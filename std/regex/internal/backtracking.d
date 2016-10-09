@@ -30,7 +30,13 @@ template BacktrackingMatcher(bool CTregex)
         alias String = const(Char)[];
         alias RegEx = Regex!Char;
         alias MatchFn = bool function (ref BacktrackingMatcher!(Char, Stream));
-        RegEx re;      //regex program
+        const(Bytecode)[] ir;
+        uint ngroup;
+        uint flags;
+        const(Interval[])[] charsets;
+        const(CharMatcher)[] matchers;
+        const(BitTable)[] filters;
+        const Kickstart!Char kickstart;
         static if (CTregex)
             MatchFn nativeFn; //native code for that program
         //Stream state
@@ -79,12 +85,17 @@ template BacktrackingMatcher(bool CTregex)
 
         static size_t initialMemory(const ref RegEx re)
         {
-            return stackSize(re)*size_t.sizeof + re.hotspotTableSize*Trace.sizeof;
+            return stackSize(re.ngroup)*size_t.sizeof + re.hotspotTableSize*Trace.sizeof;
         }
 
-        static size_t stackSize(const ref RegEx re)
+        size_t initialMemory()
         {
-            return initialStack*(stateSize + re.ngroup*(Group!DataIndex).sizeof/size_t.sizeof)+1;
+            return stackSize(ngroup)*size_t.sizeof + merge.length*Trace.sizeof;
+        }
+
+        static size_t stackSize(uint ngroup)
+        {
+            return initialStack*(stateSize + ngroup*(Group!DataIndex).sizeof/size_t.sizeof)+1;
         }
 
         @property bool atStart(){ return index == 0; }
@@ -101,7 +112,7 @@ template BacktrackingMatcher(bool CTregex)
         {
             static if (kicked)
             {
-                if (!s.search(re.kickstart, front, index))
+                if (!s.search(kickstart, front, index))
                 {
                     index = s.lastIndex;
                 }
@@ -113,46 +124,69 @@ template BacktrackingMatcher(bool CTregex)
         //
         void newStack()
         {
-            auto chunk = mallocArray!(size_t)(stackSize(re));
+            auto chunk = mallocArray!(size_t)(stackSize(ngroup));
             chunk[0] = cast(size_t)(memory.ptr);
             memory = chunk[1..$];
         }
 
-        void initExternalMemory(void[] memBlock)
+        void initExternalMemory(void[] memBlock, size_t hotspotTableSize)
         {
-            merge = arrayInChunk!(Trace)(re.hotspotTableSize, memBlock);
+            merge = arrayInChunk!(Trace)(hotspotTableSize, memBlock);
             merge[] = Trace.init;
             memory = cast(size_t[])memBlock;
             memory[0] = 0; //hidden pointer
             memory = memory[1..$];
         }
 
-        void initialize(ref RegEx program, Stream stream, void[] memBlock)
+        void dupTo(void[] memory)
         {
-            re = program;
+            initExternalMemory(memory, merge.length);
+        }
+
+        this(Matcher)(ref Matcher matcher, Stream stream, void[] memBlock, dchar ch, DataIndex idx)
+        {
+            ir = matcher.ir;
+            charsets = matcher.charsets;
+            filters = matcher.filters;
+            matchers = matcher.matchers;
+            ngroup = matcher.ngroup;
+            flags = matcher.flags;
             s = stream;
             exhausted = false;
-            initExternalMemory(memBlock);
+            initExternalMemory(memBlock, matcher.merge.length);
             backrefed = null;
-        }
-
-        auto dupTo(void[] memory)
-        {
-            typeof(this) tmp = this;
-            tmp.initExternalMemory(memory);
-            return tmp;
-        }
-
-        this(ref RegEx program, Stream stream, void[] memBlock, dchar ch, DataIndex idx)
-        {
-            initialize(program, stream, memBlock);
             front = ch;
             index = idx;
         }
 
-        this(ref RegEx program, Stream stream, void[] memBlock)
+        this(Matcher)(ref Matcher matcher, Stream stream, void[] memBlock)
         {
-            initialize(program, stream, memBlock);
+            ir = matcher.ir;
+            charsets = matcher.charsets;
+            filters = matcher.filters;
+            matchers = matcher.matchers;
+            ngroup = matcher.ngroup;
+            flags = matcher.flags;
+            s = stream;
+            exhausted = false;
+            initExternalMemory(memBlock, matcher.merge.length);
+            backrefed = null;
+            next();
+        }
+
+        this()(ref const RegEx program, Stream stream, void[] memBlock, uint regexFlags)
+        {
+            kickstart = program.kickstart;
+            ir = program.ir;
+            charsets = program.charsets;
+            filters = program.filters;
+            matchers = program.matchers;
+            ngroup = program.ngroup;
+            flags = regexFlags;
+            s = stream;
+            exhausted = false;
+            initExternalMemory(memBlock, program.hotspotTableSize);
+            backrefed = null;
             next();
         }
 
@@ -160,7 +194,7 @@ template BacktrackingMatcher(bool CTregex)
         {
             alias BackMatcherTempl = .BacktrackingMatcher!(CTregex);
             alias BackMatcher = BackMatcherTempl!(Char, Stream);
-            auto fwdMatcher = BackMatcher(matcher.re, s, memBlock, front, index);
+            auto fwdMatcher = BackMatcher(matcher, s, memBlock, front, index);
             return fwdMatcher;
         }
 
@@ -169,7 +203,7 @@ template BacktrackingMatcher(bool CTregex)
             alias BackMatcherTempl = .BacktrackingMatcher!(CTregex);
             alias BackMatcher = BackMatcherTempl!(Char, typeof(s.loopBack(index)));
             auto fwdMatcher =
-                BackMatcher(matcher.re, s.loopBack(index), memBlock);
+                BackMatcher(matcher, s.loopBack(index), memBlock);
             return fwdMatcher;
         }
 
@@ -182,7 +216,7 @@ template BacktrackingMatcher(bool CTregex)
             {//stream is updated here
                 matches[0].begin = start;
                 matches[0].end = index;
-                if (!(re.flags & RegexOption.global) || atEnd)
+                if (!(flags & RegexOption.global) || atEnd)
                     exhausted = true;
                 if (start == index)//empty match advances input
                     next();
@@ -202,7 +236,7 @@ template BacktrackingMatcher(bool CTregex)
             if (exhausted) //all matches collected
                 return false;
             this.matches = matches;
-            if (re.flags & RegexInfo.oneShot)
+            if (flags & RegexInfo.oneShot)
             {
                 exhausted = true;
                 const DataIndex start = index;
@@ -216,7 +250,7 @@ template BacktrackingMatcher(bool CTregex)
             }
             static if (kicked)
             {
-                if (!re.kickstart.empty)
+                if (kickstart)
                 {
                     for (;;)
                     {
@@ -225,6 +259,7 @@ template BacktrackingMatcher(bool CTregex)
                             return val;
                         else
                         {
+                            import std.stdio;
                             if (atEnd)
                                 break;
                             search();
@@ -284,19 +319,19 @@ template BacktrackingMatcher(bool CTregex)
                 {
                     debug(std_regex_matcher)
                         writefln("PC: %s\tCNT: %s\t%s \tfront: %s src: %s",
-                            pc, counter, disassemble(re.ir, pc, re.dict),
+                            pc, counter, disassemble(ir, pc),
                             front, s._index);
-                    switch (re.ir[pc].code)
+                    switch (ir[pc].code)
                     {
                     case IR.OrChar://assumes IRL!(OrChar) == 1
                         if (atEnd)
                             goto L_backtrack;
-                        uint len = re.ir[pc].sequence;
+                        uint len = ir[pc].sequence;
                         uint end = pc + len;
-                        if (re.ir[pc].data != front && re.ir[pc+1].data != front)
+                        if (ir[pc].data != front && ir[pc+1].data != front)
                         {
                             for (pc = pc+2; pc < end; pc++)
-                                if (re.ir[pc].data == front)
+                                if (ir[pc].data == front)
                                     break;
                             if (pc == end)
                                 goto L_backtrack;
@@ -305,7 +340,7 @@ template BacktrackingMatcher(bool CTregex)
                         next();
                         break;
                     case IR.Char:
-                        if (atEnd || front != re.ir[pc].data)
+                        if (atEnd || front != ir[pc].data)
                             goto L_backtrack;
                         pc += IRL!(IR.Char);
                         next();
@@ -317,13 +352,13 @@ template BacktrackingMatcher(bool CTregex)
                         next();
                         break;
                     case IR.CodepointSet:
-                        if (atEnd || !re.charsets[re.ir[pc].data].scanFor(front))
+                        if (atEnd || !charsets[ir[pc].data].scanFor(front))
                             goto L_backtrack;
                         next();
                         pc += IRL!(IR.CodepointSet);
                         break;
                     case IR.Trie:
-                        if (atEnd || !re.matchers[re.ir[pc].data][front])
+                        if (atEnd || !matchers[ir[pc].data][front])
                             goto L_backtrack;
                         next();
                         pc += IRL!(IR.Trie);
@@ -411,10 +446,10 @@ template BacktrackingMatcher(bool CTregex)
                             goto L_backtrack;
                         break;
                     case IR.InfiniteStart, IR.InfiniteQStart:
-                        pc += re.ir[pc].data + IRL!(IR.InfiniteStart);
+                        pc += ir[pc].data + IRL!(IR.InfiniteStart);
                         //now pc is at end IR.Infinite(Q)End
-                        uint len = re.ir[pc].data;
-                        if (re.ir[pc].code == IR.InfiniteEnd)
+                        uint len = ir[pc].data;
+                        if (ir[pc].code == IR.InfiniteEnd)
                         {
                             pushState(pc+IRL!(IR.InfiniteEnd), counter);
                             pc -= len;
@@ -426,29 +461,29 @@ template BacktrackingMatcher(bool CTregex)
                         }
                         break;
                     case IR.InfiniteBloomStart:
-                        pc += re.ir[pc].data + IRL!(IR.InfiniteBloomStart);
+                        pc += ir[pc].data + IRL!(IR.InfiniteBloomStart);
                         //now pc is at end IR.InfiniteBloomEnd
-                        immutable len = re.ir[pc].data;
-                        immutable filterIdx = re.ir[pc+2].raw;
-                        if (re.filters[filterIdx][front])
+                        immutable len = ir[pc].data;
+                        immutable filterIdx = ir[pc+2].raw;
+                        if (filters[filterIdx][front])
                             pushState(pc+IRL!(IR.InfiniteBloomEnd), counter);
                         pc -= len;
                         break;
                     case IR.RepeatStart, IR.RepeatQStart:
-                        pc += re.ir[pc].data + IRL!(IR.RepeatStart);
+                        pc += ir[pc].data + IRL!(IR.RepeatStart);
                         break;
                     case IR.RepeatEnd:
                     case IR.RepeatQEnd:
-                        if (merge[re.ir[pc + 1].raw+counter].mark(index))
+                        if (merge[ir[pc + 1].raw+counter].mark(index))
                         {
                             // merged!
                             goto L_backtrack;
                         }
                         //len, step, min, max
-                        immutable len = re.ir[pc].data;
-                        immutable step =  re.ir[pc+2].raw;
-                        immutable min = re.ir[pc+3].raw;
-                        immutable max = re.ir[pc+4].raw;
+                        immutable len = ir[pc].data;
+                        immutable step =  ir[pc+2].raw;
+                        immutable min = ir[pc+3].raw;
+                        immutable max = ir[pc+4].raw;
                         if (counter < min)
                         {
                             counter += step;
@@ -456,7 +491,7 @@ template BacktrackingMatcher(bool CTregex)
                         }
                         else if (counter < max)
                         {
-                            if (re.ir[pc].code == IR.RepeatEnd)
+                            if (ir[pc].code == IR.RepeatEnd)
                             {
                                 pushState(pc + IRL!(IR.RepeatEnd), counter%step);
                                 counter += step;
@@ -478,13 +513,13 @@ template BacktrackingMatcher(bool CTregex)
                     case IR.InfiniteEnd:
                     case IR.InfiniteQEnd:
                         debug(std_regex_matcher) writeln("Infinited nesting:", infiniteNesting);
-                        if (merge[re.ir[pc + 1].raw+counter].mark(index))
+                        if (merge[ir[pc + 1].raw+counter].mark(index))
                         {
                             // merged!
                             goto L_backtrack;
                         }
-                        immutable len = re.ir[pc].data;
-                        if (re.ir[pc].code == IR.InfiniteEnd)
+                        immutable len = ir[pc].data;
+                        if (ir[pc].code == IR.InfiniteEnd)
                         {
                             pushState(pc + IRL!(IR.InfiniteEnd), counter);
                             pc -= len;
@@ -497,14 +532,14 @@ template BacktrackingMatcher(bool CTregex)
                         break;
                     case IR.InfiniteBloomEnd:
                         debug(std_regex_matcher) writeln("Infinited nesting:", infiniteNesting);
-                        if (merge[re.ir[pc + 1].raw+counter].mark(index))
+                        if (merge[ir[pc + 1].raw+counter].mark(index))
                         {
                             // merged!
                             goto L_backtrack;
                         }
-                        immutable len = re.ir[pc].data;
-                        immutable filterIdx = re.ir[pc+2].raw;
-                        if (re.filters[filterIdx][front])
+                        immutable len = ir[pc].data;
+                        immutable filterIdx = ir[pc+2].raw;
+                        if (filters[filterIdx][front])
                         {
                             infiniteNesting--;
                             pushState(pc + IRL!(IR.InfiniteBloomEnd), counter);
@@ -513,7 +548,7 @@ template BacktrackingMatcher(bool CTregex)
                         pc -= len;
                         break;
                     case IR.OrEnd:
-                        if (merge[re.ir[pc + 1].raw+counter].mark(index))
+                        if (merge[ir[pc + 1].raw+counter].mark(index))
                         {
                             // merged!
                             goto L_backtrack;
@@ -524,34 +559,34 @@ template BacktrackingMatcher(bool CTregex)
                         pc += IRL!(IR.OrStart);
                         goto case;
                     case IR.Option:
-                        immutable len = re.ir[pc].data;
-                        if (re.ir[pc+len].code == IR.GotoEndOr)//not a last one
+                        immutable len = ir[pc].data;
+                        if (ir[pc+len].code == IR.GotoEndOr)//not a last one
                         {
                             pushState(pc + len + IRL!(IR.Option), counter); //remember 2nd branch
                         }
                         pc += IRL!(IR.Option);
                         break;
                     case IR.GotoEndOr:
-                        pc = pc + re.ir[pc].data + IRL!(IR.GotoEndOr);
+                        pc = pc + ir[pc].data + IRL!(IR.GotoEndOr);
                         break;
                     case IR.GroupStart:
-                        immutable n = re.ir[pc].data;
+                        immutable n = ir[pc].data;
                         matches[n].begin = index;
                         debug(std_regex_matcher)  writefln("IR group #%u starts at %u", n, index);
                         pc += IRL!(IR.GroupStart);
                         break;
                     case IR.GroupEnd:
-                        immutable n = re.ir[pc].data;
+                        immutable n = ir[pc].data;
                         matches[n].end = index;
                         debug(std_regex_matcher) writefln("IR group #%u ends at %u", n, index);
                         pc += IRL!(IR.GroupEnd);
                         break;
                     case IR.LookaheadStart:
                     case IR.NeglookaheadStart:
-                        immutable len = re.ir[pc].data;
+                        immutable len = ir[pc].data;
                         auto save = index;
-                        immutable ms = re.ir[pc+1].raw, me = re.ir[pc+2].raw;
-                        auto mem = malloc(initialMemory(re))[0..initialMemory(re)];
+                        immutable ms = ir[pc+1].raw, me = ir[pc+2].raw;
+                        auto mem = malloc(initialMemory())[0..initialMemory()];
                         scope(exit) free(mem.ptr);
                         static if (Stream.isLoopback)
                         {
@@ -563,10 +598,10 @@ template BacktrackingMatcher(bool CTregex)
                         }
                         matcher.matches = matches[ms .. me];
                         matcher.backrefed = backrefed.empty ? matches : backrefed;
-                        matcher.re.ir = re.ir[
+                        matcher.ir = ir[
                             pc+IRL!(IR.LookaheadStart) .. pc+IRL!(IR.LookaheadStart)+len+IRL!(IR.LookaheadEnd)
                         ];
-                        immutable match = (matcher.matchImpl() != 0) ^ (re.ir[pc].code == IR.NeglookaheadStart);
+                        immutable match = (matcher.matchImpl() != 0) ^ (ir[pc].code == IR.NeglookaheadStart);
                         s.reset(save);
                         next();
                         if (!match)
@@ -578,26 +613,26 @@ template BacktrackingMatcher(bool CTregex)
                         break;
                     case IR.LookbehindStart:
                     case IR.NeglookbehindStart:
-                        immutable len = re.ir[pc].data;
-                        immutable ms = re.ir[pc+1].raw, me = re.ir[pc+2].raw;
-                        auto mem = malloc(initialMemory(re))[0..initialMemory(re)];
+                        immutable len = ir[pc].data;
+                        immutable ms = ir[pc+1].raw, me = ir[pc+2].raw;
+                        auto mem = malloc(initialMemory())[0..initialMemory()];
                         scope(exit) free(mem.ptr);
                         static if (Stream.isLoopback)
                         {
                             alias Matcher = BacktrackingMatcher!(Char, Stream);
-                            auto matcher = Matcher(re, s, mem, front, index);
+                            auto matcher = Matcher(this, s, mem, front, index);
                         }
                         else
                         {
                             alias Matcher = BacktrackingMatcher!(Char, typeof(s.loopBack(index)));
-                            auto matcher = Matcher(re, s.loopBack(index), mem);
+                            auto matcher = Matcher(this, s.loopBack(index), mem);
                         }
                         matcher.matches = matches[ms .. me];
-                        matcher.re.ir = re.ir[
+                        matcher.ir = ir[
                           pc + IRL!(IR.LookbehindStart) .. pc + IRL!(IR.LookbehindStart) + len + IRL!(IR.LookbehindEnd)
                         ];
                         matcher.backrefed  = backrefed.empty ? matches : backrefed;
-                        immutable match = (matcher.matchImpl() != 0) ^ (re.ir[pc].code == IR.NeglookbehindStart);
+                        immutable match = (matcher.matchImpl() != 0) ^ (ir[pc].code == IR.NeglookbehindStart);
                         if (!match)
                             goto L_backtrack;
                         else
@@ -606,8 +641,8 @@ template BacktrackingMatcher(bool CTregex)
                         }
                         break;
                     case IR.Backref:
-                        immutable n = re.ir[pc].data;
-                        auto referenced = re.ir[pc].localRef
+                        immutable n = ir[pc].data;
+                        auto referenced = ir[pc].localRef
                                 ? s[matches[n].begin .. matches[n].end]
                                 : s[backrefed[n].begin .. backrefed[n].end];
                         while (!atEnd && !referenced.empty && front == referenced.front)
@@ -628,9 +663,9 @@ template BacktrackingMatcher(bool CTregex)
                     case IR.LookbehindEnd:
                     case IR.NeglookbehindEnd:
                     case IR.End:
-                        return re.ir[pc].data;
+                        return ir[pc].data;
                     default:
-                        debug printBytecode(re.ir[0..$]);
+                        debug printBytecode(ir[0..$]);
                         assert(0);
                     L_backtrack:
                         if (!popState())
@@ -659,7 +694,7 @@ template BacktrackingMatcher(bool CTregex)
             {
                 import core.stdc.stdlib : free;
                 free(memory.ptr);//last segment is freed in RegexMatch
-                immutable size = initialStack*(stateSize + 2*re.ngroup);
+                immutable size = initialStack*(stateSize + 2*ngroup);
                 memory = prev[0..size];
                 lastState = size;
                 return true;
@@ -794,7 +829,7 @@ struct CtContext
     //to mark the portion of matches to save
     int match, total_matches;
     int reserved;
-    CodepointSet[] charsets;
+    const Interval[][] charsets;
 
 
     //state of codegenerator
@@ -804,7 +839,7 @@ struct CtContext
         int addr;
     }
 
-    this(Char)(Regex!Char re)
+    this(Char)(const Regex!Char re)
     {
         match = 1;
         reserved = 1; //first match is skipped
@@ -866,7 +901,7 @@ struct CtContext
     }
 
     //
-    CtState ctGenBlock(Bytecode[] ir, int addr)
+    CtState ctGenBlock(const(Bytecode)[] ir, int addr)
     {
         CtState result;
         result.addr = addr;
@@ -880,7 +915,7 @@ struct CtContext
     }
 
     //
-    CtState ctGenGroup(ref Bytecode[] ir, int addr)
+    CtState ctGenGroup(ref const(Bytecode)[] ir, int addr)
     {
         import std.algorithm.comparison : max;
         auto bailOut = "goto L_backtrack;";
@@ -943,7 +978,7 @@ struct CtContext
                         //(neg)lookaround piece ends
                     }
                     auto save = index;
-                    auto mem = malloc(initialMemory(re))[0..initialMemory(re)];
+                    auto mem = malloc(initialMemory())[0..initialMemory()];
                     scope(exit) free(mem.ptr);
                     static if (typeof(matcher.s).isLoopback)
                         auto lookaround = $$;
@@ -982,7 +1017,7 @@ struct CtContext
     }
 
     //generate source for bytecode contained  in OrStart ... OrEnd
-    CtState ctGenAlternation(Bytecode[] ir, int addr)
+    CtState ctGenAlternation(const(Bytecode)[] ir, int addr)
     {
         CtState[] pieces;
         CtState r;
@@ -1022,11 +1057,11 @@ struct CtContext
 
     // generate fixup code for instruction in ir,
     // fixup means it has an alternative way for control flow
-    string ctGenFixupCode(Bytecode[] ir, int addr, int fixup)
+    string ctGenFixupCode(const(Bytecode)[] ir, int addr, int fixup)
     {
         return ctGenFixupCode(ir, addr, fixup); // call ref Bytecode[] version
     }
-    string ctGenFixupCode(ref Bytecode[] ir, int addr, int fixup)
+    string ctGenFixupCode(ref const(Bytecode)[] ir, int addr, int fixup)
     {
         string r;
         string testCode;
@@ -1180,7 +1215,7 @@ struct CtContext
     }
 
 
-    string ctQuickTest(Bytecode[] ir, int id)
+    string ctQuickTest(const(Bytecode)[] ir, int id)
     {
         uint pc = 0;
         while (pc < ir.length && ir[pc].isAtom)
@@ -1207,7 +1242,7 @@ struct CtContext
     }
 
     //process & generate source for simple bytecodes at front of ir using address addr
-    CtState ctGenAtom(ref Bytecode[] ir, int addr)
+    CtState ctGenAtom(ref const(Bytecode)[] ir, int addr)
     {
         CtState result;
         result.code = ctAtomCode(ir, addr);
@@ -1217,7 +1252,7 @@ struct CtContext
     }
 
     //D code for atom at ir using address addr, addr < 0 means quickTest
-    string ctAtomCode(Bytecode[] ir, int addr)
+    string ctAtomCode(const(Bytecode)[] ir, int addr)
     {
         string code;
         string bailOut, nextInstr;
@@ -1262,7 +1297,7 @@ struct CtContext
             break;
         case IR.Any:
             code ~= ctSub( `
-                    if (atEnd || (!(re.flags & RegexOption.singleline)
+                    if (atEnd || (!(flags & RegexOption.singleline)
                                 && (front == '\r' || front == '\n')))
                         $$
                     $$
@@ -1272,7 +1307,7 @@ struct CtContext
             if (charsets.length)
             {
                 string name = `func_`~to!string(addr+1);
-                string funcCode = charsets[ir[0].data].toSourceCode(name);
+                string funcCode = CodepointSet(charsets[ir[0].data]).toSourceCode(name);
                 code ~= ctSub( `
                     static $$
                     if (atEnd || !$$(front))
@@ -1282,16 +1317,16 @@ struct CtContext
             }
             else
                 code ~= ctSub( `
-                    if (atEnd || !re.charsets[$$].scanFor(front))
+                    if (atEnd || !charsets[$$].scanFor(front))
                         $$
                     $$
                 $$`, ir[0].data, bailOut, addr >= 0 ? "next();" :"", nextInstr);
             break;
         case IR.Trie:
-            if (charsets.length && charsets[ir[0].data].byInterval.length  <= 8)
+            if (charsets.length && charsets[ir[0].data].length  <= 8)
                 goto case IR.CodepointSet;
             code ~= ctSub( `
-                    if (atEnd || !re.matchers[$$][front])
+                    if (atEnd || !matchers[$$][front])
                         $$
                     $$
                 $$`, ir[0].data, bailOut, addr >= 0 ? "next();" :"", nextInstr);
@@ -1429,7 +1464,7 @@ struct CtContext
     }
 
     //generate D code for the whole regex
-    public string ctGenRegEx(Bytecode[] ir)
+    public string ctGenRegEx(const(Bytecode)[] ir)
     {
         auto bdy = ctGenBlock(ir, 0);
         auto r = `
@@ -1475,7 +1510,7 @@ struct CtContext
 
 }
 
-string ctGenRegExCode(Char)(Regex!Char re)
+string ctGenRegExCode(Char)(const Regex!Char re)
 {
     auto context = CtContext(re);
     return context.ctGenRegEx(re.ir);

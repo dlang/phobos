@@ -58,9 +58,9 @@ module std.regex.internal.generator;
                 case IR.CodepointSet:
                 case IR.Trie:
                     auto set = re.charsets[re.ir[pc].data];
-                    auto x = rand(cast(uint)set.byInterval.length);
-                    auto y = rand(set.byInterval[x].b - set.byInterval[x].a);
-                    formattedWrite(app, "%s", cast(dchar)(set.byInterval[x].a+y));
+                    auto x = rand(cast(uint)set.length);
+                    auto y = rand(set[x].b - set[x].a);
+                    formattedWrite(app, "%s", cast(dchar)(set[x].a+y));
                     pc += IRL!(IR.CodepointSet);
                     break;
                 case IR.Any:
