@@ -5657,7 +5657,7 @@ enum bool isIterable(T) = (
  * Returns $(D true) if T can be iterated over using a $(D foreach_reverse)
  * loop with a single loop variable of automatically inferred type, regardless
  * of how the $(D foreach_reverse) loop is implemented.  This includes ranges,
- * structs/classes that define $(D opApply) with a single loop variable, and
+ * structs/classes that define $(D opApplyReverse) with a single loop variable, and
  * builtin dynamic, static and associative arrays, and tuples.
  */
 enum bool isAnyIterableReverse(T) = is(typeof({ foreach_reverse (elem; T.init) {} }));
@@ -5666,7 +5666,7 @@ enum bool isAnyIterableReverse(T) = is(typeof({ foreach_reverse (elem; T.init) {
  * Returns $(D true) if T can be iterated over using a $(D foreach_reverse)
  * loop with a single loop variable of automatically inferred type, regardless
  * of how the $(D foreach_reverse) loop is implemented.  This includes ranges,
- * structs/classes that define $(D opApply) with a single loop variable, and
+ * structs/classes that define $(D opApplyReverse) with a single loop variable, and
  * builtin dynamic, static and associative arrays. Does not include tuples.
  */
 enum bool isIterableReverse(T) = (
