@@ -127,6 +127,7 @@
  *           $(LREF Unqual)
  *           $(LREF Unsigned)
  *           $(LREF ValueType)
+ *           $(LREF Promoted)
  * ))
  * $(TR $(TD Misc) $(TD
  *           $(LREF mangledName)
@@ -6549,6 +6550,44 @@ template mostNegative(T)
         static assert(mostNegative!T == 0);
 }
 
+/**
+Get the type that a scalar type `T` will $(LINK2 $(ROOT_DIR)spec/type.html#integer-promotions, promote)
+to in multi-term arithmetic expressions.
+*/
+template Promoted(T)
+    if (isScalarType!T)
+{
+    alias Promoted = CopyTypeQualifiers!(T, typeof(T.init + T.init));
+}
+
+///
+unittest
+{
+    ubyte a = 3, b = 5;
+    static assert(is(typeof(a * b) == Promoted!ubyte));
+    static assert(is(Promoted!ubyte == int));
+
+    static assert(is(Promoted!(shared(bool)) == shared(int)));
+    static assert(is(Promoted!(const(int)) == const(int)));
+    static assert(is(Promoted!double == double));
+}
+
+unittest
+{
+    // promote to int:
+    foreach (T; TypeTuple!(bool, byte, ubyte, short, ushort, char, wchar))
+    {
+        static assert(is(Promoted!T == int));
+        static assert(is(Promoted!(shared(const T)) == shared(const int)));
+    }
+
+    // already promoted:
+    foreach (T; TypeTuple!(int, uint, long, ulong, float, double, real))
+    {
+        static assert(is(Promoted!T == T));
+        static assert(is(Promoted!(immutable(T)) == immutable(T)));
+    }
+}
 
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // Misc.

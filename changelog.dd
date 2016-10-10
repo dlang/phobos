@@ -5,9 +5,24 @@ $(COMMENT Pending changelog for 2.073. This will get copied to dlang.org and
 )
 
 $(BUGSTITLE Library Changes,
+    $(LI $(RELATIVE_LINK2 promoted, Added `std.traits.Promoted` to get the result of
+        $(LINK2 $(ROOT_DIR)spec/type.html#integer-promotions, scalar type promotion)
+        in multi-term arithmetic expressions.))
 )
 
 $(BUGSTITLE Library Changes,
+
+$(LI $(LNAME2 promoted, `std.traits.Promoted` gets the type to which a scalar type will
+    be promoted in multi-term arithmetic expressions)
+-------
+import std.traits : Promoted;
+static assert(is(typeof(ubyte(3) * ubyte(5)) == Promoted!ubyte));
+static assert(is(Promoted!ubyte == int));
+-------
+    $(P See the D specification on $(LINK2 $(ROOT_DIR)spec/type.html#integer-promotions,
+    scalar type promotions) for more information.)
+)
+
 )
 
 Macros:
