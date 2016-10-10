@@ -2110,18 +2110,18 @@ if (isNarrowString!(C[]))
             //ptr is used to avoid unnnecessary bounds checking.
             str = str.ptr[1 .. str.length];
         }
-        else if (c == 0xff)
-        {
-            // bsr undefined for 0
-            str = str.ptr[1 .. str.length];
-        }
         else
         {
              import core.bitop : bsr;
-             auto msbs = 7 - bsr(~c);
-             if ((msbs < 2) | (msbs > 6))
+             // OR with 1u so we never take bsr(0), which would be illegal. If
+             // c == 0xFF (invalid character), we take bsr(1) which returns 0.
+             // At the other extreme, if c = 0b10xx_xxxx (invalid), bsr returns
+             // 6 and subsquently msbs is 1, which is exactly what we wanted
+             // (skip the invalid byte).
+             uint msbs = 7u - bsr(~c | 1u);
+             if (msbs == 7)
              {
-                 //Invalid UTF-8
+                 // Invalid UTF-8, c is 0xFE or 0xFF.
                  msbs = 1;
              }
              str = str.ptr[min(msbs, str.length) .. str.length];
