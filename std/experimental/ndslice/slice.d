@@ -2195,7 +2195,7 @@ struct Slice(size_t _N, _Range)
     $(BOLD Fully defined index)
     +/
     auto ref opIndex(size_t I)(size_t[I] _indexes...)
-        if(I && I <= N)
+        if (I && I <= N)
     {
         static if (I == PureN)
             return _ptr[indexStride(_indexes)];
