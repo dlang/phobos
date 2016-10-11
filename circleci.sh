@@ -99,4 +99,5 @@ case $1 in
     install-deps) install_deps ;;
     coverage) coverage ;;
     setup-repos) setup_repos ;;
+    style) style ;;
 esac
