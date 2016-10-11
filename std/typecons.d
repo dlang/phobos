@@ -843,7 +843,7 @@ template Tuple(Specs...)
         if (is(typeof(translate) : V[K], V, K) && isSomeString!V &&
                 (isSomeString!K || is(K : size_t)))
         {
-            import std.range: ElementType;
+            import std.range : ElementType;
             static if (isSomeString!(ElementType!(typeof(translate.keys))))
             {
                 {

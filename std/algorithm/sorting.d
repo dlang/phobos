@@ -1216,7 +1216,7 @@ Merge!(less, Rs) merge(alias less = "a < b", Rs...)
 @safe pure nothrow unittest
 {
     // save
-    import std.range: dropOne;
+    import std.range : dropOne;
     int[] a = [1, 2];
     int[] b = [0, 3];
     auto arr = a.merge(b);
