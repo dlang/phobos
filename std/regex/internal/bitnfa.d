@@ -673,8 +673,8 @@ version(unittest)
     {
         private void check(T)(string input, T re, size_t idx=uint.max, int line=__LINE__)
         {
-            import std.regex, std.conv;
-            import std.stdio;
+            import std.regex : regex;
+            import std.conv : text, to;
             auto rex = regex(re, "s");
             auto m = make(rex);
             auto s = Input!char(input);
@@ -688,8 +688,8 @@ version(unittest)
     {
         private void checkFail(T)(string input, T re, size_t idx=uint.max, int line=__LINE__)
         {
-            import std.regex, std.conv;
-            import std.stdio;
+            import std.regex : regex;
+            import std.conv : text, to;
             auto rex = regex(re, "s");
             auto m = make(rex);
             auto s = Input!char(input);
@@ -700,8 +700,8 @@ version(unittest)
 
     private void checkEmpty(T)(T re)
     {
-        import std.regex, std.conv;
-        import std.stdio;
+        import std.regex : regex;
+        import std.conv : to;
         auto rex = regex(re);
         auto m = BitNfa(rex);
         assert(m.empty, "Should be empty "~to!string(re));

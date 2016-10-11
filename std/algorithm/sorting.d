@@ -639,7 +639,7 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
             // Loop invariant
             version(unittest)
             {
-                import std.algorithm.searching;
+                import std.algorithm.searching : all;
                 assert(r[0 .. lo].all!(x => !lt(p, x)));
                 assert(r[hi + 1 .. r.length].all!(x => !lt(x, p)));
             }
