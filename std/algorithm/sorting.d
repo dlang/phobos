@@ -1562,7 +1562,7 @@ private void sort5(alias lt, Range)(Range r)
 {
     assert(r.length >= 5);
 
-    import std.algorithm : swapAt;
+    import std.algorithm.mutation : swapAt;
 
     // 1. Sort first two pairs
     if (lt(r[1], r[0])) r.swapAt(0, 1);
