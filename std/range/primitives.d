@@ -2104,28 +2104,23 @@ if (isNarrowString!(C[]))
 
     static if (is(Unqual!C == char))
     {
+        __gshared static immutable ubyte[] charWidthTab = [
+            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+            3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+            4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 1, 1
+        ];
+
         immutable c = str[0];
-        if (c < 0x80)
+        if (c < 192)
         {
-            //ptr is used to avoid unnnecessary bounds checking.
             str = str.ptr[1 .. str.length];
         }
         else
         {
-             import core.bitop : bsr;
-             // OR with 1u so we never take bsr(0), which would be illegal. If
-             // c == 0xFF (invalid character), we take bsr(1) which returns 0.
-             // At the other extreme, if c = 0b10xx_xxxx (invalid), bsr returns
-             // 6 and subsquently msbs is 1, which is exactly what we wanted
-             // (skip the invalid byte).
-             uint msbs = 7u - bsr(~c | 1u);
-             if (msbs == 7)
-             {
-                 // Invalid UTF-8, c is 0xFE or 0xFF.
-                 msbs = 1;
-             }
-             str = str.ptr[min(msbs, str.length) .. str.length];
+            str = str.ptr[min(str.length, charWidthTab.ptr[c - 192]) .. str.length];
         }
+
     }
     else static if (is(Unqual!C == wchar))
     {
