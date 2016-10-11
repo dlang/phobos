@@ -24,7 +24,7 @@ pure:
 
     uint opIndex()(uint key) const
     {
-        auto p = locate(key, table);
+        auto p = locateExisting(key, table);
         assert(p.occupied);
         return p.value;
     }
@@ -94,6 +94,19 @@ private:
     }
     Node[] table;
     size_t items;
+
+    static N* locateExisting(N)(uint key, N[] table)
+    {
+        size_t slot = hashOf(key) & (table.length-1);
+        key |= 0x8000_0000;
+        while (table[slot].key_ != key)
+        {
+            slot += 1;
+            if (slot == table.length)
+                slot = 0;
+        }
+        return table.ptr + slot;
+    }
 
     static N* locate(N)(uint key, N[] table)
     {
