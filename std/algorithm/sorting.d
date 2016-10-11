@@ -1506,7 +1506,8 @@ private void shortSort(alias less, Range)(Range r)
     immutable maxJ = r.length - 2;
     for (size_t i = r.length - 6; ; --i)
     {
-        static if (is(typeof(() nothrow {
+        static if (is(typeof(() nothrow
+            {
                 auto t = r[0]; if (pred(t, r[0])) r[0] = r[0];
             }))) // Can we afford to temporarily invalidate the array?
         {
