@@ -4378,7 +4378,7 @@ if (is(T == class))
 @nogc pure nothrow unittest
 {
     int var = 6;
-    ubyte[__traits(classInstanceSize, __conv_EmplaceTestClass)] buf;
+    align(__conv_EmplaceTestClass.alignof) ubyte[__traits(classInstanceSize, __conv_EmplaceTestClass)] buf;
     auto k = emplace!__conv_EmplaceTestClass(buf, 5, var);
     assert(k.i == 5);
     assert(var == 7);
@@ -5321,7 +5321,7 @@ pure nothrow @safe /* @nogc */ unittest
     }
     void[] buf;
 
-    static byte[__traits(classInstanceSize, A)] sbuf;
+    static align(A.alignof) byte[__traits(classInstanceSize, A)] sbuf;
     buf = sbuf[];
     auto a = emplace!A(buf, 55);
     assert(a.x == 55 && a.y == 55);
