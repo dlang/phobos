@@ -2299,9 +2299,12 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
     import std.utf : decode;
     assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
     immutable c = a[0];
-    if (c > 128)
-    {
-       return cast(dchar)c;
+    static if (is(Unqual!T == char))
+    { 
+        if (c > 128)
+        {
+            return cast(dchar)c;
+        }
     }
 
     size_t i = 0;
