@@ -1177,7 +1177,8 @@ Throws: $(D Exception) if the file is not opened.
 
         private static T wenforce(T)(T cond, string str)
         {
-            import std.windows.syserror : sysErrorString, GetLastError;
+            import std.windows.syserror : sysErrorString;
+            import core.sys.windows.windows : GetLastError;
 
             if (cond) return cond;
             throw new Exception(str ~ ": " ~ sysErrorString(GetLastError()));
