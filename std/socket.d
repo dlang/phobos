@@ -3458,6 +3458,39 @@ public:
         return result;
     }
 
+    // Protected non-const overloads for overrides in legacy code
+    protected @property AddressFamily addressFamily() { return const(this).addressFamily; }
+    protected void bind(Address addr) @trusted { return const(this).bind(addr); }
+    protected void connect(Address to) @trusted { return const(this).connect(to); }
+    protected void listen(int backlog) @trusted { return const(this).listen(backlog); }
+    protected Socket accepting() pure nothrow { return const(this).accepting(); }
+    protected Socket accept() @trusted { return const(this).accept(); }
+    protected void shutdown(SocketShutdown how) @trusted nothrow @nogc { return const(this).shutdown(how); }
+    protected @property Address remoteAddress() @trusted { return const(this).remoteAddress; }
+    protected @property Address localAddress() @trusted { return const(this).localAddress; }
+    protected ptrdiff_t send(const(void)[] buf, SocketFlags flags) @trusted { return const(this).send(buf, flags); }
+    protected ptrdiff_t send(const(void)[] buf) { return const(this).send(buf); }
+    protected ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags, Address to) @trusted { return const(this).sendTo(buf, flags, to); }
+    protected ptrdiff_t sendTo(const(void)[] buf, Address to) { return const(this).sendTo(buf, to); }
+    protected ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags) @trusted { return const(this).sendTo(buf, flags); }
+    protected ptrdiff_t sendTo(const(void)[] buf) { return const(this).sendTo(buf); }
+    protected ptrdiff_t receive(void[] buf, SocketFlags flags) @trusted { return const(this).receive(buf, flags); }
+    protected ptrdiff_t receive(void[] buf) { return const(this).receive(buf); }
+    protected ptrdiff_t receiveFrom(void[] buf, SocketFlags flags, ref Address from) @trusted { return const(this).receiveFrom(buf, flags, from); }
+    protected ptrdiff_t receiveFrom(void[] buf, ref Address from) { return const(this).receiveFrom(buf, from); }
+    protected ptrdiff_t receiveFrom(void[] buf, SocketFlags flags) @trusted { return const(this).receiveFrom(buf, flags); }
+    protected ptrdiff_t receiveFrom(void[] buf) { return const(this).receiveFrom(buf); }
+    protected int getOption(SocketOptionLevel level, SocketOption option, void[] result) @trusted { return const(this).getOption(level, option, result); }
+    protected int getOption(SocketOptionLevel level, SocketOption option, out int32_t result) @trusted { return const(this).getOption(level, option, result); }
+    protected int getOption(SocketOptionLevel level, SocketOption option, out Linger result) @trusted { return const(this).getOption(level, option, result); }
+    protected void getOption(SocketOptionLevel level, SocketOption option, out Duration result) @trusted { return const(this).getOption(level, option, result); }
+    protected void setOption(SocketOptionLevel level, SocketOption option, void[] value) @trusted { return const(this).setOption(level, option, value); }
+    protected void setOption(SocketOptionLevel level, SocketOption option, int32_t value) @trusted { return const(this).setOption(level, option, value); }
+    protected void setOption(SocketOptionLevel level, SocketOption option, Linger value) @trusted { return const(this).setOption(level, option, value); }
+    protected void setOption(SocketOptionLevel level, SocketOption option, Duration value) @trusted { return const(this).setOption(level, option, value); }
+    protected string getErrorText() { return const(this).getErrorText(); }
+    protected void setKeepAlive(int time, int interval) @trusted { return const(this).setKeepAlive(time, interval); }
+    protected Address createAddress() pure nothrow { return const(this).createAddress(); }
 }
 
 
@@ -3501,6 +3534,51 @@ class UdpSocket: Socket
     this()
     {
         this(AddressFamily.INET);
+    }
+}
+
+// Issue 16514
+unittest
+{
+    class TestSocket : Socket
+    {
+        override const pure nothrow @nogc @property @safe socket_t handle();
+        override const nothrow @nogc @property @trusted bool blocking();
+        override @property @trusted void blocking(bool byes);
+        override @property @safe AddressFamily addressFamily();
+        override const @property @trusted bool isAlive();
+        override @trusted void bind(Address addr);
+        override @trusted void connect(Address to);
+        override @trusted void listen(int backlog);
+        override protected pure nothrow @safe Socket accepting();
+        override @trusted Socket accept();
+        override nothrow @nogc @trusted void shutdown(SocketShutdown how);
+        override nothrow @nogc @trusted void close();
+        override @property @trusted Address remoteAddress();
+        override @property @trusted Address localAddress();
+        override @trusted ptrdiff_t send(const(void)[] buf, SocketFlags flags);
+        override @safe ptrdiff_t send(const(void)[] buf);
+        override @trusted ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags, Address to);
+        override @safe ptrdiff_t sendTo(const(void)[] buf, Address to);
+        override @trusted ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags);
+        override @safe ptrdiff_t sendTo(const(void)[] buf);
+        override @trusted ptrdiff_t receive(void[] buf, SocketFlags flags);
+        override @safe ptrdiff_t receive(void[] buf);
+        override @trusted ptrdiff_t receiveFrom(void[] buf, SocketFlags flags, ref Address from);
+        override @safe ptrdiff_t receiveFrom(void[] buf, ref Address from);
+        override @trusted ptrdiff_t receiveFrom(void[] buf, SocketFlags flags);
+        override @safe ptrdiff_t receiveFrom(void[] buf);
+        override @trusted int getOption(SocketOptionLevel level, SocketOption option, void[] result);
+        override @trusted int getOption(SocketOptionLevel level, SocketOption option, out int32_t result);
+        override @trusted int getOption(SocketOptionLevel level, SocketOption option, out Linger result);
+        override @trusted void getOption(SocketOptionLevel level, SocketOption option, out Duration result);
+        override @trusted void setOption(SocketOptionLevel level, SocketOption option, void[] value);
+        override @trusted void setOption(SocketOptionLevel level, SocketOption option, int32_t value);
+        override @trusted void setOption(SocketOptionLevel level, SocketOption option, Linger value);
+        override @trusted void setOption(SocketOptionLevel level, SocketOption option, Duration value);
+        override @safe string getErrorText();
+        override @trusted void setKeepAlive(int time, int interval);
+        override protected pure nothrow @safe Address createAddress();      
     }
 }
 
