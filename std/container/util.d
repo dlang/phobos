@@ -103,20 +103,31 @@ unittest
 template make(alias Container, Args...)
     if (!is(Container))
 {
-    import std.range : isInputRange;
+    import std.range : isInputRange, isInfinite;
     import std.traits : isDynamicArray;
 
     auto make(Range)(Range range)
-        if (!isDynamicArray!Range && isInputRange!Range)
+        if (!isDynamicArray!Range && isInputRange!Range && !isInfinite!Range)
     {
         import std.range : ElementType;
         return .make!(Container!(ElementType!Range, Args))(range);
     }
 
     auto make(T)(T[] items...)
+        if (!isInfinite!T)
     {
         return .make!(Container!(T, Args))(items);
     }
+}
+
+/// forbid construction from infinite range
+unittest
+{
+    import std.container.array : Array;
+    import std.range : only, repeat;
+    import std.range.primitives : isInfinite;
+    static assert(__traits(compiles, { auto arr = make!Array(only(5)); }));
+    static assert(!__traits(compiles, { auto arr = make!Array(repeat(5)); }));
 }
 
 ///
