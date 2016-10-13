@@ -3504,6 +3504,51 @@ class UdpSocket: Socket
     }
 }
 
+// Issue 16514
+unittest
+{
+    class TestSocket : Socket
+    {
+        override const pure nothrow @nogc @property @safe socket_t handle() { assert(false); }
+        override const nothrow @nogc @property @trusted bool blocking() { assert(false); }
+        override @property @trusted void blocking(bool byes) { assert(false); }
+        override @property @safe AddressFamily addressFamily() { assert(false); }
+        override const @property @trusted bool isAlive() { assert(false); }
+        override @trusted void bind(Address addr) { assert(false); }
+        override @trusted void connect(Address to) { assert(false); }
+        override @trusted void listen(int backlog) { assert(false); }
+        override protected pure nothrow @safe Socket accepting() { assert(false); }
+        override @trusted Socket accept() { assert(false); }
+        override nothrow @nogc @trusted void shutdown(SocketShutdown how) { assert(false); }
+        override nothrow @nogc @trusted void close() { assert(false); }
+        override @property @trusted Address remoteAddress() { assert(false); }
+        override @property @trusted Address localAddress() { assert(false); }
+        override @trusted ptrdiff_t send(const(void)[] buf, SocketFlags flags) { assert(false); }
+        override @safe ptrdiff_t send(const(void)[] buf) { assert(false); }
+        override @trusted ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags, Address to) { assert(false); }
+        override @safe ptrdiff_t sendTo(const(void)[] buf, Address to) { assert(false); }
+        override @trusted ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags) { assert(false); }
+        override @safe ptrdiff_t sendTo(const(void)[] buf) { assert(false); }
+        override @trusted ptrdiff_t receive(void[] buf, SocketFlags flags) { assert(false); }
+        override @safe ptrdiff_t receive(void[] buf) { assert(false); }
+        override @trusted ptrdiff_t receiveFrom(void[] buf, SocketFlags flags, ref Address from) { assert(false); }
+        override @safe ptrdiff_t receiveFrom(void[] buf, ref Address from) { assert(false); }
+        override @trusted ptrdiff_t receiveFrom(void[] buf, SocketFlags flags) { assert(false); }
+        override @safe ptrdiff_t receiveFrom(void[] buf) { assert(false); }
+        override @trusted int getOption(SocketOptionLevel level, SocketOption option, void[] result) { assert(false); }
+        override @trusted int getOption(SocketOptionLevel level, SocketOption option, out int32_t result) { assert(false); }
+        override @trusted int getOption(SocketOptionLevel level, SocketOption option, out Linger result) { assert(false); }
+        override @trusted void getOption(SocketOptionLevel level, SocketOption option, out Duration result) { assert(false); }
+        override @trusted void setOption(SocketOptionLevel level, SocketOption option, void[] value) { assert(false); }
+        override @trusted void setOption(SocketOptionLevel level, SocketOption option, int32_t value) { assert(false); }
+        override @trusted void setOption(SocketOptionLevel level, SocketOption option, Linger value) { assert(false); }
+        override @trusted void setOption(SocketOptionLevel level, SocketOption option, Duration value) { assert(false); }
+        override @safe string getErrorText() { assert(false); }
+        override @trusted void setKeepAlive(int time, int interval) { assert(false); }
+        override protected pure nothrow @safe Address createAddress() { assert(false); }
+    }
+}
+
 /**
  * Creates a pair of connected sockets.
  *
