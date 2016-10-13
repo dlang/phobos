@@ -464,7 +464,7 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
             funs[i] = ()@trusted{ return cast(FPfmt)&formatGeneric!(Writer, Arg, Char); }();
             // We can safely cast away shared because all data is either
             // immutable or completely owned by this function.
-            argsAddresses[i] = (ref arg)@trusted{ return cast(const void*) &arg; }(args[i]);
+            () @trusted { argsAddresses[i] = cast(const void*) &args[i]; } ();
 
             // Reflect formatting @safe/pure ability of each arguments to this function
             if (0) formatValue(w, args[i], spec);
