@@ -2543,7 +2543,7 @@ else version (Posix)
 
 
 
-/** Tranforms $(D path) into an absolute _path.
+/** Transforms $(D path) into an absolute _path.
 
     The following algorithm is used:
     $(OL
@@ -2616,7 +2616,7 @@ string absolutePath(string path, lazy string base = getcwd())
     assertThrown(absolutePath("bar", "foo"));
 }
 
-/** Tranforms $(D path) into an absolute _path.
+/** Transforms $(D path) into an absolute _path.
 
     The following algorithm is used:
     $(OL
