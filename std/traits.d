@@ -1214,13 +1214,6 @@ template ParameterDefaults(func...)
                 // If default arg doesn't exist, returns void instead.
         }
     }
-    else static if (is(FunctionTypeOf!func PT == __parameters))
-    {
-        template Get(size_t i)
-        {
-            enum Get = "";
-        }
-    }
     else
     {
         static assert(0, func[0].stringof ~ "is not a function");
