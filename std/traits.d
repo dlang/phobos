@@ -1206,11 +1206,7 @@ template ParameterDefaults(func...)
     {
         template Get(size_t i)
         {
-            enum ParamName = ParameterIdentifierTuple!(func[0])[i];
-            static if (ParamName.length)
-                enum get = (PT[i..i+1]) => mixin(ParamName);
-            else // Unnamed parameter
-                enum get = (PT[i..i+1] __args) => __args[0];
+            enum get = (PT[i..i+1] __args) => __args[0];
             static if (is(typeof(get())))
                 enum Get = get();
             else
