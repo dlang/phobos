@@ -1121,7 +1121,7 @@ template ParameterIdentifierTuple(func...)
         {
             static if (!isFunctionPointer!func && !isDelegate!func
                        // Unnamed parameters yield CT error.
-                       && is(typeof(__traits(identifier, PT[i..i+1]))x))
+                       && is(typeof(__traits(identifier, PT[i..i+1]))))
             {
                 enum Get = __traits(identifier, PT[i..i+1]);
             }
