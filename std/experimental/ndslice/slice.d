@@ -1342,6 +1342,7 @@ struct Slice(size_t _N, _Range)
             _ptr._range = range;
     }
 
+    static if (doUnittest)
     /// Creates a 2-dimentional slice with custom strides.
     @nogc nothrow pure
     unittest
