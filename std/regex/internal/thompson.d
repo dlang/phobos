@@ -724,23 +724,23 @@ template ThompsonOps(E,S, bool withInput:false)
     alias OpBackFunc = bool function(BackMatcher*, BackMatcher.State*);
     Thread!DataIndex* freelist;
     ThreadList!DataIndex clist, nlist;
-    DataIndex[] merge;
-    const(Bytecode)[] ir;
-    int ngroup;             // number of capturing groups
-    uint flags;
-    const(Interval[])[] charsets;
-    const(CharMatcher)[] matchers;
-    const(BitTable)[] filters;
     Stream s;
     dchar front;
     DataIndex index;
     DataIndex genCounter;    // merge trace counter, goes up on every dchar
-    OpFunc[] opCacheTrue;   // pointers to Op!(IR.xyz) for each bytecode
-    OpFunc[] opCacheFalse;  // ditto
-    OpBackFunc[] opCacheBackTrue;   // ditto
-    OpBackFunc[] opCacheBackFalse;  // ditto
-    size_t threadSize;
-    size_t threadCount;
+    OpFunc* opCacheTrue;   // pointers to Op!(IR.xyz) for each bytecode
+    OpFunc* opCacheFalse;  // ditto
+    OpBackFunc* opCacheBackTrue;   // ditto
+    OpBackFunc* opCacheBackFalse;  // ditto
+    DataIndex[] merge;
+    const(Bytecode)[] ir;
+    const(Interval[])* charsets;
+    const(CharMatcher)* matchers;
+    const(BitTable)* filters;
+    int ngroup;             // number of capturing groups
+    uint flags;
+    uint threadSize;
+    uint threadCount;
     int matched;
     bool exhausted;
     const Kickstart!Char kickstart;
@@ -823,10 +823,10 @@ template ThompsonOps(E,S, bool withInput:false)
             merge = arrayInChunk!(DataIndex)(hotspotTableSize, memory);
             merge[] = 0;
         }
-        opCacheTrue = arrayInChunk!(OpFunc)(ir.length, memory);
-        opCacheFalse = arrayInChunk!(OpFunc)(ir.length, memory);
-        opCacheBackTrue = arrayInChunk!(OpBackFunc)(ir.length, memory);
-        opCacheBackFalse = arrayInChunk!(OpBackFunc)(ir.length, memory);
+        opCacheTrue = arrayInChunk!(OpFunc)(ir.length, memory).ptr;
+        opCacheFalse = arrayInChunk!(OpFunc)(ir.length, memory).ptr;
+        opCacheBackTrue = arrayInChunk!(OpBackFunc)(ir.length, memory).ptr;
+        opCacheBackFalse = arrayInChunk!(OpBackFunc)(ir.length, memory).ptr;
 
         for (uint pc = 0; pc<ir.length; pc += ir[pc].length)
         {
@@ -855,11 +855,11 @@ template ThompsonOps(E,S, bool withInput:false)
         flags = regexFlags;
         ir = program.ir;
         ngroup = program.ngroup;
-        charsets = program.charsets;
-        matchers = program.matchers;
-        filters = program.filters;
+        charsets = program.charsets.ptr;
+        matchers = program.matchers.ptr;
+        filters = program.filters.ptr;
         s = stream;
-        threadSize = getThreadSize(program);
+        threadSize = cast(uint)getThreadSize(program);
         threadCount = program.threadCount;
         initExternalMemory(memory, program.hotspotTableSize);
         genCounter = 0;
@@ -878,10 +878,10 @@ template ThompsonOps(E,S, bool withInput:false)
         threadCount = matcher.threadCount;
         merge = matcher.merge;
         freelist = matcher.freelist;
-        opCacheTrue = matcher.opCacheTrue[lo..hi];
-        opCacheBackTrue = matcher.opCacheBackTrue[lo..hi];
-        opCacheFalse = matcher.opCacheFalse[lo..hi];
-        opCacheBackFalse = matcher.opCacheBackFalse[lo..hi];
+        opCacheTrue = matcher.opCacheTrue + lo;
+        opCacheBackTrue = matcher.opCacheBackTrue + lo;
+        opCacheFalse = matcher.opCacheFalse + lo;
+        opCacheBackFalse = matcher.opCacheBackFalse + lo;
         front = matcher.front;
         index = matcher.index;
     }
@@ -898,10 +898,10 @@ template ThompsonOps(E,S, bool withInput:false)
         threadCount = matcher.threadCount;
         merge = matcher.merge;
         freelist = matcher.freelist;
-        opCacheTrue = matcher.opCacheBackTrue[lo..hi];
-        opCacheBackTrue = matcher.opCacheTrue[lo..hi];
-        opCacheFalse = matcher.opCacheBackFalse[lo..hi];
-        opCacheBackFalse = matcher.opCacheFalse[lo..hi];
+        opCacheTrue = matcher.opCacheBackTrue + lo;
+        opCacheBackTrue = matcher.opCacheTrue + lo;
+        opCacheFalse = matcher.opCacheBackFalse + lo;
+        opCacheBackFalse = matcher.opCacheFalse + lo;
         front = matcher.front;
         index = matcher.index;
     }
@@ -1072,9 +1072,9 @@ template ThompsonOps(E,S, bool withInput:false)
     {
         debug(std_regex_matcher) writeln("---- Evaluating thread");
         static if (withInput)
-            while (opCacheTrue.ptr[state.t.pc](&this, state)){}
+            while (opCacheTrue[state.t.pc](&this, state)){}
         else
-            while (opCacheFalse.ptr[state.t.pc](&this, state)){}
+            while (opCacheFalse[state.t.pc](&this, state)){}
     }
     enum uint RestartPc = uint.max;
     //match the input, evaluating IR without searching
