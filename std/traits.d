@@ -1207,10 +1207,21 @@ template ParameterDefaults(func...)
         template Get(size_t i)
         {
             enum ParamName = ParameterIdentifierTuple!(func[0])[i];
+            // workaround scope escape check, see
+            // https://issues.dlang.org/show_bug.cgi?id=16582
+            // should use return scope once available
             static if (ParamName.length)
-                enum get = (PT[i..i+1]) => mixin(ParamName);
+                enum get = (PT[i..i+1]) @trusted
+                {
+                    PT[i]* __pd_val = &mixin(ParamName); // workaround Bugzilla 16582
+                    return *__pd_val;
+                };
             else // Unnamed parameter
-                enum get = (PT[i..i+1] __args) => __args[0];
+                enum get = (PT[i..i+1] __args) @trusted
+                {
+                    PT[i]* val = &__args[0]; // workaround Bugzilla 16582
+                    return *val;
+                };
             static if (is(typeof(get())))
                 enum Get = get();
             else
@@ -1288,9 +1299,11 @@ alias ParameterDefaultValueTuple = ParameterDefaults;
 
         static immutable Colour white = Colour(255,255,255,255);
     }
-    void bug8106(Colour c = Colour.white){}
+    void bug8106(Colour c = Colour.white) {}
     //pragma(msg, PDVT!bug8106);
     static assert(PDVT!bug8106[0] == Colour.white);
+    void bug16582(scope int* val = null) {}
+    static assert(PDVT!bug16582[0] is null);
 }
 
 
