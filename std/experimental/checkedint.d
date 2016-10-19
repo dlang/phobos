@@ -35,9 +35,9 @@ This module provides a few predefined hooks (below) that add useful behavior to
 $(UL
 
 $(LI $(LREF Abort) fails every incorrect operation with a message to $(REF
-stderr, std, stdio) followed by a call to `std.core.abort`. It is the default
+stderr, std, stdio) followed by a call to `assert(0)`. It is the default
 second parameter, i.e. `Checked!short` is the same as $(D Checked!(short,
-Abort))..)
+Abort)).)
 
 $(LI $(LREF Warn) prints incorrect operations to $(REF stderr, std, stdio) but
 otherwise preserves the built-in behavior.)
@@ -429,6 +429,9 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         auto a = checked!MyHook(-42);
         assert(a == uint(-42));
         assert(MyHook.thereWereErrors);
+        MyHook.thereWereErrors = false;
+        assert(checked!MyHook(uint(-42)) == -42);
+        assert(MyHook.thereWereErrors);
         static struct MyHook2
         {
             static bool hookOpEquals(L, R)(L lhs, R rhs)
@@ -444,9 +447,10 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
 
     // opCmp
     /**
+
     Compares `this` against `rhs` for ordering. If `Hook` defines `hookOpCmp`,
-    the function forwards to $(D hook.hookOpEquals(get, rhs)).
-    Otherwise, the result of the built-in comparison operation is returned.
+    the function forwards to $(D hook.hookOpCmp(get, rhs)). Otherwise, the
+    result of the built-in comparison operation is returned.
 
     If `U` is also an instance of `Checked`, both hooks (left- and right-hand
     side) are introspected for the method `hookOpCmp`. If both define it,
@@ -546,6 +550,14 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         assert(MyHook.thereWereErrors);
     }
 
+    // For coverage
+    static if (is(T == int) && is(Hook == void)) unittest
+    {
+        assert(checked(42) <= checked!void(42));
+        assert(checked!void(42) <= checked(42u));
+        assert(checked!void(42) <= checked!(void*)(42u));
+    }
+
     // opUnary
     /**
 
@@ -632,6 +644,8 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         auto a = checked!MyHook(long.min);
         assert(a == -a);
         assert(MyHook.thereWereErrors);
+        auto b = checked!void(42);
+        assert(++b == 43);
     }
 
     // opBinary
@@ -666,7 +680,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
 
     private auto opBinaryImpl(string op, Rhs, this _)(const Rhs rhs)
     {
-        alias R = typeof(payload + rhs);
+        alias R = typeof(mixin("payload" ~ op ~ "rhs"));
         static assert(is(typeof(mixin("payload" ~ op ~ "rhs")) == R));
         static if (isIntegral!R) alias Result = Checked!(R, Hook);
         else alias Result = R;
@@ -753,6 +767,21 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         const a = checked(42);
         assert(a + 1 == 43);
         assert(a + checked(uint(42)) == 84);
+        assert(checked(42) + checked!void(42u) == 84);
+        assert(checked!void(42) + checked(42u) == 84);
+
+        static struct MyHook
+        {
+            static uint tally;
+            static auto hookOpBinary(string x, L, R)(L lhs, R rhs)
+            {
+                ++tally;
+                return mixin("lhs" ~ x ~ "rhs");
+            }
+        }
+        assert(checked!MyHook(42) + checked(42u) == 84);
+        assert(checked!void(42) + checked!MyHook(42u) == 84);
+        assert(MyHook.tally == 2);
     }
 
     // opBinaryRight
@@ -811,6 +840,28 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         }
     }
 
+    static if (is(T == int) && is(Hook == void)) unittest
+    {
+        assert(1 + checked(1) == 2);
+        static uint tally;
+        static struct MyHook
+        {
+            static auto hookOpBinaryRight(string x, L, R)(L lhs, R rhs)
+            {
+                ++tally;
+                return mixin("lhs" ~ x ~ "rhs");
+            }
+        }
+        assert(1 + checked!MyHook(1) == 2);
+        assert(tally == 1);
+
+        immutable x1 = checked(1);
+        assert(1 + x1 == 2);
+        immutable x2 = checked!MyHook(1);
+        assert(1 + x2 == 2);
+        assert(tally == 2);
+    }
+
     // opOpAssign
     /**
 
@@ -849,7 +900,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         else
         {
             alias R = typeof(get + rhs);
-            auto r = opBinary!op(rhs).payload;
+            auto r = opBinary!op(rhs).get;
             import std.conv : unsigned;
 
             static if (ProperCompare.hookOpCmp(R.min, min.get) < 0 &&
@@ -857,6 +908,7 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
             {
                 if (ProperCompare.hookOpCmp(r, min.get) < 0)
                 {
+                    // Example: Checked!uint(1) += int(-3)
                     payload = hook.onLowerBound(r, min.get);
                     return this;
                 }
@@ -866,7 +918,8 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
             {
                 if (ProperCompare.hookOpCmp(r, max.get) > 0)
                 {
-                    payload = hook.onUpperBound(r, min.get);
+                    // Example: Checked!uint(1) += long(uint.max)
+                    payload = hook.onUpperBound(r, max.get);
                     return this;
                 }
             }
@@ -994,44 +1047,62 @@ static:
 
     /**
 
-    Called automatically upon a bad `opEquals` call (one that would make a
-    signed negative value appear equal to an unsigned positive value).
+    Called automatically upon a comparison for equality. In case of a erroneous
+    comparison (one that would make a signed negative value appear equal to an
+    unsigned positive value), this hook issues `assert(0)` which terminates the
+    application.
 
     Params:
     lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
       the operator is `Checked!int`
     rhs = The right-hand side type involved in the operator
 
-    Returns: Nominally the result is the desired value of the operator, which
-    will be forwarded as result. For `Abort`, the function never returns because
-    it aborts the program.
+    Returns: Upon a correct comparison, returns the result of the comparison.
+    Otherwise, the function terminates the application so it never returns.
 
     */
-    bool onBadOpEquals(Lhs, Rhs)(Lhs lhs, Rhs rhs)
+    static bool hookOpEquals(Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        Warn.onBadOpEquals(lhs, rhs);
-        assert(0);
+        bool error;
+        auto result = opChecked!"=="(lhs, rhs, error);
+        if (error)
+        {
+            Warn.hookOpEquals(lhs, rhs);
+            assert(0);
+        }
+        return result;
     }
 
     /**
 
-    Called automatically upon a bad `opCmp` call (one that would make a signed
-    negative value appear greater than or equal to an unsigned positive value).
+    Called automatically upon a comparison for ordering using one of the
+    operators `<`, `<=`, `>`, or `>=`. In case the comparison is erroneous (i.e.
+    it would make a signed negative value appear greater than or equal to an
+    unsigned positive value), then application is terminated with `assert(0)`.
+    Otherwise, the three-state result is returned (positive if $(D lhs > rhs),
+    negative if $(D lhs < rhs), `0` otherwise).
 
     Params:
     lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
       the operator is `Checked!int`
     rhs = The right-hand side type involved in the operator
 
-    Returns: Nominally the result is the desired value of the operator, which
-    will be forwarded as result. For `Abort`, the function never returns because
-    it aborts the program.
+    Returns: For correct comparisons, returns a positive integer if $(D lhs >
+    rhs), a negative integer if  $(D lhs < rhs), `0` if the two are equal. Upon
+    a mistaken comparison such as $(D int(-1) < uint(0)), the function never
+    returns because it aborts the program.
 
     */
-    bool onBadOpCmp(Lhs, Rhs)(Lhs lhs, Rhs rhs)
+    int hookOpCmp(Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        Warn.onBadOpCmp(lhs, rhs);
-        assert(0);
+        bool error;
+        auto result = opChecked!"cmp"(lhs, rhs, error);
+        if (error)
+        {
+            Warn.hookOpCmp(lhs, rhs);
+            assert(0);
+        }
+        return result;
     }
 
     /**
@@ -1070,6 +1141,192 @@ unittest
         auto x1 = cast(T) x;
         assert(x1 == 42);
         //x1 += long(int.max);
+    }
+    test!short;
+    test!(const short);
+    test!(immutable short);
+}
+
+
+// Throw
+/**
+
+Force all integral errors to fail by printing an error message to `stderr` and
+then abort the program. `Abort` is the default second argument for `Checked`.
+
+*/
+struct Throw
+{
+    /**
+    Exception type thrown upon any failure.
+    */
+    static class CheckFailure : Exception
+    {
+        this(T...)(string f, T vals)
+        {
+            import std.format;
+            super(format(f, vals));
+        }
+    }
+
+    /**
+
+    Called automatically upon a bad cast (one that loses precision or attempts
+    to convert a negative value to an unsigned type). The source type is `Src`
+    and the destination type is `Dst`.
+
+    Params:
+    src = The source of the cast
+
+    Returns: Nominally the result is the desired value of the cast operation,
+    which will be forwarded as the result of the cast. For `Throw`, the
+    function never returns because it throws an exception.
+
+    */
+    static Dst onBadCast(Dst, Src)(Src src)
+    {
+        throw new CheckFailure("Erroneous cast: cast(%s) %s(%s)",
+            Dst.stringof, Src.stringof, src);
+    }
+
+    /**
+
+    Called automatically upon a bounds error.
+
+    Params:
+    rhs = The right-hand side value in the assignment, after the operator has
+    been evaluated
+    bound = The value of the bound being violated
+
+    Returns: Nominally the result is the desired value of the operator, which
+    will be forwarded as result. For `Abort`, the function never returns because
+    it aborts the program.
+
+    */
+    static T onLowerBound(Rhs, T)(Rhs rhs, T bound)
+    {
+        throw new CheckFailure("Lower bound error: %s(%s) < %s(%s)",
+            Rhs.stringof, rhs, T.stringof, bound);
+    }
+    /// ditto
+    static T onUpperBound(Rhs, T)(Rhs rhs, T bound)
+    {
+        throw new CheckFailure("Upper bound error: %s(%s) > %s(%s)",
+            Rhs.stringof, rhs, T.stringof, bound);
+    }
+
+    /**
+
+    Called automatically upon a comparison for equality. Throws upon an
+    erroneous comparison (one that would make a signed negative value appear
+    equal to an unsigned positive value).
+
+    Params:
+    lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
+      the operator is `Checked!int`
+    rhs = The right-hand side type involved in the operator
+
+    Returns: The result of the comparison.
+
+    Throws: `CheckFailure` if the comparison is mathematically erroneous.
+
+    */
+    static bool hookOpEquals(L, R)(L lhs, R rhs)
+    {
+        bool error;
+        auto result = opChecked!"=="(lhs, rhs, error);
+        if (error)
+        {
+            throw new CheckFailure("Erroneous comparison: %s(%s) == %s(%s)",
+                L.stringof, lhs, R.stringof, rhs);
+        }
+        return result;
+    }
+
+    /**
+
+    Called automatically upon a comparison for ordering using one of the
+    operators `<`, `<=`, `>`, or `>=`. In case the comparison is erroneous (i.e.
+    it would make a signed negative value appear greater than or equal to an
+    unsigned positive value), then application is terminated with `assert(0)`.
+    Otherwise, the three-state result is returned (positive if $(D lhs > rhs),
+    negative if $(D lhs < rhs), `0` otherwise).
+
+    Params:
+    lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
+      the operator is `Checked!int`
+    rhs = The right-hand side type involved in the operator
+
+    Returns: For correct comparisons, returns a positive integer if $(D lhs >
+    rhs), a negative integer if  $(D lhs < rhs), `0` if the two are equal.
+
+    Throws: Upon a mistaken comparison such as $(D int(-1) < uint(0)), the
+    function never returns because it throws a `Throw.CheckedFailure` exception.
+
+    */
+    static int hookOpCmp(Lhs, Rhs)(Lhs lhs, Rhs rhs)
+    {
+        bool error;
+        auto result = opChecked!"cmp"(lhs, rhs, error);
+        if (error)
+        {
+            throw new CheckFailure("Erroneous ordering comparison: %s(%s) and %s(%s)",
+                Lhs.stringof, lhs, Rhs.stringof, rhs);
+        }
+        return result;
+    }
+
+    /**
+
+    Called automatically upon an overflow during a unary or binary operation.
+
+    Params:
+    x = The operator, e.g. `-`
+    lhs = The left-hand side (or sole) argument
+    rhs = The right-hand side type involved in the operator
+
+    Returns: Nominally the result is the desired value of the operator, which
+    will be forwarded as result. For `Abort`, the function never returns because
+    it aborts the program.
+
+    */
+    static typeof(~Lhs()) onOverflow(string x, Lhs)(Lhs lhs)
+    {
+        throw new CheckFailure("Overflow on unary operator: %s%s(%s)",
+            x, Lhs.stringof, lhs);
+    }
+    /// ditto
+    static typeof(Lhs() + Rhs()) onOverflow(string x, Lhs, Rhs)(Lhs lhs, Rhs rhs)
+    {
+        throw new CheckFailure("Overflow on binary operator: %s(%s) %s %s(%s)",
+            Lhs.stringof, lhs, x, Rhs.stringof, rhs);
+    }
+}
+
+///
+unittest
+{
+    void test(T)()
+    {
+        Checked!(int, Throw) x;
+        x = 42;
+        auto x1 = cast(T) x;
+        assert(x1 == 42);
+        x = T.max + 1;
+        import std.exception;
+        assertThrown(cast(T) x);
+        x = x.max;
+        assertThrown(x += 42);
+        assertThrown(x += 42L);
+        x = x.min;
+        assertThrown(-x);
+        assertThrown(x -= 42);
+        assertThrown(x -= 42L);
+        x = -1;
+        assertNotThrown(x == -1);
+        assertThrown(x == uint(-1));
+        assertNotThrown(x <= -1);
+        assertThrown(x <= uint(-1));
     }
     test!short;
     test!(const short);
@@ -1133,44 +1390,80 @@ static:
 
     /**
 
-    Called automatically upon a bad `opEquals` call (one that would make a
-    signed negative value appear equal to an unsigned positive value).
+    Called automatically upon a comparison for equality. In case of an Erroneous
+    comparison (one that would make a signed negative value appear equal to an
+    unsigned positive value), writes a warning message to `stderr` as a side
+    effect.
 
     Params:
     lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
       the operator is `Checked!int`
     rhs = The right-hand side type involved in the operator
 
-    Returns: Nominally the result is the desired value of the operator, which
-    will be forwarded as result. For `Abort`, the function never returns because
-    it aborts the program.
+    Returns: In all cases the function returns the built-in result of $(D lhs ==
+    rhs).
 
     */
-    bool onBadOpEquals(Lhs, Rhs)(Lhs lhs, Rhs rhs)
+    bool hookOpEquals(Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        stderr.writefln("Erroneous comparison: %s(%s) == %s(%s)",
-            Lhs.stringof, lhs, Rhs.stringof, rhs);
-        return lhs == rhs;
+        bool error;
+        auto result = opChecked!"=="(lhs, rhs, error);
+        if (error)
+        {
+            stderr.writefln("Erroneous comparison: %s(%s) == %s(%s)",
+                Lhs.stringof, lhs, Rhs.stringof, rhs);
+            return lhs == rhs;
+        }
+        return result;
+    }
+
+    ///
+    unittest
+    {
+        auto x = checked!Warn(-42);
+        // Passes
+        assert(x == -42);
+        // Passes but prints a warning
+        // assert(x == uint(-42));
     }
 
     /**
 
-    Called automatically upon a bad `opCmp` call (one that would make a signed
-    negative value appear greater than or equal to an unsigned positive value).
+    Called automatically upon a comparison for ordering using one of the
+    operators `<`, `<=`, `>`, or `>=`. In case the comparison is erroneous (i.e.
+    it would make a signed negative value appear greater than or equal to an
+    unsigned positive value), then a warning message is printed to `stderr`.
 
     Params:
     lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
       the operator is `Checked!int`
     rhs = The right-hand side type involved in the operator
 
-    Returns: $(D lhs < rhs ? -1 : lhs > rhs)
+    Returns: In all cases, returns $(D lhs < rhs ? -1 : lhs > rhs). The result
+    is  not autocorrected in case of an erroneous comparison.
 
     */
-    auto onBadOpCmp(Lhs, Rhs)(Lhs lhs, Rhs rhs)
+    int hookOpCmp(Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        stderr.writefln("Erroneous ordering comparison: %s(%s) and %s(%s)",
-            Lhs.stringof, lhs, Rhs.stringof, rhs);
-        return lhs < rhs ? -1 : lhs > rhs;
+        bool error;
+        auto result = opChecked!"cmp"(lhs, rhs, error);
+        if (error)
+        {
+            stderr.writefln("Erroneous ordering comparison: %s(%s) and %s(%s)",
+                Lhs.stringof, lhs, Rhs.stringof, rhs);
+            return lhs < rhs ? -1 : lhs > rhs;
+        }
+        return result;
+    }
+
+    ///
+    unittest
+    {
+        auto x = checked!Warn(-42);
+        // Passes
+        assert(x <= -42);
+        // Passes but prints a warning
+        // assert(x <= uint(-42));
     }
 
     /**
@@ -1267,29 +1560,16 @@ struct ProperCompare
             else
                 return lhs == rhs;
         }
-        else static if (valueConvertible!(L, C) && valueConvertible!(R, C))
-        {
-            // Values are converted to R before comparison, cool.
-            return lhs == rhs;
-        }
         else
         {
-            static assert(isUnsigned!C);
-            static assert(isUnsigned!L != isUnsigned!R);
-            if (lhs != rhs) return false;
-            // R(lhs) and R(rhs) have the same bit pattern, yet may be
-            // different due to signedness change.
-            static if (!isUnsigned!R)
+            bool error;
+            auto result = opChecked!"=="(lhs, rhs, error);
+            if (error)
             {
-                if (rhs >= 0)
-                    return true;
+                // Only possible error is a wrong "true"
+                return false;
             }
-            else
-            {
-                if (lhs >= 0)
-                    return true;
-            }
-            return false;
+            return result;
         }
     }
 
@@ -1455,32 +1735,16 @@ static:
         x = checked!WithNaN(-422);
         assert((cast(byte) x) == -128);
         assert(cast(short) x == -422);
-    }
-
-    /**
-    Unconditionally returns `WithNaN.defaultValue!Lhs` for all `opAssign`
-    failures.
-
-    Params:
-    Rhs = The right-hand side type in the assignment
-    T = The bound type (value of the bound is not used)
-
-    Returns: `WithNaN.defaultValue!Lhs`
-    */
-    T onLowerBound(Rhs, T)(Rhs, T)
-    {
-        return defaultValue!T;
-    }
-    /// ditto
-    T onUpperBound(Rhs, T)(Rhs, T)
-    {
-        return defaultValue!T;
+        assert(cast(bool) x);
+        x = x.init; // set back to NaN
+        assert(x != true);
+        assert(x != false);
     }
 
     /**
 
-    Returns `WithNaN.defaultValue!Lhs` if $(D lhs == WithNaN.defaultValue!Lhs),
-    $(D lhs == rhs) otherwise.
+    Returns `false` if $(D lhs == WithNaN.defaultValue!Lhs), $(D lhs == rhs)
+    otherwise.
 
     Params:
     lhs = The left-hand side of the comparison (`Lhs` is the first argument to
@@ -1583,6 +1847,7 @@ static:
         assert(x.isNaN);
         x = 1;
         assert(!x.isNaN);
+        x = -x;
         ++x;
         assert(!x.isNaN);
     }
@@ -1617,6 +1882,15 @@ static:
         return defaultValue!Result;
     }
 
+    ///
+    unittest
+    {
+        Checked!(int, WithNaN) x;
+        assert((x + 1).isNaN);
+        x = 100;
+        assert(!(x + 1).isNaN);
+    }
+
     /**
     Defines hooks for binary operators `+`, `-`, `*`, `/`, `%`, `^^`, `&`, `|`,
      `^`, `<<`, `>>`, and `>>>` for cases where a `Checked` object is the
@@ -1645,6 +1919,14 @@ static:
             if (!error) return result;
         }
         return defaultValue!Result;
+    }
+    ///
+    unittest
+    {
+        Checked!(int, WithNaN) x;
+        assert((1 + x).isNaN);
+        x = 100;
+        assert(!(1 + x).isNaN);
     }
 
     /**
@@ -1829,6 +2111,15 @@ static:
     {
         return bound;
     }
+    ///
+    unittest
+    {
+        auto x = checked!Saturate(short(100));
+        x += 33000;
+        assert(x == short.max);
+        x -= 70000;
+        assert(x == short.min);
+    }
 
     /**
 
@@ -1866,17 +2157,30 @@ static:
         else static if (x == "*")
             return (lhs >= 0) == (rhs >= 0) ? Lhs.max : Lhs.min;
         else static if (x == "^^")
-            return lhs & 1 ? Lhs.max : Lhs.min;
+            return lhs > 0 || !(rhs & 1) ? Lhs.max : Lhs.min;
         else static if (x == "-")
             return rhs >= 0 ? Lhs.min : Lhs.max;
         else static if (x == "/" || x == "%")
             return Lhs.max;
         else static if (x == "<<")
-            return x >= 0 ? Lhs.max : 0;
+            return rhs >= 0 ? Lhs.max : 0;
         else static if (x == ">>" || x == ">>>")
             return rhs >= 0 ? 0 : Lhs.max;
         else
-            return cast(Lhs) (mixin("lhs" ~ x ~ "rhs"));
+            static assert(false);
+    }
+    ///
+    unittest
+    {
+        assert(checked!Saturate(int.max) + 1 == int.max);
+        import std.stdio; writeln(checked!Saturate(100) ^^ 10);
+        assert(checked!Saturate(100) ^^ 10 == int.max);
+        assert(checked!Saturate(-100) ^^ 10 == int.max);
+        assert(checked!Saturate(100) / 0 == int.max);
+        assert(checked!Saturate(100) << -1 == 0);
+        assert(checked!Saturate(100) << 33 == int.max);
+        assert(checked!Saturate(100) >> -1 == int.max);
+        assert(checked!Saturate(100) >> 33 == 0);
     }
 }
 
@@ -1896,32 +2200,16 @@ unittest
 }
 
 /*
-Yields `true` if `T1` is "value convertible" (using terminology from C) to
-`T2`, where the two are integral types. That is, all of values in `T1` are
-also in `T2`. For example `int` is value convertible to `long` but not to
-`uint` or `ulong`.
+Yields `true` if `T1` is "value convertible" (by C's "value preserving" rule,
+see $(HTTP c-faq.com/expr/preservingrules.html)) to `T2`, where the two are
+integral types. That is, all of values in `T1` are also in `T2`. For example
+`int` is value convertible to `long` but not to `uint` or `ulong`.
 */
-/*
 private enum valueConvertible(T1, T2) = isIntegral!T1 && isIntegral!T2 &&
     is(T1 : T2) && (
         isUnsigned!T1 == isUnsigned!T2 || // same signedness
         !isUnsigned!T2 && T2.sizeof > T1.sizeof // safely convertible
     );
-*/
-template valueConvertible(T1, T2)
-{
-    static if (!isIntegral!T1 || !isIntegral!T2)
-    {
-        enum bool valueConvertible = false;
-    }
-    else
-    {
-        enum bool valueConvertible = is(T1 : T2) && (
-            isUnsigned!T1 == isUnsigned!T2 || // same signedness
-            !isUnsigned!T2 && T2.sizeof > T1.sizeof // safely convertible
-        );
-    }
-}
 
 /**
 
@@ -1949,14 +2237,67 @@ error = The error indicator (assigned `true` in case there's an error)
 Returns:
 The result of the operation, which is the same as the built-in operator
 */
-typeof(L() + R()) opChecked(string x, L, R)(const L lhs, const R rhs,
-    ref bool error)
+typeof(mixin(x == "cmp" ? "0" : ("L() " ~ x ~ " R()")))
+opChecked(string x, L, R)(const L lhs, const R rhs, ref bool error)
 if (isIntegral!L && isIntegral!R)
 {
-    alias Result = typeof(lhs + rhs);
+    static if (x == "cmp")
+        alias Result = int;
+    else
+        alias Result = typeof(mixin("L() " ~ x ~ " R()"));
+
     import core.checkedint;
     import std.algorithm.comparison : among;
-    static if (x.among("<<", ">>", ">>>"))
+    static if (x == "==")
+    {
+        alias C = typeof(lhs + rhs);
+        static if (valueConvertible!(L, C) && valueConvertible!(R, C))
+        {
+            // Values are converted to R before comparison, cool.
+            return lhs == rhs;
+        }
+        else
+        {
+            static assert(isUnsigned!C);
+            static assert(isUnsigned!L != isUnsigned!R);
+            if (lhs != rhs) return false;
+            // R(lhs) and R(rhs) have the same bit pattern, yet may be
+            // different due to signedness change.
+            static if (!isUnsigned!R)
+            {
+                if (rhs >= 0)
+                    return true;
+            }
+            else
+            {
+                if (lhs >= 0)
+                    return true;
+            }
+            error = true;
+            return true;
+        }
+    }
+    else static if (x == "cmp")
+    {
+        alias C = typeof(lhs + rhs);
+        static if (!valueConvertible!(L, C) || !valueConvertible!(R, C))
+        {
+            static assert(isUnsigned!C);
+            static assert(isUnsigned!L != isUnsigned!R);
+            if (!isUnsigned!L && lhs < 0)
+            {
+                error = true;
+                return -1;
+            }
+            if (!isUnsigned!R && rhs < 0)
+            {
+                error = true;
+                return 1;
+            }
+        }
+        return lhs < rhs ? -1 : lhs > rhs;
+    }
+    else static if (x.among("<<", ">>", ">>>"))
     {
         // Handle shift separately from all others. The test below covers
         // negative rhs as well.
@@ -2078,7 +2419,7 @@ if (isIntegral!L && isIntegral!R)
     debug assert(false);
 fail:
     error = true;
-    return 0;
+    return Result(0);
 }
 
 ///
@@ -2125,6 +2466,10 @@ unittest
     assert(opChecked!"/"(-6, 2u, overflow) == 0 && overflow);
     overflow = false;
     assert(opChecked!"/"(-6, 0u, overflow) == 0 && overflow);
+    overflow = false;
+    assert(opChecked!"cmp"(0u, -6, overflow) == 1 && overflow);
+    overflow = false;
+    assert(opChecked!"|"(1, 2, overflow) == 3 && !overflow);
 }
 
 /*
@@ -2504,6 +2849,12 @@ unittest
         }
     }
     auto x2 = Checked!(int, Hook2)(-100);
+    assert(x2 != x1);
+    // For coverage: lhs has no hookOpEquals, rhs does
+    assert(Checked!(uint, void)(100u) != x2);
+    // For coverage: different types, neither has a hookOpEquals
+    assert(Checked!(uint, void)(100u) == Checked!(int, void*)(100));
+    assert(x2.hook.calls == 0);
     assert(x2 != -100);
     assert(x2.hook.calls == 1);
     assert(x2 != cast(uint) -100);
