@@ -1151,8 +1151,9 @@ unittest
 // Throw
 /**
 
-Force all integral errors to fail by printing an error message to `stderr` and
-then abort the program. `Abort` is the default second argument for `Checked`.
+Force all integral errors to fail by throwing an exception of type
+`Throw.CheckFailure`. The message coming with the error is similar to the one
+printed by `Warn`.
 
 */
 struct Throw
@@ -1199,8 +1200,8 @@ struct Throw
     bound = The value of the bound being violated
 
     Returns: Nominally the result is the desired value of the operator, which
-    will be forwarded as result. For `Abort`, the function never returns because
-    it aborts the program.
+    will be forwarded as result. For `Throw`, the function never returns because
+    it throws.
 
     */
     static T onLowerBound(Rhs, T)(Rhs rhs, T bound)
@@ -1248,7 +1249,7 @@ struct Throw
     Called automatically upon a comparison for ordering using one of the
     operators `<`, `<=`, `>`, or `>=`. In case the comparison is erroneous (i.e.
     it would make a signed negative value appear greater than or equal to an
-    unsigned positive value), then application is terminated with `assert(0)`.
+    unsigned positive value), throws a `Throw.CheckFailure` exception.
     Otherwise, the three-state result is returned (positive if $(D lhs > rhs),
     negative if $(D lhs < rhs), `0` otherwise).
 
@@ -1286,8 +1287,8 @@ struct Throw
     rhs = The right-hand side type involved in the operator
 
     Returns: Nominally the result is the desired value of the operator, which
-    will be forwarded as result. For `Abort`, the function never returns because
-    it aborts the program.
+    will be forwarded as result. For `Throw`, the function never returns because
+    it throws an exception.
 
     */
     static typeof(~Lhs()) onOverflow(string x, Lhs)(Lhs lhs)
