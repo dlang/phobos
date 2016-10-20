@@ -33,9 +33,9 @@ template BacktrackingMatcher(bool CTregex)
         const(Bytecode)[] ir;
         uint ngroup;
         uint flags;
-        const(Interval[])[] charsets;
-        const(CharMatcher)[] matchers;
-        const(BitTable)[] filters;
+        const(Interval[])* charsets;
+        const(CharMatcher)* matchers;
+        const(BitTable)* filters;
         const Kickstart!Char kickstart;
         static if (CTregex)
             MatchFn nativeFn; //native code for that program
@@ -178,9 +178,9 @@ template BacktrackingMatcher(bool CTregex)
         {
             kickstart = program.kickstart;
             ir = program.ir;
-            charsets = program.charsets;
-            filters = program.filters;
-            matchers = program.matchers;
+            charsets = program.charsets.ptr;
+            filters = program.filters.ptr;
+            matchers = program.matchers.ptr;
             ngroup = program.ngroup;
             flags = regexFlags;
             s = stream;
