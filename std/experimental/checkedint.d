@@ -1625,6 +1625,7 @@ unittest
 {
     alias opEqualsProper = ProperCompare.hookOpEquals;
     assert(opEqualsProper(42, 42));
+    assert(opEqualsProper(42.0, 42.0));
     assert(opEqualsProper(42u, 42));
     assert(opEqualsProper(42, 42u));
     assert(-1 == 4294967295u);
@@ -1851,6 +1852,13 @@ static:
         x = -x;
         ++x;
         assert(!x.isNaN);
+    }
+
+    unittest // for coverage
+    {
+        Checked!(uint, WithNaN) y;
+        ++y;
+        assert(y.isNaN);
     }
 
     /**
