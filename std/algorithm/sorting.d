@@ -2947,10 +2947,11 @@ auto topN(alias less = "a < b",
         // Workaround for https://issues.dlang.org/show_bug.cgi?id=16528
         // Safety checks: enumerate all potentially unsafe generic primitives
         // then use a @trusted implementation.
+        r = r[0 .. $];
         auto b = binaryFun!less(r[0], r[$ - 1]);
         import std.algorithm.mutation : swapAt;
         r.swapAt(size_t(0), size_t(0));
-        static assert(is(typeof(r.length) == size_t));
+        size_t unused = r.length;
         pivotPartition!less(r, 0);
     }
     bool useSampling = true;
