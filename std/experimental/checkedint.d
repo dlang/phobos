@@ -33,32 +33,31 @@ This module provides a few predefined hooks (below) that add useful behavior to
 `Checked`:
 
 $(UL
-
 $(LI $(LREF Abort) fails every incorrect operation with a message to $(REF
 stderr, std, stdio) followed by a call to `assert(0)`. It is the default
 second parameter, i.e. `Checked!short` is the same as $(D Checked!(short,
-Abort)).)
-
+Abort)).
+)
 $(LI $(LREF Warn) prints incorrect operations to $(REF stderr, std, stdio) but
-otherwise preserves the built-in behavior.)
-
+otherwise preserves the built-in behavior.
+)
 $(LI $(LREF ProperCompare) fixes the comparison operators `==`, `!=`, `<`, `<=`, `>`,
 and `>=` to return correct results in all circumstances, at a slight cost in
     efficiency. For example, $(D Checked!(uint, ProperCompare)(1) > -1) is `true`,
 which is not the case for the built-in comparison. Also, comparing numbers for
 equality with floating-point numbers only passes if the integral can be
 converted to the floating-point number precisely, so as to preserve transitivity
-of equality.)
-
+of equality.
+)
 $(LI $(LREF WithNaN) reserves a special "Not a Number" value akin to the homonym
 value reserved for floating-point values. Once a $(D Checked!(X, WithNaN)) gets
-this special value, it preserves and propagates it until reassigned.)
-
+this special value, it preserves and propagates it until reassigned.
+)
 $(LI $(LREF Saturate) implements saturating arithmetic, i.e. $(D Checked!(int,
 Saturate)) "stops" at `int.max` for all operations that would cause an `int` to
 overflow toward infinity, and at `int.min` for all operations that would
-correspondingly overflow toward negative infinity.)
-
+correspondingly overflow toward negative infinity.
+)
 )
 
 These policies may be used alone, e.g. $(D Checked!(uint, WithNaN)) defines a
@@ -68,7 +67,6 @@ checked integral emulates an actual integral, which means another checked
 integral can be built on top of it. Some combinations of interest include:
 
 $(UL
-
 $(LI $(D Checked!(Checked!int, ProperCompare)) defines an `int` with fixed
 comparison operators that will fail with `assert(0)` upon overflow. (Recall that
 `Abort` is the default policy.) The order in which policies are combined is
@@ -76,14 +74,14 @@ important because the outermost policy (`ProperCompare` in this case) has the
 first crack at intercepting an operator. The converse combination $(D
 Checked!(Checked!(int, ProperCompare))) is meaningless because `Abort` will
 intercept comparison and will fail without giving `ProperCompare` a chance to
-intervene.)
-
+intervene.
+)
 $(LI $(D Checked!(Checked!(int, ProperCompare), WithNaN)) defines an `int`-like
 type that supports a NaN value. For values that are not NaN, comparison works
 properly. Again the composition order is important; $(D Checked!(Checked!(int,
 WithNaN), ProperCompare)) does not have good semantics because `ProperCompare`
-intercepts comparisons before the numbers involved are tested for NaN.)
-
+intercepts comparisons before the numbers involved are tested for NaN.
+)
 )
 
 The hook's members are looked up statically in a Design by Introspection manner
@@ -93,49 +91,48 @@ In the table, `hook` is an alias for `Hook` if the type `Hook` does not
 introduce any state, or an object of type `Hook` otherwise.
 
 $(TABLE ,
-
-$(TR $(TH `Hook` member) $(TH Semantics in $(D Checked!(T, Hook))))
-
+$(TR $(TH `Hook` member) $(TH Semantics in $(D Checked!(T, Hook)))
+)
 $(TR $(TD `defaultValue`) $(TD If defined, `Hook.defaultValue!T` is used as the
-default initializer of the payload.))
-
+default initializer of the payload.)
+)
 $(TR $(TD `min`) $(TD If defined, `Hook.min!T` is used as the minimum value of
-the payload.))
-
+the payload.)
+)
 $(TR $(TD `max`) $(TD If defined, `Hook.max!T` is used as the maximum value of
-the payload.))
-
+the payload.)
+)
 $(TR $(TD `hookOpCast`) $(TD If defined, `hook.hookOpCast!U(get)` is forwarded
-to unconditionally when the payload is to be cast to type `U`.))
-
+to unconditionally when the payload is to be cast to type `U`.)
+)
 $(TR $(TD `onBadCast`) $(TD If defined and `hookOpCast` is $(I not) defined,
 `onBadCast!U(get)` is forwarded to when the payload is to be cast to type `U`
-and the cast would lose information or force a change of sign.))
-
+and the cast would lose information or force a change of sign.)
+)
 $(TR $(TD `hookOpEquals`) $(TD If defined, $(D hook.hookOpEquals(get, rhs)) is
 forwarded to unconditionally when the payload is compared for equality against
-value `rhs` of integral, floating point, or Boolean type.))
-
+value `rhs` of integral, floating point, or Boolean type.)
+)
 $(TR $(TD `hookOpCmp`) $(TD If defined, $(D hook.hookOpCmp(get, rhs)) is
 forwarded to unconditionally when the payload is compared for ordering against
-value `rhs` of integral, floating point, or Boolean type.))
-
+value `rhs` of integral, floating point, or Boolean type.)
+)
 $(TR $(TD `hookOpUnary`) $(TD If defined, `hook.hookOpUnary!op(get)` (where `op`
 is the operator symbol) is forwarded to for unary operators `-` and `~`. In
 addition, for unary operators `++` and `--`, `hook.hookOpUnary!op(payload)` is
 called, where `payload` is a reference to the value wrapped by `Checked` so the
-hook can change it.))
-
+hook can change it.)
+)
 $(TR $(TD `hookOpBinary`) $(TD If defined, $(D hook.hookOpBinary!op(get, rhs))
 (where `op` is the operator symbol and `rhs` is the right-hand side operand) is
 forwarded to unconditionally for binary operators `+`,  `-`, `*`, `/`, `%`,
-`^^`, `&`, `|`, `^`, `<<`, `>>`, and `>>>`.))
-
+`^^`, `&`, `|`, `^`, `<<`, `>>`, and `>>>`.)
+)
 $(TR $(TD `hookOpBinaryRight`) $(TD If defined, $(D
 hook.hookOpBinaryRight!op(lhs, get)) (where `op` is the operator symbol and
 `lhs` is the left-hand side operand) is forwarded to unconditionally for binary
-operators `+`,  `-`, `*`, `/`, `%`, `^^`, `&`, `|`, `^`, `<<`, `>>`, and `>>>`.))
-
+operators `+`,  `-`, `*`, `/`, `%`, `^^`, `&`, `|`, `^`, `<<`, `>>`, and `>>>`.)
+)
 $(TR $(TD `onOverflow`) $(TD If defined, `hook.onOverflow!op(get)` is forwarded
 to for unary operators that overflow but only if `hookOpUnary` is not defined.
 Unary `~` does not overflow; unary `-` overflows only when the most negative
@@ -143,23 +140,23 @@ value of a signed type is negated, and the result of the hook call is returned.
 When the increment or decrement operators overflow, the payload is assigned the
 result of `hook.onOverflow!op(get)`. When a binary operator overflows, the
 result of $(D hook.onOverflow!op(get, rhs)) is returned, but only if `Hook` does
-not define `hookOpBinary`.))
-
+not define `hookOpBinary`.)
+)
 $(TR $(TD `hookOpOpAssign`) $(TD If defined, $(D hook.hookOpOpAssign!op(payload,
 rhs)) (where `op` is the operator symbol and `rhs` is the right-hand side
 operand) is forwarded to unconditionally for binary operators `+=`,  `-=`, `*=`, `/=`, `%=`,
-`^^=`, `&=`, `|=`, `^=`, `<<=`, `>>=`, and `>>>=`.))
-
+`^^=`, `&=`, `|=`, `^=`, `<<=`, `>>=`, and `>>>=`.)
+)
 $(TR $(TD `onLowerBound`) $(TD If defined, $(D hook.onLowerBound(value, bound))
 (where `value` is the value being assigned) is forwarded to when the result of
 binary operators `+=`,  `-=`, `*=`, `/=`, `%=`, `^^=`, `&=`, `|=`, `^=`, `<<=`, `>>=`,
-and `>>>=` is smaller than the smallest value representable by `T`.))
-
+and `>>>=` is smaller than the smallest value representable by `T`.)
+)
 $(TR $(TD `onUpperBound`) $(TD If defined, $(D hook.onUpperBound(value, bound))
 (where `value` is the value being assigned) is forwarded to when the result of
 binary operators `+=`,  `-=`, `*=`, `/=`, `%=`, `^^=`, `&=`, `|=`, `^=`, `<<=`, `>>=`,
-and `>>>=` is larger than the largest value representable by `T`.))
-
+and `>>>=` is larger than the largest value representable by `T`.)
+)
 )
 
 */
@@ -2182,7 +2179,6 @@ static:
     unittest
     {
         assert(checked!Saturate(int.max) + 1 == int.max);
-        import std.stdio; writeln(checked!Saturate(100) ^^ 10);
         assert(checked!Saturate(100) ^^ 10 == int.max);
         assert(checked!Saturate(-100) ^^ 10 == int.max);
         assert(checked!Saturate(100) / 0 == int.max);
