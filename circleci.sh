@@ -3,6 +3,7 @@
 set -uexo pipefail
 
 HOST_DMD_VER=2.068.2 # same as in dmd/src/posix.mak
+DSCANNER_DMD_VER=2.071.2 # dscanner needs a more up-to-date version
 CURL_USER_AGENT="CirleCI $(curl --version | head -n 1)"
 N=2
 
@@ -75,8 +76,9 @@ setup_repos()
 # verify style guide
 style()
 {
-    # load dmd to build dscanner
-    source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
+    # dscanner needs a more up-to-date DMD version
+    source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$DSCANNER_DMD_VER --activate)"
+
     make -f posix.mak style
 }
 
