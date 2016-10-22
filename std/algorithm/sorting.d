@@ -2948,10 +2948,12 @@ auto topN(alias less = "a < b",
         // Safety checks: enumerate all potentially unsafe generic primitives
         // then use a @trusted implementation.
         r = r[0 .. $];
+        r = r[0 .. $ - 1];
         auto b = binaryFun!less(r[0], r[$ - 1]);
         import std.algorithm.mutation : swapAt;
         r.swapAt(size_t(0), size_t(0));
-        size_t unused = r.length;
+        auto len = r.length;
+        static assert(is(typeof(len) == size_t));
         pivotPartition!less(r, 0);
     }
     bool useSampling = true;
