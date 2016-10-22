@@ -641,7 +641,7 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
             {
                 import std.algorithm.searching;
                 assert(r[0 .. lo].all!(x => !lt(p, x)));
-                assert(r[hi + 1 .. $].all!(x => !lt(x, p)));
+                assert(r[hi + 1 .. r.length].all!(x => !lt(x, p)));
             }
             do ++lo; while (lt(r[lo], p));
             r[hi] = r[lo];
@@ -2947,9 +2947,7 @@ auto topN(alias less = "a < b",
         // Workaround for https://issues.dlang.org/show_bug.cgi?id=16528
         // Safety checks: enumerate all potentially unsafe generic primitives
         // then use a @trusted implementation.
-        r = r[0 .. $];
-        r = r[0 .. $ - 1];
-        auto b = binaryFun!less(r[0], r[$ - 1]);
+        auto b = binaryFun!less(r[0], r[r.length - 1]);
         import std.algorithm.mutation : swapAt;
         r.swapAt(size_t(0), size_t(0));
         auto len = r.length;
@@ -3056,7 +3054,7 @@ void topNImpl(alias less, R)(R r, size_t n, ref bool useSampling)
         else
         {
             n -= pivot + 1;
-            r = r[pivot + 1 .. $];
+            r = r[pivot + 1 .. r.length];
         }
     }
 }
@@ -3178,7 +3176,7 @@ out
 {
     import std.algorithm.searching : all;
     assert(r[0 .. pivot + 1].all!(x => !lp(r[pivot], x)));
-    assert(r[pivot + 1 .. $].all!(x => !lp(x, r[pivot])));
+    assert(r[pivot + 1 .. r.length].all!(x => !lp(x, r[pivot])));
 }
 body
 {
@@ -3206,7 +3204,7 @@ body
     assert(r[lo .. pivot + 1].all!(x => !lp(r[pivot], x)));
     assert(r[pivot + 1 .. hi + 1].all!(x => !lp(x, r[pivot])));
     assert(r[0 .. left].all!(x => !lp(r[pivot], x)));
-    assert(r[rite + 1 .. $].all!(x => !lp(x, r[pivot])));
+    assert(r[rite + 1 .. r.length].all!(x => !lp(x, r[pivot])));
 
     immutable oldPivot = pivot;
 
