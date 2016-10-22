@@ -710,7 +710,6 @@ Compares two ranges for equality, as defined by predicate $(D pred)
 */
 template equal(alias pred = "a == b")
 {
-    /// Internal template - returns true if `R.empty == true`.
     enum isEmptyRange(R) =
         isInputRange!R && __traits(compiles, {static assert(R.empty);});
 
@@ -721,9 +720,6 @@ template equal(alias pred = "a == b")
     different element types, as long as $(D pred(r1.front, r2.front))
     evaluates to $(D bool).
     Performs $(BIGOH min(r1.length, r2.length)) evaluations of $(D pred).
-
-    Alternatively, if `Range1` or `Range2` satisfy $(LREF isEmptyRange),
-    `pred(r1.front, r2.front)` will $(B not) be evaluated.
 
     Params:
         r1 = The first range to be compared.
@@ -738,8 +734,7 @@ template equal(alias pred = "a == b")
     +/
     bool equal(Range1, Range2)(Range1 r1, Range2 r2)
     if (isInputRange!Range1 && isInputRange!Range2 &&
-        (is(typeof(binaryFun!pred(r1.front, r2.front))) ||
-            isEmptyRange!Range1 || isEmptyRange!Range2))
+        is(typeof(binaryFun!pred(r1.front, r2.front))))
     {
         static assert(!(isInfinite!Range1 && isInfinite!Range2),
             "Both ranges are known to be infinite");
@@ -924,22 +919,19 @@ range of range (of range...) comparisons.
 
 @safe pure unittest
 {
-    struct R(T, bool _empty) {
+    struct R(bool _empty) {
         enum empty = _empty;
-        @property T front(){assert(0);}
+        @property char front(){assert(0);}
         void popFront(){assert(0);}
     }
-    alias I = R!(char, false);
-    // infinite R1 should have compatible elements even with R2.length defined
-    static assert(!__traits(compiles, I().equal([cast(void*)null])));
+    alias I = R!false;
     static assert(!__traits(compiles, I().equal(I())));
-    // strings have fixed length so don't compare elements
+    // strings have fixed length so don't need to compare elements
     assert(!I().equal("foo"));
     assert(!"bar".equal(I()));
 
-    alias E = R!(void*, true);
+    alias E = R!true;
     assert(E().equal(E()));
-    // incompatible front types should work with E
     assert(E().equal(""));
     assert("".equal(E()));
     assert(!E().equal("foo"));
