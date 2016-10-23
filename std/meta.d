@@ -1146,20 +1146,10 @@ template ApplyRight(alias Template, args...)
     alias ApplyRight(left...) = SmartAlias!(Template!(left, args));
 }
 
-private template SmartAlias(T...) {
-    static if (T.length == 1)
-    {
-        alias SmartAlias = Alias!T;
-    }
-    else
-    {
-        alias SmartAlias = AliasSeq!T;
-    }
-}
-
 ///
 @safe unittest
 {
+    // enum bool isImplicitlyConvertible(From, To)
     import std.traits : isImplicitlyConvertible;
 
     static assert(allSatisfy!(
@@ -1168,25 +1158,6 @@ private template SmartAlias(T...) {
 
     static assert(is(Filter!(ApplyRight!(isImplicitlyConvertible, short),
         ubyte, string, short, float, int) == AliasSeq!(ubyte, short)));
-}
-
-@safe unittest
-{
-    static assert(is(typeof({
-        alias T(T0, int a, double b, alias T1, string c) = AliasSeq!(T0, a, b, T1, c);
-        alias T0 = ApplyRight!(ApplyLeft, ApplyRight);
-        alias T1 = T0!ApplyLeft;
-        alias T2 = T1!T;
-        alias T3 = T2!(3, "foo");
-        alias T4 = T3!(short, 3, 3.3);
-        static assert(Pack!T4.equals!(short, 3, 3.3, 3, "foo"));
-
-        import std.traits : isImplicitlyConvertible;
-        alias U1 = ApplyLeft!(ApplyRight, isImplicitlyConvertible);
-        alias U2 = U1!int;
-        enum U3 = U2!short;
-        static assert(U3);
-    })));
 }
 
 ///
@@ -1241,6 +1212,37 @@ private template SmartAlias(T...) {
     static assert(is(staticMap!(ApplyRight!(
         SetFunctionAttributes, "D", FunctionAttribute.safe),
         typeof(&foo), typeof(&bar)) == SafeFunctions));
+}
+
+private template SmartAlias(T...)
+{
+    static if (T.length == 1)
+    {
+        alias SmartAlias = Alias!T;
+    }
+    else
+    {
+        alias SmartAlias = AliasSeq!T;
+    }
+}
+
+@safe unittest
+{
+    static assert(is(typeof({
+        alias T(T0, int a, double b, alias T1, string c) = AliasSeq!(T0, a, b, T1, c);
+        alias T0 = ApplyRight!(ApplyLeft, ApplyRight);
+        alias T1 = T0!ApplyLeft;
+        alias T2 = T1!T;
+        alias T3 = T2!(3, "foo");
+        alias T4 = T3!(short, 3, 3.3);
+        static assert(Pack!T4.equals!(short, 3, 3.3, 3, "foo"));
+
+        import std.traits : isImplicitlyConvertible;
+        alias U1 = ApplyLeft!(ApplyRight, isImplicitlyConvertible);
+        alias U2 = U1!int;
+        enum U3 = U2!short;
+        static assert(U3);
+    })));
 }
 
 /**
