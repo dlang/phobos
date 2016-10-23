@@ -5,6 +5,9 @@ $(COMMENT Pending changelog for 2.073. This will get copied to dlang.org and
 )
 
 $(BUGSTITLE Library Changes,
+    $(LI Conversions from strings to number types using $(REF to, std,conv)
+        and $(REF parse, std,conv) were optimized. On average, integer types
+        are three times faster, and floating point types are 40% faster.)
 )
 
 $(BUGSTITLE Library Changes,

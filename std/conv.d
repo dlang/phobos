@@ -2553,34 +2553,53 @@ Target parse(Target, Source)(ref Source p)
         return new ConvException(text(msg, " for input \"", p, "\"."), fn, ln);
     }
 
+    // special cases for auto-decoding.
+    // Can't use std.utf.byCodeUnit because it copies
+    // the range instead of modifying in place
+    static auto customFront(ref Source r)
+    {
+        static if (isAutodecodableString!Source)
+            return r[0];
+        else
+            return r.front;
+    }
+
+    static void customPopFront(ref Source r)
+    {
+        static if (isAutodecodableString!Source)
+            r = r[1 .. $];
+        else
+            r.popFront;
+    }
+
     enforce(!p.empty, bailOut());
 
-    char sign = 0;                       /* indicating +                 */
-    switch (p.front)
+    bool sign = false;
+    switch (customFront(p))
     {
     case '-':
-        sign++;
-        p.popFront();
+        sign = true;
+        customPopFront(p);
         enforce(!p.empty, bailOut());
-        if (toLower(p.front) == 'i')
+        if (toLower(customFront(p)) == 'i')
             goto case 'i';
         enforce(!p.empty, bailOut());
         break;
     case '+':
-        p.popFront();
+        customPopFront(p);
         enforce(!p.empty, bailOut());
         break;
     case 'i': case 'I':
-        p.popFront();
+        customPopFront(p);
         enforce(!p.empty, bailOut());
-        if (toLower(p.front) == 'n')
+        if (toLower(customFront(p)) == 'n')
         {
-            p.popFront();
+            customPopFront(p);
             enforce(!p.empty, bailOut());
-            if (toLower(p.front) == 'f')
+            if (toLower(customFront(p)) == 'f')
             {
                 // 'inf'
-                p.popFront();
+                customPopFront(p);
                 return sign ? -Target.infinity : Target.infinity;
             }
         }
@@ -2589,16 +2608,16 @@ Target parse(Target, Source)(ref Source p)
     }
 
     bool isHex = false;
-    bool startsWithZero = p.front == '0';
+    bool startsWithZero = customFront(p) == '0';
     if (startsWithZero)
     {
-        p.popFront();
+        customPopFront(p);
         if (p.empty)
         {
             return (sign) ? -0.0 : 0.0;
         }
 
-        isHex = p.front == 'x' || p.front == 'X';
+        isHex = customFront(p) == 'x' || customFront(p) == 'X';
     }
 
     real ldval = 0.0;
@@ -2613,10 +2632,10 @@ Target parse(Target, Source)(ref Source p)
         int anydigits = 0;
         uint ndigits = 0;
 
-        p.popFront();
+        customPopFront(p);
         while (!p.empty)
         {
-            int i = p.front;
+            int i = customFront(p);
             while (isHexDigit(i))
             {
                 anydigits = 1;
@@ -2647,21 +2666,21 @@ Target parse(Target, Source)(ref Source p)
                     exp += 4;
                 }
                 exp -= dot;
-                p.popFront();
+                customPopFront(p);
                 if (p.empty)
                     break;
-                i = p.front;
+                i = customFront(p);
                 if (i == '_')
                 {
-                    p.popFront();
+                    customPopFront(p);
                     if (p.empty)
                         break;
-                    i = p.front;
+                    i = customFront(p);
                 }
             }
             if (i == '.' && !dot)
             {
-                p.popFront();
+                customPopFront(p);
                 dot = 4;
             }
             else
@@ -2680,20 +2699,20 @@ Target parse(Target, Source)(ref Source p)
         }
 
         enforce(anydigits, bailOut());
-        enforce(!p.empty && (p.front == 'p' || p.front == 'P'),
+        enforce(!p.empty && (customFront(p) == 'p' || customFront(p) == 'P'),
                 bailOut("Floating point parsing: exponent is required"));
         char sexp;
         int e;
 
         sexp = 0;
-        p.popFront();
+        customPopFront(p);
         if (!p.empty)
         {
-            switch (p.front)
+            switch (customFront(p))
             {
                 case '-':    sexp++;
                              goto case;
-                case '+':    p.popFront(); enforce(!p.empty,
+                case '+':    customPopFront(p); enforce(!p.empty,
                                 new ConvException("Error converting input"~
                                 " to floating point"));
                              break;
@@ -2702,13 +2721,13 @@ Target parse(Target, Source)(ref Source p)
         }
         ndigits = 0;
         e = 0;
-        while (!p.empty && isDigit(p.front))
+        while (!p.empty && isDigit(customFront(p)))
         {
             if (e < 0x7FFFFFFF / 10 - 10) // prevent integer overflow
             {
-                e = e * 10 + p.front - '0';
+                e = e * 10 + customFront(p) - '0';
             }
-            p.popFront();
+            customPopFront(p);
             ndigits = 1;
         }
         exp += (sexp) ? -e : e;
@@ -2806,17 +2825,17 @@ Target parse(Target, Source)(ref Source p)
     }
     else // not hex
     {
-        if (toUpper(p.front) == 'N' && !startsWithZero)
+        if (toUpper(customFront(p)) == 'N' && !startsWithZero)
         {
             // nan
-            p.popFront();
-            enforce(!p.empty && toUpper(p.front) == 'A',
+            customPopFront(p);
+            enforce(!p.empty && toUpper(customFront(p)) == 'A',
                    new ConvException("error converting input to floating point"));
-            p.popFront();
-            enforce(!p.empty && toUpper(p.front) == 'N',
+            customPopFront(p);
+            enforce(!p.empty && toUpper(customFront(p)) == 'N',
                    new ConvException("error converting input to floating point"));
             // skip past the last 'n'
-            p.popFront();
+            customPopFront(p);
             return typeof(return).nan;
         }
 
@@ -2824,7 +2843,7 @@ Target parse(Target, Source)(ref Source p)
 
         while (!p.empty)
         {
-            int i = p.front;
+            int i = customFront(p);
             while (isDigit(i))
             {
                 sawDigits = true;        /* must have at least 1 digit   */
@@ -2840,21 +2859,21 @@ Target parse(Target, Source)(ref Source p)
                     exp++;
                 }
                 exp -= dot;
-                p.popFront();
+                customPopFront(p);
                 if (p.empty)
                     break;
-                i = p.front;
+                i = customFront(p);
                 if (i == '_')
                 {
-                    p.popFront();
+                    customPopFront(p);
                     if (p.empty)
                         break;
-                    i = p.front;
+                    i = customFront(p);
                 }
             }
             if (i == '.' && !dot)
             {
-                p.popFront();
+                customPopFront(p);
                 dot++;
             }
             else
@@ -2864,15 +2883,15 @@ Target parse(Target, Source)(ref Source p)
         }
         enforce(sawDigits, new ConvException("no digits seen"));
     }
-    if (!p.empty && (p.front == 'e' || p.front == 'E'))
+    if (!p.empty && (customFront(p) == 'e' || customFront(p) == 'E'))
     {
         char sexp;
         int e;
 
         sexp = 0;
-        p.popFront();
+        customPopFront(p);
         enforce(!p.empty, new ConvException("Unexpected end of input"));
-        switch (p.front)
+        switch (customFront(p))
         {
             case '-':    sexp++;
                          goto case;
@@ -2882,13 +2901,13 @@ Target parse(Target, Source)(ref Source p)
         }
         bool sawDigits = 0;
         e = 0;
-        while (!p.empty && isDigit(p.front))
+        while (!p.empty && isDigit(customFront(p)))
         {
             if (e < 0x7FFFFFFF / 10 - 10)   // prevent integer overflow
             {
-                e = e * 10 + p.front - '0';
+                e = e * 10 + customFront(p) - '0';
             }
-            p.popFront();
+            customPopFront(p);
             sawDigits = 1;
         }
         exp += (sexp) ? -e : e;
