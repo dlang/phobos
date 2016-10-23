@@ -718,6 +718,46 @@ unittest
     assert(a == [0, 0, 0]);
 }
 
+private void[] allocateArray(Alloc)(ref Alloc alloc, size_t elemSize, size_t numElems)
+{
+    import core.checkedint : mulu;
+    bool overflow = false;
+    immutable size = mulu(elemSize, numElems, overflow);
+    if (overflow) return null;
+    return alloc.allocate(size);
+}
+
+private bool reallocateArray(Alloc)(ref Alloc alloc, ref void[] array, size_t elemSize, size_t numElems)
+{
+    import core.checkedint : mulu;
+    bool overflow = false;
+    immutable size = mulu(elemSize, numElems, overflow);
+    if (overflow) return false;
+    return alloc.reallocate(array, size);
+}
+
+nothrow @safe unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    auto arr = GCAllocator.instance.allocateArray(1, 10);
+    assert(arr !is null); // Assume we have some free memory to test
+    arr = GCAllocator.instance.allocateArray(size_t.max, size_t.max);
+    assert(arr is null);
+    immutable size_t elemSize = 1024 * 1024;
+    arr = GCAllocator.instance.allocateArray(elemSize, (size_t.max / elemSize) + 1);
+    assert(arr is null);
+}
+
+nothrow unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    void[] arr;
+    assert( GCAllocator.instance.reallocateArray(arr, 1, 10)); // Ditto
+    assert(!GCAllocator.instance.reallocateArray(arr, size_t.max, size_t.max));
+    immutable size_t elemSize = 1024 * 1024;
+    assert(!GCAllocator.instance.reallocateArray(arr, elemSize, (size_t.max / elemSize) + 1));
+}
+
 /**
 Create an array of $(D T) with $(D length) elements using $(D alloc). The array is either default-initialized, filled with copies of $(D init), or initialized with values fetched from `range`.
 
@@ -740,7 +780,7 @@ exception if the copy operation throws.
 T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
 {
     if (!length) return null;
-    auto m = alloc.allocate(T.sizeof * length);
+    auto m = alloc.allocateArray(T.sizeof, length);
     if (!m.ptr) return null;
     alias U = Unqual!T;
     return () @trusted { return cast(T[]) uninitializedFillDefault(cast(U[]) m); }();
@@ -808,7 +848,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
     auto ref T init)
 {
     if (!length) return null;
-    auto m = alloc.allocate(T.sizeof * length);
+    auto m = alloc.allocateArray(T.sizeof, length);
     if (!m.ptr) return null;
     auto result = () @trusted { return cast(T[]) m; } ();
     import std.traits : hasElaborateCopyConstructor;
@@ -950,7 +990,7 @@ if (isInputRange!R && !isInfinite!R)
             immutable length = range.save.walkLength;
 
         if (!length) return null;
-        auto m = alloc.allocate(T.sizeof * length);
+        auto m = alloc.allocateArray(T.sizeof, length);
         if (!m.ptr) return null;
         auto result = () @trusted { return cast(T[]) m; } ();
 
@@ -991,7 +1031,7 @@ if (isInputRange!R && !isInfinite!R)
     {
         // Estimated size
         size_t estimated = 8;
-        auto m = alloc.allocate(T.sizeof * estimated);
+        auto m = alloc.allocateArray(T.sizeof, estimated);
         if (!m.ptr) return null;
         auto result = () @trusted { return cast(T[]) m; } ();
 
@@ -1016,9 +1056,9 @@ if (isInputRange!R && !isInfinite!R)
             {
                 // Need to reallocate
                 static if (hasPurePostblit!T)
-                    auto success = () @trusted { return alloc.reallocate(m, T.sizeof * (estimated *= 2)); } ();
+                    auto success = () @trusted { return alloc.reallocateArray(m, T.sizeof, estimated *= 2); } ();
                 else
-                    auto success = alloc.reallocate(m, T.sizeof * (estimated *= 2));
+                    auto success = alloc.reallocateArray(m, T.sizeof, estimated *= 2);
                 if (!success)
                 {
                     bailout;
@@ -1034,9 +1074,9 @@ if (isInputRange!R && !isInfinite!R)
         {
             // Try to shrink memory, no harm if not possible
             static if (hasPurePostblit!T)
-                auto success = () @trusted { return alloc.reallocate(m, T.sizeof * initialized); } ();
+                auto success = () @trusted { return alloc.reallocateArray(m, T.sizeof, initialized); } ();
             else
-                auto success = alloc.reallocate(m, T.sizeof * initialized);
+                auto success = alloc.reallocateArray(m, T.sizeof, initialized);
             if (success)
                 result = () @trusted { return cast(T[]) m; } ();
         }
@@ -1278,7 +1318,7 @@ bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
     if (array is null) return false;
     immutable oldLength = array.length;
     void[] buf = array;
-    if (!alloc.reallocate(buf, buf.length + T.sizeof * delta)) return false;
+    if (!alloc.reallocateArray(buf, T.sizeof, oldLength + delta)) return false;
     array = cast(T[]) buf;
     array[oldLength .. $].uninitializedFillDefault;
     return true;
@@ -1303,9 +1343,9 @@ bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
 {
     if (!delta) return true;
     if (array is null) return false;
-    void[] buf = array;
-    if (!alloc.reallocate(buf, buf.length + T.sizeof * delta)) return false;
     immutable oldLength = array.length;
+    void[] buf = array;
+    if (!alloc.reallocateArray(buf, T.sizeof, oldLength + delta)) return false;
     array = cast(T[]) buf;
     scope(failure) array[oldLength .. $].uninitializedFillDefault;
     import std.algorithm.mutation : uninitializedFill;
@@ -1340,7 +1380,7 @@ if (isInputRange!R)
 
         // Reallocate support memory
         void[] buf = array;
-        if (!alloc.reallocate(buf, buf.length + T.sizeof * delta))
+        if (!alloc.reallocateArray(buf, T.sizeof, oldLength + delta))
         {
             return false;
         }
@@ -1460,7 +1500,7 @@ bool shrinkArray(T, Allocator)(auto ref Allocator alloc,
     }
 
     void[] buf = array;
-    if (!alloc.reallocate(buf, buf.length - T.sizeof * delta))
+    if (!alloc.reallocateArray(buf, T.sizeof, array.length - delta))
     {
         // urgh, at least fill back with default
         array[$ - delta .. $].uninitializedFillDefault;
