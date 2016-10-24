@@ -1367,6 +1367,88 @@ struct Slice(size_t _N, _Range)
         assert(slice.byElement.equal(only(1, 99, 5, 6)));
     }
 
+    static if (isPointer!PureRange)
+    {
+        static if (NSeq.length == 1)
+            private alias ConstThis = Slice!(N, const(Unqual!DeepElemType)*);
+        else
+            private alias ConstThis = Slice!(N, Range.ConstThis);
+
+        static if (!is(ConstThis == This))
+        {
+            /++
+            Implicit cast to const slices in case of underlaying range is a pointer.
+            +/
+            ref ConstThis toConst() const @trusted pure nothrow @nogc
+            {
+                pragma(inline, true);
+                return *cast(ConstThis*) &this;
+            }
+
+            /// ditto
+            alias toConst this;
+        }
+    }
+
+    static if (doUnittest)
+    ///
+    unittest
+    {
+        Slice!(2, double*) nn;
+        Slice!(2, immutable(double)*) ni;
+        Slice!(2, const(double)*) nc;
+
+        const Slice!(2, double*) cn;
+        const Slice!(2, immutable(double)*) ci;
+        const Slice!(2, const(double)*) cc;
+
+        immutable Slice!(2, double*) in_;
+        immutable Slice!(2, immutable(double)*) ii;
+        immutable Slice!(2, const(double)*) ic;
+
+        nc = nc; nc = cn; nc = in_;
+        nc = nc; nc = cc; nc = ic;
+        nc = ni; nc = ci; nc = ii;
+
+        void fun(size_t N, T)(Slice!(N, const(T)*) sl)
+        {
+            //...
+        }
+
+        fun(nn); fun(cn); fun(in_);
+        fun(nc); fun(cc); fun(ic);
+        fun(ni); fun(ci); fun(ii);
+    }
+
+    static if (doUnittest)
+    unittest
+    {
+        Slice!(2, Slice!(2, double*)) nn;
+        Slice!(2, Slice!(2, immutable(double)*)) ni;
+        Slice!(2, Slice!(2, const(double)*)) nc;
+
+        const Slice!(2, Slice!(2, double*)) cn;
+        const Slice!(2, Slice!(2, immutable(double)*)) ci;
+        const Slice!(2, Slice!(2, const(double)*)) cc;
+
+        immutable Slice!(2, Slice!(2, double*) )in_;
+        immutable Slice!(2, Slice!(2, immutable(double)*)) ii;
+        immutable Slice!(2, Slice!(2, const(double)*)) ic;
+
+        nc = nn; nc = cn; nc = in_;
+        nc = nc; nc = cc; nc = ic;
+        nc = ni; nc = ci; nc = ii;
+
+        void fun(size_t N, size_t M, T)(Slice!(N, Slice!(M, const(T)*)) sl)
+        {
+            //...
+        }
+
+        fun(nn); fun(cn); fun(in_);
+        fun(nc); fun(cc); fun(ic);
+        fun(ni); fun(ci); fun(ii);
+    }
+
     /++
     Returns:
         Pointer to the first element of a slice if slice is defined as `Slice!(N, T*)`
@@ -2020,7 +2102,7 @@ struct Slice(size_t _N, _Range)
                     do
                     {
                         static if (is(E == Unqual!ElemType))
-                            u.elems[rem] = r.front;
+                            u.elems[rem] = cast() r.front;
                         else
                         static if (__traits(compiles, r.front.toHash))
                             u.elems[rem] = r.front.toHash;
@@ -2066,7 +2148,7 @@ struct Slice(size_t _N, _Range)
                 foreach (k; Iota!(0, K))
                 {
                     static if (is(E == Unqual!ElemType))
-                        u.elems[k] = r.front;
+                        u.elems[k] = cast() r.front;
                     else
                     static if (__traits(compiles, r.front.toHash))
                         u.elems[k] = r.front.toHash;
