@@ -20,96 +20,6 @@ else
     alias alloc = Alloc.instance;
 }
 
-private struct SmallString(BaseStringCore)
-{
-    import std.traits;
-
-    enum size_t smallCapacity = 64 / C.sizeof - 1;
-    static assert(smallCapacity * C.sizeof >= BaseStringCore.sizeof);
-    alias C = typeof(*(BaseStringCore.init.payloadPtr));
-    alias K = Unqual!C;
-
-    // state {
-    union
-    {
-        size_t[64 / size_t.sizeof] _buffer_ = void;
-        struct
-        {
-            K[64 / K.sizeof - 1] _small = void;
-            ubyte _length = 0;
-        }
-    }
-    // } state
-
-    auto ref large() inout
-    {
-        return *cast(inout BaseStringCore*) &this;
-    }
-
-    this(const K[] data) immutable
-    {
-        if (data.length <= smallCapacity)
-        {
-            _small[0 .. data.length] = data;
-            _length = cast(ubyte) data.length;
-        }
-        else
-        {
-            import std.conv;
-            large.__ctor(data);
-            _length = _length.max;
-        }
-    }
-
-    this(this)
-    {
-        if (!isSmall) large.__postblit;
-    }
-
-    ~this()
-    {
-        if (!isSmall) large.__dtor;
-    }
-
-    private bool isSmall() const { return _length <= smallCapacity; }
-    private void forceLarge() { _length = _length.max; }
-    size_t length() const { return isSmall ? _length : large.length; }
-    size_t capacity() const
-    {
-        return isSmall ? smallCapacity : large.capacity;
-    }
-    auto payloadPtr() inout { return isSmall ? _small.ptr : large.payloadPtr; }
-
-    void forceLength(size_t len)
-    {
-        assert(len <= capacity);
-        if (isSmall) _length = cast(ubyte) len;
-        else large.forceLength(len);
-    }
-
-    void reserve(size_t newCapacity)
-    {
-        if (!isSmall)
-        {
-            // large to possibly larger
-            large.reserve(newCapacity);
-            return;
-        }
-        if (newCapacity <= smallCapacity) return;
-        // small to large
-        BaseStringCore t;
-        t.reserve(newCapacity);
-        assert(t.capacity > _small.length);
-        t.payloadPtr[0 .. _small.length] = _small[0 .. _small.length];
-        t.forceLength(_small.length);
-        import core.stdc.string;
-        memcpy(&large(), &t, t.sizeof);
-        import std.conv;
-        emplace(&t);
-        forceLarge;
-    }
-}
-
 private struct CowStringCore(C)
 {
     import std.traits;
@@ -303,9 +213,7 @@ if (isSomeChar!C)
 {
     import std.algorithm.comparison, std.algorithm.mutation, std.conv,
         std.range, std.traits;
-    //private alias K = Unqual!C;
 
-    //alias Core = SmallString!(CowStringCore!K);
     alias CoreT = CowStringCore;
     alias Core = CoreT!C;
     // state {
@@ -833,4 +741,95 @@ unittest
 
     import std.stdio;
     writeln(alloc.bytesUsed);
+}
+
+// Not yet finished, ignore
+private struct SmallString(BaseStringCore)
+{
+    import std.traits;
+
+    enum size_t smallCapacity = 64 / C.sizeof - 1;
+    static assert(smallCapacity * C.sizeof >= BaseStringCore.sizeof);
+    alias C = typeof(*(BaseStringCore.init.payloadPtr));
+    alias K = Unqual!C;
+
+    // state {
+    union
+    {
+        size_t[64 / size_t.sizeof] _buffer_ = void;
+        struct
+        {
+            K[64 / K.sizeof - 1] _small = void;
+            ubyte _length = 0;
+        }
+    }
+    // } state
+
+    auto ref large() inout
+    {
+        return *cast(inout BaseStringCore*) &this;
+    }
+
+    this(const K[] data) immutable
+    {
+        if (data.length <= smallCapacity)
+        {
+            _small[0 .. data.length] = data;
+            _length = cast(ubyte) data.length;
+        }
+        else
+        {
+            import std.conv;
+            large.__ctor(data);
+            _length = _length.max;
+        }
+    }
+
+    this(this)
+    {
+        if (!isSmall) large.__postblit;
+    }
+
+    ~this()
+    {
+        if (!isSmall) large.__dtor;
+    }
+
+    private bool isSmall() const { return _length <= smallCapacity; }
+    private void forceLarge() { _length = _length.max; }
+    size_t length() const { return isSmall ? _length : large.length; }
+    size_t capacity() const
+    {
+        return isSmall ? smallCapacity : large.capacity;
+    }
+    auto payloadPtr() inout { return isSmall ? _small.ptr : large.payloadPtr; }
+
+    void forceLength(size_t len)
+    {
+        assert(len <= capacity);
+        if (isSmall) _length = cast(ubyte) len;
+        else large.forceLength(len);
+    }
+
+    void reserve(size_t newCapacity)
+    {
+        if (!isSmall)
+        {
+            // large to possibly larger
+            large.reserve(newCapacity);
+            return;
+        }
+        if (newCapacity <= smallCapacity) return;
+        // small to large
+        BaseStringCore t;
+        t.reserve(newCapacity);
+        assert(t.capacity > _small.length);
+        t.payloadPtr[0 .. _small.length] = _small[0 .. _small.length];
+        t.forceLength(_small.length);
+        import core.stdc.string;
+        memcpy(&large(), &t, t.sizeof);
+        import std.conv;
+        emplace(&t);
+        forceLarge;
+    }
 }
