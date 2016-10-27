@@ -1969,19 +1969,19 @@ unittest
 }
 
 /**
- * Applies a delegate or function to the given Algebraic depending on the held type,
+ * Applies a delegate or function to the given $(LREF Algebraic) depending on the held type,
  * ensuring that all types are handled by the visiting functions.
  *
  * The delegate or function having the currently held value as parameter is called
  * with $(D variant)'s current value. Visiting handlers are passed
  * in the template parameter list.
- * It is statically ensured that all types of
+ * It is statically ensured that all held types of
  * $(D variant) are handled across all handlers.
  * $(D visit) allows delegates and static functions to be passed
  * as parameters.
  *
  * If a function without parameters is specified, this function is called
- * when variant doesn't hold a value. Exactly one parameter-less function
+ * when `variant` doesn't hold a value. Exactly one parameter-less function
  * is allowed.
  *
  * Duplicate overloads matching the same type in one of the visitors are disallowed.
@@ -1991,13 +1991,14 @@ unittest
  * Throws: If no parameter-less, error function is specified:
  * $(D VariantException) if $(D variant) doesn't hold a value.
  */
-template visit(Handler ...)
-    if (Handler.length > 0)
+template visit(Handlers ...)
+    if (Handlers.length > 0)
 {
+    ///
     auto visit(VariantType)(VariantType variant)
         if (isAlgebraic!VariantType)
     {
-        return visitImpl!(true, VariantType, Handler)(variant);
+        return visitImpl!(true, VariantType, Handlers)(variant);
     }
 }
 
@@ -2083,7 +2084,7 @@ unittest
 }
 
 /**
- * Behaves as $(D visit) but doesn't enforce that all types are handled
+ * Behaves as $(LREF visit) but doesn't enforce that all types are handled
  * by the visiting functions.
  *
  * If a parameter-less function is specified it is called when
@@ -2092,18 +2093,19 @@ unittest
  *
  * Returns: The return type of tryVisit is deduced from the visiting functions and must be
  * the same across all overloads.
- * Throws: If no parameter-less, error function is specified: $(D VariantException) if
- *         $(D variant) doesn't hold a value or
+ * Throws: $(D VariantException) if no parameter-less fallback function is specified.
+ *         Thrown when $(D variant) doesn't hold a value or
  *         if $(D variant) holds a value which isn't handled by the visiting
  *         functions.
  */
-template tryVisit(Handler ...)
-    if (Handler.length > 0)
+template tryVisit(Handlers ...)
+    if (Handlers.length > 0)
 {
+    ///
     auto tryVisit(VariantType)(VariantType variant)
         if (isAlgebraic!VariantType)
     {
-        return visitImpl!(false, VariantType, Handler)(variant);
+        return visitImpl!(false, VariantType, Handlers)(variant);
     }
 }
 
