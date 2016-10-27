@@ -634,6 +634,7 @@ private:
 @system unittest
 {
     import std.file : deleteme;
+    import core.memory : GC;
 
     const size_t K = 1024;
     size_t win = 64*K; // assume the page size is 64K
@@ -666,7 +667,10 @@ private:
     data2 = cast(ubyte[])mf[21*K .. 100*K];
     assert( data2.length == 79*K );
     assert( data2[$-1] == 'b' );
-    delete mf;
+
+    destroy(mf);
+    GC.free(&mf);
+
     std.file.remove(test_file);
     // Create anonymous mapping
     auto test = new MmFile(null, MmFile.Mode.readWriteNew, 1024*1024, null);
