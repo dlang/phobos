@@ -3487,7 +3487,7 @@ The number of seeds must be correspondingly increased.
 
 /++
 Performs a summation of the given $(REF_ALTTEXT input range, isInputRange,
-std, range, primitives) r, and provides the intermediate results of the
+std, range, primitives) `r`, and provides the intermediate results of the
 summation as an $(REF_ALTTEXT input range, isInputRange, std, range,
 primitives). `cumulativeSum` is conceptually equivalent to
 `cumulativeFold!((a, b) => a + b)`, but for floating point summations the
@@ -3495,11 +3495,11 @@ $(HTTP en.wikipedia.org/wiki/Kahan_summation, Kahan summation) algorithm is
 used to reduce accuracy loss from cancellation errors.
 
 When called without a seed, the seed type is deduced from the $(REF_ALTTEXT
-element type, ElementType, std,range,primitives) of r and the seed value is 0.
-If the $(REF_ALTTEXT element type, ElementType, std, range, primitives) of r is
-a $(REF_ALTTEXT floating point type, isFloatingPoint, std, traits), then the
-seed type will be deduced to be the most precise type available from either
-double or real.
+element type, ElementType, std,range,primitives) of `r` and the seed value is
+0. If the $(REF_ALTTEXT element type, ElementType, std, range, primitives) of
+`r` is a $(REF_ALTTEXT floating point type, isFloatingPoint, std, traits), then
+the seed type will be deduced to be the most precise type available from either
+`double` or `real`.
 
 Params:
     r = any $(REF_ALTTEXT input range, isInputRange, std, range, primitives)
@@ -3507,15 +3507,15 @@ Params:
 
 Returns:
     an $(REF_ALTTEXT input range, isInputRange, std, range, primitives)
-    containing the intermediate results of the summation of r.
+    containing the intermediate results of the summation of `r`.
 
 See_Also:
-    $(HTTP en.wikipedia.org/wiki/Prefix_sum, Prefix Sum)
+    $(HTTPS en.wikipedia.org/wiki/Prefix_sum, Prefix Sum)
 
-    $(HREF cumulativeFold) provides the intermediate results of generic
+    $(LREF cumulativeFold) provides the intermediate results of generic
     reduction operations on ranges.
 
-    $(HREF sum) performs a summation of a range without providing intermediate
+    $(LREF sum) performs a summation of a range without providing intermediate
     results.
  +/
 auto cumulativeSum(Range)(Range r)
@@ -3673,7 +3673,7 @@ unittest
 }
 
 /++
-$(D cumulativeSum) uses Kahan summation to give more accurate results than
+`cumulativeSum` uses Kahan summation to give more accurate results than
 naive summation for ranges of floating point values.
  +/
 @safe pure nothrow
