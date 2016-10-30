@@ -5332,7 +5332,7 @@ enum bool isNarrowString(T) = (is(T : const char[]) || is(T : const wchar[])) &&
 
 
 /**
- * Detect whether $(D T) is a struct or static array that is implicitly
+ * Detect whether $(D T) is a struct, static array, or enum that is implicitly
  * convertible to a string.
  */
 template isConvertibleToString(T)
@@ -5350,9 +5350,14 @@ template isConvertibleToString(T)
         string s;
         alias s this;
     }
+
+    enum StringEnum { a = "foo" }
+
     assert(!isConvertibleToString!string);
     assert(isConvertibleToString!AliasedString);
+    assert(isConvertibleToString!StringEnum);
     assert(isConvertibleToString!(char[25]));
+    assert(!isConvertibleToString!(char[]));
 }
 
 @safe unittest // Bugzilla 16573
