@@ -1441,9 +1441,9 @@ static class VariantException : Exception
     TypeInfo source;
     /// The target type in the conversion or comparison
     TypeInfo target;
-    this(string s)
+    this(string s, string file = __FILE__, size_t line = __LINE__)
     {
-        super(s);
+        super(s, file, line);
     }
     this(TypeInfo source, TypeInfo target)
     {
@@ -1980,10 +1980,10 @@ template visit(Handlers...)
     if (Handlers.length > 0)
 {
     ///
-    auto visit(VariantType)(VariantType variant)
+    auto visit(VariantType)(VariantType variant, string file = __FILE__, size_t line = __LINE__)
         if (isAlgebraic!VariantType)
     {
-        return visitImpl!(true, VariantType, Handlers)(variant);
+        return visitImpl!(true, VariantType, Handlers)(variant, file, line);
     }
 }
 
@@ -2086,10 +2086,10 @@ template tryVisit(Handlers...)
     if (Handlers.length > 0)
 {
     ///
-    auto tryVisit(VariantType)(VariantType variant)
+    auto tryVisit(VariantType)(VariantType variant, string file = __FILE__, size_t line = __LINE__)
         if (isAlgebraic!VariantType)
     {
-        return visitImpl!(false, VariantType, Handlers)(variant);
+        return visitImpl!(false, VariantType, Handlers)(variant, file, line);
     }
 }
 
@@ -2150,7 +2150,8 @@ unittest
     static assert( isAlgebraic!(Algebraic!(int, int[])));
 }
 
-private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant)
+private auto visitImpl(bool Strict, VariantType, Handler...)
+    (VariantType variant, string file, size_t line)
     if (isAlgebraic!VariantType && Handler.length > 0)
 {
     alias AllowedTypes = VariantType.AllowedTypes;
@@ -2228,7 +2229,8 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
         static if (HandlerOverloadMap.exceptionFuncIdx != -1)
             return Handler[ HandlerOverloadMap.exceptionFuncIdx ]();
         else
-            throw new VariantException("variant must hold a value before being visited.");
+            throw new VariantException(
+                "variant must hold a value before being visited.", file, line);
     }
 
     foreach (idx, T; AllowedTypes)
@@ -2249,7 +2251,8 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
                         throw new VariantException(
                             "variant holds value of type '"
                             ~ T.stringof ~
-                            "' but no visitor has been provided"
+                            "' but no visitor has been provided",
+                            file, line
                         );
                 }
             }
