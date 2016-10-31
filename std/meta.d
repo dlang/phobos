@@ -102,7 +102,7 @@ template AliasSeq(TList...)
 
 
 /**
-  Return an AliasSeq expression of $(D Func) being
+  Returns an `AliasSeq` expression of `Func` being
   applied to every variadic template argument.
  */
 
@@ -116,9 +116,12 @@ template AliasSeq(TList...)
 
     template Map(alias Func, args...)
     {
-        static if (args.length > 1) {
+        static if (args.length > 1)
+        {
             alias Map = AliasSeq!(ArgCall!(Func, args[0]), Map!(Func, args[1 .. $]));
-        } else {
+        }
+        else
+        {
             alias Map = ArgCall!(Func, args[0]);
         }
     }
