@@ -2237,8 +2237,8 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
  * $(D haystack) advanced such that $(D needle) is a prefix of it (if no
  * such position exists, returns $(D haystack) advanced to termination).
  */
-Range1 find(Range1, alias pred, Range2)(
-    Range1 haystack, scope BoyerMooreFinder!(pred, Range2) needle)
+RandomAccessRange find(RandomAccessRange, alias pred, InputRange)(
+    RandomAccessRange haystack, scope BoyerMooreFinder!(pred, InputRange) needle)
 {
     return needle.beFound(haystack);
 }
@@ -2473,9 +2473,9 @@ matching elements.
 See_Also:
     $(HTTP sgi.com/tech/stl/find_first_of.html, STL's find_first_of)
 */
-Range1 findAmong(alias pred = "a == b", Range1, Range2)(
-    Range1 seq, Range2 choices)
-    if (isInputRange!Range1 && isForwardRange!Range2)
+InputRange findAmong(alias pred = "a == b", InputRange, ForwardRange)(
+    InputRange seq, ForwardRange choices)
+    if (isInputRange!InputRange && isForwardRange!ForwardRange)
 {
     for (; !seq.empty && find!pred(choices, seq.front).empty; seq.popFront())
     {
