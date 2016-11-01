@@ -2005,7 +2005,7 @@ struct Slice(size_t _N, _Range)
 
     See_also: $(LREF Slice.toMurmurHash3), $(MREF std, _digest, murmurhash).
     +/
-    size_t toHash() const
+    size_t toHash() const @safe
     {
         static if (size_t.sizeof == 8)
         {
@@ -2059,7 +2059,7 @@ struct Slice(size_t _N, _Range)
 
     See_also: $(LREF Slice.toHash), $(MREF std, _digest, murmurhash)
     +/
-    auto toMurmurHash3(uint size /* 32 or 128 */ , uint opt = size_t.sizeof == 8 ? 64 : 32)() const
+    auto toMurmurHash3(uint size /* 32 or 128 */ , uint opt = size_t.sizeof == 8 ? 64 : 32)() const @trusted
     {
         import std.digest.murmurhash : MurmurHash3;
         enum msg = "unable to compute hash value for type " ~ DeepElemType.stringof;
