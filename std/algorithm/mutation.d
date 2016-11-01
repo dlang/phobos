@@ -108,8 +108,8 @@ Returns:
 See_Also:
     $(HTTP sgi.com/tech/stl/_rotate.html, STL's rotate)
 */
-size_t bringToFront(Range1, Range2)(Range1 front, Range2 back)
-    if (isInputRange!Range1 && isForwardRange!Range2)
+size_t bringToFront(InputRange, ForwardRange)(InputRange front, ForwardRange back)
+    if (isInputRange!InputRange && isForwardRange!ForwardRange)
 {
     import std.range : take, Take;
     import std.array : sameHead;
@@ -154,7 +154,7 @@ size_t bringToFront(Range1, Range2)(Range1 front, Range2 back)
         {
             assert(front.empty);
             // Left side was shorter. Let's step into the back.
-            static if (is(Range1 == Take!Range2))
+            static if (is(InputRange == Take!ForwardRange))
             {
                 front = take(back0, nswaps);
             }
@@ -594,16 +594,16 @@ Params:
              $(REF_ALTTEXT forward _range, isForwardRange, std,_range,primitives)
              representing the _fill pattern.
  */
-void fill(Range1, Range2)(Range1 range, Range2 filler)
-    if (isInputRange!Range1
-        && (isForwardRange!Range2
-            || (isInputRange!Range2 && isInfinite!Range2))
-        && is(typeof(Range1.init.front = Range2.init.front)))
+void fill(InputRange, ForwardRange)(InputRange range, ForwardRange filler)
+    if (isInputRange!InputRange
+        && (isForwardRange!ForwardRange
+            || (isInputRange!ForwardRange && isInfinite!ForwardRange))
+        && is(typeof(InputRange.init.front = ForwardRange.init.front)))
 {
-    static if (isInfinite!Range2)
+    static if (isInfinite!ForwardRange)
     {
-        //Range2 is infinite, no need for bounds checking or saving
-        static if (hasSlicing!Range2 && hasLength!Range1
+        //ForwardRange is infinite, no need for bounds checking or saving
+        static if (hasSlicing!ForwardRange && hasLength!InputRange
             && is(typeof(filler[0 .. range.length])))
         {
             copy(filler[0 .. range.length], range);
@@ -623,7 +623,7 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
 
         enforce(!filler.empty, "Cannot fill range with an empty filler");
 
-        static if (hasLength!Range1 && hasLength!Range2
+        static if (hasLength!InputRange && hasLength!ForwardRange
             && is(typeof(range.length > filler.length)))
         {
             //Case we have access to length
@@ -635,7 +635,7 @@ void fill(Range1, Range2)(Range1 range, Range2 filler)
             }
 
             //and finally fill the partial range. No need to save here.
-            static if (hasSlicing!Range2 && is(typeof(filler[0 .. range.length])))
+            static if (hasSlicing!ForwardRange && is(typeof(filler[0 .. range.length])))
             {
                 //use a quick copy
                 auto len2 = range.length;
@@ -1324,8 +1324,8 @@ Params:
 Returns: The leftover portion of $(D tgt) after all elements from $(D src) have
 been moved.
  */
-Range2 moveAll(Range1, Range2)(Range1 src, Range2 tgt)
-if (isInputRange!Range1 && isInputRange!Range2
+InputRange2 moveAll(InputRange1, InputRange2)(InputRange1 src, InputRange2 tgt)
+if (isInputRange!InputRange1 && isInputRange!InputRange2
         && is(typeof(move(src.front, tgt.front))))
 {
     return moveAllImpl!move(src, tgt);
@@ -1347,8 +1347,8 @@ pure nothrow @safe @nogc unittest
  * uninitialized. Uses $(LREF moveEmplace) to move elements from
  * `src` over elements from `tgt`.
  */
-Range2 moveEmplaceAll(Range1, Range2)(Range1 src, Range2 tgt) @system
-if (isInputRange!Range1 && isInputRange!Range2
+InputRange2 moveEmplaceAll(InputRange1, InputRange2)(InputRange1 src, InputRange2 tgt) @system
+if (isInputRange!InputRange1 && isInputRange!InputRange2
         && is(typeof(moveEmplace(src.front, tgt.front))))
 {
     return moveAllImpl!moveEmplace(src, tgt);
@@ -1391,13 +1391,13 @@ unittest
     assert(a.data == [ 1, 2, 3 ]);
 }
 
-private Range2 moveAllImpl(alias moveOp, Range1, Range2)(
-    ref Range1 src, ref Range2 tgt)
+private InputRange2 moveAllImpl(alias moveOp, InputRange1, InputRange2)(
+    ref InputRange1 src, ref InputRange2 tgt)
 {
     import std.exception : enforce;
 
-    static if (isRandomAccessRange!Range1 && hasLength!Range1 && hasLength!Range2
-         && hasSlicing!Range2 && isRandomAccessRange!Range2)
+    static if (isRandomAccessRange!InputRange1 && hasLength!InputRange1 && hasLength!InputRange2
+         && hasSlicing!InputRange2 && isRandomAccessRange!InputRange2)
     {
         auto toMove = src.length;
         assert(toMove <= tgt.length);
@@ -1431,8 +1431,8 @@ Params:
 Returns: The leftover portions of the two ranges after one or the other of the
 ranges have been exhausted.
  */
-Tuple!(Range1, Range2) moveSome(Range1, Range2)(Range1 src, Range2 tgt)
-if (isInputRange!Range1 && isInputRange!Range2
+Tuple!(InputRange1, InputRange2) moveSome(InputRange1, InputRange2)(InputRange1 src, InputRange2 tgt)
+if (isInputRange!InputRange1 && isInputRange!InputRange2
         && is(typeof(move(src.front, tgt.front))))
 {
     return moveSomeImpl!move(src, tgt);
@@ -1453,8 +1453,8 @@ pure nothrow @safe @nogc unittest
  * uninitialized. Uses $(LREF moveEmplace) to move elements from
  * `src` over elements from `tgt`.
  */
-Tuple!(Range1, Range2) moveEmplaceSome(Range1, Range2)(Range1 src, Range2 tgt) @system
-if (isInputRange!Range1 && isInputRange!Range2
+Tuple!(InputRange1, InputRange2) moveEmplaceSome(InputRange1, InputRange2)(InputRange1 src, InputRange2 tgt) @system
+if (isInputRange!InputRange1 && isInputRange!InputRange2
         && is(typeof(move(src.front, tgt.front))))
 {
     return moveSomeImpl!moveEmplace(src, tgt);
@@ -1480,8 +1480,8 @@ pure nothrow @nogc unittest
     assert(dst[].all!(e => e._ptr !is null));
 }
 
-private Tuple!(Range1, Range2) moveSomeImpl(alias moveOp, Range1, Range2)(
-    ref Range1 src, ref Range2 tgt)
+private Tuple!(InputRange1, InputRange2) moveSomeImpl(alias moveOp, InputRange1, InputRange2)(
+    ref InputRange1 src, ref InputRange2 tgt)
 {
     for (; !src.empty && !tgt.empty; src.popFront(), tgt.popFront())
         moveOp(src.front, tgt.front);
@@ -2572,11 +2572,11 @@ Params:
 Returns:
     Tuple containing the remainder portions of r1 and r2 that were not swapped
 */
-Tuple!(Range1, Range2)
-swapRanges(Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!(Range1) && isInputRange!(Range2)
-            && hasSwappableElements!(Range1) && hasSwappableElements!(Range2)
-            && is(ElementType!(Range1) == ElementType!(Range2)))
+Tuple!(InputRange1, InputRange2)
+swapRanges(InputRange1, InputRange2)(InputRange1 r1, InputRange2 r2)
+    if (isInputRange!(InputRange1) && isInputRange!(InputRange2)
+            && hasSwappableElements!(InputRange1) && hasSwappableElements!(InputRange2)
+            && is(ElementType!(InputRange1) == ElementType!(InputRange2)))
 {
     for (; !r1.empty && !r2.empty; r1.popFront(), r2.popFront())
     {

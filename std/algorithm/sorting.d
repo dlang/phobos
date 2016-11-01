@@ -111,8 +111,8 @@ Params:
         sorted.
 */
 void completeSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
-        Range1, Range2)(SortedRange!(Range1, less) lhs, Range2 rhs)
-if (hasLength!(Range2) && hasSlicing!(Range2))
+        RandomAccessRange1, RandomAccessRange2)(SortedRange!(RandomAccessRange1, less) lhs, RandomAccessRange2 rhs)
+if (hasLength!(RandomAccessRange2) && hasSlicing!(RandomAccessRange2))
 {
     import std.algorithm.mutation : bringToFront;
     import std.range : chain, assumeSorted;
