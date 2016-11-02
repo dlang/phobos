@@ -37,7 +37,7 @@ private struct CowCore(C)
 
     // Constructs this as an immutable buffer containing the concatenation of
     // s1 and s2.
-    this(C1, C2 = C)(C1[] s1, C2[] s2 = null) immutable
+    @trusted this(C1, C2 = C)(C1[] s1, C2[] s2 = null) immutable
     if (isSomeUbyte!C1 && isSomeUbyte!C2)
     {
         // Strategy: build a mutable buffer, then move it.
@@ -60,7 +60,7 @@ private struct CowCore(C)
         ++*prefs;
     }
 
-    ~this()
+    @trusted ~this()
     {
         if (_support is null) return;
         auto p = prefs;
@@ -81,13 +81,13 @@ private struct CowCore(C)
 
     private @system auto payloadPtr() inout { return _payload.ptr; }
 
-    void forceLength(size_t len)
+    @trusted void forceLength(size_t len)
     {
         assert(len <= length + slackBack);
         _payload = _payload.ptr[0 .. len];
     }
 
-    void reserve(size_t cap)
+    @trusted void reserve(size_t cap)
     out
     {
         assert(length + slackBack >= cap);
@@ -116,7 +116,7 @@ private struct CowCore(C)
         _support = t;
     }
 
-    private uint* prefs() const
+    @trusted private uint* prefs() const
     {
         assert(_support !is null);
         return cast(uint*) &alloc.parent.prefix(_support);
@@ -135,12 +135,12 @@ private struct CowCore(C)
         return result;
     }
 
-    private size_t slackFront() const
+    @trusted private size_t slackFront() const
     {
         return _payload.ptr - _support.ptr;
     }
 
-    private size_t slackBack() const
+    @trusted private size_t slackBack() const
     {
         return _support.ptr + _support.length - _payload.ptr - _payload.length;
     }
@@ -154,7 +154,7 @@ private struct CowCore(C)
         forceLength(newLen);
     }
 
-    auto opCat(C1)(CowCore!C1 rhs)
+    @safe auto opCat(C1)(CowCore!C1 rhs)
     {
         alias R = typeof((new C[1] ~ new C1[1])[0]);
         CowCore!R result;
@@ -165,7 +165,9 @@ private struct CowCore(C)
             {
                 immutable newLen = _payload.length + rhs.length;
                 result._support = _support;
-                result._payload = _payload.ptr[0 .. newLen];
+                () @trusted {
+                    result._payload = _payload.ptr[0 .. newLen];
+                }();
                 ++*result.prefs;
                 result._payload[_payload.length .. newLen] = rhs._payload;
                 return result;
@@ -178,7 +180,9 @@ private struct CowCore(C)
             {
                 immutable newLen = _payload.length + rhs.length;
                 result._support = rhs._support;
-                result._payload = (rhs._payload.ptr - length)[0 .. newLen];
+                () @trusted {
+                    result._payload = (rhs._payload.ptr - length)[0 .. newLen];
+                }();
                 ++*result.prefs;
                 result._payload[0 .. length] = _payload;
                 return result;
@@ -197,9 +201,9 @@ private struct CowCore(C)
     }
 }
 
-private auto payload(RCBuffer)(ref RCBuffer s)
+@trusted private auto payload(RCBuffer)(ref RCBuffer s)
 {
-    return s.payloadPtr()[0 .. s.length];
+    return s.payloadPtr[0 .. s.length];
 }
 
 /**
@@ -218,32 +222,33 @@ if (isSomeUbyte!C)
 
     /**
     */
-    private this(C1)(CoreT!C1 core)
+    @safe private this(C1)(CoreT!C1 core)
     {
         _core = core;
     }
 
     /// ditto
-    this(S)(S str) if (isInputRange!S && isSomeUbyte!(.ElementType!S))
+    @safe this(S)(S str) if (isInputRange!S && isSomeUbyte!(.ElementType!S))
     {
         assert(length == 0);
         this ~= str;
     }
 
     /// ditto
-    this(S)(S str) immutable if (isInputRange!S && isSomeUbyte!(.ElementType!S))
+    @safe this(S)(S str) immutable
+    if (isInputRange!S && isSomeUbyte!(.ElementType!S))
     {
         _core = immutable(Core)(str);
     }
 
     /**
     */
-    void opAssign(RCBuffer!C rhs)
+    @safe void opAssign(RCBuffer!C rhs)
     {
         move(rhs._core, _core);
     }
 
-    void opAssign(R)(R rhs)
+    @safe void opAssign(R)(R rhs)
     if (isInputRange!R && isSomeUbyte!(ElementType!R))
     {
         auto t = RCBuffer(rhs);
@@ -251,7 +256,7 @@ if (isSomeUbyte!C)
     }
 
     /** */
-    bool empty() const
+    @safe bool empty() const
     {
         return _core.length == 0;
     }
@@ -259,48 +264,48 @@ if (isSomeUbyte!C)
     // Range primitives
     alias ElementType = Unqual!C;
 
-    ElementType front() const
+    @trusted ElementType front() const
     {
         assert(!empty);
         return *_core.payloadPtr;
     }
 
     static if (!is(C == const) && !is(C == immutable))
-    void front(in ElementType x)
+    @trusted void front(in ElementType x)
     {
         assert(!empty);
         *_core.payloadPtr = x;
     }
 
-    void popFront()
+    @safe void popFront()
     {
         assert(!empty);
         _core.popFront;
     }
 
     // Random access primitives
-    ref ElementType opIndex(size_t i) return
+    @trusted ElementType opIndex(size_t i)
     {
         return *cast(ElementType*) &_core[i];
     }
 
-    C opIndex(size_t n) const
+    @safe C opIndex(size_t n) const
     {
         return _core.payload[n];
     }
 
     static if (is(C == Unqual!C))
-    void opIndex(C x, size_t n)
+    @safe void opIndex(C x, size_t n)
     {
         _core.payload[n] = x;
     }
 
-    auto opSlice() inout
+    @safe auto opSlice() inout
     {
         return this;
     }
 
-    auto opSlice(this _)(size_t b, size_t e)
+    @safe auto opSlice(this _)(size_t b, size_t e)
     {
         assert(b <= e && e <= length);
         auto slice = _core[b .. e];
@@ -309,7 +314,7 @@ if (isSomeUbyte!C)
 
     /**
     */
-    void clear()
+    @safe void clear()
     {
         _core.forceLength(0);
     }
@@ -317,7 +322,7 @@ if (isSomeUbyte!C)
     /**
     Returns the number of bytes in the buffer.
     */
-    size_t length() const
+    @safe size_t length() const
     {
         return _core.length;
     }
@@ -328,62 +333,62 @@ if (isSomeUbyte!C)
     Returns the number of bytes that this buffer may accommodate without a
     (re)allocation.
     */
-    size_t slackFront() const
+    @safe size_t slackFront() const
     {
         return _core.slackFront;
     }
 
     /// ditto
-    size_t slackBack() const
+    @safe size_t slackBack() const
     {
         return _core.slackBack;
     }
 
     /**
     */
-    bool opEquals(C1)(in RCBuffer!C1 rhs) const
+    @safe bool opEquals(C1)(in RCBuffer!C1 rhs) const
     {
         return this == rhs._core.payload;
     }
 
     /**
     */
-    bool opEquals(C1)(in C1[] rhs) const if (isSomeUbyte!C1)
+    @safe bool opEquals(C1)(in C1[] rhs) const if (isSomeUbyte!C1)
     {
         return equal(_core.payload, rhs);
     }
 
     /**
     */
-    int opCmp(C1)(in RCBuffer!C1 rhs) const if (isSomeUbyte!C1)
+    @safe int opCmp(C1)(in RCBuffer!C1 rhs) const if (isSomeUbyte!C1)
     {
         return opCmp(rhs._core.payload);
     }
 
     /**
     */
-    int opCmp(C1)(in C1[] rhs) const if (isSomeUbyte!C1)
+    @safe int opCmp(C1)(in C1[] rhs) const if (isSomeUbyte!C1)
     {
         return cmp(_core.payload, rhs);
     }
 
     /// Reserves at least `s` bytes for this buffer.
-    void reserve(size_t s)
+    @safe void reserve(size_t s)
     {
         _core.reserve(s);
     }
 
-    auto opCast(T)() if (is(T == immutable RCBuffer!C))
+    @safe auto opCast(T)() if (is(T == immutable RCBuffer!C))
     {
         return immutable(RCBuffer!C)(_core.payload);
     }
 
-    void opCatAssign(RCBuffer!C rhs)
+    @safe void opCatAssign(RCBuffer!C rhs)
     {
         this ~= rhs._core.payload;
     }
 
-    void opCatAssign(C1)(C1 c)
+    @trusted void opCatAssign(C1)(C1 c)
     if (isSomeUbyte!C1)
     {
         immutable cap = length + slackBack, len = _core.length;
@@ -397,7 +402,7 @@ if (isSomeUbyte!C)
         _core.forceLength(len + 1);
     }
 
-    void opCatAssign(R)(R r)
+    @safe void opCatAssign(R)(R r)
     if (isInputRange!R && isSomeUbyte!(std.range.ElementType!R))
     {
         // TODO: optimize
@@ -407,7 +412,7 @@ if (isSomeUbyte!C)
 
     /**
     */
-    auto opCat(T, this Q)(T[] rhs)
+    @safe auto opCat(T, this Q)(T[] rhs)
     if (isSomeUbyte!T)
     {
         alias R = typeof((_core.payload ~ rhs)[0]);
@@ -435,7 +440,7 @@ if (isSomeUbyte!C)
 
     /**
     */
-    auto opCat_r(T, this Q)(T[] lhs)
+    @safe auto opCat_r(T, this Q)(T[] lhs)
     if (isSomeUbyte!T)
     {
         alias R = typeof((lhs ~ _core.payload)[0]);
@@ -463,7 +468,7 @@ if (isSomeUbyte!C)
 
     /**
     */
-    auto opCat(T, this Q)(T rhs)
+    @safe auto opCat(T, this Q)(T rhs)
     if (is(Unqual!T == RCBuffer!C1, C1))
     {
         // Get rid of the cases when at least one side is qualified
@@ -488,7 +493,7 @@ if (isSomeUbyte!C)
     }
 }
 
-unittest // concatenation types
+@safe unittest // concatenation types
 {
     alias X = TemplateOf!(RCBuffer!ubyte);
     //static assert(!isOurSister!int);
@@ -582,7 +587,7 @@ unittest // concatenation types
     assert(f ~ a == "fa".representation);
 }
 
-version(unittest) private void test(C)()
+version(unittest) private @safe void test(C)()
 {
     RCBuffer!C s;
     assert(s == s);
@@ -634,7 +639,7 @@ version(unittest) private void test(C)()
     assert(s4 == "2");*/
 }
 
-version(unittest) private void test2(C)()
+version(unittest) private @safe void test2(C)()
 {
     /*static immutable(RCBuffer!C) fun(immutable RCBuffer!C s)
     {
@@ -648,7 +653,7 @@ version(unittest) private void test2(C)()
     assert(s3 == "5678".representation, text("asd", s3._core._payload));
 }
 
-unittest
+@safe unittest
 {
     test!ubyte;
     test!(const ubyte);
