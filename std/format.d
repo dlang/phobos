@@ -4388,7 +4388,7 @@ private T rawReadWrapper(T, Range)(ref Range input)
 	        input.popFront();
 	     }
 	}
-	    
+
 	return x.typed;
 
 }
