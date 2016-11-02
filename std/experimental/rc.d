@@ -1,11 +1,17 @@
 module std.experimental.rc;
-import std.traits : isSomeChar, isSomeString;
-
-import std.experimental.allocator.gc_allocator, std.experimental.allocator.mallocator,
+import std.range : ElementType;
+import std.traits : TemplateOf, Unqual;
+import std.experimental.allocator.gc_allocator,
+    std.experimental.allocator.mallocator,
     std.experimental.allocator.building_blocks.affix_allocator;
 version(unittest)
+{
+    import std.string : representation;
     import std.experimental.allocator.building_blocks.stats_collector,
         std.stdio;
+}
+
+// Allocator used by the refcounted buffer
 version(unittest)
 {
     private alias Alloc = StatsCollector!(
@@ -20,29 +26,28 @@ else
     alias alloc = Alloc.instance;
 }
 
-private struct CowStringCore(C)
+private enum isSomeUbyte(T) = is(Unqual!T == ubyte);
+
+private struct CowCore(C)
 {
-    import std.traits;
     // state {
     private Unqual!C[] _support;
     private C[] _payload;
     // } state
 
-    // Constructs this as an immutable string containing the concatenation of
+    // Constructs this as an immutable buffer containing the concatenation of
     // s1 and s2.
     this(C1, C2 = C)(C1[] s1, C2[] s2 = null) immutable
-    if (isSomeChar!C1 && isSomeChar!C2)
+    if (isSomeUbyte!C1 && isSomeUbyte!C2)
     {
-        // Strategy: build a mutable string, then move it.
-        CowStringCore!C t;
+        // Strategy: build a mutable buffer, then move it.
+        CowCore!C t;
         import std.conv, std.exception, std.range, std.utf;
-        immutable len = byUTF!C(s1).walkLength + byUTF!C(s2).walkLength;
+        immutable len = s1.length + s2.length;
         t.reserve(len);
         size_t i = 0;
-        foreach (c; byUTF!C(s1))
-            t._support[i++] = c;
-        foreach (c; byUTF!C(s2))
-            t._support[i++] = c;
+        t._support[0 .. s1.length] = s1[];
+        t._support[s1.length .. len] = s2[];
         t.forceLength(len);
         _support = t._support.assumeUnique;
         _payload = t._payload.assumeUnique;
@@ -100,7 +105,7 @@ private struct CowStringCore(C)
                 return;
             }
         }
-        // Need to create a whole new string
+        // Need to create a whole new buffer
         auto t = cast(Unqual!C[]) alloc.allocate(C.sizeof * cap);
         t || assert(0);
         assert(alloc.parent.prefix(t) == 0);
@@ -120,9 +125,9 @@ private struct CowStringCore(C)
     auto opSlice(this Q)(size_t b, size_t e) const
     {
         assert(b <= e && e <= length);
-        static if (is(Q == immutable)) alias R = CowStringCore!(immutable C);
-        else static if (is(Q == const)) alias R = CowStringCore!(const C);
-        else alias R = CowStringCore!C;
+        static if (is(Q == immutable)) alias R = CowCore!(immutable C);
+        else static if (is(Q == const)) alias R = CowCore!(const C);
+        else alias R = CowCore!C;
         R result = void;
         result._support = cast(typeof(result._support)) _support;
         result._payload = cast(typeof(result._payload)) _payload[b .. e];
@@ -149,11 +154,10 @@ private struct CowStringCore(C)
         forceLength(newLen);
     }
 
-    auto opCat(C1)(CowStringCore!C1 rhs)
+    auto opCat(C1)(CowCore!C1 rhs)
     {
         alias R = typeof((new C[1] ~ new C1[1])[0]);
-        //pragma(msg, "Core 3: " ~ R.stringof);
-        CowStringCore!R result;
+        CowCore!R result;
         static if (is(C == Unqual!C))
         {
             // Try to find slack space after this, but only if unique
@@ -193,28 +197,20 @@ private struct CowStringCore(C)
     }
 }
 
-private auto payload(RCStr)(ref RCStr s)
+private auto payload(RCBuffer)(ref RCBuffer s)
 {
     return s.payloadPtr()[0 .. s.length];
 }
 
-enum Iterate
-{
-    onDemand,
-    byCodePoint,
-    byCodeUnit,
-    byIntegral
-}
-
 /**
 */
-struct RCStr(C, Iterate iterate = Iterate.byCodePoint)
-if (isSomeChar!C)
+struct RCBuffer(C)
+if (isSomeUbyte!C)
 {
     import std.algorithm.comparison, std.algorithm.mutation, std.conv,
         std.range, std.traits;
 
-    alias CoreT = CowStringCore;
+    alias CoreT = CowCore;
     alias Core = CoreT!C;
     // state {
     Core _core;
@@ -222,35 +218,35 @@ if (isSomeChar!C)
 
     /**
     */
-    private this(C1)(CoreT!C1 core) if (C.sizeof == C1.sizeof)
+    private this(C1)(CoreT!C1 core)
     {
         _core = core;
     }
 
     /// ditto
-    this(S)(S str) if (isSomeString!S)
+    this(S)(S str) if (isInputRange!S && isSomeUbyte!(.ElementType!S))
     {
-        assert(codeUnits == 0);
+        assert(length == 0);
         this ~= str;
     }
 
     /// ditto
-    this(S)(S str) immutable if (isSomeString!S)
+    this(S)(S str) immutable if (isInputRange!S && isSomeUbyte!(.ElementType!S))
     {
         _core = immutable(Core)(str);
     }
 
     /**
     */
-    void opAssign(RCStr!C rhs)
+    void opAssign(RCBuffer!C rhs)
     {
         move(rhs._core, _core);
     }
 
     void opAssign(R)(R rhs)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+    if (isInputRange!R && isSomeUbyte!(ElementType!R))
     {
-        auto t = RCStr(rhs);
+        auto t = RCBuffer(rhs);
         move(t._core, _core);
     }
 
@@ -261,95 +257,54 @@ if (isSomeChar!C)
     }
 
     // Range primitives
-    static if (iterate != Iterate.onDemand)
+    alias ElementType = Unqual!C;
+
+    ElementType front() const
     {
-        static if (iterate == Iterate.byCodePoint)
-            alias ElementType = dchar;
-        else static if (iterate == Iterate.byCodeUnit)
-            alias ElementType = Unqual!C;
-        else static if (iterate == Iterate.byIntegral)
-            static if (C.sizeof == 1) alias ElementType = ubyte;
-            else static if (C.sizeof == 2) alias ElementType = ushort;
-            else static if (C.sizeof == 4) alias ElementType = uint;
-            else static assert(0);
-        else static assert(0);
+        assert(!empty);
+        return *_core.payloadPtr;
+    }
 
-        ElementType front() const
-        {
-            assert(!empty);
-            static if (iterate == Iterate.byCodePoint)
-            {
-                import std.utf;
-                auto s = _core.payload;
-                return decodeFront(s);
-            }
-            else
-            {
-                return *_core.payloadPtr;
-            }
-        }
+    static if (!is(C == const) && !is(C == immutable))
+    void front(in ElementType x)
+    {
+        assert(!empty);
+        *_core.payloadPtr = x;
+    }
 
-        static if ((iterate == Iterate.byCodeUnit || iterate == Iterate.byIntegral)
-            && is(Unqual!C == C))
-        void front(in ElementType x)
-        {
-            assert(!empty);
-            *_core.payloadPtr = x;
-        }
-
-        void popFront()
-        {
-            assert(!empty);
-            static if (iterate != Iterate.byCodePoint)
-            {
-                _core.popFront;
-            }
-            else
-            {
-                immutable c = *_core.payloadPtr;
-                if (c < 0x80) {
-                  _core.popFront;
-                } else {
-                  import core.bitop;
-                  uint i = 7u - bsr(~c | 1u);
-                  import std.algorithm;
-                  if (i > 6u) i = 1;
-                  _core = _core[min(i, _core.length) .. _core.length];
-                }
-            }
-        }
+    void popFront()
+    {
+        assert(!empty);
+        _core.popFront;
     }
 
     // Random access primitives
-    static if (iterate == Iterate.byCodePoint || iterate == Iterate.byIntegral)
+    ref ElementType opIndex(size_t i) return
     {
-        ref ElementType opIndex(size_t i) return
-        {
-            return *cast(ElementType*) &_core[i];
-        }
+        return *cast(ElementType*) &_core[i];
+    }
 
-        C opIndex(size_t n) const
-        {
-            return _core.payload[n];
-        }
+    C opIndex(size_t n) const
+    {
+        return _core.payload[n];
+    }
 
-        static if (is(C == Unqual!C))
-        void opIndex(C x, size_t n)
-        {
-            _core.payload[n] = x;
-        }
+    static if (is(C == Unqual!C))
+    void opIndex(C x, size_t n)
+    {
+        _core.payload[n] = x;
+    }
 
-        auto opSlice() inout
-        {
-            return this;
-        }
+    auto opSlice() inout
+    {
+        return this;
+    }
 
-        auto opSlice(this _)(size_t b, size_t e)
-        {
-            assert(b <= e && e <= codeUnits);
-            auto slice = _core[b .. e];
-            return RCStr!(typeof(slice).ElementEncodingType)(slice);
-        }
+    auto opSlice(this _)(size_t b, size_t e)
+    {
+        assert(b <= e && e <= length);
+        auto slice = _core[b .. e];
+        return RCBuffer!(typeof(slice).ElementType)(slice);
     }
 
     /**
@@ -360,18 +315,18 @@ if (isSomeChar!C)
     }
 
     /**
-    Returns the number of code units (e.g. bytes for UTF8) in the string.
+    Returns the number of bytes in the buffer.
     */
-    size_t codeUnits() const
+    size_t length() const
     {
         return _core.length;
     }
 
-    alias opDollar = codeUnits;
+    alias opDollar = length;
 
     /**
-    Returns the number of code units (e.g. bytes for UTF8) that this string may
-    accommodate without a (re)allocation.
+    Returns the number of bytes that this buffer may accommodate without a
+    (re)allocation.
     */
     size_t slackFront() const
     {
@@ -386,100 +341,81 @@ if (isSomeChar!C)
 
     /**
     */
-    bool opEquals(C1)(in RCStr!C1 rhs) const
+    bool opEquals(C1)(in RCBuffer!C1 rhs) const
     {
         return this == rhs._core.payload;
     }
 
     /**
     */
-    bool opEquals(C1)(in C1[] rhs) const if (isSomeChar!C1)
+    bool opEquals(C1)(in C1[] rhs) const if (isSomeUbyte!C1)
     {
         return equal(_core.payload, rhs);
     }
 
     /**
     */
-    int opCmp(C1)(in RCStr!C1 rhs) const if (isSomeChar!C1)
+    int opCmp(C1)(in RCBuffer!C1 rhs) const if (isSomeUbyte!C1)
     {
         return opCmp(rhs._core.payload);
     }
 
     /**
     */
-    int opCmp(C1)(in C1[] rhs) const if (isSomeChar!C1)
+    int opCmp(C1)(in C1[] rhs) const if (isSomeUbyte!C1)
     {
         return cmp(_core.payload, rhs);
     }
 
-    /// Reserves at least `s` code units for this string.
+    /// Reserves at least `s` bytes for this buffer.
     void reserve(size_t s)
     {
         _core.reserve(s);
     }
 
-    auto opCast(T)() if (is(T == immutable RCStr!C))
+    auto opCast(T)() if (is(T == immutable RCBuffer!C))
     {
-        return immutable(RCStr!C)(_core.payload);
+        return immutable(RCBuffer!C)(_core.payload);
     }
 
-    void opCatAssign(RCStr!C rhs)
+    void opCatAssign(RCBuffer!C rhs)
     {
         this ~= rhs._core.payload;
     }
 
     void opCatAssign(C1)(C1 c)
-    if (isSomeChar!C1)
+    if (isSomeUbyte!C1)
     {
-        static if (C1.sizeof > C.sizeof)
+        immutable cap = length + slackBack, len = _core.length;
+        assert(len <= cap);
+        if (len == cap)
         {
-            Unqual!C[4 / C.sizeof] buf = void;
-            import std.utf : encode;
-            return this ~= buf[0 .. encode(buf, c)];
+            _core.reserve((cap + 1) * 3 / 2);
         }
-        else
-        {
-            immutable cap = codeUnits + slackBack, len = _core.length;
-            assert(len <= cap);
-            if (len == cap)
-            {
-                _core.reserve((cap + 1) * 3 / 2);
-            }
-            assert(len < codeUnits + slackBack);
-            (cast(Unqual!C*) _core.payloadPtr())[len] = c;
-            _core.forceLength(len + 1);
-        }
+        assert(len < length + slackBack);
+        (cast(Unqual!C*) _core.payloadPtr())[len] = c;
+        _core.forceLength(len + 1);
     }
 
     void opCatAssign(R)(R r)
-    if (isInputRange!R && isSomeChar!(std.range.ElementType!R))
+    if (isInputRange!R && isSomeUbyte!(std.range.ElementType!R))
     {
         // TODO: optimize
-        import std.traits : isSomeString;
-        static if (isSomeString!R)
-        {
-            import std.utf : byChar;
-            auto p = r.byChar;
-        }
-        else
-        {
-            alias p = r;
-        }
-        for (; !p.empty; p.popFront)
-            this ~= p.front;
+        for (; !r.empty; r.popFront)
+            this ~= r.front;
     }
 
     /**
     */
     auto opCat(T, this Q)(T[] rhs)
-    if (isSomeChar!T)
+    if (isSomeUbyte!T)
     {
         alias R = typeof((_core.payload ~ rhs)[0]);
         static if (is(Q == const) || is(Q == immutable))
         {
-            // Nothing interesting to do, allocate a new string
+            // Nothing interesting to do, allocate a new buffer
             // TODO: optimize
-            RCStr!R result;
+            RCBuffer!R result;
             result.reserve(_core.length + rhs.length);
             result ~= _core.payload;
             result ~= rhs;
@@ -489,7 +425,7 @@ if (isSomeChar!C)
         {
             // TODO: implement the following strategy:
             // "this" is mutable, maybe there's slack space after it
-            RCStr!R result;
+            RCBuffer!R result;
             result.reserve(_core.length + rhs.length);
             result ~= _core.payload;
             result ~= rhs;
@@ -500,14 +436,14 @@ if (isSomeChar!C)
     /**
     */
     auto opCat_r(T, this Q)(T[] lhs)
-    if (isSomeChar!T)
+    if (isSomeUbyte!T)
     {
         alias R = typeof((lhs ~ _core.payload)[0]);
         static if (is(Q == const) || is(Q == immutable))
         {
-            // Nothing interesting to do, allocate a new string
+            // Nothing interesting to do, allocate a new buffer
             // TODO: optimize
-            RCStr!R result;
+            RCBuffer!R result;
             result.reserve(lhs.length + _core.length);
             result ~= lhs;
             result ~= _core.payload;
@@ -517,7 +453,7 @@ if (isSomeChar!C)
         {
             // TODO: implement the following strategy:
             // "this" is mutable, maybe there's slack space before it
-            RCStr!R result;
+            RCBuffer!R result;
             result.reserve(lhs.length + _core.length);
             result ~= lhs;
             result ~= _core.payload;
@@ -528,7 +464,7 @@ if (isSomeChar!C)
     /**
     */
     auto opCat(T, this Q)(T rhs)
-    if (is(Unqual!T == RCStr!C1, C1))
+    if (is(Unqual!T == RCBuffer!C1, C1))
     {
         // Get rid of the cases when at least one side is qualified
         static if (is(T == const) || is(T == immutable))
@@ -545,21 +481,17 @@ if (isSomeChar!C)
         }
         else
         {
-            // Two mutable RCStrs!
+            // Two mutable RCBuffers!
             auto newCore = _core ~ rhs._core;
-            return RCStr!(typeof(*newCore.payloadPtr))(newCore);
+            return RCBuffer!(typeof(*newCore.payloadPtr))(newCore);
         }
     }
 }
 
-import std.traits;
-enum bool isOurSister(T) = __traits(isSame, TemplateOf!T, RCStr);
-
 unittest // concatenation types
 {
-    alias X = TemplateOf!(RCStr!char);
+    alias X = TemplateOf!(RCBuffer!ubyte);
     //static assert(!isOurSister!int);
-    static assert(isOurSister!(RCStr!char));
     /*char[] a;
     const(char)[] b;
     immutable(char)[] c;
@@ -567,117 +499,118 @@ unittest // concatenation types
     immutable char[] e;
     const (const(char)[]) f;*/
 
-    auto a = RCStr!char("a");
-    auto b = RCStr!(const(char))("b");
-    auto c = RCStr!(immutable(char))("c");
-    const d = RCStr!char("d");
-    immutable e = immutable(RCStr!char)("e");
-    const RCStr!(const char) f = RCStr!(const char)("f");
+    auto a = RCBuffer!ubyte([ubyte('a')]);
+    auto b = RCBuffer!(const(ubyte))("b".representation);
+    auto c = RCBuffer!(immutable(ubyte))("c".representation);
+    const d = RCBuffer!ubyte("d".representation);
+    immutable e = immutable(RCBuffer!ubyte)("e".representation);
+    const RCBuffer!(const ubyte) f = RCBuffer!(const ubyte)("f".representation);
 
-    auto x = a ~ "123";
+    auto x = a ~ "123".representation;
 
-    /*CowStringCore!char a;
-    CowStringCore!(const(char)) b;
-    CowStringCore!(immutable(char)) c;
-    const CowStringCore!char d;
-    immutable CowStringCore!char e;
-    const CowStringCore!(const char) f;*/
+    /*CowCore!char a;
+    CowCore!(const(char)) b;
+    CowCore!(immutable(char)) c;
+    const CowCore!char d;
+    immutable CowCore!char e;
+    const CowCore!(const char) f;*/
 
     assert (is(typeof(a ~ a) == typeof(a)));
-    assert(a ~ a == "aa");
+    assert(a ~ a == "aa".representation);
     assert (is(typeof(a ~ b) == typeof(a)));
-    assert(a ~ b == "ab");
+    assert(a ~ b == "ab".representation);
     assert (is(typeof(a ~ c) == typeof(a)));
-    assert(a ~ c == "ac");
+    assert(a ~ c == "ac".representation);
     assert (is(typeof(a ~ d) == typeof(a)));
-    assert(a ~ d == "ad");
+    assert(a ~ d == "ad".representation);
     assert (is(typeof(a ~ e) == typeof(a)));
-    assert(a ~ e == "ae");
+    assert(a ~ e == "ae".representation);
 
     assert (is(typeof(b ~ a) == typeof(a) ));
-    assert(b ~ a == "ba");
+    assert(b ~ a == "ba".representation);
     assert (is(typeof(b ~ b) == typeof(b) ));
-    assert(b ~ b == "bb");
+    assert(b ~ b == "bb".representation);
     assert (is(typeof(b ~ c) == typeof(a) ));
-    assert(b ~ c == "bc");
+    assert(b ~ c == "bc".representation);
     assert (is(typeof(b ~ d) == typeof(b) ));
-    assert(b ~ d == "bd");
+    assert(b ~ d == "bd".representation);
     assert (is(typeof(b ~ e) == typeof(a) ));
-    assert(b ~ e == "be");
+    assert(b ~ e == "be".representation);
 
     assert (is(typeof(c ~ a) == typeof(a) ));
-    assert(c ~ a == "ca");
+    assert(c ~ a == "ca".representation);
     assert (is(typeof(c ~ b) == typeof(a) ));
-    assert(c ~ b == "cb");
+    assert(c ~ b == "cb".representation);
     assert (is(typeof(c ~ c) == typeof(c) ));
-    assert(c ~ c == "cc");
+    assert(c ~ c == "cc".representation);
     assert (is(typeof(c ~ d) == typeof(a) ));
-    assert(c ~ d == "cd");
+    assert(c ~ d == "cd".representation);
     assert (is(typeof(c ~ e) == typeof(c) ));
-    assert(c ~ e == "ce");
+    assert(c ~ e == "ce".representation);
 
     assert (is(typeof(d ~ a) == typeof(a) ));
-    assert(d ~ a == "da");
+    assert(d ~ a == "da".representation);
     assert (is(typeof(d ~ b) == typeof(b) ));
-    assert(d ~ b == "db");
+    assert(d ~ b == "db".representation);
     assert (is(typeof(d ~ c) == typeof(a) ));
-    assert(d ~ c == "dc");
+    assert(d ~ c == "dc".representation);
     assert (is(typeof(d ~ d) == typeof(b) ));
-    assert(d ~ d == "dd");
+    assert(d ~ d == "dd".representation);
     assert (is(typeof(d ~ e) == typeof(a) ));
-    assert(d ~ e == "de");
+    assert(d ~ e == "de".representation);
 
     assert (is(typeof(e ~ a) == typeof(a) ));
-    assert(e ~ a == "ea");
+    assert(e ~ a == "ea".representation);
     assert (is(typeof(e ~ b) == typeof(a) ));
-    assert(e ~ a == "ea");
+    assert(e ~ a == "ea".representation);
     assert (is(typeof(e ~ c) == typeof(c) ));
-    assert(e ~ a == "ea");
+    assert(e ~ a == "ea".representation);
     assert (is(typeof(e ~ d) == typeof(a) ));
-    assert(e ~ a == "ea");
+    assert(e ~ a == "ea".representation);
     assert (is(typeof(e ~ e) == typeof(c) ));
-    assert(e ~ a == "ea");
+    assert(e ~ a == "ea".representation);
 
     assert (is(typeof(f ~ a) == typeof(a) ));
-    assert(f ~ a == "fa");
+    assert(f ~ a == "fa".representation);
     assert (is(typeof(f ~ b) == typeof(b) ));
-    assert(f ~ a == "fa");
+    assert(f ~ a == "fa".representation);
     assert (is(typeof(f ~ c) == typeof(a) ));
-    assert(f ~ a == "fa");
+    assert(f ~ a == "fa".representation);
     assert (is(typeof(f ~ d) == typeof(b) ));
-    assert(f ~ a == "fa");
+    assert(f ~ a == "fa".representation);
     assert (is(typeof(f ~ e) == typeof(a) ));
-    assert(f ~ a == "fa");
+    assert(f ~ a == "fa".representation);
 }
 
 version(unittest) private void test(C)()
 {
-    RCStr!C s;
+    RCBuffer!C s;
     assert(s == s);
     assert(s <= s);
     assert(!(s < s));
-    assert(s.codeUnits == 0);
-    assert(s.codeUnits + s.slackBack >= 0);
-    s ~= '1';
-    assert(s.codeUnits == 1);
-    assert(s < "2");
-    assert(s > "");
-    assert(s > "0");
-    string x = "23456789012345678901234567890123456789012345678901234567890123";
+    assert(s.length == 0);
+    assert(s.length + s.slackBack >= 0);
+    s ~= ubyte('1');
+    assert(s.length == 1);
+    assert(s < "2".representation);
+    assert(s > "".representation);
+    assert(s > "0".representation);
+    auto x = "23456789012345678901234567890123456789012345678901234567890123"
+        .representation;
     s ~= x;
-    assert(s.codeUnits == 63);
+    assert(s.length == 63);
     assert(s ==
-        "123456789012345678901234567890123456789012345678901234567890123");
-    s ~= '4';
-    assert(s.codeUnits == 64);
-    s ~= '5';
-    assert(s.codeUnits == 65);
+        "123456789012345678901234567890123456789012345678901234567890123".representation);
+    s ~= ubyte('4');
+    assert(s.length == 64);
+    s ~= ubyte('5');
+    assert(s.length == 65);
     auto s1 = s;
     s ~= s;
-    assert(s.codeUnits == 130);
+    assert(s.length == 130);
     assert(s ==
-        "12345678901234567890123456789012345678901234567890123456789012345"
-        ~ "12345678901234567890123456789012345678901234567890123456789012345");
+        "12345678901234567890123456789012345678901234567890123456789012345".representation
+        ~ "12345678901234567890123456789012345678901234567890123456789012345".representation);
     //auto s2 = s1 ~ s1;
     //assert(s2 == s);
     /*s2 = s;
@@ -703,41 +636,27 @@ version(unittest) private void test(C)()
 
 version(unittest) private void test2(C)()
 {
-    /*static immutable(RCStr!C) fun(immutable RCStr!C s)
+    /*static immutable(RCBuffer!C) fun(immutable RCBuffer!C s)
     {
         return s ~ s;
     }*/
-    auto s1 = RCStr!C("1234");
-    auto s2 = cast(immutable RCStr!C) s1;
+    auto s1 = RCBuffer!C("1234".representation);
+    auto s2 = cast(immutable RCBuffer!C) s1;
     assert(s2 == s1);
-    auto s3 = immutable(RCStr!C)("5678");
+    auto s3 = immutable(RCBuffer!C)("5678".representation);
     import std.conv;
-    assert(s3 == "5678", text("asd", s3._core._payload));
-    assert(s3 == "5678"w);
-    assert(s3 == "5678"d);
+    assert(s3 == "5678".representation, text("asd", s3._core._payload));
 }
 
 unittest
 {
-    test!char;
-    test!(const char);
-    test!(immutable char);
-    test!wchar;
-    test!(const wchar);
-    test!(immutable wchar);
-    test!dchar;
-    test!(const dchar);
-    test!(immutable dchar);
+    test!ubyte;
+    test!(const ubyte);
+    test!(immutable ubyte);
 
-    test2!char;
-    test2!(const char);
-    test2!(immutable char);
-    test2!wchar;
-    test2!(const wchar);
-    test2!(immutable wchar);
-    test2!dchar;
-    test2!(const dchar);
-    test2!(immutable dchar);
+    test2!ubyte;
+    test2!(const ubyte);
+    test2!(immutable ubyte);
 
     import std.stdio;
     writeln(alloc.bytesUsed);
