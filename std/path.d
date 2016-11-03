@@ -1008,15 +1008,10 @@ auto stripExtension(R)(auto ref R path)
 }
 
 
-/** Params:
-        path = A path name
-        ext = The new extension
+/** Sets or replaces an extension.
 
-    Returns: A string containing the _path given by $(D path), but where
-    the extension has been set to $(D ext).
-
-    If the filename already has an extension, it is replaced.   If not, the
-    extension is simply appended to the filename.  Including a leading dot
+    If the filename already has an extension, it is replaced. If not, the
+    extension is simply appended to the filename. Including a leading dot
     in $(D ext) is optional.
 
     If the extension is empty, this function is equivalent to
@@ -1025,6 +1020,13 @@ auto stripExtension(R)(auto ref R path)
     This function normally allocates a new string (the possible exception
     being the case when path is immutable and doesn't already have an
     extension).
+
+    Params:
+        path = A path name
+        ext = The new extension
+
+    Returns: A string containing the _path given by $(D path), but where
+    the extension has been set to $(D ext).
 
     See_Also:
         $(LREF withExtension) which does not allocate and returns a lazy range.
