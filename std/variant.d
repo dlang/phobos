@@ -1437,8 +1437,6 @@ unittest
 }
 
 /**
-
-/**
  * Thrown in three cases:
  *
  * $(OL $(LI An uninitialized Variant is used in any way except
@@ -1988,10 +1986,10 @@ unittest
  *
  * Returns: The return type of visit is deduced from the visiting functions and must be
  * the same across all overloads.
- * Throws: If no parameter-less, error function is specified:
- * $(D VariantException) if $(D variant) doesn't hold a value.
+ * Throws: $(LREF VariantException) if `variant` doesn't hold a value and no
+ * parameter-less fallback function is specified.
  */
-template visit(Handlers ...)
+template visit(Handlers...)
     if (Handlers.length > 0)
 {
     ///
@@ -2093,12 +2091,11 @@ unittest
  *
  * Returns: The return type of tryVisit is deduced from the visiting functions and must be
  * the same across all overloads.
- * Throws: $(D VariantException) if no parameter-less fallback function is specified.
- *         Thrown when $(D variant) doesn't hold a value or
- *         if $(D variant) holds a value which isn't handled by the visiting
- *         functions.
+ * Throws: $(LREF VariantException) if `variant` doesn't hold a value or
+ * `variant` holds a value which isn't handled by the visiting functions,
+ * when no parameter-less fallback function is specified.
  */
-template tryVisit(Handlers ...)
+template tryVisit(Handlers...)
     if (Handlers.length > 0)
 {
     ///
