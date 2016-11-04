@@ -1048,12 +1048,212 @@ unittest
             (index3));
 }
 
+struct Merge(alias less = "a < b", Rs...)
+    if (Rs.length >= 2 &&
+        allSatisfy!(isInputRange, Rs) &&
+        !is(CommonType!(staticMap!(ElementType, Rs)) == void))
+{
+    public Rs source;
+    private size_t _lastFrontIndex = size_t.max;
+    static if (isBidirectional)
+    {
+        private size_t _lastBackIndex = size_t.max; // `size_t.max` means uninitialized,
+    }
+
+    import std.functional : binaryFun;
+    import std.traits : isCopyable;
+    import std.typetuple : anySatisfy;
+
+    private alias comp = binaryFun!less;
+    private alias ElementType = CommonType!(staticMap!(.ElementType, Rs));
+    private enum isBidirectional = allSatisfy!(isBidirectionalRange, staticMap!(Unqual, Rs));
+
+    debug private enum canCheckSortedness = isCopyable!ElementType && !hasAliasing!ElementType;
+
+    this(Rs source)
+    {
+        this.source = source;
+        this._lastFrontIndex = frontIndex;
+    }
+
+    static if (anySatisfy!(isInfinite, Rs))
+    {
+        enum bool empty = false; // propagate infiniteness
+    }
+    else
+    {
+        @property bool empty()
+        {
+            return _lastFrontIndex == size_t.max;
+        }
+    }
+
+    @property auto ref front()
+    {
+        final switch (_lastFrontIndex)
+        {
+            foreach (i, _; Rs)
+            {
+            case i:
+                assert(!source[i].empty);
+                return source[i].front;
+            }
+        }
+    }
+
+    private size_t frontIndex()
+    {
+        size_t bestIndex = size_t.max; // indicate undefined
+        Unqual!ElementType bestElement;
+        foreach (i, _; Rs)
+        {
+            if (source[i].empty) continue;
+            if (bestIndex == size_t.max || // either this is the first or
+                comp(source[i].front, bestElement))
+            {
+                bestIndex = i;
+                bestElement = source[i].front;
+            }
+        }
+        return bestIndex;
+    }
+
+    void popFront()
+    {
+        sw: final switch (_lastFrontIndex)
+        {
+            foreach (i, R; Rs)
+            {
+            case i:
+                debug static if (canCheckSortedness)
+                {
+                    ElementType previousFront = source[i].front();
+                }
+                source[i].popFront();
+                debug static if (canCheckSortedness)
+                {
+                    if (!source[i].empty)
+                    {
+                        assert(previousFront == source[i].front ||
+                               comp(previousFront, source[i].front),
+                               "Input " ~ i.stringof ~ " is unsorted"); // @nogc
+                    }
+                }
+                break sw;
+            }
+        }
+        _lastFrontIndex = frontIndex;
+    }
+
+    static if (isBidirectional)
+    {
+        @property auto ref back()
+        {
+            if (_lastBackIndex == size_t.max)
+            {
+                this._lastBackIndex = backIndex; // lazy initialization
+            }
+            final switch (_lastBackIndex)
+            {
+                foreach (i, _; Rs)
+                {
+                case i:
+                    assert(!source[i].empty);
+                    return source[i].back;
+                }
+            }
+        }
+
+        private size_t backIndex()
+        {
+            size_t bestIndex = size_t.max; // indicate undefined
+            Unqual!ElementType bestElement;
+            foreach (i, _; Rs)
+            {
+                if (source[i].empty) continue;
+                if (bestIndex == size_t.max || // either this is the first or
+                    comp(bestElement, source[i].back))
+                {
+                    bestIndex = i;
+                    bestElement = source[i].back;
+                }
+            }
+            return bestIndex;
+        }
+
+        void popBack()
+        {
+            if (_lastBackIndex == size_t.max)
+            {
+                this._lastBackIndex = backIndex; // lazy initialization
+            }
+            sw: final switch (_lastBackIndex)
+            {
+                foreach (i, R; Rs)
+                {
+                case i:
+                    debug static if (canCheckSortedness)
+                    {
+                        ElementType previousBack = source[i].back();
+                    }
+                    source[i].popBack();
+                    debug static if (canCheckSortedness)
+                    {
+                        if (!source[i].empty)
+                        {
+                            assert(previousBack == source[i].back ||
+                                   comp(source[i].back, previousBack),
+                                   "Input " ~ i.stringof ~ " is unsorted"); // @nogc
+                        }
+                    }
+                    break sw;
+                }
+            }
+            _lastBackIndex = backIndex;
+            if (_lastBackIndex == size_t.max) // if emptied
+            {
+                _lastFrontIndex = size_t.max;
+            }
+        }
+    }
+
+    static if (allSatisfy!(isForwardRange, staticMap!(Unqual, Rs)))
+    {
+        @property auto save()
+        {
+            auto result = this;
+            foreach (i, _; Rs)
+            {
+                result.source[i] = result.source[i].save;
+            }
+            return result;
+        }
+    }
+
+    static if (allSatisfy!(hasLength, Rs))
+    {
+        @property size_t length()
+        {
+            size_t result;
+            foreach (i, _; Rs)
+            {
+                result += source[i].length;
+            }
+            return result;
+        }
+
+        alias opDollar = length;
+    }
+}
+
 /**
-Lazily computes the union of two or more ranges $(D rs). The ranges
-are assumed to be sorted by $(D less). Elements in the output are not
-unique; the length of the output is the sum of the lengths of the
-inputs. (The $(D length) member is offered if all ranges also have
-length.) The element types of all ranges must have a common type.
+   Merge multiple sorted ranges `rs` with less-than predicate function `pred`
+   into one single sorted output range containing the sorted union of the
+   elements of inputs. Duplicates are not eliminated, meaning that the total
+   number of elements in the output is the sum of all elements in the ranges
+   passed to it; the `length` member is offered if all inputs also have
+   `length`. The element types of all the inputs must have a common type
+   `CommonType`.
 
 Params:
     less = Predicate the given ranges are sorted by.
@@ -1061,127 +1261,34 @@ Params:
 
 Returns:
     A range containing the union of the given ranges.
- */
-struct Merge(alias less = "a < b", Rs...) if (allSatisfy!(isInputRange, Rs))
-{
-private:
-    Rs _r;
-    alias comp = binaryFun!(less);
-    uint _crt;
 
-    void adjustPosition(uint candidate = 0)()
-    {
-        static if (candidate == Rs.length)
-        {
-            _crt = _crt.max;
-        }
-        else
-        {
-            if (_r[candidate].empty)
-            {
-                adjustPosition!(candidate + 1)();
-                return;
-            }
-            foreach (i, U; Rs[candidate + 1 .. $])
-            {
-                enum j = candidate + i + 1;
-                if (_r[j].empty) continue;
-                if (comp(_r[j].front, _r[candidate].front))
-                {
-                    // a new candidate was found
-                    adjustPosition!(j)();
-                    return;
-                }
-            }
-            // Found a successful candidate
-            _crt = candidate;
-        }
-    }
+Details:
 
-public:
-    alias ElementType = CommonType!(staticMap!(.ElementType, Rs));
-    static assert(!is(CommonType!(staticMap!(.ElementType, Rs)) == void),
-        typeof(this).stringof ~ ": incompatible element types.");
+All of its inputs are assumed to be sorted. This can mean that inputs are
+   instances of $(REF SortedRange, std,range). Use the result of $(REF sort,
+   std,algorithm,sorting), or $(REF assumeSorted, std,range) to merge ranges
+   known to be sorted (show in the example below). Note that there is currently
+   no way of ensuring that two or more instances of $(REF SortedRange,
+   std,range) are sorted using a specific comparison function `pred`. Therefore
+   no checking is done here to assure that all inputs `rs` are instances of
+   $(REF SortedRange, std,range).
 
-    ///
-    this(Rs rs)
-    {
-        this._r = rs;
-        adjustPosition();
-    }
+   This algorithm is lazy, doing work progressively as elements are pulled off
+   the result.
 
-    ///
-    @property bool empty()
-    {
-        return _crt == _crt.max;
-    }
+   Time complexity is proportional to the sum of element counts over all inputs.
 
-    ///
-    void popFront()
-    {
-        // Assumes _crt is correct
-        assert(!empty);
-        foreach (i, U; Rs)
-        {
-            if (i < _crt) continue;
-            // found _crt
-            assert(!_r[i].empty);
-            _r[i].popFront();
-            adjustPosition();
-            return;
-        }
-        assert(false);
-    }
+   If all inputs have the same element type and offer it by `ref`, output
+   becomes a range with mutable `front` (and `back` where appropriate) that
+   reflects in the original inputs.
 
-    ///
-    @property auto ref ElementType front()
-    {
-        assert(!empty);
-        // Assume _crt is correct
-        foreach (i, U; Rs)
-        {
-            if (i < _crt) continue;
-            assert(!_r[i].empty);
-            return _r[i].front;
-        }
-        assert(false);
-    }
-
-    static if (allSatisfy!(isForwardRange, Rs))
-    {
-        ///
-        @property auto save()
-        {
-            auto ret = this;
-            foreach (ti, elem; _r)
-            {
-                ret._r[ti] = elem.save;
-            }
-            return ret;
-        }
-    }
-
-    static if (allSatisfy!(hasLength, Rs))
-    {
-        ///
-        @property size_t length()
-        {
-            size_t result;
-            foreach (i, U; Rs)
-            {
-                result += _r[i].length;
-            }
-            return result;
-        }
-
-        ///
-        alias opDollar = length;
-    }
-}
-
-/// Ditto
-Merge!(less, Rs) merge(alias less = "a < b", Rs...)
-(Rs rs)
+   If any of the inputs `rs` is infinite so is the result (`empty` being always
+   `false`).
+*/
+Merge!(less, Rs) merge(alias less = "a < b", Rs...)(Rs rs)
+    if (Rs.length >= 2 &&
+        allSatisfy!(isInputRange, Rs) &&
+        !is(CommonType!(staticMap!(ElementType, Rs)) == void))
 {
     return typeof(return)(rs);
 }
@@ -1190,10 +1297,13 @@ Merge!(less, Rs) merge(alias less = "a < b", Rs...)
 @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range : retro;
 
     int[] a = [1, 3, 5];
     int[] b = [2, 3, 4];
+
     assert(a.merge(b).equal([1, 2, 3, 3, 4, 5]));
+    assert(a.merge(b).retro.equal([5, 4, 3, 3, 2, 1]));
 }
 
 @safe pure nothrow unittest
@@ -1249,6 +1359,48 @@ Merge!(less, Rs) merge(alias less = "a < b", Rs...)
     static immutable b = [2, 3, 4];
     static immutable r = [1, 2, 3, 3, 4, 5];
     assert(a.merge(b).equal(r));
+}
+
+/// test bi-directional access and common type
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : retro;
+    import std.traits : CommonType;
+
+    alias S = short;
+    alias I = int;
+    alias D = double;
+
+    S[] a = [1, 2, 3];
+    I[] b = [50, 60];
+    D[] c = [10, 20, 30, 40];
+
+    auto m = merge(a, b, c);
+
+    static assert(is(typeof(m.front) == CommonType!(S, I, D)));
+
+    assert(equal(m, [1, 2, 3, 10, 20, 30, 40, 50, 60]));
+    assert(equal(m.retro, [60, 50, 40, 30, 20, 10, 3, 2, 1]));
+
+    m.popFront();
+    assert(equal(m, [2, 3, 10, 20, 30, 40, 50, 60]));
+    m.popBack();
+    assert(equal(m, [2, 3, 10, 20, 30, 40, 50]));
+    m.popFront();
+    assert(equal(m, [3, 10, 20, 30, 40, 50]));
+    m.popBack();
+    assert(equal(m, [3, 10, 20, 30, 40]));
+    m.popFront();
+    assert(equal(m, [10, 20, 30, 40]));
+    m.popBack();
+    assert(equal(m, [10, 20, 30]));
+    m.popFront();
+    assert(equal(m, [20, 30]));
+    m.popBack();
+    assert(equal(m, [20]));
+    m.popFront();
+    assert(m.empty);
 }
 
 private template validPredicates(E, less...)
