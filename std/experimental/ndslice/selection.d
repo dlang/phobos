@@ -468,6 +468,7 @@ pure nothrow unittest
 Returns an n-dimensional slice of n-dimensional non-overlapping blocks.
 `blocks` can be generalized with other selectors.
 For example, `blocks` in combination with $(LREF diagonal) can be used to get a slice of diagonal blocks.
+For overlapped blocks, combine $(LREF windows) with $(SUBREF iteration, strided).
 
 Params:
     N = dimension count
