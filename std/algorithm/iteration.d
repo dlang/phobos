@@ -2415,6 +2415,21 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
                 return copy;
             }
         }
+
+        static if (hasAssignableElements!(ElementType!RoR))
+        {
+            @property void front(ElementType!(ElementType!RoR) element)
+            {
+                assert(!empty, "Attempting to assign to front of an empty joiner.");
+                _current.front = element;
+            }
+
+            @property void front(ref ElementType!(ElementType!RoR) element)
+            {
+                assert(!empty, "Attempting to assign to front of an empty joiner.");
+                _current.front = element;
+            }
+        }
     }
     return Result(r);
 }
@@ -2572,6 +2587,51 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 
     auto str = to!string(r);
     assert(str == "abcd");
+}
+
+@safe unittest
+{
+    import std.range : repeat;
+
+    class AssignableRange
+    {
+    @safe:
+        int element;
+        @property int front()
+        {
+            return element;
+        }
+
+        enum empty = false;
+
+        void popFront()
+        {
+        }
+
+        @property void front(int newValue)
+        {
+            element = newValue;
+        }
+    }
+
+    static assert(isInputRange!AssignableRange);
+    static assert(is(ElementType!AssignableRange == int));
+    static assert(hasAssignableElements!AssignableRange);
+    static assert(!hasLvalueElements!AssignableRange);
+
+    auto range = new AssignableRange();
+    assert(range.element == 0);
+
+    auto joined = joiner(repeat(range));
+    joined.front = 5;
+    assert(range.element == 5);
+    assert(joined.front == 5);
+
+    joined.popFront;
+    int byRef = 7;
+    joined.front = byRef;
+    assert(range.element == byRef);
+    assert(joined.front == byRef);
 }
 
 /++
