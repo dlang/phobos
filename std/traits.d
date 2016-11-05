@@ -92,6 +92,7 @@
  *           $(LREF isFloatingPoint)
  *           $(LREF isIntegral)
  *           $(LREF isNarrowString)
+ *           $(LREF isConvertibleToString)
  *           $(LREF isNumeric)
  *           $(LREF isPointer)
  *           $(LREF isScalarType)
@@ -5330,15 +5331,18 @@ enum bool isNarrowString(T) = (is(T : const char[]) || is(T : const wchar[])) &&
 }
 
 
-/*
-Detect whether $(D T) is a struct or static array that is implicitly
-convertible to a string.
+/**
+ * Detect whether $(D T) is a struct, static array, or enum that is implicitly
+ * convertible to a string.
  */
 template isConvertibleToString(T)
 {
-    enum isConvertibleToString = (isAggregateType!T || isStaticArray!T) && is(StringTypeOf!T);
+    enum isConvertibleToString =
+        (isAggregateType!T || isStaticArray!T || is(T == enum))
+        && is(StringTypeOf!T);
 }
 
+///
 @safe unittest
 {
     static struct AliasedString
@@ -5346,9 +5350,22 @@ template isConvertibleToString(T)
         string s;
         alias s this;
     }
+
+    enum StringEnum { a = "foo" }
+
     assert(!isConvertibleToString!string);
     assert(isConvertibleToString!AliasedString);
+    assert(isConvertibleToString!StringEnum);
     assert(isConvertibleToString!(char[25]));
+    assert(!isConvertibleToString!(char[]));
+}
+
+@safe unittest // Bugzilla 16573
+{
+    enum I : int { foo = 1 }
+    enum S : string { foo = "foo" }
+    assert(!isConvertibleToString!I);
+    assert(isConvertibleToString!S);
 }
 
 package template convertToString(T)
