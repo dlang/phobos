@@ -468,6 +468,7 @@ pure nothrow unittest
 Returns an n-dimensional slice of n-dimensional non-overlapping blocks.
 `blocks` can be generalized with other selectors.
 For example, `blocks` in combination with $(LREF diagonal) can be used to get a slice of diagonal blocks.
+For overlapped blocks, combine $(LREF windows) with $(SUBREF iteration, strided).
 
 Params:
     N = dimension count
@@ -709,6 +710,41 @@ pure nothrow unittest
          [1,  2,  3, 3, 3, 3,  2,  1],
          [1,  2,  3, 3, 3, 3,  2,  1],
          [1,  2,  3, 3, 3, 3,  2,  1]]);
+}
+
+/// Overlapping blocks using windows
+pure nothrow unittest
+{
+    //  ----------------
+    // |  0  1  2  3  4 |
+    // |  5  6  7  8  9 |
+    // | 10 11 12 13 14 |
+    // | 15 16 17 18 19 |
+    // | 20 21 22 23 24 |
+    //  ----------------
+    //->
+    //  ---------------------
+    // |  0  1  2 |  2  3  4 |
+    // |  5  6  7 |  7  8  9 |
+    // | 10 11 12 | 12 13 14 |
+    // | - - - - - - - - - - |
+    // | 10 11 13 | 12 13 14 |
+    // | 15 16 17 | 17 18 19 |
+    // | 20 21 22 | 22 23 24 |
+    //  ---------------------
+
+    import std.experimental.ndslice.slice;
+    import std.experimental.ndslice.iteration : strided;
+
+    auto overlappingBlocks = iotaSlice(5, 5)
+        .windows(3, 3)
+        .strided!(0, 1)(2, 2);
+
+    assert(overlappingBlocks ==
+            [[[[ 0,  1,  2], [ 5,  6,  7], [10, 11, 12]],
+              [[ 2,  3,  4], [ 7,  8,  9], [12, 13, 14]]],
+             [[[10, 11, 12], [15, 16, 17], [20, 21, 22]],
+              [[12, 13, 14], [17, 18, 19], [22, 23, 24]]]]);
 }
 
 /++
