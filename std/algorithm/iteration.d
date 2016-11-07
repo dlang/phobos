@@ -3662,6 +3662,10 @@ unittest
     assert(cumulativeSum([false, true, true, false, true])
         .equal([0, 1, 2, 2, 3]));
 
+    // Similarly, a seed can be used to force floating point summation:
+    assert(cumulativeSum([false, true, true, false, true], 0.0)
+        .equal([0.0, 1.0, 2.0, 2.0, 3.0]));
+
 
     // The result may overflow:
     assert(uint.max.repeat(3).cumulativeSum
@@ -3713,10 +3717,9 @@ unittest
     int[] empty;
     assert(cumulativeSum(empty).empty);
     assert(cumulativeSum([42]).equal([42]));
-    assert(cumulativeSum([42, 43]).equal([42, 42 + 43]));
-    assert(cumulativeSum([42, 43, 44]).equal([42, 42 + 43, 42 + 43 + 44]));
-    assert(cumulativeSum([42, 43, 44, 45])
-        .equal([42, 42 + 43, 42 + 43 + 44, 42 + 43 + 44 + 45]));
+    assert(cumulativeSum([42, 43]).equal([42, 85]));
+    assert(cumulativeSum([42, 43, 44]).equal([42, 85, 129]));
+    assert(cumulativeSum([42, 43, 44, 45]).equal([42, 85, 129, 174]));
 }
 
 @safe pure nothrow
@@ -3727,8 +3730,8 @@ unittest
 
     // Floating point types:
 
-    static assert(is(ElementType!(typeof(cumulativeSum([1.0, 2.0, 3.0, 4.0]))) == double));
     static assert(is(ElementType!(typeof(cumulativeSum([1F, 2F, 3F, 4F]))) == double));
+    static assert(is(ElementType!(typeof(cumulativeSum([1.0, 2.0, 3.0, 4.0]))) == double));
     static assert(is(ElementType!(typeof(cumulativeSum([1.0L, 2.0L, 3.0L, 4.0L]))) == real));
     const(float[]) a = [1F, 2F, 3F, 4F];
     static assert(is(ElementType!(typeof(cumulativeSum(a))) == double));
@@ -3738,11 +3741,10 @@ unittest
     double[] empty;
     assert(cumulativeSum(empty).empty);
     assert(cumulativeSum([42.0]).equal([42]));
-    assert(cumulativeSum([42.0, 43.0]).equal([42, 42 + 43]));
-    assert(cumulativeSum([42.0, 43.0, 44.0])
-        .equal([42, 42 + 43, 42 + 43 + 44]));
+    assert(cumulativeSum([42.0, 43.0]).equal([42, 85]));
+    assert(cumulativeSum([42.0, 43.0, 44.0]).equal([42, 85, 129]));
     assert(cumulativeSum([42.0, 43.0, 44.0, 45.5])
-        .equal([42, 42 + 43, 42 + 43 + 44, 42 + 43 + 44 + 45.5]));
+        .equal([42, 85, 129, 174.5]));
 }
 
 @safe @nogc pure nothrow
@@ -3763,8 +3765,8 @@ unittest
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges, propagatesLength,
         propagatesRangeType, RangeType;
-    import std.range : chunks;
     import std.algorithm.iteration : map, joiner;
+    import std.range : isForwardRange, chunks;
 
     foreach (DummyType; AllDummyRanges)
     {
@@ -3774,16 +3776,18 @@ unittest
         // cumulativeFold.
         auto f = d.map!(n => cast(double)n);
 
-        static if (DummyType.rt == RangeType.Forward)
+        static if (isForwardRange!(typeof(f)))
         {
             assert(f.chunks(1).map!cumulativeSum.joiner.equal(f));
         }
+
         auto s = f.cumulativeSum;
 
-        static assert(propagatesLength!(typeof(s), DummyType));
+        static assert(propagatesLength!(typeof(s), typeof(f)));
+
         static if (DummyType.rt <= RangeType.Forward)
         {
-            static assert(propagatesRangeType!(typeof(s), DummyType));
+            static assert(propagatesRangeType!(typeof(s), typeof(f)));
         }
 
         assert(s.equal([1, 3, 6, 10, 15, 21, 28, 36, 45, 55]));
