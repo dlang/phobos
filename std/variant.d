@@ -88,14 +88,13 @@ struct This;
 private alias This2Variant(V, T...) = AliasSeq!(ReplaceType!(This, V, T));
 
 /**
- * $(D VariantN) is a back-end type seldom used directly by user
- * code. Two commonly-used types using $(D VariantN) as
- * back-end are:
+ * Back-end type seldom used directly by user
+ * code. Two commonly-used types using $(D VariantN) are:
  *
- * $(OL $(LI $(B Algebraic): A closed discriminated union with a
+ * $(OL $(LI $(LREF Algebraic): A closed discriminated union with a
  * limited type universe (e.g., $(D Algebraic!(int, double,
  * string)) only accepts these three types and rejects anything
- * else).) $(LI $(B Variant): An open discriminated union allowing an
+ * else).) $(LI $(LREF Variant): An open discriminated union allowing an
  * unbounded set of types. If any of the types in the $(D Variant)
  * are larger than the largest built-in type, they will automatically
  * be boxed. This means that even large types will only be the size
@@ -1333,8 +1332,8 @@ unittest
 
 
 /**
-Algebraic data type restricted to a closed set of possible
-types. It's an alias for a $(LREF VariantN) with an
+_Algebraic data type restricted to a closed set of possible
+types. It's an alias for $(LREF VariantN) with an
 appropriately-constructed maximum size. `Algebraic` is
 useful when it is desirable to restrict what a discriminated type
 could hold to the end of defining simpler and more efficient
@@ -1389,7 +1388,7 @@ unittest
 }
 
 /**
-`Variant` is an alias for `VariantN` instantiated with the largest of `creal`,
+Alias for $(LREF VariantN) instantiated with the largest size of `creal`,
 `char[]`, and `void delegate()`. This ensures that `Variant` is large enough
 to hold all of D's predefined types unboxed, including all numeric types,
 pointers, delegates, and class references.  You may want to use
@@ -1424,22 +1423,10 @@ unittest
     assert(b[1] == 3.14);
 }
 
-/** Code that needs functionality similar to the $(D boxArray)
-function in the $(D std.boxer) module can achieve it like this:
-*/
-unittest
-{
-    Variant[] fun(T...)(T args)
-    {
-        // ...
-        return variantArray(args);
-    }
-}
-
 /**
  * Thrown in three cases:
  *
- * $(OL $(LI An uninitialized Variant is used in any way except
+ * $(OL $(LI An uninitialized `Variant` is used in any way except
  * assignment and $(D hasValue);) $(LI A $(D get) or
  * $(D coerce) is attempted with an incompatible target type;)
  * $(LI A comparison between $(D Variant) objects of
