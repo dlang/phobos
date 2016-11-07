@@ -4362,34 +4362,34 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     static if(__traits(compiles, parse!T(input)) ) return parse!T(input);
 }
 
-private T rawReadWrapper(T, Range)(ref Range input)
+private T rawRead(T, Range)(ref Range input)
 {
-	enforce(
+    enforce(
             isSomeString!Range || ElementType!(Range).sizeof == 1,
             "Cannot parse input of type %s".format(Range.stringof)
         );
-	union X
-	{
-		ubyte[T.sizeof] raw;
-	    T typed;
-	}
+    union X
+    {
+        ubyte[T.sizeof] raw;
+        T typed;
+    }
     X x;
-	foreach (i; 0 .. T.sizeof)
-	{
-		static if (isSomeString!Range)
-	    {
-	    	x.raw[i] = input[0];
-	       	input = input[1 .. $];
-	    }
-	    else
-	     {
-	     	// TODO: recheck this
-	       	x.raw[i] = cast(ubyte) input.front;
-	        input.popFront();
-	     }
-	}
+    foreach (i; 0 .. T.sizeof)
+    {
+        static if (isSomeString!Range)
+        {
+            x.raw[i] = input[0];
+            input = input[1 .. $];
+        }
+        else
+        {
+            // TODO: recheck this
+            x.raw[i] = cast(ubyte) input.front;
+            input.popFront();
+        }
+    }
 
-	return x.typed;
+    return x.typed;
 
 }
 
@@ -4399,7 +4399,7 @@ private T rawReadWrapper(T, Range)(ref Range input)
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && isIntegral!T && !is(T == enum))
 {
- 
+
     import std.algorithm.searching : find;
     import std.conv : parse, text;
     enforce(find(acceptedSpecs!T, spec.spec).length,
@@ -4413,16 +4413,16 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
         spec.spec == 'b' ? 2 :
         spec.spec == 's' || spec.spec == 'd' || spec.spec == 'u' ? 10 : 0;
     assert(base != 0);
-	
+
     // raw read
-	//enforce(input.length >= T.sizeof);
-	if (spec.spec == 'r') return rawReadWrapper!T(input);
+    //enforce(input.length >= T.sizeof);
+    if (spec.spec == 'r') return rawRead!T(input);
 
-	enforce(find(acceptedSpecs!T, spec.spec).length,
-    		text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+    enforce(find(acceptedSpecs!T, spec.spec).length,
+            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
-	static if(__traits(compiles, parse!T(input, base)) ) return parse!T(input, base);
-	
+    static if(__traits(compiles, parse!T(input, base)) ) return parse!T(input, base);
+
 }
 
 version(none)unittest
@@ -4451,9 +4451,9 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 
 
     // raw read
-	//enforce(input.length >= T.sizeof);
-    if (spec.spec == 'r') return rawReadWrapper!T(input);
-        
+    //enforce(input.length >= T.sizeof);
+    if (spec.spec == 'r') return rawRead!T(input);
+
     enforce(find(acceptedSpecs!T, spec.spec).length,
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
