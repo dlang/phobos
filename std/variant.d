@@ -2178,22 +2178,17 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
             static if (isSomeFunction!dg)
             {
                 alias Params = Parameters!dg;
-                foreach (tidx, T; AllowedTypes)
+
+                static if (Params.length == 0)
                 {
-                    static if (Params.length == 0)
-                    {
-                        // Just check exception functions in the first
-                        // inner iteration (over delegates)
-                        if (tidx > 0)
-                            continue;
-                        else
-                        {
-                            if (result.exceptionFuncIdx != -1)
-                                assert(false, "duplicate parameter-less (error-)function specified");
-                            result.exceptionFuncIdx = dgidx;
-                        }
-                    }
-                    else static if (is(Params[0] == T) || is(Unqual!(Params[0]) == T))
+                    if (result.exceptionFuncIdx != -1)
+                        assert(false, "duplicate parameter-less (error-)function specified");
+                    result.exceptionFuncIdx = dgidx;
+                }
+                else
+                {
+                    foreach (tidx, T; AllowedTypes)
+                        static if (is(Params[0] == T) || is(Unqual!(Params[0]) == T))
                     {
                         if (result.indices[tidx] != -1)
                             assert(false, "duplicate overload specified for type '" ~ T.stringof ~ "'");
