@@ -2187,13 +2187,18 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
                 }
                 else
                 {
+                    bool found = false;
+
                     foreach (tidx, T; AllowedTypes)
                         static if (is(Params[0] == T) || is(Unqual!(Params[0]) == T))
                     {
                         if (result.indices[tidx] != -1)
                             assert(false, "duplicate overload specified for type '" ~ T.stringof ~ "'");
                         result.indices[tidx] = dgidx;
+                        found = true;
                     }
+                    if (!found)
+                        assert(false, Params[0].stringof ~ " does not match any of " ~ AllowedTypes.stringof);
                 }
             }
             // Handle composite visitors with opCall overloads
@@ -2247,6 +2252,20 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
         }
     }
     assert(false);
+}
+
+unittest
+{
+    Algebraic!(size_t, string) v;
+
+    static assert(__traits(compiles, v.visit!((size_t s)=>0, (string s)=>0)));
+    static assert(!__traits(compiles, v.visit!((bool)=>0, (size_t s)=>0, (string s)=>0)));
+    static assert(!__traits(compiles, v.visit!((size_t s)=>0, (void*)=>0, (string s)=>0)));
+
+    static assert(__traits(compiles, v.tryVisit!((size_t s)=>0)));
+    static assert(!__traits(compiles, v.tryVisit!((bool)=>0, ()=>0)));
+    static assert(!__traits(compiles, v.tryVisit!((void*)=>0, (string s)=>0)));
+    static assert(!__traits(compiles, v.tryVisit!((size_t s)=>0, (bool)=>0)));
 }
 
 unittest
