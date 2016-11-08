@@ -2155,33 +2155,31 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
 {
     alias AllowedTypes = VariantType.AllowedTypes;
 
-
     /**
-     * Returns: Struct where $(D indices)  is an array which
+     * Returns: Struct where `indices` is an array which
      * contains at the n-th position the index in Handler which takes the
      * n-th type of AllowedTypes. If an Handler doesn't match an
-     * AllowedType, -1 is set. If a function in the delegates doesn't
-     * have parameters, the field $(D exceptionFuncIdx) is set;
+     * AllowedType, default to -1. If a function in the delegates doesn't
+     * have parameters, the field `exceptionFuncIdx` is set;
      * otherwise it's -1.
      */
     auto visitGetOverloadMap()
     {
         struct Result {
-            int[AllowedTypes.length] indices;
+            int[AllowedTypes.length] indices = -1;
             int exceptionFuncIdx = -1;
         }
 
         Result result;
 
-        foreach (tidx, T; AllowedTypes)
+        foreach (dgidx, dg; Handler)
         {
-            bool added = false;
-            foreach (dgidx, dg; Handler)
+            // Handle normal function objects
+            static if (isSomeFunction!dg)
             {
-                // Handle normal function objects
-                static if (isSomeFunction!dg)
+                alias Params = Parameters!dg;
+                foreach (tidx, T; AllowedTypes)
                 {
-                    alias Params = Parameters!dg;
                     static if (Params.length == 0)
                     {
                         // Just check exception functions in the first
@@ -2197,24 +2195,18 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
                     }
                     else static if (is(Params[0] == T) || is(Unqual!(Params[0]) == T))
                     {
-                        if (added)
+                        if (result.indices[tidx] != -1)
                             assert(false, "duplicate overload specified for type '" ~ T.stringof ~ "'");
-
-                        added = true;
                         result.indices[tidx] = dgidx;
                     }
                 }
-                // Handle composite visitors with opCall overloads
-                else
-                {
-                    static assert(false, dg.stringof ~ " is not a function or delegate");
-                }
             }
-
-            if (!added)
-                result.indices[tidx] = -1;
+            // Handle composite visitors with opCall overloads
+            else
+            {
+                static assert(false, dg.stringof ~ " is not a function or delegate");
+            }
         }
-
         return result;
     }
 
@@ -2224,7 +2216,7 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
     {
         // Call the exception function. The HandlerOverloadMap
         // will have its exceptionFuncIdx field set to value != -1 if an
-        // exception function has been specified; otherwise we just through an exception.
+        // exception function has been specified; otherwise we just throw an exception.
         static if (HandlerOverloadMap.exceptionFuncIdx != -1)
             return Handler[ HandlerOverloadMap.exceptionFuncIdx ]();
         else
@@ -2259,7 +2251,6 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
             }
         }
     }
-
     assert(false);
 }
 
