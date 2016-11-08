@@ -3506,7 +3506,7 @@ Params:
     s = a seed value that gives the initial value of the summation
 
 Returns:
-    an $(REF_ALTTEXT input range, isInputRange, std, range, primitives)
+    An $(REF_ALTTEXT input range, isInputRange, std, range, primitives)
     containing the intermediate results of the summation of `r`.
 
 See_Also:
