@@ -2296,6 +2296,19 @@ unittest
 
 unittest
 {
+    // check exceptions have the right line number
+    import std.exception : collectException;
+
+    Algebraic!(int, char) var;
+    assert(collectException(var.visit!((int)=>0, (char)=>1)).line == __LINE__);
+    assert(collectException(var.tryVisit!((int)=>0)).line == __LINE__);
+
+    var = 'c';
+    assert(collectException(var.tryVisit!((int)=>0)).line == __LINE__);
+}
+
+unittest
+{
     // http://d.puremagic.com/issues/show_bug.cgi?id=5310
     const Variant a;
     assert(a == a);
