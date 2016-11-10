@@ -1958,10 +1958,10 @@ unittest
  * ensuring that all types are handled by the visiting functions.
  *
  * The delegate or function having the currently held value as parameter is called
- * with $(D variant)'s current value. Visiting handlers are passed
+ * with $(D variant)'s current value. Visiting _handlers are passed
  * in the template parameter list.
  * It is statically ensured that all held types of
- * $(D variant) are handled across all handlers.
+ * $(D variant) are handled across all _handlers.
  * $(D visit) allows delegates and static functions to be passed
  * as parameters.
  *
@@ -1976,14 +1976,14 @@ unittest
  * Throws: $(LREF VariantException) if `variant` doesn't hold a value and no
  * parameter-less fallback function is specified.
  */
-template visit(Handlers...)
-    if (Handlers.length > 0)
+template visit(handlers...)
+    if (handlers.length > 0)
 {
     ///
     auto visit(VariantType)(VariantType variant, string file = __FILE__, size_t line = __LINE__)
         if (isAlgebraic!VariantType)
     {
-        return visitImpl!(true, VariantType, Handlers)(variant, file, line);
+        return visitImpl!(true, VariantType, handlers)(variant, file, line);
     }
 }
 
@@ -2082,14 +2082,14 @@ unittest
  * `variant` holds a value which isn't handled by the visiting functions,
  * when no parameter-less fallback function is specified.
  */
-template tryVisit(Handlers...)
-    if (Handlers.length > 0)
+template tryVisit(handlers...)
+    if (handlers.length > 0)
 {
     ///
     auto tryVisit(VariantType)(VariantType variant, string file = __FILE__, size_t line = __LINE__)
         if (isAlgebraic!VariantType)
     {
-        return visitImpl!(false, VariantType, Handlers)(variant, file, line);
+        return visitImpl!(false, VariantType, handlers)(variant, file, line);
     }
 }
 
