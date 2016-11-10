@@ -1898,27 +1898,23 @@ public alias CodepointSet = InversionList!GcPolicy;
 */
 public struct CodepointInterval
 {
-    uint[2] tuple;
-    alias tuple this;
+pure:
+    uint[2] _tuple;
+    alias _tuple this;
 
 @safe pure nothrow @nogc:
-    /// Constructor
+
     this(uint low, uint high)
     {
-        tuple[0] = low;
-        tuple[1] = high;
+        _tuple[0] = low;
+        _tuple[1] = high;
     }
-
-    /// Support for equality testing
     bool opEquals(T)(T val) const
     {
         return this[0] == val[0] && this[1] == val[1];
     }
-
-    /// Access to the interval members
-    @property ref inout(uint) a() inout { return tuple[0]; }
-    /// ditto
-    @property ref inout(uint) b() inout { return tuple[1]; }
+    @property ref inout(uint) a() inout { return _tuple[0]; }
+    @property ref inout(uint) b() inout { return _tuple[1]; }
 }
 
 /**
@@ -7962,7 +7958,7 @@ version(std_uni_bootstrap)
 {
     // old version used for bootstrapping of gen_uni.d that generates
     // up to date optimal versions of all of isXXX functions
-    package @safe pure nothrow @nogc bool isWhite(dchar c)
+    @safe pure nothrow @nogc public bool isWhite(dchar c)
     {
         import std.ascii : isWhite;
         return isWhite(c) ||
@@ -8303,7 +8299,7 @@ auto asUpperCase(Range)(Range str)
     assert("hEllo".asUpperCase.equal("HELLO"));
 }
 
-/// ditto
+// explicitly undocumented
 auto asLowerCase(Range)(auto ref Range str)
     if (isConvertibleToString!Range)
 {
@@ -8311,7 +8307,7 @@ auto asLowerCase(Range)(auto ref Range str)
     return asLowerCase!(StringTypeOf!Range)(str);
 }
 
-/// ditto
+// explicitly undocumented
 auto asUpperCase(Range)(auto ref Range str)
     if (isConvertibleToString!Range)
 {
@@ -8500,7 +8496,6 @@ auto asCapitalized(Range)(Range str)
     assert("hEllo".asCapitalized.equal("Hello"));
 }
 
-/// ditto
 auto asCapitalized(Range)(auto ref Range str)
     if (isConvertibleToString!Range)
 {
@@ -8823,6 +8818,16 @@ void toLowerInPlace(C)(ref C[] s) @trusted pure
 {
     toCaseInPlace!(LowerTriple)(s);
 }
+// overloads for the most common cases to reduce compile time
+@safe pure /*TODO nothrow*/
+{
+    void toLowerInPlace(ref char[] s)
+    { toLowerInPlace!char(s); }
+    void toLowerInPlace(ref wchar[] s)
+    { toLowerInPlace!wchar(s); }
+    void toLowerInPlace(ref dchar[] s)
+    { toLowerInPlace!dchar(s); }
+}
 
 /++
     Converts $(D s) to uppercase  (by performing Unicode uppercase mapping) in place.
@@ -8834,6 +8839,16 @@ void toUpperInPlace(C)(ref C[] s) @trusted pure
     if (is(C == char) || is(C == wchar) || is(C == dchar))
 {
     toCaseInPlace!(UpperTriple)(s);
+}
+// overloads for the most common cases to reduce compile time/code size
+@safe pure /*TODO nothrow*/
+{
+    void toUpperInPlace(ref char[] s)
+    { toUpperInPlace!char(s); }
+    void toUpperInPlace(ref wchar[] s)
+    { toUpperInPlace!wchar(s); }
+    void toUpperInPlace(ref dchar[] s)
+    { toUpperInPlace!dchar(s); }
 }
 
 /++
@@ -8874,6 +8889,17 @@ S toLower(S)(S s) @trusted pure
     static import std.ascii;
     return toCase!(LowerTriple, std.ascii.toLower)(s);
 }
+// overloads for the most common cases to reduce compile time
+@safe pure /*TODO nothrow*/
+{
+    string toLower(string s)
+    { return toLower!string(s); }
+    wstring toLower(wstring s)
+    { return toLower!wstring(s); }
+    dstring toLower(dstring s)
+    { return toLower!dstring(s); }
+}
+
 
 @system unittest //@@@BUG std.format is not @safe
 {
@@ -9028,6 +9054,16 @@ S toUpper(S)(S s) @trusted pure
 {
     static import std.ascii;
     return toCase!(UpperTriple, std.ascii.toUpper)(s);
+}
+// overloads for the most common cases to reduce compile time
+@safe pure /*TODO nothrow*/
+{
+    string toUpper(string s)
+    { return toUpper!string(s); }
+    wstring toUpper(wstring s)
+    { return toUpper!wstring(s); }
+    dstring toUpper(dstring s)
+    { return toUpper!dstring(s); }
 }
 
 @safe unittest
