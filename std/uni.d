@@ -8898,6 +8898,22 @@ S toLower(S)(S s) @trusted pure
     { return toLower!wstring(s); }
     dstring toLower(dstring s)
     { return toLower!dstring(s); }
+
+    unittest
+    {
+        // https://issues.dlang.org/show_bug.cgi?id=16663
+
+        static struct String
+        {
+            string data;
+            alias data this;
+        }
+
+        void foo()
+        {
+            auto u = toLower(String(""));
+        }
+    }
 }
 
 
@@ -9064,6 +9080,22 @@ S toUpper(S)(S s) @trusted pure
     { return toUpper!wstring(s); }
     dstring toUpper(dstring s)
     { return toUpper!dstring(s); }
+
+    unittest
+    {
+        // https://issues.dlang.org/show_bug.cgi?id=16663
+
+        static struct String
+        {
+            string data;
+            alias data this;
+        }
+
+        void foo()
+        {
+            auto u = toUpper(String(""));
+        }
+    }
 }
 
 @safe unittest
