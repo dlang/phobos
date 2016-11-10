@@ -5554,7 +5554,7 @@ template castFrom(From)
     }
 
     ///
-    @safe unittest
+    unittest
     {
         // Regular cast, which has been verified to be legal by the programmer:
         {
