@@ -360,6 +360,9 @@ SRC_STD_EXP_NDSLICE= \
 	std\experimental\ndslice\slice.d \
 	std\experimental\ndslice\internal.d
 
+SRC_STD_EXP_NUMERIC= \
+	std\experimental\numeric\sum.d
+
 SRC_ETC=
 
 SRC_ETC_C= \
@@ -555,6 +558,7 @@ DOCS= \
 	$(DOC)\std_experimental_ndslice_selection.html \
 	$(DOC)\std_experimental_ndslice_slice.html \
 	$(DOC)\std_experimental_ndslice.html \
+	$(DOC)\std_experimental_numeric_sum.html \
 	$(DOC)\std_experimental_typecons.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_windows_registry.html \
@@ -1050,6 +1054,9 @@ $(DOC)\std_experimental_ndslice_slice.html : $(STDDOC) std\experimental\ndslice\
 
 $(DOC)\std_experimental_ndslice.html : $(STDDOC) std\experimental\ndslice\package.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice.html $(STDDOC) std\experimental\ndslice\package.d
+
+$(DOC)\std_experimental_numeric_sum.html : $(STDDOC) std\experimental\numeric\sum.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_numeric_sum.html $(STDDOC) std\experimental\numeric\sum.d
 
 $(DOC)\std_digest_crc.html : $(STDDOC) std\digest\crc.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_crc.html $(STDDOC) std\digest\crc.d
