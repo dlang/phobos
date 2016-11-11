@@ -1807,6 +1807,90 @@ F[] uniformDistribution(F = double)(size_t n, F[] useThis = null)
 }
 
 /**
+Returns a random, uniformly chosen, element $(D e) from the supplied
+$(D Range range). If no random number generator is passed, the default
+$(D rndGen) is used.
+
+Params:
+    range = a random access range that has the length property defined
+    urng = (optional) random number generator to use;
+           if not specified, defaults to $(D rndGen)
+
+Returns:
+    A single random element drawn from the $(D range). If it can, it will
+    return a $(D ref) to the $(D range element), otherwise it will return
+    a copy.
+ */
+auto ref choice(Range, RandomGen=Random)(auto ref Range range,
+                                         ref RandomGen urng = rndGen)
+    if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
+{
+    import std.conv : to, text;
+    import std.exception : enforce;
+
+    enforce(range.length > 0,
+            text("std.random.choice(): invalid Range supplied. Range cannot be empty"));
+
+    return range[uniform(to!size_t(0), $, urng)];
+}
+
+///
+@safe unittest
+{
+    import std.algorithm : canFind;
+
+    auto array = [1, 2, 3, 4, 5];
+    auto elem = choice(array);
+
+    assert(canFind(array, elem),
+           "Choice did not return a valid element from the given Range");
+
+    auto urng = Random(unpredictableSeed);
+    elem = choice(array, urng);
+
+    assert(canFind(array, elem),
+           "Choice did not return a valid element from the given Range");
+}
+
+@safe unittest
+{
+    import std.algorithm : canFind;
+
+    class MyTestClass
+    {
+        int x;
+
+        this(int x)
+        {
+            this.x = x;
+        }
+    }
+
+    MyTestClass[] testClass;
+    foreach(i; 0 .. 5) {
+        testClass ~= new MyTestClass(i);
+    }
+
+    auto elem = choice(testClass);
+
+    assert(canFind!((ref MyTestClass a, ref MyTestClass b) => a.x == b.x)(testClass, elem),
+           "Choice did not return a valid element from the given Range");
+}
+
+unittest
+{
+    import std.algorithm : canFind, map;
+
+    auto array = [1, 2, 3, 4, 5];
+    auto elemAddr = &choice(array);
+
+    assert(array.map!((ref e) => &e).canFind(elemAddr),
+           "Choice did not return a ref to an element from the given Range");
+    assert(array.canFind(*(cast(int *)(elemAddr))),
+           "Choice did not return a valid element from the given Range");
+}
+
+/**
 Shuffles elements of $(D r) using $(D gen) as a shuffler. $(D r) must be
 a random-access range with length.  If no RNG is specified, $(D rndGen)
 will be used.
