@@ -121,16 +121,6 @@ private
         enum isNullToStr = isImplicitlyConvertible!(S, T) &&
                            (is(Unqual!S == typeof(null))) && isExactSomeString!T;
     }
-
-    template isRawStaticArray(T)
-    {
-        enum isRawStaticArray =
-            isStaticArray!T &&
-            !is(T == class) &&
-            !is(T == interface) &&
-            !is(T == struct) &&
-            !is(T == union);
-    }
 }
 
 /**
@@ -178,7 +168,7 @@ template to(T)
 {
     ///
     T to(A...)(A args)
-        if (A.length && !isRawStaticArray!(A[0]))
+        if (A.length > 0 && !isStaticArray!(A[0]))
     {
         return toImpl!T(args);
     }
@@ -186,7 +176,7 @@ template to(T)
     // Fix issue 6175
     ///
     T to(S)(ref S arg)
-        if (isRawStaticArray!S)
+        if (isStaticArray!S)
     {
         return toImpl!T(arg);
     }
@@ -537,7 +527,7 @@ private T toImpl(T, S)(S value)
   Converting static arrays forwards to their dynamic counterparts.
  */
 private T toImpl(T, S)(ref S s)
-    if (isRawStaticArray!S)
+    if (isStaticArray!S)
 {
     return toImpl!(T, typeof(s[0])[])(s);
 }
