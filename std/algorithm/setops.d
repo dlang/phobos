@@ -1293,7 +1293,7 @@ Returns:
     A range containing the unique union of the given ranges.
 
 See_Also:
-   $(XREF algorithm, sorting, merge)
+   $(REF merge, std,algorithm,sorting)
  */
 auto setUnion(alias less = "a < b", Rs...)
 (Rs rs)
