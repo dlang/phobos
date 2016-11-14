@@ -1807,31 +1807,28 @@ F[] uniformDistribution(F = double)(size_t n, F[] useThis = null)
 }
 
 /**
-Returns a random, uniformly chosen, element $(D e) from the supplied
+Returns a random, uniformly chosen, element `e` from the supplied
 $(D Range range). If no random number generator is passed, the default
-$(D rndGen) is used.
+`rndGen` is used.
 
 Params:
-    range = a random access range that has the length property defined
+    range = a random access range that has the `length` property defined
     urng = (optional) random number generator to use;
-           if not specified, defaults to $(D rndGen)
+           if not specified, defaults to `rndGen`
 
 Returns:
-    A single random element drawn from the $(D range). If it can, it will
-    return a $(D ref) to the $(D range element), otherwise it will return
+    A single random element drawn from the `range`. If it can, it will
+    return a `ref` to the $(D range element), otherwise it will return
     a copy.
  */
-auto ref choice(Range, RandomGen=Random)(auto ref Range range,
-                                         ref RandomGen urng = rndGen)
+auto ref choice(Range, RandomGen = Random)(auto ref Range range,
+                                           ref RandomGen urng = rndGen)
     if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
 {
-    import std.conv : to, text;
-    import std.exception : enforce;
+    assert(range.length > 0,
+           __PRETTY_FUNCTION__ ~ ": invalid Range supplied. Range cannot be empty");
 
-    enforce(range.length > 0,
-            text("std.random.choice(): invalid Range supplied. Range cannot be empty"));
-
-    return range[uniform(to!size_t(0), $, urng)];
+    return range[uniform(size_t(0), $, urng)];
 }
 
 ///
@@ -1867,7 +1864,8 @@ auto ref choice(Range, RandomGen=Random)(auto ref Range range,
     }
 
     MyTestClass[] testClass;
-    foreach(i; 0 .. 5) {
+    foreach(i; 0 .. 5)
+    {
         testClass ~= new MyTestClass(i);
     }
 
