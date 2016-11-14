@@ -166,7 +166,6 @@ $(I UnsignedInteger):
  */
 template to(T)
 {
-    ///
     T to(A...)(A args)
         if (A.length > 0 && !isStaticArray!(A[0]))
     {
@@ -174,7 +173,6 @@ template to(T)
     }
 
     // Fix issue 6175
-    ///
     T to(S)(ref S arg)
         if (isStaticArray!S)
     {
@@ -221,7 +219,7 @@ template to(T)
  * When converting strings _to numeric types, note that the D hexadecimal and binary
  * literals are not handled. Neither the prefixes that indicate the base, nor the
  * horizontal bar used _to separate groups of digits are recognized. This also
- * applies _to the suffixes that indicate the type.
+ * applies to the suffixes that indicate the type.
  *
  * _To work around this, you can specify a radix for conversions involving numbers.
  */
@@ -324,12 +322,12 @@ template to(T)
  *   $(LI Unsigned or signed integers _to strings.
  *        $(DL $(DT [special case])
  *             $(DD Convert integral value _to string in $(D_PARAM radix) radix.
- *             radix must be a value from 2 _to 36.
+ *             radix must be a value from 2 to 36.
  *             value is treated as a signed value only if radix is 10.
- *             The characters A through Z are used _to represent values 10 through 36
+ *             The characters A through Z are used to represent values 10 through 36
  *             and their case is determined by the $(D_PARAM letterCase) parameter.)))
  *   $(LI All floating point types _to all string types.)
- *   $(LI Pointer _to string conversions prints the pointer as a $(D size_t) value.
+ *   $(LI Pointer to string conversions prints the pointer as a $(D size_t) value.
  *        If pointer is $(D char*), treat it as C-style strings.
  *        In that case, this function is $(D @system).))
  */
