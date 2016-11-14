@@ -202,17 +202,41 @@ $(PRE $(I UnsignedInteger):
  */
 template to(T)
 {
-    T to(A...)(A args)
-        if (A.length > 0)
+    /// Converts value. See $(LREF _to) for details.
+    T to(S)(S value)
+        if (!isStaticArray!S)
     {
-        return toImpl!T(args);
+        return toImpl!T(value);
     }
 
     // Fix issue 6175
-    T to(S)(ref S arg)
+    /// ditto
+    T to(S)(ref S value)
         if (isStaticArray!S)
     {
-        return toImpl!T(arg);
+        return toImpl!T(value);
+    }
+
+    /** Converts value using a _radix.
+     * Params:
+     * radix = A value from 2 _to 36.
+     * letterCase = Case _to use for non-decimal output characters.
+     * Notes:
+     * value is treated as a signed _value only if radix is 10.
+     * The characters A through Z are used _to represent values 10 through 36.
+     */
+    T to(S)(S value, uint radix, LetterCase letterCase = LetterCase.upper)
+        if (isIntegral!S && isSomeString!T && !is(T == enum))
+    {
+        return toImpl!(T, S)(value, radix, letterCase);
+    }
+
+    /// ditto
+    T to(S)(S value, uint radix)
+    if (isInputRange!S && isSomeChar!(ElementEncodingType!S) &&
+        (!isSomeString!T || is(T == enum)) && is(typeof(parse!T(value, radix))))
+    {
+        return toImpl!(T, S)(value, radix);
     }
 
     // Fix issue 16108
@@ -240,7 +264,7 @@ template to(T)
  * Conversions from floating-point types _to integral types allow loss of
  * precision (the fractional part of a floating-point number). The
  * conversion is truncating towards zero, the same way a cast would
- * truncate. (_To round a floating point value when casting _to an
+ * truncate. (To round a floating point value when casting _to an
  * integral, use `roundTo`.)
  */
 @safe pure unittest
@@ -260,11 +284,12 @@ template to(T)
 
 /**
  * When converting strings _to numeric types, note that the D hexadecimal and binary
- * literals are not handled. Neither the prefixes that indicate the base, nor the
+ * literals are $(B not) handled. Neither the prefixes that indicate the base, nor the
  * horizontal bar used _to separate groups of digits are recognized. This also
- * applies to the suffixes that indicate the type.
+ * applies _to the suffixes that indicate the type.
  *
- * _To work around this, you can specify a radix for conversions involving numbers.
+ * To work around this, you can specify a radix for conversions involving numbers -
+ * see $(MYREF _to._to.2) for details.
  */
 @safe pure unittest
 {
@@ -387,13 +412,10 @@ template to(T)
  *   $(LI $(D char), $(D wchar), $(D dchar) _to a string type.)
  *   $(LI Unsigned or signed integers _to strings.
  *        $(DL $(DT [special case])
- *             $(DD Convert integral value _to string in $(D_PARAM radix) radix.
- *             radix must be a value from 2 to 36.
- *             value is treated as a signed value only if radix is 10.
- *             The characters A through Z are used to represent values 10 through 36
- *             and their case is determined by the $(D_PARAM letterCase) parameter.)))
+ *             $(DD Convert integral value _to string using a $(I radix).
+ *             See $(MYREF _to._to.2) for details.)))
  *   $(LI All floating point types _to all string types.)
- *   $(LI Pointer to string conversions prints the pointer as a $(D size_t) value.
+ *   $(LI Pointer _to string conversions prints the pointer as a $(D size_t) value.
  *        If pointer is $(D char*), treat it as C-style strings.
  *        In that case, this function is $(D @system).))
  */
@@ -6251,7 +6273,7 @@ private auto hexStrImpl(String)(scope String hexData)
 
 
 /**
- * Convert integer to a range of characters.
+ * Converts integer to a range of characters.
  * Intended to be lightweight and fast.
  *
  * Params:
