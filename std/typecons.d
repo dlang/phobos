@@ -323,15 +323,17 @@ private template sharedToString(alias field)
 }
 
 /**
-Tuple of values, for example $(D Tuple!(int, string)) is a record that
+_Tuple of values, for example $(D Tuple!(int, string)) is a record that
 stores an $(D int) and a $(D string). $(D Tuple) can be used to bundle
 values together, notably when returning multiple values from a
 function. If $(D obj) is a `Tuple`, the individual members are
 accessible with the syntax $(D obj[0]) for the first field, $(D obj[1])
 for the second, and so on.
 
+$(LREF tuple) can be used to construct a Tuple with type inference.
+
 The choice of zero-based indexing instead of one-base indexing was
-motivated by the ability to use value `Tuple`s with various compile-time
+motivated by the ability to use value tuples with various compile-time
 loop constructs (e.g. $(REF AliasSeq, std,meta) iteration), all of which use
 zero-based indexing.
 
@@ -541,6 +543,7 @@ template Tuple(Specs...)
          *              of this `Tuple`, or can implicitly convert
          *              to those types. They must be in the same
          *              order as they appear in `Types`.
+         * See_Also: $(LREF tuple).
          */
         static if (Types.length > 0)
         {
@@ -1166,15 +1169,15 @@ template Tuple(Specs...)
 }
 
 /**
-    Create a copy of a `Tuple` with its fields in reverse order.
+    Creates a copy of a $(LREF Tuple) with its fields in _reverse order.
 
     Params:
         t = The `Tuple` to copy.
 
     Returns:
-        A copy of `t` with its fields in reverse order.
+        A new `Tuple`.
  */
-ReverseTupleType!T reverse(T)(T t)
+auto reverse(T)(T t)
     if (isTuple!T)
 {
     import std.meta : Reverse;
@@ -1183,7 +1186,7 @@ ReverseTupleType!T reverse(T)(T t)
     // @@@BUG@@@ 9929 Need 'this' when calling template with expanded tuple
     // return tuple(Reverse!(t.expand));
 
-    typeof(return) result;
+    ReverseTupleType!T result;
     auto tup = t.expand;
     result.expand = Reverse!tup;
     return result;
@@ -1667,24 +1670,26 @@ unittest
 }
 
 /**
-    Constructs a $(D Tuple) object instantiated and initialized according to
+    Constructs a $(LREF Tuple) object instantiated and initialized according to
     the given arguments.
 
     Params:
-        Names = A list of strings naming each successive field of the `Tuple`.
+        Names = Optional list of strings naming each successive field of the `Tuple`.
                 Each name matches up with the corresponding field given by `Args`.
                 A name does not have to be provided for every field, but as
                 the names must proceed in order, it is not possible to skip
                 one field and name the next after it.
-
+*/
+template tuple(Names...)
+{
+    /**
+    Params:
         args = Values to initialize the `Tuple` with. The `Tuple`'s type will
                be inferred from the types of the values given.
 
     Returns:
         A new `Tuple` with its type inferred from the arguments given.
-*/
-template tuple(Names...)
-{
+     */
     auto tuple(Args...)(Args args)
     {
         static if (Names.length == 0)
