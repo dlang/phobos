@@ -1055,9 +1055,6 @@ Params:
 
 Returns:
     A range containing the union of the given ranges.
-
-See_Also:
-   $(XREF algorithm, setops, SetUnion)
  */
 struct Merge(alias less = "a < b", Rs...) if (allSatisfy!(isInputRange, Rs))
 {
