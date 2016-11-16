@@ -1183,6 +1183,137 @@ A singleton instance of the default random number generator
 }
 
 /**
+A random bool generator that has the underlying random integral
+generation batched. The underlying random number generator can be
+passed as a pointer so the RNG will not get copied internally.
+ */
+struct RandomBool(Rng = Random)
+    if (isUniformRNG!Rng || isUniformRNG!(typeof(*Rng.init)))
+{
+    private Rng parent;
+    private uint mask;
+    private uint accumulator;
+
+    /// Always `false`
+    enum bool empty = false;
+
+    /**
+      If `Rng` is a reference type, it will be passed by reference.
+      If `Rng` is a value type, a copy of it will be passed.
+     */
+    this()(auto ref Rng rng)
+    {
+        parent = rng;
+        initPrivates();
+    }
+
+    private void initPrivates()
+    {
+        // Helper function to avoid code duplication
+        mask = 1;
+        accumulator = uniform!uint(parent);
+    }
+
+    bool front()
+    {
+        return cast(bool)(accumulator & mask);
+    }
+
+    void popFront()
+    {
+        if (mask == 0)
+        {
+            initPrivates();
+        }
+        else
+        {
+            mask <<= 1;
+        }
+    }
+
+    /**
+      This method is not defined if `Rng` is not a forward range
+      (which includes the case of `Rng` being a pointer)
+     */
+    static if (isForwardRange!Rng)
+    {
+        typeof(this) save()
+        {
+            return this;
+        }
+    }
+}
+
+///
+unittest
+{
+    // Use a copy of the global rndGen
+    auto rndBoolGen = RandomBool!Random(rndGen);
+    auto r = rndBoolGen.front();
+    rndBoolGen.popFront();
+
+    // Use a reference to the global rndGen
+    auto rndBoolGen2 = RandomBool!(Random*)(&rndGen());
+    auto r2 = rndBoolGen2.front();
+    rndBoolGen2.popFront();
+}
+
+///
+@safe unittest
+{
+    auto gen = Random(42);
+    auto r1 = RandomBool!Random(gen);
+
+    auto gen2 = Random(42);
+    auto r2 = RandomBool!Random(gen2);
+
+    import std.range : take;
+    import std.algorithm : equal;
+
+    assert(equal(r1.take(64), r2.take(64)));
+}
+
+///
+@safe unittest
+{
+    auto r1 = RandomBool!(Random*)(new Random(42));
+    auto r2 = RandomBool!(Random*)(new Random(42));
+
+    import std.range : take;
+    import std.algorithm : equal;
+
+    assert(equal(r1.take(64), r2.take(64)));
+}
+
+///
+@safe unittest
+{
+    auto r1 = RandomBool!Random(Random(42));
+    auto r2 = r1.save;
+
+    import std.range : take;
+    import std.algorithm : equal;
+
+    assert(equal(r1.take(64), r2.take(64)));
+}
+
+/**
+Assure front isn't the mechanism to make the bool generator
+go to the next element.
+ */
+@safe unittest
+{
+    auto rndBoolGen = RandomBool!Random(rndGen);
+    auto a = rndBoolGen.front();
+    int i = 42;
+
+    while (--i)
+    {
+        assert(a == rndBoolGen.front());
+    }
+}
+
+/**
 Generates a number between $(D a) and $(D b). The $(D boundaries)
 parameter controls the shape of the interval (open vs. closed on
 either side). Valid values for $(D boundaries) are $(D "[]"), $(D
