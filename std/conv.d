@@ -5554,7 +5554,7 @@ template castFrom(From)
     }
 
     ///
-    @safe unittest
+    @system unittest
     {
         // Regular cast, which has been verified to be legal by the programmer:
         {
@@ -5586,6 +5586,19 @@ template castFrom(From)
             auto y = castFrom!(long*).to!int(x);
         }
     }
+}
+
+// instantiate the documenting unittest in the castFrom template
+unittest
+{
+    alias castFromI = castFrom!long;
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=16667
+unittest
+{
+    ubyte[] a = ['a', 'b', 'c'];
+    assert(castFrom!(ubyte[]).to!(string)(a) == "abc");
 }
 
 /**
