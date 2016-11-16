@@ -4300,9 +4300,9 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 {
     import std.algorithm.searching : find;
     import std.conv : parse, text;
-    if (spec.spec == 's')
+    static if (is(typeof(parse!T(input)) == T))
     {
-        static if(__traits(compiles, parse!T(input)) ) return parse!T(input);
+        if (spec.spec == `s`) return parse!T(input);
     }
     enforce(find(acceptedSpecs!long, spec.spec).length,
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
@@ -4359,7 +4359,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     enforce(spec.spec == 's',
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
-    static if(__traits(compiles, parse!T(input)) ) return parse!T(input);
+    return parse!T(input);
 }
 
 /**
