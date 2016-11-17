@@ -1121,6 +1121,13 @@ public:
     /// ditto
     Variant opIndexAssign(T, N)(T value, N i)
     {
+        static if (AllowedTypes.length && !isInstanceOf!(.VariantN, T))
+        {
+            enum canAssign(U) = __traits(compiles, (U u){ u[i] = value; });
+            static assert(anySatisfy!(canAssign, AllowedTypes),
+                "Cannot assign " ~ T.stringof ~ " to " ~ VariantN.stringof ~
+                " indexed with " ~ N.stringof);
+        }
         Variant[2] args = [ Variant(value), Variant(i) ];
         fptr(OpID.indexAssign, &store, &args) == 0 || assert(false);
         return args[0];
@@ -1198,6 +1205,24 @@ unittest
     v[2] = 6;
     assert(v[2] == 6);
     assert(v != elements);
+}
+
+unittest
+{
+    import std.exception : assertThrown;
+    Algebraic!(int[]) v = [2, 2];
+
+    assert(v == [2, 2]);
+    v[0] = 1;
+    assert(v[0] == 1);
+    assert(v != [2, 2]);
+
+    // opIndexAssign from Variant
+    v[1] = v[0];
+    assert(v[1] == 1);
+
+    static assert(!__traits(compiles, (v[1] = null)));
+    assertThrown!VariantException(v[1] = Variant(null));
 }
 
 //Issue# 8195
