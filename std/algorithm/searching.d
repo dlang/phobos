@@ -1361,7 +1361,18 @@ if (isInputRange!InputRange &&
 
     alias EType  = ElementType!R;
 
-    static if (isNarrowString!R)
+    // If the haystack is a SortedRange we can use binary search to find the needle
+    // 8829 enhancement
+    import std.range: SortedRange;
+    static if(is(typeof(haystack) : SortedRange!TT, TT) && isDefaultPred)
+    {
+        auto partitions = haystack.trisect(needle);
+        if(partitions[1].length == 0)
+            return partitions[1];
+
+        return haystack[partitions[0].length .. $];
+    }
+    else static if (isNarrowString!R)
     {
         alias EEType = ElementEncodingType!R;
         alias UEEType = Unqual!EEType;
@@ -1488,6 +1499,20 @@ if (isInputRange!InputRange &&
     import std.algorithm.comparison : equal;
     import std.container : SList;
     import std.range.primitives : empty;
+    import std.range;
+
+    auto arr = assumeSorted!"a < b"([1, 2, 4, 4, 4, 4, 5, 6, 9]);
+    assert(find(arr, 4) == assumeSorted!"a < b"([4, 4, 4, 4, 5, 6, 9]));
+    assert(find!"a > b"(arr, 4) == assumeSorted!"a < b"([5, 6, 9]));
+    assert(find!"a < b"(arr, 4) == arr);
+    assert(find(arr, 0).empty());
+    assert(find(arr, 10).empty());
+    assert(find(arr, 8).empty());
+
+    auto r = assumeSorted!"a > b"([10, 7, 3, 1, 0, 0]);
+    assert(find(r, 3) == assumeSorted!"a > b"([3, 1, 0, 0]));
+    assert(find!"a > b"(r, 8) == r);
+    assert(find!"a < b"(r, 5) == assumeSorted!"a > b"([3, 1, 0, 0]));
 
     assert(find("hello, world", ',') == ", world");
     assert(find([1, 2, 3, 5], 4) == []);
@@ -1776,6 +1801,7 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
         && is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
     if (needle.empty) return haystack;
+
     static if (hasLength!R2)
     {
         immutable needleLength = needle.length;
@@ -1788,7 +1814,50 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
     {
         return haystack[haystack.length .. haystack.length];
     }
-    static if (isRandomAccessRange!R2)
+    // Optimization in case the ranges are both SortedRanges.
+    // Binary search can be used to find the first occurence
+    // of the first element of the needle in haystack.
+    // When it is found O(walklength(needle)) steps are performed.
+    import std.range;
+    static if(is(typeof(haystack) == typeof(needle))
+            && is(typeof(haystack) : SortedRange!TT, TT)
+            && pred == "a == b")
+    {
+        auto needleFirstElem = needle[0];
+        auto partitions      = haystack.trisect(needleFirstElem);
+        auto firstElemLen    = partitions[1].length;
+        int count            = 0;
+
+        if(firstElemLen == 0)
+            return haystack[$ .. $];
+
+        while(!needle.empty())
+        {
+            auto elem = needle.front();
+            needle.popFront();
+            if(elem == needleFirstElem)
+            {
+                ++count;
+                if(count > firstElemLen)
+                    return haystack[$ .. $];
+            }
+            else
+            {
+                if(needle.length >= partitions[2].length)
+                    return haystack[$ .. $];
+                else if( elem == partitions[2].front())
+                {
+                    partitions[2].popFront();
+                    continue;
+                }
+                else
+                    return haystack[$ .. $];
+            }
+        }
+        if(needle.empty())
+            return haystack[partitions[0].length + partitions[1].length - count .. $];
+    }
+    else if (isRandomAccessRange!R2)
     {
         immutable lastIndex = needleLength - 1;
         auto last = needle[lastIndex];
@@ -1854,6 +1923,25 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
         }
     }
     return haystack[haystack.length .. haystack.length];
+}
+
+@safe unittest
+{
+    import std.range;
+    import std.stdio;
+
+    auto r1 = assumeSorted([1, 2, 3, 3, 3, 4, 5, 6, 7, 8, 8, 8, 10]);
+    auto r2 = assumeSorted([3, 3, 4, 5, 6, 7, 8, 8]);
+    auto r3 = assumeSorted([3, 4, 5, 6, 7, 8]);
+    auto r4 = assumeSorted([4, 5, 6]);
+    auto r5 = assumeSorted([12, 13]);
+    auto r6 = assumeSorted([8, 8, 10, 11]);
+
+    assert(find(r1, r2) == assumeSorted([3, 3, 4, 5, 6, 7, 8, 8, 8, 10]));
+    assert(find(r1, r3) == assumeSorted([3, 4, 5, 6, 7, 8, 8, 8, 10]));
+    assert(find(r1, r4) == assumeSorted([4, 5, 6, 7, 8, 8, 8, 10]));
+    assert(find(r1, r5).empty());
+    assert(find(r1, r6).empty());
 }
 
 @safe unittest
