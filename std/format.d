@@ -6479,6 +6479,13 @@ immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args) if (isSomeChar
     assert(is(typeof(format("happy"d)) == dstring));
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=16661
+@safe unittest
+{
+    assert(format("%.2f"d, 0.4) == "0.40");
+    assert("%02d"d.format(1) == "01"d);
+}
+
 /*****************************************************
  * Format arguments into buffer $(I buf) which must be large
  * enough to hold the result. Throws RangeError if it is not.
@@ -6570,7 +6577,7 @@ char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
  *      the difference between the starts of the arrays
  */
 @trusted private pure nothrow @nogc
-    ptrdiff_t arrayPtrDiff(const void[] array1, const void[] array2)
+    ptrdiff_t arrayPtrDiff(T)(const T[] array1, const T[] array2)
 {
     return array1.ptr - array2.ptr;
 }
