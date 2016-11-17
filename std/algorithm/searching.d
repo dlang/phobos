@@ -1818,6 +1818,7 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
     // Binary search can be used to find the first occurence
     // of the first element of the needle in haystack.
     // When it is found O(walklength(needle)) steps are performed.
+    // 8829 enhancement
     import std.range;
     static if(is(typeof(haystack) == typeof(needle))
             && is(typeof(haystack) : SortedRange!TT, TT)
