@@ -843,6 +843,7 @@ public:
 
     // returns 1 if the two are equal
     bool opEquals(T)(auto ref T rhs) const
+    if (allowed!T || is(Unqual!T == VariantN))
     {
         static if (is(Unqual!T == VariantN))
             alias temp = rhs;
@@ -865,6 +866,7 @@ public:
      */
 
     int opCmp(T)(T rhs)
+    if (allowed!T)  // includes T == VariantN
     {
         static if (is(T == VariantN))
             alias temp = rhs;
@@ -1127,7 +1129,7 @@ public:
     }
 
     /** If the $(D VariantN) contains an (associative) array,
-     * returns the length of that array. Otherwise, throws an
+     * returns the _length of that array. Otherwise, throws an
      * exception.
      */
     @property size_t length()
@@ -1696,6 +1698,19 @@ unittest
         assert( vhash.get!(int[char[]])["b"] == 2 );
         assert( vhash.get!(int[char[]])["c"] == 3 );
     }
+}
+
+unittest
+{
+    // check comparisons incompatible with AllowedTypes
+    Algebraic!int v = 2;
+
+    assert(v == 2);
+    assert(v < 3);
+    static assert(!__traits(compiles, {v == long.max;}));
+    static assert(!__traits(compiles, {v == null;}));
+    static assert(!__traits(compiles, {v < long.max;}));
+    static assert(!__traits(compiles, {v > null;}));
 }
 
 unittest
