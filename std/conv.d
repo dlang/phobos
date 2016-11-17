@@ -5552,39 +5552,39 @@ template castFrom(From)
 
         return cast(To) value;
     }
+}
 
-    ///
-    @safe unittest
+///
+unittest
+{
+    // Regular cast, which has been verified to be legal by the programmer:
     {
-        // Regular cast, which has been verified to be legal by the programmer:
-        {
-            long x;
-            auto y = cast(int) x;
-        }
+        long x;
+        auto y = cast(int) x;
+    }
 
-        // However this will still compile if 'x' is changed to be a pointer:
-        {
-            long* x;
-            auto y = cast(int) x;
-        }
+    // However this will still compile if 'x' is changed to be a pointer:
+    {
+        long* x;
+        auto y = cast(int) x;
+    }
 
-        // castFrom provides a more reliable alternative to casting:
-        {
-            long x;
-            auto y = castFrom!long.to!int(x);
-        }
+    // castFrom provides a more reliable alternative to casting:
+    {
+        long x;
+        auto y = castFrom!long.to!int(x);
+    }
 
-        // Changing the type of 'x' will now issue a compiler error,
-        // allowing bad casts to be caught before it's too late:
-        {
-            long* x;
-            static assert (
-                !__traits(compiles, castFrom!long.to!int(x))
-            );
+    // Changing the type of 'x' will now issue a compiler error,
+    // allowing bad casts to be caught before it's too late:
+    {
+        long* x;
+        static assert (
+            !__traits(compiles, castFrom!long.to!int(x))
+        );
 
-            // if cast is still needed, must be changed to:
-            auto y = castFrom!(long*).to!int(x);
-        }
+        // if cast is still needed, must be changed to:
+        auto y = castFrom!(long*).to!int(x);
     }
 }
 
