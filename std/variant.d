@@ -2298,13 +2298,13 @@ unittest
 {
     // check exceptions have the right line number
     import std.exception : collectException;
-
     Algebraic!(int, char) var;
-    assert(collectException(var.visit!((int)=>0, (char)=>1)).line == __LINE__);
-    assert(collectException(var.tryVisit!((int)=>0)).line == __LINE__);
+
+    assert(collectException!VariantException(var.visit!((int)=>0, (char)=>1)).line == __LINE__);
+    assert(collectException!VariantException(var.tryVisit!((int)=>0)).line == __LINE__);
 
     var = 'c';
-    assert(collectException(var.tryVisit!((int)=>0)).line == __LINE__);
+    assert(collectException!VariantException(var.tryVisit!((int)=>0)).line == __LINE__);
 }
 
 unittest
