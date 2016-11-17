@@ -530,6 +530,8 @@ private:
         return 0;
     }
 
+    enum doUnittest = is(VariantN == Variant);
+
 public:
     /** Constructs a $(D VariantN) value given an argument of a
      * generic type. Statically rejects disallowed types.
@@ -665,6 +667,7 @@ public:
     }
 
     ///
+    static if (doUnittest)
     unittest
     {
         Variant a;
@@ -697,6 +700,7 @@ public:
     }
 
     ///
+    static if (doUnittest)
     unittest
     {
         Variant a = 5;
@@ -1088,6 +1092,7 @@ public:
     }
 
     ///
+    static if (doUnittest)
     unittest
     {
         Variant a = new int[10];
@@ -1101,15 +1106,6 @@ public:
         assert(a[42] == 24);
         a[42] /= 2;
         assert(a[42] == 12);
-    }
-
-    unittest
-    {
-        int[int] hash = [ 42:24 ];
-        Variant v = hash;
-        assert(v[42] == 24);
-        v[42] = 5;
-        assert(v[42] == 5);
     }
 
     /// ditto
@@ -1192,6 +1188,15 @@ unittest
     static int bar(string s) { return to!int(s); }
     v = &bar;
     assert(v("43") == 43);
+}
+
+unittest
+{
+    int[int] hash = [ 42:24 ];
+    Variant v = hash;
+    assert(v[42] == 24);
+    v[42] = 5;
+    assert(v[42] == 5);
 }
 
 // opIndex with static arrays, issue 12771
