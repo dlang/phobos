@@ -1742,7 +1742,7 @@ if (isForwardRange!R1 && isForwardRange!R2
     static if (is(typeof(pred == "a == b")) && pred == "a == b" && isSomeString!R1 && isSomeString!R2
             && haystack[0].sizeof == needle[0].sizeof)
     {
-        //return cast(R1) find(representation(haystack), representation(needle));
+        // return cast(R1) find(representation(haystack), representation(needle));
         // Specialization for simple string search
         alias Representation =
             Select!(haystack[0].sizeof == 1, ubyte[],
