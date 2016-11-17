@@ -1857,7 +1857,7 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
         if(needle.empty())
             return haystack[partitions[0].length + partitions[1].length - count .. $];
     }
-    else if (isRandomAccessRange!R2)
+    static if (isRandomAccessRange!R2)
     {
         immutable lastIndex = needleLength - 1;
         auto last = needle[lastIndex];
