@@ -130,7 +130,7 @@ private:
     }
     enum size = SizeChecker.sizeof - (int function()).sizeof;
 
-    /** Tells whether a type $(D T) is statically allowed for
+    /** Tells whether a type $(D T) is statically _allowed for
      * storage inside a $(D VariantN) object by looking
      * $(D T) up in $(D AllowedTypes).
      */
@@ -721,8 +721,8 @@ public:
 
     /**
      * Returns $(D true) if and only if the $(D VariantN)
-     * object holds an object implicitly convertible to type $(D
-     * U). Implicit convertibility is defined as per
+     * object holds an object implicitly convertible to type `T`.
+     * Implicit convertibility is defined as per
      * $(REF_ALTTEXT ImplicitConversionTargets, ImplicitConversionTargets, std,traits).
      */
 
