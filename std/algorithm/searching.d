@@ -1361,7 +1361,8 @@ if (isInputRange!InputRange &&
 
     alias EType  = ElementType!R;
 
-    // If the haystack is a SortedRange we can use binary search to find the needle
+    // If the haystack is a SortedRange we can use binary search to find the needle.
+    // Works only for the default find predicate and any SortedRange predicate.
     // 8829 enhancement
     import std.range: SortedRange;
     static if(is(typeof(haystack) : SortedRange!TT, TT) && isDefaultPred)
