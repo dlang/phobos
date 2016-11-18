@@ -145,11 +145,11 @@ Checks whether a forward range is sorted according to the comparison
 operation $(D less). Performs $(BIGOH r.length) evaluations of $(D
 less).
 
-Unlike $(LREF isSorted), $(LREF isStrictlyMonotonic) does not allow for equal values,
+Unlike isSorted, isStrictlyMonotonic does not allow for equal values,
 i.e. values for which both `less(a, b)` and `less(b, a)` are false.
 
 With either function, the predicate must be a strict ordering just like with
-$(LREF isSorted). For example, using `"a <= b"` instead of `"a < b"` is
+isSorted. For example, using `"a <= b"` instead of `"a < b"` is
 incorrect and will cause failed assertions.
 
 Params:
@@ -157,8 +157,8 @@ Params:
     r = Forward range to check for sortedness.
 
 Returns:
-    `true` if the range is sorted, false otherwise. $(LREF isSorted) allows
-    duplicates, $(LREF isStrictlyMonotonic) not.
+    `true` if the range is sorted, false otherwise. isSorted allows
+    duplicates, isStrictlyMonotonic not.
 */
 bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
 {
