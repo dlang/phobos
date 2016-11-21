@@ -784,7 +784,7 @@ private template fqnType(T,
         enum fqnType = chain!(
             format("__vector(%s[%s])", fqnType!(V, qualifiers), N)
         );
-   }
+    }
     else
         // In case something is forgotten
         static assert(0, "Unrecognized type " ~ T.stringof ~ ", can't convert to fully qualified string");
@@ -807,6 +807,15 @@ private template fqnType(T,
         static assert(fqn!(string) == "string");
         static assert(fqn!(wstring) == "wstring");
         static assert(fqn!(dstring) == "dstring");
+        static assert(fqn!(void) == "void");
+        static assert(fqn!(const(void)) == "const(void)");
+        static assert(fqn!(shared(void)) == "shared(void)");
+        static assert(fqn!(shared const(void)) == "const(shared(void))");
+        static assert(fqn!(shared inout(void)) == "inout(shared(void))");
+        static assert(fqn!(shared inout const(void)) == "const(shared(void))");
+        static assert(fqn!(inout(void)) == "inout(void)");
+        static assert(fqn!(inout const(void)) == "const(void)");
+        static assert(fqn!(immutable(void)) == "immutable(void)");
 
         // Basic qualified name
         static assert(fqn!(Inner) == inner_name);
@@ -5170,12 +5179,20 @@ enum bool isScalarType(T) = isNumeric!T || isSomeChar!T || isBoolean!T;
 /**
 Detect whether $(D T) is a basic type (scalar type or void).
  */
-enum bool isBasicType(T) = isScalarType!T || is(T == void);
+enum bool isBasicType(T) = isScalarType!T || is(Unqual!T == void);
 
 ///
 @safe unittest
 {
     static assert(isBasicType!void);
+    static assert(isBasicType!(const(void)));
+    static assert(isBasicType!(shared(void)));
+    static assert(isBasicType!(immutable(void)));
+    static assert(isBasicType!(shared const(void)));
+    static assert(isBasicType!(shared inout(void)));
+    static assert(isBasicType!(shared inout const(void)));
+    static assert(isBasicType!(inout(void)));
+    static assert(isBasicType!(inout const(void)));
     static assert(isBasicType!(immutable(int)));
     static assert(isBasicType!(shared(float)));
     static assert(isBasicType!(shared(const bool)));
