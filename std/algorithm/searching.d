@@ -1365,13 +1365,13 @@ if (isInputRange!InputRange &&
     // Works only for the default find predicate and any SortedRange predicate.
     // 8829 enhancement
     import std.range: SortedRange;
-    static if(is(typeof(haystack) : SortedRange!TT, TT) && isDefaultPred)
+    static if (is(InputRange : SortedRange!TT, TT) && isDefaultPred)
     {
-        auto partitions = haystack.trisect(needle);
-        if(partitions[1].length == 0)
-            return partitions[1];
+        auto lb = haystack.lowerBound(needle);
+        if (lb.length == 0 || lb.length == haystack.length || haystack[lb.length] != needle)
+            return haystack[$ .. $];
 
-        return haystack[partitions[0].length .. $];
+        return haystack[lb.length .. $];
     }
     else static if (isNarrowString!R)
     {
@@ -1821,43 +1821,35 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
     // When it is found O(walklength(needle)) steps are performed.
     // 8829 enhancement
     import std.range;
-    static if(is(typeof(haystack) == typeof(needle))
-            && is(typeof(haystack) : SortedRange!TT, TT)
+    import std.algorithm.comparison: mismatch;
+    static if (is(R1 == R2)
+            && is(R1 : SortedRange!TT, TT)
             && pred == "a == b")
     {
         auto needleFirstElem = needle[0];
         auto partitions      = haystack.trisect(needleFirstElem);
         auto firstElemLen    = partitions[1].length;
-        int count            = 0;
+        size_t count         = 0;
 
-        if(firstElemLen == 0)
+        if (firstElemLen == 0)
             return haystack[$ .. $];
 
-        while(!needle.empty())
+        while (needle.front() == needleFirstElem)
         {
             auto elem = needle.front();
             needle.popFront();
-            if(elem == needleFirstElem)
-            {
-                ++count;
-                if(count > firstElemLen)
-                    return haystack[$ .. $];
-            }
-            else
-            {
-                if(needle.length >= partitions[2].length)
-                    return haystack[$ .. $];
-                else if( elem == partitions[2].front())
-                {
-                    partitions[2].popFront();
-                    continue;
-                }
-                else
-                    return haystack[$ .. $];
-            }
+            ++count;
+
+            if (count > firstElemLen)
+                return haystack[$ .. $];
         }
-        if(needle.empty())
+
+        auto m = mismatch(partitions[2], needle);
+
+        if (m[1] == haystack[$ .. $])
             return haystack[partitions[0].length + partitions[1].length - count .. $];
+        if (m[1] != haystack[$ .. $])
+            return haystack[$ .. $];
     }
     static if (isRandomAccessRange!R2)
     {
