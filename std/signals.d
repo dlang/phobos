@@ -193,7 +193,8 @@ mixin template Signal(T1...)
                 }
             }
         }
-        else {
+        else
+        {
             for (size_t i = 0; i < slots_idx; )
             {
                 if (slots[i].ptr == slot.ptr &&

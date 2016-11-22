@@ -1834,7 +1834,7 @@ auto ref choice(Range, RandomGen = Random)(auto ref Range range,
 ///
 @safe unittest
 {
-    import std.algorithm : canFind;
+    import std.algorithm.searching : canFind;
 
     auto array = [1, 2, 3, 4, 5];
     auto elem = choice(array);
@@ -1851,7 +1851,7 @@ auto ref choice(Range, RandomGen = Random)(auto ref Range range,
 
 @safe unittest
 {
-    import std.algorithm : canFind;
+    import std.algorithm.searching : canFind;
 
     class MyTestClass
     {
@@ -1864,7 +1864,7 @@ auto ref choice(Range, RandomGen = Random)(auto ref Range range,
     }
 
     MyTestClass[] testClass;
-    foreach(i; 0 .. 5)
+    foreach (i; 0 .. 5)
     {
         testClass ~= new MyTestClass(i);
     }
@@ -1877,7 +1877,8 @@ auto ref choice(Range, RandomGen = Random)(auto ref Range range,
 
 unittest
 {
-    import std.algorithm : canFind, map;
+    import std.algorithm.searching : canFind;
+    import std.algorith.iteration : map;
 
     auto array = [1, 2, 3, 4, 5];
     auto elemAddr = &choice(array);
@@ -1914,7 +1915,7 @@ void randomShuffle(Range)(Range r)
 
 @safe unittest
 {
-    import std.algorithm;
+    import std.algorithm.sorting : sort;
     foreach (RandomGen; PseudoRngTypes)
     {
         // Also tests partialShuffle indirectly.
