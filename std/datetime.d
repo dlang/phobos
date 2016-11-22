@@ -34052,17 +34052,15 @@ static int daysToDayOfWeek(DayOfWeek currDoW, DayOfWeek dow) @safe pure nothrow
 }
 
 
-version(StdDdoc)
-{
-    /++
-        Function for starting to a stop watch time when the function is called
-        and stopping it when its return value goes out of scope and is destroyed.
+/++
+    Function for starting to a stop watch time when the function is called
+    and stopping it when its return value goes out of scope and is destroyed.
 
-        When the value that is returned by this function is destroyed,
-        $(D func) will run. $(D func) is a unary function that takes a
-        $(REF TickDuration, core,time).
+    When the value that is returned by this function is destroyed,
+    $(D func) will run. $(D func) is a unary function that takes a
+    $(REF TickDuration, core,time).
 
-        Example:
+    Example:
 --------------------
 {
     auto mt = measureTime!((TickDuration a)
@@ -34071,7 +34069,7 @@ version(StdDdoc)
 }
 --------------------
 
-        which is functionally equivalent to
+    which is functionally equivalent to
 
 --------------------
 {
@@ -34085,48 +34083,43 @@ version(StdDdoc)
 }
 --------------------
 
-        See_Also:
-            $(LREF benchmark)
-      +/
-    auto measureTime(alias func)();
-}
-else
+    See_Also:
+        $(LREF benchmark)
++/
+@safe auto measureTime(alias func)()
+    if (isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
 {
-    @safe auto measureTime(alias func)()
-        if (isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
+    struct Result
     {
-        struct Result
+        private StopWatch _sw = void;
+        this(AutoStart as)
         {
-            private StopWatch _sw = void;
-            this(AutoStart as)
-            {
-                _sw = StopWatch(as);
-            }
-            ~this()
-            {
-                unaryFun!(func)(_sw.peek());
-            }
+            _sw = StopWatch(as);
         }
-        return Result(Yes.autoStart);
+        ~this()
+        {
+            unaryFun!(func)(_sw.peek());
+        }
     }
+    return Result(Yes.autoStart);
+}
 
-    auto measureTime(alias func)()
-        if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
+auto measureTime(alias func)()
+    if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
+{
+    struct Result
     {
-        struct Result
+        private StopWatch _sw = void;
+        this(AutoStart as)
         {
-            private StopWatch _sw = void;
-            this(AutoStart as)
-            {
-                _sw = StopWatch(as);
-            }
-            ~this()
-            {
-                unaryFun!(func)(_sw.peek());
-            }
+            _sw = StopWatch(as);
         }
-        return Result(Yes.autoStart);
+        ~this()
+        {
+            unaryFun!(func)(_sw.peek());
+        }
     }
+    return Result(Yes.autoStart);
 }
 
 // Verify Example.

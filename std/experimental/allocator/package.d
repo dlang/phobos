@@ -588,7 +588,7 @@ nothrow @safe @nogc unittest
     import std.experimental.allocator.mallocator : Mallocator;
     alias alloc = Mallocator.instance;
 
-    auto test(T, Args...)(auto ref Args args)
+    void test(T, Args...)(auto ref Args args)
     {
         auto k = alloc.make!T(args);
         () @trusted { alloc.dispose(k); }();
@@ -607,7 +607,7 @@ nothrow @safe @nogc unittest
 
     alias alloc = GCAllocator.instance;
 
-    auto test(T, Args...)(auto ref Args args)
+    void test(T, Args...)(auto ref Args args)
     {
         auto k = alloc.make!T(args);
         (a) @trusted { a.dispose(k); }(alloc);

@@ -3080,7 +3080,7 @@ pure nothrow unittest
 {
     import std.experimental.ndslice.selection : iotaSlice;
 
-    auto fun(ref size_t x) { x *= 3; }
+    void fun(ref size_t x) { x *= 3; }
 
     auto tensor = iotaSlice(8, 9, 10).slice;
 

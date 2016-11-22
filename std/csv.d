@@ -732,7 +732,7 @@ auto csvReader(Contents = string,
             return text.empty;
         }
 
-        auto popFront()
+        void popFront()
         {
             text.popFront();
         }
