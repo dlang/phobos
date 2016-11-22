@@ -59,8 +59,8 @@ unittest
     // Timings on an Intel i5-3450 quad core machine
     // for n = 1_000_000_000:
     //
-    // TaskPool.reduce:       4.011 s
-    // std.algorithm.reduce:  1.067 s
+    // TaskPool.reduce:       1.067 s
+    // std.algorithm.reduce:  4.011 s
 
     enum n = 1_000_000;
     enum delta = 1.0 / n;
