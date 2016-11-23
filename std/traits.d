@@ -77,6 +77,7 @@
  *           $(LREF StringTypeOf)
  *           $(LREF AssocArrayTypeOf)
  *           $(LREF BuiltinTypeOf)
+ *           $(LREF TypeOf)
  * ))
  * $(TR $(TD Categories of types) $(TD
  *           $(LREF isType)
@@ -5072,6 +5073,31 @@ template BuiltinTypeOf(T)
     else static if (is(ArrayTypeOf!T X))        alias BuiltinTypeOf = X;
     else static if (is(AssocArrayTypeOf!T X))   alias BuiltinTypeOf = X;
     else                                        static assert(0);
+}
+
+/++
+    Helper template so that `typeof can be used with templates taking other
+    templates (such as $(REF, staticMap, std, meta)).
+  +/
+template TypeOf(alias exp)
+{
+    alias TypeOf = typeof(exp);
+}
+
+///
+unittest
+{
+    import std.meta : AliasSeq, staticMap;
+
+    static assert(is(TypeOf!1 == int));
+    static assert(is(TypeOf!"hello" == string));
+    static assert(is(TypeOf!(17 + 42) == int));
+
+    int[] arr;
+    static assert(is(TypeOf!arr == int[]));
+
+    static assert(is(staticMap!(TypeOf, 1, true, "hello") ==
+                     AliasSeq!(int, bool, string)));
 }
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
