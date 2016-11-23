@@ -1088,25 +1088,17 @@ public:
     ///
     unittest
     {
-        auto a = Variant(new int[10]);
+        Variant a = new int[10];
         a[5] = 42;
         assert(a[5] == 42);
-        assert((cast(const Variant) a)[5] == 42);
+        a[5] += 8;
+        assert(a[5] == 50);
+
         int[int] hash = [ 42:24 ];
         a = hash;
         assert(a[42] == 24);
-    }
-
-    /** Caveat:
-    Due to limitations in current language, read-modify-write
-    operations $(D op=) will not work properly:
-    */
-    unittest
-    {
-        Variant a = new int[10];
-        a[5] = 42;
-        a[5] += 8;
-        //assert(a[5] == 50); // will fail, a[5] is still 42
+        a[42] /= 2;
+        assert(a[42] == 12);
     }
 
     unittest
@@ -1124,6 +1116,12 @@ public:
         Variant[2] args = [ Variant(value), Variant(i) ];
         fptr(OpID.indexAssign, &store, &args) == 0 || assert(false);
         return args[0];
+    }
+
+    /// ditto
+    Variant opIndexOpAssign(string op, T, N)(T value, N i)
+    {
+        return opIndexAssign(mixin(`opIndex(i)` ~ op ~ `value`), i);
     }
 
     /** If the $(D VariantN) contains an (associative) array,
@@ -2299,6 +2297,12 @@ unittest
     Variant b;
     assert(a == b);
     assert(b == a);
+}
+
+unittest
+{
+    const Variant a = [2];
+    assert(a[0] == 2);
 }
 
 unittest
