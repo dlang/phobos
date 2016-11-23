@@ -167,7 +167,7 @@ $(I UnsignedInteger):
 template to(T)
 {
     T to(A...)(A args)
-        if (A.length > 0 && !isStaticArray!(A[0]))
+        if (A.length != 1 || !isStaticArray!(A[0]))
     {
         return toImpl!T(args);
     }
