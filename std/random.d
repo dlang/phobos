@@ -1660,6 +1660,146 @@ if (is(E == enum))
 }
 
 /**
+Generates a dynamic array of $(D type T), of $(D length len), with elements
+of the underlying type of `T`. If `T` is type of `string`, then the returned
+array will contain $(D len code points).
+
+Each element is uniformly generated between `lwB` and `upB`.  If no lower
+and upper bounds are specified, then `ElementType.min` and `ElementType.max`
+will be used. For elements of $(D floating point) type the default boundaries
+values are `[0, 1)`.
+
+The `boundaries` parameter controls the shape of the interval (open vs.
+closed on either side). Valid values for `boundaries` are $(D "[]"),
+$(D "$(LPAREN)]"), $(D "[$(RPAREN)"), and $(D "()"). The default interval
+is closed to the left and open to the right.
+
+The version that does not take `urng` uses the default generator `rndGen`.
+
+Params:
+    len = length of returned array
+    lwB = lower bound of the _uniform distribution
+    upB = upper bound of the _uniform distribution
+    urng = (optional) random number generator to use;
+           if not specified, defaults to `rndGen`
+
+Returns:
+    An array of length `len` of random variates drawn from the _uniform
+    distribution between `lwB` and `upB`, whose type is the underlying type
+    of `T`.
+ */
+auto ref uniform(T)(size_t len)
+    if (isDynamicArray!T)
+{
+    return uniform!("[)", T, Random)(len, rndGen);
+}
+
+/// ditto
+auto ref uniform(string boundaries = "[)", T, RandomGen = Random)
+                (size_t len, ref RandomGen urng = rndGen)
+    if (isDynamicArray!T && isUniformRNG!RandomGen)
+{
+    alias ET = ElementType!T;
+
+    static if (isSomeString!T)
+    {
+        char[] result = uniform!(boundaries, T, dchar, dchar, RandomGen)
+                                (len, dchar.min, dchar.max, urng);
+    }
+    else static if (isFloatingPoint!(ET))
+    {
+        import std.range : generate, take;
+        import std.array : array;
+
+        T result = generate!(() => uniform01!(ET)(urng))().take(len).array();
+    }
+    else static if (isIntegral!(ET))
+    {
+        T result = uniform!(boundaries, T, ET, ET, RandomGen)
+                           (len, ET.min, ET.max, urng);
+    }
+
+    return result;
+}
+
+/// ditto
+auto ref uniform(T, LB, UB)(size_t len, LB lwB, UB upB)
+    if (isDynamicArray!T
+        && ((isNumeric!LB && isNumeric!UB) || (isSomeChar!LB && isSomeChar!UB))
+        && isImplicitlyConvertible!(LB, ElementType!T)
+        && isImplicitlyConvertible!(UB, ElementType!T))
+{
+    return uniform!("[)", T, LB, UB, Random)(len, lwB, upB, rndGen);
+}
+
+/// ditto
+auto ref uniform(string boundaries = "[)", T, LB, UB, RandomGen = Random)
+                (size_t len, LB lwB, UB upB, ref RandomGen urng = rndGen)
+    if (isDynamicArray!T && isUniformRNG!RandomGen
+        && ((isNumeric!LB && isNumeric!UB) || (isSomeChar!LB && isSomeChar!UB))
+        && isImplicitlyConvertible!(LB, ElementType!T)
+        && isImplicitlyConvertible!(UB, ElementType!T))
+{
+    alias ET = ElementType!T;
+
+    static if (isSomeString!T)
+    {
+        char[] result;
+
+        ++len;
+        while (--len)
+        {
+            result ~= uniform!(boundaries, dchar, dchar, RandomGen)
+                              (lwB, upB, urng);
+        }
+    }
+    else static if (isNumeric!(ET))
+    {
+        import std.range : generate, take;
+        import std.array : array;
+
+        T result = generate!(() => uniform!(boundaries, ET, ET, RandomGen)(lwB, upB, urng))().take(len).array();
+    }
+
+    return result;
+}
+
+///
+@safe unittest
+{
+    auto a = uniform!(int[])(10);
+
+    auto b = uniform!(string)(10, 'a', 'z');
+
+    import std.algorithm.comparison : equal;
+
+    auto c = uniform!(int[])(5, 10, 11);
+    assert(equal(c, [10, 10, 10, 10, 10]));
+
+    auto d = uniform!("[]", int[])(5, 10, 10);
+    assert(equal(d, [10, 10, 10, 10, 10]));
+
+    import std.algorithm.searching : all;
+
+    auto e = uniform!(double[])(10);
+    assert(all!(elem => elem >= 0 && elem < 1)(e));
+}
+
+@safe unittest
+{
+    enum len = 10;
+
+    foreach (T; std.meta.AliasSeq!(char, wchar, dchar, byte, ubyte, short, ushort,
+                          int, uint, long, ulong, float, double, real))
+    {
+        assert(__traits(compiles, uniform!(T[])(len)));
+        assert(__traits(compiles, uniform!("[]", T[])(len)));
+        assert(__traits(compiles, uniform!("[]", T[], Random)(len)));
+        assert(!__traits(compiles, uniform!(T[], Random)(len)));
+    }
+}
+
+/**
  * Generates a uniformly-distributed floating point number of type
  * $(D T) in the range [0, 1$(RPAREN).  If no random number generator is
  * specified, the default RNG $(D rndGen) will be used as the source
