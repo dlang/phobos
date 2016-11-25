@@ -164,7 +164,7 @@ template isInputRange(R)
     {
         R r = R.init;     // can define a range object
         if (r.empty) {}   // can test for empty
-        r.popFront();     // can invoke popFront()
+        r.popFront;       // can invoke popFront()
         auto h = r.front; // can get the front of the range
     }));
 }
@@ -844,7 +844,7 @@ template isBidirectionalRange(R)
     (inout int = 0)
     {
         R r = R.init;
-        r.popBack();
+        r.popBack;
         auto t = r.back;
         auto w = r.front;
         static assert(is(typeof(t) == typeof(w)));
