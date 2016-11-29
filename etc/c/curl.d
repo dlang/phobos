@@ -281,7 +281,7 @@ enum CurlFnMAtchFunc {
 
 /** callback type for wildcard downloading pattern matching. If the
    string matches the pattern, return CURL_FNMATCHFUNC_MATCH value, etc. */
-alias curl_fnmatch_callback = int function(void *ptr, const(char) *pattern, const(char) *string);
+alias curl_fnmatch_callback = int function(void *ptr, in char *pattern, in char *string);
 
 /// seek whence...
 enum CurlSeekPos {
@@ -378,7 +378,7 @@ alias curl_free_callback = void function(void *ptr);
 /// ditto
 alias curl_realloc_callback = void* function(void *ptr, size_t size);
 /// ditto
-alias curl_strdup_callback = char * function(const(char) *str);
+alias curl_strdup_callback = char * function(in char *str);
 /// ditto
 alias curl_calloc_callback = void* function(size_t nmemb, size_t size);
 
@@ -1365,9 +1365,9 @@ alias curl_TimeCond = int;
 /** curl_strequal() and curl_strnequal() are subject for removal in a future
    libcurl, see lib/README.curlx for details */
 extern (C) {
-int  curl_strequal(const(char) *s1, const(char) *s2);
+int  curl_strequal(in char *s1, in char *s2);
 /// ditto
-int  curl_strnequal(const(char) *s1, const(char) *s2, size_t n);
+int  curl_strnequal(in char *s1, in char *s2, size_t n);
 }
 enum CurlForm {
     nothing, /********** the first one is unused ************/
@@ -1457,7 +1457,7 @@ CURLFORMcode  curl_formadd(curl_httppost **httppost, curl_httppost **last_post,.
  * Should return the buffer length passed to it as the argument "len" on
  *   success.
  */
-alias curl_formget_callback = size_t function(void *arg, const(char) *buf, size_t len);
+alias curl_formget_callback = size_t function(void *arg, in char *buf, size_t len);
 
 /**
  * Name: curl_formget()
@@ -1487,7 +1487,7 @@ void  curl_formfree(curl_httppost *form);
  * Returns a malloc()'ed string that MUST be curl_free()ed after usage is
  * complete. DEPRECATED - see lib/README.curlx
  */
-char * curl_getenv(const(char) *variable);
+char * curl_getenv(in char *variable);
 
 /**
  * Name: curl_version()
@@ -1507,10 +1507,10 @@ char * curl_version();
  * %XX versions). This function returns a new allocated string or NULL if an
  * error occurred.
  */
-char * curl_easy_escape(CURL *handle, const(char) *string, int length);
+char * curl_easy_escape(CURL *handle, in char *string, int length);
 
 /** the previous version: */
-char * curl_escape(const(char) *string, int length);
+char * curl_escape(in char *string, int length);
 
 
 /**
@@ -1524,10 +1524,10 @@ char * curl_escape(const(char) *string, int length);
  * Conversion Note: On non-ASCII platforms the ASCII %XX codes are
  * converted into the host encoding.
  */
-char * curl_easy_unescape(CURL *handle, const(char) *string, int length, int *outlength);
+char * curl_easy_unescape(CURL *handle, in char *string, int length, int *outlength);
 
 /** the previous version */
-char * curl_unescape(const(char) *string, int length);
+char * curl_unescape(in char *string, int length);
 
 /**
  * Name: curl_free()
@@ -1601,7 +1601,7 @@ struct curl_slist
  * Appends a string to a linked list. If no list exists, it will be created
  * first. Returns the new list, after appending.
  */
-curl_slist * curl_slist_append(curl_slist *, const(char) *);
+curl_slist * curl_slist_append(curl_slist *, in char *);
 
 /**
  * Name: curl_slist_free_all()
