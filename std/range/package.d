@@ -9779,7 +9779,7 @@ struct Bitwise(R)
                remainder from the number of bits that the element type has.
              */
             ER elemPos = bitsNum - n % bitsNum;
-            UER indexMask = cast(UER)(1 << (elemPos - 1));
+            UER indexMask = cast(UER)((cast(UER)(1) << (elemPos - 1)));
 
             ER elem;
             static if (hasLength!R)
@@ -9895,14 +9895,20 @@ struct Bitwise(R)
     foreach (IntegralType; IntegralTypes)
     {
         size_t bitsNum = IntegralType.sizeof * 8;
-        IntegralType[] a = [cast(IntegralType)(1),
-                            cast(IntegralType)(1 << (bitsNum - 1))];
+
+        auto first = cast(IntegralType)(1);
+
+        // 2 ^ (bitsNum - 1)
+        auto second = cast(IntegralType)(cast(IntegralType)(1) << (bitsNum - 2));
+
+        IntegralType[] a = [first, second];
         auto bw = Bitwise!(IntegralType[])(a);
 
         // Check against lsb of a[0]
         assert(bw[bitsNum - 1] == true);
-        // Check against msb of a[1]
-        assert(bw[bitsNum] == true);
+        // Check against msb - 1 of a[1]
+        assert(bw[bitsNum + 1] == true);
+
     }
 }
 
