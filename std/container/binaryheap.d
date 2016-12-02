@@ -62,14 +62,8 @@ size of that range. If $(D Store) is a container that supports $(D
 insertBack), the $(D BinaryHeap) may grow by adding elements to the
 container.
      */
-
-template hasDup(T)
-{
-    const hasDup = __traits(compiles, (T t) { return t.dup(); });
-}
-
 struct BinaryHeap(Store, alias less = "a < b")
-if ((isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[]))) && hasDup!(Store))
+if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
 {
     import std.functional : binaryFun;
     import std.exception : enforce;
@@ -207,12 +201,14 @@ Returns $(D true) if the heap is _empty, $(D false) otherwise.
 Returns a duplicate of the heap. The underlying store must also
 support a $(D dup) method.
      */
-    @property BinaryHeap dup()
-    {
-        BinaryHeap result;
-        if (!_payload.refCountedStore.isInitialized) return result;
-        result.assume(_store.dup, length);
-        return result;
+    static if (is(typeof(Store.init.dup) == Store)) {
+        @property BinaryHeap dup()
+        {
+            BinaryHeap result;
+            if (!_payload.refCountedStore.isInitialized) return result;
+            result.assume(_store.dup, length);
+            return result;
+        }
     }
 
 /**
