@@ -62,8 +62,14 @@ size of that range. If $(D Store) is a container that supports $(D
 insertBack), the $(D BinaryHeap) may grow by adding elements to the
 container.
      */
+
+template hasDup(T)
+{
+    const hasDup = __traits(compiles, (T t) { return t.dup(); });
+}
+
 struct BinaryHeap(Store, alias less = "a < b")
-if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
+if ((isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[]))) && hasDup!(Store))
 {
     import std.functional : binaryFun;
     import std.exception : enforce;
