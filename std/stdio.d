@@ -4333,7 +4333,7 @@ __gshared
 {
     /** The standard input stream.
         Bugs:
-            Due to $(WEB https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
+            Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
             it is thread un-safe to reassign `stdin` to a different `File` instance
             than the default.
      */
@@ -4357,7 +4357,7 @@ __gshared
     /**
         The standard output stream.
         Bugs:
-            Due to $(WEB https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
+            Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
             it is thread un-safe to reassign `stdout` to a different `File` instance
             than the default.
     */
@@ -4365,7 +4365,7 @@ __gshared
     /**
         The standard error stream.
         Bugs:
-            Due to $(WEB https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
+            Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
             it is thread un-safe to reassign `stderr` to a different `File` instance
             than the default.
     */
