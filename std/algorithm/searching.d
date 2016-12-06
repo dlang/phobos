@@ -1368,7 +1368,8 @@ if (isInputRange!InputRange &&
     static if (is(InputRange : SortedRange!TT, TT) && isDefaultPred)
     {
         auto lb = haystack.lowerBound(needle);
-        if (lb.length == 0 || lb.length == haystack.length || haystack[lb.length] != needle)
+        if ((lb.length == 0 && haystack[0] != needle) || lb.length == haystack.length
+           || haystack[lb.length] != needle)
             return haystack[$ .. $];
 
         return haystack[lb.length .. $];
@@ -1504,6 +1505,8 @@ if (isInputRange!InputRange &&
 
     auto arr = assumeSorted!"a < b"([1, 2, 4, 4, 4, 4, 5, 6, 9]);
     assert(find(arr, 4) == assumeSorted!"a < b"([4, 4, 4, 4, 5, 6, 9]));
+    assert(find(arr, 1) == arr);
+    assert(find(arr, 9) == assumeSorted!"a < b"([9]));
     assert(find!"a > b"(arr, 4) == assumeSorted!"a < b"([5, 6, 9]));
     assert(find!"a < b"(arr, 4) == arr);
     assert(find(arr, 0).empty());
@@ -1836,7 +1839,6 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
 
         while (needle.front() == needleFirstElem)
         {
-            auto elem = needle.front();
             needle.popFront();
             ++count;
 
@@ -1846,9 +1848,9 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
 
         auto m = mismatch(partitions[2], needle);
 
-        if (m[1] == haystack[$ .. $])
+        if (m[1].empty)
             return haystack[partitions[0].length + partitions[1].length - count .. $];
-        if (m[1] != haystack[$ .. $])
+        if (!m[1].empty)
             return haystack[$ .. $];
     }
     static if (isRandomAccessRange!R2)
@@ -1930,12 +1932,14 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
     auto r4 = assumeSorted([4, 5, 6]);
     auto r5 = assumeSorted([12, 13]);
     auto r6 = assumeSorted([8, 8, 10, 11]);
+    auto r7 = assumeSorted([3, 3, 3, 3, 3, 3, 3]);
 
     assert(find(r1, r2) == assumeSorted([3, 3, 4, 5, 6, 7, 8, 8, 8, 10]));
     assert(find(r1, r3) == assumeSorted([3, 4, 5, 6, 7, 8, 8, 8, 10]));
     assert(find(r1, r4) == assumeSorted([4, 5, 6, 7, 8, 8, 8, 10]));
     assert(find(r1, r5).empty());
     assert(find(r1, r6).empty());
+    assert(find(r1, r7).empty());
 }
 
 @safe unittest
