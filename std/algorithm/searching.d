@@ -1368,8 +1368,7 @@ if (isInputRange!InputRange &&
     static if (is(InputRange : SortedRange!TT, TT) && isDefaultPred)
     {
         auto lb = haystack.lowerBound(needle);
-        if ((lb.length == 0 && haystack[0] != needle) || lb.length == haystack.length
-           || haystack[lb.length] != needle)
+        if (lb.length == haystack.length || haystack[lb.length] != needle)
             return haystack[$ .. $];
 
         return haystack[lb.length .. $];
@@ -1850,10 +1849,8 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
 
         if (m[1].empty)
             return haystack[partitions[0].length + partitions[1].length - count .. $];
-        if (!m[1].empty)
-            return haystack[$ .. $];
     }
-    static if (isRandomAccessRange!R2)
+    else static if (isRandomAccessRange!R2)
     {
         immutable lastIndex = needleLength - 1;
         auto last = needle[lastIndex];
