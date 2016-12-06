@@ -198,8 +198,8 @@ Returns $(D true) if the heap is _empty, $(D false) otherwise.
     }
 
 /**
-Returns a duplicate of the heap. The underlying store must also
-support a $(D dup) method.
+Returns a duplicate of the heap. The $(D dup) method is available only if the
+underlying store supports it.
      */
     static if (is(typeof(Store.init.dup) == Store)) {
         @property BinaryHeap dup()
