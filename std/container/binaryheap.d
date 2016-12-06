@@ -475,3 +475,12 @@ unittest // 16072
 
     assert(r.front == 99);
 }
+
+unittest
+{
+    import std.algorithm.comparison : equal;
+    int[] a = [4, 1, 3, 2, 16, 9, 10, 14, 8, 7];
+    auto heap = heapify(a);
+    auto dup = heap.dup();
+    assert(dup.equal([16, 14, 10, 9, 8, 7, 4, 3, 2, 1]));
+}
