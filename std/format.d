@@ -4361,6 +4361,10 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     return parse!T(input);
 }
 
+/**
+ * Function that performs raw reading. Used by unformatValue
+ * for integral and float types.
+ */
 private T rawRead(T, Range)(ref Range input)
     if (is(Unqual!(ElementEncodingType!Range) == char)
      || is(Unqual!(ElementEncodingType!Range) == byte)
@@ -4404,7 +4408,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
         static if (is(Unqual!(ElementEncodingType!Range) == char)
                 || is(Unqual!(ElementEncodingType!Range) == byte)
                 || is(Unqual!(ElementEncodingType!Range) == ubyte))
-                return rawRead!T(input);
+            return rawRead!T(input);
         else
             throw new Exception("The raw read specifier %r may only be used with narrow strings and ranges of bytes.");
     }
@@ -4454,7 +4458,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
         static if (is(Unqual!(ElementEncodingType!Range) == char)
                 || is(Unqual!(ElementEncodingType!Range) == byte)
                 || is(Unqual!(ElementEncodingType!Range) == ubyte))
-                return rawRead!T(input);
+            return rawRead!T(input);
         else
             throw new Exception("The raw read specifier %r may only be used with narrow strings and ranges of bytes.");
     }
