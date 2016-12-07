@@ -6603,7 +6603,7 @@ struct Indexed(Source, Indices)
     static if (isBidirectionalRange!Indices)
     {
         /// Ditto
-        @property auto back()
+        @property auto ref back()
         {
             assert(!empty, "Attempting to fetch the back of an empty Indexed");
             return _source[_indices.back];
