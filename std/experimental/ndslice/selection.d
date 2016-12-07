@@ -1356,12 +1356,6 @@ auto byElement(size_t N, Range)(Slice!(N, Range) slice)
     }
 }
 
-/// ditto
-Slice!(1, Range) byElement(size_t N : 1, Range)(Slice!(N, Range) slice)
-{
-    return slice;
-}
-
 /// Regular slice
 @safe @nogc pure nothrow unittest
 {
@@ -1497,15 +1491,6 @@ Use $(SUBREF iteration, allReversed) in pipeline before
     {
         //...
     }
-}
-
-/++
-`byElement` just return the slice for 1-dimensional case.
-+/
-unittest
-{
-    import std.experimental.ndslice.slice : slice;
-    static assert(is(typeof(slice!int(100)) == Slice!(1, int*)));
 }
 
 @safe @nogc pure nothrow unittest
@@ -1697,14 +1682,6 @@ auto byElementInStandardSimplex(size_t N, Range)(Slice!(N, Range) slice, size_t 
     }
 }
 
-/// ditto
-Slice!(1, Range) byElementInStandardSimplex(size_t N : 1, Range)(Slice!(N, Range) slice, size_t maxHypercubeLength = size_t.max)
-{
-    if (maxHypercubeLength > slice._lengths[0])
-        maxHypercubeLength = slice._lengths[0];
-    return slice[0 .. maxHypercubeLength];
-}
-
 ///
 pure nothrow unittest
 {
@@ -1768,21 +1745,6 @@ pure nothrow unittest
     assert(elems.front == 5);
     assert(elems.index == cast(size_t[2])[1, 1]);
     assert(elems.length == 2);
-}
-
-/++
-`byElementInStandardSimplex` returns a corresponding part of the slice for 1-dimensional case.
-+/
-@safe pure nothrow unittest
-{
-    auto sl = iotaSlice(7);
-    auto simplex = sl.byElementInStandardSimplex;
-
-    assert(simplex == [0, 1, 2, 3, 4, 5, 6]);
-
-    static assert(is(typeof(simplex) == typeof(sl)));
-
-    assert(sl.byElementInStandardSimplex(3) == [0, 1, 2]);
 }
 
 /++
