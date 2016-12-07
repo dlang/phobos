@@ -4300,10 +4300,9 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 {
     import std.algorithm.searching : find;
     import std.conv : parse, text;
-    if (spec.spec == 's')
-    {
-        return parse!T(input);
-    }
+
+    if (spec.spec == 's') return parse!T(input);
+
     enforce(find(acceptedSpecs!long, spec.spec).length,
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
@@ -4363,13 +4362,57 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 }
 
 /**
+ * Function that performs raw reading. Used by unformatValue
+ * for integral and float types.
+ */
+private T rawRead(T, Range)(ref Range input)
+    if (is(Unqual!(ElementEncodingType!Range) == char)
+     || is(Unqual!(ElementEncodingType!Range) == byte)
+     || is(Unqual!(ElementEncodingType!Range) == ubyte))
+{
+    union X
+    {
+        ubyte[T.sizeof] raw;
+        T typed;
+    }
+    X x;
+    foreach (i; 0 .. T.sizeof)
+    {
+        static if (isSomeString!Range)
+        {
+            x.raw[i] = input[0];
+            input = input[1 .. $];
+        }
+        else
+        {
+            // TODO: recheck this
+            x.raw[i] = input.front;
+            input.popFront();
+        }
+    }
+    return x.typed;
+}
+
+/**
    Reads an integral value and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isInputRange!Range && isIntegral!T && !is(T == enum))
+    if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
+
     import std.algorithm.searching : find;
     import std.conv : parse, text;
+
+    if (spec.spec == 'r')
+    {
+        static if (is(Unqual!(ElementEncodingType!Range) == char)
+                || is(Unqual!(ElementEncodingType!Range) == byte)
+                || is(Unqual!(ElementEncodingType!Range) == ubyte))
+            return rawRead!T(input);
+        else
+            throw new Exception("The raw read specifier %r may only be used with narrow strings and ranges of bytes.");
+    }
+
     enforce(find(acceptedSpecs!T, spec.spec).length,
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
@@ -4381,54 +4424,52 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
         spec.spec == 'b' ? 2 :
         spec.spec == 's' || spec.spec == 'd' || spec.spec == 'u' ? 10 : 0;
     assert(base != 0);
+
     return parse!T(input, base);
+
+}
+
+unittest
+{
+     union B
+     {
+         char[int.sizeof] untyped;
+         int typed;
+     }
+     B b;
+     b.typed = 5;
+     char[] input = b.untyped[];
+     int witness;
+     formattedRead(input, "%r", &witness);
+     assert(witness == b.typed);
 }
 
 /**
    Reads a floating-point value and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isFloatingPoint!T && !is(T == enum))
+    if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range && isSomeChar!(ElementType!Range) && !is(Range == enum))
 {
     import std.algorithm.searching : find;
     import std.conv : parse, text;
+
     if (spec.spec == 'r')
     {
-        // raw read
-        //enforce(input.length >= T.sizeof);
-        enforce(
-            isSomeString!Range || ElementType!(Range).sizeof == 1,
-            "Cannot parse input of type %s".format(Range.stringof)
-        );
-        union X
-        {
-            ubyte[T.sizeof] raw;
-            T typed;
-        }
-        X x;
-        foreach (i; 0 .. T.sizeof)
-        {
-            static if (isSomeString!Range)
-            {
-                x.raw[i] = input[0];
-                input = input[1 .. $];
-            }
-            else
-            {
-                // TODO: recheck this
-                x.raw[i] = cast(ubyte) input.front;
-                input.popFront();
-            }
-        }
-        return x.typed;
+        static if (is(Unqual!(ElementEncodingType!Range) == char)
+                || is(Unqual!(ElementEncodingType!Range) == byte)
+                || is(Unqual!(ElementEncodingType!Range) == ubyte))
+            return rawRead!T(input);
+        else
+            throw new Exception("The raw read specifier %r may only be used with narrow strings and ranges of bytes.");
     }
+
     enforce(find(acceptedSpecs!T, spec.spec).length,
             text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
 
     return parse!T(input);
 }
 
-version(none)unittest
+unittest
 {
     union A
     {
@@ -4470,7 +4511,7 @@ version(none)unittest
  * Reads one character and returns it.
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isInputRange!Range && isSomeChar!T && !is(T == enum))
+    if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
     import std.algorithm.searching : find;
     import std.conv : to, text;
