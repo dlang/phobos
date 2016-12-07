@@ -201,7 +201,8 @@ Returns $(D true) if the heap is _empty, $(D false) otherwise.
 Returns a duplicate of the heap. The $(D dup) method is available only if the
 underlying store supports it.
      */
-    static if (is(typeof(Store.init.dup) == Store)) {
+    static if (is(typeof((Store s) { return s.dup; }(Store.init)) == Store))
+    {
         @property BinaryHeap dup()
         {
             BinaryHeap result;
@@ -483,4 +484,56 @@ unittest
     auto heap = heapify(a);
     auto dup = heap.dup();
     assert(dup.equal([16, 14, 10, 9, 8, 7, 4, 3, 2, 1]));
+}
+
+unittest
+{
+    static struct StructWithoutDup
+    {
+        int[] a;
+        @disable StructWithoutDup dup()
+        {
+            StructWithoutDup d;
+            return d;
+        }
+        alias a this;
+    }
+
+    // Assert Binary heap can be created when Store doesn't have dup
+    // if dup is not used.
+    assert(__traits(compiles, ()
+        {
+            auto s = StructWithoutDup([1,2]);
+            auto h = heapify(s);
+        }));
+
+    // Assert dup can't be used on BinaryHeaps when Store doesn't have dup
+    assert(!__traits(compiles, ()
+        {
+            auto s = StructWithoutDup([1,2]);
+            auto h = heapify(s);
+            h.dup();
+        }));
+}
+
+unittest
+{
+    static struct StructWithDup
+    {
+        int[] a;
+        StructWithDup dup()
+        {
+            StructWithDup d;
+            return d;
+        }
+        alias a this;
+    }
+
+    // Assert dup can be used on BinaryHeaps when Store has dup
+    assert(__traits(compiles, ()
+        {
+            auto s = StructWithDup([1, 2]);
+            auto h = heapify(s);
+            h.dup();
+        }));
 }
