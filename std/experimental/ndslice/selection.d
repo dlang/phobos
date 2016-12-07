@@ -760,7 +760,7 @@ Slice!(M, Range) reshape
     if (!err)
         return ret;
     string msg;
-    with(ReshapeError) switch(err)
+    with (ReshapeError) switch (err)
     {
         case empty:
             msg = "slice should be not empty";
@@ -1184,7 +1184,7 @@ auto byElement(size_t N, Range)(Slice!(N, Range) slice)
             auto back(E)(E elem) @property
             {
                 assert(!this.empty);
-                return opIndexAssign(_length - 1, elem);
+                return opIndexAssign(elem, _length - 1);
             }
 
             void popBack()
