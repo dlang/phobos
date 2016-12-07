@@ -6582,7 +6582,7 @@ struct Indexed(Source, Indices)
     /// Ditto
     static if (hasAssignableElements!Source && !hasLvalueElements!Source)
     {
-        @property auto ref front(ElementType!Source newVal)
+        @property auto front(ElementType!Source newVal)
         {
             assert(!empty);
             return _source[_indices.front] = newVal;
