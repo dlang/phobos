@@ -33,12 +33,21 @@ Warning:  Unless marked as $(D @trusted) or $(D @safe), artifacts in
           this module allow implicit data sharing between threads and cannot
           guarantee that client code is free from low level data races.
 
-Synopsis:
+Source:    $(PHOBOSSRC std/_parallelism.d)
+Author:  David Simcha
+Copyright:  Copyright (c) 2009-2011, David Simcha.
+License:    $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
+*/
+module std.parallelism;
 
----
-import std.algorithm, std.parallelism, std.range;
+///
+unittest
+{
+    import std.algorithm : map;
+    import std.range : iota;
+    import std.math : approxEqual;
+    import std.parallelism : taskPool;
 
-void main() {
     // Parallel reduce can be combined with
     // std.algorithm.map to interesting effect.
     // The following example (thanks to Russel Winder)
@@ -47,32 +56,25 @@ void main() {
     // getTerm is evaluated in parallel as needed by
     // TaskPool.reduce.
     //
-    // Timings on an Athlon 64 X2 dual core machine:
+    // Timings on an Intel i5-3450 quad core machine
+    // for n = 1_000_000_000:
     //
-    // TaskPool.reduce:       12.170 s
-    // std.algorithm.reduce:  24.065 s
+    // TaskPool.reduce:       1.067 s
+    // std.algorithm.reduce:  4.011 s
 
-    immutable n = 1_000_000_000;
-    immutable delta = 1.0 / n;
+    enum n = 1_000_000;
+    enum delta = 1.0 / n;
 
-    real getTerm(int i)
+    alias getTerm = (int i)
     {
         immutable x = ( i - 0.5 ) * delta;
         return delta / ( 1.0 + x * x ) ;
-    }
+    };
 
-    immutable pi = 4.0 * taskPool.reduce!"a + b"(
-        std.algorithm.map!getTerm(iota(n))
-    );
+    immutable pi = 4.0 * taskPool.reduce!"a + b"(n.iota.map!getTerm);
+
+    assert(pi.approxEqual(3.1415926));
 }
----
-
-Source:    $(PHOBOSSRC std/_parallelism.d)
-Author:  David Simcha
-Copyright:  Copyright (c) 2009-2011, David Simcha.
-License:    $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
-*/
-module std.parallelism;
 
 import core.atomic;
 import core.exception;
