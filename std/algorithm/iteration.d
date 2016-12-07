@@ -457,35 +457,78 @@ template map(fun...) if (fun.length >= 1)
 {
     auto map(Range)(Range r) if (isInputRange!(Unqual!Range))
     {
-        import std.meta : AliasSeq, staticMap;
-
-        alias RE = ElementType!(Range);
-        static if (fun.length > 1)
+        import std.range;
+        import std.experimental.ndslice.slice : Slice;
+        // Type_normalization: ndslice.map -> ndslice
+        static if (is(Range : Slice!(N, R), size_t N, R))
         {
-            import std.functional : adjoin;
-            import std.meta : staticIndexOf;
-
-            alias _funs = staticMap!(unaryFun, fun);
-            alias _fun = adjoin!_funs;
-
-            // Once DMD issue #5710 is fixed, this validation loop can be moved into a template.
-            foreach (f; _funs)
-            {
-                static assert(!is(typeof(f(RE.init)) == void),
-                    "Mapping function(s) must not return void: " ~ _funs.stringof);
-            }
+            import std.experimental.ndslice.selection: pack, mapSlice;
+            return r.pack!(N - 1).mapSlice!fun;
+        }
+        else
+        // Type_normalization: take.map -> map.take
+        static if (is(Range : Take!R, R))
+        {
+            return r.source.map!fun.take(_maxAvailable);
+        }
+        else
+        // Type_normalization: indexed.map -> map.indexed
+        static if (is(Range : Indexed!(R, I), R, I))
+        {
+            return r.source.map!fun.indexed(r.indices);
+        }
+        else
+        // Type_normalization: strided.map -> map.strided
+        static if (is(typeof(stride(r.source, size_t(1))) == Range))
+        {
+            return r.source.map!fun.strided(r.stride);
+        }
+        else
+        // Type_normalization: retro.map -> map.retro
+        static if (is(typeof(retro(r.source)) == Range))
+        {
+            return r.source.map!fun.retro;
         }
         else
         {
-            alias _fun = unaryFun!fun;
-            alias _funs = AliasSeq!(_fun);
+            import std.meta : AliasSeq, staticMap;
 
-            // Do the validation separately for single parameters due to DMD issue #15777.
-            static assert(!is(typeof(_fun(RE.init)) == void),
-                "Mapping function(s) must not return void: " ~ _funs.stringof);
+            alias RE = ElementType!(Range);
+            static if (fun.length > 1)
+            {
+                import std.functional : adjoin;
+                import std.meta : staticIndexOf;
+
+                alias _funs = staticMap!(unaryFun, fun);
+                alias _fun = adjoin!_funs;
+
+                // Once DMD issue #5710 is fixed, this validation loop can be moved into a template.
+                foreach (f; _funs)
+                {
+                    static assert(!is(typeof(f(RE.init)) == void),
+                        "Mapping function(s) must not return void: " ~ _funs.stringof);
+                }
+            }
+            else
+            {
+                alias _fun = unaryFun!fun;
+                alias _funs = AliasSeq!(_fun);
+
+                // Do the validation separately for single parameters due to DMD issue #15777.
+                static assert(!is(typeof(_fun(RE.init)) == void),
+                    "Mapping function(s) must not return void: " ~ _funs.stringof);
+            }
+            // Type_normalization: map!a.map!b -> map!(b(a))
+            static if (is(Range : MapResult!(F, R), F, R))
+            {
+                import std.functional : compose;
+                return MapResult!(compose(_fun, F), R)(r._input);
+            }
+            else
+            {
+                return MapResult!(_fun, Range)(r);
+            }
         }
-
-        return MapResult!(_fun, Range)(r);
     }
 }
 

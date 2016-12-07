@@ -1,5 +1,3 @@
-// Written in the D programming language.
-
 /**
 This module defines the notion of a range. Ranges generalize the concept of
 arrays, lists, or anything that involves sequential access. This abstraction
@@ -183,8 +181,10 @@ to $(HTTP fantascienza.net/leonardo/so/, Leonardo Maffi).
  */
 module std.range;
 
-public import std.range.primitives;
+deprecated("use explicit `import std.range.interfaces;`")
 public import std.range.interfaces;
+
+public import std.range.primitives;
 public import std.array;
 public import std.typecons : Flag, Yes, No;
 
@@ -209,7 +209,32 @@ Returns:
 auto retro(Range)(Range r)
 if (isBidirectionalRange!(Unqual!Range))
 {
-    // Check for retro(retro(r)) and just return r in that case
+    import std.experimental.ndslice.slice: Slice;
+
+    // Type_normalization: ndslice.retro -> ndslice
+    static if (is(Range : Slice!(N, R), size_t N, R))
+    {
+        import std.experimental.ndslice.iteration: reversed;
+        return r.reversed!0;
+    }
+    else
+    // Type_normalization: .indexed(indexes).retro -> .indexed(indexes.retro)
+    static if (is(Range : Indexed!(R, I), R, I))
+    {
+        return r.source.indexed(r.indices.retro);
+    }
+    else
+    // Type_normalization: .stride(n).retro -> .retro.stride(n)
+    static if (is(typeof(stride(r.source, size_t(1))) == Range))
+    {
+        /// strided biderectional range must have a length
+        static assert(hasLength!(typeof(r.source)), "Phobos internal error: please file a bug.");
+        if (!r.source.empty)
+            r.source.popBackExactly((r.source.length - 1) % r._n);
+        return r.source.retro.stride(r._n);
+    }
+    else
+    // Type_normalization: .retro.retro -> source
     static if (is(typeof(retro(r.source)) == Range))
     {
         return r.source;
@@ -260,16 +285,16 @@ if (isBidirectionalRange!(Unqual!Range))
                 }
             }
 
-            static if (hasAssignableElements!R)
+            static if (hasAssignableElements!R && !hasLvalueElements!R)
             {
                 @property void front(ElementType!R val)
                 {
-                    source.back = val;
+                    return source.back = val;
                 }
 
                 @property void back(ElementType!R val)
                 {
-                    source.front = val;
+                    return source.front = val;
                 }
             }
 
@@ -277,11 +302,11 @@ if (isBidirectionalRange!(Unqual!Range))
             {
                 auto ref opIndex(size_t n) { return source[retroIndex(n)]; }
 
-                static if (hasAssignableElements!R)
+                static if (hasAssignableElements!R && !hasLvalueElements!R)
                 {
-                    void opIndexAssign(ElementType!R val, size_t n)
+                    auto opIndexAssign(ElementType!R val, size_t n)
                     {
-                        source[retroIndex(n)] = val;
+                        return source[retroIndex(n)] = val;
                     }
                 }
 
@@ -455,15 +480,30 @@ in
 }
 body
 {
-    import std.algorithm.comparison : min;
+    import std.experimental.ndslice.slice: Slice;
 
+    // Type_normalization: ndslice.stride -> ndslice
+    static if (is(Range : Slice!(N, R), size_t N, R))
+    {
+        import std.experimental.ndslice.iteration: strided;
+        return r.strided!0(n);
+    }
+    else
+    // Type_normalization: .indexed(indexes).stride -> .indexed(indexes.stride)
+    static if (is(Range : Indexed!(R, I), R, I))
+    {
+        return r.source.indexed(r.indices.stride(n));
+    }
+    else
+    // Type_normalization: stride.stride -> stride
     static if (is(typeof(stride(r.source, n)) == Range))
     {
-        // stride(stride(r, n1), n2) is stride(r, n1 * n2)
         return stride(r.source, r._n * n);
     }
     else
     {
+        import std.algorithm.comparison : min;
+
         static struct Result
         {
             private alias R = Unqual!Range;
@@ -504,6 +544,11 @@ body
                     }
                 }
 
+            size_t stride() @property
+            {
+                return _n;
+            }
+
             static if (isForwardRange!R)
             {
                 @property auto save()
@@ -537,11 +582,11 @@ body
                 }
             }
 
-            static if (hasAssignableElements!R)
+            static if (hasAssignableElements!R && !hasLvalueElements!R)
             {
                 @property void front(ElementType!R val)
                 {
-                    source.front = val;
+                    return source.front = val;
                 }
             }
 
@@ -572,17 +617,17 @@ body
                     }
                 }
 
-                static if (hasAssignableElements!R)
+                static if (hasAssignableElements!R && !hasLvalueElements!R)
                 {
                     @property void back(ElementType!R val)
                     {
                         eliminateSlackElements();
-                        source.back = val;
+                        return source.back = val;
                     }
                 }
             }
 
-            static if (isRandomAccessRange!R && hasLength!R)
+            static if (isRandomAccessRange!R)
             {
                 auto ref opIndex(size_t n)
                 {
@@ -600,11 +645,11 @@ body
                     }
                 }
 
-                static if (hasAssignableElements!R)
+                static if (hasAssignableElements!R && !hasLvalueElements!R)
                 {
-                    void opIndexAssign(ElementType!R val, size_t n)
+                    auto opIndexAssign(ElementType!R val, size_t n)
                     {
-                        source[_n * n] = val;
+                        return source[_n * n] = val;
                     }
                 }
             }
@@ -936,7 +981,7 @@ if (Ranges.length > 0 &&
                 assert(false);
             }
 
-            static if (allSameType && allSatisfy!(hasAssignableElements, R))
+            static if (allSameType && allSatisfy!(hasAssignableElements, R) && !allSatisfy!(hasLvalueElements, R))
             {
                 // @@@BUG@@@
                 //@property void front(T)(T v) if (is(T : RvalueElementType))
@@ -1001,7 +1046,7 @@ if (Ranges.length > 0 &&
                     }
                 }
 
-                static if (allSameType && allSatisfy!(hasAssignableElements, R))
+                static if (allSameType && allSatisfy!(hasAssignableElements, R) && !allSatisfy!(hasLvalueElements, R))
                 {
                     @property void back(RvalueElementType v)
                     {
@@ -1072,7 +1117,7 @@ if (Ranges.length > 0 &&
                     }
                 }
 
-                static if (allSameType && allSatisfy!(hasAssignableElements, R))
+                static if (allSameType && allSatisfy!(hasAssignableElements, R) && !allSatisfy!(hasLvalueElements, R))
                     void opIndexAssign(ElementType v, size_t index)
                     {
                         foreach (i, Range; R)
@@ -1873,7 +1918,8 @@ if (isInputRange!(Unqual!Range) &&
     /// User accessible in read and write
     public R source;
 
-    private size_t _maxAvailable;
+    // used in std.algorithm.iteration: map
+    package(std) size_t _maxAvailable;
 
     alias Source = R;
 
@@ -1909,7 +1955,7 @@ if (isInputRange!(Unqual!Range) &&
             return Take(source.save, _maxAvailable);
         }
 
-    static if (hasAssignableElements!R)
+    static if (hasAssignableElements!R && !hasLvalueElements!R)
         /// ditto
         @property void front(ElementType!R v)
         {
@@ -1917,7 +1963,7 @@ if (isInputRange!(Unqual!Range) &&
                 "Attempting to assign to the front of an empty "
                 ~ Take.stringof);
             // This has to return auto instead of void because of Bug 4706.
-            source.front = v;
+            return source.front = v;
         }
 
     static if (hasMobileElements!R)
@@ -1996,7 +2042,7 @@ if (isInputRange!(Unqual!Range) &&
             return source[index];
         }
 
-        static if (hasAssignableElements!R)
+        static if (hasAssignableElements!R && !hasLvalueElements!R)
         {
             /// ditto
             @property void back(ElementType!R v)
@@ -2005,16 +2051,16 @@ if (isInputRange!(Unqual!Range) &&
                 assert(!empty,
                     "Attempting to assign to the back of an empty "
                     ~ Take.stringof);
-                source[this.length - 1] = v;
+                return source[this.length - 1] = v;
             }
 
             /// ditto
-            void opIndexAssign(ElementType!R v, size_t index)
+            auto opIndexAssign(ElementType!R v, size_t index)
             {
                 assert(index < length,
                     "Attempting to index out of the bounds of a "
                     ~ Take.stringof);
-                source[index] = v;
+                return source[index] = v;
             }
         }
 
@@ -2307,9 +2353,9 @@ if (isInputRange!R)
                 }
             }
 
-            static if (hasAssignableElements!R)
+            static if (hasAssignableElements!R && !hasLvalueElements!R)
             {
-                @property auto ref front(ElementType!R v)
+                @property auto front(ElementType!R v)
                 {
                     assert(!empty,
                         "Attempting to assign to the front of an empty "
@@ -3361,12 +3407,12 @@ struct Cycle(R)
             }
         }
 
-        static if (hasAssignableElements!R)
+        static if (hasAssignableElements!R && !hasLvalueElements!R)
         {
             /// ditto
             @property void front(ElementType!R val)
             {
-                _original[_index] = val;
+                return _original[_index] = val;
             }
         }
 
@@ -3397,12 +3443,12 @@ struct Cycle(R)
             }
         }
 
-        static if (hasAssignableElements!R)
+        static if (hasAssignableElements!R && !hasLvalueElements!R)
         {
             /// ditto
             void opIndexAssign(ElementType!R val, size_t n)
             {
-                _original[(n + _index) % _original.length] = val;
+                return _original[(n + _index) % _original.length] = val;
             }
         }
 
@@ -3465,7 +3511,7 @@ struct Cycle(R)
             }
         }
 
-        static if (hasAssignableElements!R)
+        static if (hasAssignableElements!R && !hasLvalueElements!R)
         {
             /// ditto
             @property auto front(ElementType!R val)
@@ -5809,11 +5855,11 @@ struct FrontTransversal(Ror,
         }
     }
 
-    static if (hasAssignableElements!RangeType)
+    static if (hasAssignableElements!RangeType && !hasLvalueElements!RangeType)
     {
         @property void front(ElementType val)
         {
-            _input.front.front = val;
+            return _input.front.front = val;
         }
     }
 
@@ -5866,11 +5912,11 @@ struct FrontTransversal(Ror,
             }
         }
 
-        static if (hasAssignableElements!RangeType)
+        static if (hasAssignableElements!RangeType && !hasLvalueElements!RangeType)
         {
             @property void back(ElementType val)
             {
-                _input.back.front = val;
+                return _input.back.front = val;
             }
         }
     }
@@ -5899,11 +5945,11 @@ struct FrontTransversal(Ror,
             }
         }
         /// Ditto
-        static if (hasAssignableElements!RangeType)
+        static if (hasAssignableElements!RangeType && !hasLvalueElements!RangeType)
         {
-            void opIndexAssign(ElementType val, size_t n)
+            auto opIndexAssign(ElementType val, size_t n)
             {
-                _input[n].front = val;
+                return _input[n].front = val;
             }
         }
         /// Ditto
@@ -6125,11 +6171,11 @@ struct Transversal(Ror,
     }
 
     /// Ditto
-    static if (hasAssignableElements!InnerRange)
+    static if (hasAssignableElements!InnerRange && !hasLvalueElements!InnerRange)
     {
         @property void front(E val)
         {
-            _input.front[_n] = val;
+            return _input.front[_n] = val;
         }
     }
 
@@ -6183,11 +6229,11 @@ struct Transversal(Ror,
         }
 
         /// Ditto
-        static if (hasAssignableElements!InnerRange)
+        static if (hasAssignableElements!InnerRange && !hasLvalueElements!InnerRange)
         {
             @property void back(E val)
             {
-                _input.back[_n] = val;
+                return _input.back[_n] = val;
             }
         }
 
@@ -6218,11 +6264,11 @@ struct Transversal(Ror,
         }
 
         /// Ditto
-        static if (hasAssignableElements!InnerRange)
+        static if (hasAssignableElements!InnerRange && !hasLvalueElements!InnerRange)
         {
-            void opIndexAssign(E val, size_t n)
+            auto opIndexAssign(E val, size_t n)
             {
-                _input[n][_n] = val;
+                return _input[n][_n] = val;
             }
         }
 
@@ -6534,7 +6580,7 @@ struct Indexed(Source, Indices)
     }
 
     /// Ditto
-    static if (hasAssignableElements!Source)
+    static if (hasAssignableElements!Source && !hasLvalueElements!Source)
     {
         @property auto ref front(ElementType!Source newVal)
         {
@@ -6557,7 +6603,7 @@ struct Indexed(Source, Indices)
     static if (isBidirectionalRange!Indices)
     {
         /// Ditto
-        @property auto ref back()
+        @property auto back()
         {
             assert(!empty, "Attempting to fetch the back of an empty Indexed");
             return _source[_indices.back];
@@ -6571,9 +6617,9 @@ struct Indexed(Source, Indices)
         }
 
         /// Ditto
-        static if (hasAssignableElements!Source)
+        static if (hasAssignableElements!Source && !hasLvalueElements!Source)
         {
-            @property auto ref back(ElementType!Source newVal)
+            @property auto back(ElementType!Source newVal)
             {
                 assert(!empty);
                 return _source[_indices.back] = newVal;
@@ -6621,7 +6667,7 @@ struct Indexed(Source, Indices)
         }
 
 
-        static if (hasAssignableElements!Source)
+        static if (hasAssignableElements!Source && !hasLvalueElements!Source)
         {
             /// Ditto
             auto opIndexAssign(ElementType!Source newVal, size_t index)
