@@ -214,7 +214,7 @@ if (isBidirectionalRange!(Unqual!Range))
     // Type_normalization: ndslice.retro -> ndslice
     static if (is(Range : Slice!(N, R), size_t N, R))
     {
-        import std.experimental.ndslice.iteration: reversed;
+        import std.experimental.ndslice.iteration : reversed;
         return r.reversed!0;
     }
     else
@@ -485,7 +485,7 @@ body
     // Type_normalization: ndslice.stride -> ndslice
     static if (is(Range : Slice!(N, R), size_t N, R))
     {
-        import std.experimental.ndslice.iteration: strided;
+        import std.experimental.ndslice.iteration : strided;
         return r.strided!0(n);
     }
     else
@@ -1918,7 +1918,7 @@ if (isInputRange!(Unqual!Range) &&
     /// User accessible in read and write
     public R source;
 
-    // used in std.algorithm.iteration: map
+    // used in std.algorithm.iteration : map
     package(std) size_t _maxAvailable;
 
     alias Source = R;
