@@ -1262,7 +1262,7 @@ body
         return cast(T)buffer[index .. $].dup;
     }
 
-    import std.array;
+    import std.array : array;
     switch (radix)
     {
         case 10:
@@ -5738,7 +5738,7 @@ if (hexData.isHexLiteral)
 @safe nothrow pure
 private auto hexStrImpl(String)(scope String hexData)
 {
-    import std.ascii;
+    import std.ascii : isHexDigit;
     alias C = Unqual!(ElementEncodingType!String);
     C[] result;
     result.length = hexData.length / 2;

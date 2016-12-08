@@ -510,7 +510,7 @@ style: ../dscanner/dsc
 
 	# at the moment libdparse has problems to parse some modules (->excludes)
 	@echo "Running DScanner"
-	../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d|std/conv.d') -I.
+	../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d') -I.
 
 .PHONY : auto-tester-build
 auto-tester-build: all checkwhitespace
