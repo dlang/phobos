@@ -43,13 +43,13 @@ module std.parallelism;
 ///
 unittest
 {
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     import std.range : iota;
     import std.math : approxEqual;
     import std.parallelism : taskPool;
 
     // Parallel reduce can be combined with
-    // std.algorithm.map to interesting effect.
+    // std.algorithm.iteration.map to interesting effect.
     // The following example (thanks to Russel Winder)
     // calculates pi by quadrature  using
     // std.algorithm.map and TaskPool.reduce.

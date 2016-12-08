@@ -1878,7 +1878,7 @@ auto ref choice(Range, RandomGen = Random)(auto ref Range range,
 unittest
 {
     import std.algorithm.searching : canFind;
-    import std.algorith.iteration : map;
+    import std.algorithm.iteration : map;
 
     auto array = [1, 2, 3, 4, 5];
     auto elemAddr = &choice(array);

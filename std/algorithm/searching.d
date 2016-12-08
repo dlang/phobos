@@ -1364,7 +1364,7 @@ if (isInputRange!InputRange &&
     // If the haystack is a SortedRange we can use binary search to find the needle.
     // Works only for the default find predicate and any SortedRange predicate.
     // 8829 enhancement
-    import std.range: SortedRange;
+    import std.range : SortedRange;
     static if (is(InputRange : SortedRange!TT, TT) && isDefaultPred)
     {
         auto lb = haystack.lowerBound(needle);
@@ -1822,8 +1822,8 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
     // of the first element of the needle in haystack.
     // When it is found O(walklength(needle)) steps are performed.
     // 8829 enhancement
-    import std.range;
-    import std.algorithm.comparison: mismatch;
+    import std.range : SortedRange;
+    import std.algorithm.comparison : mismatch;
     static if (is(R1 == R2)
             && is(R1 : SortedRange!TT, TT)
             && pred == "a == b")
