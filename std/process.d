@@ -3205,9 +3205,7 @@ private:
             }
             buf.length = len;
 
-            // try twice in case variable grew in the tiny window since we queried the length
-            enum nAttempts = 2;
-            foreach (_; 0 .. nAttempts)
+            while(true)
             {
                 // lenRead is either the number of bytes read w/o null - if buf was long enough - or
                 // the number of bytes necessary *including* null if buf wasn't long enough
@@ -3234,9 +3232,6 @@ private:
                 else // resize and go around again, because the environment variable grew
                     buf.length = lenRead;
             }
-            throw new Exception("Couldn't read environment variable \"" ~ name.to!string ~
-                    "\" after " ~ nAttempts.to!string ~ " attempts, something else is" ~
-                    "repeatedly writing to it");
         }
         else version (Posix)
         {
