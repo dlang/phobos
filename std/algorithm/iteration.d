@@ -354,18 +354,18 @@ private struct _Cache(R, bool bidir)
 
     E front() @property
     {
-        version(assert) if (empty) throw new RangeError();
+        assert(!empty);
         return caches[0];
     }
     static if (bidir) E back() @property
     {
-        version(assert) if (empty) throw new RangeError();
+        assert(!empty);
         return caches[1];
     }
 
     void popFront()
     {
-        version(assert) if (empty) throw new RangeError();
+        assert(!empty);
         source.popFront();
         if (!source.empty)
             caches[0] = source.front;
@@ -374,7 +374,7 @@ private struct _Cache(R, bool bidir)
     }
     static if (bidir) void popBack()
     {
-        version(assert) if (empty) throw new RangeError();
+        assert(!empty);
         source.popBack();
         if (!source.empty)
             caches[1] = source.back;
@@ -2631,13 +2631,12 @@ template reduce(fun...) if (fun.length >= 1)
     auto reduce(R)(R r)
     if (isIterable!R)
     {
-        import std.exception : enforce;
         alias E = Select!(isInputRange!R, ElementType!R, ForeachType!R);
         alias Args = staticMap!(ReduceSeedType!E, binfuns);
 
         static if (isInputRange!R)
         {
-            enforce(!r.empty, "Cannot reduce an empty input range w/o an explicit seed value.");
+            assert(!r.empty, "Cannot reduce an empty input range w/o an explicit seed value.");
             Args result = r.front;
             r.popFront();
             return reduceImpl!false(r, result);
@@ -2727,8 +2726,7 @@ template reduce(fun...) if (fun.length >= 1)
                 args[i] = f(args[i], e);
         }
         static if (mustInitialize)
-        if (!initialized)
-            throw new Exception("Cannot reduce an empty iterable w/o an explicit seed value.");
+            assert(initialized, "Cannot reduce an empty iterable w/o an explicit seed value.");
 
         static if (Args.length == 1)
             return args[0];
@@ -2852,6 +2850,8 @@ The number of seeds must be correspondingly increased.
 {
     import std.algorithm.comparison : max, min;
     import std.exception : assertThrown;
+    import core.exception : AssertError;
+
     import std.range : iota;
     import std.typecons : tuple, Tuple;
 
@@ -2882,10 +2882,10 @@ The number of seeds must be correspondingly increased.
     assert(reduce!("a + b", max)(tuple(5, 0), oa) == tuple(hundredSum + 5, 99));
 
     // Test for throwing on empty range plus no seed.
-    assertThrown(reduce!"a + b"([1, 2][0..0]));
+    assertThrown!AssertError(reduce!"a + b"([1, 2][0..0]));
 
     oa.actEmpty = true;
-    assertThrown(reduce!"a + b"(oa));
+    assertThrown!AssertError(reduce!"a + b"(oa));
 }
 
 @safe unittest
@@ -4151,12 +4151,7 @@ private struct SplitterResult(alias isTerminator, Range)
 
     @property auto front()
     {
-        version(assert)
-        {
-            import core.exception : RangeError;
-            if (empty)
-                throw new RangeError();
-        }
+        assert(!empty);
         static if (fullSlicing)
             return _input[0 .. _end];
         else
@@ -4168,12 +4163,8 @@ private struct SplitterResult(alias isTerminator, Range)
 
     void popFront()
     {
-        version(assert)
-        {
-            import core.exception : RangeError;
-            if (empty)
-                throw new RangeError();
-        }
+        import core.exception : RangeError;
+        assert(!empty);
 
         static if (fullSlicing)
         {
@@ -4347,14 +4338,14 @@ if (isSomeChar!C)
 
         @property C[] front() pure @safe
         {
-            version(assert) if (empty) throw new RangeError();
+            assert(!empty);
             return _s[0 .. _frontLength];
         }
 
         void popFront() pure @safe
         {
             import std.string : stripLeft;
-            version(assert) if (empty) throw new RangeError();
+            assert(!empty);
             _s = _s[_frontLength .. $].stripLeft();
             getFirst();
         }

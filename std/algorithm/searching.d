@@ -3043,7 +3043,6 @@ if (isInputRange!Range && !isInfinite!Range &&
     is(typeof(binaryFun!pred(range.front, range.front))))
 {
     import std.algorithm.internal : algoFormat;
-    import std.exception : enforce;
 
     alias T  = ElementType!Range;
     alias UT = Unqual!T;
@@ -3053,7 +3052,7 @@ if (isInputRange!Range && !isInfinite!Range &&
         algoFormat("Error: Cannot call minCount on a %s, because it is not possible "~
                "to copy the result value (a %s) into a Tuple.", Range.stringof, T.stringof));
 
-    enforce(!range.empty, "Can't count elements from an empty range");
+    assert(!range.empty, "Can't count elements from an empty range");
     size_t occurrences = 1;
 
     static if (isForwardRange!Range)
@@ -3152,6 +3151,7 @@ unittest
 {
     import std.conv : text;
     import std.exception : assertThrown;
+    import core.exception : AssertError;
     import std.internal.test.dummyrange;
 
     debug(std_algorithm) scope(success)
@@ -3162,7 +3162,7 @@ unittest
     assert(c == tuple([2, 4], 1), text(c[0]));
 
     //Test empty range
-    assertThrown(minCount(b[$..$]));
+    assertThrown!AssertError(minCount(b[$..$]));
 
     //test with reference ranges. Test both input and forward.
     assert(minCount(new ReferenceInputRange!int([1, 2, 1, 0, 2, 0])) == tuple(0, 2));
