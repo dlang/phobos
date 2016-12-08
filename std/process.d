@@ -3161,7 +3161,8 @@ static:
                 // and it is just as much of a security issue there.  Moreso,
                 // in fact, due to the case insensensitivity of variable names,
                 // which is not handled correctly by all programs.
-                if (name !in aa) aa[name] = toUTF8(envBlock[start .. i]);
+                auto val = toUTF8(envBlock[start .. i]);
+                if (name !in aa) aa[name] = val is null ? "" : val;
             }
         }
         else static assert(0);
@@ -3169,33 +3170,73 @@ static:
     }
 
 private:
-    // Returns the length of an environment variable (in number of
-    // wchars, including the null terminator), or 0 if it doesn't exist.
-    version (Windows)
-    int varLength(LPCWSTR namez) @trusted nothrow
-    {
-        return GetEnvironmentVariableW(namez, null, 0);
-    }
-
     // Retrieves the environment variable, returns false on failure.
     bool getImpl(in char[] name, out string value) @trusted
     {
         version (Windows)
         {
+            // first we ask windows how long the environment variable is,
+            // then we try to read it in to a buffer of that length. Lots
+            // of error conditions because the windows API is nasty.
+
             import std.conv : to;
             const namezTmp = name.tempCStringW();
-            immutable len = varLength(namezTmp);
-            if (len == 0) return false;
+            WCHAR[] buf;
+
+            // clear error because GetEnvironmentVariable only says it sets it
+            // if the environment variable is missing, not on other errors.
+            SetLastError(NO_ERROR);
+            // len includes terminating null
+            immutable len = GetEnvironmentVariableW(namezTmp, null, 0);
+            if (len == 0)
+            {
+                immutable err = GetLastError();
+                if (err == ERROR_ENVVAR_NOT_FOUND)
+                    return false;
+                else // some other windows error. Might actually be NO_ERROR, because
+                     // GetEnvironmentVariable doesn't specify whether it sets on all
+                     // failures
+                    throw new Exception(sysErrorString(err));
+            }
             if (len == 1)
             {
                 value = "";
                 return true;
             }
+            buf.length = len;
 
-            auto buf = new WCHAR[len];
-            GetEnvironmentVariableW(namezTmp, buf.ptr, to!DWORD(buf.length));
-            value = toUTF8(buf[0 .. $-1]);
-            return true;
+            // try twice in case variable grew in the tiny window since we queried the length
+            enum nAttempts = 2;
+            foreach (_; 0 .. nAttempts)
+            {
+                // lenRead is either the number of bytes read w/o null - if buf was long enough - or
+                // the number of bytes necessary *including* null if buf wasn't long enough
+                immutable lenRead = GetEnvironmentVariableW(namezTmp, buf.ptr, to!DWORD(buf.length));
+                if (lenRead == 0)
+                {
+                    immutable err = GetLastError();
+                    if (err == NO_ERROR) // sucessfully read a 0-length variable
+                    {
+                        value = "";
+                        return true;
+                    }
+                    if (err == ERROR_ENVVAR_NOT_FOUND) // variable didn't exist
+                        return false;
+                    else // some other windows error
+                        throw new Exception(sysErrorString(err));
+                }
+                assert (lenRead != buf.length, "impossible according to msft docs");
+                if (lenRead < buf.length) // the buffer was long enough
+                {
+                    value = toUTF8(buf[0 .. lenRead]);
+                    return true;
+                }
+                else // resize and go around again, because the environment variable grew
+                    buf.length = lenRead;
+            }
+            throw new Exception("Couldn't read environment variable \"" ~ name.to!string ~
+                    "\" after " ~ nAttempts.to!string ~ " attempts, something else is" ~
+                    "repeatedly writing to it");
         }
         else version (Posix)
         {
@@ -3229,9 +3270,9 @@ private:
     environment["std_process"] = "foo";
     assert (environment["std_process"] == "foo");
 
-    // Set variable again
-    environment["std_process"] = "bar";
-    assert (environment["std_process"] == "bar");
+    // Set variable again (also tests length 1 case)
+    environment["std_process"] = "b";
+    assert (environment["std_process"] == "b");
 
     // Remove variable
     environment.remove("std_process");
@@ -3248,12 +3289,11 @@ private:
     // get() with default value
     assert (environment.get("std_process", "baz") == "baz");
 
-    version (Posix)
-    {
-        // get() on an empty (but present) value
-        environment["std_process"] = "";
-        assert(environment.get("std_process") !is null);
-    }
+    // get() on an empty (but present) value
+    environment["std_process"] = "";
+    auto res = environment.get("std_process");
+    assert (res !is null);
+    assert (res == "");
 
     // Convert to associative array
     auto aa = environment.toAA();
@@ -3264,10 +3304,6 @@ private:
         //  - Wine allows the existence of an env. variable with the name
         //    "\0", but GetEnvironmentVariable refuses to retrieve it.
         //    As of 2.067 we filter these out anyway (see comment in toAA).
-        //  - If an env. variable has zero length, i.e. is "\0",
-        //    GetEnvironmentVariable should return 1.  Instead it returns
-        //    0, indicating the variable doesn't exist.
-        version (Windows) if (v.length == 0) continue;
 
         assert (v == environment[n]);
     }
@@ -3278,7 +3314,8 @@ private:
 
     // Complete the roundtrip
     auto aa2 = environment.toAA();
-    assert(aa == aa2);
+    import std.conv : text;
+    assert(aa == aa2, text(aa, " != ", aa2));
 }
 
 
@@ -3638,3 +3675,4 @@ else version (Posix)
 }
 else
     static assert(0, "os not supported");
+
