@@ -469,25 +469,25 @@ template map(fun...) if (fun.length >= 1)
         // Type_normalization: take.map -> map.take
         static if (is(Range : Take!R, R))
         {
-            return r.source.map!fun.take(r._maxAvailable);
+            return .map!fun(r.source).take(r._maxAvailable);
         }
         else
         // Type_normalization: indexed.map -> map.indexed
         static if (is(Range : Indexed!(R, I), R, I))
         {
-            return r.source.map!fun.indexed(r.indices);
+            return .map!fun(r.source).indexed(r.indices);
         }
         else
         // Type_normalization: strided.map -> map.strided
         static if (is(typeof(stride(r.source, size_t(1))) == Range))
         {
-            return r.source.map!fun.strided(r.stride);
+            return .map!fun(r.source).strided(r.stride);
         }
         else
         // Type_normalization: retro.map -> map.retro
         static if (is(typeof(retro(r.source)) == Range))
         {
-            return r.source.map!fun.retro;
+            return .map!fun(r.source).retro;
         }
         else
         {

@@ -241,7 +241,7 @@ if (isBidirectionalRange!(Unqual!Range))
     }
     else
     {
-        static struct Result()
+        static struct Result
         {
             private alias R = Unqual!Range;
 
@@ -336,7 +336,7 @@ if (isBidirectionalRange!(Unqual!Range))
             }
         }
 
-        return Result!()(r);
+        return Result(r);
     }
 }
 
@@ -5982,12 +5982,32 @@ private:
 }
 
 /// Ditto
-FrontTransversal!(RangeOfRanges, opt) frontTransversal(
+auto frontTransversal(
     TransverseOptions opt = TransverseOptions.assumeJagged,
     RangeOfRanges)
 (RangeOfRanges rr)
 {
-    return typeof(return)(rr);
+    import std.experimental.ndslice.slice : Slice;
+    static if (is(RangeOfRanges : Slice!(N, R), size_t N, R))
+    {
+        import std.experimental.ndslice.iteration : transposed;
+        rr = transposed!(1, 0)(rr);
+        static if (opt == TransverseOptions.assumeJagged)
+        {
+            if (rr.length)
+                return rr.front;
+            else
+                return typeof(rr.front).init;
+        }
+        else
+        {
+            return rr.front;
+        }
+    }
+    else
+    {
+        return FrontTransversal!(RangeOfRanges, opt)(rr);
+    }
 }
 
 ///
@@ -6303,11 +6323,31 @@ private:
 }
 
 /// Ditto
-Transversal!(RangeOfRanges, opt) transversal
+auto transversal
 (TransverseOptions opt = TransverseOptions.assumeJagged, RangeOfRanges)
 (RangeOfRanges rr, size_t n)
 {
-    return typeof(return)(rr, n);
+    import std.experimental.ndslice.slice : Slice;
+    static if (is(RangeOfRanges : Slice!(N, R), size_t N, R))
+    {
+        import std.experimental.ndslice.iteration : transposed;
+        rr = transposed!(1, 0)(rr);
+        static if (opt == TransverseOptions.assumeJagged)
+        {
+            if (n < rr.length)
+                return rr[n];
+            else
+                return typeof(rr[n]).init;
+        }
+        else
+        {
+            return rr[n];
+        }
+    }
+    else
+    {
+        return Transversal!(RangeOfRanges, opt)(rr, n);
+    }
 }
 
 ///
@@ -6467,7 +6507,7 @@ unittest
 Given a range of ranges, returns a range of ranges where the $(I i)'th subrange
 contains the $(I i)'th elements of the original subranges.
  */
-Transposed!RangeOfRanges transposed(RangeOfRanges)(RangeOfRanges rr)
+auto transposed(RangeOfRanges)(RangeOfRanges rr)
     if (isForwardRange!RangeOfRanges &&
         isInputRange!(ElementType!RangeOfRanges) &&
         hasAssignableElements!RangeOfRanges)
