@@ -360,6 +360,7 @@ pure nothrow unittest
     assert(f == iotaSlice(5, 3));
 }
 
+version(none) // FIXME: unittest cycle dependency
 nothrow unittest
 {
     import std.experimental.ndslice.selection : iotaSlice;
@@ -693,6 +694,7 @@ makeSlice(T,
 }
 
 ///
+version(none) // FIXME: unittest cycle dependency
 @nogc unittest
 {
     import std.experimental.allocator;
@@ -714,6 +716,7 @@ makeSlice(T,
 }
 
 /// Initialization with default value
+version(none) // FIXME: unittest cycle dependency
 @nogc unittest
 {
     import std.experimental.allocator;
@@ -725,6 +728,7 @@ makeSlice(T,
     Mallocator.instance.dispose(tup.array);
 }
 
+version(none) // FIXME: unittest cycle dependency
 @nogc unittest
 {
     import std.experimental.allocator;
@@ -761,6 +765,7 @@ makeUninitializedSlice(T,
 }
 
 ///
+version(none) // FIXME: unittest cycle dependency
 @nogc unittest
 {
     import std.experimental.allocator;

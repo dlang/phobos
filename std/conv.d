@@ -5051,7 +5051,6 @@ version(unittest)
     }
 }
 
-version(none) // FIXME: unittest cycle dependency
 @safe unittest //@@@9559@@@
 {
     import std.algorithm.iteration : map;
@@ -5326,7 +5325,6 @@ pure nothrow @safe /* @nogc */ unittest
 }
 // Bulk of emplace unittests ends here
 
-version(none) // FIXME: unittest cycle dependency
 @safe unittest
 {
     import std.algorithm.comparison : equal;
