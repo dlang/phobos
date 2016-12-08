@@ -287,12 +287,12 @@ if (isBidirectionalRange!(Unqual!Range))
 
             static if (hasAssignableElements!R && !hasLvalueElements!R)
             {
-                @property void front(ElementType!R val)
+                @property auto front(ElementType!R val)
                 {
                     return source.back = val;
                 }
 
-                @property void back(ElementType!R val)
+                @property auto back(ElementType!R val)
                 {
                     return source.front = val;
                 }
@@ -584,7 +584,7 @@ body
 
             static if (hasAssignableElements!R && !hasLvalueElements!R)
             {
-                @property void front(ElementType!R val)
+                @property auto front(ElementType!R val)
                 {
                     return source.front = val;
                 }
@@ -619,7 +619,7 @@ body
 
                 static if (hasAssignableElements!R && !hasLvalueElements!R)
                 {
-                    @property void back(ElementType!R val)
+                    @property auto back(ElementType!R val)
                     {
                         eliminateSlackElements();
                         return source.back = val;
@@ -1957,7 +1957,7 @@ if (isInputRange!(Unqual!Range) &&
 
     static if (hasAssignableElements!R && !hasLvalueElements!R)
         /// ditto
-        @property void front(ElementType!R v)
+        @property auto front(ElementType!R v)
         {
             assert(!empty,
                 "Attempting to assign to the front of an empty "
@@ -2045,7 +2045,7 @@ if (isInputRange!(Unqual!Range) &&
         static if (hasAssignableElements!R && !hasLvalueElements!R)
         {
             /// ditto
-            @property void back(ElementType!R v)
+            @property auto back(ElementType!R v)
             {
                 // This has to return auto instead of void because of Bug 4706.
                 assert(!empty,
@@ -3410,7 +3410,7 @@ struct Cycle(R)
         static if (hasAssignableElements!R && !hasLvalueElements!R)
         {
             /// ditto
-            @property void front(ElementType!R val)
+            @property auto front(ElementType!R val)
             {
                 return _original[_index] = val;
             }
@@ -3446,7 +3446,7 @@ struct Cycle(R)
         static if (hasAssignableElements!R && !hasLvalueElements!R)
         {
             /// ditto
-            void opIndexAssign(ElementType!R val, size_t n)
+            auto opIndexAssign(ElementType!R val, size_t n)
             {
                 return _original[(n + _index) % _original.length] = val;
             }
@@ -5856,7 +5856,7 @@ struct FrontTransversal(Ror,
 
     static if (hasAssignableElements!RangeType && !hasLvalueElements!RangeType)
     {
-        @property void front(ElementType val)
+        @property auto front(ElementType val)
         {
             return _input.front.front = val;
         }
@@ -5913,7 +5913,7 @@ struct FrontTransversal(Ror,
 
         static if (hasAssignableElements!RangeType && !hasLvalueElements!RangeType)
         {
-            @property void back(ElementType val)
+            @property auto back(ElementType val)
             {
                 return _input.back.front = val;
             }
@@ -6192,7 +6192,7 @@ struct Transversal(Ror,
     /// Ditto
     static if (hasAssignableElements!InnerRange && !hasLvalueElements!InnerRange)
     {
-        @property void front(E val)
+        @property auto front(E val)
         {
             return _input.front[_n] = val;
         }
@@ -6250,7 +6250,7 @@ struct Transversal(Ror,
         /// Ditto
         static if (hasAssignableElements!InnerRange && !hasLvalueElements!InnerRange)
         {
-            @property void back(E val)
+            @property auto back(E val)
             {
                 return _input.back[_n] = val;
             }
@@ -8971,17 +8971,19 @@ public:
     }
     else
     {
-        @property auto front()
+        @property auto ref front()
         {
             return (*_range).front;
         }
 
-        static if (is(typeof((*(cast(const R*)_range)).front))) @property auto front() const
+        static if (is(typeof((*(cast(const R*)_range)).front)))
+        @property auto ref front() const
         {
             return (*_range).front;
         }
 
-        static if (is(typeof((*_range).front = (*_range).front))) @property auto front(ElementType!R value)
+        static if (hasAssignableElements!R && !hasLvalueElements!R)
+        @property auto front(ElementType!R value)
         {
             return (*_range).front = value;
         }
