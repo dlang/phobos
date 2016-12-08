@@ -848,6 +848,7 @@ auto makeNdarray(T, Allocator, size_t N, Range)(auto ref Allocator alloc,  Slice
 }
 
 ///
+version(none) // FIXME: unittest cycle dependency
 @nogc unittest
 {
     import std.experimental.allocator;
