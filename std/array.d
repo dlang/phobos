@@ -61,6 +61,9 @@ $(TR $(TH Function Name) $(TH Description)
     $(TR $(TD $(LREF split))
         $(TD Eagerly split a range or string into an _array.
     ))
+    $(TR $(TD $(LREF staticArray))
+        $(TD Create a static array from a range.
+    ))
     $(TR $(TD $(LREF uninitializedArray))
         $(TD Returns a new _array of type $(D T) without initializing its elements.
     ))
@@ -352,6 +355,97 @@ if (isNarrowString!String)
     static assert(!is(typeof(
         repeat(1).array()
     )));
+}
+
+
+/**
+ * Return a static array filled with elements from a range.
+ *
+ * Params:
+ *      range = a range (or aggregate with $(D opApply) function) whose elements are copied into the static array
+ * Returns:
+ *      initialized static array
+*/
+auto staticArray(alias range)()
+if (isIterable!(typeof(range)) && !isInfinite!(typeof(range)))
+{
+    import std.array : array;
+    enum arr = array(range);
+    enum sA = .staticArray(arr);
+    return sA;
+}
+
+///
+@safe @nogc nothrow unittest
+{
+    import std.range;
+    enum r = iota(3);
+    auto sa4 = staticArray!r;
+    static assert(sa4.length == 3);
+    assert(sa4 == [0, 1, 2]);
+}
+
+/**
+ * Returns a static array filled with elements copied from a dynamic array.
+ * In contrast to the overload that takes its source as a template alias, this takes
+ * a it as a normal argument. This allows it to be used with runtime arrays in
+ * situations where the length of the array is guaranteed in the function call expression
+ * (see examples for details).
+ *
+ * Optionally, a target type can be provided as the first template argument, which will result
+ * in a static array with that element type.
+*/
+T[N] staticArray(size_t N, T)(T[N] a)
+{
+    return a;
+}
+
+/// ditto
+TargetElemT[N] staticArray(TargetElemT, size_t N, T)(T[N] a)
+{
+    Unqual!(TargetElemT)[N] result = void;
+
+    import std.conv : emplaceRef;
+    foreach (i; 0 .. N)
+        emplaceRef!TargetElemT(result[i], a[i]);
+
+    return (() @trusted => cast(TargetElemT[N])result)();
+}
+
+///
+@safe nothrow unittest
+{
+    auto sa = staticArray([1, 2]);
+    static assert(sa.length == 2);
+    assert(sa == [1, 2]);
+
+    auto sa1 = staticArray!(immutable long)(sa[0 .. 1]);
+    static assert(is(typeof(sa1) == immutable(long)[1]));
+    assert(sa1 == [1]);
+
+    int[] a = [4, 2, 3];
+    auto sa2 = staticArray(a[0 .. 2]);
+    static assert(sa2.length == 2);
+    a[0] = 1;
+    assert(sa2 == [4, 2]);
+
+    const size_t i = 2;
+    auto sa3 = staticArray(a[0 .. i]);
+    static assert(sa3.length == 2);
+    assert(sa3 == [1, 2]);
+
+    version(none)
+        auto sa4 = staticArray(a[]); // not possible
+}
+
+///
+@nogc @safe nothrow unittest
+{
+    int[3] a = [1, 2, 3];
+    auto da = a[];
+    auto sa = staticArray!(const int)(da[0 .. 3]);
+    static assert(is(typeof(sa) == const(int)[3]));
+    assert(sa == a);
 }
 
 /**
