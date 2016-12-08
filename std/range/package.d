@@ -209,7 +209,7 @@ Returns:
 auto retro(Range)(Range r)
 if (isBidirectionalRange!(Unqual!Range))
 {
-    import std.experimental.ndslice.slice: Slice;
+    import std.experimental.ndslice.slice : Slice;
 
     // Type_normalization: ndslice.retro -> ndslice
     static if (is(Range : Slice!(N, R), size_t N, R))
@@ -480,7 +480,7 @@ in
 }
 body
 {
-    import std.experimental.ndslice.slice: Slice;
+    import std.experimental.ndslice.slice : Slice;
 
     // Type_normalization: ndslice.stride -> ndslice
     static if (is(Range : Slice!(N, R), size_t N, R))
