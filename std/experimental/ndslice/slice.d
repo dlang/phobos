@@ -862,28 +862,15 @@ auto makeNdarray(T, Allocator, size_t N, Range)(auto ref Allocator alloc,  Slice
     Mallocator.instance.dispose(m);
 }
 
-/++
-Shape of a common n-dimensional array.
-Params:
-    array = common n-dimensional array
-Returns:
-    static array of dimensions type of `size_t[n]`
-Throws:
-    $(LREF SliceException) if the array is not an n-dimensional parallelotope.
-+/
+deprecated("use: auto shape(T)(T[] array, ref int err) @property")
 auto shape(T)(T[] array) @property
 {
     static if (isDynamicArray!T)
     {
-        size_t[1 + typeof(shape(T.init)).length] ret;
-        if (array.length)
-        {
-            ret[0] = array.length;
-            ret[1..$] = shape(array[0]);
-            foreach (ar; array)
-                if (shape(ar) != ret[1..$])
-                    throw new SliceException("ndarray should be an n-dimensional parallelotope.");
-        }
+        int err;
+        auto ret = shape(array, err);
+        if (err)
+            throw new SliceException("ndarray should be an n-dimensional parallelotope.");
         return ret;
     }
     else
@@ -894,7 +881,6 @@ auto shape(T)(T[] array) @property
     }
 }
 
-///
 @safe pure unittest
 {
     size_t[2] shape = [[1, 2, 3], [4, 5, 6]].shape;
@@ -904,7 +890,6 @@ auto shape(T)(T[] array) @property
     assertThrown([[1, 2], [4, 5, 6]].shape);
 }
 
-/// Slice from ndarray
 unittest
 {
     auto array = [[1, 2, 3], [4, 5, 6]];
@@ -916,6 +901,74 @@ unittest
 @safe pure unittest
 {
     size_t[2] shape = (int[][]).init.shape;
+    assert(shape[0] == 0);
+    assert(shape[1] == 0);
+}
+
+
+/++
+Shape of a common n-dimensional array.
+Params:
+    array = common n-dimensional array
+    err = error flag
+Returns:
+    static array of dimensions type of `size_t[n]`
++/
+auto shape(T)(T[] array, ref int err) @property
+{
+    static if (isDynamicArray!T)
+    {
+        size_t[1 + typeof(shape(T.init)).length] ret;
+        if (array.length)
+        {
+            ret[0] = array.length;
+            ret[1..$] = shape(array[0]);
+            foreach (ar; array)
+                if (shape(ar) != ret[1..$])
+                {
+                    err = -1;
+                    goto R;
+                }
+        }
+    }
+    else
+    {
+        size_t[1] ret = void;
+        ret[0] = array.length;
+    }
+    err = 0;
+R:
+    return ret;
+}
+
+///
+nothrow @safe pure unittest
+{
+    int err;
+    size_t[2] shape = [[1, 2, 3], [4, 5, 6]].shape(err);
+    assert(shape == [2, 3]);
+    assert(err == 0);
+
+    [[1, 2], [4, 5, 6]].shape(err);
+    assert(err != 0);
+}
+
+/// Slice from ndarray
+nothrow unittest
+{
+    int err;
+    auto array = [[1, 2, 3], [4, 5, 6]];
+    auto slice = array.shape(err).slice!int;
+    assert(err == 0);
+    slice[] = [[1, 2, 3], [4, 5, 6]];
+    assert(slice == array);
+}
+
+nothrow @safe pure unittest
+{
+    int err;
+    size_t[2] shape = (int[][]).init.shape(err);
+    assert(err == 0);
     assert(shape[0] == 0);
     assert(shape[1] == 0);
 }
@@ -972,6 +1025,7 @@ unittest
 /++
 Base Exception class for $(MREF std, experimental, ndslice).
 +/
+deprecated("Not nothrow or @nogc ndslice API is deprecated.")
 class SliceException: Exception
 {
     ///
@@ -1263,10 +1317,6 @@ struct Slice(size_t _N, _Range)
         && PureIndexLength!Slices < N
         && allSatisfy!(templateOr!(isIndex, is_Slice), Slices);
 
-    size_t[PureN] _lengths;
-    sizediff_t[PureN] _strides;
-    SlicePtr!PureRange _ptr;
-
     sizediff_t backIndex(size_t dimension = 0)() @property const
         if (dimension < N)
     {
@@ -1322,6 +1372,13 @@ struct Slice(size_t _N, _Range)
     }
 
     public:
+
+    /// Direct access to the lengths. Use for ndslice plugins only.
+    size_t[PureN] _lengths;
+    /// Direct access to the strides. Use for ndslice plugins only.
+    sizediff_t[PureN] _strides;
+    /// Direct access to the pointer. Use for ndslice plugins only.
+    SlicePtr!PureRange _ptr;
 
     /++
     This constructor should be used only for integration with other languages or libraries such as Julia and numpy.
