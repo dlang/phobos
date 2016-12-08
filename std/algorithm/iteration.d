@@ -463,7 +463,10 @@ template map(fun...) if (fun.length >= 1)
         static if (is(Range : Slice!(N, R), size_t N, R))
         {
             import std.experimental.ndslice.selection: pack, mapSlice;
-            return r.pack!(N - 1).mapSlice!fun;
+            static if (N == 1)
+                return r.mapSlice!fun;
+            else
+                return r.pack!(N - 1).mapSlice!fun;
         }
         else
         // Type_normalization: take.map -> map.take
