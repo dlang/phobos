@@ -5364,8 +5364,8 @@ if (is(typeof(iota(E(0), end))))
 
 /// Ditto
 // Specialization for floating-point types
-auto iota(B, E, S)(B begin, E end, S step)
-if (isFloatingPoint!(CommonType!(B, E, S)))
+auto iota(T)(const T begin, const T end, const T step)
+    if (isFloatingPoint!T)
 in
 {
     assert(step != 0, "iota: step must not be 0");
@@ -5373,13 +5373,12 @@ in
 }
 body
 {
-    alias Value = Unqual!(CommonType!(B, E, S));
     static struct Result
     {
-        private Value start, step;
+        private T start, step;
         private size_t index, count;
 
-        this(Value start, Value end, Value step)
+        this(T start, T end, T step)
         {
             import std.conv : to;
 
@@ -5401,13 +5400,13 @@ body
         }
 
         @property bool empty() const { return index == count; }
-        @property Value front() const { assert(!empty); return start + step * index; }
+        @property T front() const { assert(!empty); return start + step * index; }
         void popFront()
         {
             assert(!empty);
             ++index;
         }
-        @property Value back() const
+        @property T back() const
         {
             assert(!empty);
             return start + step * (count - 1);
@@ -5420,7 +5419,7 @@ body
 
         @property auto save() { return this; }
 
-        Value opIndex(size_t n) const
+        T opIndex(size_t n) const
         {
             assert(n < count);
             return start + step * (n + index);
@@ -6473,7 +6472,16 @@ Transposed!RangeOfRanges transposed(RangeOfRanges)(RangeOfRanges rr)
         isInputRange!(ElementType!RangeOfRanges) &&
         hasAssignableElements!RangeOfRanges)
 {
-    return Transposed!RangeOfRanges(rr);
+    import std.experimental.ndslice.slice : Slice;
+    static if (is(RangeOfRanges : Slice!(N, R), size_t N, R))
+    {
+        import std.experimental.ndslice.iteration : transposed;
+        return transposed!(1, 0)(rr);
+    }
+    else
+    {
+        return Transposed!RangeOfRanges(rr);
+    }
 }
 
 ///

@@ -469,7 +469,7 @@ template map(fun...) if (fun.length >= 1)
         // Type_normalization: take.map -> map.take
         static if (is(Range : Take!R, R))
         {
-            return r.source.map!fun.take(_maxAvailable);
+            return r.source.map!fun.take(r._maxAvailable);
         }
         else
         // Type_normalization: indexed.map -> map.indexed
