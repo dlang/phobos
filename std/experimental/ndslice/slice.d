@@ -2195,7 +2195,7 @@ struct Slice(size_t _N, _Range)
     $(BOLD Fully defined index)
     +/
     auto ref opIndex(size_t I)(size_t[I] _indexes...)
-        if(I && I <= N)
+        if (I && I <= N)
     {
         static if (I == PureN)
             return _ptr[indexStride(_indexes)];
@@ -3080,7 +3080,7 @@ pure nothrow unittest
 {
     import std.experimental.ndslice.selection : iotaSlice;
 
-    auto fun(ref size_t x) { x *= 3; }
+    void fun(ref size_t x) { x *= 3; }
 
     auto tensor = iotaSlice(8, 9, 10).slice;
 

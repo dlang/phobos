@@ -737,13 +737,13 @@ void initializeAll(Range)(Range range)
         {
             for ( ; !range.empty ; range.popFront() )
             {
-                static if(__traits(isStaticArray, T))
+                static if (__traits(isStaticArray, T))
                 {
                     // static array initializer only contains initialization
                     // for one element of the static array.
                     auto elemp = cast(void *)addressOf(range.front);
                     auto endp = elemp + T.sizeof;
-                    while(elemp < endp)
+                    while (elemp < endp)
                     {
                         memcpy(elemp, p.ptr, p.length);
                         elemp += p.length;

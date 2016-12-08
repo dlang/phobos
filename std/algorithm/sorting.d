@@ -639,7 +639,7 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
             // Loop invariant
             version(unittest)
             {
-                import std.algorithm.searching;
+                import std.algorithm.searching : all;
                 assert(r[0 .. lo].all!(x => !lt(p, x)));
                 assert(r[hi + 1 .. r.length].all!(x => !lt(x, p)));
             }
@@ -1216,7 +1216,7 @@ Merge!(less, Rs) merge(alias less = "a < b", Rs...)
 @safe pure nothrow unittest
 {
     // save
-    import std.range: dropOne;
+    import std.range : dropOne;
     int[] a = [1, 2];
     int[] b = [0, 3];
     auto arr = a.merge(b);
@@ -1506,7 +1506,8 @@ private void shortSort(alias less, Range)(Range r)
     immutable maxJ = r.length - 2;
     for (size_t i = r.length - 6; ; --i)
     {
-        static if (is(typeof(() nothrow {
+        static if (is(typeof(() nothrow
+            {
                 auto t = r[0]; if (pred(t, r[0])) r[0] = r[0];
             }))) // Can we afford to temporarily invalidate the array?
         {
@@ -1562,7 +1563,7 @@ private void sort5(alias lt, Range)(Range r)
 {
     assert(r.length >= 5);
 
-    import std.algorithm : swapAt;
+    import std.algorithm.mutation : swapAt;
 
     // 1. Sort first two pairs
     if (lt(r[1], r[0])) r.swapAt(0, 1);

@@ -490,7 +490,6 @@ pure:
 
 @trusted void reverseBytecode()(Bytecode[] code) pure
 {
-    import std.typecons;
     Bytecode[] rev = new Bytecode[code.length];
     uint revPc = cast(uint)rev.length;
     Stack!(Tuple!(uint, uint, uint)) stack;

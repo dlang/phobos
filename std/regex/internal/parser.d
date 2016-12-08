@@ -1506,7 +1506,7 @@ pure:
             kickstart = new ShiftOr!Char(zis);
             if (kickstart.empty)
             {
-                if(!__ctfe)
+                if (!__ctfe)
                     kickstart = new BitMatcher!Char(zis);
                 if (kickstart.empty)
                     kickstart = null;

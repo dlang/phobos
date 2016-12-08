@@ -4586,7 +4586,7 @@ if (isInputRange!R && !isInfinite!R)
     F[64] store = void;
     size_t idx = 0;
 
-    auto collapseStore(T)(T k)
+    void collapseStore(T)(T k)
     {
         auto lastToKeep = idx - cast(uint)bsf(k+1);
         while (idx > lastToKeep)

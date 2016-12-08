@@ -416,8 +416,8 @@ unittest
 
 unittest // issue 16506
 {
-    import std.experimental.allocator.gc_allocator: GCAllocator;
-    import std.experimental.allocator.mallocator: Mallocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.mallocator : Mallocator;
 
     static void f(ParentAllocator)(size_t sz)
     {

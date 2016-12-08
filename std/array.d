@@ -162,7 +162,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
     struct Foo
     {
         int a;
-        auto opAssign(Foo foo)
+        void opAssign(Foo foo)
         {
             assert(0);
         }
@@ -1055,7 +1055,7 @@ private template isInputRangeOrConvertible(E)
     assert(test([1, 2, 3, 4], 2, 23, [1, 2, 23, 3, 4]));
     assert(test([1, 2, 3, 4], 4, 24, [1, 2, 3, 4, 24]));
 
-    auto testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
+    void testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
     {
 
         auto l = to!T("hello");
@@ -2149,7 +2149,7 @@ T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
     assert(replace(a, 2, 4, filter!"true"([5, 6, 7])) == [1, 2, 5, 6, 7]);
     assert(a == [ 1, 2, 3, 4 ]);
 
-    auto testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
+    void testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
     {
 
         auto l = to!T("hello");
@@ -2370,7 +2370,7 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
     assert(test([1, 2, 3, 4], 0, 2, filter!"true"([5, 6, 7]), [5, 6, 7, 3, 4]));
     assert(test([1, 2, 3, 4], 2, 4, filter!"true"([5, 6, 7]), [1, 2, 5, 6, 7]));
 
-    auto testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
+    void testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
     {
 
         auto l = to!T("hello");
@@ -3057,7 +3057,7 @@ if (isDynamicArray!A)
         this.arr = arr;
     }
 
-    auto opDispatch(string fn, Args...)(Args args) if (is(typeof(mixin("impl." ~ fn ~ "(args)"))))
+    void opDispatch(string fn, Args...)(Args args) if (is(typeof(mixin("impl." ~ fn ~ "(args)"))))
     {
         // we do it this way because we can't cache a void return
         scope(exit) *this.arr = impl.data;

@@ -2701,7 +2701,7 @@ private:
 
         //may break sorted property - but we need std.sort to access it
         //hence package protection attribute
-        package @property auto front(CodepointInterval val)
+        package @property void front(CodepointInterval val)
         {
             slice[start] = val.a;
             slice[start+1] = val.b;
@@ -2715,7 +2715,7 @@ private:
         }
 
         //ditto about package
-        package @property auto back(CodepointInterval val)
+        package @property void back(CodepointInterval val)
         {
             slice[end-2] = val.a;
             slice[end-1] = val.b;
@@ -2739,7 +2739,7 @@ private:
         }
 
         //ditto about package
-        package auto opIndexAssign(CodepointInterval val, size_t idx)
+        package void opIndexAssign(CodepointInterval val, size_t idx)
         {
             slice[start+idx*2] = val.a;
             slice[start+idx*2+1] = val.b;

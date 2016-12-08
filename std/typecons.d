@@ -843,7 +843,7 @@ template Tuple(Specs...)
         if (is(typeof(translate) : V[K], V, K) && isSomeString!V &&
                 (isSomeString!K || is(K : size_t)))
         {
-            import std.range: ElementType;
+            import std.range : ElementType;
             static if (isSomeString!(ElementType!(typeof(translate.keys))))
             {
                 {
@@ -860,9 +860,9 @@ template Tuple(Specs...)
                     {
                         import std.array : empty;
                         auto names = [fieldNames];
-                        foreach(ref n; names)
+                        foreach (ref n; names)
                             if (!n.empty)
-                                if(auto p = n in translate)
+                                if (auto p = n in translate)
                                     n = *p;
                         return names;
                     }()));
@@ -881,7 +881,7 @@ template Tuple(Specs...)
                 return this.rename!(aliasSeqOf!(
                     {
                         auto names = [fieldNames];
-                        foreach(k, v; translate)
+                        foreach (k, v; translate)
                             names[k] = v;
                         return names;
                     }()));

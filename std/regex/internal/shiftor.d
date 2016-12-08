@@ -531,7 +531,7 @@ unittest
         assert(kick.length == length, text(C.stringof, " == ", kick.length));
         return kick;
     }
-    auto searches(C)(const (C)[] source, ShiftOr!C kick, uint[] results...)
+    void searches(C)(const (C)[] source, ShiftOr!C kick, uint[] results...)
     {
         auto inp = Input!C(source);
         foreach (r; results)

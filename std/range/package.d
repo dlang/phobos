@@ -262,12 +262,12 @@ if (isBidirectionalRange!(Unqual!Range))
 
             static if (hasAssignableElements!R)
             {
-                @property auto front(ElementType!R val)
+                @property void front(ElementType!R val)
                 {
                     source.back = val;
                 }
 
-                @property auto back(ElementType!R val)
+                @property void back(ElementType!R val)
                 {
                     source.front = val;
                 }
@@ -539,7 +539,7 @@ body
 
             static if (hasAssignableElements!R)
             {
-                @property auto front(ElementType!R val)
+                @property void front(ElementType!R val)
                 {
                     source.front = val;
                 }
@@ -574,7 +574,7 @@ body
 
                 static if (hasAssignableElements!R)
                 {
-                    @property auto back(ElementType!R val)
+                    @property void back(ElementType!R val)
                     {
                         eliminateSlackElements();
                         source.back = val;
@@ -1911,7 +1911,7 @@ if (isInputRange!(Unqual!Range) &&
 
     static if (hasAssignableElements!R)
         /// ditto
-        @property auto front(ElementType!R v)
+        @property void front(ElementType!R v)
         {
             assert(!empty,
                 "Attempting to assign to the front of an empty "
@@ -1999,7 +1999,7 @@ if (isInputRange!(Unqual!Range) &&
         static if (hasAssignableElements!R)
         {
             /// ditto
-            @property auto back(ElementType!R v)
+            @property void back(ElementType!R v)
             {
                 // This has to return auto instead of void because of Bug 4706.
                 assert(!empty,
@@ -3364,7 +3364,7 @@ struct Cycle(R)
         static if (hasAssignableElements!R)
         {
             /// ditto
-            @property auto front(ElementType!R val)
+            @property void front(ElementType!R val)
             {
                 _original[_index] = val;
             }
@@ -3400,7 +3400,7 @@ struct Cycle(R)
         static if (hasAssignableElements!R)
         {
             /// ditto
-            auto opIndexAssign(ElementType!R val, size_t n)
+            void opIndexAssign(ElementType!R val, size_t n)
             {
                 _original[(n + _index) % _original.length] = val;
             }
@@ -5811,7 +5811,7 @@ struct FrontTransversal(Ror,
 
     static if (hasAssignableElements!RangeType)
     {
-        @property auto front(ElementType val)
+        @property void front(ElementType val)
         {
             _input.front.front = val;
         }
@@ -5868,7 +5868,7 @@ struct FrontTransversal(Ror,
 
         static if (hasAssignableElements!RangeType)
         {
-            @property auto back(ElementType val)
+            @property void back(ElementType val)
             {
                 _input.back.front = val;
             }
@@ -6127,7 +6127,7 @@ struct Transversal(Ror,
     /// Ditto
     static if (hasAssignableElements!InnerRange)
     {
-        @property auto front(E val)
+        @property void front(E val)
         {
             _input.front[_n] = val;
         }
@@ -6185,7 +6185,7 @@ struct Transversal(Ror,
         /// Ditto
         static if (hasAssignableElements!InnerRange)
         {
-            @property auto back(E val)
+            @property void back(E val)
             {
                 _input.back[_n] = val;
             }
@@ -8851,7 +8851,7 @@ public:
     }
 
     /++ +/
-    auto opAssign(typeof(null) rhs)
+    void opAssign(typeof(null) rhs)
     {
         _range = null;
     }
