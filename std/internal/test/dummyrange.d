@@ -169,6 +169,11 @@ struct DummyRange(ReturnBy _r, Length _l, RangeType _rt, T = uint[])
             ret.arr = arr[lower..upper];
             return ret;
         }
+
+        typeof(this) opSlice()
+        {
+            return this;
+        }
     }
 
     static if (l == Length.Yes)

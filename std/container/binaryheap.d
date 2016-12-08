@@ -369,12 +369,35 @@ must be collected.
             insert(value);
             return true;
         }
-        // must replace the top
+
         assert(!_store.empty, "Cannot replace front of an empty heap.");
         if (!comp(value, _store.front)) return false; // value >= largest
         _store.front = value;
+
         percolate(_store[], 0, _length);
         debug(BinaryHeap) assertValid();
+        return true;
+    }
+
+/**
+Swapping is allowed if the heap is full. If $(D less(value, front)), the
+method exchanges store.front and value and returns $(D true). Otherwise, it
+leaves the heap unaffected and returns $(D false).
+     */
+    bool conditionalSwap(ref ElementType!Store value)
+    {
+        _payload.refCountedStore.ensureInitialized();
+        assert(_length == _store.length);
+        assert(!_store.empty, "Cannot swap front of an empty heap.");
+
+        if (!comp(value, _store.front)) return false; // value >= largest
+
+        import std.algorithm.mutation : swap;
+        swap(_store.front, value);
+
+        percolate(_store[], 0, _length);
+        debug(BinaryHeap) assertValid();
+
         return true;
     }
 }
@@ -409,6 +432,7 @@ initialized with $(D s) and $(D initialSize).
 BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
         size_t initialSize = size_t.max)
 {
+
     return BinaryHeap!(Store, less)(s, initialSize);
 }
 
@@ -536,4 +560,26 @@ unittest
             auto h = heapify(s);
             h.dup();
         }));
+}
+
+unittest
+{
+    import std.internal.test.dummyrange;
+    import std.algorithm.comparison : equal;
+
+    alias RefRange = DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random);
+
+    RefRange a;
+    RefRange b;
+    a.reinit();
+    b.reinit();
+
+    auto heap = heapify(a);
+    foreach (ref elem; b)
+    {
+        heap.conditionalSwap(elem);
+    }
+
+    assert(equal(heap, [ 5, 5, 4, 4, 3, 3, 2, 2, 1, 1]));
+    assert(equal(b, [10, 9, 8, 7, 6, 6, 7, 8, 9, 10]));
 }
