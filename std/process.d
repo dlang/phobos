@@ -3196,7 +3196,7 @@ private:
                 // some other windows error. Might actually be NO_ERROR, because
                 // GetEnvironmentVariable doesn't specify whether it sets on all
                 // failures
-                throw new Exception(sysErrorString(err));
+                throw new WindowsException(err);
             }
             if (len == 1)
             {
@@ -3221,7 +3221,7 @@ private:
                     if (err == ERROR_ENVVAR_NOT_FOUND) // variable didn't exist
                         return false;
                     // some other windows error
-                    throw new Exception(sysErrorString(err));
+                    throw new WindowsException(err);
                 }
                 assert (lenRead != buf.length, "impossible according to msft docs");
                 if (lenRead < buf.length) // the buffer was long enough
