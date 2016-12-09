@@ -3384,17 +3384,20 @@ auto topN(alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable,
         Range1, Range2)(Range1 r1, Range2 r2)
     if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
-            isInputRange!Range2 && is(ElementType!Range1 == ElementType!Range2))
+            isInputRange!Range2 && is(ElementType!Range1 == ElementType!Range2) &&
+            hasLvalueElements!Range1 && hasLvalueElements!Range2)
 {
     import std.container : BinaryHeap;
 
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
+
     auto heap = BinaryHeap!(Range1, less)(r1);
-    for (; !r2.empty; r2.popFront())
+    foreach (ref e; r2)
     {
-        heap.conditionalInsert(r2.front);
+        heap.conditionalSwap(e);
     }
+
     return r1;
 }
 
@@ -3406,6 +3409,69 @@ unittest
     topN(a, b);
     sort(a);
     assert(a == [0, 1, 2, 2, 3]);
+}
+
+// bug 15421
+unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange;
+    import std.meta : AliasSeq;
+
+    alias RandomRanges = AliasSeq!(
+        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random)
+    );
+
+    alias ReferenceRanges = AliasSeq!(
+        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Forward),
+        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Bidirectional),
+        DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random),
+        DummyRange!(ReturnBy.Reference, Length.No, RangeType.Forward),
+        DummyRange!(ReturnBy.Reference, Length.No, RangeType.Bidirectional));
+
+    foreach (T1; RandomRanges)
+    {
+        foreach (T2; ReferenceRanges)
+        {
+            import std.array;
+
+            T1 A;
+            T2 B;
+
+            A.reinit();
+            B.reinit();
+
+            topN(A, B);
+
+            // BUG(?): sort doesn't accept DummyRanges (needs Slicing and Length)
+            auto a = array(A);
+            auto b = array(B);
+            sort(a);
+            sort(b);
+
+            assert(equal(a, [ 1, 1, 2, 2, 3, 3, 4, 4, 5, 5 ]));
+            assert(equal(b, [ 6, 6, 7, 7, 8, 8, 9, 9, 10, 10 ]));
+        }
+    }
+}
+
+// bug 15421
+unittest
+{
+    auto a = [ 9, 8, 0, 3, 5, 25, 43, 4, 2, 0, 7 ];
+    auto b = [ 9, 8, 0, 3, 5, 25, 43, 4, 2, 0, 7 ];
+
+    topN(a, 4);
+    topN(b[0 .. 4], b[4 .. $]);
+
+    sort(a[0 .. 4]);
+    sort(a[4 .. $]);
+    sort(b[0 .. 4]);
+    sort(b[4 .. $]);
+
+    assert(a[0 .. 4] == b[0 .. 4]);
+    assert(a[4 .. $] == b[4 .. $]);
+    assert(a == b);
 }
 
 // bug 12987
