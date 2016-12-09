@@ -3193,10 +3193,10 @@ private:
                 immutable err = GetLastError();
                 if (err == ERROR_ENVVAR_NOT_FOUND)
                     return false;
-                else // some other windows error. Might actually be NO_ERROR, because
-                     // GetEnvironmentVariable doesn't specify whether it sets on all
-                     // failures
-                    throw new Exception(sysErrorString(err));
+                // some other windows error. Might actually be NO_ERROR, because
+                // GetEnvironmentVariable doesn't specify whether it sets on all
+                // failures
+                throw new Exception(sysErrorString(err));
             }
             if (len == 1)
             {
@@ -3205,7 +3205,7 @@ private:
             }
             buf.length = len;
 
-            while(true)
+            while (true)
             {
                 // lenRead is either the number of bytes read w/o null - if buf was long enough - or
                 // the number of bytes necessary *including* null if buf wasn't long enough
@@ -3220,8 +3220,8 @@ private:
                     }
                     if (err == ERROR_ENVVAR_NOT_FOUND) // variable didn't exist
                         return false;
-                    else // some other windows error
-                        throw new Exception(sysErrorString(err));
+                    // some other windows error
+                    throw new Exception(sysErrorString(err));
                 }
                 assert (lenRead != buf.length, "impossible according to msft docs");
                 if (lenRead < buf.length) // the buffer was long enough
@@ -3229,8 +3229,8 @@ private:
                     value = toUTF8(buf[0 .. lenRead]);
                     return true;
                 }
-                else // resize and go around again, because the environment variable grew
-                    buf.length = lenRead;
+                // resize and go around again, because the environment variable grew
+                buf.length = lenRead;
             }
         }
         else version (Posix)
