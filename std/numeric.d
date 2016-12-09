@@ -2572,7 +2572,8 @@ GapWeightedSimilarityIncremental!(R, F) gapWeightedSimilarityIncremental(R, F)
 
 /**
 Computes the greatest common divisor of $(D a) and $(D b) by using
-Euclid's algorithm.
+an efficient algorithm such as $(HTTPS en.wikipedia.org/wiki/Euclidean_algorithm, Euclid's)
+or $(HTTPS en.wikipedia.org/wiki/Binary_GCD_algorithm, Stein's) algorithm.
  */
 T gcd(T)(T a, T b)
 {
@@ -2580,7 +2581,7 @@ T gcd(T)(T a, T b)
     {
         return gcd!(Unqual!T)(a, b);
     }
-    else
+    else version(DigitalMars)
     {
         static if (T.min < 0)
         {
@@ -2593,6 +2594,26 @@ T gcd(T)(T a, T b)
             a = t;
         }
         return a;
+    }
+    else
+    {
+        if (a == 0)
+            return b;
+        if (b == 0)
+            return a;
+
+        immutable uint shift = bsf(a | b);
+        a >>= a.bsf;
+
+        do
+        {
+            b >>= b.bsf;
+            if (a > b)
+                swap(a, b);
+            b -= a;
+        } while (b);
+
+        return a << shift;
     }
 }
 
