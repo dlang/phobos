@@ -9595,21 +9595,31 @@ auto refRange(R)(R* range)
 }
 
 /**
-Bitwise adapter over Integral type Ranges. Consumes the range elements bit by bit.
+Bitwise adapter over integral type ranges. Consumes the range elements bit by bit.
 */
 struct Bitwise(R)
     if (isInputRange!R && isIntegral!(ElementType!R))
 {
-    alias ER = ElementType!R;
-    alias UER = Unsigned!ER;
+private:
+    alias ElemType = ElementType!R;
+    alias UnsignedElemType = Unsigned!ElemType;
 
-    private R parent;
-    private UER mask;
-    private int maskPos;
-    private ER accumulator;
+    R parent;
 
-    private enum UER bitsNum = ER.sizeof * 8;
+    enum bitsNum = ElemType.sizeof * 8;
+    size_t maskPos = bitsNum;
 
+    static if (hasLength!R)
+    {
+        ulong len;
+    }
+
+    static if (isBidirectionalRange!R)
+    {
+        size_t backMaskPos = 1;
+    }
+
+public:
     this()(auto ref R range)
     {
         parent = range;
@@ -9618,20 +9628,31 @@ struct Bitwise(R)
         {
             len = parent.length * bitsNum;
         }
-
-        initPrivates();
-
-        static if (isBidirectionalRange!R)
-        {
-            initBackPrivates();
-        }
     }
 
-    bool empty() const
+    bool empty()
     {
         static if (hasLength!R)
         {
             return len == 0;
+        }
+        else static if (isBidirectionalRange!R)
+        {
+            bool isOverlapping = parent.empty;
+
+            if (!parent.empty)
+            {
+                /*
+                   If we have consumed the last element of the range both from
+                   the front and the back, then the masks positions will overlap
+                 */
+                R parentCopy = parent.save;
+
+                parentCopy.popFront;
+                isOverlapping = parentCopy.empty && (maskPos < backMaskPos);
+            }
+
+            return parent.empty || isOverlapping;
         }
         else
         {
@@ -9639,44 +9660,36 @@ struct Bitwise(R)
                If we consumed the last element of the range, but not all the
                bits in the last element
              */
-            return parent.empty && (maskPos == 0);
+            return parent.empty;
         }
     }
 
     bool front()
     {
-        return cast(bool)(accumulator & mask);
+        assert(!empty());
+
+        return (parent.front & mask(maskPos)) != 0;
     }
 
     void popFront()
     {
-        if (mask == 0)
+        --maskPos;
+
+        if (maskPos == 0)
         {
-            initPrivates();
-        }
-        else
-        {
-            mask >>>= 1;
-            --maskPos;
+            parent.popFront;
+            maskPos = bitsNum;
         }
 
-        --len;
-    }
-
-    private void initPrivates()
-    {
-        // Helper function to avoid code duplication
-        mask = cast(UER)(1) << (bitsNum - 1);
-        maskPos = bitsNum;
-        accumulator = parent.front;
-        parent.popFront;
+        static if (hasLength!R)
+        {
+            --len;
+        }
     }
 
     static if (hasLength!R)
     {
-        private size_t len;
-
-        size_t length() const
+        ulong length() const
         {
             return len;
         }
@@ -9688,46 +9701,35 @@ struct Bitwise(R)
     {
         typeof(this) save()
         {
-            return this;
+            auto result = this;
+            result.parent = parent.save;
+            return result;
         }
     }
 
     static if (isBidirectionalRange!R)
     {
-        private ER backMask;
-        private int backMaskPos;
-        private ER backAccumulator;
-
-        private void initBackPrivates()
-        {
-            // Helper function to avoid code duplication
-            if (!parent.empty)
-            {
-                backMask = 1;
-                backMaskPos = 1;
-                backAccumulator = parent.back;
-                parent.popBack;
-            }
-        }
-
         bool back()
         {
-            return cast(bool)(backAccumulator & backMask);
+            assert(!empty());
+
+            return (parent.back & mask(backMaskPos)) != 0;
         }
 
         void popBack()
         {
-            if (backMask == 0)
+            ++backMaskPos;
+
+            if (backMaskPos > bitsNum)
             {
-                initBackPrivates();
-            }
-            else
-            {
-                mask <<= 1;
-                ++backMaskPos;
+                parent.popBack;
+                backMaskPos = 1;
             }
 
-            --len;
+            static if (hasLength!R)
+            {
+                --len;
+            }
         }
     }
 
@@ -9740,79 +9742,166 @@ struct Bitwise(R)
         in
         {
             assert(n >= 0);
+            // TODO slice.d 2527
+
+            /*
+               If it does not have the length property, it means that R is
+               an infinite range
+             */
             static if (hasLength!R)
             {
-                import core.exception : RangeError;
-                import std.exception : enforce;
-
-                enforce(n < len, new RangeError);
+                assert(n < len,
+                       __PRETTY_FUNCTION__ ~ ": Index out of bounds");
             }
         }
         body
         {
             if (maskPos > n)
             {
-                UER indexMask = mask >> n;
-                return cast(bool)(accumulator & indexMask);
+                return (parent.front & mask(maskPos - n)) != 0;
             }
 
             n -= maskPos;
 
             /*
-               We need to subtract 1 from the element index because we have
-               the Bitwise.accumulator holding the first element of the range
-               and now parent[0] holds the next element after accumulator.
-
-               If n is less than ER.sizeof, but we have already consumed from
-               the accumulator more than n bits, then elemIndex will be -1,
-               because we want the remainder bits from parent[0]. Because of
-               this, we need to check if elemIndex is negative and set it to 0.
+               By truncating n with maskPos bits we have skipped the remaining
+               maskPos bits in parent[0], so we need to add 1 to elemIndex.
              */
-            long elemIndex = n / bitsNum - 1;
-            if (elemIndex < 0)
-            {
-                elemIndex = 0;
-            }
+            size_t elemIndex = n / bitsNum + 1;
 
             /*
                Since the indexing is from MSB to LSB, we need to subtract the
                remainder from the number of bits that the element type has.
-             */
-            ER elemPos = bitsNum - n % bitsNum;
-            UER indexMask = cast(UER)((cast(UER)(1) << (elemPos - 1)));
 
-            ER elem;
+               Because bitsNum is a power of 2, n % bitsNum == n & (bitsNum - 1)
+             */
+            uint elemMaskPos = bitsNum - (n & (bitsNum - 1));
+
+            return (parent[elemIndex] & mask(elemMaskPos)) != 0;
+        }
+
+        bool opIndexAssign(bool flag, size_t n)
+        in
+        {
+            assert(n >= 0);
             static if (hasLength!R)
             {
-                /*
-                   If R is a randomAccessRange that has the length property,
-                   then R is a BidirectionalRange; otherwise it would have
-                   been an InfiniteForwardRange.
+                assert(n < len,
+                       __PRETTY_FUNCTION__ ~ ": Index out of bounds");
+            }
+        }
+        body
+        {
+            size_t elemMaskPos;
+            size_t elemIndex;
 
-                   Because R is a BidirectionalRange, the last element of the
-                   range could be in backAccumulator, and the n'th bit that we
-                   want is inside the backAccumulator.
-                 */
-                if (elemIndex == parent.length)
-                {
-                    elem = backAccumulator;
-                }
-                else
-                {
-                    elem = parent[elemIndex];
-                }
+            if (maskPos > n)
+            {
+                elemMaskPos = maskPos - n;
+                elemIndex = 0;
             }
             else
             {
-                /*
-                   We have an infinite range so we do not have to worry about
-                   reaching the end of the range.
-                 */
-                elem = parent[elemIndex];
+                n -= maskPos;
+                elemMaskPos = bitsNum - (n & (bitsNum - 1));
+                elemIndex = n / bitsNum + 1;
             }
 
-            return cast(bool)(elem & indexMask);
+            auto elem = parent[elemIndex];
+            auto elemMask = mask(elemMaskPos);
+
+            if (flag)
+            {
+                elem |= elemMask;
+            }
+            else
+            {
+                elem &= ~elemMask;
+            }
+            parent[elemIndex] = elem;
+
+            return flag;
         }
+
+        Bitwise!R opSlice()
+        {
+            return this;
+        }
+
+        Bitwise!R opSlice(size_t start, size_t end)
+        in
+        {
+            assert(start < end);
+        }
+        body
+        {
+            size_t sliceLen = end - start;
+            size_t startElemIndex;
+            size_t endElemIndex;
+
+            size_t startElemMaskPos;
+            size_t endElemMaskPos;
+
+            if (maskPos > start)
+            {
+                startElemMaskPos = maskPos - start;
+                startElemIndex = 0;
+            }
+            else
+            {
+                start -= maskPos;
+                startElemMaskPos = bitsNum - (start & (bitsNum - 1));
+                startElemIndex = start / bitsNum + 1;
+            }
+
+            if (maskPos > sliceLen)
+            {
+                endElemMaskPos = maskPos - sliceLen;
+                endElemIndex = 0;
+            }
+            else
+            {
+                sliceLen -= maskPos;
+                endElemMaskPos = bitsNum - (sliceLen & (bitsNum - 1));
+                endElemIndex = sliceLen / bitsNum + 1;
+            }
+
+            // Get the slice to be returned from the parent
+            R resultParent = (parent.save)[startElemIndex .. endElemIndex + 1];
+            endElemIndex -= startElemIndex;
+            startElemIndex = 0;
+
+            // Turn to 0 bits leading `start` and trailing `end`
+            auto leadMask = mask(startElemMaskPos);
+            resultParent[0] = cast(UnsignedElemType)(resultParent[0] & (leadMask | (leadMask - 1)));
+
+            auto trailingMask = mask(endElemMaskPos);
+            resultParent[endElemIndex] = cast(UnsignedElemType)(resultParent[endElemIndex] & ~(trailingMask - 1));
+
+            typeof(return) result;
+
+            result.parent = resultParent;
+            result.maskPos = startElemMaskPos;
+
+            static if (hasLength!R)
+            {
+                result.len = sliceLen;
+            }
+
+            static if (isBidirectionalRange!R)
+            {
+                result.backMaskPos = endElemMaskPos;
+            }
+
+            return result;
+        }
+
+    }
+
+private:
+    auto mask(size_t maskPos)
+    {
+        return (1UL << (maskPos - 1UL));
     }
 }
 
@@ -9849,7 +9938,7 @@ struct Bitwise(R)
             ++numCalls;
             bw.popFront();
         }
-        assert(numCalls == IntegralType.sizeof * 8);
+        assert(numCalls == (IntegralType.sizeof * 8));
     }
 }
 
@@ -9888,7 +9977,7 @@ struct Bitwise(R)
 
 // Test opIndex
 ///
-@safe unittest
+@system unittest
 {
     alias IntegralTypes = AliasSeq!(byte, ubyte, short, ushort, int, uint,
             long, ulong);
@@ -9909,6 +9998,107 @@ struct Bitwise(R)
         // Check against msb - 1 of a[1]
         assert(bw[bitsNum + 1] == true);
 
+        bw.popFront();
+        /*
+           Check against msb - 1 of a[1] by indexing with bitsNum, since we
+           consumed a bit earlier
+         */
+        assert(bw[bitsNum] == true);
+
+        import core.exception : AssertError;
+        import std.exception : assertThrown;
+
+        // Check out of bounds error
+        assertThrown!AssertError(bw[2 * bitsNum - 1]);
+    }
+}
+
+// Test all range types
+///
+@safe unittest
+{
+    import std.internal.test.dummyrange;
+
+    alias IntegralTypes = AliasSeq!(byte, ubyte, short, ushort, int, uint,
+            long, ulong);
+    foreach (IntegralType; IntegralTypes)
+    {
+        foreach (T; AllDummyRangesType!(IntegralType[]))
+        {
+            T a;
+            auto bw = Bitwise!T(a);
+
+            static if (isForwardRange!T)
+            {
+                auto bw2 = bw.save;
+            }
+
+            static if (isBidirectionalRange!T)
+            {
+                auto bw3 = bw.save;
+            }
+
+            static if (hasLength!T)
+            {
+                assert(bw.length == (IntegralType.sizeof * 8 * a.length));
+                static if (isForwardRange!T)
+                {
+                    assert(bw.length == bw2.length);
+                }
+            }
+
+            // Make sure front and back are not the mechanisms that modify the range
+            long numCalls = 42;
+            bool initialFrontValue;
+
+            if (!bw.empty())
+            {
+                initialFrontValue = bw.front;
+            }
+
+            while (!bw.empty() && (--numCalls))
+            {
+                bw.front;
+                assert(bw.front == initialFrontValue);
+            }
+
+            /*
+               Check that empty works properly and that popFront does not get called
+               more times than it should
+             */
+            numCalls = 0;
+            while (!bw.empty())
+            {
+                ++numCalls;
+
+                static if (isForwardRange!T)
+                {
+                    assert(bw.front == bw2.front);
+                    bw2.popFront();
+                }
+
+                static if (isBidirectionalRange!T)
+                {
+                    bw3.popBack();
+                }
+
+                bw.popFront();
+            }
+
+            auto rangeLen = numCalls / (IntegralType.sizeof * 8);
+            assert(numCalls == (IntegralType.sizeof * 8 * rangeLen));
+
+            assert(bw.empty());
+            static if (isForwardRange!T)
+            {
+                assert(bw2.empty());
+            }
+
+            static if (isBidirectionalRange!T)
+            {
+                assert(bw3.empty());
+            }
+        }
     }
 }
 
