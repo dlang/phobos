@@ -3084,6 +3084,48 @@ static:
     }
 
     /**
+    Identify whether a variable is defined in the environment.
+
+    Because it doesn't return the value, this function is cheaper than `get`.
+    However, if you do need the value as well, you should just check the
+    return of `get` for `null` instead of using this function first.
+
+    Example:
+    -------------
+    // good usage
+    if ("MY_ENV_FLAG" in environment)
+        doSomething();
+
+    // bad usage
+    if ("MY_ENV_VAR" in environment)
+        doSomething(environment["MY_ENV_VAR"]);
+
+    // do this instead
+    if (auto var = environment.get("MY_ENV_VAR"))
+        doSomething(var);
+    -------------
+    */
+    bool opBinaryRight(string op : "in")(in char[] name) @trusted
+    {
+        version (Posix)
+            return core.sys.posix.stdlib.getenv(name.tempCString()) !is null;
+        else version (Windows)
+        {
+            SetLastError(NO_ERROR);
+            if (GetEnvironmentVariableW(name.tempCStringW, null, 0) > 0)
+                return true;
+            immutable err = GetLastError();
+            if (err == ERROR_ENVVAR_NOT_FOUND)
+                return false;
+            // some other windows error. Might actually be NO_ERROR, because
+            // GetEnvironmentVariable doesn't specify whether it sets on all
+            // failures
+            throw new WindowsException(err);
+        }
+        else static assert(0);
+    }
+
+    /**
     Copies all environment variables into an associative array.
 
     Windows_specific:
@@ -3251,16 +3293,20 @@ private:
     // New variable
     environment["std_process"] = "foo";
     assert (environment["std_process"] == "foo");
+    assert ("std_process" in environment);
 
     // Set variable again (also tests length 1 case)
     environment["std_process"] = "b";
     assert (environment["std_process"] == "b");
+    assert ("std_process" in environment);
 
     // Remove variable
     environment.remove("std_process");
+    assert ("std_process" !in environment);
 
     // Remove again, should succeed
     environment.remove("std_process");
+    assert ("std_process" !in environment);
 
     // Throw on not found.
     assertThrown(environment["std_process"]);
@@ -3276,6 +3322,7 @@ private:
     auto res = environment.get("std_process");
     assert (res !is null);
     assert (res == "");
+    assert ("std_process" in environment);
 
     // Convert to associative array
     auto aa = environment.toAA();
@@ -3297,7 +3344,8 @@ private:
     // Complete the roundtrip
     auto aa2 = environment.toAA();
     import std.conv : text;
-    assert(aa == aa2, text(aa, " != ", aa2));
+    assert (aa == aa2, text(aa, " != ", aa2));
+    assert ("std_process" in environment);
 }
 
 
