@@ -508,6 +508,9 @@ style: ../dscanner/dsc
 	@echo "Enforce Allman style"
 	grep -nrE '(if|for|foreach|foreach_reverse|while|unittest|switch|else|version) .*{$$' $$(find . -name '*.d'); test $$? -eq 1
 
+	@echo "Enforce do { to be in Allman style"
+	grep -nr 'do *{$$' $$(find . -name '*.d') ; test $$? -eq 1
+
 	# at the moment libdparse has problems to parse some modules (->excludes)
 	@echo "Running DScanner"
 	../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d') -I.
