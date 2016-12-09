@@ -3290,6 +3290,9 @@ private:
     assert (res !is null);
     assert (res == "");
 
+    // Important to do the following round-trip after the previous test
+    // because it tests toAA with an empty var
+
     // Convert to associative array
     auto aa = environment.toAA();
     assert (aa.length > 0);
