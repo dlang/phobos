@@ -1009,7 +1009,8 @@ private:
 
                 if (comp(next.front, r.front))
                 {
-                    do {
+                    do
+                    {
                         next.popFront();
                         if (next.empty) return;
                     } while (comp(next.front, r.front));
