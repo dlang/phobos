@@ -6851,6 +6851,7 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
+    import std.range : isRandomAccessRange;
 
     string bold = "ku\u0308hn";
 

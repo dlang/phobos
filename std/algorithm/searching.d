@@ -4177,6 +4177,7 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
+    import std.typecons : No;
     int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
     assert(equal(a.until(7), [1, 2, 4][]));
     assert(equal(a.until(7, No.openRight), [1, 2, 4, 7][]));

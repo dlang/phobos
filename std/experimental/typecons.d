@@ -512,6 +512,7 @@ unittest
 ///
 unittest
 {
+    import std.traits : functionAttributes, FunctionAttribute;
     interface A { int run(); }
     interface B { int stop(); @property int status(); }
     class X

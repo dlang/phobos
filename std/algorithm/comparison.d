@@ -1991,6 +1991,8 @@ bool isPermutation(alias pred = "a == b", Range1, Range2)
 ///
 @safe pure unittest
 {
+    import std.typecons : Yes;
+
     assert(isPermutation([1, 2, 3], [3, 2, 1]));
     assert(isPermutation([1.1, 2.3, 3.5], [2.3, 3.5, 1.1]));
     assert(isPermutation("abc", "bca"));

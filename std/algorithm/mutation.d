@@ -2588,6 +2588,7 @@ swapRanges(InputRange1, InputRange2)(InputRange1 r1, InputRange2 r2)
 ///
 @safe unittest
 {
+    import std.range : empty;
     int[] a = [ 100, 101, 102, 103 ];
     int[] b = [ 0, 1, 2, 3 ];
     auto c = swapRanges(a[1 .. 3], b[2 .. 4]);
