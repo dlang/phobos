@@ -53,6 +53,8 @@ SUBREF = $(REF_ALTTEXT $(TT $2), $2, std,experimental, ndslice, $1)$(NBSP)
 T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 T4=$(TR $(TDNW $(LREF $1)) $(TD $2) $(TD $3) $(TD $4))
 */
+/// @@@DEPRECATED_2017-04@@@
+deprecated("Please use mir-algorithm DUB package: http://github.com/libmir/mir-algorithm")
 module std.experimental.ndslice.selection;
 
 import std.traits;
