@@ -5,6 +5,8 @@ License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
 Authors:   Ilya Yaroshenko
 
+Copyright: Ilya Yaroshenko 2016-.
+
 Source:    $(PHOBOSSRC std/_experimental/_ndslice/_slice.d)
 
 Macros:

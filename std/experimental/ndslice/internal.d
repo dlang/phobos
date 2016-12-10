@@ -1,3 +1,4 @@
+// Copyright: Ilya Yaroshenko 2016-.
 module std.experimental.ndslice.internal;
 
 import std.range.primitives;
