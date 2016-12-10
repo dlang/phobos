@@ -10005,11 +10005,11 @@ private:
          */
         assert(bw[bitsNum] == true);
 
-        import core.exception : AssertError;
+        import core.exception : Error;
         import std.exception : assertThrown;
 
         // Check out of bounds error
-        assertThrown!AssertError(bw[2 * bitsNum - 1]);
+        assertThrown!Error(bw[2 * bitsNum - 1]);
     }
 }
 
