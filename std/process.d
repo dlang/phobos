@@ -450,6 +450,7 @@ private Pid spawnProcessImpl(in char[][] args,
         {
             import core.sys.posix.poll : pollfd, poll, POLLNVAL;
             import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
+            import core.stdc.stdlib : malloc;
 
             // Get the maximum number of file descriptors that could be open.
             rlimit r;
@@ -465,36 +466,22 @@ private Pid spawnProcessImpl(in char[][] args,
             immutable maxToClose = maxDescriptors - 3;
 
             // Call poll() to see which ones are actually open:
-            // Done as an internal function because MacOS won't allow
-            // alloca and exceptions to mix.
-            @nogc nothrow
-            static bool pollClose(int maxToClose)
+            pollfd* pfds = cast(pollfd*)malloc(pollfd.sizeof * maxToClose);
+            foreach (i; 0 .. maxToClose)
             {
-                import core.stdc.stdlib : alloca;
-
-                pollfd* pfds = cast(pollfd*)alloca(pollfd.sizeof * maxToClose);
+                pfds[i].fd = i + 3;
+                pfds[i].events = 0;
+                pfds[i].revents = 0;
+            }
+            if (poll(pfds, maxToClose, 0) >= 0)
+            {
                 foreach (i; 0 .. maxToClose)
                 {
-                    pfds[i].fd = i + 3;
-                    pfds[i].events = 0;
-                    pfds[i].revents = 0;
-                }
-                if (poll(pfds, maxToClose, 0) >= 0)
-                {
-                    foreach (i; 0 .. maxToClose)
-                    {
-                        // POLLNVAL will be set if the file descriptor is invalid.
-                        if (!(pfds[i].revents & POLLNVAL)) close(pfds[i].fd);
-                    }
-                    return true;
-                }
-                else
-                {
-                    return false;
+                    // POLLNVAL will be set if the file descriptor is invalid.
+                    if (!(pfds[i].revents & POLLNVAL)) close(pfds[i].fd);
                 }
             }
-
-            if (!pollClose(maxToClose))
+            else
             {
                 // Fall back to closing everything.
                 foreach (i; 3 .. maxDescriptors) close(i);
