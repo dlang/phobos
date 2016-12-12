@@ -6534,7 +6534,7 @@ immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args) if (isSomeChar
  */
 char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
 {
-    import core.exception : onRangeError;
+    import core.exception : onRangeError, RangeError;
     import std.utf : encode;
     import std.format : formattedWrite, FormatException;
 
@@ -6548,7 +6548,7 @@ char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
             auto n = encode(enc, c);
 
             if (buf.length < i + n)
-                onRangeError("std.string.sformat", 0);
+                throw new RangeError(__FILE__, __LINE__);
 
             buf[i .. i + n] = enc[0 .. n];
             i += n;
@@ -6556,7 +6556,7 @@ char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
         void put(const(char)[] s)
         {
             if (buf.length < i + s.length)
-                onRangeError("std.string.sformat", 0);
+                throw new RangeError(__FILE__, __LINE__);
 
             buf[i .. i + s.length] = s[];
             i += s.length;
