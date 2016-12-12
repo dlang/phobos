@@ -484,7 +484,7 @@ checkwhitespace: $(LIB)
 
 ../dscanner:
 	git clone https://github.com/Hackerpilot/Dscanner ../dscanner
-	git -C ../dscanner checkout tags/v0.4.0-beta.1
+	git -C ../dscanner checkout tags/v0.4.0-beta.3
 	git -C ../dscanner submodule update --init --recursive
 
 ../dscanner/dsc: ../dscanner
