@@ -1640,7 +1640,8 @@ unittest
     assert(opCmpProper(42, 42.0) == 0);
     assert(opCmpProper(41, 42.0) < 0);
     assert(opCmpProper(42, 41.0) > 0);
-    assert(opCmpProper(41, double.init) is double.init);
+    import std.math;
+    assert(std.math.isNaN(opCmpProper(41, double.init)));
     assert(opCmpProper(42u, 42) == 0);
     assert(opCmpProper(42, 42u) == 0);
     assert(opCmpProper(-1, uint(-1)) < 0);
