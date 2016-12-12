@@ -489,7 +489,8 @@ checkwhitespace: $(LIB)
 
 ../dscanner/dsc: ../dscanner
 	# debug build is faster, but disable 'missing import' messages (missing core from druntime)
-	sed 's/dparse_verbose/StdLoggerDisableWarning/' -i ../dscanner/makefile
+	sed 's/dparse_verbose/StdLoggerDisableWarning/' ../dscanner/makefile > dscanner_makefile_tmp
+	mv dscanner_makefile_tmp ../dscanner/makefile
 	make -C ../dscanner githash debug
 
 style: ../dscanner/dsc
