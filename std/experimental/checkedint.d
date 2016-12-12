@@ -587,9 +587,9 @@ if (isIntegral!T || is(T == Checked!(U, H), U, H))
         else static if (op == "-" && isIntegral!T && T.sizeof >= 4 &&
                 !isUnsigned!T && hasMember!(Hook, "onOverflow"))
         {
-            import core.checkedint;
             static assert(is(typeof(-payload) == typeof(payload)));
             bool overflow;
+            import core.checkedint : negs;
             auto r = negs(payload, overflow);
             if (overflow) r = hook.onOverflow!op(payload);
             return Checked(r);
@@ -1162,7 +1162,7 @@ struct Throw
     {
         this(T...)(string f, T vals)
         {
-            import std.format;
+            import std.format : format;
             super(format(f, vals));
         }
     }
@@ -1311,7 +1311,7 @@ unittest
         auto x1 = cast(T) x;
         assert(x1 == 42);
         x = T.max + 1;
-        import std.exception;
+        import std.exception : assertThrown, assertNotThrown;
         assertThrown(cast(T) x);
         x = x.max;
         assertThrown(x += 42);
@@ -1640,8 +1640,8 @@ unittest
     assert(opCmpProper(42, 42.0) == 0);
     assert(opCmpProper(41, 42.0) < 0);
     assert(opCmpProper(42, 41.0) > 0);
-    import std.math;
-    assert(std.math.isNaN(opCmpProper(41, double.init)));
+    import std.math : isNaN;
+    assert(isNaN(opCmpProper(41, double.init)));
     assert(opCmpProper(42u, 42) == 0);
     assert(opCmpProper(42, 42u) == 0);
     assert(opCmpProper(-1, uint(-1)) < 0);
@@ -2252,7 +2252,7 @@ if (isIntegral!L && isIntegral!R)
     else
         alias Result = typeof(mixin("L() " ~ x ~ " R()"));
 
-    import core.checkedint;
+    import core.checkedint : addu, adds, subs, muls, subu, mulu;
     import std.algorithm.comparison : among;
     static if (x == "==")
     {
