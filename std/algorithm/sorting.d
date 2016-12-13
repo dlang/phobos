@@ -2889,16 +2889,44 @@ void partialSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
     Range)(Range r, size_t n)
     if (isRandomAccessRange!(Range) && hasLength!(Range) && hasSlicing!(Range))
 {
-    topN!(less, ss)(r, n);
-    sort!(less, ss)(r[0 .. n]);
+    partialSort!(less, ss)(r[0 .. n], r[n .. $]);
 }
 
 ///
-@safe unittest
+unittest
 {
     int[] a = [ 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 ];
     partialSort(a, 5);
     assert(a[0 .. 5] == [ 0, 1, 2, 3, 4 ]);
+}
+
+/**
+Stores the smallest elements of the two ranges in the left-hand range in sorted order.
+
+Params:
+    less = The predicate to sort by.
+    ss = The swapping strategy to use.
+    r1 = The first range.
+    r2 = The second range.
+ */
+
+void partialSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
+    Range1, Range2)(Range1 r1, Range2 r2)
+    if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
+            isInputRange!Range2 && is(ElementType!Range1 == ElementType!Range2) &&
+            hasLvalueElements!Range1 && hasLvalueElements!Range2)
+{
+    topN!(less, ss)(r1, r2);
+    sort!(less, ss)(r1);
+}
+///
+unittest
+{
+    int[] a = [5, 7, 2, 6, 7];
+    int[] b = [2, 1, 5, 6, 7, 3, 0];
+
+    partialSort(a, b);
+    assert(a == [0, 1, 2, 2, 3]);
 }
 
 // topN
