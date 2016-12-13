@@ -912,7 +912,7 @@ template ReturnType(func...)
 
 
 /***
-Get an $(DPARAM AliasSeq) of the types of the parameters to a callable.
+Get an `AliasSeq` of the types of the parameters to a callable.
 */
 template ParameterTypes(func...)
     if (func.length == 1 && isCallable!func)
@@ -984,7 +984,7 @@ template arity(alias func)
 
 
 /**
- * Get an $(DPARAM AliasSeq) of the storage classes of the parameters of a callable.
+ * Get an `AliasSeq` of the storage classes of the parameters of a callable.
  */
 enum ParameterStorageClass : uint
 {
@@ -1109,7 +1109,7 @@ deprecated alias ParameterStorageClassTuple = ParameterStorageClasses;
 
 
 /**
-Get an $(DPARAM AliasSeq) of the identifiers of the parameters to a callable.
+Get an `AliasSeq` of the identifiers of the parameters to a callable.
  */
 template ParameterIdentifiers(func...)
     if (func.length == 1 && isCallable!func)
@@ -2178,12 +2178,12 @@ template hasNested(T)
 
 
 /***
- * Get an $(DPARAM AliasSeq) of the types of the fields of a struct, class, or union.
+ * Get an `AliasSeq` of the types of the fields of a struct, class, or union.
  * This consists of the fields that take up memory space,
  * excluding the hidden fields like the virtual function
  * table pointer or a context pointer for nested types.
- * If $(D T) isn't a struct, class, or union returns an AliasSeq
- * with one element $(D T).
+ * If `T` isn't a struct, class, or union returns an AliasSeq
+ * with one element `T`.
  */
 template FieldTypes(T)
 {
@@ -2235,11 +2235,11 @@ deprecated alias Fields = FieldTypes; ///ditto
 private enum NameOf(alias T) = T.stringof;
 
 /**
- * Get an $(DPARAM AliasSeq) of the names of the fields of a struct, class, or
+ * Get an `AliasSeq` of the names of the fields of a struct, class, or
  * union. This consists of the fields that take up memory space, excluding the
  * hidden fields like the virtual function table pointer or a context pointer
- * for nested types. If $(D T) isn't a struct, class, or union returns an
- * AliasSeq with one empty string element.
+ * for nested types. If `T` isn't a struct, class, or union returns an
+ * `AliasSeq` with one empty string element.
  */
 template FieldIdentifiers(T)
 {
@@ -3587,8 +3587,8 @@ deprecated alias BaseTypeTuple = BaseTypes;
 
 
 /**
- * Get an $(DPARAM AliasSeq) of $(I all) base classes of this class in child to
- * parent order. Interfaces are not included. $(D_PARAM BaseClasses!Object) yields an empty AliasSeq.
+ * Get an `AliasSeq` of $(I all) base classes of this class in child to
+ * parent order. Interfaces are not included. `BaseClasses!Object` yields an empty AliasSeq.
  *
  * See_Also: $(LREF BaseTypes), $(LREF BaseInterfaces), $(LREF TransitiveBaseTypes)
  */
@@ -3751,7 +3751,7 @@ deprecated alias TransitiveBaseTypeTuple = TransitiveBaseTypes;
 
 
 /**
-Get an $(DPARAM AliasSeq) of the non-static functions with the name $(D name)
+Get an `AliasSeq` of the non-static functions with the name $(D name)
 declared in the class or interface $(D C). Covariant duplicates are shrunk into
 the most derived one.
  */
@@ -4117,15 +4117,15 @@ template CommonType(T...)
 
 
 /**
- * Gets an $(DPARAM AliasSeq) of all possible target types of an implicit
- * conversion of a value of type $(D_PARAM T).
+ * Gets an `AliasSeq` of all possible target types of an implicit
+ * conversion of a value of type `T`.
  *
  * Important note:
  *
  * The possible targets are computed more conservatively than the D
  * 2.005 compiler does, eliminating all dangerous conversions. For
- * example, $(D_PARAM ImplicitConversionTargets!double) does not
- * include $(D_PARAM float).
+ * example, `ImplicitConversionTargets!double` does not
+ * include `float`.
  */
 template ImplicitConversionTargets(T)
 {
