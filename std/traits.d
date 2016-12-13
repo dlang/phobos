@@ -923,6 +923,14 @@ template ParameterTypes(func...)
         static assert(0, "argument has no parameters");
 }
 
+// @@@DEPRECATED_2017-12@@@
+deprecated("It will be removed from Phobos in December 2017. Use ParameterTypes")
+alias ParameterTypeTuple = ParameterTypes;
+
+// @@@DEPRECATED_2017-12@@@
+deprecated("It will be removed from Phobos in December 2017. Use ParameterTypes")
+alias Parameters = ParameterTypes;
+
 ///
 @safe unittest
 {
@@ -954,12 +962,6 @@ template ParameterTypes(func...)
     static assert(P_dglit.length == 1);
     static assert(is(P_dglit[0] == int));
 }
-
-/**
- * Alternate name for $(LREF ParameterTypes), kept for legacy compatibility.
- */
-deprecated alias ParameterTypeTuple = ParameterTypes;
-
 
 /**
 Returns the number of arguments of a callable.
@@ -1056,7 +1058,7 @@ template ParameterStorageClasses(func...)
     alias PSC = ParameterStorageClass;
 
     void noparam() {}
-    static assert(PSC!noparam.length == 0);
+    static assert(ParameterStorageClasses!noparam.length == 0);
 
     ref int test(scope int*, ref int, out int, lazy int, int, return ref int i) { return i; }
     alias PSC_test = ParameterStorageClasses!test;
@@ -1102,11 +1104,9 @@ template ParameterStorageClasses(func...)
     alias tup = ParameterStorageClasses!(__traits(getOverloads, Foo, "opAssign")[0]);
 }
 
-/**
- * Alternate name for $(LREF ParameterStorageClasses), kept for legacy compatibility.
- */
-deprecated alias ParameterStorageClassTuple = ParameterStorageClasses;
-
+// @@@DEPRECATED_2017-12@@@
+deprecated("It will be removed from Phobos in December 2017. Use ParameterStorageClass")
+alias ParameterStorageClassTuple = ParameterStorageClasses;
 
 /**
 Get an `AliasSeq` of the identifiers of the parameters to a callable.
@@ -1193,11 +1193,8 @@ template ParameterIdentifiers(func...)
 +/
 }
 
-/**
- * Alternate name for $(LREF ParameterIdentifiers), kept for legacy compatibility.
- */
-deprecated alias ParameterIdentifierTuple = ParameterIdentifiers;
-
+deprecated("It will be removed from Phobos in December 2017. Use ParameterIdentifiers")
+alias ParameterIdentifierTuple = ParameterIdentifiers;
 
 /**
 Get an $(D_PARAM AliasSeq) of the default values of the parameters to a callable.
@@ -1286,14 +1283,12 @@ template ParameterDefaults(func...)
     //pragma(msg, PD!bug8106);
     static assert(PD!bug8106[0] == Colour.white);
     void bug16582(scope int* val = null) {}
-    static assert(PDVT!bug16582[0] is null);
+    static assert(PD!bug16582[0] is null);
 }
 
-/**
- * Alternate name for $(LREF ParameterDefaults), kept for legacy compatibility.
- */
-deprecated alias ParameterDefaultValueTuple = ParameterDefaults;
-
+// @@@DEPRECATED_2017-12@@@
+deprecated("It will be removed from Phobos in December 2017. Use ParameterDefaults")
+alias ParameterDefaultValueTuple = ParameterDefaults;
 
 /**
 Get the attributes attached to a callable.
@@ -2224,12 +2219,13 @@ template FieldTypes(T)
     static assert(is(FieldTypes!NestedClass == AliasSeq!int));
 }
 
-/**
- * Alternate names for $(LREF FieldTypes), kept for legacy compatibility.
- */
-deprecated alias FieldTypeTuple = FieldTypes;
-deprecated alias Fields = FieldTypes; ///ditto
+// @@@DEPRECATED_2017-12@@@
+deprecated("It will be removed from Phobos in December 2017. Use FieldTypes")
+alias FieldTypeTuple = FieldTypes;
 
+// @@@DEPRECATED_2017-12@@@
+deprecated("It will be removed from Phobos in December 2017. Use Fields")
+alias Fields = FieldTypes;
 
 //Required for FieldIdentifiers
 private enum NameOf(alias T) = T.stringof;
@@ -2282,11 +2278,9 @@ template FieldIdentifiers(T)
     static assert(FieldIdentifiers!NestedClass == AliasSeq!"a");
 }
 
-/**
- * Alternate name for $(LREF FieldIdentifiers), kept for legacy compatibility.
- */
-deprecated alias FieldNameTuple = FieldIdentifiers;
-
+// @@@DEPRECATED_2017-12@@@
+deprecated("It will be removed from Phobos in December 2017. Use FieldIdentifiers")
+alias FieldNameTuple = FieldIdentifiers;
 
 /***
 Get an $(D_PARAM AliasSeq) of the primitive types of the fields of a struct or class, in
@@ -2374,11 +2368,9 @@ template RepresentationTypes(T)
     static assert(R2.length == 2 && is(R2[0] == int) && is(R2[1] == immutable(Object)));
 }
 
-/**
- * Alternate name for $(LREF RepresentationTypes), kept for legacy compatibility.
- */
-deprecated alias RepresentationTypeTuple = RepresentationTypes;
-
+// @@@DEPRECATED_2017-12@@@
+deprecated("It will be removed from Phobos in December 2017. Use RepresentationTypes")
+alias RepresentationTypeTuple = RepresentationTypes;
 
 /*
 Statically evaluates to $(D true) if and only if $(D T)'s
@@ -3580,11 +3572,9 @@ template BaseTypes(A)
     assert(BaseTypes!Object.length == 0);
 }
 
-/**
- * Alternate name for $(LREF BaseTypes), kept for legacy compatibility.
- */
-deprecated alias BaseTypeTuple = BaseTypes;
-
+// @@@DEPRECATED_2017-12@@@
+deprecated("It will be removed from Phobos in December 2017. Use BaseTypes")
+alias BaseTypeTuple = BaseTypes;
 
 /**
  * Get an `AliasSeq` of $(I all) base classes of this class in child to
@@ -3634,11 +3624,9 @@ template BaseClasses(T)
     static assert(is(BaseClasses!C5 == AliasSeq!(C4, Object)));
 }
 
-/**
- * Alternate name for $(LREF BaseClasses), kept for legacy compatibility.
- */
-deprecated alias BaseClassesTuple = BaseClasses;
-
+// @@@DEPRECATED_2017-12@@@
+deprecated("It will be removed from Phobos in December 2017. Use BaseClasses")
+alias BaseClassesTuple = BaseClasses;
 
 /**
  * Get an $(D_PARAM AliasSeq) of $(I all) interfaces directly or
@@ -3702,11 +3690,9 @@ template BaseInterfaces(T)
                     AliasSeq!(J, Ia, Iaa, Iab, Ib, Iba, Ibb)));
 }
 
-/**
- * Alternate name for $(LREF BaseInterfaces), kept for legacy compatibility.
- */
-deprecated alias InterfacesTuple = BaseInterfaces;
-
+// @@@DEPRECATED_2017-12@@@
+deprecated("It will be removed from Phobos in December 2017. Use BaseInterfaces")
+alias InterfacesTuple = BaseInterfaces;
 
 /**
  * Get an $(D_PARAM AliasSeq) of $(I all) base classes of $(D_PARAM
@@ -3744,11 +3730,9 @@ template TransitiveBaseTypes(T)
     assert(TransitiveBaseTypes!Object.length == 0);
 }
 
-/**
- * Alternate name for $(LREF TransitiveBaseTypes), kept for legacy compatibility.
- */
-deprecated alias TransitiveBaseTypeTuple = TransitiveBaseTypes;
-
+// @@@DEPRECATED_2017-12@@@
+deprecated("It will be removed from Phobos in December 2017. Use TransitiveBaseTypes")
+alias TransitiveBaseTypeTuple = TransitiveBaseTypes;
 
 /**
 Get an `AliasSeq` of the non-static functions with the name $(D name)
@@ -3931,11 +3915,9 @@ template MemberFunctions(C, string name)
     static assert(is(typeof(&Test_foo[1]) == void function(int, int)));
 }
 
-/**
- * Alternate name for $(LREF MemberFunctions), kept for legacy compatibility.
- */
-deprecated alias MemberFunctionsTuple = MemberFunctions;
-
+// @@@DEPRECATED_2017-12@@@
+deprecated("It will be removed from Phobos in December 2017. Use MemberFunctions")
+alias MemberFunctionsTuple = MemberFunctions;
 
 /**
 Returns an alias to the template that $(D T) is an instance of.
@@ -5830,13 +5812,13 @@ template isExpressionSeq(T ...)
     static assert(!isExpressionSeq!myint);
 }
 
-/**
- * Alternate name for $(LREF isExpressionSeq), kept for legacy compatibility.
- */
+// @@@DEPRECATED_2017-12@@@
+deprecated("It will be removed from Phobos in December 2017. Use isExpressionSeq")
+alias isExpressionTuple = isExpressionSeq;
 
-deprecated alias isExpressionTuple = isExpressionSeq;
-deprecated alias isExpressions = isExpressionSeq;
-
+// @@@DEPRECATED_2017-12@@@
+deprecated("It will be removed from Phobos in December 2017. Use isExpressionSeq")
+alias isExpressions = isExpressionSeq;
 
 /**
  * Check whether T is an AliasSeq containing only types, no expressions
@@ -5879,12 +5861,9 @@ template isTypeSeq(T...)
     static assert(!isTypeSeq!CONST);
 }
 
-/**
- * Alternate name for $(LREF isTypeSeq), kept for legacy compatibility.
- */
-
-deprecated alias isTypeTuple = isTypeSeq;
-
+// @@@DEPRECATED_2017-12@@@
+deprecated("It will be removed from Phobos in December 2017. Use isTypeSeq")
+alias isTypeTuple = isTypeSeq;
 
 /**
 Check whether symbol or type $(D T) is a function pointer.
@@ -6651,14 +6630,14 @@ unittest
 unittest
 {
     // promote to int:
-    foreach (T; TypeTuple!(bool, byte, ubyte, short, ushort, char, wchar))
+    foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, char, wchar))
     {
         static assert(is(Promoted!T == int));
         static assert(is(Promoted!(shared(const T)) == shared(const int)));
     }
 
     // already promoted:
-    foreach (T; TypeTuple!(int, uint, long, ulong, float, double, real))
+    foreach (T; AliasSeq!(int, uint, long, ulong, float, double, real))
     {
         static assert(is(Promoted!T == T));
         static assert(is(Promoted!(immutable(T)) == immutable(T)));
