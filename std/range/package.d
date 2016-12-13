@@ -9605,14 +9605,8 @@ private:
     alias UnsignedElemType = Unsigned!ElemType;
 
     R parent;
-
     enum bitsNum = ElemType.sizeof * 8;
     size_t maskPos = bitsNum;
-
-    static if (hasLength!R)
-    {
-        ulong len;
-    }
 
     static if (isBidirectionalRange!R)
     {
@@ -9623,23 +9617,22 @@ public:
     this()(auto ref R range)
     {
         parent = range;
-
-        static if (hasLength!R)
-        {
-            len = parent.length * bitsNum;
-        }
     }
 
+    /**
+     * Check if the range is empty
+     *
+     * Returns: a boolean true or false
+     */
     bool empty()
     {
         static if (hasLength!R)
         {
-            return len == 0;
+            return length() == 0;
         }
         else static if (isBidirectionalRange!R)
         {
             bool isOverlapping = parent.empty;
-
             if (!parent.empty)
             {
                 /*
@@ -9647,11 +9640,9 @@ public:
                    the front and the back, then the masks positions will overlap
                  */
                 R parentCopy = parent.save;
-
                 parentCopy.popFront;
                 isOverlapping = parentCopy.empty && (maskPos < backMaskPos);
             }
-
             return parent.empty || isOverlapping;
         }
         else
@@ -9667,30 +9658,27 @@ public:
     bool front()
     {
         assert(!empty());
-
         return (parent.front & mask(maskPos)) != 0;
     }
 
     void popFront()
     {
         --maskPos;
-
         if (maskPos == 0)
         {
             parent.popFront;
             maskPos = bitsNum;
         }
-
-        static if (hasLength!R)
-        {
-            --len;
-        }
     }
 
     static if (hasLength!R)
     {
-        ulong length() const
+        size_t length()
         {
+            auto len = parent.length * bitsNum - (bitsNum - maskPos);
+            static if (isBidirectionalRange!R) {
+                len -= (backMaskPos - 1);
+            }
             return len;
         }
 
@@ -9712,23 +9700,16 @@ public:
         bool back()
         {
             assert(!empty());
-
             return (parent.back & mask(backMaskPos)) != 0;
         }
 
         void popBack()
         {
             ++backMaskPos;
-
             if (backMaskPos > bitsNum)
             {
                 parent.popBack;
                 backMaskPos = 1;
-            }
-
-            static if (hasLength!R)
-            {
-                --len;
             }
         }
     }
@@ -9741,33 +9722,27 @@ public:
         bool opIndex(size_t n)
         in
         {
-            assert(n >= 0);
-            // TODO slice.d 2527
-
             /*
                If it does not have the length property, it means that R is
                an infinite range
              */
             static if (hasLength!R)
             {
-                assert(n < len,
-                       __PRETTY_FUNCTION__ ~ ": Index out of bounds");
+                assert(n < length(), __PRETTY_FUNCTION__ ~ ": Index out of bounds");
             }
         }
         body
         {
-            if (maskPos > n)
-            {
-                return (parent.front & mask(maskPos - n)) != 0;
-            }
-
-            n -= maskPos;
-
+            // If n >= maskPos, then the bit sign will be 1, otherwise 0
+            immutable sizediff_t sign = (maskPos - n - 1) >> (sizediff_t.sizeof * 8 - 1);
             /*
                By truncating n with maskPos bits we have skipped the remaining
                maskPos bits in parent[0], so we need to add 1 to elemIndex.
+
+               Because bitsNum is a power of 2, n / bitsNum == n >> bitsNum.bsf
              */
-            size_t elemIndex = n / bitsNum + 1;
+            import core.bitop : bsf;
+            immutable size_t elemIndex = sign * (((n - maskPos) >> bitsNum.bsf) + 1);
 
             /*
                Since the indexing is from MSB to LSB, we need to subtract the
@@ -9775,52 +9750,33 @@ public:
 
                Because bitsNum is a power of 2, n % bitsNum == n & (bitsNum - 1)
              */
-            uint elemMaskPos = bitsNum - (n & (bitsNum - 1));
+            immutable size_t elemMaskPos = (sign ^ 1) * (maskPos - n)
+                             + sign * (bitsNum - ((n - maskPos) & (bitsNum - 1)));
 
             return (parent[elemIndex] & mask(elemMaskPos)) != 0;
         }
 
-        bool opIndexAssign(bool flag, size_t n)
+        void opIndexAssign(bool flag, size_t n)
         in
         {
-            assert(n >= 0);
             static if (hasLength!R)
             {
-                assert(n < len,
-                       __PRETTY_FUNCTION__ ~ ": Index out of bounds");
+                assert(n < length(), __PRETTY_FUNCTION__ ~ ": Index out of bounds");
             }
         }
         body
         {
-            size_t elemMaskPos;
-            size_t elemIndex;
+            import core.bitop : bsf;
 
-            if (maskPos > n)
-            {
-                elemMaskPos = maskPos - n;
-                elemIndex = 0;
-            }
-            else
-            {
-                n -= maskPos;
-                elemMaskPos = bitsNum - (n & (bitsNum - 1));
-                elemIndex = n / bitsNum + 1;
-            }
+            immutable sizediff_t sign = (maskPos - n - 1) >> (sizediff_t.sizeof * 8 - 1);
+            immutable size_t elemIndex = sign * (((n - maskPos) >> bitsNum.bsf) + 1);
+            immutable size_t elemMaskPos = (sign ^ 1) * (maskPos - n)
+                               + sign * (bitsNum - ((n - maskPos) & (bitsNum - 1)));
 
             auto elem = parent[elemIndex];
             auto elemMask = mask(elemMaskPos);
-
-            if (flag)
-            {
-                elem |= elemMask;
-            }
-            else
-            {
-                elem &= ~elemMask;
-            }
-            parent[elemIndex] = elem;
-
-            return flag;
+            parent[elemIndex] = cast(UnsignedElemType)(flag * (elem | elemMask)
+                                                       + (flag ^ 1) * (elem & ~elemMask));
         }
 
         Bitwise!R opSlice()
@@ -9831,71 +9787,33 @@ public:
         Bitwise!R opSlice(size_t start, size_t end)
         in
         {
-            assert(start < end);
+            assert(start < end, __PRETTY_FUNCTION__ ~ ": Invalid bounds: end <= start");
         }
         body
         {
-            size_t sliceLen = end - start;
-            size_t startElemIndex;
-            size_t endElemIndex;
+            import core.bitop : bsf;
 
-            size_t startElemMaskPos;
-            size_t endElemMaskPos;
+            sizediff_t sign = (maskPos - start - 1) >> (sizediff_t.sizeof * 8 - 1);
+            immutable size_t startElemIndex = sign * (((start - maskPos) >> bitsNum.bsf) + 1);
+            immutable size_t startElemMaskPos = (sign ^ 1) * (maskPos - start)
+                                    + sign * (bitsNum - (start & (bitsNum - 1)));
 
-            if (maskPos > start)
-            {
-                startElemMaskPos = maskPos - start;
-                startElemIndex = 0;
-            }
-            else
-            {
-                start -= maskPos;
-                startElemMaskPos = bitsNum - (start & (bitsNum - 1));
-                startElemIndex = start / bitsNum + 1;
-            }
-
-            if (maskPos > sliceLen)
-            {
-                endElemMaskPos = maskPos - sliceLen;
-                endElemIndex = 0;
-            }
-            else
-            {
-                sliceLen -= maskPos;
-                endElemMaskPos = bitsNum - (sliceLen & (bitsNum - 1));
-                endElemIndex = sliceLen / bitsNum + 1;
-            }
-
-            // Get the slice to be returned from the parent
-            R resultParent = (parent.save)[startElemIndex .. endElemIndex + 1];
-            endElemIndex -= startElemIndex;
-            startElemIndex = 0;
-
-            // Turn to 0 bits leading `start` and trailing `end`
-            auto leadMask = mask(startElemMaskPos);
-            resultParent[0] = cast(UnsignedElemType)(resultParent[0] & (leadMask | (leadMask - 1)));
-
-            auto trailingMask = mask(endElemMaskPos);
-            resultParent[endElemIndex] = cast(UnsignedElemType)(resultParent[endElemIndex] & ~(trailingMask - 1));
+            immutable size_t sliceLen = end - start - 1;
+            sign = (maskPos - sliceLen - 1) >> (sizediff_t.sizeof * 8 - 1);
+            immutable size_t endElemIndex = sign * (((sliceLen - maskPos) >> bitsNum.bsf) + 1);
+            immutable size_t endElemMaskPos = (sign ^ 1) * (maskPos - sliceLen)
+                                  + sign * (bitsNum - ((sliceLen - maskPos) & (bitsNum - 1)));
 
             typeof(return) result;
-
-            result.parent = resultParent;
+            // Get the slice to be returned from the parent
+            result.parent = (parent[startElemIndex .. endElemIndex + 1]).save;
             result.maskPos = startElemMaskPos;
-
-            static if (hasLength!R)
-            {
-                result.len = sliceLen;
-            }
-
             static if (isBidirectionalRange!R)
             {
                 result.backMaskPos = endElemMaskPos;
             }
-
             return result;
         }
-
     }
 
 private:
@@ -9905,115 +9823,7 @@ private:
     }
 }
 
-///
-@safe unittest
-{
-    alias IntegralTypes = AliasSeq!(byte, ubyte, short, ushort, int, uint,
-                                    long, ulong);
-    foreach (IntegralType; IntegralTypes)
-    {
-        IntegralType[] a = [cast(IntegralType)(1)];
-        auto bw = Bitwise!(IntegralType[])(a);
-
-        // Check the length property
-        assert(bw.length == (IntegralType.sizeof * 8));
-
-        // Make sure front is not the mechanism that modifies the range
-        int numCalls = 42;
-        bool initialFrontValue = bw.front;
-        while (--numCalls)
-        {
-            bw.front;
-            assert(bw.front == initialFrontValue);
-        }
-        assert(bw.length == (IntegralType.sizeof * 8));
-
-        /*
-           Check that empty works properly and that popFront does not get called
-           more times than it should
-         */
-        numCalls = 0;
-        while (!bw.empty())
-        {
-            ++numCalls;
-            bw.popFront();
-        }
-        assert(numCalls == (IntegralType.sizeof * 8));
-    }
-}
-
-// Test the save method for ForwardRanges
-///
-@safe unittest
-{
-    alias IntegralTypes = AliasSeq!(byte, ubyte, short, ushort, int, uint,
-            long, ulong);
-    foreach (IntegralType; IntegralTypes)
-    {
-        IntegralType[] a = [cast(IntegralType)(1)];
-        auto bw = Bitwise!(IntegralType[])(a);
-        auto bw2 = bw.save();
-
-        // Check the length property
-        assert(bw.length == bw2.length);
-
-        /*
-           Check that empty works properly and that popFront does not get called
-           more times than it should
-         */
-        int numCalls = 0;
-        while (!bw.empty() && !bw2.empty())
-        {
-            assert(bw.front == bw2.front);
-
-            ++numCalls;
-            bw.popFront();
-            bw2.popFront();
-        }
-        assert(numCalls == IntegralType.sizeof * 8);
-        assert(bw.empty() && bw2.empty() && (bw.length == bw2.length));
-    }
-}
-
-// Test opIndex
-///
-@system unittest
-{
-    alias IntegralTypes = AliasSeq!(byte, ubyte, short, ushort, int, uint,
-            long, ulong);
-    foreach (IntegralType; IntegralTypes)
-    {
-        size_t bitsNum = IntegralType.sizeof * 8;
-
-        auto first = cast(IntegralType)(1);
-
-        // 2 ^ (bitsNum - 1)
-        auto second = cast(IntegralType)(cast(IntegralType)(1) << (bitsNum - 2));
-
-        IntegralType[] a = [first, second];
-        auto bw = Bitwise!(IntegralType[])(a);
-
-        // Check against lsb of a[0]
-        assert(bw[bitsNum - 1] == true);
-        // Check against msb - 1 of a[1]
-        assert(bw[bitsNum + 1] == true);
-
-        bw.popFront();
-        /*
-           Check against msb - 1 of a[1] by indexing with bitsNum, since we
-           consumed a bit earlier
-         */
-        assert(bw[bitsNum] == true);
-
-        import core.exception : Error;
-        import std.exception : assertThrown;
-
-        // Check out of bounds error
-        assertThrown!Error(bw[2 * bitsNum - 1]);
-    }
-}
-
-// Test all range types
+// Test all range types over all integral types
 ///
 @safe unittest
 {
@@ -10036,10 +9846,12 @@ private:
             static if (isBidirectionalRange!T)
             {
                 auto bw3 = bw.save;
+                auto bw4 = bw.save;
             }
 
             static if (hasLength!T)
             {
+                auto bwLength = bw.length;
                 assert(bw.length == (IntegralType.sizeof * 8 * a.length));
                 static if (isForwardRange!T)
                 {
@@ -10071,6 +9883,12 @@ private:
             {
                 ++numCalls;
 
+                static if (hasLength!T)
+                {
+                    assert(bw.length == bwLength);
+                    --bwLength;
+                }
+
                 static if (isForwardRange!T)
                 {
                     assert(bw.front == bw2.front);
@@ -10079,15 +9897,15 @@ private:
 
                 static if (isBidirectionalRange!T)
                 {
+                    assert(bw3.front == bw4.front);
                     bw3.popBack();
+                    bw4.popBack();
                 }
-
                 bw.popFront();
             }
 
             auto rangeLen = numCalls / (IntegralType.sizeof * 8);
             assert(numCalls == (IntegralType.sizeof * 8 * rangeLen));
-
             assert(bw.empty());
             static if (isForwardRange!T)
             {
@@ -10102,6 +9920,51 @@ private:
     }
 }
 
+// Test opIndex and opSlice
+///
+@system unittest
+{
+    alias IntegralTypes = AliasSeq!(byte, ubyte, short, ushort, int, uint,
+            long, ulong);
+    foreach (IntegralType; IntegralTypes)
+    {
+        size_t bitsNum = IntegralType.sizeof * 8;
+
+        auto first = cast(IntegralType)(1);
+
+        // 2 ^ (bitsNum - 1)
+        auto second = cast(IntegralType)(cast(IntegralType)(1) << (bitsNum - 2));
+
+        IntegralType[] a = [first, second];
+        auto bw = Bitwise!(IntegralType[])(a);
+
+        // Check against lsb of a[0]
+        assert(bw[bitsNum - 1] == true);
+        // Check against msb - 1 of a[1]
+        assert(bw[bitsNum + 1] == true);
+
+        bw.popFront();
+        assert(bw[bitsNum] == true);
+
+        import core.exception : Error;
+        import std.exception : assertThrown;
+
+        // Check out of bounds error
+        assertThrown!Error(bw[2 * bitsNum - 1]);
+
+        bw[2] = true;
+        assert(bw[2] == true);
+        bw.popFront();
+        assert(bw[1] == true);
+
+        auto bw2 = bw[0 .. $ - 5];
+        auto bw3 = bw2[];
+        assert(bw2.length == (bw.length - 5));
+        assert(bw2.length == bw3.length);
+        bw2.popFront();
+        assert(bw2.length != bw3.length);
+    }
+}
 
 /*********************************
  * An OutputRange that discards the data it receives.
