@@ -49,6 +49,7 @@ import core.stdc.stdint, core.stdc.string, std.string, core.stdc.stdlib, std.con
 import core.stdc.config;
 import core.time : dur, Duration;
 import std.exception;
+import std.traits : hasIndirections;
 
 import std.internal.cstring;
 
@@ -3017,11 +3018,42 @@ public:
     /**
      * Receive data on the connection. If the socket is blocking, $(D receive)
      * waits until there is data to be received.
+     *
      * Returns: The number of bytes actually received, $(D 0) if the remote side
      * has closed the connection, or $(D Socket.ERROR) on failure.
+     *
+     * Prerequisites: Can only be called from `@safe` code if buffer elements
+     * do not contain indirections. If buffer elements contain indirections,
+     * can only be called from `@system` code.
      */
-    //returns number of bytes actually received, 0 on connection closure, or -1 on error
-    ptrdiff_t receive(void[] buf, SocketFlags flags) @trusted
+    ptrdiff_t receive(T)(T[] buf, SocketFlags flags) @trusted
+        if (!hasIndirections!T)
+    {
+        return receiveImpl(buf, flags);
+    }
+
+    /// ditto
+    ptrdiff_t receive(T)(T[] buf, SocketFlags flags) @system
+        if (hasIndirections!T)
+    {
+        return receiveImpl(buf, flags);
+    }
+
+    /// ditto
+    ptrdiff_t receive(T)(T[] buf) @trusted
+        if (!hasIndirections!T)
+    {
+        return receive(buf, SocketFlags.NONE);
+    }
+
+    /// ditto
+    ptrdiff_t receive(T)(T[] buf) @system
+        if (hasIndirections!T)
+    {
+        return receive(buf, SocketFlags.NONE);
+    }
+
+    private ptrdiff_t receiveImpl(void[] buf, SocketFlags flags) @system
     {
         version(Windows)         // Does not use size_t
         {
@@ -3037,10 +3069,19 @@ public:
         }
     }
 
-    /// ditto
-    ptrdiff_t receive(void[] buf)
+    unittest // issue 15702
     {
-        return receive(buf, SocketFlags.NONE);
+        int*[] ptrs = [ new int(1), new int(2), new int(3) ];
+
+        // @safe code cannot call .receive on an array containing indirections.
+        static assert(!__traits(compiles, (Socket sock) @safe {
+            sock.receive(ptrs);
+        }));
+
+        // But @system code can.
+        static assert( __traits(compiles, (Socket sock) @system {
+            sock.receive(ptrs);
+        }));
     }
 
     /**
