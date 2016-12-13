@@ -6598,10 +6598,10 @@ template mostNegative(T)
 ///
 @safe unittest
 {
-    foreach(T; AliasSeq!(bool, byte, short, int, long))
+    foreach (T; AliasSeq!(bool, byte, short, int, long))
         static assert(mostNegative!T == T.min);
 
-    foreach(T; AliasSeq!(ubyte, ushort, uint, ulong, char, wchar, dchar))
+    foreach (T; AliasSeq!(ubyte, ushort, uint, ulong, char, wchar, dchar))
         static assert(mostNegative!T == 0);
 }
 
