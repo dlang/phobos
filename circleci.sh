@@ -7,6 +7,7 @@ DSCANNER_DMD_VER=2.071.2 # dscanner needs a more up-to-date version
 CURL_USER_AGENT="CirleCI $(curl --version | head -n 1)"
 DUB=${DUB:-$HOME/dlang/dub/dub}
 N=2
+CIRCLE_NODE_INDEX=${CIRCLE_NODE_INDEX:-0}
 
 case $CIRCLE_NODE_INDEX in
     0) MODEL=64 ;;
@@ -52,7 +53,6 @@ clone() {
     done
 }
 
-# setup dmd and druntime
 setup_repos()
 {
     # set a default in case we run into rate limit restrictions
@@ -62,6 +62,11 @@ setup_repos()
     else
         base_branch=$CIRCLE_BRANCH
     fi
+
+    # merge with upstream branch, s.t. we check with the latest changes
+    git remote add upstream https://github.com/dlang/phobos.git
+    git fetch upstream
+    git merge upstream/$base_branch
 
     clone https://github.com/dlang/dmd.git ../dmd $base_branch
     clone https://github.com/dlang/druntime.git ../druntime $base_branch
@@ -95,7 +100,7 @@ coverage()
     ENABLE_COVERAGE="1" make -f posix.mak MODEL=$MODEL unittest-debug
 
     # instead we run all tests individually
-    make -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test/" | grep -vE '(std.algorithm.sorting|std.encoding|net.curl)' )
+    make -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test")
 }
 
 # compile all public unittests separately
