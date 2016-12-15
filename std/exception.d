@@ -2143,8 +2143,8 @@ pure nothrow @safe unittest
     Convenience mixin for trivially sub-classing exceptions
 
     Even trivially sub-classing an exception involves writing boilerplate code
-    for the constructor to: 1) correctly pass in the source file and line number
-    the exception was thrown from; 2) be usable with $(LREF enforce) which
+    for the constructor to: 1$(RPAREN) correctly pass in the source file and line number
+    the exception was thrown from; 2$(RPAREN) be usable with $(LREF enforce) which
     expects exception constructors to take arguments in a fixed order. This
     mixin provides that boilerplate code.
 

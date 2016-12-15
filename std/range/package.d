@@ -1853,18 +1853,27 @@ Lazily takes only up to `n` elements of a range. This is
 particularly useful when using with infinite ranges.
 
 Unlike $(LREF takeExactly), `take` does not require that there
-are `n` or more elements in `r`. As a consequence, length
-information is not applied to the result unless `r` also has
+are `n` or more elements in `input`. As a consequence, length
+information is not applied to the result unless `input` also has
 length information.
 
 Params:
-    r = an input range to iterate over up to `n` times
+    input = an input range to iterate over up to `n` times
     n = the number of elements to take
 
 Returns:
     At minimum, an input range. If the range offers random access
     and `length`, `take` offers them as well.
  */
+Take!R take(R)(R input, size_t n)
+if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R) &&
+    !is(R T == Take!T))
+{
+    import std.algorithm.comparison : min;
+    return input[0 .. min(n, input.length)];
+}
+
+/// ditto
 struct Take(Range)
 if (isInputRange!(Unqual!Range) &&
     //take _cannot_ test hasSlicing on infinite ranges, because hasSlicing uses
@@ -2052,17 +2061,6 @@ if (isInputRange!(Unqual!Range) &&
     {
         return _maxAvailable;
     }
-}
-
-/// ditto
-Take!R take(R)(R input, size_t n)
-if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R) &&
-    !is(R T == Take!T))
-{
-    // @@@BUG@@@
-    //return input[0 .. min(n, $)];
-    import std.algorithm.comparison : min;
-    return input[0 .. min(n, input.length)];
 }
 
 /**

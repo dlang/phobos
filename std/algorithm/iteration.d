@@ -2654,7 +2654,6 @@ template reduce(fun...) if (fun.length >= 1)
     If $(D r) is empty, an $(D Exception) is thrown.
 
     Params:
-        fun = one or more functions
         r = an iterable value as defined by $(D isIterable)
 
     Returns:
@@ -2693,7 +2692,6 @@ template reduce(fun...) if (fun.length >= 1)
     Use $(D fold) instead of $(D reduce) to use the seed version in a UFCS chain.
 
     Params:
-        fun = one or more functions
         seed = the initial value of the accumulator
         r = an iterable value as defined by $(D isIterable)
 
@@ -3170,7 +3168,6 @@ if (fun.length >= 1)
     Once `S` has been determined, then $(D S s = e;) and $(D s = f(s, e);) must
     both be legal.
     Params:
-        fun = one or more functions
         range = an input range as defined by `isInputRange`
     Returns:
         a range containing the consecutive reduced values.
@@ -3189,7 +3186,6 @@ if (fun.length >= 1)
     `cumulativeFold` will operate on an unqualified copy. If this happens
     then the returned type will not perfectly match `S`.
     Params:
-        fun = one or more functions
         range = an input range as defined by `isInputRange`
         seed = the initial value of the accumulator
     Returns:
