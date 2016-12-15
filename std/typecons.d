@@ -330,12 +330,12 @@ function. If $(D obj) is a `Tuple`, the individual members are
 accessible with the syntax $(D obj[0]) for the first field, $(D obj[1])
 for the second, and so on.
 
-$(LREF tuple) can be used to construct a Tuple with type inference.
-
 The choice of zero-based indexing instead of one-base indexing was
 motivated by the ability to use value tuples with various compile-time
 loop constructs (e.g. $(REF AliasSeq, std,meta) iteration), all of which use
 zero-based indexing.
+
+See_Also: $(LREF tuple).
 
 Params:
     Specs = A list of types (and optionally, member names) that the `Tuple` contains.
@@ -543,7 +543,6 @@ template Tuple(Specs...)
          *              of this `Tuple`, or can implicitly convert
          *              to those types. They must be in the same
          *              order as they appear in `Types`.
-         * See_Also: $(LREF tuple).
          */
         static if (Types.length > 0)
         {
@@ -1674,7 +1673,7 @@ unittest
     the given arguments.
 
     Params:
-        Names = Optional list of strings naming each successive field of the `Tuple`.
+        Names = An optional list of strings naming each successive field of the `Tuple`.
                 Each name matches up with the corresponding field given by `Args`.
                 A name does not have to be provided for every field, but as
                 the names must proceed in order, it is not possible to skip
