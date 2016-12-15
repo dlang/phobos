@@ -1394,9 +1394,15 @@ template staticSort(alias cmp, Seq...)
     }
     else
     {
-        private alias bottom = staticSort!(cmp, Seq[0 .. $ / 2]);
+        private alias btm = staticSort!(cmp, Seq[0 .. $ / 2]);
         private alias top = staticSort!(cmp, Seq[$ / 2 .. $]);
-        alias staticSort = staticMerge!(cmp, Seq.length / 2, bottom, top);
+
+        static if (isLessEq!(cmp, btm[$ - 1], top[0]))
+            alias staticSort = AliasSeq!(btm, top); // already ascending
+        else static if (isLessEq!(cmp, top[$ - 1], btm[0]))
+            alias staticSort = AliasSeq!(top, btm); // already descending
+        else
+            alias staticSort = staticMerge!(cmp, Seq.length / 2, btm, top);
     }
 }
 
@@ -1427,12 +1433,13 @@ private template staticMerge(alias cmp, int half, Seq...)
     {
         static if (isLessEq!(cmp, Seq[0], Seq[half]))
         {
-            alias staticMerge = AliasSeq!(Seq[0], staticMerge!(cmp, half - 1, Seq[1 .. $]));
+            alias staticMerge = AliasSeq!(Seq[0],
+                staticMerge!(cmp, half - 1, Seq[1 .. $]));
         }
         else
         {
-            alias staticMerge = AliasSeq!(Seq[half], staticMerge!(cmp, half,
-                Seq[0 .. half], Seq[half + 1 .. $]));
+            alias staticMerge = AliasSeq!(Seq[half],
+                staticMerge!(cmp, half, Seq[0 .. half], Seq[half + 1 .. $]));
         }
     }
 }
