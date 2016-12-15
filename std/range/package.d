@@ -9596,6 +9596,13 @@ auto refRange(R)(R* range)
 
 /**
 Bitwise adapter over integral type ranges. Consumes the range elements bit by bit.
+
+Params:
+    R = an input range to iterate over
+
+Returns:
+    At minimum, an input range. If `R` was a forward, bidirectional or random
+    access range, `Bitwise!R` will be as well.
 */
 struct Bitwise(R)
     if (isInputRange!R && isIntegral!(ElementType!R))
@@ -9676,7 +9683,8 @@ public:
         size_t length()
         {
             auto len = parent.length * bitsNum - (bitsNum - maskPos);
-            static if (isBidirectionalRange!R) {
+            static if (isBidirectionalRange!R)
+            {
                 len -= (backMaskPos - 1);
             }
             return len;
@@ -9756,6 +9764,9 @@ public:
             return (parent[elemIndex] & mask(elemMaskPos)) != 0;
         }
 
+        /**
+          Assignes `flag` to the `n`th bit within the range
+         */
         void opIndexAssign(bool flag, size_t n)
         in
         {
