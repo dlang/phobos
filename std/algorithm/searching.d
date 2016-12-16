@@ -3545,6 +3545,213 @@ unittest
 }
 
 /**
+Computes the index of the first occurrence of `range`'s minimum element.
+
+Params:
+    pred = The ordering predicate to use to determine the minimum element.
+    range = The input range to search.
+
+Complexity: O(n)
+    Exactly `n - 1` comparisons are needed.
+
+Returns:
+    The index of the first encounter of the minimum element in `range`. If the
+    `range` is empty, -1 is returned.
+
+See_Also:
+    $(REF min, std,algorithm,comparison), $(LREF minCount), $(LREF minElement), $(LREF minPos)
+ */
+sizediff_t minIndex(alias pred = "a < b", Range)(Range range)
+    if (isForwardRange!Range && !isInfinite!Range &&
+        is(typeof(binaryFun!pred(range.front, range.front))))
+{
+    if (range.empty) return -1;
+
+    sizediff_t minPos = 0;
+
+    static if (isRandomAccessRange!Range && hasLength!Range)
+    {
+        foreach (i; 1 .. range.length)
+        {
+            if (binaryFun!pred(range[i], range[minPos]))
+            {
+                minPos = i;
+            }
+        }
+    }
+    else
+    {
+        sizediff_t curPos = 0;
+        Unqual!(typeof(range.front)) min = range.front;
+        for (range.popFront(); !range.empty; range.popFront())
+        {
+            ++curPos;
+            if (binaryFun!pred(range.front, min))
+            {
+                min = range.front;
+                minPos = curPos;
+            }
+        }
+    }
+    return minPos;
+}
+
+///
+@safe pure nothrow unittest
+{
+    int[] a = [2, 3, 4, 1, 2, 4, 1, 1, 2];
+
+    // Minimum is 1 and first occurs in position 3
+    assert(a.minIndex == 3);
+    // Get maximum index with minIndex
+    assert(a.minIndex!"a > b" == 2);
+
+    // Range is empty, so return value is -1
+    int[] b;
+    assert(b.minIndex == -1);
+
+    // Works with more custom types
+    struct Dog { int age; }
+    Dog[] dogs = [Dog(10), Dog(5), Dog(15)];
+    assert(dogs.minIndex!"a.age < b.age" == 1);
+}
+
+@safe pure unittest
+{
+    // should work with const
+    const(int)[] immArr = [2, 1, 3];
+    assert(immArr.minIndex == 1);
+
+    // Works for const ranges too
+    const int[] c = [2, 5, 4, 1, 2, 3];
+    assert(c.minIndex == 3);
+
+    // should work with immutable
+    immutable(int)[] immArr2 = [2, 1, 3];
+    assert(immArr2.minIndex == 1);
+
+    // with strings
+    assert(["b", "a", "c"].minIndex == 1);
+
+    // infinite range
+    import std.range : cycle;
+    static assert(!__traits(compiles, cycle([1]).minIndex));
+
+    // with all dummy ranges
+    import std.internal.test.dummyrange : AllDummyRanges;
+    foreach (DummyType; AllDummyRanges)
+    {
+        static if (isForwardRange!DummyType && !isInfinite!DummyType)
+        {
+            DummyType d;
+            d.arr = [5, 3, 7, 2, 1, 4];
+            assert(d.minIndex == 4);
+
+            d.arr = [];
+            assert(d.minIndex == -1);
+        }
+    }
+}
+
+@nogc @safe nothrow pure unittest
+{
+    static immutable arr = [7, 3, 8, 2, 1, 4];
+    assert(arr.minIndex == 4);
+
+    static immutable arr2d = [[1, 3], [3, 9], [4, 2]];
+    assert(arr2d.minIndex!"a[1] < b[1]" == 2);
+}
+
+/**
+Computes the index of the first occurrence of `range`'s maximum element.
+
+Complexity: O(n)
+    Exactly `n - 1` comparisons are needed.
+
+Params:
+    pred = The ordering predicate to use to determine the maximum element.
+    range = The input range to search.
+
+Returns:
+    The index of the first encounter of the maximum in `range`. If the
+    `range` is empty, -1 is returned.
+
+See_Also:
+    $(REF max, std,algorithm,comparison), $(LREF maxCount), $(LREF maxElement), $(LREF maxPos)
+ */
+sizediff_t maxIndex(alias pred = "a < b", Range)(Range range)
+    if (isInputRange!Range && !isInfinite!Range &&
+        is(typeof(binaryFun!pred(range.front, range.front))))
+{
+    return range.minIndex!((a, b) => binaryFun!pred(b, a));
+}
+
+///
+@safe pure nothrow unittest
+{
+    // Maximum is 4 and first occurs in position 2
+    int[] a = [2, 3, 4, 1, 2, 4, 1, 1, 2];
+    assert(a.maxIndex == 2);
+
+    // Empty range
+    int[] b;
+    assert(b.maxIndex == -1);
+
+    // Works with more custom types
+    struct Dog { int age; }
+    Dog[] dogs = [Dog(10), Dog(15), Dog(5)];
+    assert(dogs.maxIndex!"a.age < b.age" == 1);
+}
+
+@safe pure unittest
+{
+    // should work with const
+    const(int)[] immArr = [5, 1, 3];
+    assert(immArr.maxIndex == 0);
+
+    // Works for const ranges too
+    const int[] c = [2, 5, 4, 1, 2, 3];
+    assert(c.maxIndex == 1);
+
+
+    // should work with immutable
+    immutable(int)[] immArr2 = [2, 1, 3];
+    assert(immArr2.maxIndex == 2);
+
+    // with strings
+    assert(["b", "a", "c"].maxIndex == 2);
+
+    // infinite range
+    import std.range : cycle;
+    static assert(!__traits(compiles, cycle([1]).maxIndex));
+
+    // with all dummy ranges
+    import std.internal.test.dummyrange : AllDummyRanges;
+    foreach (DummyType; AllDummyRanges)
+    {
+        static if (isForwardRange!DummyType && !isInfinite!DummyType)
+        {
+            DummyType d;
+
+            d.arr = [5, 3, 7, 2, 1, 4];
+            assert(d.maxIndex == 2);
+
+            d.arr = [];
+            assert(d.maxIndex == -1);
+        }
+    }
+}
+
+@nogc @safe nothrow pure unittest
+{
+    static immutable arr = [7, 3, 8, 2, 1, 4];
+    assert(arr.maxIndex == 2);
+
+    static immutable arr2d = [[1, 3], [3, 9], [4, 2]];
+    assert(arr2d.maxIndex!"a[1] < b[1]" == 1);
+}
+
+/**
 Skip over the initial portion of the first given range that matches the second
 range, or do nothing if there is no match.
 
