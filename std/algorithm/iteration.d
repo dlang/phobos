@@ -4086,6 +4086,7 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(input.front))))
 @safe unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range.primitives : front;
 
     assert(equal(splitter!(a => a == ' ')("hello  world"), [ "hello", "", "world" ]));
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];

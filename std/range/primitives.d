@@ -698,7 +698,6 @@ package(std) template isNativeOutputRange(R, E)
     }));
 }
 
-///
 @safe unittest
 {
     int[] r = new int[](4);
@@ -935,6 +934,8 @@ template isRandomAccessRange(R)
 ///
 unittest
 {
+    import std.traits : isNarrowString;
+
     alias R = int[];
 
     // range is finite and bidirectional or infinite and forward.

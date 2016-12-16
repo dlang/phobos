@@ -498,6 +498,8 @@ pure nothrow unittest
     import std.algorithm.iteration : map, sum, reduce;
     import std.algorithm.comparison : max;
     import std.experimental.ndslice.iteration : transposed;
+    import std.typecons : No;
+
     /// Returns maximal column average.
     auto maxAvg(S)(S matrix) {
         return matrix.transposed.map!sum.reduce!max
@@ -515,6 +517,8 @@ pure nothrow unittest
     import std.algorithm.iteration : map, sum, reduce;
     import std.algorithm.comparison : max;
     import std.experimental.ndslice.iteration : transposed;
+    import std.typecons : No;
+
     /// Returns maximal column average.
     auto maxAvg(S)(S matrix) {
         return matrix.transposed.map!sum.reduce!max

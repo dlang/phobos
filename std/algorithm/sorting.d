@@ -3558,6 +3558,8 @@ TRange topNCopy(alias less = "a < b", SRange, TRange)
 ///
 unittest
 {
+    import std.typecons : Yes;
+
     int[] a = [ 10, 16, 2, 3, 1, 5, 0 ];
     int[] b = new int[3];
     topNCopy(a, b, Yes.sortOutput);
@@ -3567,6 +3569,7 @@ unittest
 unittest
 {
     import std.random : Random, unpredictableSeed, uniform, randomShuffle;
+    import std.typecons : Yes;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -3679,6 +3682,8 @@ void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
 ///
 unittest
 {
+    import std.typecons : Yes;
+
     // Construct index to top 3 elements using numerical indices:
     int[] a = [ 10, 2, 7, 5, 8, 1 ];
     int[] index = new int[3];
@@ -3862,7 +3867,6 @@ if (isRandomAccessRange!Range && hasLength!Range &&
     }
 }
 
-///
 unittest
 {
     // Verify medianOf for all permutations of [1, 2, 2, 3, 4].

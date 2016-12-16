@@ -594,10 +594,9 @@ public:
         assert(matchFirst("abc", "[0-9]+", "[a-z]+").whichPattern == 2);
     }
 
-    /++
-        Lookup named submatch.
-
-        ---
+    /// Lookup named submatch.
+    unittest
+    {
         import std.regex;
         import std.range;
 
@@ -608,8 +607,8 @@ public:
         //named groups are unaffected by range primitives
         assert(c["var"] =="a");
         assert(c.front == "42");
-        ----
-    +/
+    }
+
     R opIndex(String)(String i) /*const*/ //@@@BUG@@@
         if (isSomeString!String)
     {
@@ -627,6 +626,8 @@ public:
 ///
 unittest
 {
+    import std.range : popFrontN;
+
     auto c = matchFirst("@abc#", regex(`(\w)(\w)(\w)`));
     assert(c.pre == "@"); // Part of input preceding match
     assert(c.post == "#"); // Immediately after match
@@ -1592,6 +1593,7 @@ unittest
 unittest
 {
     import std.algorithm.comparison : equal;
+    import std.typecons : Yes;
 
     const pattern = regex(`([\.,])`);
 

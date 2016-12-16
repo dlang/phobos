@@ -25,6 +25,8 @@ import std.traits;
 ///
 @system unittest
 {
+    import std.conv : to;
+
     // parse a file or string of json into a usable structure
     string s = `{ "language": "D", "rating": 3.5, "code": "42" }`;
     JSONValue j = parseJSON(s);

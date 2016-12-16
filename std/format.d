@@ -1295,6 +1295,7 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
 ///
 @safe unittest
 {
+    import std.exception : assertThrown;
     auto spec = singleSpec("%2.3e");
 
     assert(spec.trailing == "");

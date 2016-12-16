@@ -1196,6 +1196,8 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
     //To check the class payload itself, iterate on its members:
     ()
     {
+        import std.traits : Fields;
+
         foreach (index, _; Fields!C)
             if (doesPointTo(a.tupleof[index], i))
                 return;

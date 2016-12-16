@@ -5,6 +5,7 @@ set -uexo pipefail
 HOST_DMD_VER=2.068.2 # same as in dmd/src/posix.mak
 DSCANNER_DMD_VER=2.071.2 # dscanner needs a more up-to-date version
 CURL_USER_AGENT="CirleCI $(curl --version | head -n 1)"
+DUB=${DUB:-$HOME/dlang/dub/dub}
 N=2
 
 case $CIRCLE_NODE_INDEX in
@@ -97,9 +98,19 @@ coverage()
     make -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test/" | grep -vE '(std.algorithm.sorting|std.encoding|net.curl)' )
 }
 
+# compile all public unittests separately
+publictests()
+{
+    clone https://github.com/dlang/tools.git ../tools master
+    # fix to a specific version of https://github.com/dlang/tools/blob/master/phobos_tests_extractor.d
+    git -C ../tools checkout 184f5e60372d6dd36d3451b75fb6f21e23f7275b
+    make -f posix.mak publictests DUB=$DUB
+}
+
 case $1 in
     install-deps) install_deps ;;
-    coverage) coverage ;;
     setup-repos) setup_repos ;;
+    coverage) coverage ;;
     style) style ;;
+    publictests) publictests ;;
 esac

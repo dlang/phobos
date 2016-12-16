@@ -734,6 +734,7 @@ auto driveName(R)(R path)
 ///
 @safe unittest
 {
+    import std.range : empty;
     version (Posix)  assert (driveName("c:/foo").empty);
     version (Windows)
     {
@@ -929,6 +930,7 @@ auto extension(R)(R path)
 ///
 @safe unittest
 {
+    import std.range : empty;
     assert (extension("file").empty);
     assert (extension("file.") == ".");
     assert (extension("file.ext"w) == ".ext");
