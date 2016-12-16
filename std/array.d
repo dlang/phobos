@@ -75,12 +75,13 @@ Source: $(PHOBOSSRC std/_array.d)
 */
 module std.array;
 
-import std.meta;
+static import std.meta;
 import std.traits;
 import std.functional;
 static import std.algorithm.iteration; // FIXME, remove with alias of splitter
 
 import std.range.primitives;
+static import std.range;
 public import std.range.primitives : save, empty, popFront, popBack, front, back;
 
 /**
@@ -116,7 +117,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
 
         import std.conv : emplaceRef;
 
-        auto result = (() @trusted => uninitializedArray!(Unqual!E[])(length))();
+        auto result = (() @trusted => uninitializedArray!(std.traits.Unqual!E[])(length))();
 
         // Every element of the uninitialized array must be initialized
         size_t i;
@@ -272,7 +273,7 @@ ElementType!String[] array(String)(String str) if (isNarrowString!String)
     const b = a;
     assert(array(b) == a);
 
-    //To verify that the opAssign branch doesn't get screwed up by using Unqual.
+    //To verify that the opAssign branch doesn't get screwed up by using std.traits.Unqual.
     //EDIT: array no longer calls opAssign.
     struct S
     {
@@ -284,7 +285,7 @@ ElementType!String[] array(String)(String str) if (isNarrowString!String)
         int i;
     }
 
-    foreach (T; AliasSeq!(S, const S, immutable S))
+    foreach (T; std.meta.AliasSeq!(S, const S, immutable S))
     {
         auto arr = [T(1), T(2), T(3), T(4)];
         assert(array(arr) == arr);
@@ -353,7 +354,7 @@ auto assocArray(Range)(Range r)
     static assert(E.length == 2, "assocArray: tuple dimension must be 2");
     alias KeyType = E.Types[0];
     alias ValueType = E.Types[1];
-    static assert(isMutable!ValueType, "assocArray: value type must be mutable");
+    static assert(std.traits.isMutable!ValueType, "assocArray: value type must be mutable");
 
     ValueType[KeyType] aa;
     foreach (t; r)
@@ -459,7 +460,7 @@ auto byPair(Key, Value)(Value[Key] aa)
 private template blockAttribute(T)
 {
     import core.memory;
-    static if (hasIndirections!(T) || is(T == void))
+    static if (std.traits.hasIndirections!(T) || is(T == void))
     {
         enum blockAttribute = 0;
     }
@@ -505,34 +506,34 @@ uninitializedArray is nothrow and weakly pure.
 uninitializedArray is @system if the uninitialized element type has pointers.
 +/
 auto uninitializedArray(T, I...)(I sizes) nothrow @system
-if (isDynamicArray!T && allSatisfy!(isIntegral, I) && hasIndirections!(ElementEncodingType!T))
+if (std.traits.isDynamicArray!T && std.meta.allSatisfy!(isIntegral, I) && std.traits.hasIndirections!(std.range.primitives.ElementEncodingType!T))
 {
     enum isSize_t(E) = is (E : size_t);
     alias toSize_t(E) = size_t;
 
-    static assert(allSatisfy!(isSize_t, I),
+    static assert(std.meta.allSatisfy!(isSize_t, I),
         "Argument types in "~I.stringof~" are not all convertible to size_t: "
         ~Filter!(templateNot!(isSize_t), I).stringof);
 
     //Eagerlly transform non-size_t into size_t to avoid template bloat
-    alias ST = staticMap!(toSize_t, I);
+    alias ST = std.meta.staticMap!(toSize_t, I);
 
     return arrayAllocImpl!(false, T, ST)(sizes);
 }
 
 ///
 auto uninitializedArray(T, I...)(I sizes) nothrow @trusted
-if (isDynamicArray!T && allSatisfy!(isIntegral, I) && !hasIndirections!(ElementEncodingType!T))
+if (std.traits.isDynamicArray!T && std.meta.allSatisfy!(isIntegral, I) && !std.traits.hasIndirections!(std.range.primitives.ElementEncodingType!T))
 {
     enum isSize_t(E) = is (E : size_t);
     alias toSize_t(E) = size_t;
 
-    static assert(allSatisfy!(isSize_t, I),
+    static assert(std.meta.allSatisfy!(isSize_t, I),
         "Argument types in "~I.stringof~" are not all convertible to size_t: "
         ~Filter!(templateNot!(isSize_t), I).stringof);
 
     //Eagerlly transform non-size_t into size_t to avoid template bloat
-    alias ST = staticMap!(toSize_t, I);
+    alias ST = std.meta.staticMap!(toSize_t, I);
 
     return arrayAllocImpl!(false, T, ST)(sizes);
 }
@@ -560,16 +561,16 @@ necessarily the element type's $(D .init).
 minimallyInitializedArray is nothrow and weakly pure.
 +/
 auto minimallyInitializedArray(T, I...)(I sizes) nothrow @trusted
-if (isDynamicArray!T && allSatisfy!(isIntegral, I))
+if (std.traits.isDynamicArray!T && std.meta.allSatisfy!(isIntegral, I))
 {
     enum isSize_t(E) = is (E : size_t);
     alias toSize_t(E) = size_t;
 
-    static assert(allSatisfy!(isSize_t, I),
+    static assert(std.meta.allSatisfy!(isSize_t, I),
         "Argument types in "~I.stringof~" are not all convertible to size_t: "
         ~Filter!(templateNot!(isSize_t), I).stringof);
     //Eagerlly transform non-size_t into size_t to avoid template bloat
-    alias ST = staticMap!(toSize_t, I);
+    alias ST = std.meta.staticMap!(toSize_t, I);
 
     return arrayAllocImpl!(true, T, ST)(sizes);
 }
@@ -829,9 +830,9 @@ private void copyBackwards(T)(T[] src, T[] dest)
  +/
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
     if (!isSomeString!(T[])
-        && allSatisfy!(isInputRangeOrConvertible!T, U) && U.length > 0)
+        && std.meta.allSatisfy!(isInputRangeOrConvertible!T, U) && U.length > 0)
 {
-    static if (allSatisfy!(isInputRangeWithLengthOrConvertible!T, U))
+    static if (std.meta.allSatisfy!(isInputRangeWithLengthOrConvertible!T, U))
     {
         import std.conv : emplaceRef;
 
@@ -887,10 +888,10 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
 
 /// Ditto
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
-    if (isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
+    if (isSomeString!(T[]) && std.meta.allSatisfy!(isCharOrStringOrDcharRange, U))
 {
-    static if (is(Unqual!T == T)
-        && allSatisfy!(isInputRangeWithLengthOrConvertible!dchar, U))
+    static if (is(std.traits.Unqual!T == T)
+        && std.meta.allSatisfy!(isInputRangeWithLengthOrConvertible!dchar, U))
     {
         import std.utf : codeLength;
         // mutable, can do in place
@@ -1069,10 +1070,10 @@ private template isInputRangeOrConvertible(E)
                 new AssertError("testStr failure 3", file, line));
     }
 
-    foreach (T; AliasSeq!(char, wchar, dchar,
+    foreach (T; std.meta.AliasSeq!(char, wchar, dchar,
         immutable(char), immutable(wchar), immutable(dchar)))
     {
-        foreach (U; AliasSeq!(char, wchar, dchar,
+        foreach (U; std.meta.AliasSeq!(char, wchar, dchar,
             immutable(char), immutable(wchar), immutable(dchar)))
         {
             testStr!(T[], U[])();
@@ -1228,7 +1229,7 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
 
 @safe pure nothrow unittest
 {
-    foreach (T; AliasSeq!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
+    foreach (T; std.meta.AliasSeq!(int[], const(int)[], immutable(int)[], const int[], immutable int[]))
     {
         T a = [1, 2, 3, 4, 5];
         T b = a;
@@ -1259,7 +1260,7 @@ Returns an array that consists of $(D s) (which must be an input
 range) repeated $(D n) times. This function allocates, fills, and
 returns a new array. For a lazy version, refer to $(REF repeat, std,range).
  */
-ElementEncodingType!S[] replicate(S)(S s, size_t n) if (isDynamicArray!S)
+ElementEncodingType!S[] replicate(S)(S s, size_t n) if (std.traits.isDynamicArray!S)
 {
     alias RetType = ElementEncodingType!S[];
 
@@ -1268,7 +1269,7 @@ ElementEncodingType!S[] replicate(S)(S s, size_t n) if (isDynamicArray!S)
         return RetType.init;
     if (n == 1)
         return cast(RetType) s;
-    auto r = new Unqual!(typeof(s[0]))[n * s.length];
+    auto r = new std.traits.Unqual!(typeof(s[0]))[n * s.length];
     if (s.length == 1)
         r[] = s[0];
     else
@@ -1284,7 +1285,7 @@ ElementEncodingType!S[] replicate(S)(S s, size_t n) if (isDynamicArray!S)
 
 /// ditto
 ElementType!S[] replicate(S)(S s, size_t n)
-if (isInputRange!S && !isDynamicArray!S)
+if (isInputRange!S && !std.traits.isDynamicArray!S)
 {
     import std.range : repeat;
     return join(std.range.repeat(s, n));
@@ -1315,7 +1316,7 @@ if (isInputRange!S && !isDynamicArray!S)
 
     debug(std_array) printf("array.replicate.unittest\n");
 
-    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
+    foreach (S; std.meta.AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         S s;
         immutable S t = "abc";
@@ -1384,7 +1385,7 @@ if (isSomeString!S)
     static auto makeEntry(S)(string l, string[] r)
     {return tuple(l.to!S(), r.to!(S[])());}
 
-    foreach (S; AliasSeq!(string, wstring, dstring,))
+    foreach (S; std.meta.AliasSeq!(string, wstring, dstring,))
     {
         auto entries =
         [
@@ -1493,7 +1494,7 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
     import std.algorithm.comparison : cmp;
 
     debug(std_array) printf("array.split\n");
-    foreach (S; AliasSeq!(string, wstring, dstring,
+    foreach (S; std.meta.AliasSeq!(string, wstring, dstring,
                     immutable(string), immutable(wstring), immutable(dstring),
                     char[], wchar[], dchar[],
                     const(char)[], const(wchar)[], const(dchar)[],
@@ -1567,12 +1568,12 @@ private enum bool hasCheapIteration(R) = isArray!R;
   +/
 ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     if (isInputRange!RoR &&
-       isInputRange!(Unqual!(ElementType!RoR)) &&
+       isInputRange!(std.traits.Unqual!(ElementType!RoR)) &&
        isInputRange!R &&
-       is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
+       is(std.traits.Unqual!(ElementType!(ElementType!RoR)) == std.traits.Unqual!(ElementType!R)))
 {
     alias RetType = typeof(return);
-    alias RetTypeElement = Unqual!(ElementEncodingType!RetType);
+    alias RetTypeElement = std.traits.Unqual!(ElementEncodingType!RetType);
     alias RoRElem = ElementType!RoR;
 
     if (ror.empty)
@@ -1582,7 +1583,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     // This converts sep to an array (forward range) if it isn't one,
     // and makes sure it has the same string encoding for string types.
     static if (isSomeString!RetType &&
-               !is(RetTypeElement == Unqual!(ElementEncodingType!R)))
+               !is(RetTypeElement == std.traits.Unqual!(ElementEncodingType!R)))
     {
         import std.conv : to;
         auto sepArr = to!RetType(sep);
@@ -1644,11 +1645,11 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
 /// Ditto
 ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, E sep)
     if (isInputRange!RoR &&
-       isInputRange!(Unqual!(ElementType!RoR)) &&
+       isInputRange!(std.traits.Unqual!(ElementType!RoR)) &&
        is(E : ElementType!(ElementType!RoR)))
 {
     alias RetType = typeof(return);
-    alias RetTypeElement = Unqual!(ElementEncodingType!RetType);
+    alias RetTypeElement = std.traits.Unqual!(ElementEncodingType!RetType);
     alias RoRElem = ElementType!RoR;
 
     if (ror.empty)
@@ -1730,10 +1731,10 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, E sep)
 /// Ditto
 ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
     if (isInputRange!RoR &&
-       isInputRange!(Unqual!(ElementType!RoR)))
+       isInputRange!(std.traits.Unqual!(ElementType!RoR)))
 {
     alias RetType = typeof(return);
-    alias RetTypeElement = Unqual!(ElementEncodingType!RetType);
+    alias RetTypeElement = std.traits.Unqual!(ElementEncodingType!RetType);
     alias RoRElem = ElementType!RoR;
 
     if (ror.empty)
@@ -1781,18 +1782,18 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
 {
     import std.conv : to;
 
-    foreach (T; AliasSeq!(string,wstring,dstring))
+    foreach (T; std.meta.AliasSeq!(string,wstring,dstring))
     {
         auto arr2 = "Здравствуй Мир Unicode".to!(T);
         auto arr = ["Здравствуй", "Мир", "Unicode"].to!(T[]);
         assert(join(arr) == "ЗдравствуйМирUnicode");
-        foreach (S; AliasSeq!(char,wchar,dchar))
+        foreach (S; std.meta.AliasSeq!(char,wchar,dchar))
         {
             auto jarr = arr.join(to!S(' '));
             static assert(is(typeof(jarr) == T));
             assert(jarr == arr2);
         }
-        foreach (S; AliasSeq!(string,wstring,dstring))
+        foreach (S; std.meta.AliasSeq!(string,wstring,dstring))
         {
             auto jarr = arr.join(to!S(" "));
             static assert(is(typeof(jarr) == T));
@@ -1800,11 +1801,11 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
         }
     }
 
-    foreach (T; AliasSeq!(string,wstring,dstring))
+    foreach (T; std.meta.AliasSeq!(string,wstring,dstring))
     {
         auto arr2 = "Здравствуй\u047CМир\u047CUnicode".to!(T);
         auto arr = ["Здравствуй", "Мир", "Unicode"].to!(T[]);
-        foreach (S; AliasSeq!(wchar,dchar))
+        foreach (S; std.meta.AliasSeq!(wchar,dchar))
         {
             auto jarr = arr.join(to!S('\u047C'));
             static assert(is(typeof(jarr) == T));
@@ -1824,7 +1825,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
 
     debug(std_array) printf("array.join.unittest\n");
 
-    foreach (R; AliasSeq!(string, wstring, dstring))
+    foreach (R; std.meta.AliasSeq!(string, wstring, dstring))
     {
         R word1 = "日本語";
         R word2 = "paul";
@@ -1841,7 +1842,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
         auto filteredLenWordsArr = [filteredLenWord1, filteredLenWord2, filteredLenWord3];
         auto filteredWords    = filter!"true"(filteredWordsArr);
 
-        foreach (S; AliasSeq!(string, wstring, dstring))
+        foreach (S; std.meta.AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             assert(join(filteredWords, to!S(", ")) == "日本語, paul, jerry");
             assert(join(filteredWords, to!(ElementType!S)(',')) == "日本語,paul,jerry");
@@ -1960,7 +1961,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
     if no match is found.
  +/
 E[] replace(E, R1, R2)(E[] subject, R1 from, R2 to)
-if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
+if (std.traits.isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
         && (hasLength!R2 || isSomeString!R2))
 {
     import std.algorithm.searching : find;
@@ -1991,7 +1992,7 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
     If no match is found the original array is transferred to $(D sink) as is.
 +/
 void replaceInto(E, Sink, R1, R2)(Sink sink, E[] subject, R1 from, R2 to)
-if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
+if (isOutputRange!(Sink, E) && std.traits.isDynamicArray!(E[])
     && isForwardRange!R1 && isForwardRange!R2
     && (hasLength!R2 || isSomeString!R2))
 {
@@ -2036,9 +2037,9 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
 
     debug(std_array) printf("array.replace.unittest\n");
 
-    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
+    foreach (S; std.meta.AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
+        foreach (T; std.meta.AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             auto s = to!S("This is a foo foo list");
             auto from = to!T("foo");
@@ -2073,7 +2074,7 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
         this(C[] arr){ desired = arr; }
         void put(C[] part){ assert(skipOver(desired, part)); }
     }
-    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
+    foreach (S; std.meta.AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         alias Char = ElementEncodingType!S;
         S s = to!S("yet another dummy text, yet another ...");
@@ -2099,7 +2100,7 @@ T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
         import std.algorithm.mutation : copy;
         assert(from <= to);
         immutable sliceLen = to - from;
-        auto retval = new Unqual!(T)[](subject.length - sliceLen + stuff.length);
+        auto retval = new std.traits.Unqual!(T)[](subject.length - sliceLen + stuff.length);
         retval[0 .. from] = subject[0 .. from];
 
         if (!stuff.empty)
@@ -2208,8 +2209,8 @@ T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
 void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
     if (is(typeof(replace(array, from, to, stuff))))
 {
-    static if (isDynamicArray!Range &&
-              is(Unqual!(ElementEncodingType!Range) == T) &&
+    static if (std.traits.isDynamicArray!Range &&
+              is(std.traits.Unqual!(ElementEncodingType!Range) == T) &&
               !isNarrowString!(T[]))
     {
         // optimized for homogeneous arrays that can be overwritten.
@@ -2302,7 +2303,7 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
     }
 
     import std.meta : AliasSeq;
-    alias allChars = AliasSeq!(char, immutable(char), const(char),
+    alias allChars = std.meta.AliasSeq!(char, immutable(char), const(char),
                          wchar, immutable(wchar), const(wchar),
                          dchar, immutable(dchar), const(dchar));
     foreach (T; allChars)
@@ -2405,9 +2406,9 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
     array if no match is found.
  +/
 E[] replaceFirst(E, R1, R2)(E[] subject, R1 from, R2 to)
-if (isDynamicArray!(E[]) &&
-    isForwardRange!R1 && is(typeof(appender!(E[])().put(from[0 .. 1]))) &&
-    isForwardRange!R2 && is(typeof(appender!(E[])().put(to[0 .. 1]))))
+if (std.traits.isDynamicArray!(E[]) &&
+    std.range.primitives.isForwardRange!R1 && is(typeof(appender!(E[])().put(from[0 .. 1]))) &&
+    std.range.primitives.isForwardRange!R2 && is(typeof(appender!(E[])().put(to[0 .. 1]))))
 {
     if (from.empty) return subject;
     static if (isSomeString!(E[]))
@@ -2430,7 +2431,7 @@ if (isDynamicArray!(E[]) &&
     static if (isSomeString!(E[]) && isSomeString!R1)
     {
         import std.utf : codeLength;
-        immutable fromLength = codeLength!(Unqual!E, R1)(from);
+        immutable fromLength = codeLength!(std.traits.Unqual!E, R1)(from);
     }
     else
         immutable fromLength = from.length;
@@ -2459,10 +2460,10 @@ if (isDynamicArray!(E[]) &&
 
     debug(std_array) printf("array.replaceFirst.unittest\n");
 
-    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
+    foreach (S; std.meta.AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
                           const(char[]), immutable(char[])))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
+        foreach (T; std.meta.AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
                               const(char[]), immutable(char[])))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             auto s = to!S("This is a foo foo list");
@@ -2504,9 +2505,9 @@ if (isDynamicArray!(E[]) &&
     array if no match is found.
  +/
 E[] replaceLast(E, R1, R2)(E[] subject, R1 from , R2 to)
-if (isDynamicArray!(E[]) &&
-    isForwardRange!R1 && is(typeof(appender!(E[])().put(from[0 .. 1]))) &&
-    isForwardRange!R2 && is(typeof(appender!(E[])().put(to[0 .. 1]))))
+if (std.traits.isDynamicArray!(E[]) &&
+    std.range.primitives.isForwardRange!R1 && is(typeof(appender!(E[])().put(from[0 .. 1]))) &&
+    std.range.primitives.isForwardRange!R2 && is(typeof(appender!(E[])().put(to[0 .. 1]))))
 {
     import std.range : retro;
     if (from.empty) return subject;
@@ -2527,7 +2528,7 @@ if (isDynamicArray!(E[]) &&
     static if (isSomeString!(E[]) && isSomeString!R1)
     {
         import std.utf : codeLength;
-        auto fromLength = codeLength!(Unqual!E, R1)(from);
+        auto fromLength = codeLength!(std.traits.Unqual!E, R1)(from);
     }
     else
         auto fromLength = from.length;
@@ -2567,10 +2568,10 @@ if (isDynamicArray!(E[]) &&
 
     debug(std_array) printf("array.replaceLast.unittest\n");
 
-    foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
+    foreach (S; std.meta.AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
                           const(char[]), immutable(char[])))
     {
-        foreach (T; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
+        foreach (T; std.meta.AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
                               const(char[]), immutable(char[])))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             auto s = to!S("This is a foo foo list");
@@ -2649,15 +2650,15 @@ recommended over $(D a ~= data) when appending many elements because it is more
 efficient.
  */
 struct Appender(A)
-if (isDynamicArray!A)
+if (std.traits.isDynamicArray!A)
 {
     import core.memory : GC;
 
-    private alias T = ElementEncodingType!A;
+    private alias T = std.range.primitives.ElementEncodingType!A;
     private struct Data
     {
         size_t capacity;
-        Unqual!T[] arr;
+        std.traits.Unqual!T[] arr;
         bool canExtend = false;
     }
 
@@ -2673,7 +2674,7 @@ if (isDynamicArray!A)
     {
         // initialize to a given array.
         _data = new Data;
-        _data.arr = cast(Unqual!T[])arr; //trusted
+        _data.arr = cast(std.traits.Unqual!T[])arr; //trusted
 
         if (__ctfe)
             return;
@@ -2682,7 +2683,7 @@ if (isDynamicArray!A)
         // if we consume all the block that we can, then array appending is
         // safe WRT built-in append, and we can use the entire block.
         // We only do this for mutable types that can be extended.
-        static if (isMutable!T && is(typeof(arr.length = size_t.max)))
+        static if (std.traits.isMutable!T && is(typeof(arr.length = size_t.max)))
         {
             immutable cap = arr.capacity; //trusted
             // Replace with "GC.setAttr( Not Appendable )" once pure (and fixed)
@@ -2726,7 +2727,7 @@ if (isDynamicArray!A)
     @property inout(T)[] data() inout @trusted pure nothrow
     {
         /* @trusted operation:
-         * casting Unqual!T[] to inout(T)[]
+         * casting std.traits.Unqual!T[] to inout(T)[]
          */
         return cast(typeof(return))(_data ? _data.arr : null);
     }
@@ -2745,7 +2746,7 @@ if (isDynamicArray!A)
         // need to increase capacity
         if (__ctfe)
         {
-            static if (__traits(compiles, new Unqual!T[1]))
+            static if (__traits(compiles, new std.traits.Unqual!T[1]))
             {
                 _data.arr.length = reqlen;
             }
@@ -2754,7 +2755,7 @@ if (isDynamicArray!A)
                 // avoid restriction of @disable this()
                 _data.arr = _data.arr[0 .. _data.capacity];
                 foreach (i; _data.capacity .. reqlen)
-                    _data.arr ~= Unqual!T.init;
+                    _data.arr ~= std.traits.Unqual!T.init;
             }
             _data.arr = _data.arr[0 .. len];
             _data.capacity = reqlen;
@@ -2789,7 +2790,7 @@ if (isDynamicArray!A)
             import core.stdc.string : memcpy;
             if (len)
                 memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
-            _data.arr = (cast(Unqual!T*)bi.base)[0 .. len];
+            _data.arr = (cast(std.traits.Unqual!T*)bi.base)[0 .. len];
             _data.canExtend = true;
             // leave the old data, for safety reasons
         }
@@ -2798,19 +2799,19 @@ if (isDynamicArray!A)
     private template canPutItem(U)
     {
         enum bool canPutItem =
-            isImplicitlyConvertible!(U, T) ||
-            isSomeChar!T && isSomeChar!U;
+            std.traits.isImplicitlyConvertible!(U, T) ||
+            std.traits.isSomeChar!T && std.traits.isSomeChar!U;
     }
     private template canPutConstRange(Range)
     {
         enum bool canPutConstRange =
-            isInputRange!(Unqual!Range) &&
-            !isInputRange!Range;
+            std.range.primitives.isInputRange!(std.traits.Unqual!Range) &&
+            !std.range.primitives.isInputRange!Range;
     }
     private template canPutRange(Range)
     {
         enum bool canPutRange =
-            isInputRange!Range &&
+            std.range.primitives.isInputRange!Range &&
             is(typeof(Appender.init.put(Range.init.front)));
     }
 
@@ -2819,14 +2820,14 @@ if (isDynamicArray!A)
      */
     void put(U)(U item) if (canPutItem!U)
     {
-        static if (isSomeChar!T && isSomeChar!U && T.sizeof < U.sizeof)
+        static if (std.traits.isSomeChar!T && std.traits.isSomeChar!U && T.sizeof < U.sizeof)
         {
             /* may throwable operation:
              * - std.utf.encode
              */
             // must do some transcoding around here
             import std.utf : encode;
-            Unqual!T[T.sizeof == 1 ? 4 : 2] encoded;
+            std.traits.Unqual!T[T.sizeof == 1 ? 4 : 2] encoded;
             auto len = encode(encoded, item);
             put(encoded[0 .. len]);
         }
@@ -2838,7 +2839,7 @@ if (isDynamicArray!A)
             immutable len = _data.arr.length;
 
             auto bigData = (() @trusted => _data.arr.ptr[0 .. len + 1])();
-            emplaceRef!(Unqual!T)(bigData[len], cast(Unqual!T)item);
+            emplaceRef!(std.traits.Unqual!T)(bigData[len], cast(std.traits.Unqual!T)item);
             //We do this at the end, in case of exceptions
             _data.arr = bigData;
         }
@@ -2847,7 +2848,7 @@ if (isDynamicArray!A)
     // Const fixing hack.
     void put(Range)(Range items) if (canPutConstRange!Range)
     {
-        alias p = put!(Unqual!Range);
+        alias p = put!(std.traits.Unqual!Range);
         p(items);
     }
 
@@ -2858,7 +2859,7 @@ if (isDynamicArray!A)
     {
         // note, we disable this branch for appending one type of char to
         // another because we can't trust the length portion.
-        static if (!(isSomeChar!T && isSomeChar!(ElementType!Range) &&
+        static if (!(std.traits.isSomeChar!T && std.traits.isSomeChar!(std.range.primitives.ElementType!Range) &&
                      !is(immutable Range == immutable T[])) &&
                     is(typeof(items.length) == size_t))
         {
@@ -2885,10 +2886,10 @@ if (isDynamicArray!A)
             immutable len = _data.arr.length;
             immutable newlen = bigData.length;
 
-            alias UT = Unqual!T;
+            alias UT = std.traits.Unqual!T;
 
             static if (is(typeof(_data.arr[] = items[])) &&
-                !hasElaborateAssign!(Unqual!T) && isAssignable!(UT, ElementEncodingType!Range))
+                !hasElaborateAssign!(std.traits.Unqual!T) && isAssignable!(UT, ElementEncodingType!Range))
             {
                 bigData[len .. newlen] = items[];
             }
@@ -2939,7 +2940,7 @@ if (isDynamicArray!A)
     }
 
     // only allow overwriting data on non-immutable and non-const data
-    static if (isMutable!T)
+    static if (std.traits.isMutable!T)
     {
         /**
          * Clears the managed array.  This allows the elements of the array to be reused
@@ -3032,7 +3033,7 @@ private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen)
  * the pointer to the original array passed in.
  */
 struct RefAppender(A)
-if (isDynamicArray!A)
+if (std.traits.isDynamicArray!A)
 {
     private
     {
@@ -3115,7 +3116,7 @@ if (isDynamicArray!A)
     with $(D array).
  +/
 Appender!A appender(A)()
-if (isDynamicArray!A)
+if (std.traits.isDynamicArray!A)
 {
     return Appender!A(null);
 }
@@ -3186,7 +3187,7 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
     catch (Exception) assert(0);
 
     // Issue 5663 & 9725 tests
-    foreach (S; AliasSeq!(char[], const(char)[], string))
+    foreach (S; std.meta.AliasSeq!(char[], const(char)[], string))
     {
         {
             Appender!S app5663i;
