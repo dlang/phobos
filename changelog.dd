@@ -8,12 +8,14 @@ $(BUGSTITLE Library Changes,
     $(LI $(RELATIVE_LINK2 promoted, Added `std.traits.Promoted` to get the result of
         $(LINK2 $(ROOT_DIR)spec/type.html#integer-promotions, scalar type promotion)
         in multi-term arithmetic expressions.))
+    $(LI $(RELATIVE_LINK2 staticIsSorted, Added `std.meta.staticIsSorted` to check if
+        an `AliasSeq` is sorted according to some template predicate.))
 )
 
 $(BUGSTITLE Library Changes,
 
 $(LI $(LNAME2 promoted, `std.traits.Promoted` gets the type to which a scalar type will
-    be promoted in multi-term arithmetic expressions)
+    be promoted in multi-term arithmetic expressions.)
 -------
 import std.traits : Promoted;
 static assert(is(typeof(ubyte(3) * ubyte(5)) == Promoted!ubyte));
@@ -21,6 +23,21 @@ static assert(is(Promoted!ubyte == int));
 -------
     $(P See the D specification on $(LINK2 $(ROOT_DIR)spec/type.html#integer-promotions,
     scalar type promotions) for more information.)
+)
+
+$(LI $(LNAME2 staticIsSorted, `std.meta.staticIsSorted` checks whether an `AliasSeq` is
+    sorted according to some template predicate.)
+------
+enum Comp(T1, T2) = T1.sizeof < T2.sizeof;
+
+import std.meta : staticIsSorted;
+static assert( staticIsSorted!(Comp, byte, uint, double));
+static assert(!staticIsSorted!(Comp, bool, long, dchar));
+------
+    $(P Additionally, the compile-time performance of `std.meta.staticSort` has been
+    greatly improved. Nevertheless, due to compiler limitations it is still an
+    extraordinarily expensive operation to perform on longer sequences; strive to
+    minimize such use.)
 )
 
 )
