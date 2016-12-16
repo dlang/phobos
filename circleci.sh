@@ -102,6 +102,8 @@ coverage()
 publictests()
 {
     clone https://github.com/dlang/tools.git ../tools master
+    # fix to a specific version of https://github.com/dlang/tools/blob/master/phobos_tests_extractor.d
+    git -C ../tools checkout 184f5e60372d6dd36d3451b75fb6f21e23f7275b
     make -f posix.mak publictests DUB=$DUB
 }
 
