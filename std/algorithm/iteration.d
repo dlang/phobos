@@ -4804,16 +4804,18 @@ Params:
     pred = Predicate for determining equivalence between range elements.
     r = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of
         elements to filter.
+    pp = The $(LREF PickingPolicy), which by default is the first unique
+         element from left to right
 
 Returns:
     An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of
     consecutively unique elements in the original range. If $(D r) is also a
     forward range or bidirectional range, the returned range will be likewise.
 */
-auto uniq(alias pred = "a == b", Range)(Range r)
+auto uniq(alias pred = "a == b", Range)(Range r, PickingPolicy pp = PickingPolicy.first)
 if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
 {
-    return UniqResult!(binaryFun!pred, Range)(r);
+    return UniqResult!(binaryFun!pred, Range)(r, pp);
 }
 
 ///
@@ -4835,13 +4837,64 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
     assert(equal(uniq([ 1, 1, 2, 1, 1, 3, 1]), [1, 2, 1, 3, 1]));
 }
 
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+
+    struct S
+    {
+        int i;
+        string s;
+    }
+
+    auto arr = [ S(1, "a"), S(1, "b"), S(2, "c"), S(2, "d") ];
+
+    // Let's consider just the 'i' member for equality
+    auto r = arr.uniq!((a, b) => a.i == b.i);
+    assert(r.equal([S(1, "a"), S(2, "c")]));
+    assert(r.front == S(1, "a"));
+    assert(r.back == S(2, "c"));
+
+    auto r2 = arr.uniq!((a, b) => a.i == b.i)(PickingPolicy.last);
+    assert(r2.equal([S(1, "b"), S(2, "d")]));
+    assert(r2.front == S(1, "b"));
+    assert(r2.back == S(2, "d"));
+
+    auto arr2 = [ S(1, "a"), S(1, "b") ];
+    auto r3 = arr2.uniq!((a, b) => a.i == b.i);
+    assert(r3.front == S(1, "a"));
+    assert(r3.front == r3.back);
+}
+
+/**
+   Dictates how `uniq` elements should be picked. By default stop at
+   the end of the shortest of all ranges.
+*/
+enum PickingPolicy
+{
+    /// Stop at the first uniq element, from left to right
+    first,
+    /// Stop at the last uniq element, from left to right
+    last
+}
+
 private struct UniqResult(alias pred, Range)
 {
+    private PickingPolicy _pickingPolicy;
     Range _input;
+    ElementType!Range _front;
+    bool _isInFront;
+    static if (isBidirectionalRange!Range)
+    {
+        ElementType!Range _back;
+        bool _isInBack;
+        bool _isOverlapping;
+    }
 
-    this(Range input)
+    this(Range input, PickingPolicy pp = PickingPolicy.first)
     {
         _input = input;
+        _pickingPolicy = pp;
     }
 
     auto opSlice()
@@ -4852,18 +4905,53 @@ private struct UniqResult(alias pred, Range)
     void popFront()
     {
         assert(!empty, "Attempting to popFront an empty uniq.");
-        auto last = _input.front;
-        do
+        if (_input.empty)
         {
-            _input.popFront();
+            _isInFront = false;
+            static if (isBidirectionalRange!Range)
+            {
+                if (_isOverlapping)
+                {
+                    _isInBack = false;
+                }
+            }
         }
-        while (!_input.empty && pred(last, _input.front));
+        else
+        {
+            _isInFront = true;
+            _front = _input.front;
+            ElementType!Range last;
+            do
+            {
+                last = _input.front;
+                _input.popFront();
+            }
+            while (!_input.empty && pred(last, _input.front));
+
+            if (_pickingPolicy == PickingPolicy.last)
+            {
+                _front = last;
+            }
+        }
     }
 
     @property ElementType!Range front()
     {
         assert(!empty, "Attempting to fetch the front of an empty uniq.");
-        return _input.front;
+        static if (isBidirectionalRange!Range)
+        {
+            if (_input.empty && !_isInFront && _isInBack)
+            {
+                _isInFront = true;
+                _isOverlapping = true;
+                _front = _back;
+            }
+        }
+        if (!_isInFront)
+        {
+            popFront();
+        }
+        return _front;
     }
 
     static if (isBidirectionalRange!Range)
@@ -4871,18 +4959,47 @@ private struct UniqResult(alias pred, Range)
         void popBack()
         {
             assert(!empty, "Attempting to popBack an empty uniq.");
-            auto last = _input.back;
-            do
+            if (_input.empty)
             {
-                _input.popBack();
+                _isInBack = false;
+                if (_isOverlapping)
+                {
+                    _isInFront = false;
+                }
             }
-            while (!_input.empty && pred(last, _input.back));
+            else
+            {
+                _isInBack = true;
+                _back = _input.back;
+                ElementType!Range last;
+                do
+                {
+                    last = _input.back;
+                    _input.popBack();
+                }
+                while (!_input.empty && pred(_back, _input.back));
+
+                if (_pickingPolicy == PickingPolicy.first)
+                {
+                    _back = last;
+                }
+            }
         }
 
         @property ElementType!Range back()
         {
             assert(!empty, "Attempting to fetch the back of an empty uniq.");
-            return _input.back;
+            if (_input.empty && _isInFront && !_isInBack)
+            {
+                _isInBack = true;
+                _isOverlapping = true;
+                _back = _front;
+            }
+            else if (!_isInBack)
+            {
+                popBack();
+            }
+            return _back;
         }
     }
 
@@ -4892,7 +5009,17 @@ private struct UniqResult(alias pred, Range)
     }
     else
     {
-        @property bool empty() { return _input.empty; }
+        @property bool empty()
+        {
+            static if (isBidirectionalRange!Range)
+            {
+                return _input.empty && !_isInFront && !_isInBack;
+            }
+            else
+            {
+                return _input.empty && !_isInFront;
+            }
+        }
     }
 
     static if (isForwardRange!Range)
