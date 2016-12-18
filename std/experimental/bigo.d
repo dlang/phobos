@@ -1,4 +1,4 @@
-module std.bigo;
+module std.experimental.bigo;
 
 struct BigO
 {
