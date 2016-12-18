@@ -806,6 +806,9 @@ private void setCLOEXEC(int fd, bool on) nothrow @nogc
     assert (wait(spawnProcess([prog.path, "foo", "bar"])) == 0);
 }
 
+// test that file descriptors are correctly closed / left open.
+// ideally this would be done by the child process making libc
+// calls, but we make do...
 version (Posix) @system unittest
 {
     import core.sys.posix.fcntl : open, O_RDONLY;
@@ -825,6 +828,14 @@ version (Posix) @system unittest
     auto fd = open(path.tempCString, O_RDONLY);
     scope(exit) close(fd);
 
+    // command >&2 (or any other number) checks whethether that number
+    // file descriptor is open.
+    // Can't use this for arbitrary descriptors as many shells only support
+    // single digit fds.
+    TestScript testDefaults = `command >&0 && command >&1 && command >&2`;
+    assert (execute(testDefaults.path).status == 0);
+    assert (execute(testDefaults.path, null, Config.inheritFDs).status == 0);
+
     // try /proc/<pid>/fd/ on linux
     version (linux)
     {
@@ -840,7 +851,7 @@ version (Posix) @system unittest
         }
     }
 
-    // try fuser (sometimes need permissions)
+    // try fuser (might sometimes need permissions)
     TestScript fuser = "echo $$ && fuser -f " ~ path;
     auto fuserRes = execute(fuser.path, null);
     if (fuserRes.status == 0)
@@ -852,7 +863,7 @@ version (Posix) @system unittest
         return;
     }
 
-    // try lsof (not available on all Posix)
+    // last resort, try lsof (not available on all Posix)
     TestScript lsof = "lsof -p$$";
     auto lsofRes = execute(lsof.path, null);
     if (lsofRes.status == 0)
