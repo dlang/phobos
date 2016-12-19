@@ -14,6 +14,8 @@ $(BUGSTITLE Library Changes,
 		to get the index of the minimum element of a range.))
 	$(LI $(RELATIVE_LINK2 maxIndex, Added `std.algorithm.searching.maxIndex`
 		to get the index of the maximum element of a range.))
+	$(LI $(RELATIVE_LINK2 ndslice-removal, `std.experimental.ndslice`
+		has been deprecated.))
 
 )
 
@@ -69,6 +71,14 @@ assert(a.minIndex == 5);
 int[] a;
 assert(a.minIndex == -1);
 -------
+)
+
+$(LI $(LNAME2 ndslice-removal, `std.experimental.ndslice` has been
+deprecated.)
+    The synchronization between Phobos and Mir turned out to be a lot of work
+    with litte gain. Users of `std.experimental.ndslice` are advised to
+    switch to the upstream $(LINK2 https://github.com/libmir/mir-algorithm,
+    mir package).
 )
 
 )
