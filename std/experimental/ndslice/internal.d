@@ -1,3 +1,5 @@
+/// @@@DEPRECATED_2017-04@@@
+deprecated("Please use mir-algorithm DUB package: http://github.com/libmir/mir-algorithm")
 module std.experimental.ndslice.internal;
 
 import std.range.primitives;
