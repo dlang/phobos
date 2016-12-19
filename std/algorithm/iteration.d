@@ -4836,9 +4836,48 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
     assert(equal(uniq([ 1, 1, 2, 1, 1, 3, 1]), [1, 2, 1, 3, 1]));
 }
 
+///
+@trusted unittest
+{
+    import std.algorithm.comparison : equal;
+
+    struct S
+    {
+        int i;
+        string s;
+    }
+
+    auto arr = [ S(1, "a"), S(1, "b"), S(2, "c"), S(2, "d") ];
+
+    // Let's consider just the 'i' member for equality
+    auto r = arr.uniq!((a, b) => a.i == b.i);
+    assert(r.equal([S(1, "a"), S(2, "c")]));
+    assert(r.front == S(1, "a"));
+    assert(r.back == S(2, "c"));
+
+    r.popBack;
+    assert(r.back == S(1, "a"));
+    assert(r.front == r.back);
+
+    r.popBack;
+    assert(r.empty);
+
+    import std.exception : assertThrown;
+
+    assertThrown!Error(r.front);
+    assertThrown!Error(r.back);
+    assertThrown!Error(r.popFront);
+    assertThrown!Error(r.popBack);
+}
+
 private struct UniqResult(alias pred, Range)
 {
-    Range _input;
+    private Range _input;
+    static if (isBidirectionalRange!Range)
+    {
+        private ElementType!Range _back;
+        private bool _isInBack;
+    }
 
     this(Range input)
     {
@@ -4853,10 +4892,19 @@ private struct UniqResult(alias pred, Range)
     void popFront()
     {
         assert(!empty, "Attempting to popFront an empty uniq.");
+        static if (isBidirectionalRange!Range)
+        {
+            if (_input.empty)
+            {
+                _isInBack = false;
+                return;
+            }
+        }
+
         auto last = _input.front;
         do
         {
-            _input.popFront();
+            _input.popFront;
         }
         while (!_input.empty && pred(last, _input.front));
     }
@@ -4864,6 +4912,13 @@ private struct UniqResult(alias pred, Range)
     @property ElementType!Range front()
     {
         assert(!empty, "Attempting to fetch the front of an empty uniq.");
+        static if (isBidirectionalRange!Range)
+        {
+            if (_input.empty && _isInBack)
+            {
+                return _back;
+            }
+        }
         return _input.front;
     }
 
@@ -4872,18 +4927,33 @@ private struct UniqResult(alias pred, Range)
         void popBack()
         {
             assert(!empty, "Attempting to popBack an empty uniq.");
-            auto last = _input.back;
-            do
+            if (_input.empty)
             {
-                _input.popBack();
+                _isInBack = false;
             }
-            while (!_input.empty && pred(last, _input.back));
+            else
+            {
+                _isInBack = true;
+                _back = _input.back;
+                ElementType!Range last;
+                do
+                {
+                    last = _input.back;
+                    _input.popBack;
+                }
+                while (!_input.empty && pred(_back, _input.back));
+                _back = last;
+            }
         }
 
         @property ElementType!Range back()
         {
             assert(!empty, "Attempting to fetch the back of an empty uniq.");
-            return _input.back;
+            if (!_isInBack)
+            {
+                popBack;
+            }
+            return _back;
         }
     }
 
@@ -4893,7 +4963,17 @@ private struct UniqResult(alias pred, Range)
     }
     else
     {
-        @property bool empty() { return _input.empty; }
+        @property bool empty()
+        {
+            static if (isBidirectionalRange!Range)
+            {
+                return _input.empty && !_isInBack;
+            }
+            else
+            {
+                return _input.empty;
+            }
+        }
     }
 
     static if (isForwardRange!Range)
