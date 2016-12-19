@@ -536,10 +536,11 @@ version(Posix) unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
-    import std.experimental.allocator.mmap_allocator : MmapAllocator;
+    import std.experimental.allocator.building_blocks.free_list : ContiguousFreeList;
     import std.experimental.allocator.building_blocks.segregator : Segregator;
-    import std.experimental.allocator.building_blocks.free_list
-        : ContiguousFreeList;
+    import std.experimental.allocator.building_blocks.null_allocator : NullAllocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.mmap_allocator : MmapAllocator;
 
     // Ouroboros allocator list based upon 4MB regions, fetched directly from
     // mmap. All memory is released upon destruction.

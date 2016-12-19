@@ -3015,6 +3015,7 @@ T read(T, Endian endianness = Endian.bigEndian, R)(ref R range)
 ///
 @safe unittest
 {
+    import std.range.primitives : empty;
     ubyte[] buffer = [1, 5, 22, 9, 44, 255, 8];
     assert(buffer.length == 7);
 
@@ -3818,7 +3819,6 @@ private uint countBitsSet(T)(T value) @nogc pure nothrow
     return cast(uint)c;
 }
 
-///
 @safe unittest
 {
     assert(countBitsSet(1) == 1);

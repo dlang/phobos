@@ -3953,7 +3953,6 @@ private T octal(T)(const string num)
     return value;
 }
 
-///
 @system unittest
 {
     int a = octal!int("10");
@@ -5401,6 +5400,7 @@ auto unsigned(T)(T x) if (isIntegral!T)
 ///
 @safe unittest
 {
+    import std.traits : Unsigned;
     immutable int s = 42;
     auto u1 = unsigned(s); //not qualified
     static assert(is(typeof(u1) == uint));
@@ -5475,6 +5475,8 @@ auto signed(T)(T x) if (isIntegral!T)
 ///
 @safe unittest
 {
+    import std.traits : Signed;
+
     immutable uint u = 42;
     auto s1 = signed(u); //not qualified
     static assert(is(typeof(s1) == int));
@@ -5641,7 +5643,6 @@ private bool isHexLiteral(String)(scope const String hexData)
     return !(i & 1);
 }
 
-///
 @safe unittest
 {
     // test all the hex digits

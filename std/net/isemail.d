@@ -61,7 +61,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
     EmailStatusCode errorLevel = EmailStatusCode.none) if (isSomeChar!(Char))
 {
     import std.algorithm.iteration : uniq;
-    import std.algorithm.searching : canFind;
+    import std.algorithm.searching : canFind, maxElement;
     import std.exception : enforce;
     import std.array : array, split;
     import std.conv : to;
@@ -387,7 +387,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
                 switch (token)
                 {
                     case Token.closeBracket:
-                        if (returnStatus.max() < EmailStatusCode.deprecated_)
+                        if (returnStatus.maxElement() < EmailStatusCode.deprecated_)
                         {
                             auto maxGroups = 8;
                             size_t index = -1;
@@ -687,11 +687,11 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
                 throw new Exception("Unkown context: " ~ to!(string)(context));
         }
 
-        if (returnStatus.max() > EmailStatusCode.rfc5322)
+        if (returnStatus.maxElement() > EmailStatusCode.rfc5322)
             break;
     }
 
-    if (returnStatus.max() < EmailStatusCode.rfc5322)
+    if (returnStatus.maxElement() < EmailStatusCode.rfc5322)
     {
         if (context == EmailPart.contextQuotedString)
             returnStatus ~= EmailStatusCode.errorUnclosedQuotedString;
@@ -730,12 +730,12 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
 
     auto dnsChecked = false;
 
-    if (checkDNS == Yes.checkDns && returnStatus.max() < EmailStatusCode.dnsWarning)
+    if (checkDNS == Yes.checkDns && returnStatus.maxElement() < EmailStatusCode.dnsWarning)
     {
         assert(false, "DNS check is currently not implemented");
     }
 
-    if (!dnsChecked && returnStatus.max() < EmailStatusCode.dnsWarning)
+    if (!dnsChecked && returnStatus.maxElement() < EmailStatusCode.dnsWarning)
     {
         if (elementCount == 0)
             returnStatus ~= EmailStatusCode.rfc5321TopLevelDomain;
@@ -745,7 +745,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
     }
 
     returnStatus = array(uniq(returnStatus));
-    auto finalStatus = returnStatus.max();
+    auto finalStatus = returnStatus.maxElement();
 
     if (returnStatus.length != 1)
         returnStatus.popFront();
@@ -1744,34 +1744,6 @@ enum AsciiToken
 }
 
 /*
- * Returns the maximum of the values in the given array.
- *
- * Params:
- *     arr = the array containing the values to return the maximum of
- *
- * Returns: the maximum value
- */
-T max (T) (T[] arr)
-{
-    static import std.algorithm.comparison;
-
-    auto max = arr.front;
-
-    foreach (i ; 0 .. arr.length - 1)
-        max = std.algorithm.comparison.max(max, arr[i + 1]);
-
-    return max;
-}
-
-///
-unittest
-{
-    assert([1, 2, 3, 4].max() == 4);
-    assert([3, 5, 9, 2, 5].max() == 9);
-    assert([7, 13, 9, 12, 0].max() == 13);
-}
-
-/*
  * Returns the portion of string specified by the $(D_PARAM start) and
  * $(D_PARAM length) parameters.
  *
@@ -1846,7 +1818,6 @@ T[] substr (T) (T[] str, ptrdiff_t start = 0, ptrdiff_t length = ptrdiff_t.min)
     return str[start .. end];
 }
 
-///
 unittest
 {
     assert("abcdef".substr(-1) == "f");
@@ -1898,7 +1869,6 @@ int compareFirstN (alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length, b
     return caseInsensitive ? slice1.icmp(slice2) : slice1.cmp(slice2);
 }
 
-///
 unittest
 {
     assert("abc".compareFirstN("abcdef", 3) == 0);
@@ -1929,7 +1899,6 @@ auto grep (Range, Regex) (Range input, Regex pattern, bool invert = false)
     return filter!(dg)(input);
 }
 
-///
 unittest
 {
     import std.algorithm.comparison : equal;
@@ -1953,7 +1922,6 @@ ElementType!(A) pop (A) (ref A a) if (isDynamicArray!(A) && !isNarrowString!(A) 
     return e;
 }
 
-///
 unittest
 {
     auto array = [0, 1, 2, 3];

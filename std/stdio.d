@@ -4342,7 +4342,10 @@ __gshared
     @safe unittest
     {
         // Read stdin, sort lines, write to stdout
-        import std.stdio, std.array, std.algorithm : sort, copy;
+        import std.array : array;
+        import std.algorithm.sorting : sort;
+        import std.algorithm.mutation : copy;
+        import std.typecons : Yes;
 
         void main() {
             stdin                       // read from stdin

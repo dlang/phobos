@@ -117,6 +117,9 @@ struct FreeList(ParentAllocator,
         ///
         unittest
         {
+            import std.experimental.allocator.mallocator : Mallocator;
+            import std.experimental.allocator.common : chooseAtRuntime;
+
             FreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
             a.min = 64;
             a.max = 128;
@@ -674,6 +677,8 @@ unittest
     import std.experimental.allocator.building_blocks.allocator_list
         : AllocatorList;
 
+    import std.experimental.allocator.common : unbounded;
+
     alias ScalableFreeList = AllocatorList!((n) =>
         ContiguousFreeList!(GCAllocator, 0, unbounded)(4096)
     );
@@ -891,7 +896,10 @@ struct SharedFreeList(ParentAllocator,
         ///
         unittest
         {
-            SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
+            import std.experimental.allocator.mallocator : Mallocator;
+            import std.experimental.allocator.common : chooseAtRuntime;
+
+            shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
             // Set the maxSize first so setting the minSize doesn't throw
             a.max = 128;
             a.min = 64;
@@ -909,7 +917,10 @@ struct SharedFreeList(ParentAllocator,
         ///
         unittest
         {
-            SharedFreeList!(Mallocator, 50, 50, chooseAtRuntime) a;
+            import std.experimental.allocator.mallocator : Mallocator;
+            import std.experimental.allocator.common : chooseAtRuntime;
+
+            shared SharedFreeList!(Mallocator, 50, 50, chooseAtRuntime) a;
             // Set the maxSize first so setting the minSize doesn't throw
             a.approxMaxLength = 128;
             assert(a.approxMaxLength  == 128);

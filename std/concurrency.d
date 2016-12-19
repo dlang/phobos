@@ -2650,6 +2650,8 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
 /// Use a separate mutex when init blocks on another thread that might also call initOnce.
 @system unittest
 {
+    import core.sync.mutex : Mutex;
+
     static shared bool varA, varB;
     __gshared Mutex m;
     m = new Mutex;
