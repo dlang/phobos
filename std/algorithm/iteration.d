@@ -4836,7 +4836,7 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
 }
 
 ///
-@safe unittest
+@trusted unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -4857,6 +4857,16 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
     r.popBack;
     assert(r.back == S(1, "a"));
     assert(r.front == r.back);
+
+    r.popBack;
+    assert(r.empty);
+
+    import std.exception : assertThrown;
+
+    assertThrown!Error(r.front);
+    assertThrown!Error(r.back);
+    assertThrown!Error(r.popFront);
+    assertThrown!Error(r.popBack);
 }
 
 private struct UniqResult(alias pred, Range)
