@@ -1457,6 +1457,10 @@ class ErrnoException : Exception
     this(string msg, string file = null, size_t line = 0) @trusted
     {
         import core.stdc.errno : errno;
+        this(msg, errno, file, line);
+    }
+    this(string msg, int errno, string file = null, size_t line = 0) @trusted
+    {
         import core.stdc.string : strlen;
 
         _errno = errno;
@@ -1472,6 +1476,25 @@ class ErrnoException : Exception
             auto s = strerror(errno);
         }
         super(msg ~ " (" ~ s[0..s.strlen].idup ~ ")", file, line);
+    }
+
+    unittest
+    {
+        import core.stdc.errno : errno, EAGAIN;
+
+        auto old = errno;
+        scope(exit) errno = old;
+
+        errno = EAGAIN;
+        auto ex = new ErrnoException("oh no");
+        assert (ex.errno == EAGAIN);
+    }
+
+    unittest
+    {
+        import core.stdc.errno : EAGAIN;
+        auto ex = new ErrnoException("oh no", EAGAIN);
+        assert (ex.errno == EAGAIN);
     }
 }
 
