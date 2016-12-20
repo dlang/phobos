@@ -2938,6 +2938,52 @@ schwartzSort(alias transform, alias less = "a < b",
     return typeof(return)(r);
 }
 
+///
+@safe unittest
+{
+    import std.algorithm.iteration : map;
+    import std.numeric : entropy;
+
+    auto lowEnt = [ 1.0, 0, 0 ],
+         midEnt = [ 0.1, 0.1, 0.8 ],
+        highEnt = [ 0.31, 0.29, 0.4 ];
+    auto arr = new double[][3];
+    arr[0] = midEnt;
+    arr[1] = lowEnt;
+    arr[2] = highEnt;
+
+    schwartzSort!(entropy, "a > b")(arr);
+
+    assert(arr[0] == highEnt);
+    assert(arr[1] == midEnt);
+    assert(arr[2] == lowEnt);
+    assert(isSorted!("a > b")(map!(entropy)(arr)));
+}
+
+@safe unittest
+{
+    import std.algorithm.iteration : map;
+    import std.numeric : entropy;
+
+    debug(std_algorithm) scope(success)
+        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
+    auto lowEnt = [ 1.0, 0, 0 ],
+        midEnt = [ 0.1, 0.1, 0.8 ],
+        highEnt = [ 0.31, 0.29, 0.4 ];
+    auto arr = new double[][3];
+    arr[0] = midEnt;
+    arr[1] = lowEnt;
+    arr[2] = highEnt;
+
+    schwartzSort!(entropy, "a < b")(arr);
+
+    assert(arr[0] == lowEnt);
+    assert(arr[1] == midEnt);
+    assert(arr[2] == highEnt);
+    assert(isSorted!("a < b")(map!(entropy)(arr)));
+}
+
 @safe unittest
 {
     // issue 4909
@@ -2952,74 +2998,6 @@ schwartzSort(alias transform, alias less = "a < b",
     import std.typecons : Tuple;
     Tuple!(char)[] chars;
     schwartzSort!((Tuple!(char) c){ return c[0]; })(chars);
-}
-
-@safe unittest
-{
-    import std.algorithm.iteration : map;
-    import std.math : log2;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
-    static double entropy(double[] probs) {
-        double result = 0;
-        foreach (ref p; probs)
-        {
-            if (!p) continue;
-            result -= p * log2(p);
-        }
-        return result;
-    }
-
-    auto lowEnt = [ 1.0, 0, 0 ],
-         midEnt = [ 0.1, 0.1, 0.8 ],
-        highEnt = [ 0.31, 0.29, 0.4 ];
-    auto arr = new double[][3];
-    arr[0] = midEnt;
-    arr[1] = lowEnt;
-    arr[2] = highEnt;
-
-    schwartzSort!(entropy, q{a > b})(arr);
-
-    assert(arr[0] == highEnt);
-    assert(arr[1] == midEnt);
-    assert(arr[2] == lowEnt);
-    assert(isSorted!("a > b")(map!(entropy)(arr)));
-}
-
-@safe unittest
-{
-    import std.algorithm.iteration : map;
-    import std.math : log2;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
-    static double entropy(double[] probs) {
-        double result = 0;
-        foreach (ref p; probs)
-        {
-            if (!p) continue;
-            result -= p * log2(p);
-        }
-        return result;
-    }
-
-    auto lowEnt = [ 1.0, 0, 0 ],
-        midEnt = [ 0.1, 0.1, 0.8 ],
-        highEnt = [ 0.31, 0.29, 0.4 ];
-    auto arr = new double[][3];
-    arr[0] = midEnt;
-    arr[1] = lowEnt;
-    arr[2] = highEnt;
-
-    schwartzSort!(entropy, q{a < b})(arr);
-
-    assert(arr[0] == lowEnt);
-    assert(arr[1] == midEnt);
-    assert(arr[2] == highEnt);
-    assert(isSorted!("a < b")(map!(entropy)(arr)));
 }
 
 // partialSort

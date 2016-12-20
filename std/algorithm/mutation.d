@@ -1755,6 +1755,24 @@ if (s == SwapStrategy.stable
     return result;
 }
 
+///
+@safe pure unittest
+{
+    import std.typecons : tuple;
+
+    auto a = [ 0, 1, 2, 3, 4, 5 ];
+    assert(remove!(SwapStrategy.stable)(a, 1) == [ 0, 2, 3, 4, 5 ]);
+    a = [ 0, 1, 2, 3, 4, 5 ];
+    assert(remove!(SwapStrategy.stable)(a, 1, 3) == [ 0, 2, 4, 5] );
+    a = [ 0, 1, 2, 3, 4, 5 ];
+    assert(remove!(SwapStrategy.stable)(a, 1, tuple(3, 6)) == [ 0, 2 ]);
+
+    a = [ 0, 1, 2, 3, 4, 5 ];
+    assert(remove!(SwapStrategy.unstable)(a, 1) == [0, 5, 2, 3, 4]);
+    a = [ 0, 1, 2, 3, 4, 5 ];
+    assert(remove!(SwapStrategy.unstable)(a, tuple(1, 4)) == [0]);
+}
+
 @safe unittest
 {
     import std.exception : assertThrown;
