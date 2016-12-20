@@ -270,14 +270,6 @@ if (isInputRange!(Range) && is(typeof(r.front == lPar)))
  * invoke the Boyer-Moore matching algorithm for finding of $(D needle) in a
  * given haystack.
  */
-BoyerMooreFinder!(binaryFun!(pred), Range) boyerMooreFinder
-(alias pred = "a == b", Range)
-(Range needle) if ((isRandomAccessRange!(Range) && hasSlicing!Range) || isSomeString!Range)
-{
-    return typeof(return)(needle);
-}
-
-/// Ditto
 struct BoyerMooreFinder(alias pred, Range)
 {
 private:
@@ -377,6 +369,29 @@ public:
 
     ///
     alias opDollar = length;
+}
+
+/// Ditto
+BoyerMooreFinder!(binaryFun!(pred), Range) boyerMooreFinder
+(alias pred = "a == b", Range)
+(Range needle) if ((isRandomAccessRange!(Range) && hasSlicing!Range) || isSomeString!Range)
+{
+    return typeof(return)(needle);
+}
+
+///
+@safe pure nothrow unittest
+{
+    auto bmFinder = boyerMooreFinder("TG");
+
+    string r = "TAGTGCCTGA";
+    // search for the first match in the haystack r
+    r = bmFinder.beFound(r);
+    assert(r == "TGCCTGA");
+
+    // continue search in haystack
+    r = bmFinder.beFound(r[2 .. $]);
+    assert(r == "TGA");
 }
 
 /**
