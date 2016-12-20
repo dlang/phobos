@@ -2897,7 +2897,7 @@ pure @safe nothrow @nogc unittest
         `range` with up to `n` elements dropped
 
     See_Also:
-        $(REF popFront, std, range, primitives),$(REF popBackN, std, range, primitives)
+        $(REF popFront, std, range, primitives), $(REF popBackN, std, range, primitives)
   +/
 R drop(R)(R range, size_t n)
 if (isInputRange!R)
