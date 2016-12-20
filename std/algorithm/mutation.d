@@ -619,9 +619,7 @@ void fill(InputRange, ForwardRange)(InputRange range, ForwardRange filler)
     }
     else
     {
-        import std.exception : enforce;
-
-        enforce(!filler.empty, "Cannot fill range with an empty filler");
+        assert(!filler.empty, "Cannot fill range with an empty filler");
 
         static if (hasLength!InputRange && hasLength!ForwardRange
             && is(typeof(range.length > filler.length)))
@@ -672,9 +670,10 @@ void fill(InputRange, ForwardRange)(InputRange range, ForwardRange filler)
     assert(a == [ 8, 9, 8, 9, 8 ]);
 }
 
-@safe unittest
+unittest
 {
     import std.exception : assertThrown;
+    import core.exception : AssertError;
     import std.internal.test.dummyrange;
 
     debug(std_algorithm) scope(success)
@@ -701,7 +700,7 @@ void fill(InputRange, ForwardRange)(InputRange range, ForwardRange filler)
     assert(a == [0, 1, 2, 3, 4]);
 
     //empty filler test
-    assertThrown(fill(a, a[$..$]));
+    assertThrown!AssertError(fill(a, a[$..$]));
 }
 
 /**
@@ -1394,8 +1393,6 @@ unittest
 private InputRange2 moveAllImpl(alias moveOp, InputRange1, InputRange2)(
     ref InputRange1 src, ref InputRange2 tgt)
 {
-    import std.exception : enforce;
-
     static if (isRandomAccessRange!InputRange1 && hasLength!InputRange1 && hasLength!InputRange2
          && hasSlicing!InputRange2 && isRandomAccessRange!InputRange2)
     {
@@ -1649,9 +1646,7 @@ if (s != SwapStrategy.stable
         }
         static if (i > 0)
         {
-            import std.exception : enforce;
-
-            enforce(blackouts[i - 1].pos + blackouts[i - 1].len
+            assert(blackouts[i - 1].pos + blackouts[i - 1].len
                     <= blackouts[i].pos,
                 "remove(): incorrect ordering of elements to remove");
         }
@@ -1730,8 +1725,7 @@ if (s == SwapStrategy.stable
 
         static if (pass > 0)
         {
-            import std.exception : enforce;
-            enforce(pos <= from,
+            assert(pos <= from,
                     "remove(): incorrect ordering of elements to remove");
 
             for (; pos < from; ++pos, src.popFront(), tgt.popFront())
@@ -1755,17 +1749,18 @@ if (s == SwapStrategy.stable
     return result;
 }
 
-@safe unittest
+unittest
 {
     import std.exception : assertThrown;
+    import core.exception : AssertError;
     import std.range;
 
     // http://d.puremagic.com/issues/show_bug.cgi?id=10173
     int[] test = iota(0, 10).array();
-    assertThrown(remove!(SwapStrategy.stable)(test, tuple(2, 4), tuple(1, 3)));
-    assertThrown(remove!(SwapStrategy.unstable)(test, tuple(2, 4), tuple(1, 3)));
-    assertThrown(remove!(SwapStrategy.stable)(test, 2, 4, 1, 3));
-    assertThrown(remove!(SwapStrategy.unstable)(test, 2, 4, 1, 3));
+    assertThrown!AssertError(remove!(SwapStrategy.stable)(test, tuple(2, 4), tuple(1, 3)));
+    assertThrown!AssertError(remove!(SwapStrategy.unstable)(test, tuple(2, 4), tuple(1, 3)));
+    assertThrown!AssertError(remove!(SwapStrategy.stable)(test, 2, 4, 1, 3));
+    assertThrown!AssertError(remove!(SwapStrategy.unstable)(test, 2, 4, 1, 3));
 }
 
 @safe unittest

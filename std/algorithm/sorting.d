@@ -953,13 +953,12 @@ makeIndex(
             && is(ElementType!(RangeIndex) : ElementType!(Range)*))
 {
     import std.algorithm.internal : addressOf;
-    import std.exception : enforce;
 
     // assume collection already ordered
     size_t i;
     for (; !r.empty; r.popFront(), ++i)
         index[i] = addressOf(r.front);
-    enforce(index.length == i);
+    assert(index.length == i);
     // sort the index
     sort!((a, b) => binaryFun!less(*a, *b), ss)(index);
     return typeof(return)(index);
@@ -976,15 +975,14 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
     isRandomAccessRange!RangeIndex && !isInfinite!RangeIndex &&
     isIntegral!(ElementType!RangeIndex))
 {
-    import std.exception : enforce;
     import std.conv : to;
 
     alias IndexType = Unqual!(ElementType!RangeIndex);
-    enforce(r.length == index.length,
+    assert(r.length == index.length,
         "r and index must be same length for makeIndex.");
     static if (IndexType.sizeof < size_t.sizeof)
     {
-        enforce(r.length <= IndexType.max, "Cannot create an index with " ~
+        assert(r.length <= IndexType.max, "Cannot create an index with " ~
             "element type " ~ IndexType.stringof ~ " with length " ~
             to!string(r.length) ~ ".");
     }
@@ -3780,10 +3778,9 @@ void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
                   "Stable swap strategy not implemented yet.");
 
     import std.container : BinaryHeap;
-    import std.exception : enforce;
 
     if (index.empty) return;
-    enforce(ElementType!(RangeIndex).max >= index.length,
+    assert(ElementType!(RangeIndex).max >= index.length,
             "Index type too small");
     bool indirectLess(ElementType!(RangeIndex) a, ElementType!(RangeIndex) b)
     {
