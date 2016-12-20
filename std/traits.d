@@ -1222,7 +1222,9 @@ template ParameterDefaults(func...)
             // should use return scope once available
             enum get = (PT[i..i+1] __args) @trusted
             {
-                PT[i]* __pd_val = &__args[0]; // workaround Bugzilla 16582
+                // If __args[0] is lazy, we force it to be evaluated like this.
+                PT[i] value = __args[0];
+                PT[i]* __pd_val = &value; // workaround Bugzilla 16582
                 return *__pd_val;
             };
             static if (is(typeof(get())))
@@ -1255,10 +1257,11 @@ template ParameterDefaults(func...)
 ///
 @safe unittest
 {
-    int foo(int num, string name = "hello", int[] = [1,2,3]);
+    int foo(int num, string name = "hello", int[] = [1,2,3], lazy int x = 0);
     static assert(is(ParameterDefaults!foo[0] == void));
     static assert(   ParameterDefaults!foo[1] == "hello");
     static assert(   ParameterDefaults!foo[2] == [1,2,3]);
+    static assert(   ParameterDefaults!foo[3] == 0);
 }
 
 /**
