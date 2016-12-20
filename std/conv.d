@@ -3551,7 +3551,8 @@ Lfewerr:
  * '[')), right bracket (default $(D ']')), key-value separator (default $(D
  * ':')), and element seprator (by default $(D ',')).
  */
-Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
+Target parse(Target, Source)(ref Source s, dchar lbracket = '[',
+                             dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
     if (isExactSomeString!Source &&
         isAssociativeArray!Target && !is(Target == enum))
 {
