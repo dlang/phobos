@@ -611,7 +611,6 @@ pure nothrow @system unittest
 Creates an uninitialized array and an n-dimensional slice over it.
 Params:
     lengths = list of lengths for each dimension
-    slice = slice to copy shape and data from
 Returns:
     uninitialized n-dimensional slice
 +/
@@ -749,8 +748,6 @@ See also $(MREF std, experimental, allocator).
 Params:
     alloc = allocator
     lengths = list of lengths for each dimension
-    init = default value for array initialization
-    slice = slice to copy shape and data from
 Returns:
     a structure with fields `array` and `slice`
 +/

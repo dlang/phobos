@@ -3744,6 +3744,7 @@ int impureVariable;
  *
  * Params:
  *      C = `char`, `wchar`, or `dchar`
+ *
  * Returns:
  *      A forward range if `R` is a range and not auto-decodable, as defined by
  *      $(REF isAutodecodableString, std, traits), and if the base range is

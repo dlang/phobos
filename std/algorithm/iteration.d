@@ -444,7 +444,7 @@ left to right for all elements $(D a) in $(D range). The original ranges are
 not changed. Evaluation is done lazily.
 
 Params:
-    fun = one or more functions
+    fun = one or more transformation functions
     r = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
 
 Returns:
@@ -2711,6 +2711,9 @@ seed (the range must be non-empty).
 Returns:
     the accumulated $(D result)
 
+Params:
+    fun = one or more functions
+
 See_Also:
     $(HTTP en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
 
@@ -3238,6 +3241,10 @@ This function is also known as
     $(HTTP docs.python.org/3/library/itertools.html#itertools.accumulate, accumulate),
     $(HTTP hackage.haskell.org/package/base-4.8.2.0/docs/Prelude.html#v:scanl, scan),
     $(HTTP mathworld.wolfram.com/CumulativeSum.html, Cumulative Sum).
+
+Params:
+    fun = one or more functions to use as fold operation
+
 Returns:
     The function returns a range containing the consecutive reduced values. If
     there is more than one `fun`, the element type will be $(REF Tuple,
@@ -3259,6 +3266,7 @@ if (fun.length >= 1)
     `ElementType!R`.
     Once `S` has been determined, then $(D S s = e;) and $(D s = f(s, e);) must
     both be legal.
+
     Params:
         range = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
     Returns:
@@ -3277,6 +3285,7 @@ if (fun.length >= 1)
     For convenience, if the seed is `const`, or has qualified fields, then
     `cumulativeFold` will operate on an unqualified copy. If this happens
     then the returned type will not perfectly match `S`.
+
     Params:
         range = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
         seed = the initial value of the accumulator

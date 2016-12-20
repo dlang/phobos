@@ -1612,18 +1612,18 @@ lengths = static array containing the size of each dimension
 Returns:
 An N-dimensional array with individual elements of type T.
 */
-auto makeMultidimensionalArray(T, Allocator, size_t n)(auto ref Allocator alloc, size_t[n] lengths...)
+auto makeMultidimensionalArray(T, Allocator, size_t N)(auto ref Allocator alloc, size_t[N] lengths...)
 {
-    static if (n == 1)
+    static if (N == 1)
     {
         return makeArray!T(alloc, lengths[0]);
     }
     else
     {
-        alias E = typeof(makeMultidimensionalArray!(T, Allocator, n - 1)(alloc, lengths[1 .. $]));
+        alias E = typeof(makeMultidimensionalArray!(T, Allocator, N - 1)(alloc, lengths[1 .. $]));
         auto ret = makeArray!E(alloc, lengths[0]);
         foreach (ref e; ret)
-            e = makeMultidimensionalArray!(T, Allocator, n - 1)(alloc, lengths[1 .. $]);
+            e = makeMultidimensionalArray!(T, Allocator, N - 1)(alloc, lengths[1 .. $]);
         return ret;
     }
 }

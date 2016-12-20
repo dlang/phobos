@@ -404,7 +404,6 @@ Params:
     slice = input slice
     Dimensions = indexes of dimensions to be brought to the first position
     dimensions = indexes of dimensions to be brought to the first position
-    dimension = index of dimension to be brought to the first position
 Returns:
     n-dimensional slice of the same type
 See_also: $(LREF swapped), $(LREF everted)
@@ -535,7 +534,6 @@ Params:
     slice = input slice
     Dimensions = indexes of dimensions to reverse order of iteration
     dimensions = indexes of dimensions to reverse order of iteration
-    dimension = index of dimension to reverse order of iteration
 Returns:
     n-dimensional slice of the same type
 +/
@@ -641,8 +639,7 @@ Multiplies the stride of the selected dimension by a factor.
 Params:
     slice = input slice
     Dimensions = indexes of dimensions to be strided
-    dimensions = indexes of dimensions to be strided
-    factors = list of step extension factors
+    factors = list of step extension factor
     factor = step extension factors
 Returns:
     n-dimensional slice of the same type
@@ -996,7 +993,6 @@ This makes `dropExactly` faster than `drop`.
 
 Params:
     slice = input slice
-    ns = list of numbers of elements to drop
     n = number of elements to drop
 Returns:
     n-dimensional slice of the same type
