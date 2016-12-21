@@ -63,6 +63,12 @@ $(T2 minElement,
 $(T2 maxElement,
         Selects the maximal element of a range.
         `maxElement([3, 4, 1, 2])` returns `4`.)
+$(T2 minIndex,
+        Index of the minimal element of a range.
+        `minElement([3, 4, 1, 2])` returns `2`.)
+$(T2 maxIndex,
+        Index of the maximal element of a range.
+        `maxElement([3, 4, 1, 2])` returns `1`.)
 $(T2 minPos,
         $(D minPos([2, 3, 1, 3, 4, 1])) returns the subrange $(D [1, 3, 4, 1]),
         i.e., positions the range at the first occurrence of its minimal
