@@ -1540,8 +1540,6 @@ void dispose(A, T)(auto ref A alloc, T[] array)
 {
 
     import std.traits : isArray;
-    import std.range.primitives : ElementType;
-    import std.stdio;
 
     static if (isArray!T)
     {
@@ -1609,6 +1607,67 @@ unittest //bugzilla 15721
     bar = Mallocator.instance.make!Bar;
     foo = cast(Foo) bar;
     Mallocator.instance.dispose(foo);
+}
+
+unittest //bugzilla 16824
+{
+    struct TestAllocator
+    {
+        import std.experimental.allocator.common: platformAlignment;
+        import std.experimental.allocator.mallocator: Mallocator;
+
+        alias allocator = Mallocator.instance;
+
+        private static struct ByteRange
+        {
+            void* ptr;
+            size_t length;
+        }
+
+        private ByteRange[] _allocations;
+
+        enum uint alignment = platformAlignment;
+
+        void[] allocate(size_t numBytes)
+        {
+             auto ret = allocator.allocate(numBytes);
+             _allocations ~= ByteRange(ret.ptr, ret.length);
+             return ret;
+        }
+
+        bool deallocate(void[] bytes)
+        {
+            import std.algorithm: remove, canFind;
+            import std.conv: text;
+
+            bool pred(ByteRange other)
+            { return other.ptr == bytes.ptr && other.length == bytes.length; }
+
+            assert(_allocations.canFind!pred);
+
+             _allocations = _allocations.remove!pred;
+             return allocator.deallocate(bytes);
+        }
+
+        ~this()
+        {
+            assert(!_allocations.length);
+        }
+    }
+
+    import std.experimental.allocator: dispose, makeArray;
+
+    TestAllocator allocator;
+
+    auto ints2d = allocator.makeArray!(int[][])(2);
+    foreach (ref ints1d; ints2d)
+        ints1d = allocator.makeArray!(int[])(3);
+
+    foreach (ref ints1d; ints2d)
+        foreach(ref ints0d; ints1d)
+            ints0d = allocator.makeArray!(int)(4);
+
+    allocator.dispose(ints2d);
 }
 
 /**
