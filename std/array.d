@@ -2645,15 +2645,19 @@ body
 
 /**
 Implements an output range that appends data to an array. This is
-recommended over $(D a ~= data) when appending many elements because it is more
-efficient.
+recommended over $(D array ~= data) when appending many elements because it is more
+efficient. `Appender` maintains its own array metadata locally, so it can avoid
+global locking for each append where $(LREF capacity) is non-zero.
+See_Also: $(LREF appender)
  */
 struct Appender(A)
 if (isDynamicArray!A)
 {
     import core.memory : GC;
 
-    private alias T = ElementEncodingType!A;
+    ///
+    package alias T = ElementEncodingType!A;
+
     private struct Data
     {
         size_t capacity;
@@ -2664,8 +2668,8 @@ if (isDynamicArray!A)
     private Data* _data;
 
     /**
-     * Construct an appender with a given array.  Note that this does not copy the
-     * data.  If the array has a larger capacity as determined by arr.capacity,
+     * Constructs an `Appender` with a given array.  Note that this does not copy the
+     * data.  If the array has a larger capacity as determined by `arr.capacity`,
      * it will be used by the appender.  After initializing an appender on an array,
      * appending to the original array will reallocate.
      */
@@ -2694,7 +2698,7 @@ if (isDynamicArray!A)
 
     /**
      * Reserve at least newCapacity elements for appending.  Note that more elements
-     * may be reserved than requested.  If newCapacity <= capacity, then nothing is
+     * may be reserved than requested.  If `newCapacity <= capacity`, then nothing is
      * done.
      */
     void reserve(size_t newCapacity) @safe pure nothrow
@@ -2815,7 +2819,7 @@ if (isDynamicArray!A)
     }
 
     /**
-     * Appends one item to the managed array.
+     * Appends `item` to the managed array.
      */
     void put(U)(U item) if (canPutItem!U)
     {
@@ -2917,7 +2921,7 @@ if (isDynamicArray!A)
     }
 
     /**
-     * Appends one item to the managed array.
+     * Appends `item` to the managed array.
      */
     void opOpAssign(string op : "~", U)(U item) if (canPutItem!U)
     {
@@ -2945,7 +2949,7 @@ if (isDynamicArray!A)
          * Clears the managed array.  This allows the elements of the array to be reused
          * for appending.
          *
-         * Note that clear is disabled for immutable or const element types, due to the
+         * Note: clear is disabled for immutable or const element types, due to the
          * possibility that $(D Appender) might overwrite immutable data.
          */
         void clear() @trusted pure nothrow
@@ -2960,6 +2964,7 @@ if (isDynamicArray!A)
          * Shrinks the managed array to the given length.
          *
          * Throws: $(D Exception) if newlength is greater than the current array length.
+         * Note: shrinkTo is disabled for immutable or const element types.
          */
         void shrinkTo(size_t newlength) @trusted pure
         {
@@ -3027,29 +3032,36 @@ private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen)
 }
 
 /**
- * An appender that can update an array in-place.  It forwards all calls to an
- * underlying appender implementation.  Any calls made to the appender also update
- * the pointer to the original array passed in.
+ * A version of $(LREF Appender) that can update an array in-place.
+ * It forwards all calls to an underlying appender implementation.
+ * Any calls made to the appender also update the pointer to the
+ * original array passed in.
+ *
+ * Tip: Use the `arrayPtr` overload of $(LREF appender) for construction with type-inference.
  */
 struct RefAppender(A)
 if (isDynamicArray!A)
 {
+    ///
+    package alias T = ElementEncodingType!A;
+
     private
     {
-        alias T = ElementEncodingType!A;
         Appender!A impl;
         T[] *arr;
     }
 
     /**
-     * Construct a ref appender with a given array reference.  This does not copy the
-     * data.  If the array has a larger capacity as determined by arr.capacity, it
-     * will be used by the appender.  $(D RefAppender) assumes that arr is a non-null
-     * value.
+     * Constructs a `RefAppender` with a given array reference.  This does not copy the
+     * data.  If the array has a larger capacity as determined by `arr.capacity`, it
+     * will be used by the appender.
      *
-     * Note, do not use builtin appending (i.e. ~=) on the original array passed in
-     * until you are done with the appender, because calls to the appender override
-     * those appends.
+     * Note: Do not use built-in appending (i.e. `~=`) on the original array
+     * until you are done with the appender, because subsequent calls to the appender
+     * will reallocate the array data without those appends.
+     *
+     * Params:
+     * arr = Pointer to an array. Must not be _null.
      */
     this(T[] *arr)
     {
@@ -3057,6 +3069,11 @@ if (isDynamicArray!A)
         this.arr = arr;
     }
 
+    /** Wraps remaining `Appender` methods such as $(LREF put).
+     * Params:
+     * fn = Method name to call.
+     * args = Arguments to pass to the method.
+     */
     void opDispatch(string fn, Args...)(Args args) if (is(typeof(mixin("impl." ~ fn ~ "(args)"))))
     {
         // we do it this way because we can't cache a void return
@@ -3064,19 +3081,17 @@ if (isDynamicArray!A)
         mixin("return impl." ~ fn ~ "(args);");
     }
 
-    private alias AppenderType = Appender!A;
-
     /**
-     * Appends one item to the managed array.
+     * Appends `item` to the managed array.
      */
-    void opOpAssign(string op : "~", U)(U item) if (AppenderType.canPutItem!U)
+    void opOpAssign(string op : "~", U)(U item) if (Appender!A.canPutItem!U)
     {
         scope(exit) *this.arr = impl.data;
         impl.put(item);
     }
 
     // Const fixing hack.
-    void opOpAssign(string op : "~", Range)(Range items) if (AppenderType.canPutConstRange!Range)
+    void opOpAssign(string op : "~", Range)(Range items) if (Appender!A.canPutConstRange!Range)
     {
         scope(exit) *this.arr = impl.data;
         impl.put(items);
@@ -3085,7 +3100,7 @@ if (isDynamicArray!A)
     /**
      * Appends an entire range to the managed array.
      */
-    void opOpAssign(string op : "~", Range)(Range items) if (AppenderType.canPutRange!Range)
+    void opOpAssign(string op : "~", Range)(Range items) if (Appender!A.canPutRange!Range)
     {
         scope(exit) *this.arr = impl.data;
         impl.put(items);
@@ -3111,8 +3126,8 @@ if (isDynamicArray!A)
 }
 
 /++
-    Convenience function that returns an $(D Appender!A) object initialized
-    with $(D array).
+    Convenience function that returns an $(LREF Appender) instance,
+    optionally initialized with $(D array).
  +/
 Appender!A appender(A)()
 if (isDynamicArray!A)
@@ -3486,13 +3501,13 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
 }
 
 /++
-    Convenience function that returns a $(D RefAppender!A) object initialized
-    with $(D array).  Don't use null for the $(D array) pointer, use the other
+    Convenience function that returns a $(LREF RefAppender) instance initialized
+    with `arrayPtr`. Don't use null for the array pointer, use the other
     version of $(D appender) instead.
  +/
-RefAppender!(E[]) appender(A : E[]*, E)(A array)
+RefAppender!(E[]) appender(P : E[]*, E)(P arrayPtr)
 {
-    return RefAppender!(E[])(array);
+    return RefAppender!(E[])(arrayPtr);
 }
 
 @system unittest
