@@ -224,8 +224,8 @@ unittest
                    == to!String("ack capacity"));
             assert(std.regex.replace!(matchFn)(to!String("noon"), regex(to!String("^n")), to!String("[$&]"))
                    == to!String("[n]oon"));
-            assert(std.regex.replace!(matchFn)(to!String("test1 test2"), regex(to!String(`\w+`),"g"), to!String("$`:$'"))
-                   == to!String(": test2 test1 :"));
+            assert(std.regex.replace!(matchFn)(to!String("test1 test2"),
+                   regex(to!String(`\w+`), "g"), to!String("$`:$'")) == to!String(": test2 test1 :"));
             auto s = std.regex.replace!(baz!(Captures!(String)))(to!String("Strap a rocket engine on a chicken."),
                     regex(to!String("[ar]"), "g"));
             assert(s == "StRAp A Rocket engine on A chicken.", text(s));

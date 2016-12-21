@@ -2200,7 +2200,8 @@ struct Slice(size_t _N, _Range)
                         }
                         else
                         {
-                            hasher.putElements(cast(hasher.Element[]) r._ptr._range[r._ptr._shift .. r.length + r._ptr._shift]);
+                            hasher.putElements(
+                                cast(hasher.Element[]) r._ptr._range[r._ptr._shift .. r.length + r._ptr._shift]);
                         }
                         return hasher.get;
                     }

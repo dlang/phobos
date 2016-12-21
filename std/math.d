@@ -7777,7 +7777,8 @@ bool isPowerOf2(X)(const X x) pure @safe nothrow @nogc
     {
         immutable min_sub = X.min_normal * X.epsilon;
 
-        foreach (x; AliasSeq!(smallP2, min_sub, X.min_normal, .25L, 0.5L, 1.0L, 2.0L, 8.0L, pow(2.0L, X.max_exp - 1), bigP2))
+        foreach (x; AliasSeq!(smallP2, min_sub, X.min_normal, .25L, 0.5L, 1.0L,
+                              2.0L, 8.0L, pow(2.0L, X.max_exp - 1), bigP2))
         {
             assert( isPowerOf2(cast(X) x));
             assert(!isPowerOf2(cast(X)-x));
