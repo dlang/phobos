@@ -63,10 +63,16 @@ setup_repos()
         base_branch=$CIRCLE_BRANCH
     fi
 
-    # merge with upstream branch, s.t. we check with the latest changes
-    git remote add upstream https://github.com/dlang/phobos.git
-    git fetch upstream
-    git merge upstream/$base_branch
+    # merge upstream branch with changes, s.t. we check with the latest changes
+    if [ -n "${CIRCLE_PR_NUMBER:-}" ]; then
+        local current_branch=$(git rev-parse --abbrev-ref HEAD)
+        git config user.name dummyuser
+        git config user.email dummyuser@dummyserver.com
+        git remote add upstream https://github.com/dlang/phobos.git
+        git fetch upstream
+        git checkout -f upstream/$base_branch
+        git merge -m "Automatic merge" $current_branch
+    fi
 
     clone https://github.com/dlang/dmd.git ../dmd $base_branch
     clone https://github.com/dlang/druntime.git ../druntime $base_branch
