@@ -3903,7 +3903,7 @@ struct Zip(Ranges...)
         @property Zip save()
         {
             //Zip(ranges[0].save, ranges[1].save, ..., stoppingPolicy)
-            return mixin (q{Zip(%(ranges[%s]%|, %), stoppingPolicy)}.format(iota(0, R.length)));
+            return mixin (q{Zip(%(ranges[%s].save%|, %), stoppingPolicy)}.format(iota(0, R.length)));
         }
     }
 
@@ -4421,6 +4421,19 @@ pure unittest
     R r;
     auto z = zip(r, r);
     auto zz = z.save;
+}
+
+pure unittest
+{
+    import std.typecons : tuple;
+
+    auto r1 = [0,1,2];
+    auto r2 = [1,2,3];
+    auto z1 = zip(refRange(&r1), refRange(&r2));
+    auto z2 = z1.save;
+    z1.popFront();
+    assert(z1.front == tuple(1,2));
+    assert(z2.front == tuple(0,1));
 }
 
 /*
