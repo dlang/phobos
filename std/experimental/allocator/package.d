@@ -1538,6 +1538,17 @@ if (is(T == class) || is(T == interface))
 /// Ditto
 void dispose(A, T)(auto ref A alloc, T[] array)
 {
+
+    import std.traits : isArray;
+    import std.range.primitives : ElementType;
+    import std.stdio;
+
+    static if (isArray!T)
+    {
+        foreach (ref elem; array)
+            dispose(alloc, elem);
+    }
+
     static if (hasElaborateDestructor!(typeof(array[0])))
     {
         foreach (ref e; array)
