@@ -2452,8 +2452,10 @@ certain interfaces it is important to know statically that the range may only
 have at most one element.
 
 The type returned by $(D takeOne) is a random-access range with length
-regardless of $(D R)'s capabilities (another feature that distinguishes
-$(D takeOne) from $(D take)).
+regardless of $(D R)'s capabilities, as long as it is a forward range.
+(another feature that distinguishes $(D takeOne) from $(D take)). If
+(D R) is an input range but not a forward range, return type is an input
+range with all random-access capabilites except save.
  */
 auto takeOne(R)(R source) if (isInputRange!R)
 {
@@ -2476,11 +2478,13 @@ auto takeOne(R)(R source) if (isInputRange!R)
             void popFront()
             {
                 assert(!empty, "Attempting to popFront an empty takeOne");
+                _source.popFront();
                 _empty = true;
             }
             void popBack()
             {
                 assert(!empty, "Attempting to popBack an empty takeOne");
+                _source.popFront();
                 _empty = true;
             }
             static if (isForwardRange!(Unqual!R))
@@ -2542,6 +2546,25 @@ pure @safe nothrow @nogc unittest
 
     auto s = takeOne(NonForwardRange());
     assert(s.front == 42);
+}
+
+//guards against issue 16999
+pure @safe unittest
+{
+    auto myIota = new class
+    {
+        int front = 0;
+        @safe void popFront(){front++;}
+        enum empty = false;
+    };
+    auto iotaPart = myIota.takeOne;
+    int sum;
+    foreach (var; chain(iotaPart, iotaPart, iotaPart))
+    {
+        sum += var;
+    }
+    assert(sum == 3);
+    assert(iotaPart.front == 3);
 }
 
 /++
