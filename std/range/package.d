@@ -320,16 +320,17 @@ if (isBidirectionalRange!(Unqual!Range))
 
 
 ///
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     import std.algorithm.comparison : equal;
-    int[] a = [ 1, 2, 3, 4, 5 ];
-    assert(equal(retro(a), [ 5, 4, 3, 2, 1 ][]));
-    assert(retro(a).source is a);
-    assert(retro(retro(a)) is a);
+    int[5] a = [ 1, 2, 3, 4, 5 ];
+    int[5] b = [ 5, 4, 3, 2, 1 ];
+    assert(equal(retro(a[]), b[]));
+    assert(retro(a[]).source is a[]);
+    assert(retro(retro(a[])) is a[]);
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     static assert(isBidirectionalRange!(typeof(retro("hello"))));
@@ -355,7 +356,7 @@ if (isBidirectionalRange!(Unqual!Range))
    auto r = retro(foo);
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.internal.test.dummyrange : AllDummyRanges, propagatesRangeType,
         ReturnBy;
@@ -416,16 +417,17 @@ if (isBidirectionalRange!(Unqual!Range))
     }
 }
 
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     import std.algorithm.comparison : equal;
     auto LL = iota(1L, 4L);
     auto r = retro(LL);
-    assert(equal(r, [3L, 2L, 1L]));
+    long[3] excepted = [3, 2, 1];
+    assert(equal(r, excepted[]));
 }
 
 // Issue 12662
-@safe @nogc unittest
+pure @safe nothrow @nogc unittest
 {
     int[3] src = [1,2,3];
     int[] data = src[];
@@ -640,7 +642,7 @@ body
 }
 
 ///
-unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -649,22 +651,32 @@ unittest
     assert(stride(stride(a, 2), 3) == stride(a, 6));
 }
 
-nothrow @nogc unittest
+pure @safe nothrow @nogc unittest
 {
     int[4] testArr = [1,2,3,4];
     //just checking it compiles
     auto s = testArr[].stride(2);
 }
 
-debug unittest
+debug pure nothrow unittest
 {//check the contract
     int[4] testArr = [1,2,3,4];
+    bool passed = false;
+    scope (success) assert(passed);
     import core.exception : AssertError;
-    import std.exception : assertThrown;
-    assertThrown!AssertError(testArr[].stride(0));
+    //std.exception.assertThrown won't do because it can't infer nothrow
+    // @@@BUG@@@ 12647
+    try
+    {
+        auto unused = testArr[].stride(0);
+    }
+    catch (AssertError unused)
+    {
+        passed = true;
+    }
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges, propagatesRangeType,
@@ -800,7 +812,7 @@ debug unittest
     }
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1145,7 +1157,7 @@ if (Ranges.length > 0 &&
 }
 
 ///
-unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1162,7 +1174,7 @@ unittest
  * Range primitives are carried over to the returned range if
  * all of the ranges provide them
  */
-unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.sorting : sort;
     import std.algorithm.comparison : equal;
@@ -1180,7 +1192,7 @@ unittest
     assert(arr3.equal([7, 8, 9]));
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges, dummyLength,
@@ -1279,7 +1291,7 @@ unittest
     }
 }
 
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     class Foo{}
     immutable(Foo)[] a;
@@ -2075,7 +2087,7 @@ if (isInputRange!(Unqual!R) &&
 }
 
 ///
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2091,7 +2103,7 @@ if (isInputRange!(Unqual!R) &&
  * range (unlike $(LREF takeExactly), which will cause an assertion failure if
  * the range ends prematurely):
  */
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2116,7 +2128,7 @@ if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) 
     return Take!R(input, n);
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges;
@@ -2133,16 +2145,17 @@ if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) 
     static assert(is(typeof(s) == int[]));
 
     // Test using narrow strings.
+    import std.exception : assumeWontThrow;
+
     auto myStr = "This is a string.";
     auto takeMyStr = take(myStr, 7);
-    assert(equal(takeMyStr, "This is"));
-
+    assert(assumeWontThrow(equal(takeMyStr, "This is")));
     // Test fix for bug 5052.
     auto takeMyStrAgain = take(takeMyStr, 4);
-    assert(equal(takeMyStrAgain, "This"));
+    assert(assumeWontThrow(equal(takeMyStrAgain, "This")));
     static assert (is (typeof(takeMyStrAgain) == typeof(takeMyStr)));
     takeMyStrAgain = take(takeMyStr, 10);
-    assert(equal(takeMyStrAgain, "This is"));
+    assert(assumeWontThrow(equal(takeMyStrAgain, "This is")));
 
     foreach (DummyType; AllDummyRanges)
     {
@@ -2181,7 +2194,7 @@ if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) 
     static assert(is(Take!(typeof(myRepeat))));
 }
 
-@safe nothrow @nogc unittest
+pure @safe nothrow @nogc unittest
 {
     //check for correct slicing of Take on an infinite range
     import std.algorithm.comparison : equal;
@@ -2191,7 +2204,7 @@ if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) 
                 .equal(iota(start, stop)));
 }
 
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     // Check that one can declare variables of all Take types,
     // and that they match the return type of the corresponding
@@ -2208,7 +2221,7 @@ if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) 
     t3 = take(t2, 1);
 }
 
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     alias R1 = typeof(repeat(1));
     alias R2 = typeof(cycle([1]));
@@ -2218,14 +2231,14 @@ if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) 
     static assert(isBidirectionalRange!TR2);
 }
 
-@safe unittest //12731
+pure @safe nothrow @nogc unittest //12731
 {
     auto a = repeat(1);
     auto s = a[1 .. 5];
     s = s[1 .. 3];
 }
 
-@safe unittest //13151
+pure @safe nothrow @nogc unittest //13151
 {
     import std.algorithm.comparison : equal;
 
@@ -2325,7 +2338,7 @@ if (isInputRange!R)
 }
 
 ///
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2339,7 +2352,7 @@ if (isInputRange!R)
     assert(b.back == 3);
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
@@ -2358,7 +2371,7 @@ if (isInputRange!R)
     assert(equal(takeExactly(e, 3), [1, 2, 3]));
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges;
@@ -2420,7 +2433,7 @@ if (isInputRange!R)
     }
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : DummyRange, Length, RangeType, ReturnBy;
@@ -2503,7 +2516,7 @@ auto takeOne(R)(R source) if (isInputRange!R)
 }
 
 ///
-@safe unittest
+pure @safe nothrow unittest
 {
     auto s = takeOne([42, 43, 44]);
     static assert(isRandomAccessRange!(typeof(s)));
@@ -2519,7 +2532,7 @@ auto takeOne(R)(R source) if (isInputRange!R)
     assert(s.empty);
 }
 
-unittest
+pure @safe nothrow @nogc unittest
 {
     struct NonForwardRange
     {
@@ -2546,14 +2559,14 @@ auto takeNone(R)()
 }
 
 ///
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     auto range = takeNone!(int[])();
     assert(range.length == 0);
     assert(range.empty);
 }
 
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     enum ctfe = takeNone!(int[])();
     static assert(ctfe.length == 0);
@@ -2592,7 +2605,7 @@ auto takeNone(R)(R range)
 }
 
 ///
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.iteration : filter;
     assert(takeNone([42, 27, 19]).empty);
@@ -2777,7 +2790,7 @@ auto tail(Range)(Range range, size_t n)
 }
 
 ///
-pure @safe unittest
+pure @safe nothrow unittest
 {
     // tail -c n
     assert([1, 2, 3].tail(1) == [3]);
@@ -2790,12 +2803,13 @@ pure @safe unittest
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : joiner;
     import std.string : lineSplitter;
-
+    import std.exception : assumeWontThrow;
     assert("one\ntwo\nthree"
-            .lineSplitter
-            .tail(2)
-            .joiner("\n")
-            .equal("two\nthree"));
+        .lineSplitter
+        .tail(2)
+        .joiner("\n")
+        .equal("two\nthree")
+        .assumeWontThrow);
 }
 
 // @nogc prevented by @@@BUG@@@ 15408
@@ -2829,7 +2843,7 @@ pure nothrow @safe /+@nogc+/ unittest
         RangeType.Input).init.tail(5)));
 }
 
-@nogc unittest
+pure @safe nothrow @nogc unittest
 {
     static immutable input = [1, 2, 3];
     static immutable expectedOutput = [2, 3];
@@ -2994,7 +3008,7 @@ R dropBackOne(R)(R range)
 }
 
 ///
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filterBidirectional;
@@ -3008,8 +3022,9 @@ R dropBackOne(R)(R range)
     assert(a.dropBackOne() == [1, 2]);
 
     string s = "日本語";
-    assert(s.dropOne() == "本語");
-    assert(s.dropBackOne() == "日本");
+    import std.exception : assumeWontThrow;
+    assert(assumeWontThrow(s.dropOne() == "本語"));
+    assert(assumeWontThrow(s.dropBackOne() == "日本"));
 
     auto bd = filterBidirectional!"true"([1, 2, 3]);
     assert(bd.dropOne().equal([2, 3]));
@@ -3088,14 +3103,14 @@ public:
 Repeat!T repeat(T)(T value) { return Repeat!T(value); }
 
 ///
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
     assert(equal(5.repeat().take(4), [ 5, 5, 5, 5 ]));
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -3124,14 +3139,14 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
 }
 
 ///
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     import std.algorithm.comparison : equal;
 
     assert(equal(5.repeat(4), 5.repeat().take(4)));
 }
 
-@safe unittest //12007
+pure @safe nothrow unittest //12007
 {
     static class C{}
     Repeat!(immutable int) ri;
