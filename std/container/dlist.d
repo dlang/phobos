@@ -511,8 +511,8 @@ Complexity: $(BIGOH 1).
         import std.algorithm.mutation : move;
 
         assert(!empty, "DList.removeAny: List is empty");
-        auto result = move(back);
-        removeBack();
+        auto result = move(front);
+        removeFront();
         return result;
     }
     /// ditto
