@@ -42,7 +42,7 @@ clone() {
     local path="$2"
     local branch="$3"
     for i in {0..4}; do
-        if git clone --depth=1 --branch "$branch" "$url" "$path"; then
+        if git clone --branch "$branch" "$url" "$path" "${@:4}"; then
             break
         elif [ $i -lt 4 ]; then
             sleep $((1 << $i))
@@ -74,8 +74,8 @@ setup_repos()
         git merge -m "Automatic merge" $current_branch
     fi
 
-    clone https://github.com/dlang/dmd.git ../dmd $base_branch
-    clone https://github.com/dlang/druntime.git ../druntime $base_branch
+    clone https://github.com/dlang/dmd.git ../dmd $base_branch --depth 1
+    clone https://github.com/dlang/druntime.git ../druntime $base_branch --depth 1
 
     # load environment for bootstrap compiler
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
