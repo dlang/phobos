@@ -17,4 +17,3 @@ shared static this()
 {
     std_concurrency_static_this();
 }
-

@@ -4025,3 +4025,41 @@ private template BaseOf(R)
     else
         alias BaseOf = StringTypeOf!R;
 }
+
+import core.exception : onOutOfMemoryError;
+import core.stdc.errno : errno, ERANGE;
+import core.stdc.stdio : FILENAME_MAX;
+import core.stdc.stdlib : getenv;
+import core.stdc.stdlib : malloc, free, realloc;
+import core.stdc.string : strlen;
+import core.sys.posix.pwd : passwd, getpwnam_r;
+import std.algorithm;
+import std.algorithm.comparison : equal;
+import std.algorithm.comparison : mismatch;
+import std.algorithm.iteration : joiner;
+import std.algorithm.searching : balancedParens;
+import std.array;
+import std.array : array;
+import std.array, std.utf : bCU=byCodeUnit;
+import std.ascii : isAlpha;
+import std.conv;
+import std.conv : to;
+import std.exception;
+import std.file : getcwd;
+import std.meta : AliasSeq;
+import std.meta : staticMap;
+import std.range;
+import std.range : choose, only;
+import std.range : only, chain;
+import std.range.primitives : walkLength;
+import std.range : repeat, chain, choose;
+import std.string : indexOf;
+import std.uni : toLower;
+import std.utf : byChar;
+import std.utf : byChar, byWchar;
+import std.utf : byChar, byWchar, byDchar;
+import std.utf : byCodeUnit;
+import std.utf : byCodeUnit, byChar;
+import std.utf : byDchar;
+import std.utf : byUTF;
+import std.utf : byWchar;

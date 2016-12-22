@@ -733,3 +733,18 @@ unittest
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     test!(StatsCollector!(GCAllocator, 0, 0));
 }
+
+import std.array : array;
+import std.array : join;
+import std.conv : text, to;
+import std.conv : to;
+import std.experimental.allocator.building_blocks.free_list : FreeList;
+import std.experimental.allocator.gc_allocator : GCAllocator;
+import std.file : deleteme, remove;
+import std.range : repeat;
+import std.range : walkLength;
+import std.stdio : File;
+import std.stdio : writeln;
+import std.traits : EnumMembers;
+import std.traits : hasMember, Signed;
+import std.typecons : Ternary;

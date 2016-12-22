@@ -771,3 +771,20 @@ unittest
     p = alloc.allocateAll();
     assert(p.length == 1024 * 1024);
 }
+
+import core.stdc.string : memcpy;
+import std.algorithm.comparison : max;
+import std.algorithm.mutation : move;
+import std.conv : emplace;
+import std.experimental.allocator.common : roundUpToMultipleOf;
+import std.experimental.allocator.common : stateSize, alignedAt;
+import std.experimental.allocator.common : testAllocator;
+import std.experimental.allocator.gc_allocator : GCAllocator;
+import std.experimental.allocator.mallocator : Mallocator;
+import std.experimental.allocator.mmap_allocator : MmapAllocator;
+import std.format : format;
+import std.random : randomShuffle;
+import std.range : isForwardRange;
+import std.traits : hasMember;
+import std.typecons : Ternary;
+import std.typecons : tuple, Tuple;

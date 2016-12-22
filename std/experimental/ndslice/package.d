@@ -577,3 +577,14 @@ pure nothrow unittest
     assert(matrix[0, 2] == tensor[0, 1, 2]);
     assert(&matrix[0, 2] is &tensor[0, 1, 2]);
 }
+
+import std.algorithm.comparison : equal;
+import std.algorithm.sorting : topN;
+import std.array : array;
+import std.conv : to;
+import std.getopt : getopt, defaultGetoptPrinter;
+import std.meta : AliasSeq;
+import std.path : stripExtension;
+import std.range;
+import std.range : iota;
+import std.typecons : Tuple;

@@ -758,3 +758,7 @@ private import std.random;
 {
     static assert(__traits(compiles, etc.c.zlib.gzclose(null)));        // bugzilla 15457
 }
+
+import core.memory : GC;
+import std.conv : to;
+import std.range : chunks;

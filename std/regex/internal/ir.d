@@ -901,3 +901,15 @@ pure:
             return trie[ch];
     }
 }
+
+import core.stdc.stdlib : malloc;
+import std.algorithm.comparison : equal;
+import std.algorithm.iteration : map;
+import std.array : appender;
+import std.conv : text;
+import std.conv : to;
+import std.format : formattedWrite;
+import std.range : assumeSorted;
+import std.stdio : writeln;
+import std.utf : decode;
+import std.utf : strideBack;

@@ -1991,3 +1991,20 @@ unittest
     assert("abc".get(1, 'b') == "b");
     assert("löv".get(1, 'ö') == "ö");
 }
+
+import std.algorithm.comparison : cmp;
+import std.algorithm.comparison : equal;
+import std.algorithm.iteration : filter;
+import std.algorithm.iteration : uniq;
+import std.algorithm.searching : canFind;
+import std.array : array, split;
+import std.conv : to;
+import std.exception : enforce;
+import std.format : format;
+import std.regex;
+import std.regex : match;
+import std.regex : match, regex;
+import std.string : indexOf, lastIndexOf;
+import std.uni : icmp;
+import std.uni : isNumber;
+import std.utf : codeLength;

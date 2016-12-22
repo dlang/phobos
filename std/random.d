@@ -3149,3 +3149,26 @@ auto randomSample(Range, UniformRNG)(Range r, size_t n, auto ref UniformRNG rng)
         }
     }
 }
+
+import core.internal.string : UnsignedStringBuf, unsignedToTempString;
+import core.thread : Thread, getpid, MonoTime;
+import std.algorithm;
+import std.algorithm.iteration : map;
+import std.algorithm.iteration : reduce;
+import std.algorithm.mutation : swapAt;
+import std.algorithm.searching : all;
+import std.algorithm.searching : canFind;
+import std.algorithm.sorting : sort;
+import std.conv;
+import std.conv : text;
+import std.conv : text, unsigned;
+import std.conv : to;
+import std.exception;
+import std.exception : enforce;
+import std.math;
+import std.math : isNaN, trunc;
+import std.math : nextafter;
+import std.meta;
+import std.numeric : normalize;
+import std.range;
+import std.range : repeat;

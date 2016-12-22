@@ -1633,3 +1633,16 @@ void optimize(Char)(ref Regex!Char zis) pure
         }
     }
 }
+
+import std.algorithm.comparison : equal;
+import std.algorithm.comparison : max;
+import std.algorithm.iteration : sum;
+import std.algorithm.mutation : copy;
+import std.algorithm.searching : canFind;
+import std.algorithm.searching : countUntil;
+import std.array : appender;
+import std.array : insertInPlace;
+import std.conv : text;
+import std.format : formattedWrite;
+import std.functional : unaryFun;
+import std.range : assumeSorted;

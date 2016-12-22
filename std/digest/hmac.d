@@ -331,3 +331,9 @@ unittest
     assert(hmac!SHA1  (key).put(data1).put(data2).finish == data.hmac!SHA1  (key));
     assert(hmac!SHA256(key).put(data1).put(data2).finish == data.hmac!SHA256(key));
 }
+
+import std.algorithm.iteration : map;
+import std.algorithm.mutation : copy;
+import std.range : isOutputRange;
+import std.stdio;
+import std.string : representation;

@@ -3067,3 +3067,17 @@ private
         throw new XMLException(s);
     }
 }
+
+import std.algorithm.searching : count;
+import std.algorithm.searching : startsWith;
+import std.array : appender;
+import std.ascii : whitespace;
+import std.encoding : transcode;
+import std.exception : assertThrown;
+import std.format : format;
+import std.string : count, lastIndexOf;
+import std.string : indexOf;
+import std.string : munch;
+import std.string : rightJustify;
+import std.string : startsWith;
+import std.string : strip;

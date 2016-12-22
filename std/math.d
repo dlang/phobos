@@ -7803,3 +7803,12 @@ bool isPowerOf2(X)(const X x) pure @safe nothrow @nogc
             assert(!isPowerOf2(cast(X)x));
     }
 }
+
+import core.bitop : bsr;
+//import core.stdc.stdio; // : sprintf;
+import std.meta : AliasSeq;
+import std.range.primitives : empty, front, isInputRange, popFront;
+import std.stdio : writefln;
+import std.traits : Unsigned;
+import std.typecons : Tuple;
+import std.typecons : tuple, Tuple;

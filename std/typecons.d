@@ -7579,3 +7579,20 @@ unittest
     assert(~Ternary.no == Ternary.yes);
     assert(~Ternary.unknown == Ternary.unknown);
 }
+
+import core.exception : onOutOfMemoryError;
+import core.memory : GC;
+import core.stdc.stdlib;
+import core.stdc.stdlib : free;
+import core.stdc.stdlib : malloc;
+import core.stdc.string;
+import core.stdc.string : memcpy, memset;
+import core.thread;
+import core.vararg;
+//import std.datetime;
+import std.meta : Filter;
+import std.meta : Reverse;
+import std.meta : staticMap;
+import std.traits;
+import std.traits : isArray;
+import std.traits : QualifierOf;

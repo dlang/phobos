@@ -583,3 +583,12 @@ unittest
     assert(equal(heap, [ 5, 5, 4, 4, 3, 3, 2, 2, 1, 1]));
     assert(equal(b, [10, 9, 8, 7, 6, 6, 7, 8, 9, 10]));
 }
+
+import std.algorithm.mutation : move, swapAt;
+import std.algorithm.mutation : swap;
+import std.conv : to;
+import std.exception : enforce;
+import std.internal.test.dummyrange;
+import std.range : take;
+import std.traits : isDynamicArray;
+import std.typecons : RefCounted, RefCountedAutoInitialize;

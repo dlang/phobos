@@ -1514,3 +1514,9 @@ string ctGenRegExCode(Char)(const Regex!Char re)
     auto context = CtContext(re);
     return context.ctGenRegEx(re.ir);
 }
+
+import core.stdc.stdlib;
+import core.stdc.stdlib : free;
+import std.algorithm.comparison : max;
+import std.conv : to;
+import std.conv : to, text;

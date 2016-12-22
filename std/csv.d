@@ -1698,3 +1698,18 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
         ++i;
     }
 }
+
+import std.algorithm;
+import std.algorithm.iteration : map;
+import std.algorithm.searching : findAdjacent;
+import std.algorithm.sorting : isSorted;
+import std.algorithm.sorting : sort;
+import std.array;
+import std.array : appender;
+import std.array : array;
+import std.exception;
+import std.exception : assertNotThrown;
+import std.format : format;
+import std.math : abs;
+import std.string;
+import std.typecons;

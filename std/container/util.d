@@ -185,3 +185,11 @@ unittest
     refToDList.insert(1);
     assert(!dlist.empty);
 }
+
+import std.range : ElementType;
+import std.range : iota;
+import std.range : isInputRange, isInfinite;
+import std.range : only, repeat;
+import std.range.primitives : ElementType;
+import std.range.primitives : isInfinite;
+import std.traits : isDynamicArray;

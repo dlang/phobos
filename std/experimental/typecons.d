@@ -1023,3 +1023,12 @@ pure nothrow @safe unittest
     static assert(!__traits(compiles, arr ~= 4));
     assert((arr ~ 4) == [1, 2, 3, 4]);
 }
+
+import std.conv : ConvException;
+import std.conv : to;
+import std.functional : forward;
+import std.meta : ApplyLeft, staticMap;
+import std.meta : staticMap;
+import std.range, std.algorithm;
+import std.traits : QualifierOf;
+import std.typecons : Proxy;

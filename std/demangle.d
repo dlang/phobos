@@ -86,3 +86,6 @@ string demangle(string name)
     auto ret = demangle(name);
     return assumeUnique(ret);
 }
+
+import core.demangle : demangle;
+import std.exception : assumeUnique;

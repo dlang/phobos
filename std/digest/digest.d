@@ -1004,3 +1004,10 @@ unittest
     ubyte[5] buf;
     assert(hash.peek(buf).toHexString() == "39A34F41");
 }
+import std.algorithm.mutation : copy;
+import std.exception : assumeUnique;
+import std.range : isInputRange, ElementType;
+import std.range : isOutputRange;
+import std.range : repeat;
+import std.range : retro;
+import std.stdio;

@@ -530,3 +530,9 @@ package void testAllocator(alias make)()
         assert(a.resolveInternalPointer(b8.ptr + b8.length) is null);
     }}
 }
+
+import std.conv : text;
+import std.math : isPowerOf2;
+import std.meta : AliasSeq;
+import std.stdio : writeln, stderr;
+import std.typecons : Ternary;

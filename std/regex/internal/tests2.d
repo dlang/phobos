@@ -268,3 +268,5 @@ unittest
     auto w1 = ["", "abc", "de", "fg", "hi", ""];
     assert(equal(split(s1, regex(", *")), w1[]));
 }
+
+import std.uni : toUpper;

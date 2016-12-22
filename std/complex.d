@@ -982,3 +982,13 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     // Test ease of use (vanilla toString() should be supported)
     assert(complex(1.2, 3.4).toString() == "1.2+3.4i");
 }
+
+import std.array : appender;
+import std.exception : assumeUnique;
+import std.format;
+import std.format : format;
+import std.format : FormatSpec;
+import std.format : formatValue;
+import std.math;
+import std.range.primitives : isOutputRange;
+import std.range.primitives : put;

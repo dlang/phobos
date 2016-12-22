@@ -4844,3 +4844,22 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
 
     fromTid.send(thisTid, curlMessage(true)); // signal done
 }
+
+import core.stdc.config : c_long;
+import core.stdc.stdlib : exit, EXIT_FAILURE;
+import core.stdc.string : strlen;
+import core.sys.posix.dlfcn : dlclose;
+import core.sys.posix.dlfcn : dlsym, dlopen, dlclose, RTLD_LAZY;
+import std.array : appender;
+import std.compiler : version_major, version_minor;
+import std.concurrency : initOnce;
+import std.conv : to;
+import std.file : deleteme;
+import std.meta : AliasSeq;
+import std.path : buildPath;
+import std.range;
+import std.stdio;
+import std.stdio : File;
+import std.uni : asUpperCase;
+import std.uri : urlEncode;
+import std.utf : UTFException;

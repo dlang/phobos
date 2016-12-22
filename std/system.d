@@ -71,4 +71,3 @@ immutable
     version(LittleEndian) Endian endian = Endian.littleEndian;
     else                  Endian endian = Endian.bigEndian;
 }
-

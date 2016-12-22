@@ -185,3 +185,9 @@ unittest
     foreach (v; take(gen, 1_000))
         assert(v.match(re));
 }
+
+import std.array : appender, Appender;
+import std.format : formattedWrite;
+import std.random : Xorshift;
+import std.range, std.regex;
+import std.utf : isValidDchar, byChar;

@@ -2274,3 +2274,26 @@ pure nothrow unittest
     alias stringize = mapSlice!(to!string);
     assert(stringize(iotaSlice(2, 3)) == [["0", "1", "2"], ["3", "4", "5"]]);
 }
+
+import std.algorithm.comparison : equal;
+import std.array : array;
+import std.conv : to;
+import std.exception : assertThrown;
+import std.functional : adjoin, unaryFun;
+import std.functional : unaryFun;
+import std.meta;
+import std.range : drop;
+import std.range : dropOne;
+import std.range : dropOne, popFrontN;
+import std.range : iota;
+import std.range : iota, isForwardRange, hasLength;
+import std.range : iota, repeat;
+import std.range : isRandomAccessRange;
+import std.range : only;
+import std.range.primitives;
+import std.range.primitives : ElementType;
+import std.range.primitives : isRandomAccessRange;
+import std.range.primitives : isRandomAccessRange, hasSlicing;
+import std.range.primitives : popFrontN;
+import std.range : retro;
+import std.typecons : Rebindable;

@@ -2339,3 +2339,23 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
     size_t i = a.length - strideBack(a, a.length);
     return decode(a, i);
 }
+
+import std.algorithm.iteration : filter;
+import std.algorithm.iteration : filterBidirectional;
+import std.algorithm.iteration : map;
+import std.algorithm.mutation : move;
+import std.algorithm.mutation : swap;
+
+import std.array;
+import std.conv : to;
+//import std.encoding : encode;
+import std.format;
+
+import std.internal.test.dummyrange;
+import std.meta : AliasSeq;
+import std.stdio : writeln;
+import std.typecons : tuple;
+import std.utf : decode;
+import std.utf : decode, strideBack;
+import std.utf : encode;
+import std.utf : strideBack;

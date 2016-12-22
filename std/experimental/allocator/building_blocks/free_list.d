@@ -1085,3 +1085,15 @@ unittest
     shared SharedFreeList!(Mallocator, 30, 40, chooseAtRuntime) a;
     a.allocate(64);
 }
+
+import core.atomic : atomicOp, cas;
+import std.algorithm.comparison : equal;
+import std.concurrency : receiveOnly, send, spawn, thisTid, Tid;
+import std.conv : text;
+import std.exception : enforce;
+import std.experimental.allocator.building_blocks.region : Region;
+import std.experimental.allocator.gc_allocator : GCAllocator;
+import std.experimental.allocator.mallocator : Mallocator;
+import std.range : repeat;
+import std.traits : hasMember;
+import std.typecons : Ternary;

@@ -2676,3 +2676,30 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
     static assert(!__traits(compiles, initOnce!c(true))); // TLS
     static assert(!__traits(compiles, initOnce!d(true))); // local variable
 }
+
+import core.atomic;
+import core.atomic : atomicLoad, MemoryOrder, atomicStore;
+import core.exception;
+import core.sync.condition;
+import core.sync.mutex;
+import core.thread;
+import core.time : MonoTime;
+import std.algorithm.mutation : remove;
+import std.algorithm.mutation : remove, SwapStrategy;
+import std.algorithm.searching : countUntil;
+import std.concurrencybase;
+import std.conv : emplace;
+import std.conv : text;
+import std.exception;
+import std.exception : assertThrown;
+import std.exception : basicExceptionCtors;
+import std.exception : enforce;
+import std.format : format;
+import std.format : formattedWrite;
+import std.meta : AliasSeq;
+import std.range.primitives;
+import std.stdio;
+import std.traits;
+import std.typecons : Tuple;
+import std.typecons : tuple, Tuple;
+import std.variant;

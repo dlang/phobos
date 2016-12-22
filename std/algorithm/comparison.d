@@ -2134,3 +2134,31 @@ CommonType!(T, Ts) either(alias pred = a => a, T, Ts...)(T first, lazy Ts altern
     static assert(!__traits(compiles, either(1.0, "a")));
     static assert(!__traits(compiles, either('a', "a")));
 }
+
+import core.checkedint : mulu;
+import core.exception : onOutOfMemoryError;
+import core.exception : SwitchError;
+import core.stdc.stdlib : free;
+import core.stdc.stdlib : realloc;
+import core.stdc.string : memcmp;
+import std.algorithm.internal : algoFormat;
+import std.algorithm.iteration : filter;
+import std.algorithm.iteration : map;
+import std.algorithm.mutation : reverse;
+import std.algorithm.searching : count;
+import std.datetime;
+import std.datetime : Date;
+import std.exception : assertThrown;
+import std.format : format;
+import std.functional : binaryFun;
+import std.functional : greaterThan;
+import std.functional : lessThan;
+import std.internal.test.dummyrange;
+import std.math : approxEqual;
+import std.meta : AliasSeq;
+import std.meta : staticMap;
+import std.range : iota, chunks;
+import std.uni : toUpper;
+import std.utf : byChar, byWchar, byDchar;
+import std.utf : byCodeUnit;
+import std.utf : decode;

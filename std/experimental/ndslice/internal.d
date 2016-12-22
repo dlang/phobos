@@ -517,3 +517,5 @@ pure nothrow unittest
 }
 
 struct _Slice { size_t i, j; }
+
+import std.internal.test.dummyrange;

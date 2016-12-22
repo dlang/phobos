@@ -1665,3 +1665,28 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
 
     assert(rslt.helpWanted);
 }
+
+import std.algorithm.comparison : min, max;
+import std.algorithm.iteration : map, splitter;
+import std.algorithm.mutation : remove;
+import std.array ;
+import std.array;
+import std.array : split;
+import std.ascii : isAlpha;
+import std.bitmanip : bitfields;
+import std.conv;
+import std.conv : text, to;
+import std.conv : to;
+import std.exception;
+import std.exception : enforce;
+import std.format : format;
+import std.format : formattedWrite;
+import std.math;
+import std.range : ElementEncodingType;
+import std.range : only;
+import std.stdio : stdout;
+import std.string;
+import std.string : indexOf;
+import std.typecons : staticIota;
+import std.typecons : Tuple, tuple;
+import std.uni : toUpper;

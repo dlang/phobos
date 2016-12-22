@@ -481,3 +481,6 @@ unittest
     immutable cr4 = ctRegex!(`\b(a\B[a-z]b)\b`);
     assert(array(match("azb",cr4).captures) == ["azb", "azb"]);
 }
+
+import std.algorithm.comparison : equal;
+import std.stdio;

@@ -1463,3 +1463,32 @@ template forward(args...)
     int value = 3;
     auto x2 = bar(value); // case of OK
 }
+
+import core.bitop : bt, bts;
+import core.math : sqrt;
+import core.memory : GC;
+import std.algorithm.comparison : equal;
+import std.algorithm.iteration : map;
+import std.algorithm.mutation : move;
+import std.algorithm.searching : find;
+import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+import std.array : split;
+import std.ascii : isASCII, isAlphaNum;
+import std.ascii : isDigit;
+import std.conv : emplace;
+import std.conv : to;
+import std.format : format;
+import std.typecons : Tuple;
+import std.meta : staticMap;
+import std.range : iota;
+import std.traits : CommonType;
+import std.traits : hasIndirections;
+import std.traits : isIntegral;
+import std.traits : mostNegative;
+import std.traits : ReturnType;
+import std.traits, std.typecons, std.meta;
+import std.typecons : FuncInfo, MemberFunctionGenerator;
+import std.typecons : tuple;
+import std.typecons : Tuple;
+import std.typecons : Tuple, tuple;
+import std.uni : isWhite;

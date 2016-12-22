@@ -550,3 +550,9 @@ unittest
     assert(app.data.length == 3);
     assert(equal(app.data, [1,2,3]));
 }
+
+import std.algorithm.iteration : map;
+import std.array;
+import std.conv : to;
+import std.internal.test.dummyrange;
+import std.range : iota;

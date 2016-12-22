@@ -580,3 +580,10 @@ unittest
 
 }
 
+
+import core.stdc.string : memchr;
+import std.algorithm.searching : countUntil;
+import std.conv;
+import std.conv : text;
+import std.range : assumeSorted;
+import std.stdio : writefln;

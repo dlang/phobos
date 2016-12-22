@@ -1205,3 +1205,8 @@ body
         .dropToHypercube
         .shape == cast(size_t[4])[3, 3, 3, 3]);
 }
+
+import std.algorithm.comparison : equal;
+import std.range : iota, retro;
+import std.range : iota, retro, chain;
+import std.range : iota, stride, chain;

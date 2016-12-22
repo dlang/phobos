@@ -230,3 +230,7 @@ unittest
         (size_t n) => n.roundUpToMultipleOf(64));
     testAllocator!(() => MyAlloc());
 }
+
+import std.experimental.allocator.building_blocks.free_tree : FreeTree;
+import std.experimental.allocator.gc_allocator : GCAllocator;
+import std.traits : hasMember;

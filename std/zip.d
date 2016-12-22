@@ -986,3 +986,18 @@ version(Posix) @system unittest
     scope(failure) writeln(result.output);
     assert(result.status == 0);
 }
+
+import std.algorithm.comparison : max;
+import std.algorithm.sorting : sort;
+import std.bitmanip : littleEndianToNative, nativeToLittleEndian;
+import std.conv : to;
+import std.conv : to, octal;
+import std.datetime;
+import std.datetime, std.file, std.format, std.path, std.process, std.stdio;
+import std.random : Mt19937, randomShuffle;
+import std.random : uniform, MinstdRand0;
+import std.stdio, std.conv;
+import std.zlib;
+import std.zlib : compress;
+import std.zlib : crc32;
+import std.zlib : uncompress;

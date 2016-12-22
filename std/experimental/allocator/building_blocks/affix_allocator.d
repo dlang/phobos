@@ -372,3 +372,9 @@ unittest
     auto e = MyAllocator.instance.makeArray!(const int)(100);
     static assert(is(typeof(&MyAllocator.instance.prefix(e)) == const(uint)*));
 }
+
+import std.algorithm.comparison : min;
+import std.conv : emplace;
+import std.math : isPowerOf2;
+import std.traits : hasMember;
+import std.typecons : Ternary;

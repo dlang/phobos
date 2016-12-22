@@ -156,3 +156,7 @@ unittest
     // anything above a page is simply rounded up to next page
     assert(GCAllocator.instance.goodAllocSize(4096 * 4 + 1) == 4096 * 5);
 }
+
+import core.bitop : bsr;
+import core.exception : OutOfMemoryError;
+import core.memory : GC;

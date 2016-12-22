@@ -1206,3 +1206,5 @@ template ThompsonOps(E,S, bool withInput:false)
         return t;
     }
 }
+
+import std.utf : stride;

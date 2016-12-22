@@ -237,3 +237,13 @@ unittest
     assert(a.owns(b) == Ternary.yes);
     a.deallocate(b);
 }
+
+import common = std.experimental.allocator.common : roundUpToMultipleOf;
+import std.algorithm.comparison : max;
+import std.experimental.allocator.building_blocks.allocator_list : AllocatorList;
+import std.experimental.allocator.building_blocks.free_list : FreeList;
+import std.experimental.allocator.building_blocks.region : Region;
+import std.experimental.allocator.common : unbounded;
+import std.experimental.allocator.mallocator : Mallocator;
+import std.traits : hasMember;
+import std.typecons : Ternary;

@@ -4575,3 +4575,20 @@ unittest
         arr.parallel.each!"a++";
     })));
 }
+
+import core.cpuid : datacache;
+import core.stdc.stdlib : malloc, free;
+import core.stdc.string : memcpy;
+import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
+import std.algorithm.internal : addressOf;
+import std.algorithm.iteration : map;
+import std.concurrency : initOnce;
+import std.conv, std.range, std.numeric, std.stdio;
+import std.conv, std.stdio;
+import std.file;
+import std.file : deleteme;
+import std.math : approxEqual;
+import std.parallelism : taskPool;
+import std.range : iota;
+import std.stdio;
+import std.string : chomp;

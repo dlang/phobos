@@ -2644,3 +2644,35 @@ nothrow unittest
 
     scope(exit) free(s.ptr);
 }
+
+import core.stdc.stdlib : malloc, free;
+import core.stdc.string : memcpy, memset;
+import core.stdc.string : memset, memcpy;
+import std.range;
+
+import std.array : array;
+import std.array : sameHead;
+import std.container : SList;
+import std.conv : emplaceRef;
+import std.conv : text;
+
+import std.exception : assertCTFEable;
+import std.exception : assertThrown;
+import std.exception : doesPointTo;
+import std.exception : doesPointTo, mayPointTo;
+import std.exception : enforce;
+
+import std.functional : not;
+import std.functional : unaryFun;
+import std.internal.test.dummyrange;
+import std.meta : AliasSeq;
+import std.random : Random, unpredictableSeed, uniform;
+import std.range;
+import std.range : take, Take;
+
+import std.traits;
+import std.traits : hasElaborateAssign;
+import std.traits : hasElaborateAssign, isDynamicArray;
+import std.traits : hasElaborateDestructor;
+import std.traits : isAssignable;
+import std.utf : stride;

@@ -704,3 +704,4 @@ version(none) // Disabled because of dmd @@@BUG5028@@@
     assert( dot2.value == -22 );
 }
 
+import core.checkedint : addu, mulu;

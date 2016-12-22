@@ -1575,3 +1575,13 @@ private template Pack(T...)
 // TODO: Consider publicly exposing this, maybe even if only for better
 // understandability of error messages.
 alias Instantiate(alias Template, Params...) = Template!Params;
+
+//import std.algorithm.iteration : map;
+//import std.algorithm.sorting : sort;
+//import std.array : array;
+//import std.conv : to, octal;
+//import std.range : iota;
+//import std.range.primitives : isInputRange;
+//import std.stdio;
+//import std.string : capitalize;
+//import std.traits;
