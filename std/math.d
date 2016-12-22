@@ -3020,7 +3020,7 @@ typed_allocator.d
 real log(real x) @safe pure nothrow @nogc
 {
     version (INLINE_YL2X)
-        return yl2x(x, LN2);
+        return core.math.yl2x(x, LN2);
     else
     {
         // Coefficients for log(1 + x)
@@ -3147,7 +3147,7 @@ real log(real x) @safe pure nothrow @nogc
 real log10(real x) @safe pure nothrow @nogc
 {
     version (INLINE_YL2X)
-        return yl2x(x, LOG2);
+        return core.math.yl2x(x, LOG2);
     else
     {
         // Coefficients for log(1 + x)
@@ -3285,7 +3285,7 @@ real log1p(real x) @safe pure nothrow @nogc
     {
         // On x87, yl2xp1 is valid if and only if -0.5 <= lg(x) <= 0.5,
         //    ie if -0.29<=x<=0.414
-        return (fabs(x) <= 0.25)  ? yl2xp1(x, LN2) : yl2x(x+1, LN2);
+        return (fabs(x) <= 0.25)  ? core.math.yl2xp1(x, LN2) : core.math.yl2x(x+1, LN2);
     }
     else
     {
@@ -3317,7 +3317,7 @@ real log1p(real x) @safe pure nothrow @nogc
 real log2(real x) @safe pure nothrow @nogc
 {
     version (INLINE_YL2X)
-        return yl2x(x, 1);
+        return core.math.yl2x(x, 1);
     else
     {
         // Coefficients for log(1 + x)
@@ -3579,7 +3579,7 @@ real cbrt(real x) @trusted nothrow @nogc
     version (CRuntime_Microsoft)
     {
         version (INLINE_YL2X)
-            return copysign(exp2(yl2x(fabs(x), 1.0L/3.0L)), x);
+            return copysign(exp2(core.math.yl2x(fabs(x), 1.0L/3.0L)), x);
         else
             return core.stdc.math.cbrtl(x);
     }
@@ -6378,7 +6378,7 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @nogc @trusted pure nothrow
             // (though complicated) method is described in:
             // "An efficient rounding boundary test for pow(x, y)
             // in double precision", C.Q. Lauter and V. Lefèvre, INRIA (2007).
-            return sign * exp2( yl2x(x, y) );
+            return sign * exp2( core.math.yl2x(x, y) );
         }
         else
         {
@@ -7093,23 +7093,6 @@ deprecated("Phobos1 math functions are deprecated, use isFinite ") alias isfinit
 deprecated("Phobos1 math functions are deprecated, use isNormal ") alias isnormal = isNormal;
 deprecated("Phobos1 math functions are deprecated, use isSubnormal ") alias issubnormal = isSubnormal;
 deprecated("Phobos1 math functions are deprecated, use isInfinity ") alias isinf = isInfinity;
-
-/* **********************************
- * Building block functions, they
- * translate to a single x87 instruction.
- */
-
-real yl2x(real x, real y)   @nogc @safe pure nothrow;       // y * log2(x)
-real yl2xp1(real x, real y) @nogc @safe pure nothrow;       // y * log2(x + 1)
-
-@safe pure nothrow @nogc unittest
-{
-    version (INLINE_YL2X)
-    {
-        assert(yl2x(1024, 1) == 10);
-        assert(yl2xp1(1023, 1) == 10);
-    }
-}
 
 @safe pure nothrow @nogc unittest
 {
