@@ -855,6 +855,10 @@ struct SharedFreeList(ParentAllocator,
             assert(nodes);
             atomicOp!("-=")(nodes, 1);
         }
+        private void resetNodes() shared
+        {
+            nodes = 0;
+        }
         private bool nodesFull() shared
         {
             return nodes >= approxMaxLength;
@@ -864,6 +868,7 @@ struct SharedFreeList(ParentAllocator,
     {
         private static void incNodes() { }
         private static void decNodes() { }
+        private static void resetNodes() { }
         private enum bool nodesFull = false;
     }
 
@@ -1017,13 +1022,16 @@ struct SharedFreeList(ParentAllocator,
         else static if (hasMember!(ParentAllocator, "deallocate"))
         {
             result = true;
-            for (auto n = _root; n; n = n.next)
+            for (auto n = _root; n;)
             {
+                auto tmp = n.next;
                 if (!parent.deallocate((cast(ubyte*)n)[0 .. max]))
                     result = false;
+                n = tmp;
             }
         }
         _root = null;
+        resetNodes();
         return result;
     }
 }
@@ -1062,6 +1070,18 @@ unittest
     {
         assert(receiveOnly!bool);
     }
+}
+
+unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
+    auto b = a.allocate(100);
+    a.deallocate(b);
+    assert(a.nodes == 1);
+    b = [];
+    a.deallocateAll();
+    assert(a.nodes == 0);
 }
 
 unittest
