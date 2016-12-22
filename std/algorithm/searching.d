@@ -158,6 +158,7 @@ are true.
 Checks if $(I _any) of the elements verifies $(D pred).
 $(D !any) can be used to verify that $(I none) of the elements verify
 $(D pred).
+This is sometimes called `exists` in other languages.
  +/
 template any(alias pred = "a")
 {
@@ -740,6 +741,8 @@ size_t count(alias pred = "true", R)(R haystack)
     $(D startsWith!pred(haystack, needles)) is $(D true). If
     $(D startsWith!pred(haystack, needles)) is not $(D true) for any element in
     $(D haystack), then $(D -1) is returned.
+
+    See_Also: $(REF indexOf, std,string)
   +/
 ptrdiff_t countUntil(alias pred = "a == b", R, Rs...)(R haystack, Rs needles)
     if (isForwardRange!R
@@ -1665,6 +1668,8 @@ pred).
 
 To _find the last element of a bidirectional $(D haystack) satisfying
 $(D pred), call $(D find!(pred)(retro(haystack))). See $(REF retro, std,range).
+
+`find` behaves similar to `dropWhile` in other languages.
 
 Params:
 
@@ -3262,6 +3267,7 @@ unittest
 /**
 Iterates the passed range and returns the minimal element.
 A custom mapping function can be passed to `map`.
+In other languages this is sometimes called `argmin`.
 
 Complexity: O(n)
     Exactly `n - 1` comparisons are needed.
@@ -3353,6 +3359,7 @@ auto minElement(alias map = "a", Range, RangeElementType = ElementType!Range)
 /**
 Iterates the passed range and returns the maximal element.
 A custom mapping function can be passed to `map`.
+In other languages this is sometimes called `argmax`.
 
 Complexity:
     Exactly `n - 1` comparisons are needed.
@@ -4260,10 +4267,11 @@ private void skipAll(alias pred = "a == b", R, Es...)(ref R r, Es es)
 }
 
 /**
-Interval option specifier for $(D until) (below) and others.
+Interval option specifier for `until` (below) and others.
 
 If set to $(D OpenRight.yes), then the interval is open to the right
 (last element is not included).
+This is similar to `takeWhile` in other languages.
 
 Otherwise if set to $(D OpenRight.no), then the interval is closed to the right
 (last element included).
@@ -4410,8 +4418,8 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
     import std.algorithm.comparison : equal;
     import std.typecons : No;
     int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
-    assert(equal(a.until(7), [1, 2, 4][]));
-    assert(equal(a.until(7, No.openRight), [1, 2, 4, 7][]));
+    assert(equal(a.until(7), [1, 2, 4]));
+    assert(equal(a.until(7, No.openRight), [1, 2, 4, 7]));
 }
 
 @safe unittest
@@ -4423,10 +4431,10 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
     static assert(isForwardRange!(typeof(a.until(7))));
     static assert(isForwardRange!(typeof(until!"a == 2"(a, No.openRight))));
 
-    assert(equal(a.until(7), [1, 2, 4][]));
-    assert(equal(a.until([7, 2]), [1, 2, 4, 7][]));
-    assert(equal(a.until(7, No.openRight), [1, 2, 4, 7][]));
-    assert(equal(until!"a == 2"(a, No.openRight), [1, 2][]));
+    assert(equal(a.until(7), [1, 2, 4]));
+    assert(equal(a.until([7, 2]), [1, 2, 4, 7]));
+    assert(equal(a.until(7, No.openRight), [1, 2, 4, 7]));
+    assert(equal(until!"a == 2"(a, No.openRight), [1, 2]));
 }
 
 unittest // bugzilla 13171

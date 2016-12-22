@@ -205,6 +205,8 @@ Returns:
     A bidirectional range with length if `r` also provides a length. Or,
     if `r` is a random access range, then the return value will be random
     access as well.
+See_Also:
+    $(REF reverse, std,algorithm,mutation) for mutating the source range directly.
  */
 auto retro(Range)(Range r)
 if (isBidirectionalRange!(Unqual!Range))
@@ -837,6 +839,8 @@ Returns:
     An input range at minimum. If all of the ranges in `rs` provide
     a range primitive, the returned range will also provide that range
     primitive.
+
+See_Also: $(LREF only) to chain values to a range
  */
 auto chain(Ranges...)(Ranges rs)
 if (Ranges.length > 0 &&
@@ -2872,17 +2876,27 @@ pure @safe nothrow @nogc unittest
 
 /++
     Convenience function which calls
-    $(D range.$(LREF popFrontN)(n)) and returns $(D range). $(D drop)
-    makes it easier to pop elements from a range
+    `range.$(REF popFrontN, std, range, primitives)(n)) and returns `range`.
+    `drop` makes it easier to pop elements from a range
     and then pass it to another function within a single expression,
-    whereas $(D popFrontN) would require multiple statements.
+    whereas `popFrontN` would require multiple statements.
 
-    $(D dropBack) provides the same functionality but instead calls
-    $(D range.popBackN(n)).
+    `dropBack` provides the same functionality but instead calls
+    `range.$(REF popBackN, std, range, primitives)(n))
 
-    Note: $(D drop) and $(D dropBack) will only pop $(I up to)
-    $(D n) elements but will stop if the range is empty first.
+    Note: `drop` and `dropBack` will only pop $(I up to)
+    `n` elements but will stop if the range is empty first.
+    In other languages this is sometimes called `skip`.
 
+    Params:
+        range = the input range to drop from
+        n = the number of elements to drop
+
+    Returns:
+        `range` with up to `n` elements dropped
+
+    See_Also:
+        $(REF popFront, std, range, primitives),$(REF popBackN, std, range, primitives)
   +/
 R drop(R)(R range, size_t n)
     if (isInputRange!R)
@@ -2969,6 +2983,10 @@ R dropBack(R)(R range, size_t n)
 
     Returns:
         `range` with `n` elements dropped
+
+    See_Also:
+        $(REF popFrontExcatly, std, range, primitives),
+        $(REF popBackExcatly, std, range, primitives)
 +/
 R dropExactly(R)(R range, size_t n)
     if (isInputRange!R)
@@ -7497,6 +7515,14 @@ having to perform dynamic memory allocation.
 As copying the range means copying all elements, it can be
 safely returned from functions. For the same reason, copying
 the returned range may be expensive for a large number of arguments.
+
+Params:
+    values = the values to assemble together
+
+Returns:
+    A `RandomAccessRange` of the assembled values.
+
+See_Also: $(LREF chain) to chain ranges
  */
 auto only(Values...)(auto ref Values values)
     if (!is(CommonType!Values == void) || Values.length == 0)

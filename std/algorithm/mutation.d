@@ -2080,12 +2080,11 @@ if (isBidirectionalRange!Range
 /**
 Reverses $(D r) in-place.  Performs $(D r.length / 2) evaluations of $(D
 swap).
-
 Params:
     r = a bidirectional range with swappable elements or a random access range with a length member
 
 See_Also:
-    $(HTTP sgi.com/tech/stl/_reverse.html, STL's _reverse)
+    $(HTTP sgi.com/tech/stl/_reverse.html, STL's _reverse), $(REF retro, std,range) for a lazy reversed range view
 */
 void reverse(Range)(Range r)
 if (isBidirectionalRange!Range && !isRandomAccessRange!Range
