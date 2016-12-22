@@ -760,6 +760,7 @@ struct SharedFreeList(ParentAllocator,
         "Maximum size must accommodate a pointer.");
 
     import core.atomic : atomicOp, cas;
+    import core.internal.spinlock : SpinLock;
 
     static if (minSize != chooseAtRuntime)
     {
@@ -924,6 +925,8 @@ struct SharedFreeList(ParentAllocator,
 
     mixin(forwardToMember("parent", "expand"));
 
+    private SpinLock lock;
+
     private struct Node { Node* next; }
     static assert(ParentAllocator.alignment >= Node.alignof);
     private Node* _root;
@@ -958,18 +961,22 @@ struct SharedFreeList(ParentAllocator,
         assert(bytes < size_t.max / 2);
         if (!freeListEligible(bytes)) return parent.allocate(bytes);
         if (maxSize != unbounded) bytes = max;
-        // Pop off the freelist
-        shared Node* oldRoot = void, next = void;
-        do
+
+        // Try to pop off the freelist
+        lock.lock();
+        if (!_root)
         {
-            oldRoot = _root; // atomic load
-            if (!oldRoot) return allocateFresh(bytes);
-            next = oldRoot.next; // atomic load
+            lock.unlock();
+            return allocateFresh(bytes);
         }
-        while (!cas(&_root, oldRoot, next));
-        // great, snatched the root
-        decNodes();
-        return (cast(ubyte*) oldRoot)[0 .. bytes];
+        else
+        {
+            auto oldRoot = _root;
+            _root = _root.next;
+            decNodes();
+            lock.unlock();
+            return (cast(ubyte*) oldRoot)[0 .. bytes];
+        }
     }
 
     private void[] allocateFresh(const size_t bytes) shared
@@ -984,14 +991,11 @@ struct SharedFreeList(ParentAllocator,
         if (!nodesFull && freeListEligible(b.length))
         {
             auto newRoot = cast(shared Node*) b.ptr;
-            shared Node* oldRoot;
-            do
-            {
-                oldRoot = _root;
-                newRoot.next = oldRoot;
-            }
-            while (!cas(&_root, oldRoot, newRoot));
+            lock.lock();
+            newRoot.next = _root;
+            _root = newRoot;
             incNodes();
+            lock.unlock();
             return true;
         }
         static if (hasMember!(ParentAllocator, "deallocate"))
@@ -1004,6 +1008,8 @@ struct SharedFreeList(ParentAllocator,
     bool deallocateAll() shared
     {
         bool result = false;
+        lock.lock();
+        scope(exit) lock.unlock();
         static if (hasMember!(ParentAllocator, "deallocateAll"))
         {
             result = parent.deallocateAll();
