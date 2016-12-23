@@ -4223,9 +4223,6 @@ unittest // Issue 13124
 }
 
 import core.stdc.string : memchr;
-import std.algorithm.internal : addressOf;
-import std.algorithm.internal : algoFormat;
-import std.algorithm.internal : rndstuff;
 import std.algorithm.iteration : filter;
 import std.algorithm.iteration : filterBidirectional;
 import std.ascii : isAlpha;
@@ -4235,7 +4232,6 @@ import std.container : Array;
 import std.container : SList;
 import std.conv : text;
 import std.conv : to;
-import std.exception : assertCTFEable;
 import std.exception : assertThrown;
 import std.exception : enforce;
 import std.functional : not;

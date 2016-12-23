@@ -2656,7 +2656,6 @@ import std.container : SList;
 import std.conv : emplaceRef;
 import std.conv : text;
 
-import std.exception : assertCTFEable;
 import std.exception : assertThrown;
 import std.exception : doesPointTo;
 import std.exception : doesPointTo, mayPointTo;

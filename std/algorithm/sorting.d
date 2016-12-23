@@ -4317,8 +4317,6 @@ import std.algorithm.comparison : equal;
 import std.algorithm.comparison : max, min;
 import std.algorithm.comparison : min;
 import std.algorithm.comparison : min, max;
-import std.algorithm.internal : addressOf;
-import std.algorithm.internal : rndstuff;
 import std.algorithm.iteration : map;
 import std.algorithm.iteration : permutations;
 import std.algorithm.iteration : reduce;

@@ -778,7 +778,6 @@ import std.algorithm.mutation : move;
 import std.conv : emplace;
 import std.experimental.allocator.common : roundUpToMultipleOf;
 import std.experimental.allocator.common : stateSize, alignedAt;
-import std.experimental.allocator.common : testAllocator;
 import std.experimental.allocator.gc_allocator : GCAllocator;
 import std.experimental.allocator.mallocator : Mallocator;
 import std.experimental.allocator.mmap_allocator : MmapAllocator;

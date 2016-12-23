@@ -9639,6 +9639,7 @@ private:
 
 }// version(!std_uni_bootstrap)
 
+__EOF__
 import core.bitop : bsr;
 import core.checkedint : addu;
 import core.checkedint : addu, mulu;
@@ -9674,7 +9675,6 @@ import std.conv;
 import std.conv : text;
 import std.conv : text, to;
 import std.conv : to;
-import std.exception : assertCTFEable;
 import std.exception : assertThrown;
 import std.exception : collectException;
 import std.exception : enforce;

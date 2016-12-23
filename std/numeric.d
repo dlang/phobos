@@ -3359,7 +3359,6 @@ import std.array : uninitializedArray;
 import std.bitmanip : bitfields;
 import std.conv;
 import std.conv : text;
-import std.exception : assertCTFEable;
 import std.format : FormatSpec, formatValue;
 import std.functional : binaryFun;
 import std.functional : unaryFun;

@@ -1992,6 +1992,7 @@ unittest
     assert("löv".get(1, 'ö') == "ö");
 }
 
+__EOF__
 import std.algorithm.comparison : cmp;
 import std.algorithm.comparison : equal;
 import std.algorithm.iteration : filter;
