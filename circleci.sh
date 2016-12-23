@@ -7,6 +7,7 @@ DSCANNER_DMD_VER=2.071.2 # dscanner needs a more up-to-date version
 CURL_USER_AGENT="CirleCI $(curl --version | head -n 1)"
 DUB=${DUB:-$HOME/dlang/dub/dub}
 N=2
+CIRCLE_NODE_INDEX=${CIRCLE_NODE_INDEX:-0}
 
 case $CIRCLE_NODE_INDEX in
     0) MODEL=64 ;;
@@ -41,7 +42,7 @@ clone() {
     local path="$2"
     local branch="$3"
     for i in {0..4}; do
-        if git clone --depth=1 --branch "$branch" "$url" "$path"; then
+        if git clone --branch "$branch" "$url" "$path" "${@:4}"; then
             break
         elif [ $i -lt 4 ]; then
             sleep $((1 << $i))
@@ -52,7 +53,6 @@ clone() {
     done
 }
 
-# setup dmd and druntime
 setup_repos()
 {
     # set a default in case we run into rate limit restrictions
@@ -63,8 +63,19 @@ setup_repos()
         base_branch=$CIRCLE_BRANCH
     fi
 
-    clone https://github.com/dlang/dmd.git ../dmd $base_branch
-    clone https://github.com/dlang/druntime.git ../druntime $base_branch
+    # merge upstream branch with changes, s.t. we check with the latest changes
+    if [ -n "${CIRCLE_PR_NUMBER:-}" ]; then
+        local current_branch=$(git rev-parse --abbrev-ref HEAD)
+        git config user.name dummyuser
+        git config user.email dummyuser@dummyserver.com
+        git remote add upstream https://github.com/dlang/phobos.git
+        git fetch upstream
+        git checkout -f upstream/$base_branch
+        git merge -m "Automatic merge" $current_branch
+    fi
+
+    clone https://github.com/dlang/dmd.git ../dmd $base_branch --depth 1
+    clone https://github.com/dlang/druntime.git ../druntime $base_branch --depth 1
 
     # load environment for bootstrap compiler
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
@@ -95,7 +106,7 @@ coverage()
     ENABLE_COVERAGE="1" make -f posix.mak MODEL=$MODEL unittest-debug
 
     # instead we run all tests individually
-    make -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test/" | grep -vE '(std.algorithm.sorting|std.encoding|net.curl)' )
+    make -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test")
 }
 
 # compile all public unittests separately
