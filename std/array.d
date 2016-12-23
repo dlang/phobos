@@ -2921,25 +2921,14 @@ if (isDynamicArray!A)
     }
 
     /**
-     * Appends `item` to the managed array.
+     * Appends `rhs` to the managed array.
+     * Params:
+     * rhs = Element or range.
      */
-    void opOpAssign(string op : "~", U)(U item) if (canPutItem!U)
+    void opOpAssign(string op : "~", U)(U rhs)
+    if (__traits(compiles, put(rhs)))
     {
-        put(item);
-    }
-
-    // Const fixing hack.
-    void opOpAssign(string op : "~", Range)(Range items) if (canPutConstRange!Range)
-    {
-        put(items);
-    }
-
-    /**
-     * Appends an entire range to the managed array.
-     */
-    void opOpAssign(string op : "~", Range)(Range items) if (canPutRange!Range)
-    {
-        put(items);
+        put(rhs);
     }
 
     // only allow overwriting data on non-immutable and non-const data
@@ -3083,28 +3072,15 @@ if (isDynamicArray!A)
     }
 
     /**
-     * Appends `item` to the managed array.
+     * Appends `rhs` to the managed array.
+     * Params:
+     * rhs = Element or range.
      */
-    void opOpAssign(string op : "~", U)(U item) if (Appender!A.canPutItem!U)
+    void opOpAssign(string op : "~", U)(U rhs)
+    if (__traits(compiles, (Appender!A a){ a.put(rhs); }))
     {
         scope(exit) *this.arr = impl.data;
-        impl.put(item);
-    }
-
-    // Const fixing hack.
-    void opOpAssign(string op : "~", Range)(Range items) if (Appender!A.canPutConstRange!Range)
-    {
-        scope(exit) *this.arr = impl.data;
-        impl.put(items);
-    }
-
-    /**
-     * Appends an entire range to the managed array.
-     */
-    void opOpAssign(string op : "~", Range)(Range items) if (Appender!A.canPutRange!Range)
-    {
-        scope(exit) *this.arr = impl.data;
-        impl.put(items);
+        impl.put(rhs);
     }
 
     /**
