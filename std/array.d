@@ -2655,8 +2655,7 @@ if (isDynamicArray!A)
 {
     import core.memory : GC;
 
-    ///
-    package alias T = ElementEncodingType!A;
+    private alias T = ElementEncodingType!A;
 
     private struct Data
     {
@@ -2673,7 +2672,7 @@ if (isDynamicArray!A)
      * it will be used by the appender.  After initializing an appender on an array,
      * appending to the original array will reallocate.
      */
-    this(T[] arr) @trusted pure nothrow
+    this(A arr) @trusted pure nothrow
     {
         // initialize to a given array.
         _data = new Data;
@@ -2727,7 +2726,7 @@ if (isDynamicArray!A)
     /**
      * Returns the managed array.
      */
-    @property inout(T)[] data() inout @trusted pure nothrow
+    @property inout(ElementEncodingType!A)[] data() inout @trusted pure nothrow
     {
         /* @trusted operation:
          * casting Unqual!T[] to inout(T)[]
@@ -2892,7 +2891,7 @@ if (isDynamicArray!A)
             alias UT = Unqual!T;
 
             static if (is(typeof(_data.arr[] = items[])) &&
-                !hasElaborateAssign!(Unqual!T) && isAssignable!(UT, ElementEncodingType!Range))
+                !hasElaborateAssign!UT && isAssignable!(UT, ElementEncodingType!Range))
             {
                 bigData[len .. newlen] = items[];
             }
@@ -3031,13 +3030,10 @@ private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen)
 struct RefAppender(A)
 if (isDynamicArray!A)
 {
-    ///
-    package alias T = ElementEncodingType!A;
-
     private
     {
         Appender!A impl;
-        T[] *arr;
+        A* arr;
     }
 
     /**
@@ -3052,7 +3048,7 @@ if (isDynamicArray!A)
      * Params:
      * arr = Pointer to an array. Must not be _null.
      */
-    this(T[] *arr)
+    this(A* arr)
     {
         impl = Appender!A(*arr);
         this.arr = arr;
@@ -3096,7 +3092,7 @@ if (isDynamicArray!A)
     /**
      * Returns the managed array.
      */
-    @property inout(T)[] data() inout
+    @property inout(ElementEncodingType!A)[] data() inout
     {
         return impl.data;
     }
