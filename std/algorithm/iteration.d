@@ -888,15 +888,22 @@ private:
                 cast(void) unaryFun!pred(a);
         }));
 
+    enum isForeachUnaryWithIndexIterable(R) =
+        is(typeof((R r) {
+            foreach (i, ref a; r)
+                cast(void) unaryFun!pred(i, a);
+        }));
+
     enum isForeachBinaryIterable(R) =
         is(typeof((R r) {
-            foreach (ref i, ref a; r)
-                cast(void) binaryFun!BinaryArgs(i, a);
+            foreach (ref a, ref b; r)
+                cast(void) binaryFun!BinaryArgs(a, b);
         }));
 
     enum isForeachIterable(R) =
         (!isForwardRange!R || isDynamicArray!R) &&
-        (isForeachUnaryIterable!R || isForeachBinaryIterable!R);
+        (isForeachUnaryIterable!R || isForeachBinaryIterable!R ||
+         isForeachUnaryWithIndexIterable!R);
 
 public:
     /**
@@ -954,11 +961,20 @@ public:
                 foreach (ref e; r)
                     cast(void) unaryFun!pred(e);
             }
-            else // if (isForeachBinaryIterable!Iterable)
-            {
-                foreach (ref i, ref e; r)
+        else static if (isForeachBinaryIterable!Iterable)
+        {
+            foreach (ref a, ref b; r)
+                cast(void) binaryFun!BinaryArgs(a, b);
+        }
+        else static if (isForeachUnaryWithIndexIterable!Iterable)
+        {
+            foreach (i, ref e; r)
                     cast(void) binaryFun!BinaryArgs(i, e);
             }
+        else
+        {
+            static assert(0, "An impossible static if branch was reached");
+        }
         }
         else
         {
@@ -1088,6 +1104,80 @@ public:
     assert(s.x == 1);
     s.each!"++a";
     assert(s.x == 2);
+}
+
+// #15357: `each` should behave similar to foreach
+/// `each` works with iterable objects which provide an index variable, along with each element
+@safe unittest
+{
+    import std.range : iota, lockstep;
+
+    auto arr = [1, 2, 3, 4];
+
+    // 1 ref parameter
+    arr.each!((ref e) => e = 0);
+    assert(arr.sum == 0);
+
+    // 1 ref parameter and index
+    arr.each!((i, ref e) => e = cast(int) i);
+    assert(arr.sum == 4.iota.sum);
+}
+
+// #15357: `each` should behave similar to foreach
+@system unittest
+{
+    import std.range : iota, lockstep;
+
+    // 2 ref parameters and index
+    auto arrA = [1, 2, 3, 4];
+    auto arrB = [5, 6, 7, 8];
+    lockstep(arrA, arrB).each!((ref a, ref b) {
+        a = 0;
+        b = 1;
+    });
+    assert(arrA.sum == 0);
+    assert(arrB.sum == 4);
+
+    // 3 ref parameters
+    auto arrC = [3, 3, 3, 3];
+    lockstep(arrA, arrB, arrC).each!((ref a, ref b, ref c) {
+        a = 1;
+        b = 2;
+        c = 3;
+    });
+    assert(arrA.sum == 4);
+    assert(arrB.sum == 8);
+    assert(arrC.sum == 12);
+}
+
+// #15357: `each` should behave similar to foreach
+@system unittest
+{
+    import std.range : lockstep;
+    import std.typecons : Tuple;
+
+    auto a = "abc";
+    auto b = "def";
+
+    // print each character with an index
+    {
+        alias Element = Tuple!(size_t, "index", dchar, "value");
+        Element[] rForeach, rEach;
+        foreach (i, c ; a) rForeach ~= Element(i, c);
+        a.each!((i, c) => rEach ~= Element(i, c));
+        assert(rForeach == rEach);
+        assert(rForeach == [Element(0, 'a'), Element(1, 'b'), Element(2, 'c')]);
+    }
+
+    // print pairs of characters
+    {
+        alias Element = Tuple!(dchar, "a", dchar, "b");
+        Element[] rForeach, rEach;
+        foreach (c1, c2 ; a.lockstep(b)) rForeach ~= Element(c1, c2);
+        a.lockstep(b).each!((c1, c2) => rEach ~= Element(c1, c2));
+        assert(rForeach == rEach);
+        assert(rForeach == [Element('a', 'd'), Element('b', 'e'), Element('c', 'f')]);
+    }
 }
 
 // filter
