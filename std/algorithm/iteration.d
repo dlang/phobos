@@ -910,7 +910,7 @@ template each(alias pred = "a")
         }
     }
 
-    void each(Iterable)(Iterable r)
+    void each(Iterable)(auto ref Iterable r)
         if (isForeachIterable!Iterable)
     {
         debug(each) pragma(msg, "Using foreach for ", Iterable.stringof);
@@ -928,7 +928,7 @@ template each(alias pred = "a")
 
     // opApply with >2 parameters. count the delegate args.
     // only works if it is not templated (otherwise we cannot count the args)
-    void each(Iterable)(Iterable r)
+    void each(Iterable)(auto ref Iterable r)
         if (!isRangeIterable!Iterable && !isForeachIterable!Iterable &&
             __traits(compiles, Parameters!(Parameters!(r.opApply))))
     {
@@ -1032,6 +1032,38 @@ template each(alias pred = "a")
     zip(a, b, c).each!((x, y, z) { res ~= x + y + z; });
 
     assert(res == [9, 12, 15]);
+}
+
+// #16255: `each` on opApply doesn't support ref
+unittest
+{
+    int[] dynamicArray = [1, 2, 3, 4, 5];
+    int[5] staticArray = [1, 2, 3, 4, 5];
+
+    dynamicArray.each!((ref x) => x++);
+    assert(dynamicArray == [2, 3, 4, 5, 6]);
+
+    staticArray.each!((ref x) => x++);
+    assert(staticArray == [2, 3, 4, 5, 6]);
+
+    staticArray[].each!((ref x) => x++);
+    assert(staticArray == [3, 4, 5, 6, 7]);
+}
+
+// #16255: `each` on opApply doesn't support ref
+unittest
+{
+    struct S
+    {
+       int x;
+       int opApply(int delegate(ref int _x) dg) { return dg(x); }
+    }
+
+    S s;
+    foreach (ref a; s) ++a;
+    assert(s.x == 1);
+    s.each!"++a";
+    assert(s.x == 2);
 }
 
 /**
