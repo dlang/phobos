@@ -49,7 +49,7 @@ module std.digest.ripemd;
 public import std.digest.digest;
 
 ///
-unittest
+@safe unittest
 {
     //Template API
     import std.digest.md;
@@ -445,7 +445,8 @@ struct RIPEMD160
         /**
          * Use this to feed the digest with data.
          * Also implements the $(REF isOutputRange, std,range,primitives)
-         * interface for $(D ubyte) and $(D const(ubyte)[]).
+         * interface for single elements or array of const elements of type
+         * `ubyte`, `byte` and `char`.
          *
          * Example:
          * ----
@@ -456,7 +457,8 @@ struct RIPEMD160
          * dig.put(buf); //buffer
          * ----
          */
-        void put(scope const(ubyte)[] data...) @trusted pure nothrow @nogc
+        void put(T)(scope const(T)[] data...) @trusted @nogc
+        if (is(T == ubyte) || is(T == byte) || is(T == char))
         {
             uint i, index, partLen;
             auto inputLen = data.length;
@@ -472,7 +474,7 @@ struct RIPEMD160
             //Transform as many times as possible
             if (inputLen >= partLen)
             {
-                (&_buffer[index])[0 .. partLen] = data.ptr[0 .. partLen];
+                (&_buffer[index])[0 .. partLen] = cast(ubyte[]) data.ptr[0 .. partLen];
                 transform(&_buffer);
 
                 for (i = partLen; i + 63 < inputLen; i += 64)
@@ -489,7 +491,14 @@ struct RIPEMD160
 
             /* Buffer remaining input */
             if (inputLen - i)
-                (&_buffer[index])[0 .. inputLen-i] = (&data[i])[0 .. inputLen-i];
+                (&_buffer[index])[0 .. inputLen-i] = cast(ubyte[]) (&data[i])[0 .. inputLen-i];
+        }
+
+        // Backward compatibility overload that allows to put int literals.
+        version(D_Ddoc){} else
+        void put(scope const(ubyte)[] data...) @safe @nogc pure nothrow
+        {
+            put!ubyte(data);
         }
 
         /**
@@ -560,7 +569,7 @@ struct RIPEMD160
 }
 
 ///
-unittest
+@safe unittest
 {
     //Simple example, hashing a string using ripemd160Of helper function
     ubyte[20] hash = ripemd160Of("abc");
@@ -569,7 +578,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     //Using the basic API
     RIPEMD160 hash;
@@ -581,7 +590,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     //Let's use the template features:
     void doSomething(T)(ref T hash) if (isDigest!T)
@@ -595,57 +604,61 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     //Simple example
     RIPEMD160 hash;
     hash.start();
-    hash.put(cast(ubyte)0);
+    hash.put(0);
     ubyte[20] result = hash.finish();
     assert(toHexString(result) == "C81B94933420221A7AC004A90242D8B1D3E5070D");
 }
 
-unittest
+@safe unittest
 {
     assert(isDigest!RIPEMD160);
 }
 
-unittest
+@safe unittest
 {
-    import std.range;
-
     ubyte[20] digest;
 
     RIPEMD160 md;
-    md.put(cast(ubyte[])"abcdef");
+    md.put("abcdef");
     md.start();
-    md.put(cast(ubyte[])"");
-    assert(md.finish() == cast(ubyte[])x"9c1185a5c5e9fc54612808977ee8f548b2258d31");
+    md.put("");
+    assert(md.finish() == x"9c1185a5c5e9fc54612808977ee8f548b2258d31");
 
     digest = ripemd160Of("");
-    assert(digest == cast(ubyte[])x"9c1185a5c5e9fc54612808977ee8f548b2258d31");
+    assert(digest == x"9c1185a5c5e9fc54612808977ee8f548b2258d31");
 
     digest = ripemd160Of("a");
-    assert(digest == cast(ubyte[])x"0bdc9d2d256b3ee9daae347be6f4dc835a467ffe");
+    assert(digest == x"0bdc9d2d256b3ee9daae347be6f4dc835a467ffe");
 
     digest = ripemd160Of("abc");
-    assert(digest == cast(ubyte[])x"8eb208f7e05d987a9b044a8e98c6b087f15a0bfc");
+    assert(digest == x"8eb208f7e05d987a9b044a8e98c6b087f15a0bfc");
 
     digest = ripemd160Of("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq");
-    assert(digest == cast(ubyte[])x"12a053384a9c0c88e405a06c27dcf49ada62eb2b");
+    assert(digest == x"12a053384a9c0c88e405a06c27dcf49ada62eb2b");
 
     digest = ripemd160Of("message digest");
-    assert(digest == cast(ubyte[])x"5d0689ef49d2fae572b881b123a85ffa21595f36");
+    assert(digest == x"5d0689ef49d2fae572b881b123a85ffa21595f36");
 
     digest = ripemd160Of("abcdefghijklmnopqrstuvwxyz");
-    assert(digest == cast(ubyte[])x"f71c27109c692c1b56bbdceb5b9d2865b3708dbc");
+    assert(digest == x"f71c27109c692c1b56bbdceb5b9d2865b3708dbc");
 
     digest = ripemd160Of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
-    assert(digest == cast(ubyte[])x"b0e20b6e3116640286ed3a87a5713079b21f5189");
+    assert(digest == x"b0e20b6e3116640286ed3a87a5713079b21f5189");
 
     digest = ripemd160Of("1234567890123456789012345678901234567890"~
                     "1234567890123456789012345678901234567890");
-    assert(digest == cast(ubyte[])x"9b752e45573d4b39f4dbd3323cab82bf63326bfb");
+    assert(digest == x"9b752e45573d4b39f4dbd3323cab82bf63326bfb");
+}
+
+unittest
+{
+    import std.range : repeat;
+    ubyte[20] digest;
 
     assert(toHexString(cast(ubyte[20])x"f71c27109c692c1b56bbdceb5b9d2865b3708dbc")
         == "F71C27109C692C1B56BBDCEB5B9D2865B3708DBC");
@@ -671,7 +684,7 @@ auto ripemd160Of(T...)(T data)
 }
 
 ///
-unittest
+@safe unittest
 {
     ubyte[20] hash = ripemd160Of("abc");
     assert(hash == digest!RIPEMD160("abc"));
@@ -717,15 +730,15 @@ unittest
 {
     auto md = new RIPEMD160Digest();
 
-    md.put(cast(ubyte[])"abcdef");
+    md.put("abcdef");
     md.reset();
-    md.put(cast(ubyte[])"");
-    assert(md.finish() == cast(ubyte[])x"9c1185a5c5e9fc54612808977ee8f548b2258d31");
+    md.put("");
+    assert(md.finish() == x"9c1185a5c5e9fc54612808977ee8f548b2258d31");
 
-    md.put(cast(ubyte[])"abcdefghijklmnopqrstuvwxyz");
+    md.put("abcdefghijklmnopqrstuvwxyz");
     ubyte[20] result;
     auto result2 = md.finish(result[]);
-    assert(result[0 .. 20] == result2 && result2 == cast(ubyte[])x"f71c27109c692c1b56bbdceb5b9d2865b3708dbc");
+    assert(result[0 .. 20] == result2 && result2 == x"f71c27109c692c1b56bbdceb5b9d2865b3708dbc");
 
     debug
     {
@@ -735,27 +748,27 @@ unittest
 
     assert(md.length == 20);
 
-    assert(md.digest("") == cast(ubyte[])x"9c1185a5c5e9fc54612808977ee8f548b2258d31");
+    assert(md.digest("") == x"9c1185a5c5e9fc54612808977ee8f548b2258d31");
 
-    assert(md.digest("a") == cast(ubyte[])x"0bdc9d2d256b3ee9daae347be6f4dc835a467ffe");
+    assert(md.digest("a") == x"0bdc9d2d256b3ee9daae347be6f4dc835a467ffe");
 
-    assert(md.digest("abc") == cast(ubyte[])x"8eb208f7e05d987a9b044a8e98c6b087f15a0bfc");
+    assert(md.digest("abc") == x"8eb208f7e05d987a9b044a8e98c6b087f15a0bfc");
 
     assert(md.digest("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq")
-           == cast(ubyte[])x"12a053384a9c0c88e405a06c27dcf49ada62eb2b");
+           == x"12a053384a9c0c88e405a06c27dcf49ada62eb2b");
 
-    assert(md.digest("message digest") == cast(ubyte[])x"5d0689ef49d2fae572b881b123a85ffa21595f36");
+    assert(md.digest("message digest") == x"5d0689ef49d2fae572b881b123a85ffa21595f36");
 
     assert(md.digest("abcdefghijklmnopqrstuvwxyz")
-           == cast(ubyte[])x"f71c27109c692c1b56bbdceb5b9d2865b3708dbc");
+           == x"f71c27109c692c1b56bbdceb5b9d2865b3708dbc");
 
     assert(md.digest("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
-           == cast(ubyte[])x"b0e20b6e3116640286ed3a87a5713079b21f5189");
+           == x"b0e20b6e3116640286ed3a87a5713079b21f5189");
 
     assert(md.digest("1234567890123456789012345678901234567890",
                                    "1234567890123456789012345678901234567890")
-           == cast(ubyte[])x"9b752e45573d4b39f4dbd3323cab82bf63326bfb");
+           == x"9b752e45573d4b39f4dbd3323cab82bf63326bfb");
 
     assert(md.digest(new ubyte[160/8]) // 160 zero bits
-           == cast(ubyte[])x"5c00bd4aca04a9057c09b20b05f723f2e23deb65");
+           == x"5c00bd4aca04a9057c09b20b05f723f2e23deb65");
 }
