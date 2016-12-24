@@ -1039,37 +1039,33 @@ struct SharedFreeList(ParentAllocator,
 unittest
 {
     import std.algorithm.comparison : equal;
-    import std.concurrency : receiveOnly, send, spawn, thisTid, Tid;
     import std.range : repeat;
     import std.experimental.allocator.mallocator : Mallocator;
+    import core.thread : ThreadGroup;
 
     static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
 
     assert(a.goodAllocSize(1) == platformAlignment);
 
-    auto b = a.allocate(100);
+    auto b = a.allocate(96);
     a.deallocate(b);
 
-    static void fun(Tid tid, int i)
+    void fun()
     {
-        scope(exit) tid.send(true);
-        auto b = cast(ubyte[]) a.allocate(100);
-        b[] = cast(ubyte) i;
+        auto b = cast(size_t[]) a.allocate(96);
+        b[] = cast(size_t) &b;
 
-        assert(b.equal(repeat(cast(ubyte) i, b.length)));
+        assert(b.equal(repeat(cast(size_t) &b, b.length)));
         a.deallocate(b);
     }
 
-    Tid[] tids;
+    auto tg = new ThreadGroup;
     foreach (i; 0 .. 20)
     {
-        tids ~= spawn(&fun, thisTid, i);
+        tg.create(&fun);
     }
 
-    foreach (i; 0 .. 20)
-    {
-        assert(receiveOnly!bool);
-    }
+    tg.joinAll();
 }
 
 unittest
