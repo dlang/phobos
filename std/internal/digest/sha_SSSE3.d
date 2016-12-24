@@ -15,14 +15,14 @@
  */
 module std.internal.digest.sha_SSSE3;
 
-version(D_PIC)
+version(D_InlineAsm_X86)
 {
-    // Do not use (Bug9378).
-}
-else version(D_InlineAsm_X86)
-{
-    private version = USE_SSSE3;
-    private version = _32Bit;
+    version (D_PIC) {} // Bugzilla 9378
+    else
+    {
+        private version = USE_SSSE3;
+        private version = _32Bit;
+    }
 }
 else version(D_InlineAsm_X86_64)
 {
@@ -108,6 +108,7 @@ version(USE_SSSE3)
         private immutable string SP = "RSP";
         private immutable string BUFFER_PTR = "R9";
         private immutable string STATE_PTR = "R8";
+        private immutable string CONSTANTS_PTR = "R10";
 
         // Registers for temporary results (XMM10 and XMM11 are also used temporary)
         private immutable string W_TMP = "XMM8";
@@ -120,15 +121,11 @@ version(USE_SSSE3)
         private immutable string X_CONSTANT = "XMM13";
     }
 
-    /* The control words for the byte shuffle instruction. */
-    align(16) private immutable uint[4] bswap_shufb_ctl =
+    /* The control words for the byte shuffle instruction and the round constants. */
+    align(16) public immutable uint[20] constants =
     [
-        0x0001_0203, 0x0405_0607, 0x0809_0a0b, 0x0c0d_0e0f
-    ];
-
-    /* The round constants. */
-    align(16) private immutable uint[16] constants =
-    [
+        // The control words for the byte shuffle instruction.
+        0x0001_0203, 0x0405_0607, 0x0809_0a0b, 0x0c0d_0e0f,
         // Constants for round 0-19
         0x5a827999, 0x5a827999, 0x5a827999, 0x5a827999,
         // Constants for round 20-39
@@ -152,10 +149,22 @@ version(USE_SSSE3)
         return s.idup;
     }
 
+    /** Returns the reference to the byte shuffle control word. */
+    private nothrow pure string bswap_shufb_ctl()
+    {
+        version (_64Bit)
+            return "["~CONSTANTS_PTR~"]";
+        else
+            return "[constants]";
+    }
+
     /** Returns the reference to constant used in round i. */
     private nothrow pure string constant(uint i)
     {
-        return "[constants + 16*"~to_string(i/20)~"]";
+        version (_64Bit)
+            return "16 + 16*"~to_string(i/20)~"["~CONSTANTS_PTR~"]";
+        else
+            return "[constants + 16 + 16*"~to_string(i/20)~"]";
     }
 
     /** Returns the XMM register number used in round i */
@@ -304,9 +313,9 @@ version(USE_SSSE3)
     {
         if (i == 0)
         {
-            return swt3264(["movdqa "~X_SHUFFLECTL~",[bswap_shufb_ctl]",
+            return swt3264(["movdqa "~X_SHUFFLECTL~","~bswap_shufb_ctl(),
                              "movdqa "~X_CONSTANT~","~constant(i)],
-                            ["movdqa "~X_SHUFFLECTL~",[bswap_shufb_ctl]",
+                            ["movdqa "~X_SHUFFLECTL~","~bswap_shufb_ctl(),
                              "movdqa "~X_CONSTANT~","~constant(i)]);
         }
         version(_64Bit)
@@ -589,8 +598,9 @@ version(USE_SSSE3)
         {
             /*
              * Parameters:
-             *   RSI contains pointer to state
-             *   RDI contains pointer to input buffer
+             *   RDX contains pointer to state
+             *   RSI contains pointer to input buffer
+             *   RDI contains pointer to constants
              *
              * Stack layout as follows:
              * +----------------+
@@ -610,8 +620,9 @@ version(USE_SSSE3)
                     "push RBP",
                     "push RBX",
                     // Save parameters
-                    "mov "~STATE_PTR~", RSI", //pointer to state
-                    "mov "~BUFFER_PTR~", RDI", //pointer to buffer
+                    "mov "~STATE_PTR~", RDX", //pointer to state
+                    "mov "~BUFFER_PTR~", RSI", //pointer to buffer
+                    "mov "~CONSTANTS_PTR~", RDI", //pointer to constants to avoid absolute addressing
                     // Align stack
                     "sub RSP, 4*16+8",
             ];
@@ -643,10 +654,17 @@ version(USE_SSSE3)
         }
     }
 
+    // constants as extra argument for PIC, see Bugzilla 9378
+    import std.meta : AliasSeq;
+    version (_64Bit)
+        alias ExtraArgs = AliasSeq!(typeof(&constants));
+    else
+        alias ExtraArgs = AliasSeq!();
+
     /**
      *
      */
-    public void transformSSSE3(uint[5]* state, const(ubyte[64])* buffer) pure nothrow @nogc
+    public void transformSSSE3(uint[5]* state, const(ubyte[64])* buffer, ExtraArgs) pure nothrow @nogc
     {
         mixin(wrap(["naked;"] ~ prologue()));
         // Precalc first 4*16=64 bytes
