@@ -1501,13 +1501,12 @@ pure:
             }
         }
         checkIfOneShot();
-        if (!(flags & RegexInfo.oneShot))
+        if (!(flags & RegexInfo.oneShot) && !__ctfe)
         {
             kickstart = new ShiftOr!Char(zis);
             if (kickstart.empty)
             {
-                if (!__ctfe)
-                    kickstart = new BitMatcher!Char(zis);
+                kickstart = new BitMatcher!Char(zis);
                 if (kickstart.empty)
                     kickstart = null;
             }
