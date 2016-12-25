@@ -75,19 +75,13 @@ Source: $(PHOBOSSRC std/_array.d)
 */
 module std.array;
 
-static import std.algorithm.iteration; // FIXME, remove with alias
-    // of splitter
-import std.functional : unaryFun;
-import std.meta : AliasSeq, allSatisfy, staticMap;
-import std.range.primitives : ElementEncodingType, ElementType, hasLength,
-    isBidirectionalRange, isForwardRange, isInfinite, isInputRange,
-    isOutputRange, isRandomAccessRange, put;
-public import std.range.primitives : save, empty, popFront, popBack, front,
-    back;
-import std.traits : ForeachType, Unqual, hasElaborateAssign,
-    hasElaborateCopyConstructor, hasIndirections, isArray, isAssignable,
-    isDynamicArray, isImplicitlyConvertible, isIntegral, isIterable, isMutable,
-    isNarrowString, isSomeChar, isSomeString, isStaticArray;
+import std.meta;
+import std.traits;
+import std.functional;
+static import std.algorithm.iteration; // FIXME, remove with alias of splitter
+
+import std.range.primitives;
+public import std.range.primitives : save, empty, popFront, popBack, front, back;
 
 /**
  * Allocates an array and initializes it with copies of the elements
@@ -350,7 +344,7 @@ See_Also: $(REF Tuple, std,typecons)
  */
 
 auto assocArray(Range)(Range r)
-if (isInputRange!Range)
+    if (isInputRange!Range)
 {
     import std.typecons : isTuple;
 
