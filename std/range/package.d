@@ -33,6 +33,9 @@ The remainder of this module provides a rich set of _range creation and
 composition templates that let you construct new ranges out of existing ranges:
 
 $(BOOKTABLE ,
+    $(TR $(TD $(D $(LREF bitwise)))
+        $(TD Bitwise adapter over a integral type _range.
+    ))
     $(TR $(TD $(D $(LREF chain)))
         $(TD Concatenates several ranges into a single _range.
     ))
@@ -9607,17 +9610,7 @@ auto refRange(R)(R* range)
     foo(r);
 }
 
-/**
-Bitwise adapter over integral type ranges. Consumes the range elements bit by bit.
-
-Params:
-    R = an input range to iterate over
-
-Returns:
-    At minimum, an input range. If `R` was a forward, bidirectional or random
-    access range, `Bitwise!R` will be as well.
-*/
-struct Bitwise(R)
+private struct Bitwise(R)
     if (isInputRange!R && isIntegral!(ElementType!R))
 {
 private:
@@ -9648,7 +9641,7 @@ public:
     {
         static if (hasLength!R)
         {
-            return length() == 0;
+            return length == 0;
         }
         else static if (isBidirectionalRange!R)
         {
@@ -9677,7 +9670,7 @@ public:
 
     bool front()
     {
-        assert(!empty());
+        assert(!empty);
         return (parent.front & mask(maskPos)) != 0;
     }
 
@@ -9720,12 +9713,13 @@ public:
     {
         bool back()
         {
-            assert(!empty());
+            assert(!empty);
             return (parent.back & mask(backMaskPos)) != 0;
         }
 
         void popBack()
         {
+            assert(!empty);
             ++backMaskPos;
             if (backMaskPos > bitsNum)
             {
@@ -9749,7 +9743,7 @@ public:
              */
             static if (hasLength!R)
             {
-                assert(n < length(), __PRETTY_FUNCTION__ ~ ": Index out of bounds");
+                assert(n < length, "Index out of bounds");
             }
         }
         body
@@ -9778,14 +9772,14 @@ public:
         }
 
         /**
-          Assignes `flag` to the `n`th bit within the range
+          Assigns `flag` to the `n`th bit within the range
          */
         void opIndexAssign(bool flag, size_t n)
         in
         {
             static if (hasLength!R)
             {
-                assert(n < length(), __PRETTY_FUNCTION__ ~ ": Index out of bounds");
+                assert(n < length, "Index out of bounds");
             }
         }
         body
@@ -9805,13 +9799,13 @@ public:
 
         Bitwise!R opSlice()
         {
-            return this;
+            return this.save;
         }
 
         Bitwise!R opSlice(size_t start, size_t end)
         in
         {
-            assert(start < end, __PRETTY_FUNCTION__ ~ ": Invalid bounds: end <= start");
+            assert(start < end, "Invalid bounds: end <= start");
         }
         body
         {
@@ -9847,9 +9841,43 @@ private:
     }
 }
 
-// Test all range types over all integral types
+/**
+Bitwise adapter over a integral type range. Consumes the range elements bit by bit.
+
+Params:
+    R = an integral input range to iterate over
+
+Returns:
+    A `Bitwise` input range with propagated forward, bidirectional
+    and random access capabilities
+*/
+auto bitwise(R)(auto ref R range)
+    if (isInputRange!R && isIntegral!(ElementType!R))
+{
+    return Bitwise!R(range);
+}
+
 ///
-@safe unittest
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.format : format;
+
+    // 00000011 00001001
+    ubyte[] arr = [3, 9];
+    auto r = arr.bitwise;
+
+    // iterate through it as with any other range
+    assert(format("%(%d%)", r) == "0000001100001001");
+    assert(format("%(%d%)", r.retro).equal("0000001100001001".retro));
+
+    // set a bit
+    r[5] = 1;
+    assert(arr[0] == 7);
+}
+
+// Test all range types over all integral types
+@safe pure nothrow unittest
 {
     import std.internal.test.dummyrange;
 
@@ -9887,12 +9915,12 @@ private:
             long numCalls = 42;
             bool initialFrontValue;
 
-            if (!bw.empty())
+            if (!bw.empty)
             {
                 initialFrontValue = bw.front;
             }
 
-            while (!bw.empty() && (--numCalls))
+            while (!bw.empty && (--numCalls))
             {
                 bw.front;
                 assert(bw.front == initialFrontValue);
@@ -9903,7 +9931,7 @@ private:
                more times than it should
              */
             numCalls = 0;
-            while (!bw.empty())
+            while (!bw.empty)
             {
                 ++numCalls;
 
@@ -9930,22 +9958,21 @@ private:
 
             auto rangeLen = numCalls / (IntegralType.sizeof * 8);
             assert(numCalls == (IntegralType.sizeof * 8 * rangeLen));
-            assert(bw.empty());
+            assert(bw.empty);
             static if (isForwardRange!T)
             {
-                assert(bw2.empty());
+                assert(bw2.empty);
             }
 
             static if (isBidirectionalRange!T)
             {
-                assert(bw3.empty());
+                assert(bw3.empty);
             }
         }
     }
 }
 
 // Test opIndex and opSlice
-///
 @system unittest
 {
     alias IntegralTypes = AliasSeq!(byte, ubyte, short, ushort, int, uint,
