@@ -1401,6 +1401,8 @@ be arbitrarily complex.
 */
 @system unittest
 {
+    import std.typecons : Tuple, tuple;
+
     // A tree is either a leaf or a branch of two other trees
     alias Tree(Leaf) = Algebraic!(Leaf, Tuple!(This*, This*));
     Tree!int tree = tuple(new Tree!int(42), new Tree!int(43));

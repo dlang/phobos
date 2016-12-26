@@ -439,6 +439,7 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
 @system unittest
 {
     import std.conv : to;
+    import std.range.primitives;
     {
         // example from "Introduction to Algorithms" Cormen et al., p 146
         int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
