@@ -33151,7 +33151,8 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
 
 @system unittest
 {
-    import std.algorithm.iteration : map;
+    import std.algorithm.iteration : filter, map;
+    import std.algorithm.searching : canFind;
     import std.array : array;
     import std.ascii : letters;
     import std.format : format;
@@ -33284,7 +33285,7 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
                            ["Jam", "Jen", "Fec", "Fdb", "Mas", "Mbr", "Aps", "Aqr", "Mai", "Miy",
                             "Jum", "Jbn", "Jup", "Jal", "Aur", "Apg", "Sem", "Sap", "Ocm", "Odt",
                             "Nom", "Nav", "Dem", "Dac"],
-                           Rand3Letters.start().take(20)))
+                           Rand3Letters.start().filter!(a => !_monthNames[].canFind(a)).take(20)))
         {
             scope(failure) writefln("Month: %s", mon);
             testBad(format("17 %s 2012 00:05:02 +0000", mon));
@@ -33313,7 +33314,7 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
                            daysOfWeekNames[].map!(a => toUpper(a))(),
                            ["Sum", "Spn", "Mom", "Man", "Tuf", "Tae", "Wem", "Wdd", "The", "Tur",
                             "Fro", "Fai", "San", "Sut"],
-                           Rand3Letters.start().take(20)))
+                           Rand3Letters.start().filter!(a => !daysOfWeekNames[].canFind(a)).take(20)))
         {
             scope(failure) writefln("Day of Week: %s", dow);
             testBad(format("%s, 11 Nov 2012 09:42:00 +0000", dow));
