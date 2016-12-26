@@ -496,7 +496,7 @@ checkwhitespace: $(LIB)
 	mv dscanner_makefile_tmp ../dscanner/makefile
 	make -C ../dscanner githash debug
 
-style: ../dscanner/dsc $(LIB)
+style: ../dscanner/dsc $(LIB) has_public_example publictests
 	@echo "Check for trailing whitespace"
 	grep -nr '[[:blank:]]$$' etc std ; test $$? -eq 1
 
@@ -545,11 +545,16 @@ style: ../dscanner/dsc $(LIB)
 	../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d') -I.
 
 publictests: $(LIB)
-	# parse all public unittests from Phobos, for now some modules are excluded
+	# parse all public unittests from Phobos and runs them (for now some modules are excluded)
 	rm -rf ./out
-	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) --compiler=$${PWD}/$(DMD) --single ../tools/phobos_tests_extractor.d -- --inputdir . --ignore "base64.d,building_blocks/free_list,building_blocks/quantizer,digest/hmac.d,file.d,index.d,math.d,ndslice/selection.d,stdio.d,traits.d,typecons.d,uuid.d" --outputdir ./out
+	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) --compiler=$${PWD}/$(DMD) --root=../tools/styles -c tests_extractor -- --inputdir . --ignore "base64.d,building_blocks/free_list,building_blocks/quantizer,digest/hmac.d,file.d,index.d,math.d,ndslice/selection.d,stdio.d,traits.d,typecons.d,uuid.d" --outputdir ./out
 	# execute all parsed tests
 	for file in $$(find out -name '*.d'); do echo "executing $${file}" && $(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -main -unittest -run $$file || exit 1 ; done
+
+has_public_example: $(LIB)
+	#  checks whether public function have public examples (for now some modules are excluded)
+	rm -rf ./out
+	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) --compiler=$${PWD}/$(DMD) --root=../tools/styles -c has_public_example -- --inputdir . --ignore "etc,array.d,allocator,base64.d,bitmanip.d,concurrency.d,conv.d,csv.d,datetime.d,demangle.d,digest/hmac.d,digest/sha.d,encoding.d,exception.d,file.d,format.d,getopt.d,index.d,internal,isemail.d,json.d,logger/core.d,logger/nulllogger.d,math.d,mathspecial.d,net/curl.d,ndslice/selection.d,ndslice/slice.d,numeric.d,parallelism.d,path.d,process.d,random.d,range,regex/package.d,socket.d,stdio.d,string.d,traits.d,typecons.d,uni.d,unittest.d,uri.d,utf.d,uuid.d,xml.d,zlib.d"
 
 .PHONY : auto-tester-build
 auto-tester-build: all checkwhitespace

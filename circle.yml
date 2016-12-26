@@ -8,7 +8,6 @@ test:
   override:
     - ./circleci.sh setup-repos
     - ./circleci.sh style
-    - ./circleci.sh publictests
     - ./circleci.sh coverage:
         parallel: true
         timeout: 1200
