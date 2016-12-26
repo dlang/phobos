@@ -436,6 +436,7 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
     return BinaryHeap!(Store, less)(s, initialSize);
 }
 
+///
 @system unittest
 {
     import std.conv : to;

@@ -83,6 +83,16 @@ template maxSize(T...)
     }
 }
 
+///
+unittest
+{
+    static assert(maxSize!(int, long) == 8);
+    static assert(maxSize!(bool, byte) == 1);
+
+    struct Cat { int a, b, c; }
+    static assert(maxSize!(bool, Cat) == 12);
+}
+
 struct This;
 
 private alias This2Variant(V, T...) = AliasSeq!(ReplaceType!(This, V, T));

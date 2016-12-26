@@ -1819,6 +1819,9 @@ assert(equal(rbt[], [5]));
     test!byte();
 }
 
+import std.range.primitives : isInputRange, isSomeString, ElementType;
+import std.traits : isArray;
+
 /++
     Convenience function for creating a $(D RedBlackTree!E) from a list of
     values.
@@ -1856,10 +1859,6 @@ if (is(typeof(binaryFun!less(E.init, E.init))))
     //takes less but not allowDuplicates works just fine).
     return new RedBlackTree!(E, binaryFun!less, allowDuplicates)(elems);
 }
-
-
-import std.range.primitives : isInputRange, isSomeString, ElementType;
-import std.traits : isArray;
 
 /++ Ditto +/
 auto redBlackTree(Stuff)(Stuff range)

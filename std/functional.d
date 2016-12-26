@@ -1290,6 +1290,20 @@ if (isCallable!(F))
     }
 }
 
+///
+@system unittest
+{
+    static int inc(ref uint num) {
+        num++;
+        return 8675309;
+    }
+
+    uint myNum = 0;
+    auto incMyNumDel = toDelegate(&inc);
+    auto returnVal = incMyNumDel(myNum);
+    assert(myNum == 1);
+}
+
 @system unittest // not @safe due to toDelegate
 {
     static int inc(ref uint num) {

@@ -840,7 +840,7 @@ ref T[N] asArray(size_t N, T)(ref T[] source, string errorMsg = "")
      return *cast(T[N]*) source.ptr;
 }
 
-/**
+/*
  * This helper is used internally in the WrapperDigest template, but it might be
  * useful for other purposes as well. It returns the length (in bytes) of the hash value
  * produced by T.
