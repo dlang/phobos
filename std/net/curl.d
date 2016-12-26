@@ -2836,6 +2836,46 @@ struct HTTP
         p.curl.set(CurlOption.useragent, userAgent);
     }
 
+    /**
+     * Get various timings defined in $(REF CurlInfo, etc, c, curl).
+     * The value is usable only if the return value is equal to $(D etc.c.curl.CurlError.ok).
+     *
+     * Params:
+     *      timing = one of the timings defined in $(REF CurlInfo, etc, c, curl).
+     *               The values are:
+     *               $(D etc.c.curl.CurlInfo.namelookup_time),
+     *               $(D etc.c.curl.CurlInfo.connect_time),
+     *               $(D etc.c.curl.CurlInfo.pretransfer_time),
+     *               $(D etc.c.curl.CurlInfo.starttransfer_time),
+     *               $(D etc.c.curl.CurlInfo.redirect_time),
+     *               $(D etc.c.curl.CurlInfo.appconnect_time),
+     *               $(D etc.c.curl.CurlInfo.total_time).
+     *      val    = the actual value of the inquired timing.
+     *
+     * Returns:
+     *      The return code of the operation. The value stored in val
+     *      should be used only if the return value is $(D etc.c.curl.CurlInfo.ok).
+     *
+     * Example:
+     * ---
+     * import std.net.curl;
+     * import etc.c.curl : CurlError, CurlInfo;
+     *
+     * auto client = HTTP("dlang.org");
+     * client.perform();
+     *
+     * double val;
+     * CurlCode code;
+     *
+     * code = http.getTiming(CurlInfo.namelookup_time, val);
+     * assert(code == CurlError.ok);
+     *---
+     */
+    CurlCode getTiming(CurlInfo timing, ref double val)
+    {
+        return p.curl.getTiming(timing, val);
+    }
+
     /** The headers read from a successful response.
      *
      */
@@ -3161,6 +3201,25 @@ unittest // charset/Charset/CHARSET/...
         auto http = HTTP(testServer.addr);
         http.perform();
         assert(http.p.charset == "foo");
+
+        // Bugzilla 16736
+        double val;
+        CurlCode code;
+
+        code = http.getTiming(CurlInfo.total_time, val);
+        assert(code == CurlError.ok);
+        code = http.getTiming(CurlInfo.namelookup_time, val);
+        assert(code == CurlError.ok);
+        code = http.getTiming(CurlInfo.connect_time, val);
+        assert(code == CurlError.ok);
+        code = http.getTiming(CurlInfo.pretransfer_time, val);
+        assert(code == CurlError.ok);
+        code = http.getTiming(CurlInfo.starttransfer_time, val);
+        assert(code == CurlError.ok);
+        code = http.getTiming(CurlInfo.redirect_time, val);
+        assert(code == CurlError.ok);
+        code = http.getTiming(CurlInfo.appconnect_time, val);
+        assert(code == CurlError.ok);
     }
 }
 
@@ -3479,6 +3538,71 @@ struct FTP
     @property void contentLength(ulong len)
     {
         p.curl.set(CurlOption.infilesize_large, to!curl_off_t(len));
+    }
+
+    /**
+     * Get various timings defined in $(REF CurlInfo, etc, c, curl).
+     * The value is usable only if the return value is equal to $(D etc.c.curl.CurlError.ok).
+     *
+     * Params:
+     *      timing = one of the timings defined in $(REF CurlInfo, etc, c, curl).
+     *               The values are:
+     *               $(D etc.c.curl.CurlInfo.namelookup_time),
+     *               $(D etc.c.curl.CurlInfo.connect_time),
+     *               $(D etc.c.curl.CurlInfo.pretransfer_time),
+     *               $(D etc.c.curl.CurlInfo.starttransfer_time),
+     *               $(D etc.c.curl.CurlInfo.redirect_time),
+     *               $(D etc.c.curl.CurlInfo.appconnect_time),
+     *               $(D etc.c.curl.CurlInfo.total_time).
+     *      val    = the actual value of the inquired timing.
+     *
+     * Returns:
+     *      The return code of the operation. The value stored in val
+     *      should be used only if the return value is $(D etc.c.curl.CurlInfo.ok).
+     *
+     * Example:
+     * ---
+     * import std.net.curl;
+     * import etc.c.curl : CurlError, CurlInfo;
+     *
+     * auto client = FTP();
+     * client.addCommand("RNFR my_file.txt");
+     * client.addCommand("RNTO my_renamed_file.txt");
+     * upload("my_file.txt", "ftp.digitalmars.com", client);
+     *
+     * double val;
+     * CurlCode code;
+     *
+     * code = http.getTiming(CurlInfo.namelookup_time, val);
+     * assert(code == CurlError.ok);
+     *---
+     */
+    CurlCode getTiming(CurlInfo timing, ref double val)
+    {
+        return p.curl.getTiming(timing, val);
+    }
+
+    unittest
+    {
+        auto client = FTP();
+
+        double val;
+        CurlCode code;
+
+        code = client.getTiming(CurlInfo.total_time, val);
+        assert(code == CurlError.ok);
+        code = client.getTiming(CurlInfo.namelookup_time, val);
+        assert(code == CurlError.ok);
+        code = client.getTiming(CurlInfo.connect_time, val);
+        assert(code == CurlError.ok);
+        code = client.getTiming(CurlInfo.pretransfer_time, val);
+        assert(code == CurlError.ok);
+        code = client.getTiming(CurlInfo.starttransfer_time, val);
+        assert(code == CurlError.ok);
+        code = client.getTiming(CurlInfo.redirect_time, val);
+        assert(code == CurlError.ok);
+        code = client.getTiming(CurlInfo.appconnect_time, val);
+        assert(code == CurlError.ok);
     }
 }
 
@@ -3875,6 +3999,7 @@ private struct CurlAPI
         CURL* function() easy_init;
         CURLcode function(CURL *curl, CURLoption option,...) easy_setopt;
         CURLcode function(CURL *curl) easy_perform;
+        CURLcode function(CURL *curl, CURLINFO info,...) easy_getinfo;
         CURL* function(CURL *curl) easy_duphandle;
         char* function(CURLcode) easy_strerror;
         CURLcode function(CURL *handle, int bitmask) easy_pause;
@@ -4211,6 +4336,19 @@ struct Curl
         CurlCode code = curl.easy_perform(this.handle);
         if (throwOnError)
             _check(code);
+        return code;
+    }
+
+    /**
+       Get the various timings like name lookup time, total time, connect time etc.
+       The timed category is passed through the timing parameter while the timing
+       value is stored at val. The value is usable only if res is equal to
+       $(D etc.c.curl.CurlError.ok).
+    */
+    CurlCode getTiming(CurlInfo timing, ref double val)
+    {
+        CurlCode code;
+        code = curl.easy_getinfo(handle, timing, &val);
         return code;
     }
 
