@@ -188,7 +188,7 @@ template isSeedable(Rng)
         }));
 }
 
-@safe pure nothrow unittest
+@safe pure nothrow @nogc unittest
 {
     struct NoRng
     {
@@ -311,7 +311,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
         return result * n;
     }
 
-    @safe pure nothrow unittest
+    @safe pure nothrow @nogc unittest
     {
         static assert(primeFactorsOnly(100) == 10);
         //writeln(primeFactorsOnly(11));
@@ -456,7 +456,7 @@ alias MinstdRand0 = LinearCongruentialEngine!(uint, 16_807, 0, 2_147_483_647);
 alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
 
 ///
-@safe unittest
+@safe nothrow unittest
 {
     // seed with a constant
     auto rnd0 = MinstdRand0(1);
@@ -466,7 +466,7 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
     n = rnd0.front; // different across runs
 }
 
-@safe unittest
+@safe nothrow unittest
 {
     import std.range;
     static assert(isForwardRange!MinstdRand);
@@ -853,7 +853,7 @@ alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
                                        0xefc60000, 18, 1_812_433_253);
 
 ///
-@safe unittest
+@safe nothrow unittest
 {
     // seed with a constant
     Mt19937 gen;
@@ -863,7 +863,7 @@ alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
     n = gen.front; // different across runs
 }
 
-@safe nothrow unittest
+@safe pure nothrow @nogc unittest
 {
     import std.algorithm;
     import std.range;
@@ -944,7 +944,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     gen.seed(map!((a) => unpredictableSeed)(repeat(0)));
 }
 
-@safe pure nothrow unittest
+@safe pure nothrow @nogc unittest
 {
     uint a, b;
     {
@@ -960,7 +960,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     assert(a != b);
 }
 
-@safe unittest
+@safe nothrow unittest
 {
     import std.range;
     // Check .save works
@@ -1328,7 +1328,7 @@ random number sequences every run.
 Returns:
 A single unsigned integer seed value, different on each successive call
 */
-@property uint unpredictableSeed() @trusted
+@property uint unpredictableSeed() @trusted nothrow @nogc
 {
     import core.thread : Thread, getpid, MonoTime;
     static bool seeded;
@@ -2471,10 +2471,10 @@ if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == vo
 
     static if (isForwardRange!UniformRNG)
     {
-        @property typeof(this) save()
+        @property typeof(this) save() const
         {
-            auto ret = this;
-            ret._input = _input.save;
+            auto ret = cast()this;
+            ret._input = cast(Range)_input.save;
             ret._rng = _rng.save;
             return ret;
         }
@@ -2778,10 +2778,10 @@ if (isInputRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
 /// Ditto
     static if (isForwardRange!Range && isForwardRange!UniformRNG)
     {
-        @property typeof(this) save()
+        @property typeof(this) save() const
         {
-            auto ret = this;
-            ret._input = _input.save;
+            auto ret = cast()this;
+            ret._input = cast(Range)_input.save;
             ret._rng = _rng.save;
             return ret;
         }
