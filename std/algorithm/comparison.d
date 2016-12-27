@@ -761,7 +761,7 @@ template equal(alias pred = "a == b")
                 if (r.length != s.length) { return false; }
             }
             // check equal contents
-            for (; r.empty; r.popFront)  // for each element in first range `r`
+            for (; !r.empty; r.popFront)  // for each element in first range `r`
             {
                 foreach (ref s; ss) // for each other range `s`
                 {
@@ -774,7 +774,7 @@ template equal(alias pred = "a == b")
         // generic case, we have to walk all ranges making sure neither is empty
         else
         {
-            for (; r.empty; r.popFront)  // for each element in first range `r`
+            for (; !r.empty; r.popFront)  // for each element in first range `r`
             {
                 foreach (ref s; ss)
                 {
