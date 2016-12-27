@@ -2335,6 +2335,12 @@ $(D this) must not be in the null state.
     alias get this;
 }
 
+/// ditto
+auto nullable(T)(T t)
+{
+    return Nullable!T(t);
+}
+
 ///
 @safe unittest
 {
@@ -2365,6 +2371,20 @@ $(D this) must not be in the null state.
     {
         //Add the customer to the database
     }
+}
+
+///
+@system unittest
+{
+    import std.exception : assertThrown;
+
+    auto a = 42.nullable;
+    assert(!a.isNull);
+    assert(a.get == 42);
+
+    a.nullify();
+    assert(a.isNull);
+    assertThrown!Throwable(a.get);
 }
 
 @system unittest
@@ -2841,6 +2861,13 @@ $(D this) must not be in the null state.
     alias get this;
 }
 
+/// ditto
+auto nullable(alias nullValue, T)(T t)
+    if (is (typeof(nullValue) == T))
+{
+    return Nullable!(T, nullValue)(t);
+}
+
 ///
 @safe unittest
 {
@@ -2871,6 +2898,8 @@ $(D this) must not be in the null state.
     //And there's no overhead
     static assert(Nullable!(size_t, size_t.max).sizeof == size_t.sizeof);
 }
+
+///
 @system unittest
 {
     import std.exception : assertThrown;
@@ -2883,13 +2912,16 @@ $(D this) must not be in the null state.
     assert(a == 5);
     static assert(a.sizeof == int.sizeof);
 }
+
+///
 @safe unittest
 {
-    auto a = Nullable!(int, int.min)(8);
+    auto a = nullable!(int.min)(8);
     assert(a == 8);
     a.nullify();
     assert(a.isNull);
 }
+
 @safe unittest
 {
     static int f(in Nullable!(int, int.min) x) {
@@ -3162,12 +3194,19 @@ $(D this) must not be in the null state.
     alias get this;
 }
 
+/// ditto
+auto nullableRef(T)(T* t)
+{
+    return NullableRef!T(t);
+}
+
+///
 @system unittest
 {
     import std.exception : assertThrown;
 
     int x = 5, y = 7;
-    auto a = NullableRef!(int)(&x);
+    auto a = nullableRef(&x);
     assert(!a.isNull);
     assert(a == 5);
     assert(x == 5);
@@ -3191,7 +3230,7 @@ $(D this) must not be in the null state.
         return x.isNull ? 42 : x.get;
     }
     int x = 5;
-    auto a = NullableRef!int(&x);
+    auto a = nullableRef(&x);
     assert(f(a) == 5);
     a.nullify();
     assert(f(a) == 42);
