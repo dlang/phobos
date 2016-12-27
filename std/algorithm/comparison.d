@@ -864,7 +864,7 @@ This can be very useful when the element type of a range is itself a
 range. In particular, $(D equal) can be its own predicate, allowing
 range of range (of range...) comparisons.
  +/
-@safe unittest
+unittest
 {
     import std.range : iota, chunks;
     import std.algorithm.comparison : equal;
