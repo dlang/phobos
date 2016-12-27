@@ -734,7 +734,9 @@ template equal(alias pred = "a == b")
     bool equal(R, Ss...)(R r, Ss ss)
     if (ss.length >= 1 &&
         isInputRange!R &&
-        allSatisfy!(isInputRange, Ss))
+        allSatisfy!(isInputRange, Ss) &&
+        (!isInfinite!R || !allSatisfy!(isInfinite, Ss)) // at least one must be finite
+        )
     {
         enum isEquableToR(T) = is(typeof({ return R.init == T.init; }));
 
