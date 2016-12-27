@@ -18,6 +18,9 @@ $(BUGSTITLE Library Changes,
         has been deprecated.))
     $(LI $(RELATIVE_LINK2 has-function-attributes, Added `std.traits.hasFunctionAttributes`
         as a user-friendly way to query for function attributes.))
+    $(LI $(RELATIVE_LINK2 bitwise, Added `std.range.bitwise` to create
+        a bitwise adapter over an integral type range, consuming the range elements
+        bit by bit.))
 )
 
 $(BUGSTITLE Library Changes,
@@ -103,6 +106,18 @@ bool myFunc(T)(T b)
 }
 static assert(hasFunctionAttributes!(myFunc!bool, "@safe", "pure", "@nogc", "nothrow"));
 static assert(!hasFunctionAttributes!(myFunc!bool, "shared"));
+-------
+)
+
+$(LI $(LNAME2 bitwise, `std.range.bitwise` creates a bit by bit adapter
+    over an integral type range.)
+-------
+import std.range : bitwise;
+ubyte[] arr = [3, 9];
+auto r = arr.bitwise;
+
+r[2] = 1;
+assert(arr[0] == 7);
 -------
 )
 
