@@ -369,7 +369,7 @@ $(D x0).
     {
         static if (c == 0)
         {
-            x0 || assert(0, "Invalid (zero) seed for "
+            assert(x0, "Invalid (zero) seed for "
                     ~ LinearCongruentialEngine.stringof);
         }
         _x = modulus ? (x0 % modulus) : x0;
