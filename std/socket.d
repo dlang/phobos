@@ -629,7 +629,7 @@ private mixin template socketOSExceptionCtors()
 
 
 /**
- * Class for exceptions thrown from an $(D InternetHost).
+ * Class for exceptions thrown from an `InternetHost`.
  */
 class HostException: SocketOSException
 {
@@ -637,40 +637,10 @@ class HostException: SocketOSException
 }
 
 /**
- * $(D InternetHost) is a class for resolving IPv4 addresses.
+ * `InternetHost` is a class for resolving IPv4 addresses.
  *
- * Consider using $(D getAddress), $(D parseAddress) and $(D Address) methods
+ * Consider using `getAddress`, `parseAddress` and `Address` methods
  * instead of using this class directly.
- *
- * Example:
- * ---
- * auto ih = new InternetHost;
- *
- * // Forward lookup
- * writeln("About www.digitalmars.com:");
- * if (ih.getHostByName("www.digitalmars.com"))
- * {
- *     writefln("  Name: %s", ih.name);
- *     auto ip = InternetAddress.addrToString(ih.addrList[0]);
- *     writefln("  IP address: %s", ip);
- *     foreach (string s; ih.aliases)
- *          writefln("  Alias: %s", s);
- *     writeln("---");
- *
- *     // Reverse lookup
- *     writefln("About IP %s:", ip);
- *     if (ih.getHostByAddr(ih.addrList[0]))
- *     {
- *         writefln("  Name: %s", ih.name);
- *         foreach (string s; ih.aliases)
- *              writefln("  Alias: %s", s);
- *     }
- *     else
- *         writeln("  Reverse lookup failed");
- * }
- * else
- *     writeln("  Can't resolve www.digitalmars.com");
- * ---
  */
 class InternetHost
 {
@@ -824,7 +794,7 @@ class InternetHost
     }
 }
 
-
+///
 @safe unittest
 {
     InternetHost ih = new InternetHost;
@@ -834,29 +804,21 @@ class InternetHost
     ih.getHostByAddr("127.0.0.1");
     assert(ih.addrList[0] == 0x7F_00_00_01);
 
-    softUnittest({
-        if (!ih.getHostByName("www.digitalmars.com"))
-            return;             // don't fail if not connected to internet
-        //writefln("addrList.length = %d", ih.addrList.length);
-        assert(ih.addrList.length);
-        InternetAddress ia = new InternetAddress(ih.addrList[0], InternetAddress.PORT_ANY);
-        assert(ih.name == "www.digitalmars.com" || ih.name == "digitalmars.com",
-               ih.name);
-        // writefln("IP address = %s", ia.toAddrString());
-        // writefln("name = %s", ih.name);
-        // foreach (int i, string s; ih.aliases)
-        // {
-        //      writefln("aliases[%d] = %s", i, s);
-        // }
-        // writefln("---");
+    if (!ih.getHostByName("www.digitalmars.com"))
+        return;             // don't fail if not connected to internet
 
-        //assert(ih.getHostByAddr(ih.addrList[0]));
-        // writefln("name = %s", ih.name);
-        // foreach (int i, string s; ih.aliases)
-        // {
-        //      writefln("aliases[%d] = %s", i, s);
-        // }
-    });
+    assert(ih.addrList.length);
+    InternetAddress ia = new InternetAddress(ih.addrList[0], InternetAddress.PORT_ANY);
+    assert(ih.name == "www.digitalmars.com" || ih.name == "digitalmars.com",
+            ih.name);
+
+    assert(ih.getHostByAddr(ih.addrList[0]));
+    string getHostNameFromInt = ih.name.dup;
+
+    assert(ih.getHostByAddr(ia.toAddrString()));
+    string getHostNameFromStr = ih.name.dup;
+
+    assert(getHostNameFromInt == getHostNameFromStr);
 }
 
 

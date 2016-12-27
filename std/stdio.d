@@ -2350,7 +2350,6 @@ $(REF readText, std,file)
     Range primitives may throw $(D StdioException) on I/O error.
 
     Params:
-        file = file handle to parse from
         format = tuple record $(REF_ALTTEXT _format, formattedRead, std, _format)
 
     Returns:
