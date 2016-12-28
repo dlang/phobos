@@ -733,8 +733,7 @@ template equal(alias pred = "a == b")
     +/
     bool equal(R, Ss...)(R r, Ss ss)
     if (ss.length >= 1 &&
-        isInputRange!R &&
-        allSatisfy!(isInputRange, Ss) &&
+        allSatisfy!(isInputRange, R, Ss) &&
         (!isInfinite!R || !allSatisfy!(isInfinite, Ss)) // at least one must be finite
         )
     {
@@ -754,8 +753,7 @@ template equal(alias pred = "a == b")
             return true;
         }
         // use fast implementation when the ranges have comparable lengths
-        else static if (hasLength!R &&
-                        allSatisfy!(hasLength, Ss))
+        else static if (allSatisfy!(hasLength, R, Ss))
         {
             // check equal lengths
             foreach (ref s; ss)
