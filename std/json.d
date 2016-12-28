@@ -1228,12 +1228,18 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                 }
                 else
                 {
-                    import std.format : format;
+                    import std.format : formattedWrite;
+                    import std.math : modf;
                     // The correct formula for the number of decimal digits needed for lossless round
                     // trips is actually:
                     //     ceil(log(pow(2.0, double.mant_dig - 1)) / log(10.0) + 1) == (double.dig + 2)
                     // Anything less will round off (1 + double.epsilon)
-                    json.put("%.18g".format(val));
+                    json.formattedWrite("%.18g", val);
+                    // json requires a trailing dot to recognize floating numbers
+                    real n;
+                    enum double lowerEnd = -1e18 + 65, upperEnd = 1e18 - 65;
+                    if (modf(val, n) == 0 && val >= lowerEnd && val <= upperEnd)
+                        json.put(".0");
                 }
                 break;
 
@@ -1705,4 +1711,56 @@ pure nothrow @safe unittest // issue 15884
     const minSub = double.min_normal * double.epsilon;
     assert(test(minSub));
     assert(test(3*minSub));
+}
+
+@safe unittest // issue 16432
+{
+    // Floating points numbers are rounded to the nearest integer and thus get
+    // incorrectly parsed
+    string s = "{\"rating\": 3.0 }";
+    JSONValue j = parseJSON(s);
+    assert(j["rating"].type == JSON_TYPE.FLOAT);
+    j = j.toString.parseJSON;
+    assert(j["rating"].type == JSON_TYPE.FLOAT);
+
+    s = "{\"rating\": -3.0 }";
+    j = parseJSON(s);
+    assert(j["rating"].type == JSON_TYPE.FLOAT);
+    j = j.toString.parseJSON;
+    assert(j["rating"].type == JSON_TYPE.FLOAT);
+    assert(j["rating"].floating == -3.0);
+}
+
+@safe unittest // issue 16432
+{
+    // Floating points numbers are rounded to the nearest integer and thus get
+    // incorrectly parsed
+    JSONValue j;
+    j["rating"] = 3e-21;
+    j = j.toString.parseJSON;
+    assert(j["rating"].type == JSON_TYPE.FLOAT);
+    assert(j["rating"].floating == 3e-21);
+
+    j["rating"] = -5e-33;
+    j = j.toString.parseJSON;
+    assert(j["rating"].type == JSON_TYPE.FLOAT);
+    assert(j["rating"].floating == -5e-33);
+}
+
+@safe unittest // issue 16432
+{
+    // test positive extreme values
+    JSONValue j;
+    j["rating"] = 1e18 - 65;
+    assert(j.toString == `{"rating":999999999999999872.0}`);
+
+    j["rating"] = 1e18 - 64;
+    assert(j.toString == `{"rating":1e+18}`);
+
+    // negative extreme values
+    j["rating"] = -1e18 + 65;
+    assert(j.toString == `{"rating":-999999999999999872.0}`);
+
+    j["rating"] = -1e18 + 64;
+    assert(j.toString == `{"rating":-1e+18}`);
 }
