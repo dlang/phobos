@@ -1631,8 +1631,6 @@ if (s != SwapStrategy.stable
     && hasLength!Range
     && Offset.length >= 1)
 {
-    import std.algorithm.comparison : min;
-
     Tuple!(size_t, "pos", size_t, "len")[offset.length] blackouts;
     foreach (i, v; offset)
     {
@@ -1659,7 +1657,7 @@ if (s != SwapStrategy.stable
 
     size_t left = 0, right = offset.length - 1;
     auto tgt = range.save;
-    size_t steps = 0;
+    size_t tgtPos = 0;
 
     while (left <= right)
     {
@@ -1680,24 +1678,30 @@ if (s != SwapStrategy.stable
                 break;
         }
         // Advance to next blackout on the left
-        assert(blackouts[left].pos >= steps);
-        tgt.popFrontExactly(blackouts[left].pos - steps);
-        steps = blackouts[left].pos;
-        immutable toMove = min(
-            blackouts[left].len,
-            range.length - (blackouts[right].pos + blackouts[right].len));
+        assert(blackouts[left].pos >= tgtPos);
+        tgt.popFrontExactly(blackouts[left].pos - tgtPos);
+        tgtPos = blackouts[left].pos;
+
+        // Number of elements to the right of blackouts[right]
+        immutable tailLen = range.length - (blackouts[right].pos + blackouts[right].len);
+        size_t toMove = void;
+        if (tailLen < blackouts[left].len)
+        {
+            toMove = tailLen;
+            blackouts[left].pos += toMove;
+            blackouts[left].len -= toMove;
+        }
+        else
+        {
+            toMove = blackouts[left].len;
+            ++left;
+        }
+        tgtPos += toMove;
         foreach (i; 0 .. toMove)
         {
             move(range.back, tgt.front);
             range.popBack();
             tgt.popFront();
-        }
-        steps += toMove;
-        if (toMove == blackouts[left].len)
-        {
-            // Filled the entire left hole
-            ++left;
-            continue;
         }
     }
 
@@ -1770,7 +1774,7 @@ if (s == SwapStrategy.stable
     a = [ 0, 1, 2, 3, 4, 5 ];
     assert(remove!(SwapStrategy.unstable)(a, 1) == [0, 5, 2, 3, 4]);
     a = [ 0, 1, 2, 3, 4, 5 ];
-    assert(remove!(SwapStrategy.unstable)(a, tuple(1, 4)) == [0]);
+    assert(remove!(SwapStrategy.unstable)(a, tuple(1, 4)) == [0, 5, 4]);
 }
 
 @safe unittest
@@ -1938,6 +1942,81 @@ if (isBidirectionalRange!Range
     //writeln(remove!("a != 2", SwapStrategy.stable)(a));
     assert(remove!("a == 2", SwapStrategy.stable)(a) ==
             [ 1, 3, 3, 4, 5, 5, 6 ]);
+}
+
+@nogc unittest
+{
+    // @nogc test
+    int[10] arr = [0,1,2,3,4,5,6,7,8,9];
+    alias pred = e => e < 5;
+
+    auto r = arr[].remove!(SwapStrategy.unstable)(0);
+    r = r.remove!(SwapStrategy.stable)(0);
+    r = r.remove!(pred, SwapStrategy.unstable);
+    r = r.remove!(pred, SwapStrategy.stable);
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : min;
+    import std.algorithm.searching : all, any;
+    import std.algorithm.sorting : isStrictlyMonotonic;
+    import std.array : array;
+    import std.meta : AliasSeq;
+    import std.range : iota, only;
+    import std.typecons : Tuple;
+    alias S = Tuple!(int[2]);
+    S[] soffsets;
+    foreach (start; 0..5)
+    foreach (end; min(start+1,5) .. 5)
+          soffsets ~= S([start,end]);
+    alias D = Tuple!(int[2],int[2]);
+    D[] doffsets;
+    foreach (start1; 0..10)
+    foreach (end1; min(start1+1,10) .. 10)
+    foreach (start2; end1 ..10)
+    foreach (end2; min(start2+1,10) .. 10)
+          doffsets ~= D([start1,end1],[start2,end2]);
+    alias T = Tuple!(int[2],int[2],int[2]);
+    T[] toffsets;
+    foreach (start1; 0..15)
+    foreach (end1; min(start1+1,15) .. 15)
+    foreach (start2; end1..15)
+    foreach (end2; min(start2+1,15) .. 15)
+    foreach (start3; end2..15)
+    foreach (end3; min(start3+1,15) .. 15)
+            toffsets ~= T([start1,end1],[start2,end2],[start3,end3]);
+
+    static void verify(O...)(int[] r, int len, int removed, bool stable, O offsets)
+    {
+        assert(r.length == len - removed);
+        assert(!stable || r.isStrictlyMonotonic);
+        assert(r.all!(e => all!(o => e < o[0] || e >= o[1])(offsets.only)));
+    }
+
+    foreach (offsets; AliasSeq!(soffsets,doffsets,toffsets))
+    foreach (os; offsets)
+    {
+        int len = 5*os.length;
+        auto w = iota(0, len).array;
+        auto x = w.dup;
+        auto y = w.dup;
+        auto z = w.dup;
+        alias pred = e => any!(o => o[0] <= e && e < o[1])(only(os.expand));
+        w = w.remove!(SwapStrategy.unstable)(os.expand);
+        x = x.remove!(SwapStrategy.stable)(os.expand);
+        y = y.remove!(pred, SwapStrategy.unstable);
+        z = z.remove!(pred, SwapStrategy.stable);
+        int removed;
+        foreach (o; os)
+            removed += o[1] - o[0];
+        verify(w, len, removed, false, os[]);
+        verify(x, len, removed, true, os[]);
+        verify(y, len, removed, false, os[]);
+        verify(z, len, removed, true, os[]);
+        assert(w == y);
+        assert(x == z);
+    }
 }
 
 // reverse
