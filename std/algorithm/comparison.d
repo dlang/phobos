@@ -778,17 +778,37 @@ template equal(alias pred = "a == b")
             {
                 foreach (ref s; ss)
                 {
-                    if (s.empty) return false; // because ranges may be different in length
-                    if (!binaryFun!(pred)(r.front, s.front)) return false;
-                    s.popFront();
+                    static if (!isInfinite!(typeof(s)))
+                    {
+                        if (s.empty)
+                            return false; // because ranges may be different in length
+                        else if (!binaryFun!(pred)(r.front, s.front))
+                            return false;
+                        else
+                            s.popFront();
+                    }
+                    else
+                    {
+                        if (!binaryFun!(pred)(r.front, s.front))
+                            return false;
+                        else
+                            s.popFront();
+                    }
                 }
             }
+
             // check that all other ranges are empty
-            foreach (ref s; ss)
+            static if (!isInfinite!R) // line only reached when previous `for`-loop terminated (`s.empty` not enum false)
             {
-                if (!s.empty) return false;
+                foreach (i, ref s; ss)
+                {
+                    static if (!isInfinite!(Ss[i])) // only when `s` is not infinite
+                    {
+                        if (!s.empty) return false;
+                    }
+                }
+                return true;
             }
-            return true;
         }
     }
 }
@@ -862,7 +882,7 @@ This can be very useful when the element type of a range is itself a
 range. In particular, $(D equal) can be its own predicate, allowing
 range of range (of range...) comparisons.
  +/
-unittest
+@safe unittest
 {
     import std.range : iota, chunks;
     import std.algorithm.comparison : equal;
