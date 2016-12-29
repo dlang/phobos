@@ -1944,6 +1944,69 @@ if (isBidirectionalRange!Range
             [ 1, 3, 3, 4, 5, 5, 6 ]);
 }
 
+@safe unittest
+{
+    import std.algorithm.comparison : min;
+    import std.algorithm.searching : all, any;
+    import std.algorithm.sorting : isStrictlyMonotonic;
+    import std.array : array;
+    import std.meta : AliasSeq;
+    import std.range : iota, only;
+    import std.typecons : Tuple;
+    alias S = Tuple!(int[2]);
+    S[] soffsets;
+    foreach (start; 0..5)
+    foreach (end; min(start+1,5) .. 5)
+          soffsets ~= S([start,end]);
+    alias D = Tuple!(int[2],int[2]);
+    D[] doffsets;
+    foreach (start1; 0..10)
+    foreach (end1; min(start1+1,10) .. 10)
+    foreach (start2; end1 ..10)
+    foreach (end2; min(start2+1,10) .. 10)
+          doffsets ~= D([start1,end1],[start2,end2]);
+    alias T = Tuple!(int[2],int[2],int[2]);
+    T[] toffsets;
+    foreach (start1; 0..15)
+    foreach (end1; min(start1+1,15) .. 15)
+    foreach (start2; end1..15)
+    foreach (end2; min(start2+1,15) .. 15)
+    foreach (start3; end2..15)
+    foreach (end3; min(start3+1,15) .. 15)
+            toffsets ~= T([start1,end1],[start2,end2],[start3,end3]);
+
+    static void verify(O...)(int[] r, int len, int removed, bool stable, O offsets)
+    {
+        assert(r.length == len - removed);
+        assert(!stable || r.isStrictlyMonotonic);
+        assert(r.all!(e => all!(o => e < o[0] || e >= o[1])(offsets.only)));
+    }
+
+    foreach (offsets; AliasSeq!(soffsets,doffsets,toffsets))
+    foreach (os; offsets)
+    {
+        int len = 5*os.length;
+        auto w = iota(0, len).array;
+        auto x = w.dup;
+        auto y = w.dup;
+        auto z = w.dup;
+        alias pred = e => any!(o => o[0] <= e && e < o[1])(only(os.expand));
+        w = w.remove!(SwapStrategy.unstable)(os.expand);
+        x = x.remove!(SwapStrategy.stable)(os.expand);
+        y = y.remove!(pred, SwapStrategy.unstable);
+        z = z.remove!(pred, SwapStrategy.stable);
+        int removed;
+        foreach (o; os)
+            removed += o[1] - o[0];
+        verify(w, len, removed, false, os[]);
+        verify(x, len, removed, true, os[]);
+        verify(y, len, removed, false, os[]);
+        verify(z, len, removed, true, os[]);
+        assert(w == y);
+        assert(x == z);
+    }
+}
+
 // reverse
 /**
 Reverses $(D r) in-place.  Performs $(D r.length / 2) evaluations of $(D
