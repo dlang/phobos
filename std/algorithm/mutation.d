@@ -1944,6 +1944,18 @@ if (isBidirectionalRange!Range
             [ 1, 3, 3, 4, 5, 5, 6 ]);
 }
 
+@nogc unittest
+{
+    // @nogc test
+    int[10] arr = [0,1,2,3,4,5,6,7,8,9];
+    alias pred = e => e < 5;
+
+    auto r = arr[].remove!(SwapStrategy.unstable)(0);
+    r = r.remove!(SwapStrategy.stable)(0);
+    r = r.remove!(pred, SwapStrategy.unstable);
+    r = r.remove!(pred, SwapStrategy.stable);
+}
+
 @safe unittest
 {
     import std.algorithm.comparison : min;
