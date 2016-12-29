@@ -1631,8 +1631,6 @@ if (s != SwapStrategy.stable
     && hasLength!Range
     && Offset.length >= 1)
 {
-    import std.algorithm.comparison : min;
-
     Tuple!(size_t, "pos", size_t, "len")[offset.length] blackouts;
     foreach (i, v; offset)
     {
@@ -1659,7 +1657,7 @@ if (s != SwapStrategy.stable
 
     size_t left = 0, right = offset.length - 1;
     auto tgt = range.save;
-    size_t steps = 0;
+    size_t tgtPos = 0;
 
     while (left <= right)
     {
@@ -1680,24 +1678,30 @@ if (s != SwapStrategy.stable
                 break;
         }
         // Advance to next blackout on the left
-        assert(blackouts[left].pos >= steps);
-        tgt.popFrontExactly(blackouts[left].pos - steps);
-        steps = blackouts[left].pos;
-        immutable toMove = min(
-            blackouts[left].len,
-            range.length - (blackouts[right].pos + blackouts[right].len));
+        assert(blackouts[left].pos >= tgtPos);
+        tgt.popFrontExactly(blackouts[left].pos - tgtPos);
+        tgtPos = blackouts[left].pos;
+
+        // Number of elements to the right of blackouts[right]
+        immutable tailLen = range.length - (blackouts[right].pos + blackouts[right].len);
+        size_t toMove = void;
+        if (tailLen < blackouts[left].len)
+        {
+            toMove = tailLen;
+            blackouts[left].pos += toMove;
+            blackouts[left].len -= toMove;
+        }
+        else
+        {
+            toMove = blackouts[left].len;
+            ++left;
+        }
+        tgtPos += toMove;
         foreach (i; 0 .. toMove)
         {
             move(range.back, tgt.front);
             range.popBack();
             tgt.popFront();
-        }
-        steps += toMove;
-        if (toMove == blackouts[left].len)
-        {
-            // Filled the entire left hole
-            ++left;
-            continue;
         }
     }
 
@@ -1770,7 +1774,7 @@ if (s == SwapStrategy.stable
     a = [ 0, 1, 2, 3, 4, 5 ];
     assert(remove!(SwapStrategy.unstable)(a, 1) == [0, 5, 2, 3, 4]);
     a = [ 0, 1, 2, 3, 4, 5 ];
-    assert(remove!(SwapStrategy.unstable)(a, tuple(1, 4)) == [0]);
+    assert(remove!(SwapStrategy.unstable)(a, tuple(1, 4)) == [0, 5, 4]);
 }
 
 @safe unittest
