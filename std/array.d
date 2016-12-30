@@ -78,6 +78,7 @@ module std.array;
 import std.meta;
 import std.traits;
 import std.functional;
+import std.typecons; // : Flag
 static import std.algorithm.iteration; // FIXME, remove with alias of splitter
 
 import std.range.primitives;
@@ -1454,6 +1455,7 @@ alias splitter = std.algorithm.iteration.splitter;
         The return type will be an array of $(D int) arrays.
 
     Params:
+        keepSeparators = flag to specify if the separators should be in the resulting range
         range = a forward _range.
         sep = a value of the same type as the elements of $(D range) or another
         forward range.
@@ -1465,19 +1467,21 @@ alias splitter = std.algorithm.iteration.splitter;
         $(REF splitter, std,algorithm,iteration) for the lazy version of this
         function.
  +/
-auto split(Range, Separator)(Range range, Separator sep)
+auto split(Flag!"keepSeparators" keepSeparators = No.keepSeparators,
+           Range, Separator)(Range range, Separator sep)
 if (isForwardRange!Range && is(typeof(ElementType!Range.init == Separator.init)))
 {
     import std.algorithm.iteration : splitter;
-    return range.splitter(sep).array;
+    return range.splitter!("a == b", keepSeparators)(sep).array;
 }
 ///ditto
-auto split(Range, Separator)(Range range, Separator sep) if (
+auto split(Flag!"keepSeparators" keepSeparators = No.keepSeparators,
+           Range, Separator)(Range range, Separator sep) if (
         isForwardRange!Range && isForwardRange!Separator
         && is(typeof(ElementType!Range.init == ElementType!Separator.init)))
 {
     import std.algorithm.iteration : splitter;
-    return range.splitter(sep).array;
+    return range.splitter!("a == b", keepSeparators)(sep).array;
 }
 ///ditto
 auto split(alias isTerminator, Range)(Range range)
@@ -1485,6 +1489,15 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
 {
     import std.algorithm.iteration : splitter;
     return range.splitter!isTerminator.array;
+}
+
+///
+@safe unittest
+{
+    import std.typecons : Yes;
+
+    assert(split("192.168.0.1", ".") == ["192", "168", "0", "1"]);
+    assert(split!(Yes.keepSeparators)("192.168.0.1", ".") == ["192", ".", "168", ".", "0", ".", "1"]);
 }
 
 @safe unittest
