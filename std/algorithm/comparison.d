@@ -800,9 +800,9 @@ template equal(alias pred = "a == b")
             // check that all other ranges are empty
             static if (!isInfinite!R) // line only reached when previous `for`-loop terminated (`s.empty` not enum false)
             {
-                foreach (i, ref s; ss)
+                foreach (ref s; ss)
                 {
-                    static if (!isInfinite!(Ss[i])) // only when `s` is not infinite
+                    static if (!isInfinite!(typeof(s))) // only when `s` is not infinite
                     {
                         if (!s.empty) return false;
                     }
