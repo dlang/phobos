@@ -1676,7 +1676,7 @@ Params:
 Returns: The initial range wrapped as a $(D SortedRange) with the predicate
 $(D binaryFun!less).
 
-Algorithms: $(HTTP en.wikipedia.org/wiki/Introsort) is used for unstable sorting and
+Algorithms: $(HTTP en.wikipedia.org/wiki/Introsort, Introsort) is used for unstable sorting and
 $(HTTP en.wikipedia.org/wiki/Timsort, Timsort) is used for stable sorting.
 Each algorithm has benefits beyond stability. Introsort is generally faster but
 Timsort may achieve greater speeds on data with low entropy or if predicate calls
