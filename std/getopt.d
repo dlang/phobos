@@ -1020,7 +1020,7 @@ dchar assignChar = '=';
  */
 string arraySep = "";
 
-enum autoIncrementChar = '+';
+private enum autoIncrementChar = '+';
 
 private struct configuration
 {
