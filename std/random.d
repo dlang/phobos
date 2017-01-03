@@ -44,6 +44,7 @@ License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP erdani.org, Andrei Alexandrescu)
            Masahiro Nakagawa (Xorshift random generator)
            $(HTTP braingam.es, Joseph Rushton Wakeling) (Algorithm D for random sampling)
+           Ilya Yaroshenko (Mersenne Twister implementation, adapted from $(HTTPS github.com/libmir/mir-random, mir.random))
 Credits:   The entire random number library architecture is derived from the
            excellent $(HTTP open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf, C++0X)
            random number facility proposed by Jens Maurer and contributed to by
@@ -527,9 +528,9 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48271, 0, 2147483647);
 The $(LUCKY Mersenne Twister) generator.
  */
 struct MersenneTwisterEngine(UIntType, size_t w, size_t n, size_t m, size_t r,
-                             UIntType a, size_t u, size_t s,
+                             UIntType a, size_t u, UIntType d, size_t s,
                              UIntType b, size_t t,
-                             UIntType c, size_t l)
+                             UIntType c, size_t l, UIntType f)
     if (isUnsigned!UIntType)
 {
     static assert(0 < w && w <= UIntType.sizeof * 8);
@@ -537,6 +538,7 @@ struct MersenneTwisterEngine(UIntType, size_t w, size_t n, size_t m, size_t r,
     static assert(0 <= r && 0 <= u && 0 <= s && 0 <= t && 0 <= l);
     static assert(r <= w && u <= w && s <= w && t <= w && l <= w);
     static assert(0 <= a && 0 <= b && 0 <= c);
+    static assert(n <= sizediff_t.max);
 
     ///Mark this as a Rng
     enum bool isUniformRandom = true;
@@ -549,20 +551,78 @@ Parameters for the generator.
     enum size_t   shiftSize  = m; /// ditto
     enum size_t   maskBits   = r; /// ditto
     enum UIntType xorMask    = a; /// ditto
-    enum UIntType temperingU = u; /// ditto
+    enum size_t   temperingU = u; /// ditto
+    enum UIntType temperingD = d; /// ditto
     enum size_t   temperingS = s; /// ditto
     enum UIntType temperingB = b; /// ditto
     enum size_t   temperingT = t; /// ditto
     enum UIntType temperingC = c; /// ditto
     enum size_t   temperingL = l; /// ditto
+    enum UIntType initializationMultiplier = f; /// ditto
 
     /// Smallest generated value (0).
     enum UIntType min = 0;
     /// Largest generated value.
     enum UIntType max = UIntType.max >> (UIntType.sizeof * 8u - w);
-    static assert(a <= max && b <= max && c <= max);
+    // note, `max` also serves as a bitmask for the lowest `w` bits
+    static assert(a <= max && b <= max && c <= max && f <= max);
+
     /// The default seed value.
     enum UIntType defaultSeed = 5489u;
+
+    // Bitmasks used in the 'twist' part of the algorithm
+    private enum UIntType lowerMask = (cast(UIntType) 1u << r) - 1,
+                          upperMask = (~lowerMask) & this.max;
+
+    /*
+       Collection of all state variables
+       used by the generator
+    */
+    private struct State
+    {
+        /*
+           State array of the generator.  This
+           is iterated through backwards (from
+           last element to first), providing a
+           few extra compiler optimizations by
+           comparison to the forward iteration
+           used in most implementations.
+        */
+        UIntType[n] data;
+
+        /*
+           Cached copy of most recently updated
+           element of `data` state array, ready
+           to be tempered to generate next
+           `front` value
+        */
+        UIntType z;
+
+        /*
+           Most recently generated random variate
+        */
+        UIntType front;
+
+        /*
+           Index of the entry in the `data`
+           state array that will be twisted
+           in the next `popFront()` call
+        */
+        size_t index;
+    }
+
+    /*
+       State variables used by the generator;
+       initialized to values equivalent to
+       explicitly seeding the generator with
+       `defaultSeed`
+    */
+    private State state = defaultState();
+    /* NOTE: the above is a workaround to ensure
+       backwards compatibility with the original
+       implementation, which permitted implicit
+       construction.  With `@disable this();`
+       it would not be necessary. */
 
 /**
    Constructs a MersenneTwisterEngine object.
@@ -572,36 +632,60 @@ Parameters for the generator.
         seed(value);
     }
 
+    /**
+       Generates the default initial state for a Mersenne
+       Twister; equivalent to the internal state obtained
+       by calling `seed(defaultSeed)`
+    */
+    private static State defaultState() @safe pure nothrow @nogc
+    {
+        if (!__ctfe) assert(false);
+        State mtState;
+        seedImpl(defaultSeed, mtState);
+        return mtState;
+    }
+
 /**
    Seeds a MersenneTwisterEngine object.
    Note:
-   This seed function gives 2^32 starting points. To allow the RNG to be started in any one of its
-   internal states use the seed overload taking an InputRange.
+   This seed function gives 2^w starting points (the lowest w bits of
+   the value provided will be used). To allow the RNG to be started
+   in any one of its internal states use the seed overload taking an
+   InputRange.
 */
     void seed()(UIntType value = defaultSeed) @safe pure nothrow @nogc
     {
-        static if (w == UIntType.sizeof * 8)
+        this.seedImpl(value, this.state);
+    }
+
+    /**
+       Implementation of the seeding mechanism, which
+       can be used with an arbitrary `State` instance
+    */
+    private static void seedImpl(UIntType value, ref State mtState)
+    {
+        mtState.data[$ - 1] = value;
+        static if (this.max != UIntType.max)
         {
-            mt[0] = value;
+            mtState.data[$ - 1] &= this.max;
         }
-        else
+
+        foreach_reverse (size_t i, ref e; mtState.data[0 .. $ - 1])
         {
-            static assert(max + 1 > 0);
-            mt[0] = value % (max + 1);
+            e = f * (mtState.data[i + 1] ^ (mtState.data[i + 1] >> (w - 2))) + cast(UIntType)(n - (i + 1));
+            static if (this.max != UIntType.max)
+            {
+                e &= this.max;
+            }
         }
-        for (mti = 1; mti < n; ++mti)
-        {
-            mt[mti] =
-                cast(UIntType)
-                (1812433253UL * (mt[mti-1] ^ (mt[mti-1] >> (w - 2))) + mti);
-            /* See Knuth TAOCP Vol2. 3rd Ed. P.106 for multiplier. */
-            /* In the previous versions, MSBs of the seed affect   */
-            /* only MSBs of the array mt[].                        */
-            /* 2002/01/09 modified by Makoto Matsumoto             */
-            //mt[mti] &= ResultType.max;
-            /* for >32 bit machines */
-        }
-        popFront();
+
+        mtState.index = n - 1;
+
+        /* double popFront() to guarantee both `mtState.z`
+           and `mtState.front` are derived from the newly
+           set values in `mtState.data` */
+        MersenneTwisterEngine.popFrontImpl(mtState);
+        MersenneTwisterEngine.popFrontImpl(mtState);
     }
 
 /**
@@ -613,13 +697,25 @@ Parameters for the generator.
  */
     void seed(T)(T range) if (isInputRange!T && is(Unqual!(ElementType!T) == UIntType))
     {
+        this.seedImpl(range, this.state);
+    }
+
+    /**
+       Implementation of the range-based seeding mechanism,
+       which can be used with an arbitrary `State` instance
+    */
+    private static void seedImpl(T)(T range, ref State mtState)
+        if (isInputRange!T && is(Unqual!(ElementType!T) == UIntType))
+    {
         size_t j;
         for (j = 0; j < n && !range.empty; ++j, range.popFront())
         {
-            mt[j] = range.front;
+            sizediff_t idx = n - j - 1;
+            mtState.data[idx] = range.front;
         }
 
-        mti = n;
+        mtState.index = n - 1;
+
         if (range.empty && j < n)
         {
             import core.internal.string : UnsignedStringBuf, unsignedToTempString;
@@ -630,17 +726,11 @@ Parameters for the generator.
             throw new Exception(s);
         }
 
-        popFront();
-    }
-
-    ///
-    @safe unittest
-    {
-        import std.algorithm.iteration : map;
-        import std.range : repeat;
-
-        Mt19937 gen;
-        gen.seed(map!((a) => unpredictableSeed)(repeat(0)));
+        /* double popFront() to guarantee both `mtState.z`
+           and `mtState.front` are derived from the newly
+           set values in `mtState.data` */
+        MersenneTwisterEngine.popFrontImpl(mtState);
+        MersenneTwisterEngine.popFrontImpl(mtState);
     }
 
 /**
@@ -648,59 +738,71 @@ Parameters for the generator.
 */
     void popFront() @safe pure nothrow @nogc
     {
-        if (mti == size_t.max) seed();
-        enum UIntType
-            upperMask = ~((cast(UIntType) 1u <<
-                           (UIntType.sizeof * 8 - (w - r))) - 1),
-            lowerMask = (cast(UIntType) 1u << r) - 1;
-        static immutable UIntType[2] mag01 = [0x0UL, a];
+        this.popFrontImpl(this.state);
+    }
 
-        ulong y = void;
+    /*
+       Internal implementation of `popFront()`, which
+       can be used with an arbitrary `State` instance
+    */
+    private static void popFrontImpl(ref State mtState)
+    {
+        /* This function blends two nominally independent
+           processes: (i) calculation of the next random
+           variate `mtState.front` from the cached previous
+           `data` entry `z`, and (ii) updating the value
+           of `data[index]` and `mtState.z` and advancing
+           the `index` value to the next in sequence.
 
-        if (mti >= n)
+           By interweaving the steps involved in these
+           procedures, rather than performing each of
+           them separately in sequence, the variables
+           are kept 'hot' in CPU registers, allowing
+           for significantly faster performance. */
+        sizediff_t index = mtState.index;
+        sizediff_t next = index - 1;
+        if (next < 0)
+            next = n - 1;
+        auto z = mtState.z;
+        sizediff_t conj = index - m;
+        if (conj < 0)
+            conj = index - m + n;
+
+        static if (d == UIntType.max)
         {
-            /* generate N words at one time */
-
-            int kk = 0;
-            const limit1 = n - m;
-            for (; kk < limit1; ++kk)
-            {
-                y = (mt[kk] & upperMask)|(mt[kk + 1] & lowerMask);
-                mt[kk] = cast(UIntType) (mt[kk + m] ^ (y >> 1)
-                        ^ mag01[cast(UIntType) y & 0x1U]);
-            }
-            const limit2 = n - 1;
-            for (; kk < limit2; ++kk)
-            {
-                y = (mt[kk] & upperMask)|(mt[kk + 1] & lowerMask);
-                mt[kk] = cast(UIntType) (mt[kk + (m -n)] ^ (y >> 1)
-                                         ^ mag01[cast(UIntType) y & 0x1U]);
-            }
-            y = (mt[n -1] & upperMask)|(mt[0] & lowerMask);
-            mt[n - 1] = cast(UIntType) (mt[m - 1] ^ (y >> 1)
-                                        ^ mag01[cast(UIntType) y & 0x1U]);
-
-            mti = 0;
+            z ^= (z >> u);
+        }
+        else
+        {
+            z ^= (z >> u) & d;
         }
 
-        y = mt[mti++];
+        auto q = mtState.data[index] & upperMask;
+        auto p = mtState.data[next] & lowerMask;
+        z ^= (z << s) & b;
+        auto y = q | p;
+        auto x = y >> 1;
+        z ^= (z << t) & c;
+        if (y & 1)
+            x ^= a;
+        auto e = mtState.data[conj] ^ x;
+        z ^= (z >> l);
+        mtState.z = mtState.data[index] = e;
+        mtState.index = next;
 
-        /* Tempering */
-        y ^= (y >> temperingU);
-        y ^= (y << temperingS) & temperingB;
-        y ^= (y << temperingT) & temperingC;
-        y ^= (y >> temperingL);
-
-        _y = cast(UIntType) y;
+        /* technically we should take the lowest `w`
+           bits here, but if the tempering bitmasks
+           `b` and `c` are set correctly, this should
+           be unnecessary */
+        mtState.front = z;
     }
 
 /**
    Returns the current random value.
  */
-    @property UIntType front() @safe pure nothrow @nogc
+    @property UIntType front() @safe const pure nothrow @nogc
     {
-        if (mti == size_t.max) seed();
-        return _y;
+        return this.state.front;
     }
 
 ///
@@ -713,10 +815,6 @@ Parameters for the generator.
 Always $(D false).
  */
     enum bool empty = false;
-
-    private UIntType[n] mt;
-    private size_t mti = size_t.max; /* means mt is not initialized */
-    UIntType _y = UIntType.max;
 }
 
 /**
@@ -728,9 +826,9 @@ generation unless memory is severely restricted, in which case a $(D
 LinearCongruentialEngine) would be the generator of choice.
  */
 alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
-                                       0x9908b0df, 11, 7,
+                                       0x9908b0df, 11, 0xffffffff, 7,
                                        0x9d2c5680, 15,
-                                       0xefc60000, 18);
+                                       0xefc60000, 18, 1812433253);
 
 ///
 @safe unittest
@@ -811,9 +909,9 @@ alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
 @safe pure nothrow unittest //11690
 {
     alias MT(UIntType, uint w) = MersenneTwisterEngine!(UIntType, w, 624, 397, 31,
-                                                        0x9908b0df, 11, 7,
+                                                        0x9908b0df, 11, 0xffffffff, 7,
                                                         0x9d2c5680, 15,
-                                                        0xefc60000, 18);
+                                                        0xefc60000, 18, 1812433253);
 
     foreach (R; std.meta.AliasSeq!(MT!(uint, 32), MT!(ulong, 32), MT!(ulong, 48), MT!(ulong, 64)))
         auto a = R();
