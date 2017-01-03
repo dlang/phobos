@@ -860,6 +860,49 @@ alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
     assert(gen.front == 165737292u);
 }
 
+/**
+A $(D MersenneTwisterEngine) instantiated with the parameters of the
+original engine $(HTTP en.wikipedia.org/wiki/Mersenne_Twister,
+MT19937-64), generating uniformly-distributed 64-bit numbers with a
+period of 2 to the power of 19937.
+*/
+alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
+                                          0xb5026f5aa96619e9, 29, 0x5555555555555555, 17,
+                                          0x71d67fffeda60000, 37,
+                                          0xfff7eee000000000, 43, 6364136223846793005);
+
+///
+@safe unittest
+{
+    // Seed with a constant
+    auto gen = Mt19937_64(12345);
+    auto n = gen.front; // same for each run
+    // Seed with an unpredictable value
+    gen.seed(unpredictableSeed);
+    n = gen.front; // different across runs
+}
+
+@safe nothrow unittest
+{
+    import std.algorithm;
+    import std.range;
+    static assert(isUniformRNG!Mt19937_64);
+    static assert(isUniformRNG!(Mt19937_64, ulong));
+    static assert(isSeedable!Mt19937_64);
+    static assert(isSeedable!(Mt19937_64, ulong));
+    // FIXME: this test demonstrates viably that Mt19937_64
+    // is seedable with an infinite range of `ulong` values
+    // but it's a poor example of how to actually seed the
+    // generator, since it can't cover the full range of
+    // possible seed values.  Ideally we need a 64-bit
+    // unpredictable seed to complement the 32-bit one!
+    static assert(isSeedable!(Mt19937_64, typeof(map!((a) => (cast(ulong)unpredictableSeed))(repeat(0)))));
+    Mt19937_64 gen;
+    assert(gen.front == 14514284786278117030uL);
+    popFrontN(gen, 9999);
+    assert(gen.front == 9981545732273789042uL);
+}
+
 @safe unittest
 {
     import std.exception;
@@ -895,7 +938,7 @@ alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
 {
     import std.range;
     // Check .save works
-    foreach (Type; std.meta.AliasSeq!(Mt19937))
+    foreach (Type; std.meta.AliasSeq!(Mt19937, Mt19937_64))
     {
         auto gen1 = Type(unpredictableSeed);
         auto gen2 = gen1.save;
