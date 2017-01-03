@@ -237,6 +237,7 @@ Note: $(D castSwitch) can only be used with object types.
 auto castSwitch(choices...)(Object switchObject)
 {
     import core.exception : SwitchError;
+    import std.format : format;
 
     // Check to see if all handlers return void.
     enum areAllHandlersVoidResult = {
@@ -492,6 +493,23 @@ auto castSwitch(choices...)(Object switchObject)
                                (Object o) => 1,
                                ()            { throw new Exception("null"); },
                            )());
+}
+
+@system unittest
+{
+    interface I { }
+    class B : I { }
+    class C : I { }
+
+    assert((new B()).castSwitch!(
+            (B b) => "class B",
+            (I i) => "derived from I",
+    ) == "class B");
+
+    assert((new C()).castSwitch!(
+            (B b) => "class B",
+            (I i) => "derived from I",
+    ) == "derived from I");
 }
 
 /** Clamps a value into the given bounds.
