@@ -233,7 +233,8 @@ SRC_STD_DIGEST= \
 	std\digest\ripemd.d \
 	std\digest\digest.d \
 	std\digest\hmac.d \
-	std\digest\murmurhash.d
+	std\digest\murmurhash.d \
+	std\digest\package.d
 
 SRC_STD_NET= \
 	std\net\isemail.d \
