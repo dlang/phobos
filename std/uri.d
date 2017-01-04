@@ -32,6 +32,9 @@ private import std.ascii;
 private import core.stdc.stdlib;
 private import std.utf;
 private import std.traits : isSomeChar;
+import std.array;
+import std.string;
+import std.conv;
 import core.exception : OutOfMemoryError;
 import std.exception;
 
@@ -592,5 +595,752 @@ ptrdiff_t emailLength(Char)(in Char[] s) if (isSomeChar!Char)
         assert(encoded2 == target.to!StringType); // check that `encoded2` wasn't changed
         assert(decoded2 == source);
         assert(encoded2 == encode(decoded2).to!StringType);
+    }
+}
+
+/* ====================== URI Struct ================ */
+void enforceURI(bool chk, lazy string msg) pure
+{
+    if (!chk)
+    {
+        throw new URIException(msg);
+    }
+}
+
+/** URI struct
+ */
+struct URI
+{
+    private
+    {
+        struct Opt
+        {
+            bool  reqDSlash;
+            bool  reqAuthority;
+        }
+        string      _scheme;
+        string      _fragment;
+        string      _host;
+        string      _username;
+        string      _password;
+        string      _path;
+        ushort      _port;
+        URIQuery    _query;
+
+
+        static pure auto takeOpt(const(char)[] s)
+        {
+            Opt opt;
+            switch(s)
+            {
+                case "ftp", "sftp", "http", "https", "spdy":
+                    opt.reqDSlash    = true;
+                    opt.reqAuthority = true;
+                    break;
+                case "file":
+                    opt.reqDSlash    = true;
+                    break;
+                case "mailto":
+                    opt.reqAuthority = true;
+                    break;
+                default:
+            }
+            return opt;
+        }
+    }
+
+    /// Create URI from string
+    this (string uri)
+    {
+        opAssign(uri);
+    }
+    ///
+    unittest
+    {
+        import std.conv;
+        auto u = URI("http://dlang.org/");
+        assert(to!string(u) == "http://dlang.org/");
+    }
+
+    ///Allows assign string to uri
+    void opAssign(string src)
+    {
+        this = URI.init;
+
+        enforceURI(src.length != 0, "URI string is empty");
+
+        if ( src[0] != '/' )
+        {
+            bool hasDSlash = false;
+            auto idx = src.indexOf(':');
+            scheme = (idx < 0) ? "" : src[0 .. idx];
+            src = src[idx + 1 .. $];
+
+            if (src.startsWith("//"))
+            {
+                hasDSlash = true;
+                src = src[2 .. $];
+            }
+
+            auto opt = takeOpt(_scheme);
+            if (opt.reqDSlash && !hasDSlash)
+            {
+                throw new URIException(text("URI must start with '", _scheme, "://'"));
+            }
+
+            auto pathIdx = src.indexOf('/');
+            if ( pathIdx < 0 )
+            {
+                pathIdx = src.length;
+            }
+
+            if (opt.reqAuthority && src[0 .. pathIdx].empty)
+            {
+                throw new URIException(text("Schema '", _scheme,"' requires authority"));
+            }
+            authority = src[0 .. pathIdx];
+            src = src[pathIdx  .. $];
+        }
+
+        auto fragIdx = src.indexOf('#');
+        if( fragIdx >= 0 )
+        {
+            _fragment = src[fragIdx + 1 .. $];
+            src = src[0 .. fragIdx];
+        }
+
+        auto qIdx = src.indexOf('?');
+
+        if( qIdx >= 0 )
+        {
+            query = src[qIdx + 1 .. $];
+            src   = src[0 .. qIdx];
+        }
+        path  = src;
+    }
+    ///
+    unittest
+    {
+        import std.conv;
+        URI u = "http://dlang.org/";
+        assert(to!string(u) == "http://dlang.org/");
+        u = "http://code.dlang.org/404";
+        assert(to!string(u) == "http://code.dlang.org/404");
+    }
+
+    /// Get/set URI scheme
+    @property string scheme() const pure nothrow
+    {
+        return _scheme;
+    }
+    /// ditto
+    @property string scheme(string src) pure
+    {
+        enforceURI(src.length != 0, "URI scheme is empty");
+        return _scheme = src;
+    }
+    ///
+    unittest
+    {
+        import std.conv;
+        URI u = "http://dlang.org/";
+        assert(u.scheme == "http");
+        u.scheme = "https";
+        assert(to!string(u) == "https://dlang.org/");
+    }
+
+    /// Get/set URI username
+    @property string username() const pure nothrow
+    {
+        return _username;
+    }
+    /// ditto
+    @property string username(string u) pure nothrow
+    {
+        return _username = u;
+    }
+    ///
+    unittest
+    {
+        import std.conv;
+        URI u = "http://dlang.org/";
+        assert(u.username == "");
+        u.username = "anon";
+        assert(to!string(u) == "http://anon@dlang.org/");
+    }
+
+    /// Get/set URI password
+    @property string password() const pure nothrow
+    {
+        return _password;
+    }
+    /// ditto
+    @property string password(string p) pure nothrow
+    {
+        return _password = p;
+    }
+    ///
+    unittest
+    {
+        import std.conv;
+        URI u = "http://anon:1234@dlang.org/";
+        assert(u.password == "1234");
+        u.password = "qwert";
+        assert(to!string(u) == "http://anon:qwert@dlang.org/");
+    }
+
+    /// Get/set URI host
+    @property string host() const pure nothrow
+    {
+        return _host;
+    }
+    /// ditto
+    @property string host(string h) pure nothrow
+    {
+        return _host = h;
+    }
+    ///
+    unittest
+    {
+        import std.conv;
+        URI u = "http://dlang.org/";
+        assert(u.host == "dlang.org");
+        u.host = "code.dlang.org";
+        assert(to!string(u) == "http://code.dlang.org/");
+    }
+
+    /// Get/set URI fragment
+    @property string fragment() const pure nothrow
+    {
+        return _fragment;
+    }
+    /// ditto
+    @property string fragment(string f) pure nothrow
+    {
+        return _fragment = f;
+    }
+    ///
+    unittest
+    {
+        import std.conv;
+        URI u = "http://dlang.org/#first";
+        assert(u.fragment == "first");
+        u.fragment = "second";
+        assert(to!string(u) == "http://dlang.org/#second");
+    }
+
+    /// Get/set URI port.
+    /// Returns $(B 0) if port not set
+    @property ushort port() const pure nothrow
+    {
+        return _port;
+    }
+    /// ditto
+    @property ushort port(ushort p) pure nothrow
+    {
+        return _port = p;
+    }
+    ///
+    unittest
+    {
+        import std.conv;
+        URI u = "http://dlang.org/";
+        assert(u.port == 0);  // Port not set
+        u.port = 81;
+        assert(to!string(u) == "http://dlang.org:81/");
+    }
+
+    /// Get/set URI path.
+    @property string path() const pure nothrow
+    {
+        return _path;
+    }
+    /// ditto
+    @property string path(string p)
+    {
+        return _path = decode(p);
+    }
+    ///
+    unittest
+    {
+        import std.conv;
+        URI u = "http://dlang.org";
+        assert(u.path == "");
+        u.path = "/download.html";  // converted to "/download.html"
+        assert(to!string(u) == "http://dlang.org/download.html");
+        assert(u.path == "/download.html");
+    }
+
+    // May be usefull for HTTP requests where first line is "METHOD path?query HTTP/ver"
+    // Or may be replace with template wrap
+    //@property auto pathAndQuery() const
+    //{
+    //  auto tmp = appender!string;
+    //  tmp.put(path);
+    //  auto q = query;
+    //  if (!q.empty) {
+    //    tmp.put('?');
+    //    tmp.put(q);
+    //  }
+    //  return tmp.data;
+    //}
+
+    /// URIQuery
+    @property URIQuery query() pure
+    {
+        return _query;
+    }
+    /// ditto
+    @property void query(string src)
+    {
+        _query = URIQuery(src);
+    }
+
+
+    /// Get/set URI userInfo
+    @property string userInfo() const pure nothrow
+    {
+        auto tmp = appender!string;
+        tmp.put(_username);
+        if (_password.length)
+        {
+            tmp.put(':');
+            tmp.put(_password);
+        }
+        return tmp.data;
+    }
+    /// ditto
+    @property void userInfo(string src) pure
+    {
+        auto passIdx = src.indexOf(':');
+        if ( passIdx >= 0 )
+        {
+            _username = src[0 ..  passIdx];
+            _password = src[passIdx + 1 .. $];
+        }
+        else
+        {
+            _username = src;
+        }
+    }
+    ///
+    unittest
+    {
+        import std.conv;
+        URI u = "http://dlang.org/";
+        assert(u.userInfo == "");
+        u.userInfo = "anon:1234";
+        assert(to!string(u) == "http://anon:1234@dlang.org/");
+    }
+
+    /// Get/set URI resource info
+    @property string resource() const pure nothrow
+    {
+        auto tmp = appender!string;
+        tmp.put(_host);
+        if (_port)
+        {
+            tmp.put(':');
+            tmp.put(to!string(_port));
+        }
+        return tmp.data;
+    }
+    /// ditto
+    @property void resource(string src) pure
+    {
+        auto portIdx = src.indexOf(':');
+        if ( portIdx >= 0 )
+        {
+            _host = src[0 .. portIdx];
+
+            enforceURI(src[portIdx + 1 .. $].length !=0, "Empty port part");
+
+            _port = to!ushort(src[portIdx + 1 .. $]);
+        }
+        else
+        {
+            _host = src;
+        }
+    }
+    ///
+    unittest
+    {
+        import std.conv;
+        URI u = "http://dlang.org:81/";
+        assert(u.resource == "dlang.org:81");
+        u.resource = "code.dlang.org:82";
+        assert(to!string(u) == "http://code.dlang.org:82/");
+    }
+
+    /// Get/set
+    @property string authority() const pure nothrow
+    {
+        auto tmp = appender!string;
+        tmp.put(userInfo);
+        auto tmp2 = resource;
+
+        if (!tmp.data.empty)
+            tmp.put('@');
+
+        if (tmp2.length)
+            tmp.put(tmp2);
+
+        return tmp.data;
+    }
+    /// ditto
+    @property void authority(string src) pure
+    {
+        auto atIdx = src.indexOf('@');
+        if ( atIdx >= 0 ) {
+            userInfo = src[0 .. atIdx];
+            resource = src[atIdx + 1 .. $];
+        } else {
+            resource = src;
+        }
+    }
+    ///
+    unittest
+    {
+        import std.conv;
+        URI u = "mailto:noreply@dlang.org";
+        assert(u.authority == "noreply@dlang.org");
+        u.authority = "non-exists@dlang.org";
+        assert(to!string(u) == "mailto:non-exists@dlang.org");
+    }
+
+    /// To string representation
+    void toString(scope void delegate(const(char)[]) sink) const
+    {
+        auto opt = takeOpt(_scheme);
+        sink(_scheme);
+        sink(":");
+        auto a = authority;
+        auto q = to!string(_query);
+        if (a.length)
+        {
+            if (opt.reqDSlash)
+            {
+                sink("//");
+            }
+            sink(a);
+        }
+        if (!_path.empty)
+        {
+            sink(_path);
+        }
+        if (!q.empty)
+        {
+            sink("?");
+            sink(q);
+        }
+        if (_fragment.length)
+        {
+            sink("#");
+            sink(_fragment);
+        }
+    }
+    ///
+    unittest
+    {
+        import std.conv;
+        URI  u = "http://en.wikipedia.org/wiki/D_%28programming_language%29";
+        assert(to!string(u) == "http://en.wikipedia.org/wiki/D_(programming_language)");
+    }
+
+    /// To encoded string representation
+    string toEncoded() const
+    {
+        return encode(to!string(this));
+    }
+    ///
+    unittest
+    {
+        auto s = "http://ru.wikipedia.org/wiki/D_(%D1%8F%D0%B7%D1%8B%D0%BA_%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F)";
+        URI  e = s;
+        assert(e.path == "/wiki/D_(язык_программирования)");
+        assert(to!string(e) == "http://ru.wikipedia.org/wiki/D_(язык_программирования)");
+        assert(e.toEncoded() == s);
+    }
+    /// TODO: campare operator
+}
+///
+unittest
+{
+    import std.conv;
+    // Basic
+    URI u = "scheme://user:pass@hostname:1234/path?query=string#_fragment_";
+    assert(u.scheme == "scheme");
+    assert(u.authority == "user:pass@hostname:1234");
+    assert(u.userInfo == "user:pass");
+    assert(u.resource == "hostname:1234");
+    assert(u.username == "user");
+    assert(u.password == "pass");
+    assert(u.host == "hostname");
+    assert(u.port == 1234);
+    assert(u.path == "/path");
+    assert(to!string(u.query) == "query=string");
+    assert(u.query["query"] == "string");
+    assert(u.query.get("query") == "string");
+    assert(u.fragment == "_fragment_");
+}
+
+
+/** URIQuery struct
+ * Storage for query key-value pairs.
+ * Also can be used as storage for HTTP form fields.
+ * Represent multivalued associative array with decoding on assign.
+ */
+struct URIQuery
+{
+    private
+    {
+        string[][string]    _data;
+    }
+
+    /// Create URIQuery from string
+    this(string uri)
+    {
+        opAssign(uri);
+    }
+    ///
+    void opAssign(string q)
+    {
+        _data = null;
+
+        foreach (pairs; split(q, "&"))
+        {
+            auto kv = split(pairs, "=");
+
+            if (kv.length && kv[0].length)
+            {
+                insert(kv[0], kv.length > 1 ? kv[1] : "");
+            }
+        }
+    }
+    ///
+    unittest
+    {
+        import std.conv;
+
+        auto q1 = URIQuery("x=1");
+        assert(q1["x"] == "1");
+        assert(to!string(q1) == "x=1");
+
+        URIQuery q2 = "y=2";
+        assert(q2["y"] == "2");
+        assert(to!string(q2) == "y=2");
+    }
+
+    /// Returns $(B true) if key present in storage
+    bool has(string key) const pure nothrow
+    {
+        return (key in _data) !is null;
+    }
+    ///
+    unittest
+    {
+        URIQuery q = "x=1";
+        assert(q.has("x") == true);
+        assert(q.has("z") == false);
+    }
+
+    /// Returns all values for $(B key).
+    /// If key not present in storage returns empty list.
+    /// Values order same as in original string.
+    string[] all(string key) const pure nothrow
+    {
+        string[] result;
+        auto tmp = key in _data;
+        if (tmp !is null)
+        {
+            result = (*tmp).dup;
+        }
+        return result;
+    }
+    ///
+    unittest
+    {
+        URIQuery q = "x=1&x=a";
+        assert(q.all("x") == ["1","a"]);
+        assert(q.all("z") == []);
+    }
+
+    /// Returns key list
+    string[] keys() const pure nothrow
+    {
+        return _data.keys;
+    }
+    ///
+    unittest
+    {
+        URIQuery q = "x=1&x=a";
+        assert(q.keys == ["x"]);
+    }
+
+    /// Get query value with name $(B key), returns defVal for non exists keys
+    string get(string key, lazy string defVal = "") const pure
+    {
+        auto tmp = key in _data;
+        return tmp !is null ? (*tmp)[$ - 1] : defVal;
+    }
+    ///
+    unittest
+    {
+        URIQuery q = "x=1&y=2";
+        assert(q.get("x") == "1");
+        assert(q.get("y", "7") == "2");
+        assert(q.get("z", "42") == "42");
+    }
+
+    /// Insert one or more values with same $(B key)
+    /// Decodes key/value at insert
+    /// Keeps insert order
+    void insert(string key, string val)
+    {
+        _data[decode(key)] ~= decode(val);
+    }
+    ///
+    unittest
+    {
+        URIQuery q;
+        q.insert("x", "1");
+        q.insert("x", "2");
+        assert(q.all("x") == ["1","2"]);
+    }
+
+    /// Remove all values for $(B key)
+    void remove(string key) pure nothrow
+    {
+        _data.remove(key);
+    }
+    ///
+    unittest
+    {
+        import std.conv;
+        URIQuery q = "x=1&x=a&y=5";
+        q.remove("x");
+        assert(to!string(q) == "y=5");
+    }
+
+    /// Get value by $(B key), throw exception for non exists keys
+    string opIndex(string key) const pure
+    {
+        auto val = get(key, null);
+        enforceURI(val !is null, text("Key '", key, "' not exists"));
+        return val;
+    }
+    ///
+    unittest
+    {
+        URIQuery q = "x=1";
+        assert(q["x"] == "1");
+
+        try
+        {
+            assert(q["z"] == "");
+        }
+        catch(Exception e)
+        {
+            assert(e.msg == "URI Exception: Key 'z' not exists");
+        }
+    }
+
+    /// Set query by $(B key), if some values by this key are defined, replaces last value
+    void opIndexAssign(string val, string key)
+    {
+        auto k = decode(key);
+        auto v = decode(val);
+        auto tmp = k in _data;
+        if (tmp is null)
+        {
+            _data[k] = [v];
+        }
+        else
+        {
+            _data[k][$ - 1] = v;
+        }
+    }
+    ///
+    unittest
+    {
+        URIQuery q = "x=1&x=2&y=3";
+        q["x"] = "3";          // Replace last "x" value
+        q["y"] = "1";          // Replace "y" value
+        q["z"] = "0";          // Add "z" value
+
+        assert(q["x"] == "3");
+        assert(q.all("x") == ["1","3"]);
+        assert(q["y"] == "1");
+        assert(q.all("y") == ["1"]);
+        assert(q["z"] == "0");
+        assert(q.all("z") == ["0"]);
+    }
+
+    /// Sink-based toString method
+    void toString(scope void delegate(const(char)[]) sink) const
+    {
+        bool isFirst = true;
+        foreach (key, values; _data)
+        {
+            if (!key.length)
+            {
+                continue;
+            }
+
+            if (isFirst)
+            {
+                isFirst = false;
+            }
+            else
+            {
+                sink("&");
+            }
+
+            foreach (value; values)
+            {
+                sink(key);
+                sink("=");
+                sink(value);
+            }
+        }
+    }
+    ///
+    unittest
+    {
+        import std.conv;
+        URIQuery q = "x=1";
+        assert(to!string(q) == "x=1");
+    }
+
+
+    /// Encoded values string
+    string toEncoded() const
+    {
+        auto tmp = appender!string;
+        foreach (key, values; _data)
+        {
+            if (!key.length)
+            {
+                continue;
+            }
+            if (!tmp.data.empty)
+            {
+                tmp.put("&");
+            }
+            foreach (value; values)
+            {
+                tmp.put(encode(key));
+                tmp.put('=');
+                tmp.put(encode(value));
+            }
+        }
+        return tmp.data;
+    }
+    ///
+    unittest
+    {
+        URIQuery q = "%D0%B8%D0%BC%D1%8F=%D0%B7%D0%BD%D0%B0%D1%87%D0%B5%D0%BD%D0%B8%D0%B5";
+        assert(q["имя"] == "значение");
+        assert(q.toEncoded == "%D0%B8%D0%BC%D1%8F=%D0%B7%D0%BD%D0%B0%D1%87%D0%B5%D0%BD%D0%B8%D0%B5");
     }
 }
