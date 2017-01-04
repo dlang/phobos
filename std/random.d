@@ -956,8 +956,20 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
                                                         0x9d2c5680, 15,
                                                         0xefc60000, 18, 1812433253);
 
-    foreach (R; std.meta.AliasSeq!(MT!(uint, 32), MT!(ulong, 32), MT!(ulong, 48), MT!(ulong, 64)))
+    ulong[] expectedFirstValue = [3499211612uL, 3499211612uL,
+                                  171143175841277uL, 1145028863177033374uL];
+
+    ulong[] expected10kValue = [4123659995uL, 4123659995uL,
+                                51991688252792uL, 3031481165133029945uL];
+
+    foreach (i, R; std.meta.AliasSeq!(MT!(uint, 32), MT!(ulong, 32), MT!(ulong, 48), MT!(ulong, 64)))
+    {
         auto a = R();
+        a.seed(a.defaultSeed); // checks that some alternative paths in `seed` are utilized
+        assert(a.front == expectedFirstValue[i]);
+        a.popFrontN(9999);
+        assert(a.front == expected10kValue[i]);
+    }
 }
 
 
