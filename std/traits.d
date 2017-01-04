@@ -17,6 +17,7 @@
  *           $(LREF isFunction)
  *           $(LREF arity)
  *           $(LREF functionAttributes)
+ *           $(LREF hasFunctionAttributes)
  *           $(LREF functionLinkage)
  *           $(LREF FunctionTypeOf)
  *           $(LREF isSafe)
@@ -1308,6 +1309,9 @@ alias ParameterDefaultValueTuple = ParameterDefaults;
 
 /**
 Returns the attributes attached to a function $(D func).
+
+See_Also:
+    $(LREF hasFunctionAttributes)
  */
 enum FunctionAttribute : uint
 {
@@ -1495,6 +1499,199 @@ private FunctionAttribute extractAttribFlags(Attribs...)()
     return res;
 }
 
+/**
+Checks whether a function has the given attributes attached.
+
+Params:
+    func = function to check
+    attributes = variadic number of function attributes as strings
+
+Returns:
+    `true`, if the function has the list of attributes attached and `false` otherwise.
+
+See_Also:
+    $(LREF functionAttributes)
+*/
+template hasFunctionAttributes(args...)
+    if (isCallable!(args[0]) && args.length > 0
+         && allSatisfy!(isSomeString, typeof(args[1 .. $])))
+{
+    enum bool hasFunctionAttributes = {
+        import std.algorithm.searching : canFind;
+        import std.range : only;
+        enum funcAttribs = only(__traits(getFunctionAttributes, args[0]));
+        foreach (attribute; args[1 .. $])
+        {
+            if (!funcAttribs.canFind(attribute))
+                return false;
+        }
+        return true;
+    }();
+}
+
+///
+unittest
+{
+    real func(real x) pure nothrow @safe;
+    static assert(hasFunctionAttributes!(func, "@safe", "pure"));
+    static assert(!hasFunctionAttributes!(func, "@trusted"));
+
+    // for templates types are automatically inferred
+    bool myFunc(T)(T b)
+    {
+        return !b;
+    }
+    static assert(hasFunctionAttributes!(myFunc!bool, "@safe", "pure", "@nogc", "nothrow"));
+    static assert(!hasFunctionAttributes!(myFunc!bool, "shared"));
+}
+
+unittest
+{
+    struct S
+    {
+        int noF();
+        int constF() const;
+        int immutableF() immutable;
+        int inoutF() inout;
+        int sharedF() shared;
+
+        ref int refF() return;
+        int propertyF() @property;
+        int nothrowF() nothrow;
+        int nogcF() @nogc;
+
+        int systemF() @system;
+        int trustedF() @trusted;
+        int safeF() @safe;
+
+        int pureF() pure;
+    }
+
+    // true if no args passed
+    static assert(hasFunctionAttributes!(S.noF));
+
+    static assert(hasFunctionAttributes!(S.noF, "@system"));
+    static assert(hasFunctionAttributes!(typeof(S.noF), "@system"));
+    static assert(!hasFunctionAttributes!(S.noF, "@system", "pure"));
+
+    static assert(hasFunctionAttributes!(S.constF, "const", "@system"));
+    static assert(hasFunctionAttributes!(typeof(S.constF), "const", "@system"));
+    static assert(!hasFunctionAttributes!(S.constF, "const", "@system", "@nogc"));
+
+    static assert(hasFunctionAttributes!(S.immutableF, "immutable", "@system"));
+    static assert(hasFunctionAttributes!(typeof(S.immutableF), "immutable", "@system"));
+    static assert(!hasFunctionAttributes!(S.immutableF, "immutable", "@system", "pure"));
+
+    static assert(hasFunctionAttributes!(S.inoutF, "inout", "@system"));
+    static assert(hasFunctionAttributes!(typeof(S.inoutF), "inout", "@system"));
+    static assert(!hasFunctionAttributes!(S.inoutF, "inout", "@system", "pure"));
+
+    static assert(hasFunctionAttributes!(S.sharedF, "shared", "@system"));
+    static assert(hasFunctionAttributes!(typeof(S.sharedF), "shared", "@system"));
+    static assert(!hasFunctionAttributes!(S.sharedF, "shared", "@system", "@trusted"));
+
+    static assert(hasFunctionAttributes!(S.refF, "ref", "@system", "return"));
+    static assert(hasFunctionAttributes!(typeof(S.refF), "ref", "@system", "return"));
+    static assert(!hasFunctionAttributes!(S.refF, "ref", "@system", "return", "pure"));
+
+    static assert(hasFunctionAttributes!(S.propertyF, "@property", "@system"));
+    static assert(hasFunctionAttributes!(typeof(&S.propertyF), "@property", "@system"));
+    static assert(!hasFunctionAttributes!(S.propertyF, "@property", "@system", "ref"));
+
+    static assert(hasFunctionAttributes!(S.nothrowF, "nothrow", "@system"));
+    static assert(hasFunctionAttributes!(typeof(S.nothrowF), "nothrow", "@system"));
+    static assert(!hasFunctionAttributes!(S.nothrowF, "nothrow", "@system", "@trusted"));
+
+    static assert(hasFunctionAttributes!(S.nogcF, "@nogc", "@system"));
+    static assert(hasFunctionAttributes!(typeof(S.nogcF), "@nogc", "@system"));
+    static assert(!hasFunctionAttributes!(S.nogcF, "@nogc", "@system", "ref"));
+
+    static assert(hasFunctionAttributes!(S.systemF, "@system"));
+    static assert(hasFunctionAttributes!(typeof(S.systemF), "@system"));
+    static assert(!hasFunctionAttributes!(S.systemF, "@system", "ref"));
+
+    static assert(hasFunctionAttributes!(S.trustedF, "@trusted"));
+    static assert(hasFunctionAttributes!(typeof(S.trustedF), "@trusted"));
+    static assert(!hasFunctionAttributes!(S.trustedF, "@trusted", "@safe"));
+
+    static assert(hasFunctionAttributes!(S.safeF, "@safe"));
+    static assert(hasFunctionAttributes!(typeof(S.safeF), "@safe"));
+    static assert(!hasFunctionAttributes!(S.safeF, "@safe", "nothrow"));
+
+    static assert(hasFunctionAttributes!(S.pureF, "pure", "@system"));
+    static assert(hasFunctionAttributes!(typeof(S.pureF), "pure", "@system"));
+    static assert(!hasFunctionAttributes!(S.pureF, "pure", "@system", "ref"));
+
+    int pure_nothrow() nothrow pure { return 0; }
+    void safe_nothrow() @safe nothrow { }
+    static ref int static_ref_property() @property { return *(new int); }
+    ref int ref_property() @property { return *(new int); }
+
+    static assert(hasFunctionAttributes!(pure_nothrow, "pure", "nothrow", "@safe"));
+    static assert(hasFunctionAttributes!(typeof(pure_nothrow), "pure", "nothrow", "@safe"));
+    static assert(!hasFunctionAttributes!(pure_nothrow, "pure", "nothrow", "@safe", "@trusted"));
+
+    static assert(hasFunctionAttributes!(safe_nothrow, "@safe", "nothrow"));
+    static assert(hasFunctionAttributes!(typeof(safe_nothrow), "@safe", "nothrow"));
+    static assert(hasFunctionAttributes!(safe_nothrow, "@safe", "nothrow", "pure"));
+    static assert(!hasFunctionAttributes!(safe_nothrow, "@safe", "nothrow", "pure", "@trusted"));
+
+    static assert(hasFunctionAttributes!(static_ref_property, "@property", "ref", "@safe"));
+    static assert(hasFunctionAttributes!(typeof(&static_ref_property), "@property", "ref", "@safe"));
+    static assert(hasFunctionAttributes!(static_ref_property, "@property", "ref", "@safe", "nothrow"));
+    static assert(!hasFunctionAttributes!(static_ref_property, "@property", "ref", "@safe", "nothrow", "@nogc"));
+
+    static assert(hasFunctionAttributes!(ref_property, "@property", "ref", "@safe"));
+    static assert(hasFunctionAttributes!(typeof(&ref_property), "@property", "ref", "@safe"));
+    static assert(!hasFunctionAttributes!(ref_property, "@property", "ref", "@safe", "@nogc"));
+
+    struct S2
+    {
+        int pure_const() const pure { return 0; }
+        int pure_sharedconst() const shared pure { return 0; }
+    }
+
+    static assert(hasFunctionAttributes!(S2.pure_const, "const", "pure", "@system"));
+    static assert(hasFunctionAttributes!(typeof(S2.pure_const), "const", "pure", "@system"));
+    static assert(!hasFunctionAttributes!(S2.pure_const, "const", "pure", "@system", "ref"));
+
+    static assert(hasFunctionAttributes!(S2.pure_sharedconst, "const", "shared", "pure", "@system"));
+    static assert(hasFunctionAttributes!(typeof(S2.pure_sharedconst), "const", "shared", "pure", "@system"));
+    static assert(!hasFunctionAttributes!(S2.pure_sharedconst, "const", "shared", "pure", "@system", "@nogc"));
+
+    static assert(hasFunctionAttributes!((int a) { }, "pure", "nothrow", "@nogc", "@safe"));
+    static assert(hasFunctionAttributes!(typeof((int a) { }), "pure", "nothrow", "@nogc", "@safe"));
+    static assert(!hasFunctionAttributes!((int a) { }, "pure", "nothrow", "@nogc", "@safe", "ref"));
+
+    auto safeDel = delegate() @safe { };
+    static assert(hasFunctionAttributes!(safeDel, "pure", "nothrow", "@nogc", "@safe"));
+    static assert(hasFunctionAttributes!(typeof(safeDel), "pure", "nothrow", "@nogc", "@safe"));
+    static assert(!hasFunctionAttributes!(safeDel, "pure", "nothrow", "@nogc", "@safe", "@system"));
+
+    auto trustedDel = delegate() @trusted { };
+    static assert(hasFunctionAttributes!(trustedDel, "pure", "nothrow", "@nogc", "@trusted"));
+    static assert(hasFunctionAttributes!(typeof(trustedDel), "pure", "nothrow", "@nogc", "@trusted"));
+    static assert(!hasFunctionAttributes!(trustedDel, "pure", "nothrow", "@nogc", "@trusted", "ref"));
+
+    auto systemDel = delegate() @system { };
+    static assert(hasFunctionAttributes!(systemDel, "pure", "nothrow", "@nogc", "@system"));
+    static assert(hasFunctionAttributes!(typeof(systemDel), "pure", "nothrow", "@nogc", "@system"));
+    static assert(!hasFunctionAttributes!(systemDel, "pure", "nothrow", "@nogc", "@system", "@property"));
+
+
+    // call functions to make CodeCov happy
+    {
+        assert(pure_nothrow == 0);
+        safe_nothrow;
+        assert(static_ref_property == 0);
+        assert(ref_property == 0);
+        assert(S2().pure_const == 0);
+        assert((shared S2()).pure_sharedconst == 0);
+        cast(void) safeDel;
+        cast(void) trustedDel;
+        cast(void) systemDel;
+    }
+}
 
 /**
 $(D true) if $(D func) is $(D @safe) or $(D @trusted).
