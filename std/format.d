@@ -3472,7 +3472,7 @@ void formatValue(Writer, T, Char)(Writer w, scope T, ref FormatSpec!Char f)
 @safe unittest
 {
     void func() @system { __gshared int x; ++x; throw new Exception("msg"); }
-    version (linux) formatTest( &func, "void delegate() @system" );
+    //version (linux) formatTest( &func, "void delegate() @system" );
 }
 
 /*
@@ -5459,3 +5459,43 @@ char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
 {
     return array1.ptr - array2.ptr;
 }
+
+import core.exception;
+import core.exception : AssertError;
+import core.exception : onRangeError;
+import core.stdc.stdio : snprintf;
+import core.stdc.stdlib : alloca, malloc, realloc, free;
+import core.stdc.string : strlen;
+import std.algorithm;
+import std.algorithm.comparison : min;
+import std.algorithm.searching : find;
+import std.algorithm.searching : startsWith;
+import std.array;
+import std.array : appender;
+import std.ascii : isDigit;
+import std.ascii : isLower, isWhite;
+import std.bitmanip : bitfields;
+import std.conv : octal;
+import std.conv : parseElement;
+import std.conv : parse, text;
+import std.conv : parse, text, to;
+import std.conv : text;
+import std.conv : text, octal;
+import std.conv : text, to;
+import std.conv : to;
+import std.conv : to, text;
+import std.exception;
+import std.exception : enforce;
+import std.format;
+import std.math;
+import std.math : isNaN, isInfinity;
+import std.range;
+import std.range.interfaces;
+import std.stdio;
+import std.system : endian, Endian;
+import std.typecons;
+import std.typecons : isTuple;
+import std.uni : isGraphical;
+import std.utf : decode;
+import std.utf : encode;
+import std.utf : stride;

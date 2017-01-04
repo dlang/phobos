@@ -385,3 +385,12 @@ unittest
         _aligned_free(m);
     }
 }
+
+import core.stdc.errno : ENOMEM, EINVAL;
+import core.stdc.stdlib : free;
+import core.stdc.stdlib : malloc;
+import core.stdc.stdlib : realloc;
+import std.c.stdlib : free;
+import std.c.stdlib : malloc;
+import std.c.string : memcpy;
+import std.experimental.allocator : make;

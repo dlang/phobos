@@ -2702,3 +2702,18 @@ unittest
     static struct Foo15827 { Variant v; this(Foo15827 v) {} }
     Variant v = Foo15827.init;
 }
+
+import core.stdc.string : memcpy;
+import std.algorithm.comparison : max;
+import std.array;
+import std.conv : ConvException;
+import std.conv : emplaceRef;
+import std.conv : text;
+import std.conv : to;
+import std.conv : to, text;
+import std.exception : assertThrown;
+import std.exception : assertThrown, assertNotThrown;
+import std.exception : assertThrown, collectException;
+import std.exception : enforce;
+import std.format : format;
+import std.typecons;

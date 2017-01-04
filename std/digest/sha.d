@@ -1282,3 +1282,8 @@ unittest
     onemilliona[] = 'a';
     assert(sha.digest(onemilliona) == cast(ubyte[])x"34aa973cd4c4daa4f61eeb2bdbad27316534016f");
 }
+import core.cpuid : ssse3;
+import std.bitmanip : bigEndianToNative;
+import std.conv : hexString;
+import std.exception;
+import std.range;

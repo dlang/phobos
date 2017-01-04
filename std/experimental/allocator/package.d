@@ -2417,3 +2417,32 @@ unittest
     b = alloc.allocate(101);
     assert(alloc.deallocate(b) == Ternary.yes);
 }
+
+import core.stdc.string : memcpy;
+import core.sys.windows.unknwn : IUnknown;
+import std.algorithm.comparison : equal;
+import std.algorithm.comparison : max;
+import std.algorithm.comparison : min;
+import std.algorithm.comparison : min, max;
+import std.algorithm.iteration : map;
+import std.algorithm.mutation : move;
+import std.algorithm.mutation : uninitializedFill;
+import std.array : array;
+import std.conv : emplace;
+import std.conv : emplace, emplaceRef;
+import std.conv : emplaceRef;
+import std.datetime, std.experimental.allocator.null_allocator;
+import std.exception : assertThrown, enforce;
+import std.experimental.allocator.building_blocks.bucketizer : Bucketizer;
+import std.experimental.allocator.building_blocks.free_list : FreeList;
+import std.experimental.allocator.building_blocks.region : InSituRegion;
+import std.experimental.allocator.building_blocks.segregator : Segregator;
+import std.experimental.allocator.gc_allocator : GCAllocator;
+import std.experimental.allocator.mallocator : Mallocator;
+import std.internal.test.dummyrange;
+import std.math : isNaN;
+import std.random;
+import std.range : iota;
+import std.range : only;
+import std.traits : hasElaborateCopyConstructor;
+import std.traits : hasMember;

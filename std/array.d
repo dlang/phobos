@@ -3577,3 +3577,33 @@ RefAppender!(E[]) appender(A : E[]*, E)(A array)
     assert(appS.data == "hellow");
     assert(appA.data == "hellow");
 }
+
+import core.bitop : bsr;
+import core.checkedint : mulu;
+import core.exception;
+import core.memory;
+import core.memory : GC;
+import core.stdc.string : memcpy;
+import core.stdc.string : memmove;
+import core.stdc.string : memset;
+import std.conv;
+import std.conv : emplaceRef;
+import std.conv : to;
+import std.exception;
+import std.exception : enforce;
+import std.format;
+import std.format : format;
+import std.format : formattedWrite;
+import std.meta : AliasSeq;
+import std.range;
+import std.range : repeat;
+import std.range : retro;
+import std.stdio;
+import std.typecons;
+import std.typecons : isTuple;
+import std.typecons : tuple;
+import std.typecons : tuple, Tuple;
+import std.uni : isWhite;
+import std.utf : codeLength;
+import std.utf : encode;
+import std.utf : toUTF32;

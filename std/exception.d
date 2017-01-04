@@ -2243,3 +2243,26 @@ mixin template basicExceptionCtors()
     assert(te4.line == __LINE__ - 3);
     assert(te4.next is e);
 }
+
+import core.exception;
+import core.exception : AssertError;
+import core.exception : OutOfMemoryError;
+import core.exception : RangeError;
+import core.stdc.errno : errno;
+import core.stdc.string : strerror;
+import core.stdc.string : strerror_r;
+import core.stdc.string : strlen;
+import std.algorithm.comparison : equal;
+import std.algorithm.iteration : map, splitter;
+import std.array : empty;
+import std.array : overlap;
+import std.conv;
+import std.conv : to, ConvException;
+import std.math : sqrt;
+import std.meta : AliasSeq;
+import std.range.primitives : empty;
+import std.range : retro;
+import std.range : Take;
+import std.range : Take, takeExactly;
+import std.string;
+import std.utf : UTFException;

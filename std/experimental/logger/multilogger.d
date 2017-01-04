@@ -195,3 +195,12 @@ unittest
     assert(tl !is null);
     stdThreadLocalLog.logLevel = LogLevel.all;
 }
+
+import std.algorithm.mutation : copy;
+import std.exception : assertThrown;
+import std.experimental.logger.nulllogger;
+import std.file : deleteme;
+import std.file : remove;
+import std.range.primitives : back, popBack;
+import std.stdio : File;
+import std.string : indexOf;

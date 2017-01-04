@@ -1687,3 +1687,18 @@ unittest
     ]));
 }
 
+import std.array;
+import std.conv;
+import std.conv : to;
+import std.conv : to, ConvOverflowException;
+import std.conv : unsigned;
+import std.exception : assertThrown;
+import std.exception : enforce;
+import std.format;
+import std.format : format;
+import std.internal.test.dummyrange;
+import std.math : abs;
+import std.meta : AliasSeq;
+import std.range : iota;
+import std.string : format;
+import std.utf : byCodeUnit, byChar;

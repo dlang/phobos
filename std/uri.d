@@ -594,3 +594,9 @@ ptrdiff_t emailLength(Char)(in Char[] s) if (isSomeChar!Char)
         assert(encoded2 == encode(decoded2).to!StringType);
     }
 }
+
+import std.array : Appender;
+import std.conv : to;
+import std.format : formattedWrite;
+import std.meta : AliasSeq;
+import std.uni : icmp;

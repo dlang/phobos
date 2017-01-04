@@ -35521,3 +35521,61 @@ int main(string[] args)
     return 0;
 }
 +/
+
+import std.array : appender;
+import std.array : array;
+import std.array : array, split;
+import std.array : replace;
+import std.ascii : isDigit;
+import std.ascii : isDigit, isAlpha, isPrintable;
+import std.ascii : letters;
+import std.bitmanip : bigEndianToNative;
+//import std.concurrency : initOnce;
+//import std.conv : to;
+import std.exception : assertNotThrown;
+import std.exception : assumeUnique;
+import std.exception : collectExceptionMsg;
+import std.file : exists, isFile;
+import std.file : isDir, isFile, exists, dirEntries, SpanMode, DirEntry;
+import std.format : format;
+import std.functional : not;
+import std.internal.cstring : tempCString;
+//import std.math : abs;
+//import std.meta : AliasSeq;
+
+import std.path : asNormalizedPath, chainPath;
+import std.path : chainPath;
+import std.path : dirSeparator;
+import std.path : extension;
+import std.random : rndGen;
+import std.range;
+import std.range : chain;
+import std.range : chain, iota;
+import std.range : chain, iota, take;
+import std.range.primitives : ElementEncodingType;
+import std.range.primitives : popBack;
+import std.range.primitives : walkLength;
+import std.range : retro;
+import std.range : take;
+import std.stdio : File;
+import std.stdio : stderr;
+import std.stdio : writefln;
+import std.stdio : writefln, writeln;
+import std.stdio : writeln;
+import std.string : capitalize, format;
+import std.string : lineSplitter;
+import std.string : representation;
+import std.string : strip;
+import std.string : strip, representation;
+
+import std.traits : EnumMembers;
+import std.traits : EnumMembers, isArray;
+import std.traits : FunctionAttribute, functionAttributes;
+import std.traits : hasUnsharedAliasing;
+import std.traits : isArray, isSomeChar;
+import std.typecons : Rebindable;
+import std.typecons : tuple;
+import std.uni : toLower, toUpper;
+import std.utf : toUTF16;
+import std.utf : toUTFz;
+import std.windows.registry;

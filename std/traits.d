@@ -7346,3 +7346,16 @@ enum isCopyable(S) = is(typeof(
     static assert(isCopyable!C1);
     static assert(isCopyable!int);
 }
+
+import core.sync.barrier;
+import core.vararg;
+import std.meta : Alias;
+import std.meta : AliasSeq;
+import std.meta : AliasSeq, allSatisfy;
+import std.meta : AliasSeq, Filter;
+import std.meta : anySatisfy;
+import std.meta : Filter;
+import std.meta : NoDuplicates;
+import std.meta : staticIndexOf;
+import std.meta : staticMap;
+import std.typecons : Rebindable;

@@ -781,3 +781,12 @@ version(Posix) unittest
         assert(alloc.deallocateAll);
     }
 }
+
+import std.algorithm.comparison : max;
+import std.conv : text;
+import std.conv : to;
+import std.experimental.allocator.gc_allocator : GCAllocator;
+import std.experimental.allocator.mallocator : Mallocator;
+import std.math : isPowerOf2;
+import std.traits : hasMember;
+import std.typecons : Ternary;

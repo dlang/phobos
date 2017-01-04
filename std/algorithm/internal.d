@@ -75,3 +75,6 @@ version(unittest)
 }
 
 package(std) T* addressOf(T)(ref T val) { return &val; }
+
+import std.format : format;
+import std.random : Random, unpredictableSeed, uniform;

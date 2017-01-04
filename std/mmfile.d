@@ -717,3 +717,9 @@ version(linux)
     scope(exit) std.file.remove(fn);
     verifyThrown(scoped!MmFile(fn, MmFile.Mode.readWrite, 0, null));
 }
+
+import core.memory : GC;
+import std.exception : verifyThrown = assertThrown;
+import std.exception : verifyThrown = collectException;
+import std.file : deleteme;
+import std.typecons : scoped;

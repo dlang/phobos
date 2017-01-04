@@ -666,3 +666,7 @@ auto toUpper(C)(C c)
         static assert(is(typeof(toUpper(T.init)) == dchar));
     }
 }
+
+import std.meta; // : AliasSeq;
+import std.range; // : chain;
+import std.traits; // : functionAttributes, FunctionAttribute, isSafe;

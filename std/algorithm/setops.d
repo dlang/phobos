@@ -1366,3 +1366,29 @@ auto setUnion(alias less = "a < b", Rs...)
     }
 }
 ++/
+
+import std.algorithm.comparison : equal;
+import std.algorithm.internal : algoFormat;
+import std.algorithm.iteration : filter;
+import std.algorithm.iteration : group;
+import std.algorithm.iteration : map;
+import std.algorithm.iteration : map, joiner;
+import std.algorithm.iteration : uniq;
+import std.algorithm.mutation : remove, SwapStrategy;
+import std.algorithm.searching : canFind;
+import std.algorithm.sorting : merge;
+import std.algorithm.sorting : topNCopy;
+import std.container : Array;
+import std.container : BinaryHeap;
+import std.conv : text;
+import std.internal.test.dummyrange;
+import std.range;
+import std.range : dropOne;
+import std.range : iota;
+import std.range.primitives : isForwardRange;
+import std.range : zip, repeat;
+import std.range : zip, repeat, take, chain, sequence;
+import std.typecons : tuple;
+import std.typecons : Tuple;
+import std.typecons : tuple, Tuple;
+import std.typecons : tuple, Tuple, Yes;

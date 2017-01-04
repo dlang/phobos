@@ -749,3 +749,6 @@ unittest
     testUnalignedHash!(MurmurHash3!(128, 32))();
     testUnalignedHash!(MurmurHash3!(128, 64))();
 }
+
+import std.string : representation;
+import std.traits : isUnsigned;

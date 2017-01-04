@@ -303,3 +303,6 @@ unittest
     assert("abc".matchFirst(r));
     assertThrown(regex("(?#..."));
 }
+
+import std.array : appender;
+import std.stdio : writeln;

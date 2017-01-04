@@ -421,3 +421,11 @@ unittest
     assert(a.expandArray(arr, 3));
     assert(a.shrinkArray(arr, 4));
 }
+
+import std.algorithm.sorting : isSorted;
+import std.experimental.allocator.gc_allocator : GCAllocator;
+import std.experimental.allocator.mallocator : Mallocator;
+import std.experimental.allocator.mmap_allocator : MmapAllocator;
+import std.meta : AliasSeq;
+import std.traits : hasIndirections;
+import std.typecons : Tuple;

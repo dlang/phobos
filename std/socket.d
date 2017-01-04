@@ -3575,3 +3575,15 @@ Socket[2] socketPair() @trusted
     pair[1].receive(buf);
     assert(buf == data);
 }
+
+import core.stdc.stdio : remove;
+import core.sys.posix.netdb;
+import core.sys.posix.sys.resource;
+import std.algorithm.comparison : max;
+import std.algorithm.searching : canFind;
+import std.algorithm.searching : countUntil;
+import std.array : appender;
+import std.datetime;
+import std.file : deleteme;
+import std.random;
+import std.typecons;

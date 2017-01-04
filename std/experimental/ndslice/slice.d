@@ -3634,3 +3634,27 @@ private bool _checkAssignLengths(size_t NL, RangeL, size_t NR, RangeR)(Slice!(NL
     assert(!_checkAssignLengths(iotaSlice(2, 2), iotaSlice(3, 2)));
     assert(!_checkAssignLengths(iotaSlice(2, 2), iotaSlice(3, 3)));
 }
+
+import std.algorithm.comparison : equal;
+import std.algorithm.comparison : max;
+import std.algorithm.comparison : min;
+import std.algorithm.iteration : map;
+import std.algorithm.iteration : map, sum, reduce;
+import std.array : array;
+import std.array : uninitializedArray;
+import std.bigint;
+import std.complex;
+import std.container.array;
+import std.conv : to;
+import std.digest.murmurhash : MurmurHash3;
+import std.exception : assertThrown;
+import std.experimental.allocator;
+import std.experimental.allocator : makeArray;
+import std.experimental.allocator.mallocator;
+import std.internal.test.dummyrange;
+import std.math : isPowerOf2;
+import std.meta : staticMap;
+import std.range : iota;
+import std.range : only;
+import std.range.primitives;
+import std.typecons : Yes, No;

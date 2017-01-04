@@ -423,3 +423,11 @@ class OutBuffer
     assert(buf.toBytes() == "h\x00\x00\x00e\x00\x00\x00l\x00\x00\x00l\x00\x00\x00o\x00\x00\x00");
   }
 }
+
+import core.stdc.stdio : vsnprintf;
+import core.stdc.stdlib : alloca;
+import std.algorithm;
+import std.format : formattedWrite;
+import std.range;
+import std.string : cmp;
+import std.string : toStringz;

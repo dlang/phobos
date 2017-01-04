@@ -3964,3 +3964,15 @@ auto bitsSet(T)(T value) @nogc pure nothrow
     foreach (i; 0..63)
         assert(bitsSet(1UL << i).equal([i]));
 }
+
+import core.bitop : bsf;
+import core.bitop : bswap;
+import core.bitop : bts, btr, bsf, bt;
+import core.exception : AssertError;
+import core.internal.string : UnsignedStringBuf, unsignedToTempString;
+import std.array;
+import std.format : format;
+import std.format : FormatSpec;
+import std.meta;
+import std.range : iota;
+import std.stdio;

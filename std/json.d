@@ -1706,3 +1706,17 @@ pure nothrow @safe unittest // issue 15884
     assert(test(minSub));
     assert(test(3*minSub));
 }
+
+import std.algorithm.sorting : sort;
+import std.ascii : isWhite, isDigit, isHexDigit, toUpper, toLower;
+import std.exception;
+import std.exception : assertThrown;
+import std.exception : enforceEx, enforce;
+import std.format : format;
+import std.math : feqrel;
+import std.math : isNaN, isInfinity;
+import std.stdio : writefln;
+import std.typecons;
+import std.uni : isControl;
+import std.utf : byUTF;
+import std.utf : toUTF8;

@@ -76,3 +76,5 @@ unittest
     assert(p.length == 100);
     alloc.deallocate(p);
 }
+
+import core.sys.posix.sys.mman : munmap;

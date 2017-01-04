@@ -1724,3 +1724,25 @@ public class UUIDParsingException : Exception
     assert(ex.position == 10);
     assert(ex.reason == UUIDParsingException.Reason.tooMuch);
 }
+
+import std.algorithm;
+import std.algorithm.comparison : cmp;
+import std.array : replace;
+import std.ascii : isHexDigit;
+import std.conv : ConvException, parse;
+import std.conv : to;
+import std.conv : to, parse;
+import std.digest.md : MD5;
+import std.digest.sha : SHA1;
+import std.exception;
+
+import std.exception : assumeUnique;
+import std.format : format;
+import std.meta;
+import std.meta : AliasSeq;
+import std.meta : AliasSeq, allSatisfy;
+import std.random : isUniformRNG;
+import std.random : rndGen;
+import std.random : rndGen, Mt19937;
+import std.random : Xorshift192, unpredictableSeed;
+//import std.regex;

@@ -354,3 +354,12 @@ unittest
     assert(b2.length == 10);
     assert(a.primary.owns(b2) == Ternary.no);
 }
+
+import std.algorithm.comparison : min;
+import std.algorithm.mutation : move;
+import std.conv : text;
+import std.experimental.allocator.building_blocks.region : InSituRegion;
+import std.experimental.allocator.building_blocks.region : Region;
+import std.experimental.allocator.gc_allocator : GCAllocator;
+import std.traits : hasMember;
+import std.typecons : Ternary;

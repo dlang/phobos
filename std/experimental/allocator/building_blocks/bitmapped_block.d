@@ -1407,3 +1407,16 @@ unittest
     assert(v.findZeros(641, 1) == ulong.max);
     assert(v.findZeros(641, 100) == ulong.max);
 }
+
+import std.algorithm.comparison : max;
+import std.algorithm.comparison : min;
+import std.conv : text;
+import std.conv : to;
+import std.experimental.allocator.building_blocks.region : InSituRegion;
+import std.experimental.allocator.gc_allocator : GCAllocator;
+import std.experimental.allocator.mallocator : AlignedMallocator;
+import std.math : isPowerOf2;
+import std.stdio : writefln, writeln;
+import std.traits : hasMember;
+import std.typecons : Ternary;
+import std.typecons : tuple, Tuple;

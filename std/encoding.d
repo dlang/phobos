@@ -3608,3 +3608,15 @@ immutable(BOMSeq) getBOM(Range)(Range input)
 
 /** Constant defining a fully decoded BOM */
 enum dchar utfBOM = 0xfeff;
+
+import std.algorithm.searching : find;
+import std.algorithm.searching : startsWith;
+import std.array;
+import std.conv : to;
+import std.format : format;
+import std.meta;
+import std.meta : AliasSeq;
+import std.range;
+import std.typecons : Tuple, tuple;
+import std.uni : toLower;
+import std.utf : byDchar;

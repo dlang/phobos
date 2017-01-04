@@ -358,3 +358,10 @@ unittest
     assert(b.length == 201);
     a.deallocate(b);
 }
+
+import std.algorithm.comparison : min;
+import std.experimental.allocator.building_blocks.free_list : FreeList;
+import std.experimental.allocator.gc_allocator : GCAllocator;
+import std.experimental.allocator.mallocator : Mallocator;
+import std.traits : hasMember;
+import std.typecons : Ternary;

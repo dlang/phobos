@@ -2059,3 +2059,10 @@ class Base64Exception : Exception
     assert(Base64.decode(ir2, &or2) == 6);
     assert(or2.result == [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e]);
 }
+
+import std.algorithm.comparison : equal;
+import std.algorithm.sorting : sort;
+import std.array;
+import std.conv;
+import std.file;
+import std.stdio;

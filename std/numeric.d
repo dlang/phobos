@@ -3344,3 +3344,26 @@ template isComplexLike(T)
     static assert(isComplexLike!(Complex!double));
     static assert(!isComplexLike!(uint));
 }
+
+import core.bitop : bsf;
+import core.bitop : bsr;
+import core.exception : onOutOfMemoryError;
+import core.stdc.stdlib;
+import core.stdc.stdlib : malloc, free;
+import core.stdc.stdlib : malloc, realloc, alloca, free;
+import std.algorithm;
+import std.algorithm.comparison : min;
+import std.algorithm.iteration : map;
+import std.algorithm.mutation : swap;
+import std.array : uninitializedArray;
+import std.bitmanip : bitfields;
+import std.conv;
+import std.conv : text;
+import std.format : FormatSpec, formatValue;
+import std.functional : binaryFun;
+import std.functional : unaryFun;
+import std.meta;
+import std.meta : AliasSeq;
+import std.meta : staticIndexOf;
+import std.range;
+import std.stdio;

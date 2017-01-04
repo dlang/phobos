@@ -72,3 +72,5 @@ unittest
     import std.typecons : Ternary;
     assert(NullAllocator.instance.owns(null) == Ternary.no);
 }
+
+import std.typecons : Ternary;

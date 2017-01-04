@@ -842,3 +842,14 @@ unittest
     s.reverse();
     assert(s[].equal([3, 2, 1]));
 }
+
+import std.algorithm.mutation : move;
+import std.algorithm.searching : countUntil;
+import std.exception : enforce;
+import std.range;
+import std.range : popFrontN, walkLength;
+import std.range.primitives;
+import std.range.primitives : isInputRange, isForwardRange, ElementType;
+import std.range : take;
+import std.range : Take;
+import std.traits : isImplicitlyConvertible;

@@ -1680,3 +1680,26 @@ unittest
       assert(s2.escaper.equal(""));
     }
 }
+
+import core.stdc.stdlib : calloc;
+import core.stdc.stdlib : free;
+import core.stdc.stdlib : malloc, free;
+import std.algorithm;
+import std.algorithm.comparison;
+import std.algorithm.comparison : equal;
+import std.algorithm.comparison : min;
+import std.algorithm.iteration : map;
+import std.algorithm.searching : find;
+import std.array;
+import std.array : appender;
+import std.array, std.random, std.conv, std.range;
+import std.ascii : isDigit, isAlpha;
+import std.conv;
+import std.conv : text;
+import std.conv : text, parse;
+import std.conv : to;
+import std.exception : enforce;
+import std.functional : memoize;
+import std.range;
+import std.stdio;
+import std.string : toUpper;

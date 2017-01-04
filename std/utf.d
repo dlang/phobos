@@ -3648,3 +3648,18 @@ template byUTF(C) if (isSomeChar!C)
     "𐐷".byUTF!wchar().equal([0xD801, 0xDC37]);
     "𐐷".byUTF!dchar().equal([0x00010437]);
 }
+
+import core.bitop : bsr;
+import core.exception : AssertError;
+import core.internal.string : unsignedToTempString, UnsignedStringBuf;
+import std.algorithm;
+import std.algorithm.comparison : equal;
+import std.algorithm.iteration : filter;
+import std.array : appender;
+import std.array : uninitializedArray;
+import std.conv : to;
+import std.exception;
+import std.exception : assertThrown;
+import std.internal.test.dummyrange : ReferenceInputRange;
+import std.range;
+import std.string : format;

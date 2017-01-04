@@ -759,3 +759,9 @@ unittest
     assert(md.digest(new ubyte[160/8]) // 160 zero bits
            == cast(ubyte[])x"5c00bd4aca04a9057c09b20b05f723f2e23deb65");
 }
+
+import std.bitmanip : littleEndianToNative;
+import std.bitmanip : nativeToLittleEndian;
+import std.digest.md;
+import std.exception;
+import std.range;

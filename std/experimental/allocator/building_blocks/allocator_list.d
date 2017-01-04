@@ -636,3 +636,10 @@ unittest
     assert(a.allocators.length == 2);
     a.deallocateAll();
 }
+
+import core.stdc.string : memcpy;
+import std.algorithm.comparison : max;
+import std.conv : emplace;
+import std.c.string : memcpy;
+import std.traits : hasMember;
+import std.typecons : Ternary;

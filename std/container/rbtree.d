@@ -2056,3 +2056,17 @@ unittest
     class C {}
     RedBlackTree!(C, "cast(void*)a < cast(void*)b") tree;
 }
+
+import std.array : array;
+import std.conv : to;
+import std.meta : allSatisfy;
+import std.range : chain, iota;
+import std.range : iota;
+import std.range.primitives;
+import std.range.primitives : isInputRange, walkLength;
+import std.range : take;
+import std.range : Take;
+import std.stdio : writeln;
+import std.stdio : write, writeln;
+import std.traits : isIntegral, isDynamicArray, isImplicitlyConvertible;
+import std.typecons : Tuple;

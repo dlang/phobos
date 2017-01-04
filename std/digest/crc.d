@@ -457,3 +457,10 @@ unittest
     digest = crc32Of(oneMillionRange);
     assert(digest == cast(ubyte[])x"BCBF25DC");
 }
+
+import std.bitmanip : nativeToLittleEndian;
+import std.digest.crc;
+import std.exception;
+import std.range;
+import std.range : iota;
+import std.utf : byChar;

@@ -3057,3 +3057,14 @@ unittest
     tl.logf("%s", sts);
     assert(tl.msg == SystemToStringMsg);
 }
+
+import std.concurrency, core.atomic, core.thread;
+import std.exception : assertThrown;
+import std.experimental.logger.multilogger : MultiLogger;
+import std.file : deleteme, exists, remove;
+import std.file : deleteme, remove;
+import std.format : formattedWrite;
+import std.string : format;
+import std.traits : isSomeString, isSomeChar;
+import std.typecons : Nullable;
+import std.utf : encode;

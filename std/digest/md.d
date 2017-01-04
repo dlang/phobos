@@ -587,3 +587,9 @@ unittest
                                    "1234567890123456789012345678901234567890")
            == cast(ubyte[])x"57edf4a22be3c955ac49da2e2107b67a");
 }
+
+import std.bitmanip : littleEndianToNative;
+import std.bitmanip : nativeToLittleEndian;
+import std.digest.md;
+import std.exception;
+import std.range;

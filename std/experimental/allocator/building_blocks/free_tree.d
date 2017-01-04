@@ -485,3 +485,13 @@ unittest // "desperation mode"
     assert(myDeallocCounter == 1);
     assert(y.ptr is null);
 }
+
+import std.algorithm.comparison : min, max;
+import std.algorithm.mutation : swap;
+import std.conv : to;
+import std.experimental.allocator.gc_allocator;
+import std.experimental.allocator.gc_allocator : GCAllocator;
+import std.experimental.allocator.gc_allocator, std.range;
+import std.experimental.allocator.mallocator : Mallocator;
+import std.stdio : writef, writefln, writeln;
+import std.traits : hasMember;

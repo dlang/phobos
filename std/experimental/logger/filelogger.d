@@ -200,3 +200,11 @@ unittest
     assert(tl !is null);
     stdThreadLocalLog.logLevel = LogLevel.all;
 }
+
+import std.array : empty;
+import std.concurrency : Tid;
+import std.datetime : SysTime;
+import std.file : deleteme, remove;
+import std.format : formattedWrite;
+import std.string : indexOf;
+import std.string : lastIndexOf;

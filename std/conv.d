@@ -6075,3 +6075,33 @@ auto toChars(ubyte radix = 10, Char = char, LetterCase letterCase = LetterCase.l
         }
     }
 }
+import core.checkedint : mulu, addu;
+import core.stdc.errno;
+import core.stdc.math : HUGE_VAL;
+import core.stdc.stdlib;
+import core.stdc.stdlib : malloc;
+import core.stdc.stdlib, std.exception, std.math;
+import core.stdc.string : memcpy;
+import core.stdc.string : strlen;
+import std.array;
+import std.array : appender;
+import std.array : array;
+import std.ascii;
+import std.ascii : isAlpha, isHexDigit;
+import std.ascii : isDigit, isAlpha, toLower, toUpper, isHexDigit;
+import std.ascii : isHexDigit;
+import std.ascii : isWhite;
+import std.ascii : toLower;
+//import std.datetime : SysTime, UTC;
+import std.exception;
+import std.exception : assertThrown;
+import std.exception : enforce;
+import std.format : format;
+
+import std.meta : AliasSeq;
+import std.range;
+import std.range : cycle;
+import std.stdio;
+import std.typecons : Nullable;
+import std.uni : lineSep, paraSep, nelSep;
+import std.utf : byCodeUnit, byChar, byWchar, byDchar;

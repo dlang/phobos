@@ -2254,3 +2254,19 @@ unittest
     double[] values = [double.nan, double.nan];
     auto arr = Array!double(values);
 }
+
+import core.checkedint : mulu;
+import core.memory : GC;
+import core.stdc.stdlib : malloc, realloc, free;
+import core.stdc.string : memcpy, memmove, memset;
+import std.algorithm.iteration : filter;
+import std.algorithm.mutation : bringToFront;
+import std.algorithm.mutation : copy;
+import std.algorithm.mutation : initializeAll;
+import std.algorithm.mutation : move;
+import std.conv : emplace;
+import std.conv : to;
+import std.exception;
+import std.exception : enforce;
+import std.range : retro;
+import std.typecons : RefCounted, RefCountedAutoInitialize;

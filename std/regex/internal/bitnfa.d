@@ -752,3 +752,8 @@ unittest
     "abcd".checkM("ab|cd", 0);
     "abcd".checkM("(a|b|c)*(?=x)d", 0);
 }
+
+import std.array : appender;
+import std.conv : text, to;
+import std.conv : to;
+import std.uni;

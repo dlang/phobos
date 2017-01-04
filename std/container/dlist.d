@@ -966,3 +966,12 @@ private:
     a.insertFront(iota(0, 5)); // can insert range with non-ref front
     assert(a.front == 0 && a.back == 4);
 }
+
+import std.algorithm.mutation : move;
+import std.algorithm.searching : countUntil;
+
+import std.range : drop, take;
+import std.range : iota;
+import std.range : popFrontN, popBackN, walkLength;
+import std.range : take;
+import std.range : Take;

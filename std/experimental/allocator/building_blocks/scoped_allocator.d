@@ -219,3 +219,10 @@ unittest // https://issues.dlang.org/show_bug.cgi?id=16046
     alloc.dispose(foo);
     alloc.dispose(bar); // segfault here
 }
+
+import std.exception;
+import std.experimental.allocator;
+import std.experimental.allocator.gc_allocator : GCAllocator;
+import std.experimental.allocator.mallocator;
+import std.experimental.allocator.mallocator : Mallocator;
+import std.typecons : Ternary;
