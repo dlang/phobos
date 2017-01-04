@@ -4793,6 +4793,74 @@ template FloatingPointTypeOf(T)
 
 /*
  */
+template ImaginaryTypeOf(T)
+{
+    static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
+        alias X = ImaginaryTypeOf!AT;
+    else
+        alias X = OriginalType!T;
+
+    static if (staticIndexOf!(Unqual!X, ImaginaryTypeList) >= 0)
+    {
+        alias ImaginaryTypeOf = X;
+    }
+    else
+        static assert(0, T.stringof ~ " is not an imaginary type");
+}
+
+unittest
+{
+    foreach (T; ImaginaryTypeList)
+        foreach (Q; TypeQualifierList)
+        {
+            static assert( is(Q!T == ImaginaryTypeOf!(            Q!T  )));
+            static assert( is(Q!T == ImaginaryTypeOf!( SubTypeOf!(Q!T) )));
+        }
+
+    foreach (T; TypeTuple!(void, bool, IntegralTypeList, FloatingPointTypeList, ComplexTypeList, CharTypeList))
+        foreach (Q; TypeQualifierList)
+        {
+            static assert(!is(ImaginaryTypeOf!(            Q!T  )));
+            static assert(!is(ImaginaryTypeOf!( SubTypeOf!(Q!T) )));
+        }
+}
+
+/*
+ */
+template ComplexTypeOf(T)
+{
+    static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
+        alias X = ComplexTypeOf!AT;
+    else
+        alias X = OriginalType!T;
+
+    static if (staticIndexOf!(Unqual!X, ComplexTypeList) >= 0)
+    {
+        alias ComplexTypeOf = X;
+    }
+    else
+        static assert(0, T.stringof ~ " is not a complex type");
+}
+
+unittest
+{
+    foreach (T; ComplexTypeList)
+        foreach (Q; TypeQualifierList)
+        {
+            static assert( is(Q!T == ComplexTypeOf!(            Q!T  )));
+            static assert( is(Q!T == ComplexTypeOf!( SubTypeOf!(Q!T) )));
+        }
+
+    foreach (T; TypeTuple!(void, bool, IntegralTypeList, FloatingPointTypeList, ImaginaryTypeList, CharTypeList))
+        foreach (Q; TypeQualifierList)
+        {
+            static assert(!is(ComplexTypeOf!(            Q!T  )));
+            static assert(!is(ComplexTypeOf!( SubTypeOf!(Q!T) )));
+        }
+}
+
+/*
+ */
 template NumericTypeOf(T)
 {
     static if (is(IntegralTypeOf!T X) || is(FloatingPointTypeOf!T X))
@@ -5142,6 +5210,58 @@ enum bool isFloatingPoint(T) = is(FloatingPointTypeOf!T) && !isAggregateType!T;
         foreach (Q; TypeQualifierList)
         {
             static assert(!isFloatingPoint!(Q!T));
+        }
+    }
+}
+
+/**
+ * Detect whether `T` is a built-in imaginary type.
+ */
+enum bool isImaginary(T) = is(ImaginaryTypeOf!T) && !isAggregateType!T;
+
+unittest
+{
+    enum EF : ireal { a = 1.414i, b = 1.732i, c = 2.236i }
+
+    foreach (T; TypeTuple!(ImaginaryTypeList, EF))
+    {
+        foreach (Q; TypeQualifierList)
+        {
+            static assert( isImaginary!(Q!T));
+            static assert(!isImaginary!(SubTypeOf!(Q!T)));
+        }
+    }
+    foreach (T; IntegralTypeList)
+    {
+        foreach (Q; TypeQualifierList)
+        {
+            static assert(!isImaginary!(Q!T));
+        }
+    }
+}
+
+/**
+ * Detect whether `T` is a built-in complex type.
+ */
+enum bool isComplex(T) = is(ComplexTypeOf!T) && !isAggregateType!T;
+
+unittest
+{
+    enum EF : creal { a = 1 + 0.414i, b = 1 + 0.732i, c = 2 + 0.236i }
+
+    foreach (T; TypeTuple!(ComplexTypeList, EF))
+    {
+        foreach (Q; TypeQualifierList)
+        {
+            static assert( isComplex!(Q!T));
+            static assert(!isComplex!(SubTypeOf!(Q!T)));
+        }
+    }
+    foreach (T; IntegralTypeList)
+    {
+        foreach (Q; TypeQualifierList)
+        {
+            static assert(!isComplex!(Q!T));
         }
     }
 }
