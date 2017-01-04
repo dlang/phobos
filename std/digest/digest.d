@@ -69,7 +69,7 @@ public import std.ascii : LetterCase;
 
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
 
@@ -85,7 +85,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     //Generating the hashes of a file, idiomatic D way
     import std.digest.crc, std.digest.sha, std.digest.md;
@@ -110,7 +110,7 @@ unittest
     }
 }
 ///
-unittest
+@system unittest
 {
     //Generating the hashes of a file using the template API
     import std.digest.crc, std.digest.sha, std.digest.md;
@@ -149,7 +149,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc, std.digest.sha, std.digest.md;
     import std.stdio;
@@ -253,7 +253,7 @@ version(ExampleDigest)
 }
 
 ///
-unittest
+@system unittest
 {
     //Using the OutputRange feature
     import std.algorithm.mutation : copy;
@@ -294,13 +294,13 @@ template isDigest(T)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     static assert(isDigest!CRC32);
 }
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     void myFunction(T)() if (isDigest!T)
@@ -331,13 +331,13 @@ template DigestType(T)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     assert(is(DigestType!(CRC32) == ubyte[4]));
 }
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     CRC32 dig;
@@ -367,14 +367,14 @@ template hasPeek(T)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc, std.digest.md;
     assert(!hasPeek!(MD5));
     assert(hasPeek!CRC32);
 }
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     void myFunction(T)() if (hasPeek!T)
@@ -398,7 +398,7 @@ if (isDigest!T)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md, std.digest.hmac;
     static assert(hasBlockSize!MD5        && MD5.blockSize      == 512);
@@ -435,7 +435,7 @@ DigestType!Hash digest(Hash, Range)(auto ref Range range) if (!isArray!Range
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md;
     import std.range : repeat;
@@ -459,7 +459,7 @@ DigestType!Hash digest(Hash, T...)(scope const T data) if (allSatisfy!(isArray, 
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md, std.digest.sha, std.digest.crc;
     auto md5   = digest!MD5(  "The quick brown fox jumps over the lazy dog");
@@ -469,7 +469,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     auto crc32 = digest!CRC32("The quick ", "brown ", "fox jumps over the lazy dog");
@@ -492,7 +492,7 @@ char[digestLength!(Hash)*2] hexDigest(Hash, Order order = Order.increasing, Rang
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md;
     import std.range : repeat;
@@ -514,13 +514,13 @@ char[digestLength!(Hash)*2] hexDigest(Hash, Order order = Order.increasing, T...
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     assert(hexDigest!(CRC32, Order.decreasing)("The quick brown fox jumps over the lazy dog") == "414FA339");
 }
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     assert(hexDigest!(CRC32, Order.decreasing)("The quick ", "brown ", "fox jumps over the lazy dog") == "414FA339");
@@ -538,7 +538,7 @@ Hash makeDigest(Hash)()
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md;
     auto md5 = makeDigest!MD5();
@@ -618,7 +618,7 @@ interface Digest
 }
 
 ///
-unittest
+@system unittest
 {
     //Using the OutputRange feature
     import std.algorithm.mutation : copy;
@@ -632,7 +632,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md, std.digest.sha, std.digest.crc;
     ubyte[] md5   = (new MD5Digest()).digest("The quick brown fox jumps over the lazy dog");
@@ -642,14 +642,14 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     ubyte[] crc32 = (new CRC32Digest()).digest("The quick ", "brown ", "fox jumps over the lazy dog");
     assert(crcHexString(crc32) == "414FA339");
 }
 
-unittest
+@system unittest
 {
     import std.range : isOutputRange;
     assert(!isDigest!(Digest));
@@ -657,7 +657,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     void test(Digest dig)
     {
@@ -970,7 +970,7 @@ class WrapperDigest(T) if (isDigest!T) : Digest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md;
     //Simple example
@@ -980,7 +980,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     //using a supplied buffer
     import std.digest.md;

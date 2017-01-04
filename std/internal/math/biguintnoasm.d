@@ -48,7 +48,7 @@ uint multibyteAddSub(char op)(uint[] dest, const(uint) [] src1,
     return cast(uint)c;
 }
 
-unittest
+@system unittest
 {
     uint [] a = new uint[40];
     uint [] b = new uint[40];
@@ -167,7 +167,7 @@ void multibyteShr(uint [] dest, const(uint) [] src, uint numbits)
    }
 }
 
-unittest
+@system unittest
 {
 
     uint [] aa = [0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
@@ -204,7 +204,7 @@ uint multibyteMul(uint[] dest, const(uint)[] src, uint multiplier, uint carry)
     return cast(uint)c;
 }
 
-unittest
+@system unittest
 {
     uint [] aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A,
         0xBCCC_CCCD, 0xEEEE_EEEE];
@@ -241,7 +241,7 @@ uint multibyteMulAdd(char op)(uint [] dest, const(uint)[] src,
     return cast(uint)c;
 }
 
-unittest
+@system unittest
 {
 
     uint [] aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A,
@@ -296,7 +296,7 @@ uint multibyteDivAssign(uint [] dest, uint divisor, uint overflow)
     return cast(uint)c;
 }
 
-unittest
+@system unittest
 {
     uint [] aa = new uint[101];
     for (uint i = 0; i < aa.length; ++i)

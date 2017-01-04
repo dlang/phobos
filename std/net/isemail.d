@@ -771,7 +771,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
     return EmailStatus(valid, to!(string)(localPart), to!(string)(domainPart), finalStatus);
 }
 
-unittest
+@system unittest
 {
     assert(`test.test@iana.org`.isEmail(No.checkDns).statusCode == EmailStatusCode.valid);
     assert(`test.test@iana.org`.isEmail(No.checkDns, EmailStatusCode.none).statusCode == EmailStatusCode.valid);
@@ -1818,14 +1818,14 @@ T[] substr (T) (T[] str, ptrdiff_t start = 0, ptrdiff_t length = ptrdiff_t.min)
     return str[start .. end];
 }
 
-unittest
+@system unittest
 {
     assert("abcdef".substr(-1) == "f");
     assert("abcdef".substr(-2) == "ef");
     assert("abcdef".substr(-3, 1) == "d");
 }
 
-unittest
+@system unittest
 {
     assert("abcdef".substr(0, -1) == "abcde");
     assert("abcdef".substr(2, -1) == "cde");
@@ -1869,7 +1869,7 @@ int compareFirstN (alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length, b
     return caseInsensitive ? slice1.icmp(slice2) : slice1.cmp(slice2);
 }
 
-unittest
+@system unittest
 {
     assert("abc".compareFirstN("abcdef", 3) == 0);
     assert("abc".compareFirstN("Abc", 3, true) == 0);
@@ -1899,7 +1899,7 @@ auto grep (Range, Regex) (Range input, Regex pattern, bool invert = false)
     return filter!(dg)(input);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.regex;
@@ -1922,7 +1922,7 @@ ElementType!(A) pop (A) (ref A a) if (isDynamicArray!(A) && !isNarrowString!(A) 
     return e;
 }
 
-unittest
+@system unittest
 {
     auto array = [0, 1, 2, 3];
     auto result = array.pop();
@@ -1948,13 +1948,13 @@ const(T)[] get (T) (const(T)[] str, size_t index, dchar c)
     return str[index .. index + codeLength!(T)(c)];
 }
 
-unittest
+@system unittest
 {
     assert("abc".get(1, 'b') == "b");
     assert("löv".get(1, 'ö') == "ö");
 }
 
-unittest
+@system unittest
 {
     assert("abc".get(1, 'b') == "b");
     assert("löv".get(1, 'ö') == "ö");

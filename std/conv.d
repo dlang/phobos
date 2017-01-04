@@ -4464,7 +4464,7 @@ if (is(T == class))
     assert(inner.getI == 3);
 }
 
-@nogc pure nothrow unittest
+@nogc pure nothrow @system unittest
 {
     int var = 6;
     align(__conv_EmplaceTestClass.alignof) ubyte[__traits(classInstanceSize, __conv_EmplaceTestClass)] buf;
@@ -5681,7 +5681,7 @@ template castFrom(From)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=16667
-unittest
+@system unittest
 {
     ubyte[] a = ['a', 'b', 'c'];
     assert(castFrom!(ubyte[]).to!(string)(a) == "abc");

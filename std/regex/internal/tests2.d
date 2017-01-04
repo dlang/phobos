@@ -11,7 +11,7 @@ import std.algorithm, std.conv, std.exception, std.meta, std.range,
 import std.regex.internal.parser : Escapables; // characters that need escaping
 
 
-unittest
+@system unittest
 {
     auto cr5 = ctRegex!("(?:a{2,4}b{1,3}){1,2}");
     assert(bmatch("aaabaaaabbb", cr5).hit == "aaabaaaabbb");
@@ -19,7 +19,7 @@ unittest
     assert(bmatch("aaabaaaabbb"w,  cr6).hit == "aaab"w);
 }
 
-unittest
+@system unittest
 {
     auto cr7 = ctRegex!(`\r.*?$`,"sm");
     assert(bmatch("abc\r\nxy",  cr7).hit == "\r\nxy");
@@ -28,7 +28,7 @@ unittest
             == "<packet>text</packet>");
 }
 
-unittest
+@system unittest
 {
     auto cr8 = ctRegex!("^(a)(b)?(c*)");
     auto m8 = bmatch("abcc",cr8);
@@ -42,7 +42,7 @@ unittest
     assert(equal(bmatch("xxqababqyy",cr9).captures, ["qababq", "b"]));
 }
 
-unittest
+@system unittest
 {
     auto rtr = regex("a|b|c");
     const ctr = regex("a|b|c");
@@ -54,7 +54,7 @@ unittest
     assert(equal(testCT.ir,testRT.ir));
 }
 
-unittest
+@system unittest
 {
     immutable cx = ctRegex!"(A|B|C)";
     auto mx = match("B",cx);
@@ -83,7 +83,7 @@ unittest
     assert(equal(map!"a.hit"(m9), ["First", "", "Second"]));
 }
 
-unittest
+@system unittest
 {
 //global matching
     void test_body(alias matchFn)()
@@ -124,7 +124,7 @@ unittest
 }
 
 //tests for accumulated std.regex issues and other regressions
-unittest
+@system unittest
 {
     void test_body(alias matchFn)()
     {
@@ -204,7 +204,7 @@ unittest
 }
 
 // tests for replace
-unittest
+@system unittest
 {
     void test(alias matchFn)()
     {
@@ -237,7 +237,7 @@ unittest
 }
 
 // tests for splitter
-unittest
+@system unittest
 {
     auto s1 = ", abc, de,     fg, hi, ";
     auto sp1 = splitter(s1, regex(", *"));
@@ -256,13 +256,13 @@ unittest
     assert(equal(sp2, w2));
 }
 
-unittest
+@system unittest
 {
     char[] s1 = ", abc, de,  fg, hi, ".dup;
     auto sp2 = splitter(s1, regex(", *"));
 }
 
-unittest
+@system unittest
 {
     auto s1 = ", abc, de,  fg, hi, ";
     auto w1 = ["", "abc", "de", "fg", "hi", ""];

@@ -545,7 +545,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
     }
 
     ///
-    unittest
+    @system unittest
     {
         import std.experimental.allocator.gc_allocator : GCAllocator;
         auto alloc = KRRegion!GCAllocator(1024 * 64);
@@ -613,7 +613,7 @@ allocator if $(D deallocate) is needed, yet the actual deallocation traffic is
 relatively low. The example below shows a $(D KRRegion) using stack storage
 fronting the GC allocator.
 */
-unittest
+@system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.fallback_allocator
@@ -637,7 +637,7 @@ It should perform slightly better because instead of searching through one
 large free list, it searches through several shorter lists in LRU order. Also,
 it actually returns memory to the operating system when possible.
 */
-unittest
+@system unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -647,7 +647,7 @@ unittest
     AllocatorList!(n => KRRegion!MmapAllocator(max(n * 16, 1024 * 1024))) alloc;
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -680,7 +680,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -718,7 +718,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.allocator_list
@@ -729,7 +729,7 @@ unittest
         n => KRRegion!GCAllocator(max(n * 16, 1024 * 1024)))());
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
 
@@ -747,7 +747,7 @@ unittest
     assert(alloc.allocateAll().length == 1024 * 1024);
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.typecons : Ternary;
@@ -780,7 +780,7 @@ unittest
     assert(b.length == 1024 * 1024 - KRRegion!().sizeof, text(b.length));
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     auto alloc = KRRegion!()(GCAllocator.instance.allocate(1024 * 1024));

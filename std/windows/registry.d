@@ -84,7 +84,7 @@ class Win32Exception : WindowsException
 
 version(unittest) import std.string : startsWith, endsWith;
 
-unittest
+@system unittest
 {
     // Test that we can throw and catch one by its own type
     string message = "Test W1";
@@ -94,7 +94,7 @@ unittest
     assert(e.msg.startsWith(message));
 }
 
-unittest
+@system unittest
 {
     // ditto
     string message = "Test W2";
@@ -139,7 +139,7 @@ public:
     }
 }
 
-unittest
+@system unittest
 {
     // (i) Test that we can throw and catch one by its own type
     string message = "Test 1";
@@ -151,7 +151,7 @@ unittest
     assert(e.msg.startsWith(message));
 }
 
-unittest
+@system unittest
 {
     // ditto
     string message = "Test 2";
@@ -1738,7 +1738,7 @@ private:
 }
 
 
-unittest
+@system unittest
 {
     debug(winreg) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(winreg) writefln("std.windows.registry.unittest read");
@@ -1771,7 +1771,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     debug(winreg) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(winreg) writefln("std.windows.registry.unittest write");

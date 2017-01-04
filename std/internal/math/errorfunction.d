@@ -209,7 +209,7 @@ real erf(real x)
     return x * rationalPoly(z, T, U);
 }
 
-unittest
+@system unittest
 {
    // High resolution test points.
     enum real erfc0_250 = 0.723663330078125 + 1.0279753638067014931732235184287934646022E-5;
@@ -344,7 +344,7 @@ real normalDistributionImpl(real a)
     }
 }
 
-unittest
+@system unittest
 {
 assert(fabs(normalDistributionImpl(1L) - (0.841344746068543))< 0.0000000000000005);
 assert(isIdentical(normalDistributionImpl(NaN(0x325)), NaN(0x325)));
@@ -469,7 +469,7 @@ static immutable real[8] Q3 =
 }
 
 
-unittest
+@system unittest
 {
     // TODO: Use verified test points.
     // The values below are from Excel 2003.

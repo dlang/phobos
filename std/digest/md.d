@@ -48,7 +48,7 @@ module std.digest.md;
 public import std.digest.digest;
 
 ///
-unittest
+@system unittest
 {
     //Template API
     import std.digest.md;
@@ -64,7 +64,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     //OOP API
     import std.digest.md;
@@ -391,7 +391,7 @@ struct MD5
             return data;
         }
         ///
-        unittest
+        @system unittest
         {
             //Simple example
             MD5 hash;
@@ -402,7 +402,7 @@ struct MD5
 }
 
 ///
-unittest
+@system unittest
 {
     //Simple example, hashing a string using md5Of helper function
     ubyte[16] hash = md5Of("abc");
@@ -411,7 +411,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     //Using the basic API
     MD5 hash;
@@ -423,7 +423,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     //Let's use the template features:
     void doSomething(T)(ref T hash) if (isDigest!T)
@@ -436,12 +436,12 @@ unittest
     assert(toHexString(md5.finish()) == "93B885ADFE0DA089CDF634904FD59F71");
 }
 
-unittest
+@system unittest
 {
     assert(isDigest!MD5);
 }
 
-unittest
+@system unittest
 {
     import std.range;
 
@@ -502,7 +502,7 @@ auto md5Of(T...)(T data)
 }
 
 ///
-unittest
+@system unittest
 {
     ubyte[16] hash = md5Of("abc");
     assert(hash == digest!MD5("abc"));
@@ -518,7 +518,7 @@ unittest
 alias MD5Digest = WrapperDigest!MD5;
 
 ///
-unittest
+@system unittest
 {
     //Simple example, hashing a string using Digest.digest helper function
     auto md5 = new MD5Digest();
@@ -528,7 +528,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
      //Let's use the OOP features:
     void test(Digest dig)
@@ -544,7 +544,7 @@ unittest
     assert(toHexString(result) == "93B885ADFE0DA089CDF634904FD59F71");
 }
 
-unittest
+@system unittest
 {
     auto md5 = new MD5Digest();
 

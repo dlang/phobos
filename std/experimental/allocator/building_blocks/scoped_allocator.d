@@ -17,7 +17,7 @@ simpler design combining $(D AllocatorList) with $(D Region) is recommended.
 */
 struct ScopedAllocator(ParentAllocator)
 {
-    unittest
+    @system unittest
     {
         testAllocator!(() => ScopedAllocator());
     }
@@ -191,7 +191,7 @@ struct ScopedAllocator(ParentAllocator)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     import std.typecons : Ternary;
@@ -202,13 +202,13 @@ unittest
     assert(alloc.empty == Ternary.no);
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     testAllocator!(() => ScopedAllocator!GCAllocator());
 }
 
-unittest // https://issues.dlang.org/show_bug.cgi?id=16046
+@system unittest // https://issues.dlang.org/show_bug.cgi?id=16046
 {
     import std.exception;
     import std.experimental.allocator;

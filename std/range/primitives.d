@@ -402,7 +402,7 @@ if (isSomeChar!E)
     }
 }
 
-pure unittest
+pure @system unittest
 {
     auto f = delegate (const(char)[]) {};
     putChar(f, cast(dchar)'a');
@@ -416,7 +416,7 @@ pure unittest
     putChar(r, 'a');
 }
 
-unittest
+@system unittest
 {
     struct A {}
     static assert(!isInputRange!(A));
@@ -428,7 +428,7 @@ unittest
     put(b, 5);
 }
 
-unittest
+@system unittest
 {
     int[] a = [1, 2, 3], b = [10, 20];
     auto c = a;
@@ -437,7 +437,7 @@ unittest
     assert(a == [3]);
 }
 
-unittest
+@system unittest
 {
     int[] a = new int[10];
     int b;
@@ -445,14 +445,14 @@ unittest
     put(a, b);
 }
 
-unittest
+@system unittest
 {
     void myprint(in char[] s) { }
     auto r = &myprint;
     put(r, 'a');
 }
 
-unittest
+@system unittest
 {
     int[] a = new int[10];
     static assert(!__traits(compiles, put(a, 1.0L)));
@@ -468,7 +468,7 @@ unittest
     assert(a.length == 6);
 }
 
-unittest
+@system unittest
 {
     char[] a = new char[10];
     static assert(!__traits(compiles, put(a, 1.0L)));
@@ -478,7 +478,7 @@ unittest
     static assert(!__traits(compiles, put(a, "ABC")));
 }
 
-unittest
+@system unittest
 {
     int[][] a = new int[][10];
     int[]   b = new int[10];
@@ -490,7 +490,7 @@ unittest
     static assert(!__traits(compiles, put(a, c)));
 }
 
-unittest
+@system unittest
 {
     int[][] a = new int[][](3);
     int[]   b = [1];
@@ -505,7 +505,7 @@ unittest
     assert(a == [[2], [2], [2]]);
 }
 
-unittest
+@system unittest
 {
     // Test fix for bug 7476.
     struct LockingTextWriter
@@ -524,7 +524,7 @@ unittest
     put(w, r);
 }
 
-unittest
+@system unittest
 {
     import std.conv : to;
     import std.meta : AliasSeq;
@@ -587,7 +587,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     static struct CharRange
     {
@@ -604,7 +604,7 @@ unittest
     put(c, "hello"d);
 }
 
-unittest
+@system unittest
 {
     // issue 9823
     const(char)[] r;
@@ -613,7 +613,7 @@ unittest
     assert(r == "ABC");
 }
 
-unittest
+@system unittest
 {
     // issue 10571
     import std.format;
@@ -622,7 +622,7 @@ unittest
     assert(buf == "hello");
 }
 
-unittest
+@system unittest
 {
     import std.format;
     import std.meta : AliasSeq;
@@ -851,7 +851,7 @@ template isBidirectionalRange(R)
 }
 
 ///
-unittest
+@system unittest
 {
     alias R = int[];
     R r = [0,1];
@@ -932,7 +932,7 @@ template isRandomAccessRange(R)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.traits : isNarrowString;
 
@@ -2167,7 +2167,7 @@ if (isNarrowString!(C[]))
     static assert(checkCTFEW.empty);
 }
 
-unittest // issue 16090
+@system unittest // issue 16090
 {
     string s = "\u00E4";
     assert(s.length == 2);
@@ -2177,7 +2177,7 @@ unittest // issue 16090
     assert(s.empty);
 }
 
-unittest
+@system unittest
 {
     wstring s = "\U00010000";
     assert(s.length == 2);

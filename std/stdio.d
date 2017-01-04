@@ -524,7 +524,7 @@ Throws: $(D ErrnoException) in case of error.
             _name = name;
     }
 
-    unittest // Test changing filename
+    @system unittest // Test changing filename
     {
         static import std.file;
         import std.exception : assertThrown, assertNotThrown;
@@ -546,7 +546,7 @@ Throws: $(D ErrnoException) in case of error.
 
     version (CRuntime_DigitalMars) {} else // Not implemented
     version (CRuntime_Microsoft) {} else // Not implemented
-    unittest // Test changing mode
+    @system unittest // Test changing mode
     {
         static import std.file;
         import std.exception : assertThrown, assertNotThrown;
@@ -1740,7 +1740,7 @@ is recommended if you want to process a complete file.
         return buf.length;
     }
 
-    unittest
+    @system unittest
     {
         static import std.file;
         import std.typecons : Tuple;

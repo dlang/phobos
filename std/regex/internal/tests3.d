@@ -8,7 +8,7 @@ package(std.regex):
 import std.algorithm, std.conv, std.exception, std.meta, std.range,
     std.typecons, std.regex;
 
-unittest
+@system unittest
 { // bugzilla 7141
     string pattern = `[a\--b]`;
     assert(match("-", pattern));
@@ -16,17 +16,17 @@ unittest
     string pattern2 = `[&-z]`;
     assert(match("b", pattern2));
 }
-unittest
+@system unittest
 {//bugzilla 7111
     assert(match("", regex("^")));
 }
-unittest
+@system unittest
 {//bugzilla 7300
     assert(!match("a"d, "aa"d));
 }
 
 // bugzilla 7551
-unittest
+@system unittest
 {
     auto r = regex("[]abc]*");
     assert("]ab".matchFirst(r).hit == "]ab");
@@ -35,13 +35,13 @@ unittest
     assert("]ac".matchFirst(r2).hit == "]");
 }
 
-unittest
+@system unittest
 {//bugzilla 7674
     assert("1234".replace(regex("^"), "$$") == "$1234");
     assert("hello?".replace(regex(r"\?", "g"), r"\?") == r"hello\?");
     assert("hello?".replace(regex(r"\?", "g"), r"\\?") != r"hello\?");
 }
-unittest
+@system unittest
 {// bugzilla 7679
     foreach (S; AliasSeq!(string, wstring, dstring))
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
@@ -51,7 +51,7 @@ unittest
         assert(split(str, re) == [to!S("a"), to!S("b")]);
     }();
 }
-unittest
+@system unittest
 {//bugzilla 8203
     string data = "
     NAME   = XPAW01_STA:STATION
@@ -67,14 +67,14 @@ unittest
     auto r2 = regex(`([а-яА-Я\-_]+\s*)+(?<=[\s\.,\^])`);
     match("аллея Театральная", r2);
 }
-unittest
+@system unittest
 {// bugzilla 8637 purity of enforce
     auto m = match("hello world", regex("world"));
     enforce(m);
 }
 
 // bugzilla 8725
-unittest
+@system unittest
 {
   static italic = regex( r"\*
                 (?!\s+)
@@ -87,7 +87,7 @@ unittest
 }
 
 // bugzilla 8349
-unittest
+@system unittest
 {
     const peakRegexStr = r"\>(wgEncode.*Tfbs.*\.(?:narrow)|(?:broad)Peak.gz)</a>";
     const peakRegex = ctRegex!(peakRegexStr);
@@ -96,7 +96,7 @@ unittest
 }
 
 // bugzilla 9211
-unittest
+@system unittest
 {
     auto rx_1 =  regex(r"^(\w)*(\d)");
     auto m = match("1234", rx_1);
@@ -107,7 +107,7 @@ unittest
 }
 
 // bugzilla 9280
-unittest
+@system unittest
 {
     string tomatch = "a!b@c";
     static r = regex(r"^(?P<nick>.*?)!(?P<ident>.*?)@(?P<host>.*?)$");
@@ -120,7 +120,7 @@ unittest
 
 
 // bugzilla 9579
-unittest
+@system unittest
 {
     char[] input = ['a', 'b', 'c'];
     string format = "($1)";
@@ -131,14 +131,14 @@ unittest
 }
 
 // bugzilla 9634
-unittest
+@system unittest
 {
     auto re = ctRegex!"(?:a+)";
     assert(match("aaaa", re).hit == "aaaa");
 }
 
 //bugzilla 10798
-unittest
+@system unittest
 {
     auto cr = ctRegex!("[abcd--c]*");
     auto m  = "abc".match(cr);
@@ -147,7 +147,7 @@ unittest
 }
 
 // bugzilla 10913
-unittest
+@system unittest
 {
     @system static string foo(const(char)[] s)
     {
@@ -166,7 +166,7 @@ unittest
 }
 
 // bugzilla 11262
-unittest
+@system unittest
 {
     const reg = ctRegex!(r",", "g");
     auto str = "This,List";
@@ -175,13 +175,13 @@ unittest
 }
 
 // bugzilla 11775
-unittest
+@system unittest
 {
     assert(collectException(regex("a{1,0}")));
 }
 
 // bugzilla 11839
-unittest
+@system unittest
 {
     assert(regex(`(?P<var1>\w+)`).namedCaptures.equal(["var1"]));
     assert(collectException(regex(`(?P<1>\w+)`)));
@@ -191,7 +191,7 @@ unittest
 }
 
 // bugzilla 12076
-unittest
+@system unittest
 {
     auto RE = ctRegex!(r"(?<!x[a-z]+)\s([a-z]+)");
     string s = "one two";
@@ -199,7 +199,7 @@ unittest
 }
 
 // bugzilla 12105
-unittest
+@system unittest
 {
     auto r = ctRegex!`.*?(?!a)`;
     assert("aaab".matchFirst(r).hit == "aaa");
@@ -208,14 +208,14 @@ unittest
 }
 
 //bugzilla 11784
-unittest
+@system unittest
 {
     assert("abcdefghijklmnopqrstuvwxyz"
         .matchFirst("[a-z&&[^aeiuo]]").hit == "b");
 }
 
 //bugzilla 12366
-unittest
+@system unittest
 {
      auto re = ctRegex!(`^((?=(xx+?)\2+$)((?=\2+$)(?=(x+)(\4+$))\5){2})*x?$`);
      assert("xxxxxxxx".match(re).empty);
@@ -223,27 +223,27 @@ unittest
 }
 
 // bugzilla 12582
-unittest
+@system unittest
 {
     auto r = regex(`(?P<a>abc)`);
     assert(collectException("abc".matchFirst(r)["b"]));
 }
 
 // bugzilla 12691
-unittest
+@system unittest
 {
     assert(bmatch("e@", "^([a-z]|)*$").empty);
     assert(bmatch("e@", ctRegex!`^([a-z]|)*$`).empty);
 }
 
 //bugzilla  12713
-unittest
+@system unittest
 {
     assertThrown(regex("[[a-z]([a-z]|(([[a-z])))"));
 }
 
 //bugzilla 12747
-unittest
+@system unittest
 {
     assertThrown(regex(`^x(\1)`));
     assertThrown(regex(`^(x(\1))`));
@@ -251,14 +251,14 @@ unittest
 }
 
 // bugzilla 14504
-unittest
+@system unittest
 {
     auto p = ctRegex!("a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?" ~
             "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 }
 
 // bugzilla 14529
-unittest
+@system unittest
 {
     auto ctPat2 = regex(r"^[CDF]$", "i");
     foreach (v; ["C", "c", "D", "d", "F", "f"])
@@ -266,7 +266,7 @@ unittest
 }
 
 // bugzilla 14615
-unittest
+@system unittest
 {
     import std.stdio : writeln;
     import std.regex : replaceFirst, replaceFirstInto, regex;
@@ -285,19 +285,19 @@ unittest
 }
 
 // bugzilla 15573
-unittest
+@system unittest
 {
     auto rx = regex("[c d]", "x");
     assert("a b".matchFirst(rx));
 }
 
 // bugzilla 15864
-unittest
+@system unittest
 {
     regex(`(<a (?:(?:\w+=\"[^"]*\")?\s*)*href="\.\.?)"`);
 }
 
-unittest
+@system unittest
 {
     auto r = regex("(?# comment)abc(?# comment2)");
     assert("abc".matchFirst(r));

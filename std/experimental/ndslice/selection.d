@@ -186,7 +186,7 @@ Slice!(N, Range).PureThis unpack(size_t N, Range)(Slice!(N, Range) slice)
 }
 
 ///
-pure nothrow unittest
+pure nothrow @system unittest
 {
     auto a = iotaSlice(3, 4, 5, 6, 7, 8, 9, 10, 11);
     auto b = a.pack!(2, 3).unpack();
@@ -242,7 +242,7 @@ evertPack(size_t N, Range)(Slice!(N, Range) slice)
 }
 
 ///
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.slice;
     import std.experimental.ndslice.iteration : transposed;
@@ -354,7 +354,7 @@ Slice!(1, Range) diagonal(size_t N, Range)(Slice!(N, Range) slice)
 }
 
 /// Loop through diagonal
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.slice;
 
@@ -508,7 +508,7 @@ body
 }
 
 ///
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.slice;
     auto slice = slice!int(5, 8);
@@ -534,7 +534,7 @@ pure nothrow unittest
 }
 
 /// Diagonal blocks
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.slice;
     auto slice = slice!int(5, 8);
@@ -565,7 +565,7 @@ pure nothrow unittest
 }
 
 /// Matrix divided into vertical blocks
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.slice;
     auto slice = slice!int(5, 13);
@@ -628,7 +628,7 @@ body
 }
 
 ///
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.slice;
     auto slice = slice!int(5, 8);
@@ -647,7 +647,7 @@ pure nothrow unittest
 }
 
 ///
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.slice;
     auto slice = slice!int(5, 8);
@@ -667,7 +667,7 @@ pure nothrow unittest
 }
 
 /// Multi-diagonal matrix
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.slice;
     auto slice = slice!int(8, 8);
@@ -691,7 +691,7 @@ pure nothrow unittest
 }
 
 /// Sliding window over matrix columns
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.slice;
     auto slice = slice!int(5, 8);
@@ -715,7 +715,7 @@ pure nothrow unittest
 }
 
 /// Overlapping blocks using windows
-pure nothrow unittest
+pure nothrow @system unittest
 {
     //  ----------------
     // |  0  1  2  3  4 |
@@ -795,7 +795,7 @@ Slice!(M, Range) reshape
          [ 2,  1, 0]]);
 }
 
-pure unittest
+pure @system unittest
 {
     import std.experimental.ndslice.slice;
     import std.experimental.ndslice.iteration : reversed;
@@ -836,7 +836,7 @@ pure unittest
 }
 
 // Issue 15919
-unittest
+@system unittest
 {
     assert(iotaSlice(3, 4, 5, 6, 7).pack!2.reshape(4, 3, 5)[0, 0, 0].shape == cast(size_t[2])[6, 7]);
 }
@@ -855,7 +855,7 @@ unittest
     assertThrown!ReshapeException(e.reshape(1));
 }
 
-unittest
+@system unittest
 {
     auto pElements = iotaSlice(3, 4, 5, 6, 7)
         .pack!2
@@ -987,7 +987,7 @@ nothrow @safe pure unittest
 }
 
 /// Reshaping with memory allocation
-pure unittest
+pure @system unittest
 {
     import std.experimental.ndslice.slice;
     import std.experimental.ndslice.iteration : reversed;
@@ -1057,7 +1057,7 @@ nothrow @nogc @safe pure unittest
     assert(err == ReshapeError.empty);
 }
 
-unittest
+@system unittest
 {
     auto pElements = iotaSlice(3, 4, 5, 6, 7)
         .pack!2
@@ -1383,7 +1383,7 @@ auto byElement(size_t N, Range)(Slice!(N, Range) slice)
 }
 
 /// Properties
-pure nothrow unittest
+pure nothrow @system unittest
 {
     auto elems = iotaSlice(3, 4).byElement;
 
@@ -1397,7 +1397,7 @@ pure nothrow unittest
 }
 
 /// Index property
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.slice;
     auto slice = new long[20].sliced(5, 4);
@@ -1415,7 +1415,7 @@ pure nothrow unittest
          [40, 43, 46, 49]]);
 }
 
-pure nothrow unittest
+pure nothrow @system unittest
 {
     // test save
     import std.range : dropOne;
@@ -1430,7 +1430,7 @@ pure nothrow unittest
 /++
 Random access and slicing
 +/
-@nogc nothrow unittest
+@nogc nothrow @system unittest
 {
     import std.experimental.ndslice.slice;
     import std.algorithm.comparison : equal;
@@ -1563,7 +1563,7 @@ Use $(SUBREF iteration, allReversed) in pipeline before
 }
 
 // Issue 15549
-unittest
+@system unittest
 {
     import std.range.primitives;
     alias A = typeof(iotaSlice(2, 5).sliced(1, 1, 1, 1));
@@ -1577,7 +1577,7 @@ unittest
 }
 
 // Issue 16010
-unittest
+@system unittest
 {
     auto s = iotaSlice(3, 4).byElement;
     foreach (_; 0 .. s.length)
@@ -1685,7 +1685,7 @@ auto byElementInStandardSimplex(size_t N, Range)(Slice!(N, Range) slice, size_t 
 }
 
 ///
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.slice;
     auto slice = slice!int(4, 5);
@@ -1702,7 +1702,7 @@ pure nothrow unittest
 }
 
 ///
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.slice;
     import std.experimental.ndslice.iteration;
@@ -1832,7 +1832,7 @@ template IndexSlice(size_t N)
     alias IndexSlice = Slice!(N, IndexMap);
 }
 
-unittest
+@system unittest
 {
     auto r = indexSlice(1);
     import std.range.primitives : isRandomAccessRange;
@@ -1994,7 +1994,7 @@ Slice!(M, Slice!(N + 1, Range)) repeatSlice(size_t N, Range, size_t M)(Slice!(N,
 }
 
 ///
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.slice : slice;
 
@@ -2159,7 +2159,7 @@ template mapSlice(fun...)
 }
 
 ///
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.selection : iotaSlice;
 
@@ -2168,7 +2168,7 @@ pure nothrow unittest
                  [ 9, 12, 15]]);
 }
 
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.selection : iotaSlice;
 
@@ -2176,7 +2176,7 @@ pure nothrow unittest
 }
 
 /// Packed tensors.
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.selection : iotaSlice, windows;
 
@@ -2200,7 +2200,7 @@ pure nothrow unittest
     assert(s == [[8, 12]]);
 }
 
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.selection : iotaSlice, windows;
 
@@ -2219,7 +2219,7 @@ pure nothrow unittest
 }
 
 /// Zipped tensors
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.slice : assumeSameStructure;
     import std.experimental.ndslice.selection : iotaSlice;
@@ -2247,7 +2247,7 @@ Multiple functions can be passed to `mapSlice`.
 In that case, the element type of `mapSlice` is a tuple containing
 one element for each function.
 +/
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.selection : iotaSlice;
 
@@ -2268,7 +2268,7 @@ pure nothrow unittest
 /++
 You may alias `mapSlice` with some function(s) to a symbol and use it separately:
 +/
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.conv : to;
     import std.experimental.ndslice.selection : iotaSlice;

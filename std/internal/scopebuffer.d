@@ -128,7 +128,7 @@ struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
         this.bufLen = cast(uint)buf.length;
     }
 
-    unittest
+    @system unittest
     {
         ubyte[10] tmpbuf = void;
         auto sbuf = ScopeBuffer!ubyte(tmpbuf);
@@ -289,7 +289,7 @@ struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
     }
 }
 
-unittest
+@system unittest
 {
     import core.stdc.stdio;
     import std.range;
@@ -332,7 +332,7 @@ unittest
 
 }
 
-unittest
+@system unittest
 {
     string cat(string s1, string s2)
     {
@@ -350,7 +350,7 @@ unittest
 }
 
 // const
-unittest
+@system unittest
 {
     char[10] tmpbuf = void;
     auto textbuf = ScopeBuffer!char(tmpbuf);
@@ -377,14 +377,14 @@ auto scopeBuffer(T)(T[] tmpbuf)
 }
 
 ///
-unittest
+@system unittest
 {
     ubyte[10] tmpbuf = void;
     auto sb = scopeBuffer(tmpbuf);
     scope(exit) sb.free();
 }
 
-unittest
+@system unittest
 {
     ScopeBuffer!(int*) b;
     int*[] s;

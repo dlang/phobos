@@ -654,7 +654,7 @@ public:
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.free_list : FreeList;
@@ -676,7 +676,7 @@ unittest
     assert(File(f).byLine.walkLength == 22);
 }
 
-unittest
+@system unittest
 {
     void test(Allocator)()
     {
@@ -712,7 +712,7 @@ unittest
         Options.all));
 }
 
-unittest
+@system unittest
 {
     void test(Allocator)()
     {

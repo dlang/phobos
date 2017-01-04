@@ -129,7 +129,7 @@ class FileLogger : Logger
     private string filename;
 }
 
-unittest
+@system unittest
 {
     import std.file : deleteme, remove;
     import std.array : empty;
@@ -158,7 +158,7 @@ unittest
     assert(readLine.indexOf(notWritten) == -1, readLine);
 }
 
-unittest
+@system unittest
 {
     import std.file : deleteme, remove;
     import std.array : empty;

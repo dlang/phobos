@@ -31,7 +31,7 @@ import std.meta : allSatisfy;
 
 version(StdDdoc)
 /// Computes an HMAC over data read from stdin.
-unittest
+@system unittest
 {
     import std.stdio, std.digest.hmac, std.digest.sha;
     import std.string : representation;

@@ -1672,7 +1672,7 @@ unittest
 }
 
 // Issue 6447
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : iota;

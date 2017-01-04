@@ -3434,7 +3434,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
     assert(readText(t2.byChar) == "2");
 }
 
-@safe version(Posix) unittest //issue 11434
+@safe version(Posix) @system unittest //issue 11434
 {
     import std.conv : octal;
     auto t1 = deleteme, t2 = deleteme~"2";

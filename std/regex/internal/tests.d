@@ -10,7 +10,7 @@ import std.conv, std.exception, std.meta, std.range,
 
 alias Sequence(int B, int E) = staticIota!(B, E);
 
-unittest
+@system unittest
 {//sanity checks
     regex("(a|b)*");
     regex(`(?:([0-9A-F]+)\.\.([0-9A-F]+)|([0-9A-F]+))\s*;\s*(.*)\s*#`);
@@ -52,7 +52,7 @@ unittest
 
  */
 
-unittest
+@system unittest
 {
     struct TestVectors
     {
@@ -466,7 +466,7 @@ unittest
     run_tests!match(); //thompson VM
 }
 
-unittest
+@system unittest
 {
     immutable cr = ctRegex!("abc");
     assert(bmatch("abc",cr).hit == "abc");
@@ -474,7 +474,7 @@ unittest
     assert(bmatch("abbbbc",cr2).hit == "abbbbc");
 }
 
-unittest
+@system unittest
 {
     immutable cr3 = ctRegex!("^abc$");
     assert(bmatch("abc",cr3).hit == "abc");

@@ -316,7 +316,7 @@ public import std.experimental.ndslice.slice;
 public import std.experimental.ndslice.iteration;
 public import std.experimental.ndslice.selection;
 
-unittest
+@system unittest
 {
     auto matrix = new double[12].sliced(3, 4);
     matrix[] = 0;
@@ -329,7 +329,7 @@ unittest
 }
 
 // relaxed example
-unittest
+@system unittest
 {
     static Slice!(3, ubyte*) movingWindowByChannel
     (Slice!(3, ubyte*) image, size_t nr, size_t nc, ubyte delegate(Slice!(2, ubyte*)) filter)
@@ -414,7 +414,7 @@ unittest
     assert(t1.equal(iota(12, 18)));
 }
 
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.array : array;
@@ -519,7 +519,7 @@ pure nothrow unittest
     assert(t0.length!3 == 40);
 }
 
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.internal : Iota;
     import std.meta : AliasSeq;
@@ -543,14 +543,14 @@ pure nothrow unittest
     auto slice = im.sliced(2, 3);
 }
 
-pure nothrow unittest
+pure nothrow @system unittest
 {
     auto tensor = new int[3 * 4 * 8].sliced(3, 4, 8);
     assert(&(tensor.back.back.back()) is &tensor[2, 3, 7]);
     assert(&(tensor.front.front.front()) is &tensor[0, 0, 0]);
 }
 
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.selection : pack;
     auto slice = new int[24].sliced(2, 3, 4);
@@ -560,7 +560,7 @@ pure nothrow unittest
     assert(slice[1, 2, 3] == 4);
 }
 
-pure nothrow unittest
+pure nothrow @system unittest
 {
     auto ar = new int[3 * 8 * 9];
 
