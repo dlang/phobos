@@ -1625,48 +1625,53 @@ void yield(T)(T value)
     import core.exception;
     import std.exception;
 
-    static void testScheduler(Scheduler s)
-    {
-        scheduler = s;
-        scheduler.start({
-            auto tid = spawn({
-                int i;
-
-                try
+    auto mainTid = thisTid;
+    alias testdg = () {
+        auto tid = spawn(
+        (Tid mainTid) {
+            int i;
+            scope (failure) mainTid.send(false);
+            try
+            {
+                for (i = 1; i < 10; i++)
                 {
-                    for (i = 1; i < 10; i++)
+                    if (receiveOnly!int() != i)
                     {
-                        assertNotThrown!AssertError(assert(receiveOnly!int() == i));
+                        mainTid.send(false);
+                        break;
                     }
                 }
-                catch (OwnerTerminated e)
-                {
-
-                }
-
-                // i will advance 1 past the last value expected
-                assert(i == 4);
-            });
-
-            auto r = new Generator!int({
-                assertThrown!Exception(yield(2.0));
-                yield(); // ensure this is a no-op
-                yield(1);
-                yield(); // also once something has been yielded
-                yield(2);
-                yield(3);
-            });
-
-            foreach (e; r)
-            {
-                tid.send(e);
             }
+            catch (OwnerTerminated e)
+            {
+                // i will advance 1 past the last value expected
+                mainTid.send(i == 4);
+            }
+        }, mainTid);
+        auto r = new Generator!int(
+        {
+            assertThrown!Exception(yield(2.0));
+            yield(); // ensure this is a no-op
+            yield(1);
+            yield(); // also once something has been yielded
+            yield(2);
+            yield(3);
         });
-        scheduler = null;
-    }
 
-    testScheduler(new ThreadScheduler);
-    testScheduler(new FiberScheduler);
+        foreach (e; r)
+        {
+            tid.send(e);
+        }
+    };
+
+    changeScheduler(new ThreadScheduler);
+    scheduler.spawn(testdg);
+    assert(receiveOnly!bool());
+
+    changeScheduler(new FiberScheduler);
+    scheduler.start(testdg);
+    assert(receiveOnly!bool());
+    changeScheduler(null);
 }
 
 private
@@ -2268,6 +2273,26 @@ private
 
 version (unittest)
 {
+    void changeScheduler(Scheduler s)
+    {
+        import core.memory : GC;
+        import core.thread : Thread;
+
+        bool sleepFirst = false;
+        while (Thread.getAll().length != 1)
+        {
+            // wait for all other threads to terminate, use GC.collect to help progress threads by
+            // running finalizers (which might trigger OwnerTerminated or LinkTerminated that other
+            // threads are waiting for)
+            if (sleepFirst)
+                Thread.sleep(dur!("msecs")( 10 ));
+            else
+                sleepFirst = true;
+            GC.collect;
+        }
+        scheduler = s;
+    }
+
     import std.stdio;
     import std.typecons : tuple, Tuple;
 
@@ -2313,9 +2338,9 @@ version (unittest)
 
     @system unittest
     {
-        scheduler = new ThreadScheduler;
+        changeScheduler(new ThreadScheduler);
         simpleTest();
-        scheduler = null;
+        changeScheduler(null);
     }
 }
 
