@@ -21,7 +21,8 @@ install_deps() {
     fi
 
     for i in {0..4}; do
-        if curl -fsS -A "$CURL_USER_AGENT" --max-time 5 https://dlang.org/install.sh -O; then
+        if curl -fsS -A "$CURL_USER_AGENT" --max-time 5 https://dlang.org/install.sh -O ||
+           curl -fsS -A "$CURL_USER_AGENT" --max-time 5 https://nightlies.dlang.org/install.sh -O ; then
             break
         elif [ $i -ge 4 ]; then
             sleep $((1 << $i))
@@ -56,12 +57,13 @@ clone() {
 setup_repos()
 {
     # set a default in case we run into rate limit restrictions
-    local base_branch="master"
+    local base_branch=""
     if [ -n "${CIRCLE_PR_NUMBER:-}" ]; then
-        base_branch=$(curl -fsSL https://api.github.com/repos/dlang/phobos/pulls/$CIRCLE_PR_NUMBER | jq -r '.base.ref')
+        base_branch=$((curl -fsSL https://api.github.com/repos/dlang/phobos/pulls/$CIRCLE_PR_NUMBER || echo) | jq -r '.base.ref')
     else
         base_branch=$CIRCLE_BRANCH
     fi
+    base_branch=${base_branch:-"master"}
 
     # merge upstream branch with changes, s.t. we check with the latest changes
     if [ -n "${CIRCLE_PR_NUMBER:-}" ]; then
