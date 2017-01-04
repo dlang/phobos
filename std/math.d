@@ -5326,28 +5326,45 @@ bool isInfinity(X)(X x) @nogc @trusted pure nothrow
  * Same as ==, except that positive and negative zero are not identical,
  * and two $(NAN)s are identical if they have the same 'payload'.
  */
-bool isIdentical(real x, real y) @trusted pure nothrow @nogc
+bool isIdentical(T1, T2)(T1 x, T2 y) @trusted pure nothrow @nogc
+    if (isFloatingPoint!T1 && isFloatingPoint!T2)
 {
-    // We're doing a bitwise comparison so the endianness is irrelevant.
-    long*   pxs = cast(long *)&x;
-    long*   pys = cast(long *)&y;
-    alias F = floatTraits!(real);
-    static if (F.realFormat == RealFormat.ieeeDouble)
+    alias T = CommonType!(T1, T2);
+    alias F = floatTraits!(T);
+    static if (F.realFormat == RealFormat.ieeeSingle)
     {
-        return pxs[0] == pys[0];
-    }
-    else static if (F.realFormat == RealFormat.ieeeQuadruple
-                 || F.realFormat == RealFormat.ibmExtended)
-    {
-        return pxs[0] == pys[0] && pxs[1] == pys[1];
+        return isIdentical!(double, double)(x, y); //BUG_13457 workaround
     }
     else
     {
-        ushort* pxe = cast(ushort *)&x;
-        ushort* pye = cast(ushort *)&y;
-        return pxe[4] == pye[4] && pxs[0] == pys[0];
+        // We're doing a bitwise comparison so the endianness is irrelevant.
+        long*   pxs = cast(long *)&x;
+        long*   pys = cast(long *)&y;
+        static if (F.realFormat == RealFormat.ieeeDouble)
+        {
+            return pxs[0] == pys[0];
+        }
+        else static if (F.realFormat == RealFormat.ieeeQuadruple
+                     || F.realFormat == RealFormat.ibmExtended)
+        {
+            return pxs[0] == pys[0] && pxs[1] == pys[1];
+        }
+        else
+        {
+            ushort* pxe = cast(ushort *)&x;
+            ushort* pye = cast(ushort *)&y;
+            return pxe[4] == pye[4] && pxs[0] == pys[0];
+        }        
     }
 }
+
+//BUG_13457 check
+unittest {
+    float fn1 = NaN(0xABC);
+    float fn2 = NaN(0xABC);
+    assert(isIdentical(fn1, fn2));
+}
+
 
 /*********************************
  * Return 1 if sign bit of e is set, 0 if not.
