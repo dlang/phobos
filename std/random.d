@@ -901,6 +901,10 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     assert(gen.front == 14514284786278117030uL);
     popFrontN(gen, 9999);
     assert(gen.front == 9981545732273789042uL);
+    try { gen.seed(iota(312uL)); } catch (Exception) { assert(false); }
+    assert(gen.front == 14660652410669508483uL);
+    popFrontN(gen, 9999);
+    assert(gen.front == 15956361063660440239uL);
 }
 
 @safe unittest
