@@ -1993,13 +1993,20 @@ Target parse(Target, Source)(ref Source s)
         enum char maxLastDigit = Target.min < 0 ? 7 : 5;
         uint c;
 
-        if (s.empty)
+        static if (isNarrowString!Source)
+        {
+            import std.string : representation, assumeUTF;
+            auto source = s.representation;
+        }
+        else
+        {
+            alias source = s;
+        }
+
+        if (source.empty)
             goto Lerr;
 
-        static if (isAutodecodableString!Source)
-            c = s[0];
-        else
-            c = s.front;
+        c = source.front;
 
         static if (Target.min < 0)
         {
@@ -2009,18 +2016,12 @@ Target parse(Target, Source)(ref Source s)
                     sign = true;
                     goto case '+';
                 case '+':
-                    static if (isAutodecodableString!Source)
-                        s = s[1 .. $];
-                    else
-                        s.popFront();
+                    source.popFront();
 
-                    if (s.empty)
+                    if (source.empty)
                         goto Lerr;
 
-                    static if (isAutodecodableString!Source)
-                        c = s[0];
-                    else
-                        c = s.front;
+                    c = source.front;
 
                     break;
 
@@ -2033,17 +2034,11 @@ Target parse(Target, Source)(ref Source s)
         {
             Target v = cast(Target)c;
 
-            static if (isAutodecodableString!Source)
-                s = s[1 .. $];
-            else
-                s.popFront();
+            source.popFront();
 
-            while (!s.empty)
+            while (!source.empty)
             {
-                static if (isAutodecodableString!Source)
-                    c = cast(typeof(c)) (s[0] - '0');
-                else
-                    c = cast(typeof(c)) (s.front - '0');
+                c = cast(typeof(c)) (source.front - '0');
 
                 if (c > 9)
                     break;
@@ -2055,10 +2050,7 @@ Target parse(Target, Source)(ref Source s)
                     // the most negative value:
                     v = cast(Target) (v * 10 + c);
 
-                    static if (isAutodecodableString!Source)
-                        s = s[1 .. $];
-                    else
-                        s.popFront();
+                    source.popFront();
                 }
                 else
                     throw new ConvOverflowException("Overflow in integral conversion");
@@ -2066,10 +2058,17 @@ Target parse(Target, Source)(ref Source s)
 
             if (sign)
                 v = -v;
+
+            static if (isNarrowString!Source)
+                s = source.assumeUTF;
+
             return v;
         }
 Lerr:
-        throw convError!(Source, Target)(s);
+        static if (isNarrowString!Source)
+            throw convError!(Source, Target)(source.assumeUTF);
+        else
+            throw convError!(Source, Target)(source);
     }
 }
 
