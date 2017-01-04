@@ -4927,7 +4927,7 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
 }
 
 ///
-@trusted @system unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
