@@ -47,7 +47,7 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
  * Authors:
  * Johannes Pfau
  *
- * Source:    $(PHOBOSSRC std/_digest/_digest.d)
+ * Source:    $(PHOBOSSRC std/_digest/_package.d)
  *
  * CTFE:
  * Digests do not work in CTFE
@@ -61,7 +61,7 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
-module std.digest.digest;
+module std.digest;
 
 public import std.ascii : LetterCase;
 import std.meta : allSatisfy;
