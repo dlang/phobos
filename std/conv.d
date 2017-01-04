@@ -2543,11 +2543,11 @@ Target parse(Target, Source)(ref Source p)
 
     enforce(!p.empty, bailOut());
 
-    char sign = 0;                       /* indicating +                 */
+    bool sign = false;
     switch (p.front)
     {
     case '-':
-        sign++;
+        sign = true;
         p.popFront();
         enforce(!p.empty, bailOut());
         if (toLower(p.front) == 'i')
