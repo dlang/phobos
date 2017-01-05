@@ -3387,6 +3387,15 @@ package void skipWS(R)(ref R r)
  * Parses an array from a string given the left bracket (default $(D
  * '[')), right bracket (default $(D ']')), and element separator (by
  * default $(D ',')). A trailing separator is allowed.
+ *
+ * Params:
+ *     s = The string to parse
+ *     lbracket = the character that starts the array
+ *     rbracket = the character that ends the array
+ *     comma = the character that separates the elements of the array
+ *
+ * Returns:
+ *     An array of type `Target`
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
     if (isSomeString!Source && !is(Source == enum) &&
@@ -3419,6 +3428,18 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     parseCheck!s(rbracket);
 
     return result.data;
+}
+
+///
+@safe pure unittest
+{
+    auto s1 = `[['h', 'e', 'l', 'l', 'o'], "world"]`;
+    auto a1 = parse!(string[])(s1);
+    assert(a1 == ["hello", "world"]);
+
+    auto s2 = `["aaa", "bbb", "ccc"]`;
+    auto a2 = parse!(string[])(s2);
+    assert(a2 == ["aaa", "bbb", "ccc"]);
 }
 
 @safe unittest // Bugzilla 9615
@@ -3465,17 +3486,6 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
 
     ia2 = to!(typeof(ia2))(s);
     assert( ia == ia2);
-}
-
-@safe pure unittest
-{
-    auto s1 = `[['h', 'e', 'l', 'l', 'o'], "world"]`;
-    auto a1 = parse!(string[])(s1);
-    assert(a1 == ["hello", "world"]);
-
-    auto s2 = `["aaa", "bbb", "ccc"]`;
-    auto a2 = parse!(string[])(s2);
-    assert(a2 == ["aaa", "bbb", "ccc"]);
 }
 
 @safe pure unittest
