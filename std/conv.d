@@ -3389,7 +3389,7 @@ package void skipWS(R)(ref R r)
  * default $(D ',')). A trailing separator is allowed.
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-    if (isExactSomeString!Source &&
+    if (isSomeString!Source && !is(Source == enum) &&
         isDynamicArray!Target && !is(Target == enum))
 {
     Target result;
@@ -3594,7 +3594,7 @@ Lfewerr:
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[',
                              dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
-    if (isExactSomeString!Source &&
+    if (isSomeString!Source && !is(Source == enum) &&
         isAssociativeArray!Target && !is(Target == enum))
 {
     alias KeyType = typeof(Target.init.keys[0]);
