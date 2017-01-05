@@ -3392,7 +3392,9 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     if (isSomeString!Source && !is(Source == enum) &&
         isDynamicArray!Target && !is(Target == enum))
 {
-    Target result;
+    import std.array : appender;
+
+    auto result = appender!Target();
 
     parseCheck!s(lbracket);
     skipWS(s);
@@ -3401,7 +3403,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     if (s.front == rbracket)
     {
         s.popFront();
-        return result;
+        return result.data;
     }
     for (;; s.popFront(), skipWS(s))
     {
@@ -3416,7 +3418,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     }
     parseCheck!s(rbracket);
 
-    return result;
+    return result.data;
 }
 
 @safe unittest // Bugzilla 9615
