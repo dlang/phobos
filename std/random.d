@@ -753,6 +753,7 @@ alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
     static assert(isSeedable!(Mt19937, uint));
     static assert(isSeedable!(Mt19937, typeof(map!((a) => unpredictableSeed)(repeat(0)))));
     Mt19937 gen;
+    assert(gen.front == 3499211612);
     popFrontN(gen, 9999);
     assert(gen.front == 4123659995);
 }
