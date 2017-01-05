@@ -89,6 +89,11 @@ range such that all elements in $(D back) are brought to the beginning
 of the unified range. The relative ordering of elements in $(D front)
 and $(D back), respectively, remains unchanged.
 
+The $(D bringToFront) function treats strings at the code unit
+level and it is not concerned with Unicode character integrity.
+$(D bringToFront) is designed as a function for moving elements
+in ranges, not as a string function.
+
 Performs $(BIGOH max(front.length, back.length)) evaluations of $(D
 swap).
 
@@ -111,10 +116,36 @@ See_Also:
 size_t bringToFront(InputRange, ForwardRange)(InputRange front, ForwardRange back)
     if (isInputRange!InputRange && isForwardRange!ForwardRange)
 {
+    import std.string : representation;
+
+    static if (isNarrowString!InputRange)
+    {
+        auto frontW = representation(front);
+    }
+    else
+    {
+        alias frontW = front;
+    }
+    static if (isNarrowString!ForwardRange)
+    {
+        auto backW = representation(back);
+    }
+    else
+    {
+        alias backW = back;
+    }
+
+    return bringToFrontImpl(frontW, backW);
+}
+
+private size_t bringToFrontImpl(InputRange, ForwardRange)(InputRange front, ForwardRange back)
+    if (isInputRange!InputRange && isForwardRange!ForwardRange)
+{
     import std.range : take, Take;
     import std.array : sameHead;
     enum bool sameHeadExists = is(typeof(front.sameHead(back)));
     size_t result;
+
     for (bool semidone; !front.empty && !back.empty; )
     {
         static if (sameHeadExists)
@@ -201,7 +232,6 @@ the example below, $(D r2) is a right subrange of $(D r1).
     assert(equal(list[], [ 1, 2, 3, 4, 5, 6, 7 ]));
 }
 
-
 /**
 Elements can be swapped across ranges of different types:
 */
@@ -215,6 +245,26 @@ Elements can be swapped across ranges of different types:
     bringToFront(list[], vec);
     assert(equal(list[], [ 1, 2, 3, 4 ]));
     assert(equal(vec, [ 5, 6, 7 ]));
+}
+
+/**
+Unicode integrity is not preserved:
+*/
+@safe unittest
+{
+    import std.string : representation;
+    auto ar = representation("a".dup);
+    auto br = representation("ç".dup);
+
+    bringToFront(ar, br);
+
+    auto a = cast(char[])ar;
+    auto b = cast(char[])br;
+
+    // Illegal UTF-8
+    assert(a == "\303");
+    // Illegal UTF-8
+    assert(b == "\247a");
 }
 
 @safe unittest
@@ -281,6 +331,13 @@ Elements can be swapped across ranges of different types:
         bringToFront(r1, r2) == 4 || assert(0);
         assert(equal(arr, [1, 2, 3, 4, 5, 6, 7]));
     }
+
+    // Bugzilla 16959
+    auto arr = ['4', '5', '6', '7', '1', '2', '3'];
+    auto p = bringToFront(arr[0 .. 4], arr[4 .. $]);
+
+    assert(p == arr.length - 4);
+    assert(arr == ['1', '2', '3', '4', '5', '6', '7']);
 }
 
 // Tests if types are arrays and support slice assign.
