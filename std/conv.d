@@ -1986,9 +1986,9 @@ Target parse(Target, Source)(ref Source s)
         // int or larger types
 
         static if (Target.min < 0)
-            bool sign = 0;
+            bool sign = false;
         else
-            enum bool sign = 0;
+            enum bool sign = false;
 
         enum char maxLastDigit = Target.min < 0 ? 7 : 5;
         uint c;
