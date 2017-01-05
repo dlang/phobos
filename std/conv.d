@@ -2519,13 +2519,23 @@ Target parse(Target, Source)(ref Source s)
  *     A $(LREF ConvException) if `p` is empty, if no number could be
  *     parsed, or if an overflow occurred.
  */
-Target parse(Target, Source)(ref Source p)
+Target parse(Target, Source)(ref Source source)
     if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
         isFloatingPoint!Target && !is(Target == enum))
 {
     import std.ascii : isDigit, isAlpha, toLower, toUpper, isHexDigit;
     import std.exception : enforce;
     import core.stdc.math : HUGE_VAL;
+
+    static if (isNarrowString!Source)
+    {
+        import std.string : representation, assumeUTF;
+        auto p = source.representation;
+    }
+    else
+    {
+        alias p = source;
+    }
 
     static immutable real[14] negtab =
         [ 1e-4096L,1e-2048L,1e-1024L,1e-512L,1e-256L,1e-128L,1e-64L,1e-32L,
@@ -2541,13 +2551,14 @@ Target parse(Target, Source)(ref Source p)
         return new ConvException(text(msg, " for input \"", p, "\"."), fn, ln);
     }
 
+
     enforce(!p.empty, bailOut());
 
-    char sign = 0;                       /* indicating +                 */
+    bool sign = false;
     switch (p.front)
     {
     case '-':
-        sign++;
+        sign = true;
         p.popFront();
         enforce(!p.empty, bailOut());
         if (toLower(p.front) == 'i')
@@ -2569,6 +2580,8 @@ Target parse(Target, Source)(ref Source p)
             {
                 // 'inf'
                 p.popFront();
+                static if (isNarrowString!Source)
+                    source = p.assumeUTF;
                 return sign ? -Target.infinity : Target.infinity;
             }
         }
@@ -2583,7 +2596,9 @@ Target parse(Target, Source)(ref Source p)
         p.popFront();
         if (p.empty)
         {
-            return (sign) ? -0.0 : 0.0;
+            static if (isNarrowString!Source)
+                source = p.assumeUTF;
+            return sign ? -0.0 : 0.0;
         }
 
         isHex = p.front == 'x' || p.front == 'X';
@@ -2805,6 +2820,8 @@ Target parse(Target, Source)(ref Source p)
                    new ConvException("error converting input to floating point"));
             // skip past the last 'n'
             p.popFront();
+            static if (isNarrowString!Source)
+                source = p.assumeUTF;
             return typeof(return).nan;
         }
 
@@ -2917,7 +2934,9 @@ Target parse(Target, Source)(ref Source p)
     enforce(ldval != HUGE_VAL, new ConvException("Range error"));
 
   L1:
-    return (sign) ? -ldval : ldval;
+    static if (isNarrowString!Source)
+        source = p.assumeUTF;
+    return sign ? -ldval : ldval;
 }
 
 ///
