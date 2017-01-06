@@ -33,9 +33,6 @@ The remainder of this module provides a rich set of _range creation and
 composition templates that let you construct new ranges out of existing ranges:
 
 $(BOOKTABLE ,
-    $(TR $(TD $(D $(LREF bitwise)))
-        $(TD Bitwise adapter over a integral type _range.
-    ))
     $(TR $(TD $(D $(LREF chain)))
         $(TD Concatenates several ranges into a single _range.
     ))
@@ -9854,7 +9851,7 @@ private:
     }
 }
 
-/**
+/*
 Bitwise adapter over a integral type range. Consumes the range elements bit by bit.
 
 Params:
