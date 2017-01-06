@@ -1224,8 +1224,8 @@ template ParameterDefaults(func...)
             enum get = (PT[i..i+1] __args) @trusted
             {
                 // If __args[0] is lazy, we force it to be evaluated like this.
-                PT[i] value = __args[0];
-                PT[i]* __pd_val = &value; // workaround Bugzilla 16582
+                PT[i] __pd_value = __args[0];
+                PT[i]* __pd_val = &__pd_value; // workaround Bugzilla 16582
                 return *__pd_val;
             };
             static if (is(typeof(get())))
