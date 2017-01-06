@@ -28563,7 +28563,11 @@ public:
       +/
     override long utcToTZ(long stdTime) @trusted const nothrow
     {
-        version(Posix)
+        version(Solaris)
+        {
+            return stdTime + convert!("seconds", "hnsecs")(tm_gmtoff(stdTime));
+        }
+        else version(Posix)
         {
             import core.stdc.time : localtime, tm;
             time_t unixTime = stdTimeToUnixTime(stdTime);
@@ -28795,6 +28799,26 @@ private:
         static shared bool guard;
         initOnce!guard({tzset(); return true;}());
         return instance;
+    }
+
+
+    // The Solaris version of struct tm has no tm_gmtoff field, so do it here
+    version(Solaris)
+    {
+        long tm_gmtoff(long stdTime) @trusted const nothrow
+        {
+            import core.stdc.time : localtime, gmtime, tm;
+
+            time_t unixTime = stdTimeToUnixTime(stdTime);
+            tm* buf = localtime(&unixTime);
+            tm timeInfo = *buf;
+            buf = gmtime(&unixTime);
+            tm timeInfoGmt = *buf;
+
+            return  (timeInfo.tm_sec - timeInfoGmt.tm_sec) +
+                    convert!("minutes", "seconds")(timeInfo.tm_min - timeInfoGmt.tm_min) +
+                    convert!("hours", "seconds")(timeInfo.tm_hour - timeInfoGmt.tm_hour);
+        }
     }
 }
 
