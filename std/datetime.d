@@ -28815,9 +28815,9 @@ private:
             buf = gmtime(&unixTime);
             tm timeInfoGmt = *buf;
 
-            return  (timeInfo.tm_sec-timeInfoGmt.tm_sec) +
-                    convert!("minutes", "seconds")(timeInfo.tm_min-timeInfoGmt.tm_min) +
-                    convert!("hours", "seconds")(timeInfo.tm_hour-timeInfoGmt.tm_hour);
+            return  (timeInfo.tm_sec - timeInfoGmt.tm_sec) +
+                    convert!("minutes", "seconds")(timeInfo.tm_min - timeInfoGmt.tm_min) +
+                    convert!("hours", "seconds")(timeInfo.tm_hour - timeInfoGmt.tm_hour);
         }
     }
 }
