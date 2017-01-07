@@ -6,8 +6,8 @@ according to a specified predicate. The default predicate is "a > b".
 -------
 import std.algorithm.searching : maxIndex;
 int[] a = [5, 4, 2, 1, 9, 10];
-assert(a.minIndex == 5);
+assert(a.maxIndex == 5);
 
 int[] a;
-assert(a.minIndex == -1);
+assert(a.maxIndex == -1);
 -------
