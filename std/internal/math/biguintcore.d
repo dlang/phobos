@@ -660,6 +660,7 @@ public:
     // return x % y
     static uint modInt(T)(BigUint x, T y_) pure if ( is(Unqual!T == uint) )
     {
+        import core.memory : GC;
         uint y = y_;
         assert(y!=0);
         if ((y&(-y)) == y)
@@ -672,7 +673,7 @@ public:
             uint [] wasteful = new BigDigit[x.data.length];
             wasteful[] = x.data[];
             immutable rem = multibyteDivAssign(wasteful, y, 0);
-            delete wasteful;
+            () @trusted { GC.free(wasteful.ptr); } ();
             return rem;
         }
     }
@@ -1340,6 +1341,7 @@ BigDigit [] subInt(const BigDigit[] x, ulong y) pure nothrow
 void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
     pure nothrow
 {
+    import core.memory : GC;
     assert( result.length == x.length + y.length );
     assert( y.length > 0 );
     assert( x.length >= y.length);
@@ -1451,14 +1453,14 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
             addAssignSimple(result[done .. done + y.length + chunksize], partial);
             done += chunksize;
         }
-        delete scratchbuff;
+        () @trusted { GC.free(scratchbuff.ptr); } ();
     }
     else
     {
         // Balanced. Use Karatsuba directly.
         BigDigit [] scratchbuff = new BigDigit[karatsubaRequiredBuffSize(x.length)];
         mulKaratsuba(result, x, y, scratchbuff);
-        delete scratchbuff;
+        () @trusted { GC.free(scratchbuff.ptr); } ();
     }
 }
 
@@ -1469,6 +1471,7 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
  */
 void squareInternal(BigDigit[] result, const BigDigit[] x) pure nothrow
 {
+  import core.memory : GC;
   // Squaring is potentially half a multiply, plus add the squares of
   // the diagonal elements.
   assert(result.length == 2*x.length);
@@ -1484,7 +1487,7 @@ void squareInternal(BigDigit[] result, const BigDigit[] x) pure nothrow
   // The nice thing about squaring is that it always stays balanced
   BigDigit [] scratchbuff = new BigDigit[karatsubaRequiredBuffSize(x.length)];
   squareKaratsuba(result, x, scratchbuff);
-  delete scratchbuff;
+  () @trusted { GC.free(scratchbuff.ptr); } ();
 }
 
 
@@ -1494,6 +1497,7 @@ import core.bitop : bsr;
 void divModInternal(BigDigit [] quotient, BigDigit[] remainder, const BigDigit [] u,
         const BigDigit [] v) pure nothrow
 {
+    import core.memory : GC;
     assert(quotient.length == u.length - v.length + 1);
     assert(remainder == null || remainder.length == v.length);
     assert(v.length > 1);
@@ -1533,8 +1537,7 @@ void divModInternal(BigDigit [] quotient, BigDigit[] remainder, const BigDigit [
         if (s == 0) remainder[] = un[0..vn.length];
         else multibyteShr(remainder, un[0..vn.length+1], s);
     }
-    delete un;
-    delete vn;
+    () @trusted { GC.free(un.ptr); GC.free(vn.ptr); } ();
 }
 
 pure unittest
@@ -2459,6 +2462,7 @@ void adjustRemainder(BigDigit[] quot, BigDigit[] rem, const(BigDigit)[] v,
 void blockDivMod(BigDigit [] quotient, BigDigit [] u, in BigDigit [] v)
 pure nothrow
 {
+    import core.memory : GC;
     assert(quotient.length == u.length - v.length);
     assert(v.length > 1);
     assert(u.length >= v.length);
@@ -2487,7 +2491,7 @@ pure nothrow
         m -= v.length;
     }
     recursiveDivMod(quotient[0..m], u[0..m + v.length], v, scratch);
-    delete scratch;
+    () @trusted { GC.free(scratch.ptr); } ();
 }
 
 unittest

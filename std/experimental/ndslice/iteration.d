@@ -96,6 +96,8 @@ SUBREF = $(REF_ALTTEXT $(TT $2), $2, std,experimental, ndslice, $1)$(NBSP)
 T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 T4=$(TR $(TDNW $(LREF $1)) $(TD $2) $(TD $3) $(TD $4))
 */
+/// @@@DEPRECATED_2017-04@@@
+deprecated("Please use mir-algorithm DUB package: http://github.com/libmir/mir-algorithm")
 module std.experimental.ndslice.iteration;
 
 import std.traits;
@@ -1035,8 +1037,9 @@ template dropBackExactly(Dimensions...)
 {
     static if (!allSatisfy!(isSize_t, Dimensions))
         alias dropBackExactly = .dropBackExactly!(staticMap!(toSize_t, Dimensions));
-    else
-    @fmb Slice!(N, Range) dropBackExactly(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
+else
+    @fmb Slice!(N, Range) dropBackExactly(size_t N, Range)(Slice!(N, Range) slice,
+                                                           Repeat!(Dimensions.length, size_t) ns)
     body
     {
         foreach (i, dimension; Dimensions)

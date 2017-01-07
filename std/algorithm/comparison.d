@@ -237,6 +237,7 @@ Note: $(D castSwitch) can only be used with object types.
 auto castSwitch(choices...)(Object switchObject)
 {
     import core.exception : SwitchError;
+    import std.format : format;
 
     // Check to see if all handlers return void.
     enum areAllHandlersVoidResult = {
@@ -494,6 +495,23 @@ auto castSwitch(choices...)(Object switchObject)
                            )());
 }
 
+@system unittest
+{
+    interface I { }
+    class B : I { }
+    class C : I { }
+
+    assert((new B()).castSwitch!(
+            (B b) => "class B",
+            (I i) => "derived from I",
+    ) == "class B");
+
+    assert((new C()).castSwitch!(
+            (B b) => "class B",
+            (I i) => "derived from I",
+    ) == "derived from I");
+}
+
 /** Clamps a value into the given bounds.
 
 This functions is equivalent to $(D max(lower, min(upper,val))).
@@ -710,10 +728,15 @@ Compares two ranges for equality, as defined by predicate $(D pred)
 */
 template equal(alias pred = "a == b")
 {
+    enum isEmptyRange(R) =
+        isInputRange!R && __traits(compiles, {static assert(R.empty);});
+
+    enum hasFixedLength(T) = hasLength!T || isNarrowString!T;
+
     /++
-    This function compares to ranges for equality. The ranges may have
-    different element types, as long as $(D pred(a, b)) evaluates to $(D bool)
-    for $(D a) in $(D r1) and $(D b) in $(D r2).
+    Compares two ranges for equality. The ranges may have
+    different element types, as long as $(D pred(r1.front, r2.front))
+    evaluates to $(D bool).
     Performs $(BIGOH min(r1.length, r2.length)) evaluations of $(D pred).
 
     Params:
@@ -721,17 +744,31 @@ template equal(alias pred = "a == b")
         r2 = The second range to be compared.
 
     Returns:
-        $(D true) if and only if the two ranges compare equal element
+        $(D true) if and only if the two ranges compare _equal element
         for element, according to binary predicate $(D pred).
 
     See_Also:
         $(HTTP sgi.com/tech/stl/_equal.html, STL's _equal)
     +/
     bool equal(Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!Range1 && isInputRange!Range2 && is(typeof(binaryFun!pred(r1.front, r2.front))))
+    if (isInputRange!Range1 && isInputRange!Range2 &&
+        is(typeof(binaryFun!pred(r1.front, r2.front))))
     {
-        //Start by detecting default pred and compatible dynamicarray.
-        static if (is(typeof(pred) == string) && pred == "a == b" &&
+        static assert(!(isInfinite!Range1 && isInfinite!Range2),
+            "Both ranges are known to be infinite");
+
+        //No pred calls necessary
+        static if (isEmptyRange!Range1 || isEmptyRange!Range2)
+        {
+            return r1.empty && r2.empty;
+        }
+        else static if ((isInfinite!Range1 && hasFixedLength!Range2) ||
+            (hasFixedLength!Range1 && isInfinite!Range2))
+        {
+            return false;
+        }
+        //Detect default pred and compatible dynamic array
+        else static if (is(typeof(pred) == string) && pred == "a == b" &&
             isArray!Range1 && isArray!Range2 && is(typeof(r1 == r2)))
         {
             return r1 == r2;
@@ -746,16 +783,12 @@ template equal(alias pred = "a == b")
 
             static if (isAutodecodableString!Range1)
             {
-                auto codeUnits = r1.byCodeUnit;
-                alias other = r2;
+                return equal(r1.byCodeUnit, r2);
             }
             else
             {
-                auto codeUnits = r2.byCodeUnit;
-                alias other = r1;
+                return equal(r2.byCodeUnit, r1);
             }
-
-            return equal(codeUnits, other);
         }
         //Try a fast implementation when the ranges have comparable lengths
         else static if (hasLength!Range1 && hasLength!Range2 && is(typeof(r1.length == r2.length)))
@@ -765,7 +798,7 @@ template equal(alias pred = "a == b")
             if (len1 != len2) return false; //Short circuit return
 
             //Lengths are the same, so we need to do an actual comparison
-            //Good news is we can sqeeze out a bit of performance by not checking if r2 is empty
+            //Good news is we can squeeze out a bit of performance by not checking if r2 is empty
             for (; !r1.empty; r1.popFront(), r2.popFront())
             {
                 if (!binaryFun!(pred)(r1.front, r2.front)) return false;
@@ -780,7 +813,8 @@ template equal(alias pred = "a == b")
                 if (r2.empty) return false;
                 if (!binaryFun!(pred)(r1.front, r2.front)) return false;
             }
-            return r2.empty;
+            static if (!isInfinite!Range1)
+                return r2.empty;
         }
     }
 }
@@ -880,9 +914,13 @@ range of range (of range...) comparisons.
     cir = new ReferenceInputRange!int([1, 2, 8, 1]);
     assert(!equal(cir, cfr));
 
-    //Test with an infinte range
-    ReferenceInfiniteForwardRange!int ifr = new ReferenceInfiniteForwardRange!int;
+    //Test with an infinite range
+    auto ifr = new ReferenceInfiniteForwardRange!int;
     assert(!equal(a, ifr));
+    assert(!equal(ifr, a));
+    //Test InputRange without length
+    assert(!equal(ifr, cir));
+    assert(!equal(cir, ifr));
 }
 
 @safe pure unittest
@@ -895,6 +933,27 @@ range of range (of range...) comparisons.
     assert(equal("æøå"w, "æøå".byWchar));
     assert(equal("æøå".byDchar, "æøå"d));
     assert(equal("æøå"d, "æøå".byDchar));
+}
+
+@safe pure unittest
+{
+    struct R(bool _empty) {
+        enum empty = _empty;
+        @property char front(){assert(0);}
+        void popFront(){assert(0);}
+    }
+    alias I = R!false;
+    static assert(!__traits(compiles, I().equal(I())));
+    // strings have fixed length so don't need to compare elements
+    assert(!I().equal("foo"));
+    assert(!"bar".equal(I()));
+
+    alias E = R!true;
+    assert(E().equal(E()));
+    assert(E().equal(""));
+    assert("".equal(E()));
+    assert(!E().equal("foo"));
+    assert(!"bar".equal(E()));
 }
 
 // MaxType
@@ -1950,6 +2009,8 @@ bool isPermutation(alias pred = "a == b", Range1, Range2)
 ///
 @safe pure unittest
 {
+    import std.typecons : Yes;
+
     assert(isPermutation([1, 2, 3], [3, 2, 1]));
     assert(isPermutation([1.1, 2.3, 3.5], [2.3, 3.5, 1.1]));
     assert(isPermutation("abc", "bca"));

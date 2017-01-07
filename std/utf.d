@@ -3168,6 +3168,8 @@ auto ref byCodeUnit(R)(R r)
 ///
 @safe unittest
 {
+    import std.range.primitives;
+
     auto r = "Hello, World!".byCodeUnit();
     static assert(hasLength!(typeof(r)));
     static assert(hasSlicing!(typeof(r)));
@@ -3527,13 +3529,12 @@ int impureVariable;
  *
  * Params:
  *      C = `char`, `wchar`, or `dchar`
- *      r = input range of characters, or array of characters
  * Returns:
- *      A forward range if r is a range and not auto-decodable, as defined by
+ *      A forward range if `R` is a range and not auto-decodable, as defined by
  *      $(REF isAutodecodableString, std, traits), and if the base range is
  *      also a forward range.
  *
- *      Or, if r is a range and it is auto-decodable and
+ *      Or, if `R` is a range and it is auto-decodable and
  *      `is(ElementEncodingType!typeof(r) == C)`, then the range is passed
  *      to $(LREF byCodeUnit).
  *

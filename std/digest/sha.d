@@ -739,7 +739,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
             if (inputLen - i)
                 (&buffer[index])[0 .. inputLen-i] = (&input[i])[0 .. inputLen-i];
         }
-        ///
+
         unittest
         {
             typeof(this) dig;

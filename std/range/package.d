@@ -262,12 +262,12 @@ if (isBidirectionalRange!(Unqual!Range))
 
             static if (hasAssignableElements!R)
             {
-                @property auto front(ElementType!R val)
+                @property void front(ElementType!R val)
                 {
                     source.back = val;
                 }
 
-                @property auto back(ElementType!R val)
+                @property void back(ElementType!R val)
                 {
                     source.front = val;
                 }
@@ -317,16 +317,17 @@ if (isBidirectionalRange!(Unqual!Range))
 
 
 ///
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     import std.algorithm.comparison : equal;
-    int[] a = [ 1, 2, 3, 4, 5 ];
-    assert(equal(retro(a), [ 5, 4, 3, 2, 1 ][]));
-    assert(retro(a).source is a);
-    assert(retro(retro(a)) is a);
+    int[5] a = [ 1, 2, 3, 4, 5 ];
+    int[5] b = [ 5, 4, 3, 2, 1 ];
+    assert(equal(retro(a[]), b[]));
+    assert(retro(a[]).source is a[]);
+    assert(retro(retro(a[])) is a[]);
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     static assert(isBidirectionalRange!(typeof(retro("hello"))));
@@ -352,7 +353,7 @@ if (isBidirectionalRange!(Unqual!Range))
    auto r = retro(foo);
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.internal.test.dummyrange : AllDummyRanges, propagatesRangeType,
         ReturnBy;
@@ -413,16 +414,17 @@ if (isBidirectionalRange!(Unqual!Range))
     }
 }
 
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     import std.algorithm.comparison : equal;
     auto LL = iota(1L, 4L);
     auto r = retro(LL);
-    assert(equal(r, [3L, 2L, 1L]));
+    long[3] excepted = [3, 2, 1];
+    assert(equal(r, excepted[]));
 }
 
 // Issue 12662
-@safe @nogc unittest
+pure @safe nothrow @nogc unittest
 {
     int[3] src = [1,2,3];
     int[] data = src[];
@@ -491,7 +493,7 @@ body
                         slack = 0;
                     }
                     if (!slack) return;
-                    static if (isRandomAccessRange!R && hasSlicing!R)
+                    static if (isRandomAccessRange!R && hasLength!R && hasSlicing!R)
                     {
                         source = source[0 .. source.length - slack];
                     }
@@ -539,7 +541,7 @@ body
 
             static if (hasAssignableElements!R)
             {
-                @property auto front(ElementType!R val)
+                @property void front(ElementType!R val)
                 {
                     source.front = val;
                 }
@@ -574,7 +576,7 @@ body
 
                 static if (hasAssignableElements!R)
                 {
-                    @property auto back(ElementType!R val)
+                    @property void back(ElementType!R val)
                     {
                         eliminateSlackElements();
                         source.back = val;
@@ -637,7 +639,7 @@ body
 }
 
 ///
-unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -646,22 +648,32 @@ unittest
     assert(stride(stride(a, 2), 3) == stride(a, 6));
 }
 
-nothrow @nogc unittest
+pure @safe nothrow @nogc unittest
 {
     int[4] testArr = [1,2,3,4];
     //just checking it compiles
     auto s = testArr[].stride(2);
 }
 
-debug unittest
+debug pure nothrow unittest
 {//check the contract
     int[4] testArr = [1,2,3,4];
+    bool passed = false;
+    scope (success) assert(passed);
     import core.exception : AssertError;
-    import std.exception : assertThrown;
-    assertThrown!AssertError(testArr[].stride(0));
+    //std.exception.assertThrown won't do because it can't infer nothrow
+    // @@@BUG@@@ 12647
+    try
+    {
+        auto unused = testArr[].stride(0);
+    }
+    catch (AssertError unused)
+    {
+        passed = true;
+    }
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges, propagatesRangeType,
@@ -797,7 +809,7 @@ debug unittest
     }
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1142,7 +1154,7 @@ if (Ranges.length > 0 &&
 }
 
 ///
-unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1159,7 +1171,7 @@ unittest
  * Range primitives are carried over to the returned range if
  * all of the ranges provide them
  */
-unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.sorting : sort;
     import std.algorithm.comparison : equal;
@@ -1177,7 +1189,7 @@ unittest
     assert(arr3.equal([7, 8, 9]));
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges, dummyLength,
@@ -1276,7 +1288,7 @@ unittest
     }
 }
 
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     class Foo{}
     immutable(Foo)[] a;
@@ -1762,7 +1774,7 @@ Returns:
     A forward range with length
  */
 auto radial(Range, I)(Range r, I startingIndex)
-if (isRandomAccessRange!(Unqual!Range) && hasLength!(Unqual!Range) && isIntegral!I)
+if (isRandomAccessRange!(Unqual!Range) && hasLength!(Unqual!Range) && hasSlicing!(Unqual!Range) && isIntegral!I)
 {
     if (startingIndex != r.length) ++startingIndex;
     return roundRobin(retro(r[0 .. startingIndex]), r[startingIndex .. r.length]);
@@ -1770,7 +1782,7 @@ if (isRandomAccessRange!(Unqual!Range) && hasLength!(Unqual!Range) && isIntegral
 
 /// Ditto
 auto radial(R)(R r)
-if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R))
+if (isRandomAccessRange!(Unqual!R) && hasLength!(Unqual!R) && hasSlicing!(Unqual!R))
 {
     return .radial(r, (r.length - !r.empty) / 2);
 }
@@ -1850,18 +1862,27 @@ Lazily takes only up to `n` elements of a range. This is
 particularly useful when using with infinite ranges.
 
 Unlike $(LREF takeExactly), `take` does not require that there
-are `n` or more elements in `r`. As a consequence, length
-information is not applied to the result unless `r` also has
+are `n` or more elements in `input`. As a consequence, length
+information is not applied to the result unless `input` also has
 length information.
 
 Params:
-    r = an input range to iterate over up to `n` times
+    input = an input range to iterate over up to `n` times
     n = the number of elements to take
 
 Returns:
     At minimum, an input range. If the range offers random access
     and `length`, `take` offers them as well.
  */
+Take!R take(R)(R input, size_t n)
+if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R) &&
+    !is(R T == Take!T))
+{
+    import std.algorithm.comparison : min;
+    return input[0 .. min(n, input.length)];
+}
+
+/// ditto
 struct Take(Range)
 if (isInputRange!(Unqual!Range) &&
     //take _cannot_ test hasSlicing on infinite ranges, because hasSlicing uses
@@ -1911,7 +1932,7 @@ if (isInputRange!(Unqual!Range) &&
 
     static if (hasAssignableElements!R)
         /// ditto
-        @property auto front(ElementType!R v)
+        @property void front(ElementType!R v)
         {
             assert(!empty,
                 "Attempting to assign to the front of an empty "
@@ -1999,7 +2020,7 @@ if (isInputRange!(Unqual!Range) &&
         static if (hasAssignableElements!R)
         {
             /// ditto
-            @property auto back(ElementType!R v)
+            @property void back(ElementType!R v)
             {
                 // This has to return auto instead of void because of Bug 4706.
                 assert(!empty,
@@ -2051,17 +2072,6 @@ if (isInputRange!(Unqual!Range) &&
     }
 }
 
-/// ditto
-Take!R take(R)(R input, size_t n)
-if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R) &&
-    !is(R T == Take!T))
-{
-    // @@@BUG@@@
-    //return input[0 .. min(n, $)];
-    import std.algorithm.comparison : min;
-    return input[0 .. min(n, input.length)];
-}
-
 /**
 This template simply aliases itself to R and is useful for consistency in
 generic code.
@@ -2074,7 +2084,7 @@ if (isInputRange!(Unqual!R) &&
 }
 
 ///
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2090,7 +2100,7 @@ if (isInputRange!(Unqual!R) &&
  * range (unlike $(LREF takeExactly), which will cause an assertion failure if
  * the range ends prematurely):
  */
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2115,7 +2125,7 @@ if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) 
     return Take!R(input, n);
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges;
@@ -2132,16 +2142,17 @@ if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) 
     static assert(is(typeof(s) == int[]));
 
     // Test using narrow strings.
+    import std.exception : assumeWontThrow;
+
     auto myStr = "This is a string.";
     auto takeMyStr = take(myStr, 7);
-    assert(equal(takeMyStr, "This is"));
-
+    assert(assumeWontThrow(equal(takeMyStr, "This is")));
     // Test fix for bug 5052.
     auto takeMyStrAgain = take(takeMyStr, 4);
-    assert(equal(takeMyStrAgain, "This"));
+    assert(assumeWontThrow(equal(takeMyStrAgain, "This")));
     static assert (is (typeof(takeMyStrAgain) == typeof(takeMyStr)));
     takeMyStrAgain = take(takeMyStr, 10);
-    assert(equal(takeMyStrAgain, "This is"));
+    assert(assumeWontThrow(equal(takeMyStrAgain, "This is")));
 
     foreach (DummyType; AllDummyRanges)
     {
@@ -2180,7 +2191,7 @@ if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) 
     static assert(is(Take!(typeof(myRepeat))));
 }
 
-@safe nothrow @nogc unittest
+pure @safe nothrow @nogc unittest
 {
     //check for correct slicing of Take on an infinite range
     import std.algorithm.comparison : equal;
@@ -2190,7 +2201,7 @@ if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) 
                 .equal(iota(start, stop)));
 }
 
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     // Check that one can declare variables of all Take types,
     // and that they match the return type of the corresponding
@@ -2207,7 +2218,7 @@ if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) 
     t3 = take(t2, 1);
 }
 
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     alias R1 = typeof(repeat(1));
     alias R2 = typeof(cycle([1]));
@@ -2217,14 +2228,14 @@ if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) 
     static assert(isBidirectionalRange!TR2);
 }
 
-@safe unittest //12731
+pure @safe nothrow @nogc unittest //12731
 {
     auto a = repeat(1);
     auto s = a[1 .. 5];
     s = s[1 .. 3];
 }
 
-@safe unittest //13151
+pure @safe nothrow @nogc unittest //13151
 {
     import std.algorithm.comparison : equal;
 
@@ -2324,7 +2335,7 @@ if (isInputRange!R)
 }
 
 ///
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2338,7 +2349,7 @@ if (isInputRange!R)
     assert(b.back == 3);
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
@@ -2357,7 +2368,7 @@ if (isInputRange!R)
     assert(equal(takeExactly(e, 3), [1, 2, 3]));
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges;
@@ -2419,7 +2430,7 @@ if (isInputRange!R)
     }
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : DummyRange, Length, RangeType, ReturnBy;
@@ -2502,7 +2513,7 @@ auto takeOne(R)(R source) if (isInputRange!R)
 }
 
 ///
-@safe unittest
+pure @safe nothrow unittest
 {
     auto s = takeOne([42, 43, 44]);
     static assert(isRandomAccessRange!(typeof(s)));
@@ -2518,7 +2529,7 @@ auto takeOne(R)(R source) if (isInputRange!R)
     assert(s.empty);
 }
 
-unittest
+pure @safe nothrow @nogc unittest
 {
     struct NonForwardRange
     {
@@ -2545,14 +2556,14 @@ auto takeNone(R)()
 }
 
 ///
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     auto range = takeNone!(int[])();
     assert(range.length == 0);
     assert(range.empty);
 }
 
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     enum ctfe = takeNone!(int[])();
     static assert(ctfe.length == 0);
@@ -2591,7 +2602,7 @@ auto takeNone(R)(R range)
 }
 
 ///
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.iteration : filter;
     assert(takeNone([42, 27, 19]).empty);
@@ -2776,7 +2787,7 @@ auto tail(Range)(Range range, size_t n)
 }
 
 ///
-pure @safe unittest
+pure @safe nothrow unittest
 {
     // tail -c n
     assert([1, 2, 3].tail(1) == [3]);
@@ -2789,12 +2800,13 @@ pure @safe unittest
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : joiner;
     import std.string : lineSplitter;
-
+    import std.exception : assumeWontThrow;
     assert("one\ntwo\nthree"
-            .lineSplitter
-            .tail(2)
-            .joiner("\n")
-            .equal("two\nthree"));
+        .lineSplitter
+        .tail(2)
+        .joiner("\n")
+        .equal("two\nthree")
+        .assumeWontThrow);
 }
 
 // @nogc prevented by @@@BUG@@@ 15408
@@ -2828,7 +2840,7 @@ pure nothrow @safe /+@nogc+/ unittest
         RangeType.Input).init.tail(5)));
 }
 
-@nogc unittest
+pure @safe nothrow @nogc unittest
 {
     static immutable input = [1, 2, 3];
     static immutable expectedOutput = [2, 3];
@@ -2993,7 +3005,7 @@ R dropBackOne(R)(R range)
 }
 
 ///
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filterBidirectional;
@@ -3007,8 +3019,9 @@ R dropBackOne(R)(R range)
     assert(a.dropBackOne() == [1, 2]);
 
     string s = "日本語";
-    assert(s.dropOne() == "本語");
-    assert(s.dropBackOne() == "日本");
+    import std.exception : assumeWontThrow;
+    assert(assumeWontThrow(s.dropOne() == "本語"));
+    assert(assumeWontThrow(s.dropBackOne() == "日本"));
 
     auto bd = filterBidirectional!"true"([1, 2, 3]);
     assert(bd.dropOne().equal([2, 3]));
@@ -3087,14 +3100,14 @@ public:
 Repeat!T repeat(T)(T value) { return Repeat!T(value); }
 
 ///
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
     assert(equal(5.repeat().take(4), [ 5, 5, 5, 5 ]));
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -3123,14 +3136,14 @@ Take!(Repeat!T) repeat(T)(T value, size_t n)
 }
 
 ///
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     import std.algorithm.comparison : equal;
 
     assert(equal(5.repeat(4), 5.repeat().take(4)));
 }
 
-@safe unittest //12007
+pure @safe nothrow unittest //12007
 {
     static class C{}
     Repeat!(immutable int) ri;
@@ -3364,7 +3377,7 @@ struct Cycle(R)
         static if (hasAssignableElements!R)
         {
             /// ditto
-            @property auto front(ElementType!R val)
+            @property void front(ElementType!R val)
             {
                 _original[_index] = val;
             }
@@ -3400,7 +3413,7 @@ struct Cycle(R)
         static if (hasAssignableElements!R)
         {
             /// ditto
-            auto opIndexAssign(ElementType!R val, size_t n)
+            void opIndexAssign(ElementType!R val, size_t n)
             {
                 _original[(n + _index) % _original.length] = val;
             }
@@ -3418,21 +3431,24 @@ struct Cycle(R)
         /// ditto
         enum opDollar = DollarToken.init;
 
-        /// ditto
-        auto opSlice(size_t i, size_t j)
-        in
+        static if (hasSlicing!R)
         {
-            assert(i <= j);
-        }
-        body
-        {
-            return this[i .. $].takeExactly(j - i);
-        }
+            /// ditto
+            auto opSlice(size_t i, size_t j)
+            in
+            {
+                assert(i <= j);
+            }
+            body
+            {
+                return this[i .. $].takeExactly(j - i);
+            }
 
-        /// ditto
-        auto opSlice(size_t i, DollarToken)
-        {
-            return typeof(this)(_original, _index + i);
+            /// ditto
+            auto opSlice(size_t i, DollarToken)
+            {
+                return typeof(this)(_original, _index + i);
+            }
         }
     }
     else
@@ -3900,7 +3916,7 @@ struct Zip(Ranges...)
         @property Zip save()
         {
             //Zip(ranges[0].save, ranges[1].save, ..., stoppingPolicy)
-            return mixin (q{Zip(%(ranges[%s]%|, %), stoppingPolicy)}.format(iota(0, R.length)));
+            return mixin (q{Zip(%(ranges[%s].save%|, %), stoppingPolicy)}.format(iota(0, R.length)));
         }
     }
 
@@ -4418,6 +4434,19 @@ pure unittest
     R r;
     auto z = zip(r, r);
     auto zz = z.save;
+}
+
+pure unittest
+{
+    import std.typecons : tuple;
+
+    auto r1 = [0,1,2];
+    auto r2 = [1,2,3];
+    auto z1 = zip(refRange(&r1), refRange(&r2));
+    auto z2 = z1.save;
+    z1.popFront();
+    assert(z1.front == tuple(1,2));
+    assert(z2.front == tuple(0,1));
 }
 
 /*
@@ -5808,7 +5837,7 @@ struct FrontTransversal(Ror,
 
     static if (hasAssignableElements!RangeType)
     {
-        @property auto front(ElementType val)
+        @property void front(ElementType val)
         {
             _input.front.front = val;
         }
@@ -5865,7 +5894,7 @@ struct FrontTransversal(Ror,
 
         static if (hasAssignableElements!RangeType)
         {
-            @property auto back(ElementType val)
+            @property void back(ElementType val)
             {
                 _input.back.front = val;
             }
@@ -6124,7 +6153,7 @@ struct Transversal(Ror,
     /// Ditto
     static if (hasAssignableElements!InnerRange)
     {
-        @property auto front(E val)
+        @property void front(E val)
         {
             _input.front[_n] = val;
         }
@@ -6182,7 +6211,7 @@ struct Transversal(Ror,
         /// Ditto
         static if (hasAssignableElements!InnerRange)
         {
-            @property auto back(E val)
+            @property void back(E val)
             {
                 _input.back[_n] = val;
             }
@@ -6608,10 +6637,13 @@ struct Indexed(Source, Indices)
             return _source[_indices[index]];
         }
 
-        /// Ditto
-        typeof(this) opSlice(size_t a, size_t b)
+        static if (hasSlicing!Indices)
         {
-            return typeof(this)(_source, _indices[a..b]);
+            /// Ditto
+            typeof(this) opSlice(size_t a, size_t b)
+            {
+                return typeof(this)(_source, _indices[a .. b]);
+            }
         }
 
 
@@ -7115,7 +7147,7 @@ struct EvenChunks(Source)
         @property auto back()
         {
             assert(!empty, "back called on empty evenChunks");
-            return _source[_chunkPos(_chunkCount - 1) .. $];
+            return _source[_chunkPos(_chunkCount - 1) .. _source.length];
         }
 
         /// Ditto
@@ -8117,7 +8149,7 @@ if (isInputRange!Range)
         if (!__ctfe)
         debug
         {
-            static if (isRandomAccessRange!Range)
+            static if (isRandomAccessRange!Range && hasLength!Range)
             {
                 import core.bitop : bsr;
                 import std.algorithm.sorting : isSorted;
@@ -8221,7 +8253,7 @@ if (isInputRange!Range)
     // of the range and then 1 for the rest, returns the index at
     // which the first 1 appears. Used internally by the search routines.
     private size_t getTransitionIndex(SearchPolicy sp, alias test, V)(V v)
-    if (sp == SearchPolicy.binarySearch && isRandomAccessRange!Range)
+    if (sp == SearchPolicy.binarySearch && isRandomAccessRange!Range && hasLength!Range)
     {
         size_t first = 0, count = _input.length;
         while (count > 0)
@@ -8449,7 +8481,7 @@ equalRange). Completes the entire search in $(BIGOH log(n)) time.
 */
     auto trisect(V)(V value)
     if (isTwoWayCompatible!(predFun, ElementType!Range, V)
-        && isRandomAccessRange!Range)
+        && isRandomAccessRange!Range && hasLength!Range)
     {
         import std.typecons : tuple;
         size_t first = 0, count = _input.length;
@@ -8845,7 +8877,7 @@ public:
     }
 
     /++ +/
-    auto opAssign(typeof(null) rhs)
+    void opAssign(typeof(null) rhs)
     {
         _range = null;
     }
@@ -9588,6 +9620,412 @@ auto refRange(R)(R* range)
     foo(r);
 }
 
+private struct Bitwise(R)
+    if (isInputRange!R && isIntegral!(ElementType!R))
+{
+private:
+    alias ElemType = ElementType!R;
+    alias UnsignedElemType = Unsigned!ElemType;
+
+    R parent;
+    enum bitsNum = ElemType.sizeof * 8;
+    size_t maskPos = bitsNum;
+
+    static if (isBidirectionalRange!R)
+    {
+        size_t backMaskPos = 1;
+    }
+
+public:
+    this()(auto ref R range)
+    {
+        parent = range;
+    }
+
+    /**
+     * Check if the range is empty
+     *
+     * Returns: a boolean true or false
+     */
+    bool empty()
+    {
+        static if (hasLength!R)
+        {
+            return length == 0;
+        }
+        else static if (isBidirectionalRange!R)
+        {
+            bool isOverlapping = parent.empty;
+            if (!parent.empty)
+            {
+                /*
+                   If we have consumed the last element of the range both from
+                   the front and the back, then the masks positions will overlap
+                 */
+                R parentCopy = parent.save;
+                parentCopy.popFront;
+                isOverlapping = parentCopy.empty && (maskPos < backMaskPos);
+            }
+            return parent.empty || isOverlapping;
+        }
+        else
+        {
+            /*
+               If we consumed the last element of the range, but not all the
+               bits in the last element
+             */
+            return parent.empty;
+        }
+    }
+
+    bool front()
+    {
+        assert(!empty);
+        return (parent.front & mask(maskPos)) != 0;
+    }
+
+    void popFront()
+    {
+        --maskPos;
+        if (maskPos == 0)
+        {
+            parent.popFront;
+            maskPos = bitsNum;
+        }
+    }
+
+    static if (hasLength!R)
+    {
+        size_t length()
+        {
+            auto len = parent.length * bitsNum - (bitsNum - maskPos);
+            static if (isBidirectionalRange!R)
+            {
+                len -= (backMaskPos - 1);
+            }
+            return len;
+        }
+
+        alias opDollar = length;
+    }
+
+    static if (isForwardRange!R)
+    {
+        typeof(this) save()
+        {
+            auto result = this;
+            result.parent = parent.save;
+            return result;
+        }
+    }
+
+    static if (isBidirectionalRange!R)
+    {
+        bool back()
+        {
+            assert(!empty);
+            return (parent.back & mask(backMaskPos)) != 0;
+        }
+
+        void popBack()
+        {
+            assert(!empty);
+            ++backMaskPos;
+            if (backMaskPos > bitsNum)
+            {
+                parent.popBack;
+                backMaskPos = 1;
+            }
+        }
+    }
+
+    static if (isRandomAccessRange!R)
+    {
+        /**
+          Return the `n`th bit within the range
+         */
+        bool opIndex(size_t n)
+        in
+        {
+            /*
+               If it does not have the length property, it means that R is
+               an infinite range
+             */
+            static if (hasLength!R)
+            {
+                assert(n < length, "Index out of bounds");
+            }
+        }
+        body
+        {
+            // If n >= maskPos, then the bit sign will be 1, otherwise 0
+            immutable sizediff_t sign = (maskPos - n - 1) >> (sizediff_t.sizeof * 8 - 1);
+            /*
+               By truncating n with maskPos bits we have skipped the remaining
+               maskPos bits in parent[0], so we need to add 1 to elemIndex.
+
+               Because bitsNum is a power of 2, n / bitsNum == n >> bitsNum.bsf
+             */
+            import core.bitop : bsf;
+            immutable size_t elemIndex = sign * (((n - maskPos) >> bitsNum.bsf) + 1);
+
+            /*
+               Since the indexing is from MSB to LSB, we need to subtract the
+               remainder from the number of bits that the element type has.
+
+               Because bitsNum is a power of 2, n % bitsNum == n & (bitsNum - 1)
+             */
+            immutable size_t elemMaskPos = (sign ^ 1) * (maskPos - n)
+                             + sign * (bitsNum - ((n - maskPos) & (bitsNum - 1)));
+
+            return (parent[elemIndex] & mask(elemMaskPos)) != 0;
+        }
+
+        /**
+          Assigns `flag` to the `n`th bit within the range
+         */
+        void opIndexAssign(bool flag, size_t n)
+        in
+        {
+            static if (hasLength!R)
+            {
+                assert(n < length, "Index out of bounds");
+            }
+        }
+        body
+        {
+            import core.bitop : bsf;
+
+            immutable sizediff_t sign = (maskPos - n - 1) >> (sizediff_t.sizeof * 8 - 1);
+            immutable size_t elemIndex = sign * (((n - maskPos) >> bitsNum.bsf) + 1);
+            immutable size_t elemMaskPos = (sign ^ 1) * (maskPos - n)
+                               + sign * (bitsNum - ((n - maskPos) & (bitsNum - 1)));
+
+            auto elem = parent[elemIndex];
+            auto elemMask = mask(elemMaskPos);
+            parent[elemIndex] = cast(UnsignedElemType)(flag * (elem | elemMask)
+                                                       + (flag ^ 1) * (elem & ~elemMask));
+        }
+
+        Bitwise!R opSlice()
+        {
+            return this.save;
+        }
+
+        Bitwise!R opSlice(size_t start, size_t end)
+        in
+        {
+            assert(start < end, "Invalid bounds: end <= start");
+        }
+        body
+        {
+            import core.bitop : bsf;
+
+            sizediff_t sign = (maskPos - start - 1) >> (sizediff_t.sizeof * 8 - 1);
+            immutable size_t startElemIndex = sign * (((start - maskPos) >> bitsNum.bsf) + 1);
+            immutable size_t startElemMaskPos = (sign ^ 1) * (maskPos - start)
+                                    + sign * (bitsNum - (start & (bitsNum - 1)));
+
+            immutable size_t sliceLen = end - start - 1;
+            sign = (maskPos - sliceLen - 1) >> (sizediff_t.sizeof * 8 - 1);
+            immutable size_t endElemIndex = sign * (((sliceLen - maskPos) >> bitsNum.bsf) + 1);
+            immutable size_t endElemMaskPos = (sign ^ 1) * (maskPos - sliceLen)
+                                  + sign * (bitsNum - ((sliceLen - maskPos) & (bitsNum - 1)));
+
+            typeof(return) result;
+            // Get the slice to be returned from the parent
+            result.parent = (parent[startElemIndex .. endElemIndex + 1]).save;
+            result.maskPos = startElemMaskPos;
+            static if (isBidirectionalRange!R)
+            {
+                result.backMaskPos = endElemMaskPos;
+            }
+            return result;
+        }
+    }
+
+private:
+    auto mask(size_t maskPos)
+    {
+        return (1UL << (maskPos - 1UL));
+    }
+}
+
+/*
+Bitwise adapter over a integral type range. Consumes the range elements bit by bit.
+
+Params:
+    R = an integral input range to iterate over
+
+Returns:
+    A `Bitwise` input range with propagated forward, bidirectional
+    and random access capabilities
+*/
+auto bitwise(R)(auto ref R range)
+    if (isInputRange!R && isIntegral!(ElementType!R))
+{
+    return Bitwise!R(range);
+}
+
+///
+@safe pure unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.format : format;
+
+    // 00000011 00001001
+    ubyte[] arr = [3, 9];
+    auto r = arr.bitwise;
+
+    // iterate through it as with any other range
+    assert(format("%(%d%)", r) == "0000001100001001");
+    assert(format("%(%d%)", r.retro).equal("0000001100001001".retro));
+
+    // set a bit
+    r[5] = 1;
+    assert(arr[0] == 7);
+}
+
+// Test all range types over all integral types
+@safe pure nothrow unittest
+{
+    import std.internal.test.dummyrange;
+
+    alias IntegralTypes = AliasSeq!(byte, ubyte, short, ushort, int, uint,
+            long, ulong);
+    foreach (IntegralType; IntegralTypes)
+    {
+        foreach (T; AllDummyRangesType!(IntegralType[]))
+        {
+            T a;
+            auto bw = Bitwise!T(a);
+
+            static if (isForwardRange!T)
+            {
+                auto bw2 = bw.save;
+            }
+
+            static if (isBidirectionalRange!T)
+            {
+                auto bw3 = bw.save;
+                auto bw4 = bw.save;
+            }
+
+            static if (hasLength!T)
+            {
+                auto bwLength = bw.length;
+                assert(bw.length == (IntegralType.sizeof * 8 * a.length));
+                static if (isForwardRange!T)
+                {
+                    assert(bw.length == bw2.length);
+                }
+            }
+
+            // Make sure front and back are not the mechanisms that modify the range
+            long numCalls = 42;
+            bool initialFrontValue;
+
+            if (!bw.empty)
+            {
+                initialFrontValue = bw.front;
+            }
+
+            while (!bw.empty && (--numCalls))
+            {
+                bw.front;
+                assert(bw.front == initialFrontValue);
+            }
+
+            /*
+               Check that empty works properly and that popFront does not get called
+               more times than it should
+             */
+            numCalls = 0;
+            while (!bw.empty)
+            {
+                ++numCalls;
+
+                static if (hasLength!T)
+                {
+                    assert(bw.length == bwLength);
+                    --bwLength;
+                }
+
+                static if (isForwardRange!T)
+                {
+                    assert(bw.front == bw2.front);
+                    bw2.popFront();
+                }
+
+                static if (isBidirectionalRange!T)
+                {
+                    assert(bw3.front == bw4.front);
+                    bw3.popBack();
+                    bw4.popBack();
+                }
+                bw.popFront();
+            }
+
+            auto rangeLen = numCalls / (IntegralType.sizeof * 8);
+            assert(numCalls == (IntegralType.sizeof * 8 * rangeLen));
+            assert(bw.empty);
+            static if (isForwardRange!T)
+            {
+                assert(bw2.empty);
+            }
+
+            static if (isBidirectionalRange!T)
+            {
+                assert(bw3.empty);
+            }
+        }
+    }
+}
+
+// Test opIndex and opSlice
+@system unittest
+{
+    alias IntegralTypes = AliasSeq!(byte, ubyte, short, ushort, int, uint,
+            long, ulong);
+    foreach (IntegralType; IntegralTypes)
+    {
+        size_t bitsNum = IntegralType.sizeof * 8;
+
+        auto first = cast(IntegralType)(1);
+
+        // 2 ^ (bitsNum - 1)
+        auto second = cast(IntegralType)(cast(IntegralType)(1) << (bitsNum - 2));
+
+        IntegralType[] a = [first, second];
+        auto bw = Bitwise!(IntegralType[])(a);
+
+        // Check against lsb of a[0]
+        assert(bw[bitsNum - 1] == true);
+        // Check against msb - 1 of a[1]
+        assert(bw[bitsNum + 1] == true);
+
+        bw.popFront();
+        assert(bw[bitsNum] == true);
+
+        import core.exception : Error;
+        import std.exception : assertThrown;
+
+        // Check out of bounds error
+        assertThrown!Error(bw[2 * bitsNum - 1]);
+
+        bw[2] = true;
+        assert(bw[2] == true);
+        bw.popFront();
+        assert(bw[1] == true);
+
+        auto bw2 = bw[0 .. $ - 5];
+        auto bw3 = bw2[];
+        assert(bw2.length == (bw.length - 5));
+        assert(bw2.length == bw3.length);
+        bw2.popFront();
+        assert(bw2.length != bw3.length);
+    }
+}
 
 /*********************************
  * An OutputRange that discards the data it receives.
@@ -10095,7 +10533,7 @@ auto padRight(R, E)(R r, E e, size_t n) if (
             }
         }
 
-        static if (isRandomAccessRange!R)
+        static if (isRandomAccessRange!R && hasLength!R)
         {
             E opIndex(size_t index)
             {
@@ -10105,7 +10543,7 @@ auto padRight(R, E)(R r, E e, size_t n) if (
             }
         }
 
-        static if (hasSlicing!R)
+        static if (hasSlicing!R && hasLength!R)
         {
             auto opSlice(size_t a, size_t b)
             {
@@ -10117,7 +10555,7 @@ auto padRight(R, E)(R r, E e, size_t n) if (
                     b <= length,
                     "Attempting to slice using an out of bounds index on a padRight"
                 );
-                return Result((b <= data.length) ? data[a .. b] : data[a .. $],
+                return Result((b <= data.length) ? data[a .. b] : data[a .. data.length],
                     element, b - a);
             }
 

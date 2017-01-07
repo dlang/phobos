@@ -1009,7 +1009,8 @@ private:
 
                 if (comp(next.front, r.front))
                 {
-                    do {
+                    do
+                    {
                         next.popFront();
                         if (next.empty) return;
                     } while (comp(next.front, r.front));
@@ -1298,8 +1299,8 @@ See_Also:
 auto setUnion(alias less = "a < b", Rs...)
 (Rs rs)
 {
-    import std.algorithm.iteration: uniq;
-    import std.algorithm.sorting: merge;
+    import std.algorithm.iteration : uniq;
+    import std.algorithm.sorting : merge;
     return merge!(less, Rs)(rs).uniq;
 }
 
@@ -1330,7 +1331,7 @@ auto setUnion(alias less = "a < b", Rs...)
 @safe unittest
 {
     // save
-    import std.range: dropOne;
+    import std.range : dropOne;
     int[] a = [0, 1, 2];
     int[] b = [0, 3];
     auto arr = a.setUnion(b);
@@ -1353,7 +1354,7 @@ auto setUnion(alias less = "a < b", Rs...)
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
-    import std.range: iota;
+    import std.range : iota;
 
     auto dummyResult1 = [1, 1.5, 2, 3, 4, 5, 5.5, 6, 7, 8, 9, 10];
     auto dummyResult2 = iota(1, 11);

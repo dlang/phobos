@@ -734,6 +734,7 @@ auto driveName(R)(R path)
 ///
 @safe unittest
 {
+    import std.range : empty;
     version (Posix)  assert (driveName("c:/foo").empty);
     version (Windows)
     {
@@ -929,6 +930,7 @@ auto extension(R)(R path)
 ///
 @safe unittest
 {
+    import std.range : empty;
     assert (extension("file").empty);
     assert (extension("file.") == ".");
     assert (extension("file.ext"w) == ".ext");
@@ -1008,15 +1010,10 @@ auto stripExtension(R)(auto ref R path)
 }
 
 
-/** Params:
-        path = A path name
-        ext = The new extension
+/** Sets or replaces an extension.
 
-    Returns: A string containing the _path given by $(D path), but where
-    the extension has been set to $(D ext).
-
-    If the filename already has an extension, it is replaced.   If not, the
-    extension is simply appended to the filename.  Including a leading dot
+    If the filename already has an extension, it is replaced. If not, the
+    extension is simply appended to the filename. Including a leading dot
     in $(D ext) is optional.
 
     If the extension is empty, this function is equivalent to
@@ -1025,6 +1022,13 @@ auto stripExtension(R)(auto ref R path)
     This function normally allocates a new string (the possible exception
     being the case when path is immutable and doesn't already have an
     extension).
+
+    Params:
+        path = A path name
+        ext = The new extension
+
+    Returns: A string containing the _path given by $(D path), but where
+    the extension has been set to $(D ext).
 
     See_Also:
         $(LREF withExtension) which does not allocate and returns a lazy range.
@@ -2543,7 +2547,7 @@ else version (Posix)
 
 
 
-/** Tranforms $(D path) into an absolute _path.
+/** Transforms $(D path) into an absolute _path.
 
     The following algorithm is used:
     $(OL
@@ -2616,7 +2620,7 @@ string absolutePath(string path, lazy string base = getcwd())
     assertThrown(absolutePath("bar", "foo"));
 }
 
-/** Tranforms $(D path) into an absolute _path.
+/** Transforms $(D path) into an absolute _path.
 
     The following algorithm is used:
     $(OL

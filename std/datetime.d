@@ -4036,6 +4036,8 @@ public:
     ///
     @safe unittest
     {
+        import std.typecons : No;
+
         auto st1 = SysTime(DateTime(2010, 1, 1, 12, 33, 33));
         st1.roll!"months"(1);
         assert(st1 == SysTime(DateTime(2010, 2, 1, 12, 33, 33)));
@@ -10054,6 +10056,8 @@ public:
     ///
     @safe unittest
     {
+        import std.typecons : No;
+
         auto d1 = Date(2010, 1, 1);
         d1.add!"months"(11);
         assert(d1 == Date(2010, 12, 1));
@@ -10821,6 +10825,8 @@ public:
     ///
     @safe unittest
     {
+        import std.typecons : No;
+
         auto d1 = Date(2010, 1, 1);
         d1.roll!"months"(1);
         assert(d1 == Date(2010, 2, 1));
@@ -15851,6 +15857,8 @@ public:
     ///
     @safe unittest
     {
+        import std.typecons : No;
+
         auto dt1 = DateTime(2010, 1, 1, 12, 30, 33);
         dt1.add!"months"(11);
         assert(dt1 == DateTime(2010, 12, 1, 12, 30, 33));
@@ -15914,6 +15922,8 @@ public:
     ///
     @safe unittest
     {
+        import std.typecons : No;
+
         auto dt1 = DateTime(2010, 1, 1, 12, 33, 33);
         dt1.roll!"months"(1);
         assert(dt1 == DateTime(2010, 2, 1, 12, 33, 33));
@@ -26443,6 +26453,8 @@ static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
 ///
 @system unittest
 {
+    import std.typecons : Yes;
+
     auto interval = Interval!Date(Date(2010, 9, 2), Date(2025, 9, 27));
     auto func = everyDuration!Date(4, 1, Yes.allowDayOverflow, dur!"days"(2));
     auto range = interval.fwdRange(func);
@@ -28563,7 +28575,11 @@ public:
       +/
     override long utcToTZ(long stdTime) @trusted const nothrow
     {
-        version(Posix)
+        version(Solaris)
+        {
+            return stdTime + convert!("seconds", "hnsecs")(tm_gmtoff(stdTime));
+        }
+        else version(Posix)
         {
             import core.stdc.time : localtime, tm;
             time_t unixTime = stdTimeToUnixTime(stdTime);
@@ -28795,6 +28811,26 @@ private:
         static shared bool guard;
         initOnce!guard({tzset(); return true;}());
         return instance;
+    }
+
+
+    // The Solaris version of struct tm has no tm_gmtoff field, so do it here
+    version(Solaris)
+    {
+        long tm_gmtoff(long stdTime) @trusted const nothrow
+        {
+            import core.stdc.time : localtime, gmtime, tm;
+
+            time_t unixTime = stdTimeToUnixTime(stdTime);
+            tm* buf = localtime(&unixTime);
+            tm timeInfo = *buf;
+            buf = gmtime(&unixTime);
+            tm timeInfoGmt = *buf;
+
+            return  (timeInfo.tm_sec - timeInfoGmt.tm_sec) +
+                    convert!("minutes", "seconds")(timeInfo.tm_min - timeInfoGmt.tm_min) +
+                    convert!("hours", "seconds")(timeInfo.tm_hour - timeInfoGmt.tm_hour);
+        }
     }
 }
 
@@ -33120,6 +33156,8 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
 ///
 @safe unittest
 {
+    import std.exception : assertThrown;
+
     auto tz = new immutable SimpleTimeZone(hours(-8));
     assert(parseRFC822DateTime("Sat, 6 Jan 1990 12:14:19 -0800") ==
            SysTime(DateTime(1990, 1, 6, 12, 14, 19), tz));
@@ -33151,7 +33189,8 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
 
 @system unittest
 {
-    import std.algorithm.iteration : map;
+    import std.algorithm.iteration : filter, map;
+    import std.algorithm.searching : canFind;
     import std.array : array;
     import std.ascii : letters;
     import std.format : format;
@@ -33284,7 +33323,7 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
                            ["Jam", "Jen", "Fec", "Fdb", "Mas", "Mbr", "Aps", "Aqr", "Mai", "Miy",
                             "Jum", "Jbn", "Jup", "Jal", "Aur", "Apg", "Sem", "Sap", "Ocm", "Odt",
                             "Nom", "Nav", "Dem", "Dac"],
-                           Rand3Letters.start().take(20)))
+                           Rand3Letters.start().filter!(a => !_monthNames[].canFind(a)).take(20)))
         {
             scope(failure) writefln("Month: %s", mon);
             testBad(format("17 %s 2012 00:05:02 +0000", mon));
@@ -33313,7 +33352,7 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
                            daysOfWeekNames[].map!(a => toUpper(a))(),
                            ["Sum", "Spn", "Mom", "Man", "Tuf", "Tae", "Wem", "Wdd", "The", "Tur",
                             "Fro", "Fai", "San", "Sut"],
-                           Rand3Letters.start().take(20)))
+                           Rand3Letters.start().filter!(a => !daysOfWeekNames[].canFind(a)).take(20)))
         {
             scope(failure) writefln("Day of Week: %s", dow);
             testBad(format("%s, 11 Nov 2012 09:42:00 +0000", dow));
@@ -34052,17 +34091,15 @@ static int daysToDayOfWeek(DayOfWeek currDoW, DayOfWeek dow) @safe pure nothrow
 }
 
 
-version(StdDdoc)
-{
-    /++
-        Function for starting to a stop watch time when the function is called
-        and stopping it when its return value goes out of scope and is destroyed.
+/++
+    Function for starting to a stop watch time when the function is called
+    and stopping it when its return value goes out of scope and is destroyed.
 
-        When the value that is returned by this function is destroyed,
-        $(D func) will run. $(D func) is a unary function that takes a
-        $(REF TickDuration, core,time).
+    When the value that is returned by this function is destroyed,
+    $(D func) will run. $(D func) is a unary function that takes a
+    $(REF TickDuration, core,time).
 
-        Example:
+    Example:
 --------------------
 {
     auto mt = measureTime!((TickDuration a)
@@ -34071,7 +34108,7 @@ version(StdDdoc)
 }
 --------------------
 
-        which is functionally equivalent to
+    which is functionally equivalent to
 
 --------------------
 {
@@ -34085,48 +34122,43 @@ version(StdDdoc)
 }
 --------------------
 
-        See_Also:
-            $(LREF benchmark)
-      +/
-    auto measureTime(alias func)();
-}
-else
+    See_Also:
+        $(LREF benchmark)
++/
+@safe auto measureTime(alias func)()
+    if (isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
 {
-    @safe auto measureTime(alias func)()
-        if (isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
+    struct Result
     {
-        struct Result
+        private StopWatch _sw = void;
+        this(AutoStart as)
         {
-            private StopWatch _sw = void;
-            this(AutoStart as)
-            {
-                _sw = StopWatch(as);
-            }
-            ~this()
-            {
-                unaryFun!(func)(_sw.peek());
-            }
+            _sw = StopWatch(as);
         }
-        return Result(Yes.autoStart);
+        ~this()
+        {
+            unaryFun!(func)(_sw.peek());
+        }
     }
+    return Result(Yes.autoStart);
+}
 
-    auto measureTime(alias func)()
-        if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
+auto measureTime(alias func)()
+    if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
+{
+    struct Result
     {
-        struct Result
+        private StopWatch _sw = void;
+        this(AutoStart as)
         {
-            private StopWatch _sw = void;
-            this(AutoStart as)
-            {
-                _sw = StopWatch(as);
-            }
-            ~this()
-            {
-                unaryFun!(func)(_sw.peek());
-            }
+            _sw = StopWatch(as);
         }
-        return Result(Yes.autoStart);
+        ~this()
+        {
+            unaryFun!(func)(_sw.peek());
+        }
     }
+    return Result(Yes.autoStart);
 }
 
 // Verify Example.

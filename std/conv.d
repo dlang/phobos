@@ -121,17 +121,6 @@ private
         enum isNullToStr = isImplicitlyConvertible!(S, T) &&
                            (is(Unqual!S == typeof(null))) && isExactSomeString!T;
     }
-
-    template isRawStaticArray(T, A...)
-    {
-        enum isRawStaticArray =
-            A.length == 0 &&
-            isStaticArray!T &&
-            !is(T == class) &&
-            !is(T == interface) &&
-            !is(T == struct) &&
-            !is(T == union);
-    }
 }
 
 /**
@@ -178,14 +167,14 @@ $(I UnsignedInteger):
 template to(T)
 {
     T to(A...)(A args)
-        if (!isRawStaticArray!A)
+        if (A.length > 0)
     {
         return toImpl!T(args);
     }
 
     // Fix issue 6175
     T to(S)(ref S arg)
-        if (isRawStaticArray!S)
+        if (isStaticArray!S)
     {
         return toImpl!T(arg);
     }
@@ -536,7 +525,7 @@ private T toImpl(T, S)(S value)
   Converting static arrays forwards to their dynamic counterparts.
  */
 private T toImpl(T, S)(ref S s)
-    if (isRawStaticArray!S)
+    if (isStaticArray!S)
 {
     return toImpl!(T, typeof(s[0])[])(s);
 }
@@ -1273,7 +1262,7 @@ body
         return cast(T)buffer[index .. $].dup;
     }
 
-    import std.array;
+    import std.array : array;
     switch (radix)
     {
         case 10:
@@ -1997,20 +1986,27 @@ Target parse(Target, Source)(ref Source s)
         // int or larger types
 
         static if (Target.min < 0)
-            bool sign = 0;
+            bool sign = false;
         else
-            enum bool sign = 0;
+            enum bool sign = false;
 
         enum char maxLastDigit = Target.min < 0 ? 7 : 5;
         uint c;
 
-        if (s.empty)
+        static if (isNarrowString!Source)
+        {
+            import std.string : representation, assumeUTF;
+            auto source = s.representation;
+        }
+        else
+        {
+            alias source = s;
+        }
+
+        if (source.empty)
             goto Lerr;
 
-        static if (isAutodecodableString!Source)
-            c = s[0];
-        else
-            c = s.front;
+        c = source.front;
 
         static if (Target.min < 0)
         {
@@ -2020,18 +2016,12 @@ Target parse(Target, Source)(ref Source s)
                     sign = true;
                     goto case '+';
                 case '+':
-                    static if (isAutodecodableString!Source)
-                        s = s[1 .. $];
-                    else
-                        s.popFront();
+                    source.popFront();
 
-                    if (s.empty)
+                    if (source.empty)
                         goto Lerr;
 
-                    static if (isAutodecodableString!Source)
-                        c = s[0];
-                    else
-                        c = s.front;
+                    c = source.front;
 
                     break;
 
@@ -2044,17 +2034,11 @@ Target parse(Target, Source)(ref Source s)
         {
             Target v = cast(Target)c;
 
-            static if (isAutodecodableString!Source)
-                s = s[1 .. $];
-            else
-                s.popFront();
+            source.popFront();
 
-            while (!s.empty)
+            while (!source.empty)
             {
-                static if (isAutodecodableString!Source)
-                    c = cast(typeof(c)) (s[0] - '0');
-                else
-                    c = cast(typeof(c)) (s.front - '0');
+                c = cast(typeof(c)) (source.front - '0');
 
                 if (c > 9)
                     break;
@@ -2066,10 +2050,7 @@ Target parse(Target, Source)(ref Source s)
                     // the most negative value:
                     v = cast(Target) (v * 10 + c);
 
-                    static if (isAutodecodableString!Source)
-                        s = s[1 .. $];
-                    else
-                        s.popFront();
+                    source.popFront();
                 }
                 else
                     throw new ConvOverflowException("Overflow in integral conversion");
@@ -2077,10 +2058,17 @@ Target parse(Target, Source)(ref Source s)
 
             if (sign)
                 v = -v;
+
+            static if (isNarrowString!Source)
+                s = source.assumeUTF;
+
             return v;
         }
 Lerr:
-        throw convError!(Source, Target)(s);
+        static if (isNarrowString!Source)
+            throw convError!(Source, Target)(source.assumeUTF);
+        else
+            throw convError!(Source, Target)(source);
     }
 }
 
@@ -2531,13 +2519,23 @@ Target parse(Target, Source)(ref Source s)
  *     A $(LREF ConvException) if `p` is empty, if no number could be
  *     parsed, or if an overflow occurred.
  */
-Target parse(Target, Source)(ref Source p)
+Target parse(Target, Source)(ref Source source)
     if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
         isFloatingPoint!Target && !is(Target == enum))
 {
     import std.ascii : isDigit, isAlpha, toLower, toUpper, isHexDigit;
     import std.exception : enforce;
     import core.stdc.math : HUGE_VAL;
+
+    static if (isNarrowString!Source)
+    {
+        import std.string : representation, assumeUTF;
+        auto p = source.representation;
+    }
+    else
+    {
+        alias p = source;
+    }
 
     static immutable real[14] negtab =
         [ 1e-4096L,1e-2048L,1e-1024L,1e-512L,1e-256L,1e-128L,1e-64L,1e-32L,
@@ -2553,13 +2551,14 @@ Target parse(Target, Source)(ref Source p)
         return new ConvException(text(msg, " for input \"", p, "\"."), fn, ln);
     }
 
+
     enforce(!p.empty, bailOut());
 
-    char sign = 0;                       /* indicating +                 */
+    bool sign = false;
     switch (p.front)
     {
     case '-':
-        sign++;
+        sign = true;
         p.popFront();
         enforce(!p.empty, bailOut());
         if (toLower(p.front) == 'i')
@@ -2581,6 +2580,8 @@ Target parse(Target, Source)(ref Source p)
             {
                 // 'inf'
                 p.popFront();
+                static if (isNarrowString!Source)
+                    source = p.assumeUTF;
                 return sign ? -Target.infinity : Target.infinity;
             }
         }
@@ -2595,7 +2596,9 @@ Target parse(Target, Source)(ref Source p)
         p.popFront();
         if (p.empty)
         {
-            return (sign) ? -0.0 : 0.0;
+            static if (isNarrowString!Source)
+                source = p.assumeUTF;
+            return sign ? -0.0 : 0.0;
         }
 
         isHex = p.front == 'x' || p.front == 'X';
@@ -2817,6 +2820,8 @@ Target parse(Target, Source)(ref Source p)
                    new ConvException("error converting input to floating point"));
             // skip past the last 'n'
             p.popFront();
+            static if (isNarrowString!Source)
+                source = p.assumeUTF;
             return typeof(return).nan;
         }
 
@@ -2929,7 +2934,9 @@ Target parse(Target, Source)(ref Source p)
     enforce(ldval != HUGE_VAL, new ConvException("Range error"));
 
   L1:
-    return (sign) ? -ldval : ldval;
+    static if (isNarrowString!Source)
+        source = p.assumeUTF;
+    return sign ? -ldval : ldval;
 }
 
 ///
@@ -3562,7 +3569,8 @@ Lfewerr:
  * '[')), right bracket (default $(D ']')), key-value separator (default $(D
  * ':')), and element seprator (by default $(D ',')).
  */
-Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
+Target parse(Target, Source)(ref Source s, dchar lbracket = '[',
+                             dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
     if (isExactSomeString!Source &&
         isAssociativeArray!Target && !is(Target == enum))
 {
@@ -3945,7 +3953,6 @@ private T octal(T)(const string num)
     return value;
 }
 
-///
 @system unittest
 {
     int a = octal!int("10");
@@ -4378,7 +4385,7 @@ if (is(T == class))
 @nogc pure nothrow unittest
 {
     int var = 6;
-    ubyte[__traits(classInstanceSize, __conv_EmplaceTestClass)] buf;
+    align(__conv_EmplaceTestClass.alignof) ubyte[__traits(classInstanceSize, __conv_EmplaceTestClass)] buf;
     auto k = emplace!__conv_EmplaceTestClass(buf, 5, var);
     assert(k.i == 5);
     assert(var == 7);
@@ -5321,7 +5328,7 @@ pure nothrow @safe /* @nogc */ unittest
     }
     void[] buf;
 
-    static byte[__traits(classInstanceSize, A)] sbuf;
+    static align(A.alignof) byte[__traits(classInstanceSize, A)] sbuf;
     buf = sbuf[];
     auto a = emplace!A(buf, 55);
     assert(a.x == 55 && a.y == 55);
@@ -5393,6 +5400,7 @@ auto unsigned(T)(T x) if (isIntegral!T)
 ///
 @safe unittest
 {
+    import std.traits : Unsigned;
     immutable int s = 42;
     auto u1 = unsigned(s); //not qualified
     static assert(is(typeof(u1) == uint));
@@ -5467,6 +5475,8 @@ auto signed(T)(T x) if (isIntegral!T)
 ///
 @safe unittest
 {
+    import std.traits : Signed;
+
     immutable uint u = 42;
     auto s1 = signed(u); //not qualified
     static assert(is(typeof(s1) == int));
@@ -5633,7 +5643,6 @@ private bool isHexLiteral(String)(scope const String hexData)
     return !(i & 1);
 }
 
-///
 @safe unittest
 {
     // test all the hex digits
@@ -5749,7 +5758,7 @@ if (hexData.isHexLiteral)
 @safe nothrow pure
 private auto hexStrImpl(String)(scope String hexData)
 {
-    import std.ascii;
+    import std.ascii : isHexDigit;
     alias C = Unqual!(ElementEncodingType!String);
     C[] result;
     result.length = hexData.length / 2;

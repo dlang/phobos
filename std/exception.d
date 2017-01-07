@@ -1196,6 +1196,8 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
     //To check the class payload itself, iterate on its members:
     ()
     {
+        import std.traits : Fields;
+
         foreach (index, _; Fields!C)
             if (doesPointTo(a.tupleof[index], i))
                 return;
@@ -2141,8 +2143,8 @@ pure nothrow @safe unittest
     Convenience mixin for trivially sub-classing exceptions
 
     Even trivially sub-classing an exception involves writing boilerplate code
-    for the constructor to: 1) correctly pass in the source file and line number
-    the exception was thrown from; 2) be usable with $(LREF enforce) which
+    for the constructor to: 1$(RPAREN) correctly pass in the source file and line number
+    the exception was thrown from; 2$(RPAREN) be usable with $(LREF enforce) which
     expects exception constructors to take arguments in a fixed order. This
     mixin provides that boilerplate code.
 

@@ -308,6 +308,8 @@ SUBREF = $(REF_ALTTEXT $(TT $2), $2, std,experimental, ndslice, $1)$(NBSP)
 T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 TDNW2 = <td class="donthyphenate nobr" rowspan="2">$0</td>
 */
+/// @@@DEPRECATED_2017-04@@@
+deprecated("Please use mir-algorithm DUB package: http://github.com/libmir/mir-algorithm")
 module std.experimental.ndslice;
 
 public import std.experimental.ndslice.slice;

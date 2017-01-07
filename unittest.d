@@ -70,7 +70,8 @@ int main(string[] args)
     uint ranseed = std.random.unpredictableSeed;
     thisTid;
     int[] a;
-    import std.algorithm : sort, reverse;
+    import std.algorithm.sorting : sort;
+    import std.algorithm.mutation : reverse;
     reverse(a);                         // adi
     sort(a);                            // qsort
     Clock.currTime();                   // datetime

@@ -8,8 +8,10 @@ test:
   override:
     - ./circleci.sh style
     - ./circleci.sh setup-repos
+    - ./circleci.sh publictests
     - ./circleci.sh coverage:
         parallel: true
+        timeout: 1200
 
   post:
     - bash <(curl -s https://codecov.io/bash)

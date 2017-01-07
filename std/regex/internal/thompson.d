@@ -93,7 +93,7 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-            finish(t, matches, re.ir[t.pc].data);
+            finish(t, matches, ir[t.pc].data);
             //fix endpoint of the whole match
             matches[0].end = index;
             recycle(t);
@@ -243,35 +243,35 @@ template ThompsonOps(E, S, bool withInput:true)
     static bool op(IR code:IR.InfiniteStart)(E* e, S* state)
     {
         with(e) with(state)
-            t.pc += re.ir[t.pc].data + IRL!(IR.InfiniteStart);
+            t.pc += ir[t.pc].data + IRL!(IR.InfiniteStart);
         return op!(IR.InfiniteEnd)(e,state);
     }
 
     static bool op(IR code:IR.InfiniteBloomStart)(E* e, S* state)
     {
         with(e) with(state)
-            t.pc += re.ir[t.pc].data + IRL!(IR.InfiniteBloomStart);
+            t.pc += ir[t.pc].data + IRL!(IR.InfiniteBloomStart);
         return op!(IR.InfiniteBloomEnd)(e,state);
     }
 
     static bool op(IR code:IR.InfiniteQStart)(E* e, S* state)
     {
         with(e) with(state)
-            t.pc += re.ir[t.pc].data + IRL!(IR.InfiniteQStart);
+            t.pc += ir[t.pc].data + IRL!(IR.InfiniteQStart);
         return op!(IR.InfiniteQEnd)(e,state);
     }
 
     static bool op(IR code:IR.RepeatStart)(E* e, S* state)
     {
         with(e) with(state)
-            t.pc += re.ir[t.pc].data + IRL!(IR.RepeatStart);
+            t.pc += ir[t.pc].data + IRL!(IR.RepeatStart);
         return op!(IR.RepeatEnd)(e,state);
     }
 
     static bool op(IR code:IR.RepeatQStart)(E* e, S* state)
     {
         with(e) with(state)
-            t.pc += re.ir[t.pc].data + IRL!(IR.RepeatQStart);
+            t.pc += ir[t.pc].data + IRL!(IR.RepeatQStart);
         return op!(IR.RepeatQEnd)(e,state);
     }
 
@@ -281,32 +281,32 @@ template ThompsonOps(E, S, bool withInput:true)
         with(e) with(state)
         {
             //len, step, min, max
-                uint len = re.ir[t.pc].data;
-                uint step =  re.ir[t.pc+2].raw;
-                uint min = re.ir[t.pc+3].raw;
+                uint len = ir[t.pc].data;
+                uint step =  ir[t.pc+2].raw;
+                uint min = ir[t.pc+3].raw;
                 if (t.counter < min)
                 {
                     t.counter += step;
                     t.pc -= len;
                     return true;
                 }
-                if (merge[re.ir[t.pc + 1].raw+t.counter] < genCounter)
+                if (merge[ir[t.pc + 1].raw+t.counter] < genCounter)
                 {
                     debug(std_regex_matcher) writefln("A thread(pc=%s) passed there : %s ; GenCounter=%s mergetab=%s",
-                                    t.pc, index, genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
-                    merge[re.ir[t.pc + 1].raw+t.counter] = genCounter;
+                                    t.pc, index, genCounter, merge[ir[t.pc + 1].raw+t.counter] );
+                    merge[ir[t.pc + 1].raw+t.counter] = genCounter;
                 }
                 else
                 {
                     debug(std_regex_matcher)
                         writefln("A thread(pc=%s) got merged there : %s ; GenCounter=%s mergetab=%s",
-                            t.pc, index, genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
+                            t.pc, index, genCounter, merge[ir[t.pc + 1].raw+t.counter] );
                     return popState(e);
                 }
-                uint max = re.ir[t.pc+4].raw;
+                uint max = ir[t.pc+4].raw;
                 if (t.counter < max)
                 {
-                    if (re.ir[t.pc].code == IR.RepeatEnd)
+                    if (ir[t.pc].code == IR.RepeatEnd)
                     {
                         //queue out-of-loop thread
                         worklist.insertFront(fork(t, t.pc + IRL!(IR.RepeatEnd),  t.counter % step));
@@ -335,21 +335,21 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-            if (merge[re.ir[t.pc + 1].raw+t.counter] < genCounter)
+            if (merge[ir[t.pc + 1].raw+t.counter] < genCounter)
             {
                 debug(std_regex_matcher) writefln("A thread(pc=%s) passed there : %s ; GenCounter=%s mergetab=%s",
-                                t.pc, index, genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
-                merge[re.ir[t.pc + 1].raw+t.counter] = genCounter;
+                                t.pc, index, genCounter, merge[ir[t.pc + 1].raw+t.counter] );
+                merge[ir[t.pc + 1].raw+t.counter] = genCounter;
             }
             else
             {
                 debug(std_regex_matcher) writefln("A thread(pc=%s) got merged there : %s ; GenCounter=%s mergetab=%s",
-                                t.pc, index, genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
+                                t.pc, index, genCounter, merge[ir[t.pc + 1].raw+t.counter] );
                 return popState(e);
             }
-            uint len = re.ir[t.pc].data;
+            uint len = ir[t.pc].data;
             uint pc1, pc2; //branches to take in priority order
-            if (re.ir[t.pc].code == IR.InfiniteEnd)
+            if (ir[t.pc].code == IR.InfiniteEnd)
             {
                 pc1 = t.pc - len;
                 pc2 = t.pc + IRL!(IR.InfiniteEnd);
@@ -370,24 +370,24 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-            if (merge[re.ir[t.pc + 1].raw+t.counter] < genCounter)
+            if (merge[ir[t.pc + 1].raw+t.counter] < genCounter)
             {
                 debug(std_regex_matcher) writefln("A thread(pc=%s) passed there : %s ; GenCounter=%s mergetab=%s",
-                                t.pc, index, genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
-                merge[re.ir[t.pc + 1].raw+t.counter] = genCounter;
+                                t.pc, index, genCounter, merge[ir[t.pc + 1].raw+t.counter] );
+                merge[ir[t.pc + 1].raw+t.counter] = genCounter;
             }
             else
             {
                 debug(std_regex_matcher) writefln("A thread(pc=%s) got merged there : %s ; GenCounter=%s mergetab=%s",
-                                t.pc, index, genCounter, merge[re.ir[t.pc + 1].raw+t.counter] );
+                                t.pc, index, genCounter, merge[ir[t.pc + 1].raw+t.counter] );
                 return popState(e);
             }
-            uint len = re.ir[t.pc].data;
+            uint len = ir[t.pc].data;
             uint pc1, pc2; //branches to take in priority order
             pc1 = t.pc - len;
             pc2 = t.pc + IRL!(IR.InfiniteBloomEnd);
-            uint filterIndex = re.ir[t.pc + 2].raw;
-            if (re.filters[filterIndex][front])
+            uint filterIndex = ir[t.pc + 2].raw;
+            if (filters[filterIndex][front])
                 worklist.insertFront(fork(t, pc2, t.counter));
             t.pc = pc1;
             return true;
@@ -398,17 +398,17 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-            if (merge[re.ir[t.pc + 1].raw+t.counter] < genCounter)
+            if (merge[ir[t.pc + 1].raw+t.counter] < genCounter)
             {
                 debug(std_regex_matcher) writefln("A thread(pc=%s) passed there : %s ; GenCounter=%s mergetab=%s",
-                                t.pc, s[index .. s.lastIndex], genCounter, merge[re.ir[t.pc + 1].raw + t.counter] );
-                merge[re.ir[t.pc + 1].raw+t.counter] = genCounter;
+                                t.pc, s[index .. s.lastIndex], genCounter, merge[ir[t.pc + 1].raw + t.counter] );
+                merge[ir[t.pc + 1].raw+t.counter] = genCounter;
                 t.pc += IRL!(IR.OrEnd);
             }
             else
             {
                 debug(std_regex_matcher) writefln("A thread(pc=%s) got merged there : %s ; GenCounter=%s mergetab=%s",
-                                t.pc, s[index .. s.lastIndex], genCounter, merge[re.ir[t.pc + 1].raw + t.counter] );
+                                t.pc, s[index .. s.lastIndex], genCounter, merge[ir[t.pc + 1].raw + t.counter] );
                 return popState(e);
             }
             return true;
@@ -428,9 +428,9 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-            uint next = t.pc + re.ir[t.pc].data + IRL!(IR.Option);
+            uint next = t.pc + ir[t.pc].data + IRL!(IR.Option);
             //queue next Option
-            if (re.ir[next].code == IR.Option)
+            if (ir[next].code == IR.Option)
             {
                 worklist.insertFront(fork(t, next, t.counter));
             }
@@ -443,7 +443,7 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-            t.pc = t.pc + re.ir[t.pc].data + IRL!(IR.GotoEndOr);
+            t.pc = t.pc + ir[t.pc].data + IRL!(IR.GotoEndOr);
             return op!(IR.OrEnd)(e, state);
         }
     }
@@ -452,7 +452,7 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-            uint n = re.ir[t.pc].data;
+            uint n = ir[t.pc].data;
             t.matches.ptr[n].begin = index;
             t.pc += IRL!(IR.GroupStart);
             return true;
@@ -462,7 +462,7 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-            uint n = re.ir[t.pc].data;
+            uint n = ir[t.pc].data;
             t.matches.ptr[n].end = index;
             t.pc += IRL!(IR.GroupEnd);
             return true;
@@ -473,8 +473,8 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-            uint n = re.ir[t.pc].data;
-            Group!DataIndex* source = re.ir[t.pc].localRef ? t.matches.ptr : backrefed.ptr;
+            uint n = ir[t.pc].data;
+            Group!DataIndex* source = ir[t.pc].localRef ? t.matches.ptr : backrefed.ptr;
             assert(source);
             if (source[n].begin == source[n].end)//zero-width Backref!
             {
@@ -511,15 +511,15 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-            uint len = re.ir[t.pc].data;
-            uint ms = re.ir[t.pc + 1].raw, me = re.ir[t.pc + 2].raw;
+            uint len = ir[t.pc].data;
+            uint ms = ir[t.pc + 1].raw, me = ir[t.pc + 2].raw;
             uint end = t.pc + len + IRL!(IR.LookbehindEnd) + IRL!(IR.LookbehindStart);
-            bool positive = re.ir[t.pc].code == IR.LookbehindStart;
+            bool positive = ir[t.pc].code == IR.LookbehindStart;
             static if (Stream.isLoopback)
                 auto matcher = fwdMatcher(t.pc, end, subCounters.get(t.pc, 0));
             else
                 auto matcher = bwdMatcher(t.pc, end, subCounters.get(t.pc, 0));
-            matcher.re.ngroup = me - ms;
+            matcher.ngroup = me - ms;
             matcher.backrefed = backrefed.empty ? t.matches : backrefed;
             //backMatch
             auto mRes = matcher.matchOneShot(t.matches.ptr[ms .. me], IRL!(IR.LookbehindStart));
@@ -540,15 +540,15 @@ template ThompsonOps(E, S, bool withInput:true)
         with(e) with(state)
         {
             auto save = index;
-            uint len = re.ir[t.pc].data;
-            uint ms = re.ir[t.pc+1].raw, me = re.ir[t.pc+2].raw;
+            uint len = ir[t.pc].data;
+            uint ms = ir[t.pc+1].raw, me = ir[t.pc+2].raw;
             uint end = t.pc+len+IRL!(IR.LookaheadEnd)+IRL!(IR.LookaheadStart);
-            bool positive = re.ir[t.pc].code == IR.LookaheadStart;
+            bool positive = ir[t.pc].code == IR.LookaheadStart;
             static if (Stream.isLoopback)
                 auto matcher = bwdMatcher(t.pc, end, subCounters.get(t.pc, 0));
             else
                 auto matcher = fwdMatcher(t.pc, end, subCounters.get(t.pc, 0));
-            matcher.re.ngroup = me - ms;
+            matcher.ngroup = me - ms;
             matcher.backrefed = backrefed.empty ? t.matches : backrefed;
             auto mRes = matcher.matchOneShot(t.matches.ptr[ms .. me], IRL!(IR.LookaheadStart));
             freelist = matcher.freelist;
@@ -570,7 +570,7 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-                finish(t, matches.ptr[0 .. re.ngroup], re.ir[t.pc].data);
+                finish(t, matches.ptr[0 .. ngroup], ir[t.pc].data);
                 recycle(t);
                 //cut off low priority threads
                 recycle(clist);
@@ -589,11 +589,11 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-            uint len = re.ir[t.pc].sequence;
+            uint len = ir[t.pc].sequence;
             uint end = t.pc + len;
             static assert(IRL!(IR.OrChar) == 1);
             for (; t.pc < end; t.pc++)
-                if (re.ir[t.pc].data == front)
+                if (ir[t.pc].data == front)
                     break;
             if (t.pc != end)
             {
@@ -611,7 +611,7 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-            if (front == re.ir[t.pc].data)
+            if (front == ir[t.pc].data)
             {
                 t.pc += IRL!(IR.Char);
                 nlist.insertBack(t);
@@ -638,7 +638,7 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-            if (re.charsets[re.ir[t.pc].data].scanFor(front))
+            if (charsets[ir[t.pc].data].scanFor(front))
             {
                 t.pc += IRL!(IR.CodepointSet);
                 nlist.insertBack(t);
@@ -656,7 +656,7 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-            if (re.matchers[re.ir[t.pc].data][front])
+            if (matchers[ir[t.pc].data][front])
             {
                 t.pc += IRL!(IR.Trie);
                 nlist.insertBack(t);
@@ -688,8 +688,8 @@ template ThompsonOps(E,S, bool withInput:false)
     {
         with(e) with(state)
         {
-            uint n = re.ir[t.pc].data;
-            Group!DataIndex* source = re.ir[t.pc].localRef ? t.matches.ptr : backrefed.ptr;
+            uint n = ir[t.pc].data;
+            Group!DataIndex* source = ir[t.pc].localRef ? t.matches.ptr : backrefed.ptr;
             assert(source);
             if (source[n].begin == source[n].end)//zero-width Backref!
             {
@@ -724,21 +724,28 @@ template ThompsonOps(E,S, bool withInput:false)
     alias OpBackFunc = bool function(BackMatcher*, BackMatcher.State*);
     Thread!DataIndex* freelist;
     ThreadList!DataIndex clist, nlist;
-    DataIndex[] merge;
-    Group!DataIndex[] backrefed;
-    Regex!Char re;           //regex program
     Stream s;
     dchar front;
     DataIndex index;
-    DataIndex genCounter;    //merge trace counter, goes up on every dchar
-    size_t[size_t] subCounters; //a table of gen counter per sub-engine: PC -> counter
-    OpFunc[] opCacheTrue;   // pointers to Op!(IR.xyz) for each bytecode
-    OpFunc[] opCacheFalse;  // ditto
-    OpBackFunc[] opCacheBackTrue;   // ditto
-    OpBackFunc[] opCacheBackFalse;  // ditto
-    size_t threadSize;
+    DataIndex genCounter;    // merge trace counter, goes up on every dchar
+    OpFunc* opCacheTrue;   // pointers to Op!(IR.xyz) for each bytecode
+    OpFunc* opCacheFalse;  // ditto
+    OpBackFunc* opCacheBackTrue;   // ditto
+    OpBackFunc* opCacheBackFalse;  // ditto
+    DataIndex[] merge;
+    const(Bytecode)[] ir;
+    const(Interval[])* charsets;
+    const(CharMatcher)* matchers;
+    const(BitTable)* filters;
+    int ngroup;             // number of capturing groups
+    uint flags;
+    uint threadSize;
+    uint threadCount;
     int matched;
     bool exhausted;
+    const Kickstart!Char kickstart;
+    Group!DataIndex[] backrefed;
+    size_t[size_t] subCounters; // a table of gen counter per sub-engine: PC -> counter
 
     static struct State
     {
@@ -799,7 +806,7 @@ template ThompsonOps(E,S, bool withInput:false)
         bool search()
         {
 
-            if (!s.search(re.kickstart, front, index))
+            if (!s.search(kickstart, front, index))
             {
                 index = s.lastIndex;
                 return false;
@@ -808,24 +815,23 @@ template ThompsonOps(E,S, bool withInput:false)
         }
     }
 
-    void initExternalMemory(void[] memory)
+    void initExternalMemory(void[] memory, size_t hotspotTableSize)
     {
-        threadSize = getThreadSize(re);
-        prepareFreeList(re.threadCount, memory);
-        if (re.hotspotTableSize)
+        prepareFreeList(threadCount, memory);
+        if (hotspotTableSize)
         {
-            merge = arrayInChunk!(DataIndex)(re.hotspotTableSize, memory);
+            merge = arrayInChunk!(DataIndex)(hotspotTableSize, memory);
             merge[] = 0;
         }
-        opCacheTrue = arrayInChunk!(OpFunc)(re.ir.length, memory);
-        opCacheFalse = arrayInChunk!(OpFunc)(re.ir.length, memory);
-        opCacheBackTrue = arrayInChunk!(OpBackFunc)(re.ir.length, memory);
-        opCacheBackFalse = arrayInChunk!(OpBackFunc)(re.ir.length, memory);
+        opCacheTrue = arrayInChunk!(OpFunc)(ir.length, memory).ptr;
+        opCacheFalse = arrayInChunk!(OpFunc)(ir.length, memory).ptr;
+        opCacheBackTrue = arrayInChunk!(OpBackFunc)(ir.length, memory).ptr;
+        opCacheBackFalse = arrayInChunk!(OpBackFunc)(ir.length, memory).ptr;
 
-        for (uint pc = 0; pc<re.ir.length; pc += re.ir[pc].length)
+        for (uint pc = 0; pc<ir.length; pc += ir[pc].length)
         {
         L_dispatch:
-            switch (re.ir[pc].code)
+            switch (ir[pc].code)
             {
                 foreach (e; __traits(allMembers, IR))
                 {
@@ -838,31 +844,44 @@ template ThompsonOps(E,S, bool withInput:false)
                 `);
                 }
             default:
-                assert(0, "Unrecognized instruction "~re.ir[pc].mnemonic);
+                assert(0, "Unrecognized instruction "~ir[pc].mnemonic);
             }
         }
     }
 
-    this()(Regex!Char program, Stream stream, void[] memory)
+    this()(const Regex!Char program, Stream stream, void[] memory, uint regexFlags)
     {
-        re = program;
+        kickstart = program.kickstart;
+        flags = regexFlags;
+        ir = program.ir;
+        ngroup = program.ngroup;
+        charsets = program.charsets.ptr;
+        matchers = program.matchers.ptr;
+        filters = program.filters.ptr;
         s = stream;
-        initExternalMemory(memory);
+        threadSize = cast(uint)getThreadSize(program);
+        threadCount = program.threadCount;
+        initExternalMemory(memory, program.hotspotTableSize);
         genCounter = 0;
     }
 
     this(ref ThompsonMatcher matcher, size_t lo, size_t hi, Stream stream)
     {
         s = stream;
-        re = matcher.re;
-        re.ir = re.ir[lo..hi];
+        ir = matcher.ir[lo..hi];
+        ngroup = matcher.ngroup;
+        flags = matcher.flags;
+        charsets = matcher.charsets;
+        matchers = matcher.matchers;
+        filters = matcher.filters;
         threadSize = matcher.threadSize;
+        threadCount = matcher.threadCount;
         merge = matcher.merge;
         freelist = matcher.freelist;
-        opCacheTrue = matcher.opCacheTrue[lo..hi];
-        opCacheBackTrue = matcher.opCacheBackTrue[lo..hi];
-        opCacheFalse = matcher.opCacheFalse[lo..hi];
-        opCacheBackFalse = matcher.opCacheBackFalse[lo..hi];
+        opCacheTrue = matcher.opCacheTrue + lo;
+        opCacheBackTrue = matcher.opCacheBackTrue + lo;
+        opCacheFalse = matcher.opCacheFalse + lo;
+        opCacheBackFalse = matcher.opCacheBackFalse + lo;
         front = matcher.front;
         index = matcher.index;
     }
@@ -870,15 +889,19 @@ template ThompsonOps(E,S, bool withInput:false)
     this(ref BackMatcher matcher, size_t lo, size_t hi, Stream stream)
     {
         s = stream;
-        re = matcher.re;
-        re.ir = re.ir[lo..hi];
+        ir = matcher.ir[lo..hi];
+        ngroup = matcher.ngroup;
+        charsets = matcher.charsets;
+        matchers = matcher.matchers;
+        filters = matcher.filters;
         threadSize = matcher.threadSize;
+        threadCount = matcher.threadCount;
         merge = matcher.merge;
         freelist = matcher.freelist;
-        opCacheTrue = matcher.opCacheBackTrue[lo..hi];
-        opCacheBackTrue = matcher.opCacheTrue[lo..hi];
-        opCacheFalse = matcher.opCacheBackFalse[lo..hi];
-        opCacheBackFalse = matcher.opCacheFalse[lo..hi];
+        opCacheTrue = matcher.opCacheBackTrue + lo;
+        opCacheBackTrue = matcher.opCacheTrue + lo;
+        opCacheFalse = matcher.opCacheBackFalse + lo;
+        opCacheBackFalse = matcher.opCacheFalse + lo;
         front = matcher.front;
         index = matcher.index;
     }
@@ -899,12 +922,9 @@ template ThompsonOps(E,S, bool withInput:false)
         return m;
     }
 
-    auto dupTo(void[] memory)
+    void dupTo(void[] memory)
     {
-        typeof(this) tmp = this;//bitblit
-        tmp.initExternalMemory(memory);
-        tmp.genCounter = 0;
-        return tmp;
+        initExternalMemory(memory, merge.length);
     }
 
     int match(Group!DataIndex[] matches)
@@ -915,14 +935,14 @@ template ThompsonOps(E,S, bool withInput:false)
         {
             return false;
         }
-        if (re.flags & RegexInfo.oneShot)
+        if (flags & RegexInfo.oneShot)
         {
             next();
             exhausted = true;
             return matchOneShot(matches);
         }
         static if (kicked)
-            if (!re.kickstart.empty)
+            if (kickstart)
                 return matchImpl!(true)(matches);
         return matchImpl!(false)(matches);
     }
@@ -1015,7 +1035,7 @@ template ThompsonOps(E,S, bool withInput:false)
             s.reset(matches[0].end);//reset to last successful match
             next();//and reload front character
             //--- here the exact state of stream was restored ---
-            exhausted = atEnd || !(re.flags & RegexOption.global);
+            exhausted = atEnd || !(flags & RegexOption.global);
             //+ empty match advances the input
             if (!exhausted && matches[0].begin == matches[0].end)
                 next();
@@ -1028,11 +1048,11 @@ template ThompsonOps(E,S, bool withInput:false)
     +/
     void finish(const(Thread!DataIndex)* t, Group!DataIndex[] matches, int code)
     {
-        matches.ptr[0..re.ngroup] = t.matches.ptr[0..re.ngroup];
+        matches.ptr[0..ngroup] = t.matches.ptr[0..ngroup];
         debug(std_regex_matcher)
         {
             writef("FOUND pc=%s prog_len=%s",
-                    t.pc, re.ir.length);
+                    t.pc, ir.length);
             if (!matches.empty)
                 writefln(": %s..%s", matches[0].begin, matches[0].end);
             foreach (v; matches)
@@ -1052,9 +1072,9 @@ template ThompsonOps(E,S, bool withInput:false)
     {
         debug(std_regex_matcher) writeln("---- Evaluating thread");
         static if (withInput)
-            while (opCacheTrue.ptr[state.t.pc](&this, state)){}
+            while (opCacheTrue[state.t.pc](&this, state)){}
         else
-            while (opCacheFalse.ptr[state.t.pc](&this, state)){}
+            while (opCacheFalse[state.t.pc](&this, state)){}
     }
     enum uint RestartPc = uint.max;
     //match the input, evaluating IR without searching
@@ -1167,7 +1187,7 @@ template ThompsonOps(E,S, bool withInput:false)
     Thread!DataIndex* fork(Thread!DataIndex* master, uint pc, uint counter)
     {
         auto t = allocate();
-        t.matches.ptr[0..re.ngroup] = master.matches.ptr[0..re.ngroup];
+        t.matches.ptr[0..ngroup] = master.matches.ptr[0..ngroup];
         t.pc = pc;
         t.counter = counter;
         t.uopCounter = 0;
@@ -1178,7 +1198,7 @@ template ThompsonOps(E,S, bool withInput:false)
     Thread!DataIndex* createStart(DataIndex index, uint pc = 0)
     {
         auto t = allocate();
-        t.matches.ptr[0..re.ngroup] = (Group!DataIndex).init;
+        t.matches.ptr[0..ngroup] = (Group!DataIndex).init;
         t.matches[0].begin = index;
         t.pc = pc;
         t.counter = 0;

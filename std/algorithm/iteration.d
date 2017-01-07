@@ -910,7 +910,7 @@ template each(alias pred = "a")
         }
     }
 
-    void each(Iterable)(Iterable r)
+    void each(Iterable)(auto ref Iterable r)
         if (isForeachIterable!Iterable)
     {
         debug(each) pragma(msg, "Using foreach for ", Iterable.stringof);
@@ -928,7 +928,7 @@ template each(alias pred = "a")
 
     // opApply with >2 parameters. count the delegate args.
     // only works if it is not templated (otherwise we cannot count the args)
-    void each(Iterable)(Iterable r)
+    void each(Iterable)(auto ref Iterable r)
         if (!isRangeIterable!Iterable && !isForeachIterable!Iterable &&
             __traits(compiles, Parameters!(Parameters!(r.opApply))))
     {
@@ -1032,6 +1032,38 @@ template each(alias pred = "a")
     zip(a, b, c).each!((x, y, z) { res ~= x + y + z; });
 
     assert(res == [9, 12, 15]);
+}
+
+// #16255: `each` on opApply doesn't support ref
+unittest
+{
+    int[] dynamicArray = [1, 2, 3, 4, 5];
+    int[5] staticArray = [1, 2, 3, 4, 5];
+
+    dynamicArray.each!((ref x) => x++);
+    assert(dynamicArray == [2, 3, 4, 5, 6]);
+
+    staticArray.each!((ref x) => x++);
+    assert(staticArray == [2, 3, 4, 5, 6]);
+
+    staticArray[].each!((ref x) => x++);
+    assert(staticArray == [3, 4, 5, 6, 7]);
+}
+
+// #16255: `each` on opApply doesn't support ref
+unittest
+{
+    struct S
+    {
+       int x;
+       int opApply(int delegate(ref int _x) dg) { return dg(x); }
+    }
+
+    S s;
+    foreach (ref a; s) ++a;
+    assert(s.x == 1);
+    s.each!"++a";
+    assert(s.x == 2);
 }
 
 /**
@@ -2622,7 +2654,6 @@ template reduce(fun...) if (fun.length >= 1)
     If $(D r) is empty, an $(D Exception) is thrown.
 
     Params:
-        fun = one or more functions
         r = an iterable value as defined by $(D isIterable)
 
     Returns:
@@ -2661,7 +2692,6 @@ template reduce(fun...) if (fun.length >= 1)
     Use $(D fold) instead of $(D reduce) to use the seed version in a UFCS chain.
 
     Params:
-        fun = one or more functions
         seed = the initial value of the accumulator
         r = an iterable value as defined by $(D isIterable)
 
@@ -3138,7 +3168,6 @@ if (fun.length >= 1)
     Once `S` has been determined, then $(D S s = e;) and $(D s = f(s, e);) must
     both be legal.
     Params:
-        fun = one or more functions
         range = an input range as defined by `isInputRange`
     Returns:
         a range containing the consecutive reduced values.
@@ -3157,7 +3186,6 @@ if (fun.length >= 1)
     `cumulativeFold` will operate on an unqualified copy. If this happens
     then the returned type will not perfectly match `S`.
     Params:
-        fun = one or more functions
         range = an input range as defined by `isInputRange`
         seed = the initial value of the accumulator
     Returns:
@@ -4086,6 +4114,7 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(input.front))))
 @safe unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range.primitives : front;
 
     assert(equal(splitter!(a => a == ' ')("hello  world"), [ "hello", "", "world" ]));
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
@@ -4586,7 +4615,7 @@ if (isInputRange!R && !isInfinite!R)
     F[64] store = void;
     size_t idx = 0;
 
-    auto collapseStore(T)(T k)
+    void collapseStore(T)(T k)
     {
         auto lastToKeep = idx - cast(uint)bsf(k+1);
         while (idx > lastToKeep)
@@ -4835,9 +4864,48 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
     assert(equal(uniq([ 1, 1, 2, 1, 1, 3, 1]), [1, 2, 1, 3, 1]));
 }
 
+///
+@trusted unittest
+{
+    import std.algorithm.comparison : equal;
+
+    struct S
+    {
+        int i;
+        string s;
+    }
+
+    auto arr = [ S(1, "a"), S(1, "b"), S(2, "c"), S(2, "d") ];
+
+    // Let's consider just the 'i' member for equality
+    auto r = arr.uniq!((a, b) => a.i == b.i);
+    assert(r.equal([S(1, "a"), S(2, "c")]));
+    assert(r.front == S(1, "a"));
+    assert(r.back == S(2, "c"));
+
+    r.popBack;
+    assert(r.back == S(1, "a"));
+    assert(r.front == r.back);
+
+    r.popBack;
+    assert(r.empty);
+
+    import std.exception : assertThrown;
+
+    assertThrown!Error(r.front);
+    assertThrown!Error(r.back);
+    assertThrown!Error(r.popFront);
+    assertThrown!Error(r.popBack);
+}
+
 private struct UniqResult(alias pred, Range)
 {
-    Range _input;
+    private Range _input;
+    static if (isBidirectionalRange!Range)
+    {
+        private ElementType!Range _back;
+        private bool _isInBack;
+    }
 
     this(Range input)
     {
@@ -4852,10 +4920,19 @@ private struct UniqResult(alias pred, Range)
     void popFront()
     {
         assert(!empty, "Attempting to popFront an empty uniq.");
+        static if (isBidirectionalRange!Range)
+        {
+            if (_input.empty)
+            {
+                _isInBack = false;
+                return;
+            }
+        }
+
         auto last = _input.front;
         do
         {
-            _input.popFront();
+            _input.popFront;
         }
         while (!_input.empty && pred(last, _input.front));
     }
@@ -4863,6 +4940,13 @@ private struct UniqResult(alias pred, Range)
     @property ElementType!Range front()
     {
         assert(!empty, "Attempting to fetch the front of an empty uniq.");
+        static if (isBidirectionalRange!Range)
+        {
+            if (_input.empty && _isInBack)
+            {
+                return _back;
+            }
+        }
         return _input.front;
     }
 
@@ -4871,18 +4955,33 @@ private struct UniqResult(alias pred, Range)
         void popBack()
         {
             assert(!empty, "Attempting to popBack an empty uniq.");
-            auto last = _input.back;
-            do
+            if (_input.empty)
             {
-                _input.popBack();
+                _isInBack = false;
             }
-            while (!_input.empty && pred(last, _input.back));
+            else
+            {
+                _isInBack = true;
+                _back = _input.back;
+                ElementType!Range last;
+                do
+                {
+                    last = _input.back;
+                    _input.popBack;
+                }
+                while (!_input.empty && pred(_back, _input.back));
+                _back = last;
+            }
         }
 
         @property ElementType!Range back()
         {
             assert(!empty, "Attempting to fetch the back of an empty uniq.");
-            return _input.back;
+            if (!_isInBack)
+            {
+                popBack;
+            }
+            return _back;
         }
     }
 
@@ -4892,7 +4991,17 @@ private struct UniqResult(alias pred, Range)
     }
     else
     {
-        @property bool empty() { return _input.empty; }
+        @property bool empty()
+        {
+            static if (isBidirectionalRange!Range)
+            {
+                return _input.empty && !_isInBack;
+            }
+            else
+            {
+                return _input.empty;
+            }
+        }
     }
 
     static if (isForwardRange!Range)

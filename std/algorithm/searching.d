@@ -63,6 +63,12 @@ $(T2 minElement,
 $(T2 maxElement,
         Selects the maximal element of a range.
         `maxElement([3, 4, 1, 2])` returns `4`.)
+$(T2 minIndex,
+        Index of the minimal element of a range.
+        `minElement([3, 4, 1, 2])` returns `2`.)
+$(T2 maxIndex,
+        Index of the maximal element of a range.
+        `maxElement([3, 4, 1, 2])` returns `1`.)
 $(T2 minPos,
         $(D minPos([2, 3, 1, 3, 4, 1])) returns the subrange $(D [1, 3, 4, 1]),
         i.e., positions the range at the first occurrence of its minimal
@@ -270,14 +276,6 @@ if (isInputRange!(Range) && is(typeof(r.front == lPar)))
  * invoke the Boyer-Moore matching algorithm for finding of $(D needle) in a
  * given haystack.
  */
-BoyerMooreFinder!(binaryFun!(pred), Range) boyerMooreFinder
-(alias pred = "a == b", Range)
-(Range needle) if ((isRandomAccessRange!(Range) && hasSlicing!Range) || isSomeString!Range)
-{
-    return typeof(return)(needle);
-}
-
-/// Ditto
 struct BoyerMooreFinder(alias pred, Range)
 {
 private:
@@ -377,6 +375,29 @@ public:
 
     ///
     alias opDollar = length;
+}
+
+/// Ditto
+BoyerMooreFinder!(binaryFun!(pred), Range) boyerMooreFinder
+(alias pred = "a == b", Range)
+(Range needle) if ((isRandomAccessRange!(Range) && hasSlicing!Range) || isSomeString!Range)
+{
+    return typeof(return)(needle);
+}
+
+///
+@safe pure nothrow unittest
+{
+    auto bmFinder = boyerMooreFinder("TG");
+
+    string r = "TAGTGCCTGA";
+    // search for the first match in the haystack r
+    r = bmFinder.beFound(r);
+    assert(r == "TGCCTGA");
+
+    // continue search in haystack
+    r = bmFinder.beFound(r[2 .. $]);
+    assert(r == "TGA");
 }
 
 /**
@@ -1361,7 +1382,19 @@ if (isInputRange!InputRange &&
 
     alias EType  = ElementType!R;
 
-    static if (isNarrowString!R)
+    // If the haystack is a SortedRange we can use binary search to find the needle.
+    // Works only for the default find predicate and any SortedRange predicate.
+    // 8829 enhancement
+    import std.range : SortedRange;
+    static if (is(InputRange : SortedRange!TT, TT) && isDefaultPred)
+    {
+        auto lb = haystack.lowerBound(needle);
+        if (lb.length == haystack.length || haystack[lb.length] != needle)
+            return haystack[$ .. $];
+
+        return haystack[lb.length .. $];
+    }
+    else static if (isNarrowString!R)
     {
         alias EEType = ElementEncodingType!R;
         alias UEEType = Unqual!EEType;
@@ -1488,6 +1521,22 @@ if (isInputRange!InputRange &&
     import std.algorithm.comparison : equal;
     import std.container : SList;
     import std.range.primitives : empty;
+    import std.range;
+
+    auto arr = assumeSorted!"a < b"([1, 2, 4, 4, 4, 4, 5, 6, 9]);
+    assert(find(arr, 4) == assumeSorted!"a < b"([4, 4, 4, 4, 5, 6, 9]));
+    assert(find(arr, 1) == arr);
+    assert(find(arr, 9) == assumeSorted!"a < b"([9]));
+    assert(find!"a > b"(arr, 4) == assumeSorted!"a < b"([5, 6, 9]));
+    assert(find!"a < b"(arr, 4) == arr);
+    assert(find(arr, 0).empty());
+    assert(find(arr, 10).empty());
+    assert(find(arr, 8).empty());
+
+    auto r = assumeSorted!"a > b"([10, 7, 3, 1, 0, 0]);
+    assert(find(r, 3) == assumeSorted!"a > b"([3, 1, 0, 0]));
+    assert(find!"a > b"(r, 8) == r);
+    assert(find!"a < b"(r, 5) == assumeSorted!"a > b"([3, 1, 0, 0]));
 
     assert(find("hello, world", ',') == ", world");
     assert(find([1, 2, 3, 5], 4) == []);
@@ -1717,7 +1766,7 @@ if (isForwardRange!R1 && isForwardRange!R2
     static if (is(typeof(pred == "a == b")) && pred == "a == b" && isSomeString!R1 && isSomeString!R2
             && haystack[0].sizeof == needle[0].sizeof)
     {
-        //return cast(R1) find(representation(haystack), representation(needle));
+        // return cast(R1) find(representation(haystack), representation(needle));
         // Specialization for simple string search
         alias Representation =
             Select!(haystack[0].sizeof == 1, ubyte[],
@@ -1776,6 +1825,7 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
         && is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
     if (needle.empty) return haystack;
+
     static if (hasLength!R2)
     {
         immutable needleLength = needle.length;
@@ -1788,7 +1838,40 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
     {
         return haystack[haystack.length .. haystack.length];
     }
-    static if (isRandomAccessRange!R2)
+    // Optimization in case the ranges are both SortedRanges.
+    // Binary search can be used to find the first occurence
+    // of the first element of the needle in haystack.
+    // When it is found O(walklength(needle)) steps are performed.
+    // 8829 enhancement
+    import std.range : SortedRange;
+    import std.algorithm.comparison : mismatch;
+    static if (is(R1 == R2)
+            && is(R1 : SortedRange!TT, TT)
+            && pred == "a == b")
+    {
+        auto needleFirstElem = needle[0];
+        auto partitions      = haystack.trisect(needleFirstElem);
+        auto firstElemLen    = partitions[1].length;
+        size_t count         = 0;
+
+        if (firstElemLen == 0)
+            return haystack[$ .. $];
+
+        while (needle.front() == needleFirstElem)
+        {
+            needle.popFront();
+            ++count;
+
+            if (count > firstElemLen)
+                return haystack[$ .. $];
+        }
+
+        auto m = mismatch(partitions[2], needle);
+
+        if (m[1].empty)
+            return haystack[partitions[0].length + partitions[1].length - count .. $];
+    }
+    else static if (isRandomAccessRange!R2)
     {
         immutable lastIndex = needleLength - 1;
         auto last = needle[lastIndex];
@@ -1854,6 +1937,27 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
         }
     }
     return haystack[haystack.length .. haystack.length];
+}
+
+@safe unittest
+{
+    import std.range;
+    import std.stdio;
+
+    auto r1 = assumeSorted([1, 2, 3, 3, 3, 4, 5, 6, 7, 8, 8, 8, 10]);
+    auto r2 = assumeSorted([3, 3, 4, 5, 6, 7, 8, 8]);
+    auto r3 = assumeSorted([3, 4, 5, 6, 7, 8]);
+    auto r4 = assumeSorted([4, 5, 6]);
+    auto r5 = assumeSorted([12, 13]);
+    auto r6 = assumeSorted([8, 8, 10, 11]);
+    auto r7 = assumeSorted([3, 3, 3, 3, 3, 3, 3]);
+
+    assert(find(r1, r2) == assumeSorted([3, 3, 4, 5, 6, 7, 8, 8, 8, 10]));
+    assert(find(r1, r3) == assumeSorted([3, 4, 5, 6, 7, 8, 8, 8, 10]));
+    assert(find(r1, r4) == assumeSorted([4, 5, 6, 7, 8, 8, 8, 10]));
+    assert(find(r1, r5).empty());
+    assert(find(r1, r6).empty());
+    assert(find(r1, r7).empty());
 }
 
 @safe unittest
@@ -2237,8 +2341,8 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
  * $(D haystack) advanced such that $(D needle) is a prefix of it (if no
  * such position exists, returns $(D haystack) advanced to termination).
  */
-Range1 find(Range1, alias pred, Range2)(
-    Range1 haystack, scope BoyerMooreFinder!(pred, Range2) needle)
+RandomAccessRange find(RandomAccessRange, alias pred, InputRange)(
+    RandomAccessRange haystack, scope BoyerMooreFinder!(pred, InputRange) needle)
 {
     return needle.beFound(haystack);
 }
@@ -2473,9 +2577,9 @@ matching elements.
 See_Also:
     $(HTTP sgi.com/tech/stl/find_first_of.html, STL's find_first_of)
 */
-Range1 findAmong(alias pred = "a == b", Range1, Range2)(
-    Range1 seq, Range2 choices)
-    if (isInputRange!Range1 && isForwardRange!Range2)
+InputRange findAmong(alias pred = "a == b", InputRange, ForwardRange)(
+    InputRange seq, ForwardRange choices)
+    if (isInputRange!InputRange && isForwardRange!ForwardRange)
 {
     for (; !seq.empty && find!pred(choices, seq.front).empty; seq.popFront())
     {
@@ -2809,12 +2913,19 @@ if (isForwardRange!R1 && isForwardRange!R2)
     assert(r[2] == "Sagan Memorial Station");
     auto r1 = findSplitBefore(a, "Sagan");
     assert(r1);
-    assert(r1[0] == "Carl ", r1[0]);
+    assert(r1[0] == "Carl ");
     assert(r1[1] == "Sagan Memorial Station");
     auto r2 = findSplitAfter(a, "Sagan");
     assert(r2);
     assert(r2[0] == "Carl Sagan");
     assert(r2[1] == " Memorial Station");
+}
+
+/// Use $(REF only, std,range) to find single elements:
+@safe pure nothrow unittest
+{
+    import std.range : only;
+    assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
 }
 
 @safe pure nothrow unittest
@@ -3455,6 +3566,213 @@ unittest
 }
 
 /**
+Computes the index of the first occurrence of `range`'s minimum element.
+
+Params:
+    pred = The ordering predicate to use to determine the minimum element.
+    range = The input range to search.
+
+Complexity: O(n)
+    Exactly `n - 1` comparisons are needed.
+
+Returns:
+    The index of the first encounter of the minimum element in `range`. If the
+    `range` is empty, -1 is returned.
+
+See_Also:
+    $(REF min, std,algorithm,comparison), $(LREF minCount), $(LREF minElement), $(LREF minPos)
+ */
+sizediff_t minIndex(alias pred = "a < b", Range)(Range range)
+    if (isForwardRange!Range && !isInfinite!Range &&
+        is(typeof(binaryFun!pred(range.front, range.front))))
+{
+    if (range.empty) return -1;
+
+    sizediff_t minPos = 0;
+
+    static if (isRandomAccessRange!Range && hasLength!Range)
+    {
+        foreach (i; 1 .. range.length)
+        {
+            if (binaryFun!pred(range[i], range[minPos]))
+            {
+                minPos = i;
+            }
+        }
+    }
+    else
+    {
+        sizediff_t curPos = 0;
+        Unqual!(typeof(range.front)) min = range.front;
+        for (range.popFront(); !range.empty; range.popFront())
+        {
+            ++curPos;
+            if (binaryFun!pred(range.front, min))
+            {
+                min = range.front;
+                minPos = curPos;
+            }
+        }
+    }
+    return minPos;
+}
+
+///
+@safe pure nothrow unittest
+{
+    int[] a = [2, 3, 4, 1, 2, 4, 1, 1, 2];
+
+    // Minimum is 1 and first occurs in position 3
+    assert(a.minIndex == 3);
+    // Get maximum index with minIndex
+    assert(a.minIndex!"a > b" == 2);
+
+    // Range is empty, so return value is -1
+    int[] b;
+    assert(b.minIndex == -1);
+
+    // Works with more custom types
+    struct Dog { int age; }
+    Dog[] dogs = [Dog(10), Dog(5), Dog(15)];
+    assert(dogs.minIndex!"a.age < b.age" == 1);
+}
+
+@safe pure unittest
+{
+    // should work with const
+    const(int)[] immArr = [2, 1, 3];
+    assert(immArr.minIndex == 1);
+
+    // Works for const ranges too
+    const int[] c = [2, 5, 4, 1, 2, 3];
+    assert(c.minIndex == 3);
+
+    // should work with immutable
+    immutable(int)[] immArr2 = [2, 1, 3];
+    assert(immArr2.minIndex == 1);
+
+    // with strings
+    assert(["b", "a", "c"].minIndex == 1);
+
+    // infinite range
+    import std.range : cycle;
+    static assert(!__traits(compiles, cycle([1]).minIndex));
+
+    // with all dummy ranges
+    import std.internal.test.dummyrange : AllDummyRanges;
+    foreach (DummyType; AllDummyRanges)
+    {
+        static if (isForwardRange!DummyType && !isInfinite!DummyType)
+        {
+            DummyType d;
+            d.arr = [5, 3, 7, 2, 1, 4];
+            assert(d.minIndex == 4);
+
+            d.arr = [];
+            assert(d.minIndex == -1);
+        }
+    }
+}
+
+@nogc @safe nothrow pure unittest
+{
+    static immutable arr = [7, 3, 8, 2, 1, 4];
+    assert(arr.minIndex == 4);
+
+    static immutable arr2d = [[1, 3], [3, 9], [4, 2]];
+    assert(arr2d.minIndex!"a[1] < b[1]" == 2);
+}
+
+/**
+Computes the index of the first occurrence of `range`'s maximum element.
+
+Complexity: O(n)
+    Exactly `n - 1` comparisons are needed.
+
+Params:
+    pred = The ordering predicate to use to determine the maximum element.
+    range = The input range to search.
+
+Returns:
+    The index of the first encounter of the maximum in `range`. If the
+    `range` is empty, -1 is returned.
+
+See_Also:
+    $(REF max, std,algorithm,comparison), $(LREF maxCount), $(LREF maxElement), $(LREF maxPos)
+ */
+sizediff_t maxIndex(alias pred = "a < b", Range)(Range range)
+    if (isInputRange!Range && !isInfinite!Range &&
+        is(typeof(binaryFun!pred(range.front, range.front))))
+{
+    return range.minIndex!((a, b) => binaryFun!pred(b, a));
+}
+
+///
+@safe pure nothrow unittest
+{
+    // Maximum is 4 and first occurs in position 2
+    int[] a = [2, 3, 4, 1, 2, 4, 1, 1, 2];
+    assert(a.maxIndex == 2);
+
+    // Empty range
+    int[] b;
+    assert(b.maxIndex == -1);
+
+    // Works with more custom types
+    struct Dog { int age; }
+    Dog[] dogs = [Dog(10), Dog(15), Dog(5)];
+    assert(dogs.maxIndex!"a.age < b.age" == 1);
+}
+
+@safe pure unittest
+{
+    // should work with const
+    const(int)[] immArr = [5, 1, 3];
+    assert(immArr.maxIndex == 0);
+
+    // Works for const ranges too
+    const int[] c = [2, 5, 4, 1, 2, 3];
+    assert(c.maxIndex == 1);
+
+
+    // should work with immutable
+    immutable(int)[] immArr2 = [2, 1, 3];
+    assert(immArr2.maxIndex == 2);
+
+    // with strings
+    assert(["b", "a", "c"].maxIndex == 2);
+
+    // infinite range
+    import std.range : cycle;
+    static assert(!__traits(compiles, cycle([1]).maxIndex));
+
+    // with all dummy ranges
+    import std.internal.test.dummyrange : AllDummyRanges;
+    foreach (DummyType; AllDummyRanges)
+    {
+        static if (isForwardRange!DummyType && !isInfinite!DummyType)
+        {
+            DummyType d;
+
+            d.arr = [5, 3, 7, 2, 1, 4];
+            assert(d.maxIndex == 2);
+
+            d.arr = [];
+            assert(d.maxIndex == -1);
+        }
+    }
+}
+
+@nogc @safe nothrow pure unittest
+{
+    static immutable arr = [7, 3, 8, 2, 1, 4];
+    assert(arr.maxIndex == 2);
+
+    static immutable arr2d = [[1, 3], [3, 9], [4, 2]];
+    assert(arr2d.maxIndex!"a[1] < b[1]" == 1);
+}
+
+/**
 Skip over the initial portion of the first given range that matches the second
 range, or do nothing if there is no match.
 
@@ -4087,6 +4405,7 @@ struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
+    import std.typecons : No;
     int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
     assert(equal(a.until(7), [1, 2, 4][]));
     assert(equal(a.until(7, No.openRight), [1, 2, 4, 7][]));

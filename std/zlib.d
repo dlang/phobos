@@ -195,11 +195,13 @@ in
 }
 body
 {
+    import core.memory : GC;
     auto destlen = srcbuf.length + ((srcbuf.length + 1023) / 1024) + 12;
     auto destbuf = new ubyte[destlen];
     auto err = etc.c.zlib.compress2(destbuf.ptr, &destlen, cast(ubyte *)srcbuf.ptr, srcbuf.length, level);
     if (err)
-    {   delete destbuf;
+    {
+        GC.free(destbuf.ptr);
         throw new ZlibException(err);
     }
 
@@ -402,7 +404,9 @@ class Compress
      *
      */
     const(void)[] compress(const(void)[] buf)
-    {   int err;
+    {
+        import core.memory : GC;
+        int err;
         ubyte[] destbuf;
 
         if (buf.length == 0)
@@ -428,7 +432,8 @@ class Compress
 
         err = deflate(&zs, Z_NO_FLUSH);
         if (err != Z_STREAM_END && err != Z_OK)
-        {   delete destbuf;
+        {
+            GC.free(destbuf.ptr);
             error(err);
         }
         destbuf.length = destbuf.length - zs.avail_out;
@@ -460,6 +465,7 @@ class Compress
     }
     body
     {
+        import core.memory : GC;
         ubyte[] destbuf;
         ubyte[512] tmpbuf = void;
         int err;
@@ -489,7 +495,7 @@ class Compress
                 }
                 err = Z_BUF_ERROR;
             }
-            delete destbuf;
+            GC.free(destbuf.ptr);
             error(err);
         }
         destbuf ~= tmpbuf[0 .. (tmpbuf.length - zs.avail_out)];
@@ -568,7 +574,9 @@ class UnCompress
         assert(!done);
     }
     body
-    {   int err;
+    {
+        import core.memory : GC;
+        int err;
         ubyte[] destbuf;
 
         if (buf.length == 0)
@@ -602,7 +610,8 @@ class UnCompress
 
         err = inflate(&zs, Z_NO_FLUSH);
         if (err != Z_STREAM_END && err != Z_OK)
-        {   delete destbuf;
+        {
+            GC.free(destbuf.ptr);
             error(err);
         }
         destbuf.length = destbuf.length - zs.avail_out;
@@ -625,6 +634,7 @@ class UnCompress
     }
     body
     {
+        import core.memory : GC;
         ubyte[] extra;
         ubyte[] destbuf;
         int err;
@@ -646,7 +656,7 @@ class UnCompress
         }
         if (err != Z_STREAM_END)
         {
-            delete destbuf;
+            GC.free(destbuf.ptr);
             if (err == Z_OK)
                 err = Z_BUF_ERROR;
             error(err);

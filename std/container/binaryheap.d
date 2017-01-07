@@ -198,15 +198,18 @@ Returns $(D true) if the heap is _empty, $(D false) otherwise.
     }
 
 /**
-Returns a duplicate of the heap. The underlying store must also
-support a $(D dup) method.
+Returns a duplicate of the heap. The $(D dup) method is available only if the
+underlying store supports it.
      */
-    @property BinaryHeap dup()
+    static if (is(typeof((Store s) { return s.dup; }(Store.init)) == Store))
     {
-        BinaryHeap result;
-        if (!_payload.refCountedStore.isInitialized) return result;
-        result.assume(_store.dup, length);
-        return result;
+        @property BinaryHeap dup()
+        {
+            BinaryHeap result;
+            if (!_payload.refCountedStore.isInitialized) return result;
+            result.assume(_store.dup, length);
+            return result;
+        }
     }
 
 /**
@@ -366,12 +369,35 @@ must be collected.
             insert(value);
             return true;
         }
-        // must replace the top
+
         assert(!_store.empty, "Cannot replace front of an empty heap.");
         if (!comp(value, _store.front)) return false; // value >= largest
         _store.front = value;
+
         percolate(_store[], 0, _length);
         debug(BinaryHeap) assertValid();
+        return true;
+    }
+
+/**
+Swapping is allowed if the heap is full. If $(D less(value, front)), the
+method exchanges store.front and value and returns $(D true). Otherwise, it
+leaves the heap unaffected and returns $(D false).
+     */
+    bool conditionalSwap(ref ElementType!Store value)
+    {
+        _payload.refCountedStore.ensureInitialized();
+        assert(_length == _store.length);
+        assert(!_store.empty, "Cannot swap front of an empty heap.");
+
+        if (!comp(value, _store.front)) return false; // value >= largest
+
+        import std.algorithm.mutation : swap;
+        swap(_store.front, value);
+
+        percolate(_store[], 0, _length);
+        debug(BinaryHeap) assertValid();
+
         return true;
     }
 }
@@ -406,6 +432,7 @@ initialized with $(D s) and $(D initialSize).
 BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
         size_t initialSize = size_t.max)
 {
+
     return BinaryHeap!(Store, less)(s, initialSize);
 }
 
@@ -472,4 +499,87 @@ unittest // 16072
         r.insert(i);
 
     assert(r.front == 99);
+}
+
+unittest
+{
+    import std.algorithm.comparison : equal;
+    int[] a = [4, 1, 3, 2, 16, 9, 10, 14, 8, 7];
+    auto heap = heapify(a);
+    auto dup = heap.dup();
+    assert(dup.equal([16, 14, 10, 9, 8, 7, 4, 3, 2, 1]));
+}
+
+unittest
+{
+    static struct StructWithoutDup
+    {
+        int[] a;
+        @disable StructWithoutDup dup()
+        {
+            StructWithoutDup d;
+            return d;
+        }
+        alias a this;
+    }
+
+    // Assert Binary heap can be created when Store doesn't have dup
+    // if dup is not used.
+    assert(__traits(compiles, ()
+        {
+            auto s = StructWithoutDup([1,2]);
+            auto h = heapify(s);
+        }));
+
+    // Assert dup can't be used on BinaryHeaps when Store doesn't have dup
+    assert(!__traits(compiles, ()
+        {
+            auto s = StructWithoutDup([1,2]);
+            auto h = heapify(s);
+            h.dup();
+        }));
+}
+
+unittest
+{
+    static struct StructWithDup
+    {
+        int[] a;
+        StructWithDup dup()
+        {
+            StructWithDup d;
+            return d;
+        }
+        alias a this;
+    }
+
+    // Assert dup can be used on BinaryHeaps when Store has dup
+    assert(__traits(compiles, ()
+        {
+            auto s = StructWithDup([1, 2]);
+            auto h = heapify(s);
+            h.dup();
+        }));
+}
+
+unittest
+{
+    import std.internal.test.dummyrange;
+    import std.algorithm.comparison : equal;
+
+    alias RefRange = DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random);
+
+    RefRange a;
+    RefRange b;
+    a.reinit();
+    b.reinit();
+
+    auto heap = heapify(a);
+    foreach (ref elem; b)
+    {
+        heap.conditionalSwap(elem);
+    }
+
+    assert(equal(heap, [ 5, 5, 4, 4, 3, 3, 2, 2, 1, 1]));
+    assert(equal(b, [10, 9, 8, 7, 6, 6, 7, 8, 9, 10]));
 }

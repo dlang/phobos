@@ -732,7 +732,7 @@ auto csvReader(Contents = string,
             return text.empty;
         }
 
-        auto popFront()
+        void popFront()
         {
             text.popFront();
         }
@@ -1102,7 +1102,7 @@ public:
 ///
 @safe pure unittest
 {
-    import std.algorithm;
+    import std.algorithm.comparison : equal;
 
     string str = `76;^26^;22`;
     int[] ans = [76,26,22];
@@ -1468,6 +1468,8 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
 @safe unittest
 {
     import std.array : appender;
+    import std.range.primitives : popFront;
+
     string str = "65,63\n123,3673";
 
     auto a = appender!(char[])();

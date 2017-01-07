@@ -56,6 +56,7 @@ DRUNTIME_PATH = ../druntime
 ZIPFILE = phobos.zip
 ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
+DUB=dub
 # Documentation-related stuff
 DOCSRC = ../dlang.org
 WEBSITE_DIR = ../web
@@ -129,7 +130,7 @@ endif
 LINKDL:=$(if $(findstring $(OS),linux),-L-ldl,)
 
 # use timelimit to avoid deadlocks if available
-TIMELIMIT:=$(if $(shell which timelimit 2>/dev/null || true),timelimit -t 60 ,)
+TIMELIMIT:=$(if $(shell which timelimit 2>/dev/null || true),timelimit -t 90 ,)
 
 # Set VERSION, where the file is that contains the version string
 VERSION=../dmd/VERSION
@@ -192,7 +193,7 @@ PACKAGE_std_experimental_ndslice = package iteration selection slice
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
-  backtracking kickstart tests thompson)
+  backtracking bitnfa tests tests2 tests3 thompson shiftor)
 
 # Modules in std (including those in packages)
 STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
@@ -361,9 +362,11 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 # For example: "make std/algorithm/mutation.test"
 # The mktemp business is needed so .o files don't clash in concurrent unittesting.
 %.test : %.d $(LIB)
-	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` && \
-	  $(DMD) -od$$T $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= $(LINKDL) -cov -run $< && \
-	  rm -rf $$T
+	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` &&                                                              \
+	  (                                                                                                     \
+	    $(DMD) -od$$T $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= $(LINKDL) -cov -run $< ;     \
+	    RET=$$? ; rm -rf $$T ; exit $$RET                                                                   \
+	  )
 
 # Target for quickly unittesting all modules and packages within a package,
 # transitively. For example: "make std/algorithm.test"
@@ -482,12 +485,13 @@ checkwhitespace: $(LIB)
 
 ../dscanner:
 	git clone https://github.com/Hackerpilot/Dscanner ../dscanner
-	git -C ../dscanner checkout tags/v0.4.0-alpha.8
+	git -C ../dscanner checkout tags/v0.4.0-beta.3
 	git -C ../dscanner submodule update --init --recursive
 
 ../dscanner/dsc: ../dscanner
 	# debug build is faster, but disable 'missing import' messages (missing core from druntime)
-	sed 's/dparse_verbose/StdLoggerDisableWarning/' -i ../dscanner/makefile
+	sed 's/dparse_verbose/StdLoggerDisableWarning/' ../dscanner/makefile > dscanner_makefile_tmp
+	mv dscanner_makefile_tmp ../dscanner/makefile
 	make -C ../dscanner githash debug
 
 style: ../dscanner/dsc
@@ -506,9 +510,19 @@ style: ../dscanner/dsc
 	@echo "Enforce Allman style"
 	grep -nrE '(if|for|foreach|foreach_reverse|while|unittest|switch|else|version) .*{$$' $$(find . -name '*.d'); test $$? -eq 1
 
+	@echo "Enforce do { to be in Allman style"
+	grep -nr 'do *{$$' $$(find . -name '*.d') ; test $$? -eq 1
+
 	# at the moment libdparse has problems to parse some modules (->excludes)
 	@echo "Running DScanner"
-	../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d|std/conv.d') -I.
+	../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d') -I.
+
+publictests: $(LIB)
+	# parse all public unittests from Phobos, for now some modules are excluded
+	rm -rf ./out
+	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) --compiler=$${PWD}/$(DMD) --single ../tools/phobos_tests_extractor.d -- --inputdir . --ignore "base64.d,building_blocks/free_list,building_blocks/quantizer,digest/hmac.d,file.d,index.d,math.d,ndslice/selection.d,stdio.d,traits.d,typecons.d,uuid.d" --outputdir ./out
+	# execute all parsed tests
+	for file in $$(find out -name '*.d'); do echo "executing $${file}" && $(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -main -unittest -run $$file || exit 1 ; done
 
 .PHONY : auto-tester-build
 auto-tester-build: all checkwhitespace

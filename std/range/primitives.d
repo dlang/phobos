@@ -164,7 +164,7 @@ template isInputRange(R)
     {
         R r = R.init;     // can define a range object
         if (r.empty) {}   // can test for empty
-        r.popFront();     // can invoke popFront()
+        r.popFront;       // can invoke popFront()
         auto h = r.front; // can get the front of the range
     }));
 }
@@ -698,7 +698,6 @@ package(std) template isNativeOutputRange(R, E)
     }));
 }
 
-///
 @safe unittest
 {
     int[] r = new int[](4);
@@ -844,7 +843,7 @@ template isBidirectionalRange(R)
     (inout int = 0)
     {
         R r = R.init;
-        r.popBack();
+        r.popBack;
         auto t = r.back;
         auto w = r.front;
         static assert(is(typeof(t) == typeof(w)));
@@ -935,6 +934,8 @@ template isRandomAccessRange(R)
 ///
 unittest
 {
+    import std.traits : isNarrowString;
+
     alias R = int[];
 
     // range is finite and bidirectional or infinite and forward.
@@ -1969,7 +1970,7 @@ ElementType!R moveBack(R)(R r)
 
 /**
    Moves element at index $(D i) of $(D r) out and returns it. Leaves $(D
-   r.front) in a destroyable state that does not allocate any resources
+   r[i]) in a destroyable state that does not allocate any resources
    (usually equal to its $(D .init) value).
 */
 ElementType!R moveAt(R)(R r, size_t i)
@@ -2104,28 +2105,23 @@ if (isNarrowString!(C[]))
 
     static if (is(Unqual!C == char))
     {
+        __gshared static immutable ubyte[] charWidthTab = [
+            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+            3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+            4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 1, 1
+        ];
+
         immutable c = str[0];
-        if (c < 0x80)
+        if (c < 192)
         {
-            //ptr is used to avoid unnnecessary bounds checking.
-            str = str.ptr[1 .. str.length];
-        }
-        else if (c == 0xff)
-        {
-            // bsr undefined for 0
             str = str.ptr[1 .. str.length];
         }
         else
         {
-             import core.bitop : bsr;
-             auto msbs = 7 - bsr(~c);
-             if ((msbs < 2) | (msbs > 6))
-             {
-                 //Invalid UTF-8
-                 msbs = 1;
-             }
-             str = str.ptr[min(msbs, str.length) .. str.length];
+            str = str.ptr[min(str.length, charWidthTab.ptr[c - 192]) .. str.length];
         }
+
     }
     else static if (is(Unqual!C == wchar))
     {

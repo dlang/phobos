@@ -5,9 +5,107 @@ $(COMMENT Pending changelog for 2.073. This will get copied to dlang.org and
 )
 
 $(BUGSTITLE Library Changes,
+    $(LI $(RELATIVE_LINK2 promoted, Added `std.traits.Promoted` to get the result of
+        $(LINK2 $(ROOT_DIR)spec/type.html#integer-promotions, scalar type promotion)
+        in multi-term arithmetic expressions.))
+    $(LI $(RELATIVE_LINK2 staticIsSorted, Added `std.meta.staticIsSorted` to check if
+        an `AliasSeq` is sorted according to some template predicate.))
+    $(LI $(RELATIVE_LINK2 minIndex, Added `std.algorithm.searching.minIndex`
+        to get the index of the minimum element of a range.))
+    $(LI $(RELATIVE_LINK2 maxIndex, Added `std.algorithm.searching.maxIndex`
+        to get the index of the maximum element of a range.))
+    $(LI $(RELATIVE_LINK2 ndslice-removal, `std.experimental.ndslice`
+        has been deprecated.))
+    $(LI $(RELATIVE_LINK2 has-function-attributes, Added `std.traits.hasFunctionAttributes`
+        as a user-friendly way to query for function attributes.))
 )
 
 $(BUGSTITLE Library Changes,
+
+$(LI $(LNAME2 promoted, `std.traits.Promoted` gets the type to which a scalar type will
+    be promoted in multi-term arithmetic expressions.)
+-------
+import std.traits : Promoted;
+static assert(is(typeof(ubyte(3) * ubyte(5)) == Promoted!ubyte));
+static assert(is(Promoted!ubyte == int));
+-------
+    $(P See the D specification on $(LINK2 $(ROOT_DIR)spec/type.html#integer-promotions,
+    scalar type promotions) for more information.)
+)
+
+$(LI $(LNAME2 staticIsSorted, `std.meta.staticIsSorted` checks whether an `AliasSeq` is
+    sorted according to some template predicate.)
+------
+enum Comp(T1, T2) = T1.sizeof < T2.sizeof;
+
+import std.meta : staticIsSorted;
+static assert( staticIsSorted!(Comp, byte, uint, double));
+static assert(!staticIsSorted!(Comp, bool, long, dchar));
+------
+    $(P Additionally, the compile-time performance of `std.meta.staticSort` has been
+    greatly improved. Nevertheless, due to compiler limitations it is still an
+    extraordinarily expensive operation to perform on longer sequences; strive to
+    minimize such use.)
+)
+
+$(LI $(LNAME2 minIndex, `std.algorithm.searching.minIndex` gets the index of
+    the minimum element of a range, according to a specified predicate. The
+    default predicate is "a < b")
+-------
+import std.algorithm.searching : minIndex;
+int[] a = [5, 4, 2, 1, 9, 10];
+assert(a.minIndex == 3);
+
+int[] a;
+assert(a.minIndex == -1);
+-------
+)
+
+$(LI $(LNAME2 maxIndex, `std.algorithm.searching.maxIndex` gets the index of
+    the maximum element of a range, according to a specified predicate. The
+    default predicate is "a > b")
+-------
+import std.algorithm.searching : maxIndex;
+int[] a = [5, 4, 2, 1, 9, 10];
+assert(a.minIndex == 5);
+
+int[] a;
+assert(a.minIndex == -1);
+-------
+)
+
+$(LI $(LNAME2 ndslice-removal, `std.experimental.ndslice` has been
+deprecated.)
+    The synchronization between Phobos and Mir turned out to be a lot of work
+    with litte gain. Users of `std.experimental.ndslice` are advised to
+    switch to the upstream $(LINK2 https://github.com/libmir/mir-algorithm,
+    mir package).
+)
+
+$(LI $(LNAME2 has-function-attributes, `std.traits.hasFunctionAttributes` has
+    been added)
+    It exposes a user-friendly way to query for function attributes:
+-------
+import std.traits : hasFunctionAttributes;
+
+// manually annotated function
+real func(real x) pure nothrow @safe
+{
+    return x;
+}
+static assert(hasFunctionAttributes!(func, "@safe", "pure"));
+static assert(!hasFunctionAttributes!(func, "@trusted"));
+
+// for templated function types are automatically inferred
+bool myFunc(T)(T b)
+{
+    return !b;
+}
+static assert(hasFunctionAttributes!(myFunc!bool, "@safe", "pure", "@nogc", "nothrow"));
+static assert(!hasFunctionAttributes!(myFunc!bool, "shared"));
+-------
+)
+
 )
 
 Macros:

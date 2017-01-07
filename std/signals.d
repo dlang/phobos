@@ -97,12 +97,35 @@ mixin template Signal(T1...)
 
     /***
      * Call each of the connected slots, passing the argument(s) i to them.
+     * Nested call will be ignored.
      */
     final void emit( T1 i )
     {
+        if (status >= ST.inemitting || !slots.length)
+            return; // should not nest
+
+        status = ST.inemitting;
+        scope (exit)
+            status = ST.idle;
+
         foreach (slot; slots[0 .. slots_idx])
         {   if (slot)
                 slot(i);
+        }
+
+        assert(status >= ST.inemitting);
+        if (status == ST.inemitting_disconnected)
+        {
+            for (size_t j = 0; j < slots_idx;)
+            {
+                if (slots[j] is null)
+                {
+                    slots_idx--;
+                    slots[j] = slots[slots_idx];
+                }
+                else
+                    j++;
+            }
         }
     }
 
@@ -153,22 +176,39 @@ mixin template Signal(T1...)
      */
     final void disconnect(slot_t slot)
     {
+        debug (signal) writefln("Signal.disconnect(slot)");
         size_t disconnectedSlots = 0;
         size_t instancePreviousSlots = 0;
-
-        for (size_t i = 0; i < slots_idx; )
+        if (status >= ST.inemitting)
         {
-            if (slots[i].ptr == slot.ptr &&
-                ++instancePreviousSlots &&
-                slots[i] == slot)
+            foreach (i, sloti; slots[0 .. slots_idx])
             {
-                slots_idx--;
-                disconnectedSlots++;
-                slots[i] = slots[slots_idx];
-                slots[slots_idx] = null;        // not strictly necessary
+                if (sloti.ptr == slot.ptr &&
+                    ++instancePreviousSlots &&
+                    sloti == slot)
+                {
+                    disconnectedSlots++;
+                    slots[i] = null;
+                    status = ST.inemitting_disconnected;
+                }
             }
-            else
-                i++;
+        }
+        else
+        {
+            for (size_t i = 0; i < slots_idx; )
+            {
+                if (slots[i].ptr == slot.ptr &&
+                    ++instancePreviousSlots &&
+                    slots[i] == slot)
+                {
+                    slots_idx--;
+                    disconnectedSlots++;
+                    slots[i] = slots[slots_idx];
+                    slots[slots_idx] = null;        // not strictly necessary
+                }
+                else
+                    i++;
+            }
         }
 
          // detach object from dispose event if all its slots have been removed
@@ -185,7 +225,8 @@ mixin template Signal(T1...)
      * of slots to be called by emit().
      */
     final void unhook(Object o)
-    {
+    in { assert( status == ST.idle ); }
+    body {
         debug (signal) writefln("Signal.unhook(o = %s)", cast(void*)o);
         for (size_t i = 0; i < slots_idx; )
         {
@@ -226,6 +267,9 @@ mixin template Signal(T1...)
   private:
     slot_t[] slots;             // the slots to call from emit()
     size_t slots_idx;           // used length of slots[]
+
+    enum ST { idle, inemitting, inemitting_disconnected }
+    ST status;
 }
 
 ///
@@ -566,7 +610,7 @@ void linkin() { }
 }
 
 // Triggers bug from issue 15341
-unittest
+@system unittest
 {
     class Observer
     {
@@ -606,3 +650,57 @@ version(none) // Disabled because of dmd @@@BUG5028@@@
         mixin Signal!(string, int) s2;
     }
 }
+
+// Triggers bug from issue 16249
+@system unittest
+{
+    class myLINE
+    {
+        mixin Signal!( myLINE, int );
+
+        void value( int v )
+        {
+            if ( v >= 0 ) emit( this, v );
+            else          emit( new myLINE, v );
+        }
+    }
+
+    class Dot
+    {
+        int value;
+
+        myLINE line_;
+        void line( myLINE line_x )
+        {
+            if ( line_ is line_x ) return;
+
+            if ( line_ !is null )
+            {
+                line_.disconnect( &watch );
+            }
+            line_ = line_x;
+            line_.connect( &watch );
+        }
+
+        void watch( myLINE line_x, int value_x )
+        {
+            line = line_x;
+            value = value_x;
+        }
+    }
+
+    auto dot1 = new Dot;
+    auto dot2 = new Dot;
+    auto line = new myLINE;
+    dot1.line = line;
+    dot2.line = line;
+
+    line.value = 11;
+    assert( dot1.value == 11 );
+    assert( dot2.value == 11 );
+
+    line.value = -22;
+    assert( dot1.value == -22 );
+    assert( dot2.value == -22 );
+}
+

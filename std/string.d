@@ -209,20 +209,10 @@ public import std.array : join, replace, replaceInPlace, split, empty;
   +/
 class StringException : Exception
 {
-    /++
-        Params:
-            msg  = The message for the exception.
-            file = The file where the exception occurred.
-            line = The line number where the exception occurred.
-            next = The previous exception in the chain of exceptions, if any.
-      +/
-    this(string msg,
-         string file = __FILE__,
-         size_t line = __LINE__,
-         Throwable next = null) @safe pure nothrow
-    {
-        super(msg, file, line, next);
-    }
+    import std.exception : basicExceptionCtors;
+
+    ///
+    mixin basicExceptionCtors;
 }
 
 
@@ -545,6 +535,8 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
 ///
 @safe pure unittest
 {
+    import std.typecons : No;
+
     string s = "Hello World";
     assert(indexOf(s, 'W') == 6);
     assert(indexOf(s, 'Z') == -1);
@@ -554,6 +546,8 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
 ///
 @safe pure unittest
 {
+    import std.typecons : No;
+
     string s = "Hello World";
     assert(indexOf(s, 'W', 4) == 6);
     assert(indexOf(s, 'Z', 100) == -1);
@@ -801,6 +795,8 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 ///
 @safe pure unittest
 {
+    import std.typecons : No;
+
     string s = "Hello World";
     assert(indexOf(s, "Wo", 4) == 6);
     assert(indexOf(s, "Zo", 100) == -1);
@@ -810,6 +806,8 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 ///
 @safe pure unittest
 {
+    import std.typecons : No;
+
     string s = "Hello World";
     assert(indexOf(s, "Wo") == 6);
     assert(indexOf(s, "Zo") == -1);
@@ -1059,6 +1057,8 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
 ///
 @safe pure unittest
 {
+    import std.typecons : No;
+
     string s = "Hello World";
     assert(lastIndexOf(s, 'l') == 9);
     assert(lastIndexOf(s, 'Z') == -1);
@@ -1068,6 +1068,8 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
 ///
 @safe pure unittest
 {
+    import std.typecons : No;
+
     string s = "Hello World";
     assert(lastIndexOf(s, 'l', 4) == 3);
     assert(lastIndexOf(s, 'Z', 1337) == -1);
@@ -1264,6 +1266,8 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 ///
 @safe pure unittest
 {
+    import std.typecons : No;
+
     string s = "Hello World";
     assert(lastIndexOf(s, "ll") == 2);
     assert(lastIndexOf(s, "Zo") == -1);
@@ -1273,6 +1277,8 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 ///
 @safe pure unittest
 {
+    import std.typecons : No;
+
     string s = "Hello World";
     assert(lastIndexOf(s, "ll", 4) == 2);
     assert(lastIndexOf(s, "Zo", 128) == -1);

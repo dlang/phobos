@@ -117,6 +117,9 @@ struct FreeList(ParentAllocator,
         ///
         unittest
         {
+            import std.experimental.allocator.mallocator : Mallocator;
+            import std.experimental.allocator.common : chooseAtRuntime;
+
             FreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
             a.min = 64;
             a.max = 128;
@@ -674,6 +677,8 @@ unittest
     import std.experimental.allocator.building_blocks.allocator_list
         : AllocatorList;
 
+    import std.experimental.allocator.common : unbounded;
+
     alias ScalableFreeList = AllocatorList!((n) =>
         ContiguousFreeList!(GCAllocator, 0, unbounded)(4096)
     );
@@ -760,6 +765,7 @@ struct SharedFreeList(ParentAllocator,
         "Maximum size must accommodate a pointer.");
 
     import core.atomic : atomicOp, cas;
+    import core.internal.spinlock : SpinLock;
 
     static if (minSize != chooseAtRuntime)
     {
@@ -854,6 +860,10 @@ struct SharedFreeList(ParentAllocator,
             assert(nodes);
             atomicOp!("-=")(nodes, 1);
         }
+        private void resetNodes() shared
+        {
+            nodes = 0;
+        }
         private bool nodesFull() shared
         {
             return nodes >= approxMaxLength;
@@ -863,6 +873,7 @@ struct SharedFreeList(ParentAllocator,
     {
         private static void incNodes() { }
         private static void decNodes() { }
+        private static void resetNodes() { }
         private enum bool nodesFull = false;
     }
 
@@ -885,7 +896,10 @@ struct SharedFreeList(ParentAllocator,
         ///
         unittest
         {
-            SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
+            import std.experimental.allocator.mallocator : Mallocator;
+            import std.experimental.allocator.common : chooseAtRuntime;
+
+            shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
             // Set the maxSize first so setting the minSize doesn't throw
             a.max = 128;
             a.min = 64;
@@ -903,7 +917,10 @@ struct SharedFreeList(ParentAllocator,
         ///
         unittest
         {
-            SharedFreeList!(Mallocator, 50, 50, chooseAtRuntime) a;
+            import std.experimental.allocator.mallocator : Mallocator;
+            import std.experimental.allocator.common : chooseAtRuntime;
+
+            shared SharedFreeList!(Mallocator, 50, 50, chooseAtRuntime) a;
             // Set the maxSize first so setting the minSize doesn't throw
             a.approxMaxLength = 128;
             assert(a.approxMaxLength  == 128);
@@ -923,6 +940,8 @@ struct SharedFreeList(ParentAllocator,
     else alias parent = ParentAllocator.instance;
 
     mixin(forwardToMember("parent", "expand"));
+
+    private SpinLock lock;
 
     private struct Node { Node* next; }
     static assert(ParentAllocator.alignment >= Node.alignof);
@@ -958,18 +977,22 @@ struct SharedFreeList(ParentAllocator,
         assert(bytes < size_t.max / 2);
         if (!freeListEligible(bytes)) return parent.allocate(bytes);
         if (maxSize != unbounded) bytes = max;
-        // Pop off the freelist
-        shared Node* oldRoot = void, next = void;
-        do
+
+        // Try to pop off the freelist
+        lock.lock();
+        if (!_root)
         {
-            oldRoot = _root; // atomic load
-            if (!oldRoot) return allocateFresh(bytes);
-            next = oldRoot.next; // atomic load
+            lock.unlock();
+            return allocateFresh(bytes);
         }
-        while (!cas(&_root, oldRoot, next));
-        // great, snatched the root
-        decNodes();
-        return (cast(ubyte*) oldRoot)[0 .. bytes];
+        else
+        {
+            auto oldRoot = _root;
+            _root = _root.next;
+            decNodes();
+            lock.unlock();
+            return (cast(ubyte*) oldRoot)[0 .. bytes];
+        }
     }
 
     private void[] allocateFresh(const size_t bytes) shared
@@ -984,14 +1007,11 @@ struct SharedFreeList(ParentAllocator,
         if (!nodesFull && freeListEligible(b.length))
         {
             auto newRoot = cast(shared Node*) b.ptr;
-            shared Node* oldRoot;
-            do
-            {
-                oldRoot = _root;
-                newRoot.next = oldRoot;
-            }
-            while (!cas(&_root, oldRoot, newRoot));
+            lock.lock();
+            newRoot.next = _root;
+            _root = newRoot;
             incNodes();
+            lock.unlock();
             return true;
         }
         static if (hasMember!(ParentAllocator, "deallocate"))
@@ -1004,6 +1024,8 @@ struct SharedFreeList(ParentAllocator,
     bool deallocateAll() shared
     {
         bool result = false;
+        lock.lock();
+        scope(exit) lock.unlock();
         static if (hasMember!(ParentAllocator, "deallocateAll"))
         {
             result = parent.deallocateAll();
@@ -1011,13 +1033,16 @@ struct SharedFreeList(ParentAllocator,
         else static if (hasMember!(ParentAllocator, "deallocate"))
         {
             result = true;
-            for (auto n = _root; n; n = n.next)
+            for (auto n = _root; n;)
             {
+                auto tmp = n.next;
                 if (!parent.deallocate((cast(ubyte*)n)[0 .. max]))
                     result = false;
+                n = tmp;
             }
         }
         _root = null;
+        resetNodes();
         return result;
     }
 }
@@ -1025,37 +1050,45 @@ struct SharedFreeList(ParentAllocator,
 unittest
 {
     import std.algorithm.comparison : equal;
-    import std.concurrency : receiveOnly, send, spawn, thisTid, Tid;
     import std.range : repeat;
     import std.experimental.allocator.mallocator : Mallocator;
+    import core.thread : ThreadGroup;
 
     static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
 
     assert(a.goodAllocSize(1) == platformAlignment);
 
-    auto b = a.allocate(100);
+    auto b = a.allocate(96);
     a.deallocate(b);
 
-    static void fun(Tid tid, int i)
+    void fun()
     {
-        scope(exit) tid.send(true);
-        auto b = cast(ubyte[]) a.allocate(100);
-        b[] = cast(ubyte) i;
+        auto b = cast(size_t[]) a.allocate(96);
+        b[] = cast(size_t) &b;
 
-        assert(b.equal(repeat(cast(ubyte) i, b.length)));
+        assert(b.equal(repeat(cast(size_t) &b, b.length)));
         a.deallocate(b);
     }
 
-    Tid[] tids;
+    auto tg = new ThreadGroup;
     foreach (i; 0 .. 20)
     {
-        tids ~= spawn(&fun, thisTid, i);
+        tg.create(&fun);
     }
 
-    foreach (i; 0 .. 20)
-    {
-        assert(receiveOnly!bool);
-    }
+    tg.joinAll();
+}
+
+unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
+    auto b = a.allocate(100);
+    a.deallocate(b);
+    assert(a.nodes == 1);
+    b = [];
+    a.deallocateAll();
+    assert(a.nodes == 0);
 }
 
 unittest

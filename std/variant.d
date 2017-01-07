@@ -88,14 +88,13 @@ struct This;
 private alias This2Variant(V, T...) = AliasSeq!(ReplaceType!(This, V, T));
 
 /**
- * $(D VariantN) is a back-end type seldom used directly by user
- * code. Two commonly-used types using $(D VariantN) as
- * back-end are:
+ * Back-end type seldom used directly by user
+ * code. Two commonly-used types using $(D VariantN) are:
  *
- * $(OL $(LI $(B Algebraic): A closed discriminated union with a
+ * $(OL $(LI $(LREF Algebraic): A closed discriminated union with a
  * limited type universe (e.g., $(D Algebraic!(int, double,
  * string)) only accepts these three types and rejects anything
- * else).) $(LI $(B Variant): An open discriminated union allowing an
+ * else).) $(LI $(LREF Variant): An open discriminated union allowing an
  * unbounded set of types. If any of the types in the $(D Variant)
  * are larger than the largest built-in type, they will automatically
  * be boxed. This means that even large types will only be the size
@@ -131,7 +130,7 @@ private:
     }
     enum size = SizeChecker.sizeof - (int function()).sizeof;
 
-    /** Tells whether a type $(D T) is statically allowed for
+    /** Tells whether a type $(D T) is statically _allowed for
      * storage inside a $(D VariantN) object by looking
      * $(D T) up in $(D AllowedTypes).
      */
@@ -531,6 +530,8 @@ private:
         return 0;
     }
 
+    enum doUnittest = is(VariantN == Variant);
+
 public:
     /** Constructs a $(D VariantN) value given an argument of a
      * generic type. Statically rejects disallowed types.
@@ -666,6 +667,7 @@ public:
     }
 
     ///
+    static if (doUnittest)
     unittest
     {
         Variant a;
@@ -698,6 +700,7 @@ public:
     }
 
     ///
+    static if (doUnittest)
     unittest
     {
         Variant a = 5;
@@ -722,8 +725,8 @@ public:
 
     /**
      * Returns $(D true) if and only if the $(D VariantN)
-     * object holds an object implicitly convertible to type $(D
-     * U). Implicit convertibility is defined as per
+     * object holds an object implicitly convertible to type `T`.
+     * Implicit convertibility is defined as per
      * $(REF_ALTTEXT ImplicitConversionTargets, ImplicitConversionTargets, std,traits).
      */
 
@@ -844,6 +847,7 @@ public:
 
     // returns 1 if the two are equal
     bool opEquals(T)(auto ref T rhs) const
+    if (allowed!T || is(Unqual!T == VariantN))
     {
         static if (is(Unqual!T == VariantN))
             alias temp = rhs;
@@ -866,6 +870,7 @@ public:
      */
 
     int opCmp(T)(T rhs)
+    if (allowed!T)  // includes T == VariantN
     {
         static if (is(T == VariantN))
             alias temp = rhs;
@@ -1087,48 +1092,45 @@ public:
     }
 
     ///
-    unittest
-    {
-        auto a = Variant(new int[10]);
-        a[5] = 42;
-        assert(a[5] == 42);
-        assert((cast(const Variant) a)[5] == 42);
-        int[int] hash = [ 42:24 ];
-        a = hash;
-        assert(a[42] == 24);
-    }
-
-    /** Caveat:
-    Due to limitations in current language, read-modify-write
-    operations $(D op=) will not work properly:
-    */
+    static if (doUnittest)
     unittest
     {
         Variant a = new int[10];
         a[5] = 42;
+        assert(a[5] == 42);
         a[5] += 8;
-        //assert(a[5] == 50); // will fail, a[5] is still 42
-    }
+        assert(a[5] == 50);
 
-    unittest
-    {
         int[int] hash = [ 42:24 ];
-        Variant v = hash;
-        assert(v[42] == 24);
-        v[42] = 5;
-        assert(v[42] == 5);
+        a = hash;
+        assert(a[42] == 24);
+        a[42] /= 2;
+        assert(a[42] == 12);
     }
 
     /// ditto
     Variant opIndexAssign(T, N)(T value, N i)
     {
+        static if (AllowedTypes.length && !isInstanceOf!(.VariantN, T))
+        {
+            enum canAssign(U) = __traits(compiles, (U u){ u[i] = value; });
+            static assert(anySatisfy!(canAssign, AllowedTypes),
+                "Cannot assign " ~ T.stringof ~ " to " ~ VariantN.stringof ~
+                " indexed with " ~ N.stringof);
+        }
         Variant[2] args = [ Variant(value), Variant(i) ];
         fptr(OpID.indexAssign, &store, &args) == 0 || assert(false);
         return args[0];
     }
 
+    /// ditto
+    Variant opIndexOpAssign(string op, T, N)(T value, N i)
+    {
+        return opIndexAssign(mixin(`opIndex(i)` ~ op ~ `value`), i);
+    }
+
     /** If the $(D VariantN) contains an (associative) array,
-     * returns the length of that array. Otherwise, throws an
+     * returns the _length of that array. Otherwise, throws an
      * exception.
      */
     @property size_t length()
@@ -1188,6 +1190,15 @@ unittest
     assert(v("43") == 43);
 }
 
+unittest
+{
+    int[int] hash = [ 42:24 ];
+    Variant v = hash;
+    assert(v[42] == 24);
+    v[42] = 5;
+    assert(v[42] == 5);
+}
+
 // opIndex with static arrays, issue 12771
 unittest
 {
@@ -1199,6 +1210,24 @@ unittest
     v[2] = 6;
     assert(v[2] == 6);
     assert(v != elements);
+}
+
+unittest
+{
+    import std.exception : assertThrown;
+    Algebraic!(int[]) v = [2, 2];
+
+    assert(v == [2, 2]);
+    v[0] = 1;
+    assert(v[0] == 1);
+    assert(v != [2, 2]);
+
+    // opIndexAssign from Variant
+    v[1] = v[0];
+    assert(v[1] == 1);
+
+    static assert(!__traits(compiles, (v[1] = null)));
+    assertThrown!VariantException(v[1] = Variant(null));
 }
 
 //Issue# 8195
@@ -1333,8 +1362,8 @@ unittest
 
 
 /**
-Algebraic data type restricted to a closed set of possible
-types. It's an alias for a $(LREF VariantN) with an
+_Algebraic data type restricted to a closed set of possible
+types. It's an alias for $(LREF VariantN) with an
 appropriately-constructed maximum size. `Algebraic` is
 useful when it is desirable to restrict what a discriminated type
 could hold to the end of defining simpler and more efficient
@@ -1389,7 +1418,7 @@ unittest
 }
 
 /**
-`Variant` is an alias for `VariantN` instantiated with the largest of `creal`,
+Alias for $(LREF VariantN) instantiated with the largest size of `creal`,
 `char[]`, and `void delegate()`. This ensures that `Variant` is large enough
 to hold all of D's predefined types unboxed, including all numeric types,
 pointers, delegates, and class references.  You may want to use
@@ -1424,24 +1453,10 @@ unittest
     assert(b[1] == 3.14);
 }
 
-/** Code that needs functionality similar to the $(D boxArray)
-function in the $(D std.boxer) module can achieve it like this:
-*/
-unittest
-{
-    Variant[] fun(T...)(T args)
-    {
-        // ...
-        return variantArray(args);
-    }
-}
-
-/**
-
 /**
  * Thrown in three cases:
  *
- * $(OL $(LI An uninitialized Variant is used in any way except
+ * $(OL $(LI An uninitialized `Variant` is used in any way except
  * assignment and $(D hasValue);) $(LI A $(D get) or
  * $(D coerce) is attempted with an incompatible target type;)
  * $(LI A comparison between $(D Variant) objects of
@@ -1715,6 +1730,19 @@ unittest
 
 unittest
 {
+    // check comparisons incompatible with AllowedTypes
+    Algebraic!int v = 2;
+
+    assert(v == 2);
+    assert(v < 3);
+    static assert(!__traits(compiles, {v == long.max;}));
+    static assert(!__traits(compiles, {v == null;}));
+    static assert(!__traits(compiles, {v < long.max;}));
+    static assert(!__traits(compiles, {v > null;}));
+}
+
+unittest
+{
     // bug 1558
     Variant va=1;
     Variant vb=-2;
@@ -1969,35 +1997,36 @@ unittest
 }
 
 /**
- * Applies a delegate or function to the given Algebraic depending on the held type,
+ * Applies a delegate or function to the given $(LREF Algebraic) depending on the held type,
  * ensuring that all types are handled by the visiting functions.
  *
  * The delegate or function having the currently held value as parameter is called
  * with $(D variant)'s current value. Visiting handlers are passed
  * in the template parameter list.
- * It is statically ensured that all types of
+ * It is statically ensured that all held types of
  * $(D variant) are handled across all handlers.
  * $(D visit) allows delegates and static functions to be passed
  * as parameters.
  *
  * If a function without parameters is specified, this function is called
- * when variant doesn't hold a value. Exactly one parameter-less function
+ * when `variant` doesn't hold a value. Exactly one parameter-less function
  * is allowed.
  *
  * Duplicate overloads matching the same type in one of the visitors are disallowed.
  *
  * Returns: The return type of visit is deduced from the visiting functions and must be
  * the same across all overloads.
- * Throws: If no parameter-less, error function is specified:
- * $(D VariantException) if $(D variant) doesn't hold a value.
+ * Throws: $(LREF VariantException) if `variant` doesn't hold a value and no
+ * parameter-less fallback function is specified.
  */
-template visit(Handler ...)
-    if (Handler.length > 0)
+template visit(Handlers...)
+    if (Handlers.length > 0)
 {
+    ///
     auto visit(VariantType)(VariantType variant)
         if (isAlgebraic!VariantType)
     {
-        return visitImpl!(true, VariantType, Handler)(variant);
+        return visitImpl!(true, VariantType, Handlers)(variant);
     }
 }
 
@@ -2083,7 +2112,7 @@ unittest
 }
 
 /**
- * Behaves as $(D visit) but doesn't enforce that all types are handled
+ * Behaves as $(LREF visit) but doesn't enforce that all types are handled
  * by the visiting functions.
  *
  * If a parameter-less function is specified it is called when
@@ -2092,18 +2121,18 @@ unittest
  *
  * Returns: The return type of tryVisit is deduced from the visiting functions and must be
  * the same across all overloads.
- * Throws: If no parameter-less, error function is specified: $(D VariantException) if
- *         $(D variant) doesn't hold a value or
- *         if $(D variant) holds a value which isn't handled by the visiting
- *         functions.
+ * Throws: $(LREF VariantException) if `variant` doesn't hold a value or
+ * `variant` holds a value which isn't handled by the visiting functions,
+ * when no parameter-less fallback function is specified.
  */
-template tryVisit(Handler ...)
-    if (Handler.length > 0)
+template tryVisit(Handlers...)
+    if (Handlers.length > 0)
 {
+    ///
     auto tryVisit(VariantType)(VariantType variant)
         if (isAlgebraic!VariantType)
     {
-        return visitImpl!(false, VariantType, Handler)(variant);
+        return visitImpl!(false, VariantType, Handlers)(variant);
     }
 }
 
@@ -2313,6 +2342,12 @@ unittest
     Variant b;
     assert(a == b);
     assert(b == a);
+}
+
+unittest
+{
+    const Variant a = [2];
+    assert(a[0] == 2);
 }
 
 unittest

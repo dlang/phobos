@@ -1807,6 +1807,89 @@ F[] uniformDistribution(F = double)(size_t n, F[] useThis = null)
 }
 
 /**
+Returns a random, uniformly chosen, element `e` from the supplied
+$(D Range range). If no random number generator is passed, the default
+`rndGen` is used.
+
+Params:
+    range = a random access range that has the `length` property defined
+    urng = (optional) random number generator to use;
+           if not specified, defaults to `rndGen`
+
+Returns:
+    A single random element drawn from the `range`. If it can, it will
+    return a `ref` to the $(D range element), otherwise it will return
+    a copy.
+ */
+auto ref choice(Range, RandomGen = Random)(auto ref Range range,
+                                           ref RandomGen urng = rndGen)
+    if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
+{
+    assert(range.length > 0,
+           __PRETTY_FUNCTION__ ~ ": invalid Range supplied. Range cannot be empty");
+
+    return range[uniform(size_t(0), $, urng)];
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.searching : canFind;
+
+    auto array = [1, 2, 3, 4, 5];
+    auto elem = choice(array);
+
+    assert(canFind(array, elem),
+           "Choice did not return a valid element from the given Range");
+
+    auto urng = Random(unpredictableSeed);
+    elem = choice(array, urng);
+
+    assert(canFind(array, elem),
+           "Choice did not return a valid element from the given Range");
+}
+
+@safe unittest
+{
+    import std.algorithm.searching : canFind;
+
+    class MyTestClass
+    {
+        int x;
+
+        this(int x)
+        {
+            this.x = x;
+        }
+    }
+
+    MyTestClass[] testClass;
+    foreach (i; 0 .. 5)
+    {
+        testClass ~= new MyTestClass(i);
+    }
+
+    auto elem = choice(testClass);
+
+    assert(canFind!((ref MyTestClass a, ref MyTestClass b) => a.x == b.x)(testClass, elem),
+           "Choice did not return a valid element from the given Range");
+}
+
+unittest
+{
+    import std.algorithm.searching : canFind;
+    import std.algorithm.iteration : map;
+
+    auto array = [1, 2, 3, 4, 5];
+    auto elemAddr = &choice(array);
+
+    assert(array.map!((ref e) => &e).canFind(elemAddr),
+           "Choice did not return a ref to an element from the given Range");
+    assert(array.canFind(*(cast(int *)(elemAddr))),
+           "Choice did not return a valid element from the given Range");
+}
+
+/**
 Shuffles elements of $(D r) using $(D gen) as a shuffler. $(D r) must be
 a random-access range with length.  If no RNG is specified, $(D rndGen)
 will be used.
@@ -1832,7 +1915,7 @@ void randomShuffle(Range)(Range r)
 
 @safe unittest
 {
-    import std.algorithm;
+    import std.algorithm.sorting : sort;
     foreach (RandomGen; PseudoRngTypes)
     {
         // Also tests partialShuffle indirectly.
@@ -2077,6 +2160,7 @@ struct RandomCover(Range, UniformRNG = void)
     private bool[] _chosen;
     private size_t _current;
     private size_t _alreadyChosen = 0;
+    private bool _isEmpty = false;
 
     static if (is(UniformRNG == void))
     {
@@ -2084,9 +2168,13 @@ struct RandomCover(Range, UniformRNG = void)
         {
             _input = input;
             _chosen.length = _input.length;
-            if (_chosen.length == 0)
+            if (_input.empty)
             {
-                _alreadyChosen = 1;
+                _isEmpty = true;
+            }
+            else
+            {
+                _current = uniform(0, _chosen.length);
             }
         }
     }
@@ -2099,9 +2187,13 @@ struct RandomCover(Range, UniformRNG = void)
             _input = input;
             _rng = rng;
             _chosen.length = _input.length;
-            if (_chosen.length == 0)
+            if (_input.empty)
             {
-                _alreadyChosen = 1;
+                _isEmpty = true;
+            }
+            else
+            {
+                _current = uniform(0, _chosen.length, rng);
             }
         }
 
@@ -2115,39 +2207,32 @@ struct RandomCover(Range, UniformRNG = void)
     {
         @property size_t length()
         {
-            if (_alreadyChosen == 0)
-            {
-                return _input.length;
-            }
-            else
-            {
-                return (1 + _input.length) - _alreadyChosen;
-            }
+            return _input.length - _alreadyChosen;
         }
     }
 
     @property auto ref front()
     {
-        if (_alreadyChosen == 0)
-        {
-            popFront();
-        }
+        assert(!_isEmpty);
         return _input[_current];
     }
 
     void popFront()
     {
-        if (_alreadyChosen >= _input.length)
+        assert(!_isEmpty);
+
+        size_t k = _input.length - _alreadyChosen - 1;
+        if (k == 0)
         {
-            // No more elements
-            ++_alreadyChosen; // means we're done
+            _isEmpty = true;
+            ++_alreadyChosen;
             return;
         }
-        size_t k = _input.length - _alreadyChosen;
+
         size_t i;
         foreach (e; _input)
         {
-            if (_chosen[i]) { ++i; continue; }
+            if (_chosen[i] || i == _current) { ++i; continue; }
             // Roll a dice with k faces
             static if (is(UniformRNG == void))
             {
@@ -2160,7 +2245,7 @@ struct RandomCover(Range, UniformRNG = void)
             assert(k > 1 || chooseMe);
             if (chooseMe)
             {
-                _chosen[i] = true;
+                _chosen[_current] = true;
                 _current = i;
                 ++_alreadyChosen;
                 return;
@@ -2181,7 +2266,7 @@ struct RandomCover(Range, UniformRNG = void)
         }
     }
 
-    @property bool empty() { return _alreadyChosen > _input.length; }
+    @property bool empty() { return _isEmpty; }
 }
 
 /// Ditto
@@ -2203,6 +2288,7 @@ auto randomCover(Range)(Range r)
     import std.algorithm;
     import std.conv;
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
+    int[] c;
     foreach (UniformRNG; std.meta.AliasSeq!(void, PseudoRngTypes))
     {
         static if (is(UniformRNG == void))
@@ -2219,6 +2305,8 @@ auto randomCover(Range)(Range r)
             // check for constructor passed a value-type RNG
             auto rc2 = RandomCover!(int[], UniformRNG)(a, UniformRNG(unpredictableSeed));
             static assert(isForwardRange!(typeof(rc2)));
+            auto rcEmpty = randomCover(c, rng);
+            assert(rcEmpty.length == 0);
         }
 
         int[] b = new int[9];
@@ -2240,6 +2328,17 @@ auto randomCover(Range)(Range r)
     auto rc = randomCover(r);
     assert(rc.length == 0);
     assert(rc.empty);
+
+    // Bugzilla 16724
+    import std.range : iota;
+    auto range = iota(10);
+    auto randy = range.randomCover;
+
+    for (int i=1; i<=range.length; i++)
+    {
+        randy.popFront;
+        assert(randy.length == range.length - i);
+    }
 }
 
 // RandomSample

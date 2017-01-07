@@ -2116,19 +2116,6 @@ public:
         assert(!gothic['$']);
     }
 
-    // Linear scan for $(D ch). Useful only for small sets.
-    // TODO:
-    // used internally in std.regex
-    // should be properly exposed in a public API ?
-    package auto scanFor()(dchar ch) const
-    {
-        immutable len = data.length;
-        for (size_t i = 0; i < len; i++)
-            if (ch < data[i])
-                return i & 1;
-        return 0;
-    }
-
     /// Number of $(CODEPOINTS) in this set
     @property size_t length()
     {
@@ -2714,7 +2701,7 @@ private:
 
         //may break sorted property - but we need std.sort to access it
         //hence package protection attribute
-        package @property auto front(CodepointInterval val)
+        package @property void front(CodepointInterval val)
         {
             slice[start] = val.a;
             slice[start+1] = val.b;
@@ -2728,7 +2715,7 @@ private:
         }
 
         //ditto about package
-        package @property auto back(CodepointInterval val)
+        package @property void back(CodepointInterval val)
         {
             slice[end-2] = val.a;
             slice[end-1] = val.b;
@@ -2752,7 +2739,7 @@ private:
         }
 
         //ditto about package
-        package auto opIndexAssign(CodepointInterval val, size_t idx)
+        package void opIndexAssign(CodepointInterval val, size_t idx)
         {
             slice[start+idx*2] = val.a;
             slice[start+idx*2+1] = val.b;
@@ -6864,6 +6851,7 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
+    import std.range : isRandomAccessRange;
 
     string bold = "ku\u0308hn";
 
@@ -6955,18 +6943,18 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
 }
 
 /++
-    $(P Does basic case-insensitive comparison of strings $(D str1) and $(D str2).
+    $(P Does basic case-insensitive comparison of $(D r1) and $(D r2).
     This function uses simpler comparison rule thus achieving better performance
     than $(LREF icmp). However keep in mind the warning below.)
 
     Params:
-        str1 = a string
-        str2 = a string
+        r1 = an input range of characters
+        r2 = an input range of characters
 
     Returns:
         An $(D int) that is 0 if the strings match,
-        &lt;0 if $(D str1) is lexicographically "less" than $(D str2),
-        &gt;0 if $(D str1) is lexicographically "greater" than $(D str2)
+        &lt;0 if $(D r1) is lexicographically "less" than $(D r2),
+        &gt;0 if $(D r1) is lexicographically "greater" than $(D r2)
 
     Warning:
     This function only handles 1:1 $(CODEPOINT) mapping
@@ -6977,18 +6965,22 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
         $(LREF icmp)
         $(REF cmp, std,algorithm,comparison)
 +/
-int sicmp(S1, S2)(S1 str1, S2 str2) if (isSomeString!S1 && isSomeString!S2)
+int sicmp(S1, S2)(S1 r1, S2 r2)
+    if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
+    && isInputRange!S2 && isSomeChar!(ElementEncodingType!S2))
 {
-    import std.internal.unicode_tables : simpleCaseTable; // generated file
-    alias sTable = simpleCaseTable;
-    import std.utf : decode;
+    import std.internal.unicode_tables : sTable = simpleCaseTable; // generated file
+    import std.utf : byDchar;
 
-    size_t ridx=0;
-    foreach (dchar lhs; str1)
+    auto str1 = r1.byDchar;
+    auto str2 = r2.byDchar;
+
+    foreach (immutable lhs; str1)
     {
-        if (ridx == str2.length)
+        if (str2.empty)
             return 1;
-        immutable rhs = decode(str2, ridx);
+        immutable rhs = str2.front;
+        str2.popFront();
         int diff = lhs - rhs;
         if (!diff)
             continue;
@@ -7017,11 +7009,11 @@ int sicmp(S1, S2)(S1 str1, S2 str2) if (isSomeString!S1 && isSomeString!S2)
         // one of chars is not cased at all
         return diff;
     }
-    return ridx == str2.length ? 0 : -1;
+    return str2.empty ? 0 : -1;
 }
 
 ///
-@safe unittest
+@safe @nogc nothrow unittest
 {
     assert(sicmp("Август", "авгусТ") == 0);
     // Greek also works as long as there is no 1:M mapping in sight
@@ -7036,7 +7028,7 @@ int sicmp(S1, S2)(S1 str1, S2 str2) if (isSomeString!S1 && isSomeString!S2)
 }
 
 // overloads for the most common cases to reduce compile time
-@safe pure /*TODO nothrow*/
+@safe @nogc pure nothrow
 {
     int sicmp(const(char)[] str1, const(char)[] str2)
     { return sicmp!(const(char)[], const(char)[])(str1, str2); }
@@ -7047,7 +7039,7 @@ int sicmp(S1, S2)(S1 str1, S2 str2) if (isSomeString!S1 && isSomeString!S2)
 }
 
 private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
-    @trusted pure /*TODO nothrow*/
+    @trusted pure nothrow
 {
     import std.algorithm.searching : skipOver;
     import std.internal.unicode_tables : fullCaseTable; // generated file
@@ -7141,7 +7133,7 @@ int icmp(S1, S2)(S1 r1, S2 r2)
 }
 
 ///
-@safe unittest
+@safe @nogc nothrow unittest
 {
     assert(icmp("Rußland", "Russland") == 0);
     assert(icmp("ᾩ -> \u1F70\u03B9", "\u1F61\u03B9 -> ᾲ") == 0);
@@ -7171,7 +7163,7 @@ int icmp(S1, S2)(S1 r1, S2 r2)
 }
 
 // overloads for the most common cases to reduce compile time
-@safe pure /*TODO nothrow*/
+@safe @nogc pure nothrow
 {
     int icmp(const(char)[] str1, const(char)[] str2)
     { return icmp!(const(char)[], const(char)[])(str1, str2); }

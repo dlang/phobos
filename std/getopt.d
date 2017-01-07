@@ -432,7 +432,8 @@ GetoptResult getopt(T...)(ref string[] args, T opts)
     GetoptResult rslt;
 
     GetOptException excep;
-    getoptImpl(args, cfg, rslt, excep, opts);
+    void[][string] visitedLongOpts, visitedShortOpts;
+    getoptImpl(args, cfg, rslt, excep, visitedLongOpts, visitedShortOpts, opts);
 
     if (!rslt.helpWanted && excep !is null)
     {
@@ -654,7 +655,8 @@ private template optionValidator(A...)
 }
 
 private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
-    ref GetoptResult rslt, ref GetOptException excep, T opts)
+    ref GetoptResult rslt, ref GetOptException excep,
+    void[][string] visitedLongOpts, void[][string] visitedShortOpts, T opts)
 {
     enum validationMessage = optionValidator!T;
     static assert(validationMessage == "", validationMessage);
@@ -667,7 +669,8 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
         {
             // it's a configuration flag, act on it
             setConfig(cfg, opts[0]);
-            return getoptImpl(args, cfg, rslt, excep, opts[1 .. $]);
+            return getoptImpl(args, cfg, rslt, excep, visitedLongOpts,
+                visitedShortOpts, opts[1 .. $]);
         }
         else
         {
@@ -680,6 +683,20 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             }
             Option optionHelp = splitAndGet(option);
             optionHelp.required = cfg.required;
+
+            assert(optionHelp.optLong !in visitedLongOpts,
+                "Long option " ~ optionHelp.optLong ~ " is multiply defined");
+
+            visitedLongOpts[optionHelp.optLong] = [];
+
+            if (optionHelp.optShort.length)
+            {
+                assert(optionHelp.optShort !in visitedShortOpts,
+                    "Short option " ~ optionHelp.optShort
+                    ~ " is multiply defined");
+
+                visitedShortOpts[optionHelp.optShort] = [];
+            }
 
             static if (is(typeof(opts[1]) : string))
             {
@@ -712,7 +729,8 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             }
             cfg.required = false;
 
-            getoptImpl(args, cfg, rslt, excep, opts[lowSliceIdx .. $]);
+            getoptImpl(args, cfg, rslt, excep, visitedLongOpts,
+                visitedShortOpts, opts[lowSliceIdx .. $]);
         }
     }
     else
@@ -1020,7 +1038,7 @@ dchar assignChar = '=';
  */
 string arraySep = "";
 
-enum autoIncrementChar = '+';
+private enum autoIncrementChar = '+';
 
 private struct configuration
 {
@@ -1664,4 +1682,15 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
     }
 
     assert(rslt.helpWanted);
+}
+
+// throw on duplicate options
+unittest
+{
+    import core.exception;
+    auto args = ["prog", "--abc", "1"];
+    int abc, def;
+    assertThrown!AssertError(getopt(args, "abc", &abc, "abc", &abc));
+    assertThrown!AssertError(getopt(args, "abc|a", &abc, "def|a", &def));
+    assertNotThrown!AssertError(getopt(args, "abc", &abc, "def", &def));
 }
