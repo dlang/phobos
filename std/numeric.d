@@ -124,6 +124,8 @@ template CustomFloat(uint precision, uint exponentWidth, CustomFloatFlags flags 
 ///
 @safe unittest
 {
+    import std.math : sin, cos;
+
     // Define a 16-bit floating point values
     CustomFloat!16                                x;     // Using the number of bits
     CustomFloat!(10, 5)                           y;     // Using the precision and exponent width
@@ -687,6 +689,8 @@ template FPTemporary(F)
 ///
 @safe unittest
 {
+    import std.math : approxEqual;
+
     // Average numbers in an array
     double avg(in double[] a)
     {
@@ -730,6 +734,8 @@ template secantMethod(alias fun)
 ///
 @safe unittest
 {
+    import std.math : approxEqual, cos;
+
     float f(float x)
     {
         return cos(x) - x*x*x;
@@ -1568,6 +1574,8 @@ body
 ///
 @safe unittest
 {
+    import std.math : approxEqual;
+
     auto ret = findLocalMin((double x) => (x-4)^^2, -1e7, 1e7);
     assert(ret.x.approxEqual(4.0));
     assert(ret.y.approxEqual(0.0));
@@ -1901,6 +1909,8 @@ ElementType!Range sumOfLog2s(Range)(Range r)
 ///
 @safe unittest
 {
+    import std.math : isNaN;
+
     assert(sumOfLog2s(new double[0]) == 0);
     assert(sumOfLog2s([0.0L]) == -real.infinity);
     assert(sumOfLog2s([-0.0L]) == -real.infinity);
@@ -1995,6 +2005,8 @@ kullbackLeiblerDivergence(Range1, Range2)(Range1 a, Range2 b)
 ///
 @safe unittest
 {
+    import std.math : approxEqual;
+
     double[] p = [ 0.0, 0, 0, 1 ];
     assert(kullbackLeiblerDivergence(p, p) == 0);
     double[] p1 = [ 0.25, 0.25, 0.25, 0.25 ];
@@ -2076,6 +2088,8 @@ jensenShannonDivergence(Range1, Range2, F)(Range1 a, Range2 b, F limit)
 ///
 @safe unittest
 {
+    import std.math : approxEqual;
+
     double[] p = [ 0.0, 0, 0, 1 ];
     assert(jensenShannonDivergence(p, p) == 0);
     double[] p1 = [ 0.25, 0.25, 0.25, 0.25 ];
@@ -2264,6 +2278,8 @@ gapWeightedSimilarityNormalized(alias comp = "a == b", R1, R2, F)
 ///
 @system unittest
 {
+    import std.math : approxEqual, sqrt;
+
     string[] s = ["Hello", "brave", "new", "world"];
     string[] t = ["Hello", "new", "world"];
     assert(gapWeightedSimilarity(s, s, 1) == 15);

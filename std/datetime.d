@@ -4036,6 +4036,8 @@ public:
     ///
     @safe unittest
     {
+        import std.typecons : No;
+
         auto st1 = SysTime(DateTime(2010, 1, 1, 12, 33, 33));
         st1.roll!"months"(1);
         assert(st1 == SysTime(DateTime(2010, 2, 1, 12, 33, 33)));
@@ -10054,6 +10056,8 @@ public:
     ///
     @safe unittest
     {
+        import std.typecons : No;
+
         auto d1 = Date(2010, 1, 1);
         d1.add!"months"(11);
         assert(d1 == Date(2010, 12, 1));
@@ -10821,6 +10825,8 @@ public:
     ///
     @safe unittest
     {
+        import std.typecons : No;
+
         auto d1 = Date(2010, 1, 1);
         d1.roll!"months"(1);
         assert(d1 == Date(2010, 2, 1));
@@ -15851,6 +15857,8 @@ public:
     ///
     @safe unittest
     {
+        import std.typecons : No;
+
         auto dt1 = DateTime(2010, 1, 1, 12, 30, 33);
         dt1.add!"months"(11);
         assert(dt1 == DateTime(2010, 12, 1, 12, 30, 33));
@@ -15914,6 +15922,8 @@ public:
     ///
     @safe unittest
     {
+        import std.typecons : No;
+
         auto dt1 = DateTime(2010, 1, 1, 12, 33, 33);
         dt1.roll!"months"(1);
         assert(dt1 == DateTime(2010, 2, 1, 12, 33, 33));
@@ -26443,6 +26453,8 @@ static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
 ///
 @system unittest
 {
+    import std.typecons : Yes;
+
     auto interval = Interval!Date(Date(2010, 9, 2), Date(2025, 9, 27));
     auto func = everyDuration!Date(4, 1, Yes.allowDayOverflow, dur!"days"(2));
     auto range = interval.fwdRange(func);
@@ -33144,6 +33156,8 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
 ///
 @safe unittest
 {
+    import std.exception : assertThrown;
+
     auto tz = new immutable SimpleTimeZone(hours(-8));
     assert(parseRFC822DateTime("Sat, 6 Jan 1990 12:14:19 -0800") ==
            SysTime(DateTime(1990, 1, 6, 12, 14, 19), tz));

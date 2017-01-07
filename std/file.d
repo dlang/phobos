@@ -53,7 +53,8 @@ else version (Posix)
 else
     static assert(0);
 
-package @property string deleteme() @safe
+// Purposefully not documented. Use at your own risk
+@property string deleteme() @safe
 {
     import std.conv : to;
     import std.path : buildPath;

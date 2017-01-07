@@ -520,7 +520,7 @@ style: ../dscanner/dsc
 publictests: $(LIB)
 	# parse all public unittests from Phobos, for now some modules are excluded
 	rm -rf ./out
-	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) --compiler=$${PWD}/$(DMD) --single ../tools/phobos_tests_extractor.d -- --inputdir . --ignore "allocator/allocator_list.d,allocator/building_blocks/allocator_list.d,allocator/building_blocks/free_list.d,allocator/building_blocks/quantizer,allocator/building_blocks/quantizer,allocator/building_blocks/stats_collector.d,base64.d,bitmanip.d,concurrency.d,conv.d,csv.d,datetime.d,digest/hmac.d,digest/sha.d,file.d,index.d,isemail.d,logger/core.d,logger/nulllogger.d,math.d,ndslice/selection.d,ndslice/slice.d,numeric.d,stdio.d,traits.d,typecons.d,uni.d,utf.d,uuid.d" --outputdir ./out
+	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) --compiler=$${PWD}/$(DMD) --single ../tools/phobos_tests_extractor.d -- --inputdir . --ignore "base64.d,building_blocks/free_list,building_blocks/quantizer,digest/hmac.d,file.d,index.d,math.d,ndslice/selection.d,stdio.d,traits.d,typecons.d,uuid.d" --outputdir ./out
 	# execute all parsed tests
 	for file in $$(find out -name '*.d'); do echo "executing $${file}" && $(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -main -unittest -run $$file || exit 1 ; done
 

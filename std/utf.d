@@ -3168,6 +3168,8 @@ auto ref byCodeUnit(R)(R r)
 ///
 @safe unittest
 {
+    import std.range.primitives;
+
     auto r = "Hello, World!".byCodeUnit();
     static assert(hasLength!(typeof(r)));
     static assert(hasSlicing!(typeof(r)));
