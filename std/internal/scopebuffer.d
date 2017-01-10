@@ -150,12 +150,6 @@ struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
         used = 0;
     }
 
-    /****************************
-     * Copying of ScopeBuffer is not allowed.
-     */
-    version(None)
-    @disable this(this);
-
     /************************
      * Append element c to the buffer.
      * This member function makes `ScopeBuffer` an Output Range.
