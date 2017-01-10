@@ -117,13 +117,21 @@ struct KRRegion(ParentAllocator = NullAllocator)
         {
             assert(right);
             auto p = payload;
-            return p.ptr + p.length == right;
+            return p.ptr < right && right < p.ptr + p.length + Node.sizeof;
         }
 
-        bool coalesce()
+        bool coalesce(void* memoryEnd = null)
         {
+            // Coalesce the last node before the memory end with any possible gap
+            if (memoryEnd
+                && memoryEnd < payload.ptr + payload.length + Node.sizeof)
+            {
+                size += memoryEnd - (payload.ptr + payload.length);
+                return true;
+            }
+
             if (!adjacent(next)) return false;
-            size += next.size;
+            size = (cast(ubyte*) next + next.size) - cast(ubyte*) &this;
             next = next.next;
             return true;
         }
@@ -137,6 +145,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
             if (size < bytes) return typeof(return)();
             assert(size >= bytes);
             immutable leftover = size - bytes;
+
             if (leftover >= Node.sizeof)
             {
                 // There's room for another node
@@ -146,6 +155,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
                 assert(next);
                 return tuple(payload, newNode);
             }
+
             // No slack space, just return next node
             return tuple(payload, next == &this ? null : next);
         }
@@ -400,6 +410,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
                 }
                 return result[0 .. n];
             }
+
             // Not enough memory, switch to freelist mode and fall through
             switchToFreeList;
         }
@@ -417,6 +428,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
                 pnode.next = k[1];
                 return k[0][0 .. n];
             }
+
             pnode = pnode.next;
             if (pnode == root) break;
         }
@@ -443,6 +455,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
         // coalesce at this time. Instead, do it lazily during allocation.
         auto n = cast(Node*) b.ptr;
         n.size = goodAllocSize(b.length);
+        auto memoryEnd = payload.ptr + payload.length;
 
         if (regionMode)
         {
@@ -458,6 +471,10 @@ struct KRRegion(ParentAllocator = NullAllocator)
             // What a sight for sore eyes
             root = n;
             root.next = root;
+
+            // If the first block freed is the last one allocated,
+            // maybe there's a gap after it.
+            root.coalesce(memoryEnd);
             return true;
         }
 
@@ -486,8 +503,10 @@ struct KRRegion(ParentAllocator = NullAllocator)
             else if (pnode < n)
             {
                 // Insert at the end of the list
+                // Add any possible gap at the end of n to the length of n
                 n.next = pnode.next;
                 pnode.next = n;
+                n.coalesce(memoryEnd);
                 pnode.coalesce;
                 root = pnode;
                 return true;
@@ -770,4 +789,92 @@ unittest
     alloc.deallocateAll();
     p = alloc.allocateAll();
     assert(p.length == 1024 * 1024);
+}
+
+unittest
+{
+    import std.experimental.allocator.building_blocks;
+    import std.random;
+    import std.typecons : Ternary;
+
+    // Both sequences must work on either system
+
+    // A sequence of allocs which generates the error described in issue 16564
+    // that is a gap at the end of buf from the perspective of the allocator
+
+    // for 64 bit systems (leftover balance = 8 bytes < 16)
+    int[] sizes64 = [18904, 2008, 74904, 224, 111904, 1904, 52288, 8];
+
+    // for 32 bit systems (leftover balance < 8)
+    int[] sizes32 = [81412, 107068, 49892, 23768];
+
+
+    void test(int[] sizes)
+    {
+        ubyte[256 * 1024] buf;
+        auto a = KRRegion!()(buf);
+
+        void[][] bufs;
+
+        foreach (size; sizes)
+        {
+            bufs ~= a.allocate(size);
+        }
+
+        foreach (b; bufs.randomCover)
+        {
+            a.deallocate(b);
+        }
+
+        assert(a.empty == Ternary.yes);
+    }
+
+    test(sizes64);
+    test(sizes32);
+}
+
+unittest
+{
+    import std.experimental.allocator.building_blocks;
+    import std.random;
+    import std.typecons : Ternary;
+
+    // For 64 bits, we allocate in multiples of 8, but the minimum alloc size is 16.
+    // This can create gaps.
+    // This test is an example of such a case. The gap is formed between the block
+    // allocated for the second value in sizes and the third. There is also a gap
+    // at the very end. (total lost 2 * word)
+
+    int[] sizes64 = [2008, 18904, 74904, 224, 111904, 1904, 52288, 8];
+    int[] sizes32 = [81412, 107068, 49892, 23768];
+
+    int word64 = 8;
+    int word32 = 4;
+
+    void test(int[] sizes, int word)
+    {
+        ubyte[256 * 1024] buf;
+        auto a = KRRegion!()(buf);
+
+        void[][] bufs;
+
+        foreach (size; sizes)
+        {
+            bufs ~= a.allocate(size);
+        }
+
+        a.deallocate(bufs[1]);
+        bufs ~= a.allocate(sizes[1] - word);
+
+        a.deallocate(bufs[0]);
+        foreach (i; 2..bufs.length)
+        {
+            a.deallocate(bufs[i]);
+        }
+
+        assert(a.empty == Ternary.yes);
+    }
+
+    test(sizes64, word64);
+    test(sizes32, word32);
 }
