@@ -74,8 +74,15 @@ setup_repos()
         git merge -m "Automatic merge" $current_branch
     fi
 
-    clone https://github.com/dlang/dmd.git ../dmd $base_branch --depth 1
-    clone https://github.com/dlang/druntime.git ../druntime $base_branch --depth 1
+    for proj in dmd druntime ; do
+        if [ $base_branch != master ] && [ $base_branch != stable ] &&
+            ! git ls-remote --exit-code --heads https://github.com/dlang/$proj.git $base_branch > /dev/null; then
+            # use master as fallback for other repos to test feature branches
+            clone https://github.com/dlang/$proj.git ../$proj master --depth 1
+        else
+            clone https://github.com/dlang/$proj.git ../$proj $base_branch --depth 1
+        fi
+    done
 
     # load environment for bootstrap compiler
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
