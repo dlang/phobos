@@ -1308,7 +1308,7 @@ alias ParameterDefaultValueTuple = ParameterDefaults;
 
 
 /**
-Returns the attributes attached to a function $(D func).
+Returns the FunctionAttribute mask for function $(D func).
 
 See_Also:
     $(LREF hasFunctionAttributes)
@@ -1503,8 +1503,8 @@ private FunctionAttribute extractAttribFlags(Attribs...)()
 Checks whether a function has the given attributes attached.
 
 Params:
-    func = function to check
-    attributes = variadic number of function attributes as strings
+    args = Function to check, followed by a
+    variadic number of function attributes as strings
 
 Returns:
     `true`, if the function has the list of attributes attached and `false` otherwise.
@@ -1513,7 +1513,7 @@ See_Also:
     $(LREF functionAttributes)
 */
 template hasFunctionAttributes(args...)
-    if (isCallable!(args[0]) && args.length > 0
+    if (args.length > 0 && isCallable!(args[0])
          && allSatisfy!(isSomeString, typeof(args[1 .. $])))
 {
     enum bool hasFunctionAttributes = {
@@ -1536,7 +1536,7 @@ unittest
     static assert(hasFunctionAttributes!(func, "@safe", "pure"));
     static assert(!hasFunctionAttributes!(func, "@trusted"));
 
-    // for templates types are automatically inferred
+    // for templates attributes are automatically inferred
     bool myFunc(T)(T b)
     {
         return !b;
@@ -7442,7 +7442,7 @@ template isType(X...) if (X.length == 1)
  *     `true` if `X` is a function, `false` otherwise
  *
  * See_Also:
- *     Use $(REF isFunctionPointer) or $(REF isDelegate) for detecting those types
+ *     Use $(LREF isFunctionPointer) or $(LREF isDelegate) for detecting those types
  *     respectively.
  */
 template isFunction(X...) if (X.length == 1)
