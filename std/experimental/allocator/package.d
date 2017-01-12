@@ -1538,15 +1538,6 @@ if (is(T == class) || is(T == interface))
 /// Ditto
 void dispose(A, T)(auto ref A alloc, T[] array)
 {
-
-    import std.traits : isArray;
-
-    static if (isArray!T)
-    {
-        foreach (ref elem; array)
-            dispose(alloc, elem);
-    }
-
     static if (hasElaborateDestructor!(typeof(array[0])))
     {
         foreach (ref e; array)
@@ -1609,12 +1600,78 @@ unittest //bugzilla 15721
     Mallocator.instance.dispose(foo);
 }
 
-unittest //bugzilla 16824
+/**
+Allocates a multidimensional array of elements of type T.
+
+Params:
+N = number of dimensions
+T = element type of an element of the multidimensional arrat
+alloc = the allocator used for getting memory
+lengths = static array containing the size of each dimension
+
+Returns:
+An N-dimensional array with individual elements of type T.
+*/
+auto makeMultidimensionalArray(int N, T, Allocator)(auto ref Allocator alloc, size_t[N] lengths)
+{
+    static if (N == 1)
+    {
+        return makeArray!T(alloc, lengths[0]);
+    }
+    else
+    {
+        alias E = typeof(makeMultidimensionalArray!(N-1, T)(alloc, lengths[1..$]));
+        auto ret = makeArray!E(alloc, lengths[0]);
+        foreach (ref e; ret)
+            e = makeMultidimensionalArray!(N-1, T)(alloc, lengths[1..$]);
+        return ret;
+    }
+}
+
+///
+unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    size_t[3] dimArray = [2, 3, 6];
+    auto mArray = Mallocator.instance.makeMultidimensionalArray!(dimArray.length, int)(dimArray);
+
+    assert(mArray.length == 2);
+    foreach (lvl2Array; mArray)
+    {
+        assert(lvl2Array.length == 3);
+        foreach (lvl3Array; lvl2Array)
+            assert(lvl3Array.length == 6);
+    }
+}
+
+/**
+Destroys and then deallocates a multidimensional array, assuming it was
+created with makeMultidimensionalArray and with the same allocator.
+
+Params:
+T = element type of an element of the multidimensional array
+alloc = the allocator used for getting memory
+array = the multidimensional array that is to be deallocated
+*/
+void disposeMultidimensionalArray(Allocator, T)(auto ref Allocator alloc, T[] array)
+{
+    static if(isArray!T)
+    {
+        foreach (ref e; array)
+            disposeMultidimensionalArray(alloc, e);
+    }
+
+    dispose(alloc, array);
+}
+
+///
+unittest
 {
     struct TestAllocator
     {
-        import std.experimental.allocator.common: platformAlignment;
-        import std.experimental.allocator.mallocator: Mallocator;
+        import std.experimental.allocator.common : platformAlignment;
+        import std.experimental.allocator.mallocator : Mallocator;
 
         alias allocator = Mallocator.instance;
 
@@ -1638,7 +1695,6 @@ unittest //bugzilla 16824
         bool deallocate(void[] bytes)
         {
             import std.algorithm: remove, canFind;
-            import std.conv: text;
 
             bool pred(ByteRange other)
             { return other.ptr == bytes.ptr && other.length == bytes.length; }
@@ -1655,19 +1711,12 @@ unittest //bugzilla 16824
         }
     }
 
-    import std.experimental.allocator: dispose, makeArray;
-
     TestAllocator allocator;
 
-    auto ints2d = allocator.makeArray!(int[][])(2);
-    foreach (ref ints1d; ints2d)
-        ints1d = allocator.makeArray!(int[])(3);
+    size_t[5] a = [2, 3, 6, 7, 2];
+    auto mArray = allocator.makeMultidimensionalArray!(a.length, int)(a);
 
-    foreach (ref ints1d; ints2d)
-        foreach(ref ints0d; ints1d)
-            ints0d = allocator.makeArray!(int)(4);
-
-    allocator.dispose(ints2d);
+    allocator.disposeMultidimensionalArray(mArray);
 }
 
 /**
