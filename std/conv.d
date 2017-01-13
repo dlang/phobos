@@ -3872,8 +3872,21 @@ private S textImpl(S, U...)(U args)
 
         auto app = appender!S();
 
+        // assume that on average, parameters will have less
+        // than 20 elements
+        app.reserve(U.length * 20);
+
         foreach (arg; args)
-            app.put(to!S(arg));
+        {
+            static if (
+                is(Unqual!(typeof(arg)) == uint) || is(Unqual!(typeof(arg)) == ulong) ||
+                is(Unqual!(typeof(arg)) == int) || is(Unqual!(typeof(arg)) == long)
+            )
+                app.put(arg.toChars);
+            else
+                app.put(to!S(arg));
+        }
+
         return app.data;
     }
 }
