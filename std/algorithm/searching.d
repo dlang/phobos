@@ -1416,7 +1416,7 @@ if (isInputRange!InputRange &&
                         import core.stdc.string : memchr;
                         auto ptr = memchr(haystack.ptr, needle, haystack.length);
                         return ptr ?
-                             haystack[ptr - haystack.ptr .. $] :
+                             haystack[cast(char*)ptr - haystack.ptr .. $] :
                              haystack[$ .. $];
                     }
                     return trustedMemchr(haystack, needle);
@@ -1593,10 +1593,13 @@ if (isInputRange!InputRange &&
             E e2 = 'c';
             assert(find              ("日c語", 'c') == "c語");
             assert(find!((a,b)=>a==b)("日c語", 'c') == "c語");
+            R r3 = "0123456789";
+            E e3 = 'A';
+            assert(find              ("0123456789", 'A').empty);
             static if (E.sizeof >= 2)
             {
-                R r3 = "hello world";
-                E e3 = 'w';
+                R r4 = "hello world";
+                E e4 = 'w';
                 assert(find              ("日本語", '本') == "本語");
                 assert(find!((a,b)=>a==b)("日本語", '本') == "本語");
             }
