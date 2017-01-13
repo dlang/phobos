@@ -2185,6 +2185,69 @@ Params:
         _isNull = false;
     }
 
+    /**
+      If they are both null, then they are equal. If one is null and the other
+      is not, then they are not equal. If they are both non-null, then they are
+      equal if their values are equal.
+      */
+    bool opEquals()(auto ref const(typeof(this)) rhs) const
+    {
+        if (_isNull)
+            return rhs._isNull;
+        if (rhs._isNull)
+            return false;
+        return _value == rhs._value;
+    }
+
+    /// Ditto
+    bool opEquals()(auto ref const(T) rhs) const
+    {
+        return _isNull ? false : rhs == _value;
+    }
+
+    ///
+    @safe unittest
+    {
+        Nullable!int empty;
+        Nullable!int a = 42;
+        Nullable!int b = 42;
+        Nullable!int c = 27;
+
+        assert(empty == empty);
+        assert(empty == Nullable!int.init);
+        assert(empty != a);
+        assert(empty != b);
+        assert(empty != c);
+
+        assert(a == b);
+        assert(a != c);
+
+        assert(empty != 42);
+        assert(a == 42);
+        assert(c != 42);
+    }
+
+    @safe unittest
+    {
+        // Test constness
+        immutable Nullable!int a = 42;
+        Nullable!int b = 42;
+        immutable Nullable!int c = 29;
+        Nullable!int d = 29;
+        immutable e = 42;
+        int f = 29;
+        assert(a == a);
+        assert(a == b);
+        assert(a != c);
+        assert(a != d);
+        assert(a == e);
+        assert(a != f);
+
+        // Test rvalue
+        assert(a == const Nullable!int(42));
+        assert(a != Nullable!int(29));
+    }
+
     template toString()
     {
         import std.format : FormatSpec, formatValue;
@@ -2317,15 +2380,19 @@ Returns:
 ///
 @system unittest
 {
+    import core.exception : AssertError;
     import std.exception : assertThrown, assertNotThrown;
 
     Nullable!int ni;
+    int i = 42;
     //`get` is implicitly called. Will throw
     //an AssertError in non-release mode
-    assertThrown!Throwable(ni == 0);
+    assertThrown!AssertError(i = ni);
+    assert(i == 42);
 
-    ni = 0;
-    assertNotThrown!Throwable(ni == 0);
+    ni = 5;
+    assertNotThrown!AssertError(i = ni);
+    assert(i == 5);
 }
 
 /**
