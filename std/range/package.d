@@ -9790,31 +9790,34 @@ public:
             return (parent[elemIndex] & mask(elemMaskPos)) != 0;
         }
 
-        /**
-          Assigns `flag` to the `n`th bit within the range
-         */
-        void opIndexAssign(bool flag, size_t n)
-        in
+        static if (hasAssignableElements!R)
         {
-            static if (hasLength!R)
+            /**
+              Assigns `flag` to the `n`th bit within the range
+             */
+            void opIndexAssign(bool flag, size_t n)
+                in
+                {
+                    static if (hasLength!R)
+                    {
+                        assert(n < length, "Index out of bounds");
+                    }
+                }
+            body
             {
-                assert(n < length, "Index out of bounds");
+                import core.bitop : bsf;
+
+                immutable size_t remainingBits = bitsNum - maskPos + 1;
+                immutable sizediff_t sign = (remainingBits - n - 1) >> (sizediff_t.sizeof * 8 - 1);
+                immutable size_t elemIndex = sign * (((n - remainingBits) >> bitsNum.bsf) + 1);
+                immutable size_t elemMaskPos = (sign ^ 1) * (maskPos + n)
+                    + sign * (1 + ((n - remainingBits) & (bitsNum - 1)));
+
+                auto elem = parent[elemIndex];
+                auto elemMask = mask(elemMaskPos);
+                parent[elemIndex] = cast(UnsignedElemType)(flag * (elem | elemMask)
+                        + (flag ^ 1) * (elem & ~elemMask));
             }
-        }
-        body
-        {
-            import core.bitop : bsf;
-
-            immutable size_t remainingBits = bitsNum - maskPos + 1;
-            immutable sizediff_t sign = (remainingBits - n - 1) >> (sizediff_t.sizeof * 8 - 1);
-            immutable size_t elemIndex = sign * (((n - remainingBits) >> bitsNum.bsf) + 1);
-            immutable size_t elemMaskPos = (sign ^ 1) * (maskPos + n)
-                               + sign * (1 + ((n - remainingBits) & (bitsNum - 1)));
-
-            auto elem = parent[elemIndex];
-            auto elemMask = mask(elemMaskPos);
-            parent[elemIndex] = cast(UnsignedElemType)(flag * (elem | elemMask)
-                                                       + (flag ^ 1) * (elem & ~elemMask));
         }
 
         Bitwise!R opSlice()
