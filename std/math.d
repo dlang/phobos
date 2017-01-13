@@ -4969,6 +4969,9 @@ private:
 bool isNaN(X)(X x) @nogc @trusted pure nothrow
     if (isFloatingPoint!(X))
 {
+    if (__ctfe)
+        return x != x;
+
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
@@ -5018,32 +5021,31 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
 {
     import std.meta : AliasSeq;
 
-    foreach (T; AliasSeq!(float, double, real))
+    foreach (X; AliasSeq!(float, double, real))
     {
-        // CTFE-able tests
-        assert(isNaN(T.init));
-        assert(isNaN(-T.init));
-        assert(isNaN(T.nan));
-        assert(isNaN(-T.nan));
-        assert(!isNaN(T.infinity));
-        assert(!isNaN(-T.infinity));
-        assert(!isNaN(cast(T)53.6));
-        assert(!isNaN(cast(T)-53.6));
+        foreach (x; AliasSeq!(X.init, X.nan))
+        {
+            // test CTFE
+            static assert( isNaN( x));
+            static assert( isNaN(-x));
 
-        // Runtime tests
-        shared T f;
-        f = T.init;
-        assert(isNaN(f));
-        assert(isNaN(-f));
-        f = T.nan;
-        assert(isNaN(f));
-        assert(isNaN(-f));
-        f = T.infinity;
-        assert(!isNaN(f));
-        assert(!isNaN(-f));
-        f = cast(T)53.6;
-        assert(!isNaN(f));
-        assert(!isNaN(-f));
+            // test runtime
+            shared X rtX = x;
+            assert( isNaN( rtX));
+            assert( isNaN(-rtX));
+        }
+
+        foreach (x; AliasSeq!(X.infinity, cast(X)53.6L))
+        {
+            // test CTFE
+            static assert(!isNaN( x));
+            static assert(!isNaN(-x));
+
+            // test runtime
+            shared X rtX = x;
+            assert(!isNaN( rtX));
+            assert(!isNaN(-rtX));
+        }
     }
 }
 
@@ -5056,6 +5058,9 @@ bool isNaN(X)(X x) @nogc @trusted pure nothrow
  */
 bool isFinite(X)(X x) @trusted pure nothrow @nogc
 {
+    if (__ctfe)
+        return (-X.infinity < x) && (x < X.infinity);
+
     alias F = floatTraits!(X);
     ushort* pe = cast(ushort *)&x;
     return (pe[F.EXPPOS_SHORT] & F.EXPMASK) != F.EXPMASK;
@@ -5073,17 +5078,34 @@ bool isFinite(X)(X x) @trusted pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    assert(isFinite(1.23));
-    assert(isFinite(double.max));
-    assert(isFinite(double.min_normal));
-    assert(!isFinite(double.nan));
-    assert(!isFinite(double.infinity));
+    import std.meta : AliasSeq;
 
-    assert(isFinite(1.23L));
-    assert(isFinite(real.max));
-    assert(isFinite(real.min_normal));
-    assert(!isFinite(real.nan));
-    assert(!isFinite(real.infinity));
+    foreach (X; AliasSeq!(float, double, real))
+    {
+        foreach (x; AliasSeq!(cast(X)1.23L, X.max, X.min_normal))
+        {
+            // test CTFE
+            static assert( isFinite( x));
+            static assert( isFinite(-x));
+
+            // test runtime
+            shared X rtX = x;
+            assert( isFinite( rtX));
+            assert( isFinite(-rtX));
+        }
+
+        foreach (x; AliasSeq!(X.nan, X.infinity))
+        {
+            // test CTFE
+            static assert(!isFinite( x));
+            static assert(!isFinite(-x));
+
+            // test runtime
+            shared rtX = x;
+            assert(!isFinite( rtX));
+            assert(!isFinite(-rtX));
+        }
+    }
 }
 
 
@@ -5212,6 +5234,9 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
 bool isInfinity(X)(X x) @nogc @trusted pure nothrow
     if (isFloatingPoint!(X))
 {
+    if (__ctfe)
+        return (x < -X.max) || (X.max < x);
+
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ieeeSingle)
     {
@@ -5262,62 +5287,34 @@ bool isInfinity(X)(X x) @nogc @trusted pure nothrow
 
 @safe pure nothrow @nogc unittest
 {
-    // CTFE-able tests
-    assert(!isInfinity(double.init));
-    assert(!isInfinity(-double.init));
-    assert(!isInfinity(double.nan));
-    assert(!isInfinity(-double.nan));
-    assert(isInfinity(double.infinity));
-    assert(isInfinity(-double.infinity));
-    assert(isInfinity(-1.0 / 0.0));
+    import std.meta : AliasSeq;
 
-    assert(!isInfinity(real.init));
-    assert(!isInfinity(-real.init));
-    assert(!isInfinity(real.nan));
-    assert(!isInfinity(-real.nan));
-    assert(isInfinity(real.infinity));
-    assert(isInfinity(-real.infinity));
-    assert(isInfinity(-1.0L / 0.0L));
+    foreach (X; AliasSeq!(float, double, real))
+    {
+        foreach (x; AliasSeq!(X.infinity, (cast(X)1) / (cast(X)0)))
+        {
+            // test CTFE
+            static assert( isInfinity( x));
+            static assert( isInfinity(-x));
 
-    // Runtime tests
-    shared float f;
-    f = float.init;
-    assert(!isInfinity(f));
-    assert(!isInfinity(-f));
-    f = float.nan;
-    assert(!isInfinity(f));
-    assert(!isInfinity(-f));
-    f = float.infinity;
-    assert(isInfinity(f));
-    assert(isInfinity(-f));
-    f = (-1.0f / 0.0f);
-    assert(isInfinity(f));
+            // test runtime
+            shared rtX = x;
+            assert( isInfinity( rtX));
+            assert( isInfinity(-rtX));
+        }
 
-    shared double d;
-    d = double.init;
-    assert(!isInfinity(d));
-    assert(!isInfinity(-d));
-    d = double.nan;
-    assert(!isInfinity(d));
-    assert(!isInfinity(-d));
-    d = double.infinity;
-    assert(isInfinity(d));
-    assert(isInfinity(-d));
-    d = (-1.0 / 0.0);
-    assert(isInfinity(d));
+        foreach (x; AliasSeq!(cast(X)2, X.max, X.init, X.nan))
+        {
+            // test CTFE
+            static assert(!isInfinity( x));
+            static assert(!isInfinity(-x));
 
-    shared real e;
-    e = real.init;
-    assert(!isInfinity(e));
-    assert(!isInfinity(-e));
-    e = real.nan;
-    assert(!isInfinity(e));
-    assert(!isInfinity(-e));
-    e = real.infinity;
-    assert(isInfinity(e));
-    assert(isInfinity(-e));
-    e = (-1.0L / 0.0L);
-    assert(isInfinity(e));
+            // test runtime
+            shared rtX = x;
+            assert(!isInfinity( rtX));
+            assert(!isInfinity(-rtX));
+        }
+    }
 }
 
 /*********************************
