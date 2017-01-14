@@ -402,10 +402,9 @@ ifeq (1,$(SHARED))
 	cp -P $(LIBSO) $(INSTALL_DIR)/$(OS)/$(lib_dir)/
 	ln -sf $(notdir $(LIBSO)) $(INSTALL_DIR)/$(OS)/$(lib_dir)/libphobos2.so
 endif
-	mkdir -p $(INSTALL_DIR)/src/phobos/etc
-	mkdir -p $(INSTALL_DIR)/src/phobos/std
-	cp -r std/* $(INSTALL_DIR)/src/phobos/std/
-	cp -r etc/* $(INSTALL_DIR)/src/phobos/etc/
+	mkdir -p $(INSTALL_DIR)/src/phobos
+	find std -type f -name "*.d" | xargs -n1 -i cp -r --parents {} $(INSTALL_DIR)/src/phobos/
+	find etc -type f -name "*.d" | xargs -n1 -i cp -r --parents {} $(INSTALL_DIR)/src/phobos/
 	cp LICENSE_1_0.txt $(INSTALL_DIR)/phobos-LICENSE.txt
 
 ifeq (1,$(CUSTOM_DRUNTIME))
