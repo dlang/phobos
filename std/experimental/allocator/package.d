@@ -1612,18 +1612,18 @@ lengths = static array containing the size of each dimension
 Returns:
 An N-dimensional array with individual elements of type T.
 */
-auto makeMultidimensionalArray(int N, T, Allocator)(auto ref Allocator alloc, size_t[N] lengths)
+auto makeMultidimensionalArray(uint n, T, Allocator)(auto ref Allocator alloc, size_t[n] lengths)
 {
-    static if (N == 1)
+    static if (n == 1)
     {
         return makeArray!T(alloc, lengths[0]);
     }
     else
     {
-        alias E = typeof(makeMultidimensionalArray!(N-1, T)(alloc, lengths[1..$]));
+        alias E = typeof(makeMultidimensionalArray!(n - 1, T)(alloc, lengths[1..$]));
         auto ret = makeArray!E(alloc, lengths[0]);
         foreach (ref e; ret)
-            e = makeMultidimensionalArray!(N-1, T)(alloc, lengths[1..$]);
+            e = makeMultidimensionalArray!(n - 1, T)(alloc, lengths[1..$]);
         return ret;
     }
 }
@@ -1636,6 +1636,12 @@ unittest
     size_t[3] dimArray = [2, 3, 6];
     auto mArray = Mallocator.instance.makeMultidimensionalArray!(dimArray.length, int)(dimArray);
 
+    // deallocate when exiting scope
+    scope(exit)
+    {
+        Mallocator.instance.disposeMultidimensionalArray(mArray);
+    }
+
     assert(mArray.length == 2);
     foreach (lvl2Array; mArray)
     {
@@ -1647,7 +1653,7 @@ unittest
 
 /**
 Destroys and then deallocates a multidimensional array, assuming it was
-created with makeMultidimensionalArray and with the same allocator.
+created with makeMultidimensionalArray and the same allocator was used.
 
 Params:
 T = element type of an element of the multidimensional array
@@ -1656,7 +1662,7 @@ array = the multidimensional array that is to be deallocated
 */
 void disposeMultidimensionalArray(Allocator, T)(auto ref Allocator alloc, T[] array)
 {
-    static if(isArray!T)
+    static if (isArray!T)
     {
         foreach (ref e; array)
             disposeMultidimensionalArray(alloc, e);
@@ -1694,7 +1700,8 @@ unittest
 
         bool deallocate(void[] bytes)
         {
-            import std.algorithm: remove, canFind;
+            import std.algorithm.mutation : remove;
+            import std.algorithm.searching : canFind;
 
             bool pred(ByteRange other)
             { return other.ptr == bytes.ptr && other.length == bytes.length; }
