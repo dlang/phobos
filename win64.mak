@@ -46,7 +46,8 @@ DRUNTIMELIB=$(DRUNTIME)\lib\druntime$(MODEL).lib
 
 ## Flags for dmd D compiler
 
-DFLAGS=-conf= -m$(MODEL) -O -release -w -dip25 -I$(DRUNTIME)\import
+# use DIP25 only for tests, see Bugzilla 17072
+DFLAGS=-conf= -m$(MODEL) -O -release -w -I$(DRUNTIME)\import
 #DFLAGS=-m$(MODEL) -unittest -g
 #DFLAGS=-m$(MODEL) -unittest -cov -g
 

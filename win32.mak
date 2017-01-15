@@ -43,7 +43,8 @@ DRUNTIMELIB=$(DRUNTIME)\lib\druntime.lib
 
 ## Flags for dmd D compiler
 
-DFLAGS=-conf= -O -release -w -dip25 -I$(DRUNTIME)\import
+# use DIP25 only for tests, see Bugzilla 17072
+DFLAGS=-conf= -O -release -w -I$(DRUNTIME)\import
 #DFLAGS=-unittest -g
 #DFLAGS=-unittest -cov -g
 
