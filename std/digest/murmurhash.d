@@ -200,7 +200,7 @@ struct MurmurHash3(uint size /* 32 or 128 */ , uint opt = size_t.sizeof == 8 ? 6
 
         alias Element = uint[4]; /// The element type for 128-bit implementation.
 
-        this(uint seed4, uint seed3, uint seed2, uint seed1)
+        this(uint seed4, uint seed3, uint seed2, uint seed1) pure nothrow @nogc
         {
             h4 = seed4;
             h3 = seed3;
@@ -208,7 +208,7 @@ struct MurmurHash3(uint size /* 32 or 128 */ , uint opt = size_t.sizeof == 8 ? 6
             h1 = seed1;
         }
 
-        this(uint seed)
+        this(uint seed) pure nothrow @nogc
         {
             h4 = h3 = h2 = h1 = seed;
         }
@@ -339,12 +339,12 @@ struct MurmurHash3(uint size /* 32 or 128 */ , uint opt = size_t.sizeof == 8 ? 6
 
         alias Element = ulong[2]; /// The element type for 128-bit implementation.
 
-        this(ulong seed)
+        this(ulong seed) pure nothrow @nogc
         {
             h2 = h1 = seed;
         }
 
-        this(ulong seed2, ulong seed1)
+        this(ulong seed2, ulong seed1) pure nothrow @nogc
         {
             h2 = seed2;
             h1 = seed1;

@@ -74,13 +74,8 @@ private
     import core.thread;
     import core.sync.mutex;
     import core.sync.condition;
-    import std.algorithm;
-    import std.exception;
-    import std.meta;
-    import std.range;
-    import std.string;
+    import std.range.primitives;
     import std.traits;
-    import std.typecons;
     import std.concurrencybase;
 
     template hasLocalAliasing(T...)
@@ -120,6 +115,8 @@ private
         this(T...)( MsgType t, T vals )
             if ( T.length > 1 )
         {
+            import std.typecons : Tuple;
+
             type = t;
             data = Tuple!(T)( vals );
         }
@@ -127,10 +124,15 @@ private
         @property auto convertsTo(T...)()
         {
             static if ( T.length == 1 )
+            {
                 return is( T[0] == Variant ) ||
                        data.convertsTo!(T);
+            }
             else
+            {
+                import std.typecons : Tuple;
                 return data.convertsTo!(Tuple!(T));
+            }
         }
 
         @property auto get(T...)()
@@ -144,6 +146,7 @@ private
             }
             else
             {
+                import std.typecons : Tuple;
                 return data.get!(Tuple!(T));
             }
         }
@@ -161,6 +164,7 @@ private
             }
             else
             {
+                import std.typecons : Tuple;
                 return op( data.get!(Tuple!(Args)).expand );
             }
         }
@@ -193,7 +197,7 @@ private
         }
     }
 
-    @property ref ThreadInfo thisInfo()
+    @property ref ThreadInfo thisInfo() nothrow
     {
         if ( scheduler is null )
             return ThreadInfo.thisInfo;
@@ -219,7 +223,7 @@ static ~this()
  */
 class MessageMismatch : Exception
 {
-    this( string msg = "Unexpected message type" )
+    this( string msg = "Unexpected message type" ) @safe pure
     {
         super( msg );
     }
@@ -232,7 +236,7 @@ class MessageMismatch : Exception
  */
 class OwnerTerminated : Exception
 {
-    this( Tid t, string msg = "Owner terminated" )
+    this( Tid t, string msg = "Owner terminated" ) @safe pure
     {
         super( msg );
         tid = t;
@@ -247,7 +251,7 @@ class OwnerTerminated : Exception
  */
 class LinkTerminated : Exception
 {
-    this( Tid t, string msg = "Link terminated" )
+    this( Tid t, string msg = "Link terminated" ) @safe pure
     {
         super( msg );
         tid = t;
@@ -283,7 +287,7 @@ class PriorityMessageException : Exception
  */
 class MailboxFull : Exception
 {
-    this( Tid t, string msg = "Mailbox full" )
+    this( Tid t, string msg = "Mailbox full" ) @safe pure
     {
         super( msg );
         tid = t;
@@ -299,6 +303,7 @@ class MailboxFull : Exception
  */
 class TidMissingException : Exception
 {
+    import std.exception : basicExceptionCtors;
     mixin basicExceptionCtors;
 }
 
@@ -333,14 +338,15 @@ public:
      */
     void toString(scope void delegate(const(char)[]) sink)
     {
-        import std.format;
+        import std.format : formattedWrite;
         formattedWrite(sink, "Tid(%x)", cast(void*)mbox);
     }
 
 }
 
-unittest
+@system unittest
 {
+    // text!Tid is @system
     import std.conv : text;
     Tid tid;
     assert(text(tid) == "Tid(0)");
@@ -376,13 +382,17 @@ unittest
  */
 @property Tid ownerTid()
 {
+    import std.exception : enforce;
+
     enforce!TidMissingException(thisInfo.owner.mbox !is null,
                                   "Error: Thread has no owner thread.");
     return thisInfo.owner;
 }
 
-unittest
+@system unittest
 {
+    import std.exception : assertThrown;
+
     static void fun()
     {
         string res = receiveOnly!string();
@@ -540,7 +550,7 @@ private Tid _spawn(F, T...)( bool linked, F fn, T args )
     return spawnTid;
 }
 
-unittest
+@system unittest
 {
     void function()                                fn1;
     void function(int)                             fn2;
@@ -691,20 +701,20 @@ body
 }
 
 
-unittest
+@safe unittest
 {
-    assert( __traits( compiles,
+    static assert( __traits( compiles,
                       {
                           receive( (Variant x) {} );
                           receive( (int x) {}, (Variant x) {} );
                       } ) );
 
-    assert( !__traits( compiles,
+    static assert( !__traits( compiles,
                        {
                            receive( (Variant x) {}, (int x) {} );
                        } ) );
 
-    assert( !__traits( compiles,
+    static assert( !__traits( compiles,
                        {
                            receive( (int x) {}, (int x) {} );
                        } ) );
@@ -715,9 +725,9 @@ version (unittest)
 {
     private void receiveFunction(int x) {}
 }
-unittest
+@safe unittest
 {
-    assert( __traits( compiles,
+    static assert( __traits( compiles,
                       {
                           receive( &receiveFunction );
                           receive( &receiveFunction, (Variant x) {} );
@@ -728,9 +738,14 @@ unittest
 private template receiveOnlyRet(T...)
 {
     static if ( T.length == 1 )
+    {
         alias receiveOnlyRet = T[0];
+    }
     else
+    {
+        import std.typecons : Tuple;
         alias receiveOnlyRet = Tuple!(T);
+    }
 }
 
 /**
@@ -769,6 +784,9 @@ in
 }
 body
 {
+    import std.format : format;
+    import std.typecons : Tuple;
+
     Tuple!(T) ret;
 
     thisInfo.ident.mbox.get(
@@ -802,7 +820,7 @@ body
         return ret;
 }
 
-unittest
+@system unittest
 {
     static void t1(Tid mainTid)
     {
@@ -846,25 +864,25 @@ body
     return thisInfo.ident.mbox.get( duration, ops );
 }
 
-unittest
+@safe unittest
 {
-    assert( __traits( compiles,
+    static assert( __traits( compiles,
                       {
                           receiveTimeout( msecs(0), (Variant x) {} );
                           receiveTimeout( msecs(0), (int x) {}, (Variant x) {} );
                       } ) );
 
-    assert( !__traits( compiles,
+    static assert( !__traits( compiles,
                        {
                            receiveTimeout( msecs(0), (Variant x) {}, (int x) {} );
                        } ) );
 
-    assert( !__traits( compiles,
+    static assert( !__traits( compiles,
                        {
                            receiveTimeout( msecs(0), (int x) {}, (int x) {} );
                        } ) );
 
-    assert( __traits( compiles,
+    static assert( __traits( compiles,
                       {
                           receiveTimeout( msecs(10), (int x) {}, (Variant x) {} );
                       } ) );
@@ -889,19 +907,19 @@ enum OnCrowding
 
 private
 {
-    bool onCrowdingBlock( Tid tid )
+    bool onCrowdingBlock( Tid tid ) @safe pure
     {
         return true;
     }
 
 
-    bool onCrowdingThrow( Tid tid )
+    bool onCrowdingThrow( Tid tid ) @safe pure
     {
         throw new MailboxFull( tid );
     }
 
 
-    bool onCrowdingIgnore( Tid tid )
+    bool onCrowdingIgnore( Tid tid ) @safe pure
     {
         return false;
     }
@@ -1033,6 +1051,9 @@ bool register( string name, Tid tid )
  */
 bool unregister( string name )
 {
+    import std.algorithm.searching : countUntil;
+    import std.algorithm.mutation : remove, SwapStrategy;
+
     synchronized( registryLock )
     {
         if ( auto tid = name in tidByName )
@@ -1387,7 +1408,7 @@ private:
 
         override bool wait( Duration period ) nothrow
         {
-            import core.time;
+            import core.time : MonoTime;
             scope(exit) notified = false;
 
             for ( auto limit = MonoTime.currTime + period;
@@ -1426,7 +1447,7 @@ private:
 private:
     final void dispatch()
     {
-        import std.algorithm : remove;
+        import std.algorithm.mutation : remove;
 
         while ( m_fibers.length > 0 )
         {
@@ -1466,7 +1487,7 @@ private:
 }
 
 
-unittest
+@system unittest
 {
     static void receive(Condition cond, ref size_t received)
     {
@@ -1715,16 +1736,7 @@ void yield(T)(T value)
     yield(value);
 }
 
-
-version (Win64)
-{
-    // fibers are broken on Win64
-}
-else version (Win32)
-{
-    // fibers are broken in Win32 under server 2012: bug 13821
-}
-else unittest
+unittest
 {
     import core.exception;
     import std.exception;
@@ -1908,6 +1920,8 @@ private
          */
         final bool get(T...)( scope T vals )
         {
+            import std.meta : AliasSeq;
+
             static assert( T.length );
 
             static if ( isImplicitlyConvertible!(T[0], Duration) )
@@ -2055,7 +2069,7 @@ private
 
             static if ( timedWait )
             {
-                import core.time;
+                import core.time : MonoTime;
                 auto limit = MonoTime.currTime + period;
             }
 
@@ -2245,6 +2259,8 @@ private
     {
         struct Range
         {
+            import std.exception : enforce;
+
             @property bool empty() const
             {
                 return !m_prev.next;
@@ -2326,6 +2342,8 @@ private
          */
         void removeAt( Range r )
         {
+            import std.exception : enforce;
+
             assert( m_count );
             Node* n = r.m_prev;
             enforce( n && n.next, "attempting to remove invalid list node" );
@@ -2404,9 +2422,14 @@ private
                 }
             }
             if (n)
-                *n = Node(v);
+            {
+                import std.conv : emplace;
+                emplace!Node(n, v);
+            }
             else
+            {
                 n = new Node(v);
+            }
             return n;
         }
 
@@ -2451,6 +2474,7 @@ private
 version( unittest )
 {
     import std.stdio;
+    import std.typecons : tuple, Tuple;
 
     void testfn( Tid tid )
     {
@@ -2500,13 +2524,13 @@ version( unittest )
     }
 
 
-    unittest
+    @system unittest
     {
         simpleTest();
     }
 
 
-    unittest
+    @system unittest
     {
         scheduler = new ThreadScheduler;
         simpleTest();
@@ -2551,7 +2575,7 @@ auto ref initOnce(alias var)(lazy typeof(var) init)
 }
 
 /// A typical use-case is to perform lazy but thread-safe initialization.
-unittest
+@system unittest
 {
     static class MySingleton
     {
@@ -2564,7 +2588,7 @@ unittest
     assert(MySingleton.instance !is null);
 }
 
-unittest
+@system unittest
 {
     static class MySingleton
     {
@@ -2606,7 +2630,7 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
 {
     // check that var is global, can't take address of a TLS variable
     static assert(is(typeof({__gshared p = &var;})), "var must be 'static shared' or '__gshared'.");
-    import core.atomic;
+    import core.atomic : atomicLoad, MemoryOrder, atomicStore;
 
     static shared bool flag;
     if (!atomicLoad!(MemoryOrder.acq)(flag))
@@ -2624,8 +2648,10 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
 }
 
 /// Use a separate mutex when init blocks on another thread that might also call initOnce.
-unittest
+@system unittest
 {
+    import core.sync.mutex : Mutex;
+
     static shared bool varA, varB;
     __gshared Mutex m;
     m = new Mutex;
@@ -2641,7 +2667,7 @@ unittest
     assert(varB == true);
 }
 
-unittest
+@system unittest
 {
      static shared bool a;
      __gshared bool b;

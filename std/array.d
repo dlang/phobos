@@ -147,7 +147,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
 
 @safe pure nothrow unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     struct Foo
     {
         int a;
@@ -158,11 +158,11 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
 
 @system unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     struct Foo
     {
         int a;
-        auto opAssign(Foo foo)
+        void opAssign(Foo foo)
         {
             assert(0);
         }
@@ -175,7 +175,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
     assert(equal(a, [Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)]));
 }
 
-unittest
+@safe unittest
 {
     // Issue 12315
     static struct Bug12315 { immutable int i; }
@@ -183,7 +183,7 @@ unittest
     static assert(bug12315[0].i == 123456789);
 }
 
-unittest
+@safe unittest
 {
     import std.range;
     static struct S{int* p;}
@@ -202,8 +202,9 @@ ElementType!String[] array(String)(String str) if (isNarrowString!String)
     return cast(typeof(return)) str.toUTF32;
 }
 
-unittest
+@system unittest
 {
+    // @system due to array!string
     import std.conv : to;
 
     static struct TestArray { int x; string toString() @safe { return to!string(x); } }
@@ -220,7 +221,7 @@ unittest
 
     static struct OpApply
     {
-        int opApply(int delegate(ref int) dg)
+        int opApply(scope int delegate(ref int) dg)
         {
             int res;
             foreach (i; 0..10)
@@ -263,7 +264,7 @@ unittest
 }
 
 //Bug# 8233
-unittest
+@safe unittest
 {
     assert(array("hello world"d) == "hello world"d);
     immutable a = [1, 2, 3, 4, 5];
@@ -290,7 +291,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     //9824
     static struct S
@@ -303,10 +304,10 @@ unittest
 }
 
 // Bugzilla 10220
-unittest
+@safe unittest
 {
     import std.exception;
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : repeat;
 
     static struct S
@@ -323,7 +324,7 @@ unittest
     });
 }
 
-unittest
+@safe unittest
 {
     //Turn down infinity:
     static assert(!is(typeof(
@@ -361,7 +362,7 @@ auto assocArray(Range)(Range r)
 }
 
 ///
-/*@safe*/ pure /*nothrow*/ unittest
+@safe pure /*nothrow*/ unittest
 {
     import std.range;
     import std.typecons;
@@ -375,7 +376,7 @@ auto assocArray(Range)(Range r)
 }
 
 // @@@11053@@@ - Cannot be version(unittest) - recursive instantiation error
-unittest
+@safe unittest
 {
     import std.typecons;
     static assert(!__traits(compiles, [ tuple("foo", "bar", "baz") ].assocArray()));
@@ -384,7 +385,7 @@ unittest
 }
 
 // Issue 13909
-unittest
+@safe unittest
 {
     import std.typecons;
     auto a = [tuple!(const string, string)("foo", "bar")];
@@ -404,16 +405,16 @@ associative array.
 auto byPair(Key, Value)(Value[Key] aa)
 {
     import std.typecons : tuple;
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
 
     return aa.byKeyValue.map!(pair => tuple(pair.key, pair.value));
 }
 
 ///
-unittest
+@system unittest
 {
     import std.typecons : tuple, Tuple;
-    import std.algorithm : sort;
+    import std.algorithm.sorting : sort;
 
     auto aa = ["a": 1, "b": 2, "c": 3];
     Tuple!(string, int)[] pairs;
@@ -434,7 +435,7 @@ unittest
     ]);
 }
 
-unittest
+@system unittest
 {
     import std.typecons : tuple, Tuple;
 
@@ -627,10 +628,16 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
         else
         {
             import core.stdc.string : memset;
-            import core.memory;
-            auto ptr = cast(E*) GC.malloc(sizes[0] * E.sizeof, blockAttribute!E);
+            import core.memory : GC;
+
+            import core.checkedint : mulu;
+            bool overflow;
+            const nbytes = mulu(size, E.sizeof, overflow);
+            if (overflow) assert(0);
+
+            auto ptr = cast(E*) GC.malloc(nbytes, blockAttribute!E);
             static if (minimallyInitialized && hasIndirections!E)
-                memset(ptr, 0, size * E.sizeof);
+                memset(ptr, 0, nbytes);
             ret = ptr[0 .. size];
         }
     }
@@ -644,7 +651,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
     return ret;
 }
 
-nothrow pure unittest
+@safe nothrow pure unittest
 {
     auto s1 = uninitializedArray!(int[])();
     auto s2 = minimallyInitializedArray!(int[])();
@@ -652,7 +659,7 @@ nothrow pure unittest
     assert(s2.length == 0);
 }
 
-nothrow pure unittest //@@@9803@@@
+@safe nothrow pure unittest //@@@9803@@@
 {
     auto a = minimallyInitializedArray!(int*[])(1);
     assert(a[0] == null);
@@ -662,7 +669,7 @@ nothrow pure unittest //@@@9803@@@
     assert(c[0][0] == null);
 }
 
-unittest //@@@10637@@@
+@safe unittest //@@@10637@@@
 {
     static struct S
     {
@@ -687,7 +694,7 @@ unittest //@@@10637@@@
     enum b = minimallyInitializedArray!(S[])(1);
 }
 
-nothrow unittest
+@safe nothrow unittest
 {
     static struct S1
     {
@@ -720,12 +727,10 @@ equal), $(D overlap) only compares the pointers in the ranges, not the
 values referred by them. If $(D r1) and $(D r2) have an overlapping
 slice, returns that slice. Otherwise, returns the null slice.
 */
-inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
+auto overlap(T, U)(T[] r1, U[] r2) @trusted pure nothrow
+if (is(typeof(r1.ptr < r2.ptr) == bool))
 {
-    alias U = inout(T);
-    static U* max(U* a, U* b) nothrow { return a > b ? a : b; }
-    static U* min(U* a, U* b) nothrow { return a < b ? a : b; }
-
+    import std.algorithm.comparison : min, max;
     auto b = max(r1.ptr, r2.ptr);
     auto e = min(r1.ptr + r1.length, r2.ptr + r2.length);
     return b < e ? b[0 .. e - b] : null;
@@ -742,7 +747,7 @@ inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
     assert(overlap(a, b).empty);
 }
 
-/*@safe nothrow*/ unittest
+@safe /*nothrow*/ unittest
 {
     static void test(L, R)(L l, R r)
     {
@@ -791,7 +796,7 @@ inout(T)[] overlap(T)(inout(T)[] r1, inout(T)[] r2) @trusted pure nothrow
 
 private void copyBackwards(T)(T[] src, T[] dest)
 {
-    import core.stdc.string;
+    import core.stdc.string : memmove;
 
     assert(src.length == dest.length);
 
@@ -817,6 +822,10 @@ private void copyBackwards(T)(T[] src, T[] dest)
     Inserts $(D stuff) (which must be an input range or any number of
     implicitly convertible items) in $(D array) at position $(D pos).
 
+    Params:
+        array = The array that $(D stuff) will be inserted into.
+        pos   = The position in $(D array) to insert the $(D stuff).
+        stuff = An input range, or any number of implicitly convertible items to insert into $(D array).
  +/
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
     if (!isSomeString!(T[])
@@ -897,7 +906,7 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
             {
                 import std.utf : encode;
                 T[dchar.sizeof/T.sizeof] buf;
-                size_t len = encode(buf, ch);
+                immutable len = encode(buf, ch);
                 final switch (len)
                 {
                     static if (T.sizeof == char.sizeof)
@@ -919,7 +928,6 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
                 return ptr;
             }
         }
-        immutable oldLen = array.length;
         size_t to_insert = 0;
         //count up the number of *codeunits* to insert
         foreach (i, E; U)
@@ -929,7 +937,7 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
         @trusted static void moveToRight(T[] arr, size_t gap)
         {
             static assert(!hasElaborateCopyConstructor!T);
-            import core.stdc.string;
+            import core.stdc.string : memmove;
             if (__ctfe)
             {
                 for (size_t i = arr.length - gap; i; --i)
@@ -1005,12 +1013,14 @@ private template isInputRangeOrConvertible(E)
     }
 }
 
-unittest
+@system unittest
 {
+    // @system due to insertInPlace
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : filter;
     import core.exception;
     import std.conv : to;
     import std.exception;
-    import std.algorithm;
 
 
     bool test(T, U, V)(T orig, size_t pos, U toInsert, V result,
@@ -1023,14 +1033,14 @@ unittest
                 auto a = orig.idup;
 
             a.insertInPlace(pos, toInsert);
-            if (!std.algorithm.equal(a, result))
+            if (!equal(a, result))
                 return false;
         }
 
         static if (isInputRange!U)
         {
             orig.insertInPlace(pos, filter!"true"(toInsert));
-            return std.algorithm.equal(orig, result);
+            return equal(orig, result);
         }
         else
             return true;
@@ -1045,7 +1055,7 @@ unittest
     assert(test([1, 2, 3, 4], 2, 23, [1, 2, 23, 3, 4]));
     assert(test([1, 2, 3, 4], 4, 24, [1, 2, 3, 4, 24]));
 
-    auto testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
+    void testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
     {
 
         auto l = to!T("hello");
@@ -1080,7 +1090,7 @@ unittest
         auto result = args[$-1];
 
         a.insertInPlace(pos, args[0..$-1]);
-        if (!std.algorithm.equal(a, result))
+        if (!equal(a, result))
             return false;
         return true;
     }
@@ -1099,9 +1109,9 @@ unittest
                     "flip_xyz\U00010143_abc__flop"));
 }
 
-unittest
+@system unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     // insertInPlace interop with postblit
     static struct Int
     {
@@ -1156,7 +1166,7 @@ unittest
     });
 }
 
-unittest // bugzilla 6874
+@system unittest // bugzilla 6874
 {
     import core.memory;
     // allocate some space
@@ -1282,7 +1292,7 @@ if (isInputRange!S && !isDynamicArray!S)
 
 
 ///
-unittest
+@safe unittest
 {
     auto a = "abc";
     auto s = replicate(a, 3);
@@ -1299,7 +1309,7 @@ unittest
     assert(d == []);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
 
@@ -1365,7 +1375,7 @@ if (isSomeString!S)
     return result;
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
     import std.format;
@@ -1397,7 +1407,7 @@ unittest
     assert(split(s) == ["peter", "paul", "jerry"]);
 }
 
-unittest //safety, purity, ctfe ...
+@safe unittest //purity, ctfe ...
 {
     import std.exception;
     void dg() @safe pure {
@@ -1410,7 +1420,7 @@ unittest //safety, purity, ctfe ...
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(split("hello world") == ["hello","world"]);
     assert(split("192.168.0.1", ".") == ["192", "168", "0", "1"]);
@@ -1458,7 +1468,7 @@ alias splitter = std.algorithm.iteration.splitter;
 auto split(Range, Separator)(Range range, Separator sep)
 if (isForwardRange!Range && is(typeof(ElementType!Range.init == Separator.init)))
 {
-    import std.algorithm : splitter;
+    import std.algorithm.iteration : splitter;
     return range.splitter(sep).array;
 }
 ///ditto
@@ -1466,21 +1476,21 @@ auto split(Range, Separator)(Range range, Separator sep) if (
         isForwardRange!Range && isForwardRange!Separator
         && is(typeof(ElementType!Range.init == ElementType!Separator.init)))
 {
-    import std.algorithm : splitter;
+    import std.algorithm.iteration : splitter;
     return range.splitter(sep).array;
 }
 ///ditto
 auto split(alias isTerminator, Range)(Range range)
 if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
 {
-    import std.algorithm : splitter;
+    import std.algorithm.iteration : splitter;
     return range.splitter!isTerminator.array;
 }
 
-unittest
+@safe unittest
 {
     import std.conv;
-    import std.algorithm : cmp;
+    import std.algorithm.comparison : cmp;
 
     debug(std_array) printf("array.split\n");
     foreach (S; AliasSeq!(string, wstring, dstring,
@@ -1542,18 +1552,18 @@ unittest
 private enum bool hasCheapIteration(R) = isArray!R;
 
 /++
-   Concatenates all of the ranges in $(D ror) together into one array using
-   $(D sep) as the separator if present.
+   Eagerly concatenates all of the ranges in `ror` together (with the GC)
+   into one array using `sep` as the separator if present.
 
    Params:
-        ror = Range of Ranges of Elements
-        sep = Range of Elements
+        ror = An input range of input ranges
+        sep = An input range, or a single element, to join the ranges on
 
    Returns:
-        an allocated array of Elements
+        An array of elements
 
    See_Also:
-        $(REF joiner, std,algorithm,iteration)
+        For a lazy version, see $(REF joiner, std,algorithm,iteration)
   +/
 ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     if (isInputRange!RoR &&
@@ -1625,7 +1635,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
     }
 }
 
-unittest // Issue 14230
+@safe unittest // Issue 14230
 {
    string[] ary = ["","aa","bb","cc"]; // leaded by _empty_ element
    assert(ary.join(" @") == " @aa @bb @cc"); // OK in 2.067b1 and olders
@@ -1697,7 +1707,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, E sep)
     }
 }
 
-unittest // Issue 10895
+@safe unittest // Issue 10895
 {
     class A
     {
@@ -1711,7 +1721,7 @@ unittest // Issue 10895
     assert(a[0].length == 3);
 }
 
-unittest // Issue 14230
+@safe unittest // Issue 14230
 {
    string[] ary = ["","aa","bb","cc"];
    assert(ary.join('@') == "@aa@bb@cc");
@@ -1806,7 +1816,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
     assert(arr.join(',') == "apple,banana");
 }
 
-unittest
+@system unittest
 {
     import std.conv : to;
     import std.algorithm;
@@ -1914,7 +1924,7 @@ unittest
 }
 
 // Issue 10683
-unittest
+@safe unittest
 {
     import std.range : join;
     import std.typecons : tuple;
@@ -1923,10 +1933,10 @@ unittest
 }
 
 // Issue 13877
-unittest
+@safe unittest
 {
     // Test that the range is iterated only once.
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     int c = 0;
     auto j1 = [1, 2, 3].map!(_ => [c++]).join;
     assert(c == 3);
@@ -1970,7 +1980,7 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
 }
 
 ///
-unittest
+@safe unittest
 {
     assert("Hello Wörld".replace("o Wö", "o Wo") == "Hello World");
     assert("Hello Wörld".replace("l", "h") == "Hehho Wörhd");
@@ -2007,7 +2017,7 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
 }
 
 ///
-unittest
+@safe unittest
 {
     auto arr = [1, 2, 3, 4, 5];
     auto from = [2, 3];
@@ -2019,10 +2029,10 @@ unittest
     assert(sink.data == [1, 4, 6, 4, 5]);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
-    import std.algorithm : cmp;
+    import std.algorithm.comparison : cmp;
 
     debug(std_array) printf("array.replace.unittest\n");
 
@@ -2052,10 +2062,10 @@ unittest
     assert(replace(s, "foo", "silly") == "This is a silly silly list");
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
-    import std.algorithm : skipOver;
+    import std.algorithm.searching : skipOver;
 
     struct CheckOutput(C)
     {
@@ -2086,7 +2096,7 @@ T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
 {
     static if (hasLength!Range && is(ElementEncodingType!Range : T))
     {
-        import std.algorithm : copy;
+        import std.algorithm.mutation : copy;
         assert(from <= to);
         immutable sliceLen = to - from;
         auto retval = new Unqual!(T)[](subject.length - sliceLen + stuff.length);
@@ -2109,7 +2119,7 @@ T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto a = [ 1, 2, 3, 4 ];
     auto b = a.replace(1, 3, [ 9, 9, 9 ]);
@@ -2117,12 +2127,12 @@ unittest
     assert(b == [ 1, 9, 9, 9, 4 ]);
 }
 
-unittest
+@system unittest
 {
     import core.exception;
     import std.conv : to;
     import std.exception;
-    import std.algorithm;
+    import std.algorithm.iteration : filter;
 
 
     auto a = [ 1, 2, 3, 4 ];
@@ -2139,7 +2149,7 @@ unittest
     assert(replace(a, 2, 4, filter!"true"([5, 6, 7])) == [1, 2, 5, 6, 7]);
     assert(a == [ 1, 2, 3, 4 ]);
 
-    auto testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
+    void testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
     {
 
         auto l = to!T("hello");
@@ -2203,7 +2213,7 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
               !isNarrowString!(T[]))
     {
         // optimized for homogeneous arrays that can be overwritten.
-        import std.algorithm : remove;
+        import std.algorithm.mutation : remove;
         import std.typecons : tuple;
 
         if (overlap(array, stuff).length)
@@ -2236,7 +2246,7 @@ void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff
 }
 
 ///
-unittest
+@safe unittest
 {
     int[] a = [1, 4, 5];
     replaceInPlace(a, 1u, 2u, [2, 3, 4]);
@@ -2247,7 +2257,7 @@ unittest
     assert(a == [1, 4, 5, 5]);
 }
 
-unittest
+@safe unittest
 {
     // Bug# 12889
     int[1][] arr = [[0], [1], [2], [3], [4], [5], [6]];
@@ -2256,7 +2266,7 @@ unittest
     assert(arr == [[0], [1], [2], [3], [0], [1], [6]]);
 }
 
-unittest
+@system unittest
 {
     // Bug# 14925
     char[] a = "mon texte 1".dup;
@@ -2276,7 +2286,7 @@ unittest
     void testStringReplaceInPlace(T, U)()
     {
         import std.conv;
-        import std.algorithm : equal;
+        import std.algorithm.comparison : equal;
         auto a = unicoded.to!(U[]);
         auto b = unicodedLong.to!(U[]);
 
@@ -2306,22 +2316,23 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     // the constraint for the first overload used to match this, which wouldn't compile.
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     long[] a = [1L, 2, 3];
     int[] b = [4, 5, 6];
     a.replaceInPlace(1, 2, b);
     assert(equal(a, [1L, 4, 5, 6, 3]));
 }
 
-unittest
+@system unittest
 {
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : filter;
     import core.exception;
     import std.conv : to;
     import std.exception;
-    import std.algorithm;
 
 
     bool test(T, U, V)(T orig, size_t from, size_t to, U toReplace, V result,
@@ -2334,14 +2345,14 @@ unittest
                 auto a = orig.idup;
 
             a.replaceInPlace(from, to, toReplace);
-            if (!std.algorithm.equal(a, result))
+            if (!equal(a, result))
                 return false;
         }
 
         static if (isInputRange!U)
         {
             orig.replaceInPlace(from, to, filter!"true"(toReplace));
-            return std.algorithm.equal(orig, result);
+            return equal(orig, result);
         }
         else
             return true;
@@ -2359,7 +2370,7 @@ unittest
     assert(test([1, 2, 3, 4], 0, 2, filter!"true"([5, 6, 7]), [5, 6, 7, 3, 4]));
     assert(test([1, 2, 3, 4], 2, 4, filter!"true"([5, 6, 7]), [1, 2, 5, 6, 7]));
 
-    auto testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
+    void testStr(T, U)(string file = __FILE__, size_t line = __LINE__)
     {
 
         auto l = to!T("hello");
@@ -2398,7 +2409,6 @@ if (isDynamicArray!(E[]) &&
     isForwardRange!R1 && is(typeof(appender!(E[])().put(from[0 .. 1]))) &&
     isForwardRange!R2 && is(typeof(appender!(E[])().put(to[0 .. 1]))))
 {
-    import std.algorithm : countUntil;
     if (from.empty) return subject;
     static if (isSomeString!(E[]))
     {
@@ -2407,7 +2417,7 @@ if (isDynamicArray!(E[]) &&
     }
     else
     {
-        import std.algorithm : countUntil;
+        import std.algorithm.searching : countUntil;
         immutable idx = subject.countUntil(from);
     }
     if (idx == -1)
@@ -2431,7 +2441,7 @@ if (isDynamicArray!(E[]) &&
 }
 
 ///
-unittest
+@safe unittest
 {
     auto a = [1, 2, 2, 3, 4, 5];
     auto b = a.replaceFirst([2], [1337]);
@@ -2442,10 +2452,10 @@ unittest
     assert(r == "This is a silly foo list");
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
-    import std.algorithm : cmp;
+    import std.algorithm.comparison : cmp;
 
     debug(std_array) printf("array.replaceFirst.unittest\n");
 
@@ -2481,7 +2491,7 @@ unittest
 }
 
 //Bug# 8187
-unittest
+@safe unittest
 {
     auto res = ["a", "a"];
     assert(replace(res, "a", "b") == ["b", "b"]);
@@ -2507,7 +2517,7 @@ if (isDynamicArray!(E[]) &&
     }
     else
     {
-        import std.algorithm : countUntil;
+        import std.algorithm.searching : countUntil;
         auto idx = retro(subject).countUntil(retro(from));
     }
 
@@ -2539,7 +2549,7 @@ if (isDynamicArray!(E[]) &&
 }
 
 ///
-unittest
+@safe unittest
 {
     auto a = [1, 2, 2, 3, 4, 5];
     auto b = a.replaceLast([2], [1337]);
@@ -2550,10 +2560,10 @@ unittest
     assert(r == "This is a foo silly list", r);
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
-    import std.algorithm : cmp;
+    import std.algorithm.comparison : cmp;
 
     debug(std_array) printf("array.replaceLast.unittest\n");
 
@@ -2611,7 +2621,7 @@ body
 }
 
 ///
-unittest
+@system unittest
 {
     auto a = [1, 2, 3, 4, 5];
     auto b = replaceSlice(a, a[1..4], [0, 0, 0]);
@@ -2619,9 +2629,9 @@ unittest
     assert(b == [1, 0, 0, 0, 5]);
 }
 
-unittest
+@system unittest
 {
-    import std.algorithm : cmp;
+    import std.algorithm.comparison : cmp;
     debug(std_array) printf("array.replaceSlice.unittest\n");
 
     string s = "hello";
@@ -2635,15 +2645,18 @@ unittest
 
 /**
 Implements an output range that appends data to an array. This is
-recommended over $(D a ~= data) when appending many elements because it is more
-efficient.
+recommended over $(D array ~= data) when appending many elements because it is more
+efficient. `Appender` maintains its own array metadata locally, so it can avoid
+global locking for each append where $(LREF capacity) is non-zero.
+See_Also: $(LREF appender)
  */
 struct Appender(A)
 if (isDynamicArray!A)
 {
-    import core.memory;
+    import core.memory : GC;
 
     private alias T = ElementEncodingType!A;
+
     private struct Data
     {
         size_t capacity;
@@ -2654,12 +2667,12 @@ if (isDynamicArray!A)
     private Data* _data;
 
     /**
-     * Construct an appender with a given array.  Note that this does not copy the
-     * data.  If the array has a larger capacity as determined by arr.capacity,
+     * Constructs an `Appender` with a given array.  Note that this does not copy the
+     * data.  If the array has a larger capacity as determined by `arr.capacity`,
      * it will be used by the appender.  After initializing an appender on an array,
      * appending to the original array will reallocate.
      */
-    this(T[] arr) @trusted pure nothrow
+    this(A arr) @trusted pure nothrow
     {
         // initialize to a given array.
         _data = new Data;
@@ -2674,7 +2687,7 @@ if (isDynamicArray!A)
         // We only do this for mutable types that can be extended.
         static if (isMutable!T && is(typeof(arr.length = size_t.max)))
         {
-            auto cap = arr.capacity; //trusted
+            immutable cap = arr.capacity; //trusted
             // Replace with "GC.setAttr( Not Appendable )" once pure (and fixed)
             if (cap > arr.length)
                 arr.length = cap;
@@ -2684,7 +2697,7 @@ if (isDynamicArray!A)
 
     /**
      * Reserve at least newCapacity elements for appending.  Note that more elements
-     * may be reserved than requested.  If newCapacity <= capacity, then nothing is
+     * may be reserved than requested.  If `newCapacity <= capacity`, then nothing is
      * done.
      */
     void reserve(size_t newCapacity) @safe pure nothrow
@@ -2713,7 +2726,7 @@ if (isDynamicArray!A)
     /**
      * Returns the managed array.
      */
-    @property inout(T)[] data() inout @trusted pure nothrow
+    @property inout(ElementEncodingType!A)[] data() inout @trusted pure nothrow
     {
         /* @trusted operation:
          * casting Unqual!T[] to inout(T)[]
@@ -2758,7 +2771,7 @@ if (isDynamicArray!A)
             // first, try extending the current block
             if (_data.canExtend)
             {
-                auto u = GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
+                immutable u = GC.extend(_data.arr.ptr, nelems * T.sizeof, (newlen - len) * T.sizeof);
                 if (u)
                 {
                     // extend worked, update the capacity
@@ -2767,8 +2780,14 @@ if (isDynamicArray!A)
                 }
             }
 
+
             // didn't work, must reallocate
-            auto bi = GC.qalloc(newlen * T.sizeof, blockAttribute!T);
+            import core.checkedint : mulu;
+            bool overflow;
+            const nbytes = mulu(newlen, T.sizeof, overflow);
+            if (overflow) assert(0);
+
+            auto bi = GC.qalloc(nbytes, blockAttribute!T);
             _data.capacity = bi.size / T.sizeof;
             import core.stdc.string : memcpy;
             if (len)
@@ -2799,7 +2818,7 @@ if (isDynamicArray!A)
     }
 
     /**
-     * Appends one item to the managed array.
+     * Appends `item` to the managed array.
      */
     void put(U)(U item) if (canPutItem!U)
     {
@@ -2872,7 +2891,7 @@ if (isDynamicArray!A)
             alias UT = Unqual!T;
 
             static if (is(typeof(_data.arr[] = items[])) &&
-                !hasElaborateAssign!(Unqual!T) && isAssignable!(UT, ElementEncodingType!Range))
+                !hasElaborateAssign!UT && isAssignable!(UT, ElementEncodingType!Range))
             {
                 bigData[len .. newlen] = items[];
             }
@@ -2901,25 +2920,14 @@ if (isDynamicArray!A)
     }
 
     /**
-     * Appends one item to the managed array.
+     * Appends `rhs` to the managed array.
+     * Params:
+     * rhs = Element or range.
      */
-    void opOpAssign(string op : "~", U)(U item) if (canPutItem!U)
+    void opOpAssign(string op : "~", U)(U rhs)
+    if (__traits(compiles, put(rhs)))
     {
-        put(item);
-    }
-
-    // Const fixing hack.
-    void opOpAssign(string op : "~", Range)(Range items) if (canPutConstRange!Range)
-    {
-        put(items);
-    }
-
-    /**
-     * Appends an entire range to the managed array.
-     */
-    void opOpAssign(string op : "~", Range)(Range items) if (canPutRange!Range)
-    {
-        put(items);
+        put(rhs);
     }
 
     // only allow overwriting data on non-immutable and non-const data
@@ -2929,7 +2937,7 @@ if (isDynamicArray!A)
          * Clears the managed array.  This allows the elements of the array to be reused
          * for appending.
          *
-         * Note that clear is disabled for immutable or const element types, due to the
+         * Note: clear is disabled for immutable or const element types, due to the
          * possibility that $(D Appender) might overwrite immutable data.
          */
         void clear() @trusted pure nothrow
@@ -2944,6 +2952,7 @@ if (isDynamicArray!A)
          * Shrinks the managed array to the given length.
          *
          * Throws: $(D Exception) if newlength is greater than the current array length.
+         * Note: shrinkTo is disabled for immutable or const element types.
          */
         void shrinkTo(size_t newlength) @trusted pure
         {
@@ -2999,7 +3008,7 @@ if (isDynamicArray!A)
 private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen) @safe pure nothrow
 {
     import core.bitop : bsr;
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     if (curLen == 0)
         return max(reqLen,8);
     ulong mult = 100 + (1000UL) / (bsr(curLen * TSizeOf) + 1);
@@ -3011,68 +3020,63 @@ private size_t appenderNewCapacity(size_t TSizeOf)(size_t curLen, size_t reqLen)
 }
 
 /**
- * An appender that can update an array in-place.  It forwards all calls to an
- * underlying appender implementation.  Any calls made to the appender also update
- * the pointer to the original array passed in.
+ * A version of $(LREF Appender) that can update an array in-place.
+ * It forwards all calls to an underlying appender implementation.
+ * Any calls made to the appender also update the pointer to the
+ * original array passed in.
+ *
+ * Tip: Use the `arrayPtr` overload of $(LREF appender) for construction with type-inference.
  */
 struct RefAppender(A)
 if (isDynamicArray!A)
 {
     private
     {
-        alias T = ElementEncodingType!A;
         Appender!A impl;
-        T[] *arr;
+        A* arr;
     }
 
     /**
-     * Construct a ref appender with a given array reference.  This does not copy the
-     * data.  If the array has a larger capacity as determined by arr.capacity, it
-     * will be used by the appender.  $(D RefAppender) assumes that arr is a non-null
-     * value.
+     * Constructs a `RefAppender` with a given array reference.  This does not copy the
+     * data.  If the array has a larger capacity as determined by `arr.capacity`, it
+     * will be used by the appender.
      *
-     * Note, do not use builtin appending (i.e. ~=) on the original array passed in
-     * until you are done with the appender, because calls to the appender override
-     * those appends.
+     * Note: Do not use built-in appending (i.e. `~=`) on the original array
+     * until you are done with the appender, because subsequent calls to the appender
+     * will reallocate the array data without those appends.
+     *
+     * Params:
+     * arr = Pointer to an array. Must not be _null.
      */
-    this(T[] *arr)
+    this(A* arr)
     {
         impl = Appender!A(*arr);
         this.arr = arr;
     }
 
-    auto opDispatch(string fn, Args...)(Args args) if (is(typeof(mixin("impl." ~ fn ~ "(args)"))))
+    /** Wraps remaining `Appender` methods such as $(LREF put).
+     * Params:
+     * fn = Method name to call.
+     * args = Arguments to pass to the method.
+     */
+    void opDispatch(string fn, Args...)(Args args)
+    if (__traits(compiles, (Appender!A a) => mixin("a." ~ fn ~ "(args)")))
     {
         // we do it this way because we can't cache a void return
         scope(exit) *this.arr = impl.data;
         mixin("return impl." ~ fn ~ "(args);");
     }
 
-    private alias AppenderType = Appender!A;
-
     /**
-     * Appends one item to the managed array.
+     * Appends `rhs` to the managed array.
+     * Params:
+     * rhs = Element or range.
      */
-    void opOpAssign(string op : "~", U)(U item) if (AppenderType.canPutItem!U)
+    void opOpAssign(string op : "~", U)(U rhs)
+    if (__traits(compiles, (Appender!A a){ a.put(rhs); }))
     {
         scope(exit) *this.arr = impl.data;
-        impl.put(item);
-    }
-
-    // Const fixing hack.
-    void opOpAssign(string op : "~", Range)(Range items) if (AppenderType.canPutConstRange!Range)
-    {
-        scope(exit) *this.arr = impl.data;
-        impl.put(items);
-    }
-
-    /**
-     * Appends an entire range to the managed array.
-     */
-    void opOpAssign(string op : "~", Range)(Range items) if (AppenderType.canPutRange!Range)
-    {
-        scope(exit) *this.arr = impl.data;
-        impl.put(items);
+        impl.put(rhs);
     }
 
     /**
@@ -3088,15 +3092,15 @@ if (isDynamicArray!A)
     /**
      * Returns the managed array.
      */
-    @property inout(T)[] data() inout
+    @property inout(ElementEncodingType!A)[] data() inout
     {
         return impl.data;
     }
 }
 
 /++
-    Convenience function that returns an $(D Appender!A) object initialized
-    with $(D array).
+    Convenience function that returns an $(LREF Appender) instance,
+    optionally initialized with $(D array).
  +/
 Appender!A appender(A)()
 if (isDynamicArray!A)
@@ -3265,7 +3269,7 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
     }
 }
 
-unittest
+@safe unittest
 {
     import std.typecons;
     import std.algorithm;
@@ -3274,7 +3278,7 @@ unittest
     [tuple("A")].filter!(t => true).array; // error
 }
 
-unittest
+@system unittest
 {
     import std.range;
     //Coverage for put(Range)
@@ -3297,7 +3301,7 @@ unittest
     au2.put(sc2.repeat().take(10));
 }
 
-unittest
+@system unittest
 {
     struct S
     {
@@ -3330,7 +3334,7 @@ unittest
     a2.put([s2]);
 }
 
-unittest
+@safe unittest
 {
     //9528
     const(E)[] fastCopy(E)(E[] src) {
@@ -3347,9 +3351,9 @@ unittest
     auto t = fastCopy(s); // Does not compile
 }
 
-unittest
+@safe unittest
 {
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     //10753
     struct Foo {
        immutable dchar d;
@@ -3361,7 +3365,7 @@ unittest
     [1, 2].map!Bar.array;
 }
 
-unittest
+@safe unittest
 {
     //New appender signature tests
     alias mutARR = int[];
@@ -3395,10 +3399,10 @@ unittest
     {auto app = appender!(char[])(null);}
 }
 
-unittest //Test large allocations (for GC.extend)
+@safe unittest //Test large allocations (for GC.extend)
 {
     import std.range;
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     Appender!(char[]) app;
     app.reserve(1); //cover reserve on non-initialized
     foreach (_; 0 .. 100_000)
@@ -3406,7 +3410,7 @@ unittest //Test large allocations (for GC.extend)
     assert(equal(app.data, 'a'.repeat(100_000)));
 }
 
-unittest
+@safe unittest
 {
     auto reference = new ubyte[](2048 + 1); //a number big enough to have a full page (EG: the GC extends)
     auto arr = reference.dup;
@@ -3416,13 +3420,13 @@ unittest
     assert(reference[] == arr[]);
 }
 
-unittest // clear method is supported only for mutable element types
+@safe unittest // clear method is supported only for mutable element types
 {
     Appender!string app;
     static assert(!__traits(compiles, app.clear()));
 }
 
-unittest
+@safe unittest
 {
     static struct D//dynamic
     {
@@ -3451,7 +3455,7 @@ unittest
     static assert(!is(typeof(appender(foo()))));
 }
 
-unittest
+@system unittest
 {
     // Issue 13077
     static class A {}
@@ -3470,16 +3474,16 @@ unittest
 }
 
 /++
-    Convenience function that returns a $(D RefAppender!A) object initialized
-    with $(D array).  Don't use null for the $(D array) pointer, use the other
+    Convenience function that returns a $(LREF RefAppender) instance initialized
+    with `arrayPtr`. Don't use null for the array pointer, use the other
     version of $(D appender) instead.
  +/
-RefAppender!(E[]) appender(A : E[]*, E)(A array)
+RefAppender!(E[]) appender(P : E[]*, E)(P arrayPtr)
 {
-    return RefAppender!(E[])(array);
+    return RefAppender!(E[])(arrayPtr);
 }
 
-unittest
+@system unittest
 {
     import std.exception;
     {
@@ -3534,13 +3538,13 @@ unittest
     assert(app3.data == [1, 2, 3]);
 }
 
-unittest // issue 14605
+@safe unittest // issue 14605
 {
     static assert(isOutputRange!(Appender!(int[]), int));
     static assert(isOutputRange!(RefAppender!(int[]), int));
 }
 
-unittest
+@safe unittest
 {
     Appender!(int[]) app;
     short[] range = [1, 2, 3];
@@ -3548,7 +3552,7 @@ unittest
     assert(app.data == [1, 2, 3]);
 }
 
-unittest
+@safe unittest
 {
     string s = "hello".idup;
     char[] a = "hello".dup;

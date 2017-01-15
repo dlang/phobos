@@ -1,320 +1,123 @@
 Ddoc
 
-$(COMMENT Pending changelog for 2.072. This will get copied to dlang.org and
-    cleared when master gets merged into stable prior to 2.072.
+$(COMMENT Pending changelog for 2.073. This will get copied to dlang.org and
+    cleared when master gets merged into stable.
 )
 
 $(BUGSTITLE Library Changes,
-    $(LI $(RELATIVE_LINK2 std-digest-murmurhash, Implementation of MurmurHash
-        digest.))
-    $(LI $(RELATIVE_LINK2 process, Process creation in `std.process` was sped up
-        on Posix.))
-    $(LI $(RELATIVE_LINK2 std-algorithm-iteration-cumulativeFold,
-        `algorithm.iteration.cumulativeFold` was added.))
-    $(LI $(RELATIVE_LINK2 padLeft-padRight, `std.range.padLeft` and
-        `std.range.padRight` were added.))
-    $(LI $(RELATIVE_LINK2 regex-multiple-patterns, `std.regex.regex` now
-        supports matching multiple patterns in one go.))
-    $(LI $(RELATIVE_LINK2 regex-with-matches, `std.regex.splitter` now
-        supports keeping the pattern matches in the resulting range.))
-    $(LI $(RELATIVE_LINK2 optimization, `findLocalMin` was added to `std.numeric`.))
-    $(LI $(RELATIVE_LINK2 slice_ptr, `ptr` property and public constructor were
-        added to `std.experimental.ndslice.slice.Slice`.))
-    $(LI $(RELATIVE_LINK2 slice_alloc, `slice`, `shape`, `ndarray`, and other
-        utilities were added to `std.experimental.ndslice.slice`.))
-    $(LI $(RELATIVE_LINK2 slice_iota, `iotaSlice` lazy tensor was added to
-        `std.experimental.ndslice.selection`.))
-    $(LI $(RELATIVE_LINK2 slice_mio, partial support for Math Index Order
-        was added to `std.experimental.ndslice.slice.Slice`.))
-    $(LI $(RELATIVE_LINK2 mutation, `std.algorithm.mutation.swapAt` was
-        exposed))
-    $(LI $(RELATIVE_LINK2 iota-length-size_t, `std.range.iota's `.length`
-        property is fixed to `size_t` instead of the type being iterated))
-    $(LI $(REF isNumber, std,uni) and $(REF isPunctuation, std,uni) now use a separate,
-    optimized path for ASCII inputs.)
-    $(LI $(REF isAlphaNum, std,uni), which is analogous to $(REF isAlphaNum, std,ascii)
-        was added.)
-    $(LI $(REF regex, std,regex) now supports inline comments with (?#...) syntax.)
-    $(LI std.regex had numerous optimization applied, compile-time $(REF ctRegex, std,regex)
-    should now be generally faster then the run-time version.)
-    $(LI $(REF moveAt, std,range,primitives) accepts only `size_t` for its index
-    arguments.)
-    $(LI $(REF isStrictlyMonotonic, std,algorithm,sorting) which doesn't allow
-    equal values was added.)
-    $(LI $(REF readLink, std,file) and $(REF symlink, std,file) have been
-        rangified.)
-    $(LI All overloads of `std.conv.toImpl` has been made private. Please use
-        $(REF to, std,conv) instead.)
-    $(LI $(RELATIVE_LINK2 min-max-element,
-    `std.algorithm.searching.{min,max}Element` for ranges have been added.))
-    $(LI $(REF Ternary, std,typecons) was added to represent three valued
-    logic.)
-    $(LI $(RELATIVE_LINK2 quantize, Added `std.math.quantize`, for rounding to
-        the nearest multiple of some number.))
-    $(LI $(RELATIVE_LINK2 traits, Three new traits were added to `std.traits`.))
+    $(LI $(RELATIVE_LINK2 promoted, Added `std.traits.Promoted` to get the result of
+        $(LINK2 $(ROOT_DIR)spec/type.html#integer-promotions, scalar type promotion)
+        in multi-term arithmetic expressions.))
+    $(LI $(RELATIVE_LINK2 staticIsSorted, Added `std.meta.staticIsSorted` to check if
+        an `AliasSeq` is sorted according to some template predicate.))
+    $(LI $(RELATIVE_LINK2 minIndex, Added `std.algorithm.searching.minIndex`
+        to get the index of the minimum element of a range.))
+    $(LI $(RELATIVE_LINK2 maxIndex, Added `std.algorithm.searching.maxIndex`
+        to get the index of the maximum element of a range.))
+    $(LI $(RELATIVE_LINK2 ndslice-removal, `std.experimental.ndslice`
+        has been deprecated.))
+    $(LI $(RELATIVE_LINK2 has-function-attributes, Added `std.traits.hasFunctionAttributes`
+        as a user-friendly way to query for function attributes.))
+    $(LI $(RELATIVE_LINK2 bitwise, Added `std.range.bitwise` to create
+        a bitwise adapter over an integral type range, consuming the range elements
+        bit by bit.))
 )
 
 $(BUGSTITLE Library Changes,
 
-$(LI $(LNAME2 std-digest-murmurhash, Implementation of `std.digest.murmurhash`).
-    $(P $(MREF std,digest,murmurhash) has been added. MurmurHash is a
-      non-cryptographic hash function suitable for general hash-based lookup. It
-      is optimized for x86 architectures.
-    )
+$(LI $(LNAME2 promoted, `std.traits.Promoted` gets the type to which a scalar type will
+    be promoted in multi-term arithmetic expressions.)
+-------
+import std.traits : Promoted;
+static assert(is(typeof(ubyte(3) * ubyte(5)) == Promoted!ubyte));
+static assert(is(Promoted!ubyte == int));
+-------
+    $(P See the D specification on $(LINK2 $(ROOT_DIR)spec/type.html#integer-promotions,
+    scalar type promotions) for more information.)
+)
+
+$(LI $(LNAME2 staticIsSorted, `std.meta.staticIsSorted` checks whether an `AliasSeq` is
+    sorted according to some template predicate.)
 ------
-// Computing the 32-bits hash value of an int array using the convenient digest template.
-import std.digest.murmurhash;
+enum Comp(T1, T2) = T1.sizeof < T2.sizeof;
 
-ubyte[4] hashed = digest!MurmurHash3_32_opt32([1, 2, 3, 4]);
+import std.meta : staticIsSorted;
+static assert( staticIsSorted!(Comp, byte, uint, double));
+static assert(!staticIsSorted!(Comp, bool, long, dchar));
 ------
+    $(P Additionally, the compile-time performance of `std.meta.staticSort` has been
+    greatly improved. Nevertheless, due to compiler limitations it is still an
+    extraordinarily expensive operation to perform on longer sequences; strive to
+    minimize such use.)
 )
 
-$(LI $(LNAME2 process, Process creation in `std.process` was sped up on Posix.)
-    $(P Previously, Posix systems would attempt to close every file descriptor
-        from 3 to the maximum file descriptor number if `inheritFDs` was not
-        specified with `spawnProcess`, `pipeProcess`, etc.
-        $(MREF std,process) now uses `poll()` to determine which
-        descriptors need closing.
-    )
-)
-
-$(LI $(LNAME2 std-algorithm-iteration-cumulativeFold,
-    `algorithm.iteration.cumulativeFold` was added.)
-
-    $(P $(REF cumulativeFold, std,algorithm,iteration) returns the successive
-        reduced values of an input range.)
-------
-assert([1, 2, 3, 4, 5].cumulativeFold!((a, b) => a + b).array == [1, 3, 6, 10, 15]);
-assert([1, 2, 3].cumulativeFold!((a, b) => a + b)(100).array == [101, 103, 106]);
-------
-)
-
-$(LI $(LNAME2 padLeft-padRight, `std.range.padLeft` and `std.range.padRight`
-        were added.)
-    $(P $(REF padLeft, std,range) and $(REF padRight, std,range) are functions for
-        padding ranges to a specified length using the given element.
-    )
-
+$(LI $(LNAME2 minIndex, `std.algorithm.searching.minIndex` gets the index of
+    the minimum element of a range, according to a specified predicate. The
+    default predicate is "a < b")
 -------
-import std.range;
-import std.algorithm.comparison;
+import std.algorithm.searching : minIndex;
+int[] a = [5, 4, 2, 1, 9, 10];
+assert(a.minIndex == 3);
 
-assert([1, 2, 3, 4, 5].padLeft(0, 7).equal([0, 0, 1, 2, 3, 4, 5]));
-
-assert("Hello World!".padRight('!', 15).equal("Hello World!!!!"));
+int[] a;
+assert(a.minIndex == -1);
 -------
 )
 
-$(LI $(LNAME2 regex-multiple-patterns, `std.regex.regex` now supports matching multiple patterns in one go.)
+$(LI $(LNAME2 maxIndex, `std.algorithm.searching.maxIndex` gets the index of
+    the maximum element of a range, according to a specified predicate. The
+    default predicate is "a > b")
 -------
-import std.regex;
-// multi-pattern regex
-auto multi = regex([`\d+,\d+`,`(a-z]+):(\d+)`]);
-auto m = "abc:43 12,34".matchAll(multi);
-assert(m.front.whichPattern == 2);
-assert(m.front[1] == "abc");
-assert(m.front[2] == "43");
-m.popFront();
-assert(m.front.whichPattern == 1);
-assert(m.front[1] == "12");
+import std.algorithm.searching : maxIndex;
+int[] a = [5, 4, 2, 1, 9, 10];
+assert(a.minIndex == 5);
+
+int[] a;
+assert(a.minIndex == -1);
 -------
 )
 
-$(LI $(LNAME2 regex-with-matches, `std.regex.splitter` now supports keeping the
-pattern matches in the resulting range.)
--------
-import std.regex;
-import std.algorithm.comparison : equal;
-
-auto pattern = regex(`([\.,])`);
-assert("2003.04.05"
-    .splitter!(No.keepSeparators)(pattern)
-    .equal(["2003", "04", "05"]));
-assert("2003.04.05"
-    .splitter!(Yes.keepSeparators)(pattern)
-    .equal(["2003", ".", "04", ".", "05"]));
--------
+$(LI $(LNAME2 ndslice-removal, `std.experimental.ndslice` has been
+deprecated.)
+    The synchronization between Phobos and Mir turned out to be a lot of work
+    with litte gain. Users of `std.experimental.ndslice` are advised to
+    switch to the upstream $(LINK2 https://github.com/libmir/mir-algorithm,
+    mir package).
 )
 
-$(LI $(LNAME2 optimization, `findLocalMin` was added to `std.numeric`.)
-    $(P $(REF findLocalMin, std,numeric) finds a real minimum of a real function `f(x)` via bracketing.)
+$(LI $(LNAME2 has-function-attributes, `std.traits.hasFunctionAttributes` has
+    been added)
+    It exposes a user-friendly way to query for function attributes:
 -------
-import std.numeric, std.math;
+import std.traits : hasFunctionAttributes;
 
-auto ret = findLocalMin((double x) => (x-4)^^2, -1e7, 1e7);
-
-assert(ret.x.approxEqual(4.0));
-assert(ret.y.approxEqual(0.0));
--------
-)
-
-$(LI $(LNAME2 slice_ptr, `ptr` property and public constructor were added to
-    `std.experimental.ndslice.slice.Slice`.)
-    $(P `ptr` property allows to access `Slice`'s underlaying pointer or range. 
-        Please refer to $(REF Slice, std,experimental,ndslice,slice)'s
-        internal binary epresentation before using the property.
-        `ptr` property is used in $(LINK2 https://github.com/libmir/mir, Mir)
-        for $(LINK2 http://docs.mir.dlang.io/latest/mir_sparse_package.html, sparse tensors).
-        `ndslice` developer mirror in Mir will be removed as
-        soon as LDC (LLVM D compiler) supports D version 2.072..
-    ) 
-    $(P Public constructor for `Slice` was added to support
-        $(MREF std,experimental,ndslice) integration
-        with other languages and libraries such as Julia language and NumPy library.
-    )
-)
-
-$(LI $(LNAME2 slice_alloc, `slice`, `shape`, `ndarray`, and other utilities
-    were added to `std.experimental.ndslice.slice`.)
-    $(P These utility functions have been added to
-        $(MREF std,experimental,ndslice):)
-    $(UL
-        $(LI $(REF shape, std,experimental,ndslice,slice),)
-        $(LI $(REF slice, std,experimental,ndslice,slice),)
-        $(LI $(REF makeSlice, std,experimental,ndslice,slice),)
-        $(LI $(REF ndarray, std,experimental,ndslice,slice), and)
-        $(LI $(REF makeNdarray, std,experimental,ndslice,slice).)
-    )
-    $(P Example: Transposing common 2D array using `ndslice`)
------
-import std.experimental.ndslice;
-
-auto ar = [[0, 1, 2], [3, 4, 5]];
-
-auto sh = ar.shape;         // [2, 3] type of size_t[2]
-auto sl = slice!int(sh);    // allocates slice with corresponding shape
-sl[] = ar;                  // fills sl with values from ar
-ar = sl.transposed.ndarray; // allocates common 2D array
-
-assert(ar == [[0, 3], [1, 4], [2, 5]]);
------
-)
-
-$(LI $(LNAME2 slice_iota, `iotaSlice` lazy tensor was added to `std.experimental.ndslice.selection`.)
-    $(P $(REF iotaSlice, std,experimental,ndslice,selection) is the fastest possible `Slice`.)
----
-import std.experimental.ndslice;
-
-auto sl = iotaSlice([2, 3], 10);
-
-assert(sl.transposed == [[10, 13],
-                         [11, 14],
-                         [12, 15]]);
----
-)
-
-$(LI $(LNAME2 slice_mio, partial support for Math Index Order was added to `std.experimental.ndslice.slice.Slice`.)
----
-import std.experimental.ndslice;
-
-auto sl = iotaSlice(3, 4);
-
-assert(sl[2, 3] == 11); // D & C index order
-assert(sl(3, 2) == 11); // Math & Fortran index order
----
-)
-
-$(LI $(LNAME2 mutation, `std.algorithm.mutation.swapAt` was exposed)
-    $(P $(REF swapAt, std,algorithm,mutation) allows to swap elements
-        of a RandomAccessRange by their indices.
-    )
-)
-
-$(LI $(LNAME2 iota-length-size_t, `std.range.iota's `.length` property is fixed
-        to `size_t` instead of the type being iterated)
-    $(P $(REF iota, std,range)'s `.length` property is now always returned as
-        `size_t`.  This means if you are on a 32-bit CPU and you are using
-        iota to iterate 64-bit types, the length will be truncated to `size_t`.
-        In non-release mode, you will get an exception if the length exceeds
-        `size_t.max` in your call to `iota`.
-    )
-)
-
-$(LI $(LNAME2 min-max-element, `std.algorithm.searching.{min,max}Element`
-	have been added.)
-    $(P $(REF minElement, algorithm,searching) and $(REF maxElement,
-    algorithm,searching) are functions to search for the minimum and maximum
-    element in a range. They support a custom `map` accessor.
-    )
-
--------
-import std.algorithm.searching;
-import std.range;
-import std.typecons;
-assert([3, 1, 4].minElement == 1);
-assert([4, 7, 5].enumerate.maxElement!`a.value` == tuple(1, 7));
--------
-)
-
-$(LI $(LNAME2 quantize, Added `std.math.quantize`.)
-    $(P $(XREF math, quantize) rounds to the nearest multiple of some number.
-        Features:)
-    $(UL
-        $(LI The rounding method can be specified using the `rfunc` parameter. By
-            default, the current rounding mode will be used, which is typically
-            "banker's rounding".)
-        $(LI Overloads are included for the common case of rounding to the $(I Nth)
-            digit place in some base.)
-        $(LI If known at compile time, the base and exponent (digit place) can be
-            supplied as template parameters for better performance.)
-    )
----
-import std.math;
-
-assert(12345.6789L.quantize(20.0L) == 12340.0L);
-assert(12345.6789L.quantize!(10, -2) == 12345.68L);
-assert(12345.6789L.quantize!(10, floor)(-2) == 12345.67L);
----
-
-$(LI $(LNAME2 traits, Three new traits were added to `std.traits`.)
-    $(P $(XREF traits, isType), $(XREF traits, isFunction), and
-    $(XREF traits, isFinal) were added to `std.traits`.
-    )
-
--------
-import std.traits;
-
-static assert(isType!int);
-
-struct S {}
-class C {}
-interface I {}
-
-static assert(isType!S);
-static assert(isType!C);
-static assert(isType!I);
--------
-
--------
-import std.traits;
-
-void func(){}
-struct S
+// manually annotated function
+real func(real x) pure nothrow @safe
 {
-    @property int prop(){ return 0; }
+    return x;
 }
+static assert(hasFunctionAttributes!(func, "@safe", "pure"));
+static assert(!hasFunctionAttributes!(func, "@trusted"));
 
-static assert(isFunction!func);
-static assert(isFunction!(S.prop));
-
-// is a delegate type, not function type
-static assert(!isFunction!(typeof(&S.prop)));
--------
-
--------
-import std.traits;
-
-class C
+// for templated function types are automatically inferred
+bool myFunc(T)(T b)
 {
-    void nf() {}
-    final void ff() {}
+    return !b;
 }
-final class FC {}
+static assert(hasFunctionAttributes!(myFunc!bool, "@safe", "pure", "@nogc", "nothrow"));
+static assert(!hasFunctionAttributes!(myFunc!bool, "shared"));
+-------
+)
 
-static assert(!isFinal!(C));
-static assert( isFinal!(FC));
-static assert(!isFinal!(C.nf));
-static assert( isFinal!(C.ff));
+$(LI $(LNAME2 bitwise, `std.range.bitwise` creates a bit by bit adapter
+    over an integral type range.)
+-------
+import std.range : bitwise;
+ubyte[] arr = [3, 9];
+auto r = arr.bitwise;
+
+r[2] = 1;
+assert(arr[0] == 7);
 -------
 )
 

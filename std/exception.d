@@ -87,7 +87,7 @@ auto assertNotThrown(T : Throwable = Exception, E)
     }
 }
 ///
-unittest
+@system unittest
 {
     import core.exception : AssertError;
 
@@ -101,7 +101,7 @@ unittest
                enforce!StringException(false, "Error!"))) ==
            `assertNotThrown failed: StringException was thrown: Error!`);
 }
-unittest
+@system unittest
 {
     import core.exception : AssertError;
     import std.string;
@@ -118,7 +118,7 @@ unittest
            `assertNotThrown failed: StringException was thrown.`);
 }
 
-unittest
+@system unittest
 {
     import core.exception : AssertError;
 
@@ -230,7 +230,7 @@ void assertThrown(T : Throwable = Exception, E)
                           file, line);
 }
 ///
-unittest
+@system unittest
 {
     import core.exception : AssertError;
     import std.string;
@@ -245,7 +245,7 @@ unittest
            `assertThrown failed: No StringException was thrown.`);
 }
 
-unittest
+@system unittest
 {
     import core.exception : AssertError;
 
@@ -358,16 +358,6 @@ T enforce(E : Throwable = Exception, T)(T value, lazy const(char)[] msg = null,
     return value;
 }
 
-// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
-deprecated("Use the overload of enforce that takes file and line as function arguments.")
-T enforce(T, string file, size_t line = __LINE__)
-    (T value, lazy const(char)[] msg = null)
-    if (is(typeof({ if (!value) {} })))
-{
-    if (!value) bailOut(file, line, msg);
-    return value;
-}
-
 /++
     Enforces that the given value is true.
 
@@ -396,7 +386,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
 {
     static if (is(typeof(new E(string.init, string.init, size_t.init))))
     {
-        throw new E(msg.ptr ? msg.idup : "Enforcement failed", file, line);
+        throw new E(msg ? msg.idup : "Enforcement failed", file, line);
     }
     else static if (is(typeof(new E(string.init, size_t.init))))
     {
@@ -409,7 +399,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
     }
 }
 
-unittest
+@safe unittest
 {
     assert (enforce(123) == 123);
 
@@ -426,7 +416,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     // Issue 10510
     extern(C) void cFoo() { }
@@ -434,7 +424,7 @@ unittest
 }
 
 // purity and safety inference test
-unittest
+@system unittest
 {
     import std.meta : AliasSeq;
 
@@ -469,7 +459,7 @@ unittest
 }
 
 // Test for bugzilla 8637
-unittest
+@system unittest
 {
     struct S
     {
@@ -502,24 +492,7 @@ unittest
     enforce!E2(s);
 }
 
-deprecated unittest
-{
-    struct S
-    {
-        static int g;
-        ~this() {}  // impure & unsafe destructor
-        bool opCast(T:bool)() {
-            int* p = cast(int*)0;   // unsafe operation
-            int n = g;              // impure operation
-            return true;
-        }
-    }
-    S s;
-
-    enforce!(S, __FILE__, __LINE__)(s, "");
-}
-
-unittest
+@safe unittest
 {
     // Issue 14685
 
@@ -553,7 +526,7 @@ T enforce(T)(T value, lazy Throwable ex)
     return value;
 }
 
-unittest
+@safe unittest
 {
     assertNotThrown(enforce(true, new Exception("this should not be thrown")));
     assertThrown(enforce(false, new Exception("this should be thrown")));
@@ -625,7 +598,7 @@ template enforceEx(E : Throwable)
     }
 }
 
-unittest
+@system unittest
 {
     import std.array : empty;
     import core.exception : OutOfMemoryError;
@@ -668,7 +641,7 @@ unittest
     static assert(!is(typeof(enforceEx!int(true))));
 }
 
-unittest
+@safe unittest
 {
     alias enf = enforceEx!Exception;
     assertNotThrown(enf(true));
@@ -706,7 +679,7 @@ T collectException(T = Exception, E)(lazy E expression, ref E result)
     return null;
 }
 ///
-unittest
+@system unittest
 {
     int b;
     int foo() { throw new Exception("blah"); }
@@ -746,7 +719,7 @@ T collectException(T : Throwable = Exception, E)(lazy E expression)
     return null;
 }
 
-unittest
+@safe unittest
 {
     int foo() { throw new Exception("blah"); }
     assert(collectException(foo()));
@@ -784,7 +757,7 @@ string collectExceptionMsg(T = Exception, E)(lazy E expression)
         return e.msg.empty ? emptyExceptionMsg : e.msg;
 }
 ///
-unittest
+@safe unittest
 {
     void throwFunc() { throw new Exception("My Message."); }
     assert(collectExceptionMsg(throwFunc()) == "My Message.");
@@ -910,8 +883,9 @@ immutable(T)[] assumeUnique(T)(ref T[] array) pure nothrow
     return result;
 }
 
-unittest
+@system unittest
 {
+    // @system due to assumeUnique
     int[] arr = new int[1];
     auto arr1 = assumeUnique(arr);
     assert(is(typeof(arr1) == immutable(int)[]) && arr == null);
@@ -925,7 +899,7 @@ immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
 }
 
 // @@@BUG@@@
-version(none) unittest
+version(none) @system unittest
 {
     int[string] arr = ["a":1];
     auto arr1 = assumeUnique(arr);
@@ -977,7 +951,7 @@ T assumeWontThrow(T)(lazy T expr,
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.math : sqrt;
 
@@ -1002,7 +976,7 @@ unittest
     assert(computeLength(3, 4) == 5);
 }
 
-unittest
+@system unittest
 {
     import core.exception : AssertError;
 
@@ -1140,7 +1114,7 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
 }
 
 /// Pointers
-unittest
+@system unittest
 {
     int  i = 0;
     int* p = null;
@@ -1150,7 +1124,7 @@ unittest
 }
 
 /// Structs and Unions
-unittest
+@system unittest
 {
     struct S
     {
@@ -1171,7 +1145,7 @@ unittest
 }
 
 /// Arrays (dynamic and static)
-unittest
+@system unittest
 {
     int i;
     int[]  slice = [0, 1, 2, 3, 4];
@@ -1203,7 +1177,7 @@ unittest
 }
 
 /// Classes
-unittest
+@system unittest
 {
     class C
     {
@@ -1222,6 +1196,8 @@ unittest
     //To check the class payload itself, iterate on its members:
     ()
     {
+        import std.traits : Fields;
+
         foreach (index, _; Fields!C)
             if (doesPointTo(a.tupleof[index], i))
                 return;
@@ -1234,7 +1210,7 @@ unittest
     assert(b.doesPointTo(*aLoc)); // b points to where a is pointing
 }
 
-unittest
+@system unittest
 {
     struct S1 { int a; S1 * b; }
     S1 a1;
@@ -1284,7 +1260,7 @@ unittest
     assert(!doesPointTo(darr[0..3], darr[3]));
 }
 
-unittest
+@system unittest
 {
     //tests with static arrays
     //Static arrays themselves are just objects, and don't really *point* to anything.
@@ -1333,7 +1309,7 @@ unittest
 }
 
 
-unittest //Unions
+@system unittest //Unions
 {
     int i;
     union U //Named union
@@ -1372,7 +1348,7 @@ unittest //Unions
     assert( mayPointTo(s, i));
 }
 
-unittest //Classes
+@system unittest //Classes
 {
     int i;
     static class A
@@ -1384,7 +1360,7 @@ unittest //Classes
     a.p = &i;
     assert(!doesPointTo(a, i)); //a does not point to i
 }
-unittest //alias this test
+@safe unittest //alias this test
 {
     static int i;
     static int j;
@@ -1401,7 +1377,7 @@ unittest //alias this test
     assert( doesPointTo(cast(int*)s, i));
     assert(!doesPointTo(cast(int*)s, j));
 }
-unittest //more alias this opCast
+@safe unittest //more alias this opCast
 {
     void* p;
     class A
@@ -1433,7 +1409,7 @@ private bool isUnionAliasedImpl(T)(size_t offset)
     return count >= 2;
 }
 //
-unittest
+@safe unittest
 {
     static struct S
     {
@@ -1626,7 +1602,7 @@ CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate
 }
 
 //Verify Examples
-unittest
+@system unittest
 {
     import std.string;
     import std.conv;
@@ -1658,7 +1634,7 @@ unittest
     assert("%s".format().ifThrown(e => e.classinfo.name) == "std.format.FormatException");
 }
 
-unittest
+@system unittest
 {
     import std.string;
     import std.conv;
@@ -1990,7 +1966,8 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
 ///
 pure @safe unittest
 {
-    import std.algorithm : equal, map, splitter;
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map, splitter;
     import std.conv : to, ConvException;
 
     auto s = "12,1337z32,54,2,7,9,1z,6,8";
@@ -2007,7 +1984,7 @@ pure @safe unittest
 ///
 pure @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : retro;
     import std.utf : UTFException;
 
@@ -2166,8 +2143,8 @@ pure nothrow @safe unittest
     Convenience mixin for trivially sub-classing exceptions
 
     Even trivially sub-classing an exception involves writing boilerplate code
-    for the constructor to: 1) correctly pass in the source file and line number
-    the exception was thrown from; 2) be usable with $(LREF enforce) which
+    for the constructor to: 1$(RPAREN) correctly pass in the source file and line number
+    the exception was thrown from; 2$(RPAREN) be usable with $(LREF enforce) which
     expects exception constructors to take arguments in a fixed order. This
     mixin provides that boilerplate code.
 
@@ -2211,7 +2188,7 @@ mixin template basicExceptionCtors()
 }
 
 ///
-unittest
+@safe unittest
 {
     class MeaCulpa: Exception
     {
@@ -2237,7 +2214,7 @@ unittest
     auto te2 = new TestException("foo", e);
 }
 
-unittest
+@safe unittest
 {
     class TestException : Exception { mixin basicExceptionCtors; }
     auto e = new Exception("!!!");

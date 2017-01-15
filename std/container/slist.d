@@ -6,14 +6,13 @@ This module is a submodule of $(MREF std, container).
 
 Source: $(PHOBOSSRC std/container/_slist.d)
 
-Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
-copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
+Copyright: 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
 
 License: Distributed under the Boost Software License, Version 1.0.
 (See accompanying file LICENSE_1_0.txt or copy at $(HTTP
 boost.org/LICENSE_1_0.txt)).
 
-Authors: Steven Schveighoffer, $(HTTP erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 */
 module std.container.slist;
 
@@ -21,7 +20,7 @@ module std.container.slist;
 unittest
 {
     import std.container : SList;
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     auto s = SList!int(1, 2, 3);
     assert(equal(s[], [1, 2, 3]));
@@ -33,7 +32,7 @@ unittest
     assert(equal(s[], [5, 6, 2, 3]));
 
     // If you want to apply range operations, simply slice it.
-    import std.algorithm : countUntil;
+    import std.algorithm.searching : countUntil;
     import std.range : popFrontN, walkLength;
 
     auto sl = SList!int(1, 2, 3, 4, 5);
@@ -56,8 +55,8 @@ struct SList(T)
 {
     import std.exception : enforce;
     import std.range : Take;
-    import std.range.primitives;
-    import std.traits;
+    import std.range.primitives : isInputRange, isForwardRange, ElementType;
+    import std.traits : isImplicitlyConvertible;
 
     private struct Node
     {
@@ -198,7 +197,7 @@ Defines the container's primary range, which embodies a forward range.
 
         T moveFront()
         {
-            import std.algorithm : move;
+            import std.algorithm.mutation : move;
 
             assert(!empty, "SList.Range.moveFront: Range is empty");
             return move(_head._payload);
@@ -393,7 +392,7 @@ Complexity: $(BIGOH 1).
      */
     T removeAny()
     {
-        import std.algorithm : move;
+        import std.algorithm.mutation : move;
 
         assert(!empty, "SList.removeAny: List is empty");
         auto result = move(_first._payload);
@@ -592,7 +591,7 @@ Complexity: $(BIGOH n)
 
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     auto a = SList!int(5);
     auto b = a;
@@ -692,7 +691,7 @@ unittest
 
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     auto s = SList!int(1, 2, 3);
     s.removeFront();
@@ -726,15 +725,15 @@ unittest
 
 unittest
 {
-    static import std.algorithm;
+    import std.algorithm.comparison : equal;
     import std.range : take;
 
     // insertAfter documentation example
     auto sl = SList!string(["a", "b", "d"]);
     sl.insertAfter(sl[], "e"); // insert at the end (slowest)
-    assert(std.algorithm.equal(sl[], ["a", "b", "d", "e"]));
+    assert(equal(sl[], ["a", "b", "d", "e"]));
     sl.insertAfter(take(sl[], 2), "c"); // insert after "b"
-    assert(std.algorithm.equal(sl[], ["a", "b", "c", "d", "e"]));
+    assert(equal(sl[], ["a", "b", "c", "d", "e"]));
 }
 
 unittest
@@ -759,7 +758,7 @@ unittest
 
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range;
 
     auto s = SList!int(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
@@ -835,7 +834,7 @@ unittest
 
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     auto s = SList!int([1, 2, 3]);
     assert(s[].equal([1, 2, 3]));

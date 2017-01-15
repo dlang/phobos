@@ -290,7 +290,7 @@ version(unittest)
     {
         return "HTTP/1.1 200 OK\r\n"~
             "Content-Type: text/plain\r\n"~
-            "Content-Length: "~msg.length.to!string~"\r\n"
+            "Content-Length: "~msg.length.to!string~"\r\n"~
             "\r\n"~
             msg;
     }
@@ -361,9 +361,9 @@ CALLBACK_PARAMS = $(TABLE ,
   * // Guess connection type by looking at the URL
   * content = get!AutoProtocol("ftp://foo.com/file");
   * // and since AutoProtocol is default this is the same as
-  * connect = get("ftp://foo.com/file");
+  * content = get("ftp://foo.com/file");
   * // and will end up detecting FTP from the url and be the same as
-  * connect = get!FTP("ftp://foo.com/file");
+  * content = get!FTP("ftp://foo.com/file");
   * ---
   */
 struct AutoProtocol { }
@@ -983,7 +983,6 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     HTTP.StatusLine statusLine;
     import std.array : appender;
     auto content = appender!(ubyte[])();
-    string[string] headers;
     client.onReceive = (ubyte[] data)
     {
         content ~= data;
@@ -1025,13 +1024,6 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
             import std.conv : to;
             content.reserve(value.to!size_t);
         }
-        if (auto v = key in headers)
-        {
-            *v ~= ", ";
-            *v ~= value;
-        }
-        else
-            headers[key] = value.idup;
     };
     client.onReceiveStatusLine = (HTTP.StatusLine l) { statusLine = l; };
     client.perform();
@@ -1039,18 +1031,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
                             format("HTTP request returned status code %d (%s)",
                                    statusLine.code, statusLine.reason));
 
-    // Default charset defined in HTTP RFC
-    auto charset = "ISO-8859-1";
-    if (auto v = "content-type" in headers)
-    {
-        auto m = match(cast(char[]) (*v), regex("charset=([^;,]*)"));
-        if (!m.empty && m.captures.length > 1)
-        {
-            charset = m.captures[1].idup;
-        }
-    }
-
-    return _decodeContent!T(content.data, charset);
+    return _decodeContent!T(content.data, client.p.charset);
 }
 
 unittest
@@ -1086,6 +1067,31 @@ unittest
     assert(res == "POSTRESPONSE");
     res = trace(testServer.addr, http);
     assert(res == "TRACERESPONSE");
+}
+
+unittest // charset detection and transcoding to T
+{
+    testServer.handle((s) {
+        s.send("HTTP/1.1 200 OK\r\n"~
+        "Content-Length: 4\r\n"~
+        "Content-Type: text/plain; charset=utf-8\r\n" ~
+        "\r\n" ~
+        "äbc");
+    });
+    auto client = HTTP();
+    auto result = _basicHTTP!char(testServer.addr, "", client);
+    assert(result == "äbc");
+
+    testServer.handle((s) {
+        s.send("HTTP/1.1 200 OK\r\n"~
+        "Content-Length: 3\r\n"~
+        "Content-Type: text/plain; charset=iso-8859-1\r\n" ~
+        "\r\n" ~
+        0xE4 ~ "bc");
+    });
+    client = HTTP();
+    result = _basicHTTP!char(testServer.addr, "", client);
+    assert(result == "äbc");
 }
 
 /*
@@ -1209,7 +1215,7 @@ struct ByLineBuffer(Char)
  *
  * Params:
  * url = The url to receive content from
- * keepTerminator = KeepTerminator.yes signals that the line terminator should be
+ * keepTerminator = $(D Yes.keepTerminator) signals that the line terminator should be
  *                  returned as part of the lines in the range.
  * terminator = The character that terminates a line
  * conn = The connection to use e.g. HTTP or FTP.
@@ -1218,7 +1224,7 @@ struct ByLineBuffer(Char)
  * A range of Char[] with the content of the resource pointer to by the URL
  */
 auto byLine(Conn = AutoProtocol, Terminator = char, Char = char)
-           (const(char)[] url, KeepTerminator keepTerminator = KeepTerminator.no,
+           (const(char)[] url, KeepTerminator keepTerminator = No.keepTerminator,
             Terminator terminator = '\n', Conn conn = Conn())
 if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
 {
@@ -1284,7 +1290,7 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
     }
 
     auto result = _getForRange!Char(url, conn);
-    return SyncLineInputRange(result, keepTerminator == KeepTerminator.yes, terminator);
+    return SyncLineInputRange(result, keepTerminator == Yes.keepTerminator, terminator);
 }
 
 unittest
@@ -1575,8 +1581,8 @@ private static struct AsyncLineInputRange(Char)
  * // Get a line in a background thread and wait in
  * // main thread for 2 seconds for it to arrive.
  * auto range3 = byLineAsync("dlang.com");
- * if (range.wait(dur!"seconds"(2)))
- *     writeln(range.front);
+ * if (range3.wait(dur!"seconds"(2)))
+ *     writeln(range3.front);
  * else
  *     writeln("No line received after 2 seconds!");
  * ----
@@ -1584,7 +1590,7 @@ private static struct AsyncLineInputRange(Char)
  * Params:
  * url = The url to receive content from
  * postData = Data to HTTP Post
- * keepTerminator = KeepTerminator.yes signals that the line terminator should be
+ * keepTerminator = $(D Yes.keepTerminator) signals that the line terminator should be
  *                  returned as part of the lines in the range.
  * terminator = The character that terminates a line
  * transmitBuffers = The number of lines buffered asynchronously
@@ -1596,7 +1602,7 @@ private static struct AsyncLineInputRange(Char)
  */
 auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char, PostUnit)
             (const(char)[] url, const(PostUnit)[] postData,
-             KeepTerminator keepTerminator = KeepTerminator.no,
+             KeepTerminator keepTerminator = No.keepTerminator,
              Terminator terminator = '\n',
              size_t transmitBuffers = 10, Conn conn = Conn())
     if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
@@ -1617,7 +1623,7 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char, PostUnit)
         auto tid = spawn(&_spawnAsync!(Conn, Char, Terminator));
         tid.send(thisTid);
         tid.send(terminator);
-        tid.send(keepTerminator == KeepTerminator.yes);
+        tid.send(keepTerminator == Yes.keepTerminator);
 
         _asyncDuplicateConnection(url, conn, postData, tid);
 
@@ -1628,7 +1634,7 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char, PostUnit)
 
 /// ditto
 auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char)
-            (const(char)[] url, KeepTerminator keepTerminator = KeepTerminator.no,
+            (const(char)[] url, KeepTerminator keepTerminator = No.keepTerminator,
              Terminator terminator = '\n',
              size_t transmitBuffers = 10, Conn conn = Conn())
 {
@@ -1726,8 +1732,8 @@ private static struct AsyncChunkInputRange
  * // Get a line in a background thread and wait in
  * // main thread for 2 seconds for it to arrive.
  * auto range3 = byChunkAsync("dlang.com", 10);
- * if (range.wait(dur!"seconds"(2)))
- *     writeln(range.front);
+ * if (range3.wait(dur!"seconds"(2)))
+ *     writeln(range3.front);
  * else
  *     writeln("No chunk received after 2 seconds!");
  * ----
@@ -1978,7 +1984,7 @@ private mixin template Protocol()
     /// ditto
     @property void netInterface(const(ubyte)[4] i)
     {
-        auto str = format("%d.%d.%d.%d", i[0], i[1], i[2], i[3]);
+        const str = format("%d.%d.%d.%d", i[0], i[1], i[2], i[3]);
         netInterface = str;
     }
 
@@ -2195,7 +2201,7 @@ decodeString(Char = char)(const(ubyte)[] data,
                           size_t maxChars = size_t.max)
 {
     Char[] res;
-    auto startLen = data.length;
+    immutable startLen = data.length;
     size_t charsDecoded = 0;
     while (data.length && charsDecoded < maxChars)
     {
@@ -2233,15 +2239,13 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
                                                      EncodingScheme scheme,
                                                      Terminator terminator)
 {
-    auto startLen = src.length;
-    size_t charsDecoded = 0;
     // if there is anything in the basesrc then try to decode that
     // first.
     if (basesrc.length != 0)
     {
         // Try to ensure 4 entries in the basesrc by copying from src.
-        auto blen = basesrc.length;
-        size_t len = (basesrc.length + src.length) >= 4 ?
+        immutable blen = basesrc.length;
+        immutable len = (basesrc.length + src.length) >= 4 ?
                      4 : basesrc.length + src.length;
         basesrc.length = len;
 
@@ -2258,7 +2262,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
 
     while (src.length)
     {
-        auto lsrc = src;
+        const lsrc = src;
         dchar dc = scheme.safeDecode(src);
         if (dc == INVALID_SEQUENCE)
         {
@@ -2355,7 +2359,7 @@ struct HTTP
         /// The HTTP method to use.
         Method method = Method.undefined;
 
-        @property void onReceiveHeader(void delegate(in char[] key,
+        @system @property void onReceiveHeader(void delegate(in char[] key,
                                                      in char[] value) callback)
         {
             // Wrap incoming callback in order to separate http status line from
@@ -2373,10 +2377,9 @@ struct HTTP
                     }
                     if (header.startsWith("HTTP/"))
                     {
-                        string[string] empty;
-                        headersIn = empty; // clear
+                        headersIn.clear();
 
-                        auto m = match(header, regex(r"^HTTP/(\d+)\.(\d+) (\d+) (.*)$"));
+                        const m = match(header, regex(r"^HTTP/(\d+)\.(\d+) (\d+) (.*)$"));
                         if (m.empty)
                         {
                             // Invalid status line
@@ -2400,7 +2403,7 @@ struct HTTP
                     if (fieldName == "content-type")
                     {
                         auto mct = match(cast(char[]) m.captures[2],
-                                         regex("charset=([^;]*)"));
+                                         regex("charset=([^;]*)", "i"));
                         if (!mct.empty && mct.captures.length > 1)
                             charset = mct.captures[1].idup;
                     }
@@ -2490,7 +2493,7 @@ struct HTTP
        Params:
        throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
+    CurlCode perform(ThrowOnError throwOnError = Yes.throwOnError)
     {
         p.status.reset();
 
@@ -3141,6 +3144,26 @@ struct HTTP
 
 } // HTTP
 
+unittest // charset/Charset/CHARSET/...
+{
+    import std.meta : AliasSeq;
+
+    foreach (c; AliasSeq!("charset", "Charset", "CHARSET", "CharSet", "charSet",
+        "ChArSeT", "cHaRsEt"))
+    {
+        testServer.handle((s) {
+            s.send("HTTP/1.1 200 OK\r\n"~
+                "Content-Length: 0\r\n"~
+                "Content-Type: text/plain; " ~ c ~ "=foo\r\n" ~
+                "\r\n");
+        });
+
+        auto http = HTTP(testServer.addr);
+        http.perform();
+        assert(http.p.charset == "foo");
+    }
+}
+
 /**
    FTP client functionality.
 
@@ -3223,7 +3246,7 @@ struct FTP
        Params:
        throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
+    CurlCode perform(ThrowOnError throwOnError = Yes.throwOnError)
     {
         return p.curl.perform(throwOnError);
     }
@@ -3499,7 +3522,6 @@ struct SMTP
             curl.onSend = delegate size_t(void[] data)
             {
                 if (!msg.length) return 0;
-                auto m = cast(void[])msg;
                 size_t to_copy = min(data.length, _message.length);
                 data[0..to_copy] = (cast(void[])_message)[0..to_copy];
                 _message = _message[to_copy..$];
@@ -3555,7 +3577,7 @@ struct SMTP
         Params:
         throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
+    CurlCode perform(ThrowOnError throwOnError = Yes.throwOnError)
     {
         return p.curl.perform(throwOnError);
     }
@@ -3837,7 +3859,7 @@ class CurlTimeoutException : CurlException
 /// Equal to $(REF CURLcode, etc,c,curl)
 alias CurlCode = CURLcode;
 
-import std.typecons : Flag;
+import std.typecons : Flag, Yes, No;
 /// Flag to specify whether or not an exception is thrown on error.
 alias ThrowOnError = Flag!"throwOnError";
 
@@ -3865,7 +3887,7 @@ private struct CurlAPI
 
     static ref API instance() @property
     {
-        import std.concurrency;
+        import std.concurrency : initOnce;
         initOnce!_handle(loadAPI());
         return _api;
     }
@@ -3874,12 +3896,13 @@ private struct CurlAPI
     {
         version (Posix)
         {
-            import core.sys.posix.dlfcn;
+            import core.sys.posix.dlfcn : dlsym, dlopen, dlclose, RTLD_LAZY;
             alias loadSym = dlsym;
         }
         else version (Windows)
         {
-            import core.sys.windows.windows;
+            import core.sys.windows.windows : GetProcAddress, GetModuleHandleA,
+                LoadLibraryA;
             alias loadSym = GetProcAddress;
         }
         else
@@ -3941,12 +3964,12 @@ private struct CurlAPI
         _api.global_cleanup();
         version (Posix)
         {
-            import core.sys.posix.dlfcn;
+            import core.sys.posix.dlfcn : dlclose;
             dlclose(_handle);
         }
         else version (Windows)
         {
-            import core.sys.windows.windows;
+            import core.sys.windows.windows : FreeLibrary;
             FreeLibrary(_handle);
         }
         else
@@ -4182,7 +4205,7 @@ struct Curl
        Params:
        throwOnError = whether to throw an exception or return a CurlCode on error
     */
-    CurlCode perform(ThrowOnError throwOnError = ThrowOnError.yes)
+    CurlCode perform(ThrowOnError throwOnError = Yes.throwOnError)
     {
         throwOnStopped();
         CurlCode code = curl.easy_perform(this.handle);
@@ -4734,8 +4757,8 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     static if ( !is(Terminator == void))
     {
         // Only lines reading will receive a terminator
-        auto terminator = receiveOnly!Terminator();
-        auto keepTerminator = receiveOnly!bool();
+        const terminator = receiveOnly!Terminator();
+        const keepTerminator = receiveOnly!bool();
 
         // max number of bytes to carry over from an onReceive
         // callback. This is 4 because it is the max code units to
@@ -4789,7 +4812,7 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     CurlCode code;
     try
     {
-        code = client.perform(ThrowOnError.no);
+        code = client.perform(No.throwOnError);
     }
     catch (Exception ex)
     {

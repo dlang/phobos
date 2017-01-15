@@ -275,7 +275,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
             (cast(ulong)a * (m-1) + c) % m == (c < a ? c - a + m : c - a));
 
     // Check for maximum range
-    private static ulong gcd(ulong a, ulong b) @safe pure nothrow
+    private static ulong gcd(ulong a, ulong b) @safe pure nothrow @nogc
     {
         while (b)
         {
@@ -286,7 +286,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
         return a;
     }
 
-    private static ulong primeFactorsOnly(ulong n) @safe pure nothrow
+    private static ulong primeFactorsOnly(ulong n) @safe pure nothrow @nogc
     {
         ulong result = 1;
         ulong iter = 2;
@@ -314,7 +314,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
     }
 
     private static bool properLinearCongruentialParameters(ulong m,
-            ulong a, ulong c) @safe pure nothrow
+            ulong a, ulong c) @safe pure nothrow @nogc
     {
         if (m == 0)
         {
@@ -371,7 +371,7 @@ $(D x0).
 /**
    Advances the random sequence.
 */
-    void popFront() @safe pure nothrow
+    void popFront() @safe pure nothrow @nogc
     {
         static if (m)
         {
@@ -407,13 +407,13 @@ $(D x0).
 /**
    Returns the current number in the random sequence.
 */
-    @property UIntType front() const @safe pure nothrow
+    @property UIntType front() const @safe pure nothrow @nogc
     {
         return _x;
     }
 
 ///
-    @property typeof(this) save() @safe pure nothrow
+    @property typeof(this) save() @safe pure nothrow @nogc
     {
         return this;
     }
@@ -426,7 +426,7 @@ Always $(D false) (random generators are infinite ranges).
 /**
    Compares against $(D_PARAM rhs) for equality.
  */
-    bool opEquals(ref const LinearCongruentialEngine rhs) const @safe pure nothrow
+    bool opEquals(ref const LinearCongruentialEngine rhs) const @safe pure nothrow @nogc
     {
         return _x == rhs._x;
     }
@@ -448,7 +448,7 @@ alias MinstdRand0 = LinearCongruentialEngine!(uint, 16807, 0, 2147483647);
 alias MinstdRand = LinearCongruentialEngine!(uint, 48271, 0, 2147483647);
 
 ///
-unittest
+@safe unittest
 {
     // seed with a constant
     auto rnd0 = MinstdRand0(1);
@@ -458,7 +458,7 @@ unittest
     n = rnd0.front; // different across runs
 }
 
-unittest
+@safe unittest
 {
     import std.range;
     static assert(isForwardRange!MinstdRand);
@@ -567,7 +567,7 @@ Parameters for the generator.
 /**
    Constructs a MersenneTwisterEngine object.
 */
-    this(UIntType value) @safe pure nothrow
+    this(UIntType value) @safe pure nothrow @nogc
     {
         seed(value);
     }
@@ -578,7 +578,7 @@ Parameters for the generator.
    This seed function gives 2^32 starting points. To allow the RNG to be started in any one of its
    internal states use the seed overload taking an InputRange.
 */
-    void seed()(UIntType value = defaultSeed) @safe pure nothrow
+    void seed()(UIntType value = defaultSeed) @safe pure nothrow @nogc
     {
         static if (w == UIntType.sizeof * 8)
         {
@@ -622,7 +622,7 @@ Parameters for the generator.
         mti = n;
         if (range.empty && j < n)
         {
-            import core.internal.string;
+            import core.internal.string : UnsignedStringBuf, unsignedToTempString;
 
             UnsignedStringBuf buf = void;
             string s = "MersenneTwisterEngine.seed: Input range didn't provide enough elements: Need ";
@@ -634,7 +634,7 @@ Parameters for the generator.
     }
 
     ///
-    unittest
+    @safe unittest
     {
         import std.algorithm.iteration : map;
         import std.range : repeat;
@@ -646,7 +646,7 @@ Parameters for the generator.
 /**
    Advances the generator.
 */
-    void popFront() @safe pure nothrow
+    void popFront() @safe pure nothrow @nogc
     {
         if (mti == size_t.max) seed();
         enum UIntType
@@ -697,14 +697,14 @@ Parameters for the generator.
 /**
    Returns the current random value.
  */
-    @property UIntType front() @safe pure nothrow
+    @property UIntType front() @safe pure nothrow @nogc
     {
         if (mti == size_t.max) seed();
         return _y;
     }
 
 ///
-    @property typeof(this) save() @safe pure nothrow
+    @property typeof(this) save() @safe pure nothrow @nogc
     {
         return this;
     }
@@ -733,7 +733,7 @@ alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
                                        0xefc60000, 18);
 
 ///
-unittest
+@safe unittest
 {
     // seed with a constant
     Mt19937 gen;
@@ -743,7 +743,7 @@ unittest
     n = gen.front; // different across runs
 }
 
-nothrow unittest
+@safe nothrow unittest
 {
     import std.algorithm;
     import std.range;
@@ -757,7 +757,7 @@ nothrow unittest
     assert(gen.front == 4123659995);
 }
 
-unittest
+@safe unittest
 {
     import std.exception;
     import std.range;
@@ -788,7 +788,7 @@ unittest
     assert(a != b);
 }
 
-unittest
+@safe unittest
 {
     import std.range;
     // Check .save works
@@ -877,8 +877,7 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
     /**
      * Constructs a $(D XorshiftEngine) generator seeded with $(D_PARAM x0).
      */
-    @safe
-    nothrow this(UIntType x0) pure
+    this(UIntType x0) @safe pure nothrow @nogc
     {
         seed(x0);
     }
@@ -887,8 +886,7 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
     /**
      * (Re)seeds the generator.
      */
-    @safe
-    nothrow void seed(UIntType x0) pure
+    void seed(UIntType x0) @safe pure nothrow @nogc
     {
         // Initialization routine from MersenneTwisterEngine.
         foreach (i, e; seeds_)
@@ -904,8 +902,8 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
     /**
      * Returns the current number in the random sequence.
      */
-    @property @safe
-    nothrow UIntType front() const pure
+    @property
+    UIntType front() const @safe pure nothrow @nogc
     {
         static if (bits == 192)
             return value_;
@@ -917,8 +915,7 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
     /**
      * Advances the random sequence.
      */
-    @safe
-    nothrow void popFront() pure
+    void popFront() @safe pure nothrow @nogc
     {
         UIntType temp;
 
@@ -979,8 +976,8 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
     /**
      * Captures a range state.
      */
-    @property @safe
-    nothrow typeof(this) save() pure
+    @property
+    typeof(this) save() @safe pure nothrow @nogc
     {
         return this;
     }
@@ -989,16 +986,14 @@ struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType 
     /**
      * Compares against $(D_PARAM rhs) for equality.
      */
-    @safe
-    nothrow bool opEquals(ref const XorshiftEngine rhs) const pure
+    bool opEquals(ref const XorshiftEngine rhs) const @safe pure nothrow @nogc
     {
         return seeds_ == rhs.seeds_;
     }
 
 
   private:
-    @safe
-    static nothrow void sanitizeSeeds(ref UIntType[size] seeds) pure
+    static void sanitizeSeeds(ref UIntType[size] seeds) @safe pure nothrow @nogc
     {
         for (uint i; i < seeds.length; i++)
         {
@@ -1035,7 +1030,7 @@ alias Xorshift192 = XorshiftEngine!(uint, 192, 2,  1,  4);  /// ditto
 alias Xorshift    = Xorshift128;                            /// ditto
 
 ///
-unittest
+@safe unittest
 {
     // Seed with a constant
     auto rnd = Xorshift(1);
@@ -1046,7 +1041,7 @@ unittest
     num = rnd.front; // different across rnd
 }
 
-unittest
+@safe unittest
 {
     import std.range;
     static assert(isForwardRange!Xorshift);
@@ -1102,7 +1097,7 @@ unittest
  * object is compatible with all the pseudo-random number generators
  * available.  It is enabled only in unittest mode.
  */
-unittest
+@safe unittest
 {
     foreach (Rng; PseudoRngTypes)
     {
@@ -1153,7 +1148,7 @@ method being used.
 
 alias Random = Mt19937;
 
-unittest
+@safe unittest
 {
     static assert(isUniformRNG!Random);
     static assert(isUniformRNG!(Random, uint));
@@ -1171,7 +1166,7 @@ A singleton instance of the default random number generator
  */
 @property ref Random rndGen() @safe
 {
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     import std.range : repeat;
 
     static Random result;
@@ -1213,7 +1208,7 @@ auto uniform(string boundaries = "[)", T1, T2)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto gen = Random(unpredictableSeed);
     // Generate an integer in [0, 1023]
@@ -1812,6 +1807,89 @@ F[] uniformDistribution(F = double)(size_t n, F[] useThis = null)
 }
 
 /**
+Returns a random, uniformly chosen, element `e` from the supplied
+$(D Range range). If no random number generator is passed, the default
+`rndGen` is used.
+
+Params:
+    range = a random access range that has the `length` property defined
+    urng = (optional) random number generator to use;
+           if not specified, defaults to `rndGen`
+
+Returns:
+    A single random element drawn from the `range`. If it can, it will
+    return a `ref` to the $(D range element), otherwise it will return
+    a copy.
+ */
+auto ref choice(Range, RandomGen = Random)(auto ref Range range,
+                                           ref RandomGen urng = rndGen)
+    if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
+{
+    assert(range.length > 0,
+           __PRETTY_FUNCTION__ ~ ": invalid Range supplied. Range cannot be empty");
+
+    return range[uniform(size_t(0), $, urng)];
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.searching : canFind;
+
+    auto array = [1, 2, 3, 4, 5];
+    auto elem = choice(array);
+
+    assert(canFind(array, elem),
+           "Choice did not return a valid element from the given Range");
+
+    auto urng = Random(unpredictableSeed);
+    elem = choice(array, urng);
+
+    assert(canFind(array, elem),
+           "Choice did not return a valid element from the given Range");
+}
+
+@safe unittest
+{
+    import std.algorithm.searching : canFind;
+
+    class MyTestClass
+    {
+        int x;
+
+        this(int x)
+        {
+            this.x = x;
+        }
+    }
+
+    MyTestClass[] testClass;
+    foreach (i; 0 .. 5)
+    {
+        testClass ~= new MyTestClass(i);
+    }
+
+    auto elem = choice(testClass);
+
+    assert(canFind!((ref MyTestClass a, ref MyTestClass b) => a.x == b.x)(testClass, elem),
+           "Choice did not return a valid element from the given Range");
+}
+
+unittest
+{
+    import std.algorithm.searching : canFind;
+    import std.algorithm.iteration : map;
+
+    auto array = [1, 2, 3, 4, 5];
+    auto elemAddr = &choice(array);
+
+    assert(array.map!((ref e) => &e).canFind(elemAddr),
+           "Choice did not return a ref to an element from the given Range");
+    assert(array.canFind(*(cast(int *)(elemAddr))),
+           "Choice did not return a valid element from the given Range");
+}
+
+/**
 Shuffles elements of $(D r) using $(D gen) as a shuffler. $(D r) must be
 a random-access range with length.  If no RNG is specified, $(D rndGen)
 will be used.
@@ -1835,9 +1913,9 @@ void randomShuffle(Range)(Range r)
     return randomShuffle(r, rndGen);
 }
 
-unittest
+@safe unittest
 {
-    import std.algorithm;
+    import std.algorithm.sorting : sort;
     foreach (RandomGen; PseudoRngTypes)
     {
         // Also tests partialShuffle indirectly.
@@ -1875,7 +1953,7 @@ void partialShuffle(Range, RandomGen)(Range r, in size_t n, ref RandomGen gen)
     if (isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
     import std.exception : enforce;
-    import std.algorithm : swapAt;
+    import std.algorithm.mutation : swapAt;
     enforce(n <= r.length, "n must be <= r.length for partialShuffle.");
     foreach (i; 0 .. n)
     {
@@ -1890,7 +1968,7 @@ void partialShuffle(Range)(Range r, in size_t n)
     return partialShuffle(r, n, rndGen);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm;
     foreach (RandomGen; PseudoRngTypes)
@@ -1976,7 +2054,7 @@ if (isNumeric!Num)
 }
 
 ///
-unittest
+@safe unittest
 {
     auto x = dice(0.5, 0.5);   // x is 0 or 1 in equal proportions
     auto y = dice(50, 50);     // y is 0 or 1 in equal proportions
@@ -1988,13 +2066,13 @@ private size_t diceImpl(Rng, Range)(ref Rng rng, Range proportions)
     if (isForwardRange!Range && isNumeric!(ElementType!Range) && isForwardRange!Rng)
 in
 {
-    import std.algorithm : all;
+    import std.algorithm.searching : all;
     assert(proportions.save.all!"a >= 0");
 }
 body
 {
     import std.exception : enforce;
-    import std.algorithm : reduce;
+    import std.algorithm.iteration : reduce;
     double sum = reduce!"a + b"(0.0, proportions.save);
     enforce(sum > 0, "Proportions in a dice cannot sum to zero");
     immutable point = uniform(0.0, sum, rng);
@@ -2012,7 +2090,7 @@ body
     assert(false);
 }
 
-unittest
+@safe unittest
 {
     auto rnd = Random(unpredictableSeed);
     auto i = dice(rnd, 0.0, 100.0);
@@ -2082,6 +2160,7 @@ struct RandomCover(Range, UniformRNG = void)
     private bool[] _chosen;
     private size_t _current;
     private size_t _alreadyChosen = 0;
+    private bool _isEmpty = false;
 
     static if (is(UniformRNG == void))
     {
@@ -2089,9 +2168,13 @@ struct RandomCover(Range, UniformRNG = void)
         {
             _input = input;
             _chosen.length = _input.length;
-            if (_chosen.length == 0)
+            if (_input.empty)
             {
-                _alreadyChosen = 1;
+                _isEmpty = true;
+            }
+            else
+            {
+                _current = uniform(0, _chosen.length);
             }
         }
     }
@@ -2104,9 +2187,13 @@ struct RandomCover(Range, UniformRNG = void)
             _input = input;
             _rng = rng;
             _chosen.length = _input.length;
-            if (_chosen.length == 0)
+            if (_input.empty)
             {
-                _alreadyChosen = 1;
+                _isEmpty = true;
+            }
+            else
+            {
+                _current = uniform(0, _chosen.length, rng);
             }
         }
 
@@ -2120,39 +2207,32 @@ struct RandomCover(Range, UniformRNG = void)
     {
         @property size_t length()
         {
-            if (_alreadyChosen == 0)
-            {
-                return _input.length;
-            }
-            else
-            {
-                return (1 + _input.length) - _alreadyChosen;
-            }
+            return _input.length - _alreadyChosen;
         }
     }
 
     @property auto ref front()
     {
-        if (_alreadyChosen == 0)
-        {
-            popFront();
-        }
+        assert(!_isEmpty);
         return _input[_current];
     }
 
     void popFront()
     {
-        if (_alreadyChosen >= _input.length)
+        assert(!_isEmpty);
+
+        size_t k = _input.length - _alreadyChosen - 1;
+        if (k == 0)
         {
-            // No more elements
-            ++_alreadyChosen; // means we're done
+            _isEmpty = true;
+            ++_alreadyChosen;
             return;
         }
-        size_t k = _input.length - _alreadyChosen;
+
         size_t i;
         foreach (e; _input)
         {
-            if (_chosen[i]) { ++i; continue; }
+            if (_chosen[i] || i == _current) { ++i; continue; }
             // Roll a dice with k faces
             static if (is(UniformRNG == void))
             {
@@ -2165,7 +2245,7 @@ struct RandomCover(Range, UniformRNG = void)
             assert(k > 1 || chooseMe);
             if (chooseMe)
             {
-                _chosen[i] = true;
+                _chosen[_current] = true;
                 _current = i;
                 ++_alreadyChosen;
                 return;
@@ -2186,7 +2266,7 @@ struct RandomCover(Range, UniformRNG = void)
         }
     }
 
-    @property bool empty() { return _alreadyChosen > _input.length; }
+    @property bool empty() { return _isEmpty; }
 }
 
 /// Ditto
@@ -2203,11 +2283,12 @@ auto randomCover(Range)(Range r)
     return RandomCover!(Range, void)(r);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm;
     import std.conv;
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
+    int[] c;
     foreach (UniformRNG; std.meta.AliasSeq!(void, PseudoRngTypes))
     {
         static if (is(UniformRNG == void))
@@ -2224,6 +2305,8 @@ unittest
             // check for constructor passed a value-type RNG
             auto rc2 = RandomCover!(int[], UniformRNG)(a, UniformRNG(unpredictableSeed));
             static assert(isForwardRange!(typeof(rc2)));
+            auto rcEmpty = randomCover(c, rng);
+            assert(rcEmpty.length == 0);
         }
 
         int[] b = new int[9];
@@ -2238,13 +2321,24 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     // Bugzilla 12589
     int[] r = [];
     auto rc = randomCover(r);
     assert(rc.length == 0);
     assert(rc.empty);
+
+    // Bugzilla 16724
+    import std.range : iota;
+    auto range = iota(10);
+    auto randy = range.randomCover;
+
+    for (int i=1; i<=range.length; i++)
+    {
+        randy.popFront;
+        assert(randy.length == range.length - i);
+    }
 }
 
 // RandomSample
@@ -2743,8 +2837,9 @@ auto randomSample(Range, UniformRNG)(Range r, size_t n, auto ref UniformRNG rng)
     return RandomSample!(Range, UniformRNG)(r, n, r.length, rng);
 }
 
-unittest
+@system unittest
 {
+    // @system because it takes the address of a local
     import std.exception;
     import std.range;
     import std.conv : text;

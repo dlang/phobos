@@ -159,12 +159,9 @@ SRC_STD_4= \
 SRC_STD_6= \
 	std\variant.d \
 	std\zlib.d \
-	std\stream.d \
 	std\socket.d \
-	std\socketstream.d \
 	std\conv.d \
-	std\zip.d \
-	std\cstream.d
+	std\zip.d
 
 SRC_STD_7= \
 	std\stdint.d \
@@ -223,12 +220,19 @@ SRC_STD_RANGE= \
 SRC_STD_REGEX= \
 	std\regex\internal\ir.d \
 	std\regex\package.d \
-	std\regex\internal\parser.d \
 	std\regex\internal\tests.d \
+	std\regex\internal\generator.d
+
+SRC_STD_REGEX_2 = \
+	std\regex\internal\parser.d \
 	std\regex\internal\backtracking.d \
 	std\regex\internal\thompson.d \
-	std\regex\internal\kickstart.d \
-	std\regex\internal\generator.d
+	std\regex\internal\tests2.d
+
+SRC_STD_REGEX_3 = \
+	std\regex\internal\shiftor.d \
+	std\regex\internal\bitnfa.d \
+	std\regex\internal\tests3.d
 
 SRC_STD_C= \
 	std\c\process.d \
@@ -270,6 +274,7 @@ SRC_STD_C_FREEBSD= \
 
 SRC_STD_INTERNAL= \
 	std\internal\cstring.d \
+	std\internal\encodinginit.d \
 	std\internal\processinit.d \
 	std\internal\unicode_tables.d \
 	std\internal\unicode_comp.d \
@@ -355,6 +360,8 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_NET) \
 	$(SRC_STD_RANGE) \
 	$(SRC_STD_REGEX) \
+	$(SRC_STD_REGEX_2) \
+	$(SRC_STD_REGEX_3) \
 	$(SRC_STD_C) \
 	$(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) \
@@ -456,7 +463,6 @@ DOCS= \
 	$(DOC)\std_digest_hmac.html \
 	$(DOC)\std_digest_digest.html \
 	$(DOC)\std_digest_hmac.html \
-	$(DOC)\std_cstream.html \
 	$(DOC)\std_csv.html \
 	$(DOC)\std_datetime.html \
 	$(DOC)\std_demangle.html \
@@ -483,10 +489,8 @@ DOCS= \
 	$(DOC)\std_regex.html \
 	$(DOC)\std_signals.html \
 	$(DOC)\std_socket.html \
-	$(DOC)\std_socketstream.html \
 	$(DOC)\std_stdint.html \
 	$(DOC)\std_stdio.html \
-	$(DOC)\std_stream.html \
 	$(DOC)\std_string.html \
 	$(DOC)\std_system.html \
 	$(DOC)\std_traits.html \
@@ -577,6 +581,8 @@ UNITTEST_OBJS= \
 		unittest8d.obj \
 		unittest8e.obj \
 		unittest8f.obj \
+		unittest8g.obj \
+		unittest8h.obj \
 		unittest9a.obj
 
 unittest : $(LIB)
@@ -591,11 +597,13 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest6.obj $(SRC_STD_6) $(SRC_STD_CONTAINER) $(SRC_STD_EXP_ALLOC) $(SRC_STD_EXP_LOGGER)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest7.obj $(SRC_STD_7)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8a.obj $(SRC_STD_REGEX)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8b.obj $(SRC_STD_NET)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8c.obj $(SRC_STD_C) $(SRC_STD_WIN) $(SRC_STD_C_WIN)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8d.obj $(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8e.obj $(SRC_ETC) $(SRC_ETC_C)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8f.obj $(SRC_STD_EXP)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8b.obj $(SRC_STD_REGEX_2)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8c.obj $(SRC_STD_REGEX_3)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8d.obj $(SRC_STD_NET)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8e.obj $(SRC_STD_C) $(SRC_STD_WIN) $(SRC_STD_C_WIN)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8f.obj $(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8g.obj $(SRC_ETC) $(SRC_ETC_C)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8h.obj $(SRC_STD_EXP)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest9a.obj $(SRC_STD_EXP_NDSLICE)
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(UNITTEST_OBJS) \
 		$(ZLIB) $(DRUNTIMELIB)
@@ -664,9 +672,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=95 -unittest -main -run std\algorithm\sorting.d
 	$(DMD) -conf= -cov=83 -unittest -main -run std\variant.d
 	$(DMD) -conf= -cov=58 -unittest -main -run std\zlib.d
-	$(DMD) -conf= -cov=54 -unittest -main -run std\stream.d
 	$(DMD) -conf= -cov=53 -unittest -main -run std\socket.d
-	$(DMD) -conf= -cov=0  -unittest -main -run std\socketstream.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\container\array.d
 	$(DMD) -conf= -cov=68 -unittest -main -run std\container\binaryheap.d
 	$(DMD) -conf= -cov=91 -unittest -main -run std\container\dlist.d
@@ -676,7 +682,6 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=100 -unittest -main -run std\container\package.d
 	$(DMD) -conf= -cov=90 -unittest -main -run std\conv.d
 	$(DMD) -conf= -cov=0  -unittest -main -run std\zip.d
-	$(DMD) -conf= -cov=92 -unittest -main -run std\cstream.d
 	$(DMD) -conf= -cov=77 -unittest -main -run std\regex\tests.d
 	$(DMD) -conf= -cov=92 -unittest -main -run std\json.d
 	$(DMD) -conf= -cov=87 -unittest -main -run std\parallelism.d
@@ -842,9 +847,6 @@ $(DOC)\std_range_primitives.html : $(STDDOC) std\range\primitives.d
 $(DOC)\std_range_interfaces.html : $(STDDOC) std\range\interfaces.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range_interfaces.html $(STDDOC) std\range\interfaces.d
 
-$(DOC)\std_cstream.html : $(STDDOC) std\cstream.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_cstream.html $(STDDOC) std\cstream.d
-
 $(DOC)\std_csv.html : $(STDDOC) std\csv.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_csv.html $(STDDOC) std\csv.d
 
@@ -914,17 +916,11 @@ $(DOC)\std_signals.html : $(STDDOC) std\signals.d
 $(DOC)\std_socket.html : $(STDDOC) std\socket.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_socket.html $(STDDOC) std\socket.d
 
-$(DOC)\std_socketstream.html : $(STDDOC) std\socketstream.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_socketstream.html $(STDDOC) std\socketstream.d
-
 $(DOC)\std_stdint.html : $(STDDOC) std\stdint.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stdint.html $(STDDOC) std\stdint.d
 
 $(DOC)\std_stdio.html : $(STDDOC) std\stdio.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stdio.html $(STDDOC) std\stdio.d
-
-$(DOC)\std_stream.html : $(STDDOC) std\stream.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stream.html $(STDDOC) std\stream.d
 
 $(DOC)\std_string.html : $(STDDOC) std\string.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_string.html $(STDDOC) std\string.d

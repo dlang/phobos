@@ -96,6 +96,8 @@ SUBREF = $(REF_ALTTEXT $(TT $2), $2, std,experimental, ndslice, $1)$(NBSP)
 T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 T4=$(TR $(TDNW $(LREF $1)) $(TD $2) $(TD $3) $(TD $4))
 */
+/// @@@DEPRECATED_2017-04@@@
+deprecated("Please use mir-algorithm DUB package: http://github.com/libmir/mir-algorithm")
 module std.experimental.ndslice.iteration;
 
 import std.traits;
@@ -103,6 +105,8 @@ import std.meta;
 
 import std.experimental.ndslice.internal;
 import std.experimental.ndslice.slice; //: Slice;
+
+@fmb:
 
 private enum _swappedCode = q{
     with (slice)
@@ -130,7 +134,7 @@ See_also: $(LREF everted), $(LREF transposed)
 +/
 template swapped(size_t dimensionA, size_t dimensionB)
 {
-    auto swapped(size_t N, Range)(Slice!(N, Range) slice)
+    @fmb auto swapped(size_t N, Range)(Slice!(N, Range) slice)
     {
         {
             enum i = 0;
@@ -239,7 +243,7 @@ Returns:
 +/
 template rotated(size_t dimensionA, size_t dimensionB)
 {
-    auto rotated(size_t N, Range)(Slice!(N, Range) slice, sizediff_t k = 1)
+    @fmb auto rotated(size_t N, Range)(Slice!(N, Range) slice, sizediff_t k = 1)
     {
         {
             enum i = 0;
@@ -327,7 +331,7 @@ Returns:
     n-dimensional slice of the same type
 See_also: $(LREF swapped), $(LREF transposed)
 +/
-Slice!(N, Range) everted(size_t N, Range)(auto ref Slice!(N, Range) slice)
+Slice!(N, Range) everted(size_t N, Range)(Slice!(N, Range) slice)
 {
     mixin _DefineRet;
     with (slice)
@@ -376,7 +380,7 @@ private enum _transposedCode = q{
     }
 };
 
-private size_t[N] completeTranspose(size_t N)(in size_t[] dimensions)
+private size_t[N] completeTranspose(size_t N)(size_t[] dimensions)
 {
     assert(dimensions.length <= N);
     size_t[N] ctr;
@@ -408,7 +412,10 @@ See_also: $(LREF swapped), $(LREF everted)
 template transposed(Dimensions...)
     if (Dimensions.length)
 {
-    Slice!(N, Range) transposed(size_t N, Range)(auto ref Slice!(N, Range) slice)
+    static if (!allSatisfy!(isSize_t, Dimensions))
+        alias transposed = .transposed!(staticMap!(toSize_t, Dimensions));
+    else
+    @fmb Slice!(N, Range) transposed(size_t N, Range)(Slice!(N, Range) slice)
     {
         mixin DimensionsCountCTError;
         foreach (i, dimension; Dimensions)
@@ -423,22 +430,7 @@ template transposed(Dimensions...)
 }
 
 ///ditto
-Slice!(N, Range) transposed(size_t N, Range)(auto ref Slice!(N, Range) slice, size_t dimension)
-in
-{
-    mixin (DimensionRTError);
-}
-body
-{
-    size_t[1] permutation = void;
-    permutation[0] = dimension;
-    immutable perm = completeTranspose!N(permutation);
-    assert(perm.isPermutation, __PRETTY_FUNCTION__  ~ ": internal error.");
-    mixin (_transposedCode);
-}
-
-///ditto
-Slice!(N, Range) transposed(size_t N, Range)(auto ref Slice!(N, Range) slice, in size_t[] dimensions...)
+Slice!(N, Range) transposed(size_t N, Range, size_t M)(Slice!(N, Range) slice, size_t[M] dimensions...)
 in
 {
     mixin (DimensionsCountRTError);
@@ -456,7 +448,7 @@ body
 }
 
 ///ditto
-Slice!(2, Range) transposed(Range)(auto ref Slice!(2, Range) slice)
+Slice!(2, Range) transposed(Range)(Slice!(2, Range) slice)
 {
     return .transposed!(1, 0)(slice);
 }
@@ -550,7 +542,10 @@ Returns:
 template reversed(Dimensions...)
     if (Dimensions.length)
 {
-    auto reversed(size_t N, Range)(Slice!(N, Range) slice)
+    static if (!allSatisfy!(isSize_t, Dimensions))
+        alias reversed = .reversed!(staticMap!(toSize_t, Dimensions));
+    else
+    @fmb auto reversed(size_t N, Range)(Slice!(N, Range) slice)
     {
         foreach (i, dimension; Dimensions)
         {
@@ -562,19 +557,7 @@ template reversed(Dimensions...)
 }
 
 ///ditto
-Slice!(N, Range) reversed(size_t N, Range)(Slice!(N, Range) slice, size_t dimension)
-in
-{
-    mixin (DimensionRTError);
-}
-body
-{
-    mixin (_reversedCode);
-    return slice;
-}
-
-///ditto
-Slice!(N, Range) reversed(size_t N, Range)(Slice!(N, Range) slice, in size_t[] dimensions...)
+Slice!(N, Range) reversed(size_t N, Range, size_t M)(Slice!(N, Range) slice, size_t[M] dimensions...)
 in
 {
     foreach (dimension; dimensions)
@@ -582,8 +565,11 @@ in
 }
 body
 {
-    foreach (dimension; dimensions)
+    foreach (i; Iota!(0, M))
+    {
+        auto dimension = dimensions[i];
         mixin (_reversedCode);
+    }
     return slice;
 }
 
@@ -664,7 +650,10 @@ Returns:
 template strided(Dimensions...)
     if (Dimensions.length)
 {
-    auto strided(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) factors)
+    static if (!allSatisfy!(isSize_t, Dimensions))
+        alias strided = .strided!(staticMap!(toSize_t, Dimensions));
+    else
+    @fmb auto strided(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) factors)
     body
     {
         foreach (i, dimension; Dimensions)
@@ -890,7 +879,10 @@ Returns:
 template dropOne(Dimensions...)
     if (Dimensions.length)
 {
-    Slice!(N, Range) dropOne(size_t N, Range)(Slice!(N, Range) slice)
+    static if (!allSatisfy!(isSize_t, Dimensions))
+        alias dropOne = .dropOne!(staticMap!(toSize_t, Dimensions));
+    else
+    @fmb Slice!(N, Range) dropOne(size_t N, Range)(Slice!(N, Range) slice)
     {
         foreach (i, dimension; Dimensions)
         {
@@ -902,19 +894,7 @@ template dropOne(Dimensions...)
 }
 
 ///ditto
-Slice!(N, Range) dropOne(size_t N, Range)(Slice!(N, Range) slice, size_t dimension)
-in
-{
-    mixin (DimensionRTError);
-}
-body
-{
-    slice.popFront(dimension);
-    return slice;
-}
-
-///ditto
-Slice!(N, Range) dropOne(size_t N, Range)(Slice!(N, Range) slice, in size_t[] dimensions...)
+Slice!(N, Range) dropOne(size_t N, Range, size_t M)(Slice!(N, Range) slice, size_t[M] dimensions...)
 in
 {
     foreach (dimension; dimensions)
@@ -922,8 +902,11 @@ in
 }
 body
 {
-    foreach (dimension; dimensions)
+    foreach (i; Iota!(0, M))
+    {
+        auto dimension = dimensions[i];
         slice.popFront(dimension);
+    }
     return slice;
 }
 
@@ -931,7 +914,10 @@ body
 template dropBackOne(Dimensions...)
     if (Dimensions.length)
 {
-    Slice!(N, Range) dropBackOne(size_t N, Range)(Slice!(N, Range) slice)
+    static if (!allSatisfy!(isSize_t, Dimensions))
+        alias dropBackOne = .dropBackOne!(staticMap!(toSize_t, Dimensions));
+    else
+    @fmb Slice!(N, Range) dropBackOne(size_t N, Range)(Slice!(N, Range) slice)
     {
         foreach (i, dimension; Dimensions)
         {
@@ -943,19 +929,7 @@ template dropBackOne(Dimensions...)
 }
 
 ///ditto
-Slice!(N, Range) dropBackOne(size_t N, Range)(Slice!(N, Range) slice, size_t dimension)
-in
-{
-    mixin (DimensionRTError);
-}
-body
-{
-    slice.popBack(dimension);
-    return slice;
-}
-
-///ditto
-Slice!(N, Range) dropBackOne(size_t N, Range)(Slice!(N, Range) slice, in size_t[] dimensions...)
+Slice!(N, Range) dropBackOne(size_t N, Range, size_t M)(Slice!(N, Range) slice, size_t[M] dimensions...)
 in
 {
     foreach (dimension; dimensions)
@@ -963,8 +937,11 @@ in
 }
 body
 {
-    foreach (dimension; dimensions)
+    foreach (i; Iota!(0, M))
+    {
+        auto dimension = dimensions[i];
         slice.popBack(dimension);
+    }
     return slice;
 }
 
@@ -1027,7 +1004,10 @@ Returns:
 template dropExactly(Dimensions...)
     if (Dimensions.length)
 {
-    Slice!(N, Range) dropExactly(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
+    static if (!allSatisfy!(isSize_t, Dimensions))
+        alias dropExactly = .dropExactly!(staticMap!(toSize_t, Dimensions));
+    else
+    @fmb Slice!(N, Range) dropExactly(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
     body
     {
         foreach (i, dimension; Dimensions)
@@ -1055,7 +1035,11 @@ body
 template dropBackExactly(Dimensions...)
     if (Dimensions.length)
 {
-    Slice!(N, Range) dropBackExactly(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
+    static if (!allSatisfy!(isSize_t, Dimensions))
+        alias dropBackExactly = .dropBackExactly!(staticMap!(toSize_t, Dimensions));
+else
+    @fmb Slice!(N, Range) dropBackExactly(size_t N, Range)(Slice!(N, Range) slice,
+                                                           Repeat!(Dimensions.length, size_t) ns)
     body
     {
         foreach (i, dimension; Dimensions)
@@ -1116,7 +1100,10 @@ Returns:
 template drop(Dimensions...)
     if (Dimensions.length)
 {
-    Slice!(N, Range) drop(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
+    static if (!allSatisfy!(isSize_t, Dimensions))
+        alias drop = .drop!(staticMap!(toSize_t, Dimensions));
+    else
+    @fmb Slice!(N, Range) drop(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
     body
     {
         foreach (i, dimension; Dimensions)
@@ -1144,7 +1131,10 @@ body
 template dropBack(Dimensions...)
     if (Dimensions.length)
 {
-    Slice!(N, Range) dropBack(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
+    static if (!allSatisfy!(isSize_t, Dimensions))
+        alias dropBack = .dropBack!(staticMap!(toSize_t, Dimensions));
+    else
+    @fmb Slice!(N, Range) dropBack(size_t N, Range)(Slice!(N, Range) slice, Repeat!(Dimensions.length, size_t) ns)
     body
     {
         foreach (i, dimension; Dimensions)

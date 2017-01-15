@@ -16,7 +16,7 @@ struct NullAllocator
     shouldn't be unnecessarily constrained.
     */
     enum uint alignment = 64 * 1024;
-    /// Returns $(D n).
+    // /// Returns $(D n).
     //size_t goodAllocSize(size_t n) shared const
     //{ return .goodAllocSize(this, n); }
     /// Always returns $(D null).

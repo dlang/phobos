@@ -332,7 +332,7 @@ unittest
     import std.experimental.allocator.mallocator : Mallocator;
     import std.experimental.allocator.building_blocks.allocator_list
         : AllocatorList;
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     // Create a scalable list of regions. Each gets at least 1MB at a time by
     // using malloc.
     auto batchAllocator = AllocatorList!(
@@ -375,7 +375,7 @@ hot memory is used first.
 */
 struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
 {
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.conv : to;
     import std.traits : hasMember;
     import std.typecons : Ternary;
@@ -595,21 +595,6 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
         PTHREAD_MUTEX_INITIALIZER;
     private static shared pthread_mutex_t sbrkMutex = PTHREAD_MUTEX_INITIALIZER;
     import std.typecons : Ternary;
-
-    // workaround for https://issues.dlang.org/show_bug.cgi?id=14617
-    version(OSX)
-    {
-        shared static this()
-        {
-            pthread_mutex_init(cast(pthread_mutex_t*) &sbrkMutex, null) == 0
-                || assert(0);
-        }
-        shared static ~this()
-        {
-            pthread_mutex_destroy(cast(pthread_mutex_t*) &sbrkMutex) == 0
-                || assert(0);
-        }
-    }
 
     static assert(minAlign.isGoodStaticAlignment);
     static assert(size_t.sizeof == (void*).sizeof);

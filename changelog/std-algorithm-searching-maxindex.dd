@@ -1,0 +1,13 @@
+Added `std.algorithm.searching.maxIndex` to get the index of the maximum element of a range.
+
+`std.algorithm.searching.maxIndex` gets the index of the maximum element of a range,
+according to a specified predicate. The default predicate is "a > b".
+
+-------
+import std.algorithm.searching : maxIndex;
+int[] a = [5, 4, 2, 1, 9, 10];
+assert(a.maxIndex == 5);
+
+int[] a;
+assert(a.maxIndex == -1);
+-------

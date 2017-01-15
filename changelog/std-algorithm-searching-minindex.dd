@@ -1,0 +1,13 @@
+Added `std.algorithm.searching.minIndex` to get the index of the minimum element of a range.
+
+`std.algorithm.searching.minIndex` gets the index of the minimum element of a range,
+according to a specified predicate. The default predicate is "a < b".
+
+-------
+import std.algorithm.searching : minIndex;
+int[] a = [5, 4, 2, 1, 9, 10];
+assert(a.minIndex == 3);
+
+int[] a;
+assert(a.minIndex == -1);
+-------

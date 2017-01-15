@@ -148,7 +148,8 @@ as the one being worked with. It is important to note that many generic range
 algorithms return the same range type as their input range.
 
 ---
-import std.algorithm : equal, find;
+import std.algorithm.comparison : equal;
+import std.algorithm.iteration : find;
 import std.container;
 import std.range : take;
 
@@ -173,7 +174,7 @@ a member function, the documention usually refers to the parameter's templated
 type as $(D Stuff).
 
 ---
-import std.algorithm : equal;
+import std.algorithm.comparison : equal;
 import std.container;
 import std.range : iota;
 

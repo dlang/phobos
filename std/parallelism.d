@@ -33,46 +33,48 @@ Warning:  Unless marked as $(D @trusted) or $(D @safe), artifacts in
           this module allow implicit data sharing between threads and cannot
           guarantee that client code is free from low level data races.
 
-Synopsis:
-
----
-import std.algorithm, std.parallelism, std.range;
-
-void main() {
-    // Parallel reduce can be combined with
-    // std.algorithm.map to interesting effect.
-    // The following example (thanks to Russel Winder)
-    // calculates pi by quadrature  using
-    // std.algorithm.map and TaskPool.reduce.
-    // getTerm is evaluated in parallel as needed by
-    // TaskPool.reduce.
-    //
-    // Timings on an Athlon 64 X2 dual core machine:
-    //
-    // TaskPool.reduce:       12.170 s
-    // std.algorithm.reduce:  24.065 s
-
-    immutable n = 1_000_000_000;
-    immutable delta = 1.0 / n;
-
-    real getTerm(int i)
-    {
-        immutable x = ( i - 0.5 ) * delta;
-        return delta / ( 1.0 + x * x ) ;
-    }
-
-    immutable pi = 4.0 * taskPool.reduce!"a + b"(
-        std.algorithm.map!getTerm(iota(n))
-    );
-}
----
-
 Source:    $(PHOBOSSRC std/_parallelism.d)
 Author:  David Simcha
 Copyright:  Copyright (c) 2009-2011, David Simcha.
 License:    $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
 */
 module std.parallelism;
+
+///
+unittest
+{
+    import std.algorithm.iteration : map;
+    import std.range : iota;
+    import std.math : approxEqual;
+    import std.parallelism : taskPool;
+
+    // Parallel reduce can be combined with
+    // std.algorithm.iteration.map to interesting effect.
+    // The following example (thanks to Russel Winder)
+    // calculates pi by quadrature  using
+    // std.algorithm.map and TaskPool.reduce.
+    // getTerm is evaluated in parallel as needed by
+    // TaskPool.reduce.
+    //
+    // Timings on an Intel i5-3450 quad core machine
+    // for n = 1_000_000_000:
+    //
+    // TaskPool.reduce:       1.067 s
+    // std.algorithm.reduce:  4.011 s
+
+    enum n = 1_000_000;
+    enum delta = 1.0 / n;
+
+    alias getTerm = (int i)
+    {
+        immutable x = ( i - 0.5 ) * delta;
+        return delta / ( 1.0 + x * x ) ;
+    };
+
+    immutable pi = 4.0 * taskPool.reduce!"a + b"(n.iota.map!getTerm);
+
+    assert(pi.approxEqual(3.1415926));
+}
 
 import core.atomic;
 import core.exception;
@@ -109,7 +111,7 @@ version(Windows)
     // BUGS:  Only works on Windows 2000 and above.
     shared static this()
     {
-        import core.sys.windows.windows;
+        import core.sys.windows.windows : SYSTEM_INFO, GetSystemInfo;
 
         SYSTEM_INFO si;
         GetSystemInfo(&si);
@@ -119,19 +121,17 @@ version(Windows)
 }
 else version(linux)
 {
-    import core.sys.posix.unistd;
-
     shared static this()
     {
+        import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
         totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
 }
 else version(Solaris)
 {
-    import core.sys.posix.unistd;
-
     shared static this()
     {
+        import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
         totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
 }
@@ -978,9 +978,7 @@ private final class ParallelismThread : Thread
 // Kill daemon threads.
 shared static ~this()
 {
-    auto allThreads = Thread.getAll();
-
-    foreach (thread; allThreads)
+    foreach (ref thread; Thread)
     {
         auto pthread = cast(ParallelismThread) thread;
         if (pthread is null) continue;
@@ -2604,7 +2602,7 @@ public:
             byte[maxStack] buf = void;
             immutable size_t nBytesNeeded = nWorkUnits * RTask.sizeof;
 
-            import core.stdc.stdlib;
+            import core.stdc.stdlib : malloc, free;
             if (nBytesNeeded < maxStack)
             {
                 tasks = (cast(RTask*) buf.ptr)[0..nWorkUnits];
@@ -2635,9 +2633,10 @@ public:
 
             // Hack to take the address of a nested function w/o
             // making a closure.
-            static auto scopedAddress(D)(scope D del)
+            static auto scopedAddress(D)(scope D del) @system
             {
-                return del;
+                auto tmp = del;
+                return tmp;
             }
 
             size_t curPos = 0;
@@ -3344,7 +3343,7 @@ private void submitAndExecute(
     immutable nThreads = pool.size + 1;
 
     alias PTask = typeof(scopedTask(doIt));
-    import core.stdc.stdlib;
+    import core.stdc.stdlib : malloc, free;
     import core.stdc.string : memcpy;
 
     // The logical thing to do would be to just use alloca() here, but that
@@ -4561,4 +4560,18 @@ unittest
     immutable ulong[] data = [ 2UL^^59-1, 2UL^^59-1, 2UL^^59-1, 112_272_537_195_293UL ];
 
     auto result = taskPool.amap!__genPair_12733(data);
+}
+
+unittest
+{
+    // this test was in std.range, but caused cycles.
+    assert(__traits(compiles, { foreach (i; iota(0, 100UL).parallel) {} }));
+}
+
+unittest
+{
+    long[] arr;
+    static assert(is(typeof({
+        arr.parallel.each!"a++";
+    })));
 }

@@ -885,7 +885,7 @@ struct MultiArray(Types...)
         }
     }
 
-    @property size_t bytes(size_t n=size_t.max)() const
+    @property size_t bytes(size_t n=size_t.max)() const @safe
     {
         static if (n == size_t.max)
             return storage.length*size_t.sizeof;
@@ -922,7 +922,7 @@ private:
     size_t[] storage;
 }
 
-unittest
+@system unittest
 {
     import std.conv : text;
     enum dg = (){
@@ -995,7 +995,7 @@ unittest
     auto rt = dg();
 }
 
-unittest
+@system unittest
 {// more bitpacking tests
     import std.conv : text;
 
@@ -1102,7 +1102,7 @@ template PackedPtr(T)
     alias PackedPtr = PackedPtrImpl!(T, bits > 1 ? nextPow2(bits - 1) : 1);
 }
 
-@trusted struct PackedPtrImpl(T, size_t bits)
+struct PackedPtrImpl(T, size_t bits)
 {
 pure nothrow:
     static assert(isPow2OrZero(bits));
@@ -1114,8 +1114,8 @@ pure nothrow:
 
     private T simpleIndex(size_t n) inout
     {
-        auto q = n / factor;
-        auto r = n % factor;
+        immutable q = n / factor;
+        immutable r = n % factor;
         return cast(T)((origin[q] >> bits*r) & mask);
     }
 
@@ -1127,10 +1127,10 @@ pure nothrow:
     }
     body
     {
-        auto q = n / factor;
-        auto r = n % factor;
-        size_t tgt_shift = bits*r;
-        size_t word = origin[q];
+        immutable q = n / factor;
+        immutable r = n % factor;
+        immutable tgt_shift = bits*r;
+        immutable word = origin[q];
         origin[q] = (word & ~(mask<<tgt_shift))
             | (cast(size_t)val << tgt_shift);
     }
@@ -1202,11 +1202,11 @@ private:
 // data is packed only by power of two sized packs per word,
 // thus avoiding mul/div overhead at the cost of ultimate packing
 // this construct doesn't own memory, only provides access, see MultiArray for usage
-@trusted struct PackedArrayViewImpl(T, size_t bits)
+struct PackedArrayViewImpl(T, size_t bits)
 {
 pure nothrow:
 
-    this(inout(size_t)* origin, size_t offset, size_t items) inout
+    this(inout(size_t)* origin, size_t offset, size_t items) inout @safe
     {
         ptr = inout(PackedPtr!(T))(origin);
         ofs = offset;
@@ -1222,7 +1222,7 @@ pure nothrow:
     {
         s += ofs;
         e += ofs;
-        size_t pad_s = roundUp(s);
+        immutable pad_s = roundUp(s);
         if ( s >= e)
         {
             foreach (i; s..e)
@@ -1230,7 +1230,7 @@ pure nothrow:
                     return false;
             return true;
         }
-        size_t pad_e = roundDown(e);
+        immutable pad_e = roundDown(e);
         size_t i;
         for (i=s; i<pad_s; i++)
             if (ptr[i])
@@ -1293,7 +1293,7 @@ pure nothrow:
         start += ofs;
         end += ofs;
         // rounded to factor granularity
-        size_t pad_start = roundUp(start);// rounded up
+        immutable pad_start = roundUp(start);// rounded up
         if (pad_start >= end) //rounded up >= then end of slice
         {
             //nothing to gain, use per element assignment
@@ -1301,14 +1301,14 @@ pure nothrow:
                 ptr[i] = val;
             return;
         }
-        size_t pad_end = roundDown(end); // rounded down
+        immutable pad_end = roundDown(end); // rounded down
         size_t i;
         for (i=start; i<pad_start; i++)
             ptr[i] = val;
         // all in between is x*factor elements
         if (pad_start != pad_end)
         {
-            size_t repval = replicateBits!(factor, bits)(val);
+            immutable repval = replicateBits!(factor, bits)(val);
             for (size_t j=i/factor; i<pad_end; i+=factor, j++)
                 ptr.origin[j] = repval;// so speed it up by factor
         }
@@ -1452,7 +1452,7 @@ SliceOverIndexed!T sliceOverIndexed(T)(size_t a, size_t b, T* x)
     return SliceOverIndexed!T(a, b, x);
 }
 
-unittest
+@system unittest
 {
     int[] idxArray = [2, 3, 5, 8, 13];
     auto sliced = sliceOverIndexed(0, idxArray.length, &idxArray);
@@ -1498,7 +1498,7 @@ private auto packedArrayView(T)(inout(size_t)* ptr, size_t items) @trusted pure 
 // Partially unrolled binary search using Shar's method
 //============================================================================
 
-string genUnrolledSwitchSearch(size_t size)
+string genUnrolledSwitchSearch(size_t size) @safe pure nothrow
 {
     import core.bitop : bsr;
     import std.array : replace;
@@ -1597,7 +1597,7 @@ template sharMethod(alias uniLowerBound)
 alias sharLowerBound = sharMethod!uniformLowerBound;
 alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
 
-unittest
+@safe unittest
 {
     import std.array : array;
     import std.range : assumeSorted, iota;
@@ -1734,7 +1734,13 @@ unittest
     {
         import core.stdc.stdlib : malloc;
         import std.exception : enforce;
-        auto ptr = cast(T*)enforce(malloc(T.sizeof*size), "out of memory on C heap");
+
+        import core.checkedint : mulu;
+        bool overflow;
+        size_t nbytes = mulu(size, T.sizeof, overflow);
+        if (overflow) assert(0);
+
+        auto ptr = cast(T*)enforce(malloc(nbytes), "out of memory on C heap");
         return ptr[0..size];
     }
 
@@ -1747,8 +1753,13 @@ unittest
             destroy(arr);
             return null;
         }
-        auto ptr = cast(T*)enforce(realloc(
-                             arr.ptr, T.sizeof*size), "out of memory on C heap");
+
+        import core.checkedint : mulu;
+        bool overflow;
+        size_t nbytes = mulu(size, T.sizeof, overflow);
+        if (overflow) assert(0);
+
+        auto ptr = cast(T*)enforce(realloc(arr.ptr, nbytes), "out of memory on C heap");
         return ptr[0..size];
     }
 
@@ -1760,15 +1771,41 @@ unittest
     static void append(T, V)(ref T[] arr, V value)
         if (!isInputRange!V)
     {
+        if (arr.length == size_t.max) assert(0);
         arr = realloc(arr, arr.length+1);
         arr[$-1] = force!T(value);
+    }
+
+    @safe unittest
+    {
+        int[] arr;
+        ReallocPolicy.append(arr, 3);
+
+        import std.algorithm.comparison : equal;
+        assert(equal(arr, [3]));
     }
 
     static void append(T, V)(ref T[] arr, V value)
         if (isInputRange!V && hasLength!V)
     {
-        arr = realloc(arr, arr.length+value.length);
+        import core.checkedint : addu;
+        bool overflow;
+        size_t nelems = addu(arr.length, value.length, overflow);
+        if (overflow) assert(0);
+
+        arr = realloc(arr, nelems);
+
+        import std.algorithm.mutation : copy;
         copy(value, arr[$-value.length..$]);
+    }
+
+    @safe unittest
+    {
+        int[] arr;
+        ReallocPolicy.append(arr, [1,2,3]);
+
+        import std.algorithm.comparison : equal;
+        assert(equal(arr, [1,2,3]));
     }
 
     static void destroy(T)(ref T[] arr)
@@ -1783,7 +1820,7 @@ unittest
 //build hack
 alias _RealArray = CowArray!ReallocPolicy;
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2025,7 +2062,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         import std.algorithm.comparison : equal;
 
@@ -2070,26 +2107,13 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto gothic = unicode.Gothic;
         // Gothic letter ahsa
         assert(gothic['\U00010330']);
         // no ascii in Gothic obviously
         assert(!gothic['$']);
-    }
-
-    // Linear scan for $(D ch). Useful only for small sets.
-    // TODO:
-    // used internally in std.regex
-    // should be properly exposed in a public API ?
-    package auto scanFor()(dchar ch) const
-    {
-        immutable len = data.length;
-        for (size_t i = 0; i < len; i++)
-            if (ch < data[i])
-                return i & 1;
-        return 0;
     }
 
     /// Number of $(CODEPOINTS) in this set
@@ -2155,7 +2179,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         import std.algorithm.comparison : equal;
         import std.range : iota;
@@ -2221,7 +2245,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert('я' in unicode.Cyrillic);
         assert(!('z' in unicode.Cyrillic));
@@ -2283,7 +2307,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         import std.algorithm.comparison : equal;
         import std.range : iota;
@@ -2381,7 +2405,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         CodepointSet someSet;
         someSet.add('0', '5').add('A','Z'+1);
@@ -2418,7 +2442,7 @@ private:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(unicode.Cyrillic.intersect('-').byInterval.empty);
     }
@@ -2433,7 +2457,6 @@ private:
     ref sub(U)(U rhs)
         if (isCodepointSet!U)
     {
-        uint top;
         Marker mark;
         foreach (i; rhs.byInterval)
         {
@@ -2486,7 +2509,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto set = unicode.ASCII;
         // union with the inverse gets all of the code points in the Unicode
@@ -2549,7 +2572,7 @@ public:
             string deeper = indent~"    ";
             foreach (ival; ivals)
             {
-                auto span = ival[1] - ival[0];
+                immutable span = ival[1] - ival[0];
                 assert(span != 0);
                 if (span == 1)
                 {
@@ -2641,7 +2664,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         CodepointSet emptySet;
         assert(emptySet.length == 0);
@@ -2671,14 +2694,14 @@ private:
 
         @property auto front()const
         {
-            uint a = slice[start];
-            uint b = slice[start+1];
+            immutable a = slice[start];
+            immutable b = slice[start+1];
             return CodepointInterval(a, b);
         }
 
         //may break sorted property - but we need std.sort to access it
         //hence package protection attribute
-        package @property auto front(CodepointInterval val)
+        package @property void front(CodepointInterval val)
         {
             slice[start] = val.a;
             slice[start+1] = val.b;
@@ -2686,13 +2709,13 @@ private:
 
         @property auto back()const
         {
-            uint a = slice[end-2];
-            uint b = slice[end-1];
+            immutable a = slice[end-2];
+            immutable b = slice[end-1];
             return CodepointInterval(a, b);
         }
 
         //ditto about package
-        package @property auto back(CodepointInterval val)
+        package @property void back(CodepointInterval val)
         {
             slice[end-2] = val.a;
             slice[end-1] = val.b;
@@ -2710,13 +2733,13 @@ private:
 
         auto opIndex(size_t idx) const
         {
-            uint a = slice[start+idx*2];
-            uint b = slice[start+idx*2+1];
+            immutable a = slice[start+idx*2];
+            immutable b = slice[start+idx*2+1];
             return CodepointInterval(a, b);
         }
 
         //ditto about package
-        package auto opIndexAssign(CodepointInterval val, size_t idx)
+        package void opIndexAssign(CodepointInterval val, size_t idx)
         {
             slice[start+idx*2] = val.a;
             slice[start+idx*2+1] = val.b;
@@ -2967,10 +2990,10 @@ private:
         if (idx & 1)// inside of interval, check for split
         {
 
-            uint top = data[idx];
+            immutable top = data[idx];
             if (top == a)// no need to split, it's end
                 return idx+1;
-            uint start = data[idx-1];
+            immutable start = data[idx-1];
             if (a == start)
                 return idx-1;
             // split it up
@@ -2990,7 +3013,7 @@ private:
 }
 
 // pedantic version for ctfe, and aligned-access only architectures
-@trusted uint safeRead24(const ubyte* ptr, size_t idx) pure nothrow @nogc
+@system private uint safeRead24(scope const ubyte* ptr, size_t idx) pure nothrow @nogc
 {
     idx *= 3;
     version(LittleEndian)
@@ -3002,7 +3025,7 @@ private:
 }
 
 // ditto
-@trusted void safeWrite24(ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
+@system private void safeWrite24(scope ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
 {
     idx *= 3;
     version(LittleEndian)
@@ -3020,7 +3043,7 @@ private:
 }
 
 // unaligned x86-like read/write functions
-@trusted uint unalignedRead24(const ubyte* ptr, size_t idx) pure nothrow @nogc
+@system private uint unalignedRead24(scope const ubyte* ptr, size_t idx) pure nothrow @nogc
 {
     uint* src = cast(uint*)(ptr+3*idx);
     version(LittleEndian)
@@ -3030,7 +3053,7 @@ private:
 }
 
 // ditto
-@trusted void unalignedWrite24(ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
+@system private void unalignedWrite24(scope ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
 {
     uint* dest = cast(uint*)(cast(ubyte*)ptr + 3*idx);
     version(LittleEndian)
@@ -3039,7 +3062,7 @@ private:
         *dest = (val<<8) | (*dest & 0xFF);
 }
 
-uint read24(const ubyte* ptr, size_t idx) @safe pure nothrow @nogc
+@system private uint read24(scope const ubyte* ptr, size_t idx) pure nothrow @nogc
 {
     static if (hasUnalignedReads)
         return __ctfe ? safeRead24(ptr, idx) : unalignedRead24(ptr, idx);
@@ -3047,17 +3070,19 @@ uint read24(const ubyte* ptr, size_t idx) @safe pure nothrow @nogc
         return safeRead24(ptr, idx);
 }
 
-void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
+@system private void write24(scope ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
 {
     static if (hasUnalignedReads)
         return __ctfe ? safeWrite24(ptr, val, idx) : unalignedWrite24(ptr, val, idx);
     else
         return safeWrite24(ptr, val, idx);
 }
-@trusted struct CowArray(SP=GcPolicy)
+
+struct CowArray(SP=GcPolicy)
 {
     import std.range.primitives : hasLength;
 
+  @safe:
     static auto reuse(uint[] arr)
     {
         CowArray cow;
@@ -3081,7 +3106,7 @@ void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
     {
         import std.algorithm.mutation : copy;
         import std.range.primitives : walkLength;
-        auto len = walkLength(range.save);
+        immutable len = walkLength(range.save);
         length = len;
         copy(range, data[0..$-1]);
     }
@@ -3098,7 +3123,7 @@ void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
     {
         if (!empty)
         {
-            auto cnt = refCount;
+            immutable cnt = refCount;
             if (cnt == 1)
                 SP.destroy(data);
             else
@@ -3133,7 +3158,7 @@ void write24(ubyte* ptr, uint val, size_t idx) @safe pure nothrow @nogc
             refCount = 1;
             return;
         }
-        auto cur_cnt = refCount;
+        immutable cur_cnt = refCount;
         if (cur_cnt != 1) // have more references to this memory
         {
             refCount = cur_cnt - 1;
@@ -3233,7 +3258,7 @@ private:
 
     void freeThisReference()
     {
-        auto count = refCount;
+        immutable count = refCount;
         if (count != 1) // have more references to this memory
         {
             // dec shared ref-count
@@ -3763,8 +3788,8 @@ private:
         }
         // longer row of values
         // get to the next page boundary
-        size_t nextPB = (j + pageSize) & ~(pageSize-1);
-        size_t n =  nextPB - j;// can fill right in this page
+        immutable nextPB = (j + pageSize) & ~(pageSize-1);
+        immutable n =  nextPB - j;// can fill right in this page
         if (numVals < n) //fits in current page
         {
             ptr[j..j+numVals]  = val;
@@ -3823,8 +3848,8 @@ private:
         NextIdx next_lvl_index;
         enum pageSize = 1<<Prefix[level].bitSize;
         assert(idx!level % pageSize == 0);
-        auto last = idx!level-pageSize;
-        auto slice = ptr[idx!level - pageSize..idx!level];
+        immutable last = idx!level-pageSize;
+        const slice = ptr[idx!level - pageSize..idx!level];
         size_t j;
         for (j=0; j<last; j+=pageSize)
         {
@@ -3882,7 +3907,7 @@ private:
     void putAt(size_t idx, Value v)
     {
         assert(idx >= curIndex);
-        size_t numFillers = idx - curIndex;
+        immutable numFillers = idx - curIndex;
         addValue!lastLevel(defValue, numFillers);
         addValue!lastLevel(v, 1);
         curIndex = idx + 1;
@@ -4211,7 +4236,7 @@ public template codepointTrie(T, sizes...)
 }
 
 ///
-pure unittest
+@system pure unittest
 {
     import std.algorithm.comparison : max;
     import std.algorithm.searching : count;
@@ -4552,7 +4577,7 @@ public enum isUtfMatcher(M, C) = __traits(compiles, (){
     assert(is(typeof(m.test(s)) == bool));
 });
 
-unittest
+@safe unittest
 {
     alias CharMatcher = typeof(utfMatcher!char(CodepointSet.init));
     alias WcharMatcher = typeof(utfMatcher!wchar(CodepointSet.init));
@@ -4572,7 +4597,8 @@ mixin template ForwardStrings()
 {
     private bool fwdStr(string fn, C)(ref C[] str) const pure
     {
-        alias type = typeof(units(str));
+        import std.utf : byCodeUnit;
+        alias type = typeof(byCodeUnit(str));
         return mixin(fn~"(*cast(type*)&str)");
     }
 }
@@ -4689,12 +4715,12 @@ template Utf8Matcher()
         {
             enum mode = Mode.skipOnMatch;
             assert(!inp.empty);
-            auto ch = inp[0];
+            immutable ch = inp[0];
             static if (hasASCII)
             {
                 if (ch < 0x80)
                 {
-                    bool r = tab!1[ch];
+                    immutable r = tab!1[ch];
                     if (r)
                         inp.popFront();
                     return r;
@@ -4919,7 +4945,7 @@ template Utf16Matcher()
         {
             enum mode = Mode.skipOnMatch;
             assert(!inp.empty);
-            auto ch = inp[0];
+            immutable ch = inp[0];
             static if (sizeFlags & 1)
             {
                 if (ch < 0x80)
@@ -4945,7 +4971,7 @@ template Utf16Matcher()
             {
                 enum mode = Mode.alwaysSkip;
                 assert(!inp.empty);
-                auto ch = inp[0];
+                immutable ch = inp[0];
                 static if (sizeFlags & 1)
                 {
                     if (ch < 0x80)
@@ -5164,34 +5190,6 @@ package auto decoder(C)(C[] s, size_t offset=0) @safe pure nothrow @nogc
     return Decoder(s, offset);
 }
 
-/*
-    Expose UTF string $(D s) as a random-access
-    range of $(S_LINK Code unit, code units).
-*/
-package auto units(C)(C[] s) @safe pure nothrow @nogc
-    if (is(C : wchar) || is(C : char))
-{
-    static struct Units
-    {
-    pure nothrow:
-        C[] str;
-        @property C front(){ return str[0]; }
-        @property C back(){ return str[$-1]; }
-        void popFront(){ str = str[1..$]; }
-        void popBack(){ str = str[0..$-1]; }
-        void popFrontN(size_t n){ str = str[n..$]; }
-        @property bool empty(){ return 0 == str.length; }
-        @property auto save(){ return this; }
-        auto opIndex(size_t i){ return str[i]; }
-        @property size_t length(){ return str.length; }
-        alias opDollar = length;
-        auto opSlice(size_t a, size_t b){ return Units(str[a..b]); }
-    }
-    static assert(isRandomAccessRange!Units);
-    static assert(is(ElementType!Units : C));
-    return Units(s);
-}
-
 @safe unittest
 {
     string rs = "hi! ﾈемног砀 текста";
@@ -5297,7 +5295,7 @@ package auto units(C)(C[] s) @safe pure nothrow @nogc
 }
 
 // cover decode fail cases of Matcher
-unittest
+@system unittest
 {
     import std.algorithm.iteration : map;
     import std.exception : collectException;
@@ -5507,7 +5505,7 @@ template Sequence(size_t start, size_t end)
 }
 
 //---- TRIE TESTS ----
-unittest
+@system unittest
 {
     import std.algorithm.iteration : map;
     import std.algorithm.sorting : sort;
@@ -5704,10 +5702,10 @@ bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b) @safe pu
 @safe uint decompressFrom(const(ubyte)[] arr, ref size_t idx) pure
 {
     import std.exception : enforce;
-    uint first = arr[idx++];
+    immutable first = arr[idx++];
     if (!(first & 0x80)) // no top bit -> [0..127]
         return first;
-    uint extra = ((first>>5) & 1) + 1; // [1, 2]
+    immutable extra = ((first>>5) & 1) + 1; // [1, 2]
     uint val = (first & 0x1F);
     enforce(idx + extra <= arr.length, "bad code point interval encoding");
     foreach (j; 0..extra)
@@ -6031,7 +6029,7 @@ template SetSearcher(alias table, string kind)
     }
 
     ///
-    unittest
+    @safe unittest
     {
         import std.exception : collectException;
         auto ascii = unicode.ASCII;
@@ -6084,7 +6082,7 @@ template SetSearcher(alias table, string kind)
     }
 
     ///
-    unittest
+    @safe unittest
     {
         // use .block for explicitness
         assert(unicode.block.Greek_and_Coptic == unicode.InGreek_and_Coptic);
@@ -6103,7 +6101,7 @@ template SetSearcher(alias table, string kind)
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto arabicScript = unicode.script.arabic;
         auto arabicBlock = unicode.block.arabic;
@@ -6134,7 +6132,7 @@ template SetSearcher(alias table, string kind)
     }
 
     ///
-    unittest
+    @safe unittest
     {
         // L here is syllable type not Letter as in unicode.L short-cut
         auto leadingVowel = unicode.hangulSyllableType("L");
@@ -6160,7 +6158,7 @@ private:
         import std.conv : to;
         import std.internal.unicode_tables : blocks, scripts; // generated file
         Set set;
-        bool loaded = loadProperty(name, set) || loadUnicodeSet!(scripts.tab)(name, set)
+        immutable loaded = loadProperty(name, set) || loadUnicodeSet!(scripts.tab)(name, set)
             || (name.length > 2 && ucmp(name[0..2],"In") == 0
                 && loadUnicodeSet!(blocks.tab)(name[2..$], set));
         if (loaded)
@@ -6173,7 +6171,7 @@ private:
     //@disable ~this();
 }
 
-unittest
+@safe unittest
 {
     import std.internal.unicode_tables : blocks, uniProps; // generated file
     assert(unicode("InHebrew") == asSet(blocks.Hebrew));
@@ -6370,7 +6368,7 @@ Grapheme decodeGrapheme(Input)(ref Input inp)
     return genericDecodeGrapheme!true(inp);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -6436,7 +6434,7 @@ auto byGrapheme(Range)(Range range)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : take, drop;
@@ -6462,7 +6460,7 @@ private static struct InputRangeString
     void popFront() { s.popFront(); }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.array : array;
@@ -6550,7 +6548,7 @@ Range byCodePoint(Range)(Range range)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.array : array;
     import std.conv : text;
@@ -6568,7 +6566,7 @@ unittest
     assert(reverse == "le\u0308on"); // lëon
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range.primitives : walkLength;
@@ -6643,7 +6641,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto g = Grapheme("A\u0302");
         assert(g[0] == 'A');
@@ -6691,7 +6689,7 @@ public:
             import core.stdc.stdlib : realloc;
             if (!isBig)
             {
-                if (slen_ + 1 > small_cap)
+                if (slen_ == small_cap)
                     convertToBig();// & fallthrough to "big" branch
                 else
                 {
@@ -6702,10 +6700,15 @@ public:
             }
 
             assert(isBig);
-            if (len_ + 1 > cap_)
+            if (len_ == cap_)
             {
-                cap_ += grow;
-                ptr_ = cast(ubyte*)enforce(realloc(ptr_, 3*(cap_+1)),
+                import core.checkedint : addu, mulu;
+                bool overflow;
+                cap_ = addu(cap_, grow, overflow);
+                auto nelems = mulu(3, addu(cap_, 1, overflow), overflow);
+                if (overflow) assert(0);
+
+                ptr_ = cast(ubyte*)enforce(realloc(ptr_, nelems),
                     "realloc failed");
             }
             write24(ptr_, ch, len_++);
@@ -6716,7 +6719,7 @@ public:
     }
 
     ///
-    unittest
+    @system unittest
     {
         import std.algorithm.comparison : equal;
         auto g = Grapheme("A");
@@ -6766,7 +6769,11 @@ public:
         import core.stdc.stdlib : malloc;
         if (isBig)
         {// dup it
-            auto raw_cap = 3*(cap_+1);
+            import core.checkedint : addu, mulu;
+            bool overflow;
+            auto raw_cap = mulu(3, addu(cap_, 1, overflow), overflow);
+            if (overflow) assert(0);
+
             auto p = cast(ubyte*)enforce(malloc(raw_cap), "malloc failed");
             p[0..raw_cap] = ptr_[0..raw_cap];
             ptr_ = p;
@@ -6810,8 +6817,11 @@ private:
     void convertToBig()
     {
         import core.stdc.stdlib : malloc;
+
+        static assert(grow.max / 3 - 1 >= grow);
+        enum nbytes = 3 * (grow + 1);
         size_t k = smallLength;
-        ubyte* p = cast(ubyte*)enforce(malloc(3*(grow+1)), "malloc failed");
+        ubyte* p = cast(ubyte*)enforce(malloc(nbytes), "malloc failed");
         for (int i=0; i<k; i++)
             write24(p, read24(small_.ptr, i), i);
         // now we can overwrite small array data
@@ -6837,10 +6847,11 @@ private:
 static assert(Grapheme.sizeof == size_t.sizeof*4);
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
+    import std.range : isRandomAccessRange;
 
     string bold = "ku\u0308hn";
 
@@ -6872,7 +6883,7 @@ unittest
     assert(g[].equal("A\u0301B"));
 }
 
-unittest
+@safe unittest
 {
     auto g = Grapheme("A\u0302");
     assert(g[0] == 'A');
@@ -6882,7 +6893,7 @@ unittest
     assert(!g.valid);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -6932,18 +6943,18 @@ unittest
 }
 
 /++
-    $(P Does basic case-insensitive comparison of strings $(D str1) and $(D str2).
+    $(P Does basic case-insensitive comparison of $(D r1) and $(D r2).
     This function uses simpler comparison rule thus achieving better performance
     than $(LREF icmp). However keep in mind the warning below.)
 
     Params:
-        str1 = a string
-        str2 = a string
+        r1 = an input range of characters
+        r2 = an input range of characters
 
     Returns:
         An $(D int) that is 0 if the strings match,
-        &lt;0 if $(D str1) is lexicographically "less" than $(D str2),
-        &gt;0 if $(D str1) is lexicographically "greater" than $(D str2)
+        &lt;0 if $(D r1) is lexicographically "less" than $(D r2),
+        &gt;0 if $(D r1) is lexicographically "greater" than $(D r2)
 
     Warning:
     This function only handles 1:1 $(CODEPOINT) mapping
@@ -6954,18 +6965,22 @@ unittest
         $(LREF icmp)
         $(REF cmp, std,algorithm,comparison)
 +/
-int sicmp(S1, S2)(S1 str1, S2 str2) if (isSomeString!S1 && isSomeString!S2)
+int sicmp(S1, S2)(S1 r1, S2 r2)
+    if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
+    && isInputRange!S2 && isSomeChar!(ElementEncodingType!S2))
 {
-    import std.internal.unicode_tables : simpleCaseTable; // generated file
-    alias sTable = simpleCaseTable;
-    import std.utf : decode;
+    import std.internal.unicode_tables : sTable = simpleCaseTable; // generated file
+    import std.utf : byDchar;
 
-    size_t ridx=0;
-    foreach (dchar lhs; str1)
+    auto str1 = r1.byDchar;
+    auto str2 = r2.byDchar;
+
+    foreach (immutable lhs; str1)
     {
-        if (ridx == str2.length)
+        if (str2.empty)
             return 1;
-        dchar rhs = decode(str2, ridx);
+        immutable rhs = str2.front;
+        str2.popFront();
         int diff = lhs - rhs;
         if (!diff)
             continue;
@@ -6994,11 +7009,11 @@ int sicmp(S1, S2)(S1 str1, S2 str2) if (isSomeString!S1 && isSomeString!S2)
         // one of chars is not cased at all
         return diff;
     }
-    return ridx == str2.length ? 0 : -1;
+    return str2.empty ? 0 : -1;
 }
 
 ///
-unittest
+@safe @nogc nothrow unittest
 {
     assert(sicmp("Август", "авгусТ") == 0);
     // Greek also works as long as there is no 1:M mapping in sight
@@ -7013,7 +7028,7 @@ unittest
 }
 
 // overloads for the most common cases to reduce compile time
-@safe pure /*TODO nothrow*/
+@safe @nogc pure nothrow
 {
     int sicmp(const(char)[] str1, const(char)[] str2)
     { return sicmp!(const(char)[], const(char)[])(str1, str2); }
@@ -7024,7 +7039,7 @@ unittest
 }
 
 private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
-    @trusted pure /*TODO nothrow*/
+    @trusted pure nothrow
 {
     import std.algorithm.searching : skipOver;
     import std.internal.unicode_tables : fullCaseTable; // generated file
@@ -7033,8 +7048,8 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
     // fullCaseTrie is packed index table
     if (idx == EMPTY_CASE_TRIE)
         return lhs;
-    size_t start = idx - fTable[idx].n;
-    size_t end = fTable[idx].size + start;
+    immutable start = idx - fTable[idx].n;
+    immutable end = fTable[idx].size + start;
     assert(fTable[start].entry_len == 1);
     for (idx=start; idx<end; idx++)
     {
@@ -7062,13 +7077,16 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
 }
 
 /++
-    $(P Does case insensitive comparison of $(D str1) and $(D str2).
+    Does case insensitive comparison of `r1` and `r2`.
     Follows the rules of full case-folding mapping.
     This includes matching as equal german ß with "ss" and
     other 1:M $(CODEPOINT) mappings unlike $(LREF sicmp).
-    The cost of $(D icmp) being pedantically correct is
+    The cost of `icmp` being pedantically correct is
     slightly worse performance.
-    )
+
+    Params:
+        r1 = a forward range of characters
+        r2 = a forward range of characters
 
     Returns:
         An $(D int) that is 0 if the strings match,
@@ -7079,40 +7097,43 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
         $(LREF sicmp)
         $(REF cmp, std,algorithm,comparison)
 +/
-int icmp(S1, S2)(S1 str1, S2 str2)
-    if (isForwardRange!S1 && is(Unqual!(ElementType!S1) == dchar)
-    && isForwardRange!S2 && is(Unqual!(ElementType!S2) == dchar))
+int icmp(S1, S2)(S1 r1, S2 r2)
+    if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
+    && isForwardRange!S2 && isSomeChar!(ElementEncodingType!S2))
 {
+    import std.utf : byDchar;
+
+    auto str1 = r1.byDchar;
+    auto str2 = r2.byDchar;
+
     for (;;)
     {
         if (str1.empty)
             return str2.empty ? 0 : -1;
-        dchar lhs = str1.front;
+        immutable lhs = str1.front;
         if (str2.empty)
             return 1;
-        dchar rhs = str2.front;
+        immutable rhs = str2.front;
         str1.popFront();
         str2.popFront();
-        int diff = lhs - rhs;
-        if (!diff)
+        if (!(lhs - rhs))
             continue;
         // first try to match lhs to <rhs,right-tail> sequence
-        int cmpLR = fullCasedCmp(lhs, rhs, str2);
+        immutable cmpLR = fullCasedCmp(lhs, rhs, str2);
         if (!cmpLR)
             continue;
         // then rhs to <lhs,left-tail> sequence
-        int cmpRL = fullCasedCmp(rhs, lhs, str1);
+        immutable cmpRL = fullCasedCmp(rhs, lhs, str1);
         if (!cmpRL)
             continue;
         // cmpXX contain remapped codepoints
         // to obtain stable ordering of icmp
-        diff = cmpLR - cmpRL;
-        return diff;
+        return cmpLR - cmpRL;
     }
 }
 
 ///
-unittest
+@safe @nogc nothrow unittest
 {
     assert(icmp("Rußland", "Russland") == 0);
     assert(icmp("ᾩ -> \u1F70\u03B9", "\u1F61\u03B9 -> ᾲ") == 0);
@@ -7130,8 +7151,19 @@ unittest
     assert(icmp("ᾩ -> \u1F70\u03B9".byDchar, "\u1F61\u03B9 -> ᾲ".byDchar) == 0);
 }
 
+// test different character types
+@safe unittest
+{
+    assert(icmp("Rußland", "Russland") == 0);
+    assert(icmp("Rußland"w, "Russland") == 0);
+    assert(icmp("Rußland", "Russland"w) == 0);
+    assert(icmp("Rußland"w, "Russland"w) == 0);
+    assert(icmp("Rußland"d, "Russland"w) == 0);
+    assert(icmp("Rußland"w, "Russland"d) == 0);
+}
+
 // overloads for the most common cases to reduce compile time
-@safe pure /*TODO nothrow*/
+@safe @nogc pure nothrow
 {
     int icmp(const(char)[] str1, const(char)[] str2)
     { return icmp!(const(char)[], const(char)[])(str1, str2); }
@@ -7141,7 +7173,7 @@ unittest
     { return icmp!(const(dchar)[], const(dchar)[])(str1, str2); }
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.sorting : sort;
     import std.conv : to;
@@ -7187,13 +7219,13 @@ unittest
     Return a range of all $(CODEPOINTS) that casefold to
     and from this $(D ch).
 */
-package auto simpleCaseFoldings(dchar ch)
+package auto simpleCaseFoldings(dchar ch) @safe
 {
     import std.internal.unicode_tables : simpleCaseTable; // generated file
     alias sTable = simpleCaseTable;
     static struct Range
     {
-    pure nothrow:
+    @safe pure nothrow:
         uint idx; //if == uint.max, then read c.
         union
         {
@@ -7262,7 +7294,7 @@ package auto simpleCaseFoldings(dchar ch)
     return Range(start, entry.size);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.searching : canFind;
@@ -7290,7 +7322,7 @@ ubyte combiningClass(dchar ch) @safe pure nothrow @nogc
 }
 
 ///
-unittest
+@safe unittest
 {
     // shorten the code
     alias CC = combiningClass;
@@ -7344,29 +7376,29 @@ enum {
     Note: Hangul syllables are not covered by this function.
     See $(D composeJamo) below.
 +/
-public dchar compose(dchar first, dchar second) pure nothrow
+public dchar compose(dchar first, dchar second) pure nothrow @safe
 {
     import std.algorithm.iteration : map;
     import std.internal.unicode_comp : compositionTable, composeCntShift, composeIdxMask;
     import std.range : assumeSorted;
-    size_t packed = compositionJumpTrie[first];
+    immutable packed = compositionJumpTrie[first];
     if (packed == ushort.max)
         return dchar.init;
     // unpack offset and length
-    size_t idx = packed & composeIdxMask, cnt = packed >> composeCntShift;
+    immutable idx = packed & composeIdxMask, cnt = packed >> composeCntShift;
     // TODO: optimize this micro binary search (no more then 4-5 steps)
     auto r = compositionTable[idx..idx+cnt].map!"a.rhs"().assumeSorted();
-    auto target = r.lowerBound(second).length;
+    immutable target = r.lowerBound(second).length;
     if (target == cnt)
         return dchar.init;
-    auto entry = compositionTable[idx+target];
+    immutable entry = compositionTable[idx+target];
     if (entry.rhs != second)
         return dchar.init;
     return entry.composed;
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(compose('A','\u0308') == '\u00C4');
     assert(compose('A', 'B') == dchar.init);
@@ -7391,7 +7423,7 @@ unittest
     that takes into account only hangul syllables  but
     no other decompositions.
 +/
-public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch)
+public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch) @safe
 {
     import std.algorithm.searching : until;
     import std.internal.unicode_decomp : decompCompatTable, decompCanonTable;
@@ -7405,7 +7437,7 @@ public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch)
         alias table = decompCompatTable;
         alias mapping = compatMappingTrie;
     }
-    ushort idx = mapping[ch];
+    immutable idx = mapping[ch];
     if (!idx) // not found, check hangul arithmetic decomposition
         return decomposeHangul(ch);
     auto decomp = table[idx..$].until(0);
@@ -7413,7 +7445,7 @@ public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -7441,14 +7473,14 @@ enum jamoNCount = jamoVCount * jamoTCount;
 enum jamoSCount = jamoLCount * jamoNCount;
 
 // Tests if $(D ch) is a Hangul leading consonant jamo.
-bool isJamoL(dchar ch) pure nothrow @nogc
+bool isJamoL(dchar ch) pure nothrow @nogc @safe
 {
     // first cmp rejects ~ 1M code points above leading jamo range
     return ch < jamoLBase+jamoLCount && ch >= jamoLBase;
 }
 
 // Tests if $(D ch) is a Hangul vowel jamo.
-bool isJamoT(dchar ch) pure nothrow @nogc
+bool isJamoT(dchar ch) pure nothrow @nogc @safe
 {
     // first cmp rejects ~ 1M code points above trailing jamo range
     // Note: ch == jamoTBase doesn't indicate trailing jamo (TIndex must be > 0)
@@ -7456,28 +7488,28 @@ bool isJamoT(dchar ch) pure nothrow @nogc
 }
 
 // Tests if $(D ch) is a Hangul trailnig consonant jamo.
-bool isJamoV(dchar ch) pure nothrow @nogc
+bool isJamoV(dchar ch) pure nothrow @nogc @safe
 {
     // first cmp rejects ~ 1M code points above vowel range
     return  ch < jamoVBase+jamoVCount && ch >= jamoVBase;
 }
 
-int hangulSyllableIndex(dchar ch) pure nothrow @nogc
+int hangulSyllableIndex(dchar ch) pure nothrow @nogc @safe
 {
     int idxS = cast(int)ch - jamoSBase;
     return idxS >= 0 && idxS < jamoSCount ? idxS : -1;
 }
 
 // internal helper: compose hangul syllables leaving dchar.init in holes
-void hangulRecompose(dchar[] seq) pure nothrow @nogc
+void hangulRecompose(dchar[] seq) pure nothrow @nogc @safe
 {
     for (size_t idx = 0; idx + 1 < seq.length; )
     {
         if (isJamoL(seq[idx]) && isJamoV(seq[idx+1]))
         {
-            int indexL = seq[idx] - jamoLBase;
-            int indexV = seq[idx+1] - jamoVBase;
-            int indexLV = indexL * jamoNCount + indexV * jamoTCount;
+            immutable int indexL = seq[idx] - jamoLBase;
+            immutable int indexV = seq[idx+1] - jamoVBase;
+            immutable int indexLV = indexL * jamoNCount + indexV * jamoTCount;
             if (idx + 2 < seq.length && isJamoT(seq[idx+2]))
             {
                 seq[idx] = jamoSBase + indexLV + seq[idx+2] - jamoTBase;
@@ -7504,16 +7536,16 @@ public:
     Decomposes a Hangul syllable. If $(D ch) is not a composed syllable
     then this function returns $(LREF Grapheme) containing only $(D ch) as is.
 */
-Grapheme decomposeHangul(dchar ch)
+Grapheme decomposeHangul(dchar ch) @safe
 {
-    int idxS = cast(int)ch - jamoSBase;
+    immutable idxS = cast(int)ch - jamoSBase;
     if (idxS < 0 || idxS >= jamoSCount) return Grapheme(ch);
-    int idxL = idxS / jamoNCount;
-    int idxV = (idxS % jamoNCount) / jamoTCount;
-    int idxT = idxS % jamoTCount;
+    immutable idxL = idxS / jamoNCount;
+    immutable idxV = (idxS % jamoNCount) / jamoTCount;
+    immutable idxT = idxS % jamoTCount;
 
-    int partL = jamoLBase + idxL;
-    int partV = jamoVBase + idxV;
+    immutable partL = jamoLBase + idxL;
+    immutable partV = jamoVBase + idxV;
     if (idxT > 0) // there is a trailling consonant (T); <L,V,T> decomposition
         return Grapheme(partL, partV, jamoTBase + idxT);
     else // <L, V> decomposition
@@ -7521,7 +7553,7 @@ Grapheme decomposeHangul(dchar ch)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     assert(decomposeHangul('\uD4DB')[].equal("\u1111\u1171\u11B6"));
@@ -7536,21 +7568,21 @@ unittest
     If any of $(D lead) and $(D vowel) are not a valid hangul jamo
     of the respective $(CHARACTER) class returns dchar.init.
 +/
-dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init) pure nothrow @nogc
+dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init) pure nothrow @nogc @safe
 {
     if (!isJamoL(lead))
         return dchar.init;
-    int indexL = lead - jamoLBase;
+    immutable indexL = lead - jamoLBase;
     if (!isJamoV(vowel))
         return dchar.init;
-    int indexV = vowel - jamoVBase;
-    int indexLV = indexL * jamoNCount + indexV * jamoTCount;
-    dchar syllable = jamoSBase + indexLV;
+    immutable indexV = vowel - jamoVBase;
+    immutable indexLV = indexL * jamoNCount + indexV * jamoTCount;
+    immutable dchar syllable = jamoSBase + indexLV;
     return isJamoT(trailing) ? syllable + (trailing - jamoTBase) : syllable;
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(composeJamo('\u1111', '\u1171', '\u11B6') == '\uD4DB');
     // leaving out T-vowel, or passing any codepoint
@@ -7561,7 +7593,7 @@ unittest
     assert(composeJamo('A', '\u1171') == dchar.init);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : text;
@@ -7656,7 +7688,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
 
         foreach (idx, dchar ch; decomposed)
         {
-            auto clazz = combiningClass(ch);
+            immutable clazz = combiningClass(ch);
             ccc[idx] = clazz;
             if (clazz == 0 && lastClazz != 0)
             {
@@ -7677,13 +7709,12 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
         static if (norm == NFC || norm == NFKC)
         {
             import std.algorithm.searching : countUntil;
-            size_t idx = 0;
             auto first = countUntil(ccc, 0);
             if (first >= 0) // no starters?? no recomposition
             {
                 for (;;)
                 {
-                    auto second = recompose(first, decomposed, ccc);
+                    immutable second = recompose(first, decomposed, ccc);
                     if (second == decomposed.length)
                         break;
                     first = second;
@@ -7714,7 +7745,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
 }
 
 ///
-unittest
+@safe unittest
 {
     // any encoding works
     wstring greet = "Hello world";
@@ -7728,7 +7759,7 @@ unittest
     assert(normalize!NFKD("ϓ") == "\u03A5\u0301");
 }
 
-unittest
+@safe unittest
 {
     import std.conv : text;
 
@@ -7751,11 +7782,10 @@ unittest
 }
 
 // canonically recompose given slice of code points, works in-place and mutates data
-private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow
+private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow @safe
 {
     assert(input.length == ccc.length);
     int accumCC = -1;// so that it's out of 0..255 range
-    bool foundSolidStarter = false;
     // writefln("recomposing %( %04x %)", input);
     // first one is always a starter thus we start at i == 1
     size_t i = start+1;
@@ -7763,7 +7793,7 @@ private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow
     {
         if (i == input.length)
             break;
-        int curCC = ccc[i];
+        immutable curCC = ccc[i];
         // In any character sequence beginning with a starter S
         // a character C is blocked from S if and only if there
         // is some character B between S and C, and either B
@@ -7777,7 +7807,7 @@ private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow
 
         if (curCC > accumCC)
         {
-            dchar comp = compose(input[start], input[i]);
+            immutable comp = compose(input[start], input[i]);
             if (comp != dchar.init)
             {
                 input[start] = comp;
@@ -7811,7 +7841,6 @@ private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow
 private auto splitNormalized(NormalizationForm norm, C)(const(C)[] input)
 {
     import std.typecons : tuple;
-    auto result = input;
     ubyte lastCC = 0;
 
     foreach (idx, dchar ch; input)
@@ -7822,7 +7851,7 @@ private auto splitNormalized(NormalizationForm norm, C)(const(C)[] input)
                 lastCC = 0;
                 continue;
             }
-        ubyte CC = combiningClass(ch);
+        immutable ubyte CC = combiningClass(ch);
         if (lastCC > CC && CC != 0)
         {
             return seekStable!norm(idx, input);
@@ -7880,7 +7909,7 @@ public bool allowedIn(NormalizationForm norm)(dchar ch)
 }
 
 ///
-unittest
+@safe unittest
 {
     // e.g. Cyrillic is always allowed, so is ASCII
     assert(allowedIn!NFC('я'));
@@ -7906,7 +7935,7 @@ private bool notAllowedIn(NormalizationForm norm)(dchar ch)
     return qcTrie[ch];
 }
 
-unittest
+@safe unittest
 {
     assert(allowedIn!NFC('я'));
     assert(allowedIn!NFD('я'));
@@ -8091,7 +8120,7 @@ private S toCase(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, 
                 {
                     auto val = tableFn(idx);
                     // unpack length + codepoint
-                    uint len = val>>24;
+                    immutable uint len = val>>24;
                     result.put(cast(dchar)(val & 0xFF_FFFF));
                     foreach (j; idx+1..idx+len)
                         result.put(tableFn(j));
@@ -8103,7 +8132,7 @@ private S toCase(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, 
     return s;
 }
 
-unittest //12428
+@safe unittest //12428
 {
     import std.array : replicate;
     auto s = "abcdefghij".replicate(300);
@@ -8156,7 +8185,7 @@ private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, alias asciiConve
                     }
                     else
                     {
-                        auto val = tableFn(idx);
+                        immutable val = tableFn(idx);
                         // unpack length + codepoint
                         nLeft = val >> 24;
                         if (nLeft == 0)
@@ -8278,13 +8307,13 @@ auto asUpperCase(Range)(auto ref Range str)
     return asUpperCase!(StringTypeOf!Range)(str);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!asLowerCase("hEllo"));
     assert(testAliasedString!asUpperCase("hEllo"));
 }
 
-unittest
+@safe unittest
 {
     import std.array : array;
 
@@ -8346,7 +8375,7 @@ private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUp
 
             if (!nLeft)
             {
-                dchar c = r.front;
+                immutable dchar c = r.front;
                 const idx = indexFnUpper(c);
                 if (idx == ushort.max)
                 {
@@ -8360,7 +8389,7 @@ private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUp
                 }
                 else
                 {
-                    auto val = tableFnUpper(idx);
+                    immutable val = tableFnUpper(idx);
                     // unpack length + codepoint
                     nLeft = val >> 24;
                     if (nLeft == 0)
@@ -8466,7 +8495,7 @@ auto asCapitalized(Range)(auto ref Range str)
     return asCapitalized!(StringTypeOf!Range)(str);
 }
 
-unittest
+@safe unittest
 {
     assert(testAliasedString!asCapitalized("hEllo"));
 }
@@ -8477,7 +8506,7 @@ unittest
     assert(r.front == 'H');
 }
 
-unittest
+@safe unittest
 {
     import std.array : array;
 
@@ -8526,7 +8555,7 @@ unittest
 }
 
 // TODO: helper, I wish std.utf was more flexible (and stright)
-private size_t encodeTo(char[] buf, size_t idx, dchar c) @trusted pure nothrow @nogc
+private size_t encodeTo(scope char[] buf, size_t idx, dchar c) @trusted pure nothrow @nogc
 {
     if (c <= 0x7F)
     {
@@ -8559,7 +8588,7 @@ private size_t encodeTo(char[] buf, size_t idx, dchar c) @trusted pure nothrow @
     return idx;
 }
 
-unittest
+@safe unittest
 {
     char[] s = "abcd".dup;
     size_t i = 0;
@@ -8571,7 +8600,7 @@ unittest
 }
 
 // TODO: helper, I wish std.utf was more flexible (and stright)
-private size_t encodeTo(wchar[] buf, size_t idx, dchar c) @trusted pure
+private size_t encodeTo(scope wchar[] buf, size_t idx, dchar c) @trusted pure
 {
     import std.utf : UTFException;
     if (c <= 0xFFFF)
@@ -8592,7 +8621,7 @@ private size_t encodeTo(wchar[] buf, size_t idx, dchar c) @trusted pure
     return idx;
 }
 
-private size_t encodeTo(dchar[] buf, size_t idx, dchar c) @trusted pure nothrow @nogc
+private size_t encodeTo(scope dchar[] buf, size_t idx, dchar c) @trusted pure nothrow @nogc
 {
     buf[idx] = c;
     idx++;
@@ -8625,9 +8654,9 @@ private void toCaseInPlace(alias indexFn, uint maxIdx, alias tableFn, C)(ref C[]
     while (curIdx != s.length)
     {
         size_t startIdx = curIdx;
-        dchar ch = decode(s, curIdx);
+        immutable ch = decode(s, curIdx);
         // TODO: special case for ASCII
-        auto caseIndex = indexFn(ch);
+        immutable caseIndex = indexFn(ch);
         if (caseIndex == ushort.max) // unchanged, skip over
         {
             continue;
@@ -8638,8 +8667,8 @@ private void toCaseInPlace(alias indexFn, uint maxIdx, alias tableFn, C)(ref C[]
             // thus can just adjust pointer
             destIdx = moveTo(s, destIdx, lastUnchanged, startIdx);
             lastUnchanged = curIdx;
-            dchar cased = tableFn(caseIndex);
-            auto casedLen = codeLength!C(cased);
+            immutable cased = tableFn(caseIndex);
+            immutable casedLen = codeLength!C(cased);
             if (casedLen + destIdx > curIdx) // no place to fit cased char
             {
                 // switch to slow codepath, where we allocate
@@ -8676,25 +8705,25 @@ private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
         size_t curIdx = 0;
         while (curIdx != str.length)
         {
-            size_t startIdx = curIdx;
-            dchar ch = decode(str, curIdx);
-            ushort caseIndex = indexFn(ch);
+            immutable startIdx = curIdx;
+            immutable ch = decode(str, curIdx);
+            immutable ushort caseIndex = indexFn(ch);
             if (caseIndex == ushort.max)
                 continue;
             else if (caseIndex < maxIdx)
             {
                 codeLen += startIdx - lastNonTrivial;
                 lastNonTrivial = curIdx;
-                dchar cased = tableFn(caseIndex);
+                immutable cased = tableFn(caseIndex);
                 codeLen += codeLength!C(cased);
             }
             else
             {
                 codeLen += startIdx - lastNonTrivial;
                 lastNonTrivial = curIdx;
-                auto val = tableFn(caseIndex);
-                auto len = val>>24;
-                dchar cased = val & 0xFF_FFFF;
+                immutable val = tableFn(caseIndex);
+                immutable len = val>>24;
+                immutable dchar cased = val & 0xFF_FFFF;
                 codeLen += codeLength!C(cased);
                 foreach (j; caseIndex+1..caseIndex+len)
                     codeLen += codeLength!C(tableFn(j));
@@ -8706,7 +8735,7 @@ private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
     }
 }
 
-unittest
+@safe unittest
 {
     alias toLowerLength = toCaseLength!(LowerTriple);
     assert(toLowerLength("abcd") == 4);
@@ -8729,16 +8758,16 @@ private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
         size_t lastUnchanged = curIdx;
         while (curIdx != s.length)
         {
-            size_t startIdx = curIdx; // start of current codepoint
-            dchar ch = decode(s, curIdx);
-            auto caseIndex = indexFn(ch);
+            immutable startIdx = curIdx; // start of current codepoint
+            immutable ch = decode(s, curIdx);
+            immutable caseIndex = indexFn(ch);
             if (caseIndex == ushort.max) // skip over
             {
                 continue;
             }
             else if (caseIndex < maxIdx)  // 1:1 codepoint mapping
             {
-                dchar cased = tableFn(caseIndex);
+                immutable cased = tableFn(caseIndex);
                 auto toCopy = startIdx - lastUnchanged;
                 ns[destIdx .. destIdx+toCopy] = s[lastUnchanged .. startIdx];
                 lastUnchanged = curIdx;
@@ -8753,7 +8782,7 @@ private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
                 destIdx += toCopy;
                 auto val = tableFn(caseIndex);
                 // unpack length + codepoint
-                uint len = val>>24;
+                immutable uint len = val>>24;
                 destIdx = encodeTo(ns, destIdx, cast(dchar)(val & 0xFF_FFFF));
                 foreach (j; caseIndex+1..caseIndex+len)
                     destIdx = encodeTo(ns, destIdx, tableFn(j));
@@ -8861,10 +8890,26 @@ S toLower(S)(S s) @trusted pure
     { return toLower!wstring(s); }
     dstring toLower(dstring s)
     { return toLower!dstring(s); }
+
+    unittest
+    {
+        // https://issues.dlang.org/show_bug.cgi?id=16663
+
+        static struct String
+        {
+            string data;
+            alias data this;
+        }
+
+        void foo()
+        {
+            auto u = toLower(String(""));
+        }
+    }
 }
 
 
-@trusted unittest //@@@BUG std.format is not @safe
+@system unittest //@@@BUG std.format is not @safe
 {
     import std.format : format;
     static import std.ascii;
@@ -8884,7 +8929,7 @@ S toLower(S)(S s) @trusted pure
 }
 
 //bugzilla 9629
-unittest
+@safe unittest
 {
     wchar[] test = "hello þ world"w.dup;
     auto piece = test[6..7];
@@ -8893,7 +8938,7 @@ unittest
 }
 
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : cmp;
     string s1 = "FoL";
@@ -8979,7 +9024,7 @@ dchar toUpper(dchar c)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.iteration : map;
     import std.algorithm.mutation : copy;
@@ -8990,7 +9035,7 @@ unittest
     assert(abuf.data == "HELLO");
 }
 
-@trusted unittest
+@safe unittest
 {
     import std.format : format;
     static import std.ascii;
@@ -9027,9 +9072,25 @@ S toUpper(S)(S s) @trusted pure
     { return toUpper!wstring(s); }
     dstring toUpper(dstring s)
     { return toUpper!dstring(s); }
+
+    unittest
+    {
+        // https://issues.dlang.org/show_bug.cgi?id=16663
+
+        static struct String
+        {
+            string data;
+            alias data this;
+        }
+
+        void foo()
+        {
+            auto u = toUpper(String(""));
+        }
+    }
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : cmp;
 
@@ -9058,7 +9119,7 @@ unittest
     assert(s2 !is s1);
 }
 
-unittest
+@system unittest
 {
     static void doTest(C)(const(C)[] s, const(C)[] trueUp, const(C)[] trueLow)
     {
@@ -9260,7 +9321,7 @@ bool isPunctuation(dchar c)
     }
 }
 
-unittest
+@safe unittest
 {
     assert(isPunctuation('\u0021'));
     assert(isPunctuation('\u0028'));
@@ -9283,7 +9344,7 @@ bool isSymbol(dchar c)
    return symbolTrie[c];
 }
 
-unittest
+@safe unittest
 {
     import std.format : format;
     assert(isSymbol('\u0024'));
@@ -9307,7 +9368,7 @@ bool isSpace(dchar c)
     return isSpaceGen(c);
 }
 
-unittest
+@safe unittest
 {
     assert(isSpace('\u0020'));
     auto space = unicode.Zs;
@@ -9330,7 +9391,7 @@ bool isGraphical(dchar c)
 }
 
 
-unittest
+@safe unittest
 {
     auto set = unicode("Graphical");
     import std.format : format;
@@ -9352,7 +9413,7 @@ bool isControl(dchar c)
     return isControlGen(c);
 }
 
-unittest
+@safe unittest
 {
     assert(isControl('\u0000'));
     assert(isControl('\u0081'));
@@ -9377,7 +9438,7 @@ bool isFormat(dchar c)
 }
 
 
-unittest
+@safe unittest
 {
     assert(isFormat('\u00AD'));
     foreach (ch; unicode("Format").byCodepoint)
@@ -9438,7 +9499,7 @@ bool isNonCharacter(dchar c)
     return nonCharacterTrie[c];
 }
 
-unittest
+@safe unittest
 {
     auto set = unicode("Cn");
     foreach (ch; set.byCodepoint)

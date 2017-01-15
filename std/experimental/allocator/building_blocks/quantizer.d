@@ -213,6 +213,8 @@ unittest
 {
     import std.experimental.allocator.building_blocks.free_tree : FreeTree;
     import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.common : roundUpToMultipleOf;
+
     // Quantize small allocations to a multiple of cache line, large ones to a
     // multiple of page size
     alias MyAlloc = Quantizer!(

@@ -1018,6 +1018,10 @@ template memoize(alias fun, uint maxSize)
         {
             import core.memory : GC;
 
+            // Ensure no allocation overflows
+            static assert(maxSize < size_t.max / Value.sizeof);
+            static assert(maxSize < size_t.max - (8 * size_t.sizeof - 1));
+
             enum attr = GC.BlkAttr.NO_INTERIOR | (hasIndirections!Value ? 0 : GC.BlkAttr.NO_SCAN);
             memo = (cast(Value*)GC.malloc(Value.sizeof * maxSize, attr))[0 .. maxSize];
             enum nwords = (maxSize + 8 * size_t.sizeof - 1) / (8 * size_t.sizeof);
@@ -1100,7 +1104,7 @@ template memoize(alias fun, uint maxSize)
  * When the $(D maxSize) parameter is specified, memoize will used
  * a fixed size hash table to limit the number of cached entries.
  */
-unittest // not @safe due to memoize
+@system unittest // not @safe due to memoize
 {
     ulong fact(ulong n)
     {
@@ -1112,7 +1116,7 @@ unittest // not @safe due to memoize
     assert(fact(10) == 3628800);
 }
 
-unittest // not @safe due to memoize
+@system unittest // not @safe due to memoize
 {
     import core.math : sqrt;
     alias msqrt = memoize!(function double(double x) { return sqrt(x); });
@@ -1279,7 +1283,7 @@ auto toDelegate(F)(auto ref F fp) if (isCallable!(F))
     }
 }
 
-unittest // not @safe due to toDelegate
+@system unittest // not @safe due to toDelegate
 {
     static int inc(ref uint num) {
         num++;

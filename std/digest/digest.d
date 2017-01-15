@@ -256,7 +256,7 @@ version(ExampleDigest)
 unittest
 {
     //Using the OutputRange feature
-    import std.algorithm : copy;
+    import std.algorithm.mutation : copy;
     import std.range : repeat;
     import std.digest.md;
 
@@ -427,7 +427,7 @@ package template isDigestibleRange(Range)
 DigestType!Hash digest(Hash, Range)(auto ref Range range) if (!isArray!Range
     && isDigestibleRange!Range)
 {
-    import std.algorithm : copy;
+    import std.algorithm.mutation : copy;
     Hash hash;
     hash.start();
     copy(range, &hash);
@@ -598,7 +598,7 @@ interface Digest
          */
         @trusted nothrow ubyte[] finish();
         ///ditto
-        nothrow ubyte[] finish(scope ubyte[] buf);
+        nothrow ubyte[] finish(ubyte[] buf);
         //@@@BUG@@@ http://d.puremagic.com/issues/show_bug.cgi?id=6549
         /*in
         {
@@ -621,7 +621,7 @@ interface Digest
 unittest
 {
     //Using the OutputRange feature
-    import std.algorithm : copy;
+    import std.algorithm.mutation : copy;
     import std.range : repeat;
     import std.digest.md;
 
@@ -774,7 +774,8 @@ string toHexString(Order order = Order.increasing, LetterCase letterCase = Lette
         }
     }
     import std.exception : assumeUnique;
-    return assumeUnique(result);
+    // memory was just created, so casting to immutable is safe
+    return () @trusted { return assumeUnique(result); }();
 }
 
 ///ditto
@@ -786,7 +787,7 @@ string toHexString(LetterCase letterCase, Order order = Order.increasing)(in uby
 //For more example unittests, see Digest.digest, digest
 
 ///
-unittest
+@safe unittest
 {
     import std.digest.crc;
     //Test with template API:
@@ -799,7 +800,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.digest.crc;
     // With OOP API
@@ -808,7 +809,7 @@ unittest
     assert(toHexString!(Order.decreasing)(crc32) == "414FA339");
 }
 
-unittest
+@safe unittest
 {
     ubyte[16] data;
     assert(toHexString(data) == "00000000000000000000000000000000");
@@ -909,7 +910,7 @@ class WrapperDigest(T) if (isDigest!T) : Digest
          * //length
          * --------
          */
-        nothrow ubyte[] finish(scope ubyte[] buf)
+        nothrow ubyte[] finish(ubyte[] buf)
         in
         {
             assert(buf.length >= this.length);
@@ -939,13 +940,13 @@ class WrapperDigest(T) if (isDigest!T) : Digest
              *
              * These functions are only available if $(D hasPeek!T) is true.
              */
-            @trusted ubyte[] peek(scope ubyte[] buf) const;
+            @trusted ubyte[] peek(ubyte[] buf) const;
             ///ditto
             @trusted ubyte[] peek() const;
         }
         else static if (hasPeek!T)
         {
-            @trusted ubyte[] peek(scope ubyte[] buf) const
+            @trusted ubyte[] peek(ubyte[] buf) const
             in
             {
                 assert(buf.length >= this.length);
@@ -990,4 +991,16 @@ unittest
     //The result is now in result (and in buf). If you pass a buffer which is bigger than
     //necessary, result will have the correct length, but buf will still have it's original
     //length
+}
+
+@safe unittest
+{
+    // Test peek & length
+    import std.digest.crc;
+    auto hash = new WrapperDigest!CRC32();
+    assert(hash.length == 4);
+    hash.put(cast(const(ubyte[]))"The quick brown fox jumps over the lazy dog");
+    assert(hash.peek().toHexString() == "39A34F41");
+    ubyte[5] buf;
+    assert(hash.peek(buf).toHexString() == "39A34F41");
 }

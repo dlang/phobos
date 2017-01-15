@@ -631,9 +631,10 @@ private:
     // }
 }
 
-unittest
+@system unittest
 {
     import std.file : deleteme;
+    import core.memory : GC;
 
     const size_t K = 1024;
     size_t win = 64*K; // assume the page size is 64K
@@ -666,14 +667,17 @@ unittest
     data2 = cast(ubyte[])mf[21*K .. 100*K];
     assert( data2.length == 79*K );
     assert( data2[$-1] == 'b' );
-    delete mf;
+
+    destroy(mf);
+    GC.free(&mf);
+
     std.file.remove(test_file);
     // Create anonymous mapping
     auto test = new MmFile(null, MmFile.Mode.readWriteNew, 1024*1024, null);
 }
 
 version(linux)
-unittest // Issue 14868
+@system unittest // Issue 14868
 {
     import std.typecons : scoped;
     import std.file : deleteme;
@@ -696,7 +700,7 @@ unittest // Issue 14868
     assert(.close(fd) == -1);
 }
 
-unittest // Issue 14994, 14995
+@system unittest // Issue 14994, 14995
 {
     import std.file : deleteme;
     import std.typecons : scoped;

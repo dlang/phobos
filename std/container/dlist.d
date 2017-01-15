@@ -6,14 +6,13 @@ This module is a submodule of $(MREF std, container).
 
 Source: $(PHOBOSSRC std/container/_dlist.d)
 
-Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
-copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
+Copyright: 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
 
 License: Distributed under the Boost Software License, Version 1.0.
 (See accompanying file LICENSE_1_0.txt or copy at $(HTTP
 boost.org/LICENSE_1_0.txt)).
 
-Authors: Steven Schveighoffer, $(HTTP erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 */
 module std.container.dlist;
 
@@ -21,7 +20,7 @@ module std.container.dlist;
 unittest
 {
     import std.container : DList;
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     auto s = DList!int(1, 2, 3);
     assert(equal(s[], [1, 2, 3]));
@@ -37,7 +36,7 @@ unittest
     assert(equal(s[], [4, 5, 2, 6, 7]));
 
     // If you want to apply range operations, simply slice it.
-    import std.algorithm : countUntil;
+    import std.algorithm.searching : countUntil;
     import std.range : popFrontN, popBackN, walkLength;
 
     auto sl = DList!int([1, 2, 3, 4, 5]);
@@ -410,14 +409,6 @@ Appends the contents of the argument $(D rhs) into $(D this).
         return this;
     }
 
-    // Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
-    deprecated("Please, use `dlist ~= dlist[];` instead.")
-    DList opOpAssign(string op)(DList rhs)
-    if (op == "~")
-    {
-        return this ~= rhs[];
-    }
-
 /+ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ +/
 /+                        BEGIN INSERT FUNCTIONS HERE                         +/
 /+ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ +/
@@ -517,7 +508,7 @@ Complexity: $(BIGOH 1).
      */
     T removeAny()
     {
-        import std.algorithm : move;
+        import std.algorithm.mutation : move;
 
         assert(!empty, "DList.removeAny: List is empty");
         auto result = move(back);
@@ -726,7 +717,7 @@ private:
 
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     //Tests construction signatures
     alias IntList = DList!int;
@@ -745,7 +736,7 @@ private:
 
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     alias IntList = DList!int;
     IntList list = IntList([0,1,2,3]);
@@ -762,7 +753,7 @@ private:
 
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : take;
 
     alias IntList = DList!int;
@@ -821,7 +812,7 @@ private:
 
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     auto dl = DList!string(["a", "b", "d"]);
     dl.insertAfter(dl[], "e"); // insert at the end
@@ -834,7 +825,7 @@ private:
 
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     auto dl = DList!string(["a", "b", "d"]);
     dl.insertBefore(dl[], "e"); // insert at the front
@@ -888,7 +879,7 @@ private:
 
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     //Verify all flavors of ~
     auto a = DList!int();
@@ -924,7 +915,7 @@ private:
 
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     //8905
     auto a = DList!int([1, 2, 3, 4]);

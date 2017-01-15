@@ -187,7 +187,7 @@ private:
 
 public import std.uni : icmp, toLower, toLowerInPlace, toUpper, toUpperInPlace;
 public import std.format : format, sformat;
-import std.typecons : Flag;
+import std.typecons : Flag, Yes, No;
 
 import std.meta; // AliasSeq, staticIndexOf
 import std.range.primitives; // back, ElementEncodingType, ElementType, front,
@@ -209,20 +209,10 @@ public import std.array : join, replace, replaceInPlace, split, empty;
   +/
 class StringException : Exception
 {
-    /++
-        Params:
-            msg  = The message for the exception.
-            file = The file where the exception occurred.
-            line = The line number where the exception occurred.
-            next = The previous exception in the chain of exceptions, if any.
-      +/
-    this(string msg,
-         string file = __FILE__,
-         size_t line = __LINE__,
-         Throwable next = null) @safe pure nothrow
-    {
-        super(msg, file, line, next);
-    }
+    import std.exception : basicExceptionCtors;
+
+    ///
+    mixin basicExceptionCtors;
 }
 
 
@@ -273,7 +263,7 @@ out (result)
         auto slen = s.length;
         while (slen > 0 && s[slen-1] == 0) --slen;
         assert(strlen(result) == slen);
-        assert(memcmp(result, s.ptr, slen) == 0);
+        assert(result[0 .. slen] == s[0 .. slen]);
     }
 }
 body
@@ -299,7 +289,7 @@ body
     copy[0..s.length] = s[];
     copy[s.length] = 0;
 
-    return assumeUnique(copy).ptr;
+    return &assumeUnique(copy)[0];
 }
 
 /++ Ditto +/
@@ -318,7 +308,7 @@ immutable(char)* toStringz(in string s) @trusted pure nothrow
     // unreadable. Otherwise, it's definitely pointing to valid
     // memory.
     if ((cast(size_t) p & 3) && *p == 0)
-        return s.ptr;
+        return &s[0];
     return toStringz(cast(const char[]) s);
 }
 
@@ -364,7 +354,7 @@ alias CaseSensitive = Flag!"caseSensitive";
         s = string or InputRange of characters to search in correct UTF format
         c = character to search for
         startIdx = starting index to a well-formed code point
-        cs = CaseSensitive.yes or CaseSensitive.no
+        cs = $(D Yes.caseSensitive) or $(D No.caseSensitive)
 
     Returns:
         the index of the first occurrence of $(D c) in $(D s) with
@@ -381,7 +371,7 @@ alias CaseSensitive = Flag!"caseSensitive";
 
   +/
 ptrdiff_t indexOf(Range)(Range s, in dchar c,
-        in CaseSensitive cs = CaseSensitive.yes)
+        in CaseSensitive cs = Yes.caseSensitive)
     if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
         !isConvertibleToString!Range)
 {
@@ -390,19 +380,20 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c,
     import std.utf : byDchar, byCodeUnit, UTFException, codeLength;
     alias Char = Unqual!(ElementEncodingType!Range);
 
-    if (cs == CaseSensitive.yes)
+    if (cs == Yes.caseSensitive)
     {
         static if (Char.sizeof == 1 && isSomeString!Range)
         {
-            import core.stdc.string : memchr;
             if (std.ascii.isASCII(c) && !__ctfe)
             {                                               // Plain old ASCII
-                auto trustedmemchr() @trusted { return cast(Char*)memchr(s.ptr, c, s.length); }
-                const p = trustedmemchr();
-                if (p)
-                    return p - s.ptr;
-                else
-                    return -1;
+                static ptrdiff_t trustedmemchr(Range s, char c) @trusted
+                {
+                    import core.stdc.string : memchr;
+                    const p = cast(const(Char)*)memchr(s.ptr, c, s.length);
+                    return p ? p - s.ptr : -1;
+                }
+
+                return trustedmemchr(s, cast(char)c);
             }
         }
 
@@ -480,7 +471,7 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c,
     {
         if (std.ascii.isASCII(c))
         {                                                   // Plain old ASCII
-            auto c1 = cast(char) std.ascii.toLower(c);
+            immutable c1 = cast(char) std.ascii.toLower(c);
 
             ptrdiff_t i;
             foreach (const c2; s.byCodeUnit())
@@ -492,7 +483,7 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c,
         }
         else
         {                                                   // c is a universal character
-            auto c1 = std.uni.toLower(c);
+            immutable c1 = std.uni.toLower(c);
 
             ptrdiff_t i;
             foreach (const c2; s.byDchar())
@@ -508,7 +499,7 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c,
 
 /// Ditto
 ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
-        in CaseSensitive cs = CaseSensitive.yes)
+        in CaseSensitive cs = Yes.caseSensitive)
     if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
         !isConvertibleToString!Range)
 {
@@ -544,36 +535,40 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
 ///
 @safe pure unittest
 {
+    import std.typecons : No;
+
     string s = "Hello World";
     assert(indexOf(s, 'W') == 6);
     assert(indexOf(s, 'Z') == -1);
-    assert(indexOf(s, 'w', CaseSensitive.no) == 6);
+    assert(indexOf(s, 'w', No.caseSensitive) == 6);
 }
 
 ///
 @safe pure unittest
 {
+    import std.typecons : No;
+
     string s = "Hello World";
     assert(indexOf(s, 'W', 4) == 6);
     assert(indexOf(s, 'Z', 100) == -1);
-    assert(indexOf(s, 'w', 3, CaseSensitive.no) == 6);
+    assert(indexOf(s, 'w', 3, No.caseSensitive) == 6);
 }
 
 ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c,
-        in CaseSensitive cs = CaseSensitive.yes)
+        in CaseSensitive cs = Yes.caseSensitive)
     if (isConvertibleToString!Range)
 {
     return indexOf!(StringTypeOf!Range)(s, c, cs);
 }
 
 ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c, in size_t startIdx,
-        in CaseSensitive cs = CaseSensitive.yes)
+        in CaseSensitive cs = Yes.caseSensitive)
     if (isConvertibleToString!Range)
 {
     return indexOf!(StringTypeOf!Range)(s, c, startIdx, cs);
 }
 
-unittest
+@safe pure unittest
 {
     assert(testAliasedString!indexOf("std/string.d", '/'));
 }
@@ -595,16 +590,16 @@ unittest
         assert(indexOf(to!S("abba"), cast(dchar)'a') == 0);
         assert(indexOf(to!S("def"), cast(dchar)'f') == 2);
 
-        assert(indexOf(to!S("def"), cast(dchar)'a', CaseSensitive.no) == -1);
-        assert(indexOf(to!S("def"), cast(dchar)'a', CaseSensitive.no) == -1);
-        assert(indexOf(to!S("Abba"), cast(dchar)'a', CaseSensitive.no) == 0);
-        assert(indexOf(to!S("def"), cast(dchar)'F', CaseSensitive.no) == 2);
-        assert(indexOf(to!S("ödef"), 'ö', CaseSensitive.no) == 0);
+        assert(indexOf(to!S("def"), cast(dchar)'a', No.caseSensitive) == -1);
+        assert(indexOf(to!S("def"), cast(dchar)'a', No.caseSensitive) == -1);
+        assert(indexOf(to!S("Abba"), cast(dchar)'a', No.caseSensitive) == 0);
+        assert(indexOf(to!S("def"), cast(dchar)'F', No.caseSensitive) == 2);
+        assert(indexOf(to!S("ödef"), 'ö', No.caseSensitive) == 0);
 
         S sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
-        assert(indexOf("def", cast(char)'f', CaseSensitive.no) == 2);
-        assert(indexOf(sPlts, cast(char)'P', CaseSensitive.no) == 23);
-        assert(indexOf(sPlts, cast(char)'R', CaseSensitive.no) == 2);
+        assert(indexOf("def", cast(char)'f', No.caseSensitive) == 2);
+        assert(indexOf(sPlts, cast(char)'P', No.caseSensitive) == 23);
+        assert(indexOf(sPlts, cast(char)'R', No.caseSensitive) == 2);
     }
 
     foreach (cs; EnumMembers!CaseSensitive)
@@ -630,7 +625,7 @@ unittest
     });
 }
 
-unittest
+@safe pure unittest
 {
     assert(testAliasedString!indexOf("std/string.d", '/', 3));
 }
@@ -654,21 +649,21 @@ unittest
         assert(indexOf(to!S("def"), cast(dchar)'f', 1) == 2);
 
         assert((to!S("def")).indexOf(cast(dchar)'a', 1,
-                CaseSensitive.no) == -1);
+                No.caseSensitive) == -1);
         assert(indexOf(to!S("def"), cast(dchar)'a', 1,
-                CaseSensitive.no) == -1);
+                No.caseSensitive) == -1);
         assert(indexOf(to!S("def"), cast(dchar)'a', 12,
-                CaseSensitive.no) == -1);
+                No.caseSensitive) == -1);
         assert(indexOf(to!S("AbbA"), cast(dchar)'a', 2,
-                CaseSensitive.no) == 3);
-        assert(indexOf(to!S("def"), cast(dchar)'F', 2, CaseSensitive.no) == 2);
+                No.caseSensitive) == 3);
+        assert(indexOf(to!S("def"), cast(dchar)'F', 2, No.caseSensitive) == 2);
 
         S sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
         assert(indexOf("def", cast(char)'f', cast(uint)2,
-            CaseSensitive.no) == 2);
-        assert(indexOf(sPlts, cast(char)'P', 12, CaseSensitive.no) == 23);
+            No.caseSensitive) == 2);
+        assert(indexOf(sPlts, cast(char)'P', 12, No.caseSensitive) == 23);
         assert(indexOf(sPlts, cast(char)'R', cast(ulong)1,
-            CaseSensitive.no) == 2);
+            No.caseSensitive) == 2);
     }
 
     foreach (cs; EnumMembers!CaseSensitive)
@@ -689,7 +684,7 @@ unittest
         s = string or ForwardRange of characters to search in correct UTF format
         sub = substring to search for
         startIdx = the index into s to start searching from
-        cs = CaseSensitive.yes or CaseSensitive.no
+        cs = $(D Yes.caseSensitive) or $(D No.caseSensitive)
 
     Returns:
         the index of the first occurrence of $(D sub) in $(D s) with
@@ -709,7 +704,7 @@ unittest
         tolower and toupper is not 1:1.
   +/
 ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
-        in CaseSensitive cs = CaseSensitive.yes)
+        in CaseSensitive cs = Yes.caseSensitive)
     if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
         isSomeChar!Char)
 {
@@ -720,7 +715,7 @@ ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
         import std.algorithm.searching : find;
 
         const(Char1)[] balance;
-        if (cs == CaseSensitive.yes)
+        if (cs == Yes.caseSensitive)
         {
             balance = find(s, sub);
         }
@@ -730,7 +725,7 @@ ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
                 ((a, b) => toLower(a) == toLower(b))
                 (s, sub);
         }
-        return balance.empty ? -1 : balance.ptr - s.ptr;
+        return () @trusted { return balance.empty ? -1 : balance.ptr - s.ptr; } ();
     }
     else
     {
@@ -748,7 +743,7 @@ ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
         if (subr.empty)
             return indexOf(s, sub0, cs);
 
-        if (cs == CaseSensitive.no)
+        if (cs == No.caseSensitive)
             sub0 = toLower(sub0);
 
         /* Classic double nested loop search algorithm
@@ -757,7 +752,7 @@ ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
         for (auto sbydchar = s.byDchar(); !sbydchar.empty; sbydchar.popFront())
         {
             dchar c2 = sbydchar.front;
-            if (cs == CaseSensitive.no)
+            if (cs == No.caseSensitive)
                 c2 = toLower(c2);
             if (c2 == sub0)
             {
@@ -767,7 +762,7 @@ ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
                     s2.popFront();
                     if (s2.empty)
                         return -1;
-                    if (cs == CaseSensitive.yes ? c != s2.front
+                    if (cs == Yes.caseSensitive ? c != s2.front
                                                 : toLower(c) != toLower(s2.front)
                        )
                         goto Lnext;
@@ -783,7 +778,7 @@ ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
 
 /// Ditto
 ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
-        in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes)
+        in size_t startIdx, in CaseSensitive cs = Yes.caseSensitive)
     @safe if (isSomeChar!Char1 && isSomeChar!Char2)
 {
     if (startIdx < s.length)
@@ -800,23 +795,27 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 ///
 @safe pure unittest
 {
+    import std.typecons : No;
+
     string s = "Hello World";
     assert(indexOf(s, "Wo", 4) == 6);
     assert(indexOf(s, "Zo", 100) == -1);
-    assert(indexOf(s, "wo", 3, CaseSensitive.no) == 6);
+    assert(indexOf(s, "wo", 3, No.caseSensitive) == 6);
 }
 
 ///
 @safe pure unittest
 {
+    import std.typecons : No;
+
     string s = "Hello World";
     assert(indexOf(s, "Wo") == 6);
     assert(indexOf(s, "Zo") == -1);
-    assert(indexOf(s, "wO", CaseSensitive.no) == 6);
+    assert(indexOf(s, "wO", No.caseSensitive) == 6);
 }
 
 ptrdiff_t indexOf(Range, Char)(auto ref Range s, const(Char)[] sub,
-        in CaseSensitive cs = CaseSensitive.yes)
+        in CaseSensitive cs = Yes.caseSensitive)
     if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
           isSomeChar!Char) &&
         is(StringTypeOf!Range))
@@ -824,7 +823,7 @@ ptrdiff_t indexOf(Range, Char)(auto ref Range s, const(Char)[] sub,
     return indexOf!(StringTypeOf!Range)(s, sub, cs);
 }
 
-unittest
+@safe pure unittest
 {
     assert(testAliasedString!indexOf("std/string.d", "string"));
 }
@@ -849,28 +848,28 @@ unittest
             assert(indexOf(to!S("dfefffg"), to!T("fff")) == 3);
             assert(indexOf(to!S("dfeffgfff"), to!T("fff")) == 6);
 
-            assert(indexOf(to!S("dfeffgfff"), to!T("a"), CaseSensitive.no) == -1);
-            assert(indexOf(to!S("def"), to!T("a"), CaseSensitive.no) == -1);
-            assert(indexOf(to!S("abba"), to!T("a"), CaseSensitive.no) == 0);
-            assert(indexOf(to!S("def"), to!T("f"), CaseSensitive.no) == 2);
-            assert(indexOf(to!S("dfefffg"), to!T("fff"), CaseSensitive.no) == 3);
-            assert(indexOf(to!S("dfeffgfff"), to!T("fff"), CaseSensitive.no) == 6);
+            assert(indexOf(to!S("dfeffgfff"), to!T("a"), No.caseSensitive) == -1);
+            assert(indexOf(to!S("def"), to!T("a"), No.caseSensitive) == -1);
+            assert(indexOf(to!S("abba"), to!T("a"), No.caseSensitive) == 0);
+            assert(indexOf(to!S("def"), to!T("f"), No.caseSensitive) == 2);
+            assert(indexOf(to!S("dfefffg"), to!T("fff"), No.caseSensitive) == 3);
+            assert(indexOf(to!S("dfeffgfff"), to!T("fff"), No.caseSensitive) == 6);
 
             S sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
             S sMars = "Who\'s \'My Favorite Maritian?\'";
 
-            assert(indexOf(sMars, to!T("MY fAVe"), CaseSensitive.no) == -1);
-            assert(indexOf(sMars, to!T("mY fAVOriTe"), CaseSensitive.no) == 7);
-            assert(indexOf(sPlts, to!T("mArS:"), CaseSensitive.no) == 0);
-            assert(indexOf(sPlts, to!T("rOcK"), CaseSensitive.no) == 17);
-            assert(indexOf(sPlts, to!T("Un."), CaseSensitive.no) == 41);
-            assert(indexOf(sPlts, to!T(sPlts), CaseSensitive.no) == 0);
+            assert(indexOf(sMars, to!T("MY fAVe"), No.caseSensitive) == -1);
+            assert(indexOf(sMars, to!T("mY fAVOriTe"), No.caseSensitive) == 7);
+            assert(indexOf(sPlts, to!T("mArS:"), No.caseSensitive) == 0);
+            assert(indexOf(sPlts, to!T("rOcK"), No.caseSensitive) == 17);
+            assert(indexOf(sPlts, to!T("Un."), No.caseSensitive) == 41);
+            assert(indexOf(sPlts, to!T(sPlts), No.caseSensitive) == 0);
 
-            assert(indexOf("\u0100", to!T("\u0100"), CaseSensitive.no) == 0);
+            assert(indexOf("\u0100", to!T("\u0100"), No.caseSensitive) == 0);
 
             // Thanks to Carlos Santander B. and zwang
             assert(indexOf("sus mejores cortesanos. Se embarcaron en el puerto de Dubai y",
-                           to!T("page-break-before"), CaseSensitive.no) == -1);
+                           to!T("page-break-before"), No.caseSensitive) == -1);
         }();
 
         foreach (cs; EnumMembers!CaseSensitive)
@@ -918,32 +917,32 @@ unittest
             assert(indexOf(to!S("dfefffg"), to!T("fff"), 1) == 3);
             assert(indexOf(to!S("dfeffgfff"), to!T("fff"), 5) == 6);
 
-            assert(indexOf(to!S("dfeffgfff"), to!T("a"), 1, CaseSensitive.no) == -1);
-            assert(indexOf(to!S("def"), to!T("a"), 2, CaseSensitive.no) == -1);
-            assert(indexOf(to!S("abba"), to!T("a"), 3, CaseSensitive.no) == 3);
-            assert(indexOf(to!S("def"), to!T("f"), 1, CaseSensitive.no) == 2);
-            assert(indexOf(to!S("dfefffg"), to!T("fff"), 2, CaseSensitive.no) == 3);
-            assert(indexOf(to!S("dfeffgfff"), to!T("fff"), 4, CaseSensitive.no) == 6);
-            assert(indexOf(to!S("dfeffgffföä"), to!T("öä"), 9, CaseSensitive.no) == 9,
-                to!string(indexOf(to!S("dfeffgffföä"), to!T("öä"), 9, CaseSensitive.no))
+            assert(indexOf(to!S("dfeffgfff"), to!T("a"), 1, No.caseSensitive) == -1);
+            assert(indexOf(to!S("def"), to!T("a"), 2, No.caseSensitive) == -1);
+            assert(indexOf(to!S("abba"), to!T("a"), 3, No.caseSensitive) == 3);
+            assert(indexOf(to!S("def"), to!T("f"), 1, No.caseSensitive) == 2);
+            assert(indexOf(to!S("dfefffg"), to!T("fff"), 2, No.caseSensitive) == 3);
+            assert(indexOf(to!S("dfeffgfff"), to!T("fff"), 4, No.caseSensitive) == 6);
+            assert(indexOf(to!S("dfeffgffföä"), to!T("öä"), 9, No.caseSensitive) == 9,
+                to!string(indexOf(to!S("dfeffgffföä"), to!T("öä"), 9, No.caseSensitive))
                 ~ " " ~ S.stringof ~ " " ~ T.stringof);
 
             S sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
             S sMars = "Who\'s \'My Favorite Maritian?\'";
 
             assert(indexOf(sMars, to!T("MY fAVe"), 10,
-                CaseSensitive.no) == -1);
-            assert(indexOf(sMars, to!T("mY fAVOriTe"), 4, CaseSensitive.no) == 7);
-            assert(indexOf(sPlts, to!T("mArS:"), 0, CaseSensitive.no) == 0);
-            assert(indexOf(sPlts, to!T("rOcK"), 12, CaseSensitive.no) == 17);
-            assert(indexOf(sPlts, to!T("Un."), 32, CaseSensitive.no) == 41);
-            assert(indexOf(sPlts, to!T(sPlts), 0, CaseSensitive.no) == 0);
+                No.caseSensitive) == -1);
+            assert(indexOf(sMars, to!T("mY fAVOriTe"), 4, No.caseSensitive) == 7);
+            assert(indexOf(sPlts, to!T("mArS:"), 0, No.caseSensitive) == 0);
+            assert(indexOf(sPlts, to!T("rOcK"), 12, No.caseSensitive) == 17);
+            assert(indexOf(sPlts, to!T("Un."), 32, No.caseSensitive) == 41);
+            assert(indexOf(sPlts, to!T(sPlts), 0, No.caseSensitive) == 0);
 
-            assert(indexOf("\u0100", to!T("\u0100"), 0, CaseSensitive.no) == 0);
+            assert(indexOf("\u0100", to!T("\u0100"), 0, No.caseSensitive) == 0);
 
             // Thanks to Carlos Santander B. and zwang
             assert(indexOf("sus mejores cortesanos. Se embarcaron en el puerto de Dubai y",
-                           to!T("page-break-before"), 10, CaseSensitive.no) == -1);
+                           to!T("page-break-before"), 10, No.caseSensitive) == -1);
 
             // In order for indexOf with and without index to be consistent
             assert(indexOf(to!S(""), to!T("")) == indexOf(to!S(""), to!T(""), 0));
@@ -966,7 +965,7 @@ unittest
         s = string to search
         c = character to search for
         startIdx = the index into s to start searching from
-        cs = CaseSensitive.yes or CaseSensitive.no
+        cs = $(D Yes.caseSensitive) or $(D No.caseSensitive)
 
     Returns:
         The index of the last occurrence of $(D c) in $(D s). If $(D c) is not
@@ -981,12 +980,12 @@ unittest
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
 ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c,
-        in CaseSensitive cs = CaseSensitive.yes) @safe pure
+        in CaseSensitive cs = Yes.caseSensitive) @safe pure
     if (isSomeChar!Char)
 {
     static import std.ascii, std.uni;
     import std.utf : canSearchInCodeUnits;
-    if (cs == CaseSensitive.yes)
+    if (cs == Yes.caseSensitive)
     {
         if (canSearchInCodeUnits!Char(c))
         {
@@ -1044,7 +1043,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c,
 
 /// Ditto
 ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
-        in CaseSensitive cs = CaseSensitive.yes) @safe pure
+        in CaseSensitive cs = Yes.caseSensitive) @safe pure
     if (isSomeChar!Char)
 {
     if (startIdx <= s.length)
@@ -1058,19 +1057,23 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
 ///
 @safe pure unittest
 {
+    import std.typecons : No;
+
     string s = "Hello World";
     assert(lastIndexOf(s, 'l') == 9);
     assert(lastIndexOf(s, 'Z') == -1);
-    assert(lastIndexOf(s, 'L', CaseSensitive.no) == 9);
+    assert(lastIndexOf(s, 'L', No.caseSensitive) == 9);
 }
 
 ///
 @safe pure unittest
 {
+    import std.typecons : No;
+
     string s = "Hello World";
     assert(lastIndexOf(s, 'l', 4) == 3);
     assert(lastIndexOf(s, 'Z', 1337) == -1);
-    assert(lastIndexOf(s, 'L', 7, CaseSensitive.no) == 3);
+    assert(lastIndexOf(s, 'L', 7, No.caseSensitive) == 3);
 }
 
 @safe pure unittest
@@ -1090,19 +1093,19 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
         assert(lastIndexOf(to!S("def"), 'f') == 2);
         assert(lastIndexOf(to!S("ödef"), 'ö') == 0);
 
-        assert(lastIndexOf(cast(S) null, 'a', CaseSensitive.no) == -1);
-        assert(lastIndexOf(to!S("def"), 'a', CaseSensitive.no) == -1);
-        assert(lastIndexOf(to!S("AbbA"), 'a', CaseSensitive.no) == 3);
-        assert(lastIndexOf(to!S("def"), 'F', CaseSensitive.no) == 2);
-        assert(lastIndexOf(to!S("ödef"), 'ö', CaseSensitive.no) == 0);
+        assert(lastIndexOf(cast(S) null, 'a', No.caseSensitive) == -1);
+        assert(lastIndexOf(to!S("def"), 'a', No.caseSensitive) == -1);
+        assert(lastIndexOf(to!S("AbbA"), 'a', No.caseSensitive) == 3);
+        assert(lastIndexOf(to!S("def"), 'F', No.caseSensitive) == 2);
+        assert(lastIndexOf(to!S("ödef"), 'ö', No.caseSensitive) == 0);
         assert(lastIndexOf(to!S("i\u0100def"), to!dchar("\u0100"),
-            CaseSensitive.no) == 1);
+            No.caseSensitive) == 1);
 
         S sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
 
-        assert(lastIndexOf(to!S("def"), 'f', CaseSensitive.no) == 2);
-        assert(lastIndexOf(sPlts, 'M', CaseSensitive.no) == 34);
-        assert(lastIndexOf(sPlts, 'S', CaseSensitive.no) == 40);
+        assert(lastIndexOf(to!S("def"), 'f', No.caseSensitive) == 2);
+        assert(lastIndexOf(sPlts, 'M', No.caseSensitive) == 34);
+        assert(lastIndexOf(sPlts, 'S', No.caseSensitive) == 40);
     }
 
     foreach (cs; EnumMembers!CaseSensitive)
@@ -1128,17 +1131,17 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
         assert(lastIndexOf(to!S("abba"), 'a', 3) == 0);
         assert(lastIndexOf(to!S("deff"), 'f', 3) == 2);
 
-        assert(lastIndexOf(cast(S) null, 'a', CaseSensitive.no) == -1);
-        assert(lastIndexOf(to!S("def"), 'a', CaseSensitive.no) == -1);
-        assert(lastIndexOf(to!S("AbbAa"), 'a', to!ushort(4), CaseSensitive.no) == 3,
-                to!string(lastIndexOf(to!S("AbbAa"), 'a', 4, CaseSensitive.no)));
-        assert(lastIndexOf(to!S("def"), 'F', 3, CaseSensitive.no) == 2);
+        assert(lastIndexOf(cast(S) null, 'a', No.caseSensitive) == -1);
+        assert(lastIndexOf(to!S("def"), 'a', No.caseSensitive) == -1);
+        assert(lastIndexOf(to!S("AbbAa"), 'a', to!ushort(4), No.caseSensitive) == 3,
+                to!string(lastIndexOf(to!S("AbbAa"), 'a', 4, No.caseSensitive)));
+        assert(lastIndexOf(to!S("def"), 'F', 3, No.caseSensitive) == 2);
 
         S sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
 
-        assert(lastIndexOf(to!S("def"), 'f', 4, CaseSensitive.no) == -1);
-        assert(lastIndexOf(sPlts, 'M', sPlts.length -2, CaseSensitive.no) == 34);
-        assert(lastIndexOf(sPlts, 'S', sPlts.length -2, CaseSensitive.no) == 40);
+        assert(lastIndexOf(to!S("def"), 'f', 4, No.caseSensitive) == -1);
+        assert(lastIndexOf(sPlts, 'M', sPlts.length -2, No.caseSensitive) == 34);
+        assert(lastIndexOf(sPlts, 'S', sPlts.length -2, No.caseSensitive) == 40);
     }
 
     foreach (cs; EnumMembers!CaseSensitive)
@@ -1154,7 +1157,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
         s = string to search
         sub = substring to search for
         startIdx = the index into s to start searching from
-        cs = CaseSensitive.yes or CaseSensitive.no
+        cs = $(D Yes.caseSensitive) or $(D No.caseSensitive)
 
     Returns:
         the index of the last occurrence of $(D sub) in $(D s). If $(D sub) is
@@ -1169,12 +1172,13 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
     $(D cs) indicates whether the comparisons are case sensitive.
   +/
 ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
-        in CaseSensitive cs = CaseSensitive.yes) @safe pure
+        in CaseSensitive cs = Yes.caseSensitive) @safe pure
     if (isSomeChar!Char1 && isSomeChar!Char2)
 {
     import std.algorithm.searching : endsWith;
     import std.conv : to;
     import std.range.primitives : walkLength;
+    static import std.uni;
     import std.utf : strideBack;
     if (sub.empty)
         return -1;
@@ -1182,7 +1186,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
     if (walkLength(sub) == 1)
         return lastIndexOf(s, sub.front, cs);
 
-    if (cs == CaseSensitive.yes)
+    if (cs == Yes.caseSensitive)
     {
         static if (is(Unqual!Char1 == Unqual!Char2))
         {
@@ -1248,7 +1252,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 
 /// Ditto
 ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
-        in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes) @safe pure
+        in size_t startIdx, in CaseSensitive cs = Yes.caseSensitive) @safe pure
     if (isSomeChar!Char1 && isSomeChar!Char2)
 {
     if (startIdx <= s.length)
@@ -1262,19 +1266,23 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 ///
 @safe pure unittest
 {
+    import std.typecons : No;
+
     string s = "Hello World";
     assert(lastIndexOf(s, "ll") == 2);
     assert(lastIndexOf(s, "Zo") == -1);
-    assert(lastIndexOf(s, "lL", CaseSensitive.no) == 2);
+    assert(lastIndexOf(s, "lL", No.caseSensitive) == 2);
 }
 
 ///
 @safe pure unittest
 {
+    import std.typecons : No;
+
     string s = "Hello World";
     assert(lastIndexOf(s, "ll", 4) == 2);
     assert(lastIndexOf(s, "Zo", 128) == -1);
-    assert(lastIndexOf(s, "lL", 3, CaseSensitive.no) == -1);
+    assert(lastIndexOf(s, "lL", 3, No.caseSensitive) == -1);
 }
 
 @safe pure unittest
@@ -1321,27 +1329,27 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("")) == -1, typeStr);
             assert(lastIndexOf(to!S("öabcdefcdef"), to!T("ö")) == 0, typeStr);
 
-            assert(lastIndexOf(cast(S)null, to!T("a"), CaseSensitive.no) == -1, typeStr);
-            assert(lastIndexOf(to!S("abcdefCdef"), to!T("c"), CaseSensitive.no) == 6, typeStr);
-            assert(lastIndexOf(to!S("abcdefCdef"), to!T("cD"), CaseSensitive.no) == 6, typeStr);
-            assert(lastIndexOf(to!S("abcdefcdef"), to!T("x"), CaseSensitive.no) == -1, typeStr);
-            assert(lastIndexOf(to!S("abcdefcdef"), to!T("xy"), CaseSensitive.no) == -1, typeStr);
-            assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), CaseSensitive.no) == -1, typeStr);
-            assert(lastIndexOf(to!S("öabcdefcdef"), to!T("ö"), CaseSensitive.no) == 0, typeStr);
+            assert(lastIndexOf(cast(S)null, to!T("a"), No.caseSensitive) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefCdef"), to!T("c"), No.caseSensitive) == 6, typeStr);
+            assert(lastIndexOf(to!S("abcdefCdef"), to!T("cD"), No.caseSensitive) == 6, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("x"), No.caseSensitive) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("xy"), No.caseSensitive) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), No.caseSensitive) == -1, typeStr);
+            assert(lastIndexOf(to!S("öabcdefcdef"), to!T("ö"), No.caseSensitive) == 0, typeStr);
 
-            assert(lastIndexOf(to!S("abcdefcdef"), to!T("c"), CaseSensitive.no) == 6, typeStr);
-            assert(lastIndexOf(to!S("abcdefcdef"), to!T("cd"), CaseSensitive.no) == 6, typeStr);
-            assert(lastIndexOf(to!S("abcdefcdef"), to!T("def"), CaseSensitive.no) == 7, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("c"), No.caseSensitive) == 6, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("cd"), No.caseSensitive) == 6, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("def"), No.caseSensitive) == 7, typeStr);
 
-            assert(lastIndexOf(to!S("ödfeffgfff"), to!T("ö"), CaseSensitive.yes) == 0);
+            assert(lastIndexOf(to!S("ödfeffgfff"), to!T("ö"), Yes.caseSensitive) == 0);
 
             S sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
             S sMars = "Who\'s \'My Favorite Maritian?\'";
 
-            assert(lastIndexOf(sMars, to!T("RiTE maR"), CaseSensitive.no) == 14, typeStr);
-            assert(lastIndexOf(sPlts, to!T("FOuRTh"), CaseSensitive.no) == 10, typeStr);
-            assert(lastIndexOf(sMars, to!T("whO\'s \'MY"), CaseSensitive.no) == 0, typeStr);
-            assert(lastIndexOf(sMars, to!T(sMars), CaseSensitive.no) == 0, typeStr);
+            assert(lastIndexOf(sMars, to!T("RiTE maR"), No.caseSensitive) == 14, typeStr);
+            assert(lastIndexOf(sPlts, to!T("FOuRTh"), No.caseSensitive) == 10, typeStr);
+            assert(lastIndexOf(sMars, to!T("whO\'s \'MY"), No.caseSensitive) == 0, typeStr);
+            assert(lastIndexOf(sMars, to!T(sMars), No.caseSensitive) == 0, typeStr);
         }();
 
         foreach (cs; EnumMembers!CaseSensitive)
@@ -1399,17 +1407,17 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
             assert(lastIndexOf(to!S("öafö"), to!T("ö"), 3) == 0, typeStr ~
                     to!string(lastIndexOf(to!S("öafö"), to!T("ö"), 3))); //BUG 10472
 
-            assert(lastIndexOf(cast(S)null, to!T("a"), 1, CaseSensitive.no) == -1, typeStr);
-            assert(lastIndexOf(to!S("abcdefCdef"), to!T("c"), 5, CaseSensitive.no) == 2, typeStr);
-            assert(lastIndexOf(to!S("abcdefCdef"), to!T("cD"), 4, CaseSensitive.no) == 2, typeStr ~
-                " " ~ to!string(lastIndexOf(to!S("abcdefCdef"), to!T("cD"), 3, CaseSensitive.no)));
-            assert(lastIndexOf(to!S("abcdefcdef"), to!T("x"),3 , CaseSensitive.no) == -1, typeStr);
-            assert(lastIndexOf(to!S("abcdefcdefXY"), to!T("xy"), 4, CaseSensitive.no) == -1, typeStr);
-            assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), 7, CaseSensitive.no) == -1, typeStr);
+            assert(lastIndexOf(cast(S)null, to!T("a"), 1, No.caseSensitive) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefCdef"), to!T("c"), 5, No.caseSensitive) == 2, typeStr);
+            assert(lastIndexOf(to!S("abcdefCdef"), to!T("cD"), 4, No.caseSensitive) == 2, typeStr ~
+                " " ~ to!string(lastIndexOf(to!S("abcdefCdef"), to!T("cD"), 3, No.caseSensitive)));
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("x"),3 , No.caseSensitive) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdefXY"), to!T("xy"), 4, No.caseSensitive) == -1, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T(""), 7, No.caseSensitive) == -1, typeStr);
 
-            assert(lastIndexOf(to!S("abcdefcdef"), to!T("c"), 4, CaseSensitive.no) == 2, typeStr);
-            assert(lastIndexOf(to!S("abcdefcdef"), to!T("cd"), 4, CaseSensitive.no) == 2, typeStr);
-            assert(lastIndexOf(to!S("abcdefcdef"), to!T("def"), 6, CaseSensitive.no) == 3, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("c"), 4, No.caseSensitive) == 2, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("cd"), 4, No.caseSensitive) == 2, typeStr);
+            assert(lastIndexOf(to!S("abcdefcdef"), to!T("def"), 6, No.caseSensitive) == 3, typeStr);
             assert(lastIndexOf(to!S(""), to!T(""), 0) == lastIndexOf(to!S(""), to!T("")), typeStr);
         }();
 
@@ -1426,11 +1434,11 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 
 private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
         const(Char)[] haystack, const(Char2)[] needles,
-        in CaseSensitive cs = CaseSensitive.yes) @safe pure
+        in CaseSensitive cs = Yes.caseSensitive) @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
 {
     import std.algorithm.searching : canFind, findAmong;
-    if (cs == CaseSensitive.yes)
+    if (cs == Yes.caseSensitive)
     {
         static if (forward)
         {
@@ -1558,7 +1566,7 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
-        in CaseSensitive cs = CaseSensitive.yes) @safe pure
+        in CaseSensitive cs = Yes.caseSensitive) @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
 {
     return indexOfAnyNeitherImpl!(true, true)(haystack, needles, cs);
@@ -1566,7 +1574,7 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
 
 /// Ditto
 ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
-        in size_t startIdx, in CaseSensitive cs = CaseSensitive.yes) @safe pure
+        in size_t startIdx, in CaseSensitive cs = Yes.caseSensitive) @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
 {
     if (startIdx < haystack.length)
@@ -1642,20 +1650,20 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
             assert(indexOfAny(to!S("dfeffgfff"), to!T("feg")) == 1);
 
             assert(indexOfAny(to!S("zfeffgfff"), to!T("ACDC"),
-                CaseSensitive.no) == -1);
+                No.caseSensitive) == -1);
             assert(indexOfAny(to!S("def"), to!T("MI6"),
-                CaseSensitive.no) == -1);
+                No.caseSensitive) == -1);
             assert(indexOfAny(to!S("abba"), to!T("DEA"),
-                CaseSensitive.no) == 0);
-            assert(indexOfAny(to!S("def"), to!T("FBI"), CaseSensitive.no) == 2);
-            assert(indexOfAny(to!S("dfefffg"), to!T("NSA"), CaseSensitive.no)
+                No.caseSensitive) == 0);
+            assert(indexOfAny(to!S("def"), to!T("FBI"), No.caseSensitive) == 2);
+            assert(indexOfAny(to!S("dfefffg"), to!T("NSA"), No.caseSensitive)
                 == -1);
             assert(indexOfAny(to!S("dfeffgfff"), to!T("BND"),
-                CaseSensitive.no) == 0);
+                No.caseSensitive) == 0);
             assert(indexOfAny(to!S("dfeffgfff"), to!T("BNDabCHIJKQEPÖÖSYXÄ??ß"),
-                CaseSensitive.no) == 0);
+                No.caseSensitive) == 0);
 
-            assert(indexOfAny("\u0100", to!T("\u0100"), CaseSensitive.no) == 0);
+            assert(indexOfAny("\u0100", to!T("\u0100"), No.caseSensitive) == 0);
         }();
     }
     }
@@ -1681,22 +1689,22 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
             assert(indexOfAny(to!S("dfeffgfff"), to!T("fsb"), 5) == 6);
 
             assert(indexOfAny(to!S("dfeffgfff"), to!T("NDS"), 1,
-                CaseSensitive.no) == -1);
+                No.caseSensitive) == -1);
             assert(indexOfAny(to!S("def"), to!T("DRS"), 2,
-                CaseSensitive.no) == -1);
+                No.caseSensitive) == -1);
             assert(indexOfAny(to!S("abba"), to!T("SI"), 3,
-                CaseSensitive.no) == -1);
+                No.caseSensitive) == -1);
             assert(indexOfAny(to!S("deO"), to!T("ASIO"), 1,
-                CaseSensitive.no) == 2);
+                No.caseSensitive) == 2);
             assert(indexOfAny(to!S("dfefffg"), to!T("fbh"), 2,
-                CaseSensitive.no) == 3);
+                No.caseSensitive) == 3);
             assert(indexOfAny(to!S("dfeffgfff"), to!T("fEe"), 4,
-                CaseSensitive.no) == 4);
+                No.caseSensitive) == 4);
             assert(indexOfAny(to!S("dfeffgffföä"), to!T("föä"), 9,
-                CaseSensitive.no) == 9);
+                No.caseSensitive) == 9);
 
             assert(indexOfAny("\u0100", to!T("\u0100"), 0,
-                CaseSensitive.no) == 0);
+                No.caseSensitive) == 0);
         }();
 
         foreach (cs; EnumMembers!CaseSensitive)
@@ -1729,7 +1737,7 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
-        const(Char2)[] needles, in CaseSensitive cs = CaseSensitive.yes)
+        const(Char2)[] needles, in CaseSensitive cs = Yes.caseSensitive)
         @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
 {
@@ -1739,7 +1747,7 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
 /// Ditto
 ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
         const(Char2)[] needles, in size_t stopIdx,
-        in CaseSensitive cs = CaseSensitive.yes) @safe pure
+        in CaseSensitive cs = Yes.caseSensitive) @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
 {
     if (stopIdx <= haystack.length)
@@ -1818,15 +1826,15 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
             assert(foundOeIdx == oeIdx, to!string(foundOeIdx));
 
             assert(lastIndexOfAny(to!S("zfeffgfff"), to!T("ACDC"),
-                CaseSensitive.no) == -1);
+                No.caseSensitive) == -1);
             assert(lastIndexOfAny(to!S("def"), to!T("MI6"),
-                CaseSensitive.no) == -1);
+                No.caseSensitive) == -1);
             assert(lastIndexOfAny(to!S("abba"), to!T("DEA"),
-                CaseSensitive.no) == 3);
+                No.caseSensitive) == 3);
             assert(lastIndexOfAny(to!S("def"), to!T("FBI"),
-                CaseSensitive.no) == 2);
+                No.caseSensitive) == 2);
             assert(lastIndexOfAny(to!S("dfefffg"), to!T("NSA"),
-                CaseSensitive.no) == -1);
+                No.caseSensitive) == -1);
 
             oeIdx = 2;
                if (is(S == wstring) || is(S == dstring))
@@ -1834,10 +1842,10 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
                 oeIdx = 1;
             }
             assert(lastIndexOfAny(to!S("ödfeffgfff"), to!T("BND"),
-                CaseSensitive.no) == oeIdx);
+                No.caseSensitive) == oeIdx);
 
             assert(lastIndexOfAny("\u0100", to!T("\u0100"),
-                CaseSensitive.no) == 0);
+                No.caseSensitive) == 0);
         }();
     }
     }
@@ -1877,21 +1885,21 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
                 typeStr);
 
             assert(lastIndexOfAny(cast(S)null, to!T("a"), 1337,
-                CaseSensitive.no) == -1, typeStr);
+                No.caseSensitive) == -1, typeStr);
             assert(lastIndexOfAny(to!S("abcdefcdef"), to!T("C"), 7,
-                CaseSensitive.no) == 6, typeStr);
+                No.caseSensitive) == 6, typeStr);
             assert(lastIndexOfAny(to!S("ABCDEFCDEF"), to!T("cd"), 5,
-                CaseSensitive.no) == 3, typeStr);
+                No.caseSensitive) == 3, typeStr);
             assert(lastIndexOfAny(to!S("abcdefcdef"), to!T("EF"), 6,
-                CaseSensitive.no) == 5, typeStr);
+                No.caseSensitive) == 5, typeStr);
             assert(lastIndexOfAny(to!S("ABCDEFcDEF"), to!T("C"), 8,
-                CaseSensitive.no) == 6, typeStr);
+                No.caseSensitive) == 6, typeStr);
             assert(lastIndexOfAny(to!S("ABCDEFCDEF"), to!T("x"), 7,
-                CaseSensitive.no) == -1, typeStr);
+                No.caseSensitive) == -1, typeStr);
             assert(lastIndexOfAny(to!S("abCdefcdef"), to!T("XY"), 4,
-                CaseSensitive.no) == -1, typeStr);
+                No.caseSensitive) == -1, typeStr);
             assert(lastIndexOfAny(to!S("ÖABCDEFCDEF"), to!T("ö"), 2,
-                CaseSensitive.no) == 0, typeStr);
+                No.caseSensitive) == 0, typeStr);
         }();
     }
     }
@@ -1912,7 +1920,7 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
-        const(Char2)[] needles, in CaseSensitive cs = CaseSensitive.yes)
+        const(Char2)[] needles, in CaseSensitive cs = Yes.caseSensitive)
         @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
 {
@@ -1922,7 +1930,7 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
 /// Ditto
 ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
         const(Char2)[] needles, in size_t startIdx,
-        in CaseSensitive cs = CaseSensitive.yes)
+        in CaseSensitive cs = Yes.caseSensitive)
         @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
 {
@@ -1988,28 +1996,28 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
             assert(indexOfNeither("abba", "a") == 1);
 
             assert(indexOfNeither(to!S("dfeffgfff"), to!T("a"),
-                CaseSensitive.no) == 0);
+                No.caseSensitive) == 0);
             assert(indexOfNeither(to!S("def"), to!T("D"),
-                CaseSensitive.no) == 1);
+                No.caseSensitive) == 1);
             assert(indexOfNeither(to!S("ABca"), to!T("a"),
-                CaseSensitive.no) == 1);
+                No.caseSensitive) == 1);
             assert(indexOfNeither(to!S("def"), to!T("f"),
-                CaseSensitive.no) == 0);
+                No.caseSensitive) == 0);
             assert(indexOfNeither(to!S("DfEfffg"), to!T("dFe"),
-                CaseSensitive.no) == 6);
+                No.caseSensitive) == 6);
             if (is(S == string))
             {
                 assert(indexOfNeither(to!S("äDfEfffg"), to!T("ädFe"),
-                    CaseSensitive.no) == 8,
+                    No.caseSensitive) == 8,
                     to!string(indexOfNeither(to!S("äDfEfffg"), to!T("ädFe"),
-                    CaseSensitive.no)));
+                    No.caseSensitive)));
             }
             else
             {
                 assert(indexOfNeither(to!S("äDfEfffg"), to!T("ädFe"),
-                    CaseSensitive.no) == 7,
+                    No.caseSensitive) == 7,
                     to!string(indexOfNeither(to!S("äDfEfffg"), to!T("ädFe"),
-                    CaseSensitive.no)));
+                    No.caseSensitive)));
             }
         }();
     }
@@ -2035,26 +2043,26 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
                 to!string(indexOfNeither(to!S("def"), to!T("a"), 1)));
 
             assert(indexOfNeither(to!S("dfeffgfff"), to!T("a"), 4,
-                CaseSensitive.no) == 4);
+                No.caseSensitive) == 4);
             assert(indexOfNeither(to!S("def"), to!T("D"), 2,
-                CaseSensitive.no) == 2);
+                No.caseSensitive) == 2);
             assert(indexOfNeither(to!S("ABca"), to!T("a"), 3,
-                CaseSensitive.no) == -1);
+                No.caseSensitive) == -1);
             assert(indexOfNeither(to!S("def"), to!T("tzf"), 2,
-                CaseSensitive.no) == -1);
+                No.caseSensitive) == -1);
             assert(indexOfNeither(to!S("DfEfffg"), to!T("dFe"), 5,
-                CaseSensitive.no) == 6);
+                No.caseSensitive) == 6);
             if (is(S == string))
             {
                 assert(indexOfNeither(to!S("öDfEfffg"), to!T("äDi"), 2,
-                    CaseSensitive.no) == 3, to!string(indexOfNeither(
-                    to!S("öDfEfffg"), to!T("äDi"), 2, CaseSensitive.no)));
+                    No.caseSensitive) == 3, to!string(indexOfNeither(
+                    to!S("öDfEfffg"), to!T("äDi"), 2, No.caseSensitive)));
             }
             else
             {
                 assert(indexOfNeither(to!S("öDfEfffg"), to!T("äDi"), 2,
-                    CaseSensitive.no) == 2, to!string(indexOfNeither(
-                    to!S("öDfEfffg"), to!T("äDi"), 2, CaseSensitive.no)));
+                    No.caseSensitive) == 2, to!string(indexOfNeither(
+                    to!S("öDfEfffg"), to!T("äDi"), 2, No.caseSensitive)));
             }
         }();
     }
@@ -2076,7 +2084,7 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
         cs = Indicates whether the comparisons are case sensitive.
 */
 ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
-        const(Char2)[] needles, in CaseSensitive cs = CaseSensitive.yes)
+        const(Char2)[] needles, in CaseSensitive cs = Yes.caseSensitive)
         @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
 {
@@ -2086,7 +2094,7 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
 /// Ditto
 ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
         const(Char2)[] needles, in size_t stopIdx,
-        in CaseSensitive cs = CaseSensitive.yes)
+        in CaseSensitive cs = Yes.caseSensitive)
         @safe pure
     if (isSomeChar!Char && isSomeChar!Char2)
 {
@@ -2156,20 +2164,20 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
             assert(foundOeIdx == oeIdx, to!string(foundOeIdx));
 
             assert(lastIndexOfNeither(to!S("zfeffgfsb"), to!T("FSB"),
-                CaseSensitive.no) == 5);
+                No.caseSensitive) == 5);
             assert(lastIndexOfNeither(to!S("def"), to!T("MI6"),
-                CaseSensitive.no) == 2, to!string(lastIndexOfNeither(to!S("def"),
-                to!T("MI6"), CaseSensitive.no)));
+                No.caseSensitive) == 2, to!string(lastIndexOfNeither(to!S("def"),
+                to!T("MI6"), No.caseSensitive)));
             assert(lastIndexOfNeither(to!S("abbadeafsb"), to!T("fSb"),
-                CaseSensitive.no) == 6, to!string(lastIndexOfNeither(
-                to!S("abbadeafsb"), to!T("fSb"), CaseSensitive.no)));
+                No.caseSensitive) == 6, to!string(lastIndexOfNeither(
+                to!S("abbadeafsb"), to!T("fSb"), No.caseSensitive)));
             assert(lastIndexOfNeither(to!S("defbi"), to!T("FBI"),
-                CaseSensitive.no) == 1);
+                No.caseSensitive) == 1);
             assert(lastIndexOfNeither(to!S("dfefffg"), to!T("NSA"),
-                CaseSensitive.no) == 6);
+                No.caseSensitive) == 6);
             assert(lastIndexOfNeither(to!S("dfeffgfffö"), to!T("BNDabCHIJKQEPÖÖSYXÄ??ß"),
-                CaseSensitive.no) == 8, to!string(lastIndexOfNeither(to!S("dfeffgfffö"),
-                to!T("BNDabCHIJKQEPÖÖSYXÄ??ß"), CaseSensitive.no)));
+                No.caseSensitive) == 8, to!string(lastIndexOfNeither(to!S("dfeffgfffö"),
+                to!T("BNDabCHIJKQEPÖÖSYXÄ??ß"), No.caseSensitive)));
         }();
     }
     }
@@ -2204,18 +2212,18 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
             assert(foundOeIdx == oeIdx, to!string(foundOeIdx));
 
             assert(lastIndexOfNeither(to!S("zfeffgfsb"), to!T("FSB"), 6,
-                CaseSensitive.no) == 5);
+                No.caseSensitive) == 5);
             assert(lastIndexOfNeither(to!S("def"), to!T("MI6"), 2,
-                CaseSensitive.no) == 1, to!string(lastIndexOfNeither(to!S("def"),
-                to!T("MI6"), 2, CaseSensitive.no)));
+                No.caseSensitive) == 1, to!string(lastIndexOfNeither(to!S("def"),
+                to!T("MI6"), 2, No.caseSensitive)));
             assert(lastIndexOfNeither(to!S("abbadeafsb"), to!T("fSb"), 6,
-                CaseSensitive.no) == 5, to!string(lastIndexOfNeither(
-                to!S("abbadeafsb"), to!T("fSb"), 6, CaseSensitive.no)));
+                No.caseSensitive) == 5, to!string(lastIndexOfNeither(
+                to!S("abbadeafsb"), to!T("fSb"), 6, No.caseSensitive)));
             assert(lastIndexOfNeither(to!S("defbi"), to!T("FBI"), 3,
-                CaseSensitive.no) == 1);
+                No.caseSensitive) == 1);
             assert(lastIndexOfNeither(to!S("dfefffg"), to!T("NSA"), 2,
-                CaseSensitive.no) == 1, to!string(lastIndexOfNeither(
-                    to!S("dfefffg"), to!T("NSA"), 2, CaseSensitive.no)));
+                No.caseSensitive) == 1, to!string(lastIndexOfNeither(
+                    to!S("dfefffg"), to!T("NSA"), 2, No.caseSensitive)));
         }();
     }
     }
@@ -2250,7 +2258,7 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
     assert(representation(s) == [0x68, 0x65, 0x6c, 0x6c, 0x6f]);
 }
 
-@trusted pure unittest
+@system pure unittest
 {
     import std.exception : assertCTFEable;
     import std.traits : Fields;
@@ -2389,7 +2397,7 @@ auto capitalize(S)(auto ref S s)
 alias KeepTerminator = Flag!"keepTerminator";
 
 /// ditto
-S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pure
+S[] splitLines(S)(S s, in KeepTerminator keepTerm = No.keepTerminator) @safe pure
     if (isSomeString!S)
 {
     import std.array : appender;
@@ -2403,14 +2411,14 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
         switch (s[i])
         {
             case '\v', '\f', '\n':
-                retval.put(s[iStart .. i + (keepTerm == KeepTerminator.yes)]);
+                retval.put(s[iStart .. i + (keepTerm == Yes.keepTerminator)]);
                 iStart = i + 1;
                 break;
 
             case '\r':
                 if (i + 1 < s.length && s[i + 1] == '\n')
                 {
-                    retval.put(s[iStart .. i + (keepTerm == KeepTerminator.yes) * 2]);
+                    retval.put(s[iStart .. i + (keepTerm == Yes.keepTerminator) * 2]);
                     iStart = i + 2;
                     ++i;
                 }
@@ -2432,7 +2440,7 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
                         (s[i + 2] == 0xA8 || s[i + 2] == 0xA9)
                        )
                     {
-                        retval.put(s[iStart .. i + (keepTerm == KeepTerminator.yes) * 3]);
+                        retval.put(s[iStart .. i + (keepTerm == Yes.keepTerminator) * 3]);
                         iStart = i + 3;
                         i += 2;
                     }
@@ -2445,7 +2453,7 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
                 case 0xC2:
                     if (i + 1 < s.length && s[i + 1] == 0x85)
                     {
-                        retval.put(s[iStart .. i + (keepTerm == KeepTerminator.yes) * 2]);
+                        retval.put(s[iStart .. i + (keepTerm == Yes.keepTerminator) * 2]);
                         iStart = i + 2;
                         i += 1;
                     }
@@ -2473,19 +2481,25 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = KeepTerminator.no) @safe pur
 }
 
 ///
-unittest
+@safe pure nothrow unittest
 {
     string s = "Hello\nmy\rname\nis";
     assert(splitLines(s) == ["Hello", "my", "name", "is"]);
 }
 
-auto splitLines(S)(auto ref S s, in KeepTerminator keepTerm = KeepTerminator.no)
+@safe pure nothrow unittest
+{
+    string s = "a\xC2\x86b";
+    assert(splitLines(s) == [s]);
+}
+
+auto splitLines(S)(auto ref S s, in KeepTerminator keepTerm = No.keepTerminator)
     if (!isSomeString!S && is(StringTypeOf!S))
 {
     return splitLines!(StringTypeOf!S)(s, keepTerm);
 }
 
-unittest
+@safe pure nothrow unittest
 {
     assert(testAliasedString!splitLines("hello\nworld"));
 }
@@ -2527,7 +2541,7 @@ unittest
         auto ulines = splitLines(cast(char[])u);
         assert(cast(ubyte[])(ulines[0]) == u);
 
-        lines = splitLines(s, KeepTerminator.yes);
+        lines = splitLines(s, Yes.keepTerminator);
         assert(lines.length == 14);
         assert(lines[0] == "\r");
         assert(lines[1] == "peter\n");
@@ -2549,14 +2563,14 @@ unittest
         assert(lines.length == 14);
         assert(lines[9] == "mon\u2030day");
 
-        lines = splitLines(s, KeepTerminator.yes);
+        lines = splitLines(s, Yes.keepTerminator);
         assert(lines.length == 14);
         assert(lines[13] == "cookies");
     }
     });
 }
 
-private struct LineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)
+private struct LineSplitter(KeepTerminator keepTerm = No.keepTerminator, Range)
 {
     import std.conv : unsigned;
     import std.uni : lineSep, paraSep;
@@ -2604,14 +2618,14 @@ public:
                 switch (_input[i])
                 {
                 case '\v', '\f', '\n':
-                    iEnd = i + (keepTerm == KeepTerminator.yes);
+                    iEnd = i + (keepTerm == Yes.keepTerminator);
                     iNext = i + 1;
                     break Loop;
 
                 case '\r':
                     if (i + 1 < _input.length && _input[i + 1] == '\n')
                     {
-                        iEnd = i + (keepTerm == KeepTerminator.yes) * 2;
+                        iEnd = i + (keepTerm == Yes.keepTerminator) * 2;
                         iNext = i + 2;
                         break Loop;
                     }
@@ -2632,7 +2646,7 @@ public:
                             (_input[i + 2] == 0xA8 || _input[i + 2] == 0xA9)
                         )
                         {
-                            iEnd = i + (keepTerm == KeepTerminator.yes) * 3;
+                            iEnd = i + (keepTerm == Yes.keepTerminator) * 3;
                             iNext = i + 3;
                             break Loop;
                         }
@@ -2644,7 +2658,7 @@ public:
                     case 0xC2:
                         if (i + 1 < _input.length && _input[i + 1] == 0x85)
                         {
-                            iEnd = i + (keepTerm == KeepTerminator.yes) * 2;
+                            iEnd = i + (keepTerm == Yes.keepTerminator) * 2;
                             iNext = i + 2;
                             break Loop;
                         }
@@ -2692,7 +2706,7 @@ public:
  *  Split an array or slicable range of characters into a range of lines
     using $(D '\r'), $(D '\n'), $(D '\v'), $(D '\f'), $(D "\r\n"),
     $(REF lineSep, std,uni), $(REF paraSep, std,uni) and $(D '\u0085') (NEL)
-    as delimiters. If $(D keepTerm) is set to $(D KeepTerminator.yes), then the
+    as delimiters. If $(D keepTerm) is set to $(D Yes.keepTerminator), then the
     delimiter is included in the slices returned.
 
     Does not throw on invalid UTF; such is simply passed unchanged
@@ -2713,7 +2727,7 @@ public:
     $(REF splitter, std,algorithm)
     $(REF splitter, std,regex)
  */
-auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(Range r)
+auto lineSplitter(KeepTerminator keepTerm = No.keepTerminator, Range)(Range r)
     if ((hasSlicing!Range && hasLength!Range && isSomeChar!(ElementType!Range) ||
          isSomeString!Range) &&
         !isConvertibleToString!Range)
@@ -2734,7 +2748,7 @@ auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(Range r)
     assert(lineSplitter(s).array == splitLines(s));
 }
 
-auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(auto ref Range r)
+auto lineSplitter(KeepTerminator keepTerm = No.keepTerminator, Range)(auto ref Range r)
     if (isConvertibleToString!Range)
 {
     return LineSplitter!(keepTerm, StringTypeOf!Range)(r);
@@ -2779,7 +2793,7 @@ auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(auto ref R
         auto ulines = lineSplitter(cast(char[])u).array;
         assert(cast(ubyte[])(ulines[0]) == u);
 
-        lines = lineSplitter!(KeepTerminator.yes)(s).array;
+        lines = lineSplitter!(Yes.keepTerminator)(s).array;
         assert(lines.length == 14);
         assert(lines[0] == "\r");
         assert(lines[1] == "peter\n");
@@ -2801,7 +2815,7 @@ auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(auto ref R
         assert(lines.length == 14);
         assert(lines[9] == "mon\u2030day");
 
-        lines = lineSplitter!(KeepTerminator.yes)(s).array;
+        lines = lineSplitter!(Yes.keepTerminator)(s).array;
         assert(lines.length == 14);
         assert(lines[13] == "cookies");
     }
@@ -2822,12 +2836,23 @@ auto lineSplitter(KeepTerminator keepTerm = KeepTerminator.no, Range)(auto ref R
     assert(i == witness.length);
 }
 
-unittest
+@nogc @safe pure unittest
 {
     import std.algorithm.comparison : equal;
     auto s = "std/string.d";
     auto as = TestAliasedString(s);
     assert(equal(s.lineSplitter(), as.lineSplitter()));
+}
+
+@safe pure unittest
+{
+    auto s = "line1\nline2";
+    auto spl0 = s.lineSplitter!(Yes.keepTerminator);
+    auto spl1 = spl0.save;
+    spl0.popFront;
+    assert(spl1.front ~ spl0.front == s);
+    string r = "a\xC2\x86b";
+    assert(r.lineSplitter.front == r);
 }
 
 /++
@@ -2899,7 +2924,7 @@ auto stripLeft(Range)(auto ref Range str)
     return stripLeft!(StringTypeOf!Range)(str);
 }
 
-unittest
+@safe pure unittest
 {
     assert(testAliasedString!stripLeft("  hello"));
 }
@@ -2960,10 +2985,10 @@ auto stripRight(Range)(Range str)
                 {
                     if (i)
                     {
-                        auto c1 = str[i - 1];
+                        immutable c1 = str[i - 1];
                         if (c1 >= 0xD800 && c1 < 0xDC00)
                         {
-                            dchar c = ((c1 - 0xD7C0) << 10) + (c2 - 0xDC00);
+                            immutable dchar c = ((c1 - 0xD7C0) << 10) + (c2 - 0xDC00);
                             if (isWhite(c))
                             {
                                 --i;
@@ -3035,12 +3060,12 @@ auto stripRight(Range)(auto ref Range str)
     return stripRight!(StringTypeOf!Range)(str);
 }
 
-unittest
+@safe pure unittest
 {
     assert(testAliasedString!stripRight("hello   "));
 }
 
-unittest
+@safe pure unittest
 {
     import std.array : array;
     import std.uni : lineSep, paraSep;
@@ -3314,13 +3339,13 @@ StringTypeOf!Range chomp(Range, C2)(auto ref Range str, const(C2)[] delimiter)
     return chomp!(StringTypeOf!Range, C2)(str, delimiter);
 }
 
-unittest
+@safe pure unittest
 {
     assert(testAliasedString!chomp(" hello world  \n\r"));
     assert(testAliasedString!chomp(" hello world", "orld"));
 }
 
-unittest
+@safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -3480,7 +3505,7 @@ unittest
     assert(chompPrefix("\u2020world"d.byDchar, "\u2020"d).array == "world"d);
 }
 
-unittest
+@safe pure unittest
 {
     assert(testAliasedString!chompPrefix("hello world", "hello"));
 }
@@ -3571,7 +3596,7 @@ StringTypeOf!Range chop(Range)(auto ref Range str)
     return chop!(StringTypeOf!Range)(str);
 }
 
-unittest
+@safe pure unittest
 {
     assert(testAliasedString!chop("hello world"));
 }
@@ -3610,7 +3635,7 @@ unittest
     }
 }
 
-unittest
+@safe pure unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : to;
@@ -3767,7 +3792,7 @@ auto leftJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' ')
     return leftJustifier!(StringTypeOf!Range)(r, width, fillChar);
 }
 
-unittest
+@safe pure unittest
 {
     auto r = "hello".leftJustifier(8);
     r.popFront();
@@ -3777,7 +3802,7 @@ unittest
     assert(save.front == 'e');
 }
 
-unittest
+@safe pure unittest
 {
     assert(testAliasedString!leftJustifier("hello", 2));
 }
@@ -3865,7 +3890,7 @@ auto rightJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
                 assert(_width);
                 static if (hasLength!Range)
                 {
-                    auto len = _input.length;
+                    immutable len = _input.length;
                     nfill = (_width > len) ? _width - len : 0;
                 }
                 else
@@ -3946,12 +3971,12 @@ auto rightJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' ')
     return rightJustifier!(StringTypeOf!Range)(r, width, fillChar);
 }
 
-unittest
+@safe pure unittest
 {
     assert(testAliasedString!rightJustifier("hello", 2));
 }
 
-unittest
+@safe pure unittest
 {
     auto r = "hello"d.rightJustifier(6);
     r.popFront();
@@ -4106,12 +4131,12 @@ auto centerJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' '
     return centerJustifier!(StringTypeOf!Range)(r, width, fillChar);
 }
 
-unittest
+@safe pure unittest
 {
     assert(testAliasedString!centerJustifier("hello", 8));
 }
 
-unittest
+@system unittest
 {
     static auto byFwdRange(dstring s)
     {
@@ -4170,12 +4195,12 @@ auto detab(Range)(auto ref Range s, size_t tabSize = 8) pure
 }
 
 ///
-@trusted pure unittest
+@system pure unittest
 {
     assert(detab(" \n\tx", 9) == " \n         x");
 }
 
-unittest
+@safe pure unittest
 {
     static struct TestStruct
     {
@@ -4323,7 +4348,7 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
 }
 
 ///
-@trusted pure unittest
+@system pure unittest
 {
     import std.array : array;
 
@@ -4336,12 +4361,12 @@ auto detabber(Range)(auto ref Range r, size_t tabSize = 8)
     return detabber!(StringTypeOf!Range)(r, tabSize);
 }
 
-unittest
+@safe pure unittest
 {
     assert(testAliasedString!detabber(  "  ab\t asdf ", 8));
 }
 
-@trusted pure unittest
+@system pure unittest
 {
     import std.algorithm.comparison : cmp;
     import std.conv : to;
@@ -4374,7 +4399,7 @@ unittest
 }
 
 ///
-@trusted pure unittest
+@system pure unittest
 {
     import std.array : array;
     import std.utf : byChar, byWchar;
@@ -4412,7 +4437,7 @@ auto entab(Range)(Range s, size_t tabSize = 8)
 }
 
 ///
-unittest
+@safe pure unittest
 {
     assert(entab("        x \n") == "\tx\n");
 }
@@ -4424,7 +4449,7 @@ auto entab(Range)(auto ref Range s, size_t tabSize = 8)
     return entab!(StringTypeOf!Range)(s, tabSize);
 }
 
-unittest
+@safe pure unittest
 {
     assert(testAliasedString!entab("        x \n"));
 }
@@ -4499,7 +4524,7 @@ auto entabber(Range)(Range r, size_t tabSize = 8)
             {
                 if (_input.empty)
                     return true;
-                C c = _input.front;
+                immutable c = _input.front;
                 if (c != ' ' && c != '\t')
                     return false;
                 auto t = _input.save;
@@ -4531,7 +4556,7 @@ auto entabber(Range)(Range r, size_t tabSize = 8)
                 if (c == ' ' || c == '\t')
                 {
                     // Consume input until a non-blank is encountered
-                    size_t startcol = column;
+                    immutable startcol = column;
                     C cx;
                     static if (isSomeString!Range)
                     {
@@ -4564,7 +4589,7 @@ auto entabber(Range)(Range r, size_t tabSize = 8)
                         }
                     }
                     // Compute ntabs+nspaces to get from startcol to column
-                    auto n = column - startcol;
+                    immutable n = column - startcol;
                     if (n == 1)
                     {
                         nspaces = 1;
@@ -4663,7 +4688,7 @@ auto entabber(Range)(Range r, size_t tabSize = 8)
 }
 
 ///
-unittest
+@safe pure unittest
 {
     import std.array : array;
     assert(entabber("        x \n").array == "\tx\n");
@@ -4675,7 +4700,7 @@ auto entabber(Range)(auto ref Range r, size_t tabSize = 8)
     return entabber!(StringTypeOf!Range)(r, tabSize);
 }
 
-unittest
+@safe pure unittest
 {
     assert(testAliasedString!entabber("  ab    asdf ", 8));
 }
@@ -4798,7 +4823,7 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
     assert(translate("hello world", transTable2) == "h5llorange worangerld");
 }
 
-@trusted pure unittest
+@system pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -4855,7 +4880,7 @@ C1[] translate(C1, S, C2 = immutable char)(C1[] str,
     return buffer.data;
 }
 
-@trusted pure unittest
+@system pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -5384,6 +5409,11 @@ S removechars(S)(S s, in S pattern) @safe pure if (isSomeString!S)
     });
 }
 
+@safe pure unittest
+{
+    assert(removechars("abc", "x") == "abc");
+}
+
 
 /***************************************************
  * Return string where sequences of a character in s[] from pattern[]
@@ -5434,7 +5464,7 @@ S squeeze(S)(S s, in S pattern = null)
     return changed ? ((r is null) ? s[0 .. lasti] : cast(S) r) : s;
 }
 
-@trusted pure unittest
+@system pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -5662,10 +5692,10 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
 
         for (size_t i = 0; i < from.length; )
         {
-            dchar f = decode(from, i);
+            immutable f = decode(from, i);
             if (f == '-' && lastf != dchar.init && i < from.length)
             {
-                dchar nextf = decode(from, i);
+                immutable nextf = decode(from, i);
                 if (lastf <= c && c <= nextf)
                 {
                     n += c - lastf - 1;
@@ -5695,7 +5725,8 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
         // Find the nth character in to[]
         dchar nextt;
         for (size_t i = 0; i < to.length; )
-        {   dchar t = decode(to, i);
+        {
+            immutable t = decode(to, i);
             if (t == '-' && lastt != dchar.init && i < to.length)
             {
                 nextt = decode(to, i);
@@ -5738,7 +5769,7 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
     return result.data;
 }
 
-unittest
+@safe pure unittest
 {
     import std.algorithm.comparison : equal;
     import std.conv : to;
@@ -5781,6 +5812,13 @@ unittest
         static assert(is(typeof(s) == typeof(tr(s, "he", "if"))));
     }
     });
+}
+
+@system pure unittest
+{
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
+    assertThrown!AssertError(tr("abcdef", "cd", "CD", "X"));
 }
 
 /**
@@ -5842,7 +5880,7 @@ bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S ||
             ("nan", "nani", "nan+nani", "inf", "-inf"))
         return true;
 
-    auto frontResult = codeUnits.front;
+    immutable frontResult = codeUnits.front;
     if (frontResult == '-' || frontResult == '+')
         codeUnits.popFront;
 
@@ -6004,6 +6042,11 @@ bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S ||
     assert(!isNumeric("e+"));
     assert(!isNumeric(".f"));
     assert(!isNumeric("e+f"));
+    assert(!isNumeric("++1"));
+    assert(!isNumeric(""));
+    assert(!isNumeric("1E+1E+1"));
+    assert(!isNumeric("1E1"));
+    assert(!isNumeric("\x81"));
 }
 
 // Test string types
@@ -6022,7 +6065,7 @@ bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S ||
 }
 
 // test ranges
-pure unittest
+@system pure unittest
 {
     import std.range : refRange;
     import std.utf : byCodeUnit;
@@ -6041,7 +6084,7 @@ pure unittest
 }
 
 /// isNumeric works with CTFE
-unittest
+@safe pure unittest
 {
     enum a = isNumeric("123.00E-5+1234.45E-12Li");
     enum b = isNumeric("12345xxxx890");
@@ -6050,7 +6093,7 @@ unittest
     static assert(!b);
 }
 
-@trusted unittest
+@system unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
@@ -6210,11 +6253,11 @@ char[] soundex(const(char)[] str, char[] buffer = null)
     @safe pure nothrow
 in
 {
-    assert(!buffer.ptr || buffer.length >= 4);
+    assert(buffer is null || buffer.length >= 4);
 }
 out (result)
 {
-    if (result.ptr)
+    if (result !is null)
     {
         assert(result.length == 4);
         assert(result[0] >= 'A' && result[0] <= 'Z');
@@ -6227,7 +6270,7 @@ body
     char[4] result = soundexer(str);
     if (result[0] == 0)
         return null;
-    if (!buffer.ptr)
+    if (buffer is null)
         buffer = new char[4];
     buffer[] = result[];
     return buffer;
@@ -6287,7 +6330,7 @@ body
     });
 }
 
-unittest
+@safe pure unittest
 {
     assert(testAliasedString!soundexer("Martinez"));
 }
@@ -6353,7 +6396,7 @@ string[string] abbrev(string[] values) @safe pure
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.string;
 
@@ -6364,7 +6407,7 @@ unittest
 }
 
 
-@trusted pure unittest
+@system pure unittest
 {
     import std.algorithm.sorting : sort;
     import std.conv : to;
@@ -6462,7 +6505,7 @@ size_t column(Range)(Range str, in size_t tabsize = 8)
 }
 
 ///
-unittest
+@safe pure unittest
 {
     import std.utf : byChar, byWchar, byDchar;
 
@@ -6503,7 +6546,7 @@ size_t column(Range)(auto ref Range str, in size_t tabsize = 8)
     return column!(StringTypeOf!Range)(str, tabsize);
 }
 
-unittest
+@safe pure unittest
 {
     assert(testAliasedString!column("abc\u00861"));
 }
@@ -6663,7 +6706,7 @@ S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
  */
 S outdent(S)(S str) @safe pure if (isSomeString!S)
 {
-    return str.splitLines(KeepTerminator.yes).outdent().join();
+    return str.splitLines(Yes.keepTerminator).outdent().join();
 }
 
 ///
@@ -6720,7 +6763,7 @@ S[] outdent(S)(S[] lines) @safe pure if (isSomeString!S)
     S shortestIndent;
     foreach (ref line; lines)
     {
-        auto stripped = line.stripLeft();
+        const stripped = line.stripLeft();
 
         if (stripped.empty)
         {
@@ -6728,7 +6771,7 @@ S[] outdent(S)(S[] lines) @safe pure if (isSomeString!S)
         }
         else
         {
-            auto indent = leadingWhiteOf(line);
+            const indent = leadingWhiteOf(line);
 
             // Comparing number of code units instead of code points is OK here
             // because this function throws upon inconsistent indentation.
@@ -6743,7 +6786,7 @@ S[] outdent(S)(S[] lines) @safe pure if (isSomeString!S)
 
     foreach (ref line; lines)
     {
-        auto stripped = line.stripLeft();
+        const stripped = line.stripLeft();
 
         if (stripped.empty)
         {
@@ -6857,6 +6900,13 @@ S[] outdent(S)(S[] lines) @safe pure if (isSomeString!S)
     });
 }
 
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+    auto bad = "      a\n\tb\n   c";
+    assertThrown!StringException(bad.outdent);
+}
+
 /** Assume the given array of integers $(D arr) is a well-formed UTF string and
 return it typed as a UTF string.
 
@@ -6927,4 +6977,3 @@ pure unittest
         assert(equal(jt, hti));
     }
 }
-

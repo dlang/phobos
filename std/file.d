@@ -22,11 +22,8 @@ module std.file;
 
 import core.stdc.stdlib, core.stdc.string, core.stdc.errno;
 
-import std.conv;
 import std.datetime;
-import std.exception;
 import std.meta;
-import std.path;
 import std.range.primitives;
 import std.traits;
 import std.typecons;
@@ -56,9 +53,13 @@ else version (Posix)
 else
     static assert(0);
 
-package @property string deleteme() @safe
+// Purposefully not documented. Use at your own risk
+@property string deleteme() @safe
 {
+    import std.conv : to;
+    import std.path : buildPath;
     import std.process : thisProcessID;
+
     static _deleteme = "deleteme.dmd.unittest.pid";
     static _first = true;
 
@@ -96,6 +97,8 @@ else version(Posix)
  +/
 class FileException : Exception
 {
+    import std.conv : text, to;
+
     /++
         OS error code.
      +/
@@ -250,16 +253,17 @@ void[] read(R)(auto ref R name, size_t upTo = size_t.max)
     return read!(StringTypeOf!R)(name, upTo);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, read(TestAliasedString(null))));
 }
 
 version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo = size_t.max) @trusted
 {
-    import std.algorithm : min;
+    import std.algorithm.comparison : min;
     import std.array : uninitializedArray;
     import core.memory : GC;
+    import std.conv : to;
 
     // A few internal configuration parameters {
     enum size_t
@@ -281,7 +285,7 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
         ? min(statbuf.st_size + 1, maxInitialAlloc)
         : minInitialAlloc));
     void[] result = uninitializedArray!(ubyte[])(initialAlloc);
-    scope(failure) delete result;
+    scope(failure) GC.free(result.ptr);
     size_t size = 0;
 
     for (;;)
@@ -305,8 +309,9 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
 
 version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo = size_t.max) @safe
 {
-    import std.algorithm : min;
+    import std.algorithm.comparison : min;
     import std.array : uninitializedArray;
+    import core.memory : GC;
     static trustedCreateFileW(const(wchar)* namez, DWORD dwDesiredAccess, DWORD dwShareMode,
                               SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
                               DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
@@ -324,7 +329,7 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
     {
         DWORD sizeHigh;
         DWORD sizeLow = GetFileSize(hFile, &sizeHigh);
-        bool result = sizeLow != INVALID_FILE_SIZE;
+        const bool result = sizeLow != INVALID_FILE_SIZE;
         if (result)
             fileSize = makeUlong(sizeLow, sizeHigh);
         return result;
@@ -335,9 +340,9 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
         ulong totalNumRead = 0;
         while (totalNumRead != nNumberOfBytesToRead)
         {
-            uint chunkSize = min(nNumberOfBytesToRead - totalNumRead, 0xffff_0000);
+            const uint chunkSize = min(nNumberOfBytesToRead - totalNumRead, 0xffff_0000);
             DWORD numRead = void;
-            auto result = ReadFile(hFile, lpBuffer + totalNumRead, chunkSize, &numRead, null);
+            const result = ReadFile(hFile, lpBuffer + totalNumRead, chunkSize, &numRead, null);
             if (result == 0 || numRead != chunkSize)
                 return false;
             totalNumRead += chunkSize;
@@ -361,10 +366,11 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
 
     scope(failure)
     {
-        () @trusted { delete buf; } ();
+        () @trusted { GC.free(buf.ptr); } ();
     }
 
-    cenforce(trustedReadFile(h, buf.ptr, size), name, namez);
+    if (size)
+        cenforce(trustedReadFile(h, &buf[0], size), name, namez);
     return buf[0 .. size];
 }
 
@@ -416,6 +422,7 @@ S readText(S = string, R)(R name)
 ///
 @safe unittest
 {
+    import std.exception : enforce;
     write(deleteme, "abc"); // deleteme is the name of a temporary file
     scope(exit) remove(deleteme);
     string content = readText(deleteme);
@@ -428,7 +435,7 @@ S readText(S = string, R)(auto ref R name)
     return readText!(S, StringTypeOf!R)(name);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, readText(TestAliasedString(null))));
 }
@@ -455,7 +462,7 @@ void write(R)(R name, const void[] buffer)
 }
 
 ///
-unittest
+@system unittest
 {
    scope(exit)
    {
@@ -474,7 +481,7 @@ void write(R)(auto ref R name, const void[] buffer)
     write!(StringTypeOf!R)(name, buffer);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, write(TestAliasedString(null), null)));
 }
@@ -499,7 +506,7 @@ void append(R)(R name, const void[] buffer)
 }
 
 ///
-unittest
+@system unittest
 {
    scope(exit)
    {
@@ -520,7 +527,7 @@ void append(R)(auto ref R name, const void[] buffer)
     append!(StringTypeOf!R)(name, buffer);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, append(TestAliasedString("foo"), [0, 1, 2, 3])));
 }
@@ -530,6 +537,8 @@ unittest
 version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
         in void[] buffer, bool append) @trusted
 {
+    import std.conv : octal;
+
     // append or write
     auto mode = append ? O_CREAT | O_WRONLY | O_APPEND
                        : O_CREAT | O_WRONLY | O_TRUNC;
@@ -544,7 +553,7 @@ version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
         while (sum != size)
         {
             cnt = (size - sum < 2^^30) ? (size - sum) : 2^^30;
-            auto numwritten = core.sys.posix.unistd.write(fd, buffer.ptr + sum, cnt);
+            const numwritten = core.sys.posix.unistd.write(fd, buffer.ptr + sum, cnt);
             if (numwritten != cnt)
                 break;
             sum += numwritten;
@@ -633,7 +642,7 @@ void rename(RF, RT)(auto ref RF from, auto ref RT to)
     rename!Types(from, to);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, rename(TestAliasedString(null), TestAliasedString(null))));
     static assert(__traits(compiles, rename("", TestAliasedString(null))));
@@ -646,11 +655,13 @@ private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, 
 {
     version(Windows)
     {
-        auto result = MoveFileExW(fromz, toz, MOVEFILE_REPLACE_EXISTING);
+        import std.exception : enforce;
+
+        const result = MoveFileExW(fromz, toz, MOVEFILE_REPLACE_EXISTING);
         if (!result)
         {
             import core.stdc.wchar_ : wcslen;
-            import std.conv : to;
+            import std.conv : to, text;
 
             if (!f)
                 f = to!(typeof(f))(fromz[0 .. wcslen(fromz)]);
@@ -665,7 +676,7 @@ private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, 
     }
     else version(Posix)
     {
-        import core.stdc.stdio;
+        static import core.stdc.stdio;
 
         cenforce(core.stdc.stdio.rename(fromz, toz) == 0, t, toz);
     }
@@ -710,7 +721,7 @@ void remove(R)(auto ref R name)
     remove!(StringTypeOf!R)(name);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, remove(TestAliasedString("foo"))));
 }
@@ -723,7 +734,7 @@ private void removeImpl(const(char)[] name, const(FSChar)* namez) @trusted
     }
     else version(Posix)
     {
-        import core.stdc.stdio;
+        static import core.stdc.stdio;
 
         if (!name)
         {
@@ -747,6 +758,7 @@ version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(R)(R nam
     {
         static void getFA(const(char)[] name, const(FSChar)* namez, out WIN32_FILE_ATTRIBUTE_DATA fad) @trusted
         {
+            import std.exception : enforce;
             enforce(GetFileAttributesExW(namez, GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad),
                 new FileException(name.idup));
         }
@@ -758,6 +770,7 @@ version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(R)(R nam
         {
             import core.stdc.wchar_ : wcslen;
             import std.conv : to;
+            import std.exception : enforce;
 
             enforce(GetFileAttributesExW(namez, GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad),
                 new FileException(namez[0 .. wcslen(namez)].to!string));
@@ -816,7 +829,7 @@ ulong getSize(R)(auto ref R name)
     return getSize!(StringTypeOf!R)(name);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, getSize(TestAliasedString("foo"))));
 }
@@ -910,13 +923,13 @@ void getTimes(R)(auto ref R name,
     return getTimes!(StringTypeOf!R)(name, accessTime, modificationTime);
 }
 
-unittest
+@safe unittest
 {
     SysTime atime, mtime;
     static assert(__traits(compiles, getTimes(TestAliasedString("foo"), atime, mtime)));
 }
 
-unittest
+@system unittest
 {
     import std.stdio : writefln;
 
@@ -1024,7 +1037,7 @@ else version(Windows)
     }
 }
 
-version(Windows) unittest
+version(Windows) @system unittest
 {
     import std.stdio : writefln;
     auto currTime = Clock.currTime();
@@ -1212,7 +1225,7 @@ void setTimes(R)(auto ref R name,
         setTimes(TestAliasedString("foo"), SysTime.init, SysTime.init);
 }
 
-unittest
+@system unittest
 {
     import std.stdio : File;
     string newdir = deleteme ~ r".dir";
@@ -1289,7 +1302,7 @@ SysTime timeLastModified(R)(auto ref R name)
     return timeLastModified!(StringTypeOf!R)(name);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, timeLastModified(TestAliasedString("foo"))));
 }
@@ -1354,7 +1367,7 @@ SysTime timeLastModified(R)(R name, SysTime returnIfMissing)
     }
 }
 
-unittest
+@safe unittest
 {
     //std.process.system("echo a > deleteme") == 0 || assert(false);
     if (exists(deleteme))
@@ -1383,7 +1396,7 @@ unittest
 //   timestamps with 1-second precision.
 version (FreeBSD) {} else
 version (OSX) {} else
-unittest
+@system unittest
 {
     import core.thread;
 
@@ -1469,6 +1482,11 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
     assert(exists(deleteme));
 }
 
+@safe unittest // Bugzilla 16573
+{
+    enum S : string { foo = "foo" }
+    assert(__traits(compiles, S.foo.exists));
+}
 
 /++
  Returns the attributes of the given file.
@@ -1536,7 +1554,7 @@ uint getAttributes(R)(auto ref R name)
     return getAttributes!(StringTypeOf!R)(name);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, getAttributes(TestAliasedString(null))));
 }
@@ -1591,7 +1609,7 @@ uint getLinkAttributes(R)(auto ref R name)
     return getLinkAttributes!(StringTypeOf!R)(name);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, getLinkAttributes(TestAliasedString(null))));
 }
@@ -1645,7 +1663,7 @@ void setAttributes(R)(auto ref R name, uint attributes)
     return setAttributes!(StringTypeOf!R)(name, attributes);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, setAttributes(TestAliasedString(null), 0)));
 }
@@ -1688,7 +1706,7 @@ assert("/usr/share/include".isDir);
     return name.isDir!(StringTypeOf!R);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, TestAliasedString(null).isDir));
 }
@@ -1713,7 +1731,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     version(Windows)
         enum dir = "C:\\Program Files\\";
@@ -1834,13 +1852,13 @@ assert(!"/usr/share/include".isFile);
     return isFile!(StringTypeOf!R)(name);
 }
 
-unittest // bugzilla 15658
+@system unittest // bugzilla 15658
 {
     DirEntry e = DirEntry(".");
     static assert(is(typeof(isFile(e))));
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, TestAliasedString(null).isFile));
 }
@@ -1968,12 +1986,12 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
     return name.isSymlink!(StringTypeOf!R);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, TestAliasedString(null).isSymlink));
 }
 
-unittest
+@system unittest
 {
     version(Windows)
     {
@@ -2114,7 +2132,7 @@ void chdir(R)(auto ref R pathname)
     return chdir!(StringTypeOf!R)(pathname);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, chdir(TestAliasedString(null))));
 }
@@ -2146,6 +2164,8 @@ void mkdir(R)(R pathname)
     }
     else version(Posix)
     {
+        import std.conv : octal;
+
         static auto trustedMkdir(const(FSChar)* pathz, mode_t mode) @trusted
         {
             return core.sys.posix.sys.stat.mkdir(pathz, mode);
@@ -2164,8 +2184,9 @@ void mkdir(R)(auto ref R pathname)
     return mkdir!(StringTypeOf!R)(pathname);
 }
 
-unittest
+@safe unittest
 {
+    import std.path : mkdir;
     static assert(__traits(compiles, mkdir(TestAliasedString(null))));
 }
 
@@ -2174,6 +2195,8 @@ unittest
 //   "false" if it already existed.
 private bool ensureDirExists(in char[] pathname)
 {
+    import std.exception : enforce;
+
     version(Windows)
     {
         if (CreateDirectoryW(pathname.tempCStringW(), null))
@@ -2182,6 +2205,8 @@ private bool ensureDirExists(in char[] pathname)
     }
     else version(Posix)
     {
+        import std.conv : octal;
+
         if (core.sys.posix.sys.stat.mkdir(pathname.tempCString(), octal!777) == 0)
             return true;
         cenforce(errno == EEXIST || errno == EISDIR, pathname);
@@ -2201,6 +2226,8 @@ private bool ensureDirExists(in char[] pathname)
 
 void mkdirRecurse(in char[] pathname)
 {
+    import std.path : dirName, baseName;
+
     const left = dirName(pathname);
     if (left.length != pathname.length && !exists(left))
     {
@@ -2212,9 +2239,12 @@ void mkdirRecurse(in char[] pathname)
     }
 }
 
-unittest
+@system unittest
 {
+    import std.exception : assertThrown;
     {
+        import std.path : buildPath, buildNormalizedPath;
+
         immutable basepath = deleteme ~ "_dir";
         scope(exit) rmdirRecurse(basepath);
 
@@ -2298,7 +2328,7 @@ void rmdir(R)(auto ref R pathname)
     rmdir!(StringTypeOf!R)(pathname);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, rmdir(TestAliasedString(null))));
 }
@@ -2338,6 +2368,7 @@ else version(Posix) void symlink(RO, RL)(RO original, RL link)
     }
     else
     {
+        import std.conv : text;
         auto oz = original.tempCString();
         auto lz = link.tempCString();
         alias posixSymlink = core.sys.posix.unistd.symlink;
@@ -2389,7 +2420,7 @@ version(Posix) @safe unittest
     }
 }
 
-version(Posix) unittest
+version(Posix) @safe unittest
 {
     static assert(__traits(compiles,
         symlink(TestAliasedString(null), TestAliasedString(null))));
@@ -2420,6 +2451,8 @@ else version(Posix) string readLink(R)(R link)
     }
     else
     {
+        import std.conv : to;
+        import std.exception : assumeUnique;
         alias posixReadlink = core.sys.posix.unistd.readlink;
         enum bufferLen = 2048;
         enum maxCodeUnits = 6;
@@ -2460,7 +2493,9 @@ else version(Posix) string readLink(R)(R link)
 
 version(Posix) @safe unittest
 {
+    import std.exception : assertThrown;
     import std.string;
+
     foreach (file; [system_directory, system_file])
     {
         if (file.exists)
@@ -2481,7 +2516,7 @@ version(Posix) @safe unittest
     static assert(__traits(compiles, readLink(TestAliasedString("foo"))));
 }
 
-version(Posix) unittest // input range of dchars
+version(Posix) @system unittest // input range of dchars
 {
     mkdirRecurse(deleteme);
     scope(exit) if (deleteme.exists) rmdirRecurse(deleteme);
@@ -2504,6 +2539,7 @@ version(Posix) unittest // input range of dchars
  */
 version(Windows) string getcwd()
 {
+    import std.conv : to;
     import std.utf : toUTF8;
     /* GetCurrentDirectory's return value:
         1. function succeeds: the number of characters that are written to
@@ -2547,7 +2583,7 @@ else version (Posix) string getcwd()
     return p[0 .. core.stdc.string.strlen(p)].idup;
 }
 
-unittest
+@system unittest
 {
     auto s = getcwd();
     assert(s.length);
@@ -2573,6 +2609,8 @@ else version (NetBSD)
     version (OSX)
     {
         import core.sys.posix.stdlib : realpath;
+        import std.conv : to;
+        import std.exception : errnoEnforce;
 
         uint size;
 
@@ -2597,6 +2635,9 @@ else version (NetBSD)
     }
     else version (Windows)
     {
+        import std.conv : to;
+        import std.exception : enforce;
+
         wchar[MAX_PATH] buf;
         wchar[] buffer = buf[];
 
@@ -2611,6 +2652,7 @@ else version (NetBSD)
     }
     else version (FreeBSD)
     {
+        import std.exception : errnoEnforce, assumeUnique;
         enum
         {
             CTL_KERN = 1,
@@ -2648,6 +2690,7 @@ else version (NetBSD)
 
 @safe unittest
 {
+    import std.path : isAbsolute;
     auto path = thisExePath();
 
     assert(path.exists);
@@ -2845,6 +2888,7 @@ else version(Windows)
         private this(string path, in WIN32_FIND_DATAW *fd)
         {
             import core.stdc.wchar_ : wcslen;
+            import std.path : buildPath;
 
             size_t clength = wcslen(fd.cFileName.ptr);
             _name = toUTF8(fd.cFileName[0 .. clength]);
@@ -2941,6 +2985,8 @@ else version(Posix)
 
         private this(string path, core.sys.posix.dirent.dirent* fd)
         {
+            import std.path : buildPath;
+
             immutable len = core.stdc.string.strlen(fd.d_name.ptr);
             _name = buildPath(path, fd.d_name[0 .. len]);
 
@@ -3053,6 +3099,8 @@ else version(Posix)
          +/
         void _ensureStatDone() @safe
         {
+            import std.exception : enforce;
+
             static auto trustedStat(in char[] path, stat_t* buf) @trusted
             {
                 return stat(path.tempCString(), buf);
@@ -3097,6 +3145,8 @@ else version(Posix)
          +/
         void _ensureLStatDone()
         {
+            import std.exception : enforce;
+
             if (_didLStat)
                 return;
 
@@ -3123,7 +3173,7 @@ else version(Posix)
     }
 }
 
-unittest
+@system unittest
 {
     version(Windows)
     {
@@ -3151,6 +3201,8 @@ unittest
     }
     else version(Posix)
     {
+        import std.exception : assertThrown;
+
         if (system_directory.exists)
         {
             {
@@ -3207,22 +3259,22 @@ alias PreserveAttributes = Flag!"preserveAttributes";
 
 version (StdDdoc)
 {
-    /// Defaults to PreserveAttributes.yes on Windows, and the opposite on all other platforms.
+    /// Defaults to $(D Yes.preserveAttributes) on Windows, and the opposite on all other platforms.
     PreserveAttributes preserveAttributesDefault;
 }
 else version(Windows)
 {
-    enum preserveAttributesDefault = PreserveAttributes.yes;
+    enum preserveAttributesDefault = Yes.preserveAttributes;
 }
 else
 {
-    enum preserveAttributesDefault = PreserveAttributes.no;
+    enum preserveAttributesDefault = No.preserveAttributes;
 }
 
 /***************************************************
 Copy file $(D from) to file $(D to). File timestamps are preserved.
-File attributes are preserved, if $(D preserve) equals $(D PreserveAttributes.yes).
-On Windows only $(D PreserveAttributes.yes) (the default on Windows) is supported.
+File attributes are preserved, if $(D preserve) equals $(D Yes.preserveAttributes).
+On Windows only $(D Yes.preserveAttributes) (the default on Windows) is supported.
 If the target file exists, it is overwritten.
 
 Params:
@@ -3261,11 +3313,9 @@ void copy(RF, RT)(auto ref RF from, auto ref RT to, PreserveAttributes preserve 
     copy!Types(from, to, preserve);
 }
 
-unittest // issue 15319
+@safe unittest // issue 15319
 {
-    import std.file : dirEntries;
-    auto fs = dirEntries(tempDir(), SpanMode.depth);
-    assert(__traits(compiles, copy(fs.front, fs.front)));
+    assert(__traits(compiles, copy("from.txt", "to.txt")));
 }
 
 private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, const(FSChar)* toz,
@@ -3288,8 +3338,8 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
     }
     else version(Posix)
     {
-        import core.stdc.stdio;
-        static import std.conv;
+        static import core.stdc.stdio;
+        import std.conv : to, octal;
 
         immutable fdr = core.sys.posix.fcntl.open(fromz, O_RDONLY);
         cenforce(fdr != -1, f, fromz);
@@ -3341,7 +3391,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
                 size -= toxfer;
             }
             if (preserve)
-                cenforce(fchmod(fdw, std.conv.to!mode_t(statbufr.st_mode)) == 0, f, fromz);
+                cenforce(fchmod(fdw, to!mode_t(statbufr.st_mode)) == 0, f, fromz);
         }
 
         cenforce(core.sys.posix.unistd.close(fdw) != -1, f, fromz);
@@ -3354,7 +3404,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
     }
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm, std.file; // issue 14817
     auto t1 = deleteme, t2 = deleteme~"2";
@@ -3371,8 +3421,9 @@ unittest
     assert(readText(t2.byChar) == "2");
 }
 
-version(Posix) unittest //issue 11434
+@safe version(Posix) unittest //issue 11434
 {
+    import std.conv : octal;
     auto t1 = deleteme, t2 = deleteme~"2";
     scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
     write(t1, "1");
@@ -3382,8 +3433,9 @@ version(Posix) unittest //issue 11434
     assert(getAttributes(t2) == octal!100767);
 }
 
-unittest // issue 15865
+@safe unittest // issue 15865
 {
+    import std.exception : assertThrown;
     auto t = deleteme;
     write(t, "a");
     scope(exit) t.remove();
@@ -3449,16 +3501,18 @@ void rmdirRecurse(DirEntry de)
     rmdirRecurse(de);
 }
 
-version(Windows) unittest
+version(Windows) @system unittest
 {
+    import std.exception : enforce;
     auto d = deleteme ~ r".dir\a\b\c\d\e\f\g";
     mkdirRecurse(d);
     rmdirRecurse(deleteme ~ ".dir");
     enforce(!exists(deleteme ~ ".dir"));
 }
 
-version(Posix) unittest
+version(Posix) @system unittest
 {
+    import std.exception : enforce, collectException;
     import std.process : executeShell;
     collectException(rmdirRecurse(deleteme));
     auto d = deleteme~"/a/b/c/d/e/f/g";
@@ -3480,7 +3534,7 @@ version(Posix) unittest
     enforce(!exists(deleteme));
 }
 
-unittest
+@system unittest
 {
     void[] buf;
 
@@ -3554,6 +3608,8 @@ private struct DirIteratorImpl
 
         bool stepIn(string directory)
         {
+            import std.path : chainPath;
+
             auto search_pattern = chainPath(directory, "*.*");
             WIN32_FIND_DATAW findinfo;
             HANDLE h = FindFirstFileW(search_pattern.tempCString!FSChar(), &findinfo);
@@ -3677,7 +3733,7 @@ private struct DirIteratorImpl
             alias pathnameStr = pathname;
         else
         {
-            import std.array;
+            import std.array : array;
             string pathnameStr = pathname.array;
         }
         if (stepIn(pathnameStr))
@@ -3813,7 +3869,7 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 }
 
 /// Duplicate functionality of D1's $(D std.file.listdir()):
-unittest
+@safe unittest
 {
     string[] listdir(string pathname)
     {
@@ -3837,11 +3893,17 @@ unittest
      }
 }
 
-unittest
+@system unittest
 {
-    import std.algorithm;
-    import std.range;
-    import std.process;
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    import std.algorithm.searching : startsWith;
+    import std.array : array;
+    import std.conv : to;
+    import std.path : dirEntries, buildPath, absolutePath;
+    import std.process : thisProcessID;
+    import std.range.primitives : walkLength;
+
     version(Android)
         string testdir = deleteme; // This has to be an absolute path when
                                    // called from a shared library on Android,
@@ -3856,10 +3918,11 @@ unittest
     // testing range interface
     size_t equalEntries(string relpath, SpanMode mode)
     {
+        import std.exception : enforce;
         auto len = enforce(walkLength(dirEntries(absolutePath(relpath), mode)));
         assert(walkLength(dirEntries(relpath, mode)) == len);
         assert(equal(
-                   map!(a => std.path.absolutePath(a.name))(dirEntries(relpath, mode)),
+                   map!(a => absolutePath(a.name))(dirEntries(relpath, mode)),
                    map!(a => a.name)(dirEntries(absolutePath(relpath), mode))));
         return len;
     }
@@ -3930,12 +3993,14 @@ foreach (d; dFiles)
 auto dirEntries(string path, string pattern, SpanMode mode,
     bool followSymlink = true)
 {
-    import std.algorithm : filter;
+    import std.algorithm.iteration : filter;
+    import std.path : globMatch, baseName;
+
     bool f(DirEntry de) { return globMatch(baseName(de.name), pattern); }
     return filter!f(DirIterator(path, mode, followSymlink));
 }
 
-unittest
+@system unittest
 {
     import std.stdio : writefln;
     immutable dpath = deleteme ~ "_dir";
@@ -4013,7 +4078,26 @@ unittest
 
 
 /**
-Reads an entire file into an array.
+ * Reads a file line by line and parses the line into a single value or a
+ * $(REF Tuple, std,typecons) of values depending on the length of `Types`.
+ * The lines are parsed using the specified format string. The format string is
+ * passed to $(REF formattedRead, std,format), and therefore must conform to the
+ * format string specification outlined in $(MREF format).
+ *
+ * Params:
+ *     Types = the types that each of the elements in the line should be returned as
+ *     filename = the name of the file to read
+ *     format = the format string to use when reading
+ *
+ * Returns:
+ *     If only one type is passed, then an array of that type. Otherwise, an
+ *     array of $(REF Tuple, std,typecons)s.
+ *
+ * Throws:
+ *     `Exception` if the format string is malformed. Also, throws `Exception`
+ *     if any of the lines in the file are not fully consumed by the call
+ *     to $(REF formattedRead, std,format). Meaning that no empty lines or lines
+ *     with extra characters are allowed.
  */
 Select!(Types.length == 1, Types[0][], Tuple!(Types)[])
 slurp(Types...)(string filename, in char[] format)
@@ -4021,7 +4105,9 @@ slurp(Types...)(string filename, in char[] format)
     import std.stdio : File;
     import std.format : formattedRead;
     import std.array : appender;
-    typeof(return) result;
+    import std.conv : text;
+    import std.exception : enforce;
+
     auto app = appender!(typeof(return))();
     ElementType!(typeof(return)) toAdd;
     auto f = File(filename);
@@ -4038,7 +4124,7 @@ slurp(Types...)(string filename, in char[] format)
 }
 
 ///
-unittest
+@system unittest
 {
     scope(exit)
     {

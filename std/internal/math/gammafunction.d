@@ -1089,7 +1089,8 @@ real betaDistExpansion1(real a, real b, real x )
     r = 1.0L;
     n = 0;
     const real thresh = 3.0L * real.epsilon;
-    do  {
+    do
+    {
         xk = -( x * k1 * k2 )/( k3 * k4 );
         pk = pkm1 +  pkm2 * xk;
         qk = qkm1 +  qkm2 * xk;
@@ -1177,8 +1178,8 @@ real betaDistExpansion2(real a, real b, real x )
     r = 1.0L;
     int n = 0;
     const real thresh = 3.0L * real.epsilon;
-    do {
-
+    do
+    {
         xk = -( z * k1 * k2 )/( k3 * k4 );
         pk = pkm1 +  pkm2 * xk;
         qk = qkm1 +  qkm2 * xk;
@@ -1327,7 +1328,8 @@ body {
     real c = 1.0L;
     real ans = 1.0L;
 
-    do  {
+    do
+    {
         r += 1.0L;
         c *= x/r;
         ans += c;
@@ -1374,7 +1376,8 @@ body {
     real qkm1 = z * x;
     real ans = pkm1/qkm1;
 
-    do  {
+    do
+    {
         c += 1.0L;
         y += 1.0L;
         z += 2.0L;

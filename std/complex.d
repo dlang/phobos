@@ -53,7 +53,7 @@ auto complex(R, I)(R re, I im)  @safe pure nothrow @nogc
 }
 
 ///
-@safe unittest
+@safe pure nothrow unittest
 {
     auto a = complex(1.0);
     static assert (is(typeof(a) == Complex!double));
@@ -429,7 +429,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     }
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.math;
     import std.complex;
@@ -503,6 +503,10 @@ struct Complex(T)  if (isFloatingPoint!T)
     auto rdc = a / c1;
     assert (approxEqual(abs(rdc), a/abs(c1), EPS));
     assert (approxEqual(arg(rdc), -arg(c1), EPS));
+
+    rdc = a / c2;
+    assert (approxEqual(abs(rdc), a/abs(c2), EPS));
+    assert (approxEqual(arg(rdc), -arg(c2), EPS));
 
     auto rec1a = 1.0 ^^ c1;
     assert(rec1a.re == 1.0);
@@ -578,9 +582,30 @@ struct Complex(T)  if (isFloatingPoint!T)
     static assert (is(typeof(c1pcr) == Complex!real));
     assert (c1pcf.re == c1pcr.re);
     assert (c1pcf.im == c1pcr.im);
+
+    auto c1c = c1;
+    auto c2c = c2;
+
+    c1c /= c1;
+    assert(approxEqual(c1c.re, 1.0, EPS));
+    assert(approxEqual(c1c.im, 0.0, EPS));
+
+    c1c = c1;
+    c1c /= c2;
+    assert(approxEqual(c1c.re, 0.588235, EPS));
+    assert(approxEqual(c1c.im, -0.352941, EPS));
+
+    c2c /= c1;
+    assert(approxEqual(c2c.re, 1.25, EPS));
+    assert(approxEqual(c2c.im, 0.75, EPS));
+
+    c2c = c2;
+    c2c /= c2;
+    assert(approxEqual(c2c.re, 1.0, EPS));
+    assert(approxEqual(c2c.im, 0.0, EPS));
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     // Initialization
     Complex!double a = 1;
@@ -591,7 +616,7 @@ struct Complex(T)  if (isFloatingPoint!T)
     assert (c.re == 1.0 && c.im == 2);
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     // Assignments and comparisons
     Complex!double z;
@@ -638,7 +663,7 @@ template Complex(T) if (is(T R == Complex!R))
     alias Complex = T;
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     static assert (is(Complex!(Complex!real) == Complex!real));
 
@@ -667,7 +692,7 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
 }
 
 ///
-@safe unittest
+@safe pure nothrow unittest
 {
     static import std.math;
     assert (abs(complex(1.0)) == 1.0);
@@ -689,7 +714,7 @@ T sqAbs(T)(Complex!T z) @safe pure nothrow @nogc
 }
 
 ///
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.math;
     assert (sqAbs(complex(0.0)) == 0.0);
@@ -707,7 +732,7 @@ T sqAbs(T)(T x) @safe pure nothrow @nogc
     return x*x;
 }
 
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.math;
     assert (sqAbs(0.0) == 0.0);
@@ -728,7 +753,7 @@ T arg(T)(Complex!T z) @safe pure nothrow @nogc
 }
 
 ///
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.math;
     assert (arg(complex(1.0)) == 0.0);
@@ -747,7 +772,7 @@ Complex!T conj(T)(Complex!T z) @safe pure nothrow @nogc
 }
 
 ///
-@safe unittest
+@safe pure nothrow unittest
 {
     assert (conj(complex(1.0)) == complex(1.0));
     assert (conj(complex(1.0, 2.0)) == complex(1.0, -2.0));
@@ -770,7 +795,7 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
 }
 
 ///
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.math;
     auto z = fromPolar(std.math.sqrt(2.0), PI_4);
@@ -794,7 +819,7 @@ Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 }
 
 ///
-@safe unittest
+@safe pure nothrow unittest
 {
     static import std.math;
     assert(sin(complex(0.0)) == 0.0);
@@ -812,7 +837,7 @@ Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
 }
 
 ///
-@safe unittest
+@safe pure nothrow unittest
 {
     import std.math;
     import std.complex;
@@ -839,7 +864,7 @@ Complex!real expi(real y)  @trusted pure nothrow @nogc
 }
 
 ///
-@safe unittest
+@safe pure nothrow unittest
 {
     static import std.math;
 
@@ -900,12 +925,28 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 }
 
 ///
-@safe unittest
+@safe pure nothrow unittest
 {
     static import std.math;
     assert (sqrt(complex(0.0)) == 0.0);
     assert (sqrt(complex(1.0L, 0)) == std.math.sqrt(1.0L));
     assert (sqrt(complex(-1.0L, 0)) == complex(0, 1.0L));
+}
+
+@safe pure nothrow unittest
+{
+    import std.math : approxEqual;
+
+    auto c1 = complex(1.0, 1.0);
+    auto c2 = Complex!double(0.5, 2.0);
+
+    auto c1s = sqrt(c1);
+    assert (approxEqual(c1s.re, 1.09868411));
+    assert (approxEqual(c1s.im, 0.45508986));
+
+    auto c2s = sqrt(c2);
+    assert (approxEqual(c2s.re, 1.1317134));
+    assert (approxEqual(c2s.im, 0.8836155));
 }
 
 // Issue 10881: support %f formatting of complex numbers

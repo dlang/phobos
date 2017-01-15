@@ -109,6 +109,7 @@ public import core.time;
 
 import core.exception; // AssertError
 
+import std.typecons : Flag, Yes, No;
 import std.exception; // assertThrown, enforce
 import std.range.primitives; // back, ElementType, empty, front, hasLength,
     // hasSlicing, isRandomAccessRange, popFront
@@ -122,6 +123,12 @@ version(Windows)
     import core.sys.windows.windows;
     import core.sys.windows.winsock2;
     import std.windows.registry;
+
+    // Uncomment and run unittests to print missing Windows TZ translations.
+    // Please subscribe to Microsoft Daylight Saving Time & Time Zone Blog
+    // (https://blogs.technet.microsoft.com/dst2007/) if you feel responsible
+    // for updating the translations.
+    // version = UpdateWindowsTZTranslations;
 }
 else version(Posix)
 {
@@ -129,13 +136,13 @@ else version(Posix)
     import core.sys.posix.sys.types; // time_t
 }
 
-unittest
+@safe unittest
 {
     initializeTests();
 }
 
 //Verify module example.
-unittest
+@safe unittest
 {
     auto currentTime = Clock.currTime();
     auto timeString = currentTime.toISOExtString();
@@ -143,7 +150,7 @@ unittest
 }
 
 //Verify Examples for core.time.Duration which couldn't be in core.time.
-unittest
+@safe unittest
 {
     assert(std.datetime.Date(2010, 9, 7) + dur!"days"(5) ==
            std.datetime.Date(2010, 9, 12));
@@ -197,15 +204,13 @@ enum DayOfWeek : ubyte { sun = 0, ///
     June 31st 2000 would become June 30th 2000).
 
     AllowDayOverflow only applies to calculations involving months or years.
-  +/
-enum AllowDayOverflow
-{
-    /// No, don't allow day overflow.
-    no,
 
-    /// Yes, allow day overflow.
-    yes
-}
+    If set to $(D AllowDayOverflow.no), then day overflow is not allowed.
+
+    Otherwise, if set to $(D AllowDayOverflow.yes), then day overflow is
+    allowed.
+  +/
+alias AllowDayOverflow = Flag!"allowDayOverflow";
 
 /++
     Indicates a direction in time. One example of its use is $(LREF2 .Interval, Interval)'s
@@ -248,28 +253,26 @@ enum Direction
     cases is exactly what is desired -
     e.g. if iterating over every day starting at the beginning
     of the interval).
-  +/
-enum PopFirst
-{
-    /// No, don't call popFront() before returning the range.
-    no,
 
-    /// Yes, call popFront() before returning the range.
-    yes
-}
+    If set to $(D PopFirst.no), then popFront is not called before returning
+    the range.
+
+    Otherwise, if set to $(D PopFirst.yes), then popFront is called before
+    returning the range.
+  +/
+alias PopFirst = Flag!"popFirst";
 
 /++
    Used by StopWatch to indicate whether it should start immediately upon
    construction.
-  +/
-enum AutoStart
-{
-    /// No, don't start the StopWatch when it is constructed.
-    no,
 
-    /// Yes, do start the StopWatch when it is constructed.
-    yes
-}
+   If set to $(D AutoStart.no), then the stopwatch is not started when it is
+   constructed.
+
+   Otherwise, if set to $(D AutoStart.yes), then the stopwatch is started when
+   it is constructed.
+  +/
+alias AutoStart = Flag!"autoStart";
 
 /++
     Array of the strings representing time units, starting with the smallest
@@ -320,7 +323,7 @@ public:
         return SysTime(currStdTime!clockType, tz);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.stdio : writefln;
@@ -439,7 +442,8 @@ public:
             }
             else version(FreeBSD)
             {
-                import core.sys.freebsd.time;
+                import core.sys.freebsd.time : clock_gettime, CLOCK_REALTIME,
+                    CLOCK_REALTIME_FAST, CLOCK_REALTIME_PRECISE, CLOCK_SECOND;
                 static if (clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME_FAST;
                 else static if (clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
                 else static if (clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME_PRECISE;
@@ -473,7 +477,7 @@ public:
                     return unixTimeToStdTime(core.stdc.time.time(null));
                 else
                 {
-                    import core.sys.solaris.time;
+                    import core.sys.solaris.time : CLOCK_REALTIME;
                     static if (clockType == ClockType.coarse)       alias clockArg = CLOCK_REALTIME;
                     else static if (clockType == ClockType.normal)  alias clockArg = CLOCK_REALTIME;
                     else static if (clockType == ClockType.precise) alias clockArg = CLOCK_REALTIME;
@@ -491,7 +495,7 @@ public:
         else static assert(0, "Unsupported OS");
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.math : abs;
@@ -542,7 +546,7 @@ public:
         return TickDuration.currSystemTick;
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         assert(Clock.currSystemTick.length > 0);
     }
@@ -589,7 +593,7 @@ public:
         return currSystemTick - TickDuration.appOrigin;
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         auto a = Clock.currSystemTick;
         auto b = Clock.currAppTick;
@@ -674,7 +678,7 @@ public:
             assert(0, "SysTime's constructor threw when it shouldn't have.");
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         static void test(DateTime dt, immutable TimeZone tz, long expected)
@@ -726,7 +730,7 @@ public:
         this(standardTime, nonNullTZ);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         static void test(DateTime dt, Duration fracSecs, immutable TimeZone tz, long expected)
@@ -751,24 +755,7 @@ public:
         assertThrown!DateTimeException(SysTime(DateTime.init, seconds(1), UTC()));
     }
 
-    // @@@DEPRECATED_2016-08@@@
-    /++
-        $(RED Deprecated. Please use the overload which takes a
-              $(REF Duration, core,time) for the fractional seconds. This overload
-              will be removed in August 2016.)
-
-        Params:
-            dateTime = The $(LREF DateTime) to use to set this $(LREF SysTime)'s
-                       internal std time. As $(LREF DateTime) has no concept of
-                       time zone, tz is used as its time zone.
-            fracSec  = The fractional seconds portion of the time.
-            tz       = The $(LREF2 .TimeZone, TimeZone) to use for this $(LREF SysTime). If null,
-                       $(LREF LocalTime) will be used. The given $(LREF DateTime) is
-                       assumed to be in the given time zone.
-
-        Throws:
-            $(LREF DateTimeException) if $(D fracSec) is negative.
-      +/
+    // Explicitly undocumented. It will be removed in August 2017. @@@DEPRECATED_2017-08@@@
     deprecated("Please use the overload which takes a Duration instead of a FracSec.")
     this(in DateTime dateTime, in FracSec fracSec, immutable TimeZone tz = null) @safe
     {
@@ -790,7 +777,7 @@ public:
             assert(0, "Date, TimeOfDay, or DateTime's constructor threw when it shouldn't have.");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         import std.format : format;
 
@@ -842,7 +829,7 @@ public:
             assert(0, "Date's constructor through when it shouldn't have.");
     }
 
-    unittest
+    @safe unittest
     {
         static void test(Date d, immutable TimeZone tz, long expected)
         {
@@ -881,7 +868,7 @@ public:
         _timezone = tz is null ? LocalTime() : tz;
     }
 
-    unittest
+    @safe unittest
     {
         static void test(long stdTime, immutable TimeZone tz)
         {
@@ -941,7 +928,7 @@ public:
         return _stdTime == rhs._stdTime;
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
         assert(SysTime(DateTime.init, UTC()) == SysTime(0, UTC()));
@@ -1007,7 +994,7 @@ public:
         return 0;
     }
 
-    unittest
+    @safe unittest
     {
         import std.algorithm.iteration : map;
         import std.array : array;
@@ -1068,6 +1055,68 @@ public:
         //assert(ist.opCmp(ist) == 0);
     }
 
+    /**
+     * Returns: A hash of the $(LREF SysTime)
+     */
+    size_t toHash() const @nogc pure nothrow @safe
+    {
+        static if (is(size_t == ulong))
+        {
+            return _stdTime;
+        }
+        else
+        {
+            // MurmurHash2
+            enum ulong m = 0xc6a4a7935bd1e995UL;
+            enum ulong n = m * 16;
+            enum uint r = 47;
+
+            ulong k = _stdTime;
+            k *= m;
+            k ^= k >> r;
+            k *= m;
+
+            ulong h = n;
+            h ^= k;
+            h *= m;
+
+            return cast(size_t) h;
+        }
+    }
+
+    @safe unittest
+    {
+        assert(SysTime(0).toHash == SysTime(0).toHash);
+        assert(SysTime(DateTime(2000, 1, 1)).toHash == SysTime(DateTime(2000, 1, 1)).toHash);
+        assert(SysTime(DateTime(2000, 1, 1)).toHash != SysTime(DateTime(2000, 1, 2)).toHash);
+
+        // test that timezones aren't taken into account
+        assert(SysTime(0, LocalTime()).toHash == SysTime(0, LocalTime()).toHash);
+        assert(SysTime(0, LocalTime()).toHash == SysTime(0, UTC()).toHash);
+        assert(
+            SysTime(
+                DateTime(2000, 1, 1), LocalTime()
+            ).toHash == SysTime(
+                DateTime(2000, 1, 1), LocalTime()
+            ).toHash
+        );
+        immutable zone = new SimpleTimeZone(dur!"minutes"(60));
+        assert(
+            SysTime(
+                DateTime(2000, 1, 1, 1), zone
+            ).toHash == SysTime(
+                DateTime(2000, 1, 1), UTC()
+            ).toHash
+        );
+        assert(
+            SysTime(
+                DateTime(2000, 1, 1), zone
+            ).toHash != SysTime(
+                DateTime(2000, 1, 1), UTC()
+            ).toHash
+        );
+    }
+
     /++
         Year of the Gregorian Calendar. Positive numbers are A.D. Non-positive
         are B.C.
@@ -1077,7 +1126,7 @@ public:
         return (cast(Date)this).year;
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
         static void test(SysTime sysTime, long expected)
@@ -1144,14 +1193,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).year == 1999);
         assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).year == 2010);
         assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).year == -7);
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
         static void test(SysTime st, int year, in SysTime expected)
@@ -1211,14 +1260,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(0, 1, 1, 12, 30, 33)).yearBC == 1);
         assert(SysTime(DateTime(-1, 1, 1, 10, 7, 2)).yearBC == 2);
         assert(SysTime(DateTime(-100, 1, 1, 4, 59, 0)).yearBC == 101);
     }
 
-    unittest
+    @safe unittest
     {
         import std.exception : assertNotThrown;
         import std.format : format;
@@ -1269,7 +1318,7 @@ public:
         adjTime = newDaysHNSecs + hnsecs;
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(2010, 1, 1, 7, 30, 0));
         st.yearBC = 1;
@@ -1279,7 +1328,7 @@ public:
         assert(st == SysTime(DateTime(-9, 1, 1, 7, 30, 0)));
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
         static void test(SysTime st, int year, in SysTime expected)
@@ -1347,14 +1396,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).month == 7);
         assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).month == 10);
         assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).month == 4);
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
         static void test(SysTime sysTime, Month expected)
@@ -1419,7 +1468,7 @@ public:
         adjTime = newDaysHNSecs + hnsecs;
     }
 
-    unittest
+    @safe unittest
     {
         import std.algorithm.iteration : filter;
         import std.range : chain;
@@ -1508,14 +1557,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 7, 6, 9, 7, 5)).day == 6);
         assert(SysTime(DateTime(2010, 10, 4, 0, 0, 30)).day == 4);
         assert(SysTime(DateTime(-7, 4, 5, 7, 45, 2)).day == 5);
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
 
@@ -1582,7 +1631,7 @@ public:
         adjTime = newDaysHNSecs + hnsecs;
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -1672,7 +1721,7 @@ public:
         return cast(ubyte)getUnitsFromHNSecs!"hours"(hnsecs);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -1749,7 +1798,7 @@ public:
         adjTime = daysHNSecs + hnsecs;
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -1797,7 +1846,7 @@ public:
         return cast(ubyte)getUnitsFromHNSecs!"minutes"(hnsecs);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -1877,7 +1926,7 @@ public:
         adjTime = daysHNSecs + hnsecs;
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -1926,7 +1975,7 @@ public:
         return cast(ubyte)getUnitsFromHNSecs!"seconds"(hnsecs);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -2008,7 +2057,7 @@ public:
         adjTime = daysHNSecs + hnsecs;
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -2052,7 +2101,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(1982, 4, 1, 20, 59, 22);
         assert(SysTime(dt, msecs(213)).fracSecs == msecs(213));
@@ -2064,7 +2113,7 @@ public:
         assert(SysTime(dt, nsecs(123456789)).fracSecs == nsecs(123456700));
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
 
@@ -2137,7 +2186,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1982, 4, 1, 20, 59, 22));
         assert(st.fracSecs == Duration.zero);
@@ -2154,7 +2203,7 @@ public:
         assert(st.fracSecs == hnsecs(1234567));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -2181,15 +2230,7 @@ public:
     }
 
 
-    // @@@DEPRECATED_2016-08@@@
-    /++
-        $(RED Deprecated. Please use $(LREF fracSecs) instead of fracSec. It
-              uses a $(REF Duration, core,time) to represent the fractional seconds
-              instead of a $(REF FracSec, core,time). This overload will be removed
-              in August 2016.)
-
-        Fractional seconds past the second.
-     +/
+    // Explicitly undocumented. It will be removed in August 2017. @@@DEPRECATED_2017-08@@@
     deprecated("Please use fracSecs (with an s) rather than fracSec (without an s). "
         ~"It returns a Duration instead of a FracSec, as FracSec is being deprecated.")
     @property FracSec fracSec() @safe const nothrow
@@ -2209,7 +2250,7 @@ public:
             assert(0, "FracSec.from!\"hnsecs\"() threw.");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         import std.range;
         import std.format : format;
@@ -2255,22 +2296,7 @@ public:
     }
 
 
-    // @@@DEPRECATED_2016-08@@@
-    /++
-        $(RED Deprecated. Please use $(LREF fracSecs) instead of fracSec. It
-              uses a $(REF Duration, core,time) to represent the fractional seconds
-              instead of a $(REF FracSec, core,time). This overload will be removed
-              in August 2016.)
-
-        Fractional seconds past the second.
-
-        Params:
-            fracSec = The fractional seconds to set this $(LREF SysTime)'s
-                      fractional seconds to.
-
-        Throws:
-            $(LREF DateTimeException) if $(D fracSec) is negative.
-     +/
+    // Explicitly undocumented. It will be removed in August 2017. @@@DEPRECATED_2017-08@@@
     deprecated("Please use fracSecs (with an s) rather than fracSec (without an s). "
         ~"It takes a Duration instead of a FracSec, as FracSec is being deprecated.")
     @property void fracSec(FracSec fracSec) @safe
@@ -2301,7 +2327,7 @@ public:
         adjTime = daysHNSecs + hnsecs;
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         import std.range;
         import std.format : format;
@@ -2336,7 +2362,7 @@ public:
         return _stdTime;
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime(0).stdTime == 0);
         assert(SysTime(1).stdTime == 1);
@@ -2363,7 +2389,7 @@ public:
         _stdTime = stdTime;
     }
 
-    unittest
+    @safe unittest
     {
         static void test(long stdTime, in SysTime expected, size_t line = __LINE__)
         {
@@ -2444,7 +2470,7 @@ public:
         return SysTime(_stdTime, LocalTime());
     }
 
-    unittest
+    @safe unittest
     {
         {
             auto sysTime = SysTime(DateTime(1982, 1, 4, 8, 59, 7), hnsecs(27));
@@ -2476,7 +2502,7 @@ public:
         return SysTime(_stdTime, UTC());
     }
 
-    unittest
+    @safe unittest
     {
         auto sysTime = SysTime(DateTime(1982, 1, 4, 8, 59, 7), hnsecs(27));
         assert(sysTime == sysTime.toUTC());
@@ -2499,7 +2525,7 @@ public:
             return SysTime(_stdTime, tz);
     }
 
-    unittest
+    @safe unittest
     {
         auto stz = new immutable SimpleTimeZone(dur!"minutes"(11 * 60));
         auto sysTime = SysTime(DateTime(1982, 1, 4, 8, 59, 7), hnsecs(27));
@@ -2547,7 +2573,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1970, 1, 1), UTC()).toUnixTime() == 0);
 
@@ -2561,7 +2587,7 @@ public:
         assert(ca.toUnixTime() == 1_198_340_085);
     }
 
-    unittest
+    @safe unittest
     {
         import std.meta : AliasSeq;
         assert(SysTime(DateTime(1970, 1, 1), UTC()).toUnixTime() == 0);
@@ -2595,7 +2621,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime.fromUnixTime(0) ==
                SysTime(DateTime(1970, 1, 1), UTC()));
@@ -2615,7 +2641,7 @@ public:
         assert(st2 == SysTime(DateTime(2007, 12, 22, 0, 14, 45), pst));
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime.fromUnixTime(0) == SysTime(DateTime(1970, 1, 1), UTC()));
         assert(SysTime.fromUnixTime(1) == SysTime(DateTime(1970, 1, 1, 0, 0, 1), UTC()));
@@ -2650,7 +2676,7 @@ public:
         return timeval(tv_sec, tv_usec);
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1970, 1, 1), UTC()).toTimeVal() == timeval(0, 0));
         assert(SysTime(DateTime(1970, 1, 1), hnsecs(9), UTC()).toTimeVal() == timeval(0, 0));
@@ -2694,7 +2720,7 @@ public:
             return timespec(tv_sec, tv_nsec);
         }
 
-        unittest
+        @safe unittest
         {
             assert(SysTime(DateTime(1970, 1, 1), UTC()).toTimeSpec() == timespec(0, 0));
             assert(SysTime(DateTime(1970, 1, 1), hnsecs(9), UTC()).toTimeSpec() == timespec(0, 900));
@@ -2760,7 +2786,7 @@ public:
         return timeInfo;
     }
 
-    unittest
+    @system unittest
     {
         import std.conv : to;
         version(Posix)
@@ -2838,7 +2864,7 @@ public:
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
       +/
-    ref SysTime add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe nothrow
+    ref SysTime add(string units)(long value, AllowDayOverflow allowOverflow = Yes.allowDayOverflow) @safe nothrow
         if (units == "years" ||
            units == "months")
     {
@@ -2868,7 +2894,7 @@ public:
         return this;
     }
 
-    unittest
+    @safe unittest
     {
         auto st1 = SysTime(DateTime(2010, 1, 1, 12, 30, 33));
         st1.add!"months"(11);
@@ -2883,12 +2909,12 @@ public:
         assert(st3 == SysTime(DateTime(2001, 3, 1, 12, 30, 33)));
 
         auto st4 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
-        st4.add!"years"(1, AllowDayOverflow.no);
+        st4.add!"years"(1, No.allowDayOverflow);
         assert(st4 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
     }
 
-    //Test add!"years"() with AllowDayOverlow.yes
-    unittest
+    //Test add!"years"() with Yes.allowDayOverflow
+    @safe unittest
     {
         //Test A.D.
         {
@@ -3089,165 +3115,165 @@ public:
         //static assert(!__traits(compiles, ist.add!"years"(4)));
     }
 
-    //Test add!"years"() with AllowDayOverlow.no
-    unittest
+    //Test add!"years"() with No.allowDayOverflow
+    @safe unittest
     {
         //Test A.D.
         {
             auto sysTime = SysTime(Date(1999, 7, 6));
-            sysTime.add!"years"(7, AllowDayOverflow.no);
+            sysTime.add!"years"(7, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(2006, 7, 6)));
-            sysTime.add!"years"(-9, AllowDayOverflow.no);
+            sysTime.add!"years"(-9, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1997, 7, 6)));
         }
 
         {
             auto sysTime = SysTime(Date(1999, 2, 28));
-            sysTime.add!"years"(1, AllowDayOverflow.no);
+            sysTime.add!"years"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(2000, 2, 28)));
         }
 
         {
             auto sysTime = SysTime(Date(2000, 2, 29));
-            sysTime.add!"years"(-1, AllowDayOverflow.no);
+            sysTime.add!"years"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 2, 28)));
         }
 
         {
             auto sysTime = SysTime(DateTime(1999, 7, 6, 12, 7, 3), msecs(234));
-            sysTime.add!"years"(7, AllowDayOverflow.no);
+            sysTime.add!"years"(7, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(2006, 7, 6, 12, 7, 3), msecs(234)));
-            sysTime.add!"years"(-9, AllowDayOverflow.no);
+            sysTime.add!"years"(-9, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1997, 7, 6, 12, 7, 3), msecs(234)));
         }
 
         {
             auto sysTime = SysTime(DateTime(1999, 2, 28, 0, 7, 2), usecs(1207));
-            sysTime.add!"years"(1, AllowDayOverflow.no);
+            sysTime.add!"years"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(2000, 2, 28, 0, 7, 2), usecs(1207)));
         }
 
         {
             auto sysTime = SysTime(DateTime(2000, 2, 29, 0, 7, 2), usecs(1207));
-            sysTime.add!"years"(-1, AllowDayOverflow.no);
+            sysTime.add!"years"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1999, 2, 28, 0, 7, 2), usecs(1207)));
         }
 
         //Test B.C.
         {
             auto sysTime = SysTime(Date(-1999, 7, 6));
-            sysTime.add!"years"(-7, AllowDayOverflow.no);
+            sysTime.add!"years"(-7, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-2006, 7, 6)));
-            sysTime.add!"years"(9, AllowDayOverflow.no);
+            sysTime.add!"years"(9, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1997, 7, 6)));
         }
 
         {
             auto sysTime = SysTime(Date(-1999, 2, 28));
-            sysTime.add!"years"(-1, AllowDayOverflow.no);
+            sysTime.add!"years"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-2000, 2, 28)));
         }
 
         {
             auto sysTime = SysTime(Date(-2000, 2, 29));
-            sysTime.add!"years"(1, AllowDayOverflow.no);
+            sysTime.add!"years"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 2, 28)));
         }
 
         {
             auto sysTime = SysTime(DateTime(-1999, 7, 6, 12, 7, 3), msecs(234));
-            sysTime.add!"years"(-7, AllowDayOverflow.no);
+            sysTime.add!"years"(-7, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-2006, 7, 6, 12, 7, 3), msecs(234)));
-            sysTime.add!"years"(9, AllowDayOverflow.no);
+            sysTime.add!"years"(9, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-1997, 7, 6, 12, 7, 3), msecs(234)));
         }
 
         {
             auto sysTime = SysTime(DateTime(-1999, 2, 28, 3, 3, 3), hnsecs(3));
-            sysTime.add!"years"(-1, AllowDayOverflow.no);
+            sysTime.add!"years"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-2000, 2, 28, 3, 3, 3), hnsecs(3)));
         }
 
         {
             auto sysTime = SysTime(DateTime(-2000, 2, 29, 3, 3, 3), hnsecs(3));
-            sysTime.add!"years"(1, AllowDayOverflow.no);
+            sysTime.add!"years"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-1999, 2, 28, 3, 3, 3), hnsecs(3)));
         }
 
         //Test Both
         {
             auto sysTime = SysTime(Date(4, 7, 6));
-            sysTime.add!"years"(-5, AllowDayOverflow.no);
+            sysTime.add!"years"(-5, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1, 7, 6)));
-            sysTime.add!"years"(5, AllowDayOverflow.no);
+            sysTime.add!"years"(5, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(4, 7, 6)));
         }
 
         {
             auto sysTime = SysTime(Date(-4, 7, 6));
-            sysTime.add!"years"(5, AllowDayOverflow.no);
+            sysTime.add!"years"(5, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1, 7, 6)));
-            sysTime.add!"years"(-5, AllowDayOverflow.no);
+            sysTime.add!"years"(-5, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-4, 7, 6)));
         }
 
         {
             auto sysTime = SysTime(Date(4, 7, 6));
-            sysTime.add!"years"(-8, AllowDayOverflow.no);
+            sysTime.add!"years"(-8, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-4, 7, 6)));
-            sysTime.add!"years"(8, AllowDayOverflow.no);
+            sysTime.add!"years"(8, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(4, 7, 6)));
         }
 
         {
             auto sysTime = SysTime(Date(-4, 7, 6));
-            sysTime.add!"years"(8, AllowDayOverflow.no);
+            sysTime.add!"years"(8, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(4, 7, 6)));
-            sysTime.add!"years"(-8, AllowDayOverflow.no);
+            sysTime.add!"years"(-8, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-4, 7, 6)));
         }
 
         {
             auto sysTime = SysTime(Date(-4, 2, 29));
-            sysTime.add!"years"(5, AllowDayOverflow.no);
+            sysTime.add!"years"(5, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1, 2, 28)));
         }
 
         {
             auto sysTime = SysTime(Date(4, 2, 29));
-            sysTime.add!"years"(-5, AllowDayOverflow.no);
+            sysTime.add!"years"(-5, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1, 2, 28)));
         }
 
         {
             auto sysTime = SysTime(DateTime(1, 1, 1, 0, 0, 0));
-            sysTime.add!"years"(-1, AllowDayOverflow.no);
+            sysTime.add!"years"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(0, 1, 1, 0, 0, 0)));
-            sysTime.add!"years"(1, AllowDayOverflow.no);
+            sysTime.add!"years"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1, 1, 1, 0, 0, 0)));
         }
 
         {
             auto sysTime = SysTime(DateTime(1, 1, 1, 23, 59, 59), hnsecs(9_999_999));
-            sysTime.add!"years"(-1, AllowDayOverflow.no);
+            sysTime.add!"years"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(0, 1, 1, 23, 59, 59), hnsecs(9_999_999)));
-            sysTime.add!"years"(1, AllowDayOverflow.no);
+            sysTime.add!"years"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1, 1, 1, 23, 59, 59), hnsecs(9_999_999)));
         }
 
         {
             auto sysTime = SysTime(DateTime(0, 1, 1, 0, 0, 0));
-            sysTime.add!"years"(1, AllowDayOverflow.no);
+            sysTime.add!"years"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1, 1, 1, 0, 0, 0)));
-            sysTime.add!"years"(-1, AllowDayOverflow.no);
+            sysTime.add!"years"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(0, 1, 1, 0, 0, 0)));
         }
 
         {
             auto sysTime = SysTime(DateTime(0, 1, 1, 23, 59, 59), hnsecs(9_999_999));
-            sysTime.add!"years"(1, AllowDayOverflow.no);
+            sysTime.add!"years"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1, 1, 1, 23, 59, 59), hnsecs(9_999_999)));
-            sysTime.add!"years"(-1, AllowDayOverflow.no);
+            sysTime.add!"years"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(0, 1, 1, 23, 59, 59), hnsecs(9_999_999)));
         }
 
@@ -3261,41 +3287,41 @@ public:
 
         {
             auto sysTime = SysTime(DateTime(4, 7, 6, 14, 7, 1), usecs(54329));
-            sysTime.add!"years"(-5, AllowDayOverflow.no);
+            sysTime.add!"years"(-5, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-1, 7, 6, 14, 7, 1), usecs(54329)));
-            sysTime.add!"years"(5, AllowDayOverflow.no);
+            sysTime.add!"years"(5, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(4, 7, 6, 14, 7, 1), usecs(54329)));
         }
 
         {
             auto sysTime = SysTime(DateTime(-4, 7, 6, 14, 7, 1), usecs(54329));
-            sysTime.add!"years"(5, AllowDayOverflow.no);
+            sysTime.add!"years"(5, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1, 7, 6, 14, 7, 1), usecs(54329)));
-            sysTime.add!"years"(-5, AllowDayOverflow.no);
+            sysTime.add!"years"(-5, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-4, 7, 6, 14, 7, 1), usecs(54329)));
         }
 
         {
             auto sysTime = SysTime(DateTime(-4, 2, 29, 5, 5, 5), msecs(555));
-            sysTime.add!"years"(5, AllowDayOverflow.no);
+            sysTime.add!"years"(5, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1, 2, 28, 5, 5, 5), msecs(555)));
         }
 
         {
             auto sysTime = SysTime(DateTime(4, 2, 29, 5, 5, 5), msecs(555));
-            sysTime.add!"years"(-5, AllowDayOverflow.no);
+            sysTime.add!"years"(-5, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-1, 2, 28, 5, 5, 5), msecs(555)));
         }
 
         {
             auto sysTime = SysTime(DateTime(4, 2, 29, 5, 5, 5), msecs(555));
-            sysTime.add!"years"(-5, AllowDayOverflow.no).add!"years"(7, AllowDayOverflow.no);
+            sysTime.add!"years"(-5, No.allowDayOverflow).add!"years"(7, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(6, 2, 28, 5, 5, 5), msecs(555)));
         }
     }
 
-    //Test add!"months"() with AllowDayOverlow.yes
-    unittest
+    //Test add!"months"() with Yes.allowDayOverflow
+    @safe unittest
     {
         //Test A.D.
         {
@@ -3640,343 +3666,343 @@ public:
         //static assert(!__traits(compiles, ist.add!"months"(4)));
     }
 
-    //Test add!"months"() with AllowDayOverlow.no
-    unittest
+    //Test add!"months"() with No.allowDayOverflow
+    @safe unittest
     {
         //Test A.D.
         {
             auto sysTime = SysTime(Date(1999, 7, 6));
-            sysTime.add!"months"(3, AllowDayOverflow.no);
+            sysTime.add!"months"(3, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 10, 6)));
-            sysTime.add!"months"(-4, AllowDayOverflow.no);
+            sysTime.add!"months"(-4, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 6, 6)));
         }
 
         {
             auto sysTime = SysTime(Date(1999, 7, 6));
-            sysTime.add!"months"(6, AllowDayOverflow.no);
+            sysTime.add!"months"(6, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(2000, 1, 6)));
-            sysTime.add!"months"(-6, AllowDayOverflow.no);
+            sysTime.add!"months"(-6, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 7, 6)));
         }
 
         {
             auto sysTime = SysTime(Date(1999, 7, 6));
-            sysTime.add!"months"(27, AllowDayOverflow.no);
+            sysTime.add!"months"(27, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(2001, 10, 6)));
-            sysTime.add!"months"(-28, AllowDayOverflow.no);
+            sysTime.add!"months"(-28, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 6, 6)));
         }
 
         {
             auto sysTime = SysTime(Date(1999, 5, 31));
-            sysTime.add!"months"(1, AllowDayOverflow.no);
+            sysTime.add!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 6, 30)));
         }
 
         {
             auto sysTime = SysTime(Date(1999, 5, 31));
-            sysTime.add!"months"(-1, AllowDayOverflow.no);
+            sysTime.add!"months"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 4, 30)));
         }
 
         {
             auto sysTime = SysTime(Date(1999, 2, 28));
-            sysTime.add!"months"(12, AllowDayOverflow.no);
+            sysTime.add!"months"(12, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(2000, 2, 28)));
         }
 
         {
             auto sysTime = SysTime(Date(2000, 2, 29));
-            sysTime.add!"months"(12, AllowDayOverflow.no);
+            sysTime.add!"months"(12, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(2001, 2, 28)));
         }
 
         {
             auto sysTime = SysTime(Date(1999, 7, 31));
-            sysTime.add!"months"(1, AllowDayOverflow.no);
+            sysTime.add!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 8, 31)));
-            sysTime.add!"months"(1, AllowDayOverflow.no);
+            sysTime.add!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 9, 30)));
         }
 
         {
             auto sysTime = SysTime(Date(1998, 8, 31));
-            sysTime.add!"months"(13, AllowDayOverflow.no);
+            sysTime.add!"months"(13, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 9, 30)));
-            sysTime.add!"months"(-13, AllowDayOverflow.no);
+            sysTime.add!"months"(-13, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1998, 8, 30)));
         }
 
         {
             auto sysTime = SysTime(Date(1997, 12, 31));
-            sysTime.add!"months"(13, AllowDayOverflow.no);
+            sysTime.add!"months"(13, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 1, 31)));
-            sysTime.add!"months"(-13, AllowDayOverflow.no);
+            sysTime.add!"months"(-13, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1997, 12, 31)));
         }
 
         {
             auto sysTime = SysTime(Date(1997, 12, 31));
-            sysTime.add!"months"(14, AllowDayOverflow.no);
+            sysTime.add!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 2, 28)));
-            sysTime.add!"months"(-14, AllowDayOverflow.no);
+            sysTime.add!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1997, 12, 28)));
         }
 
         {
             auto sysTime = SysTime(Date(1998, 12, 31));
-            sysTime.add!"months"(14, AllowDayOverflow.no);
+            sysTime.add!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(2000, 2, 29)));
-            sysTime.add!"months"(-14, AllowDayOverflow.no);
+            sysTime.add!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1998, 12, 29)));
         }
 
         {
             auto sysTime = SysTime(Date(1999, 12, 31));
-            sysTime.add!"months"(14, AllowDayOverflow.no);
+            sysTime.add!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(2001, 2, 28)));
-            sysTime.add!"months"(-14, AllowDayOverflow.no);
+            sysTime.add!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 12, 28)));
         }
 
         {
             auto sysTime = SysTime(DateTime(1999, 7, 6, 12, 2, 7), usecs(5007));
-            sysTime.add!"months"(3, AllowDayOverflow.no);
+            sysTime.add!"months"(3, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1999, 10, 6, 12, 2, 7), usecs(5007)));
-            sysTime.add!"months"(-4, AllowDayOverflow.no);
+            sysTime.add!"months"(-4, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1999, 6, 6, 12, 2, 7), usecs(5007)));
         }
 
         {
             auto sysTime = SysTime(DateTime(1998, 12, 31, 7, 7, 7), hnsecs(422202));
-            sysTime.add!"months"(14, AllowDayOverflow.no);
+            sysTime.add!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(2000, 2, 29, 7, 7, 7), hnsecs(422202)));
-            sysTime.add!"months"(-14, AllowDayOverflow.no);
+            sysTime.add!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1998, 12, 29, 7, 7, 7), hnsecs(422202)));
         }
 
         {
             auto sysTime = SysTime(DateTime(1999, 12, 31, 7, 7, 7), hnsecs(422202));
-            sysTime.add!"months"(14, AllowDayOverflow.no);
+            sysTime.add!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(2001, 2, 28, 7, 7, 7), hnsecs(422202)));
-            sysTime.add!"months"(-14, AllowDayOverflow.no);
+            sysTime.add!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1999, 12, 28, 7, 7, 7), hnsecs(422202)));
         }
 
         //Test B.C.
         {
             auto sysTime = SysTime(Date(-1999, 7, 6));
-            sysTime.add!"months"(3, AllowDayOverflow.no);
+            sysTime.add!"months"(3, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 10, 6)));
-            sysTime.add!"months"(-4, AllowDayOverflow.no);
+            sysTime.add!"months"(-4, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 6, 6)));
         }
 
         {
             auto sysTime = SysTime(Date(-1999, 7, 6));
-            sysTime.add!"months"(6, AllowDayOverflow.no);
+            sysTime.add!"months"(6, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1998, 1, 6)));
-            sysTime.add!"months"(-6, AllowDayOverflow.no);
+            sysTime.add!"months"(-6, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 7, 6)));
         }
 
         {
             auto sysTime = SysTime(Date(-1999, 7, 6));
-            sysTime.add!"months"(-27, AllowDayOverflow.no);
+            sysTime.add!"months"(-27, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-2001, 4, 6)));
-            sysTime.add!"months"(28, AllowDayOverflow.no);
+            sysTime.add!"months"(28, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 8, 6)));
         }
 
         {
             auto sysTime = SysTime(Date(-1999, 5, 31));
-            sysTime.add!"months"(1, AllowDayOverflow.no);
+            sysTime.add!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 6, 30)));
         }
 
         {
             auto sysTime = SysTime(Date(-1999, 5, 31));
-            sysTime.add!"months"(-1, AllowDayOverflow.no);
+            sysTime.add!"months"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 4, 30)));
         }
 
         {
             auto sysTime = SysTime(Date(-1999, 2, 28));
-            sysTime.add!"months"(-12, AllowDayOverflow.no);
+            sysTime.add!"months"(-12, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-2000, 2, 28)));
         }
 
         {
             auto sysTime = SysTime(Date(-2000, 2, 29));
-            sysTime.add!"months"(-12, AllowDayOverflow.no);
+            sysTime.add!"months"(-12, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-2001, 2, 28)));
         }
 
         {
             auto sysTime = SysTime(Date(-1999, 7, 31));
-            sysTime.add!"months"(1, AllowDayOverflow.no);
+            sysTime.add!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 8, 31)));
-            sysTime.add!"months"(1, AllowDayOverflow.no);
+            sysTime.add!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 9, 30)));
         }
 
         {
             auto sysTime = SysTime(Date(-1998, 8, 31));
-            sysTime.add!"months"(13, AllowDayOverflow.no);
+            sysTime.add!"months"(13, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1997, 9, 30)));
-            sysTime.add!"months"(-13, AllowDayOverflow.no);
+            sysTime.add!"months"(-13, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1998, 8, 30)));
         }
 
         {
             auto sysTime = SysTime(Date(-1997, 12, 31));
-            sysTime.add!"months"(13, AllowDayOverflow.no);
+            sysTime.add!"months"(13, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1995, 1, 31)));
-            sysTime.add!"months"(-13, AllowDayOverflow.no);
+            sysTime.add!"months"(-13, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1997, 12, 31)));
         }
 
         {
             auto sysTime = SysTime(Date(-1997, 12, 31));
-            sysTime.add!"months"(14, AllowDayOverflow.no);
+            sysTime.add!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1995, 2, 28)));
-            sysTime.add!"months"(-14, AllowDayOverflow.no);
+            sysTime.add!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1997, 12, 28)));
         }
 
         {
             auto sysTime = SysTime(Date(-2002, 12, 31));
-            sysTime.add!"months"(14, AllowDayOverflow.no);
+            sysTime.add!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-2000, 2, 29)));
-            sysTime.add!"months"(-14, AllowDayOverflow.no);
+            sysTime.add!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-2002, 12, 29)));
         }
 
         {
             auto sysTime = SysTime(Date(-2001, 12, 31));
-            sysTime.add!"months"(14, AllowDayOverflow.no);
+            sysTime.add!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 2, 28)));
-            sysTime.add!"months"(-14, AllowDayOverflow.no);
+            sysTime.add!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-2001, 12, 28)));
         }
 
         {
             auto sysTime = SysTime(DateTime(-1999, 7, 6, 12, 2, 7), usecs(5007));
-            sysTime.add!"months"(3, AllowDayOverflow.no);
+            sysTime.add!"months"(3, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-1999, 10, 6, 12, 2, 7), usecs(5007)));
-            sysTime.add!"months"(-4, AllowDayOverflow.no);
+            sysTime.add!"months"(-4, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-1999, 6, 6, 12, 2, 7), usecs(5007)));
         }
 
         {
             auto sysTime = SysTime(DateTime(-2002, 12, 31, 7, 7, 7), hnsecs(422202));
-            sysTime.add!"months"(14, AllowDayOverflow.no);
+            sysTime.add!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-2000, 2, 29, 7, 7, 7), hnsecs(422202)));
-            sysTime.add!"months"(-14, AllowDayOverflow.no);
+            sysTime.add!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-2002, 12, 29, 7, 7, 7), hnsecs(422202)));
         }
 
         {
             auto sysTime = SysTime(DateTime(-2001, 12, 31, 7, 7, 7), hnsecs(422202));
-            sysTime.add!"months"(14, AllowDayOverflow.no);
+            sysTime.add!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-1999, 2, 28, 7, 7, 7), hnsecs(422202)));
-            sysTime.add!"months"(-14, AllowDayOverflow.no);
+            sysTime.add!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-2001, 12, 28, 7, 7, 7), hnsecs(422202)));
         }
 
         //Test Both
         {
             auto sysTime = SysTime(Date(1, 1, 1));
-            sysTime.add!"months"(-1, AllowDayOverflow.no);
+            sysTime.add!"months"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(0, 12, 1)));
-            sysTime.add!"months"(1, AllowDayOverflow.no);
+            sysTime.add!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1, 1, 1)));
         }
 
         {
             auto sysTime = SysTime(Date(4, 1, 1));
-            sysTime.add!"months"(-48, AllowDayOverflow.no);
+            sysTime.add!"months"(-48, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(0, 1, 1)));
-            sysTime.add!"months"(48, AllowDayOverflow.no);
+            sysTime.add!"months"(48, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(4, 1, 1)));
         }
 
         {
             auto sysTime = SysTime(Date(4, 3, 31));
-            sysTime.add!"months"(-49, AllowDayOverflow.no);
+            sysTime.add!"months"(-49, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(0, 2, 29)));
-            sysTime.add!"months"(49, AllowDayOverflow.no);
+            sysTime.add!"months"(49, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(4, 3, 29)));
         }
 
         {
             auto sysTime = SysTime(Date(4, 3, 31));
-            sysTime.add!"months"(-85, AllowDayOverflow.no);
+            sysTime.add!"months"(-85, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-3, 2, 28)));
-            sysTime.add!"months"(85, AllowDayOverflow.no);
+            sysTime.add!"months"(85, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(4, 3, 28)));
         }
 
         {
             auto sysTime = SysTime(DateTime(1, 1, 1, 0, 0, 0));
-            sysTime.add!"months"(-1, AllowDayOverflow.no);
+            sysTime.add!"months"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(0, 12, 1, 0, 0, 0)));
-            sysTime.add!"months"(1, AllowDayOverflow.no);
+            sysTime.add!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1, 1, 1, 0, 0, 0)));
         }
 
         {
             auto sysTime = SysTime(DateTime(1, 1, 1, 23, 59, 59), hnsecs(9_999_999));
-            sysTime.add!"months"(-1, AllowDayOverflow.no);
+            sysTime.add!"months"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(0, 12, 1, 23, 59, 59), hnsecs(9_999_999)));
-            sysTime.add!"months"(1, AllowDayOverflow.no);
+            sysTime.add!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1, 1, 1, 23, 59, 59), hnsecs(9_999_999)));
         }
 
         {
             auto sysTime = SysTime(DateTime(0, 12, 1, 0, 0, 0));
-            sysTime.add!"months"(1, AllowDayOverflow.no);
+            sysTime.add!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1, 1, 1, 0, 0, 0)));
-            sysTime.add!"months"(-1, AllowDayOverflow.no);
+            sysTime.add!"months"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(0, 12, 1, 0, 0, 0)));
         }
 
         {
             auto sysTime = SysTime(DateTime(0, 12, 1, 23, 59, 59), hnsecs(9_999_999));
-            sysTime.add!"months"(1, AllowDayOverflow.no);
+            sysTime.add!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1, 1, 1, 23, 59, 59), hnsecs(9_999_999)));
-            sysTime.add!"months"(-1, AllowDayOverflow.no);
+            sysTime.add!"months"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(0, 12, 1, 23, 59, 59), hnsecs(9_999_999)));
         }
 
         {
             auto sysTime = SysTime(DateTime(1, 1, 1, 0, 7, 9), hnsecs(17));
-            sysTime.add!"months"(-1, AllowDayOverflow.no);
+            sysTime.add!"months"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(0, 12, 1, 0, 7, 9), hnsecs(17)));
-            sysTime.add!"months"(1, AllowDayOverflow.no);
+            sysTime.add!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1, 1, 1, 0, 7, 9), hnsecs(17)));
         }
 
         {
             auto sysTime = SysTime(DateTime(4, 3, 31, 12, 11, 10), msecs(9));
-            sysTime.add!"months"(-85, AllowDayOverflow.no);
+            sysTime.add!"months"(-85, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-3, 2, 28, 12, 11, 10), msecs(9)));
-            sysTime.add!"months"(85, AllowDayOverflow.no);
+            sysTime.add!"months"(85, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(4, 3, 28, 12, 11, 10), msecs(9)));
         }
 
         {
             auto sysTime = SysTime(DateTime(-3, 3, 31, 12, 11, 10), msecs(9));
-            sysTime.add!"months"(85, AllowDayOverflow.no);
+            sysTime.add!"months"(85, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(4, 4, 30, 12, 11, 10), msecs(9)));
-            sysTime.add!"months"(-85, AllowDayOverflow.no);
+            sysTime.add!"months"(-85, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-3, 3, 30, 12, 11, 10), msecs(9)));
         }
 
         {
             auto sysTime = SysTime(DateTime(-3, 3, 31, 12, 11, 10), msecs(9));
-            sysTime.add!"months"(85, AllowDayOverflow.no).add!"months"(-83, AllowDayOverflow.no);
+            sysTime.add!"months"(85, No.allowDayOverflow).add!"months"(-83, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-3, 5, 30, 12, 11, 10), msecs(9)));
         }
     }
@@ -4001,15 +4027,17 @@ public:
             allowOverflow = Whether the days should be allowed to overflow,
                             causing the month to increment.
       +/
-    ref SysTime roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe nothrow
+    ref SysTime roll(string units)(long value, AllowDayOverflow allowOverflow = Yes.allowDayOverflow) @safe nothrow
         if (units == "years")
     {
         return add!"years"(value, allowOverflow);
     }
 
     ///
-    unittest
+    @safe unittest
     {
+        import std.typecons : No;
+
         auto st1 = SysTime(DateTime(2010, 1, 1, 12, 33, 33));
         st1.roll!"months"(1);
         assert(st1 == SysTime(DateTime(2010, 2, 1, 12, 33, 33)));
@@ -4023,7 +4051,7 @@ public:
         assert(st3 == SysTime(DateTime(1999, 3, 1, 12, 33, 33)));
 
         auto st4 = SysTime(DateTime(1999, 1, 29, 12, 33, 33));
-        st4.roll!"months"(1, AllowDayOverflow.no);
+        st4.roll!"months"(1, No.allowDayOverflow);
         assert(st4 == SysTime(DateTime(1999, 2, 28, 12, 33, 33)));
 
         auto st5 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
@@ -4031,11 +4059,11 @@ public:
         assert(st5 == SysTime(DateTime(2001, 3, 1, 12, 30, 33)));
 
         auto st6 = SysTime(DateTime(2000, 2, 29, 12, 30, 33));
-        st6.roll!"years"(1, AllowDayOverflow.no);
+        st6.roll!"years"(1, No.allowDayOverflow);
         assert(st6 == SysTime(DateTime(2001, 2, 28, 12, 30, 33)));
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -4047,7 +4075,7 @@ public:
 
 
     //Shares documentation with "years" overload.
-    ref SysTime roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe nothrow
+    ref SysTime roll(string units)(long value, AllowDayOverflow allowOverflow = Yes.allowDayOverflow) @safe nothrow
         if (units == "months")
     {
         auto hnsecs = adjTime;
@@ -4074,8 +4102,8 @@ public:
         return this;
     }
 
-    //Test roll!"months"() with AllowDayOverlow.yes
-    unittest
+    //Test roll!"months"() with Yes.allowDayOverflow
+    @safe unittest
     {
         //Test A.D.
         {
@@ -4452,375 +4480,375 @@ public:
         //static assert(!__traits(compiles, ist.roll!"months"(4)));
     }
 
-    //Test roll!"months"() with AllowDayOverlow.no
-    unittest
+    //Test roll!"months"() with No.allowDayOverflow
+    @safe unittest
     {
         //Test A.D.
         {
             auto sysTime = SysTime(Date(1999, 7, 6));
-            sysTime.roll!"months"(3, AllowDayOverflow.no);
+            sysTime.roll!"months"(3, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 10, 6)));
-            sysTime.roll!"months"(-4, AllowDayOverflow.no);
+            sysTime.roll!"months"(-4, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 6, 6)));
         }
 
         {
             auto sysTime = SysTime(Date(1999, 7, 6));
-            sysTime.roll!"months"(6, AllowDayOverflow.no);
+            sysTime.roll!"months"(6, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 1, 6)));
-            sysTime.roll!"months"(-6, AllowDayOverflow.no);
+            sysTime.roll!"months"(-6, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 7, 6)));
         }
 
         {
             auto sysTime = SysTime(Date(1999, 7, 6));
-            sysTime.roll!"months"(27, AllowDayOverflow.no);
+            sysTime.roll!"months"(27, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 10, 6)));
-            sysTime.roll!"months"(-28, AllowDayOverflow.no);
+            sysTime.roll!"months"(-28, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 6, 6)));
         }
 
         {
             auto sysTime = SysTime(Date(1999, 5, 31));
-            sysTime.roll!"months"(1, AllowDayOverflow.no);
+            sysTime.roll!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 6, 30)));
         }
 
         {
             auto sysTime = SysTime(Date(1999, 5, 31));
-            sysTime.roll!"months"(-1, AllowDayOverflow.no);
+            sysTime.roll!"months"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 4, 30)));
         }
 
         {
             auto sysTime = SysTime(Date(1999, 2, 28));
-            sysTime.roll!"months"(12, AllowDayOverflow.no);
+            sysTime.roll!"months"(12, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 2, 28)));
         }
 
         {
             auto sysTime = SysTime(Date(2000, 2, 29));
-            sysTime.roll!"months"(12, AllowDayOverflow.no);
+            sysTime.roll!"months"(12, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(2000, 2, 29)));
         }
 
         {
             auto sysTime = SysTime(Date(1999, 7, 31));
-            sysTime.roll!"months"(1, AllowDayOverflow.no);
+            sysTime.roll!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 8, 31)));
-            sysTime.roll!"months"(1, AllowDayOverflow.no);
+            sysTime.roll!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 9, 30)));
         }
 
         {
             auto sysTime = SysTime(Date(1998, 8, 31));
-            sysTime.roll!"months"(13, AllowDayOverflow.no);
+            sysTime.roll!"months"(13, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1998, 9, 30)));
-            sysTime.roll!"months"(-13, AllowDayOverflow.no);
+            sysTime.roll!"months"(-13, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1998, 8, 30)));
         }
 
         {
             auto sysTime = SysTime(Date(1997, 12, 31));
-            sysTime.roll!"months"(13, AllowDayOverflow.no);
+            sysTime.roll!"months"(13, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1997, 1, 31)));
-            sysTime.roll!"months"(-13, AllowDayOverflow.no);
+            sysTime.roll!"months"(-13, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1997, 12, 31)));
         }
 
         {
             auto sysTime = SysTime(Date(1997, 12, 31));
-            sysTime.roll!"months"(14, AllowDayOverflow.no);
+            sysTime.roll!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1997, 2, 28)));
-            sysTime.roll!"months"(-14, AllowDayOverflow.no);
+            sysTime.roll!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1997, 12, 28)));
         }
 
         {
             auto sysTime = SysTime(Date(1998, 12, 31));
-            sysTime.roll!"months"(14, AllowDayOverflow.no);
+            sysTime.roll!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1998, 2, 28)));
-            sysTime.roll!"months"(-14, AllowDayOverflow.no);
+            sysTime.roll!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1998, 12, 28)));
         }
 
         {
             auto sysTime = SysTime(Date(1999, 12, 31));
-            sysTime.roll!"months"(14, AllowDayOverflow.no);
+            sysTime.roll!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 2, 28)));
-            sysTime.roll!"months"(-14, AllowDayOverflow.no);
+            sysTime.roll!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1999, 12, 28)));
         }
 
         {
             auto sysTime = SysTime(DateTime(1999, 7, 6, 12, 2, 7), usecs(5007));
-            sysTime.roll!"months"(3, AllowDayOverflow.no);
+            sysTime.roll!"months"(3, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1999, 10, 6, 12, 2, 7), usecs(5007)));
-            sysTime.roll!"months"(-4, AllowDayOverflow.no);
+            sysTime.roll!"months"(-4, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1999, 6, 6, 12, 2, 7), usecs(5007)));
         }
 
         {
             auto sysTime = SysTime(DateTime(1998, 12, 31, 7, 7, 7), hnsecs(422202));
-            sysTime.roll!"months"(14, AllowDayOverflow.no);
+            sysTime.roll!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1998, 2, 28, 7, 7, 7), hnsecs(422202)));
-            sysTime.roll!"months"(-14, AllowDayOverflow.no);
+            sysTime.roll!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1998, 12, 28, 7, 7, 7), hnsecs(422202)));
         }
 
         {
             auto sysTime = SysTime(DateTime(1999, 12, 31, 7, 7, 7), hnsecs(422202));
-            sysTime.roll!"months"(14, AllowDayOverflow.no);
+            sysTime.roll!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1999, 2, 28, 7, 7, 7), hnsecs(422202)));
-            sysTime.roll!"months"(-14, AllowDayOverflow.no);
+            sysTime.roll!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1999, 12, 28, 7, 7, 7), hnsecs(422202)));
         }
 
         //Test B.C.
         {
             auto sysTime = SysTime(Date(-1999, 7, 6));
-            sysTime.roll!"months"(3, AllowDayOverflow.no);
+            sysTime.roll!"months"(3, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 10, 6)));
-            sysTime.roll!"months"(-4, AllowDayOverflow.no);
+            sysTime.roll!"months"(-4, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 6, 6)));
         }
 
         {
             auto sysTime = SysTime(Date(-1999, 7, 6));
-            sysTime.roll!"months"(6, AllowDayOverflow.no);
+            sysTime.roll!"months"(6, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 1, 6)));
-            sysTime.roll!"months"(-6, AllowDayOverflow.no);
+            sysTime.roll!"months"(-6, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 7, 6)));
         }
 
         {
             auto sysTime = SysTime(Date(-1999, 7, 6));
-            sysTime.roll!"months"(-27, AllowDayOverflow.no);
+            sysTime.roll!"months"(-27, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 4, 6)));
-            sysTime.roll!"months"(28, AllowDayOverflow.no);
+            sysTime.roll!"months"(28, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 8, 6)));
         }
 
         {
             auto sysTime = SysTime(Date(-1999, 5, 31));
-            sysTime.roll!"months"(1, AllowDayOverflow.no);
+            sysTime.roll!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 6, 30)));
         }
 
         {
             auto sysTime = SysTime(Date(-1999, 5, 31));
-            sysTime.roll!"months"(-1, AllowDayOverflow.no);
+            sysTime.roll!"months"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 4, 30)));
         }
 
         {
             auto sysTime = SysTime(Date(-1999, 2, 28));
-            sysTime.roll!"months"(-12, AllowDayOverflow.no);
+            sysTime.roll!"months"(-12, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 2, 28)));
         }
 
         {
             auto sysTime = SysTime(Date(-2000, 2, 29));
-            sysTime.roll!"months"(-12, AllowDayOverflow.no);
+            sysTime.roll!"months"(-12, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-2000, 2, 29)));
         }
 
         {
             auto sysTime = SysTime(Date(-1999, 7, 31));
-            sysTime.roll!"months"(1, AllowDayOverflow.no);
+            sysTime.roll!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 8, 31)));
-            sysTime.roll!"months"(1, AllowDayOverflow.no);
+            sysTime.roll!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1999, 9, 30)));
         }
 
         {
             auto sysTime = SysTime(Date(-1998, 8, 31));
-            sysTime.roll!"months"(13, AllowDayOverflow.no);
+            sysTime.roll!"months"(13, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1998, 9, 30)));
-            sysTime.roll!"months"(-13, AllowDayOverflow.no);
+            sysTime.roll!"months"(-13, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1998, 8, 30)));
         }
 
         {
             auto sysTime = SysTime(Date(-1997, 12, 31));
-            sysTime.roll!"months"(13, AllowDayOverflow.no);
+            sysTime.roll!"months"(13, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1997, 1, 31)));
-            sysTime.roll!"months"(-13, AllowDayOverflow.no);
+            sysTime.roll!"months"(-13, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1997, 12, 31)));
         }
 
         {
             auto sysTime = SysTime(Date(-1997, 12, 31));
-            sysTime.roll!"months"(14, AllowDayOverflow.no);
+            sysTime.roll!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1997, 2, 28)));
-            sysTime.roll!"months"(-14, AllowDayOverflow.no);
+            sysTime.roll!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1997, 12, 28)));
         }
 
         {
             auto sysTime = SysTime(Date(-2002, 12, 31));
-            sysTime.roll!"months"(14, AllowDayOverflow.no);
+            sysTime.roll!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-2002, 2, 28)));
-            sysTime.roll!"months"(-14, AllowDayOverflow.no);
+            sysTime.roll!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-2002, 12, 28)));
         }
 
         {
             auto sysTime = SysTime(Date(-2001, 12, 31));
-            sysTime.roll!"months"(14, AllowDayOverflow.no);
+            sysTime.roll!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-2001, 2, 28)));
-            sysTime.roll!"months"(-14, AllowDayOverflow.no);
+            sysTime.roll!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-2001, 12, 28)));
         }
 
         {
             auto sysTime = SysTime(DateTime(-1999, 7, 6, 12, 2, 7), usecs(5007));
-            sysTime.roll!"months"(3, AllowDayOverflow.no);
+            sysTime.roll!"months"(3, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-1999, 10, 6, 12, 2, 7), usecs(5007)));
-            sysTime.roll!"months"(-4, AllowDayOverflow.no);
+            sysTime.roll!"months"(-4, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-1999, 6, 6, 12, 2, 7), usecs(5007)));
         }
 
         {
             auto sysTime = SysTime(DateTime(-2002, 12, 31, 7, 7, 7), hnsecs(422202));
-            sysTime.roll!"months"(14, AllowDayOverflow.no);
+            sysTime.roll!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-2002, 2, 28, 7, 7, 7), hnsecs(422202)));
-            sysTime.roll!"months"(-14, AllowDayOverflow.no);
+            sysTime.roll!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-2002, 12, 28, 7, 7, 7), hnsecs(422202)));
         }
 
         {
             auto sysTime = SysTime(DateTime(-2001, 12, 31, 7, 7, 7), hnsecs(422202));
-            sysTime.roll!"months"(14, AllowDayOverflow.no);
+            sysTime.roll!"months"(14, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-2001, 2, 28, 7, 7, 7), hnsecs(422202)));
-            sysTime.roll!"months"(-14, AllowDayOverflow.no);
+            sysTime.roll!"months"(-14, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-2001, 12, 28, 7, 7, 7), hnsecs(422202)));
         }
 
         //Test Both
         {
             auto sysTime = SysTime(Date(1, 1, 1));
-            sysTime.roll!"months"(-1, AllowDayOverflow.no);
+            sysTime.roll!"months"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1, 12, 1)));
-            sysTime.roll!"months"(1, AllowDayOverflow.no);
+            sysTime.roll!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(1, 1, 1)));
         }
 
         {
             auto sysTime = SysTime(Date(4, 1, 1));
-            sysTime.roll!"months"(-48, AllowDayOverflow.no);
+            sysTime.roll!"months"(-48, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(4, 1, 1)));
-            sysTime.roll!"months"(48, AllowDayOverflow.no);
+            sysTime.roll!"months"(48, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(4, 1, 1)));
         }
 
         {
             auto sysTime = SysTime(Date(4, 3, 31));
-            sysTime.roll!"months"(-49, AllowDayOverflow.no);
+            sysTime.roll!"months"(-49, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(4, 2, 29)));
-            sysTime.roll!"months"(49, AllowDayOverflow.no);
+            sysTime.roll!"months"(49, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(4, 3, 29)));
         }
 
         {
             auto sysTime = SysTime(Date(4, 3, 31));
-            sysTime.roll!"months"(-85, AllowDayOverflow.no);
+            sysTime.roll!"months"(-85, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(4, 2, 29)));
-            sysTime.roll!"months"(85, AllowDayOverflow.no);
+            sysTime.roll!"months"(85, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(4, 3, 29)));
         }
 
         {
             auto sysTime = SysTime(Date(-1, 1, 1));
-            sysTime.roll!"months"(-1, AllowDayOverflow.no);
+            sysTime.roll!"months"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1, 12, 1)));
-            sysTime.roll!"months"(1, AllowDayOverflow.no);
+            sysTime.roll!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-1, 1, 1)));
         }
 
         {
             auto sysTime = SysTime(Date(-4, 1, 1));
-            sysTime.roll!"months"(-48, AllowDayOverflow.no);
+            sysTime.roll!"months"(-48, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-4, 1, 1)));
-            sysTime.roll!"months"(48, AllowDayOverflow.no);
+            sysTime.roll!"months"(48, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-4, 1, 1)));
         }
 
         {
             auto sysTime = SysTime(Date(-4, 3, 31));
-            sysTime.roll!"months"(-49, AllowDayOverflow.no);
+            sysTime.roll!"months"(-49, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-4, 2, 29)));
-            sysTime.roll!"months"(49, AllowDayOverflow.no);
+            sysTime.roll!"months"(49, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-4, 3, 29)));
         }
 
         {
             auto sysTime = SysTime(Date(-4, 3, 31));
-            sysTime.roll!"months"(-85, AllowDayOverflow.no);
+            sysTime.roll!"months"(-85, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-4, 2, 29)));
-            sysTime.roll!"months"(85, AllowDayOverflow.no);
+            sysTime.roll!"months"(85, No.allowDayOverflow);
             assert(sysTime == SysTime(Date(-4, 3, 29)));
         }
 
         {
             auto sysTime = SysTime(DateTime(1, 1, 1, 0, 0, 0));
-            sysTime.roll!"months"(-1, AllowDayOverflow.no);
+            sysTime.roll!"months"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1, 12, 1, 0, 0, 0)));
-            sysTime.roll!"months"(1, AllowDayOverflow.no);
+            sysTime.roll!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1, 1, 1, 0, 0, 0)));
         }
 
         {
             auto sysTime = SysTime(DateTime(1, 1, 1, 23, 59, 59), hnsecs(9_999_999));
-            sysTime.roll!"months"(-1, AllowDayOverflow.no);
+            sysTime.roll!"months"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1, 12, 1, 23, 59, 59), hnsecs(9_999_999)));
-            sysTime.roll!"months"(1, AllowDayOverflow.no);
+            sysTime.roll!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1, 1, 1, 23, 59, 59), hnsecs(9_999_999)));
         }
 
         {
             auto sysTime = SysTime(DateTime(0, 12, 1, 0, 0, 0));
-            sysTime.roll!"months"(1, AllowDayOverflow.no);
+            sysTime.roll!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(0, 1, 1, 0, 0, 0)));
-            sysTime.roll!"months"(-1, AllowDayOverflow.no);
+            sysTime.roll!"months"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(0, 12, 1, 0, 0, 0)));
         }
 
         {
             auto sysTime = SysTime(DateTime(0, 12, 1, 23, 59, 59), hnsecs(9_999_999));
-            sysTime.roll!"months"(1, AllowDayOverflow.no);
+            sysTime.roll!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(0, 1, 1, 23, 59, 59), hnsecs(9_999_999)));
-            sysTime.roll!"months"(-1, AllowDayOverflow.no);
+            sysTime.roll!"months"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(0, 12, 1, 23, 59, 59), hnsecs(9_999_999)));
         }
 
         {
             auto sysTime = SysTime(DateTime(1, 1, 1, 0, 7, 9), hnsecs(17));
-            sysTime.roll!"months"(-1, AllowDayOverflow.no);
+            sysTime.roll!"months"(-1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1, 12, 1, 0, 7, 9), hnsecs(17)));
-            sysTime.roll!"months"(1, AllowDayOverflow.no);
+            sysTime.roll!"months"(1, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(1, 1, 1, 0, 7, 9), hnsecs(17)));
         }
 
         {
             auto sysTime = SysTime(DateTime(4, 3, 31, 12, 11, 10), msecs(9));
-            sysTime.roll!"months"(-85, AllowDayOverflow.no);
+            sysTime.roll!"months"(-85, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(4, 2, 29, 12, 11, 10), msecs(9)));
-            sysTime.roll!"months"(85, AllowDayOverflow.no);
+            sysTime.roll!"months"(85, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(4, 3, 29, 12, 11, 10), msecs(9)));
         }
 
         {
             auto sysTime = SysTime(DateTime(-3, 3, 31, 12, 11, 10), msecs(9));
-            sysTime.roll!"months"(85, AllowDayOverflow.no);
+            sysTime.roll!"months"(85, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-3, 4, 30, 12, 11, 10), msecs(9)));
-            sysTime.roll!"months"(-85, AllowDayOverflow.no);
+            sysTime.roll!"months"(-85, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-3, 3, 30, 12, 11, 10), msecs(9)));
         }
 
         {
             auto sysTime = SysTime(DateTime(-3, 3, 31, 12, 11, 10), msecs(9));
-            sysTime.roll!"months"(85, AllowDayOverflow.no).roll!"months"(-83, AllowDayOverflow.no);
+            sysTime.roll!"months"(85, No.allowDayOverflow).roll!"months"(-83, No.allowDayOverflow);
             assert(sysTime == SysTime(DateTime(-3, 5, 30, 12, 11, 10), msecs(9)));
         }
     }
@@ -4874,7 +4902,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto st1 = SysTime(DateTime(2010, 1, 1, 11, 23, 12));
         st1.roll!"days"(1);
@@ -4926,7 +4954,7 @@ public:
         assert(st11 == SysTime(dt, hnsecs(9_999_999)));
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -5245,7 +5273,7 @@ public:
     }
 
     //Test roll!"hours"().
-    unittest
+    @safe unittest
     {
         static void testST(SysTime orig, int hours, in SysTime expected, size_t line = __LINE__)
         {
@@ -5463,7 +5491,7 @@ public:
     }
 
     //Test roll!"minutes"().
-    unittest
+    @safe unittest
     {
         static void testST(SysTime orig, int minutes, in SysTime expected, size_t line = __LINE__)
         {
@@ -5674,7 +5702,7 @@ public:
     }
 
     //Test roll!"seconds"().
-    unittest
+    @safe unittest
     {
         static void testST(SysTime orig, int seconds, in SysTime expected, size_t line = __LINE__)
         {
@@ -5894,7 +5922,7 @@ public:
 
 
     //Test roll!"msecs"().
-    unittest
+    @safe unittest
     {
         static void testST(SysTime orig, int milliseconds, in SysTime expected, size_t line = __LINE__)
         {
@@ -6000,7 +6028,7 @@ public:
     }
 
     //Test roll!"usecs"().
-    unittest
+    @safe unittest
     {
         static void testST(SysTime orig, long microseconds, in SysTime expected, size_t line = __LINE__)
         {
@@ -6130,7 +6158,7 @@ public:
     }
 
     //Test roll!"hnsecs"().
-    unittest
+    @safe unittest
     {
         static void testST(SysTime orig, long hnsecs, in SysTime expected, size_t line = __LINE__)
         {
@@ -6298,7 +6326,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(2015, 12, 31, 23, 59, 59)) + seconds(1) ==
                SysTime(DateTime(2016, 1, 1, 0, 0, 0)));
@@ -6313,7 +6341,7 @@ public:
                SysTime(DateTime(2015, 12, 31, 23, 59, 59)));
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
 
@@ -6502,7 +6530,7 @@ public:
         return retval;
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -6543,7 +6571,7 @@ public:
         return this;
     }
 
-    unittest
+    @safe unittest
     {
         auto before = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         assert(before + dur!"weeks"(7) == SysTime(DateTime(1999, 8, 24, 12, 30, 33)));
@@ -6741,7 +6769,7 @@ public:
         return this;
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -6787,7 +6815,7 @@ public:
         return dur!"hnsecs"(_stdTime - rhs._stdTime);
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 7, 6, 12, 30, 33)) - SysTime(DateTime(1998, 7, 6, 12, 30, 33)) ==
                     dur!"seconds"(31_536_000));
@@ -6841,7 +6869,10 @@ public:
         assert(SysTime(DateTime(0, 12, 31, 23, 59, 59), hnsecs(9_999_999)) - SysTime(DateTime(1, 1, 1, 0, 0, 0)) ==
                         dur!"hnsecs"(-1));
 
-        auto tz = TimeZone.getTimeZone("America/Los_Angeles");
+        version(Posix)
+            immutable tz = PosixTimeZone.getTimeZone("America/Los_Angeles");
+        else version(Windows)
+            immutable tz = WindowsTimeZone.getTimeZone("Pacific Standard Time");
 
         {
             auto dt = DateTime(2011, 1, 13, 8, 17, 2);
@@ -6895,7 +6926,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(Date(1999, 2, 1)).diffMonths(
                     SysTime(Date(1999, 1, 31))) == 1);
@@ -6910,7 +6941,7 @@ public:
                     SysTime(Date(1999, 3, 31))) == -2);
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -6937,7 +6968,7 @@ public:
         return (cast(Date)this).isLeapYear;
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -6956,7 +6987,7 @@ public:
         return getDayOfWeek(dayOfGregorianCal);
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -6976,14 +7007,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 1, 1, 12, 22, 7)).dayOfYear == 1);
         assert(SysTime(DateTime(1999, 12, 31, 7, 2, 59)).dayOfYear == 365);
         assert(SysTime(DateTime(2000, 12, 31, 21, 20, 0)).dayOfYear == 366);
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -7015,7 +7046,7 @@ public:
         adjTime = newDaysHNSecs + theRest;
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -7047,7 +7078,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1, 1, 1, 0, 0, 0)).dayOfGregorianCal == 1);
         assert(SysTime(DateTime(1, 12, 31, 23, 59, 59)).dayOfGregorianCal == 365);
@@ -7061,7 +7092,7 @@ public:
         assert(SysTime(DateTime(2010, 12, 31, 15, 45, 50)).dayOfGregorianCal == 734_137);
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(SysTime(DateTime(1, 1, 1, 0, 0, 0)).dayOfGregorianCal == 1);
@@ -7232,7 +7263,7 @@ public:
 
     //Test that the logic for the day of the Gregorian Calendar is consistent
     //between Date and SysTime.
-    unittest
+    @safe unittest
     {
         void test(Date date, SysTime st, size_t line = __LINE__)
         {
@@ -7421,7 +7452,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(0, 1, 1, 12, 0, 0));
         st.dayOfGregorianCal = 1;
@@ -7449,7 +7480,7 @@ public:
         assert(st == SysTime(DateTime(2010, 12, 31, 12, 0, 0)));
     }
 
-    unittest
+    @safe unittest
     {
         void testST(SysTime orig, int day, in SysTime expected, size_t line = __LINE__)
         {
@@ -7664,7 +7695,7 @@ public:
         return (cast(Date)this).isoWeek;
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -7705,7 +7736,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).endOfMonth ==
                SysTime(DateTime(1999, 1, 31, 23, 59, 59),
@@ -7727,7 +7758,7 @@ public:
                        hnsecs(9_999_999)));
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(SysTime(Date(1999, 1, 1)).endOfMonth == SysTime(DateTime(1999, 1, 31, 23, 59, 59), hnsecs(9_999_999)));
@@ -7778,7 +7809,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).daysInMonth == 31);
         assert(SysTime(DateTime(1999, 2, 7, 19, 30, 0)).daysInMonth == 28);
@@ -7786,7 +7817,7 @@ public:
         assert(SysTime(DateTime(2000, 6, 4, 12, 22, 9)).daysInMonth == 30);
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(SysTime(DateTime(1999, 1, 1, 12, 1, 13)).daysInMonth == 31);
@@ -7834,7 +7865,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1, 1, 1, 12, 7, 0)).isAD);
         assert(SysTime(DateTime(2010, 12, 31, 0, 0, 0)).isAD);
@@ -7842,7 +7873,7 @@ public:
         assert(!SysTime(DateTime(-2010, 1, 1, 2, 2, 2)).isAD);
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(2010, 7, 4, 12, 0, 9)).isAD);
         assert(SysTime(DateTime(1, 1, 1, 0, 0, 0)).isAD);
@@ -7872,7 +7903,7 @@ public:
         return hour < 12 ? jd - 1 : jd;
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(-4713, 11, 24, 0, 0, 0)).julianDay == -1);
         assert(SysTime(DateTime(-4713, 11, 24, 12, 0, 0)).julianDay == 0);
@@ -7914,7 +7945,7 @@ public:
         return (dayOfGregorianCal + 1_721_425) - 2_400_001;
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(1858, 11, 17, 0, 0, 0)).modJulianDay == 0);
         assert(SysTime(DateTime(1858, 11, 17, 12, 0, 0)).modJulianDay == 0);
@@ -7938,7 +7969,7 @@ public:
         return Date(dayOfGregorianCal);
     }
 
-    unittest
+    @safe unittest
     {
         assert(cast(Date)SysTime(Date(1999, 7, 6)) == Date(1999, 7, 6));
         assert(cast(Date)SysTime(Date(2000, 12, 31)) == Date(2000, 12, 31));
@@ -7990,7 +8021,7 @@ public:
             assert(0, "Either DateTime's constructor or TimeOfDay's constructor threw.");
     }
 
-    unittest
+    @safe unittest
     {
         assert(cast(DateTime)SysTime(DateTime(1, 1, 6, 7, 12, 22)) == DateTime(1, 1, 6, 7, 12, 22));
         assert(cast(DateTime)SysTime(DateTime(1, 1, 6, 7, 12, 22), msecs(22)) == DateTime(1, 1, 6, 7, 12, 22));
@@ -8046,7 +8077,7 @@ public:
             assert(0, "TimeOfDay's constructor threw.");
     }
 
-    unittest
+    @safe unittest
     {
         assert(cast(TimeOfDay)SysTime(Date(1999, 7, 6)) == TimeOfDay(0, 0, 0));
         assert(cast(TimeOfDay)SysTime(Date(2000, 12, 31)) == TimeOfDay(0, 0, 0));
@@ -8135,16 +8166,16 @@ public:
             auto fracSecStr = fracSecsToISOString(cast(int)hnsecs);
 
             if (_timezone is LocalTime())
-                return dateTime.toISOString() ~ fracSecsToISOString(cast(int)hnsecs);
+                return dateTime.toISOString() ~ fracSecStr;
 
             if (_timezone is UTC())
-                return dateTime.toISOString() ~ fracSecsToISOString(cast(int)hnsecs) ~ "Z";
+                return dateTime.toISOString() ~ fracSecStr ~ "Z";
 
             immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
 
             return format("%s%s%s",
                           dateTime.toISOString(),
-                          fracSecsToISOString(cast(int)hnsecs),
+                          fracSecStr,
                           SimpleTimeZone.toISOExtString(utcOffset));
         }
         catch (Exception e)
@@ -8152,7 +8183,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOString() ==
                "20100704T070612");
@@ -8169,7 +8200,7 @@ public:
                "-00040105T000002.052092");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(SysTime(DateTime.init, UTC()).toISOString() == "00010101T000000Z");
@@ -8265,16 +8296,16 @@ public:
             auto fracSecStr = fracSecsToISOString(cast(int)hnsecs);
 
             if (_timezone is LocalTime())
-                return dateTime.toISOExtString() ~ fracSecsToISOString(cast(int)hnsecs);
+                return dateTime.toISOExtString() ~ fracSecStr;
 
             if (_timezone is UTC())
-                return dateTime.toISOExtString() ~ fracSecsToISOString(cast(int)hnsecs) ~ "Z";
+                return dateTime.toISOExtString() ~ fracSecStr ~ "Z";
 
             immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
 
             return format("%s%s%s",
                           dateTime.toISOExtString(),
-                          fracSecsToISOString(cast(int)hnsecs),
+                          fracSecStr,
                           SimpleTimeZone.toISOExtString(utcOffset));
         }
         catch (Exception e)
@@ -8282,7 +8313,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtString() ==
                "2010-07-04T07:06:12");
@@ -8299,7 +8330,7 @@ public:
                "-0004-01-05T00:00:02.052092");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(SysTime(DateTime.init, UTC()).toISOExtString() == "0001-01-01T00:00:00Z");
@@ -8399,16 +8430,16 @@ public:
             auto fracSecStr = fracSecsToISOString(cast(int)hnsecs);
 
             if (_timezone is LocalTime())
-                return dateTime.toSimpleString() ~ fracSecsToISOString(cast(int)hnsecs);
+                return dateTime.toSimpleString() ~ fracSecStr;
 
             if (_timezone is UTC())
-                return dateTime.toSimpleString() ~ fracSecsToISOString(cast(int)hnsecs) ~ "Z";
+                return dateTime.toSimpleString() ~ fracSecStr ~ "Z";
 
             immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
 
             return format("%s%s%s",
                           dateTime.toSimpleString(),
-                          fracSecsToISOString(cast(int)hnsecs),
+                          fracSecStr,
                           SimpleTimeZone.toISOExtString(utcOffset));
         }
         catch (Exception e)
@@ -8416,7 +8447,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toSimpleString() ==
                "2010-Jul-04 07:06:12");
@@ -8433,7 +8464,7 @@ public:
                 "-0004-Jan-05 00:00:02.052092");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(SysTime(DateTime.init, UTC()).toString() == "0001-Jan-01 00:00:00Z");
@@ -8501,7 +8532,7 @@ public:
         return toSimpleString();
     }
 
-    unittest
+    @safe unittest
     {
         auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
@@ -8617,7 +8648,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime.fromISOString("20100704T070612") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
@@ -8646,7 +8677,7 @@ public:
                        new immutable SimpleTimeZone(hours(8))));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -8853,7 +8884,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime.fromISOExtString("2010-07-04T07:06:12") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
@@ -8881,7 +8912,7 @@ public:
                        new immutable SimpleTimeZone(hours(8))));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -9066,7 +9097,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(SysTime.fromSimpleString("2010-Jul-04 07:06:12") ==
                SysTime(DateTime(2010, 7, 4, 7, 6, 12)));
@@ -9095,7 +9126,7 @@ public:
                        new immutable SimpleTimeZone(hours(8))));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -9200,7 +9231,7 @@ public:
         return SysTime(long.min, UTC());
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime.min.year < 0);
         assert(SysTime.min < SysTime.max);
@@ -9218,7 +9249,7 @@ public:
         return SysTime(long.max, UTC());
     }
 
-    unittest
+    @safe unittest
     {
         assert(SysTime.max.year > 0);
         assert(SysTime.max > SysTime.min);
@@ -9302,7 +9333,7 @@ public:
         _day   = cast(ubyte)day;
     }
 
-    unittest
+    @safe unittest
     {
         import std.exception : assertNotThrown;
         assert(Date(1, 1, 1) == Date.init);
@@ -9491,7 +9522,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
 
@@ -9531,7 +9562,7 @@ public:
         return 0;
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(1, 1, 1).opCmp(Date.init) == 0);
@@ -9625,14 +9656,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 7, 6).year == 1999);
         assert(Date(2010, 10, 4).year == 2010);
         assert(Date(-7, 4, 5).year == -7);
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date.init.year == 1);
         assert(Date(1999, 7, 6).year == 1999);
@@ -9662,14 +9693,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 7, 6).year == 1999);
         assert(Date(2010, 10, 4).year == 2010);
         assert(Date(-7, 4, 5).year == -7);
     }
 
-    unittest
+    @safe unittest
     {
         static void testDateInvalid(Date date, int year)
         {
@@ -9711,14 +9742,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(0, 1, 1).yearBC == 1);
         assert(Date(-1, 1, 1).yearBC == 2);
         assert(Date(-100, 1, 1).yearBC == 101);
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((in Date date){date.yearBC;}(Date(1, 1, 1)));
 
@@ -9749,7 +9780,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto date = Date(2010, 1, 1);
         date.yearBC = 1;
@@ -9759,7 +9790,7 @@ public:
         assert(date == Date(-9, 1, 1));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((Date date){date.yearBC = -1;}(Date(1, 1, 1)));
 
@@ -9782,14 +9813,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 7, 6).month == 7);
         assert(Date(2010, 10, 4).month == 10);
         assert(Date(-7, 4, 5).month == 4);
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date.init.month == 1);
         assert(Date(1999, 7, 6).month == 7);
@@ -9818,7 +9849,7 @@ public:
         _month = cast(Month)month;
     }
 
-    unittest
+    @safe unittest
     {
         static void testDate(Date date, Month month, in Date expected = Date.init)
         {
@@ -9851,14 +9882,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 7, 6).day == 6);
         assert(Date(2010, 10, 4).day == 4);
         assert(Date(-7, 4, 5).day == 5);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -9897,7 +9928,7 @@ public:
         _day = cast(ubyte)day;
     }
 
-    unittest
+    @safe unittest
     {
         import std.exception : assertNotThrown;
         static void testDate(Date date, int day)
@@ -10003,16 +10034,14 @@ public:
             allowOverflow = Whether the day should be allowed to overflow,
                             causing the month to increment.
       +/
-    ref Date add(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
+    ref Date add(string units)(long value, AllowDayOverflow allowOverflow = Yes.allowDayOverflow) @safe pure nothrow
         if (units == "years")
     {
-        immutable newYear = _year + value;
-
         _year += value;
 
         if (_month == Month.feb && _day == 29 && !yearIsLeapYear(_year))
         {
-            if (allowOverflow == AllowDayOverflow.yes)
+            if (allowOverflow == Yes.allowDayOverflow)
             {
                 _month = Month.mar;
                 _day = 1;
@@ -10025,8 +10054,10 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
+        import std.typecons : No;
+
         auto d1 = Date(2010, 1, 1);
         d1.add!"months"(11);
         assert(d1 == Date(2010, 12, 1));
@@ -10040,12 +10071,12 @@ public:
         assert(d3 == Date(2001, 3, 1));
 
         auto d4 = Date(2000, 2, 29);
-        d4.add!"years"(1, AllowDayOverflow.no);
+        d4.add!"years"(1, No.allowDayOverflow);
         assert(d4 == Date(2001, 2, 28));
     }
 
-    //Test add!"years"() with AllowDayOverlow.yes
-    unittest
+    //Test add!"years"() with Yes.allowDayOverflow
+    @safe unittest
     {
         //Test A.D.
         {
@@ -10146,106 +10177,106 @@ public:
         static assert(!__traits(compiles, idate.add!"years"(7)));
     }
 
-    //Test add!"years"() with AllowDayOverlow.no
-    unittest
+    //Test add!"years"() with No.allowDayOverflow
+    @safe unittest
     {
         //Test A.D.
         {
             auto date = Date(1999, 7, 6);
-            date.add!"years"(7, AllowDayOverflow.no);
+            date.add!"years"(7, No.allowDayOverflow);
             assert(date == Date(2006, 7, 6));
-            date.add!"years"(-9, AllowDayOverflow.no);
+            date.add!"years"(-9, No.allowDayOverflow);
             assert(date == Date(1997, 7, 6));
         }
 
         {
             auto date = Date(1999, 2, 28);
-            date.add!"years"(1, AllowDayOverflow.no);
+            date.add!"years"(1, No.allowDayOverflow);
             assert(date == Date(2000, 2, 28));
         }
 
         {
             auto date = Date(2000, 2, 29);
-            date.add!"years"(-1, AllowDayOverflow.no);
+            date.add!"years"(-1, No.allowDayOverflow);
             assert(date == Date(1999, 2, 28));
         }
 
         //Test B.C.
         {
             auto date = Date(-1999, 7, 6);
-            date.add!"years"(-7, AllowDayOverflow.no);
+            date.add!"years"(-7, No.allowDayOverflow);
             assert(date == Date(-2006, 7, 6));
-            date.add!"years"(9, AllowDayOverflow.no);
+            date.add!"years"(9, No.allowDayOverflow);
             assert(date == Date(-1997, 7, 6));
         }
 
         {
             auto date = Date(-1999, 2, 28);
-            date.add!"years"(-1, AllowDayOverflow.no);
+            date.add!"years"(-1, No.allowDayOverflow);
             assert(date == Date(-2000, 2, 28));
         }
 
         {
             auto date = Date(-2000, 2, 29);
-            date.add!"years"(1, AllowDayOverflow.no);
+            date.add!"years"(1, No.allowDayOverflow);
             assert(date == Date(-1999, 2, 28));
         }
 
         //Test Both
         {
             auto date = Date(4, 7, 6);
-            date.add!"years"(-5, AllowDayOverflow.no);
+            date.add!"years"(-5, No.allowDayOverflow);
             assert(date == Date(-1, 7, 6));
-            date.add!"years"(5, AllowDayOverflow.no);
+            date.add!"years"(5, No.allowDayOverflow);
             assert(date == Date(4, 7, 6));
         }
 
         {
             auto date = Date(-4, 7, 6);
-            date.add!"years"(5, AllowDayOverflow.no);
+            date.add!"years"(5, No.allowDayOverflow);
             assert(date == Date(1, 7, 6));
-            date.add!"years"(-5, AllowDayOverflow.no);
+            date.add!"years"(-5, No.allowDayOverflow);
             assert(date == Date(-4, 7, 6));
         }
 
         {
             auto date = Date(4, 7, 6);
-            date.add!"years"(-8, AllowDayOverflow.no);
+            date.add!"years"(-8, No.allowDayOverflow);
             assert(date == Date(-4, 7, 6));
-            date.add!"years"(8, AllowDayOverflow.no);
+            date.add!"years"(8, No.allowDayOverflow);
             assert(date == Date(4, 7, 6));
         }
 
         {
             auto date = Date(-4, 7, 6);
-            date.add!"years"(8, AllowDayOverflow.no);
+            date.add!"years"(8, No.allowDayOverflow);
             assert(date == Date(4, 7, 6));
-            date.add!"years"(-8, AllowDayOverflow.no);
+            date.add!"years"(-8, No.allowDayOverflow);
             assert(date == Date(-4, 7, 6));
         }
 
         {
             auto date = Date(-4, 2, 29);
-            date.add!"years"(5, AllowDayOverflow.no);
+            date.add!"years"(5, No.allowDayOverflow);
             assert(date == Date(1, 2, 28));
         }
 
         {
             auto date = Date(4, 2, 29);
-            date.add!"years"(-5, AllowDayOverflow.no);
+            date.add!"years"(-5, No.allowDayOverflow);
             assert(date == Date(-1, 2, 28));
         }
 
         {
             auto date = Date(4, 2, 29);
-            date.add!"years"(-5, AllowDayOverflow.no).add!"years"(7, AllowDayOverflow.no);
+            date.add!"years"(-5, No.allowDayOverflow).add!"years"(7, No.allowDayOverflow);
             assert(date == Date(6, 2, 28));
         }
     }
 
 
     //Shares documentation with "years" version.
-    ref Date add(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
+    ref Date add(string units)(long months, AllowDayOverflow allowOverflow = Yes.allowDayOverflow) @safe pure nothrow
         if (units == "months")
     {
         auto years = months / 12;
@@ -10274,7 +10305,7 @@ public:
 
         if (overflow > 0)
         {
-            if (allowOverflow == AllowDayOverflow.yes)
+            if (allowOverflow == Yes.allowDayOverflow)
             {
                 ++_month;
                 _day = cast(ubyte)overflow;
@@ -10286,8 +10317,8 @@ public:
         return this;
     }
 
-    //Test add!"months"() with AllowDayOverlow.yes
-    unittest
+    //Test add!"months"() with Yes.allowDayOverflow
+    @safe unittest
     {
         //Test A.D.
         {
@@ -10528,239 +10559,239 @@ public:
         static assert(!__traits(compiles, idate.add!"months"(3)));
     }
 
-    //Test add!"months"() with AllowDayOverlow.no
-    unittest
+    //Test add!"months"() with No.allowDayOverflow
+    @safe unittest
     {
         //Test A.D.
         {
             auto date = Date(1999, 7, 6);
-            date.add!"months"(3, AllowDayOverflow.no);
+            date.add!"months"(3, No.allowDayOverflow);
             assert(date == Date(1999, 10, 6));
-            date.add!"months"(-4, AllowDayOverflow.no);
+            date.add!"months"(-4, No.allowDayOverflow);
             assert(date == Date(1999, 6, 6));
         }
 
         {
             auto date = Date(1999, 7, 6);
-            date.add!"months"(6, AllowDayOverflow.no);
+            date.add!"months"(6, No.allowDayOverflow);
             assert(date == Date(2000, 1, 6));
-            date.add!"months"(-6, AllowDayOverflow.no);
+            date.add!"months"(-6, No.allowDayOverflow);
             assert(date == Date(1999, 7, 6));
         }
 
         {
             auto date = Date(1999, 7, 6);
-            date.add!"months"(27, AllowDayOverflow.no);
+            date.add!"months"(27, No.allowDayOverflow);
             assert(date == Date(2001, 10, 6));
-            date.add!"months"(-28, AllowDayOverflow.no);
+            date.add!"months"(-28, No.allowDayOverflow);
             assert(date == Date(1999, 6, 6));
         }
 
         {
             auto date = Date(1999, 5, 31);
-            date.add!"months"(1, AllowDayOverflow.no);
+            date.add!"months"(1, No.allowDayOverflow);
             assert(date == Date(1999, 6, 30));
         }
 
         {
             auto date = Date(1999, 5, 31);
-            date.add!"months"(-1, AllowDayOverflow.no);
+            date.add!"months"(-1, No.allowDayOverflow);
             assert(date == Date(1999, 4, 30));
         }
 
         {
             auto date = Date(1999, 2, 28);
-            date.add!"months"(12, AllowDayOverflow.no);
+            date.add!"months"(12, No.allowDayOverflow);
             assert(date == Date(2000, 2, 28));
         }
 
         {
             auto date = Date(2000, 2, 29);
-            date.add!"months"(12, AllowDayOverflow.no);
+            date.add!"months"(12, No.allowDayOverflow);
             assert(date == Date(2001, 2, 28));
         }
 
         {
             auto date = Date(1999, 7, 31);
-            date.add!"months"(1, AllowDayOverflow.no);
+            date.add!"months"(1, No.allowDayOverflow);
             assert(date == Date(1999, 8, 31));
-            date.add!"months"(1, AllowDayOverflow.no);
+            date.add!"months"(1, No.allowDayOverflow);
             assert(date == Date(1999, 9, 30));
         }
 
         {
             auto date = Date(1998, 8, 31);
-            date.add!"months"(13, AllowDayOverflow.no);
+            date.add!"months"(13, No.allowDayOverflow);
             assert(date == Date(1999, 9, 30));
-            date.add!"months"(-13, AllowDayOverflow.no);
+            date.add!"months"(-13, No.allowDayOverflow);
             assert(date == Date(1998, 8, 30));
         }
 
         {
             auto date = Date(1997, 12, 31);
-            date.add!"months"(13, AllowDayOverflow.no);
+            date.add!"months"(13, No.allowDayOverflow);
             assert(date == Date(1999, 1, 31));
-            date.add!"months"(-13, AllowDayOverflow.no);
+            date.add!"months"(-13, No.allowDayOverflow);
             assert(date == Date(1997, 12, 31));
         }
 
         {
             auto date = Date(1997, 12, 31);
-            date.add!"months"(14, AllowDayOverflow.no);
+            date.add!"months"(14, No.allowDayOverflow);
             assert(date == Date(1999, 2, 28));
-            date.add!"months"(-14, AllowDayOverflow.no);
+            date.add!"months"(-14, No.allowDayOverflow);
             assert(date == Date(1997, 12, 28));
         }
 
         {
             auto date = Date(1998, 12, 31);
-            date.add!"months"(14, AllowDayOverflow.no);
+            date.add!"months"(14, No.allowDayOverflow);
             assert(date == Date(2000, 2, 29));
-            date.add!"months"(-14, AllowDayOverflow.no);
+            date.add!"months"(-14, No.allowDayOverflow);
             assert(date == Date(1998, 12, 29));
         }
 
         {
             auto date = Date(1999, 12, 31);
-            date.add!"months"(14, AllowDayOverflow.no);
+            date.add!"months"(14, No.allowDayOverflow);
             assert(date == Date(2001, 2, 28));
-            date.add!"months"(-14, AllowDayOverflow.no);
+            date.add!"months"(-14, No.allowDayOverflow);
             assert(date == Date(1999, 12, 28));
         }
 
         //Test B.C.
         {
             auto date = Date(-1999, 7, 6);
-            date.add!"months"(3, AllowDayOverflow.no);
+            date.add!"months"(3, No.allowDayOverflow);
             assert(date == Date(-1999, 10, 6));
-            date.add!"months"(-4, AllowDayOverflow.no);
+            date.add!"months"(-4, No.allowDayOverflow);
             assert(date == Date(-1999, 6, 6));
         }
 
         {
             auto date = Date(-1999, 7, 6);
-            date.add!"months"(6, AllowDayOverflow.no);
+            date.add!"months"(6, No.allowDayOverflow);
             assert(date == Date(-1998, 1, 6));
-            date.add!"months"(-6, AllowDayOverflow.no);
+            date.add!"months"(-6, No.allowDayOverflow);
             assert(date == Date(-1999, 7, 6));
         }
 
         {
             auto date = Date(-1999, 7, 6);
-            date.add!"months"(-27, AllowDayOverflow.no);
+            date.add!"months"(-27, No.allowDayOverflow);
             assert(date == Date(-2001, 4, 6));
-            date.add!"months"(28, AllowDayOverflow.no);
+            date.add!"months"(28, No.allowDayOverflow);
             assert(date == Date(-1999, 8, 6));
         }
 
         {
             auto date = Date(-1999, 5, 31);
-            date.add!"months"(1, AllowDayOverflow.no);
+            date.add!"months"(1, No.allowDayOverflow);
             assert(date == Date(-1999, 6, 30));
         }
 
         {
             auto date = Date(-1999, 5, 31);
-            date.add!"months"(-1, AllowDayOverflow.no);
+            date.add!"months"(-1, No.allowDayOverflow);
             assert(date == Date(-1999, 4, 30));
         }
 
         {
             auto date = Date(-1999, 2, 28);
-            date.add!"months"(-12, AllowDayOverflow.no);
+            date.add!"months"(-12, No.allowDayOverflow);
             assert(date == Date(-2000, 2, 28));
         }
 
         {
             auto date = Date(-2000, 2, 29);
-            date.add!"months"(-12, AllowDayOverflow.no);
+            date.add!"months"(-12, No.allowDayOverflow);
             assert(date == Date(-2001, 2, 28));
         }
 
         {
             auto date = Date(-1999, 7, 31);
-            date.add!"months"(1, AllowDayOverflow.no);
+            date.add!"months"(1, No.allowDayOverflow);
             assert(date == Date(-1999, 8, 31));
-            date.add!"months"(1, AllowDayOverflow.no);
+            date.add!"months"(1, No.allowDayOverflow);
             assert(date == Date(-1999, 9, 30));
         }
 
         {
             auto date = Date(-1998, 8, 31);
-            date.add!"months"(13, AllowDayOverflow.no);
+            date.add!"months"(13, No.allowDayOverflow);
             assert(date == Date(-1997, 9, 30));
-            date.add!"months"(-13, AllowDayOverflow.no);
+            date.add!"months"(-13, No.allowDayOverflow);
             assert(date == Date(-1998, 8, 30));
         }
 
         {
             auto date = Date(-1997, 12, 31);
-            date.add!"months"(13, AllowDayOverflow.no);
+            date.add!"months"(13, No.allowDayOverflow);
             assert(date == Date(-1995, 1, 31));
-            date.add!"months"(-13, AllowDayOverflow.no);
+            date.add!"months"(-13, No.allowDayOverflow);
             assert(date == Date(-1997, 12, 31));
         }
 
         {
             auto date = Date(-1997, 12, 31);
-            date.add!"months"(14, AllowDayOverflow.no);
+            date.add!"months"(14, No.allowDayOverflow);
             assert(date == Date(-1995, 2, 28));
-            date.add!"months"(-14, AllowDayOverflow.no);
+            date.add!"months"(-14, No.allowDayOverflow);
             assert(date == Date(-1997, 12, 28));
         }
 
         {
             auto date = Date(-2002, 12, 31);
-            date.add!"months"(14, AllowDayOverflow.no);
+            date.add!"months"(14, No.allowDayOverflow);
             assert(date == Date(-2000, 2, 29));
-            date.add!"months"(-14, AllowDayOverflow.no);
+            date.add!"months"(-14, No.allowDayOverflow);
             assert(date == Date(-2002, 12, 29));
         }
 
         {
             auto date = Date(-2001, 12, 31);
-            date.add!"months"(14, AllowDayOverflow.no);
+            date.add!"months"(14, No.allowDayOverflow);
             assert(date == Date(-1999, 2, 28));
-            date.add!"months"(-14, AllowDayOverflow.no);
+            date.add!"months"(-14, No.allowDayOverflow);
             assert(date == Date(-2001, 12, 28));
         }
 
         //Test Both
         {
             auto date = Date(1, 1, 1);
-            date.add!"months"(-1, AllowDayOverflow.no);
+            date.add!"months"(-1, No.allowDayOverflow);
             assert(date == Date(0, 12, 1));
-            date.add!"months"(1, AllowDayOverflow.no);
+            date.add!"months"(1, No.allowDayOverflow);
             assert(date == Date(1, 1, 1));
         }
 
         {
             auto date = Date(4, 1, 1);
-            date.add!"months"(-48, AllowDayOverflow.no);
+            date.add!"months"(-48, No.allowDayOverflow);
             assert(date == Date(0, 1, 1));
-            date.add!"months"(48, AllowDayOverflow.no);
+            date.add!"months"(48, No.allowDayOverflow);
             assert(date == Date(4, 1, 1));
         }
 
         {
             auto date = Date(4, 3, 31);
-            date.add!"months"(-49, AllowDayOverflow.no);
+            date.add!"months"(-49, No.allowDayOverflow);
             assert(date == Date(0, 2, 29));
-            date.add!"months"(49, AllowDayOverflow.no);
+            date.add!"months"(49, No.allowDayOverflow);
             assert(date == Date(4, 3, 29));
         }
 
         {
             auto date = Date(4, 3, 31);
-            date.add!"months"(-85, AllowDayOverflow.no);
+            date.add!"months"(-85, No.allowDayOverflow);
             assert(date == Date(-3, 2, 28));
-            date.add!"months"(85, AllowDayOverflow.no);
+            date.add!"months"(85, No.allowDayOverflow);
             assert(date == Date(4, 3, 28));
         }
 
         {
             auto date = Date(-3, 3, 31);
-            date.add!"months"(85, AllowDayOverflow.no).add!"months"(-83, AllowDayOverflow.no);
+            date.add!"months"(85, No.allowDayOverflow).add!"months"(-83, No.allowDayOverflow);
             assert(date == Date(-3, 5, 30));
         }
     }
@@ -10785,15 +10816,17 @@ public:
             allowOverflow = Whether the day should be allowed to overflow,
                             causing the month to increment.
       +/
-    ref Date roll(string units)(long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
+    ref Date roll(string units)(long value, AllowDayOverflow allowOverflow = Yes.allowDayOverflow) @safe pure nothrow
         if (units == "years")
     {
         return add!"years"(value, allowOverflow);
     }
 
     ///
-    unittest
+    @safe unittest
     {
+        import std.typecons : No;
+
         auto d1 = Date(2010, 1, 1);
         d1.roll!"months"(1);
         assert(d1 == Date(2010, 2, 1));
@@ -10807,7 +10840,7 @@ public:
         assert(d3 == Date(1999, 3, 1));
 
         auto d4 = Date(1999, 1, 29);
-        d4.roll!"months"(1, AllowDayOverflow.no);
+        d4.roll!"months"(1, No.allowDayOverflow);
         assert(d4 == Date(1999, 2, 28));
 
         auto d5 = Date(2000, 2, 29);
@@ -10815,11 +10848,11 @@ public:
         assert(d5 == Date(2001, 3, 1));
 
         auto d6 = Date(2000, 2, 29);
-        d6.roll!"years"(1, AllowDayOverflow.no);
+        d6.roll!"years"(1, No.allowDayOverflow);
         assert(d6 == Date(2001, 2, 28));
     }
 
-    unittest
+    @safe unittest
     {
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
@@ -10829,7 +10862,7 @@ public:
 
 
     //Shares documentation with "years" version.
-    ref Date roll(string units)(long months, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
+    ref Date roll(string units)(long months, AllowDayOverflow allowOverflow = Yes.allowDayOverflow) @safe pure nothrow
         if (units == "months")
     {
         months %= 12;
@@ -10853,7 +10886,7 @@ public:
 
         if (overflow > 0)
         {
-            if (allowOverflow == AllowDayOverflow.yes)
+            if (allowOverflow == Yes.allowDayOverflow)
             {
                 ++_month;
                 _day = cast(ubyte)overflow;
@@ -10865,8 +10898,8 @@ public:
         return this;
     }
 
-    //Test roll!"months"() with AllowDayOverlow.yes
-    unittest
+    //Test roll!"months"() with Yes.allowDayOverflow
+    @safe unittest
     {
         //Test A.D.
         {
@@ -11139,271 +11172,271 @@ public:
         static assert(!__traits(compiles, idate.roll!"months"(3)));
     }
 
-    //Test roll!"months"() with AllowDayOverlow.no
-    unittest
+    //Test roll!"months"() with No.allowDayOverflow
+    @safe unittest
     {
         //Test A.D.
         {
             auto date = Date(1999, 7, 6);
-            date.roll!"months"(3, AllowDayOverflow.no);
+            date.roll!"months"(3, No.allowDayOverflow);
             assert(date == Date(1999, 10, 6));
-            date.roll!"months"(-4, AllowDayOverflow.no);
+            date.roll!"months"(-4, No.allowDayOverflow);
             assert(date == Date(1999, 6, 6));
         }
 
         {
             auto date = Date(1999, 7, 6);
-            date.roll!"months"(6, AllowDayOverflow.no);
+            date.roll!"months"(6, No.allowDayOverflow);
             assert(date == Date(1999, 1, 6));
-            date.roll!"months"(-6, AllowDayOverflow.no);
+            date.roll!"months"(-6, No.allowDayOverflow);
             assert(date == Date(1999, 7, 6));
         }
 
         {
             auto date = Date(1999, 7, 6);
-            date.roll!"months"(27, AllowDayOverflow.no);
+            date.roll!"months"(27, No.allowDayOverflow);
             assert(date == Date(1999, 10, 6));
-            date.roll!"months"(-28, AllowDayOverflow.no);
+            date.roll!"months"(-28, No.allowDayOverflow);
             assert(date == Date(1999, 6, 6));
         }
 
         {
             auto date = Date(1999, 5, 31);
-            date.roll!"months"(1, AllowDayOverflow.no);
+            date.roll!"months"(1, No.allowDayOverflow);
             assert(date == Date(1999, 6, 30));
         }
 
         {
             auto date = Date(1999, 5, 31);
-            date.roll!"months"(-1, AllowDayOverflow.no);
+            date.roll!"months"(-1, No.allowDayOverflow);
             assert(date == Date(1999, 4, 30));
         }
 
         {
             auto date = Date(1999, 2, 28);
-            date.roll!"months"(12, AllowDayOverflow.no);
+            date.roll!"months"(12, No.allowDayOverflow);
             assert(date == Date(1999, 2, 28));
         }
 
         {
             auto date = Date(2000, 2, 29);
-            date.roll!"months"(12, AllowDayOverflow.no);
+            date.roll!"months"(12, No.allowDayOverflow);
             assert(date == Date(2000, 2, 29));
         }
 
         {
             auto date = Date(1999, 7, 31);
-            date.roll!"months"(1, AllowDayOverflow.no);
+            date.roll!"months"(1, No.allowDayOverflow);
             assert(date == Date(1999, 8, 31));
-            date.roll!"months"(1, AllowDayOverflow.no);
+            date.roll!"months"(1, No.allowDayOverflow);
             assert(date == Date(1999, 9, 30));
         }
 
         {
             auto date = Date(1998, 8, 31);
-            date.roll!"months"(13, AllowDayOverflow.no);
+            date.roll!"months"(13, No.allowDayOverflow);
             assert(date == Date(1998, 9, 30));
-            date.roll!"months"(-13, AllowDayOverflow.no);
+            date.roll!"months"(-13, No.allowDayOverflow);
             assert(date == Date(1998, 8, 30));
         }
 
         {
             auto date = Date(1997, 12, 31);
-            date.roll!"months"(13, AllowDayOverflow.no);
+            date.roll!"months"(13, No.allowDayOverflow);
             assert(date == Date(1997, 1, 31));
-            date.roll!"months"(-13, AllowDayOverflow.no);
+            date.roll!"months"(-13, No.allowDayOverflow);
             assert(date == Date(1997, 12, 31));
         }
 
         {
             auto date = Date(1997, 12, 31);
-            date.roll!"months"(14, AllowDayOverflow.no);
+            date.roll!"months"(14, No.allowDayOverflow);
             assert(date == Date(1997, 2, 28));
-            date.roll!"months"(-14, AllowDayOverflow.no);
+            date.roll!"months"(-14, No.allowDayOverflow);
             assert(date == Date(1997, 12, 28));
         }
 
         {
             auto date = Date(1998, 12, 31);
-            date.roll!"months"(14, AllowDayOverflow.no);
+            date.roll!"months"(14, No.allowDayOverflow);
             assert(date == Date(1998, 2, 28));
-            date.roll!"months"(-14, AllowDayOverflow.no);
+            date.roll!"months"(-14, No.allowDayOverflow);
             assert(date == Date(1998, 12, 28));
         }
 
         {
             auto date = Date(1999, 12, 31);
-            date.roll!"months"(14, AllowDayOverflow.no);
+            date.roll!"months"(14, No.allowDayOverflow);
             assert(date == Date(1999, 2, 28));
-            date.roll!"months"(-14, AllowDayOverflow.no);
+            date.roll!"months"(-14, No.allowDayOverflow);
             assert(date == Date(1999, 12, 28));
         }
 
         //Test B.C.
         {
             auto date = Date(-1999, 7, 6);
-            date.roll!"months"(3, AllowDayOverflow.no);
+            date.roll!"months"(3, No.allowDayOverflow);
             assert(date == Date(-1999, 10, 6));
-            date.roll!"months"(-4, AllowDayOverflow.no);
+            date.roll!"months"(-4, No.allowDayOverflow);
             assert(date == Date(-1999, 6, 6));
         }
 
         {
             auto date = Date(-1999, 7, 6);
-            date.roll!"months"(6, AllowDayOverflow.no);
+            date.roll!"months"(6, No.allowDayOverflow);
             assert(date == Date(-1999, 1, 6));
-            date.roll!"months"(-6, AllowDayOverflow.no);
+            date.roll!"months"(-6, No.allowDayOverflow);
             assert(date == Date(-1999, 7, 6));
         }
 
         {
             auto date = Date(-1999, 7, 6);
-            date.roll!"months"(-27, AllowDayOverflow.no);
+            date.roll!"months"(-27, No.allowDayOverflow);
             assert(date == Date(-1999, 4, 6));
-            date.roll!"months"(28, AllowDayOverflow.no);
+            date.roll!"months"(28, No.allowDayOverflow);
             assert(date == Date(-1999, 8, 6));
         }
 
         {
             auto date = Date(-1999, 5, 31);
-            date.roll!"months"(1, AllowDayOverflow.no);
+            date.roll!"months"(1, No.allowDayOverflow);
             assert(date == Date(-1999, 6, 30));
         }
 
         {
             auto date = Date(-1999, 5, 31);
-            date.roll!"months"(-1, AllowDayOverflow.no);
+            date.roll!"months"(-1, No.allowDayOverflow);
             assert(date == Date(-1999, 4, 30));
         }
 
         {
             auto date = Date(-1999, 2, 28);
-            date.roll!"months"(-12, AllowDayOverflow.no);
+            date.roll!"months"(-12, No.allowDayOverflow);
             assert(date == Date(-1999, 2, 28));
         }
 
         {
             auto date = Date(-2000, 2, 29);
-            date.roll!"months"(-12, AllowDayOverflow.no);
+            date.roll!"months"(-12, No.allowDayOverflow);
             assert(date == Date(-2000, 2, 29));
         }
 
         {
             auto date = Date(-1999, 7, 31);
-            date.roll!"months"(1, AllowDayOverflow.no);
+            date.roll!"months"(1, No.allowDayOverflow);
             assert(date == Date(-1999, 8, 31));
-            date.roll!"months"(1, AllowDayOverflow.no);
+            date.roll!"months"(1, No.allowDayOverflow);
             assert(date == Date(-1999, 9, 30));
         }
 
         {
             auto date = Date(-1998, 8, 31);
-            date.roll!"months"(13, AllowDayOverflow.no);
+            date.roll!"months"(13, No.allowDayOverflow);
             assert(date == Date(-1998, 9, 30));
-            date.roll!"months"(-13, AllowDayOverflow.no);
+            date.roll!"months"(-13, No.allowDayOverflow);
             assert(date == Date(-1998, 8, 30));
         }
 
         {
             auto date = Date(-1997, 12, 31);
-            date.roll!"months"(13, AllowDayOverflow.no);
+            date.roll!"months"(13, No.allowDayOverflow);
             assert(date == Date(-1997, 1, 31));
-            date.roll!"months"(-13, AllowDayOverflow.no);
+            date.roll!"months"(-13, No.allowDayOverflow);
             assert(date == Date(-1997, 12, 31));
         }
 
         {
             auto date = Date(-1997, 12, 31);
-            date.roll!"months"(14, AllowDayOverflow.no);
+            date.roll!"months"(14, No.allowDayOverflow);
             assert(date == Date(-1997, 2, 28));
-            date.roll!"months"(-14, AllowDayOverflow.no);
+            date.roll!"months"(-14, No.allowDayOverflow);
             assert(date == Date(-1997, 12, 28));
         }
 
         {
             auto date = Date(-2002, 12, 31);
-            date.roll!"months"(14, AllowDayOverflow.no);
+            date.roll!"months"(14, No.allowDayOverflow);
             assert(date == Date(-2002, 2, 28));
-            date.roll!"months"(-14, AllowDayOverflow.no);
+            date.roll!"months"(-14, No.allowDayOverflow);
             assert(date == Date(-2002, 12, 28));
         }
 
         {
             auto date = Date(-2001, 12, 31);
-            date.roll!"months"(14, AllowDayOverflow.no);
+            date.roll!"months"(14, No.allowDayOverflow);
             assert(date == Date(-2001, 2, 28));
-            date.roll!"months"(-14, AllowDayOverflow.no);
+            date.roll!"months"(-14, No.allowDayOverflow);
             assert(date == Date(-2001, 12, 28));
         }
 
         //Test Both
         {
             auto date = Date(1, 1, 1);
-            date.roll!"months"(-1, AllowDayOverflow.no);
+            date.roll!"months"(-1, No.allowDayOverflow);
             assert(date == Date(1, 12, 1));
-            date.roll!"months"(1, AllowDayOverflow.no);
+            date.roll!"months"(1, No.allowDayOverflow);
             assert(date == Date(1, 1, 1));
         }
 
         {
             auto date = Date(4, 1, 1);
-            date.roll!"months"(-48, AllowDayOverflow.no);
+            date.roll!"months"(-48, No.allowDayOverflow);
             assert(date == Date(4, 1, 1));
-            date.roll!"months"(48, AllowDayOverflow.no);
+            date.roll!"months"(48, No.allowDayOverflow);
             assert(date == Date(4, 1, 1));
         }
 
         {
             auto date = Date(4, 3, 31);
-            date.roll!"months"(-49, AllowDayOverflow.no);
+            date.roll!"months"(-49, No.allowDayOverflow);
             assert(date == Date(4, 2, 29));
-            date.roll!"months"(49, AllowDayOverflow.no);
+            date.roll!"months"(49, No.allowDayOverflow);
             assert(date == Date(4, 3, 29));
         }
 
         {
             auto date = Date(4, 3, 31);
-            date.roll!"months"(-85, AllowDayOverflow.no);
+            date.roll!"months"(-85, No.allowDayOverflow);
             assert(date == Date(4, 2, 29));
-            date.roll!"months"(85, AllowDayOverflow.no);
+            date.roll!"months"(85, No.allowDayOverflow);
             assert(date == Date(4, 3, 29));
         }
 
         {
             auto date = Date(-1, 1, 1);
-            date.roll!"months"(-1, AllowDayOverflow.no);
+            date.roll!"months"(-1, No.allowDayOverflow);
             assert(date == Date(-1, 12, 1));
-            date.roll!"months"(1, AllowDayOverflow.no);
+            date.roll!"months"(1, No.allowDayOverflow);
             assert(date == Date(-1, 1, 1));
         }
 
         {
             auto date = Date(-4, 1, 1);
-            date.roll!"months"(-48, AllowDayOverflow.no);
+            date.roll!"months"(-48, No.allowDayOverflow);
             assert(date == Date(-4, 1, 1));
-            date.roll!"months"(48, AllowDayOverflow.no);
+            date.roll!"months"(48, No.allowDayOverflow);
             assert(date == Date(-4, 1, 1));
         }
 
         {
             auto date = Date(-4, 3, 31);
-            date.roll!"months"(-49, AllowDayOverflow.no);
+            date.roll!"months"(-49, No.allowDayOverflow);
             assert(date == Date(-4, 2, 29));
-            date.roll!"months"(49, AllowDayOverflow.no);
+            date.roll!"months"(49, No.allowDayOverflow);
             assert(date == Date(-4, 3, 29));
         }
 
         {
             auto date = Date(-4, 3, 31);
-            date.roll!"months"(-85, AllowDayOverflow.no);
+            date.roll!"months"(-85, No.allowDayOverflow);
             assert(date == Date(-4, 2, 29));
-            date.roll!"months"(85, AllowDayOverflow.no);
+            date.roll!"months"(85, No.allowDayOverflow);
             assert(date == Date(-4, 3, 29));
         }
 
         {
             auto date = Date(-3, 3, 31);
-            date.roll!"months"(85, AllowDayOverflow.no).roll!"months"(-83, AllowDayOverflow.no);
+            date.roll!"months"(85, No.allowDayOverflow).roll!"months"(-83, No.allowDayOverflow);
             assert(date == Date(-3, 5, 30));
         }
     }
@@ -11443,7 +11476,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto d = Date(2010, 1, 1);
         d.roll!"days"(1);
@@ -11454,7 +11487,7 @@ public:
         assert(d == Date(2010, 1, 25));
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -11669,7 +11702,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(2015, 12, 31) + days(1) == Date(2016, 1, 1));
         assert(Date(2004, 2, 26) + days(4) == Date(2004, 3, 1));
@@ -11678,7 +11711,7 @@ public:
         assert(Date(2004, 3, 1) - days(4) == Date(2004, 2, 26));
     }
 
-    unittest
+    @safe unittest
     {
         auto date = Date(1999, 7, 6);
 
@@ -11748,7 +11781,7 @@ public:
         mixin("return retval._addDays(" ~ op ~ "days);");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -11787,7 +11820,7 @@ public:
         mixin("return _addDays(" ~ op ~ "days);");
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 7, 6) + dur!"weeks"(7) == Date(1999, 8, 24));
         assert(Date(1999, 7, 6) + dur!"weeks"(-7) == Date(1999, 5, 18));
@@ -11861,7 +11894,7 @@ public:
         mixin("return _addDays(" ~ op ~ "days);");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -11909,7 +11942,7 @@ public:
         return dur!"days"(this.dayOfGregorianCal - rhs.dayOfGregorianCal);
     }
 
-    unittest
+    @safe unittest
     {
         auto date = Date(1999, 7, 6);
 
@@ -11966,7 +11999,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 2, 1).diffMonths(Date(1999, 1, 31)) == 1);
         assert(Date(1999, 1, 31).diffMonths(Date(1999, 2, 1)) == -1);
@@ -11974,7 +12007,7 @@ public:
         assert(Date(1999, 1, 1).diffMonths(Date(1999, 3, 31)) == -2);
     }
 
-    unittest
+    @safe unittest
     {
         auto date = Date(1999, 7, 6);
 
@@ -12200,7 +12233,7 @@ public:
         return yearIsLeapYear(_year);
     }
 
-    unittest
+    @safe unittest
     {
         auto date = Date(1999, 7, 6);
         const cdate = Date(1999, 7, 6);
@@ -12219,7 +12252,7 @@ public:
         return getDayOfWeek(dayOfGregorianCal);
     }
 
-    unittest
+    @safe unittest
     {
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
@@ -12246,14 +12279,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 1, 1).dayOfYear == 1);
         assert(Date(1999, 12, 31).dayOfYear == 365);
         assert(Date(2000, 12, 31).dayOfYear == 366);
     }
 
-    unittest
+    @safe unittest
     {
         import std.algorithm.iteration : filter;
         import std.range : chain;
@@ -12314,7 +12347,7 @@ public:
         assert(0, "Invalid day of the year.");
     }
 
-    unittest
+    @safe unittest
     {
         static void test(Date date, int day, MonthDay expected, size_t line = __LINE__)
         {
@@ -12399,7 +12432,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1, 1, 1).dayOfGregorianCal == 1);
         assert(Date(1, 12, 31).dayOfGregorianCal == 365);
@@ -12413,7 +12446,7 @@ public:
         assert(Date(2010, 12, 31).dayOfGregorianCal == 734_137);
     }
 
-    unittest
+    @safe unittest
     {
         import std.range : chain;
 
@@ -12440,7 +12473,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto date = Date.init;
         date.dayOfGregorianCal = 1;
@@ -12468,7 +12501,7 @@ public:
         assert(date == Date(2010, 12, 31));
     }
 
-    unittest
+    @safe unittest
     {
         auto date = Date(1999, 7, 6);
         const cdate = Date(1999, 7, 6);
@@ -12520,7 +12553,7 @@ public:
             assert(0, "Date's constructor threw.");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(2009, 12, 28).isoWeek == 53);
@@ -12594,7 +12627,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 1, 6).endOfMonth == Date(1999, 1, 31));
         assert(Date(1999, 2, 7).endOfMonth == Date(1999, 2, 28));
@@ -12602,7 +12635,7 @@ public:
         assert(Date(2000, 6, 4).endOfMonth == Date(2000, 6, 30));
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(1999, 1, 1).endOfMonth == Date(1999, 1, 31));
@@ -12650,7 +12683,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1999, 1, 6).daysInMonth == 31);
         assert(Date(1999, 2, 7).daysInMonth == 28);
@@ -12658,7 +12691,7 @@ public:
         assert(Date(2000, 6, 4).daysInMonth == 30);
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(1999, 1, 1).daysInMonth == 31);
@@ -12706,7 +12739,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(1, 1, 1).isAD);
         assert(Date(2010, 12, 31).isAD);
@@ -12714,7 +12747,7 @@ public:
         assert(!Date(-2010, 1, 1).isAD);
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date(2010, 7, 4).isAD);
         assert(Date(1, 1, 1).isAD);
@@ -12738,7 +12771,7 @@ public:
         return dayOfGregorianCal + 1_721_425;
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date(-4713, 11, 24).julianDay == 0);
         assert(Date(0, 12, 31).julianDay == 1_721_425);
@@ -12765,7 +12798,7 @@ public:
         return julianDay - 2_400_001;
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date(1858, 11, 17).modJulianDay == 0);
         assert(Date(2010, 8, 24).modJulianDay == 55_432);
@@ -12802,7 +12835,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(2010, 7, 4).toISOString() == "20100704");
         assert(Date(1998, 12, 25).toISOString() == "19981225");
@@ -12810,7 +12843,7 @@ public:
         assert(Date(-4, 1, 5).toISOString() == "-00040105");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(9, 12, 4).toISOString() == "00091204");
@@ -12858,7 +12891,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(2010, 7, 4).toISOExtString() == "2010-07-04");
         assert(Date(1998, 12, 25).toISOExtString() == "1998-12-25");
@@ -12866,7 +12899,7 @@ public:
         assert(Date(-4, 1, 5).toISOExtString() == "-0004-01-05");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(9, 12, 4).toISOExtString() == "0009-12-04");
@@ -12914,7 +12947,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(2010, 7, 4).toSimpleString() == "2010-Jul-04");
         assert(Date(1998, 12, 25).toSimpleString() == "1998-Dec-25");
@@ -12922,7 +12955,7 @@ public:
         assert(Date(-4, 1, 5).toSimpleString() == "-0004-Jan-05");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(Date(9, 12, 4).toSimpleString() == "0009-Dec-04");
@@ -12954,7 +12987,7 @@ public:
         return toSimpleString();
     }
 
-    unittest
+    @safe unittest
     {
         auto date = Date(1999, 7, 6);
         const cdate = Date(1999, 7, 6);
@@ -13010,7 +13043,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date.fromISOString("20100704") == Date(2010, 7, 4));
         assert(Date.fromISOString("19981225") == Date(1998, 12, 25));
@@ -13019,7 +13052,7 @@ public:
         assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(Date.fromISOString(""));
         assertThrown!DateTimeException(Date.fromISOString("990704"));
@@ -13137,7 +13170,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date.fromISOExtString("2010-07-04") == Date(2010, 7, 4));
         assert(Date.fromISOExtString("1998-12-25") == Date(1998, 12, 25));
@@ -13146,7 +13179,7 @@ public:
         assert(Date.fromISOExtString(" 2010-07-04 ") == Date(2010, 7, 4));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(Date.fromISOExtString(""));
         assertThrown!DateTimeException(Date.fromISOExtString("990704"));
@@ -13261,7 +13294,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date.fromSimpleString("2010-Jul-04") == Date(2010, 7, 4));
         assert(Date.fromSimpleString("1998-Dec-25") == Date(1998, 12, 25));
@@ -13270,7 +13303,7 @@ public:
         assert(Date.fromSimpleString(" 2010-Jul-04 ") == Date(2010, 7, 4));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(Date.fromSimpleString(""));
         assertThrown!DateTimeException(Date.fromSimpleString("990704"));
@@ -13351,7 +13384,7 @@ public:
         return date;
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date.min.year < 0);
         assert(Date.min < Date.max);
@@ -13372,7 +13405,7 @@ public:
         return date;
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date.max.year > 0);
         assert(Date.max > Date.min);
@@ -13419,7 +13452,7 @@ private:
         return this;
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         {
@@ -13624,7 +13657,7 @@ public:
         _second = cast(ubyte)second;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay(0, 0) == TimeOfDay.init);
 
@@ -13685,7 +13718,7 @@ public:
         return 0;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay(0, 0, 0).opCmp(TimeOfDay.init) == 0);
 
@@ -13730,7 +13763,7 @@ public:
         return _hour;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.init.hour == 0);
         assert(TimeOfDay(12, 0, 0).hour == 12);
@@ -13758,7 +13791,7 @@ public:
         _hour = cast(ubyte)hour;
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).hour = 24;}());
 
@@ -13781,7 +13814,7 @@ public:
         return _minute;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.init.minute == 0);
         assert(TimeOfDay(0, 30, 0).minute == 30);
@@ -13809,7 +13842,7 @@ public:
         _minute = cast(ubyte)minute;
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).minute = 60;}());
 
@@ -13832,7 +13865,7 @@ public:
         return _second;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.init.second == 0);
         assert(TimeOfDay(0, 0, 33).second == 33);
@@ -13860,7 +13893,7 @@ public:
         _second = cast(ubyte)second;
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((){TimeOfDay(0, 0, 0).second = 60;}());
 
@@ -13898,7 +13931,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto tod1 = TimeOfDay(7, 12, 0);
         tod1.roll!"hours"(1);
@@ -13925,7 +13958,7 @@ public:
         assert(tod6 == TimeOfDay(0, 0, 59));
     }
 
-    unittest
+    @safe unittest
     {
         auto tod = TimeOfDay(12, 27, 2);
         tod.roll!"hours"(22).roll!"hours"(-7);
@@ -13962,7 +13995,7 @@ public:
     }
 
     //Test roll!"minutes"().
-    unittest
+    @safe unittest
     {
         static void testTOD(TimeOfDay orig, int minutes, in TimeOfDay expected, size_t line = __LINE__)
         {
@@ -14046,7 +14079,7 @@ public:
     }
 
     //Test roll!"seconds"().
-    unittest
+    @safe unittest
     {
         static void testTOD(TimeOfDay orig, int seconds, in TimeOfDay expected, size_t line = __LINE__)
         {
@@ -14144,7 +14177,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay(12, 12, 12) + seconds(1) == TimeOfDay(12, 12, 13));
         assert(TimeOfDay(12, 12, 12) + minutes(1) == TimeOfDay(12, 13, 12));
@@ -14157,7 +14190,7 @@ public:
         assert(TimeOfDay(0, 0, 0) - seconds(1) == TimeOfDay(23, 59, 59));
     }
 
-    unittest
+    @safe unittest
     {
         auto tod = TimeOfDay(12, 30, 33);
 
@@ -14219,7 +14252,7 @@ public:
         mixin("return retval._addSeconds(" ~ op ~ "seconds);");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -14260,7 +14293,7 @@ public:
         mixin("return _addSeconds(" ~ op ~ "seconds);");
     }
 
-    unittest
+    @safe unittest
     {
         auto duration = dur!"hours"(12);
 
@@ -14321,7 +14354,7 @@ public:
         mixin("return _addSeconds(" ~ op ~ "seconds);");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -14375,7 +14408,7 @@ public:
         return dur!"seconds"(lhsSec - rhsSec);
     }
 
-    unittest
+    @safe unittest
     {
         auto tod = TimeOfDay(12, 30, 33);
 
@@ -14417,13 +14450,13 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay(0, 0, 0).toISOString() == "000000");
         assert(TimeOfDay(12, 30, 33).toISOString() == "123033");
     }
 
-    unittest
+    @safe unittest
     {
         auto tod = TimeOfDay(12, 30, 33);
         const ctod = TimeOfDay(12, 30, 33);
@@ -14447,13 +14480,13 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay(0, 0, 0).toISOExtString() == "00:00:00");
         assert(TimeOfDay(12, 30, 33).toISOExtString() == "12:30:33");
     }
 
-    unittest
+    @safe unittest
     {
         auto tod = TimeOfDay(12, 30, 33);
         const ctod = TimeOfDay(12, 30, 33);
@@ -14472,7 +14505,7 @@ public:
         return toISOExtString();
     }
 
-    unittest
+    @safe unittest
     {
         auto tod = TimeOfDay(12, 30, 33);
         const ctod = TimeOfDay(12, 30, 33);
@@ -14519,14 +14552,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.fromISOString("000000") == TimeOfDay(0, 0, 0));
         assert(TimeOfDay.fromISOString("123033") == TimeOfDay(12, 30, 33));
         assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(TimeOfDay.fromISOString(""));
         assertThrown!DateTimeException(TimeOfDay.fromISOString("0"));
@@ -14632,14 +14665,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.fromISOExtString("00:00:00") == TimeOfDay(0, 0, 0));
         assert(TimeOfDay.fromISOExtString("12:30:33") == TimeOfDay(12, 30, 33));
         assert(TimeOfDay.fromISOExtString(" 12:30:33 ") == TimeOfDay(12, 30, 33));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(TimeOfDay.fromISOExtString(""));
         assertThrown!DateTimeException(TimeOfDay.fromISOExtString("0"));
@@ -14711,7 +14744,7 @@ public:
         return TimeOfDay.init;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.min.hour == 0);
         assert(TimeOfDay.min.minute == 0);
@@ -14733,7 +14766,7 @@ public:
         return tod;
     }
 
-    unittest
+    @safe unittest
     {
         assert(TimeOfDay.max.hour == 23);
         assert(TimeOfDay.max.minute == 59);
@@ -14778,7 +14811,7 @@ private:
         return this;
     }
 
-    unittest
+    @safe unittest
     {
         static void testTOD(TimeOfDay orig, int seconds, in TimeOfDay expected, size_t line = __LINE__)
         {
@@ -14904,7 +14937,7 @@ public:
         _tod = tod;
     }
 
-    unittest
+    @safe unittest
     {
         {
             auto dt = DateTime.init;
@@ -14941,7 +14974,7 @@ public:
         _tod = TimeOfDay(hour, minute, second);
     }
 
-    unittest
+    @safe unittest
     {
         {
             auto dt = DateTime(1999, 7 ,6);
@@ -14977,7 +15010,7 @@ public:
         return _tod.opCmp(rhs._tod);
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(DateTime(Date.init, TimeOfDay.init).opCmp(DateTime.init) == 0);
@@ -15182,7 +15215,7 @@ public:
         return _date;
     }
 
-    unittest
+    @safe unittest
     {
         {
             auto dt = DateTime.init;
@@ -15212,7 +15245,7 @@ public:
         _date = date;
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime.init;
         dt.date = Date(1999, 7, 6);
@@ -15234,7 +15267,7 @@ public:
         return _tod;
     }
 
-    unittest
+    @safe unittest
     {
         {
             auto dt = DateTime.init;
@@ -15265,7 +15298,7 @@ public:
         _tod = tod;
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime.init;
         dt.timeOfDay = TimeOfDay(12, 30, 33);
@@ -15288,7 +15321,7 @@ public:
         return _date.year;
     }
 
-    unittest
+    @safe unittest
     {
         assert(Date.init.year == 1);
         assert(Date(1999, 7, 6).year == 1999);
@@ -15318,14 +15351,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).year == 1999);
         assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).year == 2010);
         assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).year == -7);
     }
 
-    unittest
+    @safe unittest
     {
         static void testDT(DateTime dt, int year, in DateTime expected, size_t line = __LINE__)
         {
@@ -15368,14 +15401,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(0, 1, 1), TimeOfDay(12, 30, 33)).yearBC == 1);
         assert(DateTime(Date(-1, 1, 1), TimeOfDay(10, 7, 2)).yearBC == 2);
         assert(DateTime(Date(-100, 1, 1), TimeOfDay(4, 59, 0)).yearBC == 101);
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((in DateTime dt){dt.yearBC;}(DateTime(Date(1, 1, 1))));
 
@@ -15404,7 +15437,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(2010, 1, 1), TimeOfDay(7, 30, 0));
         dt.yearBC = 1;
@@ -15414,7 +15447,7 @@ public:
         assert(dt == DateTime(Date(-9, 1, 1), TimeOfDay(7, 30, 0)));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((DateTime dt){dt.yearBC = -1;}(DateTime(Date(1, 1, 1))));
 
@@ -15437,14 +15470,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).month == 7);
         assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).month == 10);
         assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).month == 4);
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime.init.month == 1);
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)).month == 7);
@@ -15471,7 +15504,7 @@ public:
         _date.month = month;
     }
 
-    unittest
+    @safe unittest
     {
         static void testDT(DateTime dt, Month month, in DateTime expected = DateTime.init, size_t line = __LINE__)
         {
@@ -15510,14 +15543,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).day == 6);
         assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).day == 4);
         assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.range : chain;
@@ -15558,7 +15591,7 @@ public:
         _date.day = day;
     }
 
-    unittest
+    @safe unittest
     {
         import std.exception : assertNotThrown;
         static void testDT(DateTime dt, int day)
@@ -15651,7 +15684,7 @@ public:
         return _tod.hour;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime.init.hour == 0);
         assert(DateTime(Date.init, TimeOfDay(12, 0, 0)).hour == 12);
@@ -15678,7 +15711,7 @@ public:
         _tod.hour = hour;
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((){DateTime(Date(1999, 7, 6), TimeOfDay(0, 0, 0)).hour = 24;}());
 
@@ -15701,7 +15734,7 @@ public:
         return _tod.minute;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime.init.minute == 0);
         assert(DateTime(1, 1, 1, 0, 30, 0).minute == 30);
@@ -15728,7 +15761,7 @@ public:
         _tod.minute = minute;
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((){DateTime.init.minute = 60;}());
 
@@ -15751,7 +15784,7 @@ public:
         return _tod.second;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime.init.second == 0);
         assert(DateTime(1, 1, 1, 0, 0, 33).second == 33);
@@ -15778,7 +15811,7 @@ public:
         _tod.second = second;
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException((){DateTime.init.second = 60;}());
 
@@ -15813,7 +15846,7 @@ public:
                             causing the month to increment.
       +/
     ref DateTime add(string units)
-                    (long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
+                    (long value, AllowDayOverflow allowOverflow = Yes.allowDayOverflow) @safe pure nothrow
         if (units == "years" ||
            units == "months")
     {
@@ -15822,8 +15855,10 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
+        import std.typecons : No;
+
         auto dt1 = DateTime(2010, 1, 1, 12, 30, 33);
         dt1.add!"months"(11);
         assert(dt1 == DateTime(2010, 12, 1, 12, 30, 33));
@@ -15837,11 +15872,11 @@ public:
         assert(dt3 == DateTime(2001, 3, 1, 12, 30, 33));
 
         auto dt4 = DateTime(2000, 2, 29, 12, 30, 33);
-        dt4.add!"years"(1, AllowDayOverflow.no);
+        dt4.add!"years"(1, No.allowDayOverflow);
         assert(dt4 == DateTime(2001, 2, 28, 12, 30, 33));
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(2000, 1, 31);
         dt.add!"years"(7).add!"months"(-4);
@@ -15876,7 +15911,7 @@ public:
                             causing the month to increment.
       +/
     ref DateTime roll(string units)
-                     (long value, AllowDayOverflow allowOverflow = AllowDayOverflow.yes) @safe pure nothrow
+                     (long value, AllowDayOverflow allowOverflow = Yes.allowDayOverflow) @safe pure nothrow
         if (units == "years" ||
            units == "months")
     {
@@ -15885,8 +15920,10 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
+        import std.typecons : No;
+
         auto dt1 = DateTime(2010, 1, 1, 12, 33, 33);
         dt1.roll!"months"(1);
         assert(dt1 == DateTime(2010, 2, 1, 12, 33, 33));
@@ -15900,7 +15937,7 @@ public:
         assert(dt3 == DateTime(1999, 3, 1, 12, 33, 33));
 
         auto dt4 = DateTime(1999, 1, 29, 12, 33, 33);
-        dt4.roll!"months"(1, AllowDayOverflow.no);
+        dt4.roll!"months"(1, No.allowDayOverflow);
         assert(dt4 == DateTime(1999, 2, 28, 12, 33, 33));
 
         auto dt5 = DateTime(2000, 2, 29, 12, 30, 33);
@@ -15908,11 +15945,11 @@ public:
         assert(dt5 == DateTime(2001, 3, 1, 12, 30, 33));
 
         auto dt6 = DateTime(2000, 2, 29, 12, 30, 33);
-        dt6.roll!"years"(1, AllowDayOverflow.no);
+        dt6.roll!"years"(1, No.allowDayOverflow);
         assert(dt6 == DateTime(2001, 2, 28, 12, 30, 33));
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(2000, 1, 31);
         dt.roll!"years"(7).roll!"months"(-4);
@@ -15950,7 +15987,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto dt1 = DateTime(2010, 1, 1, 11, 23, 12);
         dt1.roll!"days"(1);
@@ -15969,7 +16006,7 @@ public:
         assert(dt3 == DateTime(2010, 1, 1, 0, 0, 59));
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(2000, 1, 31);
         dt.roll!"days"(7).roll!"days"(-4);
@@ -15993,7 +16030,7 @@ public:
     }
 
     //Test roll!"hours"().
-    unittest
+    @safe unittest
     {
         static void testDT(DateTime orig, int hours, in DateTime expected, size_t line = __LINE__)
         {
@@ -16296,7 +16333,7 @@ public:
     }
 
     //Test roll!"minutes"().
-    unittest
+    @safe unittest
     {
         static void testDT(DateTime orig, int minutes, in DateTime expected, size_t line = __LINE__)
         {
@@ -16596,7 +16633,7 @@ public:
     }
 
     //Test roll!"seconds"().
-    unittest
+    @safe unittest
     {
         static void testDT(DateTime orig, int seconds, in DateTime expected, size_t line = __LINE__)
         {
@@ -16879,7 +16916,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(2015, 12, 31, 23, 59, 59) + seconds(1) ==
                DateTime(2016, 1, 1, 0, 0, 0));
@@ -16894,7 +16931,7 @@ public:
                DateTime(2015, 12, 31, 23, 59, 59));
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
 
@@ -16961,7 +16998,7 @@ public:
         mixin("return retval._addSeconds(" ~ op ~ "seconds);");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -17010,7 +17047,7 @@ public:
         mixin(format(`return _addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"weeks"(7) == DateTime(Date(1999,
             8, 24), TimeOfDay(12, 30, 33)));
@@ -17111,7 +17148,7 @@ public:
         mixin("return _addSeconds(" ~ op ~ "seconds);");
     }
 
-    deprecated unittest
+    deprecated @safe unittest
     {
         //This probably only runs in cases where gettimeofday() is used, but it's
         //hard to do this test correctly with variable ticksPerSec.
@@ -17162,7 +17199,7 @@ public:
         return dur!"hnsecs"(dateResult.total!"hnsecs" + todResult.total!"hnsecs");
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(1999, 7, 6, 12, 30, 33);
 
@@ -17256,7 +17293,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(1999, 2, 1, 12, 2, 3).diffMonths(
                     DateTime(1999, 1, 31, 23, 59, 59)) == 1);
@@ -17271,7 +17308,7 @@ public:
                     DateTime(1999, 3, 31, 0, 30, 58)) == -2);
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17298,7 +17335,7 @@ public:
         return _date.isLeapYear;
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17317,7 +17354,7 @@ public:
         return _date.dayOfWeek;
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17337,14 +17374,14 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 1, 1), TimeOfDay(12, 22, 7)).dayOfYear == 1);
         assert(DateTime(Date(1999, 12, 31), TimeOfDay(7, 2, 59)).dayOfYear == 365);
         assert(DateTime(Date(2000, 12, 31), TimeOfDay(21, 20, 0)).dayOfYear == 366);
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17367,7 +17404,7 @@ public:
         _date.dayOfYear = day;
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17388,7 +17425,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)).dayOfGregorianCal == 1);
         assert(DateTime(Date(1, 12, 31), TimeOfDay(23, 59, 59)).dayOfGregorianCal == 365);
@@ -17402,7 +17439,7 @@ public:
         assert(DateTime(Date(2010, 12, 31), TimeOfDay(15, 45, 50)).dayOfGregorianCal == 734_137);
     }
 
-    unittest
+    @safe unittest
     {
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17426,7 +17463,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date.init, TimeOfDay(12, 0, 0));
         dt.dayOfGregorianCal = 1;
@@ -17454,7 +17491,7 @@ public:
         assert(dt == DateTime(Date(2010, 12, 31), TimeOfDay(12, 0, 0)));
     }
 
-    unittest
+    @safe unittest
     {
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17474,7 +17511,7 @@ public:
         return _date.isoWeek;
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17498,7 +17535,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonth ==
                DateTime(Date(1999, 1, 31), TimeOfDay(23, 59, 59)));
@@ -17513,7 +17550,7 @@ public:
                DateTime(Date(2000, 6, 30), TimeOfDay(23, 59, 59)));
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(DateTime(1999, 1, 1, 0, 13, 26).endOfMonth == DateTime(1999, 1, 31, 23, 59, 59));
@@ -17561,7 +17598,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).daysInMonth == 31);
         assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).daysInMonth == 28);
@@ -17569,7 +17606,7 @@ public:
         assert(DateTime(Date(2000, 6, 4), TimeOfDay(12, 22, 9)).daysInMonth == 30);
     }
 
-    unittest
+    @safe unittest
     {
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17587,7 +17624,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1, 1, 1), TimeOfDay(12, 7, 0)).isAD);
         assert(DateTime(Date(2010, 12, 31), TimeOfDay(0, 0, 0)).isAD);
@@ -17595,7 +17632,7 @@ public:
         assert(!DateTime(Date(-2010, 1, 1), TimeOfDay(2, 2, 2)).isAD);
     }
 
-    unittest
+    @safe unittest
     {
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17619,7 +17656,7 @@ public:
             return _date.julianDay;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(-4713, 11, 24), TimeOfDay(0, 0, 0)).julianDay == -1);
         assert(DateTime(Date(-4713, 11, 24), TimeOfDay(12, 0, 0)).julianDay == 0);
@@ -17661,7 +17698,7 @@ public:
         return _date.modJulianDay;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(1858, 11, 17), TimeOfDay(0, 0, 0)).modJulianDay == 0);
         assert(DateTime(Date(1858, 11, 17), TimeOfDay(12, 0, 0)).modJulianDay == 0);
@@ -17689,7 +17726,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOString() ==
                "20100704T070612");
@@ -17704,7 +17741,7 @@ public:
                "-00040105T000002");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(DateTime(Date(9, 12, 4), TimeOfDay(0, 0, 0)).toISOString() == "00091204T000000");
@@ -17742,7 +17779,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtString() ==
                "2010-07-04T07:06:12");
@@ -17757,7 +17794,7 @@ public:
                "-0004-01-05T00:00:02");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(DateTime(Date(9, 12, 4), TimeOfDay(0, 0, 0)).toISOExtString() == "0009-12-04T00:00:00");
@@ -17794,7 +17831,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toSimpleString() ==
                "2010-Jul-04 07:06:12");
@@ -17809,7 +17846,7 @@ public:
                "-0004-Jan-05 00:00:02");
     }
 
-    unittest
+    @safe unittest
     {
         //Test A.D.
         assert(DateTime(Date(9, 12, 4), TimeOfDay(0, 0, 0)).toSimpleString() == "0009-Dec-04 00:00:00");
@@ -17841,7 +17878,7 @@ public:
         return toSimpleString();
     }
 
-    unittest
+    @safe unittest
     {
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
@@ -17886,7 +17923,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime.fromISOString("20100704T070612") ==
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
@@ -17904,7 +17941,7 @@ public:
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(DateTime.fromISOString(""));
         assertThrown!DateTimeException(DateTime.fromISOString("20100704000000"));
@@ -17974,7 +18011,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime.fromISOExtString("2010-07-04T07:06:12") ==
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
@@ -17992,7 +18029,7 @@ public:
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(DateTime.fromISOExtString(""));
         assertThrown!DateTimeException(DateTime.fromISOExtString("20100704000000"));
@@ -18060,7 +18097,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(DateTime.fromSimpleString("2010-Jul-04 07:06:12") ==
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
@@ -18074,7 +18111,7 @@ public:
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
     }
 
-    unittest
+    @safe unittest
     {
         assertThrown!DateTimeException(DateTime.fromISOString(""));
         assertThrown!DateTimeException(DateTime.fromISOString("20100704000000"));
@@ -18150,7 +18187,7 @@ public:
         return dt;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime.min.year < 0);
         assert(DateTime.min < DateTime.max);
@@ -18180,7 +18217,7 @@ public:
         return dt;
     }
 
-    unittest
+    @safe unittest
     {
         assert(DateTime.max.year > 0);
         assert(DateTime.max > DateTime.min);
@@ -18226,7 +18263,7 @@ private:
         return this;
     }
 
-    unittest
+    @safe unittest
     {
         static void testDT(DateTime orig, int seconds, in DateTime expected, size_t line = __LINE__)
         {
@@ -19479,7 +19516,7 @@ interval2.shift(-2);
 assert(interval2 == Interval!Date(Date(1994, 1, 2), Date(2010, 3, 1)));
 --------------------
           +/
-        void shift(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
+        void shift(T)(T years, T months = 0, AllowDayOverflow allowOverflow = Yes.allowDayOverflow)
             if (isIntegral!T)
         {
             _enforceNotEmpty();
@@ -19605,7 +19642,7 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
 --------------------
           +/
         void expand(T)(
-            T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes,
+            T years, T months = 0, AllowDayOverflow allowOverflow = Yes.allowDayOverflow,
             Direction dir = Direction.both) if (isIntegral!T)
         {
             _enforceNotEmpty();
@@ -19672,7 +19709,7 @@ assert(interval2 == Interval!Date(Date(1998, 1, 2), Date(2010, 3, 1)));
 
         The range's $(D front) is the interval's $(D begin). $(D_PARAM func) is
         used to generate the next $(D front) when $(D popFront) is called. If
-        $(D_PARAM popFirst) is $(D PopFirst.yes), then $(D popFront) is called
+        $(D_PARAM popFirst) is $(D Yes.popFirst), then $(D popFront) is called
         before the range is returned (so that $(D front) is a time point which
         $(D_PARAM func) would generate).
 
@@ -19726,7 +19763,7 @@ auto func = delegate (in Date date) //For iterating over even-numbered days.
             };
 auto range = interval.fwdRange(func);
 
- //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 2).
+ //An odd day. Using Yes.popFirst would have made this Date(2010, 9, 2).
 assert(range.front == Date(2010, 9, 1));
 
 range.popFront();
@@ -19745,13 +19782,13 @@ range.popFront();
 assert(range.empty);
 --------------------
       +/
-    IntervalRange!(TP, Direction.fwd) fwdRange(TP delegate(in TP) func, PopFirst popFirst = PopFirst.no) const
+    IntervalRange!(TP, Direction.fwd) fwdRange(TP delegate(in TP) func, PopFirst popFirst = No.popFirst) const
     {
         _enforceNotEmpty();
 
         auto range = IntervalRange!(TP, Direction.fwd)(this, func);
 
-        if (popFirst == PopFirst.yes)
+        if (popFirst == Yes.popFirst)
             range.popFront();
 
         return range;
@@ -19765,7 +19802,7 @@ assert(range.empty);
 
         The range's $(D front) is the interval's $(D end). $(D_PARAM func) is
         used to generate the next $(D front) when $(D popFront) is called. If
-        $(D_PARAM popFirst) is $(D PopFirst.yes), then $(D popFront) is called
+        $(D_PARAM popFirst) is $(D Yes.popFirst), then $(D popFront) is called
         before the range is returned (so that $(D front) is a time point which
         $(D_PARAM func) would generate).
 
@@ -19819,7 +19856,7 @@ auto func = delegate (in Date date) //For iterating over even-numbered days.
             };
 auto range = interval.bwdRange(func);
 
-//An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
+//An odd day. Using Yes.popFirst would have made this Date(2010, 9, 8).
 assert(range.front == Date(2010, 9, 9));
 
 range.popFront();
@@ -19838,13 +19875,13 @@ range.popFront();
 assert(range.empty);
 --------------------
       +/
-    IntervalRange!(TP, Direction.bwd) bwdRange(TP delegate(in TP) func, PopFirst popFirst = PopFirst.no) const
+    IntervalRange!(TP, Direction.bwd) bwdRange(TP delegate(in TP) func, PopFirst popFirst = No.popFirst) const
     {
         _enforceNotEmpty();
 
         auto range = IntervalRange!(TP, Direction.bwd)(this, func);
 
-        if (popFirst == PopFirst.yes)
+        if (popFirst == Yes.popFirst)
             range.popFront();
 
         return range;
@@ -19926,7 +19963,7 @@ private:
 }
 
 //Test Interval's constructors.
-unittest
+@safe unittest
 {
     assertThrown!DateTimeException(Interval!Date(Date(2010, 1, 1), Date(1, 1, 1)));
 
@@ -19966,7 +20003,7 @@ unittest
 }
 
 //Test Interval's begin.
-unittest
+@safe unittest
 {
     assert(Interval!Date(Date(1, 1, 1), Date(2010, 1, 1)).begin == Date(1, 1, 1));
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).begin == Date(2010, 1, 1));
@@ -19982,7 +20019,7 @@ unittest
 }
 
 //Test Interval's end.
-unittest
+@safe unittest
 {
     assert(Interval!Date(Date(1, 1, 1), Date(2010, 1, 1)).end == Date(2010, 1, 1));
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).end == Date(2010, 1, 1));
@@ -19998,7 +20035,7 @@ unittest
 }
 
 //Test Interval's length.
-unittest
+@safe unittest
 {
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).length == dur!"days"(0));
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 4, 1)).length == dur!"days"(90));
@@ -20020,7 +20057,7 @@ unittest
 }
 
 //Test Interval's empty.
-unittest
+@safe unittest
 {
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).empty);
     assert(!Interval!Date(Date(2010, 1, 1), Date(2010, 4, 1)).empty);
@@ -20039,7 +20076,7 @@ unittest
 }
 
 //Test Interval's contains(time point).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20069,7 +20106,7 @@ unittest
 }
 
 //Test Interval's contains(Interval).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20177,7 +20214,7 @@ unittest
 }
 
 //Test Interval's isBefore(time point).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20207,7 +20244,7 @@ unittest
 }
 
 //Test Interval's isBefore(Interval).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20316,7 +20353,7 @@ unittest
 }
 
 //Test Interval's isAfter(time point).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20346,7 +20383,7 @@ unittest
 }
 
 //Test Interval's isAfter(Interval).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20454,7 +20491,7 @@ unittest
 }
 
 //Test Interval's intersects().
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20564,7 +20601,7 @@ unittest
 }
 
 //Test Interval's intersection().
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20716,7 +20753,7 @@ unittest
 }
 
 //Test Interval's isAdjacent().
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -20843,7 +20880,7 @@ unittest
 }
 
 //Test Interval's merge().
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -21014,7 +21051,7 @@ unittest
 }
 
 //Test Interval's span().
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -21193,7 +21230,7 @@ unittest
 }
 
 //Test Interval's shift(duration).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
@@ -21230,7 +21267,7 @@ unittest
 }
 
 //Test Interval's shift(int, int, AllowDayOverflow).
-unittest
+@safe unittest
 {
     {
         auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
@@ -21249,20 +21286,20 @@ unittest
             assert(interval == expected);
         }
 
-        testInterval(interval, 5, 0, AllowDayOverflow.yes, Interval!Date(Date(2015, 7, 4), Date(2017, 1, 7)));
-        testInterval(interval, -5, 0, AllowDayOverflow.yes, Interval!Date(Date(2005, 7, 4), Date(2007, 1, 7)));
+        testInterval(interval, 5, 0, Yes.allowDayOverflow, Interval!Date(Date(2015, 7, 4), Date(2017, 1, 7)));
+        testInterval(interval, -5, 0, Yes.allowDayOverflow, Interval!Date(Date(2005, 7, 4), Date(2007, 1, 7)));
 
         auto interval2 = Interval!Date(Date(2000, 1, 29), Date(2010, 5, 31));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.yes, Interval!Date(Date(2001, 3, 1), Date(2011, 7, 1)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.yes, Interval!Date(Date(2000, 12, 29), Date(2011, 5, 1)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.yes, Interval!Date(Date(1998, 12, 29), Date(2009, 5, 1)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.yes, Interval!Date(Date(1999, 3, 1), Date(2009, 7, 1)));
+        testInterval(interval2, 1, 1, Yes.allowDayOverflow, Interval!Date(Date(2001, 3, 1), Date(2011, 7, 1)));
+        testInterval(interval2, 1, -1, Yes.allowDayOverflow, Interval!Date(Date(2000, 12, 29), Date(2011, 5, 1)));
+        testInterval(interval2, -1, -1, Yes.allowDayOverflow, Interval!Date(Date(1998, 12, 29), Date(2009, 5, 1)));
+        testInterval(interval2, -1, 1, Yes.allowDayOverflow, Interval!Date(Date(1999, 3, 1), Date(2009, 7, 1)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.no, Interval!Date(Date(2001, 2, 28), Date(2011, 6, 30)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.no, Interval!Date(Date(2000, 12, 29), Date(2011, 4, 30)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.no, Interval!Date(Date(1998, 12, 29), Date(2009, 4, 30)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.no, Interval!Date(Date(1999, 2, 28), Date(2009, 6, 30)));
+        testInterval(interval2, 1, 1, No.allowDayOverflow, Interval!Date(Date(2001, 2, 28), Date(2011, 6, 30)));
+        testInterval(interval2, 1, -1, No.allowDayOverflow, Interval!Date(Date(2000, 12, 29), Date(2011, 4, 30)));
+        testInterval(interval2, -1, -1, No.allowDayOverflow, Interval!Date(Date(1998, 12, 29), Date(2009, 4, 30)));
+        testInterval(interval2, -1, 1, No.allowDayOverflow, Interval!Date(Date(1999, 2, 28), Date(2009, 6, 30)));
     }
 
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
@@ -21282,7 +21319,7 @@ unittest
 }
 
 //Test Interval's expand(Duration).
-unittest
+@safe unittest
 {
     auto interval = Interval!Date(Date(2000, 7, 4), Date(2012, 1, 7));
 
@@ -21323,7 +21360,7 @@ unittest
 }
 
 //Test Interval's expand(int, int, AllowDayOverflow, Direction)
-unittest
+@safe unittest
 {
     {
         auto interval = Interval!Date(Date(2000, 7, 4), Date(2012, 1, 7));
@@ -21343,75 +21380,75 @@ unittest
             assert(interval == expected);
         }
 
-        testInterval(interval, 5, 0, AllowDayOverflow.yes, Direction.both,
+        testInterval(interval, 5, 0, Yes.allowDayOverflow, Direction.both,
             Interval!Date(Date(1995, 7, 4), Date(2017, 1, 7)));
-        testInterval(interval, -5, 0, AllowDayOverflow.yes, Direction.both,
+        testInterval(interval, -5, 0, Yes.allowDayOverflow, Direction.both,
             Interval!Date(Date(2005, 7, 4), Date(2007, 1, 7)));
 
-        testInterval(interval, 5, 0, AllowDayOverflow.yes, Direction.fwd,
+        testInterval(interval, 5, 0, Yes.allowDayOverflow, Direction.fwd,
             Interval!Date(Date(2000, 7, 4), Date(2017, 1, 7)));
-        testInterval(interval, -5, 0, AllowDayOverflow.yes, Direction.fwd,
+        testInterval(interval, -5, 0, Yes.allowDayOverflow, Direction.fwd,
             Interval!Date(Date(2000, 7, 4), Date(2007, 1, 7)));
 
-        testInterval(interval, 5, 0, AllowDayOverflow.yes, Direction.bwd,
+        testInterval(interval, 5, 0, Yes.allowDayOverflow, Direction.bwd,
             Interval!Date(Date(1995, 7, 4), Date(2012, 1, 7)));
-        testInterval(interval, -5, 0, AllowDayOverflow.yes, Direction.bwd,
+        testInterval(interval, -5, 0, Yes.allowDayOverflow, Direction.bwd,
             Interval!Date(Date(2005, 7, 4), Date(2012, 1, 7)));
 
         auto interval2 = Interval!Date(Date(2000, 1, 29), Date(2010, 5, 31));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.yes, Direction.both,
+        testInterval(interval2, 1, 1, Yes.allowDayOverflow, Direction.both,
             Interval!Date(Date(1998, 12, 29), Date(2011, 7, 1)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.yes, Direction.both,
+        testInterval(interval2, 1, -1, Yes.allowDayOverflow, Direction.both,
             Interval!Date(Date(1999, 3, 1), Date(2011, 5, 1)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.yes, Direction.both,
+        testInterval(interval2, -1, -1, Yes.allowDayOverflow, Direction.both,
             Interval!Date(Date(2001, 3, 1), Date(2009, 5, 1)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.yes, Direction.both,
+        testInterval(interval2, -1, 1, Yes.allowDayOverflow, Direction.both,
             Interval!Date(Date(2000, 12, 29), Date(2009, 7, 1)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.no, Direction.both,
+        testInterval(interval2, 1, 1, No.allowDayOverflow, Direction.both,
             Interval!Date(Date(1998, 12, 29), Date(2011, 6, 30)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.no, Direction.both,
+        testInterval(interval2, 1, -1, No.allowDayOverflow, Direction.both,
             Interval!Date(Date(1999, 2, 28), Date(2011, 4, 30)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.no, Direction.both,
+        testInterval(interval2, -1, -1, No.allowDayOverflow, Direction.both,
             Interval!Date(Date(2001, 2, 28), Date(2009, 4, 30)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.no, Direction.both,
+        testInterval(interval2, -1, 1, No.allowDayOverflow, Direction.both,
             Interval!Date(Date(2000, 12, 29), Date(2009, 6, 30)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.yes, Direction.fwd,
+        testInterval(interval2, 1, 1, Yes.allowDayOverflow, Direction.fwd,
             Interval!Date(Date(2000, 1, 29), Date(2011, 7, 1)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.yes, Direction.fwd,
+        testInterval(interval2, 1, -1, Yes.allowDayOverflow, Direction.fwd,
             Interval!Date(Date(2000, 1, 29), Date(2011, 5, 1)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.yes, Direction.fwd,
+        testInterval(interval2, -1, -1, Yes.allowDayOverflow, Direction.fwd,
             Interval!Date(Date(2000, 1, 29), Date(2009, 5, 1)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.yes, Direction.fwd,
+        testInterval(interval2, -1, 1, Yes.allowDayOverflow, Direction.fwd,
             Interval!Date(Date(2000, 1, 29), Date(2009, 7, 1)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.no, Direction.fwd,
+        testInterval(interval2, 1, 1, No.allowDayOverflow, Direction.fwd,
             Interval!Date(Date(2000, 1, 29), Date(2011, 6, 30)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.no, Direction.fwd,
+        testInterval(interval2, 1, -1, No.allowDayOverflow, Direction.fwd,
             Interval!Date(Date(2000, 1, 29), Date(2011, 4, 30)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.no, Direction.fwd,
+        testInterval(interval2, -1, -1, No.allowDayOverflow, Direction.fwd,
             Interval!Date(Date(2000, 1, 29), Date(2009, 4, 30)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.no, Direction.fwd,
+        testInterval(interval2, -1, 1, No.allowDayOverflow, Direction.fwd,
             Interval!Date(Date(2000, 1, 29), Date(2009, 6, 30)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.yes, Direction.bwd,
+        testInterval(interval2, 1, 1, Yes.allowDayOverflow, Direction.bwd,
             Interval!Date(Date(1998, 12, 29), Date(2010, 5, 31)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.yes, Direction.bwd,
+        testInterval(interval2, 1, -1, Yes.allowDayOverflow, Direction.bwd,
             Interval!Date(Date(1999, 3, 1), Date(2010, 5, 31)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.yes, Direction.bwd,
+        testInterval(interval2, -1, -1, Yes.allowDayOverflow, Direction.bwd,
             Interval!Date(Date(2001, 3, 1), Date(2010, 5, 31)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.yes, Direction.bwd,
+        testInterval(interval2, -1, 1, Yes.allowDayOverflow, Direction.bwd,
             Interval!Date(Date(2000, 12, 29), Date(2010, 5, 31)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.no, Direction.bwd,
+        testInterval(interval2, 1, 1, No.allowDayOverflow, Direction.bwd,
             Interval!Date(Date(1998, 12, 29), Date(2010, 5, 31)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.no, Direction.bwd,
+        testInterval(interval2, 1, -1, No.allowDayOverflow, Direction.bwd,
             Interval!Date(Date(1999, 2, 28), Date(2010, 5, 31)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.no, Direction.bwd,
+        testInterval(interval2, -1, -1, No.allowDayOverflow, Direction.bwd,
             Interval!Date(Date(2001, 2, 28), Date(2010, 5, 31)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.no, Direction.bwd,
+        testInterval(interval2, -1, 1, No.allowDayOverflow, Direction.bwd,
             Interval!Date(Date(2000, 12, 29), Date(2010, 5, 31)));
     }
 
@@ -21432,7 +21469,7 @@ unittest
 }
 
 //Test Interval's fwdRange.
-unittest
+@system unittest
 {
     {
         auto interval = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 21));
@@ -21452,7 +21489,7 @@ unittest
         assertThrown!DateTimeException(testInterval2(interval));
 
         assert(!interval.fwdRange(everyDayOfWeek!Date(DayOfWeek.fri)).empty);
-        assert(interval.fwdRange(everyDayOfWeek!Date(DayOfWeek.fri), PopFirst.yes).empty);
+        assert(interval.fwdRange(everyDayOfWeek!Date(DayOfWeek.fri), Yes.popFirst).empty);
 
         assert(Interval!Date(Date(2010, 9, 12), Date(2010, 10, 1)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri)).front ==
                     Date(2010, 9, 12));
@@ -21462,7 +21499,7 @@ unittest
             Date(2010, 9, 12),
             Date(2010, 10, 1)
         ).fwdRange(
-                everyDayOfWeek!Date(DayOfWeek.fri), PopFirst.yes).front ==Date(2010, 9, 17));
+                everyDayOfWeek!Date(DayOfWeek.fri), Yes.popFirst).front ==Date(2010, 9, 17));
     }
 
     //Verify Examples.
@@ -21477,7 +21514,7 @@ unittest
                     };
         auto range = interval.fwdRange(func);
 
-        assert(range.front == Date(2010, 9, 1)); //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 2).
+        assert(range.front == Date(2010, 9, 1)); //An odd day. Using Yes.popFirst would have made this Date(2010, 9, 2).
 
         range.popFront();
         assert(range.front == Date(2010, 9, 2));
@@ -21502,7 +21539,7 @@ unittest
 }
 
 //Test Interval's bwdRange.
-unittest
+@system unittest
 {
     {
         auto interval = Interval!Date(Date(2010, 9, 19), Date(2010, 9, 21));
@@ -21522,14 +21559,14 @@ unittest
         assertThrown!DateTimeException(testInterval2(interval));
 
         assert(!interval.bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri)).empty);
-        assert(interval.bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri), PopFirst.yes).empty);
+        assert(interval.bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri), Yes.popFirst).empty);
 
         assert(Interval!Date(Date(2010, 9, 19), Date(2010, 10, 1))
             .bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri)).front == Date(2010,
             10, 1));
 
         assert(Interval!Date(Date(2010, 9, 19), Date(2010, 10, 1))
-            .bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri), PopFirst.yes).front == Date(2010,
+            .bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri), Yes.popFirst).front == Date(2010,
             9, 24));
     }
 
@@ -21545,7 +21582,7 @@ unittest
                     };
         auto range = interval.bwdRange(func);
 
-        assert(range.front == Date(2010, 9, 9)); //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
+        assert(range.front == Date(2010, 9, 9)); //An odd day. Using Yes.popFirst would have made this Date(2010, 9, 8).
 
         range.popFront();
         assert(range.front == Date(2010, 9, 8));
@@ -21570,7 +21607,7 @@ unittest
 }
 
 //Test Interval's toString().
-unittest
+@safe unittest
 {
     assert(Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).toString() == "[2010-Jul-04 - 2012-Jan-07)");
 
@@ -22395,7 +22432,7 @@ interval2.shift(dur!"days"(-50));
 assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
 --------------------
           +/
-        void shift(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
+        void shift(T)(T years, T months = 0, AllowDayOverflow allowOverflow = Yes.allowDayOverflow)
             if (isIntegral!T)
         {
             auto begin = _begin;
@@ -22463,7 +22500,7 @@ interval2.expand(-2);
 assert(interval2 == PosInfInterval!Date(Date(1998, 1, 2)));
 --------------------
           +/
-        void expand(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
+        void expand(T)(T years, T months = 0, AllowDayOverflow allowOverflow = Yes.allowDayOverflow)
             if (isIntegral!T)
         {
             auto begin = _begin;
@@ -22485,7 +22522,7 @@ assert(interval2 == PosInfInterval!Date(Date(1998, 1, 2)));
 
         The range's $(D front) is the interval's $(D begin). $(D_PARAM func) is
         used to generate the next $(D front) when $(D popFront) is called. If
-        $(D_PARAM popFirst) is $(D PopFirst.yes), then $(D popFront) is called
+        $(D_PARAM popFirst) is $(D Yes.popFirst), then $(D popFront) is called
         before the range is returned (so that $(D front) is a time point which
         $(D_PARAM func) would generate).
 
@@ -22537,7 +22574,7 @@ auto func = delegate (in Date date) //For iterating over even-numbered days.
             };
 auto range = interval.fwdRange(func);
 
-//An odd day. Using PopFirst.yes would have made this Date(2010, 9, 2).
+//An odd day. Using Yes.popFirst would have made this Date(2010, 9, 2).
 assert(range.front == Date(2010, 9, 1));
 
 range.popFront();
@@ -22556,11 +22593,11 @@ range.popFront();
 assert(!range.empty);
 --------------------
       +/
-    PosInfIntervalRange!(TP) fwdRange(TP delegate(in TP) func, PopFirst popFirst = PopFirst.no) const
+    PosInfIntervalRange!(TP) fwdRange(TP delegate(in TP) func, PopFirst popFirst = No.popFirst) const
     {
         auto range = PosInfIntervalRange!(TP)(this, func);
 
-        if (popFirst == PopFirst.yes)
+        if (popFirst == Yes.popFirst)
             range.popFront();
 
         return range;
@@ -22610,7 +22647,7 @@ private:
 }
 
 //Test PosInfInterval's constructor.
-unittest
+@safe unittest
 {
     PosInfInterval!Date(Date.init);
     PosInfInterval!TimeOfDay(TimeOfDay.init);
@@ -22622,7 +22659,7 @@ unittest
 }
 
 //Test PosInfInterval's begin.
-unittest
+@safe unittest
 {
     assert(PosInfInterval!Date(Date(1, 1, 1)).begin == Date(1, 1, 1));
     assert(PosInfInterval!Date(Date(2010, 1, 1)).begin == Date(2010, 1, 1));
@@ -22638,7 +22675,7 @@ unittest
 }
 
 //Test PosInfInterval's empty.
-unittest
+@safe unittest
 {
     assert(!PosInfInterval!Date(Date(2010, 1, 1)).empty);
     assert(!PosInfInterval!TimeOfDay(TimeOfDay(0, 30, 0)).empty);
@@ -22655,7 +22692,7 @@ unittest
 }
 
 //Test PosInfInterval's contains(time point).
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -22682,7 +22719,7 @@ unittest
 }
 
 //Test PosInfInterval's contains(Interval).
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -22776,7 +22813,7 @@ unittest
 }
 
 //Test PosInfInterval's isBefore(time point).
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -22803,7 +22840,7 @@ unittest
 }
 
 //Test PosInfInterval's isBefore(Interval).
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -22896,7 +22933,7 @@ unittest
 }
 
 //Test PosInfInterval's isAfter(time point).
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -22923,7 +22960,7 @@ unittest
 }
 
 //Test PosInfInterval's isAfter(Interval).
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23018,7 +23055,7 @@ unittest
 }
 
 //Test PosInfInterval's intersects().
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23113,7 +23150,7 @@ unittest
 }
 
 //Test PosInfInterval's intersection().
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23246,7 +23283,7 @@ unittest
 }
 
 //Test PosInfInterval's isAdjacent().
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23340,7 +23377,7 @@ unittest
 }
 
 //Test PosInfInterval's merge().
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23460,7 +23497,7 @@ unittest
 }
 
 //Test PosInfInterval's span().
-unittest
+@safe unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23582,7 +23619,7 @@ unittest
 }
 
 //Test PosInfInterval's shift().
-unittest
+@safe unittest
 {
     auto interval = PosInfInterval!Date(Date(2010, 7, 4));
 
@@ -23612,7 +23649,7 @@ unittest
 }
 
 //Test PosInfInterval's shift(int, int, AllowDayOverflow).
-unittest
+@safe unittest
 {
     {
         auto interval = PosInfInterval!Date(Date(2010, 7, 4));
@@ -23624,20 +23661,20 @@ unittest
             assert(interval == expected);
         }
 
-        testInterval(interval, 5, 0, AllowDayOverflow.yes, PosInfInterval!Date(Date(2015, 7, 4)));
-        testInterval(interval, -5, 0, AllowDayOverflow.yes, PosInfInterval!Date(Date(2005, 7, 4)));
+        testInterval(interval, 5, 0, Yes.allowDayOverflow, PosInfInterval!Date(Date(2015, 7, 4)));
+        testInterval(interval, -5, 0, Yes.allowDayOverflow, PosInfInterval!Date(Date(2005, 7, 4)));
 
         auto interval2 = PosInfInterval!Date(Date(2000, 1, 29));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.yes, PosInfInterval!Date(Date(2001, 3, 1)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.yes, PosInfInterval!Date(Date(2000, 12, 29)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.yes, PosInfInterval!Date(Date(1998, 12, 29)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.yes, PosInfInterval!Date(Date(1999, 3, 1)));
+        testInterval(interval2, 1, 1, Yes.allowDayOverflow, PosInfInterval!Date(Date(2001, 3, 1)));
+        testInterval(interval2, 1, -1, Yes.allowDayOverflow, PosInfInterval!Date(Date(2000, 12, 29)));
+        testInterval(interval2, -1, -1, Yes.allowDayOverflow, PosInfInterval!Date(Date(1998, 12, 29)));
+        testInterval(interval2, -1, 1, Yes.allowDayOverflow, PosInfInterval!Date(Date(1999, 3, 1)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.no, PosInfInterval!Date(Date(2001, 2, 28)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.no, PosInfInterval!Date(Date(2000, 12, 29)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.no, PosInfInterval!Date(Date(1998, 12, 29)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.no, PosInfInterval!Date(Date(1999, 2, 28)));
+        testInterval(interval2, 1, 1, No.allowDayOverflow, PosInfInterval!Date(Date(2001, 2, 28)));
+        testInterval(interval2, 1, -1, No.allowDayOverflow, PosInfInterval!Date(Date(2000, 12, 29)));
+        testInterval(interval2, -1, -1, No.allowDayOverflow, PosInfInterval!Date(Date(1998, 12, 29)));
+        testInterval(interval2, -1, 1, No.allowDayOverflow, PosInfInterval!Date(Date(1999, 2, 28)));
     }
 
     const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
@@ -23657,7 +23694,7 @@ unittest
 }
 
 //Test PosInfInterval's expand().
-unittest
+@safe unittest
 {
     auto interval = PosInfInterval!Date(Date(2000, 7, 4));
 
@@ -23687,7 +23724,7 @@ unittest
 }
 
 //Test PosInfInterval's expand(int, int, AllowDayOverflow).
-unittest
+@safe unittest
 {
     {
         auto interval = PosInfInterval!Date(Date(2000, 7, 4));
@@ -23699,20 +23736,20 @@ unittest
             assert(interval == expected);
         }
 
-        testInterval(interval, 5, 0, AllowDayOverflow.yes, PosInfInterval!Date(Date(1995, 7, 4)));
-        testInterval(interval, -5, 0, AllowDayOverflow.yes, PosInfInterval!Date(Date(2005, 7, 4)));
+        testInterval(interval, 5, 0, Yes.allowDayOverflow, PosInfInterval!Date(Date(1995, 7, 4)));
+        testInterval(interval, -5, 0, Yes.allowDayOverflow, PosInfInterval!Date(Date(2005, 7, 4)));
 
         auto interval2 = PosInfInterval!Date(Date(2000, 1, 29));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.yes, PosInfInterval!Date(Date(1998, 12, 29)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.yes, PosInfInterval!Date(Date(1999, 3, 1)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.yes, PosInfInterval!Date(Date(2001, 3, 1)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.yes, PosInfInterval!Date(Date(2000, 12, 29)));
+        testInterval(interval2, 1, 1, Yes.allowDayOverflow, PosInfInterval!Date(Date(1998, 12, 29)));
+        testInterval(interval2, 1, -1, Yes.allowDayOverflow, PosInfInterval!Date(Date(1999, 3, 1)));
+        testInterval(interval2, -1, -1, Yes.allowDayOverflow, PosInfInterval!Date(Date(2001, 3, 1)));
+        testInterval(interval2, -1, 1, Yes.allowDayOverflow, PosInfInterval!Date(Date(2000, 12, 29)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.no, PosInfInterval!Date(Date(1998, 12, 29)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.no, PosInfInterval!Date(Date(1999, 2, 28)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.no, PosInfInterval!Date(Date(2001, 2, 28)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.no, PosInfInterval!Date(Date(2000, 12, 29)));
+        testInterval(interval2, 1, 1, No.allowDayOverflow, PosInfInterval!Date(Date(1998, 12, 29)));
+        testInterval(interval2, 1, -1, No.allowDayOverflow, PosInfInterval!Date(Date(1999, 2, 28)));
+        testInterval(interval2, -1, -1, No.allowDayOverflow, PosInfInterval!Date(Date(2001, 2, 28)));
+        testInterval(interval2, -1, 1, No.allowDayOverflow, PosInfInterval!Date(Date(2000, 12, 29)));
     }
 
     const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
@@ -23732,7 +23769,7 @@ unittest
 }
 
 //Test PosInfInterval's fwdRange().
-unittest
+@system unittest
 {
     auto posInfInterval = PosInfInterval!Date(Date(2010, 9, 19));
 
@@ -23746,7 +23783,7 @@ unittest
     assert(PosInfInterval!Date(Date(2010, 9, 12)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri)).front ==
                 Date(2010, 9, 12));
 
-    assert(PosInfInterval!Date(Date(2010, 9, 12)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri), PopFirst.yes).front ==
+    assert(PosInfInterval!Date(Date(2010, 9, 12)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri), Yes.popFirst).front ==
                 Date(2010, 9, 17));
 
     //Verify Examples.
@@ -23760,7 +23797,7 @@ unittest
                 };
     auto range = interval.fwdRange(func);
 
-    assert(range.front == Date(2010, 9, 1)); //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 2).
+    assert(range.front == Date(2010, 9, 1)); //An odd day. Using Yes.popFirst would have made this Date(2010, 9, 2).
 
     range.popFront();
     assert(range.front == Date(2010, 9, 2));
@@ -23784,7 +23821,7 @@ unittest
 }
 
 //Test PosInfInterval's toString().
-unittest
+@safe unittest
 {
     assert(PosInfInterval!Date(Date(2010, 7, 4)).toString() == "[2010-Jul-04 - ∞)");
 
@@ -24625,7 +24662,7 @@ interval2.shift(-2);
 assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
 --------------------
           +/
-        void shift(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
+        void shift(T)(T years, T months = 0, AllowDayOverflow allowOverflow = Yes.allowDayOverflow)
             if (isIntegral!T)
         {
             auto end = _end;
@@ -24693,7 +24730,7 @@ interval2.expand(-2);
 assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
 --------------------
           +/
-        void expand(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
+        void expand(T)(T years, T months = 0, AllowDayOverflow allowOverflow = Yes.allowDayOverflow)
             if (isIntegral!T)
         {
             auto end = _end;
@@ -24715,7 +24752,7 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
 
         The range's $(D front) is the interval's $(D end). $(D_PARAM func) is
         used to generate the next $(D front) when $(D popFront) is called. If
-        $(D_PARAM popFirst) is $(D PopFirst.yes), then $(D popFront) is called
+        $(D_PARAM popFirst) is $(D Yes.popFirst), then $(D popFront) is called
         before the range is returned (so that $(D front) is a time point which
         $(D_PARAM func) would generate).
 
@@ -24767,7 +24804,7 @@ auto func = delegate (in Date date) //For iterating over even-numbered days.
             };
 auto range = interval.bwdRange(func);
 
-assert(range.front == Date(2010, 9, 9)); //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
+assert(range.front == Date(2010, 9, 9)); //An odd day. Using Yes.popFirst would have made this Date(2010, 9, 8).
 
 range.popFront();
 assert(range.front == Date(2010, 9, 8));
@@ -24785,11 +24822,11 @@ range.popFront();
 assert(!range.empty);
 --------------------
       +/
-    NegInfIntervalRange!(TP) bwdRange(TP delegate(in TP) func, PopFirst popFirst = PopFirst.no) const
+    NegInfIntervalRange!(TP) bwdRange(TP delegate(in TP) func, PopFirst popFirst = No.popFirst) const
     {
         auto range = NegInfIntervalRange!(TP)(this, func);
 
-        if (popFirst == PopFirst.yes)
+        if (popFirst == Yes.popFirst)
             range.popFront();
 
         return range;
@@ -24839,7 +24876,7 @@ private:
 }
 
 //Test NegInfInterval's constructor.
-unittest
+@safe unittest
 {
     NegInfInterval!Date(Date.init);
     NegInfInterval!TimeOfDay(TimeOfDay.init);
@@ -24848,7 +24885,7 @@ unittest
 }
 
 //Test NegInfInterval's end.
-unittest
+@safe unittest
 {
     assert(NegInfInterval!Date(Date(2010, 1, 1)).end == Date(2010, 1, 1));
     assert(NegInfInterval!Date(Date(2010, 1, 1)).end == Date(2010, 1, 1));
@@ -24864,7 +24901,7 @@ unittest
 }
 
 //Test NegInfInterval's empty.
-unittest
+@safe unittest
 {
     assert(!NegInfInterval!Date(Date(2010, 1, 1)).empty);
     assert(!NegInfInterval!TimeOfDay(TimeOfDay(0, 30, 0)).empty);
@@ -24881,7 +24918,7 @@ unittest
 }
 
 //Test NegInfInterval's contains(time point).
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -24909,7 +24946,7 @@ unittest
 }
 
 //Test NegInfInterval's contains(Interval).
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25003,7 +25040,7 @@ unittest
 }
 
 //Test NegInfInterval's isBefore(time point).
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25031,7 +25068,7 @@ unittest
 }
 
 //Test NegInfInterval's isBefore(Interval).
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25126,7 +25163,7 @@ unittest
 }
 
 //Test NegInfInterval's isAfter(time point).
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25149,7 +25186,7 @@ unittest
 }
 
 //Test NegInfInterval's isAfter(Interval).
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25248,7 +25285,7 @@ unittest
 }
 
 //Test NegInfInterval's intersects().
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25343,7 +25380,7 @@ unittest
 }
 
 //Test NegInfInterval's intersection().
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25476,7 +25513,7 @@ unittest
 }
 
 //Test NegInfInterval's isAdjacent().
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25572,7 +25609,7 @@ unittest
 }
 
 //Test NegInfInterval's merge().
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25692,7 +25729,7 @@ unittest
 }
 
 //Test NegInfInterval's span().
-unittest
+@safe unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25814,7 +25851,7 @@ unittest
 }
 
 //Test NegInfInterval's shift().
-unittest
+@safe unittest
 {
     auto interval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25844,7 +25881,7 @@ unittest
 }
 
 //Test NegInfInterval's shift(int, int, AllowDayOverflow).
-unittest
+@safe unittest
 {
     {
         auto interval = NegInfInterval!Date(Date(2012, 1, 7));
@@ -25861,20 +25898,20 @@ unittest
             assert(interval == expected);
         }
 
-        testInterval(interval, 5, 0, AllowDayOverflow.yes, NegInfInterval!Date(Date(2017, 1, 7)));
-        testInterval(interval, -5, 0, AllowDayOverflow.yes, NegInfInterval!Date(Date(2007, 1, 7)));
+        testInterval(interval, 5, 0, Yes.allowDayOverflow, NegInfInterval!Date(Date(2017, 1, 7)));
+        testInterval(interval, -5, 0, Yes.allowDayOverflow, NegInfInterval!Date(Date(2007, 1, 7)));
 
         auto interval2 = NegInfInterval!Date(Date(2010, 5, 31));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.yes, NegInfInterval!Date(Date(2011, 7, 1)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.yes, NegInfInterval!Date(Date(2011, 5, 1)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.yes, NegInfInterval!Date(Date(2009, 5, 1)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.yes, NegInfInterval!Date(Date(2009, 7, 1)));
+        testInterval(interval2, 1, 1, Yes.allowDayOverflow, NegInfInterval!Date(Date(2011, 7, 1)));
+        testInterval(interval2, 1, -1, Yes.allowDayOverflow, NegInfInterval!Date(Date(2011, 5, 1)));
+        testInterval(interval2, -1, -1, Yes.allowDayOverflow, NegInfInterval!Date(Date(2009, 5, 1)));
+        testInterval(interval2, -1, 1, Yes.allowDayOverflow, NegInfInterval!Date(Date(2009, 7, 1)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.no, NegInfInterval!Date(Date(2011, 6, 30)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.no, NegInfInterval!Date(Date(2011, 4, 30)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.no, NegInfInterval!Date(Date(2009, 4, 30)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.no, NegInfInterval!Date(Date(2009, 6, 30)));
+        testInterval(interval2, 1, 1, No.allowDayOverflow, NegInfInterval!Date(Date(2011, 6, 30)));
+        testInterval(interval2, 1, -1, No.allowDayOverflow, NegInfInterval!Date(Date(2011, 4, 30)));
+        testInterval(interval2, -1, -1, No.allowDayOverflow, NegInfInterval!Date(Date(2009, 4, 30)));
+        testInterval(interval2, -1, 1, No.allowDayOverflow, NegInfInterval!Date(Date(2009, 6, 30)));
     }
 
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
@@ -25894,7 +25931,7 @@ unittest
 }
 
 //Test NegInfInterval's expand().
-unittest
+@safe unittest
 {
     auto interval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25924,7 +25961,7 @@ unittest
 }
 
 //Test NegInfInterval's expand(int, int, AllowDayOverflow).
-unittest
+@safe unittest
 {
     {
         auto interval = NegInfInterval!Date(Date(2012, 1, 7));
@@ -25936,20 +25973,20 @@ unittest
             assert(interval == expected);
         }
 
-        testInterval(interval, 5, 0, AllowDayOverflow.yes, NegInfInterval!Date(Date(2017, 1, 7)));
-        testInterval(interval, -5, 0, AllowDayOverflow.yes, NegInfInterval!Date(Date(2007, 1, 7)));
+        testInterval(interval, 5, 0, Yes.allowDayOverflow, NegInfInterval!Date(Date(2017, 1, 7)));
+        testInterval(interval, -5, 0, Yes.allowDayOverflow, NegInfInterval!Date(Date(2007, 1, 7)));
 
         auto interval2 = NegInfInterval!Date(Date(2010, 5, 31));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.yes, NegInfInterval!Date(Date(2011, 7, 1)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.yes, NegInfInterval!Date(Date(2011, 5, 1)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.yes, NegInfInterval!Date(Date(2009, 5, 1)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.yes, NegInfInterval!Date(Date(2009, 7, 1)));
+        testInterval(interval2, 1, 1, Yes.allowDayOverflow, NegInfInterval!Date(Date(2011, 7, 1)));
+        testInterval(interval2, 1, -1, Yes.allowDayOverflow, NegInfInterval!Date(Date(2011, 5, 1)));
+        testInterval(interval2, -1, -1, Yes.allowDayOverflow, NegInfInterval!Date(Date(2009, 5, 1)));
+        testInterval(interval2, -1, 1, Yes.allowDayOverflow, NegInfInterval!Date(Date(2009, 7, 1)));
 
-        testInterval(interval2, 1, 1, AllowDayOverflow.no, NegInfInterval!Date(Date(2011, 6, 30)));
-        testInterval(interval2, 1, -1, AllowDayOverflow.no, NegInfInterval!Date(Date(2011, 4, 30)));
-        testInterval(interval2, -1, -1, AllowDayOverflow.no, NegInfInterval!Date(Date(2009, 4, 30)));
-        testInterval(interval2, -1, 1, AllowDayOverflow.no, NegInfInterval!Date( Date(2009, 6, 30)));
+        testInterval(interval2, 1, 1, No.allowDayOverflow, NegInfInterval!Date(Date(2011, 6, 30)));
+        testInterval(interval2, 1, -1, No.allowDayOverflow, NegInfInterval!Date(Date(2011, 4, 30)));
+        testInterval(interval2, -1, -1, No.allowDayOverflow, NegInfInterval!Date(Date(2009, 4, 30)));
+        testInterval(interval2, -1, 1, No.allowDayOverflow, NegInfInterval!Date( Date(2009, 6, 30)));
     }
 
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
@@ -25969,7 +26006,7 @@ unittest
 }
 
 //Test NegInfInterval's bwdRange().
-unittest
+@system unittest
 {
     auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
@@ -25984,7 +26021,7 @@ unittest
         Direction.bwd)(DayOfWeek.fri)).front == Date(2010, 10, 1));
 
     assert(NegInfInterval!Date(Date(2010, 10, 1)).bwdRange(everyDayOfWeek!(Date,
-        Direction.bwd)(DayOfWeek.fri), PopFirst.yes).front == Date(2010, 9, 24));
+        Direction.bwd)(DayOfWeek.fri), Yes.popFirst).front == Date(2010, 9, 24));
 
     //Verify Examples.
     auto interval = NegInfInterval!Date(Date(2010, 9, 9));
@@ -25997,7 +26034,7 @@ unittest
                 };
     auto range = interval.bwdRange(func);
 
-    //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
+    //An odd day. Using Yes.popFirst would have made this Date(2010, 9, 8).
     assert(range.front == Date(2010, 9, 9));
 
     range.popFront();
@@ -26022,7 +26059,7 @@ unittest
 }
 
 //Test NegInfInterval's toString().
-unittest
+@safe unittest
 {
     assert(NegInfInterval!Date(Date(2012, 1, 7)).toString() == "[-∞ - 2012-Jan-07)");
 
@@ -26074,13 +26111,13 @@ static TP delegate(in TP) everyDayOfWeek(TP, Direction dir = Direction.fwd)(DayO
 }
 
 ///
-unittest
+@system unittest
 {
     auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
     auto func = everyDayOfWeek!Date(DayOfWeek.mon);
     auto range = interval.fwdRange(func);
 
-    //A Thursday. Using PopFirst.yes would have made this Date(2010, 9, 6).
+    //A Thursday. Using Yes.popFirst would have made this Date(2010, 9, 6).
     assert(range.front == Date(2010, 9, 2));
 
     range.popFront();
@@ -26096,7 +26133,7 @@ unittest
     assert(range.empty);
 }
 
-unittest
+@system unittest
 {
     auto funcFwd = everyDayOfWeek!Date(DayOfWeek.mon);
     auto funcBwd = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.mon);
@@ -26145,7 +26182,7 @@ unittest
 
     Since it wouldn't really make sense to be iterating over a specific month
     and end up with some of the time points in the succeeding month or two years
-    after the previous time point, $(D AllowDayOverflow.no) is always used when
+    after the previous time point, $(D No.allowDayOverflow) is always used when
     calculating the next time point.
 
     Params:
@@ -26173,7 +26210,7 @@ static TP delegate(in TP) everyMonth(TP, Direction dir = Direction.fwd)(int mont
         else
             immutable adjustedMonths = months == 0 ? -12 : months - 12;
 
-        retval.add!"months"(adjustedMonths, AllowDayOverflow.no);
+        retval.add!"months"(adjustedMonths, No.allowDayOverflow);
 
         if (retval.month != month)
         {
@@ -26188,13 +26225,13 @@ static TP delegate(in TP) everyMonth(TP, Direction dir = Direction.fwd)(int mont
 }
 
 ///
-unittest
+@system unittest
 {
     auto interval = Interval!Date(Date(2000, 1, 30), Date(2004, 8, 5));
     auto func = everyMonth!(Date)(Month.feb);
     auto range = interval.fwdRange(func);
 
-    //Using PopFirst.yes would have made this Date(2010, 2, 29).
+    //Using Yes.popFirst would have made this Date(2010, 2, 29).
     assert(range.front == Date(2000, 1, 30));
 
     range.popFront();
@@ -26216,7 +26253,7 @@ unittest
     assert(range.empty);
 }
 
-unittest
+@system unittest
 {
     auto funcFwd = everyMonth!Date(Month.jun);
     auto funcBwd = everyMonth!(Date, Direction.bwd)(Month.jun);
@@ -26295,13 +26332,13 @@ static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
 }
 
 ///
-unittest
+@system unittest
 {
     auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
     auto func = everyDuration!Date(dur!"days"(8));
     auto range = interval.fwdRange(func);
 
-    //Using PopFirst.yes would have made this Date(2010, 9, 10).
+    //Using Yes.popFirst would have made this Date(2010, 9, 10).
     assert(range.front == Date(2010, 9, 2));
 
     range.popFront();
@@ -26317,7 +26354,7 @@ unittest
     assert(range.empty);
 }
 
-unittest
+@system unittest
 {
     auto funcFwd = everyDuration!Date(dur!"days"(27));
     auto funcBwd = everyDuration!(Date, Direction.bwd)(dur!"days"(27));
@@ -26357,7 +26394,7 @@ unittest
     That way, going backwards generates close to the same time points that
     iterating forward does, but since adding years and months is not entirely
     reversible (due to possible day overflow, regardless of whether
-    $(D AllowDayOverflow.yes) or $(D AllowDayOverflow.no) is used), it can't be
+    $(D Yes.allowDayOverflow) or $(D No.allowDayOverflow) is used), it can't be
     guaranteed that iterating backwards will give the same time points as
     iterating forward would have (even assuming that the end of the range is a
     time point which would be returned by the delegate when iterating forward
@@ -26380,7 +26417,7 @@ unittest
 static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
                                        (int years,
                                         int months = 0,
-                                        AllowDayOverflow allowOverflow = AllowDayOverflow.yes,
+                                        AllowDayOverflow allowOverflow = Yes.allowDayOverflow,
                                         D duration = dur!"days"(0)) nothrow
     if (isTimePoint!TP &&
        __traits(compiles, TP.init + duration) &&
@@ -26414,13 +26451,15 @@ static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
 }
 
 ///
-unittest
+@system unittest
 {
+    import std.typecons : Yes;
+
     auto interval = Interval!Date(Date(2010, 9, 2), Date(2025, 9, 27));
-    auto func = everyDuration!Date(4, 1, AllowDayOverflow.yes, dur!"days"(2));
+    auto func = everyDuration!Date(4, 1, Yes.allowDayOverflow, dur!"days"(2));
     auto range = interval.fwdRange(func);
 
-    //Using PopFirst.yes would have made this Date(2014, 10, 12).
+    //Using Yes.popFirst would have made this Date(2014, 10, 12).
     assert(range.front == Date(2010, 9, 2));
 
     range.popFront();
@@ -26436,11 +26475,11 @@ unittest
     assert(range.empty);
 }
 
-unittest
+@system unittest
 {
     {
-        auto funcFwd = everyDuration!Date(1, 2, AllowDayOverflow.yes, dur!"days"(3));
-        auto funcBwd = everyDuration!(Date, Direction.bwd)(1, 2, AllowDayOverflow.yes, dur!"days"(3));
+        auto funcFwd = everyDuration!Date(1, 2, Yes.allowDayOverflow, dur!"days"(3));
+        auto funcBwd = everyDuration!(Date, Direction.bwd)(1, 2, Yes.allowDayOverflow, dur!"days"(3));
 
         assert(funcFwd(Date(2009, 12, 25)) == Date(2011, 2, 28));
         assert(funcFwd(Date(2009, 12, 26)) == Date(2011, 3, 1));
@@ -26456,8 +26495,8 @@ unittest
     }
 
     {
-        auto funcFwd = everyDuration!Date(1, 2, AllowDayOverflow.no, dur!"days"(3));
-        auto funcBwd = everyDuration!(Date, Direction.bwd)(1, 2, AllowDayOverflow.yes, dur!"days"(3));
+        auto funcFwd = everyDuration!Date(1, 2, No.allowDayOverflow, dur!"days"(3));
+        auto funcBwd = everyDuration!(Date, Direction.bwd)(1, 2, Yes.allowDayOverflow, dur!"days"(3));
 
         assert(funcFwd(Date(2009, 12, 25)) == Date(2011, 2, 28));
         assert(funcFwd(Date(2009, 12, 26)) == Date(2011, 3, 1));
@@ -26472,10 +26511,10 @@ unittest
         assert(funcBwd(Date(2011, 3, 4)) == Date(2010, 1, 1));
     }
 
-    assert(everyDuration!Date(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1)) !is null);
-    static assert(!__traits(compiles, everyDuration!TimeOfDay(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1))));
-    assert(everyDuration!DateTime(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1)) !is null);
-    assert(everyDuration!SysTime(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1)) !is null);
+    assert(everyDuration!Date(1, 2, Yes.allowDayOverflow, dur!"hnsecs"(1)) !is null);
+    static assert(!__traits(compiles, everyDuration!TimeOfDay(1, 2, Yes.allowDayOverflow, dur!"hnsecs"(1))));
+    assert(everyDuration!DateTime(1, 2, Yes.allowDayOverflow, dur!"hnsecs"(1)) !is null);
+    assert(everyDuration!SysTime(1, 2, Yes.allowDayOverflow, dur!"hnsecs"(1)) !is null);
 }
 
 
@@ -26726,7 +26765,7 @@ private:
 }
 
 //Test that IntervalRange satisfies the range predicates that it's supposed to satisfy.
-unittest
+@safe unittest
 {
     import std.range.primitives : hasAssignableElements, hasSwappableElements,
         isBidirectionalRange, isForwardRange, isInfinite, isInputRange;
@@ -26751,7 +26790,7 @@ unittest
 }
 
 //Test construction of IntervalRange.
-unittest
+@safe unittest
 {
     {
         Date dateFunc(in Date date)
@@ -26802,7 +26841,7 @@ unittest
 }
 
 //Test IntervalRange's empty().
-unittest
+@system unittest
 {
     //fwd
     {
@@ -26842,14 +26881,14 @@ unittest
 }
 
 //Test IntervalRange's front.
-unittest
+@system unittest
 {
     //fwd
     {
         auto emptyRange = Interval!Date(
             Date(2010, 9, 19),
             Date(2010, 9, 20)
-        ).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
+        ).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), Yes.popFirst);
         assertThrown!DateTimeException((in IntervalRange!(Date, Direction.fwd) range){range.front;}(emptyRange));
 
         auto range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed));
@@ -26858,7 +26897,7 @@ unittest
         auto poppedRange = Interval!Date(
             Date(2010, 7, 4),
             Date(2012, 1, 7)
-        ).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
+        ).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), Yes.popFirst);
         assert(poppedRange.front == Date(2010, 7, 7));
 
         const cRange = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
@@ -26870,7 +26909,7 @@ unittest
         auto emptyRange = Interval!Date(
             Date(2010, 9, 19),
             Date(2010, 9, 20)
-        ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+        ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), Yes.popFirst);
         assertThrown!DateTimeException((in IntervalRange!(Date, Direction.bwd) range){range.front;}(emptyRange));
 
         auto range = Interval!Date(
@@ -26882,7 +26921,7 @@ unittest
         auto poppedRange = Interval!Date(
             Date(2010, 7, 4),
             Date(2012, 1, 7)
-        ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+        ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), Yes.popFirst);
         assert(poppedRange.front == Date(2012, 1, 4));
 
         const cRange = Interval!Date(
@@ -26894,7 +26933,7 @@ unittest
 }
 
 //Test IntervalRange's popFront().
-unittest
+@system unittest
 {
     import std.range.primitives : walkLength;
     //fwd
@@ -26902,13 +26941,13 @@ unittest
         auto emptyRange = Interval!Date(
             Date(2010, 9, 19),
             Date(2010, 9, 20)
-        ).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
+        ).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), Yes.popFirst);
         assertThrown!DateTimeException((IntervalRange!(Date, Direction.fwd) range){range.popFront();}(emptyRange));
 
         auto range = Interval!Date(
             Date(2010, 7, 4),
             Date(2012, 1, 7)
-        ).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
+        ).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), Yes.popFirst);
         auto expected = range.front;
 
         foreach (date; range)
@@ -26928,13 +26967,13 @@ unittest
         auto emptyRange = Interval!Date(
             Date(2010, 9, 19),
             Date(2010, 9, 20)
-        ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+        ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), Yes.popFirst);
         assertThrown!DateTimeException((IntervalRange!(Date, Direction.bwd) range){range.popFront();}(emptyRange));
 
         auto range = Interval!Date(
             Date(2010, 7, 4),
             Date(2012, 1, 7)
-        ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+        ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), Yes.popFirst);
         auto expected = range.front;
 
         foreach (date; range)
@@ -26954,7 +26993,7 @@ unittest
 }
 
 //Test IntervalRange's save.
-unittest
+@system unittest
 {
     //fwd
     {
@@ -26976,7 +27015,7 @@ unittest
 }
 
 //Test IntervalRange's interval.
-unittest
+@system unittest
 {
     //fwd
     {
@@ -27004,7 +27043,7 @@ unittest
 }
 
 //Test IntervalRange's func.
-unittest
+@system unittest
 {
     //fwd
     {
@@ -27026,7 +27065,7 @@ unittest
 }
 
 //Test IntervalRange's direction.
-unittest
+@system unittest
 {
     //fwd
     {
@@ -27200,7 +27239,7 @@ private:
 }
 
 //Test that PosInfIntervalRange satisfies the range predicates that it's supposed to satisfy.
-unittest
+@safe unittest
 {
     import std.range.primitives : hasAssignableElements, hasSwappableElements,
         isBidirectionalRange, isForwardRange, isInfinite, isInputRange;
@@ -27224,7 +27263,7 @@ unittest
 }
 
 //Test construction of PosInfIntervalRange.
-unittest
+@safe unittest
 {
     {
         Date dateFunc(in Date date)
@@ -27272,12 +27311,12 @@ unittest
 }
 
 //Test PosInfIntervalRange's front.
-unittest
+@system unittest
 {
     auto range = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed));
     assert(range.front == Date(2010, 7, 4));
 
-    auto poppedRange = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
+    auto poppedRange = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), Yes.popFirst);
     assert(poppedRange.front == Date(2010, 7, 7));
 
     const cRange = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
@@ -27285,10 +27324,10 @@ unittest
 }
 
 //Test PosInfIntervalRange's popFront().
-unittest
+@system unittest
 {
     import std.range : take;
-    auto range = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), PopFirst.yes);
+    auto range = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), Yes.popFirst);
     auto expected = range.front;
 
     foreach (date; take(range, 79))
@@ -27302,7 +27341,7 @@ unittest
 }
 
 //Test PosInfIntervalRange's save.
-unittest
+@system unittest
 {
     auto interval = PosInfInterval!Date(Date(2010, 7, 4));
     auto func = everyDayOfWeek!Date(DayOfWeek.fri);
@@ -27312,7 +27351,7 @@ unittest
 }
 
 //Test PosInfIntervalRange's interval.
-unittest
+@system unittest
 {
     auto interval = PosInfInterval!Date(Date(2010, 7, 4));
     auto func = everyDayOfWeek!Date(DayOfWeek.fri);
@@ -27325,7 +27364,7 @@ unittest
 }
 
 //Test PosInfIntervalRange's func.
-unittest
+@system unittest
 {
     auto interval = PosInfInterval!Date(Date(2010, 7, 4));
     auto func = everyDayOfWeek!Date(DayOfWeek.fri);
@@ -27490,7 +27529,7 @@ private:
 }
 
 //Test that NegInfIntervalRange satisfies the range predicates that it's supposed to satisfy.
-unittest
+@safe unittest
 {
     import std.range.primitives : hasAssignableElements, hasSwappableElements,
         isBidirectionalRange, isForwardRange, isInfinite, isInputRange;
@@ -27513,7 +27552,7 @@ unittest
 }
 
 //Test construction of NegInfIntervalRange.
-unittest
+@safe unittest
 {
     {
         Date dateFunc(in Date date)
@@ -27561,14 +27600,14 @@ unittest
 }
 
 //Test NegInfIntervalRange's front.
-unittest
+@system unittest
 {
     auto range = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed));
     assert(range.front == Date(2012, 1, 7));
 
     auto poppedRange = NegInfInterval!Date(
         Date(2012, 1, 7)
-    ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+    ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), Yes.popFirst);
     assert(poppedRange.front == Date(2012, 1, 4));
 
     const cRange = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
@@ -27576,13 +27615,13 @@ unittest
 }
 
 //Test NegInfIntervalRange's popFront().
-unittest
+@system unittest
 {
     import std.range : take;
 
     auto range = NegInfInterval!Date(
         Date(2012, 1, 7)
-    ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+    ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), Yes.popFirst);
     auto expected = range.front;
 
     foreach (date; take(range, 79))
@@ -27596,7 +27635,7 @@ unittest
 }
 
 //Test NegInfIntervalRange's save.
-unittest
+@system unittest
 {
     auto interval = NegInfInterval!Date(Date(2012, 1, 7));
     auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
@@ -27606,7 +27645,7 @@ unittest
 }
 
 //Test NegInfIntervalRange's interval.
-unittest
+@system unittest
 {
     auto interval = NegInfInterval!Date(Date(2012, 1, 7));
     auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
@@ -27619,7 +27658,7 @@ unittest
 }
 
 //Test NegInfIntervalRange's func.
-unittest
+@system unittest
 {
     auto interval = NegInfInterval!Date(Date(2012, 1, 7));
     auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
@@ -27739,14 +27778,14 @@ public:
         return dur!"hnsecs"(utcToTZ(stdTime) - stdTime);
     }
 
-
+    // @@@DEPRECATED_2017-07@@@
     /++
-        $(RED Please use either PosixTimeZone.getTimeZone or
-              WindowsTimeZone.getTimeZone ($(LREF parseTZConversions) can be
-              used to convert time zone names if necessary). This function will
-              be deprecated in 2.072, because Microsoft changes their time zones
-              too often for us to compile the conversions into Phobos and have
-              them be properly up-to-date.)
+        $(RED Deprecated. Use either PosixTimeZone.getTimeZone or
+              WindowsTimeZone.getTimeZone. ($(LREF parseTZConversions) can be
+              used to convert time zone names if necessary). Microsoft changes
+              their time zones too often for us to compile the conversions into
+              Phobos and have them be properly up-to-date. TimeZone.getTimeZone
+              will be removed in July 2017.)
 
         Returns a $(LREF2 .TimeZone, TimeZone) with the give name per the TZ Database.
 
@@ -27775,6 +27814,7 @@ public:
         Throws:
             $(LREF DateTimeException) if the given time zone could not be found.
       +/
+    deprecated("Use PosixTimeZone.getTimeZone or WindowsTimeZone.getTimeZone instead")
     static immutable(TimeZone) getTimeZone(string name) @safe
     {
         version(Posix)
@@ -27801,7 +27841,7 @@ public:
     }
 
     ///
-    unittest
+    deprecated @safe unittest
     {
         auto tz = TimeZone.getTimeZone("America/Los_Angeles");
     }
@@ -27827,7 +27867,7 @@ public:
     //Since reading in the time zone files could be expensive, most unit tests
     //are consolidated into this one unittest block which minimizes how often it
     //reads a time zone file.
-    unittest
+    @system unittest
     {
         import std.conv : to;
         import std.file : exists, isFile;
@@ -27835,6 +27875,9 @@ public:
         import std.path : chainPath;
         import std.stdio : writefln;
         import std.typecons : tuple;
+
+        version(Posix) alias getTimeZone = PosixTimeZone.getTimeZone;
+        else version(Windows) alias getTimeZone = WindowsTimeZone.getTimeZone;
 
         version(Posix) scope(exit) clearTZEnvVar();
 
@@ -27847,13 +27890,18 @@ public:
         {
             scope(failure) writefln("Failed time zone: %s", tzName);
 
-            immutable tz = TimeZone.getTimeZone(tzName);
-            immutable hasDST = dstOffset != dur!"hnsecs"(0);
-
             version(Posix)
+            {
+                immutable tz = PosixTimeZone.getTimeZone(tzName);
                 assert(tz.name == tzName);
+            }
             else version(Windows)
+            {
+                immutable tz = WindowsTimeZone.getTimeZone(tzName);
                 assert(tz.name == stdName);
+            }
+
+            immutable hasDST = dstOffset != Duration.zero;
 
             //assert(tz.stdName == stdName);  //Locale-dependent
             //assert(tz.dstName == dstName);  //Locale-dependent
@@ -27971,21 +28019,21 @@ public:
         }
         else version(Windows)
         {
-            auto tzs = [testTZ("America/Los_Angeles", "Pacific Standard Time",
+            auto tzs = [testTZ("Pacific Standard Time", "Pacific Standard Time",
                                "Pacific Daylight Time", dur!"hours"(-8), dur!"hours"(1)),
-                        testTZ("America/New_York", "Eastern Standard Time",
+                        testTZ("Eastern Standard Time", "Eastern Standard Time",
                                "Eastern Daylight Time", dur!"hours"(-5), dur!"hours"(1)),
-                        //testTZ("America/Santiago", "Pacific SA Standard Time",
+                        //testTZ("Pacific SA Standard Time", "Pacific SA Standard Time",
                                //"Pacific SA Daylight Time", dur!"hours"(-4), dur!"hours"(1), false),
-                        testTZ("Europe/London", "GMT Standard Time",
+                        testTZ("GMT Standard Time", "GMT Standard Time",
                                "GMT Daylight Time", dur!"hours"(0), dur!"hours"(1)),
-                        testTZ("Europe/Paris", "Romance Standard Time",
+                        testTZ("Romance Standard Time", "Romance Standard Time",
                                "Romance Daylight Time", dur!"hours"(1), dur!"hours"(1)),
-                        testTZ("Australia/Adelaide", "Cen. Australia Standard Time",
+                        testTZ("Cen. Australia Standard Time", "Cen. Australia Standard Time",
                                "Cen. Australia Daylight Time",
                                dur!"hours"(9) + dur!"minutes"(30), dur!"hours"(1), false)];
 
-            testTZ("Atlantic/Reykjavik", "Greenwich Standard Time",
+            testTZ("Greenwich Standard Time", "Greenwich Standard Time",
                    "Greenwich Daylight Time", dur!"hours"(0), dur!"hours"(0));
             assertThrown!DateTimeException(WindowsTimeZone.getTimeZone("hello_world"));
         }
@@ -28111,7 +28159,15 @@ public:
     }
 
 
+    // @@@DEPRECATED_2017-07@@@
     /++
+        $(RED Deprecated. Use either PosixTimeZone.getInstalledTZNames or
+              WindowsTimeZone.getInstalledTZNames. ($(LREF parseTZConversions)
+              can be used to convert time zone names if necessary). Microsoft
+              changes their time zones too often for us to compile the
+              conversions into Phobos and have them be properly up-to-date.
+              TimeZone.getInstalledTZNames will be removed in July 2017.)
+
         Returns a list of the names of the time zones installed on the system.
 
         Providing a sub-name narrows down the list of time zones (which
@@ -28132,15 +28188,16 @@ public:
             $(LREF DateTimeException) on Windows systems if it fails to read the
             registry.
       +/
+    deprecated("Use PosixTimeZone.getInstalledTZNames or WindowsTimeZone.getInstalledTZNames instead")
     static string[] getInstalledTZNames(string subName = "") @safe
     {
         version(Posix)
             return PosixTimeZone.getInstalledTZNames(subName);
         else version(Windows)
         {
-            import std.algorithm : startsWith, sort;
+            import std.algorithm.searching : startsWith;
+            import std.algorithm.sorting : sort;
             import std.array : appender;
-            import std.format : format;
 
             auto windowsNames = WindowsTimeZone.getInstalledTZNames();
             auto retval = appender!(string[])();
@@ -28148,12 +28205,6 @@ public:
             foreach (winName; windowsNames)
             {
                 auto tzName = windowsTZNameToTZDatabaseName(winName);
-
-                version(unittest)
-                {
-                    assert(tzName !is null, format("TZName which is missing: %s", winName));
-                }
-
                 if (tzName !is null && tzName.startsWith(subName))
                     retval.put(tzName);
             }
@@ -28163,7 +28214,7 @@ public:
         }
     }
 
-    unittest
+    deprecated @safe unittest
     {
         import std.exception : assertNotThrown;
         import std.stdio : writefln;
@@ -28307,7 +28358,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         assert(LocalTime().stdName !is null);
 
@@ -28379,7 +28430,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         assert(LocalTime().dstName !is null);
 
@@ -28445,7 +28496,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         LocalTime().hasDST;
 
@@ -28503,7 +28554,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         auto currTime = Clock.currStdTime;
         LocalTime().dstInEffect(currTime);
@@ -28524,7 +28575,11 @@ public:
       +/
     override long utcToTZ(long stdTime) @trusted const nothrow
     {
-        version(Posix)
+        version(Solaris)
+        {
+            return stdTime + convert!("seconds", "hnsecs")(tm_gmtoff(stdTime));
+        }
+        else version(Posix)
         {
             import core.stdc.time : localtime, tm;
             time_t unixTime = stdTimeToUnixTime(stdTime);
@@ -28541,7 +28596,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         LocalTime().utcToTZ(0);
     }
@@ -28594,7 +28649,7 @@ public:
         }
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
         import std.typecons : tuple;
@@ -28757,6 +28812,26 @@ private:
         initOnce!guard({tzset(); return true;}());
         return instance;
     }
+
+
+    // The Solaris version of struct tm has no tm_gmtoff field, so do it here
+    version(Solaris)
+    {
+        long tm_gmtoff(long stdTime) @trusted const nothrow
+        {
+            import core.stdc.time : localtime, gmtime, tm;
+
+            time_t unixTime = stdTimeToUnixTime(stdTime);
+            tm* buf = localtime(&unixTime);
+            tm timeInfo = *buf;
+            buf = gmtime(&unixTime);
+            tm timeInfoGmt = *buf;
+
+            return  (timeInfo.tm_sec - timeInfoGmt.tm_sec) +
+                    convert!("minutes", "seconds")(timeInfo.tm_min - timeInfoGmt.tm_min) +
+                    convert!("hours", "seconds")(timeInfo.tm_hour - timeInfoGmt.tm_hour);
+        }
+    }
 }
 
 
@@ -28809,7 +28884,7 @@ public:
         return stdTime;
     }
 
-    unittest
+    @safe unittest
     {
         assert(UTC().utcToTZ(0) == 0);
 
@@ -28841,7 +28916,7 @@ public:
         return adjTime;
     }
 
-    unittest
+    @safe unittest
     {
         assert(UTC().tzToUTC(0) == 0);
 
@@ -28930,7 +29005,7 @@ public:
         return stdTime + _utcOffset.total!"hnsecs";
     }
 
-    unittest
+    @safe unittest
     {
         auto west = new immutable SimpleTimeZone(dur!"hours"(-8));
         auto east = new immutable SimpleTimeZone(dur!"hours"(8));
@@ -28957,7 +29032,7 @@ public:
         return adjTime - _utcOffset.total!"hnsecs";
     }
 
-    unittest
+    @safe unittest
     {
         auto west = new immutable SimpleTimeZone(dur!"hours"(-8));
         auto east = new immutable SimpleTimeZone(dur!"hours"(8));
@@ -29000,14 +29075,7 @@ public:
         this._utcOffset = utcOffset;
     }
 
-    // Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
-    deprecated("Please use the overload which takes a Duration.")
-    this(int utcOffset, string stdName = "") @safe immutable pure
-    {
-        this(dur!"minutes"(utcOffset), stdName);
-    }
-
-    unittest
+    @safe unittest
     {
         auto stz = new immutable SimpleTimeZone(dur!"hours"(-8), "PST");
         assert(stz.name == "");
@@ -29050,7 +29118,7 @@ private:
         return format(utcOffset < Duration.zero ? "-%02d%02d" : "+%02d%02d", hours, minutes);
     }
 
-    unittest
+    @safe unittest
     {
         static string testSTZInvalid(Duration offset)
         {
@@ -29103,7 +29171,7 @@ private:
         return format(utcOffset < Duration.zero ? "-%02d:%02d" : "+%02d:%02d", hours, minutes);
     }
 
-    unittest
+    @safe unittest
     {
         static string testSTZInvalid(Duration offset)
         {
@@ -29179,7 +29247,7 @@ private:
         return new immutable SimpleTimeZone(sign * (dur!"hours"(hours) + dur!"minutes"(minutes)));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -29241,7 +29309,7 @@ private:
         test("-23", hours(-23));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -29331,7 +29399,7 @@ private:
         return new immutable SimpleTimeZone(sign * (dur!"hours"(hours) + dur!"minutes"(minutes)));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -29393,7 +29461,7 @@ private:
         test("-23", hours(-23));
     }
 
-    unittest
+    @safe unittest
     {
         import std.format : format;
 
@@ -29839,7 +29907,7 @@ public:
 
             _enforceValidTZFile(tzFile.readln().strip().empty);
 
-            auto posixEnvStr = tzFile.readln().strip();
+            cast(void) tzFile.readln();
 
             version(Android)
             {
@@ -29910,7 +29978,6 @@ public:
                 auto tempTransition = tempTransitions[i];
                 auto transitionTimeT = tempTransition.timeT;
                 auto ttInfo = tempTransition.ttInfo;
-                auto ttype = tempTransition.ttype;
 
                 _enforceValidTZFile(i == 0 || transitionTimeT > tempTransitions[i - 1].timeT);
 
@@ -29951,7 +30018,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         version(Posix)
         {
@@ -30034,7 +30101,7 @@ public:
         return timezones.data;
     }
 
-    version(Posix) unittest
+    version(Posix) @system unittest
     {
         import std.exception : assertNotThrown;
         import std.stdio : writefln;
@@ -30472,7 +30539,7 @@ version(StdDdoc)
 
             Example:
     --------------------
-    auto tz = TimeZone.getTimeZone("America/Los_Angeles");
+    auto tz = WindowsTimeZone.getTimeZone("Pacific Standard Time");
     --------------------
           +/
         static immutable(WindowsTimeZone) getTimeZone(string name) @safe;
@@ -30600,7 +30667,7 @@ else version(Windows)
             return timezones.data;
         }
 
-        unittest
+        @safe unittest
         {
             import std.exception : assertNotThrown;
             import std.stdio : writefln;
@@ -30693,7 +30760,7 @@ else version(Windows)
                 assert(0, "DateTime's constructor threw.");
         }
 
-        unittest
+        @system unittest
         {
             TIME_ZONE_INFORMATION tzInfo;
             GetTimeZoneInformation(&tzInfo);
@@ -30996,7 +31063,7 @@ TZConversions parseTZConversions(string windowsZonesXMLText) @safe pure
     return TZConversions(nix2Win, win2Nix);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : uniq;
@@ -31079,11 +31146,12 @@ For terms of use, see http://www.unicode.org/copyright.html
 }
 
 
+// @@@DEPRECATED_2017-07@@@
 /++
-    $(RED Please use $(LREF parseTZConversions) instead. This function will be
-          deprecated in 2.072, because Microsoft changes their time zones too
-          often for us to compile the conversions into Phobos and have them be
-          properly up-to-date.)
+    $(RED Deprecated. Use $(LREF parseTZConversions) instead. Microsoft changes
+          their time zones too often for us to compile the conversions into
+          Phobos and have them be properly up-to-date.
+          tzDatabaseNameToWindowsTZName will be removed in July 2017.)
 
     Converts the given TZ Database name to the corresponding Windows time zone
     name.
@@ -31106,6 +31174,7 @@ For terms of use, see http://www.unicode.org/copyright.html
     Params:
         tzName = The TZ Database name to convert.
   +/
+deprecated("Use parseTZConversions instead")
 string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
 {
     switch (tzName)
@@ -31561,19 +31630,24 @@ string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
     }
 }
 
-version(Windows) unittest
+version(Windows) version(UpdateWindowsTZTranslations) deprecated @system unittest
 {
-    import std.format : format;
+    import std.stdio : stderr;
+
     foreach (tzName; TimeZone.getInstalledTZNames())
-        assert(tzDatabaseNameToWindowsTZName(tzName) !is null, format("TZName which failed: %s", tzName));
+    {
+        if (tzDatabaseNameToWindowsTZName(tzName) is null)
+            stderr.writeln("Missing TZName to Windows translation: ", tzName);
+    }
 }
 
 
+// @@@DEPRECATED_2017-07@@@
 /++
-    $(RED Please use $(LREF parseTZConversions) instead. This function will be
-          deprecated in 2.072, because Microsoft changes their time zones too
-          often for us to compile the conversions into Phobos and have them be
-          properly up-to-date.)
+    $(RED Deprecated. Use $(LREF parseTZConversions) instead. Microsoft changes
+          their time zones too often for us to compile the conversions into
+          Phobos and have them be properly up-to-date.
+          windowsTZNameToTZDatabaseName will be removed in July 2017.)
 
     Converts the given Windows time zone name to a corresponding TZ Database
     name.
@@ -31587,6 +31661,7 @@ version(Windows) unittest
     Params:
         tzName = The TZ Database name to convert.
   +/
+deprecated("Use parseTZConversions instead")
 string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
 {
     switch (tzName)
@@ -31735,11 +31810,15 @@ string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
     }
 }
 
-version(Windows) unittest
+version(Windows) version(UpdateWindowsTZTranslations) deprecated @system unittest
 {
-    import std.format : format;
-    foreach (tzName; WindowsTimeZone.getInstalledTZNames())
-        assert(windowsTZNameToTZDatabaseName(tzName) !is null, format("TZName which failed: %s", tzName));
+    import std.stdio : stderr;
+
+    foreach (winName; WindowsTimeZone.getInstalledTZNames())
+    {
+        if (windowsTZNameToTZDatabaseName(winName) is null)
+            stderr.writeln("Missing Windows to TZName translation: ", winName);
+    }
 }
 
 
@@ -31775,7 +31854,7 @@ public:
 
     @nogc @safe unittest
     {
-        auto sw = StopWatch(AutoStart.yes);
+        auto sw = StopWatch(Yes.autoStart);
         sw.stop();
     }
 
@@ -31834,7 +31913,7 @@ public:
         _timeStart = TickDuration.currSystemTick;
     }
 
-    @nogc @trusted unittest
+    @nogc @system unittest
     {
         StopWatch sw;
         sw.start();
@@ -31860,7 +31939,7 @@ public:
         _timeMeasured += TickDuration.currSystemTick - _timeStart;
     }
 
-    @nogc @trusted unittest
+    @nogc @system unittest
     {
         StopWatch sw;
         sw.start();
@@ -31938,7 +32017,7 @@ public:
         assert(sw1.running);
         sw1.stop();
         assert(!sw1.running);
-        StopWatch sw2 = AutoStart.yes;
+        StopWatch sw2 = Yes.autoStart;
         assert(sw2.running);
         sw2.stop();
         assert(!sw2.running);
@@ -32032,7 +32111,7 @@ TickDuration[fun.length] benchmark(fun...)(uint n)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.conv : to;
     int a;
@@ -32131,7 +32210,7 @@ ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
 }
 
 //Bug# 8450
-unittest
+@system unittest
 {
     @safe    void safeFunc() {}
     @trusted void trustFunc() {}
@@ -32213,7 +32292,7 @@ private:
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(isTimePoint!Date);
     static assert(isTimePoint!DateTime);
@@ -32225,7 +32304,7 @@ unittest
     static assert(!isTimePoint!(Interval!SysTime));
 }
 
-unittest
+@safe unittest
 {
     import std.meta : AliasSeq;
 
@@ -32257,7 +32336,7 @@ static bool yearIsLeapYear(int year) @safe pure nothrow
     return year % 4 == 0;
 }
 
-unittest
+@safe unittest
 {
     import std.format : format;
     foreach (year; [1, 2, 3, 5, 6, 7, 100, 200, 300, 500, 600, 700, 1998, 1999,
@@ -32307,7 +32386,7 @@ long unixTimeToStdTime(long unixTime) @safe pure nothrow
 }
 
 ///
-unittest
+@safe unittest
 {
     // Midnight, January 1st, 1970
     assert(unixTimeToStdTime(0) == 621_355_968_000_000_000L);
@@ -32323,7 +32402,7 @@ unittest
            SysTime(DateTime(1969, 12, 30, 12, 41, 13), UTC()));
 }
 
-unittest
+@safe unittest
 {
     // Midnight, January 2nd, 1970
     assert(unixTimeToStdTime(86_400) == 621_355_968_000_000_000L + 864_000_000_000L);
@@ -32402,7 +32481,7 @@ T stdTimeToUnixTime(T = time_t)(long stdTime) @safe pure nothrow
 }
 
 ///
-unittest
+@safe unittest
 {
     // Midnight, January 1st, 1970 UTC
     assert(stdTimeToUnixTime(621_355_968_000_000_000L) == 0);
@@ -32411,7 +32490,7 @@ unittest
     assert(stdTimeToUnixTime(642_830_804_470_000_000L) == int.max);
 }
 
-unittest
+@safe unittest
 {
     enum unixEpochAsStdTime = (Date(1970, 1, 1) - Date.init).total!"hnsecs";
 
@@ -32612,7 +32691,7 @@ else version(Windows)
         return SysTime(dt, msecs(st.wMilliseconds), tz);
     }
 
-    unittest
+    @system unittest
     {
         auto sysTime = Clock.currTime(UTC());
         SYSTEMTIME st = void;
@@ -32644,7 +32723,7 @@ else version(Windows)
         return st;
     }
 
-    unittest
+    @system unittest
     {
         SYSTEMTIME st = void;
         GetSystemTime(&st);
@@ -32685,7 +32764,7 @@ else version(Windows)
         return sysTime;
     }
 
-    unittest
+    @system unittest
     {
         auto sysTime = Clock.currTime(UTC());
         SYSTEMTIME st = void;
@@ -32720,7 +32799,7 @@ else version(Windows)
         return stdTimeToFILETIME(sysTime.stdTime);
     }
 
-    unittest
+    @system unittest
     {
         SYSTEMTIME st = void;
         GetSystemTime(&st);
@@ -32772,7 +32851,7 @@ SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime(
         throw new DateTimeException("Invalid DosFileTime", __FILE__, __LINE__, dte);
 }
 
-unittest
+@safe unittest
 {
     assert(DosFileTimeToSysTime(0b00000000001000010000000000000000) ==
                     SysTime(DateTime(1980, 1, 1, 0, 0, 0)));
@@ -32816,7 +32895,7 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
     return cast(DosFileTime)retval;
 }
 
-unittest
+@safe unittest
 {
     assert(SysTimeToDosFileTime(SysTime(DateTime(1980, 1, 1, 0, 0, 0))) ==
                     0b00000000001000010000000000000000);
@@ -33075,8 +33154,10 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
 }
 
 ///
-unittest
+@safe unittest
 {
+    import std.exception : assertThrown;
+
     auto tz = new immutable SimpleTimeZone(hours(-8));
     assert(parseRFC822DateTime("Sat, 6 Jan 1990 12:14:19 -0800") ==
            SysTime(DateTime(1990, 1, 6, 12, 14, 19), tz));
@@ -33106,9 +33187,10 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
     throw new AssertError("No DateTimeException was thrown", __FILE__, line);
 }
 
-unittest
+@system unittest
 {
-    import std.algorithm.iteration : map;
+    import std.algorithm.iteration : filter, map;
+    import std.algorithm.searching : canFind;
     import std.array : array;
     import std.ascii : letters;
     import std.format : format;
@@ -33241,7 +33323,7 @@ unittest
                            ["Jam", "Jen", "Fec", "Fdb", "Mas", "Mbr", "Aps", "Aqr", "Mai", "Miy",
                             "Jum", "Jbn", "Jup", "Jal", "Aur", "Apg", "Sem", "Sap", "Ocm", "Odt",
                             "Nom", "Nav", "Dem", "Dac"],
-                           Rand3Letters.start().take(20)))
+                           Rand3Letters.start().filter!(a => !_monthNames[].canFind(a)).take(20)))
         {
             scope(failure) writefln("Month: %s", mon);
             testBad(format("17 %s 2012 00:05:02 +0000", mon));
@@ -33270,7 +33352,7 @@ unittest
                            daysOfWeekNames[].map!(a => toUpper(a))(),
                            ["Sum", "Spn", "Mom", "Man", "Tuf", "Tae", "Wem", "Wdd", "The", "Tur",
                             "Fro", "Fai", "San", "Sut"],
-                           Rand3Letters.start().take(20)))
+                           Rand3Letters.start().filter!(a => !daysOfWeekNames[].canFind(a)).take(20)))
         {
             scope(failure) writefln("Day of Week: %s", dow);
             testBad(format("%s, 11 Nov 2012 09:42:00 +0000", dow));
@@ -33377,7 +33459,7 @@ unittest
 }
 
 // Obsolete Format per section 4.3 of RFC 5322.
-unittest
+@system unittest
 {
     import std.algorithm.iteration : filter, map;
     import std.ascii : letters;
@@ -33650,7 +33732,7 @@ int cmpTimeUnits(string lhs, string rhs) @safe pure
     return 0;
 }
 
-unittest
+@safe unittest
 {
     foreach (i, outerUnits; timeStrings)
     {
@@ -33710,7 +33792,7 @@ private int cmpTimeUnitsCTFE(string lhs, string rhs) @safe pure nothrow
     return 0;
 }
 
-unittest
+@safe unittest
 {
     import std.format : format;
     import std.meta : AliasSeq;
@@ -33762,7 +33844,7 @@ bool valid(string units)(int value) @safe pure nothrow
 }
 
 ///
-unittest
+@safe unittest
 {
     assert(valid!"hours"(12));
     assert(!valid!"hours"(32));
@@ -33874,7 +33956,7 @@ static int monthsToMonth(int currMonth, int month) @safe pure
     return (Month.dec - currMonth) + month;
 }
 
-unittest
+@safe unittest
 {
     assert(monthsToMonth(Month.jan, Month.jan) == 0);
     assert(monthsToMonth(Month.jan, Month.feb) == 1);
@@ -33949,7 +34031,7 @@ static int daysToDayOfWeek(DayOfWeek currDoW, DayOfWeek dow) @safe pure nothrow
     return (DayOfWeek.sat - currDoW) + dow + 1;
 }
 
-unittest
+@safe unittest
 {
     assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.sun) == 0);
     assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.mon) == 1);
@@ -34009,17 +34091,15 @@ unittest
 }
 
 
-version(StdDdoc)
-{
-    /++
-        Function for starting to a stop watch time when the function is called
-        and stopping it when its return value goes out of scope and is destroyed.
+/++
+    Function for starting to a stop watch time when the function is called
+    and stopping it when its return value goes out of scope and is destroyed.
 
-        When the value that is returned by this function is destroyed,
-        $(D func) will run. $(D func) is a unary function that takes a
-        $(REF TickDuration, core,time).
+    When the value that is returned by this function is destroyed,
+    $(D func) will run. $(D func) is a unary function that takes a
+    $(REF TickDuration, core,time).
 
-        Example:
+    Example:
 --------------------
 {
     auto mt = measureTime!((TickDuration a)
@@ -34028,11 +34108,11 @@ version(StdDdoc)
 }
 --------------------
 
-        which is functionally equivalent to
+    which is functionally equivalent to
 
 --------------------
 {
-    auto sw = StopWatch(AutoStart.yes);
+    auto sw = StopWatch(Yes.autoStart);
     scope(exit)
     {
         TickDuration a = sw.peek();
@@ -34042,52 +34122,47 @@ version(StdDdoc)
 }
 --------------------
 
-        See_Also:
-            $(LREF benchmark)
-      +/
-    auto measureTime(alias func)();
-}
-else
+    See_Also:
+        $(LREF benchmark)
++/
+@safe auto measureTime(alias func)()
+    if (isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
 {
-    @safe auto measureTime(alias func)()
-        if (isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
+    struct Result
     {
-        struct Result
+        private StopWatch _sw = void;
+        this(AutoStart as)
         {
-            private StopWatch _sw = void;
-            this(AutoStart as)
-            {
-                _sw = StopWatch(as);
-            }
-            ~this()
-            {
-                unaryFun!(func)(_sw.peek());
-            }
+            _sw = StopWatch(as);
         }
-        return Result(AutoStart.yes);
+        ~this()
+        {
+            unaryFun!(func)(_sw.peek());
+        }
     }
+    return Result(Yes.autoStart);
+}
 
-    auto measureTime(alias func)()
-        if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
+auto measureTime(alias func)()
+    if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
+{
+    struct Result
     {
-        struct Result
+        private StopWatch _sw = void;
+        this(AutoStart as)
         {
-            private StopWatch _sw = void;
-            this(AutoStart as)
-            {
-                _sw = StopWatch(as);
-            }
-            ~this()
-            {
-                unaryFun!(func)(_sw.peek());
-            }
+            _sw = StopWatch(as);
         }
-        return Result(AutoStart.yes);
+        ~this()
+        {
+            unaryFun!(func)(_sw.peek());
+        }
     }
+    return Result(Yes.autoStart);
 }
 
 // Verify Example.
-unittest
+@safe unittest
 {
     {
         auto mt = measureTime!((TickDuration a)
@@ -34096,7 +34171,7 @@ unittest
     }
 
     {
-        auto sw = StopWatch(AutoStart.yes);
+        auto sw = StopWatch(Yes.autoStart);
         scope(exit)
         {
             TickDuration a = sw.peek();
@@ -34126,7 +34201,7 @@ unittest
     +/
 }
 
-unittest
+@safe unittest
 {
     import std.math : isNaN;
 
@@ -34147,7 +34222,7 @@ unittest
 }
 
 //Bug# 8450
-unittest
+@system unittest
 {
     @safe    void safeFunc() {}
     @trusted void trustFunc() {}
@@ -34251,7 +34326,7 @@ long splitUnitsFromHNSecs(string units)(ref long hnsecs) @safe pure nothrow
     return value;
 }
 
-unittest
+@safe unittest
 {
     auto hnsecs = 2595000000007L;
     immutable days = splitUnitsFromHNSecs!"days"(hnsecs);
@@ -34285,7 +34360,7 @@ long getUnitsFromHNSecs(string units)(long hnsecs) @safe pure nothrow
     return convert!("hnsecs", units)(hnsecs);
 }
 
-unittest
+@safe unittest
 {
     auto hnsecs = 2595000000007L;
     immutable days = getUnitsFromHNSecs!"days"(hnsecs);
@@ -34317,7 +34392,7 @@ long removeUnitsFromHNSecs(string units)(long hnsecs) @safe pure nothrow
     return hnsecs - convert!(units, "hnsecs")(value);
 }
 
-unittest
+@safe unittest
 {
     auto hnsecs = 2595000000007L;
     auto returned = removeUnitsFromHNSecs!"days"(hnsecs);
@@ -34353,7 +34428,7 @@ body
     }
 }
 
-unittest
+@safe unittest
 {
     //Test A.D.
     assert(maxDay(1999, 1) == 31);
@@ -34434,7 +34509,7 @@ DayOfWeek getDayOfWeek(int day) @safe pure nothrow
     }
 }
 
-unittest
+@safe unittest
 {
     //Test A.D.
     assert(getDayOfWeek(SysTime(Date(1, 1, 1)).dayOfGregorianCal) == DayOfWeek.mon);
@@ -34483,7 +34558,7 @@ string monthToString(Month month) @safe pure
     return _monthNames[month - Month.jan];
 }
 
-unittest
+@safe unittest
 {
     assert(monthToString(Month.jan) == "Jan");
     assert(monthToString(Month.feb) == "Feb");
@@ -34543,7 +34618,7 @@ Month monthFromString(string monthStr) @safe pure
     }
 }
 
-unittest
+@safe unittest
 {
     import std.stdio : writeln;
     import std.traits : EnumMembers;
@@ -34573,7 +34648,7 @@ template nextSmallerTimeUnits(string units)
     enum nextSmallerTimeUnits = timeStrings[countUntil(timeStrings, units) - 1];
 }
 
-unittest
+@safe unittest
 {
     assert(nextSmallerTimeUnits!"years" == "months");
     assert(nextSmallerTimeUnits!"months" == "weeks");
@@ -34599,7 +34674,7 @@ template nextLargerTimeUnits(string units)
     enum nextLargerTimeUnits = timeStrings[countUntil(timeStrings, units) + 1];
 }
 
-unittest
+@safe unittest
 {
     assert(nextLargerTimeUnits!"hnsecs" == "usecs");
     assert(nextLargerTimeUnits!"usecs" == "msecs");
@@ -34639,7 +34714,7 @@ static string fracSecsToISOString(int hnsecs) @safe pure nothrow
         assert(0, "format() threw.");
 }
 
-unittest
+@safe unittest
 {
     assert(fracSecsToISOString(0) == "");
     assert(fracSecsToISOString(1) == ".0000001");
@@ -34702,7 +34777,7 @@ static Duration fracSecsFromISOString(S)(in S isoString) @trusted pure
     return hnsecs(to!int(fullISOString[]));
 }
 
-unittest
+@safe unittest
 {
     static void testFSInvalid(string isoString)
     {
@@ -34839,7 +34914,7 @@ R _stripCFWS(R)(R range)
     return range[e .. e];
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -34961,7 +35036,7 @@ T _convDigits(T, R)(R str)
     return num;
 }
 
-unittest
+@safe unittest
 {
     import std.conv : to;
     import std.range : chain, iota;
@@ -35254,15 +35329,24 @@ version(unittest)
                                DayOfYear(365, MonthDay(12, 30)),
                                DayOfYear(366, MonthDay(12, 31))];
 
-    void initializeTests()
+    void initializeTests() @safe
     {
         import std.algorithm.sorting : sort;
         import std.typecons : Rebindable;
         immutable lt = LocalTime().utcToTZ(0);
         currLocalDiffFromUTC = dur!"hnsecs"(lt);
 
-        immutable otherTZ = lt < 0 ? TimeZone.getTimeZone("Australia/Sydney")
-                                   : TimeZone.getTimeZone("America/Denver");
+        version(Posix)
+        {
+            immutable otherTZ = lt < 0 ? PosixTimeZone.getTimeZone("Australia/Sydney")
+                                       : PosixTimeZone.getTimeZone("America/Denver");
+        }
+        else version(Windows)
+        {
+            immutable otherTZ = lt < 0 ? WindowsTimeZone.getTimeZone("AUS Eastern Standard Time")
+                                       : WindowsTimeZone.getTimeZone("Mountain Standard Time");
+        }
+
         immutable ot = otherTZ.utcToTZ(0);
 
         auto diffs = [0L, lt, ot];
@@ -35320,7 +35404,7 @@ version(unittest)
 }
 
 
-unittest
+@safe unittest
 {
     import std.traits : hasUnsharedAliasing;
     /* Issue 6642 */

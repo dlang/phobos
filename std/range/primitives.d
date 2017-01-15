@@ -123,16 +123,33 @@ r.popFront();     // can invoke popFront()
 auto h = r.front; // can get the front of the range of non-void type
 ----
 
-The semantics of an input range (not checkable during compilation) are
-assumed to be the following ($(D r) is an object of type $(D R)):
+The following are rules of input ranges are assumed to hold true in all
+Phobos code. These rules are not checkable at compile-time, so not conforming
+to these rules when writing ranges or range based code will result in
+undefined behavior.
 
-$(UL $(LI $(D r.empty) returns $(D false) iff there is more data
-available in the range.)  $(LI $(D r.front) returns the current
-element in the range. It may return by value or by reference. Calling
-$(D r.front) is allowed only if calling $(D r.empty) has, or would
-have, returned $(D false).) $(LI $(D r.popFront) advances to the next
-element in the range. Calling $(D r.popFront) is allowed only if
-calling $(D r.empty) has, or would have, returned $(D false).))
+$(UL
+    $(LI `r.empty` returns `false` if and only if there is more data
+    available in the range.)
+    $(LI `r.empty` evaluated multiple times, without calling
+    `r.popFront`, or otherwise mutating the range object or the
+    underlying data, yields the same result for every evaluation.)
+    $(LI `r.front` returns the current element in the range.
+    It may return by value or by reference.)
+    $(LI `r.front` can be legally evaluated if and only if evaluating
+    `r.empty` has, or would have, equaled `false`.)
+    $(LI `r.front` evaluated multiple times, without calling
+    `r.popFront`, or otherwise mutating the range object or the
+    underlying data, yields the same result for every evaluation.)
+    $(LI `r.popFront` advances to the next element in the range.)
+    $(LI `r.popFront` can be called if and only if evaluating `r.empty`
+    has, or would have, equaled `false`.)
+)
+
+Also, note that Phobos code assumes that the primitives `r.front` and
+`r.empty` are $(BIGOH 1) time complexity wise or "cheap" in terms of
+running time. $(BIGOH) statements in the documentation of range functions
+are made with this assumption.
 
 Params:
     R = type to be tested
@@ -147,7 +164,7 @@ template isInputRange(R)
     {
         R r = R.init;     // can define a range object
         if (r.empty) {}   // can test for empty
-        r.popFront();     // can invoke popFront()
+        r.popFront;       // can invoke popFront()
         auto h = r.front; // can get the front of the range
     }));
 }
@@ -681,7 +698,6 @@ package(std) template isNativeOutputRange(R, E)
     }));
 }
 
-///
 @safe unittest
 {
     int[] r = new int[](4);
@@ -827,7 +843,7 @@ template isBidirectionalRange(R)
     (inout int = 0)
     {
         R r = R.init;
-        r.popBack();
+        r.popBack;
         auto t = r.back;
         auto w = r.front;
         static assert(is(typeof(t) == typeof(w)));
@@ -918,6 +934,8 @@ template isRandomAccessRange(R)
 ///
 unittest
 {
+    import std.traits : isNarrowString;
+
     alias R = int[];
 
     // range is finite and bidirectional or infinite and forward.
@@ -1061,7 +1079,7 @@ template hasMobileElements(R)
 ///
 @safe unittest
 {
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     import std.range : iota, repeat;
 
     static struct HasPostblit
@@ -1620,7 +1638,7 @@ auto walkLength(Range)(Range range, const size_t upTo)
 
 @safe unittest
 {
-    import std.algorithm : filter;
+    import std.algorithm.iteration : filter;
     import std.range : recurrence, take;
 
     //hasLength Range
@@ -1743,7 +1761,7 @@ size_t popBackN(Range)(ref Range r, size_t n)
 ///
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : iota;
     auto LL = iota(1L, 7L);
     auto r = popFrontN(LL, 2);
@@ -1764,7 +1782,7 @@ size_t popBackN(Range)(ref Range r, size_t n)
 ///
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : iota;
     auto LL = iota(1L, 7L);
     auto r = popBackN(LL, 2);
@@ -1824,7 +1842,8 @@ void popBackExactly(Range)(ref Range r, size_t n)
 ///
 @safe unittest
 {
-    import std.algorithm : filterBidirectional, equal;
+    import std.algorithm.iteration : filterBidirectional;
+    import std.algorithm.comparison : equal;
 
     auto a = [1, 2, 3];
     a.popFrontExactly(1);
@@ -1951,7 +1970,7 @@ ElementType!R moveBack(R)(R r)
 
 /**
    Moves element at index $(D i) of $(D r) out and returns it. Leaves $(D
-   r.front) in a destroyable state that does not allocate any resources
+   r[i]) in a destroyable state that does not allocate any resources
    (usually equal to its $(D .init) value).
 */
 ElementType!R moveAt(R)(R r, size_t i)
@@ -2080,29 +2099,29 @@ version(unittest)
 void popFront(C)(ref C[] str) @trusted pure nothrow
 if (isNarrowString!(C[]))
 {
-    import std.algorithm : min;
+    import std.algorithm.comparison : min;
 
     assert(str.length, "Attempting to popFront() past the end of an array of " ~ C.stringof);
 
     static if (is(Unqual!C == char))
     {
+        __gshared static immutable ubyte[] charWidthTab = [
+            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+            3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+            4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 1, 1
+        ];
+
         immutable c = str[0];
-        if (c < 0x80)
+        if (c < 192)
         {
-            //ptr is used to avoid unnnecessary bounds checking.
             str = str.ptr[1 .. str.length];
         }
         else
         {
-             import core.bitop : bsr;
-             auto msbs = 7 - bsr(~c);
-             if ((msbs < 2) | (msbs > 6))
-             {
-                 //Invalid UTF-8
-                 msbs = 1;
-             }
-             str = str.ptr[min(msbs, str.length) .. str.length];
+            str = str.ptr[min(str.length, charWidthTab.ptr[c - 192]) .. str.length];
         }
+
     }
     else static if (is(Unqual!C == wchar))
     {

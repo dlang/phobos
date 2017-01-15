@@ -16,7 +16,7 @@ $(T2 chunkBy,
         and the third with just $(D [2, 1]).)
 $(T2 cumulativeFold,
         $(D cumulativeFold!((a, b) => a + b)([1, 2, 3, 4])) returns a
-        lazily-evaluated range containing the succesive reduced values `1`,
+        lazily-evaluated range containing the successive reduced values `1`,
         `3`, `6`, `10`.)
 $(T2 each,
         $(D each!writeln([1, 2, 3])) eagerly prints the numbers $(D 1), $(D 2)
@@ -422,12 +422,12 @@ private struct _Cache(R, bool bidir)
             auto opSlice(size_t low, size_t high)
             in
             {
-                assert(low <= high);
+                assert(low <= high, "Bounds error when slicing cache.");
             }
             body
             {
-                import std.range : take;
-                return this[low .. $].take(high - low);
+                import std.range : takeExactly;
+                return this[low .. $].takeExactly(high - low);
             }
         }
     }
@@ -552,11 +552,13 @@ private struct MapResult(alias fun, Range)
     {
         @property auto ref back()()
         {
+            assert(!empty, "Attempting to fetch the back of an empty map.");
             return fun(_input.back);
         }
 
         void popBack()()
         {
+            assert(!empty, "Attempting to popBack an empty map.");
             _input.popBack();
         }
     }
@@ -581,11 +583,13 @@ private struct MapResult(alias fun, Range)
 
     void popFront()
     {
+        assert(!empty, "Attempting to popFront an empty map.");
         _input.popFront();
     }
 
     @property auto ref front()
     {
+        assert(!empty, "Attempting to fetch the front of an empty map.");
         return fun(_input.front);
     }
 
@@ -637,8 +641,8 @@ private struct MapResult(alias fun, Range)
 
             auto opSlice(opSlice_t low, opSlice_t high)
             {
-                import std.range : take;
-                return this[low .. $].take(high - low);
+                import std.range : takeExactly;
+                return this[low .. $].takeExactly(high - low);
             }
         }
     }
@@ -674,7 +678,7 @@ private struct MapResult(alias fun, Range)
     //assert(equal(countAndSquare([ 10, 2 ]), [ tuple(0u, 100), tuple(1u, 4) ]));
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
@@ -906,7 +910,7 @@ template each(alias pred = "a")
         }
     }
 
-    void each(Iterable)(Iterable r)
+    void each(Iterable)(auto ref Iterable r)
         if (isForeachIterable!Iterable)
     {
         debug(each) pragma(msg, "Using foreach for ", Iterable.stringof);
@@ -924,7 +928,7 @@ template each(alias pred = "a")
 
     // opApply with >2 parameters. count the delegate args.
     // only works if it is not templated (otherwise we cannot count the args)
-    void each(Iterable)(Iterable r)
+    void each(Iterable)(auto ref Iterable r)
         if (!isRangeIterable!Iterable && !isForeachIterable!Iterable &&
             __traits(compiles, Parameters!(Parameters!(r.opApply))))
     {
@@ -946,7 +950,7 @@ template each(alias pred = "a")
 }
 
 ///
-unittest
+@system unittest
 {
     import std.range : iota;
 
@@ -975,14 +979,19 @@ unittest
     assert(arr == [0, 1, 2, 3, 4]);
 
     // opApply iterators work as well
-    static assert(is(typeof({
-        import std.parallelism;
-        arr.parallel.each!"a++";
-    })));
+    static class S
+    {
+        int x;
+        int opApply(scope int delegate(ref int _x) dg) { return dg(x); }
+    }
+
+    auto s = new S;
+    s.each!"a++";
+    assert(s.x == 1);
 }
 
 // binary foreach with two ref args
-unittest
+@system unittest
 {
     import std.range : lockstep;
 
@@ -996,7 +1005,7 @@ unittest
 }
 
 // #15358: application of `each` with >2 args (opApply)
-unittest
+@system unittest
 {
     import std.range : lockstep;
     auto a = [0,1,2];
@@ -1011,7 +1020,7 @@ unittest
 }
 
 // #15358: application of `each` with >2 args (range interface)
-unittest
+@safe unittest
 {
     import std.range : zip;
     auto a = [0,1,2];
@@ -1023,6 +1032,38 @@ unittest
     zip(a, b, c).each!((x, y, z) { res ~= x + y + z; });
 
     assert(res == [9, 12, 15]);
+}
+
+// #16255: `each` on opApply doesn't support ref
+unittest
+{
+    int[] dynamicArray = [1, 2, 3, 4, 5];
+    int[5] staticArray = [1, 2, 3, 4, 5];
+
+    dynamicArray.each!((ref x) => x++);
+    assert(dynamicArray == [2, 3, 4, 5, 6]);
+
+    staticArray.each!((ref x) => x++);
+    assert(staticArray == [2, 3, 4, 5, 6]);
+
+    staticArray[].each!((ref x) => x++);
+    assert(staticArray == [3, 4, 5, 6, 7]);
+}
+
+// #16255: `each` on opApply doesn't support ref
+unittest
+{
+    struct S
+    {
+       int x;
+       int opApply(int delegate(ref int _x) dg) { return dg(x); }
+    }
+
+    S s;
+    foreach (ref a; s) ++a;
+    assert(s.x == 1);
+    s.each!"++a";
+    assert(s.x == 2);
 }
 
 /**
@@ -1115,7 +1156,7 @@ private struct FilterResult(alias pred, Range)
 
     @property auto ref front()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to fetch the front of an empty filter.");
         return _input.front;
     }
 
@@ -1298,7 +1339,7 @@ private struct FilterBidiResult(alias pred, Range)
 
     @property auto ref front()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to fetch the front of an empty filterBidirectional.");
         return _input.front;
     }
 
@@ -1312,7 +1353,7 @@ private struct FilterBidiResult(alias pred, Range)
 
     @property auto ref back()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to fetch the back of an empty filterBidirectional.");
         return _input.back;
     }
 
@@ -1417,7 +1458,7 @@ struct Group(alias pred, R) if (isInputRange!R)
     ///
     @property auto ref front()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to fetch the front of an empty Group.");
         return _current;
     }
 
@@ -1470,7 +1511,7 @@ struct Group(alias pred, R) if (isInputRange!R)
     }
 }
 
-unittest
+@safe unittest
 {
     // Issue 13857
     immutable(int)[] a1 = [1,1,2,2,2,3,4,4,5,6,6,7,8,9,9,9];
@@ -1722,7 +1763,7 @@ private struct ChunkByImpl(alias pred, Range)
     static assert(isForwardRange!(typeof(this)));
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1730,6 +1771,8 @@ unittest
     class RefFwdRange
     {
         int[]  impl;
+
+        @safe nothrow:
 
         this(int[] data) { impl = data; }
         @property bool empty() { return impl.empty; }
@@ -1846,7 +1889,7 @@ auto chunkBy(alias pred, Range)(Range r)
 }
 
 version(none) // this example requires support for non-equivalence relations
-unittest
+@safe unittest
 {
     auto data = [
         [1, 1],
@@ -1996,7 +2039,7 @@ unittest
 
 // Issue 13595
 version(none) // This requires support for non-equivalence relations
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto r = [1, 2, 3, 4, 5, 6, 7, 8, 9].chunkBy!((x, y) => ((x*y) % 3) == 0);
@@ -2009,7 +2052,7 @@ unittest
 }
 
 // Issue 13805
-unittest
+@system unittest
 {
     [""].map!((s) => s).chunkBy!((x, y) => true);
 }
@@ -2152,13 +2195,13 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
         @property ElementType!(ElementType!RoR) front()
         {
             if (!_currentSep.empty) return _currentSep.front;
-            assert(!_current.empty);
+            assert(!_current.empty, "Attempting to fetch the front of an empty joiner.");
             return _current.front;
         }
 
         void popFront()
         {
-            assert(!_items.empty);
+            assert(!_items.empty, "Attempting to popFront an empty joiner.");
             // Using separator?
             if (!_currentSep.empty)
             {
@@ -2206,7 +2249,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
     assert(["", ""].joiner("xyz").equal("xyz"));
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range.primitives;
@@ -2216,7 +2259,7 @@ unittest
     assert (equal(joiner(r, "xyz"), "abcxyzdef"));
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range;
@@ -2312,7 +2355,7 @@ unittest
     assert(equal(joiner(tr5, [0,1]), [1,2,0,1,3,4,0,1,0,1]));
 }
 
-unittest
+@safe unittest
 {
     static assert(isInputRange!(typeof(joiner([""], ""))));
     static assert(isForwardRange!(typeof(joiner([""], ""))));
@@ -2380,12 +2423,12 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         }
         @property auto ref front()
         {
-            assert(!empty);
+            assert(!empty, "Attempting to fetch the front of an empty joiner.");
             return _current.front;
         }
         void popFront()
         {
-            assert(!_current.empty);
+            assert(!_current.empty, "Attempting to popFront an empty joiner.");
             _current.popFront();
             if (_current.empty)
             {
@@ -2408,14 +2451,12 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     return Result(r);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.range.interfaces;
+    import std.range.interfaces : inputRangeObject;
     import std.range : repeat;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     static assert(isInputRange!(typeof(joiner([""]))));
     static assert(isForwardRange!(typeof(joiner([""]))));
     assert(equal(joiner([""]), ""));
@@ -2425,13 +2466,20 @@ unittest
     assert(equal(joiner(["abc", "def"]), "abcdef"));
     assert(equal(joiner(["Mary", "has", "a", "little", "lamb"]),
                     "Maryhasalittlelamb"));
-    assert(equal(joiner(std.range.repeat("abc", 3)), "abcabcabc"));
+    assert(equal(joiner(repeat("abc", 3)), "abcabcabc"));
 
     // joiner allows in-place mutation!
     auto a = [ [1, 2, 3], [42, 43] ];
     auto j = joiner(a);
     j.front = 44;
     assert(a == [ [44, 2, 3], [42, 43] ]);
+}
+
+
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range.interfaces : inputRangeObject;
 
     // bugzilla 8240
     assert(equal(joiner([inputRangeObject("")]), ""));
@@ -2546,7 +2594,7 @@ unittest
 }
 
 // Issue 8061
-unittest
+@system unittest
 {
     import std.range.interfaces;
     import std.conv : to;
@@ -2582,7 +2630,7 @@ See_Also:
     to use in UFCS chains.
 
     $(LREF sum) is similar to $(D reduce!((a, b) => a + b)) that offers
-    precise summing of floating point numbers.
+    pairwise summing of floating point numbers.
 +/
 template reduce(fun...) if (fun.length >= 1)
 {
@@ -2606,7 +2654,6 @@ template reduce(fun...) if (fun.length >= 1)
     If $(D r) is empty, an $(D Exception) is thrown.
 
     Params:
-        fun = one or more functions
         r = an iterable value as defined by $(D isIterable)
 
     Returns:
@@ -2645,7 +2692,6 @@ template reduce(fun...) if (fun.length >= 1)
     Use $(D fold) instead of $(D reduce) to use the seed version in a UFCS chain.
 
     Params:
-        fun = one or more functions
         seed = the initial value of the accumulator
         r = an iterable value as defined by $(D isIterable)
 
@@ -2803,11 +2849,10 @@ The number of seeds must be correspondingly increased.
     auto stdev = sqrt(r[1] / a.length - avg * avg);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : max, min;
-    import std.exception : assertThrown;
-    import std.range;
+    import std.range : chain;
     import std.typecons : tuple, Tuple;
 
     double[] a = [ 3, 4 ];
@@ -2831,13 +2876,21 @@ unittest
     // Stringize with commas
     string rep = reduce!("a ~ `, ` ~ to!(string)(b)")("", a);
     assert(rep[2 .. $] == "1, 2, 3, 4, 5", "["~rep[2 .. $]~"]");
+}
+
+@system unittest
+{
+    import std.algorithm.comparison : max, min;
+    import std.exception : assertThrown;
+    import std.range : iota;
+    import std.typecons : tuple, Tuple;
 
     // Test the opApply case.
     static struct OpApply
     {
         bool actEmpty;
 
-        int opApply(int delegate(ref int) dg)
+        int opApply(scope int delegate(ref int) dg)
         {
             int res;
             if (actEmpty) return res;
@@ -2902,7 +2955,7 @@ unittest
     assert(r2 == tuple(3, 3));
 }
 
-unittest
+@system unittest
 {
     int i = 0;
     static struct OpApply
@@ -2921,7 +2974,7 @@ unittest
         }
     }
     //test CTFE and functions with context
-    int fun(int a, int b){return a + b + 1;}
+    int fun(int a, int b) @safe {return a + b + 1;}
     auto foo()
     {
         import std.algorithm.comparison : max;
@@ -3115,7 +3168,6 @@ if (fun.length >= 1)
     Once `S` has been determined, then $(D S s = e;) and $(D s = f(s, e);) must
     both be legal.
     Params:
-        fun = one or more functions
         range = an input range as defined by `isInputRange`
     Returns:
         a range containing the consecutive reduced values.
@@ -3134,7 +3186,6 @@ if (fun.length >= 1)
     `cumulativeFold` will operate on an unqualified copy. If this happens
     then the returned type will not perfectly match `S`.
     Params:
-        fun = one or more functions
         range = an input range as defined by `isInputRange`
         seed = the initial value of the accumulator
     Returns:
@@ -3199,7 +3250,7 @@ if (fun.length >= 1)
 
             @property auto front()
             {
-                assert(!empty);
+                assert(!empty, "Attempting to fetch the front of an empty cumulativeFold.");
                 static if (fun.length > 1)
                 {
                     import std.typecons : tuple;
@@ -3213,6 +3264,7 @@ if (fun.length >= 1)
 
             void popFront()
             {
+                assert(!empty, "Attempting to popFront an empty cumulativeFold.");
                 source.popFront;
 
                 if (source.empty)
@@ -3304,7 +3356,8 @@ The number of seeds must be correspondingly increased.
 */
 @safe unittest
 {
-    import std.algorithm : map, max, min;
+    import std.algorithm.comparison : max, min;
+    import std.algorithm.iteration : map;
     import std.math : approxEqual;
     import std.typecons : tuple;
 
@@ -3321,9 +3374,9 @@ The number of seeds must be correspondingly increased.
     assert(approxEqual(r2.map!"a[1]", [9, 25, 74, 195, 204, 208, 233])); // sum of squares
 }
 
-unittest
+@safe unittest
 {
-    import std.algorithm : equal, map, max, min;
+    import std.algorithm.comparison : equal, max, min;
     import std.conv : to;
     import std.range : chain;
     import std.typecons : tuple;
@@ -3382,7 +3435,6 @@ unittest
 
 @safe unittest
 {
-    import std.algorithm : map;
     import std.math : approxEqual;
     import std.typecons : tuple;
 
@@ -3549,6 +3601,8 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
                 _separatorLength = codeLength!(ElementEncodingType!Range)(separator);
             }
+            if (_input.empty)
+                _frontLength = _atEnd;
         }
 
         static if (isInfinite!Range)
@@ -3565,7 +3619,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
         @property Range front()
         {
-            assert(!empty);
+            assert(!empty, "Attempting to fetch the front of an empty splitter.");
             if (_frontLength == _unComputed)
             {
                 auto r = _input.find!pred(_separator);
@@ -3576,7 +3630,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
         void popFront()
         {
-            assert(!empty);
+            assert(!empty, "Attempting to popFront an empty splitter.");
             if (_frontLength == _unComputed)
             {
                 front;
@@ -3611,7 +3665,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
         {
             @property Range back()
             {
-                assert(!empty);
+                assert(!empty, "Attempting to fetch the back of an empty splitter.");
                 if (_backLength == _unComputed)
                 {
                     immutable lastIndex = lastIndexOf(_input, _separator);
@@ -3629,7 +3683,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
             void popBack()
             {
-                assert(!empty);
+                assert(!empty, "Attempting to popBack an empty splitter.");
                 if (_backLength == _unComputed)
                 {
                     // evaluate back to make sure it's computed
@@ -3680,7 +3734,6 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    assert(equal(splitter("", ' '), [ "" ]));
     assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
     assert(equal(splitter("žlutoučkýřkůň", 'ř'), [ "žlutoučký", "kůň" ]));
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
@@ -3693,7 +3746,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     // }
     assert(equal(splitter(a, 0), w));
     a = null;
-    assert(equal(splitter(a, 0), [ (int[]).init ][]));
+    assert(equal(splitter(a, 0),  (int[][]).init));
     a = [ 0 ];
     assert(equal(splitter(a, 0), [ (int[]).init, (int[]).init ][]));
     a = [ 0, 1 ];
@@ -3797,17 +3850,17 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     private:
         Range _input;
         Separator _separator;
-        enum size_t _unComputed = size_t.max - 1, _atEnd = size_t.max;
-        // _frontLength == _atEnd means empty
-        size_t _frontLength = _unComputed;
+        // _frontLength == size_t.max means empty
+        size_t _frontLength = size_t.max;
         static if (isBidirectionalRange!Range)
-            size_t _backLength = _unComputed;
+            size_t _backLength = size_t.max;
 
         @property auto separatorLength() { return _separator.length; }
 
         void ensureFrontLength()
         {
-            if (_frontLength != _unComputed) return;
+            if (_frontLength != _frontLength.max) return;
+            assert(!_input.empty);
             // compute front length
             _frontLength = (_separator.empty) ? 1 :
                            _input.length - find!pred(_input, _separator).length;
@@ -3818,7 +3871,8 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         void ensureBackLength()
         {
             static if (isBidirectionalRange!Range)
-                if (_backLength != _unComputed) return;
+                if (_backLength != _backLength.max) return;
+            assert(!_input.empty);
             // compute back length
             static if (isBidirectionalRange!Range && isBidirectionalRange!Separator)
             {
@@ -3837,7 +3891,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 
         @property Range front()
         {
-            assert(!empty);
+            assert(!empty, "Attempting to fetch the front of an empty splitter.");
             ensureFrontLength();
             return _input[0 .. _frontLength];
         }
@@ -3850,21 +3904,21 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         {
             @property bool empty()
             {
-                return _frontLength == _atEnd;
+                return _frontLength == size_t.max && _input.empty;
             }
         }
 
         void popFront()
         {
-            assert(!empty);
+            assert(!empty, "Attempting to popFront an empty splitter.");
             ensureFrontLength();
             if (_frontLength == _input.length)
             {
                 // done, there's no separator in sight
                 _input = _input[_frontLength .. _frontLength];
-                _frontLength = _atEnd;
+                _frontLength = _frontLength.max;
                 static if (isBidirectionalRange!Range)
-                    _backLength = _atEnd;
+                    _backLength = _backLength.max;
                 return;
             }
             if (_frontLength + separatorLength == _input.length)
@@ -3881,7 +3935,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
             // reading the next item
             _input = _input[_frontLength + separatorLength .. _input.length];
             // mark _frontLength as uninitialized
-            _frontLength = _unComputed;
+            _frontLength = _frontLength.max;
         }
 
         static if (isForwardRange!Range)
@@ -3931,8 +3985,6 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    assert(equal(splitter("", "  "), [ "" ]));
-
     auto s = ",abc, de, fg,hi,";
     auto sp0 = splitter(s, ',');
     // //foreach (e; sp0) writeln("[", e, "]");
@@ -4062,6 +4114,7 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(input.front))))
 @safe unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range.primitives : front;
 
     assert(equal(splitter!(a => a == ' ')("hello  world"), [ "hello", "", "world" ]));
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
@@ -4107,7 +4160,10 @@ private struct SplitterResult(alias isTerminator, Range)
         static if (!fullSlicing)
             _next = _input.save;
 
-        findTerminator();
+        if (!_input.empty)
+            findTerminator();
+        else
+            _end = size_t.max;
     }
 
     static if (isInfinite!Range)
@@ -4216,7 +4272,7 @@ private struct SplitterResult(alias isTerminator, Range)
             ["Mary", "", "has", "a", "little", "lamb.", "", "", ""]);
     compare("Mary  has a little lamb.",
             ["Mary", "", "has", "a", "little", "lamb."]);
-    compare("", [""]);
+    compare("", (string[]).init);
     compare(" ", ["", ""]);
 
     static assert(isForwardRange!(typeof(splitter!"a == ' '"("ABC"))));
@@ -4246,7 +4302,7 @@ private struct SplitterResult(alias isTerminator, Range)
         int[][] result;
     }
     Entry[] entries = [
-        Entry(0, 0, [[]]),
+        Entry(0, 0, []),
         Entry(0, 1, [[0]]),
         Entry(1, 2, [[], []]),
         Entry(2, 7, [[2], [4], [6]]),
@@ -4298,7 +4354,7 @@ if (isSomeChar!C)
     static struct Result
     {
     private:
-        import core.exception;
+        import core.exception : RangeError;
         C[] _s;
         size_t _frontLength;
 
@@ -4559,7 +4615,7 @@ if (isInputRange!R && !isInfinite!R)
     F[64] store = void;
     size_t idx = 0;
 
-    auto collapseStore(T)(T k)
+    void collapseStore(T)(T k)
     {
         auto lastToKeep = idx - cast(uint)bsf(k+1);
         while (idx > lastToKeep)
@@ -4650,8 +4706,8 @@ private auto sumKahan(Result, R)(Result result, R r)
     Result c = 0;
     for (; !r.empty; r.popFront())
     {
-        auto y = r.front - c;
-        auto t = result + y;
+        immutable y = r.front - c;
+        immutable t = result + y;
         c = (t - result) - y;
         result = t;
     }
@@ -4743,7 +4799,7 @@ private auto sumKahan(Result, R)(Result result, R r)
     auto s2 = a.map!(x => x).sum; // Error
 }
 
-unittest
+@system unittest
 {
     import std.bigint;
     import std.range;
@@ -4808,9 +4864,48 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
     assert(equal(uniq([ 1, 1, 2, 1, 1, 3, 1]), [1, 2, 1, 3, 1]));
 }
 
+///
+@trusted unittest
+{
+    import std.algorithm.comparison : equal;
+
+    struct S
+    {
+        int i;
+        string s;
+    }
+
+    auto arr = [ S(1, "a"), S(1, "b"), S(2, "c"), S(2, "d") ];
+
+    // Let's consider just the 'i' member for equality
+    auto r = arr.uniq!((a, b) => a.i == b.i);
+    assert(r.equal([S(1, "a"), S(2, "c")]));
+    assert(r.front == S(1, "a"));
+    assert(r.back == S(2, "c"));
+
+    r.popBack;
+    assert(r.back == S(1, "a"));
+    assert(r.front == r.back);
+
+    r.popBack;
+    assert(r.empty);
+
+    import std.exception : assertThrown;
+
+    assertThrown!Error(r.front);
+    assertThrown!Error(r.back);
+    assertThrown!Error(r.popFront);
+    assertThrown!Error(r.popBack);
+}
+
 private struct UniqResult(alias pred, Range)
 {
-    Range _input;
+    private Range _input;
+    static if (isBidirectionalRange!Range)
+    {
+        private ElementType!Range _back;
+        private bool _isInBack;
+    }
 
     this(Range input)
     {
@@ -4824,29 +4919,70 @@ private struct UniqResult(alias pred, Range)
 
     void popFront()
     {
+        assert(!empty, "Attempting to popFront an empty uniq.");
+        static if (isBidirectionalRange!Range)
+        {
+            if (_input.empty)
+            {
+                _isInBack = false;
+                return;
+            }
+        }
+
         auto last = _input.front;
         do
         {
-            _input.popFront();
+            _input.popFront;
         }
         while (!_input.empty && pred(last, _input.front));
     }
 
-    @property ElementType!Range front() { return _input.front; }
+    @property ElementType!Range front()
+    {
+        assert(!empty, "Attempting to fetch the front of an empty uniq.");
+        static if (isBidirectionalRange!Range)
+        {
+            if (_input.empty && _isInBack)
+            {
+                return _back;
+            }
+        }
+        return _input.front;
+    }
 
     static if (isBidirectionalRange!Range)
     {
         void popBack()
         {
-            auto last = _input.back;
-            do
+            assert(!empty, "Attempting to popBack an empty uniq.");
+            if (_input.empty)
             {
-                _input.popBack();
+                _isInBack = false;
             }
-            while (!_input.empty && pred(last, _input.back));
+            else
+            {
+                _isInBack = true;
+                _back = _input.back;
+                ElementType!Range last;
+                do
+                {
+                    last = _input.back;
+                    _input.popBack;
+                }
+                while (!_input.empty && pred(_back, _input.back));
+                _back = last;
+            }
         }
 
-        @property ElementType!Range back() { return _input.back; }
+        @property ElementType!Range back()
+        {
+            assert(!empty, "Attempting to fetch the back of an empty uniq.");
+            if (!_isInBack)
+            {
+                popBack;
+            }
+            return _back;
+        }
     }
 
     static if (isInfinite!Range)
@@ -4855,7 +4991,17 @@ private struct UniqResult(alias pred, Range)
     }
     else
     {
-        @property bool empty() { return _input.empty; }
+        @property bool empty()
+        {
+            static if (isBidirectionalRange!Range)
+            {
+                return _input.empty && !_isInBack;
+            }
+            else
+            {
+                return _input.empty;
+            }
+        }
     }
 
     static if (isForwardRange!Range)
@@ -5000,7 +5146,7 @@ struct Permutations(Range)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : iota;

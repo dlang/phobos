@@ -110,17 +110,17 @@ interface InputRange(E) {
     /**$(D foreach) iteration uses opApply, since one delegate call per loop
      * iteration is faster than three virtual function calls.
      */
-    int opApply(int delegate(E));
+    int opApply(scope int delegate(E));
 
     /// Ditto
-    int opApply(int delegate(size_t, E));
+    int opApply(scope int delegate(size_t, E));
 
 }
 
 ///
 unittest
 {
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     import std.range : iota;
 
     void useRange(InputRange!int range) {
@@ -436,7 +436,7 @@ if (isInputRange!(Unqual!R))
 
             // Optimization:  One delegate call is faster than three virtual
             // function calls.  Use opApply for foreach syntax.
-            int opApply(int delegate(E) dg) {
+            int opApply(scope int delegate(E) dg) {
                 int res;
 
                 for (auto r = _range; !r.empty; r.popFront())
@@ -448,7 +448,7 @@ if (isInputRange!(Unqual!R))
                 return res;
             }
 
-            int opApply(int delegate(size_t, E) dg) {
+            int opApply(scope int delegate(size_t, E) dg) {
                 int res;
 
                 size_t i = 0;
@@ -505,7 +505,7 @@ unittest
 unittest
 {
     import std.internal.test.dummyrange;
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.array;
 
     static void testEquality(R)(iInputRange r1, R r2) {

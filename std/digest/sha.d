@@ -101,17 +101,14 @@ unittest
     hash1 = sha1.finish();
 }
 
-version(D_PIC)
-{
-    // Do not use (Bug9378).
-}
-else version(Win64)
+version(Win64)
 {
     // wrong calling convention
 }
 else version(D_InlineAsm_X86)
 {
-    private version = USE_SSSE3;
+    version (D_PIC) {} // Bugzilla 9378
+    else private version = USE_SSSE3;
 }
 else version(D_InlineAsm_X86_64)
 {
@@ -216,11 +213,20 @@ struct SHA(uint hashBlockSize, uint digestSize)
         version(USE_SSSE3)
         {
             import core.cpuid : ssse3;
-            import std.internal.digest.sha_SSSE3 : transformSSSE3;
+            import std.internal.digest.sha_SSSE3 : sse3_constants=constants, transformSSSE3;
 
             static void transform(uint[5]* state, const(ubyte[64])* block) pure nothrow @nogc
             {
-               return ssse3 ? transformSSSE3(state, block) : transformX86(state, block);
+                if (ssse3)
+                {
+                    version (D_InlineAsm_X86_64)
+                        // constants as extra argument for PIC, see Bugzilla 9378
+                        transformSSSE3(state, block, &sse3_constants);
+                    else
+                        transformSSSE3(state, block);
+                }
+                else
+                    transformX86(state, block);
             }
         }
         else
@@ -733,7 +739,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
             if (inputLen - i)
                 (&buffer[index])[0 .. inputLen-i] = (&input[i])[0 .. inputLen-i];
         }
-        ///
+
         unittest
         {
             typeof(this) dig;

@@ -166,12 +166,9 @@ SRC_STD_4= \
 
 SRC_STD_6a=std\variant.d
 SRC_STD_6c=std\zlib.d
-SRC_STD_6d=std\stream.d
 SRC_STD_6e=std\socket.d
-SRC_STD_6f=std\socketstream.d
 SRC_STD_6h=std\conv.d
 SRC_STD_6i=std\zip.d
-SRC_STD_6j=std\cstream.d
 
 SRC_STD_7= \
 	std\stdint.d \
@@ -191,12 +188,9 @@ SRC_STD= \
 	$(SRC_STD_4) \
 	$(SRC_STD_6a) \
 	$(SRC_STD_6c) \
-	$(SRC_STD_6d) \
 	$(SRC_STD_6e) \
-	$(SRC_STD_6f) \
 	$(SRC_STD_6h) \
 	$(SRC_STD_6i) \
-	$(SRC_STD_6j) \
 	$(SRC_STD_7)
 
 SRC_STD_ALGO_1= \
@@ -245,12 +239,19 @@ SRC_STD_RANGE= \
 SRC_STD_REGEX= \
 	std\regex\internal\ir.d \
 	std\regex\package.d \
-	std\regex\internal\parser.d \
 	std\regex\internal\tests.d \
+	std\regex\internal\generator.d
+
+SRC_STD_REGEX_2 = \
+	std\regex\internal\parser.d \
 	std\regex\internal\backtracking.d \
 	std\regex\internal\thompson.d \
-	std\regex\internal\kickstart.d \
-	std\regex\internal\generator.d
+	std\regex\internal\tests2.d
+
+SRC_STD_REGEX_3 = \
+	std\regex\internal\shiftor.d \
+	std\regex\internal\bitnfa.d \
+	std\regex\internal\tests3.d
 
 SRC_STD_C= \
 	std\c\process.d \
@@ -292,6 +293,7 @@ SRC_STD_C_FREEBSD= \
 
 SRC_STD_INTERNAL= \
 	std\internal\cstring.d \
+	std\internal\encodinginit.d \
 	std\internal\processinit.d \
 	std\internal\unicode_tables.d \
 	std\internal\unicode_comp.d \
@@ -377,6 +379,8 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_NET) \
 	$(SRC_STD_RANGE) \
 	$(SRC_STD_REGEX) \
+	$(SRC_STD_REGEX_2) \
+	$(SRC_STD_REGEX_3) \
 	$(SRC_STD_C) \
 	$(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) \
@@ -478,7 +482,6 @@ DOCS= \
 	$(DOC)\std_digest_hmac.html \
 	$(DOC)\std_digest_digest.html \
 	$(DOC)\std_digest_hmac.html \
-	$(DOC)\std_cstream.html \
 	$(DOC)\std_csv.html \
 	$(DOC)\std_datetime.html \
 	$(DOC)\std_demangle.html \
@@ -505,10 +508,8 @@ DOCS= \
 	$(DOC)\std_regex.html \
 	$(DOC)\std_signals.html \
 	$(DOC)\std_socket.html \
-	$(DOC)\std_socketstream.html \
 	$(DOC)\std_stdint.html \
 	$(DOC)\std_stdio.html \
-	$(DOC)\std_stream.html \
 	$(DOC)\std_string.html \
 	$(DOC)\std_system.html \
 	$(DOC)\std_traits.html \
@@ -596,13 +597,10 @@ UNITTEST_OBJS= \
 		unittest5b.obj \
 		unittest6a.obj \
 		unittest6c.obj \
-		unittest6d.obj \
 		unittest6e.obj \
-		unittest6f.obj \
 		unittest6g.obj \
 		unittest6h.obj \
 		unittest6i.obj \
-		unittest6j.obj \
 		unittest7.obj \
 		unittest8a.obj \
 		unittest8b.obj \
@@ -627,20 +625,19 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5b.obj $(SRC_STD_ALGO_2)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6a.obj $(SRC_STD_6a)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6c.obj $(SRC_STD_6c)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6d.obj $(SRC_STD_6d)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6e.obj $(SRC_STD_6e)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6f.obj $(SRC_STD_6f)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6g.obj $(SRC_STD_CONTAINER)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6h.obj $(SRC_STD_6h)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6i.obj $(SRC_STD_6i)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6j.obj $(SRC_STD_6j)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest7.obj $(SRC_STD_7) $(SRC_STD_EXP_LOGGER)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8a.obj $(SRC_STD_REGEX)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8b.obj $(SRC_STD_NET)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8c.obj $(SRC_STD_C) $(SRC_STD_WIN) $(SRC_STD_C_WIN)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8d.obj $(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8e.obj $(SRC_ETC) $(SRC_ETC_C)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8f.obj $(SRC_STD_EXP)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8b.obj $(SRC_STD_REGEX_2)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8c.obj $(SRC_STD_REGEX_3)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8d.obj $(SRC_STD_NET)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8e.obj $(SRC_STD_C) $(SRC_STD_WIN) $(SRC_STD_C_WIN)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8f.obj $(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8g.obj $(SRC_ETC) $(SRC_ETC_C)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest8h.obj $(SRC_STD_EXP)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest9.obj $(SRC_STD_EXP_ALLOC)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest9a.obj $(SRC_STD_EXP_NDSLICE)
 	$(DMD) $(UDFLAGS) -L/OPT:NOICF -unittest unittest.d $(UNITTEST_OBJS) \
@@ -820,9 +817,6 @@ $(DOC)\std_range_primitives.html : $(STDDOC) std\range\primitives.d
 $(DOC)\std_range_interfaces.html : $(STDDOC) std\range\interfaces.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range_interfaces.html $(STDDOC) std\range\interfaces.d
 
-$(DOC)\std_cstream.html : $(STDDOC) std\cstream.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_cstream.html $(STDDOC) std\cstream.d
-
 $(DOC)\std_csv.html : $(STDDOC) std\csv.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_csv.html $(STDDOC) std\csv.d
 
@@ -892,17 +886,11 @@ $(DOC)\std_signals.html : $(STDDOC) std\signals.d
 $(DOC)\std_socket.html : $(STDDOC) std\socket.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_socket.html $(STDDOC) std\socket.d
 
-$(DOC)\std_socketstream.html : $(STDDOC) std\socketstream.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_socketstream.html $(STDDOC) std\socketstream.d
-
 $(DOC)\std_stdint.html : $(STDDOC) std\stdint.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stdint.html $(STDDOC) std\stdint.d
 
 $(DOC)\std_stdio.html : $(STDDOC) std\stdio.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stdio.html $(STDDOC) std\stdio.d
-
-$(DOC)\std_stream.html : $(STDDOC) std\stream.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stream.html $(STDDOC) std\stream.d
 
 $(DOC)\std_string.html : $(STDDOC) std\string.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_string.html $(STDDOC) std\string.d

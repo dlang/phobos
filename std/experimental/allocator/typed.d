@@ -15,7 +15,6 @@ import std.experimental.allocator;
 import std.experimental.allocator.common;
 import std.traits : isPointer, hasElaborateDestructor;
 import std.typecons : Flag, Yes, No;
-import std.algorithm : min;
 import std.range : isInputRange, isForwardRange, walkLength, save, empty,
     front, popFront;
 

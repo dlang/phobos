@@ -9,7 +9,7 @@
 
 //dfmt off
 module std.internal.unicode_tables;
-@safe pure nothrow @nogc:
+@safe pure nothrow @nogc package(std):
 
 
 struct SimpleCaseEntry

@@ -12,8 +12,11 @@ module std.regex.internal.generator;
 */
 @trusted private struct SampleGenerator(Char)
 {
-    import std.regex.internal.ir;
-    import std.array, std.format, std.utf, std.random;
+    import std.regex.internal.ir : Regex, IR, IRL;
+    import std.array : appender, Appender;
+    import std.format : formattedWrite;
+    import std.utf : isValidDchar, byChar;
+    import std.random : Xorshift;
     Regex!Char re;
     Appender!(char[]) app;
     uint limit, seed;
@@ -55,9 +58,9 @@ module std.regex.internal.generator;
                 case IR.CodepointSet:
                 case IR.Trie:
                     auto set = re.charsets[re.ir[pc].data];
-                    auto x = rand(cast(uint)set.byInterval.length);
-                    auto y = rand(set.byInterval[x].b - set.byInterval[x].a);
-                    formattedWrite(app, "%s", cast(dchar)(set.byInterval[x].a+y));
+                    auto x = rand(cast(uint)set.length);
+                    auto y = rand(set[x].b - set[x].a);
+                    formattedWrite(app, "%s", cast(dchar)(set[x].a+y));
                     pc += IRL!(IR.CodepointSet);
                     break;
                 case IR.Any:

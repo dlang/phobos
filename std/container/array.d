@@ -6,21 +6,19 @@ This module is a submodule of $(MREF std, container).
 
 Source: $(PHOBOSSRC std/container/_array.d)
 
-Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
-copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
+Copyright: 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
 
 License: Distributed under the Boost Software License, Version 1.0.
 (See accompanying file LICENSE_1_0.txt or copy at $(HTTP
 boost.org/LICENSE_1_0.txt)).
 
-Authors: Steven Schveighoffer, $(HTTP erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 */
 module std.container.array;
 
 import std.range.primitives;
 import std.traits;
 import core.exception : RangeError;
-import std.algorithm : move;
 
 public import std.container.util;
 
@@ -140,6 +138,8 @@ private struct RangeT(A)
 
     static if (isMutable!A)
     {
+        import std.algorithm.mutation : move;
+
         E moveFront()
         {
             version (assert) if (empty || _a >= _outer.length) throw new RangeError();
@@ -249,12 +249,11 @@ instead of $(D array.map!)). The container itself is not a range.
 struct Array(T)
 if (!is(Unqual!T == bool))
 {
-    import core.stdc.stdlib;
-    import core.stdc.string;
+    import core.stdc.stdlib : malloc, realloc, free;
+    import core.stdc.string : memcpy, memmove, memset;
 
-    import core.memory;
+    import core.memory : GC;
 
-    import std.algorithm : initializeAll, copy;
     import std.exception : enforce;
     import std.typecons : RefCounted, RefCountedAutoInitialize;
 
@@ -311,6 +310,8 @@ if (!is(Unqual!T == bool))
         // length
         @property void length(size_t newLength)
         {
+            import std.algorithm.mutation : initializeAll;
+
             if (length >= newLength)
             {
                 // shorten
@@ -323,8 +324,12 @@ if (!is(Unqual!T == bool))
             }
             // enlarge
             auto startEmplace = length;
+            import core.checkedint : mulu;
+            bool overflow;
+            const nbytes = mulu(newLength, T.sizeof, overflow);
+            if (overflow) assert(0);
             _payload = (cast(T*) realloc(_payload.ptr,
-                            T.sizeof * newLength))[0 .. newLength];
+                            nbytes))[0 .. newLength];
             initializeAll(_payload.ptr[startEmplace .. length]);
         }
 
@@ -338,7 +343,10 @@ if (!is(Unqual!T == bool))
         void reserve(size_t elements)
         {
             if (elements <= capacity) return;
-            immutable sz = elements * T.sizeof;
+            import core.checkedint : mulu;
+            bool overflow;
+            const sz = mulu(elements, T.sizeof, overflow);
+            if (overflow) assert(0);
             static if (hasIndirections!T)       // should use hasPointers instead
             {
                 /* Because of the transactional nature of this
@@ -419,7 +427,11 @@ Constructor taking a number of items
     this(U)(U[] values...) if (isImplicitlyConvertible!(U, T))
     {
         import std.conv : emplace;
-        auto p = cast(T*) malloc(T.sizeof * values.length);
+        import core.checkedint : mulu;
+        bool overflow;
+        const nbytes = mulu(values.length, T.sizeof, overflow);
+        if (overflow) assert(0);
+        auto p = cast(T*) malloc(nbytes);
         static if (hasIndirections!T)
         {
             if (p)
@@ -429,7 +441,6 @@ Constructor taking a number of items
         foreach (i, e; values)
         {
             emplace(p + i, e);
-            assert(p[i] == e);
         }
         _data = Data(p[0 .. values.length]);
     }
@@ -532,7 +543,10 @@ Complexity: $(BIGOH 1)
         if (!_data.refCountedStore.isInitialized)
         {
             if (!elements) return;
-            immutable sz = elements * T.sizeof;
+            import core.checkedint : mulu;
+            bool overflow;
+            const sz = mulu(elements, T.sizeof, overflow);
+            if (overflow) assert(0);
             auto p = enforce(malloc(sz));
             static if (hasIndirections!T)
             {
@@ -882,7 +896,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
         }
         else
         {
-            import std.algorithm : bringToFront;
+            import std.algorithm.mutation : bringToFront;
             enforce(_data);
             immutable offset = r._a;
             enforce(offset <= length);
@@ -896,7 +910,7 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
-        import std.algorithm : bringToFront;
+        import std.algorithm.mutation : bringToFront;
         enforce(r._outer._data is _data);
         // TODO: optimize
         immutable offset = r._b;
@@ -961,6 +975,8 @@ $(D r)
      */
     Range linearRemove(Range r)
     {
+        import std.algorithm.mutation : copy;
+
         enforce(r._outer._data is _data);
         enforce(_data.refCountedStore.isInitialized);
         enforce(r._a <= r._b && r._b <= length);
@@ -1093,7 +1109,7 @@ unittest
 // Give the Range object some testing.
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : retro;
     auto a = Array!int(0, 1, 2, 3, 4, 5, 6)[];
     auto b = Array!int(6, 5, 4, 3, 2, 1, 0)[];
@@ -1166,7 +1182,7 @@ unittest
 // test replace!Stuff with range Stuff
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     auto a = Array!int([1, 42, 5]);
     a.replace(a[1 .. 2], [2, 3, 4]);
     assert(equal(a[], [1, 2, 3, 4, 5]));
@@ -1175,28 +1191,28 @@ unittest
 // test insertBefore and replace with empty Arrays
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.insertBefore(a[], 1);
     assert(equal(a[], [1]));
 }
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.insertBefore(a[], [1, 2]);
     assert(equal(a[], [1, 2]));
 }
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.replace(a[], [1, 2]);
     assert(equal(a[], [1, 2]));
 }
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.replace(a[], 1);
     assert(equal(a[], [1]));
@@ -1247,7 +1263,7 @@ unittest
 
 unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     //Test "array-wide" operations
     auto a = Array!int([0, 1, 2]); //Array
@@ -1318,7 +1334,7 @@ unittest //11459
 
 unittest //11884
 {
-    import std.algorithm : filter;
+    import std.algorithm.iteration : filter;
     auto a = Array!int([1, 2, 2].filter!"true"());
 }
 
@@ -1809,7 +1825,7 @@ if (is(Unqual!T == bool))
 
     unittest
     {
-        import std.algorithm : equal;
+        import std.algorithm.comparison : equal;
         Array!bool a;
         a.insertBack([true, false, true, true]);
         Array!bool b;
@@ -1838,7 +1854,7 @@ if (is(Unqual!T == bool))
 
     unittest
     {
-        import std.algorithm : equal;
+        import std.algorithm.comparison : equal;
         Array!bool a;
         a.insertBack([true, false, true, true]);
         Array!bool b;
@@ -2105,7 +2121,7 @@ if (is(Unqual!T == bool))
      */
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     {
-        import std.algorithm : bringToFront;
+        import std.algorithm.mutation : bringToFront;
         // TODO: make this faster, it moves one bit at a time
         immutable inserted = stableInsertBack(stuff);
         immutable tailLength = length - inserted;
@@ -2134,7 +2150,7 @@ if (is(Unqual!T == bool))
     /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
-        import std.algorithm : bringToFront;
+        import std.algorithm.mutation : bringToFront;
         // TODO: make this faster, it moves one bit at a time
         immutable inserted = stableInsertBack(stuff);
         immutable tailLength = length - inserted;
@@ -2198,7 +2214,7 @@ if (is(Unqual!T == bool))
      */
     Range linearRemove(Range r)
     {
-        import std.algorithm : copy;
+        import std.algorithm.mutation : copy;
         copy(this[r._b .. length], this[r._a .. length]);
         length = length - r.length;
         return this[r._a .. length];
@@ -2230,4 +2246,11 @@ unittest
     assert(slice.moveFront == true);
     assert(slice.moveBack == true);
     assert(slice.moveAt(1) == true);
+}
+
+// issue 16331 - uncomparable values are valid values for an array
+unittest
+{
+    double[] values = [double.nan, double.nan];
+    auto arr = Array!double(values);
 }

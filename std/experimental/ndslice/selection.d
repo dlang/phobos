@@ -27,15 +27,17 @@ $(T2 evertPack, reverses dimension packs)
 $(BOOKTABLE $(H2 Selectors),
 
 $(TR $(TH Function Name) $(TH Description))
+$(T2 blocks, n-dimensional slice composed of n-dimensional non-overlapping blocks.
+    If the slice has two dimensions, it is a block matrix.)
 $(T2 byElement, flat, random access range of all elements with `index` property)
 $(T2 byElementInStandardSimplex, an input range of all elements in standard simplex of hypercube with `index` property.
     If the slice has two dimensions, it is a range of all elements of upper left triangular matrix.)
+$(T2 diagonal, 1-dimensional slice composed of diagonal elements)
 $(T2 indexSlice, lazy slice with initial multidimensional index)
 $(T2 iotaSlice, lazy slice with initial flattened (continuous) index)
+$(T2 mapSlice, lazy multidimensional functional map)
+$(T2 repeatSlice, slice with identical values)
 $(T2 reshape, new slice with changed dimensions for the same data)
-$(T2 diagonal, 1-dimensional slice composed of diagonal elements)
-$(T2 blocks, n-dimensional slice composed of n-dimensional non-overlapping blocks.
-    If the slice has two dimensions, it is a block matrix.)
 $(T2 windows, n-dimensional slice of n-dimensional overlapping windows.
     If the slice has two dimensions, it is a sliding window.)
 )
@@ -51,6 +53,8 @@ SUBREF = $(REF_ALTTEXT $(TT $2), $2, std,experimental, ndslice, $1)$(NBSP)
 T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 T4=$(TR $(TDNW $(LREF $1)) $(TD $2) $(TD $3) $(TD $4))
 */
+/// @@@DEPRECATED_2017-04@@@
+deprecated("Please use mir-algorithm DUB package: http://github.com/libmir/mir-algorithm")
 module std.experimental.ndslice.selection;
 
 import std.traits;
@@ -58,6 +62,8 @@ import std.meta; //: allSatisfy;
 
 import std.experimental.ndslice.internal;
 import std.experimental.ndslice.slice; //: Slice;
+
+@fmb:
 
 /++
 Creates a packed slice, i.e. slice of slices.
@@ -72,7 +78,10 @@ Returns:
 +/
 template pack(K...)
 {
-    auto pack(size_t N, Range)(auto ref Slice!(N, Range) slice)
+    static if (!allSatisfy!(isSize_t, K))
+        alias pack = .pack!(staticMap!(toSize_t, K));
+    else
+    @fmb auto pack(size_t N, Range)(Slice!(N, Range) slice)
     {
         template Template(size_t NInner, Range, R...)
         {
@@ -96,6 +105,24 @@ template pack(K...)
 }
 
 ///
+@safe @nogc pure nothrow unittest
+{
+    import std.experimental.ndslice : sliced, Slice, pack;
+    import std.range : iota;
+
+    auto r = (3 * 4 * 5 * 6).iota;
+    auto a = r.sliced(3, 4, 5, 6);
+    auto b = a.pack!2;
+
+    static immutable res1 = [3, 4];
+    static immutable res2 = [5, 6];
+    assert(b.shape == res1);
+    assert(b[0, 0].shape == res2);
+    assert(a == b);
+    static assert(is(typeof(b) == typeof(a.pack!2)));
+    static assert(is(typeof(b) == Slice!(2, Slice!(3, typeof(r)))));
+}
+
 @safe @nogc pure nothrow unittest
 {
     import std.experimental.ndslice.slice;
@@ -153,7 +180,7 @@ Returns:
 
 See_also: $(LREF pack), $(LREF evertPack)
 +/
-Slice!(N, Range).PureThis unpack(size_t N, Range)(auto ref Slice!(N, Range) slice)
+Slice!(N, Range).PureThis unpack(size_t N, Range)(Slice!(N, Range) slice)
 {
     with (slice) return PureThis(_lengths, _strides, _ptr);
 }
@@ -179,7 +206,7 @@ Returns:
 See_also: $(LREF pack), $(LREF unpack)
 +/
 SliceFromSeq!(Slice!(N, Range).PureRange, NSeqEvert!(Slice!(N, Range).NSeq))
-evertPack(size_t N, Range)(auto ref Slice!(N, Range) slice)
+evertPack(size_t N, Range)(Slice!(N, Range) slice)
 {
     mixin _DefineRet;
     static assert(Ret.NSeq.length > 0);
@@ -273,7 +300,7 @@ Params:
 Returns:
     1-dimensional slice composed of diagonal elements
 +/
-Slice!(1, Range) diagonal(size_t N, Range)(auto ref Slice!(N, Range) slice)
+Slice!(1, Range) diagonal(size_t N, Range)(Slice!(N, Range) slice)
 {
     auto NewN = slice.PureN - N + 1;
     mixin _DefineRet;
@@ -405,7 +432,6 @@ pure nothrow unittest
 /// 3D, diagonal plain
 @nogc @safe pure nothrow unittest
 {
-    import std.experimental.ndslice.iteration : dropOne;
     //  -----------
     // |  0   1  2 |
     // |  3   4  5 |
@@ -444,6 +470,7 @@ pure nothrow unittest
 Returns an n-dimensional slice of n-dimensional non-overlapping blocks.
 `blocks` can be generalized with other selectors.
 For example, `blocks` in combination with $(LREF diagonal) can be used to get a slice of diagonal blocks.
+For overlapped blocks, combine $(LREF windows) with $(SUBREF iteration, strided).
 
 Params:
     N = dimension count
@@ -452,8 +479,7 @@ Params:
 Returns:
     packed `N`-dimensional slice composed of `N`-dimensional slices
 +/
-Slice!(N, Slice!(N+1, Range)) blocks(size_t N, Range, Lengths...)(auto ref Slice!(N, Range) slice, Lengths lengths)
-    if (allSatisfy!(isIndex, Lengths) && Lengths.length == N)
+Slice!(N, Slice!(N+1, Range)) blocks(size_t N, Range)(Slice!(N, Range) slice, size_t[N] lengths...)
 in
 {
     foreach (i, length; lengths)
@@ -574,8 +600,7 @@ Params:
 Returns:
     packed `N`-dimensional slice composed of `N`-dimensional slices
 +/
-Slice!(N, Slice!(N+1, Range)) windows(size_t N, Range, Lengths...)(auto ref Slice!(N, Range) slice, Lengths lengths)
-    if (allSatisfy!(isIndex, Lengths) && Lengths.length == N)
+Slice!(N, Slice!(N+1, Range)) windows(size_t N, Range)(Slice!(N, Range) slice, size_t[N] lengths...)
 in
 {
     foreach (i, length; lengths)
@@ -689,98 +714,74 @@ pure nothrow unittest
          [1,  2,  3, 3, 3, 3,  2,  1]]);
 }
 
-/++
-Returns a new slice for the same data with different dimensions.
-
-Params:
-    slice = slice to be reshaped
-    lengths = list of new dimensions. One of the lengths can be set to `-1`.
-        In this case, the corresponding dimension is inferable.
-Returns:
-    reshaped slice
-Throws:
-    $(LREF ReshapeException) if the slice cannot be reshaped with the input lengths.
-+/
-Slice!(Lengths.length, Range)
-    reshape
-        (         size_t N, Range       , Lengths...     )
-        (auto ref Slice!(N, Range) slice, Lengths lengths)
-    if ( allSatisfy!(isIndex, Lengths) && Lengths.length)
+/// Overlapping blocks using windows
+pure nothrow unittest
 {
-    mixin _DefineRet;
-    foreach (i; Iota!(0, ret.N))
-        ret._lengths[i] = lengths[i];
+    //  ----------------
+    // |  0  1  2  3  4 |
+    // |  5  6  7  8  9 |
+    // | 10 11 12 13 14 |
+    // | 15 16 17 18 19 |
+    // | 20 21 22 23 24 |
+    //  ----------------
+    //->
+    //  ---------------------
+    // |  0  1  2 |  2  3  4 |
+    // |  5  6  7 |  7  8  9 |
+    // | 10 11 12 | 12 13 14 |
+    // | - - - - - - - - - - |
+    // | 10 11 13 | 12 13 14 |
+    // | 15 16 17 | 17 18 19 |
+    // | 20 21 22 | 22 23 24 |
+    //  ---------------------
 
-    immutable size_t eco = slice.elementsCount;
-              size_t ecn = ret  .elementsCount;
+    import std.experimental.ndslice.slice;
+    import std.experimental.ndslice.iteration : strided;
 
-    if (eco == 0)
-        throw new ReshapeException(
-            slice._lengths.dup,
-            slice._strides.dup,
-            ret.  _lengths.dup,
-            "slice should be not empty");
+    auto overlappingBlocks = iotaSlice(5, 5)
+        .windows(3, 3)
+        .strided!(0, 1)(2, 2);
 
-    foreach (i; Iota!(0, ret.N))
-        if (ret._lengths[i] == -1)
-        {
-            ecn = -ecn;
-            ret._lengths[i] = eco / ecn;
-            ecn *= ret._lengths[i];
-            break;
-        }
-
-    if (eco != ecn)
-        throw new ReshapeException(
-            slice._lengths.dup,
-            slice._strides.dup,
-            ret.  _lengths.dup,
-            "total element count should be the same");
-
-    for (size_t oi, ni, oj, nj; oi < slice.N && ni < ret.N; oi = oj, ni = nj)
-    {
-        size_t op = slice._lengths[oj++];
-        size_t np = ret  ._lengths[nj++];
-
-        for (;;)
-        {
-            if (op < np)
-                op *= slice._lengths[oj++];
-            if (op > np)
-                np *= ret  ._lengths[nj++];
-            if (op == np)
-                break;
-        }
-        while (oj < slice.N && slice._lengths[oj] == 1) oj++;
-        while (nj < ret  .N && ret  ._lengths[nj] == 1) nj++;
-
-        for (size_t l = oi, r = oi + 1; r < oj; r++)
-            if (slice._lengths[r] != 1)
-            {
-                if (slice._strides[l] != slice._lengths[r] * slice._strides[r])
-                    throw new ReshapeException(
-                        slice._lengths.dup,
-                        slice._strides.dup,
-                        ret.  _lengths.dup,
-                        "structure is incompatible with new shape");
-                l = r;
-            }
-
-        ret._strides[nj - 1] = slice._strides[oj - 1];
-        foreach_reverse (i; ni .. nj - 1)
-            ret._strides[i] = ret._lengths[i + 1] * ret._strides[i + 1];
-    assert((oi == slice.N) == (ni == ret.N));
-    }
-    foreach (i; Iota!(ret.N, ret.PureN))
-    {
-        ret._lengths[i] = slice._lengths[i + slice.N - ret.N];
-        ret._strides[i] = slice._strides[i + slice.N - ret.N];
-    }
-    ret._ptr = slice._ptr;
-    return ret;
+    assert(overlappingBlocks ==
+            [[[[ 0,  1,  2], [ 5,  6,  7], [10, 11, 12]],
+              [[ 2,  3,  4], [ 7,  8,  9], [12, 13, 14]]],
+             [[[10, 11, 12], [15, 16, 17], [20, 21, 22]],
+              [[12, 13, 14], [17, 18, 19], [22, 23, 24]]]]);
 }
 
-///
+deprecated("use:
+    Slice!(M, Range) reshape
+        (size_t N, Range, size_t M)
+        (Slice!(N, Range) slice, size_t[M] lengths, ref int err)")
+Slice!(M, Range) reshape
+        (size_t N, Range, size_t M)
+        (Slice!(N, Range) slice, size_t[M] lengths...)
+{
+    int err;
+    auto ret = slice.reshape(lengths, err);
+    if (!err)
+        return ret;
+    string msg;
+    with (ReshapeError) switch (err)
+    {
+        case empty:
+            msg = "slice should be not empty";
+            break;
+        case total:
+            msg = "total element count should be the same";
+            break;
+        case incompatible:
+            msg = "structure is incompatible with new shape";
+            break;
+        default:
+    }
+    throw new ReshapeException(
+        slice._lengths.dup,
+        slice._strides.dup,
+        ret.  _lengths.dup,
+        msg);
+}
+
 @safe pure unittest
 {
     import std.experimental.ndslice.iteration : allReversed;
@@ -794,21 +795,19 @@ Slice!(Lengths.length, Range)
          [ 2,  1, 0]]);
 }
 
-/// Reshaping with memory allocation
 pure unittest
 {
     import std.experimental.ndslice.slice;
     import std.experimental.ndslice.iteration : reversed;
     import std.array : array;
 
-    auto reshape2(S, L...)(S slice, L lengths)
+    auto reshape2(S, size_t M)(S slice, size_t[M] lengths...)
     {
         // Tries to reshape without allocation
         try return slice.reshape(lengths);
         catch (ReshapeException e)
-            //allocates the elements and creates a slice
-            //Note: -1 length is not supported by reshape2
-            return slice.byElement.array.sliced(lengths);
+            // Allocates
+            return slice.slice.reshape(lengths);
     }
 
     auto slice =
@@ -865,7 +864,210 @@ unittest
     assert(pElements[$-1][$-1] == iotaSlice([7], 2513));
 }
 
+/++
+Error codes for $(LREF reshape).
++/
+enum ReshapeError
+{
+    /// No error
+    none,
+    /// Slice should be not empty
+    empty,
+    /// Total element count should be the same
+    total,
+    /// Structure is incompatible with new shape
+    incompatible,
+}
+
+/++
+Returns a new slice for the same data with different dimensions.
+
+Params:
+    slice = slice to be reshaped
+    lengths = list of new dimensions. One of the lengths can be set to `-1`.
+        In this case, the corresponding dimension is inferable.
+    err = $(LREF ReshapeError) code
+Returns:
+    reshaped slice
++/
+Slice!(M, Range) reshape
+        (size_t N, Range, size_t M)
+        (Slice!(N, Range) slice, size_t[M] lengths, ref int err)
+{
+    mixin _DefineRet;
+    foreach (i; Iota!(0, ret.N))
+        ret._lengths[i] = lengths[i];
+
+    /// Code size optimization
+    goto B;
+R:
+        return ret;
+B:
+    immutable size_t eco = slice.elementsCount;
+    if (eco == 0)
+    {
+        err = ReshapeError.empty;
+        goto R;
+    }
+    size_t ecn = ret  .elementsCount;
+
+
+    foreach (i; Iota!(0, ret.N))
+        if (ret._lengths[i] == -1)
+        {
+            ecn = -ecn;
+            ret._lengths[i] = eco / ecn;
+            ecn *= ret._lengths[i];
+            break;
+        }
+
+    if (eco != ecn)
+    {
+        err = ReshapeError.total;
+        goto R;
+    }
+
+    for (size_t oi, ni, oj, nj; oi < slice.N && ni < ret.N; oi = oj, ni = nj)
+    {
+        size_t op = slice._lengths[oj++];
+        size_t np = ret  ._lengths[nj++];
+
+        for (;;)
+        {
+            if (op < np)
+                op *= slice._lengths[oj++];
+            if (op > np)
+                np *= ret  ._lengths[nj++];
+            if (op == np)
+                break;
+        }
+        while (oj < slice.N && slice._lengths[oj] == 1) oj++;
+        while (nj < ret  .N && ret  ._lengths[nj] == 1) nj++;
+
+        for (size_t l = oi, r = oi + 1; r < oj; r++)
+            if (slice._lengths[r] != 1)
+            {
+                if (slice._strides[l] != slice._lengths[r] * slice._strides[r])
+                {
+                    err = ReshapeError.incompatible;
+                    goto R;
+                }
+                l = r;
+            }
+
+        ret._strides[nj - 1] = slice._strides[oj - 1];
+        foreach_reverse (i; ni .. nj - 1)
+            ret._strides[i] = ret._lengths[i + 1] * ret._strides[i + 1];
+    assert((oi == slice.N) == (ni == ret.N));
+    }
+    foreach (i; Iota!(ret.N, ret.PureN))
+    {
+        ret._lengths[i] = slice._lengths[i + slice.N - ret.N];
+        ret._strides[i] = slice._strides[i + slice.N - ret.N];
+    }
+    ret._ptr = slice._ptr;
+    err = 0;
+    goto R;
+}
+
+///
+nothrow @safe pure unittest
+{
+    import std.experimental.ndslice.iteration : allReversed;
+    int err;
+    auto slice = iotaSlice(3, 4)
+        .allReversed
+        .reshape([-1, 3], err);
+    assert(err == 0);
+    assert(slice ==
+        [[11, 10, 9],
+         [ 8,  7, 6],
+         [ 5,  4, 3],
+         [ 2,  1, 0]]);
+}
+
+/// Reshaping with memory allocation
+pure unittest
+{
+    import std.experimental.ndslice.slice;
+    import std.experimental.ndslice.iteration : reversed;
+    import std.array : array;
+
+    auto reshape2(S, size_t M)(S slice, size_t[M] lengths...)
+    {
+        int err;
+        // Tries to reshape without allocation
+        auto ret = slice.reshape(lengths, err);
+        if (!err)
+            return ret;
+        if (err == ReshapeError.incompatible)
+            return slice.slice.reshape(lengths, err);
+        throw new Exception("total elements count is different or equals to zero");
+    }
+
+    auto slice =
+        [0, 1,  2,  3,
+         4, 5,  6,  7,
+         8, 9, 10, 11]
+        .sliced(3, 4)
+        .reversed!0;
+
+    assert(reshape2(slice, 4, 3) ==
+        [[ 8, 9, 10],
+         [11, 4,  5],
+         [ 6, 7,  0],
+         [ 1, 2,  3]]);
+}
+
+nothrow @safe pure unittest
+{
+    import std.experimental.ndslice.iteration : allReversed;
+    auto slice = iotaSlice(1, 1, 3, 2, 1, 2, 1).allReversed;
+    int err;
+    assert(slice.reshape([1, -1, 1, 1, 3, 1], err) ==
+        [[[[[[11], [10], [9]]]],
+          [[[[ 8], [ 7], [6]]]],
+          [[[[ 5], [ 4], [3]]]],
+          [[[[ 2], [ 1], [0]]]]]]);
+    assert(err == 0);
+}
+
+// Issue 15919
+nothrow @nogc @safe pure unittest
+{
+    int err;
+    assert(iotaSlice(3, 4, 5, 6, 7).pack!2.reshape([4, 3, 5], err)[0, 0, 0].shape == cast(size_t[2])[6, 7]);
+    assert(err == 0);
+}
+
+nothrow @nogc @safe pure unittest
+{
+    import std.experimental.ndslice.slice;
+    import std.range : iota;
+    import std.exception : assertThrown;
+
+    int err;
+    auto e = 1.iotaSlice(1);
+    // resize to the wrong dimension
+    e.reshape([2], err);
+    assert(err == ReshapeError.total);
+    e.popFront;
+    // test with an empty slice
+    e.reshape([1], err);
+    assert(err == ReshapeError.empty);
+}
+
+unittest
+{
+    auto pElements = iotaSlice(3, 4, 5, 6, 7)
+        .pack!2
+        .byElement();
+    assert(pElements[0][0] == iotaSlice(7));
+    assert(pElements[$-1][$-1] == iotaSlice([7], 2513));
+}
+
 /// See_also: $(LREF reshape)
+deprecated("Not nothrow or @nogc ndslice API is deprecated.")
 class ReshapeException: SliceException
 {
     /// Old lengths
@@ -903,7 +1105,7 @@ Params:
 Returns:
     random access range composed of elements of the `slice`
 +/
-auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
+auto byElement(size_t N, Range)(Slice!(N, Range) slice)
 {
     with (Slice!(N, Range))
     {
@@ -912,25 +1114,23 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
         +/
         static struct ByElement
         {
+            @fmb:
             This _slice;
             size_t _length;
             size_t[N] _indexes;
 
-            static if (canSave!PureRange)
             auto save() @property
             {
-                return typeof(this)(_slice.save, _length, _indexes);
+                return this;
             }
 
             bool empty() const @property
             {
-                pragma(inline, true);
                 return _length == 0;
             }
 
             size_t length() const @property
             {
-                pragma(inline, true);
                 return _length;
             }
 
@@ -986,12 +1186,11 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
             auto back(E)(E elem) @property
             {
                 assert(!this.empty);
-                return opIndexAssign(_length - 1, elem);
+                return opIndexAssign(elem, _length - 1);
             }
 
             void popBack()
             {
-                pragma(inline, true);
                 assert(_length != 0);
                 _length--;
             }
@@ -1031,7 +1230,6 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
             }
             body
             {
-                pragma(inline, true);
                 _length -= n;
             }
 
@@ -1148,13 +1346,11 @@ auto byElement(size_t N, Range)(auto ref Slice!(N, Range) slice)
             }
             body
             {
-                pragma(inline, true);
                 return typeof(return)(i, j);
             }
 
             size_t[N] index() @property
             {
-                pragma(inline, true);
                 return _indexes;
             }
         }
@@ -1397,10 +1593,11 @@ The order of elements is preserved.
 Params:
     N = dimension count
     slice = slice to be iterated
+    maxHypercubeLength = maximal length of simplex hypercube.
 Returns:
     forward range composed of all elements of standard simplex of the `slice`
 +/
-auto byElementInStandardSimplex(size_t N, Range)(auto ref Slice!(N, Range) slice, size_t maxCobeLength = size_t.max)
+auto byElementInStandardSimplex(size_t N, Range)(Slice!(N, Range) slice, size_t maxHypercubeLength = size_t.max)
 {
     with (Slice!(N, Range))
     {
@@ -1409,27 +1606,25 @@ auto byElementInStandardSimplex(size_t N, Range)(auto ref Slice!(N, Range) slice
         +/
         static struct ByElementInTopSimplex
         {
+            @fmb:
             This _slice;
             size_t _length;
-            size_t maxCobeLength;
+            size_t maxHypercubeLength;
             size_t sum;
             size_t[N] _indexes;
 
-            static if (canSave!PureRange)
             auto save() @property
             {
-                return typeof(this)(_slice.save, _length, maxCobeLength, sum, _indexes);
+                return this;
             }
 
             bool empty() const @property
             {
-                pragma(inline, true);
                 return _length == 0;
             }
 
             size_t length() const @property
             {
-                pragma(inline, true);
                 return _length;
             }
 
@@ -1448,14 +1643,12 @@ auto byElementInStandardSimplex(size_t N, Range)(auto ref Slice!(N, Range) slice
             static if (PureN == 1 && isMutable!DeepElemType && !hasAccessByRef)
             auto front(E)(E elem) @property
             {
-                pragma(inline, true);
                 assert(!this.empty);
                 return _slice._ptr[0] = elem;
             }
 
             void popFront()
             {
-                pragma(inline, true);
                 assert(_length != 0);
                 _length--;
                 popFrontImpl;
@@ -1469,9 +1662,9 @@ auto byElementInStandardSimplex(size_t N, Range)(auto ref Slice!(N, Range) slice
                     _indexes[i]++;
                     debug (ndslice) assert(_indexes[i] <= _lengths[i]);
                     sum++;
-                    if (sum < maxCobeLength)
+                    if (sum < maxHypercubeLength)
                         return;
-                    debug (ndslice) assert(sum == maxCobeLength);
+                    debug (ndslice) assert(sum == maxHypercubeLength);
                     _ptr -= _indexes[i] * _strides[i];
                     sum -= _indexes[i];
                     _indexes[i] = 0;
@@ -1480,15 +1673,14 @@ auto byElementInStandardSimplex(size_t N, Range)(auto ref Slice!(N, Range) slice
 
             size_t[N] index() @property
             {
-                pragma(inline, true);
                 return _indexes;
             }
         }
         foreach (i; Iota!(0, N))
-            if (maxCobeLength > slice._lengths[i])
-                maxCobeLength = slice._lengths[i];
-        immutable size_t elementsCount = ((maxCobeLength + 1) * maxCobeLength ^^ (N - 1)) / 2;
-        return ByElementInTopSimplex(slice, elementsCount, maxCobeLength);
+            if (maxHypercubeLength > slice._lengths[i])
+                maxHypercubeLength = slice._lengths[i];
+        immutable size_t elementsCount = ((maxHypercubeLength + 1) * maxHypercubeLength ^^ (N - 1)) / 2;
+        return ByElementInTopSimplex(slice, elementsCount, maxHypercubeLength);
     }
 }
 
@@ -1569,14 +1761,7 @@ Returns:
     `N`-dimensional slice composed of indexes
 See_also: $(LREF IndexSlice), $(LREF iotaSlice)
 +/
-IndexSlice!(Lengths.length) indexSlice(Lengths...)(Lengths lengths)
-    if (allSatisfy!(isIndex, Lengths))
-{
-    return .indexSlice!(Lengths.length)([lengths]);
-}
-
-///ditto
-IndexSlice!N indexSlice(size_t N)(auto ref size_t[N] lengths)
+IndexSlice!N indexSlice(size_t N)(size_t[N] lengths...)
 {
     import std.experimental.ndslice.slice : sliced;
     with (typeof(return)) return Range(lengths[1 .. $]).sliced(lengths);
@@ -1632,15 +1817,8 @@ template IndexSlice(size_t N)
     {
         private size_t[N-1] _lengths;
 
-        IndexMap save() @property const
+        @fmb size_t[N] opIndex(size_t index) const
         {
-            pragma(inline, true);
-            return this;
-        }
-
-        size_t[N] opIndex(size_t index) const
-        {
-            pragma(inline, true);
             size_t[N] indexes = void;
             foreach_reverse (i; Iota!(0, N - 1))
             {
@@ -1668,22 +1846,31 @@ For a multidimensional index, see $(LREF indexSlice).
 Params:
     N = dimension count
     lengths = list of dimension lengths
-    shift = value of the first element in a slice
+    shift = value of the first element in a slice (optional)
+    step = value of the step between elements (optional)
 Returns:
     `N`-dimensional slice composed of indexes
 See_also: $(LREF IotaSlice), $(LREF indexSlice)
 +/
-IotaSlice!(Lengths.length) iotaSlice(Lengths...)(Lengths lengths)
-    if (allSatisfy!(isIndex, Lengths))
+IotaSlice!N iotaSlice(size_t N)(size_t[N] lengths...)
 {
-    return .iotaSlice!(Lengths.length)([lengths]);
+    return .iotaSlice(lengths, 0);
 }
 
 ///ditto
-IotaSlice!N iotaSlice(size_t N)(auto ref size_t[N] lengths, size_t shift = 0)
+IotaSlice!N iotaSlice(size_t N)(size_t[N] lengths, size_t shift)
 {
     import std.experimental.ndslice.slice : sliced;
-    with (typeof(return)) return Range.init.sliced(lengths, shift);
+    return IotaMap!().init.sliced(lengths, shift);
+}
+
+///ditto
+IotaSlice!N iotaSlice(size_t N)(size_t[N] lengths, size_t shift, size_t step)
+{
+    auto iota = iotaSlice(lengths, shift);
+    foreach (i; Iota!(0, N))
+        iota._strides[i] *= step;
+    return iota;
 }
 
 ///
@@ -1703,7 +1890,7 @@ IotaSlice!N iotaSlice(size_t N)(auto ref size_t[N] lengths, size_t shift = 0)
 }
 
 ///
-@safe pure nothrow unittest
+@safe pure nothrow @nogc unittest
 {
     auto im = iotaSlice([10, 5], 100);
 
@@ -1712,6 +1899,15 @@ IotaSlice!N iotaSlice(size_t N)(auto ref size_t[N] lengths, size_t shift = 0)
     //slicing works correctly
     auto cm = im[1 .. $, 3 .. $];
     assert(cm[2, 1] == 119); // 119 = 100 + (1 + 2) * 5 + (3 + 1)
+}
+
+/// `iotaSlice` with step
+@safe pure nothrow unittest
+{
+    auto sl = iotaSlice([2, 3], 10, 10);
+
+    assert(sl == [[10, 20, 30],
+                  [40, 50, 60]]);
 }
 
 /++
@@ -1729,11 +1925,354 @@ template IotaSlice(size_t N)
 struct IotaMap()
 {
     enum bool empty = false;
-    enum IotaMap save = IotaMap.init;
 
-    static size_t opIndex()(size_t index) @safe pure nothrow @nogc @property
+    @fmb static size_t opIndex()(size_t index) @safe pure nothrow @nogc @property
     {
         pragma(inline, true);
         return index;
     }
+}
+
+/++
+Returns a slice with identical elements.
+`RepeatSlice` stores only single value.
+Params:
+    lengths = list of dimension lengths
+Returns:
+    `n`-dimensional slice composed of identical values, where `n` is dimension count.
+See_also: $(REF repeat, std,range)
++/
+RepeatSlice!(M, T) repeatSlice(T, size_t M)(T value, size_t[M] lengths...)
+    if (!is(T : Slice!(N, Range), size_t N, Range))
+{
+    typeof(return) ret;
+    foreach (i; Iota!(0, ret.N))
+        ret._lengths[i] = lengths[i];
+    ret._ptr = RepeatPtr!T(value);
+    return ret;
+}
+
+/// ditto
+Slice!(M, Slice!(N + 1, Range)) repeatSlice(size_t N, Range, size_t M)(Slice!(N, Range) slice, size_t[M] lengths...)
+{
+    typeof(return) ret;
+    ret._ptr = slice._ptr;
+    foreach (i; Iota!(0, M))
+        ret._lengths[i] = lengths[i];
+    foreach (i; Iota!(0, N))
+    {
+        ret._lengths[M + i] = slice._lengths[i];
+        ret._strides[M + i] = slice._strides[i];
+    }
+    return ret;
+}
+
+///
+@safe pure nothrow unittest
+{
+    auto sl = iotaSlice(3)
+        .repeatSlice(4);
+    assert(sl == [[0, 1, 2],
+                  [0, 1, 2],
+                  [0, 1, 2],
+                  [0, 1, 2]]);
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.experimental.ndslice.iteration : transposed;
+
+    auto sl = iotaSlice(3)
+        .repeatSlice(4)
+        .unpack
+        .transposed;
+
+    assert(sl == [[0, 0, 0, 0],
+                  [1, 1, 1, 1],
+                  [2, 2, 2, 2]]);
+}
+
+///
+pure nothrow unittest
+{
+    import std.experimental.ndslice.slice : slice;
+
+    auto sl = iotaSlice([3], 6).slice;
+    auto slC = sl.repeatSlice(2, 3);
+    sl[1] = 4;
+    assert(slC == [[[6, 4, 8],
+                    [6, 4, 8],
+                    [6, 4, 8]],
+                   [[6, 4, 8],
+                    [6, 4, 8],
+                    [6, 4, 8]]]);
+}
+
+///
+@safe pure nothrow unittest
+{
+    auto sl = repeatSlice(4.0, 2, 3);
+    assert(sl == [[4.0, 4.0, 4.0],
+                  [4.0, 4.0, 4.0]]);
+
+    static assert(is(DeepElementType!(typeof(sl)) == double));
+
+    sl[1, 1] = 3;
+    assert(sl == [[3.0, 3.0, 3.0],
+                  [3.0, 3.0, 3.0]]);
+}
+
+/++
+Slice composed of identical values.
++/
+template  RepeatSlice(size_t N, T)
+    if (N)
+{
+    alias RepeatSlice = Slice!(N, RepeatPtr!T);
+}
+
+// undocumented
+// zero cost variant of `std.range.repeat`
+// in addition, the internal value is mutable
+@LikePtr struct RepeatPtr(T)
+{
+    // UT definition is from std.range
+    // Store a non-qualified T when possible: This is to make RepeatPtr assignable
+    static if ((is(T == class) || is(T == interface)) && (is(T == const) || is(T == immutable)))
+    {
+        import std.typecons : Rebindable;
+        private alias UT = Rebindable!T;
+    }
+    else static if (is(T : Unqual!T) && is(Unqual!T : T))
+        private alias UT = Unqual!T;
+    else
+        private alias UT = T;
+    private UT _value;
+
+    @fmb:
+
+    ref T opIndex(sizediff_t)
+    {
+        return _value;
+    }
+
+    void opOpAssign(string op)(sizediff_t)
+        if (op == `+` || op == `-`)
+    {
+    }
+
+    auto opBinary(string op)(sizediff_t)
+        if (op == `+` || op == `-`)
+    {
+        return this;
+    }
+
+    auto ref opUnary(string op)()
+        if (op == `++` || op == `--`)
+    {
+        return this;
+    }
+}
+
+@safe pure nothrow @nogc unittest
+{
+    RepeatPtr!double val;
+    val._value = 3;
+    assert((++val)._value == 3);
+    val += 2;
+    assert((val + 3)._value == 3);
+}
+
+/++
+Implements the homonym function (also known as `transform`) present
+in many languages of functional flavor. The call `mapSlice!(fun)(tensor)`
+returns a tensor of which elements are obtained by applying `fun`
+for all elements in `tensor`. The original tensors are
+not changed. Evaluation is done lazily.
+
+Note:
+    $(SUBREF iteration, transposed) and
+    $(SUBREF selection, pack) can be used to specify dimensions.
+Params:
+    fun = One or more functions.
+    tensor = An input tensor.
+Returns:
+    a tensor with each fun applied to all the elements. If there is more than one
+    fun, the element type will be `Tuple` containing one element for each fun.
+See_Also:
+    $(REF map, std,algorithm,iteration)
+    $(HTTP en.wikipedia.org/wiki/Map_(higher-order_function), Map (higher-order function))
++/
+template mapSlice(fun...)
+    if (fun.length)
+{
+    ///
+    @fmb auto mapSlice(size_t N, Range)
+        (Slice!(N, Range) tensor)
+    {
+        // this static if-else block
+        // may be unified with std.algorithms.iteration.map
+        // after ndslice be removed from the Mir library.
+        static if (fun.length > 1)
+        {
+            import std.functional : adjoin, unaryFun;
+
+            alias _funs = staticMap!(unaryFun, fun);
+            alias _fun = adjoin!_funs;
+
+            // Once DMD issue #5710 is fixed, this validation loop can be moved into a template.
+            foreach (f; _funs)
+            {
+                static assert(!is(typeof(f(RE.init)) == void),
+                    "Mapping function(s) must not return void: " ~ _funs.stringof);
+            }
+        }
+        else
+        {
+            import std.functional : unaryFun;
+
+            alias _fun = unaryFun!fun;
+            alias _funs = AliasSeq!(_fun);
+
+            // Do the validation separately for single parameters due to DMD issue #15777.
+            static assert(!is(typeof(_fun(RE.init)) == void),
+                "Mapping function(s) must not return void: " ~ _funs.stringof);
+        }
+
+        // Specialization for packed tensors (tensors composed of tensors).
+        static if (is(Range : Slice!(NI, RangeI), size_t NI, RangeI))
+        {
+            alias Ptr = Pack!(NI - 1, RangeI);
+            alias M = Map!(Ptr, _fun);
+            alias R = Slice!(N, M);
+            return R(tensor._lengths[0 .. N], tensor._strides[0 .. N],
+                M(Ptr(tensor._lengths[N .. $], tensor._strides[N .. $], tensor._ptr)));
+        }
+        else
+        {
+            alias M = Map!(SlicePtr!Range, _fun);
+            alias R = Slice!(N, M);
+            with(tensor) return R(_lengths, _strides, M(_ptr));
+        }
+    }
+}
+
+///
+pure nothrow unittest
+{
+    import std.experimental.ndslice.selection : iotaSlice;
+
+    auto s = iotaSlice(2, 3).mapSlice!(a => a * 3);
+    assert(s == [[ 0,  3,  6],
+                 [ 9, 12, 15]]);
+}
+
+pure nothrow unittest
+{
+    import std.experimental.ndslice.selection : iotaSlice;
+
+    assert(iotaSlice(2, 3).slice.mapSlice!"a * 2" == [[0, 2, 4], [6, 8, 10]]);
+}
+
+/// Packed tensors.
+pure nothrow unittest
+{
+    import std.experimental.ndslice.selection : iotaSlice, windows;
+
+    //  iotaSlice        windows     mapSlice  sums ( ndFold!"a + b" )
+    //                --------------
+    //  -------      |  ---    ---  |      ------
+    // | 0 1 2 |  => || 0 1 || 1 2 ||  => | 8 12 |
+    // | 3 4 5 |     || 3 4 || 4 5 ||      ------
+    //  -------      |  ---    ---  |
+    //                --------------
+    auto s = iotaSlice(2, 3)
+        .windows(2, 2)
+        .mapSlice!((a) {
+            size_t s;
+            foreach (r; a)
+                foreach (e; r)
+                    s += e;
+            return s;
+            });
+
+    assert(s == [[8, 12]]);
+}
+
+pure nothrow unittest
+{
+    import std.experimental.ndslice.selection : iotaSlice, windows;
+
+    auto s = iotaSlice(2, 3)
+        .slice
+        .windows(2, 2)
+        .mapSlice!((a) {
+            size_t s;
+            foreach (r; a)
+                foreach (e; r)
+                    s += e;
+            return s;
+            });
+
+    assert(s == [[8, 12]]);
+}
+
+/// Zipped tensors
+pure nothrow unittest
+{
+    import std.experimental.ndslice.slice : assumeSameStructure;
+    import std.experimental.ndslice.selection : iotaSlice;
+
+    // 0 1 2
+    // 3 4 5
+    auto sl1 = iotaSlice(2, 3);
+    // 1 2 3
+    // 4 5 6
+    auto sl2 = iotaSlice([2, 3], 1);
+
+    // tensors must have the same strides
+    assert(sl1.structure == sl2.structure);
+
+    auto zip = assumeSameStructure!("a", "b")(sl1, sl2);
+
+    auto lazySum = zip.mapSlice!(z => z.a + z.b);
+
+    assert(lazySum == [[ 1,  3,  5],
+                       [ 7,  9, 11]]);
+}
+
+/++
+Multiple functions can be passed to `mapSlice`.
+In that case, the element type of `mapSlice` is a tuple containing
+one element for each function.
++/
+pure nothrow unittest
+{
+    import std.experimental.ndslice.selection : iotaSlice;
+
+    auto s = iotaSlice(2, 3).mapSlice!("a + a", "a * a");
+
+    auto sums     = [[0, 2, 4], [6,  8, 10]];
+    auto products = [[0, 1, 4], [9, 16, 25]];
+
+    foreach (i; 0..s.length!0)
+    foreach (j; 0..s.length!1)
+    {
+        auto values = s[i, j];
+        assert(values[0] == sums[i][j]);
+        assert(values[1] == products[i][j]);
+    }
+}
+
+/++
+You may alias `mapSlice` with some function(s) to a symbol and use it separately:
++/
+pure nothrow unittest
+{
+    import std.conv : to;
+    import std.experimental.ndslice.selection : iotaSlice;
+
+    alias stringize = mapSlice!(to!string);
+    assert(stringize(iotaSlice(2, 3)) == [["0", "1", "2"], ["3", "4", "5"]]);
 }

@@ -620,7 +620,7 @@ it actually returns memory to the operating system when possible.
 */
 unittest
 {
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.mmap_allocator : MmapAllocator;
     import std.experimental.allocator.building_blocks.allocator_list
@@ -630,7 +630,7 @@ unittest
 
 unittest
 {
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.typecons : Ternary;
     import std.experimental.allocator.mallocator : Mallocator;
@@ -663,7 +663,7 @@ unittest
 
 unittest
 {
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.typecons : Ternary;
     import std.experimental.allocator.mmap_allocator : MmapAllocator;
@@ -704,7 +704,7 @@ unittest
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.allocator_list
         : AllocatorList;
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.experimental.allocator.common : testAllocator;
     testAllocator!(() => AllocatorList!(
         n => KRRegion!GCAllocator(max(n * 16, 1024 * 1024)))());
@@ -736,7 +736,7 @@ unittest
     const store = alloc.allocate(KRRegion!().sizeof);
     auto p = cast(KRRegion!()* ) store.ptr;
     import std.conv : emplace;
-    import std.algorithm : move;
+    import std.algorithm.mutation : move;
     import core.stdc.string : memcpy;
 
     memcpy(p, &alloc, alloc.sizeof);

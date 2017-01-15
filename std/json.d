@@ -23,8 +23,10 @@ import std.array;
 import std.traits;
 
 ///
-unittest
+@system unittest
 {
+    import std.conv : to;
+
     // parse a file or string of json into a usable structure
     string s = `{ "language": "D", "rating": 3.5, "code": "42" }`;
     JSONValue j = parseJSON(s);
@@ -120,49 +122,12 @@ struct JSONValue
         return type_tag;
     }
     ///
-    unittest
+    @safe unittest
     {
           string s = "{ \"language\": \"D\" }";
           JSONValue j = parseJSON(s);
           assert(j.type == JSON_TYPE.OBJECT);
           assert(j["language"].type == JSON_TYPE.STRING);
-    }
-
-    // Explicitly undocumented. It will be removed in June 2016. @@@DEPRECATED_2016-06@@@
-    deprecated("Please assign the value with the adequate type to JSONValue directly.")
-    @property JSON_TYPE type(JSON_TYPE newType) @safe
-    {
-        if (type_tag != newType
-         && ((type_tag != JSON_TYPE.INTEGER && type_tag != JSON_TYPE.UINTEGER)
-          || (newType  != JSON_TYPE.INTEGER && newType  != JSON_TYPE.UINTEGER)))
-        {
-            final switch (newType)
-            {
-                case JSON_TYPE.STRING:
-                    str = null;
-                    break;
-                case JSON_TYPE.INTEGER:
-                    integer = long.init;
-                    break;
-                case JSON_TYPE.UINTEGER:
-                    uinteger = ulong.init;
-                    break;
-                case JSON_TYPE.FLOAT:
-                    floating = double.init;
-                    break;
-                case JSON_TYPE.OBJECT:
-                    object = null;
-                    break;
-                case JSON_TYPE.ARRAY:
-                    array = null;
-                    break;
-                case JSON_TYPE.TRUE:
-                case JSON_TYPE.FALSE:
-                case JSON_TYPE.NULL:
-                    break;
-            }
-        }
-        return type_tag = newType;
     }
 
     /// Value getter/setter for $(D JSON_TYPE.STRING).
@@ -181,7 +146,7 @@ struct JSONValue
         return v;
     }
     ///
-    unittest
+    @safe unittest
     {
         JSONValue j = [ "language": "D" ];
 
@@ -344,7 +309,8 @@ struct JSONValue
         else static if (is(T : string))
         {
             type_tag = JSON_TYPE.STRING;
-            store.str = arg;
+            string t = arg;
+            () @trusted { store.str = t; }();
         }
         else static if (isSomeString!T) // issue 15884
         {
@@ -380,14 +346,15 @@ struct JSONValue
             type_tag = JSON_TYPE.OBJECT;
             static if (is(Value : JSONValue))
             {
-                store.object = arg;
+                JSONValue[string] t = arg;
+                () @trusted { store.object = t; }();
             }
             else
             {
                 JSONValue[string] aa;
                 foreach (key, value; arg)
                     aa[key] = JSONValue(value);
-                store.object = aa;
+                () @trusted { store.object = aa; }();
             }
         }
         else static if (isArray!T)
@@ -395,14 +362,15 @@ struct JSONValue
             type_tag = JSON_TYPE.ARRAY;
             static if (is(ElementEncodingType!T : JSONValue))
             {
-                store.array = arg;
+                JSONValue[] t = arg;
+                () @trusted { store.array = t; }();
             }
             else
             {
                 JSONValue[] new_arg = new JSONValue[arg.length];
                 foreach (i, e; arg)
                     new_arg[i] = JSONValue(e);
-                store.array = new_arg;
+                () @trusted { store.array = new_arg; }();
             }
         }
         else static if (is(T : JSONValue))
@@ -460,7 +428,7 @@ struct JSONValue
         type_tag = arg.type;
     }
     ///
-    unittest
+    @safe unittest
     {
         JSONValue j = JSONValue( "a string" );
         j = JSONValue(42);
@@ -492,7 +460,7 @@ struct JSONValue
         return a[i];
     }
     ///
-    unittest
+    @safe unittest
     {
         JSONValue j = JSONValue( [42, 43, 44] );
         assert( j[0].integer == 42 );
@@ -508,7 +476,7 @@ struct JSONValue
                                         "Key not found: " ~ k);
     }
     ///
-    unittest
+    @safe unittest
     {
         JSONValue j = JSONValue( ["language": "D"] );
         assert( j["language"].str == "D" );
@@ -535,7 +503,7 @@ struct JSONValue
         this.object = aa;
     }
     ///
-    unittest
+    @safe unittest
     {
             JSONValue j = JSONValue( ["language": "D"] );
             j["language"].str = "Perl";
@@ -551,7 +519,7 @@ struct JSONValue
         this.array = a;
     }
     ///
-    unittest
+    @safe unittest
     {
             JSONValue j = JSONValue( ["Perl", "C"] );
             j[1].str = "D";
@@ -610,7 +578,7 @@ struct JSONValue
         return k in this.objectNoRef;
     }
     ///
-    unittest
+    @safe unittest
     {
         JSONValue j = [ "language": "D", "author": "walter" ];
         string a = ("author" in j).str;
@@ -650,7 +618,7 @@ struct JSONValue
     }
 
     /// Implements the foreach $(D opApply) interface for json arrays.
-    int opApply(int delegate(size_t index, ref JSONValue) dg) @system
+    int opApply(scope int delegate(size_t index, ref JSONValue) dg) @system
     {
         int result;
 
@@ -665,7 +633,7 @@ struct JSONValue
     }
 
     /// Implements the foreach $(D opApply) interface for json objects.
-    int opApply(int delegate(string key, ref JSONValue) dg) @system
+    int opApply(scope int delegate(string key, ref JSONValue) dg) @system
     {
         enforce!JSONException(type == JSON_TYPE.OBJECT,
                                 "JSONValue is not an object");
@@ -1032,7 +1000,7 @@ if (isInputRange!T)
     return root;
 }
 
-unittest
+@safe unittest
 {
     enum issue15742objectOfObject = `{ "key1": { "key2": 1 }}`;
     static assert(parseJSON(issue15742objectOfObject).type == JSON_TYPE.OBJECT);
@@ -1049,7 +1017,7 @@ unittest
     assert(a.toString == `{"key1":{"key2":1}}`);
 }
 
-unittest
+@system unittest
 {
     // Ensure we can parse JSON from a @system range.
     struct Range
@@ -1176,8 +1144,7 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                         }
                     }
 
-                    import std.algorithm : sort;
-                    import std.array;
+                    import std.algorithm.sorting : sort;
                     // @@@BUG@@@ 14439
                     // auto names = obj.keys;  // aa.keys can't be called in @safe code
                     auto names = new string[obj.length];
@@ -1344,7 +1311,7 @@ class JSONException : Exception
 }
 
 
-unittest
+@system unittest
 {
     import std.exception;
     JSONValue jv = "123";
@@ -1421,7 +1388,7 @@ unittest
     assert(jv3.str == "\u001C");
 }
 
-unittest
+@system unittest
 {
     // Bugzilla 11504
 
@@ -1463,7 +1430,7 @@ unittest
     assert(jv.type == JSON_TYPE.TRUE);
 }
 
-pure unittest
+@system pure unittest
 {
     // Adding new json element via array() / object() directly
 
@@ -1478,7 +1445,7 @@ pure unittest
     assert(jobj.object.length == 10);
 }
 
-pure unittest
+@system pure unittest
 {
     // Adding new json element without array() / object() access
 
@@ -1498,8 +1465,9 @@ pure unittest
     assert(jarr[0] == JSONValue(10));
 }
 
-unittest
+@system unittest
 {
+    // @system because JSONValue.array is @system
     import std.exception;
 
     // An overly simple test suite, if it can parse a serializated string and
@@ -1585,7 +1553,7 @@ unittest
 }`);
 }
 
-unittest
+@safe unittest
 {
   auto json = `"hello\nworld"`;
   const jv = parseJSON(json);
@@ -1593,32 +1561,7 @@ unittest
   assert(jv.toPrettyString == json);
 }
 
-deprecated unittest
-{
-    // Bugzilla 12332
-    import std.exception;
-
-    JSONValue jv;
-    jv.type = JSON_TYPE.INTEGER;
-    jv = 1;
-    assert(jv.type == JSON_TYPE.INTEGER);
-    assert(jv.integer == 1);
-    jv.type = JSON_TYPE.UINTEGER;
-    assert(jv.uinteger == 1);
-
-    jv.type = JSON_TYPE.STRING;
-    assertThrown!JSONException(jv.integer == 1);
-    assert(jv.str is null);
-    jv.str = "123";
-    assert(jv.str == "123");
-    jv.type = JSON_TYPE.STRING;
-    assert(jv.str == "123");
-
-    jv.type = JSON_TYPE.TRUE;
-    assert(jv.type == JSON_TYPE.TRUE);
-}
-
-pure unittest
+@system pure unittest
 {
     // Bugzilla 12969
 
@@ -1648,7 +1591,7 @@ pure unittest
     assert( jv[3].integer == 2 );
 }
 
-unittest
+@safe unittest
 {
     auto s = q"EOF
 [
@@ -1666,7 +1609,7 @@ EOF";
 }
 
 // handling of special float values (NaN, Inf, -Inf)
-unittest
+@safe unittest
 {
     import std.math : isNaN, isInfinity;
     import std.exception : assertThrown;
@@ -1735,7 +1678,7 @@ pure nothrow @safe unittest // issue 15884
     Test!dchar();
 }
 
-unittest // issue 15885
+@safe unittest // issue 15885
 {
     static bool test(const double num0)
     {

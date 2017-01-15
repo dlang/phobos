@@ -56,6 +56,7 @@ DRUNTIME_PATH = ../druntime
 ZIPFILE = phobos.zip
 ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
+DUB=dub
 # Documentation-related stuff
 DOCSRC = ../dlang.org
 WEBSITE_DIR = ../web
@@ -111,6 +112,10 @@ else
 	DFLAGS += -O -release
 endif
 
+ifdef ENABLE_COVERAGE
+DFLAGS  += -cov
+endif
+
 # Set DOTOBJ and DOTEXE
 ifeq (,$(findstring win,$(OS)))
 	DOTOBJ:=.o
@@ -125,7 +130,7 @@ endif
 LINKDL:=$(if $(findstring $(OS),linux),-L-ldl,)
 
 # use timelimit to avoid deadlocks if available
-TIMELIMIT:=$(if $(shell which timelimit 2>/dev/null || true),timelimit -t 60 ,)
+TIMELIMIT:=$(if $(shell which timelimit 2>/dev/null || true),timelimit -t 90 ,)
 
 # Set VERSION, where the file is that contains the version string
 VERSION=../dmd/VERSION
@@ -165,10 +170,10 @@ STD_PACKAGES = std $(addprefix std/,\
 # Modules broken down per package
 
 PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
-  conv cstream csv datetime demangle encoding exception file format \
+  conv csv datetime demangle encoding exception file format \
   functional getopt json math mathspecial meta mmfile numeric \
-  outbuffer parallelism path process random signals socket socketstream stdint \
-  stdio stdiobase stream string system traits typecons typetuple uni \
+  outbuffer parallelism path process random signals socket stdint \
+  stdio stdiobase string system traits typecons typetuple uni \
   uri utf uuid variant xml zip zlib
 PACKAGE_std_experimental = typecons
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
@@ -188,7 +193,7 @@ PACKAGE_std_experimental_ndslice = package iteration selection slice
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
-  backtracking kickstart tests thompson)
+  backtracking bitnfa tests tests2 tests3 thompson shiftor)
 
 # Modules in std (including those in packages)
 STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
@@ -212,7 +217,7 @@ EXTRA_MODULES_INTERNAL := $(addprefix			\
 	std/internal/digest/, sha_SSSE3 ) $(addprefix \
 	std/internal/math/, biguintcore biguintnoasm biguintx86	\
 	gammafunction errorfunction) $(addprefix std/internal/, \
-	cstring processinit unicode_tables scopebuffer\
+	cstring encodinginit processinit unicode_tables scopebuffer\
 	unicode_comp unicode_decomp unicode_grapheme unicode_norm) \
 	$(addprefix std/internal/test/, dummyrange) \
 	$(addprefix std/experimental/ndslice/, internal) \
@@ -357,9 +362,11 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 # For example: "make std/algorithm/mutation.test"
 # The mktemp business is needed so .o files don't clash in concurrent unittesting.
 %.test : %.d $(LIB)
-	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` && \
-	  $(DMD) -od$$T $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= $(LINKDL) -cov -run $< && \
-	  rm -rf $$T
+	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` &&                                                              \
+	  (                                                                                                     \
+	    $(DMD) -od$$T $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= $(LINKDL) -cov -run $< ;     \
+	    RET=$$? ; rm -rf $$T ; exit $$RET                                                                   \
+	  )
 
 # Target for quickly unittesting all modules and packages within a package,
 # transitively. For example: "make std/algorithm.test"
@@ -471,6 +478,51 @@ checkwhitespace: $(LIB)
 	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -run ../dmd/src/checkwhitespace.d $(CWS_TOCHECK)
 
 #############################
+# Submission to Phobos are required to conform to the DStyle
+# The tests below automate some, but not all parts of the DStyle guidelines.
+# See also: http://dlang.org/dstyle.html
+#############################
+
+../dscanner:
+	git clone https://github.com/Hackerpilot/Dscanner ../dscanner
+	git -C ../dscanner checkout tags/v0.4.0-beta.3
+	git -C ../dscanner submodule update --init --recursive
+
+../dscanner/dsc: ../dscanner
+	# debug build is faster, but disable 'missing import' messages (missing core from druntime)
+	sed 's/dparse_verbose/StdLoggerDisableWarning/' ../dscanner/makefile > dscanner_makefile_tmp
+	mv dscanner_makefile_tmp ../dscanner/makefile
+	make -C ../dscanner githash debug
+
+style: ../dscanner/dsc
+	@echo "Check for trailing whitespace"
+	grep -nr '[[:blank:]]$$' etc std ; test $$? -eq 1
+
+	@echo "Enforce whitespace before opening parenthesis"
+	grep -nrE "(for|foreach|foreach_reverse|if|while|switch|catch)\(" $$(find . -name '*.d') ; test $$? -eq 1
+
+	@echo "Enforce whitespace between colon(:) for import statements (doesn't catch everything)"
+	grep -nr 'import [^/,=]*:.*;' $$(find . -name '*.d') | grep -vE "import ([^ ]+) :\s"; test $$? -eq 1
+
+	@echo "Check for package wide std.algorithm imports"
+	grep -nr 'import std.algorithm : ' $$(find . -name '*.d') ; test $$? -eq 1
+
+	@echo "Enforce Allman style"
+	grep -nrE '(if|for|foreach|foreach_reverse|while|unittest|switch|else|version) .*{$$' $$(find . -name '*.d'); test $$? -eq 1
+
+	@echo "Enforce do { to be in Allman style"
+	grep -nr 'do *{$$' $$(find . -name '*.d') ; test $$? -eq 1
+
+	# at the moment libdparse has problems to parse some modules (->excludes)
+	@echo "Running DScanner"
+	../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d') -I.
+
+publictests: $(LIB)
+	# parse all public unittests from Phobos, for now some modules are excluded
+	rm -rf ./out
+	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) --compiler=$${PWD}/$(DMD) --single ../tools/phobos_tests_extractor.d -- --inputdir . --ignore "base64.d,building_blocks/free_list,building_blocks/quantizer,digest/hmac.d,file.d,index.d,math.d,ndslice/selection.d,stdio.d,traits.d,typecons.d,uuid.d" --outputdir ./out
+	# execute all parsed tests
+	for file in $$(find out -name '*.d'); do echo "executing $${file}" && $(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -main -unittest -run $$file || exit 1 ; done
 
 .PHONY : auto-tester-build
 auto-tester-build: all checkwhitespace

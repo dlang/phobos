@@ -732,7 +732,7 @@ auto csvReader(Contents = string,
             return text.empty;
         }
 
-        auto popFront()
+        void popFront()
         {
             text.popFront();
         }
@@ -755,7 +755,7 @@ auto csvReader(Contents = string,
 
 @safe unittest // const/immutable dchars
 {
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     import std.array : array;
     const(dchar)[] c = "foo,bar\n";
     assert(csvReader(c).map!array.array == [["foo", "bar"]]);
@@ -907,17 +907,18 @@ public:
         {
             static if (is(Contents T : T[U], U : string))
             {
-                import std.algorithm : sort;
+                import std.algorithm.sorting : sort;
                 sort(indices);
             }
             else static if (ErrorLevel == Malformed.ignore)
             {
-                import std.algorithm : sort;
+                import std.algorithm.sorting : sort;
                 sort(indices);
             }
             else
             {
-                import std.algorithm : isSorted, findAdjacent;
+                import std.algorithm.searching : findAdjacent;
+                import std.algorithm.sorting : isSorted;
                 if (!isSorted(indices))
                 {
                     auto ex = new HeaderMismatchException
@@ -1101,7 +1102,7 @@ public:
 ///
 @safe pure unittest
 {
-    import std.algorithm;
+    import std.algorithm.comparison : equal;
 
     string str = `76;^26^;22`;
     int[] ans = [76,26,22];
@@ -1118,14 +1119,12 @@ public:
 // @system due to the catch for Throwable
 @system pure unittest
 {
+    import std.exception : assertNotThrown;
     enum failData =
     "name, surname, age
     Joe, Joker, 99\r";
-    bool pass = true;
     auto r = csvReader(failData);
-    try foreach (entry; r){}
-    catch pass = false;
-    assert(pass);
+    assertNotThrown((){foreach (entry; r){}}());
 }
 
 /*
@@ -1469,6 +1468,8 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
 @safe unittest
 {
     import std.array : appender;
+    import std.range.primitives : popFront;
+
     string str = "65,63\n123,3673";
 
     auto a = appender!(char[])();
