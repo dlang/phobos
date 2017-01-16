@@ -5636,7 +5636,7 @@ enum bool isAutodecodableString(T) = (is(T : const char[]) || is(T : const wchar
 /**
  * Detect whether type $(D T) is a static array.
  */
-enum bool isStaticArray(T) = is(StaticArrayTypeOf!T) && !isAggregateType!T;
+enum bool isStaticArray(T) = __traits(isStaticArray, T);
 
 ///
 @safe unittest
