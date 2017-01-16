@@ -5320,7 +5320,7 @@ enum bool isIntegral(T) = is(IntegralTypeOf!T) && !isAggregateType!T;
 /**
  * Detect whether $(D T) is a built-in floating point type.
  */
-enum bool isFloatingPoint(T) = is(FloatingPointTypeOf!T) && !isAggregateType!T;
+enum bool isFloatingPoint(T) = __traits(isFloating, T);
 
 @safe unittest
 {
