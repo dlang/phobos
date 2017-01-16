@@ -5364,7 +5364,7 @@ enum bool isNumeric(T) = is(NumericTypeOf!T) && !isAggregateType!T;
 /**
 Detect whether $(D T) is a scalar type (a built-in numeric, character or boolean type).
  */
-enum bool isScalarType(T) = isNumeric!T || isSomeChar!T || isBoolean!T;
+enum bool isScalarType(T) = isNumeric!T || isSomeChar!T || isBoolean!T; // TODO make __traits(isScalar, T) work here
 
 ///
 @safe unittest
