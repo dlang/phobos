@@ -6276,13 +6276,9 @@ template isNestedFunction(alias f)
 }
 
 /**
- * Detect whether $(D T) is a an abstract class.
+ * Detect whether $(D T) is an abstract class.
  */
-template isAbstractClass(T...)
-    if (T.length == 1)
-{
-    enum bool isAbstractClass = __traits(isAbstractClass, T[0]);
-}
+enum bool isAbstractClass(T) = __traits(isAbstractClass, T);
 
 ///
 @safe unittest
