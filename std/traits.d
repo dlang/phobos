@@ -5347,7 +5347,7 @@ enum bool isFloatingPoint(T) = __traits(isFloating, T);
 Detect whether $(D T) is a built-in numeric type (integral or floating
 point).
  */
-enum bool isNumeric(T) = is(NumericTypeOf!T) && !isAggregateType!T;
+enum bool isNumeric(T) = __traits(isArithmetic, T);
 
 @safe unittest
 {
