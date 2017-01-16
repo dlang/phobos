@@ -5402,7 +5402,9 @@ enum bool isBasicType(T) = isScalarType!T || is(Unqual!T == void);
 /**
 Detect whether $(D T) is a built-in unsigned numeric type.
  */
-enum bool isUnsigned(T) = is(UnsignedTypeOf!T) && !isAggregateType!T;
+enum bool isUnsigned(T) = __traits(isUnsigned, T) && !(is(Unqual!T == char) ||
+                                                       is(Unqual!T == wchar) ||
+                                                       is(Unqual!T == dchar));
 
 @safe unittest
 {
