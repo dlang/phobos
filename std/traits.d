@@ -6216,13 +6216,9 @@ template isCallable(T...)
 
 
 /**
- * Detect whether $(D T) is a an abstract function.
+ * Detect whether $(D T) is an abstract function.
  */
-template isAbstractFunction(T...)
-    if (T.length == 1)
-{
-    enum bool isAbstractFunction = __traits(isAbstractFunction, T[0]);
-}
+enum bool isAbstractFunction(alias f) = __traits(isAbstractFunction, f);
 
 @safe unittest
 {
