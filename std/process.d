@@ -806,6 +806,79 @@ private void setCLOEXEC(int fd, bool on) nothrow @nogc
     assert (wait(spawnProcess([prog.path, "foo", "bar"])) == 0);
 }
 
+// test that file descriptors are correctly closed / left open.
+// ideally this would be done by the child process making libc
+// calls, but we make do...
+version (Posix) @system unittest
+{
+    import core.sys.posix.fcntl : open, O_RDONLY;
+    import core.sys.posix.unistd : close;
+    import std.path : buildPath;
+    import std.algorithm.searching : canFind, findSplitBefore;
+    import std.functional : reverseArgs;
+    import std.array : split;
+    import std.conv : to;
+    static import std.file;
+
+    auto directory = uniqueTempPath();
+    std.file.mkdir(directory);
+    scope(exit) std.file.rmdirRecurse(directory);
+    auto path = buildPath(directory, "tmp");
+    std.file.write(path, null);
+    auto fd = open(path.tempCString, O_RDONLY);
+    scope(exit) close(fd);
+
+    // command >&2 (or any other number) checks whethether that number
+    // file descriptor is open.
+    // Can't use this for arbitrary descriptors as many shells only support
+    // single digit fds.
+    TestScript testDefaults = `command >&0 && command >&1 && command >&2`;
+    assert (execute(testDefaults.path).status == 0);
+    assert (execute(testDefaults.path, null, Config.inheritFDs).status == 0);
+
+    // try /proc/<pid>/fd/ on linux
+    version (linux)
+    {
+        TestScript proc = "ls /proc/$$/fd";
+        auto procRes = execute(proc.path, null);
+        if (procRes.status == 0)
+        {
+            auto fdStr = fd.to!string;
+            assert (!procRes.output.split.canFind(fdStr));
+            assert (execute(proc.path, null, Config.inheritFDs)
+                    .output.split.canFind(fdStr));
+            return;
+        }
+    }
+
+    // try fuser (might sometimes need permissions)
+    TestScript fuser = "echo $$ && fuser -f " ~ path;
+    auto fuserRes = execute(fuser.path, null);
+    if (fuserRes.status == 0)
+    {
+        assert (!reverseArgs!canFind(fuserRes
+                    .output.findSplitBefore("\n").expand));
+        assert (reverseArgs!canFind(execute(fuser.path, null, Config.inheritFDs)
+                    .output.findSplitBefore("\n").expand));
+        return;
+    }
+
+    // last resort, try lsof (not available on all Posix)
+    TestScript lsof = "lsof -p$$";
+    auto lsofRes = execute(lsof.path, null);
+    if (lsofRes.status == 0)
+    {
+        assert(!lsofRes.output.canFind(path));
+        assert(execute(lsof.path, null, Config.inheritFDs).output.canFind(path));
+        return;
+    }
+
+    std.stdio.stderr.writeln(__FILE__, ':', __LINE__,
+            ": Warning: Couldn't find any way to check open files");
+    // DON'T DO ANY MORE TESTS BELOW HERE IN THIS UNITTEST BLOCK, THE ABOVE
+    // TESTS RETURN ON SUCCESS
+}
+
 @system unittest // Environment variables in spawnProcess().
 {
     // We really should use set /a on Windows, but Wine doesn't support it.
