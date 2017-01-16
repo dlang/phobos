@@ -6288,13 +6288,9 @@ enum bool isAbstractClass(T) = __traits(isAbstractClass, T);
 }
 
 /**
- * Detect whether $(D T) is a a final class.
+ * Detect whether $(D T) is a final class.
  */
-template isFinalClass(T...)
-    if (T.length == 1)
-{
-    enum bool isFinalClass = __traits(isFinalClass, T[0]);
-}
+enum bool isFinalClass(T) = __traits(isFinalClass, T);
 
 ///
 @safe unittest
