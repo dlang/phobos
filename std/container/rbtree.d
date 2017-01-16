@@ -755,7 +755,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
             enum doUnittest = false;
 
         // note, this must be final so it does not affect the vtable layout
-        final bool arrayEqual(T[] arr)
+        bool arrayEqual(T[] arr)
         {
             if (walkLength(this[]) == arr.length)
             {

@@ -1261,7 +1261,7 @@ abstract class Address
     }
 
     // Common code for toAddrString and toHostNameString
-    private final string toHostString(bool numeric) @trusted const
+    private string toHostString(bool numeric) @trusted const
     {
         // getnameinfo() is the recommended way to perform a reverse (name)
         // lookup on both Posix and Windows. However, it is only available
@@ -1301,7 +1301,7 @@ abstract class Address
     }
 
     // Common code for toPortString and toServiceNameString
-    private final string toServiceString(bool numeric) @trusted const
+    private string toServiceString(bool numeric) @trusted const
     {
         // See toHostNameString() for details about getnameinfo().
         if (getnameinfoPointer)
@@ -2121,23 +2121,23 @@ private:
 
         fd_set_type[] set;
 
-        final void resize(size_t size) pure nothrow
+        void resize(size_t size) pure nothrow
         {
             set.length = FD_SET_OFFSET + size;
         }
 
-        final ref inout(fd_set_count_type) count() @trusted @property inout pure nothrow @nogc
+        ref inout(fd_set_count_type) count() @trusted @property inout pure nothrow @nogc
         {
             assert(set.length);
             return *cast(inout(fd_set_count_type)*)set.ptr;
         }
 
-        final size_t capacity() @property const pure nothrow @nogc
+        size_t capacity() @property const pure nothrow @nogc
         {
             return set.length - FD_SET_OFFSET;
         }
 
-        final inout(socket_t)[] fds() @trusted inout @property pure nothrow @nogc
+        inout(socket_t)[] fds() @trusted inout @property pure nothrow @nogc
         {
             return cast(inout(socket_t)[])set[FD_SET_OFFSET..FD_SET_OFFSET+count];
         }
@@ -2175,21 +2175,21 @@ private:
 
         fd_set_type[] set;
 
-        final void resize(size_t size) pure nothrow
+        void resize(size_t size) pure nothrow
         {
             set.length = lengthFor(size);
         }
 
         // Make sure we can fit that many sockets
 
-        final void setMinCapacity(size_t size) pure nothrow
+        void setMinCapacity(size_t size) pure nothrow
         {
             auto length = lengthFor(size);
             if (set.length < length)
                 set.length = length;
         }
 
-        final size_t capacity() @property const pure nothrow @nogc
+        size_t capacity() @property const pure nothrow @nogc
         {
             return set.length * FD_NFDBITS;
         }
