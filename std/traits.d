@@ -6231,13 +6231,9 @@ enum bool isAbstractFunction(alias f) = __traits(isAbstractFunction, f);
 }
 
 /**
- * Detect whether $(D T) is a a final function.
+ * Detect whether $(D T) is a final function.
  */
-template isFinalFunction(T...)
-    if (T.length == 1)
-{
-    enum bool isFinalFunction = __traits(isFinalFunction, T[0]);
-}
+enum bool isFinalFunction(alias f) = __traits(isFinalFunction, f);
 
 ///
 @safe unittest
