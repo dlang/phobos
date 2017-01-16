@@ -5731,7 +5731,7 @@ enum bool isArray(T) = isStaticArray!T || isDynamicArray!T;
 /**
  * Detect whether $(D T) is an associative array type
  */
-enum bool isAssociativeArray(T) = is(AssocArrayTypeOf!T) && !isAggregateType!T;
+enum bool isAssociativeArray(T) = __traits(isAssociativeArray, T);
 
 @safe unittest
 {
