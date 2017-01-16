@@ -568,6 +568,7 @@ can match the expected number of readings or fewer, even zero, if a
 matching failure happens.
  */
 uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
+if (allSatisfy!(isPointer, S))
 {
     import std.typecons : isTuple;
 
