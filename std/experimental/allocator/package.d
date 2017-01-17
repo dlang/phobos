@@ -1601,6 +1601,132 @@ unittest //bugzilla 15721
 }
 
 /**
+Allocates a multidimensional array of elements of type T.
+
+Params:
+N = number of dimensions
+T = element type of an element of the multidimensional arrat
+alloc = the allocator used for getting memory
+lengths = static array containing the size of each dimension
+
+Returns:
+An N-dimensional array with individual elements of type T.
+*/
+auto makeMultidimensionalArray(uint n, T, Allocator)(auto ref Allocator alloc, size_t[n] lengths)
+{
+    static if (n == 1)
+    {
+        return makeArray!T(alloc, lengths[0]);
+    }
+    else
+    {
+        alias E = typeof(makeMultidimensionalArray!(n - 1, T)(alloc, lengths[1..$]));
+        auto ret = makeArray!E(alloc, lengths[0]);
+        foreach (ref e; ret)
+            e = makeMultidimensionalArray!(n - 1, T)(alloc, lengths[1..$]);
+        return ret;
+    }
+}
+
+///
+unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    size_t[3] dimArray = [2, 3, 6];
+    auto mArray = Mallocator.instance.makeMultidimensionalArray!(dimArray.length, int)(dimArray);
+
+    // deallocate when exiting scope
+    scope(exit)
+    {
+        Mallocator.instance.disposeMultidimensionalArray(mArray);
+    }
+
+    assert(mArray.length == 2);
+    foreach (lvl2Array; mArray)
+    {
+        assert(lvl2Array.length == 3);
+        foreach (lvl3Array; lvl2Array)
+            assert(lvl3Array.length == 6);
+    }
+}
+
+/**
+Destroys and then deallocates a multidimensional array, assuming it was
+created with makeMultidimensionalArray and the same allocator was used.
+
+Params:
+T = element type of an element of the multidimensional array
+alloc = the allocator used for getting memory
+array = the multidimensional array that is to be deallocated
+*/
+void disposeMultidimensionalArray(Allocator, T)(auto ref Allocator alloc, T[] array)
+{
+    static if (isArray!T)
+    {
+        foreach (ref e; array)
+            disposeMultidimensionalArray(alloc, e);
+    }
+
+    dispose(alloc, array);
+}
+
+///
+unittest
+{
+    struct TestAllocator
+    {
+        import std.experimental.allocator.common : platformAlignment;
+        import std.experimental.allocator.mallocator : Mallocator;
+
+        alias allocator = Mallocator.instance;
+
+        private static struct ByteRange
+        {
+            void* ptr;
+            size_t length;
+        }
+
+        private ByteRange[] _allocations;
+
+        enum uint alignment = platformAlignment;
+
+        void[] allocate(size_t numBytes)
+        {
+             auto ret = allocator.allocate(numBytes);
+             _allocations ~= ByteRange(ret.ptr, ret.length);
+             return ret;
+        }
+
+        bool deallocate(void[] bytes)
+        {
+            import std.algorithm.mutation : remove;
+            import std.algorithm.searching : canFind;
+
+            bool pred(ByteRange other)
+            { return other.ptr == bytes.ptr && other.length == bytes.length; }
+
+            assert(_allocations.canFind!pred);
+
+             _allocations = _allocations.remove!pred;
+             return allocator.deallocate(bytes);
+        }
+
+        ~this()
+        {
+            assert(!_allocations.length);
+        }
+    }
+
+    TestAllocator allocator;
+
+    size_t[5] a = [2, 3, 6, 7, 2];
+    auto mArray = allocator.makeMultidimensionalArray!(a.length, int)(a);
+
+    allocator.disposeMultidimensionalArray(mArray);
+}
+
+/**
 
 Returns a dynamically-typed $(D CAllocator) built around a given statically-
 typed allocator $(D a) of type $(D A). Passing a pointer to the allocator
