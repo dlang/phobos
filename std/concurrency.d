@@ -1433,7 +1433,7 @@ private:
         }
 
     private:
-        final void switchContext() nothrow
+        void switchContext() nothrow
         {
             mutex_nothrow.unlock_nothrow();
             scope(exit) mutex_nothrow.lock_nothrow();
@@ -1445,7 +1445,7 @@ private:
 
 
 private:
-    final void dispatch()
+    void dispatch()
     {
         import std.algorithm.mutation : remove;
 
@@ -1467,7 +1467,7 @@ private:
     }
 
 
-    final void create( void delegate() op ) nothrow
+    void create( void delegate() op ) nothrow
     {
         void wrap()
         {
@@ -1918,7 +1918,7 @@ private
          * if the owner thread terminates and no existing messages match the
          * supplied ops.
          */
-        final bool get(T...)( scope T vals )
+        bool get(T...)( scope T vals )
         {
             import std.meta : AliasSeq;
 
@@ -2194,20 +2194,20 @@ private
         //////////////////////////////////////////////////////////////////////
 
 
-        pure final bool isControlMsg( ref Message msg )
+        pure bool isControlMsg( ref Message msg )
         {
             return msg.type != MsgType.standard &&
                    msg.type != MsgType.priority;
         }
 
 
-        pure final bool isPriorityMsg( ref Message msg )
+        pure bool isPriorityMsg( ref Message msg )
         {
             return msg.type == MsgType.priority;
         }
 
 
-        pure final bool isLinkDeadMsg( ref Message msg )
+        pure bool isLinkDeadMsg( ref Message msg )
         {
             return msg.type == MsgType.linkDead;
         }

@@ -271,7 +271,7 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
                 static if (is(Source == class) || is(Source == interface))
                 {
                     // BUG: making private should work with NVI.
-                    protected final inout(Object) _wrap_getSource() inout @safe
+                    protected inout(Object) _wrap_getSource() inout @safe
                     {
                         return dynamicCast!(inout Object)(_wrap_source);
                     }
@@ -279,7 +279,7 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
                 else
                 {
                     // BUG: making private should work with NVI.
-                    protected final inout(Source) _wrap_getSource() inout @safe
+                    protected inout(Source) _wrap_getSource() inout @safe
                     {
                         return _wrap_source;
                     }
