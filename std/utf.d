@@ -1132,6 +1132,131 @@ dchar decodeFront(UseReplacementDchar useReplacementDchar = No.useReplacementDch
     return decodeFront!useReplacementDchar(str, numCodeUnits);
 }
 
+/++
+    $(D decodeBack) is a variant of $(LREF decode) which specifically decodes
+    the last code point. Unlike $(LREF decode), $(D decodeBack) accepts any
+    bidirectional range of code units (rather than just a string or random access
+    range). It also takes the range by $(D ref) and pops off the elements as it
+    decodes them. If $(D numCodeUnits) is passed in, it gets set to the number
+    of code units which were in the code point which was decoded.
+
+    Params:
+        useReplacementDchar = if invalid UTF, return `replacementDchar` rather than throwing
+        str = input string or bidirectional Range
+        numCodeUnits = gives the number of code units processed
+
+    Returns:
+        A decoded UTF character.
+
+    Throws:
+        $(LREF UTFException) if $(D str.back) is not the end of a valid UTF
+        sequence. If an exception is thrown, the $(D str) itself remains unchanged,
+        but there is no guarantee as to the value of $(D numCodeUnits) (when passed).
+  +/
+dchar decodeBack(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
+    ref S str, out size_t numCodeUnits)
+    if (isSomeString!S)
+in
+{
+    assert(!str.empty);
+}
+out (result)
+{
+    assert(isValidDchar(result));
+}
+body
+{
+    if (str[$ - 1] < codeUnitLimit!S)
+    {
+        numCodeUnits = 1;
+        immutable retval = str[$ - 1];
+        str = str[0 .. $ - 1];
+        return retval;
+    }
+    else
+    {
+        numCodeUnits = strideBack(str);
+        immutable newLength = str.length - numCodeUnits;
+        size_t index = newLength;
+        immutable retval = decodeImpl!(true, useReplacementDchar)(str, index);
+        str = str[0 .. newLength];
+        return retval;
+    }
+}
+
+/++ Ditto +/
+dchar decodeBack(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
+    ref S str, out size_t numCodeUnits)
+    if (!isSomeString!S && isSomeChar!(ElementType!S) && isBidirectionalRange!S
+        && ((isRandomAccessRange!S && hasLength!S) || !isRandomAccessRange!S))
+in
+{
+    assert(!str.empty);
+}
+out (result)
+{
+    assert(isValidDchar(result));
+}
+body
+{
+    if (str.back < codeUnitLimit!S)
+    {
+        numCodeUnits = 1;
+        immutable retval = str.back;
+        str.popBack();
+        return retval;
+    }
+    else
+    {
+        numCodeUnits = strideBack(str);
+        static if (isRandomAccessRange!S)
+        {
+            size_t index = str.length - numCodeUnits;
+            immutable retval = decodeImpl!(true, useReplacementDchar)(str, index);
+            str.popBackExactly(numCodeUnits);
+            return retval;
+        }
+        else
+        {
+            alias Char = Unqual!(ElementType!S);
+            Char[4] codeUnits;
+            S tmp = str.save;
+            for (size_t i = numCodeUnits; i > 0; )
+            {
+                codeUnits[--i] = tmp.back;
+                tmp.popBack();
+            }
+            const Char[] codePoint = codeUnits[0 .. numCodeUnits];
+            size_t index = 0;
+            immutable retval = decodeImpl!(true, useReplacementDchar)(codePoint, index);
+
+            import std.algorithm.mutation : swap;
+            swap(str, tmp);
+
+            return retval;
+        }
+    }
+}
+
+/++ Ditto +/
+dchar decodeBack(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(ref S str)
+    if (isSomeString!S
+        || (isRandomAccessRange!S && hasLength!S && isSomeChar!(ElementType!S))
+        || (!isRandomAccessRange!S && isBidirectionalRange!S && isSomeChar!(ElementType!S)))
+in
+{
+    assert(!str.empty);
+}
+out (result)
+{
+    assert(isValidDchar(result));
+}
+body
+{
+    size_t numCodeUnits;
+    return decodeBack!useReplacementDchar(str, numCodeUnits);
+}
+
 // Gives the maximum value that a code unit for the given range type can hold.
 package template codeUnitLimit(S)
     if (isSomeChar!(ElementEncodingType!S))
@@ -1627,12 +1752,47 @@ version(unittest) private void testDecodeFront(R)(ref R range,
     }
 }
 
-version(unittest) private void testBothDecode(R)(R range,
+version(unittest) private void testDecodeBack(R)(ref R range,
                                                  dchar expectedChar,
-                                                 size_t expectedIndex,
+                                                 size_t expectedNumCodeUnits,
                                                  size_t line = __LINE__)
 {
+    static if (!isSomeString!R || !isBidirectionalRange!R || (isRandomAccessRange!R && !hasLength!R))
+        return;
+    else
+    {
+        import std.string : format;
+        import core.exception : AssertError;
+
+        static if (hasLength!R)
+            immutable lenBefore = range.length;
+
+        size_t numCodeUnits;
+        immutable result = decodeBack(range, numCodeUnits);
+        enforce(result == expectedChar,
+                new AssertError(format("decodeBack: Wrong character: %s", result), __FILE__, line));
+        enforce(numCodeUnits == expectedNumCodeUnits,
+                new AssertError(format("decodeBack: Wrong numCodeUnits: %s", numCodeUnits), __FILE__, line));
+
+        static if (hasLength!R)
+        {
+            enforce(range.length == lenBefore - numCodeUnits,
+                    new AssertError(format("decodeBack: wrong length: %s", range.length), __FILE__, line));
+        }
+    }
+}
+
+version(unittest) private void testAllDecode(R)(R range,
+                                                dchar expectedChar,
+                                                size_t expectedIndex,
+                                                size_t line = __LINE__)
+{
     testDecode(range, 0, expectedChar, expectedIndex, line);
+    static if (isBidirectionalRange!R)
+    {
+        auto rangeCopy = range.save;
+        testDecodeBack(rangeCopy, expectedChar, expectedIndex, line);
+    }
     testDecodeFront(range, expectedChar, expectedIndex, line);
 }
 
@@ -1660,6 +1820,30 @@ version(unittest) private void testBadDecode(R)(R range, size_t index, size_t li
 
     if (initialIndex == 0)
         assertThrown!UTFException(decodeFront(range, index), null, __FILE__, line);
+}
+
+version(unittest) private void testBadDecodeBack(R)(R range, size_t line = __LINE__)
+{
+    static if (!isSomeString!R || !isBidirectionalRange!R || (isRandomAccessRange!R && !hasLength!R))
+        return;
+    else
+    {
+        import std.string : format;
+        import core.exception : AssertError;
+
+        static if (hasLength!R)
+            immutable lenBefore = range.length;
+
+        static if (isRandomAccessRange!R)
+        {
+            assertThrown!UTFException(decodeBack(range), null, __FILE__, line);
+            static if (hasLength!R)
+            {
+                enforce(range.length == lenBefore,
+                        new AssertError(format("decodeBack: length changed:", range.length), __FILE__, line));
+            }
+        }
+    }
 }
 
 @system unittest
@@ -1696,8 +1880,24 @@ version(unittest) private void testBadDecode(R)(R range, size_t index, size_t li
             assert(decodeFront(range) == 'サ');
         }
 
-        testBothDecode(S("\xC2\xA9"), '\u00A9', 2);
-        testBothDecode(S("\xE2\x89\xA0"), '\u2260', 3);
+        {
+            auto range = S("abcd");
+            testDecodeBack(range, 'd', 1);
+            testDecodeBack(range, 'c', 1);
+            testDecodeBack(range, 'b', 1);
+            testDecodeBack(range, 'a', 1);
+        }
+
+        {
+            auto range = S("ウェブサイト");
+            testDecodeBack(range, 'ト', 3);
+            testDecodeBack(range, 'イ', 3);
+            testDecodeBack(range, 'サ', 3);
+            testDecodeBack(range, 'ブ', 3);
+        }
+
+        testAllDecode(S("\xC2\xA9"), '\u00A9', 2);
+        testAllDecode(S("\xE2\x89\xA0"), '\u2260', 3);
 
         foreach (str; ["\xE2\x89", // too short
                        "\xC0\x8A",
@@ -1708,20 +1908,25 @@ version(unittest) private void testBadDecode(R)(R range, size_t index, size_t li
         {
             testBadDecode(S(str), 0);
             testBadDecode(S(str), 1);
+            testBadDecodeBack(S(str));
         }
 
         //Invalid UTF-8 sequence where the first code unit is valid.
-        testBothDecode(S("\xEF\xBF\xBE"), cast(dchar)0xFFFE, 3);
-        testBothDecode(S("\xEF\xBF\xBF"), cast(dchar)0xFFFF, 3);
+        testAllDecode(S("\xEF\xBF\xBE"), cast(dchar)0xFFFE, 3);
+        testAllDecode(S("\xEF\xBF\xBF"), cast(dchar)0xFFFF, 3);
 
         //Invalid UTF-8 sequence where the first code unit isn't valid.
-        testBadDecode(S("\xED\xA0\x80"), 0);
-        testBadDecode(S("\xED\xAD\xBF"), 0);
-        testBadDecode(S("\xED\xAE\x80"), 0);
-        testBadDecode(S("\xED\xAF\xBF"), 0);
-        testBadDecode(S("\xED\xB0\x80"), 0);
-        testBadDecode(S("\xED\xBE\x80"), 0);
-        testBadDecode(S("\xED\xBF\xBF"), 0);
+        foreach (str; ["\xED\xA0\x80",
+                       "\xED\xAD\xBF",
+                       "\xED\xAE\x80",
+                       "\xED\xAF\xBF",
+                       "\xED\xB0\x80",
+                       "\xED\xBE\x80",
+                       "\xED\xBF\xBF"])
+        {
+            testBadDecode(S(str), 0);
+            testBadDecodeBack(S(str));
+        }
     }
     });
 }
@@ -1736,14 +1941,17 @@ version(unittest) private void testBadDecode(R)(R range, size_t index, size_t li
                           (wstring s) => new RefBidirCU!wchar(s),
                           (wstring s) => new RefRandomCU!wchar(s)))
     {
-        testBothDecode(S([cast(wchar)0x1111]), cast(dchar)0x1111, 1);
-        testBothDecode(S([cast(wchar)0xD800, cast(wchar)0xDC00]), cast(dchar)0x10000, 2);
-        testBothDecode(S([cast(wchar)0xDBFF, cast(wchar)0xDFFF]), cast(dchar)0x10FFFF, 2);
-        testBothDecode(S([cast(wchar)0xFFFE]), cast(dchar)0xFFFE, 1);
-        testBothDecode(S([cast(wchar)0xFFFF]), cast(dchar)0xFFFF, 1);
+        testAllDecode(S([cast(wchar)0x1111]), cast(dchar)0x1111, 1);
+        testAllDecode(S([cast(wchar)0xD800, cast(wchar)0xDC00]), cast(dchar)0x10000, 2);
+        testAllDecode(S([cast(wchar)0xDBFF, cast(wchar)0xDFFF]), cast(dchar)0x10FFFF, 2);
+        testAllDecode(S([cast(wchar)0xFFFE]), cast(dchar)0xFFFE, 1);
+        testAllDecode(S([cast(wchar)0xFFFF]), cast(dchar)0xFFFF, 1);
 
         testBadDecode(S([ cast(wchar)0xD801 ]), 0);
         testBadDecode(S([ cast(wchar)0xD800, cast(wchar)0x1200 ]), 0);
+
+        testBadDecodeBack(S([ cast(wchar)0xD801 ]));
+        testBadDecodeBack(S([ cast(wchar)0xD800, cast(wchar)0x1200 ]));
 
         {
             auto range = S("ウェブサイト");
@@ -1753,6 +1961,14 @@ version(unittest) private void testBadDecode(R)(R range, size_t index, size_t li
             testDecodeFront(range, 'ェ', 1);
             assert(decodeFront(range) == 'ブ');
             assert(decodeFront(range) == 'サ');
+        }
+
+        {
+            auto range = S("ウェブサイト");
+            testDecodeBack(range, 'ト', 1);
+            testDecodeBack(range, 'イ', 1);
+            testDecodeBack(range, 'サ', 1);
+            testDecodeBack(range, 'ブ', 1);
         }
     }
 
@@ -1764,6 +1980,9 @@ version(unittest) private void testBadDecode(R)(R range, size_t index, size_t li
         testDecode(str, 0, cast(dchar)0x10000, 2);
         testDecode(str, 2, cast(dchar)0x1400, 3);
         testDecode(str, 3, cast(dchar)0xB9DDE, 5);
+        testDecodeBack(str, cast(dchar)0xB9DDE, 2);
+        testDecodeBack(str, cast(dchar)0x1400, 1);
+        testDecodeBack(str, cast(dchar)0x10000, 2);
     }
     });
 }
@@ -1778,15 +1997,19 @@ version(unittest) private void testBadDecode(R)(R range, size_t index, size_t li
                           (dstring s) => new RefBidirCU!dchar(s),
                           (dstring s) => new RefRandomCU!dchar(s)))
     {
-        testBothDecode(S([cast(dchar)0x1111]), cast(dchar)0x1111, 1);
-        testBothDecode(S([cast(dchar)0x10000]), cast(dchar)0x10000, 1);
-        testBothDecode(S([cast(dchar)0x10FFFF]), cast(dchar)0x10FFFF, 1);
-        testBothDecode(S([cast(dchar)0xFFFE]), cast(dchar)0xFFFE, 1);
-        testBothDecode(S([cast(dchar)0xFFFF]), cast(dchar)0xFFFF, 1);
+        testAllDecode(S([cast(dchar)0x1111]), cast(dchar)0x1111, 1);
+        testAllDecode(S([cast(dchar)0x10000]), cast(dchar)0x10000, 1);
+        testAllDecode(S([cast(dchar)0x10FFFF]), cast(dchar)0x10FFFF, 1);
+        testAllDecode(S([cast(dchar)0xFFFE]), cast(dchar)0xFFFE, 1);
+        testAllDecode(S([cast(dchar)0xFFFF]), cast(dchar)0xFFFF, 1);
 
         testBadDecode(S([cast(dchar)0xD800]), 0);
         testBadDecode(S([cast(dchar)0xDFFE]), 0);
         testBadDecode(S([cast(dchar)0x110000]), 0);
+
+        testBadDecodeBack(S([cast(dchar)0xD800]));
+        testBadDecodeBack(S([cast(dchar)0xDFFE]));
+        testBadDecodeBack(S([cast(dchar)0x110000]));
 
         {
             auto range = S("ウェブサイト");
@@ -1797,6 +2020,14 @@ version(unittest) private void testBadDecode(R)(R range, size_t index, size_t li
             assert(decodeFront(range) == 'ブ');
             assert(decodeFront(range) == 'サ');
         }
+
+        {
+            auto range = S("ウェブサイト");
+            testDecodeBack(range, 'ト', 1);
+            testDecodeBack(range, 'イ', 1);
+            testDecodeBack(range, 'サ', 1);
+            testDecodeBack(range, 'ブ', 1);
+        }
     }
 
     foreach (S; AliasSeq!(to!dstring, RandomCU!dchar, (dstring s) => new RefRandomCU!dchar(s)))
@@ -1805,6 +2036,9 @@ version(unittest) private void testBadDecode(R)(R range, size_t index, size_t li
         testDecode(str, 0, 0x10000, 1);
         testDecode(str, 1, 0x1400, 2);
         testDecode(str, 2, 0xB9DDE, 3);
+        testDecodeBack(str, cast(dchar)0xB9DDE, 1);
+        testDecodeBack(str, cast(dchar)0x1400, 1);
+        testDecodeBack(str, cast(dchar)0x10000, 1);
     }
     });
 }
@@ -1826,6 +2060,10 @@ version(unittest) private void testBadDecode(R)(R range, size_t index, size_t li
             S str; size_t i = 0; decodeFront(str, i);
         }) & FunctionAttribute.pure_) != 0);
         static assert((functionAttributes!({ S str; decodeFront(str); }) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!({
+            S str; size_t i = 0; decodeBack(str, i);
+        }) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!({ S str; decodeBack(str); }) & FunctionAttribute.pure_) != 0);
     }
     });
 }
