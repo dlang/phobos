@@ -2387,6 +2387,11 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
             else
                 _current = _items.front;
         };
+        this(RoR items, ElementType!RoR current)
+        {
+            _items = items;
+            _current = current;
+        }
     public:
         this(RoR r)
         {
@@ -2441,10 +2446,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         {
             @property auto save()
             {
-                Result copy = this;
-                copy._items = _items.save;
-                copy._current = _current.save;
-                return copy;
+                return Result(_items.save, _current.save);
             }
         }
     }
