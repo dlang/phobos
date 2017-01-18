@@ -100,13 +100,13 @@ version(unittest)
     hash = crc.finish();
 }
 
-private uint[256][8] genTables(uint polynomial)
+private T[256][8] genTables(T)(T polynomial)
 {
-    uint[256][8] res = void;
+    T[256][8] res = void;
 
     foreach (i; 0 .. 0x100)
     {
-        uint crc = i;
+        T crc = i;
         foreach (_; 0 .. 8)
             crc = (crc >> 1) ^ (-int(crc & 1) & polynomial);
         res[0][i] = crc;
@@ -117,7 +117,6 @@ private uint[256][8] genTables(uint polynomial)
         res[1][i] = (res[0][i] >> 8) ^ res[0][res[0][i] & 0xFF];
         res[2][i] = (res[1][i] >> 8) ^ res[0][res[1][i] & 0xFF];
         res[3][i] = (res[2][i] >> 8) ^ res[0][res[2][i] & 0xFF];
-
         res[4][i] = (res[3][i] >> 8) ^ res[0][res[3][i] & 0xFF];
         res[5][i] = (res[4][i] >> 8) ^ res[0][res[4][i] & 0xFF];
         res[6][i] = (res[5][i] >> 8) ^ res[0][res[5][i] & 0xFF];
@@ -127,6 +126,7 @@ private uint[256][8] genTables(uint polynomial)
 }
 
 private static immutable uint[256][8] crc32Tables = genTables(0xEDB88320);
+private static immutable ulong[256][8] crc64Tables = genTables(0xC96C5795D7870F42);
 
 @system unittest
 {
@@ -138,11 +138,36 @@ private static immutable uint[256][8] crc32Tables = genTables(0xEDB88320);
  * Template API CRC32 implementation.
  * See $(D std.digest.digest) for differences between template and OOP API.
  */
-struct CRC32
+alias CRC32 = CRC!32;
+
+/**
+ * Template API CRC64 implementation.
+ * See $(D std.digest.digest) for differences between template and OOP API.
+ */
+alias CRC64 = CRC!64;
+
+/**
+ * Generic Template API used for CRC32 and CRC64 implementations.
+ * See $(D std.digest.digest) for differences between template and OOP API.
+ */
+private struct CRC(uint N) if (N == 32 || N == 64)
 {
     private:
+        static if (N == 32)
+        {
+            alias T = uint;
+            alias tables = crc32Tables;
+        }
+        else
+        {
+            alias T = ulong;
+            alias tables = crc64Tables;
+        }
+
+        alias R = ubyte[T.sizeof];
+
         // magic initialization constants
-        uint _state = uint.max;
+        T _state = T.max;
 
     public:
         /**
@@ -152,7 +177,7 @@ struct CRC32
          */
         void put(scope const(ubyte)[] data...) @trusted pure nothrow @nogc
         {
-            uint crc = _state;
+            T crc = _state;
             // process eight bytes at once
             while (data.length >= 8)
             {
@@ -169,36 +194,46 @@ struct CRC32
                     enum hasLittleEndianUnalignedReads = false; // leave decision to optimizer
                 static if (hasLittleEndianUnalignedReads)
                 {
-                    uint one = (cast(uint*) data.ptr)[0] ^ crc;
+                    uint one = (cast(uint*) data.ptr)[0];
                     uint two = (cast(uint*) data.ptr)[1];
                 }
                 else
                 {
-                    uint one = (data.ptr[3] << 24 | data.ptr[2] << 16 | data.ptr[1] << 8 | data.ptr[0]) ^ crc;
+                    uint one = (data.ptr[3] << 24 | data.ptr[2] << 16 | data.ptr[1] << 8 | data.ptr[0]);
                     uint two = (data.ptr[7] << 24 | data.ptr[6] << 16 | data.ptr[5] << 8 | data.ptr[4]);
                 }
 
+                static if (N == 32)
+                {
+                    one ^= crc;
+                }
+                else
+                {
+                    one ^= (crc & 0xffffffff);
+                    two ^= (crc >> 32);
+                }
+
                 crc =
-                    crc32Tables[0][two >> 24] ^
-                    crc32Tables[1][(two >> 16) & 0xFF] ^
-                    crc32Tables[2][(two >>  8) & 0xFF] ^
-                    crc32Tables[3][two & 0xFF] ^
-                    crc32Tables[4][one >> 24] ^
-                    crc32Tables[5][(one >> 16) & 0xFF] ^
-                    crc32Tables[6][(one >>  8) & 0xFF] ^
-                    crc32Tables[7][one & 0xFF];
+                    tables[0][two >> 24] ^
+                    tables[1][(two >> 16) & 0xFF] ^
+                    tables[2][(two >>  8) & 0xFF] ^
+                    tables[3][two & 0xFF] ^
+                    tables[4][one >> 24] ^
+                    tables[5][(one >> 16) & 0xFF] ^
+                    tables[6][(one >>  8) & 0xFF] ^
+                    tables[7][one & 0xFF];
 
                 data = data[8 .. $];
             }
             // remaining 1 to 7 bytes
             foreach (d; data)
-                crc = (crc >> 8) ^ crc32Tables[0][(crc & 0xFF) ^ d];
+                crc = (crc >> 8) ^ tables[0][(crc & 0xFF) ^ d];
             _state = crc;
         }
         ///
         @safe unittest
         {
-            CRC32 dig;
+            CRC dig;
             dig.put(cast(ubyte) 0); //single ubyte
             dig.put(cast(ubyte) 0, cast(ubyte) 0); //variadic
             ubyte[10] buf;
@@ -216,21 +251,21 @@ struct CRC32
          */
         void start() @safe pure nothrow @nogc
         {
-            this = CRC32.init;
+            this = CRC.init;
         }
         ///
         @safe unittest
         {
-            CRC32 digest;
+            CRC digest;
             //digest.start(); //Not necessary
             digest.put(0);
         }
 
         /**
-         * Returns the finished CRC32 hash. This also calls $(LREF start) to
+         * Returns the finished CRC hash. This also calls $(LREF start) to
          * reset the internal state.
          */
-        ubyte[4] finish() @safe pure nothrow @nogc
+        R finish() @safe pure nothrow @nogc
         {
             auto tmp = peek();
             start();
@@ -240,16 +275,16 @@ struct CRC32
         @safe unittest
         {
             //Simple example
-            CRC32 hash;
+            CRC hash;
             hash.put(cast(ubyte) 0);
-            ubyte[4] result = hash.finish();
+            R result = hash.finish();
         }
 
         /**
          * Works like $(D finish) but does not reset the internal state, so it's possible
-         * to continue putting data into this CRC32 after a call to peek.
+         * to continue putting data into this CRC after a call to peek.
          */
-        ubyte[4] peek() const @safe pure nothrow @nogc
+        R peek() const @safe pure nothrow @nogc
         {
             import std.bitmanip : nativeToLittleEndian;
             //Complement, LSB first / Little Endian, see http://rosettacode.org/wiki/CRC-32
@@ -261,20 +296,26 @@ struct CRC32
 @safe unittest
 {
     //Simple example, hashing a string using crc32Of helper function
-    ubyte[4] hash = crc32Of("abc");
+    ubyte[4] hash32 = crc32Of("abc");
     //Let's get a hash string
-    assert(crcHexString(hash) == "352441C2");
+    assert(crcHexString(hash32) == "352441C2");
+    // Repeat for CRC64
+    ubyte[8] hash64 = crc64Of("abc");
+    assert(crcHexString(hash64) == "2CD8094A1A277627");
 }
 
 ///
 @safe unittest
 {
-    //Using the basic API
-    CRC32 hash;
     ubyte[1024] data;
+    //Using the basic API
+    CRC32 hash32;
+    CRC64 hash64;
     //Initialize data here...
-    hash.put(data);
-    ubyte[4] result = hash.finish();
+    hash32.put(data);
+    ubyte[4] result32 = hash32.finish();
+    hash64.put(data);
+    ubyte[8] result64 = hash64.finish();
 }
 
 ///
@@ -287,15 +328,21 @@ struct CRC32
     {
       hash.put(cast(ubyte) 0);
     }
-    CRC32 crc;
-    crc.start();
-    doSomething(crc);
-    assert(crcHexString(crc.finish()) == "D202EF8D");
+    CRC32 crc32;
+    crc32.start();
+    doSomething(crc32);
+    assert(crcHexString(crc32.finish()) == "D202EF8D");
+    // repeat for CRC64
+    CRC64 crc64;
+    crc64.start();
+    doSomething(crc64);
+    assert(crcHexString(crc64.finish()) == "1FADA17364673F59");
 }
 
 @safe unittest
 {
     assert(isDigest!CRC32);
+    assert(isDigest!CRC64);
 }
 
 @system unittest
@@ -337,6 +384,44 @@ struct CRC32
     assert(crcHexString(cast(ubyte[4]) x"c3fcd3d7") == "D7D3FCC3");
 }
 
+unittest
+{
+    ubyte[8] digest;
+
+    CRC64 crc;
+    crc.put(cast(ubyte[])"abcdefghijklmnopqrstuvwxyz");
+    assert(crc.peek() == cast(ubyte[])x"2f121b7575789626");
+    crc.start();
+    crc.put(cast(ubyte[])"");
+    assert(crc.finish() == cast(ubyte[])x"0000000000000000");
+    digest = crc64Of("");
+    assert(digest == cast(ubyte[])x"0000000000000000");
+
+    //Test vector from http://rosettacode.org/wiki/CRC-32
+    assert(crcHexString(crc64Of("The quick brown fox jumps over the lazy dog")) == "5B5EB8C2E54AA1C4");
+
+    digest = crc64Of("a");
+    assert(digest == cast(ubyte[])x"052b652e77840233");
+
+    digest = crc64Of("abc");
+    assert(digest == cast(ubyte[])x"2776271a4a09d82c");
+
+    digest = crc64Of("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq");
+    assert(digest == cast(ubyte[])x"4b7cdce3746c449f");
+
+    digest = crc64Of("message digest");
+    assert(digest == cast(ubyte[])x"6f9b8a3156c9bc5d");
+
+    digest = crc64Of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
+    assert(digest == cast(ubyte[])x"2656b716e1bf0503");
+
+    digest = crc64Of("1234567890123456789012345678901234567890"~
+                    "1234567890123456789012345678901234567890");
+    assert(digest == cast(ubyte[])x"bd3eb7765d0a22ae");
+
+    assert(crcHexString(cast(ubyte[8])x"c3fcd3d7efbeadde") == "DEADBEEFD7D3FCC3");
+}
+
 /**
  * This is a convenience alias for $(REF digest, std,digest,digest) using the
  * CRC32 implementation.
@@ -353,6 +438,24 @@ struct CRC32
 ubyte[4] crc32Of(T...)(T data)
 {
     return digest!(CRC32, T)(data);
+}
+
+/**
+ * This is a convenience alias for $(REF digest, std,digest,digest) using the
+ * CRC64 implementation.
+ *
+ * Params:
+ *      data = $(D InputRange) of $(D ElementType) implicitly convertible to
+ *             $(D ubyte), $(D ubyte[]) or $(D ubyte[num]) or one or more arrays
+ *             of any type.
+ *
+ * Returns:
+ *      CRC64 of data
+ */
+//simple alias doesn't work here, hope this gets inlined...
+ubyte[8] crc64Of(T...)(T data)
+{
+    return digest!(CRC64, T)(data);
 }
 
 ///
@@ -380,7 +483,6 @@ public alias crcHexString = toHexString!(Order.decreasing);
 ///ditto
 public alias crcHexString = toHexString!(Order.decreasing, 16);
 
-
 /**
  * OOP API CRC32 implementation.
  * See $(D std.digest.digest) for differences between template and OOP API.
@@ -389,6 +491,15 @@ public alias crcHexString = toHexString!(Order.decreasing, 16);
  * there for more information.
  */
 alias CRC32Digest = WrapperDigest!CRC32;
+
+/**
+ * OOP API CRC64 implementation.
+ * See $(D std.digest.digest) for differences between template and OOP API.
+ *
+ * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!CRC64), see
+ * there for more information.
+ */
+alias CRC64Digest = WrapperDigest!CRC64;
 
 ///
 @safe unittest
