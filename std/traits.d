@@ -5364,16 +5364,24 @@ enum bool isNumeric(T) = __traits(isArithmetic, T);
 /**
 Detect whether $(D T) is a scalar type (a built-in numeric, character or boolean type).
  */
-enum bool isScalarType(T) = isNumeric!T || isSomeChar!T || isBoolean!T; // TODO make __traits(isScalar, T) work here
+enum bool isScalarType(T) = is(T : real);
 
 ///
 @safe unittest
 {
     static assert(!isScalarType!void);
+    static assert( isScalarType!(immutable(bool)));
+    static assert( isScalarType!(immutable(byte)));
+    static assert( isScalarType!(immutable(short)));
     static assert( isScalarType!(immutable(int)));
     static assert( isScalarType!(shared(float)));
     static assert( isScalarType!(shared(const bool)));
+    static assert( isScalarType!(const(char)));
+    static assert( isScalarType!(const(wchar)));
     static assert( isScalarType!(const(dchar)));
+    static assert( isScalarType!(const(float)));
+    static assert( isScalarType!(const(double)));
+    static assert( isScalarType!(const(real)));
 }
 
 /**
