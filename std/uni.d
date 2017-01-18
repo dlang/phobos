@@ -6657,13 +6657,13 @@ public:
         Warning: Invalidates when this Grapheme leaves the scope,
         attempts to use it then would lead to memory corruption.
     +/
-    @system SliceOverIndexed!Grapheme opSlice(size_t a, size_t b) pure nothrow @nogc
+    @system SliceOverIndexed!Grapheme opSlice(size_t a, size_t b) return pure nothrow @nogc
     {
         return sliceOverIndexed(a, b, &this);
     }
 
     /// ditto
-    @system SliceOverIndexed!Grapheme opSlice() pure nothrow @nogc
+    @system SliceOverIndexed!Grapheme opSlice() return pure nothrow @nogc
     {
         return sliceOverIndexed(0, length, &this);
     }
