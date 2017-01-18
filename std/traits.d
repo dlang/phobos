@@ -5429,10 +5429,16 @@ enum bool isUnsigned(T) = __traits(isUnsigned, T) && !(is(Unqual!T == char) ||
 /**
 Detect whether $(D T) is a built-in signed numeric type.
  */
-enum bool isSigned(T) = is(SignedTypeOf!T) && !isAggregateType!T;
+enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T);
 
 @safe unittest
 {
+    enum E { e1 = 0 }
+    static assert(isSigned!E);
+
+    enum Eubyte : ubyte { e1 = 0 }
+    static assert(!isSigned!Eubyte);
+
     foreach (T; TypeTuple!(SignedIntTypeList))
     {
         foreach (Q; TypeQualifierList)
