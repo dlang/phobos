@@ -1754,7 +1754,8 @@ version(unittest) private void testDecodeBack(R)(ref R range,
                                                  size_t expectedNumCodeUnits,
                                                  size_t line = __LINE__)
 {
-    static if (!isSomeString!R && !isBidirectionalRange!R)
+    // This condition is to allow unit testing all `decode` functions together
+    static if (!isBidirectionalRange!R)
         return;
     else
     {
@@ -1821,7 +1822,8 @@ version(unittest) private void testBadDecode(R)(R range, size_t index, size_t li
 
 version(unittest) private void testBadDecodeBack(R)(R range, size_t line = __LINE__)
 {
-    static if (!isSomeString!R && !isBidirectionalRange!R)
+    // This condition is to allow unit testing all `decode` functions together
+    static if (!isBidirectionalRange!R)
         return;
     else
     {
