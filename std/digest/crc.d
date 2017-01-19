@@ -125,9 +125,6 @@ private T[256][8] genTables(T)(T polynomial)
     return res;
 }
 
-private static immutable uint[256][8] crc32Tables = genTables(0xEDB88320);
-private static immutable ulong[256][8] crc64Tables = genTables(0xC96C5795D7870F42);
-
 @system unittest
 {
     auto tables = genTables(0xEDB88320);
@@ -138,31 +135,37 @@ private static immutable ulong[256][8] crc64Tables = genTables(0xC96C5795D7870F4
  * Template API CRC32 implementation.
  * See $(D std.digest.digest) for differences between template and OOP API.
  */
-alias CRC32 = CRC!32;
+alias CRC32 = CRC!(32, 0xEDB88320);
 
 /**
- * Template API CRC64 implementation.
+ * Template API CRC64-ECMA implementation.
  * See $(D std.digest.digest) for differences between template and OOP API.
  */
-alias CRC64 = CRC!64;
+alias CRC64ECMA = CRC!(64, 0xC96C5795D7870F42);
+
+/**
+ * Template API CRC64-ISO implementation.
+ * See $(D std.digest.digest) for differences between template and OOP API.
+ */
+alias CRC64ISO = CRC!(64, 0xD800000000000000);
 
 /**
  * Generic Template API used for CRC32 and CRC64 implementations.
  * See $(D std.digest.digest) for differences between template and OOP API.
  */
-private struct CRC(uint N) if (N == 32 || N == 64)
+private struct CRC(uint N, ulong P) if (N == 32 || N == 64)
 {
     private:
         static if (N == 32)
         {
             alias T = uint;
-            alias tables = crc32Tables;
         }
         else
         {
             alias T = ulong;
-            alias tables = crc64Tables;
         }
+
+        static immutable T[256][8] tables = genTables!T(P);
 
         alias R = ubyte[T.sizeof];
 
@@ -300,8 +303,10 @@ private struct CRC(uint N) if (N == 32 || N == 64)
     //Let's get a hash string
     assert(crcHexString(hash32) == "352441C2");
     // Repeat for CRC64
-    ubyte[8] hash64 = crc64Of("abc");
-    assert(crcHexString(hash64) == "2CD8094A1A277627");
+    ubyte[8] hash64ecma = crc64ECMAOf("abc");
+    assert(crcHexString(hash64ecma) == "2CD8094A1A277627");
+    ubyte[8] hash64iso = crc64ISOOf("abc");
+    assert(crcHexString(hash64iso) == "3776C42000000000");
 }
 
 ///
@@ -310,12 +315,15 @@ private struct CRC(uint N) if (N == 32 || N == 64)
     ubyte[1024] data;
     //Using the basic API
     CRC32 hash32;
-    CRC64 hash64;
+    CRC64ECMA hash64ecma;
+    CRC64ISO hash64iso;
     //Initialize data here...
     hash32.put(data);
     ubyte[4] result32 = hash32.finish();
-    hash64.put(data);
-    ubyte[8] result64 = hash64.finish();
+    hash64ecma.put(data);
+    ubyte[8] result64ecma = hash64ecma.finish();
+    hash64iso.put(data);
+    ubyte[8] result64iso = hash64iso.finish();
 }
 
 ///
@@ -333,16 +341,21 @@ private struct CRC(uint N) if (N == 32 || N == 64)
     doSomething(crc32);
     assert(crcHexString(crc32.finish()) == "D202EF8D");
     // repeat for CRC64
-    CRC64 crc64;
-    crc64.start();
-    doSomething(crc64);
-    assert(crcHexString(crc64.finish()) == "1FADA17364673F59");
+    CRC64ECMA crc64ecma;
+    crc64ecma.start();
+    doSomething(crc64ecma);
+    assert(crcHexString(crc64ecma.finish()) == "1FADA17364673F59");
+    CRC64ISO crc64iso;
+    crc64iso.start();
+    doSomething(crc64iso);
+    assert(crcHexString(crc64iso.finish()) == "6F90000000000000");
 }
 
 @safe unittest
 {
     assert(isDigest!CRC32);
-    assert(isDigest!CRC64);
+    assert(isDigest!CRC64ECMA);
+    assert(isDigest!CRC64ISO);
 }
 
 @system unittest
@@ -388,36 +401,74 @@ unittest
 {
     ubyte[8] digest;
 
-    CRC64 crc;
+    CRC64ECMA crc;
     crc.put(cast(ubyte[])"abcdefghijklmnopqrstuvwxyz");
     assert(crc.peek() == cast(ubyte[])x"2f121b7575789626");
     crc.start();
     crc.put(cast(ubyte[])"");
     assert(crc.finish() == cast(ubyte[])x"0000000000000000");
-    digest = crc64Of("");
+    digest = crc64ECMAOf("");
     assert(digest == cast(ubyte[])x"0000000000000000");
 
     //Test vector from http://rosettacode.org/wiki/CRC-32
-    assert(crcHexString(crc64Of("The quick brown fox jumps over the lazy dog")) == "5B5EB8C2E54AA1C4");
+    assert(crcHexString(crc64ECMAOf("The quick brown fox jumps over the lazy dog")) == "5B5EB8C2E54AA1C4");
 
-    digest = crc64Of("a");
+    digest = crc64ECMAOf("a");
     assert(digest == cast(ubyte[])x"052b652e77840233");
 
-    digest = crc64Of("abc");
+    digest = crc64ECMAOf("abc");
     assert(digest == cast(ubyte[])x"2776271a4a09d82c");
 
-    digest = crc64Of("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq");
+    digest = crc64ECMAOf("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq");
     assert(digest == cast(ubyte[])x"4b7cdce3746c449f");
 
-    digest = crc64Of("message digest");
+    digest = crc64ECMAOf("message digest");
     assert(digest == cast(ubyte[])x"6f9b8a3156c9bc5d");
 
-    digest = crc64Of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
+    digest = crc64ECMAOf("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
     assert(digest == cast(ubyte[])x"2656b716e1bf0503");
 
-    digest = crc64Of("1234567890123456789012345678901234567890"~
-                    "1234567890123456789012345678901234567890");
+    digest = crc64ECMAOf("1234567890123456789012345678901234567890"~
+                         "1234567890123456789012345678901234567890");
     assert(digest == cast(ubyte[])x"bd3eb7765d0a22ae");
+
+    assert(crcHexString(cast(ubyte[8])x"c3fcd3d7efbeadde") == "DEADBEEFD7D3FCC3");
+}
+
+unittest
+{
+    ubyte[8] digest;
+
+    CRC64ISO crc;
+    crc.put(cast(ubyte[])"abcdefghijklmnopqrstuvwxyz");
+    assert(crc.peek() == cast(ubyte[])x"f0494ab780989b42");
+    crc.start();
+    crc.put(cast(ubyte[])"");
+    assert(crc.finish() == cast(ubyte[])x"0000000000000000");
+    digest = crc64ISOOf("");
+    assert(digest == cast(ubyte[])x"0000000000000000");
+
+    //Test vector from http://rosettacode.org/wiki/CRC-32
+    assert(crcHexString(crc64ISOOf("The quick brown fox jumps over the lazy dog")) == "4EF14E19F4C6E28E");
+
+    digest = crc64ISOOf("a");
+    assert(digest == cast(ubyte[])x"0000000000002034");
+
+    digest = crc64ISOOf("abc");
+    assert(digest == cast(ubyte[])x"0000000020c47637");
+
+    digest = crc64ISOOf("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq");
+    assert(digest == cast(ubyte[])x"5173f717971365e5");
+
+    digest = crc64ISOOf("message digest");
+    assert(digest == cast(ubyte[])x"a2c355bbc0b93f86");
+
+    digest = crc64ISOOf("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
+    assert(digest == cast(ubyte[])x"598B258292E40084");
+
+    digest = crc64ISOOf("1234567890123456789012345678901234567890"~
+                        "1234567890123456789012345678901234567890");
+    assert(digest == cast(ubyte[])x"760cd2d3588bf809");
 
     assert(crcHexString(cast(ubyte[8])x"c3fcd3d7efbeadde") == "DEADBEEFD7D3FCC3");
 }
@@ -442,7 +493,7 @@ ubyte[4] crc32Of(T...)(T data)
 
 /**
  * This is a convenience alias for $(REF digest, std,digest,digest) using the
- * CRC64 implementation.
+ * CRC64-ECMA implementation.
  *
  * Params:
  *      data = $(D InputRange) of $(D ElementType) implicitly convertible to
@@ -450,12 +501,30 @@ ubyte[4] crc32Of(T...)(T data)
  *             of any type.
  *
  * Returns:
- *      CRC64 of data
+ *      CRC64-ECMA of data
  */
 //simple alias doesn't work here, hope this gets inlined...
-ubyte[8] crc64Of(T...)(T data)
+ubyte[8] crc64ECMAOf(T...)(T data)
 {
-    return digest!(CRC64, T)(data);
+    return digest!(CRC64ECMA, T)(data);
+}
+
+/**
+ * This is a convenience alias for $(REF digest, std,digest,digest) using the
+ * CRC64-ISO implementation.
+ *
+ * Params:
+ *      data = $(D InputRange) of $(D ElementType) implicitly convertible to
+ *             $(D ubyte), $(D ubyte[]) or $(D ubyte[num]) or one or more arrays
+ *             of any type.
+ *
+ * Returns:
+ *      CRC64-ISO of data
+ */
+//simple alias doesn't work here, hope this gets inlined...
+ubyte[8] crc64ISOOf(T...)(T data)
+{
+    return digest!(CRC64ISO, T)(data);
 }
 
 ///
@@ -493,13 +562,22 @@ public alias crcHexString = toHexString!(Order.decreasing, 16);
 alias CRC32Digest = WrapperDigest!CRC32;
 
 /**
- * OOP API CRC64 implementation.
+ * OOP API CRC64-ECMA implementation.
  * See $(D std.digest.digest) for differences between template and OOP API.
  *
- * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!CRC64), see
- * there for more information.
+ * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!CRC64ECMA),
+ * see there for more information.
  */
-alias CRC64Digest = WrapperDigest!CRC64;
+alias CRC64ECMADigest = WrapperDigest!CRC64ECMA;
+
+/**
+ * OOP API CRC64-ISO implementation.
+ * See $(D std.digest.digest) for differences between template and OOP API.
+ *
+ * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!CRC64ISO),
+ * see there for more information.
+ */
+alias CRC64ISODigest = WrapperDigest!CRC64ISO;
 
 ///
 @safe unittest
