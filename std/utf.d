@@ -1229,10 +1229,7 @@ body
             const Char[] codePoint = codeUnits[0 .. numCodeUnits];
             size_t index = 0;
             immutable retval = decodeImpl!(true, useReplacementDchar)(codePoint, index);
-
-            import std.algorithm.mutation : swap;
-            swap(str, tmp);
-
+            str = tmp;
             return retval;
         }
     }
@@ -1757,7 +1754,7 @@ version(unittest) private void testDecodeBack(R)(ref R range,
                                                  size_t expectedNumCodeUnits,
                                                  size_t line = __LINE__)
 {
-    static if (!isSomeString!R || !isBidirectionalRange!R || (isRandomAccessRange!R && !hasLength!R))
+    static if (!isSomeString!R && !isBidirectionalRange!R)
         return;
     else
     {
@@ -1824,7 +1821,7 @@ version(unittest) private void testBadDecode(R)(R range, size_t index, size_t li
 
 version(unittest) private void testBadDecodeBack(R)(R range, size_t line = __LINE__)
 {
-    static if (!isSomeString!R || !isBidirectionalRange!R || (isRandomAccessRange!R && !hasLength!R))
+    static if (!isSomeString!R && !isBidirectionalRange!R)
         return;
     else
     {
@@ -1951,7 +1948,7 @@ version(unittest) private void testBadDecodeBack(R)(R range, size_t line = __LIN
         testBadDecode(S([ cast(wchar)0xD800, cast(wchar)0x1200 ]), 0);
 
         testBadDecodeBack(S([ cast(wchar)0xD801 ]));
-        testBadDecodeBack(S([ cast(wchar)0xD800, cast(wchar)0x1200 ]));
+        testBadDecodeBack(S([ cast(wchar)0x0010, cast(wchar)0xD800 ]));
 
         {
             auto range = S("ウェブサイト");
