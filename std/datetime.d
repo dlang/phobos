@@ -519,27 +519,7 @@ public:
     }
 
 
-    // @@@DEPRECATED_2017-01@@@
-    /++
-        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
-              in favor of $(REF MonoTime, core,time). Use $(D MonoTime.currTime)
-              instead. currSystemTick will be removed in January 2017.)
-
-        The current system tick. The number of ticks per second varies from
-        system to system. currSystemTick uses a monotonic clock, so it's
-        intended for precision timing by comparing relative time values, not
-        for getting the current system time.
-
-        Warning:
-            On some systems, the monotonic clock may stop counting when
-            the computer goes to sleep or hibernates. So, the monotonic
-            clock could be off if that occurs. This is known to happen
-            on Mac OS X. It has not been tested whether it occurs on
-            either Windows or Linux.
-
-        Throws:
-            $(LREF DateTimeException) if it fails to get the time.
-      +/
+    // Explicitly undocumented. It will be removed in January 2018. @@@DEPRECATED_2018-01@@@
     deprecated("Use core.time.MonoTime.currTime instead")
     static @property TickDuration currSystemTick() @safe nothrow
     {
@@ -551,42 +531,7 @@ public:
         assert(Clock.currSystemTick.length > 0);
     }
 
-    // @@@DEPRECATED_2017-01@@@
-    /++
-        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
-              in favor of $(REF MonoTime, core,time). To duplicate the behavior
-              of currAppTick with $(D MonoTime), store the value of
-              $(D MonoTime.currTime) when the program starts, and then subtract
-              it from the current value of $(D MonoTime.currTime) in order to
-              determine how long the program has been running. currAppTick will
-              be removed in January 2017.)
-
-        --------------------
-        immutable MonoTime startupTime;
-        shared static this()
-        {
-            startupTime = MonoTime.currTime;
-        }
-        Duration timeSinceProgramStarted()
-        {
-            return MonoTime.currTime - startupTime;
-        }
-        --------------------
-
-        The current number of system ticks since the application started.
-        The number of ticks per second varies from system to system.
-        This uses a monotonic clock.
-
-        Warning:
-            On some systems, the monotonic clock may stop counting when
-            the computer goes to sleep or hibernates. So, the monotonic
-            clock could be off if that occurs. This is known to happen
-            on Mac OS X. It has not been tested whether it occurs on
-            either Windows or on Linux.
-
-        Throws:
-            $(LREF DateTimeException) if it fails to get the time.
-      +/
+    // Explicitly undocumented. It will be removed in January 2018. @@@DEPRECATED_2018-01@@@
     deprecated("Use core.time.MonoTime instead. See currAppTick's documentation for details.")
     static @property TickDuration currAppTick() @safe
     {
@@ -6511,15 +6456,7 @@ public:
         //assert(ist - duration == SysTime(DateTime(1999, 7, 6, 12, 30, 21)));
     }
 
-    // @@@DEPRECATED_2017-01@@@
-    /++
-        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
-              in favor of $(REF MonoTime, core,time) and $(REF Duration, core,time).
-              Use $(D Duration) instead. This overload will be removed in
-              January 2017.)
-
-        Defines + and - with $(REF TickDuration, core,time).
-      +/
+    // Explicitly undocumented. It will be removed in January 2018. @@@DEPRECATED_2018-01@@@
     deprecated("Use Duration instead of TickDuration.")
     SysTime opBinary(string op)(TickDuration td) @safe const pure nothrow
         if (op == "+" || op == "-")
@@ -6751,15 +6688,7 @@ public:
         //static assert(!__traits(compiles, ist -= duration));
     }
 
-    // @@@DEPRECATED_2017-01@@@
-    /++
-        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
-              in favor of $(REF MonoTime, core,time) and $(REF Duration, core,time).
-              Use $(D Duration) instead. This overload will be removed in
-              January 2017.)
-
-        Defines += and -= with $(REF TickDuration, core,time).
-      +/
+    // Explicitly undocumented. It will be removed in January 2018. @@@DEPRECATED_2018-01@@@
     deprecated("Use Duration instead of TickDuration.")
     ref SysTime opOpAssign(string op)(TickDuration td) @safe pure nothrow
         if (op == "+" || op == "-")
@@ -11763,15 +11692,7 @@ public:
         assert(idate - duration == Date(1999, 6, 24));
     }
 
-    // @@@DEPRECATED_2017-01@@@
-    /++
-        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
-              in favor of $(REF MonoTime, core,time) and $(REF Duration, core,time).
-              Use $(D Duration) instead. This overload will be removed in
-              January 2017.)
-
-        Defines + and - with $(REF TickDuration, core,time).
-      +/
+    // Explicitly undocumented. It will be removed in January 2018. @@@DEPRECATED_2018-01@@@
     deprecated("Use Duration instead of TickDuration.")
     Date opBinary(string op)(TickDuration td) @safe const pure nothrow
         if (op == "+" || op == "-")
@@ -11877,15 +11798,7 @@ public:
         static assert(!__traits(compiles, idate -= duration));
     }
 
-    // @@@DEPRECATED_2017-01@@@
-    /++
-        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
-              in favor of $(REF MonoTime, core,time) and $(REF Duration, core,time).
-              Use $(D Duration) instead. This overload will be removed in
-              January 2017.)
-
-        Defines += and -= with $(REF TickDuration, core,time).
-      +/
+    // Explicitly undocumented. It will be removed in January 2018. @@@DEPRECATED_2018-01@@@
     deprecated("Use Duration instead of TickDuration.")
     ref Date opOpAssign(string op)(TickDuration td) @safe pure nothrow
         if (op == "+" || op == "-")
@@ -14234,15 +14147,7 @@ public:
         assert(itod - duration == TimeOfDay(1, 30, 33));
     }
 
-    // @@@DEPRECATED_2017-01@@@
-    /++
-        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
-              in favor of $(REF MonoTime, core,time) and $(REF Duration, core,time).
-              Use $(D Duration) instead. This overload will be removed in
-              January 2017.)
-
-        Defines + and - with $(REF TickDuration, core,time).
-      +/
+    // Explicitly undocumented. It will be removed in January 2018. @@@DEPRECATED_2018-01@@@
     deprecated("Use Duration instead of TickDuration.")
     TimeOfDay opBinary(string op)(TickDuration td) @safe const pure nothrow
         if (op == "+" || op == "-")
@@ -14337,15 +14242,7 @@ public:
         static assert(!__traits(compiles, itod -= duration));
     }
 
-    // @@@DEPRECATED_2017-01@@@
-    /++
-        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
-              in favor of $(REF MonoTime, core,time) and $(REF Duration, core,time).
-              Use $(D Duration) instead. This overload will be removed in
-              January 2017.)
-
-        Defines += and -= with $(REF TickDuration, core,time).
-      +/
+    // Explicitly undocumented. It will be removed in January 2018. @@@DEPRECATED_2018-01@@@
     deprecated("Use Duration instead of TickDuration.")
     ref TimeOfDay opOpAssign(string op)(TickDuration td) @safe pure nothrow
         if (op == "+" || op == "-")
@@ -16980,15 +16877,7 @@ public:
         assert(idt - duration == DateTime(1999, 7, 6, 12, 30, 21));
     }
 
-    // @@@DEPRECATED_2017-01@@@
-    /++
-        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
-              in favor of $(REF MonoTime, core,time) and $(REF Duration, core,time).
-              Use $(D Duration) instead. This overload will be removed in
-              January 2017.)
-
-        Defines + and - with $(REF TickDuration, core,time).
-      +/
+    // Explicitly undocumented. It will be removed in January 2018. @@@DEPRECATED_2018-01@@@
     deprecated("Use Duration instead of TickDuration.")
     DateTime opBinary(string op)(in TickDuration td) @safe const pure nothrow
         if (op == "+" || op == "-")
@@ -17130,15 +17019,7 @@ public:
         static assert(!__traits(compiles, idt -= duration));
     }
 
-    // @@@DEPRECATED_2017-01@@@
-    /++
-        $(RED Deprecated. $(REF TickDuration, core,time) is going to be deprecated
-              in favor of $(REF MonoTime, core,time) and $(REF Duration, core,time).
-              Use $(D Duration) instead. This overload will be removed in
-              January 2017.)
-
-        Defines += and -= with $(REF TickDuration, core,time).
-      +/
+    // Explicitly undocumented. It will be removed in January 2018. @@@DEPRECATED_2018-01@@@
     deprecated("Use Duration instead of TickDuration.")
     ref DateTime opOpAssign(string op)(TickDuration td) @safe pure nothrow
         if (op == "+" || op == "-")

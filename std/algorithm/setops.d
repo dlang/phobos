@@ -1269,14 +1269,6 @@ setSymmetricDifference(alias less = "a < b", R1, R2)
     static assert(hasLvalueElements!R2);
 }
 
-// Explicitly undocumented. It will be removed in December 2016. @@@DEPRECATED_2016-12@@@
-deprecated("Please use std.algorithm.sorting.merge to join ranges")
-alias setUnion = merge;
-
-// Explicitly undocumented. It will be removed in December 2016. @@@DEPRECATED_2016-12@@@
-deprecated("Please use std.algorithm.sorting.merge to join ranges")
-alias SetUnion = Merge;
-
 /++
 TODO: once SetUnion got deprecated we can provide the usual definition
 (= merge + filter after uniqs)

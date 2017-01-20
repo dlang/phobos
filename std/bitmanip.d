@@ -1257,20 +1257,6 @@ public:
         return hash;
     }
 
-    // Explicitly undocumented. It will be removed in January 2017. @@@DEPRECATED_2017-01@@@
-    deprecated("Use the constructor instead.")
-    void init(bool[] ba) pure nothrow
-    {
-        this = BitArray(ba);
-    }
-
-    // Explicitly undocumented. It will be removed in January 2017. @@@DEPRECATED_2017-01@@@
-    deprecated("Use the constructor instead.")
-    void init(void[] v, size_t numbits) pure nothrow
-    {
-        this = BitArray(v, numbits);
-    }
-
     /***************************************
      * Set this $(D BitArray) to the contents of $(D ba).
      */
