@@ -180,7 +180,7 @@ private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez,
         import core.stdc.wchar_ : wcslen;
         import std.conv : to;
 
-        auto len = wcslen(namez);
+        auto len = namez ? wcslen(namez) : 0;
         name = to!string(namez[0 .. len]);
     }
     throw new FileException(name, .GetLastError(), file, line);
@@ -197,10 +197,21 @@ private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez,
     {
         import core.stdc.string : strlen;
 
-        auto len = strlen(namez);
+        auto len = namez ? strlen(namez) : 0;
         name = namez[0 .. len].idup;
     }
     throw new FileException(name, .errno, file, line);
+}
+
+unittest
+{
+    // issue 17102
+    try
+    {
+        cenforce(false, null, null,
+                __FILE__, __LINE__);
+    }
+    catch (FileException) {}
 }
 
 /* **********************************
