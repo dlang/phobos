@@ -451,7 +451,7 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 {
     import std.conv : text, to;
 
-    alias FPfmt = void function(Writer, const(void)*, ref FormatSpec!Char) @safe pure nothrow;
+    alias FPfmt = void function(Writer, scope const(void)*, ref FormatSpec!Char) @safe pure nothrow;
 
     auto spec = FormatSpec!Char(fmt);
 
