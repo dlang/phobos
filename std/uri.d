@@ -152,27 +152,6 @@ private string URI_Encode(dstring string, uint unescapedSet)
                 Octet[3] = cast(char)(0x80 | (V & 0x3F));
                 L = 4;
             }
-            /+
-            else if (V <= 0x3FFFFFF)
-            {
-                Octet[0] = cast(char)(0xF8 | (V >> 24));
-                Octet[1] = cast(char)(0x80 | ((V >> 18) & 0x3F));
-                Octet[2] = cast(char)(0x80 | ((V >> 12) & 0x3F));
-                Octet[3] = cast(char)(0x80 | ((V >> 6) & 0x3F));
-                Octet[4] = cast(char)(0x80 | (V & 0x3F));
-                L = 5;
-            }
-            else if (V <= 0x7FFFFFFF)
-            {
-                Octet[0] = cast(char)(0xFC | (V >> 30));
-                Octet[1] = cast(char)(0x80 | ((V >> 24) & 0x3F));
-                Octet[2] = cast(char)(0x80 | ((V >> 18) & 0x3F));
-                Octet[3] = cast(char)(0x80 | ((V >> 12) & 0x3F));
-                Octet[4] = cast(char)(0x80 | ((V >> 6) & 0x3F));
-                Octet[5] = cast(char)(0x80 | (V & 0x3F));
-                L = 6;
-            }
-            +/
             else
             {
                 throw new URIException("Undefined UTF-32 code point");
@@ -444,8 +423,6 @@ ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
         else
             return -1;
     }
-    //    if (icmp(s[0 .. 4], "www.") == 0)
-    //  i = 4;
 
     ptrdiff_t lastdot;
     for (; i < s.length; i++)
@@ -465,7 +442,6 @@ ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
         }
         break;
     }
-    //if (!lastdot || (i - lastdot != 3 && i - lastdot != 4))
     if (!lastdot)
         return -1;
 
