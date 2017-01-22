@@ -52,9 +52,9 @@ private enum
     URI_Hash = 0x10,        // '#'
 }
 
-immutable char[16] hex2ascii = "0123456789ABCDEF";
+private immutable char[16] hex2ascii = "0123456789ABCDEF";
 
-immutable ubyte[128] uri_flags =      // indexed by character
+private immutable ubyte[128] uri_flags =      // indexed by character
     ({
         ubyte[128] uflags;
 
@@ -190,7 +190,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
     return R[0..Rlen].idup;
 }
 
-uint ascii2hex(dchar c)
+private uint ascii2hex(dchar c) @nogc @safe pure nothrow
 {
     return (c <= '9') ? c - '0' :
         (c <= 'F') ? c - 'A' + 10 :
