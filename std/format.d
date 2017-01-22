@@ -63,21 +63,6 @@ import std.meta;
 import std.range.primitives;
 import std.traits;
 
-version(CRuntime_DigitalMars)
-{
-    version = DigitalMarsC;
-}
-
-version (DigitalMarsC)
-{
-    // This is DMC's internal floating point formatting function
-    extern (C)
-    {
-        extern shared char* function(int c, int flags, int precision,
-                in real* pdval,
-                char* buf, size_t* psl, int width) __pfloatfmt;
-    }
-}
 
 /**********************************************************************
  * Signals a mismatch between a format and its corresponding argument.
