@@ -5989,6 +5989,10 @@ Unqual!F pow(F, G)(F x, G n) @nogc @trusted pure nothrow
     if (isFloatingPoint!(F) && isIntegral!(G))
 {
     import std.traits : Unsigned;
+
+    if (!__ctfe && x == cast(F) 2)
+        return ldexp(cast(F) 1, cast(int) n);
+
     real p = 1.0, v = void;
     Unsigned!(Unqual!G) m = n;
     if (n < 0)
@@ -6076,9 +6080,32 @@ Unqual!F pow(F, G)(F x, G n) @nogc @trusted pure nothrow
     assert(feqrel(pow(x, neg3),  1 / (x * x * x)) >= real.mant_dig - 1);
 }
 
-@system unittest
+@safe pure nothrow @nogc unittest
 {
-    assert(equalsDigit(pow(2.0L, 10.0L), 1024, 19));
+    // Tests for special case base = 2.
+
+    // CTFE
+    static assert(pow(2.0, 0) is 0x1.p0);
+    static assert(pow(2.0f, 16) is 0x1.p16f);
+    static assert(pow(2.0L, -2) is 0x1.p-2L);
+    static assert(pow(2.0, int.min) is 0x0.p0);
+    static assert(pow(2.0L, int.max) is real.infinity);
+
+    // runtime
+    import std.meta : AliasSeq;
+    foreach (T; AliasSeq!(double, const float, immutable real))
+    {
+        T base = 2;
+        assert(pow(base, 0) is 0x1.p0, T.stringof);
+        assert(pow(base, 9) is 0x1.p9, T.stringof);
+        assert(pow(base, -3) is 0x1.p-3, T.stringof);
+        assert(pow(base, T.min_exp - 1) is T.min_normal, T.stringof);
+        assert(pow(base, T.min_exp - 3) is T.min_normal / 4, T.stringof);
+        assert(pow(base, T.max_exp) is T.infinity, T.stringof);
+        assert(pow(base, T.max_exp - 1) < T.max, T.stringof);
+        assert(pow(base, int.min) is 0x0.p0, T.stringof);
+        assert(pow(base, int.max) is T.infinity, T.stringof);
+    }
 }
 
 /** Compute the value of an integer x, raised to the power of a positive
