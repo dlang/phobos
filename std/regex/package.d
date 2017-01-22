@@ -400,12 +400,23 @@ private template IsolatedFunc(Char, alias source)
 
 template ctRegexImpl(alias pattern, string flags=[])
 {
-    import std.regex.internal.parser, std.regex.internal.backtracking;
+    import std.regex.internal.parser, std.regex.internal.backtracking, 
+      std.regex.internal.shiftor, std.regex.internal.bitnfa;
     static immutable r = cast(immutable)regexPure([pattern], flags);
     alias Char = BasicElementOf!(typeof(pattern));
+    static immutable Kickstart!Char matcher = (){
+      auto re = cast()r;
+      Kickstart!Char kick = new ShiftOr!Char(re);
+      if(kick.empty)
+        kick = new BitMatcher!(Char, r);
+      if(kick.empty)
+        kick = null;
+      return kick;
+    }();
     enum source = ctGenRegExCode(r);
+    static immutable r2 = immutable Regex!Char(r, matcher);
     alias func = IsolatedFunc!(Char, source);
-    static immutable nr = immutable StaticRegex!Char(r, &func);
+    static immutable nr = immutable StaticRegex!Char(r2, &func);
 }
 
 /++
