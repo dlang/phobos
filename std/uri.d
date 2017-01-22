@@ -25,21 +25,14 @@ module std.uri;
 
 //debug=uri;        // uncomment to turn on debugging writefln's
 debug(uri) private import std.stdio;
-
-/* ====================== URI Functions ================ */
-
-private import std.ascii;
-private import core.stdc.stdlib;
-private import std.utf;
 private import std.traits : isSomeChar;
-import core.exception : OutOfMemoryError;
-import std.exception;
 
 /** This Exception is thrown if something goes wrong when encoding or
 decoding a URI.
 */
 class URIException : Exception
 {
+    import std.exception : basicExceptionCtors;
     mixin basicExceptionCtors;
 }
 
@@ -74,6 +67,9 @@ private immutable ubyte[128] uri_flags =      // indexed by character
 
 private string URI_Encode(dstring string, uint unescapedSet)
 {
+    import core.exception : OutOfMemoryError;
+    import core.stdc.stdlib : alloca;
+
     uint j;
     uint k;
     dchar V;
@@ -199,6 +195,10 @@ private uint ascii2hex(dchar c) @nogc @safe pure nothrow
 
 private dstring URI_Decode(Char)(in Char[] uri, uint reservedSet) if (isSomeChar!Char)
 {
+    import core.exception : OutOfMemoryError;
+    import core.stdc.stdlib : alloca;
+    import std.ascii : isHexDigit;
+
     uint j;
     uint k;
     uint V;
@@ -314,8 +314,9 @@ private dstring URI_Decode(Char)(in Char[] uri, uint reservedSet) if (isSomeChar
 
 string decode(Char)(in Char[] encodedURI) if (isSomeChar!Char)
 {
+    import std.utf : toUTF8;
     auto s = URI_Decode(encodedURI, URI_Reserved | URI_Hash);
-    return std.utf.toUTF8(s);
+    return toUTF8(s);
 }
 
 /*******************************
@@ -325,8 +326,9 @@ string decode(Char)(in Char[] encodedURI) if (isSomeChar!Char)
 
 string decodeComponent(Char)(in Char[] encodedURIComponent) if (isSomeChar!Char)
 {
+    import std.utf : toUTF8;
     auto s = URI_Decode(encodedURIComponent, 0);
-    return std.utf.toUTF8(s);
+    return toUTF8(s);
 }
 
 /*****************************
@@ -336,7 +338,8 @@ string decodeComponent(Char)(in Char[] encodedURIComponent) if (isSomeChar!Char)
 
 string encode(Char)(in Char[] uri) if (isSomeChar!Char)
 {
-    auto s = std.utf.toUTF32(uri);
+    import std.utf : toUTF32;
+    auto s = toUTF32(uri);
     return URI_Encode(s, URI_Reserved | URI_Hash | URI_Alpha | URI_Digit | URI_Mark);
 }
 
@@ -347,7 +350,8 @@ string encode(Char)(in Char[] uri) if (isSomeChar!Char)
 
 string encodeComponent(Char)(in Char[] uriComponent) if (isSomeChar!Char)
 {
-    auto s = std.utf.toUTF32(uriComponent);
+    import std.utf : toUTF32;
+    auto s = toUTF32(uriComponent);
     return URI_Encode(s, URI_Alpha | URI_Digit | URI_Mark);
 }
 
@@ -405,6 +409,7 @@ ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
      *  https://
      *  www.
      */
+    import std.ascii : isAlphaNum;
     import std.uni : icmp;
 
     ptrdiff_t i;
@@ -469,6 +474,8 @@ ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
  */
 ptrdiff_t emailLength(Char)(in Char[] s) if (isSomeChar!Char)
 {
+    import std.ascii : isAlpha, isAlphaNum;
+
     ptrdiff_t i;
 
     if (!isAlpha(s[0]))
