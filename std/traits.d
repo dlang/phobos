@@ -6251,7 +6251,11 @@ template isAbstractFunction(T...)
 /**
  * Detect whether $(D T) is a final function.
  */
-enum bool isFinalFunction(alias f) = __traits(isFinalFunction, f);
+template isFinalFunction(T...)
+    if (T.length == 1)
+{
+        enum bool isFinalFunction = __traits(isFinalFunction, T[0]);
+}
 
 ///
 @safe unittest
@@ -6263,6 +6267,7 @@ enum bool isFinalFunction(alias f) = __traits(isFinalFunction, f);
         void bar() { }
         final void foo();
     }
+    static assert(!isFinalFunction!(int));
     static assert(!isFinalFunction!(S.bar));
     static assert( isFinalFunction!(FC.foo));
     static assert(!isFinalFunction!(C.bar));
