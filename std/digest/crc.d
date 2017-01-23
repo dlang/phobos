@@ -153,7 +153,7 @@ alias CRC64ISO = CRC!(64, 0xD800000000000000);
  * Generic Template API used for CRC32 and CRC64 implementations.
  * See $(D std.digest.digest) for differences between template and OOP API.
  */
-private struct CRC(uint N, ulong P) if (N == 32 || N == 64)
+struct CRC(uint N, ulong P) if (N == 32 || N == 64)
 {
     private:
         static if (N == 32)
