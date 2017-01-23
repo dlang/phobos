@@ -6254,7 +6254,7 @@ template isAbstractFunction(T...)
 template isFinalFunction(T...)
     if (T.length == 1)
 {
-        enum bool isFinalFunction = __traits(isFinalFunction, T[0]);
+    enum bool isFinalFunction = __traits(isFinalFunction, T[0]);
 }
 
 ///
@@ -6293,7 +6293,11 @@ template isNestedFunction(alias f)
 /**
  * Detect whether $(D T) is an abstract class.
  */
-enum bool isAbstractClass(T) = __traits(isAbstractClass, T);
+template isAbstractClass(T...)
+    if (T.length == 1)
+{
+    enum bool isAbstractClass = __traits(isAbstractClass, T[0]);
+}
 
 ///
 @safe unittest
@@ -6304,6 +6308,8 @@ enum bool isAbstractClass(T) = __traits(isAbstractClass, T);
     static assert(!isAbstractClass!S);
     static assert(!isAbstractClass!C);
     static assert( isAbstractClass!AC);
+    AC c;
+    static assert(isAbstractClass!c);
 }
 
 /**
