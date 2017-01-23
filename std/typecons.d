@@ -7414,7 +7414,7 @@ private template replaceTypeInFunctionType(From, To, fun)
         static if (attributes & FunctionAttribute.system)
             result ~= " @system";
         static if (attributes & FunctionAttribute.const_)
-            result ~= " @const";
+            result ~= " const";
         static if (attributes & FunctionAttribute.immutable_)
             result ~= " immutable";
         static if (attributes & FunctionAttribute.inout_)
@@ -7517,6 +7517,14 @@ private template replaceTypeInFunctionType(From, To, fun)
         ubyte, ubyte, T2, T2,
         ubyte, ubyte, T3, T3,
     );
+}
+
+@safe unittest // Bugzilla 17116
+{
+    alias ConstDg = void delegate(float) const;
+    alias B = void delegate(int) const;
+    alias A = ReplaceType!(float, int, ConstDg);
+    static assert(is(B == A));
 }
 
 /**
