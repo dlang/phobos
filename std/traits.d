@@ -6308,14 +6308,20 @@ template isAbstractClass(T...)
     static assert(!isAbstractClass!S);
     static assert(!isAbstractClass!C);
     static assert( isAbstractClass!AC);
-    AC c;
-    static assert(isAbstractClass!c);
+    C c;
+    static assert(!isAbstractClass!c);
+    AC ac;
+    static assert( isAbstractClass!ac);
 }
 
 /**
  * Detect whether $(D T) is a final class.
  */
-enum bool isFinalClass(T) = __traits(isFinalClass, T);
+template isFinalClass(T...)
+    if (T.length == 1)
+{
+    enum bool isFinalClass = __traits(isFinalClass, T[0]);
+}
 
 ///
 @safe unittest
@@ -6328,6 +6334,10 @@ enum bool isFinalClass(T) = __traits(isFinalClass, T);
     static assert(!isFinalClass!AC);
     static assert( isFinalClass!FC1);
     static assert( isFinalClass!FC2);
+    C c;
+    static assert(!isFinalClass!c);
+    FC1 fc1;
+    static assert( isFinalClass!fc1);
 }
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
