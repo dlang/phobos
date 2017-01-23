@@ -6231,13 +6231,18 @@ template isCallable(T...)
 /**
  * Detect whether $(D T) is an abstract function.
  */
-enum bool isAbstractFunction(alias f) = __traits(isAbstractFunction, f);
+template isAbstractFunction(T...)
+    if (T.length == 1)
+{
+    enum bool isAbstractFunction = __traits(isAbstractFunction, T[0]);
+}
 
 @safe unittest
 {
     struct S { void foo() { } }
     class C { void foo() { } }
     class AC { abstract void foo(); }
+    static assert(!isAbstractFunction!(int));
     static assert(!isAbstractFunction!(S.foo));
     static assert(!isAbstractFunction!(C.foo));
     static assert( isAbstractFunction!(AC.foo));
