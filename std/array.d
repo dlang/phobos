@@ -1429,13 +1429,7 @@ if (isSomeString!S)
     assert(a == [[1], [4, 5, 1], [4, 5]]);
 }
 
-// @@@DEPRECATED_2017-01@@@
-/++
-    $(RED Deprecated. Use $(REF _splitter, std,algorithm,iteration) instead.
-          This will be removed in January 2017.)
-
-    Alias for $(REF _splitter, std,algorithm,iteration).
- +/
+// Explicitly undocumented. It will be removed in January 2018. @@@DEPRECATED_2018-01@@@
 deprecated("Please use std.algorithm.iteration.splitter instead.")
 alias splitter = std.algorithm.iteration.splitter;
 
