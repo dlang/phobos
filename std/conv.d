@@ -2341,15 +2341,17 @@ in
 body
 {
     import core.checkedint : mulu, addu;
+    import std.exception : enforce;
+
     if (radix == 10)
         return parse!Target(s);
 
+    enforce!ConvException(!s.empty, "s must not be empty in integral parse");
+
     immutable uint beyond = (radix < 10 ? '0' : 'a'-10) + radix;
-
     Target v = 0;
-    bool atStart = true;
 
-    for (; !s.empty; s.popFront())
+    do
     {
         uint c = s.front;
         if (c < '0')
@@ -2372,20 +2374,12 @@ body
 
         bool overflow = false;
         auto nextv = v.mulu(radix, overflow).addu(c - '0', overflow);
-        if (overflow || nextv > Target.max)
-            goto Loverflow;
+        enforce!ConvOverflowException(!overflow && nextv < Target.max, "Overflow in integral conversion");
         v = cast(Target) nextv;
+        s.popFront();
+    } while (!s.empty);
 
-        atStart = false;
-    }
-    if (atStart)
-        goto Lerr;
     return v;
-
-Loverflow:
-    throw new ConvOverflowException("Overflow in integral conversion");
-Lerr:
-    throw convError!(Source, Target)(s, radix);
 }
 
 @safe pure unittest
