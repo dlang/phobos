@@ -902,7 +902,7 @@ public:
         Params:
             rhs = The $(LREF SysTime) to assign to this one.
       +/
-    ref SysTime opAssign(SysTime rhs) return @safe pure nothrow
+    ref SysTime opAssign(SysTime rhs) scope return @safe pure nothrow
     {
         _stdTime = rhs._stdTime;
         _timezone = rhs._timezone;
@@ -32589,7 +32589,7 @@ version(StdDdoc)
             $(LREF DateTimeException) if the given $(D FILETIME) cannot be
             represented as the return value.
       +/
-    long FILETIMEToStdTime(const FILETIME* ft) @safe;
+    long FILETIMEToStdTime(scope const FILETIME* ft) @safe;
 
 
     /++
@@ -32606,7 +32606,7 @@ version(StdDdoc)
             $(LREF DateTimeException) if the given $(D FILETIME) will not fit in a
             $(LREF SysTime).
       +/
-    SysTime FILETIMEToSysTime(const FILETIME* ft, immutable TimeZone tz = LocalTime()) @safe;
+    SysTime FILETIMEToSysTime(scope const FILETIME* ft, immutable TimeZone tz = LocalTime()) @safe;
 
 
     /++
@@ -32743,7 +32743,7 @@ else version(Windows)
 
     private enum hnsecsFrom1601 = 504_911_232_000_000_000L;
 
-    long FILETIMEToStdTime(const FILETIME* ft) @safe
+    long FILETIMEToStdTime(scope const FILETIME* ft) @safe
     {
         ULARGE_INTEGER ul;
         ul.HighPart = ft.dwHighDateTime;
@@ -32756,7 +32756,7 @@ else version(Windows)
         return cast(long)tempHNSecs + hnsecsFrom1601;
     }
 
-    SysTime FILETIMEToSysTime(const FILETIME* ft, immutable TimeZone tz = LocalTime()) @safe
+    SysTime FILETIMEToSysTime(scope const FILETIME* ft, immutable TimeZone tz = LocalTime()) @safe
     {
         auto sysTime = SysTime(FILETIMEToStdTime(ft), UTC());
         sysTime.timezone = tz;
