@@ -2854,7 +2854,7 @@ if (isDynamicArray!A)
         else static if (canPutConstRange!U)
         {
             alias p = put!(Unqual!U);
-            p(items);
+            p(item);
         }
         else static if (canPutRange!U)
         {
@@ -2863,45 +2863,45 @@ if (isDynamicArray!A)
             // another because we can't trust the length portion.
             static if (!(isSomeChar!T && isSomeChar!(ElementType!Range) &&
                          !is(immutable Range == immutable T[])) &&
-                        is(typeof(items.length) == size_t))
+                        is(typeof(item.length) == size_t))
             {
                 // optimization -- if this type is something other than a string,
                 // and we are adding exactly one element, call the version for one
                 // element.
                 static if (!isSomeChar!T)
                 {
-                    if (items.length == 1)
+                    if (item.length == 1)
                     {
-                        put(items.front);
+                        put(item.front);
                         return;
                     }
                 }
 
-                // make sure we have enough space, then add the items
+                // make sure we have enough space, then add the item
                 @trusted auto bigDataFun(size_t extra)
                 {
                     ensureAddable(extra);
                     return _data.arr.ptr[0 .. _data.arr.length + extra];
                 }
-                auto bigData = bigDataFun(items.length);
+                auto bigData = bigDataFun(item.length);
 
                 immutable len = _data.arr.length;
                 immutable newlen = bigData.length;
 
                 alias UT = Unqual!T;
 
-                static if (is(typeof(_data.arr[] = items[])) &&
+                static if (is(typeof(_data.arr[] = item[])) &&
                     !hasElaborateAssign!UT && isAssignable!(UT, ElementEncodingType!Range))
                 {
-                    bigData[len .. newlen] = items[];
+                    bigData[len .. newlen] = item[];
                 }
                 else
                 {
                     import std.conv : emplaceRef;
                     foreach (ref it ; bigData[len .. newlen])
                     {
-                        emplaceRef!T(it, items.front);
-                        items.popFront();
+                        emplaceRef!T(it, item.front);
+                        item.popFront();
                     }
                 }
 
@@ -2912,9 +2912,9 @@ if (isDynamicArray!A)
             {
                 //pragma(msg, Range.stringof);
                 // Generic input range
-                for (; !items.empty; items.popFront())
+                for (; !item.empty; item.popFront())
                 {
-                    put(items.front);
+                    put(item.front);
                 }
             }
         }
