@@ -2819,36 +2819,114 @@ if (isDynamicArray!A)
 
     /**
      * Appends `item` to the managed array.
+     * Params:
+     *  item = an element that can be placed in the array,
+     *         or a range of such elements.
      */
-    void put(U)(U item) if (canPutItem!U)
+    void put(U)(U item)
     {
-        static if (isSomeChar!T && isSomeChar!U && T.sizeof < U.sizeof)
+        static if (canPutItem!U)
         {
-            /* may throwable operation:
-             * - std.utf.encode
-             */
-            // must do some transcoding around here
-            import std.utf : encode;
-            Unqual!T[T.sizeof == 1 ? 4 : 2] encoded;
-            auto len = encode(encoded, item);
-            put(encoded[0 .. len]);
+            static if (isSomeChar!T && isSomeChar!U && T.sizeof < U.sizeof)
+            {
+                /* may throwable operation:
+                 * - std.utf.encode
+                 */
+                // must do some transcoding around here
+                import std.utf : encode;
+                Unqual!T[T.sizeof == 1 ? 4 : 2] encoded;
+                auto len = encode(encoded, item);
+                put(encoded[0 .. len]);
+            }
+            else
+            {
+                import std.conv : emplaceRef;
+
+                ensureAddable(1);
+                immutable len = _data.arr.length;
+
+                auto bigData = (() @trusted => _data.arr.ptr[0 .. len + 1])();
+                emplaceRef!(Unqual!T)(bigData[len], cast(Unqual!T)item);
+                //We do this at the end, in case of exceptions
+                _data.arr = bigData;
+            }
+        }
+        else static if (canPutConstRange!U)
+        {
+            alias p = put!(Unqual!U);
+            p(items);
+        }
+        else static if (canPutRange!U)
+        {
+            alias Range = U;
+            // note, we disable this branch for appending one type of char to
+            // another because we can't trust the length portion.
+            static if (!(isSomeChar!T && isSomeChar!(ElementType!Range) &&
+                         !is(immutable Range == immutable T[])) &&
+                        is(typeof(items.length) == size_t))
+            {
+                // optimization -- if this type is something other than a string,
+                // and we are adding exactly one element, call the version for one
+                // element.
+                static if (!isSomeChar!T)
+                {
+                    if (items.length == 1)
+                    {
+                        put(items.front);
+                        return;
+                    }
+                }
+
+                // make sure we have enough space, then add the items
+                @trusted auto bigDataFun(size_t extra)
+                {
+                    ensureAddable(extra);
+                    return _data.arr.ptr[0 .. _data.arr.length + extra];
+                }
+                auto bigData = bigDataFun(items.length);
+
+                immutable len = _data.arr.length;
+                immutable newlen = bigData.length;
+
+                alias UT = Unqual!T;
+
+                static if (is(typeof(_data.arr[] = items[])) &&
+                    !hasElaborateAssign!UT && isAssignable!(UT, ElementEncodingType!Range))
+                {
+                    bigData[len .. newlen] = items[];
+                }
+                else
+                {
+                    import std.conv : emplaceRef;
+                    foreach (ref it ; bigData[len .. newlen])
+                    {
+                        emplaceRef!T(it, items.front);
+                        items.popFront();
+                    }
+                }
+
+                //We do this at the end, in case of exceptions
+                _data.arr = bigData;
+            }
+            else
+            {
+                //pragma(msg, Range.stringof);
+                // Generic input range
+                for (; !items.empty; items.popFront())
+                {
+                    put(items.front);
+                }
+            }
         }
         else
         {
-            import std.conv : emplaceRef;
-
-            ensureAddable(1);
-            immutable len = _data.arr.length;
-
-            auto bigData = (() @trusted => _data.arr.ptr[0 .. len + 1])();
-            emplaceRef!(Unqual!T)(bigData[len], cast(Unqual!T)item);
-            //We do this at the end, in case of exceptions
-            _data.arr = bigData;
+            pragma(msg, "cannot call 'put' with argument of type '", U, "'");
+            static assert(0);
         }
     }
 
     // Const fixing hack.
-    void put(Range)(Range items) if (canPutConstRange!Range)
+    void putx(Range)(Range items) if (canPutConstRange!Range)
     {
         alias p = put!(Unqual!Range);
         p(items);
@@ -2857,7 +2935,7 @@ if (isDynamicArray!A)
     /**
      * Appends an entire range to the managed array.
      */
-    void put(Range)(Range items) if (canPutRange!Range)
+    void putx(Range)(Range items) if (canPutRange!Range)
     {
         // note, we disable this branch for appending one type of char to
         // another because we can't trust the length portion.
