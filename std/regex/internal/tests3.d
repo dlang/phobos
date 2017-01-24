@@ -317,5 +317,6 @@ unittest
 
     enum issueRE = ctRegex!(`((close|fix|address)e?(s|d)? )` ~
         `?(ticket|bug|tracker item|issue)s?:? *([\d ,\+&#and]+)`, "i");
-    message.matchAll(issueRE).map!matchToRefs.joiner.array;
+    auto r = message.matchAll(issueRE);
+    r.map!matchToRefs.joiner.array;
 }
