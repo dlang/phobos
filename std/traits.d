@@ -5290,6 +5290,13 @@ enum bool isBoolean(T) = is(BooleanTypeOf!T) && !isAggregateType!T;
     enum EB : bool { a = true }
     static assert( isBoolean!EB);
     static assert(!isBoolean!(SubTypeOf!bool));
+
+    static struct S(T)
+    {
+        T t;
+        alias t this;
+    }
+    static assert(!isIntegral!(S!bool));
 }
 
 /**
@@ -5315,6 +5322,13 @@ enum bool isIntegral(T) = is(IntegralTypeOf!T) && !isAggregateType!T;
     enum EI : int { a = -1, b = 0, c = 1 }  // base type is signed (bug 7909)
     static assert(isIntegral!EU &&  isUnsigned!EU && !isSigned!EU);
     static assert(isIntegral!EI && !isUnsigned!EI &&  isSigned!EI);
+
+    static struct S(T)
+    {
+        T t;
+        alias t this;
+    }
+    static assert(!isIntegral!(S!int));
 }
 
 /**
@@ -5341,6 +5355,13 @@ enum bool isFloatingPoint(T) = __traits(isFloating, T);
             static assert(!isFloatingPoint!(Q!T));
         }
     }
+
+    static struct S(T)
+    {
+        T t;
+        alias t this;
+    }
+    static assert(!isFloatingPoint!(S!float));
 }
 
 /**
@@ -5364,6 +5385,13 @@ enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == char) ||
             static assert(!isNumeric!(SubTypeOf!(Q!T)));
         }
     }
+
+    static struct S(T)
+    {
+        T t;
+        alias t this;
+    }
+    static assert(!isNumeric!(S!int));
 }
 
 /**
@@ -5388,7 +5416,7 @@ enum bool isScalarType(T) = is(T : real) && !isAggregateType!T;
     static assert( isScalarType!(const(double)));
     static assert( isScalarType!(const(real)));
 
-    struct S(T)
+    static struct S(T)
     {
         T t;
         alias t this;
