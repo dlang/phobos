@@ -1,14 +1,14 @@
 /* zlib.d: modified from zlib.h by Walter Bright */
 /* updated from 1.2.1 to 1.2.3 by Thomas Kuehne */
 /* updated from 1.2.3 to 1.2.8 by Dmitry Atamanov */
-/* updated from 1.2.8 to 1.2.10 by Iain Buclaw */
+/* updated from 1.2.8 to 1.2.11 by Iain Buclaw */
 
 module etc.c.zlib;
 
 import core.stdc.config;
 
 /* zlib.h -- interface of the 'zlib' general purpose compression library
-  version 1.2.10, January 2nd, 2017
+  version 1.2.11, January 15th, 2017
 
   Copyright (C) 1995-2017 Jean-loup Gailly and Mark Adler
 
@@ -40,8 +40,8 @@ import core.stdc.config;
 nothrow:
 extern (C):
 
-const char[] ZLIB_VERSION = "1.2.10";
-const ZLIB_VERNUM = 0x12a0;
+const char[] ZLIB_VERSION = "1.2.11";
+const ZLIB_VERNUM = 0x12b0;
 
 /*
     The 'zlib' compression library provides in-memory compression and
@@ -725,10 +725,11 @@ int deflateParams(z_streamp strm, int level, int strategy);
    used to switch between compression and straight copy of the input data, or
    to switch to a different kind of input data requiring a different strategy.
    If the compression approach (which is a function of the level) or the
-   strategy is changed, then the input available so far is compressed with the
-   old level and strategy using deflate(strm, Z_BLOCK).  There are three
-   approaches for the compression levels 0, 1..3, and 4..9 respectively.  The
-   new level and strategy will take effect at the next call of deflate().
+   strategy is changed, and if any input has been consumed in a previous
+   deflate() call, then the input available so far is compressed with the old
+   level and strategy using deflate(strm, Z_BLOCK).  There are three approaches
+   for the compression levels 0, 1..3, and 4..9 respectively.  The new level
+   and strategy will take effect at the next call of deflate().
 
      If a deflate(strm, Z_BLOCK) is performed by deflateParams(), and it does
    not have enough output space to complete, then the parameter change will not
