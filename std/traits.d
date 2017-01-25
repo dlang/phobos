@@ -5344,7 +5344,7 @@ enum bool isFloatingPoint(T) = __traits(isFloating, T);
 }
 
 /**
-Detect whether $(D T) is a built-in numeric type (integral or floating
+   Detect whether $(D T) is a built-in numeric type (integral or floating
 point).
  */
 enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == char) ||
@@ -5369,7 +5369,7 @@ enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == char) ||
 /**
 Detect whether $(D T) is a scalar type (a built-in numeric, character or boolean type).
  */
-enum bool isScalarType(T) = is(T : real);
+enum bool isScalarType(T) = is(T : real) && !isAggregateType!T;
 
 ///
 @safe unittest
@@ -5386,6 +5386,13 @@ enum bool isScalarType(T) = is(T : real);
     static assert( isScalarType!(const(dchar)));
     static assert( isScalarType!(const(double)));
     static assert( isScalarType!(const(real)));
+
+    struct S(T)
+    {
+        T t;
+        alias t this;
+    }
+    static assert(!isScalarType!(S!int));
 }
 
 /**
