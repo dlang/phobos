@@ -5344,8 +5344,8 @@ enum bool isFloatingPoint(T) = __traits(isFloating, T);
 }
 
 /**
-   Detect whether $(D T) is a built-in numeric type (integral or floating
-point).
+ * Detect whether $(D T) is a built-in numeric type (integral or floating
+ * point).
  */
 enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == char) ||
                                                         is(Unqual!T == wchar) ||
@@ -5367,7 +5367,8 @@ enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == char) ||
 }
 
 /**
-Detect whether $(D T) is a scalar type (a built-in numeric, character or boolean type).
+ * Detect whether $(D T) is a scalar type (a built-in numeric, character or
+ * boolean type).
  */
 enum bool isScalarType(T) = is(T : real) && !isAggregateType!T;
 
@@ -5396,7 +5397,7 @@ enum bool isScalarType(T) = is(T : real) && !isAggregateType!T;
 }
 
 /**
-Detect whether $(D T) is a basic type (scalar type or void).
+ * Detect whether $(D T) is a basic type (scalar type or void).
  */
 enum bool isBasicType(T) = isScalarType!T || is(Unqual!T == void);
 
@@ -5419,7 +5420,7 @@ enum bool isBasicType(T) = isScalarType!T || is(Unqual!T == void);
 }
 
 /**
-Detect whether $(D T) is a built-in unsigned numeric type.
+ * Detect whether $(D T) is a built-in unsigned numeric type.
  */
 enum bool isUnsigned(T) = __traits(isUnsigned, T) && !(is(Unqual!T == char) ||
                                                        is(Unqual!T == wchar) ||
@@ -5438,7 +5439,7 @@ enum bool isUnsigned(T) = __traits(isUnsigned, T) && !(is(Unqual!T == char) ||
 }
 
 /**
-Detect whether $(D T) is a built-in signed numeric type.
+ * Detect whether $(D T) is a built-in signed numeric type.
  */
 enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T);
 
@@ -5461,9 +5462,10 @@ enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T);
 }
 
 /**
-Detect whether $(D T) is one of the built-in character types.
-
-The built-in char types are any of $(D char), $(D wchar) or $(D dchar), with or without qualifiers.
+ * Detect whether $(D T) is one of the built-in character types.
+ *
+ * The built-in char types are any of $(D char), $(D wchar) or $(D dchar), with
+ * or without qualifiers.
  */
 enum bool isSomeChar(T) = is(CharTypeOf!T) && !isAggregateType!T;
 
