@@ -173,7 +173,7 @@ PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
   conv csv datetime demangle encoding exception file format \
   functional getopt json math mathspecial meta mmfile numeric \
   outbuffer parallelism path process random signals socket stdint \
-  stdio stdiobase string system traits typecons typetuple uni \
+  stdio stdiobase string system traits typecons uni \
   uri utf uuid variant xml zip zlib
 PACKAGE_std_experimental = typecons
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
@@ -221,7 +221,8 @@ EXTRA_MODULES_INTERNAL := $(addprefix			\
 	unicode_comp unicode_decomp unicode_grapheme unicode_norm) \
 	$(addprefix std/internal/test/, dummyrange) \
 	$(addprefix std/experimental/ndslice/, internal) \
-	$(addprefix std/algorithm/, internal)
+	$(addprefix std/algorithm/, internal) \
+	std/typetuple
 
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(EXTRA_MODULES_INTERNAL)
 

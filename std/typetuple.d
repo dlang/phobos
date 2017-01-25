@@ -7,32 +7,12 @@
  * Authors:
  * Source:    $(PHOBOSSRC std/_typetuple.d)
  */
+// @@@DEPRECATED_2017-12@@@
+deprecated("It will be removed from Phobos in December 2017. Use std.meta")
 module std.typetuple;
 
 public import std.meta;
 
-/**
- * Alternate name for $(REF AliasSeq, std,meta) for legacy compatibility.
- */
+// @@@DEPRECATED_2017-12@@@
+deprecated("TypeTuple has been renamed to std.meta.AliasSeq. It will be removed from Phobos in December 2017")
 alias TypeTuple = AliasSeq;
-
-///
-@safe unittest
-{
-    import std.typetuple;
-    alias TL = TypeTuple!(int, double);
-
-    int foo(TL td)  // same as int foo(int, double);
-    {
-        return td[0] + cast(int)td[1];
-    }
-}
-
-///
-@safe unittest
-{
-    alias TL = TypeTuple!(int, double);
-
-    alias Types = TypeTuple!(TL, char);
-    static assert(is(Types == TypeTuple!(int, double, char)));
-}
