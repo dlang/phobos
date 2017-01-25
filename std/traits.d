@@ -5290,7 +5290,10 @@ enum bool isBoolean(T) = is(BooleanTypeOf!T) && !isAggregateType!T;
     enum EB : bool { a = true }
     static assert( isBoolean!EB);
     static assert(!isBoolean!(SubTypeOf!bool));
+}
 
+@safe unittest
+{
     static struct S(T)
     {
         T t;
@@ -5415,7 +5418,10 @@ enum bool isScalarType(T) = is(T : real) && !isAggregateType!T;
     static assert( isScalarType!(const(dchar)));
     static assert( isScalarType!(const(double)));
     static assert( isScalarType!(const(real)));
+}
 
+@safe unittest
+{
     static struct S(T)
     {
         T t;
@@ -5464,6 +5470,13 @@ enum bool isUnsigned(T) = __traits(isUnsigned, T) && !(is(Unqual!T == char) ||
             static assert(!isUnsigned!(SubTypeOf!(Q!T)));
         }
     }
+
+    static struct S(T)
+    {
+        T t;
+        alias t this;
+    }
+    static assert(!isUnsigned!(S!uint));
 }
 
 /**
@@ -5487,6 +5500,13 @@ enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T);
             static assert(!isSigned!(SubTypeOf!(Q!T)));
         }
     }
+
+    static struct S(T)
+    {
+        T t;
+        alias t this;
+    }
+    static assert(!isSigned!(S!uint));
 }
 
 /**
@@ -5529,6 +5549,14 @@ enum bool isSomeChar(T) = is(CharTypeOf!T) && !isAggregateType!T;
             static assert(!isSomeChar!( SubTypeOf!(Q!T) ));
         }
     }
+
+    // alias-this types are not allowed
+    static struct S(T)
+    {
+        T t;
+        alias t this;
+    }
+    static assert(!isSomeChar!(S!char));
 }
 
 /**
