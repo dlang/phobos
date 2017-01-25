@@ -5292,6 +5292,16 @@ enum bool isBoolean(T) = is(BooleanTypeOf!T) && !isAggregateType!T;
     static assert(!isBoolean!(SubTypeOf!bool));
 }
 
+@safe unittest
+{
+    static struct S(T)
+    {
+        T t;
+        alias t this;
+    }
+    static assert(!isIntegral!(S!bool));
+}
+
 /**
  * Detect whether $(D T) is a built-in integral type. Types $(D bool),
  * $(D char), $(D wchar), and $(D dchar) are not considered integral.
@@ -5315,12 +5325,19 @@ enum bool isIntegral(T) = is(IntegralTypeOf!T) && !isAggregateType!T;
     enum EI : int { a = -1, b = 0, c = 1 }  // base type is signed (bug 7909)
     static assert(isIntegral!EU &&  isUnsigned!EU && !isSigned!EU);
     static assert(isIntegral!EI && !isUnsigned!EI &&  isSigned!EI);
+
+    static struct S(T)
+    {
+        T t;
+        alias t this;
+    }
+    static assert(!isIntegral!(S!int));
 }
 
 /**
  * Detect whether $(D T) is a built-in floating point type.
  */
-enum bool isFloatingPoint(T) = is(FloatingPointTypeOf!T) && !isAggregateType!T;
+enum bool isFloatingPoint(T) = __traits(isFloating, T);
 
 @safe unittest
 {
@@ -5341,16 +5358,28 @@ enum bool isFloatingPoint(T) = is(FloatingPointTypeOf!T) && !isAggregateType!T;
             static assert(!isFloatingPoint!(Q!T));
         }
     }
+
+    static struct S(T)
+    {
+        T t;
+        alias t this;
+    }
+    static assert(!isFloatingPoint!(S!float));
 }
 
 /**
-Detect whether $(D T) is a built-in numeric type (integral or floating
-point).
+ * Detect whether $(D T) is a built-in numeric type (integral or floating
+ * point).
  */
-enum bool isNumeric(T) = is(NumericTypeOf!T) && !isAggregateType!T;
+enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == char) ||
+                                                        is(Unqual!T == wchar) ||
+                                                        is(Unqual!T == dchar));
 
 @safe unittest
 {
+    static assert(!isNumeric!(char));
+    static assert(!isNumeric!(wchar));
+    static assert(!isNumeric!(dchar));
     foreach (T; TypeTuple!(NumericTypeList))
     {
         foreach (Q; TypeQualifierList)
@@ -5359,25 +5388,50 @@ enum bool isNumeric(T) = is(NumericTypeOf!T) && !isAggregateType!T;
             static assert(!isNumeric!(SubTypeOf!(Q!T)));
         }
     }
+
+    static struct S(T)
+    {
+        T t;
+        alias t this;
+    }
+    static assert(!isNumeric!(S!int));
 }
 
 /**
-Detect whether $(D T) is a scalar type (a built-in numeric, character or boolean type).
+ * Detect whether $(D T) is a scalar type (a built-in numeric, character or
+ * boolean type).
  */
-enum bool isScalarType(T) = isNumeric!T || isSomeChar!T || isBoolean!T;
+enum bool isScalarType(T) = is(T : real) && !isAggregateType!T;
 
 ///
 @safe unittest
 {
     static assert(!isScalarType!void);
+    static assert( isScalarType!(immutable(byte)));
+    static assert( isScalarType!(immutable(ushort)));
     static assert( isScalarType!(immutable(int)));
+    static assert( isScalarType!(ulong));
     static assert( isScalarType!(shared(float)));
     static assert( isScalarType!(shared(const bool)));
+    static assert( isScalarType!(const(char)));
+    static assert( isScalarType!(wchar));
     static assert( isScalarType!(const(dchar)));
+    static assert( isScalarType!(const(double)));
+    static assert( isScalarType!(const(real)));
+}
+
+@safe unittest
+{
+    static struct S(T)
+    {
+        T t;
+        alias t this;
+    }
+    static assert(!isScalarType!(S!int));
 }
 
 /**
-Detect whether $(D T) is a basic type (scalar type or void).
+ * Detect whether $(D T) is a basic type (scalar type or void).
  */
 enum bool isBasicType(T) = isScalarType!T || is(Unqual!T == void);
 
@@ -5400,9 +5454,11 @@ enum bool isBasicType(T) = isScalarType!T || is(Unqual!T == void);
 }
 
 /**
-Detect whether $(D T) is a built-in unsigned numeric type.
+ * Detect whether $(D T) is a built-in unsigned numeric type.
  */
-enum bool isUnsigned(T) = is(UnsignedTypeOf!T) && !isAggregateType!T;
+enum bool isUnsigned(T) = __traits(isUnsigned, T) && !(is(Unqual!T == char) ||
+                                                       is(Unqual!T == wchar) ||
+                                                       is(Unqual!T == dchar));
 
 @safe unittest
 {
@@ -5414,15 +5470,28 @@ enum bool isUnsigned(T) = is(UnsignedTypeOf!T) && !isAggregateType!T;
             static assert(!isUnsigned!(SubTypeOf!(Q!T)));
         }
     }
+
+    static struct S(T)
+    {
+        T t;
+        alias t this;
+    }
+    static assert(!isUnsigned!(S!uint));
 }
 
 /**
-Detect whether $(D T) is a built-in signed numeric type.
+ * Detect whether $(D T) is a built-in signed numeric type.
  */
-enum bool isSigned(T) = is(SignedTypeOf!T) && !isAggregateType!T;
+enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T);
 
 @safe unittest
 {
+    enum E { e1 = 0 }
+    static assert(isSigned!E);
+
+    enum Eubyte : ubyte { e1 = 0 }
+    static assert(!isSigned!Eubyte);
+
     foreach (T; TypeTuple!(SignedIntTypeList))
     {
         foreach (Q; TypeQualifierList)
@@ -5431,12 +5500,20 @@ enum bool isSigned(T) = is(SignedTypeOf!T) && !isAggregateType!T;
             static assert(!isSigned!(SubTypeOf!(Q!T)));
         }
     }
+
+    static struct S(T)
+    {
+        T t;
+        alias t this;
+    }
+    static assert(!isSigned!(S!uint));
 }
 
 /**
-Detect whether $(D T) is one of the built-in character types.
-
-The built-in char types are any of $(D char), $(D wchar) or $(D dchar), with or without qualifiers.
+ * Detect whether $(D T) is one of the built-in character types.
+ *
+ * The built-in char types are any of $(D char), $(D wchar) or $(D dchar), with
+ * or without qualifiers.
  */
 enum bool isSomeChar(T) = is(CharTypeOf!T) && !isAggregateType!T;
 
@@ -5472,6 +5549,14 @@ enum bool isSomeChar(T) = is(CharTypeOf!T) && !isAggregateType!T;
             static assert(!isSomeChar!( SubTypeOf!(Q!T) ));
         }
     }
+
+    // alias-this types are not allowed
+    static struct S(T)
+    {
+        T t;
+        alias t this;
+    }
+    static assert(!isSomeChar!(S!char));
 }
 
 /**
@@ -5636,7 +5721,7 @@ enum bool isAutodecodableString(T) = (is(T : const char[]) || is(T : const wchar
 /**
  * Detect whether type $(D T) is a static array.
  */
-enum bool isStaticArray(T) = is(StaticArrayTypeOf!T) && !isAggregateType!T;
+enum bool isStaticArray(T) = __traits(isStaticArray, T);
 
 ///
 @safe unittest
@@ -5731,7 +5816,7 @@ enum bool isArray(T) = isStaticArray!T || isDynamicArray!T;
 /**
  * Detect whether $(D T) is an associative array type
  */
-enum bool isAssociativeArray(T) = is(AssocArrayTypeOf!T) && !isAggregateType!T;
+enum bool isAssociativeArray(T) = __traits(isAssociativeArray, T);
 
 @safe unittest
 {
@@ -6214,7 +6299,7 @@ template isCallable(T...)
 
 
 /**
- * Detect whether $(D T) is a an abstract function.
+ * Detect whether $(D T) is an abstract function.
  */
 template isAbstractFunction(T...)
     if (T.length == 1)
@@ -6227,13 +6312,14 @@ template isAbstractFunction(T...)
     struct S { void foo() { } }
     class C { void foo() { } }
     class AC { abstract void foo(); }
+    static assert(!isAbstractFunction!(int));
     static assert(!isAbstractFunction!(S.foo));
     static assert(!isAbstractFunction!(C.foo));
     static assert( isAbstractFunction!(AC.foo));
 }
 
 /**
- * Detect whether $(D T) is a a final function.
+ * Detect whether $(D T) is a final function.
  */
 template isFinalFunction(T...)
     if (T.length == 1)
@@ -6251,6 +6337,7 @@ template isFinalFunction(T...)
         void bar() { }
         final void foo();
     }
+    static assert(!isFinalFunction!(int));
     static assert(!isFinalFunction!(S.bar));
     static assert( isFinalFunction!(FC.foo));
     static assert(!isFinalFunction!(C.bar));
@@ -6274,7 +6361,7 @@ template isNestedFunction(alias f)
 }
 
 /**
- * Detect whether $(D T) is a an abstract class.
+ * Detect whether $(D T) is an abstract class.
  */
 template isAbstractClass(T...)
     if (T.length == 1)
@@ -6291,10 +6378,14 @@ template isAbstractClass(T...)
     static assert(!isAbstractClass!S);
     static assert(!isAbstractClass!C);
     static assert( isAbstractClass!AC);
+    C c;
+    static assert(!isAbstractClass!c);
+    AC ac;
+    static assert( isAbstractClass!ac);
 }
 
 /**
- * Detect whether $(D T) is a a final class.
+ * Detect whether $(D T) is a final class.
  */
 template isFinalClass(T...)
     if (T.length == 1)
@@ -6313,6 +6404,10 @@ template isFinalClass(T...)
     static assert(!isFinalClass!AC);
     static assert( isFinalClass!FC1);
     static assert( isFinalClass!FC2);
+    C c;
+    static assert(!isFinalClass!c);
+    FC1 fc1;
+    static assert( isFinalClass!fc1);
 }
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
