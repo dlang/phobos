@@ -1302,7 +1302,7 @@ private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar 
     alias bitMask = AliasSeq!((1 << 7) - 1, (1 << 11) - 1, (1 << 16) - 1, (1 << 21) - 1);
 
     static if (is(S : const char[]))
-        auto pstr = str.ptr + index;
+        auto pstr = str.ptr + index;    // this is what makes decodeImpl() @system code
     else static if (isRandomAccessRange!S && hasSlicing!S && hasLength!S)
         auto pstr = str[index .. str.length];
     else
@@ -3802,17 +3802,12 @@ template byUTF(C) if (isSomeChar!C)
         {
             static struct Result
             {
-                this(ref R r)
-                {
-                    this.r = r;
-                }
-
                 @property bool empty()
                 {
                     return pos == fill && r.empty;
                 }
 
-                @property auto front()
+                @property auto front() scope // 'scope' required by call to decodeFront() below
                 {
                     if (pos == fill)
                     {
@@ -3829,14 +3824,12 @@ template byUTF(C) if (isSomeChar!C)
                         {
                             static if (is(RC == dchar))
                             {
-                                fill = cast(ushort) encode!(Yes.useReplacementDchar)(buf, c);
                                 r.popFront;
+                                dchar dc = c;
                             }
                             else
-                            {
-                                fill = cast(ushort) encode!(Yes.useReplacementDchar)(
-                                    buf, decodeFront!(Yes.useReplacementDchar)(r));
-                            }
+                                dchar dc = () @trusted { return decodeFront!(Yes.useReplacementDchar)(r); }();
+                            fill = cast(ushort) encode!(Yes.useReplacementDchar)(buf, dc);
                         }
                     }
                     return buf[pos];
