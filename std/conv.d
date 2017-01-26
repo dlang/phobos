@@ -3386,7 +3386,7 @@ package void skipWS(R)(ref R r)
 /**
  * Parses an array from a string given the left bracket (default $(D
  * '[')), right bracket (default $(D ']')), and element separator (by
- * default $(D ',')).
+ * default $(D ',')). A trailing separator is allowed.
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
     if (isExactSomeString!Source &&
@@ -3405,6 +3405,8 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     }
     for (;; s.popFront(), skipWS(s))
     {
+        if (!s.empty && s.front == rbracket)
+            break;
         result ~= parseElement!(ElementType!Target)(s);
         skipWS(s);
         if (s.empty)
@@ -3415,6 +3417,27 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
     parseCheck!s(rbracket);
 
     return result;
+}
+
+@safe unittest // Bugzilla 9615
+{
+    string s0 = "[1,2, ]";
+    string s1 = "[1,2, \t\v\r\n]";
+    string s2 = "[1,2]";
+    assert(s0.parse!(int[]) == [1,2]);
+    assert(s1.parse!(int[]) == [1,2]);
+    assert(s2.parse!(int[]) == [1,2]);
+
+    string s3 = `["a","b",]`;
+    string s4 = `["a","b"]`;
+    assert(s3.parse!(string[]) == ["a","b"]);
+    assert(s4.parse!(string[]) == ["a","b"]);
+
+    import std.exception : assertThrown;
+    string s5 = "[,]";
+    string s6 = "[, \t,]";
+    assertThrown!ConvException(parse!(string[])(s5));
+    assertThrown!ConvException(parse!(int[])(s6));
 }
 
 @safe unittest
