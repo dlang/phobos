@@ -6240,6 +6240,32 @@ struct Typedef(T, T init = T.init, string cookie=null)
     }
 
     mixin Proxy!Typedef_payload;
+
+    pure nothrow @nogc @safe @property
+    {
+        alias TD = typeof(this);
+        static if (isIntegral!T)
+        {
+            static TD min() {return TD(T.min);}
+            static TD max() {return TD(T.max);}
+        }
+        else static if (isFloatingPoint!T)
+        {
+            static TD infinity() {return TD(T.infinity);}
+            static TD nan() {return TD(T.nan);}
+            static TD dig() {return TD(T.dig);}
+            static TD epsilon() {return TD(T.epsilon);}
+            static TD mant_dig() {return TD(T.mant_dig);}
+            static TD max_10_exp() {return TD(T.max_10_exp);}
+            static TD max_exp()  {return TD(T.max_exp);}
+            static TD min_10_exp() {return TD(T.min_10_exp);}
+            static TD min_exp() {return TD(T.min_exp);}
+            static TD max() {return TD(T.max);}
+            static TD min_normal() {return TD(T.min_normal);}
+            TD re() {return TD(Typedef_payload.re);}
+            TD im() {return TD(Typedef_payload.im);}
+        }
+    }
 }
 
 /**
@@ -6340,6 +6366,21 @@ template TypedefType(T)
 
     Typedef!Dollar3 drange3;
     assert(drange3[$] == 123);
+}
+
+@safe @nogc pure nothrow unittest // Bugzilla 11703
+{
+    alias I = Typedef!int;
+    static assert(is(typeof(I.min) == I));
+    static assert(is(typeof(I.max) == I));
+
+    alias F = Typedef!double;
+    static assert(is(typeof(F.infinity) == F));
+    static assert(is(typeof(F.epsilon) == F));
+
+    F f;
+    assert(!is(typeof(F.re).stringof == double));
+    assert(!is(typeof(F.im).stringof == double));
 }
 
 @safe unittest
