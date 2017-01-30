@@ -16,12 +16,12 @@ module std.stdio;
 public import core.stdc.stdio;
 import core.stdc.stddef; // wchar_t
 import std.algorithm.mutation; // copy
+import std.meta; // allSatisfy
 import std.range.primitives; // ElementEncodingType, empty, front,
     // isBidirectionalRange, isInputRange, put
 import std.stdiobase;
-import std.traits; // isSomeChar, isSomeString, Unqual
+import std.traits; // isSomeChar, isSomeString, Unqual, isPointer
 import std.typecons; // Flag
-
 
 /++
 If flag $(D KeepTerminator) is set to $(D KeepTerminator.yes), then the delimiter
@@ -1769,6 +1769,7 @@ is recommended if you want to process a complete file.
      * $(REF formattedRead, std,_format).
      */
     uint readf(Data...)(in char[] format, Data data)
+    if (allSatisfy!(isPointer, Data))
     {
         import std.format : formattedRead;
 
@@ -3646,6 +3647,7 @@ void writefln(T...)(T args)
  * $(REF formattedRead, std,_format).
  */
 uint readf(A...)(in char[] format, A args)
+if (allSatisfy!(isPointer, A))
 {
     return stdin.readf(format, args);
 }
