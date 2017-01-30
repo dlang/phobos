@@ -617,7 +617,7 @@ uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
 }
 
 ///
-@system unittest
+@system pure unittest
 {
     string s = "hello!124:34.5";
     string a;
@@ -627,7 +627,7 @@ uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
     assert(a == "hello" && b == 124 && c == 34.5);
 }
 
-@system unittest
+@system pure unittest
 {
     import std.math;
     string s = " 1.2 3.4 ";
@@ -1278,7 +1278,7 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
 }
 
 ///
-@safe unittest
+@safe pure unittest
 {
     import std.exception : assertThrown;
     auto spec = singleSpec("%2.3e");
@@ -1330,7 +1330,7 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 }
 
 ///
-@safe unittest
+@safe pure unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -1367,7 +1367,7 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     formatTest( S2(true),  "S" );
 }
 
-@safe unittest
+@safe pure unittest
 {
     string t1 = format("[%6s] [%6s] [%-6s]", true, false, true);
     assert(t1 == "[  true] [ false] [true  ]");
@@ -1394,7 +1394,7 @@ if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 }
 
 ///
-@safe unittest
+@safe pure unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -1466,7 +1466,7 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 }
 
 ///
-@safe unittest
+@safe pure unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -1927,7 +1927,7 @@ if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 }
 
 ///
-@safe unittest
+@safe pure unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -1960,7 +1960,7 @@ if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     formatTest( S2('c'), "S" );
 }
 
-@safe pure unittest
+@safe unittest
 {
     //Little Endian
     formatTest( "%-r", cast( char)'c', ['c'         ] );
@@ -1991,7 +1991,7 @@ if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToSt
 }
 
 ///
-@safe unittest
+@safe pure unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -2068,7 +2068,7 @@ if (is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 }
 
 ///
-@safe unittest
+@safe pure unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -2125,7 +2125,7 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
 }
 
 ///
-@safe unittest
+@safe pure unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -2577,7 +2577,7 @@ if (is(StringTypeOf!T) && !is(T == enum))
         formatValue(w, str, f);
 }
 
-@safe unittest
+@safe pure unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -2695,7 +2695,7 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 }
 
 ///
-@safe unittest
+@safe pure unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -2960,7 +2960,7 @@ if (is(T == class) && !is(T == enum))
 /++
    The following code compares the use of $(D formatValue) and $(D formattedWrite).
  +/
-@safe unittest
+@safe pure unittest
 {
    import std.format;
    import std.array : appender;
@@ -3275,7 +3275,7 @@ if (is(T == enum))
 }
 
 ///
-@safe unittest
+@safe pure unittest
 {
     import std.array : appender;
     auto w = appender!string();
@@ -3434,7 +3434,7 @@ void formatValue(Writer, T, Char)(Writer w, scope T, ref FormatSpec!Char f)
 }
 
 ///
-@safe unittest
+@safe pure unittest
 {
     import std.conv : to;
 
@@ -4415,7 +4415,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 
 }
 
-unittest
+pure unittest
 {
      union B
      {
@@ -4456,7 +4456,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     return parse!T(input);
 }
 
-unittest
+pure unittest
 {
     union A
     {
@@ -5314,7 +5314,7 @@ immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args) if (isSomeChar
     return w.data;
 }
 
-@safe unittest
+@safe pure unittest
 {
     import std.format;
     import core.exception;
