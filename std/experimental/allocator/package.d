@@ -1526,6 +1526,23 @@ if (is(T == class) || is(T == interface))
             static assert(!is(T: IUnknown), "COM interfaces can't be destroyed in "
                 ~ __PRETTY_FUNCTION__);
         }
+        static if (__traits(allMembers, T).length)
+        {
+            bool allCpp()
+            {
+                bool result = true;
+                foreach (member; __traits(allMembers, T))
+                    foreach (ov; __traits(getOverloads, T, member))
+                        static if (functionLinkage!ov != "C++")
+                {
+                    result = false;
+                    break;
+                }
+                return result;
+            }
+            static assert(!allCpp, "C++ interfaces can't be destroyed in "
+                ~ __PRETTY_FUNCTION__);
+        }
         auto ob = cast(Object) p;
     }
     else
@@ -1598,6 +1615,21 @@ unittest //bugzilla 15721
     bar = Mallocator.instance.make!Bar;
     foo = cast(Foo) bar;
     Mallocator.instance.dispose(foo);
+}
+
+unittest //bugzilla 16184
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    extern(C++) interface Foo {void foo();}
+    class Bar: Foo {extern(C++) void foo(){}}
+
+    Bar bar;
+    Foo foo;
+    bar = Mallocator.instance.make!Bar;
+    foo = cast(Foo) bar;
+    static assert(!is(typeof(Mallocator.instance.dispose(foo))));
+    Mallocator.instance.dispose(bar);
 }
 
 /**
