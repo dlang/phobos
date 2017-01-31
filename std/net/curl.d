@@ -182,9 +182,6 @@ version(unittest)
     // allow net traffic
     import std.stdio;
     import std.range;
-    import std.process : environment;
-    import std.file : deleteme;
-    import std.path : buildPath;
 
     import std.socket : Address, INADDR_LOOPBACK, Socket, TcpSocket;
 
