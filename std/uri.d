@@ -25,21 +25,14 @@ module std.uri;
 
 //debug=uri;        // uncomment to turn on debugging writefln's
 debug(uri) private import std.stdio;
-
-/* ====================== URI Functions ================ */
-
-private import std.ascii;
-private import core.stdc.stdlib;
-private import std.utf;
 private import std.traits : isSomeChar;
-import core.exception : OutOfMemoryError;
-import std.exception;
 
 /** This Exception is thrown if something goes wrong when encoding or
 decoding a URI.
 */
 class URIException : Exception
 {
+    import std.exception : basicExceptionCtors;
     mixin basicExceptionCtors;
 }
 
@@ -52,9 +45,9 @@ private enum
     URI_Hash = 0x10,        // '#'
 }
 
-immutable char[16] hex2ascii = "0123456789ABCDEF";
+private immutable char[16] hex2ascii = "0123456789ABCDEF";
 
-immutable ubyte[128] uri_flags =      // indexed by character
+private immutable ubyte[128] uri_flags =      // indexed by character
     ({
         ubyte[128] uflags;
 
@@ -74,6 +67,9 @@ immutable ubyte[128] uri_flags =      // indexed by character
 
 private string URI_Encode(dstring string, uint unescapedSet)
 {
+    import core.exception : OutOfMemoryError;
+    import core.stdc.stdlib : alloca;
+
     uint j;
     uint k;
     dchar V;
@@ -152,27 +148,6 @@ private string URI_Encode(dstring string, uint unescapedSet)
                 Octet[3] = cast(char)(0x80 | (V & 0x3F));
                 L = 4;
             }
-            /+
-            else if (V <= 0x3FFFFFF)
-            {
-                Octet[0] = cast(char)(0xF8 | (V >> 24));
-                Octet[1] = cast(char)(0x80 | ((V >> 18) & 0x3F));
-                Octet[2] = cast(char)(0x80 | ((V >> 12) & 0x3F));
-                Octet[3] = cast(char)(0x80 | ((V >> 6) & 0x3F));
-                Octet[4] = cast(char)(0x80 | (V & 0x3F));
-                L = 5;
-            }
-            else if (V <= 0x7FFFFFFF)
-            {
-                Octet[0] = cast(char)(0xFC | (V >> 30));
-                Octet[1] = cast(char)(0x80 | ((V >> 24) & 0x3F));
-                Octet[2] = cast(char)(0x80 | ((V >> 18) & 0x3F));
-                Octet[3] = cast(char)(0x80 | ((V >> 12) & 0x3F));
-                Octet[4] = cast(char)(0x80 | ((V >> 6) & 0x3F));
-                Octet[5] = cast(char)(0x80 | (V & 0x3F));
-                L = 6;
-            }
-            +/
             else
             {
                 throw new URIException("Undefined UTF-32 code point");
@@ -211,7 +186,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
     return R[0..Rlen].idup;
 }
 
-uint ascii2hex(dchar c)
+private uint ascii2hex(dchar c) @nogc @safe pure nothrow
 {
     return (c <= '9') ? c - '0' :
         (c <= 'F') ? c - 'A' + 10 :
@@ -220,6 +195,10 @@ uint ascii2hex(dchar c)
 
 private dstring URI_Decode(Char)(in Char[] uri, uint reservedSet) if (isSomeChar!Char)
 {
+    import core.exception : OutOfMemoryError;
+    import core.stdc.stdlib : alloca;
+    import std.ascii : isHexDigit;
+
     uint j;
     uint k;
     uint V;
@@ -335,8 +314,9 @@ private dstring URI_Decode(Char)(in Char[] uri, uint reservedSet) if (isSomeChar
 
 string decode(Char)(in Char[] encodedURI) if (isSomeChar!Char)
 {
+    import std.utf : toUTF8;
     auto s = URI_Decode(encodedURI, URI_Reserved | URI_Hash);
-    return std.utf.toUTF8(s);
+    return toUTF8(s);
 }
 
 /*******************************
@@ -346,8 +326,9 @@ string decode(Char)(in Char[] encodedURI) if (isSomeChar!Char)
 
 string decodeComponent(Char)(in Char[] encodedURIComponent) if (isSomeChar!Char)
 {
+    import std.utf : toUTF8;
     auto s = URI_Decode(encodedURIComponent, 0);
-    return std.utf.toUTF8(s);
+    return toUTF8(s);
 }
 
 /*****************************
@@ -357,7 +338,8 @@ string decodeComponent(Char)(in Char[] encodedURIComponent) if (isSomeChar!Char)
 
 string encode(Char)(in Char[] uri) if (isSomeChar!Char)
 {
-    auto s = std.utf.toUTF32(uri);
+    import std.utf : toUTF32;
+    auto s = toUTF32(uri);
     return URI_Encode(s, URI_Reserved | URI_Hash | URI_Alpha | URI_Digit | URI_Mark);
 }
 
@@ -368,7 +350,8 @@ string encode(Char)(in Char[] uri) if (isSomeChar!Char)
 
 string encodeComponent(Char)(in Char[] uriComponent) if (isSomeChar!Char)
 {
-    auto s = std.utf.toUTF32(uriComponent);
+    import std.utf : toUTF32;
+    auto s = toUTF32(uriComponent);
     return URI_Encode(s, URI_Alpha | URI_Digit | URI_Mark);
 }
 
@@ -426,6 +409,7 @@ ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
      *  https://
      *  www.
      */
+    import std.ascii : isAlphaNum;
     import std.uni : icmp;
 
     ptrdiff_t i;
@@ -444,8 +428,6 @@ ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
         else
             return -1;
     }
-    //    if (icmp(s[0 .. 4], "www.") == 0)
-    //  i = 4;
 
     ptrdiff_t lastdot;
     for (; i < s.length; i++)
@@ -465,7 +447,6 @@ ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
         }
         break;
     }
-    //if (!lastdot || (i - lastdot != 3 && i - lastdot != 4))
     if (!lastdot)
         return -1;
 
@@ -493,6 +474,8 @@ ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
  */
 ptrdiff_t emailLength(Char)(in Char[] s) if (isSomeChar!Char)
 {
+    import std.ascii : isAlpha, isAlphaNum;
+
     ptrdiff_t i;
 
     if (!isAlpha(s[0]))

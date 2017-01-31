@@ -76,7 +76,8 @@ int main(string[] args)
     sort(a);                            // qsort
     Clock.currTime();                   // datetime
     cast(void)isValidDchar(cast(dchar)0);          // utf
-    std.uri.ascii2hex(0);                // uri
+    string s1 = "http://www.digitalmars.com/~fred/fredsRX.html#foo end!";
+    assert(uriLength(s1) == 49);
     std.zlib.adler32(0,null);            // D.zlib
     auto t = task!cmp("foo", "bar");  // parallelism
 
