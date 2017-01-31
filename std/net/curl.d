@@ -158,17 +158,12 @@ module std.net.curl;
 
 import core.thread;
 import etc.c.curl;
-import std.algorithm;
-import std.array;
 import std.concurrency;
-import std.conv;
-import std.datetime;
 import std.encoding;
 import std.exception;
 import std.meta;
-import std.regex;
+import std.range.primitives;
 import std.socket : InternetAddress;
-import std.string;
 import std.traits;
 import std.typecons;
 
@@ -242,6 +237,11 @@ version(unittest)
 
     private Request!T recvReq(T=char)(Socket s)
     {
+        import std.algorithm.comparison : min;
+        import std.algorithm.searching : find, canFind;
+        import std.conv : to;
+        import std.regex : ctRegex, matchFirst;
+
         ubyte[1024] tmp=void;
         ubyte[] buf;
 
@@ -285,6 +285,8 @@ version(unittest)
 
     private string httpOK(string msg)
     {
+        import std.conv : to;
+
         return "HTTP/1.1 200 OK\r\n"~
             "Content-Type: text/plain\r\n"~
             "Content-Length: "~msg.length.to!string~"\r\n"~
@@ -368,6 +370,9 @@ struct AutoProtocol { }
 // Returns true if the url points to an FTP resource
 private bool isFTPUrl(const(char)[] url)
 {
+    import std.algorithm.searching : startsWith;
+    import std.uni : toLower;
+
     return startsWith(url.toLower(), "ftp://", "ftps://", "ftp.") != 0;
 }
 
@@ -414,7 +419,9 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
 
 unittest
 {
+    import std.algorithm.searching : canFind;
     static import std.file;
+
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
@@ -478,7 +485,9 @@ void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn co
 
 unittest
 {
+    import std.algorithm.searching : canFind;
     static import std.file;
+
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         auto fn = std.file.deleteme;
@@ -546,6 +555,8 @@ T[] get(Conn = AutoProtocol, T = char)(const(char)[] url, Conn conn = Conn())
 
 unittest
 {
+    import std.algorithm.searching : canFind;
+
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
@@ -597,6 +608,8 @@ if (is(T == char) || is(T == ubyte))
 
 unittest
 {
+    import std.algorithm.searching : canFind;
+
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
@@ -612,6 +625,8 @@ unittest
 
 unittest
 {
+    import std.algorithm.searching : canFind;
+
     auto data = new ubyte[](256);
     foreach (i, ref ub; data)
         ub = cast(ubyte)i;
@@ -700,6 +715,8 @@ T[] put(Conn = AutoProtocol, T = char, PutUnit)(const(char)[] url, const(PutUnit
 
 unittest
 {
+    import std.algorithm.searching : canFind;
+
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
@@ -739,6 +756,9 @@ void del(Conn = AutoProtocol)(const(char)[] url, Conn conn = Conn())
     }
     else static if (is(Conn : FTP))
     {
+        import std.algorithm.searching : findSplitAfter;
+        import std.conv : text;
+
         auto trimmed = url.findSplitAfter("ftp://")[1];
         auto t = trimmed.findSplitAfter("/");
         enum minDomainNameLength = 3;
@@ -762,6 +782,8 @@ void del(Conn = AutoProtocol)(const(char)[] url, Conn conn = Conn())
 
 unittest
 {
+    import std.algorithm.searching : canFind;
+
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
@@ -816,6 +838,8 @@ T[] options(T = char, OptionsUnit)(const(char)[] url,
 
 unittest
 {
+    import std.algorithm.searching : canFind;
+
     testServer.handle((s) {
         auto req = s.recvReq;
         assert(req.hdrs.canFind("OPTIONS /path"));
@@ -856,6 +880,8 @@ T[] trace(T = char)(const(char)[] url, HTTP conn = HTTP())
 
 unittest
 {
+    import std.algorithm.searching : canFind;
+
     testServer.handle((s) {
         auto req = s.recvReq;
         assert(req.hdrs.canFind("TRACE /path"));
@@ -895,6 +921,8 @@ T[] connect(T = char)(const(char)[] url, HTTP conn = HTTP())
 
 unittest
 {
+    import std.algorithm.searching : canFind;
+
     testServer.handle((s) {
         auto req = s.recvReq;
         assert(req.hdrs.canFind("CONNECT /path"));
@@ -939,6 +967,8 @@ T[] patch(T = char, PatchUnit)(const(char)[] url, const(PatchUnit)[] patchData,
 
 unittest
 {
+    import std.algorithm.searching : canFind;
+
     testServer.handle((s) {
         auto req = s.recvReq;
         assert(req.hdrs.canFind("PATCH /path"));
@@ -958,6 +988,9 @@ unittest
  */
 private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP client)
 {
+    import std.algorithm.comparison : min;
+    import std.format : format;
+
     immutable doSend = sendData !is null &&
         (client.method == HTTP.Method.post ||
          client.method == HTTP.Method.put ||
@@ -1033,6 +1066,8 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
 
 unittest
 {
+    import std.algorithm.searching : canFind;
+
     testServer.handle((s) {
         auto req = s.recvReq;
         assert(req.hdrs.canFind("GET /path"));
@@ -1045,6 +1080,8 @@ unittest
 // Bugzilla 14760 - content length must be reset after post
 unittest
 {
+    import std.algorithm.searching : canFind;
+
     testServer.handle((s) {
         auto req = s.recvReq;
         assert(req.hdrs.canFind("POST /"));
@@ -1099,6 +1136,8 @@ unittest // charset detection and transcoding to T
  */
 private auto _basicFTP(T)(const(char)[] url, const(void)[] sendData, FTP client)
 {
+    import std.algorithm.comparison : min;
+
     scope (exit)
     {
         client.onReceive = null;
@@ -1147,6 +1186,8 @@ private auto _decodeContent(T)(ubyte[] content, string encoding)
     }
     else
     {
+        import std.format : format;
+
         // Optimally just return the utf8 encoded content
         if (encoding == "UTF-8")
             return cast(char[])(content);
@@ -1256,6 +1297,8 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
 
         void popFront()
         {
+            import std.algorithm.searching : findSplitAfter, findSplit;
+
             enforce!CurlException(currentValid, "Cannot call popFront() on empty range");
             if (lines.empty)
             {
@@ -1292,6 +1335,8 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
 
 unittest
 {
+    import std.algorithm.comparison : equal;
+
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
@@ -1364,6 +1409,8 @@ auto byChunk(Conn = AutoProtocol)
 
 unittest
 {
+    import std.algorithm.comparison : equal;
+
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
@@ -1408,6 +1455,7 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
 
     @property Unit[] front()
     {
+        import std.format : format;
         tryEnsureUnits();
         assert(state == State.gotUnits,
                format("Expected %s but got $s",
@@ -1417,6 +1465,7 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
 
     void popFront()
     {
+        import std.format : format;
         tryEnsureUnits();
         assert(state == State.gotUnits,
                format("Expected %s but got $s",
@@ -1432,6 +1481,8 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
     */
     bool wait(Duration d)
     {
+        import std.datetime : StopWatch;
+
         if (state == State.gotUnits)
             return true;
 
@@ -1653,6 +1704,8 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char)
 
 unittest
 {
+    import std.algorithm.comparison : equal;
+
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
@@ -1799,6 +1852,8 @@ auto byChunkAsync(Conn = AutoProtocol)
 
 unittest
 {
+    import std.algorithm.comparison : equal;
+
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
@@ -1981,6 +2036,7 @@ private mixin template Protocol()
     /// ditto
     @property void netInterface(const(ubyte)[4] i)
     {
+        import std.format : format;
         const str = format("%d.%d.%d.%d", i[0], i[1], i[2], i[3]);
         netInterface = str;
     }
@@ -2055,6 +2111,7 @@ private mixin template Protocol()
     void setAuthentication(const(char)[] username, const(char)[] password,
                            const(char)[] domain = "")
     {
+        import std.format : format;
         if (!domain.empty)
             username = format("%s/%s", domain, username);
         p.curl.set(CurlOption.userpwd, format("%s:%s", username, password));
@@ -2062,6 +2119,8 @@ private mixin template Protocol()
 
     unittest
     {
+        import std.algorithm.searching : canFind;
+
         testServer.handle((s) {
             auto req = s.recvReq;
             assert(req.hdrs.canFind("GET /"));
@@ -2084,6 +2143,9 @@ private mixin template Protocol()
     */
     void setProxyAuthentication(const(char)[] username, const(char)[] password)
     {
+        import std.array : replace;
+        import std.format : format;
+
         p.curl.set(CurlOption.proxyuserpwd,
             format("%s:%s",
                 username.replace(":", "%3A"),
@@ -2236,6 +2298,8 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
                                                      EncodingScheme scheme,
                                                      Terminator terminator)
 {
+    import std.algorithm.searching : endsWith;
+
     // if there is anything in the basesrc then try to decode that
     // first.
     if (basesrc.length != 0)
@@ -2330,6 +2394,8 @@ struct HTTP
 {
     mixin Protocol;
 
+    import std.datetime : SysTime;
+
     /// Authentication method equal to $(REF CurlAuth, etc,c,curl)
     alias AuthMethod = CurlAuth;
 
@@ -2359,6 +2425,11 @@ struct HTTP
         @system @property void onReceiveHeader(void delegate(in char[] key,
                                                      in char[] value) callback)
         {
+            import std.algorithm.searching : startsWith;
+            import std.conv : to;
+            import std.regex : regex, match;
+            import std.uni : toLower;
+
             // Wrap incoming callback in order to separate http status line from
             // http headers.  On redirected requests there may be several such
             // status lines. The last one is the one recorded.
@@ -2543,6 +2614,8 @@ struct HTTP
     /// The URL to specify the location of the resource.
     @property void url(const(char)[] url)
     {
+        import std.algorithm.searching : startsWith;
+        import std.uni : toLower;
         if (!startsWith(url.toLower(), "http://", "https://"))
             url = "http://" ~ url;
         p.curl.set(CurlOption.url, url);
@@ -2789,6 +2862,9 @@ struct HTTP
      */
     void addRequestHeader(const(char)[] name, const(char)[] value)
     {
+        import std.format : format;
+        import std.uni : icmp;
+
         if (icmp(name, "User-Agent") == 0)
             return setUserAgent(value);
         string nv = format("%s: %s", name, value);
@@ -2804,6 +2880,7 @@ struct HTTP
     static string defaultUserAgent() @property
     {
         import std.compiler : version_major, version_minor;
+        import std.format : format, sformat;
 
         // http://curl.haxx.se/docs/versions.html
         enum fmt = "Phobos-std.net.curl/%d.%03d (libcurl/%d.%d.%d)";
@@ -3019,6 +3096,8 @@ struct HTTP
 
     unittest
     {
+        import std.algorithm.searching : canFind;
+
         testServer.handle((s) {
             auto req = s.recvReq!ubyte;
             assert(req.hdrs.canFind("POST /path"));
@@ -3079,6 +3158,8 @@ struct HTTP
     */
     @property void contentLength(ulong len)
     {
+        import std.conv : to;
+
         CurlOption lenOpt;
 
         // Force post if necessary
@@ -3174,6 +3255,7 @@ struct HTTP
         ///
         string toString() const
         {
+            import std.format : format;
             return format("%s %s (%s.%s)",
                           code, reason, majorVersion, minorVersion);
         }
@@ -3310,6 +3392,9 @@ struct FTP
     /// The URL to specify the location of the resource.
     @property void url(const(char)[] url)
     {
+        import std.algorithm.searching : startsWith;
+        import std.uni : toLower;
+
         if (!startsWith(url.toLower(), "ftp://", "ftps://"))
             url = "ftp://" ~ url;
         p.curl.set(CurlOption.url, url);
@@ -3534,6 +3619,7 @@ struct FTP
     */
     @property void contentLength(ulong len)
     {
+        import std.conv : to;
         p.curl.set(CurlOption.infilesize_large, to!curl_off_t(len));
     }
 
@@ -3636,6 +3722,8 @@ struct SMTP
 
         @property void message(string msg)
         {
+            import std.algorithm.comparison : min;
+
             auto _message = msg;
             /**
                 This delegate reads the message text and copies it.
@@ -3706,6 +3794,9 @@ struct SMTP
     /// The URL to specify the location of the resource.
     @property void url(const(char)[] url)
     {
+        import std.algorithm.searching : startsWith;
+        import std.uni : toLower;
+
         auto lowered = url.toLower();
 
         if (lowered.startsWith("smtps://"))
@@ -4040,6 +4131,7 @@ private struct CurlAPI
         // try to load curl from the executable to allow static linking
         if (loadSym(handle, "curl_global_init") is null)
         {
+            import std.format : format;
             version (Posix)
                 dlclose(handle);
 
@@ -4223,6 +4315,7 @@ struct Curl
     private string errorString(CurlCode code)
     {
         import core.stdc.string : strlen;
+        import std.format : format;
 
         auto msgZ = curl.easy_strerror(code);
         // doing the following (instead of just using std.conv.to!string) avoids 1 allocation
@@ -4592,6 +4685,8 @@ struct Curl
     size_t _receiveHeaderCallback(const char* str,
                                   size_t size, size_t nmemb, void* ptr)
     {
+        import std.string : chomp;
+
         auto b = cast(Curl*) ptr;
         auto s = str[0..size*nmemb].chomp();
         if (b._onReceiveHeader != null)
@@ -4779,6 +4874,7 @@ private static size_t _receiveAsyncLines(Terminator, Unit)
      ref Pool!(Unit[]) freeBuffers, ref Unit[] buffer,
      Tid fromTid, ref bool aborted)
 {
+    import std.format : format;
 
     immutable datalen = data.length;
 
