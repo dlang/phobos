@@ -3113,6 +3113,11 @@ static:
     Throws:
     $(OBJECTREF Exception) if the environment variable could not be added
         (e.g. if the name is invalid).
+
+    Note:
+    On some platforms, modifying environment variables may not be allowed in
+    multi-threaded programs. See e.g.
+    $(LINK2 https://www.gnu.org/software/libc/manual/html_node/Environment-Access.html#Environment-Access, glibc).
     */
     inout(char)[] opIndexAssign(inout char[] value, in char[] name) @trusted
     {
@@ -3148,6 +3153,11 @@ static:
 
     If the variable isn't in the environment, this function returns
     successfully without doing anything.
+
+    Note:
+    On some platforms, modifying environment variables may not be allowed in
+    multi-threaded programs. See e.g.
+    $(LINK2 https://www.gnu.org/software/libc/manual/html_node/Environment-Access.html#Environment-Access, glibc).
     */
     void remove(in char[] name) @trusted nothrow @nogc // TODO: @safe
     {
