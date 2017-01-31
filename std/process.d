@@ -3113,7 +3113,7 @@ static:
     Throws:
     $(OBJECTREF Exception) if the environment variable could not be added
         (e.g. if the name is invalid).
-        
+
     Note:
     On some platforms, modifying environment variables may not be allowed in
     multi-threaded programs. See e.g.
@@ -3153,7 +3153,7 @@ static:
 
     If the variable isn't in the environment, this function returns
     successfully without doing anything.
-    
+
     Note:
     On some platforms, modifying environment variables may not be allowed in
     multi-threaded programs. See e.g.
