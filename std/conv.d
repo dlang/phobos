@@ -40,11 +40,9 @@ package template convFormat()
  */
 class ConvException : Exception
 {
-    @safe pure nothrow
-    this(string s, string fn = __FILE__, size_t ln = __LINE__)
-    {
-        super(s, fn, ln);
-    }
+    import std.exception : basicExceptionCtors;
+    ///
+    mixin basicExceptionCtors;
 }
 
 private string convError_unexpected(S)(S source)
