@@ -1,0 +1,2 @@
+`std.format.formattedRead` now only accepts pointers as input arguments.
+
