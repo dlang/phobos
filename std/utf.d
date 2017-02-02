@@ -2654,7 +2654,8 @@ void validate(S)(in S str) @safe pure
     }());
 }
 
-/* =================== Conversion to UTF8 ======================= */
+//@@@DEPRECATED_2017-10@@@
+deprecated("To be removed November 2017. Please use std.utf.encode instead.")
 char[] toUTF8(return out char[4] buf, dchar c) nothrow @nogc @safe pure
 {
     if (c <= 0x7F)
@@ -2735,9 +2736,8 @@ string toUTF8(S)(S s) if (isInputRange!S && isSomeChar!(ElementEncodingType!S))
     assert(r2.toUTF8.equal([0xF0, 0x90, 0x90, 0xB7]));
 }
 
-
-/* =================== Conversion to UTF16 ======================= */
-
+//@@@DEPRECATED_2017-10@@@
+deprecated("To be removed November 2017. Please use std.utf.encode instead.")
 wchar[] toUTF16(return ref wchar[2] buf, dchar c) nothrow @nogc @safe pure
 in
 {

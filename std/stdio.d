@@ -2690,7 +2690,7 @@ $(D Range) that locks the file and allows fast writing to it.
             }
             else static if (c.sizeof == 2)
             {
-                import std.utf : toUTF8;
+                import std.utf : encode, UseReplacementDchar;
 
                 if (orientation_ <= 0)
                 {
@@ -2701,9 +2701,9 @@ $(D Range) that locks the file and allows fast writing to it.
                     else
                     {
                         char[4] buf;
-                        auto b = toUTF8(buf, c);
-                        foreach (i ; 0 .. b.length)
-                            trustedFPUTC(b[i], handle_);
+                        immutable size = encode!(UseReplacementDchar.yes)(buf, c);
+                        foreach (i ; 0 .. size)
+                            trustedFPUTC(buf[i], handle_);
                     }
                 }
                 else
@@ -4462,12 +4462,12 @@ private struct ReadlnAppender
     }
     void putdchar(dchar dc) @trusted
     {
-        import std.utf : toUTF8;
+        import std.utf : encode, UseReplacementDchar;
 
         char[4] ubuf;
-        char[] u = toUTF8(ubuf, dc);
-        reserve(u.length);
-        foreach (c; u)
+        immutable size = encode!(UseReplacementDchar.yes)(ubuf, dc);
+        reserve(size);
+        foreach (c; ubuf)
             buf.ptr[pos++] = c;
     }
     void putonly(char[] b) @trusted
