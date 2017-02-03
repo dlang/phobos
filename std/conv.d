@@ -1624,8 +1624,11 @@ private void testFloatingToIntegral(Floating, Integral)()
         assert(to!long(to!double(b)) == b);
         assert(to!long(to!double(-b)) == -b);
         // real
-        ulong c = 18_446_744_073_709_551_615UL; // 2^64 - 1
-        assert(to!ulong(to!real(c)) == c);
+        static if (real.mant_dig >= 64)
+        {
+            ulong c = 18_446_744_073_709_551_615UL; // 2^64 - 1
+            assert(to!ulong(to!real(c)) == c);
+        }
     }
     // test conversions floating => integral
     {
