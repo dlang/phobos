@@ -3734,12 +3734,6 @@ auto leftJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
             size_t len;
 
           public:
-            this(Range input, size_t width, dchar fillChar)
-            {
-                _input = input;
-                _width = width;
-                _fillChar = fillChar;
-            }
 
             @property bool empty()
             {
@@ -3760,7 +3754,7 @@ auto leftJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
 
             static if (isForwardRange!Range)
             {
-                @property typeof(this) save()
+                @property typeof(this) save() return scope
                 {
                     auto ret = this;
                     ret._input = _input.save;
