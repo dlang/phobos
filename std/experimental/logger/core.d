@@ -1151,7 +1151,7 @@ abstract class Logger
     l.log(1337);
     --------------------
     */
-    final void log(int line = __LINE__, string file = __FILE__,
+    void log(int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(const LogLevel ll,
@@ -1177,7 +1177,7 @@ abstract class Logger
     }
 
     /// Ditto
-    final void log(T, string moduleName = __MODULE__)(const LogLevel ll,
+    void log(T, string moduleName = __MODULE__)(const LogLevel ll,
         lazy bool condition, lazy T args, int line = __LINE__,
         string file = __FILE__, string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__)
@@ -1221,7 +1221,7 @@ abstract class Logger
     s.log(LogLevel.fatal, 1337, "is number");
     --------------------
     */
-    final void log(int line = __LINE__, string file = __FILE__,
+    void log(int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(const LogLevel ll, lazy A args)
@@ -1246,7 +1246,7 @@ abstract class Logger
     }
 
     /// Ditto
-    final void log(T)(const LogLevel ll, lazy T args, int line = __LINE__,
+    void log(T)(const LogLevel ll, lazy T args, int line = __LINE__,
         string file = __FILE__, string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__)
@@ -1290,7 +1290,7 @@ abstract class Logger
     s.log(false, 1337, "is number");
     --------------------
     */
-    final void log(int line = __LINE__, string file = __FILE__,
+    void log(int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy bool condition, lazy A args)
@@ -1316,7 +1316,7 @@ abstract class Logger
     }
 
     /// Ditto
-    final void log(T)(lazy bool condition, lazy T args, int line = __LINE__,
+    void log(T)(lazy bool condition, lazy T args, int line = __LINE__,
         string file = __FILE__, string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__)
@@ -1359,7 +1359,7 @@ abstract class Logger
     s.log(1337, "is number");
     --------------------
     */
-    final void log(int line = __LINE__, string file = __FILE__,
+    void log(int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy A args)
@@ -1387,7 +1387,7 @@ abstract class Logger
     }
 
     /// Ditto
-    final void log(T)(lazy T arg, int line = __LINE__, string file = __FILE__,
+    void log(T)(lazy T arg, int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__)
@@ -1433,7 +1433,7 @@ abstract class Logger
     s.logf(LogLevel.fatal, true ,"%d %s", 1337, "is number");
     --------------------
     */
-    final void logf(int line = __LINE__, string file = __FILE__,
+    void logf(int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(const LogLevel ll,
@@ -1479,7 +1479,7 @@ abstract class Logger
     s.logf(LogLevel.fatal, "%d %s", 1337, "is number");
     --------------------
     */
-    final void logf(int line = __LINE__, string file = __FILE__,
+    void logf(int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(const LogLevel ll,
@@ -1526,7 +1526,7 @@ abstract class Logger
     s.logf(true ,"%d %s", 1337, "is number");
     --------------------
     */
-    final void logf(int line = __LINE__, string file = __FILE__,
+    void logf(int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy bool condition,
@@ -1571,7 +1571,7 @@ abstract class Logger
     s.logf("%d %s", 1337, "is number");
     --------------------
     */
-    final void logf(int line = __LINE__, string file = __FILE__,
+    void logf(int line = __LINE__, string file = __FILE__,
         string funcName = __FUNCTION__,
         string prettyFuncName = __PRETTY_FUNCTION__,
         string moduleName = __MODULE__, A...)(lazy string msg, lazy A args)
