@@ -228,7 +228,8 @@ private
             'e': FunctionAttribute.trusted,
             'f': FunctionAttribute.safe,
             'i': FunctionAttribute.nogc,
-            'j': FunctionAttribute.return_
+            'j': FunctionAttribute.return_,
+            'l': FunctionAttribute.scope_
         ];
         uint atts = 0;
 
@@ -1332,6 +1333,7 @@ enum FunctionAttribute : uint
     inout_     = 1 << 10, /// ditto
     shared_    = 1 << 11, /// ditto
     return_    = 1 << 12, /// ditto
+    scope_     = 1 << 13, /// ditto
 }
 
 /// ditto
@@ -1492,6 +1494,7 @@ private FunctionAttribute extractAttribFlags(Attribs...)()
             case "inout":     res |= inout_; break;
             case "shared":    res |= shared_; break;
             case "return":    res |= return_; break;
+            case "scope":     res |= scope_; break;
             default: assert(0, attrib);
         }
     }
@@ -2213,7 +2216,8 @@ version (unittest)
 
             // Add all known attributes, excluding conflicting ones.
             enum allAttrs = reduce!"a | b"([EnumMembers!FA])
-                & ~FA.safe & ~FA.property & ~FA.const_ & ~FA.immutable_ & ~FA.inout_ & ~FA.shared_ & ~FA.system & ~FA.return_;
+                & ~FA.safe & ~FA.property & ~FA.const_ & ~FA.immutable_ & ~FA.inout_
+                & ~FA.shared_ & ~FA.system & ~FA.return_ & ~FA.scope_;
 
             alias T2 = SetFunctionAttributes!(T1, functionLinkage!T, allAttrs);
             static assert(functionAttributes!T2 == allAttrs);
