@@ -43,7 +43,7 @@ module std.typecons;
 import core.stdc.stdint : uintptr_t;
 import std.meta; // : AliasSeq, allSatisfy;
 import std.traits;
-import std.range : ElementType;
+import std.range : ElementType, isInputRange;
 
 debug(Unique) import std.stdio;
 
@@ -1169,7 +1169,7 @@ template Tuple(Specs...)
 }
 
 /**
-    Allows to unpack a $(D Tuple) to arguments when iterating using $(D foreach).
+    Allows to unpack a $(D Tuple) ranges to arguments when iterating using $(D foreach).
 
     Examples:
     ---
@@ -1234,7 +1234,7 @@ auto unpackIterator(Range)(Range r)
 
     {
         size_t index = 0;
-        foreach( int num, string str; array.unpackIterator ) {
+        foreach ( int num, string str; array.unpackIterator ) {
             assert( num == index + 1 );
             assert( str == [ 'a' + index ] );
 
@@ -1245,7 +1245,7 @@ auto unpackIterator(Range)(Range r)
 
     {
         size_t index = 0;
-        foreach( i, num, str; array.unpackIterator ) {
+        foreach ( i, num, str; array.unpackIterator ) {
             assert( num == index + 1 );
             assert( str == [ 'a' + index ] );
             assert( i == index );
