@@ -43,7 +43,7 @@ module std.typecons;
 import core.stdc.stdint : uintptr_t;
 import std.meta; // : AliasSeq, allSatisfy;
 import std.traits;
-import std.range : ElementType, isInputRange;
+import std.range;
 
 debug(Unique) import std.stdio;
 
