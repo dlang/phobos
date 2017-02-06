@@ -1198,7 +1198,7 @@ auto unpackIterator(Range)(Range r)
             {
                 const int result = dg(i, source.front.expand);
                 source.popFront();
-                i ++;
+                i++;
 
                 if (result)
                     return result;
@@ -1216,34 +1216,33 @@ unittest
     alias T = Tuple!(int,string);
     const T[] array = [ T(1, "a"), T(2, "b"), T(3, "c"), T(4, "d") ];
 
+    size_t index = 0;
+    foreach (int num, string str; array.unpackIterator)
     {
-        size_t index = 0;
-        foreach (int num, string str; array.unpackIterator)
-        {
-            assert( num == index + 1 );
-            assert( str == [ 'a' + index ] );
+        assert( num == index + 1 );
+        assert( str == [ 'a' + index ] );
 
-            index ++;
-        }
-        assert( index == 4 );
+        index++;
     }
+    assert( index == 4 );
 }
 
 /// It is also possible to get item index as first argument
 unittest
 {
-    {
-        size_t index = 0;
-        foreach (i, num, str; array.unpackIterator)
-        {
-            assert( num == index + 1 );
-            assert( str == [ 'a' + index ] );
-            assert( i == index );
+    alias T = Tuple!(int,string);
+    const T[] array = [ T(1, "a"), T(2, "b"), T(3, "c"), T(4, "d") ];
 
-            index ++;
-        }
-        assert( index == 4 );
+    size_t index = 0;
+    foreach (i, num, str; array.unpackIterator)
+    {
+        assert( num == index + 1 );
+        assert( str == [ 'a' + index ] );
+        assert( i == index );
+
+        index++;
     }
+    assert( index == 4 );
 }
 
 /**
