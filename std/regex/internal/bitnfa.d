@@ -639,7 +639,7 @@ final class BitMatcher(Char) : Kickstart!(Char)
             backward = reverseBitNfa(re, forward.length);
     }
 
-    final bool search(ref Input!Char r) const
+    bool search(ref Input!Char r) const
     {
         auto save = r._index;
         bool res = forward.search(r);
@@ -656,7 +656,7 @@ final class BitMatcher(Char) : Kickstart!(Char)
         return res;
     }
 
-    final bool match(ref Input!Char r) const
+    bool match(ref Input!Char r) const
     {
         auto save = r._index;
         bool res = forward.match(r);
@@ -664,7 +664,7 @@ final class BitMatcher(Char) : Kickstart!(Char)
         return res;
     }
 
-    final @property bool empty() pure const{ return forward.empty; }
+    @property bool empty() pure const{ return forward.empty; }
 }
 
 version(unittest)
