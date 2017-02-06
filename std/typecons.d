@@ -1230,7 +1230,7 @@ auto unpackIterator(Range)(Range r)
     return Result(r);
 }
 
-@safe unittest
+unittest
 {
     alias T = Tuple!(int,string);
     const T[] array = [ T(1, "a"), T(2, "b"), T(3, "c"), T(4, "d") ];
