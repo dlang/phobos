@@ -5838,6 +5838,12 @@ struct FrontTransversal(Ror,
     {
         @property bool empty()
         {
+            static if (opt != TransverseOptions.assumeJagged)
+            {
+                if (!_input.empty)
+                    return _input.front.empty;
+            }
+
             return _input.empty;
         }
     }
@@ -6082,6 +6088,18 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
 
     assert(equal(ft, [0, 4]));
     static assert(isRandomAccessRange!(typeof(ft)));
+}
+
+// Bugzilla 16442
+@safe unittest
+{
+    int[][] arr = [[], []];
+
+    auto ft1 = frontTransversal!(TransverseOptions.assumeNotJagged)(arr);
+    assert(ft1.empty);
+
+    auto ft2 = frontTransversal!(TransverseOptions.enforceNotJagged)(arr);
+    assert(ft2.empty);
 }
 
 /**
