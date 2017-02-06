@@ -43,6 +43,7 @@ module std.typecons;
 import core.stdc.stdint : uintptr_t;
 import std.meta; // : AliasSeq, allSatisfy;
 import std.traits;
+import std.range : ElementType;
 
 debug(Unique) import std.stdio;
 
@@ -1165,6 +1166,89 @@ template Tuple(Specs...)
     Tuple!(int, "x", int, "y") point1;
     Tuple!(int, int) point2;
     assert(!is(typeof(point1) == typeof(point2)));
+}
+
+/**
+    Allows to unpack a $(D Tuple) to arguments when iterating using $(D foreach).
+
+    Examples:
+    ---
+    foreach(string name, int id; [tuple("john", 5), tuple("jeff", 2)].unpackIterator){
+        writefln("name: %s, id: %s" name, id);
+    }
+    ---
+
+    Examples:
+    ---
+    alias T = Tuple!(string,string);
+    T[] array = [ T("a", "b"), T("c", "d") ];
+    foreach(size_t index, string first, string second; array) {
+        writefln("index: %s, first: %s, second: %s", index, first, second);
+    }
+    ---
+*/
+auto unpackIterator(Range)(Range r)
+    if( isInputRange!(Unqual!Range) && isTuple!(ElementType!Range) )
+{
+    static struct Result {
+        private alias R = Unqual!Range;
+        private alias Types = ElementType!R.Types;
+        public R source;
+
+        int opApply( scope int delegate(ref Types args) dg ) {
+            while( !range.empty ) {
+                const int result = dg(range.front.expand);
+                range.popFront();
+
+                if( result )
+                    return result;
+            }
+            return 0;
+	    }
+
+        int opApply( scope int delegate(ref size_t, ref Types) dg ) {
+            size_t i = 0;
+            while(!range.empty) {
+                const int result = dg(i, range.front.expand);
+                range.popFront();
+                i ++;
+
+                if(result)
+                    return result;
+            }
+            return 0;
+	    }
+    }
+
+    return Result( r );
+}
+
+@safe unittest {
+    alias T = Tuple!(int,string);
+    const T[] array = [ T(1, "a"), T(2, "b"), T(3, "c"), T(4, "d") ];
+
+    {
+        size_t index = 0;
+        foreach( int num, string str; array ) {
+            assert( num == index + 1 );
+            assert( str == [ 'a' + index ] );
+
+            index ++;
+        }
+        assert( index == 4 );
+    }
+
+    {
+        size_t index = 0;
+        foreach( i, num, str; array ) {
+            assert( num == index + 1 );
+            assert( str == [ 'a' + index ] );
+            assert( i == index );
+
+            index ++;
+        }
+        assert( index == 4 );
+    }
 }
 
 /**
