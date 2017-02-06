@@ -1182,7 +1182,7 @@ template Tuple(Specs...)
     ---
     alias T = Tuple!(string,string);
     T[] array = [ T("a", "b"), T("c", "d") ];
-    foreach(size_t index, string first, string second; array) {
+    foreach(size_t index, string first, string second; array.unpackIterator) {
         writefln("index: %s, first: %s, second: %s", index, first, second);
     }
     ---
