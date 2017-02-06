@@ -1188,27 +1188,32 @@ template Tuple(Specs...)
     ---
 */
 auto unpackIterator(Range)(Range r)
-    if( isInputRange!(Unqual!Range) && isTuple!(ElementType!Range) )
+    if(isInputRange!(Unqual!Range) && isTuple!(ElementType!Range))
 {
-    static struct Result {
+    static struct Result
+    {
         private alias R = Unqual!Range;
         private alias Types = ElementType!R.Types;
         public R source;
 
-        int opApply( scope int delegate(ref Types args) dg ) {
-            while( !range.empty ) {
+        int opApply(scope int delegate(ref Types args) dg)
+        {
+            while(!range.empty)
+            {
                 const int result = dg(range.front.expand);
                 range.popFront();
 
-                if( result )
+                if(result)
                     return result;
             }
             return 0;
 	    }
 
-        int opApply( scope int delegate(ref size_t, ref Types) dg ) {
+        int opApply(scope int delegate(ref size_t, ref Types) dg)
+        {
             size_t i = 0;
-            while(!range.empty) {
+            while(!range.empty)
+            {
                 const int result = dg(i, range.front.expand);
                 range.popFront();
                 i ++;
@@ -1220,7 +1225,7 @@ auto unpackIterator(Range)(Range r)
 	    }
     }
 
-    return Result( r );
+    return Result(r);
 }
 
 @safe unittest {
