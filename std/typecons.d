@@ -1173,7 +1173,7 @@ template Tuple(Specs...)
 
     Examples:
     ---
-    foreach(string name, int id; [tuple("john", 5), tuple("jeff", 2)].unpackIterator){
+    foreach (string name, int id; [tuple("john", 5), tuple("jeff", 2)].unpackIterator){
         writefln("name: %s, id: %s" name, id);
     }
     ---
@@ -1182,13 +1182,13 @@ template Tuple(Specs...)
     ---
     alias T = Tuple!(string,string);
     T[] array = [ T("a", "b"), T("c", "d") ];
-    foreach(size_t index, string first, string second; array.unpackIterator) {
+    foreach (size_t index, string first, string second; array.unpackIterator) {
         writefln("index: %s, first: %s, second: %s", index, first, second);
     }
     ---
 */
 auto unpackIterator(Range)(Range r)
-    if(isInputRange!(Unqual!Range) && isTuple!(ElementType!Range))
+    if (isInputRange!(Unqual!Range) && isTuple!(ElementType!Range))
 {
     static struct Result
     {
@@ -1198,12 +1198,12 @@ auto unpackIterator(Range)(Range r)
 
         int opApply(scope int delegate(ref Types args) dg)
         {
-            while(!range.empty)
+            while (!range.empty)
             {
                 const int result = dg(range.front.expand);
                 range.popFront();
 
-                if(result)
+                if (result)
                     return result;
             }
             return 0;
@@ -1212,13 +1212,13 @@ auto unpackIterator(Range)(Range r)
         int opApply(scope int delegate(ref size_t, ref Types) dg)
         {
             size_t i = 0;
-            while(!range.empty)
+            while (!range.empty)
             {
                 const int result = dg(i, range.front.expand);
                 range.popFront();
                 i ++;
 
-                if(result)
+                if (result)
                     return result;
             }
             return 0;
@@ -1234,7 +1234,7 @@ auto unpackIterator(Range)(Range r)
 
     {
         size_t index = 0;
-        foreach( int num, string str; array ) {
+        foreach( int num, string str; array.unpackIterator ) {
             assert( num == index + 1 );
             assert( str == [ 'a' + index ] );
 
@@ -1245,7 +1245,7 @@ auto unpackIterator(Range)(Range r)
 
     {
         size_t index = 0;
-        foreach( i, num, str; array ) {
+        foreach( i, num, str; array.unpackIterator ) {
             assert( num == index + 1 );
             assert( str == [ 'a' + index ] );
             assert( i == index );
