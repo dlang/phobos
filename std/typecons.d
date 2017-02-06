@@ -1168,27 +1168,7 @@ template Tuple(Specs...)
     assert(!is(typeof(point1) == typeof(point2)));
 }
 
-/**
-    Allows to unpack a $(D Tuple) range to arguments when iterating using $(D foreach).
-
-    Examples:
-    ---
-    foreach (string name, int id; [tuple("john", 5), tuple("jeff", 2)].unpackIterator)
-    {
-        writefln("name: %s, id: %s" name, id);
-    }
-    ---
-
-    Examples:
-    ---
-    alias T = Tuple!(string,string);
-    T[] array = [ T("a", "b"), T("c", "d") ];
-    foreach (size_t index, string first, string second; array.unpackIterator)
-    {
-        writefln("index: %s, first: %s, second: %s", index, first, second);
-    }
-    ---
-*/
+/// Allows to unpack a $(D Tuple) range to arguments when iterating using $(D foreach).
 auto unpackIterator(Range)(Range r)
     if (isInputRange!(Unqual!Range) && isTuple!(ElementType!Range))
 {
@@ -1196,7 +1176,7 @@ auto unpackIterator(Range)(Range r)
     {
         private alias R = Unqual!Range;
         private alias Types = ElementType!R.Types;
-        public R source;
+        R source;
 
         int opApply(scope int delegate(Types args) dg)
         {
@@ -1230,6 +1210,7 @@ auto unpackIterator(Range)(Range r)
     return Result(r);
 }
 
+///
 unittest
 {
     alias T = Tuple!(int,string);
@@ -1246,7 +1227,11 @@ unittest
         }
         assert( index == 4 );
     }
+}
 
+/// It is also possible to get item index as first argument
+unittest
+{
     {
         size_t index = 0;
         foreach (i, num, str; array.unpackIterator)
