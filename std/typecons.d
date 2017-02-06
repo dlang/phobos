@@ -1198,7 +1198,7 @@ auto unpackIterator(Range)(Range r)
         private alias Types = ElementType!R.Types;
         public R source;
 
-        int opApply(scope int delegate(ref Types args) dg)
+        int opApply(scope int delegate(Types args) dg)
         {
             while (!source.empty)
             {
@@ -1211,7 +1211,7 @@ auto unpackIterator(Range)(Range r)
             return 0;
 	    }
 
-        int opApply(scope int delegate(ref size_t, ref Types) dg)
+        int opApply(scope int delegate(size_t, Types) dg)
         {
             size_t i = 0;
             while (!source.empty)
