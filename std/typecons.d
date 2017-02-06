@@ -1169,11 +1169,12 @@ template Tuple(Specs...)
 }
 
 /**
-    Allows to unpack a $(D Tuple) ranges to arguments when iterating using $(D foreach).
+    Allows to unpack a $(D Tuple) range to arguments when iterating using $(D foreach).
 
     Examples:
     ---
-    foreach (string name, int id; [tuple("john", 5), tuple("jeff", 2)].unpackIterator){
+    foreach (string name, int id; [tuple("john", 5), tuple("jeff", 2)].unpackIterator)
+    {
         writefln("name: %s, id: %s" name, id);
     }
     ---
@@ -1182,7 +1183,8 @@ template Tuple(Specs...)
     ---
     alias T = Tuple!(string,string);
     T[] array = [ T("a", "b"), T("c", "d") ];
-    foreach (size_t index, string first, string second; array.unpackIterator) {
+    foreach (size_t index, string first, string second; array.unpackIterator)
+    {
         writefln("index: %s, first: %s, second: %s", index, first, second);
     }
     ---
@@ -1198,10 +1200,10 @@ auto unpackIterator(Range)(Range r)
 
         int opApply(scope int delegate(ref Types args) dg)
         {
-            while (!range.empty)
+            while (!source.empty)
             {
-                const int result = dg(range.front.expand);
-                range.popFront();
+                const int result = dg(source.front.expand);
+                source.popFront();
 
                 if (result)
                     return result;
@@ -1212,10 +1214,10 @@ auto unpackIterator(Range)(Range r)
         int opApply(scope int delegate(ref size_t, ref Types) dg)
         {
             size_t i = 0;
-            while (!range.empty)
+            while (!source.empty)
             {
-                const int result = dg(i, range.front.expand);
-                range.popFront();
+                const int result = dg(i, source.front.expand);
+                source.popFront();
                 i ++;
 
                 if (result)
@@ -1228,13 +1230,15 @@ auto unpackIterator(Range)(Range r)
     return Result(r);
 }
 
-@safe unittest {
+@safe unittest
+{
     alias T = Tuple!(int,string);
     const T[] array = [ T(1, "a"), T(2, "b"), T(3, "c"), T(4, "d") ];
 
     {
         size_t index = 0;
-        foreach ( int num, string str; array.unpackIterator ) {
+        foreach (int num, string str; array.unpackIterator)
+        {
             assert( num == index + 1 );
             assert( str == [ 'a' + index ] );
 
@@ -1245,7 +1249,8 @@ auto unpackIterator(Range)(Range r)
 
     {
         size_t index = 0;
-        foreach ( i, num, str; array.unpackIterator ) {
+        foreach (i, num, str; array.unpackIterator)
+        {
             assert( num == index + 1 );
             assert( str == [ 'a' + index ] );
             assert( i == index );
