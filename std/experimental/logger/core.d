@@ -1,17 +1,9 @@
 ///
 module std.experimental.logger.core;
 
-import std.array;
-import std.stdio;
-import std.conv;
 import std.datetime;
-import std.string;
-import std.range;
+import std.range.primitives;
 import std.traits;
-import std.exception;
-import std.concurrency;
-import std.format;
-import core.atomic;
 import core.sync.mutex : Mutex;
 
 import std.experimental.logger.filelogger;
@@ -175,6 +167,8 @@ The fractional second part is in milliseconds and is always 3 digits.
 void systimeToISOString(OutputRange)(OutputRange o, const ref SysTime time)
     if (isOutputRange!(OutputRange,string))
 {
+    import std.format : formattedWrite;
+
     const auto dt = cast(DateTime)time;
     const auto fsec = time.fracSecs.total!"msecs";
 
@@ -667,7 +661,7 @@ private void formatString(A...)(MsgRange oRange, A args)
 
     foreach (arg; args)
     {
-        std.format.formattedWrite(oRange, "%s", arg);
+        formattedWrite(oRange, "%s", arg);
     }
 }
 
@@ -716,6 +710,9 @@ flexibility.
 */
 abstract class Logger
 {
+    import std.array : appender, Appender;
+    import std.concurrency : thisTid, Tid;
+
     /** LogEntry is a aggregation combining all information associated
     with a log message. This aggregation will be passed to the method
     writeLogMsg.
@@ -1044,6 +1041,8 @@ abstract class Logger
             static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
                 synchronized (mutex)
             {
+                import std.format : formattedWrite;
+
                 if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel,
                                      condition))
                 {
@@ -1090,6 +1089,8 @@ abstract class Logger
             static if (isLoggingActiveAt!ll && ll >= moduleLogLevel!moduleName)
                 synchronized (mutex)
             {
+                import std.format : formattedWrite;
+
                 if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel))
                 {
                     this.beginLogMsg(file, line, funcName, prettyFuncName,
@@ -1441,6 +1442,8 @@ abstract class Logger
     {
         static if (isLoggingActive) synchronized (mutex)
         {
+            import std.format : formattedWrite;
+
             if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel, condition))
             {
                 this.beginLogMsg(file, line, funcName, prettyFuncName,
@@ -1487,6 +1490,8 @@ abstract class Logger
     {
         static if (isLoggingActive) synchronized (mutex)
         {
+            import std.format : formattedWrite;
+
             if (isLoggingEnabled(ll, this.logLevel_, globalLogLevel))
             {
                 this.beginLogMsg(file, line, funcName, prettyFuncName,
@@ -1534,6 +1539,8 @@ abstract class Logger
     {
         static if (isLoggingActive) synchronized (mutex)
         {
+            import std.format : formattedWrite;
+
             if (isLoggingEnabled(this.logLevel_, this.logLevel_, globalLogLevel,
                 condition))
             {
@@ -1578,6 +1585,8 @@ abstract class Logger
     {
         static if (isLoggingActive) synchronized (mutex)
         {
+            import std.format : formattedWrite;
+
             if (isLoggingEnabled(this.logLevel_, this.logLevel_,
                 globalLogLevel))
             {
@@ -1615,6 +1624,9 @@ private shared LogLevel stdLoggerGlobalLogLevel = LogLevel.all;
  */
 private @property Logger defaultSharedLoggerImpl() @trusted
 {
+    import std.conv : emplace;
+    import std.stdio : stderr;
+
     static __gshared ubyte[__traits(classInstanceSize, FileLogger)] _buffer;
 
     synchronized (stdSharedLoggerMutex)
@@ -1654,6 +1666,7 @@ if (sharedLog !is myLogger)
 {
     static auto trustedLoad(ref shared Logger logger) @trusted
     {
+        import core.atomic : atomicLoad, MemoryOrder;
         return atomicLoad!(MemoryOrder.acq)(logger);
     }
 
@@ -1672,6 +1685,7 @@ if (sharedLog !is myLogger)
 /// Ditto
 @property void sharedLog(Logger logger) @trusted
 {
+    import core.atomic : atomicStore, MemoryOrder;
     atomicStore!(MemoryOrder.rel)(stdSharedLogger, cast(shared) logger);
 }
 
@@ -1743,6 +1757,8 @@ private Logger stdLoggerDefaultThreadLogger;
 */
 private @property Logger stdThreadLocalLogImpl() @trusted
 {
+    import std.conv : emplace;
+
     static ubyte[__traits(classInstanceSize, StdForwardLogger)] _buffer;
 
     auto buffer = cast(ubyte[]) _buffer;
@@ -1925,6 +1941,10 @@ version(unittest) private void testFuncNames(Logger logger) @safe
 
 @safe unittest
 {
+    import std.conv : to;
+    import std.exception : assertThrown, assertNotThrown;
+    import std.format : format;
+
     auto l = new TestLogger(LogLevel.all);
     string msg = "Hello Logger World";
     l.log(msg);
@@ -2064,6 +2084,8 @@ version(unittest) private void testFuncNames(Logger logger) @safe
 unittest // default logger
 {
     import std.file : deleteme, exists, remove;
+    import std.stdio : File;
+    import std.string : indexOf;
 
     string filename = deleteme ~ __FUNCTION__ ~ ".tempLogFile";
     FileLogger l = new FileLogger(filename);
@@ -2102,6 +2124,8 @@ unittest // default logger
 unittest
 {
     import std.file : deleteme, remove;
+    import std.stdio : File;
+    import std.string : indexOf;
 
     string filename = deleteme ~ __FUNCTION__ ~ ".tempLogFile";
     auto oldunspecificLogger = sharedLog;
@@ -2134,6 +2158,8 @@ unittest
 
 @safe unittest
 {
+    import std.conv : to;
+
     auto tl = new TestLogger(LogLevel.all);
     int l = __LINE__;
     tl.info("a");
@@ -2150,6 +2176,10 @@ unittest
 // testing possible log conditions
 @safe unittest
 {
+    import std.conv : to;
+    import std.string : indexOf;
+    import std.format : format;
+
     auto oldunspecificLogger = sharedLog;
 
     auto mem = new TestLogger;
@@ -2393,6 +2423,10 @@ unittest
 // more testing
 @safe unittest
 {
+    import std.conv : to;
+    import std.format : format;
+    import std.string : indexOf;
+
     auto oldunspecificLogger = sharedLog;
 
     auto mem = new TestLogger;
@@ -2877,6 +2911,8 @@ unittest
 // Issue #5
 @safe unittest
 {
+    import std.string : indexOf;
+
     auto oldunspecificLogger = sharedLog;
 
     scope(exit)
@@ -2896,6 +2932,8 @@ unittest
 @safe unittest
 {
     import std.experimental.logger.multilogger : MultiLogger;
+    import std.string : indexOf;
+
     stdThreadLocalLog.logLevel = LogLevel.all;
 
     auto oldunspecificLogger = sharedLog;
@@ -2946,12 +2984,14 @@ unittest
 // Workaround for atomics not allowed in @safe code
 private auto trustedLoad(T)(ref shared T value) @trusted
 {
+    import core.atomic : atomicLoad, MemoryOrder;
     return atomicLoad!(MemoryOrder.acq)(value);
 }
 
 // ditto
 private void trustedStore(T)(ref shared T dst, ref T src) @trusted
 {
+    import core.atomic : atomicStore, MemoryOrder;
     atomicStore!(MemoryOrder.rel)(dst, src);
 }
 
