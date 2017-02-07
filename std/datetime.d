@@ -31720,6 +31720,7 @@ version(Windows) version(UpdateWindowsTZTranslations) deprecated @system unittes
    and situation-dependent stuff (such as the overhead of a context switch
    between threads) can also affect $(D StopWatch)'s accuracy.
   +/
+deprecated("Will be removed along with TickDuration.")
 @safe struct StopWatch
 {
 public:
@@ -31974,6 +31975,7 @@ private:
     See_Also:
         $(LREF measureTime)
   +/
+deprecated("Will be removed along with TickDuration.")
 TickDuration[fun.length] benchmark(fun...)(uint n)
 {
     TickDuration[fun.length] result;
@@ -32018,6 +32020,7 @@ TickDuration[fun.length] benchmark(fun...)(uint n)
 /++
    Return value of benchmark with two functions comparing.
   +/
+deprecated("Will be removed along with TickDuration.")
 @safe struct ComparingBenchmarkResult
 {
     /++
@@ -32071,6 +32074,7 @@ private:
        targetFunc = The function that wants to measure speed.
        times      = The number of times each function is to be executed.
   +/
+deprecated("Will be removed along with TickDuration.")
 ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
                                             alias targetFunc,
                                             int times = 0xfff)()
