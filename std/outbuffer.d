@@ -256,45 +256,24 @@ class OutBuffer
         auto psize = buffer.length;
         for (;;)
         {
-            version(Windows)
+            va_list args2;
+            va_copy(args2, args);
+            count = vsnprintf(p, psize, f, args2);
+            va_end(args2);
+            if (count == -1)
             {
-                va_list args2;
-                va_copy(args2, args);
-                count = vsnprintf(p,psize,f,args2);
-                va_end(args2);
-                if (count != -1)
-                    break;
-
                 if (psize > psize.max / 2) assert(0); // overflow check
                 psize *= 2;
-
-                p = cast(char *) alloca(psize); // buffer too small, try again with larger size
             }
-            else version(Posix)
+            else if (count >= psize)
             {
-                va_list args2;
-                va_copy(args2, args);
-                count = vsnprintf(p, psize, f, args2);
-                va_end(args2);
-                if (count == -1)
-                {
-                    if (psize > psize.max / 2) assert(0); // overflow check
-                    psize *= 2;
-                }
-                else if (count >= psize)
-                {
-                    if (count == count.max) assert(0); // overflow check
-                    psize = count + 1;
-                }
-                else
-                    break;
-
-                p = cast(char *) alloca(psize); // buffer too small, try again with larger size
+                if (count == count.max) assert(0); // overflow check
+                psize = count + 1;
             }
             else
-            {
-                static assert(0);
-            }
+                break;
+
+            p = cast(char *) alloca(psize); // buffer too small, try again with larger size
         }
         write(cast(ubyte[]) p[0 .. count]);
     }
