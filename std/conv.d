@@ -5478,23 +5478,18 @@ pure nothrow @safe /* @nogc */ unittest
 void toTextRange(T, W)(T value, W writer)
 if (isIntegral!T && isOutputRange!(W, char))
 {
-    char[value.sizeof * 4] buffer = void;
-    uint i = cast(uint) (buffer.length - 1);
+    import core.internal.string;
 
-    bool negative = value < 0;
-    Unqual!(Unsigned!T) v = negative ? -value : value;
-
-    while (v >= 10)
+    if (value < 0)
     {
-        auto c = cast(uint) (v % 10);
-        v /= 10;
-        buffer[i--] = cast(char) (c + '0');
+        SignedStringBuf buf = void;
+        put(writer, signedToTempString(value, buf, 10));
     }
-
-    buffer[i] = cast(char) (v + '0'); //hexDigits[cast(uint) v];
-    if (negative)
-        buffer[--i] = '-';
-    put(writer, buffer[i .. $]);
+    else
+    {
+        UnsignedStringBuf buf = void;
+        put(writer, unsignedToTempString(value, buf, 10));
+    }
 }
 
 @safe unittest
