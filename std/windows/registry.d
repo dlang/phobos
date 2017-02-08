@@ -564,12 +564,12 @@ body
             version(LittleEndian)
                 value = to!string(u.dw);
             else
-                value = to!string(core.bitop.bswap(u.dw));
+                value = to!string(bswap(u.dw));
             break;
 
         case REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
             version(LittleEndian)
-                value = to!string(core.bitop.bswap(u.dw));
+                value = to!string(bswap(u.dw));
             else
                 value = to!string(u.dw);
             break;
@@ -650,12 +650,12 @@ body
             version(LittleEndian)
                 static assert(REG_VALUE_TYPE.REG_DWORD == REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN);
             else
-                value = core.bitop.bswap(value);
+                value = bswap(value);
             break;
 
         case REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
             version(LittleEndian)
-                value = core.bitop.bswap(value);
+                value = bswap(value);
             else
                 static assert(REG_VALUE_TYPE.REG_DWORD == REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN);
             break;
