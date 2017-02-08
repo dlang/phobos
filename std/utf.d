@@ -66,10 +66,17 @@ class UTFException : Exception
     }
 
 
-    override string toString()
+    override string toString() const
     {
         if (len == 0)
-            return super.toString();
+        {
+            /* Exception.toString() is not marked as const, although
+             * it is const-compatible.
+             */
+            //return super.toString();
+            auto e = () @trusted { return cast(Exception)super; } ();
+            return e.toString();
+        }
 
         string result = "Invalid UTF sequence:";
 
