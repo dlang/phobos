@@ -167,11 +167,13 @@ class CSVException : Exception
  */
 class IncompleteCellException : CSVException
 {
-    /// Data pulled from input before finding a problem
-    ///
-    /// This field is populated when using $(LREF csvReader)
-    /// but not by $(LREF csvNextToken) as this data will have
-    /// already been fed to the output range.
+    /**
+     * Data pulled from input before finding a problem
+     *
+     * This field is populated when using $(LREF csvReader)
+     * but not by $(LREF csvNextToken) as this data will have
+     * already been fed to the output range.
+     */
     dstring partialData;
 
     mixin basicExceptionCtors;
@@ -234,10 +236,8 @@ class HeaderMismatchException : CSVException
 */
 enum Malformed
 {
-    /// No exceptions are thrown due to incorrect CSV.
-    ignore,
-    /// Use exceptions when input has incorrect CSV.
-    throwException
+    ignore,           /// No exceptions are thrown due to incorrect CSV.
+    throwException    /// Use exceptions when input has incorrect CSV.
 }
 
 /**
