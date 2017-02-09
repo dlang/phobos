@@ -418,13 +418,12 @@ Throws: $(D FileException) on file error, $(D UTFException) on UTF
 decoding error.
  */
 
-S readText(S = string, R)(R name)
-    if (isSomeString!S &&
-        (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
+string readText(R)(R name)
+    if ((isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
         !isConvertibleToString!R)
 {
     import std.utf : validate;
-    static auto trustedCast(void[] buf) @trusted { return cast(S)buf; }
+    static trustedCast(void[] buf) @trusted { return cast(string)buf; }
     auto result = trustedCast(read(name));
     validate(result);
     return result;
@@ -440,10 +439,10 @@ S readText(S = string, R)(R name)
     enforce(content == "abc");
 }
 
-S readText(S = string, R)(auto ref R name)
+string readText(R)(auto ref R name)
     if (isConvertibleToString!R)
 {
-    return readText!(S, StringTypeOf!R)(name);
+    return readText!(StringTypeOf!R)(name);
 }
 
 @safe unittest
