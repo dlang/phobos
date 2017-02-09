@@ -582,9 +582,9 @@ Complexity: $(BIGOH 1)
 
 /**
 Returns a range that iterates over elements of the container from
-index $(D a) up to (excluding) index $(D b).
+index $(D i) up to (excluding) index $(D j).
 
-Precondition: $(D a <= b && b <= length)
+Precondition: $(D i <= j && j <= length)
 
 Complexity: $(BIGOH 1)
 */
