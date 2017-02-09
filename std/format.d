@@ -1506,6 +1506,13 @@ private void formatUnsigned(Writer, T, Char)(Writer w, T arg, const ref FormatSp
      */
     char[64] buffer = void; // 64 bits in base 2 at most
     char[] digits;
+    if (arg < base && base <= 10 && arg)
+    {
+        // Most numbers are a single digit - avoid expensive divide
+        buffer[0] = cast(char)(arg + '0');
+        digits = buffer[0 .. 1];
+    }
+    else
     {
         size_t i = buffer.length;
         while (arg)
@@ -1589,9 +1596,11 @@ private void formatUnsigned(Writer, T, Char)(Writer w, T arg, const ref FormatSp
 {
     assertCTFEable!(
     {
+        formatTest(9, "9");
         formatTest( 10, "10" );
     });
 }
+
 @system unittest
 {
     class C1 { long val; alias val this; this(long v){ val = v; } }
@@ -1648,6 +1657,12 @@ private void formatUnsigned(Writer, T, Char)(Writer w, T arg, const ref FormatSp
     Bar bar;
     formattedWrite(&put, "%s", bar);    // NG
     assert(result == "Bar");
+
+    result = null;
+
+    int i = 9;
+    formattedWrite(&put, "%s", 9);
+    assert(result == "9");
 }
 
 /**
