@@ -21,7 +21,7 @@ struct GCAllocator
     deallocate) and $(D reallocate) methods are $(D @system) because they may
     move memory around, leaving dangling pointers in user code.
     */
-    pure nothrow @trusted void[] allocate(size_t bytes) shared
+    pure nothrow @trusted void[] allocate(size_t bytes) shared const
     {
         if (!bytes) return null;
         auto p = GC.malloc(bytes);
@@ -29,7 +29,7 @@ struct GCAllocator
     }
 
     /// Ditto
-    @system bool expand(ref void[] b, size_t delta) shared
+    @system bool expand(ref void[] b, size_t delta) shared const
     {
         if (delta == 0) return true;
         if (b is null) return false;
@@ -52,7 +52,7 @@ struct GCAllocator
     }
 
     /// Ditto
-    pure nothrow @system bool reallocate(ref void[] b, size_t newSize) shared
+    pure nothrow @system bool reallocate(ref void[] b, size_t newSize) shared const
     {
         import core.exception : OutOfMemoryError;
         try
@@ -69,7 +69,7 @@ struct GCAllocator
     }
 
     /// Ditto
-    pure nothrow void[] resolveInternalPointer(void* p) shared
+    pure nothrow void[] resolveInternalPointer(void* p) shared const
     {
         auto r = GC.addrOf(p);
         if (!r) return null;
@@ -77,14 +77,14 @@ struct GCAllocator
     }
 
     /// Ditto
-    pure nothrow @system bool deallocate(void[] b) shared
+    pure nothrow @system bool deallocate(void[] b) shared const
     {
         GC.free(b.ptr);
         return true;
     }
 
     /// Ditto
-    size_t goodAllocSize(size_t n) shared
+    size_t goodAllocSize(size_t n) shared const
     {
         if (n == 0)
             return 0;
@@ -107,7 +107,7 @@ struct GCAllocator
     are $(D shared).
     */
 
-    static shared GCAllocator instance;
+    static const shared GCAllocator instance;
 
     // Leave it undocummented for now.
     nothrow @trusted void collect() shared
