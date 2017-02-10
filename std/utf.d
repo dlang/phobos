@@ -211,14 +211,7 @@ package auto invalidUTFstrings(Char)() @safe pure @nogc nothrow
   +/
 bool isValidDchar(dchar c) pure nothrow @safe @nogc
 {
-    /* Note: FFFE and FFFF are specifically permitted by the
-     * Unicode standard for application internal use, but are not
-     * allowed for interchange.
-     * (thanks to Arcane Jill)
-     */
-
-    return c < 0xD800 ||
-          (c > 0xDFFF && c <= 0x10FFFF /*&& c != 0xFFFE && c != 0xFFFF*/);
+    return c < 0xD800 || (c > 0xDFFF && c <= 0x10FFFF);
 }
 
 pure nothrow @safe @nogc unittest
