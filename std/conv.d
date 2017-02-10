@@ -5894,6 +5894,8 @@ auto toChars(ubyte radix = 10, Char = char, LetterCase letterCase = LetterCase.l
 
             @property size_t length() { return upr - lwr; }
 
+            alias opDollar = length;
+
             @property bool empty() { return upr == lwr; }
 
             @property Char front() { return buf[lwr]; }
