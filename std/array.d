@@ -3559,3 +3559,1000 @@ RefAppender!(E[]) appender(P : E[]*, E)(P arrayPtr)
     assert(appS.data == "hellow");
     assert(appA.data == "hellow");
 }
+
+
+
+private void* __appender_scaned_freelist;
+private void* __appender_noscan_freelist;
+private extern (C) void* _memset32(void*, int, size_t); // from rt.memset;
+
+/** Implements an output range that stores data. This is highly recommended
+    over $(D a ~= data) as Builder is memory and computationally optimal.
+*/
+struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
+{
+    import core.memory : GC;
+
+    private
+    {
+        enum PageSize = 4096; // Memory page size (in bytes)
+        alias E = Unqual!T; // Internal element type
+
+        struct Segment
+        {
+            static if (hasIndirections!T)
+            {
+                alias freelist = __appender_scaned_freelist;
+            }
+            else
+            {
+                alias freelist = __appender_noscan_freelist;
+            }
+
+            enum slackInit = (PageSize - size_t.sizeof * 4) / E.sizeof;
+
+            union
+            {
+                struct
+                { // Runtime
+                    size_t slack; // The remaining capacity
+                    E* ptr; // The empty data
+                    Segment* next; // The next data segment
+                    union
+                    {
+                        size_t count; // reference count (_head only)
+                        Segment* prev; // Previous segment(_tail only)
+                    }
+                }
+
+                struct
+                { // CTFE ()
+                    // @@@BUG@@@ Currently limited by CTFE mutation issues
+                    E[] data; // The data array
+
+                    size_t ct_slack() const pure nothrow @property
+                    {
+                        return data.capacity - data.length;
+                    }
+                }
+            }
+
+            // Returns: a pointer to the full portion of the segment
+            E* base() const pure nothrow @property
+            {
+                assert(!__ctfe);
+                return cast(E*)(&this + 1);
+            }
+
+            // Returns: the number of used elements in this segment
+            size_t length() const pure nothrow @property
+            {
+                return __ctfe ? data.length : slackInit - slack;
+            }
+
+            // Returns: the number of elements in this segment
+            size_t capacity() const pure nothrow @property
+            {
+                return __ctfe ? data.capacity : slackInit;
+            }
+
+            // Create a new segment
+            static Segment* _make(Segment* prev) @property
+            {
+                import core.stdc.stdlib : malloc;
+
+                if (__ctfe)
+                {
+                    auto s = new Segment;
+                    s.data = data.init;
+                    return s;
+                }
+                auto seg = cast(Segment*) freelist;
+                if (seg)
+                { // There was a segment to re-use
+                    freelist = seg.next;
+                }
+                else
+                { // Allocate a new segment
+                    seg = cast(Segment*) malloc(PageSize);
+                    static if (hasIndirections!T)
+                    {
+                        GC.addRange(seg, PageSize);
+                    }
+                }
+                seg.slack = slackInit;
+                seg.ptr = seg.base;
+                seg.next = null;
+                seg.prev = prev;
+                return seg;
+            }
+
+            // Saves the first segment to the free-list, frees the rest.
+            void free()
+            {
+                if (__ctfe)
+                    return;
+
+                assert(&this !is null);
+                assert(count == 0);
+                auto s = next;
+                while (s)
+                {
+                    auto sn = s.next;
+                    GC.free(s);
+                    s = sn;
+                }
+
+                // Clear the memory of unwanted false pointers
+                static if (hasIndirections!T)
+                {
+                    _memset32(&this, 0, PageSize / int.sizeof);
+                }
+
+                next = cast(Segment*) freelist;
+                freelist = &this;
+            }
+        }
+
+        static assert(Segment.sizeof == 4 * size_t.sizeof);
+
+        Segment* _head; // The head data segment
+        Segment* _tail; // The last data segment
+
+        // Initialize the Builder
+        void _init() @property
+        {
+            _head = _tail = Segment._make(cast(Segment*) 1);
+        }
+
+        // Advances the _tail, adding a segment if needs be.
+        void _grow() @property
+        {
+            // Add another segment
+            if (!_tail.next)
+                _tail.next = Segment._make(_tail);
+            _tail = _tail.next;
+        }
+
+        // Returns: the total number of elements in the Builder
+        size_t _length() const pure nothrow @property
+        {
+            if (__ctfe)
+                return _head ? _head.length : 0;
+
+            size_t len = 0;
+            for (const(Segment)* d = _head; d; d = d.next)
+                len += d.length;
+            return len;
+        }
+    }
+
+    // Maintain the segment reference count
+    this(this)
+    {
+        synchronized
+        {
+            if (!__ctfe && _head)
+            {
+                _head.count++;
+            }
+        }
+    }
+
+    // Maintain the segment reference count
+    ~this()
+    {
+        assert(__ctfe || !_head || _head.count > 0);
+        if (__ctfe || !_head || --_head.count) // Uninitialized || RefCount > 0
+            return;
+        _head.free;
+    }
+
+    private template canPutItem(U)
+    {
+        enum bool canPutItem =
+            isImplicitlyConvertible!(U, E) ||
+            isSomeChar!E && isSomeChar!U;
+    }
+
+    private template canPutConstRange(Range)
+    {
+        enum bool canPutConstRange =
+            isInputRange!(Unqual!Range) &&
+            !isInputRange!Range;
+    }
+
+    private template canPutRange(Range)
+    {
+        static if (isInputRange!(Range))
+        {
+            enum bool canPutRange = canPutItem!(typeof(Range.init.front));
+        }
+        else
+            enum bool canPutRange = false;
+    }
+
+    /// Appends
+    void put(U)(U item) if (canPutItem!U)
+    {
+        static if (isImplicitlyConvertible!(U, E))
+        {
+            if (__ctfe && !_tail)
+                _init;
+
+            if (__ctfe)
+            {
+                _tail.data ~= cast(E) item;
+                return;
+            }
+
+            // Runtime
+            if (!_tail || _tail.slack == 0)
+            {
+                if (!_tail)
+                    _init;
+                else
+                    _grow;
+            }
+
+            *_tail.ptr++ = cast(E) item;
+            --_tail.slack;
+        }
+        else static if (isSomeChar!E && isSomeChar!U)
+        {
+            import std.utf : encode;
+
+            E[E.sizeof == 1 ? 4 : 2] encoded;
+            immutable len = encode(encoded, item);
+            put(encoded[0 .. len]);
+        }
+        else
+        {
+            assert(0);
+        }
+    }
+
+    /// ditto
+    void put(U)(U item) if (canPutRange!U)
+    {
+        static if ((isArray!U || is(typeof(_tail.ptr[0 .. item.length] = (cast(E[]) item[])[0 .. 1]))))
+        {
+            auto items = cast(E[]) item[];
+
+            if (__ctfe)
+            {
+                _tail.data ~= items;
+                return;
+            }
+
+            if (!_tail || _tail.slack < items.length)
+            {
+                if (!_tail)
+                {
+                    _init;
+                }
+                while (_tail.slack < items.length)
+                {
+                    // Fill up the remaining slack
+                    _tail.ptr[0 .. _tail.slack] = items[0 .. _tail.slack];
+                    _tail.ptr += _tail.slack;
+                    items = items[_tail.slack .. $];
+                    _tail.slack = 0;
+                    _grow;
+                }
+            }
+            // Push the items
+            _tail.ptr[0 .. items.length] = items;
+            _tail.ptr += items.length;
+            _tail.slack -= items.length;
+        }
+        else
+        {
+            std.range.put(this, item);
+        }
+    }
+
+    /// ditto
+    ref typeof(this) opOpAssign(string op, U)(U item) if (op == "~")
+    {
+        put(item);
+        return this;
+    }
+
+    // Need to do a build with this gone to trace / fix phobos
+    /// Returns: a copy of the Builder's data in an array.
+    static if (!hasIndirections!T)
+    {
+        private
+        E[] dupTo(ref E[] arr) pure @property
+        {
+            size_t i = 0;
+            size_t len = void;
+            arr.length = _length;
+            for (const(Segment)* d = _head; d !is null; d = d.next, i += len)
+            {
+                len = d.length;
+                arr[i .. i + len] = d.base[0 .. len];
+            }
+            return arr;
+        }
+
+        /// ditto
+        T[] dup() pure @property
+        {
+            if (__ctfe)
+            {
+                return cast(T[])(_head !is null ? _head.data : null);
+            }
+            if (_head == _tail)
+            {
+                return cast(T[])(_head ? _head.base[0 .. _head.length].dup : null);
+            }
+            E[] arr;
+            return cast(T[]) dupTo(arr);
+        }
+
+        static if (is(T == immutable) || !hasIndirections!T)
+        {
+            /// ditto
+            immutable(T)[] idup() pure @property
+            {
+                return cast(immutable(T)[]) dup;
+            }
+        }
+
+        T[] opDispatch(string name)() pure @property if (name == "data")
+        {
+            return dup;
+        }
+
+        /// Constructs an Builder and makes a copy of the array.
+        this(T[] arr)
+        {
+            put(arr);
+        }
+
+        /// Construct an Builder with a capacity of at least N elements.
+        this(size_t N)
+        {
+            reserve(N);
+        }
+
+        /// Returns: the number of elements that can be added before allocation.
+        size_t slack() const pure nothrow @property
+        {
+            if (__ctfe)
+                return _head ? _head.ct_slack : 0;
+
+            size_t sum = 0;
+            for (const(Segment)* seg = _tail; seg !is null; seg = seg.next)
+            {
+                sum += seg.slack;
+            }
+            return sum;
+        }
+
+        /// Returns: the number of elements already added to the Builder
+        size_t walkLength() const pure nothrow @property
+        {
+            return _length;
+        }
+
+        /// Increases the slack by at least N elements
+        void extend(size_t N)
+        {
+            if (!_head)
+                _init;
+
+            if (__ctfe)
+            {
+                //            _head.data.length = _head.data.length + N;
+                return;
+            }
+
+            auto len = slack;
+            auto seg = _tail;
+            while (seg.next !is null)
+                seg = seg.next;
+
+            while (N > len)
+            {
+                seg.next = Segment._make(seg);
+                len += seg.next.slack;
+                seg = seg.next;
+            }
+        }
+
+        /// Returns: the total number of elements currently allocated.
+        size_t capacity() const pure nothrow @property
+        {
+            if (__ctfe)
+                return _head ? _head.capacity : 0;
+
+            size_t sum = 0;
+            for (const(Segment)* seg = _tail; seg !is null; seg = seg.next)
+            {
+                sum += seg.capacity;
+            }
+            return sum;
+        }
+
+        /// Ensures that the capacity is a least newCapacity elements.
+        void reserve(size_t newCapacity)
+        {
+            auto cap = capacity;
+            if (cap >= newCapacity)
+                return;
+            extend(newCapacity - cap);
+        }
+
+        static if (isMutable!T)
+        {
+            /// Clears the Builder. Does not zero or destruct existing items.s
+            typeof(this) clear() nothrow
+            {
+                if (__ctfe)
+                {
+                    if (_head)
+                        _head.data.length = 0;
+                    return this;
+                }
+
+                for (auto seg = _head; seg !is null; seg = seg.next)
+                {
+                    seg.slack = Segment.slackInit;
+                    seg.ptr = _head.base;
+                }
+                _tail = _head;
+                return this;
+            }
+
+            /** Shrinks the Builder to a given length if less than the current
+                length. Does not zero or destruct existing items.
+             */
+            void shrinkTo(size_t newlength) nothrow
+            {
+                if (__ctfe)
+                {
+                    if (_head)
+                        _head.data.length = newlength;
+                    return;
+                }
+
+                for (auto seg = _head; seg !is null; seg = seg.next)
+                {
+                    if (newlength == 0)
+                    {
+                        seg.slack = Segment.slackInit;
+                        seg.ptr = _head.base;
+                        continue;
+                    }
+                    auto len = seg.length;
+
+                    if (len >= newlength)
+                    {
+                        seg.ptr = seg.base + newlength;
+                        seg.slack = Segment.slackInit - newlength;
+                        newlength = 0;
+                    }
+                    else
+                    {
+                        newlength -= len;
+                    }
+                }
+
+                assert(newlength == 0, "Builder.shrinkTo: newlength > capacity");
+            }
+        }
+
+        /// Provides a bi-directional range over the Builder's elements
+        /// Currently doesn't kept the Builder alive, etc
+        struct Slice(U)
+        {
+            private
+            {
+                Segment* _head; // Current front segment
+                Segment* _tail; // Current back segment
+                U* _front; // Current front pointer
+                U* _back; // Current back pointer
+                Segment* _ref_count; // Ref counting segment
+            }
+
+            // Construct a slice
+            this(App)(ref App app, string file = __FILE__, int line = __LINE__)
+            {
+                if (__ctfe)
+                {
+                    _head = cast(Segment*) app._head;
+                    return;
+                }
+                _head = cast(Segment*) app._head;
+                _tail = cast(Segment*) app._tail;
+                if (_head !is null && _head.ptr != _head.base)
+                {
+                    _ref_count = cast(Segment*) app._head;
+                    _ref_count.count++;
+                    _front = _head.base;
+                    while (_tail.ptr is _tail.base)
+                    {
+                        _tail = _tail.prev;
+                    }
+                    _back = _tail.ptr;
+                }
+                else
+                {
+                    // These should be the Slice.init values
+                    //_ref_count = _front = _back = null;
+                }
+            }
+
+            // Maintain the segment reference count
+            this(this)
+            {
+                if (!__ctfe && _ref_count)
+                {
+                    _ref_count.count++;
+                }
+            }
+
+            // Maintain the segment reference count
+            ~this()
+            {
+                assert(__ctfe || !_head || (_head && _head.count > 0));
+                // Uninitialized || RefCount > 0
+                if (__ctfe || !_ref_count || --_ref_count.count)
+                    return;
+                _ref_count.free;
+            }
+
+            /// The range interface
+            U front() pure nothrow @property
+            {
+                if (__ctfe)
+                    return _head.data[0];
+                return *_front;
+            }
+
+            /// ditto
+            U back() pure nothrow @property
+            {
+                if (__ctfe)
+                    return _head.data[$ - 1];
+                return *(_back - 1);
+            }
+
+            static if (is(U == E))
+            {
+                // Allow non-escaping mutation of the Builder (non-const)
+                //@@@BUG@@@ this must be defined after T front() to work with put, etc.
+                /// ditto
+                void front(U value) pure nothrow @property
+                {
+                    if (__ctfe)
+                    {
+                        _head.data[0] = value;
+                        return;
+                    }
+                    *_front = value;
+                }
+
+                /// ditto
+                void back(U value) pure nothrow @property
+                {
+                    if (__ctfe)
+                    {
+                        _head.data[$ - 1] = value;
+                        return;
+                    }
+                    *(_back - 1) = value;
+                }
+            }
+
+            /// ditto
+            bool empty() const pure nothrow @property
+            {
+                if (__ctfe)
+                    return _head.data.empty;
+                return _front is _back;
+            }
+
+            /// ditto
+            typeof(this) save() pure nothrow
+            {
+                return this;
+            }
+
+            /// ditto
+            void popFront() pure
+            {
+                if (empty)
+                    return;
+                if (__ctfe)
+                {
+                    _head.data = _head.data[1 .. $];
+                    return;
+                }
+                _front++;
+                while (_front >= _head.ptr)
+                {
+                    _head = _head.next;
+                    if (_head is null)
+                    {
+                        _front = _back = null;
+                        return;
+                    }
+                    _front = _head.base;
+                }
+            }
+
+            /// ditto
+            void popBack() pure
+            {
+                if (empty)
+                    return;
+                if (__ctfe)
+                {
+                    _head.data = _head.data[0 .. $ - 1];
+                    return;
+                }
+                _back--;
+                while (_back <= _tail.base)
+                {
+                    if (_tail is _ref_count)
+                    {
+                        _front = _back = null;
+                        return;
+                    }
+                    _tail = _tail.prev;
+                    _back = _tail.ptr;
+                }
+            }
+        }
+
+        /// Returns: a forward range iterating over the Builder's content
+        auto opSlice() @property
+        {
+            return Slice!(E)(this);
+        }
+
+        /// ditto
+        auto opSlice() @property const
+        {
+            return Slice!(const(E))(this);
+        }
+
+        /// Returns: true if no elements have been stored in the Builder
+        bool empty() const pure nothrow @property
+        {
+            return _head is null || (__ctfe ? _head.data.empty : _head.ptr == _head.base);
+        }
+
+        /// Returns: the last element of the Builder. Not UTF safe.
+        T back() nothrow pure @property
+        {
+            if (__ctfe)
+            {
+                assert(_head !is null && !_head.data.empty);
+                return _head.data[$ - 1];
+            }
+            if (_tail is null || _tail.ptr == _tail.base)
+            {
+                assert(_head !is _tail);
+                return *(_tail.prev.ptr - 1);
+            }
+            return *(_tail.ptr - 1);
+        }
+
+        /// ditto
+        void back(T value) nothrow pure @property
+        {
+            if (__ctfe)
+            {
+                assert(_head !is null && !_head.data.empty);
+                _head.data[$ - 1] = value;
+                return;
+            }
+
+            if (_tail is null || _tail.ptr == _tail.base)
+            {
+                assert(_head !is _tail);
+                *(_tail.prev.ptr - 1) = value;
+                return;
+            }
+
+            *(_tail.ptr - 1) = value;
+            return;
+        }
+
+        /// Removes N values at the back of the Builder. Defaults to 1.
+        void removeBack(size_t N = 1) nothrow pure
+        {
+            if (__ctfe)
+            {
+                assert(_head !is null && _head.data.length >= N);
+                _head.data.length = _head.data.length - N;
+                return;
+            }
+
+            assert(_tail !is null);
+
+            // pop a segment, in addition to an element
+            while (_tail.length < N)
+            {
+                assert(_head !is _tail);
+                N -= _tail.length;
+                _tail.ptr = _tail.base;
+                _tail.slack = Segment.slackInit;
+                _tail = _tail.prev;
+            }
+
+            // pop an element
+            _tail.ptr -= N;
+            _tail.slack += N;
+            return;
+        }
+
+        /// Insertion aliases
+        alias insertBack = put;
+        ///ditto
+        alias insert = put;
+        ///ditto
+        alias linearInsert = put;
+
+        /// Returns: the first element of the Builder. Not UTF safe.
+        T front() nothrow pure @property
+        {
+            if (__ctfe)
+            {
+                return _head.data[0];
+            }
+            assert(_head !is null && _head.ptr !is _head.base);
+            return *_head.base;
+        }
+
+        ///ditto
+        void front(T value) nothrow pure @property
+        {
+            if (__ctfe)
+            {
+                _head.data[0] = value;
+                return;
+            }
+            assert(_head !is null && _head.ptr !is _head.base);
+            *_head.base = value;
+        }
+
+        /// Removes the last element from c and returns it.
+        T removeAny() nothrow pure
+        {
+            if (__ctfe)
+            {
+                assert(_head !is null && _head.data.length >= 1);
+                auto result = _head.data[$ - 1];
+                _head.data = _head.data[0 .. $ - 1];
+                return result;
+            }
+
+            assert(_tail !is null);
+
+            // pop a segment, in addition to an element
+            while (_tail.length == 0)
+            {
+                assert(_head !is _tail);
+                _tail.ptr = _tail.base;
+                _tail.slack = Segment.slackInit;
+                _tail = _tail.prev;
+            }
+
+            _tail.ptr--;
+            _tail.slack++;
+            return *(_tail.ptr);
+        }
+
+        /** Signed index function with linear complexity.
+        Example:
+        ---
+        auto app = Builder("signed indexing");
+        assert(app.front == app.linearIndex( 0));
+        assert(app.back  == app.linearIndex(-1));
+        ---
+        */
+        T linearIndex(ptrdiff_t i) nothrow pure
+        {
+            if (i >= 0) // positive indexing
+            {
+                for (auto d = _head; d; d = d.next)
+                {
+                    if (d.length > i)
+                        return *(d.base + i);
+                    i -= d.length;
+                }
+                assert(false, "Builder linearIndex out of bounds.");
+            }
+            else // negative indexing
+            {
+                for (auto d = _tail; d; d = d !is _head ? d.prev : null)
+                {
+                    if (d.length >= -i)
+                        return *(d.ptr + i);
+                    i += d.length;
+                }
+                assert(false, "Builder linearIndex out of bounds.");
+            }
+        }
+
+        ///ditto
+        void linearIndex(ptrdiff_t i, T value)
+        {
+            if (i >= 0)
+            {
+                // positive indexing
+                for (auto d = _head; d; d = d.next)
+                {
+                    if (d.length > i)
+                    {
+                        *(d.base + i) = value;
+                        return;
+                    }
+                    i -= d.length;
+                }
+                assert(false, "Builder linearIndex out of bounds.");
+            }
+            else
+            {
+                // negative indexing
+                for (auto d = _tail; d; d = d !is _head ? d.prev : null)
+                {
+                    if (d.length >= -i)
+                    {
+                        *(d.ptr + i) = value;
+                        return;
+                    }
+                    i += d.length;
+                }
+                assert(false, "Builder linearIndex out of bounds.");
+            }
+        }
+
+        /** A limited functionality zero-overhead scoped wrapper around
+        an existing mutable array.
+        Example:
+        ---
+        auto buffer = cast(char[]) "HIC SVNT DRACONES";
+        // Clear the buffer, saving the 'H'
+        auto wb = Builder!string(buffer, 1);
+        // Use 'put' or '~=' to append data
+        wb.put("ere ");
+        wb ~= "be dragons";
+        // Inspect the buffer as is.
+        assert(buffer == "Here be dragonsES");
+        assert(buffer[0..wb.walkLength] == "Here be dragons");
+        // sync the buffer and underlying Builder (may allocate)
+        wb.sync;
+        assert(buffer == "Here be dragonsES");
+        // Add some more data
+        wb ~= " and dungeons!";
+        assert(buffer == "Here be dragons a");
+        // Sync the buffer and get the used portion
+        auto data = wb.syncedData;
+        assert(buffer == "Here be dragons and dungeons!");
+        assert(data   == "Here be dragons and dungeons!");
+        ---
+        */
+        struct wrappedBuffer
+        {
+            private
+            {
+                Segment seg; // For the wrapped array
+                Builder app; // Not all functions are supported
+                E[]* arr; // The wrapped array
+            }
+
+            /// Construct a wrapped buffer
+            this(ref E[] _arr, size_t preseverdLength = 0) nothrow
+            {
+                assert(preseverdLength <= _arr.length);
+                arr = &_arr;
+                seg.slack = _arr.length - preseverdLength;
+                seg.ptr = _arr.ptr + preseverdLength;
+                seg.next = null;
+                seg.count = 1;
+                app._head = app._tail = &seg;
+            }
+
+            // Ensure that the Builder's memory is freed.
+            ~this()
+            {
+                if (seg.next !is null)
+                {
+                    seg.next.count = 0;
+                    seg.next.free;
+                }
+
+                app._head = null;
+            }
+
+            // Prevent copying
+            @disable this(this);
+
+            /// Returns: the used length of the buffer
+            size_t walkLength() const pure @property
+            {
+                // No extra segments
+                if (app._head is app._tail)
+                {
+                    return arr.length - seg.slack;
+                }
+                else
+                {
+                    size_t len = arr.length;
+                    for (const(Segment)* d = seg.next; d !is null; d = d.next)
+                    {
+                        len += d.length;
+                    }
+                    return len;
+                }
+            }
+
+            /// Manual synchronizes the array and Builder
+            void sync() pure
+            {
+                // The array and Builder are out of sync
+                if (app._head != app._tail)
+                {
+                    // Get the new total length
+                    size_t len = arr.length;
+                    for (auto d = seg.next; d !is null; d = d.next)
+                    {
+                        len += d.length;
+                    }
+                    // Update the array's length
+                    size_t i = arr.length;
+                    arr.length = len;
+                    // Copy in the elements and clear the extra data segments
+                    for (auto d = seg.next; d !is null; d = d.next, i += len)
+                    {
+                        len = d.length;
+                        (*arr)[i .. i + len] = d.base[0 .. len];
+                        d.ptr = d.base;
+                        d.slack = Segment.slackInit;
+                    }
+                    // Update the segment
+                    seg.slack = 0;
+                    seg.ptr = arr.ptr;
+                }
+            }
+            
+            /// Appends to the output range
+            void put(U)(U item) @property if (isOutputRange!(T[], U))
+            {
+                app.put(item);
+            }
+            
+            ///ditto
+            ref typeof(this) opOpAssign(string op, U)(U item) if (op == "~"
+                    && isOutputRange!(Unqual!T[], U))
+            {
+                app.put(item);
+                return this;
+            }
+
+            /// Returns: the used portion of the buffer. Synchronizes if necessary
+            E[] usedBuffer() pure @property
+            {
+                sync;
+                return (*arr)[0 .. $ - seg.slack];
+            }
+        }
+    }
+}
+
+unittest
+{
+    int[] a = [1, 2];
+    auto builder = Builder!(int[])(a);
+
+    builder.put(3);
+    builder.put([4, 5, 6]);
+    assert(builder.dup == [1, 2, 3, 4, 5, 6]);
+}
