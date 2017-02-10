@@ -2116,6 +2116,20 @@ public:
         assert(!gothic['$']);
     }
 
+
+    // Linear scan for $(D ch). Useful only for small sets.
+    // TODO:
+    // used internally in std.regex
+    // should be properly exposed in a public API ?
+    package auto scanFor()(dchar ch) const
+    {
+        immutable len = data.length;
+        for (size_t i = 0; i < len; i++)
+            if (ch < data[i])
+                return i & 1;
+        return 0;
+    }
+
     /// Number of $(CODEPOINTS) in this set
     @property size_t length()
     {
