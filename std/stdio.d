@@ -3177,16 +3177,21 @@ void main()
 /// Used to specify the lock type for $(D File.lock) and $(D File.tryLock).
 enum LockType
 {
-    /// Specifies a _read (shared) lock. A _read lock denies all processes
-    /// write access to the specified region of the file, including the
-    /// process that first locks the region. All processes can _read the
-    /// locked region. Multiple simultaneous _read locks are allowed, as
-    /// long as there are no exclusive locks.
+    /**
+     * Specifies a _read (shared) lock. A _read lock denies all processes
+     * write access to the specified region of the file, including the
+     * process that first locks the region. All processes can _read the
+     * locked region. Multiple simultaneous _read locks are allowed, as
+     * long as there are no exclusive locks.
+     */
     read,
-    /// Specifies a read/write (exclusive) lock. A read/write lock denies all
-    /// other processes both read and write access to the locked file region.
-    /// If a segment has an exclusive lock, it may not have any shared locks
-    /// or other exclusive locks.
+
+    /**
+     * Specifies a read/write (exclusive) lock. A read/write lock denies all
+     * other processes both read and write access to the locked file region.
+     * If a segment has an exclusive lock, it may not have any shared locks
+     * or other exclusive locks.
+     */
     readWrite
 }
 
