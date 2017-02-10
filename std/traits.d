@@ -44,6 +44,7 @@
  *           $(LREF hasElaborateDestructor)
  *           $(LREF hasIndirections)
  *           $(LREF hasMember)
+ *           $(LREF hasStaticMember)
  *           $(LREF hasNested)
  *           $(LREF hasUnsharedAliasing)
  *           $(LREF InterfacesTuple)
@@ -3551,6 +3552,182 @@ enum hasMember(T, string name) = __traits(hasMember, T, name);
         void opDispatch(string n, A)(A dummy) {}
     }
     static assert(hasMember!(S, "foo"));
+}
+
+/**
+ * Whether the symbol represented by the string, member, exists and is a static member of T.
+ *
+ * Params:
+ *     T = Type containing symbol $(D member).
+ *     member = Name of symbol to test that resides in $(D T).
+ *
+ * Returns:
+ *     $(D true) iff $(D member) exists and is static.
+ */
+template hasStaticMember(T, string member)
+{
+    static if (__traits(hasMember, T, member))
+    {
+        import std.meta : Alias;
+        alias sym = Alias!(__traits(getMember, T, member));
+
+        static if (__traits(getOverloads, T, member).length == 0)
+            enum bool hasStaticMember = __traits(compiles, &sym);
+        else
+            enum bool hasStaticMember = __traits(isStaticFunction, sym);
+    }
+    else
+    {
+        enum bool hasStaticMember = false;
+    }
+}
+
+///
+@safe unittest
+{
+    static struct S
+    {
+        static void sf() {}
+        void f() {}
+
+        static int si;
+        int i;
+    }
+
+    static assert( hasStaticMember!(S, "sf"));
+    static assert(!hasStaticMember!(S, "f"));
+
+    static assert( hasStaticMember!(S, "si"));
+    static assert(!hasStaticMember!(S, "i"));
+
+    static assert(!hasStaticMember!(S, "hello"));
+}
+
+@safe unittest
+{
+    static struct S
+    {
+        enum X = 10;
+        enum Y
+        {
+            i = 10
+        }
+        struct S {}
+        class C {}
+
+        static int sx = 0;
+        __gshared int gx = 0;
+
+        Y y;
+        static Y sy;
+
+        static void f();
+        static void f2() pure nothrow @nogc @safe;
+
+        shared void g();
+
+        static void function() fp;
+        __gshared void function() gfp;
+        void function() fpm;
+
+        void delegate() dm;
+        static void delegate() sd;
+
+        void m();
+        final void m2() const pure nothrow @nogc @safe;
+
+        inout(int) iom() inout;
+        static inout(int) iosf(inout int x);
+
+        @property int p();
+        static @property int sp();
+    }
+
+    static class C
+    {
+        enum X = 10;
+        enum Y
+        {
+            i = 10
+        }
+        struct S {}
+        class C {}
+
+        static int sx = 0;
+        __gshared int gx = 0;
+
+        Y y;
+        static Y sy;
+
+        static void f();
+        static void f2() pure nothrow @nogc @safe;
+
+        shared void g() { }
+
+        static void function() fp;
+        __gshared void function() gfp;
+        void function() fpm;
+
+        void delegate() dm;
+        static void delegate() sd;
+
+        void m() {}
+        final void m2() const pure nothrow @nogc @safe;
+
+        inout(int) iom() inout { return 10; }
+        static inout(int) iosf(inout int x);
+
+        @property int p() { return 10; }
+        static @property int sp();
+    }
+
+    static assert(!hasStaticMember!(S, "X"));
+    static assert(!hasStaticMember!(S, "Y"));
+    static assert(!hasStaticMember!(S, "Y.i"));
+    static assert(!hasStaticMember!(S, "S"));
+    static assert(!hasStaticMember!(S, "C"));
+    static assert( hasStaticMember!(S, "sx"));
+    static assert( hasStaticMember!(S, "gx"));
+    static assert(!hasStaticMember!(S, "y"));
+    static assert( hasStaticMember!(S, "sy"));
+    static assert( hasStaticMember!(S, "f"));
+    static assert( hasStaticMember!(S, "f2"));
+    static assert(!hasStaticMember!(S, "dm"));
+    static assert( hasStaticMember!(S, "sd"));
+    static assert(!hasStaticMember!(S, "g"));
+    static assert( hasStaticMember!(S, "fp"));
+    static assert( hasStaticMember!(S, "gfp"));
+    static assert(!hasStaticMember!(S, "fpm"));
+    static assert(!hasStaticMember!(S, "m"));
+    static assert(!hasStaticMember!(S, "m2"));
+    static assert(!hasStaticMember!(S, "iom"));
+    static assert( hasStaticMember!(S, "iosf"));
+    static assert(!hasStaticMember!(S, "p"));
+    static assert( hasStaticMember!(S, "sp"));
+
+    static assert(!hasStaticMember!(C, "X"));
+    static assert(!hasStaticMember!(C, "Y"));
+    static assert(!hasStaticMember!(C, "Y.i"));
+    static assert(!hasStaticMember!(C, "S"));
+    static assert(!hasStaticMember!(C, "C"));
+    static assert( hasStaticMember!(C, "sx"));
+    static assert( hasStaticMember!(C, "gx"));
+    static assert(!hasStaticMember!(C, "y"));
+    static assert( hasStaticMember!(C, "sy"));
+    static assert( hasStaticMember!(C, "f"));
+    static assert( hasStaticMember!(C, "f2"));
+    static assert(!hasStaticMember!(S, "dm"));
+    static assert( hasStaticMember!(S, "sd"));
+    static assert(!hasStaticMember!(C, "g"));
+    static assert( hasStaticMember!(C, "fp"));
+    static assert( hasStaticMember!(C, "gfp"));
+    static assert(!hasStaticMember!(C, "fpm"));
+    static assert(!hasStaticMember!(C, "m"));
+    static assert(!hasStaticMember!(C, "m2"));
+    static assert(!hasStaticMember!(C, "iom"));
+    static assert( hasStaticMember!(C, "iosf"));
+    static assert(!hasStaticMember!(C, "p"));
+    static assert( hasStaticMember!(C, "sp"));
 }
 
 /**
