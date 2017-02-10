@@ -1772,22 +1772,20 @@ is recommended if you want to process a complete file.
     if (allSatisfy!(isPointer, Data))
     {
         import std.format : formattedRead;
-
         assert(isOpen);
         auto input = LockingTextReader(this);
         return formattedRead(input, format, data);
     }
 
     ///
-    @system unittest
+    @safe unittest
     {
-        // @system due to readf
         static import std.file;
 
         auto deleteme = testFilename();
         std.file.write(deleteme, "hello\nworld\ntrue\nfalse\n");
         scope(exit) std.file.remove(deleteme);
-        string s;
+        static string s;
         auto f = File(deleteme);
         f.readf("%s\n", &s);
         assert(s == "hello", "["~s~"]");
@@ -1795,7 +1793,7 @@ is recommended if you want to process a complete file.
         assert(s == "world", "["~s~"]");
 
         // Issue 11698
-        bool b1, b2;
+        static bool b1, b2;
         f.readf("%s\n%s\n", &b1, &b2);
         assert(b1 == true && b2 == false);
     }
@@ -3201,7 +3199,7 @@ struct LockingTextReader
     private char _front;
     private bool _hasChar;
 
-    this(File f)
+    this(File f) @trusted
     {
         import std.exception : enforce;
         enforce(f.isOpen, "LockingTextReader: File must be open");
@@ -3209,12 +3207,12 @@ struct LockingTextReader
         FLOCK(_f._p.handle);
     }
 
-    this(this)
+    this(this) @trusted
     {
         FLOCK(_f._p.handle);
     }
 
-    ~this()
+    ~this() @trusted
     {
         if (_hasChar)
             ungetc(_front, cast(FILE*)_f._p.handle);
@@ -3223,19 +3221,22 @@ struct LockingTextReader
         if (_f.isOpen) FUNLOCK(_f._p.handle);
     }
 
-    void opAssign(LockingTextReader r)
+    void opAssign(LockingTextReader r) @safe
     {
         import std.algorithm.mutation : swap;
         swap(this, r);
     }
 
-    @property bool empty()
+    @property bool empty() @safe
     {
         if (!_hasChar)
         {
             if (!_f.isOpen || _f.eof)
                 return true;
-            immutable int c = FGETC(cast(_iobuf*) _f._p.handle);
+
+            int trustedFGETC() @trusted { return FGETC(cast(_iobuf*) _f._p.handle); }
+
+            immutable int c = trustedFGETC();
             if (c == EOF)
             {
                 .destroy(_f);
@@ -3247,7 +3248,7 @@ struct LockingTextReader
         return false;
     }
 
-    @property char front()
+    @property char front() @safe
     {
         if (!_hasChar)
         {
@@ -3265,7 +3266,7 @@ struct LockingTextReader
         return _front;
     }
 
-    void popFront()
+    void popFront() @safe
     {
         if (!_hasChar)
             empty;
@@ -3273,9 +3274,8 @@ struct LockingTextReader
     }
 }
 
-@system unittest
+@safe unittest
 {
-    // @system due to readf
     static import std.file;
     import std.range.primitives : isInputRange;
 
@@ -3283,7 +3283,7 @@ struct LockingTextReader
     auto deleteme = testFilename();
     std.file.write(deleteme, "1 2 3");
     scope(exit) std.file.remove(deleteme);
-    int x, y;
+    static int x, y;
     auto f = File(deleteme);
     f.readf("%s ", &x);
     assert(x == 1);
@@ -3293,7 +3293,7 @@ struct LockingTextReader
     assert(x == 3);
 }
 
-@system unittest // bugzilla 13686
+@safe unittest // bugzilla 13686
 {
     static import std.file;
     import std.algorithm.comparison : equal;
@@ -3303,7 +3303,7 @@ struct LockingTextReader
     std.file.write(deleteme, "Тест");
     scope(exit) std.file.remove(deleteme);
 
-    string s;
+    static string s;
     File(deleteme).readf("%s", &s);
     assert(s == "Тест");
 
@@ -3311,7 +3311,7 @@ struct LockingTextReader
     assert(equal(ltr, "Тест".byDchar));
 }
 
-@system unittest // bugzilla 12320
+@safe unittest // bugzilla 12320
 {
     static import std.file;
     auto deleteme = testFilename();
@@ -3325,9 +3325,8 @@ struct LockingTextReader
     assert(ltr.empty);
 }
 
-@system unittest // bugzilla 14861
+@safe unittest // bugzilla 14861
 {
-    // @system due to readf
     static import std.file;
     auto deleteme = testFilename();
     File fw = File(deleteme, "w");
@@ -3338,7 +3337,7 @@ struct LockingTextReader
     // Test read
     File fr = File(deleteme, "r");
     scope (exit) fr.close();
-    int nom; string fam, nam, ot;
+    static int nom; static string fam, nam, ot;
     // Error format read
     while (!fr.eof)
         fr.readf("%s;%s;%s;%s\n", &nom, &fam, &nam, &ot);
@@ -3647,6 +3646,14 @@ void writefln(T...)(T args)
 }
 
 /**
+ * Property used by readf so it can infer @safe since stdin is __gshared
+ */
+private @property File trustedStdin() @trusted
+{
+    return stdin;
+}
+
+/**
  * Read data from $(D stdin) according to the specified
  * $(LINK2 std_format.html#_format-string, _format specifier) using
  * $(REF formattedRead, std,_format).
@@ -3654,18 +3661,22 @@ void writefln(T...)(T args)
 uint readf(A...)(in char[] format, A args)
 if (allSatisfy!(isPointer, A))
 {
-    return stdin.readf(format, args);
+    return trustedStdin.readf(format, args);
 }
 
-@system unittest
+@safe unittest
 {
-    float f;
-    if (false) uint x = readf("%s", &f);
-
-    char a;
-    wchar b;
-    dchar c;
-    if (false) readf("%s %s %s", &a,&b,&c);
+    static int i;
+    static float f;
+    static char a;
+    static wchar b;
+    static dchar c;
+    static string d;
+    if (false)
+    {
+        readf("%s %s %s %s", &a, &b, &c, &d);
+        uint x = readf("%s %d", &f, &i);
+    }
 }
 
 /**********************************
