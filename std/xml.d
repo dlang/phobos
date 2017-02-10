@@ -636,7 +636,7 @@ class Document : Element
          * Returns the string representation of a Document. (That is, the
          * complete XML of a document).
          */
-        override string toString()
+        override string toString() @safe
         {
             return prolog ~ super.toString() ~ epilog;
         }
@@ -878,7 +878,7 @@ class Element : Item
      * You should rarely need to call this function. It exists so that Elements
      * can be used as associative array keys.
      */
-    override size_t toHash() const
+    override size_t toHash() const @safe
     {
         size_t hash = tag.toHash();
         foreach (item;items) hash += item.toHash();
@@ -956,7 +956,7 @@ class Element : Item
          * writefln(element.toString()); // writes "<br />"
          * --------------
          */
-        override string toString()
+        override string toString() @safe
         {
             if (isEmptyXML) return tag.toEmptyString();
 
@@ -1159,7 +1159,7 @@ class Tag
          * writefln(tag.toString()); // writes "<book>"
          * --------------
          */
-        override string toString()
+        override string toString() @safe
         {
             if (isEmpty) return toEmptyString();
             return (isEnd) ? toEndString() : toStartString();
@@ -1167,7 +1167,7 @@ class Tag
 
         private
         {
-            string toNonEndString()
+            string toNonEndString() @safe
             {
                 import std.format : format;
 
@@ -1177,11 +1177,11 @@ class Tag
                 return s;
             }
 
-            string toStartString() { return toNonEndString() ~ ">"; }
+            string toStartString() @safe { return toNonEndString() ~ ">"; }
 
-            string toEndString() { return "</" ~ name ~ ">"; }
+            string toEndString() @safe { return "</" ~ name ~ ">"; }
 
-            string toEmptyString() { return toNonEndString() ~ " />"; }
+            string toEmptyString() @safe { return toNonEndString() ~ " />"; }
         }
 
         /**
@@ -1642,7 +1642,7 @@ abstract class Item
     abstract override size_t toHash() const;
 
     /// Returns a string representation of this item
-    abstract override string toString() const;
+    abstract override string toString() @safe const;
 
     /**
      * Returns an indented string representation of this item
