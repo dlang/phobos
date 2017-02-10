@@ -115,7 +115,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
             return null;
 
         import std.conv : emplaceRef;
-
+ 
         auto result = (() @trusted => uninitializedArray!(Unqual!E[])(length))();
 
         // Every element of the uninitialized array must be initialized
@@ -3610,7 +3610,7 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
                     // @@@BUG@@@ Currently limited by CTFE mutation issues
                     E[] data; // The data array
 
-                    size_t ct_slack() const pure nothrow @property
+                    size_t ct_slack() const pure nothrow
                     {
                         return data.capacity - data.length;
                     }
@@ -3700,13 +3700,13 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
         Segment* _tail; // The last data segment
 
         // Initialize the Builder
-        void _init() @property
+        void _init()
         {
             _head = _tail = Segment._make(cast(Segment*) 1);
         }
 
         // Advances the _tail, adding a segment if needs be.
-        void _grow() @property
+        void _grow()
         {
             // Add another segment
             if (!_tail.next)
@@ -3863,8 +3863,7 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
     /// Returns: a copy of the Builder's data in an array.
     static if (!hasIndirections!T)
     {
-        private
-        E[] dupTo(ref E[] arr) pure @property
+        private E[] dupTo(ref E[] arr) pure
         {
             size_t i = 0;
             size_t len = void;
@@ -3901,7 +3900,7 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
             }
         }
 
-        T[] opDispatch(string name)() pure @property if (name == "data")
+        T[] opDispatch(string name)() pure if (name == "data")
         {
             return dup;
         }
@@ -3946,12 +3945,13 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
 
             if (__ctfe)
             {
-                //            _head.data.length = _head.data.length + N;
+                //_head.data.length = _head.data.length + N;
                 return;
             }
 
             auto len = slack;
             auto seg = _tail;
+
             while (seg.next !is null)
                 seg = seg.next;
 
@@ -4555,4 +4555,15 @@ unittest
     builder.put(3);
     builder.put([4, 5, 6]);
     assert(builder.dup == [1, 2, 3, 4, 5, 6]);
+}
+
+// test Output range interface
+unittest
+{
+    import std.utf : byChar;
+
+    auto builder = Builder!(int[])();
+    auto r = "this is a test".byChar;
+
+    put(builder, r);
 }
