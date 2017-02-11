@@ -192,13 +192,21 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
 
 /**
 Convert a narrow string to an array type that fully supports random access.
-This is handled as a special case and always returns a $(D dchar[]),
-$(D const(dchar)[]), or $(D immutable(dchar)[]) depending on the constness of
-the input.
+This is handled as a special case and always returns an array of `dchar`
+
+Params:
+    str = `isNarrowString` to be converted to an array of `dchar`
+Returns:
+    a $(D dchar[]), $(D const(dchar)[]), or $(D immutable(dchar)[]) depending on the constness of
+    the input.
 */
-ElementType!String[] array(String)(String str) if (isNarrowString!String)
+@trusted ElementType!String[] array(String)(scope String str) if (isNarrowString!String)
 {
     import std.utf : toUTF32;
+    /* This function is @trusted because the following cast
+     * is unsafe - converting a dstring[] to a dchar[], for example.
+     * Our special knowledge of toUTF32 is needed to know the cast is safe.
+     */
     return cast(typeof(return)) str.toUTF32;
 }
 
@@ -1559,7 +1567,7 @@ private enum bool hasCheapIteration(R) = isArray!R;
    See_Also:
         For a lazy version, see $(REF joiner, std,algorithm,iteration)
   +/
-ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
+ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, scope R sep)
     if (isInputRange!RoR &&
        isInputRange!(Unqual!(ElementType!RoR)) &&
        isInputRange!R &&
@@ -1636,7 +1644,7 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, R sep)
 }
 
 /// Ditto
-ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, E sep)
+ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, scope E sep)
     if (isInputRange!RoR &&
        isInputRange!(Unqual!(ElementType!RoR)) &&
        is(E : ElementType!(ElementType!RoR)))
