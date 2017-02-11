@@ -2062,7 +2062,7 @@ if (isNumeric!Num)
                                // and 2 10% of the time
 }
 
-private size_t diceImpl(Rng, Range)(ref Rng rng, Range proportions)
+private size_t diceImpl(Rng, Range)(ref Rng rng, scope Range proportions)
     if (isForwardRange!Range && isNumeric!(ElementType!Range) && isForwardRange!Rng)
 in
 {
