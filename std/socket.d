@@ -147,10 +147,12 @@ class SocketException: Exception
 }
 
 
-// Needs to be public so that SocketOSException can be thrown outside of
-// std.socket (since it uses it as a default argument), but it probably doesn't
-// need to actually show up in the docs, since there's not really any public
-// need for it outside of being a default argument.
+/*
+ * Needs to be public so that SocketOSException can be thrown outside of
+ * std.socket (since it uses it as a default argument), but it probably doesn't
+ * need to actually show up in the docs, since there's not really any public
+ * need for it outside of being a default argument.
+ */
 string formatSocketError(int err) @trusted
 {
     version(Posix)
@@ -227,8 +229,10 @@ string formatSocketError(int err) @trusted
     return formatSocketError(_lasterr());
 }
 
-/// Socket exceptions representing network errors reported by the operating
-/// system.
+/**
+ * Socket exceptions representing network errors reported by the operating
+ * system.
+ */
 class SocketOSException: SocketException
 {
     int errorCode;     /// Platform-specific error code.
@@ -278,16 +282,21 @@ class SocketParameterException: SocketException
     mixin basicExceptionCtors;
 }
 
-/// Socket exceptions representing attempts to use network capabilities not
-/// available on the current system.
+/**
+ * Socket exceptions representing attempts to use network capabilities not
+ * available on the current system.
+ */
 class SocketFeatureException: SocketException
 {
     mixin basicExceptionCtors;
 }
 
 
-/// Return $(D true) if the last socket operation failed because the socket
-/// was in non-blocking mode and the operation would have blocked.
+/**
+ * Returns:
+ * $(D true) if the last socket operation failed because the socket
+ * was in non-blocking mode and the operation would have blocked.
+ */
 bool wouldHaveBlocked() nothrow @nogc
 {
     version(Windows)
@@ -832,8 +841,10 @@ struct AddressInfo
     string canonicalName;   /// Canonical name, when $(D AddressInfoFlags.CANONNAME) is used.
 }
 
-// A subset of flags supported on all platforms with getaddrinfo.
-/// Specifies option flags for $(D getAddressInfo).
+/**
+ * A subset of flags supported on all platforms with getaddrinfo.
+ * Specifies option flags for $(D getAddressInfo).
+ */
 enum AddressInfoFlags: int
 {
     /// The resulting addresses will be used in a call to $(D Socket.bind).
@@ -842,14 +853,18 @@ enum AddressInfoFlags: int
     /// The canonical name is returned in $(D canonicalName) member in the first $(D AddressInfo).
     CANONNAME = AI_CANONNAME,
 
-    /// The $(D node) parameter passed to $(D getAddressInfo) must be a numeric string.
-    /// This will suppress any potentially lengthy network host address lookups.
+    /**
+     * The $(D node) parameter passed to $(D getAddressInfo) must be a numeric string.
+     * This will suppress any potentially lengthy network host address lookups.
+     */
     NUMERICHOST = AI_NUMERICHOST,
 }
 
 
-/// On POSIX, getaddrinfo uses its own error codes, and thus has its own
-/// formatting function.
+/**
+ * On POSIX, getaddrinfo uses its own error codes, and thus has its own
+ * formatting function.
+ */
 private string formatGaiError(int err) @trusted
 {
     version(Windows)
@@ -2253,8 +2268,10 @@ public:
         }
     }
 
-    /// Add a $(D Socket) to the collection.
-    /// The socket must not already be in the collection.
+    /**
+     * Add a $(D Socket) to the collection.
+     * The socket must not already be in the collection.
+     */
     void add(Socket s) pure nothrow
     {
         add(s.sock);
@@ -2281,8 +2298,10 @@ public:
     }
 
 
-    /// Remove this $(D Socket) from the collection.
-    /// Does nothing if the socket is not in the collection already.
+    /**
+     * Remove this $(D Socket) from the collection.
+     * Does nothing if the socket is not in the collection already.
+     */
     void remove(Socket s) pure nothrow
     {
         remove(s.sock);
@@ -2312,12 +2331,16 @@ public:
     }
 
 
-    /// Return the current capacity of this $(D SocketSet). The exact
-    /// meaning of the return value varies from platform to platform.
-    ///
-    /// Note that since D 2.065, this value does not indicate a
-    /// restriction, and $(D SocketSet) will grow its capacity as
-    /// needed automatically.
+    /**
+     * Returns:
+     * The current capacity of this $(D SocketSet). The exact
+     * meaning of the return value varies from platform to platform.
+     *
+     * Note:
+     * Since D 2.065, this value does not indicate a
+     * restriction, and $(D SocketSet) will grow its capacity as
+     * needed automatically.
+     */
     @property uint max() const pure nothrow @nogc
     {
         return cast(uint)capacity;
@@ -2603,12 +2626,12 @@ public:
         setSock(handle);
     }
 
-
-    // A single protocol exists to support this socket type within the
-    // protocol family, so the ProtocolType is assumed.
     /// ditto
     this(AddressFamily af, SocketType type)
     {
+        /* A single protocol exists to support this socket type within the
+         * protocol family, so the ProtocolType is assumed.
+         */
         this(af, type, cast(ProtocolType)0);         // Pseudo protocol number.
     }
 
@@ -2773,9 +2796,10 @@ public:
      * instance of your class. The returned $(D Socket)'s handle must not be
      * set; $(D Socket) has a protected constructor $(D this()) to use in this
      * situation.
+     *
+     * Override to use a derived class.
+     * The returned socket's handle must not be set.
      */
-    // Override to use a derived class.
-    // The returned socket's handle must not be set.
     protected Socket accepting() pure nothrow
     {
         return new Socket;
@@ -2837,9 +2861,9 @@ public:
      * Calling $(D shutdown) before $(D close) is recommended for
      * connection-oriented sockets. The $(D Socket) object is no longer
      * usable after $(D close).
+     * Calling shutdown() before this is recommended
+     * for connection-oriented sockets.
      */
-    //calling shutdown() before this is recommended
-    //for connection-oriented sockets
     void close() @trusted nothrow @nogc
     {
         _close(sock);
@@ -2847,8 +2871,9 @@ public:
     }
 
 
-    /// Returns the local machine's host name.
-    // Idea from mango.
+    /**
+     * Returns: the local machine's host name
+     */
     static @property string hostName() @trusted     // getter
     {
         char[256] result;         // Host names are limited to 255 chars.
@@ -2905,7 +2930,6 @@ public:
      * Returns: The number of bytes actually sent, or $(D Socket.ERROR) on
      * failure.
      */
-    //returns number of bytes actually sent, or -1 on error
     ptrdiff_t send(const(void)[] buf, SocketFlags flags) @trusted
     {
         static if (is(typeof(MSG_NOSIGNAL)))
@@ -2983,7 +3007,6 @@ public:
      * Returns: The number of bytes actually received, $(D 0) if the remote side
      * has closed the connection, or $(D Socket.ERROR) on failure.
      */
-    //returns number of bytes actually received, 0 on connection closure, or -1 on error
     ptrdiff_t receive(void[] buf, SocketFlags flags) @trusted
     {
         version(Windows)         // Does not use size_t
@@ -3073,9 +3096,11 @@ public:
     }
 
 
-    /// Get a socket option.
-    /// Returns: The number of bytes written to $(D result).
-    //returns the length, in bytes, of the actual result - very different from getsockopt()
+    /**
+     * Get a socket option.
+     * Returns: The number of bytes written to $(D result).
+     * The length, in bytes, of the actual result - very different from getsockopt()
+     */
     int getOption(SocketOptionLevel level, SocketOption option, void[] result) @trusted
     {
         socklen_t len = cast(socklen_t) result.length;
@@ -3214,8 +3239,10 @@ public:
         else static assert(false);
     }
 
-    /// Get a text description of this socket's error status, and clear the
-    /// socket's error status.
+    /**
+     * Get a text description of this socket's error status, and clear the
+     * socket's error status.
+     */
     string getErrorText()
     {
         int32_t error;
@@ -3275,12 +3302,15 @@ public:
      * connection is established and it's able to send. For a listening socket,
      * a read status change means there is an incoming connection request and
      * it's able to accept.
+     *
+     * `SocketSet`'s updated to include only those sockets which an event occured.
+     * For a `connect()`ing socket, writeability means connected.
+     * For a `listen()`ing socket, readability means listening
+     * `Winsock`; possibly internally limited to 64 sockets per set.
+     *
+     * Returns:
+     * the number of events, 0 on timeout, or -1 on interruption
      */
-    //SocketSet's updated to include only those sockets which an event occured
-    //returns the number of events, 0 on timeout, or -1 on interruption
-    //for a connect()ing socket, writeability means connected
-    //for a listen()ing socket, readability means listening
-    //Winsock: possibly internally limited to 64 sockets per set
     static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, Duration timeout) @trusted
     {
         auto vals = timeout.split!("seconds", "usecs")();
@@ -3393,8 +3423,10 @@ public:
     }
 
 
-    /// Returns a new Address object for the current address family.
-    /// Can be overridden to support other addresses.
+    /**
+     * Can be overridden to support other addresses.
+     * Returns: a new `Address` object for the current address family.
+     */
     protected Address createAddress() pure nothrow
     {
         Address result;
