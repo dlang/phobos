@@ -677,6 +677,7 @@ unittest32mscoff:
 ######################################################
 
 $(ZLIB): $(SRC_ZLIB)
+	$(MAKE) -v
 	cd etc\c\zlib
 	$(MAKE) -f win64.mak MODEL=$(MODEL) zlib$(MODEL).lib "CC=\$(CC)"\"" "LIB=\$(AR)"\"" "VCDIR=$(VCDIR)"
 	cd ..\..\..
