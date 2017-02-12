@@ -1888,16 +1888,27 @@ Note:
     All character input range conversions using $(LREF to) are forwarded
     to `parse` and do not require lvalues.
 */
-Target parse(Target, Source)(ref Source s)
+Target parse(Target, Source)(ref Source source)
     if (isInputRange!Source &&
         isSomeChar!(ElementType!Source) &&
         is(Unqual!Target == bool))
 {
     import std.ascii : toLower;
+
+    static if (isNarrowString!Source)
+    {
+        import std.string : representation, assumeUTF;
+        auto s = source.representation;
+    }
+    else
+    {
+        alias s = source;
+    }
+
     if (!s.empty)
     {
         auto c1 = toLower(s.front);
-        bool result = (c1 == 't');
+        bool result = c1 == 't';
         if (result || c1 == 'f')
         {
             s.popFront();
@@ -1907,6 +1918,10 @@ Target parse(Target, Source)(ref Source s)
                     goto Lerr;
                 s.popFront();
             }
+
+            static if (isNarrowString!Source)
+                source = s.assumeUTF;
+
             return result;
         }
     }
