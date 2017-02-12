@@ -2799,57 +2799,21 @@ wstring toUTF16(S)(S s) if (isInputRange!S && isSomeChar!(ElementEncodingType!S)
     assert(r2.toUTF16.equal([0xD801, 0xDC37]));
 }
 
-/* =================== Conversion to UTF32 ======================= */
 
-/*****
- * Encodes string $(D_PARAM s) into UTF-32 and returns the encoded string.
+/**
+ * Encodes the elements of `s` to UTF-32 and returns a newly GC allocated
+ * `dstring` of the elements.
+ *
+ * Params:
+ *     s = the range to encode
+ * Returns:
+ *     A UTF-32 string
+ * See_Also:
+ *     For a lazy, non-allocating version of these functions, see $(LREF byUTF).
  */
-dstring toUTF32(scope const char[] s) @safe pure
+dstring toUTF32(S)(S s) if (isInputRange!S && isSomeChar!(ElementEncodingType!S))
 {
-    dchar[] r;
-    immutable slen = s.length;
-    size_t j = 0;
-
-    r.length = slen;        // r[] will never be longer than s[]
-    for (size_t i = 0; i < slen; )
-    {
-        dchar c = s[i];
-        if (c >= 0x80)
-            c = decode(s, i);
-        else
-            i++;        // c is ascii, no need for decode
-        r[j++] = c;
-    }
-
-    return r[0 .. j];
-}
-
-/// ditto
-dstring toUTF32(scope const wchar[] s) @safe pure
-{
-    dchar[] r;
-    immutable slen = s.length;
-    size_t j = 0;
-
-    r.length = slen;        // r[] will never be longer than s[]
-    for (size_t i = 0; i < slen; )
-    {
-        dchar c = s[i];
-        if (c >= 0x80)
-            c = decode(s, i);
-        else
-            i++;        // c is ascii, no need for decode
-        r[j++] = c;
-    }
-
-    return r[0 .. j];
-}
-
-/// ditto
-dstring toUTF32(scope const dchar[] s) @safe pure
-{
-    validate(s);
-    return s.idup;
+    return toUTFImpl!dstring(s);
 }
 
 private T toUTFImpl(T, S)(S s)
