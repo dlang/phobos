@@ -1565,8 +1565,8 @@ public:
         reasons, amap will assume the range elements have not yet been
         initialized. Elements will be overwritten without calling a destructor
         nor doing an assignment. As such, the range must not contain meaningful
-        data: either un-initialized objects, or objects in their $(D .init)
-        state.
+        data$(DDOC_COMMENT not a section): either un-initialized objects, or
+        objects in their $(D .init) state.
 
         ---
         auto numbers = iota(100_000_000.0);
