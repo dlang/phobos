@@ -3613,6 +3613,16 @@ Lfewerr:
  * Parses an associative array from a string given the left bracket (default $(D
  * '[')), right bracket (default $(D ']')), key-value separator (default $(D
  * ':')), and element seprator (by default $(D ',')).
+ *
+ * Params:
+ *     s = the string to parse
+ *     lbracket = the character that starts the associative array
+ *     rbracket = the character that ends the associative array
+ *     keyval = the character that associates the key with the value
+ *     comma = the character that separates the elements of the associative array
+ *
+ * Returns:
+ *     An associative array of type `Target`
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[',
                              dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
@@ -3652,6 +3662,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[',
     return result;
 }
 
+///
 @safe pure unittest
 {
     auto s1 = "[1:10, 2:20, 3:30]";
