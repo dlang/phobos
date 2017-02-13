@@ -2347,7 +2347,7 @@ Lerr:
 }
 
 /// ditto
-Target parse(Target, Source)(ref Source s, uint radix)
+Target parse(Target, Source)(ref Source source, uint radix)
     if (isSomeChar!(ElementType!Source) &&
         isIntegral!Target && !is(Target == enum))
 in
@@ -2360,12 +2360,22 @@ body
     import std.exception : enforce;
 
     if (radix == 10)
-        return parse!Target(s);
+        return parse!Target(source);
 
-    enforce!ConvException(!s.empty, "s must not be empty in integral parse");
+    enforce!ConvException(!source.empty, "s must not be empty in integral parse");
 
     immutable uint beyond = (radix < 10 ? '0' : 'a'-10) + radix;
     Target v = 0;
+
+    static if (isNarrowString!Source)
+    {
+        import std.string : representation, assumeUTF;
+        auto s = source.representation;
+    }
+    else
+    {
+        alias s = source;
+    }
 
     do
     {
@@ -2394,6 +2404,9 @@ body
         v = cast(Target) nextv;
         s.popFront();
     } while (!s.empty);
+
+    static if (isNarrowString!Source)
+        source = s.assumeUTF;
 
     return v;
 }
