@@ -251,7 +251,8 @@ SRC_STD_REGEX_2 = \
 SRC_STD_REGEX_3 = \
 	std\regex\internal\shiftor.d \
 	std\regex\internal\bitnfa.d \
-	std\regex\internal\tests3.d
+	std\regex\internal\tests3.d \
+	std\regex\internal\tests4.d
 
 SRC_STD_C= \
 	std\c\process.d \
