@@ -3910,8 +3910,10 @@ private static:
 }
 
 // Issue 17177 - AutoImplement fails on function overload sets with "cannot infer type from overloaded function symbol"
-@system unittest {
-    static class Issue17177 {
+@system unittest
+{
+    static class Issue17177
+    {
         private string n_;
 
         public {
@@ -3936,7 +3938,9 @@ private static:
             return q{
                 return parent(args);
             };
-        } else {
+        }
+        else
+        {
             return q{
                 parent(args);
             };
