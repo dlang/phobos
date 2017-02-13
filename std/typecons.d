@@ -5726,7 +5726,7 @@ mixin template Proxy(alias a)
 {
     struct NewIntType
     {
-        //Won't work; the literal '1' is
+        //Won't work; the literal '1'
         //is an rvalue, not an lvalue
         //mixin Proxy!1;
 
