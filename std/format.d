@@ -1255,14 +1255,15 @@ Params:
 
 Returns:
     A $(D FormatSpec) with the specifier parsed.
-
-Enforces giving only one specifier to the function.
+Throws:
+    An `Exception` when more than one specifier is given or the specifier
+    is malformed.
   */
 FormatSpec!Char singleSpec(Char)(Char[] fmt)
 {
     import std.conv : text;
-    enforce(fmt.length >= 2, new Exception("fmt must be at least 2 characters long"));
-    enforce(fmt.front == '%', new Exception("fmt must start with a '%' character"));
+    enforce(fmt.length >= 2, "fmt must be at least 2 characters long");
+    enforce(fmt.front == '%', "fmt must start with a '%' character");
 
     static struct DummyOutputRange {
         void put(C)(C[] buf) {} // eat elements
@@ -1273,7 +1274,7 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
     spec.writeUpToNextSpec(a);
 
     enforce(spec.trailing.empty,
-            new Exception(text("Trailing characters in fmt string: '", spec.trailing)));
+            text("Trailing characters in fmt string: '", spec.trailing));
 
     return spec;
 }
