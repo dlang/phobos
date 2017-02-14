@@ -2871,7 +2871,7 @@ auto lineSplitter(KeepTerminator keepTerm = No.keepTerminator, Range)(auto ref R
   +/
 auto stripLeft(Range)(Range input)
     if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isConvertibleToString!Range)
+        !isInfinite!Range && !isConvertibleToString!Range)
 {
     static import std.ascii;
     static import std.uni;

@@ -2707,7 +2707,7 @@ char[] toUTF8(return out char[4] buf, dchar c) nothrow @nogc @safe pure
  * See_Also:
  *     For a lazy, non-allocating version of these functions, see $(LREF byUTF).
  */
-string toUTF8(S)(S s) if (isInputRange!S && isSomeChar!(ElementEncodingType!S))
+string toUTF8(S)(S s) if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
 {
     return toUTFImpl!string(s);
 }
@@ -2769,7 +2769,7 @@ body
  * See_Also:
  *     For a lazy, non-allocating version of these functions, see $(LREF byUTF).
  */
-wstring toUTF16(S)(S s) if (isInputRange!S && isSomeChar!(ElementEncodingType!S))
+wstring toUTF16(S)(S s) if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
 {
     return toUTFImpl!wstring(s);
 }
@@ -2811,7 +2811,7 @@ wstring toUTF16(S)(S s) if (isInputRange!S && isSomeChar!(ElementEncodingType!S)
  * See_Also:
  *     For a lazy, non-allocating version of these functions, see $(LREF byUTF).
  */
-dstring toUTF32(S)(S s) if (isInputRange!S && isSomeChar!(ElementEncodingType!S))
+dstring toUTF32(S)(S s) if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
 {
     return toUTFImpl!dstring(s);
 }
