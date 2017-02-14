@@ -2519,9 +2519,15 @@ ubyte codeLength(C)(dchar c) @safe pure nothrow @nogc
     in a string whose character type is $(D C). This is particularly useful
     when slicing one string with the length of another and the two string
     types use different character types.
+
+    Params:
+        C = the character type to get the encoding length for
+        input = the input range to calculate the encoding length from
+    Returns:
+        The number of code units in `input` when encoded to `C`
   +/
 size_t codeLength(C, InputRange)(InputRange input)
-    if (isInputRange!InputRange && is(ElementType!InputRange : dchar))
+    if (isInputRange!InputRange && !isInfinite!InputRange && is(ElementType!InputRange : dchar))
 {
     alias EncType = Unqual!(ElementEncodingType!InputRange);
     static if (isSomeString!InputRange && is(EncType == C) && is(typeof(input.length)))
