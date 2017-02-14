@@ -242,7 +242,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
                         else
                         {
                             contextPrior = context;
-                            auto c = token.front;
+                            immutable c = token.front;
 
                             if (c < '!' || c > '~' || c == '\n' || Token.specials.canFind(token))
                                 returnStatus ~= EmailStatusCode.errorExpectingText;
@@ -360,7 +360,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
 
                         }
 
-                        auto c = token.front;
+                        immutable c = token.front;
                         hyphenFlag = false;
 
                         if (c < '!' || c > '~' || Token.specials.canFind(token))
@@ -414,7 +414,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
                             {
                                 auto ipV6 = addressLiteral.substr(5);
                                 matchesIp = ipV6.split(Token.colon);
-                                auto groupCount = matchesIp.length;
+                                immutable groupCount = matchesIp.length;
                                 index = ipV6.indexOf(Token.doubleColon);
 
                                 if (index == -1)
@@ -487,7 +487,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
                     break;
 
                     default:
-                        auto c = token.front;
+                        immutable c = token.front;
 
                         if (c > AsciiToken.delete_ || c == '\0' || token == Token.openBracket)
                         {
@@ -540,7 +540,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
                     break;
 
                     default:
-                        auto c = token.front;
+                        immutable c = token.front;
 
                         if (c > AsciiToken.delete_ || c == '\0' || c == '\n')
                             returnStatus ~= EmailStatusCode.errorExpectingQuotedText;
@@ -555,7 +555,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
             break;
 
             case EmailPart.contextQuotedPair:
-                auto c = token.front;
+                immutable c = token.front;
 
                 if (c > AsciiToken.delete_)
                     returnStatus ~= EmailStatusCode.errorExpectingQuotedPair;
@@ -623,7 +623,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
                     break;
 
                     default:
-                        auto c = token.front;
+                        immutable c = token.front;
 
                         if (c > AsciiToken.delete_ || c == '\0' || c == '\n')
                         {
