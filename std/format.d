@@ -640,6 +640,223 @@ if (allSatisfy!(isPointer, S))
     assert(isNaN(z));
 }
 
+@system pure unittest
+{
+    string line;
+
+    bool f1;
+
+    line = "true";
+    formattedRead(line, "%s", &f1);
+    assert(f1);
+
+    line = "TrUE";
+    formattedRead(line, "%s", &f1);
+    assert(f1);
+
+    line = "false";
+    formattedRead(line, "%s", &f1);
+    assert(!f1);
+
+    line = "fALsE";
+    formattedRead(line, "%s", &f1);
+    assert(!f1);
+
+    line = "1";
+    formattedRead(line, "%d", &f1);
+    assert(f1);
+
+    line = "-1";
+    formattedRead(line, "%d", &f1);
+    assert(f1);
+
+    line = "0";
+    formattedRead(line, "%d", &f1);
+    assert(!f1);
+
+    line = "-0";
+    formattedRead(line, "%d", &f1);
+    assert(!f1);
+}
+
+@system pure unittest
+{
+     union B
+     {
+         char[int.sizeof] untyped;
+         int typed;
+     }
+     B b;
+     b.typed = 5;
+     char[] input = b.untyped[];
+     int witness;
+     formattedRead(input, "%r", &witness);
+     assert(witness == b.typed);
+}
+
+@system pure unittest
+{
+    union A
+    {
+        char[float.sizeof] untyped;
+        float typed;
+    }
+    A a;
+    a.typed = 5.5;
+    char[] input = a.untyped[];
+    float witness;
+    formattedRead(input, "%r", &witness);
+    assert(witness == a.typed);
+}
+
+@system pure unittest
+{
+    import std.typecons;
+    char[] line = "1 2".dup;
+    int a, b;
+    formattedRead(line, "%s %s", &a, &b);
+    assert(a == 1 && b == 2);
+
+    line = "10 2 3".dup;
+    formattedRead(line, "%d ", &a);
+    assert(a == 10);
+    assert(line == "2 3");
+
+    Tuple!(int, float) t;
+    line = "1 2.125".dup;
+    formattedRead(line, "%d %g", &t);
+    assert(t[0] == 1 && t[1] == 2.125);
+
+    line = "1 7643 2.125".dup;
+    formattedRead(line, "%s %*u %s", &t);
+    assert(t[0] == 1 && t[1] == 2.125);
+}
+
+@system pure unittest
+{
+    string line;
+
+    char c1, c2;
+
+    line = "abc";
+    formattedRead(line, "%s%c", &c1, &c2);
+    assert(c1 == 'a' && c2 == 'b');
+    assert(line == "c");
+}
+
+@system pure unittest
+{
+    string line;
+
+    line = "[1,2,3]";
+    int[] s1;
+    formattedRead(line, "%s", &s1);
+    assert(s1 == [1,2,3]);
+}
+
+@system pure unittest
+{
+    string line;
+
+    line = "[1,2,3]";
+    int[] s1;
+    formattedRead(line, "[%(%s,%)]", &s1);
+    assert(s1 == [1,2,3]);
+
+    line = `["hello", "world"]`;
+    string[] s2;
+    formattedRead(line, "[%(%s, %)]", &s2);
+    assert(s2 == ["hello", "world"]);
+
+    line = "123 456";
+    int[] s3;
+    formattedRead(line, "%(%s %)", &s3);
+    assert(s3 == [123, 456]);
+
+    line = "h,e,l,l,o; w,o,r,l,d";
+    string[] s4;
+    formattedRead(line, "%(%(%c,%); %)", &s4);
+    assert(s4 == ["hello", "world"]);
+}
+
+@system pure unittest
+{
+    string line;
+
+    int[4] sa1;
+    line = `[1,2,3,4]`;
+    formattedRead(line, "%s", &sa1);
+    assert(sa1 == [1,2,3,4]);
+
+    int[4] sa2;
+    line = `[1,2,3]`;
+    assertThrown(formattedRead(line, "%s", &sa2));
+
+    int[4] sa3;
+    line = `[1,2,3,4,5]`;
+    assertThrown(formattedRead(line, "%s", &sa3));
+}
+
+@system pure unittest
+{
+    string input;
+
+    int[4] sa1;
+    input = `[1,2,3,4]`;
+    formattedRead(input, "[%(%s,%)]", &sa1);
+    assert(sa1 == [1,2,3,4]);
+
+    int[4] sa2;
+    input = `[1,2,3]`;
+    assertThrown(formattedRead(input, "[%(%s,%)]", &sa2));
+}
+
+@system pure unittest
+{
+    string line;
+
+    string s1, s2;
+
+    line = "hello, world";
+    formattedRead(line, "%s", &s1);
+    assert(s1 == "hello, world", s1);
+
+    line = "hello, world;yah";
+    formattedRead(line, "%s;%s", &s1, &s2);
+    assert(s1 == "hello, world", s1);
+    assert(s2 == "yah", s2);
+
+    line = `['h','e','l','l','o']`;
+    string s3;
+    formattedRead(line, "[%(%s,%)]", &s3);
+    assert(s3 == "hello");
+
+    line = `"hello"`;
+    string s4;
+    formattedRead(line, "\"%(%c%)\"", &s4);
+    assert(s4 == "hello");
+}
+
+@system pure unittest
+{
+    string line;
+
+    string[int] aa1;
+    line = `[1:"hello", 2:"world"]`;
+    formattedRead(line, "%s", &aa1);
+    assert(aa1 == [1:"hello", 2:"world"]);
+
+    int[string] aa2;
+    line = `{"hello"=1; "world"=2}`;
+    formattedRead(line, "{%(%s=%s; %)}", &aa2);
+    assert(aa2 == ["hello":1, "world":2]);
+
+    int[string] aa3;
+    line = `{[hello=1]; [world=2]}`;
+    formattedRead(line, "{%([%(%c%)=%s]%|; %)}", &aa3);
+    assert(aa3 == ["hello":1, "world":2]);
+}
+
 template FormatSpec(Char)
     if (!is(Unqual!Char == Char))
 {
@@ -4295,7 +4512,19 @@ private template acceptedSpecs(T)
 }
 
 /**
- * Reads a boolean value and returns it.
+ * Reads a value from the given _input range according to spec
+ * and returns it as type `T`.
+ *
+ * Params:
+ *     T = the floating point type to return
+ *     input = the _input range to read from
+ *     spec = the `FormatSpec` to use when reading from `input`
+ * Returns:
+ *     A value from `input` of type `T`
+ * Throws:
+ *     An `Exception` if `spec` cannot read a type `T`
+ * See_Also:
+ *     $(REF parse, std, conv) and $(REF to, std, conv)
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && is(Unqual!T == bool))
@@ -4311,48 +4540,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     return unformatValue!long(input, spec) != 0;
 }
 
-@system pure unittest
-{
-    string line;
-
-    bool f1;
-
-    line = "true";
-    formattedRead(line, "%s", &f1);
-    assert(f1);
-
-    line = "TrUE";
-    formattedRead(line, "%s", &f1);
-    assert(f1);
-
-    line = "false";
-    formattedRead(line, "%s", &f1);
-    assert(!f1);
-
-    line = "fALsE";
-    formattedRead(line, "%s", &f1);
-    assert(!f1);
-
-    line = "1";
-    formattedRead(line, "%d", &f1);
-    assert(f1);
-
-    line = "-1";
-    formattedRead(line, "%d", &f1);
-    assert(f1);
-
-    line = "0";
-    formattedRead(line, "%d", &f1);
-    assert(!f1);
-
-    line = "-0";
-    formattedRead(line, "%d", &f1);
-    assert(!f1);
-}
-
-/**
- * Reads null literal and returns it.
- */
+/// ditto
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && is(T == typeof(null)))
 {
@@ -4363,41 +4551,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     return parse!T(input);
 }
 
-/**
- * Function that performs raw reading. Used by unformatValue
- * for integral and float types.
- */
-private T rawRead(T, Range)(ref Range input)
-    if (is(Unqual!(ElementEncodingType!Range) == char)
-     || is(Unqual!(ElementEncodingType!Range) == byte)
-     || is(Unqual!(ElementEncodingType!Range) == ubyte))
-{
-    union X
-    {
-        ubyte[T.sizeof] raw;
-        T typed;
-    }
-    X x;
-    foreach (i; 0 .. T.sizeof)
-    {
-        static if (isSomeString!Range)
-        {
-            x.raw[i] = input[0];
-            input = input[1 .. $];
-        }
-        else
-        {
-            // TODO: recheck this
-            x.raw[i] = input.front;
-            input.popFront();
-        }
-    }
-    return x.typed;
-}
-
-/**
-   Reads an integral value and returns it.
- */
+/// ditto
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
@@ -4431,24 +4585,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 
 }
 
-pure unittest
-{
-     union B
-     {
-         char[int.sizeof] untyped;
-         int typed;
-     }
-     B b;
-     b.typed = 5;
-     char[] input = b.untyped[];
-     int witness;
-     formattedRead(input, "%r", &witness);
-     assert(witness == b.typed);
-}
-
-/**
-   Reads a floating-point value and returns it.
- */
+/// ditto
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
         && isSomeChar!(ElementType!Range)&& !is(Range == enum))
@@ -4472,47 +4609,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     return parse!T(input);
 }
 
-pure unittest
-{
-    union A
-    {
-        char[float.sizeof] untyped;
-        float typed;
-    }
-    A a;
-    a.typed = 5.5;
-    char[] input = a.untyped[];
-    float witness;
-    formattedRead(input, "%r", &witness);
-    assert(witness == a.typed);
-}
-
-@system pure unittest
-{
-    import std.typecons;
-    char[] line = "1 2".dup;
-    int a, b;
-    formattedRead(line, "%s %s", &a, &b);
-    assert(a == 1 && b == 2);
-
-    line = "10 2 3".dup;
-    formattedRead(line, "%d ", &a);
-    assert(a == 10);
-    assert(line == "2 3");
-
-    Tuple!(int, float) t;
-    line = "1 2.125".dup;
-    formattedRead(line, "%d %g", &t);
-    assert(t[0] == 1 && t[1] == 2.125);
-
-    line = "1 7643 2.125".dup;
-    formattedRead(line, "%s %*u %s", &t);
-    assert(t[0] == 1 && t[1] == 2.125);
-}
-
-/**
- * Reads one character and returns it.
- */
+/// ditto
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
@@ -4537,21 +4634,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
         static assert(0);
 }
 
-@system pure unittest
-{
-    string line;
-
-    char c1, c2;
-
-    line = "abc";
-    formattedRead(line, "%s%c", &c1, &c2);
-    assert(c1 == 'a' && c2 == 'b');
-    assert(line == "c");
-}
-
-/**
-   Reads a string and returns it.
- */
+/// ditto
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
 {
@@ -4604,35 +4687,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
         return app.data;
 }
 
-@system pure unittest
-{
-    string line;
-
-    string s1, s2;
-
-    line = "hello, world";
-    formattedRead(line, "%s", &s1);
-    assert(s1 == "hello, world", s1);
-
-    line = "hello, world;yah";
-    formattedRead(line, "%s;%s", &s1, &s2);
-    assert(s1 == "hello, world", s1);
-    assert(s2 == "yah", s2);
-
-    line = `['h','e','l','l','o']`;
-    string s3;
-    formattedRead(line, "[%(%s,%)]", &s3);
-    assert(s3 == "hello");
-
-    line = `"hello"`;
-    string s4;
-    formattedRead(line, "\"%(%c%)\"", &s4);
-    assert(s4 == "hello");
-}
-
-/**
-   Reads an array (except for string types) and returns it.
- */
+/// ditto
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
 {
@@ -4647,86 +4702,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     return parse!T(input);
 }
 
-@system pure unittest
-{
-    string line;
-
-    line = "[1,2,3]";
-    int[] s1;
-    formattedRead(line, "%s", &s1);
-    assert(s1 == [1,2,3]);
-}
-
-@system pure unittest
-{
-    string line;
-
-    line = "[1,2,3]";
-    int[] s1;
-    formattedRead(line, "[%(%s,%)]", &s1);
-    assert(s1 == [1,2,3]);
-
-    line = `["hello", "world"]`;
-    string[] s2;
-    formattedRead(line, "[%(%s, %)]", &s2);
-    assert(s2 == ["hello", "world"]);
-
-    line = "123 456";
-    int[] s3;
-    formattedRead(line, "%(%s %)", &s3);
-    assert(s3 == [123, 456]);
-
-    line = "h,e,l,l,o; w,o,r,l,d";
-    string[] s4;
-    formattedRead(line, "%(%(%c,%); %)", &s4);
-    assert(s4 == ["hello", "world"]);
-}
-
-@system pure unittest
-{
-    string line;
-
-    int[4] sa1;
-    line = `[1,2,3,4]`;
-    formattedRead(line, "%s", &sa1);
-    assert(sa1 == [1,2,3,4]);
-
-    int[4] sa2;
-    line = `[1,2,3]`;
-    assertThrown(formattedRead(line, "%s", &sa2));
-
-    int[4] sa3;
-    line = `[1,2,3,4,5]`;
-    assertThrown(formattedRead(line, "%s", &sa3));
-}
-
-@system pure unittest
-{
-    string input;
-
-    int[4] sa1;
-    input = `[1,2,3,4]`;
-    formattedRead(input, "[%(%s,%)]", &sa1);
-    assert(sa1 == [1,2,3,4]);
-
-    int[4] sa2;
-    input = `[1,2,3]`;
-    assertThrown(formattedRead(input, "[%(%s,%)]", &sa2));
-}
-
-@safe pure unittest
-{
-    // 7241
-    string input = "a";
-    auto spec = FormatSpec!char("%s");
-    spec.readUpToNextSpec(input);
-    auto result = unformatValue!(dchar[1])(input, spec);
-    assert(result[0] == 'a');
-}
-
-/**
- * Reads an associative array and returns it.
- */
+/// ditto
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     if (isInputRange!Range && isAssociativeArray!T && !is(T == enum))
 {
@@ -4741,24 +4717,88 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     return parse!T(input);
 }
 
+/// Booleans
 @system pure unittest
 {
-    string line;
+    auto str = "false";
+    auto spec = singleSpec("%s");
+    assert(unformatValue!bool(str, spec) == false);
+}
 
-    string[int] aa1;
-    line = `[1:"hello", 2:"world"]`;
-    formattedRead(line, "%s", &aa1);
-    assert(aa1 == [1:"hello", 2:"world"]);
+/// Null values
+@system pure unittest
+{
+    auto str = "null";
+    auto spec = singleSpec("%s");
+    assert(str.unformatValue!(typeof(null))(spec) == null);
+}
 
-    int[string] aa2;
-    line = `{"hello"=1; "world"=2}`;
-    formattedRead(line, "{%(%s=%s; %)}", &aa2);
-    assert(aa2 == ["hello":1, "world":2]);
+/// Integrals
+@system pure unittest
+{
+    auto str = "123";
+    auto spec = singleSpec("%s");
+    assert(str.unformatValue!int(spec) == 123);
+}
 
-    int[string] aa3;
-    line = `{[hello=1]; [world=2]}`;
-    formattedRead(line, "{%([%(%c%)=%s]%|; %)}", &aa3);
-    assert(aa3 == ["hello":1, "world":2]);
+/// Floating point numbers
+@system pure unittest
+{
+    import std.math : approxEqual;
+
+    auto str = "123.456";
+    auto spec = singleSpec("%s");
+    assert(str.unformatValue!double(spec).approxEqual(123.456));
+}
+
+/// Character input ranges
+@system pure unittest
+{
+    auto str = "aaa";
+    auto spec = singleSpec("%s");
+    assert(unformatValue!char(str, spec) == 'a');
+}
+
+@safe pure unittest
+{
+    // 7241
+    string input = "a";
+    auto spec = FormatSpec!char("%s");
+    spec.readUpToNextSpec(input);
+    auto result = unformatValue!(dchar[1])(input, spec);
+    assert(result[0] == 'a');
+}
+
+/**
+ * Function that performs raw reading. Used by unformatValue
+ * for integral and float types.
+ */
+private T rawRead(T, Range)(ref Range input)
+    if (is(Unqual!(ElementEncodingType!Range) == char)
+     || is(Unqual!(ElementEncodingType!Range) == byte)
+     || is(Unqual!(ElementEncodingType!Range) == ubyte))
+{
+    union X
+    {
+        ubyte[T.sizeof] raw;
+        T typed;
+    }
+    X x;
+    foreach (i; 0 .. T.sizeof)
+    {
+        static if (isSomeString!Range)
+        {
+            x.raw[i] = input[0];
+            input = input[1 .. $];
+        }
+        else
+        {
+            // TODO: recheck this
+            x.raw[i] = input.front;
+            input.popFront();
+        }
+    }
+    return x.typed;
 }
 
 //debug = unformatRange;
