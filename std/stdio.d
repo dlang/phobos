@@ -3415,6 +3415,22 @@ void write(T...)(T args) if (!is(T[0] : File))
  *
  * Throws:
  *      In case of an I/O error, throws an $(LREF StdioException).
+ * Example:
+ *        Reads $(D stdin) and writes it to $(D stdout) with a argument
+ *        counter.
+---
+import std.stdio;
+
+void main()
+{
+    string line;
+
+    for (size_t count = 0; (line = readln) !is null; count++)
+    {
+         writeln("Input ", count, ": ", line);
+    }
+}
+---
  */
 void writeln(T...)(T args)
 {
