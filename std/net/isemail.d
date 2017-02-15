@@ -242,7 +242,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
                         else
                         {
                             contextPrior = context;
-                            auto c = token.front;
+                            immutable c = token.front;
 
                             if (c < '!' || c > '~' || c == '\n' || Token.specials.canFind(token))
                                 returnStatus ~= EmailStatusCode.errorExpectingText;
@@ -360,7 +360,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
 
                         }
 
-                        auto c = token.front;
+                        immutable c = token.front;
                         hyphenFlag = false;
 
                         if (c < '!' || c > '~' || Token.specials.canFind(token))
@@ -414,7 +414,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
                             {
                                 auto ipV6 = addressLiteral.substr(5);
                                 matchesIp = ipV6.split(Token.colon);
-                                auto groupCount = matchesIp.length;
+                                immutable groupCount = matchesIp.length;
                                 index = ipV6.indexOf(Token.doubleColon);
 
                                 if (index == -1)
@@ -487,7 +487,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
                     break;
 
                     default:
-                        auto c = token.front;
+                        immutable c = token.front;
 
                         if (c > AsciiToken.delete_ || c == '\0' || token == Token.openBracket)
                         {
@@ -540,7 +540,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
                     break;
 
                     default:
-                        auto c = token.front;
+                        immutable c = token.front;
 
                         if (c > AsciiToken.delete_ || c == '\0' || c == '\n')
                             returnStatus ~= EmailStatusCode.errorExpectingQuotedText;
@@ -555,7 +555,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
             break;
 
             case EmailPart.contextQuotedPair:
-                auto c = token.front;
+                immutable c = token.front;
 
                 if (c > AsciiToken.delete_)
                     returnStatus ~= EmailStatusCode.errorExpectingQuotedPair;
@@ -623,7 +623,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
                     break;
 
                     default:
-                        auto c = token.front;
+                        immutable c = token.front;
 
                         if (c > AsciiToken.delete_ || c == '\0' || c == '\n')
                         {
@@ -1280,7 +1280,7 @@ struct EmailStatus
      *     domainPart = the domain part of the email address
      *        statusCode = the status code
      */
-    private this (bool valid, string localPart, string domainPart, EmailStatusCode statusCode)
+    private this (bool valid, string localPart, string domainPart, EmailStatusCode statusCode) @safe @nogc pure nothrow
     {
         this.valid_ = valid;
         this.localPart_ = localPart;
@@ -1289,37 +1289,37 @@ struct EmailStatus
     }
 
     /// Indicates if the email address is valid or not.
-    @property bool valid () const
+    @property bool valid() const @safe @nogc pure nothrow
     {
         return valid_;
     }
 
     /// The local part of the email address, that is, the part before the @ sign.
-    @property string localPart () const
+    @property string localPart() const @safe @nogc pure nothrow
     {
         return localPart_;
     }
 
     /// The domain part of the email address, that is, the part after the @ sign.
-    @property string domainPart () const
+    @property string domainPart() const @safe @nogc pure nothrow
     {
         return domainPart_;
     }
 
     /// The email status code
-    @property EmailStatusCode statusCode () const
+    @property EmailStatusCode statusCode() const @safe @nogc pure nothrow
     {
         return statusCode_;
     }
 
     /// Returns a describing string of the status code
-    @property string status () const
+    @property string status() const @safe @nogc pure nothrow
     {
         return statusCodeDescription(statusCode_);
     }
 
     /// Returns a textual representation of the email status
-    string toString () const
+    string toString() const @safe pure
     {
         import std.format : format;
         return format("EmailStatus\n{\n\tvalid: %s\n\tlocalPart: %s\n\tdomainPart: %s\n\tstatusCode: %s\n}", valid,
@@ -1328,7 +1328,7 @@ struct EmailStatus
 }
 
 /// Returns a describing string of the given status code
-string statusCodeDescription (EmailStatusCode statusCode)
+string statusCodeDescription(EmailStatusCode statusCode) @safe @nogc pure nothrow
 {
     final switch (statusCode)
     {
