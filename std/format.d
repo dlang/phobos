@@ -4719,15 +4719,19 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 }
 
 /// Booleans
-@system pure unittest
+@safe pure unittest
 {
     auto str = "false";
     auto spec = singleSpec("%s");
     assert(unformatValue!bool(str, spec) == false);
+
+    str = "1";
+    spec = singleSpec("%d");
+    assert(unformatValue!bool(str, spec));
 }
 
 /// Null values
-@system pure unittest
+@safe pure unittest
 {
     auto str = "null";
     auto spec = singleSpec("%s");
@@ -4735,15 +4739,23 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 }
 
 /// Integrals
-@system pure unittest
+@safe pure unittest
 {
     auto str = "123";
     auto spec = singleSpec("%s");
     assert(str.unformatValue!int(spec) == 123);
+
+    str = "ABC";
+    spec = singleSpec("%X");
+    assert(str.unformatValue!int(spec) == 2748);
+
+    str = "11610";
+    spec = singleSpec("%o");
+    assert(str.unformatValue!int(spec) == 5000);
 }
 
 /// Floating point numbers
-@system pure unittest
+@safe pure unittest
 {
     import std.math : approxEqual;
 
@@ -4753,11 +4765,54 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 }
 
 /// Character input ranges
-@system pure unittest
+@safe pure unittest
 {
     auto str = "aaa";
     auto spec = singleSpec("%s");
-    assert(unformatValue!char(str, spec) == 'a');
+    assert(str.unformatValue!char(spec) == 'a');
+
+    // Using a numerical format spec reads a Unicode value from a string
+    str = "65";
+    spec = singleSpec("%d");
+    assert(str.unformatValue!char(spec) == 'A');
+
+    str = "41";
+    spec = singleSpec("%x");
+    assert(str.unformatValue!char(spec) == 'A');
+
+    str = "10003";
+    spec = singleSpec("%d");
+    assert(str.unformatValue!dchar(spec) == '✓');
+}
+
+/// Arrays and static arrays
+@safe pure unittest
+{
+    string str = "aaa";
+    auto spec = singleSpec("%s");
+    assert(str.unformatValue!(dchar[])(spec) == "aaa"d);
+
+    str = "aaa";
+    spec = singleSpec("%s");
+    dchar[3] ret = ['a', 'a', 'a'];
+    assert(str.unformatValue!(dchar[3])(spec) == ret);
+
+    str = "[1, 2, 3, 4]";
+    spec = singleSpec("%s");
+    assert(str.unformatValue!(int[])(spec) == [1, 2, 3, 4]);
+
+    str = "[1, 2, 3, 4]";
+    spec = singleSpec("%s");
+    int[4] ret2 = [1, 2, 3, 4];
+    assert(str.unformatValue!(int[4])(spec) == ret2);
+}
+
+/// Associative arrays
+@safe pure unittest
+{
+    auto str = `["one": 1, "two": 2]`;
+    auto spec = singleSpec("%s");
+    assert(str.unformatValue!(int[string])(spec) == ["one": 1, "two": 2]);
 }
 
 @safe pure unittest
