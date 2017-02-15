@@ -1276,7 +1276,7 @@ auto withDefaultExtension(R, C)(auto ref R path, C[] ext)
     Returns: The assembled path.
 */
 immutable(ElementEncodingType!(ElementType!Range))[]
-    buildPath(Range)(Range segments)
+    buildPath(Range)(scope Range segments)
         if (isInputRange!Range && isSomeString!(ElementType!Range))
 {
     if (segments.empty) return null;
