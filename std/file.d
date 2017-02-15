@@ -761,7 +761,7 @@ private void removeImpl(const(char)[] name, const(FSChar)* namez) @trusted
 }
 
 version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
 {
     auto namez = name.tempCString!FSChar();
 
@@ -1020,7 +1020,7 @@ version(StdDdoc)
                         out SysTime fileCreationTime,
                         out SysTime fileAccessTime,
                         out SysTime fileModificationTime)
-        if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+        if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
             !isConvertibleToString!R);
 }
 else version(Windows)
@@ -1029,7 +1029,7 @@ else version(Windows)
                         out SysTime fileCreationTime,
                         out SysTime fileAccessTime,
                         out SysTime fileModificationTime)
-        if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+        if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
             !isConvertibleToString!R)
     {
         with (getFileAttributesWin(name))
@@ -1437,7 +1437,7 @@ version (OSX) {} else
  *    true if the filename specified as input exists
  */
 bool exists(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R)
 {
     return existsImpl(name.tempCString!FSChar());
@@ -1522,7 +1522,7 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
  Throws: $(D FileException) on error.
   +/
 uint getAttributes(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R)
 {
     version(Windows)
@@ -1592,7 +1592,7 @@ uint getAttributes(R)(auto ref R name)
         $(D FileException) on error.
  +/
 uint getLinkAttributes(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R)
 {
     version(Windows)
@@ -1638,7 +1638,7 @@ uint getLinkAttributes(R)(auto ref R name)
         $(D FileException) if the given file does not exist.
  +/
 void setAttributes(R)(R name, uint attributes)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R)
 {
     version (Windows)
@@ -1700,7 +1700,7 @@ assert("/usr/share/include".isDir);
 --------------------
   +/
 @property bool isDir(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R)
 {
     version(Windows)
@@ -1850,7 +1850,7 @@ assert(!"/usr/share/include".isFile);
 --------------------
   +/
 @property bool isFile(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R)
 {
     version(Windows)
@@ -1984,7 +1984,7 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
         $(D FileException) if the given file does not exist.
   +/
 @property bool isSymlink(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R)
 {
     version(Windows)
@@ -2112,7 +2112,7 @@ bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
  * Throws: $(D FileException) on error.
  */
 void chdir(R)(R pathname)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R)
 {
     // Place outside of @trusted block
@@ -2157,7 +2157,7 @@ Throws: $(D FileException) on Posix or $(D WindowsException) on Windows
         if an error occured.
  */
 void mkdir(R)(R pathname)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R)
 {
     // Place outside of @trusted block
@@ -2308,7 +2308,7 @@ Params:
 Throws: $(D FileException) on error.
  */
 void rmdir(R)(R pathname)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R)
 {
     // Place outside of @trusted block
@@ -2363,14 +2363,14 @@ void rmdir(R)(auto ref R pathname)
         exists).
   +/
 version(StdDdoc) void symlink(RO, RL)(RO original, RL link)
-    if ((isInputRange!RO && isSomeChar!(ElementEncodingType!RO) ||
+    if ((isInputRange!RO && !isInfinite!RO && isSomeChar!(ElementEncodingType!RO) ||
             isConvertibleToString!RO) &&
-        (isInputRange!RL && isSomeChar!(ElementEncodingType!RL) ||
+        (isInputRange!RL && !isInfinite!RL && isSomeChar!(ElementEncodingType!RL) ||
             isConvertibleToString!RL));
 else version(Posix) void symlink(RO, RL)(RO original, RL link)
-    if ((isInputRange!RO && isSomeChar!(ElementEncodingType!RO) ||
+    if ((isInputRange!RO && !isInfinite!RO && isSomeChar!(ElementEncodingType!RO) ||
             isConvertibleToString!RO) &&
-        (isInputRange!RL && isSomeChar!(ElementEncodingType!RL) ||
+        (isInputRange!RL && !isInfinite!RL && isSomeChar!(ElementEncodingType!RL) ||
             isConvertibleToString!RL))
 {
     static if (isConvertibleToString!RO || isConvertibleToString!RL)
@@ -2452,10 +2452,10 @@ version(Posix) @safe unittest
         $(D FileException) on error.
   +/
 version(StdDdoc) string readLink(R)(R link)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) ||
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) ||
         isConvertibleToString!R);
 else version(Posix) string readLink(R)(R link)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) ||
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) ||
         isConvertibleToString!R)
 {
     static if (isConvertibleToString!R)
@@ -3298,8 +3298,8 @@ Params:
 Throws: $(D FileException) on error.
  */
 void copy(RF, RT)(RF from, RT to, PreserveAttributes preserve = preserveAttributesDefault)
-    if (isInputRange!RF && isSomeChar!(ElementEncodingType!RF) && !isConvertibleToString!RF &&
-        isInputRange!RT && isSomeChar!(ElementEncodingType!RT) && !isConvertibleToString!RT)
+    if (isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) && !isConvertibleToString!RF &&
+        isInputRange!RT && !isInfinite!RT && isSomeChar!(ElementEncodingType!RT) && !isConvertibleToString!RT)
 {
     // Place outside of @trusted block
     auto fromz = from.tempCString!FSChar();

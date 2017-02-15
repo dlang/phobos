@@ -195,7 +195,7 @@ version (Windows)
     from a path.
 */
 private auto ltrimDirSeparators(R)(R path)
-    if (isInputRange!R && isSomeChar!(ElementType!R) ||
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
 {
     static if (isRandomAccessRange!R && hasSlicing!R || isNarrowString!R)
@@ -1277,7 +1277,7 @@ auto withDefaultExtension(R, C)(auto ref R path, C[] ext)
 */
 immutable(ElementEncodingType!(ElementType!Range))[]
     buildPath(Range)(Range segments)
-        if (isInputRange!Range && isSomeString!(ElementType!Range))
+        if (isInputRange!Range && !isInfinite!Range && isSomeString!(ElementType!Range))
 {
     if (segments.empty) return null;
 
@@ -3026,8 +3026,12 @@ int filenameCharCmp(CaseSensitive cs = CaseSensitive.osDefault)(dchar a, dchar b
 */
 int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, Range1, Range2)
     (Range1 filename1, Range2 filename2)
-    if (isInputRange!Range1 && isSomeChar!(ElementEncodingType!Range1) && !isConvertibleToString!Range1 &&
-        isInputRange!Range2 && isSomeChar!(ElementEncodingType!Range2) && !isConvertibleToString!Range2)
+    if (isInputRange!Range1 && !isInfinite!Range1 &&
+        isSomeChar!(ElementEncodingType!Range1) &&
+        !isConvertibleToString!Range1 &&
+        isInputRange!Range2 && !isInfinite!Range2 &&
+        isSomeChar!(ElementEncodingType!Range2) &&
+        !isConvertibleToString!Range2)
 {
     alias C1 = Unqual!(ElementEncodingType!Range1);
     alias C2 = Unqual!(ElementEncodingType!Range2);
@@ -3164,7 +3168,8 @@ int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, Range1, Range2)
 bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C, Range)
     (Range path, const(C)[] pattern)
     @safe pure nothrow
-    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) && !isConvertibleToString!Range &&
+    if (isForwardRange!Range && !isInfinite!Range &&
+        isSomeChar!(ElementEncodingType!Range) && !isConvertibleToString!Range &&
         isSomeChar!C && is(Unqual!C == Unqual!(ElementEncodingType!Range)))
 in
 {
