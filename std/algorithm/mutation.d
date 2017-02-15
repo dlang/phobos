@@ -2728,9 +2728,8 @@ Returns:
 */
 Tuple!(InputRange1, InputRange2)
 swapRanges(InputRange1, InputRange2)(InputRange1 r1, InputRange2 r2)
-    if (isInputRange!(InputRange1) && isInputRange!(InputRange2)
-            && hasSwappableElements!(InputRange1) && hasSwappableElements!(InputRange2)
-            && is(ElementType!(InputRange1) == ElementType!(InputRange2)))
+    if (hasSwappableElements!InputRange1 && hasSwappableElements!InputRange2
+        && is(ElementType!InputRange1 == ElementType!InputRange2))
 {
     for (; !r1.empty && !r2.empty; r1.popFront(), r2.popFront())
     {

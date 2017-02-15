@@ -1261,7 +1261,7 @@ R r;
 static assert(isInputRange!R);
 swap(r.front, r.front);
 static if (isBidirectionalRange!R) swap(r.back, r.front);
-static if (isRandomAccessRange!R) swap(r[], r.front);
+static if (isRandomAccessRange!R) swap(r[0], r.front);
 ----
  */
 template hasSwappableElements(R)
