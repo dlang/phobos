@@ -233,7 +233,7 @@ Throws: $(LREF FileException) on error.
  */
 
 void[] read(R)(R name, size_t upTo = size_t.max)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) && !isInfinite!R &&
         !isConvertibleToString!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
@@ -420,7 +420,7 @@ decoding error.
 
 S readText(S = string, R)(R name)
     if (isSomeString!S &&
-        (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
+        (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
         !isConvertibleToString!R)
 {
     import std.utf : validate;
@@ -463,7 +463,7 @@ Throws: $(D FileException) on error.
 See_also: $(REF toFile, std,stdio)
  */
 void write(R)(R name, const void[] buffer)
-    if ((isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
+    if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
         !isConvertibleToString!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
@@ -507,7 +507,7 @@ Params:
 Throws: $(D FileException) on error.
  */
 void append(R)(R name, const void[] buffer)
-    if ((isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
+    if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
         !isConvertibleToString!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
@@ -625,8 +625,10 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
  * Throws: $(D FileException) on error.
  */
 void rename(RF, RT)(RF from, RT to)
-    if ((isInputRange!RF && isSomeChar!(ElementEncodingType!RF) || isSomeString!RF) && !isConvertibleToString!RF &&
-        (isInputRange!RT && isSomeChar!(ElementEncodingType!RT) || isSomeString!RT) && !isConvertibleToString!RT)
+    if ((isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) || isSomeString!RF)
+        && !isConvertibleToString!RF &&
+        (isInputRange!RT && !isInfinite!RT && isSomeChar!(ElementEncodingType!RT) || isSomeString!RT)
+        && !isConvertibleToString!RT)
 {
     // Place outside of @trusted block
     auto fromz = from.tempCString!FSChar();
@@ -717,7 +719,7 @@ Params:
 Throws: $(D FileException) on error.
  */
 void remove(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
@@ -808,7 +810,7 @@ Params:
 Throws: $(D FileException) on error (e.g., file not found).
  */
 ulong getSize(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R)
 {
     version(Windows)
@@ -894,7 +896,7 @@ private SysTime statTimeToStdTime(char which)(ref stat_t statbuf)
 void getTimes(R)(R name,
               out SysTime accessTime,
               out SysTime modificationTime)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R)
 {
     version(Windows)
@@ -1133,7 +1135,7 @@ version(Windows) @system unittest
 void setTimes(R)(R name,
               SysTime accessTime,
               SysTime modificationTime)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R)
 {
     version(Windows)
@@ -1276,7 +1278,7 @@ void setTimes(R)(auto ref R name,
         $(D FileException) if the given file does not exist.
 +/
 SysTime timeLastModified(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R)
 {
     version(Windows)
@@ -1349,7 +1351,7 @@ else
 --------------------
 +/
 SysTime timeLastModified(R)(R name, SysTime returnIfMissing)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {

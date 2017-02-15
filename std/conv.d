@@ -1732,7 +1732,7 @@ private T toImpl(T, S)(S value)
 
 /// ditto
 private T toImpl(T, S)(S value, uint radix)
-    if (isInputRange!S && isSomeChar!(ElementEncodingType!S) &&
+    if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S) &&
         !isExactSomeString!T && is(typeof(parse!T(value, radix))))
 {
     scope(success)
