@@ -7378,6 +7378,13 @@ private struct OnlyResult(T, size_t arity)
         return result;
     }
 
+    bool opEquals(R)(R r)
+    if (isInputRange!R && __traits(compiles, r.front == front))
+    {
+        import std.algorithm : equal;
+        return r.equal(this);
+    }
+
     private size_t frontIndex = 0;
     private size_t backIndex = 0;
 
@@ -7454,6 +7461,13 @@ private struct OnlyResult(T, size_t arity : 1)
         return copy;
     }
 
+    bool opEquals(R)(R r)
+    if (isInputRange!R && __traits(compiles, r.front == front))
+    {
+        import std.algorithm : equal;
+        return r.equal(this);
+    }
+
     private Unqual!T _value;
     private bool _empty = true;
 }
@@ -7484,6 +7498,12 @@ private struct OnlyResult(T, size_t arity : 0)
         assert(from == 0 && to == 0);
         return this;
     }
+
+    bool opEquals(R)(R r)
+    if (isInputRange!R)
+    {
+        return r.empty;
+    }
 }
 
 /**
@@ -7492,7 +7512,8 @@ elements in-situ.
 
 Useful when a single value or multiple disconnected values
 must be passed to an algorithm expecting a range, without
-having to perform dynamic memory allocation.
+having to perform dynamic memory allocation. For convenience,
+the returned range defines `opEquals`.
 
 As copying the range means copying all elements, it can be
 safely returned from functions. For the same reason, copying
@@ -7509,11 +7530,12 @@ auto only(Values...)(auto ref Values values)
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter, joiner, map;
-    import std.algorithm.searching : findSplitBefore;
+    import std.algorithm.searching : find;
     import std.uni : isUpper;
 
-    assert(equal(only('♡'), "♡"));
-    assert([1, 2, 3, 4].findSplitBefore(only(3))[0] == [1, 2]);
+    assert(only() == "");
+    assert(only('♡') == "♡");
+    assert([1, 2, 3, 4].find(3) == only(3, 4));
 
     assert(only("one", "two", "three").joiner(" ").equal("one two three"));
 
@@ -7539,8 +7561,6 @@ unittest
 // Tests the zero-element result
 @safe unittest
 {
-    import std.algorithm.comparison : equal;
-
     auto emptyRange = only();
 
     alias EmptyRange = typeof(emptyRange);
@@ -7553,15 +7573,14 @@ unittest
 
     assert(emptyRange.empty);
     assert(emptyRange.length == 0);
-    assert(emptyRange.equal(emptyRange[]));
-    assert(emptyRange.equal(emptyRange.save));
-    assert(emptyRange[0 .. 0].equal(emptyRange));
+    assert(emptyRange == emptyRange[]);
+    assert(emptyRange == emptyRange.save);
+    assert(emptyRange[0 .. 0] == emptyRange);
 }
 
 // Tests the single-element result
 @safe unittest
 {
-    import std.algorithm.comparison : equal;
     import std.typecons : tuple;
     foreach (x; tuple(1, '1', 1.0, "1", [1]))
     {
@@ -7571,14 +7590,14 @@ unittest
         assert(a.back == x);
         assert(!a.empty);
         assert(a.length == 1);
-        assert(equal(a, a[]));
-        assert(equal(a, a[0..1]));
-        assert(equal(a[0..0], e));
-        assert(equal(a[1..1], e));
+        assert(a == a[]);
+        assert(a == a[0..1]);
+        assert(a[0..0] == e);
+        assert(a[1..1] == e);
         assert(a[0] == x);
 
         auto b = a.save;
-        assert(equal(a, b));
+        assert(a == b);
         a.popFront();
         assert(a.empty && a.length == 0 && a[].empty);
         b.popBack();
@@ -7600,18 +7619,16 @@ unittest
     assert(!imm.empty);
     assert(imm.init.empty); // Issue 13441
     assert(imm.length == 1);
-    assert(equal(imm, imm[]));
-    assert(equal(imm, imm[0..1]));
-    assert(equal(imm[0..0], imme));
-    assert(equal(imm[1..1], imme));
+    assert(imm == imm[]);
+    assert(imm == imm[0..1]);
+    assert(imm[0..0] == imme);
+    assert(imm[1..1] == imme);
     assert(imm[0] == 1);
 }
 
 // Tests multiple-element results
 @safe unittest
 {
-    import std.algorithm.comparison : equal;
-    import std.algorithm.iteration : joiner;
     import std.meta : AliasSeq;
     static assert(!__traits(compiles, only(1, "1")));
 
@@ -7634,13 +7651,13 @@ unittest
 
     assert(nums.empty);
 
-    assert(saved.equal(only(1, 2, 3)));
-    assert(saved.equal(saved[]));
-    assert(saved[0 .. 1].equal(only(1)));
-    assert(saved[0 .. 2].equal(only(1, 2)));
-    assert(saved[0 .. 3].equal(saved));
-    assert(saved[1 .. 3].equal(only(2, 3)));
-    assert(saved[2 .. 3].equal(only(3)));
+    assert(saved == only(1, 2, 3));
+    assert(saved == saved[]);
+    assert(saved[0 .. 1] == only(1));
+    assert(saved[0 .. 2] == only(1, 2));
+    assert(saved[0 .. 3] == saved);
+    assert(saved[1 .. 3] == only(2, 3));
+    assert(saved[2 .. 3] == only(3));
     assert(saved[0 .. 0].empty);
     assert(saved[3 .. 3].empty);
 
@@ -7651,6 +7668,9 @@ unittest
 
     foreach (argCount; AliasSeq!(2, 3, 4))
     {
+        import std.algorithm.comparison : equal;
+        import std.algorithm.iteration : joiner;
+
         auto values = only(data[0 .. argCount]);
         alias Values = typeof(values);
         static assert(is(ElementType!Values == string));
@@ -7662,12 +7682,12 @@ unittest
         static assert(hasLength!Values);
 
         assert(values.length == argCount);
-        assert(values[0 .. $].equal(values[0 .. values.length]));
+        assert(values[0 .. $] == values[0 .. values.length]);
         assert(values.joiner(" ").equal(joinedRange.front));
         joinedRange.popFront();
     }
 
-    assert(saved.retro.equal(only(3, 2, 1)));
+    assert(saved.retro == only(3, 2, 1));
     assert(saved.length == 3);
 
     assert(saved.back == 3);
