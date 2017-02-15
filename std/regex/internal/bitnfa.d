@@ -281,16 +281,29 @@ unittest
 // Since there is no way to mark a starting position
 // we need 2 instances of BitNfa: one to find the end, and the other
 // to run backwards to find the start.
-struct BitNfa
+struct BitNfa(alias pattern=null)
 {
 pure:
-    uint[128]   asciiTab;         // state mask for ascii characters
-    UIntTrie2   uniTab;           // state mask for unicode characters
-    HashTab     controlFlow;      // maps each bit pattern to resulting jumps pattern
-    uint        controlFlowMask;  // masks all control flow bits
-    uint        finalMask;        // marks final states terminating the NFA
-    uint        length;            // if this engine is empty
-
+    static if(!is(typeof(pattern) == typeof(null)))
+    {
+        static immutable nfa = BitNfa!null(cast()pattern);
+        enum code = nfa.generatedCode;
+        pragma(msg, code);
+        static @property bool empty() { return nfa.empty(); }
+        static bool search(Input)(ref Input inp){ return nfa.search!(Input, code)(inp); }
+        static bool match(Input)(ref Input inp){ return nfa.match!(Input, code)(inp); }
+        static @property uint length(){ return nfa.length; }
+    }
+    else
+    {
+        uint[128]   asciiTab;         // state mask for ascii characters
+        UIntTrie2   uniTab;           // state mask for unicode characters
+        HashTab     controlFlow;      // maps each bit pattern to resulting jumps pattern
+        uint        controlFlowMask;  // masks all control flow bits
+        uint        finalMask;        // marks final states terminating the NFA
+        uint        length;           // if this engine is empty
+        string      generatedCode;
+    
     @property bool empty() const { return length == 0; }
 
     void combineControlFlow()
@@ -383,7 +396,7 @@ pure:
         return result;
     }
 
-    this(Char)(auto ref Regex!Char re)
+    this(Char)(Regex!Char re)
     {
         asciiTab[] = uint.max; // all ones
         uniTab = UIntTrie2();
@@ -511,6 +524,7 @@ outer:  for (uint i=0; i<ir.length; i += ir[i].length) with(IR)
             }
         }
         length += re.ir[lastNonnested].length;
+        generateCode();
         combineControlFlow();
         if (0x1 & finalMask)
         {
@@ -523,7 +537,35 @@ outer:  for (uint i=0; i<ir.length; i += ir[i].length) with(IR)
         }
     }
 
-    bool search(Input)(ref Input r) const
+    void generateCode()
+    {
+        import std.string;
+        auto values = controlFlow.values;
+        auto keys = controlFlow.keys;
+        uint[] uvalues;
+        uint[] ukeys;
+        foreach(i; 0..values.length){
+            if(keys[i] == 0) continue;
+            ptrdiff_t j = uvalues.countUntil(values[i]);
+            if(j >= 0)
+            {
+                ukeys[j] |= keys[i];
+            }
+            else
+            {
+                uvalues ~= values[i];
+                ukeys ~= keys[i];
+            }
+        }
+        foreach(i; 0..uvalues.length){
+            generatedCode ~= format(q{
+                if(cflow & %d)
+                    word &= ~%d;
+            }, ukeys[i], uvalues[i]);
+        }
+    }
+
+    bool search(Input, alias code=null)(ref Input r) const
     {
         dchar ch;
         size_t idx;
@@ -534,7 +576,12 @@ outer:  for (uint i=0; i<ir.length; i += ir[i].length) with(IR)
             // cfMask has 1 for each control-flow op
             uint cflow = ~word  & controlFlowMask;
             word = word | controlFlowMask; // kill cflow
-            word &= ~controlFlow[cflow]; // map normal ops
+            static if(is(typeof(code) == typeof(null)))
+                word &= ~controlFlow[cflow]; // map normal ops
+            else
+            {
+                mixin(code);
+            }
             debug(std_regex_bitnfa) __ctfe || writefln("%b %b %b %b", word, finalMask, cflow, controlFlowMask);
             if ((word & finalMask) != finalMask)
             {
@@ -551,7 +598,7 @@ outer:  for (uint i=0; i<ir.length; i += ir[i].length) with(IR)
         return false;
     }
 
-    bool match(Input)(ref Input r) const
+    bool match(Input, alias code=null)(ref Input r) const
     {
         dchar ch;
         size_t idx;
@@ -564,7 +611,12 @@ outer:  for (uint i=0; i<ir.length; i += ir[i].length) with(IR)
             // cfMask has 1 for each control-flow op
             uint cflow = ~word  & controlFlowMask;
             word = word | controlFlowMask; // kill cflow
-            word &= ~controlFlow[cflow]; // map normal ops
+            static if(is(typeof(code) == typeof(null)))
+                word &= ~controlFlow[cflow]; // map normal ops
+            else
+            {
+                mixin(code);
+            }
             debug(std_regex_bitnfa) __ctfe || writefln("%b %b %b %b", word, finalMask, cflow, controlFlowMask);
             if ((word & finalMask) != finalMask)
             {
@@ -591,9 +643,10 @@ outer:  for (uint i=0; i<ir.length; i += ir[i].length) with(IR)
             r.reset(save);
         return matched;
     }
+    }
 }
 
-auto reverseBitNfa(Char)(auto ref Regex!Char re, uint length) pure
+auto reverseRe(Char)(auto ref Regex!Char re, uint length) pure
 {
     auto re2 = re;
     re2.ir = re2.ir.dup;
@@ -622,21 +675,33 @@ auto reverseBitNfa(Char)(auto ref Regex!Char re, uint length) pure
         }
     }
     debug(std_regex_bitnfa) __ctfe || re2.print();
-    return BitNfa(re2);
+    return re2;
 }
 
-final class BitMatcher(Char) : Kickstart!(Char)
+final class BitMatcher(Char, alias pattern=null) : Kickstart!(Char)
     if (is(Char : dchar))
 {
 @trusted:
-    BitNfa forward, backward;
-
-    pure this()(auto ref Regex!Char re)
+    static if(!is(typeof(pattern) == typeof(null)))
     {
-        forward = BitNfa(re);
-        // keep the end where it belongs
-        if (!forward.empty)
-            backward = reverseBitNfa(re, forward.length);
+        static immutable BitNfa!pattern forward;
+        enum len = forward.length;
+        static if(len == 0)
+            static immutable Regex!Char reversed = cast(immutable)reverseRe(cast()pattern, len+1);    
+        else
+            static immutable Regex!Char reversed = cast(immutable)reverseRe(cast()pattern, len);
+        static immutable BitNfa!reversed backward;
+    }
+    else
+    {
+        BitNfa!null forward, backward;
+        pure this()(auto ref Regex!Char re)
+        {
+            forward = BitNfa!null(re);
+            // keep the end where it belongs
+            if (!forward.empty)
+                backward = BitNfa!null(reverseRe(re, forward.length));
+        }
     }
 
     bool search(ref Input!Char r) const

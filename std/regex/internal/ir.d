@@ -627,6 +627,21 @@ pure:
     }
 
 package(std.regex):
+    this(immutable Regex re, immutable Kickstart!Char kick) immutable
+    {
+        ir = re.ir;
+        dict = re.dict;
+        ngroup = re.ngroup;
+        maxCounterDepth = re.maxCounterDepth;
+        hotspotTableSize = re.hotspotTableSize;
+        threadCount = re.threadCount;
+        flags = re.flags;
+        charsets = re.charsets;
+        matchers = re.matchers;
+        filters = re.filters;
+        backrefed = re.backrefed;
+        kickstart = kick;
+    }
     Bytecode[] ir;                         // compiled bytecode of pattern
     NamedGroup[] dict;                     // maps name -> user group number
     uint ngroup;                           // number of internal groups
