@@ -101,6 +101,7 @@
  *           $(LREF isSomeChar)
  *           $(LREF isSomeString)
  *           $(LREF isStaticArray)
+ *           $(LREF isStringLike)
  *           $(LREF isUnsigned)
  * ))
  * $(TR $(TD Type behaviours) $(TD
@@ -5745,6 +5746,73 @@ enum bool isAutodecodableString(T) = (is(T : const char[]) || is(T : const wchar
     assert(isAutodecodableString!wstring);
     assert(isAutodecodableString!Stringish);
     assert(!isAutodecodableString!dstring);
+}
+
+/**
+Checks whether `T` behaves similar to a string. In other words it requires `T`
+to be an $(B finite) `InputRange` with `char`, `wchar` or `dchar`
+as $(REF ElementEncodingType, std, range).
+Moreover `T` isn't allowed to be an aggregate type,
+implicitly convertible enum or static string array.
+
+Params:
+     T = type to be tested
+
+Returns:
+    true if T behaves similar to a string
+
+See_Also:
+    $(LREF isSomeChar), $(LREF isNarrowString), $(LREF StringTypeOf)
+*/
+template isStringLike(T)
+{
+
+    import std.range.primitives : ElementEncodingType, isInfinite, isInputRange;
+
+    enum isStringLike = isInputRange!T &&
+                        !isInfinite!T &&
+                        isSomeChar!(ElementEncodingType!T) &&
+                        !isConvertibleToString!T;
+}
+
+///
+@safe unittest
+{
+    static assert(isStringLike!string);
+    static assert(isStringLike!wstring);
+    static assert(isStringLike!string);
+    static assert(isStringLike!(char[]));
+    static assert(isStringLike!(wchar[]));
+    static assert(isStringLike!(dchar[]));
+
+    static assert(!isStringLike!(char[10]));
+    static assert(!isStringLike!(wchar[10]));
+    static assert(!isStringLike!(dchar[10]));
+
+    static struct Stringish
+    {
+        string s;
+        alias s this;
+    }
+    static assert(!isStringLike!Stringish);
+    enum StringEnum { a = "foo" }
+    static assert(!isStringLike!StringEnum);
+
+    struct InputString(T)
+    {
+        T[] payload;
+        T front() { return payload[0]; }
+        bool empty() const { return payload.length > 0; }
+        void popFront() { payload = payload[1..$]; }
+    }
+    static assert(isStringLike!(InputString!char));
+    static assert(isStringLike!(InputString!wchar));
+    static assert(isStringLike!(InputString!dchar));
+    static assert(isStringLike!(InputString!(const char)));
+    static assert(isStringLike!(InputString!(const wchar)));
+    static assert(isStringLike!(InputString!(const dchar)));
+
+    static assert(!isStringLike!(bool));
 }
 
 /**
