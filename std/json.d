@@ -22,6 +22,21 @@ import std.range.primitives;
 import std.array;
 import std.traits;
 
+unittest
+{
+    import std.format, std.stdio;
+    format("%.18g", 1e18 - 70).writeln;
+    format("%.18g", 1e18 - 66).writeln;
+    format("%.18g", 1e18 - 65).writeln;
+    format("%.18g", 1e18 - 64).writeln;
+    format("%.18g", 1e18 - 60).writeln;
+    format("%.18g", -1e18 + 70).writeln;
+    format("%.18g", -1e18 + 66).writeln;
+    format("%.18g", -1e18 + 65).writeln;
+    format("%.18g", -1e18 + 64).writeln;
+    format("%.18g", -1e18 + 60).writeln;
+}
+
 ///
 @system unittest
 {
@@ -1752,15 +1767,27 @@ pure nothrow @safe unittest // issue 15884
     // test positive extreme values
     JSONValue j;
     j["rating"] = 1e18 - 65;
-    assert(j.toString == `{"rating":999999999999999872.0}`);
+    import std.stdio;
+    writeln("j", j);
+    version(Win32)
+        assert(j.toString == `{"rating":-999999999999999870.0}`);
+    else
+        assert(j.toString == `{"rating":-999999999999999872.0}`);
 
     j["rating"] = 1e18 - 64;
+    writeln("j", j);
     assert(j.toString == `{"rating":1e+18}`);
 
     // negative extreme values
     j["rating"] = -1e18 + 65;
-    assert(j.toString == `{"rating":-999999999999999872.0}`);
+    writeln("j", j);
+    version(Win32)
+        assert(j.toString == `{"rating":-999999999999999870.0}`);
+    else
+        assert(j.toString == `{"rating":-999999999999999872.0}`);
 
     j["rating"] = -1e18 + 64;
+    writeln("j", j);
     assert(j.toString == `{"rating":-1e+18}`);
 }
+
