@@ -1676,6 +1676,8 @@ auto walkLength(Range)(Range range, const size_t upTo)
 
     $(D popBackN) will behave the same but instead removes elements from
     the back of the (bidirectional) range instead of the front.
+
+    See_Also: $(REF drop, std, range), $(REF dropBack, std, range)
 */
 size_t popFrontN(Range)(ref Range r, size_t n)
     if (isInputRange!Range)
@@ -1807,6 +1809,8 @@ size_t popBackN(Range)(ref Range r, size_t n)
 
     $(D popBackExactly) will behave the same but instead removes elements from
     the back of the (bidirectional) range instead of the front.
+
+    See_Also: $(REF dropExcatly, std, range), $(REF dropBackExactly, std, range)
 */
 void popFrontExactly(Range)(ref Range r, size_t n)
     if (isInputRange!Range)

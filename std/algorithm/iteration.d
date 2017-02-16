@@ -1384,6 +1384,9 @@ Returns: A range of elements of type $(D Tuple!(ElementType!R, uint)),
 representing each consecutively unique element and its respective number of
 occurrences in that run.  This will be an input range if $(D R) is an input
 range, and a forward range in all other cases.
+
+See_Also: $(LREF chunkBy), which chunks an input range into subranges
+    of equivalent adjacent elements.
 */
 Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
 {
@@ -1820,6 +1823,8 @@ private struct ChunkByImpl(alias pred, Range)
 
 /**
  * Chunks an input range into subranges of equivalent adjacent elements.
+ * In other languages this is often called `partitionBy`, `groupBy`
+ * or `sliceWhen`.
  *
  * Equivalence is defined by the predicate $(D pred), which can be either
  * binary, which is passed to $(REF binaryFun, std,functional), or unary, which is
@@ -2061,7 +2066,7 @@ version(none) // This requires support for non-equivalence relations
 /**
 Lazily joins a range of ranges with a separator. The separator itself
 is a range. If a separator is not provided, then the ranges are
-joined directly without anything in between them (often called $(D flatten)
+joined directly without anything in between them (often called `flatten`
 in other languages).
 
 Params:

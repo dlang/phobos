@@ -369,6 +369,7 @@ alias CaseSensitive = Flag!"caseSensitive";
         If the sequence starting at $(D startIdx) does not represent a well
         formed codepoint, then a $(REF UTFException, std,utf) may be thrown.
 
+    See_Also: $(REF countUntil, std,algorithm,searching)
   +/
 ptrdiff_t indexOf(Range)(Range s, in dchar c,
         in CaseSensitive cs = Yes.caseSensitive)

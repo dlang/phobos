@@ -883,6 +883,8 @@ template adjoin(F...) if (F.length > 1)
    function $(D f(x)) that in turn returns $(D
    fun[0](fun[1](...(x)))...). Each function can be a regular
    functions, a delegate, or a string.
+
+   See_Also: $(LREF pipe)
 */
 template compose(fun...)
 {
@@ -936,6 +938,8 @@ template compose(fun...)
 // integer
 int[] a = pipe!(readText, split, map!(to!(int)))("file.txt");
 ----
+
+   See_Also: $(LREF compose)
  */
 alias pipe(fun...) = compose!(Reverse!(fun));
 
