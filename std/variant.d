@@ -1471,9 +1471,9 @@ static class VariantException : Exception
     TypeInfo source;
     /// The target type in the conversion or comparison
     TypeInfo target;
-    this(string s)
+    this(string s, string file = __FILE__, size_t line = __LINE__)
     {
-        super(s);
+        super(s, file, line);
     }
     this(TypeInfo source, TypeInfo target)
     {
@@ -2001,10 +2001,10 @@ unittest
  * ensuring that all types are handled by the visiting functions.
  *
  * The delegate or function having the currently held value as parameter is called
- * with $(D variant)'s current value. Visiting handlers are passed
+ * with $(D variant)'s current value. Visiting _handlers are passed
  * in the template parameter list.
  * It is statically ensured that all held types of
- * $(D variant) are handled across all handlers.
+ * $(D variant) are handled across all _handlers.
  * $(D visit) allows delegates and static functions to be passed
  * as parameters.
  *
@@ -2019,14 +2019,14 @@ unittest
  * Throws: $(LREF VariantException) if `variant` doesn't hold a value and no
  * parameter-less fallback function is specified.
  */
-template visit(Handlers...)
-    if (Handlers.length > 0)
+template visit(handlers...)
+    if (handlers.length > 0)
 {
     ///
-    auto visit(VariantType)(VariantType variant)
+    auto visit(VariantType)(VariantType variant, string file = __FILE__, size_t line = __LINE__)
         if (isAlgebraic!VariantType)
     {
-        return visitImpl!(true, VariantType, Handlers)(variant);
+        return visitImpl!(true, VariantType, handlers)(variant, file, line);
     }
 }
 
@@ -2125,14 +2125,14 @@ unittest
  * `variant` holds a value which isn't handled by the visiting functions,
  * when no parameter-less fallback function is specified.
  */
-template tryVisit(Handlers...)
-    if (Handlers.length > 0)
+template tryVisit(handlers...)
+    if (handlers.length > 0)
 {
     ///
-    auto tryVisit(VariantType)(VariantType variant)
+    auto tryVisit(VariantType)(VariantType variant, string file = __FILE__, size_t line = __LINE__)
         if (isAlgebraic!VariantType)
     {
-        return visitImpl!(false, VariantType, Handlers)(variant);
+        return visitImpl!(false, VariantType, handlers)(variant, file, line);
     }
 }
 
@@ -2193,7 +2193,8 @@ unittest
     static assert( isAlgebraic!(Algebraic!(int, int[])));
 }
 
-private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant)
+private auto visitImpl(bool Strict, VariantType, Handler...)
+    (VariantType variant, string file, size_t line)
     if (isAlgebraic!VariantType && Handler.length > 0)
 {
     alias AllowedTypes = VariantType.AllowedTypes;
@@ -2271,7 +2272,8 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
         static if (HandlerOverloadMap.exceptionFuncIdx != -1)
             return Handler[ HandlerOverloadMap.exceptionFuncIdx ]();
         else
-            throw new VariantException("variant must hold a value before being visited.");
+            throw new VariantException(
+                "variant must hold a value before being visited.", file, line);
     }
 
     foreach (idx, T; AllowedTypes)
@@ -2292,7 +2294,8 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
                         throw new VariantException(
                             "variant holds value of type '"
                             ~ T.stringof ~
-                            "' but no visitor has been provided"
+                            "' but no visitor has been provided",
+                            file, line
                         );
                 }
             }
@@ -2332,6 +2335,19 @@ unittest
         (immutable(Foo) _) => 3
     );
     assert(x == 3);
+}
+
+unittest
+{
+    // check exceptions have the right line number
+    import std.exception : collectException;
+    Algebraic!(int, char) var;
+
+    assert(collectException!VariantException(var.visit!((int)=>0, (char)=>1)).line == __LINE__);
+    assert(collectException!VariantException(var.tryVisit!((int)=>0)).line == __LINE__);
+
+    var = 'c';
+    assert(collectException!VariantException(var.tryVisit!((int)=>0)).line == __LINE__);
 }
 
 unittest
