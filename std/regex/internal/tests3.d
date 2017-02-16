@@ -305,7 +305,7 @@ import std.algorithm, std.conv, std.exception, std.meta, std.range,
 }
 
 // bugzilla 17066
-unittest
+@system unittest
 {
     string message = "fix issue 16319 and fix std.traits.isInnerClass";
     static auto matchToRefs(M)(M m)

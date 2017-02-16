@@ -1629,7 +1629,7 @@ auto makeMultidimensionalArray(uint n, T, Allocator)(auto ref Allocator alloc, s
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
 
@@ -1672,7 +1672,7 @@ void disposeMultidimensionalArray(Allocator, T)(auto ref Allocator alloc, T[] ar
 }
 
 ///
-unittest
+@system unittest
 {
     struct TestAllocator
     {

@@ -128,7 +128,7 @@ private uint[256][8] genTables(uint polynomial)
 
 private static immutable uint[256][8] crc32Tables = genTables(0xEDB88320);
 
-unittest
+@system unittest
 {
     auto tables = genTables(0xEDB88320);
     assert(tables[0][0] == 0x00000000 && tables[0][$ - 1] == 0x2d02ef8d && tables[7][$ - 1] == 0x264b06e6);

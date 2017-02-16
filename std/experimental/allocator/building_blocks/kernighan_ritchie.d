@@ -791,7 +791,7 @@ it actually returns memory to the operating system when possible.
     assert(p.length == 1024 * 1024);
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks;
     import std.random;
@@ -833,7 +833,7 @@ unittest
     test(sizes32);
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks;
     import std.random;

@@ -3665,7 +3665,7 @@ struct FTP
         return p.curl.getTiming(timing, val);
     }
 
-    unittest
+    @system unittest
     {
         auto client = FTP();
 

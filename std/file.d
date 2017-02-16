@@ -203,7 +203,7 @@ private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez,
     throw new FileException(name, .errno, file, line);
 }
 
-unittest
+@safe unittest
 {
     // issue 17102
     try
