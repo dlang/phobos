@@ -625,6 +625,8 @@ public:
 ///
 unittest
 {
+    import std.range.primitives : popFrontN;
+
     auto c = matchFirst("@abc#", regex(`(\w)(\w)(\w)`));
     assert(c.pre == "@"); // Part of input preceding match
     assert(c.post == "#"); // Immediately after match
@@ -1598,6 +1600,7 @@ unittest
 unittest
 {
     import std.algorithm.comparison : equal;
+    import std.typecons;
 
     auto pattern = regex(`([\.,])`);
 
