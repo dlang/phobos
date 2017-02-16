@@ -1470,6 +1470,10 @@ Params:
     pat = the pattern to split on
 Returns:
     A lazy range of strings
+
+See_Also:
+ $(REF _splitter, std,algorithm,iteration) for a version that splits using a
+ fixed separating element, separating range or user-defined separator function.
 */
 public struct Splitter(Flag!"keepSeparators" keepSeparators = No.keepSeparators, Range, alias RegEx = Regex)
     if (isSomeString!Range && isRegexFor!(RegEx, Range))
