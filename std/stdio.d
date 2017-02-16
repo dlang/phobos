@@ -1801,8 +1801,8 @@ is recommended if you want to process a complete file.
     }
 
 /**
- Returns a temporary file by calling $(HTTP
- cplusplus.com/reference/clibrary/cstdio/_tmpfile.html, _tmpfile).
+ Returns a temporary file by calling
+ $(HTTP cplusplus.com/reference/clibrary/cstdio/_tmpfile.html, _tmpfile).
  Note that the created file has no $(LREF name).*/
     static File tmpfile() @safe
     {
