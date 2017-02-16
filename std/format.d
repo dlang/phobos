@@ -1844,8 +1844,7 @@ private void formatUnsigned(Writer, T, Char)(Writer w, T arg, const ref FormatSp
             rightpad = spacesToPrint;
     }
 
-    /**** Print ****/
-
+    // Print
     foreach (i ; 0 .. leftpad)
         put(w, ' ');
 
