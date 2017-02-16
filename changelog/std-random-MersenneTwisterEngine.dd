@@ -2,8 +2,13 @@
 matches the C++11 standard (adding two new template parameters, an extra
 tempering parameter `d` and the initialization multiplier `f`).
 
+Handling of the word size `w` has been fixed so that the generator will
+now properly handle cases where it is less than the number of bits in
+the chosen `UIntType`.  This has been validated against the behaviour
+of a widely-used implementation of the C++11 standard.
+
 For anyone using the standard template instantiation `Mt19937` this will
-have no noticeable effect.  However, this will be a breaking change for
+have no noticeable effect.  However, these will be breaking changes for
 anyone using the `MersenneTwisterEngine` template directly.
 
 The internal implementation has been reworked to use Ilya Yaroshenko's
