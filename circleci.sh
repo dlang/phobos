@@ -2,8 +2,7 @@
 
 set -uexo pipefail
 
-HOST_DMD_VER=2.068.2 # same as in dmd/src/posix.mak
-DSCANNER_DMD_VER=2.071.2 # dscanner needs a more up-to-date version
+HOST_DMD_VER=2.072.2 # same as in dmd/src/posix.mak
 CURL_USER_AGENT="CirleCI $(curl --version | head -n 1)"
 DUB=${DUB:-$HOME/dlang/dub/dub}
 N=2
@@ -59,7 +58,7 @@ setup_repos()
     # set a default in case we run into rate limit restrictions
     local base_branch=""
     if [ -n "${CIRCLE_PR_NUMBER:-}" ]; then
-        base_branch=$((curl -fsSL https://api.github.com/repos/dlang/phobos/pulls/$CIRCLE_PR_NUMBER || echo) | jq -r '.base.ref')
+        base_branch=$((curl -fsSL https://api.github.com/repos/dlang/$CIRCLE_PROJECT_REPONAME/pulls/$CIRCLE_PR_NUMBER || echo) | jq -r '.base.ref')
     else
         base_branch=$CIRCLE_BRANCH
     fi
@@ -97,8 +96,8 @@ setup_repos()
 # verify style guide
 style()
 {
-    # dscanner needs a more up-to-date DMD version
-    source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$DSCANNER_DMD_VER --activate)"
+    # load compiler for dscanner
+    source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
 
     make -f posix.mak style
 }
