@@ -1483,7 +1483,7 @@ template staticIsSorted(alias cmp, Seq...)
 }
 
 ///
-unittest
+@system unittest
 {
     enum Comp(int N1, int N2) = N1 < N2;
     static assert( staticIsSorted!(Comp, 2, 2));
@@ -1492,7 +1492,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     enum Comp(T1, T2) = __traits(isUnsigned, T2) - __traits(isUnsigned, T1);
     static assert( staticIsSorted!(Comp, uint, ubyte, ulong, short, long));

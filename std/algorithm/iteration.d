@@ -93,7 +93,7 @@ private template aggregate(fun...) if (fun.length >= 1)
         return ror.map!(reduce!fun);
     }
 
-    unittest
+    @system unittest
     {
         import std.algorithm.comparison : equal, max, min;
 
@@ -1035,7 +1035,7 @@ template each(alias pred = "a")
 }
 
 // #16255: `each` on opApply doesn't support ref
-unittest
+@system unittest
 {
     int[] dynamicArray = [1, 2, 3, 4, 5];
     int[5] staticArray = [1, 2, 3, 4, 5];
@@ -1051,7 +1051,7 @@ unittest
 }
 
 // #16255: `each` on opApply doesn't support ref
-unittest
+@system unittest
 {
     struct S
     {
@@ -1867,7 +1867,7 @@ auto chunkBy(alias pred, Range)(Range r)
 }
 
 /// Showing usage with binary predicate:
-/*FIXME: @safe*/ unittest
+/*FIXME: @safe*/ @system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1917,7 +1917,7 @@ version(none) // this example requires support for non-equivalence relations
 }
 
 /// Showing usage with unary predicate:
-/* FIXME: pure @safe nothrow*/ unittest
+/* FIXME: pure @safe nothrow*/ @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
@@ -1966,7 +1966,7 @@ version(none) // this example requires support for non-equivalence relations
     }
 }
 
-/*FIXME: pure @safe nothrow*/ unittest
+/*FIXME: pure @safe nothrow*/ @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
@@ -4932,7 +4932,7 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
 }
 
 ///
-@trusted unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 

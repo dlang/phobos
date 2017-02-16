@@ -317,7 +317,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     // One word before and after each allocation.
@@ -329,7 +329,7 @@ unittest
         && A.instance.suffix(b) == 0xDEAD_BEEF);
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.bitmapped_block
         : BitmappedBlock;
@@ -341,7 +341,7 @@ unittest
     });
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     alias A = AffixAllocator!(Mallocator, size_t);
@@ -356,7 +356,7 @@ unittest
     assert(b is null);
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.gc_allocator;
     import std.experimental.allocator;

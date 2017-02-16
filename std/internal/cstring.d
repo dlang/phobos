@@ -16,7 +16,7 @@ COREREF = $(HTTP dlang.org/phobos/core_$1.html#$2, $(D core.$1.$2))
 module std.internal.cstring;
 
 ///
-unittest
+@system unittest
 {
     version(Posix)
     {
@@ -220,7 +220,7 @@ auto tempCString(To = char, From)(From str)
 }
 
 ///
-nothrow @nogc unittest
+nothrow @nogc @system unittest
 {
     import core.stdc.string;
 
@@ -255,7 +255,7 @@ nothrow @nogc unittest
 }
 
 // Bugzilla 14980
-nothrow @nogc unittest
+nothrow @nogc @system unittest
 {
     const(char[]) str = null;
     auto res = tempCString(str);

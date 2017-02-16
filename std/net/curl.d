@@ -417,7 +417,7 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
     static import std.file;
@@ -483,7 +483,7 @@ void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn co
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
     static import std.file;
@@ -553,7 +553,7 @@ T[] get(Conn = AutoProtocol, T = char)(const(char)[] url, Conn conn = Conn())
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -606,7 +606,7 @@ if (is(T == char) || is(T == ubyte))
     return _basicHTTP!(T)(url, postData, conn);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -623,7 +623,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -650,7 +650,7 @@ if (is(T == char) || is(T == ubyte))
     return post(url, urlEncode(postDict), conn);
 }
 
-unittest
+@system unittest
 {
     foreach (host; [testServer.addr, "http://" ~ testServer.addr])
     {
@@ -713,7 +713,7 @@ T[] put(Conn = AutoProtocol, T = char, PutUnit)(const(char)[] url, const(PutUnit
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -780,7 +780,7 @@ void del(Conn = AutoProtocol)(const(char)[] url, Conn conn = Conn())
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -836,7 +836,7 @@ T[] options(T = char, OptionsUnit)(const(char)[] url,
     return options!T(url, conn);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -878,7 +878,7 @@ T[] trace(T = char)(const(char)[] url, HTTP conn = HTTP())
     return _basicHTTP!(T)(url, cast(void[]) null, conn);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -919,7 +919,7 @@ T[] connect(T = char)(const(char)[] url, HTTP conn = HTTP())
     return _basicHTTP!(T)(url, cast(void[]) null, conn);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -965,7 +965,7 @@ T[] patch(T = char, PatchUnit)(const(char)[] url, const(PatchUnit)[] patchData,
     return _basicHTTP!(T)(url, patchData, conn);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -1064,7 +1064,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     return _decodeContent!T(content.data, client.p.charset);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -1078,7 +1078,7 @@ unittest
 }
 
 // Bugzilla 14760 - content length must be reset after post
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -1103,7 +1103,7 @@ unittest
     assert(res == "TRACERESPONSE");
 }
 
-unittest // charset detection and transcoding to T
+@system unittest // charset detection and transcoding to T
 {
     testServer.handle((s) {
         s.send("HTTP/1.1 200 OK\r\n"~
@@ -1333,7 +1333,7 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
     return SyncLineInputRange(result, keepTerminator == Yes.keepTerminator, terminator);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1407,7 +1407,7 @@ auto byChunk(Conn = AutoProtocol)
     return SyncChunkInputRange(result, chunkSize);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1702,7 +1702,7 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char)
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1850,7 +1850,7 @@ auto byChunkAsync(Conn = AutoProtocol)
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -2117,7 +2117,7 @@ private mixin template Protocol()
         p.curl.set(CurlOption.userpwd, format("%s:%s", username, password));
     }
 
-    unittest
+    @system unittest
     {
         import std.algorithm.searching : canFind;
 
@@ -3094,7 +3094,7 @@ struct HTTP
             method = Method.post;
     }
 
-    unittest
+    @system unittest
     {
         import std.algorithm.searching : canFind;
 
@@ -3263,7 +3263,7 @@ struct HTTP
 
 } // HTTP
 
-unittest // charset/Charset/CHARSET/...
+@system unittest // charset/Charset/CHARSET/...
 {
     import std.meta : AliasSeq;
 
@@ -3665,7 +3665,7 @@ struct FTP
         return p.curl.getTiming(timing, val);
     }
 
-    unittest
+    @system unittest
     {
         auto client = FTP();
 

@@ -1081,7 +1081,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
                      (thisRange, thatRange);
     }
 
-    static if (doUnittest) unittest
+    static if (doUnittest) @system unittest
     {
         auto t1 = new RedBlackTree(1,2,3,4);
         auto t2 = new RedBlackTree(1,2,3,4);
@@ -2006,7 +2006,7 @@ auto redBlackTree(alias less, bool allowDuplicates, Stuff)(Stuff range)
     assert(array(rt4[]) == ["hello"]);
 }
 
-unittest
+@system unittest
 {
     import std.conv : to;
 

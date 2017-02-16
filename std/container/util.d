@@ -50,7 +50,7 @@ if (is(T == struct) || is(T == class))
 
 
 ///
-unittest
+@system unittest
 {
     import std.container;
     import std.algorithm.comparison : equal;
@@ -66,7 +66,7 @@ unittest
     assert(equal(slist[], [1, 2, 3]));
 }
 
-unittest
+@system unittest
 {
     import std.container;
     import std.algorithm.comparison : equal;
@@ -83,7 +83,7 @@ unittest
 }
 
 // Issue 8895
-unittest
+@system unittest
 {
     import std.container;
     import std.algorithm.comparison : equal;
@@ -121,7 +121,7 @@ template make(alias Container, Args...)
 }
 
 /// forbid construction from infinite range
-unittest
+@system unittest
 {
     import std.container.array : Array;
     import std.range : only, repeat;
@@ -131,7 +131,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.container.array, std.container.rbtree, std.container.slist;
     import std.range : iota;
@@ -151,7 +151,7 @@ unittest
     assert(equal(list[], [1, 7, 42]));
 }
 
-unittest
+@system unittest
 {
     import std.container.rbtree;
     import std.algorithm.comparison : equal;
@@ -161,7 +161,7 @@ unittest
 }
 
 // Issue 13872
-unittest
+@system unittest
 {
     import std.container;
 

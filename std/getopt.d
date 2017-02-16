@@ -1685,7 +1685,7 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
 }
 
 // throw on duplicate options
-unittest
+@system unittest
 {
     import core.exception;
     auto args = ["prog", "--abc", "1"];

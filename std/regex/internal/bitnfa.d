@@ -137,7 +137,7 @@ private:
     }
 }
 
-unittest
+@system unittest
 {
     HashTab tab;
     tab[3] = 1;
@@ -256,7 +256,7 @@ pure:
     }
 }
 
-unittest
+@system unittest
 {
     UIntTrie2 trie = UIntTrie2();
     trie['d'] &= 3;
@@ -714,7 +714,7 @@ version(unittest)
     alias checkMFail = checkFail!makeMatcher;
 }
 
-unittest
+@system unittest
 {
     "xabcd".checkBit("abc", 4);
     "xabbbcdyy".checkBit("a[b-c]*c", 6);
@@ -741,7 +741,7 @@ unittest
     "abc".checkBit(`\w[bc]`, 2);
 }
 
-unittest
+@system unittest
 {
     "xxabcy".checkM("abc", 2);
     "пень".checkM("пен.", 0);

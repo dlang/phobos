@@ -200,7 +200,7 @@ public import std.experimental.allocator.common,
     std.experimental.allocator.typed;
 
 // Example in the synopsis above
-unittest
+@system unittest
 {
     import std.algorithm.comparison : min, max;
     import std.experimental.allocator.building_blocks.free_list : FreeList;
@@ -371,7 +371,7 @@ nothrow @safe @nogc @property void theAllocator(IAllocator a)
 }
 
 ///
-unittest
+@system unittest
 {
     // Install a new allocator that is faster for 128-byte allocations.
     import std.experimental.allocator.building_blocks.free_list : FreeList;
@@ -402,7 +402,7 @@ allocator can be cast to $(D shared).
     _processAllocator = a;
 }
 
-unittest
+@system unittest
 {
     assert(processAllocator);
     assert(processAllocator is theAllocator);
@@ -471,7 +471,7 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
 }
 
 ///
-unittest
+@system unittest
 {
     // Dynamically allocate one integer
     const int* p1 = theAllocator.make!int;
@@ -517,7 +517,7 @@ unittest
     assert(outer.x == inner.getX);
 }
 
-unittest // bugzilla 15639 & 15772
+@system unittest // bugzilla 15639 & 15772
 {
     abstract class Foo {}
     class Bar: Foo {}
@@ -525,7 +525,7 @@ unittest // bugzilla 15639 & 15772
     static assert( is(typeof(theAllocator.make!Bar)));
 }
 
-unittest
+@system unittest
 {
     void test(Allocator)(auto ref Allocator alloc)
     {
@@ -683,7 +683,7 @@ private void fillWithMemcpy(T)(void[] array, auto ref T filler) nothrow
     }
 }
 
-unittest
+@system unittest
 {
     int[] a;
     fillWithMemcpy(a, 42);
@@ -701,7 +701,7 @@ private T[] uninitializedFillDefault(T)(T[] array) nothrow
 }
 
 pure nothrow @nogc
-unittest
+@system unittest
 {
     static struct S { int x = 42; @disable this(this); }
 
@@ -711,7 +711,7 @@ unittest
     assert ((cast(int*)arr.ptr)[0 .. arr.length] == expected);
 }
 
-unittest
+@system unittest
 {
     int[] a = [1, 2, 4];
     uninitializedFillDefault(a);
@@ -746,7 +746,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
     return () @trusted { return cast(T[]) uninitializedFillDefault(cast(U[]) m); }();
 }
 
-unittest
+@system unittest
 {
     void test1(A)(auto ref A alloc)
     {
@@ -848,7 +848,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
 }
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     static void test(T)()
@@ -1045,7 +1045,7 @@ if (isInputRange!R && !isInfinite!R)
     }
 }
 
-unittest
+@system unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -1066,7 +1066,7 @@ unittest
 }
 
 // infer types for strings
-unittest
+@system unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -1225,7 +1225,7 @@ version(unittest)
     }
 }
 
-unittest
+@system unittest
 {
     import std.array : array;
     import std.range : iota;
@@ -1284,7 +1284,7 @@ bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
     return true;
 }
 
-unittest
+@system unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -1313,7 +1313,7 @@ bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
     return true;
 }
 
-unittest
+@system unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -1387,7 +1387,7 @@ if (isInputRange!R)
 }
 
 ///
-unittest
+@system unittest
 {
     auto arr = theAllocator.makeArray!int([1, 2, 3]);
     assert(theAllocator.expandArray(arr, 2));
@@ -1397,7 +1397,7 @@ unittest
     assert(arr == [1, 2, 3, 0, 0, 4, 5]);
 }
 
-unittest
+@system unittest
 {
     auto arr = theAllocator.makeArray!int([1, 2, 3]);
     ForcedInputRange r;
@@ -1471,7 +1471,7 @@ bool shrinkArray(T, Allocator)(auto ref Allocator alloc,
 }
 
 ///
-unittest
+@system unittest
 {
     int[] a = theAllocator.makeArray!int(100, 42);
     assert(a.length == 100);
@@ -1480,7 +1480,7 @@ unittest
     assert(a == [42, 42]);
 }
 
-unittest
+@system unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -1548,7 +1548,7 @@ void dispose(A, T)(auto ref A alloc, T[] array)
     alloc.deallocate(array);
 }
 
-unittest
+@system unittest
 {
     static int x;
     static interface I
@@ -1586,7 +1586,7 @@ unittest
     theAllocator.dispose(arr);
 }
 
-unittest //bugzilla 15721
+@system unittest //bugzilla 15721
 {
     import std.experimental.allocator.mallocator : Mallocator;
 
@@ -1629,7 +1629,7 @@ auto makeMultidimensionalArray(uint n, T, Allocator)(auto ref Allocator alloc, s
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
 
@@ -1672,7 +1672,7 @@ void disposeMultidimensionalArray(Allocator, T)(auto ref Allocator alloc, T[] ar
 }
 
 ///
-unittest
+@system unittest
 {
     struct TestAllocator
     {
@@ -1802,7 +1802,7 @@ CAllocatorImpl!(A, Yes.indirect) allocatorObject(A)(A* pa)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     IAllocator a = allocatorObject(Mallocator.instance);
@@ -2009,7 +2009,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
 }
 
 // Example in intro above
-unittest
+@system unittest
 {
     // Allocate an int, initialize it with 42
     int* p = theAllocator.make!int(42);

@@ -574,7 +574,7 @@ body
 }
 
 ///
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.slice;
     auto slice = [1, 2, 3, 4].sliced(2, 2);
@@ -679,7 +679,7 @@ body
 }
 
 ///
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.slice;
     auto slice

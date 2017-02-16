@@ -3406,7 +3406,7 @@ auto ref byCodeUnit(R)(R r)
     assert(noel2.byCodeUnit[2] != 'ë');
 }
 
-pure nothrow @nogc unittest
+pure nothrow @nogc @system unittest
 {
     import std.range;
     {

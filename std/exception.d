@@ -1478,7 +1478,7 @@ class ErrnoException : Exception
         super(msg ~ " (" ~ s[0..s.strlen].idup ~ ")", file, line);
     }
 
-    unittest
+    @system unittest
     {
         import core.stdc.errno : errno, EAGAIN;
 
@@ -1490,7 +1490,7 @@ class ErrnoException : Exception
         assert (ex.errno == EAGAIN);
     }
 
-    unittest
+    @system unittest
     {
         import core.stdc.errno : EAGAIN;
         auto ex = new ErrnoException("oh no", EAGAIN);

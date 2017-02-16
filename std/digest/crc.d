@@ -65,7 +65,7 @@ version(unittest)
 
 
 ///
-unittest
+@system unittest
 {
     //Template API
     import std.digest.crc;
@@ -83,7 +83,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     //OOP API
     import std.digest.crc;
@@ -128,7 +128,7 @@ private uint[256][8] genTables(uint polynomial)
 
 private static immutable uint[256][8] crc32Tables = genTables(0xEDB88320);
 
-unittest
+@system unittest
 {
     auto tables = genTables(0xEDB88320);
     assert(tables[0][0] == 0x00000000 && tables[0][$ - 1] == 0x2d02ef8d && tables[7][$ - 1] == 0x264b06e6);
@@ -196,7 +196,7 @@ struct CRC32
             _state = crc;
         }
         ///
-        unittest
+        @system unittest
         {
             CRC32 dig;
             dig.put(cast(ubyte)0); //single ubyte
@@ -219,7 +219,7 @@ struct CRC32
             this = CRC32.init;
         }
         ///
-        unittest
+        @system unittest
         {
             CRC32 digest;
             //digest.start(); //Not necessary
@@ -237,7 +237,7 @@ struct CRC32
             return tmp;
         }
         ///
-        unittest
+        @system unittest
         {
             //Simple example
             CRC32 hash;
@@ -258,7 +258,7 @@ struct CRC32
 }
 
 ///
-unittest
+@system unittest
 {
     //Simple example, hashing a string using crc32Of helper function
     ubyte[4] hash = crc32Of("abc");
@@ -267,7 +267,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     //Using the basic API
     CRC32 hash;
@@ -278,7 +278,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     //Let's use the template features:
     //Note: When passing a CRC32 to a function, it must be passed by reference!
@@ -292,12 +292,12 @@ unittest
     assert(crcHexString(crc.finish()) == "D202EF8D");
 }
 
-unittest
+@system unittest
 {
     assert(isDigest!CRC32);
 }
 
-unittest
+@system unittest
 {
     ubyte[4] digest;
 
@@ -355,7 +355,7 @@ ubyte[4] crc32Of(T...)(T data)
 }
 
 ///
-unittest
+@system unittest
 {
     ubyte[] data = [4,5,7,25];
     assert(data.crc32Of == [167, 180, 199, 131]);
@@ -390,7 +390,7 @@ public alias crcHexString = toHexString!(Order.decreasing, 16);
 alias CRC32Digest = WrapperDigest!CRC32;
 
 ///
-unittest
+@system unittest
 {
     //Simple example, hashing a string using Digest.digest helper function
     auto crc = new CRC32Digest();
@@ -400,7 +400,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
      //Let's use the OOP features:
     void test(Digest dig)
@@ -417,7 +417,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     //Simple example
     auto hash = new CRC32Digest();
@@ -426,7 +426,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     //using a supplied buffer
     ubyte[4] buf;
@@ -438,7 +438,7 @@ unittest
     //length)
 }
 
-unittest
+@system unittest
 {
     import std.range;
 

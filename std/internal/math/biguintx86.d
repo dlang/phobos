@@ -91,7 +91,7 @@ string indexedLoopUnroll(int n, string s) pure @safe
     }
     return u;
 }
-unittest
+@system unittest
 {
     assert(indexedLoopUnroll(3, "@*23;")=="0*23;1*23;2*23;");
 }
@@ -177,7 +177,7 @@ done:
     }
 }
 
-unittest
+@system unittest
 {
     uint [] a = new uint[40];
     uint [] b = new uint[40];
@@ -522,7 +522,7 @@ L_last:
     }
 }
 
-unittest
+@system unittest
 {
 
     uint [] aa = [0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
@@ -624,7 +624,7 @@ L_odd:
     }
 }
 
-unittest
+@system unittest
 {
     uint [] aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
     multibyteMul(aa[1..4], aa[1..4], 16, 0);
@@ -795,7 +795,7 @@ L_enter_odd:
     mixin("asm pure nothrow {" ~ asmMulAdd_enter_odd(OP, "ESP+LASTPARAM") ~ "}");
 }
 
-unittest
+@system unittest
 {
 
     uint [] aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
@@ -1015,7 +1015,7 @@ Lc:
     }
 }
 
-unittest
+@system unittest
 {
     uint [] aa = new uint[101];
     for (int i=0; i<aa.length; ++i) aa[i] = 0x8765_4321 * (i+3);
@@ -1068,7 +1068,7 @@ L1:
     }
 }
 
-unittest
+@system unittest
 {
     uint [] aa = new uint[13];
         uint [] bb = new uint[6];
@@ -1212,7 +1212,7 @@ L_enter_odd:
     mixin("asm pure nothrow {" ~ asmMulAdd_enter_odd("add", "ESP") ~ "}");
 }
 
-unittest
+@system unittest
 {
    uint [] aa = new uint[200];
    uint [] a  = aa[0..100];

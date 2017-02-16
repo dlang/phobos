@@ -332,7 +332,7 @@ struct FreeTree(ParentAllocator)
         return true;
     }
 
-    unittest // test a few simple configurations
+    @system unittest // test a few simple configurations
     {
         import std.experimental.allocator.gc_allocator;
         FreeTree!GCAllocator a;
@@ -353,7 +353,7 @@ struct FreeTree(ParentAllocator)
         assert(a.formatSizes == "(_)", a.formatSizes);
     }
 
-    unittest // build a complex free tree
+    @system unittest // build a complex free tree
     {
         import std.experimental.allocator.gc_allocator, std.range;
         FreeTree!GCAllocator a;
@@ -408,13 +408,13 @@ struct FreeTree(ParentAllocator)
     }
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.gc_allocator;
     testAllocator!(() => FreeTree!GCAllocator());
 }
 
-unittest // issue 16506
+@system unittest // issue 16506
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.mallocator : Mallocator;
@@ -433,7 +433,7 @@ unittest // issue 16506
     f!GCAllocator(1);
 }
 
-unittest // issue 16507
+@system unittest // issue 16507
 {
     static struct MyAllocator
     {
@@ -451,7 +451,7 @@ unittest // issue 16507
     MyAllocator.alive = false;
 }
 
-unittest // "desperation mode"
+@system unittest // "desperation mode"
 {
     uint myDeallocCounter = 0;
 

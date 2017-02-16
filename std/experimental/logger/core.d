@@ -121,7 +121,7 @@ template moduleLogLevel(string moduleName) if (!moduleName.length)
 }
 
 ///
-unittest
+@system unittest
 {
     static assert(moduleLogLevel!"" == LogLevel.all);
 }
@@ -146,7 +146,7 @@ template moduleLogLevel(string moduleName) if (moduleName.length)
 }
 
 ///
-unittest
+@system unittest
 {
     static assert(moduleLogLevel!"not.amodule.path" == LogLevel.all);
 }
@@ -665,7 +665,7 @@ private void formatString(A...)(MsgRange oRange, A args)
     }
 }
 
-unittest
+@system unittest
 {
     void dummy() @safe
     {
@@ -1798,7 +1798,7 @@ functions.
 }
 
 /// Ditto
-unittest
+@system unittest
 {
     import std.experimental.logger.filelogger : FileLogger;
     import std.file : deleteme, remove;
@@ -2081,7 +2081,7 @@ version(unittest) private void testFuncNames(Logger logger) @safe
     assert(l.logLevel == LogLevel.all);
 }
 
-unittest // default logger
+@system unittest // default logger
 {
     import std.file : deleteme, exists, remove;
     import std.stdio : File;
@@ -2121,7 +2121,7 @@ unittest // default logger
     file.close();
 }
 
-unittest
+@system unittest
 {
     import std.file : deleteme, remove;
     import std.stdio : File;
@@ -2958,7 +2958,7 @@ unittest
     assert(tl.msg.indexOf("error") == 0);
 }
 
-unittest
+@system unittest
 {
     import std.exception : assertThrown;
     auto tl = new TestLogger();
@@ -2966,7 +2966,7 @@ unittest
 }
 
 // log objects with non-safe toString
-unittest
+@system unittest
 {
     struct Test
     {
@@ -2997,7 +2997,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
 
 // check that thread-local logging does not propagate
 // to shared logger
-unittest
+@system unittest
 {
     import std.concurrency, core.atomic, core.thread;
 
@@ -3081,7 +3081,7 @@ unittest
 }
 
 // Ensure @system toString methods work
-unittest
+@system unittest
 {
     enum SystemToStringMsg = "SystemToString";
     static struct SystemToString

@@ -7,7 +7,7 @@ import std.experimental.allocator.common;
  */
 struct Mallocator
 {
-    unittest { testAllocator!(() => Mallocator.instance); }
+    @system unittest { testAllocator!(() => Mallocator.instance); }
 
     /**
     The alignment is a static constant equal to $(D platformAlignment), which
@@ -69,7 +69,7 @@ struct Mallocator
 
 ///
 @nogc nothrow
-unittest
+@system unittest
 {
     auto buffer = Mallocator.instance.allocate(1024 * 1024 * 4);
     scope(exit) Mallocator.instance.deallocate(buffer);
@@ -77,7 +77,7 @@ unittest
 }
 
 @nogc nothrow
-unittest
+@system unittest
 {
     @nogc nothrow
     static void test(A)()
@@ -92,7 +92,7 @@ unittest
 }
 
 @nogc nothrow
-unittest
+@system unittest
 {
     static void test(A)()
     {
@@ -203,7 +203,7 @@ version (Windows)
  */
 struct AlignedMallocator
 {
-    unittest { testAllocator!(() => typeof(this).instance); }
+    @system unittest { testAllocator!(() => typeof(this).instance); }
 
     /**
     The default alignment is $(D platformAlignment).
@@ -328,7 +328,7 @@ struct AlignedMallocator
 
 ///
 @nogc nothrow
-unittest
+@system unittest
 {
     auto buffer = AlignedMallocator.instance.alignedAllocate(1024 * 1024 * 4,
         128);
@@ -342,7 +342,7 @@ size_t addr(ref void* ptr) { return cast(size_t) ptr; }
 
 version(CRuntime_DigitalMars)
 @nogc nothrow
-unittest
+@system unittest
 {
     void* m;
 

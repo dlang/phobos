@@ -8891,7 +8891,7 @@ S toLower(S)(S s) @trusted pure
     dstring toLower(dstring s)
     { return toLower!dstring(s); }
 
-    unittest
+    @system unittest
     {
         // https://issues.dlang.org/show_bug.cgi?id=16663
 
@@ -9073,7 +9073,7 @@ S toUpper(S)(S s) @trusted pure
     dstring toUpper(dstring s)
     { return toUpper!dstring(s); }
 
-    unittest
+    @system unittest
     {
         // https://issues.dlang.org/show_bug.cgi?id=16663
 

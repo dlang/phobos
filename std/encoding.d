@@ -2302,7 +2302,7 @@ body
     }
 }
 
-unittest // mutable/const input/output
+@system unittest // mutable/const input/output
 {
     import std.meta : AliasSeq;
 
