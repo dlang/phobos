@@ -3374,8 +3374,8 @@ private @property File trustedStdout() @trusted
 }
 
 /***********************************
-For each argument $(D arg) in $(D args), format the argument (as per
-$(LINK2 std_conv.html, to!(string)(arg))) and write the resulting
+For each argument $(D arg) in $(D args), format the argument (using
+$(REF to, std,conv)) and write the resulting
 string to $(D args[0]). A call without any arguments will fail to
 compile.
 
@@ -3383,6 +3383,23 @@ Params:
     args = the items to write to `stdout`
 
 Throws: In case of an I/O error, throws an $(D StdioException).
+
+Example:
+    Reads `stdin` and writes it to `stdout` with an argument
+    counter.
+---
+import std.stdio;
+
+void main()
+{
+    string line;
+
+    for (size_t count = 0; (line = readln) !is null; count++)
+    {
+         write("Input ", count, ": ", line, "\n");
+    }
+}
+---
  */
 void write(T...)(T args) if (!is(T[0] : File))
 {
