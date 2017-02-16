@@ -93,7 +93,13 @@ auto tempCString(To = char, From)(From str)
 
     alias CF = Unqual!(ElementEncodingType!From);
 
-    enum To* useStack = () @trusted { return cast(To*)size_t.max; }();
+    static To* tempCString_initPointer() @trusted
+    {
+         // this needs to be a named function so newCTFE can relibly ignore it
+         return cast(To*)size_t.max;
+    }
+
+    enum To* useStack = tempCString_initPointer();
 
     static struct Res
     {
