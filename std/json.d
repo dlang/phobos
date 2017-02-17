@@ -703,7 +703,8 @@ JSONValue parseJSON(T)(T json, int maxDepth = -1, JSONOptions options = JSONOpti
 if (isInputRange!T)
 {
     import std.ascii : isWhite, isDigit, isHexDigit, toUpper, toLower;
-    import std.utf : toUTF8;
+    import std.typecons : Yes;
+    import std.utf : encode;
 
     JSONValue root;
     root.type_tag = JSON_TYPE.NULL;
@@ -823,7 +824,8 @@ if (isInputRange!T)
                             val += (isDigit(hex) ? hex - '0' : hex - ('A' - 10)) << (4 * i);
                         }
                         char[4] buf;
-                        str.put(toUTF8(buf, val));
+                        immutable len = encode!(Yes.useReplacementDchar)(buf, val);
+                        str.put(buf[0..len]);
                         break;
 
                     default:
