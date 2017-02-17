@@ -858,6 +858,7 @@ template each(alias pred = "a")
     import std.meta : AliasSeq;
     import std.traits : Parameters;
 
+private:
     alias BinaryArgs = AliasSeq!(pred, "i", "a");
 
     enum isRangeUnaryIterable(R) =
@@ -886,66 +887,65 @@ template each(alias pred = "a")
         (!isForwardRange!R || isDynamicArray!R) &&
         (isForeachUnaryIterable!R || isForeachBinaryIterable!R);
 
+public:
     void each(Range)(Range r)
-    if (isRangeIterable!Range && !isForeachIterable!Range)
+    if (isRangeIterable!Range ||
+        isForeachIterable!Range ||
+        __traits(compiles, Parameters!(Parameters!(r.opApply))) ||
+        __traits(compiles, typeof(range.front).length))
     {
-        debug(each) pragma(msg, "Using while for ", Range.stringof);
-        static if (isRangeUnaryIterable!Range)
+        static if (isRangeIterable!Range)
         {
-            while (!r.empty)
+            debug(each) pragma(msg, "Using while for ", Range.stringof);
+            static if (isRangeUnaryIterable!Range)
             {
-                cast(void)unaryFun!pred(r.front);
-                r.popFront();
+                while (!r.empty)
+                {
+                    cast(void)unaryFun!pred(r.front);
+                    r.popFront();
+                }
+            }
+            else // if (isRangeBinaryIterable!Range)
+            {
+                size_t i = 0;
+                while (!r.empty)
+                {
+                    cast(void)binaryFun!BinaryArgs(i, r.front);
+                    r.popFront();
+                    i++;
+                }
             }
         }
-        else // if (isRangeBinaryIterable!Range)
+        else if (isForeachIterable!Iterable)
         {
-            size_t i = 0;
-            while (!r.empty)
+            debug(each) pragma(msg, "Using foreach for ", Iterable.stringof);
+            static if (isForeachUnaryIterable!Iterable)
             {
-                cast(void)binaryFun!BinaryArgs(i, r.front);
-                r.popFront();
-                i++;
+                foreach (ref e; r)
+                    cast(void)unaryFun!pred(e);
+            }
+            else // if (isForeachBinaryIterable!Iterable)
+            {
+                foreach (ref i, ref e; r)
+                    cast(void)binaryFun!BinaryArgs(i, e);
             }
         }
-    }
-
-    void each(Iterable)(auto ref Iterable r)
-        if (isForeachIterable!Iterable)
-    {
-        debug(each) pragma(msg, "Using foreach for ", Iterable.stringof);
-        static if (isForeachUnaryIterable!Iterable)
+        else static if (__traits(compiles, Parameters!(Parameters!(r.opApply))))
         {
-            foreach (ref e; r)
-                cast(void)unaryFun!pred(e);
+            // opApply with >2 parameters. count the delegate args.
+            // only works if it is not templated (otherwise we cannot count the args)
+            auto dg(Parameters!(Parameters!(r.opApply)) params) {
+                pred(params);
+                return 0; // tells opApply to continue iteration
+            }
+            r.opApply(&dg);
         }
-        else // if (isForeachBinaryIterable!Iterable)
+        else static if (__traits(compiles, typeof(range.front).length))
         {
-            foreach (ref i, ref e; r)
-                cast(void)binaryFun!BinaryArgs(i, e);
+            // range interface with >2 parameters.
+            for (auto r = range; !r.empty; r.popFront())
+                pred(r.front.expand);
         }
-    }
-
-    // opApply with >2 parameters. count the delegate args.
-    // only works if it is not templated (otherwise we cannot count the args)
-    void each(Iterable)(auto ref Iterable r)
-        if (!isRangeIterable!Iterable && !isForeachIterable!Iterable &&
-            __traits(compiles, Parameters!(Parameters!(r.opApply))))
-    {
-        auto dg(Parameters!(Parameters!(r.opApply)) params) {
-            pred(params);
-            return 0; // tells opApply to continue iteration
-        }
-        r.opApply(&dg);
-    }
-
-    // range interface with >2 parameters.
-    void each(Range)(Range range)
-        if (!isRangeIterable!Range && !isForeachIterable!Range &&
-            __traits(compiles, typeof(range.front).length))
-    {
-        for (auto r = range; !r.empty; r.popFront())
-            pred(r.front.expand);
     }
 }
 
