@@ -3852,19 +3852,6 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
     // Need to do a build with this gone to trace / fix phobos
     static if (!hasIndirections!T)
     {
-        private E[] dupTo(ref E[] arr) pure
-        {
-            size_t i = 0;
-            size_t len = void;
-            arr.length = _length;
-            for (const(Segment)* d = _head; d !is null; d = d.next, i += len)
-            {
-                len = d.length;
-                arr[i .. i + len] = d.base[0 .. len];
-            }
-            return arr;
-        }
-
         /// Returns: a copy of the Builder's data in an array.
         T[] dup() pure @property
         {
@@ -3876,8 +3863,17 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
             {
                 return cast(T[])(_head ? _head.base[0 .. _head.length].dup : null);
             }
-            E[] arr;
-            return cast(T[]) dupTo(arr);
+
+            auto arr = uninitializedArray!(E[])(_length);
+
+            size_t i = 0;
+            size_t len = void;
+            for (const(Segment)* d = _head; d !is null; d = d.next, i += len)
+            {
+                len = d.length;
+                arr[i .. i + len] = d.base[0 .. len];
+            }
+            return arr;
         }
 
         alias data = dup;
