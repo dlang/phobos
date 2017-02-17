@@ -3798,7 +3798,7 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
             *_tail.ptr++ = cast(E) item;
             --_tail.slack;
         }
-        else static if (isSomeChar!E && isSomeChar!U)
+        else static if (isSomeChar!E && isSomeChar!U && E.sizeof < U.sizeof)
         {
             import std.utf : encode;
 
@@ -3848,7 +3848,8 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
         }
         else
         {
-            std.range.put(this, item);
+            foreach (element; item)
+                put(element);
         }
     }
 
@@ -4557,13 +4558,46 @@ unittest
     assert(builder.dup == [1, 2, 3, 4, 5, 6]);
 }
 
-// test Output range interface
+// test builder encoding on char typed builders
 unittest
 {
-    import std.utf : byChar;
+    Builder!(char[]) buffer;
+    foreach(str; [`Hellø`,` `,`World`,`!`])
+    {
+        buffer.clear;
+        foreach (dchar c; str)
+        {
+            buffer ~= c;
+        }
+        assert(buffer.data == str);
+    }
+}
 
-    auto builder = Builder!(int[])();
+// test with std.range.put to test output range interface as well
+unittest
+{
+    import std.utf : byChar, byWchar, byDchar;
+    import std.algorithm.comparison : equal;
+
+    auto builder = Builder!(char[])();
+
+    static assert(isOutputRange!(typeof(builder), char));
+    static assert(isOutputRange!(typeof(builder), wchar));
+    static assert(isOutputRange!(typeof(builder), dchar));
+
     auto r = "this is a test".byChar;
+    put(builder, r.save);
+    assert(builder.data.equal(r));
 
-    put(builder, r);
+    builder.clear();
+
+    auto r2 = "ウェブサイト".byWchar;
+    put(builder, r2.save);
+    assert(builder.data.equal(r2));
+
+    builder.clear();
+
+    auto r3 = "ウェブサイト".byDchar;
+    put(builder, r3.save);
+    assert(builder.data.equal(r3));
 }
