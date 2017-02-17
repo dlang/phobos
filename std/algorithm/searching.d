@@ -483,43 +483,49 @@ if (isNarrowString!R1 && isInputRange!R2 &&
     return result[0 .. i];
 }
 
-/// ditto
-auto commonPrefix(R1, R2)(R1 r1, R2 r2)
-if (isNarrowString!R1 && isInputRange!R2 && !isNarrowString!R2 &&
-    is(typeof(r1.front == r2.front)))
+///
+@safe unittest
 {
-    return commonPrefix!"a == b"(r1, r2);
+    assert(commonPrefix("hello, world", "hello, there") == "hello, ");
 }
 
 /// ditto
 auto commonPrefix(R1, R2)(R1 r1, R2 r2)
-if (isNarrowString!R1 && isNarrowString!R2)
+if (isNarrowString!R1 && (isNarrowString!R2 ||
+        isInputRange!R2 && is(typeof(r1.front == r2.front))))
 {
-    import std.algorithm.comparison : min;
-
-    static if (ElementEncodingType!R1.sizeof == ElementEncodingType!R2.sizeof)
+    static if (isInputRange!R2)
     {
-        import std.utf : stride, UTFException;
-
-        immutable limit = min(r1.length, r2.length);
-        for (size_t i = 0; i < limit;)
-        {
-            immutable codeLen = stride(r1, i);
-            size_t j = 0;
-
-            for (; j < codeLen && i < limit; ++i, ++j)
-            {
-                if (r1[i] != r2[i])
-                    return r1[0 .. i - j];
-            }
-
-            if (i == limit && j < codeLen)
-                throw new UTFException("Invalid UTF-8 sequence", i);
-        }
-        return r1[0 .. limit];
+        return commonPrefix!"a == b"(r1, r2);
     }
     else
-        return commonPrefix!"a == b"(r1, r2);
+    {
+        import std.algorithm.comparison : min;
+
+        static if (ElementEncodingType!R1.sizeof == ElementEncodingType!R2.sizeof)
+        {
+            import std.utf : stride, UTFException;
+
+            immutable limit = min(r1.length, r2.length);
+            for (size_t i = 0; i < limit;)
+            {
+                immutable codeLen = stride(r1, i);
+                size_t j = 0;
+
+                for (; j < codeLen && i < limit; ++i, ++j)
+                {
+                    if (r1[i] != r2[i])
+                        return r1[0 .. i - j];
+                }
+
+                if (i == limit && j < codeLen)
+                    throw new UTFException("Invalid UTF-8 sequence", i);
+            }
+            return r1[0 .. limit];
+        }
+        else
+            return commonPrefix!"a == b"(r1, r2);
+    }
 }
 
 @safe unittest
@@ -1080,39 +1086,37 @@ if (isBidirectionalRange!Range && Needles.length > 1 &&
 /// Ditto
 bool endsWith(alias pred = "a == b", R1, R2)(R1 doesThisEnd, R2 withThis)
 if (isBidirectionalRange!R1 &&
+    (is(typeof(binaryFun!pred(doesThisEnd.back, withThis)) : bool) ||
     isBidirectionalRange!R2 &&
-    is(typeof(binaryFun!pred(doesThisEnd.back, withThis.back)) : bool))
+    is(typeof(binaryFun!pred(doesThisEnd.back, withThis.back)) : bool)))
 {
-    alias haystack = doesThisEnd;
-    alias needle   = withThis;
-
-    static if (is(typeof(pred) : string))
-        enum isDefaultPred = pred == "a == b";
-    else
-        enum isDefaultPred = false;
-
-    static if (isDefaultPred && isArray!R1 && isArray!R2 &&
-               is(Unqual!(ElementEncodingType!R1) == Unqual!(ElementEncodingType!R2)))
+    static if(!is(typeof(binaryFun!pred(doesThisEnd.back, withThis)) : bool))
     {
-        if (haystack.length < needle.length) return false;
+        alias haystack = doesThisEnd;
+        alias needle   = withThis;
 
-        return haystack[$ - needle.length .. $] == needle;
+        static if (is(typeof(pred) : string))
+            enum isDefaultPred = pred == "a == b";
+        else
+            enum isDefaultPred = false;
+
+        static if (isDefaultPred && isArray!R1 && isArray!R2 &&
+                   is(Unqual!(ElementEncodingType!R1) == Unqual!(ElementEncodingType!R2)))
+        {
+            if (haystack.length < needle.length) return false;
+
+            return haystack[$ - needle.length .. $] == needle;
+        }
+        else
+        {
+            import std.range : retro;
+            return startsWith!pred(retro(doesThisEnd), retro(withThis));
+        }
     }
     else
-    {
-        import std.range : retro;
-        return startsWith!pred(retro(doesThisEnd), retro(withThis));
-    }
-}
-
-/// Ditto
-bool endsWith(alias pred = "a == b", R, E)(R doesThisEnd, E withThis)
-if (isBidirectionalRange!R &&
-    is(typeof(binaryFun!pred(doesThisEnd.back, withThis)) : bool))
-{
-    return doesThisEnd.empty
-        ? false
-        : binaryFun!pred(doesThisEnd.back, withThis);
+        return doesThisEnd.empty
+            ? false
+            : binaryFun!pred(doesThisEnd.back, withThis);
 }
 
 /// Ditto
@@ -1767,26 +1771,207 @@ $(D haystack) advanced such that $(D needle) is a prefix of it (if no
 such position exists, returns $(D haystack) advanced to termination).
  */
 R1 find(alias pred = "a == b", R1, R2)(R1 haystack, scope R2 needle)
-if (isForwardRange!R1 && isForwardRange!R2
-        && is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool)
-        && !isRandomAccessRange!R1)
+if (is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool) && (
+        (isForwardRange!R1 && isForwardRange!R2) ||
+        (isRandomAccessRange!R1 && (
+            isForwardRange!R2 ||
+            hasLength!R1 && hasSlicing!R1 && isBidirectionalRange!R2))
+    ))
 {
-    static if (is(typeof(pred == "a == b")) && pred == "a == b" && isSomeString!R1 && isSomeString!R2
-            && haystack[0].sizeof == needle[0].sizeof)
+    static if (!isRandomAccessRange!R1)
     {
-        // return cast(R1) find(representation(haystack), representation(needle));
-        // Specialization for simple string search
-        alias Representation =
-            Select!(haystack[0].sizeof == 1, ubyte[],
-                Select!(haystack[0].sizeof == 2, ushort[], uint[]));
-        // Will use the array specialization
-        static TO force(TO, T)(T r) @trusted { return cast(TO)r; }
-        return force!R1(.find!(pred, Representation, Representation)
-            (force!Representation(haystack), force!Representation(needle)));
+        static if (is(typeof(pred == "a == b")) && pred == "a == b" && isSomeString!R1 && isSomeString!R2
+                && haystack[0].sizeof == needle[0].sizeof)
+        {
+            // return cast(R1) find(representation(haystack), representation(needle));
+            // Specialization for simple string search
+            alias Representation =
+                Select!(haystack[0].sizeof == 1, ubyte[],
+                    Select!(haystack[0].sizeof == 2, ushort[], uint[]));
+            // Will use the array specialization
+            static TO force(TO, T)(T r) @trusted { return cast(TO)r; }
+            return force!R1(.find!(pred, Representation, Representation)
+                (force!Representation(haystack), force!Representation(needle)));
+        }
+        else
+        {
+            return simpleMindedFind!pred(haystack, needle);
+        }
+    }
+    else static if(hasLength!R1 && hasSlicing!R1 && isBidirectionalRange!R2)
+    {
+        if (needle.empty) return haystack;
+
+        static if (hasLength!R2)
+        {
+            immutable needleLength = needle.length;
+        }
+        else
+        {
+            immutable needleLength = walkLength(needle.save);
+        }
+        if (needleLength > haystack.length)
+        {
+            return haystack[haystack.length .. haystack.length];
+        }
+        // Optimization in case the ranges are both SortedRanges.
+        // Binary search can be used to find the first occurence
+        // of the first element of the needle in haystack.
+        // When it is found O(walklength(needle)) steps are performed.
+        // 8829 enhancement
+        import std.range : SortedRange;
+        import std.algorithm.comparison : mismatch;
+        static if (is(R1 == R2)
+                && is(R1 : SortedRange!TT, TT)
+                && pred == "a == b")
+        {
+            auto needleFirstElem = needle[0];
+            auto partitions      = haystack.trisect(needleFirstElem);
+            auto firstElemLen    = partitions[1].length;
+            size_t count         = 0;
+
+            if (firstElemLen == 0)
+                return haystack[$ .. $];
+
+            while (needle.front() == needleFirstElem)
+            {
+                needle.popFront();
+                ++count;
+
+                if (count > firstElemLen)
+                    return haystack[$ .. $];
+            }
+
+            auto m = mismatch(partitions[2], needle);
+
+            if (m[1].empty)
+                return haystack[partitions[0].length + partitions[1].length - count .. $];
+        }
+        else static if (isRandomAccessRange!R2)
+        {
+            immutable lastIndex = needleLength - 1;
+            auto last = needle[lastIndex];
+            size_t j = lastIndex, skip = 0;
+            for (; j < haystack.length;)
+            {
+                if (!binaryFun!pred(haystack[j], last))
+                {
+                    ++j;
+                    continue;
+                }
+                immutable k = j - lastIndex;
+                // last elements match
+                for (size_t i = 0;; ++i)
+                {
+                    if (i == lastIndex)
+                        return haystack[k .. haystack.length];
+                    if (!binaryFun!pred(haystack[k + i], needle[i]))
+                        break;
+                }
+                if (skip == 0)
+                {
+                    skip = 1;
+                    while (skip < needleLength && needle[needleLength - 1 - skip] != needle[needleLength - 1])
+                    {
+                        ++skip;
+                    }
+                }
+                j += skip;
+            }
+        }
+        else
+        {
+            // @@@BUG@@@
+            // auto needleBack = moveBack(needle);
+            // Stage 1: find the step
+            size_t step = 1;
+            auto needleBack = needle.back;
+            needle.popBack();
+            for (auto i = needle.save; !i.empty && i.back != needleBack;
+                    i.popBack(), ++step)
+            {
+            }
+            // Stage 2: linear find
+            size_t scout = needleLength - 1;
+            for (;;)
+            {
+                if (scout >= haystack.length)
+                    break;
+                if (!binaryFun!pred(haystack[scout], needleBack))
+                {
+                    ++scout;
+                    continue;
+                }
+                // Found a match with the last element in the needle
+                auto cand = haystack[scout + 1 - needleLength .. haystack.length];
+                if (startsWith!pred(cand, needle))
+                {
+                    // found
+                    return cand;
+                }
+                scout += step;
+            }
+        }
+        return haystack[haystack.length .. haystack.length];
     }
     else
     {
-        return simpleMindedFind!pred(haystack, needle);
+        static if (!is(ElementType!R1 == ElementType!R2))
+        {
+            return simpleMindedFind!pred(haystack, needle);
+        }
+        else
+        {
+            // Prepare the search with needle's first element
+            if (needle.empty)
+                return haystack;
+
+            haystack = .find!pred(haystack, needle.front);
+
+            static if (hasLength!R1 && hasLength!R2 && is(typeof(takeNone(haystack)) == R1))
+            {
+                if (needle.length > haystack.length)
+                    return takeNone(haystack);
+            }
+            else
+            {
+                if (haystack.empty)
+                    return haystack;
+            }
+
+            needle.popFront();
+            size_t matchLen = 1;
+
+            // Loop invariant: haystack[0 .. matchLen] matches everything in
+            // the initial needle that was popped out of needle.
+            for (;;)
+            {
+                // Extend matchLength as much as possible
+                for (;;)
+                {
+                    import std.range : takeNone;
+
+                    if (needle.empty || haystack.empty)
+                        return haystack;
+
+                    static if (hasLength!R1 && is(typeof(takeNone(haystack)) == R1))
+                    {
+                        if (matchLen == haystack.length)
+                            return takeNone(haystack);
+                    }
+
+                    if (!binaryFun!pred(haystack[matchLen], needle.front))
+                        break;
+
+                    ++matchLen;
+                    needle.popFront();
+                }
+
+                auto bestMatch = haystack[0 .. matchLen];
+                haystack.popFront();
+                haystack = .find!pred(haystack, bestMatch);
+            }
+        }
     }
 }
 
@@ -1825,126 +2010,6 @@ if (isForwardRange!R1 && isForwardRange!R2
     static assert(isForwardRange!(typeof(lst[])));
     auto r = find(lst[], [2, 5]);
     assert(equal(r, SList!int(2, 5, 7, 3)[]));
-}
-
-/// ditto
-R1 find(alias pred = "a == b", R1, R2)(R1 haystack, scope R2 needle)
-if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRange!R2
-        && is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
-{
-    if (needle.empty) return haystack;
-
-    static if (hasLength!R2)
-    {
-        immutable needleLength = needle.length;
-    }
-    else
-    {
-        immutable needleLength = walkLength(needle.save);
-    }
-    if (needleLength > haystack.length)
-    {
-        return haystack[haystack.length .. haystack.length];
-    }
-    // Optimization in case the ranges are both SortedRanges.
-    // Binary search can be used to find the first occurence
-    // of the first element of the needle in haystack.
-    // When it is found O(walklength(needle)) steps are performed.
-    // 8829 enhancement
-    import std.range : SortedRange;
-    import std.algorithm.comparison : mismatch;
-    static if (is(R1 == R2)
-            && is(R1 : SortedRange!TT, TT)
-            && pred == "a == b")
-    {
-        auto needleFirstElem = needle[0];
-        auto partitions      = haystack.trisect(needleFirstElem);
-        auto firstElemLen    = partitions[1].length;
-        size_t count         = 0;
-
-        if (firstElemLen == 0)
-            return haystack[$ .. $];
-
-        while (needle.front() == needleFirstElem)
-        {
-            needle.popFront();
-            ++count;
-
-            if (count > firstElemLen)
-                return haystack[$ .. $];
-        }
-
-        auto m = mismatch(partitions[2], needle);
-
-        if (m[1].empty)
-            return haystack[partitions[0].length + partitions[1].length - count .. $];
-    }
-    else static if (isRandomAccessRange!R2)
-    {
-        immutable lastIndex = needleLength - 1;
-        auto last = needle[lastIndex];
-        size_t j = lastIndex, skip = 0;
-        for (; j < haystack.length;)
-        {
-            if (!binaryFun!pred(haystack[j], last))
-            {
-                ++j;
-                continue;
-            }
-            immutable k = j - lastIndex;
-            // last elements match
-            for (size_t i = 0;; ++i)
-            {
-                if (i == lastIndex)
-                    return haystack[k .. haystack.length];
-                if (!binaryFun!pred(haystack[k + i], needle[i]))
-                    break;
-            }
-            if (skip == 0)
-            {
-                skip = 1;
-                while (skip < needleLength && needle[needleLength - 1 - skip] != needle[needleLength - 1])
-                {
-                    ++skip;
-                }
-            }
-            j += skip;
-        }
-    }
-    else
-    {
-        // @@@BUG@@@
-        // auto needleBack = moveBack(needle);
-        // Stage 1: find the step
-        size_t step = 1;
-        auto needleBack = needle.back;
-        needle.popBack();
-        for (auto i = needle.save; !i.empty && i.back != needleBack;
-                i.popBack(), ++step)
-        {
-        }
-        // Stage 2: linear find
-        size_t scout = needleLength - 1;
-        for (;;)
-        {
-            if (scout >= haystack.length)
-                break;
-            if (!binaryFun!pred(haystack[scout], needleBack))
-            {
-                ++scout;
-                continue;
-            }
-            // Found a match with the last element in the needle
-            auto cand = haystack[scout + 1 - needleLength .. haystack.length];
-            if (startsWith!pred(cand, needle))
-            {
-                // found
-                return cand;
-            }
-            scout += step;
-        }
-    }
-    return haystack[haystack.length .. haystack.length];
 }
 
 @safe unittest
@@ -1989,69 +2054,6 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     //assert(find!"a == b"("abc", "bc").length == 2);
-}
-
-/// ditto
-R1 find(alias pred = "a == b", R1, R2)(R1 haystack, scope R2 needle)
-if (isRandomAccessRange!R1 && isForwardRange!R2 && !isBidirectionalRange!R2 &&
-    is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
-{
-    static if (!is(ElementType!R1 == ElementType!R2))
-    {
-        return simpleMindedFind!pred(haystack, needle);
-    }
-    else
-    {
-        // Prepare the search with needle's first element
-        if (needle.empty)
-            return haystack;
-
-        haystack = .find!pred(haystack, needle.front);
-
-        static if (hasLength!R1 && hasLength!R2 && is(typeof(takeNone(haystack)) == R1))
-        {
-            if (needle.length > haystack.length)
-                return takeNone(haystack);
-        }
-        else
-        {
-            if (haystack.empty)
-                return haystack;
-        }
-
-        needle.popFront();
-        size_t matchLen = 1;
-
-        // Loop invariant: haystack[0 .. matchLen] matches everything in
-        // the initial needle that was popped out of needle.
-        for (;;)
-        {
-            // Extend matchLength as much as possible
-            for (;;)
-            {
-                import std.range : takeNone;
-
-                if (needle.empty || haystack.empty)
-                    return haystack;
-
-                static if (hasLength!R1 && is(typeof(takeNone(haystack)) == R1))
-                {
-                    if (matchLen == haystack.length)
-                        return takeNone(haystack);
-                }
-
-                if (!binaryFun!pred(haystack[matchLen], needle.front))
-                    break;
-
-                ++matchLen;
-                needle.popFront();
-            }
-
-            auto bestMatch = haystack[0 .. matchLen];
-            haystack.popFront();
-            haystack = .find!pred(haystack, bestMatch);
-        }
-    }
 }
 
 @safe unittest
