@@ -2546,7 +2546,7 @@ private:
         return this;
     }
 
-    ///
+    //
     @safe unittest
     {
         assert(unicode.Cyrillic.intersect('-').byInterval.empty);
@@ -4340,7 +4340,7 @@ if (sumOfIntegerTuple!sizes == 21)
     }
 }
 
-///
+//
 @system pure unittest
 {
     import std.algorithm.comparison : max;
@@ -4644,7 +4644,7 @@ public struct MatcherConcept
         return this;
     }
 
-    ///
+    //
     @safe unittest
     {
         auto m = utfMatcher!char(unicode.Number);

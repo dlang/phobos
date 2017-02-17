@@ -2575,7 +2575,7 @@ if (isFloatingPoint!T)
     }
 }
 
-///
+//
 @system unittest
 {
     int exp;
@@ -3432,7 +3432,7 @@ real log2(real x) @safe pure nothrow @nogc
     }
 }
 
-///
+//
 @system unittest
 {
     // check if values are equal to 19 decimal digits of precision

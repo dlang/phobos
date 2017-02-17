@@ -1709,7 +1709,7 @@ public class UUIDParsingException : Exception
     }
 }
 
-///
+//
 @safe unittest
 {
     auto ex = new UUIDParsingException("foo", 10, UUIDParsingException.Reason.tooMuch);

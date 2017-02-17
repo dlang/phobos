@@ -178,7 +178,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         ubyte[] data = [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e];
 
         // Allocate a buffer large enough to hold the encoded string.
-        auto buf = new char[encodeLength(data.length)];
+        auto buf = new char[Base64.encodeLength(data.length)];
 
         Base64.encode(data, buf);
         assert(buf == "Gis8TV1u");

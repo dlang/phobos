@@ -208,7 +208,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
         "allocateAll", "owns", "deallocateAll", "empty"));
 }
 
-///
+//
 @system unittest
 {
     import std.experimental.allocator.building_blocks.free_tree : FreeTree;
