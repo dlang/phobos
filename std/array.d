@@ -3666,6 +3666,8 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
             // Saves the first segment to the free-list, frees the rest.
             void free()
             {
+                import core.stdc.stdlib : free;
+
                 if (__ctfe)
                     return;
 
@@ -3674,7 +3676,7 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
                 while (s)
                 {
                     auto sn = s.next;
-                    GC.free(s);
+                    free(s);
                     s = sn;
                 }
 
@@ -3827,6 +3829,7 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
                     _grow;
                 }
             }
+
             // Push the items
             _tail.ptr[0 .. items.length] = items;
             _tail.ptr += items.length;
@@ -3877,6 +3880,8 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
             return cast(T[]) dupTo(arr);
         }
 
+        alias data = dup;
+
         static if (is(T == immutable) || !hasIndirections!T)
         {
             /// ditto
@@ -3884,11 +3889,6 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
             {
                 return cast(immutable(T)[]) dup;
             }
-        }
-
-        T[] opDispatch(string name)() pure if (name == "data")
-        {
-            return dup;
         }
 
         /// Constructs an Builder and makes a copy of the array.
