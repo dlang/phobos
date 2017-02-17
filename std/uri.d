@@ -314,9 +314,11 @@ private dstring URI_Decode(Char)(in Char[] uri, uint reservedSet) if (isSomeChar
 
 string decode(Char)(in Char[] encodedURI) if (isSomeChar!Char)
 {
-    import std.utf : toUTF8;
+    // selective imports trigger wrong deprecation
+    // https://issues.dlang.org/show_bug.cgi?id=17193
+    static import std.utf;
     auto s = URI_Decode(encodedURI, URI_Reserved | URI_Hash);
-    return toUTF8(s);
+    return std.utf.toUTF8(s);
 }
 
 /*******************************
@@ -326,9 +328,11 @@ string decode(Char)(in Char[] encodedURI) if (isSomeChar!Char)
 
 string decodeComponent(Char)(in Char[] encodedURIComponent) if (isSomeChar!Char)
 {
-    import std.utf : toUTF8;
+    // selective imports trigger wrong deprecation
+    // https://issues.dlang.org/show_bug.cgi?id=17193
+    static import std.utf;
     auto s = URI_Decode(encodedURIComponent, 0);
-    return toUTF8(s);
+    return std.utf.toUTF8(s);
 }
 
 /*****************************

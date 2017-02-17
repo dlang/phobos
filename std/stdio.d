@@ -2713,7 +2713,7 @@ $(D Range) that locks the file and allows fast writing to it.
             }
             else // 32-bit characters
             {
-                import std.utf : toUTF8;
+                import std.utf : encode;
 
                 if (orientation_ <= 0)
                 {
@@ -2724,9 +2724,9 @@ $(D Range) that locks the file and allows fast writing to it.
                     else
                     {
                         char[4] buf = void;
-                        auto b = toUTF8(buf, c);
-                        foreach (i ; 0 .. b.length)
-                            trustedFPUTC(b[i], handle_);
+                        immutable len = encode(buf, c);
+                        foreach (i ; 0 .. len)
+                            trustedFPUTC(buf[i], handle_);
                     }
                 }
                 else
