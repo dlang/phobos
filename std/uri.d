@@ -193,7 +193,8 @@ private uint ascii2hex(dchar c) @nogc @safe pure nothrow
         c - 'a' + 10;
 }
 
-private dstring URI_Decode(Char)(in Char[] uri, uint reservedSet) if (isSomeChar!Char)
+private dstring URI_Decode(Char)(in Char[] uri, uint reservedSet)
+if (isSomeChar!Char)
 {
     import core.exception : OutOfMemoryError;
     import core.stdc.stdlib : alloca;
@@ -312,7 +313,8 @@ private dstring URI_Decode(Char)(in Char[] uri, uint reservedSet) if (isSomeChar
  * Escape sequences that resolve to the '#' character are not replaced.
  */
 
-string decode(Char)(in Char[] encodedURI) if (isSomeChar!Char)
+string decode(Char)(in Char[] encodedURI)
+if (isSomeChar!Char)
 {
     // selective imports trigger wrong deprecation
     // https://issues.dlang.org/show_bug.cgi?id=17193
@@ -326,7 +328,8 @@ string decode(Char)(in Char[] encodedURI) if (isSomeChar!Char)
  * escape sequences are decoded.
  */
 
-string decodeComponent(Char)(in Char[] encodedURIComponent) if (isSomeChar!Char)
+string decodeComponent(Char)(in Char[] encodedURIComponent)
+if (isSomeChar!Char)
 {
     // selective imports trigger wrong deprecation
     // https://issues.dlang.org/show_bug.cgi?id=17193
@@ -340,7 +343,8 @@ string decodeComponent(Char)(in Char[] encodedURIComponent) if (isSomeChar!Char)
  * not a valid URI character is escaped. The '#' character is not escaped.
  */
 
-string encode(Char)(in Char[] uri) if (isSomeChar!Char)
+string encode(Char)(in Char[] uri)
+if (isSomeChar!Char)
 {
     import std.utf : toUTF32;
     auto s = toUTF32(uri);
@@ -352,7 +356,8 @@ string encode(Char)(in Char[] uri) if (isSomeChar!Char)
  * Any character not a letter, digit, or one of -_.!~*'() is escaped.
  */
 
-string encodeComponent(Char)(in Char[] uriComponent) if (isSomeChar!Char)
+string encodeComponent(Char)(in Char[] uriComponent)
+if (isSomeChar!Char)
 {
     import std.utf : toUTF32;
     auto s = toUTF32(uriComponent);
@@ -406,7 +411,8 @@ package string urlEncode(in string[string] values)
  *  len  it does, and s[0..len] is the slice of s[] that is that URL
  */
 
-ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
+ptrdiff_t uriLength(Char)(in Char[] s)
+if (isSomeChar!Char)
 {
     /* Must start with one of:
      *  http://
@@ -476,7 +482,8 @@ ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
  * References:
  *  RFC2822
  */
-ptrdiff_t emailLength(Char)(in Char[] s) if (isSomeChar!Char)
+ptrdiff_t emailLength(Char)(in Char[] s)
+if (isSomeChar!Char)
 {
     import std.ascii : isAlpha, isAlphaNum;
 

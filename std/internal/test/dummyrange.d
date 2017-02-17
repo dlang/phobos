@@ -34,7 +34,7 @@ import std.traits : isArray;
 // can be parametrized with attributes.  It just dumbs down an array of
 // numbers 1..10.
 struct DummyRange(ReturnBy _r, Length _l, RangeType _rt, T = uint[])
-        if (isArray!T)
+if (isArray!T)
 {
     private static immutable uinttestData =
         [1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U];
@@ -316,7 +316,8 @@ unittest
 
 private:
 
-pure struct Cmp(T) if (is(T == uint))
+pure struct Cmp(T)
+if (is(T == uint))
 {
     static auto iota(size_t low = 1, size_t high = 11)
     {
@@ -336,7 +337,8 @@ pure struct Cmp(T) if (is(T == uint))
     enum dummyValueRslt = 1337U * 2;
 }
 
-pure struct Cmp(T) if (is(T == double))
+pure struct Cmp(T)
+if (is(T == double))
 {
     import std.math : approxEqual;
 
@@ -381,7 +383,8 @@ struct TestFoo
     }
 }
 
-pure struct Cmp(T) if (is(T == TestFoo))
+pure struct Cmp(T)
+if (is(T == TestFoo))
 {
     import std.math : approxEqual;
 

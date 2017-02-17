@@ -87,8 +87,8 @@ See $(RED WARNING) in $(B Examples) section.
 */
 
 auto tempCString(To = char, From)(From str)
-    if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
-        isSomeChar!(ElementEncodingType!From))
+if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
+    isSomeChar!(ElementEncodingType!From))
 {
 
     alias CF = Unqual!(ElementEncodingType!From);

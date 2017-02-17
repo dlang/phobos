@@ -1607,7 +1607,7 @@ Infinite ranges are compatible, provided the parameter $(D upTo) is
 specified, in which case the implementation simply returns upTo.
  */
 auto walkLength(Range)(Range range)
-    if (isInputRange!Range && !isInfinite!Range)
+if (isInputRange!Range && !isInfinite!Range)
 {
     static if (hasLength!Range)
         return range.length;
@@ -1621,7 +1621,7 @@ auto walkLength(Range)(Range range)
 }
 /// ditto
 auto walkLength(Range)(Range range, const size_t upTo)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     static if (hasLength!Range)
         return range.length;
@@ -1680,7 +1680,7 @@ auto walkLength(Range)(Range range, const size_t upTo)
     See_Also: $(REF drop, std, range), $(REF dropBack, std, range)
 */
 size_t popFrontN(Range)(ref Range r, size_t n)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     static if (hasLength!Range)
     {
@@ -1716,7 +1716,7 @@ size_t popFrontN(Range)(ref Range r, size_t n)
 
 /// ditto
 size_t popBackN(Range)(ref Range r, size_t n)
-    if (isBidirectionalRange!Range)
+if (isBidirectionalRange!Range)
 {
     static if (hasLength!Range)
     {
@@ -1813,7 +1813,7 @@ size_t popBackN(Range)(ref Range r, size_t n)
     See_Also: $(REF dropExcatly, std, range), $(REF dropBackExactly, std, range)
 */
 void popFrontExactly(Range)(ref Range r, size_t n)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     static if (hasLength!Range)
         assert(n <= r.length, "range is smaller than amount of items to pop");
@@ -1829,7 +1829,7 @@ void popFrontExactly(Range)(ref Range r, size_t n)
 
 /// ditto
 void popBackExactly(Range)(ref Range r, size_t n)
-    if (isBidirectionalRange!Range)
+if (isBidirectionalRange!Range)
 {
     static if (hasLength!Range)
         assert(n <= r.length, "range is smaller than amount of items to pop");
@@ -2294,7 +2294,8 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 }
 
 /// ditto
-@property dchar front(T)(T[] a) @safe pure if (isNarrowString!(T[]))
+@property dchar front(T)(T[] a) @safe pure
+if (isNarrowString!(T[]))
 {
     import std.utf : decode;
     assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
@@ -2337,7 +2338,8 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 
 /// ditto
 // Specialization for strings
-@property dchar back(T)(T[] a) @safe pure if (isNarrowString!(T[]))
+@property dchar back(T)(T[] a) @safe pure
+if (isNarrowString!(T[]))
 {
     import std.utf : decode, strideBack;
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);

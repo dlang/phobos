@@ -507,9 +507,9 @@ enum real SQRT1_2 =    SQRT2/2;                               /** $(SQRT)$(HALF)
  * = hypot(z.re, z.im).
  */
 Num abs(Num)(Num x) @safe pure nothrow
-    if (is(typeof(Num.init >= 0)) && is(typeof(-Num.init)) &&
-            !(is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
-                    || is(Num* : const(ireal*))))
+if (is(typeof(Num.init >= 0)) && is(typeof(-Num.init)) &&
+    !(is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
+    || is(Num* : const(ireal*))))
 {
     static if (isFloatingPoint!(Num))
         return fabs(x);
@@ -519,16 +519,16 @@ Num abs(Num)(Num x) @safe pure nothrow
 
 /// ditto
 auto abs(Num)(Num z) @safe pure nothrow @nogc
-    if (is(Num* : const(cfloat*)) || is(Num* : const(cdouble*))
-            || is(Num* : const(creal*)))
+if (is(Num* : const(cfloat*)) || is(Num* : const(cdouble*))
+    || is(Num* : const(creal*)))
 {
     return hypot(z.re, z.im);
 }
 
 /// ditto
 auto abs(Num)(Num y) @safe pure nothrow @nogc
-    if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
-            || is(Num* : const(ireal*)))
+if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
+    || is(Num* : const(ireal*)))
 {
     return fabs(y.im);
 }
@@ -572,8 +572,8 @@ auto abs(Num)(Num y) @safe pure nothrow @nogc
  * is always a real number
  */
 auto conj(Num)(Num z) @safe pure nothrow @nogc
-    if (is(Num* : const(cfloat*)) || is(Num* : const(cdouble*))
-            || is(Num* : const(creal*)))
+if (is(Num* : const(cfloat*)) || is(Num* : const(cdouble*))
+    || is(Num* : const(creal*)))
 {
     //FIXME
     //Issue 14206
@@ -585,8 +585,8 @@ auto conj(Num)(Num z) @safe pure nothrow @nogc
 
 /** ditto */
 auto conj(Num)(Num y) @safe pure nothrow @nogc
-    if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
-            || is(Num* : const(ireal*)))
+if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
+    || is(Num* : const(ireal*)))
 {
     return -y;
 }
@@ -2383,7 +2383,7 @@ creal expi(real y) @trusted pure nothrow @nogc
  *      )
  */
 T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
-    if (isFloatingPoint!T)
+if (isFloatingPoint!T)
 {
     Unqual!T vf = value;
     ushort* vu = cast(ushort*)&vf;
@@ -2668,7 +2668,7 @@ T frexp(T)(const T value, out int exp) @trusted pure nothrow @nogc
  *      )
  */
 int ilogb(T)(const T x) @trusted pure nothrow @nogc
-    if (isFloatingPoint!T)
+if (isFloatingPoint!T)
 {
     import core.bitop : bsr;
     alias F = floatTraits!T;
@@ -2809,7 +2809,7 @@ int ilogb(T)(const T x) @trusted pure nothrow @nogc
 }
 /// ditto
 int ilogb(T)(const T x) @safe pure nothrow @nogc
-    if (isIntegral!T && isUnsigned!T)
+if (isIntegral!T && isUnsigned!T)
 {
     import core.bitop : bsr;
     if (x == 0)
@@ -2822,7 +2822,7 @@ int ilogb(T)(const T x) @safe pure nothrow @nogc
 }
 /// ditto
 int ilogb(T)(const T x) @safe pure nothrow @nogc
-    if (isIntegral!T && isSigned!T)
+if (isIntegral!T && isSigned!T)
 {
     import std.traits : Unsigned;
     // Note: abs(x) can not be used because the return type is not Unsigned and
@@ -3966,7 +3966,7 @@ float floor(float x) @trusted pure nothrow @nogc
  * rounding mode.
  */
 Unqual!F quantize(alias rfunc = rint, F)(const F val, const F unit)
-    if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
+if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
 {
     typeof(return) ret = val;
     if (unit != 0)
@@ -4005,7 +4005,7 @@ Unqual!F quantize(alias rfunc = rint, F)(const F val, const F unit)
  * current rounding mode.
  */
 Unqual!F quantize(real base, alias rfunc = rint, F, E)(const F val, const E exp)
-    if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F && isIntegral!E)
+if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F && isIntegral!E)
 {
     // TODO: Compile-time optimization for power-of-two bases?
     return quantize!rfunc(val, pow(cast(F)base, exp));
@@ -4013,7 +4013,7 @@ Unqual!F quantize(real base, alias rfunc = rint, F, E)(const F val, const E exp)
 
 /// ditto
 Unqual!F quantize(real base, long exp = 1, alias rfunc = rint, F)(const F val)
-    if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
+if (is(typeof(rfunc(F.init)) : F) && isFloatingPoint!F)
 {
     enum unit = cast(F)pow(base, exp);
     return quantize!rfunc(val, unit);
@@ -4981,7 +4981,7 @@ private:
  *  $(D true) if $(D_PARAM x) is Nan.
  */
 bool isNaN(X)(X x) @nogc @trusted pure nothrow
-    if (isFloatingPoint!(X))
+if (isFloatingPoint!(X))
 {
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ieeeSingle)
@@ -5224,7 +5224,7 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
  *  $(D true) if $(D_PARAM x) is $(PLUSMN)$(INFIN).
  */
 bool isInfinity(X)(X x) @nogc @trusted pure nothrow
-    if (isFloatingPoint!(X))
+if (isFloatingPoint!(X))
 {
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ieeeSingle)
@@ -5408,7 +5408,7 @@ int signbit(X)(X x) @nogc @trusted pure nothrow
  * Return a value composed of to with from's sign bit.
  */
 R copysign(R, X)(R to, X from) @trusted pure nothrow @nogc
-    if (isFloatingPoint!(R) && isFloatingPoint!(X))
+if (isFloatingPoint!(R) && isFloatingPoint!(X))
 {
     ubyte* pto   = cast(ubyte *)&to;
     const ubyte* pfrom = cast(ubyte *)&from;
@@ -5422,7 +5422,7 @@ R copysign(R, X)(R to, X from) @trusted pure nothrow @nogc
 
 // ditto
 R copysign(R, X)(X to, R from) @trusted pure nothrow @nogc
-    if (isIntegral!(X) && isFloatingPoint!(R))
+if (isIntegral!(X) && isFloatingPoint!(R))
 {
     return copysign(cast(R)to, from);
 }
@@ -6000,7 +6000,7 @@ real fma(real x, real y, real z) @safe pure nothrow @nogc { return (x * y) + z; 
  * Compute the value of x $(SUPERSCRIPT n), where n is an integer
  */
 Unqual!F pow(F, G)(F x, G n) @nogc @trusted pure nothrow
-    if (isFloatingPoint!(F) && isIntegral!(G))
+if (isFloatingPoint!(F) && isIntegral!(G))
 {
     import std.traits : Unsigned;
     real p = 1.0, v = void;
@@ -6103,7 +6103,7 @@ Unqual!F pow(F, G)(F x, G n) @nogc @trusted pure nothrow
  * regardless of the value of x.
  */
 typeof(Unqual!(F).init * Unqual!(G).init) pow(F, G)(F x, G n) @nogc @trusted pure nothrow
-    if (isIntegral!(F) && isIntegral!(G))
+if (isIntegral!(F) && isIntegral!(G))
 {
     if (n<0) return x/0; // Only support positive powers
     typeof(return) p, v = void;
@@ -6160,7 +6160,7 @@ typeof(Unqual!(F).init * Unqual!(G).init) pow(F, G)(F x, G n) @nogc @trusted pur
 
 /**Computes integer to floating point powers.*/
 real pow(I, F)(I x, F y) @nogc @trusted pure nothrow
-    if (isIntegral!I && isFloatingPoint!F)
+if (isIntegral!I && isFloatingPoint!F)
 {
     return pow(cast(real) x, cast(Unqual!F) y);
 }
@@ -6208,7 +6208,7 @@ real pow(I, F)(I x, F y) @nogc @trusted pure nothrow
  * )
  */
 Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @nogc @trusted pure nothrow
-    if (isFloatingPoint!(F) && isFloatingPoint!(G))
+if (isFloatingPoint!(F) && isFloatingPoint!(G))
 {
     alias Float = typeof(return);
 
@@ -6491,7 +6491,7 @@ Unqual!(Largest!(F, G)) pow(F, G)(F x, G y) @nogc @trusted pure nothrow
  *      )
  */
 int feqrel(X)(const X x, const X y) @trusted pure nothrow @nogc
-    if (isFloatingPoint!(X))
+if (isFloatingPoint!(X))
 {
     /* Public Domain. Author: Don Clugston, 18 Aug 2005.
      */
@@ -6778,7 +6778,7 @@ public:
  *      A =     array of coefficients $(SUB a, 0), $(SUB a, 1), etc.
  */
 Unqual!(CommonType!(T1, T2)) poly(T1, T2)(T1 x, in T2[] A) @trusted pure nothrow @nogc
-    if (isFloatingPoint!T1 && isFloatingPoint!T2)
+if (isFloatingPoint!T1 && isFloatingPoint!T2)
 in
 {
     assert(A.length > 0);
@@ -6822,7 +6822,7 @@ body
 }
 
 private Unqual!(CommonType!(T1, T2)) polyImplBase(T1, T2)(T1 x, in T2[] A) @trusted pure nothrow @nogc
-    if (isFloatingPoint!T1 && isFloatingPoint!T2)
+if (isFloatingPoint!T1 && isFloatingPoint!T2)
 {
     ptrdiff_t i = A.length - 1;
     typeof(return) r = A[i];
@@ -7207,7 +7207,7 @@ deprecated("Phobos1 math functions are deprecated, use isInfinity ") alias isinf
  * Standards: Conforms to IEEE 754-2008
  */
 int cmp(T)(const(T) x, const(T) y) @nogc @trusted pure nothrow
-    if (isFloatingPoint!T)
+if (isFloatingPoint!T)
 {
     alias F = floatTraits!T;
 
@@ -7470,13 +7470,15 @@ private T powFloatingPointImpl(PowType type, T)(T x)
  * Returns:
  *     the next power of two after $(D val)
  */
-T nextPow2(T)(const T val) if (isIntegral!T)
+T nextPow2(T)(const T val)
+if (isIntegral!T)
 {
     return powIntegralImpl!(PowType.ceil)(val);
 }
 
 /// ditto
-T nextPow2(T)(const T val) if (isFloatingPoint!T)
+T nextPow2(T)(const T val)
+if (isFloatingPoint!T)
 {
     return powFloatingPointImpl!(PowType.ceil)(val);
 }
@@ -7593,13 +7595,15 @@ T nextPow2(T)(const T val) if (isFloatingPoint!T)
  * Returns:
  *     the last power of two before $(D val)
  */
-T truncPow2(T)(const T val) if (isIntegral!T)
+T truncPow2(T)(const T val)
+if (isIntegral!T)
 {
     return powIntegralImpl!(PowType.floor)(val);
 }
 
 /// ditto
-T truncPow2(T)(const T val) if (isFloatingPoint!T)
+T truncPow2(T)(const T val)
+if (isFloatingPoint!T)
 {
     return powFloatingPointImpl!(PowType.floor)(val);
 }
@@ -7708,7 +7712,7 @@ Returns:
     `true` if `x` is an integer power of two.
 */
 bool isPowerOf2(X)(const X x) pure @safe nothrow @nogc
-    if (isNumeric!X)
+if (isNumeric!X)
 {
     static if (isFloatingPoint!X)
     {

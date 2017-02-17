@@ -93,10 +93,10 @@ textbuf = doSomething(textbuf, args);
 
 @system
 struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
-          if (isAssignable!T &&
-              !hasElaborateDestructor!T &&
-              !hasElaborateCopyConstructor!T &&
-              !hasElaborateAssign!T)
+if (isAssignable!T &&
+    !hasElaborateDestructor!T &&
+    !hasElaborateCopyConstructor!T &&
+    !hasElaborateAssign!T)
 {
     import core.stdc.string : memcpy;
     import core.exception : onOutOfMemoryError;

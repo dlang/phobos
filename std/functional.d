@@ -417,7 +417,7 @@ private uint _ctfeMatchBinary(string fun, string name1, string name2)
 
 //undocumented
 template safeOp(string S)
-    if (S=="<"||S==">"||S=="<="||S==">="||S=="=="||S=="!=")
+if (S=="<"||S==">"||S=="<="||S==">="||S=="=="||S=="!=")
 {
     import std.traits : isIntegral;
     private bool unsafeOp(ElementType1, ElementType2)(ElementType1 a, ElementType2 b) pure
@@ -795,12 +795,14 @@ Note: In the special case where only a single function is provided
 ($(D F.length == 1)), adjoin simply aliases to the single passed function
 ($(D F[0])).
 */
-template adjoin(F...) if (F.length == 1)
+template adjoin(F...)
+if (F.length == 1)
 {
     alias adjoin = F[0];
 }
 /// ditto
-template adjoin(F...) if (F.length > 1)
+template adjoin(F...)
+if (F.length > 1)
 {
     auto adjoin(V...)(auto ref V a)
     {
@@ -1245,7 +1247,8 @@ private struct DelegateFaker(F)
  *   $(LI Ignores C-style / D-style variadic arguments.)
  * )
  */
-auto toDelegate(F)(auto ref F fp) if (isCallable!(F))
+auto toDelegate(F)(auto ref F fp)
+if (isCallable!(F))
 {
     static if (is(F == delegate))
     {

@@ -53,7 +53,7 @@ auto sliced(
     Flag!"replaceArrayWithPointer" ra = Yes.replaceArrayWithPointer,
     Flag!"allowDownsize" ad = No.allowDownsize,
     Range, size_t N)(Range range, size_t[N] lengths...)
-    if (!isStaticArray!Range && !isNarrowString!Range && N)
+if (!isStaticArray!Range && !isNarrowString!Range && N)
 {
     return .sliced!(ra, ad)(range, lengths, 0);
 }
@@ -63,7 +63,7 @@ auto sliced(
     Flag!"replaceArrayWithPointer" ra = Yes.replaceArrayWithPointer,
     Flag!"allowDownsize" ad = No.allowDownsize,
     size_t N, Range)(Range range, size_t[N] lengths, size_t shift = 0)
-    if (!isStaticArray!Range && !isNarrowString!Range && N)
+if (!isStaticArray!Range && !isNarrowString!Range && N)
 in
 {
     static if (hasLength!Range)
@@ -140,7 +140,7 @@ private enum bool _isSlice(T) = is(T : Slice!(N, Range), size_t N, Range);
 
 ///ditto
 template sliced(Names...)
- if (Names.length && !anySatisfy!(isType, Names) && allSatisfy!(isStringValue, Names))
+if (Names.length && !anySatisfy!(isType, Names) && allSatisfy!(isStringValue, Names))
 {
     mixin (
     "
@@ -216,7 +216,7 @@ auto sliced(
     Flag!"replaceArrayWithPointer" ra = Yes.replaceArrayWithPointer,
     Flag!"allowDownsize" ad = No.allowDownsize,
     Range)(Range range)
-    if (!isStaticArray!Range && !isNarrowString!Range && hasLength!Range)
+if (!isStaticArray!Range && !isNarrowString!Range && hasLength!Range)
 {
     return .sliced!(ra, ad, 1, Range)(range, [range.length]);
 }
@@ -433,7 +433,7 @@ Returns:
 See_also: $(LREF .Slice.structure).
 +/
 template assumeSameStructure(Names...)
- if (Names.length && !anySatisfy!(isType, Names) && allSatisfy!(isStringValue, Names))
+if (Names.length && !anySatisfy!(isType, Names) && allSatisfy!(isStringValue, Names))
 {
     mixin (
     "
@@ -1264,9 +1264,9 @@ r______________reversed!1
 -------
 +/
 struct Slice(size_t _N, _Range)
-    if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Range0)
-                     && (isPointer!_Range || is(typeof(_Range.init[size_t.init]))))
-                    || is(_Range == Slice!(N1, Range1), size_t N1, Range1)))
+if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Range0)
+    && (isPointer!_Range || is(typeof(_Range.init[size_t.init]))))
+    || is(_Range == Slice!(N1, Range1), size_t N1, Range1)))
 {
     @fmb:
 
@@ -3304,7 +3304,7 @@ private void opIndexAssignImpl(
     size_t NR, RangeR)(
     Slice!(NL, RangeL) ls,
     Slice!(NR, RangeR) rs)
-    if (NL >= NR)
+if (NL >= NR)
 {
     assert(_checkAssignLengths(ls, rs),
         __FUNCTION__ ~ ": arguments must have the corresponding shape.");
@@ -3351,7 +3351,7 @@ pure nothrow unittest
 private void opIndexAssignImpl
     (string op, size_t NL, RangeL, T)(
         Slice!(NL, RangeL) ls, T rs)
-    if (!is(T : Slice!(NR, RangeR), size_t NR, RangeR))
+if (!is(T : Slice!(NR, RangeR), size_t NR, RangeR))
 {
     foreach (i; Iota!(0, ls.PureN))
         if (ls._lengths[i] == 0)
@@ -3480,7 +3480,7 @@ private void _indexAssignValKernel(string op, TL, TR)(size_t c, TL l, TR r)
 
 private void _indexAssign(bool lastStrideEquals1, string op, size_t NL, RangeL, size_t NR, RangeR)
                          (Slice!(NL, RangeL) ls, Slice!(NR, RangeR) rs)
-    if (NL >= NR)
+if (NL >= NR)
 {
     static if (NL == 1)
     {
@@ -3525,7 +3525,7 @@ private void _indexAssign(bool lastStrideEquals1, string op, size_t NL, RangeL, 
 }
 
 private void _indexAssign(bool lastStrideEquals1, string op, size_t NL, RangeL, T)(Slice!(NL, RangeL) ls, T[] rs)
-    if (DynamicArrayDimensionsCount!(T[]) <= NL)
+if (DynamicArrayDimensionsCount!(T[]) <= NL)
 {
     assert(ls.length == rs.length, __FUNCTION__ ~ ": argument must have the same length.");
     static if (NL == 1)
@@ -3571,8 +3571,8 @@ private void _indexAssign(bool lastStrideEquals1, string op, size_t NL, RangeL, 
 }
 
 private void _indexAssign(bool lastStrideEquals1, string op, size_t NL, RangeL, T)(Slice!(NL, RangeL) ls, T rs)
-    if ((!isDynamicArray!T || isDynamicArray!(Slice!(NL, RangeL).DeepElemType))
-                && !is(T : Slice!(NR, RangeR), size_t NR, RangeR))
+if ((!isDynamicArray!T || isDynamicArray!(Slice!(NL, RangeL).DeepElemType))
+    && !is(T : Slice!(NR, RangeR), size_t NR, RangeR))
 {
     static if (NL == 1)
     {
@@ -3605,7 +3605,7 @@ private void _indexAssign(bool lastStrideEquals1, string op, size_t NL, RangeL, 
 }
 
 private bool _checkAssignLengths(size_t NL, RangeL, size_t NR, RangeR)(Slice!(NL, RangeL) ls, Slice!(NR, RangeR) rs)
-    if (NL >= NR)
+if (NL >= NR)
 {
     foreach (i; Iota!(0, NR))
         if (ls._lengths[i + NL - NR] != rs._lengths[i])

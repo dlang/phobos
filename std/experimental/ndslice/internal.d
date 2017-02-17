@@ -195,7 +195,7 @@ auto ptrShell(Range)(Range range, sizediff_t shift = 0)
 }
 
 private template PtrTupleFrontMembers(Names...)
-    if (Names.length <= 32)
+if (Names.length <= 32)
 {
     static if (Names.length)
     {

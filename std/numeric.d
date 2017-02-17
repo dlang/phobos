@@ -109,14 +109,14 @@ private template CustomFloatParams(uint precision, uint exponentWidth, CustomFlo
  * result can be stored in a custom floating-point value via assignment.
  */
 template CustomFloat(uint bits)
-    if (bits == 8 || bits == 16 || bits == 32 || bits == 64 || bits == 80)
+if (bits == 8 || bits == 16 || bits == 32 || bits == 64 || bits == 80)
 {
     alias CustomFloat = CustomFloat!(CustomFloatParams!(bits));
 }
 
 /// ditto
 template CustomFloat(uint precision, uint exponentWidth, CustomFloatFlags flags = CustomFloatFlags.ieee)
-    if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision + exponentWidth > 0)
+if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision + exponentWidth > 0)
 {
     alias CustomFloat = CustomFloat!(CustomFloatParams!(precision, exponentWidth, flags));
 }
@@ -150,8 +150,8 @@ struct CustomFloat(uint             precision,  // fraction bits (23 for float)
                    uint             exponentWidth,  // exponent bits (8 for float)  Exponent width
                    CustomFloatFlags flags,
                    uint             bias)
-    if (((flags & flags.signed)  + precision + exponentWidth) % 8 == 0 &&
-        precision + exponentWidth > 0)
+if (((flags & flags.signed)  + precision + exponentWidth) % 8 == 0 &&
+    precision + exponentWidth > 0)
 {
     import std.bitmanip : bitfields;
     import std.meta : staticIndexOf;
@@ -678,7 +678,7 @@ always be fastest, as the speed of floating-point calculations depends
 on very many factors.
  */
 template FPTemporary(F)
-    if (isFloatingPoint!F)
+if (isFloatingPoint!F)
 {
     version(X86)
         alias FPTemporary = real;
@@ -797,10 +797,10 @@ public:
  */
 T findRoot(T, DF, DT)(scope DF f, in T a, in T b,
     scope DT tolerance) //= (T a, T b) => false)
-    if (
-        isFloatingPoint!T &&
-        is(typeof(tolerance(T.init, T.init)) : bool) &&
-        is(typeof(f(T.init)) == R, R) && isFloatingPoint!R
+if (
+    isFloatingPoint!T &&
+    is(typeof(tolerance(T.init, T.init)) : bool) &&
+    is(typeof(f(T.init)) == R, R) && isFloatingPoint!R
     )
 {
     immutable fa = f(a);
@@ -855,10 +855,10 @@ T findRoot(T, DF)(scope DF f, in T a, in T b)
  */
 Tuple!(T, T, R, R) findRoot(T, R, DF, DT)(scope DF f, in T ax, in T bx, in R fax, in R fbx,
     scope DT tolerance) // = (T a, T b) => false)
-    if (
-        isFloatingPoint!T &&
-        is(typeof(tolerance(T.init, T.init)) : bool) &&
-        is(typeof(f(T.init)) == R) && isFloatingPoint!R
+if (
+    isFloatingPoint!T &&
+    is(typeof(tolerance(T.init, T.init)) : bool) &&
+    is(typeof(f(T.init)) == R) && isFloatingPoint!R
     )
 in
 {
@@ -1432,8 +1432,8 @@ findLocalMin(T, DF)(
         in T relTolerance = sqrt(T.epsilon),
         in T absTolerance = sqrt(T.epsilon),
         )
-    if (isFloatingPoint!T
-        && __traits(compiles, {T _ = DF.init(T.init);}))
+if (isFloatingPoint!T
+    && __traits(compiles, {T _ = DF.init(T.init);}))
 in
 {
     assert(isFinite(ax), "ax is not finite");
@@ -1632,7 +1632,7 @@ distance is sought).
  */
 CommonType!(ElementType!(Range1), ElementType!(Range2))
 euclideanDistance(Range1, Range2)(Range1 a, Range2 b)
-    if (isInputRange!(Range1) && isInputRange!(Range2))
+if (isInputRange!(Range1) && isInputRange!(Range2))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) assert(a.length == b.length);
@@ -1649,7 +1649,7 @@ euclideanDistance(Range1, Range2)(Range1 a, Range2 b)
 /// Ditto
 CommonType!(ElementType!(Range1), ElementType!(Range2))
 euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
-    if (isInputRange!(Range1) && isInputRange!(Range2))
+if (isInputRange!(Range1) && isInputRange!(Range2))
 {
     limit *= limit;
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
@@ -1691,8 +1691,8 @@ iteration.
  */
 CommonType!(ElementType!(Range1), ElementType!(Range2))
 dotProduct(Range1, Range2)(Range1 a, Range2 b)
-    if (isInputRange!(Range1) && isInputRange!(Range2) &&
-        !(isArray!(Range1) && isArray!(Range2)))
+if (isInputRange!(Range1) && isInputRange!(Range2) &&
+    !(isArray!(Range1) && isArray!(Range2)))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) assert(a.length == b.length);
@@ -1788,7 +1788,7 @@ iteration. If either range has all-zero elements, return 0.
  */
 CommonType!(ElementType!(Range1), ElementType!(Range2))
 cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
-    if (isInputRange!(Range1) && isInputRange!(Range2))
+if (isInputRange!(Range1) && isInputRange!(Range2))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) assert(a.length == b.length);
@@ -1829,7 +1829,7 @@ Returns: $(D true) if normalization completed normally, $(D false) if
 all elements in $(D range) were zero or if $(D range) is empty.
  */
 bool normalize(R)(R range, ElementType!(R) sum = 1)
-    if (isForwardRange!(R))
+if (isForwardRange!(R))
 {
     ElementType!(R) s = 0;
     // Step 1: Compute sum and length of the range
@@ -1886,7 +1886,7 @@ Compute the sum of binary logarithms of the input range $(D r).
 The error of this method is much smaller than with a naive sum of log2.
  */
 ElementType!Range sumOfLog2s(Range)(Range r)
-    if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
+if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
 {
     long exp = 0;
     Unqual!(typeof(return)) x = 1;
@@ -1931,7 +1931,8 @@ be normalized too (i.e., its values should sum to 1). The
 two-parameter version stops evaluating as soon as the intermediate
 result is greater than or equal to $(D max).
  */
-ElementType!Range entropy(Range)(Range r) if (isInputRange!Range)
+ElementType!Range entropy(Range)(Range r)
+if (isInputRange!Range)
 {
     Unqual!(typeof(return)) result = 0.0;
     for (;!r.empty; r.popFront)
@@ -1984,7 +1985,7 @@ positive.
  */
 CommonType!(ElementType!Range1, ElementType!Range2)
 kullbackLeiblerDivergence(Range1, Range2)(Range1 a, Range2 b)
-    if (isInputRange!(Range1) && isInputRange!(Range2))
+if (isInputRange!(Range1) && isInputRange!(Range2))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) assert(a.length == b.length);
@@ -2031,8 +2032,8 @@ or equal to $(D limit).
  */
 CommonType!(ElementType!Range1, ElementType!Range2)
 jensenShannonDivergence(Range1, Range2)(Range1 a, Range2 b)
-    if (isInputRange!Range1 && isInputRange!Range2 &&
-        is(CommonType!(ElementType!Range1, ElementType!Range2)))
+if (isInputRange!Range1 && isInputRange!Range2 &&
+    is(CommonType!(ElementType!Range1, ElementType!Range2)))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) assert(a.length == b.length);
@@ -2058,9 +2059,9 @@ jensenShannonDivergence(Range1, Range2)(Range1 a, Range2 b)
 /// Ditto
 CommonType!(ElementType!Range1, ElementType!Range2)
 jensenShannonDivergence(Range1, Range2, F)(Range1 a, Range2 b, F limit)
-   if (isInputRange!Range1 && isInputRange!Range2 &&
-       is(typeof(CommonType!(ElementType!Range1, ElementType!Range2).init
-                           >= F.init) : bool))
+if (isInputRange!Range1 && isInputRange!Range2 &&
+    is(typeof(CommonType!(ElementType!Range1, ElementType!Range2).init
+    >= F.init) : bool))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) assert(a.length == b.length);
@@ -2173,8 +2174,8 @@ t.length)) extra bytes of memory and $(BIGOH s.length * t.length) time
 to complete.
  */
 F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
-    if (isRandomAccessRange!(R1) && hasLength!(R1) &&
-        isRandomAccessRange!(R2) && hasLength!(R2))
+if (isRandomAccessRange!(R1) && hasLength!(R1) &&
+    isRandomAccessRange!(R2) && hasLength!(R2))
 {
     import std.functional : binaryFun;
     import std.algorithm.mutation : swap;
@@ -2254,8 +2255,8 @@ as $(D sSelfSim) and $(D tSelfSim), respectively.
 Select!(isFloatingPoint!(F), F, double)
 gapWeightedSimilarityNormalized(alias comp = "a == b", R1, R2, F)
         (R1 s, R2 t, F lambda, F sSelfSim = F.init, F tSelfSim = F.init)
-    if (isRandomAccessRange!(R1) && hasLength!(R1) &&
-        isRandomAccessRange!(R2) && hasLength!(R2))
+if (isRandomAccessRange!(R1) && hasLength!(R1) &&
+    isRandomAccessRange!(R2) && hasLength!(R2))
 {
     static bool uncomputed(F n)
     {
@@ -2303,7 +2304,7 @@ by Rousu et al., with additional algorithmic and systems-level
 optimizations.
  */
 struct GapWeightedSimilarityIncremental(Range, F = double)
-    if (isRandomAccessRange!(Range) && hasLength!(Range))
+if (isRandomAccessRange!(Range) && hasLength!(Range))
 {
     import core.stdc.stdlib : malloc, realloc, alloca, free;
 
@@ -3337,7 +3338,7 @@ void slowFourier4(Ret, R)(R range, Ret buf)
 }
 
 N roundDownToPowerOf2(N)(N num)
-    if (isScalarType!N && !isFloatingPoint!N)
+if (isScalarType!N && !isFloatingPoint!N)
 {
     import core.bitop : bsr;
     return num & (cast(N) 1 << bsr(num));

@@ -1811,7 +1811,7 @@ Slice composed of indexes.
 See_also: $(LREF indexSlice)
 +/
 template IndexSlice(size_t N)
-    if (N)
+if (N)
 {
     struct IndexMap
     {
@@ -1915,7 +1915,7 @@ Slice composed of flattened indexes.
 See_also: $(LREF iotaSlice)
 +/
 template IotaSlice(size_t N)
-    if (N)
+if (N)
 {
     alias IotaSlice = Slice!(N, IotaMap!());
 }
@@ -1943,7 +1943,7 @@ Returns:
 See_also: $(REF repeat, std,range)
 +/
 RepeatSlice!(M, T) repeatSlice(T, size_t M)(T value, size_t[M] lengths...)
-    if (!is(T : Slice!(N, Range), size_t N, Range))
+if (!is(T : Slice!(N, Range), size_t N, Range))
 {
     typeof(return) ret;
     foreach (i; Iota!(0, ret.N))
@@ -2027,7 +2027,7 @@ pure nothrow unittest
 Slice composed of identical values.
 +/
 template  RepeatSlice(size_t N, T)
-    if (N)
+if (N)
 {
     alias RepeatSlice = Slice!(N, RepeatPtr!T);
 }
@@ -2105,7 +2105,7 @@ See_Also:
     $(HTTP en.wikipedia.org/wiki/Map_(higher-order_function), Map (higher-order function))
 +/
 template mapSlice(fun...)
-    if (fun.length)
+if (fun.length)
 {
     ///
     @fmb auto mapSlice(size_t N, Range)

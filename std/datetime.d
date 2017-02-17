@@ -25969,11 +25969,11 @@ private:
         dayOfWeek = The week that each time point in the range will be.
   +/
 static TP delegate(in TP) everyDayOfWeek(TP, Direction dir = Direction.fwd)(DayOfWeek dayOfWeek) nothrow
-    if (isTimePoint!TP &&
-       (dir == Direction.fwd || dir == Direction.bwd) &&
-       __traits(hasMember, TP, "dayOfWeek") &&
-       !__traits(isStaticFunction, TP.dayOfWeek) &&
-       is(typeof(TP.dayOfWeek) == DayOfWeek))
+if (isTimePoint!TP &&
+    (dir == Direction.fwd || dir == Direction.bwd) &&
+    __traits(hasMember, TP, "dayOfWeek") &&
+    !__traits(isStaticFunction, TP.dayOfWeek) &&
+    is(typeof(TP.dayOfWeek) == DayOfWeek))
 {
     TP func(in TP tp)
     {
@@ -26073,11 +26073,11 @@ static TP delegate(in TP) everyDayOfWeek(TP, Direction dir = Direction.fwd)(DayO
         month = The month that each time point in the range will be in.
   +/
 static TP delegate(in TP) everyMonth(TP, Direction dir = Direction.fwd)(int month)
-    if (isTimePoint!TP &&
-       (dir == Direction.fwd || dir == Direction.bwd) &&
-       __traits(hasMember, TP, "month") &&
-       !__traits(isStaticFunction, TP.month) &&
-       is(typeof(TP.month) == Month))
+if (isTimePoint!TP &&
+    (dir == Direction.fwd || dir == Direction.bwd) &&
+    __traits(hasMember, TP, "month") &&
+    !__traits(isStaticFunction, TP.month) &&
+    is(typeof(TP.month) == Month))
 {
     enforceValid!"months"(month);
 
@@ -26197,9 +26197,9 @@ static TP delegate(in TP) everyMonth(TP, Direction dir = Direction.fwd)(int mont
   +/
 static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
                                        (D duration) nothrow
-    if (isTimePoint!TP &&
-       __traits(compiles, TP.init + duration) &&
-       (dir == Direction.fwd || dir == Direction.bwd))
+if (isTimePoint!TP &&
+    __traits(compiles, TP.init + duration) &&
+    (dir == Direction.fwd || dir == Direction.bwd))
 {
     TP func(in TP tp)
     {
@@ -26300,11 +26300,11 @@ static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
                                         int months = 0,
                                         AllowDayOverflow allowOverflow = Yes.allowDayOverflow,
                                         D duration = dur!"days"(0)) nothrow
-    if (isTimePoint!TP &&
-       __traits(compiles, TP.init + duration) &&
-       __traits(compiles, TP.init.add!"years"(years)) &&
-       __traits(compiles, TP.init.add!"months"(months)) &&
-       (dir == Direction.fwd || dir == Direction.bwd))
+if (isTimePoint!TP &&
+    __traits(compiles, TP.init + duration) &&
+    __traits(compiles, TP.init.add!"years"(years)) &&
+    __traits(compiles, TP.init.add!"months"(months)) &&
+    (dir == Direction.fwd || dir == Direction.bwd))
 {
     TP func(in TP tp)
     {
@@ -26455,7 +26455,7 @@ static TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
     excluded will treat $(D begin) as included and $(D end) as excluded.
   +/
 struct IntervalRange(TP, Direction dir)
-    if (isTimePoint!TP && dir != Direction.both)
+if (isTimePoint!TP && dir != Direction.both)
 {
 public:
 
@@ -26998,7 +26998,7 @@ private:
     a $(LREF DateTimeException) will be thrown.
   +/
 struct PosInfIntervalRange(TP)
-    if (isTimePoint!TP)
+if (isTimePoint!TP)
 {
 public:
 
@@ -27288,7 +27288,7 @@ private:
     whether $(D end) is included or excluded will treat $(D end) as excluded.
   +/
 struct NegInfIntervalRange(TP)
-    if (isTimePoint!TP)
+if (isTimePoint!TP)
 {
 public:
 
@@ -32343,7 +32343,7 @@ long unixTimeToStdTime(long unixTime) @safe pure nothrow
         SysTime.toUnixTime
   +/
 T stdTimeToUnixTime(T = time_t)(long stdTime) @safe pure nothrow
-    if (is(T == int) || is(T == long))
+if (is(T == int) || is(T == long))
 {
     immutable unixTime = convert!("hnsecs", "seconds")(stdTime - 621_355_968_000_000_000L);
 
@@ -32831,8 +32831,8 @@ SysTime parseRFC822DateTime()(in char[] value) @safe
 
 /++ Ditto +/
 SysTime parseRFC822DateTime(R)(R value) @safe
-    if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
-       (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
+    (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
 {
     import std.algorithm.searching : find, all;
     import std.ascii : isDigit, isAlpha, isPrintable;
@@ -33649,7 +33649,7 @@ int cmpTimeUnits(string lhs, string rhs) @safe pure
         )
  +/
 template CmpTimeUnits(string lhs, string rhs)
-    if (validTimeUnits(lhs, rhs))
+if (validTimeUnits(lhs, rhs))
 {
     enum CmpTimeUnits = cmpTimeUnitsCTFE(lhs, rhs);
 }
@@ -33709,10 +33709,10 @@ private int cmpTimeUnitsCTFE(string lhs, string rhs) @safe pure nothrow
         value = The number to validate.
   +/
 bool valid(string units)(int value) @safe pure nothrow
-    if (units == "months" ||
-       units == "hours" ||
-       units == "minutes" ||
-       units == "seconds")
+if (units == "months" ||
+    units == "hours" ||
+    units == "minutes" ||
+    units == "seconds")
 {
     static if (units == "months")
         return value >= Month.jan && value <= Month.dec;
@@ -33744,7 +33744,7 @@ bool valid(string units)(int value) @safe pure nothrow
         day   = The day to validate.
   +/
 bool valid(string units)(int year, int month, int day) @safe pure nothrow
-    if (units == "days")
+if (units == "days")
 {
     return day > 0 && day <= maxDay(year, month);
 }
@@ -33762,10 +33762,10 @@ bool valid(string units)(int year, int month, int day) @safe pure nothrow
         $(LREF DateTimeException) if $(D valid!units(value)) is false.
   +/
 void enforceValid(string units)(int value, string file = __FILE__, size_t line = __LINE__) @safe pure
-    if (units == "months" ||
-       units == "hours" ||
-       units == "minutes" ||
-       units == "seconds")
+if (units == "months" ||
+    units == "hours" ||
+    units == "minutes" ||
+    units == "seconds")
 {
     import std.format : format;
 
@@ -33807,7 +33807,7 @@ void enforceValid(string units)(int value, string file = __FILE__, size_t line =
   +/
 void enforceValid(string units)
                  (int year, Month month, int day, string file = __FILE__, size_t line = __LINE__) @safe pure
-    if (units == "days")
+if (units == "days")
 {
     import std.format : format;
     if (!valid!"days"(year, month, day))
@@ -34007,7 +34007,7 @@ static int daysToDayOfWeek(DayOfWeek currDoW, DayOfWeek dow) @safe pure nothrow
         $(LREF benchmark)
 +/
 @safe auto measureTime(alias func)()
-    if (isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
+if (isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
 {
     struct Result
     {
@@ -34025,7 +34025,7 @@ static int daysToDayOfWeek(DayOfWeek currDoW, DayOfWeek dow) @safe pure nothrow
 }
 
 auto measureTime(alias func)()
-    if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
+if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
 {
     struct Result
     {
@@ -34163,7 +34163,7 @@ immutable string[12] _monthNames = ["Jan",
     Template to help with converting between time units.
  +/
 template hnsecsPer(string units)
-    if (CmpTimeUnits!(units, "months") < 0)
+if (CmpTimeUnits!(units, "months") < 0)
 {
     static if (units == "hnsecs")
         enum hnsecsPer = 1L;
@@ -34198,8 +34198,8 @@ template hnsecsPer(string units)
         The number of the given units from converting hnsecs to those units.
   +/
 long splitUnitsFromHNSecs(string units)(ref long hnsecs) @safe pure nothrow
-    if (validTimeUnits(units) &&
-       CmpTimeUnits!(units, "months") < 0)
+if (validTimeUnits(units) &&
+    CmpTimeUnits!(units, "months") < 0)
 {
     immutable value = convert!("hnsecs", units)(hnsecs);
     hnsecs -= convert!(units, "hnsecs")(value);
@@ -34235,8 +34235,8 @@ long splitUnitsFromHNSecs(string units)(ref long hnsecs) @safe pure nothrow
         The split out value.
   +/
 long getUnitsFromHNSecs(string units)(long hnsecs) @safe pure nothrow
-    if (validTimeUnits(units) &&
-       CmpTimeUnits!(units, "months") < 0)
+if (validTimeUnits(units) &&
+    CmpTimeUnits!(units, "months") < 0)
 {
     return convert!("hnsecs", units)(hnsecs);
 }
@@ -34265,8 +34265,8 @@ long getUnitsFromHNSecs(string units)(long hnsecs) @safe pure nothrow
         The remaining hnsecs.
   +/
 long removeUnitsFromHNSecs(string units)(long hnsecs) @safe pure nothrow
-    if (validTimeUnits(units) &&
-       CmpTimeUnits!(units, "months") < 0)
+if (validTimeUnits(units) &&
+    CmpTimeUnits!(units, "months") < 0)
 {
     immutable value = convert!("hnsecs", units)(hnsecs);
 
@@ -34522,8 +34522,8 @@ Month monthFromString(string monthStr) @safe pure
     The time units which are one step smaller than the given units.
   +/
 template nextSmallerTimeUnits(string units)
-    if (validTimeUnits(units) &&
-       timeStrings.front != units)
+if (validTimeUnits(units) &&
+    timeStrings.front != units)
 {
     import std.algorithm.searching : countUntil;
     enum nextSmallerTimeUnits = timeStrings[countUntil(timeStrings, units) - 1];
@@ -34548,8 +34548,8 @@ template nextSmallerTimeUnits(string units)
     The time units which are one step larger than the given units.
   +/
 template nextLargerTimeUnits(string units)
-    if (validTimeUnits(units) &&
-       timeStrings.back != units)
+if (validTimeUnits(units) &&
+    timeStrings.back != units)
 {
     import std.algorithm.searching : countUntil;
     enum nextLargerTimeUnits = timeStrings[countUntil(timeStrings, units) + 1];
@@ -34628,7 +34628,7 @@ static string fracSecsToISOString(int hnsecs) @safe pure nothrow
     fractional seconds.
   +/
 static Duration fracSecsFromISOString(S)(in S isoString) @trusted pure
-    if (isSomeString!S)
+if (isSomeString!S)
 {
     import std.algorithm.searching : all;
     import std.ascii : isDigit;
@@ -34734,8 +34734,8 @@ static Duration fracSecsFromISOString(S)(in S isoString) @trusted pure
     Rather, it pops off the CFWS from the range and returns it.
   +/
 R _stripCFWS(R)(R range)
-    if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
-       (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
+    (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
 {
     immutable e = range.length;
     outer: for (size_t i = 0; i < e; )
@@ -34900,7 +34900,7 @@ R _stripCFWS(R)(R range)
 // doesn't have to worry about quite as many cases as std.conv.to, since it
 // doesn't have to worry about a sign on the value or about whether it fits.
 T _convDigits(T, R)(R str)
-    if (isIntegral!T && isSigned!T) // The constraints on R were already covered by parseRFC822DateTime.
+if (isIntegral!T && isSigned!T) // The constraints on R were already covered by parseRFC822DateTime.
 {
     import std.ascii : isDigit;
 

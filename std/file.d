@@ -233,8 +233,8 @@ Throws: $(LREF FileException) on error.
  */
 
 void[] read(R)(R name, size_t upTo = size_t.max)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) && !isInfinite!R &&
-        !isConvertibleToString!R)
+if (isInputRange!R && isSomeChar!(ElementEncodingType!R) && !isInfinite!R &&
+    !isConvertibleToString!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
         return readImpl(name, name.tempCString!FSChar(), upTo);
@@ -259,7 +259,7 @@ void[] read(R)(R name, size_t upTo = size_t.max)
 }
 
 void[] read(R)(auto ref R name, size_t upTo = size_t.max)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return read!(StringTypeOf!R)(name, upTo);
 }
@@ -419,9 +419,9 @@ decoding error.
  */
 
 S readText(S = string, R)(R name)
-    if (isSomeString!S &&
-        (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
-        !isConvertibleToString!R)
+if (isSomeString!S &&
+    (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
+    !isConvertibleToString!R)
 {
     import std.utf : validate;
     static auto trustedCast(void[] buf) @trusted { return cast(S)buf; }
@@ -441,7 +441,7 @@ S readText(S = string, R)(R name)
 }
 
 S readText(S = string, R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return readText!(S, StringTypeOf!R)(name);
 }
@@ -463,8 +463,8 @@ Throws: $(D FileException) on error.
 See_also: $(REF toFile, std,stdio)
  */
 void write(R)(R name, const void[] buffer)
-    if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
-        !isConvertibleToString!R)
+if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
+    !isConvertibleToString!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
         writeImpl(name, name.tempCString!FSChar(), buffer, false);
@@ -487,7 +487,7 @@ void write(R)(R name, const void[] buffer)
 }
 
 void write(R)(auto ref R name, const void[] buffer)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     write!(StringTypeOf!R)(name, buffer);
 }
@@ -507,8 +507,8 @@ Params:
 Throws: $(D FileException) on error.
  */
 void append(R)(R name, const void[] buffer)
-    if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
-        !isConvertibleToString!R)
+if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
+    !isConvertibleToString!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
         writeImpl(name, name.tempCString!FSChar(), buffer, true);
@@ -533,7 +533,7 @@ void append(R)(R name, const void[] buffer)
 }
 
 void append(R)(auto ref R name, const void[] buffer)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     append!(StringTypeOf!R)(name, buffer);
 }
@@ -625,10 +625,10 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
  * Throws: $(D FileException) on error.
  */
 void rename(RF, RT)(RF from, RT to)
-    if ((isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) || isSomeString!RF)
-        && !isConvertibleToString!RF &&
-        (isInputRange!RT && !isInfinite!RT && isSomeChar!(ElementEncodingType!RT) || isSomeString!RT)
-        && !isConvertibleToString!RT)
+if ((isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) || isSomeString!RF)
+    && !isConvertibleToString!RF &&
+    (isInputRange!RT && !isInfinite!RT && isSomeChar!(ElementEncodingType!RT) || isSomeString!RT)
+    && !isConvertibleToString!RT)
 {
     // Place outside of @trusted block
     auto fromz = from.tempCString!FSChar();
@@ -648,7 +648,7 @@ void rename(RF, RT)(RF from, RT to)
 }
 
 void rename(RF, RT)(auto ref RF from, auto ref RT to)
-    if (isConvertibleToString!RF || isConvertibleToString!RT)
+if (isConvertibleToString!RF || isConvertibleToString!RT)
 {
     import std.meta : staticMap;
     alias Types = staticMap!(convertToString, RF, RT);
@@ -719,8 +719,8 @@ Params:
 Throws: $(D FileException) on error.
  */
 void remove(R)(R name)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
         removeImpl(name, name.tempCString!FSChar());
@@ -729,7 +729,7 @@ void remove(R)(R name)
 }
 
 void remove(R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     remove!(StringTypeOf!R)(name);
 }
@@ -761,7 +761,7 @@ private void removeImpl(const(char)[] name, const(FSChar)* namez) @trusted
 }
 
 version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(R)(R name)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
 {
     auto namez = name.tempCString!FSChar();
 
@@ -810,8 +810,8 @@ Params:
 Throws: $(D FileException) on error (e.g., file not found).
  */
 ulong getSize(R)(R name)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -837,7 +837,7 @@ ulong getSize(R)(R name)
 }
 
 ulong getSize(R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return getSize!(StringTypeOf!R)(name);
 }
@@ -896,8 +896,8 @@ private SysTime statTimeToStdTime(char which)(ref stat_t statbuf)
 void getTimes(R)(R name,
               out SysTime accessTime,
               out SysTime modificationTime)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -931,7 +931,7 @@ void getTimes(R)(R name,
 void getTimes(R)(auto ref R name,
               out SysTime accessTime,
               out SysTime modificationTime)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return getTimes!(StringTypeOf!R)(name, accessTime, modificationTime);
 }
@@ -1020,8 +1020,8 @@ version(StdDdoc)
                         out SysTime fileCreationTime,
                         out SysTime fileAccessTime,
                         out SysTime fileModificationTime)
-        if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
-            !isConvertibleToString!R);
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+        !isConvertibleToString!R);
 }
 else version(Windows)
 {
@@ -1029,8 +1029,8 @@ else version(Windows)
                         out SysTime fileCreationTime,
                         out SysTime fileAccessTime,
                         out SysTime fileModificationTime)
-        if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
-            !isConvertibleToString!R)
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+        !isConvertibleToString!R)
     {
         with (getFileAttributesWin(name))
         {
@@ -1044,7 +1044,7 @@ else version(Windows)
                         out SysTime fileCreationTime,
                         out SysTime fileAccessTime,
                         out SysTime fileModificationTime)
-        if (isConvertibleToString!R)
+    if (isConvertibleToString!R)
     {
         getTimesWin!(StringTypeOf!R)(name, fileCreationTime, fileAccessTime, fileModificationTime);
     }
@@ -1135,8 +1135,8 @@ version(Windows) @system unittest
 void setTimes(R)(R name,
               SysTime accessTime,
               SysTime modificationTime)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -1227,7 +1227,7 @@ void setTimes(R)(R name,
 void setTimes(R)(auto ref R name,
               SysTime accessTime,
               SysTime modificationTime)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     setTimes!(StringTypeOf!R)(name, accessTime, modificationTime);
 }
@@ -1278,8 +1278,8 @@ void setTimes(R)(auto ref R name,
         $(D FileException) if the given file does not exist.
 +/
 SysTime timeLastModified(R)(R name)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -1310,7 +1310,7 @@ SysTime timeLastModified(R)(R name)
 }
 
 SysTime timeLastModified(R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return timeLastModified!(StringTypeOf!R)(name);
 }
@@ -1351,7 +1351,7 @@ else
 --------------------
 +/
 SysTime timeLastModified(R)(R name, SysTime returnIfMissing)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
@@ -1437,14 +1437,14 @@ version (OSX) {} else
  *    true if the filename specified as input exists
  */
 bool exists(R)(R name)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     return existsImpl(name.tempCString!FSChar());
 }
 
 bool exists(R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return exists!(StringTypeOf!R)(name);
 }
@@ -1522,8 +1522,8 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
  Throws: $(D FileException) on error.
   +/
 uint getAttributes(R)(R name)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -1562,7 +1562,7 @@ uint getAttributes(R)(R name)
 }
 
 uint getAttributes(R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return getAttributes!(StringTypeOf!R)(name);
 }
@@ -1592,8 +1592,8 @@ uint getAttributes(R)(auto ref R name)
         $(D FileException) on error.
  +/
 uint getLinkAttributes(R)(R name)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -1617,7 +1617,7 @@ uint getLinkAttributes(R)(R name)
 }
 
 uint getLinkAttributes(R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return getLinkAttributes!(StringTypeOf!R)(name);
 }
@@ -1638,8 +1638,8 @@ uint getLinkAttributes(R)(auto ref R name)
         $(D FileException) if the given file does not exist.
  +/
 void setAttributes(R)(R name, uint attributes)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version (Windows)
     {
@@ -1671,7 +1671,7 @@ void setAttributes(R)(R name, uint attributes)
 }
 
 void setAttributes(R)(auto ref R name, uint attributes)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return setAttributes!(StringTypeOf!R)(name, attributes);
 }
@@ -1700,8 +1700,8 @@ assert("/usr/share/include".isDir);
 --------------------
   +/
 @property bool isDir(R)(R name)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -1714,7 +1714,7 @@ assert("/usr/share/include".isDir);
 }
 
 @property bool isDir(R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return name.isDir!(StringTypeOf!R);
 }
@@ -1850,8 +1850,8 @@ assert(!"/usr/share/include".isFile);
 --------------------
   +/
 @property bool isFile(R)(R name)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
         return !name.isDir;
@@ -1860,7 +1860,7 @@ assert(!"/usr/share/include".isFile);
 }
 
 @property bool isFile(R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return isFile!(StringTypeOf!R)(name);
 }
@@ -1984,8 +1984,8 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
         $(D FileException) if the given file does not exist.
   +/
 @property bool isSymlink(R)(R name)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
         return (getAttributes(name) & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
@@ -1994,7 +1994,7 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
 }
 
 @property bool isSymlink(R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return name.isSymlink!(StringTypeOf!R);
 }
@@ -2112,8 +2112,8 @@ bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
  * Throws: $(D FileException) on error.
  */
 void chdir(R)(R pathname)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     // Place outside of @trusted block
     auto pathz = pathname.tempCString!FSChar();
@@ -2140,7 +2140,7 @@ void chdir(R)(R pathname)
 }
 
 void chdir(R)(auto ref R pathname)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return chdir!(StringTypeOf!R)(pathname);
 }
@@ -2157,8 +2157,8 @@ Throws: $(D FileException) on Posix or $(D WindowsException) on Windows
         if an error occured.
  */
 void mkdir(R)(R pathname)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     // Place outside of @trusted block
     auto pathz = pathname.tempCString!FSChar();
@@ -2192,7 +2192,7 @@ void mkdir(R)(R pathname)
 }
 
 void mkdir(R)(auto ref R pathname)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return mkdir!(StringTypeOf!R)(pathname);
 }
@@ -2308,8 +2308,8 @@ Params:
 Throws: $(D FileException) on error.
  */
 void rmdir(R)(R pathname)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     // Place outside of @trusted block
     auto pathz = pathname.tempCString!FSChar();
@@ -2336,7 +2336,7 @@ void rmdir(R)(R pathname)
 }
 
 void rmdir(R)(auto ref R pathname)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     rmdir!(StringTypeOf!R)(pathname);
 }
@@ -2363,15 +2363,15 @@ void rmdir(R)(auto ref R pathname)
         exists).
   +/
 version(StdDdoc) void symlink(RO, RL)(RO original, RL link)
-    if ((isInputRange!RO && !isInfinite!RO && isSomeChar!(ElementEncodingType!RO) ||
-            isConvertibleToString!RO) &&
-        (isInputRange!RL && !isInfinite!RL && isSomeChar!(ElementEncodingType!RL) ||
-            isConvertibleToString!RL));
+if ((isInputRange!RO && !isInfinite!RO && isSomeChar!(ElementEncodingType!RO) ||
+    isConvertibleToString!RO) &&
+    (isInputRange!RL && !isInfinite!RL && isSomeChar!(ElementEncodingType!RL) ||
+    isConvertibleToString!RL));
 else version(Posix) void symlink(RO, RL)(RO original, RL link)
-    if ((isInputRange!RO && !isInfinite!RO && isSomeChar!(ElementEncodingType!RO) ||
-            isConvertibleToString!RO) &&
-        (isInputRange!RL && !isInfinite!RL && isSomeChar!(ElementEncodingType!RL) ||
-            isConvertibleToString!RL))
+if ((isInputRange!RO && !isInfinite!RO && isSomeChar!(ElementEncodingType!RO) ||
+    isConvertibleToString!RO) &&
+    (isInputRange!RL && !isInfinite!RL && isSomeChar!(ElementEncodingType!RL) ||
+    isConvertibleToString!RL))
 {
     static if (isConvertibleToString!RO || isConvertibleToString!RL)
     {
@@ -2452,11 +2452,11 @@ version(Posix) @safe unittest
         $(D FileException) on error.
   +/
 version(StdDdoc) string readLink(R)(R link)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) ||
-        isConvertibleToString!R);
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) ||
+    isConvertibleToString!R);
 else version(Posix) string readLink(R)(R link)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) ||
-        isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) ||
+    isConvertibleToString!R)
 {
     static if (isConvertibleToString!R)
     {
@@ -3298,8 +3298,8 @@ Params:
 Throws: $(D FileException) on error.
  */
 void copy(RF, RT)(RF from, RT to, PreserveAttributes preserve = preserveAttributesDefault)
-    if (isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) && !isConvertibleToString!RF &&
-        isInputRange!RT && !isInfinite!RT && isSomeChar!(ElementEncodingType!RT) && !isConvertibleToString!RT)
+if (isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) && !isConvertibleToString!RF &&
+    isInputRange!RT && !isInfinite!RT && isSomeChar!(ElementEncodingType!RT) && !isConvertibleToString!RT)
 {
     // Place outside of @trusted block
     auto fromz = from.tempCString!FSChar();
@@ -3319,7 +3319,7 @@ void copy(RF, RT)(RF from, RT to, PreserveAttributes preserve = preserveAttribut
 }
 
 void copy(RF, RT)(auto ref RF from, auto ref RT to, PreserveAttributes preserve = preserveAttributesDefault)
-    if (isConvertibleToString!RF || isConvertibleToString!RT)
+if (isConvertibleToString!RF || isConvertibleToString!RT)
 {
     import std.meta : staticMap;
     alias Types = staticMap!(convertToString, RF, RT);

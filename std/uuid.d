@@ -1312,13 +1312,15 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
  * caused by a malformed UUID parsed at compile time can be cryptic,
  * but errors are detected and reported at compile time.
  */
-UUID parseUUID(T)(T uuidString) if (isSomeString!T)
+UUID parseUUID(T)(T uuidString)
+if (isSomeString!T)
 {
     return parseUUID(uuidString);
 }
 
 ///ditto
-UUID parseUUID(Range)(ref Range uuidRange) if (isInputRange!Range
+UUID parseUUID(Range)(ref Range uuidRange)
+if (isInputRange!Range
     && is(Unqual!(ElementType!Range) == dchar))
 {
     import std.conv : ConvException, parse;

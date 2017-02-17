@@ -134,8 +134,8 @@ version(Posix) private alias isSeparator = isDirSeparator;
     is found.
 */
 private ptrdiff_t lastSeparator(R)(R path)
-    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-        isNarrowString!R)
+if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
     while (i >= 0 && !isSeparator(path[i])) --i;
@@ -146,16 +146,16 @@ private ptrdiff_t lastSeparator(R)(R path)
 version (Windows)
 {
     private bool isUNC(R)(R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R)
     {
         return path.length >= 3 && isDirSeparator(path[0]) && isDirSeparator(path[1])
             && !isDirSeparator(path[2]);
     }
 
     private ptrdiff_t uncRootLength(R)(R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R)
         in { assert (isUNC(path)); }
         body
     {
@@ -175,15 +175,15 @@ version (Windows)
     }
 
     private bool hasDrive(R)(R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R)
     {
         return path.length >= 2 && isDriveSeparator(path[1]);
     }
 
     private bool isDriveRoot(R)(R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R)
     {
         return path.length >= 3 && isDriveSeparator(path[1])
             && isDirSeparator(path[2]);
@@ -195,8 +195,8 @@ version (Windows)
     from a path.
 */
 private auto ltrimDirSeparators(R)(R path)
-    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementType!R) ||
-        isNarrowString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R)
 {
     static if (isRandomAccessRange!R && hasSlicing!R || isNarrowString!R)
     {
@@ -224,8 +224,8 @@ private auto ltrimDirSeparators(R)(R path)
 }
 
 private auto rtrimDirSeparators(R)(R path)
-    if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
-        isNarrowString!R)
+if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R)
 {
     static if (isRandomAccessRange!R && hasSlicing!R && hasLength!R || isNarrowString!R)
     {
@@ -254,8 +254,8 @@ private auto rtrimDirSeparators(R)(R path)
 }
 
 private auto trimDirSeparators(R)(R path)
-    if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
-        isNarrowString!R)
+if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R)
 {
     return ltrimDirSeparators(rtrimDirSeparators(path));
 }
@@ -348,8 +348,8 @@ else static assert (0);
     (with suitable adaptations for Windows paths).
 */
 auto baseName(R)(R path)
-    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-        is(StringTypeOf!R))
+if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+    is(StringTypeOf!R))
 {
     auto p1 = stripDrive!(BaseOf!R)(path);
     if (p1.empty)
@@ -374,7 +374,7 @@ auto baseName(R)(R path)
 inout(C)[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
     (inout(C)[] path, in C1[] suffix)
     @safe pure //TODO: nothrow (because of filenameCmp())
-    if (isSomeChar!C && isSomeChar!C1)
+if (isSomeChar!C && isSomeChar!C1)
 {
     auto p = baseName(path);
     if (p.length > suffix.length
@@ -466,9 +466,9 @@ inout(C)[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
     (with suitable adaptations for Windows paths).
 */
 auto dirName(R)(R path)
-    if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-         isNarrowString!R) &&
-        !isConvertibleToString!R)
+if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R) &&
+    !isConvertibleToString!R)
 {
     static auto result(bool dot, typeof(path[0..1]) p)
     {
@@ -553,7 +553,7 @@ auto dirName(R)(R path)
 }
 
 auto dirName(R)(auto ref R path)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return dirName!(StringTypeOf!R)(path);
 }
@@ -618,9 +618,9 @@ auto dirName(R)(auto ref R path)
         A slice of $(D path).
 */
 auto rootName(R)(R path)
-    if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-         isNarrowString!R) &&
-        !isConvertibleToString!R)
+if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R) &&
+    !isConvertibleToString!R)
 {
     if (path.empty)
         goto Lnull;
@@ -694,7 +694,7 @@ Lnull:
 }
 
 auto rootName(R)(R path)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return rootName!(StringTypeOf!R)(path);
 }
@@ -714,9 +714,9 @@ auto rootName(R)(R path)
         Always returns an empty range on POSIX.
 */
 auto driveName(R)(R path)
-    if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-         isNarrowString!R) &&
-        !isConvertibleToString!R)
+if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R) &&
+    !isConvertibleToString!R)
 {
     version (Windows)
     {
@@ -751,7 +751,7 @@ auto driveName(R)(R path)
 }
 
 auto driveName(R)(auto ref R path)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return driveName!(StringTypeOf!R)(path);
 }
@@ -791,9 +791,9 @@ auto driveName(R)(auto ref R path)
     Returns: A slice of path without the drive component.
 */
 auto stripDrive(R)(R path)
-    if ((isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-         isNarrowString!R) &&
-        !isConvertibleToString!R)
+if ((isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -814,7 +814,7 @@ auto stripDrive(R)(R path)
 }
 
 auto stripDrive(R)(auto ref R path)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return stripDrive!(StringTypeOf!R)(path);
 }
@@ -858,8 +858,8 @@ auto stripDrive(R)(auto ref R path)
         index of extension separator (the dot), or -1 if not found
 */
 private ptrdiff_t extSeparatorPos(R)(const R path)
-    if (isRandomAccessRange!R && hasLength!R && isSomeChar!(ElementType!R) ||
-        isNarrowString!R)
+if (isRandomAccessRange!R && hasLength!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R)
 {
     for (auto i = path.length; i-- > 0 && !isSeparator(path[i]); )
     {
@@ -913,8 +913,8 @@ private ptrdiff_t extSeparatorPos(R)(const R path)
     If there is no _extension, $(D null) is returned.
 */
 auto extension(R)(R path)
-    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-        is(StringTypeOf!R))
+if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+    is(StringTypeOf!R))
 {
     auto i = extSeparatorPos!(BaseOf!R)(path);
     if (i == -1)
@@ -965,9 +965,9 @@ auto extension(R)(R path)
         slice of path with the extension (if any) stripped off
 */
 auto stripExtension(R)(R path)
-    if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-         isNarrowString!R) &&
-        !isConvertibleToString!R)
+if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R) &&
+    !isConvertibleToString!R)
 {
     auto i = extSeparatorPos(path);
     return (i == -1) ? path : path[0 .. i];
@@ -986,7 +986,7 @@ auto stripExtension(R)(R path)
 }
 
 auto stripExtension(R)(auto ref R path)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return stripExtension!(StringTypeOf!R)(path);
 }
@@ -1034,7 +1034,7 @@ auto stripExtension(R)(auto ref R path)
         $(LREF withExtension) which does not allocate and returns a lazy range.
 */
 immutable(Unqual!C1)[] setExtension(C1, C2)(in C1[] path, in C2[] ext)
-    if (isSomeChar!C1 && !is(C1 == immutable) && is(Unqual!C1 == Unqual!C2))
+if (isSomeChar!C1 && !is(C1 == immutable) && is(Unqual!C1 == Unqual!C2))
 {
     try
     {
@@ -1049,7 +1049,7 @@ immutable(Unqual!C1)[] setExtension(C1, C2)(in C1[] path, in C2[] ext)
 
 ///ditto
 immutable(C1)[] setExtension(C1, C2)(immutable(C1)[] path, const(C2)[] ext)
-    if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
+if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
     if (ext.length == 0)
         return stripExtension(path);
@@ -1109,10 +1109,10 @@ immutable(C1)[] setExtension(C1, C2)(immutable(C1)[] path, const(C2)[] ext)
  *      $(LREF setExtension)
  */
 auto withExtension(R, C)(R path, C[] ext)
-    if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-         isNarrowString!R) &&
-        !isConvertibleToString!R &&
-        isSomeChar!C)
+if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R) &&
+    !isConvertibleToString!R &&
+    isSomeChar!C)
 {
     import std.range : only, chain;
     import std.utf : byUTF;
@@ -1139,7 +1139,7 @@ auto withExtension(R, C)(R path, C[] ext)
 }
 
 auto withExtension(R, C)(auto ref R path, C[] ext)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return withExtension!(StringTypeOf!R)(path, ext);
 }
@@ -1162,7 +1162,7 @@ auto withExtension(R, C)(auto ref R path, C[] ext)
     path is immutable and already has an extension.
 */
 immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
-    if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
+if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
     import std.conv : to;
     return withDefaultExtension(path, ext).to!(typeof(return));
@@ -1201,10 +1201,10 @@ immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
  *      range with the result
  */
 auto withDefaultExtension(R, C)(R path, C[] ext)
-    if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-         isNarrowString!R) &&
-        !isConvertibleToString!R &&
-        isSomeChar!C)
+if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R) &&
+    !isConvertibleToString!R &&
+    isSomeChar!C)
 {
     import std.range : only, chain;
     import std.utf : byUTF;
@@ -1243,7 +1243,7 @@ auto withDefaultExtension(R, C)(R path, C[] ext)
 }
 
 auto withDefaultExtension(R, C)(auto ref R path, C[] ext)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return withDefaultExtension!(StringTypeOf!R, C)(path, ext);
 }
@@ -1277,7 +1277,7 @@ auto withDefaultExtension(R, C)(auto ref R path, C[] ext)
 */
 immutable(ElementEncodingType!(ElementType!Range))[]
     buildPath(Range)(Range segments)
-        if (isInputRange!Range && !isInfinite!Range && isSomeString!(ElementType!Range))
+    if (isInputRange!Range && !isInfinite!Range && isSomeString!(ElementType!Range))
 {
     if (segments.empty) return null;
 
@@ -1318,7 +1318,7 @@ immutable(ElementEncodingType!(ElementType!Range))[]
 /// ditto
 immutable(C)[] buildPath(C)(const(C)[][] paths...)
     @safe pure nothrow
-    if (isSomeChar!C)
+if (isSomeChar!C)
 {
     return buildPath!(typeof(paths))(paths);
 }
@@ -1451,14 +1451,14 @@ immutable(C)[] buildPath(C)(const(C)[][] paths...)
  *      $(LREF buildPath)
  */
 auto chainPath(R1, R2, Ranges...)(R1 r1, R2 r2, Ranges ranges)
-    if ((isRandomAccessRange!R1 && hasSlicing!R1 && hasLength!R1 && isSomeChar!(ElementType!R1) ||
-         isNarrowString!R1 &&
-        !isConvertibleToString!R1) &&
-        (isRandomAccessRange!R2 && hasSlicing!R2 && hasLength!R2 && isSomeChar!(ElementType!R2) ||
-         isNarrowString!R2 &&
-        !isConvertibleToString!R2) &&
-        (Ranges.length == 0 || is(typeof(chainPath(r2, ranges))))
-       )
+if ((isRandomAccessRange!R1 && hasSlicing!R1 && hasLength!R1 && isSomeChar!(ElementType!R1) ||
+    isNarrowString!R1 &&
+    !isConvertibleToString!R1) &&
+    (isRandomAccessRange!R2 && hasSlicing!R2 && hasLength!R2 && isSomeChar!(ElementType!R2) ||
+    isNarrowString!R2 &&
+    !isConvertibleToString!R2) &&
+    (Ranges.length == 0 || is(typeof(chainPath(r2, ranges))))
+    )
 {
     static if (Ranges.length)
     {
@@ -1546,8 +1546,8 @@ auto chainPath(R1, R2, Ranges...)(R1 r1, R2 r2, Ranges ranges)
 }
 
 auto chainPath(Ranges...)(auto ref Ranges ranges)
-    if (Ranges.length >= 2 &&
-        std.meta.anySatisfy!(isConvertibleToString, Ranges))
+if (Ranges.length >= 2 &&
+    std.meta.anySatisfy!(isConvertibleToString, Ranges))
 {
     import std.meta : staticMap;
     alias Types = staticMap!(convertToString, Ranges);
@@ -1584,7 +1584,7 @@ auto chainPath(Ranges...)(auto ref Ranges ranges)
 */
 immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     @trusted pure nothrow
-    if (isSomeChar!C)
+if (isSomeChar!C)
 {
     import std.array : array;
 
@@ -1737,9 +1737,9 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
 */
 
 auto asNormalizedPath(R)(R path)
-    if (isSomeChar!(ElementEncodingType!R) &&
-        (isRandomAccessRange!R && hasSlicing!R && hasLength!R || isNarrowString!R) &&
-        !isConvertibleToString!R)
+if (isSomeChar!(ElementEncodingType!R) &&
+    (isRandomAccessRange!R && hasSlicing!R && hasLength!R || isNarrowString!R) &&
+    !isConvertibleToString!R)
 {
     alias C = Unqual!(ElementEncodingType!R);
     alias S = typeof(path[0..0]);
@@ -1904,7 +1904,7 @@ auto asNormalizedPath(R)(R path)
 }
 
 auto asNormalizedPath(R)(auto ref R path)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return asNormalizedPath!(StringTypeOf!R)(path);
 }
@@ -2119,9 +2119,9 @@ auto asNormalizedPath(R)(auto ref R path)
         bidirectional range of slices of `path`
 */
 auto pathSplitter(R)(R path)
-    if ((isRandomAccessRange!R && hasSlicing!R ||
-         isNarrowString!R) &&
-        !isConvertibleToString!R)
+if ((isRandomAccessRange!R && hasSlicing!R ||
+    isNarrowString!R) &&
+    !isConvertibleToString!R)
 {
     static struct PathSplitter
     {
@@ -2307,7 +2307,7 @@ auto pathSplitter(R)(R path)
 }
 
 auto pathSplitter(R)(auto ref R path)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return pathSplitter!(StringTypeOf!R)(path);
 }
@@ -2418,8 +2418,8 @@ auto pathSplitter(R)(auto ref R path)
     ---
 */
 bool isRooted(R)(R path)
-    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-        is(StringTypeOf!R))
+if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+    is(StringTypeOf!R))
 {
     if (path.length >= 1 && isDirSeparator(path[0])) return true;
     version (Posix)         return false;
@@ -2492,14 +2492,14 @@ bool isRooted(R)(R path)
 version (StdDdoc)
 {
     bool isAbsolute(R)(R path) pure nothrow @safe
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            is(StringTypeOf!R));
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        is(StringTypeOf!R));
 }
 else version (Windows)
 {
     bool isAbsolute(R)(R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            is(StringTypeOf!R))
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        is(StringTypeOf!R))
     {
         return isDriveRoot!(BaseOf!R)(path) || isUNC!(BaseOf!R)(path);
     }
@@ -2640,9 +2640,9 @@ string absolutePath(string path, lazy string base = getcwd())
         $(LREF absolutePath) which returns an allocated string
 */
 auto asAbsolutePath(R)(R path)
-    if ((isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-         isNarrowString!R) &&
-        !isConvertibleToString!R)
+if ((isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R) &&
+    !isConvertibleToString!R)
 {
     import std.file : getcwd;
     string base = null;
@@ -2668,7 +2668,7 @@ auto asAbsolutePath(R)(R path)
 }
 
 auto asAbsolutePath(R)(auto ref R path)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return asAbsolutePath!(StringTypeOf!R)(path);
 }
@@ -2812,12 +2812,12 @@ string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
 */
 auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R1, R2)
     (R1 path, R2 base)
-    if ((isNarrowString!R1 ||
-         (isRandomAccessRange!R1 && hasSlicing!R1 && isSomeChar!(ElementType!R1)) &&
-        !isConvertibleToString!R1) &&
-        (isNarrowString!R2 ||
-         (isRandomAccessRange!R2 && hasSlicing!R2 && isSomeChar!(ElementType!R2)) &&
-         !isConvertibleToString!R2))
+if ((isNarrowString!R1 ||
+    (isRandomAccessRange!R1 && hasSlicing!R1 && isSomeChar!(ElementType!R1)) &&
+    !isConvertibleToString!R1) &&
+    (isNarrowString!R2 ||
+    (isRandomAccessRange!R2 && hasSlicing!R2 && isSomeChar!(ElementType!R2)) &&
+    !isConvertibleToString!R2))
 {
     bool choosePath = !isAbsolute(path);
 
@@ -2891,7 +2891,7 @@ auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R1, R2)
 
 auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R1, R2)
     (auto ref R1 path, auto ref R2 base)
-    if (isConvertibleToString!R1 || isConvertibleToString!R2)
+if (isConvertibleToString!R1 || isConvertibleToString!R2)
 {
     import std.meta : staticMap;
     alias Types = staticMap!(convertToString, R1, R2);
@@ -3026,12 +3026,12 @@ int filenameCharCmp(CaseSensitive cs = CaseSensitive.osDefault)(dchar a, dchar b
 */
 int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, Range1, Range2)
     (Range1 filename1, Range2 filename2)
-    if (isInputRange!Range1 && !isInfinite!Range1 &&
-        isSomeChar!(ElementEncodingType!Range1) &&
-        !isConvertibleToString!Range1 &&
-        isInputRange!Range2 && !isInfinite!Range2 &&
-        isSomeChar!(ElementEncodingType!Range2) &&
-        !isConvertibleToString!Range2)
+if (isInputRange!Range1 && !isInfinite!Range1 &&
+    isSomeChar!(ElementEncodingType!Range1) &&
+    !isConvertibleToString!Range1 &&
+    isInputRange!Range2 && !isInfinite!Range2 &&
+    isSomeChar!(ElementEncodingType!Range2) &&
+    !isConvertibleToString!Range2)
 {
     alias C1 = Unqual!(ElementEncodingType!Range1);
     alias C2 = Unqual!(ElementEncodingType!Range2);
@@ -3092,7 +3092,7 @@ int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, Range1, Range2)
 
 int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, Range1, Range2)
     (auto ref Range1 filename1, auto ref Range2 filename2)
-    if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
+if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
 {
     import std.meta : staticMap;
     alias Types = staticMap!(convertToString, Range1, Range2);
@@ -3168,9 +3168,9 @@ int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, Range1, Range2)
 bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C, Range)
     (Range path, const(C)[] pattern)
     @safe pure nothrow
-    if (isForwardRange!Range && !isInfinite!Range &&
-        isSomeChar!(ElementEncodingType!Range) && !isConvertibleToString!Range &&
-        isSomeChar!C && is(Unqual!C == Unqual!(ElementEncodingType!Range)))
+if (isForwardRange!Range && !isInfinite!Range &&
+    isSomeChar!(ElementEncodingType!Range) && !isConvertibleToString!Range &&
+    isSomeChar!C && is(Unqual!C == Unqual!(ElementEncodingType!Range)))
 in
 {
     // Verify that pattern[] is valid
@@ -3344,7 +3344,7 @@ body
 bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C, Range)
     (auto ref Range path, const(C)[] pattern)
     @safe pure nothrow
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return globMatch!(cs, C, StringTypeOf!Range)(path, pattern);
 }
@@ -3439,9 +3439,9 @@ bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C, Range)
 
 */
 bool isValidFilename(Range)(Range filename)
-    if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && isSomeChar!(ElementEncodingType!Range) ||
-         isNarrowString!Range) &&
-        !isConvertibleToString!Range)
+if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && isSomeChar!(ElementEncodingType!Range) ||
+    isNarrowString!Range) &&
+    !isConvertibleToString!Range)
 {
     import core.stdc.stdio : FILENAME_MAX;
     if (filename.length == 0 || filename.length >= FILENAME_MAX) return false;
@@ -3495,7 +3495,7 @@ unittest
 }
 
 bool isValidFilename(Range)(auto ref Range filename)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return isValidFilename!(StringTypeOf!Range)(filename);
 }
@@ -3582,9 +3582,9 @@ unittest
         true if $(D path) is a valid _path.
 */
 bool isValidPath(Range)(Range path)
-    if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && isSomeChar!(ElementEncodingType!Range) ||
-         isNarrowString!Range) &&
-        !isConvertibleToString!Range)
+if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && isSomeChar!(ElementEncodingType!Range) ||
+    isNarrowString!Range) &&
+    !isConvertibleToString!Range)
 {
     alias C = Unqual!(ElementEncodingType!Range);
 
@@ -3718,7 +3718,7 @@ unittest
 }
 
 bool isValidPath(Range)(auto ref Range path)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return isValidPath!(StringTypeOf!Range)(path);
 }

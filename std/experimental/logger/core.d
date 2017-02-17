@@ -114,7 +114,8 @@ If this module exists and it contains a $(D LogLevel) called logLevel this $(D
 LogLevel) will be used. This parent lookup is continued until there is no
 parent module. Then the moduleLogLevel is $(D LogLevel.all).
 */
-template moduleLogLevel(string moduleName) if (!moduleName.length)
+template moduleLogLevel(string moduleName)
+if (!moduleName.length)
 {
     // default
     enum moduleLogLevel = LogLevel.all;
@@ -127,7 +128,8 @@ unittest
 }
 
 /// ditto
-template moduleLogLevel(string moduleName) if (moduleName.length)
+template moduleLogLevel(string moduleName)
+if (moduleName.length)
 {
     import std.string : format;
     mixin(q{
@@ -165,7 +167,7 @@ $(LREF std.datatime.DateTime.toISOExtString) except the fractional second part.
 The fractional second part is in milliseconds and is always 3 digits.
 */
 void systimeToISOString(OutputRange)(OutputRange o, const ref SysTime time)
-    if (isOutputRange!(OutputRange,string))
+if (isOutputRange!(OutputRange,string))
 {
     import std.format : formattedWrite;
 
@@ -197,7 +199,7 @@ void log(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(const LogLevel ll,
     lazy bool condition, lazy A args)
-    if (args.length != 1)
+if (args.length != 1)
 {
     static if (isLoggingActive)
     {
@@ -241,7 +243,7 @@ log(LogLevel.warning, "Hello World", 3.1415);
 void log(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(const LogLevel ll, lazy A args)
-    if (args.length > 1 && !is(Unqual!(A[0]) : bool))
+if (args.length > 1 && !is(Unqual!(A[0]) : bool))
 {
     static if (isLoggingActive)
     {
@@ -286,7 +288,7 @@ log(true, "Hello World", 3.1415);
 void log(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(lazy bool condition, lazy A args)
-    if (args.length != 1)
+if (args.length != 1)
 {
     static if (isLoggingActive)
     {
@@ -323,9 +325,9 @@ log("Hello World", 3.1415);
 void log(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(lazy A args)
-    if ((args.length > 1 && !is(Unqual!(A[0]) : bool)
-            && !is(Unqual!(A[0]) == LogLevel))
-        || args.length == 0)
+if ((args.length > 1 && !is(Unqual!(A[0]) : bool)
+    && !is(Unqual!(A[0]) == LogLevel))
+    || args.length == 0)
 {
     static if (isLoggingActive)
     {

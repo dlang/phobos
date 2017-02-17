@@ -78,7 +78,8 @@ else static assert(0, "Unsupported BigDigit size");
 private import std.exception : assumeUnique;
 private import std.traits : isIntegral;
 enum BigDigitBits = BigDigit.sizeof*8;
-template maxBigDigits(T) if (isIntegral!T)
+template maxBigDigits(T)
+if (isIntegral!T)
 {
     enum maxBigDigits = (T.sizeof+BigDigit.sizeof-1)/BigDigit.sizeof;
 }
@@ -1692,7 +1693,8 @@ size_t biguintToDecimal(char [] buff, BigDigit [] data) pure nothrow
  * Returns:
  *    the highest index of data which was used.
  */
-int biguintFromDecimal(Range)(BigDigit[] data, Range s) if (
+int biguintFromDecimal(Range)(BigDigit[] data, Range s)
+if (
     isInputRange!Range &&
     isSomeChar!(ElementType!Range) &&
     !isInfinite!Range)

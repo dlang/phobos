@@ -77,8 +77,8 @@ Returns:
     cartesian product of the given ranges.
 */
 auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
-    if (!allSatisfy!(isForwardRange, R1, R2) ||
-        anySatisfy!(isInfinite, R1, R2))
+if (!allSatisfy!(isForwardRange, R1, R2) ||
+    anySatisfy!(isInfinite, R1, R2))
 {
     import std.algorithm.iteration : map, joiner;
 
@@ -346,9 +346,9 @@ pure nothrow @safe @nogc unittest
 
 /// ditto
 auto cartesianProduct(RR...)(RR ranges)
-    if (ranges.length >= 2 &&
-        allSatisfy!(isForwardRange, RR) &&
-        !anySatisfy!(isInfinite, RR))
+if (ranges.length >= 2 &&
+    allSatisfy!(isForwardRange, RR) &&
+    !anySatisfy!(isInfinite, RR))
 {
     // This overload uses a much less template-heavy implementation when
     // all ranges are finite forward ranges, which is the most common use
@@ -443,8 +443,8 @@ auto cartesianProduct(RR...)(RR ranges)
 
 /// ditto
 auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
-    if (!allSatisfy!(isForwardRange, R1, R2, RR) ||
-        anySatisfy!(isInfinite, R1, R2, RR))
+if (!allSatisfy!(isForwardRange, R1, R2, RR) ||
+    anySatisfy!(isInfinite, R1, R2, RR))
 {
     /* We implement the n-ary cartesian product by recursively invoking the
      * binary cartesian product. To make the resulting range nicer, we denest
@@ -879,7 +879,7 @@ Returns:
 See_also: $(LREF setSymmetricDifference)
  */
 struct SetDifference(alias less = "a < b", R1, R2)
-    if (isInputRange!(R1) && isInputRange!(R2))
+if (isInputRange!(R1) && isInputRange!(R2))
 {
 private:
     R1 r1;
@@ -987,8 +987,8 @@ Returns:
     A range containing the intersection of the given ranges.
  */
 struct SetIntersection(alias less = "a < b", Rs...)
-    if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
-        !is(CommonType!(staticMap!(ElementType, Rs)) == void))
+if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
+    !is(CommonType!(staticMap!(ElementType, Rs)) == void))
 {
 private:
     Rs _input;
@@ -1081,8 +1081,8 @@ public:
 
 /// Ditto
 SetIntersection!(less, Rs) setIntersection(alias less = "a < b", Rs...)(Rs ranges)
-    if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
-        !is(CommonType!(staticMap!(ElementType, Rs)) == void))
+if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
+    !is(CommonType!(staticMap!(ElementType, Rs)) == void))
 {
     return typeof(return)(ranges);
 }
@@ -1152,7 +1152,7 @@ Returns:
 See_also: $(LREF setDifference)
  */
 struct SetSymmetricDifference(alias less = "a < b", R1, R2)
-    if (isInputRange!(R1) && isInputRange!(R2))
+if (isInputRange!(R1) && isInputRange!(R2))
 {
 private:
     R1 r1;

@@ -1745,7 +1745,7 @@ unittest
     import std.algorithm.comparison : equal;
 
     auto interleave(R, E)(R range, E element)
-        if ((isInputRange!R && hasLength!R) || isForwardRange!R)
+    if ((isInputRange!R && hasLength!R) || isForwardRange!R)
     {
         static if (hasLength!R)
             immutable len = range.length;
@@ -2461,7 +2461,8 @@ regardless of $(D R)'s capabilities, as long as it is a forward range.
 (D R) is an input range but not a forward range, return type is an input
 range with all random-access capabilites except save.
  */
-auto takeOne(R)(R source) if (isInputRange!R)
+auto takeOne(R)(R source)
+if (isInputRange!R)
 {
     static if (hasSlicing!R)
     {
@@ -2577,7 +2578,7 @@ pure @safe unittest
     capabilities.
   +/
 auto takeNone(R)()
-    if (isInputRange!R)
+if (isInputRange!R)
 {
     return typeof(takeOne(R.init)).init;
 }
@@ -2604,7 +2605,7 @@ pure @safe nothrow @nogc unittest
     $(D takeExactly(range, 0)).
   +/
 auto takeNone(R)(R range)
-    if (isInputRange!R)
+if (isInputRange!R)
 {
     import std.traits : isDynamicArray;
     //Makes it so that calls to takeNone which don't use UFCS still work with a
@@ -2780,8 +2781,8 @@ pure @safe nothrow unittest
  +    Returns the _tail of $(D _range) augmented with length information
  +/
 auto tail(Range)(Range range, size_t n)
-    if (isInputRange!Range && !isInfinite!Range &&
-        (hasLength!Range || isForwardRange!Range))
+if (isInputRange!Range && !isInfinite!Range &&
+    (hasLength!Range || isForwardRange!Range))
 {
     static if (hasLength!Range)
     {
@@ -2899,14 +2900,14 @@ pure @safe nothrow @nogc unittest
         $(REF popFront, std, range, primitives),$(REF popBackN, std, range, primitives)
   +/
 R drop(R)(R range, size_t n)
-    if (isInputRange!R)
+if (isInputRange!R)
 {
     range.popFrontN(n);
     return range;
 }
 /// ditto
 R dropBack(R)(R range, size_t n)
-    if (isBidirectionalRange!R)
+if (isBidirectionalRange!R)
 {
     range.popBackN(n);
     return range;
@@ -2989,14 +2990,14 @@ R dropBack(R)(R range, size_t n)
         $(REF popBackExcatly, std, range, primitives)
 +/
 R dropExactly(R)(R range, size_t n)
-    if (isInputRange!R)
+if (isInputRange!R)
 {
     popFrontExactly(range, n);
     return range;
 }
 /// ditto
 R dropBackExactly(R)(R range, size_t n)
-    if (isBidirectionalRange!R)
+if (isBidirectionalRange!R)
 {
     popBackExactly(range, n);
     return range;
@@ -3032,14 +3033,14 @@ R dropBackExactly(R)(R range, size_t n)
     $(D range.popBack()).
 +/
 R dropOne(R)(R range)
-    if (isInputRange!R)
+if (isInputRange!R)
 {
     range.popFront();
     return range;
 }
 /// ditto
 R dropBackOne(R)(R range)
-    if (isBidirectionalRange!R)
+if (isBidirectionalRange!R)
 {
     range.popBack();
     return range;
@@ -3216,7 +3217,7 @@ The resulting range will call `fun()` on construction, and every call to
 Returns: an `inputRange` where each element represents another call to fun.
 */
 auto generate(Fun)(Fun fun)
-    if (isCallable!fun)
+if (isCallable!fun)
 {
     auto gen = Generator!(Fun)(fun);
     gen.popFront(); // prime the first element
@@ -3225,7 +3226,7 @@ auto generate(Fun)(Fun fun)
 
 /// ditto
 auto generate(alias fun)()
-    if (isCallable!fun)
+if (isCallable!fun)
 {
     auto gen = Generator!(fun)();
     gen.popFront(); // prime the first element
@@ -3386,7 +3387,7 @@ Note: The input range must not be empty.
 Tip: This is a great way to implement simple circular buffers.
 */
 struct Cycle(R)
-    if (isForwardRange!R && !isInfinite!R)
+if (isForwardRange!R && !isInfinite!R)
 {
     static if (isRandomAccessRange!R && hasLength!R)
     {
@@ -3553,14 +3554,14 @@ struct Cycle(R)
 
 /// ditto
 template Cycle(R)
-    if (isInfinite!R)
+if (isInfinite!R)
 {
     alias Cycle = R;
 }
 
 ///
 struct Cycle(R)
-    if (isStaticArray!R)
+if (isStaticArray!R)
 {
     private alias ElementType = typeof(R.init[0]);
     private ElementType* _ptr;
@@ -3643,7 +3644,7 @@ nothrow:
 
 /// Ditto
 Cycle!R cycle(R)(R input)
-    if (isForwardRange!R && !isInfinite!R)
+if (isForwardRange!R && !isInfinite!R)
 {
     assert(!input.empty, "Attempting to pass an empty input to cycle");
     return Cycle!R(input);
@@ -3664,7 +3665,7 @@ Cycle!R cycle(R)(R input)
 
 /// Ditto
 Cycle!R cycle(R)(R input, size_t index = 0)
-    if (isRandomAccessRange!R && !isInfinite!R)
+if (isRandomAccessRange!R && !isInfinite!R)
 {
     assert(!input.empty, "Attempting to pass an empty input to cycle");
     return Cycle!R(input, index);
@@ -3672,14 +3673,14 @@ Cycle!R cycle(R)(R input, size_t index = 0)
 
 /// Ditto
 Cycle!R cycle(R)(R input)
-    if (isInfinite!R)
+if (isInfinite!R)
 {
     return input;
 }
 
 /// Ditto
 Cycle!R cycle(R)(ref R input, size_t index = 0) @system
-    if (isStaticArray!R)
+if (isStaticArray!R)
 {
     return Cycle!R(input, index);
 }
@@ -3878,7 +3879,7 @@ private alias lengthType(R) = typeof(R.init.length.init);
         `sp` is set to `StoppingPolicy.requireSameLength`.
 */
 struct Zip(Ranges...)
-    if (Ranges.length && allSatisfy!(isInputRange, Ranges))
+if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
     import std.format : format; //for generic mixins
     import std.typecons : Tuple;
@@ -4223,7 +4224,7 @@ struct Zip(Ranges...)
 
 /// Ditto
 auto zip(Ranges...)(Ranges ranges)
-    if (Ranges.length && allSatisfy!(isInputRange, Ranges))
+if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
     return Zip!Ranges(ranges);
 }
@@ -4281,7 +4282,7 @@ pure unittest
 
 /// Ditto
 auto zip(Ranges...)(StoppingPolicy sp, Ranges ranges)
-    if (Ranges.length && allSatisfy!(isInputRange, Ranges))
+if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
     return Zip!Ranges(ranges, sp);
 }
@@ -4601,7 +4602,7 @@ private string lockstepMixin(Ranges...)(bool withIndex, bool reverse)
        Use `zip` if you want to pass the result to a range function.
 */
 struct Lockstep(Ranges...)
-    if (Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
+if (Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
 {
     ///
     this(R ranges, StoppingPolicy sp = StoppingPolicy.shortest)
@@ -4684,13 +4685,13 @@ template Lockstep(Range)
 
 /// Ditto
 Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges)
-    if (allSatisfy!(isInputRange, Ranges))
+if (allSatisfy!(isInputRange, Ranges))
 {
     return Lockstep!(Ranges)(ranges);
 }
 /// Ditto
 Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges, StoppingPolicy s)
-    if (allSatisfy!(isInputRange, Ranges))
+if (allSatisfy!(isInputRange, Ranges))
 {
     static if (Ranges.length > 1)
         return Lockstep!Ranges(ranges, s);
@@ -5306,7 +5307,7 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
 
 /// Ditto
 auto iota(B, E)(B begin, E end)
-    if (isFloatingPoint!(CommonType!(B, E)))
+if (isFloatingPoint!(CommonType!(B, E)))
 {
     return iota(begin, end, CommonType!(B, E)(1));
 }
@@ -5708,11 +5709,11 @@ unittest
  */
 /// ditto
 auto iota(B, E)(B begin, E end)
-    if (!isIntegral!(CommonType!(B, E)) &&
-        !isFloatingPoint!(CommonType!(B, E)) &&
-        !isPointer!(CommonType!(B, E)) &&
-        is(typeof((ref B b) { ++b; })) &&
-        (is(typeof(B.init < E.init)) || is(typeof(B.init == E.init))) )
+if (!isIntegral!(CommonType!(B, E)) &&
+    !isFloatingPoint!(CommonType!(B, E)) &&
+    !isPointer!(CommonType!(B, E)) &&
+    is(typeof((ref B b) { ++b; })) &&
+    (is(typeof(B.init < E.init)) || is(typeof(B.init == E.init))) )
 {
     static struct Result
     {
@@ -6422,9 +6423,9 @@ Transversal!(RangeOfRanges, opt) transversal
 }
 
 struct Transposed(RangeOfRanges)
-    if (isForwardRange!RangeOfRanges &&
-        isInputRange!(ElementType!RangeOfRanges) &&
-        hasAssignableElements!RangeOfRanges)
+if (isForwardRange!RangeOfRanges &&
+    isInputRange!(ElementType!RangeOfRanges) &&
+    hasAssignableElements!RangeOfRanges)
 {
     //alias ElementType = typeof(map!"a.front"(RangeOfRanges.init));
 
@@ -6508,9 +6509,9 @@ Given a range of ranges, returns a range of ranges where the $(I i)'th subrange
 contains the $(I i)'th elements of the original subranges.
  */
 Transposed!RangeOfRanges transposed(RangeOfRanges)(RangeOfRanges rr)
-    if (isForwardRange!RangeOfRanges &&
-        isInputRange!(ElementType!RangeOfRanges) &&
-        hasAssignableElements!RangeOfRanges)
+if (isForwardRange!RangeOfRanges &&
+    isInputRange!(ElementType!RangeOfRanges) &&
+    hasAssignableElements!RangeOfRanges)
 {
     return Transposed!RangeOfRanges(rr);
 }
@@ -6572,8 +6573,8 @@ bidirectional or random-access if $(D Indices) is bidirectional or
 random-access, respectively.
 */
 struct Indexed(Source, Indices)
-    if (isRandomAccessRange!Source && isInputRange!Indices &&
-        is(typeof(Source.init[ElementType!(Indices).init])))
+if (isRandomAccessRange!Source && isInputRange!Indices &&
+    is(typeof(Source.init[ElementType!(Indices).init])))
 {
     this(Source source, Indices indices)
     {
@@ -6830,7 +6831,7 @@ divisible by $(D chunkSize), the back element of this range will contain
 fewer than $(D chunkSize) elements.
 */
 struct Chunks(Source)
-    if (isForwardRange!Source)
+if (isForwardRange!Source)
 {
     /// Standard constructor
     this(Source source, size_t chunkSize)
@@ -7138,7 +7139,7 @@ elements. If $(D source.length < chunkCount), some chunks will be empty.
 $(D chunkCount) must not be zero, unless $(D source) is also empty.
 */
 struct EvenChunks(Source)
-    if (isForwardRange!Source && hasLength!Source)
+if (isForwardRange!Source && hasLength!Source)
 {
     /// Standard constructor
     this(Source source, size_t chunkCount)
@@ -7525,7 +7526,7 @@ Returns:
 See_Also: $(LREF chain) to chain ranges
  */
 auto only(Values...)(auto ref Values values)
-    if (!is(CommonType!Values == void) || Values.length == 0)
+if (!is(CommonType!Values == void) || Values.length == 0)
 {
     return OnlyResult!(CommonType!Values, Values.length)(values);
 }
@@ -7763,7 +7764,7 @@ Useful for using $(D foreach) with an index loop variable:
 ----
 */
 auto enumerate(Enumerator = size_t, Range)(Range range, Enumerator start = 0)
-    if (isIntegral!Enumerator && isInputRange!Range)
+if (isIntegral!Enumerator && isInputRange!Range)
 in
 {
     static if (hasLength!Range)
@@ -8913,7 +8914,7 @@ unittest
         range is returned rather than a `RefRange`.
   +/
 struct RefRange(R)
-    if (isInputRange!R)
+if (isInputRange!R)
 {
 public:
 
@@ -9631,14 +9632,14 @@ unittest // issue 14575
 
 /// ditto
 auto refRange(R)(R* range)
-    if (isInputRange!R && !is(R == class))
+if (isInputRange!R && !is(R == class))
 {
     return RefRange!R(range);
 }
 
 /// ditto
 auto refRange(R)(R* range)
-    if (isInputRange!R && is(R == class))
+if (isInputRange!R && is(R == class))
 {
     return *range;
 }
@@ -9688,7 +9689,7 @@ auto refRange(R)(R* range)
 }
 
 private struct Bitwise(R)
-    if (isInputRange!R && isIntegral!(ElementType!R))
+if (isInputRange!R && isIntegral!(ElementType!R))
 {
 private:
     alias ElemType = ElementType!R;
@@ -9946,7 +9947,7 @@ Returns:
     and random access capabilities
 */
 auto bitwise(R)(auto ref R range)
-    if (isInputRange!R && isIntegral!(ElementType!R))
+if (isInputRange!R && isIntegral!(ElementType!R))
 {
     return Bitwise!R(range);
 }
@@ -10569,7 +10570,8 @@ Returns:
 See Also:
     $(REF rightJustifier, std, string)
 */
-auto padRight(R, E)(R r, E e, size_t n) if (
+auto padRight(R, E)(R r, E e, size_t n)
+if (
     isInputRange!R &&
     !isInfinite!R &&
     !is(CommonType!(ElementType!R, E) == void))

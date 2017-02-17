@@ -352,7 +352,8 @@ void assertThrown(T : Throwable = Exception, E)
     --------------------
  +/
 T enforce(E : Throwable = Exception, T)(T value, lazy const(char)[] msg = null,
-    string file = __FILE__, size_t line = __LINE__) if (is(typeof({ if (!value) {} })))
+string file = __FILE__, size_t line = __LINE__)
+if (is(typeof({ if (!value) {} })))
 {
     if (!value) bailOut!E(file, line, msg);
     return value;
@@ -375,8 +376,8 @@ T enforce(E : Throwable = Exception, T)(T value, lazy const(char)[] msg = null,
  +/
 T enforce(T, Dg, string file = __FILE__, size_t line = __LINE__)
     (T value, scope Dg dg)
-    if (isSomeFunction!Dg && is(typeof( dg() )) &&
-        is(typeof({ if (!value) {} })))
+if (isSomeFunction!Dg && is(typeof( dg() )) &&
+    is(typeof({ if (!value) {} })))
 {
     if (!value) dg();
     return value;
@@ -576,7 +577,7 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
     --------------------
  +/
 template enforceEx(E : Throwable)
-    if (is(typeof(new E("", __FILE__, __LINE__))))
+if (is(typeof(new E("", __FILE__, __LINE__))))
 {
     /++ Ditto +/
     T enforceEx(T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__)
@@ -588,7 +589,7 @@ template enforceEx(E : Throwable)
 
 /++ Ditto +/
 template enforceEx(E : Throwable)
-    if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LINE__))))
+if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LINE__))))
 {
     /++ Ditto +/
     T enforceEx(T)(T value, string file = __FILE__, size_t line = __LINE__)
@@ -1030,8 +1031,8 @@ as the language is free to assume objects don't have internal pointers
 (TDPL 7.1.3.5).
 */
 bool doesPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
-    if (__traits(isRef, source) || isDynamicArray!S ||
-        isPointer!S || is(S == class))
+if (__traits(isRef, source) || isDynamicArray!S ||
+    isPointer!S || is(S == class))
 {
     static if (isPointer!S || is(S == class) || is(S == interface))
     {
@@ -1073,8 +1074,8 @@ bool doesPointTo(S, T)(auto ref const shared S source, ref const shared T target
 
 /// ditto
 bool mayPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
-    if (__traits(isRef, source) || isDynamicArray!S ||
-        isPointer!S || is(S == class))
+if (__traits(isRef, source) || isDynamicArray!S ||
+    isPointer!S || is(S == class))
 {
     static if (isPointer!S || is(S == class) || is(S == interface))
     {
@@ -1755,7 +1756,7 @@ this by $(D take)ing 0 from the return value of the handler function and
 returning that when an exception is caught.
 */
 auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Range)(Range input)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     static struct Handler
     {

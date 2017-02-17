@@ -410,7 +410,7 @@ Returns:
 See_also: $(LREF swapped), $(LREF everted)
 +/
 template transposed(Dimensions...)
-    if (Dimensions.length)
+if (Dimensions.length)
 {
     static if (!allSatisfy!(isSize_t, Dimensions))
         alias transposed = .transposed!(staticMap!(toSize_t, Dimensions));
@@ -540,7 +540,7 @@ Returns:
     n-dimensional slice of the same type
 +/
 template reversed(Dimensions...)
-    if (Dimensions.length)
+if (Dimensions.length)
 {
     static if (!allSatisfy!(isSize_t, Dimensions))
         alias reversed = .reversed!(staticMap!(toSize_t, Dimensions));
@@ -648,7 +648,7 @@ Returns:
     n-dimensional slice of the same type
 +/
 template strided(Dimensions...)
-    if (Dimensions.length)
+if (Dimensions.length)
 {
     static if (!allSatisfy!(isSize_t, Dimensions))
         alias strided = .strided!(staticMap!(toSize_t, Dimensions));
@@ -877,7 +877,7 @@ Returns:
     n-dimensional slice of the same type
 +/
 template dropOne(Dimensions...)
-    if (Dimensions.length)
+if (Dimensions.length)
 {
     static if (!allSatisfy!(isSize_t, Dimensions))
         alias dropOne = .dropOne!(staticMap!(toSize_t, Dimensions));
@@ -912,7 +912,7 @@ body
 
 ///ditto
 template dropBackOne(Dimensions...)
-    if (Dimensions.length)
+if (Dimensions.length)
 {
     static if (!allSatisfy!(isSize_t, Dimensions))
         alias dropBackOne = .dropBackOne!(staticMap!(toSize_t, Dimensions));
@@ -1002,7 +1002,7 @@ Returns:
     n-dimensional slice of the same type
 +/
 template dropExactly(Dimensions...)
-    if (Dimensions.length)
+if (Dimensions.length)
 {
     static if (!allSatisfy!(isSize_t, Dimensions))
         alias dropExactly = .dropExactly!(staticMap!(toSize_t, Dimensions));
@@ -1033,7 +1033,7 @@ body
 
 ///ditto
 template dropBackExactly(Dimensions...)
-    if (Dimensions.length)
+if (Dimensions.length)
 {
     static if (!allSatisfy!(isSize_t, Dimensions))
         alias dropBackExactly = .dropBackExactly!(staticMap!(toSize_t, Dimensions));
@@ -1098,7 +1098,7 @@ Returns:
     n-dimensional slice of the same type
 +/
 template drop(Dimensions...)
-    if (Dimensions.length)
+if (Dimensions.length)
 {
     static if (!allSatisfy!(isSize_t, Dimensions))
         alias drop = .drop!(staticMap!(toSize_t, Dimensions));
@@ -1129,7 +1129,7 @@ body
 
 ///ditto
 template dropBack(Dimensions...)
-    if (Dimensions.length)
+if (Dimensions.length)
 {
     static if (!allSatisfy!(isSize_t, Dimensions))
         alias dropBack = .dropBack!(staticMap!(toSize_t, Dimensions));

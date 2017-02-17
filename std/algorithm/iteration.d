@@ -70,7 +70,8 @@ import std.functional; // : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
 
-private template aggregate(fun...) if (fun.length >= 1)
+private template aggregate(fun...)
+if (fun.length >= 1)
 {
     /* --Intentionally not ddoc--
      * Aggregates elements in each subrange of the given range of ranges using
@@ -453,7 +454,8 @@ Returns:
 See_Also:
     $(HTTP en.wikipedia.org/wiki/Map_(higher-order_function), Map (higher-order function))
 */
-template map(fun...) if (fun.length >= 1)
+template map(fun...)
+if (fun.length >= 1)
 {
     auto map(Range)(Range r) if (isInputRange!(Unqual!Range))
     {
@@ -1084,7 +1086,8 @@ Returns:
 See_Also:
     $(HTTP en.wikipedia.org/wiki/Filter_(higher-order_function), Filter (higher-order function))
  */
-template filter(alias predicate) if (is(typeof(unaryFun!predicate)))
+template filter(alias predicate)
+if (is(typeof(unaryFun!predicate)))
 {
     auto filter(Range)(Range range) if (isInputRange!(Unqual!Range))
     {
@@ -1394,7 +1397,8 @@ Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
 }
 
 /// ditto
-struct Group(alias pred, R) if (isInputRange!R)
+struct Group(alias pred, R)
+if (isInputRange!R)
 {
     import std.typecons : Rebindable, tuple, Tuple;
 
@@ -1542,7 +1546,7 @@ struct Group(alias pred, R) if (isInputRange!R)
 
 // Used by implementation of chunkBy for non-forward input ranges.
 private struct ChunkByChunkImpl(alias pred, Range)
-    if (isInputRange!Range && !isForwardRange!Range)
+if (isInputRange!Range && !isForwardRange!Range)
 {
     alias fun = binaryFun!pred;
 
@@ -1581,7 +1585,7 @@ private template ChunkByImplIsUnary(alias pred, Range)
 
 // Implementation of chunkBy for non-forward input ranges.
 private struct ChunkByImpl(alias pred, Range)
-    if (isInputRange!Range && !isForwardRange!Range)
+if (isInputRange!Range && !isForwardRange!Range)
 {
     enum bool isUnary = ChunkByImplIsUnary!(pred, Range);
 
@@ -1645,7 +1649,7 @@ private struct ChunkByImpl(alias pred, Range)
 
 // Single-pass implementation of chunkBy for forward ranges.
 private struct ChunkByImpl(alias pred, Range)
-    if (isForwardRange!Range)
+if (isForwardRange!Range)
 {
     import std.typecons : RefCounted;
 
@@ -1861,7 +1865,7 @@ private struct ChunkByImpl(alias pred, Range)
  * element.
  */
 auto chunkBy(alias pred, Range)(Range r)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     return ChunkByImpl!(pred, Range)(r);
 }
@@ -2699,7 +2703,8 @@ See_Also:
     $(LREF sum) is similar to $(D reduce!((a, b) => a + b)) that offers
     pairwise summing of floating point numbers.
 +/
-template reduce(fun...) if (fun.length >= 1)
+template reduce(fun...)
+if (fun.length >= 1)
 {
     import std.meta : staticMap;
 
@@ -3068,7 +3073,8 @@ The number of seeds must be correspondingly increased.
     //http://forum.dlang.org/post/oghtttkopzjshsuflelk@forum.dlang.org
     //Seed is tuple of const.
     static auto minmaxElement(alias F = min, alias G = max, R)(in R range)
-        @safe pure nothrow if (isInputRange!R)
+    @safe pure nothrow
+    if (isInputRange!R)
     {
         return reduce!(F, G)(tuple(ElementType!R.max,
                                    ElementType!R.min), range);
@@ -3149,7 +3155,8 @@ See_Also:
     This is functionally equivalent to $(LREF reduce) with the argument order reversed,
     and without the need to use $(LREF tuple) for multiple seeds.
 +/
-template fold(fun...) if (fun.length >= 1)
+template fold(fun...)
+if (fun.length >= 1)
 {
     auto fold(R, S...)(R r, S seed)
     {
@@ -3522,7 +3529,8 @@ The number of seeds must be correspondingly increased.
 
     //Seed is tuple of const.
     static auto minmaxElement(alias F = min, alias G = max, R)(in R range)
-        @safe pure nothrow if (isInputRange!R)
+    @safe pure nothrow
+    if (isInputRange!R)
     {
         return range.cumulativeFold!(F, G)(tuple(ElementType!R.max, ElementType!R.min));
     }
@@ -5121,14 +5129,14 @@ See_Also:
 $(REF nextPermutation, std,algorithm,sorting).
 */
 Permutations!Range permutations(Range)(Range r)
-    if (isRandomAccessRange!Range && hasLength!Range)
+if (isRandomAccessRange!Range && hasLength!Range)
 {
     return typeof(return)(r);
 }
 
 /// ditto
 struct Permutations(Range)
-    if (isRandomAccessRange!Range && hasLength!Range)
+if (isRandomAccessRange!Range && hasLength!Range)
 {
     private size_t[] _indices, _state;
     private Range _r;

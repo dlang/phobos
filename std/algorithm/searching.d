@@ -381,7 +381,8 @@ public:
 /// Ditto
 BoyerMooreFinder!(binaryFun!(pred), Range) boyerMooreFinder
 (alias pred = "a == b", Range)
-(Range needle) if ((isRandomAccessRange!(Range) && hasSlicing!Range) || isSomeString!Range)
+(Range needle)
+if ((isRandomAccessRange!(Range) && hasSlicing!Range) || isSomeString!Range)
 {
     return typeof(return)(needle);
 }
@@ -615,8 +616,8 @@ Returns:
     The number of positions in the `haystack` for which `pred` returned true.
 */
 size_t count(alias pred = "a == b", Range, E)(Range haystack, E needle)
-    if (isInputRange!Range && !isInfinite!Range &&
-        is(typeof(binaryFun!pred(haystack.front, needle)) : bool))
+if (isInputRange!Range && !isInfinite!Range &&
+    is(typeof(binaryFun!pred(haystack.front, needle)) : bool))
 {
     bool pred2(ElementType!Range a) { return binaryFun!pred(a, needle); }
     return count!pred2(haystack);
@@ -672,9 +673,9 @@ size_t count(alias pred = "a == b", Range, E)(Range haystack, E needle)
 
 /// Ditto
 size_t count(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
-    if (isForwardRange!R1 && !isInfinite!R1 &&
-        isForwardRange!R2 &&
-        is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
+if (isForwardRange!R1 && !isInfinite!R1 &&
+    isForwardRange!R2 &&
+    is(typeof(binaryFun!pred(haystack.front, needle.front)) : bool))
 {
     assert(!needle.empty, "Cannot count occurrences of an empty range");
 
@@ -696,8 +697,8 @@ size_t count(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 
 /// Ditto
 size_t count(alias pred = "true", R)(R haystack)
-    if (isInputRange!R && !isInfinite!R &&
-        is(typeof(unaryFun!pred(haystack.front)) : bool))
+if (isInputRange!R && !isInfinite!R &&
+    is(typeof(unaryFun!pred(haystack.front)) : bool))
 {
     size_t result;
     alias T = ElementType!R; //For narrow strings forces dchar iteration
@@ -745,12 +746,12 @@ size_t count(alias pred = "true", R)(R haystack)
     See_Also: $(REF indexOf, std,string)
   +/
 ptrdiff_t countUntil(alias pred = "a == b", R, Rs...)(R haystack, Rs needles)
-    if (isForwardRange!R
-        && Rs.length > 0
-        && isForwardRange!(Rs[0]) == isInputRange!(Rs[0])
-        && is(typeof(startsWith!pred(haystack, needles[0])))
-        && (Rs.length == 1
-            || is(typeof(countUntil!pred(haystack, needles[1 .. $])))))
+if (isForwardRange!R
+    && Rs.length > 0
+    && isForwardRange!(Rs[0]) == isInputRange!(Rs[0])
+    && is(typeof(startsWith!pred(haystack, needles[0])))
+    && (Rs.length == 1
+    || is(typeof(countUntil!pred(haystack, needles[1 .. $])))))
 {
     typeof(return) result;
 
@@ -833,8 +834,8 @@ ptrdiff_t countUntil(alias pred = "a == b", R, Rs...)(R haystack, Rs needles)
 
 /// ditto
 ptrdiff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
-    if (isInputRange!R &&
-        is(typeof(binaryFun!pred(haystack.front, needle)) : bool))
+if (isInputRange!R &&
+    is(typeof(binaryFun!pred(haystack.front, needle)) : bool))
 {
     bool pred2(ElementType!R a) { return binaryFun!pred(a, needle); }
     return countUntil!pred2(haystack);
@@ -903,8 +904,8 @@ ptrdiff_t countUntil(alias pred = "a == b", R, N)(R haystack, N needle)
     before $(D pred(haystack.front)) is $(D true).
   +/
 ptrdiff_t countUntil(alias pred, R)(R haystack)
-    if (isInputRange!R &&
-        is(typeof(unaryFun!pred(haystack.front)) : bool))
+if (isInputRange!R &&
+    is(typeof(unaryFun!pred(haystack.front)) : bool))
 {
     typeof(return) i;
     static if (isRandomAccessRange!R)
@@ -1117,8 +1118,8 @@ if (isBidirectionalRange!R &&
 
 /// Ditto
 bool endsWith(alias pred, R)(R doesThisEnd)
-    if (isInputRange!R &&
-        ifTestable!(typeof(doesThisEnd.front), unaryFun!pred))
+if (isInputRange!R &&
+    ifTestable!(typeof(doesThisEnd.front), unaryFun!pred))
 {
     return !doesThisEnd.empty && unaryFun!pred(doesThisEnd.back);
 }
@@ -1252,7 +1253,7 @@ Returns:
     The extreme value according to `map` and `selector` of the passed-in values.
 */
 private auto extremum(alias map = "a", alias selector = "a < b", Range)(Range r)
-    if (isInputRange!Range && !isInfinite!Range)
+if (isInputRange!Range && !isInfinite!Range)
 in
 {
     assert(!r.empty, "r is an empty range");
@@ -1269,8 +1270,8 @@ body
 private auto extremum(alias map = "a", alias selector = "a < b", Range,
                       RangeElementType = ElementType!Range)
                      (Range r, RangeElementType seedElement)
-    if (isInputRange!Range && !isInfinite!Range &&
-        !is(CommonType!(ElementType!Range, RangeElementType) == void))
+if (isInputRange!Range && !isInfinite!Range &&
+    !is(CommonType!(ElementType!Range, RangeElementType) == void))
 {
     alias mapFun = unaryFun!map;
     alias selectorFun = binaryFun!selector;
@@ -2509,7 +2510,7 @@ See_Also:
      $(HTTP sgi.com/tech/stl/adjacent_find.html, STL's adjacent_find)
 */
 Range findAdjacent(alias pred = "a == b", Range)(Range r)
-    if (isForwardRange!(Range))
+if (isForwardRange!(Range))
 {
     auto ahead = r.save;
     if (!ahead.empty)
@@ -2587,7 +2588,7 @@ See_Also:
 */
 InputRange findAmong(alias pred = "a == b", InputRange, ForwardRange)(
     InputRange seq, ForwardRange choices)
-    if (isInputRange!InputRange && isForwardRange!ForwardRange)
+if (isInputRange!InputRange && isForwardRange!ForwardRange)
 {
     for (; !seq.empty && find!pred(choices, seq.front).empty; seq.popFront())
     {
@@ -3283,7 +3284,7 @@ See_Also:
     $(REF min, std,algorithm,comparison)
 */
 auto minElement(alias map = "a", Range)(Range r)
-    if (isInputRange!Range && !isInfinite!Range)
+if (isInputRange!Range && !isInfinite!Range)
 {
     return extremum!map(r);
 }
@@ -3291,8 +3292,8 @@ auto minElement(alias map = "a", Range)(Range r)
 /// ditto
 auto minElement(alias map = "a", Range, RangeElementType = ElementType!Range)
                (Range r, RangeElementType seed)
-    if (isInputRange!Range && !isInfinite!Range &&
-        !is(CommonType!(ElementType!Range, RangeElementType) == void))
+if (isInputRange!Range && !isInfinite!Range &&
+    !is(CommonType!(ElementType!Range, RangeElementType) == void))
 {
     return extremum!map(r, seed);
 }
@@ -3375,8 +3376,8 @@ See_Also:
     $(REF max, std,algorithm,comparison)
 */
 auto maxElement(alias map = "a", Range)(Range r)
-    if (isInputRange!Range && !isInfinite!Range &&
-        !is(CommonType!(ElementType!Range, RangeElementType) == void))
+if (isInputRange!Range && !isInfinite!Range &&
+    !is(CommonType!(ElementType!Range, RangeElementType) == void))
 {
     return extremum!(map, "a > b")(r);
 }
@@ -3384,7 +3385,7 @@ auto maxElement(alias map = "a", Range)(Range r)
 /// ditto
 auto maxElement(alias map = "a", Range, RangeElementType = ElementType!Range)
                (Range r, RangeElementType seed)
-    if (isInputRange!Range && !isInfinite!Range)
+if (isInputRange!Range && !isInfinite!Range)
 {
     return extremum!(map, "a > b")(r, seed);
 }
@@ -3477,8 +3478,8 @@ smallest (respectively largest) element and with the same ending as `range`.
 
 */
 Range minPos(alias pred = "a < b", Range)(Range range)
-    if (isForwardRange!Range && !isInfinite!Range &&
-        is(typeof(binaryFun!pred(range.front, range.front))))
+if (isForwardRange!Range && !isInfinite!Range &&
+    is(typeof(binaryFun!pred(range.front, range.front))))
 {
     static if (hasSlicing!Range && isRandomAccessRange!Range && hasLength!Range)
     {
@@ -3593,8 +3594,8 @@ See_Also:
     $(REF min, std,algorithm,comparison), $(LREF minCount), $(LREF minElement), $(LREF minPos)
  */
 sizediff_t minIndex(alias pred = "a < b", Range)(Range range)
-    if (isForwardRange!Range && !isInfinite!Range &&
-        is(typeof(binaryFun!pred(range.front, range.front))))
+if (isForwardRange!Range && !isInfinite!Range &&
+    is(typeof(binaryFun!pred(range.front, range.front))))
 {
     if (range.empty) return -1;
 
@@ -3711,8 +3712,8 @@ See_Also:
     $(REF max, std,algorithm,comparison), $(LREF maxCount), $(LREF maxElement), $(LREF maxPos)
  */
 sizediff_t maxIndex(alias pred = "a < b", Range)(Range range)
-    if (isInputRange!Range && !isInfinite!Range &&
-        is(typeof(binaryFun!pred(range.front, range.front))))
+if (isInputRange!Range && !isInfinite!Range &&
+    is(typeof(binaryFun!pred(range.front, range.front))))
 {
     return range.minIndex!((a, b) => binaryFun!pred(b, a));
 }
@@ -3800,8 +3801,8 @@ advanced to the point past this segment; otherwise false, and $(D r1) is left
 in its original position.
  */
 bool skipOver(R1, R2)(ref R1 r1, R2 r2)
-    if (isForwardRange!R1 && isInputRange!R2
-        && is(typeof(r1.front == r2.front)))
+if (isForwardRange!R1 && isInputRange!R2
+    && is(typeof(r1.front == r2.front)))
 {
     static if (is(typeof(r1[0 .. $] == r2) : bool)
         && is(typeof(r2.length > r1.length) : bool)
@@ -3822,9 +3823,9 @@ bool skipOver(R1, R2)(ref R1 r1, R2 r2)
 
 /// Ditto
 bool skipOver(alias pred, R1, R2)(ref R1 r1, R2 r2)
-    if (is(typeof(binaryFun!pred(r1.front, r2.front))) &&
-        isForwardRange!R1 &&
-        isInputRange!R2)
+if (is(typeof(binaryFun!pred(r1.front, r2.front))) &&
+    isForwardRange!R1 &&
+    isInputRange!R2)
 {
     static if (hasLength!R1 && hasLength!R2)
     {
@@ -3880,14 +3881,14 @@ predicate, and the range has been advanced by one element; otherwise false, and
 the range is left untouched.
  */
 bool skipOver(R, E)(ref R r, E e)
-    if (isInputRange!R && is(typeof(r.front == e) : bool))
+if (isInputRange!R && is(typeof(r.front == e) : bool))
 {
     return skipOver!((a, b) => a == b)(r, e);
 }
 
 /// Ditto
 bool skipOver(alias pred, R, E)(ref R r, E e)
-    if (is(typeof(binaryFun!pred(r.front, e))) && isInputRange!R)
+if (is(typeof(binaryFun!pred(r.front, e))) && isInputRange!R)
 {
     if (r.empty || !binaryFun!pred(r.front, e))
         return false;
@@ -4094,8 +4095,8 @@ if (isInputRange!R1 &&
 
 /// Ditto
 bool startsWith(alias pred = "a == b", R, E)(R doesThisStart, E withThis)
-    if (isInputRange!R &&
-        is(typeof(binaryFun!pred(doesThisStart.front, withThis)) : bool))
+if (isInputRange!R &&
+    is(typeof(binaryFun!pred(doesThisStart.front, withThis)) : bool))
 {
     return doesThisStart.empty
         ? false
@@ -4104,8 +4105,8 @@ bool startsWith(alias pred = "a == b", R, E)(R doesThisStart, E withThis)
 
 /// Ditto
 bool startsWith(alias pred, R)(R doesThisStart)
-    if (isInputRange!R &&
-        ifTestable!(typeof(doesThisStart.front), unaryFun!pred))
+if (isInputRange!R &&
+    ifTestable!(typeof(doesThisStart.front), unaryFun!pred))
 {
     return !doesThisStart.empty && unaryFun!pred(doesThisStart.front);
 }
@@ -4315,7 +4316,8 @@ until(alias pred, Range)
 }
 
 /// ditto
-struct Until(alias pred, Range, Sentinel) if (isInputRange!Range)
+struct Until(alias pred, Range, Sentinel)
+if (isInputRange!Range)
 {
     private Range _input;
     static if (!is(Sentinel == void))

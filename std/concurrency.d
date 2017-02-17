@@ -479,7 +479,7 @@ private template isSpawnable(F, T...)
  * ---
  */
 Tid spawn(F, T...)( F fn, T args )
-    if ( isSpawnable!(F, T) )
+if ( isSpawnable!(F, T) )
 {
     static assert( !hasLocalAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
@@ -507,7 +507,7 @@ Tid spawn(F, T...)( F fn, T args )
  *  A Tid representing the new thread.
  */
 Tid spawnLinked(F, T...)( F fn, T args )
-    if ( isSpawnable!(F, T) )
+if ( isSpawnable!(F, T) )
 {
     static assert( !hasLocalAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
@@ -519,7 +519,7 @@ Tid spawnLinked(F, T...)( F fn, T args )
  *
  */
 private Tid _spawn(F, T...)( bool linked, F fn, T args )
-    if ( isSpawnable!(F, T) )
+if ( isSpawnable!(F, T) )
 {
     // TODO: MessageList and &exec should be shared.
     auto spawnTid = Tid( new MessageBox );

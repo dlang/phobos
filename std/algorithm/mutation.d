@@ -114,7 +114,7 @@ See_Also:
     $(HTTP sgi.com/tech/stl/_rotate.html, STL's rotate)
 */
 size_t bringToFront(InputRange, ForwardRange)(InputRange front, ForwardRange back)
-    if (isInputRange!InputRange && isForwardRange!ForwardRange)
+if (isInputRange!InputRange && isForwardRange!ForwardRange)
 {
     import std.string : representation;
 
@@ -139,7 +139,7 @@ size_t bringToFront(InputRange, ForwardRange)(InputRange front, ForwardRange bac
 }
 
 private size_t bringToFrontImpl(InputRange, ForwardRange)(InputRange front, ForwardRange back)
-    if (isInputRange!InputRange && isForwardRange!ForwardRange)
+if (isInputRange!InputRange && isForwardRange!ForwardRange)
 {
     import std.range : take, Take;
     import std.array : sameHead;
@@ -363,7 +363,7 @@ See_Also:
     $(HTTP sgi.com/tech/stl/_copy.html, STL's _copy)
  */
 TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
-    if (areCopyCompatibleArrays!(SourceRange, TargetRange))
+if (areCopyCompatibleArrays!(SourceRange, TargetRange))
 {
     const tlen = target.length;
     const slen = source.length;
@@ -392,9 +392,9 @@ TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange targe
 
 /// ditto
 TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
-    if (!areCopyCompatibleArrays!(SourceRange, TargetRange) &&
-        isInputRange!SourceRange &&
-        isOutputRange!(TargetRange, ElementType!SourceRange))
+if (!areCopyCompatibleArrays!(SourceRange, TargetRange) &&
+    isInputRange!SourceRange &&
+    isOutputRange!(TargetRange, ElementType!SourceRange))
 {
     // Specialize for 2 random access ranges.
     // Typically 2 random access ranges are faster iterated by common
@@ -541,7 +541,7 @@ See_Also:
         $(LREF initializeAll)
  */
 void fill(Range, Value)(Range range, Value value)
-    if (isInputRange!Range && is(typeof(range.front = value)))
+if (isInputRange!Range && is(typeof(range.front = value)))
 {
     alias T = ElementType!Range;
 
@@ -652,10 +652,10 @@ Params:
              representing the _fill pattern.
  */
 void fill(InputRange, ForwardRange)(InputRange range, ForwardRange filler)
-    if (isInputRange!InputRange
-        && (isForwardRange!ForwardRange
-            || (isInputRange!ForwardRange && isInfinite!ForwardRange))
-        && is(typeof(InputRange.init.front = ForwardRange.init.front)))
+if (isInputRange!InputRange
+    && (isForwardRange!ForwardRange
+    || (isInputRange!ForwardRange && isInfinite!ForwardRange))
+    && is(typeof(InputRange.init.front = ForwardRange.init.front)))
 {
     static if (isInfinite!ForwardRange)
     {
@@ -776,7 +776,7 @@ See_Also:
         $(LREF uninitializeFill)
  */
 void initializeAll(Range)(Range range)
-    if (isInputRange!Range && hasLvalueElements!Range && hasAssignableElements!Range)
+if (isInputRange!Range && hasLvalueElements!Range && hasAssignableElements!Range)
 {
     import core.stdc.string : memset, memcpy;
     import std.traits : hasElaborateAssign, isDynamicArray;
@@ -825,7 +825,7 @@ void initializeAll(Range)(Range range)
 
 /// ditto
 void initializeAll(Range)(Range range)
-    if (is(Range == char[]) || is(Range == wchar[]))
+if (is(Range == char[]) || is(Range == wchar[]))
 {
     alias T = ElementEncodingType!Range;
     range[] = T.init;
@@ -2226,21 +2226,21 @@ if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
         a Range with all of range except element at the start and end
 */
 Range strip(Range, E)(Range range, E element)
-    if (isBidirectionalRange!Range && is(typeof(range.front == element) : bool))
+if (isBidirectionalRange!Range && is(typeof(range.front == element) : bool))
 {
     return range.stripLeft(element).stripRight(element);
 }
 
 /// ditto
 Range strip(alias pred, Range)(Range range)
-    if (isBidirectionalRange!Range && is(typeof(pred(range.back)) : bool))
+if (isBidirectionalRange!Range && is(typeof(pred(range.back)) : bool))
 {
     return range.stripLeft!pred().stripRight!pred();
 }
 
 /// ditto
 Range stripLeft(Range, E)(Range range, E element)
-    if (isInputRange!Range && is(typeof(range.front == element) : bool))
+if (isInputRange!Range && is(typeof(range.front == element) : bool))
 {
     import std.algorithm.searching : find;
     return find!((auto ref a) => a != element)(range);
@@ -2248,7 +2248,7 @@ Range stripLeft(Range, E)(Range range, E element)
 
 /// ditto
 Range stripLeft(alias pred, Range)(Range range)
-    if (isInputRange!Range && is(typeof(pred(range.front)) : bool))
+if (isInputRange!Range && is(typeof(pred(range.front)) : bool))
 {
     import std.algorithm.searching : find;
     import std.functional : not;
@@ -2258,7 +2258,7 @@ Range stripLeft(alias pred, Range)(Range range)
 
 /// ditto
 Range stripRight(Range, E)(Range range, E element)
-    if (isBidirectionalRange!Range && is(typeof(range.back == element) : bool))
+if (isBidirectionalRange!Range && is(typeof(range.back == element) : bool))
 {
     for (; !range.empty; range.popBack())
     {
@@ -2270,7 +2270,7 @@ Range stripRight(Range, E)(Range range, E element)
 
 /// ditto
 Range stripRight(alias pred, Range)(Range range)
-    if (isBidirectionalRange!Range && is(typeof(pred(range.back)) : bool))
+if (isBidirectionalRange!Range && is(typeof(pred(range.back)) : bool))
 {
     for (; !range.empty; range.popBack())
     {
@@ -2572,7 +2572,7 @@ unittest
 
 /// ditto
 void swap(T)(ref T lhs, ref T rhs)
-    if (is(typeof(lhs.proxySwap(rhs))))
+if (is(typeof(lhs.proxySwap(rhs))))
 {
     lhs.proxySwap(rhs);
 }
@@ -2694,7 +2694,7 @@ pure @safe nothrow unittest
 }
 
 private void swapFront(R1, R2)(R1 r1, R2 r2)
-    if (isInputRange!R1 && isInputRange!R2)
+if (isInputRange!R1 && isInputRange!R2)
 {
     static if (is(typeof(swap(r1.front, r2.front))))
     {
@@ -2727,8 +2727,8 @@ Returns:
 */
 Tuple!(InputRange1, InputRange2)
 swapRanges(InputRange1, InputRange2)(InputRange1 r1, InputRange2 r2)
-    if (hasSwappableElements!InputRange1 && hasSwappableElements!InputRange2
-        && is(ElementType!InputRange1 == ElementType!InputRange2))
+if (hasSwappableElements!InputRange1 && hasSwappableElements!InputRange2
+    && is(ElementType!InputRange1 == ElementType!InputRange2))
 {
     for (; !r1.empty && !r2.empty; r1.popFront(), r2.popFront())
     {
@@ -2768,7 +2768,7 @@ See_Also:
         $(LREF initializeAll)
  */
 void uninitializedFill(Range, Value)(Range range, Value value)
-    if (isInputRange!Range && hasLvalueElements!Range && is(typeof(range.front = value)))
+if (isInputRange!Range && hasLvalueElements!Range && is(typeof(range.front = value)))
 {
     import std.traits : hasElaborateAssign;
 

@@ -34,7 +34,8 @@ import std.traits;
         be $(D Complex!double).  Otherwise, the return type is
         deduced using $(D std.traits.CommonType!(R, I)).
 */
-auto complex(R)(R re)  @safe pure nothrow @nogc  if (is(R : double))
+auto complex(R)(R re)  @safe pure nothrow @nogc
+if (is(R : double))
 {
     static if (isFloatingPoint!R)
         return Complex!R(re, 0);
@@ -44,7 +45,7 @@ auto complex(R)(R re)  @safe pure nothrow @nogc  if (is(R : double))
 
 /// ditto
 auto complex(R, I)(R re, I im)  @safe pure nothrow @nogc
-    if (is(R : double) && is(I : double))
+if (is(R : double) && is(I : double))
 {
     static if (isFloatingPoint!R || isFloatingPoint!I)
         return Complex!(CommonType!(R, I))(re, im);
@@ -95,7 +96,8 @@ auto complex(R, I)(R re, I im)  @safe pure nothrow @nogc
 /** A complex number parametrised by a type $(D T), which must be either
     $(D float), $(D double) or $(D real).
 */
-struct Complex(T)  if (isFloatingPoint!T)
+struct Complex(T)
+if (isFloatingPoint!T)
 {
     import std.format : FormatSpec;
     import std.range.primitives : isOutputRange;
@@ -658,7 +660,8 @@ struct Complex(T)  if (isFloatingPoint!T)
     ---
     The above will work if T is both real and complex.
 */
-template Complex(T) if (is(T R == Complex!R))
+template Complex(T)
+if (is(T R == Complex!R))
 {
     alias Complex = T;
 }
@@ -727,7 +730,7 @@ T sqAbs(T)(Complex!T z) @safe pure nothrow @nogc
 
 /// ditto
 T sqAbs(T)(T x) @safe pure nothrow @nogc
-    if (isFloatingPoint!T)
+if (isFloatingPoint!T)
 {
     return x*x;
 }
