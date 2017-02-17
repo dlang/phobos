@@ -3598,11 +3598,7 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
                     size_t slack; // The remaining capacity
                     E* ptr; // The empty data
                     Segment* next; // The next data segment
-                    union
-                    {
-                        size_t count; // reference count (_head only)
-                        Segment* prev; // Previous segment(_tail only)
-                    }
+                    Segment* prev; // Previous segment(_tail only)
                 }
 
                 struct
@@ -3674,7 +3670,6 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
                     return;
 
                 assert(&this !is null);
-                assert(count == 0);
                 auto s = next;
                 while (s)
                 {
@@ -3728,22 +3723,10 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
     }
 
     // Maintain the segment reference count
-    this(this)
-    {
-        synchronized
-        {
-            if (!__ctfe && _head)
-            {
-                _head.count++;
-            }
-        }
-    }
-
-    // Maintain the segment reference count
     ~this()
     {
-        assert(__ctfe || !_head || _head.count > 0);
-        if (__ctfe || !_head || --_head.count) // Uninitialized || RefCount > 0
+        assert(__ctfe || !_head);
+        if (__ctfe || !_head) // Uninitialized
             return;
         _head.free;
     }
@@ -3825,6 +3808,9 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
                 return;
             }
 
+            static if (!hasIndirections!T && (hasLength!U || isSomeString!U))
+                extend(item.length);
+
             if (!_tail || _tail.slack < items.length)
             {
                 if (!_tail)
@@ -3861,7 +3847,6 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
     }
 
     // Need to do a build with this gone to trace / fix phobos
-    /// Returns: a copy of the Builder's data in an array.
     static if (!hasIndirections!T)
     {
         private E[] dupTo(ref E[] arr) pure
@@ -3877,7 +3862,7 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
             return arr;
         }
 
-        /// ditto
+        /// Returns: a copy of the Builder's data in an array.
         T[] dup() pure @property
         {
             if (__ctfe)
@@ -4056,7 +4041,6 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
                 Segment* _tail; // Current back segment
                 U* _front; // Current front pointer
                 U* _back; // Current back pointer
-                Segment* _ref_count; // Ref counting segment
             }
 
             // Construct a slice
@@ -4071,8 +4055,6 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
                 _tail = cast(Segment*) app._tail;
                 if (_head !is null && _head.ptr != _head.base)
                 {
-                    _ref_count = cast(Segment*) app._head;
-                    _ref_count.count++;
                     _front = _head.base;
                     while (_tail.ptr is _tail.base)
                     {
@@ -4085,25 +4067,6 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
                     // These should be the Slice.init values
                     //_ref_count = _front = _back = null;
                 }
-            }
-
-            // Maintain the segment reference count
-            this(this)
-            {
-                if (!__ctfe && _ref_count)
-                {
-                    _ref_count.count++;
-                }
-            }
-
-            // Maintain the segment reference count
-            ~this()
-            {
-                assert(__ctfe || !_head || (_head && _head.count > 0));
-                // Uninitialized || RefCount > 0
-                if (__ctfe || !_ref_count || --_ref_count.count)
-                    return;
-                _ref_count.free;
             }
 
             /// The range interface
@@ -4199,7 +4162,7 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
                 _back--;
                 while (_back <= _tail.base)
                 {
-                    if (_tail is _ref_count)
+                    if (_tail is _head)
                     {
                         _front = _back = null;
                         return;
@@ -4457,7 +4420,6 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
                 seg.slack = _arr.length - preseverdLength;
                 seg.ptr = _arr.ptr + preseverdLength;
                 seg.next = null;
-                seg.count = 1;
                 app._head = app._tail = &seg;
             }
 
@@ -4466,7 +4428,6 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
             {
                 if (seg.next !is null)
                 {
-                    seg.next.count = 0;
                     seg.next.free;
                 }
 
