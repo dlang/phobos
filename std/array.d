@@ -115,7 +115,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
             return null;
 
         import std.conv : emplaceRef;
- 
+
         auto result = (() @trusted => uninitializedArray!(Unqual!E[])(length))();
 
         // Every element of the uninitialized array must be initialized
