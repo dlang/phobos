@@ -700,7 +700,7 @@ Params:
     options = enable decoding string representations of NaN/Inf as float values
 */
 JSONValue parseJSON(T)(T json, int maxDepth = -1, JSONOptions options = JSONOptions.none)
-if (isInputRange!T)
+if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 {
     import std.ascii : isWhite, isDigit, isHexDigit, toUpper, toLower;
     import std.utf : toUTF8;
@@ -1068,7 +1068,7 @@ Params:
     options = enable decoding string representations of NaN/Inf as float values
 */
 JSONValue parseJSON(T)(T json, JSONOptions options)
-if (isInputRange!T)
+if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 {
     return parseJSON!T(json, -1, options);
 }
