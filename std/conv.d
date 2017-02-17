@@ -85,7 +85,7 @@ private void parseCheck(alias source)(dchar c, string fn = __FILE__, size_t ln =
 private
 {
     T toStr(T, S)(S src)
-        if (isSomeString!T)
+    if (isSomeString!T)
     {
         // workaround for Bugzilla 14198
         static if (is(S == bool) && is(typeof({ T s = "string"; })))
@@ -409,8 +409,8 @@ If the source type is implicitly convertible to the target type, $(D
 to) simply performs the implicit conversion.
  */
 private T toImpl(T, S)(S value)
-    if (isImplicitlyConvertible!(S, T) &&
-        !isEnumStrToStr!(S, T) && !isNullToStr!(S, T))
+if (isImplicitlyConvertible!(S, T) &&
+    !isEnumStrToStr!(S, T) && !isNullToStr!(S, T))
 {
     template isSignedInt(T)
     {
@@ -523,7 +523,7 @@ private T toImpl(T, S)(S value)
   Converting static arrays forwards to their dynamic counterparts.
  */
 private T toImpl(T, S)(ref S s)
-    if (isStaticArray!S)
+if (isStaticArray!S)
 {
     return toImpl!(T, typeof(s[0])[])(s);
 }
@@ -539,10 +539,10 @@ private T toImpl(T, S)(ref S s)
 When source type supports member template function opCast, it is used.
 */
 private T toImpl(T, S)(S value)
-    if (!isImplicitlyConvertible!(S, T) &&
-        is(typeof(S.init.opCast!T()) : T) &&
-        !isExactSomeString!T &&
-        !is(typeof(T(value))))
+if (!isImplicitlyConvertible!(S, T) &&
+    is(typeof(S.init.opCast!T()) : T) &&
+    !isExactSomeString!T &&
+    !is(typeof(T(value))))
 {
     return value.opCast!T();
 }
@@ -590,8 +590,8 @@ $(UL $(LI If target type is struct, $(D T(value)) is used.)
      $(LI If target type is class, $(D new T(value)) is used.))
 */
 private T toImpl(T, S)(S value)
-    if (!isImplicitlyConvertible!(S, T) &&
-        is(T == struct) && is(typeof(T(value))))
+if (!isImplicitlyConvertible!(S, T) &&
+    is(T == struct) && is(typeof(T(value))))
 {
     return T(value);
 }
@@ -639,8 +639,8 @@ private T toImpl(T, S)(S value)
 
 /// ditto
 private T toImpl(T, S)(S value)
-    if (!isImplicitlyConvertible!(S, T) &&
-        is(T == class) && is(typeof(new T(value))))
+if (!isImplicitlyConvertible!(S, T) &&
+    is(T == class) && is(typeof(new T(value))))
 {
     return new T(value);
 }
@@ -712,9 +712,9 @@ Object-to-object conversions by dynamic casting throw exception when the source 
 non-null and the target is null.
  */
 private T toImpl(T, S)(S value)
-    if (!isImplicitlyConvertible!(S, T) &&
-        (is(S == class) || is(S == interface)) && !is(typeof(value.opCast!T()) : T) &&
-        (is(T == class) || is(T == interface)) && !is(typeof(new T(value))))
+if (!isImplicitlyConvertible!(S, T) &&
+    (is(S == class) || is(S == interface)) && !is(typeof(value.opCast!T()) : T) &&
+    (is(T == class) || is(T == interface)) && !is(typeof(new T(value))))
 {
     static if (is(T == immutable))
     {
@@ -772,7 +772,8 @@ private T toImpl(T, S)(S value)
     alias toShared(T)      =       shared T;
     alias toSharedConst(T) = shared const T;
     alias toImmutable(T)   =    immutable T;
-    template AddModifier(int n) if (0 <= n && n < 5)
+    template AddModifier(int n)
+    if (0 <= n && n < 5)
     {
              static if (n == 0) alias AddModifier = Identity;
         else static if (n == 1) alias AddModifier = toConst;
@@ -832,9 +833,9 @@ private T toImpl(T, S)(S value)
 Handles type _to string conversions
 */
 private T toImpl(T, S)(S value)
-    if (!(isImplicitlyConvertible!(S, T) &&
-          !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
-        !isInfinite!S && isExactSomeString!T)
+if (!(isImplicitlyConvertible!(S, T) &&
+    !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
+    !isInfinite!S && isExactSomeString!T)
 {
     static if (isExactSomeString!S && value[0].sizeof == ElementEncodingType!T.sizeof)
     {
@@ -1229,8 +1230,8 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
 
 // ditto
 @trusted pure private T toImpl(T, S)(S value, uint radix, LetterCase letterCase = LetterCase.upper)
-    if (isIntegral!S &&
-        isExactSomeString!T)
+if (isIntegral!S &&
+    isExactSomeString!T)
 in
 {
     assert(radix >= 2 && radix <= 36);
@@ -1309,9 +1310,9 @@ Narrowing numeric-numeric conversions throw when the value does not
 fit in the narrower type.
  */
 private T toImpl(T, S)(S value)
-    if (!isImplicitlyConvertible!(S, T) &&
-        (isNumeric!S || isSomeChar!S || isBoolean!S) &&
-        (isNumeric!T || isSomeChar!T || isBoolean!T) && !is(T == enum))
+if (!isImplicitlyConvertible!(S, T) &&
+    (isNumeric!S || isSomeChar!S || isBoolean!S) &&
+    (isNumeric!T || isSomeChar!T || isBoolean!T) && !is(T == enum))
 {
     enum sSmallest = mostNegative!S;
     enum tSmallest = mostNegative!T;
@@ -1402,9 +1403,9 @@ Array-to-array conversion (except when target is a string type)
 converts each element in turn by using $(D to).
  */
 private T toImpl(T, S)(S value)
-    if (!isImplicitlyConvertible!(S, T) &&
-        !isSomeString!S && isDynamicArray!S &&
-        !isExactSomeString!T && isArray!T)
+if (!isImplicitlyConvertible!(S, T) &&
+    !isSomeString!S && isDynamicArray!S &&
+    !isExactSomeString!T && isArray!T)
 {
     alias E = typeof(T.init[0]);
 
@@ -1484,8 +1485,8 @@ Associative array to associative array conversion converts each key
 and each value in turn.
  */
 private T toImpl(T, S)(S value)
-    if (isAssociativeArray!S &&
-        isAssociativeArray!T && !is(T == enum))
+if (isAssociativeArray!S &&
+    isAssociativeArray!T && !is(T == enum))
 {
     /* This code is potentially unsafe.
      */
@@ -1717,8 +1718,8 @@ $(UL
   $(LI When the source is a narrow string, normal text parsing occurs.))
 */
 private T toImpl(T, S)(S value)
-    if (isInputRange!S && isSomeChar!(ElementEncodingType!S) &&
-        !isExactSomeString!T && is(typeof(parse!T(value))))
+if (isInputRange!S && isSomeChar!(ElementEncodingType!S) &&
+    !isExactSomeString!T && is(typeof(parse!T(value))))
 {
     scope(success)
     {
@@ -1732,8 +1733,8 @@ private T toImpl(T, S)(S value)
 
 /// ditto
 private T toImpl(T, S)(S value, uint radix)
-    if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S) &&
-        !isExactSomeString!T && is(typeof(parse!T(value, radix))))
+if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S) &&
+    !isExactSomeString!T && is(typeof(parse!T(value, radix))))
 {
     scope(success)
     {
@@ -1791,9 +1792,9 @@ a ConvException is thrown.
 Enums with floating-point or string base types are not supported.
 */
 private T toImpl(T, S)(S value)
-    if (is(T == enum) && !is(S == enum)
-        && is(typeof(value == OriginalType!T.init))
-        && !isFloatingPoint!(OriginalType!T) && !isSomeString!(OriginalType!T))
+if (is(T == enum) && !is(S == enum)
+    && is(typeof(value == OriginalType!T.init))
+    && !isFloatingPoint!(OriginalType!T) && !isSomeString!(OriginalType!T))
 {
     foreach (Member; EnumMembers!T)
     {
@@ -1889,9 +1890,9 @@ Note:
     to `parse` and do not require lvalues.
 */
 Target parse(Target, Source)(ref Source source)
-    if (isInputRange!Source &&
-        isSomeChar!(ElementType!Source) &&
-        is(Unqual!Target == bool))
+if (isInputRange!Source &&
+    isSomeChar!(ElementType!Source) &&
+    is(Unqual!Target == bool))
 {
     import std.ascii : toLower;
 
@@ -1985,8 +1986,8 @@ Throws:
     if no character of the input was meaningfully converted.
 */
 Target parse(Target, Source)(ref Source s)
-    if (isSomeChar!(ElementType!Source) &&
-        isIntegral!Target && !is(Target == enum))
+if (isSomeChar!(ElementType!Source) &&
+    isIntegral!Target && !is(Target == enum))
 {
     static if (Target.sizeof < int.sizeof)
     {
@@ -2348,8 +2349,8 @@ Lerr:
 
 /// ditto
 Target parse(Target, Source)(ref Source source, uint radix)
-    if (isSomeChar!(ElementType!Source) &&
-        isIntegral!Target && !is(Target == enum))
+if (isSomeChar!(ElementType!Source) &&
+    isIntegral!Target && !is(Target == enum))
 in
 {
     assert(radix >= 2 && radix <= 36);
@@ -2460,8 +2461,8 @@ body
  *     represented by `s`.
  */
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source && !is(Source == enum) &&
-        is(Target == enum))
+if (isSomeString!Source && !is(Source == enum) &&
+    is(Target == enum))
 {
     import std.algorithm.searching : startsWith;
     Target result;
@@ -2543,8 +2544,8 @@ Target parse(Target, Source)(ref Source s)
  *     parsed, or if an overflow occurred.
  */
 Target parse(Target, Source)(ref Source source)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
-        isFloatingPoint!Target && !is(Target == enum))
+if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
+    isFloatingPoint!Target && !is(Target == enum))
 {
     import std.ascii : isDigit, isAlpha, toLower, toUpper, isHexDigit;
     import std.exception : enforce;
@@ -3243,8 +3244,8 @@ Throws:
     A $(LREF ConvException) if the range is empty.
  */
 Target parse(Target, Source)(ref Source s)
-    if (isSomeString!Source && !is(Source == enum) &&
-        staticIndexOf!(Unqual!Target, dchar, Unqual!(ElementEncodingType!Source)) >= 0)
+if (isSomeString!Source && !is(Source == enum) &&
+    staticIndexOf!(Unqual!Target, dchar, Unqual!(ElementEncodingType!Source)) >= 0)
 {
     if (s.empty)
         throw convError!(Source, Target)(s);
@@ -3282,8 +3283,8 @@ Target parse(Target, Source)(ref Source s)
 
 /// ditto
 Target parse(Target, Source)(ref Source s)
-    if (!isSomeString!Source && isInputRange!Source && isSomeChar!(ElementType!Source) &&
-        isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof && !is(Target == enum))
+if (!isSomeString!Source && isInputRange!Source && isSomeChar!(ElementType!Source) &&
+    isSomeChar!Target && Target.sizeof >= ElementType!Source.sizeof && !is(Target == enum))
 {
     if (s.empty)
         throw convError!(Source, Target)(s);
@@ -3345,9 +3346,9 @@ Throws:
     A $(LREF ConvException) if the range doesn't represent `null`.
  */
 Target parse(Target, Source)(ref Source s)
-    if (isInputRange!Source &&
-        isSomeChar!(ElementType!Source) &&
-        is(Unqual!Target == typeof(null)))
+if (isInputRange!Source &&
+    isSomeChar!(ElementType!Source) &&
+    is(Unqual!Target == typeof(null)))
 {
     import std.ascii : toLower;
     foreach (c; "null")
@@ -3421,8 +3422,8 @@ package void skipWS(R)(ref R r)
  *     An array of type `Target`
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-    if (isSomeString!Source && !is(Source == enum) &&
-        isDynamicArray!Target && !is(Target == enum))
+if (isSomeString!Source && !is(Source == enum) &&
+    isDynamicArray!Target && !is(Target == enum))
 {
     import std.array : appender;
 
@@ -3555,8 +3556,8 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket 
 
 /// ditto
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[', dchar rbracket = ']', dchar comma = ',')
-    if (isExactSomeString!Source &&
-        isStaticArray!Target && !is(Target == enum))
+if (isExactSomeString!Source &&
+    isStaticArray!Target && !is(Target == enum))
 {
     static if (hasIndirections!Target)
         Target result = Target.init[0].init;
@@ -3639,8 +3640,8 @@ Lfewerr:
  */
 Target parse(Target, Source)(ref Source s, dchar lbracket = '[',
                              dchar rbracket = ']', dchar keyval = ':', dchar comma = ',')
-    if (isSomeString!Source && !is(Source == enum) &&
-        isAssociativeArray!Target && !is(Target == enum))
+if (isSomeString!Source && !is(Source == enum) &&
+    isAssociativeArray!Target && !is(Target == enum))
 {
     alias KeyType = typeof(Target.init.keys[0]);
     alias ValType = typeof(Target.init.values[0]);
@@ -3706,7 +3707,7 @@ Target parse(Target, Source)(ref Source s, dchar lbracket = '[',
 }
 
 private dchar parseEscape(Source)(ref Source s)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source))
+if (isInputRange!Source && isSomeChar!(ElementType!Source))
 {
     parseCheck!s('\\');
     if (s.empty)
@@ -3821,8 +3822,8 @@ private dchar parseEscape(Source)(ref Source s)
 
 // Undocumented
 Target parseElement(Target, Source)(ref Source s)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
-        isExactSomeString!Target)
+if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
+    isExactSomeString!Target)
 {
     import std.array : appender;
     auto result = appender!Target();
@@ -3864,8 +3865,8 @@ Target parseElement(Target, Source)(ref Source s)
 
 // ditto
 Target parseElement(Target, Source)(ref Source s)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
-        isSomeChar!Target && !is(Target == enum))
+if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
+    isSomeChar!Target && !is(Target == enum))
 {
     Target c;
 
@@ -3886,8 +3887,8 @@ Target parseElement(Target, Source)(ref Source s)
 
 // ditto
 Target parseElement(Target, Source)(ref Source s)
-    if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
-        !isSomeString!Target && !isSomeChar!Target)
+if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
+    !isSomeString!Target && !isSomeChar!Target)
 {
     return parse!Target(s);
 }
@@ -3897,21 +3898,26 @@ Target parseElement(Target, Source)(ref Source s)
  * Convenience functions for converting one or more arguments
  * of any type into _text (the three character widths).
  */
-string text(T...)(T args) if (T.length > 0) { return textImpl!string(args); }
+string text(T...)(T args)
+if (T.length > 0) { return textImpl!string(args); }
 
 // @@@DEPRECATED_2017-06@@@
 deprecated("Calling `text` with 0 arguments is deprecated")
-string text(T...)(T args) if (T.length == 0) { return textImpl!string(args); }
+string text(T...)(T args)
+if (T.length == 0) { return textImpl!string(args); }
 
 ///ditto
-wstring wtext(T...)(T args) if (T.length > 0) { return textImpl!wstring(args); }
+wstring wtext(T...)(T args)
+if (T.length > 0) { return textImpl!wstring(args); }
 
 // @@@DEPRECATED_2017-06@@@
 deprecated("Calling `wtext` with 0 arguments is deprecated")
-wstring wtext(T...)(T args) if (T.length == 0) { return textImpl!wstring(args); }
+wstring wtext(T...)(T args)
+if (T.length == 0) { return textImpl!wstring(args); }
 
 ///ditto
-dstring dtext(T...)(T args) if (T.length > 0) { return textImpl!dstring(args); }
+dstring dtext(T...)(T args)
+if (T.length > 0) { return textImpl!dstring(args); }
 
 ///
 @safe unittest
@@ -3923,7 +3929,8 @@ dstring dtext(T...)(T args) if (T.length > 0) { return textImpl!dstring(args); }
 
 // @@@DEPRECATED_2017-06@@@
 deprecated("Calling `dtext` with 0 arguments is deprecated")
-dstring dtext(T...)(T args) if (T.length == 0) { return textImpl!dstring(args); }
+dstring dtext(T...)(T args)
+if (T.length == 0) { return textImpl!dstring(args); }
 
 private S textImpl(S, U...)(U args)
 {
@@ -3977,7 +3984,7 @@ See_Also:
     $(LREF parse) for parsing octal strings at runtime.
  */
 template octal(string num)
-    if (isOctalLiteral(num))
+if (isOctalLiteral(num))
 {
     static if ((octalFitsInInt!num && !literalIsLong!num) && !literalIsUnsigned!num)
         enum octal = octal!int(num);
@@ -3993,7 +4000,7 @@ template octal(string num)
 
 /// Ditto
 template octal(alias decimalInteger)
-    if (isIntegral!(typeof(decimalInteger)))
+if (isIntegral!(typeof(decimalInteger)))
 {
     enum octal = octal!(typeof(decimalInteger))(to!string(decimalInteger));
 }
@@ -4490,7 +4497,7 @@ $(D T) is $(D @safe).
 Returns: A pointer to the newly constructed object.
  */
 T* emplace(T, Args...)(void[] chunk, auto ref Args args)
-    if (!is(T == class))
+if (!is(T == class))
 {
     testEmplaceChunk(chunk, T.sizeof, T.alignof, T.stringof);
     emplaceRef!(T, Unqual!T)(*cast(Unqual!T*) chunk.ptr, args);
@@ -5435,7 +5442,7 @@ pure nothrow @safe /* @nogc */ unittest
 
 // Undocumented for the time being
 void toTextRange(T, W)(T value, W writer)
-    if (isIntegral!T && isOutputRange!(W, char))
+if (isIntegral!T && isOutputRange!(W, char))
 {
     char[value.sizeof * 4] buffer = void;
     uint i = cast(uint) (buffer.length - 1);
@@ -5474,7 +5481,8 @@ void toTextRange(T, W)(T value, W writer)
     Note that the result is always mutable even if the original type was const
     or immutable. In order to retain the constness, use $(REF Unsigned, std,traits).
  */
-auto unsigned(T)(T x) if (isIntegral!T)
+auto unsigned(T)(T x)
+if (isIntegral!T)
 {
     return cast(Unqual!(Unsigned!T))x;
 }
@@ -5522,7 +5530,8 @@ auto unsigned(T)(T x) if (isIntegral!T)
     }
 }
 
-auto unsigned(T)(T x) if (isSomeChar!T)
+auto unsigned(T)(T x)
+if (isSomeChar!T)
 {
     // All characters are unsigned
     static assert(T.min == 0);
@@ -5549,7 +5558,8 @@ auto unsigned(T)(T x) if (isSomeChar!T)
     Note that the result is always mutable even if the original type was const
     or immutable. In order to retain the constness, use $(REF Signed, std,traits).
  */
-auto signed(T)(T x) if (isIntegral!T)
+auto signed(T)(T x)
+if (isIntegral!T)
 {
     return cast(Unqual!(Signed!T))x;
 }
@@ -5896,9 +5906,9 @@ private auto hexStrImpl(String)(scope String hexData)
 
 auto toChars(ubyte radix = 10, Char = char, LetterCase letterCase = LetterCase.lower, T)(T value)
     pure nothrow @nogc @safe
-    if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
-        (is(Unqual!T == uint) || is(Unqual!T == ulong) ||
-         radix == 10 && (is(Unqual!T == int) || is(Unqual!T == long))))
+if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
+    (is(Unqual!T == uint) || is(Unqual!T == ulong) ||
+    radix == 10 && (is(Unqual!T == int) || is(Unqual!T == long))))
 {
     alias UT = Unqual!T;
 

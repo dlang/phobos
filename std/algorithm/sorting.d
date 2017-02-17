@@ -160,7 +160,8 @@ Returns:
     `true` if the range is sorted, false otherwise. `isSorted` allows
     duplicates, `isStrictlyMonotonic` not.
 */
-bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
+bool isSorted(alias less = "a < b", Range)(Range r)
+if (isForwardRange!(Range))
 {
     if (r.empty) return true;
 
@@ -395,7 +396,7 @@ See_Also:
     STL's $(HTTP sgi.com/tech/stl/stable_partition.html, stable_partition)
 */
 Range partition(alias predicate, SwapStrategy ss, Range)(Range r)
-    if (ss == SwapStrategy.stable && isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
+if (ss == SwapStrategy.stable && isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
 {
     import std.algorithm.mutation : bringToFront;
 
@@ -417,7 +418,7 @@ Range partition(alias predicate, SwapStrategy ss, Range)(Range r)
 
 ///ditto
 Range partition(alias predicate, SwapStrategy ss = SwapStrategy.unstable, Range)(Range r)
-    if (ss != SwapStrategy.stable && isInputRange!Range && hasSwappableElements!Range)
+if (ss != SwapStrategy.stable && isInputRange!Range && hasSwappableElements!Range)
 {
     import std.algorithm.mutation : swap;
     alias pred = unaryFun!(predicate);
@@ -772,7 +773,7 @@ Params:
 Returns: $(D true) if $(D r) is partitioned according to predicate $(D pred).
  */
 bool isPartitioned(alias pred, Range)(Range r)
-    if (isForwardRange!(Range))
+if (isForwardRange!(Range))
 {
     for (; !r.empty; r.popFront())
     {
@@ -949,8 +950,8 @@ makeIndex(
     Range,
     RangeIndex)
 (Range r, RangeIndex index)
-    if (isForwardRange!(Range) && isRandomAccessRange!(RangeIndex)
-            && is(ElementType!(RangeIndex) : ElementType!(Range)*))
+if (isForwardRange!(Range) && isRandomAccessRange!(RangeIndex)
+    && is(ElementType!(RangeIndex) : ElementType!(Range)*))
 {
     import std.algorithm.internal : addressOf;
     import std.exception : enforce;
@@ -1049,9 +1050,9 @@ unittest
 }
 
 struct Merge(alias less = "a < b", Rs...)
-    if (Rs.length >= 2 &&
-        allSatisfy!(isInputRange, Rs) &&
-        !is(CommonType!(staticMap!(ElementType, Rs)) == void))
+if (Rs.length >= 2 &&
+    allSatisfy!(isInputRange, Rs) &&
+    !is(CommonType!(staticMap!(ElementType, Rs)) == void))
 {
     public Rs source;
     private size_t _lastFrontIndex = size_t.max;
@@ -1286,9 +1287,9 @@ All of its inputs are assumed to be sorted. This can mean that inputs are
    `false`).
 */
 Merge!(less, Rs) merge(alias less = "a < b", Rs...)(Rs rs)
-    if (Rs.length >= 2 &&
-        allSatisfy!(isInputRange, Rs) &&
-        !is(CommonType!(staticMap!(ElementType, Rs)) == void))
+if (Rs.length >= 2 &&
+    allSatisfy!(isInputRange, Rs) &&
+    !is(CommonType!(staticMap!(ElementType, Rs)) == void))
 {
     return typeof(return)(rs);
 }
@@ -1829,12 +1830,12 @@ See_Also:
 SortedRange!(Range, less)
 sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         Range)(Range r)
-    if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
-                                          hasAssignableElements!Range)) ||
-         (ss != SwapStrategy.unstable && hasAssignableElements!Range)) &&
-        isRandomAccessRange!Range &&
-        hasSlicing!Range &&
-        hasLength!Range)
+if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
+    hasAssignableElements!Range)) ||
+    (ss != SwapStrategy.unstable && hasAssignableElements!Range)) &&
+    isRandomAccessRange!Range &&
+    hasSlicing!Range &&
+    hasLength!Range)
     /+ Unstable sorting uses the quicksort algorithm, which uses swapAt,
        which either uses swap(...), requiring swappable elements, or just
        swaps using assignment.
@@ -2888,7 +2889,7 @@ SortedRange!(R, ((a, b) => binaryFun!less(unaryFun!transform(a),
                                           unaryFun!transform(b))))
 schwartzSort(alias transform, alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable, R)(R r)
-    if (isRandomAccessRange!R && hasLength!R)
+if (isRandomAccessRange!R && hasLength!R)
 {
     import std.conv : emplace;
     import std.string : representation;
@@ -3017,7 +3018,7 @@ Params:
 */
 void partialSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
     Range)(Range r, size_t n)
-    if (isRandomAccessRange!(Range) && hasLength!(Range) && hasSlicing!(Range))
+if (isRandomAccessRange!(Range) && hasLength!(Range) && hasSlicing!(Range))
 {
     partialSort!(less, ss)(r[0 .. n], r[n .. $]);
 }
@@ -3042,9 +3043,9 @@ Params:
 
 void partialSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
     Range1, Range2)(Range1 r1, Range2 r2)
-    if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
-            isInputRange!Range2 && is(ElementType!Range1 == ElementType!Range2) &&
-            hasLvalueElements!Range1 && hasLvalueElements!Range2)
+if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
+    isInputRange!Range2 && is(ElementType!Range1 == ElementType!Range2) &&
+    hasLvalueElements!Range1 && hasLvalueElements!Range2)
 {
     topN!(less, ss)(r1, r2);
     sort!(less, ss)(r1);
@@ -3092,7 +3093,7 @@ Stable topN has not been implemented yet.
 auto topN(alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable,
         Range)(Range r, size_t nth)
-    if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
+if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
 {
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
@@ -3541,9 +3542,9 @@ Params:
 auto topN(alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable,
         Range1, Range2)(Range1 r1, Range2 r2)
-    if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
-            isInputRange!Range2 && is(ElementType!Range1 == ElementType!Range2) &&
-            hasLvalueElements!Range1 && hasLvalueElements!Range2)
+if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
+    isInputRange!Range2 && is(ElementType!Range1 == ElementType!Range2) &&
+    hasLvalueElements!Range1 && hasLvalueElements!Range2)
 {
     import std.container : BinaryHeap;
 
@@ -3669,8 +3670,8 @@ Returns: The slice of `target` containing the copied elements.
  */
 TRange topNCopy(alias less = "a < b", SRange, TRange)
     (SRange source, TRange target, SortOutput sorted = No.sortOutput)
-    if (isInputRange!(SRange) && isRandomAccessRange!(TRange)
-            && hasLength!(TRange) && hasSlicing!(TRange))
+if (isInputRange!(SRange) && isRandomAccessRange!(TRange)
+    && hasLength!(TRange) && hasSlicing!(TRange))
 {
     import std.container : BinaryHeap;
 
@@ -3749,10 +3750,10 @@ ignored.
 void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
                Range, RangeIndex)
               (Range r, RangeIndex index, SortOutput sorted = No.sortOutput)
-    if (isRandomAccessRange!Range &&
-        isRandomAccessRange!RangeIndex &&
-        hasAssignableElements!RangeIndex &&
-        isIntegral!(ElementType!(RangeIndex)))
+if (isRandomAccessRange!Range &&
+    isRandomAccessRange!RangeIndex &&
+    hasAssignableElements!RangeIndex &&
+    isIntegral!(ElementType!(RangeIndex)))
 {
     static assert(ss == SwapStrategy.unstable,
                   "Stable swap strategy not implemented yet.");
@@ -3782,10 +3783,10 @@ void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
 void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
                Range, RangeIndex)
               (Range r, RangeIndex index, SortOutput sorted = No.sortOutput)
-    if (isRandomAccessRange!Range &&
-        isRandomAccessRange!RangeIndex &&
-        hasAssignableElements!RangeIndex &&
-        is(ElementType!(RangeIndex) == ElementType!(Range)*))
+if (isRandomAccessRange!Range &&
+    isRandomAccessRange!RangeIndex &&
+    hasAssignableElements!RangeIndex &&
+    is(ElementType!(RangeIndex) == ElementType!(Range)*))
 {
     static assert(ss == SwapStrategy.unstable,
                   "Stable swap strategy not implemented yet.");
@@ -4066,8 +4067,8 @@ do
  */
 bool nextPermutation(alias less="a < b", BidirectionalRange)
                     (BidirectionalRange range)
-    if (isBidirectionalRange!BidirectionalRange &&
-        hasSwappableElements!BidirectionalRange)
+if (isBidirectionalRange!BidirectionalRange &&
+    hasSwappableElements!BidirectionalRange)
 {
     import std.algorithm.mutation : reverse, swap;
     import std.algorithm.searching : find;
@@ -4323,8 +4324,8 @@ do
  */
 bool nextEvenPermutation(alias less="a < b", BidirectionalRange)
                         (BidirectionalRange range)
-    if (isBidirectionalRange!BidirectionalRange &&
-        hasSwappableElements!BidirectionalRange)
+if (isBidirectionalRange!BidirectionalRange &&
+    hasSwappableElements!BidirectionalRange)
 {
     import std.algorithm.mutation : reverse, swap;
     import std.algorithm.searching : find;

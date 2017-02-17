@@ -84,7 +84,7 @@ range.
 */
 uint among(alias pred = (a, b) => a == b, Value, Values...)
     (Value value, Values values)
-    if (Values.length != 0)
+if (Values.length != 0)
 {
     foreach (uint i, ref v; values)
     {
@@ -96,7 +96,7 @@ uint among(alias pred = (a, b) => a == b, Value, Values...)
 
 /// Ditto
 template among(values...)
-    if (isExpressionTuple!values)
+if (isExpressionTuple!values)
 {
     uint among(Value)(Value value)
         if (!is(CommonType!(Value, values) == void))
@@ -617,7 +617,8 @@ if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
 }
 
 /// ditto
-int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSomeString!R2)
+int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2)
+if (isSomeString!R1 && isSomeString!R2)
 {
     import core.stdc.string : memcmp;
     import std.utf : decode;
@@ -958,7 +959,7 @@ range of range (of range...) comparisons.
 
 // MaxType
 private template MaxType(T...)
-    if (T.length >= 1)
+if (T.length >= 1)
 {
     static if (T.length == 1)
     {
@@ -1200,7 +1201,7 @@ Does not allocate GC memory.
 */
 size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
     (Range1 s, Range2 t)
-    if (isForwardRange!(Range1) && isForwardRange!(Range2))
+if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
     alias eq = binaryFun!(equals);
 
@@ -1271,7 +1272,7 @@ size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
 /// ditto
 size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
     (auto ref Range1 s, auto ref Range2 t)
-    if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
+if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
 {
     import std.meta : staticMap;
     alias Types = staticMap!(convertToString, Range1, Range2);
@@ -1312,7 +1313,7 @@ Allocates GC memory for the returned EditOp[] array.
 Tuple!(size_t, EditOp[])
 levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
     (Range1 s, Range2 t)
-    if (isForwardRange!(Range1) && isForwardRange!(Range2))
+if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
     Levenshtein!(Range1, binaryFun!(equals)) lev;
     auto d = lev.distanceWithPath(s, t);
@@ -1344,7 +1345,7 @@ levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
 Tuple!(size_t, EditOp[])
 levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
     (auto ref Range1 s, auto ref Range2 t)
-    if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
+if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
 {
     import std.meta : staticMap;
     alias Types = staticMap!(convertToString, Range1, Range2);
@@ -1375,7 +1376,7 @@ See_Also:
     $(REF maxElement, std,algorithm,searching)
 */
 MaxType!T max(T...)(T args)
-    if (T.length >= 2)
+if (T.length >= 2)
 {
     //Get "a"
     static if (T.length <= 2)
@@ -1448,7 +1449,7 @@ MaxType!T max(T...)(T args)
 
 // MinType
 private template MinType(T...)
-    if (T.length >= 1)
+if (T.length >= 1)
 {
     static if (T.length == 1)
     {
@@ -1489,7 +1490,7 @@ See_Also:
     $(REF minElement, std,algorithm,searching)
 */
 MinType!T min(T...)(T args)
-    if (T.length >= 2)
+if (T.length >= 2)
 {
     //Get "a"
     static if (T.length <= 2)
@@ -1560,7 +1561,7 @@ See_Also:
 */
 Tuple!(Range1, Range2)
 mismatch(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!(Range1) && isInputRange!(Range2))
+if (isInputRange!(Range1) && isInputRange!(Range2))
 {
     for (; !r1.empty && !r2.empty; r1.popFront(), r2.popFront())
     {
@@ -1745,10 +1746,10 @@ Returns:
     $(D true) if both ranges have the same length, $(D false) otherwise.
 */
 bool isSameLength(Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!Range1 &&
-        isInputRange!Range2 &&
-        !isInfinite!Range1 &&
-        !isInfinite!Range2)
+if (isInputRange!Range1 &&
+    isInputRange!Range2 &&
+    !isInfinite!Range1 &&
+    !isInfinite!Range2)
 {
     static if (hasLength!(Range1) && hasLength!(Range2))
     {
@@ -1889,11 +1890,11 @@ Returns:
 
 bool isPermutation(AllocateGC allocate_gc, Range1, Range2)
 (Range1 r1, Range2 r2)
-    if (allocate_gc == Yes.allocateGC &&
-        isForwardRange!Range1 &&
-        isForwardRange!Range2 &&
-        !isInfinite!Range1 &&
-        !isInfinite!Range2)
+if (allocate_gc == Yes.allocateGC &&
+    isForwardRange!Range1 &&
+    isForwardRange!Range2 &&
+    !isInfinite!Range1 &&
+    !isInfinite!Range2)
 {
     alias E1 = Unqual!(ElementType!Range1);
     alias E2 = Unqual!(ElementType!Range2);
@@ -1937,11 +1938,11 @@ bool isPermutation(AllocateGC allocate_gc, Range1, Range2)
 /// ditto
 bool isPermutation(alias pred = "a == b", Range1, Range2)
 (Range1 r1, Range2 r2)
-    if (is(typeof(binaryFun!(pred))) &&
-        isForwardRange!Range1 &&
-        isForwardRange!Range2 &&
-        !isInfinite!Range1 &&
-        !isInfinite!Range2)
+if (is(typeof(binaryFun!(pred))) &&
+    isForwardRange!Range1 &&
+    isForwardRange!Range2 &&
+    !isInfinite!Range1 &&
+    !isInfinite!Range2)
 {
     import std.algorithm.searching : count;
 
@@ -2093,9 +2094,9 @@ Returns:
     The _first argument that passes the test `pred`.
 */
 CommonType!(T, Ts) either(alias pred = a => a, T, Ts...)(T first, lazy Ts alternatives)
-    if (alternatives.length >= 1 &&
-        !is(CommonType!(T, Ts) == void) &&
-        allSatisfy!(ifTestable, T, Ts))
+if (alternatives.length >= 1 &&
+    !is(CommonType!(T, Ts) == void) &&
+    allSatisfy!(ifTestable, T, Ts))
 {
     alias predFun = unaryFun!pred;
 

@@ -2729,7 +2729,7 @@ private char[] charAllocator(size_t size) @safe pure nothrow
 
 private char[] escapeWindowsArgumentImpl(alias allocator)(in char[] arg)
     @safe nothrow
-    if (is(typeof(allocator(size_t.init)[0] = char.init)))
+if (is(typeof(allocator(size_t.init)[0] = char.init)))
 {
     // References:
     // * http://msdn.microsoft.com/en-us/library/windows/desktop/bb776391(v=vs.85).aspx
@@ -2862,7 +2862,7 @@ private string escapePosixArgument(in char[] arg) @trusted pure nothrow
 
 private char[] escapePosixArgumentImpl(alias allocator)(in char[] arg)
     @safe nothrow
-    if (is(typeof(allocator(size_t.init)[0] = char.init)))
+if (is(typeof(allocator(size_t.init)[0] = char.init)))
 {
     // '\'' means: close quoted part of argument, append an escaped
     // single quote, and reopen quotes

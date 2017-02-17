@@ -592,7 +592,7 @@ package(std.regex):
 
 //Simple UTF-string abstraction compatible with stream interface
 struct Input(Char)
-    if (is(Char :dchar))
+if (is(Char :dchar))
 {
     import std.utf : decode;
     alias DataIndex = size_t;

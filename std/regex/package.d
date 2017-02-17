@@ -321,7 +321,7 @@ public alias StaticRegex(Char) = std.regex.internal.ir.StaticRegex!(Char);
     Throws: $(D RegexException) if there were any errors during compilation.
 +/
 @trusted public auto regex(S)(S[] patterns, const(char)[] flags="")
-    if (isSomeString!(S))
+if (isSomeString!(S))
 {
     import std.array : appender;
     import std.functional : memoize;
@@ -352,7 +352,7 @@ public alias StaticRegex(Char) = std.regex.internal.ir.StaticRegex!(Char);
 
 ///ditto
 @trusted public auto regex(S)(S pattern, const(char)[] flags="")
-    if (isSomeString!(S))
+if (isSomeString!(S))
 {
     return regex([pattern], flags);
 }
@@ -372,7 +372,7 @@ unittest
 }
 
 public auto regexImpl(S)(S pattern, const(char)[] flags="")
-    if (isSomeString!(S))
+if (isSomeString!(S))
 {
     import std.regex.internal.parser : Parser, CodeGen;
     auto parser = Parser!(Unqual!(typeof(pattern)), CodeGen)(pattern, flags);
@@ -419,7 +419,7 @@ enum isRegexFor(RegEx, R) = is(RegEx == Regex!(BasicElementOf!R))
     First element of range is the whole match.
 +/
 @trusted public struct Captures(R, DIndex = size_t)
-    if (isSomeString!R)
+if (isSomeString!R)
 {//@trusted because of union inside
     alias DataIndex = DIndex;
     alias String = R;
@@ -654,7 +654,7 @@ unittest
     and is automatically deduced in a call to $(D match)/$(D bmatch).
 +/
 @trusted public struct RegexMatch(R, alias Engine = ThompsonMatcher)
-    if (isSomeString!R)
+if (isSomeString!R)
 {
 private:
     import core.stdc.stdlib : malloc, free;
@@ -812,7 +812,7 @@ private enum isReplaceFunctor(alias fun, R) =
 // the lowest level - just stuff replacements into the sink
 private @trusted void replaceCapturesInto(alias output, Sink, R, T)
         (ref Sink sink, R input, T captures)
-    if (isOutputRange!(Sink, dchar) && isSomeString!R)
+if (isOutputRange!(Sink, dchar) && isSomeString!R)
 {
     if (captures.empty)
     {
@@ -832,7 +832,7 @@ private @trusted void replaceCapturesInto(alias output, Sink, R, T)
 // ditto for a range of captures
 private void replaceMatchesInto(alias output, Sink, R, T)
         (ref Sink sink, R input, T matches)
-    if (isOutputRange!(Sink, dchar) && isSomeString!R)
+if (isOutputRange!(Sink, dchar) && isSomeString!R)
 {
     size_t offset = 0;
     foreach (cap; matches)
@@ -850,7 +850,7 @@ private void replaceMatchesInto(alias output, Sink, R, T)
 
 //  a general skeleton of replaceFirst
 private R replaceFirstWith(alias output, R, RegEx)(R input, RegEx re)
-    if (isSomeString!R && isRegexFor!(RegEx, R))
+if (isSomeString!R && isRegexFor!(RegEx, R))
 {
     import std.array : appender;
     auto data = matchFirst(input, re);
@@ -865,7 +865,7 @@ private R replaceFirstWith(alias output, R, RegEx)(R input, RegEx re)
 // the method parameter allows old API to ride on the back of the new one
 private R replaceAllWith(alias output,
         alias method=matchAll, R, RegEx)(R input, RegEx re)
-    if (isSomeString!R && isRegexFor!(RegEx, R))
+if (isSomeString!R && isRegexFor!(RegEx, R))
 {
     import std.array : appender;
     auto matches = method(input, re); //inout(C)[] fails
@@ -894,7 +894,7 @@ private R replaceAllWith(alias output,
 +/
 
 public auto match(R, RegEx)(R input, RegEx re)
-    if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
+if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
 {
     import std.regex.internal.thompson : ThompsonMatcher;
     return RegexMatch!(Unqual!(typeof(input)),ThompsonMatcher)(input, re);
@@ -902,14 +902,14 @@ public auto match(R, RegEx)(R input, RegEx re)
 
 ///ditto
 public auto match(R, String)(R input, String re)
-    if (isSomeString!R && isSomeString!String)
+if (isSomeString!R && isSomeString!String)
 {
     import std.regex.internal.thompson : ThompsonMatcher;
     return RegexMatch!(Unqual!(typeof(input)),ThompsonMatcher)(input, regex(re));
 }
 
 public auto match(R, RegEx)(R input, RegEx re)
-    if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
+if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 {
     import std.regex.internal.backtracking : BacktrackingMatcher;
     return RegexMatch!(Unqual!(typeof(input)),BacktrackingMatcher!true)(input, re);
@@ -934,7 +934,7 @@ public auto match(R, RegEx)(R input, RegEx re)
     if there was a match, otherwise an empty $(LREF Captures) object.
 +/
 public auto matchFirst(R, RegEx)(R input, RegEx re)
-    if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
+if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
 {
     import std.regex.internal.thompson : ThompsonMatcher;
     return matchOnce!ThompsonMatcher(input, re);
@@ -942,7 +942,7 @@ public auto matchFirst(R, RegEx)(R input, RegEx re)
 
 ///ditto
 public auto matchFirst(R, String)(R input, String re)
-    if (isSomeString!R && isSomeString!String)
+if (isSomeString!R && isSomeString!String)
 {
     import std.regex.internal.thompson : ThompsonMatcher;
     return matchOnce!ThompsonMatcher(input, regex(re));
@@ -950,14 +950,14 @@ public auto matchFirst(R, String)(R input, String re)
 
 ///ditto
 public auto matchFirst(R, String)(R input, String[] re...)
-    if (isSomeString!R && isSomeString!String)
+if (isSomeString!R && isSomeString!String)
 {
     import std.regex.internal.thompson : ThompsonMatcher;
     return matchOnce!ThompsonMatcher(input, regex(re));
 }
 
 public auto matchFirst(R, RegEx)(R input, RegEx re)
-    if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
+if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 {
     import std.regex.internal.backtracking : BacktrackingMatcher;
     return matchOnce!(BacktrackingMatcher!true)(input, re);
@@ -985,7 +985,7 @@ public auto matchFirst(R, RegEx)(R input, RegEx re)
     after the first match was found or an empty one if not present.
 +/
 public auto matchAll(R, RegEx)(R input, RegEx re)
-    if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
+if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
 {
     import std.regex.internal.thompson : ThompsonMatcher;
     return matchMany!ThompsonMatcher(input, re);
@@ -993,7 +993,7 @@ public auto matchAll(R, RegEx)(R input, RegEx re)
 
 ///ditto
 public auto matchAll(R, String)(R input, String re)
-    if (isSomeString!R && isSomeString!String)
+if (isSomeString!R && isSomeString!String)
 {
     import std.regex.internal.thompson : ThompsonMatcher;
     return matchMany!ThompsonMatcher(input, regex(re));
@@ -1001,14 +1001,14 @@ public auto matchAll(R, String)(R input, String re)
 
 ///ditto
 public auto matchAll(R, String)(R input, String[] re...)
-    if (isSomeString!R && isSomeString!String)
+if (isSomeString!R && isSomeString!String)
 {
     import std.regex.internal.thompson : ThompsonMatcher;
     return matchMany!ThompsonMatcher(input, regex(re));
 }
 
 public auto matchAll(R, RegEx)(R input, RegEx re)
-    if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
+if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 {
     import std.regex.internal.backtracking : BacktrackingMatcher;
     return matchMany!(BacktrackingMatcher!true)(input, re);
@@ -1074,7 +1074,7 @@ public auto matchAll(R, RegEx)(R input, RegEx re)
 
 +/
 public auto bmatch(R, RegEx)(R input, RegEx re)
-    if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
+if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
 {
     import std.regex.internal.backtracking : BacktrackingMatcher;
     return RegexMatch!(Unqual!(typeof(input)), BacktrackingMatcher!false)(input, re);
@@ -1082,14 +1082,14 @@ public auto bmatch(R, RegEx)(R input, RegEx re)
 
 ///ditto
 public auto bmatch(R, String)(R input, String re)
-    if (isSomeString!R && isSomeString!String)
+if (isSomeString!R && isSomeString!String)
 {
     import std.regex.internal.backtracking : BacktrackingMatcher;
     return RegexMatch!(Unqual!(typeof(input)), BacktrackingMatcher!false)(input, regex(re));
 }
 
 public auto bmatch(R, RegEx)(R input, RegEx re)
-    if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
+if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 {
     import std.regex.internal.backtracking : BacktrackingMatcher;
     return RegexMatch!(Unqual!(typeof(input)),BacktrackingMatcher!true)(input, re);
@@ -1098,8 +1098,8 @@ public auto bmatch(R, RegEx)(R input, RegEx re)
 // produces replacement string from format using captures for substitution
 package void replaceFmt(R, Capt, OutR)
     (R format, Capt captures, OutR sink, bool ignoreBadSubs = false)
-    if (isOutputRange!(OutR, ElementEncodingType!R[]) &&
-        isOutputRange!(OutR, ElementEncodingType!(Capt.String)[]))
+if (isOutputRange!(OutR, ElementEncodingType!R[]) &&
+    isOutputRange!(OutR, ElementEncodingType!(Capt.String)[]))
 {
     import std.algorithm.searching : find;
     import std.conv : text, parse;
@@ -1186,7 +1186,7 @@ L_Replace_Loop:
     If no match is found returns the input string itself.
 +/
 public R replaceFirst(R, C, RegEx)(R input, RegEx re, const(C)[] format)
-    if (isSomeString!R && is(C : dchar) && isRegexFor!(RegEx, R))
+if (isSomeString!R && is(C : dchar) && isRegexFor!(RegEx, R))
 {
     return replaceFirstWith!((m, sink) => replaceFmt(format, m, sink))(input, re);
 }
@@ -1213,7 +1213,7 @@ unittest
     returns the $(D input) itself.
 +/
 public R replaceFirst(alias fun, R, RegEx)(R input, RegEx re)
-  if (isSomeString!R && isRegexFor!(RegEx, R))
+if (isSomeString!R && isRegexFor!(RegEx, R))
 {
     return replaceFirstWith!((m, sink) => sink.put(fun(m)))(input, re);
 }
@@ -1239,8 +1239,8 @@ unittest
 +/
 public @trusted void replaceFirstInto(Sink, R, C, RegEx)
         (ref Sink sink, R input, RegEx re, const(C)[] format)
-    if (isOutputRange!(Sink, dchar) && isSomeString!R
-        && is(C : dchar) && isRegexFor!(RegEx, R))
+if (isOutputRange!(Sink, dchar) && isSomeString!R
+    && is(C : dchar) && isRegexFor!(RegEx, R))
     {
     replaceCapturesInto!((m, sink) => replaceFmt(format, m, sink))
         (sink, input, matchFirst(input, re));
@@ -1249,7 +1249,7 @@ public @trusted void replaceFirstInto(Sink, R, C, RegEx)
 ///ditto
 public @trusted void replaceFirstInto(alias fun, Sink, R, RegEx)
     (Sink sink, R input, RegEx re)
-    if (isOutputRange!(Sink, dchar) && isSomeString!R && isRegexFor!(RegEx, R))
+if (isOutputRange!(Sink, dchar) && isSomeString!R && isRegexFor!(RegEx, R))
 {
     replaceCapturesInto!fun(sink, input, matchFirst(input, re));
 }
@@ -1304,7 +1304,7 @@ unittest
     If no match is found returns the input string itself.
 +/
 public @trusted R replaceAll(R, C, RegEx)(R input, RegEx re, const(C)[] format)
-    if (isSomeString!R && is(C : dchar) && isRegexFor!(RegEx, R))
+if (isSomeString!R && is(C : dchar) && isRegexFor!(RegEx, R))
 {
     return replaceAllWith!((m, sink) => replaceFmt(format, m, sink))(input, re);
 }
@@ -1338,7 +1338,7 @@ unittest
     fun = delegate to use
 +/
 public @trusted R replaceAll(alias fun, R, RegEx)(R input, RegEx re)
-    if (isSomeString!R && isRegexFor!(RegEx, R))
+if (isSomeString!R && isRegexFor!(RegEx, R))
 {
     return replaceAllWith!((m, sink) => sink.put(fun(m)))(input, re);
 }
@@ -1367,8 +1367,8 @@ unittest
 +/
 public @trusted void replaceAllInto(Sink, R, C, RegEx)
         (Sink sink, R input, RegEx re, const(C)[] format)
-    if (isOutputRange!(Sink, dchar) && isSomeString!R
-        && is(C : dchar) && isRegexFor!(RegEx, R))
+if (isOutputRange!(Sink, dchar) && isSomeString!R
+    && is(C : dchar) && isRegexFor!(RegEx, R))
     {
     replaceMatchesInto!((m, sink) => replaceFmt(format, m, sink))
         (sink, input, matchAll(input, re));
@@ -1377,7 +1377,7 @@ public @trusted void replaceAllInto(Sink, R, C, RegEx)
 ///ditto
 public @trusted void replaceAllInto(alias fun, Sink, R, RegEx)
         (Sink sink, R input, RegEx re)
-    if (isOutputRange!(Sink, dchar) && isSomeString!R && isRegexFor!(RegEx, R))
+if (isOutputRange!(Sink, dchar) && isSomeString!R && isRegexFor!(RegEx, R))
 {
     replaceMatchesInto!fun(sink, input, matchAll(input, re));
 }
@@ -1449,14 +1449,14 @@ public @trusted void replaceAllInto(alias fun, Sink, R, RegEx)
     or $(LREF replaceFirst) explicitly.
 +/
 public R replace(alias scheme = match, R, C, RegEx)(R input, RegEx re, const(C)[] format)
-    if (isSomeString!R && isRegexFor!(RegEx, R))
+if (isSomeString!R && isRegexFor!(RegEx, R))
 {
     return replaceAllWith!((m, sink) => replaceFmt(format, m, sink), match)(input, re);
 }
 
 ///ditto
 public R replace(alias fun, R, RegEx)(R input, RegEx re)
-    if (isSomeString!R && isRegexFor!(RegEx, R))
+if (isSomeString!R && isRegexFor!(RegEx, R))
 {
     return replaceAllWith!(fun, match)(input, re);
 }
@@ -1472,7 +1472,7 @@ Returns:
     A lazy range of strings
 */
 public struct Splitter(Flag!"keepSeparators" keepSeparators = No.keepSeparators, Range, alias RegEx = Regex)
-    if (isSomeString!Range && isRegexFor!(RegEx, Range))
+if (isSomeString!Range && isRegexFor!(RegEx, Range))
 {
 private:
     Range _input;
@@ -1581,8 +1581,9 @@ public:
 
 /// ditto
 public Splitter!(keepSeparators, Range, RegEx) splitter(
-    Flag!"keepSeparators" keepSeparators = No.keepSeparators, Range, RegEx)(Range r, RegEx pat) if (
-        is(BasicElementOf!Range : dchar) && isRegexFor!(RegEx, Range))
+    Flag!"keepSeparators" keepSeparators = No.keepSeparators, Range, RegEx)(Range r, RegEx pat)
+if (
+    is(BasicElementOf!Range : dchar) && isRegexFor!(RegEx, Range))
 {
     return Splitter!(keepSeparators, Range, RegEx)(r, pat);
 }
@@ -1615,7 +1616,7 @@ unittest
 
 ///An eager version of $(D splitter) that creates an array with splitted slices of $(D input).
 public @trusted String[] split(String, RegEx)(String input, RegEx rx)
-    if (isSomeString!String  && isRegexFor!(RegEx, String))
+if (isSomeString!String  && isRegexFor!(RegEx, String))
 {
     import std.array : appender;
     auto a = appender!(String[])();

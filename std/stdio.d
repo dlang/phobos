@@ -3401,7 +3401,8 @@ void main()
 }
 ---
  */
-void write(T...)(T args) if (!is(T[0] : File))
+void write(T...)(T args)
+if (!is(T[0] : File))
 {
     trustedStdout.write(args);
 }
@@ -3809,8 +3810,8 @@ if (isSomeChar!C && is(Unqual!C == C) && !is(C == enum) &&
  * with appropriately-constructed C-style strings.
  */
 private FILE* fopen(R1, R2)(R1 name, R2 mode = "r")
-    if ((isInputRange!R1 && isSomeChar!(ElementEncodingType!R1) || isSomeString!R1) &&
-        (isInputRange!R2 && isSomeChar!(ElementEncodingType!R2) || isSomeString!R2))
+if ((isInputRange!R1 && isSomeChar!(ElementEncodingType!R1) || isSomeString!R1) &&
+    (isInputRange!R2 && isSomeChar!(ElementEncodingType!R2) || isSomeString!R2))
 {
     import std.internal.cstring : tempCString;
 
@@ -3851,8 +3852,8 @@ version (Posix)
      * with appropriately-constructed C-style strings.
      */
     FILE* popen(R1, R2)(R1 name, R2 mode = "r") @trusted nothrow @nogc
-        if ((isInputRange!R1 && isSomeChar!(ElementEncodingType!R1) || isSomeString!R1) &&
-            (isInputRange!R2 && isSomeChar!(ElementEncodingType!R2) || isSomeString!R2))
+    if ((isInputRange!R1 && isSomeChar!(ElementEncodingType!R1) || isSomeString!R1) &&
+        (isInputRange!R2 && isSomeChar!(ElementEncodingType!R2) || isSomeString!R2))
     {
         import std.internal.cstring : tempCString;
 
@@ -4277,7 +4278,7 @@ en.cppreference.com/w/c/io#Narrow_and_wide_orientation,
 orientation).
 */
 void toFile(T)(T data, string fileName)
-    if (is(typeof(copy(data, stdout.lockingBinaryWriter))))
+if (is(typeof(copy(data, stdout.lockingBinaryWriter))))
 {
     copy(data, File(fileName, "wb").lockingBinaryWriter);
 }

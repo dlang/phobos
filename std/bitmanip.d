@@ -2146,7 +2146,7 @@ public:
     Swaps the endianness of the given integral value or character.
   +/
 T swapEndian(T)(T val) @safe pure nothrow @nogc
-    if (isIntegral!T || isSomeChar!T || isBoolean!T)
+if (isIntegral!T || isSomeChar!T || isBoolean!T)
 {
     static if (val.sizeof == 1)
         return val;
@@ -2231,7 +2231,7 @@ private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
 
 
 private union EndianSwapper(T)
-    if (canSwapEndianness!T)
+if (canSwapEndianness!T)
 {
     Unqual!T value;
     ubyte[T.sizeof] array;
@@ -2258,7 +2258,7 @@ private union EndianSwapper(T)
     unusable if you tried to transfer it to another machine).
   +/
 auto nativeToBigEndian(T)(T val) @safe pure nothrow @nogc
-    if (canSwapEndianness!T)
+if (canSwapEndianness!T)
 {
     return nativeToBigEndianImpl(val);
 }
@@ -2276,7 +2276,7 @@ auto nativeToBigEndian(T)(T val) @safe pure nothrow @nogc
 }
 
 private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
-    if (isIntegral!T || isSomeChar!T || isBoolean!T)
+if (isIntegral!T || isSomeChar!T || isBoolean!T)
 {
     EndianSwapper!T es = void;
 
@@ -2289,7 +2289,7 @@ private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
 }
 
 private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
-    if (isFloatOrDouble!T)
+if (isFloatOrDouble!T)
 {
     version(LittleEndian)
         return floatEndianImpl!(T, true)(val);
@@ -2380,7 +2380,7 @@ private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
     can't actually have swapped floating point values as floating point values).
   +/
 T bigEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
-    if (canSwapEndianness!T && n == T.sizeof)
+if (canSwapEndianness!T && n == T.sizeof)
 {
     return bigEndianToNativeImpl!(T, n)(val);
 }
@@ -2398,8 +2398,8 @@ T bigEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
 }
 
 private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
-    if ((isIntegral!T || isSomeChar!T || isBoolean!T) &&
-       n == T.sizeof)
+if ((isIntegral!T || isSomeChar!T || isBoolean!T) &&
+    n == T.sizeof)
 {
     EndianSwapper!T es = void;
     es.array = val;
@@ -2413,7 +2413,7 @@ private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @n
 }
 
 private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
-    if (isFloatOrDouble!T && n == T.sizeof)
+if (isFloatOrDouble!T && n == T.sizeof)
 {
     version(LittleEndian)
         return cast(T) floatEndianImpl!(n, true)(val);
@@ -2432,7 +2432,7 @@ private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @n
     can't actually have swapped floating point values as floating point values).
   +/
 auto nativeToLittleEndian(T)(T val) @safe pure nothrow @nogc
-    if (canSwapEndianness!T)
+if (canSwapEndianness!T)
 {
     return nativeToLittleEndianImpl(val);
 }
@@ -2450,7 +2450,7 @@ auto nativeToLittleEndian(T)(T val) @safe pure nothrow @nogc
 }
 
 private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
-    if (isIntegral!T || isSomeChar!T || isBoolean!T)
+if (isIntegral!T || isSomeChar!T || isBoolean!T)
 {
     EndianSwapper!T es = void;
 
@@ -2463,7 +2463,7 @@ private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
 }
 
 private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
-    if (isFloatOrDouble!T)
+if (isFloatOrDouble!T)
 {
     version(BigEndian)
         return floatEndianImpl!(T, true)(val);
@@ -2527,7 +2527,7 @@ private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
     unusable if you tried to transfer it to another machine).
   +/
 T littleEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
-    if (canSwapEndianness!T && n == T.sizeof)
+if (canSwapEndianness!T && n == T.sizeof)
 {
     return littleEndianToNativeImpl!T(val);
 }
@@ -2545,8 +2545,8 @@ T littleEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
 }
 
 private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
-    if ((isIntegral!T || isSomeChar!T || isBoolean!T) &&
-       n == T.sizeof)
+if ((isIntegral!T || isSomeChar!T || isBoolean!T) &&
+    n == T.sizeof)
 {
     EndianSwapper!T es = void;
     es.array = val;
@@ -2560,8 +2560,8 @@ private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
 }
 
 private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
-    if (((isFloatOrDouble!T) &&
-       n == T.sizeof))
+if (((isFloatOrDouble!T) &&
+    n == T.sizeof))
 {
     version(BigEndian)
         return floatEndianImpl!(n, true)(val);
@@ -2570,7 +2570,7 @@ private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
 }
 
 private auto floatEndianImpl(T, bool swap)(T val) @safe pure nothrow @nogc
-    if (isFloatOrDouble!T)
+if (isFloatOrDouble!T)
 {
     EndianSwapper!T es = void;
     es.value = val;
@@ -2582,7 +2582,7 @@ private auto floatEndianImpl(T, bool swap)(T val) @safe pure nothrow @nogc
 }
 
 private auto floatEndianImpl(size_t n, bool swap)(ubyte[n] val) @safe pure nothrow @nogc
-    if (n == 4 || n == 8)
+if (n == 4 || n == 8)
 {
     static if (n == 4)       EndianSwapper!float es = void;
     else static if (n == 8)  EndianSwapper!double es = void;
@@ -2672,9 +2672,9 @@ private template canSwapEndianness(T)
   +/
 
 T peek(T, Endian endianness = Endian.bigEndian, R)(R range)
-    if (canSwapEndianness!T &&
-        isForwardRange!R &&
-        is(ElementType!R : const ubyte))
+if (canSwapEndianness!T &&
+    isForwardRange!R &&
+    is(ElementType!R : const ubyte))
 {
     static if (hasSlicing!R)
         const ubyte[T.sizeof] bytes = range[0 .. T.sizeof];
@@ -2699,20 +2699,20 @@ T peek(T, Endian endianness = Endian.bigEndian, R)(R range)
 
 /++ Ditto +/
 T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t index)
-    if (canSwapEndianness!T &&
-       isForwardRange!R &&
-       hasSlicing!R &&
-       is(ElementType!R : const ubyte))
+if (canSwapEndianness!T &&
+    isForwardRange!R &&
+    hasSlicing!R &&
+    is(ElementType!R : const ubyte))
 {
     return peek!(T, endianness)(range, &index);
 }
 
 /++ Ditto +/
 T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t* index)
-    if (canSwapEndianness!T &&
-       isForwardRange!R &&
-       hasSlicing!R &&
-       is(ElementType!R : const ubyte))
+if (canSwapEndianness!T &&
+    isForwardRange!R &&
+    hasSlicing!R &&
+    is(ElementType!R : const ubyte))
 {
     assert(index);
 
@@ -2974,7 +2974,7 @@ T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t* index)
         range = The range to read from.
   +/
 T read(T, Endian endianness = Endian.bigEndian, R)(ref R range)
-    if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
+if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
 {
     static if (hasSlicing!R)
     {
@@ -3220,20 +3220,20 @@ T read(T, Endian endianness = Endian.bigEndian, R)(ref R range)
                 is updated to the index after the bytes read.
   +/
 void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t index)
-    if (canSwapEndianness!T &&
-       isForwardRange!R &&
-       hasSlicing!R &&
-       is(ElementType!R : ubyte))
+if (canSwapEndianness!T &&
+    isForwardRange!R &&
+    hasSlicing!R &&
+    is(ElementType!R : ubyte))
 {
     write!(T, endianness)(range, value, &index);
 }
 
 /++ Ditto +/
 void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t* index)
-    if (canSwapEndianness!T &&
-       isForwardRange!R &&
-       hasSlicing!R &&
-       is(ElementType!R : ubyte))
+if (canSwapEndianness!T &&
+    isForwardRange!R &&
+    hasSlicing!R &&
+    is(ElementType!R : ubyte))
 {
     assert(index);
 
@@ -3564,7 +3564,7 @@ void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t*
         value = The value to _append.
   +/
 void append(T, Endian endianness = Endian.bigEndian, R)(R range, T value)
-    if (canSwapEndianness!T && isOutputRange!(R, ubyte))
+if (canSwapEndianness!T && isOutputRange!(R, ubyte))
 {
     static if (endianness == Endian.bigEndian)
         immutable bytes = nativeToBigEndian!T(value);
@@ -3765,7 +3765,7 @@ Counts the number of set bits in the binary representation of $(D value).
 For signed integers, the sign bit is included in the count.
 */
 private uint countBitsSet(T)(T value) @nogc pure nothrow
-    if (isIntegral!T)
+if (isIntegral!T)
 {
     // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
     static if (T.sizeof == 8)
@@ -3904,7 +3904,7 @@ Index 0 corresponds to the least significant bit.
 For signed integers, the highest index corresponds to the sign bit.
 */
 auto bitsSet(T)(T value) @nogc pure nothrow
-    if (isIntegral!T)
+if (isIntegral!T)
 {
     return BitsSet!T(value);
 }

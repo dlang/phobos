@@ -501,7 +501,7 @@ bool isASCII(dchar c) @safe pure nothrow @nogc
     ASCII character, otherwise $(D c) itself.
   +/
 auto toLower(C)(C c)
-    if (is(C : dchar))
+if (is(C : dchar))
 {
     import std.traits : isAggregateType, OriginalType, Unqual;
 
@@ -563,7 +563,7 @@ auto toLower(C)(C c)
     character, otherwise $(D c) itself.
   +/
 auto toUpper(C)(C c)
-    if (is(C : dchar))
+if (is(C : dchar))
 {
     import std.traits : isAggregateType, OriginalType, Unqual;
 

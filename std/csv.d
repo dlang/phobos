@@ -311,9 +311,9 @@ enum Malformed
  */
 auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException, Range, Separator = char)(Range input,
                  Separator delimiter = ',', Separator quote = '"')
-               if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
-                  && isSomeChar!(Separator)
-                  && !is(Contents T : T[U], U : string))
+if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
+    && isSomeChar!(Separator)
+    && !is(Contents T : T[U], U : string))
 {
     return CsvReader!(Contents,ErrorLevel,Range,
                     Unqual!(ElementType!Range),string[])
@@ -399,10 +399,10 @@ auto csvReader(Contents = string,
                Range, Header, Separator = char)
                 (Range input, Header header,
                  Separator delimiter = ',', Separator quote = '"')
-               if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
-                  && isSomeChar!(Separator)
-                  && isForwardRange!Header
-                  && isSomeString!(ElementType!Header))
+if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
+    && isSomeChar!(Separator)
+    && isForwardRange!Header
+    && isSomeString!(ElementType!Header))
 {
     return CsvReader!(Contents,ErrorLevel,Range,
                     Unqual!(ElementType!Range),Header)
@@ -415,9 +415,9 @@ auto csvReader(Contents = string,
                Range, Header, Separator = char)
                 (Range input, Header header,
                  Separator delimiter = ',', Separator quote = '"')
-               if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
-                  && isSomeChar!(Separator)
-                  && is(Header : typeof(null)))
+if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
+    && isSomeChar!(Separator)
+    && is(Header : typeof(null)))
 {
     return CsvReader!(Contents,ErrorLevel,Range,
                     Unqual!(ElementType!Range),string[])
@@ -783,9 +783,9 @@ private pure struct Input(Range, Malformed ErrorLevel)
  * Malformed).ignore if best guess processing should take place.
  */
 private struct CsvReader(Contents, Malformed ErrorLevel, Range, Separator, Header)
-    if (isSomeChar!Separator && isInputRange!Range
-       && is(Unqual!(ElementType!Range) == dchar)
-       && isForwardRange!Header && isSomeString!(ElementType!Header))
+if (isSomeChar!Separator && isInputRange!Range
+    && is(Unqual!(ElementType!Range) == dchar)
+    && isForwardRange!Header && isSomeString!(ElementType!Header))
 {
 private:
     Input!(Range, ErrorLevel)* _input;
@@ -1132,7 +1132,7 @@ public:
  * requested $(D Contents) type is neither a structure or an associative array.
  */
 private struct CsvRecord(Contents, Malformed ErrorLevel, Range, Separator)
-    if (!is(Contents == class) && !is(Contents == struct))
+if (!is(Contents == class) && !is(Contents == struct))
 {
     import std.array : appender;
 private:
@@ -1367,9 +1367,9 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
                           (ref Range input, ref Output ans,
                            Separator sep, Separator quote,
                            bool startQuoted = false)
-                          if (isSomeChar!Separator && isInputRange!Range
-                             && is(Unqual!(ElementType!Range) == dchar)
-                             && isOutputRange!(Output, dchar))
+if (isSomeChar!Separator && isInputRange!Range
+    && is(Unqual!(ElementType!Range) == dchar)
+    && isOutputRange!(Output, dchar))
 {
     bool quoted = startQuoted;
     bool escQuote;

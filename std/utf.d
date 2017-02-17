@@ -112,7 +112,7 @@ class UTFException : Exception
  */
 
 package auto invalidUTFstrings(Char)() @safe pure @nogc nothrow
-    if (isSomeChar!Char)
+if (isSomeChar!Char)
 {
     static if (is(Char == char))
     {
@@ -262,8 +262,8 @@ pure nothrow @safe @nogc unittest
         $(D index + stride(str, index) <= str.length).
   +/
 uint stride(S)(auto ref S str, size_t index)
-    if (is(S : const char[]) ||
-        (isRandomAccessRange!S && is(Unqual!(ElementType!S) == char)))
+if (is(S : const char[]) ||
+    (isRandomAccessRange!S && is(Unqual!(ElementType!S) == char)))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index < str.length, "Past the end of the UTF-8 sequence");
@@ -277,8 +277,8 @@ uint stride(S)(auto ref S str, size_t index)
 
 /// Ditto
 uint stride(S)(auto ref S str)
-    if (is(S : const char[]) ||
-        (isInputRange!S && is(Unqual!(ElementType!S) == char)))
+if (is(S : const char[]) ||
+    (isInputRange!S && is(Unqual!(ElementType!S) == char)))
 {
     static if (is(S : const char[]))
         immutable c = str[0];
@@ -385,8 +385,8 @@ body
 
 /// Ditto
 uint stride(S)(auto ref S str, size_t index)
-    if (is(S : const wchar[]) ||
-        (isRandomAccessRange!S && is(Unqual!(ElementType!S) == wchar)))
+if (is(S : const wchar[]) ||
+    (isRandomAccessRange!S && is(Unqual!(ElementType!S) == wchar)))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index < str.length, "Past the end of the UTF-16 sequence");
@@ -396,14 +396,14 @@ uint stride(S)(auto ref S str, size_t index)
 
 /// Ditto
 uint stride(S)(auto ref S str) @safe pure
-    if (is(S : const wchar[]))
+if (is(S : const wchar[]))
 {
     return stride(str, 0);
 }
 
 /// Ditto
 uint stride(S)(auto ref S str)
-    if (isInputRange!S && is(Unqual!(ElementType!S) == wchar))
+if (isInputRange!S && is(Unqual!(ElementType!S) == wchar))
 {
     assert(!str.empty, "UTF-16 sequence is empty");
     immutable uint u = str.front;
@@ -479,8 +479,8 @@ uint stride(S)(auto ref S str)
 
 /// Ditto
 uint stride(S)(auto ref S str, size_t index = 0)
-    if (is(S : const dchar[]) ||
-        (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
+if (is(S : const dchar[]) ||
+    (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index < str.length, "Past the end of the UTF-32 sequence");
@@ -581,8 +581,8 @@ uint stride(S)(auto ref S str, size_t index = 0)
         guarantee that $(D strideBack(str, index) <= index).
   +/
 uint strideBack(S)(auto ref S str, size_t index)
-    if (is(S : const char[]) ||
-        (isRandomAccessRange!S && is(Unqual!(ElementType!S) == char)))
+if (is(S : const char[]) ||
+    (isRandomAccessRange!S && is(Unqual!(ElementType!S) == char)))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index <= str.length, "Past the end of the UTF-8 sequence");
@@ -612,15 +612,15 @@ uint strideBack(S)(auto ref S str, size_t index)
 
 /// Ditto
 uint strideBack(S)(auto ref S str)
-    if (is(S : const char[]) ||
-        (isRandomAccessRange!S && hasLength!S && is(Unqual!(ElementType!S) == char)))
+if (is(S : const char[]) ||
+    (isRandomAccessRange!S && hasLength!S && is(Unqual!(ElementType!S) == char)))
 {
     return strideBack(str, str.length);
 }
 
 /// Ditto
 uint strideBack(S)(auto ref S str)
-    if (isBidirectionalRange!S && is(Unqual!(ElementType!S) == char) && !isRandomAccessRange!S)
+if (isBidirectionalRange!S && is(Unqual!(ElementType!S) == char) && !isRandomAccessRange!S)
 {
     assert(!str.empty, "Past the end of the UTF-8 sequence");
     auto temp = str.save;
@@ -706,8 +706,8 @@ uint strideBack(S)(auto ref S str)
 //the value of a single wchar
 /// Ditto
 uint strideBack(S)(auto ref S str, size_t index)
-    if (is(S : const wchar[]) ||
-        (isRandomAccessRange!S && is(Unqual!(ElementType!S) == wchar)))
+if (is(S : const wchar[]) ||
+    (isRandomAccessRange!S && is(Unqual!(ElementType!S) == wchar)))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index <= str.length, "Past the end of the UTF-16 sequence");
@@ -719,8 +719,8 @@ uint strideBack(S)(auto ref S str, size_t index)
 
 /// Ditto
 uint strideBack(S)(auto ref S str)
-    if (is(S : const wchar[]) ||
-        (isBidirectionalRange!S && is(Unqual!(ElementType!S) == wchar)))
+if (is(S : const wchar[]) ||
+    (isBidirectionalRange!S && is(Unqual!(ElementType!S) == wchar)))
 {
     assert(!str.empty, "UTF-16 sequence is empty");
 
@@ -801,7 +801,7 @@ uint strideBack(S)(auto ref S str)
 
 /// Ditto
 uint strideBack(S)(auto ref S str, size_t index)
-    if (isRandomAccessRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
+if (isRandomAccessRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
 {
     static if (is(typeof(str.length) : ulong))
         assert(index <= str.length, "Past the end of the UTF-32 sequence");
@@ -811,7 +811,7 @@ uint strideBack(S)(auto ref S str, size_t index)
 
 /// Ditto
 uint strideBack(S)(auto ref S str)
-    if (isBidirectionalRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
+if (isBidirectionalRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
 {
     assert(!str.empty, "Empty UTF-32 sequence");
     return 1;
@@ -893,7 +893,7 @@ uint strideBack(S)(auto ref S str)
     the string that that code point is.
   +/
 size_t toUCSindex(C)(const(C)[] str, size_t index) @safe pure
-    if (isSomeChar!C)
+if (isSomeChar!C)
 {
     static if (is(Unqual!C == dchar))
         return index;
@@ -940,7 +940,7 @@ size_t toUCSindex(C)(const(C)[] str, size_t index) @safe pure
     the array index of the code unit is returned.
   +/
 size_t toUTFindex(C)(const(C)[] str, size_t n) @safe pure
-    if (isSomeChar!C)
+if (isSomeChar!C)
 {
     static if (is(Unqual!C == dchar))
     {
@@ -1002,8 +1002,8 @@ alias UseReplacementDchar = Flag!"useReplacementDchar";
         sequence and useReplacementDchar is $(D No.useReplacementDchar)
   +/
 dchar decode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(auto ref S str, ref size_t index)
-    if (!isSomeString!S &&
-        isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S))
+if (!isSomeString!S &&
+    isRandomAccessRange!S && hasSlicing!S && hasLength!S && isSomeChar!(ElementType!S))
 in
 {
     assert(index < str.length, "Attempted to decode past the end of a string");
@@ -1021,7 +1021,8 @@ body
 }
 
 dchar decode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
-    auto ref S str, ref size_t index) @trusted pure if (isSomeString!S)
+auto ref S str, ref size_t index) @trusted pure
+if (isSomeString!S)
 in
 {
     assert(index < str.length, "Attempted to decode past the end of a string");
@@ -1062,7 +1063,8 @@ body
         before the code point was determined to be invalid.
   +/
 dchar decodeFront(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
-    ref S str, out size_t numCodeUnits) if (!isSomeString!S && isInputRange!S && isSomeChar!(ElementType!S))
+ref S str, out size_t numCodeUnits)
+if (!isSomeString!S && isInputRange!S && isSomeChar!(ElementType!S))
 in
 {
     assert(!str.empty);
@@ -1098,7 +1100,8 @@ body
 }
 
 dchar decodeFront(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
-    ref S str, out size_t numCodeUnits) @trusted pure if (isSomeString!S)
+ref S str, out size_t numCodeUnits) @trusted pure
+if (isSomeString!S)
 in
 {
     assert(!str.empty);
@@ -1126,7 +1129,7 @@ body
 
 /++ Ditto +/
 dchar decodeFront(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(ref S str)
-    if (isInputRange!S && isSomeChar!(ElementType!S))
+if (isInputRange!S && isSomeChar!(ElementType!S))
 {
     size_t numCodeUnits;
     return decodeFront!useReplacementDchar(str, numCodeUnits);
@@ -1155,7 +1158,7 @@ dchar decodeFront(UseReplacementDchar useReplacementDchar = No.useReplacementDch
   +/
 dchar decodeBack(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
     ref S str, out size_t numCodeUnits)
-    if (isSomeString!S)
+if (isSomeString!S)
 in
 {
     assert(!str.empty);
@@ -1187,8 +1190,8 @@ body
 /++ Ditto +/
 dchar decodeBack(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
     ref S str, out size_t numCodeUnits)
-    if (!isSomeString!S && isSomeChar!(ElementType!S) && isBidirectionalRange!S
-        && ((isRandomAccessRange!S && hasLength!S) || !isRandomAccessRange!S))
+if (!isSomeString!S && isSomeChar!(ElementType!S) && isBidirectionalRange!S
+    && ((isRandomAccessRange!S && hasLength!S) || !isRandomAccessRange!S))
 in
 {
     assert(!str.empty);
@@ -1237,9 +1240,9 @@ body
 
 /++ Ditto +/
 dchar decodeBack(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(ref S str)
-    if (isSomeString!S
-        || (isRandomAccessRange!S && hasLength!S && isSomeChar!(ElementType!S))
-        || (!isRandomAccessRange!S && isBidirectionalRange!S && isSomeChar!(ElementType!S)))
+if (isSomeString!S
+    || (isRandomAccessRange!S && hasLength!S && isSomeChar!(ElementType!S))
+    || (!isRandomAccessRange!S && isBidirectionalRange!S && isSomeChar!(ElementType!S)))
 in
 {
     assert(!str.empty);
@@ -1256,7 +1259,7 @@ body
 
 // Gives the maximum value that a code unit for the given range type can hold.
 package template codeUnitLimit(S)
-    if (isSomeChar!(ElementEncodingType!S))
+if (isSomeChar!(ElementEncodingType!S))
 {
     static if (is(Unqual!(ElementEncodingType!S) == char))
         enum char codeUnitLimit = 0x80;
@@ -1284,7 +1287,8 @@ package template codeUnitLimit(S)
  *      decoded character
  */
 private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
-    auto ref S str, ref size_t index) if (
+    auto ref S str, ref size_t index)
+if (
     is(S : const char[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == char)))
 {
     /* The following encodings are valid, except for the 5 and 6 byte
@@ -1515,7 +1519,7 @@ unittest
 
 private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)
 (auto ref S str, ref size_t index)
-    if (is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == wchar)))
+if (is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == wchar)))
 {
     static if (is(S : const wchar[]))
         auto pstr = str.ptr + index;
@@ -1632,7 +1636,7 @@ unittest
 
 private dchar decodeImpl(bool canIndex, UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
     auto ref S str, ref size_t index)
-    if (is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
+if (is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S) == dchar)))
 {
     static if (is(S : const dchar[]))
         auto pstr = str.ptr;
@@ -2480,7 +2484,7 @@ void encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     $(D c) when $(D C) is the character type used to encode it.
   +/
 ubyte codeLength(C)(dchar c) @safe pure nothrow @nogc
-    if (isSomeChar!C)
+if (isSomeChar!C)
 {
     static if (C.sizeof == 1)
     {
@@ -2527,7 +2531,7 @@ ubyte codeLength(C)(dchar c) @safe pure nothrow @nogc
         The number of code units in `input` when encoded to `C`
   +/
 size_t codeLength(C, InputRange)(InputRange input)
-    if (isInputRange!InputRange && !isInfinite!InputRange && is(ElementType!InputRange : dchar))
+if (isInputRange!InputRange && !isInfinite!InputRange && is(ElementType!InputRange : dchar))
 {
     alias EncType = Unqual!(ElementEncodingType!InputRange);
     static if (isSomeString!InputRange && is(EncType == C) && is(typeof(input.length)))
@@ -2641,7 +2645,7 @@ if (isSomeChar!C)
         $(D UTFException) if $(D str) is not well-formed.
   +/
 void validate(S)(in S str) @safe pure
-    if (isSomeString!S)
+if (isSomeString!S)
 {
     immutable len = str.length;
     for (size_t i = 0; i < len; )
@@ -2713,7 +2717,8 @@ char[] toUTF8(return out char[4] buf, dchar c) nothrow @nogc @safe pure
  * See_Also:
  *     For a lazy, non-allocating version of these functions, see $(LREF byUTF).
  */
-string toUTF8(S)(S s) if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
+string toUTF8(S)(S s)
+if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
 {
     return toUTFImpl!string(s);
 }
@@ -2775,7 +2780,8 @@ body
  * See_Also:
  *     For a lazy, non-allocating version of these functions, see $(LREF byUTF).
  */
-wstring toUTF16(S)(S s) if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
+wstring toUTF16(S)(S s)
+if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
 {
     return toUTFImpl!wstring(s);
 }
@@ -2817,7 +2823,8 @@ wstring toUTF16(S)(S s) if (isInputRange!S && !isInfinite!S && isSomeChar!(Eleme
  * See_Also:
  *     For a lazy, non-allocating version of these functions, see $(LREF byUTF).
  */
-dstring toUTF32(S)(S s) if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
+dstring toUTF32(S)(S s)
+if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
 {
     return toUTFImpl!dstring(s);
 }
@@ -2902,9 +2909,9 @@ template toUTFz(P)
 }
 
 private P toUTFzImpl(P, S)(S str) @safe pure
-    if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
-        is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)) &&
-        is(immutable(Unqual!(ElementEncodingType!S)) == ElementEncodingType!S))
+if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
+    is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)) &&
+    is(immutable(Unqual!(ElementEncodingType!S)) == ElementEncodingType!S))
 //immutable(C)[] -> C*, const(C)*, or immutable(C)*
 {
     if (str.empty)
@@ -2947,9 +2954,9 @@ private P toUTFzImpl(P, S)(S str) @safe pure
 }
 
 private P toUTFzImpl(P, S)(S str) @safe pure
-    if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
-        is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)) &&
-        !is(immutable(Unqual!(ElementEncodingType!S)) == ElementEncodingType!S))
+if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
+    is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)) &&
+    !is(immutable(Unqual!(ElementEncodingType!S)) == ElementEncodingType!S))
 //C[] or const(C)[] -> C*, const(C)*, or immutable(C)*
 {
     alias InChar  = ElementEncodingType!S;
@@ -2987,8 +2994,8 @@ private P toUTFzImpl(P, S)(S str) @safe pure
 }
 
 private P toUTFzImpl(P, S)(S str) @safe pure
-    if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
-        !is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)))
+if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
+    !is(Unqual!(typeof(*P.init)) == Unqual!(ElementEncodingType!S)))
 //C1[], const(C1)[], or immutable(C1)[] -> C2*, const(C2)*, or immutable(C2)*
 {
     import std.array : appender;
@@ -3097,7 +3104,7 @@ private P toUTFzImpl(P, S)(S str) @safe pure
     that take an $(D LPWSTR) or $(D LPCWSTR) argument.
   +/
 const(wchar)* toUTF16z(C)(const(C)[] str) @safe pure
-    if (isSomeChar!C)
+if (isSomeChar!C)
 {
     return toUTFz!(const(wchar)*)(str);
 }
@@ -3156,7 +3163,7 @@ const(wchar)* toUTF16z(C)(const(C)[] str) @safe pure
         $(D UTFException) if $(D str) is not well-formed.
   +/
 size_t count(C)(const(C)[] str) @trusted pure nothrow @nogc
-    if (isSomeChar!C)
+if (isSomeChar!C)
 {
     return walkLength(str);
 }
@@ -3312,7 +3319,8 @@ enum dchar replacementDchar = '\uFFFD';
  *      For a range that iterates by grapheme cluster (written character) see
  *      $(REF byGrapheme, std,uni).
  */
-auto byCodeUnit(R)(R r) if (isAutodecodableString!R)
+auto byCodeUnit(R)(R r)
+if (isAutodecodableString!R)
 {
     static struct ByCodeUnitImpl
     {
@@ -3366,7 +3374,7 @@ auto byCodeUnit(R)(R r) if (isAutodecodableString!R)
 
 /// Ditto
 auto ref byCodeUnit(R)(R r)
-    if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
+if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
 {
     // byCodeUnit for ranges and dchar[] is a no-op
     return r;
@@ -3747,7 +3755,8 @@ int impureVariable;
  *
  *      Otherwise, an input range of characters.
  */
-template byUTF(C) if (isSomeChar!C)
+template byUTF(C)
+if (isSomeChar!C)
 {
     static if (!is(Unqual!C == C))
         alias byUTF = byUTF!(Unqual!C);

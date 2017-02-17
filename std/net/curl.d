@@ -398,7 +398,7 @@ private template isCurlConn(Conn)
  * ----
  */
 void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn conn = Conn())
-    if (isCurlConn!Conn)
+if (isCurlConn!Conn)
 {
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
@@ -451,7 +451,7 @@ unittest
  * ----
  */
 void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn conn = Conn())
-    if (isCurlConn!Conn)
+if (isCurlConn!Conn)
 {
     static if (is(Conn : HTTP))
     {
@@ -532,7 +532,7 @@ unittest
  * See_Also: $(LREF HTTP.Method)
  */
 T[] get(Conn = AutoProtocol, T = char)(const(char)[] url, Conn conn = Conn())
-    if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
+if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
 {
     static if (is(Conn : HTTP))
     {
@@ -693,7 +693,7 @@ unittest
  */
 T[] put(Conn = AutoProtocol, T = char, PutUnit)(const(char)[] url, const(PutUnit)[] putData,
                                                   Conn conn = Conn())
-    if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
+if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
 {
     static if (is(Conn : HTTP))
     {
@@ -747,7 +747,7 @@ unittest
  * See_Also: $(LREF HTTP.Method)
  */
 void del(Conn = AutoProtocol)(const(char)[] url, Conn conn = Conn())
-    if (isCurlConn!Conn)
+if (isCurlConn!Conn)
 {
     static if (is(Conn : HTTP))
     {
@@ -820,7 +820,7 @@ unittest
  * See_Also: $(LREF HTTP.Method)
  */
 T[] options(T = char)(const(char)[] url, HTTP conn = HTTP())
-    if (is(T == char) || is(T == ubyte))
+if (is(T == char) || is(T == ubyte))
 {
     conn.method = HTTP.Method.options;
     return _basicHTTP!(T)(url, null, conn);
@@ -831,7 +831,7 @@ deprecated("options does not send any data")
 T[] options(T = char, OptionsUnit)(const(char)[] url,
                                    const(OptionsUnit)[] optionsData = null,
                                    HTTP conn = HTTP())
-    if (is(T == char) || is(T == ubyte))
+if (is(T == char) || is(T == ubyte))
 {
     return options!T(url, conn);
 }
@@ -872,7 +872,7 @@ unittest
  * See_Also: $(LREF HTTP.Method)
  */
 T[] trace(T = char)(const(char)[] url, HTTP conn = HTTP())
-   if (is(T == char) || is(T == ubyte))
+if (is(T == char) || is(T == ubyte))
 {
     conn.method = HTTP.Method.trace;
     return _basicHTTP!(T)(url, cast(void[]) null, conn);
@@ -913,7 +913,7 @@ unittest
  * See_Also: $(LREF HTTP.Method)
  */
 T[] connect(T = char)(const(char)[] url, HTTP conn = HTTP())
-   if (is(T == char) || is(T == ubyte))
+if (is(T == char) || is(T == ubyte))
 {
     conn.method = HTTP.Method.connect;
     return _basicHTTP!(T)(url, cast(void[]) null, conn);
@@ -959,7 +959,7 @@ unittest
  */
 T[] patch(T = char, PatchUnit)(const(char)[] url, const(PatchUnit)[] patchData,
                                HTTP conn = HTTP())
-    if (is(T == char) || is(T == ubyte))
+if (is(T == char) || is(T == ubyte))
 {
     conn.method = HTTP.Method.patch;
     return _basicHTTP!(T)(url, patchData, conn);
@@ -1370,7 +1370,7 @@ unittest
  */
 auto byChunk(Conn = AutoProtocol)
             (const(char)[] url, size_t chunkSize = 1024, Conn conn = Conn())
-    if (isCurlConn!(Conn))
+if (isCurlConn!(Conn))
 {
     static struct SyncChunkInputRange
     {
@@ -1653,7 +1653,7 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char, PostUnit)
              KeepTerminator keepTerminator = No.keepTerminator,
              Terminator terminator = '\n',
              size_t transmitBuffers = 10, Conn conn = Conn())
-    if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
+if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
 {
     static if (is(Conn : AutoProtocol))
     {
@@ -1803,7 +1803,7 @@ auto byChunkAsync(Conn = AutoProtocol, PostUnit)
            (const(char)[] url, const(PostUnit)[] postData,
             size_t chunkSize = 1024, size_t transmitBuffers = 10,
             Conn conn = Conn())
-    if (isCurlConn!(Conn))
+if (isCurlConn!(Conn))
 {
     static if (is(Conn : AutoProtocol))
     {
@@ -1832,7 +1832,7 @@ auto byChunkAsync(Conn = AutoProtocol)
            (const(char)[] url,
             size_t chunkSize = 1024, size_t transmitBuffers = 10,
             Conn conn = Conn())
-    if (isCurlConn!(Conn))
+if (isCurlConn!(Conn))
 {
     static if (is(Conn : AutoProtocol))
     {

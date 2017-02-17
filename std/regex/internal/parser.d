@@ -38,7 +38,7 @@ auto makeRegex(S, CG)(Parser!(S, CG) p)
 
 // helper for unittest
 auto makeRegex(S)(S arg)
-    if (isSomeString!S)
+if (isSomeString!S)
 {
     return makeRegex(Parser!(S, CodeGen)(arg, ""));
 }
@@ -614,7 +614,7 @@ enum maxCumulativeRepetitionLength = 2^^20;
 enum infinite = ~0u;
 
 struct Parser(R, Generator)
-    if (isForwardRange!R && is(ElementType!R : dchar))
+if (isForwardRange!R && is(ElementType!R : dchar))
 {
     dchar _current;
     bool empty;

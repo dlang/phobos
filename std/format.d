@@ -858,7 +858,7 @@ if (allSatisfy!(isPointer, S))
 }
 
 template FormatSpec(Char)
-    if (!is(Unqual!Char == Char))
+if (!is(Unqual!Char == Char))
 {
     alias FormatSpec = FormatSpec!(Unqual!Char);
 }
@@ -868,7 +868,7 @@ template FormatSpec(Char)
  * specific formatting functions.
  */
 struct FormatSpec(Char)
-    if (is(Unqual!Char == Char))
+if (is(Unqual!Char == Char))
 {
     import std.ascii : isDigit;
     import std.algorithm.searching : startsWith;
@@ -3662,7 +3662,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
    Delegates are formatted by 'ReturnType delegate(Parameters) FunctionAttributes'
  */
 void formatValue(Writer, T, Char)(Writer w, scope T, ref FormatSpec!Char f)
-    if (isDelegate!T)
+if (isDelegate!T)
 {
     formatValue(w, T.stringof, f);
 }
@@ -4528,7 +4528,7 @@ private template acceptedSpecs(T)
  *     $(REF parse, std, conv) and $(REF to, std, conv)
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isInputRange!Range && is(Unqual!T == bool))
+if (isInputRange!Range && is(Unqual!T == bool))
 {
     import std.algorithm.searching : find;
     import std.conv : parse, text;
@@ -4543,7 +4543,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 
 /// ditto
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isInputRange!Range && is(T == typeof(null)))
+if (isInputRange!Range && is(T == typeof(null)))
 {
     import std.conv : parse, text;
     enforce(spec.spec == 's',
@@ -4554,7 +4554,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 
 /// ditto
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementType!Range))
+if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
 
     import std.algorithm.searching : find;
@@ -4588,8 +4588,8 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 
 /// ditto
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
-        && isSomeChar!(ElementType!Range)&& !is(Range == enum))
+if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
+    && isSomeChar!(ElementType!Range)&& !is(Range == enum))
 {
     import std.algorithm.searching : find;
     import std.conv : parse, text;
@@ -4612,7 +4612,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 
 /// ditto
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementType!Range))
+if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
     import std.algorithm.searching : find;
     import std.conv : to, text;
@@ -4637,7 +4637,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 
 /// ditto
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
+if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
 {
     import std.conv : text;
 
@@ -4690,7 +4690,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 
 /// ditto
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
+if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
 {
     import std.conv : parse, text;
     if (spec.spec == '(')
@@ -4705,7 +4705,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
 
 /// ditto
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isInputRange!Range && isAssociativeArray!T && !is(T == enum))
+if (isInputRange!Range && isAssociativeArray!T && !is(T == enum))
 {
     import std.conv : parse, text;
     if (spec.spec == '(')
@@ -4830,9 +4830,9 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
  * for integral and float types.
  */
 private T rawRead(T, Range)(ref Range input)
-    if (is(Unqual!(ElementEncodingType!Range) == char)
-     || is(Unqual!(ElementEncodingType!Range) == byte)
-     || is(Unqual!(ElementEncodingType!Range) == ubyte))
+if (is(Unqual!(ElementEncodingType!Range) == char)
+    || is(Unqual!(ElementEncodingType!Range) == byte)
+    || is(Unqual!(ElementEncodingType!Range) == ubyte))
 {
     union X
     {
@@ -4961,7 +4961,7 @@ body
 
 // Undocumented
 T unformatElement(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     import std.conv : parseElement;
     static if (isSomeString!T)
@@ -5408,7 +5408,8 @@ private bool needToSwapEndianess(Char)(ref FormatSpec!Char f)
  * Params: fmt  = Format string. For detailed specification, see $(REF formattedWrite, std,_format).
  *         args = Variadic list of arguments to format into returned string.
  */
-immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args) if (isSomeChar!Char)
+immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args)
+if (isSomeChar!Char)
 {
     import std.format : formattedWrite, FormatException;
     import std.array : appender;

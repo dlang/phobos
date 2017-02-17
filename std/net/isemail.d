@@ -58,7 +58,8 @@ import std.typecons : Flag, Yes, No;
  * Returns: an EmailStatus, indicating the status of the email address.
  */
 EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns,
-    EmailStatusCode errorLevel = EmailStatusCode.none) if (isSomeChar!(Char))
+EmailStatusCode errorLevel = EmailStatusCode.none)
+if (isSomeChar!(Char))
 {
     import std.algorithm.iteration : uniq;
     import std.algorithm.searching : canFind, maxElement;
@@ -1856,7 +1857,7 @@ unittest
  * )
  */
 int compareFirstN (alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length, bool caseInsensitive = false)
-    if (is(Unqual!(ElementType!(S1)) == dchar) && is(Unqual!(ElementType!(S2)) == dchar))
+if (is(Unqual!(ElementType!(S1)) == dchar) && is(Unqual!(ElementType!(S2)) == dchar))
 {
     import std.uni : icmp;
     import std.algorithm.comparison : cmp;
@@ -1915,7 +1916,8 @@ unittest
  *
  * Returns: the popped element
  */
-ElementType!(A) pop (A) (ref A a) if (isDynamicArray!(A) && !isNarrowString!(A) && isMutable!(A) && !is(A == void[]))
+ElementType!(A) pop (A) (ref A a)
+if (isDynamicArray!(A) && !isNarrowString!(A) && isMutable!(A) && !is(A == void[]))
 {
     auto e = a.back;
     a.popBack();

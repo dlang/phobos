@@ -373,8 +373,8 @@ alias CaseSensitive = Flag!"caseSensitive";
   +/
 ptrdiff_t indexOf(Range)(Range s, in dchar c,
         in CaseSensitive cs = Yes.caseSensitive)
-    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isConvertibleToString!Range)
+if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+    !isConvertibleToString!Range)
 {
     static import std.ascii;
     static import std.uni;
@@ -501,8 +501,8 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c,
 /// Ditto
 ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
         in CaseSensitive cs = Yes.caseSensitive)
-    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isConvertibleToString!Range)
+if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+    !isConvertibleToString!Range)
 {
     static if (isSomeString!(typeof(s)) ||
                 (hasSlicing!(typeof(s)) && hasLength!(typeof(s))))
@@ -557,14 +557,14 @@ ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
 
 ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c,
         in CaseSensitive cs = Yes.caseSensitive)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return indexOf!(StringTypeOf!Range)(s, c, cs);
 }
 
 ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c, in size_t startIdx,
         in CaseSensitive cs = Yes.caseSensitive)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return indexOf!(StringTypeOf!Range)(s, c, startIdx, cs);
 }
@@ -706,8 +706,8 @@ ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c, in size_t startIdx,
   +/
 ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
         in CaseSensitive cs = Yes.caseSensitive)
-    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        isSomeChar!Char)
+if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+    isSomeChar!Char)
 {
     alias Char1 = Unqual!(ElementEncodingType!Range);
 
@@ -780,7 +780,8 @@ ptrdiff_t indexOf(Range, Char)(Range s, const(Char)[] sub,
 /// Ditto
 ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
         in size_t startIdx, in CaseSensitive cs = Yes.caseSensitive)
-    @safe if (isSomeChar!Char1 && isSomeChar!Char2)
+@safe
+if (isSomeChar!Char1 && isSomeChar!Char2)
 {
     if (startIdx < s.length)
     {
@@ -817,9 +818,9 @@ ptrdiff_t indexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 
 ptrdiff_t indexOf(Range, Char)(auto ref Range s, const(Char)[] sub,
         in CaseSensitive cs = Yes.caseSensitive)
-    if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-          isSomeChar!Char) &&
-        is(StringTypeOf!Range))
+if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+    isSomeChar!Char) &&
+    is(StringTypeOf!Range))
 {
     return indexOf!(StringTypeOf!Range)(s, sub, cs);
 }
@@ -982,7 +983,7 @@ unittest
   +/
 ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c,
         in CaseSensitive cs = Yes.caseSensitive) @safe pure
-    if (isSomeChar!Char)
+if (isSomeChar!Char)
 {
     static import std.ascii, std.uni;
     import std.utf : canSearchInCodeUnits;
@@ -1045,7 +1046,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c,
 /// Ditto
 ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
         in CaseSensitive cs = Yes.caseSensitive) @safe pure
-    if (isSomeChar!Char)
+if (isSomeChar!Char)
 {
     if (startIdx <= s.length)
     {
@@ -1174,7 +1175,7 @@ ptrdiff_t lastIndexOf(Char)(const(Char)[] s, in dchar c, in size_t startIdx,
   +/
 ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
         in CaseSensitive cs = Yes.caseSensitive) @safe pure
-    if (isSomeChar!Char1 && isSomeChar!Char2)
+if (isSomeChar!Char1 && isSomeChar!Char2)
 {
     import std.algorithm.searching : endsWith;
     import std.conv : to;
@@ -1254,7 +1255,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 /// Ditto
 ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
         in size_t startIdx, in CaseSensitive cs = Yes.caseSensitive) @safe pure
-    if (isSomeChar!Char1 && isSomeChar!Char2)
+if (isSomeChar!Char1 && isSomeChar!Char2)
 {
     if (startIdx <= s.length)
     {
@@ -1436,7 +1437,7 @@ ptrdiff_t lastIndexOf(Char1, Char2)(const(Char1)[] s, const(Char2)[] sub,
 private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
         const(Char)[] haystack, const(Char2)[] needles,
         in CaseSensitive cs = Yes.caseSensitive) @safe pure
-    if (isSomeChar!Char && isSomeChar!Char2)
+if (isSomeChar!Char && isSomeChar!Char2)
 {
     import std.algorithm.searching : canFind, findAmong;
     if (cs == Yes.caseSensitive)
@@ -1568,7 +1569,7 @@ private ptrdiff_t indexOfAnyNeitherImpl(bool forward, bool any, Char, Char2)(
 */
 ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
         in CaseSensitive cs = Yes.caseSensitive) @safe pure
-    if (isSomeChar!Char && isSomeChar!Char2)
+if (isSomeChar!Char && isSomeChar!Char2)
 {
     return indexOfAnyNeitherImpl!(true, true)(haystack, needles, cs);
 }
@@ -1576,7 +1577,7 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
 /// Ditto
 ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
         in size_t startIdx, in CaseSensitive cs = Yes.caseSensitive) @safe pure
-    if (isSomeChar!Char && isSomeChar!Char2)
+if (isSomeChar!Char && isSomeChar!Char2)
 {
     if (startIdx < haystack.length)
     {
@@ -1740,7 +1741,7 @@ ptrdiff_t indexOfAny(Char,Char2)(const(Char)[] haystack, const(Char2)[] needles,
 ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
         const(Char2)[] needles, in CaseSensitive cs = Yes.caseSensitive)
         @safe pure
-    if (isSomeChar!Char && isSomeChar!Char2)
+if (isSomeChar!Char && isSomeChar!Char2)
 {
     return indexOfAnyNeitherImpl!(false, true)(haystack, needles, cs);
 }
@@ -1749,7 +1750,7 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
 ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
         const(Char2)[] needles, in size_t stopIdx,
         in CaseSensitive cs = Yes.caseSensitive) @safe pure
-    if (isSomeChar!Char && isSomeChar!Char2)
+if (isSomeChar!Char && isSomeChar!Char2)
 {
     if (stopIdx <= haystack.length)
     {
@@ -1923,7 +1924,7 @@ ptrdiff_t lastIndexOfAny(Char,Char2)(const(Char)[] haystack,
 ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
         const(Char2)[] needles, in CaseSensitive cs = Yes.caseSensitive)
         @safe pure
-    if (isSomeChar!Char && isSomeChar!Char2)
+if (isSomeChar!Char && isSomeChar!Char2)
 {
     return indexOfAnyNeitherImpl!(true, false)(haystack, needles, cs);
 }
@@ -1933,7 +1934,7 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
         const(Char2)[] needles, in size_t startIdx,
         in CaseSensitive cs = Yes.caseSensitive)
         @safe pure
-    if (isSomeChar!Char && isSomeChar!Char2)
+if (isSomeChar!Char && isSomeChar!Char2)
 {
     if (startIdx < haystack.length)
     {
@@ -2087,7 +2088,7 @@ ptrdiff_t indexOfNeither(Char,Char2)(const(Char)[] haystack,
 ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
         const(Char2)[] needles, in CaseSensitive cs = Yes.caseSensitive)
         @safe pure
-    if (isSomeChar!Char && isSomeChar!Char2)
+if (isSomeChar!Char && isSomeChar!Char2)
 {
     return indexOfAnyNeitherImpl!(false, false)(haystack, needles, cs);
 }
@@ -2097,7 +2098,7 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
         const(Char2)[] needles, in size_t stopIdx,
         in CaseSensitive cs = Yes.caseSensitive)
         @safe pure
-    if (isSomeChar!Char && isSomeChar!Char2)
+if (isSomeChar!Char && isSomeChar!Char2)
 {
     if (stopIdx < haystack.length)
     {
@@ -2243,7 +2244,7 @@ ptrdiff_t lastIndexOfNeither(Char,Char2)(const(Char)[] haystack,
  *     The _representation of the passed string.
  */
 auto representation(Char)(Char[] s) @safe pure nothrow @nogc
-    if (isSomeChar!Char)
+if (isSomeChar!Char)
 {
     import std.traits : ModifyTypePreservingTQ;
     alias ToRepType(T) = AliasSeq!(ubyte, ushort, uint)[T.sizeof / 2];
@@ -2305,7 +2306,7 @@ auto representation(Char)(Char[] s) @safe pure nothrow @nogc
  *      $(REF asCapitalized, std,uni) for a lazy range version that doesn't allocate memory
  */
 S capitalize(S)(S input) @trusted pure
-    if (isSomeString!S)
+if (isSomeString!S)
 {
     import std.array : array;
     import std.conv : to;
@@ -2322,7 +2323,7 @@ pure @safe unittest
 }
 
 auto capitalize(S)(auto ref S s)
-    if (!isSomeString!S && is(StringTypeOf!S))
+if (!isSomeString!S && is(StringTypeOf!S))
 {
     return capitalize!(StringTypeOf!S)(s);
 }
@@ -2399,7 +2400,7 @@ alias KeepTerminator = Flag!"keepTerminator";
 
 /// ditto
 S[] splitLines(S)(S s, in KeepTerminator keepTerm = No.keepTerminator) @safe pure
-    if (isSomeString!S)
+if (isSomeString!S)
 {
     import std.array : appender;
     import std.uni : lineSep, paraSep;
@@ -2495,7 +2496,7 @@ S[] splitLines(S)(S s, in KeepTerminator keepTerm = No.keepTerminator) @safe pur
 }
 
 auto splitLines(S)(auto ref S s, in KeepTerminator keepTerm = No.keepTerminator)
-    if (!isSomeString!S && is(StringTypeOf!S))
+if (!isSomeString!S && is(StringTypeOf!S))
 {
     return splitLines!(StringTypeOf!S)(s, keepTerm);
 }
@@ -2729,9 +2730,9 @@ public:
     $(REF splitter, std,regex)
  */
 auto lineSplitter(KeepTerminator keepTerm = No.keepTerminator, Range)(Range r)
-    if ((hasSlicing!Range && hasLength!Range && isSomeChar!(ElementType!Range) ||
-         isSomeString!Range) &&
-        !isConvertibleToString!Range)
+if ((hasSlicing!Range && hasLength!Range && isSomeChar!(ElementType!Range) ||
+    isSomeString!Range) &&
+    !isConvertibleToString!Range)
 {
     return LineSplitter!(keepTerm, Range)(r);
 }
@@ -2750,7 +2751,7 @@ auto lineSplitter(KeepTerminator keepTerm = No.keepTerminator, Range)(Range r)
 }
 
 auto lineSplitter(KeepTerminator keepTerm = No.keepTerminator, Range)(auto ref Range r)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return LineSplitter!(keepTerm, StringTypeOf!Range)(r);
 }
@@ -2871,8 +2872,8 @@ auto lineSplitter(KeepTerminator keepTerm = No.keepTerminator, Range)(auto ref R
         Generic stripping on ranges: $(REF _stripLeft, std, algorithm, mutation)
   +/
 auto stripLeft(Range)(Range input)
-    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isInfinite!Range && !isConvertibleToString!Range)
+if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+    !isInfinite!Range && !isConvertibleToString!Range)
 {
     static import std.ascii;
     static import std.uni;
@@ -2920,7 +2921,7 @@ auto stripLeft(Range)(Range input)
 }
 
 auto stripLeft(Range)(auto ref Range str)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return stripLeft!(StringTypeOf!Range)(str);
 }
@@ -2943,10 +2944,10 @@ auto stripLeft(Range)(auto ref Range str)
         Generic stripping on ranges: $(REF _stripRight, std, algorithm, mutation)
   +/
 auto stripRight(Range)(Range str)
-    if (isSomeString!Range ||
-        isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
-        !isConvertibleToString!Range &&
-        isSomeChar!(ElementEncodingType!Range))
+if (isSomeString!Range ||
+    isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
+    !isConvertibleToString!Range &&
+    isSomeChar!(ElementEncodingType!Range))
 {
     import std.uni : isWhite;
     alias C = Unqual!(ElementEncodingType!(typeof(str)));
@@ -3056,7 +3057,7 @@ unittest
 }
 
 auto stripRight(Range)(auto ref Range str)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return stripRight!(StringTypeOf!Range)(str);
 }
@@ -3105,10 +3106,10 @@ auto stripRight(Range)(auto ref Range str)
         Generic stripping on ranges: $(REF _strip, std, algorithm, mutation)
   +/
 auto strip(Range)(Range str)
-    if (isSomeString!Range ||
-        isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
-        !isConvertibleToString!Range &&
-        isSomeChar!(ElementEncodingType!Range))
+if (isSomeString!Range ||
+    isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range &&
+    !isConvertibleToString!Range &&
+    isSomeChar!(ElementEncodingType!Range))
 {
     return stripRight(stripLeft(str));
 }
@@ -3130,7 +3131,7 @@ auto strip(Range)(Range str)
 }
 
 auto strip(Range)(auto ref Range str)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return strip!(StringTypeOf!Range)(str);
 }
@@ -3208,9 +3209,9 @@ auto strip(Range)(auto ref Range str)
         slice of str
   +/
 Range chomp(Range)(Range str)
-    if ((isRandomAccessRange!Range && isSomeChar!(ElementEncodingType!Range) ||
-         isNarrowString!Range) &&
-        !isConvertibleToString!Range)
+if ((isRandomAccessRange!Range && isSomeChar!(ElementEncodingType!Range) ||
+    isNarrowString!Range) &&
+    !isConvertibleToString!Range)
 {
     import std.uni : lineSep, paraSep, nelSep;
     if (str.empty)
@@ -3264,10 +3265,10 @@ Range chomp(Range)(Range str)
 
 /// Ditto
 Range chomp(Range, C2)(Range str, const(C2)[] delimiter)
-    if ((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range) ||
-         isNarrowString!Range) &&
-        !isConvertibleToString!Range &&
-        isSomeChar!C2)
+if ((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range) ||
+    isNarrowString!Range) &&
+    !isConvertibleToString!Range &&
+    isSomeChar!C2)
 {
     if (delimiter.empty)
         return chomp(str);
@@ -3329,13 +3330,13 @@ unittest
 }
 
 StringTypeOf!Range chomp(Range)(auto ref Range str)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return chomp!(StringTypeOf!Range)(str);
 }
 
 StringTypeOf!Range chomp(Range, C2)(auto ref Range str, const(C2)[] delimiter)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return chomp!(StringTypeOf!Range, C2)(str, delimiter);
 }
@@ -3420,10 +3421,10 @@ StringTypeOf!Range chomp(Range, C2)(auto ref Range str, const(C2)[] delimiter)
         slice of str
  +/
 Range chompPrefix(Range, C2)(Range str, const(C2)[] delimiter)
-    if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) ||
-         isNarrowString!Range) &&
-        !isConvertibleToString!Range &&
-        isSomeChar!C2)
+if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) ||
+    isNarrowString!Range) &&
+    !isConvertibleToString!Range &&
+    isSomeChar!C2)
 {
     alias C1 = ElementEncodingType!Range;
 
@@ -3465,7 +3466,7 @@ Range chompPrefix(Range, C2)(Range str, const(C2)[] delimiter)
 }
 
 StringTypeOf!Range chompPrefix(Range, C2)(auto ref Range str, const(C2)[] delimiter)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return chompPrefix!(StringTypeOf!Range, C2)(str, delimiter);
 }
@@ -3523,9 +3524,9 @@ unittest
  +/
 
 Range chop(Range)(Range str)
-    if ((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range) ||
-         isNarrowString!Range) &&
-        !isConvertibleToString!Range)
+if ((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range) ||
+    isNarrowString!Range) &&
+    !isConvertibleToString!Range)
 {
     if (str.empty)
         return str;
@@ -3592,7 +3593,7 @@ Range chop(Range)(Range str)
 }
 
 StringTypeOf!Range chop(Range)(auto ref Range str)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return chop!(StringTypeOf!Range)(str);
 }
@@ -3677,7 +3678,7 @@ StringTypeOf!Range chop(Range)(auto ref Range str)
         $(LREF leftJustifier), which does not allocate
   +/
 S leftJustify(S)(S s, size_t width, dchar fillChar = ' ')
-    if (isSomeString!S)
+if (isSomeString!S)
 {
     import std.array : array;
     return leftJustifier(s, width, fillChar).array;
@@ -3709,8 +3710,8 @@ S leftJustify(S)(S s, size_t width, dchar fillChar = ' ')
   +/
 
 auto leftJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
-    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isConvertibleToString!Range)
+if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+    !isConvertibleToString!Range)
 {
     alias C = Unqual!(ElementEncodingType!Range);
 
@@ -3782,7 +3783,7 @@ unittest
 }
 
 auto leftJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' ')
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return leftJustifier!(StringTypeOf!Range)(r, width, fillChar);
 }
@@ -3819,7 +3820,7 @@ auto leftJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' ')
         $(LREF rightJustifier), which does not allocate
   +/
 S rightJustify(S)(S s, size_t width, dchar fillChar = ' ')
-    if (isSomeString!S)
+if (isSomeString!S)
 {
     import std.array : array;
     return rightJustifier(s, width, fillChar).array;
@@ -3851,8 +3852,8 @@ S rightJustify(S)(S s, size_t width, dchar fillChar = ' ')
   +/
 
 auto rightJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
-    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isConvertibleToString!Range)
+if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+    !isConvertibleToString!Range)
 {
     alias C = Unqual!(ElementEncodingType!Range);
 
@@ -3961,7 +3962,7 @@ unittest
 }
 
 auto rightJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' ')
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return rightJustifier!(StringTypeOf!Range)(r, width, fillChar);
 }
@@ -4008,7 +4009,7 @@ auto rightJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' ')
         instead.
   +/
 S center(S)(S s, size_t width, dchar fillChar = ' ')
-    if (isSomeString!S)
+if (isSomeString!S)
 {
     import std.array : array;
     return centerJustifier(s, width, fillChar).array;
@@ -4078,8 +4079,8 @@ unittest
   +/
 
 auto centerJustifier(Range)(Range r, size_t width, dchar fillChar = ' ')
-    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isConvertibleToString!Range)
+if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+    !isConvertibleToString!Range)
 {
     alias C = Unqual!(ElementEncodingType!Range);
 
@@ -4121,7 +4122,7 @@ unittest
 }
 
 auto centerJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' ')
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return centerJustifier!(StringTypeOf!Range)(r, width, fillChar);
 }
@@ -4182,8 +4183,8 @@ auto centerJustifier(Range)(auto ref Range r, size_t width, dchar fillChar = ' '
         GC allocated string with tabs replaced with spaces
   +/
 auto detab(Range)(auto ref Range s, size_t tabSize = 8) pure
-    if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
-        || __traits(compiles, StringTypeOf!Range))
+if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
+    || __traits(compiles, StringTypeOf!Range))
 {
     import std.array : array;
     return detabber(s, tabSize).array;
@@ -4232,8 +4233,8 @@ auto detab(Range)(auto ref Range s, size_t tabSize = 8) pure
         lazy forward range with tabs replaced with spaces
   +/
 auto detabber(Range)(Range r, size_t tabSize = 8)
-    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isConvertibleToString!Range)
+if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+    !isConvertibleToString!Range)
 {
     import std.uni : lineSep, paraSep, nelSep;
     import std.utf : codeUnitLimit, decodeFront;
@@ -4351,7 +4352,7 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
 }
 
 auto detabber(Range)(auto ref Range r, size_t tabSize = 8)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return detabber!(StringTypeOf!Range)(r, tabSize);
 }
@@ -4425,7 +4426,7 @@ auto detabber(Range)(auto ref Range r, size_t tabSize = 8)
         $(LREF entabber)
  +/
 auto entab(Range)(Range s, size_t tabSize = 8)
-    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
+if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
 {
     import std.array : array;
     return entabber(s, tabSize).array;
@@ -4438,8 +4439,8 @@ auto entab(Range)(Range s, size_t tabSize = 8)
 }
 
 auto entab(Range)(auto ref Range s, size_t tabSize = 8)
-    if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
-        is(StringTypeOf!Range))
+if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
+    is(StringTypeOf!Range))
 {
     return entab!(StringTypeOf!Range)(s, tabSize);
 }
@@ -4464,7 +4465,7 @@ auto entab(Range)(auto ref Range s, size_t tabSize = 8)
         $(LREF entab)
   +/
 auto entabber(Range)(Range r, size_t tabSize = 8)
-    if (isForwardRange!Range && !isConvertibleToString!Range)
+if (isForwardRange!Range && !isConvertibleToString!Range)
 {
     import std.uni : lineSep, paraSep, nelSep;
     import std.utf : codeUnitLimit, decodeFront;
@@ -4690,7 +4691,7 @@ auto entabber(Range)(Range r, size_t tabSize = 8)
 }
 
 auto entabber(Range)(auto ref Range r, size_t tabSize = 8)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return entabber!(StringTypeOf!Range)(r, tabSize);
 }
@@ -4787,7 +4788,7 @@ unittest
 C1[] translate(C1, C2 = immutable char)(C1[] str,
                                         in dchar[dchar] transTable,
                                         const(C2)[] toRemove = null) @safe pure
-    if (isSomeChar!C1 && isSomeChar!C2)
+if (isSomeChar!C1 && isSomeChar!C2)
 {
     import std.array : appender;
     auto buffer = appender!(C1[])();
@@ -4867,7 +4868,7 @@ C1[] translate(C1, C2 = immutable char)(C1[] str,
 C1[] translate(C1, S, C2 = immutable char)(C1[] str,
                                            in S[dchar] transTable,
                                            const(C2)[] toRemove = null) @safe pure
-    if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
+if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
 {
     import std.array : appender;
     auto buffer = appender!(C1[])();
@@ -4943,7 +4944,7 @@ void translate(C1, C2 = immutable char, Buffer)(C1[] str,
                                         in dchar[dchar] transTable,
                                         const(C2)[] toRemove,
                                         Buffer buffer)
-    if (isSomeChar!C1 && isSomeChar!C2 && isOutputRange!(Buffer, C1))
+if (isSomeChar!C1 && isSomeChar!C2 && isOutputRange!(Buffer, C1))
 {
     translateImpl(str, transTable, toRemove, buffer);
 }
@@ -4990,7 +4991,7 @@ void translate(C1, S, C2 = immutable char, Buffer)(C1[] str,
                                                    in S[dchar] transTable,
                                                    const(C2)[] toRemove,
                                                    Buffer buffer)
-    if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2 && isOutputRange!(Buffer, S))
+if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2 && isOutputRange!(Buffer, S))
 {
     translateImpl(str, transTable, toRemove, buffer);
 }
@@ -5053,7 +5054,7 @@ private void translateImpl(C1, T, C2, Buffer)(C1[] str,
         toRemove   = The characters to remove from the string.
   +/
 C[] translate(C = immutable char)(in char[] str, in char[] transTable, in char[] toRemove = null) @trusted pure nothrow
-    if (is(Unqual!C == char))
+if (is(Unqual!C == char))
 in
 {
     assert(transTable.length == 256);
@@ -5192,7 +5193,7 @@ body
   +/
 void translate(C = immutable char, Buffer)(in char[] str, in char[] transTable,
         in char[] toRemove, Buffer buffer) @trusted pure
-    if (is(Unqual!C == char) && isOutputRange!(Buffer, char))
+if (is(Unqual!C == char) && isOutputRange!(Buffer, char))
 in
 {
     assert(transTable.length == 256);
@@ -5244,7 +5245,8 @@ body
  *  to be more like regular expression character classes.
  */
 
-bool inPattern(S)(dchar c, in S pattern) @safe pure @nogc if (isSomeString!S)
+bool inPattern(S)(dchar c, in S pattern) @safe pure @nogc
+if (isSomeString!S)
 {
     bool result = false;
     int range = 0;
@@ -5313,7 +5315,8 @@ bool inPattern(S)(dchar c, in S pattern) @safe pure @nogc if (isSomeString!S)
  * See if character c is in the intersection of the patterns.
  */
 
-bool inPattern(S)(dchar c, S[] patterns) @safe pure @nogc if (isSomeString!S)
+bool inPattern(S)(dchar c, S[] patterns) @safe pure @nogc
+if (isSomeString!S)
 {
     foreach (string pattern; patterns)
     {
@@ -5330,7 +5333,8 @@ bool inPattern(S)(dchar c, S[] patterns) @safe pure @nogc if (isSomeString!S)
  * Count characters in s that match pattern.
  */
 
-size_t countchars(S, S1)(S s, in S1 pattern) @safe pure @nogc if (isSomeString!S && isSomeString!S1)
+size_t countchars(S, S1)(S s, in S1 pattern) @safe pure @nogc
+if (isSomeString!S && isSomeString!S1)
 {
     size_t count;
     foreach (dchar c; s)
@@ -5359,7 +5363,8 @@ size_t countchars(S, S1)(S s, in S1 pattern) @safe pure @nogc if (isSomeString!S
  * Return string that is s with all characters removed that match pattern.
  */
 
-S removechars(S)(S s, in S pattern) @safe pure if (isSomeString!S)
+S removechars(S)(S s, in S pattern) @safe pure
+if (isSomeString!S)
 {
     import std.utf : encode;
 
@@ -5536,7 +5541,8 @@ S1 munch(S1, S2)(ref S1 s, S2 pattern) @safe pure @nogc
  * repeated with the one to its immediate left.
  */
 
-S succ(S)(S s) @safe pure if (isSomeString!S)
+S succ(S)(S s) @safe pure
+if (isSomeString!S)
 {
     import std.ascii : isAlphaNum;
 
@@ -5836,7 +5842,8 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
  * Returns:
  *     $(D bool)
  */
-bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S ||
+bool isNumeric(S)(S s, bool bAllowSep = false)
+if (isSomeString!S ||
     (isRandomAccessRange!S &&
     hasSlicing!S &&
     isSomeChar!(ElementType!S) &&
@@ -6168,8 +6175,8 @@ bool isNumeric(S)(S s, bool bAllowSep = false) if (isSomeString!S ||
  *  but this one is the standard one.
  */
 char[4] soundexer(Range)(Range str)
-    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isConvertibleToString!Range)
+if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+    !isConvertibleToString!Range)
 {
     alias C = Unqual!(ElementEncodingType!Range);
 
@@ -6224,7 +6231,7 @@ char[4] soundexer(Range)(Range str)
 }
 
 char[4] soundexer(Range)(auto ref Range str)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return soundexer!(StringTypeOf!Range)(str);
 }
@@ -6456,9 +6463,9 @@ string[string] abbrev(string[] values) @safe pure
  */
 
 size_t column(Range)(Range str, in size_t tabsize = 8)
-    if ((isInputRange!Range && isSomeChar!(Unqual!(ElementEncodingType!Range)) ||
-         isNarrowString!Range) &&
-        !isConvertibleToString!Range)
+if ((isInputRange!Range && isSomeChar!(Unqual!(ElementEncodingType!Range)) ||
+    isNarrowString!Range) &&
+    !isConvertibleToString!Range)
 {
     static if (is(Unqual!(ElementEncodingType!Range) == char))
     {
@@ -6536,7 +6543,7 @@ size_t column(Range)(Range str, in size_t tabsize = 8)
 }
 
 size_t column(Range)(auto ref Range str, in size_t tabsize = 8)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return column!(StringTypeOf!Range)(str, tabsize);
 }
@@ -6582,7 +6589,8 @@ size_t column(Range)(auto ref Range str, in size_t tabsize = 8)
  */
 
 S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
-        S indent = null, in size_t tabsize = 8) if (isSomeString!S)
+S indent = null, in size_t tabsize = 8)
+if (isSomeString!S)
 {
     import std.uni : isWhite;
     typeof(s.dup) result;
@@ -6699,7 +6707,8 @@ S wrap(S)(S s, in size_t columns = 80, S firstindent = null,
  *     StringException if indentation is done with different sequences
  *     of whitespace characters.
  */
-S outdent(S)(S str) @safe pure if (isSomeString!S)
+S outdent(S)(S str) @safe pure
+if (isSomeString!S)
 {
     return str.splitLines(Yes.keepTerminator).outdent().join();
 }
@@ -6741,7 +6750,8 @@ void main() {
  *     StringException if indentation is done with different sequences
  *     of whitespace characters.
  */
-S[] outdent(S)(S[] lines) @safe pure if (isSomeString!S)
+S[] outdent(S)(S[] lines) @safe pure
+if (isSomeString!S)
 {
     import std.algorithm.searching : startsWith;
 
@@ -6917,7 +6927,7 @@ Returns:
 See_Also: $(LREF representation)
 */
 auto assumeUTF(T)(T[] arr) pure
-    if (staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
+if (staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
 {
     import std.traits : ModifyTypePreservingTQ;
     import std.utf : validate;

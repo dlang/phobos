@@ -736,7 +736,7 @@ private struct RBRange(N)
  * inserted after all existing duplicate elements.
  */
 final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
-    if (is(typeof(binaryFun!less(T.init, T.init))))
+if (is(typeof(binaryFun!less(T.init, T.init))))
 {
     import std.meta : allSatisfy;
     import std.range.primitives : isInputRange, walkLength;
@@ -1842,14 +1842,14 @@ auto redBlackTree(bool allowDuplicates, E)(E[] elems...)
 
 /++ Ditto +/
 auto redBlackTree(alias less, E)(E[] elems...)
-    if (is(typeof(binaryFun!less(E.init, E.init))))
+if (is(typeof(binaryFun!less(E.init, E.init))))
 {
     return new RedBlackTree!(E, less)(elems);
 }
 
 /++ Ditto +/
 auto redBlackTree(alias less, bool allowDuplicates, E)(E[] elems...)
-    if (is(typeof(binaryFun!less(E.init, E.init))))
+if (is(typeof(binaryFun!less(E.init, E.init))))
 {
     //We shouldn't need to instantiate less here, but for some reason,
     //dmd can't handle it if we don't (even though the template which
@@ -1885,8 +1885,8 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
 
 /++ Ditto +/
 auto redBlackTree(alias less, bool allowDuplicates, Stuff)(Stuff range)
-    if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init)))
-         && isInputRange!Stuff && !isArray!(Stuff))
+if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init)))
+    && isInputRange!Stuff && !isArray!(Stuff))
 {
     //We shouldn't need to instantiate less here, but for some reason,
     //dmd can't handle it if we don't (even though the template which

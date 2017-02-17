@@ -200,7 +200,8 @@ Returns:
     a $(D dchar[]), $(D const(dchar)[]), or $(D immutable(dchar)[]) depending on the constness of
     the input.
 */
-@trusted ElementType!String[] array(String)(scope String str) if (isNarrowString!String)
+@trusted ElementType!String[] array(String)(scope String str)
+if (isNarrowString!String)
 {
     import std.utf : toUTF32;
     /* This function is @trusted because the following cast
@@ -354,7 +355,7 @@ See_Also: $(REF Tuple, std,typecons), $(REF zip, std,range)
  */
 
 auto assocArray(Range)(Range r)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     import std.typecons : isTuple;
 
@@ -838,8 +839,8 @@ private void copyBackwards(T)(T[] src, T[] dest)
         stuff = An input range, or any number of implicitly convertible items to insert into $(D array).
  +/
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
-    if (!isSomeString!(T[])
-        && allSatisfy!(isInputRangeOrConvertible!T, U) && U.length > 0)
+if (!isSomeString!(T[])
+    && allSatisfy!(isInputRangeOrConvertible!T, U) && U.length > 0)
 {
     static if (allSatisfy!(isInputRangeWithLengthOrConvertible!T, U))
     {
@@ -897,7 +898,7 @@ void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
 
 /// Ditto
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
-    if (isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
+if (isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
 {
     static if (is(Unqual!T == T)
         && allSatisfy!(isInputRangeWithLengthOrConvertible!dchar, U))
@@ -1269,7 +1270,8 @@ Returns an array that consists of $(D s) (which must be an input
 range) repeated $(D n) times. This function allocates, fills, and
 returns a new array. For a lazy version, refer to $(REF repeat, std,range).
  */
-ElementEncodingType!S[] replicate(S)(S s, size_t n) if (isDynamicArray!S)
+ElementEncodingType!S[] replicate(S)(S s, size_t n)
+if (isDynamicArray!S)
 {
     alias RetType = ElementEncodingType!S[];
 
@@ -1476,9 +1478,10 @@ if (isForwardRange!Range && is(typeof(ElementType!Range.init == Separator.init))
     return range.splitter(sep).array;
 }
 ///ditto
-auto split(Range, Separator)(Range range, Separator sep) if (
-        isForwardRange!Range && isForwardRange!Separator
-        && is(typeof(ElementType!Range.init == ElementType!Separator.init)))
+auto split(Range, Separator)(Range range, Separator sep)
+if (
+    isForwardRange!Range && isForwardRange!Separator
+    && is(typeof(ElementType!Range.init == ElementType!Separator.init)))
 {
     import std.algorithm.iteration : splitter;
     return range.splitter(sep).array;
@@ -1570,10 +1573,10 @@ private enum bool hasCheapIteration(R) = isArray!R;
         For a lazy version, see $(REF joiner, std,algorithm,iteration)
   +/
 ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, scope R sep)
-    if (isInputRange!RoR &&
-       isInputRange!(Unqual!(ElementType!RoR)) &&
-       isInputRange!R &&
-       is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
+if (isInputRange!RoR &&
+    isInputRange!(Unqual!(ElementType!RoR)) &&
+    isInputRange!R &&
+    is(Unqual!(ElementType!(ElementType!RoR)) == Unqual!(ElementType!R)))
 {
     alias RetType = typeof(return);
     alias RetTypeElement = Unqual!(ElementEncodingType!RetType);
@@ -1647,9 +1650,9 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, R)(RoR ror, scope R sep)
 
 /// Ditto
 ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, scope E sep)
-    if (isInputRange!RoR &&
-       isInputRange!(Unqual!(ElementType!RoR)) &&
-       is(E : ElementType!(ElementType!RoR)))
+if (isInputRange!RoR &&
+    isInputRange!(Unqual!(ElementType!RoR)) &&
+    is(E : ElementType!(ElementType!RoR)))
 {
     alias RetType = typeof(return);
     alias RetTypeElement = Unqual!(ElementEncodingType!RetType);
@@ -1733,8 +1736,8 @@ ElementEncodingType!(ElementType!RoR)[] join(RoR, E)(RoR ror, scope E sep)
 
 /// Ditto
 ElementEncodingType!(ElementType!RoR)[] join(RoR)(RoR ror)
-    if (isInputRange!RoR &&
-       isInputRange!(Unqual!(ElementType!RoR)))
+if (isInputRange!RoR &&
+    isInputRange!(Unqual!(ElementType!RoR)))
 {
     alias RetType = typeof(return);
     alias RetTypeElement = Unqual!(ElementEncodingType!RetType);
@@ -2094,9 +2097,9 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     array without changing the contents of $(D subject).
  +/
 T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
-    if (isInputRange!Range &&
-       (is(ElementType!Range : T) ||
-        isSomeString!(T[]) && is(ElementType!Range : dchar)))
+if (isInputRange!Range &&
+    (is(ElementType!Range : T) ||
+    isSomeString!(T[]) && is(ElementType!Range : dchar)))
 {
     static if (hasLength!Range && is(ElementEncodingType!Range : T))
     {
@@ -2210,7 +2213,7 @@ T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
     shrinks the array as needed.
  +/
 void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
-    if (is(typeof(replace(array, from, to, stuff))))
+if (is(typeof(replace(array, from, to, stuff))))
 {
     static if (isDynamicArray!Range &&
               is(Unqual!(ElementEncodingType!Range) == T) &&

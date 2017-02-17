@@ -101,7 +101,7 @@ unittest
  * Convenience function for constructing a generic container.
  */
 template make(alias Container, Args...)
-    if (!is(Container))
+if (!is(Container))
 {
     import std.range : isInputRange, isInfinite;
     import std.traits : isDynamicArray;

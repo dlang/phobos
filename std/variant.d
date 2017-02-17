@@ -2020,7 +2020,7 @@ unittest
  * parameter-less fallback function is specified.
  */
 template visit(Handlers...)
-    if (Handlers.length > 0)
+if (Handlers.length > 0)
 {
     ///
     auto visit(VariantType)(VariantType variant)
@@ -2126,7 +2126,7 @@ unittest
  * when no parameter-less fallback function is specified.
  */
 template tryVisit(Handlers...)
-    if (Handlers.length > 0)
+if (Handlers.length > 0)
 {
     ///
     auto tryVisit(VariantType)(VariantType variant)
@@ -2194,7 +2194,7 @@ unittest
 }
 
 private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant)
-    if (isAlgebraic!VariantType && Handler.length > 0)
+if (isAlgebraic!VariantType && Handler.length > 0)
 {
     alias AllowedTypes = VariantType.AllowedTypes;
 

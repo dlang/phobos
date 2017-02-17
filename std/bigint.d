@@ -1086,7 +1086,8 @@ Returns:
     The absolute value of x.
 
 */
-Unsigned!T absUnsign(T)(T x) if (isIntegral!T)
+Unsigned!T absUnsign(T)(T x)
+if (isIntegral!T)
 {
     static if (isSigned!T)
     {

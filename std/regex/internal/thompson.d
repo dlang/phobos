@@ -715,7 +715,7 @@ template ThompsonOps(E,S, bool withInput:false)
    never looking at the same char twice
 +/
 @trusted struct ThompsonMatcher(Char, StreamType = Input!Char)
-    if (is(Char : dchar))
+if (is(Char : dchar))
 {
     alias DataIndex = Stream.DataIndex;
     alias Stream = StreamType;

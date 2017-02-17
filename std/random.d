@@ -249,7 +249,7 @@ template isSeedable(Rng)
 Linear Congruential generator.
  */
 struct LinearCongruentialEngine(UIntType, UIntType a, UIntType c, UIntType m)
-    if (isUnsigned!UIntType)
+if (isUnsigned!UIntType)
 {
     ///Mark this as a Rng
     enum bool isUniformRandom = true;
@@ -531,7 +531,7 @@ struct MersenneTwisterEngine(UIntType, size_t w, size_t n, size_t m, size_t r,
                              UIntType a, size_t u, UIntType d, size_t s,
                              UIntType b, size_t t,
                              UIntType c, size_t l, UIntType f)
-    if (isUnsigned!UIntType)
+if (isUnsigned!UIntType)
 {
     static assert(0 < w && w <= UIntType.sizeof * 8);
     static assert(1 <= m && m <= n);
@@ -993,7 +993,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
  * )
  */
 struct XorshiftEngine(UIntType, UIntType bits, UIntType a, UIntType b, UIntType c)
-    if (isUnsigned!UIntType)
+if (isUnsigned!UIntType)
 {
     static assert(bits == 32 || bits == 64 || bits == 96 || bits == 128 || bits == 160 || bits == 192,
                   "Xorshift supports only 32, 64, 96, 128, 160 and 192 bit versions. "
@@ -1364,7 +1364,8 @@ Returns:
     these parameters
  */
 auto uniform(string boundaries = "[)", T1, T2)
-(T1 a, T2 b)  if (!is(CommonType!(T1, T2) == void))
+(T1 a, T2 b)
+if (!is(CommonType!(T1, T2) == void))
 {
     return uniform!(boundaries, T1, T2, Random)(a, b, rndGen);
 }
@@ -1841,14 +1842,14 @@ if (is(E == enum))
  *
  */
 T uniform01(T = double)()
-    if (isFloatingPoint!T)
+if (isFloatingPoint!T)
 {
     return uniform01!T(rndGen);
 }
 
 /// ditto
 T uniform01(T = double, UniformRNG)(ref UniformRNG rng)
-    if (isFloatingPoint!T && isUniformRNG!UniformRNG)
+if (isFloatingPoint!T && isUniformRNG!UniformRNG)
 out (result)
 {
     assert(0 <= result);
@@ -1943,7 +1944,7 @@ array of size $(D n) of positive numbers of type $(D F) that sum to
 $(D 1). If $(D useThis) is provided, it is used as storage.
  */
 F[] uniformDistribution(F = double)(size_t n, F[] useThis = null)
-    if (isFloatingPoint!F)
+if (isFloatingPoint!F)
 {
     import std.numeric : normalize;
     useThis.length = n;
@@ -1985,7 +1986,7 @@ Returns:
  */
 auto ref choice(Range, RandomGen = Random)(auto ref Range range,
                                            ref RandomGen urng = rndGen)
-    if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
+if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
 {
     assert(range.length > 0,
            __PRETTY_FUNCTION__ ~ ": invalid Range supplied. Range cannot be empty");
@@ -2063,14 +2064,14 @@ Params:
  */
 
 void randomShuffle(Range, RandomGen)(Range r, ref RandomGen gen)
-    if (isRandomAccessRange!Range && isUniformRNG!RandomGen)
+if (isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
     return partialShuffle!(Range, RandomGen)(r, r.length, gen);
 }
 
 /// ditto
 void randomShuffle(Range)(Range r)
-    if (isRandomAccessRange!Range)
+if (isRandomAccessRange!Range)
 {
     return randomShuffle(r, rndGen);
 }
@@ -2112,7 +2113,7 @@ Params:
           specified, defaults to $(D rndGen)
 */
 void partialShuffle(Range, RandomGen)(Range r, in size_t n, ref RandomGen gen)
-    if (isRandomAccessRange!Range && isUniformRNG!RandomGen)
+if (isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
     import std.exception : enforce;
     import std.algorithm.mutation : swapAt;
@@ -2125,7 +2126,7 @@ void partialShuffle(Range, RandomGen)(Range r, in size_t n, ref RandomGen gen)
 
 /// ditto
 void partialShuffle(Range)(Range r, in size_t n)
-    if (isRandomAccessRange!Range)
+if (isRandomAccessRange!Range)
 {
     return partialShuffle(r, n, rndGen);
 }
@@ -2225,7 +2226,7 @@ if (isNumeric!Num)
 }
 
 private size_t diceImpl(Rng, Range)(ref Rng rng, scope Range proportions)
-    if (isForwardRange!Range && isNumeric!(ElementType!Range) && isForwardRange!Rng)
+if (isForwardRange!Range && isNumeric!(ElementType!Range) && isForwardRange!Rng)
 in
 {
     import std.algorithm.searching : all;
@@ -2316,7 +2317,7 @@ foreach (e; randomCover(a, rndGen))  // ... so this second random cover
 ----
  */
 struct RandomCover(Range, UniformRNG = void)
-    if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
+if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
 {
     private Range _input;
     private bool[] _chosen;
@@ -2433,14 +2434,14 @@ struct RandomCover(Range, UniformRNG = void)
 
 /// Ditto
 auto randomCover(Range, UniformRNG)(Range r, auto ref UniformRNG rng)
-    if (isRandomAccessRange!Range && isUniformRNG!UniformRNG)
+if (isRandomAccessRange!Range && isUniformRNG!UniformRNG)
 {
     return RandomCover!(Range, UniformRNG)(r, rng);
 }
 
 /// Ditto
 auto randomCover(Range)(Range r)
-    if (isRandomAccessRange!Range)
+if (isRandomAccessRange!Range)
 {
     return RandomCover!(Range, void)(r);
 }
@@ -2585,7 +2586,7 @@ foreach (e; randomSample(a, 5, rndGen))  // ... so this second random
 ----
 */
 struct RandomSample(Range, UniformRNG = void)
-    if (isInputRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
+if (isInputRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
 {
     private size_t _available, _toSelect;
     private enum ushort _alphaInverse = 13; // Vitter's recommended value.
@@ -2973,28 +2974,28 @@ Variable names are chosen to match those in Vitter's paper.
 
 /// Ditto
 auto randomSample(Range)(Range r, size_t n, size_t total)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     return RandomSample!(Range, void)(r, n, total);
 }
 
 /// Ditto
 auto randomSample(Range)(Range r, size_t n)
-    if (isInputRange!Range && hasLength!Range)
+if (isInputRange!Range && hasLength!Range)
 {
     return RandomSample!(Range, void)(r, n, r.length);
 }
 
 /// Ditto
 auto randomSample(Range, UniformRNG)(Range r, size_t n, size_t total, auto ref UniformRNG rng)
-    if (isInputRange!Range && isUniformRNG!UniformRNG)
+if (isInputRange!Range && isUniformRNG!UniformRNG)
 {
     return RandomSample!(Range, UniformRNG)(r, n, total, rng);
 }
 
 /// Ditto
 auto randomSample(Range, UniformRNG)(Range r, size_t n, auto ref UniformRNG rng)
-    if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
+if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
 {
     return RandomSample!(Range, UniformRNG)(r, n, r.length, rng);
 }

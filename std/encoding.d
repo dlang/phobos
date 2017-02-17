@@ -3501,7 +3501,7 @@ Returns:
     the found $(D BOMSeq) corresponding to the passed $(D input).
 */
 immutable(BOMSeq) getBOM(Range)(Range input)
-        if (isForwardRange!Range && is(Unqual!(ElementType!Range) == ubyte))
+if (isForwardRange!Range && is(Unqual!(ElementType!Range) == ubyte))
 {
     import std.algorithm.searching : startsWith;
     foreach (it; bomTable[1 .. $])
