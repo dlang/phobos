@@ -2619,6 +2619,9 @@ T gcd(T)(T a, T b)
         if (b == 0)
             return a;
 
+        import core.bitop : bsf;
+        import std.algorithm.mutation : swap;
+
         immutable uint shift = bsf(a | b);
         a >>= a.bsf;
 
