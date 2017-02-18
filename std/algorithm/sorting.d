@@ -3748,58 +3748,46 @@ void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
               (Range r, RangeIndex index, SortOutput sorted = No.sortOutput)
 if (isRandomAccessRange!Range &&
     isRandomAccessRange!RangeIndex &&
-    hasAssignableElements!RangeIndex &&
-    isIntegral!(ElementType!(RangeIndex)))
+    hasAssignableElements!RangeIndex)
 {
     static assert(ss == SwapStrategy.unstable,
                   "Stable swap strategy not implemented yet.");
 
-    import std.container : BinaryHeap;
-    import std.exception : enforce;
-
+    import std.container.binaryheap : BinaryHeap;
     if (index.empty) return;
-    enforce(ElementType!(RangeIndex).max >= index.length,
-            "Index type too small");
-    bool indirectLess(ElementType!(RangeIndex) a, ElementType!(RangeIndex) b)
-    {
-        return binaryFun!(less)(r[a], r[b]);
-    }
-    auto heap = BinaryHeap!(RangeIndex, indirectLess)(index, 0);
-    foreach (i; 0 .. r.length)
-    {
-        heap.conditionalInsert(cast(ElementType!RangeIndex) i);
-    }
-    if (sorted == Yes.sortOutput)
-    {
-        while (!heap.empty) heap.removeFront();
-    }
-}
 
-/// ditto
-void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
-               Range, RangeIndex)
-              (Range r, RangeIndex index, SortOutput sorted = No.sortOutput)
-if (isRandomAccessRange!Range &&
-    isRandomAccessRange!RangeIndex &&
-    hasAssignableElements!RangeIndex &&
-    is(ElementType!(RangeIndex) == ElementType!(Range)*))
-{
-    static assert(ss == SwapStrategy.unstable,
-                  "Stable swap strategy not implemented yet.");
-
-    import std.container : BinaryHeap;
-
-    if (index.empty) return;
-    static bool indirectLess(const ElementType!(RangeIndex) a,
-                             const ElementType!(RangeIndex) b)
+    static if (isIntegral!(ElementType!(RangeIndex)))
     {
-        return binaryFun!less(*a, *b);
+        import std.exception : enforce;
+
+        enforce(ElementType!(RangeIndex).max >= index.length,
+                "Index type too small");
+        bool indirectLess(ElementType!(RangeIndex) a, ElementType!(RangeIndex) b)
+        {
+            return binaryFun!(less)(r[a], r[b]);
+        }
+        auto heap = BinaryHeap!(RangeIndex, indirectLess)(index, 0);
+        foreach (i; 0 .. r.length)
+        {
+            heap.conditionalInsert(cast(ElementType!RangeIndex) i);
+        }
+
     }
-    auto heap = BinaryHeap!(RangeIndex, indirectLess)(index, 0);
-    foreach (i; 0 .. r.length)
+    else static if (is(ElementType!(RangeIndex) == ElementType!(Range)*))
     {
-        heap.conditionalInsert(&r[i]);
+        static bool indirectLess(const ElementType!(RangeIndex) a,
+                                 const ElementType!(RangeIndex) b)
+        {
+            return binaryFun!less(*a, *b);
+        }
+        auto heap = BinaryHeap!(RangeIndex, indirectLess)(index, 0);
+        foreach (i; 0 .. r.length)
+        {
+            heap.conditionalInsert(&r[i]);
+        }
     }
+    else static assert(0, "Invalid ElementType");
+
     if (sorted == Yes.sortOutput)
     {
         while (!heap.empty) heap.removeFront();
