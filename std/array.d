@@ -3739,7 +3739,18 @@ private:
     }
 
 public:
-    // Maintain the segment reference count
+    /// Constructs an Builder and makes a copy of the array.
+    this(T[] arr)
+    {
+        put(arr);
+    }
+
+    /// Construct an Builder with a capacity of at least N elements.
+    this(size_t N)
+    {
+        reserve(N);
+    }
+
     ~this()
     {
         if (__ctfe || !headSegment) // Uninitialized || RefCount > 0
@@ -3787,7 +3798,7 @@ public:
     /// ditto
     void put(U)(U item) if (canPutRange!U)
     {
-        static if ((isArray!U || is(typeof(tailSegment.ptr[0 .. item.length] = (cast(E[]) item[])[0 .. 1]))))
+        static if (isArray!U || (isRandomAccessRange!U && hasSlicing!U))
         {
             auto items = cast(E[]) item[];
 
@@ -3805,16 +3816,18 @@ public:
                 {
                     initialize();
                 }
+
                 while (tailSegment.slack < items.length)
                 {
                     // Fill up the remaining slack
                     tailSegment.ptr[0 .. tailSegment.slack] = items[0 .. tailSegment.slack];
                     tailSegment.ptr += tailSegment.slack;
-                    items = items[tailSegment.slack .. $];
+                    items = items[tailSegment.slack .. items.length];
                     tailSegment.slack = 0;
                     grow();
                 }
             }
+
             // Push the items
             tailSegment.ptr[0 .. items.length] = items;
             tailSegment.ptr += items.length;
@@ -3824,7 +3837,7 @@ public:
         }
         else
         {
-            static if (hasLength!U || isSomeString!U)
+            static if (hasLength!U)
                 reserve(item.length);
 
             foreach (element; item)
@@ -3880,18 +3893,6 @@ public:
 
     /// ditto
     alias data = dup;
-
-    /// Constructs an Builder and makes a copy of the array.
-    this(T[] arr)
-    {
-        put(arr);
-    }
-
-    /// Construct an Builder with a capacity of at least N elements.
-    this(size_t N)
-    {
-        reserve(N);
-    }
 
     /// Returns: the number of elements already added to the Builder
     size_t length() const @property
@@ -4027,51 +4028,52 @@ public:
 
         /// Provides a bi-directional range over the Builder's elements
         /// Currently doesn't kept the Builder alive, etc
-        struct Slice(U)
+        static struct Slice(U)
         {
             private
             {
                 Segment* headSegment; // Current front segment
                 Segment* tailSegment; // Current back segment
-                U* _front; // Current front pointer
-                U* _back; // Current back pointer
-                Segment* _ref_count; // Ref counting segment
+                U* frontItem; // Current front pointer
+                U* backItem; // Current back pointer
+                Segment* savedPos; // Ref counting segment
             }
 
             // Construct a slice
-            this(App)(ref App app, string file = __FILE__, int line = __LINE__)
+            this(T)(ref T builder)
             {
                 if (__ctfe)
                 {
-                    headSegment = cast(Segment*) app.headSegment;
+                    headSegment = cast(Segment*) builder.headSegment;
                     return;
                 }
-                headSegment = cast(Segment*) app.headSegment;
-                tailSegment = cast(Segment*) app.tailSegment;
+
+                headSegment = cast(Segment*) builder.headSegment;
+                tailSegment = cast(Segment*) builder.tailSegment;
+
                 if (headSegment !is null && headSegment.ptr != headSegment.base)
                 {
-                    _ref_count = cast(Segment*) app.headSegment;
-                    _front = headSegment.base;
+                    savedPos = cast(Segment*) builder.headSegment;
+                    frontItem = headSegment.base;
                     while (tailSegment.ptr is tailSegment.base)
                     {
                         tailSegment = tailSegment.prev;
                     }
-                    _back = tailSegment.ptr;
+                    backItem = tailSegment.ptr;
                 }
                 else
                 {
                     // These should be the Slice.init values
-                    //_ref_count = _front = _back = null;
+                    //savedPos = frontItem = backItem = null;
                 }
             }
 
-            // Maintain the segment reference count
             ~this()
             {
-                // Uninitialized || RefCount > 0
-                if (__ctfe || !_ref_count)
+                // Uninitialized
+                if (__ctfe || !savedPos)
                     return;
-                _ref_count.free;
+                savedPos.free;
             }
 
             /// The range interface
@@ -4079,7 +4081,7 @@ public:
             {
                 if (__ctfe)
                     return headSegment.data[0];
-                return *_front;
+                return *frontItem;
             }
 
             /// ditto
@@ -4087,7 +4089,7 @@ public:
             {
                 if (__ctfe)
                     return headSegment.data[$ - 1];
-                return *(_back - 1);
+                return *(backItem - 1);
             }
 
             static if (is(U == E))
@@ -4102,7 +4104,7 @@ public:
                         headSegment.data[0] = value;
                         return;
                     }
-                    *_front = value;
+                    *frontItem = value;
                 }
 
                 /// ditto
@@ -4113,7 +4115,7 @@ public:
                         headSegment.data[$ - 1] = value;
                         return;
                     }
-                    *(_back - 1) = value;
+                    *(backItem - 1) = value;
                 }
             }
 
@@ -4122,7 +4124,7 @@ public:
             {
                 if (__ctfe)
                     return headSegment.data.empty;
-                return _front is _back;
+                return frontItem is backItem;
             }
 
             /// ditto
@@ -4141,16 +4143,16 @@ public:
                     headSegment.data = headSegment.data[1 .. $];
                     return;
                 }
-                _front++;
-                while (_front >= headSegment.ptr)
+                frontItem++;
+                while (frontItem >= headSegment.ptr)
                 {
                     headSegment = headSegment.next;
                     if (headSegment is null)
                     {
-                        _front = _back = null;
+                        frontItem = backItem = null;
                         return;
                     }
-                    _front = headSegment.base;
+                    frontItem = headSegment.base;
                 }
             }
 
@@ -4164,16 +4166,16 @@ public:
                     headSegment.data = headSegment.data[0 .. $ - 1];
                     return;
                 }
-                _back--;
-                while (_back <= tailSegment.base)
+                backItem--;
+                while (backItem <= tailSegment.base)
                 {
-                    if (tailSegment is _ref_count)
+                    if (tailSegment is savedPos)
                     {
-                        _front = _back = null;
+                        frontItem = backItem = null;
                         return;
                     }
                     tailSegment = tailSegment.prev;
-                    _back = tailSegment.ptr;
+                    backItem = tailSegment.ptr;
                 }
             }
         }
