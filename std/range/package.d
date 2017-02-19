@@ -123,6 +123,9 @@ $(BOOKTABLE ,
     $(TR $(TD $(LREF only))
         $(TD Creates a _range that iterates over the given arguments.
     ))
+    $(TR $(TD $(LREF orElse))
+        $(TD Provide a default value for an empty range.
+    ))
     $(TR $(TD $(LREF padLeft))
         $(TD Pads a _range to a specified length by adding a given element to
         the front of the _range. Is lazy if the _range has a known length.
@@ -12895,4 +12898,478 @@ pure @safe unittest
     static immutable r1 = [1, 2, 3, 4];
     static immutable r2 = [1, 2, 3, 4, 0, 0];
     assert(r1.padRight(0, 6).equal(r2));
+}
+
+/**
+`orElse` provides a safe wrapper around possibly empty ranges.
+If an empty range is passed, a range of length 1 with the given fallback will
+be used. Otherwise, the original range is used for all range methods.
+Moreover, all range capabilities of the original range are forwared.
+
+Params:
+    r = input range (can be empty)
+    fallback = element to build a single-element range from if r is empty
+
+Returns: if the range is non-empty the original range and otherwise a range of length
+with the fallback.
+*/
+auto orElse(Range, RangeElementType = ElementType!Range)(Range r, RangeElementType fallback)
+if (isInputRange!(Unqual!(Range)) &&
+    !is(CommonType!(ElementType!Range, RangeElementType) == void))
+{
+    static struct OrElseRange
+    {
+        private
+        {
+            Range r;
+            alias RetType = ElementType!Range;
+
+            // support const or immutable fallbacks
+            static if ((is(RetType == class) || is(RetType == interface)) &&
+                       (is(RetType == const) || is(RetType == immutable)))
+            {
+                import std.typecons : Rebindable;
+                alias UT = Rebindable!ReType;
+            }
+            else static if (is(RetType : Unqual!RetType) && is(Unqual!RetType : RetType))
+                alias UT = Unqual!RetType;
+            else
+                alias UT = RetType;
+
+            bool hasFallback; // if the default fallback should be used
+            UT fallback;
+        }
+
+        this(Range r, inout UT fallback)
+        {
+            this.r = r;
+            this.fallback = fallback;
+            hasFallback = r.empty;
+        }
+
+        void popFront()
+        {
+            if (hasFallback)
+                hasFallback = false;
+            else
+                r.popFront;
+        }
+
+        static if (isBidirectionalRange!Range)
+        void popBack()
+        {
+            if (hasFallback)
+                hasFallback = false;
+            else
+                r.popBack;
+        }
+
+        bool empty() const
+        {
+            return r.empty && !hasFallback;
+        }
+
+        @property auto ref front() inout
+        {
+            assert(!empty, "can't access front on an empty range");
+            if (hasFallback) return fallback;
+            return r.front;
+        }
+
+        static if (hasAssignableElements!Range)
+        @property void front(ElementType!Range val)
+        {
+            assert(!empty, "can't set front on an empty range");
+            if (hasFallback)
+                fallback = val;
+            else
+                r.front = val;
+        }
+
+        static if (isBidirectionalRange!Range)
+        {
+            @property auto ref back() inout
+            {
+                assert(!empty, "can't access back on an empty range");
+                if (hasFallback) return fallback;
+                return r.back;
+            }
+
+            static if (hasAssignableElements!Range)
+            @property void back(ElementType!Range val)
+            {
+                assert(!empty, "can't set back on an empty range");
+                if (hasFallback)
+                    fallback = val;
+                else
+                    r.back = val;
+            }
+        }
+
+        static if (isForwardRange!Range)
+        @property typeof(this) save()
+        {
+            return this;
+        }
+
+        static if (isRandomAccessRange!Range)
+        {
+            static if (hasSwappableElements!Range)
+                auto ref opIndex(size_t index) inout
+                {
+                    if (hasFallback) return fallback;
+                    return r[index];
+                }
+            else
+            {
+                auto opIndex(size_t index) inout
+                {
+                    if (hasFallback) return fallback;
+                    return r[index];
+                }
+            }
+        }
+
+        static if (isRandomAccessRange!Range && hasAssignableElements!Range)
+        void opIndexAssign()(auto ref ElementType!Range val, size_t n)
+        {
+            if (hasFallback)
+            {
+                assert(n <= 1, "fallback contains only one element.");
+                fallback = val;
+            }
+            else
+            {
+                r[n] = val;
+            }
+        }
+
+        static if (hasLength!Range)
+        {
+            @property size_t length() const
+            {
+                if (hasFallback) return 1;
+                return r.length;
+            }
+
+            alias opDollar = length;
+        }
+
+        static if (hasSlicing!Range)
+        {
+            auto opSlice(size_t i, size_t j)
+            in
+            {
+                assert(
+                    i <= j,
+                    "Attempting to slice a fallback with a larger first argument than the second."
+                );
+            }
+            body
+            {
+                static if (isInfinite!Range)
+                {
+                    // as an infinite type can't be null, this returns opSlice directly
+                    return r[i .. j];
+                }
+                else
+                {
+                    if (hasFallback)
+                    {
+                        assert(j <= 1, "fallback contains only one element.");
+                        auto ret = typeof(this)(r, fallback);
+                        if (i == 1)
+                            ret.hasFallback = false;
+
+                        return ret;
+                    }
+                    else
+                    {
+                        return typeof(this)(r[i .. j], fallback);
+                    }
+                }
+            }
+
+            static if (isInfinite!Range)
+            {
+                private static struct DollarToken {}
+                enum opDollar = DollarToken.init;
+
+                typeof(this) opSlice(size_t i, DollarToken)
+                {
+                    return typeof(this)(r[i .. $], fallback);
+                }
+            }
+        }
+
+        auto opSlice() { return this; }
+
+        string toString()
+        {
+            import std.format : format;
+            if (hasFallback)
+                return "OrElse(%s)".format(fallback);
+            else
+                return "OrElse(%s)".format(r);
+        }
+    }
+
+    return OrElseRange(r, fallback);
+}
+
+///
+@safe pure unittest
+{
+    import std.conv : to;
+    import std.range : drop;
+
+    auto arr = [0, 1, 2];
+
+    // given a non-empty range, it is a pure proxy
+    auto d = arr.orElse(42);
+    assert(d.front == 0);
+    assert(d.length == 3);
+    assert(d.to!string == "OrElse([0, 1, 2])");
+
+    // given an empty range, it uses the orElse
+    auto e = arr.drop(3).orElse(42);
+    assert(e.front == 42);
+    assert(e.to!string == "OrElse(42)");
+
+    // the orElse range has a length of 1
+    assert(e.length == 1);
+    e.popFront;
+    assert(e.empty);
+}
+
+// test range capability forwarding
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange;
+    import std.range : drop, dropOne;
+
+    import std.stdio;
+
+    foreach (DummyType; AllDummyRanges)
+    {
+        auto d = DummyType.init.orElse(42);
+        auto e = DummyType.init.drop(10).orElse(42); // empty range
+        alias OrElse = typeof(d);
+
+        // input range
+        {
+            static assert(isInputRange!OrElse);
+
+            assert(!d.empty);
+            assert(!e.empty);
+
+            assert(d.front == 1);
+            assert(e.front == 42);
+
+            d.popFront;
+            assert(!d.empty);
+            assert(d.front == 2);
+
+            e.popFront;
+            assert(e.empty);
+        }
+
+        static if (isForwardRange!DummyType)
+        {
+            static assert(isForwardRange!OrElse);
+
+            d = DummyType.init.orElse(42);
+            e = DummyType.init.drop(10).orElse(42); // empty range
+
+            // creates new range -> no modification at the current one
+            d.save.dropOne;
+            e.save.dropOne;
+
+            // alternative syntax
+            d[].dropOne;
+            e[].dropOne;
+
+            assert(d.front == 1);
+            assert(e.front == 42);
+        }
+
+        static if (isBidirectionalRange!DummyType)
+        {
+            static assert(isBidirectionalRange!OrElse);
+
+            d = DummyType.init.orElse(42);
+            e = DummyType.init.drop(10).orElse(42); // empty range
+
+            assert(d.back == 10);
+            assert(e.back == 42);
+
+            d.popBack;
+            assert(!d.empty);
+            assert(d.back == 9);
+
+            e.popBack;
+            assert(e.empty);
+        }
+
+        static if (isRandomAccessRange!DummyType)
+        {
+            static assert(isRandomAccessRange!OrElse);
+
+            d = DummyType.init.orElse(42);
+            e = DummyType.init.drop(10).orElse(42); // empty range
+
+            assert(d[0] == 1);
+            assert(e[0] == 42);
+
+            d.popFront;
+            assert(!d.empty);
+            assert(d[1] == 3);
+        }
+
+        static if (hasLength!DummyType)
+        {
+            static assert(hasLength!OrElse);
+
+            d = DummyType.init.orElse(42);
+            e = DummyType.init.drop(10).orElse(42); // empty range
+
+            assert(d.length == 10);
+            assert(e.length == 1);
+        }
+
+        static if (hasSlicing!DummyType)
+        {
+            static assert(hasSlicing!OrElse);
+
+            d = DummyType.init.orElse(42);
+            e = DummyType.init.drop(10).orElse(42); // empty range
+
+            assert(d[0..2].equal([1, 2]));
+
+            assert(e[0..1].equal([42]));
+            assert(e[0..$].equal([42]));
+            assert(e[1..1].empty);
+        }
+
+        static if (hasAssignableElements!DummyType)
+        {
+            static assert(hasAssignableElements!OrElse);
+
+            d = DummyType.init.orElse(42);
+            e = DummyType.init.drop(10).orElse(42); // empty range
+
+            d.front = 20;
+            assert(d.front == 20);
+
+            e.front = 21;
+            assert(e.front == 21);
+
+            static if (isBidirectionalRange!DummyType)
+            {
+                d.back = 30;
+                assert(d.back == 30);
+
+                assert(e.back == 21);
+                e.back = 60;
+                assert(e.back == 60);
+                assert(e.front == 60);
+            }
+
+            static if (hasSlicing!DummyType)
+            {
+                d[1] = 35;
+                assert(d[1] == 35);
+                d[2] = d.front;
+                assert(d[2] == 20);
+
+                e[0] = 0;
+                assert(e[0] == 0);
+                assert(e.back == 0);
+                assert(e.front == 0);
+            }
+        }
+
+        static if (hasMobileElements!DummyType)
+        {
+            static assert(hasMobileElements!OrElse);
+        }
+
+        static if (hasSwappableElements!DummyType)
+            static assert(hasSwappableElements!OrElse);
+
+        static if (hasLvalueElements!DummyType)
+            static assert(hasLvalueElements!OrElse);
+    }
+}
+
+// test const
+@safe pure nothrow unittest
+{
+    import std.range : drop, dropOne;
+
+    struct Foo
+    {
+        int m;
+        this ()(auto ref int m) { this.m = m; }
+    }
+    const(Foo)[] arr = [Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)];
+
+    immutable Foo f42 = Foo(42);
+    auto d = arr.orElse(f42);
+    auto e = arr.drop(5).orElse(Foo(42));
+
+    assert(d.front.m == 1);
+    assert(e.front.m == 42);
+
+    assert(d[0..$].length == 5);
+    assert(e[0..$].length == 1);
+
+    static assert(is(typeof(d.front) == const(Foo)));
+    static assert(is(typeof(d.back) == const(Foo)));
+    static assert(is(typeof(d[0]) == const(Foo)));
+
+    static assert(is(typeof(e.front) == const(Foo)));
+    static assert(is(typeof(e.back) == const(Foo)));
+    static assert(is(typeof(e[0]) == const(Foo)));
+
+    static assert(!__traits(compiles, { d.front = const Foo(10); }));
+    static assert(!__traits(compiles, { d.back = const Foo(10); }));
+    static assert(!__traits(compiles, { d[0] = const Foo(10); }));
+}
+
+// test strings
+@safe pure unittest
+{
+    assert("abc".orElse('z').front == 'a');
+    assert("".orElse('z').front == 'z');
+
+    assert("a❤c".orElse('❤').front == 'a');
+    assert("".orElse('❤').front == '❤');
+}
+
+// infinite ranges
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : repeat;
+
+    auto r = 1.repeat.orElse(2);
+
+    assert(r.front == 1);
+    assert(r[10] == 1);
+    assert(r[2..$].front == 1);
+    // as an infinite type can't be null, this returns opSlice directly
+    assert(r[2..5].front == 1);
+}
+
+// @nogc + CTFE
+@safe @nogc pure nothrow unittest
+{
+    import std.range : iota;
+    assert(0.iota(10).orElse(42).front == 0);
+    assert(0.iota.orElse(42).front == 42);
+
+    static assert(0.iota(10).orElse(42).front == 0);
+    static assert(0.iota.orElse(42).front == 42);
 }
