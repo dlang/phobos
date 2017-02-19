@@ -3578,7 +3578,7 @@ private:
     enum PageSize = 4096; // Memory page size (in bytes)
     alias E = Unqual!T; // Internal element type
 
-    struct Segment
+    static struct Segment
     {
         static if (hasIndirections!T)
         {
@@ -3693,6 +3693,7 @@ private:
 
     static assert(Segment.sizeof == 4 * size_t.sizeof);
 
+    size_t numberOfElements;
     Segment* _head; // The head data segment
     Segment* _tail; // The last data segment
 
@@ -3709,19 +3710,6 @@ private:
         if (!_tail.next)
             _tail.next = Segment._make(_tail);
         _tail = _tail.next;
-    }
-
-    // Returns: the total number of elements in the Builder
-    // O(n) to the number of segments
-    size_t getLength() const pure nothrow @property
-    {
-        if (__ctfe)
-            return _head ? _head.length : 0;
-
-        size_t len = 0;
-        for (const(Segment)* d = _head; d; d = d.next)
-            len += d.length;
-        return len;
     }
 
     template canPutItem(U)
@@ -3792,6 +3780,7 @@ public:
 
             *_tail.ptr++ = cast(E) item;
             --_tail.slack;
+            ++numberOfElements;
         }
     }
 
@@ -3830,6 +3819,8 @@ public:
             _tail.ptr[0 .. items.length] = items;
             _tail.ptr += items.length;
             _tail.slack -= items.length;
+
+            numberOfElements += item.length;
         }
         else
         {
@@ -3853,7 +3844,7 @@ public:
      *     A copy of the Builder's data in a newly allocated
      *     GC array.
      */
-    T[] dup() pure @property
+    T[] dup() @property
     {
         if (__ctfe)
         {
@@ -3867,7 +3858,7 @@ public:
         E[] arr;
         size_t i;
         size_t len;
-        arr.length = getLength();
+        arr.length = numberOfElements;
 
         for (const(Segment)* d = _head; d !is null; d = d.next, i += len)
         {
@@ -3902,6 +3893,12 @@ public:
         reserve(N);
     }
 
+    /// Returns: the number of elements already added to the Builder
+    size_t length() const @property
+    {
+        return numberOfElements;
+    }
+
     // Need to do a build with this gone to trace / fix phobos
     static if (!hasIndirections!T)
     {
@@ -3917,12 +3914,6 @@ public:
                 sum += seg.slack;
             }
             return sum;
-        }
-
-        /// Returns: the number of elements already added to the Builder
-        size_t walkLength() const pure nothrow @property
-        {
-            return getLength();
         }
 
         /// Increases the slack by at least N elements
@@ -3979,6 +3970,8 @@ public:
             /// Clears the Builder. Does not zero or destruct existing items.s
             void clear()
             {
+                numberOfElements = 0;
+
                 if (__ctfe)
                 {
                     if (_head)
