@@ -3564,9 +3564,15 @@ private void* __appender_scaned_freelist;
 private void* __appender_noscan_freelist;
 private extern (C) void* _memset32(void*, int, size_t); // from rt.memset;
 
-/** Implements an output range that stores data. This is highly recommended
-    over $(D a ~= data) as Builder is memory and computationally optimal.
-*/
+/**
+ * An storage container built for building arrays from other arrays and ranges.
+ * Stores elements in a free-list of arrays until `data` is called, which returns
+ * a newly allocated array on the GC.
+ * 
+ * Elements can also be accessed via a range interface by getting a slice over
+ * the builder, e.g. `builder[]`. This returns a bidirectional range over the stored
+ * elements and does not allocate any new memory.
+ */
 struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
 {
     import core.memory : GC;
@@ -3692,8 +3698,8 @@ private:
     static assert(Segment.sizeof == 4 * size_t.sizeof);
 
     size_t numberOfElements;
-    Segment* headSegment; // The head data segment
-    Segment* tailSegment; // The last data segment
+    Segment* headSegment;
+    Segment* tailSegment;
 
     // Initialize the Builder
     void initialize()
@@ -3737,13 +3743,16 @@ private:
     }
 
 public:
-    /// Constructs an Builder and makes a copy of the array.
+    /**
+     * Constructs an Builder from an array. Elements in the array are copied
+     * to the freelist.
+     */
     this(T[] arr)
     {
         put(arr);
     }
 
-    /// Construct an Builder with a capacity of at least N elements.
+    /// Construct an Builder and pre-allocate space for `N` elements
     this(size_t N)
     {
         reserve(N);
@@ -3756,7 +3765,11 @@ public:
         headSegment.free;
     }
 
-    /// Appends
+    /**
+     * Add an item to the builder. If the builder's type is a string like
+     * array, then other character types will be encoded to the proper
+     * character type and stored.
+     */
     void put(U)(U item) if (canPutItem!U)
     {
         static if (isSomeChar!E && isSomeChar!U && E.sizeof < U.sizeof)
@@ -3793,7 +3806,12 @@ public:
         }
     }
 
-    /// ditto
+    /**
+     * Add a range to the builder.
+     * 
+     * If the builder's type is a string like array, then other string like array
+     * types will be encoded to the proper character type and stored.
+     */
     void put(U)(U item) if (canPutRange!U)
     {
         static if (isArray!U || (isRandomAccessRange!U && hasSlicing!U))
@@ -3843,7 +3861,7 @@ public:
         }
     }
 
-    /// ditto
+    /// Forwards the `~` operator to put
     ref typeof(this) opOpAssign(string op, U)(U item) if (op == "~")
     {
         put(item);
@@ -3892,7 +3910,7 @@ public:
     /// ditto
     alias data = dup;
 
-    /// Returns: the number of elements already added to the Builder
+    /// Returns: the number of elements in the builder
     size_t length() const @property
     {
         return numberOfElements;
@@ -3913,7 +3931,7 @@ public:
         return sum;
     }
 
-    /// Increases the slack by at least N elements
+    /// Increases the space for elements by at least N elements
     void extend(size_t N)
     {
         if (!headSegment)
@@ -3964,7 +3982,7 @@ public:
 
     static if (isMutable!T)
     {
-        /// Clears the Builder. Does not zero or destruct existing items.s
+        /// Clears the Builder. Does not zero or destruct existing items
         void clear()
         {
             numberOfElements = 0;
