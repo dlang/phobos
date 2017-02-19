@@ -3572,6 +3572,7 @@ private extern (C) void* _memset32(void*, int, size_t); // from rt.memset;
 struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
 {
     import core.memory : GC;
+    import std.stdio;
 
 private:
     enum PageSize = 4096; // Memory page size (in bytes)
@@ -3597,11 +3598,7 @@ private:
                 size_t slack; // The remaining capacity
                 E* ptr; // The empty data
                 Segment* next; // The next data segment
-                union
-                {
-                    size_t count; // reference count (_head only)
-                    Segment* prev; // Previous segment(_tail only)
-                }
+                Segment* prev; // Previous segment(_tail only)
             }
 
             struct
@@ -3675,7 +3672,6 @@ private:
                 return;
 
             assert(&this !is null);
-            assert(count == 0);
             auto s = next;
             while (s)
             {
@@ -3756,22 +3752,9 @@ private:
 
 public:
     // Maintain the segment reference count
-    this(this)
-    {
-        synchronized
-        {
-            if (!__ctfe && _head)
-            {
-                _head.count++;
-            }
-        }
-    }
-
-    // Maintain the segment reference count
     ~this()
     {
-        assert(__ctfe || !_head || _head.count > 0);
-        if (__ctfe || !_head || --_head.count) // Uninitialized || RefCount > 0
+        if (__ctfe || !_head) // Uninitialized || RefCount > 0
             return;
         _head.free;
     }
@@ -3851,7 +3834,7 @@ public:
         else
         {
             static if (hasLength!U || isSomeString!U)
-                extend(item.length);
+                reserve(item.length);
 
             foreach (element; item)
                 put(element);
@@ -3994,13 +3977,13 @@ public:
         static if (isMutable!T)
         {
             /// Clears the Builder. Does not zero or destruct existing items.s
-            typeof(this) clear() nothrow
+            void clear()
             {
                 if (__ctfe)
                 {
                     if (_head)
                         _head.data.length = 0;
-                    return this;
+                    return;
                 }
 
                 for (auto seg = _head; seg !is null; seg = seg.next)
@@ -4009,7 +3992,6 @@ public:
                     seg.ptr = _head.base;
                 }
                 _tail = _head;
-                return this;
             }
 
             /** Shrinks the Builder to a given length if less than the current
@@ -4076,7 +4058,6 @@ public:
                 if (_head !is null && _head.ptr != _head.base)
                 {
                     _ref_count = cast(Segment*) app._head;
-                    _ref_count.count++;
                     _front = _head.base;
                     while (_tail.ptr is _tail.base)
                     {
@@ -4092,20 +4073,10 @@ public:
             }
 
             // Maintain the segment reference count
-            this(this)
-            {
-                if (!__ctfe && _ref_count)
-                {
-                    _ref_count.count++;
-                }
-            }
-
-            // Maintain the segment reference count
             ~this()
             {
-                assert(__ctfe || !_head || (_head && _head.count > 0));
                 // Uninitialized || RefCount > 0
-                if (__ctfe || !_ref_count || --_ref_count.count)
+                if (__ctfe || !_ref_count)
                     return;
                 _ref_count.free;
             }
@@ -4439,7 +4410,6 @@ public:
                 seg.slack = _arr.length - preseverdLength;
                 seg.ptr = _arr.ptr + preseverdLength;
                 seg.next = null;
-                seg.count = 1;
                 app._head = app._tail = &seg;
             }
 
@@ -4448,7 +4418,6 @@ public:
             {
                 if (seg.next !is null)
                 {
-                    seg.next.count = 0;
                     seg.next.free;
                 }
 
@@ -4505,13 +4474,13 @@ public:
                     seg.ptr = arr.ptr;
                 }
             }
-            
+
             /// Appends to the output range
             void put(U)(U item) @property if (isOutputRange!(T[], U))
             {
                 app.put(item);
             }
-            
+
             ///ditto
             ref typeof(this) opOpAssign(string op, U)(U item) if (op == "~"
                     && isOutputRange!(Unqual!T[], U))
