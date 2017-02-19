@@ -3862,59 +3862,59 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
         return this;
     }
 
+    /// Returns: a copy of the Builder's data in an array.
+    T[] dup() pure @property
+    {
+        if (__ctfe)
+        {
+            return cast(T[])(_head !is null ? _head.data : null);
+        }
+        if (_head == _tail)
+        {
+            return cast(T[])(_head ? _head.base[0 .. _head.length].dup : null);
+        }
+
+        E[] arr;
+        size_t i = 0;
+        size_t len = void;
+        arr.length = _length;
+
+        for (const(Segment)* d = _head; d !is null; d = d.next, i += len)
+        {
+            len = d.length;
+            arr[i .. i + len] = d.base[0 .. len];
+        }
+
+        return cast(T[]) arr;
+    }
+
+    static if (is(T == immutable) || !hasIndirections!T)
+    {
+        /// ditto
+        immutable(T)[] idup() pure @property
+        {
+            return cast(immutable(T)[]) dup;
+        }
+    }
+
+    /// ditto
+    alias data = dup;
+
+    /// Constructs an Builder and makes a copy of the array.
+    this(T[] arr)
+    {
+        put(arr);
+    }
+
+    /// Construct an Builder with a capacity of at least N elements.
+    this(size_t N)
+    {
+        reserve(N);
+    }
+
     // Need to do a build with this gone to trace / fix phobos
     static if (!hasIndirections!T)
     {
-        /// Returns: a copy of the Builder's data in an array.
-        T[] dup() pure @property
-        {
-            if (__ctfe)
-            {
-                return cast(T[])(_head !is null ? _head.data : null);
-            }
-            if (_head == _tail)
-            {
-                return cast(T[])(_head ? _head.base[0 .. _head.length].dup : null);
-            }
-
-            E[] arr;
-            size_t i = 0;
-            size_t len = void;
-            arr.length = _length;
-
-            for (const(Segment)* d = _head; d !is null; d = d.next, i += len)
-            {
-                len = d.length;
-                arr[i .. i + len] = d.base[0 .. len];
-            }
-
-            return cast(T[]) arr;
-        }
-
-        static if (is(T == immutable) || !hasIndirections!T)
-        {
-            /// ditto
-            immutable(T)[] idup() pure @property
-            {
-                return cast(immutable(T)[]) dup;
-            }
-        }
-
-        /// ditto
-        alias data = dup;
-
-        /// Constructs an Builder and makes a copy of the array.
-        this(T[] arr)
-        {
-            put(arr);
-        }
-
-        /// Construct an Builder with a capacity of at least N elements.
-        this(size_t N)
-        {
-            reserve(N);
-        }
-
         /// Returns: the number of elements that can be added before allocation.
         size_t slack() const pure nothrow @property
         {
