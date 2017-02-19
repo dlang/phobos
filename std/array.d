@@ -3863,23 +3863,9 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
     }
 
     // Need to do a build with this gone to trace / fix phobos
-    /// Returns: a copy of the Builder's data in an array.
     static if (!hasIndirections!T)
     {
-        private E[] dupTo(ref E[] arr) pure
-        {
-            size_t i = 0;
-            size_t len = void;
-            arr.length = _length;
-            for (const(Segment)* d = _head; d !is null; d = d.next, i += len)
-            {
-                len = d.length;
-                arr[i .. i + len] = d.base[0 .. len];
-            }
-            return arr;
-        }
-
-        /// ditto
+        /// Returns: a copy of the Builder's data in an array.
         T[] dup() pure @property
         {
             if (__ctfe)
@@ -3890,8 +3876,19 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
             {
                 return cast(T[])(_head ? _head.base[0 .. _head.length].dup : null);
             }
+
             E[] arr;
-            return cast(T[]) dupTo(arr);
+            size_t i = 0;
+            size_t len = void;
+            arr.length = _length;
+
+            for (const(Segment)* d = _head; d !is null; d = d.next, i += len)
+            {
+                len = d.length;
+                arr[i .. i + len] = d.base[0 .. len];
+            }
+
+            return cast(T[]) arr;
         }
 
         static if (is(T == immutable) || !hasIndirections!T)
@@ -3903,10 +3900,8 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
             }
         }
 
-        T[] opDispatch(string name)() pure if (name == "data")
-        {
-            return dup;
-        }
+        /// ditto
+        alias data = dup;
 
         /// Constructs an Builder and makes a copy of the array.
         this(T[] arr)
@@ -4417,30 +4412,8 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
             }
         }
 
-        /** A limited functionality zero-overhead scoped wrapper around
-        an existing mutable array.
-        Example:
-        ---
-        auto buffer = cast(char[]) "HIC SVNT DRACONES";
-        // Clear the buffer, saving the 'H'
-        auto wb = Builder!string(buffer, 1);
-        // Use 'put' or '~=' to append data
-        wb.put("ere ");
-        wb ~= "be dragons";
-        // Inspect the buffer as is.
-        assert(buffer == "Here be dragonsES");
-        assert(buffer[0..wb.walkLength] == "Here be dragons");
-        // sync the buffer and underlying Builder (may allocate)
-        wb.sync;
-        assert(buffer == "Here be dragonsES");
-        // Add some more data
-        wb ~= " and dungeons!";
-        assert(buffer == "Here be dragons a");
-        // Sync the buffer and get the used portion
-        auto data = wb.syncedData;
-        assert(buffer == "Here be dragons and dungeons!");
-        assert(data   == "Here be dragons and dungeons!");
-        ---
+        /* A limited functionality zero-overhead scoped wrapper around
+            an existing mutable array.
         */
         struct wrappedBuffer
         {
