@@ -97,6 +97,9 @@ $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF walkLength)))
         $(TD Computes the length of any _range in O(n) time.
     ))
+    $(TR $(TD $(D $(LREF walkBack)))
+        $(TD Returns the back of any _range in O(n) time.
+    ))
 )
 
 Source: $(PHOBOSSRC std/range/_primitives.d)
@@ -1605,6 +1608,13 @@ upTo) steps have been taken and returns $(D upTo).
 
 Infinite ranges are compatible, provided the parameter $(D upTo) is
 specified, in which case the implementation simply returns upTo.
+
+Params
+    r = range to walk through
+
+Returns: the length of the range
+
+See_Also: $(REF walkBack, std, range, primitives)
  */
 auto walkLength(Range)(Range range)
 if (isInputRange!Range && !isInfinite!Range)
@@ -1661,6 +1671,154 @@ if (isInputRange!Range)
     assert(!__traits(compiles, fibs.walkLength()));
     assert(fibs.take(10).walkLength() == 10);
     assert(fibs.walkLength(55) == 55);
+}
+
+/**
+This is a best-effort implementation of `back` for any kind of
+range. It expects a non-empty range.
+
+If `isBidirectional!Range`, simply returns `range.back` without
+checking `upTo) (when specified).
+
+Otherwise, walks the range through its length and returns the last element seen.
+Performes $(BIGOH n) evaluations of `range.empty` and `range.popFront()`,
+where `n` is the effective length of `range`.
+
+The `upTo` parameter is useful to "cut the losses" in case
+the interest is in seeing whether the range has at least some number
+of elements. If the parameter `upTo` is specified, stops if `upTo`
+steps have been taken and returns `upTo`.
+
+Infinite ranges are compatible, provided the parameter `upTo` is
+specified, in which case the implementation simply returns `upTo`.
+
+Params:
+    range = range to walk through
+
+Returns: last element of the range
+
+See_Also: $(REF walkLength, std, range, primitives)
+*/
+auto walkBack(Range)(Range range)
+if ((isInputRange!Range || isIterable!Range) && !isInfinite!Range)
+in
+{
+
+    assert(!range.empty, "Can't walkBack an empty range");
+}
+body
+{
+    static if (isBidirectionalRange!Range)
+    {
+        return range.back;
+    }
+    else
+    {
+        // Rebindable doesn't support all types as of now
+        Unqual!(ElementType!Range) last;
+        foreach (e; range)
+            last = cast(Unqual!(ElementType!Range)) e;
+
+        return cast(ElementType!Range) last;
+    }
+}
+
+/// ditto
+auto walkBack(Range)(Range range, size_t upTo)
+if ((isInputRange!Range || isIterable!Range))
+in
+{
+
+    assert(!range.empty, "Can't walkBack an empty range");
+    static if (!isBidirectionalRange!Range)
+    {
+        assert(upTo > 0, "walkBack needs to see at least one element");
+    }
+}
+body
+{
+    static if (isBidirectionalRange!Range)
+    {
+        return range.back;
+    }
+    else
+    {
+        // Rebindable doesn't support all types as of now
+        Unqual!(ElementType!Range) last;
+        for ( ; upTo > 0 && !range.empty; range.popFront(), upTo--)
+            last = cast(Unqual!(ElementType!Range)) range.front;
+
+        return cast(ElementType!Range) last;
+    }
+}
+
+///
+@safe nothrow pure unittest
+{
+    import std.algorithm.iteration : splitter;
+
+    assert([1, 2, 3].walkBack == 3);
+    assert("a;b;c".splitter(";").walkBack == "c");
+    assert("a;b;c;d;e".splitter(";").walkBack(2) == "b");
+}
+
+// @nogc
+@safe @nogc nothrow pure unittest
+{
+    import std.algorithm.iteration : filter;
+
+    static immutable arr = [1, 2, 3];
+    assert(arr.walkBack == 3);
+    assert(arr.walkBack(1) == 3); // arr isBidirectional
+    assert(arr.filter!(a => a < 10).walkBack(1) == 1);
+    assert(arr.filter!(a => a < 10).walkBack(4) == 3);
+}
+
+// all dummy ranges
+@safe nothrow pure unittest
+{
+    import std.internal.test.dummyrange : AllDummyRanges;
+
+    foreach (DummyType; AllDummyRanges)
+    {
+        DummyType dummyRange;
+        assert(dummyRange.walkBack == 10);
+        static if (isBidirectionalRange!DummyType)
+            assert(dummyRange.walkBack(2) == 10);
+        else
+            assert(dummyRange.walkBack(2) == 2);
+
+        assert(dummyRange.walkBack(20) == 10);
+    }
+}
+
+// test const
+@safe nothrow pure unittest
+{
+    import std.algorithm.iteration : filter;
+
+    static struct Foo {
+        int m;
+        this(int m) { this.m = m; }
+    }
+    const(Foo)[] arr = [Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)];
+    assert(arr.walkBack == Foo(5));
+    assert(arr.walkBack(2) == Foo(5)); // is bidirectional
+    assert(arr.filter!(f => f.m < 10).walkBack(2) == Foo(2));
+    assert(arr.filter!(f => f.m < 10).walkBack == Foo(5));
+}
+
+// strings
+@safe pure unittest
+{
+    import std.algorithm.iteration : filter;
+
+    static assert(is(typeof("abc".walkBack) == dchar));
+    static assert(is(typeof("abc".walkBack(2)) == dchar));
+    assert("a$b€c☢".walkBack == '☢');
+    assert("a$b€c☢".walkBack(2) == '☢');
+    assert("a$b€c☢".filter!(f => true).walkBack == '☢');
+    assert("a$b€c☢".filter!(f => true).walkBack(2) == '$');
 }
 
 /**

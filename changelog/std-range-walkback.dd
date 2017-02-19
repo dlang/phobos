@@ -1,0 +1,12 @@
+Added `std.range.walkBack` which returns the last element of any given range.
+
+$(REF walkBack, std, range) is intended for input ranges that can only be
+iterated linearly. Optionally to support infinite ranges, a maximal `upTo`
+parameter can be supplied.
+
+-----
+import std.algorithm.iteration : splitter;
+
+assert("a;b;c".splitter(";").walkBack == "c");
+assert("a;b;c;d;e".splitter(";").walkBack(2) == "b");
+-----
