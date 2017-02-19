@@ -115,7 +115,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
             return null;
 
         import std.conv : emplaceRef;
- 
+
         auto result = (() @trusted => uninitializedArray!(Unqual!E[])(length))();
 
         // Every element of the uninitialized array must be initialized
@@ -3573,163 +3573,188 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
 {
     import core.memory : GC;
 
-    private
-    {
-        enum PageSize = 4096; // Memory page size (in bytes)
-        alias E = Unqual!T; // Internal element type
+private:
+    enum PageSize = 4096; // Memory page size (in bytes)
+    alias E = Unqual!T; // Internal element type
 
-        struct Segment
+    struct Segment
+    {
+        static if (hasIndirections!T)
         {
-            static if (hasIndirections!T)
+            alias freelist = __appender_scaned_freelist;
+        }
+        else
+        {
+            alias freelist = __appender_noscan_freelist;
+        }
+
+        enum slackInit = (PageSize - size_t.sizeof * 4) / E.sizeof;
+
+        union
+        {
+            struct
+            { // Runtime
+                size_t slack; // The remaining capacity
+                E* ptr; // The empty data
+                Segment* next; // The next data segment
+                union
+                {
+                    size_t count; // reference count (_head only)
+                    Segment* prev; // Previous segment(_tail only)
+                }
+            }
+
+            struct
+            { // CTFE ()
+                // @@@BUG@@@ Currently limited by CTFE mutation issues
+                E[] data; // The data array
+
+                size_t ct_slack() const pure nothrow
+                {
+                    return data.capacity - data.length;
+                }
+            }
+        }
+
+        // Returns: a pointer to the full portion of the segment
+        E* base() const pure nothrow @property
+        {
+            assert(!__ctfe);
+            return cast(E*)(&this + 1);
+        }
+
+        // Returns: the number of used elements in this segment
+        size_t length() const pure nothrow @property
+        {
+            return __ctfe ? data.length : slackInit - slack;
+        }
+
+        // Returns: the number of elements in this segment
+        size_t capacity() const pure nothrow @property
+        {
+            return __ctfe ? data.capacity : slackInit;
+        }
+
+        // Create a new segment
+        static Segment* _make(Segment* prev) @property
+        {
+            import core.stdc.stdlib : malloc;
+
+            if (__ctfe)
             {
-                alias freelist = __appender_scaned_freelist;
+                auto s = new Segment;
+                s.data = data.init;
+                return s;
+            }
+            auto seg = cast(Segment*) freelist;
+            if (seg)
+            { // There was a segment to re-use
+                freelist = seg.next;
             }
             else
-            {
-                alias freelist = __appender_noscan_freelist;
-            }
-
-            enum slackInit = (PageSize - size_t.sizeof * 4) / E.sizeof;
-
-            union
-            {
-                struct
-                { // Runtime
-                    size_t slack; // The remaining capacity
-                    E* ptr; // The empty data
-                    Segment* next; // The next data segment
-                    union
-                    {
-                        size_t count; // reference count (_head only)
-                        Segment* prev; // Previous segment(_tail only)
-                    }
-                }
-
-                struct
-                { // CTFE ()
-                    // @@@BUG@@@ Currently limited by CTFE mutation issues
-                    E[] data; // The data array
-
-                    size_t ct_slack() const pure nothrow
-                    {
-                        return data.capacity - data.length;
-                    }
-                }
-            }
-
-            // Returns: a pointer to the full portion of the segment
-            E* base() const pure nothrow @property
-            {
-                assert(!__ctfe);
-                return cast(E*)(&this + 1);
-            }
-
-            // Returns: the number of used elements in this segment
-            size_t length() const pure nothrow @property
-            {
-                return __ctfe ? data.length : slackInit - slack;
-            }
-
-            // Returns: the number of elements in this segment
-            size_t capacity() const pure nothrow @property
-            {
-                return __ctfe ? data.capacity : slackInit;
-            }
-
-            // Create a new segment
-            static Segment* _make(Segment* prev) @property
-            {
-                import core.stdc.stdlib : malloc;
-
-                if (__ctfe)
-                {
-                    auto s = new Segment;
-                    s.data = data.init;
-                    return s;
-                }
-                auto seg = cast(Segment*) freelist;
-                if (seg)
-                { // There was a segment to re-use
-                    freelist = seg.next;
-                }
-                else
-                { // Allocate a new segment
-                    seg = cast(Segment*) malloc(PageSize);
-                    static if (hasIndirections!T)
-                    {
-                        GC.addRange(seg, PageSize);
-                    }
-                }
-                seg.slack = slackInit;
-                seg.ptr = seg.base;
-                seg.next = null;
-                seg.prev = prev;
-                return seg;
-            }
-
-            // Saves the first segment to the free-list, frees the rest.
-            void free()
-            {
-                import core.stdc.stdlib : free;
-
-                if (__ctfe)
-                    return;
-
-                assert(&this !is null);
-                assert(count == 0);
-                auto s = next;
-                while (s)
-                {
-                    auto sn = s.next;
-                    free(s);
-                    s = sn;
-                }
-
-                // Clear the memory of unwanted false pointers
+            { // Allocate a new segment
+                seg = cast(Segment*) malloc(PageSize);
                 static if (hasIndirections!T)
                 {
-                    _memset32(&this, 0, PageSize / int.sizeof);
+                    GC.addRange(seg, PageSize);
                 }
-
-                next = cast(Segment*) freelist;
-                freelist = &this;
             }
+            seg.slack = slackInit;
+            seg.ptr = seg.base;
+            seg.next = null;
+            seg.prev = prev;
+            return seg;
         }
 
-        static assert(Segment.sizeof == 4 * size_t.sizeof);
-
-        Segment* _head; // The head data segment
-        Segment* _tail; // The last data segment
-
-        // Initialize the Builder
-        void _init()
+        // Saves the first segment to the free-list, frees the rest.
+        void free()
         {
-            _head = _tail = Segment._make(cast(Segment*) 1);
-        }
+            import core.stdc.stdlib : free;
 
-        // Advances the _tail, adding a segment if needs be.
-        void _grow()
-        {
-            // Add another segment
-            if (!_tail.next)
-                _tail.next = Segment._make(_tail);
-            _tail = _tail.next;
-        }
-
-        // Returns: the total number of elements in the Builder
-        // O(n) to the number of segments
-        size_t getLength() const pure nothrow @property
-        {
             if (__ctfe)
-                return _head ? _head.length : 0;
+                return;
 
-            size_t len = 0;
-            for (const(Segment)* d = _head; d; d = d.next)
-                len += d.length;
-            return len;
+            assert(&this !is null);
+            assert(count == 0);
+            auto s = next;
+            while (s)
+            {
+                auto sn = s.next;
+                free(s);
+                s = sn;
+            }
+
+            // Clear the memory of unwanted false pointers
+            static if (hasIndirections!T)
+            {
+                _memset32(&this, 0, PageSize / int.sizeof);
+            }
+
+            next = cast(Segment*) freelist;
+            freelist = &this;
         }
     }
 
+    static assert(Segment.sizeof == 4 * size_t.sizeof);
+
+    Segment* _head; // The head data segment
+    Segment* _tail; // The last data segment
+
+    // Initialize the Builder
+    void _init()
+    {
+        _head = _tail = Segment._make(cast(Segment*) 1);
+    }
+
+    // Advances the _tail, adding a segment if needs be.
+    void _grow()
+    {
+        // Add another segment
+        if (!_tail.next)
+            _tail.next = Segment._make(_tail);
+        _tail = _tail.next;
+    }
+
+    // Returns: the total number of elements in the Builder
+    // O(n) to the number of segments
+    size_t getLength() const pure nothrow @property
+    {
+        if (__ctfe)
+            return _head ? _head.length : 0;
+
+        size_t len = 0;
+        for (const(Segment)* d = _head; d; d = d.next)
+            len += d.length;
+        return len;
+    }
+
+    template canPutItem(U)
+    {
+        enum bool canPutItem =
+            isImplicitlyConvertible!(U, E) ||
+            isSomeChar!E && isSomeChar!U;
+    }
+
+    template canPutConstRange(Range)
+    {
+        enum bool canPutConstRange =
+            isInputRange!(Unqual!Range) &&
+            !isInputRange!Range;
+    }
+
+    template canPutRange(Range)
+    {
+        static if (isInputRange!(Range))
+        {
+            enum bool canPutRange = canPutItem!(typeof(Range.init.front));
+        }
+        else
+        {
+            enum bool canPutRange = false;
+        }
+    }
+
+public:
     // Maintain the segment reference count
     this(this)
     {
@@ -3751,37 +3776,21 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
         _head.free;
     }
 
-    private template canPutItem(U)
-    {
-        enum bool canPutItem =
-            isImplicitlyConvertible!(U, E) ||
-            isSomeChar!E && isSomeChar!U;
-    }
-
-    private template canPutConstRange(Range)
-    {
-        enum bool canPutConstRange =
-            isInputRange!(Unqual!Range) &&
-            !isInputRange!Range;
-    }
-
-    private template canPutRange(Range)
-    {
-        static if (isInputRange!(Range))
-        {
-            enum bool canPutRange = canPutItem!(typeof(Range.init.front));
-        }
-        else
-            enum bool canPutRange = false;
-    }
-
     /// Appends
     void put(U)(U item) if (canPutItem!U)
     {
-        static if (isImplicitlyConvertible!(U, E))
+        static if (isSomeChar!E && isSomeChar!U && E.sizeof < U.sizeof)
+        {
+            import std.utf : encode;
+
+            E[E.sizeof == 1 ? 4 : 2] encoded;
+            immutable len = encode(encoded, item);
+            put(encoded[0 .. len]);
+        }
+        else
         {
             if (__ctfe && !_tail)
-                _init;
+                _init();
 
             if (__ctfe)
             {
@@ -3793,25 +3802,13 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
             if (!_tail || _tail.slack == 0)
             {
                 if (!_tail)
-                    _init;
+                    _init();
                 else
-                    _grow;
+                    _grow();
             }
 
             *_tail.ptr++ = cast(E) item;
             --_tail.slack;
-        }
-        else static if (isSomeChar!E && isSomeChar!U && E.sizeof < U.sizeof)
-        {
-            import std.utf : encode;
-
-            E[E.sizeof == 1 ? 4 : 2] encoded;
-            immutable len = encode(encoded, item);
-            put(encoded[0 .. len]);
-        }
-        else
-        {
-            assert(0);
         }
     }
 
@@ -3828,13 +3825,13 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
                 return;
             }
 
-            extend(item.length);
+            reserve(item.length);
 
             if (!_tail || _tail.slack < items.length)
             {
                 if (!_tail)
                 {
-                    _init;
+                    _init();
                 }
                 while (_tail.slack < items.length)
                 {
@@ -3843,7 +3840,7 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
                     _tail.ptr += _tail.slack;
                     items = items[_tail.slack .. $];
                     _tail.slack = 0;
-                    _grow;
+                    _grow();
                 }
             }
             // Push the items
@@ -3868,7 +3865,11 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
         return this;
     }
 
-    /// Returns: a copy of the Builder's data in an array.
+    /**
+     * Returns:
+     *     A copy of the Builder's data in a newly allocated
+     *     GC array.
+     */
     T[] dup() pure @property
     {
         if (__ctfe)
@@ -3881,8 +3882,8 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
         }
 
         E[] arr;
-        size_t i = 0;
-        size_t len = void;
+        size_t i;
+        size_t len;
         arr.length = getLength();
 
         for (const(Segment)* d = _head; d !is null; d = d.next, i += len)
@@ -3945,7 +3946,7 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
         void extend(size_t N)
         {
             if (!_head)
-                _init;
+                _init();
 
             if (__ctfe)
             {
@@ -3973,7 +3974,7 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
             if (__ctfe)
                 return _head ? _head.capacity : 0;
 
-            size_t sum = 0;
+            size_t sum;
             for (const(Segment)* seg = _tail; seg !is null; seg = seg.next)
             {
                 sum += seg.capacity;
@@ -3984,7 +3985,7 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
         /// Ensures that the capacity is a least newCapacity elements.
         void reserve(size_t newCapacity)
         {
-            auto cap = capacity;
+            immutable cap = capacity();
             if (cap >= newCapacity)
                 return;
             extend(newCapacity - cap);
