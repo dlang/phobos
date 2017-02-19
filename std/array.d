@@ -3717,7 +3717,8 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
         }
 
         // Returns: the total number of elements in the Builder
-        size_t _length() const pure nothrow @property
+        // O(n) to the number of segments
+        size_t getLength() const pure nothrow @property
         {
             if (__ctfe)
                 return _head ? _head.length : 0;
@@ -3827,6 +3828,8 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
                 return;
             }
 
+            extend(item.length);
+
             if (!_tail || _tail.slack < items.length)
             {
                 if (!_tail)
@@ -3850,6 +3853,9 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
         }
         else
         {
+            static if (hasLength!U || isSomeString!U)
+                extend(item.length);
+
             foreach (element; item)
                 put(element);
         }
@@ -3877,7 +3883,7 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
         E[] arr;
         size_t i = 0;
         size_t len = void;
-        arr.length = _length;
+        arr.length = getLength();
 
         for (const(Segment)* d = _head; d !is null; d = d.next, i += len)
         {
@@ -3888,7 +3894,7 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
         return cast(T[]) arr;
     }
 
-    static if (is(T == immutable) || !hasIndirections!T)
+    static if (is(T == immutable))
     {
         /// ditto
         immutable(T)[] idup() pure @property
@@ -3932,7 +3938,7 @@ struct Builder(A : T[], T) if (T.sizeof <= 4096 - 4 * size_t.sizeof)
         /// Returns: the number of elements already added to the Builder
         size_t walkLength() const pure nothrow @property
         {
-            return _length;
+            return getLength();
         }
 
         /// Increases the slack by at least N elements
