@@ -3598,7 +3598,7 @@ private:
                 size_t slack; // The remaining capacity
                 E* ptr; // The empty data
                 Segment* next; // The next data segment
-                Segment* prev; // Previous segment(_tail only)
+                Segment* prev; // Previous segment(tailSegment only)
             }
 
             struct
@@ -3694,22 +3694,22 @@ private:
     static assert(Segment.sizeof == 4 * size_t.sizeof);
 
     size_t numberOfElements;
-    Segment* _head; // The head data segment
-    Segment* _tail; // The last data segment
+    Segment* headSegment; // The head data segment
+    Segment* tailSegment; // The last data segment
 
     // Initialize the Builder
-    void _init()
+    void initialize()
     {
-        _head = _tail = Segment._make(cast(Segment*) 1);
+        headSegment = tailSegment = Segment._make(cast(Segment*) 1);
     }
 
-    // Advances the _tail, adding a segment if needs be.
-    void _grow()
+    // Advances the tailSegment, adding a segment if needs be.
+    void grow()
     {
         // Add another segment
-        if (!_tail.next)
-            _tail.next = Segment._make(_tail);
-        _tail = _tail.next;
+        if (!tailSegment.next)
+            tailSegment.next = Segment._make(tailSegment);
+        tailSegment = tailSegment.next;
     }
 
     template canPutItem(U)
@@ -3742,9 +3742,9 @@ public:
     // Maintain the segment reference count
     ~this()
     {
-        if (__ctfe || !_head) // Uninitialized || RefCount > 0
+        if (__ctfe || !headSegment) // Uninitialized || RefCount > 0
             return;
-        _head.free;
+        headSegment.free;
     }
 
     /// Appends
@@ -3760,26 +3760,26 @@ public:
         }
         else
         {
-            if (__ctfe && !_tail)
-                _init();
+            if (__ctfe && !tailSegment)
+                initialize();
 
             if (__ctfe)
             {
-                _tail.data ~= cast(E) item;
+                tailSegment.data ~= cast(E) item;
                 return;
             }
 
             // Runtime
-            if (!_tail || _tail.slack == 0)
+            if (!tailSegment || tailSegment.slack == 0)
             {
-                if (!_tail)
-                    _init();
+                if (!tailSegment)
+                    initialize();
                 else
-                    _grow();
+                    grow();
             }
 
-            *_tail.ptr++ = cast(E) item;
-            --_tail.slack;
+            *tailSegment.ptr++ = cast(E) item;
+            --tailSegment.slack;
             ++numberOfElements;
         }
     }
@@ -3787,38 +3787,38 @@ public:
     /// ditto
     void put(U)(U item) if (canPutRange!U)
     {
-        static if ((isArray!U || is(typeof(_tail.ptr[0 .. item.length] = (cast(E[]) item[])[0 .. 1]))))
+        static if ((isArray!U || is(typeof(tailSegment.ptr[0 .. item.length] = (cast(E[]) item[])[0 .. 1]))))
         {
             auto items = cast(E[]) item[];
 
             if (__ctfe)
             {
-                _tail.data ~= items;
+                tailSegment.data ~= items;
                 return;
             }
 
             reserve(item.length);
 
-            if (!_tail || _tail.slack < items.length)
+            if (!tailSegment || tailSegment.slack < items.length)
             {
-                if (!_tail)
+                if (!tailSegment)
                 {
-                    _init();
+                    initialize();
                 }
-                while (_tail.slack < items.length)
+                while (tailSegment.slack < items.length)
                 {
                     // Fill up the remaining slack
-                    _tail.ptr[0 .. _tail.slack] = items[0 .. _tail.slack];
-                    _tail.ptr += _tail.slack;
-                    items = items[_tail.slack .. $];
-                    _tail.slack = 0;
-                    _grow();
+                    tailSegment.ptr[0 .. tailSegment.slack] = items[0 .. tailSegment.slack];
+                    tailSegment.ptr += tailSegment.slack;
+                    items = items[tailSegment.slack .. $];
+                    tailSegment.slack = 0;
+                    grow();
                 }
             }
             // Push the items
-            _tail.ptr[0 .. items.length] = items;
-            _tail.ptr += items.length;
-            _tail.slack -= items.length;
+            tailSegment.ptr[0 .. items.length] = items;
+            tailSegment.ptr += items.length;
+            tailSegment.slack -= items.length;
 
             numberOfElements += item.length;
         }
@@ -3848,11 +3848,11 @@ public:
     {
         if (__ctfe)
         {
-            return cast(T[])(_head !is null ? _head.data : null);
+            return cast(T[])(headSegment !is null ? headSegment.data : null);
         }
-        if (_head == _tail)
+        if (headSegment == tailSegment)
         {
-            return cast(T[])(_head ? _head.base[0 .. _head.length].dup : null);
+            return cast(T[])(headSegment ? headSegment.base[0 .. headSegment.length].dup : null);
         }
 
         E[] arr;
@@ -3860,7 +3860,7 @@ public:
         size_t len;
         arr.length = numberOfElements;
 
-        for (const(Segment)* d = _head; d !is null; d = d.next, i += len)
+        for (const(Segment)* d = headSegment; d !is null; d = d.next, i += len)
         {
             len = d.length;
             arr[i .. i + len] = d.base[0 .. len];
@@ -3906,10 +3906,10 @@ public:
         size_t slack() const pure nothrow @property
         {
             if (__ctfe)
-                return _head ? _head.ct_slack : 0;
+                return headSegment ? headSegment.ct_slack : 0;
 
             size_t sum = 0;
-            for (const(Segment)* seg = _tail; seg !is null; seg = seg.next)
+            for (const(Segment)* seg = tailSegment; seg !is null; seg = seg.next)
             {
                 sum += seg.slack;
             }
@@ -3919,17 +3919,17 @@ public:
         /// Increases the slack by at least N elements
         void extend(size_t N)
         {
-            if (!_head)
-                _init();
+            if (!headSegment)
+                initialize();
 
             if (__ctfe)
             {
-                //_head.data.length = _head.data.length + N;
+                //headSegment.data.length = headSegment.data.length + N;
                 return;
             }
 
             auto len = slack;
-            auto seg = _tail;
+            auto seg = tailSegment;
 
             while (seg.next !is null)
                 seg = seg.next;
@@ -3946,10 +3946,10 @@ public:
         size_t capacity() const pure nothrow @property
         {
             if (__ctfe)
-                return _head ? _head.capacity : 0;
+                return headSegment ? headSegment.capacity : 0;
 
             size_t sum;
-            for (const(Segment)* seg = _tail; seg !is null; seg = seg.next)
+            for (const(Segment)* seg = tailSegment; seg !is null; seg = seg.next)
             {
                 sum += seg.capacity;
             }
@@ -3974,17 +3974,17 @@ public:
 
                 if (__ctfe)
                 {
-                    if (_head)
-                        _head.data.length = 0;
+                    if (headSegment)
+                        headSegment.data.length = 0;
                     return;
                 }
 
-                for (auto seg = _head; seg !is null; seg = seg.next)
+                for (auto seg = headSegment; seg !is null; seg = seg.next)
                 {
                     seg.slack = Segment.slackInit;
-                    seg.ptr = _head.base;
+                    seg.ptr = headSegment.base;
                 }
-                _tail = _head;
+                tailSegment = headSegment;
             }
 
             /** Shrinks the Builder to a given length if less than the current
@@ -3994,17 +3994,17 @@ public:
             {
                 if (__ctfe)
                 {
-                    if (_head)
-                        _head.data.length = newlength;
+                    if (headSegment)
+                        headSegment.data.length = newlength;
                     return;
                 }
 
-                for (auto seg = _head; seg !is null; seg = seg.next)
+                for (auto seg = headSegment; seg !is null; seg = seg.next)
                 {
                     if (newlength == 0)
                     {
                         seg.slack = Segment.slackInit;
-                        seg.ptr = _head.base;
+                        seg.ptr = headSegment.base;
                         continue;
                     }
                     auto len = seg.length;
@@ -4031,8 +4031,8 @@ public:
         {
             private
             {
-                Segment* _head; // Current front segment
-                Segment* _tail; // Current back segment
+                Segment* headSegment; // Current front segment
+                Segment* tailSegment; // Current back segment
                 U* _front; // Current front pointer
                 U* _back; // Current back pointer
                 Segment* _ref_count; // Ref counting segment
@@ -4043,20 +4043,20 @@ public:
             {
                 if (__ctfe)
                 {
-                    _head = cast(Segment*) app._head;
+                    headSegment = cast(Segment*) app.headSegment;
                     return;
                 }
-                _head = cast(Segment*) app._head;
-                _tail = cast(Segment*) app._tail;
-                if (_head !is null && _head.ptr != _head.base)
+                headSegment = cast(Segment*) app.headSegment;
+                tailSegment = cast(Segment*) app.tailSegment;
+                if (headSegment !is null && headSegment.ptr != headSegment.base)
                 {
-                    _ref_count = cast(Segment*) app._head;
-                    _front = _head.base;
-                    while (_tail.ptr is _tail.base)
+                    _ref_count = cast(Segment*) app.headSegment;
+                    _front = headSegment.base;
+                    while (tailSegment.ptr is tailSegment.base)
                     {
-                        _tail = _tail.prev;
+                        tailSegment = tailSegment.prev;
                     }
-                    _back = _tail.ptr;
+                    _back = tailSegment.ptr;
                 }
                 else
                 {
@@ -4078,7 +4078,7 @@ public:
             U front() pure nothrow @property
             {
                 if (__ctfe)
-                    return _head.data[0];
+                    return headSegment.data[0];
                 return *_front;
             }
 
@@ -4086,7 +4086,7 @@ public:
             U back() pure nothrow @property
             {
                 if (__ctfe)
-                    return _head.data[$ - 1];
+                    return headSegment.data[$ - 1];
                 return *(_back - 1);
             }
 
@@ -4099,7 +4099,7 @@ public:
                 {
                     if (__ctfe)
                     {
-                        _head.data[0] = value;
+                        headSegment.data[0] = value;
                         return;
                     }
                     *_front = value;
@@ -4110,7 +4110,7 @@ public:
                 {
                     if (__ctfe)
                     {
-                        _head.data[$ - 1] = value;
+                        headSegment.data[$ - 1] = value;
                         return;
                     }
                     *(_back - 1) = value;
@@ -4121,7 +4121,7 @@ public:
             bool empty() const pure nothrow @property
             {
                 if (__ctfe)
-                    return _head.data.empty;
+                    return headSegment.data.empty;
                 return _front is _back;
             }
 
@@ -4138,19 +4138,19 @@ public:
                     return;
                 if (__ctfe)
                 {
-                    _head.data = _head.data[1 .. $];
+                    headSegment.data = headSegment.data[1 .. $];
                     return;
                 }
                 _front++;
-                while (_front >= _head.ptr)
+                while (_front >= headSegment.ptr)
                 {
-                    _head = _head.next;
-                    if (_head is null)
+                    headSegment = headSegment.next;
+                    if (headSegment is null)
                     {
                         _front = _back = null;
                         return;
                     }
-                    _front = _head.base;
+                    _front = headSegment.base;
                 }
             }
 
@@ -4161,19 +4161,19 @@ public:
                     return;
                 if (__ctfe)
                 {
-                    _head.data = _head.data[0 .. $ - 1];
+                    headSegment.data = headSegment.data[0 .. $ - 1];
                     return;
                 }
                 _back--;
-                while (_back <= _tail.base)
+                while (_back <= tailSegment.base)
                 {
-                    if (_tail is _ref_count)
+                    if (tailSegment is _ref_count)
                     {
                         _front = _back = null;
                         return;
                     }
-                    _tail = _tail.prev;
-                    _back = _tail.ptr;
+                    tailSegment = tailSegment.prev;
+                    _back = tailSegment.ptr;
                 }
             }
         }
@@ -4193,7 +4193,7 @@ public:
         /// Returns: true if no elements have been stored in the Builder
         bool empty() const pure nothrow @property
         {
-            return _head is null || (__ctfe ? _head.data.empty : _head.ptr == _head.base);
+            return headSegment is null || (__ctfe ? headSegment.data.empty : headSegment.ptr == headSegment.base);
         }
 
         /// Returns: the last element of the Builder. Not UTF safe.
@@ -4201,15 +4201,15 @@ public:
         {
             if (__ctfe)
             {
-                assert(_head !is null && !_head.data.empty);
-                return _head.data[$ - 1];
+                assert(headSegment !is null && !headSegment.data.empty);
+                return headSegment.data[$ - 1];
             }
-            if (_tail is null || _tail.ptr == _tail.base)
+            if (tailSegment is null || tailSegment.ptr == tailSegment.base)
             {
-                assert(_head !is _tail);
-                return *(_tail.prev.ptr - 1);
+                assert(headSegment !is tailSegment);
+                return *(tailSegment.prev.ptr - 1);
             }
-            return *(_tail.ptr - 1);
+            return *(tailSegment.ptr - 1);
         }
 
         /// ditto
@@ -4217,19 +4217,19 @@ public:
         {
             if (__ctfe)
             {
-                assert(_head !is null && !_head.data.empty);
-                _head.data[$ - 1] = value;
+                assert(headSegment !is null && !headSegment.data.empty);
+                headSegment.data[$ - 1] = value;
                 return;
             }
 
-            if (_tail is null || _tail.ptr == _tail.base)
+            if (tailSegment is null || tailSegment.ptr == tailSegment.base)
             {
-                assert(_head !is _tail);
-                *(_tail.prev.ptr - 1) = value;
+                assert(headSegment !is tailSegment);
+                *(tailSegment.prev.ptr - 1) = value;
                 return;
             }
 
-            *(_tail.ptr - 1) = value;
+            *(tailSegment.ptr - 1) = value;
             return;
         }
 
@@ -4238,26 +4238,26 @@ public:
         {
             if (__ctfe)
             {
-                assert(_head !is null && _head.data.length >= N);
-                _head.data.length = _head.data.length - N;
+                assert(headSegment !is null && headSegment.data.length >= N);
+                headSegment.data.length = headSegment.data.length - N;
                 return;
             }
 
-            assert(_tail !is null);
+            assert(tailSegment !is null);
 
             // pop a segment, in addition to an element
-            while (_tail.length < N)
+            while (tailSegment.length < N)
             {
-                assert(_head !is _tail);
-                N -= _tail.length;
-                _tail.ptr = _tail.base;
-                _tail.slack = Segment.slackInit;
-                _tail = _tail.prev;
+                assert(headSegment !is tailSegment);
+                N -= tailSegment.length;
+                tailSegment.ptr = tailSegment.base;
+                tailSegment.slack = Segment.slackInit;
+                tailSegment = tailSegment.prev;
             }
 
             // pop an element
-            _tail.ptr -= N;
-            _tail.slack += N;
+            tailSegment.ptr -= N;
+            tailSegment.slack += N;
             return;
         }
 
@@ -4273,10 +4273,10 @@ public:
         {
             if (__ctfe)
             {
-                return _head.data[0];
+                return headSegment.data[0];
             }
-            assert(_head !is null && _head.ptr !is _head.base);
-            return *_head.base;
+            assert(headSegment !is null && headSegment.ptr !is headSegment.base);
+            return *headSegment.base;
         }
 
         ///ditto
@@ -4284,11 +4284,11 @@ public:
         {
             if (__ctfe)
             {
-                _head.data[0] = value;
+                headSegment.data[0] = value;
                 return;
             }
-            assert(_head !is null && _head.ptr !is _head.base);
-            *_head.base = value;
+            assert(headSegment !is null && headSegment.ptr !is headSegment.base);
+            *headSegment.base = value;
         }
 
         /// Removes the last element from c and returns it.
@@ -4296,26 +4296,26 @@ public:
         {
             if (__ctfe)
             {
-                assert(_head !is null && _head.data.length >= 1);
-                auto result = _head.data[$ - 1];
-                _head.data = _head.data[0 .. $ - 1];
+                assert(headSegment !is null && headSegment.data.length >= 1);
+                auto result = headSegment.data[$ - 1];
+                headSegment.data = headSegment.data[0 .. $ - 1];
                 return result;
             }
 
-            assert(_tail !is null);
+            assert(tailSegment !is null);
 
             // pop a segment, in addition to an element
-            while (_tail.length == 0)
+            while (tailSegment.length == 0)
             {
-                assert(_head !is _tail);
-                _tail.ptr = _tail.base;
-                _tail.slack = Segment.slackInit;
-                _tail = _tail.prev;
+                assert(headSegment !is tailSegment);
+                tailSegment.ptr = tailSegment.base;
+                tailSegment.slack = Segment.slackInit;
+                tailSegment = tailSegment.prev;
             }
 
-            _tail.ptr--;
-            _tail.slack++;
-            return *(_tail.ptr);
+            tailSegment.ptr--;
+            tailSegment.slack++;
+            return *(tailSegment.ptr);
         }
 
         /** Signed index function with linear complexity.
@@ -4330,7 +4330,7 @@ public:
         {
             if (i >= 0) // positive indexing
             {
-                for (auto d = _head; d; d = d.next)
+                for (auto d = headSegment; d; d = d.next)
                 {
                     if (d.length > i)
                         return *(d.base + i);
@@ -4340,7 +4340,7 @@ public:
             }
             else // negative indexing
             {
-                for (auto d = _tail; d; d = d !is _head ? d.prev : null)
+                for (auto d = tailSegment; d; d = d !is headSegment ? d.prev : null)
                 {
                     if (d.length >= -i)
                         return *(d.ptr + i);
@@ -4356,7 +4356,7 @@ public:
             if (i >= 0)
             {
                 // positive indexing
-                for (auto d = _head; d; d = d.next)
+                for (auto d = headSegment; d; d = d.next)
                 {
                     if (d.length > i)
                     {
@@ -4370,7 +4370,7 @@ public:
             else
             {
                 // negative indexing
-                for (auto d = _tail; d; d = d !is _head ? d.prev : null)
+                for (auto d = tailSegment; d; d = d !is headSegment ? d.prev : null)
                 {
                     if (d.length >= -i)
                     {
@@ -4403,7 +4403,7 @@ public:
                 seg.slack = _arr.length - preseverdLength;
                 seg.ptr = _arr.ptr + preseverdLength;
                 seg.next = null;
-                app._head = app._tail = &seg;
+                app.headSegment = app.tailSegment = &seg;
             }
 
             // Ensure that the Builder's memory is freed.
@@ -4414,7 +4414,7 @@ public:
                     seg.next.free;
                 }
 
-                app._head = null;
+                app.headSegment = null;
             }
 
             // Prevent copying
@@ -4424,7 +4424,7 @@ public:
             size_t walkLength() const pure @property
             {
                 // No extra segments
-                if (app._head is app._tail)
+                if (app.headSegment is app.tailSegment)
                 {
                     return arr.length - seg.slack;
                 }
@@ -4443,7 +4443,7 @@ public:
             void sync() pure
             {
                 // The array and Builder are out of sync
-                if (app._head != app._tail)
+                if (app.headSegment != app.tailSegment)
                 {
                     // Get the new total length
                     size_t len = arr.length;
