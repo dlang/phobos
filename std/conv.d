@@ -617,9 +617,9 @@ if (!isImplicitlyConvertible!(S, T) &&
         int x;
         static Int3 opCall(int x) @safe pure
         {
-            Int3 i;
-            i.x = x;
-            return i;
+            Int3 i3;
+            i3.x = x;
+            return i3;
         }
     }
     Int3 i3 = to!Int3(1);
@@ -5122,7 +5122,6 @@ version(unittest)
 //opCall
 @system unittest
 {
-    int i;
     //Without constructor
     {
         static struct S1
@@ -5323,7 +5322,7 @@ version(unittest)
 
     struct S
     {
-        int* p;
+        int* p2;
     }
     alias IS = immutable(S);
     S s = void;

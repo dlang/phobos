@@ -3120,7 +3120,7 @@ private template ReduceSeedType(E)
 
         //Check the Seed type is useable.
         ReduceSeedType s = ReduceSeedType.init;
-        static assert(is(typeof({ReduceSeedType s = lvalueOf!E;})) &&
+        static assert(is(typeof({ReduceSeedType r = lvalueOf!E;})) &&
             is(typeof(lvalueOf!ReduceSeedType = fun(lvalueOf!ReduceSeedType, lvalueOf!E))),
             algoFormat(
                 "Unable to deduce an acceptable seed type for %s with element type %s.",

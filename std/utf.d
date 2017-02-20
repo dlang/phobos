@@ -1575,7 +1575,9 @@ if (is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S
         }
 
         static if (canIndex)
+        {
             immutable uint u2 = pstr[1];
+        }
         else
         {
             immutable uint u2 = pstr.front;

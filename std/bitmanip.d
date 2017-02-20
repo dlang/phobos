@@ -2677,7 +2677,9 @@ if (canSwapEndianness!T &&
     is(ElementType!R : const ubyte))
 {
     static if (hasSlicing!R)
+    {
         const ubyte[T.sizeof] bytes = range[0 .. T.sizeof];
+    }
     else
     {
         ubyte[T.sizeof] bytes;

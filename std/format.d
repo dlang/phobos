@@ -947,9 +947,6 @@ if (is(Unqual!Char == Char))
          compatibility).
          */
         bool flHash;
-
-        // Fake field to allow compilation
-        ubyte allFlags;
     }
     else
     {
@@ -963,6 +960,8 @@ if (is(Unqual!Char == Char))
                         bool, "flPlus", 1,
                         bool, "flHash", 1,
                         ubyte, "", 3));
+
+            // Fake field to allow compilation
             ubyte allFlags;
         }
     }

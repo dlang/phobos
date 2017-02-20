@@ -153,9 +153,9 @@ public:
     @system unittest
     {
         // @system due to failure in FreeBSD32
-        ulong data = 1_000_000_000_000;
-        auto bigData = BigInt(data);
-        assert(data == BigInt("1_000_000_000_000"));
+        ulong _data = 1_000_000_000_000;
+        auto bigData = BigInt(_data);
+        assert(_data == BigInt("1_000_000_000_000"));
     }
 
     /// Construct a BigInt from another BigInt.

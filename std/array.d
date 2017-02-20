@@ -1156,10 +1156,10 @@ private template isInputRangeOrConvertible(E)
     {
         static bool testctfe()
         {
-            Int[] arr = [Int(1), Int(4), Int(5)];
-            assert(arr[0] == 1);
-            insertInPlace(arr, 1, Int(2), Int(3));
-            return equal(arr, [1, 2, 3, 4, 5]);  //check it works with postblit
+            Int[] _arr = [Int(1), Int(4), Int(5)];
+            assert(_arr[0] == 1);
+            insertInPlace(_arr, 1, Int(2), Int(3));
+            return equal(_arr, [1, 2, 3, 4, 5]);  //check it works with postblit
         }
         enum E = testctfe();
     }

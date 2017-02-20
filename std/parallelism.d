@@ -1842,7 +1842,7 @@ public:
                 alias E = MapType!(S, functions);
                 E[] buf1, buf2;
                 S source;
-                TaskPool pool;
+                TaskPool _pool;
                 Task!(run, E[] delegate(E[]), E[]) nextBufTask;
                 size_t workUnitSize;
                 size_t bufPos;
@@ -1959,7 +1959,7 @@ public:
                     this.workUnitSize = (workUnitSize == size_t.max) ?
                             pool.defaultWorkUnitSize(bufSize) : workUnitSize;
                     this.source = source;
-                    this.pool = pool;
+                    this._pool = pool;
 
                     static if (hasLength!S)
                     {
@@ -1987,7 +1987,7 @@ public:
                     buf = buf[0..min(buf.length, toMap.length)];
 
                     // Handle as a special case:
-                    if (pool.size == 0)
+                    if (_pool.size == 0)
                     {
                         size_t index = 0;
                         foreach (elem; toMap)
@@ -1997,7 +1997,7 @@ public:
                         return buf;
                     }
 
-                    pool.amap!functions(toMap, workUnitSize, buf);
+                    _pool.amap!functions(toMap, workUnitSize, buf);
 
                     return buf;
                 }
@@ -2014,7 +2014,7 @@ public:
                     nextBufTask = typeof(nextBufTask).init;
                     nextBufTask._args[0] = &fillBuf;
                     nextBufTask._args[1] = buf2;
-                    pool.put(nextBufTask);
+                    _pool.put(nextBufTask);
                 }
 
                 void doBufSwap()
@@ -2141,7 +2141,7 @@ public:
         private:
             E[] buf1, buf2;
             S source;
-            TaskPool pool;
+            TaskPool _pool;
             Task!(run, E[] delegate(E[]), E[]) nextBufTask;
             size_t bufPos;
             bool lastTaskWaited;
@@ -2163,7 +2163,7 @@ public:
                 buf2.length = bufSize;
 
                 this.source = source;
-                this.pool = pool;
+                this._pool = pool;
 
                 static if (hasLength!S)
                 {
@@ -2200,7 +2200,7 @@ public:
                 nextBufTask = typeof(nextBufTask).init;
                 nextBufTask._args[0] = &fillBuf;
                 nextBufTask._args[1] = buf2;
-                pool.put(nextBufTask);
+                _pool.put(nextBufTask);
             }
 
             void doBufSwap()
@@ -2469,7 +2469,7 @@ public:
 
                 static if (!is(typeof(workUnitSize)))
                 {
-                    size_t workUnitSize = defaultWorkUnitSize(range.length);
+                    size_t _workUnitSize = defaultWorkUnitSize(range.length);
                 }
             }
             else
@@ -2479,7 +2479,7 @@ public:
 
                 static if (!is(typeof(workUnitSize)))
                 {
-                    size_t workUnitSize = defaultWorkUnitSize(range.length);
+                    size_t _workUnitSize = defaultWorkUnitSize(range.length);
                 }
 
                 enforce(!range.empty,
@@ -2488,6 +2488,11 @@ public:
                 auto seed = makeStartValue(range.front);
                 enum explicitSeed = false;
                 range.popFront();
+            }
+
+            static if (!is(typeof(_workUnitSize)))
+            {
+                size_t _workUnitSize = workUnitSize;
             }
 
             alias E = typeof(seed);
@@ -2585,13 +2590,13 @@ public:
             // be applied on the results of these to get a final result, but
             // it can't be evaluated out of order.
 
-            if (workUnitSize > len)
+            if (_workUnitSize > len)
             {
-                workUnitSize = len;
+                _workUnitSize = len;
             }
 
-            immutable size_t nWorkUnits = (len / workUnitSize) + ((len % workUnitSize == 0) ? 0 : 1);
-            assert(nWorkUnits * workUnitSize >= len);
+            immutable size_t nWorkUnits = (len / _workUnitSize) + ((len % _workUnitSize == 0) ? 0 : 1);
+            assert(nWorkUnits * _workUnitSize >= len);
 
             alias RTask = Task!(run, typeof(&reduceOnRange), R, size_t, size_t);
             RTask[] tasks;
@@ -2644,11 +2649,11 @@ public:
             {
                 task.pool = this;
                 task._args[0] = scopedAddress(&reduceOnRange);
-                task._args[3] = min(len, curPos + workUnitSize);  // upper bound.
+                task._args[3] = min(len, curPos + _workUnitSize);  // upper bound.
                 task._args[1] = range;  // range
                 task._args[2] = curPos; // lower bound.
 
-                curPos += workUnitSize;
+                curPos += _workUnitSize;
             }
 
             foreach (ref task; tasks)
@@ -2814,7 +2819,7 @@ public:
     static struct WorkerLocalStorage(T)
     {
     private:
-        TaskPool pool;
+        TaskPool _pool;
         size_t size;
 
         size_t elemSize;
@@ -2836,7 +2841,7 @@ public:
 
         void initialize(TaskPool pool)
         {
-            this.pool = pool;
+            this._pool = pool;
             size = pool.size + 1;
             stillThreadLocal = new bool;
             *stillThreadLocal = true;
@@ -2896,7 +2901,7 @@ public:
                 "Cannot call get() on this instance of WorkerLocalStorage " ~
                 "because it is no longer worker-local."
             );
-            return opIndex(pool.workerIndex);
+            return opIndex(_pool.workerIndex);
         }
 
         /**
@@ -2910,7 +2915,7 @@ public:
                 "because it is no longer worker-local."
             );
 
-            opIndexAssign(val, pool.workerIndex);
+            opIndexAssign(val, _pool.workerIndex);
         }
 
         /**
