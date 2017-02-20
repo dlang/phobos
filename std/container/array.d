@@ -115,24 +115,24 @@ private struct RangeT(A)
 
     @property ref inout(E) front() inout
     {
-        version (assert) if (empty) throw new RangeError();
+        assert(!empty, "Attempting to access the front of an empty Array");
         return _outer[_a];
     }
     @property ref inout(E) back() inout
     {
-        version (assert) if (empty) throw new RangeError();
+        assert(!empty, "Attempting to access the back of an empty Array");
         return _outer[_b - 1];
     }
 
-    void popFront() @safe pure nothrow
+    void popFront() @safe @nogc pure nothrow
     {
-        version (assert) if (empty) throw new RangeError();
+        assert(!empty, "Attempting to popFront an empty Array");
         ++_a;
     }
 
-    void popBack() @safe pure nothrow
+    void popBack() @safe @nogc pure nothrow
     {
-        version (assert) if (empty) throw new RangeError();
+        assert(!empty, "Attempting to popBack an empty Array");
         --_b;
     }
 
@@ -142,26 +142,26 @@ private struct RangeT(A)
 
         E moveFront()
         {
-            version (assert) if (empty || _a >= _outer.length) throw new RangeError();
+            assert(!empty && _a < _outer.length);
             return move(_outer._data._payload[_a]);
         }
 
         E moveBack()
         {
-            version (assert) if (empty || _b  > _outer.length) throw new RangeError();
+            assert(!empty && _b  <= _outer.length);
             return move(_outer._data._payload[_b - 1]);
         }
 
         E moveAt(size_t i)
         {
-            version (assert) if (_a + i >= _b || _a + i >= _outer.length) throw new RangeError();
+            assert(_a + i < _b && _a + i < _outer.length);
             return move(_outer._data._payload[_a + i]);
         }
     }
 
     ref inout(E) opIndex(size_t i) inout
     {
-        version (assert) if (_a + i >= _b) throw new RangeError();
+        assert(_a + i < _b);
         return _outer[_a + i];
     }
 
@@ -172,7 +172,7 @@ private struct RangeT(A)
 
     RangeT opSlice(size_t i, size_t j)
     {
-        version (assert) if (i > j || _a + j > _b) throw new RangeError();
+        assert(i <= j && _a + j <= _b);
         return typeof(return)(_outer, _a + i, _a + j);
     }
 
@@ -183,7 +183,7 @@ private struct RangeT(A)
 
     RangeT!(const(A)) opSlice(size_t i, size_t j) const
     {
-        version (assert) if (i > j || _a + j > _b) throw new RangeError();
+        assert(i <= j && _a + j <= _b);
         return typeof(return)(_outer, _a + i, _a + j);
     }
 
@@ -191,39 +191,39 @@ private struct RangeT(A)
     {
         void opSliceAssign(E value)
         {
-            version (assert) if (_b > _outer.length) throw new RangeError();
+            assert(_b <= _outer.length);
             _outer[_a .. _b] = value;
         }
 
         void opSliceAssign(E value, size_t i, size_t j)
         {
-            version (assert) if (_a + j > _b) throw new RangeError();
+            assert(_a + j <= _b);
             _outer[_a + i .. _a + j] = value;
         }
 
         void opSliceUnary(string op)()
         if (op == "++" || op == "--")
         {
-            version (assert) if (_b > _outer.length) throw new RangeError();
+            assert(_b <= _outer.length);
             mixin(op~"_outer[_a .. _b];");
         }
 
         void opSliceUnary(string op)(size_t i, size_t j)
         if (op == "++" || op == "--")
         {
-            version (assert) if (_a + j > _b) throw new RangeError();
+            assert(_a + j <= _b);
             mixin(op~"_outer[_a + i .. _a + j];");
         }
 
         void opSliceOpAssign(string op)(E value)
         {
-            version (assert) if (_b > _outer.length) throw new RangeError();
+            assert(_b <= _outer.length);
             mixin("_outer[_a .. _b] "~op~"= value;");
         }
 
         void opSliceOpAssign(string op)(E value, size_t i, size_t j)
         {
-            version (assert) if (_a + j > _b) throw new RangeError();
+            assert(_a + j <= _b);
             mixin("_outer[_a + i .. _a + j] "~op~"= value;");
         }
     }
@@ -355,8 +355,11 @@ if (!is(Unqual!T == bool))
                  * than realloc.
                  */
                 immutable oldLength = length;
-                auto newPayload =
-                    enforce(cast(T*) malloc(sz))[0 .. oldLength];
+
+                auto newPayloadPtr = cast(T*) malloc(sz);
+                newPayloadPtr || assert(false, "std.container.Array.reserve failed to allocate memory");
+                auto newPayload = newPayloadPtr[0 .. oldLength];
+
                 // copy old data over to new array
                 memcpy(newPayload.ptr, _payload.ptr, T.sizeof * oldLength);
                 // Zero out unused capacity to prevent gc from seeing
@@ -374,8 +377,9 @@ if (!is(Unqual!T == bool))
                 /* These can't have pointers, so no need to zero
                  * unused region
                  */
-                auto newPayload =
-                    enforce(cast(T*) realloc(_payload.ptr, sz))[0 .. length];
+                auto newPayloadPtr = cast(T*) realloc(_payload.ptr, sz);
+                newPayloadPtr || assert(false, "std.container.Array.reserve failed to allocate memory");
+                auto newPayload = newPayloadPtr[0 .. length];
                 _payload = newPayload;
             }
             _capacity = elements;
@@ -547,7 +551,8 @@ Complexity: $(BIGOH 1)
             bool overflow;
             const sz = mulu(elements, T.sizeof, overflow);
             if (overflow) assert(0);
-            auto p = enforce(malloc(sz));
+            auto p = malloc(sz);
+            p || assert(false, "std.container.Array.reserve failed to allocate memory");
             static if (hasIndirections!T)
             {
                 GC.addRange(p, sz);
@@ -590,17 +595,17 @@ Complexity: $(BIGOH 1)
 */
     Range opSlice(size_t i, size_t j)
     {
-        version (assert) if (i > j || j > length) throw new RangeError();
+        assert(i <= j && j <= length);
         return typeof(return)(this, i, j);
     }
     ConstRange opSlice(size_t i, size_t j) const
     {
-        version (assert) if (i > j || j > length) throw new RangeError();
+        assert(i <= j && j <= length);
         return typeof(return)(this, i, j);
     }
     ImmutableRange opSlice(size_t i, size_t j) immutable
     {
-        version (assert) if (i > j || j > length) throw new RangeError();
+        assert(i <= j && j <= length);
         return typeof(return)(this, i, j);
     }
 
@@ -613,14 +618,14 @@ Complexity: $(BIGOH 1)
      */
     @property ref inout(T) front() inout
     {
-        version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
+        assert(_data.refCountedStore.isInitialized);
         return _data._payload[0];
     }
 
     /// ditto
     @property ref inout(T) back() inout
     {
-        version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
+        assert(_data.refCountedStore.isInitialized);
         return _data._payload[$ - 1];
     }
 
@@ -633,7 +638,7 @@ Complexity: $(BIGOH 1)
      */
     ref inout(T) opIndex(size_t i) inout
     {
-        version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
+        assert(_data.refCountedStore.isInitialized);
         return _data._payload[i];
     }
 
@@ -1220,7 +1225,8 @@ unittest
 // make sure that Array instances refuse ranges that don't belong to them
 unittest
 {
-    import std.exception;
+    import std.exception : assertThrown;
+
     Array!int a = [1, 2, 3];
     auto r = a.dup[];
     assertThrown(a.insertBefore(r, 42));
@@ -1414,6 +1420,19 @@ unittest // const/immutable Array and Ranges
         A.ImmutableRange);
 }
 
+// ensure @nogc
+@nogc unittest
+{
+    Array!int ai;
+    ai ~= 1;
+    assert(ai.front == 1);
+
+    ai.reserve(10);
+    assert(ai.capacity == 10);
+
+    static immutable arr = [1, 2, 3];
+    ai.insertBack(arr);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Array!bool
@@ -1471,49 +1490,49 @@ if (is(Unqual!T == bool))
         /// Ditto
         @property T front()
         {
-            enforce(!empty);
+            enforce(!empty, "Attempting to access the front of an empty Array");
             return _outer[_a];
         }
         /// Ditto
         @property void front(bool value)
         {
-            enforce(!empty);
+            enforce(!empty, "Attempting to set the front of an empty Array");
             _outer[_a] = value;
         }
         /// Ditto
         T moveFront()
         {
-            enforce(!empty);
+            enforce(!empty, "Attempting to move the front of an empty Array");
             return _outer.moveAt(_a);
         }
         /// Ditto
         void popFront()
         {
-            enforce(!empty);
+            enforce(!empty, "Attempting to popFront an empty Array");
             ++_a;
         }
         /// Ditto
         @property T back()
         {
-            enforce(!empty);
+            enforce(!empty, "Attempting to access the back of an empty Array");
             return _outer[_b - 1];
         }
         /// Ditto
         @property void back(bool value)
         {
-            enforce(!empty);
+            enforce(!empty, "Attempting to set the back of an empty Array");
             _outer[_b - 1] = value;
         }
         /// Ditto
         T moveBack()
         {
-            enforce(!empty);
+            enforce(!empty, "Attempting to move the back of an empty Array");
             return _outer.moveAt(_b - 1);
         }
         /// Ditto
         void popBack()
         {
-            enforce(!empty);
+            enforce(!empty, "Attempting to popBack an empty Array");
             --_b;
         }
         /// Ditto
@@ -1541,7 +1560,10 @@ if (is(Unqual!T == bool))
         /// ditto
         Range opSlice(size_t low, size_t high)
         {
-            assert(_a <= low && low <= high && high <= _b);
+            assert(
+                _a <= low && low <= high && high <= _b,
+                "Using out of bounds indexes on an Array"
+            );
             return Range(_outer, _a + low, _a + high);
         }
     }
