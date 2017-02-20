@@ -2586,7 +2586,7 @@ Params:
     i1 = first index
     i2 = second index
 */
-void swapAt(R)(auto ref R r, size_t i1, size_t i2)
+void swapAt(R)(ref R r, size_t i1, size_t i2)
 {
     static if (is(typeof(&r.swapAt)))
     {
