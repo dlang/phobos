@@ -1630,7 +1630,7 @@ EOF";
 
     import std.exception;
 
-    auto e = collectException!JSONException(parseJSON(s));
+    immutable e = collectException!JSONException(parseJSON(s));
     assert(e.msg == "Unexpected character 'p'. (Line 5:3)", e.msg);
 }
 

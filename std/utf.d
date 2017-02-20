@@ -2900,12 +2900,12 @@ template toUTFz(P)
 ///
 @safe pure unittest
 {
-    auto p1 = toUTFz!(char*)("hello world");
-    auto p2 = toUTFz!(const(char)*)("hello world");
-    auto p3 = toUTFz!(immutable(char)*)("hello world");
-    auto p4 = toUTFz!(char*)("hello world"d);
-    auto p5 = toUTFz!(const(wchar)*)("hello world");
-    auto p6 = toUTFz!(immutable(dchar)*)("hello world"w);
+    immutable p1 = toUTFz!(char*)("hello world");
+    immutable p2 = toUTFz!(const(char)*)("hello world");
+    immutable p3 = toUTFz!(immutable(char)*)("hello world");
+    immutable p4 = toUTFz!(char*)("hello world"d);
+    immutable p5 = toUTFz!(const(wchar)*)("hello world");
+    immutable p6 = toUTFz!(immutable(dchar)*)("hello world"w);
 }
 
 private P toUTFzImpl(P, S)(S str) @safe pure
@@ -3392,7 +3392,7 @@ if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingTyp
     static assert(is(ElementType!(typeof(r)) == immutable char));
 
     // contrast with the range capabilities of standard strings
-    auto s = "Hello, World!";
+    immutable s = "Hello, World!";
     static assert(isBidirectionalRange!(typeof(r)));
     static assert(is(ElementType!(typeof(s)) == dchar));
 
@@ -3461,7 +3461,7 @@ pure nothrow @nogc unittest
     {
         auto r = "hello".byCodeUnit().byCodeUnit();
         static assert(isForwardRange!(typeof(r)));
-        auto s = r.save;
+        immutable s = r.save;
         r.popFront();
         assert(s.front == 'h');
     }
@@ -3491,7 +3491,7 @@ pure nothrow @nogc unittest
         }
 
         auto fn = Stringish("test.d");
-        auto x = fn.byCodeUnit();
+        immutable x = fn.byCodeUnit();
         assert(x.front == 't');
     }
 }
@@ -3791,7 +3791,7 @@ if (isSomeChar!C)
                     if (pos == fill)
                     {
                         pos = 0;
-                        auto c = r.front;
+                        immutable c = r.front;
 
                         if (c <= 0x7F)
                         {

@@ -127,15 +127,15 @@ public:
         import std.exception : assertThrown;
 
         auto r1 = new ReferenceBidirectionalRange!dchar("101");
-        auto big1 = BigInt(r1);
+        immutable big1 = BigInt(r1);
         assert(big1 == BigInt(101));
 
         auto r2 = new ReferenceBidirectionalRange!dchar("1_000");
-        auto big2 = BigInt(r2);
+        immutable big2 = BigInt(r2);
         assert(big2 == BigInt(1000));
 
         auto r3 = new ReferenceBidirectionalRange!dchar("0x0");
-        auto big3 = BigInt(r3);
+        immutable big3 = BigInt(r3);
         assert(big3 == BigInt(0));
 
         auto r4 = new ReferenceBidirectionalRange!dchar("0x");
@@ -154,7 +154,7 @@ public:
     {
         // @system due to failure in FreeBSD32
         ulong data = 1_000_000_000_000;
-        auto bigData = BigInt(data);
+        immutable bigData = BigInt(data);
         assert(data == BigInt("1_000_000_000_000"));
     }
 
@@ -199,7 +199,7 @@ public:
     ///
     @system unittest
     {
-        auto b1 = BigInt("123");
+        immutable b1 = BigInt("123");
         auto b2 = BigInt("456");
         b2 = b1;
         assert(b2 == BigInt("123"));
@@ -363,7 +363,7 @@ public:
     {
         // @system because opOpAssign is @system
         auto x = BigInt("123");
-        auto y = BigInt("321");
+        immutable y = BigInt("321");
         x += y;
         assert(x == BigInt("444"));
     }
@@ -383,8 +383,8 @@ public:
     ///
     @system unittest
     {
-        auto x = BigInt("123");
-        auto y = BigInt("456");
+        immutable x = BigInt("123");
+        immutable y = BigInt("456");
         BigInt z = x * y;
         assert(z == BigInt("56088"));
     }
@@ -456,7 +456,7 @@ public:
     ///
     @system unittest
     {
-        auto  x  = BigInt("1_000_000_500");
+        immutable  x  = BigInt("1_000_000_500");
         long  l  = 1_000_000L;
         ulong ul = 2_000_000UL;
         int   i  = 500_000;
@@ -481,7 +481,7 @@ public:
     ///
     @system unittest
     {
-        auto x = BigInt("100");
+        immutable x = BigInt("100");
         BigInt y = 123 + x;
         assert(y == BigInt("223"));
 
@@ -602,8 +602,8 @@ public:
     ///
     @system unittest
     {
-        auto x = BigInt("12345");
-        auto y = BigInt("12340");
+        immutable x = BigInt("12345");
+        immutable y = BigInt("12340");
         int z = 12345;
         int w = 54321;
 
@@ -626,13 +626,13 @@ public:
     @system unittest
     {
         // Non-zero values are regarded as true
-        auto x = BigInt("1");
-        auto y = BigInt("10");
+        immutable x = BigInt("1");
+        immutable y = BigInt("10");
         assert(x);
         assert(y);
 
         // Zero value is regarded as false
-        auto z = BigInt("0");
+        immutable z = BigInt("0");
         assert(!z);
     }
 
@@ -770,8 +770,8 @@ public:
     ///
     @system unittest
     {
-        auto x = BigInt("100");
-        auto y = BigInt("10");
+        immutable x = BigInt("100");
+        immutable y = BigInt("10");
         int z = 50;
         const int w = 200;
 
@@ -996,7 +996,7 @@ private:
 {
     BigInt a = "9588669891916142";
     BigInt b = "7452469135154800";
-    auto c = a * b;
+    immutable c = a * b;
     assert(c == BigInt("71459266416693160362545788781600"));
     auto d = b * a;
     assert(d == BigInt("71459266416693160362545788781600"));
@@ -1005,7 +1005,7 @@ private:
     assert(d == BigInt("56783581982794522489042432639320434378739200"));
     auto e = c + d;
     assert(e == BigInt("56783581982865981755459125799682980167520800"));
-    auto f = d + c;
+    immutable f = d + c;
     assert(f == e);
     auto g = f - c;
     assert(g == d);
@@ -1013,8 +1013,8 @@ private:
     assert(g == c);
     e = 12345678;
     g = c + e;
-    auto h = g / b;
-    auto i = g % b;
+    immutable h = g / b;
+    immutable i = g % b;
     assert(h == a);
     assert(i == e);
     BigInt j = "-0x9A56_57f4_7B83_AB78";
@@ -1044,7 +1044,7 @@ string toDecimalString(const(BigInt) x)
     x *= 1000;
     x += 456;
 
-    auto xstr = x.toDecimalString();
+    immutable xstr = x.toDecimalString();
     assert(xstr == "123456");
 }
 
@@ -1072,7 +1072,7 @@ string toHex(const(BigInt) x)
     x *= 1000;
     x += 456;
 
-    auto xstr = x.toHex();
+    immutable xstr = x.toHex();
     assert(xstr == "1E240");
 }
 
@@ -1110,7 +1110,7 @@ unittest
     BigInt a, b;
     a = 1;
     b = 2;
-    auto c = a + b;
+    immutable c = a + b;
 }
 
 nothrow pure @system
@@ -1118,8 +1118,8 @@ unittest
 {
     long a;
     BigInt b;
-    auto c = a + b;
-    auto d = b + a;
+    immutable c = a + b;
+    immutable d = b + a;
 }
 
 nothrow pure @system
@@ -1142,7 +1142,7 @@ unittest
     assert(r3 == 5);
 
     BigInt[] arr = [BigInt(1)];
-    auto incr = arr[0]++;
+    immutable incr = arr[0]++;
     assert(arr == [BigInt(2)]);
     assert(incr == BigInt(1));
 }
@@ -1237,7 +1237,7 @@ unittest
     BigInt n7793 = 10;
     assert( n7793 / 1 == 10);
     // Bug 7973
-    auto a7973 = 10_000_000_000_000_000;
+    immutable a7973 = 10_000_000_000_000_000;
     const c7973 = 10_000_000_000_000_000;
     immutable i7973 = 10_000_000_000_000_000;
     BigInt v7973 = 2551700137;
@@ -1435,12 +1435,12 @@ unittest
 @safe unittest
 {
     import std.math : abs;
-    auto r = abs(BigInt(-1000)); // 6486
+    immutable r = abs(BigInt(-1000)); // 6486
     assert(r == 1000);
 
-    auto r2 = abs(const(BigInt)(-500)); // 11188
+    immutable r2 = abs(const(BigInt)(-500)); // 11188
     assert(r2 == 500);
-    auto r3 = abs(immutable(BigInt)(-733)); // 11188
+    immutable r3 = abs(immutable(BigInt)(-733)); // 11188
     assert(r3 == 733);
 
     // opCast!bool
@@ -1609,8 +1609,8 @@ unittest
     assert(is(typeof(x % 1L) == long));
     assert(is(typeof(x % 1UL) == BigInt));
 
-    auto x1 = BigInt(8);
-    auto x2 = -BigInt(long.min) + 1;
+    immutable x1 = BigInt(8);
+    immutable x2 = -BigInt(long.min) + 1;
 
     // long
     assert(x1 % 2L == 0L);

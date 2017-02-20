@@ -522,7 +522,7 @@ template ThompsonOps(E, S, bool withInput:true)
             matcher.re.ngroup = me - ms;
             matcher.backrefed = backrefed.empty ? t.matches : backrefed;
             //backMatch
-            auto mRes = matcher.matchOneShot(t.matches.ptr[ms .. me], IRL!(IR.LookbehindStart));
+            immutable mRes = matcher.matchOneShot(t.matches.ptr[ms .. me], IRL!(IR.LookbehindStart));
             freelist = matcher.freelist;
             subCounters[t.pc] = matcher.genCounter;
             if ((mRes != 0 ) ^ positive)
@@ -539,7 +539,7 @@ template ThompsonOps(E, S, bool withInput:true)
     {
         with(e) with(state)
         {
-            auto save = index;
+            immutable save = index;
             uint len = re.ir[t.pc].data;
             uint ms = re.ir[t.pc+1].raw, me = re.ir[t.pc+2].raw;
             uint end = t.pc+len+IRL!(IR.LookaheadEnd)+IRL!(IR.LookaheadStart);
@@ -550,7 +550,7 @@ template ThompsonOps(E, S, bool withInput:true)
                 auto matcher = fwdMatcher(t.pc, end, subCounters.get(t.pc, 0));
             matcher.re.ngroup = me - ms;
             matcher.backrefed = backrefed.empty ? t.matches : backrefed;
-            auto mRes = matcher.matchOneShot(t.matches.ptr[ms .. me], IRL!(IR.LookaheadStart));
+            immutable mRes = matcher.matchOneShot(t.matches.ptr[ms .. me], IRL!(IR.LookaheadStart));
             freelist = matcher.freelist;
             subCounters[t.pc] = matcher.genCounter;
             s.reset(index);

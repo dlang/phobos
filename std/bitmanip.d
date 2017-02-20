@@ -829,7 +829,7 @@ public:
 
         void Fun(const BitArray arr)
         {
-            auto x = arr[0];
+            immutable x = arr[0];
             assert(x == 1);
         }
         BitArray a;
@@ -1121,13 +1121,13 @@ public:
         static bool[] bf = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
         static bool[] bg = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1];
 
-        auto a = BitArray(ba);
-        auto b = BitArray(bb);
-        auto c = BitArray(bc);
-        auto d = BitArray(bd);
-        auto e = BitArray(be);
-        auto f = BitArray(bf);
-        auto g = BitArray(bg);
+        immutable a = BitArray(ba);
+        immutable b = BitArray(bb);
+        immutable c = BitArray(bc);
+        immutable d = BitArray(bd);
+        immutable e = BitArray(be);
+        immutable f = BitArray(bf);
+        immutable g = BitArray(bg);
 
         assert(a != b);
         assert(a != c);
@@ -1187,12 +1187,12 @@ public:
         static bool[] bf = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1];
         static bool[] bg = [1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0];
 
-        auto a = BitArray(ba);
+        immutable a = BitArray(ba);
         auto b = BitArray(bb);
         auto c = BitArray(bc);
         auto d = BitArray(bd);
         auto e = BitArray(be);
-        auto f = BitArray(bf);
+        immutable f = BitArray(bf);
         auto g = BitArray(bg);
 
         assert(a >  b);
@@ -1212,7 +1212,7 @@ public:
         {
             v.length = i;
             v[] = false;
-            auto x = BitArray(v);
+            immutable x = BitArray(v);
             v[i-1] = true;
             auto y = BitArray(v);
             assert(x < y);
@@ -1379,7 +1379,7 @@ public:
 
         static bool[] ba = [1,0,1,0,1];
 
-        auto a = BitArray(ba);
+        immutable a = BitArray(ba);
         BitArray b = ~a;
 
         assert(b[0] == 0);
@@ -1426,8 +1426,8 @@ public:
         static bool[] ba = [1,0,1,0,1];
         static bool[] bb = [1,0,1,1,0];
 
-        auto a = BitArray(ba);
-        auto b = BitArray(bb);
+        immutable a = BitArray(ba);
+        immutable b = BitArray(bb);
 
         BitArray c = a & b;
 
@@ -1445,8 +1445,8 @@ public:
         static bool[] ba = [1,0,1,0,1];
         static bool[] bb = [1,0,1,1,0];
 
-        auto a = BitArray(ba);
-        auto b = BitArray(bb);
+        immutable a = BitArray(ba);
+        immutable b = BitArray(bb);
 
         BitArray c = a | b;
 
@@ -1464,8 +1464,8 @@ public:
         static bool[] ba = [1,0,1,0,1];
         static bool[] bb = [1,0,1,1,0];
 
-        auto a = BitArray(ba);
-        auto b = BitArray(bb);
+        immutable a = BitArray(ba);
+        immutable b = BitArray(bb);
 
         BitArray c = a ^ b;
 
@@ -1483,8 +1483,8 @@ public:
         static bool[] ba = [1,0,1,0,1];
         static bool[] bb = [1,0,1,1,0];
 
-        auto a = BitArray(ba);
-        auto b = BitArray(bb);
+        immutable a = BitArray(ba);
+        immutable b = BitArray(bb);
 
         BitArray c = a - b;
 
@@ -1533,7 +1533,7 @@ public:
         static bool[] ba = [1,0,1,0,1,1,0,1,0,1];
         static bool[] bb = [1,0,1,1,0];
         auto a = BitArray(ba);
-        auto b = BitArray(bb);
+        immutable b = BitArray(bb);
         BitArray c = a;
         c.length = 5;
         c &= b;
@@ -1552,7 +1552,7 @@ public:
         static bool[] bb = [1,0,1,1,0];
 
         auto a = BitArray(ba);
-        auto b = BitArray(bb);
+        immutable b = BitArray(bb);
 
         a &= b;
         assert(a[0] == 1);
@@ -1570,7 +1570,7 @@ public:
         static bool[] bb = [1,0,1,1,0];
 
         auto a = BitArray(ba);
-        auto b = BitArray(bb);
+        immutable b = BitArray(bb);
 
         a |= b;
         assert(a[0] == 1);
@@ -1588,7 +1588,7 @@ public:
         static bool[] bb = [1,0,1,1,0];
 
         auto a = BitArray(ba);
-        auto b = BitArray(bb);
+        immutable b = BitArray(bb);
 
         a ^= b;
         assert(a[0] == 0);
@@ -1606,7 +1606,7 @@ public:
         static bool[] bb = [1,0,1,1,0];
 
         auto a = BitArray(ba);
-        auto b = BitArray(bb);
+        immutable b = BitArray(bb);
 
         a -= b;
         assert(a[0] == 0);
@@ -1728,7 +1728,7 @@ public:
         static bool[] ba = [1,0];
         static bool[] bb = [0,1,0];
 
-        auto a = BitArray(ba);
+        immutable a = BitArray(ba);
         auto b = BitArray(bb);
         BitArray c;
 
@@ -2009,10 +2009,10 @@ public:
         debug(bitarray) printf("BitArray.toString unittest\n");
         auto b = BitArray([0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]);
 
-        auto s1 = format("%s", b);
+        immutable s1 = format("%s", b);
         assert(s1 == "[0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1]");
 
-        auto s2 = format("%b", b);
+        immutable s2 = format("%b", b);
         assert(s2 == "00001111_00001111");
     }
 
@@ -3708,7 +3708,7 @@ if (canSwapEndianness!T && isOutputRange!(R, ubyte))
 
     {
         //enum - real
-        auto buffer = appender!(const ubyte[])();
+        immutable buffer = appender!(const ubyte[])();
 
         enum Real: real
         {

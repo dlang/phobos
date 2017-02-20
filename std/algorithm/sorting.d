@@ -502,7 +502,7 @@ if (ss != SwapStrategy.stable && isInputRange!Range && hasSwappableElements!Rang
                 }
                 else
                 {
-                    auto t1 = r.moveFront(), t2 = r.moveBack();
+                    immutable t1 = r.moveFront(), t2 = r.moveBack();
                     r.front = t2;
                     r.back = t1;
                 }
@@ -1509,7 +1509,7 @@ private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
     import std.algorithm.mutation : SwapStrategy;
     static struct Point { int x, y; }
     auto pts1 = [ Point(0, 0), Point(5, 5), Point(0, 1), Point(0, 2) ];
-    auto pts2 = [ Point(0, 0), Point(0, 1), Point(0, 2), Point(5, 5) ];
+    immutable pts2 = [ Point(0, 0), Point(0, 1), Point(0, 2), Point(5, 5) ];
     multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts1);
     assert(pts1 == pts2);
 }
@@ -3104,7 +3104,7 @@ if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
         // Workaround for https://issues.dlang.org/show_bug.cgi?id=16528
         // Safety checks: enumerate all potentially unsafe generic primitives
         // then use a @trusted implementation.
-        auto b = binaryFun!less(r[0], r[r.length - 1]);
+        immutable b = binaryFun!less(r[0], r[r.length - 1]);
         import std.algorithm.mutation : swapAt;
         r.swapAt(size_t(0), size_t(0));
         auto len = r.length;
@@ -3510,12 +3510,12 @@ private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
     topN(a, k);
     if (k > 0)
     {
-        auto left = reduce!max(a[0 .. k]);
+        immutable left = reduce!max(a[0 .. k]);
         assert(left <= a[k]);
     }
     if (k + 1 < a.length)
     {
-        auto right = reduce!min(a[k + 1 .. $]);
+        immutable right = reduce!min(a[k + 1 .. $]);
         assert(right >= a[k]);
     }
 }

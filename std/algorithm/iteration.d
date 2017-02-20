@@ -98,7 +98,7 @@ if (fun.length >= 1)
     {
         import std.algorithm.comparison : equal, max, min;
 
-        auto data = [[4, 2, 1, 3], [4, 9, -1, 3, 2], [3]];
+        immutable data = [[4, 2, 1, 3], [4, 9, -1, 3, 2], [3]];
 
         // Single aggregating function
         auto agg1 = data.aggregate!max;
@@ -297,7 +297,7 @@ same cost or side effects.
         void popFront() {initialized = false;}
         enum empty = false;
     }
-    auto r = Range().cache();
+    immutable r = Range().cache();
     assert(r.source.initialized == true);
 }
 
@@ -833,7 +833,7 @@ private struct MapResult(alias fun, Range)
 {
     import std.range;
     struct S {int* p;}
-    auto m = immutable(S).init.repeat().map!"a".save;
+    immutable m = immutable(S).init.repeat().map!"a".save;
 }
 
 // each
@@ -1522,11 +1522,11 @@ if (isInputRange!R)
 {
     // Issue 13857
     immutable(int)[] a1 = [1,1,2,2,2,3,4,4,5,6,6,7,8,9,9,9];
-    auto g1 = group(a1);
+    immutable g1 = group(a1);
 
     // Issue 13162
     immutable(ubyte)[] a2 = [1, 1, 1, 0, 0, 0];
-    auto g2 = a2.group;
+    immutable g2 = a2.group;
 
     // Issue 10104
     const a3 = [1, 1, 2, 2];
@@ -1538,7 +1538,7 @@ if (isInputRange!R)
     auto g4 = a4.group!"a is b";
 
     immutable I[] a5 = [new immutable C()];
-    auto g5 = a5.group!"a is b";
+    immutable g5 = a5.group!"a is b";
 
     const(int[][]) a6 = [[1], [1]];
     auto g6 = a6.group;
@@ -1876,7 +1876,7 @@ if (isInputRange!Range)
     import std.algorithm.comparison : equal;
 
     // Grouping by particular attribute of each element:
-    auto data = [
+    immutable data = [
         [1, 1],
         [1, 2],
         [2, 2],
@@ -1900,7 +1900,7 @@ if (isInputRange!Range)
 version(none) // this example requires support for non-equivalence relations
 @safe unittest
 {
-    auto data = [
+    immutable data = [
         [1, 1],
         [1, 2],
         [2, 2],
@@ -2628,7 +2628,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     auto r = joiner([inputRangeObject("ab"), inputRangeObject("cd")]);
     assert(isForwardRange!(typeof(r)));
 
-    auto str = to!string(r);
+    immutable str = to!string(r);
     assert(str == "abcd");
 }
 
@@ -2868,17 +2868,17 @@ remarkable power and flexibility.
     assert(largest == 5);
 
     // Compute the number of odd elements
-    auto odds = reduce!((a,b) => a + (b & 1))(0, arr);
+    immutable odds = reduce!((a,b) => a + (b & 1))(0, arr);
     assert(odds == 3);
 
     // Compute the sum of squares
-    auto ssquares = reduce!((a,b) => a + b * b)(0, arr);
+    immutable ssquares = reduce!((a,b) => a + b * b)(0, arr);
     assert(ssquares == 55);
 
     // Chain multiple ranges into seed
     int[] a = [ 3, 4 ];
     int[] b = [ 100 ];
-    auto r = reduce!("a + b")(chain(a, b));
+    immutable r = reduce!("a + b")(chain(a, b));
     assert(r == 107);
 
     // Mixing convertible types is fair game, too
@@ -2918,7 +2918,7 @@ The number of seeds must be correspondingly increased.
     assert(approxEqual(r[1], 233)); // sum of squares
     // Compute average and standard deviation from the above
     auto avg = r[0] / a.length;
-    auto stdev = sqrt(r[1] / a.length - avg * avg);
+    immutable stdev = sqrt(r[1] / a.length - avg * avg);
 }
 
 @safe unittest
@@ -2935,7 +2935,7 @@ The number of seeds must be correspondingly increased.
     r = reduce!(min)(a);
     assert(r == 3);
     double[] b = [ 100 ];
-    auto r1 = reduce!("a + b")(chain(a, b));
+    immutable r1 = reduce!("a + b")(chain(a, b));
     assert(r1 == 107);
 
     // two funs
@@ -3021,8 +3021,8 @@ The number of seeds must be correspondingly increased.
 
     enum foo = "a + 0.5 * b";
     auto r = [0, 1, 2, 3];
-    auto r1 = reduce!foo(r);
-    auto r2 = reduce!(foo, foo)(r);
+    immutable r1 = reduce!foo(r);
+    immutable r2 = reduce!(foo, foo)(r);
     assert(r1 == 3);
     assert(r2 == tuple(3, 3));
 }
@@ -3056,12 +3056,12 @@ The number of seeds must be correspondingly increased.
         auto b = reduce!(fun, fun)([1, 2, 3]);
         auto c = reduce!(fun)(0, [1, 2, 3]);
         auto d = reduce!(fun, fun)(tuple(0, 0), [1, 2, 3]);
-        auto e = reduce!(fun)(0, OpApply());
-        auto f = reduce!(fun, fun)(tuple(0, 0), OpApply());
+        immutable e = reduce!(fun)(0, OpApply());
+        immutable f = reduce!(fun, fun)(tuple(0, 0), OpApply());
 
         return max(a, b.expand, c, d.expand);
     }
-    auto a = foo();
+    immutable a = foo();
     enum b = foo();
 }
 
@@ -3513,7 +3513,7 @@ The number of seeds must be correspondingly increased.
     import std.typecons : tuple;
 
     enum foo = "a + 0.5 * b";
-    auto r = [0, 1, 2, 3];
+    immutable r = [0, 1, 2, 3];
     auto r1 = r.cumulativeFold!foo;
     auto r2 = r.cumulativeFold!(foo, foo);
     assert(approxEqual(r1, [0, 0.5, 1.5, 3]));
@@ -4517,7 +4517,7 @@ if (isSomeChar!C)
        foreach (word; splitter(strip(line)))
        {
             if (word in dictionary) continue; // Nothing to do
-            auto newID = dictionary.length;
+            immutable newID = dictionary.length;
             dictionary[to!string(word)] = cast(uint)newID;
         }
     }
@@ -4870,8 +4870,8 @@ private auto sumKahan(Result, R)(Result result, R r)
 @safe pure nothrow unittest // 12434
 {
     immutable a = [10, 20];
-    auto s1 = sum(a);             // Error
-    auto s2 = a.map!(x => x).sum; // Error
+    immutable s1 = sum(a);             // Error
+    immutable s2 = a.map!(x => x).sum; // Error
 }
 
 @system unittest
@@ -4881,8 +4881,8 @@ private auto sumKahan(Result, R)(Result result, R r)
 
     immutable BigInt[] a = BigInt("1_000_000_000_000_000_000").repeat(10).array();
     immutable ulong[]  b = (ulong.max/2).repeat(10).array();
-    auto sa = a.sum();
-    auto sb = b.sum(BigInt(0)); //reduce ulongs into bigint
+    immutable sa = a.sum();
+    immutable sb = b.sum(BigInt(0)); //reduce ulongs into bigint
     assert(sa == BigInt("10_000_000_000_000_000_000"));
     assert(sb == (BigInt(ulong.max/2) * 10));
 }

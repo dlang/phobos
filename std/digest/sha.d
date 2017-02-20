@@ -711,7 +711,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
             else static if (blockSize==1024)
             {
                 /* ugly hack to work around lack of ucent */
-                auto oldCount0 = count[0];
+                immutable oldCount0 = count[0];
                 count[0] += inputLen * 8;
                 if (count[0] < oldCount0)
                     count[1]++;

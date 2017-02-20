@@ -61,7 +61,7 @@ unittest
     // The call to 'finish' ensures:
     // - the remaining bits are processed
     // - the hash gets finalized
-    auto hashed = hasher.finish();
+    immutable hashed = hasher.finish();
 }
 
 ///
@@ -85,7 +85,7 @@ unittest
     // Call finalize to incorporate data length in the hash.
     hasher.finalize();
     // Finally get the hashed value.
-    auto hashed = hasher.getBytes();
+    immutable hashed = hasher.getBytes();
 }
 
 public import std.digest.digest;

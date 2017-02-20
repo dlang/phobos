@@ -165,7 +165,7 @@ string formatSocketError(int err) @trusted
         }
         else version (OSX)
         {
-            auto errs = strerror_r(err, buf.ptr, buf.length);
+            immutable errs = strerror_r(err, buf.ptr, buf.length);
             if (errs == 0)
                 cs = buf.ptr;
             else
@@ -173,7 +173,7 @@ string formatSocketError(int err) @trusted
         }
         else version (FreeBSD)
         {
-            auto errs = strerror_r(err, buf.ptr, buf.length);
+            immutable errs = strerror_r(err, buf.ptr, buf.length);
             if (errs == 0)
                 cs = buf.ptr;
             else
@@ -181,7 +181,7 @@ string formatSocketError(int err) @trusted
         }
         else version (NetBSD)
         {
-            auto errs = strerror_r(err, buf.ptr, buf.length);
+            immutable errs = strerror_r(err, buf.ptr, buf.length);
             if (errs == 0)
                 cs = buf.ptr;
             else
@@ -189,7 +189,7 @@ string formatSocketError(int err) @trusted
         }
         else version (Solaris)
         {
-            auto errs = strerror_r(err, buf.ptr, buf.length);
+            immutable errs = strerror_r(err, buf.ptr, buf.length);
             if (errs == 0)
                 cs = buf.ptr;
             else
@@ -197,7 +197,7 @@ string formatSocketError(int err) @trusted
         }
         else version (CRuntime_Bionic)
         {
-            auto errs = strerror_r(err, buf.ptr, buf.length);
+            immutable errs = strerror_r(err, buf.ptr, buf.length);
             if (errs == 0)
                 cs = buf.ptr;
             else
@@ -3313,7 +3313,7 @@ public:
      */
     static int select(SocketSet checkRead, SocketSet checkWrite, SocketSet checkError, Duration timeout) @trusted
     {
-        auto vals = timeout.split!("seconds", "usecs")();
+        immutable vals = timeout.split!("seconds", "usecs")();
         TimeVal tv;
         tv.seconds      = cast(tv.tv_sec_t )vals.seconds;
         tv.microseconds = cast(tv.tv_usec_t)vals.usecs;
@@ -3581,7 +3581,7 @@ Socket[2] socketPair() @trusted
         auto listener = new TcpSocket();
         listener.setOption(SocketOptionLevel.SOCKET, SocketOption.REUSEADDR, true);
         listener.bind(new InternetAddress(INADDR_LOOPBACK, InternetAddress.PORT_ANY));
-        auto addr = listener.localAddress;
+        immutable addr = listener.localAddress;
         listener.listen(1);
 
         result[0] = new TcpSocket(addr);

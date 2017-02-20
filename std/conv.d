@@ -225,7 +225,7 @@ template to(T)
 {
     auto str = to!string(42, 16);
     assert(str == "2A");
-    auto i = to!int(str, 16);
+    immutable i = to!int(str, 16);
     assert(i == 42);
 }
 
@@ -254,10 +254,10 @@ template to(T)
     import std.string : split;
 
     int[] a = [1, 2, 3];
-    auto b = to!(float[])(a);
+    immutable b = to!(float[])(a);
     assert(b == [1.0f, 2, 3]);
     string str = "1 2 3 4 5 6";
-    auto numbers = to!(double[])(split(str));
+    immutable numbers = to!(double[])(split(str));
     assert(numbers == [1.0, 2, 3, 4, 5, 6]);
     int[string] c;
     c["a"] = 1;
@@ -345,11 +345,11 @@ template to(T)
     assert(to!string("foo\0".ptr) == "foo");
 
     // Conversion reinterpreting void array to string
-    auto w = "abcx"w;
+    immutable w = "abcx"w;
     const(void)[] b = w;
     assert(b.length == 8);
 
-    auto c = to!(wchar[])(b);
+    immutable c = to!(wchar[])(b);
     assert(c == "abcx");
 }
 
@@ -438,14 +438,14 @@ if (isImplicitlyConvertible!(S, T) &&
 @safe pure nothrow unittest
 {
     enum E { a }  // Issue 9523 - Allow identity enum conversion
-    auto e = to!E(E.a);
+    immutable e = to!E(E.a);
     assert(e == E.a);
 }
 
 @safe pure nothrow unittest
 {
     int a = 42;
-    auto b = to!long(a);
+    immutable b = to!long(a);
     assert(a == b);
 }
 
@@ -634,7 +634,7 @@ if (!isImplicitlyConvertible!(S, T) &&
     }
 
     string s = "101";
-    auto i3 = to!FakeBigInt(s);
+    immutable i3 = to!FakeBigInt(s);
 }
 
 /// ditto
@@ -665,14 +665,14 @@ if (!isImplicitlyConvertible!(S, T) &&
     }
 
     S s = S(1);
-    auto b1 = to!B(s);  // == new B(s)
+    immutable b1 = to!B(s);  // == new B(s)
     assert(b1.value == 1);
 
     C c = new C(2);
     auto b2 = to!B(c);  // == new B(c)
     assert(b2.value == 2);
 
-    auto c2 = to!C(3);   // == new C(3)
+    immutable c2 = to!C(3);   // == new C(3)
     assert(c2.x == 3);
 }
 
@@ -943,7 +943,7 @@ if (!(isImplicitlyConvertible!(S, T) &&
 @system unittest
 {
     immutable(char)* ptr = "hello".ptr;
-    auto result = ptr.to!(char[]);
+    immutable result = ptr.to!(char[]);
 }
 // Bugzilla 8384
 @system unittest
@@ -1211,8 +1211,8 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
 
     foreach (S; AliasSeq!(string, wstring, dstring, const(char[]), const(wchar[]), const(dchar[])))
     {
-        auto s1 = to!S(E.foo);
-        auto s2 = to!S(E.foo);
+        immutable s1 = to!S(E.foo);
+        immutable s2 = to!S(E.foo);
         assert(s1 == s2);
         // ensure we don't allocate when it's unnecessary
         assert(s1 is s2);
@@ -1220,8 +1220,8 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
 
     foreach (S; AliasSeq!(char[], wchar[], dchar[]))
     {
-        auto s1 = to!S(E.foo);
-        auto s2 = to!S(E.foo);
+        immutable s1 = to!S(E.foo);
+        immutable s2 = to!S(E.foo);
         assert(s1 == s2);
         // ensure each mutable array is unique
         assert(s1 !is s2);
@@ -1466,7 +1466,7 @@ if (!isImplicitlyConvertible!(S, T) &&
     immutable s4 = [1, 2, 3, 4];
     foreach (i; [1, 4])
     {
-        auto ex = collectException(s4[0 .. i].to!(int[2]));
+        immutable ex = collectException(s4[0 .. i].to!(int[2]));
             assert(ex && ex.msg == "Length mismatch when converting to static array: 2 vs " ~ [cast(char)(i + '0')],
                 ex ? ex.msg : "Exception was not thrown!");
     }
@@ -1525,10 +1525,10 @@ if (isAssociativeArray!S &&
 @system unittest // Extra cases for AA with qualifiers conversion
 {
     int[][int[]] a;// = [[], []];
-    auto b = to!(immutable(short[])[immutable short[]])(a);
+    immutable b = to!(immutable(short[])[immutable short[]])(a);
 
     double[dstring][int[long[]]] c;
-    auto d = to!(immutable(short[immutable wstring])[immutable string[double[]]])(c);
+    immutable d = to!(immutable(short[immutable wstring])[immutable string[double[]]])(c);
 }
 
 private void testIntegralToFloating(Integral, Floating)()
@@ -1544,7 +1544,7 @@ private void testFloatingToIntegral(Floating, Integral)()
     bool convFails(Source, Target, E)(Source src)
     {
         try
-            auto t = to!Target(src);
+            immutable t = to!Target(src);
         catch (E)
             return true;
         return false;
@@ -1608,7 +1608,7 @@ private void testFloatingToIntegral(Floating, Integral)()
         foreach (T; AllNumerics)
         {
             T a = 42;
-            auto b = to!T(a);
+            immutable b = to!T(a);
             assert(is(typeof(a) == typeof(b)) && a == b);
         }
     }
@@ -1705,7 +1705,7 @@ private void testFloatingToIntegral(Floating, Integral)()
     // test enum to int conversion
     enum Testing { Test1, Test2 }
     Testing t;
-    auto a = to!string(t);
+    immutable a = to!string(t);
     assert(a == "Test1");
 }
 
@@ -1763,7 +1763,7 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S) &&
     }
 
     // 6255
-    auto n = to!int("FF", 16);
+    immutable n = to!int("FF", 16);
     assert(n == 255);
 }
 
@@ -1908,7 +1908,7 @@ if (isInputRange!Source &&
 
     if (!s.empty)
     {
-        auto c1 = toLower(s.front);
+        immutable c1 = toLower(s.front);
         bool result = c1 == 't';
         if (result || c1 == 'f')
         {
@@ -2093,7 +2093,7 @@ Lerr:
 @safe pure unittest
 {
     string s = "123";
-    auto a = parse!int(s);
+    immutable a = parse!int(s);
     assert(a == 123);
 
     // parse only accepts lvalues
@@ -2105,12 +2105,12 @@ Lerr:
 {
     import std.string : munch;
     string test = "123 \t  76.14";
-    auto a = parse!uint(test);
+    immutable a = parse!uint(test);
     assert(a == 123);
     assert(test == " \t  76.14"); // parse bumps string
     munch(test, " \t\n\r"); // skip ws
     assert(test == "76.14");
-    auto b = parse!double(test);
+    immutable b = parse!double(test);
     assert(b == 76.14);
     assert(test == "");
 }
@@ -2434,7 +2434,7 @@ body
 {
     import std.range : cycle;
     auto r = cycle("2A!");
-    auto u = parse!uint(r, 16);
+    immutable u = parse!uint(r, 16);
     assert(u == 42);
     assert(r.front == '!');
 }
@@ -2786,7 +2786,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                 //and do rounding
                 if ((msdec & 0xFFE0_0000_0000_0000) != 0)
                 {
-                    auto roundUp = (msdec & 0x1);
+                    immutable roundUp = (msdec & 0x1);
 
                     msdec  = ((cast(ulong)msdec) >> 1);
                     e2++;
@@ -3200,7 +3200,7 @@ unittest
     // Bugzilla 4959
     {
         auto s = "0 ";
-        auto x = parse!double(s);
+        immutable x = parse!double(s);
         assert(s == " ");
         assert(x == 0.0);
     }
@@ -3327,7 +3327,7 @@ if (!isSomeString!Source && isInputRange!Source && isSomeChar!(ElementType!Sourc
     assert (m == "maybe");  // m shouldn't change on failure
 
     auto s = "true";
-    auto b = parse!(const(bool))(s);
+    immutable b = parse!(const(bool))(s);
     assert(b == true);
 }
 
@@ -3609,11 +3609,11 @@ Lfewerr:
     import std.exception;
 
     auto s1 = "[1,2,3,4]";
-    auto sa1 = parse!(int[4])(s1);
+    immutable sa1 = parse!(int[4])(s1);
     assert(sa1 == [1,2,3,4]);
 
     auto s2 = "[[1],[2,3],[4]]";
-    auto sa2 = parse!(int[][3])(s2);
+    immutable sa2 = parse!(int[][3])(s2);
     assert(sa2 == [[1],[2,3],[4]]);
 
     auto s3 = "[1,2,3]";
@@ -4009,11 +4009,11 @@ if (isIntegral!(typeof(decimalInteger)))
 @safe unittest
 {
     // same as 0177
-    auto x = octal!177;
+    immutable x = octal!177;
     // octal is a compile-time device
     enum y = octal!160;
     // Create an unsigned octal
-    auto z = octal!"1_000_000u";
+    immutable z = octal!"1_000_000u";
 }
 
 /*
@@ -4140,7 +4140,7 @@ private bool isOctalLiteral(const string num)
 @safe unittest
 {
     // ensure that you get the right types, even with embedded underscores
-    auto w = octal!"100_000_000_000";
+    immutable w = octal!"100_000_000_000";
     static assert(!is(typeof(w) == int));
     auto w2 = octal!"1_000_000_000";
     static assert(is(typeof(w2) == int));
@@ -4898,7 +4898,7 @@ version(unittest) private class __conv_EmplaceTestClass
         }
         static assert(!is(immutable(S2) : S2));
         S2 sa = void;
-        auto sb = immutable(S2)(null);
+        immutable sb = immutable(S2)(null);
         assert(!__traits(compiles, emplace(&sa, sb)));
     }
 }
@@ -5075,11 +5075,11 @@ version(unittest)
     enum c = bar!S2;
     static assert(c.i == 5);
     // runtime
-    auto aa = bar!int;
+    immutable aa = bar!int;
     assert(aa == 5);
-    auto bb = bar!S1;
+    immutable bb = bar!S1;
     assert(bb.i == 5);
-    auto cc = bar!S2;
+    immutable cc = bar!S2;
     assert(cc.i == 5);
 }
 
@@ -5613,7 +5613,7 @@ if (isIntegral!T)
     // issue 10874
     enum Test { a = 0 }
     ulong l = 0;
-    auto t = l.to!Test;
+    immutable t = l.to!Test;
 }
 
 /**
@@ -5674,7 +5674,7 @@ template castFrom(From)
     // castFrom provides a more reliable alternative to casting:
     {
         long x;
-        auto y = castFrom!long.to!int(x);
+        immutable y = castFrom!long.to!int(x);
     }
 
     // Changing the type of 'x' will now issue a compiler error,
@@ -5686,7 +5686,7 @@ template castFrom(From)
         );
 
         // if cast is still needed, must be changed to:
-        auto y = castFrom!(long*).to!int(x);
+        immutable y = castFrom!(long*).to!int(x);
     }
 }
 
@@ -5834,11 +5834,11 @@ if (hexData.isHexLiteral)
 @safe unittest
 {
     // conversion at compile time
-    auto string1 = hexString!"304A314B";
+    immutable string1 = hexString!"304A314B";
     assert(string1 == "0J1K");
-    auto string2 = hexString!"304A314B"w;
+    immutable string2 = hexString!"304A314B"w;
     assert(string2 == "0J1K"w);
-    auto string3 = hexString!"304A314B"d;
+    immutable string3 = hexString!"304A314B"d;
     assert(string3 == "0J1K"d);
 }
 
@@ -6070,7 +6070,7 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         assert(r.length == 2);
         assert(r[0] == '1');
         assert(r[1..2].array == "0");
-        auto s = r.save;
+        immutable s = r.save;
         assert(r.array == "10");
         assert(s.retro.array == "01");
     }
@@ -6084,7 +6084,7 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         assert(r.length == 2);
         assert(r[0] == '1');
         assert(r[1..2].array == "0");
-        auto s = r.save;
+        immutable s = r.save;
         assert(r.array == "10");
         assert(s.retro.array == "01");
     }
@@ -6100,7 +6100,7 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         assert(r.length == 2);
         assert(r[0] == '1');
         assert(r[1..2].array == "0");
-        auto s = r.save;
+        immutable s = r.save;
         assert(r.array == "10");
         assert(s.retro.array == "01");
     }
@@ -6120,7 +6120,7 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         assert(r.length == 2);
         assert(r[0] == '1');
         assert(r[1..2].array == "0");
-        auto s = r.save;
+        immutable s = r.save;
         assert(r.array == "10");
         assert(s.retro.array == "01");
     }
@@ -6134,7 +6134,7 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         assert(r.length == 2);
         assert(r[0] == '1');
         assert(r[1..2].array == "0");
-        auto s = r.save;
+        immutable s = r.save;
         assert(r.array == "10");
         assert(s.retro.array == "01");
     }

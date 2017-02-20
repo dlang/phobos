@@ -1787,7 +1787,7 @@ if (is(Unqual!T == bool))
      */
     bool opIndex(size_t i)
     {
-        auto div = cast(size_t) (i / bitsPerWord);
+        immutable div = cast(size_t) (i / bitsPerWord);
         auto rem = i % bitsPerWord;
         enforce(div < data.length);
         return cast(bool)(data.ptr[div] & (cast(size_t)1 << rem));

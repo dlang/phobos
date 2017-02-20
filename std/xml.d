@@ -646,7 +646,7 @@ class Document : Element
 @system unittest
 {
     // https://issues.dlang.org/show_bug.cgi?id=14966
-    auto xml = `<?xml version="1.0" encoding="UTF-8"?><foo></foo>`;
+    immutable xml = `<?xml version="1.0" encoding="UTF-8"?><foo></foo>`;
 
     auto a = new Document(xml);
     auto b = new Document(xml);
@@ -1302,7 +1302,7 @@ class Comment : Item
 unittest // issue 16241
 {
     import std.exception : assertThrown;
-    auto c = new Comment("==");
+    immutable c = new Comment("==");
     assert(c.content == "==");
     assertThrown!CommentException(new Comment("--"));
 }
@@ -2747,7 +2747,7 @@ void check(string s) pure
     }
     catch (CheckException e)
     {
-        auto n = e.toString().indexOf("end tag name \"genres\" differs"~
+        immutable n = e.toString().indexOf("end tag name \"genres\" differs"~
                                       " from start tag name \"genre\"");
         assert(n != -1);
     }

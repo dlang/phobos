@@ -3902,7 +3902,7 @@ unittest
     // The only way this can be verified is manually.
     debug(std_parallelism) stderr.writeln("totalCPUs = ", totalCPUs);
 
-    auto oldPriority = poolInstance.priority;
+    immutable oldPriority = poolInstance.priority;
     poolInstance.priority = Thread.PRIORITY_MAX;
     assert(poolInstance.priority == Thread.PRIORITY_MAX);
 
@@ -4074,7 +4074,7 @@ unittest
     }
 
     auto wlRange = wl.toRange;
-    auto parallelSum = poolInstance.reduce!"a + b"(wlRange);
+    immutable parallelSum = poolInstance.reduce!"a + b"(wlRange);
     assert(parallelSum == 499500);
     assert(wlRange[0..1][0] == wlRange[0]);
     assert(wlRange[1..2][0] == wlRange[1]);
@@ -4348,7 +4348,7 @@ version(parallelismStressTest)
             uint mySum = sumFuture.spinForce();
             assert(mySum == 999 * 1000 / 2);
 
-            auto mySumParallel = poolInstance.reduce!"a + b"(numbers);
+            immutable mySumParallel = poolInstance.reduce!"a + b"(numbers);
             assert(mySum == mySumParallel);
             stderr.writeln("Done sums.");
 

@@ -1408,10 +1408,10 @@ if (T.length >= 2)
     int a = 5;
     short b = 6;
     double c = 2;
-    auto d = max(a, b);
+    immutable d = max(a, b);
     assert(is(typeof(d) == int));
     assert(d == 6);
-    auto e = min(a, b, c);
+    immutable e = min(a, b, c);
     assert(is(typeof(e) == double));
     assert(e == 2);
 }
@@ -2131,7 +2131,7 @@ if (alternatives.length >= 1 &&
 
     immutable p = 1;
     immutable q = 2;
-    auto pq = either(p, q);
+    immutable pq = either(p, q);
     static assert(is(typeof(pq) == immutable(int)));
     assert(pq == p);
 

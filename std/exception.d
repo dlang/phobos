@@ -608,7 +608,7 @@ if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LI
     assertNotThrown(enforceEx!OutOfMemoryError(true));
 
     {
-        auto e = collectException(enforceEx!Exception(false));
+        immutable e = collectException(enforceEx!Exception(false));
         assert(e !is null);
         assert(e.msg.empty);
         assert(e.file == __FILE__);
@@ -616,7 +616,7 @@ if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LI
     }
 
     {
-        auto e = collectException(enforceEx!Exception(false, "hello", "file", 42));
+        immutable e = collectException(enforceEx!Exception(false, "hello", "file", 42));
         assert(e !is null);
         assert(e.msg == "hello");
         assert(e.file == "file");
@@ -624,7 +624,7 @@ if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LI
     }
 
     {
-        auto e = collectException!Error(enforceEx!OutOfMemoryError(false));
+        immutable e = collectException!Error(enforceEx!OutOfMemoryError(false));
         assert(e !is null);
         assert(e.msg == "Memory allocation failed");
         assert(e.file == __FILE__);
@@ -632,7 +632,7 @@ if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LI
     }
 
     {
-        auto e = collectException!Error(enforceEx!OutOfMemoryError(false, "file", 42));
+        immutable e = collectException!Error(enforceEx!OutOfMemoryError(false, "file", 42));
         assert(e !is null);
         assert(e.msg == "Memory allocation failed");
         assert(e.file == "file");
@@ -888,7 +888,7 @@ immutable(T)[] assumeUnique(T)(ref T[] array) pure nothrow
 {
     // @system due to assumeUnique
     int[] arr = new int[1];
-    auto arr1 = assumeUnique(arr);
+    immutable arr1 = assumeUnique(arr);
     assert(is(typeof(arr1) == immutable(int)[]) && arr == null);
 }
 
@@ -903,7 +903,7 @@ immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
 version(none) @system unittest
 {
     int[string] arr = ["a":1];
-    auto arr1 = assumeUnique(arr);
+    immutable arr1 = assumeUnique(arr);
     assert(is(typeof(arr1) == immutable(int[string])) && arr == null);
 }
 
@@ -1483,7 +1483,7 @@ class ErrnoException : Exception
     {
         import core.stdc.errno : errno, EAGAIN;
 
-        auto old = errno;
+        immutable old = errno;
         scope(exit) errno = old;
 
         errno = EAGAIN;
@@ -2012,7 +2012,7 @@ pure @safe unittest
     import std.range : retro;
     import std.utf : UTFException;
 
-    auto str = "hello\xFFworld"; // 0xFF is an invalid UTF-8 code unit
+    immutable str = "hello\xFFworld"; // 0xFF is an invalid UTF-8 code unit
 
     auto handled = str.handle!(UTFException, RangePrimitive.access,
             (e, r) => ' '); // Replace invalid code points with spaces
@@ -2131,7 +2131,7 @@ pure nothrow @safe unittest
     auto slice = f.handle!(Exception,
         RangePrimitive.opSlice, (e, r) => ThrowingRange())();
 
-    auto sliced = slice[0 .. 1337]; // this would throw otherwise
+    immutable sliced = slice[0 .. 1337]; // this would throw otherwise
 
     static struct Infinite
     {
@@ -2159,7 +2159,7 @@ pure nothrow @safe unittest
     auto infinite = Infinite.init.handle!(Exception,
         RangePrimitive.opSlice, (e, r) => Infinite())();
 
-    auto infSlice = infinite[0 .. $]; // this would throw otherwise
+    immutable infSlice = infinite[0 .. $]; // this would throw otherwise
 }
 
 

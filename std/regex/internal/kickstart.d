@@ -251,15 +251,15 @@ public:
                         auto srange = assumeSorted!"a <= b"(arr);
                         for (uint i = 0; i < codeBounds.length/2; i++)
                         {
-                            auto start = srange.lowerBound(codeBounds[2*i]).length;
-                            auto end = srange.lowerBound(codeBounds[2*i+1]).length;
+                            immutable start = srange.lowerBound(codeBounds[2*i]).length;
+                            immutable end = srange.lowerBound(codeBounds[2*i+1]).length;
                             if (end > start || (end == start && (end & 1)))
                                s[numS++] = (i+1)*charSize;
                         }
                     }
                     if (numS == 0 || t.idx + s[numS-1] > n_length)
                         goto L_StopThread;
-                    auto  chars = set.length;
+                    immutable  chars = set.length;
                     if (chars > charsetThreshold)
                         goto L_StopThread;
                     foreach (ch; set.byCodepoint)

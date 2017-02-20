@@ -729,7 +729,7 @@ if (isSomeChar!(Char))
             returnStatus ~= EmailStatusCode.rfc5322LabelTooLong;
     }
 
-    auto dnsChecked = false;
+    immutable dnsChecked = false;
 
     if (checkDNS == Yes.checkDns && returnStatus.maxElement() < EmailStatusCode.dnsWarning)
     {
@@ -1927,7 +1927,7 @@ if (isDynamicArray!(A) && !isNarrowString!(A) && isMutable!(A) && !is(A == void[
 unittest
 {
     auto array = [0, 1, 2, 3];
-    auto result = array.pop();
+    immutable result = array.pop();
 
     assert(array == [0, 1, 2]);
     assert(result == 3);

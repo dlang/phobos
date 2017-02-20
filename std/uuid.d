@@ -263,7 +263,7 @@ public struct UUID
         @safe pure unittest
         {
             enum ubyte[16] data = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
-            auto uuid = UUID(data);
+            immutable uuid = UUID(data);
             enum ctfe = UUID(data);
             assert(uuid.data == data);
             assert(ctfe.data == data);
@@ -288,7 +288,7 @@ public struct UUID
         ///
         @safe unittest
         {
-            auto tmp = UUID(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
+            immutable tmp = UUID(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15);
             assert(tmp.data == cast(ubyte[16])[0,1,2,3,4,5,6,7,8,9,10,11,
                 12,13,14,15]);
         }
@@ -506,7 +506,7 @@ public struct UUID
             {
                 for (size_t i = 0; i < 16; i++)
                 {
-                    auto ctfeEmpty2 = UUID(getData(i)).empty;
+                    immutable ctfeEmpty2 = UUID(getData(i)).empty;
                     assert(!ctfeEmpty2);
                 }
                 return true;
@@ -528,7 +528,7 @@ public struct UUID
         {
             //variant is stored in octet 7
             //which is index 8, since indexes count backwards
-            auto octet7 = data[8]; //octet 7 is array index 8
+            immutable octet7 = data[8]; //octet 7 is array index 8
 
             if ((octet7 & 0x80) == 0x00) //0b0xxxxxxx
                 return Variant.ncs;
@@ -589,7 +589,7 @@ public struct UUID
         {
             //version is stored in octet 9
             //which is index 6, since indexes count backwards
-            auto octet9 = data[6];
+            immutable octet9 = data[6];
             if ((octet9 & 0xF0) == 0x10)
                 return Version.timeBased;
             else if ((octet9 & 0xF0) == 0x20)
@@ -643,7 +643,7 @@ public struct UUID
          */
         @safe pure nothrow @nogc void swap(ref UUID rhs)
         {
-            auto bck = data;
+            immutable bck = data;
             data = rhs.data;
             rhs.data = bck;
         }
@@ -822,7 +822,7 @@ public struct UUID
                           UUID("7c351fd4-b860-4ee3-bbdc-7f79f3dfb00a"),
                           UUID("9ac0a4e5-10ee-493a-86fc-d29eeb82ecc1")];
             sort(ids);
-            auto id2 = ids.dup;
+            immutable id2 = ids.dup;
 
             ids = [UUID("7c351fd4-b860-4ee3-bbdc-7f79f3dfb00a"),
                    UUID("8a94f585-d180-44f7-8929-6fca0189c7d0"),
@@ -1036,16 +1036,16 @@ public struct UUID
 @safe unittest
 {
     //Use default UUID.init namespace
-    auto simpleID = md5UUID("test.uuid.any.string");
+    immutable simpleID = md5UUID("test.uuid.any.string");
 
     //use a name-based id as namespace
     auto namespace = md5UUID("my.app");
-    auto id = md5UUID("some-description", namespace);
+    immutable id = md5UUID("some-description", namespace);
 }
 
 @safe pure unittest
 {
-    auto simpleID = md5UUID("test.uuid.any.string");
+    immutable simpleID = md5UUID("test.uuid.any.string");
     assert(simpleID.data == cast(ubyte[16])[126, 206, 86, 72, 29, 233, 62, 213, 178, 139, 198, 136,
         188, 135, 153, 123]);
     auto namespace = md5UUID("my.app");
@@ -1067,9 +1067,9 @@ public struct UUID
     assert(id.variant == UUID.Variant.rfc4122);
     assert(id.uuidVersion == UUID.Version.nameBasedMD5);
 
-    auto correct = UUID("3d813cbb-47fb-32ba-91df-831e1593ac29");
+    immutable correct = UUID("3d813cbb-47fb-32ba-91df-831e1593ac29");
 
-    auto u = md5UUID("www.widgets.com", dnsNamespace);
+    immutable u = md5UUID("www.widgets.com", dnsNamespace);
     //enum ctfeId = md5UUID("www.widgets.com", dnsNamespace);
     //assert(ctfeId == u);
     assert(u == correct);
@@ -1150,16 +1150,16 @@ public struct UUID
 @safe unittest
 {
     //Use default UUID.init namespace
-    auto simpleID = sha1UUID("test.uuid.any.string");
+    immutable simpleID = sha1UUID("test.uuid.any.string");
 
     //use a name-based id as namespace
     auto namespace = sha1UUID("my.app");
-    auto id = sha1UUID("some-description", namespace);
+    immutable id = sha1UUID("some-description", namespace);
 }
 
 @safe pure unittest
 {
-    auto simpleID = sha1UUID("test.uuid.any.string");
+    immutable simpleID = sha1UUID("test.uuid.any.string");
     assert(simpleID.data == cast(ubyte[16])[16, 209, 239, 61, 99, 12, 94, 70, 159, 79, 255, 250,
         131, 79, 14, 147]);
     auto namespace = sha1UUID("my.app");
@@ -1178,9 +1178,9 @@ public struct UUID
     assert(id.data == cast(ubyte[16])[60, 65, 92, 240, 96, 46, 95, 238, 149, 100, 12, 64, 199, 194,
         243, 12]);
 
-    auto correct = UUID("21f7f8de-8051-5b89-8680-0195ef798b6a");
+    immutable correct = UUID("21f7f8de-8051-5b89-8680-0195ef798b6a");
 
-    auto u = sha1UUID("www.widgets.com", dnsNamespace);
+    immutable u = sha1UUID("www.widgets.com", dnsNamespace);
     assert(u == correct);
     assert(u.variant == UUID.Variant.rfc4122);
     assert(u.uuidVersion == UUID.Version.nameBasedSHA1);
@@ -1245,13 +1245,13 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
     import std.random : Xorshift192, unpredictableSeed;
 
     //simple call
-    auto uuid = randomUUID();
+    immutable uuid = randomUUID();
 
     //provide a custom RNG. Must be seeded manually.
     Xorshift192 gen;
 
     gen.seed(unpredictableSeed);
-    auto uuid3 = randomUUID(gen);
+    immutable uuid3 = randomUUID(gen);
 }
 
 /*
@@ -1270,15 +1270,15 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
 {
     import std.random : Xorshift192, unpredictableSeed;
     //simple call
-    auto uuid = randomUUID();
+    immutable uuid = randomUUID();
 
     //provide a custom RNG. Must be seeded manually.
     Xorshift192 gen;
     gen.seed(unpredictableSeed);
-    auto uuid3 = randomUUID(gen);
+    immutable uuid3 = randomUUID(gen);
 
-    auto u1 = randomUUID();
-    auto u2 = randomUUID();
+    immutable u1 = randomUUID();
+    immutable u2 = randomUUID();
     assert(u1 != u2);
     assert(u1.variant == UUID.Variant.rfc4122);
     assert(u1.uuidVersion == UUID.Version.randomNumberBased);
@@ -1721,7 +1721,7 @@ public class UUIDParsingException : Exception
 ///
 @safe unittest
 {
-    auto ex = new UUIDParsingException("foo", 10, UUIDParsingException.Reason.tooMuch);
+    immutable ex = new UUIDParsingException("foo", 10, UUIDParsingException.Reason.tooMuch);
     assert(ex.input == "foo");
     assert(ex.position == 10);
     assert(ex.reason == UUIDParsingException.Reason.tooMuch);

@@ -849,10 +849,10 @@ private:
 // Issue 8895
 @safe unittest
 {
-    auto a = make!(DList!int)(1,2,3,4);
-    auto b = make!(DList!int)(1,2,3,4);
-    auto c = make!(DList!int)(1,2,3,5);
-    auto d = make!(DList!int)(1,2,3,4,5);
+    immutable a = make!(DList!int)(1,2,3,4);
+    immutable b = make!(DList!int)(1,2,3,4);
+    immutable c = make!(DList!int)(1,2,3,5);
+    immutable d = make!(DList!int)(1,2,3,4,5);
     assert(a == b); // this better terminate!
     assert(!(a == c));
     assert(!(a == d));

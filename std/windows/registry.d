@@ -1796,8 +1796,8 @@ unittest
     bool foundCologne, foundMinsk, foundBeijing;
     foreach (Value v; cityKey.values)
     {
-        auto vname = v.name;
-        auto vvalue_SZ = v.value_SZ;
+        immutable vname = v.name;
+        immutable vvalue_SZ = v.value_SZ;
         if (v.name == "K\u00f6ln")
         {
             foundCologne = true;

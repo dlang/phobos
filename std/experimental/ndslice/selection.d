@@ -111,7 +111,7 @@ template pack(K...)
     import std.range : iota;
 
     auto r = (3 * 4 * 5 * 6).iota;
-    auto a = r.sliced(3, 4, 5, 6);
+    immutable a = r.sliced(3, 4, 5, 6);
     auto b = a.pack!2;
 
     static immutable res1 = [3, 4];
@@ -134,7 +134,7 @@ template pack(K...)
     auto c = b[1, 2, 3, 4];
     auto d = c[5, 6, 7];
     auto e = d[8, 9];
-    auto g = a[1, 2, 3, 4, 5, 6, 7, 8, 9];
+    immutable g = a[1, 2, 3, 4, 5, 6, 7, 8, 9];
     assert(e == g);
     assert(a == b);
     assert(c == a[1, 2, 3, 4]);
@@ -148,8 +148,8 @@ template pack(K...)
 
 @safe @nogc pure nothrow unittest
 {
-    auto a = iotaSlice(3, 4, 5, 6, 7, 8, 9, 10, 11);
-    auto b = a.pack!(2, 3);
+    immutable a = iotaSlice(3, 4, 5, 6, 7, 8, 9, 10, 11);
+    immutable b = a.pack!(2, 3);
     static assert(b.shape.length == 4);
     static assert(b.structure.lengths.length == 4);
     static assert(b.structure.strides.length == 4);
@@ -231,7 +231,7 @@ evertPack(size_t N, Range)(Slice!(N, Range) slice)
 @safe @nogc pure nothrow unittest
 {
     import std.experimental.ndslice.iteration : transposed;
-    auto slice = iotaSlice(3, 4, 5, 6, 7, 8, 9, 10, 11);
+    immutable slice = iotaSlice(3, 4, 5, 6, 7, 8, 9, 10, 11);
     assert(slice
         .pack!2
         .evertPack
@@ -257,7 +257,7 @@ pure nothrow unittest
     auto c = b[8, 9];
     auto d = c[5, 6, 7];
     auto e = d[1, 2, 3, 4];
-    auto g = a[1, 2, 3, 4, 5, 6, 7, 8, 9];
+    immutable g = a[1, 2, 3, 4, 5, 6, 7, 8, 9];
     assert(e == g);
     assert(a == b.evertPack);
     assert(c == a.transposed!(7, 8, 4, 5, 6)[8, 9]);
@@ -302,7 +302,7 @@ Returns:
 +/
 Slice!(1, Range) diagonal(size_t N, Range)(Slice!(N, Range) slice)
 {
-    auto NewN = slice.PureN - N + 1;
+    immutable NewN = slice.PureN - N + 1;
     mixin _DefineRet;
     ret._lengths[0] = slice._lengths[0];
     ret._strides[0] = slice._strides[0];
@@ -1799,7 +1799,7 @@ IndexSlice!N indexSlice(size_t N)(size_t[N] lengths...)
     // test save
     import std.range : dropOne;
 
-    auto im = indexSlice(7, 9);
+    immutable im = indexSlice(7, 9);
     auto imByElement = im.byElement;
     assert(imByElement.front == [0, 0]);
     assert(imByElement.save.dropOne.front == [0, 1]);
@@ -2234,7 +2234,7 @@ pure nothrow unittest
     // tensors must have the same strides
     assert(sl1.structure == sl2.structure);
 
-    auto zip = assumeSameStructure!("a", "b")(sl1, sl2);
+    immutable zip = assumeSameStructure!("a", "b")(sl1, sl2);
 
     auto lazySum = zip.mapSlice!(z => z.a + z.b);
 

@@ -2848,7 +2848,7 @@ if (isConvertibleToString!Range)
 
 @safe pure unittest
 {
-    auto s = "line1\nline2";
+    immutable s = "line1\nline2";
     auto spl0 = s.lineSplitter!(Yes.keepTerminator);
     auto spl1 = spl0.save;
     spl0.popFront;
@@ -5151,7 +5151,7 @@ body
         assert(translate!C("hello world", makeTransTable("hl", "q5")) == to!(C[])("qe55o wor5d"));
 
         auto s = to!(C[])("hello world");
-        auto transTable = makeTransTable("hl", "q5");
+        immutable transTable = makeTransTable("hl", "q5");
         static assert(is(typeof(s) == typeof(translate!C(s, transTable))));
     }
 

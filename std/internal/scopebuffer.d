@@ -345,7 +345,7 @@ unittest
         return textbuf[].idup;
     }
 
-    auto s = cat("hello", "betty");
+    immutable s = cat("hello", "betty");
     assert(s == "hellobettyeven more");
 }
 

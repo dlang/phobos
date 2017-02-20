@@ -291,17 +291,17 @@ body
     import std.experimental.ndslice.selection : iotaSlice;
     auto slice = iotaSlice(2, 3);
 
-    auto a = [[0, 1, 2],
+    immutable a = [[0, 1, 2],
               [3, 4, 5]];
 
-    auto b = [[2, 5],
+    immutable b = [[2, 5],
               [1, 4],
               [0, 3]];
 
-    auto c = [[5, 4, 3],
+    immutable c = [[5, 4, 3],
               [2, 1, 0]];
 
-    auto d = [[3, 0],
+    immutable d = [[3, 0],
               [4, 1],
               [5, 2]];
 
@@ -523,7 +523,7 @@ Slice!(N, Range) allReversed(size_t N, Range)(Slice!(N, Range) slice)
 {
     import std.experimental.ndslice.slice;
     import std.range : iota, retro;
-    auto a = 20.iota.sliced(4, 5).allReversed;
+    immutable a = 20.iota.sliced(4, 5).allReversed;
     auto b = 20.iota.retro.sliced(4, 5);
     assert(a == b);
 }
@@ -567,7 +567,7 @@ body
 {
     foreach (i; Iota!(0, M))
     {
-        auto dimension = dimensions[i];
+        immutable dimension = dimensions[i];
         mixin (_reversedCode);
     }
     return slice;

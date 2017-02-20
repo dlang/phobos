@@ -1373,7 +1373,7 @@ if (n > 0)
         return a;
     }
 
-    auto a = staticArray!(long, 3)(3, 1, 4);
+    immutable a = staticArray!(long, 3)(3, 1, 4);
     assert(is(typeof(a) == long[3]));
     assert(a == [3, 1, 4]);
 }

@@ -447,7 +447,7 @@ unittest
             }
 
             assert(!Cmp.cmp(it.front, Cmp.dummyValue));
-            auto s = it.front;
+            immutable s = it.front;
             it.front = Cmp.dummyValue;
             assert(Cmp.cmp(it.front, Cmp.dummyValue));
             it.front = s;

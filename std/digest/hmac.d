@@ -197,7 +197,7 @@ if (hashBlockSize % 8 == 0)
         import std.string : representation;
         string data1 = "Hello, world", data2 = "Hola mundo";
         auto hmac = HMAC!SHA1("My s3cR3T keY".representation);
-        auto digest = hmac.put(data1.representation)
+        immutable digest = hmac.put(data1.representation)
                           .put(data2.representation)
                           .finish();
         static immutable expected = [
@@ -236,7 +236,7 @@ if (isDigest!H)
         import std.digest.sha, std.digest.hmac;
         import std.string : representation;
         string data1 = "Hello, world", data2 = "Hola mundo";
-        auto digest = hmac!SHA1("My s3cR3T keY".representation)
+        immutable digest = hmac!SHA1("My s3cR3T keY".representation)
                           .put(data1.representation)
                           .put(data2.representation)
                           .finish();

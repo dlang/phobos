@@ -770,7 +770,7 @@ version (Posix) @safe unittest
     assert (!lsPath.empty);
     assert (lsPath[0] == '/');
     assert (lsPath.endsWith("ls"));
-    auto unlikely = searchPathFor("lkmqwpoialhggyaofijadsohufoiqezm");
+    immutable unlikely = searchPathFor("lkmqwpoialhggyaofijadsohufoiqezm");
     assert (unlikely is null, "Are you kidding me?");
 }
 
@@ -1031,7 +1031,7 @@ version (Posix) @system unittest
         std.stdio.stdout.close();
     }
 
-    auto lines = readText(tmpFile).splitLines();
+    immutable lines = readText(tmpFile).splitLines();
     assert(lines == ["foo", "bar"]);
 }
 
@@ -1044,7 +1044,7 @@ version (Windows)
     auto f = File(fn, "a");
     spawnProcess(["cmd", "/c", "echo BBBBB"], std.stdio.stdin, f).wait();
 
-    auto data = readText(fn);
+    immutable data = readText(fn);
     assert(data == "AAAAAAAAAABBBBB\r\n", data);
 }
 
@@ -1088,7 +1088,7 @@ Pid spawnShell(in char[] command,
         // It does not use CommandLineToArgvW.
         // Instead, it treats the first and last quote specially.
         // See CMD.EXE /? for details.
-        auto args = escapeShellFileName(shellPath)
+        immutable args = escapeShellFileName(shellPath)
                     ~ ` ` ~ shellSwitch ~ ` "` ~ command ~ `"`;
     }
     else version (Posix)
@@ -1135,7 +1135,7 @@ Pid spawnShell(in char[] command,
     version(CRuntime_Microsoft) f.seek(0, SEEK_END); // MSVCRT probably seeks to the end when writing, not before
     assert (wait(spawnShell(cmd, std.stdio.stdin, f, std.stdio.stderr, env)) == 0);
     f.close();
-    auto output = std.file.readText(tmpFile);
+    immutable output = std.file.readText(tmpFile);
     assert (output == "bar\nbar\n" || output == "bar\r\nbar\r\n");
 }
 
@@ -1147,7 +1147,7 @@ version (Windows)
     auto outputFn = uniqueTempPath();
     scope(exit) if (exists(outputFn)) remove(outputFn);
     auto args = [`a b c`, `a\b\c\`, `a"b"c"`];
-    auto result = executeShell(
+    immutable result = executeShell(
         escapeShellCommand([prog.path] ~ args)
         ~ " > " ~
         escapeShellFileName(outputFn));
@@ -1287,7 +1287,7 @@ private:
         while (true)
         {
             int status;
-            auto check = waitpid(_processID, &status, block ? 0 : WNOHANG);
+            immutable check = waitpid(_processID, &status, block ? 0 : WNOHANG);
             if (check == -1)
             {
                 if (errno == ECHILD)
@@ -1334,7 +1334,7 @@ private:
             assert (_handle != INVALID_HANDLE_VALUE);
             if (block)
             {
-                auto result = WaitForSingleObject(_handle, INFINITE);
+                immutable result = WaitForSingleObject(_handle, INFINITE);
                 if (result != WAIT_OBJECT_0)
                     throw ProcessException.newFromLastError("Wait failed.");
             }
@@ -2299,7 +2299,7 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     auto r2 = executeShell("echo bar 1>&2");
     assert (r2.status == 0);
     assert (r2.output.chomp().stripRight() == "bar");
-    auto r3 = executeShell("exit 123");
+    immutable r3 = executeShell("exit 123");
     assert (r3.status == 123);
     assert (r3.output.empty);
 }
@@ -2334,7 +2334,7 @@ class ProcessException : Exception
         {
             import core.stdc.string : strerror_r;
             char[1024] buf;
-            auto errnoMsg = to!string(
+            immutable errnoMsg = to!string(
                 core.stdc.string.strerror_r(errno, buf.ptr, buf.length));
         }
         else
@@ -2353,7 +2353,7 @@ class ProcessException : Exception
                                              string file = __FILE__,
                                              size_t line = __LINE__)
     {
-        auto lastMsg = sysErrorString(GetLastError());
+        immutable lastMsg = sysErrorString(GetLastError());
         auto msg = customMsg.empty ? lastMsg
                                    : customMsg ~ " (" ~ lastMsg ~ ')';
         return new ProcessException(msg, file, line);
@@ -2472,7 +2472,7 @@ private struct TestScript
         import std.file : write;
         version (Windows)
         {
-            auto ext = ".cmd";
+            immutable ext = ".cmd";
             auto firstLine = "@echo off";
         }
         else version (Posix)
@@ -2958,7 +2958,7 @@ version(unittest_burnin)
         {
             scope(failure) writefln(
                 "executeShell() with redirect failed.\nExpected:\t%s\nFilename:\t%s\nEncoded:\t%s", s, [fn], [e]);
-            auto result = executeShell(e);
+            immutable result = executeShell(e);
             assert(result.status == 0, "std_process_unittest_helper failed");
             assert(!result.output.length, "No output expected, got:\n" ~ result.output);
             g = readText(fn).split("\0")[1..$];
@@ -3231,7 +3231,7 @@ static:
                 // and it is just as much of a security issue there.  Moreso,
                 // in fact, due to the case insensensitivity of variable names,
                 // which is not handled correctly by all programs.
-                auto val = toUTF8(envBlock[start .. i]);
+                immutable val = toUTF8(envBlock[start .. i]);
                 if (name !in aa) aa[name] = val is null ? "" : val;
             }
         }
@@ -3356,7 +3356,7 @@ private:
 
     // get() on an empty (but present) value
     environment["std_process"] = "";
-    auto res = environment.get("std_process");
+    immutable res = environment.get("std_process");
     assert (res !is null);
     assert (res == "");
 
@@ -3682,7 +3682,7 @@ else version (OSX)
     {
         const(char)*[5] args;
 
-        auto curl = url.tempCString();
+        immutable curl = url.tempCString();
         const(char)* browser = core.stdc.stdlib.getenv("BROWSER");
         if (browser)
         {   browser = strdup(browser);
@@ -3697,7 +3697,7 @@ else version (OSX)
             args[2] = null;
         }
 
-        auto childpid = core.sys.posix.unistd.fork();
+        immutable childpid = core.sys.posix.unistd.fork();
         if (childpid == 0)
         {
             core.sys.posix.unistd.execvp(args[0], cast(char**)args.ptr);
@@ -3730,7 +3730,7 @@ else version (Posix)
         args[1] = url.tempCString();
         args[2] = null;
 
-        auto childpid = core.sys.posix.unistd.fork();
+        immutable childpid = core.sys.posix.unistd.fork();
         if (childpid == 0)
         {
             core.sys.posix.unistd.execvp(args[0], cast(char**)args.ptr);

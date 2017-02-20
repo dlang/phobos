@@ -233,7 +233,7 @@ struct AlignedMallocator
         import core.stdc.errno : ENOMEM, EINVAL;
         assert(a.isGoodDynamicAlignment);
         void* result;
-        auto code = posix_memalign(&result, a, bytes);
+        immutable code = posix_memalign(&result, a, bytes);
         if (code == ENOMEM)
             return null;
 

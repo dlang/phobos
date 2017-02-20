@@ -360,12 +360,12 @@ public:
         Signed!size_t slack = 0;
         static if (!hasMember!(Allocator, "expand"))
         {
-            auto result = s == 0;
+            immutable result = s == 0;
         }
         else
         {
             immutable bytesSlackB4 = this.goodAllocSize(b.length) - b.length;
-            auto result = parent.expand(b, s);
+            immutable result = parent.expand(b, s);
             if (result)
             {
                 up!"numExpandOK";
