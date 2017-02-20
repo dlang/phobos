@@ -3568,7 +3568,7 @@ private extern (C) void* _memset32(void*, int, size_t); // from rt.memset;
  * An storage container built for building arrays from other arrays and ranges.
  * Stores elements in a free-list of arrays until `data` is called, which returns
  * a newly allocated array on the GC.
- * 
+ *
  * Elements can also be accessed via a range interface by getting a slice over
  * the builder, e.g. `builder[]`. This returns a bidirectional range over the stored
  * elements and does not allocate any new memory.
@@ -3808,13 +3808,13 @@ public:
 
     /**
      * Add a range to the builder.
-     * 
+     *
      * If the builder's type is a string like array, then other string like array
      * types will be encoded to the proper character type and stored.
      */
     void put(U)(U item) if (canPutRange!U)
     {
-        static if (isArray!U || (isRandomAccessRange!U && hasSlicing!U))
+        static if (is(typeof(tailSegment.ptr[0 .. 0] = item[0 .. 0])))
         {
             auto items = cast(E[]) item[];
 
@@ -3879,6 +3879,7 @@ public:
         {
             return cast(T[])(headSegment !is null ? headSegment.data : null);
         }
+
         if (headSegment == tailSegment)
         {
             return cast(T[])(headSegment ? headSegment.base[0 .. headSegment.length].dup : null);
@@ -4396,113 +4397,6 @@ public:
                 i += d.length;
             }
             assert(false, "Builder linearIndex out of bounds.");
-        }
-    }
-
-    /* A limited functionality zero-overhead scoped wrapper around
-        an existing mutable array.
-    */
-    struct wrappedBuffer
-    {
-        private
-        {
-            Segment seg; // For the wrapped array
-            Builder app; // Not all functions are supported
-            E[]* arr; // The wrapped array
-        }
-
-        /// Construct a wrapped buffer
-        this(ref E[] _arr, size_t preseverdLength = 0) nothrow
-        {
-            assert(preseverdLength <= _arr.length);
-            arr = &_arr;
-            seg.slack = _arr.length - preseverdLength;
-            seg.ptr = _arr.ptr + preseverdLength;
-            seg.next = null;
-            app.headSegment = app.tailSegment = &seg;
-        }
-
-        // Ensure that the Builder's memory is freed.
-        ~this()
-        {
-            if (seg.next !is null)
-            {
-                seg.next.free;
-            }
-
-            app.headSegment = null;
-        }
-
-        // Prevent copying
-        @disable this(this);
-
-        /// Returns: the used length of the buffer
-        size_t walkLength() const pure @property
-        {
-            // No extra segments
-            if (app.headSegment is app.tailSegment)
-            {
-                return arr.length - seg.slack;
-            }
-            else
-            {
-                size_t len = arr.length;
-                for (const(Segment)* d = seg.next; d !is null; d = d.next)
-                {
-                    len += d.length;
-                }
-                return len;
-            }
-        }
-
-        /// Manual synchronizes the array and Builder
-        void sync() pure
-        {
-            // The array and Builder are out of sync
-            if (app.headSegment != app.tailSegment)
-            {
-                // Get the new total length
-                size_t len = arr.length;
-                for (auto d = seg.next; d !is null; d = d.next)
-                {
-                    len += d.length;
-                }
-                // Update the array's length
-                size_t i = arr.length;
-                arr.length = len;
-                // Copy in the elements and clear the extra data segments
-                for (auto d = seg.next; d !is null; d = d.next, i += len)
-                {
-                    len = d.length;
-                    (*arr)[i .. i + len] = d.base[0 .. len];
-                    d.ptr = d.base;
-                    d.slack = Segment.slackInit;
-                }
-                // Update the segment
-                seg.slack = 0;
-                seg.ptr = arr.ptr;
-            }
-        }
-
-        /// Appends to the output range
-        void put(U)(U item) @property if (isOutputRange!(T[], U))
-        {
-            app.put(item);
-        }
-
-        ///ditto
-        ref typeof(this) opOpAssign(string op, U)(U item) if (op == "~"
-                && isOutputRange!(Unqual!T[], U))
-        {
-            app.put(item);
-            return this;
-        }
-
-        /// Returns: the used portion of the buffer. Synchronizes if necessary
-        E[] usedBuffer() pure @property
-        {
-            sync;
-            return (*arr)[0 .. $ - seg.slack];
         }
     }
 }
