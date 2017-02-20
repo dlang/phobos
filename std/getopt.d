@@ -469,15 +469,15 @@ GetoptResult getopt(T...)(ref string[] args, T opts)
 enum config {
     /// Turn case sensitivity on
     caseSensitive,
-    /// Turn case sensitivity off
+    /// Turn case sensitivity off (default)
     caseInsensitive,
     /// Turn bundling on
     bundling,
-    /// Turn bundling off
+    /// Turn bundling off (default)
     noBundling,
     /// Pass unrecognized arguments through
     passThrough,
-    /// Signal unrecognized arguments as errors
+    /// Signal unrecognized arguments as errors (default)
     noPassThrough,
     /// Stop at first argument that does not look like an option
     stopOnFirstNonOption,
