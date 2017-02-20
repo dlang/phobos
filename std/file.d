@@ -454,6 +454,8 @@ if (isConvertibleToString!R)
 /*********************************************
 Write $(D buffer) to file $(D name).
 
+Creates the file if it does not already exist.
+
 Params:
     name = string or range of characters representing the file _name
     buffer = data to be written to file
@@ -499,6 +501,8 @@ if (isConvertibleToString!R)
 
 /*********************************************
 Appends $(D buffer) to file $(D name).
+
+Creates the file if it does not already exist.
 
 Params:
     name = string or range of characters representing the file _name
