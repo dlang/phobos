@@ -9032,26 +9032,31 @@ public:
     else static if (isForwardRange!R)
     {
         import std.traits : isSafe;
+        private alias S = typeof((*_range).save);
+
+        static if (is(typeof((*cast(const R*)_range).save)))
+            private alias CS = typeof((*cast(const R*)_range).save);
+
         static if (isSafe!((R* r) => (*r).save))
         {
-            @property auto save() @trusted
+            @property RefRange!S save() @trusted
             {
                 mixin(_genSave());
             }
 
-            static if (is(typeof((*cast(const R*)_range).save))) @property auto save() @trusted const
+            static if (is(typeof((*cast(const R*)_range).save))) @property RefRange!CS save() @trusted const
             {
                 mixin(_genSave());
             }
         }
         else
         {
-            @property auto save()
+            @property RefRange!S save()
             {
                 mixin(_genSave());
             }
 
-            static if (is(typeof((*cast(const R*)_range).save))) @property auto save() const
+            static if (is(typeof((*cast(const R*)_range).save))) @property RefRange!CS save() const
             {
                 mixin(_genSave());
             }
@@ -9217,14 +9222,20 @@ public:
     }
     else static if (hasSlicing!R)
     {
-        auto opSlice(IndexType1, IndexType2)
+        private alias T = typeof((*_range)[1 .. 2]);
+        static if (is(typeof((*cast(const R*)_range)[1 .. 2])))
+        {
+            private alias CT = typeof((*cast(const R*)_range)[1 .. 2]);
+        }
+
+        RefRange!T opSlice(IndexType1, IndexType2)
                     (IndexType1 begin, IndexType2 end)
             if (is(typeof((*_range)[begin .. end])))
         {
             mixin(_genOpSlice());
         }
 
-        auto opSlice(IndexType1, IndexType2)
+        RefRange!CT opSlice(IndexType1, IndexType2)
                     (IndexType1 begin, IndexType2 end) const
             if (is(typeof((*cast(const R*)_range)[begin .. end])))
         {
