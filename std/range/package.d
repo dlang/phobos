@@ -657,7 +657,7 @@ pure @safe nothrow @nogc unittest
     auto s = testArr[].stride(2);
 }
 
-debug pure nothrow unittest
+debug pure nothrow @system unittest
 {//check the contract
     int[4] testArr = [1,2,3,4];
     bool passed = false;
@@ -1485,7 +1485,7 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
 }
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter, map;
@@ -1545,7 +1545,7 @@ if (Ranges.length == 2 && is(typeof(choose(true, rs[0], rs[1]))))
 }
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1608,7 +1608,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     int[] a = [1, 2, 3];
     long[] b = [4, 5, 6];
@@ -1740,7 +1740,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
  * roundRobin can be used to create "interleave" functionality which inserts
  * an element between each element in a range.
  */
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -3260,7 +3260,7 @@ if (isCallable!fun)
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.format : format;
     import std.random : uniform;
@@ -3831,7 +3831,7 @@ if (isStaticArray!R)
     assert(cleS.front == 0);
 }
 
-unittest //10845
+@system unittest //10845
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
@@ -3846,7 +3846,7 @@ unittest //10845
 }
 
 // Issue 13390
-unittest
+@system unittest
 {
     import core.exception : AssertError;
     import std.exception : assertThrown;
@@ -4230,7 +4230,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 }
 
 ///
-pure unittest
+pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -4241,7 +4241,7 @@ pure unittest
 }
 
 ///
-pure unittest
+pure @safe unittest
 {
     import std.conv : to;
 
@@ -4267,7 +4267,7 @@ pure unittest
 }
 
 /// $(D zip) is powerful - the following code sorts two arrays in parallel:
-pure unittest
+pure @safe unittest
 {
     import std.algorithm.sorting : sort;
 
@@ -4301,7 +4301,7 @@ enum StoppingPolicy
     requireSameLength,
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter, map;
@@ -4423,7 +4423,7 @@ unittest
     +/
 }
 
-pure unittest
+pure @safe unittest
 {
     import std.algorithm.sorting : sort;
 
@@ -4478,7 +4478,7 @@ pure unittest
     auto zz = z.save;
 }
 
-pure unittest
+pure @system unittest
 {
     import std.typecons : tuple;
 
@@ -4700,7 +4700,7 @@ if (allSatisfy!(isInputRange, Ranges))
 }
 
 ///
-unittest
+@system unittest
 {
    auto arr1 = [1,2,3,4,5,100];
    auto arr2 = [6,7,8,9,10];
@@ -4720,7 +4720,7 @@ unittest
    }
 }
 
-unittest // Bugzilla 15860: foreach_reverse on lockstep
+@system unittest // Bugzilla 15860: foreach_reverse on lockstep
 {
     auto arr1 = [0, 1, 2, 3];
     auto arr2 = [4, 5, 6, 7];
@@ -4744,7 +4744,7 @@ unittest // Bugzilla 15860: foreach_reverse on lockstep
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.iteration : filter;
     import std.conv : to;
@@ -4831,7 +4831,7 @@ unittest
     foreach (x, y; lockstep(iota(0, 10), iota(0, 10))) { }
 }
 
-unittest
+@system unittest
 {
     struct RvalueRange
     {
@@ -5157,7 +5157,7 @@ auto sequence(alias fun, State...)(State args)
 }
 
 // Issue 5036
-unittest
+@safe unittest
 {
     auto s = sequence!((a, n) => new int)(0);
     assert(s.front != s.front);  // no caching
@@ -5486,7 +5486,7 @@ body
     assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
 }
 
-nothrow @nogc unittest
+nothrow @nogc @safe unittest
 {
     auto t0 = iota(0, 10);
     auto t1 = iota(0, 10, 2);
@@ -5494,7 +5494,7 @@ nothrow @nogc unittest
     //float overloads use std.conv.to so can't be @nogc or nothrow
 }
 
-debug unittest
+debug @system unittest
 {//check the contracts
     import core.exception : AssertError;
     import std.exception : assertThrown;
@@ -5504,7 +5504,7 @@ debug unittest
     assertThrown!AssertError(iota(0f,1f,-0.1f));
 }
 
-unittest
+@system unittest
 {
     int[] a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
     auto r1 = iota(a.ptr, a.ptr + a.length, 1);
@@ -5512,7 +5512,7 @@ unittest
     assert(r1.back == a.ptr + a.length - 1);
 }
 
-unittest
+@safe unittest
 {
     assert(iota(1UL, 0UL).length == 0);
     assert(iota(1UL, 0UL, 1).length == 0);
@@ -5672,7 +5672,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     //The ptr stuff can't be done at compile time, so we unfortunately end
     //up with some code duplication here.
@@ -5739,7 +5739,7 @@ if (!isIntegral!(CommonType!(B, E)) &&
     return Result(begin, end);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -6493,7 +6493,7 @@ private:
 }
 
 // Issue 9507
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -6759,7 +6759,7 @@ if (isRandomAccessRange!Source && isInputRange!Indices &&
         }
 
         ///
-        unittest
+        @safe unittest
         {
             auto ind = indexed([1, 2, 3, 4, 5], [1, 3, 4]);
             assert(ind.physicalIndex(0) == 1);
@@ -7100,7 +7100,7 @@ if (isForwardRange!Source)
     assert(chunks1[$ / 2 .. $ - 1].equal([[2, 2], [3, 3]])); //Slow
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
@@ -7552,7 +7552,7 @@ if (!is(CommonType!Values == void) || Values.length == 0)
         .equal("T.D.P.L"));
 }
 
-unittest
+@safe unittest
 {
     // Verify that the same common type and same arity
     // results in the same template instantiation
@@ -8049,7 +8049,7 @@ pure @safe unittest
 version(none) // @@@BUG@@@ 10939
 {
     // Re-enable (or remove) if 10939 is resolved.
-    /+pure+/ unittest // Impure because of std.conv.to
+    /+pure+/ @safe unittest // Impure because of std.conv.to
     {
         import core.exception : RangeError;
         import std.exception : assertNotThrown, assertThrown;
@@ -8423,7 +8423,7 @@ if (isInputRange!Range)
     }
 
     ///
-    unittest
+    @safe unittest
     {
         import std.algorithm.comparison : equal;
         auto a = assumeSorted([ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ]);
@@ -8467,7 +8467,7 @@ See_Also: STL's $(HTTP sgi.com/tech/stl/lower_bound.html,upper_bound).
     }
 
     ///
-    unittest
+    @safe unittest
     {
         import std.algorithm.comparison : equal;
         auto a = assumeSorted([ 1, 2, 3, 3, 3, 4, 4, 5, 6 ]);
@@ -8530,7 +8530,7 @@ See_Also: STL's $(HTTP sgi.com/tech/stl/lower_bound.html,upper_bound).
     }
 
     ///
-    unittest
+    @safe unittest
     {
         import std.algorithm.comparison : equal;
         auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
@@ -8590,7 +8590,7 @@ equalRange). Completes the entire search in $(BIGOH log(n)) time.
     }
 
     ///
-    unittest
+    @safe unittest
     {
         import std.algorithm.comparison : equal;
         auto a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
@@ -8630,7 +8630,7 @@ sorting relation.
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.algorithm.sorting : sort;
     auto a = [ 1, 2, 3, 42, 52, 64 ];
@@ -8756,7 +8756,7 @@ that break its sortedness, $(D SortedRange) will work erratically.
     auto s = assumeSorted(arr);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     int[] arr = [100, 101, 102, 200, 201, 300];
@@ -8765,7 +8765,7 @@ unittest
 }
 
 // Test on an input range
-unittest
+@system unittest
 {
     import std.conv : text;
     import std.file : exists, remove, tempDir;
@@ -8871,7 +8871,7 @@ if (isInputRange!(Unqual!R))
     r = assumeSorted(a);
 }
 
-unittest
+@system unittest
 {
     bool ok = true;
     try
@@ -8886,7 +8886,7 @@ unittest
 }
 
 // issue 15003
-@nogc unittest
+@nogc @safe unittest
 {
     static immutable a = [1, 2, 3, 4];
     auto r = a.assumeSorted;
@@ -9249,7 +9249,7 @@ private:
 }
 
 /// Basic Example
-unittest
+@system unittest
 {
     import std.algorithm.searching : find;
     ubyte[] buffer = [1, 9, 45, 12, 22];
@@ -9276,7 +9276,7 @@ unittest
 }
 
 /// opAssign Example.
-unittest
+@system unittest
 {
     ubyte[] buffer1 = [1, 2, 3, 4, 5];
     ubyte[] buffer2 = [6, 7, 8, 9, 10];
@@ -9321,7 +9321,7 @@ unittest
     assert(buffer2 == [11, 12, 13, 14, 15]);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.iteration : filter;
     {
@@ -9408,7 +9408,7 @@ unittest
 }
 
 //Test assignment.
-unittest
+@system unittest
 {
     ubyte[] buffer1 = [1, 2, 3, 4, 5];
     ubyte[] buffer2 = [6, 7, 8, 9, 10];
@@ -9435,7 +9435,7 @@ unittest
     assert(buffer2 == [6, 7, 8, 9, 10]);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.mutation : bringToFront;
@@ -9555,7 +9555,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     struct S
     {
@@ -9570,7 +9570,7 @@ unittest
     static assert(isInfinite!(typeof(wrapper)));
 }
 
-unittest
+@system unittest
 {
     class C
     {
@@ -9587,7 +9587,7 @@ unittest
     assert(cWrapper is c);
 }
 
-unittest // issue 14373
+@system unittest // issue 14373
 {
     static struct R
     {
@@ -9600,7 +9600,7 @@ unittest // issue 14373
     assert(r.empty);
 }
 
-unittest // issue 14575
+@system unittest // issue 14575
 {
     struct R
     {
@@ -10705,7 +10705,7 @@ if (
     assert("abc".padRight('_', 6).equal("abc___"));
 }
 
-pure unittest
+pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges, ReferenceInputRange;

@@ -118,7 +118,7 @@ interface InputRange(E) {
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.algorithm.iteration : map;
     import std.range : iota;
@@ -493,7 +493,7 @@ template outputRangeObject(E...) {
 }
 
 ///
-unittest
+@safe unittest
 {
      import std.array;
      auto app = appender!(uint[])();
@@ -502,7 +502,7 @@ unittest
      static assert(is(typeof(appWrapped) : OutputRange!(uint)));
 }
 
-unittest
+@system unittest
 {
     import std.internal.test.dummyrange;
     import std.algorithm.comparison : equal;

@@ -512,7 +512,7 @@ public:
     }
 }
 
-unittest
+@system unittest
 {
     import std.conv, std.regex;
     @trusted void test_fixed(alias Kick)()

@@ -536,7 +536,7 @@ pure @safe nothrow @nogc unittest
 }
 
 // Issue 13935
-unittest
+@safe unittest
 {
     import std.algorithm.iteration : map;
     auto seq = [1, 2].map!(x => x);
@@ -586,7 +586,7 @@ void largestPartialIntersection
 }
 
 ///
-unittest
+@system unittest
 {
     import std.typecons : tuple, Tuple;
 
@@ -647,7 +647,7 @@ void largestPartialIntersectionWeighted
 }
 
 ///
-unittest
+@system unittest
 {
     import std.typecons : tuple, Tuple;
 
@@ -670,7 +670,7 @@ unittest
     // 7.0 occurs 3 times -> 4.4 (3 * 1.1)
 }
 
-unittest
+@system unittest
 {
     import std.conv : text;
     import std.typecons : tuple, Tuple, Yes;
@@ -694,7 +694,7 @@ unittest
     assert(a[0].empty);
 }
 
-unittest
+@system unittest
 {
     import std.conv : text;
     import std.typecons : tuple, Tuple, Yes;
@@ -716,7 +716,7 @@ unittest
     assert(b == [ tuple("7", 4u), tuple("1", 3u) ][], text(b));
 }
 
-unittest
+@system unittest
 {
     import std.typecons : tuple, Tuple;
 
@@ -739,7 +739,7 @@ unittest
     assert(b[0] == tuple(4.0, 2u));
 }
 
-unittest
+@system unittest
 {
     import std.container : Array;
     import std.typecons : Tuple;
@@ -845,7 +845,7 @@ NWayUnion!(less, RangeOfRanges) nWayUnion
 }
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 

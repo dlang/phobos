@@ -532,7 +532,7 @@ template AllocatorList(alias factoryFunction,
 }
 
 ///
-version(Posix) unittest
+version(Posix) @system unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
@@ -575,7 +575,7 @@ version(Posix) unittest
     assert(b1.length == 1024 * 10);
 }
 
-unittest
+@system unittest
 {
     // Create an allocator based upon 4MB regions, fetched from the GC heap.
     import std.algorithm.comparison : max;
@@ -589,7 +589,7 @@ unittest
     a.deallocateAll();
 }
 
-unittest
+@system unittest
 {
     // Create an allocator based upon 4MB regions, fetched from the GC heap.
     import std.algorithm.comparison : max;
@@ -602,7 +602,7 @@ unittest
     a.deallocateAll();
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
@@ -617,7 +617,7 @@ unittest
     assert(a.empty == Ternary.yes);
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
     enum bs = GCAllocator.alignment;

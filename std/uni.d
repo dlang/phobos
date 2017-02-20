@@ -8905,7 +8905,7 @@ if (isSomeString!S)
     dstring toLower(dstring s)
     { return toLower!dstring(s); }
 
-    unittest
+    @safe unittest
     {
         // https://issues.dlang.org/show_bug.cgi?id=16663
 
@@ -9087,7 +9087,7 @@ if (isSomeString!S)
     dstring toUpper(dstring s)
     { return toUpper!dstring(s); }
 
-    unittest
+    @safe unittest
     {
         // https://issues.dlang.org/show_bug.cgi?id=16663
 

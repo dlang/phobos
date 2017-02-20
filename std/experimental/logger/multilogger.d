@@ -140,7 +140,7 @@ class MultiLogger : Logger
 }
 
 // Issue #16
-unittest
+@system unittest
 {
     import std.file : deleteme;
     import std.stdio : File;

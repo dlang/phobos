@@ -303,7 +303,7 @@ class ReferenceBidirectionalRange(T) : ReferenceForwardRange!T
     final void popBack(){_payload.popBack();}
 }
 
-unittest
+@safe unittest
 {
     static assert(isInputRange!(ReferenceInputRange!int));
     static assert(isInputRange!(ReferenceInfiniteInputRange!int));
@@ -417,7 +417,7 @@ if (is(T == TestFoo))
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : iota, retro, repeat;

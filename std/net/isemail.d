@@ -1843,14 +1843,14 @@ T[] substr (T) (T[] str, ptrdiff_t start = 0, ptrdiff_t length = ptrdiff_t.min)
     return str[start .. end];
 }
 
-unittest
+@safe unittest
 {
     assert("abcdef".substr(-1) == "f");
     assert("abcdef".substr(-2) == "ef");
     assert("abcdef".substr(-3, 1) == "d");
 }
 
-unittest
+@safe unittest
 {
     assert("abcdef".substr(0, -1) == "abcde");
     assert("abcdef".substr(2, -1) == "cde");
@@ -1893,7 +1893,7 @@ if (is(Unqual!(ElementType!(S1)) == dchar) && is(Unqual!(ElementType!(S2)) == dc
     return slice1.icmp(slice2);
 }
 
-unittest
+@safe unittest
 {
     assert("abc".compareFirstN("abcdef", 3) == 0);
     assert("abc".compareFirstN("Abc", 3) == 0);
@@ -1917,7 +1917,7 @@ if (isDynamicArray!(A) && !isNarrowString!(A) && isMutable!(A) && !is(A == void[
     return e;
 }
 
-unittest
+@safe unittest
 {
     auto array = [0, 1, 2, 3];
     auto result = array.pop();
@@ -1943,13 +1943,13 @@ const(T)[] get (T) (const(T)[] str, size_t index, dchar c)
     return str[index .. index + codeLength!(T)(c)];
 }
 
-unittest
+@safe unittest
 {
     assert("abc".get(1, 'b') == "b");
     assert("löv".get(1, 'ö') == "ö");
 }
 
-unittest
+@safe unittest
 {
     assert("abc".get(1, 'b') == "b");
     assert("löv".get(1, 'ö') == "ö");

@@ -3500,7 +3500,7 @@ class UdpSocket: Socket
 }
 
 // Issue 16514
-unittest
+@safe unittest
 {
     class TestSocket : Socket
     {

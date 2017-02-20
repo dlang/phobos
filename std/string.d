@@ -313,7 +313,7 @@ immutable(char)* toStringz(in string s) @trusted pure nothrow
 }
 
 ///
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import core.stdc.string : strlen;
     import std.conv : to;
@@ -6947,7 +6947,7 @@ if (staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
     assert(a == c);
 }
 
-pure unittest
+pure @system unittest
 {
     import std.algorithm.comparison : equal;
     foreach (T; AliasSeq!(char[], wchar[], dchar[]))

@@ -1299,7 +1299,7 @@ class Comment : Item
     override @property @safe @nogc pure nothrow bool isEmptyXML() const { return false; } /// Returns false always
 }
 
-unittest // issue 16241
+@safe unittest // issue 16241
 {
     import std.exception : assertThrown;
     auto c = new Comment("==");

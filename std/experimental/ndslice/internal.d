@@ -70,7 +70,7 @@ template PtrTuple(Names...)
 }
 
 // ISSUE 16501
-unittest
+@system unittest
 {
     import std.experimental.ndslice;
     alias sab = sliced!("a", "b");
@@ -320,7 +320,7 @@ template isMemory(T)
         enum isMemory = false;
 }
 
-unittest
+@system unittest
 {
     import std.experimental.ndslice.slice : PtrTuple;
     import std.experimental.ndslice.selection : Map;
@@ -444,7 +444,7 @@ bool isPermutation(size_t N)(auto ref in size_t[N] perm)
     return isValidPartialPermutationImpl(perm, mask);
 }
 
-unittest
+@system unittest
 {
     assert(isPermutation([0, 1]));
     // all numbers 0..N-1 need to be part of the permutation
@@ -511,7 +511,7 @@ size_t lengthsProduct(size_t N)(auto ref in size_t[N] lengths)
     return length;
 }
 
-pure nothrow unittest
+pure nothrow @system unittest
 {
     const size_t[3] lengths = [3, 4, 5];
     assert(lengthsProduct(lengths) == 60);

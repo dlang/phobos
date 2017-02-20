@@ -2038,7 +2038,7 @@ if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
            "Choice did not return a valid element from the given Range");
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
     import std.algorithm.iteration : map;

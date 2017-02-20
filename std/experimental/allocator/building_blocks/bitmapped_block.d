@@ -50,7 +50,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     import std.conv : text;
     import std.typecons : Ternary;
 
-    unittest
+    @system unittest
     {
         import std.experimental.allocator.mallocator : AlignedMallocator;
         import std.algorithm.comparison : max;
@@ -690,7 +690,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 }
 
 ///
-unittest
+@system unittest
 {
     // Create a block allocator on top of a 10KB stack region.
     import std.experimental.allocator.building_blocks.region : InSituRegion;
@@ -702,13 +702,13 @@ unittest
     assert(b.length == 100);
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     testAllocator!(() => BitmappedBlock!(64, 8, GCAllocator)(1024 * 64));
 }
 
-unittest
+@system unittest
 {
     static void testAllocateAll(size_t bs)(uint blocks, uint blocksAtATime)
     {
@@ -823,7 +823,7 @@ unittest
 }
 
 // Test totalAllocation
-unittest
+@safe unittest
 {
     BitmappedBlock!(8, 8, NullAllocator) h1;
     assert(h1.totalAllocation(1) >= 8);
@@ -860,7 +860,7 @@ struct BitmappedBlockWithInternalPointers(
 {
     import std.conv : text;
     import std.typecons : Ternary;
-    unittest
+    @system unittest
     {
         import std.experimental.allocator.mallocator : AlignedMallocator;
         auto m = AlignedMallocator.instance.alignedAllocate(1024 * 64,
@@ -1059,7 +1059,7 @@ struct BitmappedBlockWithInternalPointers(
     }
 }
 
-unittest
+@system unittest
 {
     auto h = BitmappedBlockWithInternalPointers!(4096)(new void[4096 * 1024]);
     auto b = h.allocate(123);
@@ -1092,7 +1092,7 @@ private uint leadingOnes(ulong x)
     return result;
 }
 
-unittest
+@system unittest
 {
     assert(leadingOnes(0) == 0);
     assert(leadingOnes(~0UL) == 64);
@@ -1117,7 +1117,7 @@ private uint findContigOnes(ulong x, uint n)
     return leadingOnes(~x);
 }
 
-unittest
+@system unittest
 {
     assert(findContigOnes(0x0000_0000_0000_0300, 2) == 54);
 
@@ -1141,7 +1141,7 @@ private void setBits(ref ulong w, uint lsb, uint msb)
     w |= mask;
 }
 
-unittest
+@system unittest
 {
     ulong w;
     w = 0; setBits(w, 0, 63); assert(w == ulong.max);
@@ -1339,7 +1339,7 @@ private struct BitVector
     }
 }
 
-unittest
+@system unittest
 {
     auto v = BitVector(new ulong[10]);
     assert(v.length == 640);

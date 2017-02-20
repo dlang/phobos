@@ -23,7 +23,7 @@ import core.exception : RangeError;
 public import std.container.util;
 
 ///
-unittest
+@system unittest
 {
     auto arr = Array!int(0, 2, 3);
     assert(arr[0] == 0);
@@ -50,7 +50,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto arr = Array!int(1, 2, 3);
@@ -69,7 +69,7 @@ unittest
 }
 
 /// `Array!bool` packs together values efficiently by allocating one bit per element
-unittest
+@system unittest
 {
     Array!bool arr;
     arr.insert([true, true, false, true, false]);
@@ -995,13 +995,13 @@ $(D r)
     }
 }
 
-unittest
+@system unittest
 {
     Array!int a;
     assert(a.empty);
 }
 
-unittest
+@system unittest
 {
     Array!int a = Array!int(1, 2, 3);
     //a._data._refCountedDebug = true;
@@ -1012,13 +1012,13 @@ unittest
     assert(a == Array!int(1, 2, 3));
 }
 
-unittest
+@system unittest
 {
     auto a = Array!int(1, 2, 3);
     assert(a.length == 3);
 }
 
-unittest
+@system unittest
 {
     const Array!int a = [1, 2];
 
@@ -1039,14 +1039,14 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     // REG https://issues.dlang.org/show_bug.cgi?id=13621
     import std.container : Array, BinaryHeap;
     alias Heap = BinaryHeap!(Array!int);
 }
 
-unittest
+@system unittest
 {
     Array!int a;
     a.reserve(1000);
@@ -1061,14 +1061,14 @@ unittest
     assert(p == a._data._payload.ptr);
 }
 
-unittest
+@system unittest
 {
     auto a = Array!int(1, 2, 3);
     a[1] *= 42;
     assert(a[1] == 84);
 }
 
-unittest
+@system unittest
 {
     auto a = Array!int(1, 2, 3);
     auto b = Array!int(11, 12, 13);
@@ -1078,7 +1078,7 @@ unittest
     assert(a ~ [4,5] == Array!int(1,2,3,4,5));
 }
 
-unittest
+@system unittest
 {
     auto a = Array!int(1, 2, 3);
     auto b = Array!int(11, 12, 13);
@@ -1086,14 +1086,14 @@ unittest
     assert(a == Array!int(1, 2, 3, 11, 12, 13));
 }
 
-unittest
+@system unittest
 {
     auto a = Array!int(1, 2, 3, 4);
     assert(a.removeAny() == 4);
     assert(a == Array!int(1, 2, 3));
 }
 
-unittest
+@system unittest
 {
     auto a = Array!int(1, 2, 3, 4, 5);
     auto r = a[2 .. a.length];
@@ -1104,7 +1104,7 @@ unittest
     assert(a == Array!int(1, 2, 8, 9, 42, 3, 4, 5));
 }
 
-unittest
+@system unittest
 {
     auto a = Array!int(0, 1, 2, 3, 4, 5, 6, 7, 8);
     a.linearRemove(a[4 .. 6]);
@@ -1112,7 +1112,7 @@ unittest
 }
 
 // Give the Range object some testing.
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : retro;
@@ -1130,7 +1130,7 @@ unittest
     assert(equal(a[1..4], [1, 2, 3]));
 }
 // Test issue 5920
-unittest
+@system unittest
 {
     struct structBug5920
     {
@@ -1169,7 +1169,7 @@ unittest
     assert(dMask == 0b1111_1111);   // make sure the d'tor is called once only.
 }
 // Test issue 5792 (mainly just to check if this piece of code is compilable)
-unittest
+@system unittest
 {
     auto a = Array!(int[])([[1,2],[3,4]]);
     a.reserve(4);
@@ -1185,7 +1185,7 @@ unittest
 }
 
 // test replace!Stuff with range Stuff
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto a = Array!int([1, 42, 5]);
@@ -1194,28 +1194,28 @@ unittest
 }
 
 // test insertBefore and replace with empty Arrays
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.insertBefore(a[], 1);
     assert(equal(a[], [1]));
 }
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.insertBefore(a[], [1, 2]);
     assert(equal(a[], [1, 2]));
 }
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.replace(a[], [1, 2]);
     assert(equal(a[], [1, 2]));
 }
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto a = Array!int();
@@ -1223,7 +1223,7 @@ unittest
     assert(equal(a[], [1]));
 }
 // make sure that Array instances refuse ranges that don't belong to them
-unittest
+@system unittest
 {
     import std.exception : assertThrown;
 
@@ -1236,7 +1236,7 @@ unittest
     assertThrown(a.replace(r, [42]));
     assertThrown(a.linearRemove(r));
 }
-unittest
+@system unittest
 {
     auto a = Array!int([1, 1]);
     a[1]  = 0; //Check Array.opIndexAssign
@@ -1267,7 +1267,7 @@ unittest
     assert(~r[0] == ~3);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1313,7 +1313,7 @@ unittest
 }
 
 // Test issue 11194
-unittest
+@system unittest
 {
     static struct S {
         int i = 1337;
@@ -1327,7 +1327,7 @@ unittest
     arr ~= s;
 }
 
-unittest //11459
+@safe unittest //11459
 {
     static struct S
     {
@@ -1338,18 +1338,18 @@ unittest //11459
     alias B = Array!(shared bool);
 }
 
-unittest //11884
+@system unittest //11884
 {
     import std.algorithm.iteration : filter;
     auto a = Array!int([1, 2, 2].filter!"true"());
 }
 
-unittest //8282
+@safe unittest //8282
 {
     auto arr = new Array!int;
 }
 
-unittest //6998
+@system unittest //6998
 {
     static int i = 0;
     class C
@@ -1374,7 +1374,7 @@ unittest //6998
     //Just to make sure the GC doesn't collect before the above test.
     assert(c.dummy ==1);
 }
-unittest //6998-2
+@system unittest //6998-2
 {
     static class C {int i;}
     auto c = new C;
@@ -1385,13 +1385,13 @@ unittest //6998-2
     assert(c.i == 42); //fails
 }
 
-unittest
+@safe unittest
 {
     static assert(is(Array!int.Range));
     static assert(is(Array!int.ConstRange));
 }
 
-unittest // const/immutable Array and Ranges
+@system unittest // const/immutable Array and Ranges
 {
     static void test(A, R, E, S)()
     {
@@ -1421,7 +1421,7 @@ unittest // const/immutable Array and Ranges
 }
 
 // ensure @nogc
-@nogc unittest
+@nogc @system unittest
 {
     Array!int ai;
     ai ~= 1;
@@ -1579,7 +1579,7 @@ if (is(Unqual!T == bool))
         return !length;
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         //a._store._refCountedDebug = true;
@@ -1601,7 +1601,7 @@ if (is(Unqual!T == bool))
         return result;
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         assert(a.empty);
@@ -1625,7 +1625,7 @@ if (is(Unqual!T == bool))
         return length;
     }
 
-    unittest
+    @system unittest
     {
         import std.conv : to;
         Array!bool a;
@@ -1648,7 +1648,7 @@ if (is(Unqual!T == bool))
             : 0;
     }
 
-    unittest
+    @system unittest
     {
         import std.conv : to;
         Array!bool a;
@@ -1675,7 +1675,7 @@ if (is(Unqual!T == bool))
         _store._backend.reserve(to!size_t((e + bitsPerWord - 1) / bitsPerWord));
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         assert(a.capacity == 0);
@@ -1696,7 +1696,7 @@ if (is(Unqual!T == bool))
         return Range(this, 0, length);
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         a.insertBack([true, false, true, true]);
@@ -1715,7 +1715,7 @@ if (is(Unqual!T == bool))
         return Range(this, a, b);
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         a.insertBack([true, false, true, true]);
@@ -1742,7 +1742,7 @@ if (is(Unqual!T == bool))
         else data.ptr[0] &= ~cast(size_t) 1;
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         a.insertBack([true, false, true, true]);
@@ -1773,7 +1773,7 @@ if (is(Unqual!T == bool))
         }
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         a.insertBack([true, false, true, true]);
@@ -1823,7 +1823,7 @@ if (is(Unqual!T == bool))
         return this[i];
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         a.insertBack([true, false, true, true]);
@@ -1845,7 +1845,7 @@ if (is(Unqual!T == bool))
         return result ~= rhs;
     }
 
-    unittest
+    @system unittest
     {
         import std.algorithm.comparison : equal;
         Array!bool a;
@@ -1874,7 +1874,7 @@ if (is(Unqual!T == bool))
         return this;
     }
 
-    unittest
+    @system unittest
     {
         import std.algorithm.comparison : equal;
         Array!bool a;
@@ -1900,7 +1900,7 @@ if (is(Unqual!T == bool))
         this = Array();
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         a.insertBack([true, false, true, true]);
@@ -1928,7 +1928,7 @@ if (is(Unqual!T == bool))
         _store._length = newLength;
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         a.length = 1057;
@@ -1986,7 +1986,7 @@ if (is(Unqual!T == bool))
     /// ditto
     alias stableRemoveAny = removeAny;
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         a.length = 1057;
@@ -2049,7 +2049,7 @@ if (is(Unqual!T == bool))
     /// ditto
     alias stableInsertBack = insertBack;
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         for (int i = 0; i < 100; ++i)
@@ -2116,7 +2116,7 @@ if (is(Unqual!T == bool))
         return howMany;
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         a.length = 1057;
@@ -2155,7 +2155,7 @@ if (is(Unqual!T == bool))
     /// ditto
     alias stableInsertBefore = insertBefore;
 
-    unittest
+    @system unittest
     {
         import std.conv : to;
         Array!bool a;
@@ -2184,7 +2184,7 @@ if (is(Unqual!T == bool))
     /// ditto
     alias stableInsertAfter = insertAfter;
 
-    unittest
+    @system unittest
     {
         import std.conv : to;
         Array!bool a;
@@ -2213,7 +2213,7 @@ if (is(Unqual!T == bool))
     /// ditto
     alias stableReplace = replace;
 
-    unittest
+    @system unittest
     {
         import std.conv : to;
         Array!bool a;
@@ -2243,13 +2243,13 @@ if (is(Unqual!T == bool))
     }
 }
 
-unittest
+@system unittest
 {
     Array!bool a;
     assert(a.empty);
 }
 
-unittest
+@system unittest
 {
     Array!bool arr;
     arr.insert([false, false, false, false]);
@@ -2271,7 +2271,7 @@ unittest
 }
 
 // issue 16331 - uncomparable values are valid values for an array
-unittest
+@system unittest
 {
     double[] values = [double.nan, double.nan];
     auto arr = Array!double(values);

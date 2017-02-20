@@ -380,7 +380,7 @@ real gamma(real x)
     return z * poly( x, GammaNumeratorCoeffs ) / poly( x, GammaDenominatorCoeffs );
 }
 
-unittest
+@safe unittest
 {
     // gamma(n) = factorial(n-1) if n is an integer.
     real fact = 1.0L;
@@ -524,7 +524,7 @@ real logGamma(real x)
     return q ;
 }
 
-unittest
+@safe unittest
 {
     assert(isIdentical(logGamma(NaN(0xDEF)), NaN(0xDEF)));
     assert(logGamma(real.infinity) == real.infinity);
@@ -990,7 +990,7 @@ done:
     return x;
 }
 
-unittest { // also tested by the normal distribution
+@safe unittest { // also tested by the normal distribution
     // check NaN propagation
     assert(isIdentical(betaIncomplete(NaN(0xABC),2,3), NaN(0xABC)));
     assert(isIdentical(betaIncomplete(7,NaN(0xABC),3), NaN(0xABC)));
@@ -1552,7 +1552,7 @@ ihalve:
     return x;
 }
 
-unittest
+@safe unittest
 {
 //Values from Excel's GammaInv(1-p, x, 1)
 assert(fabs(gammaIncompleteComplInv(1, 0.5) - 0.693147188044814) < 0.00000005);
@@ -1675,7 +1675,7 @@ done:
     return y;
 }
 
-unittest
+@safe unittest
 {
     // Exact values
     assert(digamma(1.0)== -EULERGAMMA);
@@ -1735,7 +1735,7 @@ real logmdigamma(real x)
     return x == s ? y + 0.5L/s : (log(x/s) + 0.5L/s + y + w);
 }
 
-unittest
+@safe unittest
 {
     assert(logmdigamma(-5.0).isNaN());
     assert(isIdentical(logmdigamma(NaN(0xABC)), NaN(0xABC)));
@@ -1788,7 +1788,7 @@ real logmdigammaInverse(real y)
     return y; //NaN
 }
 
-unittest
+@safe unittest
 {
     import std.typecons;
     //WolframAlpha, 22.02.2015

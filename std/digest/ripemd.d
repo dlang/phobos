@@ -49,7 +49,7 @@ module std.digest.ripemd;
 public import std.digest.digest;
 
 ///
-unittest
+@safe unittest
 {
     //Template API
     import std.digest.md;
@@ -68,7 +68,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     //OOP API
     import std.digest.md;
@@ -560,7 +560,7 @@ struct RIPEMD160
 }
 
 ///
-unittest
+@safe unittest
 {
     //Simple example, hashing a string using ripemd160Of helper function
     ubyte[20] hash = ripemd160Of("abc");
@@ -569,7 +569,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     //Using the basic API
     RIPEMD160 hash;
@@ -581,7 +581,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     //Let's use the template features:
     void doSomething(T)(ref T hash)
@@ -596,7 +596,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     //Simple example
     RIPEMD160 hash;
@@ -606,12 +606,12 @@ unittest
     assert(toHexString(result) == "C81B94933420221A7AC004A90242D8B1D3E5070D");
 }
 
-unittest
+@safe unittest
 {
     assert(isDigest!RIPEMD160);
 }
 
-unittest
+@system unittest
 {
     import std.range;
 
@@ -672,7 +672,7 @@ auto ripemd160Of(T...)(T data)
 }
 
 ///
-unittest
+@safe unittest
 {
     ubyte[20] hash = ripemd160Of("abc");
     assert(hash == digest!RIPEMD160("abc"));
@@ -688,7 +688,7 @@ unittest
 alias RIPEMD160Digest = WrapperDigest!RIPEMD160;
 
 ///
-unittest
+@safe unittest
 {
     //Simple example, hashing a string using Digest.digest helper function
     auto md = new RIPEMD160Digest();
@@ -698,7 +698,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     //Let's use the OOP features:
     void test(Digest dig)
@@ -714,7 +714,7 @@ unittest
     assert(toHexString(result) == "C81B94933420221A7AC004A90242D8B1D3E5070D");
 }
 
-unittest
+@system unittest
 {
     auto md = new RIPEMD160Digest();
 

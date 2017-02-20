@@ -970,7 +970,7 @@ inout(BigDigit) [] removeLeadingZeros(inout(BigDigit) [] x) pure nothrow @safe
     return x[0 .. k];
 }
 
-pure unittest
+pure @system unittest
 {
    BigUint r = BigUint([5]);
    BigUint t = BigUint([7]);
@@ -992,7 +992,7 @@ pure unittest
 
 
 // Pow tests
-pure unittest
+pure @system unittest
 {
     BigUint r, s;
     r.fromHexString("80000000_00000001");
@@ -1541,7 +1541,7 @@ void divModInternal(BigDigit [] quotient, BigDigit[] remainder, const BigDigit [
     () @trusted { GC.free(un.ptr); GC.free(vn.ptr); } ();
 }
 
-pure unittest
+pure @system unittest
 {
     immutable(uint) [] u = [0, 0xFFFF_FFFE, 0x8000_0000];
     immutable(uint) [] v = [0xFFFF_FFFF, 0x8000_0000];
@@ -2496,7 +2496,7 @@ pure nothrow
     () @trusted { GC.free(scratch.ptr); } ();
 }
 
-unittest
+@system unittest
 {
     import core.stdc.stdio;
 
@@ -2533,7 +2533,7 @@ unittest
 }
 
 // biguintToOctal
-unittest
+@safe unittest
 {
     enum bufSize = 5 * BigDigitBits / 3 + 1;
     auto buf = new char[bufSize];

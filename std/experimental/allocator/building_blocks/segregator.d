@@ -274,7 +274,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.mallocator : Mallocator;
@@ -342,7 +342,7 @@ if (Args.length > 3)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.mallocator : Mallocator;

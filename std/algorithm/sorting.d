@@ -1001,7 +1001,7 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
 }
 
 ///
-unittest
+@system unittest
 {
     immutable(int[]) arr = [ 2, 3, 1, 5, 0 ];
     // index using pointers
@@ -1016,7 +1016,7 @@ unittest
         (index2));
 }
 
-unittest
+@system unittest
 {
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
@@ -1569,7 +1569,7 @@ private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
     assert(arr == [[1, 0], [1, 1], [1, 2], [2, 0]]);
 }
 
-unittest //Issue 16413 - @system comparison function
+@safe unittest //Issue 16413 - @system comparison function
 {
     bool lt(int a, int b) { return a < b; } static @system
     auto a = [2, 1];
@@ -1904,7 +1904,7 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
     assert(numbers.equal!isIdentical(sorted));
 }
 
-unittest
+@safe unittest
 {
     // Simple regression benchmark
     import std.random, std.algorithm.iteration, std.algorithm.mutation;
@@ -3024,7 +3024,7 @@ if (isRandomAccessRange!(Range) && hasLength!(Range) && hasSlicing!(Range))
 }
 
 ///
-unittest
+@system unittest
 {
     int[] a = [ 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 ];
     partialSort(a, 5);
@@ -3051,7 +3051,7 @@ if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
     sort!(less, ss)(r1);
 }
 ///
-unittest
+@system unittest
 {
     int[] a = [5, 7, 2, 6, 7];
     int[] b = [2, 1, 5, 6, 7, 3, 0];
@@ -3423,7 +3423,7 @@ done:
     return pivot;
 }
 
-unittest
+@safe unittest
 {
     auto a = [ 10, 5, 3, 4, 8,  11,  13, 3, 9, 4, 10 ];
     assert(expandPartition!((a, b) => a < b)(a, 4, 5, 6) == 9);
@@ -3561,7 +3561,7 @@ if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
 }
 
 ///
-unittest
+@system unittest
 {
     int[] a = [ 5, 7, 2, 6, 7 ];
     int[] b = [ 2, 1, 5, 6, 7, 3, 0 ];
@@ -3571,7 +3571,7 @@ unittest
 }
 
 // bug 15421
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
@@ -3615,7 +3615,7 @@ unittest
 }
 
 // bug 15421
-unittest
+@system unittest
 {
     auto a = [ 9, 8, 0, 3, 5, 25, 43, 4, 2, 0, 7 ];
     auto b = [ 9, 8, 0, 3, 5, 25, 43, 4, 2, 0, 7 ];
@@ -3634,7 +3634,7 @@ unittest
 }
 
 // bug 12987
-unittest
+@system unittest
 {
     int[] a = [ 5, 7, 2, 6, 7 ];
     int[] b = [ 2, 1, 5, 6, 7, 3, 0 ];
@@ -3644,7 +3644,7 @@ unittest
 }
 
 // bug 15420
-unittest
+@system unittest
 {
     int[] a = [ 5, 7, 2, 6, 7 ];
     int[] b = [ 2, 1, 5, 6, 7, 3, 0 ];
@@ -3687,7 +3687,7 @@ if (isInputRange!(SRange) && isRandomAccessRange!(TRange)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.typecons : Yes;
 
@@ -3697,7 +3697,7 @@ unittest
     assert(b == [ 0, 1, 2 ]);
 }
 
-unittest
+@system unittest
 {
     import std.random : Random, unpredictableSeed, uniform, randomShuffle;
     import std.typecons : Yes;
@@ -3811,7 +3811,7 @@ if (isRandomAccessRange!Range &&
 }
 
 ///
-unittest
+@system unittest
 {
     import std.typecons : Yes;
 
@@ -3827,7 +3827,7 @@ unittest
     assert(ptrIndex == [ &a[5], &a[1], &a[3] ]);
 }
 
-unittest
+@system unittest
 {
     import std.conv : text;
 
@@ -3998,7 +3998,7 @@ if (isRandomAccessRange!Range && hasLength!Range &&
     }
 }
 
-unittest
+@safe unittest
 {
     // Verify medianOf for all permutations of [1, 2, 2, 3, 4].
     int[5] data = [1, 2, 2, 3, 4];
