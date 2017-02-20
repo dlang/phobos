@@ -417,7 +417,7 @@ auto castSwitch(choices...)(Object switchObject)
 
     // Void handlers are also allowed if all the handlers are void:
     new A().castSwitch!(
-        (A a) { assert(true); },
+        (A a) { },
         (B b) { assert(false); },
     )();
 }
@@ -485,7 +485,7 @@ auto castSwitch(choices...)(Object switchObject)
     // All-void handlers work for the null case:
     null.castSwitch!(
         (Object o) { assert(false); },
-        ()         { assert(true); },
+        ()         { },
     )();
 
     // Throwing void handlers work for the null case:
