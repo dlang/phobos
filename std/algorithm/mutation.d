@@ -2657,12 +2657,6 @@ pure @safe nothrow unittest
     {
         T payload;
 
-        // needed for ElementType
-        auto init()
-        {
-            return payload.init;
-        }
-
         ElementType!T moveAt(size_t i)
         {
            return payload.moveAt(i);

@@ -325,7 +325,7 @@ if (is(T == uint))
         return iota(cast(uint)low, cast(uint)high);
     }
 
-    static void init(ref uint[] arr)
+    static void initialize(ref uint[] arr)
     {
         import std.array : array;
         arr = iota().array;
@@ -348,7 +348,7 @@ if (is(T == double))
         return iota(cast(double)low, cast(double)high, 1.0);
     }
 
-    static void init(ref double[] arr)
+    static void initialize(ref double[] arr)
     {
         import std.array : array;
         arr = iota().array;
@@ -395,7 +395,7 @@ if (is(T == TestFoo))
         return iota(cast(int)low, cast(int)high).map!(a => TestFoo(a));
     }
 
-    static void init(ref TestFoo[] arr)
+    static void initialize(ref TestFoo[] arr)
     {
         import std.array : array;
         arr = iota().array;
@@ -426,7 +426,7 @@ unittest
     static void testInputRange(T,Cmp)()
     {
         T it;
-        Cmp.init(it.arr);
+        Cmp.initialize(it.arr);
         for (size_t numRuns = 0; numRuns < 2; ++numRuns)
         {
             if (numRuns == 1)
@@ -436,7 +436,7 @@ unittest
                     it.reinit();
                 }
 
-                Cmp.init(it.arr);
+                Cmp.initialize(it.arr);
             }
 
             assert(equal!(Cmp.cmp)(it, Cmp.iota(1, 11)));
@@ -478,7 +478,7 @@ unittest
     static void testForwardRange(T,Cmp)()
     {
         T it;
-        Cmp.init(it.arr);
+        Cmp.initialize(it.arr);
         auto s = it.save();
         s.popFront();
         assert(!Cmp.cmp(s.front, it.front));
@@ -487,7 +487,7 @@ unittest
     static void testBidirectionalRange(T,Cmp)()
     {
         T it;
-        Cmp.init(it.arr);
+        Cmp.initialize(it.arr);
         assert(equal!(Cmp.cmp)(it.retro, Cmp.iota().retro));
 
         auto s = it.back;
@@ -500,7 +500,7 @@ unittest
     static void testRandomAccessRange(T,Cmp)()
     {
         T it;
-        Cmp.init(it.arr);
+        Cmp.initialize(it.arr);
         size_t idx = 0;
         foreach (jt; it)
         {
