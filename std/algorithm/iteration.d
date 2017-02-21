@@ -1492,6 +1492,24 @@ if (isInputRange!R)
         tuple(4, 3u), tuple(5, 1u) ][]));
 }
 
+/**
+ * Using group, an associative array can be easily generated with the count of each
+ * unique element in the range.
+ */
+@safe unittest
+{
+    import std.algorithm.sorting : sort;
+    import std.array : assocArray;
+
+    uint[string] result;
+    auto range = ["a", "b", "a", "c", "b", "c", "c", "d", "e"];
+    result = range.sort!((a, b) => a < b)
+        .group
+        .assocArray;
+
+    assert(result == ["a": 2U, "b": 2U, "c": 3U, "d": 1U, "e": 1U]);
+}
+
 @safe unittest
 {
     import std.algorithm.comparison : equal;
