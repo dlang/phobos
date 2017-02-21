@@ -1850,6 +1850,7 @@ if (is(S == struct))
         static if (!is(S == immutable))
         void opAssign()(immutable S s)
         {
+            movePayload;
             emplace(s);
         }
 
@@ -1894,7 +1895,7 @@ if (is(S == struct))
         ~this()
         {
             // call destructor with proper constness
-            S s = movePayload;
+            movePayload;
         }
     }
 }
