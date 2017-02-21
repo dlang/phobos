@@ -33,10 +33,9 @@ import std.typecons : Flag, Yes, No;
 /**
  * Check that an email address conforms to RFCs 5321, 5322 and others.
  *
- * As of Version 3.0, we are now distinguishing clearly between a Mailbox as defined
- * by RFC 5321 and an addr-spec as defined by RFC 5322. Depending on the context,
- * either can be regarded as a valid email address. The RFC 5321 Mailbox specification
- * is more restrictive (comments, white space and obsolete forms are not allowed).
+ * Distinguishes between a Mailbox as defined  by RFC 5321 and an addr-spec as
+ * defined by RFC 5322. Depending on the context, either can be regarded as a
+ * valid email address.
  *
  * Note: The DNS check is currently not implemented.
  *
@@ -56,7 +55,8 @@ import std.typecons : Flag, Yes, No;
  *                  either considered valid or not. Email status code will either be
  *                  EmailStatusCode.valid or EmailStatusCode.error.
  *
- * Returns: an EmailStatus, indicating the status of the email address.
+ * Returns:
+ *     An $(LREF EmailStatus), indicating the status of the email address.
  */
 EmailStatus isEmail(Char)(const(Char)[] email, CheckDns checkDNS = No.checkDns,
 EmailStatusCode errorLevel = EmailStatusCode.none)
@@ -1279,7 +1279,7 @@ if (isSomeChar!(Char))
  */
 alias CheckDns = Flag!"checkDns";
 
-/// This struct represents the status of an email address
+/// Represents the status of an email address
 struct EmailStatus
 {
     private
@@ -1290,7 +1290,7 @@ struct EmailStatus
         EmailStatusCode statusCode_;
     }
 
-    ///
+    /// Self aliases to a `bool` representing if the email is valid or not
     alias valid this;
 
     /*
@@ -1308,37 +1308,37 @@ struct EmailStatus
         this.statusCode_ = statusCode;
     }
 
-    /// Indicates if the email address is valid or not.
+    /// Returns: If the email address is valid or not.
     @property bool valid() const @safe @nogc pure nothrow
     {
         return valid_;
     }
 
-    /// The local part of the email address, that is, the part before the @ sign.
+    /// Returns: The local part of the email address, that is, the part before the @ sign.
     @property string localPart() const @safe @nogc pure nothrow
     {
         return localPart_;
     }
 
-    /// The domain part of the email address, that is, the part after the @ sign.
+    /// Returns: The domain part of the email address, that is, the part after the @ sign.
     @property string domainPart() const @safe @nogc pure nothrow
     {
         return domainPart_;
     }
 
-    /// The email status code
+    /// Returns: The email status code
     @property EmailStatusCode statusCode() const @safe @nogc pure nothrow
     {
         return statusCode_;
     }
 
-    /// Returns a describing string of the status code
+    /// Returns: A describing string of the status code
     @property string status() const @safe @nogc pure nothrow
     {
         return statusCodeDescription(statusCode_);
     }
 
-    /// Returns a textual representation of the email status
+    /// Returns: A textual representation of the email status
     string toString() const @safe pure
     {
         import std.format : format;
@@ -1347,7 +1347,12 @@ struct EmailStatus
     }
 }
 
-/// Returns a describing string of the given status code
+/**
+ * Params:
+ *     statusCode = The $(LREF EmailStatusCode) to read
+ * Returns:
+ *     A detailed string describing the given status code
+ */
 string statusCodeDescription(EmailStatusCode statusCode) @safe @nogc pure nothrow
 {
     final switch (statusCode)
