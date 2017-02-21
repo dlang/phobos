@@ -833,8 +833,8 @@ version (Posix) @system unittest
     // Can't use this for arbitrary descriptors as many shells only support
     // single digit fds.
     TestScript testDefaults = `command >&0 && command >&1 && command >&2`;
-    assert (execute(testDefaults.path).status == 0);
-    assert (execute(testDefaults.path, null, Config.inheritFDs).status == 0);
+    assert(execute(testDefaults.path).status == 0);
+    assert(execute(testDefaults.path, null, Config.inheritFDs).status == 0);
 
     // try /proc/<pid>/fd/ on linux
     version (linux)
@@ -844,8 +844,8 @@ version (Posix) @system unittest
         if (procRes.status == 0)
         {
             auto fdStr = fd.to!string;
-            assert (!procRes.output.split.canFind(fdStr));
-            assert (execute(proc.path, null, Config.inheritFDs)
+            assert(!procRes.output.split.canFind(fdStr));
+            assert(execute(proc.path, null, Config.inheritFDs)
                     .output.split.canFind(fdStr));
             return;
         }
@@ -856,9 +856,9 @@ version (Posix) @system unittest
     auto fuserRes = execute(fuser.path, null);
     if (fuserRes.status == 0)
     {
-        assert (!reverseArgs!canFind(fuserRes
+        assert(!reverseArgs!canFind(fuserRes
                     .output.findSplitBefore("\n").expand));
-        assert (reverseArgs!canFind(execute(fuser.path, null, Config.inheritFDs)
+        assert(reverseArgs!canFind(execute(fuser.path, null, Config.inheritFDs)
                     .output.findSplitBefore("\n").expand));
         return;
     }

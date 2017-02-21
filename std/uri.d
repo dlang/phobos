@@ -467,10 +467,10 @@ if (isSomeChar!Char)
 @safe unittest
 {
     string s1 = "http://www.digitalmars.com/~fred/fredsRX.html#foo end!";
-    assert (uriLength(s1) == 49);
+    assert(uriLength(s1) == 49);
     string s2 = "no uri here";
-    assert (uriLength(s2) == -1);
-    assert (uriLength("issue 14924") < 0);
+    assert(uriLength(s2) == -1);
+    assert(uriLength("issue 14924") < 0);
 }
 
 
@@ -534,10 +534,10 @@ if (isSomeChar!Char)
 @safe unittest
 {
     string s1 = "my.e-mail@www.example-domain.com with garbage added";
-    assert (emailLength(s1) == 32);
+    assert(emailLength(s1) == 32);
     string s2 = "no email address here";
-    assert (emailLength(s2) == -1);
-    assert (emailLength("issue 14924") < 0);
+    assert(emailLength(s2) == -1);
+    assert(emailLength("issue 14924") < 0);
 }
 
 

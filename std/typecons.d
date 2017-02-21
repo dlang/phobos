@@ -1634,7 +1634,7 @@ unittest
     import std.exception : assertThrown;
 
     // enum tupStr = tuple(1, 1.0).toString; // toString is *impure*.
-    //static assert (tupStr == `Tuple!(int, double)(1, 1)`);
+    //static assert(tupStr == `Tuple!(int, double)(1, 1)`);
 
     Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
 
@@ -2078,7 +2078,7 @@ template UnqualRef(T)
 {
     class C { }
     alias T = UnqualRef!(const shared C);
-    static assert (is(typeof(T.stripped) == C));
+    static assert(is(typeof(T.stripped) == C));
 }
 
 
@@ -7278,7 +7278,7 @@ public:
 
     // use & between BitFlags for intersection
     immutable BitFlags!Enum flags_BC = BitFlags!Enum(Enum.B, Enum.C);
-    assert (flags_B == (flags_BC & flags_AB));
+    assert(flags_B == (flags_BC & flags_AB));
 
     // All the binary operators work in their assignment version
     BitFlags!Enum temp = flags_empty;

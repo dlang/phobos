@@ -3310,21 +3310,21 @@ if (!isSomeString!Source && isInputRange!Source && isSomeChar!(ElementType!Sourc
 {
     import std.exception;
 
-    assert (to!bool("TruE") == true);
-    assert (to!bool("faLse"d) == false);
+    assert(to!bool("TruE") == true);
+    assert(to!bool("faLse"d) == false);
     assertThrown!ConvException(to!bool("maybe"));
 
     auto t = "TrueType";
-    assert (parse!bool(t) == true);
-    assert (t == "Type");
+    assert(parse!bool(t) == true);
+    assert(t == "Type");
 
     auto f = "False killer whale"d;
-    assert (parse!bool(f) == false);
-    assert (f == " killer whale"d);
+    assert(parse!bool(f) == false);
+    assert(f == " killer whale"d);
 
     auto m = "maybe";
     assertThrown!ConvException(parse!bool(m));
-    assert (m == "maybe");  // m shouldn't change on failure
+    assert(m == "maybe");  // m shouldn't change on failure
 
     auto s = "true";
     auto b = parse!(const(bool))(s);
@@ -4217,9 +4217,9 @@ package void emplaceRef(T, UT, Args...)(ref UT chunk, auto ref Args args)
 {
     static if (args.length == 0)
     {
-        static assert (is(typeof({static T i;})),
+        static assert(is(typeof({static T i;})),
             convFormat("Cannot emplace a %1$s because %1$s.this() is annotated with @disable.", T.stringof));
-        static if (is(T == class)) static assert (!isAbstractClass!T,
+        static if (is(T == class)) static assert(!isAbstractClass!T,
             T.stringof ~ " is abstract and it can't be emplaced");
         emplaceInitializer(chunk);
     }
@@ -4404,7 +4404,7 @@ Returns: The newly constructed object.
 T emplace(T, Args...)(void[] chunk, auto ref Args args)
 if (is(T == class))
 {
-    static assert (!isAbstractClass!T, T.stringof ~
+    static assert(!isAbstractClass!T, T.stringof ~
         " is abstract and it can't be emplaced");
 
     enum classSize = __traits(classInstanceSize, T);
@@ -5641,13 +5641,13 @@ template castFrom(From)
      */
     auto ref to(To, T)(auto ref T value) @system
     {
-        static assert (
+        static assert(
             is(From == T),
             "the value to cast is not of specified type '" ~ From.stringof ~
                  "', it is of type '" ~ T.stringof ~ "'"
         );
 
-        static assert (
+        static assert(
             is(typeof(cast(To)value)),
             "can't cast from '" ~ From.stringof ~ "' to '" ~ To.stringof ~ "'"
         );
@@ -5681,7 +5681,7 @@ template castFrom(From)
     // allowing bad casts to be caught before it's too late:
     {
         long* x;
-        static assert (
+        static assert(
             !__traits(compiles, castFrom!long.to!int(x))
         );
 

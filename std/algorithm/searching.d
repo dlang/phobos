@@ -1614,10 +1614,10 @@ if (isInputRange!InputRange &&
 @safe unittest
 {
     //CTFE
-    static assert (find("abc", 'b') == "bc");
-    static assert (find("日b語", 'b') == "b語");
-    static assert (find("日本語", '本') == "本語");
-    static assert (find([1, 2, 3], 2)  == [2, 3]);
+    static assert(find("abc", 'b') == "bc");
+    static assert(find("日b語", 'b') == "b語");
+    static assert(find("日本語", '本') == "本語");
+    static assert(find([1, 2, 3], 2)  == [2, 3]);
 
     int[] a1 = [1, 2, 3];
     static assert(find              ([1, 2, 3], 2));
@@ -3079,7 +3079,7 @@ if (isInputRange!Range && !isInfinite!Range &&
     alias UT = Unqual!T;
     alias RetType = Tuple!(T, size_t);
 
-    static assert (is(typeof(RetType(range.front, 1))),
+    static assert(is(typeof(RetType(range.front, 1))),
         algoFormat("Error: Cannot call minCount on a %s, because it is not possible "~
                "to copy the result value (a %s) into a Tuple.", Range.stringof, T.stringof));
 

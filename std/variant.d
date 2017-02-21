@@ -1764,7 +1764,7 @@ unittest
 unittest
 {
     Variant v = 5;
-    assert (!__traits(compiles, v.coerce!(bool delegate())));
+    assert(!__traits(compiles, v.coerce!(bool delegate())));
 }
 
 

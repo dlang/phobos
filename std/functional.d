@@ -451,7 +451,7 @@ if (S=="<"||S==">"||S=="<="||S==">="||S=="=="||S=="!=")
         }
         else
         {
-            static assert (is(typeof(mixin("a "~S~" b"))),
+            static assert(is(typeof(mixin("a "~S~" b"))),
                 "Invalid arguments: Cannot compare types " ~ T0.stringof ~ " and " ~ T1.stringof ~ ".");
 
             immutable result = mixin("a "~S~" b");

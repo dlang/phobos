@@ -3056,7 +3056,7 @@ unittest
     foreach (t; spawned)
         t.join();
 
-    assert (atomicOp!"=="(logged_count, 4));
+    assert(atomicOp!"=="(logged_count, 4));
 }
 
 @safe unittest

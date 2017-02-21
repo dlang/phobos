@@ -1212,12 +1212,12 @@ UUID randomUUID(RNG)(ref RNG randomGen)
 if (isInputRange!RNG && isIntegral!(ElementType!RNG))
 {
     import std.random : isUniformRNG;
-    static assert (isUniformRNG!RNG, "randomGen must be a uniform RNG");
+    static assert(isUniformRNG!RNG, "randomGen must be a uniform RNG");
 
     alias E = ElementEncodingType!RNG;
     enum size_t elemSize = E.sizeof;
-    static assert (elemSize <= 16);
-    static assert (16 % elemSize == 0);
+    static assert(elemSize <= 16);
+    static assert(16 % elemSize == 0);
 
     UUID u;
     foreach (ref E e ; u.asArrayOf!E())

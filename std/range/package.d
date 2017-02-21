@@ -2154,7 +2154,7 @@ pure @safe nothrow unittest
     // Test fix for bug 5052.
     auto takeMyStrAgain = take(takeMyStr, 4);
     assert(assumeWontThrow(equal(takeMyStrAgain, "This")));
-    static assert (is (typeof(takeMyStrAgain) == typeof(takeMyStr)));
+    static assert(is (typeof(takeMyStrAgain) == typeof(takeMyStr)));
     takeMyStrAgain = take(takeMyStr, 10);
     assert(assumeWontThrow(equal(takeMyStrAgain, "This is")));
 
@@ -3777,7 +3777,7 @@ if (isStaticArray!R)
 
     InfRange i;
     auto c = cycle(i);
-    assert (c == i);
+    assert(c == i);
 }
 
 @safe unittest
@@ -7073,31 +7073,31 @@ if (isForwardRange!Source)
     auto chunks1 = [0, 0, 1, 1, 2, 2, 3, 3, 4].chunks(2);
     auto chunks2 = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4].chunks(2);
 
-    assert (chunks1.length == 5);
-    assert (chunks2.length == 5);
-    assert (chunks1[4] == [4]);
-    assert (chunks2[4] == [4, 4]);
-    assert (chunks1.back == [4]);
-    assert (chunks2.back == [4, 4]);
+    assert(chunks1.length == 5);
+    assert(chunks2.length == 5);
+    assert(chunks1[4] == [4]);
+    assert(chunks2[4] == [4, 4]);
+    assert(chunks1.back == [4]);
+    assert(chunks2.back == [4, 4]);
 
-    assert (chunks1[0 .. 1].equal([[0, 0]]));
-    assert (chunks1[0 .. 2].equal([[0, 0], [1, 1]]));
-    assert (chunks1[4 .. 5].equal([[4]]));
-    assert (chunks2[4 .. 5].equal([[4, 4]]));
+    assert(chunks1[0 .. 1].equal([[0, 0]]));
+    assert(chunks1[0 .. 2].equal([[0, 0], [1, 1]]));
+    assert(chunks1[4 .. 5].equal([[4]]));
+    assert(chunks2[4 .. 5].equal([[4, 4]]));
 
-    assert (chunks1[0 .. 0].equal((int[][]).init));
-    assert (chunks1[5 .. 5].equal((int[][]).init));
-    assert (chunks2[5 .. 5].equal((int[][]).init));
+    assert(chunks1[0 .. 0].equal((int[][]).init));
+    assert(chunks1[5 .. 5].equal((int[][]).init));
+    assert(chunks2[5 .. 5].equal((int[][]).init));
 
     //Fun with opDollar
-    assert (chunks1[$ .. $].equal((int[][]).init)); //Quick
-    assert (chunks2[$ .. $].equal((int[][]).init)); //Quick
-    assert (chunks1[$ - 1 .. $].equal([[4]]));      //Semiquick
-    assert (chunks2[$ - 1 .. $].equal([[4, 4]]));   //Semiquick
-    assert (chunks1[$ .. 5].equal((int[][]).init)); //Semiquick
-    assert (chunks2[$ .. 5].equal((int[][]).init)); //Semiquick
+    assert(chunks1[$ .. $].equal((int[][]).init)); //Quick
+    assert(chunks2[$ .. $].equal((int[][]).init)); //Quick
+    assert(chunks1[$ - 1 .. $].equal([[4]]));      //Semiquick
+    assert(chunks2[$ - 1 .. $].equal([[4, 4]]));   //Semiquick
+    assert(chunks1[$ .. 5].equal((int[][]).init)); //Semiquick
+    assert(chunks2[$ .. 5].equal((int[][]).init)); //Semiquick
 
-    assert (chunks1[$ / 2 .. $ - 1].equal([[2, 2], [3, 3]])); //Slow
+    assert(chunks1[$ / 2 .. $ - 1].equal([[2, 2], [3, 3]])); //Slow
 }
 
 unittest

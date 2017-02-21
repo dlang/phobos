@@ -170,7 +170,7 @@ template IRL(IR code)
 {
     enum uint IRL =  lengthOfIR(code);
 }
-static assert (IRL!(IR.LookaheadStart) == 3);
+static assert(IRL!(IR.LookaheadStart) == 3);
 
 //how many parameters follow the IR, should be optimized fixing some IR bits
 int immediateParamsIR(IR i){
