@@ -411,7 +411,7 @@ if (isSomeChar!(Char))
                             if (index == 0)
                                 returnStatus ~= EmailStatusCode.rfc5321AddressLiteral;
 
-                            else if (addressLiteral.compareFirstN(Token.ipV6Tag, 5, true))
+                            else if (addressLiteral.compareFirstN(Token.ipV6Tag, 5))
                                 returnStatus ~= EmailStatusCode.rfc5322DomainLiteral;
 
                             else
@@ -777,7 +777,7 @@ if (isSomeChar!(Char))
     return EmailStatus(valid, to!(string)(localPart), to!(string)(domainPart), finalStatus);
 }
 
-@system unittest
+@safe unittest
 {
     assert(`test.test@iana.org`.isEmail(No.checkDns).statusCode == EmailStatusCode.valid);
     assert(`test.test@iana.org`.isEmail(No.checkDns, EmailStatusCode.none).statusCode == EmailStatusCode.valid);
@@ -1257,7 +1257,7 @@ if (isSomeChar!(Char))
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=17217
-@system unittest
+@safe unittest
 {
     wstring a = `test.test@iana.org`w;
     dstring b = `test.test@iana.org`d;
@@ -1880,24 +1880,23 @@ unittest
  * $(TR $(TD $(D > 0))  $(TD $(D s1 > s2)))
  * )
  */
-int compareFirstN (alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length, bool caseInsensitive = false)
+int compareFirstN(alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length)
 if (is(Unqual!(ElementType!(S1)) == dchar) && is(Unqual!(ElementType!(S2)) == dchar))
 {
     import std.uni : icmp;
-    import std.algorithm.comparison : cmp;
     auto s1End = length <= s1.length ? length : s1.length;
     auto s2End = length <= s2.length ? length : s2.length;
 
     auto slice1 = s1[0 .. s1End];
     auto slice2 = s2[0 .. s2End];
 
-    return caseInsensitive ? slice1.icmp(slice2) : slice1.cmp(slice2);
+    return slice1.icmp(slice2);
 }
 
 unittest
 {
     assert("abc".compareFirstN("abcdef", 3) == 0);
-    assert("abc".compareFirstN("Abc", 3, true) == 0);
+    assert("abc".compareFirstN("Abc", 3) == 0);
     assert("abc".compareFirstN("abcdef", 6) < 0);
     assert("abcdef".compareFirstN("abc", 6) > 0);
 }
