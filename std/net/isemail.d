@@ -26,8 +26,13 @@ module std.net.isemail;
 
 // FIXME
 import std.range.primitives; // : ElementType;
+import std.regex;
 import std.traits;
 import std.typecons : Flag, Yes, No;
+
+private static ipRegex = ctRegex!(`\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}`~
+                        `(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`);
+private static fourChars = ctRegex!(`^[0-9A-Fa-f]{0,4}$`);
 
 /**
  * Check that an email address conforms to RFCs 5321, 5322 and others.
@@ -57,16 +62,15 @@ import std.typecons : Flag, Yes, No;
  *
  * Returns: an EmailStatus, indicating the status of the email address.
  */
-EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns,
+EmailStatus isEmail(Char)(const(Char)[] email, CheckDns checkDNS = No.checkDns,
 EmailStatusCode errorLevel = EmailStatusCode.none)
 if (isSomeChar!(Char))
 {
-    import std.algorithm.iteration : uniq;
+    import std.algorithm.iteration : uniq, filter, map;
     import std.algorithm.searching : canFind, maxElement;
     import std.exception : enforce;
     import std.array : array, split;
     import std.conv : to;
-    import std.regex : match, regex;
     import std.string : indexOf, lastIndexOf;
     import std.uni : isNumber;
 
@@ -393,9 +397,7 @@ if (isSomeChar!(Char))
                             auto maxGroups = 8;
                             size_t index = -1;
                             auto addressLiteral = parseData[EmailPart.componentLiteral];
-                            enum regexStr = `\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}`~
-                                            `(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`;
-                            auto matchesIp = array(addressLiteral.match(regex!tstring(regexStr)).captures);
+                            auto matchesIp = addressLiteral.matchAll(ipRegex).map!(a => a.hit).array;
 
                             if (!matchesIp.empty)
                             {
@@ -448,7 +450,9 @@ if (isSomeChar!(Char))
                                 else if (ipV6.substr(-1) == Token.colon && ipV6.substr(-2, -1) != Token.colon)
                                     returnStatus ~= EmailStatusCode.rfc5322IpV6ColonEnd;
 
-                                else if (!matchesIp.grep(regex!(tstring)(`^[0-9A-Fa-f]{0,4}$`), true).empty)
+                                else if (!matchesIp
+                                        .filter!(a => a.matchFirst(fourChars).empty)
+                                        .empty)
                                     returnStatus ~= EmailStatusCode.rfc5322IpV6BadChar;
 
                                 else
@@ -1876,36 +1880,6 @@ unittest
     assert("abc".compareFirstN("Abc", 3, true) == 0);
     assert("abc".compareFirstN("abcdef", 6) < 0);
     assert("abcdef".compareFirstN("abc", 6) > 0);
-}
-
-/*
- * Returns a range consisting of the elements of the $(D_PARAM input) range that
- * matches the given $(D_PARAM pattern).
- *
- * Params:
- *     input = the input range
- *     pattern = the regular expression pattern to search for
- *     invert = if $(D_KEYWORD true), this function returns the elements of the
- *              input range that do $(B not) match the given $(D_PARAM pattern).
- *
- * Returns: a range containing the matched elements
- */
-auto grep (Range, Regex) (Range input, Regex pattern, bool invert = false)
-{
-    import std.regex : match;
-    import std.algorithm.iteration : filter;
-    auto dg = invert ? (ElementType!(Range) e) { return e.match(pattern).empty; } :
-                       (ElementType!(Range) e) { return !e.match(pattern).empty; };
-
-    return filter!(dg)(input);
-}
-
-unittest
-{
-    import std.algorithm.comparison : equal;
-    import std.regex;
-    assert(equal(["ab", "0a", "cd", "1b"].grep(regex(`\d\w`)), ["0a", "1b"]));
-    assert(equal(["abc", "0123", "defg", "4567"].grep(regex(`4567`), true), ["abc", "0123", "defg"]));
 }
 
 /*
