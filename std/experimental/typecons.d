@@ -63,7 +63,7 @@ unittest
     class C { @disable opCast(T)() {} }
     auto c = new C;
     static assert(!__traits(compiles, cast(Object)c));
-    auto o = dynamicCast!Object(c);
+    immutable o = dynamicCast!Object(c);
     assert(c is o);
 
     interface I { @disable opCast(T)() {} Object instance(); }
@@ -639,7 +639,7 @@ unittest
 
     auto ma = new A();
     auto sa = new shared A();
-    auto ia = new immutable A();
+    immutable ia = new immutable A();
     {
                      Drawable  md = ma.wrap!Drawable;
                const Drawable  cd = ma.wrap!Drawable;
@@ -1019,7 +1019,7 @@ pure nothrow @safe unittest
 
 pure nothrow @safe unittest
 {
-    auto arr = makeFinal([1, 2, 3]);
+    immutable arr = makeFinal([1, 2, 3]);
     static assert(!__traits(compiles, arr = null));
     static assert(!__traits(compiles, arr ~= 4));
     assert((arr ~ 4) == [1, 2, 3, 4]);

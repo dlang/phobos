@@ -394,8 +394,8 @@ struct RBNode(V)
             yp = y._parent;
             yl = y._left;
             yr = y._right;
-            auto yc = y.color;
-            auto isyleft = y.isLeftNode;
+            immutable yc = y.color;
+            immutable isyleft = y.isLeftNode;
 
             //
             // replace y's structure with structure of this node.
@@ -828,8 +828,8 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
 
         assert(r.front == vals.front);
         assert(r.back != r.front);
-        auto oldfront = r.front;
-        auto oldback = r.back;
+        immutable oldfront = r.front;
+        immutable oldback = r.back;
         r.popFront();
         r.popBack();
         assert(r.front != r.back);
@@ -1055,7 +1055,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
 
     static if (doUnittest) @safe pure unittest
     {
-        auto ts = new RedBlackTree(1, 2, 3, 4, 5);
+        immutable ts = new RedBlackTree(1, 2, 3, 4, 5);
         assert(cast(Elem)3 in ts);
         assert(cast(Elem)6 !in ts);
     }
@@ -1083,11 +1083,11 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
 
     static if (doUnittest) unittest
     {
-        auto t1 = new RedBlackTree(1,2,3,4);
-        auto t2 = new RedBlackTree(1,2,3,4);
-        auto t3 = new RedBlackTree(1,2,3,5);
-        auto t4 = new RedBlackTree(1,2,3,4,5);
-        auto o = new Object();
+        immutable t1 = new RedBlackTree(1,2,3,4);
+        immutable t2 = new RedBlackTree(1,2,3,4);
+        immutable t3 = new RedBlackTree(1,2,3,5);
+        immutable t4 = new RedBlackTree(1,2,3,4,5);
+        immutable o = new Object();
 
         assert(t1 == t1);
         assert(t1 == t2);
@@ -1222,7 +1222,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
     {
         auto ts = new RedBlackTree(1,2,3,4,5);
         assert(ts.length == 5);
-        auto x = ts.removeAny();
+        immutable x = ts.removeAny();
         assert(ts.length == 4);
         Elem[] arr;
         foreach (Elem i; 1..6)
@@ -1803,10 +1803,10 @@ assert(equal(rbt[], [5]));
 {
     void test(T)()
     {
-        auto rt1 = new RedBlackTree!(T, "a < b", false)();
-        auto rt2 = new RedBlackTree!(T, "a < b", true)();
-        auto rt3 = new RedBlackTree!(T, "a > b", false)();
-        auto rt4 = new RedBlackTree!(T, "a > b", true)();
+        immutable rt1 = new RedBlackTree!(T, "a < b", false)();
+        immutable rt2 = new RedBlackTree!(T, "a < b", true)();
+        immutable rt3 = new RedBlackTree!(T, "a > b", false)();
+        immutable rt4 = new RedBlackTree!(T, "a > b", true)();
     }
 
     test!long();
@@ -1899,25 +1899,25 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
 {
     import std.range : iota;
 
-    auto rbt1 = redBlackTree(0, 1, 5, 7);
-    auto rbt2 = redBlackTree!string("hello", "world");
-    auto rbt3 = redBlackTree!true(0, 1, 5, 7, 5);
-    auto rbt4 = redBlackTree!"a > b"(0, 1, 5, 7);
-    auto rbt5 = redBlackTree!("a > b", true)(0.1, 1.3, 5.9, 7.2, 5.9);
+    immutable rbt1 = redBlackTree(0, 1, 5, 7);
+    immutable rbt2 = redBlackTree!string("hello", "world");
+    immutable rbt3 = redBlackTree!true(0, 1, 5, 7, 5);
+    immutable rbt4 = redBlackTree!"a > b"(0, 1, 5, 7);
+    immutable rbt5 = redBlackTree!("a > b", true)(0.1, 1.3, 5.9, 7.2, 5.9);
 
     // also works with ranges
-    auto rbt6 = redBlackTree(iota(3));
-    auto rbt7 = redBlackTree!true(iota(3));
-    auto rbt8 = redBlackTree!"a > b"(iota(3));
-    auto rbt9 = redBlackTree!("a > b", true)(iota(3));
+    immutable rbt6 = redBlackTree(iota(3));
+    immutable rbt7 = redBlackTree!true(iota(3));
+    immutable rbt8 = redBlackTree!"a > b"(iota(3));
+    immutable rbt9 = redBlackTree!("a > b", true)(iota(3));
 }
 
 //Combinations not in examples.
 @safe pure unittest
 {
-    auto rbt1 = redBlackTree!(true, string)("hello", "hello");
+    immutable rbt1 = redBlackTree!(true, string)("hello", "hello");
     auto rbt2 = redBlackTree!((a, b){return a < b;}, double)(5.1, 2.3);
-    auto rbt3 = redBlackTree!("a > b", true, string)("hello", "world");
+    immutable rbt3 = redBlackTree!("a > b", true, string)("hello", "world");
 }
 
 //Range construction.
@@ -2010,17 +2010,17 @@ unittest
 {
     import std.conv : to;
 
-    auto rt1 = redBlackTree!string();
+    immutable rt1 = redBlackTree!string();
     assert(rt1.to!string == "RedBlackTree([])");
 
-    auto rt2 = redBlackTree!string("hello");
+    immutable rt2 = redBlackTree!string("hello");
     assert(rt2.to!string == "RedBlackTree([\"hello\"])");
 
-    auto rt3 = redBlackTree!string("hello", "world", "!");
+    immutable rt3 = redBlackTree!string("hello", "world", "!");
     assert(rt3.to!string == "RedBlackTree([\"!\", \"hello\", \"world\"])");
 
     // type deduction can be done automatically
-    auto rt4 = redBlackTree(["hello"]);
+    immutable rt4 = redBlackTree(["hello"]);
     assert(rt4.to!string == "RedBlackTree([\"hello\"])");
 }
 

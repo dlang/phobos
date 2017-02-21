@@ -476,7 +476,7 @@ if (isCurlConn!Conn)
         import std.stdio : File;
         auto f = File(loadFromPath, "rb");
         conn.onSend = buf => f.rawRead(buf).length;
-        auto sz = f.size;
+        immutable sz = f.size;
         if (sz != ulong.max)
             conn.contentLength = sz;
         conn.perform();
@@ -1073,7 +1073,7 @@ unittest
         assert(req.hdrs.canFind("GET /path"));
         s.send(httpNotFound());
     });
-    auto e = collectException!CurlException(get(testServer.addr ~ "/path"));
+    immutable e = collectException!CurlException(get(testServer.addr ~ "/path"));
     assert(e.msg == "HTTP request returned status code 404 (Not Found)");
 }
 
@@ -1340,7 +1340,7 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            auto req = s.recvReq;
+            immutable req = s.recvReq;
             s.send(httpOK("Line1\nLine2\nLine3"));
         });
         assert(byLine(host).equal(["Line1", "Line2", "Line3"]));
@@ -1414,7 +1414,7 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            auto req = s.recvReq;
+            immutable req = s.recvReq;
             s.send(httpOK(cast(ubyte[])[0, 1, 2, 3, 4, 5]));
         });
         assert(byChunk(host, 2).equal([[0, 1], [2, 3], [4, 5]]));
@@ -1709,7 +1709,7 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            auto req = s.recvReq;
+            immutable req = s.recvReq;
             s.send(httpOK("Line1\nLine2\nLine3"));
         });
         assert(byLineAsync(host).equal(["Line1", "Line2", "Line3"]));
@@ -1857,7 +1857,7 @@ unittest
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
         testServer.handle((s) {
-            auto req = s.recvReq;
+            immutable req = s.recvReq;
             s.send(httpOK(cast(ubyte[])[0, 1, 2, 3, 4, 5]));
         });
         assert(byChunkAsync(host, 2).equal([[0, 1], [2, 3], [4, 5]]));

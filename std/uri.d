@@ -81,7 +81,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
     uint Rlen;
     uint Rsize; // alloc'd size
 
-    auto len = string.length;
+    immutable len = string.length;
 
     R = buffer.ptr;
     Rsize = buffer.length;
@@ -209,7 +209,7 @@ if (isSomeChar!Char)
     dchar* R;
     uint Rlen;
 
-    auto len = uri.length;
+    immutable len = uri.length;
     auto s = uri.ptr;
 
     // Preallocate result buffer R guaranteed to be large enough for result

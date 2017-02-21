@@ -636,7 +636,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
 @safe unittest
 {
     string str = "a,b,c\nHello,65,63.63\nWorld,123,3673.562";
-    auto records = csvReader(str, ["a"]);
+    immutable records = csvReader(str, ["a"]);
 
     assert(records.header == ["a","b","c"]);
 }
@@ -1689,9 +1689,9 @@ if (isSomeChar!Separator && isInputRange!Range
     i = 0;
     foreach (data; csvReader!real(csv))
     {
-        auto a = data.front;    data.popFront();
-        auto b = data.front;    data.popFront();
-        auto c = data.front;
+        immutable a = data.front;    data.popFront();
+        immutable b = data.front;    data.popFront();
+        immutable c = data.front;
         int[] row = [cast(int)a, cast(int)b, cast(int)c];
         if (i == 0)
             assert(row == [1, 2, 3]);

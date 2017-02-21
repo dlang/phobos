@@ -60,7 +60,7 @@ unittest
     md5.put(data[]);
     md5.start(); //Start again
     md5.put(data[]);
-    auto hash = md5.finish();
+    immutable hash = md5.finish();
 }
 
 ///

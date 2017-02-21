@@ -857,7 +857,7 @@ if (F.length > 1)
     }
     S s;
     s.store = (int a) { return eff4(a); };
-    auto x4 = s.fun();
+    immutable x4 = s.fun();
     assert(x4 == 43);
 }
 
@@ -1143,7 +1143,7 @@ template memoize(alias fun, uint maxSize)
         return n < 2 ? 1 : mfib(n - 2) + mfib(n - 1);
     }
 
-    auto z = fib(10);
+    immutable z = fib(10);
     assert(z == 89);
 
     static ulong fact(ulong n) @safe
@@ -1283,7 +1283,7 @@ if (isCallable!(F))
         df.contextPtr = cast(void*) fp;
 
         DelegateFaker!(F) dummy;
-        auto dummyDel = &dummy.doIt;
+        immutable dummyDel = &dummy.doIt;
         df.funcPtr = dummyDel.funcptr;
 
         return df.del;
@@ -1300,7 +1300,7 @@ if (isCallable!(F))
     uint myNum = 0;
     auto incMyNumDel = toDelegate(&inc);
     int delegate(ref uint) dg = incMyNumDel;
-    auto returnVal = incMyNumDel(myNum);
+    immutable returnVal = incMyNumDel(myNum);
     assert(myNum == 1);
 
     interface I { int opCall(); }
@@ -1369,8 +1369,8 @@ if (isCallable!(F))
             extern(C) static void xtrnC() {}
             extern(D) static void xtrnD() {}
         }
-        auto dg_xtrnC = toDelegate(&S.xtrnC);
-        auto dg_xtrnD = toDelegate(&S.xtrnD);
+        immutable dg_xtrnC = toDelegate(&S.xtrnC);
+        immutable dg_xtrnD = toDelegate(&S.xtrnD);
         static assert(! is(typeof(dg_xtrnC) == typeof(dg_xtrnD)));
     }
 }
@@ -1468,5 +1468,5 @@ template forward(args...)
     }
     static assert(!__traits(compiles, { auto x1 = bar(3); })); // case of NG
     int value = 3;
-    auto x2 = bar(value); // case of OK
+    immutable x2 = bar(value); // case of OK
 }

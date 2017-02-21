@@ -743,7 +743,7 @@ template isOutputRange(R, E)
     import std.array;
     import std.stdio : writeln;
 
-    auto app = appender!string();
+    immutable app = appender!string();
     string s;
     static assert( isOutputRange!(Appender!string, string));
     static assert( isOutputRange!(Appender!string*, string));
@@ -1087,7 +1087,7 @@ template hasMobileElements(R)
         this(this) {}
     }
 
-    auto nonMobile = map!"a"(repeat(HasPostblit.init));
+    immutable nonMobile = map!"a"(repeat(HasPostblit.init));
     static assert(!hasMobileElements!(typeof(nonMobile)));
     static assert( hasMobileElements!(int[]));
     static assert( hasMobileElements!(inout(int)[]));
@@ -1146,7 +1146,7 @@ template ElementType(R)
 @safe unittest
 {
     enum XYZ : string { a = "foo" }
-    auto x = XYZ.a.front;
+    immutable x = XYZ.a.front;
     immutable char[3] a = "abc";
     int[] i;
     void[] buf;
@@ -1228,7 +1228,7 @@ template ElementEncodingType(R)
 @safe unittest
 {
     enum XYZ : string { a = "foo" }
-    auto x = XYZ.a.front;
+    immutable x = XYZ.a.front;
     immutable char[3] a = "abc";
     int[] i;
     void[] buf;
@@ -1766,7 +1766,7 @@ if (isBidirectionalRange!Range)
     import std.algorithm.comparison : equal;
     import std.range : iota;
     auto LL = iota(1L, 7L);
-    auto r = popFrontN(LL, 2);
+    immutable r = popFrontN(LL, 2);
     assert(equal(LL, [3L, 4L, 5L, 6L]));
     assert(r == 2);
 }
@@ -1787,7 +1787,7 @@ if (isBidirectionalRange!Range)
     import std.algorithm.comparison : equal;
     import std.range : iota;
     auto LL = iota(1L, 7L);
-    auto r = popBackN(LL, 2);
+    immutable r = popBackN(LL, 2);
     assert(equal(LL, [1L, 2L, 3L, 4L]));
     assert(r == 2);
 }
@@ -1968,7 +1968,7 @@ ElementType!R moveBack(R)(R r)
     }
     static assert(isBidirectionalRange!TestRange);
     TestRange r;
-    auto x = moveBack(r);
+    immutable x = moveBack(r);
     assert(x == 5);
 }
 
@@ -2064,8 +2064,8 @@ content of the array, it simply returns its argument.
 ///
 @safe pure nothrow unittest
 {
-    auto a = [ 1, 2, 3 ];
-    auto b = a.save;
+    immutable a = [ 1, 2, 3 ];
+    immutable b = a.save;
     assert(b is a);
 }
 
@@ -2239,7 +2239,7 @@ if (isNarrowString!(T[]))
         s.popBack();
         assert(s == "hello");
         S s3 = "\xE2\x89\xA0";
-        auto c = s3.back;
+        immutable c = s3.back;
         assert(c == cast(dchar)'\u2260');
         s3.popBack();
         assert(s3 == "");

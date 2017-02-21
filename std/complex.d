@@ -327,7 +327,7 @@ if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, C)(C z)
         if (op == "*" && is(C R == Complex!R))
     {
-        auto temp = re*z.re - im*z.im;
+        immutable temp = re*z.re - im*z.im;
         im = im*z.re + re*z.im;
         re = temp;
         return this;
@@ -420,7 +420,7 @@ if (isFloatingPoint!T)
             this *= this;
             break;
         case 3:
-            auto z = this;
+            immutable z = this;
             this *= z;
             this *= z;
             break;
@@ -449,11 +449,11 @@ if (isFloatingPoint!T)
     assert (c2 == -(-c2));
 
     // Check complex-complex operations.
-    auto cpc = c1 + c2;
+    immutable cpc = c1 + c2;
     assert (cpc.re == c1.re + c2.re);
     assert (cpc.im == c1.im + c2.im);
 
-    auto cmc = c1 - c2;
+    immutable cmc = c1 - c2;
     assert (cmc.re == c1.re - c2.re);
     assert (cmc.im == c1.im - c2.im);
 
@@ -472,15 +472,15 @@ if (isFloatingPoint!T)
     // Check complex-real operations.
     double a = 123.456;
 
-    auto cpr = c1 + a;
+    immutable cpr = c1 + a;
     assert (cpr.re == c1.re + a);
     assert (cpr.im == c1.im);
 
-    auto cmr = c1 - a;
+    immutable cmr = c1 - a;
     assert (cmr.re == c1.re - a);
     assert (cmr.im == c1.im);
 
-    auto ctr = c1 * a;
+    immutable ctr = c1 * a;
     assert (ctr.re == c1.re*a);
     assert (ctr.im == c1.im*a);
 
@@ -492,14 +492,14 @@ if (isFloatingPoint!T)
     assert (approxEqual(abs(cer), abs(c1)^^3, EPS));
     assert (approxEqual(arg(cer), arg(c1)*3, EPS));
 
-    auto rpc = a + c1;
+    immutable rpc = a + c1;
     assert (rpc == cpr);
 
-    auto rmc = a - c1;
+    immutable rmc = a - c1;
     assert (rmc.re == a-c1.re);
     assert (rmc.im == -c1.im);
 
-    auto rtc = a * c1;
+    immutable rtc = a * c1;
     assert (rtc == ctr);
 
     auto rdc = a / c1;
@@ -510,11 +510,11 @@ if (isFloatingPoint!T)
     assert (approxEqual(abs(rdc), a/abs(c2), EPS));
     assert (approxEqual(arg(rdc), -arg(c2), EPS));
 
-    auto rec1a = 1.0 ^^ c1;
+    immutable rec1a = 1.0 ^^ c1;
     assert(rec1a.re == 1.0);
     assert(rec1a.im == 0.0);
 
-    auto rec2a = 1.0 ^^ c2;
+    immutable rec2a = 1.0 ^^ c2;
     assert(rec2a.re == 1.0);
     assert(rec2a.im == 0.0);
 
@@ -576,8 +576,8 @@ if (isFloatingPoint!T)
     }
 
     // Check operations between different complex types.
-    auto cf = Complex!float(1.0, 1.0);
-    auto cr = Complex!real(1.0, 1.0);
+    immutable cf = Complex!float(1.0, 1.0);
+    immutable cr = Complex!real(1.0, 1.0);
     auto c1pcf = c1 + cf;
     auto c1pcr = c1 + cr;
     static assert (is(typeof(c1pcf) == Complex!double));
@@ -635,12 +635,12 @@ if (isFloatingPoint!T)
     assert (z == 1.0L);
     assert (z.re == 1.0  &&  z.im == 0.0);
 
-    auto w = Complex!real(1.0, 1.0);
+    immutable w = Complex!real(1.0, 1.0);
     z = w;
     assert (z == w);
     assert (z.re == 1.0  &&  z.im == 1.0);
 
-    auto c = Complex!float(2.0, 2.0);
+    immutable c = Complex!float(2.0, 2.0);
     z = c;
     assert (z == c);
     assert (z.re == 2.0  &&  z.im == 2.0);
@@ -675,11 +675,11 @@ if (is(T R == Complex!R))
         return x + Complex!T(0.0, 1.0);
     }
 
-    auto z1 = addI(1.0);
+    immutable z1 = addI(1.0);
     assert (z1.re == 1.0 && z1.im == 1.0);
 
     enum one = Complex!double(1.0, 0.0);
-    auto z2 = addI(one);
+    immutable z2 = addI(one);
     assert (z1 == z2);
 }
 
@@ -873,8 +873,8 @@ Complex!real expi(real y)  @trusted pure nothrow @nogc
 
     assert(expi(1.3e5L) == complex(std.math.cos(1.3e5L), std.math.sin(1.3e5L)));
     assert(expi(0.0L) == 1.0L);
-    auto z1 = expi(1.234);
-    auto z2 = std.math.expi(1.234);
+    immutable z1 = expi(1.234);
+    immutable z2 = std.math.expi(1.234);
     assert(z1.re == z2.re && z1.im == z2.im);
 }
 
@@ -972,7 +972,7 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     {
         import std.array : appender;
         auto w = appender!wstring();
-        auto n = formattedWrite(w, format, c);
+        immutable n = formattedWrite(w, format, c);
         return w.data;
     }
 

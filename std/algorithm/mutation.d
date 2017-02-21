@@ -208,7 +208,7 @@ buffer. For example:
 @safe unittest
 {
     auto arr = [4, 5, 6, 7, 1, 2, 3];
-    auto p = bringToFront(arr[0 .. 4], arr[4 .. $]);
+    immutable p = bringToFront(arr[0 .. 4], arr[4 .. $]);
     assert(p == arr.length - 4);
     assert(arr == [ 1, 2, 3, 4, 5, 6, 7 ]);
 }
@@ -286,7 +286,7 @@ Unicode integrity is not preserved:
         int[] c = a ~ b;
         // writeln("a= ", a);
         // writeln("b= ", b);
-        auto n = bringToFront(c[0 .. a.length], c[a.length .. $]);
+        immutable n = bringToFront(c[0 .. a.length], c[a.length .. $]);
         //writeln("c= ", c);
         assert(n == b.length);
         assert(c == b ~ a, text(c, "\n", a, "\n", b));
@@ -308,7 +308,7 @@ Unicode integrity is not preserved:
         }
         auto a = R!int([1, 2, 3, 4, 5]);
         auto b = R!real([6, 7, 8, 9]);
-        auto n = bringToFront(a, b);
+        immutable n = bringToFront(a, b);
         assert(n == 4);
         assert(a.data == [6, 7, 8, 9, 1]);
         assert(b.data == [2, 3, 4, 5]);
@@ -334,7 +334,7 @@ Unicode integrity is not preserved:
 
     // Bugzilla 16959
     auto arr = ['4', '5', '6', '7', '1', '2', '3'];
-    auto p = bringToFront(arr[0 .. 4], arr[4 .. $]);
+    immutable p = bringToFront(arr[0 .. 4], arr[4 .. $]);
 
     assert(p == arr.length - 4);
     assert(arr == ['1', '2', '3', '4', '5', '6', '7']);
@@ -1241,7 +1241,7 @@ unittest// Issue 8055
     }
     S a;
     a.x = 0;
-    auto b = foo(a);
+    immutable b = foo(a);
     assert(b.x == 0);
 }
 
@@ -1906,7 +1906,7 @@ if (s == SwapStrategy.stable
     import std.range;
     // Bug# 12889
     int[1][] arr = [[0], [1], [2], [3], [4], [5], [6]];
-    auto orig = arr.dup;
+    immutable orig = arr.dup;
     foreach (i; iota(arr.length))
     {
         assert(orig == arr.remove!(SwapStrategy.unstable)(tuple(i,i)));

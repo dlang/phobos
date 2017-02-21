@@ -1553,7 +1553,7 @@ void main()
         foreach (uint i, C; Tuple!(char, wchar, dchar).Types)
         {
             immutable(C)[] witness = "cześć \U0002000D";
-            auto buf = File(deleteme).readln!(immutable(C)[])();
+            immutable buf = File(deleteme).readln!(immutable(C)[])();
             assert(buf.length == lengths[i]);
             assert(buf == witness);
         }
@@ -1648,7 +1648,7 @@ is recommended if you want to process a complete file.
             if (_p.orientation == Orientation.unknown)
             {
                 import core.stdc.wchar_ : fwide;
-                auto w = fwide(_p.handle, 0);
+                immutable w = fwide(_p.handle, 0);
                 if (w < 0) _p.orientation = Orientation.narrow;
                 else if (w > 0) _p.orientation = Orientation.wide;
             }
@@ -2656,7 +2656,7 @@ $(D Range) that locks the file and allows fast writing to it.
                 {
                     //file.write(writeme); causes infinite recursion!!!
                     //file.rawWrite(writeme);
-                    auto result = trustedFwrite(fps_, writeme);
+                    immutable result = trustedFwrite(fps_, writeme);
                     if (result != writeme.length) errnoEnforce(0);
                     return;
                 }
@@ -3170,7 +3170,7 @@ void main()
 @safe unittest
 {
     import std.exception : collectException;
-    auto e = collectException({ File f; f.writeln("Hello!"); }());
+    immutable e = collectException({ File f; f.writeln("Hello!"); }());
     assert(e && e.msg == "Attempting to write to closed File");
 }
 
@@ -4323,14 +4323,14 @@ Initialize with a message and an error code.
             else
             {
                 strerror_r(errno, buf.ptr, buf.length);
-                auto s = buf.ptr;
+                immutable s = buf.ptr;
             }
         }
         else
         {
             import core.stdc.string : strerror;
 
-            auto s = strerror(errno);
+            immutable s = strerror(errno);
         }
         auto sysmsg = to!string(s);
         // If e is 0, we don't use the system error message.  (The message
@@ -4625,7 +4625,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             {
                 if (i == u)         // if end of buffer
                     goto L1;        // give up
-                auto c = p[i];
+                immutable c = p[i];
                 i++;
                 if (c == terminator)
                     break;

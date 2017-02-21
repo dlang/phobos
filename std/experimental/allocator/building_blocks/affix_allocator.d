@@ -365,7 +365,7 @@ unittest
     static assert(is(typeof(&MyAllocator.instance.prefix(a)) == shared(uint)*));
     auto b = MyAllocator.instance.makeArray!(shared const int)(100);
     static assert(is(typeof(&MyAllocator.instance.prefix(b)) == shared(uint)*));
-    auto c = MyAllocator.instance.makeArray!(immutable int)(100);
+    immutable c = MyAllocator.instance.makeArray!(immutable int)(100);
     static assert(is(typeof(&MyAllocator.instance.prefix(c)) == shared(uint)*));
     auto d = MyAllocator.instance.makeArray!(int)(100);
     static assert(is(typeof(&MyAllocator.instance.prefix(d)) == uint*));

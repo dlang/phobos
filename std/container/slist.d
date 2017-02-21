@@ -646,7 +646,7 @@ unittest
 unittest
 {
     auto a = SList!int(1, 2, 3);
-    auto b = [4, 5, 6];
+    immutable b = [4, 5, 6];
     auto c = a ~ b;
     assert(c == SList!int(1, 2, 3, 4, 5, 6));
 }
@@ -667,7 +667,7 @@ unittest
 
 unittest
 {
-    auto a = [1, 2, 3];
+    immutable a = [1, 2, 3];
     auto b = SList!int(4, 5, 6);
     auto c = a ~ b;
     assert(c == SList!int(1, 2, 3, 4, 5, 6));
@@ -788,7 +788,7 @@ unittest
 
 unittest
 {
-    auto s = make!(SList!int)(1, 2, 3);
+    immutable s = make!(SList!int)(1, 2, 3);
 }
 
 unittest

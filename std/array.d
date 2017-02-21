@@ -141,7 +141,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
 ///
 @safe pure nothrow unittest
 {
-    auto a = array([1, 2, 3, 4, 5][]);
+    immutable a = array([1, 2, 3, 4, 5][]);
     assert(a == [ 1, 2, 3, 4, 5 ]);
 }
 
@@ -187,7 +187,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
 {
     import std.range;
     static struct S{int* p;}
-    auto a = array(immutable(S).init.repeat(5));
+    immutable a = array(immutable(S).init.repeat(5));
 }
 
 /**
@@ -243,11 +243,11 @@ if (isNarrowString!String)
         }
     }
 
-    auto a = array([1, 2, 3, 4, 5][]);
+    immutable a = array([1, 2, 3, 4, 5][]);
     //writeln(a);
     assert(a == [ 1, 2, 3, 4, 5 ]);
 
-    auto b = array([TestArray(1), TestArray(2)][]);
+    immutable b = array([TestArray(1), TestArray(2)][]);
     //writeln(b);
 
     class C
@@ -259,8 +259,8 @@ if (isNarrowString!String)
     auto c = array([new C(1), new C(2)][]);
     //writeln(c);
 
-    auto d = array([1.0, 2.2, 3][]);
-    assert(is(typeof(d) == double[]));
+    immutable d = array([1.0, 2.2, 3][]);
+    assert(is(typeof(d) == immutable double[]));
     //writeln(d);
 
     auto e = [OpAssign(1), OpAssign(2)];
@@ -400,7 +400,7 @@ if (isInputRange!Range)
 {
     import std.typecons;
     auto a = [tuple!(const string, string)("foo", "bar")];
-    auto b = [tuple!(string, const string)("foo", "bar")];
+    immutable b = [tuple!(string, const string)("foo", "bar")];
     assert(assocArray(a) == [cast(const(string)) "foo": "bar"]);
     static assert(!__traits(compiles, assocArray(b)));
 }
@@ -664,8 +664,8 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
 
 @safe nothrow pure unittest
 {
-    auto s1 = uninitializedArray!(int[])();
-    auto s2 = minimallyInitializedArray!(int[])();
+    immutable s1 = uninitializedArray!(int[])();
+    immutable s2 = minimallyInitializedArray!(int[])();
     assert(s1.length == 0);
     assert(s2.length == 0);
 }
@@ -712,21 +712,21 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
         this() @disable;
         this(this) @disable;
     }
-    auto a1 = minimallyInitializedArray!(S1[][])(2, 2);
+    immutable a1 = minimallyInitializedArray!(S1[][])(2, 2);
     //enum b1 = minimallyInitializedArray!(S1[][])(2, 2);
     static struct S2
     {
         this() @disable;
         //this(this) @disable;
     }
-    auto a2 = minimallyInitializedArray!(S2[][])(2, 2);
+    immutable a2 = minimallyInitializedArray!(S2[][])(2, 2);
     enum b2 = minimallyInitializedArray!(S2[][])(2, 2);
     static struct S3
     {
         //this() @disable;
         this(this) @disable;
     }
-    auto a3 = minimallyInitializedArray!(S3[][])(2, 2);
+    immutable a3 = minimallyInitializedArray!(S3[][])(2, 2);
     enum b3 = minimallyInitializedArray!(S3[][])(2, 2);
 }
 
@@ -1307,7 +1307,7 @@ if (isInputRange!S && !isDynamicArray!S)
 @safe unittest
 {
     auto a = "abc";
-    auto s = replicate(a, 3);
+    immutable s = replicate(a, 3);
 
     assert(s == "abcabcabc");
 
@@ -1437,7 +1437,7 @@ if (isSomeString!S)
     assert(split("hello world") == ["hello","world"]);
     assert(split("192.168.0.1", ".") == ["192", "168", "0", "1"]);
 
-    auto a = split([1, 2, 3, 4, 5, 1, 2, 3, 4, 5], [2, 3]);
+    immutable a = split([1, 2, 3, 4, 5, 1, 2, 3, 4, 5], [2, 3]);
     assert(a == [[1], [4, 5, 1], [4, 5]]);
 }
 
@@ -1724,7 +1724,7 @@ if (isInputRange!RoR &&
     }
     auto a = [new A(`foo`)];
     assert(a[0].length == 3);
-    auto temp = join(a, " ");
+    immutable temp = join(a, " ");
     assert(a[0].length == 3);
 }
 
@@ -1790,7 +1790,7 @@ if (isInputRange!RoR &&
 
     foreach (T; AliasSeq!(string,wstring,dstring))
     {
-        auto arr2 = "Здравствуй Мир Unicode".to!(T);
+        immutable arr2 = "Здравствуй Мир Unicode".to!(T);
         auto arr = ["Здравствуй", "Мир", "Unicode"].to!(T[]);
         assert(join(arr) == "ЗдравствуйМирUnicode");
         foreach (S; AliasSeq!(char,wchar,dchar))
@@ -1809,7 +1809,7 @@ if (isInputRange!RoR &&
 
     foreach (T; AliasSeq!(string,wstring,dstring))
     {
-        auto arr2 = "Здравствуй\u047CМир\u047CUnicode".to!(T);
+        immutable arr2 = "Здравствуй\u047CМир\u047CUnicode".to!(T);
         auto arr = ["Здравствуй", "Мир", "Unicode"].to!(T[]);
         foreach (S; AliasSeq!(wchar,dchar))
         {
@@ -1841,7 +1841,7 @@ if (isInputRange!RoR &&
         auto filteredWord1    = filter!"true"(word1);
         auto filteredLenWord1 = takeExactly(filteredWord1, word1.walkLength());
         auto filteredWord2    = filter!"true"(word2);
-        auto filteredLenWord2 = takeExactly(filteredWord2, word2.walkLength());
+        immutable filteredLenWord2 = takeExactly(filteredWord2, word2.walkLength());
         auto filteredWord3    = filter!"true"(word3);
         auto filteredLenWord3 = takeExactly(filteredWord3, word3.walkLength());
         auto filteredWordsArr = [filteredWord1, filteredWord2, filteredWord3];
@@ -2455,7 +2455,7 @@ if (isDynamicArray!(E[]) &&
     assert(b == [1, 1337, 2, 3, 4, 5]);
 
     auto s = "This is a foo foo list";
-    auto r = s.replaceFirst("foo", "silly");
+    immutable r = s.replaceFirst("foo", "silly");
     assert(r == "This is a silly foo list");
 }
 
@@ -2563,7 +2563,7 @@ if (isDynamicArray!(E[]) &&
     assert(b == [1, 2, 1337, 3, 4, 5]);
 
     auto s = "This is a foo foo list";
-    auto r = s.replaceLast("foo", "silly");
+    immutable r = s.replaceLast("foo", "silly");
     assert(r == "This is a foo silly list", r);
 }
 

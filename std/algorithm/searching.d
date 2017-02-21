@@ -1860,7 +1860,7 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
     {
         auto needleFirstElem = needle[0];
         auto partitions      = haystack.trisect(needleFirstElem);
-        auto firstElemLen    = partitions[1].length;
+        immutable firstElemLen    = partitions[1].length;
         size_t count         = 0;
 
         if (firstElemLen == 0)
@@ -1984,7 +1984,7 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
         void popBack() { return payload.popBack(); }
     }
     //static assert(isBidirectionalRange!BiRange);
-    auto r = BiRange([1, 2, 3, 10, 11, 4]);
+    immutable r = BiRange([1, 2, 3, 10, 11, 4]);
     //assert(equal(find(r, [3, 10]), BiRange([3, 10, 11, 4])));
     //assert(find("abc", "bc").length == 2);
     debug(std_algorithm) scope(success)
@@ -2175,7 +2175,7 @@ private R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, scope R2 needle)
 
     // If issue 7992 occurs, this will throw an exception from calling
     // popFront() on an empty range.
-    auto r = find(CustomString("a"), CustomString("b"));
+    immutable r = find(CustomString("a"), CustomString("b"));
 }
 
 /**
@@ -2366,7 +2366,7 @@ RandomAccessRange find(RandomAccessRange, alias pred, InputRange)(
     string[] ns = ["libphobos", "function", " undefined", "`", ":"];
     foreach (n ; ns)
     {
-        auto p = find(h, boyerMooreFinder(n));
+        immutable p = find(h, boyerMooreFinder(n));
         assert(!p.empty);
     }
 }
@@ -2385,7 +2385,7 @@ RandomAccessRange find(RandomAccessRange, alias pred, InputRange)(
 @safe unittest
 {
     auto bm = boyerMooreFinder("for");
-    auto match = find("Moor", bm);
+    immutable match = find("Moor", bm);
     assert(match.empty);
 }
 
@@ -4460,6 +4460,6 @@ unittest // bugzilla 13171
 unittest // Issue 13124
 {
     import std.algorithm.comparison : among;
-    auto s = "hello how\nare you";
+    immutable s = "hello how\nare you";
     s.until!(c => c.among!('\n', '\r'));
 }

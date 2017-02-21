@@ -430,7 +430,7 @@ if (ranges.length >= 2 &&
 @safe unittest
 {
     // .init value of cartesianProduct should be empty
-    auto cprod = cartesianProduct([0,0], [1,1], [2,2]);
+    immutable cprod = cartesianProduct([0,0], [1,1], [2,2]);
     assert(!cprod.empty);
     assert(cprod.init.empty);
 }
@@ -529,7 +529,7 @@ pure @safe nothrow @nogc unittest
     assert(isForwardRange!(typeof(C)));
 
     C.popFront();
-    auto front1 = C.front;
+    immutable front1 = C.front;
     auto D = C.save;
     C.popFront();
     assert(D.front == front1);

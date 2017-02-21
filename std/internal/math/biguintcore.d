@@ -710,7 +710,7 @@ public:
     pure nothrow @safe if (op == "|" || op == "^" || op == "&")
     {
         auto d1 = includeSign(x.data, y.uintLength, xSign);
-        auto d2 = includeSign(y.data, x.uintLength, ySign);
+        immutable d2 = includeSign(y.data, x.uintLength, ySign);
 
         foreach (i; 0..d1.length)
         {

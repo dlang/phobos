@@ -142,7 +142,7 @@ if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision +
 
     // Define a 8-bit custom float for storing probabilities
     alias Probability = CustomFloat!(4, 4, CustomFloatFlags.ieee^CustomFloatFlags.probability^CustomFloatFlags.signed );
-    auto p = Probability(0.5);
+    immutable p = Probability(0.5);
 }
 
 /// ditto
@@ -244,7 +244,7 @@ private:
             if (sig > 0)
             {
                 import core.bitop : bsr;
-                auto shift2 = precision - bsr(sig);
+                immutable shift2 = precision - bsr(sig);
                 exp  -= shift2-1;
                 shift += shift2;
             }
@@ -1378,8 +1378,8 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
         (1.0*powercalls)/powerProblems);
 */
     //Issue 14231
-    auto xp = findRoot((float x) => x, 0f, 1f);
-    auto xn = findRoot((float x) => x, -1f, -0f);
+    immutable xp = findRoot((float x) => x, 0f, 1f);
+    immutable xn = findRoot((float x) => x, -1f, -0f);
 }
 
 //regression control
@@ -1598,7 +1598,7 @@ body
             assert(ret.error <= 10 * T.epsilon);
         }
         {
-            auto ret = findLocalMin!T((T x) => T.init, 0, 1, T.min_normal, 2*T.epsilon);
+            immutable ret = findLocalMin!T((T x) => T.init, 0, 1, T.min_normal, 2*T.epsilon);
             assert(!ret.x.isNaN);
             assert(ret.y.isNaN);
             assert(ret.error.isNaN);
@@ -1609,7 +1609,7 @@ body
             assert(ret.x >= 0 && ret.x <= ret.error);
         }
         {
-            auto ret = findLocalMin!T((T x) => log(x), 0, T.max, T.min_normal, 2*T.epsilon);
+            immutable ret = findLocalMin!T((T x) => log(x), 0, T.max, T.min_normal, 2*T.epsilon);
             assert(ret.y < -18);
             assert(ret.error < 5e-08);
             assert(ret.x >= 0 && ret.x <= ret.error);

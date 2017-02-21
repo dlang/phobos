@@ -722,7 +722,7 @@ public enum dchar nelSep  = '\u0085'; /// Constant $(CODEPOINT) (0x0085) - next 
     // build the trie with the most sensible trie level
     // and bind it as a functor
     auto cyrillicOrArmenian = toDelegate(set);
-    auto balance = find!(cyrillicOrArmenian)("Hello ընկեր!");
+    immutable balance = find!(cyrillicOrArmenian)("Hello ընկեր!");
     assert(balance == "ընկեր!");
     // compatible with bool delegate(dchar)
     bool delegate(dchar) bindIt = cyrillicOrArmenian;
@@ -732,7 +732,7 @@ public enum dchar nelSep  = '\u0085'; /// Constant $(CODEPOINT) (0x0085) - next 
     assert(s is normalize(s));// is the same string
 
     string nonS = "A\u0308ffin"; // A ligature
-    auto nS = normalize(nonS); // to NFC, the W3C endorsed standard
+    immutable nS = normalize(nonS); // to NFC, the W3C endorsed standard
     assert(nS == "Äffin");
     assert(nS != nonS);
     string composed = "Äffin";
@@ -992,7 +992,7 @@ private:
         return 0;
     };
     enum ct = dg();
-    auto rt = dg();
+    immutable rt = dg();
 }
 
 @system unittest
@@ -1611,12 +1611,12 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
     assert(arr.length == MAX/5-1);
     foreach (i; 0..MAX+5)
     {
-        auto st = stdLowerBound(arr, i);
+        immutable st = stdLowerBound(arr, i);
         assert(st == sharLowerBound(arr, i));
         assert(st == sharSwitchLowerBound(arr, i));
     }
     arr = [];
-    auto st = stdLowerBound(arr, 33);
+    immutable st = stdLowerBound(arr, 33);
     assert(st == sharLowerBound(arr, 33));
     assert(st == sharSwitchLowerBound(arr, 33));
 }
@@ -5254,7 +5254,7 @@ if (is(C : wchar) || is(C : char))
         assert(utf8.test(codec));
         assert(utf8.match(codec));
     }
-    auto i = codec.idx;
+    immutable i = codec.idx;
     assert(!utf8.match(codec));
     assert(codec.idx == i);
 }
@@ -5265,7 +5265,7 @@ if (is(C : wchar) || is(C : char))
     static bool testAll(Matcher, Range)(ref Matcher m, ref Range r)
     {
         bool t = m.test(r);
-        auto save = r.idx;
+        immutable save = r.idx;
         assert(t == m.match(r));
         assert(r.idx == save || t); //ether no change or was match
         r.idx = save;
@@ -6453,7 +6453,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
     import std.algorithm.comparison : equal;
     import std.range : take, drop;
     import std.range.primitives : walkLength;
-    auto text = "noe\u0308l"; // noël using e + combining diaeresis
+    immutable text = "noe\u0308l"; // noël using e + combining diaeresis
     assert(text.walkLength == 5); // 5 code points
 
     auto gText = text.byGrapheme;
@@ -6482,7 +6482,7 @@ private static struct InputRangeString
     import std.range.primitives : walkLength;
     assert("".byGrapheme.walkLength == 0);
 
-    auto reverse = "le\u0308on";
+    immutable reverse = "le\u0308on";
     assert(reverse.walkLength == 5);
 
     auto gReverse = reverse.byGrapheme;
@@ -8345,9 +8345,9 @@ if (isConvertibleToString!Range)
     {
         import std.utf : byChar;
 
-        auto sx = slwr.asUpperCase.byChar.array;
+        immutable sx = slwr.asUpperCase.byChar.array;
         assert(sx == toUpper(slwr));
-        auto sy = upper[i].asLowerCase.byChar.array;
+        immutable sy = upper[i].asLowerCase.byChar.array;
         assert(sy == toLower(upper[i]));
     }
 
@@ -8547,8 +8547,8 @@ if (isConvertibleToString!Range)
     {
         import std.utf : byChar;
 
-        auto r = cases[i][0].asCapitalized.byChar.array;
-        auto result = cases[i][1];
+        immutable r = cases[i][0].asCapitalized.byChar.array;
+        immutable result = cases[i][1];
         assert(r == result);
     }
 
@@ -8917,7 +8917,7 @@ if (isSomeString!S)
 
         void foo()
         {
-            auto u = toLower(String(""));
+            immutable u = toLower(String(""));
         }
     }
 }
@@ -9099,7 +9099,7 @@ if (isSomeString!S)
 
         void foo()
         {
-            auto u = toUpper(String(""));
+            immutable u = toUpper(String(""));
         }
     }
 }

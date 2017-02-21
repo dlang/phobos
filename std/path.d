@@ -1211,7 +1211,7 @@ if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(Element
 
     alias CR = Unqual!(ElementEncodingType!R);
     auto dot = only(CR('.'));
-    auto i = extSeparatorPos(path);
+    immutable i = extSeparatorPos(path);
     if (i == -1)
     {
         if (ext.length > 0 && ext[0] == '.')
@@ -1412,7 +1412,7 @@ if (isSomeChar!C)
 
     // Test that allocation works as it should.
     auto manyShort = "aaa".repeat(1000).array();
-    auto manyShortCombined = join(manyShort, dirSeparator);
+    immutable manyShortCombined = join(manyShort, dirSeparator);
     assert (buildPath(manyShort) == manyShortCombined);
     assert (buildPath(ir(manyShort)) == manyShortCombined);
 
@@ -2214,7 +2214,7 @@ if ((isRandomAccessRange!R && hasSlicing!R ||
             {
                 if (isUNC(_path))
                 {
-                    auto i = uncRootLength(_path);
+                    immutable i = uncRootLength(_path);
                     fs = 0;
                     fe = i;
                     ps = ltrim(fe, pe);
@@ -3477,7 +3477,7 @@ if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && isSomeC
     }
     version (Windows)
     {
-        auto last = filename[filename.length - 1];
+        immutable last = filename[filename.length - 1];
         if (last == '.' || last == ' ') return false;
     }
 
@@ -3930,7 +3930,7 @@ version(unittest) import std.process : environment;
     version (Posix)
     {
         // Retrieve the current home variable.
-        auto oldHome = environment.get("HOME");
+        immutable oldHome = environment.get("HOME");
 
         // Testing when there is no environment variable.
         environment.remove("HOME");

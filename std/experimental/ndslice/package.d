@@ -511,7 +511,7 @@ pure nothrow unittest
     import std.range : iota;
     auto r = (10_000L * 2 * 3 * 4).iota;
 
-    auto t0 = r.sliced(10, 20, 30, 40);
+    immutable t0 = r.sliced(10, 20, 30, 40);
     assert(t0.length == 10);
     assert(t0.length!0 == 10);
     assert(t0.length!1 == 20);
@@ -540,7 +540,7 @@ pure nothrow unittest
     }
 
     immutable int[] im = [1,2,3,4,5,6];
-    auto slice = im.sliced(2, 3);
+    immutable slice = im.sliced(2, 3);
 }
 
 pure nothrow unittest

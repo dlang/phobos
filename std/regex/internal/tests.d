@@ -642,7 +642,7 @@ unittest
             "a",
             ""
         ];
-        auto tails = [
+        immutable tails = [
             "abcabc",
              "bcabc",
               "cabc",
@@ -706,7 +706,7 @@ unittest
             assert(std.regex.replace!(matchFn)(
                 to!String("test1 test2"), regex(to!String(`\w+`),"g"), to!String("$`:$'")
             ) == to!String(": test2 test1 :"));
-            auto s = std.regex.replace!(baz!(Captures!(String)))(to!String("Strap a rocket engine on a chicken."),
+            immutable s = std.regex.replace!(baz!(Captures!(String)))(to!String("Strap a rocket engine on a chicken."),
                     regex(to!String("[ar]"), "g"));
             assert(s == "StRAp A Rocket engine on A chicken.");
         }
@@ -999,7 +999,7 @@ unittest
 // bugzilla 14504
 unittest
 {
-    auto p = ctRegex!("a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?" ~
+    immutable p = ctRegex!("a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?" ~
             "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 }
 
@@ -1020,7 +1020,7 @@ unittest
 
     auto example = "Hello, world!";
     auto pattern = regex("^Hello, (bug)");  // won't find this one
-    auto result = replaceFirst(example, pattern, "$1 Sponge Bob");
+    immutable result = replaceFirst(example, pattern, "$1 Sponge Bob");
     assert(result == "Hello, world!");  // Ok.
 
     auto sink = appender!string;

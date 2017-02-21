@@ -679,7 +679,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         void doEncoding()
         {
             auto data = cast(const(ubyte)[])range_.front;
-            auto size = encodeLength(data.length);
+            immutable size = encodeLength(data.length);
             if (size > buffer_.length)
                 buffer_.length = size;
 
@@ -1476,7 +1476,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
                 }
             }
 
-            auto size = decodeLength(data.length);
+            immutable size = decodeLength(data.length);
             if (size > buffer_.length)
                 buffer_.length = size;
 

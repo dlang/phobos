@@ -352,7 +352,7 @@ pure @safe nothrow unittest
     test([ 1, 2, 3, 4, 5, 6 ], [ 6, 5, 4, 3, 2, 1 ]);
 
    immutable foo = [1,2,3].idup;
-   auto r = retro(foo);
+   immutable r = retro(foo);
 }
 
 pure @safe nothrow unittest
@@ -1234,7 +1234,7 @@ pure @safe nothrow unittest
 
     // Make sure bug 3311 is fixed.  ChainImpl should compile even if not all
     // elements are mutable.
-    auto c = chain( iota(0, 10), iota(0, 10) );
+    immutable c = chain( iota(0, 10), iota(0, 10) );
 
     // Test the case where infinite ranges are present.
     auto inf = chain([0,1,2][], cycle([4,5,6][]), [7,8,9][]); // infinite range
@@ -1297,7 +1297,7 @@ pure @safe nothrow @nogc unittest
     class Foo{}
     immutable(Foo)[] a;
     immutable(Foo)[] b;
-    auto c = chain(a, b);
+    immutable c = chain(a, b);
 }
 
 /**
@@ -1674,7 +1674,7 @@ if (Rs.length > 1 && allSatisfy!(isInputRange, staticMap!(Unqual, Rs)))
                 }
             }
 
-            auto next = _current == (Rs.length - 1) ? 0 : (_current + 1);
+            immutable next = _current == (Rs.length - 1) ? 0 : (_current + 1);
             final switch (next)
             {
                 foreach (i, R; Rs)
@@ -2586,7 +2586,7 @@ if (isInputRange!R)
 ///
 pure @safe nothrow @nogc unittest
 {
-    auto range = takeNone!(int[])();
+    immutable range = takeNone!(int[])();
     assert(range.length == 0);
     assert(range.empty);
 }
@@ -3197,7 +3197,7 @@ pure @safe nothrow unittest //12007
     immutable int[] A = [1,2,3];
     immutable int[] B = [4,5,6];
 
-    auto AB = cartesianProduct(A,B);
+    immutable AB = cartesianProduct(A,B);
 }
 
 /**
@@ -3367,7 +3367,7 @@ public:
 {
     int i;
     auto g = generate!(() => ++i);
-    auto f = g.front;
+    immutable f = g.front;
     assert(f == g.front);
     g = g.drop(5); // reassign because generate caches
     assert(g.front == f + 5);
@@ -3699,7 +3699,7 @@ if (isStaticArray!R)
     assert(nums[0] == 2);
 
     immutable int[] immarr = [1, 2, 3];
-    auto cycleimm = cycle(immarr);
+    immutable cycleimm = cycle(immarr);
 
     foreach (DummyType; AllDummyRanges)
     {
@@ -3842,7 +3842,7 @@ unittest //10845
 
 @safe unittest // 12177
 {
-    auto a = recurrence!q{a[n - 1] ~ a[n - 2]}("1", "0");
+    immutable a = recurrence!q{a[n - 1] ~ a[n - 2]}("1", "0");
 }
 
 // Issue 13390
@@ -4475,7 +4475,7 @@ pure unittest
     }
     R r;
     auto z = zip(r, r);
-    auto zz = z.save;
+    immutable zz = z.save;
 }
 
 pure unittest
@@ -4799,7 +4799,7 @@ unittest
 
     // Just make sure 1-range case instantiates.  This hangs the compiler
     // when no explicit stopping policy is specified due to Bug 4652.
-    auto stuff = lockstep([1,2,3,4,5], StoppingPolicy.shortest);
+    immutable stuff = lockstep([1,2,3,4,5], StoppingPolicy.shortest);
 
     // Test with indexing.
     uint[] res1;
@@ -5409,7 +5409,7 @@ body
             this.step = step;
             immutable fcount = (end - start) / step;
             count = to!size_t(fcount);
-            auto pastEnd = start + count * step;
+            immutable pastEnd = start + count * step;
             if (step > 0)
             {
                 if (pastEnd < end) ++count;
@@ -5488,9 +5488,9 @@ body
 
 nothrow @nogc unittest
 {
-    auto t0 = iota(0, 10);
-    auto t1 = iota(0, 10, 2);
-    auto t2 = iota(1, 1, 0);
+    immutable t0 = iota(0, 10);
+    immutable t1 = iota(0, 10, 2);
+    immutable t2 = iota(1, 1, 0);
     //float overloads use std.conv.to so can't be @nogc or nothrow
 }
 
@@ -5614,7 +5614,7 @@ unittest
     assert(approxEqual(rf, [0.0, -0.1, -0.2, -0.3, -0.4, -0.5][]));
 
     // iota of longs
-    auto rl = iota(5_000_000L);
+    immutable rl = iota(5_000_000L);
     assert(rl.length == 5_000_000L);
 
     // iota of longs with steps
@@ -7251,8 +7251,8 @@ private:
             and right-most column, respectively.
         */
 
-        auto div = _source.length / _chunkCount;
-        auto mod = _source.length % _chunkCount;
+        immutable div = _source.length / _chunkCount;
+        immutable mod = _source.length % _chunkCount;
         auto pos = i <= mod
             ? i   * (div+1)
             : mod * (div+1) + (i-mod) * div
@@ -7777,7 +7777,7 @@ in
         alias LengthType = typeof(range.length);
         bool overflow;
         static if (isSigned!Enumerator && isSigned!LengthType)
-            auto result = adds(start, range.length, overflow);
+            immutable result = adds(start, range.length, overflow);
         else static if (isSigned!Enumerator)
         {
             Largest!(Enumerator, Signed!LengthType) signedLength;
@@ -7787,13 +7787,13 @@ in
             catch (Exception)
                 assert(false);
 
-            auto result = adds(start, signedLength, overflow);
+            immutable result = adds(start, signedLength, overflow);
         }
         else
         {
             static if (isSigned!LengthType)
                 assert(range.length >= 0);
-            auto result = addu(start, range.length, overflow);
+            immutable result = addu(start, range.length, overflow);
         }
 
         assert(!overflow && result <= Enumerator.max);
@@ -7994,7 +7994,7 @@ pure @safe nothrow unittest
         assert(shifted.front == tuple(i, "zero"));
         assert(shifted[0] == shifted.front);
 
-        auto next = tuple(i + 1, "one");
+        immutable next = tuple(i + 1, "one");
         assert(shifted[1] == next);
         shifted.popFront();
         assert(shifted.front == next);
@@ -8753,7 +8753,7 @@ that break its sortedness, $(D SortedRange) will work erratically.
 @safe unittest
 {
     immutable(int)[] arr = [ 1, 2, 3 ];
-    auto s = assumeSorted(arr);
+    immutable s = assumeSorted(arr);
 }
 
 unittest
@@ -8855,7 +8855,7 @@ if (isInputRange!(Unqual!R))
     int[] a = [ 1, 2, 3, 3, 3, 4, 4, 5, 6 ];
     if (a.length)
     {
-        auto b = a[a.length / 2];
+        immutable b = a[a.length / 2];
         //auto r = sort(a);
         //assert(r.contains(b));
     }
@@ -8876,7 +8876,7 @@ unittest
     bool ok = true;
     try
     {
-        auto r2 = assumeSorted([ 677, 345, 34, 7, 5 ]);
+        immutable r2 = assumeSorted([ 677, 345, 34, 7, 5 ]);
         debug ok = false;
     }
     catch (Throwable)
@@ -8889,7 +8889,7 @@ unittest
 @nogc unittest
 {
     static immutable a = [1, 2, 3, 4];
-    auto r = a.assumeSorted;
+    immutable r = a.assumeSorted;
 }
 
 /++
@@ -9328,19 +9328,19 @@ unittest
         ubyte[] buffer = [1, 2, 3, 4, 5];
         auto wrapper = refRange(&buffer);
         auto p = wrapper.ptr;
-        auto f = wrapper.front;
+        immutable f = wrapper.front;
         wrapper.front = f;
-        auto e = wrapper.empty;
+        immutable e = wrapper.empty;
         wrapper.popFront();
         auto s = wrapper.save;
-        auto b = wrapper.back;
+        immutable b = wrapper.back;
         wrapper.back = b;
         wrapper.popBack();
-        auto i = wrapper[0];
+        immutable i = wrapper[0];
         wrapper.moveFront();
         wrapper.moveBack();
         wrapper.moveAt(0);
-        auto l = wrapper.length;
+        immutable l = wrapper.length;
         auto sl = wrapper[0 .. 1];
         assert(wrapper[0 .. $].length == buffer[0 .. $].length);
     }
@@ -9363,9 +9363,9 @@ unittest
         auto filtered = filter!"true"(buffer);
         auto wrapper = refRange(&filtered);
         auto p = wrapper.ptr;
-        auto f = wrapper.front;
+        immutable f = wrapper.front;
         wrapper.front = f;
-        auto e = wrapper.empty;
+        immutable e = wrapper.empty;
         wrapper.popFront();
         auto s = wrapper.save;
         wrapper.moveFront();
@@ -9389,11 +9389,11 @@ unittest
         string str = "hello world";
         auto wrapper = refRange(&str);
         auto p = wrapper.ptr;
-        auto f = wrapper.front;
-        auto e = wrapper.empty;
+        immutable f = wrapper.front;
+        immutable e = wrapper.empty;
         wrapper.popFront();
         auto s = wrapper.save;
-        auto b = wrapper.back;
+        immutable b = wrapper.back;
         wrapper.popBack();
     }
 
@@ -9544,8 +9544,8 @@ unittest
         int[] arr = [1, 42, 2, 41, 3, 40, 4, 42, 9];
         auto wrapper = refRange(&arr);
 
-        auto t1 = wrapper.moveFront();
-        auto t2 = wrapper.moveBack();
+        immutable t1 = wrapper.moveFront();
+        immutable t2 = wrapper.moveBack();
         wrapper.front = t2;
         wrapper.back = t1;
         assert(arr == [9, 42, 2, 41, 3, 40, 4, 42, 1]);
@@ -9881,8 +9881,8 @@ public:
                 immutable size_t elemMaskPos = (sign ^ 1) * (maskPos + n)
                     + sign * (1 + ((n - remainingBits) & (bitsNum - 1)));
 
-                auto elem = parent[elemIndex];
-                auto elemMask = mask(elemMaskPos);
+                immutable elem = parent[elemIndex];
+                immutable elemMask = mask(elemMaskPos);
                 parent[elemIndex] = cast(UnsignedElemType)(flag * (elem | elemMask)
                         + (flag ^ 1) * (elem & ~elemMask));
             }
@@ -10082,7 +10082,7 @@ if (isInputRange!R && isIntegral!(ElementType!R))
                 bw.popFront();
             }
 
-            auto rangeLen = numCalls / (IntegralType.sizeof * 8);
+            immutable rangeLen = numCalls / (IntegralType.sizeof * 8);
             assert(numCalls == (IntegralType.sizeof * 8 * rangeLen));
             assert(bw.empty);
             static if (isForwardRange!T)

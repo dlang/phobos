@@ -694,7 +694,7 @@ version(linux)
     auto f = File(fn);
     auto fd = f.fileno;
     {
-        auto mf = scoped!MmFile(f);
+        immutable mf = scoped!MmFile(f);
         f = File.init;
     }
     assert(.close(fd) == -1);

@@ -2648,8 +2648,8 @@ if (isFloatingPoint!T)
             int exp;
             const T a = 1;
             immutable T b = 2;
-            auto c = frexp(a, exp);
-            auto d = frexp(b, exp);
+            immutable c = frexp(a, exp);
+            immutable d = frexp(b, exp);
         }
     }
 }
@@ -6610,7 +6610,7 @@ if (isFloatingPoint!(X))
 
        const F Const = 2;
        immutable F Immutable = 2;
-       auto Compiles = feqrel(Const, Immutable);
+       immutable Compiles = feqrel(Const, Immutable);
     }
 
     assert(feqrel(7.1824L, 7.1824L) == real.mant_dig);
@@ -7179,8 +7179,8 @@ deprecated("Phobos1 math functions are deprecated, use isInfinity ") alias isinf
 @safe pure nothrow unittest
 {
     // issue 6381: floor/ceil should be usable in pure function.
-    auto x = floor(1.2);
-    auto y = ceil(1.2);
+    immutable x = floor(1.2);
+    immutable y = ceil(1.2);
 }
 
 /***********************************

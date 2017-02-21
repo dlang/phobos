@@ -146,7 +146,7 @@ else version(Posix)
 {
     auto currentTime = Clock.currTime();
     auto timeString = currentTime.toISOExtString();
-    auto restoredTime = SysTime.fromISOExtString(timeString);
+    immutable restoredTime = SysTime.fromISOExtString(timeString);
 }
 
 //Verify Examples for core.time.Duration which couldn't be in core.time.
@@ -540,8 +540,8 @@ public:
 
     deprecated @safe unittest
     {
-        auto a = Clock.currSystemTick;
-        auto b = Clock.currAppTick;
+        immutable a = Clock.currSystemTick;
+        immutable b = Clock.currAppTick;
         assert(a.length);
         assert(b.length);
         assert(a > b);
@@ -628,7 +628,7 @@ public:
         import std.format : format;
         static void test(DateTime dt, immutable TimeZone tz, long expected)
         {
-            auto sysTime = SysTime(dt, tz);
+            immutable sysTime = SysTime(dt, tz);
             assert(sysTime._stdTime == expected);
             assert(sysTime._timezone is (tz is null ? LocalTime() : tz),
                    format("Given DateTime: %s", dt));
@@ -680,7 +680,7 @@ public:
         import std.format : format;
         static void test(DateTime dt, Duration fracSecs, immutable TimeZone tz, long expected)
         {
-            auto sysTime = SysTime(dt, fracSecs, tz);
+            immutable sysTime = SysTime(dt, fracSecs, tz);
             assert(sysTime._stdTime == expected);
             assert(sysTime._timezone is (tz is null ? LocalTime() : tz),
                    format("Given DateTime: %s, Given Duration: %s", dt, fracSecs));
@@ -731,7 +731,7 @@ public:
                          immutable TimeZone tz,
                          long expected)
         {
-            auto sysTime = SysTime(dt, fracSec, tz);
+            immutable sysTime = SysTime(dt, fracSec, tz);
             assert(sysTime._stdTime == expected);
             assert(sysTime._timezone is (tz is null ? LocalTime() : tz),
                    format("Given DateTime: %s, Given FracSec: %s", dt, fracSec));
@@ -779,7 +779,7 @@ public:
         static void test(Date d, immutable TimeZone tz, long expected)
         {
             import std.format : format;
-            auto sysTime = SysTime(d, tz);
+            immutable sysTime = SysTime(d, tz);
             assert(sysTime._stdTime == expected);
             assert(sysTime._timezone is (tz is null ? LocalTime() : tz),
                    format("Given Date: %s", d));
@@ -818,7 +818,7 @@ public:
         static void test(long stdTime, immutable TimeZone tz)
         {
             import std.format : format;
-            auto sysTime = SysTime(stdTime, tz);
+            immutable sysTime = SysTime(stdTime, tz);
             assert(sysTime._stdTime == stdTime);
             assert(sysTime._timezone is (tz is null ? LocalTime() : tz),
                    format("Given stdTime: %s", stdTime));
@@ -903,7 +903,7 @@ public:
             }
         }
 
-        auto st = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
+        immutable st = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 33, 30));
         assert(st == st);
@@ -2575,12 +2575,12 @@ public:
         assert(SysTime.fromUnixTime(28800) ==
                SysTime(DateTime(1970, 1, 1), pst));
 
-        auto st1 = SysTime.fromUnixTime(1_198_311_285, UTC());
+        immutable st1 = SysTime.fromUnixTime(1_198_311_285, UTC());
         assert(st1 == SysTime(DateTime(2007, 12, 22, 8, 14, 45), UTC()));
         assert(st1.timezone is UTC());
         assert(st1 == SysTime(DateTime(2007, 12, 22, 0, 14, 45), pst));
 
-        auto st2 = SysTime.fromUnixTime(1_198_311_285, pst);
+        immutable st2 = SysTime.fromUnixTime(1_198_311_285, pst);
         assert(st2 == SysTime(DateTime(2007, 12, 22, 8, 14, 45), UTC()));
         assert(st2.timezone is pst);
         assert(st2 == SysTime(DateTime(2007, 12, 22, 0, 14, 45), pst));
@@ -2592,7 +2592,7 @@ public:
         assert(SysTime.fromUnixTime(1) == SysTime(DateTime(1970, 1, 1, 0, 0, 1), UTC()));
         assert(SysTime.fromUnixTime(-1) == SysTime(DateTime(1969, 12, 31, 23, 59, 59), UTC()));
 
-        auto st = SysTime.fromUnixTime(0);
+        immutable st = SysTime.fromUnixTime(0);
         auto dt = cast(DateTime)st;
         assert(dt <= DateTime(1970, 2, 1) && dt >= DateTime(1969, 12, 31));
         assert(st.timezone is LocalTime());
@@ -6288,7 +6288,7 @@ public:
 
     @safe unittest
     {
-        auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
+        immutable st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
 
         assert(st + dur!"weeks"(7) == SysTime(DateTime(1999, 8, 24, 12, 30, 33), hnsecs(2_345_678)));
         assert(st + dur!"weeks"(-7) == SysTime(DateTime(1999, 5, 18, 12, 30, 33), hnsecs(2_345_678)));
@@ -6447,7 +6447,7 @@ public:
         testST(beforeBoth2, 20_000_000, SysTime(DateTime(1, 1, 1, 0, 0, 1), hnsecs(9_999_999)));
         testST(beforeBoth2, 20_888_888, SysTime(DateTime(1, 1, 1, 0, 0, 2), hnsecs(888_887)));
 
-        auto duration = dur!"seconds"(12);
+        immutable duration = dur!"seconds"(12);
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         assert(cst + duration == SysTime(DateTime(1999, 7, 6, 12, 30, 45)));
@@ -6473,7 +6473,7 @@ public:
         //hard to do this test correctly with variable ticksPerSec.
         if (TickDuration.ticksPerSec == 1_000_000)
         {
-            auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
+            immutable st = SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_678));
 
             assert(st + TickDuration.from!"usecs"(7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_748)));
             assert(st + TickDuration.from!"usecs"(-7) == SysTime(DateTime(1999, 7, 6, 12, 30, 33), hnsecs(2_345_608)));
@@ -6510,7 +6510,7 @@ public:
 
     @safe unittest
     {
-        auto before = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        immutable before = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         assert(before + dur!"weeks"(7) == SysTime(DateTime(1999, 8, 24, 12, 30, 33)));
         assert(before + dur!"weeks"(-7) == SysTime(DateTime(1999, 5, 18, 12, 30, 33)));
         assert(before + dur!"days"(7) == SysTime(DateTime(1999, 7, 13, 12, 30, 33)));
@@ -6679,7 +6679,7 @@ public:
             assert(st == SysTime(DateTime(0, 12, 31, 23, 44, 53), hnsecs(51)));
         }
 
-        auto duration = dur!"seconds"(12);
+        immutable duration = dur!"seconds"(12);
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         static assert(!__traits(compiles, cst += duration));
@@ -6811,7 +6811,7 @@ public:
             assert(SysTime(dt, d, UTC()) - SysTime(dt, d, tz) == hours(-8));
         }
 
-        auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        immutable st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         assert(st - st == Duration.zero);
@@ -6899,7 +6899,7 @@ public:
 
     @safe unittest
     {
-        auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        immutable st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         assert(!st.isLeapYear);
@@ -6918,7 +6918,7 @@ public:
 
     @safe unittest
     {
-        auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        immutable st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         assert(st.dayOfWeek == DayOfWeek.tue);
@@ -6945,7 +6945,7 @@ public:
 
     @safe unittest
     {
-        auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        immutable st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         assert(st.dayOfYear == 187);
@@ -7626,7 +7626,7 @@ public:
 
     @safe unittest
     {
-        auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        immutable st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
         assert(st.isoWeek == 27);
@@ -9682,7 +9682,7 @@ public:
     {
         assertThrown!DateTimeException((in Date date){date.yearBC;}(Date(1, 1, 1)));
 
-        auto date = Date(0, 7, 6);
+        immutable date = Date(0, 7, 6);
         const cdate = Date(0, 7, 6);
         immutable idate = Date(0, 7, 6);
         assert(date.yearBC == 1);
@@ -11642,7 +11642,7 @@ public:
 
     @safe unittest
     {
-        auto date = Date(1999, 7, 6);
+        immutable date = Date(1999, 7, 6);
 
         assert(date + dur!"weeks"(7) == Date(1999, 8, 24));
         assert(date + dur!"weeks"(-7) == Date(1999, 5, 18));
@@ -11680,7 +11680,7 @@ public:
         assert(date - dur!"hnsecs"(-864_000_000_000) == Date(1999, 7, 7));
         assert(date - dur!"hnsecs"(864_000_000_000) == Date(1999, 7, 5));
 
-        auto duration = dur!"days"(12);
+        immutable duration = dur!"days"(12);
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
         assert(date + duration == Date(1999, 7, 18));
@@ -11708,7 +11708,7 @@ public:
         //hard to do this test correctly with variable ticksPerSec.
         if (TickDuration.ticksPerSec == 1_000_000)
         {
-            auto date = Date(1999, 7, 6);
+            immutable date = Date(1999, 7, 6);
 
             assert(date + TickDuration.from!"usecs"(86_400_000_000) == Date(1999, 7, 7));
             assert(date + TickDuration.from!"usecs"(-86_400_000_000) == Date(1999, 7, 5));
@@ -11785,7 +11785,7 @@ public:
             assert(date == Date(1, 6, 19));
         }
 
-        auto duration = dur!"days"(12);
+        immutable duration = dur!"days"(12);
         auto date = Date(1999, 7, 6);
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
@@ -11857,7 +11857,7 @@ public:
 
     @safe unittest
     {
-        auto date = Date(1999, 7, 6);
+        immutable date = Date(1999, 7, 6);
 
         assert(Date(1999, 7, 6) - Date(1998, 7, 6) == dur!"days"(365));
         assert(Date(1998, 7, 6) - Date(1999, 7, 6) == dur!"days"(-365));
@@ -12148,7 +12148,7 @@ public:
 
     @safe unittest
     {
-        auto date = Date(1999, 7, 6);
+        immutable date = Date(1999, 7, 6);
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
         static assert(!__traits(compiles, date.isLeapYear = true));
@@ -12366,7 +12366,7 @@ public:
         foreach (gd; chain(testGregDaysBC, testGregDaysAD))
             assert(gd.date.dayOfGregorianCal == gd.day);
 
-        auto date = Date(1999, 7, 6);
+        immutable date = Date(1999, 7, 6);
         const cdate = Date(1999, 7, 6);
         immutable idate = Date(1999, 7, 6);
         assert(date.dayOfGregorianCal == 729_941);
@@ -13575,21 +13575,21 @@ public:
         assert(TimeOfDay(0, 0) == TimeOfDay.init);
 
         {
-            auto tod = TimeOfDay(0, 0);
+            immutable tod = TimeOfDay(0, 0);
             assert(tod._hour == 0);
             assert(tod._minute == 0);
             assert(tod._second == 0);
         }
 
         {
-            auto tod = TimeOfDay(12, 30, 33);
+            immutable tod = TimeOfDay(12, 30, 33);
             assert(tod._hour == 12);
             assert(tod._minute == 30);
             assert(tod._second == 33);
         }
 
         {
-            auto tod = TimeOfDay(23, 59, 59);
+            immutable tod = TimeOfDay(23, 59, 59);
             assert(tod._hour == 23);
             assert(tod._minute == 59);
             assert(tod._second == 59);
@@ -14105,7 +14105,7 @@ public:
 
     @safe unittest
     {
-        auto tod = TimeOfDay(12, 30, 33);
+        immutable tod = TimeOfDay(12, 30, 33);
 
         assert(tod + dur!"hours"(7) == TimeOfDay(19, 30, 33));
         assert(tod + dur!"hours"(-7) == TimeOfDay(5, 30, 33));
@@ -14135,7 +14135,7 @@ public:
         assert(tod - dur!"hnsecs"(-70_000_000) == TimeOfDay(12, 30, 40));
         assert(tod - dur!"hnsecs"(70_000_000) == TimeOfDay(12, 30, 26));
 
-        auto duration = dur!"hours"(11);
+        immutable duration = dur!"hours"(11);
         const ctod = TimeOfDay(12, 30, 33);
         immutable itod = TimeOfDay(12, 30, 33);
         assert(tod + duration == TimeOfDay(23, 30, 33));
@@ -14163,7 +14163,7 @@ public:
         //hard to do this test correctly with variable ticksPerSec.
         if (TickDuration.ticksPerSec == 1_000_000)
         {
-            auto tod = TimeOfDay(12, 30, 33);
+            immutable tod = TimeOfDay(12, 30, 33);
 
             assert(tod + TickDuration.from!"usecs"(7_000_000) == TimeOfDay(12, 30, 40));
             assert(tod + TickDuration.from!"usecs"(-7_000_000) == TimeOfDay(12, 30, 26));
@@ -14200,7 +14200,7 @@ public:
 
     @safe unittest
     {
-        auto duration = dur!"hours"(12);
+        immutable duration = dur!"hours"(12);
 
         assert(TimeOfDay(12, 30, 33) + dur!"hours"(7) == TimeOfDay(19, 30, 33));
         assert(TimeOfDay(12, 30, 33) + dur!"hours"(-7) == TimeOfDay(5, 30, 33));
@@ -14307,7 +14307,7 @@ public:
 
     @safe unittest
     {
-        auto tod = TimeOfDay(12, 30, 33);
+        immutable tod = TimeOfDay(12, 30, 33);
 
         assert(TimeOfDay(7, 12, 52) - TimeOfDay(12, 30, 33) == dur!"seconds"(-19_061));
         assert(TimeOfDay(12, 30, 33) - TimeOfDay(7, 12, 52) == dur!"seconds"(19_061));
@@ -14837,19 +14837,19 @@ public:
     @safe unittest
     {
         {
-            auto dt = DateTime.init;
+            immutable dt = DateTime.init;
             assert(dt._date == Date.init);
             assert(dt._tod == TimeOfDay.init);
         }
 
         {
-            auto dt = DateTime(Date(1999, 7 ,6));
+            immutable dt = DateTime(Date(1999, 7 ,6));
             assert(dt._date == Date(1999, 7, 6));
             assert(dt._tod == TimeOfDay.init);
         }
 
         {
-            auto dt = DateTime(Date(1999, 7 ,6), TimeOfDay(12, 30, 33));
+            immutable dt = DateTime(Date(1999, 7 ,6), TimeOfDay(12, 30, 33));
             assert(dt._date == Date(1999, 7, 6));
             assert(dt._tod == TimeOfDay(12, 30, 33));
         }
@@ -14874,13 +14874,13 @@ public:
     @safe unittest
     {
         {
-            auto dt = DateTime(1999, 7 ,6);
+            immutable dt = DateTime(1999, 7 ,6);
             assert(dt._date == Date(1999, 7, 6));
             assert(dt._tod == TimeOfDay.init);
         }
 
         {
-            auto dt = DateTime(1999, 7 ,6, 12, 30, 33);
+            immutable dt = DateTime(1999, 7 ,6, 12, 30, 33);
             assert(dt._date == Date(1999, 7, 6));
             assert(dt._tod == TimeOfDay(12, 30, 33));
         }
@@ -15115,12 +15115,12 @@ public:
     @safe unittest
     {
         {
-            auto dt = DateTime.init;
+            immutable dt = DateTime.init;
             assert(dt.date == Date.init);
         }
 
         {
-            auto dt = DateTime(Date(1999, 7, 6));
+            immutable dt = DateTime(Date(1999, 7, 6));
             assert(dt.date == Date(1999, 7, 6));
         }
 
@@ -15167,12 +15167,12 @@ public:
     @safe unittest
     {
         {
-            auto dt = DateTime.init;
+            immutable dt = DateTime.init;
             assert(dt.timeOfDay == TimeOfDay.init);
         }
 
         {
-            auto dt = DateTime(Date.init, TimeOfDay(12, 30, 33));
+            immutable dt = DateTime(Date.init, TimeOfDay(12, 30, 33));
             assert(dt.timeOfDay == TimeOfDay(12, 30, 33));
         }
 
@@ -16830,7 +16830,7 @@ public:
 
     @safe unittest
     {
-        auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+        immutable dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
 
         assert(dt + dur!"weeks"(7) == DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
         assert(dt + dur!"weeks"(-7) == DateTime(Date(1999, 5, 18), TimeOfDay(12, 30, 33)));
@@ -16868,7 +16868,7 @@ public:
         assert(dt - dur!"hnsecs"(-70_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
         assert(dt - dur!"hnsecs"(70_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
 
-        auto duration = dur!"seconds"(12);
+        immutable duration = dur!"seconds"(12);
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         assert(cdt + duration == DateTime(1999, 7, 6, 12, 30, 45));
@@ -16893,7 +16893,7 @@ public:
         //hard to do this test correctly with variable ticksPerSec.
         if (TickDuration.ticksPerSec == 1_000_000)
         {
-            auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+            immutable dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
 
             assert(dt + TickDuration.from!"usecs"(7_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 40)));
             assert(dt + TickDuration.from!"usecs"(-7_000_000) == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 26)));
@@ -17010,7 +17010,7 @@ public:
         (dt += dur!"seconds"(92)) -= dur!"days"(-500);
         assert(dt == DateTime(2001, 6, 14, 9, 8, 38));
 
-        auto duration = dur!"seconds"(12);
+        immutable duration = dur!"seconds"(12);
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         static assert(!__traits(compiles, cdt += duration));
@@ -17082,7 +17082,7 @@ public:
 
     @safe unittest
     {
-        auto dt = DateTime(1999, 7, 6, 12, 30, 33);
+        immutable dt = DateTime(1999, 7, 6, 12, 30, 33);
 
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) -
                      DateTime(Date(1998, 7, 6), TimeOfDay(12, 30, 33)) ==
@@ -17218,7 +17218,7 @@ public:
 
     @safe unittest
     {
-        auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+        immutable dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         assert(!dt.isLeapYear);
@@ -17237,7 +17237,7 @@ public:
 
     @safe unittest
     {
-        auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+        immutable dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         assert(dt.dayOfWeek == DayOfWeek.tue);
@@ -17264,7 +17264,7 @@ public:
 
     @safe unittest
     {
-        auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+        immutable dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         assert(dt.dayOfYear == 187);
@@ -17394,7 +17394,7 @@ public:
 
     @safe unittest
     {
-        auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
+        immutable dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         const cdt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         immutable idt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
         assert(dt.isoWeek == 27);
@@ -22536,7 +22536,7 @@ private:
     PosInfInterval!SysTime(SysTime(0));
 
     //Verify Examples.
-    auto interval = PosInfInterval!Date(Date(1996, 1, 2));
+    immutable interval = PosInfInterval!Date(Date(1996, 1, 2));
 }
 
 //Test PosInfInterval's begin.
@@ -23334,7 +23334,7 @@ private:
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
-    auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     assert(!posInfInterval.merge(interval).empty);
@@ -23454,7 +23454,7 @@ private:
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
-    auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     assert(!posInfInterval.span(interval).empty);
@@ -25564,7 +25564,7 @@ private:
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-    auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    immutable posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
@@ -25684,7 +25684,7 @@ private:
     auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
-    auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    immutable posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
@@ -26681,7 +26681,7 @@ private:
 
         auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
 
-        auto ir = IntervalRange!(Date, Direction.fwd)(interval, &dateFunc);
+        immutable ir = IntervalRange!(Date, Direction.fwd)(interval, &dateFunc);
     }
 
     {
@@ -26692,7 +26692,7 @@ private:
 
         auto interval = Interval!TimeOfDay(TimeOfDay(12, 1, 7), TimeOfDay(14, 0, 0));
 
-        auto ir = IntervalRange!(TimeOfDay, Direction.fwd)(interval, &todFunc);
+        immutable ir = IntervalRange!(TimeOfDay, Direction.fwd)(interval, &todFunc);
     }
 
     {
@@ -26703,7 +26703,7 @@ private:
 
         auto interval = Interval!DateTime(DateTime(2010, 7, 4, 12, 1, 7), DateTime(2012, 1, 7, 14, 0, 0));
 
-        auto ir = IntervalRange!(DateTime, Direction.fwd)(interval, &dtFunc);
+        immutable ir = IntervalRange!(DateTime, Direction.fwd)(interval, &dtFunc);
     }
 
     {
@@ -26717,7 +26717,7 @@ private:
             SysTime(DateTime(2012, 1, 7, 14, 0, 0))
         );
 
-        auto ir = IntervalRange!(SysTime, Direction.fwd)(interval, &stFunc);
+        immutable ir = IntervalRange!(SysTime, Direction.fwd)(interval, &stFunc);
     }
 }
 
@@ -26772,10 +26772,11 @@ private:
         ).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), Yes.popFirst);
         assertThrown!DateTimeException((in IntervalRange!(Date, Direction.fwd) range){range.front;}(emptyRange));
 
-        auto range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed));
+        immutable range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7))
+                                    .fwdRange(everyDayOfWeek!Date(DayOfWeek.wed));
         assert(range.front == Date(2010, 7, 4));
 
-        auto poppedRange = Interval!Date(
+        immutable poppedRange = Interval!Date(
             Date(2010, 7, 4),
             Date(2012, 1, 7)
         ).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), Yes.popFirst);
@@ -26793,13 +26794,13 @@ private:
         ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), Yes.popFirst);
         assertThrown!DateTimeException((in IntervalRange!(Date, Direction.bwd) range){range.front;}(emptyRange));
 
-        auto range = Interval!Date(
+        immutable range = Interval!Date(
             Date(2010, 7, 4),
             Date(2012, 1, 7)
         ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed));
         assert(range.front == Date(2012, 1, 7));
 
-        auto poppedRange = Interval!Date(
+        immutable poppedRange = Interval!Date(
             Date(2010, 7, 4),
             Date(2012, 1, 7)
         ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), Yes.popFirst);
@@ -26902,7 +26903,7 @@ private:
     {
         auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
         auto func = everyDayOfWeek!Date(DayOfWeek.fri);
-        auto range = interval.fwdRange(func);
+        immutable range = interval.fwdRange(func);
 
         assert(range.interval == interval);
 
@@ -26914,7 +26915,7 @@ private:
     {
         auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
         auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
-        auto range = interval.bwdRange(func);
+        immutable range = interval.bwdRange(func);
 
         assert(range.interval == interval);
 
@@ -26952,7 +26953,7 @@ private:
     {
         auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
         auto func = everyDayOfWeek!Date(DayOfWeek.fri);
-        auto range = interval.fwdRange(func);
+        immutable range = interval.fwdRange(func);
 
         assert(range.direction == Direction.fwd);
 
@@ -26964,7 +26965,7 @@ private:
     {
         auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
         auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
-        auto range = interval.bwdRange(func);
+        immutable range = interval.bwdRange(func);
 
         assert(range.direction == Direction.bwd);
 
@@ -27154,7 +27155,7 @@ private:
 
         auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
 
-        auto ir = PosInfIntervalRange!Date(posInfInterval, &dateFunc);
+        immutable ir = PosInfIntervalRange!Date(posInfInterval, &dateFunc);
     }
 
     {
@@ -27165,7 +27166,7 @@ private:
 
         auto posInfInterval = PosInfInterval!TimeOfDay(TimeOfDay(12, 1, 7));
 
-        auto ir = PosInfIntervalRange!(TimeOfDay)(posInfInterval, &todFunc);
+        immutable ir = PosInfIntervalRange!(TimeOfDay)(posInfInterval, &todFunc);
     }
 
     {
@@ -27176,7 +27177,7 @@ private:
 
         auto posInfInterval = PosInfInterval!DateTime(DateTime(2010, 7, 4, 12, 1, 7));
 
-        auto ir = PosInfIntervalRange!(DateTime)(posInfInterval, &dtFunc);
+        immutable ir = PosInfIntervalRange!(DateTime)(posInfInterval, &dtFunc);
     }
 
     {
@@ -27187,17 +27188,18 @@ private:
 
         auto posInfInterval = PosInfInterval!SysTime(SysTime(DateTime(2010, 7, 4, 12, 1, 7)));
 
-        auto ir = PosInfIntervalRange!(SysTime)(posInfInterval, &stFunc);
+        immutable ir = PosInfIntervalRange!(SysTime)(posInfInterval, &stFunc);
     }
 }
 
 //Test PosInfIntervalRange's front.
 @system unittest
 {
-    auto range = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed));
+    immutable range = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed));
     assert(range.front == Date(2010, 7, 4));
 
-    auto poppedRange = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), Yes.popFirst);
+    immutable poppedRange = PosInfInterval!Date(Date(2010, 7, 4))
+                                .fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), Yes.popFirst);
     assert(poppedRange.front == Date(2010, 7, 7));
 
     const cRange = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
@@ -27236,7 +27238,7 @@ private:
 {
     auto interval = PosInfInterval!Date(Date(2010, 7, 4));
     auto func = everyDayOfWeek!Date(DayOfWeek.fri);
-    auto range = interval.fwdRange(func);
+    immutable range = interval.fwdRange(func);
 
     assert(range.interval == interval);
 
@@ -27443,7 +27445,7 @@ private:
 
         auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
 
-        auto ir = NegInfIntervalRange!Date(negInfInterval, &dateFunc);
+        immutable ir = NegInfIntervalRange!Date(negInfInterval, &dateFunc);
     }
 
     {
@@ -27454,7 +27456,7 @@ private:
 
         auto negInfInterval = NegInfInterval!TimeOfDay(TimeOfDay(14, 0, 0));
 
-        auto ir = NegInfIntervalRange!(TimeOfDay)(negInfInterval, &todFunc);
+        immutable ir = NegInfIntervalRange!(TimeOfDay)(negInfInterval, &todFunc);
     }
 
     {
@@ -27465,7 +27467,7 @@ private:
 
         auto negInfInterval = NegInfInterval!DateTime(DateTime(2012, 1, 7, 14, 0, 0));
 
-        auto ir = NegInfIntervalRange!(DateTime)(negInfInterval, &dtFunc);
+        immutable ir = NegInfIntervalRange!(DateTime)(negInfInterval, &dtFunc);
     }
 
     {
@@ -27476,17 +27478,18 @@ private:
 
         auto negInfInterval = NegInfInterval!SysTime(SysTime(DateTime(2012, 1, 7, 14, 0, 0)));
 
-        auto ir = NegInfIntervalRange!(SysTime)(negInfInterval, &stFunc);
+        immutable ir = NegInfIntervalRange!(SysTime)(negInfInterval, &stFunc);
     }
 }
 
 //Test NegInfIntervalRange's front.
 @system unittest
 {
-    auto range = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed));
+    immutable range = NegInfInterval!Date(Date(2012, 1, 7))
+                            .bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed));
     assert(range.front == Date(2012, 1, 7));
 
-    auto poppedRange = NegInfInterval!Date(
+    immutable poppedRange = NegInfInterval!Date(
         Date(2012, 1, 7)
     ).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), Yes.popFirst);
     assert(poppedRange.front == Date(2012, 1, 4));
@@ -27530,7 +27533,7 @@ private:
 {
     auto interval = NegInfInterval!Date(Date(2012, 1, 7));
     auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
-    auto range = interval.bwdRange(func);
+    immutable range = interval.bwdRange(func);
 
     assert(range.interval == interval);
 
@@ -27724,7 +27727,7 @@ public:
     ///
     deprecated @safe unittest
     {
-        auto tz = TimeZone.getTimeZone("America/Los_Angeles");
+        immutable tz = TimeZone.getTimeZone("America/Los_Angeles");
     }
 
     // The purpose of this is to handle the case where a Windows time zone is
@@ -27792,8 +27795,8 @@ public:
             immutable dstDate = DateTime(2010, north ? 7 : 1, 1, 6, 0, 0);
             auto std = SysTime(stdDate, tz);
             auto dst = SysTime(dstDate, tz);
-            auto stdUTC = SysTime(stdDate - utcOffset, UTC());
-            auto dstUTC = SysTime(stdDate - utcOffset + dstOffset, UTC());
+            immutable stdUTC = SysTime(stdDate - utcOffset, UTC());
+            immutable dstUTC = SysTime(stdDate - utcOffset + dstOffset, UTC());
 
             assert(!std.dstInEffect);
             assert(dst.dstInEffect == hasDST);
@@ -27848,8 +27851,8 @@ public:
                     //assert(leapTZ.dstName == dstName);  //Locale-dependent
                     assert(leapTZ.hasDST == hasDST);
 
-                    auto leapSTD = SysTime(std.stdTime, leapTZ);
-                    auto leapDST = SysTime(dst.stdTime, leapTZ);
+                    immutable leapSTD = SysTime(std.stdTime, leapTZ);
+                    immutable leapDST = SysTime(dst.stdTime, leapTZ);
 
                     assert(!leapSTD.dstInEffect);
                     assert(leapDST.dstInEffect == hasDST);
@@ -27883,7 +27886,7 @@ public:
             else version(OSX)     enum utcZone = "UTC";
             else static assert(0, "The location of the UTC timezone file on this Posix platform must be set.");
 
-            auto tzs = [testTZ("America/Los_Angeles", "PST", "PDT", dur!"hours"(-8), dur!"hours"(1)),
+            immutable tzs = [testTZ("America/Los_Angeles", "PST", "PDT", dur!"hours"(-8), dur!"hours"(1)),
                         testTZ("America/New_York", "EST", "EDT", dur!"hours"(-5), dur!"hours"(1)),
                         //testTZ("America/Santiago", "CLT", "CLST", dur!"hours"(-4), dur!"hours"(1), false),
                         testTZ("Europe/London", "GMT", "BST", dur!"hours"(0), dur!"hours"(1)),
@@ -27900,7 +27903,7 @@ public:
         }
         else version(Windows)
         {
-            auto tzs = [testTZ("Pacific Standard Time", "Pacific Standard Time",
+            immutable tzs = [testTZ("Pacific Standard Time", "Pacific Standard Time",
                                "Pacific Daylight Time", dur!"hours"(-8), dur!"hours"(1)),
                         testTZ("Eastern Standard Time", "Eastern Standard Time",
                                "Eastern Daylight Time", dur!"hours"(-5), dur!"hours"(1)),
@@ -27991,10 +27994,10 @@ public:
             //time zone results in the correct time during and surrounding
             //a DST switch.
             bool first = true;
-            auto springSwitch = SysTime(dstSwitches[i][0] + dur!"hours"(spring), UTC()) - stdOffset;
-            auto fallSwitch = SysTime(dstSwitches[i][1] + dur!"hours"(fall), UTC()) - dstOffset;
+            immutable springSwitch = SysTime(dstSwitches[i][0] + dur!"hours"(spring), UTC()) - stdOffset;
+            immutable fallSwitch = SysTime(dstSwitches[i][1] + dur!"hours"(fall), UTC()) - dstOffset;
             //@@@BUG@@@ 3659 makes this necessary.
-            auto fallSwitchMinus1 = fallSwitch - dur!"hours"(1);
+            immutable fallSwitchMinus1 = fallSwitch - dur!"hours"(1);
 
             foreach (hour; -24 .. 25)
             {
@@ -28624,10 +28627,10 @@ public:
                 //time zone results in the correct time during and surrounding
                 //a DST switch.
                 bool first = true;
-                auto springSwitch = SysTime(tzInfos[i][1] + dur!"hours"(spring), UTC()) - stdOffset;
-                auto fallSwitch = SysTime(tzInfos[i][2] + dur!"hours"(fall), UTC()) - dstOffset;
+                immutable springSwitch = SysTime(tzInfos[i][1] + dur!"hours"(spring), UTC()) - stdOffset;
+                immutable fallSwitch = SysTime(tzInfos[i][2] + dur!"hours"(fall), UTC()) - dstOffset;
                 //@@@BUG@@@ 3659 makes this necessary.
-                auto fallSwitchMinus1 = fallSwitch - dur!"hours"(1);
+                immutable fallSwitchMinus1 = fallSwitch - dur!"hours"(1);
 
                 foreach (hour; -24 .. 25)
                 {
@@ -28958,7 +28961,7 @@ public:
 
     @safe unittest
     {
-        auto stz = new immutable SimpleTimeZone(dur!"hours"(-8), "PST");
+        immutable stz = new immutable SimpleTimeZone(dur!"hours"(-8), "PST");
         assert(stz.name == "");
         assert(stz.stdName == "PST");
         assert(stz.dstName == "");
@@ -29871,7 +29874,7 @@ public:
 
             foreach (transition; retro(transitions))
             {
-                auto ttInfo = transition.ttInfo;
+                immutable ttInfo = transition.ttInfo;
 
                 if (ttInfo.isDST)
                 {
@@ -29903,7 +29906,7 @@ public:
     {
         version(Posix)
         {
-            auto tz = PosixTimeZone.getTimeZone("America/Los_Angeles");
+            immutable tz = PosixTimeZone.getTimeZone("America/Los_Angeles");
 
             assert(tz.name == "America/Los_Angeles");
             assert(tz.stdName == "PST");
@@ -30507,7 +30510,7 @@ else version(Windows)
                 auto dstName = dstVal.value_SZ;
 
                 scope tziVal = tzKey.getValue("TZI");
-                auto binVal = tziVal.value_BINARY;
+                immutable binVal = tziVal.value_BINARY;
                 assert(binVal.length == REG_TZI_FORMAT.sizeof);
                 auto tziFmt = cast(REG_TZI_FORMAT*)binVal.ptr;
 
@@ -30734,9 +30737,9 @@ else version(Windows)
                     auto localDateTimeBefore = localDateTime - dur!"hours"(1);
                     auto localDateTimeAfter = localDateTime + dur!"hours"(1);
 
-                    auto dstInEffectNow = dstInEffectForLocalDateTime(localDateTime);
-                    auto dstInEffectBefore = dstInEffectForLocalDateTime(localDateTimeBefore);
-                    auto dstInEffectAfter = dstInEffectForLocalDateTime(localDateTimeAfter);
+                    immutable dstInEffectNow = dstInEffectForLocalDateTime(localDateTime);
+                    immutable dstInEffectBefore = dstInEffectForLocalDateTime(localDateTimeBefore);
+                    immutable dstInEffectAfter = dstInEffectForLocalDateTime(localDateTimeAfter);
 
                     bool isDST;
 
@@ -31852,10 +31855,10 @@ public:
     {
         StopWatch sw;
         sw.start();
-        auto t1 = sw.peek();
+        immutable t1 = sw.peek();
         sw.stop();
-        auto t2 = sw.peek();
-        auto t3 = sw.peek();
+        immutable t2 = sw.peek();
+        immutable t3 = sw.peek();
         assert(t1 <= t2);
         assert(t2 == t3);
     }
@@ -31877,7 +31880,7 @@ public:
         TickDuration t0;
         t0.length = 100;
         sw.setMeasured(t0);
-        auto t1 = sw.peek();
+        immutable t1 = sw.peek();
         assert(t0 == t1);
     }
 
@@ -32000,9 +32003,9 @@ TickDuration[fun.length] benchmark(fun...)(uint n)
     void f1() {auto b = a;}
     void f2() {auto b = to!string(a);}
     auto r = benchmark!(f0, f1, f2)(10_000);
-    auto f0Result = to!Duration(r[0]); // time f0 took to run 10,000 times
-    auto f1Result = to!Duration(r[1]); // time f1 took to run 10,000 times
-    auto f2Result = to!Duration(r[2]); // time f2 took to run 10,000 times
+    immutable f0Result = to!Duration(r[0]); // time f0 took to run 10,000 times
+    immutable f1Result = to!Duration(r[1]); // time f1 took to run 10,000 times
+    immutable f2Result = to!Duration(r[2]); // time f2 took to run 10,000 times
 }
 
 @safe unittest
@@ -32011,7 +32014,7 @@ TickDuration[fun.length] benchmark(fun...)(uint n)
     void f0() {}
     //void f1() {auto b = to!(string)(a);}
     void f2() {auto b = (a);}
-    auto r = benchmark!(f0, f2)(100);
+    immutable r = benchmark!(f0, f2)(100);
 }
 
 
@@ -32086,7 +32089,7 @@ ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
     void f2x() {}
     @safe void f1o() {}
     @safe void f2o() {}
-    auto b1 = comparingBenchmark!(f1o, f2o, 1)(); // OK
+    immutable b1 = comparingBenchmark!(f1o, f2o, 1)(); // OK
     //writeln(b1.point);
 }
 
@@ -32096,12 +32099,12 @@ ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
     @safe    void safeFunc() {}
     @trusted void trustFunc() {}
     @system  void sysFunc() {}
-    auto safeResult  = comparingBenchmark!((){safeFunc();}, (){safeFunc();})();
-    auto trustResult = comparingBenchmark!((){trustFunc();}, (){trustFunc();})();
-    auto sysResult   = comparingBenchmark!((){sysFunc();}, (){sysFunc();})();
-    auto mixedResult1  = comparingBenchmark!((){safeFunc();}, (){trustFunc();})();
-    auto mixedResult2  = comparingBenchmark!((){trustFunc();}, (){sysFunc();})();
-    auto mixedResult3  = comparingBenchmark!((){safeFunc();}, (){sysFunc();})();
+    immutable safeResult  = comparingBenchmark!((){safeFunc();}, (){safeFunc();})();
+    immutable trustResult = comparingBenchmark!((){trustFunc();}, (){trustFunc();})();
+    immutable sysResult   = comparingBenchmark!((){sysFunc();}, (){sysFunc();})();
+    immutable mixedResult1  = comparingBenchmark!((){safeFunc();}, (){trustFunc();})();
+    immutable mixedResult2  = comparingBenchmark!((){trustFunc();}, (){sysFunc();})();
+    immutable mixedResult3  = comparingBenchmark!((){safeFunc();}, (){sysFunc();})();
 }
 
 
@@ -33467,7 +33470,7 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
         foreach (i; 0 .. 10)
         {
             auto str1 = cr(format("1 Jan %d 00:00 GMT", i));
-            auto str2 = cr(format("1 Jan %d 00:00 -1200", i));
+            immutable str2 = cr(format("1 Jan %d 00:00 -1200", i));
             assertThrown!DateTimeException(parseRFC822DateTime(str1));
             assertThrown!DateTimeException(parseRFC822DateTime(str1));
         }
@@ -34276,7 +34279,7 @@ if (validTimeUnits(units) &&
 @safe unittest
 {
     auto hnsecs = 2595000000007L;
-    auto returned = removeUnitsFromHNSecs!"days"(hnsecs);
+    immutable returned = removeUnitsFromHNSecs!"days"(hnsecs);
     assert(returned == 3000000007);
     assert(hnsecs == 2595000000007L);
 }
