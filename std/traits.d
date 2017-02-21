@@ -5341,7 +5341,12 @@ enum bool isIntegral(T) = is(IntegralTypeOf!T) && !isAggregateType!T;
 /**
  * Detect whether $(D T) is a built-in floating point type.
  */
-enum bool isFloatingPoint(T) = __traits(isFloating, T);
+enum bool isFloatingPoint(T) = __traits(isFloating, T) && !(is(Unqual!T == cfloat) ||
+                                                            is(Unqual!T == cdouble) ||
+                                                            is(Unqual!T == creal) ||
+                                                            is(Unqual!T == ifloat) ||
+                                                            is(Unqual!T == idouble) ||
+                                                            is(Unqual!T == ireal));
 
 @safe unittest
 {
@@ -5369,6 +5374,18 @@ enum bool isFloatingPoint(T) = __traits(isFloating, T);
         alias t this;
     }
     static assert(!isFloatingPoint!(S!float));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=17195
+@safe unittest
+{
+    static assert(!isFloatingPoint!cfloat);
+    static assert(!isFloatingPoint!cdouble);
+    static assert(!isFloatingPoint!creal);
+
+    static assert(!isFloatingPoint!ifloat);
+    static assert(!isFloatingPoint!idouble);
+    static assert(!isFloatingPoint!ireal);
 }
 
 /**
