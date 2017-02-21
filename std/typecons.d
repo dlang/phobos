@@ -3909,6 +3909,47 @@ private static:
     }+/
 }
 
+// Issue 17177 - AutoImplement fails on function overload sets with "cannot infer type from overloaded function symbol"
+@system unittest
+{
+    static class Issue17177
+    {
+        private string n_;
+
+        public {
+            Issue17177 overloaded(string n)
+            {
+                this.n_ = n;
+
+                return this;
+            }
+
+            string overloaded()
+            {
+                return this.n_;
+            }
+        }
+    }
+
+    static string how(C, alias fun)()
+    {
+        static if (!is(ReturnType!fun == void))
+        {
+            return q{
+                return parent(args);
+            };
+        }
+        else
+        {
+            return q{
+                parent(args);
+            };
+        }
+    }
+
+    alias Implementation = AutoImplement!(Issue17177, how, templateNot!isFinalFunction);
+}
+
 version(unittest)
 {
     // Issue 10647
@@ -4175,8 +4216,7 @@ private static:
             {
                 preamble ~= "alias self = " ~ name ~ ";\n";
                 if (WITH_BASE_CLASS && !__traits(isAbstractFunction, func))
-                    //preamble ~= "alias super." ~ name ~ " parent;\n"; // [BUG 2540]
-                    preamble ~= "auto parent = &super." ~ name ~ ";\n";
+                    preamble ~= "alias parent = AliasSeq!(__traits(getMember, super, \"" ~ name ~ "\"))[0];";
             }
 
             // Function body
