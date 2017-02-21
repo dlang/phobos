@@ -888,7 +888,7 @@ immutable(T)[] assumeUnique(T)(ref T[] array) pure nothrow
 {
     // @system due to assumeUnique
     int[] arr = new int[1];
-    immutable arr1 = assumeUnique(arr);
+    auto arr1 = assumeUnique(arr);
     assert(is(typeof(arr1) == immutable(int)[]) && arr == null);
 }
 
@@ -903,7 +903,7 @@ immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
 version(none) @system unittest
 {
     int[string] arr = ["a":1];
-    immutable arr1 = assumeUnique(arr);
+    auto arr1 = assumeUnique(arr);
     assert(is(typeof(arr1) == immutable(int[string])) && arr == null);
 }
 

@@ -1608,7 +1608,7 @@ private void testFloatingToIntegral(Floating, Integral)()
         foreach (T; AllNumerics)
         {
             T a = 42;
-            immutable b = to!T(a);
+            auto b = to!T(a);
             assert(is(typeof(a) == typeof(b)) && a == b);
         }
     }

@@ -36,7 +36,7 @@ D's allocators have a layered structure in both implementation and documentation
 
 $(OL
 $(LI A high-level, dynamically-typed layer (described further down in this
-module). It consists of an interface called $(LREF IAllocator), which concret;
+module). It consists of an interface called $(LREF IAllocator), which concrete
 allocators need to implement. The interface primitives themselves are oblivious
 to the type of the objects being allocated; they only deal in `void[]`, by
 necessity of the interface being dynamic (as opposed to type-parameterized).

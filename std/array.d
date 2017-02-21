@@ -260,7 +260,7 @@ if (isNarrowString!String)
     //writeln(c);
 
     immutable d = array([1.0, 2.2, 3][]);
-    assert(is(typeof(d) == double[]));
+    assert(is(typeof(d) == immutable double[]));
     //writeln(d);
 
     auto e = [OpAssign(1), OpAssign(2)];

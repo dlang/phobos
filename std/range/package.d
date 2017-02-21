@@ -667,7 +667,7 @@ debug pure nothrow unittest
     // @@@BUG@@@ 12647
     try
     {
-        immutable unused = testArr[].stride(0);
+        auto unused = testArr[].stride(0);
     }
     catch (AssertError unused)
     {

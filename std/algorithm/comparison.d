@@ -1408,10 +1408,10 @@ if (T.length >= 2)
     int a = 5;
     short b = 6;
     double c = 2;
-    immutable d = max(a, b);
+    auto d = max(a, b);
     assert(is(typeof(d) == int));
     assert(d == 6);
-    immutable e = min(a, b, c);
+    auto e = min(a, b, c);
     assert(is(typeof(e) == double));
     assert(e == 2);
 }

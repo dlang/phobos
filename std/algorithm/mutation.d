@@ -2599,8 +2599,8 @@ void swapAt(R)(auto ref R r, size_t i1, size_t i2)
     else
     {
         if (i1 == i2) return;
-        immutable t1 = r.moveAt(i1);
-        immutable t2 = r.moveAt(i2);
+        auto t1 = r.moveAt(i1);
+        auto t2 = r.moveAt(i2);
         r[i2] = t1;
         r[i1] = t2;
     }
