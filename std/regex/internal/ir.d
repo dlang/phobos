@@ -390,10 +390,10 @@ struct Group(DataIndex)
     switch (irb[pc].code)
     {
     case IR.Char:
-        formattedWrite(output, " %s (0x%x)",cast(dchar)irb[pc].data, irb[pc].data);
+        formattedWrite(output, " %s (0x%x)",cast(dchar) irb[pc].data, irb[pc].data);
         break;
     case IR.OrChar:
-        formattedWrite(output, " %s (0x%x) seq=%d", cast(dchar)irb[pc].data, irb[pc].data, irb[pc].sequence);
+        formattedWrite(output, " %s (0x%x) seq=%d", cast(dchar) irb[pc].data, irb[pc].data, irb[pc].sequence);
         break;
     case IR.RepeatStart, IR.InfiniteStart, IR.InfiniteBloomStart,
     IR.Option, IR.GotoEndOr, IR.OrStart:
@@ -693,13 +693,13 @@ template BackLooper(E)
 @system T[] mallocArray(T)(size_t len)
 {
     import core.stdc.stdlib : malloc;
-    return (cast(T*)malloc(len * T.sizeof))[0 .. len];
+    return (cast(T*) malloc(len * T.sizeof))[0 .. len];
 }
 
 //very unsafe, no initialization
 @system T[] arrayInChunk(T)(size_t len, ref void[] chunk)
 {
-    auto ret = (cast(T*)chunk.ptr)[0..len];
+    auto ret = (cast(T*) chunk.ptr)[0..len];
     chunk = chunk[len * T.sizeof .. $];
     return ret;
 }

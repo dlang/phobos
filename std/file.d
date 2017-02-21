@@ -424,7 +424,7 @@ if (isSomeString!S &&
     !isConvertibleToString!R)
 {
     import std.utf : validate;
-    static auto trustedCast(void[] buf) @trusted { return cast(S)buf; }
+    static auto trustedCast(void[] buf) @trusted { return cast(S) buf; }
     auto result = trustedCast(read(name));
     validate(result);
     return result;
@@ -1670,7 +1670,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
             alias names = name;
         else
             string names = null;
-        cenforce(!trustedChmod(namez, cast(mode_t)attributes), names, namez);
+        cenforce(!trustedChmod(namez, cast(mode_t) attributes), names, namez);
     }
 }
 
@@ -2910,7 +2910,7 @@ else version(Windows)
             size_t clength = wcslen(fd.cFileName.ptr);
             _name = toUTF8(fd.cFileName[0 .. clength]);
             _name = buildPath(path, toUTF8(fd.cFileName[0 .. clength]));
-            _size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
+            _size = (cast(ulong) fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
             _timeCreated = std.datetime.FILETIMEToSysTime(&fd.ftCreationTime);
             _timeLastAccessed = std.datetime.FILETIMEToSysTime(&fd.ftLastAccessTime);
             _timeLastModified = std.datetime.FILETIMEToSysTime(&fd.ftLastWriteTime);
@@ -3414,8 +3414,8 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
         cenforce(core.sys.posix.unistd.close(fdw) != -1, f, fromz);
 
         utimbuf utim = void;
-        utim.actime = cast(time_t)statbufr.st_atime;
-        utim.modtime = cast(time_t)statbufr.st_mtime;
+        utim.actime = cast(time_t) statbufr.st_atime;
+        utim.modtime = cast(time_t) statbufr.st_mtime;
 
         cenforce(utime(toz, &utim) != -1, f, fromz);
     }
@@ -3472,7 +3472,7 @@ void rmdirRecurse(in char[] pathname)
 {
     //No references to pathname will be kept after rmdirRecurse,
     //so the cast is safe
-    rmdirRecurse(DirEntry(cast(string)pathname));
+    rmdirRecurse(DirEntry(cast(string) pathname));
 }
 
 /++
@@ -3556,7 +3556,7 @@ version(Posix) @system unittest
     void[] buf;
 
     buf = new void[10];
-    (cast(byte[])buf)[] = 3;
+    (cast(byte[]) buf)[] = 3;
     string unit_file = deleteme ~ "-unittest_write.tmp";
     if (exists(unit_file)) remove(unit_file);
     write(unit_file, buf);

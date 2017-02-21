@@ -1074,7 +1074,7 @@ private:
             import core.exception : onOutOfMemoryError;
             const nbytes = mulu(rc, _matrix[0].sizeof, overflow);
             if (overflow) assert(0);
-            auto m = cast(CostType *)realloc(_matrix.ptr, nbytes);
+            auto m = cast(CostType *) realloc(_matrix.ptr, nbytes);
             if (!m)
                 onOutOfMemoryError();
             _matrix = m[0 .. r * c];

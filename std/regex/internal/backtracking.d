@@ -122,7 +122,7 @@ template BacktrackingMatcher(bool CTregex)
         {
             merge = arrayInChunk!(Trace)(re.hotspotTableSize, memBlock);
             merge[] = Trace.init;
-            memory = cast(size_t[])memBlock;
+            memory = cast(size_t[]) memBlock;
             memory[0] = 0; //hidden pointer
             memory = memory[1..$];
         }
@@ -717,7 +717,7 @@ template BacktrackingMatcher(bool CTregex)
                 *cast(State*)&memory[lastState] =
                     State(index, pc, counter, infiniteNesting);
                 lastState += stateSize;
-                memory[lastState .. lastState + 2 * matches.length] = (cast(size_t[])matches)[];
+                memory[lastState .. lastState + 2 * matches.length] = (cast(size_t[]) matches)[];
                 lastState += 2*matches.length;
                 debug(std_regex_matcher)
                     writefln("Saved(pc=%s) front: %s src: %s",
@@ -730,7 +730,7 @@ template BacktrackingMatcher(bool CTregex)
                 if (!lastState)
                     return prevStack();
                 lastState -= 2*matches.length;
-                auto pm = cast(size_t[])matches;
+                auto pm = cast(size_t[]) matches;
                 pm[] = memory[lastState .. lastState + 2 * matches.length];
                 lastState -= stateSize;
                 State* state = cast(State*)&memory[lastState];
@@ -851,7 +851,7 @@ struct CtContext
                     {
                         newStack();
                         lastState = 0;
-                    }", match - reserved, cast(int)counter + 2);
+                    }", match - reserved, cast(int) counter + 2);
         if (match < total_matches)
             text ~= ctSub("
                     stackPush(matches[$$..$$]);", reserved, match);

@@ -1355,7 +1355,7 @@ class JSONException : Exception
     assert(jv.type == JSON_TYPE.INTEGER);
     assertNotThrown(jv.integer);
 
-    jv = cast(uint)3;
+    jv = cast(uint) 3;
     assert(jv.type == JSON_TYPE.UINTEGER);
     assertNotThrown(jv.uinteger);
 

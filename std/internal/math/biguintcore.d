@@ -142,13 +142,13 @@ public:
         }
     }
 
-    // The value at (cast(ulong[])data)[n]
+    // The value at (cast(ulong[]) data)[n]
     ulong peekUlong(int n) pure nothrow const @safe @nogc
     {
         static if (BigDigit.sizeof == int.sizeof)
         {
             if (data.length == n*2 + 1) return data[n*2];
-            return data[n*2] + ((cast(ulong)data[n*2 + 1]) << 32 );
+            return data[n*2] + ((cast(ulong) data[n*2 + 1]) << 32 );
         }
         else static if (BigDigit.sizeof == long.sizeof)
         {
@@ -164,7 +164,7 @@ public:
         else
         {
             immutable x = data[n >> 1];
-            return (n & 1) ? cast(uint)(x >> 32) : cast(uint)x;
+            return (n & 1) ? cast(uint)(x >> 32) : cast(uint) x;
         }
     }
 public:
@@ -460,7 +460,7 @@ public:
     BigUint opShr(Tulong)(Tulong y) pure nothrow const if (is (Tulong == ulong))
     {
         assert(y>0);
-        uint bits = cast(uint)y & BIGDIGITSHIFTMASK;
+        uint bits = cast(uint) y & BIGDIGITSHIFTMASK;
         if ((y>>LG2BIGDIGITBITS) >= data.length) return BigUint(ZERO);
         uint words = cast(uint)(y >> LG2BIGDIGITBITS);
         if (bits==0)
@@ -484,7 +484,7 @@ public:
     {
         assert(y>0);
         if (isZero()) return this;
-        uint bits = cast(uint)y & BIGDIGITSHIFTMASK;
+        uint bits = cast(uint) y & BIGDIGITSHIFTMASK;
         assert((y>>LG2BIGDIGITBITS) < cast(ulong)(uint.max));
         uint words = cast(uint)(y >> LG2BIGDIGITBITS);
         BigDigit [] result = new BigDigit[data.length + words+1];
@@ -519,7 +519,7 @@ public:
             {   // could change sign!
                 ulong xx = x.data[0];
                 if (x.data.length > 1)
-                    xx += (cast(ulong)x.data[1]) << 32;
+                    xx += (cast(ulong) x.data[1]) << 32;
                 ulong d;
                 if (xx <= y)
                 {
@@ -647,7 +647,7 @@ public:
     if ( is(Unqual!T == ulong) )
     {
         if (y <= uint.max)
-            return divInt!uint(x, cast(uint)y);
+            return divInt!uint(x, cast(uint) y);
         if (x.data.length < 2)
             return BigUint(ZERO);
         uint hi = cast(uint)(y >>> 32);
@@ -797,7 +797,7 @@ public:
             immutable p = highestPowerBelowUintMax(x0);
             if (y <= p)
             {   // Just do it with pow
-                result = cast(ulong)intpow(x0, y);
+                result = cast(ulong) intpow(x0, y);
                 if (evenbits + firstnonzero == 0)
                     return result;
                 return result << (evenbits + firstnonzero * 8 * BigDigit.sizeof) * y;
@@ -836,7 +836,7 @@ public:
             assert(0, "Overflow in BigInt.pow");
 
         // The result buffer includes space for all the trailing zeros
-        BigDigit [] resultBuffer = new BigDigit[cast(size_t)estimatelength];
+        BigDigit [] resultBuffer = new BigDigit[cast(size_t) estimatelength];
 
         // Do all the powers of 2!
         size_t result_start = cast(size_t)( firstnonzero * y
@@ -1178,7 +1178,7 @@ version(unittest)
 int slowHighestPowerBelowUintMax(uint x) pure nothrow @safe
 {
      int pwr = 1;
-     for (ulong q = x;x*q < cast(ulong)uint.max; )
+     for (ulong q = x;x*q < cast(ulong) uint.max; )
      {
          q*=x; ++pwr;
      }
@@ -1789,7 +1789,7 @@ body
     {
         if (hi == 0)
         {
-            data[0] = cast(uint)y;
+            data[0] = cast(uint) y;
             if (data.length == 1)
             {
                 hi = 1;
@@ -2234,9 +2234,9 @@ div3by2done:    ;
                 ulong uu = (cast(ulong)(u[j + v.length]) << 32) | u[j + v.length - 1];
                 immutable bigqhat = uu / vhi;
                 ulong rhat =  uu - bigqhat * vhi;
-                qhat = cast(uint)bigqhat;
+                qhat = cast(uint) bigqhat;
 again:
-                if (cast(ulong)qhat * vlo > ((rhat << 32) + ulo))
+                if (cast(ulong) qhat * vlo > ((rhat << 32) + ulo))
                 {
                     --qhat;
                     rhat += vhi;

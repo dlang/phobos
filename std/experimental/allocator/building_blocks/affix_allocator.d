@@ -91,7 +91,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             static if (stateSize!Prefix)
             {
                 assert(result.ptr.alignedAt(Prefix.alignof));
-                emplace!Prefix(cast(Prefix*)result.ptr);
+                emplace!Prefix(cast(Prefix*) result.ptr);
             }
             static if (stateSize!Suffix)
             {
@@ -115,7 +115,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             static if (stateSize!Prefix)
             {
                 assert(result.length > stateSize!Prefix);
-                emplace!Prefix(cast(Prefix*)result.ptr);
+                emplace!Prefix(cast(Prefix*) result.ptr);
                 result = result[stateSize!Prefix .. $];
             }
             static if (stateSize!Suffix)

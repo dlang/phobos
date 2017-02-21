@@ -333,7 +333,7 @@ void assertThrown(T : Throwable = Exception, E)
         file = The source file of the caller.
         line = The line number of the caller.
 
-    Returns: $(D value), if `cast(bool)value` is true. Otherwise,
+    Returns: $(D value), if `cast(bool) value` is true. Otherwise,
     $(D new Exception(msg)) is thrown.
 
     Note:
@@ -368,7 +368,7 @@ if (is(typeof({ if (!value) {} })))
         file = The source file of the caller.
         line = The line number of the caller.
 
-    Returns: $(D value), if `cast(bool)value` is true. Otherwise, the given
+    Returns: $(D value), if `cast(bool) value` is true. Otherwise, the given
     delegate is called.
 
     The safety and purity of this function are inferred from $(D Dg)'s safety
@@ -467,7 +467,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
         static int g;
         ~this() {}  // impure & unsafe destructor
         bool opCast(T:bool)() {
-            int* p = cast(int*)0;   // unsafe operation
+            int* p = cast(int*) 0;   // unsafe operation
             int n = g;              // impure operation
             return true;
         }
@@ -511,7 +511,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
         value = The value to test.
         ex = The exception to throw if the value evaluates to false.
 
-    Returns: $(D value), if `cast(bool)value` is true. Otherwise, $(D ex) is
+    Returns: $(D value), if `cast(bool) value` is true. Otherwise, $(D ex) is
     thrown.
 
     Example:
@@ -541,7 +541,7 @@ T enforce(T)(T value, lazy Throwable ex)
         value = The value to test.
         msg = The message to include in the `ErrnoException` if it is thrown.
 
-    Returns: $(D value), if `cast(bool)value` is true. Otherwise,
+    Returns: $(D value), if `cast(bool) value` is true. Otherwise,
     $(D new ErrnoException(msg)) is thrown.  It is assumed that the last
     operation set $(D errno) to an error code corresponding with the failed
     condition.
@@ -752,7 +752,7 @@ string collectExceptionMsg(T = Exception, E)(lazy E expression)
     {
         expression();
 
-        return cast(string)null;
+        return cast(string) null;
     }
     catch (T e)
         return e.msg.empty ? emptyExceptionMsg : e.msg;
@@ -961,7 +961,7 @@ T assumeWontThrow(T)(lazy T expr,
     {
         if (x < 0)
             throw new Exception("Tried to take root of negative number");
-        return cast(int)sqrt(cast(double)x);
+        return cast(int) sqrt(cast(double) x);
     }
 
     // This function never throws.
@@ -1057,7 +1057,7 @@ if (__traits(isRef, source) || isDynamicArray!S ||
     else static if (isDynamicArray!S)
     {
         import std.array : overlap;
-        return overlap(cast(void[])source, cast(void[])(&target)[0 .. 1]).length != 0;
+        return overlap(cast(void[]) source, cast(void[])(&target)[0 .. 1]).length != 0;
     }
     else
     {
@@ -1099,7 +1099,7 @@ if (__traits(isRef, source) || isDynamicArray!S ||
     else static if (isDynamicArray!S)
     {
         import std.array : overlap;
-        return overlap(cast(void[])source, cast(void[])(&target)[0 .. 1]).length != 0;
+        return overlap(cast(void[]) source, cast(void[])(&target)[0 .. 1]).length != 0;
     }
     else
     {
@@ -1241,7 +1241,7 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
         static struct NoCopy { this(this) { assert(0); } }
         static struct Holder { NoCopy a, b, c; }
         Holder h;
-        cast(void)doesPointTo(h, h);
+        cast(void) doesPointTo(h, h);
     }
 
     shared S3 sh3;
@@ -1375,8 +1375,8 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
     S s = S(&j);
     assert(!doesPointTo(s, i));
     assert( doesPointTo(s, j));
-    assert( doesPointTo(cast(int*)s, i));
-    assert(!doesPointTo(cast(int*)s, j));
+    assert( doesPointTo(cast(int*) s, i));
+    assert(!doesPointTo(cast(int*) s, j));
 }
 @safe unittest //more alias this opCast
 {
@@ -1530,8 +1530,8 @@ class ErrnoException : Exception
     //Chaining multiple calls to ifThrown to attempt multiple things in a row:
     string s="true";
     assert(s.to!int().
-            ifThrown(cast(int)s.to!double()).
-            ifThrown(cast(int)s.to!bool())
+            ifThrown(cast(int) s.to!double()).
+            ifThrown(cast(int) s.to!bool())
             == 1);
 
     //Respond differently to different types of errors
@@ -1636,8 +1636,8 @@ CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate
     //Chaining multiple calls to ifThrown to attempt multiple things in a row:
     string s="true";
     assert(s.to!int().
-            ifThrown(cast(int)s.to!double()).
-            ifThrown(cast(int)s.to!bool())
+            ifThrown(cast(int) s.to!double()).
+            ifThrown(cast(int) s.to!bool())
             == 1);
 
     //Respond differently to different types of errors
@@ -1698,8 +1698,8 @@ CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate
 version(unittest) package
 @property void assertCTFEable(alias dg)()
 {
-    static assert({ cast(void)dg(); return true; }());
-    cast(void)dg();
+    static assert({ cast(void) dg(); return true; }());
+    cast(void) dg();
 }
 
 /** This $(D enum) is used to select the primitives of the range to handle by the

@@ -254,7 +254,7 @@ void main(string[] args)
         IFImage image = read_image(name);
 
         auto ret = image.pixels
-            .sliced(cast(size_t)image.h, cast(size_t)image.w, cast(size_t)image.c)
+            .sliced(cast(size_t) image.h, cast(size_t) image.w, cast(size_t) image.c)
             .movingWindowByChannel
                 !(window => median(window, buf))
                  (nr, nc);

@@ -1405,9 +1405,9 @@ unittest
     }
     {
         Tuple!(wchar, dchar, int, "x", string, "y", char, byte, float) tup;
-        tup = tuple('a', 'b', 3, "4", 'c', cast(byte)0x0D, 0.00);
+        tup = tuple('a', 'b', 3, "4", 'c', cast(byte) 0x0D, 0.00);
         auto rev = tup.reverse;
-        assert(rev == tuple(0.00, cast(byte)0x0D, 'c', "4", 3, 'b', 'a'));
+        assert(rev == tuple(0.00, cast(byte) 0x0D, 'c', "4", 3, 'b', 'a'));
         assert(rev.x == 3 && rev.y == "4");
     }
 }
@@ -2882,7 +2882,7 @@ Params:
 @system unittest
 {
     //Passes
-    enum nullVal = cast(int*)0xCAFEBABE;
+    enum nullVal = cast(int*) 0xCAFEBABE;
     Nullable!(int*, nullVal) npi;
     assert(npi.isNull);
 
@@ -4317,7 +4317,7 @@ if (is(T == class) || is(T == interface))
         }
         else
         {
-            return cast(T)typecons_d_toObject(*cast(void**)(&source));
+            return cast(T) typecons_d_toObject(*cast(void**)(&source));
         }
     }
 }
@@ -4326,7 +4326,7 @@ if (is(T == class) || is(T == interface))
 {
     class C { @disable opCast(T)() {} }
     auto c = new C;
-    static assert(!__traits(compiles, cast(Object)c));
+    static assert(!__traits(compiles, cast(Object) c));
     auto o = dynamicCast!Object(c);
     assert(c is o);
 
@@ -4334,7 +4334,7 @@ if (is(T == class) || is(T == interface))
     interface J { @disable opCast(T)() {} Object instance(); }
     class D : I, J { Object instance() { return this; } }
     I i = new D();
-    static assert(!__traits(compiles, cast(J)i));
+    static assert(!__traits(compiles, cast(J) i));
     J j = dynamicCast!J(i);
     assert(i.instance() is j.instance());
 }
@@ -5106,7 +5106,7 @@ if (!is(T == class) && !(is(T == interface)))
             import core.exception : onOutOfMemoryError;
             import std.conv : emplace;
 
-            _store = cast(Impl*)pureMalloc(Impl.sizeof);
+            _store = cast(Impl*) pureMalloc(Impl.sizeof);
             if (_store is null)
                 onOutOfMemoryError();
             static if (hasIndirections!T)
@@ -5120,7 +5120,7 @@ if (!is(T == class) && !(is(T == interface)))
             import core.exception : onOutOfMemoryError;
             import core.stdc.string : memcpy, memset;
 
-            _store = cast(Impl*)pureMalloc(Impl.sizeof);
+            _store = cast(Impl*) pureMalloc(Impl.sizeof);
             if (_store is null)
                 onOutOfMemoryError();
             static if (hasIndirections!T)
@@ -5502,7 +5502,7 @@ mixin template Proxy(alias a)
      * 'static if' in the definition of Proxy or T.
      */
     private enum bool accessibleFrom(T) =
-        is(typeof((T* self){ cast(void)mixin("(*self)."~__traits(identifier, a)); }));
+        is(typeof((T* self){ cast(void) mixin("(*self)."~__traits(identifier, a)); }));
 
     static if (is(typeof(this) == class))
     {
@@ -5602,7 +5602,7 @@ mixin template Proxy(alias a)
 
     auto ref opCall(this X, Args...)(auto ref Args args) { return a(args); }
 
-    auto ref opCast(T, this X)() { return cast(T)a; }
+    auto ref opCast(T, this X)() { return cast(T) a; }
 
     auto ref opIndex(this X, D...)(auto ref D i)               { return a[i]; }
     auto ref opSlice(this X      )()                           { return a[]; }
@@ -5802,7 +5802,7 @@ mixin template Proxy(alias a)
         assert(m < 20);
         assert(+m == 10);
         assert(-m == -10);
-        assert(cast(double)m == 10.0);
+        assert(cast(double) m == 10.0);
         assert(m + 10 == 20);
         assert(m - 5 == 5);
         assert(m * 20 == 200);
@@ -5847,9 +5847,9 @@ mixin template Proxy(alias a)
         assert(a != [5,6,7,8]);
         assert(+a[0]    == 1);
         version (LittleEndian)
-            assert(cast(ulong[])a == [0x0000_0002_0000_0001, 0x0000_0004_0000_0003]);
+            assert(cast(ulong[]) a == [0x0000_0002_0000_0001, 0x0000_0004_0000_0003]);
         else
-            assert(cast(ulong[])a == [0x0000_0001_0000_0002, 0x0000_0003_0000_0004]);
+            assert(cast(ulong[]) a == [0x0000_0001_0000_0002, 0x0000_0003_0000_0004]);
         assert(a ~ [10,11] == [1,2,3,4,10,11]);
         assert(a[0]    == 1);
         assert(a[]     == [1,2,3,4]);
@@ -5934,10 +5934,10 @@ mixin template Proxy(alias a)
 
     // bug5896 test
     assert(h.opCast!int() == 0);
-    assert(cast(int)h == 0);
+    assert(cast(int) h == 0);
     const ih = new const Hoge(new Foo());
     static assert(!__traits(compiles, ih.opCast!int()));
-    static assert(!__traits(compiles, cast(int)ih));
+    static assert(!__traits(compiles, cast(int) ih));
 
     // template member function
     assert(h.tempfunc!int() == 0);
@@ -5974,9 +5974,9 @@ mixin template Proxy(alias a)
     Object c = new MyClass2(5);
     Object d = new MyClass3(5);
     assert(a == b);
-    assert((cast(MyClass)a) == 5);
-    assert(5 == (cast(MyClass)b));
-    assert(5 == cast(MyClass2)c);
+    assert((cast(MyClass) a) == 5);
+    assert(5 == (cast(MyClass) b));
+    assert(5 == cast(MyClass2) c);
     assert(a != d);
 
     assert(c != a);
@@ -5986,23 +5986,23 @@ mixin template Proxy(alias a)
     // MyClass.opEquals doesn't know MyClass2.
     // so, c.opEquals(a) is true, but a.opEquals(c) is false.
     // furthermore, opEquals(T) couldn't be invoked.
-    assert((cast(MyClass2)c) != (cast(MyClass)a));
+    assert((cast(MyClass2) c) != (cast(MyClass) a));
 
     // opCmp
     Object e = new MyClass2(7);
-    assert(a < cast(MyClass2)e); // OK. and
+    assert(a < cast(MyClass2) e); // OK. and
     assert(e > a); // OK, but...
     // assert(a < e); // RUNTIME ERROR!
-    // assert((cast(MyClass)a) < e); // RUNTIME ERROR!
-    assert(3 < cast(MyClass)a);
-    assert((cast(MyClass2)e) < 11);
+    // assert((cast(MyClass) a) < e); // RUNTIME ERROR!
+    assert(3 < cast(MyClass) a);
+    assert((cast(MyClass2) e) < 11);
 
     // opCall
-    assert((cast(MyClass2)e)("hello") == "hello");
+    assert((cast(MyClass2) e)("hello") == "hello");
 
     // opCast
-    assert((cast(MyClass)(cast(MyClass2)c)) == a);
-    assert((cast(int)(cast(MyClass2)c)) == 5);
+    assert((cast(MyClass)(cast(MyClass2) c)) == a);
+    assert((cast(int)(cast(MyClass2) c)) == 5);
 
     // opIndex
     class MyClass4
@@ -6026,24 +6026,24 @@ mixin template Proxy(alias a)
     assert(f[2..4] == "ll");
 
     // opUnary
-    assert(-(cast(MyClass2)c) == -5);
+    assert(-(cast(MyClass2) c) == -5);
 
     // opBinary
-    assert((cast(MyClass)a) + (cast(MyClass2)c) == 10);
-    assert(5 + cast(MyClass)a == 10);
+    assert((cast(MyClass) a) + (cast(MyClass2) c) == 10);
+    assert(5 + cast(MyClass) a == 10);
 
     // opAssign
-    (cast(MyClass2)c) = 11;
-    assert((cast(MyClass2)c) == 11);
-    (cast(MyClass2)c) = new MyClass(13);
-    assert((cast(MyClass2)c) == 13);
+    (cast(MyClass2) c) = 11;
+    assert((cast(MyClass2) c) == 11);
+    (cast(MyClass2) c) = new MyClass(13);
+    assert((cast(MyClass2) c) == 13);
 
     // opOpAssign
-    assert((cast(MyClass2)c) += 4);
-    assert((cast(MyClass2)c) == 17);
+    assert((cast(MyClass2) c) += 4);
+    assert((cast(MyClass2) c) == 17);
 
     // opDispatch
-    assert((cast(MyClass2)c).pow(2) == 289);
+    assert((cast(MyClass2) c).pow(2) == 289);
 
     // opDollar
     assert(f[2..$-1] == "ll");
@@ -6240,16 +6240,16 @@ struct Typedef(T, T init = T.init, string cookie=null)
         this(tdef.Typedef_payload);
     }
 
-    // We need to add special overload for cast(Typedef!X)exp,
+    // We need to add special overload for cast(Typedef!X) exp,
     // thus we can't simply inherit Proxy!Typedef_payload
     T2 opCast(T2 : Typedef!(T, Unused), this X, T, Unused...)()
     {
-        return T2(cast(T)Typedef_payload);
+        return T2(cast(T) Typedef_payload);
     }
 
     auto ref opCast(T2, this X)()
     {
-        return cast(T2)Typedef_payload;
+        return cast(T2) Typedef_payload;
     }
 
     mixin Proxy!Typedef_payload;
@@ -6312,7 +6312,7 @@ template TypedefType(T)
     assert(myInt == 5);
 
     // cast to the underlying type to get the value that's being wrapped
-    int x = cast(TypedefType!MyInt)myInt;
+    int x = cast(TypedefType!MyInt) myInt;
 
     alias MyIntInit = Typedef!(int, 42);
     static assert(is(TypedefType!MyIntInit == int));
@@ -6486,9 +6486,9 @@ template TypedefType(T)
     alias String = Typedef!(char[]);
     alias CString = Typedef!(const(char)[]);
     CString cs = "fubar";
-    String s = cast(String)cs;
+    String s = cast(String) cs;
     assert(cs == s);
-    char[] s2 = cast(char[])cs;
+    char[] s2 = cast(char[]) cs;
     const(char)[] cs2 = cast(const(char)[])s;
     assert(s2 == cs2);
 }
@@ -7305,7 +7305,7 @@ public:
     assert(flags_AB & Enum.A);
 
     // Finally, you can of course get you raw value out of flags
-    auto value = cast(int)flags_A;
+    auto value = cast(int) flags_A;
     assert(value == Enum.A);
 }
 

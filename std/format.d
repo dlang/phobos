@@ -2343,7 +2343,7 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
 {
     static if (is(const(ArrayTypeOf!T) == const(void[])))
     {
-        formatValue(w, cast(const ubyte[])obj, f);
+        formatValue(w, cast(const ubyte[]) obj, f);
     }
     else static if (!isInputRange!T)
     {
@@ -2432,13 +2432,13 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
     void[] val0;
     formatTest( val0, "[]" );
 
-    void[] val = cast(void[])cast(ubyte[])[1, 2, 3];
+    void[] val = cast(void[]) cast(ubyte[])[1, 2, 3];
     formatTest( val, "[1, 2, 3]" );
 
     void[0] sval0 = [];
     formatTest( sval0, "[]");
 
-    void[3] sval = cast(void[3])cast(ubyte[3])[1, 2, 3];
+    void[3] sval = cast(void[3]) cast(ubyte[3])[1, 2, 3];
     formatTest( sval, "[1, 2, 3]" );
 }
 
@@ -2668,7 +2668,7 @@ if (isInputRange!T)
         static if (is(DynamicArrayTypeOf!T))
         {
             alias ARR = DynamicArrayTypeOf!T;
-            foreach (e ; cast(ARR)val)
+            foreach (e ; cast(ARR) val)
             {
                 formatValue(w, e, f);
             }
@@ -2749,7 +2749,7 @@ private void formatChar(Writer)(Writer w, in dchar c, in char quote)
     else
         fmt = "\\U%08X";
 
-    formattedWrite(w, fmt, cast(uint)c);
+    formattedWrite(w, fmt, cast(uint) c);
 }
 
 // undocumented because of deprecation
@@ -2805,7 +2805,7 @@ if (is(StringTypeOf!T) && !is(T == enum))
             enum postfix = 'd';
             alias IntArr = const(uint)[];
         }
-        formattedWrite(w, "x\"%(%02X %)\"%s", cast(IntArr)str, postfix);
+        formattedWrite(w, "x\"%(%02X %)\"%s", cast(IntArr) str, postfix);
     }
     else
         formatValue(w, str, f);
@@ -3299,12 +3299,12 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
                 }
                 else
                 {
-                    formatValue(w, cast(Object)val, f);
+                    formatValue(w, cast(Object) val, f);
                 }
             }
             else
             {
-                formatValue(w, cast(Object)val, f);
+                formatValue(w, cast(Object) val, f);
             }
         }
     }
@@ -3345,7 +3345,7 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
         }
 
         IUnknown2 d = new D;
-        string expected = format("%X", cast(void*)d);
+        string expected = format("%X", cast(void*) d);
         formatTest(d, expected);
     }
 }
@@ -3501,11 +3501,11 @@ if (is(T == enum))
             }
         }
 
-        // val is not a member of T, output cast(T)rawValue instead.
+        // val is not a member of T, output cast(T) rawValue instead.
         put(w, "cast(" ~ T.stringof ~ ")");
         static assert(!is(OriginalType!T == T));
     }
-    formatValue(w, cast(OriginalType!T)val, f);
+    formatValue(w, cast(OriginalType!T) val, f);
 }
 
 ///
@@ -3526,7 +3526,7 @@ if (is(T == enum))
 {
     enum A { first, second, third }
     formatTest( A.second, "second" );
-    formatTest( cast(A)72, "cast(A)72" );
+    formatTest( cast(A) 72, "cast(A)72" );
 }
 @safe unittest
 {
@@ -3606,7 +3606,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
     p = null;
     formatTest( p, "null" );
 
-    auto q = ()@trusted{ return cast(void*)0xFFEECCAA; }();
+    auto q = ()@trusted{ return cast(void*) 0xFFEECCAA; }();
     formatTest( q, "FFEECCAA" );
 }
 
@@ -3620,7 +3620,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
     S* p = null;
     formatTest( p, "null" );
 
-    S* q = cast(S*)0xFFEECCAA;
+    S* q = cast(S*) 0xFFEECCAA;
     formatTest( q, "FFEECCAA" );
 }
 
@@ -4150,7 +4150,7 @@ void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, s
     assert(stream.data == "ghi");
 
 here:
-    @trusted void* deadBeef() { return cast(void*)0xDEADBEEF; }
+    @trusted void* deadBeef() { return cast(void*) 0xDEADBEEF; }
     stream.clear(); formattedWrite(stream, "%s", deadBeef());
     assert(stream.data == "DEADBEEF", stream.data);
 
@@ -4237,7 +4237,7 @@ here:
     }
     stream.clear(); formattedWrite(stream, "%s", TestEnum.Value2);
     assert(stream.data == "Value2", stream.data);
-    stream.clear(); formattedWrite(stream, "%s", cast(TestEnum)5);
+    stream.clear(); formattedWrite(stream, "%s", cast(TestEnum) 5);
     assert(stream.data == "cast(TestEnum)5", stream.data);
 
     //immutable(char[5])[int] aa = ([3:"hello", 4:"betty"]);
@@ -5274,7 +5274,7 @@ private bool needToSwapEndianess(Char)(ref FormatSpec!Char f)
     dr = format("ghi"d);
     assert(dr == "ghi"d);
 
-    void* p = cast(void*)0xDEADBEEF;
+    void* p = cast(void*) 0xDEADBEEF;
     r = format("%s", p);
     assert(r == "DEADBEEF");
 

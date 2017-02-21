@@ -93,7 +93,7 @@ if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
 
     alias CF = Unqual!(ElementEncodingType!From);
 
-    enum To* useStack = () @trusted { return cast(To*)size_t.max; }();
+    enum To* useStack = () @trusted { return cast(To*) size_t.max; }();
 
     static struct Res
     {
@@ -167,7 +167,7 @@ if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
             size_t newlen = res.length * 3 / 2;
             if (newlen <= strLength)
                 newlen = strLength + 1; // +1 for terminating 0
-            auto ptr = cast(To*)malloc(newlen * To.sizeof);
+            auto ptr = cast(To*) malloc(newlen * To.sizeof);
             if (!ptr)
                 onOutOfMemoryError();
             memcpy(ptr, res.ptr, i * To.sizeof);
@@ -178,7 +178,7 @@ if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
             if (buf.length >= size_t.max / (2 * To.sizeof))
                 onOutOfMemoryError();
             const newlen = buf.length * 3 / 2;
-            auto ptr = cast(To*)realloc(buf.ptr, newlen * To.sizeof);
+            auto ptr = cast(To*) realloc(buf.ptr, newlen * To.sizeof);
             if (!ptr)
                 onOutOfMemoryError();
             return ptr[0 .. newlen];

@@ -202,7 +202,7 @@ version(unittest)
                     handler = receiveOnly!(typeof(handler));
                 catch (OwnerTerminated)
                     return;
-                handler((cast()listener).accept);
+                handler((cast() listener).accept);
             }
             catch (Throwable e)
             {
@@ -219,7 +219,7 @@ version(unittest)
         sock.bind(new InternetAddress(INADDR_LOOPBACK, InternetAddress.PORT_ANY));
         sock.listen(1);
         auto addr = sock.localAddress.toString();
-        auto tid = spawn(&TestServer.loop, cast(shared)sock);
+        auto tid = spawn(&TestServer.loop, cast(shared) sock);
         return TestServer(addr, tid);
     }
 
@@ -256,7 +256,7 @@ version(unittest)
             if (bdy.empty)
                 continue;
 
-            auto hdrs = cast(string)buf[0 .. $ - bdy.length];
+            auto hdrs = cast(string) buf[0 .. $ - bdy.length];
             bdy.popFrontN(4);
             // no support for chunked transfer-encoding
             if (auto m = hdrs.matchFirst(ctRegex!(`Content-Length: ([0-9]+)`, "i")))
@@ -629,7 +629,7 @@ unittest
 
     auto data = new ubyte[](256);
     foreach (i, ref ub; data)
-        ub = cast(ubyte)i;
+        ub = cast(ubyte) i;
 
     testServer.handle((s) {
         auto req = s.recvReq!ubyte;
@@ -1036,7 +1036,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
             switch (mode)
             {
                 case CurlSeekPos.set:
-                    remainingData = sendData[cast(size_t)offset..$];
+                    remainingData = sendData[cast(size_t) offset..$];
                     return CurlSeek.ok;
                 default:
                     // As of curl 7.18.0, libcurl will not pass
@@ -1689,15 +1689,15 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char)
     static if (is(Conn : AutoProtocol))
     {
         if (isFTPUrl(url))
-            return byLineAsync(url, cast(void[])null, keepTerminator,
+            return byLineAsync(url, cast(void[]) null, keepTerminator,
                                terminator, transmitBuffers, FTP());
         else
-            return byLineAsync(url, cast(void[])null, keepTerminator,
+            return byLineAsync(url, cast(void[]) null, keepTerminator,
                                terminator, transmitBuffers, HTTP());
     }
     else
     {
-        return byLineAsync(url, cast(void[])null, keepTerminator,
+        return byLineAsync(url, cast(void[]) null, keepTerminator,
                            terminator, transmitBuffers, conn);
     }
 }
@@ -1837,15 +1837,15 @@ if (isCurlConn!(Conn))
     static if (is(Conn : AutoProtocol))
     {
         if (isFTPUrl(url))
-            return byChunkAsync(url, cast(void[])null, chunkSize,
+            return byChunkAsync(url, cast(void[]) null, chunkSize,
                                 transmitBuffers, FTP());
         else
-            return byChunkAsync(url, cast(void[])null, chunkSize,
+            return byChunkAsync(url, cast(void[]) null, chunkSize,
                                 transmitBuffers, HTTP());
     }
     else
     {
-        return byChunkAsync(url, cast(void[])null, chunkSize,
+        return byChunkAsync(url, cast(void[]) null, chunkSize,
                             transmitBuffers, conn);
     }
 }
@@ -1897,14 +1897,14 @@ private void _asyncDuplicateConnection(Conn, PostData)
             connDup.handle.set(CurlOption.copypostfields,
                                cast(void*) postData.ptr);
         }
-        tid.send(cast(ulong)connDup.handle.handle);
+        tid.send(cast(ulong) connDup.handle.handle);
         tid.send(connDup.method);
     }
     else
     {
         enforce!CurlException(postData is null,
                                 "Cannot put ftp data using byLineAsync()");
-        tid.send(cast(ulong)connDup.handle.handle);
+        tid.send(cast(ulong) connDup.handle.handle);
         tid.send(HTTP.Method.undefined);
     }
     connDup.p.curl.handle = null; // make sure handle is not freed
@@ -2054,7 +2054,7 @@ private mixin template Protocol()
     */
     @property void localPort(ushort port)
     {
-        p.curl.set(CurlOption.localport, cast(long)port);
+        p.curl.set(CurlOption.localport, cast(long) port);
     }
 
     /**
@@ -2066,7 +2066,7 @@ private mixin template Protocol()
     */
     @property void localPortRange(ushort range)
     {
-        p.curl.set(CurlOption.localportrange, cast(long)range);
+        p.curl.set(CurlOption.localportrange, cast(long) range);
     }
 
     /** Set the tcp no-delay socket option on or off.
@@ -2173,7 +2173,7 @@ private mixin template Protocol()
      * auto client = HTTP("dlang.org");
      * client.onSend = delegate size_t(void[] data)
      * {
-     *     auto m = cast(void[])msg;
+     *     auto m = cast(void[]) msg;
      *     size_t length = m.length > data.length ? data.length : m.length;
      *     if (length == 0) return 0;
      *     data[0..length] = m[0..length];
@@ -2267,7 +2267,7 @@ decodeString(Char = char)(const(ubyte)[] data,
         dchar dc = scheme.safeDecode(data);
         if (dc == INVALID_SEQUENCE)
         {
-            return typeof(return)(size_t.max, cast(Char[])null);
+            return typeof(return)(size_t.max, cast(Char[]) null);
         }
         charsDecoded++;
         res ~= dc;
@@ -2364,7 +2364,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   * http.contentLength = msg.length;
   * http.onSend = (void[] data)
   * {
-  *     auto m = cast(void[])msg;
+  *     auto m = cast(void[]) msg;
   *     size_t len = m.length > data.length ? data.length : m.length;
   *     if (len == 0) return len;
   *     data[0..len] = m[0..len];
@@ -2774,7 +2774,7 @@ struct HTTP
          * auto client = HTTP("dlang.org");
          * client.onSend = delegate size_t(void[] data)
          * {
-         *     auto m = cast(void[])msg;
+         *     auto m = cast(void[]) msg;
          *     size_t length = m.length > data.length ? data.length : m.length;
          *     if (length == 0) return 0;
          *     data[0..length] = m[0..length];
@@ -2892,7 +2892,7 @@ struct HTTP
         if (!userAgent.length)
         {
             auto curlVer = Curl.curl.version_info(CURLVERSION_NOW).version_num;
-            userAgent = cast(immutable)sformat(
+            userAgent = cast(immutable) sformat(
                 buf, fmt, version_major, version_minor,
                 curlVer >> 16 & 0xFF, curlVer >> 8 & 0xFF, curlVer & 0xFF);
         }
@@ -3088,7 +3088,7 @@ struct HTTP
         // cannot use callback when specifying data directly so it is disabled here.
         p.curl.clear(CurlOption.readfunction);
         addRequestHeader("Content-Type", contentType);
-        p.curl.set(CurlOption.postfields, cast(void*)data.ptr);
+        p.curl.set(CurlOption.postfields, cast(void*) data.ptr);
         p.curl.set(CurlOption.postfieldsize, data.length);
         if (method == Method.undefined)
             method = Method.post;
@@ -3107,7 +3107,7 @@ struct HTTP
         });
         auto data = new ubyte[](256);
         foreach (i, ref ub; data)
-            ub = cast(ubyte)i;
+            ub = cast(ubyte) i;
 
         auto http = HTTP(testServer.addr~"/path");
         http.postData = data;
@@ -4534,7 +4534,7 @@ struct Curl
       * string msg = "Hello world";
       * curl.onSend = (void[] data)
       * {
-      *     auto m = cast(void[])msg;
+      *     auto m = cast(void[]) msg;
       *     size_t length = m.length > data.length ? data.length : m.length;
       *     if (length == 0) return 0;
       *     data[0..length] = m[0..length];
@@ -4739,8 +4739,8 @@ struct Curl
             return 0;
 
         // return: 0 ok, 1 fail
-        return b._onProgress(cast(size_t)dltotal, cast(size_t)dlnow,
-                             cast(size_t)ultotal, cast(size_t)ulnow);
+        return b._onProgress(cast(size_t) dltotal, cast(size_t) dlnow,
+                             cast(size_t) ultotal, cast(size_t) ulnow);
     }
 
 }
@@ -4824,12 +4824,12 @@ private static size_t _receiveAsyncChunks(ubyte[] data, ref ubyte[] outdata,
             // them.
             receive((immutable(ubyte)[] buf)
                     {
-                        buffer = cast(ubyte[])buf;
+                        buffer = cast(ubyte[]) buf;
                         outdata = buffer[];
                     },
                     (bool flag) { aborted = true; }
                     );
-            if (aborted) return cast(size_t)0;
+            if (aborted) return cast(size_t) 0;
         }
         if (outdata.empty)
         {
@@ -4895,14 +4895,14 @@ private static size_t _receiveAsyncLines(Terminator, Unit)
             // reuse them.
             receive((immutable(Unit)[] buf)
                     {
-                        buffer = cast(Unit[])buf;
+                        buffer = cast(Unit[]) buf;
                         buffer.length = 0;
                         buffer.assumeSafeAppend();
                         bufferValid = true;
                     },
                     (bool flag) { aborted = true; }
                     );
-            if (aborted) return cast(size_t)0;
+            if (aborted) return cast(size_t) 0;
         }
         if (!bufferValid)
         {
@@ -4954,7 +4954,7 @@ private static size_t _receiveAsyncLines(Terminator, Unit)
         catch (CurlException ex)
         {
             prioritySend(fromTid, cast(immutable(CurlException))ex);
-            return cast(size_t)0;
+            return cast(size_t) 0;
         }
     }
     return datalen;
@@ -5004,7 +5004,7 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     }
 
     // no move semantic available in std.concurrency ie. must use casting.
-    auto connDup = cast(CURL*)receiveOnly!ulong();
+    auto connDup = cast(CURL*) receiveOnly!ulong();
     auto client = Conn();
     client.p.curl.handle = connDup;
 

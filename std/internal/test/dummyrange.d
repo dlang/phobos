@@ -322,7 +322,7 @@ if (is(T == uint))
     static auto iota(size_t low = 1, size_t high = 11)
     {
         import std.range : iota;
-        return iota(cast(uint)low, cast(uint)high);
+        return iota(cast(uint) low, cast(uint) high);
     }
 
     static void initialize(ref uint[] arr)
@@ -345,7 +345,7 @@ if (is(T == double))
     static auto iota(size_t low = 1, size_t high = 11)
     {
         import std.range : iota;
-        return iota(cast(double)low, cast(double)high, 1.0);
+        return iota(cast(double) low, cast(double) high, 1.0);
     }
 
     static void initialize(ref double[] arr)
@@ -392,7 +392,7 @@ if (is(T == TestFoo))
     {
         import std.range : iota;
         import std.algorithm.iteration : map;
-        return iota(cast(int)low, cast(int)high).map!(a => TestFoo(a));
+        return iota(cast(int) low, cast(int) high).map!(a => TestFoo(a));
     }
 
     static void initialize(ref TestFoo[] arr)

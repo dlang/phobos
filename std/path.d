@@ -726,7 +726,7 @@ if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(Element
             return path[0 .. uncRootLength(path)];
     }
     static if (isSomeString!R)
-        return cast(ElementEncodingType!R[])null; // legacy code may rely on null return rather than slice
+        return cast(ElementEncodingType!R[]) null; // legacy code may rely on null return rather than slice
     else
         return path[0..0];
 }
@@ -2655,7 +2655,7 @@ if ((isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
 @system unittest
 {
     import std.array;
-    assert(asAbsolutePath(cast(string)null).array == "");
+    assert(asAbsolutePath(cast(string) null).array == "");
     version (Posix)
     {
         assert(asAbsolutePath("/foo").array == "/foo");
@@ -3541,7 +3541,7 @@ unittest
         {
             char[3] buf;
             buf[0] = 'a';
-            buf[1] = i <= 31 ? cast(char)i : cases[i - 32];
+            buf[1] = i <= 31 ? cast(char) i : cases[i - 32];
             buf[2] = 'b';
             assert(!isValidFilename(buf[]));
         }
@@ -3850,7 +3850,7 @@ string expandTilde(string inputPath) nothrow
                 auto last_char = indexOf(path, dirSeparator[0]);
 
                 size_t username_len = (last_char == -1) ? path.length : last_char;
-                char* username = cast(char*)malloc(username_len * char.sizeof);
+                char* username = cast(char*) malloc(username_len * char.sizeof);
                 if (!username)
                     onOutOfMemoryError();
                 scope(exit) free(username);
@@ -3876,7 +3876,7 @@ string expandTilde(string inputPath) nothrow
                 passwd result;
                 while (1)
                 {
-                    extra_memory = cast(char*)realloc(extra_memory, extra_memory_size * char.sizeof);
+                    extra_memory = cast(char*) realloc(extra_memory, extra_memory_size * char.sizeof);
                     if (extra_memory == null)
                         onOutOfMemoryError();
 

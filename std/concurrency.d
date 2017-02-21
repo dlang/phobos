@@ -335,7 +335,7 @@ public:
     void toString(scope void delegate(const(char)[]) sink)
     {
         import std.format : formattedWrite;
-        formattedWrite(sink, "Tid(%x)", cast(void*)mbox);
+        formattedWrite(sink, "Tid(%x)", cast(void*) mbox);
     }
 
 }
@@ -567,16 +567,16 @@ if ( isSpawnable!(F, T) )
     static assert(!__traits(compiles, spawn(dg6, 6)));
 
     auto callable1  = new class{ void opCall(int) shared {} };
-    auto callable2  = cast(shared)new class{ void opCall(int) shared {} };
+    auto callable2  = cast(shared) new class{ void opCall(int) shared {} };
     auto callable3  = new class{ void opCall(int) immutable {} };
-    auto callable4  = cast(immutable)new class{ void opCall(int) immutable {} };
+    auto callable4  = cast(immutable) new class{ void opCall(int) immutable {} };
     auto callable5  = new class{ void opCall(int) {} };
-    auto callable6  = cast(shared)new class{ void opCall(int) immutable {} };
-    auto callable7  = cast(immutable)new class{ void opCall(int) shared {} };
-    auto callable8  = cast(shared)new class{ void opCall(int) const shared {} };
-    auto callable9  = cast(const shared)new class{ void opCall(int) shared {} };
-    auto callable10 = cast(const shared)new class{ void opCall(int) const shared {} };
-    auto callable11 = cast(immutable)new class{ void opCall(int) const shared {} };
+    auto callable6  = cast(shared) new class{ void opCall(int) immutable {} };
+    auto callable7  = cast(immutable) new class{ void opCall(int) shared {} };
+    auto callable8  = cast(shared) new class{ void opCall(int) const shared {} };
+    auto callable9  = cast(const shared) new class{ void opCall(int) shared {} };
+    auto callable10 = cast(const shared) new class{ void opCall(int) const shared {} };
+    auto callable11 = cast(immutable) new class{ void opCall(int) const shared {} };
     static assert(!__traits(compiles, spawn(callable1,  1)));
     static assert( __traits(compiles, spawn(callable2,  2)));
     static assert(!__traits(compiles, spawn(callable3,  3)));
@@ -2389,7 +2389,7 @@ private
 
                 if (sm_head)
                 {
-                    n = cast(Node*)sm_head;
+                    n = cast(Node*) sm_head;
                     sm_head = sm_head.next;
                 }
             }
@@ -2518,7 +2518,7 @@ private @property Mutex initOnceLock()
     if (auto mtx = atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock))
         return mtx;
     auto mtx = new Mutex;
-    if (cas(cast(shared)&lock, cast(shared)null, cast(shared)mtx))
+    if (cas(cast(shared)&lock, cast(shared) null, cast(shared) mtx))
         return mtx;
     return atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock);
 }

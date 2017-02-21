@@ -177,7 +177,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
                 // Overestimated
                 continue;
             }
-            _control = BitVector((cast(ulong*)data.ptr)[0 .. controlWords]);
+            _control = BitVector((cast(ulong*) data.ptr)[0 .. controlWords]);
             _control[] = 0;
             _payload = payload;
             break;

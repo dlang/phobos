@@ -175,7 +175,7 @@ public:
     /// Assignment from built-in integer types.
     BigInt opAssign(T)(T x) pure nothrow if (isIntegral!T)
     {
-        data = cast(ulong)absUnsign(x);
+        data = cast(ulong) absUnsign(x);
         sign = (x < 0);
         return this;
     }
@@ -241,7 +241,7 @@ public:
             assert(y!=0, "Division by zero");
             static if (T.sizeof <= uint.sizeof)
             {
-                data = BigUint.divInt(data, cast(uint)u);
+                data = BigUint.divInt(data, cast(uint) u);
             }
             else
             {
@@ -258,7 +258,7 @@ public:
             }
             else
             {
-                data = cast(ulong)BigUint.modInt(data, cast(uint)u);
+                data = cast(ulong) BigUint.modInt(data, cast(uint) u);
                 if (data.isZero())
                     sign = false;
             }
@@ -596,7 +596,7 @@ public:
     {
         if (sign != (y<0))
             return 0;
-        return data.opEquals(cast(ulong)absUnsign(y));
+        return data.opEquals(cast(ulong) absUnsign(y));
     }
 
     ///
@@ -653,7 +653,7 @@ public:
             if (isUnsigned!T || !sign)
             {
                 if (l <= T.max)
-                    return cast(T)l;
+                    return cast(T) l;
             }
             else
             {
@@ -755,7 +755,7 @@ public:
     {
         if (sign != (y<0) )
             return sign ? -1 : 1;
-        int cmp = data.opCmp(cast(ulong)absUnsign(y));
+        int cmp = data.opCmp(cast(ulong) absUnsign(y));
         return sign? -cmp: cmp;
     }
     /// ditto
@@ -1504,7 +1504,7 @@ unittest
             T2 t2 = t1;
 
             T2 t2_1 = to!T2(t1);
-            T2 t2_2 = cast(T2)t1;
+            T2 t2_2 = cast(T2) t1;
 
             assert(t2 == t1);
             assert(t2 == 2);
@@ -1648,7 +1648,7 @@ unittest
     assert(x.isZero());
 
     x = BigInt(-3);
-    x %= cast(ushort)3;
+    x %= cast(ushort) 3;
     assert(!x.isNegative());
     assert(x.isZero());
 

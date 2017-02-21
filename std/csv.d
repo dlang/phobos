@@ -421,7 +421,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
 {
     return CsvReader!(Contents,ErrorLevel,Range,
                     Unqual!(ElementType!Range),string[])
-        (input, cast(string[])null, delimiter, quote);
+        (input, cast(string[]) null, delimiter, quote);
 }
 
 // Test standard iteration over input.
@@ -745,12 +745,12 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
     auto ir = InputRange("Name,Occupation,Salary\r"d~
           "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n"d);
 
-    foreach (record; csvReader(ir, cast(string[])null))
+    foreach (record; csvReader(ir, cast(string[]) null))
         foreach (cell; record) {}
     foreach (record; csvReader!(Tuple!(string, string, int))
-            (ir,cast(string[])null)) {}
+            (ir,cast(string[]) null)) {}
     foreach (record; csvReader!(string[string])
-            (ir,cast(string[])null)) {}
+            (ir,cast(string[]) null)) {}
 }
 
 @safe unittest // const/immutable dchars
@@ -1678,7 +1678,7 @@ if (isSomeChar!Separator && isInputRange!Range
     size_t i = 0;
     foreach (data; csvReader!Data(csv)) with (data)
     {
-        int[] row = [cast(int)a, cast(int)b, cast(int)c];
+        int[] row = [cast(int) a, cast(int) b, cast(int) c];
         if (i == 0)
             assert(row == [1, 2, 3]);
         else
@@ -1692,7 +1692,7 @@ if (isSomeChar!Separator && isInputRange!Range
         auto a = data.front;    data.popFront();
         auto b = data.front;    data.popFront();
         auto c = data.front;
-        int[] row = [cast(int)a, cast(int)b, cast(int)c];
+        int[] row = [cast(int) a, cast(int) b, cast(int) c];
         if (i == 0)
             assert(row == [1, 2, 3]);
         else

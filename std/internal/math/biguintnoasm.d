@@ -41,11 +41,11 @@ uint multibyteAddSub(char op)(uint[] dest, const(uint) [] src1,
     for (size_t i = 0; i < src2.length; ++i)
     {
         static if (op=='+') c = c  + src1[i] + src2[i];
-             else           c = cast(ulong)src1[i] - src2[i] - c;
-        dest[i] = cast(uint)c;
+             else           c = cast(ulong) src1[i] - src2[i] - c;
+        dest[i] = cast(uint) c;
         c = (c > 0xFFFF_FFFF);
     }
-    return cast(uint)c;
+    return cast(uint) c;
 }
 
 unittest
@@ -56,7 +56,7 @@ unittest
     for (size_t i = 0; i < a.length; ++i)
     {
         if (i&1) a[i]=cast(uint)(0x8000_0000 + i);
-        else a[i]=cast(uint)i;
+        else a[i]=cast(uint) i;
         b[i]= 0x8000_0003;
     }
     c[19]=0x3333_3333;
@@ -106,7 +106,7 @@ uint multibyteIncrementAssign(char op)(uint[] dest, uint carry)
     {
         ulong c = carry;
         c += dest[0];
-        dest[0] = cast(uint)c;
+        dest[0] = cast(uint) c;
         if (c<=0xFFFF_FFFF)
             return 0;
 
@@ -122,7 +122,7 @@ uint multibyteIncrementAssign(char op)(uint[] dest, uint carry)
     {
         ulong c = carry;
         c = dest[0] - c;
-        dest[0] = cast(uint)c;
+        dest[0] = cast(uint) c;
         if (c<=0xFFFF_FFFF)
             return 0;
         for (size_t i = 1; i < dest.length; ++i)
@@ -145,10 +145,10 @@ uint multibyteShl(uint [] dest, const(uint) [] src, uint numbits)
     for (size_t i = 0; i < dest.length; ++i)
     {
         c += (cast(ulong)(src[i]) << numbits);
-        dest[i] = cast(uint)c;
+        dest[i] = cast(uint) c;
         c >>>= 32;
    }
-   return cast(uint)c;
+   return cast(uint) c;
 }
 
 
@@ -162,7 +162,7 @@ void multibyteShr(uint [] dest, const(uint) [] src, uint numbits)
     for (ptrdiff_t i = dest.length; i!=0; --i)
     {
         c += (src[i-1] >>numbits) + (cast(ulong)(src[i-1]) << (64 - numbits));
-        dest[i-1] = cast(uint)c;
+        dest[i-1] = cast(uint) c;
         c >>>= 32;
    }
 }
@@ -198,10 +198,10 @@ uint multibyteMul(uint[] dest, const(uint)[] src, uint multiplier, uint carry)
     for (size_t i = 0; i < src.length; ++i)
     {
         c += cast(ulong)(src[i]) * multiplier;
-        dest[i] = cast(uint)c;
+        dest[i] = cast(uint) c;
         c>>=32;
     }
-    return cast(uint)c;
+    return cast(uint) c;
 }
 
 unittest
@@ -227,18 +227,18 @@ uint multibyteMulAdd(char op)(uint [] dest, const(uint)[] src,
         static if (op=='+')
         {
             c += cast(ulong)(multiplier) * src[i]  + dest[i];
-            dest[i] = cast(uint)c;
+            dest[i] = cast(uint) c;
             c >>= 32;
         }
         else
         {
-            c += cast(ulong)multiplier * src[i];
-            ulong t = cast(ulong)dest[i] - cast(uint)c;
-            dest[i] = cast(uint)t;
+            c += cast(ulong) multiplier * src[i];
+            ulong t = cast(ulong) dest[i] - cast(uint) c;
+            dest[i] = cast(uint) t;
             c = cast(uint)((c>>32) - (t>>32));
         }
     }
-    return cast(uint)c;
+    return cast(uint) c;
 }
 
 unittest
@@ -285,7 +285,7 @@ void multibyteMultiplyAccumulate(uint [] dest, const(uint)[] left, const(uint)
 uint multibyteDivAssign(uint [] dest, uint divisor, uint overflow)
     pure @nogc @safe
 {
-    ulong c = cast(ulong)overflow;
+    ulong c = cast(ulong) overflow;
     for (ptrdiff_t i = dest.length-1; i>= 0; --i)
     {
         c = (c<<32) + cast(ulong)(dest[i]);
@@ -293,7 +293,7 @@ uint multibyteDivAssign(uint [] dest, uint divisor, uint overflow)
         c -= divisor * q;
         dest[i] = q;
     }
-    return cast(uint)c;
+    return cast(uint) c;
 }
 
 unittest
@@ -319,9 +319,9 @@ void multibyteAddDiagonalSquares(uint[] dest, const(uint)[] src)
     {
         // At this point, c is 0 or 1, since FFFF*FFFF+FFFF_FFFF = 1_0000_0000.
         c += cast(ulong)(src[i]) * src[i] + dest[2*i];
-        dest[2*i] = cast(uint)c;
+        dest[2*i] = cast(uint) c;
         c = (c>>=32) + dest[2*i+1];
-        dest[2*i+1] = cast(uint)c;
+        dest[2*i+1] = cast(uint) c;
         c >>= 32;
     }
 }
@@ -337,9 +337,9 @@ void multibyteTriangleAccumulate(uint[] dest, const(uint)[] x)
         if (x.length == 3)
         {
             ulong c = cast(ulong)(x[$-1]) * x[$-2]  + dest[2*x.length-3];
-            dest[2*x.length - 3] = cast(uint)c;
+            dest[2*x.length - 3] = cast(uint) c;
             c >>= 32;
-            dest[2*x.length - 2] = cast(uint)c;
+            dest[2*x.length - 2] = cast(uint) c;
         }
         return;
     }
@@ -350,15 +350,15 @@ void multibyteTriangleAccumulate(uint[] dest, const(uint)[] x)
     }
         // Unroll the last two entries, to reduce loop overhead:
     ulong  c = cast(ulong)(x[$-3]) * x[$-2] + dest[2*x.length-5];
-    dest[2*x.length-5] = cast(uint)c;
+    dest[2*x.length-5] = cast(uint) c;
     c >>= 32;
     c += cast(ulong)(x[$-3]) * x[$-1] + dest[2*x.length-4];
-    dest[2*x.length-4] = cast(uint)c;
+    dest[2*x.length-4] = cast(uint) c;
     c >>= 32;
     c += cast(ulong)(x[$-1]) * x[$-2];
-    dest[2*x.length-3] = cast(uint)c;
+    dest[2*x.length-3] = cast(uint) c;
     c >>= 32;
-    dest[2*x.length-2] = cast(uint)c;
+    dest[2*x.length-2] = cast(uint) c;
 }
 
 void multibyteSquare(BigDigit[] result, const(BigDigit) [] x) pure @nogc @safe

@@ -273,7 +273,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
     static assert(m == 0 || a < m);
     static assert(m == 0 || c < m);
     static assert(m == 0 ||
-            (cast(ulong)a * (m-1) + c) % m == (c < a ? c - a + m : c - a));
+            (cast(ulong) a * (m-1) + c) % m == (c < a ? c - a + m : c - a));
 
     // Check for maximum range
     private static ulong gcd(ulong a, ulong b) @safe pure nothrow @nogc
@@ -896,7 +896,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
     // generator, since it can't cover the full range of
     // possible seed values.  Ideally we need a 64-bit
     // unpredictable seed to complement the 32-bit one!
-    static assert(isSeedable!(Mt19937_64, typeof(map!((a) => (cast(ulong)unpredictableSeed))(repeat(0)))));
+    static assert(isSeedable!(Mt19937_64, typeof(map!((a) => (cast(ulong) unpredictableSeed))(repeat(0)))));
     Mt19937_64 gen;
     assert(gen.front == 14514284786278117030uL);
     popFrontN(gen, 9999);
@@ -1742,7 +1742,7 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T) && isUniformRNG!UniformRand
         else
         {
             static assert(T.sizeof == 8 && r.sizeof == 4);
-            T r1 = urng.front | (cast(T)r << 32);
+            T r1 = urng.front | (cast(T) r << 32);
             urng.popFront();
             return r1;
         }

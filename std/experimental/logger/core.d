@@ -171,7 +171,7 @@ if (isOutputRange!(OutputRange,string))
 {
     import std.format : formattedWrite;
 
-    const auto dt = cast(DateTime)time;
+    const auto dt = cast(DateTime) time;
     const auto fsec = time.fracSecs.total!"msecs";
 
     formattedWrite(o, "%04d-%02d-%02dT%02d:%02d:%02d.%03d",
@@ -3061,12 +3061,12 @@ unittest
 
 @safe unittest
 {
-    auto dl = cast(FileLogger)sharedLog;
+    auto dl = cast(FileLogger) sharedLog;
     assert(dl !is null);
     assert(dl.logLevel == LogLevel.all);
     assert(globalLogLevel == LogLevel.all);
 
-    auto tl = cast(StdForwardLogger)stdThreadLocalLog;
+    auto tl = cast(StdForwardLogger) stdThreadLocalLog;
     assert(tl !is null);
     stdThreadLocalLog.logLevel = LogLevel.all;
 }

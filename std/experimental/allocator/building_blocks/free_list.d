@@ -1036,7 +1036,7 @@ struct SharedFreeList(ParentAllocator,
             for (auto n = _root; n;)
             {
                 auto tmp = n.next;
-                if (!parent.deallocate((cast(ubyte*)n)[0 .. max]))
+                if (!parent.deallocate((cast(ubyte*) n)[0 .. max]))
                     result = false;
                 n = tmp;
             }

@@ -3636,7 +3636,7 @@ nothrow:
     {
         static auto trustedCtor(typeof(_ptr) p, size_t idx) @trusted
         {
-            return cast(inout)Cycle(*cast(R*)(p), idx);
+            return cast(inout) Cycle(*cast(R*)(p), idx);
         }
         return trustedCtor(_ptr, _index + i);
     }
@@ -5283,7 +5283,7 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         {
             assert(upper >= lower && upper <= this.length);
 
-            return cast(inout Result)Result(cast(Value)(current + lower * step),
+            return cast(inout Result) Result(cast(Value)(current + lower * step),
                                             cast(Value)(pastLast - (length - upper) * step),
                                             step);
         }
@@ -5362,7 +5362,7 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         {
             assert(upper >= lower && upper <= this.length);
 
-            return cast(inout Result)Result(cast(Value)(current + lower),
+            return cast(inout Result) Result(cast(Value)(current + lower),
                                             cast(Value)(pastLast - (length - upper)));
         }
         @property size_t length() const
@@ -5458,7 +5458,7 @@ body
             Result ret = this;
             ret.index += lower;
             ret.count = upper - lower + ret.index;
-            return cast(inout Result)ret;
+            return cast(inout Result) ret;
         }
         @property size_t length() const
         {
@@ -5641,7 +5641,7 @@ unittest
         int, uint, long, ulong))
     {
         Type val;
-        foreach (i; iota(cast(Type)0, cast(Type)10)) { val++; }
+        foreach (i; iota(cast(Type) 0, cast(Type) 10)) { val++; }
         assert(val == 10);
     }
 }
@@ -7723,7 +7723,7 @@ unittest
 
     static struct Test { int* a; }
     immutable(Test) test;
-    cast(void)only(test, test); // Works with mutable indirection
+    cast(void) only(test, test); // Works with mutable indirection
 }
 
 /**
@@ -8038,7 +8038,7 @@ pure @safe unittest
 
         foreach (T i; 0 .. 5)
         {
-            auto subset = values[cast(size_t)i .. $];
+            auto subset = values[cast(size_t) i .. $];
             auto offsetEnumerated = subset.enumerate(i);
             static assert(is(typeof(enumerated.front.index) == T));
             assert(offsetEnumerated.equal(subset.zip(subset)));
@@ -9074,7 +9074,7 @@ public:
                    `static assert(isForwardRange!S, S.stringof ~ " is not a forward range.");` ~
                    `auto mem = new void[S.sizeof];` ~
                    `emplace!S(mem, cast(S)(*_range).save);` ~
-                   `return RefRange!S(cast(S*)mem.ptr);`;
+                   `return RefRange!S(cast(S*) mem.ptr);`;
         }
 
         static assert(isForwardRange!RefRange);
@@ -9238,7 +9238,7 @@ public:
                    `static assert(hasSlicing!S, S.stringof ~ " is not sliceable.");` ~
                    `auto mem = new void[S.sizeof];` ~
                    `emplace!S(mem, cast(S)(*_range)[begin .. end]);` ~
-                   `return RefRange!S(cast(S*)mem.ptr);`;
+                   `return RefRange!S(cast(S*) mem.ptr);`;
         }
     }
 

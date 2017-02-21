@@ -213,8 +213,8 @@ version(ExampleDigest)
              * Example:
              * ----
              * ExampleDigest dig;
-             * dig.put(cast(ubyte)0); //single ubyte
-             * dig.put(cast(ubyte)0, cast(ubyte)0); //variadic
+             * dig.put(cast(ubyte) 0); //single ubyte
+             * dig.put(cast(ubyte) 0, cast(ubyte) 0); //variadic
              * ubyte[10] buf;
              * dig.put(buf); //buffer
              * ----
@@ -289,7 +289,7 @@ template isDigest(T)
         is(typeof(
         {
             T dig = void; //Can define
-            dig.put(cast(ubyte)0, cast(ubyte)0); //varags
+            dig.put(cast(ubyte) 0, cast(ubyte) 0); //varags
             dig.start(); //has start
             auto value = dig.finish(); //has finish
         }));
@@ -575,8 +575,8 @@ interface Digest
          * ----
          * void test(Digest dig)
          * {
-         *     dig.put(cast(ubyte)0); //single ubyte
-         *     dig.put(cast(ubyte)0, cast(ubyte)0); //variadic
+         *     dig.put(cast(ubyte) 0); //single ubyte
+         *     dig.put(cast(ubyte) 0, cast(ubyte) 0); //variadic
          *     ubyte[10] buf;
          *     dig.put(buf); //buffer
          * }
@@ -618,7 +618,7 @@ interface Digest
         {
             this.reset();
             foreach (datum; data)
-                this.put(cast(ubyte[])datum);
+                this.put(cast(ubyte[]) datum);
             return this.finish();
         }
 }
@@ -667,8 +667,8 @@ unittest
 {
     void test(Digest dig)
     {
-        dig.put(cast(ubyte)0); //single ubyte
-        dig.put(cast(ubyte)0, cast(ubyte)0); //variadic
+        dig.put(cast(ubyte) 0); //single ubyte
+        dig.put(cast(ubyte) 0, cast(ubyte) 0); //variadic
         ubyte[10] buf;
         dig.put(buf); //buffer
     }
@@ -837,7 +837,7 @@ string toHexString(LetterCase letterCase, Order order = Order.increasing)(in uby
 ref T[N] asArray(size_t N, T)(ref T[] source, string errorMsg = "")
 {
      assert(source.length >= N, errorMsg);
-     return *cast(T[N]*)source.ptr;
+     return *cast(T[N]*) source.ptr;
 }
 
 /**
@@ -911,7 +911,7 @@ if (isDigest!T) : Digest
          * import std.digest.md;
          * ubyte[16] buf;
          * auto hash = new WrapperDigest!MD5();
-         * hash.put(cast(ubyte)0);
+         * hash.put(cast(ubyte) 0);
          * auto result = hash.finish(buf[]);
          * //The result is now in result (and in buf). If you pass a buffer which is bigger than
          * //necessary, result will have the correct length, but buf will still have it's original
@@ -983,7 +983,7 @@ unittest
     import std.digest.md;
     //Simple example
     auto hash = new WrapperDigest!MD5();
-    hash.put(cast(ubyte)0);
+    hash.put(cast(ubyte) 0);
     auto result = hash.finish();
 }
 
@@ -994,7 +994,7 @@ unittest
     import std.digest.md;
     ubyte[16] buf;
     auto hash = new WrapperDigest!MD5();
-    hash.put(cast(ubyte)0);
+    hash.put(cast(ubyte) 0);
     auto result = hash.finish(buf[]);
     //The result is now in result (and in buf). If you pass a buffer which is bigger than
     //necessary, result will have the correct length, but buf will still have it's original

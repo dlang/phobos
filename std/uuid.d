@@ -240,7 +240,7 @@ public struct UUID
             assert(tmp.data == cast(ubyte[16])[0,1,3,3,4,5,6,7,8,9,10,11,
                 12,13,14,15]);
 
-            auto tmp2 = cast(immutable UUID)tmp;
+            auto tmp2 = cast(immutable UUID) tmp;
             assert(tmp2.data == cast(ubyte[16])[0,1,3,3,4,5,6,7,8,9,10,11,
                 12,13,14,15]);
         }
@@ -935,7 +935,7 @@ public struct UUID
             import std.encoding : Char = AsciiChar;
             enum  utfstr = "8ab3060e-2cba-4f23-b74c-b52db3bdfb46";
             alias String = immutable(Char)[];
-            enum String s = cast(String)utfstr;
+            enum String s = cast(String) utfstr;
             enum id = UUID(utfstr);
             //nogc
             Char[36] str;

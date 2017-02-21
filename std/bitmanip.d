@@ -38,7 +38,7 @@ private string myToString(ulong n)
     import core.internal.string : UnsignedStringBuf, unsignedToTempString;
     UnsignedStringBuf buf;
     auto s = unsignedToTempString(n, buf);
-    return cast(string)s ~ (n > uint.max ? "UL" : "U");
+    return cast(string) s ~ (n > uint.max ? "UL" : "U");
 }
 
 private template createAccessors(
@@ -1247,7 +1247,7 @@ public:
         foreach (i; 0 .. fullBytes)
         {
             hash *= 3559;
-            hash += (cast(byte*)this._ptr)[i];
+            hash += (cast(byte*) this._ptr)[i];
         }
         foreach (i; 8*fullBytes .. _len)
         {
@@ -1292,7 +1292,7 @@ public:
     }
     body
     {
-        _ptr = cast(size_t*)v.ptr;
+        _ptr = cast(size_t*) v.ptr;
         _len = numbits;
         if (endBits)
         {
@@ -1310,7 +1310,7 @@ public:
         auto a = BitArray(ba);
         void[] v;
 
-        v = cast(void[])a;
+        v = cast(void[]) a;
         auto b = BitArray(v, a.length);
 
         assert(b[0] == 1);
@@ -1348,7 +1348,7 @@ public:
         static bool[] ba = [1,0,1,0,1];
 
         auto a = BitArray(ba);
-        void[] v = cast(void[])a;
+        void[] v = cast(void[]) a;
 
         assert(v.length == a.dim * size_t.sizeof);
     }
@@ -2153,11 +2153,11 @@ if (isIntegral!T || isSomeChar!T || isBoolean!T)
     else static if (isUnsigned!T)
         return swapEndianImpl(val);
     else static if (isIntegral!T)
-        return cast(T)swapEndianImpl(cast(Unsigned!T) val);
+        return cast(T) swapEndianImpl(cast(Unsigned!T) val);
     else static if (is(Unqual!T == wchar))
-        return cast(T)swapEndian(cast(ushort)val);
+        return cast(T) swapEndian(cast(ushort) val);
     else static if (is(Unqual!T == dchar))
-        return cast(T)swapEndian(cast(uint)val);
+        return cast(T) swapEndian(cast(uint) val);
     else
         static assert(0, T.stringof ~ " unsupported by swapEndian.");
 }
@@ -2177,7 +2177,7 @@ private uint swapEndianImpl(uint val) @trusted pure nothrow @nogc
 private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
 {
     import core.bitop : bswap;
-    immutable ulong res = bswap(cast(uint)val);
+    immutable ulong res = bswap(cast(uint) val);
     return res << 32 | bswap(cast(uint)(val >> 32));
 }
 
@@ -2209,7 +2209,7 @@ private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
         }
 
         static if (isSigned!T)
-            assert(swapEndian(swapEndian(cast(T)0)) == 0);
+            assert(swapEndian(swapEndian(cast(T) 0)) == 0);
 
         // used to trigger BUG6354
         static if (T.sizeof > 1 && isUnsigned!T)
@@ -2326,7 +2326,7 @@ if (isFloatOrDouble!T)
         assert(bigEndianToNative!T(nativeToBigEndian(T.max)) == T.max);
 
         static if (isSigned!T)
-            assert(bigEndianToNative!T(nativeToBigEndian(cast(T)0)) == 0);
+            assert(bigEndianToNative!T(nativeToBigEndian(cast(T) 0)) == 0);
 
         static if (!is(T == bool))
         {
@@ -2491,7 +2491,7 @@ if (isFloatOrDouble!T)
         assert(littleEndianToNative!T(nativeToLittleEndian(T.max)) == T.max);
 
         static if (isSigned!T)
-            assert(littleEndianToNative!T(nativeToLittleEndian(cast(T)0)) == 0);
+            assert(littleEndianToNative!T(nativeToLittleEndian(cast(T) 0)) == 0);
 
         static if (!is(T == bool))
         {
@@ -3736,7 +3736,7 @@ if (canSwapEndianness!T && isOutputRange!(R, ubyte))
         size_t length = 0;
         foreach (T; Types)
         {
-            toWrite.append!(T, endianness)(cast(T)values[index++]);
+            toWrite.append!(T, endianness)(cast(T) values[index++]);
             length += T.sizeof;
         }
 
@@ -3802,7 +3802,7 @@ if (isIntegral!T)
     {
         static assert(false, "countBitsSet only supports 1, 2, 4, or 8 byte sized integers.");
     }
-    return cast(uint)c;
+    return cast(uint) c;
 }
 
 @safe unittest
@@ -3818,13 +3818,13 @@ if (isIntegral!T)
     import std.meta;
     foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
-        assert(countBitsSet(cast(T)0) == 0);
-        assert(countBitsSet(cast(T)1) == 1);
-        assert(countBitsSet(cast(T)2) == 1);
-        assert(countBitsSet(cast(T)3) == 2);
-        assert(countBitsSet(cast(T)4) == 1);
-        assert(countBitsSet(cast(T)5) == 2);
-        assert(countBitsSet(cast(T)127) == 7);
+        assert(countBitsSet(cast(T) 0) == 0);
+        assert(countBitsSet(cast(T) 1) == 1);
+        assert(countBitsSet(cast(T) 2) == 1);
+        assert(countBitsSet(cast(T) 3) == 2);
+        assert(countBitsSet(cast(T) 4) == 1);
+        assert(countBitsSet(cast(T) 5) == 2);
+        assert(countBitsSet(cast(T) 127) == 7);
         static if (isSigned!T)
         {
             assert(countBitsSet(cast(T)-1) == 8 * T.sizeof);
@@ -3929,13 +3929,13 @@ if (isIntegral!T)
     import std.meta;
     foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
-        assert(bitsSet(cast(T)0).empty);
-        assert(bitsSet(cast(T)1).equal([0]));
-        assert(bitsSet(cast(T)2).equal([1]));
-        assert(bitsSet(cast(T)3).equal([0, 1]));
-        assert(bitsSet(cast(T)4).equal([2]));
-        assert(bitsSet(cast(T)5).equal([0, 2]));
-        assert(bitsSet(cast(T)127).equal(iota(7)));
+        assert(bitsSet(cast(T) 0).empty);
+        assert(bitsSet(cast(T) 1).equal([0]));
+        assert(bitsSet(cast(T) 2).equal([1]));
+        assert(bitsSet(cast(T) 3).equal([0, 1]));
+        assert(bitsSet(cast(T) 4).equal([2]));
+        assert(bitsSet(cast(T) 5).equal([0, 2]));
+        assert(bitsSet(cast(T) 127).equal(iota(7)));
         static if (isSigned!T)
         {
             assert(bitsSet(cast(T)-1).equal(iota(8 * T.sizeof)));

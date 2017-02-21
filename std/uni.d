@@ -748,14 +748,14 @@ auto force(T, F)(F from)
 if (isIntegral!T && !is(T == F))
 {
     assert(from <= T.max && from >= T.min);
-    return cast(T)from;
+    return cast(T) from;
 }
 
 auto force(T, F)(F from)
 if (isBitPacked!T && !is(T == F))
 {
     assert(from <= 2^^bitSizeOf!T-1);
-    return T(cast(TypeOfBitPacked!T)from);
+    return T(cast(TypeOfBitPacked!T) from);
 }
 
 auto force(T, F)(F from)
@@ -1132,7 +1132,7 @@ pure nothrow:
         immutable tgt_shift = bits*r;
         immutable word = origin[q];
         origin[q] = (word & ~(mask<<tgt_shift))
-            | (cast(size_t)val << tgt_shift);
+            | (cast(size_t) val << tgt_shift);
     }
 
     static if (factor == bytesPerWord// can safely pack by byte
@@ -1152,14 +1152,14 @@ pure nothrow:
         T opIndex(size_t idx) inout
         {
             return __ctfe ? simpleIndex(idx) :
-                cast(inout(T))(cast(U*)origin)[idx];
+                cast(inout(T))(cast(U*) origin)[idx];
         }
 
         static if (isBitPacked!T) // lack of user-defined implicit conversion
         {
             void opIndexAssign(T val, size_t idx)
             {
-                return opIndexAssign(cast(TypeOfBitPacked!T)val, idx);
+                return opIndexAssign(cast(TypeOfBitPacked!T) val, idx);
             }
         }
 
@@ -1168,7 +1168,7 @@ pure nothrow:
             if (__ctfe)
                 simpleWrite(val, idx);
             else
-                (cast(U*)origin)[idx] = cast(U)val;
+                (cast(U*) origin)[idx] = cast(U) val;
         }
     }
     else
@@ -1182,7 +1182,7 @@ pure nothrow:
         {
             void opIndexAssign(T val, size_t idx)
             {
-                return opIndexAssign(cast(TypeOfBitPacked!T)val, idx);
+                return opIndexAssign(cast(TypeOfBitPacked!T) val, idx);
             }
         }
 
@@ -1259,7 +1259,7 @@ pure nothrow:
     {
         void opIndexAssign(T val, size_t idx)
         {
-            return opIndexAssign(cast(TypeOfBitPacked!T)val, idx);
+            return opIndexAssign(cast(TypeOfBitPacked!T) val, idx);
         }
     }
 
@@ -1277,7 +1277,7 @@ pure nothrow:
     {
         void opSliceAssign(T val, size_t start, size_t end)
         {
-            opSliceAssign(cast(TypeOfBitPacked!T)val, start, end);
+            opSliceAssign(cast(TypeOfBitPacked!T) val, start, end);
         }
     }
 
@@ -1740,7 +1740,7 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
         size_t nbytes = mulu(size, T.sizeof, overflow);
         if (overflow) assert(0);
 
-        auto ptr = cast(T*)enforce(malloc(nbytes), "out of memory on C heap");
+        auto ptr = cast(T*) enforce(malloc(nbytes), "out of memory on C heap");
         return ptr[0..size];
     }
 
@@ -1759,7 +1759,7 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
         size_t nbytes = mulu(size, T.sizeof, overflow);
         if (overflow) assert(0);
 
-        auto ptr = cast(T*)enforce(realloc(arr.ptr, nbytes), "out of memory on C heap");
+        auto ptr = cast(T*) enforce(realloc(arr.ptr, nbytes), "out of memory on C heap");
         return ptr[0..size];
     }
 
@@ -2293,7 +2293,7 @@ public:
 
             @property dchar front() const
             {
-                return cast(dchar)cur;
+                return cast(dchar) cur;
             }
 
             @property bool empty() const
@@ -2511,13 +2511,13 @@ public:
         if (inversion.data[0] != 0)
             genericReplace(inversion.data, 0, 0, [0]);
         else
-            genericReplace(inversion.data, 0, 1, cast(uint[])null);
+            genericReplace(inversion.data, 0, 1, cast(uint[]) null);
         if (data[data.length-1] != lastDchar+1)
             genericReplace(inversion.data,
                 inversion.data.length, inversion.data.length, [lastDchar+1]);
         else
             genericReplace(inversion.data,
-                inversion.data.length-1, inversion.data.length, cast(uint[])null);
+                inversion.data.length-1, inversion.data.length, cast(uint[]) null);
 
         return inversion;
     }
@@ -3031,10 +3031,10 @@ private:
 {
     idx *= 3;
     version(LittleEndian)
-        return ptr[idx] + (cast(uint)ptr[idx+1]<<8)
-             + (cast(uint)ptr[idx+2]<<16);
+        return ptr[idx] + (cast(uint) ptr[idx+1]<<8)
+             + (cast(uint) ptr[idx+2]<<16);
     else
-        return (cast(uint)ptr[idx]<<16) + (cast(uint)ptr[idx+1]<<8)
+        return (cast(uint) ptr[idx]<<16) + (cast(uint) ptr[idx+1]<<8)
              + ptr[idx+2];
 }
 
@@ -3069,7 +3069,7 @@ private:
 // ditto
 @system private void unalignedWrite24(scope ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
 {
-    uint* dest = cast(uint*)(cast(ubyte*)ptr + 3*idx);
+    uint* dest = cast(uint*)(cast(ubyte*) ptr + 3*idx);
     version(LittleEndian)
         *dest = val | (*dest & 0xFF00_0000);
     else
@@ -4069,7 +4069,7 @@ if (isValidPrefixForTrie!(Key, Args)
             assert(mapTrieIndex!Prefix(key) < maxIndex);
         size_t idx;
         alias p = Prefix;
-        idx = cast(size_t)p[0](key);
+        idx = cast(size_t) p[0](key);
         foreach (i, v; p[0..$-1])
             idx = cast(size_t)((_table.ptr!i[idx]<<p[i+1].bitSize) + p[i+1](key));
         return _table.ptr!(p.length-1)[idx];
@@ -4274,7 +4274,7 @@ if (sumOfIntegerTuple!sizes == 21)
         }
         uint luck;
         foreach (n; nibbles)
-            luck = cast(uint)max(luck, count(nibbles[], n));
+            luck = cast(uint) max(luck, count(nibbles[], n));
         return luck;
     }
 
@@ -4651,7 +4651,7 @@ template Utf8Matcher()
     );
     alias Table(int size) = Tables[size-1];
 
-    enum leadMask(size_t size) = (cast(size_t)1<<(7 - size))-1;
+    enum leadMask(size_t size) = (cast(size_t) 1<<(7 - size))-1;
     enum encMask(size_t size) = ((1<<size)-1)<<(8-size);
 
     char truncate()(char ch) pure @safe
@@ -4664,7 +4664,7 @@ template Utf8Matcher()
         else
         {
             badEncoding();
-            return cast(char)0;
+            return cast(char) 0;
         }
     }
 
@@ -4689,7 +4689,7 @@ template Utf8Matcher()
         auto utf8_2 = set & CodepointSet(0x80, 0x800);
         auto utf8_3 = set & CodepointSet(0x800, 0x1_0000);
         auto utf8_4 = set & CodepointSet(0x1_0000, lastDchar+1);
-        auto asciiT = ascii.byCodepoint.map!(x=>cast(char)x).buildTrie!(AsciiSpec);
+        auto asciiT = ascii.byCodepoint.map!(x=>cast(char) x).buildTrie!(AsciiSpec);
         auto utf8_2T = utf8_2.byCodepoint.map!(x=>encode!2(x)).buildTrie!(Utf8Spec2);
         auto utf8_3T = utf8_3.byCodepoint.map!(x=>encode!3(x)).buildTrie!(Utf8Spec3);
         auto utf8_4T = utf8_4.byCodepoint.map!(x=>encode!4(x)).buildTrie!(Utf8Spec4);
@@ -4943,8 +4943,8 @@ template Utf16Matcher()
         auto bmp = (set & CodepointSet.fromIntervals(0x80, 0xFFFF+1))
             - CodepointSet.fromIntervals(0xD800, 0xDFFF+1);
         auto other = set - (bmp | ascii);
-        auto asciiT = ascii.byCodepoint.map!(x=>cast(char)x).buildTrie!(AsciiSpec);
-        auto bmpT = bmp.byCodepoint.map!(x=>cast(wchar)x).buildTrie!(BmpSpec);
+        auto asciiT = ascii.byCodepoint.map!(x=>cast(char) x).buildTrie!(AsciiSpec);
+        auto bmpT = bmp.byCodepoint.map!(x=>cast(wchar) x).buildTrie!(BmpSpec);
         auto otherT = other.byCodepoint.map!(x=>encode2(x)).buildTrie!(UniSpec);
         alias Ret = Impl!(1,2);
         return Ret(asciiT, bmpT, otherT);
@@ -5326,14 +5326,14 @@ if (is(C : wchar) || is(C : char))
             auto s = msg;
             size_t idx = 0;
             utf8.test(s);
-        }()), format("%( %2x %)", cast(ubyte[])msg));
+        }()), format("%( %2x %)", cast(ubyte[]) msg));
     }
     //decode failure cases UTF-16
     alias fails16 = AliasSeq!([0xD811], [0xDC02]);
     foreach (msg; fails16)
     {
         assert(collectException((){
-            auto s = msg.map!(x => cast(wchar)x);
+            auto s = msg.map!(x => cast(wchar) x);
             utf16.test(s);
         }()));
     }
@@ -5568,7 +5568,7 @@ template Sequence(size_t start, size_t end)
     auto trie2 = buildTrie!(bool, uint, 1024, mlo8, lo8)(redundant2.byInterval);
     trieStats(trie2);
     foreach (e; redundant2.byCodepoint)
-        assert(trie2[e], text(cast(uint)e, " - ", trie2[e]));
+        assert(trie2[e], text(cast(uint) e, " - ", trie2[e]));
     foreach (i; 0..1024)
     {
         assert(trie2[i] == (i in redundant2));
@@ -5588,7 +5588,7 @@ template Sequence(size_t start, size_t end)
         )(redundant3.byInterval);
     trieStats(trie3);
     foreach (i; 0..max3)
-        assert(trie3[i] == (i in redundant3), text(cast(uint)i));
+        assert(trie3[i] == (i in redundant3), text(cast(uint) i));
 
     auto redundant4 = Set(
             10, 64, 64+10, 128, 128+10, 256, 256+10, 512,
@@ -5601,7 +5601,7 @@ template Sequence(size_t start, size_t end)
     foreach (i; 0..max4)
     {
         if (i in redundant4)
-            assert(trie4[i], text(cast(uint)i));
+            assert(trie4[i], text(cast(uint) i));
     }
     trieStats(trie4);
 
@@ -5620,7 +5620,7 @@ template Sequence(size_t start, size_t end)
     auto bt = buildTrie!(bool, ubyte, sliceBits!(7, 8), sliceBits!(5, 7), sliceBits!(0, 5))(a);
     trieStats(bt);
     foreach (i; 0..256)
-        assert(bt[cast(ubyte)i]);
+        assert(bt[cast(ubyte) i]);
 }
 
 template useItemAt(size_t idx, T)
@@ -5698,7 +5698,7 @@ if (is(Char1 : dchar) && is(Char2 : dchar))
 {
     // not optimized as usually done 1 time (and not public interface)
     if (val < 128)
-        arr ~= cast(ubyte)val;
+        arr ~= cast(ubyte) val;
     else if (val < (1<<13))
     {
         arr ~= (0b1_00<<5) | cast(ubyte)(val>>8);
@@ -5754,10 +5754,10 @@ if (isInputRange!Range && isIntegralPair!(ElementType!Range))
     import std.typecons : tuple;
 
     auto run = [tuple(80, 127), tuple(128, (1<<10)+128)];
-    ubyte[] enc = [cast(ubyte)80, 47, 1, (0b1_00<<5) | (1<<2), 0];
+    ubyte[] enc = [cast(ubyte) 80, 47, 1, (0b1_00<<5) | (1<<2), 0];
     assert(compressIntervals(run) == enc);
     auto run2 = [tuple(0, (1<<20)+512+1), tuple((1<<20)+512+4, lastDchar+1)];
-    ubyte[] enc2 = [cast(ubyte)0, (0b1_01<<5) | (1<<4), 2, 1, 3]; // odd length-ed
+    ubyte[] enc2 = [cast(ubyte) 0, (0b1_01<<5) | (1<<4), 2, 1, 3]; // odd length-ed
     assert(compressIntervals(run2) == enc2);
     size_t  idx = 0;
     assert(decompressFrom(enc, idx) == 80);
@@ -6722,7 +6722,7 @@ public:
                 auto nelems = mulu(3, addu(cap_, 1, overflow), overflow);
                 if (overflow) assert(0);
 
-                ptr_ = cast(ubyte*)enforce(realloc(ptr_, nelems),
+                ptr_ = cast(ubyte*) enforce(realloc(ptr_, nelems),
                     "realloc failed");
             }
             write24(ptr_, ch, len_++);
@@ -6788,7 +6788,7 @@ public:
             auto raw_cap = mulu(3, addu(cap_, 1, overflow), overflow);
             if (overflow) assert(0);
 
-            auto p = cast(ubyte*)enforce(malloc(raw_cap), "malloc failed");
+            auto p = cast(ubyte*) enforce(malloc(raw_cap), "malloc failed");
             p[0..raw_cap] = ptr_[0..raw_cap];
             ptr_ = p;
         }
@@ -6835,7 +6835,7 @@ private:
         static assert(grow.max / 3 - 1 >= grow);
         enum nbytes = 3 * (grow + 1);
         size_t k = smallLength;
-        ubyte* p = cast(ubyte*)enforce(malloc(nbytes), "malloc failed");
+        ubyte* p = cast(ubyte*) enforce(malloc(nbytes), "malloc failed");
         for (int i=0; i<k; i++)
             write24(p, read24(small_.ptr, i), i);
         // now we can overwrite small array data
@@ -7510,7 +7510,7 @@ bool isJamoV(dchar ch) pure nothrow @nogc @safe
 
 int hangulSyllableIndex(dchar ch) pure nothrow @nogc @safe
 {
-    int idxS = cast(int)ch - jamoSBase;
+    int idxS = cast(int) ch - jamoSBase;
     return idxS >= 0 && idxS < jamoSCount ? idxS : -1;
 }
 
@@ -7552,7 +7552,7 @@ public:
 */
 Grapheme decomposeHangul(dchar ch) @safe
 {
-    immutable idxS = cast(int)ch - jamoSBase;
+    immutable idxS = cast(int) ch - jamoSBase;
     if (idxS < 0 || idxS >= jamoSCount) return Grapheme(ch);
     immutable idxL = idxS / jamoNCount;
     immutable idxV = (idxS % jamoNCount) / jamoTCount;
@@ -8573,7 +8573,7 @@ private size_t encodeTo(scope char[] buf, size_t idx, dchar c) @trusted pure not
 {
     if (c <= 0x7F)
     {
-        buf[idx] = cast(char)c;
+        buf[idx] = cast(char) c;
         idx++;
     }
     else if (c <= 0x7FF)
@@ -8621,7 +8621,7 @@ private size_t encodeTo(scope wchar[] buf, size_t idx, dchar c) @trusted pure
     {
         if (0xD800 <= c && c <= 0xDFFF)
             throw (new UTFException("Encoding an isolated surrogate code point in UTF-16")).setSequence(c);
-        buf[idx] = cast(wchar)c;
+        buf[idx] = cast(wchar) c;
         idx++;
     }
     else if (c <= 0x10FFFF)
@@ -9146,9 +9146,9 @@ if (isSomeString!S)
         assert(low == trueLow, format(diff, low, trueLow));
         assert(up == trueUp,  format(diff, up, trueUp));
         assert(lowInp == trueLow,
-            format(diff, cast(ubyte[])s, cast(ubyte[])lowInp, cast(ubyte[])trueLow));
+            format(diff, cast(ubyte[]) s, cast(ubyte[]) lowInp, cast(ubyte[]) trueLow));
         assert(upInp == trueUp,
-            format(diff, cast(ubyte[])s, cast(ubyte[])upInp, cast(ubyte[])trueUp));
+            format(diff, cast(ubyte[]) s, cast(ubyte[]) upInp, cast(ubyte[]) trueUp));
     }
     foreach (S; AliasSeq!(dstring, wstring, string))
     {

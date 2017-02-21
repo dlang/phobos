@@ -258,8 +258,8 @@ Unicode integrity is not preserved:
 
     bringToFront(ar, br);
 
-    auto a = cast(char[])ar;
-    auto b = cast(char[])br;
+    auto a = cast(char[]) ar;
+    auto b = cast(char[]) br;
 
     // Illegal UTF-8
     assert(a == "\303");
@@ -798,7 +798,7 @@ if (isInputRange!Range && hasLvalueElements!Range && hasAssignableElements!Range
                 {
                     // static array initializer only contains initialization
                     // for one element of the static array.
-                    auto elemp = cast(void *)addressOf(range.front);
+                    auto elemp = cast(void *) addressOf(range.front);
                     auto endp = elemp + T.sizeof;
                     while (elemp < endp)
                     {

@@ -117,14 +117,14 @@ pure:
         auto t = worklist[$-1];
         worklist.length -= 1;
         //if (!__ctfe)
-        //    cast(void)worklist.assumeSafeAppend();
+        //    cast(void) worklist.assumeSafeAppend();
         return t;
     }
 
     static uint charLen(uint ch)
     {
         assert(ch <= 0x10FFFF);
-        return codeLength!Char(cast(dchar)ch)*charSize;
+        return codeLength!Char(cast(dchar) ch)*charSize;
     }
 
 public:
@@ -388,7 +388,7 @@ public:
         if (fChar != uint.max)
         {
             const(ubyte)* end = cast(ubyte*)(haystack.ptr + haystack.length);
-            const orginalAlign = cast(size_t)p & (Char.sizeof-1);
+            const orginalAlign = cast(size_t) p & (Char.sizeof-1);
             while (p != end)
             {
                 if (!~state)
@@ -396,13 +396,13 @@ public:
                     for (;;)
                     {
                         assert(p <= end, text(p," vs ", end));
-                        p = cast(ubyte*)memchr(p, fChar, end - p);
+                        p = cast(ubyte*) memchr(p, fChar, end - p);
                         if (!p)
                         {
                             s._index = haystack.length;
                             return false;
                         }
-                        if ((cast(size_t)p & (Char.sizeof-1)) == orginalAlign)
+                        if ((cast(size_t) p & (Char.sizeof-1)) == orginalAlign)
                             break;
                         if (++p == end)
                         {
@@ -411,7 +411,7 @@ public:
                         }
                     }
                     state = ~1u;
-                    assert((cast(size_t)p & (Char.sizeof-1)) == orginalAlign);
+                    assert((cast(size_t) p & (Char.sizeof-1)) == orginalAlign);
                     static if (charSize == 3)
                     {
                         state = (state<<1) | table[p[1]];
@@ -423,7 +423,7 @@ public:
                     //first char is tested, see if that's all
                     if (!(state & limit))
                     {
-                        s._index =  (p-cast(ubyte*)haystack.ptr)/Char.sizeof-length;
+                        s._index =  (p-cast(ubyte*) haystack.ptr)/Char.sizeof-length;
                         return true;
                     }
                 }
@@ -444,7 +444,7 @@ public:
                     }
                     if (!(state & limit))
                     {
-                        s._index = (p-cast(ubyte*)haystack.ptr)/Char.sizeof-length;
+                        s._index = (p-cast(ubyte*) haystack.ptr)/Char.sizeof-length;
                         return true;
                     }
                 }
@@ -465,7 +465,7 @@ public:
                     p += 4;
                     if (!(state & limit))//division rounds down for dchar
                     {
-                        s._index = (p-cast(ubyte*)haystack.ptr)/Char.sizeof-length;
+                        s._index = (p-cast(ubyte*) haystack.ptr)/Char.sizeof-length;
                         return true;
                     }
                 }

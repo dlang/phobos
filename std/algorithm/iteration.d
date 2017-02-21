@@ -875,13 +875,13 @@ template each(alias pred = "a")
     enum isForeachUnaryIterable(R) =
         is(typeof((R r) {
             foreach (ref a; r)
-                cast(void)unaryFun!pred(a);
+                cast(void) unaryFun!pred(a);
         }));
 
     enum isForeachBinaryIterable(R) =
         is(typeof((R r) {
             foreach (ref i, ref a; r)
-                cast(void)binaryFun!BinaryArgs(i, a);
+                cast(void) binaryFun!BinaryArgs(i, a);
         }));
 
     enum isForeachIterable(R) =
@@ -896,7 +896,7 @@ template each(alias pred = "a")
         {
             while (!r.empty)
             {
-                cast(void)unaryFun!pred(r.front);
+                cast(void) unaryFun!pred(r.front);
                 r.popFront();
             }
         }
@@ -905,7 +905,7 @@ template each(alias pred = "a")
             size_t i = 0;
             while (!r.empty)
             {
-                cast(void)binaryFun!BinaryArgs(i, r.front);
+                cast(void) binaryFun!BinaryArgs(i, r.front);
                 r.popFront();
                 i++;
             }
@@ -919,12 +919,12 @@ template each(alias pred = "a")
         static if (isForeachUnaryIterable!Iterable)
         {
             foreach (ref e; r)
-                cast(void)unaryFun!pred(e);
+                cast(void) unaryFun!pred(e);
         }
         else // if (isForeachBinaryIterable!Iterable)
         {
             foreach (ref i, ref e; r)
-                cast(void)binaryFun!BinaryArgs(i, e);
+                cast(void) binaryFun!BinaryArgs(i, e);
         }
     }
 
@@ -4518,7 +4518,7 @@ if (isSomeChar!C)
        {
             if (word in dictionary) continue; // Nothing to do
             auto newID = dictionary.length;
-            dictionary[to!string(word)] = cast(uint)newID;
+            dictionary[to!string(word)] = cast(uint) newID;
         }
     }
     assert(dictionary.length == 5);
@@ -4692,7 +4692,7 @@ if (isInputRange!R && !isInfinite!R)
 
     void collapseStore(T)(T k)
     {
-        auto lastToKeep = idx - cast(uint)bsf(k+1);
+        auto lastToKeep = idx - cast(uint) bsf(k+1);
         while (idx > lastToKeep)
         {
             store[idx - 1] += store[idx];
@@ -4746,10 +4746,10 @@ if (isInputRange!R && !isInfinite!R)
 private auto sumPairwise16(F, R)(R r)
 if (isRandomAccessRange!R)
 {
-    return (((cast(F)r[ 0] + r[ 1]) + (cast(F)r[ 2] + r[ 3]))
-          + ((cast(F)r[ 4] + r[ 5]) + (cast(F)r[ 6] + r[ 7])))
-         + (((cast(F)r[ 8] + r[ 9]) + (cast(F)r[10] + r[11]))
-          + ((cast(F)r[12] + r[13]) + (cast(F)r[14] + r[15])));
+    return (((cast(F) r[ 0] + r[ 1]) + (cast(F) r[ 2] + r[ 3]))
+          + ((cast(F) r[ 4] + r[ 5]) + (cast(F) r[ 6] + r[ 7])))
+         + (((cast(F) r[ 8] + r[ 9]) + (cast(F) r[10] + r[11]))
+          + ((cast(F) r[12] + r[13]) + (cast(F) r[14] + r[15])));
 }
 
 private auto sumPair(bool needEmptyChecks, F, R)(ref R r)
@@ -4821,8 +4821,8 @@ private auto sumKahan(Result, R)(Result result, R r)
 
 @safe pure nothrow unittest
 {
-    static assert(is(typeof(sum([cast( byte)1])) ==  int));
-    static assert(is(typeof(sum([cast(ubyte)1])) ==  int));
+    static assert(is(typeof(sum([cast( byte) 1])) ==  int));
+    static assert(is(typeof(sum([cast(ubyte) 1])) ==  int));
     static assert(is(typeof(sum([  1,   2,   3,   4])) ==  int));
     static assert(is(typeof(sum([ 1U,  2U,  3U,  4U])) == uint));
     static assert(is(typeof(sum([ 1L,  2L,  3L,  4L])) ==  long));

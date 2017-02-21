@@ -394,7 +394,7 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
                     return p ? p - s.ptr : -1;
                 }
 
-                return trustedmemchr(s, cast(char)c);
+                return trustedmemchr(s, cast(char) c);
             }
         }
 
@@ -512,7 +512,7 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
             ptrdiff_t foundIdx = indexOf(s[startIdx .. $], c, cs);
             if (foundIdx != -1)
             {
-                return foundIdx + cast(ptrdiff_t)startIdx;
+                return foundIdx + cast(ptrdiff_t) startIdx;
             }
         }
     }
@@ -527,7 +527,7 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
         ptrdiff_t foundIdx = indexOf(s, c, cs);
         if (foundIdx != -1)
         {
-            return foundIdx + cast(ptrdiff_t)startIdx;
+            return foundIdx + cast(ptrdiff_t) startIdx;
         }
     }
     return -1;
@@ -586,7 +586,7 @@ if (isConvertibleToString!Range)
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        assert(indexOf(cast(S)null, cast(dchar)'a') == -1);
+        assert(indexOf(cast(S) null, cast(dchar)'a') == -1);
         assert(indexOf(to!S("def"), cast(dchar)'a') == -1);
         assert(indexOf(to!S("abba"), cast(dchar)'a') == 0);
         assert(indexOf(to!S("def"), cast(dchar)'f') == 2);
@@ -644,7 +644,7 @@ if (isConvertibleToString!Range)
 
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
-        assert(indexOf(cast(S)null, cast(dchar)'a', 1) == -1);
+        assert(indexOf(cast(S) null, cast(dchar)'a', 1) == -1);
         assert(indexOf(to!S("def"), cast(dchar)'a', 1) == -1);
         assert(indexOf(to!S("abba"), cast(dchar)'a', 1) == 3);
         assert(indexOf(to!S("def"), cast(dchar)'f', 1) == 2);
@@ -660,10 +660,10 @@ if (isConvertibleToString!Range)
         assert(indexOf(to!S("def"), cast(dchar)'F', 2, No.caseSensitive) == 2);
 
         S sPlts = "Mars: the fourth Rock (Planet) from the Sun.";
-        assert(indexOf("def", cast(char)'f', cast(uint)2,
+        assert(indexOf("def", cast(char)'f', cast(uint) 2,
             No.caseSensitive) == 2);
         assert(indexOf(sPlts, cast(char)'P', 12, No.caseSensitive) == 23);
-        assert(indexOf(sPlts, cast(char)'R', cast(ulong)1,
+        assert(indexOf(sPlts, cast(char)'R', cast(ulong) 1,
             No.caseSensitive) == 2);
     }
 
@@ -788,7 +788,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
         ptrdiff_t foundIdx = indexOf(s[startIdx .. $], sub, cs);
         if (foundIdx != -1)
         {
-            return foundIdx + cast(ptrdiff_t)startIdx;
+            return foundIdx + cast(ptrdiff_t) startIdx;
         }
     }
     return -1;
@@ -843,7 +843,7 @@ if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
-            assert(indexOf(cast(S)null, to!T("a")) == -1);
+            assert(indexOf(cast(S) null, to!T("a")) == -1);
             assert(indexOf(to!S("def"), to!T("a")) == -1);
             assert(indexOf(to!S("abba"), to!T("a")) == 0);
             assert(indexOf(to!S("def"), to!T("f")) == 2);
@@ -912,7 +912,7 @@ unittest
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
-            assert(indexOf(cast(S)null, to!T("a"), 1337) == -1);
+            assert(indexOf(cast(S) null, to!T("a"), 1337) == -1);
             assert(indexOf(to!S("def"), to!T("a"), 0) == -1);
             assert(indexOf(to!S("abba"), to!T("a"), 2) == 3);
             assert(indexOf(to!S("def"), to!T("f"), 1) == 2);
@@ -1227,7 +1227,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
             for (size_t i = s.length; !s.empty;)
             {
                 if (s.endsWith(sub))
-                    return cast(ptrdiff_t)i - to!(const(Char1)[])(sub).length;
+                    return cast(ptrdiff_t) i - to!(const(Char1)[])(sub).length;
 
                 i -= strideBack(s, i);
                 s = s[0 .. i];
@@ -1241,7 +1241,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
             if (endsWith!((a, b) => std.uni.toLower(a) == std.uni.toLower(b))
                          (s, sub))
             {
-                return cast(ptrdiff_t)i - to!(const(Char1)[])(sub).length;
+                return cast(ptrdiff_t) i - to!(const(Char1)[])(sub).length;
             }
 
             i -= strideBack(s, i);
@@ -1320,7 +1320,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
-            assert(lastIndexOf(cast(S)null, to!T("a")) == -1, typeStr);
+            assert(lastIndexOf(cast(S) null, to!T("a")) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("c")) == 6, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("cd")) == 6, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("ef")) == 8, typeStr);
@@ -1331,7 +1331,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("")) == -1, typeStr);
             assert(lastIndexOf(to!S("öabcdefcdef"), to!T("ö")) == 0, typeStr);
 
-            assert(lastIndexOf(cast(S)null, to!T("a"), No.caseSensitive) == -1, typeStr);
+            assert(lastIndexOf(cast(S) null, to!T("a"), No.caseSensitive) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefCdef"), to!T("c"), No.caseSensitive) == 6, typeStr);
             assert(lastIndexOf(to!S("abcdefCdef"), to!T("cD"), No.caseSensitive) == 6, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("x"), No.caseSensitive) == -1, typeStr);
@@ -1396,7 +1396,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
-            assert(lastIndexOf(cast(S)null, to!T("a")) == -1, typeStr);
+            assert(lastIndexOf(cast(S) null, to!T("a")) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("c"), 5) == 2, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("cd"), 3) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefcdef"), to!T("ef"), 6) == 4, typeStr ~
@@ -1409,7 +1409,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
             assert(lastIndexOf(to!S("öafö"), to!T("ö"), 3) == 0, typeStr ~
                     to!string(lastIndexOf(to!S("öafö"), to!T("ö"), 3))); //BUG 10472
 
-            assert(lastIndexOf(cast(S)null, to!T("a"), 1, No.caseSensitive) == -1, typeStr);
+            assert(lastIndexOf(cast(S) null, to!T("a"), 1, No.caseSensitive) == -1, typeStr);
             assert(lastIndexOf(to!S("abcdefCdef"), to!T("c"), 5, No.caseSensitive) == 2, typeStr);
             assert(lastIndexOf(to!S("abcdefCdef"), to!T("cD"), 4, No.caseSensitive) == 2, typeStr ~
                 " " ~ to!string(lastIndexOf(to!S("abcdefCdef"), to!T("cD"), 3, No.caseSensitive)));
@@ -1584,7 +1584,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
         ptrdiff_t foundIdx = indexOfAny(haystack[startIdx .. $], needles, cs);
         if (foundIdx != -1)
         {
-            return foundIdx + cast(ptrdiff_t)startIdx;
+            return foundIdx + cast(ptrdiff_t) startIdx;
         }
     }
 
@@ -1644,7 +1644,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
-            assert(indexOfAny(cast(S)null, to!T("a")) == -1);
+            assert(indexOfAny(cast(S) null, to!T("a")) == -1);
             assert(indexOfAny(to!S("def"), to!T("rsa")) == -1);
             assert(indexOfAny(to!S("abba"), to!T("a")) == 0);
             assert(indexOfAny(to!S("def"), to!T("f")) == 2);
@@ -1683,7 +1683,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
-            assert(indexOfAny(cast(S)null, to!T("a"), 1337) == -1);
+            assert(indexOfAny(cast(S) null, to!T("a"), 1337) == -1);
             assert(indexOfAny(to!S("def"), to!T("AaF"), 0) == -1);
             assert(indexOfAny(to!S("abba"), to!T("NSa"), 2) == 3);
             assert(indexOfAny(to!S("def"), to!T("fbi"), 1) == 2);
@@ -1812,7 +1812,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
-            assert(lastIndexOfAny(cast(S)null, to!T("a")) == -1);
+            assert(lastIndexOfAny(cast(S) null, to!T("a")) == -1);
             assert(lastIndexOfAny(to!S("def"), to!T("rsa")) == -1);
             assert(lastIndexOfAny(to!S("abba"), to!T("a")) == 3);
             assert(lastIndexOfAny(to!S("def"), to!T("f")) == 2);
@@ -1869,7 +1869,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
-            assert(lastIndexOfAny(cast(S)null, to!T("a"), 1337) == -1,
+            assert(lastIndexOfAny(cast(S) null, to!T("a"), 1337) == -1,
                 typeStr);
             assert(lastIndexOfAny(to!S("abcdefcdef"), to!T("c"), 7) == 6,
                 typeStr);
@@ -1886,7 +1886,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
             assert(lastIndexOfAny(to!S("öabcdefcdef"), to!T("ö"), 2) == 0,
                 typeStr);
 
-            assert(lastIndexOfAny(cast(S)null, to!T("a"), 1337,
+            assert(lastIndexOfAny(cast(S) null, to!T("a"), 1337,
                 No.caseSensitive) == -1, typeStr);
             assert(lastIndexOfAny(to!S("abcdefcdef"), to!T("C"), 7,
                 No.caseSensitive) == 6, typeStr);
@@ -1942,7 +1942,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
             haystack[startIdx .. $], needles, cs);
         if (foundIdx != -1)
         {
-            return foundIdx + cast(ptrdiff_t)startIdx;
+            return foundIdx + cast(ptrdiff_t) startIdx;
         }
     }
     return -1;
@@ -1994,7 +1994,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
-            assert(indexOfNeither(cast(S)null, to!T("a")) == -1);
+            assert(indexOfNeither(cast(S) null, to!T("a")) == -1);
             assert(indexOfNeither("abba", "a") == 1);
 
             assert(indexOfNeither(to!S("dfeffgfff"), to!T("a"),
@@ -2040,7 +2040,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
-            assert(indexOfNeither(cast(S)null, to!T("a"), 1) == -1);
+            assert(indexOfNeither(cast(S) null, to!T("a"), 1) == -1);
             assert(indexOfNeither(to!S("def"), to!T("a"), 1) == 1,
                 to!string(indexOfNeither(to!S("def"), to!T("a"), 1)));
 
@@ -2152,7 +2152,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
-            assert(lastIndexOfNeither(cast(S)null, to!T("a")) == -1);
+            assert(lastIndexOfNeither(cast(S) null, to!T("a")) == -1);
             assert(lastIndexOfNeither(to!S("def"), to!T("rsa")) == 2);
             assert(lastIndexOfNeither(to!S("dfefffg"), to!T("fgh")) == 2);
 
@@ -2199,7 +2199,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
-            assert(lastIndexOfNeither(cast(S)null, to!T("a"), 1337) == -1);
+            assert(lastIndexOfNeither(cast(S) null, to!T("a"), 1337) == -1);
             assert(lastIndexOfNeither(to!S("def"), to!T("f")) == 1);
             assert(lastIndexOfNeither(to!S("dfefffg"), to!T("fgh")) == 2);
 
@@ -2540,7 +2540,7 @@ if (!isSomeString!S && is(StringTypeOf!S))
 
 
         ubyte[] u = ['a', 0xFF, 0x12, 'b'];     // invalid UTF
-        auto ulines = splitLines(cast(char[])u);
+        auto ulines = splitLines(cast(char[]) u);
         assert(cast(ubyte[])(ulines[0]) == u);
 
         lines = splitLines(s, Yes.keepTerminator);
@@ -2792,7 +2792,7 @@ if (isConvertibleToString!Range)
 
 
         ubyte[] u = ['a', 0xFF, 0x12, 'b'];     // invalid UTF
-        auto ulines = lineSplitter(cast(char[])u).array;
+        auto ulines = lineSplitter(cast(char[]) u).array;
         assert(cast(ubyte[])(ulines[0]) == u);
 
         lines = lineSplitter!(Yes.keepTerminator)(s).array;
@@ -3082,13 +3082,13 @@ if (isConvertibleToString!Range)
     {
         foreach (s; invalidUTFstrings!C())
         {
-            cast(void)stripRight(s.byUTF!C).array;
+            cast(void) stripRight(s.byUTF!C).array;
         }
     }
 
-    cast(void)stripRight("a\x80".byUTF!char).array;
-    wstring ws = ['a', cast(wchar)0xDC00];
-    cast(void)stripRight(ws.byUTF!wchar).array;
+    cast(void) stripRight("a\x80".byUTF!char).array;
+    wstring ws = ['a', cast(wchar) 0xDC00];
+    cast(void) stripRight(ws.byUTF!wchar).array;
 }
 
 
@@ -3360,7 +3360,7 @@ if (isConvertibleToString!Range)
     foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         // @@@ BUG IN COMPILER, MUST INSERT CAST
-        assert(chomp(cast(S)null) is null);
+        assert(chomp(cast(S) null) is null);
         assert(chomp(to!S("hello")) == "hello");
         assert(chomp(to!S("hello\n")) == "hello");
         assert(chomp(to!S("hello\r")) == "hello");
@@ -3380,8 +3380,8 @@ if (isConvertibleToString!Range)
         foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
         (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
             // @@@ BUG IN COMPILER, MUST INSERT CAST
-            assert(chomp(cast(S)null, cast(T)null) is null);
-            assert(chomp(to!S("hello\n"), cast(T)null) == "hello");
+            assert(chomp(cast(S) null, cast(T) null) is null);
+            assert(chomp(to!S("hello\n"), cast(T) null) == "hello");
             assert(chomp(to!S("hello"), to!T("o")) == "hell");
             assert(chomp(to!S("hello"), to!T("p")) == "hello");
             // @@@ BUG IN COMPILER, MUST INSERT CAST
@@ -4377,7 +4377,7 @@ if (isConvertibleToString!Range)
         S s = to!S("This \tis\t a fofof\tof list");
         assert(cmp(detab(s), "This    is       a fofof        of list") == 0);
 
-        assert(detab(cast(S)null) is null);
+        assert(detab(cast(S) null) is null);
         assert(detab("").empty);
         assert(detab("a") == "a");
         assert(detab("\t") == "        ");
@@ -4838,7 +4838,7 @@ if (isSomeChar!C1 && isSomeChar!C2)
                to!S("qe55o \U00010143 wor5d"));
         assert(translate(to!S("hello \U00010143 world"), cast(dchar[dchar])['o' : '0', '\U00010143' : 'o']) ==
                to!S("hell0 o w0rld"));
-        assert(translate(to!S("hello world"), cast(dchar[dchar])null) == to!S("hello world"));
+        assert(translate(to!S("hello world"), cast(dchar[dchar]) null) == to!S("hello world"));
 
         foreach (T; AliasSeq!( char[], const( char)[], immutable( char)[],
                               wchar[], const(wchar)[], immutable(wchar)[],
@@ -4899,7 +4899,7 @@ if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
                to!S("ello \U00010143 world"));
         assert(translate(to!S("hello \U00010143 world"), ['\U00010143' : ""]) ==
                to!S("hello  world"));
-        assert(translate(to!S("hello world"), cast(string[dchar])null) == to!S("hello world"));
+        assert(translate(to!S("hello world"), cast(string[dchar]) null) == to!S("hello world"));
 
         foreach (T; AliasSeq!( char[], const( char)[], immutable( char)[],
                               wchar[], const(wchar)[], immutable(wchar)[],
@@ -5133,7 +5133,7 @@ body
     char[256] result = void;
 
     foreach (i; 0 .. result.length)
-        result[i] = cast(char)i;
+        result[i] = cast(char) i;
     foreach (i, c; from)
         result[c] = to[i];
     return result;
@@ -5567,7 +5567,7 @@ if (isSomeString!S)
                 c -= 'Z' - 'A';
                 carry = c;
             Lcarry:
-                r[i] = cast(char)c;
+                r[i] = cast(char) c;
                 if (i == 0)
                 {
                     auto t = new typeof(r[0])[r.length + 1];
@@ -6201,7 +6201,7 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
         }
         if (b == 0)
         {
-            result[0] = cast(char)c;
+            result[0] = cast(char) c;
             b++;
             lastc = dex[c - 'A'];
         }
@@ -6214,7 +6214,7 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
             c = dex[c - 'A'];
             if (c != '0' && c != lastc)
             {
-                result[b] = cast(char)c;
+                result[b] = cast(char) c;
                 b++;
                 lastc = c;
             }
@@ -6957,19 +6957,19 @@ pure unittest
 
         static if (is(T == char[]))
         {
-            auto gt = cast(ubyte[])jt;
+            auto gt = cast(ubyte[]) jt;
             auto gtc = cast(const(ubyte)[])jt;
             auto gti = cast(immutable(ubyte)[])jt;
         }
         else static if (is(T == wchar[]))
         {
-            auto gt = cast(ushort[])jt;
+            auto gt = cast(ushort[]) jt;
             auto gtc = cast(const(ushort)[])jt;
             auto gti = cast(immutable(ushort)[])jt;
         }
         else static if (is(T == dchar[]))
         {
-            auto gt = cast(uint[])jt;
+            auto gt = cast(uint[]) jt;
             auto gtc = cast(const(uint)[])jt;
             auto gti = cast(immutable(uint)[])jt;
         }

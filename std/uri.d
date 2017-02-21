@@ -104,14 +104,14 @@ private string URI_Encode(dstring string, uint unescapedSet)
                 }
                 else
                 {
-                    R2 = cast(char *)alloca(Rsize * char.sizeof);
+                    R2 = cast(char *) alloca(Rsize * char.sizeof);
                     if (!R2)
                         throw new OutOfMemoryError("Alloca failure");
                 }
                 R2[0..Rlen] = R[0..Rlen];
                 R = R2;
             }
-            R[Rlen] = cast(char)C;
+            R[Rlen] = cast(char) C;
             Rlen++;
         }
         else
@@ -164,7 +164,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
                 }
                 else
                 {
-                    R2 = cast(char *)alloca(Rsize * char.sizeof);
+                    R2 = cast(char *) alloca(Rsize * char.sizeof);
                     if (!R2)
                         throw new OutOfMemoryError("Alloca failure");
                 }
@@ -220,7 +220,7 @@ if (isSomeChar!Char)
     }
     else
     {
-        R = cast(dchar *)alloca(Rsize * dchar.sizeof);
+        R = cast(dchar *) alloca(Rsize * dchar.sizeof);
         if (!R)
             throw new OutOfMemoryError("Alloca failure");
     }

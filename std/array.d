@@ -125,7 +125,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
             emplaceRef!E(result[i], e);
             ++i;
         }
-        return (() @trusted => cast(E[])result)();
+        return (() @trusted => cast(E[]) result)();
     }
     else
     {
@@ -587,7 +587,7 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
 
 @safe pure nothrow unittest
 {
-    cast(void)minimallyInitializedArray!(int[][][][][])();
+    cast(void) minimallyInitializedArray!(int[][][][][])();
     double[] arr = minimallyInitializedArray!(double[])(100);
     assert(arr.length == 100);
 
@@ -1759,7 +1759,7 @@ if (isInputRange!RoR &&
             foreach (e; r)
                 emplaceRef(result[len++], e);
         assert(len == result.length);
-        return (() @trusted => cast(RetType)result)();
+        return (() @trusted => cast(RetType) result)();
     }
     else
     {
@@ -2113,7 +2113,7 @@ if (isInputRange!Range &&
             copy(stuff, retval[from .. from + stuff.length]);
 
         retval[from + stuff.length .. $] = subject[to .. $];
-        return cast(T[])retval;
+        return cast(T[]) retval;
     }
     else
     {
@@ -2683,7 +2683,7 @@ if (isDynamicArray!A)
     {
         // initialize to a given array.
         _data = new Data;
-        _data.arr = cast(Unqual!T[])arr; //trusted
+        _data.arr = cast(Unqual!T[]) arr; //trusted
 
         if (__ctfe)
             return;
@@ -2799,7 +2799,7 @@ if (isDynamicArray!A)
             import core.stdc.string : memcpy;
             if (len)
                 memcpy(bi.base, _data.arr.ptr, len * T.sizeof);
-            _data.arr = (cast(Unqual!T*)bi.base)[0 .. len];
+            _data.arr = (cast(Unqual!T*) bi.base)[0 .. len];
             _data.canExtend = true;
             // leave the old data, for safety reasons
         }
@@ -2848,7 +2848,7 @@ if (isDynamicArray!A)
             immutable len = _data.arr.length;
 
             auto bigData = (() @trusted => _data.arr.ptr[0 .. len + 1])();
-            emplaceRef!(Unqual!T)(bigData[len], cast(Unqual!T)item);
+            emplaceRef!(Unqual!T)(bigData[len], cast(Unqual!T) item);
             //We do this at the end, in case of exceptions
             _data.arr = bigData;
         }
@@ -3232,8 +3232,8 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
     {
         auto w = appender!string();
         w.reserve(4);
-        cast(void)w.capacity;
-        cast(void)w.data;
+        cast(void) w.capacity;
+        cast(void) w.data;
         try
         {
             wchar wc = 'a';
@@ -3246,8 +3246,8 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
     {
         auto w = appender!(int[])();
         w.reserve(4);
-        cast(void)w.capacity;
-        cast(void)w.data;
+        cast(void) w.capacity;
+        cast(void) w.data;
         w.put(10);
         w.put([10]);
         w.clear();

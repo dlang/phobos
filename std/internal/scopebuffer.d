@@ -125,7 +125,7 @@ if (isAssignable!T &&
     body
     {
         this.buf = buf.ptr;
-        this.bufLen = cast(uint)buf.length;
+        this.bufLen = cast(uint) buf.length;
     }
 
     unittest
@@ -179,7 +179,7 @@ if (isAssignable!T &&
     void put(CT[] s)
     {
         const newlen = used + s.length;
-        assert((cast(ulong)used + s.length) <= uint.max);
+        assert((cast(ulong) used + s.length) <= uint.max);
         const len = bufLen;
         if (newlen > len)
         {
@@ -187,7 +187,7 @@ if (isAssignable!T &&
             resize(newlen <= len * 2 ? len * 2 : newlen);
         }
         buf[used .. newlen] = s[];
-        used = cast(uint)newlen;
+        used = cast(uint) newlen;
     }
 
     /******
@@ -246,7 +246,7 @@ if (isAssignable!T &&
         }
     body
     {
-        this.used = cast(uint)i;
+        this.used = cast(uint) i;
     }
 
     alias opDollar = length;
@@ -275,8 +275,8 @@ if (isAssignable!T &&
             memcpy(newBuf, buf, used * T.sizeof);
             debug(ScopeBuffer) buf[0 .. bufLen] = 0;
         }
-        buf = cast(T*)newBuf;
-        bufLen = cast(uint)newsize;
+        buf = cast(T*) newBuf;
+        bufLen = cast(uint) newsize;
 
         /* This function is called only rarely,
          * inlining results in poorer register allocation.

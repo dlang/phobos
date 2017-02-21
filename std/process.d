@@ -394,7 +394,7 @@ private Pid spawnProcessImpl(in char[][] args,
         if (fstat(workDirFD, &s) < 0)
             throw ProcessException.newFromErrno("Failed to stat working directory");
         if (!S_ISDIR(s.st_mode))
-            throw new ProcessException("Not a directory: " ~ cast(string)workDir);
+            throw new ProcessException("Not a directory: " ~ cast(string) workDir);
     }
 
     int getFD(ref File f) { return core.stdc.stdio.fileno(f.getFP()); }
@@ -460,13 +460,13 @@ private Pid spawnProcessImpl(in char[][] args,
                 core.sys.posix.unistd._exit(1);
                 assert(0);
             }
-            immutable maxDescriptors = cast(int)r.rlim_cur;
+            immutable maxDescriptors = cast(int) r.rlim_cur;
 
             // The above, less stdin, stdout, and stderr
             immutable maxToClose = maxDescriptors - 3;
 
             // Call poll() to see which ones are actually open:
-            pollfd* pfds = cast(pollfd*)malloc(pollfd.sizeof * maxToClose);
+            pollfd* pfds = cast(pollfd*) malloc(pollfd.sizeof * maxToClose);
             foreach (i; 0 .. maxToClose)
             {
                 pfds[i].fd = i + 3;
@@ -3495,7 +3495,7 @@ private void toAStringz(in string[] a, const(char)**az)
 //{
 //    int spawnvp(int mode, string pathname, string[] argv)
 //    {
-//      char** argv_ = cast(char**)core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
+//      char** argv_ = cast(char**) core.stdc.stdlib.malloc((char*).sizeof * (1 + argv.length));
 //      scope(exit) core.stdc.stdlib.free(argv_);
 //
 //      toAStringz(argv, argv_);
@@ -3748,12 +3748,12 @@ else version (OSX)
         auto childpid = core.sys.posix.unistd.fork();
         if (childpid == 0)
         {
-            core.sys.posix.unistd.execvp(args[0], cast(char**)args.ptr);
+            core.sys.posix.unistd.execvp(args[0], cast(char**) args.ptr);
             perror(args[0]);                // failed to execute
             return;
         }
         if (browser)
-            free(cast(void*)browser);
+            free(cast(void*) browser);
     }
 }
 else version (Posix)
@@ -3781,12 +3781,12 @@ else version (Posix)
         auto childpid = core.sys.posix.unistd.fork();
         if (childpid == 0)
         {
-            core.sys.posix.unistd.execvp(args[0], cast(char**)args.ptr);
+            core.sys.posix.unistd.execvp(args[0], cast(char**) args.ptr);
             perror(args[0]);                // failed to execute
             return;
         }
         if (browser)
-            free(cast(void*)browser);
+            free(cast(void*) browser);
     }
 }
 else

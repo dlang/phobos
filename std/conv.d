@@ -422,7 +422,7 @@ if (isImplicitlyConvertible!(S, T) &&
     static if (isUnsignedInt!S && isSignedInt!T && S.sizeof == T.sizeof)
     {   // unsigned to signed & same size
         import std.exception : enforce;
-        enforce(value <= cast(S)T.max,
+        enforce(value <= cast(S) T.max,
                 new ConvOverflowException("Conversion positive overflow"));
     }
     else static if (isSignedInt!S && isUnsignedInt!T)
@@ -560,7 +560,7 @@ if (!isImplicitlyConvertible!(S, T) &&
             T opCast(U)() @safe pure { assert(false); }
         }
     }
-    cast(void)to!(Test.T)(Test.S());
+    cast(void) to!(Test.T)(Test.S());
 
     // make sure std.conv.to is doing the same thing as initialization
     Test.S s;
@@ -691,7 +691,7 @@ if (!isImplicitlyConvertible!(S, T) &&
     }
 
     S.B b = new S.B();
-    S.A a = to!(S.A)(b);      // == cast(S.A)b
+    S.A a = to!(S.A)(b);      // == cast(S.A) b
                               // (do not run construction conversion like new S.A(b))
     assert(b is a);
 
@@ -929,7 +929,7 @@ if (!(isImplicitlyConvertible!(S, T) &&
         app.put(S.stringof);
         app.put(')');
         FormatSpec!char f;
-        formatValue(app, cast(OriginalType!S)value, f);
+        formatValue(app, cast(OriginalType!S) value, f);
         return app.data;
     }
     else
@@ -1189,7 +1189,7 @@ if (is (T == immutable) && isExactSomeString!T && is(S == enum))
     }
 
     // Test an value not corresponding to an enum member.
-    auto o = cast(EU)5;
+    auto o = cast(EU) 5;
     assert(to! string(o) == "cast(EU)5"c);
     assert(to!wstring(o) == "cast(EU)5"w);
     assert(to!dstring(o) == "cast(EU)5"d);
@@ -1254,11 +1254,11 @@ body
             div = cast(S)(mValue / runtimeRadix );
             mod = cast(ubyte)(mValue % runtimeRadix);
             mod += mod < 10 ? '0' : baseChar - 10;
-            buffer[--index] = cast(char)mod;
+            buffer[--index] = cast(char) mod;
             mValue = div;
         } while (mValue);
 
-        return cast(T)buffer[index .. $].dup;
+        return cast(T) buffer[index .. $].dup;
     }
 
     import std.array : array;
@@ -1502,7 +1502,7 @@ if (isAssociativeArray!S &&
         result[to!K2(k1)] = cast(Unqual!V2) to!V2(v1);
     }
     // Cast back to original type
-    return cast(T)result;
+    return cast(T) result;
 }
 
 @safe unittest
@@ -2049,7 +2049,7 @@ if (isSomeChar!(ElementType!Source) &&
         c -= '0';
         if (c <= 9)
         {
-            Target v = cast(Target)c;
+            Target v = cast(Target) c;
 
             source.popFront();
 
@@ -2778,7 +2778,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                 // shift one time less, do rounding, shift again
                 while ((msdec & 0xFFC0_0000_0000_0000) != 0)
                 {
-                    msdec  = ((cast(ulong)msdec) >> 1);
+                    msdec  = ((cast(ulong) msdec) >> 1);
                     e2++;
                 }
 
@@ -2788,7 +2788,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                 {
                     auto roundUp = (msdec & 0x1);
 
-                    msdec  = ((cast(ulong)msdec) >> 1);
+                    msdec  = ((cast(ulong) msdec) >> 1);
                     e2++;
                     if (roundUp)
                     {
@@ -2984,7 +2984,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
             return 1;
 
         if (isNaN(rx))
-            return cast(bool)isNaN(ry);
+            return cast(bool) isNaN(ry);
 
         if (isNaN(ry))
             return 0;
@@ -3021,15 +3021,15 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 
     // min and max
     float f = to!float("1.17549e-38");
-    assert(feq(cast(real)f, cast(real)1.17549e-38));
-    assert(feq(cast(real)f, cast(real)float.min_normal));
+    assert(feq(cast(real) f, cast(real) 1.17549e-38));
+    assert(feq(cast(real) f, cast(real) float.min_normal));
     f = to!float("3.40282e+38");
     assert(to!string(f) == to!string(3.40282e+38));
 
     // min and max
     double d = to!double("2.22508e-308");
-    assert(feq(cast(real)d, cast(real)2.22508e-308));
-    assert(feq(cast(real)d, cast(real)double.min_normal));
+    assert(feq(cast(real) d, cast(real) 2.22508e-308));
+    assert(feq(cast(real) d, cast(real) double.min_normal));
     d = to!double("1.79769e+308");
     assert(to!string(d) == to!string(1.79769e+308));
     assert(to!string(d) == to!string(double.max));
@@ -4376,7 +4376,7 @@ if (is(T == struct) || Args.length == 1)
 private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName) @nogc pure nothrow
 {
     assert(chunk.length >= typeSize, "emplace: Chunk size too small.");
-    assert((cast(size_t)chunk.ptr) % typeAlignment == 0, "emplace: Chunk is not aligned.");
+    assert((cast(size_t) chunk.ptr) % typeAlignment == 0, "emplace: Chunk is not aligned.");
 }
 
 /**
@@ -5503,30 +5503,30 @@ if (isIntegral!T)
 {
     foreach (T; AliasSeq!(byte, ubyte))
     {
-        static assert(is(typeof(unsigned(cast(T)1)) == ubyte));
-        static assert(is(typeof(unsigned(cast(const T)1)) == ubyte));
-        static assert(is(typeof(unsigned(cast(immutable T)1)) == ubyte));
+        static assert(is(typeof(unsigned(cast(T) 1)) == ubyte));
+        static assert(is(typeof(unsigned(cast(const T) 1)) == ubyte));
+        static assert(is(typeof(unsigned(cast(immutable T) 1)) == ubyte));
     }
 
     foreach (T; AliasSeq!(short, ushort))
     {
-        static assert(is(typeof(unsigned(cast(T)1)) == ushort));
-        static assert(is(typeof(unsigned(cast(const T)1)) == ushort));
-        static assert(is(typeof(unsigned(cast(immutable T)1)) == ushort));
+        static assert(is(typeof(unsigned(cast(T) 1)) == ushort));
+        static assert(is(typeof(unsigned(cast(const T) 1)) == ushort));
+        static assert(is(typeof(unsigned(cast(immutable T) 1)) == ushort));
     }
 
     foreach (T; AliasSeq!(int, uint))
     {
-        static assert(is(typeof(unsigned(cast(T)1)) == uint));
-        static assert(is(typeof(unsigned(cast(const T)1)) == uint));
-        static assert(is(typeof(unsigned(cast(immutable T)1)) == uint));
+        static assert(is(typeof(unsigned(cast(T) 1)) == uint));
+        static assert(is(typeof(unsigned(cast(const T) 1)) == uint));
+        static assert(is(typeof(unsigned(cast(immutable T) 1)) == uint));
     }
 
     foreach (T; AliasSeq!(long, ulong))
     {
-        static assert(is(typeof(unsigned(cast(T)1)) == ulong));
-        static assert(is(typeof(unsigned(cast(const T)1)) == ulong));
-        static assert(is(typeof(unsigned(cast(immutable T)1)) == ulong));
+        static assert(is(typeof(unsigned(cast(T) 1)) == ulong));
+        static assert(is(typeof(unsigned(cast(const T) 1)) == ulong));
+        static assert(is(typeof(unsigned(cast(immutable T) 1)) == ulong));
     }
 }
 
@@ -5581,30 +5581,30 @@ if (isIntegral!T)
 {
     foreach (T; AliasSeq!(byte, ubyte))
     {
-        static assert(is(typeof(signed(cast(T)1)) == byte));
-        static assert(is(typeof(signed(cast(const T)1)) == byte));
-        static assert(is(typeof(signed(cast(immutable T)1)) == byte));
+        static assert(is(typeof(signed(cast(T) 1)) == byte));
+        static assert(is(typeof(signed(cast(const T) 1)) == byte));
+        static assert(is(typeof(signed(cast(immutable T) 1)) == byte));
     }
 
     foreach (T; AliasSeq!(short, ushort))
     {
-        static assert(is(typeof(signed(cast(T)1)) == short));
-        static assert(is(typeof(signed(cast(const T)1)) == short));
-        static assert(is(typeof(signed(cast(immutable T)1)) == short));
+        static assert(is(typeof(signed(cast(T) 1)) == short));
+        static assert(is(typeof(signed(cast(const T) 1)) == short));
+        static assert(is(typeof(signed(cast(immutable T) 1)) == short));
     }
 
     foreach (T; AliasSeq!(int, uint))
     {
-        static assert(is(typeof(signed(cast(T)1)) == int));
-        static assert(is(typeof(signed(cast(const T)1)) == int));
-        static assert(is(typeof(signed(cast(immutable T)1)) == int));
+        static assert(is(typeof(signed(cast(T) 1)) == int));
+        static assert(is(typeof(signed(cast(const T) 1)) == int));
+        static assert(is(typeof(signed(cast(immutable T) 1)) == int));
     }
 
     foreach (T; AliasSeq!(long, ulong))
     {
-        static assert(is(typeof(signed(cast(T)1)) == long));
-        static assert(is(typeof(signed(cast(const T)1)) == long));
-        static assert(is(typeof(signed(cast(immutable T)1)) == long));
+        static assert(is(typeof(signed(cast(T) 1)) == long));
+        static assert(is(typeof(signed(cast(const T) 1)) == long));
+        static assert(is(typeof(signed(cast(immutable T) 1)) == long));
     }
 }
 
@@ -5648,7 +5648,7 @@ template castFrom(From)
         );
 
         static assert(
-            is(typeof(cast(To)value)),
+            is(typeof(cast(To) value)),
             "can't cast from '" ~ From.stringof ~ "' to '" ~ To.stringof ~ "'"
         );
 
@@ -5930,27 +5930,27 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
                     {
                         lwr = 0;
                         upr = 1;
-                        buf[0] = cast(char)(cast(uint)value + '0');
+                        buf[0] = cast(char)(cast(uint) value + '0');
                         return;
                     }
                     value = -value;
                     neg = true;
                 }
-                auto i = cast(uint)buf.length - 1;
-                while (cast(Unsigned!UT)value >= 10)
+                auto i = cast(uint) buf.length - 1;
+                while (cast(Unsigned!UT) value >= 10)
                 {
-                    buf[i] = cast(ubyte)('0' + cast(Unsigned!UT)value % 10);
+                    buf[i] = cast(ubyte)('0' + cast(Unsigned!UT) value % 10);
                     value = unsigned(value) / 10;
                     --i;
                 }
-                buf[i] = cast(char)(cast(uint)value + '0');
+                buf[i] = cast(char)(cast(uint) value + '0');
                 if (neg)
                 {
                     buf[i - 1] = '-';
                     --i;
                 }
                 lwr = i;
-                upr = cast(uint)buf.length;
+                upr = cast(uint) buf.length;
             }
 
             @property size_t length() { return upr - lwr; }
