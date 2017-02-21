@@ -508,7 +508,7 @@ private Pid spawnProcessImpl(in char[][] args,
     if (id == 0)
     {
         forkChild();
-        assert (0);
+        assert(0);
     }
     else
     {
@@ -664,22 +664,22 @@ private const(char*)* createEnv(const string[string] childEnv,
 version (Posix) @system unittest
 {
     auto e1 = createEnv(null, false);
-    assert (e1 != null && *e1 == null);
+    assert(e1 != null && *e1 == null);
 
     auto e2 = createEnv(null, true);
-    assert (e2 != null);
+    assert(e2 != null);
     int i = 0;
     for (; environ[i] != null; ++i)
     {
-        assert (e2[i] != null);
+        assert(e2[i] != null);
         import core.stdc.string;
-        assert (strcmp(e2[i], environ[i]) == 0);
+        assert(strcmp(e2[i], environ[i]) == 0);
     }
-    assert (e2[i] == null);
+    assert(e2[i] == null);
 
     auto e3 = createEnv(["foo" : "bar", "hello" : "world"], false);
-    assert (e3 != null && e3[0] != null && e3[1] != null && e3[2] == null);
-    assert ((e3[0][0 .. 8] == "foo=bar\0" && e3[1][0 .. 12] == "hello=world\0")
+    assert(e3 != null && e3[0] != null && e3[1] != null && e3[2] == null);
+    assert((e3[0][0 .. 8] == "foo=bar\0" && e3[1][0 .. 12] == "hello=world\0")
          || (e3[0][0 .. 12] == "hello=world\0" && e3[1][0 .. 8] == "foo=bar\0"));
 }
 
@@ -727,10 +727,10 @@ private LPVOID createEnv(const string[string] childEnv,
 
 version (Windows) @system unittest
 {
-    assert (createEnv(null, true) == null);
-    assert ((cast(wchar*) createEnv(null, false))[0 .. 2] == "\0\0"w);
+    assert(createEnv(null, true) == null);
+    assert((cast(wchar*) createEnv(null, false))[0 .. 2] == "\0\0"w);
     auto e1 = (cast(wchar*) createEnv(["foo":"bar", "ab":"c"], false))[0 .. 14];
-    assert (e1 == "FOO=bar\0AB=c\0\0"w || e1 == "AB=c\0FOO=bar\0\0"w);
+    assert(e1 == "FOO=bar\0AB=c\0\0"w || e1 == "AB=c\0FOO=bar\0\0"w);
 }
 
 // Searches the PATH variable for the given executable file,
@@ -767,11 +767,11 @@ version (Posix) @safe unittest
 {
     import std.algorithm;
     auto lsPath = searchPathFor("ls");
-    assert (!lsPath.empty);
-    assert (lsPath[0] == '/');
-    assert (lsPath.endsWith("ls"));
+    assert(!lsPath.empty);
+    assert(lsPath[0] == '/');
+    assert(lsPath.endsWith("ls"));
     auto unlikely = searchPathFor("lkmqwpoialhggyaofijadsohufoiqezm");
-    assert (unlikely is null, "Are you kidding me?");
+    assert(unlikely is null, "Are you kidding me?");
 }
 
 // Sets or unsets the FD_CLOEXEC flag on the given file descriptor.
@@ -786,7 +786,7 @@ private void setCLOEXEC(int fd, bool on) nothrow @nogc
         else    flags &= ~(cast(typeof(flags)) FD_CLOEXEC);
         flags = fcntl(fd, F_SETFD, flags);
     }
-    assert (flags != -1 || .errno == EBADF);
+    assert(flags != -1 || .errno == EBADF);
 }
 
 @system unittest // Command line arguments in spawnProcess().
@@ -799,11 +799,11 @@ private void setCLOEXEC(int fd, bool on) nothrow @nogc
        `if test "$1" != "foo"; then exit 1; fi
         if test "$2" != "bar"; then exit 2; fi
         exit 0`;
-    assert (wait(spawnProcess(prog.path)) == 1);
-    assert (wait(spawnProcess([prog.path])) == 1);
-    assert (wait(spawnProcess([prog.path, "foo"])) == 2);
-    assert (wait(spawnProcess([prog.path, "foo", "baz"])) == 2);
-    assert (wait(spawnProcess([prog.path, "foo", "bar"])) == 0);
+    assert(wait(spawnProcess(prog.path)) == 1);
+    assert(wait(spawnProcess([prog.path])) == 1);
+    assert(wait(spawnProcess([prog.path, "foo"])) == 2);
+    assert(wait(spawnProcess([prog.path, "foo", "baz"])) == 2);
+    assert(wait(spawnProcess([prog.path, "foo", "bar"])) == 0);
 }
 
 @system unittest // Environment variables in spawnProcess().
@@ -831,24 +831,24 @@ private void setCLOEXEC(int fd, bool on) nothrow @nogc
 
     environment.remove("std_process_unittest1"); // Just in case.
     environment.remove("std_process_unittest2");
-    assert (wait(spawnProcess(envProg.path)) == 0);
-    assert (wait(spawnProcess(envProg.path, null, Config.newEnv)) == 0);
+    assert(wait(spawnProcess(envProg.path)) == 0);
+    assert(wait(spawnProcess(envProg.path, null, Config.newEnv)) == 0);
 
     environment["std_process_unittest1"] = "1";
-    assert (wait(spawnProcess(envProg.path)) == 1);
-    assert (wait(spawnProcess(envProg.path, null, Config.newEnv)) == 0);
+    assert(wait(spawnProcess(envProg.path)) == 1);
+    assert(wait(spawnProcess(envProg.path, null, Config.newEnv)) == 0);
 
     auto env = ["std_process_unittest2" : "2"];
-    assert (wait(spawnProcess(envProg.path, env)) == 3);
-    assert (wait(spawnProcess(envProg.path, env, Config.newEnv)) == 2);
+    assert(wait(spawnProcess(envProg.path, env)) == 3);
+    assert(wait(spawnProcess(envProg.path, env, Config.newEnv)) == 2);
 
     env["std_process_unittest1"] = "4";
-    assert (wait(spawnProcess(envProg.path, env)) == 6);
-    assert (wait(spawnProcess(envProg.path, env, Config.newEnv)) == 6);
+    assert(wait(spawnProcess(envProg.path, env)) == 6);
+    assert(wait(spawnProcess(envProg.path, env, Config.newEnv)) == 6);
 
     environment.remove("std_process_unittest1");
-    assert (wait(spawnProcess(envProg.path, env)) == 6);
-    assert (wait(spawnProcess(envProg.path, env, Config.newEnv)) == 6);
+    assert(wait(spawnProcess(envProg.path, env)) == 6);
+    assert(wait(spawnProcess(envProg.path, env, Config.newEnv)) == 6);
 }
 
 @system unittest // Stream redirection in spawnProcess().
@@ -872,8 +872,8 @@ private void setCLOEXEC(int fd, bool on) nothrow @nogc
                              pipei.readEnd, pipeo.writeEnd, pipee.writeEnd);
     pipei.writeEnd.writeln("input");
     pipei.writeEnd.flush();
-    assert (pipeo.readEnd.readln().chomp() == "input output foo");
-    assert (pipee.readEnd.readln().chomp().stripRight() == "input error bar");
+    assert(pipeo.readEnd.readln().chomp() == "input output foo");
+    assert(pipee.readEnd.readln().chomp().stripRight() == "input error bar");
     wait(pid);
 
     // Files
@@ -887,8 +887,8 @@ private void setCLOEXEC(int fd, bool on) nothrow @nogc
     auto filee = File(pathe, "w");
     pid = spawnProcess([prog.path, "bar", "baz" ], filei, fileo, filee);
     wait(pid);
-    assert (readText(patho).chomp() == "INPUT output bar");
-    assert (readText(pathe).chomp().stripRight() == "INPUT error baz");
+    assert(readText(patho).chomp() == "INPUT output bar");
+    assert(readText(pathe).chomp().stripRight() == "INPUT error baz");
     remove(pathi);
     remove(patho);
     remove(pathe);
@@ -1057,13 +1057,13 @@ Pid spawnShell(in char[] command,
     scope(exit) if (exists(tmpFile)) remove(tmpFile);
     auto redir = "> \""~tmpFile~'"';
     auto env = ["foo" : "bar"];
-    assert (wait(spawnShell(cmd~redir, env)) == 0);
+    assert(wait(spawnShell(cmd~redir, env)) == 0);
     auto f = File(tmpFile, "a");
     version(CRuntime_Microsoft) f.seek(0, SEEK_END); // MSVCRT probably seeks to the end when writing, not before
-    assert (wait(spawnShell(cmd, std.stdio.stdin, f, std.stdio.stderr, env)) == 0);
+    assert(wait(spawnShell(cmd, std.stdio.stdin, f, std.stdio.stderr, env)) == 0);
     f.close();
     auto output = std.file.readText(tmpFile);
-    assert (output == "bar\nbar\n" || output == "bar\r\nbar\r\n");
+    assert(output == "bar\nbar\n" || output == "bar\r\nbar\r\n");
 }
 
 version (Windows)
@@ -1226,7 +1226,7 @@ private:
                 {
                     // waitpid() was interrupted by a signal.  We simply
                     // restart it.
-                    assert (errno == EINTR);
+                    assert(errno == EINTR);
                     continue;
                 }
             }
@@ -1258,7 +1258,7 @@ private:
         int performWait(bool block) @trusted
         {
             if (_processID == terminated) return _exitCode;
-            assert (_handle != INVALID_HANDLE_VALUE);
+            assert(_handle != INVALID_HANDLE_VALUE);
             if (block)
             {
                 auto result = WaitForSingleObject(_handle, INFINITE);
@@ -1357,17 +1357,17 @@ int wait(Pid pid) @safe
 {
     version (Windows)    TestScript prog = "exit %~1";
     else version (Posix) TestScript prog = "exit $1";
-    assert (wait(spawnProcess([prog.path, "0"])) == 0);
-    assert (wait(spawnProcess([prog.path, "123"])) == 123);
+    assert(wait(spawnProcess([prog.path, "0"])) == 0);
+    assert(wait(spawnProcess([prog.path, "123"])) == 123);
     auto pid = spawnProcess([prog.path, "10"]);
-    assert (pid.processID > 0);
-    version (Windows)    assert (pid.osHandle != INVALID_HANDLE_VALUE);
-    else version (Posix) assert (pid.osHandle == pid.processID);
-    assert (wait(pid) == 10);
-    assert (wait(pid) == 10); // cached exit code
-    assert (pid.processID < 0);
-    version (Windows)    assert (pid.osHandle == INVALID_HANDLE_VALUE);
-    else version (Posix) assert (pid.osHandle < 0);
+    assert(pid.processID > 0);
+    version (Windows)    assert(pid.osHandle != INVALID_HANDLE_VALUE);
+    else version (Posix) assert(pid.osHandle == pid.processID);
+    assert(wait(pid) == 10);
+    assert(wait(pid) == 10); // cached exit code
+    assert(pid.processID < 0);
+    version (Windows)    assert(pid.osHandle == INVALID_HANDLE_VALUE);
+    else version (Posix) assert(pid.osHandle < 0);
 }
 
 
@@ -1448,7 +1448,7 @@ used by Windows to signal that a process has in fact $(I not) terminated yet.
 ---
 auto pid = spawnProcess("some_app");
 kill(pid, 10);
-assert (wait(pid) == 10);
+assert(wait(pid) == 10);
 ---
 
 POSIX_specific:
@@ -1466,7 +1466,7 @@ $(D _kill)) shell command.)
 import core.sys.posix.signal : SIGKILL;
 auto pid = spawnProcess("some_app");
 kill(pid, SIGKILL);
-assert (wait(pid) == -SIGKILL); // Negative return value on POSIX!
+assert(wait(pid) == -SIGKILL); // Negative return value on POSIX!
 ---
 
 Throws:
@@ -1528,19 +1528,19 @@ void kill(Pid pid, int codeOrSignal)
     else
         Thread.sleep(dur!"seconds"(1));
     kill(pid);
-    version (Windows)    assert (wait(pid) == 1);
-    else version (Posix) assert (wait(pid) == -SIGTERM);
+    version (Windows)    assert(wait(pid) == 1);
+    else version (Posix) assert(wait(pid) == -SIGTERM);
 
     pid = spawnProcess(prog.path);
     Thread.sleep(dur!"seconds"(1));
     auto s = tryWait(pid);
-    assert (!s.terminated && s.status == 0);
+    assert(!s.terminated && s.status == 0);
     assertThrown!ProcessException(kill(pid, -123)); // Negative code not allowed.
     version (Windows)    kill(pid, 123);
     else version (Posix) kill(pid, SIGKILL);
     do { s = tryWait(pid); } while (!s.terminated);
-    version (Windows)    assert (s.status == 123);
-    else version (Posix) assert (s.status == -SIGKILL);
+    version (Windows)    assert(s.status == 123);
+    else version (Posix) assert(s.status == -SIGKILL);
     assertThrown!ProcessException(kill(pid));
 }
 
@@ -1553,7 +1553,7 @@ Data is written to one end of the _pipe and read from the other.
 auto p = pipe();
 p.writeEnd.writeln("Hello World");
 p.writeEnd.flush();
-assert (p.readEnd.readln().chomp() == "Hello World");
+assert(p.readEnd.readln().chomp() == "Hello World");
 ---
 Pipes can, for example, be used for interprocess communication
 by spawning a new process and passing one end of the _pipe to
@@ -1673,10 +1673,10 @@ private:
     auto p = pipe();
     p.writeEnd.writeln("Hello World");
     p.writeEnd.flush();
-    assert (p.readEnd.readln().chomp() == "Hello World");
+    assert(p.readEnd.readln().chomp() == "Hello World");
     p.close();
-    assert (!p.readEnd.isOpen);
-    assert (!p.writeEnd.isOpen);
+    assert(!p.readEnd.isOpen);
+    assert(!p.writeEnd.isOpen);
 }
 
 
@@ -1940,35 +1940,35 @@ enum Redirect
     auto pp = pipeProcess([prog.path, "bar", "baz"]);
     pp.stdin.writeln("foo");
     pp.stdin.flush();
-    assert (pp.stdout.readln().chomp() == "foo bar");
-    assert (pp.stderr.readln().chomp().stripRight() == "foo baz");
+    assert(pp.stdout.readln().chomp() == "foo bar");
+    assert(pp.stderr.readln().chomp().stripRight() == "foo baz");
     pp.stdin.writeln("1234567890");
     pp.stdin.flush();
-    assert (pp.stdout.readln().chomp() == "1234567890 bar");
-    assert (pp.stderr.readln().chomp().stripRight() == "1234567890 baz");
+    assert(pp.stdout.readln().chomp() == "1234567890 bar");
+    assert(pp.stderr.readln().chomp().stripRight() == "1234567890 baz");
     pp.stdin.writeln("stop");
     pp.stdin.flush();
-    assert (wait(pp.pid) == 2);
+    assert(wait(pp.pid) == 2);
 
     pp = pipeProcess([prog.path, "12345", "67890"],
                      Redirect.stdin | Redirect.stdout | Redirect.stderrToStdout);
     pp.stdin.writeln("xyz");
     pp.stdin.flush();
-    assert (pp.stdout.readln().chomp() == "xyz 12345");
-    assert (pp.stdout.readln().chomp().stripRight() == "xyz 67890");
+    assert(pp.stdout.readln().chomp() == "xyz 12345");
+    assert(pp.stdout.readln().chomp().stripRight() == "xyz 67890");
     pp.stdin.writeln("stop");
     pp.stdin.flush();
-    assert (wait(pp.pid) == 1);
+    assert(wait(pp.pid) == 1);
 
     pp = pipeShell(escapeShellCommand(prog.path, "AAAAA", "BBB"),
                    Redirect.stdin | Redirect.stdoutToStderr | Redirect.stderr);
     pp.stdin.writeln("ab");
     pp.stdin.flush();
-    assert (pp.stderr.readln().chomp() == "ab AAAAA");
-    assert (pp.stderr.readln().chomp().stripRight() == "ab BBB");
+    assert(pp.stderr.readln().chomp() == "ab AAAAA");
+    assert(pp.stderr.readln().chomp().stripRight() == "ab BBB");
     pp.stdin.writeln("stop");
     pp.stdin.flush();
-    assert (wait(pp.pid) == 1);
+    assert(wait(pp.pid) == 1);
 }
 
 @system unittest
@@ -2210,25 +2210,25 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
         printf '%s' $2 >&2
         exit 123`;
     auto r = execute([prog.path, "foo", "bar"]);
-    assert (r.status == 123);
-    assert (r.output.stripRight() == "foobar");
+    assert(r.status == 123);
+    assert(r.output.stripRight() == "foobar");
     auto s = execute([prog.path, "Hello", "World"]);
-    assert (s.status == 123);
-    assert (s.output.stripRight() == "HelloWorld");
+    assert(s.status == 123);
+    assert(s.output.stripRight() == "HelloWorld");
 }
 
 @safe unittest
 {
     import std.string;
     auto r1 = executeShell("echo foo");
-    assert (r1.status == 0);
-    assert (r1.output.chomp() == "foo");
+    assert(r1.status == 0);
+    assert(r1.output.chomp() == "foo");
     auto r2 = executeShell("echo bar 1>&2");
-    assert (r2.status == 0);
-    assert (r2.output.chomp().stripRight() == "bar");
+    assert(r2.status == 0);
+    assert(r2.output.chomp().stripRight() == "bar");
     auto r3 = executeShell("exit 123");
-    assert (r3.status == 123);
-    assert (r3.output.empty);
+    assert(r3.status == 123);
+    assert(r3.output.empty);
 }
 
 @safe unittest
@@ -3149,7 +3149,7 @@ static:
 
                 immutable varDef = to!string(environ[i]);
                 immutable eq = indexOf(varDef, '=');
-                assert (eq >= 0);
+                assert(eq >= 0);
 
                 immutable name = varDef[0 .. eq];
                 immutable value = varDef[eq+1 .. $];
@@ -3252,7 +3252,7 @@ private:
                     // some other windows error
                     throw new Exception(sysErrorString(err));
                 }
-                assert (lenRead != buf.length, "impossible according to msft docs");
+                assert(lenRead != buf.length, "impossible according to msft docs");
                 if (lenRead < buf.length) // the buffer was long enough
                 {
                     value = toUTF8(buf[0 .. lenRead]);
@@ -3292,41 +3292,41 @@ private:
     import std.exception : assertThrown;
     // New variable
     environment["std_process"] = "foo";
-    assert (environment["std_process"] == "foo");
-    assert ("std_process" in environment);
+    assert(environment["std_process"] == "foo");
+    assert("std_process" in environment);
 
     // Set variable again (also tests length 1 case)
     environment["std_process"] = "b";
-    assert (environment["std_process"] == "b");
-    assert ("std_process" in environment);
+    assert(environment["std_process"] == "b");
+    assert("std_process" in environment);
 
     // Remove variable
     environment.remove("std_process");
-    assert ("std_process" !in environment);
+    assert("std_process" !in environment);
 
     // Remove again, should succeed
     environment.remove("std_process");
-    assert ("std_process" !in environment);
+    assert("std_process" !in environment);
 
     // Throw on not found.
     assertThrown(environment["std_process"]);
 
     // get() without default value
-    assert (environment.get("std_process") is null);
+    assert(environment.get("std_process") is null);
 
     // get() with default value
-    assert (environment.get("std_process", "baz") == "baz");
+    assert(environment.get("std_process", "baz") == "baz");
 
     // get() on an empty (but present) value
     environment["std_process"] = "";
     auto res = environment.get("std_process");
-    assert (res !is null);
-    assert (res == "");
-    assert ("std_process" in environment);
+    assert(res !is null);
+    assert(res == "");
+    assert("std_process" in environment);
 
     // Convert to associative array
     auto aa = environment.toAA();
-    assert (aa.length > 0);
+    assert(aa.length > 0);
     foreach (n, v; aa)
     {
         // Wine has some bugs related to environment variables:
@@ -3334,7 +3334,7 @@ private:
         //    "\0", but GetEnvironmentVariable refuses to retrieve it.
         //    As of 2.067 we filter these out anyway (see comment in toAA).
 
-        assert (v == environment[n]);
+        assert(v == environment[n]);
     }
 
     // ... and back again.
@@ -3344,8 +3344,8 @@ private:
     // Complete the roundtrip
     auto aa2 = environment.toAA();
     import std.conv : text;
-    assert (aa == aa2, text(aa, " != ", aa2));
-    assert ("std_process" in environment);
+    assert(aa == aa2, text(aa, " != ", aa2));
+    assert("std_process" in environment);
 }
 
 
