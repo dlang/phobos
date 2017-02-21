@@ -30,10 +30,6 @@ import std.regex;
 import std.traits;
 import std.typecons : Flag, Yes, No;
 
-private static ipRegex = ctRegex!(`\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}`~
-                        `(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`);
-private static fourChars = ctRegex!(`^[0-9A-Fa-f]{0,4}$`);
-
 /**
  * Check that an email address conforms to RFCs 5321, 5322 and others.
  *
@@ -75,6 +71,11 @@ if (isSomeChar!(Char))
     import std.uni : isNumber;
 
     alias tstring = const(Char)[];
+    alias Token = TokenImpl!(Char);
+
+    static ipRegex = ctRegex!(`\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}`~
+                        `(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`.to!(const(Char)[]));
+    static fourChars = ctRegex!(`^[0-9A-Fa-f]{0,4}$`.to!(const(Char)[]));
 
     enum defaultThreshold = 16;
     int threshold;
@@ -776,7 +777,7 @@ if (isSomeChar!(Char))
     return EmailStatus(valid, to!(string)(localPart), to!(string)(domainPart), finalStatus);
 }
 
-unittest
+@system unittest
 {
     assert(`test.test@iana.org`.isEmail(No.checkDns).statusCode == EmailStatusCode.valid);
     assert(`test.test@iana.org`.isEmail(No.checkDns, EmailStatusCode.none).statusCode == EmailStatusCode.valid);
@@ -1255,6 +1256,20 @@ unittest
     //     ` (OpenDNS does this, for instance).`); // DNS check is currently not implemented
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=17217
+@system unittest
+{
+    wstring a = `test.test@iana.org`w;
+    dstring b = `test.test@iana.org`d;
+    const(wchar)[] c = `test.test@iana.org`w;
+    const(dchar)[] d = `test.test@iana.org`d;
+
+    assert(a.isEmail(No.checkDns).statusCode == EmailStatusCode.valid);
+    assert(b.isEmail(No.checkDns).statusCode == EmailStatusCode.valid);
+    assert(c.isEmail(No.checkDns).statusCode == EmailStatusCode.valid);
+    assert(d.isEmail(No.checkDns).statusCode == EmailStatusCode.valid);
+}
+
 /**
  * Flag for indicating if the isEmail function should perform a DNS check or not.
  *
@@ -1715,9 +1730,9 @@ enum EmailPart
 }
 
 // Miscellaneous string constants
-struct Token
+struct TokenImpl(Char)
 {
-    enum
+    enum : const(Char)[]
     {
         at = "@",
         backslash = `\`,
