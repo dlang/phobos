@@ -26772,7 +26772,8 @@ private:
         ).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), Yes.popFirst);
         assertThrown!DateTimeException((in IntervalRange!(Date, Direction.fwd) range){range.front;}(emptyRange));
 
-        immutable range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed));
+        immutable range = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7))
+                                    .fwdRange(everyDayOfWeek!Date(DayOfWeek.wed));
         assert(range.front == Date(2010, 7, 4));
 
         immutable poppedRange = Interval!Date(
@@ -27197,7 +27198,8 @@ private:
     immutable range = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed));
     assert(range.front == Date(2010, 7, 4));
 
-    immutable poppedRange = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), Yes.popFirst);
+    immutable poppedRange = PosInfInterval!Date(Date(2010, 7, 4))
+                                .fwdRange(everyDayOfWeek!Date(DayOfWeek.wed), Yes.popFirst);
     assert(poppedRange.front == Date(2010, 7, 7));
 
     const cRange = PosInfInterval!Date(Date(2010, 7, 4)).fwdRange(everyDayOfWeek!Date(DayOfWeek.fri));
@@ -27483,7 +27485,8 @@ private:
 //Test NegInfIntervalRange's front.
 @system unittest
 {
-    immutable range = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed));
+    immutable range = NegInfInterval!Date(Date(2012, 1, 7))
+                            .bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed));
     assert(range.front == Date(2012, 1, 7));
 
     immutable poppedRange = NegInfInterval!Date(
