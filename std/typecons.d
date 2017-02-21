@@ -1945,6 +1945,9 @@ if (is(S == struct))
     static assert(!__traits(compiles, {s = ri;}));
     static assert(!__traits(compiles, {ri = s;}));
 
+    auto ri2 = ri;
+    assert(ri2.ptr == ri.ptr);
+
     const S cs3 = ri;
     static assert(!__traits(compiles, {ri = cs3;}));
 
