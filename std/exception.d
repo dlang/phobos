@@ -402,18 +402,18 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
 
 @safe unittest
 {
-    assert (enforce(123) == 123);
+    assert(enforce(123) == 123);
 
     try
     {
         enforce(false, "error");
-        assert (false);
+        assert(false);
     }
     catch (Exception e)
     {
-        assert (e.msg == "error");
-        assert (e.file == __FILE__);
-        assert (e.line == __LINE__-7);
+        assert(e.msg == "error");
+        assert(e.file == __FILE__);
+        assert(e.line == __LINE__-7);
     }
 }
 
@@ -1488,14 +1488,14 @@ class ErrnoException : Exception
 
         errno = EAGAIN;
         auto ex = new ErrnoException("oh no");
-        assert (ex.errno == EAGAIN);
+        assert(ex.errno == EAGAIN);
     }
 
     unittest
     {
         import core.stdc.errno : EAGAIN;
         auto ex = new ErrnoException("oh no", EAGAIN);
-        assert (ex.errno == EAGAIN);
+        assert(ex.errno == EAGAIN);
     }
 }
 

@@ -610,7 +610,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
 
     static if (I.length != 0)
     {
-        static assert (is(I[0] == size_t));
+        static assert(is(I[0] == size_t));
         alias size = sizes[0];
     }
 
@@ -3117,7 +3117,7 @@ if (isDynamicArray!A)
 /// ditto
 Appender!(E[]) appender(A : E[], E)(auto ref A array)
 {
-    static assert (!isStaticArray!A || __traits(isRef, array),
+    static assert(!isStaticArray!A || __traits(isRef, array),
         "Cannot create Appender from an rvalue static array");
 
     return Appender!(E[])(array);

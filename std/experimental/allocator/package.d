@@ -708,7 +708,7 @@ unittest
     int[5] expected = [42, 42, 42, 42, 42];
     S[5] arr = void;
     uninitializedFillDefault(arr);
-    assert ((cast(int*)arr.ptr)[0 .. arr.length] == expected);
+    assert((cast(int*)arr.ptr)[0 .. arr.length] == expected);
 }
 
 unittest

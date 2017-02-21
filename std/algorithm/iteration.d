@@ -2265,7 +2265,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
     import std.range.interfaces;
     // joiner() should work for non-forward ranges too.
     auto r = inputRangeObject(["abc", "def"]);
-    assert (equal(joiner(r, "xyz"), "abcxyzdef"));
+    assert(equal(joiner(r, "xyz"), "abcxyzdef"));
 }
 
 @system unittest
@@ -4777,7 +4777,7 @@ if (isForwardRange!R && !isRandomAccessRange!R)
 // Kahan algo http://en.wikipedia.org/wiki/Kahan_summation_algorithm
 private auto sumKahan(Result, R)(Result result, R r)
 {
-    static assert (isFloatingPoint!Result && isMutable!Result);
+    static assert(isFloatingPoint!Result && isMutable!Result);
     Result c = 0;
     for (; !r.empty; r.popFront())
     {

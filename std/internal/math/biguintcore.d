@@ -485,7 +485,7 @@ public:
         assert(y>0);
         if (isZero()) return this;
         uint bits = cast(uint)y & BIGDIGITSHIFTMASK;
-        assert ((y>>LG2BIGDIGITBITS) < cast(ulong)(uint.max));
+        assert((y>>LG2BIGDIGITBITS) < cast(ulong)(uint.max));
         uint words = cast(uint)(y >> LG2BIGDIGITBITS);
         BigDigit [] result = new BigDigit[data.length + words+1];
         result[0..words] = 0;

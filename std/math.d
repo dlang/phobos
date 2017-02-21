@@ -2559,7 +2559,7 @@ if (isFloatingPoint!T)
     }
     else // static if (F.realFormat == RealFormat.ibmExtended)
     {
-        assert (0, "frexp not implemented");
+        assert(0, "frexp not implemented");
     }
 }
 
@@ -2816,7 +2816,7 @@ if (isIntegral!T && isUnsigned!T)
         return FP_ILOGB0;
     else
     {
-        static assert (T.sizeof <= ulong.sizeof, "integer size too large for the current ilogb implementation");
+        static assert(T.sizeof <= ulong.sizeof, "integer size too large for the current ilogb implementation");
         return bsr(x);
     }
 }
@@ -4281,7 +4281,7 @@ long lround(real x) @trusted nothrow @nogc
     version (Posix)
         return core.stdc.math.llroundl(x);
     else
-        assert (0, "lround not implemented");
+        assert(0, "lround not implemented");
 }
 
 version(Posix)
@@ -4380,7 +4380,7 @@ real remquo(real x, real y, out int n) @trusted nothrow @nogc  /// ditto
     version (Posix)
         return core.stdc.math.remquol(x, y, &n);
     else
-        assert (0, "remquo not implemented");
+        assert(0, "remquo not implemented");
 }
 
 /** IEEE exception status flags ('sticky bits')
@@ -5632,20 +5632,20 @@ debug(UnitTest)
         static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended
                 || floatTraits!(real).realFormat == RealFormat.ieeeQuadruple)
         {
-            assert (getNaNPayload(nan4) == 0x789_ABCD_EF12_3456);
+            assert(getNaNPayload(nan4) == 0x789_ABCD_EF12_3456);
         }
         else
         {
-            assert (getNaNPayload(nan4) == 0x1_ABCD_EF12_3456);
+            assert(getNaNPayload(nan4) == 0x1_ABCD_EF12_3456);
         }
         double nan5 = nan4;
-        assert (getNaNPayload(nan5) == 0x1_ABCD_EF12_3456);
+        assert(getNaNPayload(nan5) == 0x1_ABCD_EF12_3456);
         float nan6 = nan4;
-        assert (getNaNPayload(nan6) == 0x12_3456);
+        assert(getNaNPayload(nan6) == 0x12_3456);
         nan4 = NaN(0xFABCD);
-        assert (getNaNPayload(nan4) == 0xFABCD);
+        assert(getNaNPayload(nan4) == 0xFABCD);
         nan6 = nan4;
-        assert (getNaNPayload(nan6) == 0xFABCD);
+        assert(getNaNPayload(nan6) == 0xFABCD);
         nan5 = NaN(0x100_0000_0000_3456);
         assert(getNaNPayload(nan5) == 0x0000_0000_3456);
     }
@@ -5761,7 +5761,7 @@ real nextUp(real x) @trusted pure nothrow @nogc
     }
     else // static if (F.realFormat == RealFormat.ibmExtended)
     {
-        assert (0, "nextUp not implemented");
+        assert(0, "nextUp not implemented");
     }
 }
 
@@ -6512,7 +6512,7 @@ if (isFloatingPoint!(X))
     }
     else
     {
-        static assert (F.realFormat == RealFormat.ieeeSingle
+        static assert(F.realFormat == RealFormat.ieeeSingle
                     || F.realFormat == RealFormat.ieeeDouble
                     || F.realFormat == RealFormat.ieeeExtended
                     || F.realFormat == RealFormat.ieeeQuadruple);

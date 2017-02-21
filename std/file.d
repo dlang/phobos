@@ -4226,7 +4226,7 @@ string tempDir() @trusted
                                     "/var/tmp",
                                     "/usr/tmp");
         }
-        else static assert (false, "Unsupported platform");
+        else static assert(false, "Unsupported platform");
 
         if (cache is null) cache = getcwd();
     }

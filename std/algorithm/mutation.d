@@ -894,14 +894,14 @@ unittest
         int i = 1;
         this(this){}
     }
-    static assert (!hasElaborateAssign!S1);
-    static assert (!hasElaborateAssign!S2);
-    static assert ( hasElaborateAssign!S3);
-    static assert ( hasElaborateAssign!S4);
-    assert (!typeid(S1).initializer().ptr);
-    assert ( typeid(S2).initializer().ptr);
-    assert (!typeid(S3).initializer().ptr);
-    assert ( typeid(S4).initializer().ptr);
+    static assert(!hasElaborateAssign!S1);
+    static assert(!hasElaborateAssign!S2);
+    static assert( hasElaborateAssign!S3);
+    static assert( hasElaborateAssign!S4);
+    assert(!typeid(S1).initializer().ptr);
+    assert( typeid(S2).initializer().ptr);
+    assert(!typeid(S3).initializer().ptr);
+    assert( typeid(S4).initializer().ptr);
 
     foreach (S; AliasSeq!(S1, S2, S3, S4))
     {

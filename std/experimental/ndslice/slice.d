@@ -2148,7 +2148,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
             }
             enum K = hasher.Element.sizeof / E.sizeof + bool(hasher.Element.sizeof % E.sizeof != 0);
             enum B = E.sizeof / hasher.Element.sizeof + bool(E.sizeof % hasher.Element.sizeof != 0);
-            static assert (K == 1 || B == 1);
+            static assert(K == 1 || B == 1);
             static union U
             {
                 hasher.Element[B] blocks;
@@ -3431,7 +3431,7 @@ pure nothrow unittest
     auto a = new int[20], b = new int[20];
     alias T = PtrTuple!("a", "b");
     alias S = T!(int*, int*);
-    static assert (hasUDA!(S, LikePtr));
+    static assert(hasUDA!(S, LikePtr));
     auto t = S(a.ptr, b.ptr);
     t[4].a++;
     auto r = t[4];

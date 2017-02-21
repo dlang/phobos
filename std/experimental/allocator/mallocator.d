@@ -243,7 +243,7 @@ struct AlignedMallocator
                 ~"multiple of (void*).sizeof, according to posix_memalign!");
         }
         else if (code != 0)
-            assert (0, "posix_memalign returned an unknown code!");
+            assert(0, "posix_memalign returned an unknown code!");
 
         else
             return result[0 .. bytes];

@@ -917,7 +917,7 @@ $(D rawRead) always reads in binary mode on Windows.
             }
         }
         immutable freadResult = trustedFread(_p.handle, buffer);
-        assert (freadResult <= buffer.length); // fread return guarantee
+        assert(freadResult <= buffer.length); // fread return guarantee
         if (freadResult != buffer.length) // error or eof
         {
             errnoEnforce(!error);

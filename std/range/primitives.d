@@ -223,33 +223,33 @@ private void doPut(R, E)(ref R r, auto ref E e)
     }
     else
     {
-        static assert (false,
+        static assert(false,
             "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
     }
 }
 
 @safe unittest
 {
-    static assert (!isNativeOutputRange!(int,     int));
-    static assert ( isNativeOutputRange!(int[],   int));
-    static assert (!isNativeOutputRange!(int[][], int));
+    static assert(!isNativeOutputRange!(int,     int));
+    static assert( isNativeOutputRange!(int[],   int));
+    static assert(!isNativeOutputRange!(int[][], int));
 
-    static assert (!isNativeOutputRange!(int,     int[]));
-    static assert (!isNativeOutputRange!(int[],   int[]));
-    static assert ( isNativeOutputRange!(int[][], int[]));
+    static assert(!isNativeOutputRange!(int,     int[]));
+    static assert(!isNativeOutputRange!(int[],   int[]));
+    static assert( isNativeOutputRange!(int[][], int[]));
 
-    static assert (!isNativeOutputRange!(int,     int[][]));
-    static assert (!isNativeOutputRange!(int[],   int[][]));
-    static assert (!isNativeOutputRange!(int[][], int[][]));
+    static assert(!isNativeOutputRange!(int,     int[][]));
+    static assert(!isNativeOutputRange!(int[],   int[][]));
+    static assert(!isNativeOutputRange!(int[][], int[][]));
 
-    static assert (!isNativeOutputRange!(int[4],   int));
-    static assert ( isNativeOutputRange!(int[4][], int)); //Scary!
-    static assert ( isNativeOutputRange!(int[4][], int[4]));
+    static assert(!isNativeOutputRange!(int[4],   int));
+    static assert( isNativeOutputRange!(int[4][], int)); //Scary!
+    static assert( isNativeOutputRange!(int[4][], int[4]));
 
-    static assert (!isNativeOutputRange!( char[],   char));
-    static assert (!isNativeOutputRange!( char[],  dchar));
-    static assert ( isNativeOutputRange!(dchar[],   char));
-    static assert ( isNativeOutputRange!(dchar[],  dchar));
+    static assert(!isNativeOutputRange!( char[],   char));
+    static assert(!isNativeOutputRange!( char[],  dchar));
+    static assert( isNativeOutputRange!(dchar[],   char));
+    static assert( isNativeOutputRange!(dchar[],  dchar));
 
 }
 
@@ -344,7 +344,7 @@ void put(R, E)(ref R r, E e)
     }
     else
     {
-        static assert (false, "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
+        static assert(false, "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
     }
 }
 
@@ -398,7 +398,7 @@ if (isSomeChar!E)
     }
     else
     {
-        static assert (false, "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
+        static assert(false, "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
     }
 }
 
@@ -775,7 +775,7 @@ The following code should compile for any forward range.
 static assert(isInputRange!R);
 R r1;
 auto s1 = r1.save;
-static assert (is(typeof(s1) == R));
+static assert(is(typeof(s1) == R));
 ----
 
 Saving a range is not duplicating it; in the example above, $(D r1)
@@ -797,7 +797,7 @@ template isForwardRange(R)
         // because typeof may not check the right type there, and
         // because we want to ensure the range can be copied.
         auto s1 = r1.save;
-        static assert (is(typeof(s1) == R));
+        static assert(is(typeof(s1) == R));
     }));
 }
 
