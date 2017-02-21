@@ -164,6 +164,7 @@ STD_PACKAGES = std $(addprefix std/,\
   algorithm container digest experimental/allocator \
   experimental/allocator/building_blocks experimental/logger \
   experimental/ndslice \
+  experimental/numeric \
   net \
   experimental range regex)
 
@@ -190,6 +191,7 @@ PACKAGE_std_experimental_allocator_building_blocks = \
   kernighan_ritchie null_allocator package quantizer \
   region scoped_allocator segregator stats_collector
 PACKAGE_std_experimental_ndslice = package iteration selection slice
+PACKAGE_std_experimental_numeric = sum
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
