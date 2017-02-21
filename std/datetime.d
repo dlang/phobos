@@ -5195,7 +5195,8 @@ public:
             immutable minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
             immutable second = splitUnitsFromHNSecs!"seconds"(hnsecs);
 
-            auto dateTime = DateTime(Date(cast(int) days), TimeOfDay(cast(int) hour, cast(int) minute, cast(int) second));
+            auto dateTime = DateTime(Date(cast(int) days), TimeOfDay(cast(int) hour,
+                                          cast(int) minute, cast(int) second));
             dateTime.roll!units(value);
             --days;
 
@@ -8091,7 +8092,8 @@ public:
             auto minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
             auto second = splitUnitsFromHNSecs!"seconds"(hnsecs);
 
-            auto dateTime = DateTime(Date(cast(int) days), TimeOfDay(cast(int) hour, cast(int) minute, cast(int) second));
+            auto dateTime = DateTime(Date(cast(int) days), TimeOfDay(cast(int) hour,
+                                          cast(int) minute, cast(int) second));
             auto fracSecStr = fracSecsToISOString(cast(int) hnsecs);
 
             if (_timezone is LocalTime())
@@ -8221,7 +8223,8 @@ public:
             auto minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
             auto second = splitUnitsFromHNSecs!"seconds"(hnsecs);
 
-            auto dateTime = DateTime(Date(cast(int) days), TimeOfDay(cast(int) hour, cast(int) minute, cast(int) second));
+            auto dateTime = DateTime(Date(cast(int) days), TimeOfDay(cast(int) hour,
+                                          cast(int) minute, cast(int) second));
             auto fracSecStr = fracSecsToISOString(cast(int) hnsecs);
 
             if (_timezone is LocalTime())
@@ -8355,7 +8358,8 @@ public:
             auto minute = splitUnitsFromHNSecs!"minutes"(hnsecs);
             auto second = splitUnitsFromHNSecs!"seconds"(hnsecs);
 
-            auto dateTime = DateTime(Date(cast(int) days), TimeOfDay(cast(int) hour, cast(int) minute, cast(int) second));
+            auto dateTime = DateTime(Date(cast(int) days), TimeOfDay(cast(int) hour,
+                                          cast(int) minute, cast(int) second));
             auto fracSecStr = fracSecsToISOString(cast(int) hnsecs);
 
             if (_timezone is LocalTime())
