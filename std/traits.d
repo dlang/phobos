@@ -5479,7 +5479,8 @@ enum bool isBasicType(T) = isScalarType!T || is(Unqual!T == void);
  */
 enum bool isUnsigned(T) = __traits(isUnsigned, T) && !(is(Unqual!T == char) ||
                                                        is(Unqual!T == wchar) ||
-                                                       is(Unqual!T == dchar));
+                                                       is(Unqual!T == dchar) ||
+                                                       is(Unqual!T == bool));
 
 @safe unittest
 {
@@ -5528,6 +5529,13 @@ enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T);
         alias t this;
     }
     static assert(!isSigned!(S!uint));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=17196
+@safe unittest
+{
+    static assert(isUnsigned!bool == false);
+    static assert(isSigned!bool == false);
 }
 
 /**
