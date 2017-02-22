@@ -212,16 +212,17 @@ EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
 
 EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_COMMON)
 
-EXTRA_MODULES_INTERNAL := $(addprefix			\
-	std/concurrencybase \
-	std/internal/digest/, sha_SSSE3 ) $(addprefix \
-	std/internal/math/, biguintcore biguintnoasm biguintx86	\
-	gammafunction errorfunction) $(addprefix std/internal/, \
-	cstring encodinginit processinit unicode_tables scopebuffer\
-	unicode_comp unicode_decomp unicode_grapheme unicode_norm) \
-	$(addprefix std/internal/test/, dummyrange) \
-	$(addprefix std/experimental/ndslice/, internal) \
-	$(addprefix std/algorithm/, internal)
+EXTRA_MODULES_INTERNAL := $(addprefix std/, \
+	algorithm/internal concurrencybase \
+	experimental/ndslice/internal \
+	$(addprefix internal/, \
+		cstring digest/sha_SSSE3 encodinginit \
+		$(addprefix math/, biguintcore biguintnoasm biguintx86	\
+						   errorfunction gammafunction ) \
+		processinit scopebuffer test/dummyrange \
+		$(addprefix unicode_, comp decomp grapheme norm tables) \
+	) \
+)
 
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(EXTRA_MODULES_INTERNAL)
 
