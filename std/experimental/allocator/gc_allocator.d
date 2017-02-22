@@ -8,7 +8,7 @@ D's built-in garbage-collected allocator.
 struct GCAllocator
 {
     import core.memory : GC;
-    unittest { testAllocator!(() => GCAllocator.instance); }
+    @system unittest { testAllocator!(() => GCAllocator.instance); }
 
     /**
     The alignment is a static constant equal to $(D platformAlignment), which
@@ -117,7 +117,7 @@ struct GCAllocator
 }
 
 ///
-unittest
+@system unittest
 {
     auto buffer = GCAllocator.instance.allocate(1024 * 1024 * 4);
     // deallocate upon scope's end (alternatively: leave it to collection)
@@ -125,13 +125,13 @@ unittest
     //...
 }
 
-unittest
+@system unittest
 {
     auto b = GCAllocator.instance.allocate(10_000);
     assert(GCAllocator.instance.expand(b, 1));
 }
 
-unittest
+@system unittest
 {
     import core.memory : GC;
 

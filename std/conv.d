@@ -3058,7 +3058,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 }
 
 //Tests for the double implementation
-unittest
+@safe unittest
 {
     static if (real.mant_dig == 53)
     {
@@ -4471,7 +4471,7 @@ if (is(T == class))
     assert(inner.getI == 3);
 }
 
-@nogc pure nothrow unittest
+@nogc pure nothrow @system unittest
 {
     int var = 6;
     align(__conv_EmplaceTestClass.alignof) ubyte[__traits(classInstanceSize, __conv_EmplaceTestClass)] buf;
@@ -5577,7 +5577,7 @@ if (isIntegral!T)
     immutable s3 = signed(u); //explicitly qualified
 }
 
-@safe unittest
+@system unittest
 {
     foreach (T; AliasSeq!(byte, ubyte))
     {
@@ -5691,7 +5691,7 @@ template castFrom(From)
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=16667
-unittest
+@system unittest
 {
     ubyte[] a = ['a', 'b', 'c'];
     assert(castFrom!(ubyte[]).to!(string)(a) == "abc");

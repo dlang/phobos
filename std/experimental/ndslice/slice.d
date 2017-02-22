@@ -222,7 +222,7 @@ if (!isStaticArray!Range && !isNarrowString!Range && hasLength!Range)
 }
 
 /// Creates a slice from an array.
-pure nothrow unittest
+pure nothrow @system unittest
 {
     auto slice = slice!int(5, 6, 7);
     assert(slice.length == 5);
@@ -249,7 +249,7 @@ pure nothrow unittest
 }
 
 /// $(LINK2 https://en.wikipedia.org/wiki/Vandermonde_matrix, Vandermonde matrix)
-pure nothrow unittest
+pure nothrow @system unittest
 {
     auto vandermondeMatrix(Slice!(1, double*) x)
     {
@@ -274,7 +274,7 @@ pure nothrow unittest
 Creates a slice composed of named elements, each one of which corresponds
 to a given argument. See also $(LREF assumeSameStructure).
 +/
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.experimental.ndslice.selection : byElement;
@@ -296,7 +296,7 @@ pure nothrow unittest
 }
 
 /// Random access range primitives for slices over user defined types
-pure nothrow @nogc unittest
+pure nothrow @nogc @system unittest
 {
     struct MyIota
     {
@@ -320,7 +320,7 @@ pure nothrow @nogc unittest
 }
 
 /// Slice tuple and flags
-pure nothrow @nogc unittest
+pure nothrow @nogc @system unittest
 {
     import std.typecons : Yes, No;
     static immutable a = [1, 2, 3, 4, 5, 6];
@@ -332,7 +332,7 @@ pure nothrow @nogc unittest
 }
 
 // sliced slice
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.selection : iotaSlice;
     auto data = new int[24];
@@ -362,7 +362,7 @@ pure nothrow unittest
     assert(f == iotaSlice(5, 3));
 }
 
-nothrow unittest
+nothrow @system unittest
 {
     import std.experimental.ndslice.selection : iotaSlice;
 
@@ -474,7 +474,7 @@ if (Names.length && !anySatisfy!(isType, Names) && allSatisfy!(isStringValue, Na
 }
 
 ///
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.experimental.ndslice.selection : byElement, iotaSlice;
@@ -580,7 +580,7 @@ auto slice(
 }
 
 ///
-pure nothrow unittest
+pure nothrow @system unittest
 {
     auto tensor = slice!int(5, 6, 7);
     assert(tensor.length == 5);
@@ -593,14 +593,14 @@ pure nothrow unittest
 }
 
 ///
-pure nothrow unittest
+pure nothrow @system unittest
 {
     auto tensor = slice([2, 3], 5);
     assert(tensor.elementsCount == 2 * 3);
     assert(tensor[1, 1] == 5);
 }
 
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.selection : iotaSlice;
     auto tensor = iotaSlice(2, 3).slice;
@@ -626,7 +626,7 @@ auto uninitializedSlice(T,
 }
 
 ///
-pure nothrow unittest
+pure nothrow @system unittest
 {
     auto tensor = uninitializedSlice!int(5, 6, 7);
     assert(tensor.length == 5);
@@ -699,7 +699,7 @@ makeSlice(T,
 }
 
 ///
-@nogc unittest
+@nogc @system unittest
 {
     import std.experimental.allocator;
     import std.experimental.allocator.mallocator;
@@ -720,7 +720,7 @@ makeSlice(T,
 }
 
 /// Initialization with default value
-@nogc unittest
+@nogc @system unittest
 {
     import std.experimental.allocator;
     import std.experimental.allocator.mallocator;
@@ -731,7 +731,7 @@ makeSlice(T,
     Mallocator.instance.dispose(tup.array);
 }
 
-@nogc unittest
+@nogc @system unittest
 {
     import std.experimental.allocator;
     import std.experimental.allocator.mallocator;
@@ -767,7 +767,7 @@ makeUninitializedSlice(T,
 }
 
 ///
-@nogc unittest
+@nogc @system unittest
 {
     import std.experimental.allocator;
     import std.experimental.allocator.mallocator;
@@ -814,7 +814,7 @@ auto ndarray(size_t N, Range)(Slice!(N, Range) slice)
 }
 
 ///
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.selection : iotaSlice;
     auto slice = iotaSlice(3, 4);
@@ -849,7 +849,7 @@ auto makeNdarray(T, Allocator, size_t N, Range)(auto ref Allocator alloc,  Slice
 }
 
 ///
-@nogc unittest
+@nogc @system unittest
 {
     import std.experimental.allocator;
     import std.experimental.allocator.mallocator;
@@ -896,7 +896,7 @@ auto shape(T)(T[] array) @property
     assertThrown([[1, 2], [4, 5, 6]].shape);
 }
 
-unittest
+@system unittest
 {
     auto array = [[1, 2, 3], [4, 5, 6]];
     auto slice = array.shape.slice!int;
@@ -960,7 +960,7 @@ nothrow @safe pure unittest
 }
 
 /// Slice from ndarray
-nothrow unittest
+nothrow @system unittest
 {
     int err;
     auto array = [[1, 2, 3], [4, 5, 6]];
@@ -1008,7 +1008,7 @@ template as(T)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.ndslice.slice : as;
     import std.experimental.ndslice.selection : diagonal;
@@ -1052,7 +1052,7 @@ Returns the element type of the `Slice` type.
 alias DeepElementType(S : Slice!(N, Range), size_t N, Range) = S.DeepElemType;
 
 ///
-unittest
+@system unittest
 {
     import std.range : iota;
     static assert(is(DeepElementType!(Slice!(4, const(int)[]))     == const(int)));
@@ -1408,7 +1408,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
     static if (doUnittest)
     /// Creates a 2-dimentional slice with custom strides.
     @nogc nothrow pure
-    unittest
+    @system unittest
     {
         import std.experimental.ndslice.selection : byElement;
         import std.algorithm.comparison : equal;
@@ -1455,7 +1455,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
     static if (doUnittest)
     ///
-    unittest
+    @system unittest
     {
         Slice!(2, double*) nn;
         Slice!(2, immutable(double)*) ni;
@@ -1484,7 +1484,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
     }
 
     static if (doUnittest)
-    unittest
+    @system unittest
     {
         Slice!(2, Slice!(2, double*)) nn;
         Slice!(2, Slice!(2, immutable(double)*)) ni;
@@ -1626,7 +1626,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
     static if (doUnittest)
     /// Pointer type.
-    pure nothrow unittest
+    pure nothrow @system unittest
     {
          //slice type is `Slice!(2, int*)`
          auto slice = slice!int(2, 3).save;
@@ -1933,7 +1933,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
     static if (doUnittest)
     ///
-    unittest
+    @system unittest
     {
         import std.experimental.ndslice.selection : iotaSlice;
         auto s = iotaSlice(2, 3);
@@ -2039,7 +2039,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
     static if (doUnittest)
     ///
-    pure nothrow unittest
+    pure nothrow @system unittest
     {
         auto a = [1, 2, 3, 4].sliced(2, 2);
 
@@ -2054,7 +2054,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
     }
 
     static if (doUnittest)
-    pure nothrow unittest
+    pure nothrow @system unittest
     {
         import std.experimental.ndslice.iteration : dropExactly;
         import std.experimental.ndslice.selection : iotaSlice;
@@ -2095,7 +2095,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
     static if (doUnittest)
     ///
     pure nothrow
-    unittest
+    @system unittest
     {
         import std.experimental.ndslice.iteration : allReversed;
         import std.experimental.ndslice.selection : iotaSlice;
@@ -2281,7 +2281,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
     static if (doUnittest)
     ///
-    pure nothrow unittest
+    pure nothrow @system unittest
     {
         auto slice = slice!int(5, 2);
 
@@ -2299,7 +2299,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
     }
 
     static if (doUnittest)
-    pure nothrow unittest
+    pure nothrow @system unittest
     {
         // check with different PureN
         import std.experimental.ndslice.selection : pack, iotaSlice;
@@ -2364,7 +2364,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
     static if (doUnittest)
     ///
-    pure nothrow unittest
+    pure nothrow @system unittest
     {
         auto slice = slice!int(5, 3);
 
@@ -2378,7 +2378,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
     }
 
     static if (doUnittest)
-    pure nothrow unittest
+    pure nothrow @system unittest
     {
         auto slice = slice!(int, No.replaceArrayWithPointer)(5, 3);
 
@@ -2407,7 +2407,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
         static if (doUnittest)
         ///
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!int(2, 3);
             auto b = [1, 2, 3, 4].sliced(2, 2);
@@ -2428,7 +2428,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
         static if (doUnittest)
         /// Left slice is packed
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             import std.experimental.ndslice.selection : blocks, iotaSlice;
             auto a = slice!size_t(4, 4);
@@ -2443,7 +2443,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
         static if (doUnittest)
         /// Both slices are packed
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             import std.experimental.ndslice.selection : blocks, iotaSlice, pack;
             auto a = slice!size_t(4, 4);
@@ -2457,7 +2457,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
         }
 
         static if (doUnittest)
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!(int, No.replaceArrayWithPointer)(2, 3);
             auto b = [1, 2, 3, 4].sliced(2, 2);
@@ -2491,7 +2491,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
         static if (doUnittest)
         ///
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!int(2, 3);
             auto b = [[1, 2], [3, 4]];
@@ -2514,7 +2514,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
         static if (doUnittest)
         /// Packed slices
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             import std.experimental.ndslice.selection : blocks;
             auto a = slice!int(4, 4);
@@ -2528,7 +2528,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
         }
 
         static if (doUnittest)
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!(int, No.replaceArrayWithPointer)(2, 3);
             auto b = [[1, 2], [3, 4]];
@@ -2565,7 +2565,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
         static if (doUnittest)
         ///
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!int(2, 3);
 
@@ -2590,7 +2590,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
         static if (doUnittest)
         /// Packed slices have the same behavior.
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             import std.experimental.ndslice.selection : pack;
             auto a = slice!int(2, 3).pack!1;
@@ -2600,7 +2600,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
         }
 
         static if (doUnittest)
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!(int, No.replaceArrayWithPointer)(2, 3);
 
@@ -2634,7 +2634,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
         static if (doUnittest)
         ///
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!int(2, 3);
 
@@ -2643,7 +2643,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
         }
 
         static if (doUnittest)
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!(int, No.replaceArrayWithPointer)(2, 3);
 
@@ -2652,7 +2652,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
         }
 
         static if (doUnittest)
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = new int[6].sliced(2, 3);
 
@@ -2661,7 +2661,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
         }
 
         static if (doUnittest)
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = new int[6].sliced!(No.replaceArrayWithPointer)(2, 3);
 
@@ -2680,7 +2680,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
         static if (doUnittest)
         ///
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!int(2, 3);
 
@@ -2689,7 +2689,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
         }
 
         static if (doUnittest)
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = new int[6].sliced(2, 3);
 
@@ -2698,7 +2698,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
         }
 
         static if (doUnittest)
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!(int, No.replaceArrayWithPointer)(2, 3);
 
@@ -2707,7 +2707,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
         }
 
         static if (doUnittest)
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = new int[6].sliced!(No.replaceArrayWithPointer)(2, 3);
 
@@ -2730,7 +2730,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
         static if (doUnittest)
         ///
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!int(2, 3);
             auto b = [1, 2, 3, 4].sliced(2, 2);
@@ -2750,7 +2750,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
         static if (doUnittest)
         /// Left slice is packed
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             import std.experimental.ndslice.selection : blocks, iotaSlice;
             auto a = slice!size_t(4, 4);
@@ -2765,7 +2765,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
         static if (doUnittest)
         /// Both slices are packed
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             import std.experimental.ndslice.selection : blocks, iotaSlice, pack;
             auto a = slice!size_t(4, 4);
@@ -2779,7 +2779,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
         }
 
         static if (doUnittest)
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!(int, No.replaceArrayWithPointer)(2, 3);
             auto b = [1, 2, 3, 4].sliced(2, 2);
@@ -2813,7 +2813,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
         static if (doUnittest)
         ///
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!int(2, 3);
 
@@ -2832,7 +2832,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
         static if (doUnittest)
         /// Packed slices
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             import std.experimental.ndslice.selection : blocks;
             auto a = slice!int(4, 4);
@@ -2847,7 +2847,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
         static if (doUnittest)
         /// Packed slices have the same behavior.
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             import std.experimental.ndslice.selection : pack;
             auto a = slice!int(2, 3).pack!1;
@@ -2857,7 +2857,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
         }
 
         static if (doUnittest)
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!(int, No.replaceArrayWithPointer)(2, 3);
 
@@ -2890,7 +2890,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
         static if (doUnittest)
         ///
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!int(2, 3);
 
@@ -2905,7 +2905,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
         }
 
         static if (doUnittest)
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!(int, No.replaceArrayWithPointer)(2, 3);
 
@@ -2932,7 +2932,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
         static if (doUnittest)
         ///
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!int(2, 3);
 
@@ -2942,14 +2942,14 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
         // Issue 16473
         static if (doUnittest)
-        unittest
+        @system unittest
         {
             auto sl = slice!double(2, 5);
             auto d = -sl[0, 1];
         }
 
         static if (doUnittest)
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!(int, No.replaceArrayWithPointer)(2, 3);
 
@@ -2958,7 +2958,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
         }
 
         static if (doUnittest)
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = new int[6].sliced(2, 3);
 
@@ -2967,7 +2967,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
         }
 
         static if (doUnittest)
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = new int[6].sliced!(No.replaceArrayWithPointer)(2, 3);
 
@@ -3001,7 +3001,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 
         static if (doUnittest)
         ///
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!int(2, 3);
 
@@ -3013,7 +3013,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
         }
 
         static if (doUnittest)
-        pure nothrow unittest
+        pure nothrow @system unittest
         {
             auto a = slice!(int, No.replaceArrayWithPointer)(2, 3);
 
@@ -3029,7 +3029,7 @@ if (_N && _N < 256LU && ((!is(Unqual!_Range : Slice!(N0, Range0), size_t N0, Ran
 /++
 Slicing, indexing, and arithmetic operations.
 +/
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.iteration : transposed;
     import std.experimental.ndslice.selection : iotaSlice;
@@ -3062,7 +3062,7 @@ pure nothrow unittest
 /++
 Operations with rvalue slices.
 +/
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.iteration : transposed, everted;
 
@@ -3095,7 +3095,7 @@ pure nothrow unittest
 Creating a slice from text.
 See also $(MREF std, format).
 +/
-unittest
+@system unittest
 {
     import std.algorithm,  std.conv, std.exception, std.format,
         std.functional, std.string, std.range;
@@ -3140,7 +3140,7 @@ unittest
 }
 
 // Operator overloading. # 1
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.selection : iotaSlice;
 
@@ -3159,7 +3159,7 @@ pure nothrow unittest
 }
 
 // Operator overloading. # 2
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.algorithm.iteration : map;
     import std.array : array;
@@ -3182,7 +3182,7 @@ pure nothrow unittest
 }
 
 // Operator overloading. # 3
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.selection : iotaSlice;
 
@@ -3203,7 +3203,7 @@ pure nothrow unittest
 }
 
 // Type deduction
-unittest
+@system unittest
 {
     // Arrays
     foreach (T; AliasSeq!(int, const int, immutable int))
@@ -3226,7 +3226,7 @@ unittest
 }
 
 // Test for map #1
-unittest
+@system unittest
 {
     import std.algorithm.iteration : map;
     import std.range.primitives;
@@ -3248,7 +3248,7 @@ unittest
 }
 
 // Test for map #2
-unittest
+@system unittest
 {
     import std.algorithm.iteration : map;
     import std.range.primitives;
@@ -3334,7 +3334,7 @@ if (NL >= NR)
     _indexAssign!(false, op)(ls, rs);
 }
 
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.experimental.ndslice.iteration : dropExactly;
     import std.experimental.ndslice.selection : byElement;
@@ -3369,7 +3369,7 @@ if (!is(T : Slice!(NR, RangeR), size_t NR, RangeR))
     _indexAssign!(false, op)(ls, rs);
 }
 
-pure nothrow unittest
+pure nothrow @system unittest
 {
     import std.internal.test.dummyrange;
     foreach (RB; AliasSeq!(ReturnBy.Reference, ReturnBy.Value))
@@ -3389,7 +3389,7 @@ pure nothrow unittest
 }
 
 // toHash test
-unittest
+@system unittest
 {
     import std.conv : to;
     import std.complex;
@@ -3415,7 +3415,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     int[] arr = [1, 2, 3];
     auto ptr = arr.ptrShell;
@@ -3426,7 +3426,7 @@ unittest
     assert(ptrCopy[0] == 2);
 }
 
-pure nothrow unittest
+pure nothrow @system unittest
 {
     auto a = new int[20], b = new int[20];
     alias T = PtrTuple!("a", "b");

@@ -17,7 +17,7 @@ Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 module std.container.dlist;
 
 ///
-unittest
+@safe unittest
 {
     import std.container : DList;
     import std.algorithm.comparison : equal;
@@ -90,7 +90,7 @@ The base DList Range. Contains Range primitives that don't depend on payload typ
  +/
 private struct DRange
 {
-    unittest
+    @safe unittest
     {
         static assert(isBidirectionalRange!DRange);
         static assert(is(ElementType!DRange == BaseNode*));

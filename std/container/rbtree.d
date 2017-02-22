@@ -1081,7 +1081,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
                      (thisRange, thatRange);
     }
 
-    static if (doUnittest) unittest
+    static if (doUnittest) @system unittest
     {
         auto t1 = new RedBlackTree(1,2,3,4);
         auto t2 = new RedBlackTree(1,2,3,4);
@@ -2006,7 +2006,7 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
     assert(array(rt4[]) == ["hello"]);
 }
 
-unittest
+@system unittest
 {
     import std.conv : to;
 

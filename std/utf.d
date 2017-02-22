@@ -3414,7 +3414,7 @@ if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingTyp
     assert(noel2.byCodeUnit[2] != 'ë');
 }
 
-pure nothrow @nogc unittest
+pure nothrow @nogc @safe unittest
 {
     import std.range;
     {

@@ -358,7 +358,7 @@ if (isSomeString!(S))
 }
 
 ///
-unittest
+@system unittest
 {
     // multi-pattern regex example
     auto multi = regex([`([a-z]+):(\d+)`, `(\d+),\d+`]); // multi regex
@@ -586,7 +586,7 @@ public:
     @safe @property int whichPattern() const nothrow { return _nMatch; }
 
     ///
-    unittest
+    @system unittest
     {
         import std.regex;
         assert(matchFirst("abc", "[0-9]+", "[a-z]+").whichPattern == 2);
@@ -623,7 +623,7 @@ public:
 }
 
 ///
-unittest
+@system unittest
 {
     import std.range.primitives : popFrontN;
 
@@ -797,7 +797,7 @@ private auto matchMany(alias Engine, RegEx, R)(R input, RegEx re)
     return RegexMatch!(R, Engine)(input, re);
 }
 
-unittest
+@system unittest
 {
     //sanity checks for new API
     auto re = regex("abc");
@@ -1192,7 +1192,7 @@ if (isSomeString!R && is(C : dchar) && isRegexFor!(RegEx, R))
 }
 
 ///
-unittest
+@system unittest
 {
     assert(replaceFirst("noon", regex("n"), "[$&]") == "[n]oon");
 }
@@ -1219,7 +1219,7 @@ if (isSomeString!R && isRegexFor!(RegEx, R))
 }
 
 ///
-unittest
+@system unittest
 {
     import std.conv : to;
     string list = "#21 out of 46";
@@ -1255,7 +1255,7 @@ if (isOutputRange!(Sink, dchar) && isSomeString!R && isRegexFor!(RegEx, R))
 }
 
 ///
-unittest
+@system unittest
 {
     import std.array;
     string m1 = "first message\n";
@@ -1310,7 +1310,7 @@ if (isSomeString!R && is(C : dchar) && isRegexFor!(RegEx, R))
 }
 
 ///
-unittest
+@system unittest
 {
     // insert comma as thousands delimiter
     auto re = regex(r"(?<=\d)(?=(\d\d\d)+\b)","g");
@@ -1344,7 +1344,7 @@ if (isSomeString!R && isRegexFor!(RegEx, R))
 }
 
 ///
-unittest
+@system unittest
 {
     string baz(Captures!(string) m)
     {
@@ -1589,7 +1589,7 @@ if (
 }
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto s1 = ", abc, de,  fg, hi, ";
@@ -1598,7 +1598,7 @@ unittest
 }
 
 /// Split on a pattern, but keep the matches in the resulting range
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons;
@@ -1668,7 +1668,7 @@ auto escaper(Range)(Range r)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.regex;
     import std.algorithm.comparison;
@@ -1676,7 +1676,7 @@ unittest
     assert(s.escaper.equal(`This is \{unfriendly\} to \*regex\*`));
 }
 
-unittest
+@system unittest
 {
     import std.conv;
     import std.algorithm.comparison;

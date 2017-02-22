@@ -41,7 +41,7 @@ License:    $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
 module std.parallelism;
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.iteration : map;
     import std.range : iota;
@@ -248,7 +248,7 @@ private template isSafeTask(F)
         allSatisfy!(noUnsharedAliasing, Parameters!F);
 }
 
-unittest
+@safe unittest
 {
     alias F1 = void function() @safe;
     alias F2 = void function();
@@ -361,7 +361,7 @@ private template isRoundRobin(T)
     enum isRoundRobin = false;
 }
 
-unittest
+@safe unittest
 {
     static assert( isRoundRobin!(RoundRobinBuffer!(void delegate(char[]), bool delegate())));
     static assert(!isRoundRobin!(uint));
@@ -3894,7 +3894,7 @@ version(unittest)
 
 // These test basic functionality but don't stress test for threading bugs.
 // These are the tests that should be run every time Phobos is compiled.
-unittest
+@system unittest
 {
     poolInstance = new TaskPool(2);
     scope(exit) poolInstance.stop();
@@ -4296,7 +4296,7 @@ unittest
 // tons of stuff and should not be run every time make unittest is run.
 version(parallelismStressTest)
 {
-    unittest
+    @safe unittest
     {
         size_t attempt;
         for (; attempt < 10; attempt++)
@@ -4379,7 +4379,7 @@ version(parallelismStressTest)
 
     // These unittests are intended more for actual testing and not so much
     // as examples.
-    unittest
+    @safe unittest
     {
         foreach (attempt; 0 .. 10)
         foreach (poolSize; [0, 4])
@@ -4555,20 +4555,20 @@ version(unittest)
     static auto __genPair_12733(ulong n) { return __S_12733(n); }
 }
 
-unittest
+@system unittest
 {
     immutable ulong[] data = [ 2UL^^59-1, 2UL^^59-1, 2UL^^59-1, 112_272_537_195_293UL ];
 
     auto result = taskPool.amap!__genPair_12733(data);
 }
 
-unittest
+@safe unittest
 {
     // this test was in std.range, but caused cycles.
     assert(__traits(compiles, { foreach (i; iota(0, 100UL).parallel) {} }));
 }
 
-unittest
+@safe unittest
 {
     long[] arr;
     static assert(is(typeof({

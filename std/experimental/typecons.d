@@ -58,7 +58,7 @@ if (is(T == class) || is(T == interface))
     }
 }
 
-unittest
+@system unittest
 {
     class C { @disable opCast(T)() {} }
     auto c = new C;
@@ -131,7 +131,7 @@ if (Targets.length >= 1 && !allSatisfy!(isMutable, Targets))
     alias implementsInterface = .implementsInterface!(Source, staticMap!(Unqual, Targets));
 }
 
-unittest
+@safe unittest
 {
     interface Foo {
         void foo();
@@ -377,7 +377,7 @@ private template wrapperSignature(alias fun)
         ~ name~"("~wrapperParameters~")"~mod;
 }
 
-unittest
+@safe unittest
 {
     interface M
     {
@@ -429,7 +429,7 @@ version(StdDdoc)
 }
 
 ///
-unittest
+@system unittest
 {
     interface Quack
     {
@@ -510,7 +510,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.traits : functionAttributes, FunctionAttribute;
     interface A { int run(); }
@@ -611,7 +611,7 @@ template unwrap(Target)
     }
 }
 
-unittest
+@system unittest
 {
     // Validate const/immutable
     class A
@@ -658,7 +658,7 @@ unittest
         assert(d.draw(10) == 10);
     }
 }
-unittest
+@system unittest
 {
     // Bugzilla 10377
     import std.range, std.algorithm;
@@ -675,7 +675,7 @@ unittest
     auto r = iota(0,10,1).inputRangeObject().wrap!(MyInputRange!int)();
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
 }
-unittest
+@system unittest
 {
     // Bugzilla 10536
     interface Interface
@@ -691,7 +691,7 @@ unittest
     Interface i = new Pluggable().wrap!Interface;
     assert(i.foo() == 1);
 }
-unittest
+@system unittest
 {
     // Enhancement 10538
     interface Interface

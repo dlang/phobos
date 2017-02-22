@@ -521,7 +521,7 @@ public:
     }
 }
 
-unittest
+@safe unittest
 {
     import std.conv, std.regex;
     auto shiftOrLength(C)(const(C)[] pat, uint length)

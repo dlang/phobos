@@ -43,7 +43,7 @@ if (isSomeString!S)
     return makeRegex(Parser!(S, CodeGen)(arg, ""));
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto re = makeRegex(`(?P<name>\w+) = (?P<var>\d+)`);

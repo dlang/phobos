@@ -1720,7 +1720,7 @@ void yield(T)(T value)
     yield(value);
 }
 
-unittest
+@system unittest
 {
     import core.exception;
     import std.exception;

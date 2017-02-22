@@ -832,7 +832,7 @@ if (is(Range == char[]) || is(Range == wchar[]))
 }
 
 ///
-unittest
+@system unittest
 {
     import core.stdc.stdlib : malloc, free;
 
@@ -848,7 +848,7 @@ unittest
     scope(exit) free(s.ptr);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.iteration : filter;
     import std.meta : AliasSeq;
@@ -937,7 +937,7 @@ unittest
 
 // test that initializeAll works for arrays of static arrays of structs with
 // elaborate assigns.
-unittest
+@system unittest
 {
     struct Int {
         ~this() {}
@@ -982,7 +982,7 @@ void move(T)(ref T source, ref T target)
 }
 
 /// For non-struct types, `move` just performs `target = source`:
-unittest
+@safe unittest
 {
     Object obj1 = new Object;
     Object obj2 = obj1;
@@ -1029,7 +1029,7 @@ pure nothrow @safe @nogc unittest
     assert(s22 == S2(3, 4));
 }
 
-unittest
+@safe unittest
 {
     import std.traits;
     debug(std_algorithm) scope(success)
@@ -1144,7 +1144,7 @@ private T moveImpl(T)(ref T source)
     return result;
 }
 
-unittest
+@safe unittest
 {
     import std.traits;
     debug(std_algorithm) scope(success)
@@ -1204,7 +1204,7 @@ unittest
     assert(s53 is s51);
 }
 
-unittest
+@system unittest
 {
     static struct S { int n = 0; ~this() @system { n = 0; } }
     S a, b;
@@ -1218,14 +1218,14 @@ unittest
     assert(a.n == 0);
 }
 
-unittest//Issue 6217
+@safe unittest//Issue 6217
 {
     import std.algorithm.iteration : map;
     auto x = map!"a"([1,2,3]);
     x = move(x);
 }
 
-unittest// Issue 8055
+@safe unittest// Issue 8055
 {
     static struct S
     {
@@ -1245,7 +1245,7 @@ unittest// Issue 8055
     assert(b.x == 0);
 }
 
-unittest// Issue 8057
+@system unittest// Issue 8057
 {
     int n = 10;
     struct S
@@ -1338,7 +1338,7 @@ void moveEmplace(T)(ref T source, ref T target) @system
 }
 
 ///
-pure nothrow @nogc unittest
+pure nothrow @nogc @system unittest
 {
     static struct Foo
     {
@@ -1412,7 +1412,7 @@ if (isInputRange!InputRange1 && isInputRange!InputRange2
 }
 
 ///
-pure nothrow @nogc unittest
+pure nothrow @nogc @system unittest
 {
     static struct Foo
     {
@@ -1432,7 +1432,7 @@ pure nothrow @nogc unittest
     assert(dst[0 .. 3].all!(e => e._ptr !is null));
 }
 
-unittest
+@system unittest
 {
     struct InputRange
     {
@@ -1518,7 +1518,7 @@ if (isInputRange!InputRange1 && isInputRange!InputRange2
 }
 
 ///
-pure nothrow @nogc unittest
+pure nothrow @nogc @system unittest
 {
     static struct Foo
     {
@@ -2001,7 +2001,7 @@ if (isBidirectionalRange!Range
             [ 1, 3, 3, 4, 5, 5, 6 ]);
 }
 
-@nogc unittest
+@nogc @system unittest
 {
     // @nogc test
     int[10] arr = [0,1,2,3,4,5,6,7,8,9];
@@ -2525,7 +2525,7 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     SysTime a, b;
 }
 
-unittest // 9975
+@system unittest // 9975
 {
     import std.exception : doesPointTo, mayPointTo;
     static struct S2
@@ -2551,7 +2551,7 @@ unittest // 9975
     assertThrown!Error(swap(p, pp));
 }
 
-unittest
+@system unittest
 {
     static struct A
     {
@@ -2781,7 +2781,7 @@ if (isInputRange!Range && hasLvalueElements!Range && is(typeof(range.front = val
 }
 
 ///
-nothrow unittest
+nothrow @system unittest
 {
     import core.stdc.stdlib : malloc, free;
 

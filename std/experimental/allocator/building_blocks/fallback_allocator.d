@@ -24,7 +24,7 @@ struct FallbackAllocator(Primary, Fallback)
     import std.traits : hasMember;
     import std.typecons : Ternary;
 
-    unittest
+    @system unittest
     {
         testAllocator!(() => FallbackAllocator());
     }
@@ -255,7 +255,7 @@ struct FallbackAllocator(Primary, Fallback)
     }
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.region : InSituRegion;
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -289,7 +289,7 @@ private auto ref forward(alias arg)()
     }
 }
 
-unittest
+@safe unittest
 {
     void fun(T)(auto ref T, string) { /* ... */ }
     void gun(T...)(auto ref T args)
@@ -301,7 +301,7 @@ unittest
     gun(x, "hello");
 }
 
-unittest
+@safe unittest
 {
     static void checkByRef(T)(auto ref T value)
     {
@@ -341,7 +341,7 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
     import std.experimental.allocator.gc_allocator : GCAllocator;

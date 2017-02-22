@@ -3163,7 +3163,7 @@ if (isInputRange!Range && !isInfinite!Range &&
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.conv : text;
     import std.typecons : tuple;
@@ -3178,7 +3178,7 @@ unittest
     assert(a.maxCount == tuple(4, 2));
 }
 
-unittest
+@system unittest
 {
     import std.conv : text;
     import std.exception : assertThrown;
@@ -3199,7 +3199,7 @@ unittest
     assert(minCount(new ReferenceForwardRange!int([1, 2, 1, 0, 2, 0])) == tuple(0, 2));
 }
 
-unittest
+@system unittest
 {
     import std.conv : text;
     import std.meta : AliasSeq;
@@ -3546,7 +3546,7 @@ if (isForwardRange!Range && !isInfinite!Range &&
     assert( equal( minPos(new ReferenceForwardRange!int([1, 2, 1, 0, 2, 0])), [0, 2, 0] ) );
 }
 
-unittest
+@system unittest
 {
     //Rvalue range
     import std.algorithm.comparison : equal;
@@ -4439,7 +4439,7 @@ if (isInputRange!Range)
     assert(equal(until!"a == 2"(a, No.openRight), [1, 2]));
 }
 
-unittest // bugzilla 13171
+@system unittest // bugzilla 13171
 {
     import std.algorithm.comparison : equal;
     import std.range;
@@ -4457,7 +4457,7 @@ unittest // bugzilla 13171
     assert(equal(a, [0, 0, 3, 4]));
 }
 
-unittest // Issue 13124
+@safe unittest // Issue 13124
 {
     import std.algorithm.comparison : among;
     auto s = "hello how\nare you";

@@ -327,7 +327,7 @@ struct Region(ParentAllocator = NullAllocator,
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     import std.experimental.allocator.building_blocks.allocator_list
@@ -346,7 +346,7 @@ unittest
     // Destructor will free the memory
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     // Create a 64 KB region allocated with malloc
@@ -528,7 +528,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
 }
 
 ///
-unittest
+@system unittest
 {
     // 128KB region, allocated to x86's cache line
     InSituRegion!(128 * 1024, 16) r1;
@@ -562,7 +562,7 @@ unittest
     assert(a4.length == 104);
 }
 
-unittest
+@system unittest
 {
     InSituRegion!(4096, 1) r1;
     auto a = r1.allocate(2001);
@@ -752,7 +752,7 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     }
 }
 
-version(Posix) unittest
+version(Posix) @system unittest
 {
     // Let's test the assumption that sbrk(n) returns the old address
     const p1 = sbrk(0);
@@ -764,7 +764,7 @@ version(Posix) unittest
     sbrk(-4096);
 }
 
-version(Posix) unittest
+version(Posix) @system unittest
 {
     import std.typecons : Ternary;
     alias alloc = SbrkRegion!(8).instance;

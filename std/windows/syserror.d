@@ -178,7 +178,7 @@ T wenforce(T)(T condition, const(char)[] name, const(wchar)* namez, string file 
 }
 
 version(Windows)
-unittest
+@system unittest
 {
     import std.exception;
     import std.string;
