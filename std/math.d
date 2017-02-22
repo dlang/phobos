@@ -514,7 +514,7 @@ if (is(typeof(Num.init >= 0)) && is(typeof(-Num.init)) &&
     static if (isFloatingPoint!(Num))
         return fabs(x);
     else
-        return x>=0 ? x : -x;
+        return x >= 0 ? x : -x;
 }
 
 /// ditto
@@ -2827,7 +2827,7 @@ if (isIntegral!T && isSigned!T)
     import std.traits : Unsigned;
     // Note: abs(x) can not be used because the return type is not Unsigned and
     //       the return value would be wrong for x == int.min
-    Unsigned!T absx =  x>=0 ? x : -x;
+    Unsigned!T absx =  x >= 0 ? x : -x;
     return ilogb(absx);
 }
 
@@ -6647,7 +6647,7 @@ body
 {
     // Runtime behaviour for contract violation:
     // If signs are opposite, or one is a NaN, return 0.
-    if (!((x>=0 && y>=0) || (x <= 0 && y <= 0))) return 0.0;
+    if (!((x >= 0 && y >= 0) || (x <= 0 && y <= 0))) return 0.0;
 
     // The implementation is simple: cast x and y to integers,
     // average them (avoiding overflow), and cast the result back to a floating-point number.

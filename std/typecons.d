@@ -2115,7 +2115,7 @@ string alignForSize(E...)(const char[][] names...)
     foreach (i, T; E)
     {
         auto a = T.alignof;
-        auto k = a>=64? 0 : a>=32? 1 : a>=16? 2 : a>=8? 3 : a>=4? 4 : a>=2? 5 : 6;
+        auto k = a >= 64? 0 : a >= 32? 1 : a >= 16? 2 : a >= 8? 3 : a >= 4? 4 : a >= 2? 5 : 6;
         declaration[k] ~= T.stringof ~ " " ~ names[i] ~ ";\n";
     }
 
@@ -6183,7 +6183,7 @@ mixin template Proxy(alias a)
         assert(!(a<b));
         assert(!(a <= b));
         assert(!(a>b));
-        assert(!(a>=b));
+        assert(!(a >= b));
     }
     foreach (T1; AliasSeq!(MyFloatImpl, Typedef!float, Typedef!double,
         float, real, Typedef!int, int))
@@ -6203,14 +6203,14 @@ mixin template Proxy(alias a)
             assert(a<b);
             assert(a <= b);
             assert(!(a>b));
-            assert(!(a>=b));
+            assert(!(a >= b));
 
             a = 4;
             assert(a == b);
             assert(!(a<b));
             assert(a <= b);
             assert(!(a>b));
-            assert(a>=b);
+            assert(a >= b);
         }
     }
 }

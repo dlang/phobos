@@ -1427,7 +1427,7 @@ body {
  */
 real gammaIncompleteComplInv(real a, real p)
 in {
-  assert(p>=0 && p <= 1);
+  assert(p >= 0 && p <= 1);
   assert(a>0);
 }
 body {
@@ -1688,7 +1688,7 @@ done:
     for (int k=1; k<40; ++k)
     {
         real y=0;
-        for (int u=k; u>=1; --u)
+        for (int u=k; u >= 1; --u)
         {
             y += 1.0L/u;
         }

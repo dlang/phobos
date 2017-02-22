@@ -1567,7 +1567,7 @@ char [] biguintToHex(char [] buff, const BigDigit [] data, char separator=0,
         LetterCase letterCase = LetterCase.upper) pure nothrow @safe
 {
     int x=0;
-    for (ptrdiff_t i=data.length - 1; i>=0; --i)
+    for (ptrdiff_t i=data.length - 1; i >= 0; --i)
     {
         toHexZeroPadded(buff[x .. x+8], data[i], letterCase);
         x+=8;
@@ -1772,10 +1772,10 @@ body
         }
     }
     // Now set y = all remaining digits.
-    if (lo>=18)
+    if (lo >= 18)
     {
     }
-    else if (lo>=9)
+    else if (lo >= 9)
     {
         for (int k=9; k<lo; ++k) y*=10;
         y+=x;
@@ -1950,9 +1950,9 @@ bool less(const(BigDigit)[] x, const(BigDigit)[] y) pure nothrow
 {
     assert(x.length >= y.length);
     auto k = x.length-1;
-    while (x[k]==0 && k>=y.length)
+    while (x[k]==0 && k >= y.length)
         --k;
-    if (k>=y.length)
+    if (k >= y.length)
         return false;
     while (k>0 && x[k]==y[k])
         --k;
@@ -2286,7 +2286,7 @@ void toHexZeroPadded(char[] output, uint value,
     ptrdiff_t x = output.length - 1;
     static immutable string upperHexDigits = "0123456789ABCDEF";
     static immutable string lowerHexDigits = "0123456789abcdef";
-    for ( ; x>=0; --x)
+    for ( ; x >= 0; --x)
     {
         if (letterCase == LetterCase.upper)
         {
@@ -2440,7 +2440,7 @@ body
 }
 
 // rem -= quot * v[0 .. k].
-// If would make rem negative, decrease quot until rem is >=0.
+// If would make rem negative, decrease quot until rem is >= 0.
 // Needs (quot.length * k) scratch space to store the result of the multiply.
 void adjustRemainder(BigDigit[] quot, BigDigit[] rem, const(BigDigit)[] v,
         ptrdiff_t k,

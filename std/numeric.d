@@ -588,7 +588,7 @@ public:
     {
         auto x = get!real;
         auto y = cast(real) b;
-        return  (x>=y)-(x <= y);
+        return  (x >= y)-(x <= y);
     }
 
     /// ditto
@@ -2602,7 +2602,7 @@ T gcd(T)(T a, T b)
     {
         static if (T.min < 0)
         {
-            assert(a >= 0 && b >=0);
+            assert(a >= 0 && b >= 0);
         }
         while (b)
         {
