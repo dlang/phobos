@@ -205,7 +205,7 @@ done:
     a[5] =0x44444444;
     carry = multibyteAddSub!('-')(a[0 .. 12], a[0 .. 12], b[0 .. 12], 0);
     assert(a[11]==0);
-    for (int i=0; i<10; ++i) if (i!=5) assert(a[i]==0);
+    for (int i=0; i<10; ++i) if (i != 5) assert(a[i]==0);
 
     for (int q=3; q<36;++q)
     {

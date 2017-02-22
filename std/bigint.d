@@ -238,7 +238,7 @@ public:
         }
         else static if (op=="/")
         {
-            assert(y!=0, "Division by zero");
+            assert(y != 0, "Division by zero");
             static if (T.sizeof <= uint.sizeof)
             {
                 data = BigUint.divInt(data, cast(uint) u);
@@ -251,7 +251,7 @@ public:
         }
         else static if (op=="%")
         {
-            assert(y!=0, "Division by zero");
+            assert(y != 0, "Division by zero");
             static if (is(immutable(T) == immutable(long)) || is( immutable(T) == immutable(ulong) ))
             {
                 this %= BigInt(y);
@@ -424,7 +424,7 @@ public:
     auto opBinary(string op, T)(T y) pure nothrow const
         if (op == "%" && isIntegral!T)
     {
-        assert(y!=0);
+        assert(y != 0);
 
         // BigInt % long => long
         // BigInt % ulong => BigInt
@@ -761,7 +761,7 @@ public:
     /// ditto
     int opCmp(T:BigInt)(const T y) pure nothrow @nogc const
     {
-        if (sign!=y.sign)
+        if (sign != y.sign)
             return sign ? -1 : 1;
         immutable cmp = data.opCmp(y.data);
         return sign? -cmp: cmp;

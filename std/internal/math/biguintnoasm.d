@@ -159,7 +159,7 @@ void multibyteShr(uint [] dest, const(uint) [] src, uint numbits)
     pure @nogc @safe
 {
     ulong c = 0;
-    for (ptrdiff_t i = dest.length; i!=0; --i)
+    for (ptrdiff_t i = dest.length; i != 0; --i)
     {
         c += (src[i-1] >>numbits) + (cast(ulong)(src[i-1]) << (64 - numbits));
         dest[i-1] = cast(uint) c;

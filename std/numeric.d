@@ -924,7 +924,7 @@ body
     */
     static T secant_interpolate(T a, T b, R fa, R fb)
     {
-        if (( ((a - b) == a) && b!=0) || (a!=0 && ((b - a) == b)))
+        if (( ((a - b) == a) && b != 0) || (a != 0 && ((b - a) == b)))
         {
             // Catastrophic cancellation
             if (a == 0)
@@ -1188,7 +1188,7 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
 
         auto flo = f(result[0]);
         auto fhi = f(result[1]);
-        if (flo!=0)
+        if (flo != 0)
         {
             assert(oppositeSigns(flo, fhi));
         }

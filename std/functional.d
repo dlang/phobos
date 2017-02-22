@@ -336,7 +336,7 @@ private uint _ctfeMatchUnary(string fun, string name)
     static assert(_ctfeMatchUnary("4 == a", "a"));
     static assert(_ctfeMatchUnary("2 == a", "a"));
     static assert(_ctfeMatchUnary("1 != a", "a"));
-    static assert(_ctfeMatchUnary("a!=4", "a"));
+    static assert(_ctfeMatchUnary("a != 4", "a"));
     static assert(_ctfeMatchUnary("a< 1", "a"));
     static assert(_ctfeMatchUnary("434 < a", "a"));
     static assert(_ctfeMatchUnary("132 > a", "a"));
@@ -384,7 +384,7 @@ private uint _ctfeMatchBinary(string fun, string name1, string name2)
     static assert(_ctfeMatchBinary("4 == a", "a", "b"));
     static assert(_ctfeMatchBinary("2 == a", "a", "b"));
     static assert(_ctfeMatchBinary("1 != a", "a", "b"));
-    static assert(_ctfeMatchBinary("a!=4", "a", "b"));
+    static assert(_ctfeMatchBinary("a != 4", "a", "b"));
     static assert(_ctfeMatchBinary("a< 1", "a", "b"));
     static assert(_ctfeMatchBinary("434 < a", "a", "b"));
     static assert(_ctfeMatchBinary("132 > a", "a", "b"));
@@ -404,7 +404,7 @@ private uint _ctfeMatchBinary(string fun, string name1, string name2)
     static assert(_ctfeMatchBinary("b == a", "b", "a"));
     static assert(_ctfeMatchBinary("b == a", "b", "a"));
     static assert(_ctfeMatchBinary("b != a", "b", "a"));
-    static assert(_ctfeMatchBinary("a!=b", "b", "a"));
+    static assert(_ctfeMatchBinary("a != b", "b", "a"));
     static assert(_ctfeMatchBinary("a< b", "b", "a"));
     static assert(_ctfeMatchBinary("b < a", "b", "a"));
     static assert(_ctfeMatchBinary("b > a", "b", "a"));

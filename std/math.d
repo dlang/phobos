@@ -951,7 +951,7 @@ Lret: {}
         r = -r;
         t = tan(x);
         //printf("tan(%Lg) = %Lg, should be %Lg\n", x, t, r);
-        if (!isIdentical(r, t) && !(r!=r && t!=t)) assert(fabs(r-t) <= .0000001);
+        if (!isIdentical(r, t) && !(r != r && t != t)) assert(fabs(r-t) <= .0000001);
     }
     // overflow
     assert(isNaN(tan(real.infinity)));
@@ -1770,7 +1770,7 @@ L_extreme:  // Extreme exponent. X is very large positive, very
             // large negative, infinity, or NaN.
             fxam;
             fstsw AX;
-            test AX, 0x0400; // NaN_or_zero, but we already know x!=0
+            test AX, 0x0400; // NaN_or_zero, but we already know x != 0
             jz L_was_nan;  // if x is NaN, returns x
             test AX, 0x0200;
             jnz L_largenegative;
@@ -1858,7 +1858,7 @@ L_extreme:  // Extreme exponent. X is very large positive, very
             // large negative, infinity, or NaN.
             fxam;
             fstsw AX;
-            test AX, 0x0400; // NaN_or_zero, but we already know x!=0
+            test AX, 0x0400; // NaN_or_zero, but we already know x != 0
             jz L_was_nan;  // if x is NaN, returns x
             test AX, 0x0200;
             jnz L_largenegative;
@@ -2023,7 +2023,7 @@ L_extreme:  // Extreme exponent. X is very large positive, very
             // large negative, infinity, or NaN.
             fxam;
             fstsw AX;
-            test AX, 0x0400; // NaN_or_zero, but we already know x!=0
+            test AX, 0x0400; // NaN_or_zero, but we already know x != 0
             jz L_was_nan;  // if x is NaN, returns x
             // set scratchreal = real.min_normal
             // squaring it will return 0, setting underflow flag
@@ -2124,7 +2124,7 @@ L_extreme:  // Extreme exponent. X is very large positive, very
             // large negative, infinity, or NaN.
             fxam;
             fstsw AX;
-            test AX, 0x0400; // NaN_or_zero, but we already know x!=0
+            test AX, 0x0400; // NaN_or_zero, but we already know x != 0
             jz L_was_nan;  // if x is NaN, returns x
             // set scratchreal = real.min
             // squaring it will return 0, setting underflow flag
@@ -6518,7 +6518,7 @@ if (isFloatingPoint!(X))
                     || F.realFormat == RealFormat.ieeeQuadruple);
 
         if (x == y)
-            return X.mant_dig; // ensure diff!=0, cope with INF.
+            return X.mant_dig; // ensure diff != 0, cope with INF.
 
         Unqual!X diff = fabs(x - y);
 

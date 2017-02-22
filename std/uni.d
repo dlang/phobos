@@ -5304,7 +5304,7 @@ if (is(C : wchar) || is(C : char))
         assert(testAll(ascii, c8) || len != 1);
         assert(testAll(uni2, c8) || len != 2);
         assert(testAll(uni3, c8) || len != 3);
-        assert(testAll(uni24, c8) || (len != 2 && len !=4));
+        assert(testAll(uni24, c8) || (len != 2 && len != 4));
     }
 }
 

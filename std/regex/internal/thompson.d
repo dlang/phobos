@@ -1075,7 +1075,7 @@ if (is(Char : dchar))
             {
                 writefln("-- Threaded matching threads at  %s",  s[index .. s.lastIndex]);
             }
-            if (startPc!=RestartPc)
+            if (startPc != RestartPc)
             {
                 state.t = createStart(index, startPc);
                 genCounter++;

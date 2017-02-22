@@ -252,7 +252,7 @@ public:
         uint yhi = cast(uint)(y >> 32);
         if (data.length == 2 && data[1]!=yhi)
             return false;
-        if (data.length == 1 && yhi!=0)
+        if (data.length == 1 && yhi != 0)
             return false;
         return (data[0] == ylo);
     }
@@ -584,9 +584,9 @@ public:
         if (y == 0 || x == 0) return BigUint(ZERO);
         uint hi = cast(uint)(y >>> 32);
         uint lo = cast(uint)(y & 0xFFFF_FFFF);
-        uint [] result = new BigDigit[x.data.length+1+(hi!=0)];
+        uint [] result = new BigDigit[x.data.length+1+(hi != 0)];
         result[x.data.length] = multibyteMul(result[0 .. x.data.length], x.data, lo, 0);
-        if (hi!=0)
+        if (hi != 0)
         {
             result[x.data.length+1] = multibyteMulAdd!('+')(result[1 .. x.data.length+1],
                 x.data, hi, 0);
@@ -626,10 +626,10 @@ public:
         uint [] result = new BigDigit[x.data.length];
         if ((y&(-y))==y)
         {
-            assert(y!=0, "BigUint division by zero");
+            assert(y != 0, "BigUint division by zero");
             // perfect power of 2
             uint b = 0;
-            for (;y!=1; y>>=1)
+            for (;y != 1; y>>=1)
             {
                 ++b;
             }
@@ -663,7 +663,7 @@ public:
     {
         import core.memory : GC;
         uint y = y_;
-        assert(y!=0);
+        assert(y != 0);
         if ((y&(-y)) == y)
         {   // perfect power of 2
             return x.data[0] & (y-1);
@@ -752,7 +752,7 @@ public:
         // If true, then x0 is that digit
         // and the result will be (x0 ^^ y) * (2^^(firstnonzero*y*BigDigitBits))
         BigDigit x0 = x.data[firstnonzero];
-        assert(x0 !=0);
+        assert(x0 != 0);
         // Length of the non-zero portion
         size_t nonzerolength = x.data.length - firstnonzero;
         ulong y0;
@@ -874,7 +874,7 @@ public:
             }
             y <<=1;
 
-            while (y!=0)
+            while (y != 0)
             {
                 // For each bit of y: Set r1 =  r1 * r1
                 // If the bit is 1, set r1 = r1 * x
@@ -915,7 +915,7 @@ public:
             }
         }
 
-        if (finalMultiplier!=1)
+        if (finalMultiplier != 1)
         {
             const BigDigit carry = multibyteMul(r1, r1, finalMultiplier, 0);
             if (carry)
@@ -927,7 +927,7 @@ public:
         if (evenshiftbits)
         {
             const BigDigit carry = multibyteShl(r1, r1, evenshiftbits);
-            if (carry!=0)
+            if (carry != 0)
             {
                 r1 = t1[0 .. r1.length + 1];
                 r1[$ - 1] = carry;
@@ -1293,16 +1293,16 @@ BigDigit [] addInt(const BigDigit[] x, ulong y) pure nothrow
     uint hi = cast(uint)(y >>> 32);
     uint lo = cast(uint)(y& 0xFFFF_FFFF);
     auto len = x.length;
-    if (x.length < 2 && hi!=0) ++len;
+    if (x.length < 2 && hi != 0) ++len;
     BigDigit [] result = new BigDigit[len+1];
     result[0 .. x.length] = x[];
-    if (x.length < 2 && hi!=0)
+    if (x.length < 2 && hi != 0)
     {
         result[1]=hi;
         hi=0;
     }
     uint carry = multibyteIncrementAssign!('+')(result[0..$-1], lo);
-    if (hi!=0) carry += multibyteIncrementAssign!('+')(result[1..$-1], hi);
+    if (hi != 0) carry += multibyteIncrementAssign!('+')(result[1..$-1], hi);
     if (carry)
     {
         result[$-1] = carry;
@@ -1512,7 +1512,7 @@ void divModInternal(BigDigit [] quotient, BigDigit[] remainder, const BigDigit [
     BigDigit [] un = new BigDigit[u.length + 1];
     // How much to left shift v, so that its MSB is set.
     uint s = BIGDIGITSHIFTMASK - bsr(v[$-1]);
-    if (s!=0)
+    if (s != 0)
     {
         multibyteShl(vn, v, s);
         un[$-1] = multibyteShl(un[0..$-1], u, s);
@@ -1675,7 +1675,7 @@ size_t biguintToDecimal(char [] buff, BigDigit [] data) pure nothrow
     itoaZeroPadded(buff[sofar-10 .. sofar], data[0]);
     sofar -= 10;
     // and strip off the leading zeros
-    while (sofar!= buff.length-1 && buff[sofar] == '0')
+    while (sofar != buff.length-1 && buff[sofar] == '0')
         sofar++;
     return sofar;
 }
@@ -1762,7 +1762,7 @@ body
                 hi = 2;
             uint c = multibyteIncrementAssign!('+')(data[0 .. hi], cast(uint)(y&0xFFFF_FFFF));
             c += multibyteIncrementAssign!('+')(data[1 .. hi], cast(uint)(y>>32));
-            if (c!=0)
+            if (c != 0)
             {
                 data[hi]=c;
                 ++hi;
@@ -1805,7 +1805,7 @@ body
             while (lo>0)
             {
                 immutable c = multibyteMul(data[0 .. hi], data[0 .. hi], 10, 0);
-                if (c!=0)
+                if (c != 0)
                 {
                     data[hi]=c;
                     ++hi;
@@ -1817,7 +1817,7 @@ body
             {
                 c += multibyteIncrementAssign!('+')(data[1 .. hi], cast(uint)(y>>32));
             }
-            if (c!=0)
+            if (c != 0)
             {
                 data[hi]=c;
                 ++hi;

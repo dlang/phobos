@@ -6199,7 +6199,7 @@ mixin template Proxy(alias a)
             allFail(a, b);
 
             b = 4;
-            assert(a!=b);
+            assert(a != b);
             assert(a<b);
             assert(a<=b);
             assert(!(a>b));
