@@ -3045,13 +3045,13 @@ private:
     version(LittleEndian)
     {
         ptr[idx] = val & 0xFF;
-        ptr[idx+1] = (val>>8) & 0xFF;
-        ptr[idx+2] = (val>>16) & 0xFF;
+        ptr[idx+1] = (val >> 8) & 0xFF;
+        ptr[idx+2] = (val >> 16) & 0xFF;
     }
     else
     {
-        ptr[idx] = (val>>16) & 0xFF;
-        ptr[idx+1] = (val>>8) & 0xFF;
+        ptr[idx] = (val >> 16) & 0xFF;
+        ptr[idx+1] = (val >> 8) & 0xFF;
         ptr[idx+2] = val & 0xFF;
     }
 }
@@ -4931,7 +4931,7 @@ template Utf16Matcher()
         assert(ch <= 0xF_FFFF);
         wchar[2] ret;
         //do not put surrogate bits, they are sliced off
-        ret[0] = cast(wchar)(ch>>10);
+        ret[0] = cast(wchar)(ch >> 10);
         ret[1] = (ch & 0xFFF);
         return ret;
     }
@@ -5701,13 +5701,13 @@ if (is(Char1 : dchar) && is(Char2 : dchar))
         arr ~= cast(ubyte) val;
     else if (val < (1 << 13))
     {
-        arr ~= (0b1_00 << 5) | cast(ubyte)(val>>8);
+        arr ~= (0b1_00 << 5) | cast(ubyte)(val >> 8);
         arr ~= val & 0xFF;
     }
     else
     {
         assert(val < (1 << 21));
-        arr ~= (0b1_01 << 5) | cast(ubyte)(val>>16);
+        arr ~= (0b1_01 << 5) | cast(ubyte)(val >> 16);
         arr ~= (val >> 8) & 0xFF;
         arr ~= val  & 0xFF;
     }
@@ -5719,7 +5719,7 @@ if (is(Char1 : dchar) && is(Char2 : dchar))
     immutable first = arr[idx++];
     if (!(first & 0x80)) // no top bit -> [0 .. 127]
         return first;
-    immutable extra = ((first>>5) & 1) + 1; // [1, 2]
+    immutable extra = ((first >> 5) & 1) + 1; // [1, 2]
     uint val = (first & 0x1F);
     enforce(idx + extra <= arr.length, "bad code point interval encoding");
     foreach (j; 0 .. extra)
@@ -8134,7 +8134,7 @@ if (isSomeString!S)
                 {
                     auto val = tableFn(idx);
                     // unpack length + codepoint
-                    immutable uint len = val>>24;
+                    immutable uint len = val >> 24;
                     result.put(cast(dchar)(val & 0xFF_FFFF));
                     foreach (j; idx+1 .. idx+len)
                         result.put(tableFn(j));
@@ -8736,7 +8736,7 @@ private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
                 codeLen += startIdx - lastNonTrivial;
                 lastNonTrivial = curIdx;
                 immutable val = tableFn(caseIndex);
-                immutable len = val>>24;
+                immutable len = val >> 24;
                 immutable dchar cased = val & 0xFF_FFFF;
                 codeLen += codeLength!C(cased);
                 foreach (j; caseIndex+1 .. caseIndex+len)
@@ -8796,7 +8796,7 @@ private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
                 destIdx += toCopy;
                 auto val = tableFn(caseIndex);
                 // unpack length + codepoint
-                immutable uint len = val>>24;
+                immutable uint len = val >> 24;
                 destIdx = encodeTo(ns, destIdx, cast(dchar)(val & 0xFF_FFFF));
                 foreach (j; caseIndex+1 .. caseIndex+len)
                     destIdx = encodeTo(ns, destIdx, tableFn(j));

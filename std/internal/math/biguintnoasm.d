@@ -235,7 +235,7 @@ uint multibyteMulAdd(char op)(uint [] dest, const(uint)[] src,
             c += cast(ulong) multiplier * src[i];
             ulong t = cast(ulong) dest[i] - cast(uint) c;
             dest[i] = cast(uint) t;
-            c = cast(uint)((c>>32) - (t>>32));
+            c = cast(uint)((c >> 32) - (t >> 32));
         }
     }
     return cast(uint) c;

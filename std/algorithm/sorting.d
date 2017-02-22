@@ -2327,7 +2327,7 @@ private template TimSortImpl(alias pred, R)
     size_t minRunLength()(size_t n)
     {
         immutable shift = bsr(n)-5;
-        auto result = (n>>shift) + !!(n & ~((1 << shift)-1));
+        auto result = (n >> shift) + !!(n & ~((1 << shift)-1));
         return result;
     }
 

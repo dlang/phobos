@@ -277,7 +277,7 @@ struct Bytecode
 
     //ditto
     //0-arg template due to @@@BUG@@@ 10985
-    @property IR code()() const { return cast(IR)(raw>>24); }
+    @property IR code()() const { return cast(IR)(raw >> 24); }
 
     //ditto
     @property bool hotspot() const { return hasMerge(code); }

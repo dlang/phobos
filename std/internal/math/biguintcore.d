@@ -461,7 +461,7 @@ public:
     {
         assert(y>0);
         uint bits = cast(uint) y & BIGDIGITSHIFTMASK;
-        if ((y>>LG2BIGDIGITBITS) >= data.length) return BigUint(ZERO);
+        if ((y >> LG2BIGDIGITBITS) >= data.length) return BigUint(ZERO);
         uint words = cast(uint)(y >> LG2BIGDIGITBITS);
         if (bits == 0)
         {
@@ -485,7 +485,7 @@ public:
         assert(y>0);
         if (isZero()) return this;
         uint bits = cast(uint) y & BIGDIGITSHIFTMASK;
-        assert((y>>LG2BIGDIGITBITS) < cast(ulong)(uint.max));
+        assert((y >> LG2BIGDIGITBITS) < cast(ulong)(uint.max));
         uint words = cast(uint)(y >> LG2BIGDIGITBITS);
         BigDigit [] result = new BigDigit[data.length + words+1];
         result[0 .. words] = 0;
@@ -538,7 +538,7 @@ public:
                 }
                 if (d > uint.max)
                 {
-                    r.data = [cast(uint)(d & 0xFFFF_FFFF), cast(uint)(d>>32)];
+                    r.data = [cast(uint)(d & 0xFFFF_FFFF), cast(uint)(d >> 32)];
                 }
                 else
                 {
@@ -1761,7 +1761,7 @@ body
             else
                 hi = 2;
             uint c = multibyteIncrementAssign!('+')(data[0 .. hi], cast(uint)(y&0xFFFF_FFFF));
-            c += multibyteIncrementAssign!('+')(data[1 .. hi], cast(uint)(y>>32));
+            c += multibyteIncrementAssign!('+')(data[1 .. hi], cast(uint)(y >> 32));
             if (c != 0)
             {
                 data[hi]=c;
@@ -1815,7 +1815,7 @@ body
             uint c = multibyteIncrementAssign!('+')(data[0 .. hi], cast(uint)(y&0xFFFF_FFFF));
             if (y > 0xFFFF_FFFFL)
             {
-                c += multibyteIncrementAssign!('+')(data[1 .. hi], cast(uint)(y>>32));
+                c += multibyteIncrementAssign!('+')(data[1 .. hi], cast(uint)(y >> 32));
             }
             if (c != 0)
             {
