@@ -2842,15 +2842,25 @@ if (isDynamicArray!A)
         }
         else
         {
-            import std.conv : emplaceRef;
-
             ensureAddable(1);
             immutable len = _data.arr.length;
 
-            auto bigData = (() @trusted => _data.arr.ptr[0 .. len + 1])();
-            emplaceRef!(Unqual!T)(bigData[len], cast(Unqual!T)item);
-            //We do this at the end, in case of exceptions
-            _data.arr = bigData;
+            static if (isBasicType!U)
+            {
+                () @trusted {
+                    _data.arr.ptr[len] = cast(Unqual!T) item;
+                    _data.arr = _data.arr.ptr[0 .. len + 1];
+                }();
+            }
+            else
+            {
+                import std.conv : emplaceRef;
+
+                auto bigData = (() @trusted => _data.arr.ptr[0 .. len + 1])();
+                emplaceRef!(Unqual!T)(bigData[len], cast(Unqual!T)item);
+                //We do this at the end, in case of exceptions
+                _data.arr = bigData;
+            }
         }
     }
 
