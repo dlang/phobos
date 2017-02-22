@@ -4290,20 +4290,43 @@ unittest
     assertThrown!Exception(poolInstance.asyncBuf(ThrowingRange.init));
 }
 
+bool isNaN(float f)
+{
+    static import std.math;
+    return std.math.isNaN(f);
+}
+
+bool isNaN(double f)
+{
+    static import std.math;
+    return std.math.isNaN(f);
+}
+
+bool isNaN(real f)
+{
+    static import std.math;
+    return std.math.isNaN(f);
+}
+
 //version = parallelismStressTest;
 
 // These are more like stress tests than real unit tests.  They print out
 // tons of stuff and should not be run every time make unittest is run.
-version(parallelismStressTest)
+unittest
 {
-    unittest
+    testFunction(1);
+    testFunction2(1);
+}
+
+void testFunction(size_t runs)
     {
+        import std.stdio : stderr, writeln;
         size_t attempt;
-        for (; attempt < 10; attempt++)
+        for (; attempt < runs; attempt++)
             foreach (poolSize; [0, 4])
         {
 
-            poolInstance = new TaskPool(poolSize);
+            auto poolInstance = new TaskPool(poolSize);
 
             uint[] numbers = new uint[1_000];
 
@@ -4372,19 +4395,19 @@ version(parallelismStressTest)
             poolInstance.stop();
         }
 
-        assert(attempt == 10);
-        writeln("Press enter to go to next round of unittests.");
-        readln();
+        assert(attempt == runs);
     }
 
-    // These unittests are intended more for actual testing and not so much
-    // as examples.
-    unittest
+// These unittests are intended more for actual testing and not so much
+// as examples.
+void testFunction2(size_t runs)
     {
-        foreach (attempt; 0..10)
+        import std.stdio : stderr;
+
+        foreach (attempt; 0..runs)
         foreach (poolSize; [0, 4])
         {
-            poolInstance = new TaskPool(poolSize);
+            auto poolInstance = new TaskPool(poolSize);
 
             // Test indexing.
             stderr.writeln("Creator Raw Index:  ", poolInstance.threadIndex);
@@ -4539,7 +4562,6 @@ version(parallelismStressTest)
             poolInstance.stop();
         }
     }
-}
 
 version(unittest)
 {
