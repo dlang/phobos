@@ -62,7 +62,7 @@ $(TR $(TDC void[] allocateAll();) $(TD Offers all of allocator's memory to the
 caller, so it's usually defined by fixed-size allocators. If the allocator is
 currently NOT managing any memory, then $(D allocateAll()) shall allocate and
 return all memory available to the allocator, and subsequent calls to all
-allocation primitives should not succeed (e .. g $(D allocate) shall return $(D
+allocation primitives should not succeed (e.g. $(D allocate) shall return $(D
 null) etc). Otherwise, $(D allocateAll) only works on a best-effort basis, and
 the allocator is allowed to return $(D null) even if does have available memory.
 Memory allocated with $(D allocateAll) is not otherwise special (e.g. can be

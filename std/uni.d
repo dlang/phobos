@@ -2341,7 +2341,7 @@ public:
         Example:
         ---
         import std.conv;
-        assert(unicode.ASCII.to!string == "[0 .. 128$(RPAREN)");
+        assert(unicode.ASCII.to!string == "[0..128$(RPAREN)");
         ---
     */
 
@@ -2387,18 +2387,18 @@ public:
         import std.uni : unicode;
 
         assert(unicode.Cyrillic.to!string ==
-            "[1024 .. 1157) [1159 .. 1320) [7467 .. 7468) [7544 .. 7545) [11744 .. 11776) [42560 .. 42648) [42655 .. 42656)");
+            "[1024..1157) [1159..1320) [7467..7468) [7544..7545) [11744..11776) [42560..42648) [42655..42656)");
 
         // The specs '%s' and '%d' are equivalent to the to!string call above.
         assert(format("%d", unicode.Cyrillic) == unicode.Cyrillic.to!string);
 
         assert(format("%#x", unicode.Cyrillic) ==
-            "[0x400 .. 0x485) [0x487 .. 0x528) [0x1d2b .. 0x1d2c) [0x1d78 .. 0x1d79) [0x2de0 .. 0x2e00) "
-            ~"[0xa640 .. 0xa698) [0xa69f .. 0xa6a0)");
+            "[0x400..0x485) [0x487..0x528) [0x1d2b..0x1d2c) [0x1d78..0x1d79) [0x2de0..0x2e00) "
+            ~"[0xa640..0xa698) [0xa69f..0xa6a0)");
 
         assert(format("%#X", unicode.Cyrillic) ==
-            "[0X400 .. 0X485) [0X487 .. 0X528) [0X1D2B .. 0X1D2C) [0X1D78 .. 0X1D79) [0X2DE0 .. 0X2E00) "
-            ~"[0XA640 .. 0XA698) [0XA69F .. 0XA6A0)");
+            "[0X400..0X485) [0X487..0X528) [0X1D2B..0X1D2C) [0X1D78..0X1D79) [0X2DE0..0X2E00) "
+            ~"[0XA640..0XA698) [0XA69F..0XA6A0)");
     }
 
     @safe unittest
@@ -3023,7 +3023,7 @@ private:
 @system unittest
 {
     import std.conv : to;
-    assert(unicode.ASCII.to!string() == "[0 .. 128)");
+    assert(unicode.ASCII.to!string() == "[0..128)");
 }
 
 // pedantic version for ctfe, and aligned-access only architectures

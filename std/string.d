@@ -6111,7 +6111,7 @@ if (isSomeString!S ||
     assert(isNumeric("12345xxxx890") == false );
     assert(isNumeric("567L") == true );
     assert(isNumeric("23UL") == true );
-    assert(isNumeric("-123 .. 56f") == false );
+    assert(isNumeric("-123..56f") == false );
     assert(isNumeric("12.3.5.6") == false );
     assert(isNumeric(" 12.356") == false );
     assert(isNumeric("123 5.6") == false );
