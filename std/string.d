@@ -2309,10 +2309,10 @@ S capitalize(S)(S input) @trusted pure
 if (isSomeString!S)
 {
     import std.array : array;
-    import std.conv : to;
+    import std.utf : byUTF;
     import std.uni : asCapitalized;
 
-    return input.asCapitalized.array.to!S;
+    return input.asCapitalized.byUTF!(ElementEncodingType!(S)).array;
 }
 
 ///
