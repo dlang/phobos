@@ -32,7 +32,7 @@ import std.traits : isArray;
 
 // Range that's useful for testing other higher order ranges,
 // can be parametrized with attributes.  It just dumbs down an array of
-// numbers 1..10.
+// numbers 1 .. 10.
 struct DummyRange(ReturnBy _r, Length _l, RangeType _rt, T = uint[])
 if (isArray!T)
 {
@@ -166,7 +166,7 @@ if (isArray!T)
         typeof(this) opSlice(size_t lower, size_t upper)
         {
             auto ret = this;
-            ret.arr = arr[lower..upper];
+            ret.arr = arr[lower .. upper];
             return ret;
         }
 

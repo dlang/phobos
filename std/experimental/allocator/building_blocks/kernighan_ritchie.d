@@ -867,7 +867,7 @@ unittest
         bufs ~= a.allocate(sizes[1] - word);
 
         a.deallocate(bufs[0]);
-        foreach (i; 2..bufs.length)
+        foreach (i; 2 .. bufs.length)
         {
             a.deallocate(bufs[i]);
         }

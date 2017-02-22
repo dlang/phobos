@@ -107,7 +107,7 @@ bool putSysError(Writer)(DWORD code, Writer w, /*WORD*/int langId = 0)
     if (lpMsgBuf)
     {
         import std.string : strip;
-        w.put(lpMsgBuf[0..res].strip());
+        w.put(lpMsgBuf[0 .. res].strip());
         return true;
     }
     else

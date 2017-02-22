@@ -1099,7 +1099,7 @@ public:
         auto p1 = this._ptr;
         auto p2 = a2._ptr;
 
-        if (p1[0..fullWords] != p2[0..fullWords])
+        if (p1[0 .. fullWords] != p2[0 .. fullWords])
             return false;
 
         if (!endBits)
@@ -1363,7 +1363,7 @@ public:
         BitArray result;
         result.length = _len;
 
-        result._ptr[0..dim] = ~this._ptr[0..dim];
+        result._ptr[0 .. dim] = ~this._ptr[0 .. dim];
 
         // Avoid putting garbage in extra bits
         // Remove once we zero on length extension
@@ -1407,9 +1407,9 @@ public:
         result.length = _len;
 
         static if (op == "-")
-            result._ptr[0..dim] = this._ptr[0..dim] & ~e2._ptr[0..dim];
+            result._ptr[0 .. dim] = this._ptr[0 .. dim] & ~e2._ptr[0 .. dim];
         else
-            mixin("result._ptr[0..dim] = this._ptr[0..dim]"~op~" e2._ptr[0..dim];");
+            mixin("result._ptr[0 .. dim] = this._ptr[0 .. dim]"~op~" e2._ptr[0 .. dim];");
 
         // Avoid putting garbage in extra bits
         // Remove once we zero on length extension
@@ -3836,7 +3836,7 @@ if (isIntegral!T)
         }
     }
     assert(countBitsSet(1_000_000) == 7);
-    foreach (i; 0..63)
+    foreach (i; 0 .. 63)
         assert(countBitsSet(1UL << i) == 1);
 }
 
@@ -3947,6 +3947,6 @@ if (isIntegral!T)
         }
     }
     assert(bitsSet(1_000_000).equal([6, 9, 14, 16, 17, 18, 19]));
-    foreach (i; 0..63)
+    foreach (i; 0 .. 63)
         assert(bitsSet(1UL << i).equal([i]));
 }

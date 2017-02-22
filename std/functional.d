@@ -254,7 +254,7 @@ template binaryFun(alias fun, string parm1Name = "a",
     static assert(!is(typeof(binaryFun!FuncObj)));
 }
 
-// skip all ASCII chars except a..z, A..Z, 0..9, '_' and '.'.
+// skip all ASCII chars except a .. z, A .. Z, 0 .. 9, '_' and '.'.
 private uint _ctfeSkipOp(ref string op)
 {
     if (!__ctfe) assert(false);
@@ -292,7 +292,7 @@ private uint _ctfeSkipInteger(ref string op)
 private uint _ctfeSkipName(ref string op, string name)
 {
     if (!__ctfe) assert(false);
-    if (op.length >= name.length && op[0..name.length] == name)
+    if (op.length >= name.length && op[0 .. name.length] == name)
     {
         op = op[name.length..$];
         return 1;
@@ -1413,7 +1413,7 @@ template forward(args...)
 ///
 @safe unittest
 {
-    void foo(int n, ref string s) { s = null; foreach (i; 0..n) s ~= "Hello"; }
+    void foo(int n, ref string s) { s = null; foreach (i; 0 .. n) s ~= "Hello"; }
 
     // forwards all arguments which are bound to parameter tuple
     void bar(Args...)(auto ref Args args) { return foo(forward!args); }

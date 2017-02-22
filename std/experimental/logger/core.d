@@ -3044,7 +3044,7 @@ unittest
     sharedLog = new IgnoredLog;
     Thread[] spawned;
 
-    foreach (i; 0..4)
+    foreach (i; 0 .. 4)
     {
         spawned ~= new Thread({
             stdThreadLocalLog = new TestLog;

@@ -30,14 +30,14 @@ version (unittest)
 }
 
 
-immutable fullHexDigits  = "0123456789ABCDEFabcdef";     /// 0..9A..Fa..f
-immutable hexDigits      = fullHexDigits[0..16];         /// 0..9A..F
-immutable lowerHexDigits = "0123456789abcdef";           /// 0..9a..f
-immutable digits         = hexDigits[0..10];             /// 0..9
-immutable octalDigits    = digits[0..8];                 /// 0..7
-immutable letters        = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"; /// A..Za..z
-immutable uppercase      = letters[0..26];               /// A..Z
-immutable lowercase      = letters[26..52];              /// a..z
+immutable fullHexDigits  = "0123456789ABCDEFabcdef";     /// 0 .. 9A .. Fa .. f
+immutable hexDigits      = fullHexDigits[0 .. 16];         /// 0 .. 9A .. F
+immutable lowerHexDigits = "0123456789abcdef";           /// 0 .. 9a .. f
+immutable digits         = hexDigits[0 .. 10];             /// 0 .. 9
+immutable octalDigits    = digits[0 .. 8];                 /// 0 .. 7
+immutable letters        = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"; /// A .. Za .. z
+immutable uppercase      = letters[0 .. 26];               /// A .. Z
+immutable lowercase      = letters[26 .. 52];              /// a .. z
 immutable whitespace     = " \t\v\r\n\f";                /// ASCII _whitespace
 
 /++
@@ -60,7 +60,7 @@ else
 
 /++
     Params: c = The character to test.
-    Returns: Whether $(D c) is a letter or a number (0..9, a..z, A..Z).
+    Returns: Whether $(D c) is a letter or a number (0 .. 9, a .. z, A .. Z).
   +/
 bool isAlphaNum(dchar c) @safe pure nothrow @nogc
 {
@@ -90,7 +90,7 @@ bool isAlphaNum(dchar c) @safe pure nothrow @nogc
 
 /++
     Params: c = The character to test.
-    Returns: Whether $(D c) is an ASCII letter (A..Z, a..z).
+    Returns: Whether $(D c) is an ASCII letter (A .. Z, a .. z).
   +/
 bool isAlpha(dchar c) @safe pure nothrow @nogc
 {
@@ -121,7 +121,7 @@ bool isAlpha(dchar c) @safe pure nothrow @nogc
 
 /++
     Params: c = The character to test.
-    Returns: Whether $(D c) is a lowercase ASCII letter (a..z).
+    Returns: Whether $(D c) is a lowercase ASCII letter (a .. z).
   +/
 bool isLower(dchar c) @safe pure nothrow @nogc
 {
@@ -152,7 +152,7 @@ bool isLower(dchar c) @safe pure nothrow @nogc
 
 /++
     Params: c = The character to test.
-    Returns: Whether $(D c) is an uppercase ASCII letter (A..Z).
+    Returns: Whether $(D c) is an uppercase ASCII letter (A .. Z).
   +/
 bool isUpper(dchar c) @safe pure nothrow @nogc
 {
@@ -183,7 +183,7 @@ bool isUpper(dchar c) @safe pure nothrow @nogc
 
 /++
     Params: c = The character to test.
-    Returns: Whether $(D c) is a digit (0..9).
+    Returns: Whether $(D c) is a digit (0 .. 9).
   +/
 bool isDigit(dchar c) @safe pure nothrow @nogc
 {
@@ -215,7 +215,7 @@ bool isDigit(dchar c) @safe pure nothrow @nogc
 
 /++
     Params: c = The character to test.
-    Returns: Whether $(D c) is a digit in base 8 (0..7).
+    Returns: Whether $(D c) is a digit in base 8 (0 .. 7).
   +/
 bool isOctalDigit(dchar c) @safe pure nothrow @nogc
 {
@@ -244,7 +244,7 @@ bool isOctalDigit(dchar c) @safe pure nothrow @nogc
 
 /++
     Params: c = The character to test.
-    Returns: Whether $(D c) is a digit in base 16 (0..9, A..F, a..f).
+    Returns: Whether $(D c) is a digit in base 16 (0 .. 9, A .. F, a .. f).
   +/
 bool isHexDigit(dchar c) @safe pure nothrow @nogc
 {
@@ -465,7 +465,7 @@ bool isPrintable(dchar c) @safe pure nothrow @nogc
 /++
     Params: c = The character to test.
     Returns: Whether or not $(D c) is in the ASCII character set - i.e. in the
-    range 0..0x7F.
+    range 0 .. 0x7F.
   +/
 pragma(inline, true)
 bool isASCII(dchar c) @safe pure nothrow @nogc

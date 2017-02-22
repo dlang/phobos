@@ -1350,7 +1350,7 @@ public:
  *
  * $(TABLE_DOMRG
  *  $(DOMAIN 1..$(INFIN))
- *  $(RANGE  1..log(real.max), $(INFIN)) )
+ *  $(RANGE  1 .. log(real.max), $(INFIN)) )
  *      $(TABLE_SV
  *    $(SVH  x,     acosh(x) )
  *    $(SV  $(NAN), $(NAN) )
@@ -1434,7 +1434,7 @@ float asinh(float x) @safe pure nothrow @nogc { return asinh(cast(real) x); }
  *
  * $(TABLE_DOMRG
  *  $(DOMAIN -$(INFIN)..$(INFIN))
- *  $(RANGE  -1..1) )
+ *  $(RANGE  -1 .. 1) )
  * $(TABLE_SV
  *    $(SVH  x,     acosh(x) )
  *    $(SV  $(NAN), $(NAN) )

@@ -1027,7 +1027,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         {
             size_t minLen = min(buf.length, remainingData.length);
             if (minLen == 0) return 0;
-            buf[0..minLen] = remainingData[0..minLen];
+            buf[0 .. minLen] = remainingData[0 .. minLen];
             remainingData = remainingData[minLen..$];
             return minLen;
         };
@@ -1164,7 +1164,7 @@ private auto _basicFTP(T)(const(char)[] url, const(void)[] sendData, FTP client)
         {
             size_t minLen = min(buf.length, sendData.length);
             if (minLen == 0) return 0;
-            buf[0..minLen] = sendData[0..minLen];
+            buf[0 .. minLen] = sendData[0 .. minLen];
             sendData = sendData[minLen..$];
             return minLen;
         };
@@ -1393,7 +1393,7 @@ if (isCurlConn!(Conn))
         {
             size_t nextOffset = offset + chunkSize;
             if (nextOffset > _bytes.length) nextOffset = _bytes.length;
-            return _bytes[offset..nextOffset];
+            return _bytes[offset .. nextOffset];
         }
 
         @safe void popFront()
@@ -1582,7 +1582,7 @@ private static struct AsyncLineInputRange(Char)
         // Send buffers to other thread for it to use.  Since no mechanism is in
         // place for moving ownership a cast to shared is done here and casted
         // back to non-shared in the receiving end.
-        foreach (i ; 0..transmitBuffers)
+        foreach (i ; 0 .. transmitBuffers)
         {
             auto arr = new Char[](bufferSize);
             workerTid.send(cast(immutable(Char[]))arr);
@@ -1735,7 +1735,7 @@ private static struct AsyncChunkInputRange
         // Send buffers to other thread for it to use.  Since no mechanism is in
         // place for moving ownership a cast to shared is done here and a cast
         // back to non-shared in the receiving end.
-        foreach (i ; 0..transmitBuffers)
+        foreach (i ; 0 .. transmitBuffers)
         {
             ubyte[] arr = new ubyte[](chunkSize);
             workerTid.send(cast(immutable(ubyte[]))arr);
@@ -2176,7 +2176,7 @@ private mixin template Protocol()
      *     auto m = cast(void[]) msg;
      *     size_t length = m.length > data.length ? data.length : m.length;
      *     if (length == 0) return 0;
-     *     data[0..length] = m[0..length];
+     *     data[0 .. length] = m[0 .. length];
      *     msg = msg[length..$];
      *     return length;
      * };
@@ -2367,7 +2367,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   *     auto m = cast(void[]) msg;
   *     size_t len = m.length > data.length ? data.length : m.length;
   *     if (len == 0) return len;
-  *     data[0..len] = m[0..len];
+  *     data[0 .. len] = m[0 .. len];
   *     msg = msg[len..$];
   *     return len;
   * };
@@ -2777,7 +2777,7 @@ struct HTTP
          *     auto m = cast(void[]) msg;
          *     size_t length = m.length > data.length ? data.length : m.length;
          *     if (length == 0) return 0;
-         *     data[0..length] = m[0..length];
+         *     data[0 .. length] = m[0 .. length];
          *     msg = msg[length..$];
          *     return length;
          * };
@@ -3732,7 +3732,7 @@ struct SMTP
             {
                 if (!msg.length) return 0;
                 size_t to_copy = min(data.length, _message.length);
-                data[0..to_copy] = (cast(void[])_message)[0..to_copy];
+                data[0 .. to_copy] = (cast(void[])_message)[0 .. to_copy];
                 _message = _message[to_copy..$];
                 return to_copy;
             };
@@ -4537,7 +4537,7 @@ struct Curl
       *     auto m = cast(void[]) msg;
       *     size_t length = m.length > data.length ? data.length : m.length;
       *     if (length == 0) return 0;
-      *     data[0..length] = m[0..length];
+      *     data[0 .. length] = m[0 .. length];
       *     msg = msg[length..$];
       *     return length;
       * };
@@ -4677,7 +4677,7 @@ struct Curl
     {
         auto b = cast(Curl*) ptr;
         if (b._onReceive != null)
-            return b._onReceive(cast(InData)(str[0..size*nmemb]));
+            return b._onReceive(cast(InData)(str[0 .. size*nmemb]));
         return size*nmemb;
     }
 
@@ -4688,7 +4688,7 @@ struct Curl
         import std.string : chomp;
 
         auto b = cast(Curl*) ptr;
-        auto s = str[0..size*nmemb].chomp();
+        auto s = str[0 .. size*nmemb].chomp();
         if (b._onReceiveHeader != null)
             b._onReceiveHeader(s);
 
@@ -4699,7 +4699,7 @@ struct Curl
     size_t _sendCallback(char *str, size_t size, size_t nmemb, void *ptr)
     {
         Curl* b = cast(Curl*) ptr;
-        auto a = cast(void[]) str[0..size*nmemb];
+        auto a = cast(void[]) str[0 .. size*nmemb];
         if (b._onSend == null)
             return 0;
         return b._onSend(a);
@@ -4841,7 +4841,7 @@ private static size_t _receiveAsyncChunks(ubyte[] data, ref ubyte[] outdata,
         auto copyBytes = outdata.length < data.length ?
             outdata.length : data.length;
 
-        outdata[0..copyBytes] = data[0..copyBytes];
+        outdata[0 .. copyBytes] = data[0 .. copyBytes];
         outdata = outdata[copyBytes..$];
         data = data[copyBytes..$];
 

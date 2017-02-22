@@ -338,17 +338,17 @@ pure nothrow unittest
     auto data = new int[24];
     foreach (int i,ref e; data)
         e = i;
-    auto a = data[0..10].sliced(10)[0..6].sliced(2, 3);
-    auto b = iotaSlice(10)[0..6].sliced(2, 3);
+    auto a = data[0 .. 10].sliced(10)[0 .. 6].sliced(2, 3);
+    auto b = iotaSlice(10)[0 .. 6].sliced(2, 3);
     assert(a == b);
     a[] += b;
-    foreach (int i, e; data[0..6])
+    foreach (int i, e; data[0 .. 6])
         assert(e == 2*i);
     foreach (int i, e; data[6..$])
         assert(e == i+6);
-    auto c  = data.sliced(12, 2)[0..6].sliced(2, 3);
-    auto d  = iotaSlice(12, 2)[0..6].sliced(2, 3);
-    auto cc = data[0..12].sliced(2, 3, 2);
+    auto c  = data.sliced(12, 2)[0 .. 6].sliced(2, 3);
+    auto d  = iotaSlice(12, 2)[0 .. 6].sliced(2, 3);
+    auto cc = data[0 .. 12].sliced(2, 3, 2);
     auto dc = iotaSlice(2, 3, 2);
     assert(c._lengths == cc._lengths);
     assert(c._strides == cc._strides);
@@ -356,9 +356,9 @@ pure nothrow unittest
     assert(d._strides == dc._strides);
     assert(cc == c);
     assert(dc == d);
-    auto e = data.sliced(8, 3)[0..5].sliced(5);
-    auto f = iotaSlice(8, 3)[0..5].sliced(5);
-    assert(e == data[0..15].sliced(5, 3));
+    auto e = data.sliced(8, 3)[0 .. 5].sliced(5);
+    auto f = iotaSlice(8, 3)[0 .. 5].sliced(5);
+    assert(e == data[0 .. 15].sliced(5, 3));
     assert(f == iotaSlice(5, 3));
 }
 
@@ -1098,19 +1098,19 @@ in comments on operator overloading.
 $(BOOKTABLE
 $(TR $(TH Definition) $(TH Examples at `N == 3`))
 $(TR $(TD An $(B interval) is a part of a sequence of type `i .. j`.)
-    $(STD `2..$-3`, `0..4`))
+    $(STD `2..$-3`, `0 .. 4`))
 $(TR $(TD An $(B index) is a part of a sequence of type `i`.)
     $(STD `3`, `$-1`))
 $(TR $(TD A $(B partially defined slice) is a sequence composed of
     $(B intervals) and $(B indexes) with an overall length strictly less than `N`.)
-    $(STD `[3]`, `[0..$]`, `[3, 3]`, `[0..$,0..3]`, `[0..$,2]`))
+    $(STD `[3]`, `[0..$]`, `[3, 3]`, `[0..$,0 .. 3]`, `[0..$,2]`))
 $(TR $(TD A $(B fully defined index) is a sequence
     composed only of $(B indexes) with an overall length equal to `N`.)
     $(STD `[2,3,1]`))
 $(TR $(TD A $(B fully defined slice) is an empty sequence
     or a sequence composed of $(B indexes) and at least one
     $(B interval) with an overall length equal to `N`.)
-    $(STD `[]`, `[3..$,0..3,0..$-1]`, `[2,0..$,1]`))
+    $(STD `[]`, `[3..$,0 .. 3,0..$-1]`, `[2,0..$,1]`))
 )
 
 $(H3 Internal Binary Representation)
@@ -3070,7 +3070,7 @@ pure nothrow unittest
     auto matrix = slice!int(3, 4);
     auto vector = slice!int(3);
 
-    foreach (i; 0..3)
+    foreach (i; 0 .. 3)
         vector[i] = i;
 
     // fills matrix columns

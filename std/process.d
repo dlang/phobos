@@ -2685,7 +2685,7 @@ private string escapeShellArguments(in char[][] args...)
             auto p = buf.length;
             buf.length = buf.length + 1 + size;
             buf[p++] = ' ';
-            return buf[p..p+size];
+            return buf[p .. p+size];
         }
     }
 
@@ -2820,8 +2820,8 @@ version(Windows) version(unittest)
         int numArgs;
         LPWSTR* args = CommandLineToArgvW(lpCommandLine, &numArgs);
         scope(exit) LocalFree(args);
-        return args[0..numArgs]
-            .map!(arg => to!string(arg[0..wcslen(arg)]))
+        return args[0 .. numArgs]
+            .map!(arg => to!string(arg[0 .. wcslen(arg)]))
             .array();
     }
 
@@ -2881,7 +2881,7 @@ if (is(typeof(allocator(size_t.init)[0] = char.init)))
     foreach (char c; arg)
         if (c == '\'')
         {
-            buf[p..p+4] = `'\''`;
+            buf[p .. p+4] = `'\''`;
             p += 4;
         }
         else
@@ -2971,10 +2971,10 @@ version(unittest_burnin)
     while (true)
     {
         string[] args;
-        foreach (n; 0..uniform(1, 4))
+        foreach (n; 0 .. uniform(1, 4))
         {
             string arg;
-            foreach (l; 0..uniform(0, 10))
+            foreach (l; 0 .. uniform(0, 10))
             {
                 dchar c;
                 while (true)
@@ -3002,7 +3002,7 @@ version(unittest_burnin)
 
         // generate filename
         string fn;
-        foreach (l; 0..uniform(1, 10))
+        foreach (l; 0 .. uniform(1, 10))
         {
             dchar c;
             while (true)

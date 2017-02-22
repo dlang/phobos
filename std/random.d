@@ -2095,9 +2095,9 @@ if (isRandomAccessRange!Range)
 }
 
 /**
-Partially shuffles the elements of $(D r) such that upon returning $(D r[0..n])
-is a random subset of $(D r) and is randomly ordered.  $(D r[n..r.length])
-will contain the elements not in $(D r[0..n]).  These will be in an undefined
+Partially shuffles the elements of $(D r) such that upon returning $(D r[0 .. n])
+is a random subset of $(D r) and is randomly ordered.  $(D r[n .. r.length])
+will contain the elements not in $(D r[0 .. n]).  These will be in an undefined
 order, but will not be random in the sense that their order after
 $(D partialShuffle) returns will not be independent of their order before
 $(D partialShuffle) was called.
@@ -2147,13 +2147,13 @@ if (isRandomAccessRange!Range)
         immutable int LEN = 2;
         immutable int NUM = 750;
         int[][] chk;
-        foreach (step; 0..NUM)
+        foreach (step; 0 .. NUM)
         {
             partialShuffle(a, LEN, gen);
-            chk ~= a[0..LEN].dup;
+            chk ~= a[0 .. LEN].dup;
         }
 
-        // Check that each possible a[0..LEN] was produced at least once.
+        // Check that each possible a[0 .. LEN] was produced at least once.
         // For a perfectly random RandomGen, the probability that each
         // particular combination failed to appear would be at most
         // 0.95 ^^ NUM which is approximately 1,962e-17.

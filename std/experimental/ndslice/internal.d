@@ -447,7 +447,7 @@ bool isPermutation(size_t N)(auto ref in size_t[N] perm)
 unittest
 {
     assert(isPermutation([0, 1]));
-    // all numbers 0..N-1 need to be part of the permutation
+    // all numbers 0 .. N-1 need to be part of the permutation
     assert(!isPermutation([1, 2]));
     assert(!isPermutation([0, 2]));
     // duplicates are not allowed

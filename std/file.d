@@ -1421,7 +1421,7 @@ version (OSX) {} else
         remove(deleteme);
 
     SysTime lastTime;
-    foreach (n; 0..3)
+    foreach (n; 0 .. 3)
     {
         write(deleteme, "a");
         auto time = timeLastModified(deleteme);

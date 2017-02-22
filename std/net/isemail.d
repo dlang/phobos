@@ -816,7 +816,7 @@ if (isSomeChar!(Char))
     assert(`.test@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotStart);
     assert(`test.@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotEnd);
 
-    assert(`test..iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
+    assert(`test .. iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorConsecutiveDots);
 
     assert(`test_exa-mple.com`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoDomain);
@@ -861,7 +861,7 @@ if (isSomeChar!(Char))
 
     assert(`test@.iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotStart);
     assert(`test@iana.org.`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotEnd);
-    assert(`test@iana..com`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
+    assert(`test@iana .. com`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorConsecutiveDots);
 
     //assert(`a@a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z`

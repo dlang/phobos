@@ -43,14 +43,14 @@ void main()
     textbuf.put('x');
     textbuf.put("abc");
     assert(textbuf.length == 5);
-    assert(textbuf[1..3] == "xa");
+    assert(textbuf[1 .. 3] == "xa");
     assert(textbuf[3] == 'b');
 
     // Can shrink it
     textbuf.length = 3;
-    assert(textbuf[0..textbuf.length] == "axa");
+    assert(textbuf[0 .. textbuf.length] == "axa");
     assert(textbuf[textbuf.length - 1] == 'a');
-    assert(textbuf[1..3] == "xa");
+    assert(textbuf[1 .. 3] == "xa");
 
     textbuf.put('z');
     assert(textbuf[] == "axaz");
@@ -306,16 +306,16 @@ unittest
     textbuf.put('x');
     textbuf.put("abc");         // tickle put([])'s resize
     assert(textbuf.length == 5);
-    assert(textbuf[1..3] == "xa");
+    assert(textbuf[1 .. 3] == "xa");
     assert(textbuf[3] == 'b');
 
     textbuf.length = textbuf.length - 1;
-    assert(textbuf[0..textbuf.length] == "axab");
+    assert(textbuf[0 .. textbuf.length] == "axab");
 
     textbuf.length = 3;
-    assert(textbuf[0..textbuf.length] == "axa");
+    assert(textbuf[0 .. textbuf.length] == "axa");
     assert(textbuf[textbuf.length - 1] == 'a');
-    assert(textbuf[1..3] == "xa");
+    assert(textbuf[1 .. 3] == "xa");
 
     textbuf.put(cast(dchar)'z');
     assert(textbuf[] == "axaz");
@@ -355,10 +355,10 @@ unittest
     char[10] tmpbuf = void;
     auto textbuf = ScopeBuffer!char(tmpbuf);
     scope(exit) textbuf.free();
-    foreach (i; 0..10) textbuf.put('w');
+    foreach (i; 0 .. 10) textbuf.put('w');
     const csb = textbuf;
     const elem = csb[3];
-    const slice0 = csb[0..5];
+    const slice0 = csb[0 .. 5];
     const slice1 = csb[];
 }
 

@@ -635,7 +635,7 @@ if (is(Char :dchar))
     //support for backtracker engine, might not be present
     void reset(size_t index){   _index = index;  }
 
-    String opSlice(size_t start, size_t end){   return _origin[start..end]; }
+    String opSlice(size_t start, size_t end){   return _origin[start .. end]; }
 
     auto loopBack(size_t index){   return BackLooper!Input(this, index); }
 }
@@ -671,7 +671,7 @@ struct BackLooperImpl(Input)
     //void reset(size_t index){   _index = index ? index-std.utf.strideBack(_origin, index) : 0;  }
     void reset(size_t index){   _index = index;  }
 
-    String opSlice(size_t start, size_t end){   return _origin[end..start]; }
+    String opSlice(size_t start, size_t end){   return _origin[end .. start]; }
     //index of at End position
     @property size_t lastIndex(){   return 0; }
 }
@@ -699,7 +699,7 @@ template BackLooper(E)
 //very unsafe, no initialization
 @system T[] arrayInChunk(T)(size_t len, ref void[] chunk)
 {
-    auto ret = (cast(T*) chunk.ptr)[0..len];
+    auto ret = (cast(T*) chunk.ptr)[0 .. len];
     chunk = chunk[len * T.sizeof .. $];
     return ret;
 }
@@ -747,7 +747,7 @@ struct BitTable {
     this(CodepointSet set){
         foreach (iv; set.byInterval)
         {
-            foreach (v; iv.a..iv.b)
+            foreach (v; iv.a .. iv.b)
                 add(v);
         }
     }

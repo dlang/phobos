@@ -2256,8 +2256,8 @@ pure nothrow unittest
     auto sums     = [[0, 2, 4], [6,  8, 10]];
     auto products = [[0, 1, 4], [9, 16, 25]];
 
-    foreach (i; 0..s.length!0)
-    foreach (j; 0..s.length!1)
+    foreach (i; 0 .. s.length!0)
+    foreach (j; 0 .. s.length!1)
     {
         auto values = s[i, j];
         assert(values[0] == sums[i][j]);

@@ -730,7 +730,7 @@ private struct MapResult(alias fun, Range)
     assert(squares[3] == 16);
 
     // Test slicing.
-    auto squareSlice = squares[1..squares.length - 1];
+    auto squareSlice = squares[1 .. squares.length - 1];
     assert(equal(squareSlice, [4, 9][]));
     assert(squareSlice.back == 9);
     assert(squareSlice[1] == 9);
@@ -770,9 +770,9 @@ private struct MapResult(alias fun, Range)
     static assert(!is(ms1[0])); //narrow strings can't be indexed
     assert(ms2[0] == '日');
     assert(ms3[0] == 'H');
-    static assert(!is(ms1[0..1])); //narrow strings can't be sliced
-    assert(equal(ms2[0..2], "日本"w));
-    assert(equal(ms3[0..2], "HE"));
+    static assert(!is(ms1[0 .. 1])); //narrow strings can't be sliced
+    assert(equal(ms2[0 .. 2], "日本"w));
+    assert(equal(ms3[0 .. 2], "HE"));
 
     // Issue 5753
     static void voidFun(int) {}
@@ -2985,7 +2985,7 @@ The number of seeds must be correspondingly increased.
             int res;
             if (actEmpty) return res;
 
-            foreach (i; 0..100)
+            foreach (i; 0 .. 100)
             {
                 res = dg(i);
                 if (res) break;
@@ -3002,7 +3002,7 @@ The number of seeds must be correspondingly increased.
     assert(reduce!("a + b", max)(tuple(5, 0), oa) == tuple(hundredSum + 5, 99));
 
     // Test for throwing on empty range plus no seed.
-    assertThrown(reduce!"a + b"([1, 2][0..0]));
+    assertThrown(reduce!"a + b"([1, 2][0 .. 0]));
 
     oa.actEmpty = true;
     assertThrown(reduce!"a + b"(oa));

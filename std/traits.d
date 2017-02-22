@@ -1134,9 +1134,9 @@ template ParameterIdentifierTuple(func...)
         {
             static if (!isFunctionPointer!func && !isDelegate!func
                        // Unnamed parameters yield CT error.
-                       && is(typeof(__traits(identifier, PT[i..i+1]))))
+                       && is(typeof(__traits(identifier, PT[i .. i+1]))))
             {
-                enum Get = __traits(identifier, PT[i..i+1]);
+                enum Get = __traits(identifier, PT[i .. i+1]);
             }
             else
             {
@@ -1222,7 +1222,7 @@ template ParameterDefaults(func...)
             // workaround scope escape check, see
             // https://issues.dlang.org/show_bug.cgi?id=16582
             // should use return scope once available
-            enum get = (PT[i..i+1] __args) @trusted
+            enum get = (PT[i .. i+1] __args) @trusted
             {
                 // If __args[0] is lazy, we force it to be evaluated like this.
                 PT[i] __pd_value = __args[0];

@@ -428,7 +428,7 @@ if (isInputRange!(Unqual!R))
                     version(none)
                     {
                         typeof(this) opSlice(size_t lower, size_t upper) {
-                            return new typeof(this)(_range[lower..upper]);
+                            return new typeof(this)(_range[lower .. upper]);
                         }
                     }
                 }

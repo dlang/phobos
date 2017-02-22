@@ -12252,7 +12252,7 @@ public:
         if (day <= 0 || day > (isLeapYear ? daysInLeapYear : daysInYear) )
             throw new DateTimeException("Invalid day of the year.");
 
-        foreach (i; 1..lastDay.length)
+        foreach (i; 1 .. lastDay.length)
         {
             if (day <= lastDay[i])
             {
@@ -17801,7 +17801,7 @@ public:
 
         enforce(t != -1, new DateTimeException(format("Invalid ISO String: %s", isoString)));
 
-        immutable date = Date.fromISOString(dstr[0..t]);
+        immutable date = Date.fromISOString(dstr[0 .. t]);
         immutable tod = TimeOfDay.fromISOString(dstr[t+1 .. $]);
 
         return DateTime(date, tod);
@@ -17889,7 +17889,7 @@ public:
 
         enforce(t != -1, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
-        immutable date = Date.fromISOExtString(dstr[0..t]);
+        immutable date = Date.fromISOExtString(dstr[0 .. t]);
         immutable tod = TimeOfDay.fromISOExtString(dstr[t+1 .. $]);
 
         return DateTime(date, tod);
@@ -17975,7 +17975,7 @@ public:
 
         enforce(t != -1, new DateTimeException(format("Invalid string format: %s", simpleString)));
 
-        immutable date = Date.fromSimpleString(dstr[0..t]);
+        immutable date = Date.fromSimpleString(dstr[0 .. t]);
         immutable tod = TimeOfDay.fromISOExtString(dstr[t+1 .. $]);
 
         return DateTime(date, tod);
@@ -31935,10 +31935,10 @@ private:
     enum n = 100;
     TickDuration[n] times;
     TickDuration last = TickDuration.from!"seconds"(0);
-    foreach (i; 0..n)
+    foreach (i; 0 .. n)
     {
        sw.start(); //start/resume mesuring.
-       foreach (unused; 0..1_000_000)
+       foreach (unused; 0 .. 1_000_000)
            bar();
        sw.stop();  //stop/pause measuring.
        //Return value of peek() after having stopped are the always same.
@@ -32724,11 +32724,11 @@ SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime(
         throw new DateTimeException("Invalid DosFileTime.");
 
     int year = ((dt >> 25) & 0x7F) + 1980;
-    int month = ((dt >> 21) & 0x0F);       // 1..12
-    int dayOfMonth = ((dt >> 16) & 0x1F);  // 1..31
-    int hour = (dt >> 11) & 0x1F;          // 0..23
-    int minute = (dt >> 5) & 0x3F;         // 0..59
-    int second = (dt << 1) & 0x3E;         // 0..58 (in 2 second increments)
+    int month = ((dt >> 21) & 0x0F);       // 1 .. 12
+    int dayOfMonth = ((dt >> 16) & 0x1F);  // 1 .. 31
+    int hour = (dt >> 11) & 0x1F;          // 0 .. 23
+    int minute = (dt >> 5) & 0x3F;         // 0 .. 59
+    int second = (dt << 1) & 0x3E;         // 0 .. 58 (in 2 second increments)
 
     try
         return SysTime(DateTime(year, month, dayOfMonth, hour, minute, second), tz);

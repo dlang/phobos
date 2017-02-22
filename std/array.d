@@ -233,7 +233,7 @@ if (isNarrowString!String)
         int opApply(scope int delegate(ref int) dg)
         {
             int res;
-            foreach (i; 0..10)
+            foreach (i; 0 .. 10)
             {
                 res = dg(i);
                 if (res) break;
@@ -862,7 +862,7 @@ if (!isSomeString!(T[])
 
             // Takes arguments array, pos, stuff
             // Spread apart array[] at pos by moving elements
-            (() @trusted { copyBackwards(array[pos..oldLen], array[pos+to_insert..$]); })();
+            (() @trusted { copyBackwards(array[pos .. oldLen], array[pos+to_insert..$]); })();
 
             // Initialize array[pos .. pos+to_insert] with stuff[]
             auto j = 0;
@@ -977,7 +977,7 @@ if (isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
     {
         // immutable/const, just construct a new array
         auto app = appender!(T[])();
-        app.put(array[0..pos]);
+        app.put(array[0 .. pos]);
         foreach (i, E; U)
             app.put(stuff[i]);
         app.put(array[pos..$]);
@@ -1211,7 +1211,7 @@ pure nothrow bool sameHead(T)(in T[] lhs, in T[] rhs)
 @safe pure nothrow unittest
 {
     auto a = [1, 2, 3, 4, 5];
-    auto b = a[0..2];
+    auto b = a[0 .. 2];
 
     assert(a.sameHead(b));
 }
@@ -1668,7 +1668,7 @@ if (isInputRange!RoR &&
             import std.utf : encode;
             RetTypeElement[4 / RetTypeElement.sizeof] encodeSpace;
             immutable size_t sepArrLength = encode(encodeSpace, sep);
-            return join(ror, encodeSpace[0..sepArrLength]);
+            return join(ror, encodeSpace[0 .. sepArrLength]);
         }
         else
         {
@@ -2631,7 +2631,7 @@ body
 @system unittest
 {
     auto a = [1, 2, 3, 4, 5];
-    auto b = replaceSlice(a, a[1..4], [0, 0, 0]);
+    auto b = replaceSlice(a, a[1 .. 4], [0, 0, 0]);
 
     assert(b == [1, 0, 0, 0, 5]);
 }

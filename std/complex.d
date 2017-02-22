@@ -566,7 +566,7 @@ if (isFloatingPoint!T)
     assert(rer4.im == 0.0);
 
     // Check Complex-int operations.
-    foreach (i; 0..6)
+    foreach (i; 0 .. 6)
     {
         auto cei = c1^^i;
         assert(approxEqual(abs(cei), abs(c1)^^i, EPS));

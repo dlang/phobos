@@ -4057,11 +4057,11 @@ void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, s
 
     s = "helloworld";
     string r;
-    stream.clear(); formattedWrite(stream, "%.2s", s[0..5]);
+    stream.clear(); formattedWrite(stream, "%.2s", s[0 .. 5]);
     assert(stream.data == "he");
-    stream.clear(); formattedWrite(stream, "%.20s", s[0..5]);
+    stream.clear(); formattedWrite(stream, "%.20s", s[0 .. 5]);
     assert(stream.data == "hello");
-    stream.clear(); formattedWrite(stream, "%8s", s[0..5]);
+    stream.clear(); formattedWrite(stream, "%8s", s[0 .. 5]);
     assert(stream.data == "   hello");
 
     byte[] arrbyte = new byte[4];
@@ -5185,11 +5185,11 @@ private bool needToSwapEndianess(Char)(ref FormatSpec!Char f)
 
     s = "helloworld";
     string r;
-    r = format("%.2s", s[0..5]);
+    r = format("%.2s", s[0 .. 5]);
     assert(r == "he");
-    r = format("%.20s", s[0..5]);
+    r = format("%.20s", s[0 .. 5]);
     assert(r == "hello");
-    r = format("%8s", s[0..5]);
+    r = format("%8s", s[0 .. 5]);
     assert(r == "   hello");
 
     byte[] arrbyte = new byte[4];

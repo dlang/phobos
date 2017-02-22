@@ -204,7 +204,7 @@ public:
                     for (uint i = 0; i < len; i++)
                     {
                         auto x = charLen(re.ir[t.pc+i].data);
-                        if (countUntil(s[0..numS], x) < 0)
+                        if (countUntil(s[0 .. numS], x) < 0)
                            s[numS++] = x;
                     }
                     for (uint i = t.pc; i < end; i++)
@@ -264,7 +264,7 @@ public:
                     if (chars > charsetThreshold)
                         goto L_StopThread;
                     foreach (ival; set)
-                    foreach (ch; ival.a..ival.b)
+                    foreach (ch; ival.a .. ival.b)
                     {
                         //avoid surrogate pairs
                         if (0xD800 <= ch && ch <= 0xDFFF)

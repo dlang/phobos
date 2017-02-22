@@ -64,7 +64,7 @@ $(BOOKTABLE ,
     ))
     $(TR $(TD $(D $(LREF hasSlicing)))
         $(TD Tests if a given _range supports the array slicing operation $(D
-        R[x..y]).
+        R[x .. y]).
     ))
 )
 
@@ -315,7 +315,7 @@ void put(R, E)(ref R r, E e)
             doPut(r, arr[]);
         }
         else
-            doPut(r, (ref e) @trusted { return (&e)[0..1]; }(e));
+            doPut(r, (ref e) @trusted { return (&e)[0 .. 1]; }(e));
     }
     //special case for char to string.
     else static if (isSomeChar!E && is(typeof(putChar(r, e))))
@@ -533,7 +533,7 @@ unittest
     static struct PutC(C)
     {
         string result;
-        void put(const(C) c) { result ~= to!string((&c)[0..1]); }
+        void put(const(C) c) { result ~= to!string((&c)[0 .. 1]); }
     }
     static struct PutS(C)
     {

@@ -2007,7 +2007,7 @@ unittest
         size_t[] arr;
         arr.length = 1024;
 
-        foreach (k; 0..arr.length) arr[k] = k;
+        foreach (k; 0 .. arr.length) arr[k] = k;
         swapRanges(arr[0..$/2], arr[$/2..$]);
 
         sort!(pred, SwapStrategy.unstable)(arr);

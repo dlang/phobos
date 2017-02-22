@@ -173,13 +173,13 @@ version(USE_SSSE3)
         return (i/4)&7;
     }
 
-    /** Returns reference to storage of vector W[i..i+4]. */
+    /** Returns reference to storage of vector W[i .. i+4]. */
     private nothrow pure string WiV(uint i)
     {
         return "["~SP~" + WI_PTR + "~to_string((i/4)&7)~"*16]";
     }
 
-    /** Returns reference to storage of vector (W + K)[i..i+4]. */
+    /** Returns reference to storage of vector (W + K)[i .. i+4]. */
     private nothrow pure string WiKiV(uint i)
     {
         return "["~SP~" + WI_PLUS_KI_PTR + "~to_string((i/4)&3)~"*16]";
@@ -230,7 +230,7 @@ version(USE_SSSE3)
         {
             if (i2 < seq2.length)
             {
-                res ~= seq2[i2..i2+1];
+                res ~= seq2[i2 .. i2+1];
                 i2 += 1;
             }
             if (i1 < seq1.length)

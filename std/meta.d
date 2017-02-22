@@ -487,13 +487,13 @@ template NoDuplicates(TList...)
         }
         else
         {
-            alias EraseAllN = EraseAllN!(N-1, T[1..N], EraseAll!(T[0], T[N..$]));
+            alias EraseAllN = EraseAllN!(N-1, T[1 .. N], EraseAll!(T[0], T[N..$]));
         }
     }
     static if (TList.length > 500)
     {
         enum steps = 16;
-        alias first = NoDuplicates!(TList[0..steps]);
+        alias first = NoDuplicates!(TList[0 .. steps]);
         alias NoDuplicates = NoDuplicates!(EraseAllN!(first.length, first, TList[steps..$]));
     }
     else static if (TList.length == 0)

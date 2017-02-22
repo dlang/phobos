@@ -1225,7 +1225,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
         auto x = ts.removeAny();
         assert(ts.length == 4);
         Elem[] arr;
-        foreach (Elem i; 1..6)
+        foreach (Elem i; 1 .. 6)
             if (i != x) arr ~= i;
         assert(ts.arrayEqual(arr));
     }

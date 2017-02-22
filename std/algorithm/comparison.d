@@ -271,7 +271,7 @@ auto castSwitch(choices...)(Object switchObject)
 
                 // Check for overshadowing:
                 immutable indexOfOvershadowingChoice =
-                    indexOfFirstOvershadowingChoiceOnLast!(choices[0..index + 1]);
+                    indexOfFirstOvershadowingChoiceOnLast!(choices[0 .. index + 1]);
                 static assert(indexOfOvershadowingChoice == index,
                         "choice number %d(type %s) is overshadowed by choice number %d(type %s)".format(
                             index + 1, CastClass.stringof, indexOfOvershadowingChoice + 1,
@@ -335,7 +335,7 @@ auto castSwitch(choices...)(Object switchObject)
             static if (Parameters!(choice).length == 0)
             {
                 immutable indexOfOvershadowingChoice =
-                    indexOfFirstOvershadowingChoiceOnLast!(choices[0..index + 1]);
+                    indexOfFirstOvershadowingChoiceOnLast!(choices[0 .. index + 1]);
 
                 // Check for overshadowing:
                 static assert(indexOfOvershadowingChoice == index,

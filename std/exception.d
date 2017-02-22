@@ -1257,8 +1257,8 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
     //But they do point their elements
     foreach (i; 0 .. 4)
         assert(doesPointTo(darr, darr[i]));
-    assert(doesPointTo(darr[0..3], darr[2]));
-    assert(!doesPointTo(darr[0..3], darr[3]));
+    assert(doesPointTo(darr[0 .. 3], darr[2]));
+    assert(!doesPointTo(darr[0 .. 3], darr[3]));
 }
 
 @system unittest
@@ -1476,7 +1476,7 @@ class ErrnoException : Exception
             import core.stdc.string : strerror;
             auto s = strerror(errno);
         }
-        super(msg ~ " (" ~ s[0..s.strlen].idup ~ ")", file, line);
+        super(msg ~ " (" ~ s[0 .. s.strlen].idup ~ ")", file, line);
     }
 
     unittest

@@ -279,7 +279,7 @@ template BacktrackingMatcher(bool CTregex)
                 lastState = 0;
                 auto start = s._index;
                 debug(std_regex_matcher)
-                    writeln("Try match starting at ", s[index..s.lastIndex]);
+                    writeln("Try match starting at ", s[index .. s.lastIndex]);
                 for (;;)
                 {
                     debug(std_regex_matcher)
@@ -400,7 +400,7 @@ template BacktrackingMatcher(bool CTregex)
                     case IR.Eol:
                         dchar back;
                         DataIndex bi;
-                        debug(std_regex_matcher) writefln("EOL (front 0x%x) %s", front, s[index..s.lastIndex]);
+                        debug(std_regex_matcher) writefln("EOL (front 0x%x) %s", front, s[index .. s.lastIndex]);
                         //no matching inside \r\n
                         if (atEnd || (endOfLine(front, s.loopBack(index).nextChar(back,bi)
                                 && back == '\r')))
@@ -551,7 +551,7 @@ template BacktrackingMatcher(bool CTregex)
                         immutable len = re.ir[pc].data;
                         auto save = index;
                         immutable ms = re.ir[pc+1].raw, me = re.ir[pc+2].raw;
-                        auto mem = malloc(initialMemory(re))[0..initialMemory(re)];
+                        auto mem = malloc(initialMemory(re))[0 .. initialMemory(re)];
                         scope(exit) free(mem.ptr);
                         static if (Stream.isLoopback)
                         {
@@ -580,7 +580,7 @@ template BacktrackingMatcher(bool CTregex)
                     case IR.NeglookbehindStart:
                         immutable len = re.ir[pc].data;
                         immutable ms = re.ir[pc+1].raw, me = re.ir[pc+2].raw;
-                        auto mem = malloc(initialMemory(re))[0..initialMemory(re)];
+                        auto mem = malloc(initialMemory(re))[0 .. initialMemory(re)];
                         scope(exit) free(mem.ptr);
                         static if (Stream.isLoopback)
                         {
@@ -660,7 +660,7 @@ template BacktrackingMatcher(bool CTregex)
                 import core.stdc.stdlib : free;
                 free(memory.ptr);//last segment is freed in RegexMatch
                 immutable size = initialStack*(stateSize + 2*re.ngroup);
-                memory = prev[0..size];
+                memory = prev[0 .. size];
                 lastState = size;
                 return true;
             }
@@ -678,7 +678,7 @@ template BacktrackingMatcher(bool CTregex)
         void stackPush(T)(T[] val)
         {
             static assert(T.sizeof % size_t.sizeof == 0);
-            (cast(T*)&memory[lastState])[0..val.length]
+            (cast(T*)&memory[lastState])[0 .. val.length]
                 = val[0..$];
             lastState += val.length*(T.sizeof/size_t.sizeof);
             debug(std_regex_matcher) writeln("push array SP= ", lastState);
@@ -700,7 +700,7 @@ template BacktrackingMatcher(bool CTregex)
         void stackPop(T)(ref T[] val)
         {
             lastState -= val.length*(T.sizeof/size_t.sizeof);
-            val[0..$] = (cast(T*)&memory[lastState])[0..val.length];
+            val[0..$] = (cast(T*)&memory[lastState])[0 .. val.length];
             debug(std_regex_matcher) writeln("pop array SP= ", lastState);
         }
 
@@ -721,7 +721,7 @@ template BacktrackingMatcher(bool CTregex)
                 lastState += 2*matches.length;
                 debug(std_regex_matcher)
                     writefln("Saved(pc=%s) front: %s src: %s",
-                        pc, front, s[index..s.lastIndex]);
+                        pc, front, s[index .. s.lastIndex]);
             }
 
             //helper function, restores engine state
@@ -748,7 +748,7 @@ template BacktrackingMatcher(bool CTregex)
                 next();
                 debug(std_regex_matcher)
                     writefln("Backtracked (pc=%s) front: %s src: %s",
-                        pc, front, s[index..s.lastIndex]);
+                        pc, front, s[index .. s.lastIndex]);
                 return true;
             }
         }
@@ -902,7 +902,7 @@ struct CtContext
             //start/end codegen
             //r.addr is at last test+ jump of loop, addr+1 is body of loop
             nir = ir[ir[0].length + len .. $];
-            r.code = ctGenFixupCode(ir[0..ir[0].length], addr, r.addr) ~ r.code;
+            r.code = ctGenFixupCode(ir[0 .. ir[0].length], addr, r.addr) ~ r.code;
             r.code ~= ctGenFixupCode(nir, r.addr, addr+1);
             r.addr += 2;   //account end instruction + restore state
             ir = nir;
@@ -943,7 +943,7 @@ struct CtContext
                         //(neg)lookaround piece ends
                     }
                     auto save = index;
-                    auto mem = malloc(initialMemory(re))[0..initialMemory(re)];
+                    auto mem = malloc(initialMemory(re))[0 .. initialMemory(re)];
                     scope(exit) free(mem.ptr);
                     static if (typeof(matcher.s).isLoopback)
                         auto lookaround = $$;
@@ -1368,7 +1368,7 @@ struct CtContext
             code ~= ctSub(`
                     dchar back;
                     DataIndex bi;
-                    debug(std_regex_matcher) writefln("EOL (front 0x%x) %s", front, s[index..s.lastIndex]);
+                    debug(std_regex_matcher) writefln("EOL (front 0x%x) %s", front, s[index .. s.lastIndex]);
                     //no matching inside \r\n
                     if (atEnd || (endOfLine(front, s.loopBack(index).nextChar(back,bi)
                              && back == '\r')))
@@ -1442,7 +1442,7 @@ struct CtContext
             auto start = s._index;`;
         r ~= `
             goto StartLoop;
-            debug(std_regex_matcher) writeln("Try CT matching  starting at ",s[index..s.lastIndex]);
+            debug(std_regex_matcher) writeln("Try CT matching  starting at ",s[index .. s.lastIndex]);
         L_backtrack:
             if (lastState || prevStack())
             {
