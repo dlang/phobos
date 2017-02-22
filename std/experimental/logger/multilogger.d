@@ -186,12 +186,12 @@ unittest
 
 @safe unittest
 {
-    auto dl = cast(FileLogger)sharedLog;
+    auto dl = cast(FileLogger) sharedLog;
     assert(dl !is null);
     assert(dl.logLevel == LogLevel.all);
     assert(globalLogLevel == LogLevel.all);
 
-    auto tl = cast(StdForwardLogger)stdThreadLocalLog;
+    auto tl = cast(StdForwardLogger) stdThreadLocalLog;
     assert(tl !is null);
     stdThreadLocalLog.logLevel = LogLevel.all;
 }

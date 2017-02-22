@@ -995,7 +995,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
         auto ts2 = ts.dup;
         assert(ts2.length == 5);
         assert(equal(ts[], ts2[]));
-        ts2.insert(cast(Elem)6);
+        ts2.insert(cast(Elem) 6);
         assert(!equal(ts[], ts2[]));
         assert(ts.length == 5 && ts2.length == 6);
     }
@@ -1056,8 +1056,8 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
     static if (doUnittest) @safe pure unittest
     {
         auto ts = new RedBlackTree(1, 2, 3, 4, 5);
-        assert(cast(Elem)3 in ts);
-        assert(cast(Elem)6 !in ts);
+        assert(cast(Elem) 3 in ts);
+        assert(cast(Elem) 6 !in ts);
     }
 
     /**
@@ -1069,7 +1069,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
     {
         import std.algorithm.comparison : equal;
 
-        RedBlackTree that = cast(RedBlackTree)rhs;
+        RedBlackTree that = cast(RedBlackTree) rhs;
         if (that is null) return false;
 
         // If there aren't the same number of nodes, we can't be equal.
@@ -1178,8 +1178,8 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
             assert(ts.length == 7);
             assert(ts.stableInsert(cast(Elem[])[7, 8, 6, 9, 10, 8]) == 6);
             assert(ts.length == 13);
-            assert(ts.stableInsert(cast(Elem)11) == 1 && ts.length == 14);
-            assert(ts.stableInsert(cast(Elem)7) == 1 && ts.length == 15);
+            assert(ts.stableInsert(cast(Elem) 11) == 1 && ts.length == 14);
+            assert(ts.stableInsert(cast(Elem) 7) == 1 && ts.length == 15);
 
             static if (less == "a < b")
                 assert(ts.arrayEqual([1,2,2,3,4,5,5,6,7,7,8,8,9,10,11]));
@@ -1191,8 +1191,8 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
             assert(ts.length == 5);
             assert(ts.stableInsert(cast(Elem[])[7, 8, 6, 9, 10, 8]) == 5);
             assert(ts.length == 10);
-            assert(ts.stableInsert(cast(Elem)11) == 1 && ts.length == 11);
-            assert(ts.stableInsert(cast(Elem)7) == 0 && ts.length == 11);
+            assert(ts.stableInsert(cast(Elem) 11) == 1 && ts.length == 11);
+            assert(ts.stableInsert(cast(Elem) 7) == 0 && ts.length == 11);
 
             static if (less == "a < b")
                 assert(ts.arrayEqual([1,2,3,4,5,6,7,8,9,10,11]));
@@ -1457,10 +1457,10 @@ assert(equal(rbt[], [5]));
         static if (allowDuplicates)
         {
             assert(rbt.length == 11);
-            assert(rbt.removeKey(cast(Elem)4) == 1 && rbt.length == 10);
+            assert(rbt.removeKey(cast(Elem) 4) == 1 && rbt.length == 10);
             assert(rbt.arrayEqual([1,2,2,3,5,6,7,7,19,45]) && rbt.length == 10);
 
-            assert(rbt.removeKey(cast(Elem)6, cast(Elem)2, cast(Elem)1) == 3);
+            assert(rbt.removeKey(cast(Elem) 6, cast(Elem) 2, cast(Elem) 1) == 3);
             assert(rbt.arrayEqual([2,3,5,7,7,19,45]) && rbt.length == 7);
 
             assert(rbt.removeKey(cast(Elem)(42)) == 0 && rbt.length == 7);
@@ -1474,10 +1474,10 @@ assert(equal(rbt[], [5]));
         else
         {
             assert(rbt.length == 9);
-            assert(rbt.removeKey(cast(Elem)4) == 1 && rbt.length == 8);
+            assert(rbt.removeKey(cast(Elem) 4) == 1 && rbt.length == 8);
             assert(rbt.arrayEqual([1,2,3,5,6,7,19,45]));
 
-            assert(rbt.removeKey(cast(Elem)6, cast(Elem)2, cast(Elem)1) == 3);
+            assert(rbt.removeKey(cast(Elem) 6, cast(Elem) 2, cast(Elem) 1) == 3);
             assert(rbt.arrayEqual([3,5,7,19,45]) && rbt.length == 5);
 
             assert(rbt.removeKey(cast(Elem)(42)) == 0 && rbt.length == 5);
@@ -1790,11 +1790,11 @@ assert(equal(rbt[], [5]));
         assert(equal(rbt[], [1, 2, 4, 12, 27, 500]));
         assert(rbt.removeKey(1u) == 1);
         assert(equal(rbt[], [2, 4, 12, 27, 500]));
-        assert(rbt.removeKey(cast(byte)1) == 0);
+        assert(rbt.removeKey(cast(byte) 1) == 0);
         assert(equal(rbt[], [2, 4, 12, 27, 500]));
-        assert(rbt.removeKey(1, 12u, cast(byte)27) == 2);
+        assert(rbt.removeKey(1, 12u, cast(byte) 27) == 2);
         assert(equal(rbt[], [2, 4, 500]));
-        assert(rbt.removeKey([cast(short)0, cast(short)500, cast(short)1]) == 1);
+        assert(rbt.removeKey([cast(short) 0, cast(short) 500, cast(short) 1]) == 1);
         assert(equal(rbt[], [2, 4]));
     }
 }
@@ -2054,5 +2054,5 @@ unittest
 @safe pure unittest
 {
     class C {}
-    RedBlackTree!(C, "cast(void*)a < cast(void*)b") tree;
+    RedBlackTree!(C, "cast(void*)a < cast(void*) b") tree;
 }

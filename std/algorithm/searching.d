@@ -538,9 +538,9 @@ if (isNarrowString!R1 && isNarrowString!R2)
     assert(commonPrefix([1, 2, 3, 4], [1, 2, 3, 4]) == [1, 2, 3, 4]);
     assert(commonPrefix([1, 2, 3], [7, 2, 3, 4, 5]).empty);
     assert(commonPrefix([7, 2, 3, 4, 5], [1, 2, 3]).empty);
-    assert(commonPrefix([1, 2, 3], cast(int[])null).empty);
-    assert(commonPrefix(cast(int[])null, [1, 2, 3]).empty);
-    assert(commonPrefix(cast(int[])null, cast(int[])null).empty);
+    assert(commonPrefix([1, 2, 3], cast(int[]) null).empty);
+    assert(commonPrefix(cast(int[]) null, [1, 2, 3]).empty);
+    assert(commonPrefix(cast(int[]) null, cast(int[]) null).empty);
 
     foreach (S; AliasSeq!(char[], const(char)[], string,
                           wchar[], const(wchar)[], wstring,
@@ -1208,7 +1208,7 @@ if (isInputRange!R &&
         immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 
         //RA range
-        assert(endsWith(arr, cast(int[])null));
+        assert(endsWith(arr, cast(int[]) null));
         assert(!endsWith(arr, 0));
         assert(!endsWith(arr, 4));
         assert(endsWith(arr, 5));
@@ -1420,7 +1420,7 @@ if (isInputRange!InputRange &&
                         import core.stdc.string : memchr;
                         auto ptr = memchr(haystack.ptr, needle, haystack.length);
                         return ptr ?
-                             haystack[cast(char*)ptr - haystack.ptr .. $] :
+                             haystack[cast(char*) ptr - haystack.ptr .. $] :
                              haystack[$ .. $];
                     }
                     return trustedMemchr(haystack, needle);
@@ -1781,7 +1781,7 @@ if (isForwardRange!R1 && isForwardRange!R2
             Select!(haystack[0].sizeof == 1, ubyte[],
                 Select!(haystack[0].sizeof == 2, ushort[], uint[]));
         // Will use the array specialization
-        static TO force(TO, T)(T r) @trusted { return cast(TO)r; }
+        static TO force(TO, T)(T r) @trusted { return cast(TO) r; }
         return force!R1(.find!(pred, Representation, Representation)
             (force!Representation(haystack), force!Representation(needle)));
     }
@@ -3112,7 +3112,7 @@ if (isInputRange!Range && !isInfinite!Range &&
     {
         UT v = UT.init;
         static if (isAssignable!(UT, T)) v = range.front;
-        else                             v = cast(UT)range.front;
+        else                             v = cast(UT) range.front;
 
         for (range.popFront(); !range.empty; range.popFront())
         {
@@ -3121,7 +3121,7 @@ if (isInputRange!Range && !isInfinite!Range &&
             {
                 // change the min
                 static if (isAssignable!(UT, T)) v = range.front;
-                else                             v = cast(UT)range.front; //Safe because !hasElaborateAssign!UT
+                else                             v = cast(UT) range.front; //Safe because !hasElaborateAssign!UT
                 occurrences = 1;
             }
             else
@@ -4208,7 +4208,7 @@ if (isInputRange!R &&
         immutable arr = cast(T[])[0, 1, 2, 3, 4, 5];
 
         //RA range
-        assert(startsWith(arr, cast(int[])null));
+        assert(startsWith(arr, cast(int[]) null));
         assert(!startsWith(arr, 5));
         assert(!startsWith(arr, 1));
         assert(startsWith(arr, 0));

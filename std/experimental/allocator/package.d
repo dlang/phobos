@@ -446,7 +446,7 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
         else
         {
             // Assume cast is safe as allocation succeeded for `stateSize!T`
-            auto p = () @trusted { return cast(T*)m.ptr; }();
+            auto p = () @trusted { return cast(T*) m.ptr; }();
             emplaceRef(*p, args);
             return p;
         }
@@ -708,7 +708,7 @@ unittest
     int[5] expected = [42, 42, 42, 42, 42];
     S[5] arr = void;
     uninitializedFillDefault(arr);
-    assert((cast(int*)arr.ptr)[0 .. arr.length] == expected);
+    assert((cast(int*) arr.ptr)[0 .. arr.length] == expected);
 }
 
 unittest
@@ -1510,7 +1510,7 @@ void dispose(A, T)(auto ref A alloc, T* p)
     {
         destroy(*p);
     }
-    alloc.deallocate((cast(void*)p)[0 .. T.sizeof]);
+    alloc.deallocate((cast(void*) p)[0 .. T.sizeof]);
 }
 
 /// Ditto

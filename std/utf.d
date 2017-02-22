@@ -74,7 +74,7 @@ class UTFException : Exception
              * it is const-compatible.
              */
             //return super.toString();
-            auto e = () @trusted { return cast(Exception)super; } ();
+            auto e = () @trusted { return cast(Exception) super; } ();
             return e.toString();
         }
 
@@ -160,21 +160,21 @@ if (isSomeChar!Char)
         static immutable wstring[5] result =
         [
             [
-              cast(wchar)0xDC00,
+              cast(wchar) 0xDC00,
             ],
             [
-              cast(wchar)0xDFFF,
+              cast(wchar) 0xDFFF,
             ],
             [
-              cast(wchar)0xDBFF,
-              cast(wchar)0xDBFF,
+              cast(wchar) 0xDBFF,
+              cast(wchar) 0xDBFF,
             ],
             [
-              cast(wchar)0xDBFF,
-              cast(wchar)0xE000,
+              cast(wchar) 0xDBFF,
+              cast(wchar) 0xE000,
             ],
             [
-              cast(wchar)0xD800,
+              cast(wchar) 0xD800,
             ],
         ];
 
@@ -184,9 +184,9 @@ if (isSomeChar!Char)
     {
         static immutable dstring[3] result =
         [
-            [ cast(dchar)0x110000 ],
-            [ cast(dchar)0x00D800 ],
-            [ cast(dchar)0x00DFFF ],
+            [ cast(dchar) 0x110000 ],
+            [ cast(dchar) 0x00D800 ],
+            [ cast(dchar) 0x00DFFF ],
         ];
 
         return result;
@@ -222,17 +222,17 @@ pure nothrow @safe @nogc unittest
     assertCTFEable!(
     {
     assert( isValidDchar(cast(dchar)'a') == true);
-    assert( isValidDchar(cast(dchar)0x1FFFFF) == false);
+    assert( isValidDchar(cast(dchar) 0x1FFFFF) == false);
 
-    assert(!isValidDchar(cast(dchar)0x00D800));
-    assert(!isValidDchar(cast(dchar)0x00DBFF));
-    assert(!isValidDchar(cast(dchar)0x00DC00));
-    assert(!isValidDchar(cast(dchar)0x00DFFF));
-    assert( isValidDchar(cast(dchar)0x00FFFE));
-    assert( isValidDchar(cast(dchar)0x00FFFF));
-    assert( isValidDchar(cast(dchar)0x01FFFF));
-    assert( isValidDchar(cast(dchar)0x10FFFF));
-    assert(!isValidDchar(cast(dchar)0x110000));
+    assert(!isValidDchar(cast(dchar) 0x00D800));
+    assert(!isValidDchar(cast(dchar) 0x00DBFF));
+    assert(!isValidDchar(cast(dchar) 0x00DC00));
+    assert(!isValidDchar(cast(dchar) 0x00DFFF));
+    assert( isValidDchar(cast(dchar) 0x00FFFE));
+    assert( isValidDchar(cast(dchar) 0x00FFFF));
+    assert( isValidDchar(cast(dchar) 0x01FFFF));
+    assert( isValidDchar(cast(dchar) 0x10FFFF));
+    assert(!isValidDchar(cast(dchar) 0x110000));
     });
 }
 
@@ -1605,7 +1605,7 @@ if (is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S
     // Note: u+FFFE and u+FFFF are specifically permitted by the
     // Unicode standard for application internal use (see isValidDchar)
 
-    return cast(dchar)u;
+    return cast(dchar) u;
 }
 
 @safe pure @nogc nothrow
@@ -1915,8 +1915,8 @@ version(unittest) private void testBadDecodeBack(R)(R range, size_t line = __LIN
         }
 
         //Invalid UTF-8 sequence where the first code unit is valid.
-        testAllDecode(S("\xEF\xBF\xBE"), cast(dchar)0xFFFE, 3);
-        testAllDecode(S("\xEF\xBF\xBF"), cast(dchar)0xFFFF, 3);
+        testAllDecode(S("\xEF\xBF\xBE"), cast(dchar) 0xFFFE, 3);
+        testAllDecode(S("\xEF\xBF\xBF"), cast(dchar) 0xFFFF, 3);
 
         //Invalid UTF-8 sequence where the first code unit isn't valid.
         foreach (str; ["\xED\xA0\x80",
@@ -1944,17 +1944,17 @@ version(unittest) private void testBadDecodeBack(R)(R range, size_t line = __LIN
                           (wstring s) => new RefBidirCU!wchar(s),
                           (wstring s) => new RefRandomCU!wchar(s)))
     {
-        testAllDecode(S([cast(wchar)0x1111]), cast(dchar)0x1111, 1);
-        testAllDecode(S([cast(wchar)0xD800, cast(wchar)0xDC00]), cast(dchar)0x10000, 2);
-        testAllDecode(S([cast(wchar)0xDBFF, cast(wchar)0xDFFF]), cast(dchar)0x10FFFF, 2);
-        testAllDecode(S([cast(wchar)0xFFFE]), cast(dchar)0xFFFE, 1);
-        testAllDecode(S([cast(wchar)0xFFFF]), cast(dchar)0xFFFF, 1);
+        testAllDecode(S([cast(wchar) 0x1111]), cast(dchar) 0x1111, 1);
+        testAllDecode(S([cast(wchar) 0xD800, cast(wchar) 0xDC00]), cast(dchar) 0x10000, 2);
+        testAllDecode(S([cast(wchar) 0xDBFF, cast(wchar) 0xDFFF]), cast(dchar) 0x10FFFF, 2);
+        testAllDecode(S([cast(wchar) 0xFFFE]), cast(dchar) 0xFFFE, 1);
+        testAllDecode(S([cast(wchar) 0xFFFF]), cast(dchar) 0xFFFF, 1);
 
-        testBadDecode(S([ cast(wchar)0xD801 ]), 0);
-        testBadDecode(S([ cast(wchar)0xD800, cast(wchar)0x1200 ]), 0);
+        testBadDecode(S([ cast(wchar) 0xD801 ]), 0);
+        testBadDecode(S([ cast(wchar) 0xD800, cast(wchar) 0x1200 ]), 0);
 
-        testBadDecodeBack(S([ cast(wchar)0xD801 ]));
-        testBadDecodeBack(S([ cast(wchar)0x0010, cast(wchar)0xD800 ]));
+        testBadDecodeBack(S([ cast(wchar) 0xD801 ]));
+        testBadDecodeBack(S([ cast(wchar) 0x0010, cast(wchar) 0xD800 ]));
 
         {
             auto range = S("ウェブサイト");
@@ -1977,15 +1977,15 @@ version(unittest) private void testBadDecodeBack(R)(R range, size_t line = __LIN
 
     foreach (S; AliasSeq!(to!wstring, RandomCU!wchar, (wstring s) => new RefRandomCU!wchar(s)))
     {
-        auto str = S([cast(wchar)0xD800, cast(wchar)0xDC00,
-                      cast(wchar)0x1400,
-                      cast(wchar)0xDAA7, cast(wchar)0xDDDE]);
-        testDecode(str, 0, cast(dchar)0x10000, 2);
-        testDecode(str, 2, cast(dchar)0x1400, 3);
-        testDecode(str, 3, cast(dchar)0xB9DDE, 5);
-        testDecodeBack(str, cast(dchar)0xB9DDE, 2);
-        testDecodeBack(str, cast(dchar)0x1400, 1);
-        testDecodeBack(str, cast(dchar)0x10000, 2);
+        auto str = S([cast(wchar) 0xD800, cast(wchar) 0xDC00,
+                      cast(wchar) 0x1400,
+                      cast(wchar) 0xDAA7, cast(wchar) 0xDDDE]);
+        testDecode(str, 0, cast(dchar) 0x10000, 2);
+        testDecode(str, 2, cast(dchar) 0x1400, 3);
+        testDecode(str, 3, cast(dchar) 0xB9DDE, 5);
+        testDecodeBack(str, cast(dchar) 0xB9DDE, 2);
+        testDecodeBack(str, cast(dchar) 0x1400, 1);
+        testDecodeBack(str, cast(dchar) 0x10000, 2);
     }
     });
 }
@@ -2000,19 +2000,19 @@ version(unittest) private void testBadDecodeBack(R)(R range, size_t line = __LIN
                           (dstring s) => new RefBidirCU!dchar(s),
                           (dstring s) => new RefRandomCU!dchar(s)))
     {
-        testAllDecode(S([cast(dchar)0x1111]), cast(dchar)0x1111, 1);
-        testAllDecode(S([cast(dchar)0x10000]), cast(dchar)0x10000, 1);
-        testAllDecode(S([cast(dchar)0x10FFFF]), cast(dchar)0x10FFFF, 1);
-        testAllDecode(S([cast(dchar)0xFFFE]), cast(dchar)0xFFFE, 1);
-        testAllDecode(S([cast(dchar)0xFFFF]), cast(dchar)0xFFFF, 1);
+        testAllDecode(S([cast(dchar) 0x1111]), cast(dchar) 0x1111, 1);
+        testAllDecode(S([cast(dchar) 0x10000]), cast(dchar) 0x10000, 1);
+        testAllDecode(S([cast(dchar) 0x10FFFF]), cast(dchar) 0x10FFFF, 1);
+        testAllDecode(S([cast(dchar) 0xFFFE]), cast(dchar) 0xFFFE, 1);
+        testAllDecode(S([cast(dchar) 0xFFFF]), cast(dchar) 0xFFFF, 1);
 
-        testBadDecode(S([cast(dchar)0xD800]), 0);
-        testBadDecode(S([cast(dchar)0xDFFE]), 0);
-        testBadDecode(S([cast(dchar)0x110000]), 0);
+        testBadDecode(S([cast(dchar) 0xD800]), 0);
+        testBadDecode(S([cast(dchar) 0xDFFE]), 0);
+        testBadDecode(S([cast(dchar) 0x110000]), 0);
 
-        testBadDecodeBack(S([cast(dchar)0xD800]));
-        testBadDecodeBack(S([cast(dchar)0xDFFE]));
-        testBadDecodeBack(S([cast(dchar)0x110000]));
+        testBadDecodeBack(S([cast(dchar) 0xD800]));
+        testBadDecodeBack(S([cast(dchar) 0xDFFE]));
+        testBadDecodeBack(S([cast(dchar) 0x110000]));
 
         {
             auto range = S("ウェブサイト");
@@ -2035,13 +2035,13 @@ version(unittest) private void testBadDecodeBack(R)(R range, size_t line = __LIN
 
     foreach (S; AliasSeq!(to!dstring, RandomCU!dchar, (dstring s) => new RefRandomCU!dchar(s)))
     {
-        auto str = S([cast(dchar)0x10000, cast(dchar)0x1400, cast(dchar)0xB9DDE]);
+        auto str = S([cast(dchar) 0x10000, cast(dchar) 0x1400, cast(dchar) 0xB9DDE]);
         testDecode(str, 0, 0x10000, 1);
         testDecode(str, 1, 0x1400, 2);
         testDecode(str, 2, 0xB9DDE, 3);
-        testDecodeBack(str, cast(dchar)0xB9DDE, 1);
-        testDecodeBack(str, cast(dchar)0x1400, 1);
-        testDecodeBack(str, cast(dchar)0x10000, 1);
+        testDecodeBack(str, cast(dchar) 0xB9DDE, 1);
+        testDecodeBack(str, cast(dchar) 0x1400, 1);
+        testDecodeBack(str, cast(dchar) 0x10000, 1);
     }
     });
 }
@@ -2107,7 +2107,7 @@ size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     if (c <= 0x7F)
     {
         assert(isValidDchar(c));
-        buf[0] = cast(char)c;
+        buf[0] = cast(char) c;
         return 1;
     }
     if (c <= 0x7FF)
@@ -2163,13 +2163,13 @@ size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     assert(encode(buf, '\U00010000') == 4 && buf[0 .. 4] == "\U00010000");
     assert(encode(buf, '\U0010FFFF') == 4 && buf[0 .. 4] == "\U0010FFFF");
 
-    assertThrown!UTFException(encode(buf, cast(dchar)0xD800));
-    assertThrown!UTFException(encode(buf, cast(dchar)0xDBFF));
-    assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
-    assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
-    assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xD800));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDBFF));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDC00));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDFFF));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0x110000));
 
-    assert(encode!(Yes.useReplacementDchar)(buf, cast(dchar)0x110000) == buf.stride);
+    assert(encode!(Yes.useReplacementDchar)(buf, cast(dchar) 0x110000) == buf.stride);
     assert(buf.front == replacementDchar);
     });
 }
@@ -2186,7 +2186,7 @@ size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
 
         assert(isValidDchar(c));
     L1:
-        buf[0] = cast(wchar)c;
+        buf[0] = cast(wchar) c;
         return 1;
     }
     if (c <= 0x10FFFF)
@@ -2216,13 +2216,13 @@ size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     assert(encode(buf, '\U00010000') == 2 && buf[0 .. 2] == "\U00010000");
     assert(encode(buf, '\U0010FFFF') == 2 && buf[0 .. 2] == "\U0010FFFF");
 
-    assertThrown!UTFException(encode(buf, cast(dchar)0xD800));
-    assertThrown!UTFException(encode(buf, cast(dchar)0xDBFF));
-    assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
-    assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
-    assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xD800));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDBFF));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDC00));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDFFF));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0x110000));
 
-    assert(encode!(Yes.useReplacementDchar)(buf, cast(dchar)0x110000) == buf.stride);
+    assert(encode!(Yes.useReplacementDchar)(buf, cast(dchar) 0x110000) == buf.stride);
     assert(buf.front == replacementDchar);
     });
 }
@@ -2254,13 +2254,13 @@ size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     encode(buf, 0xFFFF ); assert(buf[0] == 0xFFFF);
     encode(buf, '\U0010FFFF'); assert(buf[0] == '\U0010FFFF');
 
-    assertThrown!UTFException(encode(buf, cast(dchar)0xD800));
-    assertThrown!UTFException(encode(buf, cast(dchar)0xDBFF));
-    assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
-    assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
-    assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xD800));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDBFF));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDC00));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDFFF));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0x110000));
 
-    assert(encode!(Yes.useReplacementDchar)(buf, cast(dchar)0x110000) == buf.stride);
+    assert(encode!(Yes.useReplacementDchar)(buf, cast(dchar) 0x110000) == buf.stride);
     assert(buf.front == replacementDchar);
     });
 }
@@ -2280,7 +2280,7 @@ void encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     if (c <= 0x7F)
     {
         assert(isValidDchar(c));
-        r ~= cast(char)c;
+        r ~= cast(char) c;
     }
     else
     {
@@ -2368,14 +2368,14 @@ void encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     encode(buf, '\U00010000'); assert(buf[21 .. $] == "\U00010000");
     encode(buf, '\U0010FFFF'); assert(buf[25 .. $] == "\U0010FFFF");
 
-    assertThrown!UTFException(encode(buf, cast(dchar)0xD800));
-    assertThrown!UTFException(encode(buf, cast(dchar)0xDBFF));
-    assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
-    assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
-    assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xD800));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDBFF));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDC00));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDFFF));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0x110000));
 
     assert(buf.back != replacementDchar);
-    encode!(Yes.useReplacementDchar)(buf, cast(dchar)0x110000);
+    encode!(Yes.useReplacementDchar)(buf, cast(dchar) 0x110000);
     assert(buf.back == replacementDchar);
     });
 }
@@ -2393,7 +2393,7 @@ void encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
 
         assert(isValidDchar(c));
     L1:
-        r ~= cast(wchar)c;
+        r ~= cast(wchar) c;
     }
     else if (c <= 0x10FFFF)
     {
@@ -2429,14 +2429,14 @@ void encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     encode(buf, '\U00010000'); assert(buf[5 .. $] == "\U00010000");
     encode(buf, '\U0010FFFF'); assert(buf[7 .. $] == "\U0010FFFF");
 
-    assertThrown!UTFException(encode(buf, cast(dchar)0xD800));
-    assertThrown!UTFException(encode(buf, cast(dchar)0xDBFF));
-    assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
-    assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
-    assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xD800));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDBFF));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDC00));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDFFF));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0x110000));
 
     assert(buf.back != replacementDchar);
-    encode!(Yes.useReplacementDchar)(buf, cast(dchar)0x110000);
+    encode!(Yes.useReplacementDchar)(buf, cast(dchar) 0x110000);
     assert(buf.back == replacementDchar);
     });
 }
@@ -2466,14 +2466,14 @@ void encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     encode(buf, 0xFFFF ); assert(buf[4] == 0xFFFF);
     encode(buf, '\U0010FFFF'); assert(buf[5] == '\U0010FFFF');
 
-    assertThrown!UTFException(encode(buf, cast(dchar)0xD800));
-    assertThrown!UTFException(encode(buf, cast(dchar)0xDBFF));
-    assertThrown!UTFException(encode(buf, cast(dchar)0xDC00));
-    assertThrown!UTFException(encode(buf, cast(dchar)0xDFFF));
-    assertThrown!UTFException(encode(buf, cast(dchar)0x110000));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xD800));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDBFF));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDC00));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0xDFFF));
+    assertThrown!UTFException(encode(buf, cast(dchar) 0x110000));
 
     assert(buf.back != replacementDchar);
-    encode!(Yes.useReplacementDchar)(buf, cast(dchar)0x110000);
+    encode!(Yes.useReplacementDchar)(buf, cast(dchar) 0x110000);
     assert(buf.back == replacementDchar);
     });
 }
@@ -2629,8 +2629,8 @@ if (isSomeChar!C)
     assert(!canSearchInCodeUnits! char('日'));
     assert( canSearchInCodeUnits!wchar('日'));
     assert( canSearchInCodeUnits!dchar('日'));
-    assert(!canSearchInCodeUnits!wchar(cast(wchar)0xDA00));
-    assert( canSearchInCodeUnits!dchar(cast(dchar)0xDA00));
+    assert(!canSearchInCodeUnits!wchar(cast(wchar) 0xDA00));
+    assert( canSearchInCodeUnits!dchar(cast(dchar) 0xDA00));
     assert(!canSearchInCodeUnits! char('\U00010001'));
     assert(!canSearchInCodeUnits!wchar('\U00010001'));
     assert( canSearchInCodeUnits!dchar('\U00010001'));
@@ -2670,7 +2670,7 @@ char[] toUTF8(return out char[4] buf, dchar c) nothrow @nogc @safe pure
 {
     if (c <= 0x7F)
     {
-        buf[0] = cast(char)c;
+        buf[0] = cast(char) c;
         return buf[0 .. 1];
     }
     else if (c <= 0x7FF)
@@ -2758,7 +2758,7 @@ body
 {
     if (c <= 0xFFFF)
     {
-        buf[0] = cast(wchar)c;
+        buf[0] = cast(wchar) c;
         return buf[0 .. 1];
     }
     else
@@ -2945,7 +2945,7 @@ if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
             // might be pointing to a new block of memory, which might be
             // unreadable. Otherwise, it's definitely pointing to valid
             // memory.
-            if ((cast(size_t)p & 3) && *p == '\0')
+            if ((cast(size_t) p & 3) && *p == '\0')
                 return &str[0];
         }
 
@@ -2972,7 +2972,7 @@ if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
             auto trustedPtrAdd(S s) @trusted { return s.ptr + s.length; }
             auto p = trustedPtrAdd(str);
 
-            if ((cast(size_t)p & 3) && *p == '\0')
+            if ((cast(size_t) p & 3) && *p == '\0')
                 return &str[0];
         }
 
@@ -2988,7 +2988,7 @@ if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
         copy[0 .. $ - 1] = str[];
         copy[$ - 1] = '\0';
 
-        auto trustedCast(typeof(copy) c) @trusted { return cast(P)c.ptr; }
+        auto trustedCast(typeof(copy) c) @trusted { return cast(P) c.ptr; }
         return trustedCast(copy);
     }
 }
@@ -3005,7 +3005,7 @@ if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
         retval.put(c);
     retval.put('\0');
 
-    return () @trusted { return cast(P)retval.data.ptr; } ();
+    return () @trusted { return cast(P) retval.data.ptr; } ();
 }
 
 @safe pure unittest
@@ -3530,7 +3530,7 @@ alias byDchar = byUTF!dchar;
     dchar[10] a;
     a[0..8] = "hello\u07FF\uD7FF\U0010FFFF"d;
     a[8] = 0xD800;   // invalid
-    a[9] = cast(dchar)0x110000; // invalid
+    a[9] = cast(dchar) 0x110000; // invalid
     foreach (c; a[].byChar())
     {
         //writefln("[%d] '%c'", i, c);
@@ -3567,7 +3567,7 @@ alias byDchar = byUTF!dchar;
     dchar[10] a;
     a[0..8] = "hello\u07FF\uD7FF\U0010FFFF"d;
     a[8] = 0xD800;   // invalid
-    a[9] = cast(dchar)0x110000; // invalid
+    a[9] = cast(dchar) 0x110000; // invalid
     foreach (c; a[].byWchar())
     {
         //writefln("[%d] '%c' x%x", i, c, c);

@@ -485,12 +485,12 @@ pure nothrow unittest
     auto m = assumeSameStructure!("a", "b")(alpha, beta);
     foreach (r; m)
         foreach (e; r)
-            e.b = cast(int)e.a;
+            e.b = cast(int) e.a;
     assert(alpha == beta);
 
     beta[] = 0;
     foreach (e; m.byElement)
-        e.b = cast(int)e.a;
+        e.b = cast(int) e.a;
     assert(alpha == beta);
 }
 
@@ -565,7 +565,7 @@ auto slice(T,
         auto arr = new Unqual!T[len];
     }
     arr[] = init;
-    auto ret = .sliced!ra(cast(T[])arr, lengths);
+    auto ret = .sliced!ra(cast(T[]) arr, lengths);
     return ret;
 }
 

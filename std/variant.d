@@ -495,7 +495,7 @@ private:
                 auto variantArgs = p[1 .. argCount + 1];
                 foreach (i, T; ParamTypes)
                 {
-                    t[i] = cast()variantArgs[i].get!T;
+                    t[i] = cast() variantArgs[i].get!T;
                 }
 
                 auto args = cast(Tuple!(ParamTypes))t;
@@ -860,7 +860,7 @@ public:
     // workaround for bug 10567 fix
     int opCmp(ref const VariantN rhs) const
     {
-        return (cast()this).opCmp!(VariantN)(cast()rhs);
+        return (cast() this).opCmp!(VariantN)(cast() rhs);
     }
 
     /**
@@ -2036,17 +2036,17 @@ unittest
     Algebraic!(int, string) variant;
 
     variant = 10;
-    assert(variant.visit!((string s) => cast(int)s.length,
+    assert(variant.visit!((string s) => cast(int) s.length,
                           (int i)    => i)()
                           == 10);
     variant = "string";
     assert(variant.visit!((int i) => i,
-                          (string s) => cast(int)s.length)()
+                          (string s) => cast(int) s.length)()
                           == 6);
 
     // Error function usage
     Algebraic!(int, string) emptyVar;
-    auto rslt = emptyVar.visit!((string s) => cast(int)s.length,
+    auto rslt = emptyVar.visit!((string s) => cast(int) s.length,
                           (int i)    => i,
                           () => -1)();
     assert(rslt == -1);
@@ -2059,7 +2059,7 @@ unittest
     // not all handled check
     static assert(!__traits(compiles, variant.visit!((size_t i){ })() ));
 
-    variant = cast(size_t)10;
+    variant = cast(size_t) 10;
     auto which = 0;
     variant.visit!( (string s) => which = 1,
                     (size_t i) => which = 0
@@ -2095,7 +2095,7 @@ unittest
     auto floatVisited = false;
 
     assert(variant3.visit!(
-                 (float f) { floatVisited = true; return cast(size_t)f; },
+                 (float f) { floatVisited = true; return cast(size_t) f; },
                  func,
                  (size_t i) { return i; }
                  )() == 10);
@@ -2103,11 +2103,11 @@ unittest
 
     Algebraic!(float, string) variant4;
 
-    assert(variant4.visit!(func, (float f) => cast(size_t)f, () => size_t.max)() == size_t.max);
+    assert(variant4.visit!(func, (float f) => cast(size_t) f, () => size_t.max)() == size_t.max);
 
     // double error func check
     static assert(!__traits(compiles,
-                            visit!(() => size_t.max, func, (float f) => cast(size_t)f, () => size_t.max)(variant4))
+                            visit!(() => size_t.max, func, (float f) => cast(size_t) f, () => size_t.max)(variant4))
                  );
 }
 

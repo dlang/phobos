@@ -511,7 +511,7 @@ if (is(C : dchar))
     else
         alias R = Unqual!OC;
 
-    return isUpper(c) ? cast(R)(cast(R)c + 'a' - 'A') : cast(R)c;
+    return isUpper(c) ? cast(R)(cast(R) c + 'a' - 'A') : cast(R) c;
 }
 
 ///
@@ -531,7 +531,7 @@ if (is(C : dchar))
     foreach (C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
     {
         foreach (i, c; uppercase)
-            assert(toLower(cast(C)c) == lowercase[i]);
+            assert(toLower(cast(C) c) == lowercase[i]);
 
         foreach (C c; 0 .. 128)
         {
@@ -573,7 +573,7 @@ if (is(C : dchar))
     else
         alias R = Unqual!OC;
 
-    return isLower(c) ? cast(R)(cast(R)c - ('a' - 'A')) : cast(R)c;
+    return isLower(c) ? cast(R)(cast(R) c - ('a' - 'A')) : cast(R) c;
 }
 
 ///
@@ -592,7 +592,7 @@ if (is(C : dchar))
     foreach (C; AliasSeq!(char, wchar, dchar, immutable char, ubyte))
     {
         foreach (i, c; lowercase)
-            assert(toUpper(cast(C)c) == uppercase[i]);
+            assert(toUpper(cast(C) c) == uppercase[i]);
 
         foreach (C c; 0 .. 128)
         {

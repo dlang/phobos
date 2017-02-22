@@ -244,7 +244,7 @@ struct RIPEMD160
             }
             else
             {
-                (cast(ubyte*)x.ptr)[0 .. 64] = (cast(ubyte*)block)[0 .. 64];
+                (cast(ubyte*) x.ptr)[0 .. 64] = (cast(ubyte*) block)[0 .. 64];
             }
 
             /* round 1 */
@@ -450,8 +450,8 @@ struct RIPEMD160
          * Example:
          * ----
          * RIPEMD160 dig;
-         * dig.put(cast(ubyte)0); //single ubyte
-         * dig.put(cast(ubyte)0, cast(ubyte)0); //variadic
+         * dig.put(cast(ubyte) 0); //single ubyte
+         * dig.put(cast(ubyte) 0, cast(ubyte) 0); //variadic
          * ubyte[10] buf;
          * dig.put(buf); //buffer
          * ----
@@ -522,7 +522,7 @@ struct RIPEMD160
          * //Simple example
          * RIPEMD160 hash;
          * hash.start();
-         * hash.put(cast(ubyte)0);
+         * hash.put(cast(ubyte) 0);
          * ubyte[20] result = hash.finish();
          * assert(toHexString(result) == "C81B94933420221A7AC004A90242D8B1D3E5070D");
          * --------
@@ -587,7 +587,7 @@ unittest
     void doSomething(T)(ref T hash)
     if (isDigest!T)
     {
-        hash.put(cast(ubyte)0);
+        hash.put(cast(ubyte) 0);
     }
     RIPEMD160 md;
     md.start();
@@ -601,7 +601,7 @@ unittest
     //Simple example
     RIPEMD160 hash;
     hash.start();
-    hash.put(cast(ubyte)0);
+    hash.put(cast(ubyte) 0);
     ubyte[20] result = hash.finish();
     assert(toHexString(result) == "C81B94933420221A7AC004A90242D8B1D3E5070D");
 }
@@ -621,44 +621,44 @@ unittest
     md.put(cast(ubyte[])"abcdef");
     md.start();
     md.put(cast(ubyte[])"");
-    assert(md.finish() == cast(ubyte[])x"9c1185a5c5e9fc54612808977ee8f548b2258d31");
+    assert(md.finish() == cast(ubyte[]) x"9c1185a5c5e9fc54612808977ee8f548b2258d31");
 
     digest = ripemd160Of("");
-    assert(digest == cast(ubyte[])x"9c1185a5c5e9fc54612808977ee8f548b2258d31");
+    assert(digest == cast(ubyte[]) x"9c1185a5c5e9fc54612808977ee8f548b2258d31");
 
     digest = ripemd160Of("a");
-    assert(digest == cast(ubyte[])x"0bdc9d2d256b3ee9daae347be6f4dc835a467ffe");
+    assert(digest == cast(ubyte[]) x"0bdc9d2d256b3ee9daae347be6f4dc835a467ffe");
 
     digest = ripemd160Of("abc");
-    assert(digest == cast(ubyte[])x"8eb208f7e05d987a9b044a8e98c6b087f15a0bfc");
+    assert(digest == cast(ubyte[]) x"8eb208f7e05d987a9b044a8e98c6b087f15a0bfc");
 
     digest = ripemd160Of("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq");
-    assert(digest == cast(ubyte[])x"12a053384a9c0c88e405a06c27dcf49ada62eb2b");
+    assert(digest == cast(ubyte[]) x"12a053384a9c0c88e405a06c27dcf49ada62eb2b");
 
     digest = ripemd160Of("message digest");
-    assert(digest == cast(ubyte[])x"5d0689ef49d2fae572b881b123a85ffa21595f36");
+    assert(digest == cast(ubyte[]) x"5d0689ef49d2fae572b881b123a85ffa21595f36");
 
     digest = ripemd160Of("abcdefghijklmnopqrstuvwxyz");
-    assert(digest == cast(ubyte[])x"f71c27109c692c1b56bbdceb5b9d2865b3708dbc");
+    assert(digest == cast(ubyte[]) x"f71c27109c692c1b56bbdceb5b9d2865b3708dbc");
 
     digest = ripemd160Of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
-    assert(digest == cast(ubyte[])x"b0e20b6e3116640286ed3a87a5713079b21f5189");
+    assert(digest == cast(ubyte[]) x"b0e20b6e3116640286ed3a87a5713079b21f5189");
 
     digest = ripemd160Of("1234567890123456789012345678901234567890"~
                     "1234567890123456789012345678901234567890");
-    assert(digest == cast(ubyte[])x"9b752e45573d4b39f4dbd3323cab82bf63326bfb");
+    assert(digest == cast(ubyte[]) x"9b752e45573d4b39f4dbd3323cab82bf63326bfb");
 
-    assert(toHexString(cast(ubyte[20])x"f71c27109c692c1b56bbdceb5b9d2865b3708dbc")
+    assert(toHexString(cast(ubyte[20]) x"f71c27109c692c1b56bbdceb5b9d2865b3708dbc")
         == "F71C27109C692C1B56BBDCEB5B9D2865B3708DBC");
 
     ubyte[] onemilliona = new ubyte[1000000];
     onemilliona[] = 'a';
     digest = ripemd160Of(onemilliona);
-    assert(digest == cast(ubyte[])x"52783243c1697bdbe16d37f97f68f08325dc1528");
+    assert(digest == cast(ubyte[]) x"52783243c1697bdbe16d37f97f68f08325dc1528");
 
     auto oneMillionRange = repeat!ubyte(cast(ubyte)'a', 1000000);
     digest = ripemd160Of(oneMillionRange);
-    assert(digest == cast(ubyte[])x"52783243c1697bdbe16d37f97f68f08325dc1528");
+    assert(digest == cast(ubyte[]) x"52783243c1697bdbe16d37f97f68f08325dc1528");
 }
 
 /**
@@ -703,7 +703,7 @@ unittest
     //Let's use the OOP features:
     void test(Digest dig)
     {
-      dig.put(cast(ubyte)0);
+      dig.put(cast(ubyte) 0);
     }
     auto md = new RIPEMD160Digest();
     test(md);
@@ -721,12 +721,12 @@ unittest
     md.put(cast(ubyte[])"abcdef");
     md.reset();
     md.put(cast(ubyte[])"");
-    assert(md.finish() == cast(ubyte[])x"9c1185a5c5e9fc54612808977ee8f548b2258d31");
+    assert(md.finish() == cast(ubyte[]) x"9c1185a5c5e9fc54612808977ee8f548b2258d31");
 
     md.put(cast(ubyte[])"abcdefghijklmnopqrstuvwxyz");
     ubyte[20] result;
     auto result2 = md.finish(result[]);
-    assert(result[0 .. 20] == result2 && result2 == cast(ubyte[])x"f71c27109c692c1b56bbdceb5b9d2865b3708dbc");
+    assert(result[0 .. 20] == result2 && result2 == cast(ubyte[]) x"f71c27109c692c1b56bbdceb5b9d2865b3708dbc");
 
     debug
     {
@@ -736,27 +736,27 @@ unittest
 
     assert(md.length == 20);
 
-    assert(md.digest("") == cast(ubyte[])x"9c1185a5c5e9fc54612808977ee8f548b2258d31");
+    assert(md.digest("") == cast(ubyte[]) x"9c1185a5c5e9fc54612808977ee8f548b2258d31");
 
-    assert(md.digest("a") == cast(ubyte[])x"0bdc9d2d256b3ee9daae347be6f4dc835a467ffe");
+    assert(md.digest("a") == cast(ubyte[]) x"0bdc9d2d256b3ee9daae347be6f4dc835a467ffe");
 
-    assert(md.digest("abc") == cast(ubyte[])x"8eb208f7e05d987a9b044a8e98c6b087f15a0bfc");
+    assert(md.digest("abc") == cast(ubyte[]) x"8eb208f7e05d987a9b044a8e98c6b087f15a0bfc");
 
     assert(md.digest("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq")
-           == cast(ubyte[])x"12a053384a9c0c88e405a06c27dcf49ada62eb2b");
+           == cast(ubyte[]) x"12a053384a9c0c88e405a06c27dcf49ada62eb2b");
 
-    assert(md.digest("message digest") == cast(ubyte[])x"5d0689ef49d2fae572b881b123a85ffa21595f36");
+    assert(md.digest("message digest") == cast(ubyte[]) x"5d0689ef49d2fae572b881b123a85ffa21595f36");
 
     assert(md.digest("abcdefghijklmnopqrstuvwxyz")
-           == cast(ubyte[])x"f71c27109c692c1b56bbdceb5b9d2865b3708dbc");
+           == cast(ubyte[]) x"f71c27109c692c1b56bbdceb5b9d2865b3708dbc");
 
     assert(md.digest("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
-           == cast(ubyte[])x"b0e20b6e3116640286ed3a87a5713079b21f5189");
+           == cast(ubyte[]) x"b0e20b6e3116640286ed3a87a5713079b21f5189");
 
     assert(md.digest("1234567890123456789012345678901234567890",
                                    "1234567890123456789012345678901234567890")
-           == cast(ubyte[])x"9b752e45573d4b39f4dbd3323cab82bf63326bfb");
+           == cast(ubyte[]) x"9b752e45573d4b39f4dbd3323cab82bf63326bfb");
 
     assert(md.digest(new ubyte[160/8]) // 160 zero bits
-           == cast(ubyte[])x"5c00bd4aca04a9057c09b20b05f723f2e23deb65");
+           == cast(ubyte[]) x"5c00bd4aca04a9057c09b20b05f723f2e23deb65");
 }

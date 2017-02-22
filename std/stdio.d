@@ -613,7 +613,7 @@ Throws: $(D ErrnoException) in case of error.
             auto fp = fopen("NUL", modez);
             errnoEnforce(fp, "Cannot open placeholder NUL stream");
             FLOCK(fp);
-            auto iob = cast(_iobuf*)fp;
+            auto iob = cast(_iobuf*) fp;
             .close(iob._file);
             iob._file = fd;
             iob._flag &= ~_IOTRAN;
@@ -673,7 +673,7 @@ Throws: $(D ErrnoException) in case of error.
                     default: break;
                 }
 
-            auto fd = _open_osfhandle(cast(intptr_t)handle, mode);
+            auto fd = _open_osfhandle(cast(intptr_t) handle, mode);
         }
 
         errnoEnforce(fd >= 0, "Cannot open Windows HANDLE");
@@ -1514,7 +1514,7 @@ void main()
     {
         Unqual!(ElementEncodingType!S)[] buf;
         readln(buf, terminator);
-        return cast(S)buf;
+        return cast(S) buf;
     }
 
     @system unittest
@@ -2564,7 +2564,7 @@ $(D StdioException).
 
         uint i;
         foreach (chunk; f.byChunk(4))
-            assert(chunk == cast(ubyte[])witness[i++]);
+            assert(chunk == cast(ubyte[]) witness[i++]);
 
         assert(i == witness.length);
     }
@@ -2589,7 +2589,7 @@ $(D StdioException).
 
         uint i;
         foreach (chunk; f.byChunk(new ubyte[4]))
-            assert(chunk == cast(ubyte[])witness[i++]);
+            assert(chunk == cast(ubyte[]) witness[i++]);
 
         assert(i == witness.length);
     }
@@ -3241,7 +3241,7 @@ struct LockingTextReader
                 .destroy(_f);
                 return true;
             }
-            _front = cast(char)c;
+            _front = cast(char) c;
             _hasChar = true;
         }
         return false;
@@ -4009,7 +4009,7 @@ struct lines
         ubyte[] buffer;
         static if (Parms.length == 2)
             Parms[0] line = 0;
-        while ((c = FGETC(cast(_iobuf*)f._p.handle)) != -1)
+        while ((c = FGETC(cast(_iobuf*) f._p.handle)) != -1)
         {
             buffer ~= to!(ubyte)(c);
             if (c == terminator)
@@ -4526,7 +4526,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     /* Since fps is now locked, we can create an "unshared" version
      * of fp.
      */
-    auto fp = cast(_iobuf*)fps;
+    auto fp = cast(_iobuf*) fps;
 
     ReadlnAppender app;
     app.initialize(buf);
@@ -4556,7 +4556,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                     }
                     c = ((c - 0xD7C0) << 10) + (c2 - 0xDC00);
                 }
-                app.putdchar(cast(dchar)c);
+                app.putdchar(cast(dchar) c);
             }
         }
         if (ferror(fps))
@@ -4615,7 +4615,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                 }
             }
             app.putonly(p[0..i]);
-            app.buf[i - 1] = cast(char)terminator;
+            app.buf[i - 1] = cast(char) terminator;
             if (terminator == '\n' && c == '\r')
                 i++;
         }
@@ -4649,7 +4649,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     /* Since fps is now locked, we can create an "unshared" version
      * of fp.
      */
-    auto fp = cast(_iobuf*)fps;
+    auto fp = cast(_iobuf*) fps;
 
     ReadlnAppender app;
     app.initialize(buf);
@@ -4685,7 +4685,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
          */
         FLOCK(fps);
         scope(exit) FUNLOCK(fps);
-        auto fp = cast(_iobuf*)fps;
+        auto fp = cast(_iobuf*) fps;
         version (Windows)
         {
             buf.length = 0;
@@ -4724,9 +4724,9 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                 import std.utf : encode;
 
                 if ((c & ~0x7F) == 0)
-                    buf ~= cast(char)c;
+                    buf ~= cast(char) c;
                 else
-                    encode(buf, cast(dchar)c);
+                    encode(buf, cast(dchar) c);
                 if (c == terminator)
                     break;
             }
@@ -4781,7 +4781,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
 
     FLOCK(fps);
     scope(exit) FUNLOCK(fps);
-    auto fp = cast(_iobuf*)fps;
+    auto fp = cast(_iobuf*) fps;
     if (orientation == File.Orientation.wide)
     {
         /* Stream is in wide characters.
@@ -4824,9 +4824,9 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
             for (int c; (c = FGETWC(fp)) != -1; )
             {
                 if ((c & ~0x7F) == 0)
-                    buf ~= cast(char)c;
+                    buf ~= cast(char) c;
                 else
-                    encode(buf, cast(dchar)c);
+                    encode(buf, cast(dchar) c);
                 if (c == terminator)
                     break;
             }
@@ -4861,7 +4861,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     // Then, append to it
     for (int c; (c = FGETC(fp)) != -1; )
     {
-        buf ~= cast(char)c;
+        buf ~= cast(char) c;
         if (c == terminator)
         {
             // No need to test for errors in file

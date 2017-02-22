@@ -24,7 +24,7 @@ alias TypeTuple = AliasSeq;
 
     int foo(TL td)  // same as int foo(int, double);
     {
-        return td[0] + cast(int)td[1];
+        return td[0] + cast(int) td[1];
     }
 }
 

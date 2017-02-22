@@ -92,7 +92,7 @@ if (!allSatisfy!(isForwardRange, R1, R2) ||
             // covering the right and bottom edges of an increasing square area
             // over the infinite table of combinations. This schedule allows us
             // to require only forward ranges.
-            return zip(sequence!"n"(cast(size_t)0), range1.save, range2.save,
+            return zip(sequence!"n"(cast(size_t) 0), range1.save, range2.save,
                        repeat(range1), repeat(range2))
                 .map!(function(a) => chain(
                     zip(repeat(a[1]), take(a[4].save, a[0])),

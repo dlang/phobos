@@ -1755,7 +1755,7 @@ if (is(Unqual!T == bool))
     @property bool back()
     {
         enforce(!empty);
-        return cast(bool)(data.back & (cast(size_t)1 << ((_store._length - 1) % bitsPerWord)));
+        return cast(bool)(data.back & (cast(size_t) 1 << ((_store._length - 1) % bitsPerWord)));
     }
 
     /// Ditto
@@ -1764,12 +1764,12 @@ if (is(Unqual!T == bool))
         enforce(!empty);
         if (value)
         {
-            data.back |= (cast(size_t)1 << ((_store._length - 1) % bitsPerWord));
+            data.back |= (cast(size_t) 1 << ((_store._length - 1) % bitsPerWord));
         }
         else
         {
             data.back &=
-                ~(cast(size_t)1 << ((_store._length - 1) % bitsPerWord));
+                ~(cast(size_t) 1 << ((_store._length - 1) % bitsPerWord));
         }
     }
 
@@ -1790,7 +1790,7 @@ if (is(Unqual!T == bool))
         auto div = cast(size_t) (i / bitsPerWord);
         auto rem = i % bitsPerWord;
         enforce(div < data.length);
-        return cast(bool)(data.ptr[div] & (cast(size_t)1 << rem));
+        return cast(bool)(data.ptr[div] & (cast(size_t) 1 << rem));
     }
     /// ditto
     void opIndexAssign(bool value, size_t i)
@@ -1798,8 +1798,8 @@ if (is(Unqual!T == bool))
         auto div = cast(size_t) (i / bitsPerWord);
         auto rem = i % bitsPerWord;
         enforce(div < data.length);
-        if (value) data.ptr[div] |= (cast(size_t)1 << rem);
-        else data.ptr[div] &= ~(cast(size_t)1 << rem);
+        if (value) data.ptr[div] |= (cast(size_t) 1 << rem);
+        else data.ptr[div] &= ~(cast(size_t) 1 << rem);
     }
     /// ditto
     void opIndexOpAssign(string op)(bool value, size_t i)
@@ -1807,14 +1807,14 @@ if (is(Unqual!T == bool))
         auto div = cast(size_t) (i / bitsPerWord);
         auto rem = i % bitsPerWord;
         enforce(div < data.length);
-        auto oldValue = cast(bool) (data.ptr[div] & (cast(size_t)1 << rem));
+        auto oldValue = cast(bool) (data.ptr[div] & (cast(size_t) 1 << rem));
         // Do the deed
         auto newValue = mixin("oldValue "~op~" value");
         // Write back the value
         if (newValue != oldValue)
         {
-            if (newValue) data.ptr[div] |= (cast(size_t)1 << rem);
-            else data.ptr[div] &= ~(cast(size_t)1 << rem);
+            if (newValue) data.ptr[div] |= (cast(size_t) 1 << rem);
+            else data.ptr[div] &= ~(cast(size_t) 1 << rem);
         }
     }
     /// Ditto
@@ -2018,11 +2018,11 @@ if (is(Unqual!T == bool))
             // Fits within the current array
             if (stuff)
             {
-                data[$ - 1] |= (cast(size_t)1 << rem);
+                data[$ - 1] |= (cast(size_t) 1 << rem);
             }
             else
             {
-                data[$ - 1] &= ~(cast(size_t)1 << rem);
+                data[$ - 1] &= ~(cast(size_t) 1 << rem);
             }
         }
         else

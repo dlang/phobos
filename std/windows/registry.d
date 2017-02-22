@@ -282,9 +282,9 @@ body
      * these hive keys is ignored, we'd rather not trust the Win32
      * API.
      */
-    if (cast(uint)hkey & 0x80000000)
+    if (cast(uint) hkey & 0x80000000)
     {
-        switch (cast(uint)hkey)
+        switch (cast(uint) hkey)
         {
             case HKEY_CLASSES_ROOT:
             case HKEY_CURRENT_USER:
@@ -376,9 +376,9 @@ in
 body
 {
     /* Can't duplicate standard keys, but don't need to, so can just return */
-    if (cast(uint)hkey & 0x80000000)
+    if (cast(uint) hkey & 0x80000000)
     {
-        switch (cast(uint)hkey)
+        switch (cast(uint) hkey)
         {
             case HKEY_CLASSES_ROOT:
             case HKEY_CURRENT_USER:
@@ -966,7 +966,7 @@ public:
         Params:
             name = The name of the key to delete. May not be $(D null).
      */
-    void deleteKey(string name, REGSAM access = cast(REGSAM)0)
+    void deleteKey(string name, REGSAM access = cast(REGSAM) 0)
     {
         enforce(!name.empty, new RegistryException("Key name is invalid"));
 

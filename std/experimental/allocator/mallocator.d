@@ -370,7 +370,7 @@ unittest
     m = _aligned_malloc(16, 0x10);
     if (m)
     {
-        assert((cast(size_t)m & 0xF) == 0);
+        assert((cast(size_t) m & 0xF) == 0);
         m = _aligned_realloc(m, 32, 0x10000);
         if (m) assert((m.addr & 0xFFFF) == 0);
         _aligned_free(m);

@@ -147,7 +147,7 @@ mixin template Signal(T1...)
                 auto p = core.stdc.stdlib.calloc(slot_t.sizeof, len);
                 if (!p)
                     core.exception.onOutOfMemoryError();
-                slots = (cast(slot_t*)p)[0 .. len];
+                slots = (cast(slot_t*) p)[0 .. len];
             }
             else
             {
@@ -160,7 +160,7 @@ mixin template Signal(T1...)
                 auto p = core.stdc.stdlib.realloc(slots.ptr, nbytes);
                 if (!p)
                     core.exception.onOutOfMemoryError();
-                slots = (cast(slot_t*)p)[0 .. len];
+                slots = (cast(slot_t*) p)[0 .. len];
                 slots[slots_idx + 1 .. $] = null;
             }
         }
@@ -227,7 +227,7 @@ mixin template Signal(T1...)
     final void unhook(Object o)
     in { assert( status == ST.idle ); }
     body {
-        debug (signal) writefln("Signal.unhook(o = %s)", cast(void*)o);
+        debug (signal) writefln("Signal.unhook(o = %s)", cast(void*) o);
         for (size_t i = 0; i < slots_idx; )
         {
             if (_d_toObject(slots[i].ptr) is o)

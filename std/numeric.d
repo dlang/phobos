@@ -138,7 +138,7 @@ if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision +
     // Functions calls require conversion
     z = sin(+x)           + cos(+y);                     // Use unary plus to concisely convert to a real
     z = sin(x.get!float)  + cos(y.get!float);            // Or use get!T
-    z = sin(cast(float)x) + cos(cast(float)y);           // Or use cast(T) to explicitly convert
+    z = sin(cast(float) x) + cos(cast(float) y);           // Or use cast(T) to explicitly convert
 
     // Define a 8-bit custom float for storing probabilities
     alias Probability = CustomFloat!(4, 4, CustomFloatFlags.ieee^CustomFloatFlags.probability^CustomFloatFlags.signed );
@@ -477,7 +477,7 @@ public:
     static @property CustomFloat im() { return CustomFloat(0.0f); }
 
     /// Initialize from any $(D real) compatible type.
-    this(F)(F input) if (__traits(compiles, cast(real)input ))
+    this(F)(F input) if (__traits(compiles, cast(real) input ))
     {
         this = input;
     }
@@ -493,7 +493,7 @@ public:
 
     /// Assigns from any $(D real) compatible type.
     void opAssign(F)(F input)
-        if (__traits(compiles, cast(real)input))
+        if (__traits(compiles, cast(real) input))
     {
         import std.conv : text;
 
@@ -584,7 +584,7 @@ public:
 
     /// ditto
     int opCmp(T)(auto ref T b)
-        if (__traits(compiles, cast(real)b))
+        if (__traits(compiles, cast(real) b))
     {
         auto x = get!real;
         auto y = cast(real) b;
@@ -593,9 +593,9 @@ public:
 
     /// ditto
     void opOpAssign(string op, T)(auto ref T b)
-        if (__traits(compiles, mixin(`get!real`~op~`cast(real)b`)))
+        if (__traits(compiles, mixin(`get!real`~op~`cast(real) b`)))
     {
-        return mixin(`this = this `~op~` cast(real)b`);
+        return mixin(`this = this `~op~` cast(real) b`);
     }
 
     /// ditto
@@ -1386,9 +1386,9 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
 @system unittest
 {
     // @system due to the case in the 2nd line
-    static assert(__traits(compiles, findRoot((float x)=>cast(real)x, float.init, float.init)));
-    static assert(__traits(compiles, findRoot!real((x)=>cast(double)x, real.init, real.init)));
-    static assert(__traits(compiles, findRoot((real x)=>cast(double)x, real.init, real.init)));
+    static assert(__traits(compiles, findRoot((float x)=>cast(real) x, float.init, float.init)));
+    static assert(__traits(compiles, findRoot!real((x)=>cast(double) x, real.init, real.init)));
+    static assert(__traits(compiles, findRoot((real x)=>cast(double) x, real.init, real.init)));
 }
 
 /++
@@ -2185,7 +2185,7 @@ if (isRandomAccessRange!(R1) && hasLength!(R1) &&
     if (s.length < t.length) return gapWeightedSimilarity(t, s, lambda);
     if (!t.length) return 0;
 
-    auto dpvi = cast(F*)malloc(F.sizeof * 2 * t.length);
+    auto dpvi = cast(F*) malloc(F.sizeof * 2 * t.length);
     if (!dpvi)
         onOutOfMemoryError();
 
@@ -2366,7 +2366,7 @@ time and computes all matches of length 1.
         this.s = s;
         this.t = t;
 
-        kl = cast(F*)malloc(s.length * t.length * F.sizeof);
+        kl = cast(F*) malloc(s.length * t.length * F.sizeof);
         if (!kl)
             onOutOfMemoryError();
 
@@ -3107,7 +3107,7 @@ private enum string MakeLocalFft = q{
     import core.stdc.stdlib;
     import core.exception : onOutOfMemoryError;
 
-    auto lookupBuf = (cast(lookup_t*)malloc(range.length * 2 * lookup_t.sizeof))
+    auto lookupBuf = (cast(lookup_t*) malloc(range.length * 2 * lookup_t.sizeof))
                      [0..2 * range.length];
     if (!lookupBuf.ptr)
         onOutOfMemoryError();

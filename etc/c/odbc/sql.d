@@ -284,13 +284,13 @@ enum
 }
 
 // * null handles returned by SQLAllocHandle() *
-enum SQLHANDLE SQL_NULL_HENV  = cast(SQLHANDLE)0;
-enum SQLHANDLE SQL_NULL_HDBC  = cast(SQLHANDLE)0;
-enum SQLHANDLE SQL_NULL_HSTMT = cast(SQLHANDLE)0;
-enum SQLHANDLE SQL_NULL_HDESC = cast(SQLHANDLE)0;
+enum SQLHANDLE SQL_NULL_HENV  = cast(SQLHANDLE) 0;
+enum SQLHANDLE SQL_NULL_HDBC  = cast(SQLHANDLE) 0;
+enum SQLHANDLE SQL_NULL_HSTMT = cast(SQLHANDLE) 0;
+enum SQLHANDLE SQL_NULL_HDESC = cast(SQLHANDLE) 0;
 
 // * null handle used in place of parent handle when allocating HENV *
-enum SQLHANDLE SQL_NULL_HANDLE = cast(SQLHANDLE)0L;
+enum SQLHANDLE SQL_NULL_HANDLE = cast(SQLHANDLE) 0L;
 
 // * Values that may appear in the result set of SQLSpecialColumns() *
 enum

@@ -552,7 +552,7 @@ uint SQL_LEN_DATA_AT_EXEC()
     uint length
 )
 {
-    return ( ( -1 * length ) + cast(uint)SQL_LEN_DATA_AT_EXEC_OFFSET );
+    return ( ( -1 * length ) + cast(uint) SQL_LEN_DATA_AT_EXEC_OFFSET );
 }
 
 // * binary length for driver specific attributes *
@@ -563,7 +563,7 @@ uint SQL_LEN_BINARY_ATTR()
     uint length
 )
 {
-    return ( ( -1 * length ) + cast(uint)SQL_LEN_BINARY_ATTR_OFFSET );
+    return ( ( -1 * length ) + cast(uint) SQL_LEN_BINARY_ATTR_OFFSET );
 }
 
 // * Defines used by Driver Manager when mapping SQLSetParam to SQLBindParameter *

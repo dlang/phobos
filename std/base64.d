@@ -1717,7 +1717,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         if (chr > 0x7f)
             throw new Base64Exception("Base64-encoded character must be a single byte");
 
-        return decodeChar(cast(char)chr);
+        return decodeChar(cast(char) chr);
     }
 }
 
@@ -1985,17 +1985,17 @@ class Base64Exception : Exception
 
         foreach (u, e; tests)
         {
-            assert(equal(Base64.encoder(cast(ubyte[])u), e[0]));
-            assert(equal(Base64.decoder(Base64.encoder(cast(ubyte[])u)), u));
+            assert(equal(Base64.encoder(cast(ubyte[]) u), e[0]));
+            assert(equal(Base64.decoder(Base64.encoder(cast(ubyte[]) u)), u));
 
-            assert(equal(Base64URL.encoder(cast(ubyte[])u), e[1]));
-            assert(equal(Base64URL.decoder(Base64URL.encoder(cast(ubyte[])u)), u));
+            assert(equal(Base64URL.encoder(cast(ubyte[]) u), e[1]));
+            assert(equal(Base64URL.decoder(Base64URL.encoder(cast(ubyte[]) u)), u));
 
-            assert(equal(Base64NoPadding.encoder(cast(ubyte[])u), e[2]));
-            assert(equal(Base64NoPadding.decoder(Base64NoPadding.encoder(cast(ubyte[])u)), u));
+            assert(equal(Base64NoPadding.encoder(cast(ubyte[]) u), e[2]));
+            assert(equal(Base64NoPadding.decoder(Base64NoPadding.encoder(cast(ubyte[]) u)), u));
 
-            assert(equal(Base64Re.encoder(cast(ubyte[])u), e[3]));
-            assert(equal(Base64Re.decoder(Base64Re.encoder(cast(ubyte[])u)), u));
+            assert(equal(Base64Re.encoder(cast(ubyte[]) u), e[3]));
+            assert(equal(Base64Re.decoder(Base64Re.encoder(cast(ubyte[]) u)), u));
         }
     }
 }

@@ -1088,16 +1088,16 @@ void multibyteTriangleAccumulateD(uint[] dest, uint[] x) pure
              dest[i+i+1 .. i+x.length], x[i+1..$], x[i], 0);
     }
     ulong c = cast(ulong)(x[$-3]) * x[$-2] + dest[$-5];
-    dest[$-5] = cast(uint)c;
+    dest[$-5] = cast(uint) c;
     c >>= 32;
     c += cast(ulong)(x[$-3]) * x[$-1] + dest[$-4];
-    dest[$-4] = cast(uint)c;
+    dest[$-4] = cast(uint) c;
     c >>= 32;
 length2:
     c += cast(ulong)(x[$-2]) * x[$-1];
-        dest[$-3] = cast(uint)c;
+        dest[$-3] = cast(uint) c;
         c >>= 32;
-        dest[$-2] = cast(uint)c;
+        dest[$-2] = cast(uint) c;
 }
 
 //dest += src[0]*src[1...$] + src[1]*src[2..$] + ... + src[$-3]*src[$-2..$]+ src[$-2]*src[$-1]

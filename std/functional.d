@@ -425,7 +425,7 @@ if (S=="<"||S==">"||S=="<="||S==">="||S=="=="||S=="!=")
     {
         import std.traits : CommonType;
         alias T = CommonType!(ElementType1, ElementType2);
-        return mixin("cast(T)a "~S~" cast(T)b");
+        return mixin("cast(T)a "~S~" cast(T) b");
     }
 
     bool safeOp(T0, T1)(auto ref T0 a, auto ref T1 b)
@@ -1029,9 +1029,9 @@ template memoize(alias fun, uint maxSize)
             static assert(maxSize < size_t.max - (8 * size_t.sizeof - 1));
 
             enum attr = GC.BlkAttr.NO_INTERIOR | (hasIndirections!Value ? 0 : GC.BlkAttr.NO_SCAN);
-            memo = (cast(Value*)GC.malloc(Value.sizeof * maxSize, attr))[0 .. maxSize];
+            memo = (cast(Value*) GC.malloc(Value.sizeof * maxSize, attr))[0 .. maxSize];
             enum nwords = (maxSize + 8 * size_t.sizeof - 1) / (8 * size_t.sizeof);
-            initialized = (cast(size_t*)GC.calloc(nwords * size_t.sizeof, attr | GC.BlkAttr.NO_SCAN))[0 .. nwords];
+            initialized = (cast(size_t*) GC.calloc(nwords * size_t.sizeof, attr | GC.BlkAttr.NO_SCAN))[0 .. nwords];
         }
 
         import core.bitop : bt, bts;

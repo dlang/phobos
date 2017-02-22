@@ -468,7 +468,7 @@ private:
         import std.exception : enforce;
         if (n > smallString)
         {
-            auto p = cast(Group!DataIndex*)enforce(
+            auto p = cast(Group!DataIndex*) enforce(
                 calloc(Group!DataIndex.sizeof,n),
                 "Failed to allocate Captures struct"
             );
