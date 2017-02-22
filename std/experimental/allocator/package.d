@@ -1612,7 +1612,7 @@ lengths = static array containing the size of each dimension
 Returns:
 An N-dimensional array with individual elements of type T.
 */
-auto makeMultidimensionalArray(uint n, T, Allocator)(auto ref Allocator alloc, size_t[n] lengths)
+auto makeMultidimensionalArray(T, Allocator, size_t n)(auto ref Allocator alloc, size_t[n] lengths...)
 {
     static if (n == 1)
     {
@@ -1620,10 +1620,10 @@ auto makeMultidimensionalArray(uint n, T, Allocator)(auto ref Allocator alloc, s
     }
     else
     {
-        alias E = typeof(makeMultidimensionalArray!(n - 1, T)(alloc, lengths[1..$]));
+        alias E = typeof(makeMultidimensionalArray!(T, Allocator, n - 1)(alloc, lengths[1 .. $]));
         auto ret = makeArray!E(alloc, lengths[0]);
         foreach (ref e; ret)
-            e = makeMultidimensionalArray!(n - 1, T)(alloc, lengths[1..$]);
+            e = makeMultidimensionalArray!(T, Allocator, n - 1)(alloc, lengths[1 .. $]);
         return ret;
     }
 }
@@ -1633,8 +1633,7 @@ auto makeMultidimensionalArray(uint n, T, Allocator)(auto ref Allocator alloc, s
 {
     import std.experimental.allocator.mallocator : Mallocator;
 
-    size_t[3] dimArray = [2, 3, 6];
-    auto mArray = Mallocator.instance.makeMultidimensionalArray!(dimArray.length, int)(dimArray);
+    auto mArray = Mallocator.instance.makeMultidimensionalArray!int(2, 3, 6);
 
     // deallocate when exiting scope
     scope(exit)
@@ -1660,7 +1659,7 @@ T = element type of an element of the multidimensional array
 alloc = the allocator used for getting memory
 array = the multidimensional array that is to be deallocated
 */
-void disposeMultidimensionalArray(Allocator, T)(auto ref Allocator alloc, T[] array)
+void disposeMultidimensionalArray(T, Allocator)(auto ref Allocator alloc, T[] array)
 {
     static if (isArray!T)
     {
@@ -1720,8 +1719,7 @@ void disposeMultidimensionalArray(Allocator, T)(auto ref Allocator alloc, T[] ar
 
     TestAllocator allocator;
 
-    size_t[5] a = [2, 3, 6, 7, 2];
-    auto mArray = allocator.makeMultidimensionalArray!(a.length, int)(a);
+    auto mArray = allocator.makeMultidimensionalArray!int(2, 3, 5, 6, 7, 2);
 
     allocator.disposeMultidimensionalArray(mArray);
 }
