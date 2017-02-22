@@ -204,8 +204,6 @@ evaluate to true.
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto a = [ 1, 2, 0, 4 ];
     assert(any!"a == 2"(a));
 }
@@ -646,9 +644,6 @@ if (isInputRange!Range && !isInfinite!Range &&
 {
     import std.conv : text;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     int[] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
     assert(count(a, 2) == 3, text(count(a, 2)));
     assert(count!("a > b")(a, 2) == 5, text(count!("a > b")(a, 2)));
@@ -665,7 +660,6 @@ if (isInputRange!Range && !isInfinite!Range &&
 
 @safe unittest
 {
-    debug(std_algorithm) printf("algorithm.count.unittest\n");
     string s = "This is a fofofof list";
     string sub = "fof";
     assert(count(s, sub) == 2);
@@ -709,8 +703,6 @@ if (isInputRange!R && !isInfinite!R &&
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
     assert(count!("a == 3")(a) == 2);
     assert(count("日本語") == 3);
@@ -1158,9 +1150,6 @@ if (isInputRange!R &&
     import std.meta : AliasSeq;
     import std.conv : to;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         assert(!endsWith(to!S("abc"), 'a'));
@@ -1561,8 +1550,6 @@ if (isInputRange!InputRange &&
     import std.algorithm.comparison : equal;
     import std.container : SList;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto lst = SList!int(1, 2, 5, 7, 3);
     assert(lst.front == 1);
     auto r = find(lst[], 5);
@@ -1734,7 +1721,6 @@ if (isInputRange!InputRange)
 
 @safe pure unittest
 {
-    //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] r = [ 1, 2, 3 ];
     assert(find!(a=>a > 2)(r) == [3]);
     bool pred(int x) { return x + 1 > 1.5; }
@@ -1821,8 +1807,6 @@ if (isForwardRange!R1 && isForwardRange!R2
     import std.algorithm.comparison : equal;
     import std.container : SList;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto lst = SList!int(1, 2, 5, 7, 3);
     static assert(isForwardRange!(int[]));
     static assert(isForwardRange!(typeof(lst[])));
@@ -1973,7 +1957,6 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
 
 @safe unittest
 {
-    //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     // @@@BUG@@@ removing static below makes unittest fail
     static struct BiRange
     {
@@ -1985,13 +1968,7 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
         void popFront() { return payload.popFront(); }
         void popBack() { return payload.popBack(); }
     }
-    //static assert(isBidirectionalRange!BiRange);
     auto r = BiRange([1, 2, 3, 10, 11, 4]);
-    //assert(equal(find(r, [3, 10]), BiRange([3, 10, 11, 4])));
-    //assert(find("abc", "bc").length == 2);
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    //assert(find!"a == b"("abc", "bc").length == 2);
 }
 
 /// ditto
@@ -2154,9 +2131,6 @@ private R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, scope R2 needle)
 {
     // Test simpleMindedFind for the case where both haystack and needle have
     // length.
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     struct CustomString
     {
     @safe:
@@ -2255,10 +2229,7 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto s1 = "Mary has a little lamb";
-    //writeln(find(s1, "has a", "has an"));
     assert(find(s1, "has a", "has an") == tuple("has a little lamb", 1));
     assert(find(s1, 't', "has a", "has an") == tuple("has a little lamb", 2));
     assert(find(s1, 't', "has a", 'y', "has an") == tuple("y has a little lamb", 3));
@@ -2270,9 +2241,6 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     import std.algorithm.internal : rndstuff;
     import std.meta : AliasSeq;
     import std.uni : toUpper;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     int[] a = [ 1, 2, 3 ];
     assert(find(a, 5).empty);
@@ -2289,7 +2257,6 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 
     // Case-insensitive find of a string
     string[] s = [ "Hello", "world", "!" ];
-    //writeln(find!("toUpper(a) == toUpper(b)")(s, "hello"));
     assert(find!("toUpper(a) == toUpper(b)")(s, "hello").length == 3);
 
     static bool f(string a, string b) { return toUpper(a) == toUpper(b); }
@@ -2302,9 +2269,6 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     import std.algorithm.comparison : equal;
     import std.meta : AliasSeq;
     import std.range : retro;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     int[] a = [ 1, 2, 3, 2, 6 ];
     assert(find(retro(a), 5).empty);
@@ -2326,8 +2290,6 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ -1, 0, 1, 2, 3, 4, 5 ];
     int[] b = [ 1, 2, 3 ];
     assert(find(a, b) == [ 1, 2, 3, 4, 5 ]);
@@ -2361,8 +2323,6 @@ RandomAccessRange find(RandomAccessRange, alias pred, InputRange)(
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     string h = "/homes/aalexand/d/dmd/bin/../lib/libphobos.a(dmain2.o)"~
         "(.gnu.linkonce.tmain+0x74): In function `main' undefined reference"~
         " to `_Dmain':";
@@ -2477,8 +2437,7 @@ template canFind(alias pred="a == b")
 @safe unittest
 {
     import std.algorithm.internal : rndstuff;
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+
     auto a = rndstuff!(int)();
     if (a.length)
     {
@@ -2544,7 +2503,6 @@ if (isForwardRange!(Range))
     import std.internal.test.dummyrange;
     import std.range;
 
-    //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 11, 10, 10, 9, 8, 8, 7, 8, 9 ];
     auto p = findAdjacent(a);
     assert(p == [10, 10, 9, 8, 8, 7, 8, 9 ]);
@@ -2609,7 +2567,6 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
 
 @safe unittest
 {
-    //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ -1, 0, 2, 1, 2, 3, 4, 5 ];
     int[] b = [ 1, 2, 3 ];
     assert(findAmong(a, b) == [2, 1, 2, 3, 4, 5 ]);
@@ -3172,9 +3129,6 @@ if (isInputRange!Range && !isInfinite!Range &&
     import std.conv : text;
     import std.typecons : tuple;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     int[] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
     // Minimum is 1 and occurs 3 times
     assert(a.minCount == tuple(1, 3));
@@ -3187,9 +3141,6 @@ if (isInputRange!Range && !isInfinite!Range &&
     import std.conv : text;
     import std.exception : assertThrown;
     import std.internal.test.dummyrange;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     int[][] b = [ [4], [2, 4], [4], [4] ];
     auto c = minCount!("a[0] < b[0]")(b);
@@ -3207,9 +3158,6 @@ if (isInputRange!Range && !isInfinite!Range &&
 {
     import std.conv : text;
     import std.meta : AliasSeq;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     static struct R(T) //input range
     {
@@ -3539,8 +3487,6 @@ if (isForwardRange!Range && !isInfinite!Range &&
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
     //Test that an empty range works
     int[] b = a[$..$];
@@ -3556,9 +3502,6 @@ if (isForwardRange!Range && !isInfinite!Range &&
     import std.algorithm.comparison : equal;
     import std.container : Array;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     assert(Array!int(2, 3, 4, 1, 2, 4, 1, 1, 2)
                []
                .minPos()
@@ -3568,8 +3511,6 @@ if (isForwardRange!Range && !isInfinite!Range &&
 @safe unittest
 {
     //BUG 9299
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     immutable a = [ 2, 3, 4, 1, 2, 4, 1, 1, 2 ];
     // Minimum is 1 and first occurs in position 3
     assert(minPos(a) == [ 1, 2, 4, 1, 1, 2 ]);
@@ -4155,9 +4096,6 @@ if (isInputRange!R &&
     import std.meta : AliasSeq;
     import std.range;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         assert(!startsWith(to!S("abc"), 'c'));
@@ -4266,7 +4204,6 @@ private void skipAll(alias pred = "a == b", R, Es...)(ref R r, Es es)
 
 @safe unittest
 {
-    //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto s1 = "Hello world";
     skipAll(s1, 'H', 'e');
     assert(s1 == "llo world");
@@ -4328,12 +4265,6 @@ if (isInputRange!Range)
     private Range _input;
     static if (!is(Sentinel == void))
         private Sentinel _sentinel;
-    // mixin(bitfields!(
-    //             OpenRight, "_openRight", 1,
-    //             bool,  "_done", 1,
-    //             uint, "", 6));
-    //             OpenRight, "_openRight", 1,
-    //             bool,  "_done", 1,
     private OpenRight _openRight;
     private bool _done;
 
@@ -4433,7 +4364,6 @@ if (isInputRange!Range)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 4, 7, 7, 2, 4, 7, 3, 5];
 
     static assert(isForwardRange!(typeof(a.until(7))));

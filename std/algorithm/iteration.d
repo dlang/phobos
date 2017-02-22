@@ -665,9 +665,6 @@ private struct MapResult(alias fun, Range)
     import std.conv : to;
     import std.functional : adjoin;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     alias stringize = map!(to!string);
     assert(equal(stringize([ 1, 2, 3, 4 ]), [ "1", "2", "3", "4" ]));
 
@@ -689,8 +686,6 @@ private struct MapResult(alias fun, Range)
     import std.range;
     import std.typecons : tuple;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] arr1 = [ 1, 2, 3, 4 ];
     const int[] arr1Const = arr1;
     int[] arr2 = [ 5, 6 ];
@@ -1179,8 +1174,6 @@ private struct FilterResult(alias pred, Range)
     import std.internal.test.dummyrange;
     import std.range;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 3, 4, 2 ];
     auto r = filter!("a > 3")(a);
     static assert(isForwardRange!(typeof(r)));
@@ -1518,8 +1511,6 @@ if (isInputRange!R)
     import std.internal.test.dummyrange;
     import std.typecons : tuple, Tuple;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
     assert(equal(group(arr), [ tuple(1, 1u), tuple(2, 4u), tuple(3, 1u),
                             tuple(4, 3u), tuple(5, 1u) ][]));
@@ -3015,8 +3006,6 @@ The number of seeds must be correspondingly increased.
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     const float a = 0.0;
     const float[] b = [ 1.2, 3, 3.3 ];
     float[] c = [ 1.2, 3, 3.3 ];
@@ -3837,18 +3826,12 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     import std.array : array;
     import std.range : retro;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
     assert(equal(splitter("žlutoučkýřkůň", 'ř'), [ "žlutoučký", "kůň" ]));
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
     int[][] w = [ [1, 2], [], [3], [4, 5], [] ];
     static assert(isForwardRange!(typeof(splitter(a, 0))));
 
-    // foreach (x; splitter(a, 0))
-    // {
-    //     writeln("[", x, "]");
-    // }
     assert(equal(splitter(a, 0), w));
     a = null;
     assert(equal(splitter(a, 0),  (int[][]).init));
@@ -4088,16 +4071,12 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     import std.conv : text;
     import std.array : split;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto s = ",abc, de, fg,hi,";
     auto sp0 = splitter(s, ',');
-    // //foreach (e; sp0) writeln("[", e, "]");
     assert(equal(sp0, ["", "abc", " de", " fg", "hi", ""][]));
 
     auto s1 = ", abc, de,  fg, hi, ";
     auto sp1 = splitter(s1, ", ");
-    //foreach (e; sp1) writeln("[", e, "]");
     assert(equal(sp1, ["", "abc", "de", " fg", "hi", ""][]));
     static assert(isForwardRange!(typeof(sp1)));
 
@@ -4141,14 +4120,9 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto s6 = ",";
     auto sp6 = splitter(s6, ',');
-    foreach (e; sp6)
-    {
-        //writeln("{", e, "}");
-    }
+    foreach (e; sp6) {}
     assert(equal(sp6, ["", ""][]));
 }
 
@@ -4363,8 +4337,6 @@ private struct SplitterResult(alias isTerminator, Range)
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     void compare(string sentence, string[] witness)
     {
         auto r = splitter!"a == ' '"(sentence);
@@ -5124,8 +5096,6 @@ private struct UniqResult(alias pred, Range)
     import std.internal.test.dummyrange;
     import std.range;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
     auto r = uniq(arr);
     static assert(isForwardRange!(typeof(r)));

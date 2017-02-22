@@ -183,7 +183,6 @@ Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 Source: $(PHOBOSSRC std/_algorithm/package.d)
  */
 module std.algorithm;
-//debug = std_algorithm;
 
 public import std.algorithm.comparison;
 public import std.algorithm.iteration;
