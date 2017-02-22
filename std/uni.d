@@ -774,12 +774,12 @@ size_t replicateBits(size_t times, size_t bits)(size_t val) @safe pure nothrow @
         static if (times == size_t.sizeof*8)
             return val ? size_t.max : 0;
         else
-            return val ? (1<<times)-1 : 0;
+            return val ? (1 << times)-1 : 0;
     }
     else static if (times % 2)
         return (replicateBits!(times-1, bits)(val)<<bits) | val;
     else
-        return replicateBits!(times/2, bits*2)((val<<bits) | val);
+        return replicateBits!(times/2, bits*2)((val << bits) | val);
 }
 
 @safe pure nothrow @nogc unittest // for replicate
@@ -1131,7 +1131,7 @@ pure nothrow:
         immutable r = n % factor;
         immutable tgt_shift = bits*r;
         immutable word = origin[q];
-        origin[q] = (word & ~(mask<<tgt_shift))
+        origin[q] = (word & ~(mask << tgt_shift))
             | (cast(size_t) val << tgt_shift);
     }
 
@@ -1560,7 +1560,7 @@ if (is(T : ElementType!Range))
 {
     assert(isPow2OrZero(range.length));
     size_t idx = 0, m = range.length/2;
-    enum max = 1<<10;
+    enum max = 1 << 10;
     while (m >= max)
     {
         if (pred(range[idx+m], needle))
@@ -3073,7 +3073,7 @@ private:
     version(LittleEndian)
         *dest = val | (*dest & 0xFF00_0000);
     else
-        *dest = (val<<8) | (*dest & 0xFF);
+        *dest = (val << 8) | (*dest & 0xFF);
 }
 
 @system private uint read24(scope const ubyte* ptr, size_t idx) pure nothrow @nogc
@@ -3782,7 +3782,7 @@ private:
     void addValue(size_t level, T)(T val, size_t numVals)
     {
         alias j = idx!level;
-        enum pageSize = 1<<Prefix[level].bitSize;
+        enum pageSize = 1 << Prefix[level].bitSize;
         if (numVals == 0)
             return;
         auto ptr = table.slice!(level);
@@ -3860,7 +3860,7 @@ private:
     {
         alias NextIdx = typeof(table.slice!(level-1)[0]);
         NextIdx next_lvl_index;
-        enum pageSize = 1<<Prefix[level].bitSize;
+        enum pageSize = 1 << Prefix[level].bitSize;
         assert(idx!level % pageSize == 0);
         immutable last = idx!level-pageSize;
         const slice = ptr[idx!level - pageSize .. idx!level];
@@ -3956,7 +3956,7 @@ public:
         table = typeof(table)(indices);
         // one page per level is a bootstrap minimum
         foreach (i, Pred; Prefix)
-            table.length!i = (1<<Pred.bitSize);
+            table.length!i = (1 << Pred.bitSize);
     }
 
     /**
@@ -4652,7 +4652,7 @@ template Utf8Matcher()
     alias Table(int size) = Tables[size-1];
 
     enum leadMask(size_t size) = (cast(size_t) 1<<(7 - size))-1;
-    enum encMask(size_t size) = ((1<<size)-1)<<(8-size);
+    enum encMask(size_t size) = ((1 << size)-1)<<(8-size);
 
     char truncate()(char ch) pure @safe
     {
@@ -5489,13 +5489,13 @@ struct sliceBits(size_t from, size_t to)
     static auto opCall(T)(T x)
     out(result)
     {
-        assert(result < (1<<to-from));
+        assert(result < (1 << to-from));
     }
     body
     {
         static assert(from < to);
         static if (from == 0)
-            return x & ((1<<to)-1);
+            return x & ((1 << to)-1);
         else
         return (x >> from) & ((1<<(to-from))-1);
     }
@@ -5699,15 +5699,15 @@ if (is(Char1 : dchar) && is(Char2 : dchar))
     // not optimized as usually done 1 time (and not public interface)
     if (val < 128)
         arr ~= cast(ubyte) val;
-    else if (val < (1<<13))
+    else if (val < (1 << 13))
     {
-        arr ~= (0b1_00<<5) | cast(ubyte)(val>>8);
+        arr ~= (0b1_00 << 5) | cast(ubyte)(val>>8);
         arr ~= val & 0xFF;
     }
     else
     {
-        assert(val < (1<<21));
-        arr ~= (0b1_01<<5) | cast(ubyte)(val>>16);
+        assert(val < (1 << 21));
+        arr ~= (0b1_01 << 5) | cast(ubyte)(val>>16);
         arr ~= (val >> 8) & 0xFF;
         arr ~= val  & 0xFF;
     }
@@ -5723,7 +5723,7 @@ if (is(Char1 : dchar) && is(Char2 : dchar))
     uint val = (first & 0x1F);
     enforce(idx + extra <= arr.length, "bad code point interval encoding");
     foreach (j; 0 .. extra)
-        val = (val<<8) | arr[idx+j];
+        val = (val << 8) | arr[idx+j];
     idx += extra;
     return val;
 }
@@ -5753,20 +5753,20 @@ if (isInputRange!Range && isIntegralPair!(ElementType!Range))
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
 
-    auto run = [tuple(80, 127), tuple(128, (1<<10)+128)];
-    ubyte[] enc = [cast(ubyte) 80, 47, 1, (0b1_00<<5) | (1<<2), 0];
+    auto run = [tuple(80, 127), tuple(128, (1 << 10)+128)];
+    ubyte[] enc = [cast(ubyte) 80, 47, 1, (0b1_00 << 5) | (1 << 2), 0];
     assert(compressIntervals(run) == enc);
-    auto run2 = [tuple(0, (1<<20)+512+1), tuple((1<<20)+512+4, lastDchar+1)];
-    ubyte[] enc2 = [cast(ubyte) 0, (0b1_01<<5) | (1<<4), 2, 1, 3]; // odd length-ed
+    auto run2 = [tuple(0, (1 << 20)+512+1), tuple((1 << 20)+512+4, lastDchar+1)];
+    ubyte[] enc2 = [cast(ubyte) 0, (0b1_01 << 5) | (1 << 4), 2, 1, 3]; // odd length-ed
     assert(compressIntervals(run2) == enc2);
     size_t  idx = 0;
     assert(decompressFrom(enc, idx) == 80);
     assert(decompressFrom(enc, idx) == 47);
     assert(decompressFrom(enc, idx) == 1);
-    assert(decompressFrom(enc, idx) == (1<<10));
+    assert(decompressFrom(enc, idx) == (1 << 10));
     idx = 0;
     assert(decompressFrom(enc2, idx) == 0);
-    assert(decompressFrom(enc2, idx) == (1<<20)+512+1);
+    assert(decompressFrom(enc2, idx) == (1 << 20)+512+1);
     assert(equal(decompressIntervals(compressIntervals(run)), run));
     assert(equal(decompressIntervals(compressIntervals(run2)), run2));
 }

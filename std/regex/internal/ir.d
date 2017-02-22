@@ -238,18 +238,18 @@ struct Bytecode
     uint raw;
     //natural constraints
     enum maxSequence = 2+4;
-    enum maxData = 1<<22;
-    enum maxRaw = 1<<31;
+    enum maxData = 1 << 22;
+    enum maxRaw = 1 << 31;
 
     this(IR code, uint data)
     {
-        assert(data < (1<<22) && code < 256);
-        raw = code<<24 | data;
+        assert(data < (1 << 22) && code < 256);
+        raw = code << 24 | data;
     }
 
     this(IR code, uint data, uint seq)
     {
-        assert(data < (1<<22) && code < 256 );
+        assert(data < (1 << 22) && code < 256 );
         assert(seq >= 2 && seq < maxSequence);
         raw = code << 24 | (seq - 2)<<22 | data;
     }

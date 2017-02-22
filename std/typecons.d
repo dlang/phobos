@@ -7087,10 +7087,10 @@ template isBitFlagEnum(E)
     enum A
     {
         None,
-        A = 1<<0,
-        B = 1<<1,
-        C = 1<<2,
-        D = 1<<3,
+        A = 1 << 0,
+        B = 1 << 1,
+        C = 1 << 2,
+        D = 1 << 3,
     }
 
     static assert(isBitFlagEnum!A);
@@ -7107,8 +7107,8 @@ template isBitFlagEnum(E)
 
     enum C: double
     {
-        A = 1<<0,
-        B = 1<<1
+        A = 1 << 0,
+        B = 1 << 1
     }
 
     static assert(!isBitFlagEnum!C);
@@ -7126,8 +7126,8 @@ the OR combination, which can produce surprising effects like this:
 ----
 enum E
 {
-    A = 1<<0,
-    B = 1<<1
+    A = 1 << 0,
+    B = 1 << 1
 }
 E e = E.A | E.B;
 // will throw SwitchError
@@ -7274,9 +7274,9 @@ public:
     enum Enum
     {
         None,
-        A = 1<<0,
-        B = 1<<1,
-        C = 1<<2
+        A = 1 << 0,
+        B = 1 << 1,
+        C = 1 << 2
     }
     BitFlags!Enum flags1;
     assert(!(flags1 & (Enum.A | Enum.B | Enum.C)));

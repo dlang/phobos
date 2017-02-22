@@ -288,7 +288,7 @@ uint multibyteDivAssign(uint [] dest, uint divisor, uint overflow)
     ulong c = cast(ulong) overflow;
     for (ptrdiff_t i = dest.length-1; i>= 0; --i)
     {
-        c = (c<<32) + cast(ulong)(dest[i]);
+        c = (c << 32) + cast(ulong)(dest[i]);
         uint q = cast(uint)(c/divisor);
         c -= divisor * q;
         dest[i] = q;

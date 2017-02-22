@@ -7537,10 +7537,10 @@ if (isFloatingPoint!T)
 {
     foreach (ulong i; 1 .. 62)
     {
-        assert(nextPow2(1UL<<i) == 2UL<<i);
-        assert(nextPow2((1UL<<i) - 1) == 1UL<<i);
-        assert(nextPow2((1UL<<i) + 1) == 2UL<<i);
-        assert(nextPow2((1UL<<i) + (1UL<<(i-1))) == 2UL<<i);
+        assert(nextPow2(1UL << i) == 2UL << i);
+        assert(nextPow2((1UL << i) - 1) == 1UL << i);
+        assert(nextPow2((1UL << i) + 1) == 2UL << i);
+        assert(nextPow2((1UL << i) + (1UL<<(i-1))) == 2UL << i);
     }
 }
 
@@ -7667,10 +7667,10 @@ if (isFloatingPoint!T)
 {
     foreach (ulong i; 1 .. 62)
     {
-        assert(truncPow2(2UL<<i) == 2UL<<i);
-        assert(truncPow2((2UL<<i) + 1) == 2UL<<i);
-        assert(truncPow2((2UL<<i) - 1) == 1UL<<i);
-        assert(truncPow2((2UL<<i) - (2UL<<(i-1))) == 1UL<<i);
+        assert(truncPow2(2UL << i) == 2UL << i);
+        assert(truncPow2((2UL << i) + 1) == 2UL << i);
+        assert(truncPow2((2UL << i) - 1) == 1UL << i);
+        assert(truncPow2((2UL << i) - (2UL<<(i-1))) == 1UL << i);
     }
 }
 
