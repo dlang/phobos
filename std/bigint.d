@@ -658,7 +658,7 @@ public:
             else
             {
                 if (l <= ulong(T.max)+1)
-                    return cast(T)-long(l); // -long.min==long.min
+                    return cast(T)-long(l); // -long.min == long.min
             }
         }
 

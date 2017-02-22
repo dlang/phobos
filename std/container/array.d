@@ -1372,7 +1372,7 @@ $(D r)
     assert(i == 1);
 
     //Just to make sure the GC doesn't collect before the above test.
-    assert(c.dummy ==1);
+    assert(c.dummy == 1);
 }
 @system unittest //6998-2
 {

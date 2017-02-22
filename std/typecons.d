@@ -6179,7 +6179,7 @@ mixin template Proxy(alias a)
     }
     static void allFail(T0, T1)(T0 a, T1 b)
     {
-        assert(!(a==b));
+        assert(!(a == b));
         assert(!(a<b));
         assert(!(a<=b));
         assert(!(a>b));
@@ -6206,7 +6206,7 @@ mixin template Proxy(alias a)
             assert(!(a>=b));
 
             a = 4;
-            assert(a==b);
+            assert(a == b);
             assert(!(a<b));
             assert(a<=b);
             assert(!(a>b));

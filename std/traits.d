@@ -991,9 +991,9 @@ template arity(alias func)
 @safe unittest
 {
     void foo(){}
-    static assert(arity!foo==0);
+    static assert(arity!foo == 0);
     void bar(uint){}
-    static assert(arity!bar==1);
+    static assert(arity!bar == 1);
     void variadicFoo(uint...){}
     static assert(!__traits(compiles, arity!variadicFoo));
 }

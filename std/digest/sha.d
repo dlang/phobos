@@ -208,7 +208,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
     static assert(!(blockSize == 1024 && digestSize < 224),
         "Invalid SHA digestSize for a blockSize of 1024. The digestSize must be 224, 256, 384 or 512.");
 
-    static if (digestSize==160) /* SHA-1 */
+    static if (digestSize == 160) /* SHA-1 */
     {
         version(USE_SSSE3)
         {
@@ -636,7 +636,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
             T_SHA2_16_79!Word(62, W, C, D, E, F, G, H, A, B, constants[62]);
             T_SHA2_16_79!Word(63, W, B, C, D, E, F, G, H, A, constants[63]);
 
-            static if (is(Word==ulong))
+            static if (is(Word == ulong))
             {
                 T_SHA2_16_79!Word(64, W, A, B, C, D, E, F, G, H, constants[64]);
                 T_SHA2_16_79!Word(65, W, H, A, B, C, D, E, F, G, constants[65]);
@@ -706,9 +706,9 @@ struct SHA(uint hashBlockSize, uint digestSize)
             index = (cast(uint) count[0] >> 3) & (blockSizeInBytes - 1);
 
             /* Update number of bits */
-            static if (blockSize==512)
+            static if (blockSize == 512)
                 count[0] += inputLen * 8;
-            else static if (blockSize==1024)
+            else static if (blockSize == 1024)
             {
                 /* ugly hack to work around lack of ucent */
                 auto oldCount0 = count[0];
@@ -756,7 +756,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
          */
         ubyte[digestSize/8] finish() @trusted pure nothrow @nogc
         {
-            static if (blockSize==512)
+            static if (blockSize == 512)
             {
                 ubyte[32] data = void;
                 uint index, padLen;
@@ -780,7 +780,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
                 start();
                 return data[0 .. digestSize/8];
             }
-            else static if (blockSize==1024)
+            else static if (blockSize == 1024)
             {
                 ubyte[64] data = void;
                 uint index, padLen;

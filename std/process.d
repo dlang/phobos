@@ -2847,7 +2847,7 @@ version(Windows) version(unittest)
         {
             auto q = escapeWindowsArgument(s);
             auto args = parseCommandLine("Dummy.exe " ~ q);
-            assert(args.length==2, s ~ " => " ~ q ~ " #" ~ text(args.length-1));
+            assert(args.length == 2, s ~ " => " ~ q ~ " #" ~ text(args.length-1));
             assert(args[1] == s, s ~ " => " ~ q ~ " => " ~ args[1]);
         }
     }

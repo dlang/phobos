@@ -1575,11 +1575,11 @@ if (isInputRange!InputRange &&
 {
     int[] a1 = [1, 2, 3];
     assert(!find              ([1, 2, 3], 2).empty);
-    assert(!find!((a,b)=>a==b)([1, 2, 3], 2).empty);
+    assert(!find!((a,b)=>a == b)([1, 2, 3], 2).empty);
     ubyte[] a2 = [1, 2, 3];
     ubyte   b2 = 2;
     assert(!find              ([1, 2, 3], 2).empty);
-    assert(!find!((a,b)=>a==b)([1, 2, 3], 2).empty);
+    assert(!find!((a,b)=>a == b)([1, 2, 3], 2).empty);
 }
 
 @safe pure unittest
@@ -1592,11 +1592,11 @@ if (isInputRange!InputRange &&
             R r1 = "hello world";
             E e1 = 'w';
             assert(find              ("hello world", 'w') == "world");
-            assert(find!((a,b)=>a==b)("hello world", 'w') == "world");
+            assert(find!((a,b)=>a == b)("hello world", 'w') == "world");
             R r2 = "日c語";
             E e2 = 'c';
             assert(find              ("日c語", 'c') == "c語");
-            assert(find!((a,b)=>a==b)("日c語", 'c') == "c語");
+            assert(find!((a,b)=>a == b)("日c語", 'c') == "c語");
             R r3 = "0123456789";
             E e3 = 'A';
             assert(find              ("0123456789", 'A').empty);
@@ -1605,7 +1605,7 @@ if (isInputRange!InputRange &&
                 R r4 = "hello world";
                 E e4 = 'w';
                 assert(find              ("日本語", '本') == "本語");
-                assert(find!((a,b)=>a==b)("日本語", '本') == "本語");
+                assert(find!((a,b)=>a == b)("日本語", '本') == "本語");
             }
         }
     }
@@ -1621,11 +1621,11 @@ if (isInputRange!InputRange &&
 
     int[] a1 = [1, 2, 3];
     static assert(find              ([1, 2, 3], 2));
-    static assert(find!((a,b)=>a==b)([1, 2, 3], 2));
+    static assert(find!((a,b)=>a == b)([1, 2, 3], 2));
     ubyte[] a2 = [1, 2, 3];
     ubyte   b2 = 2;
     static assert(find              ([1, 2, 3], 2));
-    static assert(find!((a,b)=>a==b)([1, 2, 3], 2));
+    static assert(find!((a,b)=>a == b)([1, 2, 3], 2));
 }
 
 @safe unittest

@@ -747,7 +747,7 @@ if (isInputRange!InputRange
     InputRange range;
     fill(range,[1,2]);
     foreach (i,value;range.arr)
-    assert(value == (i%2==0?1:2));
+    assert(value == (i%2 == 0?1:2));
 
     //test with a input being a "reference forward" range
     fill(a, new ReferenceForwardRange!int([8, 9]));

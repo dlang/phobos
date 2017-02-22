@@ -64,7 +64,7 @@ uint multibyteAddSub(char op)(uint[] dest, const(uint) [] src1,
     assert(c[0]==0x8000_0003);
     assert(c[1]==4);
     assert(c[19]==0x3333_3333); // check for overrun
-    assert(carry==1);
+    assert(carry == 1);
     for (size_t i = 0; i < a.length; ++i)
     {
         a[i] = b[i] = c[i] = 0;

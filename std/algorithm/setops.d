@@ -389,7 +389,7 @@ if (ranges.length >= 2 &&
                 r.popFront();
                 if (!r.empty) break;
 
-                static if (i==0)
+                static if (i == 0)
                     empty = true;
                 else
                     r = ranges[i].save; // rollover

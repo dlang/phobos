@@ -225,7 +225,7 @@ public:
                 if (data.length >= i+1)
                 {
                     // Since ZERO is [0], so we cannot simply return 1 here, as
-                    // data[i] would be 0 for i==0 in that case.
+                    // data[i] would be 0 for i == 0 in that case.
                     return (data[i] > 0) ? 1 : 0;
                 }
                 else
@@ -250,9 +250,9 @@ public:
             return false;
         uint ylo = cast(uint)(y & 0xFFFF_FFFF);
         uint yhi = cast(uint)(y >> 32);
-        if (data.length==2 && data[1]!=yhi)
+        if (data.length == 2 && data[1]!=yhi)
             return false;
-        if (data.length==1 && yhi!=0)
+        if (data.length == 1 && yhi!=0)
             return false;
         return (data[0] == ylo);
     }
@@ -463,7 +463,7 @@ public:
         uint bits = cast(uint) y & BIGDIGITSHIFTMASK;
         if ((y>>LG2BIGDIGITBITS) >= data.length) return BigUint(ZERO);
         uint words = cast(uint)(y >> LG2BIGDIGITBITS);
-        if (bits==0)
+        if (bits == 0)
         {
             return BigUint(data[words..$]);
         }
@@ -489,7 +489,7 @@ public:
         uint words = cast(uint)(y >> LG2BIGDIGITBITS);
         BigDigit [] result = new BigDigit[data.length + words+1];
         result[0 .. words] = 0;
-        if (bits==0)
+        if (bits == 0)
         {
             result[words .. words+data.length] = data[];
             return BigUint(trustedAssumeUnique(result[0 .. words+data.length]));
@@ -497,7 +497,7 @@ public:
         else
         {
             immutable c = multibyteShl(result[words .. words+data.length], data, bits);
-            if (c==0) return BigUint(trustedAssumeUnique(result[0 .. words+data.length]));
+            if (c == 0) return BigUint(trustedAssumeUnique(result[0 .. words+data.length]));
             result[$-1] = c;
             return BigUint(trustedAssumeUnique(result));
         }
@@ -581,7 +581,7 @@ public:
     //  y must not be zero.
     static BigUint mulInt(T = ulong)(BigUint x, T y) pure nothrow
     {
-        if (y==0 || x == 0) return BigUint(ZERO);
+        if (y == 0 || x == 0) return BigUint(ZERO);
         uint hi = cast(uint)(y >>> 32);
         uint lo = cast(uint)(y & 0xFFFF_FFFF);
         uint [] result = new BigDigit[x.data.length+1+(hi!=0)];
@@ -598,7 +598,7 @@ public:
      */
     static BigUint mul(BigUint x, BigUint y) pure nothrow
     {
-        if (y==0 || x == 0)
+        if (y == 0 || x == 0)
             return BigUint(ZERO);
         auto len = x.data.length + y.data.length;
         BigDigit [] result = new BigDigit[len];
@@ -736,9 +736,9 @@ public:
     static BigUint pow(BigUint x, ulong y) pure nothrow
     {
         // Deal with the degenerate cases first.
-        if (y==0) return BigUint(ONE);
-        if (y==1) return x;
-        if (x==0 || x==1) return x;
+        if (y == 0) return BigUint(ONE);
+        if (y == 1) return x;
+        if (x == 0 || x == 1) return x;
 
         BigUint result;
 
@@ -975,7 +975,7 @@ pure @system unittest
    BigUint r = BigUint([5]);
    BigUint t = BigUint([7]);
    BigUint s = BigUint.mod(r, t);
-   assert(s==5);
+   assert(s == 5);
 }
 
 
@@ -1478,7 +1478,7 @@ void squareInternal(BigDigit[] result, const BigDigit[] x) pure nothrow
   assert(result.length == 2*x.length);
   if (x.length <= KARATSUBASQUARELIMIT)
   {
-      if (x.length==1)
+      if (x.length == 1)
       {
          result[1] = multibyteMul(result[0 .. 1], x, x[0], 0);
          return;
@@ -1903,7 +1903,7 @@ body
     {
         result[right.length .. left.length] = left[right.length .. $];
         carry = multibyteIncrementAssign!('-')(result[right.length..$], carry);
-    } //else if (result.length==left.length+1) { result[$-1] = carry; carry=0; }
+    } //else if (result.length == left.length+1) { result[$-1] = carry; carry=0; }
     return carry;
 }
 

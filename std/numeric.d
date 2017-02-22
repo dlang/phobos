@@ -239,7 +239,7 @@ private:
         }
         if ((~flags&Flags.storeNormalized) ||
             // Convert denormalized form to normalized form
-            ((flags&Flags.allowDenorm) && exp==0))
+            ((flags&Flags.allowDenorm) && exp == 0))
         {
             if (sig > 0)
             {
@@ -1087,7 +1087,7 @@ whileloop:
 
         // DAC: If the secant predicts a value equal to an endpoint, it's
         // probably false.
-        if (c==a || c==b || c.isNaN() || fabs(c - u) > (b - a) / 2)
+        if (c == a || c == b || c.isNaN() || fabs(c - u) > (b - a) / 2)
         {
             if ((a-b) == a || (b-a) == b)
             {
@@ -1095,9 +1095,9 @@ whileloop:
                     c = 0;
                 else
                 {
-                    if (a==0)
+                    if (a == 0)
                         c = ieeeMean(copysign(T(0), b), b);
-                    else if (b==0)
+                    else if (b == 0)
                         c = ieeeMean(copysign(T(0), a), a);
                     else
                         c = ieeeMean(a, b);
@@ -1120,7 +1120,7 @@ whileloop:
         // yet, or if we don't yet know what the exponent is,
         // perform a binary chop.
 
-        if ((a==0 || b==0 ||
+        if ((a == 0 || b == 0 ||
             (fabs(a) >= T(0.5) * fabs(b) && fabs(b) >= T(0.5) * fabs(a)))
             &&  (b - a) < T(0.25) * (b0 - a0))
         {

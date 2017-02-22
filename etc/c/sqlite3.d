@@ -1182,7 +1182,7 @@ int sqlite3_key_v2(
 
 /**
 ** Change the key on an open database.  If the current database is not
-** encrypted, this routine will encrypt it.  If pNew==0 or nNew==0, the
+** encrypted, this routine will encrypt it.  If pNew == 0 or nNew == 0, the
 ** database is decrypted.
 **
 ** The code to implement this API is not available in the public release

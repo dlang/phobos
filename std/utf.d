@@ -1494,7 +1494,7 @@ if (
 @safe pure @nogc nothrow
 unittest
 {
-    // Add tests for useReplacemendDchar==yes path
+    // Add tests for useReplacemendDchar == yes path
 
     static struct R
     {
@@ -1611,7 +1611,7 @@ if (is(S : const wchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S
 @safe pure @nogc nothrow
 unittest
 {
-    // Add tests for useReplacemendDchar==true path
+    // Add tests for useReplacemendDchar == true path
 
     static struct R
     {
@@ -1675,7 +1675,7 @@ if (is(S : const dchar[]) || (isInputRange!S && is(Unqual!(ElementEncodingType!S
 @safe pure @nogc nothrow
 unittest
 {
-    // Add tests for useReplacemendDchar==true path
+    // Add tests for useReplacemendDchar == true path
 
     static struct R
     {

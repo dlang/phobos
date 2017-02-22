@@ -1759,7 +1759,7 @@ is recommended if you want to process a complete file.
                 assert(i < witness.length);
                 assert(buf == witness[i++]);
             }
-            assert(buf.length==0);
+            assert(buf.length == 0);
         }
     }
 

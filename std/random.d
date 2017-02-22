@@ -2790,7 +2790,7 @@ to remaining data values is sufficiently large.
         size_t s;
         double v, quot, top;
 
-        if (_toSelect==1)
+        if (_toSelect == 1)
         {
             static if (is(UniformRNG == void))
             {

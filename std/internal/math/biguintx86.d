@@ -190,7 +190,7 @@ done:
     }
     c[19]=0x3333_3333;
     uint carry = multibyteAddSub!('+')(c[0 .. 18], a[0 .. 18], b[0 .. 18], 0);
-    assert(carry==1);
+    assert(carry == 1);
     assert(c[0]==0x8000_0003);
     assert(c[1]==4);
     assert(c[19]==0x3333_3333); // check for overrun
@@ -546,14 +546,14 @@ L_last:
     uint r = multibyteShl(aa[2 .. 4], aa[2 .. 4], 4);
     assert(aa[0] == 0xF0FF_FFFF && aa[1]==0x1222_2223
         && aa[2]==0x5555_5560 && aa[3]==0x9999_99A4 && aa[4]==0xBCCC_CCCD);
-    assert(r==8);
+    assert(r == 8);
 
     aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
     r = multibyteShl(aa[1 .. 4], aa[1 .. 4], 4);
     assert(aa[0] == 0xF0FF_FFFF
         && aa[2]==0x5555_5561);
         assert(aa[3]==0x9999_99A4 && aa[4]==0xBCCC_CCCD);
-    assert(r==8);
+    assert(r == 8);
         assert(aa[1]==0x2222_2230);
 
     aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
@@ -1022,7 +1022,7 @@ Lc:
     uint overflow = multibyteMul(aa, aa, 0x8EFD_FCFB, 0x33FF_7461);
     uint r = multibyteDivAssign(aa, 0x8EFD_FCFB, overflow);
     for (int i=0; i<aa.length-1; ++i) assert(aa[i] == 0x8765_4321 * (i+3));
-    assert(r==0x33FF_7461);
+    assert(r == 0x33FF_7461);
 }
 
 // Set dest[2*i .. 2*i+1]+=src[i]*src[i]
@@ -1193,7 +1193,7 @@ length_is_3:
         // now EDX: EAX = c + x[$-3] * x[$-1]
         add [EDI-1*4], EAX; // ECX:dest[$-4] += (EDX:EAX)
         adc ECX, EDX;  //  ECX holds dest[$-3], it acts as carry for the last row
-// do length==2
+// do length == 2
         mov EAX, [ESI - 4*2];
         mul EAX, [ESI - 4*1];
         add ECX, EAX;
