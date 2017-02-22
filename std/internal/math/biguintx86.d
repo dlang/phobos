@@ -82,7 +82,7 @@ string indexedLoopUnroll(int n, string s) pure @safe
         {
             if (s[j]=='@')
             {
-                u ~= s[last..j] ~ nstr;
+                u ~= s[last .. j] ~ nstr;
                 last = j+1;
             }
         }
@@ -152,7 +152,7 @@ L_unrolled:
         setc AL; // save carry
         add ECX, 8;
         ja L_unrolled;
-L2:     // Do the residual 1..7 ints.
+L2:     // Do the residual 1 .. 7 ints.
 
         sub ECX, 8;
         jz done;
@@ -189,7 +189,7 @@ unittest
         b[i]= 0x8000_0003;
     }
     c[19]=0x3333_3333;
-    uint carry = multibyteAddSub!('+')(c[0..18], a[0..18], b[0..18], 0);
+    uint carry = multibyteAddSub!('+')(c[0 .. 18], a[0 .. 18], b[0 .. 18], 0);
     assert(carry==1);
     assert(c[0]==0x8000_0003);
     assert(c[1]==4);
@@ -203,7 +203,7 @@ unittest
     a[10]=0x1D950C84;
     b[10]=0x1D950C84;
     a[5] =0x44444444;
-    carry = multibyteAddSub!('-')(a[0..12], a[0..12], b[0..12], 0);
+    carry = multibyteAddSub!('-')(a[0 .. 12], a[0 .. 12], b[0 .. 12], 0);
     assert(a[11]==0);
     for (int i=0; i<10; ++i) if (i!=5) assert(a[i]==0);
 
@@ -215,7 +215,7 @@ unittest
         }
         a[q-2]=0x040000;
         b[q-2]=0x040000;
-       carry = multibyteAddSub!('-')(a[0..q], a[0..q], b[0..q], 0);
+       carry = multibyteAddSub!('-')(a[0 .. q], a[0 .. q], b[0 .. q], 0);
        assert(a[q-2]==0);
     }
 }
@@ -251,13 +251,13 @@ L2:     dec EAX;
 }
 
 /** dest[#] = src[#] << numbits
- *  numbits must be in the range 1..31
+ *  numbits must be in the range 1 .. 31
  *  Returns the overflow
  */
 uint multibyteShlNoMMX(uint [] dest, const uint [] src, uint numbits) pure
 {
     // Timing: Optimal for P6 family.
-    // 2.0 cycles/int on PPro..PM (limited by execution port p0)
+    // 2.0 cycles/int on PPro .. PM (limited by execution port p0)
     // 5.0 cycles/int on Athlon, which has 7 cycles for SHLD!!
     enum { LASTPARAM = 4*4 } // 3* pushes + return address.
     asm pure nothrow {
@@ -302,7 +302,7 @@ L_last:
 }
 
 /** dest[#] = src[#] >> numbits
- *  numbits must be in the range 1..31
+ *  numbits must be in the range 1 .. 31
  * This version uses MMX.
  */
 uint multibyteShl(uint [] dest, const uint [] src, uint numbits) pure
@@ -473,12 +473,12 @@ L_length1:
 }
 
 /** dest[#] = src[#] >> numbits
- *  numbits must be in the range 1..31
+ *  numbits must be in the range 1 .. 31
  */
 void multibyteShrNoMMX(uint [] dest, const uint [] src, uint numbits) pure
 {
     // Timing: Optimal for P6 family.
-    // 2.0 cycles/int on PPro..PM (limited by execution port p0)
+    // 2.0 cycles/int on PPro .. PM (limited by execution port p0)
     // Terrible performance on AMD64, which has 7 cycles for SHRD!!
     enum { LASTPARAM = 4*4 } // 3* pushes + return address.
     asm pure nothrow {
@@ -543,13 +543,13 @@ unittest
 
 
     aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
-    uint r = multibyteShl(aa[2..4], aa[2..4], 4);
+    uint r = multibyteShl(aa[2 .. 4], aa[2 .. 4], 4);
     assert(aa[0] == 0xF0FF_FFFF && aa[1]==0x1222_2223
         && aa[2]==0x5555_5560 && aa[3]==0x9999_99A4 && aa[4]==0xBCCC_CCCD);
     assert(r==8);
 
     aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
-    r = multibyteShl(aa[1..4], aa[1..4], 4);
+    r = multibyteShl(aa[1 .. 4], aa[1 .. 4], 4);
     assert(aa[0] == 0xF0FF_FFFF
         && aa[2]==0x5555_5561);
         assert(aa[3]==0x9999_99A4 && aa[4]==0xBCCC_CCCD);
@@ -557,7 +557,7 @@ unittest
         assert(aa[1]==0x2222_2230);
 
     aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
-    r = multibyteShl(aa[0..4], aa[1..5], 31);
+    r = multibyteShl(aa[0 .. 4], aa[1 .. 5], 31);
 }
 
 /** dest[#] = src[#] * multiplier + carry.
@@ -627,7 +627,7 @@ L_odd:
 unittest
 {
     uint [] aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD, 0xEEEE_EEEE];
-    multibyteMul(aa[1..4], aa[1..4], 16, 0);
+    multibyteMul(aa[1 .. 4], aa[1 .. 4], 16, 0);
     assert(aa[0] == 0xF0FF_FFFF && aa[1] == 0x2222_2230 &&
         aa[2]==0x5555_5561 && aa[3]==0x9999_99A4 && aa[4]==0x0BCCC_CCCD);
 }
@@ -725,9 +725,9 @@ string asmMulAdd_enter_odd(string OP, string M_ADDRESS) pure
 
 
 /**
- * dest[#] += src[#] * multiplier OP carry(0..FFFF_FFFF).
+ * dest[#] += src[#] * multiplier OP carry(0 .. FFFF_FFFF).
  * where op == '+' or '-'
- * Returns carry out of MSB (0..FFFF_FFFF).
+ * Returns carry out of MSB (0 .. FFFF_FFFF).
  */
 uint multibyteMulAdd(char op)(uint [] dest, const uint [] src, uint
         multiplier, uint carry) pure {
@@ -807,14 +807,14 @@ unittest
 }
 
 /**
-   Sets result[#] = result[0..left.length] + left[#] * right[#]
+   Sets result[#] = result[0 .. left.length] + left[#] * right[#]
 
    It is defined in this way to allow cache-efficient multiplication.
    This function is equivalent to:
     ----
     for (int i = 0; i< right.length; ++i)
     {
-        dest[left.length + i] = multibyteMulAdd(dest[i..left.length+i],
+        dest[left.length + i] = multibyteMulAdd(dest[i .. left.length+i],
                 left, right[i], 0);
     }
     ----
@@ -900,7 +900,7 @@ L_enter_odd:
 }
 
 /**  dest[#] /= divisor.
- * overflow is the initial remainder, and must be in the range 0..divisor-1.
+ * overflow is the initial remainder, and must be in the range 0 .. divisor-1.
  * divisor must not be a power of 2 (use right shift for that case;
  * A division by zero will occur if divisor is a power of 2).
  * Returns the final remainder
@@ -935,7 +935,7 @@ uint multibyteDivAssign(uint [] dest, uint divisor, uint overflow) pure
 
         // Loop from msb to lsb
         lea     EDI, [EDI + 4*EBX];
-        mov EBP, EAX; // rem is the input remainder, in 0..divisor-1
+        mov EBP, EAX; // rem is the input remainder, in 0 .. divisor-1
         // Build the pseudo-inverse of divisor k: 2^64/k
         // First determine the shift in ecx to get the max number of bits in kinv
         xor     ECX, ECX;
@@ -991,7 +991,7 @@ Ld:     inc     ESI;
 
         // Adjust quotient and remainder on single word
 Lb:     cmp     EBP, [ESP + LASTPARAM+LOCALS]; //divisor;
-        jc      Lc; // rem in 0..divisor-1, OK
+        jc      Lc; // rem in 0 .. divisor-1, OK
         sub     EBP, [ESP + LASTPARAM+LOCALS]; //divisor;
         inc     ESI;
         jmp     Lb;
@@ -1025,7 +1025,7 @@ unittest
     assert(r==0x33FF_7461);
 }
 
-// Set dest[2*i..2*i+1]+=src[i]*src[i]
+// Set dest[2*i .. 2*i+1]+=src[i]*src[i]
 void multibyteAddDiagonalSquares(uint [] dest, const uint [] src) pure
 {
     /* Unlike mulAdd, the carry is only 1 bit,
@@ -1215,7 +1215,7 @@ L_enter_odd:
 unittest
 {
    uint [] aa = new uint[200];
-   uint [] a  = aa[0..100];
+   uint [] a  = aa[0 .. 100];
    uint [] b  = new uint [100];
    aa[] = 761;
    a[] = 0;
@@ -1223,8 +1223,8 @@ unittest
    a[3] = 6;
    b[0]=1;
    b[1] = 17;
-   b[50..100]=78;
-   multibyteTriangleAccumulateAsm(a, b[0..50]);
+   b[50 .. 100]=78;
+   multibyteTriangleAccumulateAsm(a, b[0 .. 50]);
    uint [] c = new uint[100];
    c[] = 0;
    c[1] = 17;
@@ -1239,7 +1239,7 @@ unittest
    b[2]=  0xdaa797ed;
    b[3] = 0;
 
-   multibyteTriangleAccumulateAsm(a[0..8], b[0..4]);
+   multibyteTriangleAccumulateAsm(a[0 .. 8], b[0 .. 4]);
    assert(a[1]==0x3a600964);
    assert(a[2]==0x339974f6);
    assert(a[3]==0x46736fce);
@@ -1248,7 +1248,7 @@ unittest
    b[3] = 0xe93ff9f4;
    b[4] = 0x184f03;
    a[]=0;
-   multibyteTriangleAccumulateAsm(a[0..14], b[0..7]);
+   multibyteTriangleAccumulateAsm(a[0 .. 14], b[0 .. 7]);
    assert(a[3]==0x79fff5c2);
    assert(a[4]==0xcf384241);
    assert(a[5]== 0x4a17fc8);
@@ -1261,7 +1261,7 @@ void multibyteSquare(BigDigit[] result, const BigDigit [] x) pure
     if (x.length < 4)
     {
         // Special cases, not worth doing triangular.
-        result[x.length] = multibyteMul(result[0..x.length], x, x[0], 0);
+        result[x.length] = multibyteMul(result[0 .. x.length], x, x[0], 0);
         multibyteMultiplyAccumulate(result[1..$], x, x[1..$]);
         return;
     }
@@ -1293,44 +1293,44 @@ void testPerformance() pure
     // The value for division is quite inconsistent.
     for (int i=0; i<X1.length; ++i) { X1[i]=i; Y1[i]=i; Z1[i]=i; }
     int t, t0;
-    multibyteShl(Z1[0..2000], X1[0..2000], 7);
+    multibyteShl(Z1[0 .. 2000], X1[0 .. 2000], 7);
     t0 = clock();
-    multibyteShl(Z1[0..1000], X1[0..1000], 7);
+    multibyteShl(Z1[0 .. 1000], X1[0 .. 1000], 7);
     t = clock();
-    multibyteShl(Z1[0..2000], X1[0..2000], 7);
+    multibyteShl(Z1[0 .. 2000], X1[0 .. 2000], 7);
     auto shltime = (clock() - t) - (t - t0);
     t0 = clock();
-    multibyteShr(Z1[2..1002], X1[4..1004], 13);
+    multibyteShr(Z1[2 .. 1002], X1[4 .. 1004], 13);
     t = clock();
-    multibyteShr(Z1[2..2002], X1[4..2004], 13);
+    multibyteShr(Z1[2 .. 2002], X1[4 .. 2004], 13);
     auto shrtime = (clock() - t) - (t - t0);
     t0 = clock();
-    multibyteAddSub!('+')(Z1[0..1000], X1[0..1000], Y1[0..1000], 0);
+    multibyteAddSub!('+')(Z1[0 .. 1000], X1[0 .. 1000], Y1[0 .. 1000], 0);
     t = clock();
-    multibyteAddSub!('+')(Z1[0..2000], X1[0..2000], Y1[0..2000], 0);
+    multibyteAddSub!('+')(Z1[0 .. 2000], X1[0 .. 2000], Y1[0 .. 2000], 0);
     auto addtime = (clock() - t) - (t-t0);
     t0 = clock();
-    multibyteMul(Z1[0..1000], X1[0..1000], 7, 0);
+    multibyteMul(Z1[0 .. 1000], X1[0 .. 1000], 7, 0);
     t = clock();
-    multibyteMul(Z1[0..2000], X1[0..2000], 7, 0);
+    multibyteMul(Z1[0 .. 2000], X1[0 .. 2000], 7, 0);
     auto multime = (clock() - t) - (t - t0);
-    multibyteMulAdd!('+')(Z1[0..2000], X1[0..2000], 217, 0);
+    multibyteMulAdd!('+')(Z1[0 .. 2000], X1[0 .. 2000], 217, 0);
     t0 = clock();
-    multibyteMulAdd!('+')(Z1[0..1000], X1[0..1000], 217, 0);
+    multibyteMulAdd!('+')(Z1[0 .. 1000], X1[0 .. 1000], 217, 0);
     t = clock();
-    multibyteMulAdd!('+')(Z1[0..2000], X1[0..2000], 217, 0);
+    multibyteMulAdd!('+')(Z1[0 .. 2000], X1[0 .. 2000], 217, 0);
     auto muladdtime = (clock() - t) - (t - t0);
-    multibyteMultiplyAccumulate(Z1[0..64], X1[0..32], Y1[0..32]);
+    multibyteMultiplyAccumulate(Z1[0 .. 64], X1[0 .. 32], Y1[0 .. 32]);
     t = clock();
-    multibyteMultiplyAccumulate(Z1[0..64], X1[0..32], Y1[0..32]);
+    multibyteMultiplyAccumulate(Z1[0 .. 64], X1[0 .. 32], Y1[0 .. 32]);
     auto accumtime = clock() - t;
     t0 = clock();
-    multibyteDivAssign(Z1[0..2000], 217, 0);
+    multibyteDivAssign(Z1[0 .. 2000], 217, 0);
     t = clock();
-    multibyteDivAssign(Z1[0..1000], 37, 0);
+    multibyteDivAssign(Z1[0 .. 1000], 37, 0);
     auto divtime = (t - t0) - (clock() - t);
         t= clock();
-    multibyteSquare(Z1[0..64], X1[0..32]);
+    multibyteSquare(Z1[0 .. 64], X1[0 .. 32]);
     auto squaretime = clock() - t;
 
     printf("-- BigInt asm performance (cycles/int) --\n");

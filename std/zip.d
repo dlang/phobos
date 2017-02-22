@@ -856,13 +856,13 @@ debug(print)
     import std.stdio, std.conv;
     MinstdRand0 gen;
     const uint itemCount = 20, minSize = 10, maxSize = 500;
-    foreach (variant; 0..2)
+    foreach (variant; 0 .. 2)
     {
         bool useZip64 = !!variant;
         zip1 = new ZipArchive();
         zip1.isZip64 = useZip64;
         ArchiveMember[itemCount] ams;
-        foreach (i; 0..itemCount)
+        foreach (i; 0 .. itemCount)
         {
             ams[i] = new ArchiveMember();
             ams[i].name = to!string(i);
@@ -894,7 +894,7 @@ debug(print)
     string[] names;
     int value = 0;
     // Generate a series of unique numbers as filenames.
-    foreach (i; 0..20)
+    foreach (i; 0 .. 20)
     {
         value += 1 + rand.front & 0xFFFF;
         rand.popFront;

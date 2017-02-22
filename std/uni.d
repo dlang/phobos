@@ -855,11 +855,11 @@ struct MultiArray(Types...)
                     // len includes delta
                     size_t len = (storage.ptr+storage.length-start);
 
-                    copyBackwards(start[0..len-delta], start[delta..len]);
+                    copyBackwards(start[0 .. len-delta], start[delta .. len]);
 
-                    start[0..delta] = 0;
+                    start[0 .. delta] = 0;
                     // offsets are used for raw_slice, ptr etc.
-                    foreach (i; n+1..dim)
+                    foreach (i; n+1 .. dim)
                         offsets[i] += delta;
                 }
             }
@@ -873,10 +873,10 @@ struct MultiArray(Types...)
                 {
                     auto start = raw_ptr!(n+1);
                     size_t len = (storage.ptr+storage.length-start);
-                    copyForward(start[0..len-delta], start[delta..len]);
+                    copyForward(start[0 .. len-delta], start[delta .. len]);
 
                     // adjust offsets last, they affect raw_slice
-                    foreach (i; n+1..dim)
+                    foreach (i; n+1 .. dim)
                         offsets[i] -= delta;
                 }
                 storage.length -= delta;
@@ -932,25 +932,25 @@ private:
 
         static void check(size_t k, T)(ref T m, int n)
         {
-            foreach (i; 0..n)
-                assert(m.slice!(k)[i] == i+1, text("level:",i," : ",m.slice!(k)[0..n]));
+            foreach (i; 0 .. n)
+                assert(m.slice!(k)[i] == i+1, text("level:",i," : ",m.slice!(k)[0 .. n]));
         }
 
         static void checkB(size_t k, T)(ref T m, int n)
         {
-            foreach (i; 0..n)
-                assert(m.slice!(k)[i] == n-i, text("level:",i," : ",m.slice!(k)[0..n]));
+            foreach (i; 0 .. n)
+                assert(m.slice!(k)[i] == n-i, text("level:",i," : ",m.slice!(k)[0 .. n]));
         }
 
         static void fill(size_t k, T)(ref T m, int n)
         {
-            foreach (i; 0..n)
+            foreach (i; 0 .. n)
                 m.slice!(k)[i] = force!ubyte(i+1);
         }
 
         static void fillB(size_t k, T)(ref T m, int n)
         {
-            foreach (i; 0..n)
+            foreach (i; 0 .. n)
                 m.slice!(k)[i] = force!ubyte(n-i);
         }
 
@@ -1225,7 +1225,7 @@ pure nothrow:
         immutable pad_s = roundUp(s);
         if ( s >= e)
         {
-            foreach (i; s..e)
+            foreach (i; s .. e)
                 if (ptr[i])
                     return false;
             return true;
@@ -1297,7 +1297,7 @@ pure nothrow:
         if (pad_start >= end) //rounded up >= then end of slice
         {
             //nothing to gain, use per element assignment
-            foreach (i; start..end)
+            foreach (i; start .. end)
                 ptr[i] = val;
             return;
         }
@@ -1361,7 +1361,7 @@ private:
 private struct SliceOverIndexed(T)
 {
     enum assignableIndex = is(typeof((){ T.init[0] = Item.init; }));
-    enum assignableSlice = is(typeof((){ T.init[0..0] = Item.init; }));
+    enum assignableSlice = is(typeof((){ T.init[0 .. 0] = Item.init; }));
     auto opIndex(size_t idx)const
     in
     {
@@ -1481,8 +1481,8 @@ if (is(Unqual!T == T))
 
     int[] other = [2, 5];
     assert(sliced[] == sliceOverIndexed(1, 2, &other));
-    sliceOverIndexed(0, 2, &idxArray)[0..2] = -1;
-    assert(idxArray[0..2] == [-1, -1]);
+    sliceOverIndexed(0, 2, &idxArray)[0 .. 2] = -1;
+    assert(idxArray[0 .. 2] == [-1, -1]);
     uint[] nullArr = null;
     auto nullSlice = sliceOverIndexed(0, 0, &idxArray);
     assert(nullSlice.empty);
@@ -1509,7 +1509,7 @@ string genUnrolledSwitchSearch(size_t size) @safe pure nothrow
     auto power = bsr(m)+1;
     switch (power){`;
     size_t i = bsr(size);
-    foreach_reverse (val; 0..bsr(size))
+    foreach_reverse (val; 0 .. bsr(size))
     {
         auto v = 2^^val;
         code ~= `
@@ -1590,7 +1590,7 @@ template sharMethod(alias uniLowerBound)
             return range.length - k + uniLowerBound!pred(range[$-k..$], needle);
         }
         else
-            return uniLowerBound!pred(range[0..n], needle);
+            return uniLowerBound!pred(range[0 .. n], needle);
     }
 }
 
@@ -1609,7 +1609,7 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
     immutable MAX = 5*1173;
     auto arr = array(iota(5, MAX, 5));
     assert(arr.length == MAX/5-1);
-    foreach (i; 0..MAX+5)
+    foreach (i; 0 .. MAX+5)
     {
         auto st = stdLowerBound(arr, i);
         assert(st == sharLowerBound(arr, i));
@@ -1640,20 +1640,20 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
             dest.length = dest.length+delta;//@@@BUG lame @property
         else
             dest = Policy.realloc(dest, dest.length+delta);
-        copyBackwards(dest[to..dest.length-delta],
-            dest[to+delta..dest.length]);
-        copyForward(stuff, dest[from..stuff_end]);
+        copyBackwards(dest[to .. dest.length-delta],
+            dest[to+delta .. dest.length]);
+        copyForward(stuff, dest[from .. stuff_end]);
     }
     else if (stuff.length == delta)
     {
-        copy(stuff, dest[from..to]);
+        copy(stuff, dest[from .. to]);
     }
     else
     {// replace decreases length by delta
         delta = delta - stuff.length;
-        copy(stuff, dest[from..stuff_end]);
-        copyForward(dest[to..dest.length],
-            dest[stuff_end..dest.length-delta]);
+        copy(stuff, dest[from .. stuff_end]);
+        copyForward(dest[to .. dest.length],
+            dest[stuff_end .. dest.length-delta]);
         static if (is(Policy == void))
             dest.length = dest.length - delta;//@@@BUG lame @property
         else
@@ -1741,7 +1741,7 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
         if (overflow) assert(0);
 
         auto ptr = cast(T*) enforce(malloc(nbytes), "out of memory on C heap");
-        return ptr[0..size];
+        return ptr[0 .. size];
     }
 
     static T[] realloc(T)(T[] arr, size_t size)
@@ -1760,7 +1760,7 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
         if (overflow) assert(0);
 
         auto ptr = cast(T*) enforce(realloc(arr.ptr, nbytes), "out of memory on C heap");
-        return ptr[0..size];
+        return ptr[0 .. size];
     }
 
     static void replaceImpl(T, Range)(ref T[] dest, size_t from, size_t to, Range stuff)
@@ -2352,9 +2352,9 @@ public:
      * in form of open-right intervals.
      *
      * The formatting flag is applied individually to each value, for example:
-     * $(LI $(B %s) and $(B %d) format the intervals as a [low..high$(RPAREN) range of integrals)
-     * $(LI $(B %x) formats the intervals as a [low..high$(RPAREN) range of lowercase hex characters)
-     * $(LI $(B %X) formats the intervals as a [low..high$(RPAREN) range of uppercase hex characters)
+     * $(LI $(B %s) and $(B %d) format the intervals as a [low .. high$(RPAREN) range of integrals)
+     * $(LI $(B %x) formats the intervals as a [low .. high$(RPAREN) range of lowercase hex characters)
+     * $(LI $(B %X) formats the intervals as a [low .. high$(RPAREN) range of uppercase hex characters)
      */
     void toString(Writer)(scope Writer sink,
                   FormatSpec!char fmt) /* const */
@@ -2647,7 +2647,7 @@ public:
             string result = indent~"{\n";
             // less branch, < a
             result ~= format("%sif (ch < %s)\n%s",
-                deeper, range[idx][0], binaryScope(range[0..idx], deeper));
+                deeper, range[idx][0], binaryScope(range[0 .. idx], deeper));
             // middle point,  >= a && < b
             result ~= format("%selse if (ch < %s) return true;\n",
                 deeper, range[idx][1]);
@@ -2854,7 +2854,7 @@ private:
             data.append(a, b);
             return data.length-1;
         }
-        size_t b_idx = range[a_idx..range.length].lowerBound!(SearchPolicy.gallop)(b).length+a_idx;
+        size_t b_idx = range[a_idx .. range.length].lowerBound!(SearchPolicy.gallop)(b).length+a_idx;
         uint[3] buf = void;
         uint to_insert;
         debug(std_uni)
@@ -2876,7 +2876,7 @@ private:
                 buf[1] = b;
                 to_insert = 2;
             }
-            pos = genericReplace(data, a_idx, b_idx, buf[0..to_insert]);
+            pos = genericReplace(data, a_idx, b_idx, buf[0 .. to_insert]);
             return pos - 1;
         }
 
@@ -2904,7 +2904,7 @@ private:
                 {
                     assert(b_idx+1 < data.length);
                     buf[0] = data[b_idx+1];
-                    pos = genericReplace(data, a_idx, b_idx+2, buf[0..1]);
+                    pos = genericReplace(data, a_idx, b_idx+2, buf[0 .. 1]);
                     return pos - 1;
                 }
                 buf[0] = b;
@@ -2931,7 +2931,7 @@ private:
                     assert(b_idx+1 < data.length);
                     buf[0] = a;
                     buf[1] = data[b_idx+1];
-                    pos = genericReplace(data, a_idx, b_idx+2, buf[0..2]);
+                    pos = genericReplace(data, a_idx, b_idx+2, buf[0 .. 2]);
                     return pos - 1;
                 }
                 buf[0] = a;
@@ -2940,11 +2940,11 @@ private:
                 to_insert = 3;
             }
         }
-        pos = genericReplace(data, a_idx, b_idx+1, buf[0..to_insert]);
+        pos = genericReplace(data, a_idx, b_idx+1, buf[0 .. to_insert]);
         debug(std_uni)
         {
             writefln("marker idx: %d; length=%d", pos, data[pos], data.length);
-            writeln("inserting ", buf[0..to_insert]);
+            writeln("inserting ", buf[0 .. to_insert]);
         }
         return pos - 1;
     }
@@ -2957,7 +2957,7 @@ private:
     }
     body
     {
-        auto range = assumeSorted!"a<=b"(data[pos..data.length]);
+        auto range = assumeSorted!"a<=b"(data[pos .. data.length]);
         if (range.empty)
             return pos;
         size_t idx = pos;
@@ -2995,7 +2995,7 @@ private:
     body
     {
         assert(data.length % 2 == 0);
-        auto range = assumeSorted!"a<=b"(data[pos..data.length]);
+        auto range = assumeSorted!"a<=b"(data[pos .. data.length]);
         size_t idx = pos+range.lowerBound(a).length;
 
         if (idx >= data.length) // could have Marker point to recently removed stuff
@@ -3179,7 +3179,7 @@ struct CowArray(SP=GcPolicy)
             auto new_data = SP.alloc!uint(total);
             // take shrinking into account
             auto to_copy = min(total, data.length) - 1;
-            copy(data[0..to_copy], new_data[0..to_copy]);
+            copy(data[0 .. to_copy], new_data[0 .. to_copy]);
             data = new_data; // before setting refCount!
             refCount = 1;
         }
@@ -3242,7 +3242,7 @@ struct CowArray(SP=GcPolicy)
     {
         size_t nl = length + range.length;
         length = nl;
-        copy(range, this[nl-range.length..nl]);
+        copy(range, this[nl-range.length .. nl]);
     }
 
     void append()(uint[] val...)
@@ -3380,13 +3380,13 @@ private:
         assert(arr[0] == 72);
         assert(arr2[0] == 11);
         // set this to about 100M to stress-test COW memory management
-        foreach (v; 0..10_000)
+        foreach (v; 0 .. 10_000)
             func2(arr);
         assert(equal(arr[], [72, 0xFE_FEFE, 100]));
 
         auto r2 = U24A(iota(0, 100));
         assert(equal(r2[], iota(0, 100)), text(r2[]));
-        copy(iota(10, 170, 2), r2[10..90]);
+        copy(iota(10, 170, 2), r2[10 .. 90]);
         assert(equal(r2[], chain(iota(0, 10), iota(10, 170, 2), iota(90, 100)))
                , text(r2[]));
     }
@@ -3681,7 +3681,7 @@ auto arrayRepr(T)(T x)
     import std.conv : text;
     if (x.length > 32)
     {
-        return text(x[0..16],"~...~", x[x.length-16..x.length]);
+        return text(x[0 .. 16],"~...~", x[x.length-16 .. x.length]);
     }
     else
         return text(x);
@@ -3806,7 +3806,7 @@ private:
         immutable n =  nextPB - j;// can fill right in this page
         if (numVals < n) //fits in current page
         {
-            ptr[j..j+numVals]  = val;
+            ptr[j .. j+numVals]  = val;
             j += numVals;
             return;
         }
@@ -3814,7 +3814,7 @@ private:
         {
             numVals -= n;
             //write till the end of current page
-            ptr[j..j+n]  = val;
+            ptr[j .. j+n]  = val;
             j += n;
             //spill to the next page
             spillToNextPage!level(ptr);
@@ -3832,7 +3832,7 @@ private:
                 while (numVals >= pageSize)
                 {
                     numVals -= pageSize;
-                    ptr[j..j+pageSize]  = val;
+                    ptr[j .. j+pageSize]  = val;
                     j += pageSize;
                     spillToNextPage!level(ptr);
                 }
@@ -3840,7 +3840,7 @@ private:
             if (numVals)
             {
                 // the leftovers, an incomplete page
-                ptr[j..j+numVals]  = val;
+                ptr[j .. j+numVals]  = val;
                 j += numVals;
             }
         }
@@ -3863,11 +3863,11 @@ private:
         enum pageSize = 1<<Prefix[level].bitSize;
         assert(idx!level % pageSize == 0);
         immutable last = idx!level-pageSize;
-        const slice = ptr[idx!level - pageSize..idx!level];
+        const slice = ptr[idx!level - pageSize .. idx!level];
         size_t j;
         for (j=0; j<last; j+=pageSize)
         {
-            if (ptr[j..j+pageSize] == slice)
+            if (ptr[j .. j+pageSize] == slice)
             {
                 // get index to it, reuse ptr space for the next block
                 next_lvl_index = force!NextIdx(j/pageSize);
@@ -3878,9 +3878,9 @@ private:
                         ,level
                         ,indices[level-1], pageSize, j, j+pageSize);
                 writeln("LEVEL(", level
-                        , ") mapped page is: ", slice, ": ", arrayRepr(ptr[j..j+pageSize]));
+                        , ") mapped page is: ", slice, ": ", arrayRepr(ptr[j .. j+pageSize]));
                 writeln("LEVEL(", level
-                        , ") src page is :", ptr, ": ", arrayRepr(slice[0..pageSize]));
+                        , ") src page is :", ptr, ": ", arrayRepr(slice[0 .. pageSize]));
                 }
                 idx!level -= pageSize; // reuse this page, it is duplicate
                 break;
@@ -3899,7 +3899,7 @@ private:
             {
             import std.stdio : writefln;
             writefln("LEVEL(%s) page allocated: %s"
-                     , level, arrayRepr(slice[0..pageSize]));
+                     , level, arrayRepr(slice[0 .. pageSize]));
             writefln("LEVEL(%s) index: %s ; page at this index %s"
                      , level
                      , next_lvl_index
@@ -4267,7 +4267,7 @@ if (sumOfIntegerTuple!sizes == 21)
         // e.g. arabic letter DDAL (\u0688) has a "luck factor" of 2
         ubyte[6] nibbles; // 6 4-bit chunks of code point
         uint value = ch;
-        foreach (i; 0..6)
+        foreach (i; 0 .. 6)
         {
             nibbles[i] = value & 0xF;
             value >>= 4;
@@ -4676,9 +4676,9 @@ template Utf8Matcher()
         std.utf.encode(buf, ch);
         char[sz] ret;
         buf[0] &= leadMask!sz;
-        foreach (n; 1..sz)
+        foreach (n; 1 .. sz)
             buf[n] = buf[n] & 0x3f; //keep 6 lower bits
-        ret[] = buf[0..sz];
+        ret[] = buf[0 .. sz];
         return ret;
     }
 
@@ -4857,7 +4857,7 @@ template Utf8Matcher()
             else static if (size == 4)
             {
                 //0x800-0xFFFF
-                //got 2x6=12 bits in needle[2..3] must use at least 17bits
+                //got 2x6=12 bits in needle[2 .. 3] must use at least 17bits
                 //must use 5 bits (or above) in needle[1] or anything in needle[0]
                 if (needle[0] == 0 && needle[1] < 0x10) badEncoding();
             }
@@ -5197,7 +5197,7 @@ if (is(C : wchar) || is(C : char))
         auto opIndex(size_t i){ return str[idx+i]; }
         @property size_t length(){ return str.length - idx; }
         alias opDollar = length;
-        auto opSlice(size_t a, size_t b){ return Decoder(str[0..idx+b], idx+a); }
+        auto opSlice(size_t a, size_t b){ return Decoder(str[0 .. idx+b], idx+a); }
     }
     static assert(isRandomAccessRange!Decoder);
     static assert(is(ElementType!Decoder : C));
@@ -5229,7 +5229,7 @@ if (is(C : wchar) || is(C : char))
     assert(!utf8.test(codec));
     assert(!utf8.skip(codec));
     assert(utf8.test(codec));
-    foreach (i; 0..7)
+    foreach (i; 0 .. 7)
     {
         assert(!asc.test(codec));
         assert(uni.test(codec));
@@ -5248,7 +5248,7 @@ if (is(C : wchar) || is(C : char))
     assert(!utf8.skip(codec));
     assert(!utf8.skip(codec));
 
-    foreach (i; 0..7)
+    foreach (i; 0 .. 7)
     {
         assert(!asc.test(codec));
         assert(utf8.test(codec));
@@ -5292,8 +5292,8 @@ if (is(C : wchar) || is(C : char))
         wchar[2] buf16;
         auto len = encode(buf, ch);
         auto len16 = encode(buf16, ch);
-        auto c8 = buf[0..len].decoder;
-        auto c16 = buf16[0..len16].decoder;
+        auto c8 = buf[0 .. len].decoder;
+        auto c16 = buf16[0 .. len16].decoder;
         assert(testAll(utf16, c16));
         assert(testAll(bmp, c16) || len16 != 1);
         assert(testAll(nonBmp, c16) || len16 != 2);
@@ -5542,7 +5542,7 @@ template Sequence(size_t start, size_t end)
             {
                 writeln("INDEX (excluding value level):");
                 foreach (i; staticIota!(0, t.table.dim-1) )
-                    writeln(t.table.slice!(i)[0..t.table.length!i]);
+                    writeln(t.table.slice!(i)[0 .. t.table.length!i]);
             }
             writeln("---------------------------");
         }
@@ -5569,7 +5569,7 @@ template Sequence(size_t start, size_t end)
     trieStats(trie2);
     foreach (e; redundant2.byCodepoint)
         assert(trie2[e], text(cast(uint) e, " - ", trie2[e]));
-    foreach (i; 0..1024)
+    foreach (i; 0 .. 1024)
     {
         assert(trie2[i] == (i in redundant2));
     }
@@ -5587,7 +5587,7 @@ template Sequence(size_t start, size_t end)
             sliceBits!(6,8), sliceBits!(4,6), sliceBits!(0,4)
         )(redundant3.byInterval);
     trieStats(trie3);
-    foreach (i; 0..max3)
+    foreach (i; 0 .. max3)
         assert(trie3[i] == (i in redundant3), text(cast(uint) i));
 
     auto redundant4 = Set(
@@ -5598,7 +5598,7 @@ template Sequence(size_t start, size_t end)
     auto trie4 = buildTrie!(bool, size_t, max4,
             sliceBits!(13, 16), sliceBits!(9, 13), sliceBits!(6, 9) , sliceBits!(0, 6)
         )(redundant4.byInterval);
-    foreach (i; 0..max4)
+    foreach (i; 0 .. max4)
     {
         if (i in redundant4)
             assert(trie4[i], text(cast(uint) i));
@@ -5619,7 +5619,7 @@ template Sequence(size_t start, size_t end)
     auto a = array(map!(x => to!ubyte(x))(iota(0, 256)));
     auto bt = buildTrie!(bool, ubyte, sliceBits!(7, 8), sliceBits!(5, 7), sliceBits!(0, 5))(a);
     trieStats(bt);
-    foreach (i; 0..256)
+    foreach (i; 0 .. 256)
         assert(bt[cast(ubyte) i]);
 }
 
@@ -5717,12 +5717,12 @@ if (is(Char1 : dchar) && is(Char2 : dchar))
 {
     import std.exception : enforce;
     immutable first = arr[idx++];
-    if (!(first & 0x80)) // no top bit -> [0..127]
+    if (!(first & 0x80)) // no top bit -> [0 .. 127]
         return first;
     immutable extra = ((first>>5) & 1) + 1; // [1, 2]
     uint val = (first & 0x1F);
     enforce(idx + extra <= arr.length, "bad code point interval encoding");
-    foreach (j; 0..extra)
+    foreach (j; 0 .. extra)
         val = (val<<8) | arr[idx+j];
     idx += extra;
     return val;
@@ -6164,7 +6164,7 @@ private:
         import std.internal.unicode_tables : blocks, scripts, uniProps; // generated file
         return isPrettyPropertyName(name)
             || findSetName!(uniProps.tab)(name) || findSetName!(scripts.tab)(name)
-            || (ucmp(name[0..2],"In") == 0 && findSetName!(blocks.tab)(name[2..$]));
+            || (ucmp(name[0 .. 2],"In") == 0 && findSetName!(blocks.tab)(name[2..$]));
     }
 
     static auto loadAny(Set=CodepointSet, C)(in C[] name) pure
@@ -6173,7 +6173,7 @@ private:
         import std.internal.unicode_tables : blocks, scripts; // generated file
         Set set;
         immutable loaded = loadProperty(name, set) || loadUnicodeSet!(scripts.tab)(name, set)
-            || (name.length > 2 && ucmp(name[0..2],"In") == 0
+            || (name.length > 2 && ucmp(name[0 .. 2],"In") == 0
                 && loadUnicodeSet!(blocks.tab)(name[2..$], set));
         if (loaded)
             return set;
@@ -6363,7 +6363,7 @@ if (is(C : dchar))
     string city = "A\u030Arhus";
     size_t first = graphemeStride(city, 0);
     assert(first == 3); //\u030A has 2 UTF-8 code units
-    assert(city[0..first] == "A\u030A");
+    assert(city[0 .. first] == "A\u030A");
     assert(city[first..$] == "rhus");
 }
 
@@ -6391,7 +6391,7 @@ if (isInputRange!Input && is(Unqual!(ElementType!Input) == dchar))
     gr = decodeGrapheme(s);
     assert(gr.length == 1 && gr[0] == ' ');
     gr = decodeGrapheme(s);
-    assert(gr.length == 2 && equal(gr[0..2], " \u0308"));
+    assert(gr.length == 2 && equal(gr[0 .. 2], " \u0308"));
     s = "\u0300\u0308\u1100";
     assert(equal(decodeGrapheme(s)[], "\u0300\u0308"));
     assert(equal(decodeGrapheme(s)[], "\u1100"));
@@ -6789,7 +6789,7 @@ public:
             if (overflow) assert(0);
 
             auto p = cast(ubyte*) enforce(malloc(raw_cap), "malloc failed");
-            p[0..raw_cap] = ptr_[0..raw_cap];
+            p[0 .. raw_cap] = ptr_[0 .. raw_cap];
             ptr_ = p;
         }
     }
@@ -6943,11 +6943,11 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
     copy[1] = '-';
     assert(g[0] == 'a' && copy[0] == 'X');
     assert(g[1] == 'b' && copy[1] == '-');
-    assert(equal(g[2..g.length], copy[2..copy.length]));
+    assert(equal(g[2 .. g.length], copy[2 .. copy.length]));
     copy = Grapheme("АБВГДЕЁЖЗИКЛМ");
-    assert(equal(copy[0..8], "АБВГДЕЁЖ"), text(copy[0..8]));
+    assert(equal(copy[0 .. 8], "АБВГДЕЁЖ"), text(copy[0 .. 8]));
     copy ~= "xyz";
-    assert(equal(copy[13..15], "xy"), text(copy[13..15]));
+    assert(equal(copy[13 .. 15], "xy"), text(copy[13 .. 15]));
     assert(!copy.valid);
 
     Grapheme h;
@@ -7077,7 +7077,7 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
         }
         else
         {// OK it's a long chunk, like 'ss' for German
-            dstring seq = fTable[idx].seq[0..entryLen];
+            dstring seq = fTable[idx].seq[0 .. entryLen];
             if (rhs == seq[0]
                 && rtail.skipOver(seq[1..$]))
             {
@@ -7351,7 +7351,7 @@ ubyte combiningClass(dchar ch) @safe pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    foreach (ch; 0..0x80)
+    foreach (ch; 0 .. 0x80)
         assert(combiningClass(ch) == 0);
     assert(combiningClass('\u05BD') == 22);
     assert(combiningClass('\u0300') == 230);
@@ -7401,7 +7401,7 @@ public dchar compose(dchar first, dchar second) pure nothrow @safe
     // unpack offset and length
     immutable idx = packed & composeIdxMask, cnt = packed >> composeCntShift;
     // TODO: optimize this micro binary search (no more then 4-5 steps)
-    auto r = compositionTable[idx..idx+cnt].map!"a.rhs"().assumeSorted();
+    auto r = compositionTable[idx .. idx+cnt].map!"a.rhs"().assumeSorted();
     immutable target = r.lowerBound(second).length;
     if (target == cnt)
         return dchar.init;
@@ -7684,7 +7684,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
     auto app = appender!(C[])();
     do
     {
-        app.put(input[0..anchors[0]]);
+        app.put(input[0 .. anchors[0]]);
         foreach (dchar ch; input[anchors[0]..anchors[1]])
             static if (norm == NFD || norm == NFC)
             {
@@ -7708,7 +7708,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
             {
                 // found a stable code point after unstable ones
                 sort!("a[0] < b[0]", SwapStrategy.stable)
-                    (zip(ccc[firstNonStable..idx], decomposed[firstNonStable..idx]));
+                    (zip(ccc[firstNonStable .. idx], decomposed[firstNonStable .. idx]));
                 firstNonStable = decomposed.length;
             }
             else if (clazz != 0 && lastClazz == 0)
@@ -7754,7 +7754,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
         // and move on
         anchors = splitNormalized!norm(input);
     }while (anchors[0] != input.length);
-    app.put(input[0..anchors[0]]);
+    app.put(input[0 .. anchors[0]]);
     return cast(inout(C)[])app.data;
 }
 
@@ -7799,7 +7799,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
 private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow @safe
 {
     assert(input.length == ccc.length);
-    int accumCC = -1;// so that it's out of 0..255 range
+    int accumCC = -1;// so that it's out of 0 .. 255 range
     // writefln("recomposing %( %04x %)", input);
     // first one is always a starter thus we start at i == 1
     size_t i = start+1;
@@ -7885,7 +7885,7 @@ private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
     import std.typecons : tuple;
     import std.utf : codeLength;
 
-    auto br = input[0..idx];
+    auto br = input[0 .. idx];
     size_t region_start = 0;// default
     for (;;)
     {
@@ -7909,7 +7909,7 @@ private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
             break;
         }
     }
-    // writeln("Region to normalize: ", input[region_start..region_end]);
+    // writeln("Region to normalize: ", input[region_start .. region_end]);
     return tuple(region_start, region_end);
 }
 
@@ -8025,7 +8025,7 @@ bool isLower(dchar c)
 @safe unittest
 {
     import std.ascii : isLower;
-    foreach (v; 0..0x80)
+    foreach (v; 0 .. 0x80)
         assert(isLower(v) == .isLower(v));
     assert(.isLower('я'));
     assert(.isLower('й'));
@@ -8058,7 +8058,7 @@ bool isUpper(dchar c)
 @safe unittest
 {
     import std.ascii : isLower;
-    foreach (v; 0..0x80)
+    foreach (v; 0 .. 0x80)
         assert(isLower(v) == .isLower(v));
     assert(!isUpper('й'));
     assert(isUpper('Ж'));
@@ -8112,7 +8112,7 @@ if (isSomeString!S)
         ushort idx = indexFn(cOuter);
         if (idx == ushort.max)
             continue;
-        auto result = appender!S(s[0..i]);
+        auto result = appender!S(s[0 .. i]);
         result.reserve(s.length);
         foreach (dchar c; s[i .. $])
         {
@@ -8136,7 +8136,7 @@ if (isSomeString!S)
                     // unpack length + codepoint
                     immutable uint len = val>>24;
                     result.put(cast(dchar)(val & 0xFF_FFFF));
-                    foreach (j; idx+1..idx+len)
+                    foreach (j; idx+1 .. idx+len)
                         result.put(tableFn(j));
                 }
             }
@@ -8150,7 +8150,7 @@ if (isSomeString!S)
 {
     import std.array : replicate;
     auto s = "abcdefghij".replicate(300);
-    s = s[0..10];
+    s = s[0 .. 10];
 
     toUpper(s);
 
@@ -8661,7 +8661,7 @@ if (is(C == char) || is(C == wchar)  || is(C == dchar))
         if (dest == from)
             return to;
         // got to copy
-        foreach (C c; str[from..to])
+        foreach (C c; str[from .. to])
             str[dest++] = c;
         return dest;
     }
@@ -8705,7 +8705,7 @@ if (is(C == char) || is(C == wchar)  || is(C == dchar))
     {
         destIdx = moveTo(s, destIdx, lastUnchanged, s.length);
     }
-    s = s[0..destIdx];
+    s = s[0 .. destIdx];
 }
 
 // helper to precalculate size of case-converted string
@@ -8739,7 +8739,7 @@ private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
                 immutable len = val>>24;
                 immutable dchar cased = val & 0xFF_FFFF;
                 codeLen += codeLength!C(cased);
-                foreach (j; caseIndex+1..caseIndex+len)
+                foreach (j; caseIndex+1 .. caseIndex+len)
                     codeLen += codeLength!C(tableFn(j));
             }
         }
@@ -8768,7 +8768,7 @@ private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
         alias caseLength = toCaseLength!(indexFn, maxIdx, tableFn);
         auto trueLength = destIdx + caseLength(s[curIdx..$]);
         C[] ns = new C[trueLength];
-        ns[0..destIdx] = s[0..destIdx];
+        ns[0 .. destIdx] = s[0 .. destIdx];
         size_t lastUnchanged = curIdx;
         while (curIdx != s.length)
         {
@@ -8798,14 +8798,14 @@ private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
                 // unpack length + codepoint
                 immutable uint len = val>>24;
                 destIdx = encodeTo(ns, destIdx, cast(dchar)(val & 0xFF_FFFF));
-                foreach (j; caseIndex+1..caseIndex+len)
+                foreach (j; caseIndex+1 .. caseIndex+len)
                     destIdx = encodeTo(ns, destIdx, tableFn(j));
             }
         }
         if (lastUnchanged != s.length)
         {
             auto toCopy = s.length - lastUnchanged;
-            ns[destIdx..destIdx+toCopy] = s[lastUnchanged..$];
+            ns[destIdx .. destIdx+toCopy] = s[lastUnchanged..$];
             destIdx += toCopy;
         }
         assert(ns.length == destIdx);
@@ -8927,7 +8927,7 @@ if (isSomeString!S)
 {
     import std.format : format;
     static import std.ascii;
-    foreach (ch; 0..0x80)
+    foreach (ch; 0 .. 0x80)
         assert(std.ascii.toLower(ch) == toLower(ch));
     assert(toLower('Я') == 'я');
     assert(toLower('Δ') == 'δ');
@@ -8946,7 +8946,7 @@ if (isSomeString!S)
 @safe unittest
 {
     wchar[] test = "hello þ world"w.dup;
-    auto piece = test[6..7];
+    auto piece = test[6 .. 7];
     toUpperInPlace(piece);
     assert(test == "hello Þ world");
 }
@@ -9053,7 +9053,7 @@ dchar toUpper(dchar c)
 {
     import std.format : format;
     static import std.ascii;
-    foreach (ch; 0..0x80)
+    foreach (ch; 0 .. 0x80)
         assert(std.ascii.toUpper(ch) == toUpper(ch));
     assert(toUpper('я') == 'Я');
     assert(toUpper('δ') == 'Δ');
@@ -9176,9 +9176,9 @@ if (isSomeString!S)
         }
 
         // a few combinatorial runs
-        foreach (i; 0..options.length)
-        foreach (j; i..options.length)
-        foreach (k; j..options.length)
+        foreach (i; 0 .. options.length)
+        foreach (j; i .. options.length)
+        foreach (k; j .. options.length)
         {
             auto sample = options[i] ~ options[j] ~ options[k];
             auto sample2 = options[k] ~ options[j] ~ options[i];
@@ -9221,7 +9221,7 @@ bool isAlpha(dchar c)
     auto alpha = unicode("Alphabetic");
     foreach (ch; alpha.byCodepoint)
         assert(isAlpha(ch));
-    foreach (ch; 0..0x4000)
+    foreach (ch; 0 .. 0x4000)
         assert((ch in alpha) == isAlpha(ch));
 }
 
@@ -9241,7 +9241,7 @@ bool isMark(dchar c)
     auto mark = unicode("Mark");
     foreach (ch; mark.byCodepoint)
         assert(isMark(ch));
-    foreach (ch; 0..0x4000)
+    foreach (ch; 0 .. 0x4000)
         assert((ch in mark) == isMark(ch));
 }
 
@@ -9268,7 +9268,7 @@ bool isNumber(dchar c)
     auto n = unicode("N");
     foreach (ch; n.byCodepoint)
         assert(isNumber(ch));
-    foreach (ch; 0..0x4000)
+    foreach (ch; 0 .. 0x4000)
         assert((ch in n) == isNumber(ch));
 }
 
@@ -9309,7 +9309,7 @@ bool isAlphaNum(dchar c)
     foreach (ch; alpha.byCodepoint)
         assert(isAlphaNum(ch));
 
-    foreach (ch; 0..0x4000)
+    foreach (ch; 0 .. 0x4000)
     {
         assert(((ch in n) || (ch in alpha)) == isAlphaNum(ch));
     }
@@ -9388,7 +9388,7 @@ bool isSpace(dchar c)
     auto space = unicode.Zs;
     foreach (ch; space.byCodepoint)
         assert(isSpace(ch));
-    foreach (ch; 0..0x1000)
+    foreach (ch; 0 .. 0x1000)
         assert(isSpace(ch) == space[ch]);
 }
 
@@ -9411,7 +9411,7 @@ bool isGraphical(dchar c)
     import std.format : format;
     foreach (ch; set.byCodepoint)
         assert(isGraphical(ch), format("%4x", ch));
-    foreach (ch; 0..0x4000)
+    foreach (ch; 0 .. 0x4000)
         assert((ch in set) == isGraphical(ch));
 }
 
@@ -9435,7 +9435,7 @@ bool isControl(dchar c)
     auto cc = unicode.Cc;
     foreach (ch; cc.byCodepoint)
         assert(isControl(ch));
-    foreach (ch; 0..0x1000)
+    foreach (ch; 0 .. 0x1000)
         assert(isControl(ch) == cc[ch]);
 }
 

@@ -41,7 +41,7 @@ struct FullCaseEntry
 
     @property auto value() const @trusted pure nothrow @nogc return
     {
-        return seq[0..entry_len];
+        return seq[0 .. entry_len];
     }
 }
 

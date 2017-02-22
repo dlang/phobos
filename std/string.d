@@ -286,7 +286,7 @@ body
 
     // Need to make a copy
     auto copy = new char[s.length + 1];
-    copy[0..s.length] = s[];
+    copy[0 .. s.length] = s[];
     copy[s.length] = 0;
 
     return &assumeUnique(copy)[0];
@@ -321,7 +321,7 @@ pure nothrow unittest
     auto p = toStringz("foo");
     assert(strlen(p) == 3);
     const(char)[] foo = "abbzxyzzy";
-    p = toStringz(foo[3..5]);
+    p = toStringz(foo[3 .. 5]);
     assert(strlen(p) == 2);
 
     string test = "";
@@ -5946,19 +5946,19 @@ if (isSomeString!S ||
             if (!sawDigits)
                 return false;
             // Integer Whole Number
-            if (asciiCmp(codeUnits[i..iLen], "ul") &&
+            if (asciiCmp(codeUnits[i .. iLen], "ul") &&
                     (!bDecimalPoint && !bExponent && !bComplex))
                 return true;
             // Floating-Point Number
-            if (codeUnits[i..iLen].among!((a, b) => asciiCmp(a, b))("fi", "li") &&
+            if (codeUnits[i .. iLen].among!((a, b) => asciiCmp(a, b))("fi", "li") &&
                     (bDecimalPoint || bExponent || bComplex))
                 return true;
-            if (asciiCmp(codeUnits[i..iLen], "ul") &&
+            if (asciiCmp(codeUnits[i .. iLen], "ul") &&
                     (bDecimalPoint || bExponent || bComplex))
                 return false;
             // Could be a Integer or a Float, thus
             // all these suffixes are valid for both
-            return codeUnits[i..iLen].among!((a, b) => asciiCmp(a, b))
+            return codeUnits[i .. iLen].among!((a, b) => asciiCmp(a, b))
                 ("ul", "fi", "li") != 0;
         }
         if (i == iLen - 1)
@@ -6139,9 +6139,9 @@ if (isSomeString!S ||
   }
 
     string s = "$250.99-";
-    assert(isNumeric(s[1..s.length - 2]) == true);
+    assert(isNumeric(s[1 .. s.length - 2]) == true);
     assert(isNumeric(s) == false);
-    assert(isNumeric(s[0..s.length - 1]) == false);
+    assert(isNumeric(s[0 .. s.length - 1]) == false);
     });
 
     assert(!isNumeric("-"));

@@ -2415,7 +2415,7 @@ body
 @safe pure unittest
 {
     string s; // parse doesn't accept rvalues
-    foreach (i; 2..37)
+    foreach (i; 2 .. 37)
     {
         assert(parse!int(s = "0", i) == 0);
         assert(parse!int(s = "1", i) == 1);
@@ -3518,7 +3518,7 @@ if (isSomeString!Source && !is(Source == enum) &&
 
     //Check proper failure
     auto s = "[ 1 , 2 , 3 ]";
-    foreach (i ; 0..s.length-1)
+    foreach (i ; 0 .. s.length-1)
     {
         auto ss = s[0 .. i];
         assertThrown!ConvException(parse!(int[])(ss));
@@ -6069,7 +6069,7 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         auto r = toChars!2(2u);
         assert(r.length == 2);
         assert(r[0] == '1');
-        assert(r[1..2].array == "0");
+        assert(r[1 .. 2].array == "0");
         auto s = r.save;
         assert(r.array == "10");
         assert(s.retro.array == "01");
@@ -6083,7 +6083,7 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         auto r = toChars!8(8u);
         assert(r.length == 2);
         assert(r[0] == '1');
-        assert(r[1..2].array == "0");
+        assert(r[1 .. 2].array == "0");
         auto s = r.save;
         assert(r.array == "10");
         assert(s.retro.array == "01");
@@ -6099,7 +6099,7 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         auto r = toChars(10u);
         assert(r.length == 2);
         assert(r[0] == '1');
-        assert(r[1..2].array == "0");
+        assert(r[1 .. 2].array == "0");
         auto s = r.save;
         assert(r.array == "10");
         assert(s.retro.array == "01");
@@ -6119,7 +6119,7 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         auto r = toChars!10(10);
         assert(r.length == 2);
         assert(r[0] == '1');
-        assert(r[1..2].array == "0");
+        assert(r[1 .. 2].array == "0");
         auto s = r.save;
         assert(r.array == "10");
         assert(s.retro.array == "01");
@@ -6133,7 +6133,7 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         auto r = toChars!(16)(16u);
         assert(r.length == 2);
         assert(r[0] == '1');
-        assert(r[1..2].array == "0");
+        assert(r[1 .. 2].array == "0");
         auto s = r.save;
         assert(r.array == "10");
         assert(s.retro.array == "01");

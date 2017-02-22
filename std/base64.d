@@ -222,7 +222,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         auto      bufptr = buffer.ptr;
         auto      srcptr = source.ptr;
 
-        foreach (Unused; 0..blocks)
+        foreach (Unused; 0 .. blocks)
         {
             immutable val = srcptr[0] << 16 | srcptr[1] << 8 | srcptr[2];
             *bufptr++ = EncodeMap[val >> 18       ];
@@ -256,7 +256,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // encode method can't assume buffer length. So, slice needed.
-        return buffer[0..bufptr - buffer.ptr];
+        return buffer[0 .. bufptr - buffer.ptr];
     }
 
     ///
@@ -304,7 +304,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable remain = srcLen % 3;
         auto      bufptr = buffer.ptr;
 
-        foreach (Unused; 0..blocks)
+        foreach (Unused; 0 .. blocks)
         {
             immutable v1 = source.front; source.popFront();
             immutable v2 = source.front; source.popFront();
@@ -353,7 +353,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             );
 
         // encode method can't assume buffer length. So, slice needed.
-        return buffer[0..bufptr - buffer.ptr];
+        return buffer[0 .. bufptr - buffer.ptr];
     }
 
 
@@ -392,7 +392,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         auto      srcptr = source.ptr;
         size_t    pcount;
 
-        foreach (Unused; 0..blocks)
+        foreach (Unused; 0 .. blocks)
         {
             immutable val = srcptr[0] << 16 | srcptr[1] << 8 | srcptr[2];
             put(range, EncodeMap[val >> 18       ]);
@@ -480,7 +480,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable remain = srcLen % 3;
         size_t    pcount;
 
-        foreach (Unused; 0..blocks)
+        foreach (Unused; 0 .. blocks)
         {
             immutable v1 = source.front; source.popFront();
             immutable v2 = source.front; source.popFront();
@@ -668,7 +668,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
                 encoder.range_   = range_.save;
                 encoder.buffer_  = buffer_.dup;
-                encoder.encoded_ = encoder.buffer_[0..encoded_.length];
+                encoder.encoded_ = encoder.buffer_[0 .. encoded_.length];
 
                 return encoder;
             }
@@ -1001,7 +1001,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         auto      srcptr = source.ptr;
         auto      bufptr = buffer.ptr;
 
-        foreach (Unused; 0..blocks)
+        foreach (Unused; 0 .. blocks)
         {
             immutable v1 = decodeChar(*srcptr++);
             immutable v2 = decodeChar(*srcptr++);
@@ -1037,7 +1037,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             }
         }
 
-        return buffer[0..bufptr - buffer.ptr];
+        return buffer[0 .. bufptr - buffer.ptr];
     }
 
     ///
@@ -1086,7 +1086,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable blocks = srcLen / 4;
         auto      bufptr = buffer.ptr;
 
-        foreach (Unused; 0..blocks)
+        foreach (Unused; 0 .. blocks)
         {
             immutable v1 = decodeChar(source.front); source.popFront();
             immutable v2 = decodeChar(source.front); source.popFront();
@@ -1134,7 +1134,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
                 "The length of result is smaller than expected length"
             );
 
-        return buffer[0..bufptr - buffer.ptr];
+        return buffer[0 .. bufptr - buffer.ptr];
     }
 
 
@@ -1178,7 +1178,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         auto      srcptr = source.ptr;
         size_t    pcount;
 
-        foreach (Unused; 0..blocks)
+        foreach (Unused; 0 .. blocks)
         {
             immutable v1 = decodeChar(*srcptr++);
             immutable v2 = decodeChar(*srcptr++);
@@ -1266,7 +1266,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable blocks = srcLen / 4;
         size_t    pcount;
 
-        foreach (Unused; 0..blocks)
+        foreach (Unused; 0 .. blocks)
         {
             immutable v1 = decodeChar(source.front); source.popFront();
             immutable v2 = decodeChar(source.front); source.popFront();
@@ -1447,7 +1447,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
                 decoder.range_   = range_.save;
                 decoder.buffer_  = buffer_.dup;
-                decoder.decoded_ = decoder.buffer_[0..decoded_.length];
+                decoder.decoded_ = decoder.buffer_[0 .. decoded_.length];
 
                 return decoder;
             }

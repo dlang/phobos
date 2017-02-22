@@ -740,8 +740,8 @@ unittest
     void testUnalignedHash(H)()
     {
         immutable ubyte[1025] data = 0xAC;
-        immutable alignedHash = digest!H(data[0 .. $ - 1]); // 0..1023
-        immutable unalignedHash = digest!H(data[1 .. $]); // 1..1024
+        immutable alignedHash = digest!H(data[0 .. $ - 1]); // 0 .. 1023
+        immutable unalignedHash = digest!H(data[1 .. $]); // 1 .. 1024
         assert(alignedHash == unalignedHash);
     }
 

@@ -60,7 +60,7 @@ unittest
         b[i]= 0x8000_0003;
     }
     c[19]=0x3333_3333;
-    uint carry = multibyteAddSub!('+')(c[0..18], b[0..18], a[0..18], 0);
+    uint carry = multibyteAddSub!('+')(c[0 .. 18], b[0 .. 18], a[0 .. 18], 0);
     assert(c[0]==0x8000_0003);
     assert(c[1]==4);
     assert(c[19]==0x3333_3333); // check for overrun
@@ -74,7 +74,7 @@ unittest
     a[10]=0x1D950C84;
     b[10]=0x1D950C84;
     a[5] =0x44444444;
-    carry = multibyteAddSub!('-')(a[0..12], a[0..12], b[0..12], 0);
+    carry = multibyteAddSub!('-')(a[0 .. 12], a[0 .. 12], b[0 .. 12], 0);
     assert(a[11] == 0);
     for (size_t i = 0; i < 10; ++i)
         if (i != 5)
@@ -88,7 +88,7 @@ unittest
         }
         a[q-2]=0x040000;
         b[q-2]=0x040000;
-       carry = multibyteAddSub!('-')(a[0..q], a[0..q], b[0..q], 0);
+       carry = multibyteAddSub!('-')(a[0 .. q], a[0 .. q], b[0 .. q], 0);
        assert(a[q-2]==0);
     }
 }
@@ -136,7 +136,7 @@ uint multibyteIncrementAssign(char op)(uint[] dest, uint carry)
 }
 
 /** dest[] = src[] << numbits
- *  numbits must be in the range 1..31
+ *  numbits must be in the range 1 .. 31
  */
 uint multibyteShl(uint [] dest, const(uint) [] src, uint numbits)
     pure @nogc @safe
@@ -153,7 +153,7 @@ uint multibyteShl(uint [] dest, const(uint) [] src, uint numbits)
 
 
 /** dest[] = src[] >> numbits
- *  numbits must be in the range 1..31
+ *  numbits must be in the range 1 .. 31
  */
 void multibyteShr(uint [] dest, const(uint) [] src, uint numbits)
     pure @nogc @safe
@@ -182,7 +182,7 @@ unittest
 
     aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A, 0xBCCC_CCCD,
         0xEEEE_EEEE];
-    multibyteShl(aa[1..4], aa[1..$], 4);
+    multibyteShl(aa[1 .. 4], aa[1..$], 4);
     assert(aa[0] == 0xF0FF_FFFF && aa[1] == 0x2222_2230
         && aa[2]==0x5555_5561 && aa[3]==0x9999_99A4 && aa[4]==0x0BCCC_CCCD);
 }
@@ -208,14 +208,14 @@ unittest
 {
     uint [] aa = [0xF0FF_FFFF, 0x1222_2223, 0x4555_5556, 0x8999_999A,
         0xBCCC_CCCD, 0xEEEE_EEEE];
-    multibyteMul(aa[1..4], aa[1..4], 16, 0);
+    multibyteMul(aa[1 .. 4], aa[1 .. 4], 16, 0);
     assert(aa[0] == 0xF0FF_FFFF && aa[1] == 0x2222_2230 && aa[2]==0x5555_5561
         && aa[3]==0x9999_99A4 && aa[4]==0x0BCCC_CCCD);
 }
 
 /**
- * dest[] += src[] * multiplier + carry(0..FFFF_FFFF).
- * Returns carry out of MSB (0..FFFF_FFFF).
+ * dest[] += src[] * multiplier + carry(0 .. FFFF_FFFF).
+ * Returns carry out of MSB (0 .. FFFF_FFFF).
  */
 uint multibyteMulAdd(char op)(uint [] dest, const(uint)[] src,
     uint multiplier, uint carry) pure @nogc @safe
@@ -257,14 +257,14 @@ unittest
 
 
 /**
-   Sets result = result[0..left.length] + left * right
+   Sets result = result[0 .. left.length] + left * right
 
    It is defined in this way to allow cache-efficient multiplication.
    This function is equivalent to:
     ----
     for (size_t i = 0; i< right.length; ++i)
     {
-        dest[left.length + i] = multibyteMulAdd(dest[i..left.length+i],
+        dest[left.length + i] = multibyteMulAdd(dest[i .. left.length+i],
                 left, right[i], 0);
     }
     ----
@@ -274,13 +274,13 @@ void multibyteMultiplyAccumulate(uint [] dest, const(uint)[] left, const(uint)
 {
     for (size_t i = 0; i < right.length; ++i)
     {
-        dest[left.length + i] = multibyteMulAdd!('+')(dest[i..left.length+i],
+        dest[left.length + i] = multibyteMulAdd!('+')(dest[i .. left.length+i],
                 left, right[i], 0);
     }
 }
 
 /**  dest[] /= divisor.
- * overflow is the initial remainder, and must be in the range 0..divisor-1.
+ * overflow is the initial remainder, and must be in the range 0 .. divisor-1.
  */
 uint multibyteDivAssign(uint [] dest, uint divisor, uint overflow)
     pure @nogc @safe
@@ -310,7 +310,7 @@ unittest
     assert(r == 0x33FF_7461);
 
 }
-// Set dest[2*i..2*i+1]+=src[i]*src[i]
+// Set dest[2*i .. 2*i+1]+=src[i]*src[i]
 void multibyteAddDiagonalSquares(uint[] dest, const(uint)[] src)
     pure @nogc @safe
 {

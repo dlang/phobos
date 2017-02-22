@@ -1655,7 +1655,7 @@ immutable(E)[] sanitize(E)(immutable(E)[] s)
 
     // Now do the write
     E[] array = new E[len];
-    array[0..n] = s[0..n];
+    array[0 .. n] = s[0 .. n];
     size_t offset = n;
 
     t = s[n..$];
@@ -1663,14 +1663,14 @@ immutable(E)[] sanitize(E)(immutable(E)[] s)
     {
         immutable c = EncoderInstance!(E).safeDecode(t);
         assert(c == INVALID_SEQUENCE);
-        array[offset..offset+repSeq.length] = repSeq[];
+        array[offset .. offset+repSeq.length] = repSeq[];
         offset += repSeq.length;
         n = validLength(t);
-        array[offset..offset+n] = t[0..n];
+        array[offset .. offset+n] = t[0 .. n];
         offset += n;
         t = t[n..$];
     }
-    return cast(immutable(E)[])array[0..offset];
+    return cast(immutable(E)[])array[0 .. offset];
 }
 
 ///
@@ -2580,7 +2580,7 @@ abstract class EncodingScheme
 
         // Now do the write
         ubyte[] array = new ubyte[len];
-        array[0..n] = s[0..n];
+        array[0 .. n] = s[0 .. n];
         auto offset = n;
 
         t = s[n..$];
@@ -2588,14 +2588,14 @@ abstract class EncodingScheme
         {
             immutable c = safeDecode(t);
             assert(c == INVALID_SEQUENCE);
-            array[offset..offset+repSeq.length] = repSeq[];
+            array[offset .. offset+repSeq.length] = repSeq[];
             offset += repSeq.length;
             n = validLength(t);
-            array[offset..offset+n] = t[0..n];
+            array[offset .. offset+n] = t[0 .. n];
             offset += n;
             t = t[n..$];
         }
-        return cast(immutable(ubyte)[])array[0..offset];
+        return cast(immutable(ubyte)[])array[0 .. offset];
     }
 
     /**

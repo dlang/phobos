@@ -1277,7 +1277,7 @@ public:
      */
     private void prime(size_t skipNum)
     {
-        foreach (i; 0..skipNum)
+        foreach (i; 0 .. skipNum)
         {
             _input.col++;
             _front.shrinkTo(0);

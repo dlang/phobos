@@ -356,7 +356,7 @@ if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
     {
         version (Windows) if (isUNC!(BaseOf!R)(path))
         {
-            return path[0..1];
+            return path[0 .. 1];
         }
         static if (is(StringTypeOf!R))
             return StringTypeOf!R.init[];   // which is null
@@ -470,7 +470,7 @@ if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(Element
     isNarrowString!R) &&
     !isConvertibleToString!R)
 {
-    static auto result(bool dot, typeof(path[0..1]) p)
+    static auto result(bool dot, typeof(path[0 .. 1]) p)
     {
         static if (isSomeString!R)
             return dot ? "." : p;
@@ -649,7 +649,7 @@ Lnull:
     static if (is(StringTypeOf!R))
         return null; // legacy code may rely on null return rather than slice
     else
-        return path[0..0];
+        return path[0 .. 0];
 }
 
 ///
@@ -728,7 +728,7 @@ if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(Element
     static if (isSomeString!R)
         return cast(ElementEncodingType!R[]) null; // legacy code may rely on null return rather than slice
     else
-        return path[0..0];
+        return path[0 .. 0];
 }
 
 ///
@@ -1742,7 +1742,7 @@ if (isSomeChar!(ElementEncodingType!R) &&
     !isConvertibleToString!R)
 {
     alias C = Unqual!(ElementEncodingType!R);
-    alias S = typeof(path[0..0]);
+    alias S = typeof(path[0 .. 0]);
 
     static struct Result
     {
@@ -1770,7 +1770,7 @@ if (isSomeChar!(ElementEncodingType!R) &&
             {
                 if (elements.empty)
                 {
-                    element = element[0..0];
+                    element = element[0 .. 0];
                     return;
                 }
                 element = elements.front;
@@ -1794,7 +1794,7 @@ if (isSomeChar!(ElementEncodingType!R) &&
                             if (n == 0)
                             {
                                 elements = elements2;
-                                element = element[0..0];
+                                element = element[0 .. 0];
                                 continue L1;
                             }
                         }
@@ -1872,7 +1872,7 @@ if (isSomeChar!(ElementEncodingType!R) &&
         bool rooted;    // the path starts with a root directory
         C c;
         S element;
-        typeof(pathSplitter(path[0..0])) elements;
+        typeof(pathSplitter(path[0 .. 0])) elements;
     }
 
     return Result(path);
@@ -3277,7 +3277,7 @@ body
                         else
                         {
                             /* Match for:
-                             *   pattern[pi0..pi-1] ~ pattern[piRemain..$]
+                             *   pattern[pi0 .. pi-1] ~ pattern[piRemain..$]
                              */
                             if (pattmp is null)
                                 // Allocate this only once per function invocation.

@@ -61,11 +61,11 @@ unittest
     assert(arr.length == 6);
 
     // slicing
-    assert(arr[1..3].equal([2, 3]));
+    assert(arr[1 .. 3].equal([2, 3]));
 
     // remove
-    arr.linearRemove(arr[1..3]);
-    assert(arr[0..2].equal([1, 11]));
+    arr.linearRemove(arr[1 .. 3]);
+    assert(arr[0 .. 2].equal([1, 11]));
 }
 
 /// `Array!bool` packs together values efficiently by allocating one bit per element
@@ -1127,7 +1127,7 @@ unittest
 
     assert(equal(retro(b), a));
     assert(a.length == 7);
-    assert(equal(a[1..4], [1, 2, 3]));
+    assert(equal(a[1 .. 4], [1, 2, 3]));
 }
 // Test issue 5920
 unittest
@@ -1147,7 +1147,7 @@ unittest
     uint dMask;
 
     auto arr = Array!S(cast(S[])[]);
-    foreach (i; 0..8)
+    foreach (i; 0 .. 8)
         arr.insertBack(S(i, &dMask));
     // don't check dMask now as S may be copied multiple times (it's ok?)
     {

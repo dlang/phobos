@@ -495,7 +495,7 @@ unittest // 16072
     // test more multiple grows
     int[] arr;
     auto r = heapify!"a < b"(arr);
-    foreach (i; 0..100)
+    foreach (i; 0 .. 100)
         r.insert(i);
 
     assert(r.front == 99);

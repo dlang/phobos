@@ -778,7 +778,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
 
                 /* Zeroize sensitive information. */
                 start();
-                return data[0..digestSize/8];
+                return data[0 .. digestSize/8];
             }
             else static if (blockSize==1024)
             {
@@ -787,8 +787,8 @@ struct SHA(uint hashBlockSize, uint digestSize)
 
                 /* Save number of bits */
                 ubyte[16] bits;
-                bits[ 0..8] = nativeToBigEndian(count[1]);
-                bits[8..16] = nativeToBigEndian(count[0]);
+                bits[ 0 .. 8] = nativeToBigEndian(count[1]);
+                bits[8 .. 16] = nativeToBigEndian(count[0]);
 
                 /* Pad out to 112 mod 128. */
                 index = (cast(uint) count[0] >> 3) & (128 - 1);
@@ -804,7 +804,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
 
                 /* Zeroize sensitive information. */
                 start();
-                return data[0..digestSize/8];
+                return data[0 .. digestSize/8];
             }
             else
                 static assert(0);

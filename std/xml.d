@@ -2217,7 +2217,7 @@ private
             n = i;
             break;
         }
-        name = s[0..n];
+        name = s[0 .. n];
         s = s[n..$];
     }
 
@@ -2926,7 +2926,7 @@ private
     string chop(ref string s, size_t n) @safe pure nothrow
     {
         if (n == -1) n = s.length;
-        string t = s[0..n];
+        string t = s[0 .. n];
         s = s[n..$];
         return t;
     }
@@ -3040,7 +3040,7 @@ private
             auto m = (table.length >> 1) & ~1;
             if (c < table[m])
             {
-                table = table[0..m];
+                table = table[0 .. m];
             }
             else if (c > table[m+1])
             {

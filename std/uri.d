@@ -108,7 +108,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
                     if (!R2)
                         throw new OutOfMemoryError("Alloca failure");
                 }
-                R2[0..Rlen] = R[0..Rlen];
+                R2[0 .. Rlen] = R[0 .. Rlen];
                 R = R2;
             }
             R[Rlen] = cast(char) C;
@@ -168,7 +168,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
                     if (!R2)
                         throw new OutOfMemoryError("Alloca failure");
                 }
-                R2[0..Rlen] = R[0..Rlen];
+                R2[0 .. Rlen] = R[0 .. Rlen];
                 R = R2;
             }
 
@@ -183,7 +183,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
         }
     }
 
-    return R[0..Rlen].idup;
+    return R[0 .. Rlen].idup;
 }
 
 private uint ascii2hex(dchar c) @nogc @safe pure nothrow
@@ -304,7 +304,7 @@ if (isSomeChar!Char)
     assert(Rlen <= Rsize);  // enforce our preallocation size guarantee
 
     // Copy array on stack to array in memory
-    return R[0..Rlen].idup;
+    return R[0 .. Rlen].idup;
 }
 
 /*************************************
@@ -408,7 +408,7 @@ package string urlEncode(in string[string] values)
  * Does string s[] start with a URL?
  * Returns:
  *  -1   it does not
- *  len  it does, and s[0..len] is the slice of s[] that is that URL
+ *  len  it does, and s[0 .. len] is the slice of s[] that is that URL
  */
 
 ptrdiff_t uriLength(Char)(in Char[] s)
@@ -478,7 +478,7 @@ if (isSomeChar!Char)
  * Does string s[] start with an email address?
  * Returns:
  *  -1    it does not
- *  len   it does, and s[0..i] is the slice of s[] that is that email address
+ *  len   it does, and s[0 .. i] is the slice of s[] that is that email address
  * References:
  *  RFC2822
  */

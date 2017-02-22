@@ -203,7 +203,7 @@ public:
                     for (uint i = 0; i < len; i++)
                     {
                         auto x = charLen(re.ir[t.pc+i].data);
-                        if (countUntil(s[0..numS], x) < 0)
+                        if (countUntil(s[0 .. numS], x) < 0)
                            s[numS++] = x;
                     }
                     for (uint i = t.pc; i < end; i++)

@@ -772,7 +772,7 @@ public:
 
 /**  Find a real root of a real function f(x) via bracketing.
  *
- * Given a function `f` and a range `[a..b]` such that `f(a)`
+ * Given a function `f` and a range `[a .. b]` such that `f(a)`
  * and `f(b)` have opposite signs or at least one of them equals ±0,
  * returns the value of `x` in
  * the range which is closest to a root of `f(x)`.  If `f(x)`
@@ -871,7 +871,7 @@ body
     // (www.netlib.org).  The changes to improve the worst-cast performance are
     // entirely original.
 
-    T a, b, d;  // [a..b] is our current bracket. d is the third best guess.
+    T a, b, d;  // [a .. b] is our current bracket. d is the third best guess.
     R fa, fb, fd; // Values of f at a, b, d.
     bool done = false; // Has a root been found?
 
@@ -947,10 +947,10 @@ body
         return c;
     }
 
-    /* Uses 'numsteps' newton steps to approximate the zero in [a..b] of the
+    /* Uses 'numsteps' newton steps to approximate the zero in [a .. b] of the
        quadratic polynomial interpolating f(x) at a, b, and d.
        Returns:
-         The approximate zero in [a..b] of the quadratic polynomial.
+         The approximate zero in [a .. b] of the quadratic polynomial.
     */
     T newtonQuadratic(int numsteps)
     {
@@ -963,7 +963,7 @@ body
         T c = oppositeSigns(a2, fa) ? a  : b;
 
         // start the safeguarded newton steps.
-        foreach (int i; 0..numsteps)
+        foreach (int i; 0 .. numsteps)
         {
             immutable T pc = a0 + (a1 + a2 * (c - b))*(c - a);
             immutable T pdc = a1 + a2*((2 * c) - (a + b));
@@ -1006,7 +1006,7 @@ whileloop:
         T a0 = a, b0 = b; // record the brackets
 
         // Do two higher-order (cubic or parabolic) interpolation steps.
-        foreach (int QQ; 0..2)
+        foreach (int QQ; 0 .. 2)
         {
             // Cubic inverse interpolation requires that
             // all four function values fa, fb, fd, and fe are distinct;
@@ -1134,7 +1134,7 @@ whileloop:
 
         if ((b - a) < T(0.25) * (b0 - a0))
             baditer = 1;
-        foreach (int QQ; 0..baditer)
+        foreach (int QQ; 0 .. baditer)
         {
             e = d;
             fe = fd;
@@ -1393,7 +1393,7 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
 
 /++
 Find a real minimum of a real function `f(x)` via bracketing.
-Given a function `f` and a range `(ax..bx)`,
+Given a function `f` and a range `(ax .. bx)`,
 returns the value of `x` in the range which is closest to a minimum of `f(x)`.
 `f` is never evaluted at the endpoints of `ax` and `bx`.
 If `f(x)` has more than one minimum in the range, one will be chosen arbitrarily.
@@ -2787,7 +2787,7 @@ private:
 
                 typeof(this) opSlice(size_t lower, size_t upper)
                 {
-                    return typeof(this)(source[lower * 2..upper * 2]);
+                    return typeof(this)(source[lower * 2 .. upper * 2]);
                 }
             }
 
@@ -2803,7 +2803,7 @@ private:
         evenFft[0].im = 0;
         // evenFft[0].re is already right b/c it's aliased with buf[0].re.
 
-        foreach (k; 1..halfN / 2 + 1)
+        foreach (k; 1 .. halfN / 2 + 1)
         {
             immutable bufk = buf[k];
             immutable bufnk = buf[buf.length / 2 - k];
@@ -2917,11 +2917,11 @@ private:
         auto table = new lookup_t[][bsf(size) + 1];
 
         table[$ - 1] = memSpace[$ - size..$];
-        memSpace = memSpace[0..size];
+        memSpace = memSpace[0 .. size];
 
         auto lastRow = table[$ - 1];
         lastRow[0] = 0;  // -sin(0) == 0.
-        foreach (ptrdiff_t i; 1..size)
+        foreach (ptrdiff_t i; 1 .. size)
         {
             // The hard coded cases are for improved accuracy and to prevent
             // annoying non-zeroness when stuff should be zero.
@@ -2937,7 +2937,7 @@ private:
         }
 
         // Fill in all the other rows with strided versions.
-        foreach (i; 1..table.length - 1)
+        foreach (i; 1 .. table.length - 1)
         {
             immutable strideLength = size / (2 ^^ i);
             auto strided = Stride!(lookup_t[])(lastRow, strideLength);
@@ -3108,7 +3108,7 @@ private enum string MakeLocalFft = q{
     import core.exception : onOutOfMemoryError;
 
     auto lookupBuf = (cast(lookup_t*) malloc(range.length * 2 * lookup_t.sizeof))
-                     [0..2 * range.length];
+                     [0 .. 2 * range.length];
     if (!lookupBuf.ptr)
         onOutOfMemoryError();
 
@@ -3273,12 +3273,12 @@ struct Stride(R)
     {
         if (range.length >= _nSteps)
         {
-            range = range[_nSteps..range.length];
+            range = range[_nSteps .. range.length];
             _length--;
         }
         else
         {
-            range = range[0..0];
+            range = range[0 .. 0];
             _length = 0;
         }
     }
@@ -3286,7 +3286,7 @@ struct Stride(R)
     // Pops half the range's stride.
     void popHalf()
     {
-        range = range[_nSteps / 2..range.length];
+        range = range[_nSteps / 2 .. range.length];
     }
 
     bool empty() const @property

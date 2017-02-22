@@ -5646,12 +5646,12 @@ mixin template Proxy(alias a)
 
     auto ref opIndex(this X, D...)(auto ref D i)               { return a[i]; }
     auto ref opSlice(this X      )()                           { return a[]; }
-    auto ref opSlice(this X, B, E)(auto ref B b, auto ref E e) { return a[b..e]; }
+    auto ref opSlice(this X, B, E)(auto ref B b, auto ref E e) { return a[b .. e]; }
 
     auto ref opUnary     (string op, this X      )()                           { return mixin(op~"a"); }
     auto ref opIndexUnary(string op, this X, D...)(auto ref D i)               { return mixin(op~"a[i]"); }
     auto ref opSliceUnary(string op, this X      )()                           { return mixin(op~"a[]"); }
-    auto ref opSliceUnary(string op, this X, B, E)(auto ref B b, auto ref E e) { return mixin(op~"a[b..e]"); }
+    auto ref opSliceUnary(string op, this X, B, E)(auto ref B b, auto ref E e) { return mixin(op~"a[b .. e]"); }
 
     auto ref opBinary(string op, this X, B)(auto ref B b)
     if (op == "in" && is(typeof(a in b)) || op != "in")
@@ -5680,12 +5680,12 @@ mixin template Proxy(alias a)
     auto ref opAssign     (this X, V      )(auto ref V v) if (!is(V == typeof(this))) { return a       = v; }
     auto ref opIndexAssign(this X, V, D...)(auto ref V v, auto ref D i)               { return a[i]    = v; }
     auto ref opSliceAssign(this X, V      )(auto ref V v)                             { return a[]     = v; }
-    auto ref opSliceAssign(this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return a[b..e] = v; }
+    auto ref opSliceAssign(this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return a[b .. e] = v; }
 
     auto ref opOpAssign     (string op, this X, V      )(auto ref V v)                             { return mixin("a "      ~op~"= v"); }
     auto ref opIndexOpAssign(string op, this X, V, D...)(auto ref V v, auto ref D i)               { return mixin("a[i] "   ~op~"= v"); }
     auto ref opSliceOpAssign(string op, this X, V      )(auto ref V v)                             { return mixin("a[] "    ~op~"= v"); }
-    auto ref opSliceOpAssign(string op, this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return mixin("a[b..e] "~op~"= v"); }
+    auto ref opSliceOpAssign(string op, this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return mixin("a[b .. e] "~op~"= v"); }
 
     template opDispatch(string name)
     {
@@ -5893,17 +5893,17 @@ mixin template Proxy(alias a)
         assert(a ~ [10,11] == [1,2,3,4,10,11]);
         assert(a[0]    == 1);
         assert(a[]     == [1,2,3,4]);
-        assert(a[2..4] == [3,4]);
+        assert(a[2 .. 4] == [3,4]);
         static if (is(T == MyArray))    // mutable
         {
             a = a;
             a = [5,6,7,8];  assert(a == [5,6,7,8]);
             a[0]     = 0;   assert(a == [0,6,7,8]);
             a[]      = 1;   assert(a == [1,1,1,1]);
-            a[0..3]  = 2;   assert(a == [2,2,2,1]);
+            a[0 .. 3]  = 2;   assert(a == [2,2,2,1]);
             a[0]    += 2;   assert(a == [4,2,2,1]);
             a[]     *= 2;   assert(a == [8,4,4,2]);
-            a[0..2] /= 2;   assert(a == [4,2,4,2]);
+            a[0 .. 2] /= 2;   assert(a == [4,2,4,2]);
         }
     }
 }
@@ -6063,7 +6063,7 @@ mixin template Proxy(alias a)
     assert(f[1] == 'e');
 
     // opSlice
-    assert(f[2..4] == "ll");
+    assert(f[2 .. 4] == "ll");
 
     // opUnary
     assert(-(cast(MyClass2) c) == -5);
@@ -6384,11 +6384,11 @@ template TypedefType(T)
     static assert(typeof(sa).length == 3);
 
     Typedef!(int[3]) dollar1;
-    assert(dollar1[0..$] is dollar1[0..3]);
+    assert(dollar1[0..$] is dollar1[0 .. 3]);
 
     Typedef!(int[]) dollar2;
     dollar2.length = 3;
-    assert(dollar2[0..$] is dollar2[0..3]);
+    assert(dollar2[0..$] is dollar2[0 .. 3]);
 
     static struct Dollar1
     {
@@ -6400,7 +6400,7 @@ template TypedefType(T)
 
     Typedef!Dollar1 drange1;
     assert(drange1[0..$] == 1);
-    assert(drange1[0..1] == 2);
+    assert(drange1[0 .. 1] == 2);
 
     static struct Dollar2
     {

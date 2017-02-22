@@ -2869,7 +2869,7 @@ See $(LREF byChunk) for an example.
         if (!hasIndirections!T &&
             !isInputRange!T)
         {
-            rawWrite((&value)[0..1]);
+            rawWrite((&value)[0 .. 1]);
         }
 
         void put(T)(in T[] array)
@@ -4455,8 +4455,8 @@ private struct ReadlnAppender
     @property char[] data() @trusted
     {
         if (safeAppend)
-            assumeSafeAppend(buf.ptr[0..pos]);
-        return buf.ptr[0..pos];
+            assumeSafeAppend(buf.ptr[0 .. pos]);
+        return buf.ptr[0 .. pos];
     }
 
     bool reserveWithoutAllocating(size_t n)
@@ -4614,7 +4614,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                     goto L1;
                 }
             }
-            app.putonly(p[0..i]);
+            app.putonly(p[0 .. i]);
             app.buf[i - 1] = cast(char) terminator;
             if (terminator == '\n' && c == '\r')
                 i++;
@@ -4630,7 +4630,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
                 if (c == terminator)
                     break;
             }
-            app.putonly(p[0..i]);
+            app.putonly(p[0 .. i]);
         }
         fp._cnt -= i;
         fp._ptr += i;
@@ -4889,7 +4889,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     f.readln(ln);
 
     assert(ln == "abcd\n");
-    char[] t = ln[0..2];
+    char[] t = ln[0 .. 2];
     t ~= 't';
     assert(t == "abt");
     assert(ln == "abcd\n");  // bug 13856: ln stomped to "abtd"

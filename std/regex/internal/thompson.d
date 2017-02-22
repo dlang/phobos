@@ -485,11 +485,11 @@ template ThompsonOps(E, S, bool withInput:true)
             {
                 size_t idx = source[n].begin + t.uopCounter;
                 size_t end = source[n].end;
-                if (s[idx..end].front == front)
+                if (s[idx .. end].front == front)
                 {
                     import std.utf : stride;
 
-                    t.uopCounter += stride(s[idx..end], 0);
+                    t.uopCounter += stride(s[idx .. end], 0);
                     if (t.uopCounter + source[n].begin == source[n].end)
                     {//last codepoint
                         t.pc += IRL!(IR.Backref);
@@ -855,14 +855,14 @@ if (is(Char : dchar))
     {
         s = stream;
         re = matcher.re;
-        re.ir = re.ir[lo..hi];
+        re.ir = re.ir[lo .. hi];
         threadSize = matcher.threadSize;
         merge = matcher.merge;
         freelist = matcher.freelist;
-        opCacheTrue = matcher.opCacheTrue[lo..hi];
-        opCacheBackTrue = matcher.opCacheBackTrue[lo..hi];
-        opCacheFalse = matcher.opCacheFalse[lo..hi];
-        opCacheBackFalse = matcher.opCacheBackFalse[lo..hi];
+        opCacheTrue = matcher.opCacheTrue[lo .. hi];
+        opCacheBackTrue = matcher.opCacheBackTrue[lo .. hi];
+        opCacheFalse = matcher.opCacheFalse[lo .. hi];
+        opCacheBackFalse = matcher.opCacheBackFalse[lo .. hi];
         front = matcher.front;
         index = matcher.index;
     }
@@ -871,14 +871,14 @@ if (is(Char : dchar))
     {
         s = stream;
         re = matcher.re;
-        re.ir = re.ir[lo..hi];
+        re.ir = re.ir[lo .. hi];
         threadSize = matcher.threadSize;
         merge = matcher.merge;
         freelist = matcher.freelist;
-        opCacheTrue = matcher.opCacheBackTrue[lo..hi];
-        opCacheBackTrue = matcher.opCacheTrue[lo..hi];
-        opCacheFalse = matcher.opCacheBackFalse[lo..hi];
-        opCacheBackFalse = matcher.opCacheFalse[lo..hi];
+        opCacheTrue = matcher.opCacheBackTrue[lo .. hi];
+        opCacheBackTrue = matcher.opCacheTrue[lo .. hi];
+        opCacheFalse = matcher.opCacheBackFalse[lo .. hi];
+        opCacheBackFalse = matcher.opCacheFalse[lo .. hi];
         front = matcher.front;
         index = matcher.index;
     }
@@ -950,7 +950,7 @@ if (is(Char : dchar))
                 genCounter++;
                 debug(std_regex_matcher)
                 {
-                    writefln("Threaded matching threads at  %s", s[index..s.lastIndex]);
+                    writefln("Threaded matching threads at  %s", s[index .. s.lastIndex]);
                     foreach (t; clist[])
                     {
                         assert(t);
@@ -1028,7 +1028,7 @@ if (is(Char : dchar))
     +/
     void finish(const(Thread!DataIndex)* t, Group!DataIndex[] matches, int code)
     {
-        matches.ptr[0..re.ngroup] = t.matches.ptr[0..re.ngroup];
+        matches.ptr[0 .. re.ngroup] = t.matches.ptr[0 .. re.ngroup];
         debug(std_regex_matcher)
         {
             writef("FOUND pc=%s prog_len=%s",
@@ -1073,7 +1073,7 @@ if (is(Char : dchar))
         {
             debug(std_regex_matcher)
             {
-                writefln("-- Threaded matching threads at  %s",  s[index..s.lastIndex]);
+                writefln("-- Threaded matching threads at  %s",  s[index .. s.lastIndex]);
             }
             if (startPc!=RestartPc)
             {
@@ -1167,7 +1167,7 @@ if (is(Char : dchar))
     Thread!DataIndex* fork(Thread!DataIndex* master, uint pc, uint counter)
     {
         auto t = allocate();
-        t.matches.ptr[0..re.ngroup] = master.matches.ptr[0..re.ngroup];
+        t.matches.ptr[0 .. re.ngroup] = master.matches.ptr[0 .. re.ngroup];
         t.pc = pc;
         t.counter = counter;
         t.uopCounter = 0;
@@ -1178,7 +1178,7 @@ if (is(Char : dchar))
     Thread!DataIndex* createStart(DataIndex index, uint pc = 0)
     {
         auto t = allocate();
-        t.matches.ptr[0..re.ngroup] = (Group!DataIndex).init;
+        t.matches.ptr[0 .. re.ngroup] = (Group!DataIndex).init;
         t.matches[0].begin = index;
         t.pc = pc;
         t.counter = 0;

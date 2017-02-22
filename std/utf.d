@@ -3345,7 +3345,7 @@ if (isAutodecodableString!R)
         {
             auto opSlice(size_t lower, size_t upper)
             {
-                return ByCodeUnitImpl(r[lower..upper]);
+                return ByCodeUnitImpl(r[lower .. upper]);
             }
         }
 
@@ -3448,7 +3448,7 @@ pure nothrow @nogc unittest
         auto r = "hello".byCodeUnit();
         assert(r.length == 5);
         assert(r[3] == 'l');
-        assert(r[2..4][1] == 'l');
+        assert(r[2 .. 4][1] == 'l');
     }
     {
         char[5] buff = "hello";
@@ -3528,7 +3528,7 @@ alias byDchar = byUTF!dchar;
     char[5+2+3+4+3+3] s;
     int i;
     dchar[10] a;
-    a[0..8] = "hello\u07FF\uD7FF\U0010FFFF"d;
+    a[0 .. 8] = "hello\u07FF\uD7FF\U0010FFFF"d;
     a[8] = 0xD800;   // invalid
     a[9] = cast(dchar) 0x110000; // invalid
     foreach (c; a[].byChar())
@@ -3565,7 +3565,7 @@ alias byDchar = byUTF!dchar;
     wchar[11] s;
     int i;
     dchar[10] a;
-    a[0..8] = "hello\u07FF\uD7FF\U0010FFFF"d;
+    a[0 .. 8] = "hello\u07FF\uD7FF\U0010FFFF"d;
     a[8] = 0xD800;   // invalid
     a[9] = cast(dchar) 0x110000; // invalid
     foreach (c; a[].byWchar())

@@ -496,8 +496,8 @@ $(HTTP sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
 
     {
         int[] a = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-        copy(a[5..10], a[4..9]);
-        assert(a[4..9] == [6, 7, 8, 9, 10]);
+        copy(a[5 .. 10], a[4 .. 9]);
+        assert(a[4 .. 9] == [6, 7, 8, 9, 10]);
     }
 
     {   // Test for bug 7898
@@ -2024,23 +2024,23 @@ if (isBidirectionalRange!Range
     import std.typecons : Tuple;
     alias S = Tuple!(int[2]);
     S[] soffsets;
-    foreach (start; 0..5)
+    foreach (start; 0 .. 5)
     foreach (end; min(start+1,5) .. 5)
           soffsets ~= S([start,end]);
     alias D = Tuple!(int[2],int[2]);
     D[] doffsets;
-    foreach (start1; 0..10)
+    foreach (start1; 0 .. 10)
     foreach (end1; min(start1+1,10) .. 10)
-    foreach (start2; end1 ..10)
+    foreach (start2; end1 .. 10)
     foreach (end2; min(start2+1,10) .. 10)
           doffsets ~= D([start1,end1],[start2,end2]);
     alias T = Tuple!(int[2],int[2],int[2]);
     T[] toffsets;
-    foreach (start1; 0..15)
+    foreach (start1; 0 .. 15)
     foreach (end1; min(start1+1,15) .. 15)
-    foreach (start2; end1..15)
+    foreach (start2; end1 .. 15)
     foreach (end2; min(start2+1,15) .. 15)
-    foreach (start3; end2..15)
+    foreach (start3; end2 .. 15)
     foreach (end3; min(start3+1,15) .. 15)
             toffsets ~= T([start1,end1],[start2,end2],[start3,end3]);
 

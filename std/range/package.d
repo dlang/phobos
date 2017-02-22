@@ -623,7 +623,7 @@ body
 
                     assert(translatedLower <= translatedUpper);
 
-                    return typeof(this)(source[translatedLower..translatedUpper], _n);
+                    return typeof(this)(source[translatedLower .. translatedUpper], _n);
                 }
 
             static if (hasLength!R)
@@ -696,22 +696,22 @@ pure @safe nothrow unittest
 
     // Test slicing.
     auto s1 = stride(arr, 1);
-    assert(equal(s1[1..4], [2, 3, 4]));
-    assert(s1[1..4].length == 3);
-    assert(equal(s1[1..5], [2, 3, 4, 5]));
-    assert(s1[1..5].length == 4);
-    assert(s1[0..0].empty);
-    assert(s1[3..3].empty);
+    assert(equal(s1[1 .. 4], [2, 3, 4]));
+    assert(s1[1 .. 4].length == 3);
+    assert(equal(s1[1 .. 5], [2, 3, 4, 5]));
+    assert(s1[1 .. 5].length == 4);
+    assert(s1[0 .. 0].empty);
+    assert(s1[3 .. 3].empty);
     // assert(s1[$ .. $].empty);
     assert(s1[s1.opDollar .. s1.opDollar].empty);
 
     auto s2 = stride(arr, 2);
-    assert(equal(s2[0..2], [1,3]));
-    assert(s2[0..2].length == 2);
-    assert(equal(s2[1..5], [3, 5, 7, 9]));
-    assert(s2[1..5].length == 4);
-    assert(s2[0..0].empty);
-    assert(s2[3..3].empty);
+    assert(equal(s2[0 .. 2], [1,3]));
+    assert(s2[0 .. 2].length == 2);
+    assert(equal(s2[1 .. 5], [3, 5, 7, 9]));
+    assert(s2[1 .. 5].length == 4);
+    assert(s2[0 .. 0].empty);
+    assert(s2[3 .. 3].empty);
     // assert(s2[$ .. $].empty);
     assert(s2[s2.opDollar .. s2.opDollar].empty);
 
@@ -1264,7 +1264,7 @@ pure @safe nothrow unittest
             );
 
             assert(myChain.front == 1);
-            foreach (i; 0..dummyLength)
+            foreach (i; 0 .. dummyLength)
             {
                 myChain.popFront();
             }
@@ -1574,7 +1574,7 @@ unittest
         assert(equal(s, [8, 9][]));
     }
     {
-        auto s = chooseAmong(1, arr2, arr1, arr3)[1..3];
+        auto s = chooseAmong(1, arr2, arr1, arr3)[1 .. 3];
         assert(s.length == 2);
         assert(equal(s, [2, 3][]));
     }
@@ -3850,7 +3850,7 @@ unittest
 {
     import core.exception : AssertError;
     import std.exception : assertThrown;
-    assertThrown!AssertError(cycle([0, 1, 2][0..0]));
+    assertThrown!AssertError(cycle([0, 1, 2][0 .. 0]));
 }
 
 private alias lengthType(R) = typeof(R.init.length.init);
@@ -4756,7 +4756,7 @@ unittest
     auto l = lockstep(foo, bar);
 
     // Should work twice.  These are forward ranges with implicit save.
-    foreach (i; 0..2)
+    foreach (i; 0 .. 2)
     {
         uint[] res1;
         float[] res2;
@@ -5194,7 +5194,7 @@ unittest
         // The following groups all produce the same output of:
         // 0 1 2 3 4
 
-        foreach (i; 0..5)
+        foreach (i; 0 .. 5)
             writef("%s ", i);
         writeln();
 
@@ -5536,7 +5536,7 @@ unittest
     assert(r[$ - 1] == 9);
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][]));
 
-    auto rSlice = r[2..8];
+    auto rSlice = r[2 .. 8];
     assert(equal(rSlice, [2, 3, 4, 5, 6, 7]));
 
     rSlice.popFront();
@@ -5547,7 +5547,7 @@ unittest
     assert(rSlice[rSlice.length - 1] == rSlice.back);
     assert(rSlice.back == 6);
 
-    rSlice = r[0..4];
+    rSlice = r[0 .. 4];
     assert(equal(rSlice, [0, 1, 2, 3]));
 
     auto rr = iota(10);
@@ -5555,23 +5555,23 @@ unittest
 
     r = iota(0, -10, -1);
     assert(equal(r, [0, -1, -2, -3, -4, -5, -6, -7, -8, -9][]));
-    rSlice = r[3..9];
+    rSlice = r[3 .. 9];
     assert(equal(rSlice, [-3, -4, -5, -6, -7, -8]));
 
     r = iota(0, -6, -3);
     assert(equal(r, [0, -3][]));
-    rSlice = r[1..2];
+    rSlice = r[1 .. 2];
     assert(equal(rSlice, [-3]));
 
     r = iota(0, -7, -3);
     assert(equal(r, [0, -3, -6][]));
-    rSlice = r[1..3];
+    rSlice = r[1 .. 3];
     assert(equal(rSlice, [-3, -6]));
 
     r = iota(0, 11, 3);
     assert(equal(r, [0, 3, 6, 9][]));
     assert(r[2] == 6);
-    rSlice = r[1..3];
+    rSlice = r[1 .. 3];
     assert(equal(rSlice, [3, 6]));
 
     auto rf = iota(0.0, 0.5, 0.1);
@@ -5581,7 +5581,7 @@ unittest
     rf.popFront();
     assert(rf.length == 4);
 
-    auto rfSlice = rf[1..4];
+    auto rfSlice = rf[1 .. 4];
     assert(rfSlice.length == 3);
     assert(approxEqual(rfSlice, [0.2, 0.3, 0.4]));
 
@@ -5591,7 +5591,7 @@ unittest
     rf.popFront();
     assert(rf.length == 3);
 
-    rfSlice = rf[1..3];
+    rfSlice = rf[1 .. 3];
     assert(rfSlice.length == 2);
     assert(approxEqual(rfSlice, [0.3, 0.4]));
     assert(approxEqual(rfSlice[0], 0.3));
@@ -5607,7 +5607,7 @@ unittest
     // going down
     rf = iota(0.0, -0.5, -0.1);
     assert(approxEqual(rf, [0.0, -0.1, -0.2, -0.3, -0.4][]));
-    rfSlice = rf[2..5];
+    rfSlice = rf[2 .. 5];
     assert(approxEqual(rfSlice, [-0.2, -0.3, -0.4]));
 
     rf = iota(0.0, nextDown(-0.5), -0.1);
@@ -5999,7 +5999,7 @@ struct FrontTransversal(Ror,
         {
             typeof(this) opSlice(size_t lower, size_t upper)
             {
-                return typeof(this)(_input[lower..upper]);
+                return typeof(this)(_input[lower .. upper]);
             }
         }
     }
@@ -6057,8 +6057,8 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
         assert(equal(ft, [1, 2, 3, 4]));
 
         // Test slicing.
-        assert(equal(ft[0..2], [1, 2]));
-        assert(equal(ft[1..3], [2, 3]));
+        assert(equal(ft[0 .. 2], [1, 2]));
+        assert(equal(ft[1 .. 3], [2, 3]));
 
         assert(ft.front == ft.moveFront());
         assert(ft.back == ft.moveBack());
@@ -6331,7 +6331,7 @@ struct Transversal(Ror,
         {
             typeof(this) opSlice(size_t lower, size_t upper)
             {
-                return typeof(this)(_input[lower..upper], _n);
+                return typeof(this)(_input[lower .. upper], _n);
             }
         }
     }
@@ -6406,7 +6406,7 @@ Transversal!(RangeOfRanges, opt) transversal
     // Test w/o ref return.
     alias D = DummyRange!(ReturnBy.Value, Length.Yes, RangeType.Random);
     auto drs = [D.init, D.init];
-    foreach (num; 0..10)
+    foreach (num; 0 .. 10)
     {
         auto t = transversal!(TransverseOptions.enforceNotJagged)(drs, num);
         assert(t[0] == t[1]);
@@ -6417,7 +6417,7 @@ Transversal!(RangeOfRanges, opt) transversal
 
     // Test slicing.
     auto mat = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]];
-    auto mat1 = transversal!(TransverseOptions.assumeNotJagged)(mat, 1)[1..3];
+    auto mat1 = transversal!(TransverseOptions.assumeNotJagged)(mat, 1)[1 .. 3];
     assert(mat1[0] == 6);
     assert(mat1[1] == 10);
 }
@@ -7599,9 +7599,9 @@ unittest
         assert(!a.empty);
         assert(a.length == 1);
         assert(equal(a, a[]));
-        assert(equal(a, a[0..1]));
-        assert(equal(a[0..0], e));
-        assert(equal(a[1..1], e));
+        assert(equal(a, a[0 .. 1]));
+        assert(equal(a[0 .. 0], e));
+        assert(equal(a[1 .. 1], e));
         assert(a[0] == x);
 
         auto b = a.save;
@@ -7628,9 +7628,9 @@ unittest
     assert(imm.init.empty); // Issue 13441
     assert(imm.length == 1);
     assert(equal(imm, imm[]));
-    assert(equal(imm, imm[0..1]));
-    assert(equal(imm[0..0], imme));
-    assert(equal(imm[1..1], imme));
+    assert(equal(imm, imm[0 .. 1]));
+    assert(equal(imm[0 .. 0], imme));
+    assert(equal(imm[1 .. 1], imme));
     assert(imm[0] == 1);
 }
 

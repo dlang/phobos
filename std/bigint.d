@@ -914,7 +914,7 @@ public:
                 sink(" ");
 
         if (signChar)
-            sink((&signChar)[0..1]);
+            sink((&signChar)[0 .. 1]);
 
         if (!f.flDash && f.flZero)
             foreach (i; 0 .. difw)

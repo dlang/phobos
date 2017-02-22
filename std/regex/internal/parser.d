@@ -1513,7 +1513,7 @@ if (isForwardRange!R && is(ElementType!R : dchar))
             enforce(current < 0x80, "invalid property name");
             result[k++] = cast(char) current;
         }
-        auto s = getUnicodeSet(result[0..k], negated,
+        auto s = getUnicodeSet(result[0 .. k], negated,
             cast(bool)(re_flags & RegexOption.casefold));
         enforce(!s.empty, "unrecognized unicode property spec");
         next();

@@ -1454,7 +1454,7 @@ public:
     /// Constructs an $(D Address) with a copy of the specified $(D sockaddr).
     this(const(sockaddr)* sa, socklen_t len) @system pure nothrow
     {
-        this.sa = cast(sockaddr*) (cast(ubyte*) sa)[0..len].dup.ptr;
+        this.sa = cast(sockaddr*) (cast(ubyte*) sa)[0 .. len].dup.ptr;
         this.len = len;
     }
 
@@ -1981,7 +1981,7 @@ static if (is(sockaddr_un))
         {
             enforce(path.length <= sun.sun_path.sizeof, new SocketParameterException("Path too long"));
             sun.sun_family = AddressFamily.UNIX;
-            sun.sun_path.ptr[0..path.length] = (cast(byte[]) path)[];
+            sun.sun_path.ptr[0 .. path.length] = (cast(byte[]) path)[];
             sun.sun_path.ptr[path.length] = 0;
         }
 
@@ -2154,7 +2154,7 @@ private:
 
         inout(socket_t)[] fds() @trusted inout @property pure nothrow @nogc
         {
-            return cast(inout(socket_t)[])set[FD_SET_OFFSET..FD_SET_OFFSET+count];
+            return cast(inout(socket_t)[])set[FD_SET_OFFSET .. FD_SET_OFFSET+count];
         }
     }
     else
@@ -2469,7 +2469,7 @@ public:
     assert(set.max >= 0);
 
     enum LIMIT = 4096;
-    foreach (n; 0..LIMIT)
+    foreach (n; 0 .. LIMIT)
         set.add(cast(socket_t) n);
     assert(set.max >= LIMIT);
 }
@@ -3142,7 +3142,7 @@ public:
         else version (Posix)
         {
             TimeVal tv;
-            getOption(level, option, (&tv.ctimeval)[0..1]);
+            getOption(level, option, (&tv.ctimeval)[0 .. 1]);
             result = dur!"seconds"(tv.seconds) + dur!"usecs"(tv.microseconds);
         }
         else static assert(false);
