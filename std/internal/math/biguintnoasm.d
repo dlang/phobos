@@ -107,7 +107,7 @@ uint multibyteIncrementAssign(char op)(uint[] dest, uint carry)
         ulong c = carry;
         c += dest[0];
         dest[0] = cast(uint) c;
-        if (c<=0xFFFF_FFFF)
+        if (c <= 0xFFFF_FFFF)
             return 0;
 
         for (size_t i = 1; i < dest.length; ++i)
@@ -123,7 +123,7 @@ uint multibyteIncrementAssign(char op)(uint[] dest, uint carry)
         ulong c = carry;
         c = dest[0] - c;
         dest[0] = cast(uint) c;
-        if (c<=0xFFFF_FFFF)
+        if (c <= 0xFFFF_FFFF)
             return 0;
         for (size_t i = 1; i < dest.length; ++i)
         {

@@ -1427,7 +1427,7 @@ body {
  */
 real gammaIncompleteComplInv(real a, real p)
 in {
-  assert(p>=0 && p<= 1);
+  assert(p>=0 && p <= 1);
   assert(a>0);
 }
 body {

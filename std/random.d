@@ -2497,7 +2497,7 @@ if (isRandomAccessRange!Range)
     auto range = iota(10);
     auto randy = range.randomCover;
 
-    for (int i=1; i<=range.length; i++)
+    for (int i=1; i <= range.length; i++)
     {
         randy.popFront;
         assert(randy.length == range.length - i);

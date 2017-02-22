@@ -1959,7 +1959,7 @@ bool less(const(BigDigit)[] x, const(BigDigit)[] y) pure nothrow
     return x[k] < y[k];
 }
 
-// Set result = abs(x-y), return true if result is negative(x<y), false if x<=y.
+// Set result = abs(x-y), return true if result is negative(x<y), false if x <= y.
 bool inplaceSub(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
     pure nothrow
 {

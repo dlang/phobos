@@ -588,7 +588,7 @@ public:
     {
         auto x = get!real;
         auto y = cast(real) b;
-        return  (x>=y)-(x<=y);
+        return  (x>=y)-(x <= y);
     }
 
     /// ditto
@@ -1304,7 +1304,7 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
 
     numProblems=0;
     //testFindRoot(&alefeld0, PI_2, PI);
-    for (n=1; n<=10; ++n)
+    for (n=1; n <= 10; ++n)
     {
         //testFindRoot(&alefeld0, n*n+1e-9L, (n+1)*(n+1)-1e-9L);
     }

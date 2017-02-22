@@ -3284,7 +3284,7 @@ real log1p(real x) @safe pure nothrow @nogc
     version(INLINE_YL2X)
     {
         // On x87, yl2xp1 is valid if and only if -0.5 <= lg(x) <= 0.5,
-        //    ie if -0.29<=x<=0.414
+        //    ie if -0.29 <= x <= 0.414
         return (fabs(x) <= 0.25)  ? core.math.yl2xp1(x, LN2) : core.math.yl2x(x+1, LN2);
     }
     else
@@ -6647,7 +6647,7 @@ body
 {
     // Runtime behaviour for contract violation:
     // If signs are opposite, or one is a NaN, return 0.
-    if (!((x>=0 && y>=0) || (x<=0 && y<=0))) return 0.0;
+    if (!((x>=0 && y>=0) || (x <= 0 && y <= 0))) return 0.0;
 
     // The implementation is simple: cast x and y to integers,
     // average them (avoiding overflow), and cast the result back to a floating-point number.

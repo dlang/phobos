@@ -2102,8 +2102,8 @@ public:
     bool opIndex(uint val) const
     {
         // the <= ensures that searching in  interval of [a, b) for 'a' you get .length == 1
-        // return assumeSorted!((a,b) => a<=b)(data[]).lowerBound(val).length & 1;
-        return sharSwitchLowerBound!"a<=b"(data[], val) & 1;
+        // return assumeSorted!((a,b) => a <= b)(data[]).lowerBound(val).length & 1;
+        return sharSwitchLowerBound!"a <= b"(data[], val) & 1;
     }
 
     ///
@@ -2957,7 +2957,7 @@ private:
     }
     body
     {
-        auto range = assumeSorted!"a<=b"(data[pos .. data.length]);
+        auto range = assumeSorted!"a <= b"(data[pos .. data.length]);
         if (range.empty)
             return pos;
         size_t idx = pos;
@@ -2995,7 +2995,7 @@ private:
     body
     {
         assert(data.length % 2 == 0);
-        auto range = assumeSorted!"a<=b"(data[pos .. data.length]);
+        auto range = assumeSorted!"a <= b"(data[pos .. data.length]);
         size_t idx = pos+range.lowerBound(a).length;
 
         if (idx >= data.length) // could have Marker point to recently removed stuff
@@ -4619,7 +4619,7 @@ mixin template ForwardStrings()
 
 template Utf8Matcher()
 {
-    enum validSize(int sz) = sz >= 1 && sz <=4;
+    enum validSize(int sz) = sz >= 1 && sz <= 4;
 
     void badEncoding() pure @safe
     {
@@ -4902,7 +4902,7 @@ template Utf8Matcher()
 
 template Utf16Matcher()
 {
-    enum validSize(int sz) = sz >= 1 && sz <=2;
+    enum validSize(int sz) = sz >= 1 && sz <= 2;
 
     void badEncoding() pure
     {

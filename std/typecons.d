@@ -6181,7 +6181,7 @@ mixin template Proxy(alias a)
     {
         assert(!(a == b));
         assert(!(a<b));
-        assert(!(a<=b));
+        assert(!(a <= b));
         assert(!(a>b));
         assert(!(a>=b));
     }
@@ -6201,14 +6201,14 @@ mixin template Proxy(alias a)
             b = 4;
             assert(a != b);
             assert(a<b);
-            assert(a<=b);
+            assert(a <= b);
             assert(!(a>b));
             assert(!(a>=b));
 
             a = 4;
             assert(a == b);
             assert(!(a<b));
-            assert(a<=b);
+            assert(a <= b);
             assert(!(a>b));
             assert(a>=b);
         }
