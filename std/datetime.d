@@ -35242,7 +35242,7 @@ version(unittest)
         sort(diffs);
         testTZs = [diffAA[diffs[0]], diffAA[diffs[1]], diffAA[diffs[2]]];
 
-        testFracSecs = [Duration.zero, hnsecs(1), hnsecs(5007), hnsecs(9999999)];
+        testFracSecs = [Duration.zero, hnsecs(1), hnsecs(5007), hnsecs(9_999_999)];
 
         foreach (year; testYearsBC)
         {

@@ -661,7 +661,7 @@ enum
     SQL_ALTER_DOMAIN                    = 117,
     SQL_SQL_CONFORMANCE                 = 118,
     SQL_DATETIME_LITERALS               = 119,
-    SQL_ASYNC_MODE                      = 10021, /* new X/Open spec */
+    SQL_ASYNC_MODE                      = 10_021, /* new X/Open spec */
     SQL_BATCH_ROW_COUNT                 = 120,
     SQL_BATCH_SUPPORT                   = 121,
     SQL_QUALIFIER_LOCATION              = 114,
@@ -702,7 +702,7 @@ enum
     SQL_INFO_SCHEMA_VIEWS               = 149,
     SQL_KEYSET_CURSOR_ATTRIBUTES1       = 150,
     SQL_KEYSET_CURSOR_ATTRIBUTES2       = 151,
-    SQL_MAX_ASYNC_CONCURRENT_STATEMENTS = 10022, /* new X/Open spec */
+    SQL_MAX_ASYNC_CONCURRENT_STATEMENTS = 10_022, /* new X/Open spec */
     SQL_ODBC_INTERFACE_CONFORMANCE      = 152,
     SQL_PARAM_ARRAY_ROW_COUNTS          = 153,
     SQL_PARAM_ARRAY_SELECTS             = 154,

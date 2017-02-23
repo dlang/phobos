@@ -1051,7 +1051,7 @@ template memoize(alias fun, uint maxSize)
         else if (memo[idx1].args == args)
             return memo[idx1].res;
         // FNV prime
-        immutable idx2 = (hash * 16777619) % maxSize;
+        immutable idx2 = (hash * 16_777_619) % maxSize;
         if (!bt(initialized.ptr, idx2))
         {
             emplace(&memo[idx2], memo[idx1]);

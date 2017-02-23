@@ -3600,7 +3600,7 @@ The number of seeds must be correspondingly increased.
         static if (DummyType.rt <= RangeType.Forward)
             static assert(propagatesRangeType!(typeof(m), DummyType));
 
-        assert(m.equal([1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628800]));
+        assert(m.equal([1, 2, 6, 24, 120, 720, 5040, 40_320, 362_880, 3_628_800]));
     }
 }
 

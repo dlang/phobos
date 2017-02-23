@@ -577,7 +577,7 @@ final class ZipArchive
             throw new ZipException("zip files bigger than 4 GB are unsupported");
 
         // Find 'end record index' by searching backwards for signature
-        iend = (data.length > 66000 ? to!uint(data.length - 66000) : 0);
+        iend = (data.length > 66_000 ? to!uint(data.length - 66_000) : 0);
         for (i = to!uint(data.length) - 22; 1; i--)
         {
             if (i < iend || i >= data.length)

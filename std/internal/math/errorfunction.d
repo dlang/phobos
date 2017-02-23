@@ -272,7 +272,7 @@ real expx2(real x, int sign)
     Cephes Math Library Release 2.9:  June, 2000
     Copyright 2000 by Stephen L. Moshier
     */
-    const real M = 32768.0;
+    const real M = 32_768.0;
     const real MINV = 3.0517578125e-5L;
 
     x = abs(x);
