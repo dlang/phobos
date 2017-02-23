@@ -41,7 +41,7 @@ extern (C) __gshared nothrow:
 */
 enum SQLITE_VERSION = "3.10.2";
 /// Ditto
-enum SQLITE_VERSION_NUMBER = 3010002;
+enum SQLITE_VERSION_NUMBER = 3_010_002;
 /// Ditto
 enum SQLITE_SOURCE_ID = "2016-01-20 15:27:19 17efb4209f97fb4971656086b138599a91a75ff9";
 

@@ -4545,11 +4545,11 @@ version(unittest)
 {
     struct __S_12733
     {
-        invariant() { assert(checksum == 1234567890); }
+        invariant() { assert(checksum == 1_234_567_890); }
         this(ulong u){n = u;}
         void opAssign(__S_12733 s){this.n = s.n;}
         ulong n;
-        ulong checksum = 1234567890;
+        ulong checksum = 1_234_567_890;
     }
 
     static auto __genPair_12733(ulong n) { return __S_12733(n); }

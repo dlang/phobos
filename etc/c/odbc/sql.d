@@ -67,17 +67,17 @@ enum
     SQL_HANDLE_DESC                 = 4,
 
     // * environment attribute *
-    SQL_ATTR_OUTPUT_NTS             = 10001,
+    SQL_ATTR_OUTPUT_NTS             = 10_001,
 
     // * connection attributes *
-    SQL_ATTR_AUTO_IPD               = 10001,
-    SQL_ATTR_METADATA_ID            = 10014,
+    SQL_ATTR_AUTO_IPD               = 10_001,
+    SQL_ATTR_METADATA_ID            = 10_014,
 
     // * statement attributes *
-    SQL_ATTR_APP_ROW_DESC           = 10010,
-    SQL_ATTR_APP_PARAM_DESC         = 10011,
-    SQL_ATTR_IMP_ROW_DESC           = 10012,
-    SQL_ATTR_IMP_PARAM_DESC         = 10013,
+    SQL_ATTR_APP_ROW_DESC           = 10_010,
+    SQL_ATTR_APP_PARAM_DESC         = 10_011,
+    SQL_ATTR_IMP_ROW_DESC           = 10_012,
+    SQL_ATTR_IMP_PARAM_DESC         = 10_013,
     SQL_ATTR_CURSOR_SCROLLABLE      = (-1),
     SQL_ATTR_CURSOR_SENSITIVITY     = (-2),
 
@@ -453,12 +453,12 @@ enum
 
 enum
 {
-    SQL_XOPEN_CLI_YEAR            = 10000,
-    SQL_CURSOR_SENSITIVITY        = 10001,
-    SQL_DESCRIBE_PARAMETER        = 10002,
-    SQL_CATALOG_NAME              = 10003,
-    SQL_COLLATION_SEQ             = 10004,
-    SQL_MAX_IDENTIFIER_LEN        = 10005,
+    SQL_XOPEN_CLI_YEAR            = 10_000,
+    SQL_CURSOR_SENSITIVITY        = 10_001,
+    SQL_DESCRIBE_PARAMETER        = 10_002,
+    SQL_CATALOG_NAME              = 10_003,
+    SQL_COLLATION_SEQ             = 10_004,
+    SQL_MAX_IDENTIFIER_LEN        = 10_005,
     SQL_MAXIMUM_IDENTIFIER_LENGTH = SQL_MAX_IDENTIFIER_LEN
 }
 

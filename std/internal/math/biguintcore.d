@@ -1147,7 +1147,7 @@ int highestPowerBelowUintMax(uint x) pure nothrow @safe
      if (x<85) return 5;
      if (x<256) return 4;
      if (x<1626) return 3;
-     if (x<65536) return 2;
+     if (x<65_536) return 2;
      return 1;
 }
 
@@ -1167,8 +1167,8 @@ int highestPowerBelowUlongMax(uint x) pure nothrow @safe
      if (x<566) return 7;
      if (x<1626) return 6;
      if (x<7132) return 5;
-     if (x<65536) return 4;
-     if (x<2642246) return 3;
+     if (x<65_536) return 4;
+     if (x<2_642_246) return 3;
      return 2;
 }
 
@@ -1753,9 +1753,9 @@ body
             // Multiply existing number by 10^19, then add y1.
             if (hi>0)
             {
-                data[hi] = multibyteMul(data[0 .. hi], data[0 .. hi], 1220703125*2u, 0); // 5^13*2 = 0x9184_E72A
+                data[hi] = multibyteMul(data[0 .. hi], data[0 .. hi], 1_220_703_125*2u, 0); // 5^13*2 = 0x9184_E72A
                 ++hi;
-                data[hi] = multibyteMul(data[0 .. hi], data[0 .. hi], 15625*262144u, 0); // 5^6*2^18 = 0xF424_0000
+                data[hi] = multibyteMul(data[0 .. hi], data[0 .. hi], 15_625*262_144u, 0); // 5^6*2^18 = 0xF424_0000
                 ++hi;
             }
             else

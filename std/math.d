@@ -2160,8 +2160,8 @@ L_was_nan:
         ];
 
         // Overflow and Underflow limits.
-        enum real OF =  16384.0L;
-        enum real UF = -16382.0L;
+        enum real OF =  16_384.0L;
+        enum real UF = -16_382.0L;
 
         // Special cases. Raises an overflow or underflow flag accordingly,
         // except in the case for CTFE, where there are no hardware controls.
@@ -6350,7 +6350,7 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
 
         // Integer power of x.
         long iy = cast(long) y;
-        if (iy == y && fabs(y) < 32768.0)
+        if (iy == y && fabs(y) < 32_768.0)
             return pow(x, iy);
 
         real sign = 1.0;

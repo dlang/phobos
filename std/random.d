@@ -444,9 +444,9 @@ generator) that uses 16807 for the multiplier. $(D MinstdRand)
 implements a variant that has slightly better spectral behavior by
 using the multiplier 48271. Both generators are rather simplistic.
  */
-alias MinstdRand0 = LinearCongruentialEngine!(uint, 16807, 0, 2147483647);
+alias MinstdRand0 = LinearCongruentialEngine!(uint, 16_807, 0, 2_147_483_647);
 /// ditto
-alias MinstdRand = LinearCongruentialEngine!(uint, 48271, 0, 2147483647);
+alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
 
 ///
 @safe unittest
@@ -828,7 +828,7 @@ LinearCongruentialEngine) would be the generator of choice.
 alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
                                        0x9908b0df, 11, 0xffffffff, 7,
                                        0x9d2c5680, 15,
-                                       0xefc60000, 18, 1812433253);
+                                       0xefc60000, 18, 1_812_433_253);
 
 ///
 @safe unittest
@@ -869,7 +869,7 @@ period of 2 to the power of 19937.
 alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
                                           0xb5026f5aa96619e9, 29, 0x5555555555555555, 17,
                                           0x71d67fffeda60000, 37,
-                                          0xfff7eee000000000, 43, 6364136223846793005);
+                                          0xfff7eee000000000, 43, 6_364_136_223_846_793_005);
 
 ///
 @safe unittest
@@ -1014,18 +1014,18 @@ if (isUnsigned!UIntType)
     enum size = bits / 32;
 
     static if (bits == 32)
-        UIntType[size] seeds_ = [2463534242];
+        UIntType[size] seeds_ = [2_463_534_242];
     else static if (bits == 64)
-        UIntType[size] seeds_ = [123456789, 362436069];
+        UIntType[size] seeds_ = [123_456_789, 362_436_069];
     else static if (bits == 96)
-        UIntType[size] seeds_ = [123456789, 362436069, 521288629];
+        UIntType[size] seeds_ = [123_456_789, 362_436_069, 521_288_629];
     else static if (bits == 128)
-        UIntType[size] seeds_ = [123456789, 362436069, 521288629, 88675123];
+        UIntType[size] seeds_ = [123_456_789, 362_436_069, 521_288_629, 88_675_123];
     else static if (bits == 160)
-        UIntType[size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321];
+        UIntType[size] seeds_ = [123_456_789, 362_436_069, 521_288_629, 88_675_123, 5_783_321];
     else static if (bits == 192)
     {
-        UIntType[size] seeds_ = [123456789, 362436069, 521288629, 88675123, 5783321, 6615241];
+        UIntType[size] seeds_ = [123_456_789, 362_436_069, 521_288_629, 88_675_123, 5_783_321, 6_615_241];
         UIntType       value_;
     }
     else
@@ -1052,7 +1052,7 @@ if (isUnsigned!UIntType)
     {
         // Initialization routine from MersenneTwisterEngine.
         foreach (i, e; seeds_)
-            seeds_[i] = x0 = cast(UIntType)(1812433253U * (x0 ^ (x0 >> 30)) + i + 1);
+            seeds_[i] = x0 = cast(UIntType)(1_812_433_253U * (x0 ^ (x0 >> 30)) + i + 1);
 
         // All seeds must not be 0.
         sanitizeSeeds(seeds_);
@@ -1125,7 +1125,7 @@ if (isUnsigned!UIntType)
             seeds_[2] = seeds_[3];
             seeds_[3] = seeds_[4];
             seeds_[4] = seeds_[4] ^ (seeds_[4] << c) ^ temp ^ (temp << b);
-            value_    = seeds_[4] + (seeds_[5] += 362437);
+            value_    = seeds_[4] + (seeds_[5] += 362_437);
         }
         else
         {
