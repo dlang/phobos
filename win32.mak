@@ -291,7 +291,8 @@ SRC_STD_INTERNAL_WINDOWS= \
 	std\internal\windows\advapi32.d
 
 SRC_STD_EXP= \
-	std\experimental\typecons.d
+	std\experimental\typecons.d \
+	std\experimental\normint.d
 
 SRC_STD_EXP_ALLOC_BB= \
 	std\experimental\allocator\building_blocks\affix_allocator.d \
@@ -334,6 +335,15 @@ SRC_STD_EXP_NDSLICE= \
 	std\experimental\ndslice\slice.d \
 	std\experimental\ndslice\internal.d
 
+SRC_STD_EXP_COLOR= \
+	std\experimental\color\colorspace.d \
+	std\experimental\color\hsx.d \
+	std\experimental\color\lab.d \
+	std\experimental\color\package.d \
+	std\experimental\color\packedrgb.d \
+	std\experimental\color\rgb.d \
+	std\experimental\color\xyz.d
+
 SRC_ETC=
 
 SRC_ETC_C= \
@@ -364,6 +374,7 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_EXP_ALLOC) \
 	$(SRC_STD_EXP_LOGGER) \
 	$(SRC_STD_EXP_NDSLICE) \
+    $(SRC_STD_EXP_COLOR) \
 	$(SRC_ETC) \
 	$(SRC_ETC_C)
 
@@ -527,7 +538,15 @@ DOCS= \
 	$(DOC)\std_experimental_ndslice_selection.html \
 	$(DOC)\std_experimental_ndslice_slice.html \
 	$(DOC)\std_experimental_ndslice.html \
+	$(DOC)\std_experimental_color_colorspace.html \
+	$(DOC)\std_experimental_color_hsx.html \
+	$(DOC)\std_experimental_color_lab.html \
+	$(DOC)\std_experimental_color_packedrgb.html \
+	$(DOC)\std_experimental_color_rgb.html \
+	$(DOC)\std_experimental_color_xyz.html \
+	$(DOC)\std_experimental_color.html \
 	$(DOC)\std_experimental_typecons.html \
+	$(DOC)\std_experimental_normint.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_windows_registry.html \
 	$(DOC)\std_c_fenv.html \
@@ -592,6 +611,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8e.obj $(SRC_ETC) $(SRC_ETC_C)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8f.obj $(SRC_STD_EXP)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest9a.obj $(SRC_STD_EXP_NDSLICE)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest9a.obj $(SRC_STD_EXP_COLOR)
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(UNITTEST_OBJS) \
 		$(ZLIB) $(DRUNTIMELIB)
 	.\unittest.exe
@@ -1056,6 +1076,9 @@ $(DOC)\std_experimental_allocator.html : $(STDDOC) std\experimental\allocator\pa
 $(DOC)\std_experimental_typecons.html : $(STDDOC) std\experimental\typecons.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_typecons.html $(STDDOC) std\experimental\typecons.d
 
+$(DOC)\std_experimental_normint.html : $(STDDOC) std\experimental\normint.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_normint.html $(STDDOC) std\experimental\normint.d
+
 $(DOC)\std_experimental_ndslice_iteration.html : $(STDDOC) std\experimental\ndslice\iteration.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice_iteration.html $(STDDOC) std\experimental\ndslice\iteration.d
 
@@ -1067,6 +1090,27 @@ $(DOC)\std_experimental_ndslice_slice.html : $(STDDOC) std\experimental\ndslice\
 
 $(DOC)\std_experimental_ndslice.html : $(STDDOC) std\experimental\ndslice\package.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice.html $(STDDOC) std\experimental\ndslice\package.d
+
+$(DOC)\std_experimental_color_colorspace.html : $(STDDOC) std\experimental\color\colorspace.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_color_colorspace.html $(STDDOC) std\experimental\color\colorspace.d
+
+$(DOC)\std_experimental_color_hsx.html : $(STDDOC) std\experimental\color\hsx.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_color_hsx.html $(STDDOC) std\experimental\color\hsx.d
+
+$(DOC)\std_experimental_color_lab.html : $(STDDOC) std\experimental\color\lab.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_color_lab.html $(STDDOC) std\experimental\color\lab.d
+
+$(DOC)\std_experimental_color_packedrgb.html : $(STDDOC) std\experimental\color\packedrgb.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_color_packedrgb.html $(STDDOC) std\experimental\color\packedrgb.d
+
+$(DOC)\std_experimental_color_rgb.html : $(STDDOC) std\experimental\color\rgb.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_color_rgb.html $(STDDOC) std\experimental\color\rgb.d
+
+$(DOC)\std_experimental_color_xyz.html : $(STDDOC) std\experimental\color\xyz.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_color_xyz.html $(STDDOC) std\experimental\color\xyz.d
+
+$(DOC)\std_experimental_color.html : $(STDDOC) std\experimental\color\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_color.html $(STDDOC) std\experimental\color\package.d
 
 $(DOC)\std_digest_crc.html : $(STDDOC) std\digest\crc.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_crc.html $(STDDOC) std\digest\crc.d
