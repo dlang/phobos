@@ -1319,7 +1319,7 @@ body {
     real ax = a * log(x) - x - logGamma(a);
 /+
     if ( ax < MINLOGL ) return 0; // underflow
-    //  { mtherr( "igaml", UNDERFLOW ); return( 0.0L ); }
+    //  { mtherr( "igaml", UNDERFLOW ); return 0.0L; }
 +/
     ax = exp(ax);
 
