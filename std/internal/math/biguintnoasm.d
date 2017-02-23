@@ -64,7 +64,7 @@ uint multibyteAddSub(char op)(uint[] dest, const(uint) [] src1,
     assert(c[0]==0x8000_0003);
     assert(c[1]==4);
     assert(c[19]==0x3333_3333); // check for overrun
-    assert(carry==1);
+    assert(carry == 1);
     for (size_t i = 0; i < a.length; ++i)
     {
         a[i] = b[i] = c[i] = 0;
@@ -107,7 +107,7 @@ uint multibyteIncrementAssign(char op)(uint[] dest, uint carry)
         ulong c = carry;
         c += dest[0];
         dest[0] = cast(uint) c;
-        if (c<=0xFFFF_FFFF)
+        if (c <= 0xFFFF_FFFF)
             return 0;
 
         for (size_t i = 1; i < dest.length; ++i)
@@ -123,7 +123,7 @@ uint multibyteIncrementAssign(char op)(uint[] dest, uint carry)
         ulong c = carry;
         c = dest[0] - c;
         dest[0] = cast(uint) c;
-        if (c<=0xFFFF_FFFF)
+        if (c <= 0xFFFF_FFFF)
             return 0;
         for (size_t i = 1; i < dest.length; ++i)
         {
@@ -159,7 +159,7 @@ void multibyteShr(uint [] dest, const(uint) [] src, uint numbits)
     pure @nogc @safe
 {
     ulong c = 0;
-    for (ptrdiff_t i = dest.length; i!=0; --i)
+    for (ptrdiff_t i = dest.length; i != 0; --i)
     {
         c += (src[i-1] >>numbits) + (cast(ulong)(src[i-1]) << (64 - numbits));
         dest[i-1] = cast(uint) c;
@@ -235,7 +235,7 @@ uint multibyteMulAdd(char op)(uint [] dest, const(uint)[] src,
             c += cast(ulong) multiplier * src[i];
             ulong t = cast(ulong) dest[i] - cast(uint) c;
             dest[i] = cast(uint) t;
-            c = cast(uint)((c>>32) - (t>>32));
+            c = cast(uint)((c >> 32) - (t >> 32));
         }
     }
     return cast(uint) c;
@@ -286,9 +286,9 @@ uint multibyteDivAssign(uint [] dest, uint divisor, uint overflow)
     pure @nogc @safe
 {
     ulong c = cast(ulong) overflow;
-    for (ptrdiff_t i = dest.length-1; i>= 0; --i)
+    for (ptrdiff_t i = dest.length-1; i >= 0; --i)
     {
-        c = (c<<32) + cast(ulong)(dest[i]);
+        c = (c << 32) + cast(ulong)(dest[i]);
         uint q = cast(uint)(c/divisor);
         c -= divisor * q;
         dest[i] = q;

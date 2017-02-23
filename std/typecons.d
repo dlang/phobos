@@ -2115,7 +2115,7 @@ string alignForSize(E...)(const char[][] names...)
     foreach (i, T; E)
     {
         auto a = T.alignof;
-        auto k = a>=64? 0 : a>=32? 1 : a>=16? 2 : a>=8? 3 : a>=4? 4 : a>=2? 5 : 6;
+        auto k = a >= 64? 0 : a >= 32? 1 : a >= 16? 2 : a >= 8? 3 : a >= 4? 4 : a >= 2? 5 : 6;
         declaration[k] ~= T.stringof ~ " " ~ names[i] ~ ";\n";
     }
 
@@ -6179,11 +6179,11 @@ mixin template Proxy(alias a)
     }
     static void allFail(T0, T1)(T0 a, T1 b)
     {
-        assert(!(a==b));
+        assert(!(a == b));
         assert(!(a<b));
-        assert(!(a<=b));
+        assert(!(a <= b));
         assert(!(a>b));
-        assert(!(a>=b));
+        assert(!(a >= b));
     }
     foreach (T1; AliasSeq!(MyFloatImpl, Typedef!float, Typedef!double,
         float, real, Typedef!int, int))
@@ -6199,18 +6199,18 @@ mixin template Proxy(alias a)
             allFail(a, b);
 
             b = 4;
-            assert(a!=b);
+            assert(a != b);
             assert(a<b);
-            assert(a<=b);
+            assert(a <= b);
             assert(!(a>b));
-            assert(!(a>=b));
+            assert(!(a >= b));
 
             a = 4;
-            assert(a==b);
+            assert(a == b);
             assert(!(a<b));
-            assert(a<=b);
+            assert(a <= b);
             assert(!(a>b));
-            assert(a>=b);
+            assert(a >= b);
         }
     }
 }
@@ -7087,10 +7087,10 @@ template isBitFlagEnum(E)
     enum A
     {
         None,
-        A = 1<<0,
-        B = 1<<1,
-        C = 1<<2,
-        D = 1<<3,
+        A = 1 << 0,
+        B = 1 << 1,
+        C = 1 << 2,
+        D = 1 << 3,
     }
 
     static assert(isBitFlagEnum!A);
@@ -7107,8 +7107,8 @@ template isBitFlagEnum(E)
 
     enum C: double
     {
-        A = 1<<0,
-        B = 1<<1
+        A = 1 << 0,
+        B = 1 << 1
     }
 
     static assert(!isBitFlagEnum!C);
@@ -7126,8 +7126,8 @@ the OR combination, which can produce surprising effects like this:
 ----
 enum E
 {
-    A = 1<<0,
-    B = 1<<1
+    A = 1 << 0,
+    B = 1 << 1
 }
 E e = E.A | E.B;
 // will throw SwitchError
@@ -7274,9 +7274,9 @@ public:
     enum Enum
     {
         None,
-        A = 1<<0,
-        B = 1<<1,
-        C = 1<<2
+        A = 1 << 0,
+        B = 1 << 1,
+        C = 1 << 2
     }
     BitFlags!Enum flags1;
     assert(!(flags1 & (Enum.A | Enum.B | Enum.C)));

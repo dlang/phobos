@@ -21384,7 +21384,7 @@ private:
             Date(2010, 9, 12),
             Date(2010, 10, 1)
         ).fwdRange(
-                everyDayOfWeek!Date(DayOfWeek.fri), Yes.popFirst).front ==Date(2010, 9, 17));
+                everyDayOfWeek!Date(DayOfWeek.fri), Yes.popFirst).front == Date(2010, 9, 17));
     }
 
     //Verify Examples.

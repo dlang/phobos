@@ -414,8 +414,8 @@ public:
                     assert((cast(size_t) p & (Char.sizeof-1)) == orginalAlign);
                     static if (charSize == 3)
                     {
-                        state = (state<<1) | table[p[1]];
-                        state = (state<<1) | table[p[2]];
+                        state = (state << 1) | table[p[1]];
+                        state = (state << 1) | table[p[2]];
                         p += 4;
                     }
                     else
@@ -432,14 +432,14 @@ public:
                  //use the usual shift-or cycle
                     static if (charSize == 3)
                     {
-                        state = (state<<1) | table[p[0]];
-                        state = (state<<1) | table[p[1]];
-                        state = (state<<1) | table[p[2]];
+                        state = (state << 1) | table[p[0]];
+                        state = (state << 1) | table[p[1]];
+                        state = (state << 1) | table[p[2]];
                         p += 4;
                     }
                     else
                     {
-                        state = (state<<1) | table[p[0]];
+                        state = (state << 1) | table[p[0]];
                         p++;
                     }
                     if (!(state & limit))
@@ -459,9 +459,9 @@ public:
                 const(ubyte)* end = cast(ubyte*)(haystack.ptr + haystack.length);
                 while (p != end)
                 {
-                    state = (state<<1) | table[p[0]];
-                    state = (state<<1) | table[p[1]];
-                    state = (state<<1) | table[p[2]];
+                    state = (state << 1) | table[p[0]];
+                    state = (state << 1) | table[p[1]];
+                    state = (state << 1) | table[p[2]];
                     p += 4;
                     if (!(state & limit))//division rounds down for dchar
                     {
@@ -476,7 +476,7 @@ public:
                 size_t i  = 0;
                 if (len & 1)
                 {
-                    state = (state<<1) | table[p[i++]];
+                    state = (state << 1) | table[p[i++]];
                     if (!(state & limit))
                     {
                         s._index += i/Char.sizeof-length;
@@ -485,13 +485,13 @@ public:
                 }
                 while (i < len)
                 {
-                    state = (state<<1) | table[p[i++]];
+                    state = (state << 1) | table[p[i++]];
                     if (!(state & limit))
                     {
                         s._index += i/Char.sizeof-length;
                         return true;
                     }
-                    state = (state<<1) | table[p[i++]];
+                    state = (state << 1) | table[p[i++]];
                     if (!(state & limit))
                     {
                         s._index += i/Char.sizeof-length;

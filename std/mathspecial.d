@@ -351,7 +351,7 @@ real normalDistribution(real x)
  */
 real normalDistributionInverse(real p)
 in {
-  assert(p>=0.0L && p<=1.0L, "Domain error");
+  assert(p >= 0.0L && p <= 1.0L, "Domain error");
 }
 body
 {

@@ -2327,7 +2327,7 @@ private template TimSortImpl(alias pred, R)
     size_t minRunLength()(size_t n)
     {
         immutable shift = bsr(n)-5;
-        auto result = (n>>shift) + !!(n & ~((1<<shift)-1));
+        auto result = (n >> shift) + !!(n & ~((1 << shift)-1));
         return result;
     }
 
@@ -3955,15 +3955,15 @@ if (isRandomAccessRange!Range && hasLength!Range &&
         static if (flag == No.leanRight)
         {
             // Eliminate the rightmost from the competition
-            if (lt(r[d], r[c])) r.swapAt(c, d); // c<=d
-            if (lt(r[d], r[b])) r.swapAt(b, d); // b<=d
+            if (lt(r[d], r[c])) r.swapAt(c, d); // c <= d
+            if (lt(r[d], r[b])) r.swapAt(b, d); // b <= d
             medianOf!lt(r, a, b, c);
         }
         else
         {
             // Eliminate the leftmost from the competition
-            if (lt(r[b], r[a])) r.swapAt(a, b); // a<=b
-            if (lt(r[c], r[a])) r.swapAt(a, c); // a<=c
+            if (lt(r[b], r[a])) r.swapAt(a, b); // a <= b
+            if (lt(r[c], r[a])) r.swapAt(a, c); // a <= c
             medianOf!lt(r, b, c, d);
         }
     }

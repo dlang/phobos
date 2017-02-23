@@ -542,7 +542,7 @@ private template optionValidator(A...)
     import std.format : format;
 
     enum fmt = "getopt validator: %s (at position %d)";
-    enum isReceiver(T) = isPointer!T || (is(T==function)) || (is(T==delegate));
+    enum isReceiver(T) = isPointer!T || (is(T == function)) || (is(T == delegate));
     enum isOptionStr(T) = isSomeString!T || isSomeChar!T;
 
     auto validator()
@@ -1077,7 +1077,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
     }
     else
     {
-        if (!isLong && eqPos==1)
+        if (!isLong && eqPos == 1)
         {
             // argument looks like -o=value
             value = arg[2 .. $];

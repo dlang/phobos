@@ -3339,11 +3339,11 @@ version(unittest)
 {
     void transcodeReverse(Src,Dst)(immutable(Src)[] s, out immutable(Dst)[] r)
     {
-        static if (is(Src==Dst))
+        static if (is(Src == Dst))
         {
             return s;
         }
-        else static if (is(Src==AsciiChar))
+        else static if (is(Src == AsciiChar))
         {
             transcodeReverse!(char,Dst)(cast(string) s,r);
         }

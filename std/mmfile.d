@@ -244,7 +244,7 @@ class MmFile
                 }
             }
 
-            int hi = cast(int)(size>>32);
+            int hi = cast(int)(size >> 32);
             hFileMap = CreateFileMappingW(hFile, null, flProtect,
                     hi, cast(uint) size, null);
             wenforce(hFileMap, "CreateFileMapping");
@@ -523,7 +523,7 @@ class MmFile
             len = cast(size_t)(size-start);
         version(Windows)
         {
-            uint hi = cast(uint)(start>>32);
+            uint hi = cast(uint)(start >> 32);
             p = MapViewOfFileEx(hFileMap, dwDesiredAccess, hi, cast(uint) start, len, address);
             wenforce(p, "MapViewOfFileEx");
         }

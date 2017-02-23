@@ -239,7 +239,7 @@ private:
         }
         if ((~flags&Flags.storeNormalized) ||
             // Convert denormalized form to normalized form
-            ((flags&Flags.allowDenorm) && exp==0))
+            ((flags&Flags.allowDenorm) && exp == 0))
         {
             if (sig > 0)
             {
@@ -588,7 +588,7 @@ public:
     {
         auto x = get!real;
         auto y = cast(real) b;
-        return  (x>=y)-(x<=y);
+        return  (x >= y)-(x <= y);
     }
 
     /// ditto
@@ -924,7 +924,7 @@ body
     */
     static T secant_interpolate(T a, T b, R fa, R fb)
     {
-        if (( ((a - b) == a) && b!=0) || (a!=0 && ((b - a) == b)))
+        if (( ((a - b) == a) && b != 0) || (a != 0 && ((b - a) == b)))
         {
             // Catastrophic cancellation
             if (a == 0)
@@ -1087,7 +1087,7 @@ whileloop:
 
         // DAC: If the secant predicts a value equal to an endpoint, it's
         // probably false.
-        if (c==a || c==b || c.isNaN() || fabs(c - u) > (b - a) / 2)
+        if (c == a || c == b || c.isNaN() || fabs(c - u) > (b - a) / 2)
         {
             if ((a-b) == a || (b-a) == b)
             {
@@ -1095,9 +1095,9 @@ whileloop:
                     c = 0;
                 else
                 {
-                    if (a==0)
+                    if (a == 0)
                         c = ieeeMean(copysign(T(0), b), b);
-                    else if (b==0)
+                    else if (b == 0)
                         c = ieeeMean(copysign(T(0), a), a);
                     else
                         c = ieeeMean(a, b);
@@ -1120,7 +1120,7 @@ whileloop:
         // yet, or if we don't yet know what the exponent is,
         // perform a binary chop.
 
-        if ((a==0 || b==0 ||
+        if ((a == 0 || b == 0 ||
             (fabs(a) >= T(0.5) * fabs(b) && fabs(b) >= T(0.5) * fabs(a)))
             &&  (b - a) < T(0.25) * (b0 - a0))
         {
@@ -1188,7 +1188,7 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
 
         auto flo = f(result[0]);
         auto fhi = f(result[1]);
-        if (flo!=0)
+        if (flo != 0)
         {
             assert(oppositeSigns(flo, fhi));
         }
@@ -1304,7 +1304,7 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
 
     numProblems=0;
     //testFindRoot(&alefeld0, PI_2, PI);
-    for (n=1; n<=10; ++n)
+    for (n=1; n <= 10; ++n)
     {
         //testFindRoot(&alefeld0, n*n+1e-9L, (n+1)*(n+1)-1e-9L);
     }
@@ -2602,7 +2602,7 @@ T gcd(T)(T a, T b)
     {
         static if (T.min < 0)
         {
-            assert(a >= 0 && b >=0);
+            assert(a >= 0 && b >= 0);
         }
         while (b)
         {

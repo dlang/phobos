@@ -293,7 +293,7 @@ real gamma(real x)
     if (isNaN(x)) return x;
     if (x == -x.infinity) return real.nan;
     if ( fabs(x) > MAXGAMMA ) return real.infinity;
-    if (x==0) return 1.0 / x; // +- infinity depending on sign of x, create an exception.
+    if (x == 0) return 1.0 / x; // +- infinity depending on sign of x, create an exception.
 
     q = fabs(x);
 
@@ -1310,7 +1310,7 @@ body {
      *          k=0   | (a+k+1)
      *
      */
-    if (x==0)
+    if (x == 0)
        return 0.0L;
 
     if ( (x > 1.0L) && (x > a ) )
@@ -1345,7 +1345,7 @@ in {
    assert(a > 0);
 }
 body {
-    if (x==0)
+    if (x == 0)
         return 1.0L;
     if ( (x < 1.0L) || (x < a) )
         return 1.0L - gammaIncomplete(a,x);
@@ -1427,11 +1427,11 @@ body {
  */
 real gammaIncompleteComplInv(real a, real p)
 in {
-  assert(p>=0 && p<= 1);
+  assert(p >= 0 && p <= 1);
   assert(a>0);
 }
 body {
-    if (p==0) return real.infinity;
+    if (p == 0) return real.infinity;
 
     real y0 = p;
     const real MAXLOGL =  1.1356523406294143949492E4L;
@@ -1688,7 +1688,7 @@ done:
     for (int k=1; k<40; ++k)
     {
         real y=0;
-        for (int u=k; u>=1; --u)
+        for (int u=k; u >= 1; --u)
         {
             y += 1.0L/u;
         }

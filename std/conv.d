@@ -1372,18 +1372,18 @@ if (!isImplicitlyConvertible!(S, T) &&
     // Narrowing conversions from enum -> integral should be allowed, but they
     // should throw at runtime if the enum value doesn't fit in the target
     // type.
-    enum E1 : ulong { A = 1, B = 1UL<<48, C = 0 }
+    enum E1 : ulong { A = 1, B = 1UL << 48, C = 0 }
     assert(to!int(E1.A) == 1);
     assert(to!bool(E1.A) == true);
     assertThrown!ConvOverflowException(to!int(E1.B)); // E1.B overflows int
     assertThrown!ConvOverflowException(to!bool(E1.B)); // E1.B overflows bool
     assert(to!bool(E1.C) == false);
 
-    enum E2 : long { A = -1L<<48, B = -1<<31, C = 1<<31 }
+    enum E2 : long { A = -1L << 48, B = -1 << 31, C = 1 << 31 }
     assertThrown!ConvOverflowException(to!int(E2.A)); // E2.A overflows int
     assertThrown!ConvOverflowException(to!uint(E2.B)); // E2.B overflows uint
-    assert(to!int(E2.B) == -1<<31); // but does not overflow int
-    assert(to!int(E2.C) == 1<<31);  // E2.C does not overflow int
+    assert(to!int(E2.B) == -1 << 31); // but does not overflow int
+    assert(to!int(E2.C) == 1 << 31);  // E2.C does not overflow int
 
     enum E3 : int { A = -1, B = 1, C = 255, D = 0 }
     assertThrown!ConvOverflowException(to!ubyte(E3.A));

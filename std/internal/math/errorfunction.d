@@ -365,7 +365,7 @@ assert(isIdentical(normalDistributionImpl(NaN(0x325)), NaN(0x325)));
  */
 real normalDistributionInvImpl(real p)
 in {
-  assert(p>=0.0L && p<=1.0L, "Domain error");
+  assert(p >= 0.0L && p <= 1.0L, "Domain error");
 }
 body
 {
@@ -419,7 +419,7 @@ static immutable real[8] Q3 =
    0x1.e05268dd3c07989ep-3, 0x1.239c6aff14afbf82p+1, 1.0
 ];
 
-    if (p<=0.0L || p>=1.0L)
+    if (p <= 0.0L || p >= 1.0L)
     {
         if (p == 0.0L)
             return -real.infinity;

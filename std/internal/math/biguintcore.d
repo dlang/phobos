@@ -225,7 +225,7 @@ public:
                 if (data.length >= i+1)
                 {
                     // Since ZERO is [0], so we cannot simply return 1 here, as
-                    // data[i] would be 0 for i==0 in that case.
+                    // data[i] would be 0 for i == 0 in that case.
                     return (data[i] > 0) ? 1 : 0;
                 }
                 else
@@ -250,9 +250,9 @@ public:
             return false;
         uint ylo = cast(uint)(y & 0xFFFF_FFFF);
         uint yhi = cast(uint)(y >> 32);
-        if (data.length==2 && data[1]!=yhi)
+        if (data.length == 2 && data[1]!=yhi)
             return false;
-        if (data.length==1 && yhi!=0)
+        if (data.length == 1 && yhi != 0)
             return false;
         return (data[0] == ylo);
     }
@@ -461,9 +461,9 @@ public:
     {
         assert(y>0);
         uint bits = cast(uint) y & BIGDIGITSHIFTMASK;
-        if ((y>>LG2BIGDIGITBITS) >= data.length) return BigUint(ZERO);
+        if ((y >> LG2BIGDIGITBITS) >= data.length) return BigUint(ZERO);
         uint words = cast(uint)(y >> LG2BIGDIGITBITS);
-        if (bits==0)
+        if (bits == 0)
         {
             return BigUint(data[words..$]);
         }
@@ -485,11 +485,11 @@ public:
         assert(y>0);
         if (isZero()) return this;
         uint bits = cast(uint) y & BIGDIGITSHIFTMASK;
-        assert((y>>LG2BIGDIGITBITS) < cast(ulong)(uint.max));
+        assert((y >> LG2BIGDIGITBITS) < cast(ulong)(uint.max));
         uint words = cast(uint)(y >> LG2BIGDIGITBITS);
         BigDigit [] result = new BigDigit[data.length + words+1];
         result[0 .. words] = 0;
-        if (bits==0)
+        if (bits == 0)
         {
             result[words .. words+data.length] = data[];
             return BigUint(trustedAssumeUnique(result[0 .. words+data.length]));
@@ -497,7 +497,7 @@ public:
         else
         {
             immutable c = multibyteShl(result[words .. words+data.length], data, bits);
-            if (c==0) return BigUint(trustedAssumeUnique(result[0 .. words+data.length]));
+            if (c == 0) return BigUint(trustedAssumeUnique(result[0 .. words+data.length]));
             result[$-1] = c;
             return BigUint(trustedAssumeUnique(result));
         }
@@ -538,7 +538,7 @@ public:
                 }
                 if (d > uint.max)
                 {
-                    r.data = [cast(uint)(d & 0xFFFF_FFFF), cast(uint)(d>>32)];
+                    r.data = [cast(uint)(d & 0xFFFF_FFFF), cast(uint)(d >> 32)];
                 }
                 else
                 {
@@ -581,12 +581,12 @@ public:
     //  y must not be zero.
     static BigUint mulInt(T = ulong)(BigUint x, T y) pure nothrow
     {
-        if (y==0 || x == 0) return BigUint(ZERO);
+        if (y == 0 || x == 0) return BigUint(ZERO);
         uint hi = cast(uint)(y >>> 32);
         uint lo = cast(uint)(y & 0xFFFF_FFFF);
-        uint [] result = new BigDigit[x.data.length+1+(hi!=0)];
+        uint [] result = new BigDigit[x.data.length+1+(hi != 0)];
         result[x.data.length] = multibyteMul(result[0 .. x.data.length], x.data, lo, 0);
-        if (hi!=0)
+        if (hi != 0)
         {
             result[x.data.length+1] = multibyteMulAdd!('+')(result[1 .. x.data.length+1],
                 x.data, hi, 0);
@@ -598,7 +598,7 @@ public:
      */
     static BigUint mul(BigUint x, BigUint y) pure nothrow
     {
-        if (y==0 || x == 0)
+        if (y == 0 || x == 0)
             return BigUint(ZERO);
         auto len = x.data.length + y.data.length;
         BigDigit [] result = new BigDigit[len];
@@ -626,10 +626,10 @@ public:
         uint [] result = new BigDigit[x.data.length];
         if ((y&(-y))==y)
         {
-            assert(y!=0, "BigUint division by zero");
+            assert(y != 0, "BigUint division by zero");
             // perfect power of 2
             uint b = 0;
-            for (;y!=1; y>>=1)
+            for (;y != 1; y>>=1)
             {
                 ++b;
             }
@@ -663,7 +663,7 @@ public:
     {
         import core.memory : GC;
         uint y = y_;
-        assert(y!=0);
+        assert(y != 0);
         if ((y&(-y)) == y)
         {   // perfect power of 2
             return x.data[0] & (y-1);
@@ -736,9 +736,9 @@ public:
     static BigUint pow(BigUint x, ulong y) pure nothrow
     {
         // Deal with the degenerate cases first.
-        if (y==0) return BigUint(ONE);
-        if (y==1) return x;
-        if (x==0 || x==1) return x;
+        if (y == 0) return BigUint(ONE);
+        if (y == 1) return x;
+        if (x == 0 || x == 1) return x;
 
         BigUint result;
 
@@ -752,7 +752,7 @@ public:
         // If true, then x0 is that digit
         // and the result will be (x0 ^^ y) * (2^^(firstnonzero*y*BigDigitBits))
         BigDigit x0 = x.data[firstnonzero];
-        assert(x0 !=0);
+        assert(x0 != 0);
         // Length of the non-zero portion
         size_t nonzerolength = x.data.length - firstnonzero;
         ulong y0;
@@ -874,7 +874,7 @@ public:
             }
             y <<=1;
 
-            while (y!=0)
+            while (y != 0)
             {
                 // For each bit of y: Set r1 =  r1 * r1
                 // If the bit is 1, set r1 = r1 * x
@@ -915,7 +915,7 @@ public:
             }
         }
 
-        if (finalMultiplier!=1)
+        if (finalMultiplier != 1)
         {
             const BigDigit carry = multibyteMul(r1, r1, finalMultiplier, 0);
             if (carry)
@@ -927,7 +927,7 @@ public:
         if (evenshiftbits)
         {
             const BigDigit carry = multibyteShl(r1, r1, evenshiftbits);
-            if (carry!=0)
+            if (carry != 0)
             {
                 r1 = t1[0 .. r1.length + 1];
                 r1[$ - 1] = carry;
@@ -975,7 +975,7 @@ pure @system unittest
    BigUint r = BigUint([5]);
    BigUint t = BigUint([7]);
    BigUint s = BigUint.mod(r, t);
-   assert(s==5);
+   assert(s == 5);
 }
 
 
@@ -1293,16 +1293,16 @@ BigDigit [] addInt(const BigDigit[] x, ulong y) pure nothrow
     uint hi = cast(uint)(y >>> 32);
     uint lo = cast(uint)(y& 0xFFFF_FFFF);
     auto len = x.length;
-    if (x.length < 2 && hi!=0) ++len;
+    if (x.length < 2 && hi != 0) ++len;
     BigDigit [] result = new BigDigit[len+1];
     result[0 .. x.length] = x[];
-    if (x.length < 2 && hi!=0)
+    if (x.length < 2 && hi != 0)
     {
         result[1]=hi;
         hi=0;
     }
     uint carry = multibyteIncrementAssign!('+')(result[0..$-1], lo);
-    if (hi!=0) carry += multibyteIncrementAssign!('+')(result[1..$-1], hi);
+    if (hi != 0) carry += multibyteIncrementAssign!('+')(result[1..$-1], hi);
     if (carry)
     {
         result[$-1] = carry;
@@ -1478,7 +1478,7 @@ void squareInternal(BigDigit[] result, const BigDigit[] x) pure nothrow
   assert(result.length == 2*x.length);
   if (x.length <= KARATSUBASQUARELIMIT)
   {
-      if (x.length==1)
+      if (x.length == 1)
       {
          result[1] = multibyteMul(result[0 .. 1], x, x[0], 0);
          return;
@@ -1512,7 +1512,7 @@ void divModInternal(BigDigit [] quotient, BigDigit[] remainder, const BigDigit [
     BigDigit [] un = new BigDigit[u.length + 1];
     // How much to left shift v, so that its MSB is set.
     uint s = BIGDIGITSHIFTMASK - bsr(v[$-1]);
-    if (s!=0)
+    if (s != 0)
     {
         multibyteShl(vn, v, s);
         un[$-1] = multibyteShl(un[0..$-1], u, s);
@@ -1567,7 +1567,7 @@ char [] biguintToHex(char [] buff, const BigDigit [] data, char separator=0,
         LetterCase letterCase = LetterCase.upper) pure nothrow @safe
 {
     int x=0;
-    for (ptrdiff_t i=data.length - 1; i>=0; --i)
+    for (ptrdiff_t i=data.length - 1; i >= 0; --i)
     {
         toHexZeroPadded(buff[x .. x+8], data[i], letterCase);
         x+=8;
@@ -1675,7 +1675,7 @@ size_t biguintToDecimal(char [] buff, BigDigit [] data) pure nothrow
     itoaZeroPadded(buff[sofar-10 .. sofar], data[0]);
     sofar -= 10;
     // and strip off the leading zeros
-    while (sofar!= buff.length-1 && buff[sofar] == '0')
+    while (sofar != buff.length-1 && buff[sofar] == '0')
         sofar++;
     return sofar;
 }
@@ -1761,8 +1761,8 @@ body
             else
                 hi = 2;
             uint c = multibyteIncrementAssign!('+')(data[0 .. hi], cast(uint)(y&0xFFFF_FFFF));
-            c += multibyteIncrementAssign!('+')(data[1 .. hi], cast(uint)(y>>32));
-            if (c!=0)
+            c += multibyteIncrementAssign!('+')(data[1 .. hi], cast(uint)(y >> 32));
+            if (c != 0)
             {
                 data[hi]=c;
                 ++hi;
@@ -1772,10 +1772,10 @@ body
         }
     }
     // Now set y = all remaining digits.
-    if (lo>=18)
+    if (lo >= 18)
     {
     }
-    else if (lo>=9)
+    else if (lo >= 9)
     {
         for (int k=9; k<lo; ++k) y*=10;
         y+=x;
@@ -1805,7 +1805,7 @@ body
             while (lo>0)
             {
                 immutable c = multibyteMul(data[0 .. hi], data[0 .. hi], 10, 0);
-                if (c!=0)
+                if (c != 0)
                 {
                     data[hi]=c;
                     ++hi;
@@ -1815,9 +1815,9 @@ body
             uint c = multibyteIncrementAssign!('+')(data[0 .. hi], cast(uint)(y&0xFFFF_FFFF));
             if (y > 0xFFFF_FFFFL)
             {
-                c += multibyteIncrementAssign!('+')(data[1 .. hi], cast(uint)(y>>32));
+                c += multibyteIncrementAssign!('+')(data[1 .. hi], cast(uint)(y >> 32));
             }
-            if (c!=0)
+            if (c != 0)
             {
                 data[hi]=c;
                 ++hi;
@@ -1903,7 +1903,7 @@ body
     {
         result[right.length .. left.length] = left[right.length .. $];
         carry = multibyteIncrementAssign!('-')(result[right.length..$], carry);
-    } //else if (result.length==left.length+1) { result[$-1] = carry; carry=0; }
+    } //else if (result.length == left.length+1) { result[$-1] = carry; carry=0; }
     return carry;
 }
 
@@ -1950,16 +1950,16 @@ bool less(const(BigDigit)[] x, const(BigDigit)[] y) pure nothrow
 {
     assert(x.length >= y.length);
     auto k = x.length-1;
-    while (x[k]==0 && k>=y.length)
+    while (x[k]==0 && k >= y.length)
         --k;
-    if (k>=y.length)
+    if (k >= y.length)
         return false;
     while (k>0 && x[k]==y[k])
         --k;
     return x[k] < y[k];
 }
 
-// Set result = abs(x-y), return true if result is negative(x<y), false if x<=y.
+// Set result = abs(x-y), return true if result is negative(x<y), false if x <= y.
 bool inplaceSub(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
     pure nothrow
 {
@@ -2286,7 +2286,7 @@ void toHexZeroPadded(char[] output, uint value,
     ptrdiff_t x = output.length - 1;
     static immutable string upperHexDigits = "0123456789ABCDEF";
     static immutable string lowerHexDigits = "0123456789abcdef";
-    for ( ; x>=0; --x)
+    for ( ; x >= 0; --x)
     {
         if (letterCase == LetterCase.upper)
         {
@@ -2440,7 +2440,7 @@ body
 }
 
 // rem -= quot * v[0 .. k].
-// If would make rem negative, decrease quot until rem is >=0.
+// If would make rem negative, decrease quot until rem is >= 0.
 // Needs (quot.length * k) scratch space to store the result of the multiply.
 void adjustRemainder(BigDigit[] quot, BigDigit[] rem, const(BigDigit)[] v,
         ptrdiff_t k,

@@ -514,7 +514,7 @@ if (is(typeof(Num.init >= 0)) && is(typeof(-Num.init)) &&
     static if (isFloatingPoint!(Num))
         return fabs(x);
     else
-        return x>=0 ? x : -x;
+        return x >= 0 ? x : -x;
 }
 
 /// ditto
@@ -951,7 +951,7 @@ Lret: {}
         r = -r;
         t = tan(x);
         //printf("tan(%Lg) = %Lg, should be %Lg\n", x, t, r);
-        if (!isIdentical(r, t) && !(r!=r && t!=t)) assert(fabs(r-t) <= .0000001);
+        if (!isIdentical(r, t) && !(r != r && t != t)) assert(fabs(r-t) <= .0000001);
     }
     // overflow
     assert(isNaN(tan(real.infinity)));
@@ -1770,7 +1770,7 @@ L_extreme:  // Extreme exponent. X is very large positive, very
             // large negative, infinity, or NaN.
             fxam;
             fstsw AX;
-            test AX, 0x0400; // NaN_or_zero, but we already know x!=0
+            test AX, 0x0400; // NaN_or_zero, but we already know x != 0
             jz L_was_nan;  // if x is NaN, returns x
             test AX, 0x0200;
             jnz L_largenegative;
@@ -1858,7 +1858,7 @@ L_extreme:  // Extreme exponent. X is very large positive, very
             // large negative, infinity, or NaN.
             fxam;
             fstsw AX;
-            test AX, 0x0400; // NaN_or_zero, but we already know x!=0
+            test AX, 0x0400; // NaN_or_zero, but we already know x != 0
             jz L_was_nan;  // if x is NaN, returns x
             test AX, 0x0200;
             jnz L_largenegative;
@@ -2023,7 +2023,7 @@ L_extreme:  // Extreme exponent. X is very large positive, very
             // large negative, infinity, or NaN.
             fxam;
             fstsw AX;
-            test AX, 0x0400; // NaN_or_zero, but we already know x!=0
+            test AX, 0x0400; // NaN_or_zero, but we already know x != 0
             jz L_was_nan;  // if x is NaN, returns x
             // set scratchreal = real.min_normal
             // squaring it will return 0, setting underflow flag
@@ -2124,7 +2124,7 @@ L_extreme:  // Extreme exponent. X is very large positive, very
             // large negative, infinity, or NaN.
             fxam;
             fstsw AX;
-            test AX, 0x0400; // NaN_or_zero, but we already know x!=0
+            test AX, 0x0400; // NaN_or_zero, but we already know x != 0
             jz L_was_nan;  // if x is NaN, returns x
             // set scratchreal = real.min
             // squaring it will return 0, setting underflow flag
@@ -2827,7 +2827,7 @@ if (isIntegral!T && isSigned!T)
     import std.traits : Unsigned;
     // Note: abs(x) can not be used because the return type is not Unsigned and
     //       the return value would be wrong for x == int.min
-    Unsigned!T absx =  x>=0 ? x : -x;
+    Unsigned!T absx =  x >= 0 ? x : -x;
     return ilogb(absx);
 }
 
@@ -2936,7 +2936,7 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
         assert(ldexp(1.0L, -16382) == 0x1p-16382L);
         int x;
         real n = frexp(0x1p-16384L, x);
-        assert(n==0.5L);
+        assert(n == 0.5L);
         assert(x==-16383);
         assert(ldexp(n, x)==0x1p-16384L);
     }
@@ -2946,7 +2946,7 @@ float ldexp(float n, int exp) @safe pure nothrow @nogc { return ldexp(cast(real)
         assert(ldexp(1.0L, -1022) == 0x1p-1022L);
         int x;
         real n = frexp(0x1p-1024L, x);
-        assert(n==0.5L);
+        assert(n == 0.5L);
         assert(x==-1023);
         assert(ldexp(n, x)==0x1p-1024L);
     }
@@ -2961,7 +2961,7 @@ typed_allocator.d
     assert(ldexp(1.0, -1022) == 0x1p-1022);
     int x;
     double n = frexp(0x1p-1024, x);
-    assert(n==0.5);
+    assert(n == 0.5);
     assert(x==-1023);
     assert(ldexp(n, x)==0x1p-1024);
 }
@@ -2972,7 +2972,7 @@ typed_allocator.d
     assert(ldexp(1.0f, -126) == 0x1p-126f);
     int x;
     float n = frexp(0x1p-128f, x);
-    assert(n==0.5f);
+    assert(n == 0.5f);
     assert(x==-127);
     assert(ldexp(n, x)==0x1p-128f);
 }
@@ -3284,7 +3284,7 @@ real log1p(real x) @safe pure nothrow @nogc
     version(INLINE_YL2X)
     {
         // On x87, yl2xp1 is valid if and only if -0.5 <= lg(x) <= 0.5,
-        //    ie if -0.29<=x<=0.414
+        //    ie if -0.29 <= x <= 0.414
         return (fabs(x) <= 0.25)  ? core.math.yl2xp1(x, LN2) : core.math.yl2x(x+1, LN2);
     }
     else
@@ -4561,7 +4561,7 @@ public:
     assert(!ieeeFlags.divByZero);
     // Perform a division by zero.
     a/=0.0L;
-    assert(a==real.infinity);
+    assert(a == real.infinity);
     assert(ieeeFlags.divByZero);
     // Create a NaN
     a*=0.0L;
@@ -6518,7 +6518,7 @@ if (isFloatingPoint!(X))
                     || F.realFormat == RealFormat.ieeeQuadruple);
 
         if (x == y)
-            return X.mant_dig; // ensure diff!=0, cope with INF.
+            return X.mant_dig; // ensure diff != 0, cope with INF.
 
         Unqual!X diff = fabs(x - y);
 
@@ -6534,7 +6534,7 @@ if (isFloatingPoint!(X))
         // AND with 0x7FFF to form the absolute value.
         // To avoid out-by-1 errors, we subtract 1 so it rounds down
         // if the exponents were different. This means 'bitsdiff' is
-        // always 1 lower than we want, except that if bitsdiff==0,
+        // always 1 lower than we want, except that if bitsdiff == 0,
         // they could have 0 or 1 bits in common.
 
         int bitsdiff = (((  (pa[F.EXPPOS_SHORT] & F.EXPMASK)
@@ -6647,7 +6647,7 @@ body
 {
     // Runtime behaviour for contract violation:
     // If signs are opposite, or one is a NaN, return 0.
-    if (!((x>=0 && y>=0) || (x<=0 && y<=0))) return 0.0;
+    if (!((x >= 0 && y >= 0) || (x <= 0 && y <= 0))) return 0.0;
 
     // The implementation is simple: cast x and y to integers,
     // average them (avoiding overflow), and cast the result back to a floating-point number.
@@ -7537,10 +7537,10 @@ if (isFloatingPoint!T)
 {
     foreach (ulong i; 1 .. 62)
     {
-        assert(nextPow2(1UL<<i) == 2UL<<i);
-        assert(nextPow2((1UL<<i) - 1) == 1UL<<i);
-        assert(nextPow2((1UL<<i) + 1) == 2UL<<i);
-        assert(nextPow2((1UL<<i) + (1UL<<(i-1))) == 2UL<<i);
+        assert(nextPow2(1UL << i) == 2UL << i);
+        assert(nextPow2((1UL << i) - 1) == 1UL << i);
+        assert(nextPow2((1UL << i) + 1) == 2UL << i);
+        assert(nextPow2((1UL << i) + (1UL<<(i-1))) == 2UL << i);
     }
 }
 
@@ -7667,10 +7667,10 @@ if (isFloatingPoint!T)
 {
     foreach (ulong i; 1 .. 62)
     {
-        assert(truncPow2(2UL<<i) == 2UL<<i);
-        assert(truncPow2((2UL<<i) + 1) == 2UL<<i);
-        assert(truncPow2((2UL<<i) - 1) == 1UL<<i);
-        assert(truncPow2((2UL<<i) - (2UL<<(i-1))) == 1UL<<i);
+        assert(truncPow2(2UL << i) == 2UL << i);
+        assert(truncPow2((2UL << i) + 1) == 2UL << i);
+        assert(truncPow2((2UL << i) - 1) == 1UL << i);
+        assert(truncPow2((2UL << i) - (2UL<<(i-1))) == 1UL << i);
     }
 }
 

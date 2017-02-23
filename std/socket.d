@@ -1299,10 +1299,10 @@ abstract class Address
 
             if (!numeric)
             {
-                if (ret==EAI_NONAME)
+                if (ret == EAI_NONAME)
                     return null;
                 version(Windows)
-                    if (ret==WSANO_DATA)
+                    if (ret == WSANO_DATA)
                         return null;
             }
 
@@ -2164,7 +2164,7 @@ private:
         // type (declared in core.sys.posix.sys.select) is a structure
         // containing a single field, a static array.
 
-        static assert(fd_set.tupleof.length==1);
+        static assert(fd_set.tupleof.length == 1);
 
         // This is the type used in the fd_set array.
         // Using the type of the correct size is important for big-endian
