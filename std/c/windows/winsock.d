@@ -6,7 +6,7 @@
 // @@@DEPRECATED_2017-06@@@
 
 /++
-    $(RED Deprecated. Use $(D core.sys.windows.winsock2) instead. This module
+    $(RED Deprecated. Use `core.sys.windows.winsock2` instead. This module
           will be removed in June 2017.)
   +/
 deprecated("Import core.sys.windows.winsock2 instead")

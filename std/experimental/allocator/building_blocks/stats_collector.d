@@ -16,48 +16,48 @@ module std.experimental.allocator.building_blocks.stats_collector;
 import std.experimental.allocator.common;
 
 /**
-_Options for $(D StatsCollector) defined below. Each enables during
+_Options for `StatsCollector` defined below. Each enables during
 compilation one specific counter, statistic, or other piece of information.
 */
 enum Options : ulong
 {
     /**
-    Counts the number of calls to $(D owns).
+    Counts the number of calls to `owns`.
     */
     numOwns = 1u << 0,
     /**
-    Counts the number of calls to $(D allocate). All calls are counted,
+    Counts the number of calls to `allocate`. All calls are counted,
     including requests for zero bytes or failed requests.
     */
     numAllocate = 1u << 1,
     /**
-    Counts the number of calls to $(D allocate) that succeeded, i.e. they
+    Counts the number of calls to `allocate` that succeeded, i.e. they
     returned a block as large as requested. (N.B. requests for zero bytes count
     as successful.)
     */
     numAllocateOK = 1u << 2,
     /**
-    Counts the number of calls to $(D expand), regardless of arguments or
+    Counts the number of calls to `expand`, regardless of arguments or
     result.
     */
     numExpand = 1u << 3,
     /**
-    Counts the number of calls to $(D expand) that resulted in a successful
+    Counts the number of calls to `expand` that resulted in a successful
     expansion.
     */
     numExpandOK = 1u << 4,
     /**
-    Counts the number of calls to $(D reallocate), regardless of arguments or
+    Counts the number of calls to `reallocate`, regardless of arguments or
     result.
     */
     numReallocate = 1u << 5,
     /**
-    Counts the number of calls to $(D reallocate) that succeeded.
+    Counts the number of calls to `reallocate` that succeeded.
     (Reallocations to zero bytes count as successful.)
     */
     numReallocateOK = 1u << 6,
     /**
-    Counts the number of calls to $(D reallocate) that resulted in an in-place
+    Counts the number of calls to `reallocate` that resulted in an in-place
     reallocation (no memory moved). If this number is close to the total number
     of reallocations, that indicates the allocator finds room at the current
     block's end in a large fraction of the cases, but also that internal
@@ -66,15 +66,15 @@ enum Options : ulong
     */
     numReallocateInPlace = 1u << 7,
     /**
-    Counts the number of calls to $(D deallocate).
+    Counts the number of calls to `deallocate`.
     */
     numDeallocate = 1u << 8,
     /**
-    Counts the number of calls to $(D deallocateAll).
+    Counts the number of calls to `deallocateAll`.
     */
     numDeallocateAll = 1u << 9,
     /**
-    Chooses all $(D numXxx) flags.
+    Chooses all `numXxx` flags.
     */
     numAll = (1u << 10) - 1,
     /**
@@ -84,37 +84,37 @@ enum Options : ulong
     */
     bytesUsed = 1u << 10,
     /**
-    Tracks total cumulative bytes allocated by means of $(D allocate),
-    $(D expand), and $(D reallocate) (when resulting in an expansion). This
+    Tracks total cumulative bytes allocated by means of `allocate`,
+    `expand`, and `reallocate` (when resulting in an expansion). This
     number always grows and indicates allocation traffic. To compute bytes
-    deallocated cumulatively, subtract $(D bytesUsed) from $(D bytesAllocated).
+    deallocated cumulatively, subtract `bytesUsed` from `bytesAllocated`.
     */
     bytesAllocated = 1u << 11,
     /**
-    Tracks the sum of all $(D delta) values in calls of the form
-    $(D expand(b, delta)) that succeed (return $(D true)).
+    Tracks the sum of all `delta` values in calls of the form
+    `expand(b, delta)` that succeed (return `true`).
     */
     bytesExpanded = 1u << 12,
     /**
-    Tracks the sum of all $(D b.length - s) with $(D b.length > s) in calls of
-    the form $(D realloc(b, s)) that succeed (return $(D true)). In per-call
+    Tracks the sum of all `b.length - s` with `b.length > s` in calls of
+    the form `realloc(b, s)` that succeed (return `true`). In per-call
     statistics, also unambiguously counts the bytes deallocated with
-    $(D deallocate).
+    `deallocate`.
     */
     bytesContracted = 1u << 13,
     /**
-    Tracks the sum of all bytes moved as a result of calls to $(D realloc) that
+    Tracks the sum of all bytes moved as a result of calls to `realloc` that
     were unable to reallocate in place. A large number (relative to $(D
     bytesAllocated)) indicates that the application should use larger
     preallocations.
     */
     bytesMoved = 1u << 14,
     /**
-    Tracks the sum of all bytes NOT moved as result of calls to $(D realloc)
+    Tracks the sum of all bytes NOT moved as result of calls to `realloc`
     that managed to reallocate in place. A large number (relative to $(D
     bytesAllocated)) indicates that the application is expansion-intensive and
     is saving a good amount of moves. However, if this number is relatively
-    small and $(D bytesSlack) is high, it means the application is
+    small and `bytesSlack` is high, it means the application is
     overallocating for little benefit.
     */
     bytesNotMoved = 1u << 15,
@@ -130,7 +130,7 @@ enum Options : ulong
     */
     bytesHighTide = 1u << 17,
     /**
-    Chooses all $(D byteXxx) flags.
+    Chooses all `byteXxx` flags.
     */
     bytesAll = ((1u << 18) - 1) & ~numAll,
     /**
@@ -143,14 +143,14 @@ enum Options : ulong
 
 Allocator that collects extra data about allocations. Since each piece of
 information adds size and time overhead, statistics can be individually enabled
-or disabled through compile-time $(D flags).
+or disabled through compile-time `flags`.
 
-All stats of the form $(D numXxx) record counts of events occurring, such as
-calls to functions and specific results. The stats of the form $(D bytesXxx)
+All stats of the form `numXxx` record counts of events occurring, such as
+calls to functions and specific results. The stats of the form `bytesXxx`
 collect cumulative sizes.
 
-In addition, the data $(D callerSize), $(D callerModule), $(D callerFile), $(D
-callerLine), and $(D callerTime) is associated with each specific allocation.
+In addition, the data `callerSize`, `callerModule`, `callerFile`, $(D
+callerLine), and `callerTime` is associated with each specific allocation.
 This data prefixes each allocation.
 
 */
@@ -188,7 +188,7 @@ private:
     version (StdDdoc)
     {
         /**
-        Read-only properties enabled by the homonym $(D flags) chosen by the
+        Read-only properties enabled by the homonym `flags` chosen by the
         user.
 
         Example:
@@ -276,11 +276,11 @@ private:
 
 public:
 
-    /// Alignment offered is equal to $(D Allocator.alignment).
+    /// Alignment offered is equal to `Allocator.alignment`.
     alias alignment = Allocator.alignment;
 
     /**
-    Increments $(D numOwns) (per instance and and per call) and forwards to $(D
+    Increments `numOwns` (per instance and and per call) and forwards to $(D
     parent.owns(b)).
     */
     static if (hasMember!(Allocator, "owns"))
@@ -301,10 +301,10 @@ public:
     }
 
     /**
-    Forwards to $(D parent.allocate). Affects per instance: $(D numAllocate),
-    $(D bytesUsed), $(D bytesAllocated), $(D bytesSlack), $(D numAllocateOK),
-    and $(D bytesHighTide). Affects per call: $(D numAllocate), $(D
-    numAllocateOK), and $(D bytesAllocated).
+    Forwards to `parent.allocate`. Affects per instance: `numAllocate`,
+    `bytesUsed`, `bytesAllocated`, `bytesSlack`, `numAllocateOK`,
+    and `bytesHighTide`. Affects per call: `numAllocate`, $(D
+    numAllocateOK), and `bytesAllocated`.
     */
     static if (!(perCallFlags
         & (Options.numAllocate | Options.numAllocateOK
@@ -335,11 +335,11 @@ public:
     }
 
     /**
-    Defined whether or not $(D Allocator.expand) is defined. Affects
-    per instance: $(D numExpand), $(D numExpandOK), $(D bytesExpanded),
-    $(D bytesSlack), $(D bytesAllocated), and $(D bytesUsed). Affects per call:
-    $(D numExpand), $(D numExpandOK), $(D bytesExpanded), and
-    $(D bytesAllocated).
+    Defined whether or not `Allocator.expand` is defined. Affects
+    per instance: `numExpand`, `numExpandOK`, `bytesExpanded`,
+    `bytesSlack`, `bytesAllocated`, and `bytesUsed`. Affects per call:
+    `numExpand`, `numExpandOK`, `bytesExpanded`, and
+    `bytesAllocated`.
     */
     static if (!(perCallFlags
         & (Options.numExpand | Options.numExpandOK | Options.bytesExpanded)))
@@ -385,13 +385,13 @@ public:
     }
 
     /**
-    Defined whether or not $(D Allocator.reallocate) is defined. Affects
-    per instance: $(D numReallocate), $(D numReallocateOK), $(D
-    numReallocateInPlace), $(D bytesNotMoved), $(D bytesAllocated), $(D
-    bytesSlack), $(D bytesExpanded), and $(D bytesContracted). Affects per call:
-    $(D numReallocate), $(D numReallocateOK), $(D numReallocateInPlace),
-    $(D bytesNotMoved), $(D bytesExpanded), $(D bytesContracted), and
-    $(D bytesMoved).
+    Defined whether or not `Allocator.reallocate` is defined. Affects
+    per instance: `numReallocate`, `numReallocateOK`, $(D
+    numReallocateInPlace), `bytesNotMoved`, `bytesAllocated`, $(D
+    bytesSlack), `bytesExpanded`, and `bytesContracted`. Affects per call:
+    `numReallocate`, `numReallocateOK`, `numReallocateInPlace`,
+    `bytesNotMoved`, `bytesExpanded`, `bytesContracted`, and
+    `bytesMoved`.
     */
     static if (!(perCallFlags
         & (Options.numReallocate | Options.numReallocateOK
@@ -465,9 +465,9 @@ public:
     }
 
     /**
-    Defined whether or not $(D Allocator.deallocate) is defined. Affects
-    per instance: $(D numDeallocate), $(D bytesUsed), and $(D bytesSlack).
-    Affects per call: $(D numDeallocate) and $(D bytesContracted).
+    Defined whether or not `Allocator.deallocate` is defined. Affects
+    per instance: `numDeallocate`, `bytesUsed`, and `bytesSlack`.
+    Affects per call: `numDeallocate` and `bytesContracted`.
     */
     static if (!(perCallFlags &
             (Options.numDeallocate | Options.bytesContracted)))
@@ -492,8 +492,8 @@ public:
     static if (hasMember!(Allocator, "deallocateAll"))
     {
         /**
-        Defined only if $(D Allocator.deallocateAll) is defined. Affects
-        per instance and per call $(D numDeallocateAll).
+        Defined only if `Allocator.deallocateAll` is defined. Affects
+        per instance and per call `numDeallocateAll`.
         */
         static if (!(perCallFlags & Options.numDeallocateAll))
             bool deallocateAll()
@@ -513,7 +513,7 @@ public:
     }
 
     /**
-    Defined only if $(D Options.bytesUsed) is defined. Returns $(D bytesUsed ==
+    Defined only if `Options.bytesUsed` is defined. Returns `bytesUsed ==
     0).
     */
     static if (flags & Options.bytesUsed)
@@ -523,9 +523,9 @@ public:
     }
 
     /**
-    Reports per instance statistics to $(D output) (e.g. $(D stdout)). The
+    Reports per instance statistics to `output` (e.g. `stdout`). The
     format is simple: one kind and value per line, separated by a colon, e.g.
-    $(D bytesAllocated:7395404)
+    `bytesAllocated:7395404`
     */
     void reportStatistics(R)(auto ref R output)
     {
@@ -542,7 +542,7 @@ public:
     static if (perCallFlags)
     {
         /**
-        Defined if $(D perCallFlags) is nonzero.
+        Defined if `perCallFlags` is nonzero.
         */
         struct PerCallStatistics
         {
@@ -552,14 +552,14 @@ public:
             uint line;
             /// The options corresponding to the statistics collected.
             Options[] opts;
-            /// The values of the statistics. Has the same length as $(D opts).
+            /// The values of the statistics. Has the same length as `opts`.
             ulong[] values;
             // Next in the chain.
             private PerCallStatistics* next;
 
             /**
             Format to a string such as:
-            $(D mymodule.d(655): [numAllocate:21, numAllocateOK:21, bytesAllocated:324202]).
+            `mymodule.d(655): [numAllocate:21, numAllocateOK:21, bytesAllocated:324202]`.
             */
             string toString() const
             {
@@ -578,7 +578,7 @@ public:
         private static PerCallStatistics* root;
 
         /**
-        Defined if $(D perCallFlags) is nonzero. Iterates all monitored
+        Defined if `perCallFlags` is nonzero. Iterates all monitored
         file/line instances. The order of iteration is not meaningful (items
         are inserted at the front of a list upon the first call), so
         preprocessing the statistics after collection might be appropriate.
@@ -597,7 +597,7 @@ public:
         }
 
         /**
-        Defined if $(D perCallFlags) is nonzero. Outputs (e.g. to a $(D File))
+        Defined if `perCallFlags` is nonzero. Outputs (e.g. to a `File`)
         a simple report of the collected per-call statistics.
         */
         static void reportPerCallStatistics(R)(auto ref R output)

@@ -1748,7 +1748,7 @@ real logmdigamma(real x)
 
 /** Inverse of the Log Minus Digamma function
  *
- *   Returns x such $(D log(x) - digamma(x) == y).
+ *   Returns x such `log(x) - digamma(x) == y`.
  *
  * References:
  *   1. Abramowitz, M., and Stegun, I. A. (1970).

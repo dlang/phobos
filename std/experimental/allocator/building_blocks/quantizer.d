@@ -4,7 +4,7 @@ module std.experimental.allocator.building_blocks.quantizer;
 import std.experimental.allocator.common;
 
 /**
-This allocator sits on top of $(D ParentAllocator) and quantizes allocation
+This allocator sits on top of `ParentAllocator` and quantizes allocation
 sizes, usually from arbitrary positive numbers to a small set of round numbers
 (e.g. powers of two, page sizes etc). This technique is commonly used to:
 
@@ -14,24 +14,24 @@ reallocation is needed (e.g. to grow an array), expansion can be done quickly
 in place. Reallocation to smaller sizes is also fast (in-place) when the new
 size requested is within the same quantum as the existing size. Code that's
 reallocation-heavy can therefore benefit from fronting a generic allocator
-with a $(D Quantizer). These advantages are present even if
-$(D ParentAllocator) does not support reallocation at all.)
+with a `Quantizer`. These advantages are present even if
+`ParentAllocator` does not support reallocation at all.)
 $(LI Improve behavior of allocators sensitive to allocation sizes, such as $(D
-FreeList) and $(D FreeTree). Rounding allocation requests up makes for smaller
+FreeList) and `FreeTree`. Rounding allocation requests up makes for smaller
 free lists/trees at the cost of slack memory (internal fragmentation).)
 )
 
 The following methods are forwarded to the parent allocator if present:
-$(D allocateAll), $(D owns), $(D deallocateAll), $(D empty).
+`allocateAll`, `owns`, `deallocateAll`, `empty`.
 
-Preconditions: $(D roundingFunction) must satisfy three constraints. These are
-not enforced (save for the use of $(D assert)) for the sake of efficiency.
+Preconditions: `roundingFunction` must satisfy three constraints. These are
+not enforced (save for the use of `assert`) for the sake of efficiency.
 $(OL
-$(LI $(D roundingFunction(n) >= n) for all $(D n) of type $(D size_t);)
-$(LI $(D roundingFunction) must be monotonically increasing, i.e. $(D
-roundingFunction(n1) <= roundingFunction(n2)) for all $(D n1 < n2);)
-$(LI $(D roundingFunction) must be $(D pure), i.e. always return the same
-value for a given $(D n).)
+$(LI `roundingFunction(n) >= n` for all `n` of type `size_t`;)
+$(LI `roundingFunction` must be monotonically increasing, i.e. $(D
+roundingFunction(n1) <= roundingFunction(n2)) for all `n1 < n2`;)
+$(LI `roundingFunction` must be `pure`, i.e. always return the same
+value for a given `n`.)
 )
 */
 struct Quantizer(ParentAllocator, alias roundingFunction)
@@ -39,7 +39,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     import std.traits : hasMember;
 
     /**
-    The parent allocator. Depending on whether $(D ParentAllocator) holds state
+    The parent allocator. Depending on whether `ParentAllocator` holds state
     or not, this is a member variable or an alias for
     `ParentAllocator.instance`.
     */
@@ -54,7 +54,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     }
 
     /**
-    Returns $(D roundingFunction(n)).
+    Returns `roundingFunction(n)`.
     */
     size_t goodAllocSize(size_t n)
     {
@@ -69,9 +69,9 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     enum alignment = ParentAllocator.alignment;
 
     /**
-    Gets a larger buffer $(D buf) by calling
-    $(D parent.allocate(goodAllocSize(n))). If $(D buf) is $(D null), returns
-    $(D null). Otherwise, returns $(D buf[0 .. n]).
+    Gets a larger buffer `buf` by calling
+    `parent.allocate(goodAllocSize(n))`. If `buf` is `null`, returns
+    `null`. Otherwise, returns `buf[0 .. n]`.
     */
     void[] allocate(size_t n)
     {
@@ -80,9 +80,9 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     }
 
     /**
-    Defined only if $(D parent.alignedAllocate) exists and works similarly to
-    $(D allocate) by forwarding to
-    $(D parent.alignedAllocate(goodAllocSize(n), a)).
+    Defined only if `parent.alignedAllocate` exists and works similarly to
+    `allocate` by forwarding to
+    `parent.alignedAllocate(goodAllocSize(n), a)`.
     */
     static if (hasMember!(ParentAllocator, "alignedAllocate"))
     void[] alignedAllocate(size_t n, uint)
@@ -92,10 +92,10 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     }
 
     /**
-    First checks whether there's enough slack memory preallocated for $(D b)
-    by evaluating $(D b.length + delta <= goodAllocSize(b.length)). If that's
-    the case, expands $(D b) in place. Otherwise, attempts to use
-    $(D parent.expand) appropriately if present.
+    First checks whether there's enough slack memory preallocated for `b`
+    by evaluating `b.length + delta <= goodAllocSize(b.length)`. If that's
+    the case, expands `b` in place. Otherwise, attempts to use
+    `parent.expand` appropriately if present.
     */
     bool expand(ref void[] b, size_t delta)
     {
@@ -134,7 +134,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     /**
     Expands or shrinks allocated block to an allocated size of $(D
     goodAllocSize(s)). Expansion occurs in place under the conditions required
-    by $(D expand). Shrinking occurs in place if $(D goodAllocSize(b.length)
+    by `expand`. Shrinking occurs in place if `goodAllocSize(b.length)
     == goodAllocSize(s)).
     */
     bool reallocate(ref void[] b, size_t s)
@@ -162,9 +162,9 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     }
 
     /**
-    Defined only if $(D ParentAllocator.alignedAllocate) exists. Expansion
-    occurs in place under the conditions required by $(D expand). Shrinking
-    occurs in place if $(D goodAllocSize(b.length) == goodAllocSize(s)).
+    Defined only if `ParentAllocator.alignedAllocate` exists. Expansion
+    occurs in place under the conditions required by `expand`. Shrinking
+    occurs in place if `goodAllocSize(b.length) == goodAllocSize(s)`.
     */
     static if (hasMember!(ParentAllocator, "alignedAllocate"))
     bool alignedReallocate(ref void[] b, size_t s, uint a)
@@ -193,8 +193,8 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     }
 
     /**
-    Defined if $(D ParentAllocator.deallocate) exists and forwards to
-    $(D parent.deallocate(b.ptr[0 .. goodAllocSize(b.length)])).
+    Defined if `ParentAllocator.deallocate` exists and forwards to
+    `parent.deallocate(b.ptr[0 .. goodAllocSize(b.length)])`.
     */
     static if (hasMember!(ParentAllocator, "deallocate"))
     bool deallocate(void[] b)

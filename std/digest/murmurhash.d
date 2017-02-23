@@ -9,22 +9,22 @@ The older MurmurHash 1 and 2 are currently not supported.
 
 MurmurHash3 comes in three flavors, listed in increasing order of throughput:
 $(UL
-$(LI $(D MurmurHash3!32) produces a 32-bit value and is optimized for 32-bit architectures)
-$(LI $(D MurmurHash3!(128, 32)) produces a 128-bit value and is optimized for 32-bit architectures)
-$(LI $(D MurmurHash3!(128, 64)) produces a 128-bit value and is optimized for 64-bit architectures)
+$(LI `MurmurHash3!32` produces a 32-bit value and is optimized for 32-bit architectures)
+$(LI `MurmurHash3!(128, 32)` produces a 128-bit value and is optimized for 32-bit architectures)
+$(LI `MurmurHash3!(128, 64)` produces a 128-bit value and is optimized for 64-bit architectures)
 )
 
 Note:
 $(UL
-$(LI $(D MurmurHash3!(128, 32)) and $(D MurmurHash3!(128, 64)) produce different values.)
+$(LI `MurmurHash3!(128, 32)` and `MurmurHash3!(128, 64)` produce different values.)
 $(LI The current implementation is optimized for little endian architectures.
   It will exhibit different results on big endian architectures and a slightly
   less uniform distribution.)
 )
 
-This module conforms to the APIs defined in $(D std.digest.digest).
+This module conforms to the APIs defined in `std.digest.digest`.
 
-This module publicly imports $(D std.digest.digest) and can be used as a stand-alone module.
+This module publicly imports `std.digest.digest` and can be used as a stand-alone module.
 
 License: $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: Guillaume Chatelet
@@ -528,8 +528,8 @@ struct MurmurHash3(uint size /* 32 or 128 */ , uint opt = size_t.sizeof == 8 ? 6
 
     /++
     Finalizes the computation of the hash and returns the computed value.
-    Note that $(D finish) can be called only once and that no subsequent calls
-    to $(D put) is allowed.
+    Note that `finish` can be called only once and that no subsequent calls
+    to `put` is allowed.
     +/
     ubyte[Element.sizeof] finish() pure nothrow
     {

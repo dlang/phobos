@@ -771,7 +771,7 @@ template DerivedToFront(TList...)
 }
 
 /**
-Evaluates to $(D AliasSeq!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
+Evaluates to `AliasSeq!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))`.
  */
 template staticMap(alias F, T...)
 {
@@ -818,7 +818,7 @@ template staticMap(alias F, T...)
 
 /**
 Tests whether all given items satisfy a template predicate, i.e. evaluates to
-$(D F!(T[0]) && F!(T[1]) && ... && F!(T[$ - 1])).
+`F!(T[0]) && F!(T[1]) && ... && F!(T[$ - 1])`.
 
 Evaluation is $(I not) short-circuited if a false result is encountered; the
 template predicate must be instantiable with all the given items.
@@ -852,7 +852,7 @@ template allSatisfy(alias F, T...)
 
 /**
 Tests whether any given items satisfy a template predicate, i.e. evaluates to
-$(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
+`F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])`.
 
 Evaluation is short-circuited if a true result is encountered; the
 template predicate must be instantiable with one of the given items.
@@ -886,8 +886,8 @@ template anySatisfy(alias F, T...)
 
 
 /**
- * Filters an $(D AliasSeq) using a template predicate. Returns a
- * $(D AliasSeq) of the elements which satisfy the predicate.
+ * Filters an `AliasSeq` using a template predicate. Returns a
+ * `AliasSeq` of the elements which satisfy the predicate.
  */
 template Filter(alias pred, TList...)
 {
@@ -1102,7 +1102,7 @@ template templateOr(Preds...)
 }
 
 /**
- * Converts an input range $(D range) to an alias sequence.
+ * Converts an input range `range` to an alias sequence.
  */
 template aliasSeqOf(alias range)
 {
@@ -1379,11 +1379,11 @@ if (n > 0)
 }
 
 /**
- * Sorts a $(LREF AliasSeq) using $(D cmp).
+ * Sorts a $(LREF AliasSeq) using `cmp`.
  *
  * Parameters:
- *     cmp = A template that returns a $(D bool) (if its first argument is less than the second one)
- *         or an $(D int) (-1 means less than, 0 means equal, 1 means greater than)
+ *     cmp = A template that returns a `bool` (if its first argument is less than the second one)
+ *         or an `int` (-1 means less than, 0 means equal, 1 means greater than)
  *
  *     Seq = The  $(LREF AliasSeq) to sort
  *
@@ -1460,11 +1460,11 @@ if (Seq.length == 2)
 }
 
 /**
- * Checks if an $(LREF AliasSeq) is sorted according to $(D cmp).
+ * Checks if an $(LREF AliasSeq) is sorted according to `cmp`.
  *
  * Parameters:
- *     cmp = A template that returns a $(D bool) (if its first argument is less than the second one)
- *         or an $(D int) (-1 means less than, 0 means equal, 1 means greater than)
+ *     cmp = A template that returns a `bool` (if its first argument is less than the second one)
+ *         or an `int` (-1 means less than, 0 means equal, 1 means greater than)
  *
  *     Seq = The  $(LREF AliasSeq) to check
  *

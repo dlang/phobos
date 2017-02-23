@@ -48,17 +48,17 @@ $(LREF allDropExactly) $(LREF allDropBackExactly)
 
 $(GRAMMAR
 $(GNAME DropOperatorName):
-    $(D dropToHypercube)
+    `dropToHypercube`
     $(GLINK DropRoot)
     $(GLINK DropRoot) $(GLINK DropSuffix)
-    $(GLINK DropRoot) $(D Back)
-    $(GLINK DropRoot) $(D Back) $(GLINK DropSuffix)
+    $(GLINK DropRoot) `Back`
+    $(GLINK DropRoot) `Back` $(GLINK DropSuffix)
 $(GNAME DropRoot):
-    $(D drop)
-    $(D allDrop)
+    `drop`
+    `allDrop`
 $(GNAME DropSuffix):
-    $(D One)
-    $(D Exactly)
+    `One`
+    `Exactly`
 )
 
 $(H2 Bifacial operators)

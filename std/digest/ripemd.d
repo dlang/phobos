@@ -18,10 +18,10 @@ $(TR $(TDNW Helpers) $(TD $(MYREF ripemd160Of))
 )
 )
 
- * This module conforms to the APIs defined in $(D std.digest.digest). To understand the
- * differences between the template and the OOP API, see $(D std.digest.digest).
+ * This module conforms to the APIs defined in `std.digest.digest`. To understand the
+ * differences between the template and the OOP API, see `std.digest.digest`.
  *
- * This module publicly imports $(D std.digest.digest) and can be used as a stand-alone
+ * This module publicly imports `std.digest.digest` and can be used as a stand-alone
  * module.
  *
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -95,7 +95,7 @@ private uint rotateLeft(uint x, uint n) @safe pure nothrow @nogc
 
 /**
  * Template API RIPEMD160 implementation.
- * See $(D std.digest.digest) for differences between template and OOP API.
+ * See `std.digest.digest` for differences between template and OOP API.
  */
 struct RIPEMD160
 {
@@ -445,7 +445,7 @@ struct RIPEMD160
         /**
          * Use this to feed the digest with data.
          * Also implements the $(REF isOutputRange, std,range,primitives)
-         * interface for $(D ubyte) and $(D const(ubyte)[]).
+         * interface for `ubyte` and `const(ubyte)[]`.
          *
          * Example:
          * ----
@@ -680,9 +680,9 @@ auto ripemd160Of(T...)(T data)
 
 /**
  * OOP API RIPEMD160 implementation.
- * See $(D std.digest.digest) for differences between template and OOP API.
+ * See `std.digest.digest` for differences between template and OOP API.
  *
- * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!RIPEMD160),
+ * This is an alias for `$(REF WrapperDigest, std,digest,digest)!RIPEMD160`,
  * see there for more information.
  */
 alias RIPEMD160Digest = WrapperDigest!RIPEMD160;

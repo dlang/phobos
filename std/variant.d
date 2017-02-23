@@ -68,7 +68,7 @@ module std.variant;
 import std.meta, std.traits, std.typecons;
 
 /++
-    Gives the $(D sizeof) the largest type given.
+    Gives the `sizeof` the largest type given.
   +/
 template maxSize(T...)
 {
@@ -89,28 +89,28 @@ private alias This2Variant(V, T...) = AliasSeq!(ReplaceType!(This, V, T));
 
 /**
  * Back-end type seldom used directly by user
- * code. Two commonly-used types using $(D VariantN) are:
+ * code. Two commonly-used types using `VariantN` are:
  *
  * $(OL $(LI $(LREF Algebraic): A closed discriminated union with a
  * limited type universe (e.g., $(D Algebraic!(int, double,
  * string)) only accepts these three types and rejects anything
  * else).) $(LI $(LREF Variant): An open discriminated union allowing an
- * unbounded set of types. If any of the types in the $(D Variant)
+ * unbounded set of types. If any of the types in the `Variant`
  * are larger than the largest built-in type, they will automatically
  * be boxed. This means that even large types will only be the size
- * of a pointer within the $(D Variant), but this also implies some
- * overhead. $(D Variant) can accommodate all primitive types and
+ * of a pointer within the `Variant`, but this also implies some
+ * overhead. `Variant` can accommodate all primitive types and
  * all user-defined types.))
  *
- * Both $(D Algebraic) and $(D Variant) share $(D
+ * Both `Algebraic` and `Variant` share $(D
  * VariantN)'s interface. (See their respective documentations below.)
  *
- * $(D VariantN) is a discriminated union type parameterized
- * with the largest size of the types stored ($(D maxDataSize))
- * and with the list of allowed types ($(D AllowedTypes)). If
+ * `VariantN` is a discriminated union type parameterized
+ * with the largest size of the types stored (`maxDataSize`)
+ * and with the list of allowed types (`AllowedTypes`). If
  * the list is empty, then any type up of size up to $(D
  * maxDataSize) (rounded up for alignment) can be stored in a
- * $(D VariantN) object without being boxed (types larger
+ * `VariantN` object without being boxed (types larger
  * than this will be boxed).
  *
  */
@@ -130,9 +130,9 @@ private:
     }
     enum size = SizeChecker.sizeof - (int function()).sizeof;
 
-    /** Tells whether a type $(D T) is statically _allowed for
-     * storage inside a $(D VariantN) object by looking
-     * $(D T) up in $(D AllowedTypes).
+    /** Tells whether a type `T` is statically _allowed for
+     * storage inside a `VariantN` object by looking
+     * `T` up in `AllowedTypes`.
      */
     public template allowed(T)
     {
@@ -533,7 +533,7 @@ private:
     enum doUnittest = is(VariantN == Variant);
 
 public:
-    /** Constructs a $(D VariantN) value given an argument of a
+    /** Constructs a `VariantN` value given an argument of a
      * generic type. Statically rejects disallowed types.
      */
 
@@ -567,7 +567,7 @@ public:
         }
     }
 
-    /** Assigns a $(D VariantN) from a generic
+    /** Assigns a `VariantN` from a generic
      * argument. Statically rejects disallowed types. */
 
     VariantN opAssign(T)(T rhs)
@@ -656,7 +656,7 @@ public:
         return pack[0];
     }
 
-    /** Returns true if and only if the $(D VariantN) object
+    /** Returns true if and only if the `VariantN` object
      * holds a valid value (has been initialized with, or assigned
      * from, a valid value).
      */
@@ -680,10 +680,10 @@ public:
     }
 
     /**
-     * If the $(D VariantN) object holds a value of the
-     * $(I exact) type $(D T), returns a pointer to that
-     * value. Otherwise, returns $(D null). In cases
-     * where $(D T) is statically disallowed, $(D
+     * If the `VariantN` object holds a value of the
+     * $(I exact) type `T`, returns a pointer to that
+     * value. Otherwise, returns `null`. In cases
+     * where `T` is statically disallowed, $(D
      * peek) will not compile.
      */
     @property inout(T)* peek(T)() inout
@@ -711,7 +711,7 @@ public:
     }
 
     /**
-     * Returns the $(D typeid) of the currently held value.
+     * Returns the `typeid` of the currently held value.
      */
 
     @property TypeInfo type() const nothrow @trusted
@@ -724,7 +724,7 @@ public:
     }
 
     /**
-     * Returns $(D true) if and only if the $(D VariantN)
+     * Returns `true` if and only if the `VariantN`
      * object holds an object implicitly convertible to type `T`.
      * Implicit convertibility is defined as per
      * $(REF_ALTTEXT ImplicitConversionTargets, ImplicitConversionTargets, std,traits).
@@ -775,11 +775,11 @@ public:
     }
 
     /**
-     * Returns the value stored in the $(D VariantN) object,
+     * Returns the value stored in the `VariantN` object,
      * explicitly converted (coerced) to the requested type $(D
-     * T). If $(D T) is a string type, the value is formatted as
-     * a string. If the $(D VariantN) object is a string, a
-     * parse of the string to type $(D T) is attempted. If a
+     * T). If `T` is a string type, the value is formatted as
+     * a string. If the `VariantN` object is a string, a
+     * parse of the string to type `T` is attempted. If a
      * conversion is not possible, throws a $(D
      * VariantException).
      */
@@ -866,7 +866,7 @@ public:
     /**
      * Ordering comparison used by the "<", "<=", ">", and ">="
      * operators. In case comparison is not sensible between the held
-     * value and $(D rhs), an exception is thrown.
+     * value and `rhs`, an exception is thrown.
      */
 
     int opCmp(T)(T rhs)
@@ -970,8 +970,8 @@ public:
     }
 
     /**
-     * Arithmetic between $(D VariantN) objects and numeric
-     * values. All arithmetic operations return a $(D VariantN)
+     * Arithmetic between `VariantN` objects and numeric
+     * values. All arithmetic operations return a `VariantN`
      * object typed depending on the types of both values
      * involved. The conversion rules mimic D's built-in rules for
      * arithmetic conversions.
@@ -1129,7 +1129,7 @@ public:
         return opIndexAssign(mixin(`opIndex(i)` ~ op ~ `value`), i);
     }
 
-    /** If the $(D VariantN) contains an (associative) array,
+    /** If the `VariantN` contains an (associative) array,
      * returns the _length of that array. Otherwise, throws an
      * exception.
      */
@@ -1139,7 +1139,7 @@ public:
     }
 
     /**
-       If the $(D VariantN) contains an array, applies $(D dg) to each
+       If the `VariantN` contains an array, applies `dg` to each
        element of the array in turn. Otherwise, throws an exception.
      */
     int opApply(Delegate)(scope Delegate dg) if (is(Delegate == delegate))
@@ -1422,15 +1422,15 @@ Alias for $(LREF VariantN) instantiated with the largest size of `creal`,
 `char[]`, and `void delegate()`. This ensures that `Variant` is large enough
 to hold all of D's predefined types unboxed, including all numeric types,
 pointers, delegates, and class references.  You may want to use
-$(D VariantN) directly with a different maximum size either for
+`VariantN` directly with a different maximum size either for
 storing larger types unboxed, or for saving memory.
  */
 alias Variant = VariantN!(maxSize!(creal, char[], void delegate()));
 
 /**
- * Returns an array of variants constructed from $(D args).
+ * Returns an array of variants constructed from `args`.
  *
- * This is by design. During construction the $(D Variant) needs
+ * This is by design. During construction the `Variant` needs
  * static type information about the type being held, so as to store a
  * pointer to function for fast retrieval.
  */
@@ -1457,9 +1457,9 @@ Variant[] variantArray(T...)(T args)
  * Thrown in three cases:
  *
  * $(OL $(LI An uninitialized `Variant` is used in any way except
- * assignment and $(D hasValue);) $(LI A $(D get) or
- * $(D coerce) is attempted with an incompatible target type;)
- * $(LI A comparison between $(D Variant) objects of
+ * assignment and `hasValue`;) $(LI A `get` or
+ * `coerce` is attempted with an incompatible target type;)
+ * $(LI A comparison between `Variant` objects of
  * incompatible types is attempted.))
  *
  */
@@ -2001,11 +2001,11 @@ static class VariantException : Exception
  * ensuring that all types are handled by the visiting functions.
  *
  * The delegate or function having the currently held value as parameter is called
- * with $(D variant)'s current value. Visiting handlers are passed
+ * with `variant`'s current value. Visiting handlers are passed
  * in the template parameter list.
  * It is statically ensured that all held types of
- * $(D variant) are handled across all handlers.
- * $(D visit) allows delegates and static functions to be passed
+ * `variant` are handled across all handlers.
+ * `visit` allows delegates and static functions to be passed
  * as parameters.
  *
  * If a function without parameters is specified, this function is called
@@ -2116,7 +2116,7 @@ if (Handlers.length > 0)
  * by the visiting functions.
  *
  * If a parameter-less function is specified it is called when
- * either $(D variant) doesn't hold a value or holds a type
+ * either `variant` doesn't hold a value or holds a type
  * which isn't handled by the visiting functions.
  *
  * Returns: The return type of tryVisit is deduced from the visiting functions and must be
@@ -2200,11 +2200,11 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 
 
     /**
-     * Returns: Struct where $(D indices)  is an array which
+     * Returns: Struct where `indices`  is an array which
      * contains at the n-th position the index in Handler which takes the
      * n-th type of AllowedTypes. If an Handler doesn't match an
      * AllowedType, -1 is set. If a function in the delegates doesn't
-     * have parameters, the field $(D exceptionFuncIdx) is set;
+     * have parameters, the field `exceptionFuncIdx` is set;
      * otherwise it's -1.
      */
     auto visitGetOverloadMap()

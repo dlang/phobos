@@ -3,16 +3,16 @@ module std.experimental.allocator.building_blocks.bucketizer;
 
 /**
 
-A $(D Bucketizer) uses distinct allocators for handling allocations of sizes in
-the intervals $(D [min, min + step - 1]), $(D [min + step, min + 2 * step - 1]),
-$(D [min + 2 * step, min + 3 * step - 1]), $(D ...), $(D [max - step + 1, max]).
+A `Bucketizer` uses distinct allocators for handling allocations of sizes in
+the intervals `[min, min + step - 1]`, `[min + step, min + 2 * step - 1]`,
+`[min + 2 * step, min + 3 * step - 1]`, `...`, `[max - step + 1, max]`.
 
-$(D Bucketizer) holds a fixed-size array of allocators and dispatches calls to
-them appropriately. The size of the array is $(D (max + 1 - min) / step), which
+`Bucketizer` holds a fixed-size array of allocators and dispatches calls to
+them appropriately. The size of the array is `(max + 1 - min) / step`, which
 must be an exact division.
 
-Allocations for sizes smaller than $(D min) or larger than $(D max) are illegal
-for $(D Bucketizer). To handle them separately, $(D Segregator) may be of use.
+Allocations for sizes smaller than `min` or larger than `max` are illegal
+for `Bucketizer`. To handle them separately, `Segregator` may be of use.
 
 */
 struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
@@ -38,12 +38,12 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     }
 
     /**
-    The alignment offered is the same as $(D Allocator.alignment).
+    The alignment offered is the same as `Allocator.alignment`.
     */
     enum uint alignment = Allocator.alignment;
 
     /**
-    Rounds up to the maximum size of the bucket in which $(D bytes) falls.
+    Rounds up to the maximum size of the bucket in which `bytes` falls.
     */
     size_t goodAllocSize(size_t bytes) const
     {
@@ -54,7 +54,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     }
 
     /**
-    Directs the call to either one of the $(D buckets) allocators.
+    Directs the call to either one of the `buckets` allocators.
     */
     void[] allocate(size_t bytes)
     {
@@ -69,7 +69,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     }
 
     /**
-    Directs the call to either one of the $(D buckets) allocators. Defined only
+    Directs the call to either one of the `buckets` allocators. Defined only
     if `Allocator` defines `alignedAllocate`.
     */
     static if (hasMember!(Allocator, "alignedAllocate"))
@@ -87,8 +87,8 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 
     /**
     This method allows expansion within the respective bucket range. It succeeds
-    if both $(D b.length) and $(D b.length + delta) fall in a range of the form
-    $(D [min + k * step, min + (k + 1) * step - 1]).
+    if both `b.length` and `b.length + delta` fall in a range of the form
+    `[min + k * step, min + (k + 1) * step - 1]`.
     */
     bool expand(ref void[] b, size_t delta)
     {
@@ -103,7 +103,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 
     /**
     This method allows reallocation within the respective bucket range. If both
-    $(D b.length) and $(D size) fall in a range of the form $(D [min + k *
+    `b.length` and `size` fall in a range of the form `[min + k *
     step, min + (k + 1) * step - 1]), then reallocation is in place. Otherwise,
     reallocation with moving is attempted.
     */
@@ -172,7 +172,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     }
 
     /**
-    This method is only defined if $(D Allocator) defines $(D deallocate).
+    This method is only defined if `Allocator` defines `deallocate`.
     */
     static if (hasMember!(Allocator, "deallocate"))
     bool deallocate(void[] b)

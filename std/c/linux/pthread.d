@@ -7,7 +7,7 @@
 
 /++
     $(RED Deprecated. Use $(core.sys.posix.pthread) or the appropriate
-          $(D core.sys.posix.*) modules instead. This module will be removed in
+          `core.sys.posix.*` modules instead. This module will be removed in
           June 2017.)
   +/
 deprecated("Import core.sys.posix.pthread or the appropriate core.sys.posix.* modules instead")

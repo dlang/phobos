@@ -302,21 +302,21 @@ template to(T)
  * Stringize conversion from all types is supported.
  * $(UL
  *   $(LI String _to string conversion works for any two string types having
- *        ($(D char), $(D wchar), $(D dchar)) character widths and any
- *        combination of qualifiers (mutable, $(D const), or $(D immutable)).)
+ *        (`char`, `wchar`, `dchar`) character widths and any
+ *        combination of qualifiers (mutable, `const`, or `immutable`).)
  *   $(LI Converts array (other than strings) _to string.
- *        Each element is converted by calling $(D to!T).)
+ *        Each element is converted by calling `to!T`.)
  *   $(LI Associative array _to string conversion.
- *        Each element is printed by calling $(D to!T).)
- *   $(LI Object _to string conversion calls $(D toString) against the object or
- *        returns $(D "null") if the object is null.)
- *   $(LI Struct _to string conversion calls $(D toString) against the struct if
+ *        Each element is printed by calling `to!T`.)
+ *   $(LI Object _to string conversion calls `toString` against the object or
+ *        returns `"null"` if the object is null.)
+ *   $(LI Struct _to string conversion calls `toString` against the struct if
  *        it is defined.)
- *   $(LI For structs that do not define $(D toString), the conversion _to string
+ *   $(LI For structs that do not define `toString`, the conversion _to string
  *        produces the list of fields.)
  *   $(LI Enumerated types are converted _to strings as their symbolic names.)
- *   $(LI Boolean values are printed as $(D "true") or $(D "false").)
- *   $(LI $(D char), $(D wchar), $(D dchar) _to a string type.)
+ *   $(LI Boolean values are printed as `"true"` or `"false"`.)
+ *   $(LI `char`, `wchar`, `dchar` _to a string type.)
  *   $(LI Unsigned or signed integers _to strings.
  *        $(DL $(DT [special case])
  *             $(DD Convert integral value _to string in $(D_PARAM radix) radix.
@@ -325,9 +325,9 @@ template to(T)
  *             The characters A through Z are used to represent values 10 through 36
  *             and their case is determined by the $(D_PARAM letterCase) parameter.)))
  *   $(LI All floating point types _to all string types.)
- *   $(LI Pointer to string conversions prints the pointer as a $(D size_t) value.
- *        If pointer is $(D char*), treat it as C-style strings.
- *        In that case, this function is $(D @system).))
+ *   $(LI Pointer to string conversions prints the pointer as a `size_t` value.
+ *        If pointer is `char*`, treat it as C-style strings.
+ *        In that case, this function is `@system`.))
  */
 @system pure unittest // @system due to cast and ptr
 {
@@ -586,8 +586,8 @@ if (!isImplicitlyConvertible!(S, T) &&
 
 /**
 When target type supports 'converting construction', it is used.
-$(UL $(LI If target type is struct, $(D T(value)) is used.)
-     $(LI If target type is class, $(D new T(value)) is used.))
+$(UL $(LI If target type is struct, `T(value)` is used.)
+     $(LI If target type is class, `new T(value)` is used.))
 */
 private T toImpl(T, S)(S value)
 if (!isImplicitlyConvertible!(S, T) &&
@@ -976,7 +976,7 @@ if (!(isImplicitlyConvertible!(S, T) &&
 }
 
 /*
-    Check whether type $(D T) can be used in a switch statement.
+    Check whether type `T` can be used in a switch statement.
     This is useful for compile-time generation of switch case statements.
 */
 private template isSwitchable(E)
@@ -1400,7 +1400,7 @@ if (!isImplicitlyConvertible!(S, T) &&
 
 /**
 Array-to-array conversion (except when target is a string type)
-converts each element in turn by using $(D to).
+converts each element in turn by using `to`.
  */
 private T toImpl(T, S)(S value)
 if (!isImplicitlyConvertible!(S, T) &&
@@ -1864,12 +1864,12 @@ template roundTo(Target)
 }
 
 /**
-The $(D parse) family of functions works quite like the $(D to)
+The `parse` family of functions works quite like the `to`
 family, except that:
 $(OL
     $(LI It only works with character ranges as input.)
     $(LI It takes the input by reference. (This means that rvalues - such
-    as string literals - are not accepted: use $(D to) instead.))
+    as string literals - are not accepted: use `to` instead.))
     $(LI It advances the input to the position following the conversion.)
     $(LI It does not throw if it could not convert the entire input.))
 
@@ -3409,8 +3409,8 @@ package void skipWS(R)(ref R r)
 
 /**
  * Parses an array from a string given the left bracket (default $(D
- * '[')), right bracket (default $(D ']')), and element separator (by
- * default $(D ',')). A trailing separator is allowed.
+ * '[')), right bracket (default `']'`), and element separator (by
+ * default `','`). A trailing separator is allowed.
  *
  * Params:
  *     s = The string to parse
@@ -3625,8 +3625,8 @@ Lfewerr:
 
 /**
  * Parses an associative array from a string given the left bracket (default $(D
- * '[')), right bracket (default $(D ']')), key-value separator (default $(D
- * ':')), and element seprator (by default $(D ',')).
+ * '[')), right bracket (default `']'`), key-value separator (default $(D
+ * ':')), and element seprator (by default `','`).
  *
  * Params:
  *     s = the string to parse
@@ -3969,15 +3969,15 @@ private S textImpl(S, U...)(U args)
 
 
 /***************************************************************
-The $(D octal) facility provides a means to declare a number in base 8.
-Using $(D octal!177) or $(D octal!"177") for 127 represented in octal
+The `octal` facility provides a means to declare a number in base 8.
+Using `octal!177` or `octal!"177"` for 127 represented in octal
 (same as 0177 in C).
 
 The rules for strings are the usual for literals: If it can fit in an
-$(D int), it is an $(D int). Otherwise, it is a $(D long). But, if the
-user specifically asks for a $(D long) with the $(D L) suffix, always
-give the $(D long). Give an unsigned iff it is asked for with the $(D
-U) or $(D u) suffix. _Octals created from integers preserve the type
+`int`, it is an `int`. Otherwise, it is a `long`. But, if the
+user specifically asks for a `long` with the `L` suffix, always
+give the `long`. Give an unsigned iff it is asked for with the $(D
+U) or `u` suffix. _Octals created from integers preserve the type
 of the passed-in integral.
 
 See_Also:
@@ -4299,12 +4299,12 @@ private void emplaceInitializer(T)(ref T chunk) @trusted pure nothrow
 
 // emplace
 /**
-Given a pointer $(D chunk) to uninitialized memory (but already typed
-as $(D T)), constructs an object of non-$(D class) type $(D T) at that
+Given a pointer `chunk` to uninitialized memory (but already typed
+as `T`), constructs an object of non-`class` type `T` at that
 address. If `T` is a class, initializes the class reference to null.
 
 Returns: A pointer to the newly constructed object (which is the same
-as $(D chunk)).
+as `chunk`).
  */
 T* emplace(T)(T* chunk) @safe pure nothrow
 {
@@ -4340,16 +4340,16 @@ T* emplace(T)(T* chunk) @safe pure nothrow
 }
 
 /**
-Given a pointer $(D chunk) to uninitialized memory (but already typed
-as a non-class type $(D T)), constructs an object of type $(D T) at
-that address from arguments $(D args). If `T` is a class, initializes
+Given a pointer `chunk` to uninitialized memory (but already typed
+as a non-class type `T`), constructs an object of type `T` at
+that address from arguments `args`. If `T` is a class, initializes
 the class reference to `args[0]`.
 
-This function can be $(D @trusted) if the corresponding constructor of
-$(D T) is $(D @safe).
+This function can be `@trusted` if the corresponding constructor of
+`T` is `@safe`.
 
 Returns: A pointer to the newly constructed object (which is the same
-as $(D chunk)).
+as `chunk`).
  */
 T* emplace(T, Args...)(T* chunk, auto ref Args args)
 if (is(T == struct) || Args.length == 1)
@@ -4380,9 +4380,9 @@ private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignmen
 }
 
 /**
-Given a raw memory area $(D chunk), constructs an object of $(D class)
-type $(D T) at that address. The constructor is passed the arguments
-$(D Args).
+Given a raw memory area `chunk`, constructs an object of `class`
+type `T` at that address. The constructor is passed the arguments
+`Args`.
 
 If `T` is an inner class whose `outer` field can be used to access an instance
 of the enclosing class, then `Args` must not be empty, and the first member of it
@@ -4390,14 +4390,14 @@ must be a valid initializer for that `outer` field. Correct initialization of
 this field is essential to access members of the outer class inside `T` methods.
 
 Preconditions:
-$(D chunk) must be at least as large as $(D T) needs
-and should have an alignment multiple of $(D T)'s alignment. (The size
-of a $(D class) instance is obtained by using $(D
+`chunk` must be at least as large as `T` needs
+and should have an alignment multiple of `T`'s alignment. (The size
+of a `class` instance is obtained by using $(D
 __traits(classInstanceSize, T))).
 
 Note:
-This function can be $(D @trusted) if the corresponding constructor of
-$(D T) is $(D @safe).
+This function can be `@trusted` if the corresponding constructor of
+`T` is `@safe`.
 
 Returns: The newly constructed object.
  */
@@ -4481,18 +4481,18 @@ if (is(T == class))
 }
 
 /**
-Given a raw memory area $(D chunk), constructs an object of non-$(D
-class) type $(D T) at that address. The constructor is passed the
-arguments $(D args), if any.
+Given a raw memory area `chunk`, constructs an object of non-$(D
+class) type `T` at that address. The constructor is passed the
+arguments `args`, if any.
 
 Preconditions:
-$(D chunk) must be at least as large
-as $(D T) needs and should have an alignment multiple of $(D T)'s
+`chunk` must be at least as large
+as `T` needs and should have an alignment multiple of `T`'s
 alignment.
 
 Note:
-This function can be $(D @trusted) if the corresponding constructor of
-$(D T) is $(D @safe).
+This function can be `@trusted` if the corresponding constructor of
+`T` is `@safe`.
 
 Returns: A pointer to the newly constructed object.
  */
@@ -5473,10 +5473,10 @@ if (isIntegral!T && isOutputRange!(W, char))
 
 
 /**
-    Returns the corresponding _unsigned value for $(D x) (e.g. if $(D x) has type
-    $(D int), it returns $(D cast(uint) x)). The advantage compared to the cast
-    is that you do not need to rewrite the cast if $(D x) later changes type
-    (e.g from $(D int) to $(D long)).
+    Returns the corresponding _unsigned value for `x` (e.g. if `x` has type
+    `int`, it returns `cast(uint) x`). The advantage compared to the cast
+    is that you do not need to rewrite the cast if `x` later changes type
+    (e.g from `int` to `long`).
 
     Note that the result is always mutable even if the original type was const
     or immutable. In order to retain the constness, use $(REF Unsigned, std,traits).
@@ -5550,10 +5550,10 @@ if (isSomeChar!T)
 
 
 /**
-    Returns the corresponding _signed value for $(D x) (e.g. if $(D x) has type
-    $(D uint), it returns $(D cast(int) x)). The advantage compared to the cast
-    is that you do not need to rewrite the cast if $(D x) later changes type
-    (e.g from $(D uint) to $(D ulong)).
+    Returns the corresponding _signed value for `x` (e.g. if `x` has type
+    `uint`, it returns `cast(int) x`). The advantage compared to the cast
+    is that you do not need to rewrite the cast if `x` later changes type
+    (e.g from `uint` to `ulong`).
 
     Note that the result is always mutable even if the original type was const
     or immutable. In order to retain the constness, use $(REF Signed, std,traits).
@@ -5633,7 +5633,7 @@ template castFrom(From)
     /**
         Params:
             To    = The type _to cast _to.
-            value = The value _to cast. It must be of type $(D From),
+            value = The value _to cast. It must be of type `From`,
                     otherwise a compile-time error is emitted.
 
         Returns:
@@ -5698,7 +5698,7 @@ template castFrom(From)
 }
 
 /**
-Check the correctness of a string for $(D hexString).
+Check the correctness of a string for `hexString`.
 The result is true if and only if the input string is composed of whitespace
 characters (\f\n\r\t\v lineSep paraSep nelSep) and
 an even number of hexadecimal digits (regardless of the case).
@@ -5802,13 +5802,13 @@ The input string can also include white characters, which can be used
 to keep the literal string readable in the source code.
 
 The function is intended to replace the hexadecimal literal strings
-starting with $(D 'x'), which could be removed to simplify the core language.
+starting with `'x'`, which could be removed to simplify the core language.
 
 Params:
     hexData = string to be converted.
 
 Returns:
-    a $(D string), a $(D wstring) or a $(D dstring), according to the type of hexData.
+    a `string`, a `wstring` or a `dstring`, according to the type of hexData.
  */
 template hexString(string hexData)
 if (hexData.isHexLiteral)

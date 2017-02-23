@@ -1,7 +1,7 @@
 // @@@DEPRECATED_2017-06@@@
 
 /**
- * $(RED Deprecated. Use $(D core.stdc.stdlib) or the appropriate
+ * $(RED Deprecated. Use `core.stdc.stdlib` or the appropriate
  *       core.sys.posix.* modules instead. This module will be removed in June
  *       2017.)
  *

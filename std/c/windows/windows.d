@@ -5,7 +5,7 @@ States and other countries. */
 // @@@DEPRECATED_2017-06@@@
 
 /++
-    $(RED Deprecated. Use $(D core.sys.windows.windows) instead. This module will
+    $(RED Deprecated. Use `core.sys.windows.windows` instead. This module will
           be removed in June 2017.)
   +/
 deprecated("Import core.sys.windows.windows instead")

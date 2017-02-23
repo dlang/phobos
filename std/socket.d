@@ -140,7 +140,7 @@ version(unittest)
     }
 }
 
-/// Base exception thrown by $(D std.socket).
+/// Base exception thrown by `std.socket`.
 class SocketException: Exception
 {
     mixin basicExceptionCtors;
@@ -294,7 +294,7 @@ class SocketFeatureException: SocketException
 
 /**
  * Returns:
- * $(D true) if the last socket operation failed because the socket
+ * `true` if the last socket operation failed because the socket
  * was in non-blocking mode and the operation would have blocked.
  */
 bool wouldHaveBlocked() nothrow @nogc
@@ -404,7 +404,7 @@ enum ProtocolType: int
 
 
 /**
- * $(D Protocol) is a class for retrieving protocol information.
+ * `Protocol` is a class for retrieving protocol information.
  *
  * Example:
  * ---
@@ -502,7 +502,7 @@ version(CRuntime_Bionic) {} else
 
 
 /**
- * $(D Service) is a class for retrieving service information.
+ * `Service` is a class for retrieving service information.
  *
  * Example:
  * ---
@@ -831,30 +831,30 @@ class InternetHost
 }
 
 
-/// Holds information about a socket _address retrieved by $(D getAddressInfo).
+/// Holds information about a socket _address retrieved by `getAddressInfo`.
 struct AddressInfo
 {
     AddressFamily family;   /// Address _family
     SocketType type;        /// Socket _type
     ProtocolType protocol;  /// Protocol
     Address address;        /// Socket _address
-    string canonicalName;   /// Canonical name, when $(D AddressInfoFlags.CANONNAME) is used.
+    string canonicalName;   /// Canonical name, when `AddressInfoFlags.CANONNAME` is used.
 }
 
 /**
  * A subset of flags supported on all platforms with getaddrinfo.
- * Specifies option flags for $(D getAddressInfo).
+ * Specifies option flags for `getAddressInfo`.
  */
 enum AddressInfoFlags: int
 {
-    /// The resulting addresses will be used in a call to $(D Socket.bind).
+    /// The resulting addresses will be used in a call to `Socket.bind`.
     PASSIVE = AI_PASSIVE,
 
-    /// The canonical name is returned in $(D canonicalName) member in the first $(D AddressInfo).
+    /// The canonical name is returned in `canonicalName` member in the first `AddressInfo`.
     CANONNAME = AI_CANONNAME,
 
     /**
-     * The $(D node) parameter passed to $(D getAddressInfo) must be a numeric string.
+     * The `node` parameter passed to `getAddressInfo` must be a numeric string.
      * This will suppress any potentially lengthy network host address lookups.
      */
     NUMERICHOST = AI_NUMERICHOST,
@@ -881,21 +881,21 @@ private string formatGaiError(int err) @trusted
 /**
  * Provides _protocol-independent translation from host names to socket
  * addresses. If advanced functionality is not required, consider using
- * $(D getAddress) for compatibility with older systems.
+ * `getAddress` for compatibility with older systems.
  *
- * Returns: Array with one $(D AddressInfo) per socket address.
+ * Returns: Array with one `AddressInfo` per socket address.
  *
- * Throws: $(D SocketOSException) on failure, or $(D SocketFeatureException)
+ * Throws: `SocketOSException` on failure, or `SocketFeatureException`
  * if this functionality is not available on the current system.
  *
  * Params:
  *  node     = string containing host name or numeric address
  *  options  = optional additional parameters, identified by type:
- *             $(UL $(LI $(D string) - service name or port number)
- *                  $(LI $(D AddressInfoFlags) - option flags)
- *                  $(LI $(D AddressFamily) - address family to filter by)
- *                  $(LI $(D SocketType) - socket type to filter by)
- *                  $(LI $(D ProtocolType) - protocol to filter by))
+ *             $(UL $(LI `string` - service name or port number)
+ *                  $(LI `AddressInfoFlags` - option flags)
+ *                  $(LI `AddressFamily` - address family to filter by)
+ *                  $(LI `SocketType` - socket type to filter by)
+ *                  $(LI `ProtocolType` - protocol to filter by))
  *
  * Example:
  * ---
@@ -1068,12 +1068,12 @@ private ushort serviceToPort(in char[] service)
 
 /**
  * Provides _protocol-independent translation from host names to socket
- * addresses. Uses $(D getAddressInfo) if the current system supports it,
- * and $(D InternetHost) otherwise.
+ * addresses. Uses `getAddressInfo` if the current system supports it,
+ * and `InternetHost` otherwise.
  *
- * Returns: Array with one $(D Address) instance per socket address.
+ * Returns: Array with one `Address` instance per socket address.
  *
- * Throws: $(D SocketOSException) on failure.
+ * Throws: `SocketOSException` on failure.
  *
  * Example:
  * ---
@@ -1147,13 +1147,13 @@ Address[] getAddress(in char[] hostname, ushort port)
 
 /**
  * Provides _protocol-independent parsing of network addresses. Does not
- * attempt name resolution. Uses $(D getAddressInfo) with
- * $(D AddressInfoFlags.NUMERICHOST) if the current system supports it, and
- * $(D InternetAddress) otherwise.
+ * attempt name resolution. Uses `getAddressInfo` with
+ * `AddressInfoFlags.NUMERICHOST` if the current system supports it, and
+ * `InternetAddress` otherwise.
  *
- * Returns: An $(D Address) instance representing specified address.
+ * Returns: An `Address` instance representing specified address.
  *
- * Throws: $(D SocketException) on failure.
+ * Throws: `SocketException` on failure.
  *
  * Example:
  * ---
@@ -1228,7 +1228,7 @@ Address parseAddress(in char[] hostaddr, ushort port)
 
 
 /**
- * Class for exceptions thrown from an $(D Address).
+ * Class for exceptions thrown from an `Address`.
  */
 class AddressException: SocketOSException
 {
@@ -1237,7 +1237,7 @@ class AddressException: SocketOSException
 
 
 /**
- * $(D Address) is an abstract class for representing a socket addresses.
+ * `Address` is an abstract class for representing a socket addresses.
  *
  * Example:
  * ---
@@ -1262,11 +1262,11 @@ class AddressException: SocketOSException
  */
 abstract class Address
 {
-    /// Returns pointer to underlying $(D sockaddr) structure.
+    /// Returns pointer to underlying `sockaddr` structure.
     abstract @property sockaddr* name() pure nothrow @nogc;
     abstract @property const(sockaddr)* name() const pure nothrow @nogc; /// ditto
 
-    /// Returns actual size of underlying $(D sockaddr) structure.
+    /// Returns actual size of underlying `sockaddr` structure.
     abstract @property socklen_t nameLen() const pure nothrow @nogc;
 
     /// Family of this address.
@@ -1339,7 +1339,7 @@ abstract class Address
     /**
      * Attempts to retrieve the host address as a human-readable string.
      *
-     * Throws: $(D AddressException) on failure, or $(D SocketFeatureException)
+     * Throws: `AddressException` on failure, or `SocketFeatureException`
      * if address retrieval for this address family is not available on the
      * current system.
      */
@@ -1351,10 +1351,10 @@ abstract class Address
     /**
      * Attempts to retrieve the host name as a fully qualified domain name.
      *
-     * Returns: The FQDN corresponding to this $(D Address), or $(D null) if
+     * Returns: The FQDN corresponding to this `Address`, or `null` if
      * the host name did not resolve.
      *
-     * Throws: $(D AddressException) on error, or $(D SocketFeatureException)
+     * Throws: `AddressException` on error, or `SocketFeatureException`
      * if host name lookup for this address family is not available on the
      * current system.
      */
@@ -1366,7 +1366,7 @@ abstract class Address
     /**
      * Attempts to retrieve the numeric port number as a string.
      *
-     * Throws: $(D AddressException) on failure, or $(D SocketFeatureException)
+     * Throws: `AddressException` on failure, or `SocketFeatureException`
      * if port number retrieval for this address family is not available on the
      * current system.
      */
@@ -1378,7 +1378,7 @@ abstract class Address
     /**
      * Attempts to retrieve the service name as a string.
      *
-     * Throws: $(D AddressException) on failure, or $(D SocketFeatureException)
+     * Throws: `AddressException` on failure, or `SocketFeatureException`
      * if service name lookup for this address family is not available on the
      * current system.
      */
@@ -1405,7 +1405,7 @@ abstract class Address
 }
 
 /**
- * $(D UnknownAddress) encapsulates an unknown socket address.
+ * `UnknownAddress` encapsulates an unknown socket address.
  */
 class UnknownAddress: Address
 {
@@ -1434,7 +1434,7 @@ public:
 
 
 /**
- * $(D UnknownAddressReference) encapsulates a reference to an arbitrary
+ * `UnknownAddressReference` encapsulates a reference to an arbitrary
  * socket address.
  */
 class UnknownAddressReference: Address
@@ -1444,14 +1444,14 @@ protected:
     socklen_t len;
 
 public:
-    /// Constructs an $(D Address) with a reference to the specified $(D sockaddr).
+    /// Constructs an `Address` with a reference to the specified `sockaddr`.
     this(sockaddr* sa, socklen_t len) pure nothrow @nogc
     {
         this.sa  = sa;
         this.len = len;
     }
 
-    /// Constructs an $(D Address) with a copy of the specified $(D sockaddr).
+    /// Constructs an `Address` with a copy of the specified `sockaddr`.
     this(const(sockaddr)* sa, socklen_t len) @system pure nothrow
     {
         this.sa = cast(sockaddr*) (cast(ubyte*) sa)[0 .. len].dup.ptr;
@@ -1477,10 +1477,10 @@ public:
 
 
 /**
- * $(D InternetAddress) encapsulates an IPv4 (Internet Protocol version 4)
+ * `InternetAddress` encapsulates an IPv4 (Internet Protocol version 4)
  * socket address.
  *
- * Consider using $(D getAddress), $(D parseAddress) and $(D Address) methods
+ * Consider using `getAddress`, `parseAddress` and `Address` methods
  * instead of using this class directly.
  */
 class InternetAddress: Address
@@ -1529,12 +1529,12 @@ public:
     }
 
     /**
-     * Construct a new $(D InternetAddress).
+     * Construct a new `InternetAddress`.
      * Params:
      *   addr = an IPv4 address string in the dotted-decimal form a.b.c.d,
-     *          or a host name which will be resolved using an $(D InternetHost)
+     *          or a host name which will be resolved using an `InternetHost`
      *          object.
-     *   port = port number, may be $(D PORT_ANY).
+     *   port = port number, may be `PORT_ANY`.
      */
     this(in char[] addr, ushort port)
     {
@@ -1554,10 +1554,10 @@ public:
     }
 
     /**
-     * Construct a new $(D InternetAddress).
+     * Construct a new `InternetAddress`.
      * Params:
-     *   addr = (optional) an IPv4 address in host byte order, may be $(D ADDR_ANY).
-     *   port = port number, may be $(D PORT_ANY).
+     *   addr = (optional) an IPv4 address in host byte order, may be `ADDR_ANY`.
+     *   port = port number, may be `PORT_ANY`.
      */
     this(uint addr, ushort port) pure nothrow @nogc
     {
@@ -1575,7 +1575,7 @@ public:
     }
 
     /**
-     * Construct a new $(D InternetAddress).
+     * Construct a new `InternetAddress`.
      * Params:
      *   addr = A sockaddr_in as obtained from lower-level API calls such as getifaddrs.
      */
@@ -1600,10 +1600,10 @@ public:
     /**
      * Attempts to retrieve the host name as a fully qualified domain name.
      *
-     * Returns: The FQDN corresponding to this $(D InternetAddress), or
-     * $(D null) if the host name did not resolve.
+     * Returns: The FQDN corresponding to this `InternetAddress`, or
+     * `null` if the host name did not resolve.
      *
-     * Throws: $(D AddressException) on error.
+     * Throws: `AddressException` on error.
      */
     override string toHostNameString() const
     {
@@ -1652,7 +1652,7 @@ public:
      * Parse an IPv4 address string in the dotted-decimal form $(I a.b.c.d)
      * and return the number.
      * Returns: If the string is not a legitimate IPv4 address,
-     * $(D ADDR_NONE) is returned.
+     * `ADDR_NONE` is returned.
      */
     static uint parse(in char[] addr) @trusted nothrow
     {
@@ -1731,10 +1731,10 @@ public:
 
 
 /**
- * $(D Internet6Address) encapsulates an IPv6 (Internet Protocol version 6)
+ * `Internet6Address` encapsulates an IPv6 (Internet Protocol version 6)
  * socket address.
  *
- * Consider using $(D getAddress), $(D parseAddress) and $(D Address) methods
+ * Consider using `getAddress`, `parseAddress` and `Address` methods
  * instead of using this class directly.
  */
 class Internet6Address: Address
@@ -1800,10 +1800,10 @@ public:
     }
 
     /**
-     * Construct a new $(D Internet6Address).
+     * Construct a new `Internet6Address`.
      * Params:
      *   addr    = an IPv6 host address string in the form described in RFC 2373,
-     *             or a host name which will be resolved using $(D getAddressInfo).
+     *             or a host name which will be resolved using `getAddressInfo`.
      *   service = (optional) service name.
      */
     this(in char[] addr, in char[] service = null) @trusted
@@ -1814,11 +1814,11 @@ public:
     }
 
     /**
-     * Construct a new $(D Internet6Address).
+     * Construct a new `Internet6Address`.
      * Params:
      *   addr = an IPv6 host address string in the form described in RFC 2373,
-     *          or a host name which will be resolved using $(D getAddressInfo).
-     *   port = port number, may be $(D PORT_ANY).
+     *          or a host name which will be resolved using `getAddressInfo`.
+     *   port = port number, may be `PORT_ANY`.
      */
     this(in char[] addr, ushort port)
     {
@@ -1829,11 +1829,11 @@ public:
     }
 
     /**
-     * Construct a new $(D Internet6Address).
+     * Construct a new `Internet6Address`.
      * Params:
      *   addr = (optional) an IPv6 host address in host byte order, or
-     *          $(D ADDR_ANY).
-     *   port = port number, may be $(D PORT_ANY).
+     *          `ADDR_ANY`.
+     *   port = port number, may be `PORT_ANY`.
      */
     this(ubyte[16] addr, ushort port) pure nothrow @nogc
     {
@@ -1851,7 +1851,7 @@ public:
     }
 
      /**
-     * Construct a new $(D Internet6Address).
+     * Construct a new `Internet6Address`.
      * Params:
      *   addr = A sockaddr_in6 as obtained from lower-level API calls such as getifaddrs.
      */
@@ -1864,7 +1864,7 @@ public:
    /**
      * Parse an IPv6 host address string as described in RFC 2373, and return the
      * address.
-     * Throws: $(D SocketException) on error.
+     * Throws: `SocketException` on error.
      */
     static ubyte[16] parse(in char[] addr) @trusted
     {
@@ -1913,18 +1913,18 @@ version(StdDdoc)
     }
 
     /**
-     * $(D UnixAddress) encapsulates an address for a Unix domain socket
-     * ($(D AF_UNIX)). Available only on supported systems.
+     * `UnixAddress` encapsulates an address for a Unix domain socket
+     * (`AF_UNIX`). Available only on supported systems.
      */
     class UnixAddress: Address
     {
         private this() pure nothrow @nogc {}
 
-        /// Construct a new $(D UnixAddress) from the specified path.
+        /// Construct a new `UnixAddress` from the specified path.
         this(in char[] path) { }
 
         /**
-         * Construct a new $(D UnixAddress).
+         * Construct a new `UnixAddress`.
          * Params:
          *   addr = A sockaddr_un as obtained from lower-level API calls.
          */
@@ -2041,7 +2041,7 @@ static if (is(sockaddr_un))
 
 
 /**
- * Class for exceptions thrown by $(D Socket.accept).
+ * Class for exceptions thrown by `Socket.accept`.
  */
 class SocketAcceptException: SocketOSException
 {
@@ -2107,10 +2107,10 @@ struct TimeVal
 
 
 /**
- * A collection of sockets for use with $(D Socket.select).
+ * A collection of sockets for use with `Socket.select`.
  *
- * $(D SocketSet) wraps the platform $(D fd_set) type. However, unlike
- * $(D fd_set), $(D SocketSet) is not statically limited to $(D FD_SETSIZE)
+ * `SocketSet` wraps the platform `fd_set` type. However, unlike
+ * `fd_set`, `SocketSet` is not statically limited to `FD_SETSIZE`
  * or any other limit, and grows as needed.
  */
 class SocketSet
@@ -2218,7 +2218,7 @@ public:
 
     /**
      * Create a SocketSet with a specific initial capacity (defaults to
-     * $(D FD_SETSIZE), the system's default capacity).
+     * `FD_SETSIZE`, the system's default capacity).
      */
     this(size_t size = FD_SETSIZE) pure nothrow
     {
@@ -2226,7 +2226,7 @@ public:
         reset();
     }
 
-    /// Reset the $(D SocketSet) so that there are 0 $(D Socket)s in the collection.
+    /// Reset the `SocketSet` so that there are 0 `Socket`s in the collection.
     void reset() pure nothrow @nogc
     {
         version (Windows)
@@ -2269,7 +2269,7 @@ public:
     }
 
     /**
-     * Add a $(D Socket) to the collection.
+     * Add a `Socket` to the collection.
      * The socket must not already be in the collection.
      */
     void add(Socket s) pure nothrow
@@ -2299,7 +2299,7 @@ public:
 
 
     /**
-     * Remove this $(D Socket) from the collection.
+     * Remove this `Socket` from the collection.
      * Does nothing if the socket is not in the collection already.
      */
     void remove(Socket s) pure nothrow
@@ -2324,7 +2324,7 @@ public:
     }
 
 
-    /// Return nonzero if this $(D Socket) is in the collection.
+    /// Return nonzero if this `Socket` is in the collection.
     int isSet(Socket s) const pure nothrow @nogc
     {
         return isSet(s.sock);
@@ -2333,12 +2333,12 @@ public:
 
     /**
      * Returns:
-     * The current capacity of this $(D SocketSet). The exact
+     * The current capacity of this `SocketSet`. The exact
      * meaning of the return value varies from platform to platform.
      *
      * Note:
      * Since D 2.065, this value does not indicate a
-     * restriction, and $(D SocketSet) will grow its capacity as
+     * restriction, and `SocketSet` will grow its capacity as
      * needed automatically.
      */
     @property uint max() const pure nothrow @nogc
@@ -2545,7 +2545,7 @@ enum SocketOption: int
 
 
 /**
- * $(D Socket) is a class that creates a network communication endpoint using
+ * `Socket` is a class that creates a network communication endpoint using
  * the Berkeley sockets interface.
  */
 class Socket
@@ -2614,7 +2614,7 @@ public:
 
     /**
      * Create a blocking socket. If a single protocol type exists to support
-     * this socket type within the address family, the $(D ProtocolType) may be
+     * this socket type within the address family, the `ProtocolType` may be
      * omitted.
      */
     this(AddressFamily af, SocketType type, ProtocolType protocol) @trusted
@@ -2649,7 +2649,7 @@ public:
 
     /**
      * Create a blocking socket using the parameters from the specified
-     * $(D AddressInfo) structure.
+     * `AddressInfo` structure.
      */
     this(in AddressInfo info)
     {
@@ -2780,9 +2780,9 @@ public:
     }
 
     /**
-     * Listen for an incoming connection. $(D bind) must be called before you
-     * can $(D listen). The $(D backlog) is a request of how many pending
-     * incoming connections are queued until $(D accept)ed.
+     * Listen for an incoming connection. `bind` must be called before you
+     * can `listen`. The `backlog` is a request of how many pending
+     * incoming connections are queued until `accept`ed.
      */
     void listen(int backlog) @trusted
     {
@@ -2791,10 +2791,10 @@ public:
     }
 
     /**
-     * Called by $(D accept) when a new $(D Socket) must be created for a new
+     * Called by `accept` when a new `Socket` must be created for a new
      * connection. To use a derived class, override this method and return an
-     * instance of your class. The returned $(D Socket)'s handle must not be
-     * set; $(D Socket) has a protected constructor $(D this()) to use in this
+     * instance of your class. The returned `Socket`'s handle must not be
+     * set; `Socket` has a protected constructor `this()` to use in this
      * situation.
      *
      * Override to use a derived class.
@@ -2806,9 +2806,9 @@ public:
     }
 
     /**
-     * Accept an incoming connection. If the socket is blocking, $(D accept)
-     * waits for a connection request. Throws $(D SocketAcceptException) if
-     * unable to _accept. See $(D accepting) for use with derived classes.
+     * Accept an incoming connection. If the socket is blocking, `accept`
+     * waits for a connection request. Throws `SocketAcceptException` if
+     * unable to _accept. See `accepting` for use with derived classes.
      */
     Socket accept() @trusted
     {
@@ -2858,9 +2858,9 @@ public:
 
     /**
      * Immediately drop any connections and release socket resources.
-     * Calling $(D shutdown) before $(D close) is recommended for
-     * connection-oriented sockets. The $(D Socket) object is no longer
-     * usable after $(D close).
+     * Calling `shutdown` before `close` is recommended for
+     * connection-oriented sockets. The `Socket` object is no longer
+     * usable after `close`.
      * Calling shutdown() before this is recommended
      * for connection-oriented sockets.
      */
@@ -2882,7 +2882,7 @@ public:
         return to!string(result.ptr);
     }
 
-    /// Remote endpoint $(D Address).
+    /// Remote endpoint `Address`.
     @property Address remoteAddress() @trusted
     {
         Address addr = createAddress();
@@ -2895,7 +2895,7 @@ public:
         return addr;
     }
 
-    /// Local endpoint $(D Address).
+    /// Local endpoint `Address`.
     @property Address localAddress() @trusted
     {
         Address addr = createAddress();
@@ -2909,8 +2909,8 @@ public:
     }
 
     /**
-     * Send or receive error code. See $(D wouldHaveBlocked),
-     * $(D lastSocketError) and $(D Socket.getErrorText) for obtaining more
+     * Send or receive error code. See `wouldHaveBlocked`,
+     * `lastSocketError` and `Socket.getErrorText` for obtaining more
      * information about the error.
      */
     enum int ERROR = _SOCKET_ERROR;
@@ -2926,8 +2926,8 @@ public:
 
     /**
      * Send data on the connection. If the socket is blocking and there is no
-     * buffer space left, $(D send) waits.
-     * Returns: The number of bytes actually sent, or $(D Socket.ERROR) on
+     * buffer space left, `send` waits.
+     * Returns: The number of bytes actually sent, or `Socket.ERROR` on
      * failure.
      */
     ptrdiff_t send(const(void)[] buf, SocketFlags flags) @trusted
@@ -2952,8 +2952,8 @@ public:
     /**
      * Send data to a specific destination Address. If the destination address is
      * not specified, a connection must have been made and that address is used.
-     * If the socket is blocking and there is no buffer space left, $(D sendTo) waits.
-     * Returns: The number of bytes actually sent, or $(D Socket.ERROR) on
+     * If the socket is blocking and there is no buffer space left, `sendTo` waits.
+     * Returns: The number of bytes actually sent, or `Socket.ERROR` on
      * failure.
      */
     ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags, Address to) @trusted
@@ -3002,10 +3002,10 @@ public:
 
 
     /**
-     * Receive data on the connection. If the socket is blocking, $(D receive)
+     * Receive data on the connection. If the socket is blocking, `receive`
      * waits until there is data to be received.
-     * Returns: The number of bytes actually received, $(D 0) if the remote side
-     * has closed the connection, or $(D Socket.ERROR) on failure.
+     * Returns: The number of bytes actually received, `0` if the remote side
+     * has closed the connection, or `Socket.ERROR` on failure.
      */
     ptrdiff_t receive(void[] buf, SocketFlags flags) @trusted
     {
@@ -3030,11 +3030,11 @@ public:
     }
 
     /**
-     * Receive data and get the remote endpoint $(D Address).
-     * If the socket is blocking, $(D receiveFrom) waits until there is data to
+     * Receive data and get the remote endpoint `Address`.
+     * If the socket is blocking, `receiveFrom` waits until there is data to
      * be received.
-     * Returns: The number of bytes actually received, $(D 0) if the remote side
-     * has closed the connection, or $(D Socket.ERROR) on failure.
+     * Returns: The number of bytes actually received, `0` if the remote side
+     * has closed the connection, or `Socket.ERROR` on failure.
      */
     ptrdiff_t receiveFrom(void[] buf, SocketFlags flags, ref Address from) @trusted
     {
@@ -3098,7 +3098,7 @@ public:
 
     /**
      * Get a socket option.
-     * Returns: The number of bytes written to $(D result).
+     * Returns: The number of bytes written to `result`.
      * The length, in bytes, of the actual result - very different from getsockopt()
      */
     int getOption(SocketOptionLevel level, SocketOption option, void[] result) @trusted
@@ -3172,8 +3172,8 @@ public:
     }
 
     /**
-     * Sets a timeout (duration) option, i.e. $(D SocketOption.SNDTIMEO) or
-     * $(D RCVTIMEO). Zero indicates no timeout.
+     * Sets a timeout (duration) option, i.e. `SocketOption.SNDTIMEO` or
+     * `RCVTIMEO`. Zero indicates no timeout.
      *
      * In a typical application, you might also want to consider using
      * a non-blocking socket instead of setting a timeout on a blocking one.
@@ -3182,17 +3182,17 @@ public:
      * on *nix systems even for smaller durations, there are two issues to
      * be aware of on Windows: First, although undocumented, the effective
      * timeout duration seems to be the one set on the socket plus half
-     * a second. $(D setOption()) tries to compensate for that, but still,
+     * a second. `setOption()` tries to compensate for that, but still,
      * timeouts under 500ms are not possible on Windows. Second, be aware
      * that the actual amount of time spent until a blocking call returns
      * randomly varies on the order of 10ms.
      *
      * Params:
      *   level  = The level at which a socket option is defined.
-     *   option = Either $(D SocketOption.SNDTIMEO) or $(D SocketOption.RCVTIMEO).
+     *   option = Either `SocketOption.SNDTIMEO` or `SocketOption.RCVTIMEO`.
      *   value  = The timeout duration to set. Must not be negative.
      *
-     * Throws: $(D SocketException) if setting the options fails.
+     * Throws: `SocketException` if setting the options fails.
      *
      * Example:
      * ---
@@ -3259,8 +3259,8 @@ public:
      *   interval = Number of seconds between when successive keep-alive
      *              packets are sent if no acknowledgement is received.
      *
-     * Throws: $(D SocketOSException) if setting the options fails, or
-     * $(D SocketFeatureException) if setting keep-alive parameters is
+     * Throws: `SocketOSException` if setting the options fails, or
+     * `SocketFeatureException` if setting keep-alive parameters is
      * unsupported on the current platform.
      */
     void setKeepAlive(int time, int interval) @trusted
@@ -3292,12 +3292,12 @@ public:
 
     /**
      * Wait for a socket to change status. A wait timeout of $(Duration) or
-     * $(D TimeVal), may be specified; if a timeout is not specified or the
-     * $(D TimeVal) is $(D null), the maximum timeout is used. The $(D TimeVal)
-     * timeout has an unspecified value when $(D select) returns.
-     * Returns: The number of sockets with status changes, $(D 0) on timeout,
-     * or $(D -1) on interruption. If the return value is greater than $(D 0),
-     * the $(D SocketSets) are updated to only contain the sockets having status
+     * `TimeVal`, may be specified; if a timeout is not specified or the
+     * `TimeVal` is `null`, the maximum timeout is used. The `TimeVal`
+     * timeout has an unspecified value when `select` returns.
+     * Returns: The number of sockets with status changes, `0` on timeout,
+     * or `-1` on interruption. If the return value is greater than `0`,
+     * the `SocketSets` are updated to only contain the sockets having status
      * changes. For a connecting socket, a write status change means the
      * connection is established and it's able to send. For a listening socket,
      * a read status change means there is an incoming connection request and
@@ -3456,7 +3456,7 @@ public:
 }
 
 
-/// $(D TcpSocket) is a shortcut class for a TCP Socket.
+/// `TcpSocket` is a shortcut class for a TCP Socket.
 class TcpSocket: Socket
 {
     /// Constructs a blocking TCP Socket.
@@ -3473,7 +3473,7 @@ class TcpSocket: Socket
 
 
     //shortcut
-    /// Constructs a blocking TCP Socket and connects to an $(D Address).
+    /// Constructs a blocking TCP Socket and connects to an `Address`.
     this(Address connectTo)
     {
         this(connectTo.addressFamily);
@@ -3482,7 +3482,7 @@ class TcpSocket: Socket
 }
 
 
-/// $(D UdpSocket) is a shortcut class for a UDP Socket.
+/// `UdpSocket` is a shortcut class for a UDP Socket.
 class UdpSocket: Socket
 {
     /// Constructs a blocking UDP Socket.
@@ -3552,7 +3552,7 @@ class UdpSocket: Socket
  *
  * The two sockets are indistinguishable.
  *
- * Throws: $(D SocketException) if creation of the sockets fails.
+ * Throws: `SocketException` if creation of the sockets fails.
  */
 Socket[2] socketPair() @trusted
 {

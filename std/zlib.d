@@ -104,7 +104,7 @@ class ZlibException : Exception
  *     buf = buffer containing input data
  *
  * Returns:
- *     A $(D uint) checksum for the provided input data and starting checksum
+ *     A `uint` checksum for the provided input data and starting checksum
  *
  * See_Also:
  *     $(LINK http://en.wikipedia.org/wiki/Adler-32)
@@ -147,7 +147,7 @@ uint adler32(uint adler, const(void)[] buf)
  *     buf = buffer containing input data
  *
  * Returns:
- *     A $(D uint) checksum for the provided input data and starting checksum
+ *     A `uint` checksum for the provided input data and starting checksum
  *
  * See_Also:
  *     $(LINK http://en.wikipedia.org/wiki/Cyclic_redundancy_check)
