@@ -54,6 +54,10 @@ DFLAGS=-conf= -m$(MODEL) -O -release -w -dip25 -I$(DRUNTIME)\import
 
 UDFLAGS=-conf= -g -m$(MODEL) -O -w -dip25 -I$(DRUNTIME)\import
 
+## Flags for benchmark
+
+UBDFLAGS=-conf= -m$(MODEL) -O -version=randomized_unittest_benchmark w -dip25 -I$(DRUNTIME)\import
+
 ## C compiler, linker, librarian
 
 CC="$(VCDIR)\bin\amd64\cl"
@@ -294,7 +298,8 @@ SRC_STD_INTERNAL= \
 	std\internal\unicode_grapheme.d \
 	std\internal\unicode_norm.d \
 	std\internal\scopebuffer.d \
-	std\internal\test\dummyrange.d
+	std\internal\test\dummyrange.d \
+	std\internal\test\randomized_unittest_benchmark.d
 
 SRC_STD_INTERNAL_DIGEST= \
 	std\internal\digest\sha_SSSE3.d
@@ -328,6 +333,15 @@ SRC_STD_EXP_ALLOC_BB= \
 	std\experimental\allocator\building_blocks\segregator.d \
 	std\experimental\allocator\building_blocks\stats_collector.d \
 	std\experimental\allocator\building_blocks\package.d
+
+SRC_STD_C_OSX= std\c\osx\socket.d
+
+SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
+
+SRC_STD_INTERNAL= std\internal\cstring.d std\internal\processinit.d \
+	std\internal\unicode_tables.d std\internal\unicode_comp.d std\internal\unicode_decomp.d \
+	std\internal\unicode_grapheme.d std\internal\unicode_norm.d std\internal\scopebuffer.d \
+	std\internal\test\dummyrange.d
 
 SRC_STD_EXP_ALLOC= \
 	std\experimental\allocator\common.d \
@@ -385,6 +399,12 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_EXP_NDSLICE) \
 	$(SRC_ETC) \
 	$(SRC_ETC_C)
+
+SRC_TO_COMPILE= $(SRC_STD_ALL) \
+	$(SRC_STD_ALGO) \
+	$(SRC_STD_RANGE) \
+	$(SRC_STD_NDSLICE) \
+	$(SRC_TO_COMPILE_NOT_STD)
 
 SRC_ZLIB= \
 	etc\c\zlib\crc32.h \
@@ -632,6 +652,34 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/OPT:NOICF -unittest unittest.d $(UNITTEST_OBJS) \
 	    $(ZLIB) $(DRUNTIMELIB)
 	.\unittest.exe
+
+benchmark : $(LIB)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest2.obj $(SRC_STD_RANGE)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest2a.obj $(SRC_STD_2a_HEAVY)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittestM.obj $(SRC_STD_math)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest3.obj $(SRC_STD_3)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest3b.obj $(SRC_STD_3b)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest3c.obj $(SRC_STD_3c)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest4.obj $(SRC_STD_4)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest5.obj $(SRC_STD_5_HEAVY)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest6a.obj $(SRC_STD_6a)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest6b.obj $(SRC_STD_6b)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest6c.obj $(SRC_STD_6c)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest6d.obj $(SRC_STD_6d)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest6e.obj $(SRC_STD_6e)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest6h.obj $(SRC_STD_6h)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest6i.obj $(SRC_STD_6i)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest6f.obj $(SRC_STD_6f)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest6g.obj $(SRC_STD_CONTAINER)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest6j.obj $(SRC_STD_6j)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest7.obj $(SRC_STD_7) $(SRC_STD_LOGGER)
+	$(DMD) $(UBDFLAGS) -c -unittest -ofunittest8.obj $(SRC_TO_COMPILE_NOT_STD)
+	$(DMD) $(UBDFLAGS) -L/OPT:NOICF -unittest unittest.d $(UNITTEST_OBJS) \
+	    $(ZLIB) $(DRUNTIMELIB)
+	.\unittest.exe
+
 
 #unittest : unittest.exe
 #	unittest

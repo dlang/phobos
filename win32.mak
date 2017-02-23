@@ -51,6 +51,9 @@ DFLAGS=-conf= -O -release -w -dip25 -I$(DRUNTIME)\import
 
 UDFLAGS=-conf= -O -w -dip25 -I$(DRUNTIME)\import
 
+## Flags for unittest benchmark
+UBDFLAGS=-conf= -O -w -version=randomized_unittest_benchmark -dip25 -I$(DRUNTIME)\import
+
 ## C compiler
 
 CC=dmc
@@ -318,7 +321,19 @@ SRC_STD_EXP_ALLOC= \
 	std\experimental\allocator\showcase.d \
 	std\experimental\allocator\typed.d \
 	std\experimental\allocator\package.d \
-	$(SRC_STD_EXP_ALLOC_BB)
+	$(SRC_STD_ALLOC_BB)
+
+SRC_STD_6= std\variant.d std\zlib.d \
+	std\stream.d std\socket.d std\socketstream.d \
+	std\conv.d std\zip.d std\cstream.d \
+	std\experimental\randomized_unittest_benchmark.d \
+	$(SRC_STD_CONTAINER) $(SRC_STD_LOGGER) $(SRC_STD_ALLOC)
+
+SRC_STD_REST= std\stdint.d \
+	std\json.d \
+	std\parallelism.d \
+	std\mathspecial.d \
+	std\process.d
 
 SRC_STD_EXP_LOGGER= \
 	std\experimental\logger\core.d \
@@ -333,6 +348,39 @@ SRC_STD_EXP_NDSLICE= \
 	std\experimental\ndslice\selection.d \
 	std\experimental\ndslice\slice.d \
 	std\experimental\ndslice\internal.d
+
+SRC_STD_NET= std\net\isemail.d std\net\curl.d
+
+SRC_STD_C= std\c\process.d std\c\stdlib.d std\c\time.d std\c\stdio.d \
+	std\c\math.d std\c\stdarg.d std\c\stddef.d std\c\fenv.d std\c\string.d \
+	std\c\locale.d std\c\wcharh.d
+
+SRC_STD_WIN= std\windows\registry.d \
+	std\windows\iunknown.d std\windows\syserror.d std\windows\charset.d
+
+SRC_STD_C_WIN= std\c\windows\windows.d std\c\windows\com.d \
+	std\c\windows\winsock.d std\c\windows\stat.d
+
+SRC_STD_C_LINUX= std\c\linux\linux.d \
+	std\c\linux\socket.d std\c\linux\pthread.d std\c\linux\termios.d \
+	std\c\linux\tipc.d
+
+SRC_STD_C_OSX= std\c\osx\socket.d
+
+SRC_STD_C_FREEBSD= std\c\freebsd\socket.d
+
+SRC_STD_INTERNAL= std\internal\cstring.d std\internal\processinit.d \
+	std\internal\unicode_tables.d std\internal\unicode_comp.d std\internal\unicode_decomp.d \
+	std\internal\unicode_grapheme.d std\internal\unicode_norm.d std\internal\scopebuffer.d \
+	std\internal\test\dummyrange.d
+
+SRC_STD_INTERNAL_DIGEST= std\internal\digest\sha_SSSE3.d
+
+SRC_STD_INTERNAL_MATH= std\internal\math\biguintcore.d \
+	std\internal\math\biguintnoasm.d std\internal\math\biguintx86.d \
+	std\internal\math\gammafunction.d std\internal\math\errorfunction.d
+
+SRC_STD_INTERNAL_WINDOWS= std\internal\windows\advapi32.d
 
 SRC_ETC=
 
@@ -404,7 +452,6 @@ SRC_ZLIB= \
 	etc\c\zlib\win64.mak \
 	etc\c\zlib\linux.mak \
 	etc\c\zlib\osx.mak
-
 
 DOCS= \
 	$(DOC)\object.html \
@@ -528,6 +575,7 @@ DOCS= \
 	$(DOC)\std_experimental_ndslice_slice.html \
 	$(DOC)\std_experimental_ndslice.html \
 	$(DOC)\std_experimental_typecons.html \
+	$(DOC)\std_experimental_randomized_unittest_benchmark.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_windows_registry.html \
 	$(DOC)\std_c_fenv.html \
@@ -593,6 +641,22 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8f.obj $(SRC_STD_EXP)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest9a.obj $(SRC_STD_EXP_NDSLICE)
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(UNITTEST_OBJS) \
+		$(ZLIB) $(DRUNTIMELIB)
+	.\unittest.exe
+
+benchmark : $(LIB)
+	$(DMD) $(UBDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1_HEAVY)
+	$(DMD) $(UBDFLAGS) -L/co -c -unittest -ofunittest2.obj $(SRC_STD_RANGE)
+	$(DMD) $(UBDFLAGS) -L/co -c -unittest -ofunittest2a.obj $(SRC_STD_2a_HEAVY)
+	$(DMD) $(UBDFLAGS) -L/co -c -unittest -ofunittest3.obj $(SRC_STD_3)
+	$(DMD) $(UBDFLAGS) -L/co -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
+	$(DMD) $(UBDFLAGS) -L/co -c -unittest -ofunittest3b.obj $(SRC_STD_3b)
+	$(DMD) $(UBDFLAGS) -L/co -c -unittest -ofunittest4.obj $(SRC_STD_4)
+	$(DMD) $(UBDFLAGS) -L/co -c -unittest -ofunittest5.obj $(SRC_STD_5_HEAVY)
+	$(DMD) $(UBDFLAGS) -L/co -c -unittest -ofunittest6.obj $(SRC_STD_6)
+	$(DMD) $(UBDFLAGS) -L/co -c -unittest -ofunittest7.obj $(SRC_STD_REST)
+	$(DMD) $(UBDFLAGS) -L/co -c -unittest -ofunittest8.obj $(SRC_TO_COMPILE_NOT_STD)
+	$(DMD) $(UBDFLAGS) -L/co -unittest unittest.d $(UNITTEST_OBJS) \
 		$(ZLIB) $(DRUNTIMELIB)
 	.\unittest.exe
 
@@ -1067,6 +1131,9 @@ $(DOC)\std_experimental_ndslice_slice.html : $(STDDOC) std\experimental\ndslice\
 
 $(DOC)\std_experimental_ndslice.html : $(STDDOC) std\experimental\ndslice\package.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice.html $(STDDOC) std\experimental\ndslice\package.d
+
+$(DOC)\std_experimental_randomized_unittest_benchmark.html : $(STDDOC) std\experimental\randomized_unittest_benchmark.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_randomized_unittest_benchmark.html $(STDDOC) std\experimental\randomized_unittest_benchmark.d
 
 $(DOC)\std_digest_crc.html : $(STDDOC) std\digest\crc.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_crc.html $(STDDOC) std\digest\crc.d

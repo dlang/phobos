@@ -44,7 +44,9 @@ endif
 
 ifneq ($(BUILD),release)
     ifneq ($(BUILD),debug)
-        $(error Unrecognized BUILD=$(BUILD), must be 'debug' or 'release')
+        ifneq ($(BUILD),benchmark)
+        	$(error Unrecognized BUILD=$(BUILD), must be 'debug', 'release' or 'benchmark')
+		endif
     endif
 endif
 
@@ -108,6 +110,10 @@ endif
 DFLAGS=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -dip25 $(MODEL_FLAG) $(PIC)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
+else ifeq ($(BENCHMARK),true)
+	DFLAGS += -O -release -version=randomized_unittest_benchmark
+else ifeq ($(TEST),true)
+	DFLAGS += -debug -version=randomized_unittest_benchmark
 else
 	DFLAGS += -O -release
 endif
@@ -165,6 +171,7 @@ STD_PACKAGES = std $(addprefix std/,\
   experimental/allocator/building_blocks experimental/logger \
   experimental/ndslice \
   net \
+  randomized_unittest_benchmark \
   experimental range regex)
 
 # Modules broken down per package
@@ -175,7 +182,9 @@ PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
   outbuffer parallelism path process random signals socket stdint \
   stdio stdiobase string system traits typecons typetuple uni \
   uri utf uuid variant xml zip zlib
-PACKAGE_std_experimental = typecons
+
+PACKAGE_std_experimental = typecons randomized_unittest_benchmark	
+
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
   sorting
 PACKAGE_std_container = array binaryheap dlist package rbtree slist util
@@ -241,6 +250,15 @@ ALL_D_FILES = $(addsuffix .d, $(STD_MODULES) $(EXTRA_MODULES_COMMON) \
 # C files to be part of the build
 C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
 	gzclose gzlib gzread gzwrite infback inffast inflate inftrees trees uncompr zutil)
+C_FILES = $(addsuffix .c,$(C_MODULES))
+# C files that are not compiled (right now only zlib-related)
+C_EXTRAS = $(addprefix etc/c/zlib/, algorithm.txt ChangeLog crc32.h	\
+deflate.h example.c inffast.h inffixed.h inflate.h inftrees.h		\
+linux.mak minigzip.c osx.mak README trees.h win32.mak zconf.h		\
+win64.mak \
+gzguts.h zlib.3 zlib.h zutil.h)
+# Aggregate all C files over all OSs (this is for the zip file)
+ALL_C_FILES = $(C_FILES) $(C_EXTRAS)
 
 OBJS = $(addsuffix $(DOTOBJ),$(addprefix $(ROOT)/,$(C_MODULES)))
 
