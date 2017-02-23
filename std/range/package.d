@@ -33,133 +33,133 @@ The remainder of this module provides a rich set of _range creation and
 composition templates that let you construct new ranges out of existing ranges:
 
 $(BOOKTABLE ,
-    $(TR $(TD $(D $(LREF chain)))
+    $(TR $(TD $(LREF `chain)`)
         $(TD Concatenates several ranges into a single _range.
     ))
-    $(TR $(TD $(D $(LREF choose)))
+    $(TR $(TD $(LREF `choose)`)
         $(TD Chooses one of two ranges at runtime based on a boolean condition.
     ))
-    $(TR $(TD $(D $(LREF chooseAmong)))
+    $(TR $(TD $(LREF `chooseAmong)`)
         $(TD Chooses one of several ranges at runtime based on an index.
     ))
-    $(TR $(TD $(D $(LREF chunks)))
+    $(TR $(TD $(LREF `chunks)`)
         $(TD Creates a _range that returns fixed-size chunks of the original
         _range.
     ))
-    $(TR $(TD $(D $(LREF cycle)))
+    $(TR $(TD $(LREF `cycle)`)
         $(TD Creates an infinite _range that repeats the given forward _range
         indefinitely. Good for implementing circular buffers.
     ))
-    $(TR $(TD $(D $(LREF drop)))
+    $(TR $(TD $(LREF `drop)`)
         $(TD Creates the _range that results from discarding the first $(I n)
         elements from the given _range.
     ))
-    $(TR $(TD $(D $(LREF dropExactly)))
+    $(TR $(TD $(LREF `dropExactly)`)
         $(TD Creates the _range that results from discarding exactly $(I n)
         of the first elements from the given _range.
     ))
-    $(TR $(TD $(D $(LREF dropOne)))
+    $(TR $(TD $(LREF `dropOne)`)
         $(TD Creates the _range that results from discarding
         the first elements from the given _range.
     ))
-    $(TR $(TD $(D $(LREF enumerate)))
+    $(TR $(TD $(LREF `enumerate)`)
         $(TD Iterates a _range with an attached index variable.
     ))
-    $(TR $(TD $(D $(LREF evenChunks)))
+    $(TR $(TD $(LREF `evenChunks)`)
         $(TD Creates a _range that returns a number of chunks of
         approximately equal length from the original _range.
     ))
-    $(TR $(TD $(D $(LREF frontTransversal)))
+    $(TR $(TD $(LREF `frontTransversal)`)
         $(TD Creates a _range that iterates over the first elements of the
         given ranges.
     ))
-    $(TR $(TD $(D $(LREF indexed)))
+    $(TR $(TD $(LREF `indexed)`)
         $(TD Creates a _range that offers a view of a given _range as though
         its elements were reordered according to a given _range of indices.
     ))
-    $(TR $(TD $(D $(LREF iota)))
+    $(TR $(TD $(LREF `iota)`)
         $(TD Creates a _range consisting of numbers between a starting point
         and ending point, spaced apart by a given interval.
     ))
-    $(TR $(TD $(D $(LREF lockstep)))
+    $(TR $(TD $(LREF `lockstep)`)
         $(TD Iterates $(I n) _ranges in lockstep, for use in a $(D foreach)
         loop. Similar to $(D zip), except that $(D lockstep) is designed
         especially for $(D foreach) loops.
     ))
-    $(TR $(TD $(D $(LREF NullSink)))
+    $(TR $(TD $(LREF `NullSink)`)
         $(TD An output _range that discards the data it receives.
     ))
-    $(TR $(TD $(D $(LREF only)))
+    $(TR $(TD $(LREF `only)`)
         $(TD Creates a _range that iterates over the given arguments.
     ))
-    $(TR $(TD $(D $(LREF padLeft)))
+    $(TR $(TD $(LREF `padLeft)`)
         $(TD Pads a _range to a specified length by adding a given element to
         the front of the _range. Is lazy if the range has a known length.
     ))
-    $(TR $(TD $(D $(LREF padRight)))
+    $(TR $(TD $(LREF `padRight)`)
         $(TD Lazily pads a _range to a specified length by adding a given element to
         the back of the _range.
     ))
-    $(TR $(TD $(D $(LREF radial)))
+    $(TR $(TD $(LREF `radial)`)
         $(TD Given a random-access _range and a starting point, creates a
         _range that alternately returns the next left and next right element to
         the starting point.
     ))
-    $(TR $(TD $(D $(LREF recurrence)))
+    $(TR $(TD $(LREF `recurrence)`)
         $(TD Creates a forward _range whose values are defined by a
         mathematical recurrence relation.
     ))
-    $(TR $(TD $(D $(LREF repeat)))
+    $(TR $(TD $(LREF `repeat)`)
         $(TD Creates a _range that consists of a single element repeated $(I n)
         times, or an infinite _range repeating that element indefinitely.
     ))
-    $(TR $(TD $(D $(LREF retro)))
+    $(TR $(TD $(LREF `retro)`)
         $(TD Iterates a bidirectional _range backwards.
     ))
-    $(TR $(TD $(D $(LREF roundRobin)))
+    $(TR $(TD $(LREF `roundRobin)`)
         $(TD Given $(I n) ranges, creates a new _range that return the $(I n)
         first elements of each _range, in turn, then the second element of each
         _range, and so on, in a round-robin fashion.
     ))
-    $(TR $(TD $(D $(LREF sequence)))
+    $(TR $(TD $(LREF `sequence)`)
         $(TD Similar to $(D recurrence), except that a random-access _range is
         created.
     ))
-    $(TR $(TD $(D $(LREF stride)))
+    $(TR $(TD $(LREF `stride)`)
         $(TD Iterates a _range with stride $(I n).
     ))
-    $(TR $(TD $(D $(LREF tail)))
+    $(TR $(TD $(LREF `tail)`)
         $(TD Return a _range advanced to within $(D n) elements of the end of
         the given _range.
     ))
-    $(TR $(TD $(D $(LREF take)))
+    $(TR $(TD $(LREF `take)`)
         $(TD Creates a sub-_range consisting of only up to the first $(I n)
         elements of the given _range.
     ))
-    $(TR $(TD $(D $(LREF takeExactly)))
+    $(TR $(TD $(LREF `takeExactly)`)
         $(TD Like $(D take), but assumes the given _range actually has $(I n)
         elements, and therefore also defines the $(D length) property.
     ))
-    $(TR $(TD $(D $(LREF takeNone)))
+    $(TR $(TD $(LREF `takeNone)`)
         $(TD Creates a random-access _range consisting of zero elements of the
         given _range.
     ))
-    $(TR $(TD $(D $(LREF takeOne)))
+    $(TR $(TD $(LREF `takeOne)`)
         $(TD Creates a random-access _range consisting of exactly the first
         element of the given _range.
     ))
-    $(TR $(TD $(D $(LREF tee)))
+    $(TR $(TD $(LREF `tee)`)
         $(TD Creates a _range that wraps a given _range, forwarding along
         its elements while also calling a provided function with each element.
     ))
-    $(TR $(TD $(D $(LREF transposed)))
+    $(TR $(TD $(LREF `transposed)`)
         $(TD Transposes a _range of ranges.
     ))
-    $(TR $(TD $(D $(LREF transversal)))
+    $(TR $(TD $(LREF `transversal)`)
         $(TD Creates a _range that iterates over the $(I n)'th elements of the
         given random-access ranges.
     ))
-    $(TR $(TD $(D $(LREF zip)))
+    $(TR $(TD $(LREF `zip)`)
         $(TD Given $(I n) _ranges, creates a _range that successively returns a
         tuple of all the first elements, a tuple of all the second elements,
         etc.
@@ -167,8 +167,8 @@ $(BOOKTABLE ,
 )
 
 Ranges whose elements are sorted afford better efficiency with certain
-operations. For this, the $(D $(LREF assumeSorted)) function can be used to
-construct a $(D $(LREF SortedRange)) from a pre-sorted _range. The $(REF
+operations. For this, the $(LREF `assumeSorted`) function can be used to
+construct a $(LREF `SortedRange`) from a pre-sorted _range. The $(REF
 sort, std, algorithm, sorting) function also conveniently
 returns a $(D SortedRange). $(D SortedRange) objects provide some additional
 _range operations that take advantage of the fact that the _range is sorted.
