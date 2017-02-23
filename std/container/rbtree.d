@@ -1133,7 +1133,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
         }
         else
         {
-            return(_add(stuff).added ? 1 : 0);
+            return _add(stuff).added ? 1 : 0;
         }
     }
 
