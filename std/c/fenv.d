@@ -1,7 +1,7 @@
 // @@@DEPRECATED_2017-06@@@
 
 /**
- * $(RED Deprecated. Use $(D core.stdc.fenv) instead. This module will be
+ * $(RED Deprecated. Use `core.stdc.fenv` instead. This module will be
  *       removed in June 2017.)
  *
  * C's &lt;fenv.h&gt;

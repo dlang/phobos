@@ -11,19 +11,19 @@ Encodings currently supported are UTF-8, UTF-16, UTF-32, ASCII, ISO-8859-1
 (also known as LATIN-1), ISO-8859-2 (LATIN-2), WINDOWS-1250 and WINDOWS-1252.
 
 $(UL
-$(LI The type $(D AsciiChar) represents an ASCII character.)
-$(LI The type $(D AsciiString) represents an ASCII string.)
-$(LI The type $(D Latin1Char) represents an ISO-8859-1 character.)
-$(LI The type $(D Latin1String) represents an ISO-8859-1 string.)
-$(LI The type $(D Latin2Char) represents an ISO-8859-2 character.)
-$(LI The type $(D Latin2String) represents an ISO-8859-2 string.)
-$(LI The type $(D Windows1250Char) represents a Windows-1250 character.)
-$(LI The type $(D Windows1250String) represents a Windows-1250 string.)
-$(LI The type $(D Windows1252Char) represents a Windows-1252 character.)
-$(LI The type $(D Windows1252String) represents a Windows-1252 string.))
+$(LI The type `AsciiChar` represents an ASCII character.)
+$(LI The type `AsciiString` represents an ASCII string.)
+$(LI The type `Latin1Char` represents an ISO-8859-1 character.)
+$(LI The type `Latin1String` represents an ISO-8859-1 string.)
+$(LI The type `Latin2Char` represents an ISO-8859-2 character.)
+$(LI The type `Latin2String` represents an ISO-8859-2 string.)
+$(LI The type `Windows1250Char` represents a Windows-1250 character.)
+$(LI The type `Windows1250String` represents a Windows-1250 string.)
+$(LI The type `Windows1252Char` represents a Windows-1252 character.)
+$(LI The type `Windows1252String` represents a Windows-1252 string.))
 
 For cases where the _encoding is not known at compile-time, but is
-known at run-time, we provide the abstract class $(D EncodingScheme)
+known at run-time, we provide the abstract class `EncodingScheme`
 and its subclasses.  To construct a run-time encoder/decoder, one does
 e.g.
 
@@ -31,7 +31,7 @@ e.g.
     auto e = EncodingScheme.create("utf-8");
 ----------------------------------------------------
 
-This library supplies $(D EncodingScheme) subclasses for ASCII,
+This library supplies `EncodingScheme` subclasses for ASCII,
 ISO-8859-1 (also known as LATIN-1), ISO-8859-2 (LATIN-2), WINDOWS-1250,
 WINDOWS-1252, UTF-8, and (on little-endian architectures) UTF-16LE and
 UTF-32LE; or (on big-endian architectures) UTF-16BE and UTF-32BE.
@@ -369,7 +369,7 @@ import std.internal.encodinginit;
 
 //=============================================================================
 
-/** Special value returned by $(D safeDecode) */
+/** Special value returned by `safeDecode` */
 enum dchar INVALID_SEQUENCE = cast(dchar) 0xFFFFFFFF;
 
 template EncoderFunctions()
@@ -1455,7 +1455,7 @@ Returns true if c is a valid code point
  characters).
 
  Supersedes:
- This function supersedes $(D std.utf.startsValidDchar()).
+ This function supersedes `std.utf.startsValidDchar()`.
 
  Standards: Unicode 5.0, ASCII, ISO-8859-1, ISO-8859-2, WINDOWS-1250,
  WINDOWS-1252
@@ -1960,8 +1960,8 @@ body
 }
 
 /*
-Encodes $(D c) in units of type $(D E) and writes the result to the
-output range $(D R). Returns the number of $(D E)s written.
+Encodes `c` in units of type `E` and writes the result to the
+output range `R`. Returns the number of `E`s written.
  */
 size_t encode(E, R)(dchar c, auto ref R range)
 if (isNativeOutputRange!(R, E))
@@ -2064,12 +2064,12 @@ body
 }
 
 /**
-Encodes the contents of $(D s) in units of type $(D Tgt), writing the result to an
+Encodes the contents of `s` in units of type `Tgt`, writing the result to an
 output range.
 
-Returns: The number of $(D Tgt) elements written.
+Returns: The number of `Tgt` elements written.
 Params:
-Tgt = Element type of $(D range).
+Tgt = Element type of `range`.
 s = Input array.
 range = Output range.
  */
@@ -3440,8 +3440,8 @@ version(unittest)
 }
 
 /** Definitions of common Byte Order Marks.
-The elements of the $(D enum) can used as indices into $(D bomTable) to get
-matching $(D BOMSeq).
+The elements of the `enum` can used as indices into `bomTable` to get
+matching `BOMSeq`.
 */
 enum BOM
 {
@@ -3464,7 +3464,7 @@ enum BOM
     utf16le   = 15  /// [0xFF, 0xFE]
 }
 
-/// The type stored inside $(D bomTable).
+/// The type stored inside `bomTable`.
 alias BOMSeq = Tuple!(BOM, "schema", ubyte[], "sequence");
 
 /** Mapping of a byte sequence to $(B Byte Order Mark (BOM))
@@ -3488,17 +3488,17 @@ immutable bomTable = [
     BOMSeq(BOM.utf16le, cast(ubyte[])([0xFF, 0xFE]))
 ];
 
-/** Returns a $(D BOMSeq) for a given $(D input).
-If no $(D BOM) is present the $(D BOMSeq) for $(D BOM.none) is
-returned. The $(D BOM) sequence at the beginning of the range will
+/** Returns a `BOMSeq` for a given `input`.
+If no `BOM` is present the `BOMSeq` for `BOM.none` is
+returned. The `BOM` sequence at the beginning of the range will
 not be comsumed from the passed range. If you pass a reference type
-range make sure that $(D save) creates a deep copy.
+range make sure that `save` creates a deep copy.
 
 Params:
-    input = The sequence to check for the $(D BOM)
+    input = The sequence to check for the `BOM`
 
 Returns:
-    the found $(D BOMSeq) corresponding to the passed $(D input).
+    the found `BOMSeq` corresponding to the passed `input`.
 */
 immutable(BOMSeq) getBOM(Range)(Range input)
 if (isForwardRange!Range && is(Unqual!(ElementType!Range) == ubyte))

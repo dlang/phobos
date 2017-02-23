@@ -11,7 +11,7 @@ License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: Denis Shelomovskij
 
 Macros:
-COREREF = $(HTTP dlang.org/phobos/core_$1.html#$2, $(D core.$1.$2))
+COREREF = $(HTTP dlang.org/phobos/core_$1.html#$2, `core.$1.$2`)
 */
 module std.internal.cstring;
 
@@ -62,9 +62,9 @@ Params:
 
 Returns:
 
-The value returned is implicitly convertible to $(D const To*) and
-has two properties: $(D ptr) to access $(I C string) as $(D const To*)
-and $(D buffPtr) to access it as $(D To*).
+The value returned is implicitly convertible to `const To*` and
+has two properties: `ptr` to access $(I C string) as `const To*`
+and `buffPtr` to access it as `To*`.
 
 The value returned can be indexed by [] to access it as an array.
 
@@ -77,11 +77,11 @@ primary expression.
 Implementation_note:
 For small strings tempCString will use stack allocated buffer,
 for large strings (approximately 250 characters and more) it will
-allocate temporary one using C's $(D malloc).
+allocate temporary one using C's `malloc`.
 
 Note:
 This function is intended to be used in function call expression (like
-$(D strlen(str.tempCString()))). Incorrect usage of this function may
+`strlen(str.tempCString())`). Incorrect usage of this function may
 lead to memory corruption.
 See $(RED WARNING) in $(B Examples) section.
 */

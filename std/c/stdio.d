@@ -1,7 +1,7 @@
 // @@@DEPRECATED_2017-06@@@
 
 /**
- * $(RED Deprecated. Use $(D core.stdc.stdio) instead. This module will be
+ * $(RED Deprecated. Use `core.stdc.stdio` instead. This module will be
  *       removed in June 2017.)
  *
  * C's &lt;stdio.h&gt; for the D programming language

@@ -23,7 +23,7 @@ SMTP) )
 )
 
 Note:
-You may need to link to the $(B curl) library, e.g. by adding $(D "libs": ["curl"])
+You may need to link to the $(B curl) library, e.g. by adding `"libs": ["curl"]`
 to your $(B dub.json) file if you are using $(LINK2 http://code.dlang.org, DUB).
 
 Windows x86 note:
@@ -32,7 +32,7 @@ $(LINK2 http://dlang.org/download.html, download page).
 
 Compared to using libcurl directly this module allows simpler client code for
 common uses, requires no unsafe operations, and integrates better with the rest
-of the language. Futhermore it provides <a href="std_range.html">$(D range)</a>
+of the language. Futhermore it provides <a href="std_range.html">`range`</a>
 access to protocols supported by libcurl both synchronously and asynchronously.
 
 A high level and a low level API are available. The high level API is built
@@ -40,7 +40,7 @@ entirely on top of the low level one.
 
 The high level API is for commonly used functionality such as HTTP/FTP get. The
 $(LREF byLineAsync) and $(LREF byChunkAsync) provides asynchronous <a
-href="std_range.html">$(D ranges)</a> that performs the request in another
+href="std_range.html">`ranges`</a> that performs the request in another
 thread while handling a line/chunk in the current thread.
 
 The low level API allows for streaming and other advanced features.
@@ -86,9 +86,9 @@ dlang.org web page asynchronously.)
 )
 $(LEADINGROW Low level
 )
-$(TR $(TDNW $(LREF HTTP)) $(TD $(D HTTP) struct for advanced usage))
-$(TR $(TDNW $(LREF FTP)) $(TD $(D FTP) struct for advanced usage))
-$(TR $(TDNW $(LREF SMTP)) $(TD $(D SMTP) struct for advanced usage))
+$(TR $(TDNW $(LREF HTTP)) $(TD `HTTP` struct for advanced usage))
+$(TR $(TDNW $(LREF FTP)) $(TD `FTP` struct for advanced usage))
+$(TR $(TDNW $(LREF SMTP)) $(TD `SMTP` struct for advanced usage))
 )
 
 
@@ -510,9 +510,9 @@ if (isCurlConn!Conn)
  * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
  *        guess connection type and create a new instance for this call only.
  *
- * The template parameter $(D T) specifies the type to return. Possible values
- * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
- * for $(D char), content will be converted from the connection character set
+ * The template parameter `T` specifies the type to return. Possible values
+ * are `char` and `ubyte` to return `char[]` or `ubyte[]`. If asking
+ * for `char`, content will be converted from the connection character set
  * (specified in HTTP response headers or FTP connection properties, both ISO-8859-1
  * by default) to UTF-8.
  *
@@ -527,7 +527,7 @@ if (isCurlConn!Conn)
  *
  * Throws:
  *
- * $(D CurlException) on error.
+ * `CurlException` on error.
  *
  * See_Also: $(LREF HTTP.Method)
  */
@@ -574,15 +574,15 @@ if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
  * Params:
  *     url = resource to post to
  *     postDict = data to send as the body of the request. An associative array
- *                of $(D string) is accepted and will be encoded using
+ *                of `string` is accepted and will be encoded using
  *                www-form-urlencoding
  *     postData = data to send as the body of the request. An array
  *                of an arbitrary type is accepted and will be cast to ubyte[]
  *                before sending it.
  *     conn = HTTP connection to use
- *     T    = The template parameter $(D T) specifies the type to return. Possible values
- *            are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
- *            for $(D char), content will be converted from the connection character set
+ *     T    = The template parameter `T` specifies the type to return. Possible values
+ *            are `char` and `ubyte` to return `char[]` or `ubyte[]`. If asking
+ *            for `char`, content will be converted from the connection character set
  *            (specified in HTTP response headers or FTP connection properties, both ISO-8859-1
  *            by default) to UTF-8.
  *
@@ -673,9 +673,9 @@ if (is(T == char) || is(T == ubyte))
  * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
  *        guess connection type and create a new instance for this call only.
  *
- * The template parameter $(D T) specifies the type to return. Possible values
- * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]). If asking
- * for $(D char), content will be converted from the connection character set
+ * The template parameter `T` specifies the type to return. Possible values
+ * are `char` and `ubyte` to return `char[]` or `ubyte[]`. If asking
+ * for `char`, content will be converted from the connection character set
  * (specified in HTTP response headers or FTP connection properties, both ISO-8859-1
  * by default) to UTF-8.
  *
@@ -803,8 +803,8 @@ if (isCurlConn!Conn)
  * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
  *        guess connection type and create a new instance for this call only.
  *
- * The template parameter $(D T) specifies the type to return. Possible values
- * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
+ * The template parameter `T` specifies the type to return. Possible values
+ * are `char` and `ubyte` to return `char[]` or `ubyte[]`.
  *
  * Example:
  * ----
@@ -857,8 +857,8 @@ if (is(T == char) || is(T == ubyte))
  * conn = connection to use e.g. FTP or HTTP. The default AutoProtocol will
  *        guess connection type and create a new instance for this call only.
  *
- * The template parameter $(D T) specifies the type to return. Possible values
- * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
+ * The template parameter `T` specifies the type to return. Possible values
+ * are `char` and `ubyte` to return `char[]` or `ubyte[]`.
  *
  * Example:
  * ----
@@ -898,8 +898,8 @@ if (is(T == char) || is(T == ubyte))
  * url = resource make a connect to
  * conn = HTTP connection to use
  *
- * The template parameter $(D T) specifies the type to return. Possible values
- * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
+ * The template parameter `T` specifies the type to return. Possible values
+ * are `char` and `ubyte` to return `char[]` or `ubyte[]`.
  *
  * Example:
  * ----
@@ -942,8 +942,8 @@ if (is(T == char) || is(T == ubyte))
  *           before sending it.
  * conn = HTTP connection to use
  *
- * The template parameter $(D T) specifies the type to return. Possible values
- * are $(D char) and $(D ubyte) to return $(D char[]) or $(D ubyte[]).
+ * The template parameter `T` specifies the type to return. Possible values
+ * are `char` and `ubyte` to return `char[]` or `ubyte[]`.
  *
  * Example:
  * ----
@@ -1241,7 +1241,7 @@ struct ByLineBuffer(Char)
 /** HTTP/FTP fetch content as a range of lines.
  *
  * A range of lines is returned when the request is complete. If the method or
- * other request properties is to be customized then set the $(D conn) parameter
+ * other request properties is to be customized then set the `conn` parameter
  * with a HTTP/FTP instance that has these properties set.
  *
  * Example:
@@ -1253,7 +1253,7 @@ struct ByLineBuffer(Char)
  *
  * Params:
  * url = The url to receive content from
- * keepTerminator = $(D Yes.keepTerminator) signals that the line terminator should be
+ * keepTerminator = `Yes.keepTerminator` signals that the line terminator should be
  *                  returned as part of the lines in the range.
  * terminator = The character that terminates a line
  * conn = The connection to use e.g. HTTP or FTP.
@@ -1350,7 +1350,7 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
 /** HTTP/FTP fetch content as a range of chunks.
  *
  * A range of chunks is returned when the request is complete. If the method or
- * other request properties is to be customized then set the $(D conn) parameter
+ * other request properties is to be customized then set the `conn` parameter
  * with a HTTP/FTP instance that has these properties set.
  *
  * Example:
@@ -1594,10 +1594,10 @@ private static struct AsyncLineInputRange(Char)
  *
  * A range of lines is returned immediately and the request that fetches the
  * lines is performed in another thread. If the method or other request
- * properties is to be customized then set the $(D conn) parameter with a
+ * properties is to be customized then set the `conn` parameter with a
  * HTTP/FTP instance that has these properties set.
  *
- * If $(D postData) is non-_null the method will be set to $(D post) for HTTP
+ * If `postData` is non-_null the method will be set to `post` for HTTP
  * requests.
  *
  * The background thread will buffer up to transmitBuffers number of lines
@@ -1606,7 +1606,7 @@ private static struct AsyncLineInputRange(Char)
  * to receive more data from the network.
  *
  * If no data is available and the main thread accesses the range it will block
- * until data becomes available. An exception to this is the $(D wait(Duration)) method on
+ * until data becomes available. An exception to this is the `wait(Duration)` method on
  * the $(LREF AsyncLineInputRange). This method will wait at maximum for the
  * specified duration and return true if data is available.
  *
@@ -1638,7 +1638,7 @@ private static struct AsyncLineInputRange(Char)
  * Params:
  * url = The url to receive content from
  * postData = Data to HTTP Post
- * keepTerminator = $(D Yes.keepTerminator) signals that the line terminator should be
+ * keepTerminator = `Yes.keepTerminator` signals that the line terminator should be
  *                  returned as part of the lines in the range.
  * terminator = The character that terminates a line
  * transmitBuffers = The number of lines buffered asynchronously
@@ -1747,10 +1747,10 @@ private static struct AsyncChunkInputRange
  *
  * A range of chunks is returned immediately and the request that fetches the
  * chunks is performed in another thread. If the method or other request
- * properties is to be customized then set the $(D conn) parameter with a
+ * properties is to be customized then set the `conn` parameter with a
  * HTTP/FTP instance that has these properties set.
  *
- * If $(D postData) is non-_null the method will be set to $(D post) for HTTP
+ * If `postData` is non-_null the method will be set to `post` for HTTP
  * requests.
  *
  * The background thread will buffer up to transmitBuffers number of chunks
@@ -1759,7 +1759,7 @@ private static struct AsyncChunkInputRange
  * thread to receive more data from the network.
  *
  * If no data is available and the main thread access the range it will block
- * until data becomes available. An exception to this is the $(D wait(Duration))
+ * until data becomes available. An exception to this is the `wait(Duration)`
  * method on the $(LREF AsyncChunkInputRange). This method will wait at maximum for the specified
  * duration and return true if data is available.
  *
@@ -1920,7 +1920,7 @@ private void _asyncDuplicateConnection(Conn, PostData)
 private mixin template Protocol()
 {
 
-    /// Value to return from $(D onSend)/$(D onReceive) delegates in order to
+    /// Value to return from `onSend`/`onReceive` delegates in order to
     /// pause a request
     alias requestPause = CurlReadFunc.pause;
 
@@ -2155,15 +2155,15 @@ private mixin template Protocol()
 
     /**
      * The event handler that gets called when data is needed for sending. The
-     * length of the $(D void[]) specifies the maximum number of bytes that can
+     * length of the `void[]` specifies the maximum number of bytes that can
      * be sent.
      *
      * Returns:
      * The callback returns the number of elements in the buffer that have been
      * filled and are ready to send.
-     * The special value $(D .abortRequest) can be returned in order to abort the
+     * The special value `.abortRequest` can be returned in order to abort the
      * current request.
-     * The special value $(D .pauseRequest) can be returned in order to pause the
+     * The special value `.pauseRequest` can be returned in order to pause the
      * current request.
      *
      * Example:
@@ -2250,8 +2250,8 @@ private mixin template Protocol()
 }
 
 /*
-  Decode $(D ubyte[]) array using the provided EncodingScheme up to maxChars
-  Returns: Tuple of ubytes read and the $(D Char[]) characters decoded.
+  Decode `ubyte[]` array using the provided EncodingScheme up to maxChars
+  Returns: Tuple of ubytes read and the `Char[]` characters decoded.
            Not all ubytes are guaranteed to be read in case of decoding error.
 */
 private Tuple!(size_t,Char[])
@@ -2276,7 +2276,7 @@ decodeString(Char = char)(const(ubyte)[] data,
 }
 
 /*
-  Decode $(D ubyte[]) array using the provided $(D EncodingScheme) until a the
+  Decode `ubyte[]` array using the provided `EncodingScheme` until a the
   line terminator specified is found. The basesrc parameter is effectively
   prepended to src as the first thing.
 
@@ -2555,7 +2555,7 @@ struct HTTP
        Perform a http request.
 
        After the HTTP client has been setup and possibly assigned callbacks the
-       $(D perform()) method will start performing the request towards the
+       `perform()` method will start performing the request towards the
        specified server.
 
        Params:
@@ -2631,7 +2631,7 @@ struct HTTP
     // docs mixed in.
     version (StdDdoc)
     {
-        /// Value to return from $(D onSend)/$(D onReceive) delegates in order to
+        /// Value to return from `onSend`/`onReceive` delegates in order to
         /// pause a request
         alias requestPause = CurlReadFunc.pause;
 
@@ -2756,15 +2756,15 @@ struct HTTP
 
         /**
          * The event handler that gets called when data is needed for sending. The
-         * length of the $(D void[]) specifies the maximum number of bytes that can
+         * length of the `void[]` specifies the maximum number of bytes that can
          * be sent.
          *
          * Returns:
          * The callback returns the number of elements in the buffer that have been
          * filled and are ready to send.
-         * The special value $(D .abortRequest) can be returned in order to abort the
+         * The special value `.abortRequest` can be returned in order to abort the
          * current request.
-         * The special value $(D .pauseRequest) can be returned in order to pause the
+         * The special value `.pauseRequest` can be returned in order to pause the
          * current request.
          *
          * Example:
@@ -2902,7 +2902,7 @@ struct HTTP
     /** Set the value of the user agent request header field.
      *
      * By default a request has it's "User-Agent" field set to $(LREF
-     * defaultUserAgent) even if $(D setUserAgent) was never called.  Pass
+     * defaultUserAgent) even if `setUserAgent` was never called.  Pass
      * an empty string to suppress the "User-Agent" field altogether.
      */
     void setUserAgent(const(char)[] userAgent)
@@ -2912,23 +2912,23 @@ struct HTTP
 
     /**
      * Get various timings defined in $(REF CurlInfo, etc, c, curl).
-     * The value is usable only if the return value is equal to $(D etc.c.curl.CurlError.ok).
+     * The value is usable only if the return value is equal to `etc.c.curl.CurlError.ok`.
      *
      * Params:
      *      timing = one of the timings defined in $(REF CurlInfo, etc, c, curl).
      *               The values are:
-     *               $(D etc.c.curl.CurlInfo.namelookup_time),
-     *               $(D etc.c.curl.CurlInfo.connect_time),
-     *               $(D etc.c.curl.CurlInfo.pretransfer_time),
-     *               $(D etc.c.curl.CurlInfo.starttransfer_time),
-     *               $(D etc.c.curl.CurlInfo.redirect_time),
-     *               $(D etc.c.curl.CurlInfo.appconnect_time),
-     *               $(D etc.c.curl.CurlInfo.total_time).
+     *               `etc.c.curl.CurlInfo.namelookup_time`,
+     *               `etc.c.curl.CurlInfo.connect_time`,
+     *               `etc.c.curl.CurlInfo.pretransfer_time`,
+     *               `etc.c.curl.CurlInfo.starttransfer_time`,
+     *               `etc.c.curl.CurlInfo.redirect_time`,
+     *               `etc.c.curl.CurlInfo.appconnect_time`,
+     *               `etc.c.curl.CurlInfo.total_time`.
      *      val    = the actual value of the inquired timing.
      *
      * Returns:
      *      The return code of the operation. The value stored in val
-     *      should be used only if the return value is $(D etc.c.curl.CurlInfo.ok).
+     *      should be used only if the return value is `etc.c.curl.CurlInfo.ok`.
      *
      * Example:
      * ---
@@ -3015,7 +3015,7 @@ struct HTTP
        Set time condition on the request.
 
        Params:
-       cond =  $(D CurlTimeCond.{none,ifmodsince,ifunmodsince,lastmod})
+       cond =  `CurlTimeCond.{none,ifmodsince,ifunmodsince,lastmod}`
        timestamp = Timestamp for the condition
 
        $(HTTP www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.25, _RFC2616 Section 14.25)
@@ -3121,7 +3121,7 @@ struct HTTP
       * Set the event handler that receives incoming headers.
       *
       * The callback will receive a header field key, value as parameter. The
-      * $(D const(char)[]) arrays are not valid after the delegate has returned.
+      * `const(char)[]` arrays are not valid after the delegate has returned.
       *
       * Example:
       * ----
@@ -3142,7 +3142,7 @@ struct HTTP
        Callback for each received StatusLine.
 
        Notice that several callbacks can be done for each call to
-       $(D perform()) due to redirections.
+       `perform()` due to redirections.
 
        See_Also: $(LREF StatusLine)
      */
@@ -3404,7 +3404,7 @@ struct FTP
     // docs mixed in.
     version (StdDdoc)
     {
-        /// Value to return from $(D onSend)/$(D onReceive) delegates in order to
+        /// Value to return from `onSend`/`onReceive` delegates in order to
         /// pause a request
         alias requestPause = CurlReadFunc.pause;
 
@@ -3529,15 +3529,15 @@ struct FTP
 
         /**
          * The event handler that gets called when data is needed for sending. The
-         * length of the $(D void[]) specifies the maximum number of bytes that can
+         * length of the `void[]` specifies the maximum number of bytes that can
          * be sent.
          *
          * Returns:
          * The callback returns the number of elements in the buffer that have been
          * filled and are ready to send.
-         * The special value $(D .abortRequest) can be returned in order to abort the
+         * The special value `.abortRequest` can be returned in order to abort the
          * current request.
-         * The special value $(D .pauseRequest) can be returned in order to pause the
+         * The special value `.pauseRequest` can be returned in order to pause the
          * current request.
          *
          */
@@ -3625,23 +3625,23 @@ struct FTP
 
     /**
      * Get various timings defined in $(REF CurlInfo, etc, c, curl).
-     * The value is usable only if the return value is equal to $(D etc.c.curl.CurlError.ok).
+     * The value is usable only if the return value is equal to `etc.c.curl.CurlError.ok`.
      *
      * Params:
      *      timing = one of the timings defined in $(REF CurlInfo, etc, c, curl).
      *               The values are:
-     *               $(D etc.c.curl.CurlInfo.namelookup_time),
-     *               $(D etc.c.curl.CurlInfo.connect_time),
-     *               $(D etc.c.curl.CurlInfo.pretransfer_time),
-     *               $(D etc.c.curl.CurlInfo.starttransfer_time),
-     *               $(D etc.c.curl.CurlInfo.redirect_time),
-     *               $(D etc.c.curl.CurlInfo.appconnect_time),
-     *               $(D etc.c.curl.CurlInfo.total_time).
+     *               `etc.c.curl.CurlInfo.namelookup_time`,
+     *               `etc.c.curl.CurlInfo.connect_time`,
+     *               `etc.c.curl.CurlInfo.pretransfer_time`,
+     *               `etc.c.curl.CurlInfo.starttransfer_time`,
+     *               `etc.c.curl.CurlInfo.redirect_time`,
+     *               `etc.c.curl.CurlInfo.appconnect_time`,
+     *               `etc.c.curl.CurlInfo.total_time`.
      *      val    = the actual value of the inquired timing.
      *
      * Returns:
      *      The return code of the operation. The value stored in val
-     *      should be used only if the return value is $(D etc.c.curl.CurlInfo.ok).
+     *      should be used only if the return value is `etc.c.curl.CurlInfo.ok`.
      *
      * Example:
      * ---
@@ -3824,7 +3824,7 @@ struct SMTP
     // docs mixed in.
     version (StdDdoc)
     {
-        /// Value to return from $(D onSend)/$(D onReceive) delegates in order to
+        /// Value to return from `onSend`/`onReceive` delegates in order to
         /// pause a request
         alias requestPause = CurlReadFunc.pause;
 
@@ -3949,15 +3949,15 @@ struct SMTP
 
         /**
          * The event handler that gets called when data is needed for sending. The
-         * length of the $(D void[]) specifies the maximum number of bytes that can
+         * length of the `void[]` specifies the maximum number of bytes that can
          * be sent.
          *
          * Returns:
          * The callback returns the number of elements in the buffer that have been
          * filled and are ready to send.
-         * The special value $(D .abortRequest) can be returned in order to abort the
+         * The special value `.abortRequest` can be returned in order to abort the
          * current request.
-         * The special value $(D .pauseRequest) can be returned in order to pause the
+         * The special value `.pauseRequest` can be returned in order to pause the
          * current request.
          */
         @property void onSend(size_t delegate(void[]) callback);
@@ -4196,7 +4196,7 @@ private struct CurlAPI
 
 /**
   Wrapper to provide a better interface to libcurl than using the plain C API.
-  It is recommended to use the $(D HTTP)/$(D FTP) etc. structs instead unless
+  It is recommended to use the `HTTP`/`FTP` etc. structs instead unless
   raw access to libcurl is needed.
 
   Warning: This struct uses interior pointers for callbacks. Only allocate it
@@ -4215,7 +4215,7 @@ struct Curl
     // A handle should not be used by two threads simultaneously
     private CURL* handle;
 
-    // May also return $(D CURL_READFUNC_ABORT) or $(D CURL_READFUNC_PAUSE)
+    // May also return `CURL_READFUNC_ABORT` or `CURL_READFUNC_PAUSE`
     private size_t delegate(OutData) _onSend;
     private size_t delegate(InData) _onReceive;
     private void delegate(in char[]) _onReceiveHeader;
@@ -4331,7 +4331,7 @@ struct Curl
 
     /**
         Stop and invalidate this curl instance.
-        Warning: Do not call this from inside a callback handler e.g. $(D onReceive).
+        Warning: Do not call this from inside a callback handler e.g. `onReceive`.
     */
     void shutdown()
     {
@@ -4433,7 +4433,7 @@ struct Curl
        Get the various timings like name lookup time, total time, connect time etc.
        The timed category is passed through the timing parameter while the timing
        value is stored at val. The value is usable only if res is equal to
-       $(D etc.c.curl.CurlError.ok).
+       `etc.c.curl.CurlError.ok`.
     */
     CurlCode getTiming(CurlInfo timing, ref double val)
     {
@@ -4446,7 +4446,7 @@ struct Curl
       * The event handler that receives incoming data.
       *
       * Params:
-      * callback = the callback that receives the $(D ubyte[]) data.
+      * callback = the callback that receives the `ubyte[]` data.
       * Be sure to copy the incoming data and not store
       * a slice.
       *
@@ -4514,14 +4514,14 @@ struct Curl
       * The event handler that gets called when data is needed for sending.
       *
       * Params:
-      * callback = the callback that has a $(D void[]) buffer to be filled
+      * callback = the callback that has a `void[]` buffer to be filled
       *
       * Returns:
       * The callback returns the number of elements in the buffer that have been
       * filled and are ready to send.
-      * The special value $(D Curl.abortRequest) can be returned in
+      * The special value `Curl.abortRequest` can be returned in
       * order to abort the current request.
-      * The special value $(D Curl.pauseRequest) can be returned in order to
+      * The special value `Curl.pauseRequest` can be returned in order to
       * pause the current request.
       *
       * Example:
@@ -4593,7 +4593,7 @@ struct Curl
 
     /**
       * The event handler that gets called when the net socket has been created
-      * but a $(D connect()) call has not yet been done. This makes it possible to set
+      * but a `connect()` call has not yet been done. This makes it possible to set
       * misc. socket options.
       *
       * Params:

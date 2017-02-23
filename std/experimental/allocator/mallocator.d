@@ -10,16 +10,16 @@ struct Mallocator
     @system unittest { testAllocator!(() => Mallocator.instance); }
 
     /**
-    The alignment is a static constant equal to $(D platformAlignment), which
+    The alignment is a static constant equal to `platformAlignment`, which
     ensures proper alignment for any D data type.
     */
     enum uint alignment = platformAlignment;
 
     /**
     Standard allocator methods per the semantics defined above. The
-    $(D deallocate) and $(D reallocate) methods are $(D @system) because they
+    `deallocate` and `reallocate` methods are `@system` because they
     may move memory around, leaving dangling pointers in user code. Somewhat
-    paradoxically, $(D malloc) is $(D @safe) but that's only useful to safe
+    paradoxically, `malloc` is `@safe` but that's only useful to safe
     programs that can afford to leak memory allocated.
     */
     @trusted @nogc nothrow
@@ -62,7 +62,7 @@ struct Mallocator
     /**
     Returns the global instance of this allocator type. The C heap allocator is
     thread-safe, therefore all of its methods and `it` itself are
-    $(D shared).
+    `shared`.
     */
     static shared Mallocator instance;
 }
@@ -206,12 +206,12 @@ struct AlignedMallocator
     @system unittest { testAllocator!(() => typeof(this).instance); }
 
     /**
-    The default alignment is $(D platformAlignment).
+    The default alignment is `platformAlignment`.
     */
     enum uint alignment = platformAlignment;
 
     /**
-    Forwards to $(D alignedAllocate(bytes, platformAlignment)).
+    Forwards to `alignedAllocate(bytes, platformAlignment)`.
     */
     @trusted @nogc nothrow
     void[] allocate(size_t bytes) shared
@@ -222,9 +222,9 @@ struct AlignedMallocator
 
     /**
     Uses $(HTTP man7.org/linux/man-pages/man3/posix_memalign.3.html,
-    $(D posix_memalign)) on Posix and
+    `posix_memalign`) on Posix and
     $(HTTP msdn.microsoft.com/en-us/library/8z34s9c6(v=vs.80).aspx,
-    $(D __aligned_malloc)) on Windows.
+    `__aligned_malloc`) on Windows.
     */
     version(Posix)
     @trusted @nogc nothrow
@@ -258,9 +258,9 @@ struct AlignedMallocator
     else static assert(0);
 
     /**
-    Calls $(D free(b.ptr)) on Posix and
+    Calls `free(b.ptr)` on Posix and
     $(HTTP msdn.microsoft.com/en-US/library/17b5h8td(v=vs.80).aspx,
-    $(D __aligned_free(b.ptr))) on Windows.
+    `__aligned_free(b.ptr)`) on Windows.
     */
     version (Posix)
     @system @nogc nothrow
@@ -280,8 +280,8 @@ struct AlignedMallocator
     else static assert(0);
 
     /**
-    On Posix, forwards to $(D realloc). On Windows, forwards to
-    $(D alignedReallocate(b, newSize, platformAlignment)).
+    On Posix, forwards to `realloc`. On Windows, forwards to
+    `alignedReallocate(b, newSize, platformAlignment)`.
     */
     version (Posix)
     @system @nogc nothrow
@@ -297,10 +297,10 @@ struct AlignedMallocator
     }
 
     /**
-    On Posix, uses $(D alignedAllocate) and copies data around because there is
+    On Posix, uses `alignedAllocate` and copies data around because there is
     no realloc for aligned memory. On Windows, calls
     $(HTTP msdn.microsoft.com/en-US/library/y69db7sx(v=vs.80).aspx,
-    $(D __aligned_realloc(b.ptr, newSize, a))).
+    `__aligned_realloc(b.ptr, newSize, a)`).
     */
     version (Windows)
     @system @nogc nothrow
@@ -321,7 +321,7 @@ struct AlignedMallocator
     /**
     Returns the global instance of this allocator type. The C heap allocator is
     thread-safe, therefore all of its methods and `instance` itself are
-    $(D shared).
+    `shared`.
     */
     static shared AlignedMallocator instance;
 }

@@ -49,7 +49,7 @@ public import std.container.util;
    Implements a simple and fast singly-linked list.
    It can be used as a stack.
 
-   $(D SList) uses reference semantics.
+   `SList` uses reference semantics.
  */
 struct SList(T)
 {
@@ -143,8 +143,8 @@ Constructor taking an input range
 /**
 Comparison for equality.
 
-Complexity: $(BIGOH min(n, n1)) where $(D n1) is the number of
-elements in $(D rhs).
+Complexity: $(BIGOH min(n, n1)) where `n1` is the number of
+elements in `rhs`.
      */
     bool opEquals(const SList rhs) const
     {
@@ -215,7 +215,7 @@ Defines the container's primary range, which embodies a forward range.
     }
 
 /**
-Property returning $(D true) if and only if the container has no
+Property returning `true` if and only if the container has no
 elements.
 
 Complexity: $(BIGOH 1)
@@ -251,7 +251,7 @@ Complexity: $(BIGOH 1)
     }
 
 /**
-Forward to $(D opSlice().front).
+Forward to `opSlice().front`.
 
 Complexity: $(BIGOH 1)
      */
@@ -269,9 +269,9 @@ Complexity: $(BIGOH 1)
     }
 
 /**
-Returns a new $(D SList) that's the concatenation of $(D this) and its
-argument. $(D opBinaryRight) is only defined if $(D Stuff) does not
-define $(D opBinary).
+Returns a new `SList` that's the concatenation of `this` and its
+argument. `opBinaryRight` is only defined if `Stuff` does not
+define `opBinary`.
      */
     SList opBinary(string op, Stuff)(Stuff rhs)
     if (op == "~" && is(typeof(SList(rhs))))
@@ -297,9 +297,9 @@ define $(D opBinary).
     }
 
 /**
-Removes all contents from the $(D SList).
+Removes all contents from the `SList`.
 
-Postcondition: $(D empty)
+Postcondition: `empty`
 
 Complexity: $(BIGOH 1)
      */
@@ -331,14 +331,14 @@ Complexity: $(BIGOH n)
     }
 
 /**
-Inserts $(D stuff) to the front of the container. $(D stuff) can be a
-value convertible to $(D T) or a range of objects convertible to $(D
+Inserts `stuff` to the front of the container. `stuff` can be a
+value convertible to `T` or a range of objects convertible to $(D
 T). The stable version behaves the same, but guarantees that ranges
 iterating over the container are never invalidated.
 
 Returns: The number of elements inserted
 
-Complexity: $(BIGOH m), where $(D m) is the length of $(D stuff)
+Complexity: $(BIGOH m), where `m` is the length of `stuff`
      */
     size_t insertFront(Stuff)(Stuff stuff)
     if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
@@ -384,7 +384,7 @@ Picks one value in an unspecified position in the container, removes
 it from the container, and returns it. The stable version behaves the same,
 but guarantees that ranges iterating over the container are never invalidated.
 
-Precondition: $(D !empty)
+Precondition: `!empty`
 
 Returns: The element removed.
 
@@ -407,7 +407,7 @@ Removes the value at the front of the container. The stable version
 behaves the same, but guarantees that ranges iterating over the
 container are never invalidated.
 
-Precondition: $(D !empty)
+Precondition: `!empty`
 
 Complexity: $(BIGOH 1).
      */
@@ -421,10 +421,10 @@ Complexity: $(BIGOH 1).
     alias stableRemoveFront = removeFront;
 
 /**
-Removes $(D howMany) values at the front or back of the
+Removes `howMany` values at the front or back of the
 container. Unlike the unparameterized versions above, these functions
-do not throw if they could not remove $(D howMany) elements. Instead,
-if $(D howMany > n), all elements are removed. The returned value is
+do not throw if they could not remove `howMany` elements. Instead,
+if `howMany > n`, all elements are removed. The returned value is
 the effective number of elements removed. The stable version behaves
 the same, but guarantees that ranges iterating over the container are
 never invalidated.
@@ -448,22 +448,22 @@ Complexity: $(BIGOH howMany * log(n)).
     alias stableRemoveFront = removeFront;
 
 /**
-Inserts $(D stuff) after range $(D r), which must be a range
+Inserts `stuff` after range `r`, which must be a range
 previously extracted from this container. Given that all ranges for a
 list end at the end of the list, this function essentially appends to
-the list and uses $(D r) as a potentially fast way to reach the last
-node in the list. Ideally $(D r) is positioned near or at the last
+the list and uses `r` as a potentially fast way to reach the last
+node in the list. Ideally `r` is positioned near or at the last
 element of the list.
 
-$(D stuff) can be a value convertible to $(D T) or a range of objects
-convertible to $(D T). The stable version behaves the same, but
+`stuff` can be a value convertible to `T` or a range of objects
+convertible to `T`. The stable version behaves the same, but
 guarantees that ranges iterating over the container are never
 invalidated.
 
 Returns: The number of values inserted.
 
-Complexity: $(BIGOH k + m), where $(D k) is the number of elements in
-$(D r) and $(D m) is the length of $(D stuff).
+Complexity: $(BIGOH k + m), where `k` is the number of elements in
+`r` and `m` is the length of `stuff`.
 
 Example:
 --------------------
@@ -492,18 +492,18 @@ assert(std.algorithm.equal(sl[], ["a", "b", "c", "d", "e"]));
     }
 
 /**
-Similar to $(D insertAfter) above, but accepts a range bounded in
+Similar to `insertAfter` above, but accepts a range bounded in
 count. This is important for ensuring fast insertions in the middle of
-the list.  For fast insertions after a specified position $(D r), use
-$(D insertAfter(take(r, 1), stuff)). The complexity of that operation
-only depends on the number of elements in $(D stuff).
+the list.  For fast insertions after a specified position `r`, use
+`insertAfter(take(r, 1), stuff)`. The complexity of that operation
+only depends on the number of elements in `stuff`.
 
-Precondition: $(D r.original.empty || r.maxLength > 0)
+Precondition: `r.original.empty || r.maxLength > 0`
 
 Returns: The number of values inserted.
 
-Complexity: $(BIGOH k + m), where $(D k) is the number of elements in
-$(D r) and $(D m) is the length of $(D stuff).
+Complexity: $(BIGOH k + m), where `k` is the number of elements in
+`r` and `m` is the length of `stuff`.
      */
     size_t insertAfter(Stuff)(Take!Range r, Stuff stuff)
     {
@@ -553,7 +553,7 @@ Complexity: $(BIGOH n)
     }
 
 /**
-Removes a $(D Take!Range) from the list in linear time.
+Removes a `Take!Range` from the list in linear time.
 
 Returns: A range comprehending the elements after the removed range.
 

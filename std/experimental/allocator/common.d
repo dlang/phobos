@@ -10,7 +10,7 @@ import std.algorithm.comparison, std.traits;
 
 /**
 Returns the size in bytes of the state that needs to be allocated to hold an
-object of type $(D T). $(D stateSize!T) is zero for $(D struct)s that are not
+object of type `T`. `stateSize!T` is zero for `struct`s that are not
 nested and have no nonstatic member variables.
  */
 template stateSize(T)
@@ -44,21 +44,21 @@ unittest
 }
 
 /**
-$(D chooseAtRuntime) is a compile-time constant of type $(D size_t) that several
+`chooseAtRuntime` is a compile-time constant of type `size_t` that several
 parameterized structures in this module recognize to mean deferral to runtime of
-the exact value. For example, $(D BitmappedBlock!(Allocator, 4096)) (described in
+the exact value. For example, `BitmappedBlock!(Allocator, 4096)` (described in
 detail below) defines a block allocator with block size of 4096 bytes, whereas
-$(D BitmappedBlock!(Allocator, chooseAtRuntime)) defines a block allocator that has a
+`BitmappedBlock!(Allocator, chooseAtRuntime)` defines a block allocator that has a
 field storing the block size, initialized by the user.
 */
 enum chooseAtRuntime = size_t.max - 1;
 
 /**
-$(D unbounded) is a compile-time constant of type $(D size_t) that several
+`unbounded` is a compile-time constant of type `size_t` that several
 parameterized structures in this module recognize to mean "infinite" bounds for
-the parameter. For example, $(D Freelist) (described in detail below) accepts a
-$(D maxNodes) parameter limiting the number of freelist items. If $(D unbounded)
-is passed for $(D maxNodes), then there is no limit and no checking for the
+the parameter. For example, `Freelist` (described in detail below) accepts a
+`maxNodes` parameter limiting the number of freelist items. If `unbounded`
+is passed for `maxNodes`, then there is no limit and no checking for the
 number of nodes.
 */
 enum unbounded = size_t.max;
@@ -70,7 +70,7 @@ current platform.
 enum uint platformAlignment = std.algorithm.comparison.max(double.alignof, real.alignof);
 
 /**
-The default good size allocation is deduced as $(D n) rounded up to the
+The default good size allocation is deduced as `n` rounded up to the
 allocator's alignment.
 */
 size_t goodAllocSize(A)(auto ref A a, size_t n)
@@ -200,7 +200,7 @@ nothrow pure
 }
 
 /**
-Returns $(D s) rounded up to the nearest power of 2.
+Returns `s` rounded up to the nearest power of 2.
 */
 @safe @nogc nothrow pure
 package size_t roundUpToPowerOf2(size_t s)
@@ -237,7 +237,7 @@ unittest
 }
 
 /**
-Returns the number of trailing zeros of $(D x).
+Returns the number of trailing zeros of `x`.
 */
 @safe @nogc nothrow pure
 package uint trailingZeros(ulong x)
@@ -326,15 +326,15 @@ package bool isGoodDynamicAlignment(uint x)
 }
 
 /**
-The default $(D reallocate) function first attempts to use $(D expand). If $(D
-Allocator.expand) is not defined or returns $(D false), $(D reallocate)
+The default `reallocate` function first attempts to use `expand`. If $(D
+Allocator.expand) is not defined or returns `false`, `reallocate`
 allocates a new block of memory of appropriate size and copies data from the old
-block to the new block. Finally, if $(D Allocator) defines $(D deallocate), $(D
+block to the new block. Finally, if `Allocator` defines `deallocate`, $(D
 reallocate) uses it to free the old memory block.
 
-$(D reallocate) does not attempt to use $(D Allocator.reallocate) even if
+`reallocate` does not attempt to use `Allocator.reallocate` even if
 defined. This is deliberate so allocators may use it internally within their own
-implementation of $(D reallocate).
+implementation of `reallocate`.
 
 */
 bool reallocate(Allocator)(ref Allocator a, ref void[] b, size_t s)
@@ -356,16 +356,16 @@ bool reallocate(Allocator)(ref Allocator a, ref void[] b, size_t s)
 
 /**
 
-The default $(D alignedReallocate) function first attempts to use $(D expand).
-If $(D Allocator.expand) is not defined or returns $(D false),  $(D
+The default `alignedReallocate` function first attempts to use `expand`.
+If `Allocator.expand` is not defined or returns `false`,  $(D
 alignedReallocate) allocates a new block of memory of appropriate size and
-copies data from the old block to the new block. Finally, if $(D Allocator)
-defines $(D deallocate), $(D alignedReallocate) uses it to free the old memory
+copies data from the old block to the new block. Finally, if `Allocator`
+defines `deallocate`, `alignedReallocate` uses it to free the old memory
 block.
 
-$(D alignedReallocate) does not attempt to use $(D Allocator.reallocate) even if
+`alignedReallocate` does not attempt to use `Allocator.reallocate` even if
 defined. This is deliberate so allocators may use it internally within their own
-implementation of $(D reallocate).
+implementation of `reallocate`.
 
 */
 bool alignedReallocate(Allocator)(ref Allocator alloc,

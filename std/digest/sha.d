@@ -23,10 +23,10 @@ $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
  * SHA2 comes in several different versions, all supported by this module:
  * SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/224 and SHA-512/256.
  *
- * This module conforms to the APIs defined in $(D std.digest.digest). To understand the
- * differences between the template and the OOP API, see $(D std.digest.digest).
+ * This module conforms to the APIs defined in `std.digest.digest`. To understand the
+ * differences between the template and the OOP API, see `std.digest.digest`.
  *
- * This module publicly imports $(D std.digest.digest) and can be used as a stand-alone
+ * This module publicly imports `std.digest.digest` and can be used as a stand-alone
  * module.
  *
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -193,7 +193,7 @@ private ulong rotateRight(ulong x, uint n) @safe pure nothrow @nogc
  * simply use the convenience aliases: SHA1, SHA224, SHA256, SHA384, SHA512,
  * SHA512_224 and SHA512_256.
  *
- * See $(D std.digest.digest) for differences between template and OOP API.
+ * See `std.digest.digest` for differences between template and OOP API.
  */
 struct SHA(uint hashBlockSize, uint digestSize)
 {
@@ -694,7 +694,7 @@ struct SHA(uint hashBlockSize, uint digestSize)
         /**
          * Use this to feed the digest with data.
          * Also implements the $(REF isOutputRange, std,range,primitives)
-         * interface for $(D ubyte) and $(D const(ubyte)[]).
+         * interface for `ubyte` and `const(ubyte)[]`.
          */
         void put(scope const(ubyte)[] input...) @trusted pure nothrow @nogc
         {
@@ -1199,9 +1199,9 @@ auto sha512_256Of(T...)(T data)
 
 /**
  * OOP API SHA1 and SHA2 implementations.
- * See $(D std.digest.digest) for differences between template and OOP API.
+ * See `std.digest.digest` for differences between template and OOP API.
  *
- * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!SHA1), see
+ * This is an alias for `$(REF WrapperDigest, std,digest,digest)!SHA1`, see
  * there for more information.
  */
 alias SHA1Digest = WrapperDigest!SHA1;

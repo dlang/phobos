@@ -3,7 +3,7 @@
 /**
  * Contains the elementary mathematical functions (powers, roots,
  * and trigonometric functions), and low-level floating-point operations.
- * Mathematical special functions are available in $(D std.mathspecial).
+ * Mathematical special functions are available in `std.mathspecial`.
  *
 $(SCRIPT inhibitQuickIndex = 1;)
 
@@ -2658,7 +2658,7 @@ if (isFloatingPoint!T)
  * Extracts the exponent of x as a signed integral value.
  *
  * If x is not a special value, the result is the same as
- * $(D cast(int) logb(x)).
+ * `cast(int) logb(x)`.
  *
  *      $(TABLE_SV
  *      $(TR $(TH x)                $(TH ilogb(x))     $(TH Range error?))
@@ -4978,7 +4978,7 @@ private:
  * params:
  *  x = a floating point number.
  * returns:
- *  $(D true) if $(D_PARAM x) is Nan.
+ *  `true` if $(D_PARAM x) is Nan.
  */
 bool isNaN(X)(X x) @nogc @trusted pure nothrow
 if (isFloatingPoint!(X))
@@ -5066,7 +5066,7 @@ if (isFloatingPoint!(X))
  * params:
  *  x = a floating point number.
  * returns:
- *  $(D true) if $(D_PARAM x) is finite.
+ *  `true` if $(D_PARAM x) is finite.
  */
 bool isFinite(X)(X x) @trusted pure nothrow @nogc
 {
@@ -5109,7 +5109,7 @@ bool isFinite(X)(X x) @trusted pure nothrow @nogc
  * params:
  *  x = a floating point number.
  * returns:
- *  $(D true) if $(D_PARAM x) is normalized.
+ *  `true` if $(D_PARAM x) is normalized.
  */
 
 /* Need one for each format because subnormal floats might
@@ -5159,7 +5159,7 @@ bool isNormal(X)(X x) @trusted pure nothrow @nogc
  * params:
  *  x = a floating point number.
  * returns:
- *  $(D true) if $(D_PARAM x) is a denormal number.
+ *  `true` if $(D_PARAM x) is a denormal number.
  */
 bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
 {
@@ -5221,7 +5221,7 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
  * params:
  *  x = a floating point number.
  * returns:
- *  $(D true) if $(D_PARAM x) is $(PLUSMN)$(INFIN).
+ *  `true` if $(D_PARAM x) is $(PLUSMN)$(INFIN).
  */
 bool isInfinity(X)(X x) @nogc @trusted pure nothrow
 if (isFloatingPoint!(X))
@@ -5464,8 +5464,8 @@ if (isIntegral!(X) && isFloatingPoint!(R))
 }
 
 /*********************************
-Returns $(D -1) if $(D x < 0), $(D x) if $(D x == 0), $(D 1) if
-$(D x > 0), and $(NAN) if x==$(NAN).
+Returns `-1` if `x < 0`, `x` if `x == 0`, `1` if
+`x > 0`, and $(NAN) if x==$(NAN).
  */
 F sgn(F)(F x) @safe pure nothrow @nogc
 {
@@ -6996,13 +6996,13 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
 
 
 /**
-   Computes whether $(D lhs) is approximately equal to $(D rhs)
-   admitting a maximum relative difference $(D maxRelDiff) and a
-   maximum absolute difference $(D maxAbsDiff).
+   Computes whether `lhs` is approximately equal to `rhs`
+   admitting a maximum relative difference `maxRelDiff` and a
+   maximum absolute difference `maxAbsDiff`.
 
-   If the two inputs are ranges, $(D approxEqual) returns true if and
+   If the two inputs are ranges, `approxEqual` returns true if and
    only if the ranges have the same number of elements and if $(D
-   approxEqual) evaluates to $(D true) for each pair of elements.
+   approxEqual) evaluates to `true` for each pair of elements.
  */
 bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
 {
@@ -7068,7 +7068,7 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
 }
 
 /**
-   Returns $(D approxEqual(lhs, rhs, 1e-2, 1e-5)).
+   Returns `approxEqual(lhs, rhs, 1e-2, 1e-5)`.
  */
 bool approxEqual(T, U)(T lhs, U rhs)
 {
@@ -7199,8 +7199,8 @@ deprecated("Phobos1 math functions are deprecated, use isInfinity ") alias isinf
  * )
  *
  * Returns:
- *      negative value if $(D x) precedes $(D y) in the order specified above;
- *      0 if $(D x) and $(D y) are identical, and positive value otherwise.
+ *      negative value if `x` precedes `y` in the order specified above;
+ *      0 if `x` and `y` are identical, and positive value otherwise.
  *
  * See_Also:
  *      $(MYREF isIdentical)
@@ -7458,7 +7458,7 @@ private T powFloatingPointImpl(PowType type, T)(T x)
 }
 
 /**
- * Gives the next power of two after $(D val). `T` can be any built-in
+ * Gives the next power of two after `val`. `T` can be any built-in
  * numerical type.
  *
  * If the operation would lead to an over/underflow, this function will
@@ -7468,7 +7468,7 @@ private T powFloatingPointImpl(PowType type, T)(T x)
  *     val = any number
  *
  * Returns:
- *     the next power of two after $(D val)
+ *     the next power of two after `val`
  */
 T nextPow2(T)(const T val)
 if (isIntegral!T)
@@ -7586,14 +7586,14 @@ if (isFloatingPoint!T)
 }
 
 /**
- * Gives the last power of two before $(D val). $(T) can be any built-in
+ * Gives the last power of two before `val`. $(T) can be any built-in
  * numerical type.
  *
  * Params:
  *     val = any number
  *
  * Returns:
- *     the last power of two before $(D val)
+ *     the last power of two before `val`
  */
 T truncPow2(T)(const T val)
 if (isIntegral!T)

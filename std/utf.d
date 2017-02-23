@@ -4,7 +4,7 @@
     Encode and decode UTF-8, UTF-16 and UTF-32 strings.
 
     UTF character support is restricted to
-    $(D '\u0000' &lt;= character &lt;= '\U0010FFFF').
+    `'\u0000' &lt;= character &lt;= '\U0010FFFF'`.
 
     See_Also:
         $(LINK2 http://en.wikipedia.org/wiki/Unicode, Wikipedia)<br>
@@ -202,10 +202,10 @@ if (isSomeChar!Char)
         c = code point to check
 
     Returns:
-        $(D true) iff $(D c) is a valid Unicode code point
+        `true` iff `c` is a valid Unicode code point
 
     Note:
-    $(D '\uFFFE') and $(D '\uFFFF') are considered valid by $(D isValidDchar),
+    `'\uFFFE'` and `'\uFFFF'` are considered valid by `isValidDchar`,
     as they are permitted for internal use by an application, but they are
     not allowed for interchange by the Unicode standard.
   +/
@@ -238,13 +238,13 @@ pure nothrow @safe @nogc unittest
 
 
 /++
-    Calculate the length of the UTF sequence starting at $(D index)
-    in $(D str).
+    Calculate the length of the UTF sequence starting at `index`
+    in `str`.
 
     Params:
         str = input range of UTF code units. Must be random access if
-        $(D index) is passed
-        index = starting index of UTF sequence (default: $(D 0))
+        `index` is passed
+        index = starting index of UTF sequence (default: `0`)
 
     Returns:
         The number of code units in the UTF sequence. For UTF-8, this is a
@@ -252,14 +252,14 @@ pure nothrow @safe @nogc unittest
         For UTF-16, it is either 1 or 2. For UTF-32, it is always 1.
 
     Throws:
-        May throw a $(D UTFException) if $(D str[index]) is not the start of a
+        May throw a `UTFException` if `str[index]` is not the start of a
         valid UTF sequence.
 
     Note:
-        $(D stride) will only analyze the first $(D str[index]) element. It
+        `stride` will only analyze the first `str[index]` element. It
         will not fully verify the validity of the UTF sequence, nor even verify
         the presence of the sequence: it will not actually guarantee that
-        $(D index + stride(str, index) <= str.length).
+        `index + stride(str, index) <= str.length`.
   +/
 uint stride(S)(auto ref S str, size_t index)
 if (is(S : const char[]) ||
@@ -558,12 +558,12 @@ if (is(S : const dchar[]) ||
 
 /++
     Calculate the length of the UTF sequence ending one code unit before
-    $(D index) in $(D str).
+    `index` in `str`.
 
     Params:
         str = bidirectional range of UTF code units. Must be random access if
-        $(D index) is passed
-        index = index one past end of UTF sequence (default: $(D str.length))
+        `index` is passed
+        index = index one past end of UTF sequence (default: `str.length`)
 
     Returns:
         The number of code units in the UTF sequence. For UTF-8, this is a
@@ -571,14 +571,14 @@ if (is(S : const dchar[]) ||
         For UTF-16, it is either 1 or 2. For UTF-32, it is always 1.
 
     Throws:
-        May throw a $(D UTFException) if $(D str[index]) is not one past the
+        May throw a `UTFException` if `str[index]` is not one past the
         end of a valid UTF sequence.
 
     Note:
-        $(D strideBack) will only analyze the element at $(D str[index - 1])
+        `strideBack` will only analyze the element at `str[index - 1]`
         element. It will not fully verify the validity of the UTF sequence, nor
         even verify the presence of the sequence: it will not actually
-        guarantee that $(D strideBack(str, index) <= index).
+        guarantee that `strideBack(str, index) <= index`.
   +/
 uint strideBack(S)(auto ref S str, size_t index)
 if (is(S : const char[]) ||
@@ -886,9 +886,9 @@ if (isBidirectionalRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
 
 
 /++
-    Given $(D index) into $(D str) and assuming that $(D index) is at the start
-    of a UTF sequence, $(D toUCSindex) determines the number of UCS characters
-    up to $(D index). So, $(D index) is the index of a code unit at the
+    Given `index` into `str` and assuming that `index` is at the start
+    of a UTF sequence, `toUCSindex` determines the number of UCS characters
+    up to `index`. So, `index` is the index of a code unit at the
     beginning of a code point, and the return value is how many code points into
     the string that that code point is.
   +/
@@ -935,8 +935,8 @@ if (isSomeChar!C)
 
 
 /++
-    Given a UCS index $(D n) into $(D str), returns the UTF index.
-    So, $(D n) is how many code points into the string the code point is, and
+    Given a UCS index `n` into `str`, returns the UTF index.
+    So, `n` is how many code points into the string the code point is, and
     the array index of the code unit is returned.
   +/
 size_t toUTFindex(C)(const(C)[] str, size_t n) @safe pure
@@ -980,9 +980,9 @@ if (isSomeChar!C)
 alias UseReplacementDchar = Flag!"useReplacementDchar";
 
 /++
-    Decodes and returns the code point starting at $(D str[index]). $(D index)
+    Decodes and returns the code point starting at `str[index]`. `index`
     is advanced to one past the decoded code point. If the code point is not
-    well-formed, then a $(D UTFException) is thrown and $(D index) remains
+    well-formed, then a `UTFException` is thrown and `index` remains
     unchanged.
 
     decode will only work with strings and random access ranges of code units
@@ -998,8 +998,8 @@ alias UseReplacementDchar = Flag!"useReplacementDchar";
         decoded character
 
     Throws:
-        $(LREF UTFException) if $(D str[index]) is not the start of a valid UTF
-        sequence and useReplacementDchar is $(D No.useReplacementDchar)
+        $(LREF UTFException) if `str[index]` is not the start of a valid UTF
+        sequence and useReplacementDchar is `No.useReplacementDchar`
   +/
 dchar decode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(auto ref S str, ref size_t index)
 if (!isSomeString!S &&
@@ -1040,11 +1040,11 @@ body
 }
 
 /++
-    $(D decodeFront) is a variant of $(LREF decode) which specifically decodes
-    the first code point. Unlike $(LREF decode), $(D decodeFront) accepts any
+    `decodeFront` is a variant of $(LREF decode) which specifically decodes
+    the first code point. Unlike $(LREF decode), `decodeFront` accepts any
     input range of code units (rather than just a string or random access
-    range). It also takes the range by $(D ref) and pops off the elements as it
-    decodes them. If $(D numCodeUnits) is passed in, it gets set to the number
+    range). It also takes the range by `ref` and pops off the elements as it
+    decodes them. If `numCodeUnits` is passed in, it gets set to the number
     of code units which were in the code point which was decoded.
 
     Params:
@@ -1056,7 +1056,7 @@ body
         decoded character
 
     Throws:
-        $(LREF UTFException) if $(D str.front) is not the start of a valid UTF
+        $(LREF UTFException) if `str.front` is not the start of a valid UTF
         sequence. If an exception is thrown, then there is no guarantee as to
         the number of code units which were popped off, as it depends on the
         type of range being used and how many code units had to be popped off
@@ -1136,11 +1136,11 @@ if (isInputRange!S && isSomeChar!(ElementType!S))
 }
 
 /++
-    $(D decodeBack) is a variant of $(LREF decode) which specifically decodes
-    the last code point. Unlike $(LREF decode), $(D decodeBack) accepts any
+    `decodeBack` is a variant of $(LREF decode) which specifically decodes
+    the last code point. Unlike $(LREF decode), `decodeBack` accepts any
     bidirectional range of code units (rather than just a string or random access
-    range). It also takes the range by $(D ref) and pops off the elements as it
-    decodes them. If $(D numCodeUnits) is passed in, it gets set to the number
+    range). It also takes the range by `ref` and pops off the elements as it
+    decodes them. If `numCodeUnits` is passed in, it gets set to the number
     of code units which were in the code point which was decoded.
 
     Params:
@@ -1152,9 +1152,9 @@ if (isInputRange!S && isSomeChar!(ElementType!S))
         A decoded UTF character.
 
     Throws:
-        $(LREF UTFException) if $(D str.back) is not the end of a valid UTF
-        sequence. If an exception is thrown, the $(D str) itself remains unchanged,
-        but there is no guarantee as to the value of $(D numCodeUnits) (when passed).
+        $(LREF UTFException) if `str.back` is not the end of a valid UTF
+        sequence. If an exception is thrown, the `str` itself remains unchanged,
+        but there is no guarantee as to the value of `numCodeUnits` (when passed).
   +/
 dchar decodeBack(UseReplacementDchar useReplacementDchar = No.useReplacementDchar, S)(
     ref S str, out size_t numCodeUnits)
@@ -2093,13 +2093,13 @@ private dchar _utfException(UseReplacementDchar useReplacementDchar)(string msg,
 }
 
 /++
-    Encodes $(D c) into the static array, $(D buf), and returns the actual
-    length of the encoded character (a number between $(D 1) and $(D 4) for
-    $(D char[4]) buffers and a number between $(D 1) and $(D 2) for
-    $(D wchar[2]) buffers).
+    Encodes `c` into the static array, `buf`, and returns the actual
+    length of the encoded character (a number between `1` and `4` for
+    `char[4]` buffers and a number between `1` and `2` for
+    `wchar[2]` buffers).
 
     Throws:
-        $(D UTFException) if $(D c) is not a valid UTF code point.
+        `UTFException` if `c` is not a valid UTF code point.
   +/
 size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     ref char[4] buf, dchar c) @safe pure
@@ -2267,10 +2267,10 @@ size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
 
 
 /++
-    Encodes $(D c) in $(D str)'s encoding and appends it to $(D str).
+    Encodes `c` in `str`'s encoding and appends it to `str`.
 
     Throws:
-        $(D UTFException) if $(D c) is not a valid UTF code point.
+        `UTFException` if `c` is not a valid UTF code point.
   +/
 void encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     ref char[] str, dchar c) @safe pure
@@ -2481,7 +2481,7 @@ void encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
 
 /++
     Returns the number of code units that are required to encode the code point
-    $(D c) when $(D C) is the character type used to encode it.
+    `c` when `C` is the character type used to encode it.
   +/
 ubyte codeLength(C)(dchar c) @safe pure nothrow @nogc
 if (isSomeChar!C)
@@ -2519,8 +2519,8 @@ if (isSomeChar!C)
 
 
 /++
-    Returns the number of code units that are required to encode $(D str)
-    in a string whose character type is $(D C). This is particularly useful
+    Returns the number of code units that are required to encode `str`
+    in a string whose character type is `C`. This is particularly useful
     when slicing one string with the length of another and the two string
     types use different character types.
 
@@ -2599,11 +2599,11 @@ if (isInputRange!InputRange && !isInfinite!InputRange && is(ElementType!InputRan
 /+
 Internal helper function:
 
-Returns true if it is safe to search for the Codepoint $(D c) inside
+Returns true if it is safe to search for the Codepoint `c` inside
 code units, without decoding.
 
 This is a runtime check that is used an optimization in various functions,
-particularly, in $(D std.string).
+particularly, in `std.string`.
   +/
 package bool canSearchInCodeUnits(C)(dchar c)
 if (isSomeChar!C)
@@ -2639,10 +2639,10 @@ if (isSomeChar!C)
 /* =================== Validation ======================= */
 
 /++
-    Checks to see if $(D str) is well-formed unicode or not.
+    Checks to see if `str` is well-formed unicode or not.
 
     Throws:
-        $(D UTFException) if $(D str) is not well-formed.
+        `UTFException` if `str` is not well-formed.
   +/
 void validate(S)(in S str) @safe pure
 if (isSomeString!S)
@@ -2853,36 +2853,36 @@ private T toUTFImpl(T, S)(S s)
 /* =================== toUTFz ======================= */
 
 /++
-    Returns a C-style zero-terminated string equivalent to $(D str). $(D str)
-    must not contain embedded $(D '\0')'s as any C function will treat the first
-    $(D '\0') that it sees as the end of the string. If $(D str.empty) is
-    $(D true), then a string containing only $(D '\0') is returned.
+    Returns a C-style zero-terminated string equivalent to `str`. `str`
+    must not contain embedded `'\0'`'s as any C function will treat the first
+    `'\0'` that it sees as the end of the string. If `str.empty` is
+    `true`, then a string containing only `'\0'` is returned.
 
-    $(D toUTFz) accepts any type of string and is templated on the type of
+    `toUTFz` accepts any type of string and is templated on the type of
     character pointer that you wish to convert to. It will avoid allocating a
     new string if it can, but there's a decent chance that it will end up having
     to allocate a new string - particularly when dealing with character types
-    other than $(D char).
+    other than `char`.
 
-    $(RED Warning 1:) If the result of $(D toUTFz) equals $(D str.ptr), then if
-    anything alters the character one past the end of $(D str) (which is the
-    $(D '\0') character terminating the string), then the string won't be
+    $(RED Warning 1:) If the result of `toUTFz` equals `str.ptr`, then if
+    anything alters the character one past the end of `str` (which is the
+    `'\0'` character terminating the string), then the string won't be
     zero-terminated anymore. The most likely scenarios for that are if you
-    append to $(D str) and no reallocation takes place or when $(D str) is a
+    append to `str` and no reallocation takes place or when `str` is a
     slice of a larger array, and you alter the character in the larger array
-    which is one character past the end of $(D str). Another case where it could
+    which is one character past the end of `str`. Another case where it could
     occur would be if you had a mutable character array immediately after
-    $(D str) in memory (for example, if they're member variables in a
+    `str` in memory (for example, if they're member variables in a
     user-defined type with one declared right after the other) and that
-    character array happened to start with $(D '\0'). Such scenarios will never
+    character array happened to start with `'\0'`. Such scenarios will never
     occur if you immediately use the zero-terminated string after calling
-    $(D toUTFz) and the C function using it doesn't keep a reference to it.
+    `toUTFz` and the C function using it doesn't keep a reference to it.
     Also, they are unlikely to occur even if you save the zero-terminated string
     (the cases above would be among the few examples of where it could happen).
     However, if you save the zero-terminate string and want to be absolutely
     certain that the string stays zero-terminated, then simply append a
-    $(D '\0') to the string and use its $(D ptr) property rather than calling
-    $(D toUTFz).
+    `'\0'` to the string and use its `ptr` property rather than calling
+    `toUTFz`.
 
     $(RED Warning 2:) When passing a character pointer to a C function, and the
     C function keeps it around for any reason, make sure that you keep a
@@ -3097,11 +3097,11 @@ if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
 
 
 /++
-    $(D toUTF16z) is a convenience function for $(D toUTFz!(const(wchar)*)).
+    `toUTF16z` is a convenience function for `toUTFz!(const(wchar)*)`.
 
-    Encodes string $(D s) into UTF-16 and returns the encoded string.
-    $(D toUTF16z) is suitable for calling the 'W' functions in the Win32 API
-    that take an $(D LPWSTR) or $(D LPCWSTR) argument.
+    Encodes string `s` into UTF-16 and returns the encoded string.
+    `toUTF16z` is suitable for calling the 'W' functions in the Win32 API
+    that take an `LPWSTR` or `LPCWSTR` argument.
   +/
 const(wchar)* toUTF16z(C)(const(C)[] str) @safe pure
 if (isSomeChar!C)
@@ -3153,14 +3153,14 @@ if (isSomeChar!C)
 
 
 /++
-    Returns the total number of code points encoded in $(D str).
+    Returns the total number of code points encoded in `str`.
 
     Supercedes: This function supercedes $(LREF toUCSindex).
 
     Standards: Unicode 5.0, ASCII, ISO-8859-1, WINDOWS-1252
 
     Throws:
-        $(D UTFException) if $(D str) is not well-formed.
+        `UTFException` if `str` is not well-formed.
   +/
 size_t count(C)(const(C)[] str) @trusted pure nothrow @nogc
 if (isSomeChar!C)

@@ -522,6 +522,9 @@ style: ../dscanner/dsc
 	@echo "Enforce space between a .. b"
 	grep -nrE '[[:alnum:]][.][.][[:alnum:]]|[[:alnum:]] [.][.][[:alnum:]]|[[:alnum:]][.][.] [[:alnum:]]' $$(find . -name '*.d' | grep -vE 'std/string.d|std/uni.d') ; test $$? -eq 1
 
+	@echo "Check for uses of the old ddoc code macro"
+	grep -nrE '[$$]\(D ([^)]*)\)' $$(find . -name '*.d') ; test $$? -eq 1
+
 	# at the moment libdparse has problems to parse some modules (->excludes)
 	@echo "Running DScanner"
 	../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d') -I.

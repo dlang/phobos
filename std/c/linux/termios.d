@@ -2,7 +2,7 @@
 
 
 /++
-    $(RED Deprecated. Use $(D core.sys.posix.termios) instead. This module will
+    $(RED Deprecated. Use `core.sys.posix.termios` instead. This module will
           be removed in June 2017.)
   +/
 deprecated("Import core.sys.posix.termios instead")

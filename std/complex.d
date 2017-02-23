@@ -5,8 +5,8 @@
 
     $(LREF Complex) will eventually
     $(DDLINK deprecate, Deprecated Features, replace)
-    the built-in types $(D cfloat), $(D cdouble), $(D creal), $(D ifloat),
-    $(D idouble), and $(D ireal).
+    the built-in types `cfloat`, `cdouble`, `creal`, `ifloat`,
+    `idouble`, and `ireal`.
 
     Authors:    Lars Tandle Kyllingstad, Don Clugston
     Copyright:  Copyright (c) 2010, Lars T. Kyllingstad.
@@ -28,11 +28,11 @@ import std.traits;
         im = (optional) imaginary part of complex number
 
     Returns:
-        $(D Complex) instance with real and imaginary parts set
-        to the values provided as input.  If neither $(D re) nor
-        $(D im) are floating-point numbers, the return type will
-        be $(D Complex!double).  Otherwise, the return type is
-        deduced using $(D std.traits.CommonType!(R, I)).
+        `Complex` instance with real and imaginary parts set
+        to the values provided as input.  If neither `re` nor
+        `im` are floating-point numbers, the return type will
+        be `Complex!double`.  Otherwise, the return type is
+        deduced using `std.traits.CommonType!(R, I)`.
 */
 auto complex(R)(R re)  @safe pure nothrow @nogc
 if (is(R : double))
@@ -93,8 +93,8 @@ if (is(R : double) && is(I : double))
 }
 
 
-/** A complex number parametrised by a type $(D T), which must be either
-    $(D float), $(D double) or $(D real).
+/** A complex number parametrised by a type `T`, which must be either
+    `float`, `double` or `real`.
 */
 struct Complex(T)
 if (isFloatingPoint!T)
@@ -855,7 +855,7 @@ Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
     Returns: The value of cos(y) + i sin(y).
 
     Note:
-    $(D expi) is included here for convenience and for easy migration of code
+    `expi` is included here for convenience and for easy migration of code
     that uses $(REF _expi, std,math).  Unlike $(REF _expi, std,math), which uses the
     x87 $(I fsincos) instruction when possible, this function is no faster
     than calculating cos(y) and sin(y) separately.

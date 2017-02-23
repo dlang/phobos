@@ -3,7 +3,7 @@
 // @@@DEPRECATED_2017-06@@@
 
 /++
-    $(RED Deprecated. Use the appropriate $(D core.sys.posix.*) modules instead.
+    $(RED Deprecated. Use the appropriate `core.sys.posix.*` modules instead.
           This module will be removed in June 2017.)
   +/
 deprecated("Import the appropriate core.sys.posix.* modules instead")

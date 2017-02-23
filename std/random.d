@@ -10,7 +10,7 @@ numbers. An overall fast and reliable means to generate random numbers
 is the $(D_PARAM Mt19937) generator, which derives its name from
 "$(LUCKY Mersenne Twister) with a period of 2 to the power of
 19937". In memory-constrained situations, $(LUCKY linear congruential)
-generators such as $(D MinstdRand0) and $(D MinstdRand) might be
+generators such as `MinstdRand0` and `MinstdRand` might be
 useful. The standard library provides an alias $(D_PARAM Random) for
 whichever generator it considers the most fit for the target
 environment.
@@ -255,9 +255,9 @@ if (isUnsigned!UIntType)
     enum bool isUniformRandom = true;
     /// Does this generator have a fixed range? ($(D_PARAM true)).
     enum bool hasFixedRange = true;
-    /// Lowest generated value ($(D 1) if $(D c == 0), $(D 0) otherwise).
+    /// Lowest generated value (`1` if `c == 0`, `0` otherwise).
     enum UIntType min = ( c == 0 ? 1 : 0 );
-    /// Highest generated value ($(D modulus - 1)).
+    /// Highest generated value (`modulus - 1`).
     enum UIntType max = m - 1;
 /**
 The parameters of this distribution. The random number is $(D_PARAM x
@@ -347,7 +347,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
 
 /**
 Constructs a $(D_PARAM LinearCongruentialEngine) generator seeded with
-$(D x0).
+`x0`.
  */
     this(UIntType x0) @safe pure
     {
@@ -420,7 +420,7 @@ $(D x0).
     }
 
 /**
-Always $(D false) (random generators are infinite ranges).
+Always `false` (random generators are infinite ranges).
  */
     enum bool empty = false;
 
@@ -437,10 +437,10 @@ Always $(D false) (random generators are infinite ranges).
 
 /**
 Define $(D_PARAM LinearCongruentialEngine) generators with well-chosen
-parameters. $(D MinstdRand0) implements Park and Miller's "minimal
+parameters. `MinstdRand0` implements Park and Miller's "minimal
 standard" $(HTTP
 wikipedia.org/wiki/Park%E2%80%93Miller_random_number_generator,
-generator) that uses 16807 for the multiplier. $(D MinstdRand)
+generator) that uses 16807 for the multiplier. `MinstdRand`
 implements a variant that has slightly better spectral behavior by
 using the multiplier 48271. Both generators are rather simplistic.
  */
@@ -692,7 +692,7 @@ Parameters for the generator.
    Seeds a MersenneTwisterEngine object using an InputRange.
 
    Throws:
-   $(D Exception) if the InputRange didn't provide enough elements to seed the generator.
+   `Exception` if the InputRange didn't provide enough elements to seed the generator.
    The number of elements required is the 'n' template parameter of the MersenneTwisterEngine struct.
  */
     void seed(T)(T range) if (isInputRange!T && is(Unqual!(ElementType!T) == UIntType))
@@ -812,13 +812,13 @@ Parameters for the generator.
     }
 
 /**
-Always $(D false).
+Always `false`.
  */
     enum bool empty = false;
 }
 
 /**
-A $(D MersenneTwisterEngine) instantiated with the parameters of the
+A `MersenneTwisterEngine` instantiated with the parameters of the
 original engine $(HTTP math.sci.hiroshima-u.ac.jp/~m-mat/MT/emt.html,
 MT19937), generating uniformly-distributed 32-bit numbers with a
 period of 2 to the power of 19937. Recommended for random number
@@ -861,7 +861,7 @@ alias Mt19937 = MersenneTwisterEngine!(uint, 32, 624, 397, 31,
 }
 
 /**
-A $(D MersenneTwisterEngine) instantiated with the parameters of the
+A `MersenneTwisterEngine` instantiated with the parameters of the
 original engine $(HTTP en.wikipedia.org/wiki/Mersenne_Twister,
 MT19937-64), generating uniformly-distributed 64-bit numbers with a
 period of 2 to the power of 19937.
@@ -982,7 +982,7 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
  *
  * Implemented according to $(HTTP www.jstatsoft.org/v08/i14/paper, Xorshift RNGs).
  *
- * $(BOOKTABLE $(TEXTWITHCOMMAS Supporting bits are below, $(D bits) means second parameter of XorshiftEngine.),
+ * $(BOOKTABLE $(TEXTWITHCOMMAS Supporting bits are below, `bits` means second parameter of XorshiftEngine.),
  *  $(TR $(TH bits) $(TH period))
  *  $(TR $(TD 32)   $(TD 2^32 - 1))
  *  $(TR $(TD 64)   $(TD 2^64 - 1))
@@ -1002,7 +1002,7 @@ if (isUnsigned!UIntType)
   public:
     ///Mark this as a Rng
     enum bool isUniformRandom = true;
-    /// Always $(D false) (random generators are infinite ranges).
+    /// Always `false` (random generators are infinite ranges).
     enum empty = false;
     /// Smallest generated value.
     enum UIntType min = 0;
@@ -1037,7 +1037,7 @@ if (isUnsigned!UIntType)
 
   public:
     /**
-     * Constructs a $(D XorshiftEngine) generator seeded with $(D_PARAM x0).
+     * Constructs a `XorshiftEngine` generator seeded with $(D_PARAM x0).
      */
     this(UIntType x0) @safe pure nothrow @nogc
     {
@@ -1180,8 +1180,8 @@ if (isUnsigned!UIntType)
 
 
 /**
- * Define $(D XorshiftEngine) generators with well-chosen parameters. See each bits examples of "Xorshift RNGs".
- * $(D Xorshift) is a Xorshift128's alias because 128bits implementation is mostly used.
+ * Define `XorshiftEngine` generators with well-chosen parameters. See each bits examples of "Xorshift RNGs".
+ * `Xorshift` is a Xorshift128's alias because 128bits implementation is mostly used.
  */
 alias Xorshift32  = XorshiftEngine!(uint, 32,  13, 17, 15) ;
 alias Xorshift64  = XorshiftEngine!(uint, 64,  10, 13, 10); /// ditto
@@ -1345,22 +1345,22 @@ A singleton instance of the default random number generator
 }
 
 /**
-Generates a number between $(D a) and $(D b). The $(D boundaries)
+Generates a number between `a` and `b`. The `boundaries`
 parameter controls the shape of the interval (open vs. closed on
-either side). Valid values for $(D boundaries) are $(D "[]"), $(D
-"$(LPAREN)]"), $(D "[$(RPAREN)"), and $(D "()"). The default interval
+either side). Valid values for `boundaries` are `"[]"`, $(D
+"$(LPAREN)]"), `"[$(RPAREN)"`, and `"()"`. The default interval
 is closed to the left and open to the right. The version that does not
-take $(D urng) uses the default generator $(D rndGen).
+take `urng` uses the default generator `rndGen`.
 
 Params:
     a = lower bound of the _uniform distribution
     b = upper bound of the _uniform distribution
     urng = (optional) random number generator to use;
-           if not specified, defaults to $(D rndGen)
+           if not specified, defaults to `rndGen`
 
 Returns:
     A single random variate drawn from the _uniform distribution
-    between $(D a) and $(D b), whose type is the common type of
+    between `a` and `b`, whose type is the common type of
     these parameters
  */
 auto uniform(string boundaries = "[)", T1, T2)
@@ -1709,16 +1709,16 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
 
 /**
 Generates a uniformly-distributed number in the range $(D [T.min,
-T.max]) for any integral or character type $(D T). If no random
-number generator is passed, uses the default $(D rndGen).
+T.max]) for any integral or character type `T`. If no random
+number generator is passed, uses the default `rndGen`.
 
 Params:
     urng = (optional) random number generator to use;
-           if not specified, defaults to $(D rndGen)
+           if not specified, defaults to `rndGen`
 
 Returns:
     Random variate drawn from the _uniform distribution across all
-    possible values of the integral or character type $(D T).
+    possible values of the integral or character type `T`.
  */
 auto uniform(T, UniformRandomNumberGenerator)
 (ref UniformRandomNumberGenerator urng)
@@ -1777,16 +1777,16 @@ if (!is(T == enum) && (isIntegral!T || isSomeChar!T))
 }
 
 /**
-Returns a uniformly selected member of enum $(D E). If no random number
-generator is passed, uses the default $(D rndGen).
+Returns a uniformly selected member of enum `E`. If no random number
+generator is passed, uses the default `rndGen`.
 
 Params:
     urng = (optional) random number generator to use;
-           if not specified, defaults to $(D rndGen)
+           if not specified, defaults to `rndGen`
 
 Returns:
     Random variate drawn with equal probability from any
-    of the possible values of the enum $(D E).
+    of the possible values of the enum `E`.
  */
 auto uniform(E, UniformRandomNumberGenerator)
 (ref UniformRandomNumberGenerator urng)
@@ -1824,20 +1824,20 @@ if (is(E == enum))
 
 /**
  * Generates a uniformly-distributed floating point number of type
- * $(D T) in the range [0, 1$(RPAREN).  If no random number generator is
- * specified, the default RNG $(D rndGen) will be used as the source
+ * `T` in the range [0, 1$(RPAREN).  If no random number generator is
+ * specified, the default RNG `rndGen` will be used as the source
  * of randomness.
  *
- * $(D uniform01) offers a faster generation of random variates than
- * the equivalent $(D uniform!"[$(RPAREN)"(0.0, 1.0)) and so may be preferred
+ * `uniform01` offers a faster generation of random variates than
+ * the equivalent `uniform!"[$(RPAREN)"(0.0, 1.0)` and so may be preferred
  * for some applications.
  *
  * Params:
  *     rng = (optional) random number generator to use;
- *           if not specified, defaults to $(D rndGen)
+ *           if not specified, defaults to `rndGen`
  *
  * Returns:
- *     Floating-point random variate of type $(D T) drawn from the _uniform
+ *     Floating-point random variate of type `T` drawn from the _uniform
  *     distribution across the half-open interval [0, 1$(RPAREN).
  *
  */
@@ -1939,9 +1939,9 @@ body
 }
 
 /**
-Generates a uniform probability distribution of size $(D n), i.e., an
-array of size $(D n) of positive numbers of type $(D F) that sum to
-$(D 1). If $(D useThis) is provided, it is used as storage.
+Generates a uniform probability distribution of size `n`, i.e., an
+array of size `n` of positive numbers of type `F` that sum to
+`1`. If `useThis` is provided, it is used as storage.
  */
 F[] uniformDistribution(F = double)(size_t n, F[] useThis = null)
 if (isFloatingPoint!F)
@@ -1971,7 +1971,7 @@ if (isFloatingPoint!F)
 
 /**
 Returns a random, uniformly chosen, element `e` from the supplied
-$(D Range range). If no random number generator is passed, the default
+`Range range`. If no random number generator is passed, the default
 `rndGen` is used.
 
 Params:
@@ -1981,7 +1981,7 @@ Params:
 
 Returns:
     A single random element drawn from the `range`. If it can, it will
-    return a `ref` to the $(D range element), otherwise it will return
+    return a `ref` to the `range element`, otherwise it will return
     a copy.
  */
 auto ref choice(Range, RandomGen = Random)(auto ref Range range,
@@ -2053,14 +2053,14 @@ if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
 }
 
 /**
-Shuffles elements of $(D r) using $(D gen) as a shuffler. $(D r) must be
-a random-access range with length.  If no RNG is specified, $(D rndGen)
+Shuffles elements of `r` using `gen` as a shuffler. `r` must be
+a random-access range with length.  If no RNG is specified, `rndGen`
 will be used.
 
 Params:
     r = random-access range whose elements are to be shuffled
     gen = (optional) random number generator to use; if not
-          specified, defaults to $(D rndGen)
+          specified, defaults to `rndGen`
  */
 
 void randomShuffle(Range, RandomGen)(Range r, ref RandomGen gen)
@@ -2095,22 +2095,22 @@ if (isRandomAccessRange!Range)
 }
 
 /**
-Partially shuffles the elements of $(D r) such that upon returning $(D r[0 .. n])
-is a random subset of $(D r) and is randomly ordered.  $(D r[n .. r.length])
-will contain the elements not in $(D r[0 .. n]).  These will be in an undefined
+Partially shuffles the elements of `r` such that upon returning `r[0 .. n]`
+is a random subset of `r` and is randomly ordered.  `r[n .. r.length]`
+will contain the elements not in `r[0 .. n]`.  These will be in an undefined
 order, but will not be random in the sense that their order after
-$(D partialShuffle) returns will not be independent of their order before
-$(D partialShuffle) was called.
+`partialShuffle` returns will not be independent of their order before
+`partialShuffle` was called.
 
-$(D r) must be a random-access range with length.  $(D n) must be less than
-or equal to $(D r.length).  If no RNG is specified, $(D rndGen) will be used.
+`r` must be a random-access range with length.  `n` must be less than
+or equal to `r.length`.  If no RNG is specified, `rndGen` will be used.
 
 Params:
     r = random-access range whose elements are to be shuffled
-    n = number of elements of $(D r) to shuffle (counting from the beginning);
-        must be less than $(D r.length)
+    n = number of elements of `r` to shuffle (counting from the beginning);
+        must be less than `r.length`
     gen = (optional) random number generator to use; if not
-          specified, defaults to $(D rndGen)
+          specified, defaults to `rndGen`
 */
 void partialShuffle(Range, RandomGen)(Range r, in size_t n, ref RandomGen gen)
 if (isRandomAccessRange!Range && isUniformRNG!RandomGen)
@@ -2173,11 +2173,11 @@ if (isRandomAccessRange!Range)
 
 /**
 Rolls a dice with relative probabilities stored in $(D
-proportions). Returns the index in $(D proportions) that was chosen.
+proportions). Returns the index in `proportions` that was chosen.
 
 Params:
     rnd = (optional) random number generator to use; if not
-          specified, defaults to $(D rndGen)
+          specified, defaults to `rndGen`
     proportions = forward range or list of individual values
                   whose elements correspond to the probabilities
                   with which to choose the corresponding index
@@ -2185,9 +2185,9 @@ Params:
 
 Returns:
     Random variate drawn from the index values
-    [0, ... $(D proportions.length) - 1], with the probability
-    of getting an individual index value $(D i) being proportional to
-    $(D proportions[i]).
+    [0, ... `proportions.length` - 1], with the probability
+    of getting an individual index value `i` being proportional to
+    `proportions[i]`.
 */
 size_t dice(Rng, Num)(ref Rng rnd, Num[] proportions...)
 if (isNumeric!Num && isForwardRange!Rng)
@@ -2266,22 +2266,22 @@ body
 }
 
 /**
-Covers a given range $(D r) in a random manner, i.e. goes through each
-element of $(D r) once and only once, just in a random order. $(D r)
+Covers a given range `r` in a random manner, i.e. goes through each
+element of `r` once and only once, just in a random order. `r`
 must be a random-access range with length.
 
-If no random number generator is passed to $(D randomCover), the
+If no random number generator is passed to `randomCover`, the
 thread-global RNG rndGen will be used internally.
 
 Params:
     r = random-access range to cover
     rng = (optional) random number generator to use;
-          if not specified, defaults to $(D rndGen)
+          if not specified, defaults to `rndGen`
 
 Returns:
-    Range whose elements consist of the elements of $(D r),
-    in random order.  Will be a forward range if both $(D r) and
-    $(D rng) are forward ranges, an input range otherwise.
+    Range whose elements consist of the elements of `r`,
+    in random order.  Will be a forward range if both `r` and
+    `rng` are forward ranges, an input range otherwise.
 
 Example:
 ----
@@ -2506,49 +2506,49 @@ if (isRandomAccessRange!Range)
 
 // RandomSample
 /**
-Selects a random subsample out of $(D r), containing exactly $(D n)
+Selects a random subsample out of `r`, containing exactly `n`
 elements. The order of elements is the same as in the original
-range. The total length of $(D r) must be known. If $(D total) is
+range. The total length of `r` must be known. If `total` is
 passed in, the total number of sample is considered to be $(D
-total). Otherwise, $(D RandomSample) uses $(D r.length).
+total). Otherwise, `RandomSample` uses `r.length`.
 
 Params:
     r = range to sample from
     n = number of elements to include in the sample;
         must be less than or equal to the total number
-        of elements in $(D r) and/or the parameter
-        $(D total) (if provided)
-    total = (semi-optional) number of elements of $(D r)
+        of elements in `r` and/or the parameter
+        `total` (if provided)
+    total = (semi-optional) number of elements of `r`
             from which to select the sample (counting from
             the beginning); must be less than or equal to
-            the total number of elements in $(D r) itself.
-            May be omitted if $(D r) has the $(D .length)
+            the total number of elements in `r` itself.
+            May be omitted if `r` has the `.length`
             property and the sample is to be drawn from
-            all elements of $(D r).
+            all elements of `r`.
     rng = (optional) random number generator to use;
-          if not specified, defaults to $(D rndGen)
+          if not specified, defaults to `rndGen`
 
 Returns:
     Range whose elements consist of a randomly selected subset of
-    the elements of $(D r), in the same order as these elements
-    appear in $(D r) itself.  Will be a forward range if both $(D r)
-    and $(D rng) are forward ranges, an input range otherwise.
+    the elements of `r`, in the same order as these elements
+    appear in `r` itself.  Will be a forward range if both `r`
+    and `rng` are forward ranges, an input range otherwise.
 
-$(D RandomSample) implements Jeffrey Scott Vitter's Algorithm D
+`RandomSample` implements Jeffrey Scott Vitter's Algorithm D
 (see Vitter $(HTTP dx.doi.org/10.1145/358105.893, 1984), $(HTTP
 dx.doi.org/10.1145/23002.23003, 1987)), which selects a sample
-of size $(D n) in O(n) steps and requiring O(n) random variates,
+of size `n` in O(n) steps and requiring O(n) random variates,
 regardless of the size of the data being sampled.  The exception
 to this is if traversing k elements on the input range is itself
 an O(k) operation (e.g. when sampling lines from an input file),
 in which case the sampling calculation will inevitably be of
 O(total).
 
-RandomSample will throw an exception if $(D total) is verifiably
+RandomSample will throw an exception if `total` is verifiably
 less than the total number of elements available in the input,
-or if $(D n > total).
+or if `n > total`.
 
-If no random number generator is passed to $(D randomSample), the
+If no random number generator is passed to `randomSample`, the
 thread-global RNG rndGen will be used internally.
 
 Example:

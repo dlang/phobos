@@ -68,7 +68,7 @@ $(TR $(TDNW UUID namespaces)
  *
  * For efficiency, UUID is implemented as a struct. UUIDs are therefore empty if not explicitly
  * initialized. An UUID is empty if $(MYREF3 UUID.empty, empty) is true. Empty UUIDs are equal to
- * $(D UUID.init), which is a UUID with all 16 bytes set to 0.
+ * `UUID.init`, which is a UUID with all 16 bytes set to 0.
  * Use UUID's constructors or the UUID generator functions to get an initialized UUID.
  *
  * This is a port of $(LINK2 http://www.boost.org/doc/libs/1_42_0/libs/uuid/uuid.html,
@@ -88,7 +88,7 @@ $(TR $(TDNW UUID namespaces)
  *
  * Macros:
  * MYREF2 = <a href="#$2">$(TT $1)</a>&nbsp;
- * MYREF3 = <a href="#$2">$(D $1)</a>
+ * MYREF3 = <a href="#$2">`$1`</a>
  */
 /*          Copyright Johannes Pfau 2011 - 2012.
  * Distributed under the Boost Software License, Version 1.0.
@@ -178,7 +178,7 @@ public struct UUID
          *
          * Note:
          * All of these UUID versions can be read and processed by
-         * $(D std.uuid), but only version 3, 4 and 5 UUIDs can be generated.
+         * `std.uuid`, but only version 3, 4 and 5 UUIDs can be generated.
          */
         enum Version
         {
@@ -964,7 +964,7 @@ public struct UUID
 
 /**
  * This function generates a name based (Version 3) UUID from a namespace UUID and a name.
- * If no namespace UUID was passed, the empty UUID $(D UUID.init) is used.
+ * If no namespace UUID was passed, the empty UUID `UUID.init` is used.
  *
  * Note:
  * The default namespaces ($(LREF dnsNamespace), ...) defined by
@@ -980,8 +980,8 @@ public struct UUID
  * RFC 4122 isn't very clear on how UUIDs should be generated from names.
  * It is possible that different implementations return different UUIDs
  * for the same input, so be warned. The implementation for UTF-8 strings
- * and byte arrays used by $(D std.uuid) is compatible with Boost's implementation.
- * $(D std.uuid) guarantees that the same input to this function will generate
+ * and byte arrays used by `std.uuid` is compatible with Boost's implementation.
+ * `std.uuid` guarantees that the same input to this function will generate
  * the same output at any time, on any system (this especially means endianness
  * doesn't matter).
  *
@@ -1080,7 +1080,7 @@ public struct UUID
  /**
  * This function generates a name based (Version 5) UUID from a namespace
  * UUID and a name.
- * If no namespace UUID was passed, the empty UUID $(D UUID.init) is used.
+ * If no namespace UUID was passed, the empty UUID `UUID.init` is used.
  *
  * Note:
  * The default namespaces ($(LREF dnsNamespace), ...) defined by
@@ -1093,8 +1093,8 @@ public struct UUID
  * RFC 4122 isn't very clear on how UUIDs should be generated from names.
  * It is possible that different implementations return different UUIDs
  * for the same input, so be warned. The implementation for UTF-8 strings
- * and byte arrays used by $(D std.uuid) is compatible with Boost's implementation.
- * $(D std.uuid) guarantees that the same input to this function will generate
+ * and byte arrays used by `std.uuid` is compatible with Boost's implementation.
+ * `std.uuid` guarantees that the same input to this function will generate
  * the same output at any time, on any system (this especially means endianness
  * doesn't matter).
  *

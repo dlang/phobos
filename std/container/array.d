@@ -1,5 +1,5 @@
 /**
-This module provides an $(D Array) type with deterministic memory usage not
+This module provides an `Array` type with deterministic memory usage not
 reliant on the GC, as an alternative to the built-in arrays.
 
 This module is a submodule of $(MREF std, container).
@@ -232,19 +232,19 @@ private struct RangeT(A)
 /**
 Array type with deterministic control of memory. The memory allocated
 for the array is reclaimed as soon as possible; there is no reliance
-on the garbage collector. $(D Array) uses $(D malloc) and $(D free)
+on the garbage collector. `Array` uses `malloc` and `free`
 for managing its own memory.
 
-This means that pointers to elements of an $(D Array) will become
-dangling as soon as the element is removed from the $(D Array). On the other hand
-the memory allocated by an $(D Array) will be scanned by the GC and
-GC managed objects referenced from an $(D Array) will be kept alive.
+This means that pointers to elements of an `Array` will become
+dangling as soon as the element is removed from the `Array`. On the other hand
+the memory allocated by an `Array` will be scanned by the GC and
+GC managed objects referenced from an `Array` will be kept alive.
 
 Note:
 
-When using $(D Array) with range-based functions like those in $(D std.algorithm),
-$(D Array) must be sliced to get a range (for example, use $(D array[].map!)
-instead of $(D array.map!)). The container itself is not a range.
+When using `Array` with range-based functions like those in `std.algorithm`,
+`Array` must be sliced to get a range (for example, use `array[].map!`
+instead of `array.map!`). The container itself is not a range.
  */
 struct Array(T)
 if (!is(Unqual!T == bool))
@@ -498,7 +498,7 @@ Complexity: $(BIGOH n).
     }
 
 /**
-Property returning $(D true) if and only if the container has no
+Property returning `true` if and only if the container has no
 elements.
 
 Complexity: $(BIGOH 1)
@@ -536,9 +536,9 @@ Complexity: $(BIGOH 1)
     }
 
 /**
-Ensures sufficient capacity to accommodate $(D e) elements.
+Ensures sufficient capacity to accommodate `e` elements.
 
-Postcondition: $(D capacity >= e)
+Postcondition: `capacity >= e`
 
 Complexity: $(BIGOH 1)
      */
@@ -587,9 +587,9 @@ Complexity: $(BIGOH 1)
 
 /**
 Returns a range that iterates over elements of the container from
-index $(D i) up to (excluding) index $(D j).
+index `i` up to (excluding) index `j`.
 
-Precondition: $(D i <= j && j <= length)
+Precondition: `i <= j && j <= length`
 
 Complexity: $(BIGOH 1)
 */
@@ -610,9 +610,9 @@ Complexity: $(BIGOH 1)
     }
 
 /**
-Forward to $(D opSlice().front) and $(D opSlice().back), respectively.
+Forward to `opSlice().front` and `opSlice().back`, respectively.
 
-Precondition: $(D !empty)
+Precondition: `!empty`
 
 Complexity: $(BIGOH 1)
      */
@@ -632,7 +632,7 @@ Complexity: $(BIGOH 1)
 /**
 Indexing operators yield or modify the value at a specified index.
 
-Precondition: $(D i < length)
+Precondition: `i < length`
 
 Complexity: $(BIGOH 1)
      */
@@ -645,7 +645,7 @@ Complexity: $(BIGOH 1)
 /**
 Slicing operations execute an operation on an entire slice.
 
-Precondition: $(D i < j && j < length)
+Precondition: `i < j && j < length`
 
 Complexity: $(BIGOH slice.length)
      */
@@ -695,9 +695,9 @@ Complexity: $(BIGOH slice.length)
     }
 
 /**
-Returns a new container that's the concatenation of $(D this) and its
-argument. $(D opBinaryRight) is only defined if $(D Stuff) does not
-define $(D opBinary).
+Returns a new container that's the concatenation of `this` and its
+argument. `opBinaryRight` is only defined if `Stuff` does not
+define `opBinary`.
 
 Complexity: $(BIGOH n + m), where m is the number of elements in $(D
 stuff)
@@ -714,7 +714,7 @@ stuff)
     }
 
 /**
-Forwards to $(D insertBack(stuff)).
+Forwards to `insertBack(stuff)`.
      */
     void opOpAssign(string op, Stuff)(Stuff stuff)
         if (op == "~")
@@ -733,7 +733,7 @@ Forwards to $(D insertBack(stuff)).
 Removes all contents from the container. The container decides how $(D
 capacity) is affected.
 
-Postcondition: $(D empty)
+Postcondition: `empty`
 
 Complexity: $(BIGOH n)
      */
@@ -743,14 +743,14 @@ Complexity: $(BIGOH n)
     }
 
 /**
-Sets the number of elements in the container to $(D newSize). If $(D
-newSize) is greater than $(D length), the added elements are added to
+Sets the number of elements in the container to `newSize`. If $(D
+newSize) is greater than `length`, the added elements are added to
 unspecified positions in the container and initialized with $(D
 T.init).
 
 Complexity: $(BIGOH abs(n - newLength))
 
-Postcondition: $(D length == newLength)
+Postcondition: `length == newLength`
      */
     @property void length(size_t newLength)
     {
@@ -763,7 +763,7 @@ Picks one value in an unspecified position in the container, removes
 it from the container, and returns it. The stable version behaves the same,
 but guarantees that ranges iterating over the container are never invalidated.
 
-Precondition: $(D !empty)
+Precondition: `!empty`
 
 Returns: The element removed.
 
@@ -779,15 +779,15 @@ Complexity: $(BIGOH log(n)).
     alias stableRemoveAny = removeAny;
 
 /**
-Inserts $(D value) to the front or back of the container. $(D stuff)
-can be a value convertible to $(D T) or a range of objects convertible
-to $(D T). The stable version behaves the same, but guarantees that
+Inserts `value` to the front or back of the container. `stuff`
+can be a value convertible to `T` or a range of objects convertible
+to `T`. The stable version behaves the same, but guarantees that
 ranges iterating over the container are never invalidated.
 
 Returns: The number of elements inserted
 
-Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
-elements in $(D stuff)
+Complexity: $(BIGOH m * log(n)), where `m` is the number of
+elements in `stuff`
      */
     size_t insertBack(Stuff)(Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T) ||
@@ -804,7 +804,7 @@ Removes the value at the back of the container. The stable version
 behaves the same, but guarantees that ranges iterating over the
 container are never invalidated.
 
-Precondition: $(D !empty)
+Precondition: `!empty`
 
 Complexity: $(BIGOH log(n)).
      */
@@ -820,10 +820,10 @@ Complexity: $(BIGOH log(n)).
     alias stableRemoveBack = removeBack;
 
 /**
-Removes $(D howMany) values at the front or back of the
+Removes `howMany` values at the front or back of the
 container. Unlike the unparameterized versions above, these functions
-do not throw if they could not remove $(D howMany) elements. Instead,
-if $(D howMany > n), all elements are removed. The returned value is
+do not throw if they could not remove `howMany` elements. Instead,
+if `howMany > n`, all elements are removed. The returned value is
 the effective number of elements removed. The stable version behaves
 the same, but guarantees that ranges iterating over the container are
 never invalidated.
@@ -846,15 +846,15 @@ Complexity: $(BIGOH howMany).
     alias stableRemoveBack = removeBack;
 
 /**
-Inserts $(D stuff) before, after, or instead range $(D r), which must
-be a valid range previously extracted from this container. $(D stuff)
-can be a value convertible to $(D T) or a range of objects convertible
-to $(D T). The stable version behaves the same, but guarantees that
+Inserts `stuff` before, after, or instead range `r`, which must
+be a valid range previously extracted from this container. `stuff`
+can be a value convertible to `T` or a range of objects convertible
+to `T`. The stable version behaves the same, but guarantees that
 ranges iterating over the container are never invalidated.
 
 Returns: The number of values inserted.
 
-Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
+Complexity: $(BIGOH n + m), where `m` is the length of `stuff`
      */
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T))
@@ -967,16 +967,16 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     }
 
 /**
-Removes all elements belonging to $(D r), which must be a range
+Removes all elements belonging to `r`, which must be a range
 obtained originally from this container. The stable version behaves
 the same, but guarantees that ranges iterating over the container are
 never invalidated.
 
 Returns: A range spanning the remaining elements in the container that
-initially were right after $(D r).
+initially were right after `r`.
 
-Complexity: $(BIGOH n - m), where $(D m) is the number of elements in
-$(D r)
+Complexity: $(BIGOH n - m), where `m` is the number of elements in
+`r`
      */
     Range linearRemove(Range r)
     {
@@ -1439,7 +1439,7 @@ $(D r)
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
-_Array specialized for $(D bool). Packs together values efficiently by
+_Array specialized for `bool`. Packs together values efficiently by
 allocating one bit per element.
  */
 struct Array(T)
@@ -1569,7 +1569,7 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Property returning $(D true) if and only if the container has
+       Property returning `true` if and only if the container has
        no elements.
 
        Complexity: $(BIGOH 1)
@@ -1661,11 +1661,11 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Ensures sufficient capacity to accommodate $(D n) elements.
+       Ensures sufficient capacity to accommodate `n` elements.
 
-       Postcondition: $(D capacity >= n)
+       Postcondition: `capacity >= n`
 
-       Complexity: $(BIGOH log(e - capacity)) if $(D e > capacity),
+       Complexity: $(BIGOH log(e - capacity)) if `e > capacity`,
        otherwise $(BIGOH 1).
      */
     void reserve(size_t e)
@@ -1723,7 +1723,7 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Equivalent to $(D opSlice().front) and $(D opSlice().back),
+       Equivalent to `opSlice().front` and `opSlice().back`,
        respectively.
 
        Complexity: $(BIGOH log(n))
@@ -1833,11 +1833,11 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Returns a new container that's the concatenation of $(D this)
+       Returns a new container that's the concatenation of `this`
        and its argument.
 
        Complexity: $(BIGOH n + m), where m is the number of elements
-       in $(D stuff)
+       in `stuff`
      */
     Array!bool opBinary(string op, Stuff)(Stuff rhs) if (op == "~")
     {
@@ -1863,7 +1863,7 @@ if (is(Unqual!T == bool))
     // }
 
     /**
-       Forwards to $(D insertAfter(this[], stuff)).
+       Forwards to `insertAfter(this[], stuff)`.
      */
     // @@@BUG@@@
     //ref Array!bool opOpAssign(string op, Stuff)(Stuff stuff) if (op == "~")
@@ -1889,9 +1889,9 @@ if (is(Unqual!T == bool))
 
     /**
        Removes all contents from the container. The container decides
-       how $(D capacity) is affected.
+       how `capacity` is affected.
 
-       Postcondition: $(D empty)
+       Postcondition: `empty`
 
        Complexity: $(BIGOH n)
      */
@@ -1910,13 +1910,13 @@ if (is(Unqual!T == bool))
 
     /**
        Sets the number of elements in the container to $(D
-       newSize). If $(D newSize) is greater than $(D length), the
+       newSize). If `newSize` is greater than `length`, the
        added elements are added to the container and initialized with
-       $(D ElementType.init).
+       `ElementType.init`.
 
        Complexity: $(BIGOH abs(n - newLength))
 
-       Postcondition: $(D _length == newLength)
+       Postcondition: `_length == newLength`
      */
     @property void length(size_t newLength)
     {
@@ -1940,25 +1940,25 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Inserts $(D stuff) in the container. $(D stuff) can be a value
-       convertible to $(D ElementType) or a range of objects
-       convertible to $(D ElementType).
+       Inserts `stuff` in the container. `stuff` can be a value
+       convertible to `ElementType` or a range of objects
+       convertible to `ElementType`.
 
-       The $(D stable) version guarantees that ranges iterating over
+       The `stable` version guarantees that ranges iterating over
        the container are never invalidated. Client code that counts on
-       non-invalidating insertion should use $(D stableInsert).
+       non-invalidating insertion should use `stableInsert`.
 
        Returns: The number of elements added.
 
-       Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
-       elements in $(D stuff)
+       Complexity: $(BIGOH m * log(n)), where `m` is the number of
+       elements in `stuff`
      */
     alias insert = insertBack;
     ///ditto
     alias stableInsert = insertBack;
 
     /**
-       Same as $(D insert(stuff)) and $(D stableInsert(stuff))
+       Same as `insert(stuff)` and `stableInsert(stuff)`
        respectively, but relax the complexity constraint to linear.
      */
     alias linearInsert = insertBack;
@@ -1971,7 +1971,7 @@ if (is(Unqual!T == bool))
        but guarantees that ranges iterating over the container are
        never invalidated.
 
-       Precondition: $(D !empty)
+       Precondition: `!empty`
 
        Returns: The element removed.
 
@@ -1999,9 +1999,9 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Inserts $(D value) to the back of the container. $(D stuff) can
-       be a value convertible to $(D ElementType) or a range of
-       objects convertible to $(D ElementType). The stable version
+       Inserts `value` to the back of the container. `stuff` can
+       be a value convertible to `ElementType` or a range of
+       objects convertible to `ElementType`. The stable version
        behaves the same, but guarantees that ranges iterating over the
        container are never invalidated.
 
@@ -2062,11 +2062,11 @@ if (is(Unqual!T == bool))
        Removes the value at the front or back of the container. The
        stable version behaves the same, but guarantees that ranges
        iterating over the container are never invalidated. The
-       optional parameter $(D howMany) instructs removal of that many
-       elements. If $(D howMany > n), all elements are removed and no
+       optional parameter `howMany` instructs removal of that many
+       elements. If `howMany > n`, all elements are removed and no
        exception is thrown.
 
-       Precondition: $(D !empty)
+       Precondition: `!empty`
 
        Complexity: $(BIGOH log(n)).
      */
@@ -2089,10 +2089,10 @@ if (is(Unqual!T == bool))
     alias stableRemoveBack = removeBack;
 
     /**
-       Removes $(D howMany) values at the front or back of the
+       Removes `howMany` values at the front or back of the
        container. Unlike the unparameterized versions above, these
-       functions do not throw if they could not remove $(D howMany)
-       elements. Instead, if $(D howMany > n), all elements are
+       functions do not throw if they could not remove `howMany`
+       elements. Instead, if `howMany > n`, all elements are
        removed. The returned value is the effective number of elements
        removed. The stable version behaves the same, but guarantees
        that ranges iterating over the container are never invalidated.
@@ -2129,9 +2129,9 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Inserts $(D stuff) before, after, or instead range $(D r),
+       Inserts `stuff` before, after, or instead range `r`,
        which must be a valid range previously extracted from this
-       container. $(D stuff) can be a value convertible to $(D
+       container. `stuff` can be a value convertible to $(D
        ElementType) or a range of objects convertible to $(D
        ElementType). The stable version behaves the same, but
        guarantees that ranges iterating over the container are never
@@ -2139,7 +2139,7 @@ if (is(Unqual!T == bool))
 
        Returns: The number of values inserted.
 
-       Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
+       Complexity: $(BIGOH n + m), where `m` is the length of `stuff`
      */
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     {
@@ -2224,13 +2224,13 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Removes all elements belonging to $(D r), which must be a range
+       Removes all elements belonging to `r`, which must be a range
        obtained originally from this container. The stable version
        behaves the same, but guarantees that ranges iterating over the
        container are never invalidated.
 
        Returns: A range spanning the remaining elements in the container that
-       initially were right after $(D r).
+       initially were right after `r`.
 
        Complexity: $(BIGOH n)
      */

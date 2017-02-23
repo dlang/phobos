@@ -11,14 +11,14 @@ struct GCAllocator
     @system unittest { testAllocator!(() => GCAllocator.instance); }
 
     /**
-    The alignment is a static constant equal to $(D platformAlignment), which
+    The alignment is a static constant equal to `platformAlignment`, which
     ensures proper alignment for any D data type.
     */
     enum uint alignment = platformAlignment;
 
     /**
     Standard allocator methods per the semantics defined above. The $(D
-    deallocate) and $(D reallocate) methods are $(D @system) because they may
+    deallocate) and `reallocate` methods are `@system` because they may
     move memory around, leaving dangling pointers in user code.
     */
     pure nothrow @trusted void[] allocate(size_t bytes) shared
@@ -104,7 +104,7 @@ struct GCAllocator
     /**
     Returns the global instance of this allocator type. The garbage collected
     allocator is thread-safe, therefore all of its methods and `instance` itself
-    are $(D shared).
+    are `shared`.
     */
 
     static shared GCAllocator instance;
