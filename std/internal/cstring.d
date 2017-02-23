@@ -62,8 +62,8 @@ Params:
 
 Returns:
 
-The value returned is implicitly convertible to $(D const To*) and
-has two properties: $(D ptr) to access $(I C string) as $(D const To*)
+The value returned is implicitly convertible to `const To*` and
+has two properties: `ptr` to access $(I C string) as `const To*`
 and $(D buffPtr) to access it as $(D To*).
 
 The value returned can be indexed by [] to access it as an array.

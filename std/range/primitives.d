@@ -5,28 +5,28 @@ It provides basic range functionality by defining several templates for testing
 whether a given object is a _range, and what kind of _range it is:
 
 $(BOOKTABLE ,
-    $(TR $(TD $(D $(LREF isInputRange)))
+    $(TR $(TD `$(LREF isInputRange)`)
         $(TD Tests if something is an $(I input _range), defined to be
         something from which one can sequentially read data using the
         primitives $(D front), $(D popFront), and $(D empty).
     ))
-    $(TR $(TD $(D $(LREF isOutputRange)))
+    $(TR $(TD `$(LREF isOutputRange)`)
         $(TD Tests if something is an $(I output _range), defined to be
         something to which one can sequentially write data using the
-        $(D $(LREF put)) primitive.
+        `$(LREF put)` primitive.
     ))
-    $(TR $(TD $(D $(LREF isForwardRange)))
+    $(TR $(TD `$(LREF isForwardRange)`)
         $(TD Tests if something is a $(I forward _range), defined to be an
         input _range with the additional capability that one can save one's
         current position with the $(D save) primitive, thus allowing one to
         iterate over the same _range multiple times.
     ))
-    $(TR $(TD $(D $(LREF isBidirectionalRange)))
+    $(TR $(TD `$(LREF isBidirectionalRange)`)
         $(TD Tests if something is a $(I bidirectional _range), that is, a
         forward _range that allows reverse traversal using the primitives $(D
         back) and $(D popBack).
     ))
-    $(TR $(TD $(D $(LREF isRandomAccessRange)))
+    $(TR $(TD `$(LREF isRandomAccessRange)`)
         $(TD Tests if something is a $(I random access _range), which is a
         bidirectional _range that also supports the array subscripting
         operation via the primitive $(D opIndex).
@@ -36,33 +36,33 @@ $(BOOKTABLE ,
 It also provides number of templates that test for various _range capabilities:
 
 $(BOOKTABLE ,
-    $(TR $(TD $(D $(LREF hasMobileElements)))
+    $(TR $(TD `$(LREF hasMobileElements)`)
         $(TD Tests if a given _range's elements can be moved around using the
         primitives $(D moveFront), $(D moveBack), or $(D moveAt).
     ))
-    $(TR $(TD $(D $(LREF ElementType)))
+    $(TR $(TD `$(LREF ElementType)`)
         $(TD Returns the element type of a given _range.
     ))
-    $(TR $(TD $(D $(LREF ElementEncodingType)))
+    $(TR $(TD `$(LREF ElementEncodingType)`)
         $(TD Returns the encoding element type of a given _range.
     ))
-    $(TR $(TD $(D $(LREF hasSwappableElements)))
+    $(TR $(TD `$(LREF hasSwappableElements)`)
         $(TD Tests if a _range is a forward _range with swappable elements.
     ))
-    $(TR $(TD $(D $(LREF hasAssignableElements)))
+    $(TR $(TD `$(LREF hasAssignableElements)`)
         $(TD Tests if a _range is a forward _range with mutable elements.
     ))
-    $(TR $(TD $(D $(LREF hasLvalueElements)))
+    $(TR $(TD `$(LREF hasLvalueElements)`)
         $(TD Tests if a _range is a forward _range with elements that can be
         passed by reference and have their address taken.
     ))
-    $(TR $(TD $(D $(LREF hasLength)))
+    $(TR $(TD `$(LREF hasLength)`)
         $(TD Tests if a given _range has the $(D length) attribute.
     ))
-    $(TR $(TD $(D $(LREF isInfinite)))
+    $(TR $(TD `$(LREF isInfinite)`)
         $(TD Tests if a given _range is an $(I infinite _range).
     ))
-    $(TR $(TD $(D $(LREF hasSlicing)))
+    $(TR $(TD `$(LREF hasSlicing)`)
         $(TD Tests if a given _range supports the array slicing operation $(D
         R[x .. y]).
     ))
@@ -71,30 +71,30 @@ $(BOOKTABLE ,
 Finally, it includes some convenience functions for manipulating ranges:
 
 $(BOOKTABLE ,
-    $(TR $(TD $(D $(LREF popFrontN)))
+    $(TR $(TD `$(LREF popFrontN)`)
         $(TD Advances a given _range by up to $(I n) elements.
     ))
-    $(TR $(TD $(D $(LREF popBackN)))
+    $(TR $(TD `$(LREF popBackN)`)
         $(TD Advances a given bidirectional _range from the right by up to
         $(I n) elements.
     ))
-    $(TR $(TD $(D $(LREF popFrontExactly)))
+    $(TR $(TD `$(LREF popFrontExactly)`)
         $(TD Advances a given _range by up exactly $(I n) elements.
     ))
-    $(TR $(TD $(D $(LREF popBackExactly)))
+    $(TR $(TD `$(LREF popBackExactly)`)
         $(TD Advances a given bidirectional _range from the right by exactly
         $(I n) elements.
     ))
-    $(TR $(TD $(D $(LREF moveFront)))
+    $(TR $(TD `$(LREF moveFront)`)
         $(TD Removes the front element of a _range.
     ))
-    $(TR $(TD $(D $(LREF moveBack)))
+    $(TR $(TD `$(LREF moveBack)`)
         $(TD Removes the back element of a bidirectional _range.
     ))
-    $(TR $(TD $(D $(LREF moveAt)))
+    $(TR $(TD `$(LREF moveAt)`)
         $(TD Removes the $(I i)'th element of a random-access _range.
     ))
-    $(TR $(TD $(D $(LREF walkLength)))
+    $(TR $(TD `$(LREF walkLength)`)
         $(TD Computes the length of any _range in O(n) time.
     ))
 )
@@ -190,7 +190,7 @@ template isInputRange(R)
 /+
 puts the whole raw element $(D e) into $(D r). doPut will not attempt to
 iterate, slice or transcode $(D e) in any way shape or form. It will $(B only)
-call the correct primitive ($(D r.put(e)),  $(D r.front = e) or
+call the correct primitive (`r.put(e)`,  `r.front = e` or
 $(D r(0)) once.
 
 This can be important when $(D e) needs to be placed in $(D r) unchanged.
@@ -260,7 +260,7 @@ are attempted in order, and the first to compile "wins" and gets
 evaluated.
 
 In this table "doPut" is a method that places $(D e) into $(D r), using the
-correct primitive: $(D r.put(e)) if $(D R) defines $(D put), $(D r.front = e)
+correct primitive: `r.put(e)` if `R` defines `put`, `r.front = e`
 if $(D r) is an input range (followed by $(D r.popFront())), or $(D r(e))
 otherwise.
 
@@ -274,7 +274,7 @@ $(BOOKTABLE ,
         $(TD $(D R) specifically accepts an $(D E).)
     )
     $(TR
-        $(TD $(D r.doPut([ e ]);))
+        $(TD `r.doPut([ e ]);`)
         $(TD $(D R) specifically accepts an $(D E[]).)
     )
     $(TR
@@ -283,14 +283,14 @@ $(BOOKTABLE ,
             transcode the character $(D e) accordingly.)
     )
     $(TR
-        $(TD $(D for (; !e.empty; e.popFront()) put(r, e.front);))
+        $(TD `for (; !e.empty; e.popFront()) put(r, e.front);`)
         $(TD Copying range $(D E) into $(D R).)
     )
 )
 
 Tip: $(D put) should $(I not) be used "UFCS-style", e.g. $(D r.put(e)).
 Doing this may call $(D R.put) directly, by-passing any transformation
-feature provided by $(D Range.put). $(D put(r, e)) is prefered.
+feature provided by `Range.put`. `put(r, e)` is prefered.
  +/
 void put(R, E)(ref R r, E e)
 {
@@ -678,7 +678,7 @@ pure @safe unittest
 /+
 Returns $(D true) if $(D R) is a native output range for elements of type
 $(D E). An output range is defined functionally as a range that
-supports the operation $(D doPut(r, e)) as defined above. if $(D doPut(r, e))
+supports the operation `doPut(r, e)` as defined above. if `doPut(r, e)`
 is valid, then $(D put(r,e)) will have the same behavior.
 
 The two guarantees isNativeOutputRange gives over the larger $(D isOutputRange)
@@ -714,7 +714,7 @@ package(std) template isNativeOutputRange(R, E)
 /++
 Returns $(D true) if $(D R) is an output range for elements of type
 $(D E). An output range is defined functionally as a range that
-supports the operation $(D put(r, e)) as defined above.
+supports the operation `put(r, e)` as defined above.
  +/
 template isOutputRange(R, E)
 {

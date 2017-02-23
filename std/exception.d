@@ -334,7 +334,7 @@ void assertThrown(T : Throwable = Exception, E)
         line = The line number of the caller.
 
     Returns: $(D value), if `cast(bool) value` is true. Otherwise,
-    $(D new Exception(msg)) is thrown.
+    `new Exception(msg)` is thrown.
 
     Note:
         $(D enforce) is used to throw exceptions and is therefore intended to
@@ -542,7 +542,7 @@ T enforce(T)(T value, lazy Throwable ex)
         msg = The message to include in the `ErrnoException` if it is thrown.
 
     Returns: $(D value), if `cast(bool) value` is true. Otherwise,
-    $(D new ErrnoException(msg)) is thrown.  It is assumed that the last
+    `new ErrnoException(msg)` is thrown.  It is assumed that the last
     operation set $(D errno) to an error code corresponding with the failed
     condition.
 
@@ -563,9 +563,9 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
 
 /++
     If $(D !value) is $(D false), $(D value) is returned. Otherwise,
-    $(D new E(msg, file, line)) is thrown. Or if $(D E) doesn't take a message
-    and can be constructed with $(D new E(file, line)), then
-    $(D new E(file, line)) will be thrown.
+    `new E(msg, file, line)` is thrown. Or if `E` doesn't take a message
+    and can be constructed with `new E(file, line)`, then
+    `new E(file, line)` will be thrown.
 
     This is legacy name, it is recommended to use $(D enforce!E) instead.
 
@@ -1025,7 +1025,7 @@ $(D source) does not point to $(D target). It may produce false positives, but n
 false negatives. This function should be prefered for defensively choosing a
 code path.
 
-Note: Evaluating $(D doesPointTo(x, x)) checks whether $(D x) has
+Note: Evaluating `doesPointTo(x, x)` checks whether `x` has
 internal pointers. This should only be done as an assertive test,
 as the language is free to assume objects don't have internal pointers
 (TDPL 7.1.3.5).
@@ -1741,7 +1741,7 @@ Params:
     primitivesToHandle = Set of range primitives to _handle.
     handler = The callable that is called when a handled primitive throws a
     $(D Throwable) of type $(D E). The handler must accept arguments of
-    the form $(D E, ref IRange) and its return value is used as the primitive's
+    the form `E, ref IRange` and its return value is used as the primitive's
     return value whenever $(D E) is thrown. For $(D opIndex), the handler can
     optionally recieve a third argument; the index that caused the exception.
     input = The range to _handle.

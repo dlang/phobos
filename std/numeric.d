@@ -665,7 +665,7 @@ The necessity of $(D FPTemporary) stems from the optimized
 floating-point operations and registers present in virtually all
 processors. When adding numbers in the example above, the addition may
 in fact be done in $(D real) precision internally. In that case,
-storing the intermediate $(D result) in $(D double format) is not only
+storing the intermediate `result` in `double format` is not only
 less precise, it is also (surprisingly) slower, because a conversion
 from $(D real) to $(D double) is performed every pass through the
 loop. This being a lose-lose situation, $(D FPTemporary!F) has been
@@ -706,7 +706,7 @@ if (isFloatingPoint!F)
 
 /**
 Implements the $(HTTP tinyurl.com/2zb9yr, secant method) for finding a
-root of the function $(D fun) starting from points $(D [xn_1, x_n])
+root of the function `fun` starting from points `[xn_1, x_n]`
 (ideally close to the root). $(D Num) may be $(D float), $(D double),
 or $(D real).
 */
@@ -1821,7 +1821,7 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 /**
 Normalizes values in $(D range) by multiplying each element with a
 number chosen such that values sum up to $(D sum). If elements in $(D
-range) sum to zero, assigns $(D sum / range.length) to
+range) sum to zero, assigns `sum / range.length` to
 all. Normalization makes sense only if all elements in $(D range) are
 positive. $(D normalize) assumes that is the case without checking it.
 
@@ -1926,7 +1926,7 @@ if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
 /**
 Computes $(LUCKY _entropy) of input range $(D r) in bits. This
 function assumes (without checking) that the values in $(D r) are all
-in $(D [0, 1]). For the entropy to be meaningful, often $(D r) should
+in `[0, 1]`. For the entropy to be meaningful, often `r` should
 be normalized too (i.e., its values should sum to 1). The
 two-parameter version stops evaluating as soon as the intermediate
 result is greater than or equal to $(D max).
@@ -1973,13 +1973,13 @@ if (isInputRange!Range &&
 
 /**
 Computes the $(LUCKY Kullback-Leibler divergence) between input ranges
-$(D a) and $(D b), which is the sum $(D ai * log(ai / bi)). The base
+`a` and `b`, which is the sum `ai * log(ai / bi)`. The base
 of logarithm is 2. The ranges are assumed to contain elements in $(D
 [0, 1]). Usually the ranges are normalized probability distributions,
 but this is not required or checked by $(D
 kullbackLeiblerDivergence). If any element $(D bi) is zero and the
 corresponding element $(D ai) nonzero, returns infinity. (Otherwise,
-if $(D ai == 0 && bi == 0), the term $(D ai * log(ai / bi)) is
+if `ai == 0 && bi == 0`, the term `ai * log(ai / bi)` is
 considered zero.) If the inputs are normalized, the result is
 positive.
  */
@@ -2021,12 +2021,12 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 
 /**
 Computes the $(LUCKY Jensen-Shannon divergence) between $(D a) and $(D
-b), which is the sum $(D (ai * log(2 * ai / (ai + bi)) + bi * log(2 *
+b), which is the sum `(ai * log(2 * ai / (ai + bi)) + bi * log(2 *
 bi / (ai + bi))) / 2). The base of logarithm is 2. The ranges are
-assumed to contain elements in $(D [0, 1]). Usually the ranges are
+assumed to contain elements in `[0, 1]`. Usually the ranges are
 normalized probability distributions, but this is not required or
 checked by $(D jensenShannonDivergence). If the inputs are normalized,
-the result is bounded within $(D [0, 1]). The three-parameter version
+the result is bounded within `[0, 1]`. The three-parameter version
 stops evaluations as soon as the intermediate result is greater than
 or equal to $(D limit).
  */
@@ -2108,18 +2108,18 @@ similarity measure between $(D s) and $(D t) based on all of their
 common subsequences of all lengths. Gapped subsequences are also
 included.
 
-To understand what $(D gapWeightedSimilarity(s, t, lambda)) computes,
-consider first the case $(D lambda = 1) and the strings $(D s =
+To understand what `gapWeightedSimilarity(s, t, lambda)` computes,
+consider first the case `lambda = 1` and the strings `s =
 ["Hello", "brave", "new", "world"]) and $(D t = ["Hello", "new",
 "world"]). In that case, $(D gapWeightedSimilarity) counts the
 following matches:
 
 $(OL $(LI three matches of length 1, namely $(D "Hello"), $(D "new"),
 and $(D "world");) $(LI three matches of length 2, namely ($(D
-"Hello", "new")), ($(D "Hello", "world")), and ($(D "new", "world"));)
-$(LI one match of length 3, namely ($(D "Hello", "new", "world")).))
+"Hello", "new")), (`"Hello", "world"`), and (`"new", "world"`);)
+$(LI one match of length 3, namely (`"Hello", "new", "world"`).))
 
-The call $(D gapWeightedSimilarity(s, t, 1)) simply counts all of
+The call `gapWeightedSimilarity(s, t, 1)` simply counts all of
 these matches and adds them up, returning 7.
 
 ----
@@ -2131,7 +2131,7 @@ assert(gapWeightedSimilarity(s, t, 1) == 7);
 Note how the gaps in matching are simply ignored, for example ($(D
 "Hello", "new")) is deemed as good a match as ($(D "new",
 "world")). This may be too permissive for some applications. To
-eliminate gapped matches entirely, use $(D lambda = 0):
+eliminate gapped matches entirely, use `lambda = 0`:
 
 ----
 string[] s = ["Hello", "brave", "new", "world"];
@@ -2139,8 +2139,8 @@ string[] t = ["Hello", "new", "world"];
 assert(gapWeightedSimilarity(s, t, 0) == 4);
 ----
 
-The call above eliminated the gapped matches ($(D "Hello", "new")),
-($(D "Hello", "world")), and ($(D "Hello", "new", "world")) from the
+The call above eliminated the gapped matches (`"Hello", "new"`),
+(`"Hello", "world"`), and (`"Hello", "new", "world"`) from the
 tally. That leaves only 4 matches.
 
 The most interesting case is when gapped matches still participate in
@@ -2151,12 +2151,12 @@ into play: gapped matches are $(I exponentially penalized with the
 number of gaps) with base $(D lambda). This means that an ungapped
 match adds 1 to the return value; a match with one gap in either
 string adds $(D lambda) to the return value; ...; a match with a total
-of $(D n) gaps in both strings adds $(D pow(lambda, n)) to the return
+of `n` gaps in both strings adds `pow(lambda, n)` to the return
 value. In the example above, we have 4 matches without gaps, 2 matches
 with one gap, and 1 match with three gaps. The latter match is ($(D
 "Hello", "world")), which has two gaps in the first string and one gap
 in the second string, totaling to three gaps. Summing these up we get
-$(D 4 + 2 * lambda + pow(lambda, 3)).
+`4 + 2 * lambda + pow(lambda, 3)`.
 
 ----
 string[] s = ["Hello", "brave", "new", "world"];
@@ -2239,16 +2239,16 @@ not actually very similar. For example, the range $(D ["Hello",
 "world", "world", "world",...]) as more instances of $(D "world") are
 appended. To prevent that, $(D gapWeightedSimilarityNormalized)
 computes a normalized version of the similarity that is computed as
-$(D gapWeightedSimilarity(s, t, lambda) /
+`gapWeightedSimilarity(s, t, lambda) /
 sqrt(gapWeightedSimilarity(s, t, lambda) * gapWeightedSimilarity(s, t,
 lambda))). The function $(D gapWeightedSimilarityNormalized) (a
-so-called normalized kernel) is bounded in $(D [0, 1]), reaches $(D 0)
+so-called normalized kernel) is bounded in `[0, 1]`, reaches `0`
 only for ranges that don't match in any position, and $(D 1) only for
 identical ranges.
 
 The optional parameters $(D sSelfSim) and $(D tSelfSim) are meant for
 avoiding duplicate computation. Many applications may have already
-computed $(D gapWeightedSimilarity(s, s, lambda)) and/or $(D
+computed `gapWeightedSimilarity(s, s, lambda)` and/or $(D
 gapWeightedSimilarity(t, t, lambda)). In that case, they can be passed
 as $(D sSelfSim) and $(D tSelfSim), respectively.
  */

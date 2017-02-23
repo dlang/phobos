@@ -6,57 +6,57 @@ It contains generic _searching algorithms.
 $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 $(T2 all,
-        $(D all!"a > 0"([1, 2, 3, 4])) returns $(D true) because all elements
+        `all!"a > 0"([1, 2, 3, 4])` returns `true` because all elements
         are positive)
 $(T2 any,
-        $(D any!"a > 0"([1, 2, -3, -4])) returns $(D true) because at least one
+        `any!"a > 0"([1, 2, -3, -4])` returns `true` because at least one
         element is positive)
 $(T2 balancedParens,
-        $(D balancedParens("((1 + 1) / 2)")) returns $(D true) because the
+        `balancedParens("((1 + 1) / 2)")` returns `true` because the
         string has balanced parentheses.)
 $(T2 boyerMooreFinder,
-        $(D find("hello world", boyerMooreFinder("or"))) returns $(D "orld")
+        `find("hello world", boyerMooreFinder("or"))` returns `"orld"`
         using the $(LUCKY Boyer-Moore _algorithm).)
 $(T2 canFind,
-        $(D canFind("hello world", "or")) returns $(D true).)
+        `canFind("hello world", "or")` returns `true`.)
 $(T2 count,
         Counts elements that are equal to a specified value or satisfy a
-        predicate.  $(D count([1, 2, 1], 1)) returns $(D 2) and
-        $(D count!"a < 0"([1, -3, 0])) returns $(D 1).)
+        predicate.  `count([1, 2, 1], 1)` returns `2` and
+        `count!"a < 0"([1, -3, 0])` returns `1`.)
 $(T2 countUntil,
-        $(D countUntil(a, b)) returns the number of steps taken in $(D a) to
-        reach $(D b); for example, $(D countUntil("hello!", "o")) returns
+        `countUntil(a, b)` returns the number of steps taken in `a` to
+        reach `b`; for example, `countUntil("hello!", "o")` returns
         $(D 4).)
 $(T2 commonPrefix,
-        $(D commonPrefix("parakeet", "parachute")) returns $(D "para").)
+        `commonPrefix("parakeet", "parachute")` returns `"para"`.)
 $(T2 endsWith,
-        $(D endsWith("rocks", "ks")) returns $(D true).)
+        `endsWith("rocks", "ks")` returns `true`.)
 $(T2 find,
-        $(D find("hello world", "or")) returns $(D "orld") using linear search.
+        `find("hello world", "or")` returns `"orld"` using linear search.
         (For binary search refer to $(REF sortedRange, std,range).))
 $(T2 findAdjacent,
-        $(D findAdjacent([1, 2, 3, 3, 4])) returns the subrange starting with
-        two equal adjacent elements, i.e. $(D [3, 3, 4]).)
+        `findAdjacent([1, 2, 3, 3, 4])` returns the subrange starting with
+        two equal adjacent elements, i.e. `[3, 3, 4]`.)
 $(T2 findAmong,
-        $(D findAmong("abcd", "qcx")) returns $(D "cd") because $(D 'c') is
+        `findAmong("abcd", "qcx")` returns `"cd"` because `'c'` is
         among $(D "qcx").)
 $(T2 findSkip,
-        If $(D a = "abcde"), then $(D findSkip(a, "x")) returns $(D false) and
-        leaves $(D a) unchanged, whereas $(D findSkip(a, "c")) advances $(D a)
+        If `a = "abcde"`, then `findSkip(a, "x")` returns `false` and
+        leaves `a` unchanged, whereas `findSkip(a, "c")` advances `a`
         to $(D "de") and returns $(D true).)
 $(T2 findSplit,
-        $(D findSplit("abcdefg", "de")) returns the three ranges $(D "abc"),
+        `findSplit("abcdefg", "de")` returns the three ranges `"abc"`,
         $(D "de"), and $(D "fg").)
 $(T2 findSplitAfter,
-        $(D findSplitAfter("abcdefg", "de")) returns the two ranges
+        `findSplitAfter("abcdefg", "de")` returns the two ranges
         $(D "abcde") and $(D "fg").)
 $(T2 findSplitBefore,
-        $(D findSplitBefore("abcdefg", "de")) returns the two ranges $(D "abc")
+        `findSplitBefore("abcdefg", "de")` returns the two ranges `"abc"`
         and $(D "defg").)
 $(T2 minCount,
-        $(D minCount([2, 1, 1, 4, 1])) returns $(D tuple(1, 3)).)
+        `minCount([2, 1, 1, 4, 1])` returns `tuple(1, 3)`.)
 $(T2 maxCount,
-        $(D maxCount([2, 4, 1, 4, 1])) returns $(D tuple(4, 2)).)
+        `maxCount([2, 4, 1, 4, 1])` returns `tuple(4, 2)`.)
 $(T2 minElement,
         Selects the minimal element of a range.
         `minElement([3, 4, 1, 2])` returns `1`.)
@@ -70,22 +70,22 @@ $(T2 maxIndex,
         Index of the maximal element of a range.
         `maxElement([3, 4, 1, 2])` returns `1`.)
 $(T2 minPos,
-        $(D minPos([2, 3, 1, 3, 4, 1])) returns the subrange $(D [1, 3, 4, 1]),
+        `minPos([2, 3, 1, 3, 4, 1])` returns the subrange `[1, 3, 4, 1]`,
         i.e., positions the range at the first occurrence of its minimal
         element.)
 $(T2 maxPos,
-        $(D maxPos([2, 3, 1, 3, 4, 1])) returns the subrange $(D [4, 1]),
+        `maxPos([2, 3, 1, 3, 4, 1])` returns the subrange `[4, 1]`,
         i.e., positions the range at the first occurrence of its maximal
         element.)
 $(T2 mismatch,
-        $(D mismatch("parakeet", "parachute")) returns the two ranges
+        `mismatch("parakeet", "parachute")` returns the two ranges
         $(D "keet") and $(D "chute").)
 $(T2 skipOver,
-        Assume $(D a = "blah"). Then $(D skipOver(a, "bi")) leaves $(D a)
-        unchanged and returns $(D false), whereas $(D skipOver(a, "bl"))
+        Assume `a = "blah"`. Then `skipOver(a, "bi")` leaves `a`
+        unchanged and returns `false`, whereas `skipOver(a, "bl")`
         advances $(D a) to refer to $(D "ah") and returns $(D true).)
 $(T2 startsWith,
-        $(D startsWith("hello, world", "hello")) returns $(D true).)
+        `startsWith("hello, world", "hello")` returns `true`.)
 $(T2 until,
         Lazily iterates a range until a specific value is found.)
 )
@@ -407,7 +407,7 @@ Returns the common prefix of two ranges.
 
 Params:
     pred = The predicate to use in comparing elements for commonality. Defaults
-        to equality $(D "a == b").
+        to equality `"a == b"`.
 
     r1 = A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) of
         elements.
@@ -418,7 +418,7 @@ Params:
 Returns:
 A slice of $(D r1) which contains the characters that both ranges start with,
 if the first argument is a string; otherwise, the same as the result of
-$(D takeExactly(r1, n)), where $(D n) is the number of elements in the common
+`takeExactly(r1, n)`, where `n` is the number of elements in the common
 prefix of both ranges.
 
 See_Also:
@@ -592,13 +592,13 @@ if (isNarrowString!R1 && isNarrowString!R2)
 // count
 /**
 The first version counts the number of elements $(D x) in $(D r) for
-which $(D pred(x, value)) is $(D true). $(D pred) defaults to
+which `pred(x, value)` is `true`. `pred` defaults to
 equality. Performs $(BIGOH haystack.length) evaluations of $(D pred).
 
 The second version returns the number of times $(D needle) occurs in
 $(D haystack). Throws an exception if $(D needle.empty), as the _count
 of the empty range in any range would be infinite. Overlapped counts
-are not considered, for example $(D count("aaa", "aa")) is $(D 1), not
+are not considered, for example `count("aaa", "aa")` is `1`, not
 $(D 2).
 
 The third version counts the elements for which $(D pred(x)) is $(D
@@ -739,8 +739,8 @@ if (isInputRange!R && !isInfinite!R &&
 
     Returns: The number of elements which must be popped from the front of
     $(D haystack) before reaching an element for which
-    $(D startsWith!pred(haystack, needles)) is $(D true). If
-    $(D startsWith!pred(haystack, needles)) is not $(D true) for any element in
+    `startsWith!pred(haystack, needles)` is `true`. If
+    `startsWith!pred(haystack, needles)` is not `true` for any element in
     $(D haystack), then $(D -1) is returned.
 
     See_Also: $(REF indexOf, std,string)
@@ -1348,8 +1348,8 @@ find(retro(haystack), needle)). See $(REF retro, std,range).
 Params:
 
 pred = The predicate for comparing each element with the needle, defaulting to
-$(D "a == b").
-The negated predicate $(D "a != b") can be used to search instead for the first
+`"a == b"`.
+The negated predicate `"a != b"` can be used to search instead for the first
 element $(I not) matching the needle.
 
 haystack = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
@@ -1359,13 +1359,13 @@ needle = The element searched for.
 
 Constraints:
 
-$(D isInputRange!InputRange && is(typeof(binaryFun!pred(haystack.front, needle)
+`isInputRange!InputRange && is(typeof(binaryFun!pred(haystack.front, needle)
 : bool)))
 
 Returns:
 
 $(D haystack) advanced such that the front element is the one searched for;
-that is, until $(D binaryFun!pred(haystack.front, needle)) is $(D true). If no
+that is, until `binaryFun!pred(haystack.front, needle)` is `true`. If no
 such position exists, returns an empty $(D haystack).
 
 See_Also:
@@ -1683,7 +1683,7 @@ search in.
 Returns:
 
 $(D haystack) advanced such that the front element is the one searched for;
-that is, until $(D binaryFun!pred(haystack.front, needle)) is $(D true). If no
+that is, until `binaryFun!pred(haystack.front, needle)` is `true`. If no
 such position exists, returns an empty $(D haystack).
 
 See_Also:
@@ -1754,7 +1754,7 @@ possible), depending on the statistics of the two ranges' content.
 Params:
 
 pred = The predicate to use for comparing respective elements from the haystack
-and the needle. Defaults to simple equality $(D "a == b").
+and the needle. Defaults to simple equality `"a == b"`.
 
 haystack = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
 searched in.
@@ -2430,7 +2430,7 @@ template canFind(alias pred="a == b")
     will be $(D true) if one of the needles is found and $(D false) if none are
     found, whereas if the result is used elsewhere, it can either be cast to
     $(D bool) for the same effect or used to get which needle was found first
-    without having to deal with the tuple that $(D LREF find) returns for the
+    without having to deal with the tuple that `LREF find` returns for the
     same operation.
      +/
     size_t canFind(Range, Ranges...)(Range haystack, scope Ranges needles)
@@ -2493,7 +2493,7 @@ template canFind(alias pred="a == b")
 // findAdjacent
 /**
 Advances $(D r) until it finds the first two adjacent elements $(D a),
-$(D b) that satisfy $(D pred(a, b)). Performs $(BIGOH r.length)
+`b` that satisfy `pred(a, b)`. Performs $(BIGOH r.length)
 evaluations of $(D pred).
 
 Params:
@@ -3046,16 +3046,16 @@ if (isForwardRange!R1 && isForwardRange!R2)
 Computes the minimum (respectively maximum) of `range` along with its number of
 occurrences. Formally, the minimum is a value `x` in `range` such that $(D
 pred(a, x)) is `false` for all values `a` in `range`. Conversely, the maximum is
-a value `x` in `range` such that $(D pred(x, a)) is `false` for all values `a`
+a value `x` in `range` such that `pred(x, a)` is `false` for all values `a`
 in `range` (note the swapped arguments to `pred`).
 
 These functions may be used for computing arbitrary extrema by choosing `pred`
 appropriately. For corrrect functioning, `pred` must be a strict partial order,
-i.e. transitive (if $(D pred(a, b) && pred(b, c)) then $(D pred(a, c))) and
-irreflexive ($(D pred(a, a)) is `false`). The $(LUCKY trichotomy property of
+i.e. transitive (if `pred(a, b) && pred(b, c)` then `pred(a, c)`) and
+irreflexive (`pred(a, a)` is `false`). The $(LUCKY trichotomy property of
 inequality) is not required: these algoritms consider elements `a` and `b` equal
 (for the purpose of counting) if `pred` puts them in the same equivalence class,
-i.e. $(D !pred(a, b) && !pred(b, a)).
+i.e. `!pred(a, b) && !pred(b, a)`.
 
 Params:
     pred = The ordering predicate to use to determine the extremum (minimum
@@ -3457,15 +3457,15 @@ Computes a subrange of `range` starting at the first occurrence of `range`'s
 minimum (respectively maximum) and with the same ending as `range`, or the
 empty range if `range` itself is empty.
 
-Formally, the minimum is a value `x` in `range` such that $(D pred(a, x)) is
+Formally, the minimum is a value `x` in `range` such that `pred(a, x)` is
 `false` for all values `a` in `range`. Conversely, the maximum is a value `x` in
-`range` such that $(D pred(x, a)) is `false` for all values `a` in `range` (note
+`range` such that `pred(x, a)` is `false` for all values `a` in `range` (note
 the swapped arguments to `pred`).
 
 These functions may be used for computing arbitrary extrema by choosing `pred`
 appropriately. For corrrect functioning, `pred` must be a strict partial order,
-i.e. transitive (if $(D pred(a, b) && pred(b, c)) then $(D pred(a, c))) and
-irreflexive ($(D pred(a, a)) is `false`).
+i.e. transitive (if `pred(a, b) && pred(b, c)` then `pred(a, c)`) and
+irreflexive (`pred(a, a)` is `false`).
 
 Params:
     pred = The ordering predicate to use to determine the extremum (minimum or
@@ -3789,7 +3789,7 @@ range, or do nothing if there is no match.
 
 Params:
     pred = The predicate that determines whether elements from each respective
-        range match. Defaults to equality $(D "a == b").
+        range match. Defaults to equality `"a == b"`.
     r1 = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to
         move forward.
     r2 = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
@@ -4281,7 +4281,7 @@ alias OpenRight = Flag!"openRight";
 
 /**
 Lazily iterates $(D range) _until the element $(D e) for which
-$(D pred(e, sentinel)) is true.
+`pred(e, sentinel)` is true.
 
 Params:
     pred = Predicate to determine when to stop.

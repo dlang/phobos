@@ -4,7 +4,7 @@
     Encode and decode UTF-8, UTF-16 and UTF-32 strings.
 
     UTF character support is restricted to
-    $(D '\u0000' &lt;= character &lt;= '\U0010FFFF').
+    `'\u0000' &lt;= character &lt;= '\U0010FFFF'`.
 
     See_Also:
         $(LINK2 http://en.wikipedia.org/wiki/Unicode, Wikipedia)<br>
@@ -259,7 +259,7 @@ pure nothrow @safe @nogc unittest
         $(D stride) will only analyze the first $(D str[index]) element. It
         will not fully verify the validity of the UTF sequence, nor even verify
         the presence of the sequence: it will not actually guarantee that
-        $(D index + stride(str, index) <= str.length).
+        `index + stride(str, index) <= str.length`.
   +/
 uint stride(S)(auto ref S str, size_t index)
 if (is(S : const char[]) ||
@@ -575,10 +575,10 @@ if (is(S : const dchar[]) ||
         end of a valid UTF sequence.
 
     Note:
-        $(D strideBack) will only analyze the element at $(D str[index - 1])
+        `strideBack` will only analyze the element at `str[index - 1]`
         element. It will not fully verify the validity of the UTF sequence, nor
         even verify the presence of the sequence: it will not actually
-        guarantee that $(D strideBack(str, index) <= index).
+        guarantee that `strideBack(str, index) <= index`.
   +/
 uint strideBack(S)(auto ref S str, size_t index)
 if (is(S : const char[]) ||

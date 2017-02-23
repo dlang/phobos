@@ -424,7 +424,7 @@ Complexity: $(BIGOH 1).
 Removes $(D howMany) values at the front or back of the
 container. Unlike the unparameterized versions above, these functions
 do not throw if they could not remove $(D howMany) elements. Instead,
-if $(D howMany > n), all elements are removed. The returned value is
+if `howMany > n`, all elements are removed. The returned value is
 the effective number of elements removed. The stable version behaves
 the same, but guarantees that ranges iterating over the container are
 never invalidated.
@@ -495,10 +495,10 @@ assert(std.algorithm.equal(sl[], ["a", "b", "c", "d", "e"]));
 Similar to $(D insertAfter) above, but accepts a range bounded in
 count. This is important for ensuring fast insertions in the middle of
 the list.  For fast insertions after a specified position $(D r), use
-$(D insertAfter(take(r, 1), stuff)). The complexity of that operation
+`insertAfter(take(r, 1), stuff)`. The complexity of that operation
 only depends on the number of elements in $(D stuff).
 
-Precondition: $(D r.original.empty || r.maxLength > 0)
+Precondition: `r.original.empty || r.maxLength > 0`
 
 Returns: The number of values inserted.
 

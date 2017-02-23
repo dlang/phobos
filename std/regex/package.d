@@ -650,7 +650,7 @@ public:
     Effectively it's a forward range of Captures!R, produced
     by lazily searching for matches in a given input.
 
-    $(D alias Engine) specifies an engine type to use during matching,
+    `alias Engine` specifies an engine type to use during matching,
     and is automatically deduced in a call to $(D match)/$(D bmatch).
 +/
 @trusted public struct RegexMatch(R, alias Engine = ThompsonMatcher)

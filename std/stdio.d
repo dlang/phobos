@@ -1563,7 +1563,7 @@ void main()
 Read line from the file handle and write it to $(D buf[]), including
 terminating character.
 
-This can be faster than $(D line = File.readln()) because you can reuse
+This can be faster than `line = File.readln()` because you can reuse
 the buffer for each call. Note that reusing the buffer means that you
 must copy the previous contents if you wish to retain them.
 
@@ -1605,7 +1605,7 @@ void main()
 
 This method can be more efficient than the one in the previous example
 because $(D stdin.readln(buf)) reuses (if possible) memory allocated
-for $(D buf), whereas $(D line = stdin.readln()) makes a new memory allocation
+for `buf`, whereas `line = stdin.readln()` makes a new memory allocation
 for every line.
 
 For even better performance you can help $(D readln) by passing in a
@@ -2153,7 +2153,7 @@ The element type for the range will be $(D Char[]). Range
 primitives may throw $(D StdioException) on I/O error.
 
 Params:
-Char = Character type for each line, defaulting to $(D immutable char).
+Char = Character type for each line, defaulting to `immutable char`.
 keepTerminator = Use $(D Yes.keepTerminator) to include the
 terminator at the end of each line.
 terminator = Line separator ($(D '\n') by default). Use
@@ -3652,7 +3652,7 @@ void writef(T...)(T args)
 }
 
 /***********************************
- * Equivalent to $(D writef(args, '\n')).
+ * Equivalent to `writef(args, '\n')`.
  */
 void writefln(T...)(T args)
 {
@@ -3740,7 +3740,7 @@ if (isSomeString!S)
 /**********************************
  * Read line from $(D stdin) and write it to buf[], including terminating character.
  *
- * This can be faster than $(D line = readln()) because you can reuse
+ * This can be faster than `line = readln()` because you can reuse
  * the buffer for each call. Note that reusing the buffer means that you
  * must copy the previous contents if you wish to retain them.
  *
@@ -4271,7 +4271,7 @@ private struct ChunksImpl
 
 /**
 Writes an array or range to a file.
-Shorthand for $(D data.copy(File(fileName, "wb").lockingBinaryWriter)).
+Shorthand for `data.copy(File(fileName, "wb").lockingBinaryWriter)`.
 Similar to $(REF write, std,file), strings are written as-is,
 rather than encoded according to the $(D File)'s $(HTTP
 en.cppreference.com/w/c/io#Narrow_and_wide_orientation,

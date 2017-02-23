@@ -7,60 +7,60 @@ This module provides all kinds of functions to create, manipulate or convert arr
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(D $(LREF _array)))
+    $(TR $(TD `$(LREF _array)`)
         $(TD Returns a copy of the input in a newly allocated dynamic _array.
     ))
-    $(TR $(TD $(D $(LREF appender)))
+    $(TR $(TD `$(LREF appender)`)
         $(TD Returns a new Appender initialized with a given _array.
     ))
-    $(TR $(TD $(D $(LREF assocArray)))
+    $(TR $(TD `$(LREF assocArray)`)
         $(TD Returns a newly allocated associative _array from a range of key/value tuples.
     ))
-    $(TR $(TD $(D $(LREF byPair)))
+    $(TR $(TD `$(LREF byPair)`)
         $(TD Construct a range iterating over an associative _array by key/value tuples.
     ))
-    $(TR $(TD $(D $(LREF insertInPlace)))
+    $(TR $(TD `$(LREF insertInPlace)`)
         $(TD Inserts into an existing _array at a given position.
     ))
-    $(TR $(TD $(D $(LREF join)))
+    $(TR $(TD `$(LREF join)`)
         $(TD Concatenates a range of ranges into one _array.
     ))
-    $(TR $(TD $(D $(LREF minimallyInitializedArray)))
+    $(TR $(TD `$(LREF minimallyInitializedArray)`)
         $(TD Returns a new _array of type $(D T).
     ))
-    $(TR $(TD $(D $(LREF replace)))
+    $(TR $(TD `$(LREF replace)`)
         $(TD Returns a new _array with all occurrences of a certain subrange replaced.
     ))
-    $(TR $(TD $(D $(LREF replaceFirst)))
+    $(TR $(TD `$(LREF replaceFirst)`)
         $(TD Returns a new _array with the first occurrence of a certain subrange replaced.
     ))
-    $(TR $(TD $(D $(LREF replaceInPlace)))
+    $(TR $(TD `$(LREF replaceInPlace)`)
         $(TD Replaces all occurrences of a certain subrange and puts the result into a given _array.
     ))
-    $(TR $(TD $(D $(LREF replaceInto)))
+    $(TR $(TD `$(LREF replaceInto)`)
         $(TD Replaces all occurrences of a certain subrange and puts the result into an output range.
     ))
-    $(TR $(TD $(D $(LREF replaceLast)))
+    $(TR $(TD `$(LREF replaceLast)`)
         $(TD Returns a new _array with the last occurrence of a certain subrange replaced.
     ))
-    $(TR $(TD $(D $(LREF replaceSlice)))
+    $(TR $(TD `$(LREF replaceSlice)`)
         $(TD Returns a new _array with a given slice replaced.
     ))
-    $(TR $(TD $(D $(LREF replicate)))
+    $(TR $(TD `$(LREF replicate)`)
         $(TD Creates a new _array out of several copies of an input _array or range.
     ))
-    $(TR $(TD $(D $(LREF sameHead)))
+    $(TR $(TD `$(LREF sameHead)`)
         $(TD Checks if the initial segments of two arrays refer to the same
         place in memory.
     ))
-    $(TR $(TD $(D $(LREF sameTail)))
+    $(TR $(TD `$(LREF sameTail)`)
         $(TD Checks if the final segments of two arrays refer to the same place
         in memory.
     ))
-    $(TR $(TD $(D $(LREF split)))
+    $(TR $(TD `$(LREF split)`)
         $(TD Eagerly split a range or string into an _array.
     ))
-    $(TR $(TD $(D $(LREF uninitializedArray)))
+    $(TR $(TD `$(LREF uninitializedArray)`)
         $(TD Returns a new _array of type $(D T) without initializing its elements.
     ))
 )
@@ -2652,7 +2652,7 @@ body
 
 /**
 Implements an output range that appends data to an array. This is
-recommended over $(D array ~= data) when appending many elements because it is more
+recommended over `array ~= data` when appending many elements because it is more
 efficient. `Appender` maintains its own array metadata locally, so it can avoid
 global locking for each append where $(LREF capacity) is non-zero.
 See_Also: $(LREF appender)

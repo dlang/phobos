@@ -5377,7 +5377,7 @@ if (isCodepointSet!Set)
 /**
     $(P Builds a $(D Trie) with typically optimal speed-size trade-off
     and wraps it into a delegate of the following type:
-    $(D bool delegate(dchar ch)). )
+    `bool delegate(dchar ch)`. )
 
     $(P Effectively this creates a 'tester' lambda suitable
     for algorithms like std.algorithm.find that take unary predicates. )
@@ -5401,7 +5401,7 @@ if (isCodepointSet!Set)
     data-structures like trie. )
 
     Note:
-    $(P The $(D BitPacked!(T, sz)) is implicitly convertible to $(D T)
+    $(P The `BitPacked!(T, sz)` is implicitly convertible to `T`
     but not vise-versa. Users have to ensure the value fits in
     the range required and use the $(D cast)
     operator to perform the conversion.)

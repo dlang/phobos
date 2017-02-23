@@ -972,7 +972,7 @@ unittest
     Returns:
         The index of the last occurrence of $(D c) in $(D s). If $(D c) is not
         found, then $(D -1) is returned. The $(D startIdx) slices $(D s) in
-        the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
+        the following way `s[0 .. startIdx]`. `startIdx` represents a
         codeunit index in $(D s).
 
     Throws:
@@ -1164,7 +1164,7 @@ if (isSomeChar!Char)
     Returns:
         the index of the last occurrence of $(D sub) in $(D s). If $(D sub) is
         not found, then $(D -1) is returned. The $(D startIdx) slices $(D s)
-        in the following way $(D s[0 .. startIdx]). $(D startIdx) represents a
+        in the following way `s[0 .. startIdx]`. `startIdx` represents a
         codeunit index in $(D s).
 
     Throws:
@@ -1554,7 +1554,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     Returns the index of the first occurence of any of the elements in $(D
     needles) in $(D haystack). If no element of $(D needles) is found,
     then $(D -1) is returned. The $(D startIdx) slices $(D haystack) in the
-    following way $(D haystack[startIdx .. $]). $(D startIdx) represents a
+    following way `haystack[startIdx .. $]`. `startIdx` represents a
     codeunit index in $(D haystack). If the sequence ending at $(D startIdx)
     does not represent a well formed codepoint, then a $(REF UTFException, std,utf)
     may be thrown.
@@ -1562,7 +1562,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     Params:
         haystack = String to search for needles in.
         needles = Strings to search for in haystack.
-        startIdx = slices haystack like this $(D haystack[startIdx .. $]). If
+        startIdx = slices haystack like this `haystack[startIdx .. $]`. If
             the startIdx is greater equal the length of haystack the functions
             returns $(D -1).
         cs = Indicates whether the comparisons are case sensitive.
@@ -1725,7 +1725,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     Returns the index of the last occurence of any of the elements in $(D
     needles) in $(D haystack). If no element of $(D needles) is found,
     then $(D -1) is returned. The $(D stopIdx) slices $(D haystack) in the
-    following way $(D s[0 .. stopIdx]). $(D stopIdx) represents a codeunit
+    following way `s[0 .. stopIdx]`. `stopIdx` represents a codeunit
     index in $(D haystack). If the sequence ending at $(D startIdx) does not
     represent a well formed codepoint, then a $(REF UTFException, std,utf) may be
     thrown.
@@ -1733,7 +1733,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     Params:
         haystack = String to search for needles in.
         needles = Strings to search for in haystack.
-        stopIdx = slices haystack like this $(D haystack[0 .. stopIdx]). If
+        stopIdx = slices haystack like this `haystack[0 .. stopIdx]`. If
             the stopIdx is greater equal the length of haystack the functions
             returns $(D -1).
         cs = Indicates whether the comparisons are case sensitive.
@@ -1916,7 +1916,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     Params:
         haystack = String to search for needles in.
         needles = Strings to search for in haystack.
-        startIdx = slices haystack like this $(D haystack[startIdx .. $]). If
+        startIdx = slices haystack like this `haystack[startIdx .. $]`. If
             the startIdx is greater equal the length of haystack the functions
             returns $(D -1).
         cs = Indicates whether the comparisons are case sensitive.
@@ -2080,7 +2080,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
     Params:
         haystack = String to search for needles in.
         needles = Strings to search for in haystack.
-        stopIdx = slices haystack like this $(D haystack[0 .. stopIdx]) If
+        stopIdx = slices haystack like this `haystack[0 .. stopIdx]` If
         the stopIdx is greater equal the length of haystack the functions
         returns $(D -1).
         cs = Indicates whether the comparisons are case sensitive.

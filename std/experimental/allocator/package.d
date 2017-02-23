@@ -1258,7 +1258,7 @@ T = element type of the array being created
 alloc = the allocator used for getting memory
 array = a reference to the array being grown
 delta = number of elements to add (upon success the new length of $(D array) is
-$(D array.length + delta))
+`array.length + delta`)
 init = element used for filling the array
 range = range used for initializing the array elements
 
@@ -1411,8 +1411,8 @@ if (isInputRange!R)
 /**
 Shrinks an array by $(D delta) elements.
 
-If $(D array.length < delta), does nothing and returns `false`. Otherwise,
-destroys the last $(D array.length - delta) elements in the array and then
+If `array.length < delta`, does nothing and returns `false`. Otherwise,
+destroys the last `array.length - delta` elements in the array and then
 reallocates the array's buffer. If reallocation fails, fills the array with
 default-initialized data.
 
@@ -1420,11 +1420,11 @@ Params:
 T = element type of the array being created
 alloc = the allocator used for getting memory
 array = a reference to the array being shrunk
-delta = number of elements to remove (upon success the new length of $(D array) is $(D array.length - delta))
+delta = number of elements to remove (upon success the new length of `array` is `array.length - delta`)
 
 Returns:
 `true` upon success, `false` if memory could not be reallocated. In the latter
-case, the slice $(D array[$ - delta .. $]) is left with default-initialized
+case, the slice `array[$ - delta .. $]` is left with default-initialized
 elements.
 
 Throws:
@@ -1897,7 +1897,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
         else return Ternary.unknown;
     }
 
-    /// Returns $(D impl.expand(b, s)) if defined, $(D false) otherwise.
+    /// Returns `impl.expand(b, s)` if defined, `false` otherwise.
     override bool expand(ref void[] b, size_t s)
     {
         static if (hasMember!(Allocator, "expand"))
@@ -1906,7 +1906,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
             return s == 0;
     }
 
-    /// Returns $(D impl.reallocate(b, s)).
+    /// Returns `impl.reallocate(b, s)`.
     override bool reallocate(ref void[] b, size_t s)
     {
         return impl.reallocate(b, s);

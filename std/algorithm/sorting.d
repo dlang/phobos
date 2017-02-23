@@ -6,23 +6,23 @@ It contains generic _sorting algorithms.
 $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 $(T2 completeSort,
-        If $(D a = [10, 20, 30]) and $(D b = [40, 6, 15]), then
-        $(D completeSort(a, b)) leaves $(D a = [6, 10, 15]) and $(D b = [20,
+        If `a = [10, 20, 30]` and `b = [40, 6, 15]`, then
+        `completeSort(a, b)` leaves `a = [6, 10, 15]` and `b = [20,
         30, 40]).
         The range $(D a) must be sorted prior to the call, and as a result the
-        combination $(D $(REF chain, std,range)(a, b)) is sorted.)
+        combination `$(REF chain, std,range)(a, b)` is sorted.)
 $(T2 isPartitioned,
-        $(D isPartitioned!"a < 0"([-1, -2, 1, 0, 2])) returns $(D true) because
+        `isPartitioned!"a < 0"([-1, -2, 1, 0, 2])` returns `true` because
         the predicate is $(D true) for a portion of the range and $(D false)
         afterwards.)
 $(T2 isSorted,
-        $(D isSorted([1, 1, 2, 3])) returns $(D true).)
+        `isSorted([1, 1, 2, 3])` returns `true`.)
 $(T2 isStrictlyMonotonic,
-        $(D isStrictlyMonotonic([1, 1, 2, 3])) returns $(D false).)
+        `isStrictlyMonotonic([1, 1, 2, 3])` returns `false`.)
 $(T2 ordered,
-        $(D ordered(1, 1, 2, 3)) returns $(D true).)
+        `ordered(1, 1, 2, 3)` returns `true`.)
 $(T2 strictlyOrdered,
-        $(D strictlyOrdered(1, 1, 2, 3)) returns $(D false).)
+        `strictlyOrdered(1, 1, 2, 3)` returns `false`.)
 $(T2 makeIndex,
         Creates a separate index for a range.)
 $(T2 merge,
@@ -36,8 +36,8 @@ $(T2 nextPermutation,
         Computes the next lexicographically greater permutation of a range
         in-place.)
 $(T2 partialSort,
-        If $(D a = [5, 4, 3, 2, 1]), then $(D partialSort(a, 3)) leaves
-        $(D a[0 .. 3] = [1, 2, 3]).
+        If `a = [5, 4, 3, 2, 1]`, then `partialSort(a, 3)` leaves
+        `a[0 .. 3] = [1, 2, 3]`.
         The other elements of $(D a) are left in an unspecified order.)
 $(T2 partition,
         Partitions a range according to a unary predicate.)
@@ -95,7 +95,7 @@ alias SortOutput = Flag!"sortOutput";
 
 // completeSort
 /**
-Sorts the random-access range $(D chain(lhs, rhs)) according to
+Sorts the random-access range `chain(lhs, rhs)` according to
 predicate $(D less). The left-hand side of the range $(D lhs) is
 assumed to be already sorted; $(D rhs) is assumed to be unsorted. The
 exact strategy chosen depends on the relative sizes of $(D lhs) and
@@ -294,12 +294,12 @@ Like $(D isSorted), returns $(D true) if the given $(D values) are ordered
 according to the comparison operation $(D less). Unlike $(D isSorted), takes values
 directly instead of structured in a range.
 
-$(D ordered) allows repeated values, e.g. $(D ordered(1, 1, 2)) is $(D true). To verify
+`ordered` allows repeated values, e.g. `ordered(1, 1, 2)` is `true`. To verify
 that the values are ordered strictly monotonically, use $(D strictlyOrdered);
-$(D strictlyOrdered(1, 1, 2)) is $(D false).
+`strictlyOrdered(1, 1, 2)` is `false`.
 
 With either function, the predicate must be a strict ordering. For example,
-using $(D "a <= b") instead of $(D "a < b") is incorrect and will cause failed
+using `"a <= b"` instead of `"a < b"` is incorrect and will cause failed
 assertions.
 
 Params:
@@ -366,7 +366,7 @@ if (is(typeof(ordered!less(values))))
 // partition
 /**
 Partitions a range in two using the given $(D predicate).
-Specifically, reorders the range $(D r = [left, right$(RPAREN)) using $(D swap)
+Specifically, reorders the range `r = [left, right$(RPAREN)` using `swap`
 such that all elements $(D i) for which $(D predicate(i)) is $(D true) come
 before all elements $(D j) for which $(D predicate(j)) returns $(D false).
 
@@ -385,9 +385,9 @@ Returns:
 
 The right part of $(D r) after partitioning.
 
-If $(D ss == SwapStrategy.stable), $(D partition) preserves the relative
+If `ss == SwapStrategy.stable`, `partition` preserves the relative
 ordering of all elements $(D a), $(D b) in $(D r) for which $(D predicate(a) ==
-predicate(b)). If $(D ss == SwapStrategy.semistable), $(D partition) preserves
+predicate(b)). If `ss == SwapStrategy.semistable`, `partition` preserves
 the relative ordering of all elements $(D a), $(D b) in the left part of $(D r)
 for which $(D predicate(a) == predicate(b)).
 
@@ -574,17 +574,17 @@ if (ss != SwapStrategy.stable && isInputRange!Range && hasSwappableElements!Rang
 
 Partitions `r` around `pivot` using comparison function `less`, algorithm akin
 to $(LUCKY Hoare partition). Specifically, permutes elements of `r` and returns
-an index $(D k < r.length) such that:
+an index `k < r.length` such that:
 
 $(UL
 
 $(LI `r[pivot]` is swapped to `r[k]`)
 
-$(LI All elements `e` in subrange $(D r[0 .. k]) satisfy $(D !less(r[k], e))
+$(LI All elements `e` in subrange `r[0 .. k]` satisfy `!less(r[k], e)`
 (i.e. `r[k]` is greater than or equal to each element to its left according to
 predicate `less`))
 
-$(LI All elements `e` in subrange $(D r[0 .. k]) satisfy $(D !less(e,
+$(LI All elements `e` in subrange `r[0 .. k]` satisfy `!less(e,
 r[k])) (i.e. `r[k]` is less than or equal to each element to its right
 according to predicate `less`)))
 
@@ -935,7 +935,7 @@ Params:
     index = The resulting index.
 
 Returns: The pointer-based version returns a $(D SortedRange) wrapper
-over index, of type $(D SortedRange!(RangeIndex, (a, b) =>
+over index, of type `SortedRange!(RangeIndex, (a, b) =>
 binaryFun!less(*a, *b))) thus reflecting the ordering of the
 index. The index-based version returns $(D void) because the ordering
 relation involves not only $(D index) but also $(D r).
@@ -1417,7 +1417,7 @@ private template validPredicates(E, less...)
 }
 
 /**
-$(D auto multiSort(Range)(Range r)
+`auto multiSort(Range)(Range r)
     if (validPredicates!(ElementType!Range, less));)
 
 Sorts a range by multiple keys. The call $(D multiSort!("a.id < b.id",
@@ -1800,7 +1800,7 @@ behave as expected - otherwise, the program may fail on certain inputs (but not
 others) when not compiled in release mode, due to the cursory $(D assumeSorted)
 check. Specifically, $(D sort) expects $(D less(a,b) && less(b,c)) to imply
 $(D less(a,c)) (transitivity), and, conversely, $(D !less(a,b) && !less(b,c)) to
-imply $(D !less(a,c)). Note that the default predicate ($(D "a < b")) does not
+imply `!less(a,c)`. Note that the default predicate (`"a < b"`) does not
 always satisfy these conditions for floating point types, because the expression
 will always be $(D false) when either $(D a) or $(D b) is NaN.
 Use $(REF cmp, std,math) instead.
@@ -2882,7 +2882,7 @@ Params:
     r = The range to sort.
 
 Returns: The initial range wrapped as a $(D SortedRange) with the
-predicate $(D (a, b) => binaryFun!less(transform(a),
+predicate `(a, b) => binaryFun!less(transform(a),
 transform(b))).
  */
 SortedRange!(R, ((a, b) => binaryFun!less(unaryFun!transform(a),
@@ -3005,9 +3005,9 @@ if (isRandomAccessRange!R && hasLength!R)
 /**
 Reorders the random-access range $(D r) such that the range $(D r[0
 .. mid]) is the same as if the entire $(D r) were sorted, and leaves
-the range $(D r[mid .. r.length]) in no particular order. Performs
+the range `r[mid .. r.length]` in no particular order. Performs
 $(BIGOH r.length * log(mid)) evaluations of $(D pred). The
-implementation simply calls $(D topN!(less, ss)(r, n)) and then $(D
+implementation simply calls `topN!(less, ss)(r, n)` and then $(D
 sort!(less, ss)(r[0 .. n])).
 
 Params:
@@ -3065,14 +3065,14 @@ if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
 Reorders the range $(D r) using $(D swap) such that $(D r[nth]) refers
 to the element that would fall there if the range were fully
 sorted. In addition, it also partitions $(D r) such that all elements
-$(D e1) from $(D r[0]) to $(D r[nth]) satisfy $(D !less(r[nth], e1)),
+`e1` from `r[0]` to `r[nth]` satisfy `!less(r[nth], e1)`,
 and all elements $(D e2) from $(D r[nth]) to $(D r[r.length]) satisfy
-$(D !less(e2, r[nth])). Effectively, it finds the nth smallest
+`!less(e2, r[nth])`. Effectively, it finds the nth smallest
 (according to $(D less)) elements in $(D r). Performs an expected
 $(BIGOH r.length) (if unstable) or $(BIGOH r.length * log(r.length))
 (if stable) evaluations of $(D less) and $(D swap).
 
-If $(D n >= r.length), the algorithm has no effect and returns
+If `n >= r.length`, the algorithm has no effect and returns
 `r[0 .. r.length]`.
 
 Params:
@@ -3723,7 +3723,7 @@ Similar to $(LREF topN), except that the range is not modified.
 
 Params:
     less = A binary predicate that defines the ordering of range elements.
-        Defaults to $(D a < b).
+        Defaults to `a < b`.
     ss = $(RED (Not implemented yet.)) Specify the swapping strategy.
     r = A
         $(REF_ALTTEXT random-access range, isRandomAccessRange, std,range,primitives)
@@ -3857,7 +3857,7 @@ Private for the time being.
 Computes the median of 2 to 5 arbitrary indexes in random-access range `r`
 using hand-written specialized algorithms. The indexes must be distinct (if not,
 behavior is implementation-defined). The function also partitions the elements
-involved around the median, e.g. $(D medianOf(r, a, b, c)) not only fills `r[b]`
+involved around the median, e.g. `medianOf(r, a, b, c)` not only fills `r[b]`
 with the median of `r[a]`, `r[b]`, and `r[c]`, but also puts the minimum in
 `r[a]` and the maximum in `r[c]`.
 
@@ -3866,9 +3866,9 @@ less = The comparison predicate used, modeled as a $(LUCKY strict weak
 ordering) (irreflexive, antisymmetric, transitive, and implying a transitive
 equivalence).
 flag = Used only for even values of `T.length`. If `No.leanRight`, the median
-"leans left", meaning $(D medianOf(r, a, b, c, d)) puts the lower median of the
+"leans left", meaning `medianOf(r, a, b, c, d)` puts the lower median of the
 four in `r[b]`, the minimum in `r[a]`, and the two others in `r[c]` and `r[d]`.
-Conversely, $(D median!("a < b", Yes.leanRight)(r, a, b, c, d)) puts the upper
+Conversely, `median!("a < b", Yes.leanRight)(r, a, b, c, d)` puts the upper
 median of the four in `r[c]`, the maximum in `r[d]`, and the two others in
 `r[a]` and `r[b]`.
 r = The range containing the indexes.

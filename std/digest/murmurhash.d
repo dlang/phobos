@@ -10,13 +10,13 @@ The older MurmurHash 1 and 2 are currently not supported.
 MurmurHash3 comes in three flavors, listed in increasing order of throughput:
 $(UL
 $(LI $(D MurmurHash3!32) produces a 32-bit value and is optimized for 32-bit architectures)
-$(LI $(D MurmurHash3!(128, 32)) produces a 128-bit value and is optimized for 32-bit architectures)
-$(LI $(D MurmurHash3!(128, 64)) produces a 128-bit value and is optimized for 64-bit architectures)
+$(LI `MurmurHash3!(128, 32)` produces a 128-bit value and is optimized for 32-bit architectures)
+$(LI `MurmurHash3!(128, 64)` produces a 128-bit value and is optimized for 64-bit architectures)
 )
 
 Note:
 $(UL
-$(LI $(D MurmurHash3!(128, 32)) and $(D MurmurHash3!(128, 64)) produce different values.)
+$(LI `MurmurHash3!(128, 32)` and `MurmurHash3!(128, 64)` produce different values.)
 $(LI The current implementation is optimized for little endian architectures.
   It will exhibit different results on big endian architectures and a slightly
   less uniform distribution.)

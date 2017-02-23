@@ -48,7 +48,7 @@ version (StdDdoc)
 
     /++
         If $(D !!value) is true, $(D value) is returned. Otherwise,
-        $(D new WindowsException(GetLastError(), msg)) is thrown.
+        `new WindowsException(GetLastError(), msg)` is thrown.
         $(D WindowsException) assumes that the last operation set
         $(D GetLastError()) appropriately.
 

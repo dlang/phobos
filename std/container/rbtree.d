@@ -721,13 +721,13 @@ private struct RBRange(N)
  * All inserts, removes, searches, and any function in general has complexity
  * of $(BIGOH lg(n)).
  *
- * To use a different comparison than $(D "a < b"), pass a different operator string
+ * To use a different comparison than `"a < b"`, pass a different operator string
  * that can be used by $(REF binaryFun, std,functional), or pass in a
- * function, delegate, functor, or any type where $(D less(a, b)) results in a $(D bool)
+ * function, delegate, functor, or any type where `less(a, b)` results in a `bool`
  * value.
  *
  * Note that less should produce a strict ordering.  That is, for two unequal
- * elements $(D a) and $(D b), $(D less(a, b) == !less(b, a)). $(D less(a, a)) should
+ * elements `a` and `b`, `less(a, b) == !less(b, a)`. `less(a, a)` should
  * always equal $(D false).
  *
  * If $(D allowDuplicates) is set to $(D true), then inserting the same element more than

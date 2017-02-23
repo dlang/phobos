@@ -14,16 +14,16 @@
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(D $(LREF formattedRead)))
+    $(TR $(TD `$(LREF formattedRead)`)
         $(TD Reads values according to the _format string from an InputRange.
     ))
-    $(TR $(TD $(D $(LREF formattedWrite)))
+    $(TR $(TD `$(LREF formattedWrite)`)
         $(TD Formats its arguments according to the _format string and puts them
         to an OutputRange.
     ))
 )
 
-   Please see the documentation of function $(D $(LREF formattedWrite)) for a
+   Please see the documentation of function `$(LREF formattedWrite)` for a
    description of the _format string.
 
    Two functions have been added for convenience:
@@ -31,10 +31,10 @@ $(TR $(TH Function Name) $(TH Description)
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(D $(LREF _format)))
+    $(TR $(TD `$(LREF _format)`)
         $(TD Returns a GC-allocated string with the formatting result.
     ))
-    $(TR $(TD $(D $(LREF sformat)))
+    $(TR $(TD `$(LREF sformat)`)
         $(TD Puts the formatting result into a preallocated array.
     ))
 )
@@ -42,7 +42,7 @@ $(TR $(TH Function Name) $(TH Description)
    These two functions are publicly imported by $(MREF std, string)
    to be easily available.
 
-   The functions $(D $(LREF formatValue)) and $(D $(LREF unformatValue)) are
+   The functions `$(LREF formatValue)` and `$(LREF unformatValue)` are
    used for the plumbing.
    Copyright: Copyright Digital Mars 2000-2013.
 
@@ -89,7 +89,7 @@ private alias enforceFmt = enforceEx!FormatException;
    Interprets variadic argument list $(D args), formats them according
    to $(D fmt), and sends the resulting characters to $(D w). The
    encoding of the output is the same as $(D Char). The type $(D Writer)
-   must satisfy $(D $(REF isOutputRange, std,range,primitives)!(Writer, Char)).
+   must satisfy `$(REF isOutputRange, std,range,primitives)!(Writer, Char)`.
 
    The variadic arguments are normally consumed in order. POSIX-style
    $(HTTP opengroup.org/onlinepubs/009695399/functions/printf.html,
@@ -931,7 +931,7 @@ if (is(Unqual!Char == Char))
         bool flZero;
 
         /**
-         The format specifier contained a $(D ' ') ($(D printf)
+         The format specifier contained a `' '` (`printf`
          compatibility).
          */
         bool flSpace;
@@ -1007,7 +1007,7 @@ if (is(Unqual!Char == Char))
 
     /*
        This string is inserted in between elements of a sequence (by
-       default $(D ", ")).
+       default `", "`).
      */
     enum immutable(Char)[] seqSeparator = ", ";
 
@@ -2872,7 +2872,7 @@ if (!is(StringTypeOf!T) && !is(CharTypeOf!T) || is(T == enum))
 }
 
 /**
-   Associative arrays are formatted by using $(D ':') and $(D ", ") as
+   Associative arrays are formatted by using `':'` and `", "` as
    separators, and enclosed by $(D '[') and $(D ']').
 
 Params:
@@ -3119,7 +3119,7 @@ const string toString();
 
    For the struct and union objects which does not have $(D toString),
    $(UL $(LI If they have range interface, formatted as input range.)
-        $(LI Otherwise, they are formatted like $(D Type(field1, filed2, ...)).))
+        $(LI Otherwise, they are formatted like `Type(field1, filed2, ...)`.))
 
    Otherwise, are formatted just as their type name.
  */

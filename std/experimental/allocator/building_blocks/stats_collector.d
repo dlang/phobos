@@ -92,12 +92,12 @@ enum Options : ulong
     bytesAllocated = 1u << 11,
     /**
     Tracks the sum of all $(D delta) values in calls of the form
-    $(D expand(b, delta)) that succeed (return $(D true)).
+    `expand(b, delta)` that succeed (return `true`).
     */
     bytesExpanded = 1u << 12,
     /**
-    Tracks the sum of all $(D b.length - s) with $(D b.length > s) in calls of
-    the form $(D realloc(b, s)) that succeed (return $(D true)). In per-call
+    Tracks the sum of all `b.length - s` with `b.length > s` in calls of
+    the form `realloc(b, s)` that succeed (return `true`). In per-call
     statistics, also unambiguously counts the bytes deallocated with
     $(D deallocate).
     */

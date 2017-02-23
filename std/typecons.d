@@ -323,7 +323,7 @@ private template sharedToString(alias field)
 }
 
 /**
-_Tuple of values, for example $(D Tuple!(int, string)) is a record that
+_Tuple of values, for example `Tuple!(int, string)` is a record that
 stores an $(D int) and a $(D string). $(D Tuple) can be used to bundle
 values together, notably when returning multiple values from a
 function. If $(D obj) is a `Tuple`, the individual members are
@@ -1878,7 +1878,7 @@ template Rebindable(T)
 
 /**
     However, $(D Rebindable!(Widget)) does allow reassignment,
-    while otherwise behaving exactly like a $(D const Widget).
+    while otherwise behaving exactly like a `const Widget`.
  */
 @system unittest
 {
@@ -2738,9 +2738,9 @@ auto nullable(T)(T t)
 
 /**
 Just like $(D Nullable!T), except that the null state is defined as a
-particular value. For example, $(D Nullable!(uint, uint.max)) is an
+particular value. For example, `Nullable!(uint, uint.max)` is an
 $(D uint) that sets aside the value $(D uint.max) to denote a null
-state. $(D Nullable!(T, nullValue)) is more storage-efficient than $(D
+state. `Nullable!(T, nullValue)` is more storage-efficient than $(D
 Nullable!T) because it does not need to store an extra $(D bool).
 
 Params:
@@ -3101,7 +3101,7 @@ auto nullable(alias nullValue, T)(T t)
 Just like $(D Nullable!T), except that the object refers to a value
 sitting elsewhere in memory. This makes assignments overwrite the
 initially assigned value. Internally $(D NullableRef!T) only stores a
-pointer to $(D T) (i.e., $(D Nullable!T.sizeof == (T*).sizeof)).
+pointer to `T` (i.e., `Nullable!T.sizeof == (T*).sizeof`).
  */
 struct NullableRef(T)
 {
@@ -5321,8 +5321,8 @@ Assignment operators
         refCountedPayload this;), so callers can just use the $(D RefCounted)
         object as a $(D T).
 
-        $(BLUE The first overload exists only if $(D autoInit == RefCountedAutoInitialize.yes).)
-        So if $(D autoInit == RefCountedAutoInitialize.no)
+        $(BLUE The first overload exists only if `autoInit == RefCountedAutoInitialize.yes`.)
+        So if `autoInit == RefCountedAutoInitialize.no`
         or called for a constant or immutable object, then
         $(D refCountedPayload) will also be qualified as safe and nothrow
         (but will still assert if not initialized).
@@ -7352,8 +7352,8 @@ public:
 // ReplaceType
 /**
 Replaces all occurrences of `From` into `To`, in one or more types `T`. For
-example, $(D ReplaceType!(int, uint, Tuple!(int, float)[string])) yields
-$(D Tuple!(uint, float)[string]). The types in which replacement is performed
+example, `ReplaceType!(int, uint, Tuple!(int, float)[string])` yields
+`Tuple!(uint, float)[string]`. The types in which replacement is performed
 may be arbitrarily complex, including qualifiers, built-in type constructors
 (pointers, arrays, associative arrays, functions, and delegates), and template
 instantiations; replacement proceeds transitively through the type definition.

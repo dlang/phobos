@@ -13,7 +13,7 @@ deallocated in the past. All other allocations are directed to $(D
 ParentAllocator). Due to the simplicity of free list management, allocations
 from the free list are fast.
 
-One instantiation is of particular interest: $(D FreeList!(0, unbounded)) puts
+One instantiation is of particular interest: `FreeList!(0, unbounded)` puts
 every deallocation in the freelist, and subsequently serves any allocation from
 the freelist (if not empty). There is no checking of size matching, which would
 be incorrect for a freestanding allocator but is both correct and fast when an
@@ -46,7 +46,7 @@ struct FreeList(ParentAllocator,
     {
         /**
         Returns the smallest allocation size eligible for allocation from the
-        freelist. (If $(D minSize != chooseAtRuntime), this is simply an alias
+        freelist. (If `minSize != chooseAtRuntime`, this is simply an alias
         for $(D minSize).)
         */
         @property size_t min() const
@@ -62,11 +62,11 @@ struct FreeList(ParentAllocator,
         Params:
         low = new value for $(D min)
 
-        Precondition: $(D low <= max), or $(D maxSize == chooseAtRuntime) and
+        Precondition: `low <= max`, or `maxSize == chooseAtRuntime` and
         $(D max) has not yet been initialized. Also, no allocation has been
         yet done with this allocator.
 
-        Postcondition: $(D min == low)
+        Postcondition: `min == low`
         */
         @property void min(size_t low)
         {
@@ -84,7 +84,7 @@ struct FreeList(ParentAllocator,
     {
         /**
         Returns the largest allocation size eligible for allocation from the
-        freelist. (If $(D maxSize != chooseAtRuntime), this is simply an alias
+        freelist. (If `maxSize != chooseAtRuntime`, this is simply an alias
         for $(D maxSize).) All allocation requests for sizes greater than or
         equal to $(D min) and less than or equal to $(D max) are rounded to $(D
         max) and forwarded to the parent allocator. When the block fitting the
@@ -101,10 +101,10 @@ struct FreeList(ParentAllocator,
         Params:
         high = new value for $(D max)
 
-        Precondition: $(D high >= min), or $(D minSize == chooseAtRuntime) and
-        $(D min) has not yet been initialized. Also $(D high >= (void*).sizeof). Also, no allocation has been yet done with this allocator.
+        Precondition: `high >= min`, or `minSize == chooseAtRuntime` and
+        `min` has not yet been initialized. Also `high >= (void*).sizeof`. Also, no allocation has been yet done with this allocator.
 
-        Postcondition: $(D max == high)
+        Postcondition: `max == high`
         */
         @property void max(size_t high)
         {
@@ -225,8 +225,8 @@ struct FreeList(ParentAllocator,
     alias alignment = ParentAllocator.alignment;
 
     /**
-    If $(D maxSize == unbounded), returns  $(D parent.goodAllocSize(bytes)).
-    Otherwise, returns $(D max) for sizes in the interval $(D [min, max]), and
+    If `maxSize == unbounded`, returns  `parent.goodAllocSize(bytes)`.
+    Otherwise, returns `max` for sizes in the interval `[min, max]`, and
     $(D parent.goodAllocSize(bytes)) otherwise.
 
     Precondition:
@@ -234,7 +234,7 @@ struct FreeList(ParentAllocator,
     appropriately.
 
     Postcondition:
-    $(D result >= bytes)
+    `result >= bytes`
     */
     size_t goodAllocSize(size_t bytes)
     {
@@ -287,8 +287,8 @@ struct FreeList(ParentAllocator,
 
     /**
     Allocates memory either off of the free list or from the parent allocator.
-    If $(D n) is within $(D [min, max]) or if the free list is unchecked
-    ($(D minSize == 0 && maxSize == size_t.max)), then the free list is
+    If `n` is within `[min, max]` or if the free list is unchecked
+    (`minSize == 0 && maxSize == size_t.max`), then the free list is
     consulted first. If not empty (hit), the block at the front of the free
     list is removed from the list and returned. Otherwise (miss), a new block
     of $(D max) bytes is allocated, truncated to $(D n) bytes, and returned.
@@ -303,7 +303,7 @@ struct FreeList(ParentAllocator,
     If set at runtime, $(D min) and/or $(D max) must be initialized
     appropriately.
 
-    Postcondition: $(D result.length == bytes || result is null)
+    Postcondition: `result.length == bytes || result is null`
     */
     void[] allocate(size_t n)
     {
@@ -327,8 +327,8 @@ struct FreeList(ParentAllocator,
         "expand", "owns", "reallocate"));
 
     /**
-    If $(D block.length) is within $(D [min, max]) or if the free list is
-    unchecked ($(D minSize == 0 && maxSize == size_t.max)), then inserts the
+    If `block.length` is within `[min, max]` or if the free list is
+    unchecked (`minSize == 0 && maxSize == size_t.max`), then inserts the
     block at the front of the free list. For all others, forwards to $(D
     parent.deallocate) if $(D Parent.deallocate) is defined.
 
@@ -420,7 +420,7 @@ lived objects may occupy the entire block, making it unavailable for serving
 allocations from the free list. However, an absolute cap on the free list size
 may be beneficial.
 
-The options $(D minSize == unbounded) and $(D maxSize == unbounded) are not
+The options `minSize == unbounded` and `maxSize == unbounded` are not
 available for $(D ContiguousFreeList).
 */
 struct ContiguousFreeList(ParentAllocator,
@@ -489,10 +489,10 @@ struct ContiguousFreeList(ParentAllocator,
     bytes = Bytes (not items) to be allocated for the free list. Memory will be
     allocated during construction and deallocated in the destructor.
     max = Maximum size eligible for freelisting. Construction with this
-    parameter is defined only if $(D maxSize == chooseAtRuntime) or $(D maxSize
+    parameter is defined only if `maxSize == chooseAtRuntime` or `maxSize
     == unbounded).
     min = Minimum size eligible for freelisting. Construction with this
-    parameter is defined only if $(D minSize == chooseAtRuntime). If this
+    parameter is defined only if `minSize == chooseAtRuntime`. If this
     condition is met and no $(D min) parameter is present, $(D min) is
     initialized with $(D max).
     */
@@ -581,7 +581,7 @@ struct ContiguousFreeList(ParentAllocator,
     appropriately.
 
     Postcondition:
-    $(D result >= bytes)
+    `result >= bytes`
     */
     size_t goodAllocSize(size_t n)
     {

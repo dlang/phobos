@@ -20,9 +20,9 @@ against the limit.
 If $(D ParentAllocator) is different from $(D NullAllocator), $(D Region)
 deallocates the chunk of memory during destruction.
 
-The $(D minAlign) parameter establishes alignment. If $(D minAlign > 1), the
+The `minAlign` parameter establishes alignment. If `minAlign > 1`, the
 sizes of all allocation requests are rounded up to a multiple of $(D minAlign).
-Applications aiming at maximum speed may want to choose $(D minAlign = 1) and
+Applications aiming at maximum speed may want to choose `minAlign = 1` and
 control alignment externally.
 
 */
@@ -112,7 +112,7 @@ struct Region(ParentAllocator = NullAllocator,
 
     /**
     Allocates $(D n) bytes of memory. The shortest path involves an alignment
-    adjustment (if $(D alignment > 1)), an increment, and a comparison.
+    adjustment (if `alignment > 1`), an increment, and a comparison.
 
     Params:
     n = number of bytes to allocate
@@ -366,7 +366,7 @@ The first template argument is the size of the region and the second is the
 needed alignment. Depending on the alignment requested and platform details,
 the actual available storage may be smaller than the compile-time parameter. To
 make sure that at least $(D n) bytes are available in the region, use
-$(D InSituRegion!(n + a - 1, a)).
+`InSituRegion!(n + a - 1, a)`.
 
 Given that the most frequent use of `InSituRegion` is as a stack allocator, it
 allocates starting at the end on systems where stack grows downwards, such that
@@ -429,7 +429,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
 
     /**
     Allocates $(D bytes) and returns them, or $(D null) if the region cannot
-    accommodate the request. For efficiency reasons, if $(D bytes == 0) the
+    accommodate the request. For efficiency reasons, if `bytes == 0` the
     function returns an empty non-null slice.
     */
     void[] allocate(size_t n)
@@ -581,7 +581,7 @@ private extern(C) int brk(shared void*);
 
 /**
 
-Allocator backed by $(D $(LUCKY sbrk)) for Posix systems. Due to the fact that
+Allocator backed by `$(LUCKY sbrk)` for Posix systems. Due to the fact that
 $(D sbrk) is not thread-safe $(HTTP lifecs.likai.org/2010/02/sbrk-is-not-thread-
 safe.html, by design), $(D SbrkRegion) uses a mutex internally. This implies
 that uncontrolled calls to $(D brk) and $(D sbrk) may affect the workings of $(D

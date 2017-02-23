@@ -32,7 +32,7 @@ import std.traits;
         to the values provided as input.  If neither $(D re) nor
         $(D im) are floating-point numbers, the return type will
         be $(D Complex!double).  Otherwise, the return type is
-        deduced using $(D std.traits.CommonType!(R, I)).
+        deduced using `std.traits.CommonType!(R, I)`.
 */
 auto complex(R)(R re)  @safe pure nothrow @nogc
 if (is(R : double))

@@ -68,7 +68,7 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
 --------------------
 
     Various functions take a string (or strings) to represent a unit of time
-    (e.g. $(D convert!("days", "hours")(numDays))). The valid strings to use
+    (e.g. `convert!("days", "hours")(numDays)`). The valid strings to use
     with such functions are $(D "years"), $(D "months"), $(D "weeks"),
     $(D "days"), $(D "hours"), $(D "minutes"), $(D "seconds"),
     $(D "msecs") (milliseconds), $(D "usecs") (microseconds),
@@ -13358,7 +13358,7 @@ private:
         current year.
 
         $(D _addDays(numDays)) is effectively equivalent to
-        $(D date.dayOfGregorianCal = date.dayOfGregorianCal + days).
+        `date.dayOfGregorianCal = date.dayOfGregorianCal + days`.
 
         Params:
             days = The number of days to add to this Date.
@@ -18506,7 +18506,7 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).length ==
 
 
     /++
-        Whether the interval's length is 0, that is, whether $(D begin == end).
+        Whether the interval's length is 0, that is, whether `begin == end`.
 
         Example:
 --------------------
@@ -19329,8 +19329,8 @@ assert(Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1)).span(
     /++
         Shifts the interval forward or backwards in time by the given duration
         (a positive duration shifts the interval forward; a negative duration
-        shifts it backward). Effectively, it does $(D begin += duration) and
-        $(D end += duration).
+        shifts it backward). Effectively, it does `begin += duration` and
+        `end += duration`.
 
         Params:
             duration = The duration to shift the interval by.
@@ -19424,7 +19424,7 @@ assert(interval2 == Interval!Date(Date(1994, 1, 2), Date(2010, 3, 1)));
 
     /++
         Expands the interval forwards and/or backwards in time. Effectively,
-        it does $(D begin -= duration) and/or $(D end += duration). Whether
+        it does `begin -= duration` and/or `end += duration`. Whether
         it expands forwards and/or backwards in time is determined by
         $(D_PARAM dir).
 
@@ -22259,7 +22259,7 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).span(
         Shifts the $(D begin) of this interval forward or backwards in time by
         the given duration (a positive duration shifts the interval forward; a
         negative duration shifts it backward). Effectively, it does
-        $(D begin += duration).
+        `begin += duration`.
 
         Params:
             duration = The duration to shift the interval by.
@@ -22332,7 +22332,7 @@ assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
 
     /++
         Expands the interval backwards in time. Effectively, it does
-        $(D begin -= duration).
+        `begin -= duration`.
 
         Params:
             duration = The duration to expand the interval by.
@@ -24490,7 +24490,7 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
         Shifts the $(D end) of this interval forward or backwards in time by the
         given duration (a positive duration shifts the interval forward; a
         negative duration shifts it backward). Effectively, it does
-        $(D end += duration).
+        `end += duration`.
 
         Params:
             duration = The duration to shift the interval by.
@@ -24562,7 +24562,7 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
 
     /++
         Expands the interval forwards in time. Effectively, it does
-        $(D end += duration).
+        `end += duration`.
 
         Params:
             duration = The duration to expand the interval by.
@@ -26429,10 +26429,10 @@ if (isTimePoint!TP &&
     day later. That function would then be used by $(D IntervalRange)'s
     $(D popFront) to iterate over the $(LREF Date)s in the interval.
 
-    If $(D dir == Direction.fwd), then a range iterates forward in time, whereas
-    if $(D dir == Direction.bwd), then it iterates backwards in time. So, if
-    $(D dir == Direction.fwd) then $(D front == interval.begin), whereas if
-    $(D dir == Direction.bwd) then $(D front == interval.end). $(D func) must
+    If `dir == Direction.fwd`, then a range iterates forward in time, whereas
+    if `dir == Direction.bwd`, then it iterates backwards in time. So, if
+    `dir == Direction.fwd` then `front == interval.begin`, whereas if
+    `dir == Direction.bwd` then `front == interval.end`. `func` must
     generate a time point going in the proper direction of iteration, or a
     $(LREF DateTimeException) will be thrown. So, to iterate forward in
     time, the time point that $(D func) generates must be later in time than the
@@ -26448,13 +26448,13 @@ if (isTimePoint!TP &&
     $(D begin). In either case, the range would then be empty.
 
     Also note that while normally the $(D begin) of an interval is included in
-    it and its $(D end) is excluded from it, if $(D dir == Direction.bwd), then
+    it and its `end` is excluded from it, if `dir == Direction.bwd`, then
     $(D begin) is treated as excluded and $(D end) is treated as included. This
     allows for the same behavior in both directions. This works because none of
     $(LREF2 .Interval, Interval)'s functions which care about whether $(D begin) or $(D end) is
     included or excluded are ever called by $(D IntervalRange). $(D interval)
-    returns a normal interval, regardless of whether $(D dir == Direction.fwd)
-    or if $(D dir == Direction.bwd), so any $(LREF2 .Interval, Interval) functions which are
+    returns a normal interval, regardless of whether `dir == Direction.fwd`
+    or if `dir == Direction.bwd`, so any $(LREF2 .Interval, Interval) functions which are
     called on it which care about whether $(D begin) or $(D end) are included or
     excluded will treat $(D begin) as included and $(D end) as excluded.
   +/
@@ -32128,7 +32128,7 @@ ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
        accepts $(REF Duration, core,time) and returns $(D Unqual!T).
 
     4. $(D T) must define an $(D opOpAssign) for addition and subtraction that
-       accepts $(REF Duration, core,time) and returns $(D ref Unqual!T).
+       accepts $(REF Duration, core,time) and returns `ref Unqual!T`.
 
     5. $(D T) must define a $(D opBinary) for subtraction which accepts $(D T)
        and returns returns $(REF Duration, core,time).
@@ -33807,7 +33807,7 @@ if (units == "months" ||
                 thrown.
 
     Throws:
-        $(LREF DateTimeException) if $(D valid!"days"(year, month, day)) is false.
+        $(LREF DateTimeException) if `valid!"days"(year, month, day)` is false.
   +/
 void enforceValid(string units)
                  (int year, Month month, int day, string file = __FILE__, size_t line = __LINE__) @safe pure

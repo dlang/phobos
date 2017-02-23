@@ -587,7 +587,7 @@ if (!isImplicitlyConvertible!(S, T) &&
 /**
 When target type supports 'converting construction', it is used.
 $(UL $(LI If target type is struct, $(D T(value)) is used.)
-     $(LI If target type is class, $(D new T(value)) is used.))
+     $(LI If target type is class, `new T(value)` is used.))
 */
 private T toImpl(T, S)(S value)
 if (!isImplicitlyConvertible!(S, T) &&

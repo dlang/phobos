@@ -29,7 +29,7 @@ not enforced (save for the use of $(D assert)) for the sake of efficiency.
 $(OL
 $(LI $(D roundingFunction(n) >= n) for all $(D n) of type $(D size_t);)
 $(LI $(D roundingFunction) must be monotonically increasing, i.e. $(D
-roundingFunction(n1) <= roundingFunction(n2)) for all $(D n1 < n2);)
+roundingFunction(n1) <= roundingFunction(n2)) for all `n1 < n2`;)
 $(LI $(D roundingFunction) must be $(D pure), i.e. always return the same
 value for a given $(D n).)
 )
@@ -71,7 +71,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     /**
     Gets a larger buffer $(D buf) by calling
     $(D parent.allocate(goodAllocSize(n))). If $(D buf) is $(D null), returns
-    $(D null). Otherwise, returns $(D buf[0 .. n]).
+    `null`. Otherwise, returns `buf[0 .. n]`.
     */
     void[] allocate(size_t n)
     {
@@ -93,7 +93,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
 
     /**
     First checks whether there's enough slack memory preallocated for $(D b)
-    by evaluating $(D b.length + delta <= goodAllocSize(b.length)). If that's
+    by evaluating `b.length + delta <= goodAllocSize(b.length)`. If that's
     the case, expands $(D b) in place. Otherwise, attempts to use
     $(D parent.expand) appropriately if present.
     */
@@ -194,7 +194,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
 
     /**
     Defined if $(D ParentAllocator.deallocate) exists and forwards to
-    $(D parent.deallocate(b.ptr[0 .. goodAllocSize(b.length)])).
+    `parent.deallocate(b.ptr[0 .. goodAllocSize(b.length)])`.
     */
     static if (hasMember!(ParentAllocator, "deallocate"))
     bool deallocate(void[] b)

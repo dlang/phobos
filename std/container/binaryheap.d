@@ -49,7 +49,7 @@ removeFront()) method) is done fast in $(BIGOH log n) time.
 If $(D less) is the less-than operator, which is the default option,
 then $(D BinaryHeap) defines a so-called max-heap that optimizes
 extraction of the $(I largest) elements. To define a min-heap,
-instantiate BinaryHeap with $(D "a > b") as its predicate.
+instantiate BinaryHeap with `"a > b"` as its predicate.
 
 Simply extracting elements from a $(D BinaryHeap) container is
 tantamount to lazily fetching elements of $(D Store) in descending
@@ -258,7 +258,7 @@ Clears the heap by detaching it from the underlying store.
 
 /**
 Inserts $(D value) into the store. If the underlying store is a range
-and $(D length == capacity), throws an exception.
+and `length == capacity`, throws an exception.
      */
     size_t insert(ElementType!Store value)
     {
@@ -355,7 +355,7 @@ Replaces the largest element in the store with $(D value).
 
 /**
 If the heap has room to grow, inserts $(D value) into the store and
-returns $(D true). Otherwise, if $(D less(value, front)), calls $(D
+returns `true`. Otherwise, if `less(value, front)`, calls $(D
 replaceFront(value)) and returns again $(D true). Otherwise, leaves
 the heap unaffected and returns $(D false). This method is useful in
 scenarios where the smallest $(D k) elements of a set of candidates
@@ -380,7 +380,7 @@ must be collected.
     }
 
 /**
-Swapping is allowed if the heap is full. If $(D less(value, front)), the
+Swapping is allowed if the heap is full. If `less(value, front)`, the
 method exchanges store.front and value and returns $(D true). Otherwise, it
 leaves the heap unaffected and returns $(D false).
      */

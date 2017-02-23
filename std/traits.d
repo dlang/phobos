@@ -3349,7 +3349,7 @@ template hasElaborateCopyConstructor(S)
 /**
    True if $(D S) or any type directly embedded in the representation of $(D S)
    defines an elaborate assignment. Elaborate assignments are introduced by
-   defining $(D opAssign(typeof(this))) or $(D opAssign(ref typeof(this)))
+   defining `opAssign(typeof(this))` or `opAssign(ref typeof(this))`
    for a $(D struct) or when there is a compiler-generated $(D opAssign).
 
    A type $(D S) gets compiler-generated $(D opAssign) in case it has
@@ -3554,7 +3554,7 @@ enum hasMember(T, string name) = __traits(hasMember, T, name);
 }
 
 /**
-Retrieves the members of an enumerated type $(D enum E).
+Retrieves the members of an enumerated type `enum E`.
 
 Params:
  E = An enumerated type. $(D E) may have duplicated values.
@@ -4810,7 +4810,7 @@ private struct __InoutWorkaroundStruct{}
 
 /**
 Creates an lvalue or rvalue of type $(D T) for $(D typeof(...)) and
-$(D __traits(compiles, ...)) purposes. No actual value is returned.
+`__traits(compiles, ...)` purposes. No actual value is returned.
 
 Note: Trying to use returned value will result in a
 "Symbol Undefined" error at link time.
@@ -7507,7 +7507,7 @@ template allSameType(T...)
 
 /**
    Returns: $(D true) iff the type $(D T) can be tested in an $(D
-   if)-expression, that is if $(D if (pred(T.init)) {}) is compilable.
+   if)-expression, that is if `if (pred(T.init)) {}` is compilable.
 */
 enum ifTestable(T, alias pred = a => a) = __traits(compiles, { if (pred(T.init)) {} });
 

@@ -207,7 +207,7 @@ public:
 
     /**
      * Implements assignment operators from built-in integers of the form
-     * $(D BigInt op= integer).
+     * `BigInt op= integer`.
      */
     BigInt opOpAssign(string op, T)(T y) pure nothrow
         if ((op=="+" || op=="-" || op=="*" || op=="/" || op=="%"
@@ -310,7 +310,7 @@ public:
     }
 
     /**
-     * Implements assignment operators of the form $(D BigInt op= BigInt).
+     * Implements assignment operators of the form `BigInt op= BigInt`.
      */
     BigInt opOpAssign(string op, T)(T y) pure nothrow
         if ((op=="+" || op== "-" || op=="*" || op=="|" || op=="&" || op=="^" || op=="/" || op=="%")

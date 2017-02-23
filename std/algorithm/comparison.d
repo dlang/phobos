@@ -7,39 +7,39 @@ $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 $(T2 among,
         Checks if a value is among a set of values, e.g.
-        $(D if (v.among(1, 2, 3)) // `v` is 1, 2 or 3))
+        `if (v.among(1, 2, 3)) // `v` is 1, 2 or 3`)
 $(T2 castSwitch,
-        $(D (new A()).castSwitch((A a)=>1,(B b)=>2)) returns $(D 1).)
+        `(new A()).castSwitch((A a)=>1,(B b)=>2)` returns `1`.)
 $(T2 clamp,
-        $(D clamp(1, 3, 6)) returns $(D 3). $(D clamp(4, 3, 6)) returns $(D 4).)
+        `clamp(1, 3, 6)` returns `3`. `clamp(4, 3, 6)` returns `4`.)
 $(T2 cmp,
-        $(D cmp("abc", "abcd")) is $(D -1), $(D cmp("abc", "aba")) is $(D 1),
-        and $(D cmp("abc", "abc")) is $(D 0).)
+        `cmp("abc", "abcd")` is `-1`, `cmp("abc", "aba")` is `1`,
+        and `cmp("abc", "abc")` is `0`.)
 $(T2 either,
-        Return first parameter $(D p) that passes an $(D if (p)) test, e.g.
-        $(D either(0, 42, 43)) returns $(D 42).)
+        Return first parameter `p` that passes an `if (p)` test, e.g.
+        `either(0, 42, 43)` returns `42`.)
 $(T2 equal,
         Compares ranges for element-by-element equality, e.g.
-        $(D equal([1, 2, 3], [1.0, 2.0, 3.0])) returns $(D true).)
+        `equal([1, 2, 3], [1.0, 2.0, 3.0])` returns `true`.)
 $(T2 isPermutation,
-        $(D isPermutation([1, 2], [2, 1])) returns $(D true).)
+        `isPermutation([1, 2], [2, 1])` returns `true`.)
 $(T2 isSameLength,
-        $(D isSameLength([1, 2, 3], [4, 5, 6])) returns $(D true).)
+        `isSameLength([1, 2, 3], [4, 5, 6])` returns `true`.)
 $(T2 levenshteinDistance,
-        $(D levenshteinDistance("kitten", "sitting")) returns $(D 3) by using
+        `levenshteinDistance("kitten", "sitting")` returns `3` by using
         the $(LUCKY Levenshtein distance _algorithm).)
 $(T2 levenshteinDistanceAndPath,
-        $(D levenshteinDistanceAndPath("kitten", "sitting")) returns
-        $(D tuple(3, "snnnsni")) by using the $(LUCKY Levenshtein distance
+        `levenshteinDistanceAndPath("kitten", "sitting")` returns
+        `tuple(3, "snnnsni")` by using the $(LUCKY Levenshtein distance
         _algorithm).)
 $(T2 max,
-        $(D max(3, 4, 2)) returns $(D 4).)
+        `max(3, 4, 2)` returns `4`.)
 $(T2 min,
-        $(D min(3, 4, 2)) returns $(D 2).)
+        `min(3, 4, 2)` returns `2`.)
 $(T2 mismatch,
-        $(D mismatch("oh hi", "ohayo")) returns $(D tuple(" hi", "ayo")).)
+        `mismatch("oh hi", "ohayo")` returns `tuple(" hi", "ayo")`.)
 $(T2 predSwitch,
-        $(D 2.predSwitch(1, "one", 2, "two", 3, "three")) returns $(D "two").)
+        `2.predSwitch(1, "one", 2, "two", 3, "three")` returns `"two"`.)
 )
 
 Copyright: Andrei Alexandrescu 2008-.
@@ -514,7 +514,7 @@ auto castSwitch(choices...)(Object switchObject)
 
 /** Clamps a value into the given bounds.
 
-This functions is equivalent to $(D max(lower, min(upper,val))).
+This functions is equivalent to `max(lower, min(upper,val))`.
 
 Params:
     val = The value to _clamp.
@@ -736,7 +736,7 @@ template equal(alias pred = "a == b")
 
     /++
     Compares two ranges for equality. The ranges may have
-    different element types, as long as $(D pred(r1.front, r2.front))
+    different element types, as long as `pred(r1.front, r2.front)`
     evaluates to $(D bool).
     Performs $(BIGOH min(r1.length, r2.length)) evaluations of $(D pred).
 
@@ -986,7 +986,7 @@ Encodes $(HTTP realityinteractive.com/rgrzywinski/archives/000249.html,
 edit operations) necessary to transform one sequence into
 another. Given sequences $(D s) (source) and $(D t) (target), a
 sequence of $(D EditOp) encodes the steps that need to be taken to
-convert $(D s) into $(D t). For example, if $(D s = "cat") and $(D
+convert `s` into `t`. For example, if `s = "cat"` and $(D
 "cars"), the minimal sequence that transforms $(D s) into $(D t) is:
 skip two characters, replace 't' with 'r', and insert an 's'. Working
 with edit operations is useful in applications such as spell-checkers
