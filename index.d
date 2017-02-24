@@ -88,6 +88,10 @@ $(BOOKTABLE ,
     )
     $(LEADINGROW Data integrity)
     $(TR
+        $(TDNW $(LINK2 std_experimental_checkedint.html, std.experimental.checkedint))
+        $(TD Checked integral types.)
+    )
+    $(TR
         $(TDNW $(LINK2 std_digest_crc.html, std.digest.crc))
         $(TD Cyclic Redundancy Check (32-bit) implementation.)
     )
