@@ -147,20 +147,16 @@ Conversions from string _to numeric types differ from the C equivalents
 `atoi()` and `atol()` by checking for overflow and not allowing whitespace.
 
 For conversion of strings _to signed types, the grammar recognized is:
-<pre>
-$(I Integer): $(I Sign UnsignedInteger)
+$(PRE $(I Integer): $(I Sign UnsignedInteger)
 $(I UnsignedInteger)
 $(I Sign):
     $(B +)
-    $(B -)
-</pre>
+    $(B -))
 
 For conversion _to unsigned types, the grammar recognized is:
-<pre>
-$(I UnsignedInteger):
+$(PRE $(I UnsignedInteger):
     $(I DecimalDigit)
-    $(I DecimalDigit) $(I UnsignedInteger)
-</pre>
+    $(I DecimalDigit) $(I UnsignedInteger))
  */
 template to(T)
 {
