@@ -5464,8 +5464,17 @@ if (isSomeChar!Char)
 
 /*****************************************************
  * Format arguments into buffer $(I buf) which must be large
- * enough to hold the result. Throws RangeError if it is not.
- * Returns: The slice of $(D buf) containing the formatted string.
+ * enough to hold the result.
+ *
+ * Returns:
+ *     The slice of `buf` containing the formatted string.
+ *
+ * Throws:
+ *     A `RangeError` if `buf` isn't large enough to hold the
+ *     formatted string.
+ *
+ *     A $(LREF FormatException) if the length of `args` is different
+ *     than the number of format specifiers in `fmt`.
  */
 char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
 {
@@ -5514,10 +5523,21 @@ char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
         // with formattedWrite
         import std.conv : text;
         import std.exception : enforce;
-        enforce(n == args.length, new FormatException(
-            text("Orphan format arguments: args[", n, "..", args.length, "]")));
+        enforce!FormatException(
+            n == args.length,
+            text("Orphan format arguments: args[", n, " .. ", args.length, "]")
+        );
     }
     return buf[0 .. i];
+}
+
+///
+@system unittest
+{
+    char[10] buf;
+
+    assert(sformat(buf[], "foo%s", 'C') == "fooC");
+    assert(sformat(buf[], "%s foo", "bar") == "bar foo");
 }
 
 @system unittest
