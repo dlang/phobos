@@ -75,6 +75,15 @@ import std.traits;
 
 private
 {
+    import core.atomic;
+    import core.thread;
+    import core.sync.mutex;
+    import core.sync.condition;
+    import std.range.primitives;
+    import std.range.interfaces;
+    import std.traits;
+    import std.concurrencybase;
+
     template hasLocalAliasing(T...)
     {
         static if (!T.length)
@@ -1496,7 +1505,8 @@ private interface IsGenerator {}
  * }
  * ---
  */
-class Generator(T) : Fiber, IsGenerator
+class Generator(T) :
+    Fiber, IsGenerator, InputRange!T
 {
     /**
      * Initializes a generator object which is associated with a static
@@ -1585,13 +1595,52 @@ class Generator(T) : Fiber, IsGenerator
     }
 
     /**
-     * Returns the most recently generated value.
+     * Returns the most recently generated value by shallow copy.
      */
     final T front() @property
     {
         return *m_value;
     }
 
+    /**
+     * Returns the most recently generated value without excuting a copy
+     * contructor. Will not compile for element types defining a
+     * postblit, because Generator does not return by reference.
+     */
+    final T moveFront()
+    {
+        static if (!hasElaborateCopyConstructor!T)
+        {
+            return front;
+        }
+        else
+        {
+            static assert(0,
+                    "Fiber front is rvalue and thus cannot be moved when it defines a postblit.");
+        }
+    }
+
+    final int opApply(scope int delegate(T) loopBody)
+    {
+        int broken;
+        for (; !empty; popFront())
+        {
+            broken = loopBody(front);
+            if (broken) break;
+        }
+        return broken;
+    }
+
+    final int opApply(scope int delegate(size_t, T) loopBody)
+    {
+        int broken;
+        for (size_t i; !empty; ++i, popFront())
+        {
+            broken = loopBody(i, front);
+            if (broken) break;
+        }
+        return broken;
+    }
 private:
     T* m_value;
 }
@@ -1624,6 +1673,7 @@ void yield(T)(T value)
 {
     import core.exception;
     import std.exception;
+    import std.range.interfaces;
 
     static void testScheduler(Scheduler s)
     {
@@ -1661,6 +1711,7 @@ void yield(T)(T value)
             {
                 tid.send(e);
             }
+
         });
         scheduler = null;
     }
@@ -1668,7 +1719,41 @@ void yield(T)(T value)
     testScheduler(new ThreadScheduler);
     testScheduler(new FiberScheduler);
 }
+///
+@system unittest
+{
+    import std.range;
 
+    InputRange!int myIota = iota(10).inputRangeObject;
+
+    myIota.popFront();
+    myIota.popFront();
+    assert(myIota.moveFront == 2);
+    assert(myIota.front == 2);
+    myIota.popFront();
+    assert(myIota.front == 3);
+
+    //can be assigned to std.range.interfaces.InputRange directly
+    myIota = new Generator!int(
+    {
+        foreach (i; 0 .. 10) yield(i);
+    });
+
+    myIota.popFront();
+    myIota.popFront();
+    assert(myIota.moveFront == 2);
+    assert(myIota.front == 2);
+    myIota.popFront();
+    assert(myIota.front == 3);
+
+    size_t[2] counter = [0, 0];
+    foreach (i, unused; myIota) counter[] += [1, i];
+
+    assert(myIota.empty);
+    assert(counter == [7, 21]);
+}
+
+// MessageBox Implementation
 private
 {
     /*
