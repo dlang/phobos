@@ -566,6 +566,9 @@ Returns:
 On success, the function returns the number of variables filled. This count
 can match the expected number of readings or fewer, even zero, if a
 matching failure happens.
+
+Throws:
+    An `Exception` if `S.length == 0` and `fmt` has format specifiers
  */
 uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
 if (allSatisfy!(isPointer, S))
