@@ -60,6 +60,9 @@ $(TR $(TH Function Name) $(TH Description)
     $(TR $(TD $(D $(LREF split)))
         $(TD Eagerly split a range or string into an _array.
     ))
+    $(TR $(TD $(D $(LREF staticArray)))
+        $(TD Create a static _array from an _array literal or range.
+    ))
     $(TR $(TD $(D $(LREF uninitializedArray)))
         $(TD Returns a new _array of type $(D T) without initializing its elements.
     ))
@@ -339,6 +342,165 @@ if (isNarrowString!String)
     static assert(!is(typeof(
         repeat(1).array()
     )));
+}
+
+/**
+ * Interprets an array literal as a static array.
+ *
+ * Params:
+ *      arr = An array literal.
+ *
+ * Returns: A static array of size `arr.length`.
+ *
+ * Warning:
+ * Do not initialize a dynamic array with a call to staticArray.
+ * The dynamic array slice would point to stack memory no longer in use.
+ * Instead define the static array first using type inference (or `int[4]`).
+ * ---
+ * int[] invalid = [1,2,3,4].staticArray; // Wrong
+ * ---
+ * See $(LINK2 http://issues.dlang.org/show_bug.cgi?id=12625, Issue 12625).
+ */
+pragma(inline, true)
+@nogc T[n] staticArray(T, size_t n)(T[n] arr)
+{
+    return arr;
+}
+
+/// Array size and type can be inferred:
+@safe @nogc pure nothrow unittest
+{
+    auto arr = [1,2,3,4].staticArray;
+    static assert(is(typeof(arr) == int[4])); // arr is a static array
+    assert(arr == [1,2,3,4]);
+}
+
+// dmd doesn't support inference of n, but not T for staticArray!immutable
+// http://issues.dlang.org/show_bug.cgi?id=15890
+/// The element type can also be supplied:
+@safe @nogc pure nothrow unittest
+{
+    auto arr = [1,2].staticArray!(immutable int, 2);
+    static assert(is(typeof(arr) == immutable(int)[2]));
+    assert(arr == [1,2].staticArray);
+}
+
+/**
+ * Initializes a static array from the first `n` elements of the range `r`.
+ *
+ * Preconditions: `r` has at least `n` elements.
+ *
+ * Params:
+ *      r = range (or aggregate with $(D opApply) function) whose elements are
+ *      copied into the static array.
+ *
+ * Returns:
+ *      A static array of size `n` initialized from `r`
+ */
+ForeachType!Iterable[n] staticArray(size_t n, Iterable)(Iterable r)
+if (isIterable!Iterable)
+{
+    import std.conv : emplaceRef;
+
+    alias E = ForeachType!Iterable;
+
+    // need mutable elements while the array is built
+    Unqual!E[n] result = void;
+
+    // manually count our index instead of using foreach(i, e; r) because:
+    // 1. for a range, we would need to use enumerate
+    static if (isInputRange!Iterable)
+    {
+        // we cannot foreach over r, it may have too many elements
+        foreach (i; 0..n)
+        {
+            assert(!r.empty, "r had less than n elements");
+            emplaceRef!E(result[i], r.front);
+            r.popFront();
+        }
+    }
+    else // opApply
+    {
+        // we may not have an indexed overload, so we need to count
+        size_t i;
+        foreach (e; r)
+        {
+            if (i == n) break; // got all the elements we need
+            emplaceRef!E(result[i++], e);
+        }
+        assert(i == n, "r had less than n elements");
+    }
+
+    // the type qualifiers are implicitly re-applied
+    return result;
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.range : only;
+    int[3] arr = only(1, 2, 3).staticArray!3;
+    assert(arr == [ 1, 2, 3 ]);
+}
+
+/// If the range has more than `n` elements, `staticArray` takes only `n`
+@safe pure nothrow unittest
+{
+    import std.range : take, repeat;
+    int[4] arr = repeat(5).staticArray!4;
+    assert(arr == [ 5, 5, 5, 5 ]);
+}
+
+/// `staticArray!n` will fail if given a range with less than `n` elements
+pure unittest
+{
+    import std.range : only, chain, repeat;
+    import std.exception : assertThrown;
+    import core.exception : AssertError;
+
+    assertThrown!AssertError(only(1,2,3).staticArray!5);
+
+    // extend the range to the desired length before handing it to staticArray
+    int[5] arr = only(1,2,3).chain(0.repeat).staticArray!5;
+    assert(arr == [ 1, 2, 3, 0, 0 ]);
+}
+
+/// `staticArray!n` works with `opApply` as well as a range interface
+unittest
+{
+    static struct OpApply
+    {
+        int opApply(int delegate(ref int) dg)
+        {
+            int res;
+            foreach(i; 0..5)
+            {
+                res = dg(i);
+                if(res) break;
+            }
+
+            return res;
+        }
+    }
+
+    int[5] arr = OpApply().staticArray!5;
+    assert(arr == [ 0, 1, 2, 3, 4 ]);
+}
+
+// immutable element support for staticArray
+@safe pure nothrow unittest
+{
+    import std.range : only;
+
+    immutable int i = 1;
+    auto arr0 = i.only.staticArray!1;
+    static assert(is(typeof(arr0) == immutable(int)[1]));
+    assert(arr0 == [ 1 ]);
+
+    immutable struct S { int i ; }
+    auto arr1 = S(1).only.staticArray!1;
+    static assert(is(typeof(arr1) == S[1]));
+    assert(arr1 == [ S(1) ]);
 }
 
 /**
