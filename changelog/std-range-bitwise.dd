@@ -1,6 +1,6 @@
 Added `std.range.bitwise` to create a bitwise adapter over an integral type range, consuming the range elements bit by bit.
 
-`std.range.bitwise` creates a bit by bit adapter over an integral type range.
+`std.range.bitwise` creates a bit by bit adapter over an integral type range:
 -------
 import std.range : bitwise;
 ubyte[] arr = [3, 9];

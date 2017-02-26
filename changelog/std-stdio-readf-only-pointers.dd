@@ -1,2 +1,14 @@
 `std.stdio.readf` now only accepts pointers as input arguments.
 
+For example, the "bad" version of the following code lead to very confusing
+errors from Phobos:
+
+-------
+import std.stdio;
+void main() {
+    int[3] row;
+    auto text = "10 20 30";
+    //readf(text, "%(%d %)", row);   // bad
+    readf(text, "%(%d %)", &row);  // OK
+}
+-------

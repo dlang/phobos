@@ -1,4 +1,5 @@
 Added `std.utf.decodeBack` which decodes the last UTF code point of given character range.
+
 -------
  import std.utf : decodeBack;
 
