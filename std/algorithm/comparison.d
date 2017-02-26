@@ -579,7 +579,8 @@ body
 
 // cmp
 /**********************************
-Performs three-way lexicographical comparison on two input ranges
+Performs three-way lexicographical comparison on two
+$(REF_ALTTEXT input ranges, isInputRange, std,range,primitives)
 according to predicate $(D pred). Iterating $(D r1) and $(D r2) in
 lockstep, $(D cmp) compares each element $(D e1) of $(D r1) with the
 corresponding element $(D e2) in $(D r2). If one of the ranges has been
@@ -1739,8 +1740,8 @@ If both ranges have a length member, this function is $(BIGOH 1). Otherwise,
 this function is $(BIGOH min(r1.length, r2.length)).
 
 Params:
-    r1 = a finite input range
-    r2 = a finite input range
+    r1 = a finite $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+    r2 = a finite $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
 
 Returns:
     $(D true) if both ranges have the same length, $(D false) otherwise.
