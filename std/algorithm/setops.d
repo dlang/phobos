@@ -55,7 +55,8 @@ _range of tuples of elements from each respective range.
 
 The conditions for the two-range case are as follows:
 
-If both ranges are finite, then one must be (at least) a forward range and the
+If both ranges are finite, then one must be (at least) a
+$(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) and the
 other an $(REF_ALTTEXT input range, isInputRange, std,range,primitives).
 
 If one _range is infinite and the other finite, then the finite _range must
@@ -545,8 +546,8 @@ pure @safe nothrow @nogc unittest
 
 // largestPartialIntersection
 /**
-Given a range of sorted forward ranges $(D ror), copies to $(D tgt)
-the elements that are common to most ranges, along with their number
+Given a range of sorted $(REF_ALTTEXT forward ranges, isForwardRange, std,range,primitives)
+$(D ror), copies to $(D tgt) the elements that are common to most ranges, along with their number
 of occurrences. All ranges in $(D ror) are assumed to be sorted by $(D
 less). Only the most frequent $(D tgt.length) elements are returned.
 
@@ -624,7 +625,8 @@ with each distinct element in the intersection.
 
 Params:
     less = The predicate the ranges are sorted by.
-    ror = A range of forward ranges sorted by `less`.
+    ror = A range of $(REF_ALTTEXT forward ranges, isForwardRange, std,range,primitives)
+    sorted by `less`.
     tgt = The target range to copy common elements to.
     weights = An associative array mapping elements to weights.
     sorted = Whether the elements copied should be in sorted order.

@@ -141,9 +141,9 @@ if (hasLength!(RandomAccessRange2) && hasSlicing!(RandomAccessRange2))
 
 // isSorted
 /**
-Checks whether a forward range is sorted according to the comparison
-operation $(D less). Performs $(BIGOH r.length) evaluations of $(D
-less).
+Checks whether a $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
+is sorted according to the comparison operation $(D less). Performs $(BIGOH r.length)
+evaluations of $(D less).
 
 Unlike `isSorted`, `isStrictlyMonotonic` does not allow for equal values,
 i.e. values for which both `less(a, b)` and `less(b, a)` are false.
@@ -922,7 +922,8 @@ collection. The complexity is the same as $(D sort)'s.
 
 The first overload of $(D makeIndex) writes to a range containing
 pointers, and the second writes to a range containing offsets. The
-first overload requires $(D Range) to be a forward range, and the
+first overload requires $(D Range) to be a
+$(REF_ALTTEXT forward range, isForwardRange, std,range,primitives), and the
 latter requires it to be a random-access range.
 
 $(D makeIndex) overwrites its second argument with the result, but

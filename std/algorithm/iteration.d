@@ -127,8 +127,9 @@ that have expensive evaluation, as a lazy alternative to $(REF array, std,array)
 In particular, it can be placed after a call to $(D map), or before a call
 to $(D filter).
 
-$(D cache) may provide bidirectional iteration if needed, but since
-this comes at an increased cost, it must be explicitly requested via the
+$(D cache) may provide
+$(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
+iteration if needed, but since this comes at an increased cost, it must be explicitly requested via the
 call to $(D cacheBidirectional). Furthermore, a bidirectional cache will
 evaluate the "center" element twice, when there is only one element left in
 the range.
@@ -1274,8 +1275,9 @@ private struct FilterResult(alias pred, Range)
 /**
  * $(D auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range));)
  *
- * Similar to $(D filter), except it defines a bidirectional
- * range. There is a speed disadvantage - the constructor spends time
+ * Similar to $(D filter), except it defines a
+ * $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives).
+ * There is a speed disadvantage - the constructor spends time
  * finding the last element in the range that satisfies the filtering
  * condition (in addition to finding the first one). The advantage is
  * that the filtered range can be spanned from both directions. Also,
@@ -3648,8 +3650,9 @@ Constraints:
 
 Returns:
     An input range of the subranges of elements between separators. If $(D r)
-    is a forward range or bidirectional range, the returned range will be
-    likewise.
+    is a $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
+    or $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives),
+    the returned range will be likewise.
 
 See_Also:
  $(REF _splitter, std,regex) for a version that splits using a regular
@@ -3932,8 +3935,8 @@ Constraints:
 
 Returns:
     An input range of the subranges of elements between separators. If $(D r)
-    is a forward range or bidirectional range, the returned range will be
-    likewise.
+    is a forward range or $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives),
+    the returned range will be likewise.
 
 See_Also: $(REF _splitter, std,regex) for a version that splits using a regular
 expression defined separator.
@@ -4200,8 +4203,8 @@ Constraints:
 
 Returns:
     An input range of the subranges of elements between separators. If $(D input)
-    is a forward range or bidirectional range, the returned range will be
-    likewise.
+    is a forward range or $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives),
+    the returned range will be likewise.
 
 See_Also: $(REF _splitter, std,regex) for a version that splits using a regular
 expression defined separator.
@@ -4929,7 +4932,8 @@ utility). Equivalence of elements is assessed by using the predicate
 $(D pred), by default $(D "a == b"). The predicate is passed to
 $(REF binaryFun, std,functional), and can either accept a string, or any callable
 that can be executed via $(D pred(element, element)). If the given range is
-bidirectional, $(D uniq) also yields a bidirectional range.
+bidirectional, $(D uniq) also yields a
+$(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives).
 
 Params:
     pred = Predicate for determining equivalence between range elements.
@@ -5149,8 +5153,8 @@ Lazily computes all _permutations of $(D r) using $(HTTP
 en.wikipedia.org/wiki/Heap%27s_algorithm, Heap's algorithm).
 
 Returns:
-A forward range the elements of which are an $(REF indexed, std,range)
-view into $(D r).
+A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
+the elements of which are an $(REF indexed, std,range) view into $(D r).
 
 See_Also:
 $(REF nextPermutation, std,algorithm,sorting).

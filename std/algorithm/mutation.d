@@ -105,7 +105,7 @@ back).
 
 Params:
     front = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
-    back = a forward range
+    back = a $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
 
 Returns:
     The number of elements brought to the front, i.e., the length of $(D back).
@@ -1673,7 +1673,8 @@ cases.))
 
 Params:
     s = a SwapStrategy to determine if the original order needs to be preserved
-    range = a bidirectional range with a length member
+    range = a $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
+    with a length member
     offset = which element(s) to remove
 
 Returns:
@@ -1915,7 +1916,8 @@ if (s == SwapStrategy.stable
 }
 
 /**
-Reduces the length of the bidirectional range $(D range) by removing
+Reduces the length of the
+$(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives) $(D range) by removing
 elements that satisfy $(D pred). If $(D s = SwapStrategy.unstable),
 elements are moved from the right end of the range over the elements
 to eliminate. If $(D s = SwapStrategy.stable) (the default),
@@ -2081,7 +2083,8 @@ if (isBidirectionalRange!Range
 Reverses $(D r) in-place.  Performs $(D r.length / 2) evaluations of $(D
 swap).
 Params:
-    r = a bidirectional range with swappable elements or a random access range with a length member
+    r = a $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
+    with swappable elements or a random access range with a length member
 
 See_Also:
     $(HTTP sgi.com/tech/stl/_reverse.html, STL's _reverse), $(REF retro, std,range) for a lazy reversed range view
@@ -2219,7 +2222,8 @@ if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
     long as the predicate returns true.
 
     Params:
-        range = a bidirectional or $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+        range = a $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
+        or $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
         element = the elements to remove
 
     Returns:
