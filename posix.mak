@@ -525,6 +525,16 @@ style: ../dscanner/dsc $(LIB)
 	@echo "Enforce space between binary operators"
 	grep -nrE "[[:alnum:]](==|!=|<=|<<|>>|>>>|^^)[[:alnum:]]|[[:alnum:]] (==|!=|<=|<<|>>|>>>|^^)[[:alnum:]]|[[:alnum:]](==|!=|<=|<<|>>|>>>|^^) [[:alnum:]]" $$(find . -name '*.d'); test $$? -eq 1
 
+	@echo "Validate changelog files (Do _not_ use REF in the title!)"
+	@for file in $$(find changelog -name '*.dd') ; do  \
+		cat $$file | head -n1 | grep -nqE '\$$\((REF|LINK2|HTTP|MREF)' && \
+		{ echo "$$file: The title line can't contain links - it's already a link" && exit 1; } ;\
+		cat $$file | head -n2 | tail -n1 | grep -q '^$$' || \
+		{ echo "$$file: After the title line an empty, separating line is expected" && exit 1; } ;\
+		cat $$file | head -n3 | tail -n1 | grep -nqE '^.{1,}$$'  || \
+		{ echo "$$file: The title is supposed to be followed by a long description" && exit 1; } ;\
+	done
+
 	@echo "Check that Ddoc runs without errors"
 	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -w -D -main -c -o- $$(find etc std -type f -name '*.d' | grep -vE 'std/experimental/ndslice/iteration.d') 2>&1 | grep -v "Deprecation:"; test $$? -eq 1
 
