@@ -1,3 +1,5 @@
+`MersenneTwisterEngine` has been updated so that its template signature matches the C++11 standard.
+
 `MersenneTwisterEngine` has been updated so that its template signature
 matches the C++11 standard (adding two new template parameters, an extra
 tempering parameter `d` and the initialization multiplier `f`).
