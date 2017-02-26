@@ -494,7 +494,7 @@ checkwhitespace: $(LIB)
 	mv dscanner_makefile_tmp ../dscanner/makefile
 	make -C ../dscanner githash debug
 
-style: ../dscanner/dsc
+style: ../dscanner/dsc $(LIB)
 	@echo "Check for trailing whitespace"
 	grep -nr '[[:blank:]]$$' etc std ; test $$? -eq 1
 
@@ -524,6 +524,9 @@ style: ../dscanner/dsc
 
 	@echo "Enforce space between binary operators"
 	grep -nrE "[[:alnum:]](==|!=|<=|<<|>>|>>>|^^)[[:alnum:]]|[[:alnum:]] (==|!=|<=|<<|>>|>>>|^^)[[:alnum:]]|[[:alnum:]](==|!=|<=|<<|>>|>>>|^^) [[:alnum:]]" $$(find . -name '*.d'); test $$? -eq 1
+
+	@echo "Check that Ddoc runs without errors"
+	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -w -D -main -c -o- $$(find etc std -type f -name '*.d' | grep -vE 'std/experimental/ndslice/iteration.d') 2>&1 | grep -v "Deprecation:"; test $$? -eq 1
 
 	# at the moment libdparse has problems to parse some modules (->excludes)
 	@echo "Running DScanner"

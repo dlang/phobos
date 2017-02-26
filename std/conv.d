@@ -1877,7 +1877,7 @@ This overload converts an character input range to a `bool`.
 
 Params:
     Target = the type to convert to
-    s = the lvalue of an input range
+    source = the lvalue of an input range
 
 Returns:
     A `bool`
@@ -2534,7 +2534,7 @@ if (isSomeString!Source && !is(Source == enum) &&
  *
  * Params:
  *     Target = a floating point type
- *     p = the lvalue of the range to _parse
+ *     source = the lvalue of the range to _parse
  *
  * Returns:
  *     A floating point number of type `Target`

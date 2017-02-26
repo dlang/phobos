@@ -2877,13 +2877,13 @@ pure @safe nothrow @nogc unittest
 
 /++
     Convenience function which calls
-    `range.$(REF popFrontN, std, range, primitives)(n)) and returns `range`.
+    `range.$(REF popFrontN, std, range, primitives)(n) and returns `range`.
     `drop` makes it easier to pop elements from a range
     and then pass it to another function within a single expression,
     whereas `popFrontN` would require multiple statements.
 
     `dropBack` provides the same functionality but instead calls
-    `range.$(REF popBackN, std, range, primitives)(n))
+    `range.$(REF popBackN, std, range, primitives)(n)
 
     Note: `drop` and `dropBack` will only pop $(I up to)
     `n` elements but will stop if the range is empty first.
@@ -2897,7 +2897,7 @@ pure @safe nothrow @nogc unittest
         `range` with up to `n` elements dropped
 
     See_Also:
-        $(REF popFront, std, range, primitives),$(REF popBackN, std, range, primitives)
+        $(REF popFront, std, range, primitives), $(REF popBackN, std, range, primitives)
   +/
 R drop(R)(R range, size_t n)
 if (isInputRange!R)
@@ -9941,6 +9941,7 @@ bit, from the least significant bit to the most significant bit.
 
 Params:
     R = an integral input range to iterate over
+    range = range to consume bit by by
 
 Returns:
     A `Bitwise` input range with propagated forward, bidirectional
