@@ -15,12 +15,22 @@ results. For example, `Checked!int` is a type that behaves like `int` but aborts
 execution immediately whenever involved in an operation that produces the
 arithmetically wrong result. The accompanying convenience function $(LREF
 checked) uses type deduction to convert a value `x` of integral type `T` to
-`Checked!T` by means of `checked(x)`. For example, $(D checked(1_000_000) *
-10_000) aborts execution because the operation overflows. Also, $(D checked(-1) >
-uint(0)) aborts execution (even though the built-in comparison $(D int(-1) >
-uint(0)) is surprisingly true due to language's conversion rules modeled  after
-C). Thus, `Checked!int` is a virtually drop-in replacement for `int` useable in
-debug builds, to be replaced by `int` in release mode if efficiency demands it.
+`Checked!T` by means of `checked(x)`. For example:
+
+---
+void main()
+{
+    import std.experimental.checkedint, std.stdio;
+    writeln((checked(5) + 7).get); // 12
+    writeln((checked(10) * 1000 * 1000 * 1000).get); // Overflow
+}
+---
+
+Similarly, $(D checked(-1) > uint(0)) aborts execution (even though the built-in
+comparison $(D int(-1) > uint(0)) is surprisingly true due to language's
+conversion rules modeled after C). Thus, `Checked!int` is a virtually drop-in
+replacement for `int` useable in debug builds, to be replaced by `int` in
+release mode if efficiency demands it.
 
 `Checked`  has customizable behavior with the help of a second type parameter,
 `Hook`. Depending on what methods `Hook` defines, core operations on the
