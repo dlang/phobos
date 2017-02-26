@@ -4520,7 +4520,7 @@ private template acceptedSpecs(T)
  * and returns it as type `T`.
  *
  * Params:
- *     T = the floating point type to return
+ *     T = the type to return
  *     input = the _input range to read from
  *     spec = the `FormatSpec` to use when reading from `input`
  * Returns:
@@ -4531,194 +4531,8 @@ private template acceptedSpecs(T)
  *     $(REF parse, std, conv) and $(REF to, std, conv)
  */
 T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-if (isInputRange!Range && is(Unqual!T == bool))
 {
-    import std.algorithm.searching : find;
-    import std.conv : parse, text;
-
-    if (spec.spec == 's') return parse!T(input);
-
-    enforce(find(acceptedSpecs!long, spec.spec).length,
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
-
-    return unformatValue!long(input, spec) != 0;
-}
-
-/// ditto
-T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-if (isInputRange!Range && is(T == typeof(null)))
-{
-    import std.conv : parse, text;
-    enforce(spec.spec == 's',
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
-
-    return parse!T(input);
-}
-
-/// ditto
-T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementType!Range))
-{
-
-    import std.algorithm.searching : find;
-    import std.conv : parse, text;
-
-    if (spec.spec == 'r')
-    {
-        static if (is(Unqual!(ElementEncodingType!Range) == char)
-                || is(Unqual!(ElementEncodingType!Range) == byte)
-                || is(Unqual!(ElementEncodingType!Range) == ubyte))
-            return rawRead!T(input);
-        else
-            throw new Exception("The raw read specifier %r may only be used with narrow strings and ranges of bytes.");
-    }
-
-    enforce(find(acceptedSpecs!T, spec.spec).length,
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
-
-    enforce(spec.width == 0, "Parsing integers with a width specification is not implemented");   // TODO
-
-    immutable uint base =
-        spec.spec == 'x' || spec.spec == 'X' ? 16 :
-        spec.spec == 'o' ? 8 :
-        spec.spec == 'b' ? 2 :
-        spec.spec == 's' || spec.spec == 'd' || spec.spec == 'u' ? 10 : 0;
-    assert(base != 0);
-
-    return parse!T(input, base);
-
-}
-
-/// ditto
-T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
-    && isSomeChar!(ElementType!Range)&& !is(Range == enum))
-{
-    import std.algorithm.searching : find;
-    import std.conv : parse, text;
-
-    if (spec.spec == 'r')
-    {
-        static if (is(Unqual!(ElementEncodingType!Range) == char)
-                || is(Unqual!(ElementEncodingType!Range) == byte)
-                || is(Unqual!(ElementEncodingType!Range) == ubyte))
-            return rawRead!T(input);
-        else
-            throw new Exception("The raw read specifier %r may only be used with narrow strings and ranges of bytes.");
-    }
-
-    enforce(find(acceptedSpecs!T, spec.spec).length,
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
-
-    return parse!T(input);
-}
-
-/// ditto
-T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementType!Range))
-{
-    import std.algorithm.searching : find;
-    import std.conv : to, text;
-    if (spec.spec == 's' || spec.spec == 'c')
-    {
-        auto result = to!T(input.front);
-        input.popFront();
-        return result;
-    }
-    enforce(find(acceptedSpecs!T, spec.spec).length,
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
-
-    static if (T.sizeof == 1)
-        return unformatValue!ubyte(input, spec);
-    else static if (T.sizeof == 2)
-        return unformatValue!ushort(input, spec);
-    else static if (T.sizeof == 4)
-        return unformatValue!uint(input, spec);
-    else
-        static assert(0);
-}
-
-/// ditto
-T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
-{
-    import std.conv : text;
-
-    if (spec.spec == '(')
-    {
-        return unformatRange!T(input, spec);
-    }
-    enforce(spec.spec == 's',
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
-
-    static if (isStaticArray!T)
-    {
-        T result;
-        auto app = result[];
-    }
-    else
-    {
-        import std.array : appender;
-        auto app = appender!T();
-    }
-    if (spec.trailing.empty)
-    {
-        for (; !input.empty; input.popFront())
-        {
-            static if (isStaticArray!T)
-                if (app.empty)
-                    break;
-            app.put(input.front);
-        }
-    }
-    else
-    {
-        immutable end = spec.trailing.front;
-        for (; !input.empty && input.front != end; input.popFront())
-        {
-            static if (isStaticArray!T)
-                if (app.empty)
-                    break;
-            app.put(input.front);
-        }
-    }
-    static if (isStaticArray!T)
-    {
-        enforce(app.empty, "need more input");
-        return result;
-    }
-    else
-        return app.data;
-}
-
-/// ditto
-T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
-{
-    import std.conv : parse, text;
-    if (spec.spec == '(')
-    {
-        return unformatRange!T(input, spec);
-    }
-    enforce(spec.spec == 's',
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
-
-    return parse!T(input);
-}
-
-/// ditto
-T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
-if (isInputRange!Range && isAssociativeArray!T && !is(T == enum))
-{
-    import std.conv : parse, text;
-    if (spec.spec == '(')
-    {
-        return unformatRange!T(input, spec);
-    }
-    enforce(spec.spec == 's',
-            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
-
-    return parse!T(input);
+    return unformatValueImpl!T(input, spec);
 }
 
 /// Booleans
@@ -4826,6 +4640,196 @@ if (isInputRange!Range && isAssociativeArray!T && !is(T == enum))
     spec.readUpToNextSpec(input);
     auto result = unformatValue!(dchar[1])(input, spec);
     assert(result[0] == 'a');
+}
+
+private T unformatValueImpl(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+if (isInputRange!Range && is(Unqual!T == bool))
+{
+    import std.algorithm.searching : find;
+    import std.conv : parse, text;
+
+    if (spec.spec == 's') return parse!T(input);
+
+    enforce(find(acceptedSpecs!long, spec.spec).length,
+            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+
+    return unformatValue!long(input, spec) != 0;
+}
+
+private T unformatValueImpl(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+if (isInputRange!Range && is(T == typeof(null)))
+{
+    import std.conv : parse, text;
+    enforce(spec.spec == 's',
+            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+
+    return parse!T(input);
+}
+
+/// ditto
+private T unformatValueImpl(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementType!Range))
+{
+
+    import std.algorithm.searching : find;
+    import std.conv : parse, text;
+
+    if (spec.spec == 'r')
+    {
+        static if (is(Unqual!(ElementEncodingType!Range) == char)
+                || is(Unqual!(ElementEncodingType!Range) == byte)
+                || is(Unqual!(ElementEncodingType!Range) == ubyte))
+            return rawRead!T(input);
+        else
+            throw new Exception("The raw read specifier %r may only be used with narrow strings and ranges of bytes.");
+    }
+
+    enforce(find(acceptedSpecs!T, spec.spec).length,
+            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+
+    enforce(spec.width == 0, "Parsing integers with a width specification is not implemented");   // TODO
+
+    immutable uint base =
+        spec.spec == 'x' || spec.spec == 'X' ? 16 :
+        spec.spec == 'o' ? 8 :
+        spec.spec == 'b' ? 2 :
+        spec.spec == 's' || spec.spec == 'd' || spec.spec == 'u' ? 10 : 0;
+    assert(base != 0);
+
+    return parse!T(input, base);
+
+}
+
+/// ditto
+private T unformatValueImpl(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
+    && isSomeChar!(ElementType!Range)&& !is(Range == enum))
+{
+    import std.algorithm.searching : find;
+    import std.conv : parse, text;
+
+    if (spec.spec == 'r')
+    {
+        static if (is(Unqual!(ElementEncodingType!Range) == char)
+                || is(Unqual!(ElementEncodingType!Range) == byte)
+                || is(Unqual!(ElementEncodingType!Range) == ubyte))
+            return rawRead!T(input);
+        else
+            throw new Exception("The raw read specifier %r may only be used with narrow strings and ranges of bytes.");
+    }
+
+    enforce(find(acceptedSpecs!T, spec.spec).length,
+            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+
+    return parse!T(input);
+}
+
+/// ditto
+private T unformatValueImpl(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementType!Range))
+{
+    import std.algorithm.searching : find;
+    import std.conv : to, text;
+    if (spec.spec == 's' || spec.spec == 'c')
+    {
+        auto result = to!T(input.front);
+        input.popFront();
+        return result;
+    }
+    enforce(find(acceptedSpecs!T, spec.spec).length,
+            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+
+    static if (T.sizeof == 1)
+        return unformatValue!ubyte(input, spec);
+    else static if (T.sizeof == 2)
+        return unformatValue!ushort(input, spec);
+    else static if (T.sizeof == 4)
+        return unformatValue!uint(input, spec);
+    else
+        static assert(0);
+}
+
+/// ditto
+private T unformatValueImpl(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
+{
+    import std.conv : text;
+
+    if (spec.spec == '(')
+    {
+        return unformatRange!T(input, spec);
+    }
+    enforce(spec.spec == 's',
+            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+
+    static if (isStaticArray!T)
+    {
+        T result;
+        auto app = result[];
+    }
+    else
+    {
+        import std.array : appender;
+        auto app = appender!T();
+    }
+    if (spec.trailing.empty)
+    {
+        for (; !input.empty; input.popFront())
+        {
+            static if (isStaticArray!T)
+                if (app.empty)
+                    break;
+            app.put(input.front);
+        }
+    }
+    else
+    {
+        immutable end = spec.trailing.front;
+        for (; !input.empty && input.front != end; input.popFront())
+        {
+            static if (isStaticArray!T)
+                if (app.empty)
+                    break;
+            app.put(input.front);
+        }
+    }
+    static if (isStaticArray!T)
+    {
+        enforce(app.empty, "need more input");
+        return result;
+    }
+    else
+        return app.data;
+}
+
+/// ditto
+private T unformatValueImpl(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
+{
+    import std.conv : parse, text;
+    if (spec.spec == '(')
+    {
+        return unformatRange!T(input, spec);
+    }
+    enforce(spec.spec == 's',
+            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+
+    return parse!T(input);
+}
+
+/// ditto
+private T unformatValueImpl(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+if (isInputRange!Range && isAssociativeArray!T && !is(T == enum))
+{
+    import std.conv : parse, text;
+    if (spec.spec == '(')
+    {
+        return unformatRange!T(input, spec);
+    }
+    enforce(spec.spec == 's',
+            text("Wrong unformat specifier '%", spec.spec , "' for ", T.stringof));
+
+    return parse!T(input);
 }
 
 /**
