@@ -883,26 +883,31 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
 
 @safe unittest
 {
-    import std.random : uniform;
+    import std.random : Random, uniform, unpredictableSeed;
 
-    auto a = new int[](uniform(0, 100));
-    foreach (ref e; a)
+    immutable uint[] seeds = [3923355730, 1927035882, unpredictableSeed];
+    foreach (s; seeds)
     {
-        e = uniform(0, 50);
-    }
-    auto pieces = partition3(a, 25);
-    assert(pieces[0].length + pieces[1].length + pieces[2].length == a.length);
-    foreach (e; pieces[0])
-    {
-        assert(e < 25);
-    }
-    foreach (e; pieces[1])
-    {
-        assert(e == 25);
-    }
-    foreach (e; pieces[2])
-    {
-        assert(e > 25);
+        auto r = Random(s);
+        auto a = new int[](uniform(0, 100, r));
+        foreach (ref e; a)
+        {
+            e = uniform(0, 50);
+        }
+        auto pieces = partition3(a, 25);
+        assert(pieces[0].length + pieces[1].length + pieces[2].length == a.length);
+        foreach (e; pieces[0])
+        {
+            assert(e < 25);
+        }
+        foreach (e; pieces[1])
+        {
+            assert(e == 25);
+        }
+        foreach (e; pieces[2])
+        {
+            assert(e > 25);
+        }
     }
 }
 
@@ -3500,24 +3505,31 @@ private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
 {
     import std.algorithm.comparison : max, min;
     import std.algorithm.iteration : reduce;
-    import std.random : uniform;
+    import std.random : Random, uniform, unpredictableSeed;
 
     debug(std_algorithm) scope(success)
         writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
-    int[] a = new int[uniform(1, 10000)];
-        foreach (ref e; a) e = uniform(-1000, 1000);
-    auto k = uniform(0, a.length);
-    topN(a, k);
-    if (k > 0)
+    immutable uint[] seeds = [90027751, 2709791795, 1374631933, 995751648, 3541495258, 984840953, unpredictableSeed];
+    foreach (s; seeds)
     {
-        auto left = reduce!max(a[0 .. k]);
-        assert(left <= a[k]);
-    }
-    if (k + 1 < a.length)
-    {
-        auto right = reduce!min(a[k + 1 .. $]);
-        assert(right >= a[k]);
+        auto r = Random(s);
+
+        int[] a = new int[uniform(1, 10000, r)];
+        foreach (ref e; a) e = uniform(-1000, 1000, r);
+
+        auto k = uniform(0, a.length, r);
+        topN(a, k);
+        if (k > 0)
+        {
+            auto left = reduce!max(a[0 .. k]);
+            assert(left <= a[k]);
+        }
+        if (k + 1 < a.length)
+        {
+            auto right = reduce!min(a[k + 1 .. $]);
+            assert(right >= a[k]);
+        }
     }
 }
 
