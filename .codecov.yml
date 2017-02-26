@@ -11,7 +11,7 @@ coverage:
   status:
 
     # Learn more at https://codecov.io/docs#yaml_default_commit_status
-    project: true
+    project: false
     patch: true
     changes: false
 
