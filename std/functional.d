@@ -10,38 +10,38 @@ $(MREF std, algorithm) or $(MREF std, range).
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(D $(LREF adjoin)))
+    $(TR $(TD `$(LREF adjoin)`)
         $(TD Joins a couple of functions into one that executes the original
         functions independently and returns a tuple with all the results.
     ))
-    $(TR $(TD $(D $(LREF compose)), $(D $(LREF pipe)))
+    $(TR $(TD `$(LREF compose)`, `$(LREF pipe)`)
         $(TD Join a couple of functions into one that executes the original
         functions one after the other, using one function's result for the next
         function's argument.
     ))
-    $(TR $(TD $(D $(LREF forward)))
+    $(TR $(TD `$(LREF forward)`)
         $(TD Forwards function arguments while saving ref-ness.
     ))
-    $(TR $(TD $(D $(LREF lessThan)), $(D $(LREF greaterThan)), $(D $(LREF equalTo)))
+    $(TR $(TD `$(LREF lessThan)`, `$(LREF greaterThan)`, `$(LREF equalTo)`)
         $(TD Ready-made predicate functions to compare two values.
     ))
-    $(TR $(TD $(D $(LREF memoize)))
+    $(TR $(TD `$(LREF memoize)`)
         $(TD Creates a function that caches its result for fast re-evaluation.
     ))
-    $(TR $(TD $(D $(LREF not)))
+    $(TR $(TD `$(LREF not)`)
         $(TD Creates a function that negates another.
     ))
-    $(TR $(TD $(D $(LREF partial)))
+    $(TR $(TD `$(LREF partial)`)
         $(TD Creates a function that binds the first argument of a given function
         to a given value.
     ))
-    $(TR $(TD $(D $(LREF reverseArgs)), $(D $(LREF binaryReverseArgs)))
+    $(TR $(TD `$(LREF reverseArgs)`, `$(LREF binaryReverseArgs)`)
         $(TD Predicate that reverses the order of its arguments.
     ))
-    $(TR $(TD $(D $(LREF toDelegate)))
+    $(TR $(TD `$(LREF toDelegate)`)
         $(TD Converts a callable to a delegate.
     ))
-    $(TR $(TD $(D $(LREF unaryFun)), $(D $(LREF binaryFun)))
+    $(TR $(TD `$(LREF unaryFun)`, `$(LREF binaryFun)`)
         $(TD Create a unary or binary function from a string. Most often
         used when defining algorithms on ranges.
     ))
@@ -531,7 +531,7 @@ alias equalTo = safeOp!"==";
 }
 /**
    N-ary predicate that reverses the order of arguments, e.g., given
-   $(D pred(a, b, c)), returns $(D pred(c, b, a)).
+   `pred(a, b, c)`, returns `pred(c, b, a)`.
 */
 template reverseArgs(alias pred)
 {
@@ -581,7 +581,7 @@ template reverseArgs(alias pred)
 
 /**
    Binary predicate that reverses the order of arguments, e.g., given
-   $(D pred(a, b)), returns $(D pred(b, a)).
+   `pred(a, b)`, returns `pred(b, a)`.
 */
 template binaryReverseArgs(alias pred)
 {
@@ -792,7 +792,7 @@ invocation, the returned tuple is the adjoined results of all
 functions.
 
 Note: In the special case where only a single function is provided
-($(D F.length == 1)), adjoin simply aliases to the single passed function
+(`F.length == 1`), adjoin simply aliases to the single passed function
 ($(D F[0])).
 */
 template adjoin(F...)
@@ -881,7 +881,7 @@ if (F.length > 1)
 }
 
 /**
-   Composes passed-in functions $(D fun[0], fun[1], ...) returning a
+   Composes passed-in functions `fun[0], fun[1], ...` returning a
    function $(D f(x)) that in turn returns $(D
    fun[0](fun[1](...(x)))...). Each function can be a regular
    functions, a delegate, or a string.

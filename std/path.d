@@ -2944,9 +2944,9 @@ if (isConvertibleToString!R1 || isConvertibleToString!R2)
         b = A filename character.
 
     Returns:
-        $(D < 0) if $(D a < b),
-        $(D 0) if $(D a == b), and
-        $(D > 0) if $(D a > b).
+        `< 0` if `a < b`,
+        `0` if `a == b`, and
+        `> 0` if `a > b`.
 */
 int filenameCharCmp(CaseSensitive cs = CaseSensitive.osDefault)(dchar a, dchar b)
     @safe pure nothrow
@@ -3017,9 +3017,9 @@ int filenameCharCmp(CaseSensitive cs = CaseSensitive.osDefault)(dchar a, dchar b
         filename2 = range for second file name
 
     Returns:
-        $(D < 0) if $(D filename1 < filename2),
-        $(D 0) if $(D filename1 == filename2) and
-        $(D > 0) if $(D filename1 > filename2).
+        `< 0` if `filename1 < filename2`,
+        `0` if `filename1 == filename2` and
+        `> 0` if `filename1 > filename2`.
 
     See_Also:
         $(LREF filenameCharCmp)
@@ -3423,7 +3423,7 @@ if (isConvertibleToString!Range)
             representation is in the range 0-31.)
         $(LI $(D filename) must not contain any of the following $(I reserved
             characters): <>:"/\|?*)
-        $(LI $(D filename) may not end with a space ($(D ' ')) or a period
+        $(LI `filename` may not end with a space (`' '`) or a period
             ($(D '.')).)
     )
 
@@ -3564,7 +3564,7 @@ unittest
         $(LI If the second character of $(D path) is a colon ($(D ':')),
             the first character is interpreted as a drive letter, and
             must be in the range A-Z (case insensitive).)
-        $(LI If $(D path) is on the form $(D `\\$(I server)\$(I share)\...`)
+        $(LI If `path` is on the form ``\\$(I server)\$(I share)\...``
             (UNC path), $(LREF isValidFilename) is applied to $(I server)
             and $(I share) as well.)
         $(LI If $(D path) starts with $(D `\\?\`) (long UNC path), the

@@ -27,7 +27,7 @@ struct NullAllocator
     void[] allocateAll() shared { return null; }
     /**
     These methods return $(D false).
-    Precondition: $(D b is null). This is because there is no other possible
+    Precondition: `b is null`. This is because there is no other possible
     legitimate input.
     */
     bool expand(ref void[] b, size_t s) shared
@@ -46,7 +46,7 @@ struct NullAllocator
     void[] resolveInternalPointer(void*) shared const { return null; }
     /**
     No-op.
-    Precondition: $(D b is null)
+    Precondition: `b is null`
     */
     bool deallocate(void[] b) shared { assert(b is null); return true; }
     /**

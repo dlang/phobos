@@ -1872,12 +1872,12 @@ T[] substr (T) (T[] str, ptrdiff_t start = 0, ptrdiff_t length = ptrdiff_t.min)
  *     caseInsensitive = if true, a case-insensitive comparison will be made,
  *                       otherwise a case-sensitive comparison will be made
  *
- * Returns: (for $(D pred = "a < b")):
+ * Returns: (for `pred = "a < b"`):
  *
  * $(BOOKTABLE,
- * $(TR $(TD $(D < 0))  $(TD $(D s1 < s2) ))
- * $(TR $(TD $(D = 0))  $(TD $(D s1 == s2)))
- * $(TR $(TD $(D > 0))  $(TD $(D s1 > s2)))
+ * $(TR $(TD `< 0`)  $(TD `s1 < s2` ))
+ * $(TR $(TD `= 0`)  $(TD `s1 == s2`))
+ * $(TR $(TD `> 0`)  $(TD `s1 > s2`))
  * )
  */
 int compareFirstN(alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length)

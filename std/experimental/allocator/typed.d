@@ -75,17 +75,17 @@ $(T2 AllocFlag.threadLocal |$(NBSP)AllocFlag.hasNoIndirections
 |$(NBSP)AllocFlag.fixedSize,
 This is the most specific allocation policy: the memory being allocated is
 thread local, has no indirections at all, and will not be reallocated. Examples
-of types fitting this description: `int`, `double`, $(D Tuple!(int, long)), but
-not $(D Tuple!(int, string)), which contains an indirection.)
+of types fitting this description: `int`, `double`, `Tuple!(int, long)`, but
+not `Tuple!(int, string)`, which contains an indirection.)
 
 $(T2 AllocFlag.threadLocal |$(NBSP)AllocFlag.hasNoIndirections,
 As above, but may be reallocated later. Examples of types fitting this
-description are $(D int[]), $(D double[]), $(D Tuple!(int, long)[]), but not
-$(D Tuple!(int, string)[]), which contains an indirection.)
+description are `int[]`, `double[]`, `Tuple!(int, long)[]`, but not
+`Tuple!(int, string)[]`, which contains an indirection.)
 
 $(T2 AllocFlag.threadLocal,
 As above, but may embed indirections. Examples of types fitting this
-description are $(D int*[]), $(D Object[]), $(D Tuple!(int, string)[]).)
+description are `int*[]`, `Object[]`, `Tuple!(int, string)[]`.)
 
 $(T2 AllocFlag.immutableShared |$(NBSP)AllocFlag.hasNoIndirections
 |$(NBSP)AllocFlag.fixedSize,
@@ -309,7 +309,7 @@ struct TypedAllocator(PrimaryAllocator, Policies...)
     T = element type of the array being created
     array = a reference to the array being grown
     delta = number of elements to add (upon success the new length of `array`
-    is $(D array.length + delta))
+    is `array.length + delta`)
     init = element used for filling the array
     range = range used for initializing the array elements
 
@@ -341,8 +341,8 @@ struct TypedAllocator(PrimaryAllocator, Policies...)
     /**
     Shrinks an array by `delta` elements using `allocatorFor!(T[])`.
 
-    If $(D arr.length < delta), does nothing and returns `false`. Otherwise,
-    destroys the last $(D arr.length - delta) elements in the array and then
+    If `arr.length < delta`, does nothing and returns `false`. Otherwise,
+    destroys the last `arr.length - delta` elements in the array and then
     reallocates the array's buffer. If reallocation fails, fills the array with
     default-initialized data.
 
@@ -350,11 +350,11 @@ struct TypedAllocator(PrimaryAllocator, Policies...)
     T = element type of the array being created
     arr = a reference to the array being shrunk
     delta = number of elements to remove (upon success the new length of
-    `arr` is $(D arr.length - delta))
+    `arr` is `arr.length - delta`)
 
     Returns:
     `true` upon success, `false` if memory could not be reallocated. In the
-    latter case $(D arr[$ - delta .. $]) is left with default-initialized
+    latter case `arr[$ - delta .. $]` is left with default-initialized
     elements.
 
     Throws:

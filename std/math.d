@@ -5464,8 +5464,8 @@ if (isIntegral!(X) && isFloatingPoint!(R))
 }
 
 /*********************************
-Returns $(D -1) if $(D x < 0), $(D x) if $(D x == 0), $(D 1) if
-$(D x > 0), and $(NAN) if x==$(NAN).
+Returns `-1` if `x < 0`, `x` if `x == 0`, `1` if
+`x > 0`, and $(NAN) if x==$(NAN).
  */
 F sgn(F)(F x) @safe pure nothrow @nogc
 {
@@ -7068,7 +7068,7 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
 }
 
 /**
-   Returns $(D approxEqual(lhs, rhs, 1e-2, 1e-5)).
+   Returns `approxEqual(lhs, rhs, 1e-2, 1e-5)`.
  */
 bool approxEqual(T, U)(T lhs, U rhs)
 {

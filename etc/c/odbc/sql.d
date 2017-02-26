@@ -15,7 +15,7 @@ typically not a part of the distribution packages of other compilers
 such as `gdc` and `ldc`). To use ODBC, install it per the vendor- and
 platform-specific instructions and then use the appropriate command-line
 flags (e.g. for dmd, `-L-lodbc` on Posix and `-Lodbc32.lib` on Windows) to link
-with the ODBC library. On Windows, using $(D pragma(lib, "odbc32")) in D
+with the ODBC library. On Windows, using `pragma(lib, "odbc32")` in D
 code at top level is also appropriate.
 
 See_Also: $(LUCKY ODBC API Reference on MSN Online)

@@ -6,23 +6,23 @@ It contains generic _mutation algorithms.
 $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 $(T2 bringToFront,
-        If $(D a = [1, 2, 3]) and $(D b = [4, 5, 6, 7]),
-        $(D bringToFront(a, b)) leaves $(D a = [4, 5, 6]) and
-        $(D b = [7, 1, 2, 3]).)
+        If `a = [1, 2, 3]` and `b = [4, 5, 6, 7]`,
+        `bringToFront(a, b)` leaves `a = [4, 5, 6]` and
+        `b = [7, 1, 2, 3]`.)
 $(T2 copy,
         Copies a range to another. If
-        $(D a = [1, 2, 3]) and $(D b = new int[5]), then $(D copy(a, b))
-        leaves $(D b = [1, 2, 3, 0, 0]) and returns $(D b[3 .. $]).)
+        `a = [1, 2, 3]` and `b = new int[5]`, then `copy(a, b)`
+        leaves `b = [1, 2, 3, 0, 0]` and returns `b[3 .. $]`.)
 $(T2 fill,
         Fills a range with a pattern,
-        e.g., if $(D a = new int[3]), then $(D fill(a, 4))
-        leaves $(D a = [4, 4, 4]) and $(D fill(a, [3, 4])) leaves
-        $(D a = [3, 4, 3]).)
+        e.g., if `a = new int[3]`, then `fill(a, 4)`
+        leaves `a = [4, 4, 4]` and `fill(a, [3, 4])` leaves
+        `a = [3, 4, 3]`.)
 $(T2 initializeAll,
-        If $(D a = [1.2, 3.4]), then $(D initializeAll(a)) leaves
-        $(D a = [double.init, double.init]).)
+        If `a = [1.2, 3.4]`, then `initializeAll(a)` leaves
+        `a = [double.init, double.init]`.)
 $(T2 move,
-        $(D move(a, b)) moves $(D a) into $(D b). $(D move(a)) reads $(D a)
+        `move(a, b)` moves `a` into `b`. `move(a)` reads `a`
         destructively when necessary.)
 $(T2 moveAll,
         Moves all elements from one range to another.)
@@ -32,21 +32,21 @@ $(T2 remove,
         Removes elements from a range in-place, and returns the shortened
         range.)
 $(T2 reverse,
-        If $(D a = [1, 2, 3]), $(D reverse(a)) changes it to $(D [3, 2, 1]).)
+        If `a = [1, 2, 3]`, `reverse(a)` changes it to `[3, 2, 1]`.)
 $(T2 strip,
         Strips all leading and trailing elements equal to a value, or that
         satisfy a predicate.
-        If $(D a = [1, 1, 0, 1, 1]), then $(D strip(a, 1)) and
-        $(D strip!(e => e == 1)(a)) returns $(D [0]).)
+        If `a = [1, 1, 0, 1, 1]`, then `strip(a, 1)` and
+        `strip!(e => e == 1)(a)` returns `[0]`.)
 $(T2 stripLeft,
         Strips all leading elements equal to a value, or that satisfy a
-        predicate.  If $(D a = [1, 1, 0, 1, 1]), then $(D stripLeft(a, 1)) and
-        $(D stripLeft!(e => e == 1)(a)) returns $(D [0, 1, 1]).)
+        predicate.  If `a = [1, 1, 0, 1, 1]`, then `stripLeft(a, 1)` and
+        `stripLeft!(e => e == 1)(a)` returns `[0, 1, 1]`.)
 $(T2 stripRight,
         Strips all trailing elements equal to a value, or that satisfy a
         predicate.
-        If $(D a = [1, 1, 0, 1, 1]), then $(D stripRight(a, 1)) and
-        $(D stripRight!(e => e == 1)(a)) returns $(D [1, 1, 0]).)
+        If `a = [1, 1, 0, 1, 1]`, then `stripRight(a, 1)` and
+        `stripRight!(e => e == 1)(a)` returns `[1, 1, 0]`.)
 $(T2 swap,
         Swaps two values.)
 $(T2 swapAt,
@@ -216,7 +216,7 @@ buffer. For example:
 /**
 The $(D front) range may actually "step over" the $(D back)
 range. This is very useful with forward ranges that cannot compute
-comfortably right-bounded subranges like $(D arr[0 .. 4]) above. In
+comfortably right-bounded subranges like `arr[0 .. 4]` above. In
 the example below, $(D r2) is a right subrange of $(D r1).
 */
 @safe unittest
@@ -1555,12 +1555,12 @@ algorithm. For example, consider an algorithm that sorts $(D [ "abc",
 "b", "aBc" ]) according to $(D toUpper(a) < toUpper(b)). That
 algorithm might choose to swap the two equivalent strings $(D "abc")
 and $(D "aBc"). That does not affect the sorting since both $(D [
-"abc", "aBc", "b" ]) and $(D [ "aBc", "abc", "b" ]) are valid
+"abc", "aBc", "b" ]) and `[ "aBc", "abc", "b" ]` are valid
 outcomes.
 
 Some situations require that the algorithm must NOT ever change the
 relative ordering of equivalent elements (in the example above, only
-$(D [ "abc", "aBc", "b" ]) would be the correct result). Such
+`[ "abc", "aBc", "b" ]` would be the correct result). Such
 algorithms are called $(B stable). If the ordering algorithm may swap
 equivalent elements discretionarily, the ordering is called $(B
 unstable).
@@ -1614,7 +1614,7 @@ std.algorithm) only change $(I content), not $(I topology). The value
 $(D 8) is repeated because $(LREF move) was invoked to
 move elements around and on integers $(D move) simply copies the source to
 the destination. To replace $(D a) with the effect of the removal,
-simply assign $(D a = remove(a, 1)). The slice will be rebound to the
+simply assign `a = remove(a, 1)`. The slice will be rebound to the
 shorter array and the operation completes with maximal efficiency.
 
 Multiple indices can be passed into $(D remove). In that case,
@@ -1639,7 +1639,7 @@ assert(remove(a, 1, tuple(3, 5), 9) == [ 0, 2, 5, 6, 7, 8, 10 ]);
 
 In this case, the slots at positions 1, 3, 4, and 9 are removed from
 the array. The tuple passes in a range closed to the left and open to
-the right (consistent with built-in slices), e.g. $(D tuple(3, 5))
+the right (consistent with built-in slices), e.g. `tuple(3, 5)`
 means indices $(D 3) and $(D 4) but not $(D 5).
 
 If the need is to remove some elements in the range but the order of
@@ -1916,9 +1916,9 @@ if (s == SwapStrategy.stable
 
 /**
 Reduces the length of the bidirectional range $(D range) by removing
-elements that satisfy $(D pred). If $(D s = SwapStrategy.unstable),
+elements that satisfy `pred`. If `s = SwapStrategy.unstable`,
 elements are moved from the right end of the range over the elements
-to eliminate. If $(D s = SwapStrategy.stable) (the default),
+to eliminate. If `s = SwapStrategy.stable` (the default),
 elements are moved progressively to front such that their relative
 order is preserved. Returns the filtered range.
 
@@ -2078,7 +2078,7 @@ if (isBidirectionalRange!Range
 
 // reverse
 /**
-Reverses $(D r) in-place.  Performs $(D r.length / 2) evaluations of $(D
+Reverses `r` in-place.  Performs `r.length / 2` evaluations of $(D
 swap).
 Params:
     r = a bidirectional range with swappable elements or a random access range with a length member

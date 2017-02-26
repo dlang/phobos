@@ -1512,7 +1512,7 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
  completely different. On Windows, they're what is returned by
  $(HTTP msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx,
  GetFileAttributes), whereas on Posix systems, they're the $(LUCKY
- st_mode) value which is part of the $(D stat struct) gotten by
+ st_mode) value which is part of the `stat struct` gotten by
  calling the $(HTTP en.wikipedia.org/wiki/Stat_%28Unix%29, $(D stat))
  function.
 

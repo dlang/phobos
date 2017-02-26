@@ -4,11 +4,11 @@ module std.experimental.allocator.building_blocks.bucketizer;
 /**
 
 A $(D Bucketizer) uses distinct allocators for handling allocations of sizes in
-the intervals $(D [min, min + step - 1]), $(D [min + step, min + 2 * step - 1]),
-$(D [min + 2 * step, min + 3 * step - 1]), $(D ...), $(D [max - step + 1, max]).
+the intervals `[min, min + step - 1]`, `[min + step, min + 2 * step - 1]`,
+`[min + 2 * step, min + 3 * step - 1]`, `...`, `[max - step + 1, max]`.
 
 $(D Bucketizer) holds a fixed-size array of allocators and dispatches calls to
-them appropriately. The size of the array is $(D (max + 1 - min) / step), which
+them appropriately. The size of the array is `(max + 1 - min) / step`, which
 must be an exact division.
 
 Allocations for sizes smaller than $(D min) or larger than $(D max) are illegal
@@ -87,8 +87,8 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 
     /**
     This method allows expansion within the respective bucket range. It succeeds
-    if both $(D b.length) and $(D b.length + delta) fall in a range of the form
-    $(D [min + k * step, min + (k + 1) * step - 1]).
+    if both `b.length` and `b.length + delta` fall in a range of the form
+    `[min + k * step, min + (k + 1) * step - 1]`.
     */
     bool expand(ref void[] b, size_t delta)
     {

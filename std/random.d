@@ -255,9 +255,9 @@ if (isUnsigned!UIntType)
     enum bool isUniformRandom = true;
     /// Does this generator have a fixed range? ($(D_PARAM true)).
     enum bool hasFixedRange = true;
-    /// Lowest generated value ($(D 1) if $(D c == 0), $(D 0) otherwise).
+    /// Lowest generated value (`1` if `c == 0`, `0` otherwise).
     enum UIntType min = ( c == 0 ? 1 : 0 );
-    /// Highest generated value ($(D modulus - 1)).
+    /// Highest generated value (`modulus - 1`).
     enum UIntType max = m - 1;
 /**
 The parameters of this distribution. The random number is $(D_PARAM x
@@ -1971,7 +1971,7 @@ if (isFloatingPoint!F)
 
 /**
 Returns a random, uniformly chosen, element `e` from the supplied
-$(D Range range). If no random number generator is passed, the default
+`Range range`. If no random number generator is passed, the default
 `rndGen` is used.
 
 Params:
@@ -1981,7 +1981,7 @@ Params:
 
 Returns:
     A single random element drawn from the `range`. If it can, it will
-    return a `ref` to the $(D range element), otherwise it will return
+    return a `ref` to the `range element`, otherwise it will return
     a copy.
  */
 auto ref choice(Range, RandomGen = Random)(auto ref Range range,
@@ -2095,9 +2095,9 @@ if (isRandomAccessRange!Range)
 }
 
 /**
-Partially shuffles the elements of $(D r) such that upon returning $(D r[0 .. n])
-is a random subset of $(D r) and is randomly ordered.  $(D r[n .. r.length])
-will contain the elements not in $(D r[0 .. n]).  These will be in an undefined
+Partially shuffles the elements of `r` such that upon returning `r[0 .. n]`
+is a random subset of `r` and is randomly ordered.  `r[n .. r.length]`
+will contain the elements not in `r[0 .. n]`.  These will be in an undefined
 order, but will not be random in the sense that their order after
 $(D partialShuffle) returns will not be independent of their order before
 $(D partialShuffle) was called.
@@ -2546,7 +2546,7 @@ O(total).
 
 RandomSample will throw an exception if $(D total) is verifiably
 less than the total number of elements available in the input,
-or if $(D n > total).
+or if `n > total`.
 
 If no random number generator is passed to $(D randomSample), the
 thread-global RNG rndGen will be used internally.

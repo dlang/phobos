@@ -513,7 +513,7 @@ auto md5Of(T...)(T data)
  * OOP API MD5 implementation.
  * See $(D std.digest.digest) for differences between template and OOP API.
  *
- * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!MD5), see
+ * This is an alias for `$(REF WrapperDigest, std,digest,digest)!MD5`, see
  * there for more information.
  */
 alias MD5Digest = WrapperDigest!MD5;

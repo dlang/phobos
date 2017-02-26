@@ -40,7 +40,7 @@ blocks are rotated to the root of the tree. That way allocations are cache
 friendly and also frequently used sizes are more likely to be found quickly,
 whereas seldom used sizes migrate to the leaves of the tree.
 
-$(D FreeTree) rounds up small allocations to at least $(D 4 * size_t.sizeof),
+`FreeTree` rounds up small allocations to at least `4 * size_t.sizeof`,
 which on 64-bit system is one cache line size. If very small objects need to
 be efficiently allocated, the $(D FreeTree) should be fronted with an
 appropriate small object allocator.
@@ -260,7 +260,7 @@ struct FreeTree(ParentAllocator)
     }
 
     /**
-    Returns $(D parent.goodAllocSize(max(Node.sizeof, s))).
+    Returns `parent.goodAllocSize(max(Node.sizeof, s))`.
     */
     static if (stateSize!ParentAllocator)
         size_t goodAllocSize(size_t s)

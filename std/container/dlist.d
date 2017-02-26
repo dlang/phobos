@@ -552,7 +552,7 @@ Complexity: $(BIGOH 1).
 Removes $(D howMany) values at the front or back of the
 container. Unlike the unparameterized versions above, these functions
 do not throw if they could not remove $(D howMany) elements. Instead,
-if $(D howMany > n), all elements are removed. The returned value is
+if `howMany > n`, all elements are removed. The returned value is
 the effective number of elements removed. The stable version behaves
 the same, but guarantees that ranges iterating over the container are
 never invalidated.

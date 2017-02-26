@@ -37,8 +37,8 @@ both internal and external fragmentation.
 The size of each block can be selected either during compilation or at run
 time. Statically-known block sizes are frequent in practice and yield slightly
 better performance. To choose a block size statically, pass it as the $(D
-blockSize) parameter as in $(D BitmappedBlock!(Allocator, 4096)). To choose a block
-size parameter, use $(D BitmappedBlock!(Allocator, chooseAtRuntime)) and pass the
+blockSize) parameter as in `BitmappedBlock!(Allocator, 4096)`. To choose a block
+size parameter, use `BitmappedBlock!(Allocator, chooseAtRuntime)` and pass the
 block size to the constructor.
 
 */
@@ -65,7 +65,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         "Block size must be a multiple of the alignment");
 
     /**
-    If $(D blockSize == chooseAtRuntime), $(D BitmappedBlock) offers a read/write
+    If `blockSize == chooseAtRuntime`, `BitmappedBlock` offers a read/write
     property $(D blockSize). It must be set before any use of the allocator.
     Otherwise (i.e. $(D theBlockSize) is a legit constant), $(D blockSize) is
     an alias for $(D theBlockSize). Whether constant or variable, must also be
@@ -298,7 +298,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 
     /**
     Allocates a block with specified alignment $(D a). The alignment must be a
-    power of 2. If $(D a <= alignment), function forwards to $(D allocate).
+    power of 2. If `a <= alignment`, function forwards to `allocate`.
     Otherwise, it attempts to overallocate and then adjust the result for
     proper alignment. In the worst case the slack memory is around two blocks.
     */

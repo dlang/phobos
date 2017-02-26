@@ -4,12 +4,12 @@
  * Support for Base64 encoding and decoding.
  *
  * This module provides two default implementations of Base64 encoding,
- * $(D $(LREF Base64)) with a standard encoding alphabet, and a variant
- * $(D $(LREF Base64URL)) that has a modified encoding alphabet designed to be
+ * `$(LREF Base64)` with a standard encoding alphabet, and a variant
+ * `$(LREF Base64URL)` that has a modified encoding alphabet designed to be
  * safe for embedding in URLs and filenames.
  *
  * Both variants are implemented as instantiations of the template
- * $(D $(LREF Base64Impl)). Most users will not need to use this template
+ * `$(LREF Base64Impl)`. Most users will not need to use this template
  * directly; however, it can be used to create customized Base64 encodings,
  * such as one that omits padding characters, or one that is safe to embed
  * inside a regular expression.
@@ -76,7 +76,7 @@ import std.traits;     // isArray
 /**
  * Implementation of standard _Base64 encoding.
  *
- * See $(D $(LREF Base64Impl)) for a description of available methods.
+ * See `$(LREF Base64Impl)` for a description of available methods.
  */
 alias Base64 = Base64Impl!('+', '/');
 
@@ -92,7 +92,7 @@ alias Base64 = Base64Impl!('+', '/');
 /**
  * Variation of Base64 encoding that is safe for use in URLs and filenames.
  *
- * See $(D $(LREF Base64Impl)) for a description of available methods.
+ * See `$(LREF Base64Impl)` for a description of available methods.
  */
 alias Base64URL = Base64Impl!('-', '_');
 
@@ -109,8 +109,8 @@ alias Base64URL = Base64Impl!('-', '_');
  * Template for implementing Base64 encoding and decoding.
  *
  * For most purposes, direct usage of this template is not necessary; instead,
- * this module provides two default implementations: $(D $(LREF Base64)) and
- * $(D $(LREF Base64URL)), that implement basic Base64 encoding and a variant
+ * this module provides two default implementations: `$(LREF Base64)` and
+ * `$(LREF Base64URL)`, that implement basic Base64 encoding and a variant
  * intended for use in URLs and filenames, respectively.
  *
  * Customized Base64 encoding schemes can be implemented by instantiating this

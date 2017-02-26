@@ -46,9 +46,9 @@ unittest
 /**
 $(D chooseAtRuntime) is a compile-time constant of type $(D size_t) that several
 parameterized structures in this module recognize to mean deferral to runtime of
-the exact value. For example, $(D BitmappedBlock!(Allocator, 4096)) (described in
+the exact value. For example, `BitmappedBlock!(Allocator, 4096)` (described in
 detail below) defines a block allocator with block size of 4096 bytes, whereas
-$(D BitmappedBlock!(Allocator, chooseAtRuntime)) defines a block allocator that has a
+`BitmappedBlock!(Allocator, chooseAtRuntime)` defines a block allocator that has a
 field storing the block size, initialized by the user.
 */
 enum chooseAtRuntime = size_t.max - 1;

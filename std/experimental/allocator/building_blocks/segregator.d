@@ -38,7 +38,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
         */
         static size_t goodAllocSize(size_t s);
         /**
-        The memory is obtained from $(D SmallAllocator) if $(D s <= threshold),
+        The memory is obtained from `SmallAllocator` if `s <= threshold`,
         or $(D LargeAllocator) otherwise.
         */
         void[] allocate(size_t);
@@ -51,7 +51,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
         This method is defined only if at least one of the allocators defines
         it. If $(D SmallAllocator) defines $(D expand) and $(D b.length +
         delta <= threshold), the call is forwarded to $(D SmallAllocator). If $(
-        LargeAllocator) defines $(D expand) and $(D b.length > threshold), the
+        LargeAllocator) defines `expand` and `b.length > threshold`, the
         call is forwarded to $(D LargeAllocator). Otherwise, the call returns
         $(D false).
         */
@@ -72,7 +72,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
         bool alignedReallocate(ref void[] b, size_t s);
         /**
         This method is defined only if both allocators define it. The call is
-        forwarded to $(D SmallAllocator) if $(D b.length <= threshold), or $(D
+        forwarded to `SmallAllocator` if `b.length <= threshold`, or $(D
         LargeAllocator) otherwise.
         */
         Ternary owns(void[] b);
@@ -310,8 +310,8 @@ alias A =
 ----
 
 With this definition, allocation requests for $(D n1) bytes or less are directed
-to $(D A1); requests between $(D n1 + 1) and $(D n2) bytes (inclusive) are
-directed to $(D A2); requests between $(D n2 + 1) and $(D n3) bytes (inclusive)
+to `A1`; requests between `n1 + 1` and `n2` bytes (inclusive) are
+directed to `A2`; requests between `n2 + 1` and `n3` bytes (inclusive)
 are directed to $(D A3); and requests for more than $(D n3) bytes are directed
 to $(D A4). If some particular range should not be handled, $(D NullAllocator)
 may be used appropriately.

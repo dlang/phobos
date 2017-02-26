@@ -80,8 +80,8 @@ License:
 Source:
     $(PHOBOSSRC std/_process.d)
 Macros:
-    OBJECTREF=$(D $(LINK2 object.html#$0,$0))
-    LREF=$(D $(LINK2 #.$0,$0))
+    OBJECTREF=`$(LINK2 object.html#$0,$0)`
+    LREF=`$(LINK2 #.$0,$0)`
 */
 module std.process;
 
@@ -1463,7 +1463,7 @@ get the exit code, but also to avoid the process becoming a "zombie"
 when it finally terminates.  (See $(LREF wait) for details).
 
 Returns:
-An $(D std.typecons.Tuple!(bool, "terminated", int, "status")).
+An `std.typecons.Tuple!(bool, "terminated", int, "status")`.
 
 Throws:
 $(LREF ProcessException) on failure.
@@ -1515,7 +1515,7 @@ The process will be
 $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/ms686714%28v=vs.100%29.aspx,
 forcefully and abruptly terminated).  If $(D codeOrSignal) is specified, it
 must be a nonnegative number which will be used as the exit code of the process.
-If not, the process wil exit with code 1.  Do not use $(D codeOrSignal = 259),
+If not, the process wil exit with code 1.  Do not use `codeOrSignal = 259`,
 as this is a special value (aka. $(LINK2 http://msdn.microsoft.com/en-us/library/windows/desktop/ms683189.aspx,STILL_ACTIVE))
 used by Windows to signal that a process has in fact $(I not) terminated yet.
 ---
@@ -1970,7 +1970,7 @@ enum Redirect
 
     /**
     Redirect _all three streams.  This is equivalent to
-    $(D Redirect.stdin | Redirect.stdout | Redirect.stderr).
+    `Redirect.stdin | Redirect.stdout | Redirect.stderr`.
     */
     all = stdin | stdout | stderr,
 
@@ -2178,7 +2178,7 @@ shellPath = The path to the shell to use to run the specified program.
 
 
 Returns:
-An $(D std.typecons.Tuple!(int, "status", string, "output")).
+An `std.typecons.Tuple!(int, "status", string, "output")`.
 
 POSIX_specific:
 If the process is terminated by a signal, the $(D status) field of
@@ -3522,7 +3522,7 @@ version (StdDdoc)
     $(BLUE This functions is Posix-Only.)
 
     Typically, the first element of $(D argv) is
-    the command being executed, i.e. $(D argv[0] == pathname). The 'p'
+    the command being executed, i.e. `argv[0] == pathname`. The 'p'
     versions of $(D exec) search the PATH environment variable for $(D
     pathname). The 'e' versions additionally take the new process'
     environment variables as an array of strings of the form key=value.

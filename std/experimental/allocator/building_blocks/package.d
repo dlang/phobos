@@ -49,7 +49,7 @@ implementation that returns $(D n) rounded up to a multiple of the allocator's
 alignment.))
 
 $(TR $(TDC void[] allocate(size_t s);, $(POST $(RES) is null || $(RES).length ==
-s)) $(TD If $(D s == 0), the call may return any empty slice (including $(D
+s)) $(TD If `s == 0`, the call may return any empty slice (including $(D
 null)). Otherwise, the call allocates $(D s) bytes of memory and returns the
 allocated block, or $(D null) if the request could not be satisfied.))
 
@@ -70,10 +70,10 @@ reallocated or deallocated with the usual primitives, if defined).))
 
 $(TR $(TDC bool expand(ref void[] b, size_t delta);, $(POST !$(RES) || b.length
 == $(I old)(b).length + delta)) $(TD Expands $(D b) by $(D delta) bytes. If $(D
-delta == 0), succeeds without changing $(D b). If $(D b is null), returns
+delta == 0), succeeds without changing `b`. If `b is null`, returns
 `false` (the null pointer cannot be expanded in place). Otherwise, $(D
 b) must be a buffer previously allocated with the same allocator. If expansion
-was successful, $(D expand) changes $(D b)'s length to $(D b.length + delta) and
+was successful, `expand` changes `b`'s length to `b.length + delta` and
 returns $(D true). Upon failure, the call effects no change upon the allocator
 object, leaves $(D b) unchanged, and returns $(D false).))
 
@@ -100,7 +100,7 @@ $(TR $(TDC Ternary owns(void[] b);) $(TD Returns `Ternary.yes` if `b` has been
 allocated with this allocator. An allocator should define this method only if it
 can decide on ownership precisely and fast (in constant time, logarithmic time,
 or linear time with a low multiplication factor). Traditional allocators such as
-the C heap do not define such functionality. If $(D b is null), the allocator
+the C heap do not define such functionality. If `b is null`, the allocator
 shall return `Ternary.no`, i.e. no allocator owns the `null` slice.))
 
 $(TR $(TDC void[] resolveInternalPointer(void* p);) $(TD If $(D p) is a pointer
@@ -109,7 +109,7 @@ beginning of the allocated block. Otherwise, returns $(D null). If the pointer
 points immediately after an allocated block, the result is implementation
 defined.))
 
-$(TR $(TDC bool deallocate(void[] b);) $(TD If $(D b is null), does
+$(TR $(TDC bool deallocate(void[] b);) $(TD If `b is null`, does
 nothing and returns `true`. Otherwise, deallocates memory previously allocated
 with this allocator and returns `true` if successful, `false` otherwise. An
 implementation that would not support deallocation (i.e. would always return
@@ -176,7 +176,7 @@ across threads, and to deallocate blocks in a different thread than the one that
 allocated it.
 
 All allocators in this module accept and return $(D void[]) (as opposed to
-$(D shared void[])). This is because at the time of allocation, deallocation, or
+`shared void[]`). This is because at the time of allocation, deallocation, or
 reallocation, the memory is effectively not $(D shared) (if it were, it would
 reveal a bug at the application level).
 
@@ -252,10 +252,10 @@ simple bump-the-pointer allocator.))
 $(TR $(TDC2 InSituRegion, region) $(TD Region holding its own allocation, most often on
 the stack. Has statically-determined size.))
 
-$(TR $(TDC2 SbrkRegion, region) $(TD Region using $(D $(LUCKY sbrk)) for allocating
+$(TR $(TDC2 SbrkRegion, region) $(TD Region using `$(LUCKY sbrk)` for allocating
 memory.))
 
-$(TR $(TDC3 MmapAllocator, mmap_allocator) $(TD Allocator using $(D $(LUCKY mmap)) directly.))
+$(TR $(TDC3 MmapAllocator, mmap_allocator) $(TD Allocator using `$(LUCKY mmap)` directly.))
 
 $(TR $(TDC2 StatsCollector, stats_collector) $(TD Collect statistics about any other
 allocator.))
@@ -282,9 +282,9 @@ Macros:
 MYREF2 = $(REF_SHORT $1, std,experimental,allocator,building_blocks,$2)
 MYREF3 = $(REF_SHORT $1, std,experimental,allocator,$2)
 TDC = $(TDNW $(D $1)$+)
-TDC2 = $(TDNW $(D $(MYREF2 $1,$+))$(BR)$(SMALL
+TDC2 = $(TDNW `$(MYREF2 $1,$+)`$(BR)$(SMALL
 $(D std.experimental.allocator.building_blocks.$2)))
-TDC3 = $(TDNW $(D $(MYREF3 $1,$+))$(BR)$(SMALL
+TDC3 = $(TDNW `$(MYREF3 $1,$+)`$(BR)$(SMALL
 $(D std.experimental.allocator.$2)))
 RES = $(I result)
 POST = $(BR)$(SMALL $(I Post:) $(BLUE $(D $0)))

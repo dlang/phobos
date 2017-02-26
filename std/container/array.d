@@ -538,7 +538,7 @@ Complexity: $(BIGOH 1)
 /**
 Ensures sufficient capacity to accommodate $(D e) elements.
 
-Postcondition: $(D capacity >= e)
+Postcondition: `capacity >= e`
 
 Complexity: $(BIGOH 1)
      */
@@ -589,7 +589,7 @@ Complexity: $(BIGOH 1)
 Returns a range that iterates over elements of the container from
 index $(D i) up to (excluding) index $(D j).
 
-Precondition: $(D i <= j && j <= length)
+Precondition: `i <= j && j <= length`
 
 Complexity: $(BIGOH 1)
 */
@@ -632,7 +632,7 @@ Complexity: $(BIGOH 1)
 /**
 Indexing operators yield or modify the value at a specified index.
 
-Precondition: $(D i < length)
+Precondition: `i < length`
 
 Complexity: $(BIGOH 1)
      */
@@ -645,7 +645,7 @@ Complexity: $(BIGOH 1)
 /**
 Slicing operations execute an operation on an entire slice.
 
-Precondition: $(D i < j && j < length)
+Precondition: `i < j && j < length`
 
 Complexity: $(BIGOH slice.length)
      */
@@ -750,7 +750,7 @@ T.init).
 
 Complexity: $(BIGOH abs(n - newLength))
 
-Postcondition: $(D length == newLength)
+Postcondition: `length == newLength`
      */
     @property void length(size_t newLength)
     {
@@ -823,7 +823,7 @@ Complexity: $(BIGOH log(n)).
 Removes $(D howMany) values at the front or back of the
 container. Unlike the unparameterized versions above, these functions
 do not throw if they could not remove $(D howMany) elements. Instead,
-if $(D howMany > n), all elements are removed. The returned value is
+if `howMany > n`, all elements are removed. The returned value is
 the effective number of elements removed. The stable version behaves
 the same, but guarantees that ranges iterating over the container are
 never invalidated.
@@ -1663,9 +1663,9 @@ if (is(Unqual!T == bool))
     /**
        Ensures sufficient capacity to accommodate $(D n) elements.
 
-       Postcondition: $(D capacity >= n)
+       Postcondition: `capacity >= n`
 
-       Complexity: $(BIGOH log(e - capacity)) if $(D e > capacity),
+       Complexity: $(BIGOH log(e - capacity)) if `e > capacity`,
        otherwise $(BIGOH 1).
      */
     void reserve(size_t e)
@@ -1863,7 +1863,7 @@ if (is(Unqual!T == bool))
     // }
 
     /**
-       Forwards to $(D insertAfter(this[], stuff)).
+       Forwards to `insertAfter(this[], stuff)`.
      */
     // @@@BUG@@@
     //ref Array!bool opOpAssign(string op, Stuff)(Stuff stuff) if (op == "~")
@@ -1916,7 +1916,7 @@ if (is(Unqual!T == bool))
 
        Complexity: $(BIGOH abs(n - newLength))
 
-       Postcondition: $(D _length == newLength)
+       Postcondition: `_length == newLength`
      */
     @property void length(size_t newLength)
     {
@@ -2063,7 +2063,7 @@ if (is(Unqual!T == bool))
        stable version behaves the same, but guarantees that ranges
        iterating over the container are never invalidated. The
        optional parameter $(D howMany) instructs removal of that many
-       elements. If $(D howMany > n), all elements are removed and no
+       elements. If `howMany > n`, all elements are removed and no
        exception is thrown.
 
        Precondition: $(D !empty)
@@ -2092,7 +2092,7 @@ if (is(Unqual!T == bool))
        Removes $(D howMany) values at the front or back of the
        container. Unlike the unparameterized versions above, these
        functions do not throw if they could not remove $(D howMany)
-       elements. Instead, if $(D howMany > n), all elements are
+       elements. Instead, if `howMany > n`, all elements are
        removed. The returned value is the effective number of elements
        removed. The stable version behaves the same, but guarantees
        that ranges iterating over the container are never invalidated.

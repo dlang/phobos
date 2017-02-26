@@ -3085,7 +3085,7 @@ public:
     rudimentary scheduler for tasks which communicate by means other than
     return values.
 
-    Warning:  Calling this function with $(D blocking = true) from a worker
+    Warning:  Calling this function with `blocking = true` from a worker
               thread that is a member of the same $(D TaskPool) that
               $(D finish) is being called on will result in a deadlock.
      */

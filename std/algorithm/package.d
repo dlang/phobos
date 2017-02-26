@@ -152,8 +152,8 @@ expression that uses the symbol $(D a) (for unary functions) or the
 symbols $(D a) and $(D b) (for binary functions). These names will NOT
 interfere with other homonym symbols in user code because they are
 evaluated in a different context. The default for all binary
-comparison predicates is $(D "a == b") for unordered operations and
-$(D "a < b") for ordered operations.
+comparison predicates is `"a == b"` for unordered operations and
+`"a < b"` for ordered operations.
 
 Example:
 

@@ -102,7 +102,7 @@ the logger.
 
 $(H4 Printf Style Logging)
 If $(D printf)-style logging is needed add a $(B f) to the logging call, such as
-$(D myLogger.infof("Hello %s", "world");) or $(D fatalf("errno %d", 1337)).
+`myLogger.infof("Hello %s", "world");` or `fatalf("errno %d", 1337)`.
 The additional $(B f) appended to the function name enables $(D printf)-style
 logging for all combinations of explicit $(D LogLevel) and conditional
 logging functions and methods.
@@ -169,7 +169,7 @@ $(H3 Provided Logger)
 By default four $(D Logger) implementations are given. The $(D FileLogger)
 logs data to files. It can also be used to log to $(D stdout) and $(D stderr)
 as these devices are files as well. A $(D Logger) that logs to $(D stdout) can
-therefore be created by $(D new FileLogger(stdout)).
+therefore be created by `new FileLogger(stdout)`.
 The $(D MultiLogger) is basically an associative array of $(D string)s to
 $(D Logger). It propagates log calls to its stored $(D Logger). The
 $(D ArrayLogger) contains an array of $(D Logger) and also propagates log

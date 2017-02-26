@@ -246,7 +246,7 @@ struct FallbackAllocator(Primary, Fallback)
     /**
     $(D empty) is defined if both allocators also define it.
 
-    Returns: $(D primary.empty & fallback.empty)
+    Returns: `primary.empty & fallback.empty`
     */
     static if (hasMember!(Primary, "empty") && hasMember!(Fallback, "empty"))
     Ternary empty()

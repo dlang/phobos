@@ -130,7 +130,7 @@ void main(string[] args)
 ---------
 
     To set $(D timeout) to $(D 5), invoke the program with either
-    $(D --timeout=5) or $(D --timeout 5).
+    `--timeout=5` or `--timeout 5`.
     )
 
     $(LI $(I Incremental options.) If an option name has a "+" suffix and is
@@ -160,7 +160,7 @@ void main(string[] args)
 ---------
 
     To set $(D color) to $(D Color.yes), invoke the program with either
-    $(D --color=yes) or $(D --color yes).
+    `--color=yes` or `--color yes`.
     )
 
     $(LI $(I String options.) If an option is bound to a string, a string is
@@ -188,7 +188,7 @@ getopt(args, "output", &outputFiles);
 
     Invoking the program with "--output=myfile.txt --output=yourfile.txt" or
     "--output myfile.txt --output yourfile.txt" will set $(D outputFiles) to
-    $(D [ "myfile.txt", "yourfile.txt" ]).
+    `[ "myfile.txt", "yourfile.txt" ]`.
 
     Alternatively you can set $(LREF arraySep) as the element separator:
 
@@ -228,8 +228,8 @@ getopt(args, "tune", &tuningParms);
     )
 
     $(LI $(I Callback options.) An option can be bound to a function or
-    delegate with the signature $(D void function()), $(D void function(string
-    option)), $(D void function(string option, string value)), or their
+    delegate with the signature `void function()`, `void function(string
+    option)), `void function(string option, string value)`, or their
     delegate equivalents.
 
     $(UL
@@ -355,14 +355,14 @@ getopt(args, "timeout|t", &timeout);
 ---------
 
 To set $(D timeout) to $(D 5), use either of the following: $(D --timeout=5),
-$(D --timeout 5), $(D --t=5), $(D --t 5), or $(D -t5). Forms such as $(D -t 5)
+`--timeout 5`, `--t=5`, `--t 5`, or `-t5`. Forms such as `-t 5`
 and $(D -timeout=5) will be not accepted.
 
 For more details about short options, refer also to the next section.
 
 Bundling:
 Single-letter options can be bundled together, i.e. "-abc" is the same as
-$(D "-a -b -c"). By default, this option is turned off. You can turn it on
+`"-a -b -c"`. By default, this option is turned off. You can turn it on
 with the $(D std.getopt.config.bundling) directive:
 
 ---------
@@ -411,14 +411,14 @@ Help_Information_Generation:
 If an option string is followed by another string, this string serves as a
 description for this option. The $(D getopt) function returns a struct of type
 $(D GetoptResult). This return value contains information about all passed options
-as well a $(D bool GetoptResult.helpWanted) flag indicating whether information
+as well a `bool GetoptResult.helpWanted` flag indicating whether information
 about these options was requested. The $(D getopt) function always adds an option for
 `--help|-h` to set the flag if the option is seen on the command line.
 
 Options_Terminator:
 A lone double-dash terminates $(D getopt) gathering. It is used to
 separate program options from other parameters (e.g., options to be passed
-to another program). Invoking the example above with $(D "--foo -- --bar")
+to another program). Invoking the example above with `"--foo -- --bar"`
 parses foo but leaves "--bar" in $(D args). The double-dash itself is
 removed from the argument array unless the $(D std.getopt.config.keepEndOfOptions)
 directive is given.

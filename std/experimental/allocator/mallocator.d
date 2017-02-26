@@ -211,7 +211,7 @@ struct AlignedMallocator
     enum uint alignment = platformAlignment;
 
     /**
-    Forwards to $(D alignedAllocate(bytes, platformAlignment)).
+    Forwards to `alignedAllocate(bytes, platformAlignment)`.
     */
     @trusted @nogc nothrow
     void[] allocate(size_t bytes) shared
@@ -281,7 +281,7 @@ struct AlignedMallocator
 
     /**
     On Posix, forwards to $(D realloc). On Windows, forwards to
-    $(D alignedReallocate(b, newSize, platformAlignment)).
+    `alignedReallocate(b, newSize, platformAlignment)`.
     */
     version (Posix)
     @system @nogc nothrow
@@ -300,7 +300,7 @@ struct AlignedMallocator
     On Posix, uses $(D alignedAllocate) and copies data around because there is
     no realloc for aligned memory. On Windows, calls
     $(HTTP msdn.microsoft.com/en-US/library/y69db7sx(v=vs.80).aspx,
-    $(D __aligned_realloc(b.ptr, newSize, a))).
+    `__aligned_realloc(b.ptr, newSize, a)`).
     */
     version (Windows)
     @system @nogc nothrow

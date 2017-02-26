@@ -96,7 +96,7 @@ struct ScopedAllocator(ParentAllocator)
     }
 
     /**
-    Forwards to $(D parent.expand(b, delta)).
+    Forwards to `parent.expand(b, delta)`.
     */
     static if (hasMember!(Allocator, "expand"))
     bool expand(ref void[] b, size_t delta)

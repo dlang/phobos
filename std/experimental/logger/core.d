@@ -1652,7 +1652,7 @@ sharedLog = new FileLogger(yourFile);
 The example sets a new $(D FileLogger) as new $(D sharedLog).
 
 If at some point you want to use the original default logger again, you can
-use $(D sharedLog = null;). This will put back the original.
+use `sharedLog = null;`. This will put back the original.
 
 Note:
 While getting and setting $(D sharedLog) is thread-safe, it has to be considered
