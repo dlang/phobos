@@ -1667,7 +1667,8 @@ until either $(D pred(haystack.front)), or $(D
 haystack.empty). Performs $(BIGOH haystack.length) evaluations of $(D
 pred).
 
-To _find the last element of a bidirectional $(D haystack) satisfying
+To _find the last element of a
+$(REF_ALTTEXT bidirectional, isBidirectionalRange, std,range,primitives) $(D haystack) satisfying
 $(D pred), call $(D find!(pred)(retro(haystack))). See $(REF retro, std,range).
 
 `find` behaves similar to `dropWhile` in other languages.
@@ -1748,8 +1749,9 @@ Finds the first occurrence of a forward range in another forward range.
 
 Performs $(BIGOH walkLength(haystack) * walkLength(needle)) comparisons in the
 worst case.  There are specializations that improve performance by taking
-advantage of bidirectional or random access in the given ranges (where
-possible), depending on the statistics of the two ranges' content.
+advantage of $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
+or random access in the given ranges (where possible), depending on the statistics
+of the two ranges' content.
 
 Params:
 
@@ -2189,7 +2191,8 @@ pred = The predicate to use for comparing elements.
 
 haystack = The target of the search. Must be an input range.
 If any of $(D needles) is a range with elements comparable to
-elements in $(D haystack), then $(D haystack) must be a forward range
+elements in $(D haystack), then $(D haystack) must be a
+$(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
 such that the search can backtrack.
 
 needles = One or more items to search for. Each of $(D needles) must
@@ -2686,7 +2689,8 @@ In all cases, the concatenation of the returned ranges spans the
 entire `haystack`.
 
 If `haystack` is a random-access range, all three components of the tuple have
-the same type as `haystack`. Otherwise, `haystack` must be a forward range and
+the same type as `haystack`. Otherwise, `haystack` must be a
+$(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) and
 the type of `result[0]` and `result[1]` is the same as $(REF takeExactly,
 std,range).
 

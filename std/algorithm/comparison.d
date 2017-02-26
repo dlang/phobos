@@ -1881,8 +1881,8 @@ Allocating forward range option: amortized $(BIGOH r1.length) + $(BIGOH r2.lengt
 Params:
     pred = an optional parameter to change how equality is defined
     allocate_gc = $(D Yes.allocateGC)/$(D No.allocateGC)
-    r1 = A finite forward range
-    r2 = A finite forward range
+    r1 = A finite $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
+    r2 = A finite $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
 
 Returns:
     $(D true) if all of the elements in $(D r1) appear the same number of times in $(D r2).
