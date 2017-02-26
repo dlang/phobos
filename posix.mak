@@ -497,37 +497,38 @@ checkwhitespace: $(LIB)
 	make -C ../dscanner githash debug
 
 style: ../dscanner/dsc $(LIB)
-	@echo "Check for trailing whitespace"
-	grep -nr '[[:blank:]]$$' etc std ; test $$? -eq 1
+	@grep -nr '[[:blank:]]$$' etc std && \
+		{ echo "Check for trailing whitespace" && exit 1; } ; exit 0
 
-	@echo "Enforce whitespace before opening parenthesis"
-	grep -nrE "(for|foreach|foreach_reverse|if|while|switch|catch)\(" $$(find . -name '*.d') ; test $$? -eq 1
+	@grep -nrE "(for|foreach|foreach_reverse|if|while|switch|catch)\(" $$(find . -name '*.d') && \
+		{ echo "Enforce whitespace before opening parenthesis"; exit 1; } ; exit 0
 
-	@echo "Enforce whitespace between colon(:) for import statements (doesn't catch everything)"
-	grep -nr 'import [^/,=]*:.*;' $$(find . -name '*.d') | grep -vE "import ([^ ]+) :\s"; test $$? -eq 1
+	@grep -nr 'import [^/,=]*:.*;' $$(find . -name '*.d') | grep -vE "import ([^ ]+) :\s" && \
+		{ echo "Enforce whitespace between colon(:) for import statements (doesn't catch everything)"; exit 1; } ; exit 0
 
-	@echo "Check for package wide std.algorithm imports"
-	grep -nr 'import std.algorithm : ' $$(find . -name '*.d') ; test $$? -eq 1
+	@grep -nr 'import std.algorithm : ' $$(find . -name '*.d') && \
+		{ echo "Check for package wide std.algorithm imports"; exit 1; } ; exit 0
 
-	@echo "Enforce Allman style"
-	grep -nrE '(if|for|foreach|foreach_reverse|while|unittest|switch|else|version) .*{$$' $$(find . -name '*.d'); test $$? -eq 1
+	@grep -nrE '(if|for|foreach|foreach_reverse|while|unittest|switch|else|version) .*{$$' $$(find . -name '*.d') && \
+		{ echo "Enforce Allman style"; exit 1; } ; exit 0
 
-	@echo "Enforce do { to be in Allman style"
-	grep -nr 'do *{$$' $$(find . -name '*.d') ; test $$? -eq 1
+	@grep -nr 'do *{$$' $$(find . -name '*.d') && \
+		{ echo "Enforce do { to be in Allman style"; exit 1; } ; exit 0
 
-	@echo "Enforce no space between assert and the opening brace, i.e. assert("
-	grep -nrE 'assert +\(' $$(find . -name '*.d') ; test $$? -eq 1
+	@grep -nrE 'assert +\(' $$(find . -name '*.d') && \
+		{ echo "Enforce no space between assert and the opening brace, i.e. assert("; exit 1; } ; exit 0
 
-	@echo "Enforce space after cast(...)"
-	grep -nrE '[^"]cast\([^)]*?\)[[:alnum:]]' $$(find . -name '*.d') ; test $$? -eq 1
+	@grep -nrE '[^"]cast\([^)]*?\)[[:alnum:]]' $$(find . -name '*.d') && \
+		{ echo "Enforce space after cast(...)"; exit 1; } ; exit 0
 
-	@echo "Enforce space between a .. b"
-	grep -nrE '[[:alnum:]][.][.][[:alnum:]]|[[:alnum:]] [.][.][[:alnum:]]|[[:alnum:]][.][.] [[:alnum:]]' $$(find . -name '*.d' | grep -vE 'std/string.d|std/uni.d') ; test $$? -eq 1
+	@grep -nrE '[[:alnum:]][.][.][[:alnum:]]|[[:alnum:]] [.][.][[:alnum:]]|[[:alnum:]][.][.] [[:alnum:]]' \
+		$$(find . -name '*.d' | grep -vE 'std/string.d|std/uni.d') && \
+		{ echo "Enforce space between a .. b"; exit 1; } ; exit 0
 
-	@echo "Enforce space between binary operators"
-	grep -nrE "[[:alnum:]](==|!=|<=|<<|>>|>>>|^^)[[:alnum:]]|[[:alnum:]] (==|!=|<=|<<|>>|>>>|^^)[[:alnum:]]|[[:alnum:]](==|!=|<=|<<|>>|>>>|^^) [[:alnum:]]" $$(find . -name '*.d'); test $$? -eq 1
+	@grep -nrE "[[:alnum:]](==|!=|<=|<<|>>|>>>|^^)[[:alnum:]]|[[:alnum:]] (==|!=|<=|<<|>>|>>>|^^)[[:alnum:]]|[[:alnum:]](==|!=|<=|<<|>>|>>>|^^) [[:alnum:]]" \
+		$$(find . -name '*.d') && \
+		{ echo "Enforce space between binary operators"; exit 1; } ; exit 0
 
-	@echo "Validate changelog files (Do _not_ use REF in the title!)"
 	@for file in $$(find changelog -name '*.dd') ; do  \
 		cat $$file | head -n1 | grep -nqE '\$$\((REF|LINK2|HTTP|MREF)' && \
 		{ echo "$$file: The title line can't contain links - it's already a link" && exit 1; } ;\
@@ -537,12 +538,13 @@ style: ../dscanner/dsc $(LIB)
 		{ echo "$$file: The title is supposed to be followed by a long description" && exit 1; } ;\
 	done
 
-	@echo "Check that Ddoc runs without errors"
-	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -w -D -main -c -o- $$(find etc std -type f -name '*.d' | grep -vE 'std/experimental/ndslice/iteration.d') 2>&1 | grep -v "Deprecation:"; test $$? -eq 1
+	@$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -w -D -main -c -o- $$(find etc std -type f -name '*.d' | \
+		grep -vE 'std/experimental/ndslice/iteration.d') 2>&1 | \
+		grep -v "Deprecation:" && \
+		 { echo "Check that Ddoc runs without errors"; exit 1; } ; exit 0
 
-	# at the moment libdparse has problems to parse some modules (->excludes)
-	@echo "Running DScanner"
-	../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d') -I.
+	@# at the moment libdparse has problems to parse some modules (->excludes)
+	@../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d') -I.
 
 publictests: $(LIB)
 	# parse all public unittests from Phobos, for now some modules are excluded
