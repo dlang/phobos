@@ -74,6 +74,11 @@ setup_repos()
         git fetch upstream
         git checkout -f upstream/$base_branch
         git merge -m "Automatic merge" $current_branch
+        # CodeCov doesn't handle a changed parent_ref well.
+        # It will assume all merged changes as part of this commit.
+        # Hence we temporarily revert the merge for .d files (we keep the updated configs)
+        # https://github.com/codecov/support/issues/360
+        git checkout $current_branch etc std
     fi
 
     for proj in dmd druntime ; do
