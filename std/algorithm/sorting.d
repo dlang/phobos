@@ -3654,7 +3654,8 @@ if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
 }
 
 /**
-Copies the top $(D n) elements of the input range $(D source) into the
+Copies the top $(D n) elements of the
+$(REF_ALTTEXT input range, isInputRange, std,range,primitives) $(D source) into the
 random-access range $(D target), where $(D n =
 target.length). Elements of $(D source) are not touched. If $(D
 sorted) is $(D true), the target is sorted. Otherwise, the target

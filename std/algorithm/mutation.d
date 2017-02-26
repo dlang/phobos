@@ -104,7 +104,7 @@ reachable from $(D front) and $(D front) is not reachable from $(D
 back).
 
 Params:
-    front = an input range
+    front = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
     back = a forward range
 
 Returns:
@@ -353,7 +353,7 @@ Preconditions: $(D target) shall have enough room to accommodate
 the entirety of $(D source).
 
 Params:
-    source = an input range
+    source = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
     target = an output range
 
 Returns:
@@ -2219,7 +2219,7 @@ if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
     long as the predicate returns true.
 
     Params:
-        range = a bidirectional or input range
+        range = a bidirectional or $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
         element = the elements to remove
 
     Returns:

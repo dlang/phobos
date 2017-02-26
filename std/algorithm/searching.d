@@ -3060,7 +3060,7 @@ i.e. $(D !pred(a, b) && !pred(b, a)).
 Params:
     pred = The ordering predicate to use to determine the extremum (minimum
         or maximum).
-    range = The input range to count.
+    range = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to count.
 
 Returns: The minimum, respectively maximum element of a range together with the
 number it occurs in the range.
@@ -3470,7 +3470,7 @@ irreflexive ($(D pred(a, a)) is `false`).
 Params:
     pred = The ordering predicate to use to determine the extremum (minimum or
         maximum) element.
-    range = The input range to search.
+    range = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to search.
 
 Returns: The position of the minimum (respectively maximum) element of forward
 range `range`, i.e. a subrange of `range` starting at the position of  its
@@ -3581,7 +3581,8 @@ Computes the index of the first occurrence of `range`'s minimum element.
 
 Params:
     pred = The ordering predicate to use to determine the minimum element.
-    range = The input range to search.
+    range = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+    to search.
 
 Complexity: O(n)
     Exactly `n - 1` comparisons are needed.
@@ -3702,7 +3703,7 @@ Complexity: O(n)
 
 Params:
     pred = The ordering predicate to use to determine the maximum element.
-    range = The input range to search.
+    range = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to search.
 
 Returns:
     The index of the first encounter of the maximum in `range`. If the

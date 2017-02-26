@@ -141,7 +141,7 @@ but $(D hasSlicing!Cache) will not yield true (as the $(REF hasSlicing, std,_ran
 trait also checks for random access).
 
 Params:
-    range = an input range
+    range = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
 
 Returns:
     an input range with the cached values of range
@@ -203,7 +203,7 @@ if (isBidirectionalRange!Range)
 
 /++
 Tip: $(D cache) is eager when evaluating elements. If calling front on the
-underlying _range has a side effect, it will be observeable before calling
+underlying _range has a side effect, it will be observable before calling
 front on the actual cached _range.
 
 Furthermore, care should be taken composing $(D cache) with $(REF take, std,_range).
@@ -445,7 +445,7 @@ not changed. Evaluation is done lazily.
 
 Params:
     fun = one or more functions
-    r = an input range
+    r = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
 
 Returns:
     a range with each fun applied to all the elements. If there is more than one
@@ -1863,7 +1863,7 @@ if (isForwardRange!Range)
  *
  * Params:
  *  pred = Predicate for determining equivalence.
- *  r = The range to be chunked.
+ *  r = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to be chunked.
  *
  * Returns: With a binary predicate, a range of ranges is returned in which
  * all elements in a given subrange are equivalent under the given predicate.
@@ -3260,7 +3260,7 @@ if (fun.length >= 1)
     Once `S` has been determined, then $(D S s = e;) and $(D s = f(s, e);) must
     both be legal.
     Params:
-        range = an input range as defined by `isInputRange`
+        range = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
     Returns:
         a range containing the consecutive reduced values.
     +/
@@ -3274,11 +3274,11 @@ if (fun.length >= 1)
     Seed version. The seed should be a single value if `fun` is a single
     function. If `fun` is multiple functions, then `seed` should be a
     $(REF Tuple, std,typecons), with one field per function in `f`.
-    For convenience, if the seed is const, or has qualified fields, then
+    For convenience, if the seed is `const`, or has qualified fields, then
     `cumulativeFold` will operate on an unqualified copy. If this happens
     then the returned type will not perfectly match `S`.
     Params:
-        range = an input range as defined by `isInputRange`
+        range = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
         seed = the initial value of the accumulator
     Returns:
         a range containing the consecutive reduced values.
