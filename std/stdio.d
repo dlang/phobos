@@ -1768,8 +1768,7 @@ is recommended if you want to process a complete file.
      * $(LINK2 std_format.html#_format-string, _format specifier) using
      * $(REF formattedRead, std,_format).
      */
-    uint readf(Data...)(in char[] format, Data data)
-    if (allSatisfy!(isPointer, Data))
+    uint readf(Data...)(in char[] format, auto ref Data data)
     {
         import std.format : formattedRead;
 
@@ -1779,6 +1778,26 @@ is recommended if you want to process a complete file.
     }
 
     ///
+    @system unittest
+    {
+        static import std.file;
+
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "hello\nworld\ntrue\nfalse\n");
+        scope(exit) std.file.remove(deleteme);
+        string s;
+        auto f = File(deleteme);
+        f.readf("%s\n", s);
+        assert(s == "hello", "["~s~"]");
+        f.readf("%s\n", s);
+        assert(s == "world", "["~s~"]");
+
+        bool b1, b2;
+        f.readf("%s\n%s\n", b1, b2);
+        assert(b1 == true && b2 == false);
+    }
+
+    // backwards compatibility with pointers
     @system unittest
     {
         // @system due to readf
@@ -1797,6 +1816,27 @@ is recommended if you want to process a complete file.
         // Issue 11698
         bool b1, b2;
         f.readf("%s\n%s\n", &b1, &b2);
+        assert(b1 == true && b2 == false);
+    }
+
+    // backwards compatibility (mixed)
+    @system unittest
+    {
+        // @system due to readf
+        static import std.file;
+
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "hello\nworld\ntrue\nfalse\n");
+        scope(exit) std.file.remove(deleteme);
+        string s1, s2;
+        auto f = File(deleteme);
+        f.readf("%s\n%s\n", s1, &s2);
+        assert(s1 == "hello");
+        assert(s2 == "world");
+
+        // Issue 11698
+        bool b1, b2;
+        f.readf("%s\n%s\n", &b1, b2);
         assert(b1 == true && b2 == false);
     }
 
