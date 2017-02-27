@@ -1767,6 +1767,28 @@ is recommended if you want to process a complete file.
      * Read data from the file according to the specified
      * $(LINK2 std_format.html#_format-string, _format specifier) using
      * $(REF formattedRead, std,_format).
+     * Example:
+----
+// test.d
+void main()
+{
+    import std.stdio;
+    auto f = File("foo");
+    foreach (_; 0 .. 3)
+    {
+        int a;
+        f.readf(" %d", a);
+        writeln(++a);
+    }
+}
+----
+$(CONSOLE
+% echo "1 2 3" > foo
+% rdmd test.d
+2
+3
+4
+)
      */
     uint readf(Data...)(in char[] format, auto ref Data data)
     {
@@ -3724,9 +3746,28 @@ void writefln(T...)(T args)
  * Read data from $(D stdin) according to the specified
  * $(LINK2 std_format.html#_format-string, _format specifier) using
  * $(REF formattedRead, std,_format).
+ * Example:
+----
+// test.d
+void main()
+{
+    import std.stdio;
+    foreach (_; 0 .. 3)
+    {
+        int a;
+        readf(" %d", a);
+        writeln(++a);
+    }
+}
+----
+$(CONSOLE
+% echo "1 2 3" | rdmd test.d
+2
+3
+4
+)
  */
-uint readf(A...)(in char[] format, A args)
-if (allSatisfy!(isPointer, A))
+uint readf(A...)(in char[] format, auto ref A args)
 {
     return stdin.readf(format, args);
 }
@@ -3739,7 +3780,10 @@ if (allSatisfy!(isPointer, A))
     char a;
     wchar b;
     dchar c;
-    if (false) readf("%s %s %s", &a,&b,&c);
+    if (false) readf("%s %s %s", a, b, c);
+    // backwards compatibility with pointers
+    if (false) readf("%s %s %s", a, &b, c);
+    if (false) readf("%s %s %s", &a, &b, &c);
 }
 
 /**********************************
