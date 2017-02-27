@@ -570,8 +570,7 @@ matching failure happens.
 Throws:
     An `Exception` if `S.length == 0` and `fmt` has format specifiers
  */
-uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, S args)
-if (allSatisfy!(isPointer, S))
+uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, auto ref S args)
 {
     import std.typecons : isTuple;
 
@@ -584,6 +583,8 @@ if (allSatisfy!(isPointer, S))
     }
     else
     {
+        enum hasPointer = isPointer!(typeof(args[0]));
+
         // The function below accounts for '*' == fields meant to be
         // read and skipped
         void skipUnstoredFields()
@@ -603,24 +604,57 @@ if (allSatisfy!(isPointer, S))
             // Input is empty, nothing to read
             return 0;
         }
-        alias A = typeof(*args[0]);
+        static if (hasPointer)
+            alias A = typeof(*args[0]);
+        else
+            alias A = typeof(args[0]);
+
         static if (isTuple!A)
         {
             foreach (i, T; A.Types)
             {
-                (*args[0])[i] = unformatValue!(T)(r, spec);
+                static if (hasPointer)
+                    (*args[0])[i] = unformatValue!(T)(r, spec);
+                else
+                    args[0][i] = unformatValue!(T)(r, spec);
                 skipUnstoredFields();
             }
         }
         else
         {
-            *args[0] = unformatValue!(A)(r, spec);
+            static if (hasPointer)
+                *args[0] = unformatValue!(A)(r, spec);
+            else
+                args[0] = unformatValue!(A)(r, spec);
         }
         return 1 + formattedRead(r, spec.trailing, args[1 .. $]);
     }
 }
 
 ///
+@safe pure unittest
+{
+    string s = "hello!124:34.5";
+    string a;
+    int b;
+    double c;
+    formattedRead(s, "%s!%s:%s", a, b, c);
+    assert(a == "hello" && b == 124 && c == 34.5);
+}
+
+@safe unittest
+{
+    import std.math;
+    string s = " 1.2 3.4 ";
+    double x, y, z;
+    assert(formattedRead(s, " %s %s %s ", x, y, z) == 2);
+    assert(s.empty);
+    assert(approxEqual(x, 1.2));
+    assert(approxEqual(y, 3.4));
+    assert(isNaN(z));
+}
+
+// for backwards compatibility
 @system pure unittest
 {
     string s = "hello!124:34.5";
@@ -629,8 +663,22 @@ if (allSatisfy!(isPointer, S))
     double c;
     formattedRead(s, "%s!%s:%s", &a, &b, &c);
     assert(a == "hello" && b == 124 && c == 34.5);
+
+    // mix pointers and auto-ref
+    s = "world!200:42.2";
+    formattedRead(s, "%s!%s:%s", a, &b, &c);
+    assert(a == "world" && b == 200 && c == 42.2);
+
+    s = "world1!201:42.3";
+    formattedRead(s, "%s!%s:%s", &a, &b, c);
+    assert(a == "world1" && b == 201 && c == 42.3);
+
+    s = "world2!202:42.4";
+    formattedRead(s, "%s!%s:%s", a, b, &c);
+    assert(a == "world2" && b == 202 && c == 42.4);
 }
 
+// for backwards compatibility
 @system pure unittest
 {
     import std.math;
