@@ -1712,10 +1712,10 @@ class Generator(T) :
     final int opApply(scope int delegate(T) loopBody)
     {
         int broken;
-        for(; !empty; popFront())
+        for (; !empty; popFront())
         {
             broken = loopBody(front);
-            if(broken) break;
+            if (broken) break;
         }
         return broken;
     }
@@ -1723,10 +1723,10 @@ class Generator(T) :
     final int opApply(scope int delegate(size_t, T) loopBody)
     {
         int broken;
-        for(size_t i; !empty; ++i, popFront())
+        for (size_t i; !empty; ++i, popFront())
         {
             broken = loopBody(i, front);
-            if(broken) break;
+            if (broken) break;
         }
         return broken;
     }
@@ -1833,7 +1833,7 @@ void yield(T)(T value)
     //can be assigned to std.range.interfaces.InputRange directly
     myIota = new Generator!int(
     {
-        foreach(i; 0 .. 10) yield(i);
+        foreach (i; 0 .. 10) yield(i);
     });
 
     myIota.popFront();
