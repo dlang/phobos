@@ -1877,7 +1877,7 @@ This overload converts an character input range to a `bool`.
 
 Params:
     Target = the type to convert to
-    source = the lvalue of an input range
+    source = the lvalue of an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
 
 Returns:
     A `bool`
@@ -1972,7 +1972,8 @@ Lerr:
 }
 
 /**
-Parses a character input range to an integral value.
+Parses a character $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+to an integral value.
 
 Params:
     Target = the integral type to convert to
@@ -3237,7 +3238,7 @@ Parsing one character off a range returns the first element and calls `popFront`
 
 Params:
     Target = the type to convert to
-    s = the lvalue of an input range
+    s = the lvalue of an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
 
 Returns:
     A character of type `Target`
@@ -3339,7 +3340,7 @@ spells `"null"`. This function is case insensitive.
 
 Params:
     Target = the type to convert to
-    s = the lvalue of an input range
+    s = the lvalue of an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
 
 Returns:
     `null`

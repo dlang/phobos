@@ -2861,7 +2861,8 @@ if (isConvertibleToString!Range)
     Strips leading whitespace (as defined by $(REF isWhite, std,uni)).
 
     Params:
-        input = string or ForwardRange of characters
+        input = string or $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
+        of characters
 
     Returns: $(D input) stripped of leading whitespace.
 
@@ -3414,7 +3415,8 @@ if (isConvertibleToString!Range)
     $(D delimiter), then it is returned unchanged.
 
     Params:
-        str = string or forward range of characters
+        str = string or $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
+        of characters
         delimiter = string of characters to be sliced off front of str[]
 
     Returns:
@@ -3840,7 +3842,8 @@ if (isSomeString!S)
     $(D s) doesn't fill.
 
     Params:
-        r = string or forward range of characters
+        r = string or $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
+        of characters
         width = minimum field width
         fillChar = used to pad end up to $(D width) characters
 
@@ -4066,7 +4069,8 @@ unittest
     $(D r) doesn't fill.
 
     Params:
-        r = string or forward range of characters
+        r = string or $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
+        of characters
         width = minimum field width
         fillChar = used to pad end up to $(D width) characters
 
@@ -4226,7 +4230,7 @@ if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
     necessary to align the following character at the next tab stop.
 
     Params:
-        r = string or forward range
+        r = string or $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
         tabSize = distance between tab stops
 
     Returns:
@@ -4455,7 +4459,7 @@ if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
     All spaces and tabs at the end of a line are removed.
 
     Params:
-        r = string or forward range
+        r = string or $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
         tabSize = distance between tab stops
 
     Returns:
