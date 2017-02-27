@@ -75,6 +75,7 @@ private
     import core.sync.mutex;
     import core.sync.condition;
     import std.range.primitives;
+    import std.range.interfaces;
     import std.traits;
     import std.concurrencybase;
 
@@ -1586,7 +1587,6 @@ private interface IsGenerator {}
  * }
  * ---
  */
-import std.range.interfaces : InputRange;
 class Generator(T) :
     Fiber, IsGenerator, InputRange!T
 {
@@ -1697,7 +1697,6 @@ class Generator(T) :
      */
     final T moveFront()
     {
-        import std.algorithm, std.range;
         static if (!hasElaborateCopyConstructor!T)
         {
             return front;
