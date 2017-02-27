@@ -52,6 +52,9 @@ deleted at the end of the scope, unless it is transferred.  The
 transfer can be explicit, by calling $(D release), or implicit, when
 returning Unique from a function. The resource can be a polymorphic
 class object, in which case Unique behaves polymorphically too.
+It is @safe to use as long as it's resource is, but constructing it is
+not because the user could escape aliases to the argument of the
+constructor.
 */
 struct Unique(T)
 {
@@ -66,8 +69,8 @@ public:
     version(None)
     /**
     Allows safe construction of $(D Unique). It creates the resource and
-    guarantees unique ownership of it (unless $(D T) publishes aliases of
-    $(D this)).
+    guarantees unique ownership of it, unless $(D T) publishes aliases of
+    $(D this).
     Note: Nested structs/classes cannot be created.
     Params:
     args = Arguments to pass to $(D T)'s constructor.
@@ -76,7 +79,7 @@ public:
     auto u = Unique!(C).create();
     ---
     */
-    static Unique!T create(A...)(auto ref A args)
+    @system static Unique!T create(A...)(auto ref A args)
     if (__traits(compiles, new T(args)))
     {
         debug(Unique) writeln("Unique.create for ", T.stringof);
@@ -94,7 +97,7 @@ public:
     Unique!Foo f = new Foo;
     ----
     */
-    this(RefT p)
+    @system this(RefT p)
     {
         debug(Unique) writeln("Unique constructor with rvalue");
         _p = p;
@@ -104,7 +107,7 @@ public:
     The nulling will ensure uniqueness as long as there
     are no previous aliases to the source.
     */
-    this(ref RefT p)
+    @system this(ref RefT p)
     {
         _p = p;
         debug(Unique) writeln("Unique constructor nulling source");
@@ -143,25 +146,39 @@ public:
         u._p = null;
     }
 
-    ~this()
+    // whether a RefT instance can be @safely destroyed at end of scope
+    static if (__traits(compiles, (RefT t) @safe {})) @trusted ~this()
     {
-        debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
-        if (_p !is null) destroy(_p);
-        _p = null;
+        debug(Unique) writeln("Unique @trusted destructor of ", (_p is null)? null: _p);
+        if (_p !is null)
+        {
+            destroy(_p);
+            _p = null;
+        }
     }
+    else this()
+    {
+        debug(Unique) writeln("Unique @system destructor of ", (_p is null)? null: _p);
+        if (_p !is null)
+        {
+            destroy(_p);
+            _p = null;
+        }
+    }
+
     /** Returns whether the resource exists. */
     @property bool isEmpty() const
     {
         return _p is null;
     }
-    /** Transfer ownership to a $(D Unique) rvalue. Nullifies the current contents. */
+    /** Transfer ownership to a $(D Unique) rvalue. Nullifies the current contents.
+    Same as calling std.algorithm.move on it.
+    */
     Unique release()
     {
-        debug(Unique) writeln("Release");
-        auto u = Unique(_p);
-        assert(_p is null);
-        debug(Unique) writeln("return from Release");
-        return u;
+        debug(Unique) writeln("Unique Release");
+        import std.algorithm : move;
+        return this.move;
     }
 
     /** Forwards member access to contents. */
@@ -307,6 +324,33 @@ private:
     assert(ptr.bar.val == 6);
     foo.bar.val = 7;
     assert(ptr.bar.val == 7);
+}
+
+// Makes sure Unique can be used in a @safe way even with classes
+///
+@system unittest
+{
+    class IntWrapper
+    {
+        int wrapped;
+        this(int a) { wrapped = a; }
+    }
+
+    @trusted auto createWrapper(int arg)
+    {   return Unique!IntWrapper(new IntWrapper(arg));}
+
+    @safe auto useWrapper()
+    {
+        auto a = createWrapper(9);
+        assert(a.wrapped == 9);
+        auto b = Unique!IntWrapper(a.release);
+        assert(a.isEmpty);
+        assert(b.wrapped == 9);
+        b.release;
+        assert(b.isEmpty);
+    }
+
+    useWrapper;
 }
 
 // Used in Tuple.toString
