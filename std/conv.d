@@ -2401,7 +2401,7 @@ body
 
         bool overflow = false;
         auto nextv = v.mulu(radix, overflow).addu(c - '0', overflow);
-        enforce!ConvOverflowException(!overflow && nextv < Target.max, "Overflow in integral conversion");
+        enforce!ConvOverflowException(!overflow && nextv <= Target.max, "Overflow in integral conversion");
         v = cast(Target) nextv;
         s.popFront();
     } while (!s.empty);
@@ -2428,6 +2428,8 @@ body
 
     // 6609
     assert(parse!int(s = "-42", 10) == -42);
+
+    assert(parse!ubyte(s = "ff", 16) == 0xFF);
 }
 
 @safe pure unittest // bugzilla 7302
