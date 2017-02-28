@@ -1,8 +1,9 @@
 Performance improvements for `std.algorithm.searching.{min,max}Element`
 
 $(REF minElement, std, algorithm, searching) and $(REF maxElement, std, algorithm, searching)
-are now a lot faster as a special path for the identity case is provided.
-This allows the compiler to make use of SSE instructions.
+are now considerably faster (almost 2x in microbenchmarks)
+as a special path for the identity case is provided. This allows the compiler
+to make use of SSE instructions.
 
 The exact improvements are:
 
