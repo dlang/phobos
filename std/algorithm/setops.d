@@ -558,7 +558,8 @@ Params:
     sorted = Whether the elements copied should be in sorted order.
 
 The function $(D largestPartialIntersection) is useful for
-e.g. searching an $(LUCKY inverted index) for the documents most
+e.g. searching an $(LINK2 https://en.wikipedia.org/wiki/Inverted_index,
+inverted index) for the documents most
 likely to contain some terms of interest. The complexity of the search
 is $(BIGOH n * log(tgt.length)), where $(D n) is the sum of lengths of
 all input ranges. This approach is faster than keeping an associative

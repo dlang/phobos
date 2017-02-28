@@ -8,7 +8,8 @@ original announcement)).
 
 `etc.c.odbc.sqlext.d` corresponds to the `sqlext.h` C header file.
 
-See_Also: $(LUCKY ODBC API Reference on MSN Online)
+See_Also: $(LINK2 https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/odbc-api-reference,
+          ODBC API Reference on MSN Online)
 */
 module etc.c.odbc.sqltypes;
 

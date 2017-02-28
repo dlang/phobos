@@ -2883,8 +2883,8 @@ See $(LREF byChunk) for an example.
 /** Returns an output range that locks the file and allows fast writing to it.
 
 Example:
-Produce a grayscale image of the $(LUCKY Mandelbrot set)
-in binary $(LUCKY Netpbm format) to standard output.
+Produce a grayscale image of the $(LINK2 https://en.wikipedia.org/wiki/Mandelbrot_set, Mandelbrot set)
+in binary $(LINK2 https://en.wikipedia.org/wiki/Netpbm_format, Netpbm format) to standard output.
 ---
 import std.algorithm, std.range, std.stdio;
 

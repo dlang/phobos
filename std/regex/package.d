@@ -1,5 +1,6 @@
 /++
-  $(LUCKY Regular expressions) are a commonly used method of pattern matching
+  $(LINK2 https://en.wikipedia.org/wiki/Regular_expression, Regular expressions)
+  are a commonly used method of pattern matching
   on strings, with $(I regex) being a catchy word for a pattern in this domain
   specific language. Typical problems usually solved by regular expressions
   include validation of user input and the ubiquitous find $(AMP) replace
@@ -1058,7 +1059,8 @@ if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 
 /++
     Start matching of $(D input) to regex pattern $(D re),
-    using traditional $(LUCKY backtracking) matching scheme.
+    using traditional $(LINK2 https://en.wikipedia.org/wiki/Backtracking,
+    backtracking) matching scheme.
 
     The use of this function is $(RED discouraged) - use either of
     $(LREF matchAll) or $(LREF matchFirst).

@@ -55,7 +55,7 @@
         )
         $(LI
             A way to construct optimal packed multi-stage tables also known as a
-            special case of $(LUCKY Trie).
+            special case of $(LINK2 https://en.wikipedia.org/wiki/Trie, Trie).
             The functions $(LREF codepointTrie), $(LREF codepointSetTrie)
             construct custom tries that map dchar to value.
             The end result is a fast and predictable $(BIGOH 1) lookup that powers
@@ -1940,7 +1940,7 @@ pure:
     As seen this provides a space-efficient storage of highly redundant data
     that comes in long runs. A description which Unicode $(CHARACTER)
     properties fit nicely. The technique itself could be seen as a variation
-    on $(LUCKY RLE encoding).
+    on $(LINK2 https://en.wikipedia.org/wiki/Run-length_encoding, RLE encoding).
     )
 
     $(P Sets are value types (just like $(D int) is) thus they

@@ -8139,7 +8139,8 @@ enum SearchPolicy
     trot,
 
     /**
-       Performs a $(LUCKY galloping search algorithm), i.e. searches
+       Performs a $(LINK2 https://en.wikipedia.org/wiki/Exponential_search,
+       galloping search algorithm), i.e. searches
        with a step that doubles every time, (1, 2, 4, 8, ...)  leading
        to an exponential search schedule (indexes tried are 0, 1, 3,
        7, 15, 31, 63,...) Once the search overshoots its target, the

@@ -716,7 +716,8 @@ private struct RBRange(N)
 }
 
 /**
- * Implementation of a $(LUCKY red-black tree) container.
+ * Implementation of a $(LINK2 https://en.wikipedia.org/wiki/Red%E2%80%93black_tree,
+ * red-black tree) container.
  *
  * All inserts, removes, searches, and any function in general has complexity
  * of $(BIGOH lg(n)).

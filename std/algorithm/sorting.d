@@ -50,7 +50,7 @@ $(T2 pivotPartition,
         than or equal, and greater than or equal to the given pivot, passed as
         an index in the range.)
 $(T2 schwartzSort,
-        Sorts with the help of the $(LUCKY Schwartzian transform).)
+        Sorts with the help of the $(LINK2 https://en.wikipedia.org/wiki/Schwartzian_transform, Schwartzian transform).)
 $(T2 sort,
         Sorts.)
 $(T2 topN,
@@ -573,7 +573,8 @@ if (ss != SwapStrategy.stable && isInputRange!Range && hasSwappableElements!Rang
 /**
 
 Partitions `r` around `pivot` using comparison function `less`, algorithm akin
-to $(LUCKY Hoare partition). Specifically, permutes elements of `r` and returns
+to $(LINK2 https://en.wikipedia.org/wiki/Quicksort#Hoare_partition_scheme,
+Hoare partition). Specifically, permutes elements of `r` and returns
 an index $(D k < r.length) such that:
 
 $(UL
@@ -594,9 +595,10 @@ elements fairly to the left and right of `k` such that `k` stays close to  $(D
 r.length / 2).
 
 Params:
-less = The predicate used for comparison, modeled as a $(LUCKY strict weak
-ordering) (irreflexive, antisymmetric, transitive, and implying a transitive
-equivalence)
+less = The predicate used for comparison, modeled as a
+        $(LINK2 https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings,
+        strict weak ordering) (irreflexive, antisymmetric, transitive, and implying a transitive
+        equivalence)
 r = The range being partitioned
 pivot = The index of the pivot for partitioning, must be less than `r.length` or
 `0` is `r.length` is `0`
@@ -3864,9 +3866,9 @@ with the median of `r[a]`, `r[b]`, and `r[c]`, but also puts the minimum in
 `r[a]` and the maximum in `r[c]`.
 
 Params:
-less = The comparison predicate used, modeled as a $(LUCKY strict weak
-ordering) (irreflexive, antisymmetric, transitive, and implying a transitive
-equivalence).
+less = The comparison predicate used, modeled as a
+    $(LINK2 https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings, strict weak ordering)
+    (irreflexive, antisymmetric, transitive, and implying a transitive equivalence).
 flag = Used only for even values of `T.length`. If `No.leanRight`, the median
 "leans left", meaning $(D medianOf(r, a, b, c, d)) puts the lower median of the
 four in `r[b]`, the minimum in `r[a]`, and the two others in `r[c]` and `r[d]`.
