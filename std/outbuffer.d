@@ -7,6 +7,8 @@ Serialize data to $(D ubyte) arrays.
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_outbuffer.d)
+ *
+ * $(SCRIPT inhibitQuickIndex = 1;)
  */
 module std.outbuffer;
 
