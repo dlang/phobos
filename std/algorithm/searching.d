@@ -1421,6 +1421,7 @@ private auto extremum(alias selector = "a < b", Range,
     {
         DummyType d;
         assert(d.extremum == 1);
+        assert(d.extremum!`a > b` == 10);
     }
 }
 
