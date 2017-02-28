@@ -8,7 +8,7 @@ to make use of SSE instructions.
 The exact improvements are:
 
 $(CONSOLE
-dmd -release -O test.d && ./test
+% dmd -release -O test.d && ./test
 extremum.before = 54 secs, 12 ms, 347 μs, and 9 hnsecs
 extremum.after  = 29 secs, 521 ms, 896 μs, and 5 hnsecs
 )
