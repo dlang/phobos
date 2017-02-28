@@ -4277,7 +4277,6 @@ Interval option specifier for `until` (below) and others.
 
 If set to $(D OpenRight.yes), then the interval is open to the right
 (last element is not included).
-This is similar to `takeWhile` in other languages.
 
 Otherwise if set to $(D OpenRight.no), then the interval is closed to the right
 (last element included).
@@ -4287,6 +4286,8 @@ alias OpenRight = Flag!"openRight";
 /**
 Lazily iterates $(D range) _until the element $(D e) for which
 $(D pred(e, sentinel)) is true.
+
+This is similar to `takeWhile` in other languages.
 
 Params:
     pred = Predicate to determine when to stop.
