@@ -2974,12 +2974,12 @@ version(unittest) private struct CountOpBinary
     static struct Hook2
     {
         uint calls;
-        auto hookOpUnary(string op, T)(ref T value) if (op == "++")
+        void hookOpUnary(string op, T)(ref T value) if (op == "++")
         {
             ++calls;
             --value;
         }
-        auto hookOpUnary(string op, T)(ref T value) if (op == "--")
+        void hookOpUnary(string op, T)(ref T value) if (op == "--")
         {
             ++calls;
             ++value;
