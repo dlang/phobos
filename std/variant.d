@@ -84,7 +84,7 @@ template maxSize(T...)
 }
 
 ///
-unittest
+@safe unittest
 {
     static assert(maxSize!(int, long) == 8);
     static assert(maxSize!(bool, byte) == 1);
