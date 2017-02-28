@@ -3,6 +3,7 @@
 This is a submodule of $(MREF std, algorithm).
 It contains generic algorithms that implement set operations.
 
+$(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 $(T2 cartesianProduct,

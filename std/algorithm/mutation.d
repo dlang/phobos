@@ -3,6 +3,7 @@
 This is a submodule of $(MREF std, algorithm).
 It contains generic _mutation algorithms.
 
+$(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 $(T2 bringToFront,
@@ -24,10 +25,16 @@ $(T2 initializeAll,
 $(T2 move,
         $(D move(a, b)) moves $(D a) into $(D b). $(D move(a)) reads $(D a)
         destructively when necessary.)
+$(T2 moveEmplace,
+        Similar to $(D move) but assumes `target` is uninitialized.)
 $(T2 moveAll,
         Moves all elements from one range to another.)
+$(T2 moveEmplaceAll,
+        Similar to $(D moveAll) but assumes all elements in `target` are uninitialized.)
 $(T2 moveSome,
         Moves as many elements as possible from one range to another.)
+$(T2 moveEmplaceSome,
+        Similar to $(D moveSome) but assumes all elements in `target` are uninitialized.)
 $(T2 remove,
         Removes elements from a range in-place, and returns the shortened
         range.)
