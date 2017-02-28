@@ -841,14 +841,23 @@ ref T[N] asArray(size_t N, T)(ref T[] source, string errorMsg = "")
 }
 
 /*
- * This helper is used internally in the WrapperDigest template, but it might be
- * useful for other purposes as well. It returns the length (in bytes) of the hash value
- * produced by T.
+ * Returns the length (in bytes) of the hash value produced by T.
  */
 template digestLength(T)
 if (isDigest!T)
 {
     enum size_t digestLength = (ReturnType!(T.finish)).length;
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    import std.digest.md : MD5;
+    import std.digest.sha: SHA1, SHA256, SHA512;
+    assert(digestLength!MD5 == 16);
+    assert(digestLength!SHA1 == 20);
+    assert(digestLength!SHA256 == 32);
+    assert(digestLength!SHA512 == 64);
 }
 
 /**
