@@ -111,7 +111,7 @@ $(TR
     )
 )
 $(TR
-    $(TDNW $(SUBMODULE Set operations, setops))
+    $(TDNW Set operations $(BR)($(SUBMODULE setops, setops)))
     $(TD
         $(SUBREF setops, cartesianProduct)
         $(SUBREF setops, largestPartialIntersection)
