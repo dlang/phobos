@@ -85,6 +85,12 @@ $(BOOKTABLE ,
         $(TD Advances a given bidirectional _range from the right by exactly
         $(I n) elements.
     ))
+    $(TR $(TD $(D $(LREF shift)))
+        $(TD Pops the first element from $(D r) and returns it.
+    ))
+    $(TR $(TD $(D $(LREF shiftBack)))
+        $(TD Pops the last element from $(D r) and returns it.
+    ))
     $(TR $(TD $(D $(LREF moveFront)))
         $(TD Removes the front element of a _range.
     ))
@@ -2028,6 +2034,156 @@ ElementType!R moveAt(R)(R r, size_t i)
             assert(moveAt(d, 2) == 3);
         }
     }
+}
+
+private enum int hasNothrowPopFront(Range) = (functionAttributes!(popFrontN!Range)
+                                               & FunctionAttribute.nothrow_);
+
+/**
+Pops the first element from a range or array $(D r) and returns it.
+It combines $(D front) and $(D popFront) in one method.
+
+Params:
+    r = range to consume the first element from
+
+Warning:
+    If a transient range is used, you should `dup`licate it to avoid it from
+    being overwritten.
+    Using shift with `popFront` that might `throw` could lead to a loss of the
+    `front` element and thus it is prohibited.
+
+Returns:
+    Next element of the input range
+ */
+auto shift(Range)(ref Range r)
+if (isInputRange!Range && hasNothrowPopFront!Range)
+in
+{
+    assert(!r.empty, "empty range");
+}
+body
+{
+    auto e = r.front;
+    r.popFront();
+    return e;
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    int[3] arr = [1, 2, 3];
+    int[] r = arr;
+    assert(r.shift == 1);
+
+    static immutable result = [2, 3];
+    assert(r == result);
+    assert(r.shift == 2);
+    assert(r.shift == 3);
+    assert(r.empty);
+
+    import std.algorithm.comparison: equal;
+    import std.range: iota;
+    // original array stays unmodified
+    assert(arr[].equal(iota(1, 4)));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.range : iota;
+    auto r = iota(1, 3);
+    assert(r.shift == 1);
+    assert(r.shift == 2);
+    assert(r.empty);
+}
+
+unittest
+{
+    struct ThrowingRange
+    {
+        bool empty = false;
+        int[] front = [0];
+        void popFront(){}
+    }
+
+    ThrowingRange tRange;
+    assert(tRange.front == [0]);
+    // if popFront might throw, shift shouldn't be possible
+    static assert(!__traits(compiles, tRange.shift));
+}
+
+private enum int hasNothrowPopBack(Range) = (functionAttributes!(popBackN!Range)
+                                               & FunctionAttribute.nothrow_);
+
+/**
+Pops the last element from a range or array $(D r) and returns it.
+It combines $(D back) and $(D popBack) in one method.
+
+Params:
+    r = Bidirectional range or array to consume the last element from
+
+Warning:
+    If a transient range is used, you should `dup`licate it to avoid it from
+    being overwritten.
+    Using shift with `popFront` that might `throw` could lead to a loss of the
+    `front` element and thus it is prohibited.
+
+Returns:
+    Last element of the bidirectional range
+ */
+auto shiftBack(Range)(ref Range r)
+if (isBidirectionalRange!Range && hasNothrowPopBack!Range)
+in
+{
+    assert(!r.empty, "empty range");
+}
+body
+{
+    auto e = r.back;
+    r.popBack();
+    return e;
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    int[3] arr = [1, 2, 3];
+    int[] r = arr;
+    assert(r.shiftBack == 3);
+
+    static immutable result = [1, 2];
+    assert(r == result);
+    assert(r.shiftBack == 2);
+    assert(r.shiftBack == 1);
+    assert(r.empty);
+
+    import std.algorithm.comparison: equal;
+    import std.range: iota;
+    // original array stays unmodified
+    assert(arr[].equal(iota(1, 4)));
+}
+
+@safe pure nothrow @nogc unittest
+{
+    import std.range : iota;
+    auto r = iota(1, 3);
+    assert(r.shiftBack == 2);
+    assert(r.shiftBack == 1);
+    assert(r.empty);
+}
+
+unittest
+{
+    struct ThrowingRange
+    {
+        bool empty = false;
+        int[] front = [0];
+        void popBack(){}
+    }
+
+    ThrowingRange tRange;
+    assert(tRange.front == [0]);
+    // if popBack might throw, shiftBack shouldn't be possible
+    static assert(!__traits(compiles, tRange.shiftBack));
 }
 
 /**
