@@ -4,6 +4,36 @@
     This module defines functions related to exceptions and general error
     handling. It also defines functions intended to aid in unit testing.
 
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Assumptions) $(TD
+        $(LREF assertNotThrown)
+        $(LREF assertThrown)
+        $(LREF assumeUnique)
+        $(LREF assumeWontThrow)
+        $(LREF mayPointTo)
+))
+$(TR $(TD Enforce) $(TD
+        $(LREF doesPointTo)
+        $(LREF enforce)
+        $(LREF enforceEx)
+        $(LREF errnoEnforce)
+))
+$(TR $(TD Handlers) $(TD
+        $(LREF collectException)
+        $(LREF collectExceptionMsg)
+        $(LREF ifThrown)
+        $(LREF handle)
+))
+$(TR $(TD Other) $(TD
+        $(LREF basicExceptionCtors)
+        $(LREF emptyExceptionMsg)
+        $(LREF ErrnoException)
+        $(LREF RangePrimitive)
+))
+)
+
     Synopsis of some of std.exception's functions:
     --------------------
     string synopsis()
