@@ -4,6 +4,7 @@ Functions and types that manipulate built-in arrays and associative arrays.
 
 This module provides all kinds of functions to create, manipulate or convert arrays:
 
+$(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
@@ -11,7 +12,7 @@ $(TR $(TH Function Name) $(TH Description)
         $(TD Returns a copy of the input in a newly allocated dynamic _array.
     ))
     $(TR $(TD $(D $(LREF appender)))
-        $(TD Returns a new Appender initialized with a given _array.
+        $(TD Returns a new $(LREF Appender) or $(LREF RefAppender) initialized with a given _array.
     ))
     $(TR $(TD $(D $(LREF assocArray)))
         $(TD Returns a newly allocated associative _array from a range of key/value tuples.

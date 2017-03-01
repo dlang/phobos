@@ -7,6 +7,8 @@
  * Authors:   $(HTTP digitalmars.com, Walter Bright),
  *            Matthew Wilson
  * Source:    $(PHOBOSSRC std/_mmfile.d)
+ *
+ * $(SCRIPT inhibitQuickIndex = 1;)
  */
 /*          Copyright Digital Mars 2004 - 2009.
  * Distributed under the Boost Software License, Version 1.0.
