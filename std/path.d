@@ -32,9 +32,53 @@
     returned, it is usually a slice of an input string.  If a function
     allocates, this is explicitly mentioned in the documentation.
 
-    Upgrading:
-        $(HTTP digitalmars.com/d/1.0/phobos/std_path.html#fnmatch) can
-        be replaced with $(D globMatch).
+$(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Normalization) $(TD
+          $(LREF absolutePath)
+          $(LREF asAbsolutePath)
+          $(LREF asNormalizedPath)
+          $(LREF asRelativePath)
+          $(LREF buildNormalizedPath)
+          $(LREF buildPath)
+          $(LREF chainPath)
+          $(LREF expandTilde)
+))
+$(TR $(TD Partitioning) $(TD
+          $(LREF baseName)
+          $(LREF dirName)
+          $(LREF dirSeparator)
+          $(LREF driveName)
+          $(LREF pathSeparator)
+          $(LREF pathSplitter)
+          $(LREF relativePath)
+          $(LREF rootName)
+          $(LREF stripDrive)
+))
+$(TR $(TD Validation) $(TD
+          $(LREF isAbsolute)
+          $(LREF isDirSeparator)
+          $(LREF isRooted)
+          $(LREF isValidFilename)
+          $(LREF isValidPath)
+))
+$(TR $(TD Extension) $(TD
+          $(LREF defaultExtension)
+          $(LREF extension)
+          $(LREF setExtension)
+          $(LREF stripExtension)
+          $(LREF withDefaultExtension)
+          $(LREF withExtension)
+))
+$(TR $(TD Other) $(TD
+          $(LREF filenameCharCmp)
+          $(LREF filenameCmp)
+          $(LREF globMatch)
+          $(LREF CaseSensitive)
+))
+))
 
     Authors:
         Lars Tandle Kyllingstad,
