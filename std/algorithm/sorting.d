@@ -1024,8 +1024,6 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
 
 @system unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     immutable(int)[] arr = [ 2, 3, 1, 5, 0 ];
     // index using pointers
     auto index1 = new immutable(int)*[arr.length];
@@ -1701,9 +1699,6 @@ private void shortSort(alias less, Range)(Range r)
 {
     import std.random : Random, uniform;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     auto rnd = Random(1);
     auto a = new int[uniform(100, 200, rnd)];
     foreach (ref e; a)
@@ -1943,9 +1938,6 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
     import std.algorithm.mutation : swapRanges;
     import std.random : Random, unpredictableSeed, uniform;
     import std.uni : toUpper;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     // sort using delegate
     auto a = new int[100];
@@ -2972,9 +2964,6 @@ if (isRandomAccessRange!R && hasLength!R)
     import std.algorithm.iteration : map;
     import std.numeric : entropy;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     auto lowEnt = [ 1.0, 0, 0 ],
         midEnt = [ 0.1, 0.1, 0.8 ],
         highEnt = [ 0.31, 0.29, 0.4 ];
@@ -3455,10 +3444,6 @@ private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
     import std.algorithm.comparison : max, min;
     import std.algorithm.iteration : reduce;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    //scope(failure) writeln(stderr, "Failure testing algorithm");
-    //auto v = [ 25, 7, 9, 2, 0, 5, 21 ];
     int[] v = [ 7, 6, 5, 4, 3, 2, 1, 0 ];
     ptrdiff_t n = 3;
     topN!("a < b")(v, n);
@@ -3506,9 +3491,6 @@ private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
     import std.algorithm.comparison : max, min;
     import std.algorithm.iteration : reduce;
     import std.random : Random, uniform, unpredictableSeed;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     immutable uint[] seeds = [90027751, 2709791795, 1374631933, 995751648, 3541495258, 984840953, unpredictableSeed];
     foreach (s; seeds)
@@ -3716,9 +3698,6 @@ if (isInputRange!(SRange) && isRandomAccessRange!(TRange)
     import std.random : Random, unpredictableSeed, uniform, randomShuffle;
     import std.typecons : Yes;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     auto r = Random(unpredictableSeed);
     ptrdiff_t[] a = new ptrdiff_t[uniform(1, 1000, r)];
     foreach (i, ref e; a) e = i;
@@ -3845,21 +3824,16 @@ if (isRandomAccessRange!Range &&
 {
     import std.conv : text;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     {
         int[] a = [ 10, 8, 9, 2, 4, 6, 7, 1, 3, 5 ];
         int*[] b = new int*[5];
         topNIndex!("a > b")(a, b, Yes.sortOutput);
-        //foreach (e; b) writeln(*e);
         assert(b == [ &a[0], &a[2], &a[1], &a[6], &a[5]]);
     }
     {
         int[] a = [ 10, 8, 9, 2, 4, 6, 7, 1, 3, 5 ];
         auto b = new ubyte[5];
         topNIndex!("a > b")(a, b, Yes.sortOutput);
-        //foreach (e; b) writeln(e, ":", a[e]);
         assert(b == [ cast(ubyte) 0, cast(ubyte) 2, cast(ubyte) 1, cast(ubyte) 6, cast(ubyte) 5], text(b));
     }
 }

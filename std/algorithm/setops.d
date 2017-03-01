@@ -677,9 +677,6 @@ void largestPartialIntersectionWeighted
     import std.conv : text;
     import std.typecons : tuple, Tuple, Yes;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     double[][] a =
         [
             [ 1, 4, 7, 8 ],
@@ -690,8 +687,6 @@ void largestPartialIntersectionWeighted
         ];
     auto b = new Tuple!(double, uint)[2];
     largestPartialIntersection(a, b, Yes.sortOutput);
-    //sort(b);
-    //writeln(b);
     assert(b == [ tuple(7.0, 4u), tuple(1.0, 3u) ][], text(b));
     assert(a[0].empty);
 }
@@ -700,9 +695,6 @@ void largestPartialIntersectionWeighted
 {
     import std.conv : text;
     import std.typecons : tuple, Tuple, Yes;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     string[][] a =
         [
@@ -714,7 +706,6 @@ void largestPartialIntersectionWeighted
         ];
     auto b = new Tuple!(string, uint)[2];
     largestPartialIntersection(a, b, Yes.sortOutput);
-    //writeln(b);
     assert(b == [ tuple("7", 4u), tuple("1", 3u) ][], text(b));
 }
 
@@ -722,9 +713,8 @@ void largestPartialIntersectionWeighted
 {
     import std.typecons : tuple, Tuple;
 
-    //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-// Figure which number can be found in most arrays of the set of
-// arrays below, with specific per-element weights
+    // Figure which number can be found in most arrays of the set of
+    // arrays below, with specific per-element weights
     double[][] a =
         [
             [ 1, 4, 7, 8 ],
@@ -736,8 +726,7 @@ void largestPartialIntersectionWeighted
     auto b = new Tuple!(double, uint)[1];
     double[double] weights = [ 1:1.2, 4:2.3, 7:1.1, 8:1.1 ];
     largestPartialIntersectionWeighted(a, b, weights);
-// First member is the item, second is the occurrence count
-    //writeln(b[0]);
+    // First member is the item, second is the occurrence count
     assert(b[0] == tuple(4.0, 2u));
 }
 

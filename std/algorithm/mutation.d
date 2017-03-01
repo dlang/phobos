@@ -274,9 +274,6 @@ Unicode integrity is not preserved:
     import std.conv : text;
     import std.random : Random, unpredictableSeed, uniform;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     // a more elaborate test
     {
         auto rnd = Random(unpredictableSeed);
@@ -486,8 +483,6 @@ $(HTTP sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
 {
     import std.algorithm.iteration : filter;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     {
         int[] a = [ 1, 5 ];
         int[] b = [ 9, 8 ];
@@ -576,9 +571,6 @@ if (isInputRange!Range && is(typeof(range.front = value)))
     import std.conv : text;
     import std.internal.test.dummyrange;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     int[] a = [ 1, 2, 3 ];
     fill(a, 6);
     assert(a == [ 6, 6, 6 ], text(a));
@@ -591,8 +583,6 @@ if (isInputRange!Range && is(typeof(range.front = value)))
         }
     }
     void fun1() { foreach (i; 0 .. 1000) fill(a, 6); }
-    //void fun2() { foreach (i; 0 .. 1000) fill2(a, 6); }
-    //writeln(benchmark!(fun0, fun1, fun2)(10000));
 
     // fill should accept InputRange
     alias InputRange = DummyRange!(ReturnBy.Reference, Length.No, RangeType.Input);
@@ -735,9 +725,6 @@ if (isInputRange!InputRange
     import std.exception : assertThrown;
     import std.internal.test.dummyrange;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     int[] a = [ 1, 2, 3, 4, 5 ];
     int[] b = [1, 2];
     fill(a, b);
@@ -854,9 +841,6 @@ if (is(Range == char[]) || is(Range == wchar[]))
     import std.algorithm.iteration : filter;
     import std.meta : AliasSeq;
     import std.traits : hasElaborateAssign;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     //Test strings:
     //Must work on narrow strings.
@@ -1033,9 +1017,8 @@ pure nothrow @safe @nogc unittest
 @safe unittest
 {
     import std.traits;
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     import std.exception : assertCTFEable;
+
     assertCTFEable!((){
         Object obj1 = new Object;
         Object obj2 = obj1;
@@ -1148,9 +1131,8 @@ private T moveImpl(T)(ref T source)
 @safe unittest
 {
     import std.traits;
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     import std.exception : assertCTFEable;
+
     assertCTFEable!((){
         Object obj1 = new Object;
         Object obj2 = obj1;
@@ -1852,10 +1834,7 @@ if (s == SwapStrategy.stable
 @safe unittest
 {
     import std.range;
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-    //writeln(remove!(SwapStrategy.stable)(a, 1));
     a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     assert(remove!(SwapStrategy.stable)(a, 1) ==
         [ 0, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]);
@@ -1873,18 +1852,12 @@ if (s == SwapStrategy.stable
            [ 1, 2, 4 ]);
 
     a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-    //writeln(remove!(SwapStrategy.stable)(a, 1, 5));
-    a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     assert(remove!(SwapStrategy.stable)(a, 1, 5) ==
         [ 0, 2, 3, 4, 6, 7, 8, 9, 10 ]);
 
     a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-    //writeln(remove!(SwapStrategy.stable)(a, 1, 3, 5));
-    a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     assert(remove!(SwapStrategy.stable)(a, 1, 3, 5)
             == [ 0, 2, 4, 6, 7, 8, 9, 10]);
-    a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-    //writeln(remove!(SwapStrategy.stable)(a, 1, tuple(3, 5)));
     a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
     assert(remove!(SwapStrategy.stable)(a, 1, tuple(3, 5))
             == [ 0, 2, 5, 6, 7, 8, 9, 10]);
@@ -1993,13 +1966,10 @@ if (isBidirectionalRange!Range
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] a = [ 1, 2, 3, 2, 3, 4, 5, 2, 5, 6 ];
     assert(remove!("a == 2", SwapStrategy.unstable)(a) ==
             [ 1, 6, 3, 5, 3, 4, 5 ]);
     a = [ 1, 2, 3, 2, 3, 4, 5, 2, 5, 6 ];
-    //writeln(remove!("a != 2", SwapStrategy.stable)(a));
     assert(remove!("a == 2", SwapStrategy.stable)(a) ==
             [ 1, 3, 3, 4, 5, 5, 6 ]);
 }
@@ -2126,8 +2096,6 @@ if (isRandomAccessRange!Range && hasLength!Range)
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] range = null;
     reverse(range);
     range = [ 1 ];
