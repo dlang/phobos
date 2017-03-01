@@ -175,7 +175,8 @@ heap.
 
 /**
 Clears the heap. Returns the portion of the store from $(D 0) up to
-$(D length), which satisfies the $(LUCKY heap property).
+$(D length), which satisfies the $(LINK2 https://en.wikipedia.org/wiki/Heap_(data_structure),
+heap property).
      */
     auto release()
     {

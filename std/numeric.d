@@ -40,20 +40,23 @@ public enum CustomFloatFlags
      * Store values in normalized form by default. The actual precision of the
      * significand is extended by 1 bit by assuming an implicit leading bit of 1
      * instead of 0. i.e. $(D 1.nnnn) instead of $(D 0.nnnn).
-     * True for all $(LUCKY IEE754) types
+     * True for all $(LINK2 https://en.wikipedia.org/wiki/IEEE_floating_point, IEE754) types
      */
     storeNormalized = 2,
 
     /**
-     * Stores the significand in $(LUCKY IEEE754 denormalized) form when the
-     * exponent is 0. Required to express the value 0.
+     * Stores the significand in $(LINK2 https://en.wikipedia.org/wiki/IEEE_754-1985#Denormalized_numbers,
+     * IEEE754 denormalized) form when the exponent is 0. Required to express the value 0.
      */
     allowDenorm = 4,
 
-    /// Allows the storage of $(LUCKY IEEE754 _infinity) values.
+    /**
+      * Allows the storage of $(LINK2 https://en.wikipedia.org/wiki/IEEE_754-1985#Positive_and_negative_infinity,
+      * IEEE754 _infinity) values.
+      */
     infinity = 8,
 
-    /// Allows the storage of $(LUCKY IEEE754 Not a Number) values.
+    /// Allows the storage of $(LINK2 https://en.wikipedia.org/wiki/NaN, IEEE754 Not a Number) values.
     nan = 16,
 
     /**
@@ -66,12 +69,13 @@ public enum CustomFloatFlags
     /// If set, unsigned custom floats are assumed to be negative.
     negativeUnsigned = 64,
 
-    /**If set, 0 is the only allowed $(LUCKY IEEE754 denormalized) number.
+    /**If set, 0 is the only allowed $(LINK2 https://en.wikipedia.org/wiki/IEEE_754-1985#Denormalized_numbers,
+     * IEEE754 denormalized) number.
      * Requires allowDenorm and storeNormalized.
      */
     allowDenormZeroOnly = 128 | allowDenorm | storeNormalized,
 
-    /// Include _all of the $(LUCKY IEEE754) options.
+    /// Include _all of the $(LINK2 https://en.wikipedia.org/wiki/IEEE_floating_point, IEEE754) options.
     ieee = signed | storeNormalized | allowDenorm | infinity | nan ,
 
     /// Include none of the above options.
@@ -1624,7 +1628,8 @@ body
 }
 
 /**
-Computes $(LUCKY Euclidean distance) between input ranges $(D a) and
+Computes $(LINK2 https://en.wikipedia.org/wiki/Euclidean_distance,
+Euclidean distance) between input ranges $(D a) and
 $(D b). The two ranges must have the same length. The three-parameter
 version stops computation as soon as the distance is greater than or
 equal to $(D limit) (this is useful to save computation if a small
@@ -1684,7 +1689,8 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 }
 
 /**
-Computes the $(LUCKY dot product) of input ranges $(D a) and $(D
+Computes the $(LINK2 https://en.wikipedia.org/wiki/Dot_product,
+dot product) of input ranges $(D a) and $(D
 b). The two ranges must have the same length. If both ranges define
 length, the check is done once; otherwise, it is done at each
 iteration.
@@ -1781,7 +1787,8 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 }
 
 /**
-Computes the $(LUCKY cosine similarity) of input ranges $(D a) and $(D
+Computes the $(LINK2 https://en.wikipedia.org/wiki/Cosine_similarity,
+cosine similarity) of input ranges $(D a) and $(D
 b). The two ranges must have the same length. If both ranges define
 length, the check is done once; otherwise, it is done at each
 iteration. If either range has all-zero elements, return 0.
@@ -1924,7 +1931,8 @@ if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
 }
 
 /**
-Computes $(LUCKY _entropy) of input range $(D r) in bits. This
+Computes $(LINK2 https://en.wikipedia.org/wiki/Entropy_(information_theory),
+_entropy) of input range $(D r) in bits. This
 function assumes (without checking) that the values in $(D r) are all
 in $(D [0, 1]). For the entropy to be meaningful, often $(D r) should
 be normalized too (i.e., its values should sum to 1). The
@@ -1972,7 +1980,8 @@ if (isInputRange!Range &&
 }
 
 /**
-Computes the $(LUCKY Kullback-Leibler divergence) between input ranges
+Computes the $(LINK2 https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence,
+Kullback-Leibler divergence) between input ranges
 $(D a) and $(D b), which is the sum $(D ai * log(ai / bi)). The base
 of logarithm is 2. The ranges are assumed to contain elements in $(D
 [0, 1]). Usually the ranges are normalized probability distributions,
@@ -2020,7 +2029,8 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 }
 
 /**
-Computes the $(LUCKY Jensen-Shannon divergence) between $(D a) and $(D
+Computes the $(LINK2 https://en.wikipedia.org/wiki/Jensen%E2%80%93Shannon_divergence,
+Jensen-Shannon divergence) between $(D a) and $(D
 b), which is the sum $(D (ai * log(2 * ai / (ai + bi)) + bi * log(2 *
 bi / (ai + bi))) / 2). The base of logarithm is 2. The ranges are
 assumed to contain elements in $(D [0, 1]). Usually the ranges are

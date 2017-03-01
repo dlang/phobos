@@ -16,7 +16,8 @@ $(T2 balancedParens,
         string has balanced parentheses.)
 $(T2 boyerMooreFinder,
         $(D find("hello world", boyerMooreFinder("or"))) returns $(D "orld")
-        using the $(LUCKY Boyer-Moore _algorithm).)
+        using the $(LINK2 https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore_string_search_algorithm,
+        Boyer-Moore _algorithm).)
 $(T2 canFind,
         $(D canFind("hello world", "or")) returns $(D true).)
 $(T2 count,
@@ -2305,7 +2306,8 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 
 /**
  * Finds $(D needle) in $(D haystack) efficiently using the
- * $(LUCKY Boyer-Moore) method.
+ * $(LINK2 https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore_string_search_algorithm,
+ * Boyer-Moore) method.
  *
  * Params:
  * haystack = A random-access range with length and slicing.

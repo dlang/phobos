@@ -963,8 +963,8 @@ alias pipe(fun...) = compose!(Reverse!(fun));
 }
 
 /**
- * $(LUCKY Memoizes) a function so as to avoid repeated
- * computation. The memoization structure is a hash table keyed by a
+ * $(LINK2 https://en.wikipedia.org/wiki/Memoization, Memoizes) a function so as
+ * to avoid repeated computation. The memoization structure is a hash table keyed by a
  * tuple of the function's arguments. There is a speed gain if the
  * function is repeatedly called with the same arguments and is more
  * expensive than a hash table lookup. For more information on memoization, refer to $(HTTP docs.google.com/viewer?url=http%3A%2F%2Fhop.perl.plover.com%2Fbook%2Fpdf%2F03CachingAndMemoization.pdf, this book chapter).

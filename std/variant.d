@@ -1405,7 +1405,8 @@ values of their own type within.
 
 This is achieved with `Algebraic` by using `This` as a placeholder whenever a
 reference to the type being defined is needed. The `Algebraic` instantiation
-will perform $(LUCKY alpha renaming) on its constituent types, replacing `This`
+will perform $(LINK2 https://en.wikipedia.org/wiki/Name_resolution_(programming_languages)#Alpha_renaming_to_make_name_resolution_trivial,
+alpha renaming) on its constituent types, replacing `This`
 with the self-referenced type. The structure of the type involving `This` may
 be arbitrarily complex.
 */

@@ -11,7 +11,8 @@ version(unittest) import std.stdio;
 
 /**
 
-Given an $(LUCKY object factory) of type `Factory` or a factory function
+Given an $(LINK2 https://en.wikipedia.org/wiki/Factory_(object-oriented_programming),
+object factory) of type `Factory` or a factory function
 `factoryFunction`, and optionally also `BookkeepingAllocator` as a supplemental
 allocator for bookkeeping, `AllocatorList` creates an allocator that lazily
 creates as many allocators are needed for satisfying client allocation requests.

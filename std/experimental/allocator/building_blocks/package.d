@@ -252,10 +252,11 @@ simple bump-the-pointer allocator.))
 $(TR $(TDC2 InSituRegion, region) $(TD Region holding its own allocation, most often on
 the stack. Has statically-determined size.))
 
-$(TR $(TDC2 SbrkRegion, region) $(TD Region using $(D $(LUCKY sbrk)) for allocating
-memory.))
+$(TR $(TDC2 SbrkRegion, region) $(TD Region using $(D $(LINK2 https://en.wikipedia.org/wiki/Sbrk,
+sbrk)) for allocating memory.))
 
-$(TR $(TDC3 MmapAllocator, mmap_allocator) $(TD Allocator using $(D $(LUCKY mmap)) directly.))
+$(TR $(TDC3 MmapAllocator, mmap_allocator) $(TD Allocator using
+            $(D $(LINK2 https://en.wikipedia.org/wiki/Mmap, mmap)) directly.))
 
 $(TR $(TDC2 StatsCollector, stats_collector) $(TD Collect statistics about any other
 allocator.))
