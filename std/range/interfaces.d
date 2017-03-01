@@ -7,7 +7,7 @@ when runtime polymorphism is required. For this purpose, this submodule
 provides a number of object and $(D interface) definitions that can be used to
 wrap around _range objects created by the $(D std.range) templates.
 
-$(BOOKTABLE ,
+$(SIMPLE_CHEATSHEET
     $(TR $(TD $(D $(LREF InputRange)))
         $(TD Wrapper for input ranges.
     ))

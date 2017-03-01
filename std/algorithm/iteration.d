@@ -3,7 +3,7 @@
 This is a submodule of $(MREF std, algorithm).
 It contains generic _iteration algorithms.
 
-$(BOOKTABLE Cheat Sheet,
+$(SIMPLE_CHEATSHEET
 $(TR $(TH Function Name) $(TH Description))
 $(T2 cache,
         Eagerly evaluates and caches another range's $(D front).)

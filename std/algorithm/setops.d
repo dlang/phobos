@@ -3,7 +3,7 @@
 This is a submodule of $(MREF std, algorithm).
 It contains generic algorithms that implement set operations.
 
-$(BOOKTABLE Cheat Sheet,
+$(SIMPLE_CHEATSHEET
 $(TR $(TH Function Name) $(TH Description))
 $(T2 cartesianProduct,
         Computes Cartesian product of two ranges.)
