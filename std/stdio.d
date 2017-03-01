@@ -1773,7 +1773,7 @@ is recommended if you want to process a complete file.
 void main()
 {
     import std.stdio;
-    auto f = File("foo");
+    auto f = File("input");
     foreach (_; 0 .. 3)
     {
         int a;
@@ -1783,7 +1783,7 @@ void main()
 }
 ----
 $(CONSOLE
-% echo "1 2 3" > foo
+% echo "1 2 3" > input
 % rdmd test.d
 2
 3
