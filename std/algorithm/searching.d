@@ -3493,19 +3493,33 @@ Returns: The maximal element of the passed-in range.
 See_Also:
     $(REF max, std,algorithm,comparison)
 */
-auto maxElement(alias map = "a", Range)(Range r)
+auto maxElement(alias map, Range)(Range r)
 if (isInputRange!Range && !isInfinite!Range &&
     !is(CommonType!(ElementType!Range, RangeElementType) == void))
 {
     return extremum!(map, "a > b")(r);
 }
 
+auto maxElement(Range)(Range r)
+if (isInputRange!Range && !isInfinite!Range &&
+    !is(CommonType!(ElementType!Range, RangeElementType) == void))
+{
+    return extremum!`a > b`(r);
+}
+
 /// ditto
-auto maxElement(alias map = "a", Range, RangeElementType = ElementType!Range)
+auto maxElement(alias map, Range, RangeElementType = ElementType!Range)
                (Range r, RangeElementType seed)
 if (isInputRange!Range && !isInfinite!Range)
 {
     return extremum!(map, "a > b")(r, seed);
+}
+
+auto maxElement(Range, RangeElementType = ElementType!Range)
+               (Range r, RangeElementType seed)
+if (isInputRange!Range && !isInfinite!Range)
+{
+    return extremum!`a > b`(r, seed);
 }
 
 ///
