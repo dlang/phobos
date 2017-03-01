@@ -5,10 +5,10 @@ import std.stdio : readf;
 void main() {
     // assume every line from stdin is similar to "1 2 3";
     int a, b, c;
-    readf(text, "%d %d %d", a, b, c);
+    readf(" %d %d %d", a, b, c);
     // pointers can still be used
-    readf(text, "%d %d %d, &a, &b, &c);
+    readf(" %d %d %d, &a, &b, &c);
     // and even combined:
-    readf(text, "%d %d %d, a, &b, c);
+    readf(" %d %d %d, a, &b, c);
 }
 -------
