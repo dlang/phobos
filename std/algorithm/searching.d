@@ -1421,7 +1421,9 @@ private auto extremum(alias selector = "a < b", Range,
     {
         DummyType d;
         assert(d.extremum == 1);
+        assert(d.extremum!(a => a)  == 1);
         assert(d.extremum!`a > b` == 10);
+        assert(d.extremum!(a => a, `a > b`) == 10);
     }
 }
 
@@ -3463,7 +3465,13 @@ auto minElement(Range, RangeElementType = ElementType!Range)
     {
         DummyType d;
         assert(d.minElement == 1);
+        assert(d.minElement!(a => a) == 1);
     }
+
+    // with empty, but seeded ranges
+    int[] arr;
+    assert(arr.minElement(42) == 42);
+    assert(arr.minElement!(a => a)(42) == 42);
 }
 
 @nogc @safe nothrow pure unittest
@@ -3570,7 +3578,14 @@ if (isInputRange!Range && !isInfinite!Range)
     {
         DummyType d;
         assert(d.maxElement == 10);
+        assert(d.maxElement!(a => a) == 10);
     }
+
+    // with empty, but seeded ranges
+    int[] arr;
+    assert(arr.maxElement(42) == 42);
+    assert(arr.maxElement!(a => a)(42) == 42);
+
 }
 
 @nogc @safe nothrow pure unittest
