@@ -344,7 +344,9 @@ if (isNarrowString!String)
 /**
 Returns a newly allocated associative _array from a range of key/value tuples.
 
-Params: r = An input range of tuples of keys and values.
+Params:
+    r = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+    of tuples of keys and values.
 Returns: A newly allocated associative array out of elements of the input
 range, which must be a range of tuples (Key, Value). Returns a null associative
 array reference when given an empty range.
@@ -410,8 +412,8 @@ Construct a range iterating over an associative array by key/value tuples.
 
 Params: aa = The associative array to iterate over.
 
-Returns: A forward range of Tuple's of key and value pairs from the given
-associative array.
+Returns: A $(REF_ALTTEXT forward range, isForwardRange, std,_range,primitives)
+of Tuple's of key and value pairs from the given associative array.
 */
 auto byPair(Key, Value)(Value[Key] aa)
 {
@@ -836,7 +838,8 @@ private void copyBackwards(T)(T[] src, T[] dest)
     Params:
         array = The array that $(D stuff) will be inserted into.
         pos   = The position in $(D array) to insert the $(D stuff).
-        stuff = An input range, or any number of implicitly convertible items to insert into $(D array).
+        stuff = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives),
+        or any number of implicitly convertible items to insert into $(D array).
  +/
 void insertInPlace(T, U...)(ref T[] array, size_t pos, U stuff)
 if (!isSomeString!(T[])
@@ -1563,7 +1566,8 @@ private enum bool hasCheapIteration(R) = isArray!R;
    into one array using `sep` as the separator if present.
 
    Params:
-        ror = An input range of input ranges
+        ror = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+        of input ranges
         sep = An input range, or a single element, to join the ranges on
 
    Returns:
