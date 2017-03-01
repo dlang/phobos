@@ -3394,6 +3394,7 @@ if (isInputRange!Range && !isInfinite!Range)
     return extremum!map(r);
 }
 
+/// ditto
 auto minElement(Range)(Range r)
     if (isInputRange!Range && !isInfinite!Range)
 {
