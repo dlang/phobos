@@ -1841,6 +1841,12 @@ void yield(T)(T value)
     assert(myIota.front == 2);
     myIota.popFront();
     assert(myIota.front == 3);
+
+    size_t[2] counter = [0, 0];
+    foreach (i, unused; myIota) counter[] += [1, i];
+
+    assert(myIota.empty);
+    assert(counter == [7, 21]);
 }
 
 // MessageBox Implementation
