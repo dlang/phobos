@@ -6,6 +6,64 @@ in this module handle files as a unit, e.g., read or write one _file
 at a time. For opening files and manipulating them via handles refer
 to module $(MREF std, stdio).
 
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD General) $(TD
+          $(LREF exists)
+          $(LREF isDir)
+          $(LREF isFile)
+          $(LREF isSymlink)
+          $(LREF rename)
+          $(LREF thisExePath)
+))
+$(TR $(TD Directories) $(TD
+          $(LREF chdir)
+          $(LREF dirEntries)
+          $(LREF getcwd)
+          $(LREF mkdir)
+          $(LREF mkdirRecurse)
+          $(LREF rmdir)
+          $(LREF rmdirRecurse)
+          $(LREF tempDir)
+))
+$(TR $(TD Files) $(TD
+          $(LREF append)
+          $(LREF copy)
+          $(LREF read)
+          $(LREF readText)
+          $(LREF remove)
+          $(LREF slurp)
+          $(LREF write)
+))
+$(TR $(TD Symlinks) $(TD
+          $(LREF symlink)
+          $(LREF readLink)
+))
+$(TR $(TD Attributes) $(TD
+          $(LREF attrIsDir)
+          $(LREF attrIsFile)
+          $(LREF attrIsSymlink)
+          $(LREF getAttributes)
+          $(LREF getLinkAttributes)
+          $(LREF getSize)
+          $(LREF setAttributes)
+))
+$(TR $(TD Timestamp) $(TD
+          $(LREF getTimes)
+          $(LREF getTimesWin)
+          $(LREF setTimes)
+          $(LREF timeLastModified)
+))
+$(TR $(TD Other) $(TD
+          $(LREF DirEntry)
+          $(LREF FileException)
+          $(LREF PreserveAttributes)
+          $(LREF SpanMode)
+))
+)
+
+
 Copyright: Copyright Digital Mars 2007 - 2011.
 See_Also:  The $(HTTP ddili.org/ders/d.en/files.html, official tutorial) for an
 introduction to working with files in D, module
