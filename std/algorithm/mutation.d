@@ -223,6 +223,7 @@ the example below, $(D r2) is a right subrange of $(D r1).
 {
     import std.algorithm.comparison : equal;
     import std.container : SList;
+    import std.range.primitives : popFrontN;
 
     auto list = SList!(int)(4, 5, 6, 7, 1, 2, 3);
     auto r1 = list[];

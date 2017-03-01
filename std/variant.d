@@ -83,6 +83,16 @@ template maxSize(T...)
     }
 }
 
+///
+@safe unittest
+{
+    static assert(maxSize!(int, long) == 8);
+    static assert(maxSize!(bool, byte) == 1);
+
+    struct Cat { int a, b, c; }
+    static assert(maxSize!(bool, Cat) == 12);
+}
+
 struct This;
 
 private alias This2Variant(V, T...) = AliasSeq!(ReplaceType!(This, V, T));
@@ -1401,6 +1411,8 @@ be arbitrarily complex.
 */
 @system unittest
 {
+    import std.typecons : Tuple, tuple;
+
     // A tree is either a leaf or a branch of two other trees
     alias Tree(Leaf) = Algebraic!(Leaf, Tuple!(This*, This*));
     Tree!int tree = tuple(new Tree!int(42), new Tree!int(43));

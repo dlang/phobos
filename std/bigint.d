@@ -1104,6 +1104,14 @@ if (isIntegral!T)
     }
 }
 
+///
+nothrow pure @system
+unittest
+{
+    assert((-1).absUnsign == 1);
+    assert(1.absUnsign == 1);
+}
+
 nothrow pure @system
 unittest
 {
