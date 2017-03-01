@@ -14,10 +14,10 @@ $(TR $(TD Generic) $(TD
         $(LREF toChars)
 ))
 $(TR $(TD Strings) $(TD
-        $(LREF dtext)
-        $(LREF hexString)
         $(LREF text)
         $(LREF wtext)
+        $(LREF dtext)
+        $(LREF hexString)
 ))
 $(TR $(TD Numeric) $(TD
         $(LREF octal)
