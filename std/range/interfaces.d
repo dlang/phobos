@@ -1,12 +1,13 @@
 /**
 This module is a submodule of $(MREF std, range).
 
-The main $(D std.range) module provides template-based tools for working with
+The main $(MREF std, range) module provides template-based tools for working with
 ranges, but sometimes an object-based interface for ranges is needed, such as
 when runtime polymorphism is required. For this purpose, this submodule
 provides a number of object and $(D interface) definitions that can be used to
-wrap around _range objects created by the $(D std.range) templates.
+wrap around _range objects created by the $(MREF std, range) templates.
 
+$(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF InputRange)))
         $(TD Wrapper for input ranges.
@@ -41,13 +42,20 @@ $(BOOKTABLE ,
     $(TR $(TD $(D $(LREF OutputRangeObject)))
         $(TD Class that implements the $(D OutputRange) interface and wraps the
         $(D put) methods in virtual functions.
+    $(TR $(TD $(D $(LREF outputRangeObject)))
+        Convenience function for creating an $(D OutputRangeObject) with a base
+        range of type R that accepts types E.
     ))
     $(TR $(TD $(D $(LREF InputRangeObject)))
         $(TD Class that implements the $(D InputRange) interface and wraps the
         input _range methods in virtual functions.
     ))
-    $(TR $(TD $(D $(LREF RefRange)))
-        $(TD Wrapper around a forward _range that gives it reference semantics.
+    $(TR $(TD $(D $(LREF InputRangeObject)))
+        $(TD Convenience function for creating an $(D InputRangeObject)
+        of the proper type.
+    ))
+    $(TR $(TD $(D $(LREF MostDerivedInputRange)))
+        $(TD Returns the interface type that best matches the range.)
     ))
 )
 
