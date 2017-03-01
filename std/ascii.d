@@ -11,6 +11,44 @@
     For functions which operate on Unicode characters, see
     $(MREF std, uni).
 
+$(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Validation) $(TD
+        $(LREF isAlpha)
+        $(LREF isAlphaNum)
+        $(LREF isASCII)
+        $(LREF isControl)
+        $(LREF isDigit)
+        $(LREF isGraphical)
+        $(LREF isHexDigit)
+        $(LREF isOctalDigit)
+        $(LREF isPrintable)
+        $(LREF isPunctuation)
+        $(LREF isUpper)
+        $(LREF isWhite)
+))
+$(TR $(TD Conversions) $(TD
+        $(LREF toLower)
+        $(LREF toUpper)
+))
+$(TR $(TD Constants) $(TD
+        $(LREF digits)
+        $(LREF fullHexDigits)
+        $(LREF hexDigits)
+        $(LREF letters)
+        $(LREF lowercase)
+        $(LREF lowerHexDigits)
+        $(LREF newline)
+        $(LREF octalDigits)
+        $(LREF uppercase)
+        $(LREF whitespace)
+))
+$(TR $(TD Enums) $(TD
+        $(LREF LetterCase)
+))
+))
     References:
         $(LINK2 http://www.digitalmars.com/d/ascii-table.html, ASCII Table),
         $(HTTP en.wikipedia.org/wiki/Ascii, Wikipedia)
