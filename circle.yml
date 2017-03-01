@@ -14,4 +14,4 @@ test:
         timeout: 1200
 
   post:
-    - bash <(curl -s https://codecov.io/bash)
+    - ./circleci.sh codecov
