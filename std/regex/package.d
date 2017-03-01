@@ -5,6 +5,41 @@
   include validation of user input and the ubiquitous find $(AMP) replace
   in text processing utilities.
 
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Matching) $(TD
+        $(LREF bmatch)
+        $(LREF match)
+        $(LREF matchAll)
+        $(LREF matchFirst)
+))
+$(TR $(TD Building) $(TD
+        $(LREF ctRegex)
+        $(LREF escaper)
+        $(LREF _regex)
+))
+$(TR $(TD Replace) $(TD
+        $(LREF replace)
+        $(LREF replaceAll)
+        $(LREF replaceAllInto)
+        $(LREF replaceFirst)
+        $(LREF replaceFirstInto)
+))
+$(TR $(TD Split) $(TD
+        $(LREF split)
+        $(LREF splitter)
+))
+$(TR $(TD Objects) $(TD
+        $(LREF Captures)
+        $(LREF Regex)
+        $(LREF RegexException)
+        $(LREF RegexMatch)
+        $(LREF Splitter)
+        $(LREF StaticRegex)
+))
+)
+
   $(SECTION Synopsis)
   ---
   import std.regex;
@@ -46,9 +81,8 @@
   // The result of the $(D matchAll/matchFirst) is directly testable with if/assert/while.
   // e.g. test if a string consists of letters:
   assert(matchFirst("Letter", `^\p{L}+$`));
-
-
   ---
+
   $(SECTION Syntax and general information)
   The general usage guideline is to keep regex complexity on the side of simplicity,
   as its capabilities reside in purely character-level manipulation.
