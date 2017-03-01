@@ -853,7 +853,7 @@ if (isDigest!T)
 unittest
 {
     import std.digest.md : MD5;
-    import std.digest.sha: SHA1, SHA256, SHA512;
+    import std.digest.sha : SHA1, SHA256, SHA512;
     assert(digestLength!MD5 == 16);
     assert(digestLength!SHA1 == 20);
     assert(digestLength!SHA256 == 32);
