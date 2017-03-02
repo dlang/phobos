@@ -3206,6 +3206,9 @@ if (fun.length >= 1)
 
     // Can be used in a UFCS chain
     assert(arr.map!(a => a + 1).fold!((a, b) => a + b) == 20);
+
+    // Return the last element of any range
+    assert(arr.fold!((a, b) => b) == 5);
 }
 
 @safe @nogc pure nothrow unittest
