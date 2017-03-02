@@ -587,8 +587,7 @@ UNITTEST_OBJS= \
 		unittest8d.obj \
 		unittest8e.obj \
 		unittest8f.obj \
-		unittest9.obj \
-		unittest9a.obj
+		unittest9.obj
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest1.obj $(SRC_STD_1)
