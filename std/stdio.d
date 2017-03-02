@@ -2642,7 +2642,8 @@ $(D Range) that locks the file and allows fast writing to it.
 
         /// Range primitive implementations.
         void put(A)(A writeme)
-            if (is(ElementType!A : const(dchar)) &&
+            if ((isSomeChar!(Unqual!(ElementType!A)) ||
+                  is(ElementType!A : const(ubyte))) &&
                 isInputRange!A &&
                 !isInfinite!A)
         {
@@ -2650,7 +2651,7 @@ $(D Range) that locks the file and allows fast writing to it.
 
             alias C = ElementEncodingType!A;
             static assert(!is(C == void));
-            static if (isSomeString!A && C.sizeof == 1)
+            static if (isSomeString!A && C.sizeof == 1 || is(A : const(ubyte)[]))
             {
                 if (orientation_ <= 0)
                 {
@@ -2662,15 +2663,16 @@ $(D Range) that locks the file and allows fast writing to it.
                 }
             }
 
-            // put each character in turn
-            foreach (dchar c; writeme)
+            // put each element in turn.
+            alias Elem = Unqual!(ElementType!A);
+            foreach (Elem c; writeme)
             {
                 put(c);
             }
         }
 
         /// ditto
-        void put(C)(C c) @safe if (is(C : const(dchar)))
+        void put(C)(C c) @safe if (isSomeChar!C || is(C : const(ubyte)))
         {
             import std.traits : Parameters;
             static auto trustedFPUTC(int ch, _iobuf* h) @trusted
