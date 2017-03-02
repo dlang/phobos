@@ -32,10 +32,6 @@ $(BOOKTABLE ,
             comparison, iteration, sorting, set operations, and mutation.
         )
     )
-    $(TR
-        $(TDNW $(LINK2 std_experimental_ndslice.html, std.experimental.ndslice))
-        $(TD Multidimensional random access ranges and arrays.)
-    )
     $(LEADINGROW Array manipulation)
     $(TR
         $(TDNW
@@ -325,10 +321,6 @@ $(BOOKTABLE ,
     $(TR
         $(TDNW $(LINK2 std_mathspecial.html, std.mathspecial))
         $(TD Families of transcendental functions.)
-    )
-    $(TR
-        $(TDNW $(LINK2 std_experimental_ndslice.html, std.experimental.ndslice))
-        $(TD Multidimensional random access ranges and arrays.)
     )
     $(TR
         $(TDNW $(LINK2 std_numeric.html, std.numeric))
