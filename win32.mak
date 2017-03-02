@@ -334,6 +334,21 @@ SRC_STD_EXP_NDSLICE= \
 	std\experimental\ndslice\slice.d \
 	std\experimental\ndslice\internal.d
 
+SRC_STD_EXP_XML= \
+	std\experimental\xml\package.d \
+	std\experimental\xml\appender.d \
+	std\experimental\xml\cursor.d \
+	std\experimental\xml\dom.d \
+	std\experimental\xml\domimpl.d \
+	std\experimental\xml\domparser.d \
+	std\experimental\xml\faststrings.d \
+	std\experimental\xml\interfaces.d \
+	std\experimental\xml\lexers.d \
+	std\experimental\xml\parser.d \
+	std\experimental\xml\sax.d \
+	std\experimental\xml\validation.d \
+	std\experimental\xml\writer.d \
+
 SRC_ETC=
 
 SRC_ETC_C= \
@@ -364,6 +379,7 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_EXP_ALLOC) \
 	$(SRC_STD_EXP_LOGGER) \
 	$(SRC_STD_EXP_NDSLICE) \
+	$(SRC_STD_EXP_XML) \
 	$(SRC_ETC) \
 	$(SRC_ETC_C)
 
@@ -528,6 +544,18 @@ DOCS= \
 	$(DOC)\std_experimental_ndslice_slice.html \
 	$(DOC)\std_experimental_ndslice.html \
 	$(DOC)\std_experimental_typecons.html \
+	$(DOC)\std_experimental_xml_cursor.html \
+	$(DOC)\std_experimental_xml_dom.html \
+	$(DOC)\std_experimental_xml_domimpl.html \
+	$(DOC)\std_experimental_xml_domparser.html \
+	$(DOC)\std_experimental_xml_faststrings.html \
+	$(DOC)\std_experimental_xml_interfaces.html \
+	$(DOC)\std_experimental_xml_lexers.html \
+	$(DOC)\std_experimental_xml_parser.html \
+	$(DOC)\std_experimental_xml_sax.html \
+	$(DOC)\std_experimental_xml_validation.html \
+	$(DOC)\std_experimental_xml_writer.html \
+	$(DOC)\std_experimental_xml \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_windows_registry.html \
 	$(DOC)\std_c_fenv.html \
@@ -572,7 +600,8 @@ UNITTEST_OBJS= \
 		unittest8d.obj \
 		unittest8e.obj \
 		unittest8f.obj \
-		unittest9a.obj
+		unittest9a.obj \
+		unittest9b.obj
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1)
@@ -592,6 +621,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8e.obj $(SRC_ETC) $(SRC_ETC_C)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8f.obj $(SRC_STD_EXP)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest9a.obj $(SRC_STD_EXP_NDSLICE)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest9b.obj $(SRC_STD_EXP_XML)
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(UNITTEST_OBJS) \
 		$(ZLIB) $(DRUNTIMELIB)
 	.\unittest.exe
@@ -1067,6 +1097,42 @@ $(DOC)\std_experimental_ndslice_slice.html : $(STDDOC) std\experimental\ndslice\
 
 $(DOC)\std_experimental_ndslice.html : $(STDDOC) std\experimental\ndslice\package.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice.html $(STDDOC) std\experimental\ndslice\package.d
+
+$(DOC)\std_experimental_xml_cursor.html : $(STDDOC) std\experimental\xml\cursor.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_cursor.html $(STDDOC) std\experimental\xml\cursor.d
+
+$(DOC)\std_experimental_xml_dom.html : $(STDDOC) std\experimental\xml\dom.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_dom.html $(STDDOC) std\experimental\xml\dom.d
+
+$(DOC)\std_experimental_xml_domimpl.html : $(STDDOC) std\experimental\xml\domimpl.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_domimpl.html $(STDDOC) std\experimental\xml\domimpl.d
+
+$(DOC)\std_experimental_xml_domparser.html : $(STDDOC) std\experimental\xml\domparser.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_domparser.html $(STDDOC) std\experimental\xml\domparser.d
+
+$(DOC)\std_experimental_xml_faststrings.html : $(STDDOC) std\experimental\xml\faststrings.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_faststrings.html $(STDDOC) std\experimental\xml\faststrings.d
+
+$(DOC)\std_experimental_xml_interfaces.html : $(STDDOC) std\experimental\xml\interfaces.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_interfaces.html $(STDDOC) std\experimental\xml\interfaces.d
+
+$(DOC)\std_experimental_xml_lexers.html : $(STDDOC) std\experimental\xml\lexers.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_lexers.html $(STDDOC) std\experimental\xml\lexers.d
+
+$(DOC)\std_experimental_xml_parser.html : $(STDDOC) std\experimental\xml\parser.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_parser.html $(STDDOC) std\experimental\xml\parser.d
+
+$(DOC)\std_experimental_xml_sax.html : $(STDDOC) std\experimental\xml\sax.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_sax.html $(STDDOC) std\experimental\xml\sax.d
+
+$(DOC)\std_experimental_xml_validation.html : $(STDDOC) std\experimental\xml\validation.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_validation.html $(STDDOC) std\experimental\xml\validation.d
+
+$(DOC)\std_experimental_xml_writer.html : $(STDDOC) std\experimental\xml\writer.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml_writer.html $(STDDOC) std\experimental\xml\writer.d
+
+$(DOC)\std_experimental_xml.html : $(STDDOC) std\experimental\xml\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_xml.html $(STDDOC) std\experimental\xml\package.d
 
 $(DOC)\std_digest_crc.html : $(STDDOC) std\digest\crc.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_crc.html $(STDDOC) std\digest\crc.d

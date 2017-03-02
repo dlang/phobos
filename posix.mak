@@ -163,7 +163,7 @@ P2MODULES=$(foreach P,$1,$(addprefix $P/,$(PACKAGE_$(subst /,_,$P))))
 STD_PACKAGES = std $(addprefix std/,\
   algorithm container digest experimental/allocator \
   experimental/allocator/building_blocks experimental/logger \
-  experimental/ndslice \
+  experimental/ndslice experimental/xml \
   net \
   experimental range regex)
 
@@ -190,6 +190,8 @@ PACKAGE_std_experimental_allocator_building_blocks = \
   kernighan_ritchie null_allocator package quantizer \
   region scoped_allocator segregator stats_collector
 PACKAGE_std_experimental_ndslice = package iteration selection slice
+PACKAGE_std_experimental_xml = package appender cursor dom domimpl domparser \
+  faststrings interfaces lexers parser sax validation writer
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
