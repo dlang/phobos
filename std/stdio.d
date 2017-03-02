@@ -1767,9 +1767,30 @@ is recommended if you want to process a complete file.
      * Read data from the file according to the specified
      * $(LINK2 std_format.html#_format-string, _format specifier) using
      * $(REF formattedRead, std,_format).
+     * Example:
+----
+// test.d
+void main()
+{
+    import std.stdio;
+    auto f = File("input");
+    foreach (_; 0 .. 3)
+    {
+        int a;
+        f.readf(" %d", a);
+        writeln(++a);
+    }
+}
+----
+$(CONSOLE
+% echo "1 2 3" > input
+% rdmd test.d
+2
+3
+4
+)
      */
-    uint readf(Data...)(in char[] format, Data data)
-    if (allSatisfy!(isPointer, Data))
+    uint readf(Data...)(in char[] format, auto ref Data data)
     {
         import std.format : formattedRead;
 
@@ -1779,6 +1800,26 @@ is recommended if you want to process a complete file.
     }
 
     ///
+    @system unittest
+    {
+        static import std.file;
+
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "hello\nworld\ntrue\nfalse\n");
+        scope(exit) std.file.remove(deleteme);
+        string s;
+        auto f = File(deleteme);
+        f.readf("%s\n", s);
+        assert(s == "hello", "["~s~"]");
+        f.readf("%s\n", s);
+        assert(s == "world", "["~s~"]");
+
+        bool b1, b2;
+        f.readf("%s\n%s\n", b1, b2);
+        assert(b1 == true && b2 == false);
+    }
+
+    // backwards compatibility with pointers
     @system unittest
     {
         // @system due to readf
@@ -1797,6 +1838,27 @@ is recommended if you want to process a complete file.
         // Issue 11698
         bool b1, b2;
         f.readf("%s\n%s\n", &b1, &b2);
+        assert(b1 == true && b2 == false);
+    }
+
+    // backwards compatibility (mixed)
+    @system unittest
+    {
+        // @system due to readf
+        static import std.file;
+
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "hello\nworld\ntrue\nfalse\n");
+        scope(exit) std.file.remove(deleteme);
+        string s1, s2;
+        auto f = File(deleteme);
+        f.readf("%s\n%s\n", s1, &s2);
+        assert(s1 == "hello");
+        assert(s2 == "world");
+
+        // Issue 11698
+        bool b1, b2;
+        f.readf("%s\n%s\n", &b1, b2);
         assert(b1 == true && b2 == false);
     }
 
@@ -3684,9 +3746,28 @@ void writefln(T...)(T args)
  * Read data from $(D stdin) according to the specified
  * $(LINK2 std_format.html#_format-string, _format specifier) using
  * $(REF formattedRead, std,_format).
+ * Example:
+----
+// test.d
+void main()
+{
+    import std.stdio;
+    foreach (_; 0 .. 3)
+    {
+        int a;
+        readf(" %d", a);
+        writeln(++a);
+    }
+}
+----
+$(CONSOLE
+% echo "1 2 3" | rdmd test.d
+2
+3
+4
+)
  */
-uint readf(A...)(in char[] format, A args)
-if (allSatisfy!(isPointer, A))
+uint readf(A...)(in char[] format, auto ref A args)
 {
     return stdin.readf(format, args);
 }
@@ -3699,7 +3780,10 @@ if (allSatisfy!(isPointer, A))
     char a;
     wchar b;
     dchar c;
-    if (false) readf("%s %s %s", &a,&b,&c);
+    if (false) readf("%s %s %s", a, b, c);
+    // backwards compatibility with pointers
+    if (false) readf("%s %s %s", a, &b, c);
+    if (false) readf("%s %s %s", &a, &b, &c);
 }
 
 /**********************************

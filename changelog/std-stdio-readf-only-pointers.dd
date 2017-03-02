@@ -1,14 +1,14 @@
-`std.stdio.readf` now only accepts pointers as input arguments.
-
-For example, the "bad" version of the following code lead to very confusing
-errors from Phobos:
+`std.stdio.readf` now accepts `ref` parameters as input arguments.
 
 -------
-import std.stdio;
+import std.stdio : readf;
 void main() {
-    int[3] row;
-    auto text = "10 20 30";
-    //readf(text, "%(%d %)", row);   // bad
-    readf(text, "%(%d %)", &row);  // OK
+    // assume every line from stdin is similar to "1 2 3";
+    int a, b, c;
+    readf(" %d %d %d", a, b, c);
+    // pointers can still be used
+    readf(" %d %d %d, &a, &b, &c);
+    // and even combined:
+    readf(" %d %d %d, a, &b, c);
 }
 -------
