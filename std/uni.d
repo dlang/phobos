@@ -4,8 +4,99 @@
     $(P The $(D std.uni) module provides an implementation
     of fundamental Unicode algorithms and data structures.
     This doesn't include UTF encoding and decoding primitives,
-    see $(REF decode, std,_utf) and $(REF encode, std,_utf) in std.utf
+    see $(REF decode, std,_utf) and $(REF encode, std,_utf) in $(MREF std, utf)
     for this functionality. )
+
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Decode) $(TD
+    $(LREF byCodePoint)
+    $(LREF byGrapheme)
+    $(LREF decodeGrapheme)
+    $(LREF graphemeStride)
+))
+$(TR $(TD Comparison) $(TD
+    $(LREF icmp)
+    $(LREF sicmp)
+))
+$(TR $(TD Classification) $(TD
+    $(LREF isAlpha)
+    $(LREF isAlphaNum)
+    $(LREF isCodepointSet)
+    $(LREF isControl)
+    $(LREF isFormat)
+    $(LREF isGraphical)
+    $(LREF isIntegralPair)
+    $(LREF isMark)
+    $(LREF isNonCharacter)
+    $(LREF isNumber)
+    $(LREF isPrivateUse)
+    $(LREF isPunctuation)
+    $(LREF isSpace)
+    $(LREF isSurrogate)
+    $(LREF isSurrogateHi)
+    $(LREF isSurrogateLo)
+    $(LREF isSymbol)
+    $(LREF isWhite)
+))
+$(TR $(TD Normalization) $(TD
+    $(LREF NFC)
+    $(LREF NFD)
+    $(LREF NFKD)
+    $(LREF NormalizationForm)
+    $(LREF normalize)
+))
+$(TR $(TD Decompose) $(TD
+    $(LREF decompose)
+    $(LREF decomposeHangul)
+    $(LREF UnicodeDecomposition)
+))
+$(TR $(TD Compose) $(TD
+    $(LREF compose)
+    $(LREF composeJamo)
+))
+$(TR $(TD Sets) $(TD
+    $(LREF CodepointInterval)
+    $(LREF CodepointSet)
+    $(LREF InversionList)
+    $(LREF unicode)
+))
+$(TR $(TD Trie) $(TD
+    $(LREF codepointSetTrie)
+    $(LREF CodepointSetTrie)
+    $(LREF codepointTrie)
+    $(LREF CodepointTrie)
+    $(LREF toTrie)
+    $(LREF toDelegate)
+))
+$(TR $(TD Casing) $(TD
+    $(LREF asCapitalized)
+    $(LREF asLowerCase)
+    $(LREF asUpperCase)
+    $(LREF isLower)
+    $(LREF isUpper)
+    $(LREF toLower)
+    $(LREF toLowerInPlace)
+    $(LREF toUpper)
+    $(LREF toUpperInPlace)
+))
+$(TR $(TD Utf8Matcher) $(TD
+    $(LREF isUtfMatcher)
+    $(LREF MatcherConcept)
+    $(LREF utfMatcher)
+))
+$(TR $(TD Separators) $(TD
+    $(LREF lineSep)
+    $(LREF nelSep)
+    $(LREF paraSep)
+))
+$(TR $(TD Building blocks) $(TD
+    $(LREF allowedIn)
+    $(LREF combiningClass)
+    $(LREF Grapheme)
+))
+)
 
     $(P All primitives listed operate on Unicode characters and
         sets of characters. For functions which operate on ASCII characters
