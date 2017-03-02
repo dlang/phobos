@@ -28,7 +28,9 @@
 
 QUIET:=
 
-include osmodel.mak
+TOOLS_DIR = ../tools
+$(shell [ ! -d $(TOOLS_DIR) ] && git clone https://github.com/dlang/tools $(TOOLS_DIR))
+include $(TOOLS_DIR)/osmodel.mak
 
 ifeq (osx,$(OS))
 	export MACOSX_DEPLOYMENT_TARGET=10.7
