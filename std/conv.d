@@ -3,6 +3,34 @@
 /**
 A one-stop shop for converting values from one type to another.
 
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Generic) $(TD
+        $(LREF castFrom)
+        $(LREF emplace)
+        $(LREF parse)
+        $(LREF to)
+        $(LREF toChars)
+))
+$(TR $(TD Strings) $(TD
+        $(LREF text)
+        $(LREF wtext)
+        $(LREF dtext)
+        $(LREF hexString)
+))
+$(TR $(TD Numeric) $(TD
+        $(LREF octal)
+        $(LREF roundTo)
+        $(LREF signed)
+        $(LREF unsigned)
+))
+$(TR $(TD Exceptions) $(TD
+        $(LREF ConvException)
+        $(LREF ConvOverflowException)
+))
+)
+
 Copyright: Copyright Digital Mars 2007-.
 
 License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
