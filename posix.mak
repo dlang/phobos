@@ -87,7 +87,7 @@ ifeq ($(OS),win32wine)
 	DMD = wine dmd.exe
 	RUN = wine
 else
-	DMD = ../dmd/src/dmd
+	DMD = ../dmd/generated/$(OS)/release/$(MODEL)/dmd
 	ifeq ($(OS),win32)
 		CC = dmc
 	else
