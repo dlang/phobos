@@ -207,22 +207,20 @@ $(PRE $(I UnsignedInteger):
  */
 template to(T)
 {
-    /// Converts value. See $(LREF _to) for details.
+    /// Converts value _to type `T`. See $(LREF _to) for details.
     T to(S)(S value)
-        if (!isStaticArray!S)
     {
         return toImpl!T(value);
     }
 
     // Fix issue 6175
-    /// ditto
     T to(S)(ref S value)
         if (isStaticArray!S)
     {
         return toImpl!T(value);
     }
 
-    /** Converts value using a _radix.
+    /** Converts value _to type `T` using a _radix.
      * Params:
      * radix = A value from 2 _to 36.
      * letterCase = Case _to use for non-decimal output characters.
@@ -231,15 +229,14 @@ template to(T)
      * The characters A through Z are used _to represent values 10 through 36.
      */
     T to(S)(S value, uint radix, LetterCase letterCase = LetterCase.upper)
-        if (isIntegral!S && isSomeString!T && !is(T == enum))
+    if (isIntegral!S)
     {
         return toImpl!(T, S)(value, radix, letterCase);
     }
 
     /// ditto
     T to(S)(S value, uint radix)
-    if (isInputRange!S && isSomeChar!(ElementEncodingType!S) &&
-        (!isSomeString!T || is(T == enum)) && is(typeof(parse!T(value, radix))))
+    if (isInputRange!S && isSomeChar!(ElementEncodingType!S))
     {
         return toImpl!(T, S)(value, radix);
     }
