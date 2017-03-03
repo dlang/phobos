@@ -3416,7 +3416,7 @@ package void skipWS(R)(ref R r)
     static if (isSomeString!R)
     {
         //Implementation inspired from stripLeft.
-        foreach (i, dchar c; r)
+        foreach (i, c; r)
         {
             if (!isWhite(c))
             {
