@@ -1270,6 +1270,19 @@ alias Xorshift    = Xorshift128;                            /// ditto
     }
 }
 
+version (OpenBSD)
+{
+    version = ARC4_RANDOM;
+}
+else version (NetBSD)
+{
+    version = ARC4_RANDOM;
+}
+
+version (ARC4_RANDOM)
+{
+    extern(C) uint arc4random() @nogc nothrow;
+}
 
 /**
 A "good" seed for initializing random number engines. Initializing
@@ -1281,17 +1294,90 @@ A single unsigned integer seed value, different on each successive call
 */
 @property uint unpredictableSeed() @trusted
 {
-    import core.thread : Thread, getpid, MonoTime;
-    static bool seeded;
-    static MinstdRand0 rand;
-    if (!seeded)
+    version (Windows)
     {
-        uint threadID = cast(uint) cast(void*) Thread.getThis();
-        rand.seed((getpid() + threadID) ^ cast(uint) MonoTime.currTime.ticks);
-        seeded = true;
+        import std.internal.windows.advapi32 : loadAdvapi32, hAdvapi32;
+        import core.sys.windows.wincrypt : HCRYPTPROV, PROV_RSA_FULL, CRYPT_SILENT,
+                                           CRYPT_VERIFYCONTEXT;
+        import core.sys.windows.winbase : GetProcAddress;
+        import core.sys.windows.windef : BOOL, DWORD, PBYTE;
+        import core.sys.windows.winnt : LPCWSTR;
+        static extern(Windows) BOOL function(HCRYPTPROV, DWORD, PBYTE) pCryptGenRandom;
+        static extern(Windows) BOOL function(HCRYPTPROV*, LPCWSTR, LPCWSTR, DWORD, DWORD) pCryptAcquireContextW;
+        static HCRYPTPROV hProv;
+        static bool initialized;
+        uint rand;
+        if (!initialized)
+        {
+            loadAdvapi32;
+            pCryptGenRandom = cast(typeof(pCryptGenRandom)) GetProcAddress(hAdvapi32, "CryptGenRandom");
+            pCryptAcquireContextW = cast(typeof(pCryptAcquireContextW))
+                GetProcAddress(hAdvapi32, "CryptAcquireContextW");
+            if (pCryptGenRandom is null || pCryptAcquireContextW is null)
+                throw new Exception("Failed to load advapi32");
+            int ret = pCryptAcquireContextW(&hProv, null, null, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT);
+            if (!ret)
+                throw new Exception("CryptAcquireContextW");
+            initialized = true;
+        }
+        int ret = pCryptGenRandom(hProv, uint.sizeof, cast(ubyte*)&rand);
+        if (!ret)
+            throw new Exception("CryptGenRandom");
+        return rand;
     }
-    rand.popFront();
-    return cast(uint) (MonoTime.currTime.ticks ^ rand.front);
+    else version (Posix)
+    {
+        version (ARC4_RANDOM)
+        {
+            return arc4random();
+        }
+        else
+        {
+            // Read from /dev/urandom
+            import core.sys.posix.unistd : read;
+            import core.sys.posix.fcntl : open, O_RDONLY;
+            static int urand = -1;
+            static bool initialized;
+            uint rand;
+            if (!initialized)
+            {
+                urand = open("/dev/urandom", O_RDONLY);
+                if (urand < 0)
+                    throw new Exception("Can't open /dev/urandom");
+                initialized = true;
+            }
+            auto ret = read(urand, &rand, uint.sizeof);
+            if (ret != uint.sizeof)
+                throw new Exception("Read /dev/urandom failed");
+            return rand;
+        }
+    }
+    else
+    {
+        // Fallback version, less secure
+        // TODO: Maybe we should use ChaCha20? Need to add
+        //       a ChaCha20 implementation to Phobos.
+        import core.thread : Thread, getpid, MonoTime;
+        import std.digest.sha : SHA256Digest;
+        import std.typecons : scoped;
+        static ubyte[32] state;
+        static bool initialized;
+        auto sha256 = scoped!SHA256Digest();
+        if (!initialized)
+        {
+            ubyte[] seed = cast(ubyte[])[cast(ulong) cast(void*) Thread.getThis(),
+                MonoTime.currTime.ticks, getpid];
+            state[] = sha256.digest(seed);
+            initialized = true;
+        }
+        ubyte[] newSeed = cast(ubyte[])[MonoTime.currTime.ticks];
+        newSeed = sha256.digest(newSeed);
+        state[] = sha256.digest(state);
+        state[] = state[] ^ newSeed[];
+
+        // Expose 4 bytes of the state
+        return (cast(uint[])(state[]))[0];
+    }
 }
 
 ///
