@@ -3,6 +3,37 @@
 /**
 Bit-level manipulation facilities.
 
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Bit constructs) $(TD
+    $(LREF BitArray)
+    $(LREF bitfields)
+    $(LREF bitsSet)
+))
+$(TR $(TD Endianness conversion) $(TD
+    $(LREF bigEndianToNative)
+    $(LREF littleEndianToNative)
+    $(LREF nativeToBigEndian)
+    $(LREF nativeToLittleEndian)
+    $(LREF swapEndian)
+))
+$(TR $(TD Integral ranges) $(TD
+    $(LREF append)
+    $(LREF peek)
+    $(LREF read)
+    $(LREF write)
+))
+$(TR $(TD Floating-Point manipulation) $(TD
+    $(LREF DoubleRep)
+    $(LREF FloatRep)
+))
+$(TR $(TD Tagging) $(TD
+    $(LREF taggedClassRef)
+    $(LREF taggedPointer)
+))
+)
+
 Copyright: Copyright Digital Mars 2007 - 2011.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP digitalmars.com, Walter Bright),
