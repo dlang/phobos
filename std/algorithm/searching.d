@@ -3503,15 +3503,13 @@ See_Also:
     $(REF max, std,algorithm,comparison)
 */
 auto maxElement(alias map, Range)(Range r)
-if (isInputRange!Range && !isInfinite!Range &&
-    !is(CommonType!(ElementType!Range, RangeElementType) == void))
+if (isInputRange!Range && !isInfinite!Range)
 {
     return extremum!(map, "a > b")(r);
 }
 
 auto maxElement(Range)(Range r)
-if (isInputRange!Range && !isInfinite!Range &&
-    !is(CommonType!(ElementType!Range, RangeElementType) == void))
+if (isInputRange!Range && !isInfinite!Range)
 {
     return extremum!`a > b`(r);
 }
@@ -3519,14 +3517,16 @@ if (isInputRange!Range && !isInfinite!Range &&
 /// ditto
 auto maxElement(alias map, Range, RangeElementType = ElementType!Range)
                (Range r, RangeElementType seed)
-if (isInputRange!Range && !isInfinite!Range)
+if (isInputRange!Range && !isInfinite!Range &&
+    !is(CommonType!(ElementType!Range, RangeElementType) == void))
 {
     return extremum!(map, "a > b")(r, seed);
 }
 
 auto maxElement(Range, RangeElementType = ElementType!Range)
                (Range r, RangeElementType seed)
-if (isInputRange!Range && !isInfinite!Range)
+if (isInputRange!Range && !isInfinite!Range &&
+    !is(CommonType!(ElementType!Range, RangeElementType) == void))
 {
     return extremum!`a > b`(r, seed);
 }
