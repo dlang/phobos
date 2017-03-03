@@ -176,8 +176,13 @@ class ConvOverflowException : ConvException
 }
 
 /**
-The `to` template converts a value from one type _to another.
-The source type is deduced and the target type must be specified, for example the
+$(D_CODE
+T $(DDOC_PSYMBOL _to)$(DDOC_TEMPLATE_PARAM_LIST (S))(S value);
+T $(DDOC_PSYMBOL _to)$(DDOC_TEMPLATE_PARAM_LIST (S))(S value, uint radix);
+T $(DDOC_PSYMBOL _to)$(DDOC_TEMPLATE_PARAM_LIST (S))(S value, uint radix, LetterCase lc = LetterCase.upper);
+)
+Converts a value from one type _to type `T`.
+The source type `S` is deduced and the target type must be specified, for example the
 expression `to!int(42.0)` converts the number 42 from
 `double` _to `int`. The conversion is "safe", i.e.,
 it checks for overflow; `to!int(4.2e10)` would throw the
