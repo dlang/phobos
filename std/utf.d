@@ -6,6 +6,48 @@
     UTF character support is restricted to
     $(D '\u0000' &lt;= character &lt;= '\U0010FFFF').
 
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Decode) $(TD
+    $(LREF decode)
+    $(LREF decodeFront)
+))
+$(TR $(TD Lazy decode) $(TD
+    $(LREF byCodeUnit)
+    $(LREF byChar)
+    $(LREF byWchar)
+    $(LREF byDchar)
+    $(LREF byUTF)
+))
+$(TR $(TD Encode) $(TD
+    $(LREF encode)
+    $(LREF toUTF8)
+    $(LREF toUTF16)
+    $(LREF toUTF32)
+    $(LREF toUTFz)
+    $(LREF toUTF16z)
+))
+$(TR $(TD Length) $(TD
+    $(LREF codeLength)
+    $(LREF count)
+    $(LREF stride)
+    $(LREF strideBack)
+))
+$(TR $(TD Index) $(TD
+    $(LREF toUCSindex)
+    $(LREF toUTFindex)
+))
+$(TR $(TD Validation) $(TD
+    $(LREF isValidDchar)
+    $(LREF validate)
+))
+$(TR $(TD Miscellaneous) $(TD
+    $(LREF replacementDchar)
+    $(LREF UseReplacementDchar)
+    $(LREF UTFException)
+))
+)
     See_Also:
         $(LINK2 http://en.wikipedia.org/wiki/Unicode, Wikipedia)<br>
         $(LINK http://www.cl.cam.ac.uk/~mgk25/unicode.html#utf-8)<br>
