@@ -3508,6 +3508,7 @@ if (isInputRange!Range && !isInfinite!Range)
     return extremum!(map, "a > b")(r);
 }
 
+/// ditto
 auto maxElement(Range)(Range r)
 if (isInputRange!Range && !isInfinite!Range)
 {
@@ -3523,6 +3524,7 @@ if (isInputRange!Range && !isInfinite!Range &&
     return extremum!(map, "a > b")(r, seed);
 }
 
+/// ditto
 auto maxElement(Range, RangeElementType = ElementType!Range)
                (Range r, RangeElementType seed)
 if (isInputRange!Range && !isInfinite!Range &&
