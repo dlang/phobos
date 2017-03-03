@@ -3,6 +3,7 @@
 This is a submodule of $(MREF std, algorithm).
 It contains generic _sorting algorithms.
 
+$(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 $(T2 completeSort,
