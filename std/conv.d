@@ -73,26 +73,32 @@ class ConvException : Exception
     mixin basicExceptionCtors;
 }
 
-private string convError_unexpected(S)(S source)
-{
-    return source.empty ? "end of input" : text("'", source.front, "'");
-}
-
 private auto convError(S, T)(S source, string fn = __FILE__, size_t ln = __LINE__)
 {
-    return new ConvException(
-        text("Unexpected ", convError_unexpected(source),
-             " when converting from type "~S.stringof~" to type "~T.stringof),
-        fn, ln);
+    string msg;
+
+    if (source.empty)
+        msg = "Unexpected end of input when converting from type " ~ S.stringof ~ " to type " ~ T.stringof;
+    else
+        msg =  text("Unexpected '", source.front,
+                 "' when converting from type " ~ S.stringof ~ " to type " ~ T.stringof);
+
+    return new ConvException(msg, fn, ln);
 }
 
 private auto convError(S, T)(S source, int radix, string fn = __FILE__, size_t ln = __LINE__)
 {
-    return new ConvException(
-        text("Unexpected ", convError_unexpected(source),
-             " when converting from type "~S.stringof~" base ", radix,
-             " to type "~T.stringof),
-        fn, ln);
+    string msg;
+
+    if (source.empty)
+        msg = text("Unexpected end of input when converting from type " ~ S.stringof ~ " base ", radix,
+                " to type " ~ T.stringof);
+    else
+        msg = text("Unexpected '", source.front,
+            "' when converting from type " ~ S.stringof ~ " base ", radix,
+            " to type " ~ T.stringof);
+
+    return new ConvException(msg, fn, ln);
 }
 
 @safe pure/* nothrow*/  // lazy parameter bug
