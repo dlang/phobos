@@ -17,7 +17,6 @@ $(TR $(TD Assumptions) $(TD
 $(TR $(TD Enforce) $(TD
         $(LREF doesPointTo)
         $(LREF enforce)
-        $(LREF enforceEx)
         $(LREF errnoEnforce)
 ))
 $(TR $(TD Handlers) $(TD
@@ -26,7 +25,7 @@ $(TR $(TD Handlers) $(TD
         $(LREF ifThrown)
         $(LREF handle)
 ))
-$(TR $(TD Other) $(TD
+$(TR $(TD Miscellaneous) $(TD
         $(LREF basicExceptionCtors)
         $(LREF emptyExceptionMsg)
         $(LREF ErrnoException)
@@ -597,7 +596,7 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
     and can be constructed with $(D new E(file, line)), then
     $(D new E(file, line)) will be thrown.
 
-    This is legacy name, it is recommended to use $(D enforce!E) instead.
+    $(RED Deprecated:) This is legacy name, it is recommended to use $(D enforce!E) instead.
 
     Example:
     --------------------
@@ -609,7 +608,9 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
 template enforceEx(E : Throwable)
 if (is(typeof(new E("", __FILE__, __LINE__))))
 {
-    /++ Ditto +/
+    // It will be undocumented in December 2017. @@@DEPRECATED_2017-12@@
+    /// $(RED Deprecated:) Please use `enforce!E` instead
+    deprecated("Please use enforce!E instead")
     T enforceEx(T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__)
     {
         if (!value) throw new E(msg, file, line);
@@ -617,11 +618,12 @@ if (is(typeof(new E("", __FILE__, __LINE__))))
     }
 }
 
-/++ Ditto +/
 template enforceEx(E : Throwable)
 if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LINE__))))
 {
-    /++ Ditto +/
+    // It will be undocumented in December 2017. @@@DEPRECATED_2017-12@@
+    /// $(RED Deprecated:) Please use `enforce!E` instead
+    deprecated("Please use enforce!E instead")
     T enforceEx(T)(T value, string file = __FILE__, size_t line = __LINE__)
     {
         if (!value) throw new E(file, line);
