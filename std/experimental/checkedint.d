@@ -1,4 +1,5 @@
 /**
+$(SCRIPT inhibitQuickIndex = 1;)
 
 This module defines facilities for efficient checking of integral operations
 against overflow, casting with loss of precision, unexpected change of sign,
@@ -42,33 +43,42 @@ customization at all.
 This module provides a few predefined hooks (below) that add useful behavior to
 `Checked`:
 
-$(UL
-$(LI $(LREF Abort) fails every incorrect operation with a message to $(REF
-stderr, std, stdio) followed by a call to `assert(0)`. It is the default
-second parameter, i.e. `Checked!short` is the same as $(D Checked!(short,
-Abort)).
+$(BOOKTABLE ,
+    $(TR $(TD $(D $(LREF Abort))) $(TD
+        fails every incorrect operation with a message to $(REF
+        stderr, std, stdio) followed by a call to `assert(0)`. It is the default
+        second parameter, i.e. `Checked!short` is the same as
+        $(D Checked!(short, Abort)).
+    ))
+    $(TR $(TD $(D $(LREF Warn))) $(TD
+        prints incorrect operations to $(REF stderr, std, stdio)
+        but otherwise preserves the built-in behavior.
+    ))
+    $(TR $(TD $(D $(LREF ProperCompare))) $(TD
+        fixes the comparison operators `==`, `!=`, `<`, `<=`, `>`, and `>=`
+        to return correct results in all circumstances,
+        at a slight cost in efficiency. For example,
+        $(D Checked!(uint, ProperCompare)(1) > -1) is `true`,
+        which is not the case for the built-in comparison. Also, comparing
+        numbers for equality with floating-point numbers only passes if the
+        integral can be converted to the floating-point number precisely,
+        so as to preserve transitivity of equality.
+    ))
+    $(TR $(TD $(D $(LREF WithNaN))) $(TD
+        reserves a special "Not a Number" (NaN) value akin to the homonym value
+        reserved for floating-point values. Once a $(D Checked!(X, WithNaN))
+        gets this special value, it preserves and propagates it until
+        reassigned. $(LREF isNaN) can be used to query whether the object
+        is not a number.
+    ))
+    $(TR $(TD $(D $(LREF Saturate))) $(TD
+        implements saturating arithmetic, i.e. $(D Checked!(int, Saturate))
+        "stops" at `int.max` for all operations that would cause an `int` to
+        overflow toward infinity, and at `int.min` for all operations that would
+        correspondingly overflow toward negative infinity.
+    ))
 )
-$(LI $(LREF Warn) prints incorrect operations to $(REF stderr, std, stdio) but
-otherwise preserves the built-in behavior.
-)
-$(LI $(LREF ProperCompare) fixes the comparison operators `==`, `!=`, `<`, `<=`, `>`,
-and `>=` to return correct results in all circumstances, at a slight cost in
-    efficiency. For example, $(D Checked!(uint, ProperCompare)(1) > -1) is `true`,
-which is not the case for the built-in comparison. Also, comparing numbers for
-equality with floating-point numbers only passes if the integral can be
-converted to the floating-point number precisely, so as to preserve transitivity
-of equality.
-)
-$(LI $(LREF WithNaN) reserves a special "Not a Number" value akin to the homonym
-value reserved for floating-point values. Once a $(D Checked!(X, WithNaN)) gets
-this special value, it preserves and propagates it until reassigned.
-)
-$(LI $(LREF Saturate) implements saturating arithmetic, i.e. $(D Checked!(int,
-Saturate)) "stops" at `int.max` for all operations that would cause an `int` to
-overflow toward infinity, and at `int.min` for all operations that would
-correspondingly overflow toward negative infinity.
-)
-)
+
 
 These policies may be used alone, e.g. $(D Checked!(uint, WithNaN)) defines a
 `uint`-like type that reaches a stable NaN state for all erroneous operations.
@@ -76,8 +86,10 @@ They may also be "stacked" on top of each other, owing to the property that a
 checked integral emulates an actual integral, which means another checked
 integral can be built on top of it. Some combinations of interest include:
 
-$(UL
-$(LI $(D Checked!(Checked!int, ProperCompare)) defines an `int` with fixed
+$(BOOKTABLE ,
+    $(TR $(TD $(D Checked!(Checked!int, ProperCompare))))
+    $(TR $(TD
+defines an `int` with fixed
 comparison operators that will fail with `assert(0)` upon overflow. (Recall that
 `Abort` is the default policy.) The order in which policies are combined is
 important because the outermost policy (`ProperCompare` in this case) has the
@@ -85,13 +97,16 @@ first crack at intercepting an operator. The converse combination $(D
 Checked!(Checked!(int, ProperCompare))) is meaningless because `Abort` will
 intercept comparison and will fail without giving `ProperCompare` a chance to
 intervene.
-)
-$(LI $(D Checked!(Checked!(int, ProperCompare), WithNaN)) defines an `int`-like
+    ))
+    $(TR $(TD))
+    $(TR $(TDNW $(D Checked!(Checked!(int, ProperCompare), WithNaN))))
+    $(TR $(TD
+defines an `int`-like
 type that supports a NaN value. For values that are not NaN, comparison works
 properly. Again the composition order is important; $(D Checked!(Checked!(int,
 WithNaN), ProperCompare)) does not have good semantics because `ProperCompare`
 intercepts comparisons before the numbers involved are tested for NaN.
-)
+    ))
 )
 
 The hook's members are looked up statically in a Design by Introspection manner
