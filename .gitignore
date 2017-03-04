@@ -9,6 +9,9 @@ GNUmakefile
 Makefile
 *.lst
 
+temp/
+tmp/
+
 # Rules for Xamarin Studio project data/build output
 *.dproj
 bin/
