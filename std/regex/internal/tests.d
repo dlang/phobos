@@ -1051,7 +1051,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
 }
 
 // bugzilla 17212
-unittest
+@safe unittest
 {
     auto r = regex(" [a] ", "x");
     assert("a".matchFirst(r));
