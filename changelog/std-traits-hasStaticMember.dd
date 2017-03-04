@@ -4,10 +4,10 @@ import std.traits : hasStaticMember;
 
 struct S
 {
-    static int globalVar;
-    int localVar;
+    static int staticVar;
+    int nonstaticVar;
 }
 
-assert( hasStaticMember!(S, "globalVar"));
-assert(!hasStaticMember!(S, "localVar"));
+assert( hasStaticMember!(S, "staticVar"));
+assert(!hasStaticMember!(S, "nonstaticVar"));
 -------
