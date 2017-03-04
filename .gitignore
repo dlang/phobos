@@ -1,7 +1,6 @@
 /etc/c/zlib/*.obj
-/etc/c/zlib/zlib.lib
+*.lib
 /phobos.json
-/phobos.lib
 
 generated
 GNUmakefile
@@ -14,5 +13,8 @@ Makefile
 *.dproj
 bin/
 obj/
+
+# Rule for VS Code config folder
+.vscode
 
 *.html
