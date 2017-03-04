@@ -6,6 +6,33 @@ and destruction/deallocation of data including `struct`s and `class`es,
 and also array primitives related to allocation. This module is the entry point
 for both making use of allocators and for their documentation.
 
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Make) $(TD
+    $(LREF make)
+    $(LREF makeArray)
+    $(LREF makeMultidimensionalArray)
+))
+$(TR $(TD Dispose) $(TD
+    $(LREF dispose)
+    $(LREF disposeMultidimensionalArray)
+))
+$(TR $(TD Modify) $(TD
+    $(LREF expandArray)
+    $(LREF shrinkArray)
+))
+$(TR $(TD Global) $(TD
+    $(LREF processAllocator)
+    $(LREF theAllocator)
+))
+$(TR $(TD Class interface) $(TD
+    $(LREF allocatorObject)
+    $(LREF CAllocatorImpl)
+    $(LREF IAllocator)
+))
+)
+
 Synopsis:
 ---
 // Allocate an int, initialize it with 42
