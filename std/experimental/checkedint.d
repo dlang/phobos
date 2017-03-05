@@ -44,17 +44,17 @@ This module provides a few predefined hooks (below) that add useful behavior to
 `Checked`:
 
 $(BOOKTABLE ,
-    $(TR $(TD $(D $(LREF Abort))) $(TD
+    $(TR $(TD $(LREF Abort)) $(TD
         fails every incorrect operation with a message to $(REF
         stderr, std, stdio) followed by a call to `assert(0)`. It is the default
         second parameter, i.e. `Checked!short` is the same as
         $(D Checked!(short, Abort)).
     ))
-    $(TR $(TD $(D $(LREF Warn))) $(TD
+    $(TR $(TD $(LREF Warn)) $(TD
         prints incorrect operations to $(REF stderr, std, stdio)
         but otherwise preserves the built-in behavior.
     ))
-    $(TR $(TD $(D $(LREF ProperCompare))) $(TD
+    $(TR $(TD $(LREF ProperCompare)) $(TD
         fixes the comparison operators `==`, `!=`, `<`, `<=`, `>`, and `>=`
         to return correct results in all circumstances,
         at a slight cost in efficiency. For example,
@@ -64,14 +64,14 @@ $(BOOKTABLE ,
         integral can be converted to the floating-point number precisely,
         so as to preserve transitivity of equality.
     ))
-    $(TR $(TD $(D $(LREF WithNaN))) $(TD
+    $(TR $(TD $(LREF WithNaN)) $(TD
         reserves a special "Not a Number" (NaN) value akin to the homonym value
         reserved for floating-point values. Once a $(D Checked!(X, WithNaN))
         gets this special value, it preserves and propagates it until
         reassigned. $(LREF isNaN) can be used to query whether the object
         is not a number.
     ))
-    $(TR $(TD $(D $(LREF Saturate))) $(TD
+    $(TR $(TD $(LREF Saturate)) $(TD
         implements saturating arithmetic, i.e. $(D Checked!(int, Saturate))
         "stops" at `int.max` for all operations that would cause an `int` to
         overflow toward infinity, and at `int.min` for all operations that would

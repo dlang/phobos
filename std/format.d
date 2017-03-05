@@ -14,16 +14,16 @@
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(D $(LREF formattedRead)))
+    $(TR $(TD $(LREF formattedRead))
         $(TD Reads values according to the _format string from an InputRange.
     ))
-    $(TR $(TD $(D $(LREF formattedWrite)))
+    $(TR $(TD $(LREF formattedWrite))
         $(TD Formats its arguments according to the _format string and puts them
         to an OutputRange.
     ))
 )
 
-   Please see the documentation of function $(D $(LREF formattedWrite)) for a
+   Please see the documentation of function $(LREF formattedWrite) for a
    description of the _format string.
 
    Two functions have been added for convenience:
@@ -31,10 +31,10 @@ $(TR $(TH Function Name) $(TH Description)
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(D $(LREF _format)))
+    $(TR $(TD $(LREF _format))
         $(TD Returns a GC-allocated string with the formatting result.
     ))
-    $(TR $(TD $(D $(LREF sformat)))
+    $(TR $(TD $(LREF sformat))
         $(TD Puts the formatting result into a preallocated array.
     ))
 )
@@ -42,7 +42,7 @@ $(TR $(TH Function Name) $(TH Description)
    These two functions are publicly imported by $(MREF std, string)
    to be easily available.
 
-   The functions $(D $(LREF formatValue)) and $(D $(LREF unformatValue)) are
+   The functions $(LREF formatValue) and $(LREF unformatValue) are
    used for the plumbing.
    Copyright: Copyright Digital Mars 2000-2013.
 
