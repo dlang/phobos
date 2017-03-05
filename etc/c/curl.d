@@ -40,7 +40,7 @@ import core.stdc.config;
 import std.socket;
 
 // linux
-import core.sys.posix.sys.socket;
+version(Posix) import core.sys.posix.sys.socket;
 
 //
 // LICENSE FROM CURL HEADERS
