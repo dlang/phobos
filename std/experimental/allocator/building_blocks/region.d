@@ -581,7 +581,7 @@ private extern(C) int brk(shared void*);
 
 /**
 
-Allocator backed by $(D $(LINK2 https://en.wikipedia.org/wiki/Sbrk, sbrk))
+Allocator backed by $(LINK2 https://en.wikipedia.org/wiki/Sbrk, `sbrk`)
 for Posix systems. Due to the fact that $(D sbrk) is not thread-safe
 $(HTTP lifecs.likai.org/2010/02/sbrk-is-not-thread-safe.html, by design),
 $(D SbrkRegion) uses a mutex internally. This implies

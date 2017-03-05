@@ -6294,7 +6294,7 @@ template isSomeFunction(T...)
 
 /**
 Detect whether $(D T) is a callable object, which can be called with the
-function call operator $(D $(LPAREN)...$(RPAREN)).
+function call operator `(...)`.
  */
 template isCallable(T...)
     if (T.length == 1)

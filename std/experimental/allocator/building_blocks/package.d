@@ -252,11 +252,11 @@ simple bump-the-pointer allocator.))
 $(TR $(TDC2 InSituRegion, region) $(TD Region holding its own allocation, most often on
 the stack. Has statically-determined size.))
 
-$(TR $(TDC2 SbrkRegion, region) $(TD Region using $(D $(LINK2 https://en.wikipedia.org/wiki/Sbrk,
-sbrk)) for allocating memory.))
+$(TR $(TDC2 SbrkRegion, region) $(TD Region using $(LINK2 https://en.wikipedia.org/wiki/Sbrk,
+`sbrk`) for allocating memory.))
 
 $(TR $(TDC3 MmapAllocator, mmap_allocator) $(TD Allocator using
-            $(D $(LINK2 https://en.wikipedia.org/wiki/Mmap, mmap)) directly.))
+            $(LINK2 https://en.wikipedia.org/wiki/Mmap, `mmap`) directly.))
 
 $(TR $(TDC2 StatsCollector, stats_collector) $(TD Collect statistics about any other
 allocator.))
@@ -283,9 +283,9 @@ Macros:
 MYREF2 = $(REF_SHORT $1, std,experimental,allocator,building_blocks,$2)
 MYREF3 = $(REF_SHORT $1, std,experimental,allocator,$2)
 TDC = $(TDNW $(D $1)$+)
-TDC2 = $(TDNW $(D $(MYREF2 $1,$+))$(BR)$(SMALL
+TDC2 = $(TDNW $(MYREF2 $1,$+)$(BR)$(SMALL
 $(D std.experimental.allocator.building_blocks.$2)))
-TDC3 = $(TDNW $(D $(MYREF3 $1,$+))$(BR)$(SMALL
+TDC3 = $(TDNW $(MYREF3 $1,$+)$(BR)$(SMALL
 $(D std.experimental.allocator.$2)))
 RES = $(I result)
 POST = $(BR)$(SMALL $(I Post:) $(BLUE $(D $0)))

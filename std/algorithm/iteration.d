@@ -4611,12 +4611,12 @@ if (isSomeChar!C)
 /**
 Sums elements of $(D r), which must be a finite
 $(REF_ALTTEXT input range, isInputRange, std,range,primitives). Although
-conceptually $(D sum(r)) is equivalent to $(LREF fold)!((a, b) => a +
-b)(r, 0), $(D sum) uses specialized algorithms to maximize accuracy,
+conceptually $(D sum(r)) is equivalent to $(LREF fold)$(D !((a, b) => a +
+b)(r, 0)), $(D sum) uses specialized algorithms to maximize accuracy,
 as follows.
 
 $(UL
-$(LI If $(D $(REF ElementType, std,range,primitives)!R) is a floating-point
+$(LI If $(REF ElementType, std,range,primitives)$(D !R) is a floating-point
 type and $(D R) is a
 $(REF_ALTTEXT random-access range, isRandomAccessRange, std,range,primitives) with
 length and slicing, then $(D sum) uses the

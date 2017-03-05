@@ -385,7 +385,7 @@ public alias crcHexString = toHexString!(Order.decreasing, 16);
  * OOP API CRC32 implementation.
  * See $(D std.digest.digest) for differences between template and OOP API.
  *
- * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!CRC32), see
+ * This is an alias for $(REF WrapperDigest, std,digest,digest)$(D !CRC32), see
  * there for more information.
  */
 alias CRC32Digest = WrapperDigest!CRC32;

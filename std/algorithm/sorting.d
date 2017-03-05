@@ -11,7 +11,7 @@ $(T2 completeSort,
         $(D completeSort(a, b)) leaves $(D a = [6, 10, 15]) and $(D b = [20,
         30, 40]).
         The range $(D a) must be sorted prior to the call, and as a result the
-        combination $(D $(REF chain, std,range)(a, b)) is sorted.)
+        combination $(REF chain, std,range)$(D (a, b)) is sorted.)
 $(T2 isPartitioned,
         $(D isPartitioned!"a < 0"([-1, -2, 1, 0, 2])) returns $(D true) because
         the predicate is $(D true) for a portion of the range and $(D false)

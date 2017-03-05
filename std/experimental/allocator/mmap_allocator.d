@@ -5,8 +5,8 @@ module std.experimental.allocator.mmap_allocator;
 /**
 
 Allocator (currently defined only for Posix and Windows) using
-$(D $(LINK2 https://en.wikipedia.org/wiki/Mmap, mmap))
-and $(D $(LUCKY munmap)) directly (or their Windows equivalents). There is no
+$(LINK2 https://en.wikipedia.org/wiki/Mmap, `mmap`)
+and $(LUCKY munmap) directly (or their Windows equivalents). There is no
 additional structure: each call to $(D allocate(s)) issues a call to
 $(D mmap(null, s, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)),
 and each call to $(D deallocate(b)) issues $(D munmap(b.ptr, b.length)).
