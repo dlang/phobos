@@ -9,52 +9,52 @@ wrap around _range objects created by the $(MREF std, range) templates.
 
 $(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE ,
-    $(TR $(TD $(D $(LREF InputRange)))
+    $(TR $(TD $(LREF InputRange))
         $(TD Wrapper for input ranges.
     ))
-    $(TR $(TD $(D $(LREF InputAssignable)))
+    $(TR $(TD $(LREF InputAssignable))
         $(TD Wrapper for input ranges with assignable elements.
     ))
-    $(TR $(TD $(D $(LREF ForwardRange)))
+    $(TR $(TD $(LREF ForwardRange))
         $(TD Wrapper for forward ranges.
     ))
-    $(TR $(TD $(D $(LREF ForwardAssignable)))
+    $(TR $(TD $(LREF ForwardAssignable))
         $(TD Wrapper for forward ranges with assignable elements.
     ))
-    $(TR $(TD $(D $(LREF BidirectionalRange)))
+    $(TR $(TD $(LREF BidirectionalRange))
         $(TD Wrapper for bidirectional ranges.
     ))
-    $(TR $(TD $(D $(LREF BidirectionalAssignable)))
+    $(TR $(TD $(LREF BidirectionalAssignable))
         $(TD Wrapper for bidirectional ranges with assignable elements.
     ))
-    $(TR $(TD $(D $(LREF RandomAccessFinite)))
+    $(TR $(TD $(LREF RandomAccessFinite))
         $(TD Wrapper for finite random-access ranges.
     ))
-    $(TR $(TD $(D $(LREF RandomAccessAssignable)))
+    $(TR $(TD $(LREF RandomAccessAssignable))
         $(TD Wrapper for finite random-access ranges with assignable elements.
     ))
-    $(TR $(TD $(D $(LREF RandomAccessInfinite)))
+    $(TR $(TD $(LREF RandomAccessInfinite))
         $(TD Wrapper for infinite random-access ranges.
     ))
-    $(TR $(TD $(D $(LREF OutputRange)))
+    $(TR $(TD $(LREF OutputRange))
         $(TD Wrapper for output ranges.
     ))
-    $(TR $(TD $(D $(LREF OutputRangeObject)))
+    $(TR $(TD $(LREF OutputRangeObject))
         $(TD Class that implements the $(D OutputRange) interface and wraps the
         $(D put) methods in virtual functions.
-    $(TR $(TD $(D $(LREF outputRangeObject)))
+    $(TR $(TD $(LREF outputRangeObject))
         Convenience function for creating an $(D OutputRangeObject) with a base
         range of type R that accepts types E.
     ))
-    $(TR $(TD $(D $(LREF InputRangeObject)))
+    $(TR $(TD $(LREF InputRangeObject))
         $(TD Class that implements the $(D InputRange) interface and wraps the
         input _range methods in virtual functions.
     ))
-    $(TR $(TD $(D $(LREF InputRangeObject)))
+    $(TR $(TD $(LREF InputRangeObject))
         $(TD Convenience function for creating an $(D InputRangeObject)
         of the proper type.
     ))
-    $(TR $(TD $(D $(LREF MostDerivedInputRange)))
+    $(TR $(TD $(LREF MostDerivedInputRange))
         $(TD Returns the interface type that best matches the range.)
     ))
 )
