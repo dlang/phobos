@@ -80,7 +80,7 @@ License:
 Source:
     $(PHOBOSSRC std/_process.d)
 Macros:
-    OBJECTREF=$(LINK2 object.html#$0,$(D $0)))
+    OBJECTREF=$(REF_ALTTEXT $1, object, $1)
 */
 module std.process;
 
