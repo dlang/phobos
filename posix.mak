@@ -524,6 +524,9 @@ style: ../dscanner/dsc $(LIB) has_public_example publictests
 	@echo "Enforce space between binary operators"
 	grep -nrE "[[:alnum:]](==|!=|<=|<<|>>|>>>|^^)[[:alnum:]]|[[:alnum:]] (==|!=|<=|<<|>>|>>>|^^)[[:alnum:]]|[[:alnum:]](==|!=|<=|<<|>>|>>>|^^) [[:alnum:]]" $$(find . -name '*.d'); test $$? -eq 1
 
+	@echo "Check for usage of D macros within D code"
+	grep -nrE "[$$]\(D [$$]\(" . ; test $$? -eq 1
+
 	@echo "Validate changelog files (Do _not_ use REF in the title!)"
 	@for file in $$(find changelog -name '*.dd') ; do  \
 		cat $$file | head -n1 | grep -nqE '\$$\((REF|LINK2|HTTP|MREF)' && \
