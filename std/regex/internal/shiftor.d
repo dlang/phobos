@@ -26,7 +26,7 @@ uint effectiveSize(Char)()
     Kickstart engine using ShiftOr algorithm,
     a bit parallel technique for inexact string searching.
 */
-class ShiftOr(Char) : Kickstart!Char
+class ShiftOr(Char)
 {
 private:
 pure:
@@ -242,9 +242,9 @@ public:
                             static immutable codeBounds = [0x0, 0x7F, 0x80, 0x7FF, 0x800, 0xFFFF, 0x10000, 0x10FFFF];
                         else //== 2
                             static immutable codeBounds = [0x0, 0xFFFF, 0x10000, 0x10FFFF];
-                        uint[] arr = new uint[set.length * 2];
+                        uint[] arr = new uint[set.byInterval.length * 2];
                         size_t ofs = 0;
-                        foreach (ival; set)
+                        foreach (ival; set.byInterval)
                         {
                             arr[ofs++] = ival.a;
                             arr[ofs++] = ival.b;
@@ -263,8 +263,7 @@ public:
                     auto  chars = set.length;
                     if (chars > charsetThreshold)
                         goto L_StopThread;
-                    foreach (ival; set)
-                    foreach (ch; ival.a..ival.b)
+                    foreach (ch; set.byCodepoint)
                     {
                         //avoid surrogate pairs
                         if (0xD800 <= ch && ch <= 0xDFFF)
