@@ -1278,6 +1278,8 @@ if (isForwardRange!R && is(ElementType!R : dchar))
         re_flags &= ~RegexOption.freeform; // stop ignoring whitespace if we did
         parseCharsetImpl();
         re_flags = save;
+        // Last next() in parseCharsetImp is executed w/o freeform flag
+        if (re_flags & RegexOption.freeform) skipSpace();
     }
 
     void parseCharsetImpl()

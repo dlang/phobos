@@ -1049,3 +1049,10 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     assert("abc".matchFirst(r));
     assertThrown(regex("(?#..."));
 }
+
+// bugzilla 17212
+@safe unittest
+{
+    auto r = regex(" [a] ", "x");
+    assert("a".matchFirst(r));
+}
