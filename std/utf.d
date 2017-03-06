@@ -3376,39 +3376,23 @@ if (isAutodecodableString!R ||
         {
         @safe pure nothrow @nogc:
 
-            @property bool empty() const         { return r.length == 0; }
-            @property auto ref front() inout     { return r[0]; }
-            void popFront()                      { r = r[1 .. $]; }
-            auto ref opIndex(size_t index) inout { return r[index]; }
+            @property bool empty() const     { return str.length == 0; }
+            @property auto ref front() inout { return str[0]; }
+            void popFront()                  { str = str[1 .. $]; }
 
-            @property auto ref back() inout
-            {
-                return r[$ - 1];
-            }
+            @property auto save() { return ByCodeUnitImpl(str.save); }
 
-            void popBack()
-            {
-                r = r[0 .. $-1];
-            }
+            @property auto ref back() inout { return str[$ - 1]; }
+            void popBack()                  { str = str[0 .. $-1]; }
 
-            auto opSlice(size_t lower, size_t upper)
-            {
-                return ByCodeUnitImpl(r[lower..upper]);
-            }
+            auto ref opIndex(size_t index) inout     { return str[index]; }
+            auto opSlice(size_t lower, size_t upper) { return ByCodeUnitImpl(str[lower..upper]); }
 
-            @property size_t length() const
-            {
-                return r.length;
-            }
+            @property size_t length() const { return str.length; }
             alias opDollar = length;
 
-            @property auto save()
-            {
-                return ByCodeUnitImpl(r.save);
-            }
-
           private:
-            StringTypeOf!R r;
+            StringTypeOf!R str;
         }
 
         static assert(isRandomAccessRange!ByCodeUnitImpl);
