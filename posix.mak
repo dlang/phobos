@@ -57,6 +57,9 @@ ZIPFILE = phobos.zip
 ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DUB=dub
+GIT_HOME=https://github.com/dlang
+TOOLS_DIR=../tools
+
 # Documentation-related stuff
 DOCSRC = ../dlang.org
 WEBSITE_DIR = ../web
@@ -473,8 +476,11 @@ changelog.html: changelog.dd
 CWS_TOCHECK = posix.mak win32.mak win64.mak osmodel.mak
 CWS_TOCHECK += $(ALL_D_FILES) index.d
 
-checkwhitespace: $(LIB)
-	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -run ../dmd/src/checkwhitespace.d $(CWS_TOCHECK)
+checkwhitespace: $(LIB) $(TOOLS_DIR)/checkwhitespace.d
+	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -run $(TOOLS_DIR)/checkwhitespace.d $(CWS_TOCHECK)
+
+$(TOOLS_DIR)/checkwhitespace.d:
+	git clone --depth=1 ${GIT_HOME}/tools $(TOOLS_DIR)
 
 #############################
 # Submission to Phobos are required to conform to the DStyle
