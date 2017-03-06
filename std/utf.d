@@ -3336,8 +3336,9 @@ enum dchar replacementDchar = '\uFFFD';
  *
  * The purpose is to bypass the special case decoding that
  * $(REF front, std,range,primitives) does to character arrays. As a result,
- * using ranges with `byCodeUnit` can be `nothrow` while $(REF front, std,range,primitives)
- * throws when it encounters invalid Unicode sequences.
+ * using ranges with `byCodeUnit` can be `nothrow` while
+ * $(REF front, std,range,primitives) throws when it encounters invalid Unicode
+ * sequences.
  *
  * A code unit is a building block of the UTF encodings. Generally, an
  * individual code unit does not represent what's perceived as a full
@@ -3348,15 +3349,25 @@ enum dchar replacementDchar = '\uFFFD';
  * one while iterating over the resulting range will give nonsensical results.
  *
  * Params:
- *      r = an input range of characters, or an array of characters
+ *      r = an input range of characters (including strings) or a type that
+ *          implicitly converts to a string type.
  * Returns:
- *     If `r` is not an auto-decodable string, then `r` is returned.
+ *     If `r` is not an auto-decodable string (i.e. a narrow string or a
+ *     user-defined type that implicits converts to a string type), then `r`
+ *     is returned.
  *
- *      Otherwise, an input range with a length if $(REF isAggregateType, std,traits)
- *      is `true` for `R`. Otherwise, this returns a finite random access range
- *      with slicing.
+ *      Otherwise, `r` is converted to its corresponding string type (if it's
+ *      not already a string) and wrapped in a random-access range where the
+ *      element encoding type of the string (its code unit) is the element type
+ *      of the range, and that range returned. The range has slicing.
+ *
+ *      If `r` is quirky enough to be a struct or class which is an input range
+ *      of characters on its own (i.e. it has the input range API as member
+ *      functions), $(I and) it's implicitly convertible to a string type, then
+ *      `r` is returned, and no implicit conversion takes place.
  * See_Also:
- *      Refer to the $(MREF std, uni) docs for a reference on Unicode terminology.
+ *      Refer to the $(MREF std, uni) docs for a reference on Unicode
+ *      terminology.
  *
  *      For a range that iterates by grapheme cluster (written character) see
  *      $(REF byGrapheme, std,uni).
