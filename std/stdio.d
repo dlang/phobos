@@ -295,7 +295,7 @@ public:
         else
         {
             line = chomp(line);
-            formattedRead(line, format, &current);
+            formattedRead(line, format, current);
             enforce(line.empty, text("Leftover characters in record: `",
                             line, "'"));
         }
