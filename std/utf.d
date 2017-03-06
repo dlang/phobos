@@ -3362,71 +3362,74 @@ enum dchar replacementDchar = '\uFFFD';
  *      $(REF byGrapheme, std,uni).
  */
 auto byCodeUnit(R)(R r)
-if (isAutodecodableString!R)
+if (isAutodecodableString!R ||
+    isInputRange!R && isSomeChar!(ElementEncodingType!R) ||
+    (is(R : const dchar[]) && !isStaticArray!R))
 {
-    static struct ByCodeUnitImpl
+    static if (isNarrowString!R ||
+               // This would be cleaner if we had a way to check whether a type
+               // was a range without any implicit conversions.
+               (isAutodecodableString!R && !__traits(hasMember, R, "empty") &&
+                !__traits(hasMember, R, "front") && !__traits(hasMember, R, "popFront")))
     {
-    pure nothrow @nogc:
-
-        @property bool empty() const         { return r.length == 0; }
-        @property auto ref front() inout     { return r[0]; }
-        void popFront()                      { r = r[1 .. $]; }
-        auto ref opIndex(size_t index) inout { return r[index]; }
-
-        @property auto ref back() inout
+        static struct ByCodeUnitImpl
         {
-            return r[$ - 1];
-        }
+        @safe pure nothrow @nogc:
 
-        void popBack()
-        {
-            r = r[0 .. $-1];
-        }
+            @property bool empty() const         { return r.length == 0; }
+            @property auto ref front() inout     { return r[0]; }
+            void popFront()                      { r = r[1 .. $]; }
+            auto ref opIndex(size_t index) inout { return r[index]; }
 
-        static if (!isAggregateType!R)
-        {
+            @property auto ref back() inout
+            {
+                return r[$ - 1];
+            }
+
+            void popBack()
+            {
+                r = r[0 .. $-1];
+            }
+
             auto opSlice(size_t lower, size_t upper)
             {
-                return ByCodeUnitImpl(r[lower .. upper]);
+                return ByCodeUnitImpl(r[lower..upper]);
             }
-        }
 
-        @property size_t length() const
-        {
-            return r.length;
-        }
-        alias opDollar = length;
+            @property size_t length() const
+            {
+                return r.length;
+            }
+            alias opDollar = length;
 
-        static if (!isAggregateType!R)
-        {
             @property auto save()
             {
                 return ByCodeUnitImpl(r.save);
             }
+
+          private:
+            StringTypeOf!R r;
         }
 
-      private:
-        R r;
+        static assert(isRandomAccessRange!ByCodeUnitImpl);
+
+        return ByCodeUnitImpl(r);
     }
-
-    static assert(isAggregateType!R || isRandomAccessRange!ByCodeUnitImpl);
-
-    return ByCodeUnitImpl(r);
-}
-
-/// Ditto
-auto ref byCodeUnit(R)(R r)
-if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingType!R))
-{
-    // byCodeUnit for ranges and dchar[] is a no-op
-    return r;
+    else static if (is(R : const dchar[]) && !__traits(hasMember, R, "empty") &&
+                    !__traits(hasMember, R, "front") && !__traits(hasMember, R, "popFront"))
+    {
+        return cast(StringTypeOf!R) r;
+    }
+    else
+    {
+        // byCodeUnit for ranges and dchar[] is a no-op
+        return r;
+    }
 }
 
 ///
 @safe unittest
 {
-    import std.range.primitives;
-
     auto r = "Hello, World!".byCodeUnit();
     static assert(hasLength!(typeof(r)));
     static assert(hasSlicing!(typeof(r)));
@@ -3456,71 +3459,79 @@ if (!isAutodecodableString!R && isInputRange!R && isSomeChar!(ElementEncodingTyp
     assert(noel2.byCodeUnit[2] != 'ë');
 }
 
-pure nothrow @nogc @safe unittest
+@safe pure nothrow @nogc unittest
 {
     import std.range;
     {
-        char[5] s;
+        enum testStr = "𐁄𐂌𐃯 hello ディラン";
+        char[testStr.length] s;
         int i;
-        foreach (c; "hello".byCodeUnit().byCodeUnit())
+        foreach (c; testStr.byCodeUnit().byCodeUnit())
         {
             s[i++] = c;
         }
-        assert(s == "hello");
+        assert(s == testStr);
     }
     {
-        wchar[5] s;
+        enum testStr = "𐁄𐂌𐃯 hello ディラン"w;
+        wchar[testStr.length] s;
         int i;
-        foreach (c; "hello"w.byCodeUnit().byCodeUnit())
+        foreach (c; testStr.byCodeUnit().byCodeUnit())
         {
             s[i++] = c;
         }
-        assert(s == "hello"w);
+        assert(s == testStr);
     }
     {
-        dchar[5] s;
+        enum testStr = "𐁄𐂌𐃯 hello ディラン"d;
+        dchar[testStr.length] s;
         int i;
-        foreach (c; "hello"d.byCodeUnit().byCodeUnit())
+        foreach (c; testStr.byCodeUnit().byCodeUnit())
         {
             s[i++] = c;
         }
-        assert(s == "hello"d);
+        assert(s == testStr);
     }
     {
-        auto r = "hello".byCodeUnit();
-        assert(r.length == 5);
-        assert(r[3] == 'l');
-        assert(r[2 .. 4][1] == 'l');
+        auto bcu = "hello".byCodeUnit();
+        assert(bcu.length == 5);
+        assert(bcu[3] == 'l');
+        assert(bcu[2 .. 4][1] == 'l');
     }
     {
-        char[5] buff = "hello";
-        auto s = buff[].byCodeUnit();
-        s.front = 'H';
-        assert(s.front == 'H');
-        s[1] = 'E';
-        assert(s[1] == 'E');
+        char[5] orig = "hello";
+        auto bcu = orig[].byCodeUnit();
+        bcu.front = 'H';
+        assert(bcu.front == 'H');
+        bcu[1] = 'E';
+        assert(bcu[1] == 'E');
     }
     {
-        auto r = "hello".byCodeUnit().byCodeUnit();
-        static assert(isForwardRange!(typeof(r)));
-        auto s = r.save;
-        r.popFront();
+        auto bcu = "hello".byCodeUnit().byCodeUnit();
+        static assert(isForwardRange!(typeof(bcu)));
+        static assert(is(typeof(bcu) == struct));
+        auto s = bcu.save;
+        bcu.popFront();
         assert(s.front == 'h');
     }
     {
-        auto r = "hello".byCodeUnit();
-        static assert(hasSlicing!(typeof(r)));
-        static assert(isBidirectionalRange!(typeof(r)));
-        auto ret = r.retro;
+        auto bcu = "hello".byCodeUnit();
+        static assert(hasSlicing!(typeof(bcu)));
+        static assert(isBidirectionalRange!(typeof(bcu)));
+        static assert(is(typeof(bcu) == struct));
+        static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
+        auto ret = bcu.retro;
         assert(ret.front == 'o');
         ret.popFront();
         assert(ret.front == 'l');
     }
     {
-        auto r = "κόσμε"w.byCodeUnit();
-        static assert(hasSlicing!(typeof(r)));
-        static assert(isBidirectionalRange!(typeof(r)));
-        auto ret = r.retro;
+        auto bcu = "κόσμε"w.byCodeUnit();
+        static assert(hasSlicing!(typeof(bcu)));
+        static assert(isBidirectionalRange!(typeof(bcu)));
+        static assert(is(typeof(bcu) == struct));
+        static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
+        auto ret = bcu.retro;
         assert(ret.front == 'ε');
         ret.popFront();
         assert(ret.front == 'μ');
@@ -3532,10 +3543,209 @@ pure nothrow @nogc @safe unittest
             alias s this;
         }
 
-        auto fn = Stringish("test.d");
-        auto x = fn.byCodeUnit();
-        assert(x.front == 't');
+        auto orig = Stringish("\U0010fff8 𐁊 foo 𐂓");
+        auto bcu = orig.byCodeUnit();
+        static assert(is(typeof(bcu) == struct));
+        static assert(!is(typeof(bcu) == Stringish));
+        static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
+        static assert(is(ElementType!(typeof(bcu)) == immutable char));
+        assert(bcu.front == cast(char)244);
     }
+    {
+        static struct WStringish
+        {
+            wstring s;
+            alias s this;
+        }
+
+        auto orig = WStringish("\U0010fff8 𐁊 foo 𐂓"w);
+        auto bcu = orig.byCodeUnit();
+        static assert(is(typeof(bcu) == struct));
+        static assert(!is(typeof(bcu) == WStringish));
+        static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
+        static assert(is(ElementType!(typeof(bcu)) == immutable wchar));
+        assert(bcu.front == cast(wchar)56319);
+    }
+    {
+        static struct DStringish
+        {
+            dstring s;
+            alias s this;
+        }
+
+        auto orig = DStringish("\U0010fff8 𐁊 foo 𐂓"d);
+        auto bcu = orig.byCodeUnit();
+        static assert(is(typeof(bcu) == dstring));
+        static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
+        static assert(is(ElementType!(typeof(bcu)) == immutable dchar));
+        assert(bcu.front == cast(dchar)1114104);
+    }
+    {
+        static struct FuncStringish
+        {
+            string str;
+            string s() pure nothrow @nogc { return str; }
+            alias s this;
+        }
+
+        auto orig = FuncStringish("\U0010fff8 𐁊 foo 𐂓");
+        auto bcu = orig.byCodeUnit();
+        static assert(is(typeof(bcu) == struct));
+        static assert(!is(typeof(bcu) == FuncStringish));
+        static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
+        static assert(is(ElementType!(typeof(bcu)) == immutable char));
+        assert(bcu.front == cast(char)244);
+    }
+    {
+        static struct Range
+        {
+            string data;
+            bool empty() pure nothrow @nogc { return data.empty; }
+            char front() pure nothrow @nogc { return data[0]; }
+            void popFront() pure nothrow @nogc { data = data[1 .. $]; }
+        }
+
+        auto orig = Range("\U0010fff8 𐁊 foo 𐂓");
+        auto bcu = orig.byCodeUnit();
+        static assert(is(typeof(bcu) == Range));
+        static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
+        static assert(is(ElementType!(typeof(bcu)) == char));
+        assert(bcu.front == cast(char)244);
+    }
+    {
+        static struct WRange
+        {
+            wstring data;
+            bool empty() pure nothrow @nogc { return data.empty; }
+            wchar front() pure nothrow @nogc { return data[0]; }
+            void popFront() pure nothrow @nogc { data = data[1 .. $]; }
+        }
+
+        auto orig = WRange("\U0010fff8 𐁊 foo 𐂓"w);
+        auto bcu = orig.byCodeUnit();
+        static assert(is(typeof(bcu) == WRange));
+        static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
+        static assert(is(ElementType!(typeof(bcu)) == wchar));
+        assert(bcu.front == 56319);
+    }
+    {
+        static struct DRange
+        {
+            dstring data;
+            bool empty() pure nothrow @nogc { return data.empty; }
+            dchar front() pure nothrow @nogc { return data[0]; }
+            void popFront() pure nothrow @nogc { data = data[1 .. $]; }
+        }
+
+        auto orig = DRange("\U0010fff8 𐁊 foo 𐂓"d);
+        auto bcu = orig.byCodeUnit();
+        static assert(is(typeof(bcu) == DRange));
+        static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
+        static assert(is(ElementType!(typeof(bcu)) == dchar));
+        assert(bcu.front == 1114104);
+    }
+    {
+        static struct RangeAndStringish
+        {
+            bool empty() pure nothrow @nogc { return data.empty; }
+            char front() pure nothrow @nogc { return data[0]; }
+            void popFront() pure nothrow @nogc { data = data[1 .. $]; }
+
+            string data;
+            string s;
+            alias s this;
+        }
+
+        auto orig = RangeAndStringish("test.d", "other");
+        auto bcu = orig.byCodeUnit();
+        static assert(is(typeof(bcu) == RangeAndStringish));
+        static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
+        static assert(is(ElementType!(typeof(bcu)) == char));
+        assert(bcu.front == 't');
+    }
+    {
+        static struct WRangeAndStringish
+        {
+            bool empty() pure nothrow @nogc { return data.empty; }
+            wchar front() pure nothrow @nogc { return data[0]; }
+            void popFront() pure nothrow @nogc { data = data[1 .. $]; }
+
+            wstring data;
+            wstring s;
+            alias s this;
+        }
+
+        auto orig = WRangeAndStringish("test.d"w, "other"w);
+        auto bcu = orig.byCodeUnit();
+        static assert(is(typeof(bcu) == WRangeAndStringish));
+        static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
+        static assert(is(ElementType!(typeof(bcu)) == wchar));
+        assert(bcu.front == 't');
+    }
+    {
+        static struct DRangeAndStringish
+        {
+            bool empty() pure nothrow @nogc { return data.empty; }
+            dchar front() pure nothrow @nogc { return data[0]; }
+            void popFront() pure nothrow @nogc { data = data[1 .. $]; }
+
+            dstring data;
+            dstring s;
+            alias s this;
+        }
+
+        auto orig = DRangeAndStringish("test.d"d, "other"d);
+        auto bcu = orig.byCodeUnit();
+        static assert(is(typeof(bcu) == DRangeAndStringish));
+        static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
+        static assert(is(ElementType!(typeof(bcu)) == dchar));
+        assert(bcu.front == 't');
+    }
+    {
+        enum Enum : string { a = "test.d" }
+
+        auto orig = Enum.a;
+        auto bcu = orig.byCodeUnit();
+        static assert(!is(typeof(bcu) == Enum));
+        static assert(is(typeof(bcu) == struct));
+        static assert(is(ElementType!(typeof(bcu)) == immutable char));
+        assert(bcu.front == 't');
+    }
+    {
+        enum WEnum : wstring { a = "test.d"w }
+
+        auto orig = WEnum.a;
+        auto bcu = orig.byCodeUnit();
+        static assert(!is(typeof(bcu) == WEnum));
+        static assert(is(typeof(bcu) == struct));
+        static assert(is(ElementType!(typeof(bcu)) == immutable wchar));
+        assert(bcu.front == 't');
+    }
+    {
+        enum DEnum : dstring { a = "test.d"d }
+
+        auto orig = DEnum.a;
+        auto bcu = orig.byCodeUnit();
+        static assert(is(typeof(bcu) == dstring));
+        static assert(is(ElementType!(typeof(bcu)) == immutable dchar));
+        assert(bcu.front == 't');
+    }
+
+    static assert(!is(typeof(byCodeUnit("hello")) == string));
+    static assert(!is(typeof(byCodeUnit("hello"w)) == wstring));
+    static assert(is(typeof(byCodeUnit("hello"d)) == dstring));
+
+    static assert(!__traits(compiles, byCodeUnit((char[5]).init)));
+    static assert(!__traits(compiles, byCodeUnit((wchar[5]).init)));
+    static assert(!__traits(compiles, byCodeUnit((dchar[5]).init)));
+
+    enum SEnum : char[5] { a = "hello" }
+    enum WSEnum : wchar[5] { a = "hello"w }
+    enum DSEnum : dchar[5] { a = "hello"d }
+
+    static assert(!__traits(compiles, byCodeUnit(SEnum.a)));
+    static assert(!__traits(compiles, byCodeUnit(WSEnum.a)));
+    static assert(!__traits(compiles, byCodeUnit(DSEnum.a)));
 }
 
 /****************************
