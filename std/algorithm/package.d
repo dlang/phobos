@@ -3,7 +3,7 @@
 /**
 This package implements generic algorithms oriented towards the processing of
 sequences. Sequences processed by these functions define range-based
-interfaces.  See also $(LINK2 std_range.html, Reference on ranges) and
+interfaces.  See also $(MREF_ALTTEF Reference on ranges, std, range) and
 $(HTTP ddili.org/ders/d.en/ranges.html, tutorial on ranges).
 
 $(SCRIPT inhibitQuickIndex = 1;)
@@ -132,6 +132,9 @@ $(TR $(TDNW Mutation)
         $(SUBREF mutation, move)
         $(SUBREF mutation, moveAll)
         $(SUBREF mutation, moveSome)
+        $(SUBREF mutation, moveEmplace)
+        $(SUBREF mutation, moveEmplaceAll)
+        $(SUBREF mutation, moveEmplaceSome)
         $(SUBREF mutation, remove)
         $(SUBREF mutation, reverse)
         $(SUBREF mutation, strip)
@@ -183,7 +186,6 @@ Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 Source: $(PHOBOSSRC std/_algorithm/package.d)
  */
 module std.algorithm;
-//debug = std_algorithm;
 
 public import std.algorithm.comparison;
 public import std.algorithm.iteration;

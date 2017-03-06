@@ -21,7 +21,8 @@ install_deps() {
     fi
 
     for i in {0..4}; do
-        if curl -fsS -A "$CURL_USER_AGENT" --max-time 5 https://dlang.org/install.sh -O; then
+        if curl -fsS -A "$CURL_USER_AGENT" --max-time 5 https://dlang.org/install.sh -O ||
+           curl -fsS -A "$CURL_USER_AGENT" --max-time 5 https://nightlies.dlang.org/install.sh -O ; then
             break
         elif [ $i -ge 4 ]; then
             sleep $((1 << $i))
@@ -56,12 +57,13 @@ clone() {
 setup_repos()
 {
     # set a default in case we run into rate limit restrictions
-    local base_branch="master"
+    local base_branch=""
     if [ -n "${CIRCLE_PR_NUMBER:-}" ]; then
-        base_branch=$(curl -fsSL https://api.github.com/repos/dlang/phobos/pulls/$CIRCLE_PR_NUMBER | jq -r '.base.ref')
+        base_branch=$((curl -fsSL https://api.github.com/repos/dlang/phobos/pulls/$CIRCLE_PR_NUMBER || echo) | jq -r '.base.ref')
     else
         base_branch=$CIRCLE_BRANCH
     fi
+    base_branch=${base_branch:-"master"}
 
     # merge upstream branch with changes, s.t. we check with the latest changes
     if [ -n "${CIRCLE_PR_NUMBER:-}" ]; then
@@ -98,7 +100,12 @@ style()
     # dscanner needs a more up-to-date DMD version
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$DSCANNER_DMD_VER --activate)"
 
-    make -f posix.mak style
+    # some style tools are at the tools repo
+    clone https://github.com/dlang/tools.git ../tools master
+    # fix to a specific version of https://github.com/dlang/tools/tree/master/styles
+    git -C ../tools checkout 60583c8363ff25d00017dffdb18c7ee7e7d9a343
+
+    make -f posix.mak style DUB=$DUB
 }
 
 # run unittest with coverage
@@ -116,19 +123,9 @@ coverage()
     make -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test")
 }
 
-# compile all public unittests separately
-publictests()
-{
-    clone https://github.com/dlang/tools.git ../tools master
-    # fix to a specific version of https://github.com/dlang/tools/blob/master/phobos_tests_extractor.d
-    git -C ../tools checkout 184f5e60372d6dd36d3451b75fb6f21e23f7275b
-    make -f posix.mak publictests DUB=$DUB
-}
-
 case $1 in
     install-deps) install_deps ;;
     setup-repos) setup_repos ;;
     coverage) coverage ;;
     style) style ;;
-    publictests) publictests ;;
 esac

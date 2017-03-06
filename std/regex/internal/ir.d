@@ -9,7 +9,7 @@ module std.regex.internal.ir;
 
 package(std.regex):
 
-import std.exception, std.uni, std.meta, std.traits, std.typecons, std.range.primitives;
+import std.exception, std.uni, std.meta, std.traits, std.range.primitives;
 
 debug(std_regex_parser) import std.stdio;
 // just a common trait, may be moved elsewhere
@@ -28,6 +28,25 @@ alias makeTrie = codepointSetTrie!(13, 8);
 
 CharMatcher[CodepointSet] matcherCache;
 
+//accessor with caching
+@trusted CharMatcher getMatcher(CodepointSet set)
+{// @@@BUG@@@ 6357 almost all properties of AA are not @safe
+    if (__ctfe || maxCachedMatchers == 0)
+        return CharMatcher(set);
+    else
+    {
+        auto p = set in matcherCache;
+        if (p)
+            return *p;
+        if (matcherCache.length == maxCachedMatchers)
+        {
+            // flush enmatchers in trieCache
+            matcherCache = null;
+        }
+        return (matcherCache[set] = CharMatcher(set));
+    }
+}
+
 @trusted auto memoizeExpr(string expr)()
 {
     if (__ctfe)
@@ -44,28 +63,15 @@ CharMatcher[CodepointSet] matcherCache;
 }
 
 //property for \w character class
-@property CodepointSet wordCharacter() pure
+@property CodepointSet wordCharacter()
 {
-    return unicode.Alphabetic | unicode.Mn | unicode.Mc
-        | unicode.Me | unicode.Nd | unicode.Pc;
+    return memoizeExpr!("unicode.Alphabetic | unicode.Mn | unicode.Mc
+        | unicode.Me | unicode.Nd | unicode.Pc")();
 }
 
 @property CharMatcher wordMatcher()
 {
     return memoizeExpr!("CharMatcher(wordCharacter)")();
-}
-
-package bool scanFor()(const(Interval)[] ivals, dchar ch)
-{
-    immutable len = ivals.length;
-    for (size_t i = 0; i < len; i++)
-    {
-        if (ch < ivals[i].a)
-            return false;
-        if (ch < ivals[i].b)
-            return true;
-    }
-    return false;
 }
 
 // some special Unicode white space characters
@@ -91,7 +97,7 @@ enum RegexOption: uint {
 //do not reorder this list
 alias RegexOptionNames = AliasSeq!('g', 'i', 'x', 'U', 'm', 's');
 static assert( RegexOption.max < 0x80);
-// flags that guide execution of engine
+// flags that allow guide execution of engine
 enum RegexInfo : uint { oneShot = 0x80 }
 
 // IR bit pattern: 0b1_xxxxx_yy
@@ -164,11 +170,10 @@ template IRL(IR code)
 {
     enum uint IRL =  lengthOfIR(code);
 }
-static assert (IRL!(IR.LookaheadStart) == 3);
+static assert(IRL!(IR.LookaheadStart) == 3);
 
 //how many parameters follow the IR, should be optimized fixing some IR bits
-int immediateParamsIR(IR i) pure
-{
+int immediateParamsIR(IR i){
     switch (i)
     {
     case IR.OrEnd,IR.InfiniteEnd,IR.InfiniteQEnd:
@@ -185,43 +190,43 @@ int immediateParamsIR(IR i) pure
 }
 
 //full length of IR instruction inlcuding all parameters that might follow it
-int lengthOfIR(IR i) pure
+int lengthOfIR(IR i)
 {
     return 1 + immediateParamsIR(i);
 }
 
 //full length of the paired IR instruction inlcuding all parameters that might follow it
-int lengthOfPairedIR(IR i) pure
+int lengthOfPairedIR(IR i)
 {
     return 1 + immediateParamsIR(pairedIR(i));
 }
 
 //if the operation has a merge point (this relies on the order of the ops)
-bool hasMerge(IR i) pure
+bool hasMerge(IR i)
 {
     return (i&0b11)==0b10 && i <= IR.RepeatQEnd;
 }
 
 //is an IR that opens a "group"
-bool isStartIR(IR i) pure
+bool isStartIR(IR i)
 {
     return (i&0b11)==0b01;
 }
 
 //is an IR that ends a "group"
-bool isEndIR(IR i) pure
+bool isEndIR(IR i)
 {
     return (i&0b11)==0b10;
 }
 
 //is a standalone IR
-bool isAtomIR(IR i) pure
+bool isAtomIR(IR i)
 {
     return (i&0b11)==0b00;
 }
 
 //makes respective pair out of IR i, swapping start/end bits of instruction
-IR pairedIR(IR i) pure
+IR pairedIR(IR i)
 {
     assert(isStartIR(i) || isEndIR(i));
     return cast(IR)(i ^ 0b11);
@@ -230,22 +235,21 @@ IR pairedIR(IR i) pure
 //encoded IR instruction
 struct Bytecode
 {
-pure:
     uint raw;
     //natural constraints
     enum maxSequence = 2+4;
-    enum maxData = 1<<22;
-    enum maxRaw = 1<<31;
+    enum maxData = 1 << 22;
+    enum maxRaw = 1 << 31;
 
     this(IR code, uint data)
     {
-        assert(data < (1<<22) && code < 256);
-        raw = code<<24 | data;
+        assert(data < (1 << 22) && code < 256);
+        raw = code << 24 | data;
     }
 
     this(IR code, uint data, uint seq)
     {
-        assert(data < (1<<22) && code < 256 );
+        assert(data < (1 << 22) && code < 256 );
         assert(seq >= 2 && seq < maxSequence);
         raw = code << 24 | (seq - 2)<<22 | data;
     }
@@ -273,7 +277,7 @@ pure:
 
     //ditto
     //0-arg template due to @@@BUG@@@ 10985
-    @property IR code()() const { return cast(IR)(raw>>24); }
+    @property IR code()() const { return cast(IR)(raw >> 24); }
 
     //ditto
     @property bool hotspot() const { return hasMerge(code); }
@@ -377,7 +381,7 @@ struct Group(DataIndex)
 }
 
 //debugging tool, prints out instruction along with opcodes
-@trusted pure string disassemble(in Bytecode[] irb, uint pc, in NamedGroup[] dict=[])
+@trusted string disassemble(in Bytecode[] irb, uint pc, in NamedGroup[] dict=[])
 {
     import std.array : appender;
     import std.format : formattedWrite;
@@ -386,10 +390,10 @@ struct Group(DataIndex)
     switch (irb[pc].code)
     {
     case IR.Char:
-        formattedWrite(output, " %s (0x%x)",cast(dchar)irb[pc].data, irb[pc].data);
+        formattedWrite(output, " %s (0x%x)",cast(dchar) irb[pc].data, irb[pc].data);
         break;
     case IR.OrChar:
-        formattedWrite(output, " %s (0x%x) seq=%d", cast(dchar)irb[pc].data, irb[pc].data, irb[pc].sequence);
+        formattedWrite(output, " %s (0x%x) seq=%d", cast(dchar) irb[pc].data, irb[pc].data, irb[pc].sequence);
         break;
     case IR.RepeatStart, IR.InfiniteStart, IR.InfiniteBloomStart,
     IR.Option, IR.GotoEndOr, IR.OrStart:
@@ -448,128 +452,6 @@ struct Group(DataIndex)
         writeln("\t", disassemble(slice, pc, dict));
 }
 
-/+
-    Generic interface for kickstart engine components.
-    The goal of kickstart is to advance input to the next potential match,
-    the more accurate & fast the better.
-+/
-interface Kickstart(Char){
-@trusted:
-    bool search(ref Input!Char input) const;
-    bool match(ref Input!Char input) const;
-    @property bool empty() const pure;
-}
-
-//basic stack, just in case it gets used anywhere else then Parser
-@trusted struct Stack(T)
-{
-pure:
-    T[] data;
-    @property bool empty(){ return data.empty; }
-
-    @property size_t length(){ return data.length; }
-
-    void push(T val){ data ~= val;  }
-
-    T pop()
-    {
-        assert(!empty);
-        auto val = data[$ - 1];
-        data = data[0 .. $ - 1];
-        //if (!__ctfe)
-        //    cast(void)data.assumeSafeAppend();
-        return val;
-    }
-
-    @property ref T top()
-    {
-        assert(!empty);
-        return data[$ - 1];
-    }
-}
-
-@trusted void reverseBytecode()(Bytecode[] code) pure
-{
-    Bytecode[] rev = new Bytecode[code.length];
-    uint revPc = cast(uint)rev.length;
-    Stack!(Tuple!(uint, uint, uint)) stack;
-    uint start = 0;
-    uint end = cast(uint)code.length;
-    for (;;)
-    {
-        for (uint pc = start; pc < end; )
-        {
-            uint len = code[pc].length;
-            if (code[pc].code == IR.GotoEndOr)
-                break; //pick next alternation branch
-            if (code[pc].isAtom)
-            {
-                rev[revPc - len .. revPc] = code[pc .. pc + len];
-                revPc -= len;
-                pc += len;
-            }
-            else if (code[pc].isStart || code[pc].isEnd)
-            {
-                //skip over other embedded lookbehinds they are reversed
-                if (code[pc].code == IR.LookbehindStart
-                    || code[pc].code == IR.NeglookbehindStart)
-                {
-                    uint blockLen = len + code[pc].data
-                         + code[pc].pairedLength;
-                    rev[revPc - blockLen .. revPc] = code[pc .. pc + blockLen];
-                    pc += blockLen;
-                    revPc -= blockLen;
-                    continue;
-                }
-                uint second = code[pc].indexOfPair(pc);
-                uint secLen = code[second].length;
-                rev[revPc - secLen .. revPc] = code[second .. second + secLen];
-                revPc -= secLen;
-                if (code[pc].code == IR.OrStart)
-                {
-                    //we pass len bytes forward, but secLen in reverse
-                    uint revStart = revPc - (second + len - secLen - pc);
-                    uint r = revStart;
-                    uint i = pc + IRL!(IR.OrStart);
-                    while (code[i].code == IR.Option)
-                    {
-                        if (code[i - 1].code != IR.OrStart)
-                        {
-                            assert(code[i - 1].code == IR.GotoEndOr);
-                            rev[r - 1] = code[i - 1];
-                        }
-                        rev[r] = code[i];
-                        auto newStart = i + IRL!(IR.Option);
-                        auto newEnd = newStart + code[i].data;
-                        auto newRpc = r + code[i].data + IRL!(IR.Option);
-                        if (code[newEnd].code != IR.OrEnd)
-                        {
-                            newRpc--;
-                        }
-                        stack.push(tuple(newStart, newEnd, newRpc));
-                        r += code[i].data + IRL!(IR.Option);
-                        i += code[i].data + IRL!(IR.Option);
-                    }
-                    pc = i;
-                    revPc = revStart;
-                    assert(code[pc].code == IR.OrEnd);
-                }
-                else
-                    pc += len;
-            }
-        }
-        if (stack.empty)
-            break;
-        start = stack.top[0];
-        end = stack.top[1];
-        revPc = stack.top[2];
-        stack.pop();
-    }
-    code[] = rev[];
-}
-
-package alias Interval = Tuple!(uint,"a",uint, "b");
-
 /++
     $(D Regex) object holds regular expression pattern in compiled form.
     Instances of this object are constructed via calls to $(D regex).
@@ -578,7 +460,11 @@ package alias Interval = Tuple!(uint,"a",uint, "b");
 +/
 struct Regex(Char)
 {
-pure:
+    //temporary workaround for identifier lookup
+    CodepointSet[] charsets; //
+    Bytecode[] ir;      //compiled bytecode of pattern
+
+
     @safe @property bool empty() const nothrow {  return ir is null; }
 
     @safe @property auto namedCaptures()
@@ -627,16 +513,15 @@ pure:
     }
 
 package(std.regex):
-    Bytecode[] ir;                         // compiled bytecode of pattern
+    import std.regex.internal.kickstart : Kickstart; //TODO: get rid of this dependency
     NamedGroup[] dict;                     // maps name -> user group number
     uint ngroup;                           // number of internal groups
     uint maxCounterDepth;                  // max depth of nested {n,m} repetitions
     uint hotspotTableSize;                 // number of entries in merge table
     uint threadCount;                      // upper bound on number of Thompson VM threads
     uint flags;                            // global regex flags
-    Interval[][] charsets;                 // intervals of characters
-    const(CharMatcher)[]  matchers;        // tables that represent character sets
-    const(BitTable)[] filters;             // bloom filters for conditional loops
+    public const(CharMatcher)[]  matchers; // tables that represent character sets
+    public const(BitTable)[] filters;      // bloom filters for conditional loops
     uint[] backrefed;                      // bit array of backreferenced submatches
     Kickstart!Char kickstart;
 
@@ -673,10 +558,10 @@ package(std.regex):
     {//@@@BUG@@@ write is system
         for (uint i = 0; i < ir.length; i += ir[i].length)
         {
-            debug(std_regex_parser) writefln("%d\t%s ", i, disassemble(ir, i, dict));
+            writefln("%d\t%s ", i, disassemble(ir, i, dict));
         }
-        debug(std_regex_parser) writeln("Total merge table size: ", hotspotTableSize);
-        debug(std_regex_parser) writeln("Max counter nesting depth: ", maxCounterDepth);
+        writeln("Total merge table size: ", hotspotTableSize);
+        writeln("Max counter nesting depth: ", maxCounterDepth);
     }
 
 }
@@ -692,10 +577,11 @@ package(std.regex):
 public:
     Regex!Char _regex;
     alias _regex this;
-    this(immutable Regex!Char re, MatchFn fn) immutable
+    this(Regex!Char re, MatchFn fn)
     {
         _regex = re;
         nativeFn = fn;
+
     }
 
 }
@@ -706,7 +592,7 @@ package(std.regex):
 
 //Simple UTF-string abstraction compatible with stream interface
 struct Input(Char)
-    if (is(Char :dchar))
+if (is(Char :dchar))
 {
     import std.utf : decode;
     alias DataIndex = size_t;
@@ -736,10 +622,10 @@ struct Input(Char)
     @property bool atEnd(){
         return _index == _origin.length;
     }
-
-    bool search(const Kickstart!Char kick, ref dchar res, ref size_t pos)
+    bool search(Kickstart)(ref Kickstart kick, ref dchar res, ref size_t pos)
     {
-        kick.search(this);
+        size_t idx = kick.search(_origin, _index);
+        _index = idx;
         return nextChar(res, pos);
     }
 
@@ -749,7 +635,7 @@ struct Input(Char)
     //support for backtracker engine, might not be present
     void reset(size_t index){   _index = index;  }
 
-    String opSlice(size_t start, size_t end){   return _origin[start..end]; }
+    String opSlice(size_t start, size_t end){   return _origin[start .. end]; }
 
     auto loopBack(size_t index){   return BackLooper!Input(this, index); }
 }
@@ -785,7 +671,7 @@ struct BackLooperImpl(Input)
     //void reset(size_t index){   _index = index ? index-std.utf.strideBack(_origin, index) : 0;  }
     void reset(size_t index){   _index = index;  }
 
-    String opSlice(size_t start, size_t end){   return _origin[end..start]; }
+    String opSlice(size_t start, size_t end){   return _origin[end .. start]; }
     //index of at End position
     @property size_t lastIndex(){   return 0; }
 }
@@ -807,20 +693,20 @@ template BackLooper(E)
 @system T[] mallocArray(T)(size_t len)
 {
     import core.stdc.stdlib : malloc;
-    return (cast(T*)malloc(len * T.sizeof))[0 .. len];
+    return (cast(T*) malloc(len * T.sizeof))[0 .. len];
 }
 
 //very unsafe, no initialization
 @system T[] arrayInChunk(T)(size_t len, ref void[] chunk)
 {
-    auto ret = (cast(T*)chunk.ptr)[0..len];
+    auto ret = (cast(T*) chunk.ptr)[0 .. len];
     chunk = chunk[len * T.sizeof .. $];
     return ret;
 }
 
 //
-@safe uint lookupNamedGroup(String)(const(NamedGroup)[] dict, String name)
-{
+@trusted uint lookupNamedGroup(String)(NamedGroup[] dict, String name)
+{//equal is @system?
     import std.range : assumeSorted;
     import std.conv : text;
     import std.algorithm.iteration : map;
@@ -856,13 +742,12 @@ public class RegexException : Exception
 
 // simple 128-entry bit-table used with a hash function
 struct BitTable {
-pure:
     uint[4] filter;
 
     this(CodepointSet set){
         foreach (iv; set.byInterval)
         {
-            foreach (v; iv.a..iv.b)
+            foreach (v; iv.a .. iv.b)
                 add(v);
         }
     }
@@ -885,7 +770,7 @@ pure:
 struct CharMatcher {
     BitTable ascii; // fast path for ASCII
     Trie trie;      // slow path for Unicode
-pure:
+
     this(CodepointSet set)
     {
         auto asciiSet = set & unicode.ASCII;

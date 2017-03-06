@@ -61,9 +61,9 @@ int main(string[] args)
 {
     // Bring in unit test for module by referencing function in it
 
-    cast(void)cmp("foo", "bar");                  // string
-    cast(void)filenameCharCmp('a', 'b');          // path
-    cast(void)isNaN(1.0);                         // math
+    cast(void) cmp("foo", "bar");                  // string
+    cast(void) filenameCharCmp('a', 'b');          // path
+    cast(void) isNaN(1.0);                         // math
     std.conv.to!double("1.0");          // std.conv
     OutBuffer b = new OutBuffer();      // outbuffer
     auto r = regex("");                 // regex
@@ -75,8 +75,9 @@ int main(string[] args)
     reverse(a);                         // adi
     sort(a);                            // qsort
     Clock.currTime();                   // datetime
-    cast(void)isValidDchar(cast(dchar)0);          // utf
-    std.uri.ascii2hex(0);                // uri
+    cast(void) isValidDchar(cast(dchar) 0);          // utf
+    string s1 = "http://www.digitalmars.com/~fred/fredsRX.html#foo end!";
+    assert(uriLength(s1) == 49);
     std.zlib.adler32(0,null);            // D.zlib
     auto t = task!cmp("foo", "bar");  // parallelism
 
@@ -98,12 +99,12 @@ int main(string[] args)
     assert(x[1] == 3);
     assert(x[2] == 45);
 
-    cast(void)std.math.sin(3.0);
-    cast(void)std.mathspecial.gamma(6.2);
+    cast(void) std.math.sin(3.0);
+    cast(void) std.mathspecial.gamma(6.2);
 
     std.demangle.demangle("hello");
 
-    cast(void)std.uni.isAlpha('A');
+    cast(void) std.uni.isAlpha('A');
 
     std.file.exists("foo");
 

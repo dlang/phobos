@@ -1,0 +1,18 @@
+`std.format.formattedRead` now accepts `ref` parameters as input arguments.
+
+When $(REF formattedRead, std, format) is used with `ref` parameters it is `@safe`.
+For compatibility it's still possible to use $(REF formattedRead, std, format)
+with pointers:
+
+-------
+import std.format;
+void main() {
+    string text = "1 2 3";
+    int a, b, c;
+    formattedRead(text, "%d %d %d", a, b, c);
+    // pointers can still be used
+    formattedRead(text, "%d %d %d", &a, &b, &c);
+    // and even combined:
+    formattedRead(text, "%d %d %d", a, &b, c);
+}
+-------

@@ -134,7 +134,7 @@ class CSVException : Exception
         this.col = col;
     }
 
-    override string toString() @safe pure
+    override string toString() @safe pure const
     {
         return "(Row: " ~ to!string(row) ~
               ", Col: " ~ to!string(col) ~ ") " ~ msg;
@@ -167,11 +167,13 @@ class CSVException : Exception
  */
 class IncompleteCellException : CSVException
 {
-    /// Data pulled from input before finding a problem
-    ///
-    /// This field is populated when using $(LREF csvReader)
-    /// but not by $(LREF csvNextToken) as this data will have
-    /// already been fed to the output range.
+    /**
+     * Data pulled from input before finding a problem
+     *
+     * This field is populated when using $(LREF csvReader)
+     * but not by $(LREF csvNextToken) as this data will have
+     * already been fed to the output range.
+     */
     dstring partialData;
 
     mixin basicExceptionCtors;
@@ -234,10 +236,8 @@ class HeaderMismatchException : CSVException
 */
 enum Malformed
 {
-    /// No exceptions are thrown due to incorrect CSV.
-    ignore,
-    /// Use exceptions when input has incorrect CSV.
-    throwException
+    ignore,           /// No exceptions are thrown due to incorrect CSV.
+    throwException    /// Use exceptions when input has incorrect CSV.
 }
 
 /**
@@ -311,9 +311,9 @@ enum Malformed
  */
 auto csvReader(Contents = string,Malformed ErrorLevel = Malformed.throwException, Range, Separator = char)(Range input,
                  Separator delimiter = ',', Separator quote = '"')
-               if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
-                  && isSomeChar!(Separator)
-                  && !is(Contents T : T[U], U : string))
+if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
+    && isSomeChar!(Separator)
+    && !is(Contents T : T[U], U : string))
 {
     return CsvReader!(Contents,ErrorLevel,Range,
                     Unqual!(ElementType!Range),string[])
@@ -399,10 +399,10 @@ auto csvReader(Contents = string,
                Range, Header, Separator = char)
                 (Range input, Header header,
                  Separator delimiter = ',', Separator quote = '"')
-               if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
-                  && isSomeChar!(Separator)
-                  && isForwardRange!Header
-                  && isSomeString!(ElementType!Header))
+if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
+    && isSomeChar!(Separator)
+    && isForwardRange!Header
+    && isSomeString!(ElementType!Header))
 {
     return CsvReader!(Contents,ErrorLevel,Range,
                     Unqual!(ElementType!Range),Header)
@@ -415,13 +415,13 @@ auto csvReader(Contents = string,
                Range, Header, Separator = char)
                 (Range input, Header header,
                  Separator delimiter = ',', Separator quote = '"')
-               if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
-                  && isSomeChar!(Separator)
-                  && is(Header : typeof(null)))
+if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar)
+    && isSomeChar!(Separator)
+    && is(Header : typeof(null)))
 {
     return CsvReader!(Contents,ErrorLevel,Range,
                     Unqual!(ElementType!Range),string[])
-        (input, cast(string[])null, delimiter, quote);
+        (input, cast(string[]) null, delimiter, quote);
 }
 
 // Test standard iteration over input.
@@ -745,12 +745,12 @@ auto csvReader(Contents = string,
     auto ir = InputRange("Name,Occupation,Salary\r"d~
           "Joe,Carpenter,300000\nFred,Blacksmith,400000\r\n"d);
 
-    foreach (record; csvReader(ir, cast(string[])null))
+    foreach (record; csvReader(ir, cast(string[]) null))
         foreach (cell; record) {}
     foreach (record; csvReader!(Tuple!(string, string, int))
-            (ir,cast(string[])null)) {}
+            (ir,cast(string[]) null)) {}
     foreach (record; csvReader!(string[string])
-            (ir,cast(string[])null)) {}
+            (ir,cast(string[]) null)) {}
 }
 
 @safe unittest // const/immutable dchars
@@ -783,9 +783,9 @@ private pure struct Input(Range, Malformed ErrorLevel)
  * Malformed).ignore if best guess processing should take place.
  */
 private struct CsvReader(Contents, Malformed ErrorLevel, Range, Separator, Header)
-    if (isSomeChar!Separator && isInputRange!Range
-       && is(Unqual!(ElementType!Range) == dchar)
-       && isForwardRange!Header && isSomeString!(ElementType!Header))
+if (isSomeChar!Separator && isInputRange!Range
+    && is(Unqual!(ElementType!Range) == dchar)
+    && isForwardRange!Header && isSomeString!(ElementType!Header))
 {
 private:
     Input!(Range, ErrorLevel)* _input;
@@ -1132,7 +1132,7 @@ public:
  * requested $(D Contents) type is neither a structure or an associative array.
  */
 private struct CsvRecord(Contents, Malformed ErrorLevel, Range, Separator)
-    if (!is(Contents == class) && !is(Contents == struct))
+if (!is(Contents == class) && !is(Contents == struct))
 {
     import std.array : appender;
 private:
@@ -1277,7 +1277,7 @@ public:
      */
     private void prime(size_t skipNum)
     {
-        foreach (i; 0..skipNum)
+        foreach (i; 0 .. skipNum)
         {
             _input.col++;
             _front.shrinkTo(0);
@@ -1367,9 +1367,9 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
                           (ref Range input, ref Output ans,
                            Separator sep, Separator quote,
                            bool startQuoted = false)
-                          if (isSomeChar!Separator && isInputRange!Range
-                             && is(Unqual!(ElementType!Range) == dchar)
-                             && isOutputRange!(Output, dchar))
+if (isSomeChar!Separator && isInputRange!Range
+    && is(Unqual!(ElementType!Range) == dchar)
+    && isOutputRange!(Output, dchar))
 {
     bool quoted = startQuoted;
     bool escQuote;
@@ -1678,7 +1678,7 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
     size_t i = 0;
     foreach (data; csvReader!Data(csv)) with (data)
     {
-        int[] row = [cast(int)a, cast(int)b, cast(int)c];
+        int[] row = [cast(int) a, cast(int) b, cast(int) c];
         if (i == 0)
             assert(row == [1, 2, 3]);
         else
@@ -1692,7 +1692,7 @@ void csvNextToken(Range, Malformed ErrorLevel = Malformed.throwException,
         auto a = data.front;    data.popFront();
         auto b = data.front;    data.popFront();
         auto c = data.front;
-        int[] row = [cast(int)a, cast(int)b, cast(int)c];
+        int[] row = [cast(int) a, cast(int) b, cast(int) c];
         if (i == 0)
             assert(row == [1, 2, 3]);
         else

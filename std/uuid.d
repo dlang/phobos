@@ -240,7 +240,7 @@ public struct UUID
             assert(tmp.data == cast(ubyte[16])[0,1,3,3,4,5,6,7,8,9,10,11,
                 12,13,14,15]);
 
-            auto tmp2 = cast(immutable UUID)tmp;
+            auto tmp2 = cast(immutable UUID) tmp;
             assert(tmp2.data == cast(ubyte[16])[0,1,3,3,4,5,6,7,8,9,10,11,
                 12,13,14,15]);
         }
@@ -935,7 +935,7 @@ public struct UUID
             import std.encoding : Char = AsciiChar;
             enum  utfstr = "8ab3060e-2cba-4f23-b74c-b52db3bdfb46";
             alias String = immutable(Char)[];
-            enum String s = cast(String)utfstr;
+            enum String s = cast(String) utfstr;
             enum id = UUID(utfstr);
             //nogc
             Char[36] str;
@@ -1212,12 +1212,12 @@ UUID randomUUID(RNG)(ref RNG randomGen)
 if (isInputRange!RNG && isIntegral!(ElementType!RNG))
 {
     import std.random : isUniformRNG;
-    static assert (isUniformRNG!RNG, "randomGen must be a uniform RNG");
+    static assert(isUniformRNG!RNG, "randomGen must be a uniform RNG");
 
     alias E = ElementEncodingType!RNG;
     enum size_t elemSize = E.sizeof;
-    static assert (elemSize <= 16);
-    static assert (16 % elemSize == 0);
+    static assert(elemSize <= 16);
+    static assert(16 % elemSize == 0);
 
     UUID u;
     foreach (ref E e ; u.asArrayOf!E())
@@ -1312,13 +1312,15 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
  * caused by a malformed UUID parsed at compile time can be cryptic,
  * but errors are detected and reported at compile time.
  */
-UUID parseUUID(T)(T uuidString) if (isSomeString!T)
+UUID parseUUID(T)(T uuidString)
+if (isSomeString!T)
 {
     return parseUUID(uuidString);
 }
 
 ///ditto
-UUID parseUUID(Range)(ref Range uuidRange) if (isInputRange!Range
+UUID parseUUID(Range)(ref Range uuidRange)
+if (isInputRange!Range
     && is(Unqual!(ElementType!Range) == dchar))
 {
     import std.conv : ConvException, parse;

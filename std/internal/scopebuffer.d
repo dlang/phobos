@@ -43,14 +43,14 @@ void main()
     textbuf.put('x');
     textbuf.put("abc");
     assert(textbuf.length == 5);
-    assert(textbuf[1..3] == "xa");
+    assert(textbuf[1 .. 3] == "xa");
     assert(textbuf[3] == 'b');
 
     // Can shrink it
     textbuf.length = 3;
-    assert(textbuf[0..textbuf.length] == "axa");
+    assert(textbuf[0 .. textbuf.length] == "axa");
     assert(textbuf[textbuf.length - 1] == 'a');
-    assert(textbuf[1..3] == "xa");
+    assert(textbuf[1 .. 3] == "xa");
 
     textbuf.put('z');
     assert(textbuf[] == "axaz");
@@ -93,10 +93,10 @@ textbuf = doSomething(textbuf, args);
 
 @system
 struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
-          if (isAssignable!T &&
-              !hasElaborateDestructor!T &&
-              !hasElaborateCopyConstructor!T &&
-              !hasElaborateAssign!T)
+if (isAssignable!T &&
+    !hasElaborateDestructor!T &&
+    !hasElaborateCopyConstructor!T &&
+    !hasElaborateAssign!T)
 {
     import core.stdc.string : memcpy;
     import core.exception : onOutOfMemoryError;
@@ -125,10 +125,10 @@ struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
     body
     {
         this.buf = buf.ptr;
-        this.bufLen = cast(uint)buf.length;
+        this.bufLen = cast(uint) buf.length;
     }
 
-    unittest
+    @system unittest
     {
         ubyte[10] tmpbuf = void;
         auto sbuf = ScopeBuffer!ubyte(tmpbuf);
@@ -179,7 +179,7 @@ struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
     void put(CT[] s)
     {
         const newlen = used + s.length;
-        assert((cast(ulong)used + s.length) <= uint.max);
+        assert((cast(ulong) used + s.length) <= uint.max);
         const len = bufLen;
         if (newlen > len)
         {
@@ -187,7 +187,7 @@ struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
             resize(newlen <= len * 2 ? len * 2 : newlen);
         }
         buf[used .. newlen] = s[];
-        used = cast(uint)newlen;
+        used = cast(uint) newlen;
     }
 
     /******
@@ -246,7 +246,7 @@ struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
         }
     body
     {
-        this.used = cast(uint)i;
+        this.used = cast(uint) i;
     }
 
     alias opDollar = length;
@@ -275,8 +275,8 @@ struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
             memcpy(newBuf, buf, used * T.sizeof);
             debug(ScopeBuffer) buf[0 .. bufLen] = 0;
         }
-        buf = cast(T*)newBuf;
-        bufLen = cast(uint)newsize;
+        buf = cast(T*) newBuf;
+        bufLen = cast(uint) newsize;
 
         /* This function is called only rarely,
          * inlining results in poorer register allocation.
@@ -289,7 +289,7 @@ struct ScopeBuffer(T, alias realloc = /*core.stdc.stdlib*/.realloc)
     }
 }
 
-unittest
+@system unittest
 {
     import core.stdc.stdio;
     import std.range;
@@ -306,16 +306,16 @@ unittest
     textbuf.put('x');
     textbuf.put("abc");         // tickle put([])'s resize
     assert(textbuf.length == 5);
-    assert(textbuf[1..3] == "xa");
+    assert(textbuf[1 .. 3] == "xa");
     assert(textbuf[3] == 'b');
 
     textbuf.length = textbuf.length - 1;
-    assert(textbuf[0..textbuf.length] == "axab");
+    assert(textbuf[0 .. textbuf.length] == "axab");
 
     textbuf.length = 3;
-    assert(textbuf[0..textbuf.length] == "axa");
+    assert(textbuf[0 .. textbuf.length] == "axa");
     assert(textbuf[textbuf.length - 1] == 'a');
-    assert(textbuf[1..3] == "xa");
+    assert(textbuf[1 .. 3] == "xa");
 
     textbuf.put(cast(dchar)'z');
     assert(textbuf[] == "axaz");
@@ -332,7 +332,7 @@ unittest
 
 }
 
-unittest
+@system unittest
 {
     string cat(string s1, string s2)
     {
@@ -350,15 +350,15 @@ unittest
 }
 
 // const
-unittest
+@system unittest
 {
     char[10] tmpbuf = void;
     auto textbuf = ScopeBuffer!char(tmpbuf);
     scope(exit) textbuf.free();
-    foreach (i; 0..10) textbuf.put('w');
+    foreach (i; 0 .. 10) textbuf.put('w');
     const csb = textbuf;
     const elem = csb[3];
-    const slice0 = csb[0..5];
+    const slice0 = csb[0 .. 5];
     const slice1 = csb[];
 }
 
@@ -377,14 +377,14 @@ auto scopeBuffer(T)(T[] tmpbuf)
 }
 
 ///
-unittest
+@system unittest
 {
     ubyte[10] tmpbuf = void;
     auto sb = scopeBuffer(tmpbuf);
     scope(exit) sb.free();
 }
 
-unittest
+@system unittest
 {
     ScopeBuffer!(int*) b;
     int*[] s;

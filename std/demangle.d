@@ -8,6 +8,7 @@
  * Authors:   $(HTTP digitalmars.com, Walter Bright),
  *                        Thomas K$(UUML)hne, Frits van Bommel
  * Source:    $(PHOBOSSRC std/_demangle.d)
+ * $(SCRIPT inhibitQuickIndex = 1;)
  */
 /*
  *          Copyright Digital Mars 2000 - 2009.

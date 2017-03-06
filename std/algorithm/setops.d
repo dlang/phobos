@@ -3,6 +3,7 @@
 This is a submodule of $(MREF std, algorithm).
 It contains generic algorithms that implement set operations.
 
+$(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 $(T2 cartesianProduct,
@@ -55,8 +56,9 @@ _range of tuples of elements from each respective range.
 
 The conditions for the two-range case are as follows:
 
-If both ranges are finite, then one must be (at least) a forward range and the
-other an input range.
+If both ranges are finite, then one must be (at least) a
+$(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) and the
+other an $(REF_ALTTEXT input range, isInputRange, std,range,primitives).
 
 If one _range is infinite and the other finite, then the finite _range must
 be a forward _range, and the infinite range can be an input _range.
@@ -77,8 +79,8 @@ Returns:
     cartesian product of the given ranges.
 */
 auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
-    if (!allSatisfy!(isForwardRange, R1, R2) ||
-        anySatisfy!(isInfinite, R1, R2))
+if (!allSatisfy!(isForwardRange, R1, R2) ||
+    anySatisfy!(isInfinite, R1, R2))
 {
     import std.algorithm.iteration : map, joiner;
 
@@ -92,7 +94,7 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
             // covering the right and bottom edges of an increasing square area
             // over the infinite table of combinations. This schedule allows us
             // to require only forward ranges.
-            return zip(sequence!"n"(cast(size_t)0), range1.save, range2.save,
+            return zip(sequence!"n"(cast(size_t) 0), range1.save, range2.save,
                        repeat(range1), repeat(range2))
                 .map!(function(a) => chain(
                     zip(repeat(a[1]), take(a[4].save, a[0])),
@@ -346,9 +348,9 @@ pure nothrow @safe @nogc unittest
 
 /// ditto
 auto cartesianProduct(RR...)(RR ranges)
-    if (ranges.length >= 2 &&
-        allSatisfy!(isForwardRange, RR) &&
-        !anySatisfy!(isInfinite, RR))
+if (ranges.length >= 2 &&
+    allSatisfy!(isForwardRange, RR) &&
+    !anySatisfy!(isInfinite, RR))
 {
     // This overload uses a much less template-heavy implementation when
     // all ranges are finite forward ranges, which is the most common use
@@ -389,7 +391,7 @@ auto cartesianProduct(RR...)(RR ranges)
                 r.popFront();
                 if (!r.empty) break;
 
-                static if (i==0)
+                static if (i == 0)
                     empty = true;
                 else
                     r = ranges[i].save; // rollover
@@ -443,8 +445,8 @@ auto cartesianProduct(RR...)(RR ranges)
 
 /// ditto
 auto cartesianProduct(R1, R2, RR...)(R1 range1, R2 range2, RR otherRanges)
-    if (!allSatisfy!(isForwardRange, R1, R2, RR) ||
-        anySatisfy!(isInfinite, R1, R2, RR))
+if (!allSatisfy!(isForwardRange, R1, R2, RR) ||
+    anySatisfy!(isInfinite, R1, R2, RR))
 {
     /* We implement the n-ary cartesian product by recursively invoking the
      * binary cartesian product. To make the resulting range nicer, we denest
@@ -536,7 +538,7 @@ pure @safe nothrow @nogc unittest
 }
 
 // Issue 13935
-unittest
+@safe unittest
 {
     import std.algorithm.iteration : map;
     auto seq = [1, 2].map!(x => x);
@@ -545,8 +547,8 @@ unittest
 
 // largestPartialIntersection
 /**
-Given a range of sorted forward ranges $(D ror), copies to $(D tgt)
-the elements that are common to most ranges, along with their number
+Given a range of sorted $(REF_ALTTEXT forward ranges, isForwardRange, std,range,primitives)
+$(D ror), copies to $(D tgt) the elements that are common to most ranges, along with their number
 of occurrences. All ranges in $(D ror) are assumed to be sorted by $(D
 less). Only the most frequent $(D tgt.length) elements are returned.
 
@@ -557,7 +559,8 @@ Params:
     sorted = Whether the elements copied should be in sorted order.
 
 The function $(D largestPartialIntersection) is useful for
-e.g. searching an $(LUCKY inverted index) for the documents most
+e.g. searching an $(LINK2 https://en.wikipedia.org/wiki/Inverted_index,
+inverted index) for the documents most
 likely to contain some terms of interest. The complexity of the search
 is $(BIGOH n * log(tgt.length)), where $(D n) is the sum of lengths of
 all input ranges. This approach is faster than keeping an associative
@@ -586,7 +589,7 @@ void largestPartialIntersection
 }
 
 ///
-unittest
+@system unittest
 {
     import std.typecons : tuple, Tuple;
 
@@ -624,7 +627,8 @@ with each distinct element in the intersection.
 
 Params:
     less = The predicate the ranges are sorted by.
-    ror = A range of forward ranges sorted by `less`.
+    ror = A range of $(REF_ALTTEXT forward ranges, isForwardRange, std,range,primitives)
+    sorted by `less`.
     tgt = The target range to copy common elements to.
     weights = An associative array mapping elements to weights.
     sorted = Whether the elements copied should be in sorted order.
@@ -647,7 +651,7 @@ void largestPartialIntersectionWeighted
 }
 
 ///
-unittest
+@system unittest
 {
     import std.typecons : tuple, Tuple;
 
@@ -670,13 +674,10 @@ unittest
     // 7.0 occurs 3 times -> 4.4 (3 * 1.1)
 }
 
-unittest
+@system unittest
 {
     import std.conv : text;
     import std.typecons : tuple, Tuple, Yes;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     double[][] a =
         [
@@ -688,19 +689,14 @@ unittest
         ];
     auto b = new Tuple!(double, uint)[2];
     largestPartialIntersection(a, b, Yes.sortOutput);
-    //sort(b);
-    //writeln(b);
     assert(b == [ tuple(7.0, 4u), tuple(1.0, 3u) ][], text(b));
     assert(a[0].empty);
 }
 
-unittest
+@system unittest
 {
     import std.conv : text;
     import std.typecons : tuple, Tuple, Yes;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     string[][] a =
         [
@@ -712,17 +708,15 @@ unittest
         ];
     auto b = new Tuple!(string, uint)[2];
     largestPartialIntersection(a, b, Yes.sortOutput);
-    //writeln(b);
     assert(b == [ tuple("7", 4u), tuple("1", 3u) ][], text(b));
 }
 
-unittest
+@system unittest
 {
     import std.typecons : tuple, Tuple;
 
-    //scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-// Figure which number can be found in most arrays of the set of
-// arrays below, with specific per-element weights
+    // Figure which number can be found in most arrays of the set of
+    // arrays below, with specific per-element weights
     double[][] a =
         [
             [ 1, 4, 7, 8 ],
@@ -734,12 +728,11 @@ unittest
     auto b = new Tuple!(double, uint)[1];
     double[double] weights = [ 1:1.2, 4:2.3, 7:1.1, 8:1.1 ];
     largestPartialIntersectionWeighted(a, b, weights);
-// First member is the item, second is the occurrence count
-    //writeln(b[0]);
+    // First member is the item, second is the occurrence count
     assert(b[0] == tuple(4.0, 2u));
 }
 
-unittest
+@system unittest
 {
     import std.container : Array;
     import std.typecons : Tuple;
@@ -845,7 +838,7 @@ NWayUnion!(less, RangeOfRanges) nWayUnion
 }
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -879,7 +872,7 @@ Returns:
 See_also: $(LREF setSymmetricDifference)
  */
 struct SetDifference(alias less = "a < b", R1, R2)
-    if (isInputRange!(R1) && isInputRange!(R2))
+if (isInputRange!(R1) && isInputRange!(R2))
 {
 private:
     R1 r1;
@@ -987,8 +980,8 @@ Returns:
     A range containing the intersection of the given ranges.
  */
 struct SetIntersection(alias less = "a < b", Rs...)
-    if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
-        !is(CommonType!(staticMap!(ElementType, Rs)) == void))
+if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
+    !is(CommonType!(staticMap!(ElementType, Rs)) == void))
 {
 private:
     Rs _input;
@@ -1081,8 +1074,8 @@ public:
 
 /// Ditto
 SetIntersection!(less, Rs) setIntersection(alias less = "a < b", Rs...)(Rs ranges)
-    if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
-        !is(CommonType!(staticMap!(ElementType, Rs)) == void))
+if (Rs.length >= 2 && allSatisfy!(isInputRange, Rs) &&
+    !is(CommonType!(staticMap!(ElementType, Rs)) == void))
 {
     return typeof(return)(ranges);
 }
@@ -1152,7 +1145,7 @@ Returns:
 See_also: $(LREF setDifference)
  */
 struct SetSymmetricDifference(alias less = "a < b", R1, R2)
-    if (isInputRange!(R1) && isInputRange!(R2))
+if (isInputRange!(R1) && isInputRange!(R2))
 {
 private:
     R1 r1;
@@ -1268,14 +1261,6 @@ setSymmetricDifference(alias less = "a < b", R1, R2)
     static assert(is(ElementType!R2 == int));
     static assert(hasLvalueElements!R2);
 }
-
-// Explicitly undocumented. It will be removed in December 2016. @@@DEPRECATED_2016-12@@@
-deprecated("Please use std.algorithm.sorting.merge to join ranges")
-alias setUnion = merge;
-
-// Explicitly undocumented. It will be removed in December 2016. @@@DEPRECATED_2016-12@@@
-deprecated("Please use std.algorithm.sorting.merge to join ranges")
-alias SetUnion = Merge;
 
 /++
 TODO: once SetUnion got deprecated we can provide the usual definition

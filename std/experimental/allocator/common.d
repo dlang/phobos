@@ -158,7 +158,7 @@ package void[] roundUpToAlignment(void[] b, uint a)
 }
 
 @nogc nothrow pure
-unittest
+@system unittest
 {
     void[] empty;
     assert(roundUpToAlignment(empty, 4) == null);
@@ -191,7 +191,7 @@ package void[] roundStartToMultipleOf(void[] s, uint base)
 }
 
 nothrow pure
-unittest
+@system unittest
 {
     void[] p;
     assert(roundStartToMultipleOf(p, 16) is null);
@@ -280,7 +280,7 @@ package uint effectiveAlignment(void* ptr)
 }
 
 @nogc nothrow pure
-unittest
+@system unittest
 {
     int x;
     assert(effectiveAlignment(&x) >= int.alignof);

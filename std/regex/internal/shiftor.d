@@ -117,14 +117,14 @@ pure:
         auto t = worklist[$-1];
         worklist.length -= 1;
         //if (!__ctfe)
-        //    cast(void)worklist.assumeSafeAppend();
+        //    cast(void) worklist.assumeSafeAppend();
         return t;
     }
 
     static uint charLen(uint ch)
     {
         assert(ch <= 0x10FFFF);
-        return codeLength!Char(cast(dchar)ch)*charSize;
+        return codeLength!Char(cast(dchar) ch)*charSize;
     }
 
 public:
@@ -204,7 +204,7 @@ public:
                     for (uint i = 0; i < len; i++)
                     {
                         auto x = charLen(re.ir[t.pc+i].data);
-                        if (countUntil(s[0..numS], x) < 0)
+                        if (countUntil(s[0 .. numS], x) < 0)
                            s[numS++] = x;
                     }
                     for (uint i = t.pc; i < end; i++)
@@ -264,7 +264,7 @@ public:
                     if (chars > charsetThreshold)
                         goto L_StopThread;
                     foreach (ival; set)
-                    foreach (ch; ival.a..ival.b)
+                    foreach (ch; ival.a .. ival.b)
                     {
                         //avoid surrogate pairs
                         if (0xD800 <= ch && ch <= 0xDFFF)
@@ -388,7 +388,7 @@ public:
         if (fChar != uint.max)
         {
             const(ubyte)* end = cast(ubyte*)(haystack.ptr + haystack.length);
-            const orginalAlign = cast(size_t)p & (Char.sizeof-1);
+            const orginalAlign = cast(size_t) p & (Char.sizeof-1);
             while (p != end)
             {
                 if (!~state)
@@ -396,13 +396,13 @@ public:
                     for (;;)
                     {
                         assert(p <= end, text(p," vs ", end));
-                        p = cast(ubyte*)memchr(p, fChar, end - p);
+                        p = cast(ubyte*) memchr(p, fChar, end - p);
                         if (!p)
                         {
                             s._index = haystack.length;
                             return false;
                         }
-                        if ((cast(size_t)p & (Char.sizeof-1)) == orginalAlign)
+                        if ((cast(size_t) p & (Char.sizeof-1)) == orginalAlign)
                             break;
                         if (++p == end)
                         {
@@ -411,11 +411,11 @@ public:
                         }
                     }
                     state = ~1u;
-                    assert((cast(size_t)p & (Char.sizeof-1)) == orginalAlign);
+                    assert((cast(size_t) p & (Char.sizeof-1)) == orginalAlign);
                     static if (charSize == 3)
                     {
-                        state = (state<<1) | table[p[1]];
-                        state = (state<<1) | table[p[2]];
+                        state = (state << 1) | table[p[1]];
+                        state = (state << 1) | table[p[2]];
                         p += 4;
                     }
                     else
@@ -423,7 +423,7 @@ public:
                     //first char is tested, see if that's all
                     if (!(state & limit))
                     {
-                        s._index =  (p-cast(ubyte*)haystack.ptr)/Char.sizeof-length;
+                        s._index =  (p-cast(ubyte*) haystack.ptr)/Char.sizeof-length;
                         return true;
                     }
                 }
@@ -432,19 +432,19 @@ public:
                  //use the usual shift-or cycle
                     static if (charSize == 3)
                     {
-                        state = (state<<1) | table[p[0]];
-                        state = (state<<1) | table[p[1]];
-                        state = (state<<1) | table[p[2]];
+                        state = (state << 1) | table[p[0]];
+                        state = (state << 1) | table[p[1]];
+                        state = (state << 1) | table[p[2]];
                         p += 4;
                     }
                     else
                     {
-                        state = (state<<1) | table[p[0]];
+                        state = (state << 1) | table[p[0]];
                         p++;
                     }
                     if (!(state & limit))
                     {
-                        s._index = (p-cast(ubyte*)haystack.ptr)/Char.sizeof-length;
+                        s._index = (p-cast(ubyte*) haystack.ptr)/Char.sizeof-length;
                         return true;
                     }
                 }
@@ -459,13 +459,13 @@ public:
                 const(ubyte)* end = cast(ubyte*)(haystack.ptr + haystack.length);
                 while (p != end)
                 {
-                    state = (state<<1) | table[p[0]];
-                    state = (state<<1) | table[p[1]];
-                    state = (state<<1) | table[p[2]];
+                    state = (state << 1) | table[p[0]];
+                    state = (state << 1) | table[p[1]];
+                    state = (state << 1) | table[p[2]];
                     p += 4;
                     if (!(state & limit))//division rounds down for dchar
                     {
-                        s._index = (p-cast(ubyte*)haystack.ptr)/Char.sizeof-length;
+                        s._index = (p-cast(ubyte*) haystack.ptr)/Char.sizeof-length;
                         return true;
                     }
                 }
@@ -476,7 +476,7 @@ public:
                 size_t i  = 0;
                 if (len & 1)
                 {
-                    state = (state<<1) | table[p[i++]];
+                    state = (state << 1) | table[p[i++]];
                     if (!(state & limit))
                     {
                         s._index += i/Char.sizeof-length;
@@ -485,13 +485,13 @@ public:
                 }
                 while (i < len)
                 {
-                    state = (state<<1) | table[p[i++]];
+                    state = (state << 1) | table[p[i++]];
                     if (!(state & limit))
                     {
                         s._index += i/Char.sizeof-length;
                         return true;
                     }
-                    state = (state<<1) | table[p[i++]];
+                    state = (state << 1) | table[p[i++]];
                     if (!(state & limit))
                     {
                         s._index += i/Char.sizeof-length;
@@ -521,7 +521,7 @@ public:
     }
 }
 
-unittest
+@safe unittest
 {
     import std.conv, std.regex;
     auto shiftOrLength(C)(const(C)[] pat, uint length)
