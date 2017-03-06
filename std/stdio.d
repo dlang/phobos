@@ -1789,14 +1789,18 @@ $(CONSOLE
 3
 4
 )
+     * Deprecation:
+     * Usage with pointer arguments is deprecated.
+     * For details see $(REF formattedRead, std,_format).
      */
     uint readf(Data...)(in char[] format, auto ref Data data)
     {
+        import std.functional : forward;
         import std.format : formattedRead;
 
         assert(isOpen);
         auto input = LockingTextReader(this);
-        return formattedRead(input, format, data);
+        return formattedRead(input, format, forward!data);
     }
 
     ///
@@ -3766,10 +3770,14 @@ $(CONSOLE
 3
 4
 )
+     * Deprecation:
+     * Usage with pointer arguments is deprecated.
+     * For details see $(REF formattedRead, std,_format).
  */
 uint readf(A...)(in char[] format, auto ref A args)
 {
-    return stdin.readf(format, args);
+    import std.functional : forward;
+    return stdin.readf(format, forward!args);
 }
 
 @system unittest
