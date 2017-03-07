@@ -919,6 +919,12 @@ uint formattedRead(R, Char, T, S...)(ref R r, const(Char)[] fmt, ref T arg, auto
     static assert(!__traits(compiles,
         formattedRead("%p", p) // new interface
     ));
+
+    ref returnsPtrByRef() { return p; }
+
+    static assert(!__traits(compiles,
+        formattedRead("%p", returnsPtrByRef()) // new interface
+    ));
 }
 
 @system pure unittest
