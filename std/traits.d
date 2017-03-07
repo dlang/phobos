@@ -44,6 +44,7 @@
  *           $(LREF hasElaborateDestructor)
  *           $(LREF hasIndirections)
  *           $(LREF hasMember)
+ *           $(LREF isStaticMember)
  *           $(LREF hasNested)
  *           $(LREF hasUnsharedAliasing)
  *           $(LREF InterfacesTuple)
@@ -3551,6 +3552,170 @@ enum hasMember(T, string name) = __traits(hasMember, T, name);
         void opDispatch(string n, A)(A dummy) {}
     }
     static assert(hasMember!(S, "foo"));
+}
+
+/++
+    Whether the symbol represented by the string, member, is a static member of
+    T.
+  +/
+template isStaticMember(T, string member)
+    if (__traits(hasMember, T, member))
+{
+    import std.meta : Alias;
+    alias sym = Alias!(__traits(getMember, T, member));
+
+    static if (__traits(getOverloads, T, member).length == 0)
+        enum bool isStaticMember = __traits(compiles, &sym);
+    else
+        enum bool isStaticMember = __traits(isStaticFunction, sym);
+}
+
+///
+unittest
+{
+    static struct S
+    {
+        static void sf() {}
+        void f() {}
+
+        static int si;
+        int i;
+    }
+
+    static assert( isStaticMember!(S, "sf"));
+    static assert(!isStaticMember!(S, "f"));
+
+    static assert( isStaticMember!(S, "si"));
+    static assert(!isStaticMember!(S, "i"));
+
+    static assert(!__traits(compiles, isStaticMember!(S, "hello")));
+}
+
+unittest
+{
+    static struct S
+    {
+        enum X = 10;
+        enum Y
+        {
+            i = 10
+        }
+        struct S {}
+        class C {}
+
+        static int sx = 0;
+        __gshared int gx = 0;
+
+        Y y;
+        static Y sy;
+
+        static void f() {}
+        static void f2() pure nothrow @nogc @safe {}
+
+        shared void g() {}
+
+        static void function() fp;
+        __gshared void function() gfp;
+        void function() fpm;
+
+        void delegate() dm;
+        static void delegate() sd;
+
+        void m() {}
+        final void m2() const pure nothrow @nogc @safe {}
+
+        inout(int) iom() inout { return 10; }
+        static inout(int) iosf(inout int x) { return x; }
+
+        @property int p() { return 10; }
+        static @property int sp() { return 10; }
+    }
+
+    static class C
+    {
+        enum X = 10;
+        enum Y
+        {
+            i = 10
+        }
+        struct S {}
+        class C {}
+
+        static int sx = 0;
+        __gshared int gx = 0;
+
+        Y y;
+        static Y sy;
+
+        static void f() {}
+        static void f2() pure nothrow @nogc @safe {}
+
+        shared void g() {}
+
+        static void function() fp;
+        __gshared void function() gfp;
+        void function() fpm;
+
+        void delegate() dm;
+        static void delegate() sd;
+
+        void m() {}
+        final void m2() const pure nothrow @nogc @safe {}
+
+        inout(int) iom() inout { return 10; }
+        static inout(int) iosf(inout int x) { return x; }
+
+        @property int p() { return 10; }
+        static @property int sp() { return 10; }
+    }
+
+    static assert(!isStaticMember!(S, "X"));
+    static assert(!isStaticMember!(S, "Y"));
+    static assert(!__traits(compiles, isStaticMember!(S, "Y.i")));
+    static assert(!isStaticMember!(S, "S"));
+    static assert(!isStaticMember!(S, "C"));
+    static assert( isStaticMember!(S, "sx"));
+    static assert( isStaticMember!(S, "gx"));
+    static assert(!isStaticMember!(S, "y"));
+    static assert( isStaticMember!(S, "sy"));
+    static assert( isStaticMember!(S, "f"));
+    static assert( isStaticMember!(S, "f2"));
+    static assert(!isStaticMember!(S, "dm"));
+    static assert( isStaticMember!(S, "sd"));
+    static assert(!isStaticMember!(S, "g"));
+    static assert( isStaticMember!(S, "fp"));
+    static assert( isStaticMember!(S, "gfp"));
+    static assert(!isStaticMember!(S, "fpm"));
+    static assert(!isStaticMember!(S, "m"));
+    static assert(!isStaticMember!(S, "m2"));
+    static assert(!isStaticMember!(S, "iom"));
+    static assert( isStaticMember!(S, "iosf"));
+    static assert(!isStaticMember!(S, "p"));
+    static assert( isStaticMember!(S, "sp"));
+
+    static assert(!isStaticMember!(C, "X"));
+    static assert(!isStaticMember!(C, "Y"));
+    static assert(!__traits(compiles, isStaticMember!(C, "Y.i")));
+    static assert(!isStaticMember!(C, "S"));
+    static assert(!isStaticMember!(C, "C"));
+    static assert( isStaticMember!(C, "sx"));
+    static assert( isStaticMember!(C, "gx"));
+    static assert(!isStaticMember!(C, "y"));
+    static assert( isStaticMember!(C, "sy"));
+    static assert( isStaticMember!(C, "f"));
+    static assert( isStaticMember!(C, "f2"));
+    static assert(!isStaticMember!(S, "dm"));
+    static assert( isStaticMember!(S, "sd"));
+    static assert(!isStaticMember!(C, "g"));
+    static assert( isStaticMember!(C, "fp"));
+    static assert( isStaticMember!(C, "gfp"));
+    static assert(!isStaticMember!(C, "fpm"));
+    static assert(!isStaticMember!(C, "m"));
+    static assert(!isStaticMember!(C, "m2"));
+    static assert(!isStaticMember!(C, "iom"));
+    static assert( isStaticMember!(C, "iosf"));
+    static assert(!isStaticMember!(C, "p"));
+    static assert( isStaticMember!(C, "sp"));
 }
 
 /**
