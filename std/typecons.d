@@ -1090,7 +1090,7 @@ template Tuple(Specs...)
                     goto case;
 
                 case '(':
-                    assert (fmt.nested);
+                    assert(fmt.nested);
                     if (fmt.sep)
                     {
                         foreach (i, Type; Types)
