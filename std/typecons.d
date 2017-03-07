@@ -1012,30 +1012,33 @@ template Tuple(Specs...)
         import std.format : FormatSpec;
 
         /**
-         * Formats `Tuple` with either `%s`, `%(inner%)` or `%(inner%|sep%)`.
+         * Formats `Tuple` with either `%s`, `%t`, `%(inner%)` or `%(inner%|sep%)`.
          *
          * $(TABLE2 Formats supported by Tuple,
          * $(THEAD Format, Description)
          * $(TROW $(P `%s`), $(P Format like `Tuple!(types)(elements formatted with %s each)`.))
+         * $(TROW $(P `%t`), $(P Format like `(elements formatted with %s each)`.))
          * $(TROW $(P `%(inner%)`), $(P The format `inner` is applied the expanded `Tuple`, so
          *      it may contain as many formats as the `Tuple` has fields.))
          * $(TROW $(P `%(inner%|sep%)`), $(P The format `inner` is one format, that is applied
          *      on all fields of the `Tuple`. The inner format must be compatible to all
          *      of them.)))
          * ---
-         *  Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
-         *
          *  // Default format
          *  assert(format("%s", tuple("a", 1)) == `Tuple!(string, int)("a", 1)`);
          *
+         *  // Tuple format
+         *  assert(format("%t", tuple("a", 1)) == `("a", 1)`);
+         *
          *  // One Format for each individual component
-         *  assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))         == `0x1 v 1.0000 w 0xa`);
-         *  assert(format(  "%#x v %.4f w %#x"  , tuple(1, 1.0, 10).expand)  == `0x1 v 1.0000 w 0xa`);
+         *  assert(format("%(%#x | %.4f : %#x%)", tuple(1, 1.0, 10))         == `0x1 | 1.0000 : 0xa`);
+         *  assert(format(  "%#x | %.4f : %#x"  , tuple(1, 1.0, 10).expand)  == `0x1 | 1.0000 : 0xa`);
          *
          *  // One Format for all components
          *  assert(format("%(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>abc< & >1< & >2.3< & >[4, 5]<`);
          *
          *  // Array of Tuples
+         *  Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
          *  assert(format("%(%(f(%d) = %.1f%);  %)", tupList) == `f(1) = 1.0;  f(2) = 4.0;  f(3) = 9.0`);
          *
          *
@@ -1049,7 +1052,7 @@ template Tuple(Specs...)
          *      format("%d", tuple(1, 2)) == `1, 2`
          *  );
          *
-         *  // Error: %d inadequate for double.
+         *  // Error: %d inadequate for double
          *  assertThrown!FormatException(
          *      format("%(%d%|, %)", tuple(1, 2.0)) == `1, 2.0`
          *  );
@@ -1119,7 +1122,7 @@ template Tuple(Specs...)
 
                 default:
                     throw new FormatException(
-                        "Expected '%s' or '%(...%)' or '%(...%|...%)' format specifier for type '" ~
+                        "Expected '%s' or '%t' or '%(...%)' or '%(...%|...%)' format specifier for type '" ~
                             Unqual!(typeof(this)).stringof ~ "', not '%" ~ fmt.spec ~ "'.");
             }
         }
@@ -1634,19 +1637,21 @@ unittest
     // enum tupStr = tuple(1, 1.0).toString; // toString is *impure*.
     //static assert(tupStr == `Tuple!(int, double)(1, 1)`);
 
-    Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
-
     // Default format
     assert(format("%s", tuple("a", 1)) == `Tuple!(string, int)("a", 1)`);
 
+    // Tuple format
+    assert(format("%t", tuple("a", 1)) == `("a", 1)`);
+
     // One Format for each individual component
-    assert(format("%(%#x v %.4f w %#x%)", tuple(1, 1.0, 10))         == `0x1 v 1.0000 w 0xa`);
-    assert(format(  "%#x v %.4f w %#x"  , tuple(1, 1.0, 10).expand)  == `0x1 v 1.0000 w 0xa`);
+    assert(format("%(%#x | %.4f : %#x%)", tuple(1, 1.0, 10))         == `0x1 | 1.0000 : 0xa`);
+    assert(format(  "%#x | %.4f : %#x"  , tuple(1, 1.0, 10).expand)  == `0x1 | 1.0000 : 0xa`);
 
     // One Format for all components
     assert(format("%(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>abc< & >1< & >2.3< & >[4, 5]<`);
 
     // Array of Tuples
+    Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
     assert(format("%(%(f(%d) = %.1f%);  %)", tupList) == `f(1) = 1.0;  f(2) = 4.0;  f(3) = 9.0`);
 
 
