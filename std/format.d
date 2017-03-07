@@ -912,6 +912,24 @@ uint formattedRead(R, Char, T, S...)(ref R r, const(Char)[] fmt, ref T arg, auto
     assert(aa3 == ["hello":1, "world":2]);
 }
 
+@safe pure unittest
+{
+    int* p;
+    // reading pointers not supported.
+    static assert(!__traits(compiles,
+        formattedRead("%p", p) // new interface
+    ));
+}
+
+@system pure unittest
+{
+    int* p;
+    // reading pointers not supported.
+    static assert(!__traits(compiles,
+        formattedRead("%p", &p) // deprecated interface
+    ));
+}
+
 template FormatSpec(Char)
 if (!is(Unqual!Char == Char))
 {
