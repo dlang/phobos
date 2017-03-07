@@ -1030,12 +1030,18 @@ template Tuple(Specs...)
          *  // Tuple format
          *  assert(format("%t", tuple("a", 1)) == `("a", 1)`);
          *
-         *  // One Format for each individual component
-         *  assert(format("%(%#x | %.4f : %#x%)", tuple(1, 1.0, 10))         == `0x1 | 1.0000 : 0xa`);
-         *  assert(format(  "%#x | %.4f : %#x"  , tuple(1, 1.0, 10).expand)  == `0x1 | 1.0000 : 0xa`);
+         *  // Tuple format without escaping
+         *  assert(format("%-t", tuple("a", 1)) == `(a, 1)`);
+         *
+         *  // One Format for each individual component (no escaping by default)
+         *  assert(format("%(%#x | %.4f : %#x = %s%)", tuple(1, 1.0, 10, "one"))         == `0x1 | 1.0000 : 0xa = one`);
+         *  assert(format(  "%#x | %.4f : %#x = %s"  , tuple(1, 1.0, 10, "one").expand)  == `0x1 | 1.0000 : 0xa = one`);
          *
          *  // One Format for all components
-         *  assert(format("%(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>abc< & >1< & >2.3< & >[4, 5]<`);
+         *  assert(format("%(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>"abc"< & >1< & >2.3< & >[4, 5]<`);
+         *
+         *  // One Format for all components without escaping (cf. arrays)
+         *  assert(format("%-(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>abc< & >1< & >2.3< & >[4, 5]<`);
          *
          *  // Array of Tuples
          *  Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
@@ -1066,10 +1072,23 @@ template Tuple(Specs...)
         /// ditto
         void toString(DG, Char)(scope DG sink, FormatSpec!Char fmt) const
         {
-            import std.format : formatElement, formattedWrite, FormatException;
+            import std.format : formatElement, formatValue, formattedWrite, FormatException;
 
             switch (fmt.spec)
             {
+                case 's':
+                    sink(Unqual!(typeof(this)).stringof);
+                    goto case;
+
+                case 't':
+                    // fmt.spec remains unchanged because of being able to
+                    // destinguish it from '(' later.
+                    fmt.nested = "%s";
+                    fmt.sep = ", ";
+
+                    sink("(");
+                    goto case;
+
                 case '(':
                     assert (fmt.nested);
                     if (fmt.sep)
@@ -1087,7 +1106,17 @@ template Tuple(Specs...)
                             }
                             else
                             {
-                                formattedWrite(sink, fmt.nested, this.field[i]);
+                                auto nested = FormatSpec!Char(fmt.nested);
+                                nested.writeUpToNextSpec(sink);
+                                if (fmt.flDash)
+                                {
+                                    formatValue(sink, this.field[i], nested);
+                                }
+                                else
+                                {
+                                    formatElement(sink, this.field[i], nested);
+                                }
+                                nested.writeUpToNextSpec(sink);
                             }
                         }
                     }
@@ -1095,29 +1124,13 @@ template Tuple(Specs...)
                     {
                         formattedWrite(sink, fmt.nested, staticMap!(sharedToString, this.expand));
                     }
-                    break;
 
-                case 's':
-                    sink(Unqual!(typeof(this)).stringof);
-                    goto case;
-
-                case 't':
-                    sink("(");
-                    foreach (i, Type; Types)
+                    // see goto case.
+                    if (fmt.spec == 's' || fmt.spec == 't')
                     {
-                        static if (i > 0) sink(", ");
-                        // TODO: Change this once formatElement() works for shared objects.
-                        static if (is(Type == class) && is(Type == shared))
-                        {
-                            sink(Type.stringof);
-                        }
-                        else
-                        {
-                            FormatSpec!Char f;
-                            formatElement(sink, field[i], f);
-                        }
+                        sink(")");
                     }
-                    sink(")");
+
                     break;
 
                 default:
@@ -1643,12 +1656,18 @@ unittest
     // Tuple format
     assert(format("%t", tuple("a", 1)) == `("a", 1)`);
 
-    // One Format for each individual component
-    assert(format("%(%#x | %.4f : %#x%)", tuple(1, 1.0, 10))         == `0x1 | 1.0000 : 0xa`);
-    assert(format(  "%#x | %.4f : %#x"  , tuple(1, 1.0, 10).expand)  == `0x1 | 1.0000 : 0xa`);
+    // Tuple format without escaping
+    assert(format("%-t", tuple("a", 1)) == `(a, 1)`);
+
+    // One Format for each individual component (no escaping by default)
+    assert(format("%(%#x | %.4f : %#x = %s%)", tuple(1, 1.0, 10, "one"))         == `0x1 | 1.0000 : 0xa = one`);
+    assert(format(  "%#x | %.4f : %#x = %s"  , tuple(1, 1.0, 10, "one").expand)  == `0x1 | 1.0000 : 0xa = one`);
 
     // One Format for all components
-    assert(format("%(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>abc< & >1< & >2.3< & >[4, 5]<`);
+    assert(format("%(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>"abc"< & >1< & >2.3< & >[4, 5]<`);
+
+    // One Format for all components without escaping (cf. arrays)
+    assert(format("%-(>%s<%| & %)", tuple("abc", 1, 2.3, [4, 5])) == `>abc< & >1< & >2.3< & >[4, 5]<`);
 
     // Array of Tuples
     Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
