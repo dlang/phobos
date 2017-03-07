@@ -146,22 +146,26 @@ public:
     ~this()
     {
         debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
-        if (_p !is null) destroy(_p);
-        _p = null;
+        if (_p !is null)
+        {
+            destroy(_p);
+            _p = null;
+        }
     }
+
     /** Returns whether the resource exists. */
     @property bool isEmpty() const
     {
         return _p is null;
     }
-    /** Transfer ownership to a $(D Unique) rvalue. Nullifies the current contents. */
+    /** Transfer ownership to a $(D Unique) rvalue. Nullifies the current contents.
+    Same as calling std.algorithm.move on it.
+    */
     Unique release()
     {
-        debug(Unique) writeln("Release");
-        auto u = Unique(_p);
-        assert(_p is null);
-        debug(Unique) writeln("return from Release");
-        return u;
+        debug(Unique) writeln("Unique Release");
+        import std.algorithm.mutation : move;
+        return this.move;
     }
 
     /** Forwards member access to contents. */
@@ -269,6 +273,7 @@ private:
     {
         ~this() { debug(Unique) writeln("    Foo destructor"); }
         int val() const { return 3; }
+        @disable this(this);
     }
     alias UFoo = Unique!(Foo);
 
