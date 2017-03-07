@@ -559,7 +559,7 @@ to $(D fmt), and writes them to $(D args).
 Params:
     r = The range to read from.
     fmt = The format of the data to read.
-    args = The drain of the data read.
+    arg, args = The drain of the data read.
 
 Returns:
 
@@ -572,11 +572,11 @@ Throws:
 
 Deprecated:
 
-The deprecation targets parameters of the form `&param` which take the address of
-a local and make most usages of this function non-@safe. Replace these parameters
-simply by `param`.
-Paramters of the form `paramFunc()` are false positives; replace them by
-`*paramFunc()` to surpass the deprecation warning correctly.
+Do not use parameters of the form `&param` which may take the address of
+a local and make most usages of this function non-@safe. Replace these
+parameters by `param` (without address-operator).
+Replace parameters which are pointer returning functions of the form
+`returnsPtr()` by `*returnsPtr()`.
  */
 uint formattedRead(R, Char)(ref R r, const(Char)[] fmt)
 {
