@@ -3007,7 +3007,7 @@ if (canSwapEndianness!T &&
 T read(T, Endian endianness = Endian.bigEndian, R)(ref R range)
 if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
 {
-    static if (hasSlicing!R)
+    static if (hasSlicing!R && is(typeof(R.init[0 .. 0]) : const(ubyte)[]))
     {
         const ubyte[T.sizeof] bytes = range[0 .. T.sizeof];
         range.popFrontN(T.sizeof);
@@ -3234,6 +3234,32 @@ if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
 
     assert(range.read!ubyte() == 8);
     assert(range.empty);
+}
+
+// issue 17247
+@safe unittest
+{
+    struct UbyteRange
+    {
+        ubyte[] impl;
+        @property bool empty() { return impl.empty; }
+        @property ubyte front() { return impl.front; }
+        void popFront() { impl.popFront(); }
+        @property UbyteRange save() { return this; }
+
+        // N.B. support slicing but do not return ubyte[] slices.
+        UbyteRange opSlice(size_t start, size_t end)
+        {
+            return UbyteRange(impl[start .. end]);
+        }
+        @property size_t length() { return impl.length; }
+        size_t opDollar() { return impl.length; }
+    }
+    static assert(hasSlicing!UbyteRange);
+
+    auto r = UbyteRange([0x01, 0x00, 0x00, 0x00]);
+    int x = r.read!(int, Endian.littleEndian)();
+    assert(x == 1);
 }
 
 
