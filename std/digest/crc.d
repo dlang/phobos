@@ -151,6 +151,13 @@ alias CRC64ISO = CRC!(64, 0xD800000000000000);
 
 /**
  * Generic Template API used for CRC32 and CRC64 implementations.
+ *
+ * The N parameter indicate the size of the hash in bits.
+ * The parameter P specify the polynomial to be used for reduction.
+ *
+ * You may want to use the CRC32, CRC65ECMA and CRC64ISO aliases
+ * for convenience.
+ *
  * See $(D std.digest.digest) for differences between template and OOP API.
  */
 struct CRC(uint N, ulong P) if (N == 32 || N == 64)
@@ -167,6 +174,10 @@ struct CRC(uint N, ulong P) if (N == 32 || N == 64)
 
         static immutable T[256][8] tables = genTables!T(P);
 
+        /**
+         * Type of the finished CRC hash.
+         * ubyte[4] if N is 32, ubyte[8] if N is 64.
+         */
         alias R = ubyte[T.sizeof];
 
         // magic initialization constants
