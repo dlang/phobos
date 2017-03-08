@@ -1089,7 +1089,7 @@ Tid locate( string name )
 /**
  * Encapsulates all implementation-level data needed for scheduling.
  *
- * When definining a Scheduler, an instance of this struct must be associated
+ * When defining a Scheduler, an instance of this struct must be associated
  * with each logical thread.  It contains all implementation-level information
  * needed by the internal API.
  */
