@@ -354,18 +354,18 @@ public:
 
 
 /**
- * Returns the caller's Tid.
+ * Returns: The $(LREF Tid) of the caller's thread.
  */
 @property Tid thisTid() @safe
 {
     // TODO: remove when concurrency is safe
-    auto trus = delegate() @trusted
+    static auto trus() @trusted
     {
         if ( thisInfo.ident != Tid.init )
             return thisInfo.ident;
         thisInfo.ident = Tid( new MessageBox );
         return thisInfo.ident;
-    };
+    }
 
     return trus();
 }
@@ -2119,7 +2119,7 @@ private
          */
         final void close()
         {
-            void onLinkDeadMsg( ref Message msg )
+            static void onLinkDeadMsg( ref Message msg )
             {
                 assert( msg.convertsTo!(Tid) );
                 auto tid = msg.get!(Tid);
@@ -2129,7 +2129,7 @@ private
                     thisInfo.owner = Tid.init;
             }
 
-            void sweep( ref ListT list )
+            static void sweep( ref ListT list )
             {
                 for ( auto range = list[]; !range.empty; range.popFront() )
                 {
