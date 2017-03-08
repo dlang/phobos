@@ -517,12 +517,35 @@ private pure Option splitAndGet(string opt) @trusted nothrow
         ret.optLong = "--" ~ (sp[0].length > sp[1].length ?
             sp[0] : sp[1]);
     }
-    else
+    else if (sp[0].length > 1)
     {
         ret.optLong = "--" ~ sp[0];
     }
+    else
+    {
+        ret.optShort = "-" ~ sp[0];
+    }
 
     return ret;
+}
+
+@safe unittest
+{
+    auto oshort = splitAndGet("f");
+    assert(oshort.optShort == "-f");
+    assert(oshort.optLong == "");
+
+    auto olong = splitAndGet("foo");
+    assert(olong.optShort == "");
+    assert(olong.optLong == "--foo");
+
+    auto oshortlong = splitAndGet("f|foo");
+    assert(oshortlong.optShort == "-f");
+    assert(oshortlong.optLong == "--foo");
+
+    auto olongshort = splitAndGet("foo|f");
+    assert(olongshort.optShort == "-f");
+    assert(olongshort.optLong == "--foo");
 }
 
 /*
@@ -684,10 +707,13 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             Option optionHelp = splitAndGet(option);
             optionHelp.required = cfg.required;
 
-            assert(optionHelp.optLong !in visitedLongOpts,
-                "Long option " ~ optionHelp.optLong ~ " is multiply defined");
+            if (optionHelp.optLong.length)
+            {
+                assert(optionHelp.optLong !in visitedLongOpts,
+                    "Long option " ~ optionHelp.optLong ~ " is multiply defined");
 
-            visitedLongOpts[optionHelp.optLong] = [];
+                visitedLongOpts[optionHelp.optLong] = [];
+            }
 
             if (optionHelp.optShort.length)
             {
