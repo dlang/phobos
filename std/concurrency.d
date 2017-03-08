@@ -221,6 +221,7 @@ static ~this()
  */
 class MessageMismatch : Exception
 {
+    ///
     this( string msg = "Unexpected message type" ) @safe pure
     {
         super( msg );
@@ -234,6 +235,7 @@ class MessageMismatch : Exception
  */
 class OwnerTerminated : Exception
 {
+    ///
     this( Tid t, string msg = "Owner terminated" ) @safe pure
     {
         super( msg );
@@ -249,6 +251,7 @@ class OwnerTerminated : Exception
  */
 class LinkTerminated : Exception
 {
+    ///
     this( Tid t, string msg = "Link terminated" ) @safe pure
     {
         super( msg );
@@ -266,6 +269,7 @@ class LinkTerminated : Exception
  */
 class PriorityMessageException : Exception
 {
+    ///
     this( Variant vals )
     {
         super( "Priority message" );
@@ -285,6 +289,7 @@ class PriorityMessageException : Exception
  */
 class MailboxFull : Exception
 {
+    ///
     this( Tid t, string msg = "Mailbox full" ) @safe pure
     {
         super( msg );
@@ -302,6 +307,7 @@ class MailboxFull : Exception
 class TidMissingException : Exception
 {
     import std.exception : basicExceptionCtors;
+    ///
     mixin basicExceptionCtors;
 }
 
