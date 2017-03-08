@@ -1050,6 +1050,15 @@ unittest
     assertThrown(regex("(?#..."));
 }
 
+// bugzilla 17075
+@safe unittest
+{
+    enum titlePattern = `<title>(.+)</title>`;
+    static titleRegex = ctRegex!titlePattern;
+    string input = "<title>" ~ "<".repeat(100_000).join;
+    assert(input.matchFirst(titleRegex).empty);
+}
+
 // bugzilla 17212
 unittest
 {
