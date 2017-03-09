@@ -277,6 +277,7 @@ template BacktrackingMatcher(bool CTregex)
                 pc = 0;
                 counter = 0;
                 lastState = 0;
+                matches[] = Group!DataIndex.init;
                 auto start = s._index;
                 debug(std_regex_matcher)
                     writeln("Try match starting at ", s[index..s.lastIndex]);
@@ -1439,6 +1440,7 @@ struct CtContext
             pc = 0;
             counter = 0;
             lastState = 0;
+            matches[] = Group!DataIndex.init;
             auto start = s._index;`;
         r ~= `
             goto StartLoop;
