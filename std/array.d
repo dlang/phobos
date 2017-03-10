@@ -2880,7 +2880,8 @@ if (isDynamicArray!A)
     {
         enum bool canPutConstRange =
             isInputRange!(Unqual!Range) &&
-            !isInputRange!Range;
+            !isInputRange!Range &&
+            is(typeof(Appender.init.put(Range.init.front)));
     }
     private template canPutRange(Range)
     {
@@ -3070,6 +3071,21 @@ if (isDynamicArray!A)
     app.put(2);
     app.put(3);
     assert("%s".format(app) == "Appender!(int[])(%s)".format([1,2,3]));
+}
+
+@safe unittest // issue 17251
+{
+    static struct R
+    {
+        int front() const { return 0; }
+        bool empty() const { return true; }
+        void popFront() {}
+    }
+    
+    auto app = appender!(R[]);
+    const(R)[1] r;
+    app.put(r[0]);
+    app.put(r[]);
 }
 
 //Calculates an efficient growth scheme based on the old capacity
