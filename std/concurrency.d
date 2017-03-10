@@ -99,26 +99,20 @@ private
         MsgType type;
         Variant data;
 
-        this(T...)( MsgType t, T vals )
-            if ( T.length < 1 )
+        this(T...)(MsgType t, T vals) if (T.length > 0)
         {
-            static assert( false, "messages must contain at least one item" );
-        }
+            static if (T.length == 1)
+            {
+                type = t;
+                data = vals[0];
+            }
+            else
+            {
+                import std.typecons : Tuple;
 
-        this(T...)( MsgType t, T vals )
-            if ( T.length == 1 )
-        {
-            type = t;
-            data = vals[0];
-        }
-
-        this(T...)( MsgType t, T vals )
-            if ( T.length > 1 )
-        {
-            import std.typecons : Tuple;
-
-            type = t;
-            data = Tuple!(T)( vals );
+                type = t;
+                data = Tuple!(T)(vals);
+            }
         }
 
         @property auto convertsTo(T...)()
