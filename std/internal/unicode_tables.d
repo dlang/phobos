@@ -41,7 +41,7 @@ struct FullCaseEntry
 
     @property auto value() const @trusted pure nothrow @nogc return
     {
-        return seq[0..entry_len];
+        return seq[0 .. entry_len];
     }
 }
 
@@ -3815,36 +3815,36 @@ bool isFormatGen(dchar ch) @safe pure nothrow
     else if (ch < 8293) return true;
     else
     {
-        if (ch < 69821)
+        if (ch < 69_821)
         {
-            if (ch < 65279)
+            if (ch < 65_279)
             {
                 if (ch < 8294) return false;
                 if (ch < 8304) return true;
                 return false;
             }
-            else if (ch < 65280) return true;
+            else if (ch < 65_280) return true;
             else
             {
-                if (ch < 65529) return false;
-                if (ch < 65532) return true;
+                if (ch < 65_529) return false;
+                if (ch < 65_532) return true;
                 return false;
             }
         }
-        else if (ch < 69822) return true;
+        else if (ch < 69_822) return true;
         else
         {
-            if (ch < 917505)
+            if (ch < 917_505)
             {
-                if (ch < 119155) return false;
-                if (ch < 119163) return true;
+                if (ch < 119_155) return false;
+                if (ch < 119_163) return true;
                 return false;
             }
-            else if (ch < 917506) return true;
+            else if (ch < 917_506) return true;
             else
             {
-                if (ch < 917536) return false;
-                if (ch < 917632) return true;
+                if (ch < 917_536) return false;
+                if (ch < 917_632) return true;
                 return false;
             }
         }
@@ -3880,7 +3880,7 @@ bool isSpaceGen(dchar ch) @safe pure nothrow
         else
         {
             if (ch == 8287) return true;
-            if (ch == 12288) return true;
+            if (ch == 12_288) return true;
             return false;
         }
     }
@@ -3924,7 +3924,7 @@ bool isWhiteGen(dchar ch) @safe pure nothrow @nogc
             else if (ch < 8288) return true;
             else
             {
-                if (ch == 12288) return true;
+                if (ch == 12_288) return true;
                 return false;
             }
         }
@@ -3935,8 +3935,8 @@ bool isHangL(dchar ch) @safe pure nothrow
 {
     if (ch < 4352) return false;
     if (ch < 4448) return true;
-    if (ch < 43360) return false;
-    if (ch < 43389) return true;
+    if (ch < 43_360) return false;
+    if (ch < 43_389) return true;
     return false;
 }
 
@@ -3944,8 +3944,8 @@ bool isHangV(dchar ch) @safe pure nothrow
 {
     if (ch < 4448) return false;
     if (ch < 4520) return true;
-    if (ch < 55216) return false;
-    if (ch < 55239) return true;
+    if (ch < 55_216) return false;
+    if (ch < 55_239) return true;
     return false;
 }
 
@@ -3953,8 +3953,8 @@ bool isHangT(dchar ch) @safe pure nothrow
 {
     if (ch < 4520) return false;
     if (ch < 4608) return true;
-    if (ch < 55243) return false;
-    if (ch < 55292) return true;
+    if (ch < 55_243) return false;
+    if (ch < 55_292) return true;
     return false;
 }
 

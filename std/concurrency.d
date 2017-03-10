@@ -99,26 +99,20 @@ private
         MsgType type;
         Variant data;
 
-        this(T...)( MsgType t, T vals )
-            if ( T.length < 1 )
+        this(T...)(MsgType t, T vals) if (T.length > 0)
         {
-            static assert( false, "messages must contain at least one item" );
-        }
+            static if (T.length == 1)
+            {
+                type = t;
+                data = vals[0];
+            }
+            else
+            {
+                import std.typecons : Tuple;
 
-        this(T...)( MsgType t, T vals )
-            if ( T.length == 1 )
-        {
-            type = t;
-            data = vals[0];
-        }
-
-        this(T...)( MsgType t, T vals )
-            if ( T.length > 1 )
-        {
-            import std.typecons : Tuple;
-
-            type = t;
-            data = Tuple!(T)( vals );
+                type = t;
+                data = Tuple!(T)(vals);
+            }
         }
 
         @property auto convertsTo(T...)()
@@ -212,9 +206,7 @@ static ~this()
 }
 
 
-//////////////////////////////////////////////////////////////////////////////
 // Exceptions
-//////////////////////////////////////////////////////////////////////////////
 
 
 /**
@@ -223,6 +215,7 @@ static ~this()
  */
 class MessageMismatch : Exception
 {
+    ///
     this( string msg = "Unexpected message type" ) @safe pure
     {
         super( msg );
@@ -236,6 +229,7 @@ class MessageMismatch : Exception
  */
 class OwnerTerminated : Exception
 {
+    ///
     this( Tid t, string msg = "Owner terminated" ) @safe pure
     {
         super( msg );
@@ -251,6 +245,7 @@ class OwnerTerminated : Exception
  */
 class LinkTerminated : Exception
 {
+    ///
     this( Tid t, string msg = "Link terminated" ) @safe pure
     {
         super( msg );
@@ -268,6 +263,7 @@ class LinkTerminated : Exception
  */
 class PriorityMessageException : Exception
 {
+    ///
     this( Variant vals )
     {
         super( "Priority message" );
@@ -287,6 +283,7 @@ class PriorityMessageException : Exception
  */
 class MailboxFull : Exception
 {
+    ///
     this( Tid t, string msg = "Mailbox full" ) @safe pure
     {
         super( msg );
@@ -304,13 +301,12 @@ class MailboxFull : Exception
 class TidMissingException : Exception
 {
     import std.exception : basicExceptionCtors;
+    ///
     mixin basicExceptionCtors;
 }
 
 
-//////////////////////////////////////////////////////////////////////////////
 // Thread ID
-//////////////////////////////////////////////////////////////////////////////
 
 
 /**
@@ -339,7 +335,7 @@ public:
     void toString(scope void delegate(const(char)[]) sink)
     {
         import std.format : formattedWrite;
-        formattedWrite(sink, "Tid(%x)", cast(void*)mbox);
+        formattedWrite(sink, "Tid(%x)", cast(void*) mbox);
     }
 
 }
@@ -407,9 +403,7 @@ public:
     assert(res == "Child responding");
 }
 
-//////////////////////////////////////////////////////////////////////////////
 // Thread Creation
-//////////////////////////////////////////////////////////////////////////////
 
 private template isSpawnable(F, T...)
 {
@@ -485,7 +479,7 @@ private template isSpawnable(F, T...)
  * ---
  */
 Tid spawn(F, T...)( F fn, T args )
-    if ( isSpawnable!(F, T) )
+if ( isSpawnable!(F, T) )
 {
     static assert( !hasLocalAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
@@ -513,7 +507,7 @@ Tid spawn(F, T...)( F fn, T args )
  *  A Tid representing the new thread.
  */
 Tid spawnLinked(F, T...)( F fn, T args )
-    if ( isSpawnable!(F, T) )
+if ( isSpawnable!(F, T) )
 {
     static assert( !hasLocalAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
@@ -525,7 +519,7 @@ Tid spawnLinked(F, T...)( F fn, T args )
  *
  */
 private Tid _spawn(F, T...)( bool linked, F fn, T args )
-    if ( isSpawnable!(F, T) )
+if ( isSpawnable!(F, T) )
 {
     // TODO: MessageList and &exec should be shared.
     auto spawnTid = Tid( new MessageBox );
@@ -573,16 +567,16 @@ private Tid _spawn(F, T...)( bool linked, F fn, T args )
     static assert(!__traits(compiles, spawn(dg6, 6)));
 
     auto callable1  = new class{ void opCall(int) shared {} };
-    auto callable2  = cast(shared)new class{ void opCall(int) shared {} };
+    auto callable2  = cast(shared) new class{ void opCall(int) shared {} };
     auto callable3  = new class{ void opCall(int) immutable {} };
-    auto callable4  = cast(immutable)new class{ void opCall(int) immutable {} };
+    auto callable4  = cast(immutable) new class{ void opCall(int) immutable {} };
     auto callable5  = new class{ void opCall(int) {} };
-    auto callable6  = cast(shared)new class{ void opCall(int) immutable {} };
-    auto callable7  = cast(immutable)new class{ void opCall(int) shared {} };
-    auto callable8  = cast(shared)new class{ void opCall(int) const shared {} };
-    auto callable9  = cast(const shared)new class{ void opCall(int) shared {} };
-    auto callable10 = cast(const shared)new class{ void opCall(int) const shared {} };
-    auto callable11 = cast(immutable)new class{ void opCall(int) const shared {} };
+    auto callable6  = cast(shared) new class{ void opCall(int) immutable {} };
+    auto callable7  = cast(immutable) new class{ void opCall(int) shared {} };
+    auto callable8  = cast(shared) new class{ void opCall(int) const shared {} };
+    auto callable9  = cast(const shared) new class{ void opCall(int) shared {} };
+    auto callable10 = cast(const shared) new class{ void opCall(int) const shared {} };
+    auto callable11 = cast(immutable) new class{ void opCall(int) const shared {} };
     static assert(!__traits(compiles, spawn(callable1,  1)));
     static assert( __traits(compiles, spawn(callable2,  2)));
     static assert(!__traits(compiles, spawn(callable3,  3)));
@@ -597,9 +591,7 @@ private Tid _spawn(F, T...)( bool linked, F fn, T args )
 }
 
 
-//////////////////////////////////////////////////////////////////////////////
 // Sending and Receiving Messages
-//////////////////////////////////////////////////////////////////////////////
 
 
 /**
@@ -889,9 +881,7 @@ body
 }
 
 
-//////////////////////////////////////////////////////////////////////////////
 // MessageBox Limits
-//////////////////////////////////////////////////////////////////////////////
 
 
 /**
@@ -973,9 +963,7 @@ void setMaxMailboxSize( Tid tid, size_t messages, bool function(Tid) onCrowdingD
 }
 
 
-//////////////////////////////////////////////////////////////////////////////
 // Name Registration
-//////////////////////////////////////////////////////////////////////////////
 
 
 private
@@ -1089,15 +1077,13 @@ Tid locate( string name )
 }
 
 
-//////////////////////////////////////////////////////////////////////////////
 // Scheduler
-//////////////////////////////////////////////////////////////////////////////
 
 
 /**
  * Encapsulates all implementation-level data needed for scheduling.
  *
- * When definining a Scheduler, an instance of this struct must be associated
+ * When defining a Scheduler, an instance of this struct must be associated
  * with each logical thread.  It contains all implementation-level information
  * needed by the internal API.
  */
@@ -1433,7 +1419,7 @@ private:
         }
 
     private:
-        final void switchContext() nothrow
+        void switchContext() nothrow
         {
             mutex_nothrow.unlock_nothrow();
             scope(exit) mutex_nothrow.lock_nothrow();
@@ -1445,7 +1431,7 @@ private:
 
 
 private:
-    final void dispatch()
+    void dispatch()
     {
         import std.algorithm.mutation : remove;
 
@@ -1467,7 +1453,7 @@ private:
     }
 
 
-    final void create( void delegate() op ) nothrow
+    void create( void delegate() op ) nothrow
     {
         void wrap()
         {
@@ -1541,9 +1527,7 @@ private:
 __gshared Scheduler scheduler;
 
 
-//////////////////////////////////////////////////////////////////////////////
 // Generator
-//////////////////////////////////////////////////////////////////////////////
 
 
 /**
@@ -1736,7 +1720,7 @@ void yield(T)(T value)
     yield(value);
 }
 
-unittest
+@system unittest
 {
     import core.exception;
     import std.exception;
@@ -1790,9 +1774,7 @@ unittest
 }
 
 
-//////////////////////////////////////////////////////////////////////////////
 // MessageBox Implementation
-//////////////////////////////////////////////////////////////////////////////
 
 
 private
@@ -1918,7 +1900,7 @@ private
          * if the owner thread terminates and no existing messages match the
          * supplied ops.
          */
-        final bool get(T...)( scope T vals )
+        bool get(T...)( scope T vals )
         {
             import std.meta : AliasSeq;
 
@@ -2170,9 +2152,7 @@ private
 
 
     private:
-        //////////////////////////////////////////////////////////////////////
         // Routines involving shared data, m_lock must be held.
-        //////////////////////////////////////////////////////////////////////
 
 
         bool mboxFull()
@@ -2189,43 +2169,37 @@ private
 
 
     private:
-        //////////////////////////////////////////////////////////////////////
         // Routines involving local data only, no lock needed.
-        //////////////////////////////////////////////////////////////////////
 
 
-        pure final bool isControlMsg( ref Message msg )
+        pure bool isControlMsg( ref Message msg )
         {
             return msg.type != MsgType.standard &&
                    msg.type != MsgType.priority;
         }
 
 
-        pure final bool isPriorityMsg( ref Message msg )
+        pure bool isPriorityMsg( ref Message msg )
         {
             return msg.type == MsgType.priority;
         }
 
 
-        pure final bool isLinkDeadMsg( ref Message msg )
+        pure bool isLinkDeadMsg( ref Message msg )
         {
             return msg.type == MsgType.linkDead;
         }
 
 
     private:
-        //////////////////////////////////////////////////////////////////////
         // Type declarations.
-        //////////////////////////////////////////////////////////////////////
 
 
         alias OnMaxFn = bool function(Tid);
         alias ListT   = List!(Message);
 
     private:
-        //////////////////////////////////////////////////////////////////////
         // Local data, no lock needed.
-        //////////////////////////////////////////////////////////////////////
 
 
         ListT       m_localBox;
@@ -2233,9 +2207,7 @@ private
 
 
     private:
-        //////////////////////////////////////////////////////////////////////
         // Shared data, m_lock must be held on access.
-        //////////////////////////////////////////////////////////////////////
 
 
         Mutex       m_lock;
@@ -2417,7 +2389,7 @@ private
 
                 if (sm_head)
                 {
-                    n = cast(Node*)sm_head;
+                    n = cast(Node*) sm_head;
                     sm_head = sm_head.next;
                 }
             }
@@ -2538,9 +2510,7 @@ version( unittest )
     }
 }
 
-//////////////////////////////////////////////////////////////////////////////
 // initOnce
-//////////////////////////////////////////////////////////////////////////////
 
 private @property Mutex initOnceLock()
 {
@@ -2548,7 +2518,7 @@ private @property Mutex initOnceLock()
     if (auto mtx = atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock))
         return mtx;
     auto mtx = new Mutex;
-    if (cas(cast(shared)&lock, cast(shared)null, cast(shared)mtx))
+    if (cas(cast(shared)&lock, cast(shared) null, cast(shared) mtx))
         return mtx;
     return atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock);
 }

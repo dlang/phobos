@@ -63,7 +63,7 @@ struct NullAllocator
     static shared NullAllocator instance;
 }
 
-unittest
+@system unittest
 {
     auto b = NullAllocator.instance.allocate(100);
     assert(b is null);

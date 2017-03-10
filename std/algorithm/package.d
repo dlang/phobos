@@ -3,7 +3,7 @@
 /**
 This package implements generic algorithms oriented towards the processing of
 sequences. Sequences processed by these functions define range-based
-interfaces.  See also $(LINK2 std_range.html, Reference on ranges) and
+interfaces.  See also $(MREF_ALTTEF Reference on ranges, std, range) and
 $(HTTP ddili.org/ders/d.en/ranges.html, tutorial on ranges).
 
 $(SCRIPT inhibitQuickIndex = 1;)
@@ -12,10 +12,10 @@ Algorithms are categorized into the following submodules:
 
 $(DIVC quickindex,
 $(BOOKTABLE ,
-$(TR $(TH Category) $(TH Submodule) $(TH Functions)
+$(TR $(TH Submodule) $(TH Functions)
 )
-$(TR $(TDNW Searching)
-     $(TDNW $(SUBMODULE searching))
+$(TR
+     $(TDNW $(SUBMODULE Searching, searching))
      $(TD
         $(SUBREF searching, all)
         $(SUBREF searching, any)
@@ -46,8 +46,8 @@ $(TR $(TDNW Searching)
         $(SUBREF searching, until)
     )
 )
-$(TR $(TDNW Comparison)
-    $(TDNW $(SUBMODULE comparison))
+$(TR
+    $(TDNW $(SUBMODULE Comparison, comparison))
     $(TD
         $(SUBREF comparison, among)
         $(SUBREF comparison, castSwitch)
@@ -65,8 +65,8 @@ $(TR $(TDNW Comparison)
         $(SUBREF comparison, predSwitch)
     )
 )
-$(TR $(TDNW Iteration)
-    $(TDNW $(SUBMODULE iteration))
+$(TR
+    $(TDNW $(SUBMODULE Iteration, iteration))
     $(TD
         $(SUBREF iteration, cache)
         $(SUBREF iteration, cacheBidirectional)
@@ -86,8 +86,8 @@ $(TR $(TDNW Iteration)
         $(SUBREF iteration, uniq)
     )
 )
-$(TR $(TDNW Sorting)
-    $(TDNW $(SUBMODULE sorting))
+$(TR
+    $(TDNW $(SUBMODULE Sorting, sorting))
     $(TD
         $(SUBREF sorting, completeSort)
         $(SUBREF sorting, isPartitioned)
@@ -110,8 +110,8 @@ $(TR $(TDNW Sorting)
         $(SUBREF sorting, topNIndex)
     )
 )
-$(TR $(TDNW Set&nbsp;operations)
-    $(TDNW $(SUBMODULE setops))
+$(TR
+    $(TDNW Set operations $(BR)($(SUBMODULE setops, setops)))
     $(TD
         $(SUBREF setops, cartesianProduct)
         $(SUBREF setops, largestPartialIntersection)
@@ -122,8 +122,8 @@ $(TR $(TDNW Set&nbsp;operations)
         $(SUBREF setops, setSymmetricDifference)
     )
 )
-$(TR $(TDNW Mutation)
-    $(TDNW $(SUBMODULE mutation))
+$(TR
+    $(TDNW $(SUBMODULE Mutation, mutation))
     $(TD
         $(SUBREF mutation, bringToFront)
         $(SUBREF mutation, copy)
@@ -132,6 +132,9 @@ $(TR $(TDNW Mutation)
         $(SUBREF mutation, move)
         $(SUBREF mutation, moveAll)
         $(SUBREF mutation, moveSome)
+        $(SUBREF mutation, moveEmplace)
+        $(SUBREF mutation, moveEmplaceAll)
+        $(SUBREF mutation, moveEmplaceSome)
         $(SUBREF mutation, remove)
         $(SUBREF mutation, reverse)
         $(SUBREF mutation, strip)
@@ -171,7 +174,7 @@ sort(a);                   // no predicate, "a < b" is implicit
 ----
 
 Macros:
-SUBMODULE = $(MREF std, algorithm, $1)
+SUBMODULE = $(MREF_ALTTEXT $1, std, algorithm, $2)
 SUBREF = $(REF_ALTTEXT $(TT $2), $2, std, algorithm, $1)$(NBSP)
 
 Copyright: Andrei Alexandrescu 2008-.
@@ -183,7 +186,6 @@ Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 Source: $(PHOBOSSRC std/_algorithm/package.d)
  */
 module std.algorithm;
-//debug = std_algorithm;
 
 public import std.algorithm.comparison;
 public import std.algorithm.iteration;

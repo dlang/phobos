@@ -69,7 +69,7 @@ public import std.ascii : LetterCase;
 
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
 
@@ -85,14 +85,15 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     //Generating the hashes of a file, idiomatic D way
     import std.digest.crc, std.digest.sha, std.digest.md;
     import std.stdio;
 
     // Digests a file and prints the result.
-    void digestFile(Hash)(string filename) if (isDigest!Hash)
+    void digestFile(Hash)(string filename)
+    if (isDigest!Hash)
     {
         auto file = File(filename);
         auto result = digest!Hash(file.byChunk(4096 * 1024));
@@ -110,13 +111,14 @@ unittest
     }
 }
 ///
-unittest
+@system unittest
 {
     //Generating the hashes of a file using the template API
     import std.digest.crc, std.digest.sha, std.digest.md;
     import std.stdio;
     // Digests a file and prints the result.
-    void digestFile(Hash)(ref Hash hash, string filename) if (isDigest!Hash)
+    void digestFile(Hash)(ref Hash hash, string filename)
+    if (isDigest!Hash)
     {
         File file = File(filename);
 
@@ -149,7 +151,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc, std.digest.sha, std.digest.md;
     import std.stdio;
@@ -211,8 +213,8 @@ version(ExampleDigest)
              * Example:
              * ----
              * ExampleDigest dig;
-             * dig.put(cast(ubyte)0); //single ubyte
-             * dig.put(cast(ubyte)0, cast(ubyte)0); //variadic
+             * dig.put(cast(ubyte) 0); //single ubyte
+             * dig.put(cast(ubyte) 0, cast(ubyte) 0); //variadic
              * ubyte[10] buf;
              * dig.put(buf); //buffer
              * ----
@@ -253,7 +255,7 @@ version(ExampleDigest)
 }
 
 ///
-unittest
+@system unittest
 {
     //Using the OutputRange feature
     import std.algorithm.mutation : copy;
@@ -287,23 +289,24 @@ template isDigest(T)
         is(typeof(
         {
             T dig = void; //Can define
-            dig.put(cast(ubyte)0, cast(ubyte)0); //varags
+            dig.put(cast(ubyte) 0, cast(ubyte) 0); //varags
             dig.start(); //has start
             auto value = dig.finish(); //has finish
         }));
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     static assert(isDigest!CRC32);
 }
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
-    void myFunction(T)() if (isDigest!T)
+    void myFunction(T)()
+    if (isDigest!T)
     {
         T dig;
         dig.start();
@@ -331,13 +334,13 @@ template DigestType(T)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     assert(is(DigestType!(CRC32) == ubyte[4]));
 }
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     CRC32 dig;
@@ -367,17 +370,18 @@ template hasPeek(T)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc, std.digest.md;
     assert(!hasPeek!(MD5));
     assert(hasPeek!CRC32);
 }
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
-    void myFunction(T)() if (hasPeek!T)
+    void myFunction(T)()
+    if (hasPeek!T)
     {
         T dig;
         dig.start();
@@ -398,7 +402,7 @@ if (isDigest!T)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md, std.digest.hmac;
     static assert(hasBlockSize!MD5        && MD5.blockSize      == 512);
@@ -424,7 +428,8 @@ package template isDigestibleRange(Range)
  * Params:
  *  range= an $(D InputRange) with $(D ElementType) $(D ubyte), $(D ubyte[]) or $(D ubyte[num])
  */
-DigestType!Hash digest(Hash, Range)(auto ref Range range) if (!isArray!Range
+DigestType!Hash digest(Hash, Range)(auto ref Range range)
+if (!isArray!Range
     && isDigestibleRange!Range)
 {
     import std.algorithm.mutation : copy;
@@ -435,7 +440,7 @@ DigestType!Hash digest(Hash, Range)(auto ref Range range) if (!isArray!Range
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md;
     import std.range : repeat;
@@ -449,7 +454,8 @@ unittest
  * Params:
  *  data= one or more arrays of any type
  */
-DigestType!Hash digest(Hash, T...)(scope const T data) if (allSatisfy!(isArray, typeof(data)))
+DigestType!Hash digest(Hash, T...)(scope const T data)
+if (allSatisfy!(isArray, typeof(data)))
 {
     Hash hash;
     hash.start();
@@ -459,7 +465,7 @@ DigestType!Hash digest(Hash, T...)(scope const T data) if (allSatisfy!(isArray, 
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md, std.digest.sha, std.digest.crc;
     auto md5   = digest!MD5(  "The quick brown fox jumps over the lazy dog");
@@ -469,7 +475,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     auto crc32 = digest!CRC32("The quick ", "brown ", "fox jumps over the lazy dog");
@@ -486,13 +492,13 @@ unittest
  *  range= an $(D InputRange) with $(D ElementType) $(D ubyte), $(D ubyte[]) or $(D ubyte[num])
  */
 char[digestLength!(Hash)*2] hexDigest(Hash, Order order = Order.increasing, Range)(ref Range range)
-    if (!isArray!Range && isDigestibleRange!Range)
+if (!isArray!Range && isDigestibleRange!Range)
 {
     return toHexString!order(digest!Hash(range));
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md;
     import std.range : repeat;
@@ -508,19 +514,19 @@ unittest
  *  data= one or more arrays of any type
  */
 char[digestLength!(Hash)*2] hexDigest(Hash, Order order = Order.increasing, T...)(scope const T data)
-    if (allSatisfy!(isArray, typeof(data)))
+if (allSatisfy!(isArray, typeof(data)))
 {
     return toHexString!order(digest!Hash(data));
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     assert(hexDigest!(CRC32, Order.decreasing)("The quick brown fox jumps over the lazy dog") == "414FA339");
 }
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     assert(hexDigest!(CRC32, Order.decreasing)("The quick ", "brown ", "fox jumps over the lazy dog") == "414FA339");
@@ -538,7 +544,7 @@ Hash makeDigest(Hash)()
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md;
     auto md5 = makeDigest!MD5();
@@ -569,8 +575,8 @@ interface Digest
          * ----
          * void test(Digest dig)
          * {
-         *     dig.put(cast(ubyte)0); //single ubyte
-         *     dig.put(cast(ubyte)0, cast(ubyte)0); //variadic
+         *     dig.put(cast(ubyte) 0); //single ubyte
+         *     dig.put(cast(ubyte) 0, cast(ubyte) 0); //variadic
          *     ubyte[10] buf;
          *     dig.put(buf); //buffer
          * }
@@ -612,13 +618,13 @@ interface Digest
         {
             this.reset();
             foreach (datum; data)
-                this.put(cast(ubyte[])datum);
+                this.put(cast(ubyte[]) datum);
             return this.finish();
         }
 }
 
 ///
-unittest
+@system unittest
 {
     //Using the OutputRange feature
     import std.algorithm.mutation : copy;
@@ -632,7 +638,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md, std.digest.sha, std.digest.crc;
     ubyte[] md5   = (new MD5Digest()).digest("The quick brown fox jumps over the lazy dog");
@@ -642,14 +648,14 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     ubyte[] crc32 = (new CRC32Digest()).digest("The quick ", "brown ", "fox jumps over the lazy dog");
     assert(crcHexString(crc32) == "414FA339");
 }
 
-unittest
+@system unittest
 {
     import std.range : isOutputRange;
     assert(!isDigest!(Digest));
@@ -657,12 +663,12 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     void test(Digest dig)
     {
-        dig.put(cast(ubyte)0); //single ubyte
-        dig.put(cast(ubyte)0, cast(ubyte)0); //variadic
+        dig.put(cast(ubyte) 0); //single ubyte
+        dig.put(cast(ubyte) 0, cast(ubyte) 0); //variadic
         ubyte[10] buf;
         dig.put(buf); //buffer
     }
@@ -831,17 +837,27 @@ string toHexString(LetterCase letterCase, Order order = Order.increasing)(in uby
 ref T[N] asArray(size_t N, T)(ref T[] source, string errorMsg = "")
 {
      assert(source.length >= N, errorMsg);
-     return *cast(T[N]*)source.ptr;
+     return *cast(T[N]*) source.ptr;
 }
 
-/**
- * This helper is used internally in the WrapperDigest template, but it might be
- * useful for other purposes as well. It returns the length (in bytes) of the hash value
- * produced by T.
+/*
+ * Returns the length (in bytes) of the hash value produced by T.
  */
-template digestLength(T) if (isDigest!T)
+template digestLength(T)
+if (isDigest!T)
 {
     enum size_t digestLength = (ReturnType!(T.finish)).length;
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    import std.digest.md : MD5;
+    import std.digest.sha : SHA1, SHA256, SHA512;
+    assert(digestLength!MD5 == 16);
+    assert(digestLength!SHA1 == 20);
+    assert(digestLength!SHA256 == 32);
+    assert(digestLength!SHA512 == 64);
 }
 
 /**
@@ -849,7 +865,8 @@ template digestLength(T) if (isDigest!T)
  * Modules providing digest implementations will usually provide
  * an alias for this template (e.g. MD5Digest, SHA1Digest, ...).
  */
-class WrapperDigest(T) if (isDigest!T) : Digest
+class WrapperDigest(T)
+if (isDigest!T) : Digest
 {
     protected:
         T _digest;
@@ -903,7 +920,7 @@ class WrapperDigest(T) if (isDigest!T) : Digest
          * import std.digest.md;
          * ubyte[16] buf;
          * auto hash = new WrapperDigest!MD5();
-         * hash.put(cast(ubyte)0);
+         * hash.put(cast(ubyte) 0);
          * auto result = hash.finish(buf[]);
          * //The result is now in result (and in buf). If you pass a buffer which is bigger than
          * //necessary, result will have the correct length, but buf will still have it's original
@@ -970,23 +987,23 @@ class WrapperDigest(T) if (isDigest!T) : Digest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md;
     //Simple example
     auto hash = new WrapperDigest!MD5();
-    hash.put(cast(ubyte)0);
+    hash.put(cast(ubyte) 0);
     auto result = hash.finish();
 }
 
 ///
-unittest
+@system unittest
 {
     //using a supplied buffer
     import std.digest.md;
     ubyte[16] buf;
     auto hash = new WrapperDigest!MD5();
-    hash.put(cast(ubyte)0);
+    hash.put(cast(ubyte) 0);
     auto result = hash.finish(buf[]);
     //The result is now in result (and in buf). If you pass a buffer which is bigger than
     //necessary, result will have the correct length, but buf will still have it's original

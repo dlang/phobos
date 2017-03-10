@@ -9,10 +9,11 @@
     vs efficiency, in a manner compatible with the <tt>stdint.h</tt>
     definitions in C.
 
-    The exact aliases are types of exactly the specified number of bits.
-    The at least aliases are at least the specified number of bits
+    In the table below, the $(B exact alias)es are types of exactly the
+    specified number of bits.
+    The $(B at least alias)es are at least the specified number of bits
     large, and can be larger.
-    The fast aliases are the fastest integral type supported by the
+    The $(B fast alias)es are the fastest integral type supported by the
     processor that is at least as wide as the specified number of bits.
 
     The aliases are:

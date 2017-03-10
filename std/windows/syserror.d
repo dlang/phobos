@@ -59,7 +59,7 @@ version (StdDdoc)
      +/
     T wenforce(T, S)(T value, lazy S msg = null,
         string file = __FILE__, size_t line = __LINE__) @safe
-        if (isSomeString!S);
+    if (isSomeString!S);
 }
 else:
 
@@ -107,7 +107,7 @@ bool putSysError(Writer)(DWORD code, Writer w, /*WORD*/int langId = 0)
     if (lpMsgBuf)
     {
         import std.string : strip;
-        w.put(lpMsgBuf[0..res].strip());
+        w.put(lpMsgBuf[0 .. res].strip());
         return true;
     }
     else
@@ -147,7 +147,8 @@ class WindowsException : Exception
 
 
 T wenforce(T, S)(T value, lazy S msg = null,
-    string file = __FILE__, size_t line = __LINE__) if (isSomeString!S)
+string file = __FILE__, size_t line = __LINE__)
+if (isSomeString!S)
 {
     if (!value)
         throw new WindowsException(GetLastError(), to!string(msg), file, line);
@@ -177,7 +178,7 @@ T wenforce(T)(T condition, const(char)[] name, const(wchar)* namez, string file 
 }
 
 version(Windows)
-unittest
+@system unittest
 {
     import std.exception;
     import std.string;

@@ -91,7 +91,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             static if (stateSize!Prefix)
             {
                 assert(result.ptr.alignedAt(Prefix.alignof));
-                emplace!Prefix(cast(Prefix*)result.ptr);
+                emplace!Prefix(cast(Prefix*) result.ptr);
             }
             static if (stateSize!Suffix)
             {
@@ -115,7 +115,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             static if (stateSize!Prefix)
             {
                 assert(result.length > stateSize!Prefix);
-                emplace!Prefix(cast(Prefix*)result.ptr);
+                emplace!Prefix(cast(Prefix*) result.ptr);
                 result = result[stateSize!Prefix .. $];
             }
             static if (stateSize!Suffix)
@@ -317,7 +317,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     // One word before and after each allocation.
@@ -329,7 +329,7 @@ unittest
         && A.instance.suffix(b) == 0xDEAD_BEEF);
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.bitmapped_block
         : BitmappedBlock;
@@ -341,7 +341,7 @@ unittest
     });
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     alias A = AffixAllocator!(Mallocator, size_t);
@@ -356,7 +356,7 @@ unittest
     assert(b is null);
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.gc_allocator;
     import std.experimental.allocator;

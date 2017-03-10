@@ -41,7 +41,7 @@ License:    $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
 module std.parallelism;
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.iteration : map;
     import std.range : iota;
@@ -248,7 +248,7 @@ private template isSafeTask(F)
         allSatisfy!(noUnsharedAliasing, Parameters!F);
 }
 
-unittest
+@safe unittest
 {
     alias F1 = void function() @safe;
     alias F2 = void function();
@@ -361,7 +361,7 @@ private template isRoundRobin(T)
     enum isRoundRobin = false;
 }
 
-unittest
+@safe unittest
 {
     static assert( isRoundRobin!(RoundRobinBuffer!(void delegate(char[]), bool delegate())));
     static assert(!isRoundRobin!(uint));
@@ -1565,8 +1565,8 @@ public:
         reasons, amap will assume the range elements have not yet been
         initialized. Elements will be overwritten without calling a destructor
         nor doing an assignment. As such, the range must not contain meaningful
-        data: either un-initialized objects, or objects in their $(D .init)
-        state.
+        data$(DDOC_COMMENT not a section): either un-initialized objects, or
+        objects in their $(D .init) state.
 
         ---
         auto numbers = iota(100_000_000.0);
@@ -1726,8 +1726,8 @@ public:
 
                     static if (hasSlicing!R)
                     {
-                        auto subrange = range[start..end];
-                        foreach (i; start..end)
+                        auto subrange = range[start .. end];
+                        foreach (i; start .. end)
                         {
                             emplaceRef(buf[i], fun(subrange.front));
                             subrange.popFront();
@@ -1735,7 +1735,7 @@ public:
                     }
                     else
                     {
-                        foreach (i; start..end)
+                        foreach (i; start .. end)
                         {
                             emplaceRef(buf[i], fun(range[i]));
                         }
@@ -1854,7 +1854,7 @@ public:
 
                 void popSource()
                 {
-                    static if (__traits(compiles, source[0..source.length]))
+                    static if (__traits(compiles, source[0 .. source.length]))
                     {
                         source = source[min(buf1.length, source.length)..source.length];
                     }
@@ -1926,7 +1926,7 @@ public:
                         from[i++] = source.front;
                     }
 
-                    from = from[0..i];
+                    from = from[0 .. i];
                     return from;
                 }
             }
@@ -1984,7 +1984,7 @@ public:
                         auto toMap = dumpToFrom();
                     }
 
-                    buf = buf[0..min(buf.length, toMap.length)];
+                    buf = buf[0 .. min(buf.length, toMap.length)];
 
                     // Handle as a special case:
                     if (pool.size == 0)
@@ -2184,7 +2184,7 @@ public:
                     buf[i++] = source.front;
                 }
 
-                buf = buf[0..i];
+                buf = buf[0 .. i];
                 return buf;
             }
 
@@ -2517,7 +2517,7 @@ public:
                         lowerBound++;
                     }
 
-                    foreach (i; lowerBound..upperBound)
+                    foreach (i; lowerBound .. upperBound)
                     {
                         result = fun(result, range[i]);
                     }
@@ -2545,7 +2545,7 @@ public:
                 }
 
                 immutable nLoop = subSize - (!explicitSeed);
-                foreach (i; 0..nLoop)
+                foreach (i; 0 .. nLoop)
                 {
                     foreach (j; ilpTuple)
                     {
@@ -2555,7 +2555,7 @@ public:
                 }
 
                 // Finish the remainder.
-                foreach (i; nILP * subSize + lowerBound..upperBound)
+                foreach (i; nILP * subSize + lowerBound .. upperBound)
                 {
                     results[$ - 1] = fun(results[$ - 1], range[i]);
                 }
@@ -2605,7 +2605,7 @@ public:
             import core.stdc.stdlib : malloc, free;
             if (nBytesNeeded < maxStack)
             {
-                tasks = (cast(RTask*) buf.ptr)[0..nWorkUnits];
+                tasks = (cast(RTask*) buf.ptr)[0 .. nWorkUnits];
             }
             else
             {
@@ -2617,7 +2617,7 @@ public:
                     );
                 }
 
-                tasks = ptr[0..nWorkUnits];
+                tasks = ptr[0 .. nWorkUnits];
             }
 
             scope(exit)
@@ -2656,7 +2656,7 @@ public:
                 useTask(task);
             }
 
-            foreach (i; 1..tasks.length - 1)
+            foreach (i; 1 .. tasks.length - 1)
             {
                 tasks[i].next = tasks[i + 1].basePtr;
                 tasks[i + 1].prev = tasks[i].basePtr;
@@ -2858,7 +2858,7 @@ public:
             // Cache line align data ptr.
             data = cast(void*) roundToLine(cast(size_t) data);
 
-            foreach (i; 0..nElem)
+            foreach (i; 0 .. nElem)
             {
                 this.opIndex(i) = T.init;
             }
@@ -3044,7 +3044,7 @@ public:
     {
         WorkerLocalStorage!T ret;
         ret.initialize(this);
-        foreach (i; 0..size + 1)
+        foreach (i; 0 .. size + 1)
         {
             ret[i] = initialVal;
         }
@@ -3359,13 +3359,13 @@ private void submitAndExecute(
     PTask[] tasks;
     if (nThreads <= nBuf)
     {
-        tasks = (cast(PTask*) buf.ptr)[0..nThreads];
+        tasks = (cast(PTask*) buf.ptr)[0 .. nThreads];
     }
     else
     {
         auto ptr = cast(PTask*) malloc(nThreads * PTask.sizeof);
         if (!ptr) throw new OutOfMemoryError("Out of memory in std.parallelism.");
-        tasks = ptr[0..nThreads];
+        tasks = ptr[0 .. nThreads];
     }
 
     scope(exit)
@@ -3391,7 +3391,7 @@ private void submitAndExecute(
         t.pool = pool;
     }
 
-    foreach (i; 1..tasks.length - 1)
+    foreach (i; 1 .. tasks.length - 1)
     {
         tasks[i].next = tasks[i + 1].basePtr;
         tasks[i + 1].prev = tasks[i].basePtr;
@@ -3531,7 +3531,7 @@ private enum string parallelApplyMixinRandomAccess = q{
 
             immutable end = min(len, start + workUnitSize);
 
-            foreach (i; start..end)
+            foreach (i; start .. end)
             {
                 static if (withIndex)
                 {
@@ -3625,7 +3625,7 @@ enum string parallelApplyMixinInputRange = q{
                     temp[i] = addressOf(range.front);
                 }
 
-                temp = temp[0..i];
+                temp = temp[0 .. i];
                 auto ret = nPopped;
                 nPopped += temp.length;
                 return ret;
@@ -3655,7 +3655,7 @@ enum string parallelApplyMixinInputRange = q{
                     temp[i] = range.front;
                 }
 
-                temp = temp[0..i];
+                temp = temp[0 .. i];
                 auto ret = nPopped;
                 nPopped += temp.length;
                 return ret;
@@ -3695,7 +3695,7 @@ enum string parallelApplyMixinInputRange = q{
                 break;
             }
 
-            foreach (i; 0..temp.length)
+            foreach (i; 0 .. temp.length)
             {
                 scope(success) overallIndex++;
 
@@ -3894,7 +3894,7 @@ version(unittest)
 
 // These test basic functionality but don't stress test for threading bugs.
 // These are the tests that should be run every time Phobos is compiled.
-unittest
+@system unittest
 {
     poolInstance = new TaskPool(2);
     scope(exit) poolInstance.stop();
@@ -4076,8 +4076,8 @@ unittest
     auto wlRange = wl.toRange;
     auto parallelSum = poolInstance.reduce!"a + b"(wlRange);
     assert(parallelSum == 499500);
-    assert(wlRange[0..1][0] == wlRange[0]);
-    assert(wlRange[1..2][0] == wlRange[1]);
+    assert(wlRange[0 .. 1][0] == wlRange[0]);
+    assert(wlRange[1 .. 2][0] == wlRange[1]);
 
     // Test finish()
     {
@@ -4296,7 +4296,7 @@ unittest
 // tons of stuff and should not be run every time make unittest is run.
 version(parallelismStressTest)
 {
-    unittest
+    @safe unittest
     {
         size_t attempt;
         for (; attempt < 10; attempt++)
@@ -4313,7 +4313,7 @@ version(parallelismStressTest)
             }
 
             // Make sure it works.
-            foreach (i; 0..numbers.length)
+            foreach (i; 0 .. numbers.length)
             {
                 assert(numbers[i] == i);
             }
@@ -4379,9 +4379,9 @@ version(parallelismStressTest)
 
     // These unittests are intended more for actual testing and not so much
     // as examples.
-    unittest
+    @safe unittest
     {
-        foreach (attempt; 0..10)
+        foreach (attempt; 0 .. 10)
         foreach (poolSize; [0, 4])
         {
             poolInstance = new TaskPool(poolSize);
@@ -4490,7 +4490,7 @@ version(parallelismStressTest)
                 // Test work waiting.
                 static void uselessFun()
                 {
-                    foreach (i; 0..1_000_000) {}
+                    foreach (i; 0 .. 1_000_000) {}
                 }
 
                 auto uselessTasks = new typeof(task(&uselessFun))[1000];
@@ -4545,30 +4545,30 @@ version(unittest)
 {
     struct __S_12733
     {
-        invariant() { assert(checksum == 1234567890); }
+        invariant() { assert(checksum == 1_234_567_890); }
         this(ulong u){n = u;}
         void opAssign(__S_12733 s){this.n = s.n;}
         ulong n;
-        ulong checksum = 1234567890;
+        ulong checksum = 1_234_567_890;
     }
 
     static auto __genPair_12733(ulong n) { return __S_12733(n); }
 }
 
-unittest
+@system unittest
 {
     immutable ulong[] data = [ 2UL^^59-1, 2UL^^59-1, 2UL^^59-1, 112_272_537_195_293UL ];
 
     auto result = taskPool.amap!__genPair_12733(data);
 }
 
-unittest
+@safe unittest
 {
     // this test was in std.range, but caused cycles.
     assert(__traits(compiles, { foreach (i; iota(0, 100UL).parallel) {} }));
 }
 
-unittest
+@safe unittest
 {
     long[] arr;
     static assert(is(typeof({

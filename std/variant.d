@@ -83,6 +83,16 @@ template maxSize(T...)
     }
 }
 
+///
+@safe unittest
+{
+    static assert(maxSize!(int, long) == 8);
+    static assert(maxSize!(bool, byte) == 1);
+
+    struct Cat { int a, b, c; }
+    static assert(maxSize!(bool, Cat) == 12);
+}
+
 struct This;
 
 private alias This2Variant(V, T...) = AliasSeq!(ReplaceType!(This, V, T));
@@ -495,7 +505,7 @@ private:
                 auto variantArgs = p[1 .. argCount + 1];
                 foreach (i, T; ParamTypes)
                 {
-                    t[i] = cast()variantArgs[i].get!T;
+                    t[i] = cast() variantArgs[i].get!T;
                 }
 
                 auto args = cast(Tuple!(ParamTypes))t;
@@ -668,7 +678,7 @@ public:
 
     ///
     static if (doUnittest)
-    unittest
+    @system unittest
     {
         Variant a;
         assert(!a.hasValue);
@@ -701,7 +711,7 @@ public:
 
     ///
     static if (doUnittest)
-    unittest
+    @system unittest
     {
         Variant a = 5;
         auto b = a.peek!(int);
@@ -860,7 +870,7 @@ public:
     // workaround for bug 10567 fix
     int opCmp(ref const VariantN rhs) const
     {
-        return (cast()this).opCmp!(VariantN)(cast()rhs);
+        return (cast() this).opCmp!(VariantN)(cast() rhs);
     }
 
     /**
@@ -1093,7 +1103,7 @@ public:
 
     ///
     static if (doUnittest)
-    unittest
+    @system unittest
     {
         Variant a = new int[10];
         a[5] = 42;
@@ -1177,7 +1187,7 @@ public:
     }
 }
 
-unittest
+@system unittest
 {
     import std.conv : to;
     Variant v;
@@ -1190,7 +1200,7 @@ unittest
     assert(v("43") == 43);
 }
 
-unittest
+@system unittest
 {
     int[int] hash = [ 42:24 ];
     Variant v = hash;
@@ -1200,7 +1210,7 @@ unittest
 }
 
 // opIndex with static arrays, issue 12771
-unittest
+@system unittest
 {
     int[4] elements = [0, 1, 2, 3];
     Variant v = elements;
@@ -1212,7 +1222,7 @@ unittest
     assert(v != elements);
 }
 
-unittest
+@system unittest
 {
     import std.exception : assertThrown;
     Algebraic!(int[]) v = [2, 2];
@@ -1231,7 +1241,7 @@ unittest
 }
 
 //Issue# 8195
-unittest
+@system unittest
 {
     struct S
     {
@@ -1251,7 +1261,7 @@ unittest
 }
 
 // Issue #10961
-unittest
+@system unittest
 {
     // Primarily test that we can assign a void[] to a Variant.
     void[] elements = cast(void[])[1, 2, 3];
@@ -1261,7 +1271,7 @@ unittest
 }
 
 // Issue #13352
-unittest
+@system unittest
 {
     alias TP = Algebraic!(long);
     auto a = TP(1L);
@@ -1277,7 +1287,7 @@ unittest
 }
 
 // Issue #13354
-unittest
+@system unittest
 {
     alias A = Algebraic!(string[]);
     A a = ["a", "b"];
@@ -1295,14 +1305,14 @@ unittest
 }
 
 // Issue #14198
-unittest
+@system unittest
 {
     Variant a = true;
     assert(a.type == typeid(bool));
 }
 
 // Issue #14233
-unittest
+@system unittest
 {
     alias Atom = Algebraic!(string, This[]);
 
@@ -1311,7 +1321,7 @@ unittest
 }
 
 pure nothrow @nogc
-unittest
+@system unittest
 {
     Algebraic!(int, double) a;
     a = 100;
@@ -1319,7 +1329,7 @@ unittest
 }
 
 // Issue 14457
-unittest
+@system unittest
 {
     alias A = Algebraic!(int, float, double);
     alias B = Algebraic!(int, float);
@@ -1333,7 +1343,7 @@ unittest
 }
 
 // Issue 14585
-unittest
+@system unittest
 {
     static struct S
     {
@@ -1344,13 +1354,13 @@ unittest
 }
 
 // Issue 14586
-unittest
+@system unittest
 {
     const Variant v = new immutable Object;
     v.get!(immutable Object);
 }
 
-unittest
+@system unittest
 {
     static struct S
     {
@@ -1376,7 +1386,7 @@ template Algebraic(T...)
 }
 
 ///
-unittest
+@system unittest
 {
     auto v = Algebraic!(int, double, string)(5);
     assert(v.peek!(int));
@@ -1395,12 +1405,15 @@ values of their own type within.
 
 This is achieved with `Algebraic` by using `This` as a placeholder whenever a
 reference to the type being defined is needed. The `Algebraic` instantiation
-will perform $(LUCKY alpha renaming) on its constituent types, replacing `This`
+will perform $(LINK2 https://en.wikipedia.org/wiki/Name_resolution_(programming_languages)#Alpha_renaming_to_make_name_resolution_trivial,
+alpha renaming) on its constituent types, replacing `This`
 with the self-referenced type. The structure of the type involving `This` may
 be arbitrarily complex.
 */
-unittest
+@system unittest
 {
+    import std.typecons : Tuple, tuple;
+
     // A tree is either a leaf or a branch of two other trees
     alias Tree(Leaf) = Algebraic!(Leaf, Tuple!(This*, This*));
     Tree!int tree = tuple(new Tree!int(42), new Tree!int(43));
@@ -1445,7 +1458,7 @@ Variant[] variantArray(T...)(T args)
 }
 
 ///
-unittest
+@system unittest
 {
     auto a = variantArray(1, 3.14, "Hi!");
     assert(a[1] == 3.14);
@@ -1485,7 +1498,7 @@ static class VariantException : Exception
     }
 }
 
-unittest
+@system unittest
 {
     alias W1 = This2Variant!(char, int, This[int]);
     alias W2 = AliasSeq!(int, char[int]);
@@ -1495,7 +1508,7 @@ unittest
     var_t foo = "quux";
 }
 
-unittest
+@system unittest
 {
      alias A = Algebraic!(real, This[], This[int], This[This]);
      A v1, v2, v3;
@@ -1510,7 +1523,7 @@ unittest
      //writeln(v1);
 }
 
-unittest
+@system unittest
 {
     import std.conv : ConvException;
     import std.exception : assertThrown, collectException;
@@ -1607,7 +1620,7 @@ unittest
 
 // tests adapted from
 // http://www.dsource.org/projects/tango/browser/trunk/tango/core/Variant.d?rev=2601
-unittest
+@system unittest
 {
     Variant v;
 
@@ -1728,7 +1741,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     // check comparisons incompatible with AllowedTypes
     Algebraic!int v = 2;
@@ -1741,7 +1754,7 @@ unittest
     static assert(!__traits(compiles, {v > null;}));
 }
 
-unittest
+@system unittest
 {
     // bug 1558
     Variant va=1;
@@ -1750,7 +1763,7 @@ unittest
     assert((va-vb).get!(int) == 3);
 }
 
-unittest
+@system unittest
 {
     Variant a;
     a=5;
@@ -1761,14 +1774,14 @@ unittest
     assert(c[3] == "hello");
 }
 
-unittest
+@system unittest
 {
     Variant v = 5;
-    assert (!__traits(compiles, v.coerce!(bool delegate())));
+    assert(!__traits(compiles, v.coerce!(bool delegate())));
 }
 
 
-unittest
+@system unittest
 {
     struct Huge {
         real a, b, c, d, e, f, g;
@@ -1781,7 +1794,7 @@ unittest
     assert(v.get!(Huge).e == 42);
 }
 
-unittest
+@system unittest
 {
     const x = Variant(42);
     auto y1 = x.get!(const int);
@@ -1790,7 +1803,7 @@ unittest
 }
 
 // test iteration
-unittest
+@system unittest
 {
     auto v = Variant([ 1, 2, 3, 4 ][]);
     auto j = 0;
@@ -1802,14 +1815,14 @@ unittest
 }
 
 // test convertibility
-unittest
+@system unittest
 {
     auto v = Variant("abc".dup);
     assert(v.convertsTo!(char[]));
 }
 
 // http://d.puremagic.com/issues/show_bug.cgi?id=5424
-unittest
+@system unittest
 {
     interface A {
         void func1();
@@ -1824,7 +1837,7 @@ unittest
     Variant b = Variant(a);
 }
 
-unittest
+@system unittest
 {
     // bug 7070
     Variant v;
@@ -1832,7 +1845,7 @@ unittest
 }
 
 // Class and interface opEquals, issue 12157
-unittest
+@system unittest
 {
     class Foo { }
 
@@ -1850,7 +1863,7 @@ unittest
 }
 
 // Const parameters with opCall, issue 11361.
-unittest
+@system unittest
 {
     static string t1(string c) {
         return c ~ "a";
@@ -1881,7 +1894,7 @@ unittest
 }
 
 // issue 12071
-unittest
+@system unittest
 {
     static struct Structure { int data; }
     alias VariantTest = Algebraic!(Structure delegate() pure nothrow @nogc @safe);
@@ -1898,7 +1911,7 @@ unittest
 }
 
 // Ordering comparisons of incompatible types, e.g. issue 7990.
-unittest
+@system unittest
 {
     import std.exception : assertThrown;
     assertThrown!VariantException(Variant(3) < "a");
@@ -1910,7 +1923,7 @@ unittest
 }
 
 // Handling of unordered types, e.g. issue 9043.
-unittest
+@system unittest
 {
     import std.exception : assertThrown;
     static struct A { int a; }
@@ -1923,7 +1936,7 @@ unittest
 }
 
 // Handling of empty types and arrays, e.g. issue 10958
-unittest
+@system unittest
 {
     class EmptyClass { }
     struct EmptyStruct { }
@@ -1954,7 +1967,7 @@ unittest
 }
 
 // Handling of void function pointers / delegates, e.g. issue 11360
-unittest
+@system unittest
 {
     static void t1() { }
     Variant v = &t1;
@@ -1966,7 +1979,7 @@ unittest
 }
 
 // Using peek for large structs, issue 8580
-unittest
+@system unittest
 {
     struct TestStruct(bool pad)
     {
@@ -2008,6 +2021,11 @@ unittest
  * $(D visit) allows delegates and static functions to be passed
  * as parameters.
  *
+ * If a function with an untyped parameter is specified, this function is called
+ * when the variant contains a type that does not match any other function.
+ * This can be used to apply the same function across multiple possible types.
+ * Exactly one generic function is allowed.
+ *
  * If a function without parameters is specified, this function is called
  * when `variant` doesn't hold a value. Exactly one parameter-less function
  * is allowed.
@@ -2020,7 +2038,7 @@ unittest
  * parameter-less fallback function is specified.
  */
 template visit(Handlers...)
-    if (Handlers.length > 0)
+if (Handlers.length > 0)
 {
     ///
     auto visit(VariantType)(VariantType variant)
@@ -2031,35 +2049,49 @@ template visit(Handlers...)
 }
 
 ///
-unittest
+@system unittest
 {
     Algebraic!(int, string) variant;
 
     variant = 10;
-    assert(variant.visit!((string s) => cast(int)s.length,
+    assert(variant.visit!((string s) => cast(int) s.length,
                           (int i)    => i)()
                           == 10);
     variant = "string";
     assert(variant.visit!((int i) => i,
-                          (string s) => cast(int)s.length)()
+                          (string s) => cast(int) s.length)()
                           == 6);
 
     // Error function usage
     Algebraic!(int, string) emptyVar;
-    auto rslt = emptyVar.visit!((string s) => cast(int)s.length,
+    auto rslt = emptyVar.visit!((string s) => cast(int) s.length,
                           (int i)    => i,
                           () => -1)();
     assert(rslt == -1);
+
+    // Generic function usage
+    Algebraic!(int, float, real) number = 2;
+    assert(number.visit!(x => x += 1) == 3);
+
+    // Generic function for int/float with separate behavior for string
+    Algebraic!(int, float, string) something = 2;
+    assert(something.visit!((string s) => s.length, x => x) == 2); // generic
+    something = "asdf";
+    assert(something.visit!((string s) => s.length, x => x) == 4); // string
+
+    // Generic handler and empty handler
+    Algebraic!(int, float, real) empty2;
+    assert(empty2.visit!(x => x + 1, () => -1) == -1);
 }
 
-unittest
+@system unittest
 {
     Algebraic!(size_t, string) variant;
 
     // not all handled check
     static assert(!__traits(compiles, variant.visit!((size_t i){ })() ));
 
-    variant = cast(size_t)10;
+    variant = cast(size_t) 10;
     auto which = 0;
     variant.visit!( (string s) => which = 1,
                     (size_t i) => which = 0
@@ -2087,15 +2119,15 @@ unittest
     Algebraic!(int, float, string) variant2 = 5.0f;
     // Shouldn' t compile as float not handled by visitor.
     static assert(!__traits(compiles, variant2.visit!(
-                        (int) {},
-                        (string) {})()));
+                        (int _) {},
+                        (string _) {})()));
 
     Algebraic!(size_t, string, float) variant3;
     variant3 = 10.0f;
     auto floatVisited = false;
 
     assert(variant3.visit!(
-                 (float f) { floatVisited = true; return cast(size_t)f; },
+                 (float f) { floatVisited = true; return cast(size_t) f; },
                  func,
                  (size_t i) { return i; }
                  )() == 10);
@@ -2103,12 +2135,35 @@ unittest
 
     Algebraic!(float, string) variant4;
 
-    assert(variant4.visit!(func, (float f) => cast(size_t)f, () => size_t.max)() == size_t.max);
+    assert(variant4.visit!(func, (float f) => cast(size_t) f, () => size_t.max)() == size_t.max);
 
     // double error func check
     static assert(!__traits(compiles,
-                            visit!(() => size_t.max, func, (float f) => cast(size_t)f, () => size_t.max)(variant4))
+                            visit!(() => size_t.max, func, (float f) => cast(size_t) f, () => size_t.max)(variant4))
                  );
+}
+
+// disallow providing multiple generic handlers to visit
+// disallow a generic handler that does not apply to all types
+@system unittest
+{
+    Algebraic!(int, float) number = 2;
+    // ok, x + 1 valid for int and float
+    static assert( __traits(compiles, number.visit!(x => x + 1)));
+    // bad, two generic handlers
+    static assert(!__traits(compiles, number.visit!(x => x + 1, x => x + 2)));
+    // bad, x ~ "a" does not apply to int or float
+    static assert(!__traits(compiles, number.visit!(x => x ~ "a")));
+    // bad, x ~ "a" does not apply to int or float
+    static assert(!__traits(compiles, number.visit!(x => x + 1, x => x ~ "a")));
+
+    Algebraic!(int, string) maybenumber = 2;
+    // ok, x ~ "a" valid for string, x + 1 valid for int, only 1 generic
+    static assert( __traits(compiles, number.visit!((string x) => x ~ "a", x => x + 1)));
+    // bad, x ~ "a" valid for string but not int
+    static assert(!__traits(compiles, number.visit!(x => x ~ "a")));
+    // bad, two generics, each only applies in one case
+    static assert(!__traits(compiles, number.visit!(x => x + 1, x => x ~ "a")));
 }
 
 /**
@@ -2126,7 +2181,7 @@ unittest
  * when no parameter-less fallback function is specified.
  */
 template tryVisit(Handlers...)
-    if (Handlers.length > 0)
+if (Handlers.length > 0)
 {
     ///
     auto tryVisit(VariantType)(VariantType variant)
@@ -2137,7 +2192,7 @@ template tryVisit(Handlers...)
 }
 
 ///
-unittest
+@system unittest
 {
     Algebraic!(int, string) variant;
 
@@ -2153,7 +2208,7 @@ unittest
     assert(which == -100);
 }
 
-unittest
+@system unittest
 {
     import std.exception : assertThrown;
     Algebraic!(int, string) variant;
@@ -2186,7 +2241,7 @@ private template isAlgebraic(Type)
         enum isAlgebraic = false;
 }
 
-unittest
+@system unittest
 {
     static assert(!isAlgebraic!(Variant));
     static assert( isAlgebraic!(Algebraic!(string)));
@@ -2194,7 +2249,7 @@ unittest
 }
 
 private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant)
-    if (isAlgebraic!VariantType && Handler.length > 0)
+if (isAlgebraic!VariantType && Handler.length > 0)
 {
     alias AllowedTypes = VariantType.AllowedTypes;
 
@@ -2212,6 +2267,7 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
         struct Result {
             int[AllowedTypes.length] indices;
             int exceptionFuncIdx = -1;
+            int generalFuncIdx = -1;
         }
 
         Result result;
@@ -2246,6 +2302,13 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
                         added = true;
                         result.indices[tidx] = dgidx;
                     }
+                }
+                else static if (isSomeFunction!(dg!T))
+                {
+                    assert(result.generalFuncIdx == -1 ||
+                           result.generalFuncIdx == dgidx,
+                           "Only one generic visitor function is allowed");
+                    result.generalFuncIdx = dgidx;
                 }
                 // Handle composite visitors with opCall overloads
                 else
@@ -2282,19 +2345,18 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
 
             static if (dgIdx == -1)
             {
-                static if (Strict)
+                static if (HandlerOverloadMap.generalFuncIdx >= 0)
+                    return Handler[HandlerOverloadMap.generalFuncIdx](*ptr);
+                else static if (Strict)
                     static assert(false, "overload for type '" ~ T.stringof ~ "' hasn't been specified");
+                else static if (HandlerOverloadMap.exceptionFuncIdx != -1)
+                    return Handler[HandlerOverloadMap.exceptionFuncIdx]();
                 else
-                {
-                    static if (HandlerOverloadMap.exceptionFuncIdx != -1)
-                        return Handler[ HandlerOverloadMap.exceptionFuncIdx ]();
-                    else
-                        throw new VariantException(
-                            "variant holds value of type '"
-                            ~ T.stringof ~
-                            "' but no visitor has been provided"
-                        );
-                }
+                    throw new VariantException(
+                        "variant holds value of type '"
+                        ~ T.stringof ~
+                        "' but no visitor has been provided"
+                    );
             }
             else
             {
@@ -2306,7 +2368,7 @@ private auto visitImpl(bool Strict, VariantType, Handler...)(VariantType variant
     assert(false);
 }
 
-unittest
+@system unittest
 {
     // validate that visit can be called with a const type
     struct Foo { int depth; }
@@ -2322,7 +2384,7 @@ unittest
     assert(depth(fb) == 3);
 }
 
-unittest
+@system unittest
 {
     // https://issues.dlang.org/show_bug.cgi?id=16383
     class Foo {this() immutable {}}
@@ -2334,7 +2396,7 @@ unittest
     assert(x == 3);
 }
 
-unittest
+@system unittest
 {
     // http://d.puremagic.com/issues/show_bug.cgi?id=5310
     const Variant a;
@@ -2344,13 +2406,13 @@ unittest
     assert(b == a);
 }
 
-unittest
+@system unittest
 {
     const Variant a = [2];
     assert(a[0] == 2);
 }
 
-unittest
+@system unittest
 {
     // http://d.puremagic.com/issues/show_bug.cgi?id=10017
     static struct S
@@ -2363,7 +2425,7 @@ unittest
     v2 = v1;  // AssertError: target must be non-null
     assert(v1 == v2);
 }
-unittest
+@system unittest
 {
     import std.exception : assertThrown;
     // http://d.puremagic.com/issues/show_bug.cgi?id=7069
@@ -2525,7 +2587,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     static struct DummyScope
     {
@@ -2539,7 +2601,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     // https://issues.dlang.org/show_bug.cgi?id=10194
     // Also test for elaborate copying
@@ -2585,7 +2647,7 @@ unittest
     assert(S.cnt == 0);
 }
 
-unittest
+@system unittest
 {
     // Bugzilla 13300
     static struct S
@@ -2615,7 +2677,7 @@ unittest
     auto a = appender!(T[]);
 }
 
-unittest
+@system unittest
 {
     // Bugzilla 13871
     alias A = Algebraic!(int, typeof(null));
@@ -2626,7 +2688,7 @@ unittest
     var = C(B());
 }
 
-unittest
+@system unittest
 {
     import std.exception : assertThrown, assertNotThrown;
     // Make sure Variant can handle types with opDispatch but no length field.
@@ -2654,7 +2716,7 @@ unittest
     assertThrown!VariantException(v.length);
 }
 
-unittest
+@system unittest
 {
     // Bugzilla 13534
     static assert(!__traits(compiles, () @safe {
@@ -2664,7 +2726,7 @@ unittest
     }));
 }
 
-unittest
+@system unittest
 {
     // Bugzilla 15039
     import std.variant;
@@ -2682,7 +2744,7 @@ unittest
     );
 }
 
-unittest
+@system unittest
 {
     // Bugzilla 15791
     int n = 3;
@@ -2696,7 +2758,7 @@ unittest
     assert(v.get!NS2.foo() == 30);
 }
 
-unittest
+@system unittest
 {
     // Bugzilla 15827
     static struct Foo15827 { Variant v; this(Foo15827 v) {} }

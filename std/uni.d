@@ -55,7 +55,7 @@
         )
         $(LI
             A way to construct optimal packed multi-stage tables also known as a
-            special case of $(LUCKY Trie).
+            special case of $(LINK2 https://en.wikipedia.org/wiki/Trie, Trie).
             The functions $(LREF codepointTrie), $(LREF codepointSetTrie)
             construct custom tries that map dchar to value.
             The end result is a fast and predictable $(BIGOH 1) lookup that powers
@@ -745,21 +745,21 @@ public enum dchar nelSep  = '\u0085'; /// Constant $(CODEPOINT) (0x0085) - next 
 enum lastDchar = 0x10FFFF;
 
 auto force(T, F)(F from)
-    if (isIntegral!T && !is(T == F))
+if (isIntegral!T && !is(T == F))
 {
     assert(from <= T.max && from >= T.min);
-    return cast(T)from;
+    return cast(T) from;
 }
 
 auto force(T, F)(F from)
-    if (isBitPacked!T && !is(T == F))
+if (isBitPacked!T && !is(T == F))
 {
     assert(from <= 2^^bitSizeOf!T-1);
-    return T(cast(TypeOfBitPacked!T)from);
+    return T(cast(TypeOfBitPacked!T) from);
 }
 
 auto force(T, F)(F from)
-    if (is(T == F))
+if (is(T == F))
 {
     return from;
 }
@@ -774,12 +774,12 @@ size_t replicateBits(size_t times, size_t bits)(size_t val) @safe pure nothrow @
         static if (times == size_t.sizeof*8)
             return val ? size_t.max : 0;
         else
-            return val ? (1<<times)-1 : 0;
+            return val ? (1 << times)-1 : 0;
     }
     else static if (times % 2)
         return (replicateBits!(times-1, bits)(val)<<bits) | val;
     else
-        return replicateBits!(times/2, bits*2)((val<<bits) | val);
+        return replicateBits!(times/2, bits*2)((val << bits) | val);
 }
 
 @safe pure nothrow @nogc unittest // for replicate
@@ -855,11 +855,11 @@ struct MultiArray(Types...)
                     // len includes delta
                     size_t len = (storage.ptr+storage.length-start);
 
-                    copyBackwards(start[0..len-delta], start[delta..len]);
+                    copyBackwards(start[0 .. len-delta], start[delta .. len]);
 
-                    start[0..delta] = 0;
+                    start[0 .. delta] = 0;
                     // offsets are used for raw_slice, ptr etc.
-                    foreach (i; n+1..dim)
+                    foreach (i; n+1 .. dim)
                         offsets[i] += delta;
                 }
             }
@@ -873,10 +873,10 @@ struct MultiArray(Types...)
                 {
                     auto start = raw_ptr!(n+1);
                     size_t len = (storage.ptr+storage.length-start);
-                    copyForward(start[0..len-delta], start[delta..len]);
+                    copyForward(start[0 .. len-delta], start[delta .. len]);
 
                     // adjust offsets last, they affect raw_slice
-                    foreach (i; n+1..dim)
+                    foreach (i; n+1 .. dim)
                         offsets[i] -= delta;
                 }
                 storage.length -= delta;
@@ -932,25 +932,25 @@ private:
 
         static void check(size_t k, T)(ref T m, int n)
         {
-            foreach (i; 0..n)
-                assert(m.slice!(k)[i] == i+1, text("level:",i," : ",m.slice!(k)[0..n]));
+            foreach (i; 0 .. n)
+                assert(m.slice!(k)[i] == i+1, text("level:",i," : ",m.slice!(k)[0 .. n]));
         }
 
         static void checkB(size_t k, T)(ref T m, int n)
         {
-            foreach (i; 0..n)
-                assert(m.slice!(k)[i] == n-i, text("level:",i," : ",m.slice!(k)[0..n]));
+            foreach (i; 0 .. n)
+                assert(m.slice!(k)[i] == n-i, text("level:",i," : ",m.slice!(k)[0 .. n]));
         }
 
         static void fill(size_t k, T)(ref T m, int n)
         {
-            foreach (i; 0..n)
+            foreach (i; 0 .. n)
                 m.slice!(k)[i] = force!ubyte(i+1);
         }
 
         static void fillB(size_t k, T)(ref T m, int n)
         {
-            foreach (i; 0..n)
+            foreach (i; 0 .. n)
                 m.slice!(k)[i] = force!ubyte(n-i);
         }
 
@@ -1084,8 +1084,8 @@ template isBitPackableType(T)
 
 //============================================================================
 template PackedArrayView(T)
-    if ((is(T dummy == BitPacked!(U, sz), U, size_t sz)
-        && isBitPackableType!U) || isBitPackableType!T)
+if ((is(T dummy == BitPacked!(U, sz), U, size_t sz)
+    && isBitPackableType!U) || isBitPackableType!T)
 {
     import std.math : nextPow2;
     private enum bits = bitSizeOf!T;
@@ -1094,8 +1094,8 @@ template PackedArrayView(T)
 
 //unsafe and fast access to a chunk of RAM as if it contains packed values
 template PackedPtr(T)
-    if ((is(T dummy == BitPacked!(U, sz), U, size_t sz)
-        && isBitPackableType!U) || isBitPackableType!T)
+if ((is(T dummy == BitPacked!(U, sz), U, size_t sz)
+    && isBitPackableType!U) || isBitPackableType!T)
 {
     import std.math : nextPow2;
     private enum bits = bitSizeOf!T;
@@ -1131,8 +1131,8 @@ pure nothrow:
         immutable r = n % factor;
         immutable tgt_shift = bits*r;
         immutable word = origin[q];
-        origin[q] = (word & ~(mask<<tgt_shift))
-            | (cast(size_t)val << tgt_shift);
+        origin[q] = (word & ~(mask << tgt_shift))
+            | (cast(size_t) val << tgt_shift);
     }
 
     static if (factor == bytesPerWord// can safely pack by byte
@@ -1152,14 +1152,14 @@ pure nothrow:
         T opIndex(size_t idx) inout
         {
             return __ctfe ? simpleIndex(idx) :
-                cast(inout(T))(cast(U*)origin)[idx];
+                cast(inout(T))(cast(U*) origin)[idx];
         }
 
         static if (isBitPacked!T) // lack of user-defined implicit conversion
         {
             void opIndexAssign(T val, size_t idx)
             {
-                return opIndexAssign(cast(TypeOfBitPacked!T)val, idx);
+                return opIndexAssign(cast(TypeOfBitPacked!T) val, idx);
             }
         }
 
@@ -1168,7 +1168,7 @@ pure nothrow:
             if (__ctfe)
                 simpleWrite(val, idx);
             else
-                (cast(U*)origin)[idx] = cast(U)val;
+                (cast(U*) origin)[idx] = cast(U) val;
         }
     }
     else
@@ -1182,7 +1182,7 @@ pure nothrow:
         {
             void opIndexAssign(T val, size_t idx)
             {
-                return opIndexAssign(cast(TypeOfBitPacked!T)val, idx);
+                return opIndexAssign(cast(TypeOfBitPacked!T) val, idx);
             }
         }
 
@@ -1225,7 +1225,7 @@ pure nothrow:
         immutable pad_s = roundUp(s);
         if ( s >= e)
         {
-            foreach (i; s..e)
+            foreach (i; s .. e)
                 if (ptr[i])
                     return false;
             return true;
@@ -1259,7 +1259,7 @@ pure nothrow:
     {
         void opIndexAssign(T val, size_t idx)
         {
-            return opIndexAssign(cast(TypeOfBitPacked!T)val, idx);
+            return opIndexAssign(cast(TypeOfBitPacked!T) val, idx);
         }
     }
 
@@ -1277,7 +1277,7 @@ pure nothrow:
     {
         void opSliceAssign(T val, size_t start, size_t end)
         {
-            opSliceAssign(cast(TypeOfBitPacked!T)val, start, end);
+            opSliceAssign(cast(TypeOfBitPacked!T) val, start, end);
         }
     }
 
@@ -1297,7 +1297,7 @@ pure nothrow:
         if (pad_start >= end) //rounded up >= then end of slice
         {
             //nothing to gain, use per element assignment
-            foreach (i; start..end)
+            foreach (i; start .. end)
                 ptr[i] = val;
             return;
         }
@@ -1361,7 +1361,7 @@ private:
 private struct SliceOverIndexed(T)
 {
     enum assignableIndex = is(typeof((){ T.init[0] = Item.init; }));
-    enum assignableSlice = is(typeof((){ T.init[0..0] = Item.init; }));
+    enum assignableSlice = is(typeof((){ T.init[0 .. 0] = Item.init; }));
     auto opIndex(size_t idx)const
     in
     {
@@ -1439,7 +1439,7 @@ private:
 static assert(isRandomAccessRange!(SliceOverIndexed!(int[])));
 
 SliceOverIndexed!(const(T)) sliceOverIndexed(T)(size_t a, size_t b, const(T)* x)
-    if (is(Unqual!T == T))
+if (is(Unqual!T == T))
 {
     return SliceOverIndexed!(const(T))(a, b, x);
 }
@@ -1447,7 +1447,7 @@ SliceOverIndexed!(const(T)) sliceOverIndexed(T)(size_t a, size_t b, const(T)* x)
 // BUG? inout is out of reach
 //...SliceOverIndexed.arr only parameters or stack based variables can be inout
 SliceOverIndexed!T sliceOverIndexed(T)(size_t a, size_t b, T* x)
-    if (is(Unqual!T == T))
+if (is(Unqual!T == T))
 {
     return SliceOverIndexed!T(a, b, x);
 }
@@ -1481,8 +1481,8 @@ SliceOverIndexed!T sliceOverIndexed(T)(size_t a, size_t b, T* x)
 
     int[] other = [2, 5];
     assert(sliced[] == sliceOverIndexed(1, 2, &other));
-    sliceOverIndexed(0, 2, &idxArray)[0..2] = -1;
-    assert(idxArray[0..2] == [-1, -1]);
+    sliceOverIndexed(0, 2, &idxArray)[0 .. 2] = -1;
+    assert(idxArray[0 .. 2] == [-1, -1]);
     uint[] nullArr = null;
     auto nullSlice = sliceOverIndexed(0, 0, &idxArray);
     assert(nullSlice.empty);
@@ -1509,7 +1509,7 @@ string genUnrolledSwitchSearch(size_t size) @safe pure nothrow
     auto power = bsr(m)+1;
     switch (power){`;
     size_t i = bsr(size);
-    foreach_reverse (val; 0..bsr(size))
+    foreach_reverse (val; 0 .. bsr(size))
     {
         auto v = 2^^val;
         code ~= `
@@ -1540,7 +1540,7 @@ bool isPow2OrZero(size_t sz) @safe pure nothrow @nogc
 }
 
 size_t uniformLowerBound(alias pred, Range, T)(Range range, T needle)
-    if (is(T : ElementType!Range))
+if (is(T : ElementType!Range))
 {
     assert(isPow2OrZero(range.length));
     size_t idx = 0, m = range.length/2;
@@ -1556,11 +1556,11 @@ size_t uniformLowerBound(alias pred, Range, T)(Range range, T needle)
 }
 
 size_t switchUniformLowerBound(alias pred, Range, T)(Range range, T needle)
-    if (is(T : ElementType!Range))
+if (is(T : ElementType!Range))
 {
     assert(isPow2OrZero(range.length));
     size_t idx = 0, m = range.length/2;
-    enum max = 1<<10;
+    enum max = 1 << 10;
     while (m >= max)
     {
         if (pred(range[idx+m], needle))
@@ -1590,7 +1590,7 @@ template sharMethod(alias uniLowerBound)
             return range.length - k + uniLowerBound!pred(range[$-k..$], needle);
         }
         else
-            return uniLowerBound!pred(range[0..n], needle);
+            return uniLowerBound!pred(range[0 .. n], needle);
     }
 }
 
@@ -1609,7 +1609,7 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
     immutable MAX = 5*1173;
     auto arr = array(iota(5, MAX, 5));
     assert(arr.length == MAX/5-1);
-    foreach (i; 0..MAX+5)
+    foreach (i; 0 .. MAX+5)
     {
         auto st = stdLowerBound(arr, i);
         assert(st == sharLowerBound(arr, i));
@@ -1640,20 +1640,20 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
             dest.length = dest.length+delta;//@@@BUG lame @property
         else
             dest = Policy.realloc(dest, dest.length+delta);
-        copyBackwards(dest[to..dest.length-delta],
-            dest[to+delta..dest.length]);
-        copyForward(stuff, dest[from..stuff_end]);
+        copyBackwards(dest[to .. dest.length-delta],
+            dest[to+delta .. dest.length]);
+        copyForward(stuff, dest[from .. stuff_end]);
     }
     else if (stuff.length == delta)
     {
-        copy(stuff, dest[from..to]);
+        copy(stuff, dest[from .. to]);
     }
     else
     {// replace decreases length by delta
         delta = delta - stuff.length;
-        copy(stuff, dest[from..stuff_end]);
-        copyForward(dest[to..dest.length],
-            dest[stuff_end..dest.length-delta]);
+        copy(stuff, dest[from .. stuff_end]);
+        copyForward(dest[to .. dest.length],
+            dest[stuff_end .. dest.length-delta]);
         static if (is(Policy == void))
             dest.length = dest.length - delta;//@@@BUG lame @property
         else
@@ -1740,8 +1740,8 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
         size_t nbytes = mulu(size, T.sizeof, overflow);
         if (overflow) assert(0);
 
-        auto ptr = cast(T*)enforce(malloc(nbytes), "out of memory on C heap");
-        return ptr[0..size];
+        auto ptr = cast(T*) enforce(malloc(nbytes), "out of memory on C heap");
+        return ptr[0 .. size];
     }
 
     static T[] realloc(T)(T[] arr, size_t size)
@@ -1759,8 +1759,8 @@ alias sharSwitchLowerBound = sharMethod!switchUniformLowerBound;
         size_t nbytes = mulu(size, T.sizeof, overflow);
         if (overflow) assert(0);
 
-        auto ptr = cast(T*)enforce(realloc(arr.ptr, nbytes), "out of memory on C heap");
-        return ptr[0..size];
+        auto ptr = cast(T*) enforce(realloc(arr.ptr, nbytes), "out of memory on C heap");
+        return ptr[0 .. size];
     }
 
     static void replaceImpl(T, Range)(ref T[] dest, size_t from, size_t to, Range stuff)
@@ -1940,7 +1940,7 @@ pure:
     As seen this provides a space-efficient storage of highly redundant data
     that comes in long runs. A description which Unicode $(CHARACTER)
     properties fit nicely. The technique itself could be seen as a variation
-    on $(LUCKY RLE encoding).
+    on $(LINK2 https://en.wikipedia.org/wiki/Run-length_encoding, RLE encoding).
     )
 
     $(P Sets are value types (just like $(D int) is) thus they
@@ -2102,8 +2102,8 @@ public:
     bool opIndex(uint val) const
     {
         // the <= ensures that searching in  interval of [a, b) for 'a' you get .length == 1
-        // return assumeSorted!((a,b) => a<=b)(data[]).lowerBound(val).length & 1;
-        return sharSwitchLowerBound!"a<=b"(data[], val) & 1;
+        // return assumeSorted!((a,b) => a <= b)(data[]).lowerBound(val).length & 1;
+        return sharSwitchLowerBound!"a <= b"(data[], val) & 1;
     }
 
     ///
@@ -2293,7 +2293,7 @@ public:
 
             @property dchar front() const
             {
-                return cast(dchar)cur;
+                return cast(dchar) cur;
             }
 
             @property bool empty() const
@@ -2352,9 +2352,9 @@ public:
      * in form of open-right intervals.
      *
      * The formatting flag is applied individually to each value, for example:
-     * $(LI $(B %s) and $(B %d) format the intervals as a [low..high$(RPAREN) range of integrals)
-     * $(LI $(B %x) formats the intervals as a [low..high$(RPAREN) range of lowercase hex characters)
-     * $(LI $(B %X) formats the intervals as a [low..high$(RPAREN) range of uppercase hex characters)
+     * $(LI $(B %s) and $(B %d) format the intervals as a [low .. high$(RPAREN) range of integrals)
+     * $(LI $(B %x) formats the intervals as a [low .. high$(RPAREN) range of lowercase hex characters)
+     * $(LI $(B %X) formats the intervals as a [low .. high$(RPAREN) range of uppercase hex characters)
      */
     void toString(Writer)(scope Writer sink,
                   FormatSpec!char fmt) /* const */
@@ -2511,13 +2511,13 @@ public:
         if (inversion.data[0] != 0)
             genericReplace(inversion.data, 0, 0, [0]);
         else
-            genericReplace(inversion.data, 0, 1, cast(uint[])null);
+            genericReplace(inversion.data, 0, 1, cast(uint[]) null);
         if (data[data.length-1] != lastDchar+1)
             genericReplace(inversion.data,
                 inversion.data.length, inversion.data.length, [lastDchar+1]);
         else
             genericReplace(inversion.data,
-                inversion.data.length-1, inversion.data.length, cast(uint[])null);
+                inversion.data.length-1, inversion.data.length, cast(uint[]) null);
 
         return inversion;
     }
@@ -2647,7 +2647,7 @@ public:
             string result = indent~"{\n";
             // less branch, < a
             result ~= format("%sif (ch < %s)\n%s",
-                deeper, range[idx][0], binaryScope(range[0..idx], deeper));
+                deeper, range[idx][0], binaryScope(range[0 .. idx], deeper));
             // middle point,  >= a && < b
             result ~= format("%selse if (ch < %s) return true;\n",
                 deeper, range[idx][1]);
@@ -2854,7 +2854,7 @@ private:
             data.append(a, b);
             return data.length-1;
         }
-        size_t b_idx = range[a_idx..range.length].lowerBound!(SearchPolicy.gallop)(b).length+a_idx;
+        size_t b_idx = range[a_idx .. range.length].lowerBound!(SearchPolicy.gallop)(b).length+a_idx;
         uint[3] buf = void;
         uint to_insert;
         debug(std_uni)
@@ -2876,7 +2876,7 @@ private:
                 buf[1] = b;
                 to_insert = 2;
             }
-            pos = genericReplace(data, a_idx, b_idx, buf[0..to_insert]);
+            pos = genericReplace(data, a_idx, b_idx, buf[0 .. to_insert]);
             return pos - 1;
         }
 
@@ -2904,7 +2904,7 @@ private:
                 {
                     assert(b_idx+1 < data.length);
                     buf[0] = data[b_idx+1];
-                    pos = genericReplace(data, a_idx, b_idx+2, buf[0..1]);
+                    pos = genericReplace(data, a_idx, b_idx+2, buf[0 .. 1]);
                     return pos - 1;
                 }
                 buf[0] = b;
@@ -2931,7 +2931,7 @@ private:
                     assert(b_idx+1 < data.length);
                     buf[0] = a;
                     buf[1] = data[b_idx+1];
-                    pos = genericReplace(data, a_idx, b_idx+2, buf[0..2]);
+                    pos = genericReplace(data, a_idx, b_idx+2, buf[0 .. 2]);
                     return pos - 1;
                 }
                 buf[0] = a;
@@ -2940,11 +2940,11 @@ private:
                 to_insert = 3;
             }
         }
-        pos = genericReplace(data, a_idx, b_idx+1, buf[0..to_insert]);
+        pos = genericReplace(data, a_idx, b_idx+1, buf[0 .. to_insert]);
         debug(std_uni)
         {
             writefln("marker idx: %d; length=%d", pos, data[pos], data.length);
-            writeln("inserting ", buf[0..to_insert]);
+            writeln("inserting ", buf[0 .. to_insert]);
         }
         return pos - 1;
     }
@@ -2957,7 +2957,7 @@ private:
     }
     body
     {
-        auto range = assumeSorted!"a<=b"(data[pos..data.length]);
+        auto range = assumeSorted!"a <= b"(data[pos .. data.length]);
         if (range.empty)
             return pos;
         size_t idx = pos;
@@ -2995,7 +2995,7 @@ private:
     body
     {
         assert(data.length % 2 == 0);
-        auto range = assumeSorted!"a<=b"(data[pos..data.length]);
+        auto range = assumeSorted!"a <= b"(data[pos .. data.length]);
         size_t idx = pos+range.lowerBound(a).length;
 
         if (idx >= data.length) // could have Marker point to recently removed stuff
@@ -3031,10 +3031,10 @@ private:
 {
     idx *= 3;
     version(LittleEndian)
-        return ptr[idx] + (cast(uint)ptr[idx+1]<<8)
-             + (cast(uint)ptr[idx+2]<<16);
+        return ptr[idx] + (cast(uint) ptr[idx+1]<<8)
+             + (cast(uint) ptr[idx+2]<<16);
     else
-        return (cast(uint)ptr[idx]<<16) + (cast(uint)ptr[idx+1]<<8)
+        return (cast(uint) ptr[idx]<<16) + (cast(uint) ptr[idx+1]<<8)
              + ptr[idx+2];
 }
 
@@ -3045,13 +3045,13 @@ private:
     version(LittleEndian)
     {
         ptr[idx] = val & 0xFF;
-        ptr[idx+1] = (val>>8) & 0xFF;
-        ptr[idx+2] = (val>>16) & 0xFF;
+        ptr[idx+1] = (val >> 8) & 0xFF;
+        ptr[idx+2] = (val >> 16) & 0xFF;
     }
     else
     {
-        ptr[idx] = (val>>16) & 0xFF;
-        ptr[idx+1] = (val>>8) & 0xFF;
+        ptr[idx] = (val >> 16) & 0xFF;
+        ptr[idx+1] = (val >> 8) & 0xFF;
         ptr[idx+2] = val & 0xFF;
     }
 }
@@ -3069,11 +3069,11 @@ private:
 // ditto
 @system private void unalignedWrite24(scope ubyte* ptr, uint val, size_t idx) pure nothrow @nogc
 {
-    uint* dest = cast(uint*)(cast(ubyte*)ptr + 3*idx);
+    uint* dest = cast(uint*)(cast(ubyte*) ptr + 3*idx);
     version(LittleEndian)
         *dest = val | (*dest & 0xFF00_0000);
     else
-        *dest = (val<<8) | (*dest & 0xFF);
+        *dest = (val << 8) | (*dest & 0xFF);
 }
 
 @system private uint read24(scope const ubyte* ptr, size_t idx) pure nothrow @nogc
@@ -3179,7 +3179,7 @@ struct CowArray(SP=GcPolicy)
             auto new_data = SP.alloc!uint(total);
             // take shrinking into account
             auto to_copy = min(total, data.length) - 1;
-            copy(data[0..to_copy], new_data[0..to_copy]);
+            copy(data[0 .. to_copy], new_data[0 .. to_copy]);
             data = new_data; // before setting refCount!
             refCount = 1;
         }
@@ -3242,7 +3242,7 @@ struct CowArray(SP=GcPolicy)
     {
         size_t nl = length + range.length;
         length = nl;
-        copy(range, this[nl-range.length..nl]);
+        copy(range, this[nl-range.length .. nl]);
     }
 
     void append()(uint[] val...)
@@ -3380,13 +3380,13 @@ private:
         assert(arr[0] == 72);
         assert(arr2[0] == 11);
         // set this to about 100M to stress-test COW memory management
-        foreach (v; 0..10_000)
+        foreach (v; 0 .. 10_000)
             func2(arr);
         assert(equal(arr[], [72, 0xFE_FEFE, 100]));
 
         auto r2 = U24A(iota(0, 100));
         assert(equal(r2[], iota(0, 100)), text(r2[]));
-        copy(iota(10, 170, 2), r2[10..90]);
+        copy(iota(10, 170, 2), r2[10 .. 90]);
         assert(equal(r2[], chain(iota(0, 10), iota(10, 170, 2), iota(90, 100)))
                , text(r2[]));
     }
@@ -3681,7 +3681,7 @@ auto arrayRepr(T)(T x)
     import std.conv : text;
     if (x.length > 32)
     {
-        return text(x[0..16],"~...~", x[x.length-16..x.length]);
+        return text(x[0 .. 16],"~...~", x[x.length-16 .. x.length]);
     }
     else
         return text(x);
@@ -3719,7 +3719,7 @@ template mapTrieIndex(Prefix...)
     See $(LREF buildTrie) for generic helpers built on top of it.
 */
 @trusted private struct TrieBuilder(Value, Key, Args...)
-    if (isBitPackableType!Value && isValidArgsForTrie!(Key, Args))
+if (isBitPackableType!Value && isValidArgsForTrie!(Key, Args))
 {
     import std.exception : enforce;
 
@@ -3782,7 +3782,7 @@ private:
     void addValue(size_t level, T)(T val, size_t numVals)
     {
         alias j = idx!level;
-        enum pageSize = 1<<Prefix[level].bitSize;
+        enum pageSize = 1 << Prefix[level].bitSize;
         if (numVals == 0)
             return;
         auto ptr = table.slice!(level);
@@ -3806,7 +3806,7 @@ private:
         immutable n =  nextPB - j;// can fill right in this page
         if (numVals < n) //fits in current page
         {
-            ptr[j..j+numVals]  = val;
+            ptr[j .. j+numVals]  = val;
             j += numVals;
             return;
         }
@@ -3814,7 +3814,7 @@ private:
         {
             numVals -= n;
             //write till the end of current page
-            ptr[j..j+n]  = val;
+            ptr[j .. j+n]  = val;
             j += n;
             //spill to the next page
             spillToNextPage!level(ptr);
@@ -3832,7 +3832,7 @@ private:
                 while (numVals >= pageSize)
                 {
                     numVals -= pageSize;
-                    ptr[j..j+pageSize]  = val;
+                    ptr[j .. j+pageSize]  = val;
                     j += pageSize;
                     spillToNextPage!level(ptr);
                 }
@@ -3840,7 +3840,7 @@ private:
             if (numVals)
             {
                 // the leftovers, an incomplete page
-                ptr[j..j+numVals]  = val;
+                ptr[j .. j+numVals]  = val;
                 j += numVals;
             }
         }
@@ -3860,14 +3860,14 @@ private:
     {
         alias NextIdx = typeof(table.slice!(level-1)[0]);
         NextIdx next_lvl_index;
-        enum pageSize = 1<<Prefix[level].bitSize;
+        enum pageSize = 1 << Prefix[level].bitSize;
         assert(idx!level % pageSize == 0);
         immutable last = idx!level-pageSize;
-        const slice = ptr[idx!level - pageSize..idx!level];
+        const slice = ptr[idx!level - pageSize .. idx!level];
         size_t j;
         for (j=0; j<last; j+=pageSize)
         {
-            if (ptr[j..j+pageSize] == slice)
+            if (ptr[j .. j+pageSize] == slice)
             {
                 // get index to it, reuse ptr space for the next block
                 next_lvl_index = force!NextIdx(j/pageSize);
@@ -3878,9 +3878,9 @@ private:
                         ,level
                         ,indices[level-1], pageSize, j, j+pageSize);
                 writeln("LEVEL(", level
-                        , ") mapped page is: ", slice, ": ", arrayRepr(ptr[j..j+pageSize]));
+                        , ") mapped page is: ", slice, ": ", arrayRepr(ptr[j .. j+pageSize]));
                 writeln("LEVEL(", level
-                        , ") src page is :", ptr, ": ", arrayRepr(slice[0..pageSize]));
+                        , ") src page is :", ptr, ": ", arrayRepr(slice[0 .. pageSize]));
                 }
                 idx!level -= pageSize; // reuse this page, it is duplicate
                 break;
@@ -3899,7 +3899,7 @@ private:
             {
             import std.stdio : writefln;
             writefln("LEVEL(%s) page allocated: %s"
-                     , level, arrayRepr(slice[0..pageSize]));
+                     , level, arrayRepr(slice[0 .. pageSize]));
             writefln("LEVEL(%s) index: %s ; page at this index %s"
                      , level
                      , next_lvl_index
@@ -3956,7 +3956,7 @@ public:
         table = typeof(table)(indices);
         // one page per level is a bootstrap minimum
         foreach (i, Pred; Prefix)
-            table.length!i = (1<<Pred.bitSize);
+            table.length!i = (1 << Pred.bitSize);
     }
 
     /**
@@ -4019,9 +4019,9 @@ public:
 
 */
 @trusted private struct Trie(Value, Key, Args...)
-    if (isValidPrefixForTrie!(Key, Args)
-        || (isValidPrefixForTrie!(Key, Args[1..$])
-            && is(typeof(Args[0]) : size_t)))
+if (isValidPrefixForTrie!(Key, Args)
+    || (isValidPrefixForTrie!(Key, Args[1..$])
+    && is(typeof(Args[0]) : size_t)))
 {
     import std.range.primitives : isOutputRange;
     static if (is(typeof(Args[0]) : size_t))
@@ -4069,7 +4069,7 @@ public:
             assert(mapTrieIndex!Prefix(key) < maxIndex);
         size_t idx;
         alias p = Prefix;
-        idx = cast(size_t)p[0](key);
+        idx = cast(size_t) p[0](key);
         foreach (i, v; p[0..$-1])
             idx = cast(size_t)((_table.ptr!i[idx]<<p[i+1].bitSize) + p[i+1](key));
         return _table.ptr!(p.length-1)[idx];
@@ -4188,7 +4188,7 @@ template isValidArgsForTrie(Key, Args...)
     ---
 */
 public template codepointSetTrie(sizes...)
-    if (sumOfIntegerTuple!sizes == 21)
+if (sumOfIntegerTuple!sizes == 21)
 {
     auto codepointSetTrie(Set)(Set set)
         if (isCodepointSet!Set)
@@ -4202,7 +4202,7 @@ public template codepointSetTrie(sizes...)
 
 /// Type of Trie generated by codepointSetTrie function.
 public template CodepointSetTrie(sizes...)
-    if (sumOfIntegerTuple!sizes == 21)
+if (sumOfIntegerTuple!sizes == 21)
 {
     alias Prefix = GetBitSlicing!(21, sizes);
     alias CodepointSetTrie = typeof(TrieBuilder!(bool, dchar, lastDchar+1, Prefix)(false).build());
@@ -4219,7 +4219,7 @@ public template CodepointSetTrie(sizes...)
     only to bool mapping $(D Trie)s.
 */
 public template codepointTrie(T, sizes...)
-    if (sumOfIntegerTuple!sizes == 21)
+if (sumOfIntegerTuple!sizes == 21)
 {
     alias Prefix = GetBitSlicing!(21, sizes);
 
@@ -4267,14 +4267,14 @@ public template codepointTrie(T, sizes...)
         // e.g. arabic letter DDAL (\u0688) has a "luck factor" of 2
         ubyte[6] nibbles; // 6 4-bit chunks of code point
         uint value = ch;
-        foreach (i; 0..6)
+        foreach (i; 0 .. 6)
         {
             nibbles[i] = value & 0xF;
             value >>= 4;
         }
         uint luck;
         foreach (n; nibbles)
-            luck = cast(uint)max(luck, count(nibbles[], n));
+            luck = cast(uint) max(luck, count(nibbles[], n));
         return luck;
     }
 
@@ -4304,7 +4304,7 @@ public template codepointTrie(T, sizes...)
 
 /// Type of Trie as generated by codepointTrie function.
 public template CodepointTrie(T, sizes...)
-    if (sumOfIntegerTuple!sizes == 21)
+if (sumOfIntegerTuple!sizes == 21)
 {
     alias Prefix = GetBitSlicing!(21, sizes);
     alias CodepointTrie = typeof(TrieBuilder!(T, dchar, lastDchar+1, Prefix)(T.init).build());
@@ -4333,7 +4333,7 @@ package template cmpK0(alias Pred)
     and the maximum Key is deduced from predicates.
 */
 private template buildTrie(Value, Key, Args...)
-    if (isValidArgsForTrie!(Key, Args))
+if (isValidArgsForTrie!(Key, Args))
 {
     static if (is(typeof(Args[0]) : Key)) // prefix starts with upper bound on Key
     {
@@ -4619,7 +4619,7 @@ mixin template ForwardStrings()
 
 template Utf8Matcher()
 {
-    enum validSize(int sz) = sz >= 1 && sz <=4;
+    enum validSize(int sz) = sz >= 1 && sz <= 4;
 
     void badEncoding() pure @safe
     {
@@ -4651,8 +4651,8 @@ template Utf8Matcher()
     );
     alias Table(int size) = Tables[size-1];
 
-    enum leadMask(size_t size) = (cast(size_t)1<<(7 - size))-1;
-    enum encMask(size_t size) = ((1<<size)-1)<<(8-size);
+    enum leadMask(size_t size) = (cast(size_t) 1<<(7 - size))-1;
+    enum encMask(size_t size) = ((1 << size)-1)<<(8-size);
 
     char truncate()(char ch) pure @safe
     {
@@ -4664,7 +4664,7 @@ template Utf8Matcher()
         else
         {
             badEncoding();
-            return cast(char)0;
+            return cast(char) 0;
         }
     }
 
@@ -4676,9 +4676,9 @@ template Utf8Matcher()
         std.utf.encode(buf, ch);
         char[sz] ret;
         buf[0] &= leadMask!sz;
-        foreach (n; 1..sz)
+        foreach (n; 1 .. sz)
             buf[n] = buf[n] & 0x3f; //keep 6 lower bits
-        ret[] = buf[0..sz];
+        ret[] = buf[0 .. sz];
         return ret;
     }
 
@@ -4689,7 +4689,7 @@ template Utf8Matcher()
         auto utf8_2 = set & CodepointSet(0x80, 0x800);
         auto utf8_3 = set & CodepointSet(0x800, 0x1_0000);
         auto utf8_4 = set & CodepointSet(0x1_0000, lastDchar+1);
-        auto asciiT = ascii.byCodepoint.map!(x=>cast(char)x).buildTrie!(AsciiSpec);
+        auto asciiT = ascii.byCodepoint.map!(x=>cast(char) x).buildTrie!(AsciiSpec);
         auto utf8_2T = utf8_2.byCodepoint.map!(x=>encode!2(x)).buildTrie!(Utf8Spec2);
         auto utf8_3T = utf8_3.byCodepoint.map!(x=>encode!3(x)).buildTrie!(Utf8Spec3);
         auto utf8_4T = utf8_4.byCodepoint.map!(x=>encode!4(x)).buildTrie!(Utf8Spec4);
@@ -4857,7 +4857,7 @@ template Utf8Matcher()
             else static if (size == 4)
             {
                 //0x800-0xFFFF
-                //got 2x6=12 bits in needle[2..3] must use at least 17bits
+                //got 2x6=12 bits in needle[2 .. 3] must use at least 17bits
                 //must use 5 bits (or above) in needle[1] or anything in needle[0]
                 if (needle[0] == 0 && needle[1] < 0x10) badEncoding();
             }
@@ -4902,7 +4902,7 @@ template Utf8Matcher()
 
 template Utf16Matcher()
 {
-    enum validSize(int sz) = sz >= 1 && sz <=2;
+    enum validSize(int sz) = sz >= 1 && sz <= 2;
 
     void badEncoding() pure
     {
@@ -4931,7 +4931,7 @@ template Utf16Matcher()
         assert(ch <= 0xF_FFFF);
         wchar[2] ret;
         //do not put surrogate bits, they are sliced off
-        ret[0] = cast(wchar)(ch>>10);
+        ret[0] = cast(wchar)(ch >> 10);
         ret[1] = (ch & 0xFFF);
         return ret;
     }
@@ -4943,8 +4943,8 @@ template Utf16Matcher()
         auto bmp = (set & CodepointSet.fromIntervals(0x80, 0xFFFF+1))
             - CodepointSet.fromIntervals(0xD800, 0xDFFF+1);
         auto other = set - (bmp | ascii);
-        auto asciiT = ascii.byCodepoint.map!(x=>cast(char)x).buildTrie!(AsciiSpec);
-        auto bmpT = bmp.byCodepoint.map!(x=>cast(wchar)x).buildTrie!(BmpSpec);
+        auto asciiT = ascii.byCodepoint.map!(x=>cast(char) x).buildTrie!(AsciiSpec);
+        auto bmpT = bmp.byCodepoint.map!(x=>cast(wchar) x).buildTrie!(BmpSpec);
         auto otherT = other.byCodepoint.map!(x=>encode2(x)).buildTrie!(UniSpec);
         alias Ret = Impl!(1,2);
         return Ret(asciiT, bmpT, otherT);
@@ -5164,7 +5164,7 @@ private auto utf16Matcher(Set)(Set set) @trusted
     See $(LREF MatcherConcept) for API outline.
 */
 public auto utfMatcher(Char, Set)(Set set) @trusted
-    if (isCodepointSet!Set)
+if (isCodepointSet!Set)
 {
     static if (is(Char : char))
         return utf8Matcher(set);
@@ -5180,7 +5180,7 @@ public auto utfMatcher(Char, Set)(Set set) @trusted
 
 //a range of code units, packed with index to speed up forward iteration
 package auto decoder(C)(C[] s, size_t offset=0) @safe pure nothrow @nogc
-    if (is(C : wchar) || is(C : char))
+if (is(C : wchar) || is(C : char))
 {
     static struct Decoder
     {
@@ -5197,7 +5197,7 @@ package auto decoder(C)(C[] s, size_t offset=0) @safe pure nothrow @nogc
         auto opIndex(size_t i){ return str[idx+i]; }
         @property size_t length(){ return str.length - idx; }
         alias opDollar = length;
-        auto opSlice(size_t a, size_t b){ return Decoder(str[0..idx+b], idx+a); }
+        auto opSlice(size_t a, size_t b){ return Decoder(str[0 .. idx+b], idx+a); }
     }
     static assert(isRandomAccessRange!Decoder);
     static assert(is(ElementType!Decoder : C));
@@ -5229,7 +5229,7 @@ package auto decoder(C)(C[] s, size_t offset=0) @safe pure nothrow @nogc
     assert(!utf8.test(codec));
     assert(!utf8.skip(codec));
     assert(utf8.test(codec));
-    foreach (i; 0..7)
+    foreach (i; 0 .. 7)
     {
         assert(!asc.test(codec));
         assert(uni.test(codec));
@@ -5248,7 +5248,7 @@ package auto decoder(C)(C[] s, size_t offset=0) @safe pure nothrow @nogc
     assert(!utf8.skip(codec));
     assert(!utf8.skip(codec));
 
-    foreach (i; 0..7)
+    foreach (i; 0 .. 7)
     {
         assert(!asc.test(codec));
         assert(utf8.test(codec));
@@ -5292,8 +5292,8 @@ package auto decoder(C)(C[] s, size_t offset=0) @safe pure nothrow @nogc
         wchar[2] buf16;
         auto len = encode(buf, ch);
         auto len16 = encode(buf16, ch);
-        auto c8 = buf[0..len].decoder;
-        auto c16 = buf16[0..len16].decoder;
+        auto c8 = buf[0 .. len].decoder;
+        auto c16 = buf16[0 .. len16].decoder;
         assert(testAll(utf16, c16));
         assert(testAll(bmp, c16) || len16 != 1);
         assert(testAll(nonBmp, c16) || len16 != 2);
@@ -5304,7 +5304,7 @@ package auto decoder(C)(C[] s, size_t offset=0) @safe pure nothrow @nogc
         assert(testAll(ascii, c8) || len != 1);
         assert(testAll(uni2, c8) || len != 2);
         assert(testAll(uni3, c8) || len != 3);
-        assert(testAll(uni24, c8) || (len != 2 && len !=4));
+        assert(testAll(uni24, c8) || (len != 2 && len != 4));
     }
 }
 
@@ -5326,14 +5326,14 @@ package auto decoder(C)(C[] s, size_t offset=0) @safe pure nothrow @nogc
             auto s = msg;
             size_t idx = 0;
             utf8.test(s);
-        }()), format("%( %2x %)", cast(ubyte[])msg));
+        }()), format("%( %2x %)", cast(ubyte[]) msg));
     }
     //decode failure cases UTF-16
     alias fails16 = AliasSeq!([0xD811], [0xDC02]);
     foreach (msg; fails16)
     {
         assert(collectException((){
-            auto s = msg.map!(x => cast(wchar)x);
+            auto s = msg.map!(x => cast(wchar) x);
             utf16.test(s);
         }()));
     }
@@ -5359,7 +5359,7 @@ package auto decoder(C)(C[] s, size_t offset=0) @safe pure nothrow @nogc
 
 +/
 public auto toTrie(size_t level, Set)(Set set)
-    if (isCodepointSet!Set)
+if (isCodepointSet!Set)
 {
     static if (level == 1)
         return codepointSetTrie!(21)(set);
@@ -5385,7 +5385,7 @@ public auto toTrie(size_t level, Set)(Set set)
     See the $(S_LINK Synopsis, Synopsis) section for example.
 */
 public auto toDelegate(Set)(Set set)
-    if (isCodepointSet!Set)
+if (isCodepointSet!Set)
 {
     // 3 is very small and is almost as fast as 2-level (due to CPU caches?)
     auto t = toTrie!3(set);
@@ -5407,7 +5407,7 @@ public auto toDelegate(Set)(Set set)
     operator to perform the conversion.)
 */
 struct BitPacked(T, size_t sz)
-    if (isIntegral!T || is(T:dchar))
+if (isIntegral!T || is(T:dchar))
 {
     enum bitSize = sz;
     T _value;
@@ -5420,7 +5420,7 @@ struct BitPacked(T, size_t sz)
     or a return type of a given functor.
 */
 template bitSizeOf(Args...)
-    if (Args.length == 1)
+if (Args.length == 1)
 {
     import std.traits : ReturnType;
     alias T = Args[0];
@@ -5489,13 +5489,13 @@ struct sliceBits(size_t from, size_t to)
     static auto opCall(T)(T x)
     out(result)
     {
-        assert(result < (1<<to-from));
+        assert(result < (1 << to-from));
     }
     body
     {
         static assert(from < to);
         static if (from == 0)
-            return x & ((1<<to)-1);
+            return x & ((1 << to)-1);
         else
         return (x >> from) & ((1<<(to-from))-1);
     }
@@ -5542,7 +5542,7 @@ template Sequence(size_t start, size_t end)
             {
                 writeln("INDEX (excluding value level):");
                 foreach (i; staticIota!(0, t.table.dim-1) )
-                    writeln(t.table.slice!(i)[0..t.table.length!i]);
+                    writeln(t.table.slice!(i)[0 .. t.table.length!i]);
             }
             writeln("---------------------------");
         }
@@ -5568,8 +5568,8 @@ template Sequence(size_t start, size_t end)
     auto trie2 = buildTrie!(bool, uint, 1024, mlo8, lo8)(redundant2.byInterval);
     trieStats(trie2);
     foreach (e; redundant2.byCodepoint)
-        assert(trie2[e], text(cast(uint)e, " - ", trie2[e]));
-    foreach (i; 0..1024)
+        assert(trie2[e], text(cast(uint) e, " - ", trie2[e]));
+    foreach (i; 0 .. 1024)
     {
         assert(trie2[i] == (i in redundant2));
     }
@@ -5587,8 +5587,8 @@ template Sequence(size_t start, size_t end)
             sliceBits!(6,8), sliceBits!(4,6), sliceBits!(0,4)
         )(redundant3.byInterval);
     trieStats(trie3);
-    foreach (i; 0..max3)
-        assert(trie3[i] == (i in redundant3), text(cast(uint)i));
+    foreach (i; 0 .. max3)
+        assert(trie3[i] == (i in redundant3), text(cast(uint) i));
 
     auto redundant4 = Set(
             10, 64, 64+10, 128, 128+10, 256, 256+10, 512,
@@ -5598,10 +5598,10 @@ template Sequence(size_t start, size_t end)
     auto trie4 = buildTrie!(bool, size_t, max4,
             sliceBits!(13, 16), sliceBits!(9, 13), sliceBits!(6, 9) , sliceBits!(0, 6)
         )(redundant4.byInterval);
-    foreach (i; 0..max4)
+    foreach (i; 0 .. max4)
     {
         if (i in redundant4)
-            assert(trie4[i], text(cast(uint)i));
+            assert(trie4[i], text(cast(uint) i));
     }
     trieStats(trie4);
 
@@ -5619,12 +5619,12 @@ template Sequence(size_t start, size_t end)
     auto a = array(map!(x => to!ubyte(x))(iota(0, 256)));
     auto bt = buildTrie!(bool, ubyte, sliceBits!(7, 8), sliceBits!(5, 7), sliceBits!(0, 5))(a);
     trieStats(bt);
-    foreach (i; 0..256)
-        assert(bt[cast(ubyte)i]);
+    foreach (i; 0 .. 256)
+        assert(bt[cast(ubyte) i]);
 }
 
 template useItemAt(size_t idx, T)
-    if (isIntegral!T || is(T: dchar))
+if (isIntegral!T || is(T: dchar))
 {
     size_t impl(in T[] arr){ return arr[idx]; }
     alias useItemAt = assumeSize!(impl, 8*T.sizeof);
@@ -5668,7 +5668,7 @@ template idxTypes(Key, size_t fullBits, Prefix...)
 //============================================================================
 
 @safe pure int comparePropertyName(Char1, Char2)(const(Char1)[] a, const(Char2)[] b)
-    if (is(Char1 : dchar) && is(Char2 : dchar))
+if (is(Char1 : dchar) && is(Char2 : dchar))
 {
     import std.algorithm.comparison : cmp;
     import std.algorithm.iteration : map, filter;
@@ -5685,7 +5685,7 @@ template idxTypes(Key, size_t fullBits, Prefix...)
 }
 
 bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b) @safe pure
-    if (is(Char1 : dchar) && is(Char2 : dchar))
+if (is(Char1 : dchar) && is(Char2 : dchar))
 {
     return comparePropertyName(a, b) < 0;
 }
@@ -5698,16 +5698,16 @@ bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b) @safe pu
 {
     // not optimized as usually done 1 time (and not public interface)
     if (val < 128)
-        arr ~= cast(ubyte)val;
-    else if (val < (1<<13))
+        arr ~= cast(ubyte) val;
+    else if (val < (1 << 13))
     {
-        arr ~= (0b1_00<<5) | cast(ubyte)(val>>8);
+        arr ~= (0b1_00 << 5) | cast(ubyte)(val >> 8);
         arr ~= val & 0xFF;
     }
     else
     {
-        assert(val < (1<<21));
-        arr ~= (0b1_01<<5) | cast(ubyte)(val>>16);
+        assert(val < (1 << 21));
+        arr ~= (0b1_01 << 5) | cast(ubyte)(val >> 16);
         arr ~= (val >> 8) & 0xFF;
         arr ~= val  & 0xFF;
     }
@@ -5717,20 +5717,20 @@ bool propertyNameLess(Char1, Char2)(const(Char1)[] a, const(Char2)[] b) @safe pu
 {
     import std.exception : enforce;
     immutable first = arr[idx++];
-    if (!(first & 0x80)) // no top bit -> [0..127]
+    if (!(first & 0x80)) // no top bit -> [0 .. 127]
         return first;
-    immutable extra = ((first>>5) & 1) + 1; // [1, 2]
+    immutable extra = ((first >> 5) & 1) + 1; // [1, 2]
     uint val = (first & 0x1F);
     enforce(idx + extra <= arr.length, "bad code point interval encoding");
-    foreach (j; 0..extra)
-        val = (val<<8) | arr[idx+j];
+    foreach (j; 0 .. extra)
+        val = (val << 8) | arr[idx+j];
     idx += extra;
     return val;
 }
 
 
 package ubyte[] compressIntervals(Range)(Range intervals)
-    if (isInputRange!Range && isIntegralPair!(ElementType!Range))
+if (isInputRange!Range && isIntegralPair!(ElementType!Range))
 {
     ubyte[] storage;
     uint base = 0;
@@ -5753,20 +5753,20 @@ package ubyte[] compressIntervals(Range)(Range intervals)
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
 
-    auto run = [tuple(80, 127), tuple(128, (1<<10)+128)];
-    ubyte[] enc = [cast(ubyte)80, 47, 1, (0b1_00<<5) | (1<<2), 0];
+    auto run = [tuple(80, 127), tuple(128, (1 << 10)+128)];
+    ubyte[] enc = [cast(ubyte) 80, 47, 1, (0b1_00 << 5) | (1 << 2), 0];
     assert(compressIntervals(run) == enc);
-    auto run2 = [tuple(0, (1<<20)+512+1), tuple((1<<20)+512+4, lastDchar+1)];
-    ubyte[] enc2 = [cast(ubyte)0, (0b1_01<<5) | (1<<4), 2, 1, 3]; // odd length-ed
+    auto run2 = [tuple(0, (1 << 20)+512+1), tuple((1 << 20)+512+4, lastDchar+1)];
+    ubyte[] enc2 = [cast(ubyte) 0, (0b1_01 << 5) | (1 << 4), 2, 1, 3]; // odd length-ed
     assert(compressIntervals(run2) == enc2);
     size_t  idx = 0;
     assert(decompressFrom(enc, idx) == 80);
     assert(decompressFrom(enc, idx) == 47);
     assert(decompressFrom(enc, idx) == 1);
-    assert(decompressFrom(enc, idx) == (1<<10));
+    assert(decompressFrom(enc, idx) == (1 << 10));
     idx = 0;
     assert(decompressFrom(enc2, idx) == 0);
-    assert(decompressFrom(enc2, idx) == (1<<20)+512+1);
+    assert(decompressFrom(enc2, idx) == (1 << 20)+512+1);
     assert(equal(decompressIntervals(compressIntervals(run)), run));
     assert(equal(decompressIntervals(compressIntervals(run2)), run2));
 }
@@ -6164,7 +6164,7 @@ private:
         import std.internal.unicode_tables : blocks, scripts, uniProps; // generated file
         return isPrettyPropertyName(name)
             || findSetName!(uniProps.tab)(name) || findSetName!(scripts.tab)(name)
-            || (ucmp(name[0..2],"In") == 0 && findSetName!(blocks.tab)(name[2..$]));
+            || (ucmp(name[0 .. 2],"In") == 0 && findSetName!(blocks.tab)(name[2..$]));
     }
 
     static auto loadAny(Set=CodepointSet, C)(in C[] name) pure
@@ -6173,7 +6173,7 @@ private:
         import std.internal.unicode_tables : blocks, scripts; // generated file
         Set set;
         immutable loaded = loadProperty(name, set) || loadUnicodeSet!(scripts.tab)(name, set)
-            || (name.length > 2 && ucmp(name[0..2],"In") == 0
+            || (name.length > 2 && ucmp(name[0 .. 2],"In") == 0
                 && loadUnicodeSet!(blocks.tab)(name[2..$], set));
         if (loaded)
             return set;
@@ -6347,7 +6347,7 @@ public: // Public API continues
         length of grapheme cluster
 +/
 size_t graphemeStride(C)(in C[] input, size_t index)
-    if (is(C : dchar))
+if (is(C : dchar))
 {
     auto src = input[index..$];
     auto n = src.length;
@@ -6363,7 +6363,7 @@ size_t graphemeStride(C)(in C[] input, size_t index)
     string city = "A\u030Arhus";
     size_t first = graphemeStride(city, 0);
     assert(first == 3); //\u030A has 2 UTF-8 code units
-    assert(city[0..first] == "A\u030A");
+    assert(city[0 .. first] == "A\u030A");
     assert(city[first..$] == "rhus");
 }
 
@@ -6377,7 +6377,7 @@ size_t graphemeStride(C)(in C[] input, size_t index)
     must be an L-value.
 +/
 Grapheme decodeGrapheme(Input)(ref Input inp)
-    if (isInputRange!Input && is(Unqual!(ElementType!Input) == dchar))
+if (isInputRange!Input && is(Unqual!(ElementType!Input) == dchar))
 {
     return genericDecodeGrapheme!true(inp);
 }
@@ -6391,7 +6391,7 @@ Grapheme decodeGrapheme(Input)(ref Input inp)
     gr = decodeGrapheme(s);
     assert(gr.length == 1 && gr[0] == ' ');
     gr = decodeGrapheme(s);
-    assert(gr.length == 2 && equal(gr[0..2], " \u0308"));
+    assert(gr.length == 2 && equal(gr[0 .. 2], " \u0308"));
     s = "\u0300\u0308\u1100";
     assert(equal(decodeGrapheme(s)[], "\u0300\u0308"));
     assert(equal(decodeGrapheme(s)[], "\u1100"));
@@ -6410,7 +6410,7 @@ Grapheme decodeGrapheme(Input)(ref Input inp)
         $(LREF byCodePoint)
 +/
 auto byGrapheme(Range)(Range range)
-    if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
+if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 {
     // TODO: Bidirectional access
     static struct Result
@@ -6513,7 +6513,7 @@ private static struct InputRangeString
     $(P Acts as the identity function when given a range of code points.)
 +/
 auto byCodePoint(Range)(Range range)
-    if (isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
+if (isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
 {
     // TODO: Propagate bidirectional access
     static struct Result
@@ -6556,7 +6556,7 @@ auto byCodePoint(Range)(Range range)
 
 /// Ditto
 Range byCodePoint(Range)(Range range)
-    if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
+if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 {
     return range;
 }
@@ -6722,7 +6722,7 @@ public:
                 auto nelems = mulu(3, addu(cap_, 1, overflow), overflow);
                 if (overflow) assert(0);
 
-                ptr_ = cast(ubyte*)enforce(realloc(ptr_, nelems),
+                ptr_ = cast(ubyte*) enforce(realloc(ptr_, nelems),
                     "realloc failed");
             }
             write24(ptr_, ch, len_++);
@@ -6788,8 +6788,8 @@ public:
             auto raw_cap = mulu(3, addu(cap_, 1, overflow), overflow);
             if (overflow) assert(0);
 
-            auto p = cast(ubyte*)enforce(malloc(raw_cap), "malloc failed");
-            p[0..raw_cap] = ptr_[0..raw_cap];
+            auto p = cast(ubyte*) enforce(malloc(raw_cap), "malloc failed");
+            p[0 .. raw_cap] = ptr_[0 .. raw_cap];
             ptr_ = p;
         }
     }
@@ -6835,7 +6835,7 @@ private:
         static assert(grow.max / 3 - 1 >= grow);
         enum nbytes = 3 * (grow + 1);
         size_t k = smallLength;
-        ubyte* p = cast(ubyte*)enforce(malloc(nbytes), "malloc failed");
+        ubyte* p = cast(ubyte*) enforce(malloc(nbytes), "malloc failed");
         for (int i=0; i<k; i++)
             write24(p, read24(small_.ptr, i), i);
         // now we can overwrite small array data
@@ -6943,11 +6943,11 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
     copy[1] = '-';
     assert(g[0] == 'a' && copy[0] == 'X');
     assert(g[1] == 'b' && copy[1] == '-');
-    assert(equal(g[2..g.length], copy[2..copy.length]));
+    assert(equal(g[2 .. g.length], copy[2 .. copy.length]));
     copy = Grapheme("АБВГДЕЁЖЗИКЛМ");
-    assert(equal(copy[0..8], "АБВГДЕЁЖ"), text(copy[0..8]));
+    assert(equal(copy[0 .. 8], "АБВГДЕЁЖ"), text(copy[0 .. 8]));
     copy ~= "xyz";
-    assert(equal(copy[13..15], "xy"), text(copy[13..15]));
+    assert(equal(copy[13 .. 15], "xy"), text(copy[13 .. 15]));
     assert(!copy.valid);
 
     Grapheme h;
@@ -6980,7 +6980,7 @@ static assert(Grapheme.sizeof == size_t.sizeof*4);
         $(REF cmp, std,algorithm,comparison)
 +/
 int sicmp(S1, S2)(S1 r1, S2 r2)
-    if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
+if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
     && isInputRange!S2 && isSomeChar!(ElementEncodingType!S2))
 {
     import std.internal.unicode_tables : sTable = simpleCaseTable; // generated file
@@ -7077,7 +7077,7 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
         }
         else
         {// OK it's a long chunk, like 'ss' for German
-            dstring seq = fTable[idx].seq[0..entryLen];
+            dstring seq = fTable[idx].seq[0 .. entryLen];
             if (rhs == seq[0]
                 && rtail.skipOver(seq[1..$]))
             {
@@ -7112,7 +7112,7 @@ private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
         $(REF cmp, std,algorithm,comparison)
 +/
 int icmp(S1, S2)(S1 r1, S2 r2)
-    if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
+if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
     && isForwardRange!S2 && isSomeChar!(ElementEncodingType!S2))
 {
     import std.utf : byDchar;
@@ -7351,7 +7351,7 @@ ubyte combiningClass(dchar ch) @safe pure nothrow @nogc
 
 @safe pure nothrow @nogc unittest
 {
-    foreach (ch; 0..0x80)
+    foreach (ch; 0 .. 0x80)
         assert(combiningClass(ch) == 0);
     assert(combiningClass('\u05BD') == 22);
     assert(combiningClass('\u0300') == 230);
@@ -7401,7 +7401,7 @@ public dchar compose(dchar first, dchar second) pure nothrow @safe
     // unpack offset and length
     immutable idx = packed & composeIdxMask, cnt = packed >> composeCntShift;
     // TODO: optimize this micro binary search (no more then 4-5 steps)
-    auto r = compositionTable[idx..idx+cnt].map!"a.rhs"().assumeSorted();
+    auto r = compositionTable[idx .. idx+cnt].map!"a.rhs"().assumeSorted();
     immutable target = r.lowerBound(second).length;
     if (target == cnt)
         return dchar.init;
@@ -7510,7 +7510,7 @@ bool isJamoV(dchar ch) pure nothrow @nogc @safe
 
 int hangulSyllableIndex(dchar ch) pure nothrow @nogc @safe
 {
-    int idxS = cast(int)ch - jamoSBase;
+    int idxS = cast(int) ch - jamoSBase;
     return idxS >= 0 && idxS < jamoSCount ? idxS : -1;
 }
 
@@ -7552,7 +7552,7 @@ public:
 */
 Grapheme decomposeHangul(dchar ch) @safe
 {
-    immutable idxS = cast(int)ch - jamoSBase;
+    immutable idxS = cast(int) ch - jamoSBase;
     if (idxS < 0 || idxS >= jamoSCount) return Grapheme(ch);
     immutable idxL = idxS / jamoNCount;
     immutable idxV = (idxS % jamoNCount) / jamoTCount;
@@ -7684,7 +7684,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
     auto app = appender!(C[])();
     do
     {
-        app.put(input[0..anchors[0]]);
+        app.put(input[0 .. anchors[0]]);
         foreach (dchar ch; input[anchors[0]..anchors[1]])
             static if (norm == NFD || norm == NFC)
             {
@@ -7708,7 +7708,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
             {
                 // found a stable code point after unstable ones
                 sort!("a[0] < b[0]", SwapStrategy.stable)
-                    (zip(ccc[firstNonStable..idx], decomposed[firstNonStable..idx]));
+                    (zip(ccc[firstNonStable .. idx], decomposed[firstNonStable .. idx]));
                 firstNonStable = decomposed.length;
             }
             else if (clazz != 0 && lastClazz == 0)
@@ -7754,7 +7754,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
         // and move on
         anchors = splitNormalized!norm(input);
     }while (anchors[0] != input.length);
-    app.put(input[0..anchors[0]]);
+    app.put(input[0 .. anchors[0]]);
     return cast(inout(C)[])app.data;
 }
 
@@ -7799,7 +7799,7 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
 private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow @safe
 {
     assert(input.length == ccc.length);
-    int accumCC = -1;// so that it's out of 0..255 range
+    int accumCC = -1;// so that it's out of 0 .. 255 range
     // writefln("recomposing %( %04x %)", input);
     // first one is always a starter thus we start at i == 1
     size_t i = start+1;
@@ -7885,7 +7885,7 @@ private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
     import std.typecons : tuple;
     import std.utf : codeLength;
 
-    auto br = input[0..idx];
+    auto br = input[0 .. idx];
     size_t region_start = 0;// default
     for (;;)
     {
@@ -7909,7 +7909,7 @@ private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
             break;
         }
     }
-    // writeln("Region to normalize: ", input[region_start..region_end]);
+    // writeln("Region to normalize: ", input[region_start .. region_end]);
     return tuple(region_start, region_end);
 }
 
@@ -8025,7 +8025,7 @@ bool isLower(dchar c)
 @safe unittest
 {
     import std.ascii : isLower;
-    foreach (v; 0..0x80)
+    foreach (v; 0 .. 0x80)
         assert(isLower(v) == .isLower(v));
     assert(.isLower('я'));
     assert(.isLower('й'));
@@ -8058,7 +8058,7 @@ bool isUpper(dchar c)
 @safe unittest
 {
     import std.ascii : isLower;
-    foreach (v; 0..0x80)
+    foreach (v; 0 .. 0x80)
         assert(isLower(v) == .isLower(v));
     assert(!isUpper('й'));
     assert(isUpper('Ж'));
@@ -8102,7 +8102,7 @@ private alias LowerTriple = AliasSeq!(toLowerIndex, MAX_SIMPLE_LOWER, toLowerTab
 
 // generic toUpper/toLower on whole string, creates new or returns as is
 private S toCase(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, S)(S s) @trusted pure
-    if (isSomeString!S)
+if (isSomeString!S)
 {
     import std.array : appender;
     import std.ascii : isASCII;
@@ -8112,7 +8112,7 @@ private S toCase(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, 
         ushort idx = indexFn(cOuter);
         if (idx == ushort.max)
             continue;
-        auto result = appender!S(s[0..i]);
+        auto result = appender!S(s[0 .. i]);
         result.reserve(s.length);
         foreach (dchar c; s[i .. $])
         {
@@ -8134,9 +8134,9 @@ private S toCase(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, 
                 {
                     auto val = tableFn(idx);
                     // unpack length + codepoint
-                    immutable uint len = val>>24;
+                    immutable uint len = val >> 24;
                     result.put(cast(dchar)(val & 0xFF_FFFF));
-                    foreach (j; idx+1..idx+len)
+                    foreach (j; idx+1 .. idx+len)
                         result.put(tableFn(j));
                 }
             }
@@ -8150,7 +8150,7 @@ private S toCase(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, 
 {
     import std.array : replicate;
     auto s = "abcdefghij".replicate(300);
-    s = s[0..10];
+    s = s[0 .. 10];
 
     toUpper(s);
 
@@ -8161,9 +8161,9 @@ private S toCase(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, 
 // generic toUpper/toLower on whole range, returns range
 private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, Range)(Range str)
     // Accept range of dchar's
-    if (isInputRange!Range &&
-        isSomeChar!(ElementEncodingType!Range) &&
-        ElementEncodingType!Range.sizeof == dchar.sizeof)
+if (isInputRange!Range &&
+    isSomeChar!(ElementEncodingType!Range) &&
+    ElementEncodingType!Range.sizeof == dchar.sizeof)
 {
     static struct ToCaserImpl
     {
@@ -8261,8 +8261,8 @@ private auto toCaser(alias indexFn, uint maxIdx, alias tableFn, alias asciiConve
  */
 
 auto asLowerCase(Range)(Range str)
-    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isConvertibleToString!Range)
+if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+    !isConvertibleToString!Range)
 {
     static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
     {
@@ -8280,8 +8280,8 @@ auto asLowerCase(Range)(Range str)
 
 /// ditto
 auto asUpperCase(Range)(Range str)
-    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isConvertibleToString!Range)
+if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+    !isConvertibleToString!Range)
 {
     static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
     {
@@ -8307,7 +8307,7 @@ auto asUpperCase(Range)(Range str)
 
 // explicitly undocumented
 auto asLowerCase(Range)(auto ref Range str)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     import std.traits : StringTypeOf;
     return asLowerCase!(StringTypeOf!Range)(str);
@@ -8315,7 +8315,7 @@ auto asLowerCase(Range)(auto ref Range str)
 
 // explicitly undocumented
 auto asUpperCase(Range)(auto ref Range str)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     import std.traits : StringTypeOf;
     return asUpperCase!(StringTypeOf!Range)(str);
@@ -8371,9 +8371,9 @@ auto asUpperCase(Range)(auto ref Range str)
 private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUpper,
                            Range)(Range str)
     // Accept range of dchar's
-    if (isInputRange!Range &&
-        isSomeChar!(ElementEncodingType!Range) &&
-        ElementEncodingType!Range.sizeof == dchar.sizeof)
+if (isInputRange!Range &&
+    isSomeChar!(ElementEncodingType!Range) &&
+    ElementEncodingType!Range.sizeof == dchar.sizeof)
 {
     static struct ToCapitalizerImpl
     {
@@ -8478,8 +8478,8 @@ private auto toCapitalizer(alias indexFnUpper, uint maxIdxUpper, alias tableFnUp
  */
 
 auto asCapitalized(Range)(Range str)
-    if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-        !isConvertibleToString!Range)
+if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
+    !isConvertibleToString!Range)
 {
     static if (ElementEncodingType!Range.sizeof < dchar.sizeof)
     {
@@ -8503,7 +8503,7 @@ auto asCapitalized(Range)(Range str)
 }
 
 auto asCapitalized(Range)(auto ref Range str)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     import std.traits : StringTypeOf;
     return asCapitalized!(StringTypeOf!Range)(str);
@@ -8573,7 +8573,7 @@ private size_t encodeTo(scope char[] buf, size_t idx, dchar c) @trusted pure not
 {
     if (c <= 0x7F)
     {
-        buf[idx] = cast(char)c;
+        buf[idx] = cast(char) c;
         idx++;
     }
     else if (c <= 0x7FF)
@@ -8621,7 +8621,7 @@ private size_t encodeTo(scope wchar[] buf, size_t idx, dchar c) @trusted pure
     {
         if (0xD800 <= c && c <= 0xDFFF)
             throw (new UTFException("Encoding an isolated surrogate code point in UTF-16")).setSequence(c);
-        buf[idx] = cast(wchar)c;
+        buf[idx] = cast(wchar) c;
         idx++;
     }
     else if (c <= 0x10FFFF)
@@ -8643,7 +8643,7 @@ private size_t encodeTo(scope dchar[] buf, size_t idx, dchar c) @trusted pure no
 }
 
 private void toCaseInPlace(alias indexFn, uint maxIdx, alias tableFn, C)(ref C[] s) @trusted pure
-    if (is(C == char) || is(C == wchar)  || is(C == dchar))
+if (is(C == char) || is(C == wchar)  || is(C == dchar))
 {
     import std.utf : decode, codeLength;
     size_t curIdx = 0;
@@ -8661,7 +8661,7 @@ private void toCaseInPlace(alias indexFn, uint maxIdx, alias tableFn, C)(ref C[]
         if (dest == from)
             return to;
         // got to copy
-        foreach (C c; str[from..to])
+        foreach (C c; str[from .. to])
             str[dest++] = c;
         return dest;
     }
@@ -8705,7 +8705,7 @@ private void toCaseInPlace(alias indexFn, uint maxIdx, alias tableFn, C)(ref C[]
     {
         destIdx = moveTo(s, destIdx, lastUnchanged, s.length);
     }
-    s = s[0..destIdx];
+    s = s[0 .. destIdx];
 }
 
 // helper to precalculate size of case-converted string
@@ -8736,10 +8736,10 @@ private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
                 codeLen += startIdx - lastNonTrivial;
                 lastNonTrivial = curIdx;
                 immutable val = tableFn(caseIndex);
-                immutable len = val>>24;
+                immutable len = val >> 24;
                 immutable dchar cased = val & 0xFF_FFFF;
                 codeLen += codeLength!C(cased);
-                foreach (j; caseIndex+1..caseIndex+len)
+                foreach (j; caseIndex+1 .. caseIndex+len)
                     codeLen += codeLength!C(tableFn(j));
             }
         }
@@ -8768,7 +8768,7 @@ private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
         alias caseLength = toCaseLength!(indexFn, maxIdx, tableFn);
         auto trueLength = destIdx + caseLength(s[curIdx..$]);
         C[] ns = new C[trueLength];
-        ns[0..destIdx] = s[0..destIdx];
+        ns[0 .. destIdx] = s[0 .. destIdx];
         size_t lastUnchanged = curIdx;
         while (curIdx != s.length)
         {
@@ -8796,16 +8796,16 @@ private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
                 destIdx += toCopy;
                 auto val = tableFn(caseIndex);
                 // unpack length + codepoint
-                immutable uint len = val>>24;
+                immutable uint len = val >> 24;
                 destIdx = encodeTo(ns, destIdx, cast(dchar)(val & 0xFF_FFFF));
-                foreach (j; caseIndex+1..caseIndex+len)
+                foreach (j; caseIndex+1 .. caseIndex+len)
                     destIdx = encodeTo(ns, destIdx, tableFn(j));
             }
         }
         if (lastUnchanged != s.length)
         {
             auto toCopy = s.length - lastUnchanged;
-            ns[destIdx..destIdx+toCopy] = s[lastUnchanged..$];
+            ns[destIdx .. destIdx+toCopy] = s[lastUnchanged..$];
             destIdx += toCopy;
         }
         assert(ns.length == destIdx);
@@ -8820,7 +8820,7 @@ private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
     If $(D s) does not have any uppercase characters, then $(D s) is unaltered.
 +/
 void toLowerInPlace(C)(ref C[] s) @trusted pure
-    if (is(C == char) || is(C == wchar) || is(C == dchar))
+if (is(C == char) || is(C == wchar) || is(C == dchar))
 {
     toCaseInPlace!(LowerTriple)(s);
 }
@@ -8842,7 +8842,7 @@ void toLowerInPlace(C)(ref C[] s) @trusted pure
     If $(D s) does not have any lowercase characters, then $(D s) is unaltered.
 +/
 void toUpperInPlace(C)(ref C[] s) @trusted pure
-    if (is(C == char) || is(C == wchar) || is(C == dchar))
+if (is(C == char) || is(C == wchar) || is(C == dchar))
 {
     toCaseInPlace!(UpperTriple)(s);
 }
@@ -8890,7 +8890,7 @@ dchar toLower(dchar c)
     If none of $(D s) characters were affected, then $(D s) itself is returned.
 +/
 S toLower(S)(S s) @trusted pure
-    if (isSomeString!S)
+if (isSomeString!S)
 {
     static import std.ascii;
     return toCase!(LowerTriple, std.ascii.toLower)(s);
@@ -8905,7 +8905,7 @@ S toLower(S)(S s) @trusted pure
     dstring toLower(dstring s)
     { return toLower!dstring(s); }
 
-    unittest
+    @safe unittest
     {
         // https://issues.dlang.org/show_bug.cgi?id=16663
 
@@ -8927,7 +8927,7 @@ S toLower(S)(S s) @trusted pure
 {
     import std.format : format;
     static import std.ascii;
-    foreach (ch; 0..0x80)
+    foreach (ch; 0 .. 0x80)
         assert(std.ascii.toLower(ch) == toLower(ch));
     assert(toLower('Я') == 'я');
     assert(toLower('Δ') == 'δ');
@@ -8946,7 +8946,7 @@ S toLower(S)(S s) @trusted pure
 @safe unittest
 {
     wchar[] test = "hello þ world"w.dup;
-    auto piece = test[6..7];
+    auto piece = test[6 .. 7];
     toUpperInPlace(piece);
     assert(test == "hello Þ world");
 }
@@ -9053,7 +9053,7 @@ dchar toUpper(dchar c)
 {
     import std.format : format;
     static import std.ascii;
-    foreach (ch; 0..0x80)
+    foreach (ch; 0 .. 0x80)
         assert(std.ascii.toUpper(ch) == toUpper(ch));
     assert(toUpper('я') == 'Я');
     assert(toUpper('δ') == 'Δ');
@@ -9072,7 +9072,7 @@ dchar toUpper(dchar c)
     If none of $(D s) characters were affected, then $(D s) itself is returned.
 +/
 S toUpper(S)(S s) @trusted pure
-    if (isSomeString!S)
+if (isSomeString!S)
 {
     static import std.ascii;
     return toCase!(UpperTriple, std.ascii.toUpper)(s);
@@ -9087,7 +9087,7 @@ S toUpper(S)(S s) @trusted pure
     dstring toUpper(dstring s)
     { return toUpper!dstring(s); }
 
-    unittest
+    @safe unittest
     {
         // https://issues.dlang.org/show_bug.cgi?id=16663
 
@@ -9146,9 +9146,9 @@ S toUpper(S)(S s) @trusted pure
         assert(low == trueLow, format(diff, low, trueLow));
         assert(up == trueUp,  format(diff, up, trueUp));
         assert(lowInp == trueLow,
-            format(diff, cast(ubyte[])s, cast(ubyte[])lowInp, cast(ubyte[])trueLow));
+            format(diff, cast(ubyte[]) s, cast(ubyte[]) lowInp, cast(ubyte[]) trueLow));
         assert(upInp == trueUp,
-            format(diff, cast(ubyte[])s, cast(ubyte[])upInp, cast(ubyte[])trueUp));
+            format(diff, cast(ubyte[]) s, cast(ubyte[]) upInp, cast(ubyte[]) trueUp));
     }
     foreach (S; AliasSeq!(dstring, wstring, string))
     {
@@ -9176,9 +9176,9 @@ S toUpper(S)(S s) @trusted pure
         }
 
         // a few combinatorial runs
-        foreach (i; 0..options.length)
-        foreach (j; i..options.length)
-        foreach (k; j..options.length)
+        foreach (i; 0 .. options.length)
+        foreach (j; i .. options.length)
+        foreach (k; j .. options.length)
         {
             auto sample = options[i] ~ options[j] ~ options[k];
             auto sample2 = options[k] ~ options[j] ~ options[i];
@@ -9221,7 +9221,7 @@ bool isAlpha(dchar c)
     auto alpha = unicode("Alphabetic");
     foreach (ch; alpha.byCodepoint)
         assert(isAlpha(ch));
-    foreach (ch; 0..0x4000)
+    foreach (ch; 0 .. 0x4000)
         assert((ch in alpha) == isAlpha(ch));
 }
 
@@ -9241,7 +9241,7 @@ bool isMark(dchar c)
     auto mark = unicode("Mark");
     foreach (ch; mark.byCodepoint)
         assert(isMark(ch));
-    foreach (ch; 0..0x4000)
+    foreach (ch; 0 .. 0x4000)
         assert((ch in mark) == isMark(ch));
 }
 
@@ -9268,7 +9268,7 @@ bool isNumber(dchar c)
     auto n = unicode("N");
     foreach (ch; n.byCodepoint)
         assert(isNumber(ch));
-    foreach (ch; 0..0x4000)
+    foreach (ch; 0 .. 0x4000)
         assert((ch in n) == isNumber(ch));
 }
 
@@ -9309,7 +9309,7 @@ bool isAlphaNum(dchar c)
     foreach (ch; alpha.byCodepoint)
         assert(isAlphaNum(ch));
 
-    foreach (ch; 0..0x4000)
+    foreach (ch; 0 .. 0x4000)
     {
         assert(((ch in n) || (ch in alpha)) == isAlphaNum(ch));
     }
@@ -9388,7 +9388,7 @@ bool isSpace(dchar c)
     auto space = unicode.Zs;
     foreach (ch; space.byCodepoint)
         assert(isSpace(ch));
-    foreach (ch; 0..0x1000)
+    foreach (ch; 0 .. 0x1000)
         assert(isSpace(ch) == space[ch]);
 }
 
@@ -9411,7 +9411,7 @@ bool isGraphical(dchar c)
     import std.format : format;
     foreach (ch; set.byCodepoint)
         assert(isGraphical(ch), format("%4x", ch));
-    foreach (ch; 0..0x4000)
+    foreach (ch; 0 .. 0x4000)
         assert((ch in set) == isGraphical(ch));
 }
 
@@ -9435,7 +9435,7 @@ bool isControl(dchar c)
     auto cc = unicode.Cc;
     foreach (ch; cc.byCodepoint)
         assert(isControl(ch));
-    foreach (ch; 0..0x1000)
+    foreach (ch; 0 .. 0x1000)
         assert(isControl(ch) == cc[ch]);
 }
 

@@ -209,7 +209,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.free_tree : FreeTree;
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -225,7 +225,7 @@ unittest
     assert(buf.ptr);
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     alias MyAlloc = Quantizer!(GCAllocator,

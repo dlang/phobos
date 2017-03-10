@@ -1,0 +1,5 @@
+`std.experimental.ndslice` has been removed
+
+The synchronization between Phobos and Mir turned out to be a high amount of work with litte gain.
+Users of `std.experimental.ndslice` are advised to switch to the upstream
+$(LINK2 https://github.com/libmir/mir-algorithm, mir package).

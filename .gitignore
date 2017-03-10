@@ -1,7 +1,6 @@
 /etc/c/zlib/*.obj
-/etc/c/zlib/zlib.lib
+*.lib
 /phobos.json
-/phobos.lib
 
 generated
 GNUmakefile
@@ -10,9 +9,15 @@ GNUmakefile
 Makefile
 *.lst
 
+temp/
+tmp/
+
 # Rules for Xamarin Studio project data/build output
 *.dproj
 bin/
 obj/
+
+# Rule for VS Code config folder
+.vscode
 
 *.html

@@ -293,7 +293,7 @@ real gamma(real x)
     if (isNaN(x)) return x;
     if (x == -x.infinity) return real.nan;
     if ( fabs(x) > MAXGAMMA ) return real.infinity;
-    if (x==0) return 1.0 / x; // +- infinity depending on sign of x, create an exception.
+    if (x == 0) return 1.0 / x; // +- infinity depending on sign of x, create an exception.
 
     q = fabs(x);
 
@@ -380,7 +380,7 @@ real gamma(real x)
     return z * poly( x, GammaNumeratorCoeffs ) / poly( x, GammaDenominatorCoeffs );
 }
 
-unittest
+@safe unittest
 {
     // gamma(n) = factorial(n-1) if n is an integer.
     real fact = 1.0L;
@@ -524,7 +524,7 @@ real logGamma(real x)
     return q ;
 }
 
-unittest
+@safe unittest
 {
     assert(isIdentical(logGamma(NaN(0xDEF)), NaN(0xDEF)));
     assert(logGamma(real.infinity) == real.infinity);
@@ -990,7 +990,7 @@ done:
     return x;
 }
 
-unittest { // also tested by the normal distribution
+@safe unittest { // also tested by the normal distribution
     // check NaN propagation
     assert(isIdentical(betaIncomplete(NaN(0xABC),2,3), NaN(0xABC)));
     assert(isIdentical(betaIncomplete(7,NaN(0xABC),3), NaN(0xABC)));
@@ -1310,7 +1310,7 @@ body {
      *          k=0   | (a+k+1)
      *
      */
-    if (x==0)
+    if (x == 0)
        return 0.0L;
 
     if ( (x > 1.0L) && (x > a ) )
@@ -1345,7 +1345,7 @@ in {
    assert(a > 0);
 }
 body {
-    if (x==0)
+    if (x == 0)
         return 1.0L;
     if ( (x < 1.0L) || (x < a) )
         return 1.0L - gammaIncomplete(a,x);
@@ -1427,11 +1427,11 @@ body {
  */
 real gammaIncompleteComplInv(real a, real p)
 in {
-  assert(p>=0 && p<= 1);
+  assert(p >= 0 && p <= 1);
   assert(a>0);
 }
 body {
-    if (p==0) return real.infinity;
+    if (p == 0) return real.infinity;
 
     real y0 = p;
     const real MAXLOGL =  1.1356523406294143949492E4L;
@@ -1552,7 +1552,7 @@ ihalve:
     return x;
 }
 
-unittest
+@safe unittest
 {
 //Values from Excel's GammaInv(1-p, x, 1)
 assert(fabs(gammaIncompleteComplInv(1, 0.5) - 0.693147188044814) < 0.00000005);
@@ -1675,7 +1675,7 @@ done:
     return y;
 }
 
-unittest
+@safe unittest
 {
     // Exact values
     assert(digamma(1.0)== -EULERGAMMA);
@@ -1688,7 +1688,7 @@ unittest
     for (int k=1; k<40; ++k)
     {
         real y=0;
-        for (int u=k; u>=1; --u)
+        for (int u=k; u >= 1; --u)
         {
             y += 1.0L/u;
         }
@@ -1735,7 +1735,7 @@ real logmdigamma(real x)
     return x == s ? y + 0.5L/s : (log(x/s) + 0.5L/s + y + w);
 }
 
-unittest
+@safe unittest
 {
     assert(logmdigamma(-5.0).isNaN());
     assert(isIdentical(logmdigamma(NaN(0xABC)), NaN(0xABC)));
@@ -1788,7 +1788,7 @@ real logmdigammaInverse(real y)
     return y; //NaN
 }
 
-unittest
+@safe unittest
 {
     import std.typecons;
     //WolframAlpha, 22.02.2015

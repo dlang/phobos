@@ -217,7 +217,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.allocator_list : AllocatorList;
     import std.experimental.allocator.building_blocks.free_list : FreeList;
