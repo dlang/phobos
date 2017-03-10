@@ -216,7 +216,7 @@ static ~this()
 class MessageMismatch : Exception
 {
     ///
-    this( string msg = "Unexpected message type" ) @safe pure
+    this( string msg = "Unexpected message type" ) @safe pure nothrow @nogc
     {
         super( msg );
     }
@@ -230,7 +230,7 @@ class MessageMismatch : Exception
 class OwnerTerminated : Exception
 {
     ///
-    this( Tid t, string msg = "Owner terminated" ) @safe pure
+    this( Tid t, string msg = "Owner terminated" ) @safe pure nothrow @nogc
     {
         super( msg );
         tid = t;
@@ -246,7 +246,7 @@ class OwnerTerminated : Exception
 class LinkTerminated : Exception
 {
     ///
-    this( Tid t, string msg = "Link terminated" ) @safe pure
+    this( Tid t, string msg = "Link terminated" ) @safe pure nothrow @nogc
     {
         super( msg );
         tid = t;
@@ -284,7 +284,7 @@ class PriorityMessageException : Exception
 class MailboxFull : Exception
 {
     ///
-    this( Tid t, string msg = "Mailbox full" ) @safe pure
+    this( Tid t, string msg = "Mailbox full" ) @safe pure nothrow @nogc
     {
         super( msg );
         tid = t;
@@ -315,7 +315,7 @@ class TidMissingException : Exception
 struct Tid
 {
 private:
-    this( MessageBox m ) @safe
+    this( MessageBox m ) @safe pure nothrow @nogc
     {
         mbox = m;
     }
@@ -897,7 +897,7 @@ enum OnCrowding
 
 private
 {
-    bool onCrowdingBlock( Tid tid ) @safe pure
+    bool onCrowdingBlock( Tid tid ) @safe pure nothrow @nogc
     {
         return true;
     }
@@ -909,7 +909,7 @@ private
     }
 
 
-    bool onCrowdingIgnore( Tid tid ) @safe pure
+    bool onCrowdingIgnore( Tid tid ) @safe pure nothrow @nogc
     {
         return false;
     }
@@ -930,7 +930,7 @@ private
  *  doThis   = The behavior executed when a message is sent to a full
  *             mailbox.
  */
-void setMaxMailboxSize( Tid tid, size_t messages, OnCrowding doThis )
+void setMaxMailboxSize( Tid tid, size_t messages, OnCrowding doThis ) @safe pure
 {
     final switch ( doThis )
     {
@@ -1788,7 +1788,7 @@ private
      */
     class MessageBox
     {
-        this() @trusted /* TODO: make @safe after relevant druntime PR gets merged */
+        this() @trusted nothrow /* TODO: make @safe after relevant druntime PR gets merged */
         {
             m_lock      = new Mutex;
             m_closed    = false;
@@ -1806,7 +1806,7 @@ private
         }
 
         ///
-        final @property bool isClosed()
+        final @property bool isClosed() @safe @nogc pure
         {
             synchronized( m_lock )
             {
@@ -1825,7 +1825,7 @@ private
          *         unbounded.
          *  call = The routine to call when the queue is full.
          */
-        final void setMaxMsgs( size_t num, bool function(Tid) call )
+        final void setMaxMsgs( size_t num, bool function(Tid) call ) @safe @nogc pure
         {
             synchronized( m_lock )
             {
@@ -2155,14 +2155,14 @@ private
         // Routines involving shared data, m_lock must be held.
 
 
-        bool mboxFull()
+        bool mboxFull() @safe @nogc pure nothrow
         {
             return m_maxMsgs &&
                    m_maxMsgs <= m_localMsgs + m_sharedBox.length;
         }
 
 
-        void updateMsgCount()
+        void updateMsgCount() @safe @nogc pure nothrow
         {
             m_localMsgs = m_localBox.length;
         }
@@ -2172,20 +2172,20 @@ private
         // Routines involving local data only, no lock needed.
 
 
-        pure bool isControlMsg( ref Message msg )
+        bool isControlMsg( ref Message msg ) @safe @nogc pure nothrow
         {
             return msg.type != MsgType.standard &&
                    msg.type != MsgType.priority;
         }
 
 
-        pure bool isPriorityMsg( ref Message msg )
+        bool isPriorityMsg( ref Message msg ) @safe @nogc pure nothrow
         {
             return msg.type == MsgType.priority;
         }
 
 
-        pure bool isLinkDeadMsg( ref Message msg )
+        bool isLinkDeadMsg( ref Message msg ) @safe @nogc pure nothrow
         {
             return msg.type == MsgType.linkDead;
         }
