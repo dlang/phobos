@@ -49,7 +49,7 @@ debug(Unique) import std.stdio;
 /**
 Encapsulates unique ownership of a resource.
 
-When a $(D Unique!T) goes out of scope it will call $(REF destroy, object)
+When a $(D Unique!T) goes out of scope it will call $(D destroy)
 on the resource $(D T) that it manages, unless it is transferred.
 One important consequence of $(D destroy) is that it will call the
 destructor of the resource $(D T).  GC-managed references are not
