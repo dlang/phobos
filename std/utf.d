@@ -3397,7 +3397,7 @@ if (isAutodecodableString!R ||
             void popBack()                  { str = str[0 .. $-1]; }
 
             auto ref opIndex(size_t index) inout     { return str[index]; }
-            auto opSlice(size_t lower, size_t upper) { return ByCodeUnitImpl(str[lower..upper]); }
+            auto opSlice(size_t lower, size_t upper) { return ByCodeUnitImpl(str[lower .. upper]); }
 
             @property size_t length() const { return str.length; }
             alias opDollar = length;
@@ -3425,6 +3425,8 @@ if (isAutodecodableString!R ||
 ///
 @safe unittest
 {
+    import std.range.primitives;
+
     auto r = "Hello, World!".byCodeUnit();
     static assert(hasLength!(typeof(r)));
     static assert(hasSlicing!(typeof(r)));
@@ -3544,7 +3546,7 @@ if (isAutodecodableString!R ||
         static assert(!is(typeof(bcu) == Stringish));
         static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
         static assert(is(ElementType!(typeof(bcu)) == immutable char));
-        assert(bcu.front == cast(char)244);
+        assert(bcu.front == cast(char) 244);
     }
     {
         static struct WStringish
@@ -3559,7 +3561,7 @@ if (isAutodecodableString!R ||
         static assert(!is(typeof(bcu) == WStringish));
         static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
         static assert(is(ElementType!(typeof(bcu)) == immutable wchar));
-        assert(bcu.front == cast(wchar)56319);
+        assert(bcu.front == cast(wchar) 56319);
     }
     {
         static struct DStringish
@@ -3573,7 +3575,7 @@ if (isAutodecodableString!R ||
         static assert(is(typeof(bcu) == dstring));
         static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
         static assert(is(ElementType!(typeof(bcu)) == immutable dchar));
-        assert(bcu.front == cast(dchar)1114104);
+        assert(bcu.front == cast(dchar) 1114104);
     }
     {
         static struct FuncStringish
@@ -3589,7 +3591,7 @@ if (isAutodecodableString!R ||
         static assert(!is(typeof(bcu) == FuncStringish));
         static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
         static assert(is(ElementType!(typeof(bcu)) == immutable char));
-        assert(bcu.front == cast(char)244);
+        assert(bcu.front == cast(char) 244);
     }
     {
         static struct Range
@@ -3605,7 +3607,7 @@ if (isAutodecodableString!R ||
         static assert(is(typeof(bcu) == Range));
         static assert(is(typeof(bcu) == typeof(bcu.byCodeUnit())));
         static assert(is(ElementType!(typeof(bcu)) == char));
-        assert(bcu.front == cast(char)244);
+        assert(bcu.front == cast(char) 244);
     }
     {
         static struct WRange
