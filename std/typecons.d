@@ -47,11 +47,25 @@ import std.traits;
 debug(Unique) import std.stdio;
 
 /**
-Encapsulates unique ownership of a resource.  Resource of type $(D T) is
-deleted at the end of the scope, unless it is transferred.  The
-transfer can be explicit, by calling $(D release), or implicit, when
-returning Unique from a function. The resource can be a polymorphic
-class object, in which case Unique behaves polymorphically too.
+Encapsulates unique ownership of a resource.
+
+When a $(D Unique!T) goes out of scope it will call $(D destroy)
+on the resource $(D T) that it manages, unless it is transferred.
+One important consequence of $(D destroy) is that it will call the
+destructor of the resource $(D T).  GC-managed references are not
+guaranteed to be valid during a destructor call, but other members of
+$(D T), such as file handles or pointers to $(D malloc) memory, will
+still be valid during the destructor call.  This allows the resource
+$(D T) to deallocate or clean up any non-GC resources.
+
+If it is desirable to persist a $(D Unique!T) outside of its original
+scope, then it can be transferred.  The transfer can be explicit, by
+calling $(D release), or implicit, when returning Unique from a
+function. The resource $(D T) can be a polymorphic class object, in
+which case Unique behaves polymorphically too.
+
+If $(D T) is a value type, then $(D Unique!T) will be implemented
+as a reference to a $(D T).
 */
 struct Unique(T)
 {
