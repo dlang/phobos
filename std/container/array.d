@@ -325,14 +325,15 @@ if (!is(Unqual!T == bool))
                 return;
             }
             // enlarge
-            auto startEmplace = length;
+            immutable startEmplace = length;
             import core.checkedint : mulu;
             bool overflow;
             const nbytes = mulu(newLength, T.sizeof, overflow);
             if (overflow) assert(0);
             _payload = (cast(T*) realloc(_payload.ptr,
                             nbytes))[0 .. newLength];
-            initializeAll(_payload.ptr[startEmplace .. length]);
+            initializeAll(_payload.ptr[startEmplace .. newLength]);
+            _capacity = newLength;
         }
 
         // capacity
@@ -1001,6 +1002,25 @@ $(D r)
 {
     Array!int a;
     assert(a.empty);
+}
+
+@system unittest
+{
+    Array!int a;
+    a.length = 10;
+    assert(a.length == 10);
+    assert(a.capacity >= a.length);
+}
+
+@system unittest
+{
+    Array!int a;
+    a.length = 10;
+    assert(a.length == 10);
+    assert(a.capacity >= a.length);
+    a.length = 5;
+    assert(a.length == 5);
+    assert(a.capacity >= a.length);
 }
 
 @system unittest
@@ -1935,10 +1955,14 @@ if (is(Unqual!T == bool))
         Array!bool a;
         a.length = 1057;
         assert(a.length == 1057);
+        assert(a.capacity >= a.length);
         foreach (e; a)
         {
             assert(!e);
         }
+        a.length = 100;
+        assert(a.length == 100);
+        assert(a.capacity >= a.length);
     }
 
     /**
