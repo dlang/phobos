@@ -325,14 +325,14 @@ if (!is(Unqual!T == bool))
                 return;
             }
             // enlarge
-            auto startEmplace = length;
+            immutable startEmplace = length;
             import core.checkedint : mulu;
             bool overflow;
             const nbytes = mulu(newLength, T.sizeof, overflow);
             if (overflow) assert(0);
             _payload = (cast(T*) realloc(_payload.ptr,
                             nbytes))[0 .. newLength];
-            initializeAll(_payload.ptr[startEmplace .. length]);
+            initializeAll(_payload.ptr[startEmplace .. newLength]);
             _capacity = newLength;
         }
 
