@@ -155,6 +155,18 @@ else version(D_InlineAsm_X86_64)
     version = InlineAsm_X86_Any;
 }
 
+version (X86_64) version = StaticallyHaveSSE;
+version (X86) version (OSX) version = StaticallyHaveSSE;
+
+version (StaticallyHaveSSE)
+{
+    private enum bool haveSSE = true;
+}
+else
+{
+    static import core.cpuid;
+    private alias haveSSE = core.cpuid.sse;
+}
 
 version(unittest)
 {
@@ -4406,7 +4418,9 @@ private:
             UNDERFLOW_MASK = 0x10,
             OVERFLOW_MASK  = 0x08,
             DIVBYZERO_MASK = 0x04,
-            INVALID_MASK   = 0x01
+            INVALID_MASK   = 0x01,
+
+            EXCEPTIONS_MASK = 0b11_1111
         }
         // Don't bother about subnormals, they are not supported on most CPUs.
         //  SUBNORMAL_MASK = 0x02;
@@ -4453,27 +4467,19 @@ private:
 private:
     static uint getIeeeFlags()
     {
-        version(D_InlineAsm_X86)
+        version(InlineAsm_X86_Any)
         {
-            asm pure nothrow @nogc
+            ushort sw;
+            asm pure nothrow @nogc { fstsw sw; }
+
+            // OR the result with the SSE2 status register (MXCSR).
+            if (haveSSE)
             {
-                 fstsw AX;
-                 // NOTE: If compiler supports SSE2, need to OR the result with
-                 // the SSE2 status register.
-                 // Clear all irrelevant bits
-                 and EAX, 0x03D;
+                uint mxcsr;
+                asm pure nothrow @nogc { stmxcsr mxcsr; }
+                return (sw | mxcsr) & EXCEPTIONS_MASK;
             }
-        }
-        else version(D_InlineAsm_X86_64)
-        {
-            asm pure nothrow @nogc
-            {
-                 fstsw AX;
-                 // NOTE: If compiler supports SSE2, need to OR the result with
-                 // the SSE2 status register.
-                 // Clear all irrelevant bits
-                 and RAX, 0x03D;
-            }
+            else return sw & EXCEPTIONS_MASK;
         }
         else version (SPARC)
         {
@@ -4491,13 +4497,22 @@ private:
         else
             assert(0, "Not yet supported");
     }
-    static void resetIeeeFlags()
+    static void resetIeeeFlags() @nogc
     {
         version(InlineAsm_X86_Any)
         {
             asm pure nothrow @nogc
             {
                 fnclex;
+            }
+
+            // Also clear exception flags in MXCSR, SSE's control register.
+            if (haveSSE)
+            {
+                uint mxcsr;
+                asm nothrow @nogc { stmxcsr mxcsr; }
+                mxcsr &= ~EXCEPTIONS_MASK;
+                asm nothrow @nogc { ldmxcsr mxcsr; }
             }
         }
         else
@@ -4561,6 +4576,52 @@ public:
     assert(ieeeFlags == f);
 }
 
+@system unittest
+{
+    import std.meta : AliasSeq;
+
+    static struct Test
+    {
+        void delegate() action;
+        bool function() ieeeCheck;
+    }
+
+    foreach (T; AliasSeq!(float, double, real))
+    {
+        T x; /* Needs to be here to trick -O. It would optimize away the
+            calculations if x were local to the function literals. */
+        auto tests = [
+            Test(
+                () { x = 1; x += 0.1; },
+                () => ieeeFlags.inexact
+            ),
+            Test(
+                () { x = T.min_normal; x /= T.max; },
+                () => ieeeFlags.underflow
+            ),
+            Test(
+                () { x = T.max; x += T.max; },
+                () => ieeeFlags.overflow
+            ),
+            Test(
+                () { x = 1; x /= 0; },
+                () => ieeeFlags.divByZero
+            ),
+            Test(
+                () { x = 0; x /= 0; },
+                () => ieeeFlags.invalid
+            )
+        ];
+        foreach (test; tests)
+        {
+            resetIeeeFlags();
+            assert(!test.ieeeCheck());
+            test.action();
+            assert(test.ieeeCheck());
+        }
+    }
+}
+
 version(X86_Any)
 {
     version = IeeeFlagsSupport;
@@ -4571,7 +4632,7 @@ else version(ARM)
 }
 
 /// Set all of the floating-point status flags to false.
-void resetIeeeFlags() { IeeeFlags.resetIeeeFlags(); }
+void resetIeeeFlags() @nogc { IeeeFlags.resetIeeeFlags(); }
 
 /// Return a snapshot of the current state of the floating-point status flags.
 @property IeeeFlags ieeeFlags()
@@ -4849,15 +4910,7 @@ private:
     // Clear all pending exceptions
     static void clearExceptions() @nogc
     {
-        version (InlineAsm_X86_Any)
-        {
-            asm nothrow @nogc
-            {
-                fclex;
-            }
-        }
-        else
-            assert(0, "Not yet supported");
+        resetIeeeFlags();
     }
 
     // Read from the control register
@@ -4893,24 +4946,33 @@ private:
     {
         version (InlineAsm_X86_Any)
         {
-            version (Win64)
+            asm nothrow @nogc
             {
-                asm nothrow @nogc
-                {
-                    naked;
-                    mov     8[RSP],RCX;
-                    fclex;
-                    fldcw   8[RSP];
-                    ret;
-                }
+                fclex;
+                fldcw newState;
             }
-            else
+
+            // Also update MXCSR, SSE's control register.
+            if (haveSSE)
             {
-                asm nothrow @nogc
-                {
-                    fclex;
-                    fldcw newState;
-                }
+                uint mxcsr;
+                asm nothrow @nogc { stmxcsr mxcsr; }
+
+                /* In the FPU control register, rounding mode is in bits 10 and
+                11. In MXCSR it's in bits 13 and 14. */
+                enum ROUNDING_MASK_SSE = ROUNDING_MASK << 3;
+                immutable newRoundingModeSSE = (newState & ROUNDING_MASK) << 3;
+                mxcsr &= ~ROUNDING_MASK_SSE; // delete old rounding mode
+                mxcsr |= newRoundingModeSSE; // write new rounding mode
+
+                /* In the FPU control register, masks are bits 0 through 5.
+                In MXCSR they're 7 through 12. */
+                enum EXCEPTION_MASK_SSE = EXCEPTION_MASK << 7;
+                immutable newExceptionMasks = (newState & EXCEPTION_MASK) << 7;
+                mxcsr &= ~EXCEPTION_MASK_SSE; // delete old masks
+                mxcsr |= newExceptionMasks; // write new exception masks
+
+                asm nothrow @nogc { ldmxcsr mxcsr; }
             }
         }
         else
@@ -4956,6 +5018,46 @@ private:
         assert(FloatingPointControl.rounding == FloatingPointControl.roundUp);
     }
     ensureDefaults();
+}
+
+@system unittest // rounding
+{
+    import std.meta : AliasSeq;
+
+    foreach (T; AliasSeq!(float, double, real))
+    {
+        FloatingPointControl fpctrl;
+
+        fpctrl.rounding = FloatingPointControl.roundUp;
+        T u = 1;
+        u += 0.1;
+
+        fpctrl.rounding = FloatingPointControl.roundDown;
+        T d = 1;
+        d += 0.1;
+
+        fpctrl.rounding = FloatingPointControl.roundToZero;
+        T z = 1;
+        z += 0.1;
+
+        assert(u > d);
+        assert(z == d);
+
+        fpctrl.rounding = FloatingPointControl.roundUp;
+        u = -1;
+        u -= 0.1;
+
+        fpctrl.rounding = FloatingPointControl.roundDown;
+        d = -1;
+        d -= 0.1;
+
+        fpctrl.rounding = FloatingPointControl.roundToZero;
+        z = -1;
+        z -= 0.1;
+
+        assert(u > d);
+        assert(z == u);
+    }
 }
 
 
