@@ -333,6 +333,7 @@ if (!is(Unqual!T == bool))
             _payload = (cast(T*) realloc(_payload.ptr,
                             nbytes))[0 .. newLength];
             initializeAll(_payload.ptr[startEmplace .. length]);
+            _capacity = newLength;
         }
 
         // capacity
@@ -1001,6 +1002,25 @@ $(D r)
 {
     Array!int a;
     assert(a.empty);
+}
+
+@system unittest
+{
+    Array!int a;
+    a.length = 10;
+    assert(a.length == 10);
+    assert(a.capacity >= a.length);
+}
+
+@system unittest
+{
+    Array!int a;
+    a.length = 10;
+    assert(a.length == 10);
+    assert(a.capacity >= a.length);
+    a.length = 5;
+    assert(a.length == 5);
+    assert(a.capacity >= a.length);
 }
 
 @system unittest
@@ -1935,10 +1955,14 @@ if (is(Unqual!T == bool))
         Array!bool a;
         a.length = 1057;
         assert(a.length == 1057);
+        assert(a.capacity >= a.length);
         foreach (e; a)
         {
             assert(!e);
         }
+        a.length = 100;
+        assert(a.length == 100);
+        assert(a.capacity >= a.length);
     }
 
     /**
