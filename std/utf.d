@@ -3397,7 +3397,7 @@ if (isAutodecodableString!R ||
             void popBack()                  { str = str[0 .. $-1]; }
 
             auto ref opIndex(size_t index) inout     { return str[index]; }
-            auto opSlice(size_t lower, size_t upper) { return ByCodeUnitImpl(str[lower..upper]); }
+            auto opSlice(size_t lower, size_t upper) { return ByCodeUnitImpl(str[lower .. upper]); }
 
             @property size_t length() const { return str.length; }
             alias opDollar = length;
