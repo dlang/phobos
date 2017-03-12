@@ -849,32 +849,40 @@ private struct MapResult(alias fun, Range)
 
 // each
 /**
-Eagerly iterates over `r` and calls `pred` over _each element.
+Eagerly iterates over `r` and calls `fun` over _each element.
 
-If no predicate is specified, `each` will default to doing nothing
-but consuming the entire range. `.front` will be evaluated, but this
-can be avoided by explicitly specifying a predicate lambda with a
-`lazy` parameter.
+If no function to call is specified, `each` defaults to doing nothing but
+consuming the entire range. `r.front` will be evaluated, but that can be avoided
+by specifying a lambda with a `lazy` parameter.
 
-`each` also supports `opApply`-based iterators, so it will work
-with e.g. $(REF parallel, std,parallelism).
+`each` also supports `opApply`-based types, so it works with e.g. $(REF
+parallel, std,parallelism).
+
+Normally the entire range is iterated. If partial iteration (early stopping) is
+desired, `fun` needs to return a value of type $(REF Flag,
+std.typecons)`!"each"` (`No.each` to continue iteration, or `No.each` to stop
+iteration).
 
 Params:
     pred = predicate to apply to each element of the range
     r = range or iterable over which each iterates
 
+Returns: `Yes.each` if the entire range was iterated, `No.each` in case of early
+stopping.
+
 See_Also: $(REF tee, std,range)
  */
-template each(alias pred = "a")
+template each(alias fun = "a")
 {
     import std.meta : AliasSeq;
     import std.traits : Parameters;
+    import std.typecons : Flag, Yes, No;
 
 private:
-    alias BinaryArgs = AliasSeq!(pred, "i", "a");
+    alias BinaryArgs = AliasSeq!(fun, "i", "a");
 
     enum isRangeUnaryIterable(R) =
-        is(typeof(unaryFun!pred(R.init.front)));
+        is(typeof(unaryFun!fun(R.init.front)));
 
     enum isRangeBinaryIterable(R) =
         is(typeof(binaryFun!BinaryArgs(0, R.init.front)));
@@ -886,7 +894,7 @@ private:
     enum isForeachUnaryIterable(R) =
         is(typeof((R r) {
             foreach (ref a; r)
-                cast(void) unaryFun!pred(a);
+                cast(void) unaryFun!fun(a);
         }));
 
     enum isForeachUnaryWithIndexIterable(R) =
@@ -911,7 +919,7 @@ public:
     Params:
         r = range or iterable over which each iterates
      */
-    void each(Range)(Range r)
+    Flag!"each" each(Range)(Range r)
     if (!isForeachIterable!Range && (
         isRangeIterable!Range ||
         __traits(compiles, typeof(r.front).length)))
@@ -923,7 +931,11 @@ public:
             {
                 while (!r.empty)
                 {
-                    cast(void) unaryFun!pred(r.front);
+                    static if (!is(typeof(unaryFun!fun(r.front)) == Flag!"each"))
+                        cast(void) unaryFun!fun(r.front);
+                    else
+                        if (unaryFun!fun(r.front) == No.each) return No.each;
+
                     r.popFront();
                 }
             }
@@ -932,7 +944,12 @@ public:
                 size_t i = 0;
                 while (!r.empty)
                 {
-                    cast(void) binaryFun!BinaryArgs(i, r.front);
+                    static if (!is(typeof(binaryFun!BinaryArgs(i, r.front)) ==
+                            Flag!"each"))
+                        cast(void) binaryFun!BinaryArgs(i, r.front);
+                    else
+                        if (binaryFun!BinaryArgs(i, r.front) == No.each)
+                            return No.each;
                     r.popFront();
                     i++;
                 }
@@ -942,15 +959,17 @@ public:
         {
             // range interface with >2 parameters.
             for (auto range = r; !range.empty; range.popFront())
-                pred(range.front.expand);
+                if (pred(range.front.expand)
+                    return No.each;
         }
+        return Yes.each;
     }
 
     /**
     Params:
         r = range or iterable over which each iterates
      */
-    void each(Iterable)(auto ref Iterable r)
+    Flag!"each" each(Iterable)(auto ref Iterable r)
     if (isForeachIterable!Iterable ||
         __traits(compiles, Parameters!(Parameters!(r.opApply))))
     {
@@ -960,33 +979,51 @@ public:
             static if (isForeachUnaryIterable!Iterable)
             {
                 foreach (ref e; r)
-                    cast(void) unaryFun!pred(e);
+                {
+                    static if (!is(typeof(unaryFun!fun(e)) == Flag!"each"))
+                        cast(void) unaryFun!fun(e);
+                    else
+                        if (unaryFun!fun(e) == No.each) return No.each;
+                }
             }
         else static if (isForeachBinaryIterable!Iterable)
         {
             foreach (ref a, ref b; r)
-                cast(void) binaryFun!BinaryArgs(a, b);
-        }
+            {
+                static if (!is(typeof(binaryFun!BinaryArgs(i, e)) == Flag!"each"))
+                    cast(void) binaryFun!BinaryArgs(i, e);
+                else
+                    if (binaryFun!BinaryArgs(i, e) == No.each) return No.each;
+            }
         else static if (isForeachUnaryWithIndexIterable!Iterable)
         {
             foreach (i, ref e; r)
-                    cast(void) binaryFun!BinaryArgs(i, e);
+            {
             }
-        else
-        {
-            static assert(0, "An impossible static if branch was reached");
-        }
         }
         else
         {
             // opApply with >2 parameters. count the delegate args.
             // only works if it is not templated (otherwise we cannot count the args)
+            auto result = Yes.each;
             auto dg(Parameters!(Parameters!(r.opApply)) params) {
                 pred(params);
-                return 0; // tells opApply to continue iteration
+            {
+                static if (!is(typeof(binaryFun!BinaryArgs(i, e)) == Flag!"each"))
+                {
+                    fun(params);
+                    return 0; // tells opApply to continue iteration
+                }
+                else
+                {
+                    result = fun(params);
+                    return result == Yes.each ? 0 : -1;
+                }
             }
             r.opApply(&dg);
+            return result;
         }
+
     }
 }
 
@@ -994,17 +1031,20 @@ public:
 @system unittest
 {
     import std.range : iota;
+    import std.typecons : Flag, Yes, No;
 
     long[] arr;
     iota(5).each!(n => arr ~= n);
     assert(arr == [0, 1, 2, 3, 4]);
+    iota(5).each!((n) { arr ~= n; return No.each; });
+    assert(arr == [0, 1, 2, 3, 4, 0]);
 
     // If the range supports it, the value can be mutated in place
     arr.each!((ref n) => n++);
-    assert(arr == [1, 2, 3, 4, 5]);
+    assert(arr == [1, 2, 3, 4, 5, 1]);
 
     arr.each!"a++";
-    assert(arr == [2, 3, 4, 5, 6]);
+    assert(arr == [2, 3, 4, 5, 6, 2]);
 
     // by-ref lambdas are not allowed for non-ref ranges
     static assert(!is(typeof(arr.map!(n => n).each!((ref n) => n++))));
@@ -1017,7 +1057,7 @@ public:
     // Indexes are also available for in-place mutations
     arr[] = 0;
     arr.each!"a=i"();
-    assert(arr == [0, 1, 2, 3, 4]);
+    assert(arr == [0, 1, 2, 3, 4, 5]);
 
     // opApply iterators work as well
     static class S
