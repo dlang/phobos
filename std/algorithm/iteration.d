@@ -860,7 +860,7 @@ parallel, std,parallelism).
 
 Normally the entire range is iterated. If partial iteration (early stopping) is
 desired, `fun` needs to return a value of type $(REF Flag,
-std.typecons)`!"each"` (`No.each` to continue iteration, or `No.each` to stop
+std.typecons)`!"each"` (`Yes.each` to continue iteration, or `No.each` to stop
 iteration).
 
 Params:
