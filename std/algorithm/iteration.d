@@ -864,8 +864,8 @@ std.typecons)`!"each"` (`Yes.each` to continue iteration, or `No.each` to stop
 iteration).
 
 Params:
-    pred = predicate to apply to each element of the range
-    r = range or iterable over which each iterates
+    fun = function to apply to _each element of the range
+    r = range or iterable over which `each` iterates
 
 Returns: `Yes.each` if the entire range was iterated, `No.each` in case of early
 stopping.
