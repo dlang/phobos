@@ -326,14 +326,21 @@ if (!is(Unqual!T == bool))
             }
             // enlarge
             immutable startEmplace = length;
-            import core.checkedint : mulu;
-            bool overflow;
-            const nbytes = mulu(newLength, T.sizeof, overflow);
-            if (overflow) assert(0);
-            _payload = (cast(T*) realloc(_payload.ptr,
-                            nbytes))[0 .. newLength];
+            if (_capacity < newLength)
+            {
+                import core.checkedint : mulu;
+
+                bool overflow;
+                const nbytes = mulu(newLength, T.sizeof, overflow);
+                assert(!overflow, "Trying to allocate more than size_t.max bytes.");
+                _payload = (cast(T*) realloc(_payload.ptr, nbytes))[0 .. newLength];
+                _capacity = newLength;
+            }
+            else
+            {
+                _payload = _payload.ptr[0 .. newLength];
+            }
             initializeAll(_payload.ptr[startEmplace .. newLength]);
-            _capacity = newLength;
         }
 
         // capacity
@@ -349,7 +356,7 @@ if (!is(Unqual!T == bool))
             import core.checkedint : mulu;
             bool overflow;
             const sz = mulu(elements, T.sizeof, overflow);
-            if (overflow) assert(0);
+            assert(!overflow, "Trying to allocate more than size_t.max bytes.");
             static if (hasIndirections!T)       // should use hasPointers instead
             {
                 /* Because of the transactional nature of this
@@ -1014,13 +1021,46 @@ $(D r)
 
 @system unittest
 {
-    Array!int a;
+    struct Dumb { int x = 5; }
+    Array!Dumb a;
     a.length = 10;
     assert(a.length == 10);
     assert(a.capacity >= a.length);
+    immutable cap = a.capacity;
+    foreach (ref e; a)
+        e.x = 10;
     a.length = 5;
     assert(a.length == 5);
-    assert(a.capacity >= a.length);
+    // do not realloc if length decreases
+    assert(a.capacity == cap);
+    foreach (ref e; a)
+        assert(e.x == 10);
+
+    a.length = 8;
+    assert(a.length == 8);
+    // do not realloc if capacity sufficient
+    assert(a.capacity == cap);
+    assert(Dumb.init.x == 5);
+    foreach (i; 0 .. 5)
+        assert(a[i].x == 10);
+    foreach (i; 5 .. a.length)
+        assert(a[i].x == Dumb.init.x);
+
+    // realloc required, check if values properly copied
+    a[] = Dumb(1);
+    a.length = 20;
+    assert(a.capacity >= 20);
+    foreach (i; 0 .. 8)
+        assert(a[i].x == 1);
+    foreach (i; 8 .. a.length)
+        assert(a[i].x == Dumb.init.x);
+
+    // check if overlapping elements properly initialized
+    a.length = 1;
+    a.length = 20;
+    assert(a[0].x == 1);
+    foreach (e; a[1 .. $])
+        assert(e.x == Dumb.init.x);
 }
 
 @system unittest
@@ -1702,6 +1742,8 @@ if (is(Unqual!T == bool))
         Array!bool a;
         assert(a.capacity == 0);
         a.reserve(15657);
+        assert(a.capacity >= 15657);
+        a.reserve(100);
         assert(a.capacity >= 15657);
     }
 
