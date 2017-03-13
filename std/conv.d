@@ -176,11 +176,7 @@ class ConvOverflowException : ConvException
 }
 
 /**
-$(D_CODE
-T $(DDOC_PSYMBOL _to)$(DDOC_TEMPLATE_PARAM_LIST (S))(S value);
-T $(DDOC_PSYMBOL _to)$(DDOC_TEMPLATE_PARAM_LIST (S))(S value, uint radix);
-T $(DDOC_PSYMBOL _to)$(DDOC_TEMPLATE_PARAM_LIST (S))(S value, uint radix, LetterCase lc = LetterCase.upper);
-)
+$(D_CODE T $(DDOC_PSYMBOL _to)$(DDOC_TEMPLATE_PARAM_LIST (S))(S value);)
 Converts a value from one type _to type `T`.
 The source type `S` is deduced and the target type must be specified, for example the
 expression `to!int(42.0)` converts the number 42 from
@@ -292,6 +288,7 @@ template to(T)
  *
  * To work around this, you can specify a radix for conversions involving numbers -
  * see $(MYREF _to._to.2) for details.
+ * $(D_CODE T $(DDOC_PSYMBOL _to)$(DDOC_TEMPLATE_PARAM_LIST (S))(S value, uint radix);)
  */
 @safe pure unittest
 {
@@ -415,6 +412,7 @@ template to(T)
  *   $(LI Unsigned or signed integers _to strings.
  *        $(DL $(DT [special case])
  *             $(DD Convert integral value _to string using a $(I radix).
+ *             $(D_CODE T $(DDOC_PSYMBOL _to)$(DDOC_TEMPLATE_PARAM_LIST (S))(S value, uint radix, LetterCase lc = LetterCase.upper);)
  *             See $(MYREF _to._to.2) for details.)))
  *   $(LI All floating point types _to all string types.)
  *   $(LI Pointer _to string conversions prints the pointer as a $(D size_t) value.
