@@ -476,7 +476,7 @@ if (isCurlConn!Conn)
         import std.stdio : File;
         auto f = File(loadFromPath, "rb");
         conn.onSend = buf => f.rawRead(buf).length;
-        auto sz = f.size;
+        immutable sz = f.size;
         if (sz != ulong.max)
             conn.contentLength = sz;
         conn.perform();
@@ -2264,7 +2264,7 @@ decodeString(Char = char)(const(ubyte)[] data,
     size_t charsDecoded = 0;
     while (data.length && charsDecoded < maxChars)
     {
-        dchar dc = scheme.safeDecode(data);
+        immutable dchar dc = scheme.safeDecode(data);
         if (dc == INVALID_SEQUENCE)
         {
             return typeof(return)(size_t.max, cast(Char[]) null);
@@ -2310,7 +2310,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
                      4 : basesrc.length + src.length;
         basesrc.length = len;
 
-        dchar dc = scheme.safeDecode(basesrc);
+        immutable dchar dc = scheme.safeDecode(basesrc);
         if (dc == INVALID_SEQUENCE)
         {
             enforce!CurlException(len != 4, "Invalid code sequence");
