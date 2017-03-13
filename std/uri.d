@@ -65,7 +65,7 @@ private immutable ubyte[128] uri_flags =      // indexed by character
         return uflags;
     })();
 
-private string URI_Encode(dstring string, uint unescapedSet)
+private string URI_Encode(dstring str, uint unescapedSet)
 {
     import core.exception : OutOfMemoryError;
     import core.stdc.stdlib : alloca;
@@ -81,7 +81,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
     uint Rlen;
     uint Rsize; // alloc'd size
 
-    auto len = string.length;
+    immutable len = str.length;
 
     R = buffer.ptr;
     Rsize = buffer.length;
@@ -89,7 +89,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
 
     for (k = 0; k != len; k++)
     {
-        C = string[k];
+        C = str[k];
         // if (C in unescapedSet)
         if (C < uri_flags.length && uri_flags[C] & unescapedSet)
         {
@@ -209,7 +209,7 @@ if (isSomeChar!Char)
     dchar* R;
     uint Rlen;
 
-    auto len = uri.length;
+    immutable len = uri.length;
     auto s = uri.ptr;
 
     // Preallocate result buffer R guaranteed to be large enough for result
@@ -290,7 +290,7 @@ if (isSomeChar!Char)
         if (C < uri_flags.length && uri_flags[C] & reservedSet)
         {
             // R ~= s[start .. k + 1];
-            int width = (k + 1) - start;
+            immutable width = (k + 1) - start;
             for (int ii = 0; ii < width; ii++)
                 R[Rlen + ii] = s[start + ii];
             Rlen += width;
