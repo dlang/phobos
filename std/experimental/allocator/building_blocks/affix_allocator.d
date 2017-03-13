@@ -21,25 +21,41 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
 {
     import std.conv : emplace;
     import std.experimental.allocator.common : stateSize, forwardToMember,
-        roundUpToMultipleOf, alignedAt, alignDownTo, roundUpToMultipleOf;
+        roundUpToMultipleOf, alignedAt, alignDownTo, roundUpToMultipleOf,
+        hasStaticallyKnownAlignment;
+    import std.experimental.allocator : IAllocator, theAllocator;
     import std.traits : hasMember;
     import std.algorithm.comparison : min;
     import std.typecons : Ternary;
     import std.math : isPowerOf2;
 
-    static assert(
-        !stateSize!Prefix || Allocator.alignment >= Prefix.alignof,
-        "AffixAllocator does not work with allocators offering a smaller"
-        ~ " alignment than the prefix alignment.");
+    static if (hasStaticallyKnownAlignment!Allocator)
+    {
+        static assert(
+                !stateSize!Prefix || Allocator.alignment >= Prefix.alignof,
+                "AffixAllocator does not work with allocators offering a smaller"
+                ~ " alignment than the prefix alignment.");
+    }
     static assert(alignment % Suffix.alignof == 0,
         "This restriction could be relaxed in the future.");
 
     /**
     If $(D Prefix) is $(D void), the alignment is that of the parent. Otherwise, the alignment is the same as the $(D Prefix)'s alignment.
     */
-    enum uint alignment = isPowerOf2(stateSize!Prefix)
-        ? min(stateSize!Prefix, Allocator.alignment)
-        : (stateSize!Prefix ? Prefix.alignof : Allocator.alignment);
+    static if (hasStaticallyKnownAlignment!Allocator)
+    {
+        enum uint alignment = isPowerOf2(stateSize!Prefix)
+            ? min(stateSize!Prefix, Allocator.alignment)
+            : (stateSize!Prefix ? Prefix.alignof : Allocator.alignment);
+    }
+    else static if (is(Prefix == void))
+    {
+        enum uint alignment = platformAlignment;
+    }
+    else
+    {
+        enum uint alignment = Prefix.alignof;
+    }
 
     /**
     If the parent allocator $(D Allocator) is stateful, an instance of it is
@@ -47,11 +63,31 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     `Allocator.instance`. In either case, the name $(D _parent) is uniformly
     used for accessing the parent allocator.
     */
-    static if (stateSize!Allocator) Allocator parent;
-    else alias parent = Allocator.instance;
+    static if (stateSize!Allocator)
+    {
+        Allocator _parent;
+        static if (is(Allocator == IAllocator))
+        {
+            Allocator parent()
+            {
+                if (_parent is null) _parent = theAllocator;
+                assert(alignment <= _parent.alignment);
+                return _parent;
+            }
+        }
+        else
+        {
+            alias parent = _parent;
+        }
+    }
+    else
+    {
+        alias parent = Allocator.instance;
+    }
 
     private template Impl()
     {
+
         size_t goodAllocSize(size_t s)
         {
             import std.experimental.allocator.common : goodAllocSize;
@@ -330,6 +366,28 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     A.instance.suffix(b) = 0xDEAD_BEEF;
     assert(A.instance.prefix(b) == 0xCAFE_BABE
         && A.instance.suffix(b) == 0xDEAD_BEEF);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator : theAllocator, IAllocator;
+
+    // One word before and after each allocation.
+    auto A = AffixAllocator!(IAllocator, size_t, size_t)(theAllocator);
+    auto a = A.allocate(11);
+    A.prefix(a) = 0xCAFE_BABE;
+    A.suffix(a) = 0xDEAD_BEEF;
+    assert(A.prefix(a) == 0xCAFE_BABE
+        && A.suffix(a) == 0xDEAD_BEEF);
+
+    // One word before and after each allocation.
+    auto B = AffixAllocator!(IAllocator, size_t, size_t)();
+    auto b = B.allocate(11);
+    B.prefix(b) = 0xCAFE_BABE;
+    B.suffix(b) = 0xDEAD_BEEF;
+    assert(B.prefix(b) == 0xCAFE_BABE
+        && B.suffix(b) == 0xDEAD_BEEF);
 }
 
 @system unittest
