@@ -203,38 +203,17 @@ $(PRE $(I UnsignedInteger):
  */
 template to(T)
 {
-    /// Converts value _to type `T`. See $(LREF _to) for details.
-    T to(S)(S value)
+    T to(A...)(A args)
+        if (A.length > 0)
     {
-        return toImpl!T(value);
+        return toImpl!T(args);
     }
 
     // Fix issue 6175
-    T to(S)(ref S value)
+    T to(S)(ref S arg)
         if (isStaticArray!S)
     {
-        return toImpl!T(value);
-    }
-
-    /** Converts value _to type `T` using a _radix.
-     * Params:
-     * radix = A value from 2 _to 36.
-     * letterCase = Case _to use for non-decimal output characters.
-     * Notes:
-     * value is treated as a signed _value only if radix is 10.
-     * The characters A through Z are used _to represent values 10 through 36.
-     */
-    T to(S)(S value, uint radix, LetterCase letterCase = LetterCase.upper)
-    if (isIntegral!S)
-    {
-        return toImpl!(T, S)(value, radix, letterCase);
-    }
-
-    /// ditto
-    T to(S)(S value, uint radix)
-    if (isInputRange!S && isSomeChar!(ElementEncodingType!S))
-    {
-        return toImpl!(T, S)(value, radix);
+        return toImpl!T(arg);
     }
 
     // Fix issue 16108
@@ -286,8 +265,7 @@ template to(T)
  * horizontal bar used _to separate groups of digits are recognized. This also
  * applies _to the suffixes that indicate the type.
  *
- * To work around this, you can specify a radix for conversions involving numbers -
- * see $(MYREF _to._to.2) for details.
+ * To work around this, you can specify a radix for conversions involving numbers:
  * $(D_CODE T $(DDOC_PSYMBOL _to)$(DDOC_TEMPLATE_PARAM_LIST (S))(S value, uint radix);)
  */
 @safe pure unittest
@@ -411,9 +389,12 @@ template to(T)
  *   $(LI $(D char), $(D wchar), $(D dchar) _to a string type.)
  *   $(LI Unsigned or signed integers _to strings.
  *        $(DL $(DT [special case])
- *             $(DD Convert integral value _to string using a $(I radix).
  *             $(D_CODE T $(DDOC_PSYMBOL _to)$(DDOC_TEMPLATE_PARAM_LIST (S))(S value, uint radix, LetterCase lc = LetterCase.upper);)
- *             See $(MYREF _to._to.2) for details.)))
+ *             $(DD Converts an integral value _to a string using a radix.
+ *             $(D_PARAM radix) must be a value from 2 _to 36.
+ *             $(D_PARAM value) is treated as a signed value only if $(D_PARAM radix) is 10.
+ *             The characters A through Z are used _to represent values 10 through 36.
+ *             $(D_PARAM letterCase) is the case _to use for non-decimal output characters.)))
  *   $(LI All floating point types _to all string types.)
  *   $(LI Pointer _to string conversions prints the pointer as a $(D size_t) value.
  *        If pointer is $(D char*), treat it as C-style strings.
