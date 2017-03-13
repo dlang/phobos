@@ -690,6 +690,8 @@ if (!is(Unqual!T == bool))
         mixin("slice[i .. j] "~op~"= value;");
     }
 
+    private enum hasSliceWithLength(T) = is(typeof({ T t = T.init; t[].length; }));
+
     /**
      * Returns: A new array which is a concatenation of `this` and its argument.
      *
@@ -699,12 +701,46 @@ if (!is(Unqual!T == bool))
     Array opBinary(string op, Stuff)(Stuff stuff)
     if (op == "~")
     {
-        // TODO: optimize
         Array result;
-        result ~= this[];
-        assert(result.length == length);
-        result ~= stuff[];
+
+        static if (hasLength!Stuff || isNarrowString!Stuff)
+            result.reserve(length + stuff.length);
+        else static if (hasSliceWithLength!Stuff)
+            result.reserve(length + stuff[].length);
+        else static if (isImplicitlyConvertible!(Stuff, T))
+            result.reserve(length + 1);
+
+        result.insertBack(this[]);
+        result ~= stuff;
         return result;
+    }
+
+    @nogc @system unittest
+    {
+        auto a = Array!int(0, 1, 2);
+        int[3] b = [3, 4, 5];
+        short[3] ci = [0, 1, 0];
+        auto c = Array!short(ci);
+        assert(Array!int(0, 1, 2, 0, 1, 2) == a ~ a);
+        assert(Array!int(0, 1, 2, 3, 4, 5) == a ~ b);
+        assert(Array!int(0, 1, 2, 3) == a ~ 3);
+        assert(Array!int(0, 1, 2, 0, 1, 0) == a ~ c);
+    }
+
+    @nogc @system unittest
+    {
+        auto a = Array!char('a', 'b');
+        assert(Array!char("abc") == a ~ 'c');
+        import std.utf : byCodeUnit;
+        assert(Array!char("abcd") == a ~ "cd".byCodeUnit);
+    }
+
+    @nogc @system unittest
+    {
+        auto a = Array!dchar("ąćę"d);
+        assert(Array!dchar("ąćęϢϖ"d) == a ~ "Ϣϖ"d);
+        wchar x = 'Ϣ';
+        assert(Array!dchar("ąćęϢz"d) == a ~ x ~ 'z');
     }
 
     /**
@@ -1880,8 +1916,18 @@ if (is(Unqual!T == bool))
     Array!bool opBinary(string op, Stuff)(Stuff rhs)
     if (op == "~")
     {
-        auto result = this;
-        return result ~= rhs;
+        Array!bool result;
+
+        static if (hasLength!Stuff)
+            result.reserve(length + rhs.length);
+        else static if (is(typeof(rhs[])) && hasLength!(typeof(rhs[])))
+            result.reserve(length + rhs[].length);
+        else static if (isImplicitlyConvertible!(Stuff, bool))
+            result.reserve(length + 1);
+
+        result.insertBack(this[]);
+        result ~= rhs;
+        return result;
     }
 
     @system unittest
@@ -1893,6 +1939,10 @@ if (is(Unqual!T == bool))
         b.insertBack([true, true, false, true]);
         assert(equal((a ~ b)[],
                         [true, false, true, true, true, true, false, true]));
+        assert((a ~ [true, false])[].equal([true, false, true, true, true, false]));
+        Array!bool c;
+        c.insertBack(true);
+        assert((c ~ false)[].equal([true, false]));
     }
 
     /**
@@ -2195,6 +2245,9 @@ if (is(Unqual!T == bool))
         assert(a.length == 1, to!string(a.length));
         a.insertBefore(a[], false);
         assert(a.length == 2, to!string(a.length));
+        a.insertBefore(a[1 .. $], true);
+        import std.algorithm.comparison : equal;
+        assert(a[].equal([false, true, true]));
     }
 
     /// ditto
