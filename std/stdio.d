@@ -2562,7 +2562,7 @@ In the  example above, $(D buffer.length) is 4096 for all iterations, except
 for the last one, in which case $(D buffer.length) may be less than 4096 (but
 always greater than zero).
 
-With the mentioned limitations, $(D byChunks) works with any algorithm
+With the mentioned limitations, $(D byChunk) works with any algorithm
 compatible with input ranges.
 
 Example:
