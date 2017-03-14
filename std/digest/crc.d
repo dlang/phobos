@@ -244,15 +244,6 @@ struct CRC(uint N, ulong P) if (N == 32 || N == 64)
                 crc = (crc >> 8) ^ tables[0][(crc & 0xFF) ^ d];
             _state = crc;
         }
-        ///
-        @safe unittest
-        {
-            CRC dig;
-            dig.put(cast(ubyte) 0); //single ubyte
-            dig.put(cast(ubyte) 0, cast(ubyte) 0); //variadic
-            ubyte[10] buf;
-            dig.put(buf); //buffer
-        }
 
         /**
          * Used to initialize the CRC32 digest.
@@ -267,13 +258,6 @@ struct CRC(uint N, ulong P) if (N == 32 || N == 64)
         {
             this = CRC.init;
         }
-        ///
-        @safe unittest
-        {
-            CRC digest;
-            //digest.start(); //Not necessary
-            digest.put(0);
-        }
 
         /**
          * Returns the finished CRC hash. This also calls $(LREF start) to
@@ -284,14 +268,6 @@ struct CRC(uint N, ulong P) if (N == 32 || N == 64)
             auto tmp = peek();
             start();
             return tmp;
-        }
-        ///
-        @safe unittest
-        {
-            //Simple example
-            CRC hash;
-            hash.put(cast(ubyte) 0);
-            R result = hash.finish();
         }
 
         /**
