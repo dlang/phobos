@@ -82,7 +82,6 @@ import core.memory;
 import core.sync.condition;
 import core.thread;
 
-import std.conv;
 import std.exception;
 import std.functional;
 import std.math;
@@ -1187,6 +1186,8 @@ private:
     }
     out
     {
+        import std.conv : text;
+
         assert(tail.prev !is tail);
         assert(tail.next is null, text(tail.prev, '\t', tail.next));
         if (tail.prev !is null)
@@ -1642,6 +1643,8 @@ public:
         auto amap(Args...)(Args args)
         if (isRandomAccessRange!(Args[0]))
         {
+            import std.conv : emplaceRef;
+
             alias fun = adjoin!(staticMap!(unaryFun, functions));
 
             alias range = args[0];
@@ -1653,6 +1656,8 @@ public:
                 is(MapType!(Args[0], functions) : ElementType!(Args[$ - 1]))
                 )
             {
+                import std.conv : text;
+
                 alias buf = args[$ - 1];
                 alias args2 = args[0..$ - 1];
                 alias Args2 = Args[0..$ - 1];
@@ -2080,7 +2085,7 @@ public:
                     }
                 }
 
-                static if (std.range.isInfinite!S)
+                static if (isInfinite!S)
                 {
                     enum bool empty = false;
                 }
@@ -2260,7 +2265,7 @@ public:
                 }
             }
 
-            static if (std.range.isInfinite!S)
+            static if (isInfinite!S)
             {
                 enum bool empty = false;
             }
@@ -2440,6 +2445,8 @@ public:
          */
         auto reduce(Args...)(Args args)
         {
+            import std.conv : emplaceRef;
+
             alias fun = reduceAdjoin!functions;
             alias finishFun = reduceFinish!functions;
 
@@ -2881,6 +2888,7 @@ public:
 
         ref T opIndex(size_t index)
         {
+            import std.conv : text;
             assert(index < size, text(index, '\t', uint.max));
             return *(cast(T*) (data + elemSize * index));
         }
@@ -3920,7 +3928,8 @@ version(unittest)
     import std.algorithm.iteration : filter, map, reduce;
     import std.algorithm.comparison : equal, min, max;
     import std.array : split;
-    import std.range : iota, join;
+    import std.conv : text;
+    import std.range : indexed, iota, join;
 
     poolInstance = new TaskPool(2);
     scope(exit) poolInstance.stop();
@@ -4066,12 +4075,12 @@ version(unittest)
 
     // Test amap with a non-array buffer.
     auto toIndex = new int[5];
-    auto indexed = std.range.indexed(toIndex, [3, 1, 4, 0, 2]);
-    poolInstance.amap!"a * 2"([1, 2, 3, 4, 5], indexed);
-    assert(equal(indexed, [2, 4, 6, 8, 10]));
+    auto ind = indexed(toIndex, [3, 1, 4, 0, 2]);
+    poolInstance.amap!"a * 2"([1, 2, 3, 4, 5], ind);
+    assert(equal(ind, [2, 4, 6, 8, 10]));
     assert(equal(toIndex, [8, 4, 10, 2, 6]));
-    poolInstance.amap!"a / 2"(indexed, indexed);
-    assert(equal(indexed, [1, 2, 3, 4, 5]));
+    poolInstance.amap!"a / 2"(ind, ind);
+    assert(equal(ind, [1, 2, 3, 4, 5]));
     assert(equal(toIndex, [4, 2, 5, 1, 3]));
 
     auto buf = new int[5];
@@ -4176,6 +4185,7 @@ version(unittest)
            ));
 
     {
+        import std.conv : to;
         import std.file : deleteme;
 
         string temp_file = deleteme ~ "-tempDelMe.txt";
