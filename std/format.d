@@ -325,20 +325,6 @@ $(I FormatChar):
     $(B infinity) if the
     $(I FormatChar) is lower case, or $(B INF) or $(B INFINITY) if upper.
 
-    Example:
-    -----------------
-    import std.array : appender;
-    import std.format : formattedWrite;
-
-    auto writer = appender!string();
-    formattedWrite(writer, "%s is the ultimate %s.", 42, "answer");
-    assert(writer.data == "42 is the ultimate answer.");
-    // Clear the writer
-    writer = appender!string();
-    formattedWrite(writer, "Date: %2$s %1$s", "October", 5);
-    assert(writer.data == "Date: 5 October");
-    -----------------
-
     The positional and non-positional styles can be mixed in the same
     format string. (POSIX leaves this behavior undefined.) The internal
     counter for non-positional parameters tracks the next parameter after
@@ -432,6 +418,30 @@ My friends are "John", "Nancy".
 My friends are John, Nancy.
 )
  */
+uint formattedWrite(alias fmt, Writer, A...)(Writer w, A args)
+{
+    alias e = checkFormatException!(fmt, A);
+    static assert(!e, e.msg);
+    return .formattedWrite(w, fmt, args);
+}
+
+/// The format string can be checked at compile-time (see $(LREF format) for details):
+@safe pure unittest
+{
+    import std.array : appender;
+    import std.format : formattedWrite;
+
+    auto writer = appender!string();
+    writer.formattedWrite!"%s is the ultimate %s."(42, "answer");
+    assert(writer.data == "42 is the ultimate answer.");
+
+    // Clear the writer
+    writer = appender!string();
+    formattedWrite(writer, "Date: %2$s %1$s", "October", 5);
+    assert(writer.data == "Date: 5 October");
+}
+
+/// ditto
 uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 {
     import std.conv : text, to;
@@ -570,6 +580,14 @@ matching failure happens.
 Throws:
     An `Exception` if `S.length == 0` and `fmt` has format specifiers
  */
+uint formattedRead(alias fmt, R, S...)(ref R r, auto ref S args)
+{
+    alias e = checkFormatException!(fmt, S);
+    static assert(!e, e.msg);
+    return .formattedRead(r, fmt, args);
+}
+
+/// ditto
 uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, auto ref S args)
 {
     import std.typecons : isTuple;
@@ -631,14 +649,14 @@ uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, auto ref S args)
     }
 }
 
-///
+/// The format string can be checked at compile-time (see $(LREF format) for details):
 @safe pure unittest
 {
     string s = "hello!124:34.5";
     string a;
     int b;
     double c;
-    formattedRead(s, "%s!%s:%s", a, b, c);
+    s.formattedRead!"%s!%s:%s"(a, b, c);
     assert(a == "hello" && b == 124 && c == 34.5);
 }
 
@@ -1516,10 +1534,10 @@ if (is(Unqual!Char == Char))
 
 /**
 Helper function that returns a $(D FormatSpec) for a single specifier given
-in $(D fmt)
+in $(D fmt).
 
 Params:
-    fmt = A format specifier
+    fmt = A format specifier.
 
 Returns:
     A $(D FormatSpec) with the specifier parsed.
@@ -1933,6 +1951,8 @@ private void formatUnsigned(Writer, T, Char)(Writer w, T arg, const ref FormatSp
     assert(result == "9");
 }
 
+private enum ctfpMessage = "Cannot format floating point types at compile-time";
+
 /**
 Floating-point values are formatted like $(D printf) does.
 
@@ -1969,6 +1989,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
     enforceFmt(find("fgFGaAeEs", fs.spec).length,
         "incompatible format character for floating point type");
+    enforceFmt(!__ctfe, ctfpMessage);
 
     version (CRuntime_Microsoft)
     {
@@ -1986,7 +2007,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
           {
             return formatValue(w, s, f);
           }
-          else  // FIXME:workaroun
+          else  // FIXME:workaround
           {
             s = s[0 .. f.precision < $ ? f.precision : $];
             if (!f.flDash)
@@ -5456,12 +5477,41 @@ private bool needToSwapEndianess(Char)(const ref FormatSpec!Char f)
     assert(stream.data == "C");
 }
 
+// Used to check format strings are compatible with argument types
+package static const checkFormatException(alias fmt, Args...) =
+{
+    try
+        .format(fmt, Args.init);
+    catch (Exception e)
+        return (e.msg is ctfpMessage) ? null : e;
+    return null;
+}();
+
 /*****************************************************
  * Format arguments into a string.
  *
- * Params: fmt  = Format string. For detailed specification, see $(REF formattedWrite, std,_format).
- *         args = Variadic list of arguments to format into returned string.
+ * Params: fmt  = Format string. For detailed specification, see $(LREF formattedWrite).
+ *         args = Variadic list of arguments to _format into returned string.
  */
+typeof(fmt) format(alias fmt, Args...)(Args args)
+{
+    alias e = checkFormatException!(fmt, Args);
+    static assert(!e, e.msg);
+    return .format(fmt, args);
+}
+
+/// Type checking can be done when fmt is known at compile-time:
+@safe unittest
+{
+    auto s = format!"%s is %s"("Pi", 3.14);
+    assert(s == "Pi is 3.14");
+
+    static assert(!__traits(compiles, {s = format!"%l"();}));     // missing arg
+    static assert(!__traits(compiles, {s = format!""(404);}));    // surplus arg
+    static assert(!__traits(compiles, {s = format!"%d"(4.03);})); // incompatible arg
+}
+
+/// ditto
 immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args)
 if (isSomeChar!Char)
 {
@@ -5530,6 +5580,14 @@ if (isSomeChar!Char)
  *     A $(LREF FormatException) if the length of `args` is different
  *     than the number of format specifiers in `fmt`.
  */
+char[] sformat(alias fmt, Args...)(char[] buf, Args args)
+{
+    alias e = checkFormatException!(fmt, Args);
+    static assert(!e, e.msg);
+    return .sformat(buf, fmt, args);
+}
+
+/// ditto
 char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
 {
     import core.exception : onRangeError;
@@ -5585,12 +5643,12 @@ char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
     return buf[0 .. i];
 }
 
-///
+/// The format string can be checked at compile-time (see $(LREF format) for details):
 @system unittest
 {
     char[10] buf;
 
-    assert(sformat(buf[], "foo%s", 'C') == "fooC");
+    assert(buf[].sformat!"foo%s"('C') == "fooC");
     assert(sformat(buf[], "%s foo", "bar") == "bar foo");
 }
 
