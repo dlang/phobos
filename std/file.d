@@ -3908,8 +3908,8 @@ public:
     Returns an input range of DirEntry that lazily iterates a given directory,
     also provides two ways of foreach iteration. The iteration variable can be of
     type $(D_PARAM string) if only the name is needed, or $(D_PARAM DirEntry)
-    if additional details are needed. The span mode dictates the how the
-    directory is traversed. The name of the each directory entry iterated
+    if additional details are needed. The span mode dictates how the
+    directory is traversed. The name of each iterated directory entry
     contains the absolute path.
 
     Params:
