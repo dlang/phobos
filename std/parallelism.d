@@ -82,7 +82,6 @@ import core.memory;
 import core.sync.condition;
 import core.thread;
 
-import std.algorithm;
 import std.conv;
 import std.exception;
 import std.functional;
@@ -112,6 +111,7 @@ version(Windows)
     shared static this()
     {
         import core.sys.windows.windows : SYSTEM_INFO, GetSystemInfo;
+        import std.algorithm.comparison : max;
 
         SYSTEM_INFO si;
         GetSystemInfo(&si);
@@ -1401,6 +1401,8 @@ public:
     // as public API.
     size_t defaultWorkUnitSize(size_t rangeLen) const @safe pure nothrow
     {
+        import std.algorithm.comparison : max;
+
         if (this.size == 0)
         {
             return rangeLen;
@@ -1706,6 +1708,8 @@ public:
 
             void doIt()
             {
+                import std.algorithm.comparison : min;
+
                 scope(failure)
                 {
                     // If an exception is thrown, all threads should bail.
@@ -1854,6 +1858,8 @@ public:
 
                 void popSource()
                 {
+                    import std.algorithm.comparison : min;
+
                     static if (__traits(compiles, source[0 .. source.length]))
                     {
                         source = source[min(buf1.length, source.length)..source.length];
@@ -1890,6 +1896,8 @@ public:
                 // No need to copy element by element.
                 FromType dumpToFrom()
                 {
+                    import std.algorithm.mutation : swap;
+
                     assert(source.buf1.length <= from.length);
                     from.length = source.buf1.length;
                     swap(source.buf1, from);
@@ -1974,6 +1982,8 @@ public:
                 // case.
                 E[] fillBuf(E[] buf)
                 {
+                    import std.algorithm.comparison : min;
+
                     static if (isRandomAccessRange!S)
                     {
                         auto toMap = take(source, buf.length);
@@ -2642,6 +2652,8 @@ public:
             size_t curPos = 0;
             void useTask(ref RTask task)
             {
+                import std.algorithm.comparison : min;
+
                 task.pool = this;
                 task._args[0] = scopedAddress(&reduceOnRange);
                 task._args[3] = min(len, curPos + workUnitSize);  // upper bound.
@@ -3513,6 +3525,8 @@ private enum string parallelApplyMixinRandomAccess = q{
 
     void doIt()
     {
+        import std.algorithm.comparison : min;
+
         scope(failure)
         {
             // If an exception is thrown, all threads should bail.
@@ -3663,6 +3677,7 @@ enum string parallelApplyMixinInputRange = q{
 
             static if (bufferTrick) size_t makeTemp()
             {
+                import std.algorithm.mutation : swap;
                 rangeMutex.lock();
                 scope(exit) rangeMutex.unlock();
 
@@ -3896,6 +3911,9 @@ version(unittest)
 // These are the tests that should be run every time Phobos is compiled.
 @system unittest
 {
+    import std.algorithm.iteration : filter, map, reduce;
+    import std.algorithm.comparison : equal, min, max;
+
     poolInstance = new TaskPool(2);
     scope(exit) poolInstance.stop();
 
@@ -4062,7 +4080,7 @@ version(unittest)
     assert(poolInstance.reduce!("a + b", "a * b")(tuple(0, 1), [1,2,3,4]) ==
            tuple(10, 24));
 
-    immutable serialAns = std.algorithm.reduce!"a + b"(iota(1000));
+    immutable serialAns = reduce!"a + b"(iota(1000));
     assert(poolInstance.reduce!"a + b"(0, iota(1000)) == serialAns);
     assert(poolInstance.reduce!"a + b"(iota(1000)) == serialAns);
 
@@ -4123,7 +4141,7 @@ version(unittest)
 
     assert(equal(
                poolInstance.map!"a * a"(iota(30_000_001), 10_000),
-               std.algorithm.map!"a * a"(iota(30_000_001))
+               map!"a * a"(iota(30_000_001))
            ));
 
     // The filter is to kill random access and test the non-random access
@@ -4132,7 +4150,7 @@ version(unittest)
                poolInstance.map!"a * a"(
                    filter!"a == a"(iota(30_000_001)
                                   ), 10_000, 1000),
-               std.algorithm.map!"a * a"(iota(30_000_001))
+               map!"a * a"(iota(30_000_001))
            ));
 
     assert(
@@ -4140,7 +4158,7 @@ version(unittest)
                        poolInstance.map!"a * a"(iota(3_000_001), 10_000)
                       ) ==
         reduce!"a + b"(0UL,
-                       std.algorithm.map!"a * a"(iota(3_000_001))
+                       map!"a * a"(iota(3_000_001))
                       )
     );
 
@@ -4570,6 +4588,8 @@ version(unittest)
 
 @safe unittest
 {
+    import std.algorithm.iteration : each;
+
     long[] arr;
     static assert(is(typeof({
         arr.parallel.each!"a++";
