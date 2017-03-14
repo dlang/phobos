@@ -87,7 +87,7 @@ import std.exception;
 import std.functional;
 import std.math;
 import std.meta;
-import std.range;
+import std.range.primitives;
 import std.traits;
 import std.typecons;
 
@@ -1666,6 +1666,8 @@ public:
             }
             else
             {
+                import std.array : uninitializedArray;
+
                 auto buf = uninitializedArray!(MapType!(Args[0], functions)[])(len);
                 alias args2 = args;
                 alias Args2 = Args;
@@ -1986,6 +1988,7 @@ public:
 
                     static if (isRandomAccessRange!S)
                     {
+                        import std.range : take;
                         auto toMap = take(source, buf.length);
                         scope(success) popSource();
                     }
@@ -3624,6 +3627,7 @@ enum string parallelApplyMixinInputRange = q{
             size_t makeTemp()
             {
                 import std.algorithm.internal : addressOf;
+                import std.array : uninitializedArray;
 
                 if (temp is null)
                 {
@@ -3655,6 +3659,8 @@ enum string parallelApplyMixinInputRange = q{
             // Returns:  The previous value of nPopped.
             static if (!bufferTrick) size_t makeTemp()
             {
+                import std.array : uninitializedArray;
+
                 if (temp is null)
                 {
                     temp = uninitializedArray!Temp(workUnitSize);
@@ -3913,6 +3919,8 @@ version(unittest)
 {
     import std.algorithm.iteration : filter, map, reduce;
     import std.algorithm.comparison : equal, min, max;
+    import std.array : split;
+    import std.range : iota, join;
 
     poolInstance = new TaskPool(2);
     scope(exit) poolInstance.stop();
@@ -4582,6 +4590,8 @@ version(unittest)
 
 @safe unittest
 {
+    import std.range : iota;
+
     // this test was in std.range, but caused cycles.
     assert(__traits(compiles, { foreach (i; iota(0, 100UL).parallel) {} }));
 }
