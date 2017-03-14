@@ -83,7 +83,6 @@ import core.sync.condition;
 import core.thread;
 
 import std.functional;
-import std.math;
 import std.meta;
 import std.range.primitives;
 import std.traits;
@@ -3937,6 +3936,7 @@ version(unittest)
     import std.array : split;
     import std.conv : text;
     import std.exception : assertThrown;
+    import std.math : approxEqual, sqrt, log;
     import std.range : indexed, iota, join;
 
     poolInstance = new TaskPool(2);
