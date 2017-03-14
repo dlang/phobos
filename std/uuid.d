@@ -131,7 +131,7 @@ public struct UUID
 
     private:
         alias skipSeq = AliasSeq!(8, 13, 18, 23);
-        alias byteSeq = AliasSeq!(0,2,4,6,/++/9,11,/++/14,16,/++/19,21,/++/24,26,28,30,32,34);
+        alias byteSeq = AliasSeq!(0,2,4,6,9,11,14,16,19,21,24,26,28,30,32,34);
 
         @safe pure nothrow @nogc Char toChar(Char)(size_t i) const
         {
@@ -998,9 +998,7 @@ public struct UUID
     return md5UUID(cast(const(ubyte[]))name, namespace);
 }
 
-/**
- * ditto
- */
+/// ditto
 @safe pure nothrow @nogc UUID md5UUID(const(ubyte[]) data, const UUID namespace = UUID.init)
 {
     import std.digest.md : MD5;
@@ -1111,9 +1109,7 @@ public struct UUID
     return sha1UUID(cast(const(ubyte[]))name, namespace);
 }
 
-/**
- * ditto
- */
+/// ditto
 @safe pure nothrow @nogc UUID sha1UUID(in ubyte[] data, const UUID namespace = UUID.init)
 {
     import std.digest.sha : SHA1;
@@ -1190,9 +1186,11 @@ public struct UUID
  * This function generates a random number based UUID from a random
  * number generator.
  *
- * CTFE:
  * This function is not supported at compile time.
  *
+ * Params:
+ *      randomGen = uniform RNG
+ * See_Also: $(REF isUniformRNG, std,random)
  */
 @safe UUID randomUUID()
 {
@@ -1200,14 +1198,7 @@ public struct UUID
     return randomUUID(rndGen);
 }
 
-/**
- * ditto
- */
-/**
- * Params:
- *      randomGen = uniform RNG
- * See_Also: $(REF isUniformRNG, std,random)
- */
+/// ditto
 UUID randomUUID(RNG)(ref RNG randomGen)
 if (isInputRange!RNG && isIntegral!(ElementType!RNG))
 {
