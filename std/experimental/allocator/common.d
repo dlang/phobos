@@ -507,26 +507,27 @@ package void testAllocator(alias make)()
 
     static if (hasMember!(A, "resolveInternalPointer"))
     {{
-        assert(a.resolveInternalPointer(null) is null);
-        auto p = a.resolveInternalPointer(b1.ptr);
+        void[] p;
+        assert(a.resolveInternalPointer(null, p) == Ternary.no);
+        Ternary r = a.resolveInternalPointer(b1.ptr, p);
         assert(p.ptr is b1.ptr && p.length >= b1.length);
-        p = a.resolveInternalPointer(b1.ptr + b1.length / 2);
+        r = a.resolveInternalPointer(b1.ptr + b1.length / 2, p);
         assert(p.ptr is b1.ptr && p.length >= b1.length);
-        p = a.resolveInternalPointer(b2.ptr);
+        r = a.resolveInternalPointer(b2.ptr, p);
         assert(p.ptr is b2.ptr && p.length >= b2.length);
-        p = a.resolveInternalPointer(b2.ptr + b2.length / 2);
+        r = a.resolveInternalPointer(b2.ptr + b2.length / 2, p);
         assert(p.ptr is b2.ptr && p.length >= b2.length);
-        p = a.resolveInternalPointer(b6.ptr);
+        r = a.resolveInternalPointer(b6.ptr, p);
         assert(p.ptr is b6.ptr && p.length >= b6.length);
-        p = a.resolveInternalPointer(b6.ptr + b6.length / 2);
+        r = a.resolveInternalPointer(b6.ptr + b6.length / 2, p);
         assert(p.ptr is b6.ptr && p.length >= b6.length);
         static int[10] b7 = [ 1, 2, 3 ];
-        assert(a.resolveInternalPointer(b7.ptr) is null);
-        assert(a.resolveInternalPointer(b7.ptr + b7.length / 2) is null);
-        assert(a.resolveInternalPointer(b7.ptr + b7.length) is null);
+        assert(a.resolveInternalPointer(b7.ptr, p) == Ternary.no);
+        assert(a.resolveInternalPointer(b7.ptr + b7.length / 2, p) == Ternary.no);
+        assert(a.resolveInternalPointer(b7.ptr + b7.length, p) == Ternary.no);
         int[3] b8 = [ 1, 2, 3 ];
-        assert(a.resolveInternalPointer(b8.ptr).ptr is null);
-        assert(a.resolveInternalPointer(b8.ptr + b8.length / 2) is null);
-        assert(a.resolveInternalPointer(b8.ptr + b8.length) is null);
+        assert(a.resolveInternalPointer(b8.ptr, p) == Ternary.no);
+        assert(a.resolveInternalPointer(b8.ptr + b8.length / 2, p) == Ternary.no);
+        assert(a.resolveInternalPointer(b8.ptr + b8.length, p) == Ternary.no);
     }}
 }

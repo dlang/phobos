@@ -8,6 +8,7 @@ D's built-in garbage-collected allocator.
 struct GCAllocator
 {
     import core.memory : GC;
+    import std.typecons : Ternary;
     @system unittest { testAllocator!(() => GCAllocator.instance); }
 
     /**
@@ -69,11 +70,12 @@ struct GCAllocator
     }
 
     /// Ditto
-    pure nothrow void[] resolveInternalPointer(void* p) shared
+    pure nothrow Ternary resolveInternalPointer(void* p, ref void[] result) shared
     {
         auto r = GC.addrOf(p);
-        if (!r) return null;
-        return r[0 .. GC.sizeOf(r)];
+        if (!r) return Ternary.no;
+        result = r[0 .. GC.sizeOf(r)];
+        return Ternary.yes;
     }
 
     /// Ditto
@@ -134,6 +136,7 @@ struct GCAllocator
 @system unittest
 {
     import core.memory : GC;
+    import std.typecons : Ternary;
 
     // test allocation sizes
     assert(GCAllocator.instance.goodAllocSize(1) == 16);
@@ -144,6 +147,11 @@ struct GCAllocator
 
         auto buffer = GCAllocator.instance.allocate(s);
         scope(exit) GCAllocator.instance.deallocate(buffer);
+
+        void[] p;
+        assert(GCAllocator.instance.resolveInternalPointer(null, p) == Ternary.no);
+        Ternary r = GCAllocator.instance.resolveInternalPointer(buffer.ptr, p);
+        assert(p.ptr is buffer.ptr && p.length >= buffer.length);
 
         assert(GC.sizeOf(buffer.ptr) == s);
 
