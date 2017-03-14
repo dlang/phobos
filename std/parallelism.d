@@ -82,7 +82,6 @@ import core.memory;
 import core.sync.condition;
 import core.thread;
 
-import std.exception;
 import std.functional;
 import std.math;
 import std.meta;
@@ -536,6 +535,7 @@ struct Task(alias fun, Args...)
 
     private void enforcePool()
     {
+        import std.exception : enforce;
         enforce(this.pool !is null, "Job not submitted yet.");
     }
 
@@ -1530,6 +1530,7 @@ public:
     */
     ParallelForeach!R parallel(R)(R range, size_t workUnitSize)
     {
+        import std.exception : enforce;
         enforce(workUnitSize > 0, "workUnitSize must be > 0.");
         alias RetType = ParallelForeach!R;
         return RetType(this, range, workUnitSize);
@@ -1657,6 +1658,7 @@ public:
                 )
             {
                 import std.conv : text;
+                import std.exception : enforce;
 
                 alias buf = args[$ - 1];
                 alias args2 = args[0..$ - 1];
@@ -1835,6 +1837,8 @@ public:
         map(S)(S source, size_t bufSize = 100, size_t workUnitSize = size_t.max)
         if (isInputRange!S)
         {
+            import std.exception : enforce;
+
             enforce(workUnitSize == size_t.max || workUnitSize <= bufSize,
                     "Work unit size must be smaller than buffer size.");
             alias fun = adjoin!(staticMap!(unaryFun, functions));
@@ -2446,6 +2450,7 @@ public:
         auto reduce(Args...)(Args args)
         {
             import std.conv : emplaceRef;
+            import std.exception : enforce;
 
             alias fun = reduceAdjoin!functions;
             alias finishFun = reduceFinish!functions;
@@ -3191,6 +3196,7 @@ public:
     void put(alias fun, Args...)(Task!(fun, Args)* task)
     if (!isSafeReturn!(typeof(*task)))
     {
+        import std.exception : enforce;
         enforce(task !is null, "Cannot put a null Task on a TaskPool queue.");
         put(*task);
     }
@@ -3205,6 +3211,7 @@ public:
     @trusted void put(alias fun, Args...)(Task!(fun, Args)* task)
     if (isSafeReturn!(typeof(*task)))
     {
+        import std.exception : enforce;
         enforce(task !is null, "Cannot put a null Task on a TaskPool queue.");
         put(*task);
     }
@@ -3929,6 +3936,7 @@ version(unittest)
     import std.algorithm.comparison : equal, min, max;
     import std.array : split;
     import std.conv : text;
+    import std.exception : assertThrown;
     import std.range : indexed, iota, join;
 
     poolInstance = new TaskPool(2);
