@@ -2074,7 +2074,7 @@ public:
                 else
                 {
 
-                    bool empty() @property
+                    bool empty() const @property
                     {
                         // popFront() sets this when source is empty
                         return buf1.length == 0;
@@ -2864,13 +2864,13 @@ public:
             }
         }
 
-        ref T opIndex(size_t index)
+        ref T opIndex(size_t index) const
         {
             assert(index < size, text(index, '\t', uint.max));
             return *(cast(T*) (data + elemSize * index));
         }
 
-        void opIndexAssign(T val, size_t index)
+        void opIndexAssign(T val, size_t index) const
         {
             assert(index < size);
             *(cast(T*) (data + elemSize * index)) = val;
@@ -2890,7 +2890,7 @@ public:
         failure will result when calling this method.  This is not checked
         when assertions are disabled for performance reasons.
          */
-        ref T get() @property
+        ref T get() const @property
         {
             assert(*stillThreadLocal,
                 "Cannot call get() on this instance of WorkerLocalStorage " ~
@@ -2903,7 +2903,7 @@ public:
         Assign a value to the current thread's instance.  This function has
         the same caveats as its overload.
         */
-        void get(T val) @property
+        void get(T val) const @property
         {
             assert(*stillThreadLocal,
                 "Cannot call get() on this instance of WorkerLocalStorage " ~
@@ -2970,12 +2970,12 @@ public:
         }
 
     public:
-        ref T front() @property
+        ref T front() const @property
         {
             return this[0];
         }
 
-        ref T back() @property
+        ref T back() const @property
         {
             return this[_length - 1];
         }
@@ -3002,13 +3002,13 @@ public:
             return this;
         }
 
-        ref T opIndex(size_t index)
+        ref T opIndex(size_t index) const
         {
             assert(index < _length);
             return workerLocalStorage[index + beginOffset];
         }
 
-        void opIndexAssign(T val, size_t index)
+        void opIndexAssign(T val, size_t index) const
         {
             assert(index < _length);
             workerLocalStorage[index] = val;
@@ -3023,12 +3023,12 @@ public:
             return typeof(this)(newWl);
         }
 
-        bool empty() @property
+        bool empty() const @property
         {
             return length == 0;
         }
 
-        size_t length() @property
+        size_t length() const @property
         {
             return _length;
         }
