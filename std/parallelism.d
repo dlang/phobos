@@ -77,7 +77,6 @@ module std.parallelism;
 }
 
 import core.atomic;
-import core.exception;
 import core.memory;
 import core.sync.condition;
 import core.thread;
@@ -2448,6 +2447,7 @@ public:
          */
         auto reduce(Args...)(Args args)
         {
+            import core.exception : OutOfMemoryError;
             import std.conv : emplaceRef;
             import std.exception : enforce;
 
@@ -3369,6 +3369,7 @@ private void submitAndExecute(
     scope void delegate() doIt
 )
 {
+    import core.exception : OutOfMemoryError;
     immutable nThreads = pool.size + 1;
 
     alias PTask = typeof(scopedTask(doIt));
