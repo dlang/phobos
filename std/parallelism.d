@@ -85,7 +85,6 @@ import std.functional;
 import std.meta;
 import std.range.primitives;
 import std.traits;
-import std.typecons;
 
 version(OSX)
 {
@@ -3939,6 +3938,7 @@ version(unittest)
     import std.exception : assertThrown;
     import std.math : approxEqual, sqrt, log;
     import std.range : indexed, iota, join;
+    import std.typecons : Tuple, tuple;
 
     poolInstance = new TaskPool(2);
     scope(exit) poolInstance.stop();
