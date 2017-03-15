@@ -913,6 +913,13 @@ immutable(T)[] assumeUnique(T)(ref T[] array) pure nothrow
     array = null;
     return result;
 }
+/// ditto
+immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
+{
+    auto result = cast(immutable(T[U])) array;
+    array = null;
+    return result;
+}
 
 @system unittest
 {
@@ -920,13 +927,6 @@ immutable(T)[] assumeUnique(T)(ref T[] array) pure nothrow
     int[] arr = new int[1];
     auto arr1 = assumeUnique(arr);
     assert(is(typeof(arr1) == immutable(int)[]) && arr == null);
-}
-
-immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
-{
-    auto result = cast(immutable(T[U])) array;
-    array = null;
-    return result;
 }
 
 // @@@BUG@@@
