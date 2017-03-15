@@ -139,14 +139,17 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         }
 
         static if (hasMember!(Allocator, "resolveInternalPointer"))
-        void[] resolveInternalPointer(void* p)
+        Ternary resolveInternalPointer(void* p, ref void[] result)
         {
-            auto p1 = parent.resolveInternalPointer(p);
-            if (p1 is null) return p1;
+            void[] p1;
+            Ternary r = parent.resolveInternalPointer(p, p1);
+            if (r != Ternary.yes || p1 is null)
+                return r;
             p1 = p1[stateSize!Prefix .. $];
             auto p2 = (p1.ptr + p1.length - stateSize!Suffix)
-                    .alignDownTo(Suffix.alignof);
-            return p1[0 .. p2 - p1.ptr];
+                      .alignDownTo(Suffix.alignof);
+            result = p1[0 .. p2 - p1.ptr];
+            return Ternary.yes;
         }
 
         static if (!stateSize!Suffix && hasMember!(Allocator, "expand"))
@@ -360,6 +363,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
 {
     import std.experimental.allocator.gc_allocator;
     import std.experimental.allocator;
+    import std.typecons : Ternary;
     alias MyAllocator = AffixAllocator!(GCAllocator, uint);
     auto a = MyAllocator.instance.makeArray!(shared int)(100);
     static assert(is(typeof(&MyAllocator.instance.prefix(a)) == shared(uint)*));
@@ -371,4 +375,9 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     static assert(is(typeof(&MyAllocator.instance.prefix(d)) == uint*));
     auto e = MyAllocator.instance.makeArray!(const int)(100);
     static assert(is(typeof(&MyAllocator.instance.prefix(e)) == const(uint)*));
+
+    void[] p;
+    assert(MyAllocator.instance.resolveInternalPointer(null, p) == Ternary.no);
+    Ternary r = MyAllocator.instance.resolveInternalPointer(d.ptr, p);
+    assert(p.ptr is d.ptr && p.length >= d.length);
 }

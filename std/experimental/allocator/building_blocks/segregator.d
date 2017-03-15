@@ -247,10 +247,10 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 
         static if (hasMember!(SmallAllocator, "resolveInternalPointer")
                 && hasMember!(LargeAllocator, "resolveInternalPointer"))
-        void[] resolveInternalPointer(void* p)
+        Ternary resolveInternalPointer(void* p, ref void[] result)
         {
-            if (auto r = _small.resolveInternalPointer(p)) return r;
-            return _large.resolveInternalPointer(p);
+            Ternary r = _small.resolveInternalPointer(p, result);
+            return r == Ternary.no ? _large.resolveInternalPointer(p, result) : r;
         }
     }
 

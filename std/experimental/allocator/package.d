@@ -1930,8 +1930,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     {
         static if (hasMember!(Allocator, "resolveInternalPointer"))
         {
-            result = impl.resolveInternalPointer(p);
-            return Ternary(result.ptr !is null);
+            return impl.resolveInternalPointer(p, result);
         }
         else
         {
@@ -2012,17 +2011,26 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     // Allocate an int, initialize it with 42
     int* p = theAllocator.make!int(42);
     assert(*p == 42);
+
     // Destroy and deallocate it
     theAllocator.dispose(p);
 
     // Allocate using the global process allocator
     p = processAllocator.make!int(100);
     assert(*p == 100);
+
     // Destroy and deallocate
     processAllocator.dispose(p);
 
     // Create an array of 50 doubles initialized to -1.0
     double[] arr = theAllocator.makeArray!double(50, -1.0);
+
+    // Check internal pointer
+    void[] result;
+    assert(theAllocator.resolveInternalPointer(null, result) == Ternary.no);
+    Ternary r = theAllocator.resolveInternalPointer(arr.ptr, result);
+    assert(result.ptr is arr.ptr && result.length >= arr.length);
+
     // Append two zeros to it
     theAllocator.expandArray(arr, 2, 0.0);
     // On second thought, take that back
@@ -2364,7 +2372,8 @@ private struct InternalPointersTree(Allocator)
     /// Ditto
     Ternary owns(void[] b)
     {
-        return Ternary(resolveInternalPointer(b.ptr) !is null);
+        void[] result;
+        return resolveInternalPointer(b.ptr, result);
     }
 
     /// Ditto
@@ -2376,7 +2385,7 @@ private struct InternalPointersTree(Allocator)
     /** Returns the block inside which $(D p) resides, or $(D null) if the
     pointer does not belong.
     */
-    void[] resolveInternalPointer(void* p)
+    Ternary resolveInternalPointer(void* p, ref void[] result)
     {
         // Must define a custom find
         Tree.Node* find()
@@ -2400,8 +2409,9 @@ private struct InternalPointersTree(Allocator)
         }
 
         auto n = find();
-        if (!n) return null;
-        return (cast(void*) (n + 1))[0 .. n.payload];
+        if (!n) return Ternary.no;
+        result = (cast(void*) (n + 1))[0 .. n.payload];
+        return Ternary.yes;
     }
 }
 
@@ -2418,14 +2428,15 @@ unittest
 
     foreach (b; allox)
     {
-        auto p = a.resolveInternalPointer(b.ptr);
+        void[] p;
+        Ternary r = a.resolveInternalPointer(b.ptr, p);
         assert(p.ptr is b.ptr && p.length >= b.length);
-        p = a.resolveInternalPointer(b.ptr + b.length);
+        r = a.resolveInternalPointer(b.ptr + b.length, p);
         assert(p.ptr is b.ptr && p.length >= b.length);
-        p = a.resolveInternalPointer(b.ptr + b.length / 2);
+        r = a.resolveInternalPointer(b.ptr + b.length / 2, p);
         assert(p.ptr is b.ptr && p.length >= b.length);
         auto bogus = new void[b.length];
-        assert(a.resolveInternalPointer(bogus.ptr) is null);
+        assert(a.resolveInternalPointer(bogus.ptr, p) == Ternary.no);
     }
 
     foreach (b; allox.randomCover)
