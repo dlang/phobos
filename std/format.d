@@ -587,7 +587,8 @@ uint formattedRead(R, Char)(ref R r, const(Char)[] fmt)
 
 /// ditto
 deprecated("do not use '&' before parameters and let them bind by ref insted")
-uint formattedRead(R, Char, T, S...)(ref R r, const(Char)[] fmt, T* arg, auto ref S args)
+uint formattedRead(R, Char, T, S...)(ref R r, const(Char)[] fmt, auto ref T* arg, auto ref S args)
+    if (!__traits(isRef, arg))
 {
     import std.functional : forward;
     return formattedRead(r, fmt, *arg, forward!args);
