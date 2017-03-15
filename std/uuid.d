@@ -528,7 +528,7 @@ public struct UUID
         {
             //variant is stored in octet 7
             //which is index 8, since indexes count backwards
-            auto octet7 = data[8]; //octet 7 is array index 8
+            immutable octet7 = data[8]; //octet 7 is array index 8
 
             if ((octet7 & 0x80) == 0x00) //0b0xxxxxxx
                 return Variant.ncs;
@@ -589,7 +589,7 @@ public struct UUID
         {
             //version is stored in octet 9
             //which is index 6, since indexes count backwards
-            auto octet9 = data[6];
+            immutable octet9 = data[6];
             if ((octet9 & 0xF0) == 0x10)
                 return Version.timeBased;
             else if ((octet9 & 0xF0) == 0x20)
@@ -643,7 +643,7 @@ public struct UUID
          */
         @safe pure nothrow @nogc void swap(ref UUID rhs)
         {
-            auto bck = data;
+            immutable bck = data;
             data = rhs.data;
             rhs.data = bck;
         }
@@ -1378,7 +1378,7 @@ if (isInputRange!Range
 
     parseLoop: while (!uuidRange.empty)
     {
-        dchar character = uuidRange.front;
+        immutable character = uuidRange.front;
 
         if (character == '-')
         {
