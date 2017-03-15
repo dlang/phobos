@@ -1476,6 +1476,32 @@ Throws: $(D Exception) if the file is not opened.
         w.put('\n');
     }
 
+    /**
+
+    Writes its arguments in text format to the file separated pairwise by a
+    space (or custom `separator`), followed by a newline (or custom `eol`).
+
+    Throws: $(D Exception) if the file is not opened.
+            $(D ErrnoException) on an error writing to the file.
+    */
+    void print(string separator = " ", string eol = "\n", S...)(auto ref S args)
+    {
+        import std.range : repeat;
+        import std.string : join;
+        static immutable fmt = repeat("%s", S.length).join(separator) ~ eol;
+        writefln(fmt, args);
+    }
+
+    ///
+    unittest
+    {
+        void cubes(uint limit)
+        {
+            foreach (i; 0 .. limit)
+                stdout.print(i, i * i * i);
+        }
+    }
+
 /**
 Read line from the file handle and return it as a specified type.
 
@@ -3740,6 +3766,23 @@ void writefln(T...)(T args)
         assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, nice world number 42!\n",
                 cast(char[]) std.file.read(deleteme));
+}
+
+/**
+Forwards to `stdout.print`.
+*/
+void print(string separator = " ", string eol = "\n", S...)(S args)
+{
+    trustedStdout.print!(separator, eol)(args);
+}
+
+///
+unittest
+{
+    void printCSVRow(Data...)(Data data)
+    {
+        print!", "(data);
+    }
 }
 
 /**
