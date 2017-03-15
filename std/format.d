@@ -559,24 +559,23 @@ to $(D fmt), and writes them to $(D args).
 Params:
     r = The range to read from.
     fmt = The format of the data to read.
-    arg, args = The drain of the data read.
+    arg = The next data to read.
+    args = The drain of the data to be further read.
 
 Returns:
-
-On success, the function returns the number of variables filled. This count
-can match the expected number of readings or fewer, even zero, if a
-matching failure happens.
+    On success, the function returns the number of variables filled. This count
+    can match the expected number of readings or fewer, even zero, if a
+    matching failure happens.
 
 Throws:
     An `Exception` if `S.length == 0` and `fmt` has format specifiers
 
 Deprecated:
-
-Do not use parameters of the form `&param` which may take the address of
-a local and make most usages of this function non-@safe. Replace these
-parameters by `param` (without address-operator).
-Replace parameters which are pointer returning functions of the form
-`returnsPtr()` by `*returnsPtr()`.
+    Do not use parameters of the form `&param` which may take the address of
+    a local and make most usages of this function non-@safe. Replace these
+    parameters by `param` (without address-operator).
+    Replace parameters which are pointer returning functions of the form
+    `returnsPtr()` by `*returnsPtr()`.
  */
 uint formattedRead(R, Char)(ref R r, const(Char)[] fmt)
 {
@@ -588,8 +587,7 @@ uint formattedRead(R, Char)(ref R r, const(Char)[] fmt)
 
 /// ditto
 deprecated("do not use '&' before parameters and let them bind by ref insted")
-uint formattedRead(R, Char, T, S...)(ref R r, const(Char)[] fmt, auto ref T arg, auto ref S args)
-    if (is(typeof(*arg)) && !__traits(isRef, arg))
+uint formattedRead(R, Char, T, S...)(ref R r, const(Char)[] fmt, T* arg, auto ref S args)
 {
     import std.functional : forward;
     return formattedRead(r, fmt, *arg, forward!args);
