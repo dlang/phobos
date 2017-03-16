@@ -2091,9 +2091,9 @@ public:
         assert(set.byInterval.equal([tuple('A','E'), tuple('a','e')]));
         -----------
     */
-    @property auto byInterval()
+    @property auto byInterval() const
     {
-        return Intervals!(typeof(data))(data);
+        return Intervals!(typeof(data[]))(data[]);
     }
 
     /**
@@ -2357,7 +2357,7 @@ public:
      * $(LI $(B %X) formats the intervals as a [low .. high$(RPAREN) range of uppercase hex characters)
      */
     void toString(Writer)(scope Writer sink,
-                  FormatSpec!char fmt) /* const */
+                  FormatSpec!char fmt) const
     {
         import std.format : formatValue;
         auto range = byInterval;
@@ -2574,7 +2574,7 @@ public:
         }
         ---
     */
-    string toSourceCode(string funcName="")
+    string toSourceCode(string funcName="") const
     {
         import std.algorithm.searching : countUntil;
         import std.array : array;
@@ -2713,8 +2713,11 @@ private:
             return CodepointInterval(a, b);
         }
 
+        enum modifiable = !is(ElementType!Range == const(T), T);
+
         //may break sorted property - but we need std.sort to access it
         //hence package protection attribute
+        static if(modifiable)
         package @property void front(CodepointInterval val)
         {
             slice[start] = val.a;
@@ -2729,6 +2732,7 @@ private:
         }
 
         //ditto about package
+        static if(modifiable)
         package @property void back(CodepointInterval val)
         {
             slice[end-2] = val.a;
@@ -2753,6 +2757,7 @@ private:
         }
 
         //ditto about package
+        static if(modifiable)
         package void opIndexAssign(CodepointInterval val, size_t idx)
         {
             slice[start+idx*2] = val.a;
