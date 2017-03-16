@@ -1269,10 +1269,18 @@ pure nothrow bool sameTail(T)(in T[] lhs, in T[] rhs)
     }
 }
 
-/********************************************
-Returns an array that consists of $(D s) (which must be an input
-range) repeated $(D n) times. This function allocates, fills, and
-returns a new array. For a lazy version, refer to $(REF repeat, std,range).
+/**
+Params:
+    s = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+    or a dynamic array
+    n = number of times to repeat `s`
+
+Returns:
+    An array that consists of `s` repeated `n` times. This function allocates, fills, and
+    returns a new array.
+
+See_Also:
+    For a lazy version, refer to $(REF repeat, std,range).
  */
 ElementEncodingType!S[] replicate(S)(S s, size_t n)
 if (isDynamicArray!S)
@@ -1351,6 +1359,9 @@ Eagerly split the string $(D s) into an array of words, using whitespace as
 delimiter. Runs of whitespace are merged together (no empty words are produced).
 
 $(D @safe), $(D pure) and $(D CTFE)-able.
+
+Params:
+    s = the string to split
 
 See_Also:
 $(REF splitter, std,algorithm,iteration) for a version that splits using any
@@ -1967,9 +1978,20 @@ if (isInputRange!RoR &&
 
 
 /++
-    Replace occurrences of $(D from) with $(D to) in $(D subject). Returns a new
-    array without changing the contents of $(D subject), or the original array
-    if no match is found.
+    Replace occurrences of `from` with `to` in `subject` in a new
+    array. If `sink` is defined, then output the new array into
+    `sink`.
+
+    Params:
+        sink = an output range
+        subject = the array to scan
+        from = the item to replace
+        to = the item to replace all instances of `from` with
+
+    Returns:
+        If `sink` isn't defined, a new array without changing the
+        contents of `subject`, or the original array if no match
+        is found.
  +/
 E[] replace(E, R1, R2)(E[] subject, R1 from, R2 to)
 if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
@@ -1998,10 +2020,7 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
     assert("Hello Wörld".replace("l", "h") == "Hehho Wörhd");
 }
 
-/++
-    Same as above, but outputs the result via OutputRange $(D sink).
-    If no match is found the original array is transferred to $(D sink) as is.
-+/
+/// ditto
 void replaceInto(E, Sink, R1, R2)(Sink sink, E[] subject, R1 from, R2 to)
 if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     && isForwardRange!R1 && isForwardRange!R2
@@ -2097,9 +2116,17 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
 }
 
 /++
-    Replaces elements from $(D array) with indices ranging from $(D from)
-    (inclusive) to $(D to) (exclusive) with the range $(D stuff). Returns a new
-    array without changing the contents of $(D subject).
+    Replaces elements from `array` with indices ranging from `from`
+    (inclusive) to `to` (exclusive) with the range `stuff`.
+
+    Params:
+        subject = the array to scan
+        from = the starting index
+        to = the ending index
+        stuff = the items to replace in-between `from` and `to`
+
+    Returns:
+        A new array without changing the contents of `subject`.
  +/
 T[] replace(T, Range)(T[] subject, size_t from, size_t to, Range stuff)
 if (isInputRange!Range &&
@@ -2412,9 +2439,16 @@ if (is(typeof(replace(array, from, to, stuff))))
 }
 
 /++
-    Replaces the first occurrence of $(D from) with $(D to) in $(D a). Returns a
-    new array without changing the contents of $(D subject), or the original
-    array if no match is found.
+    Replaces the first occurrence of `from` with `to` in `subject`.
+
+    Params:
+        subject = the array to scan
+        from = the item to replace
+        to = the item to replace `from` with
+
+    Returns:
+        A new array without changing the contents of $(D subject), or the original
+        array if no match is found.
  +/
 E[] replaceFirst(E, R1, R2)(E[] subject, R1 from, R2 to)
 if (isDynamicArray!(E[]) &&
@@ -2511,9 +2545,16 @@ if (isDynamicArray!(E[]) &&
 }
 
 /++
-    Replaces the last occurrence of $(D from) with $(D to) in $(D a). Returns a
-    new array without changing the contents of $(D subject), or the original
-    array if no match is found.
+    Replaces the last occurrence of `from` with `to` in `subject`.
+
+    Params:
+        subject = the array to scan
+        from = the item to replace
+        to = the item to replace `from` with
+
+    Returns:
+        A new array without changing the contents of $(D subject), or the original
+        array if no match is found.
  +/
 E[] replaceLast(E, R1, R2)(E[] subject, R1 from , R2 to)
 if (isDynamicArray!(E[]) &&
