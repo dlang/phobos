@@ -44,6 +44,16 @@ unittest
 }
 
 /**
+Returns `true` if the `Allocator` has the alignment known at compile time;
+otherwise it returns `false`.
+ */
+template hasStaticallyKnownAlignment(Allocator)
+{
+    enum hasStaticallyKnownAlignment = __traits(compiles,
+                                                {enum x = Allocator.alignment;});
+}
+
+/**
 $(D chooseAtRuntime) is a compile-time constant of type $(D size_t) that several
 parameterized structures in this module recognize to mean deferral to runtime of
 the exact value. For example, $(D BitmappedBlock!(Allocator, 4096)) (described in
