@@ -5563,15 +5563,38 @@ enum bool isSomeChar(T) = is(CharTypeOf!T) && !isAggregateType!T;
     static assert(!isSomeChar!(S!char));
 }
 
-/**
-Detect whether $(D T) is one of the built-in string types.
+/++
+    Detect whether `T` is one of the built-in string types.
 
-The built-in string types are $(D Char[]), where $(D Char) is any of $(D char),
-$(D wchar) or $(D dchar), with or without qualifiers.
+    A built-in string type is any array type whose element type is `char`,
+    `wchar`, or `dchar` - regardless of qualifiers (that includes `string`,
+    `wstring`, and `dstring`).
 
-Static arrays of characters (like $(D char[80])) are not considered
-built-in string types.
- */
+    All arrays whose element types are `char`, `wchar`, or `dchar` -
+    regardless of qualifiers (that includes `string` and `wstring`). It
+    specifically does $(I not) include arrays of `dchar`.
+
+    Static arrays of characters (like `char[80]`) are not considered built-in
+    string types.
+
+    $(RED Warning:
+        This trait is true for enums with a base type that is a built-in string
+        type. In some cases, this is useful, but in many cases, for a function
+        to work correctly with both an enum and the enum's base type, the enum
+        value needs to be converted to the base type (which won't happen
+        automatically if the function is templated on the parameter type rather
+        than expicitly accepting the enum's base type); otherwise, it risks not
+        compiling or ending up with a value that is not one of the members of
+        that enum. So, code that uses isSomeString should be careful to ensure
+        that it either works with enums or that it disallows them - e.g.
+        `isSomeString!T && !is(T == enum)`. In general, if a function is going
+        to accept any string type rather than a generic range of characters,
+        it's simpler and safer to just templatize on character type rather than
+        to use isSomeString. However, in other cases, isSomeString can be quite
+        useful when used in combination with other traits. Just be aware that
+        it will be true for enums whose base type is a string type and code
+        accordingly.)
+  +/
 enum bool isSomeString(T) = is(StringTypeOf!T) && !isAggregateType!T && !isStaticArray!T;
 
 ///
@@ -5604,12 +5627,41 @@ enum bool isSomeString(T) = is(StringTypeOf!T) && !isAggregateType!T && !isStati
     }
 }
 
-/**
- * Detect whether type $(D T) is a narrow string.
- *
- * All arrays that use char, wchar, and their qualified versions are narrow
- * strings. (Those include string and wstring).
- */
+/++
+    Detect whether type `T` is a narrow string.
+
+    Any array type whose element type is `char` or `wchar` - regardless of
+    qualifiers - is a narrow string (that includes `string` and `wstring`). It
+    specifically does $(I not) include arrays of `dchar`.
+
+    The reason that the concept of a narrow string is important is that the
+    range primitives (`front`, `popFront`, `back`, etc.) auto-decode narrow
+    strings so that they're ranges of `dchar` rather than their actual element
+    type with the idea that it avoids processing pieces of code points
+    separately (though it does not avoid processing pieces of graphemes
+    separately). Also $(REF hasSlicing, std,range,primitives) and
+    $(REF hasLength, std,range,primitives),
+    $(REF isRandomAccessRange, std,range,primitives) are considered to be
+    `false` for narrow strings (in order to avoid splitting up a code point).
+    isNarrowString makes it easy to specialize code for narrow strings in order
+    to avoid unnecessary auto-decoding or to have more control over the
+    decoding. Alternatively, Phobos contains helper functions for wrapping
+    ranges of characters in other ranges which turn them into ranges of code
+    units, code points, or graphemes.
+
+    See_Also: $(REF ElementEncodingType, std,range,primitives),
+        $(REF byCodeUnit, std,utf), $(REF byUTF, std,utf),
+        $(REF byGrapheme, std,uni)
+
+    $(RED Warning:
+        As with $(LREF isSomeString), isNarrowString is true for enums whose
+        base type is a string type (see the warning on $(LREF isSomeString)).
+        This is less of an issue with isNarrowString than $(LREF isSomeString),
+        because isNarrowString is normally used in range-based code, and enums
+        are not ranges, regardless of their base type, but it's still something
+        to keep in mind when writing template constraints or other compile-time
+        conditions that use isNarrowString.)
+  +/
 enum bool isNarrowString(T) = (is(T : const char[]) || is(T : const wchar[])) && !isAggregateType!T && !isStaticArray!T;
 
 ///
