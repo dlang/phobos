@@ -375,7 +375,7 @@ if (areCopyCompatibleArrays!(SourceRange, TargetRange))
     assert(tlen >= slen,
             "Cannot copy a source range into a smaller target range.");
 
-    immutable overlaps = () @trusted {
+    immutable overlaps = __ctfe || () @trusted {
         return source.ptr < target.ptr + tlen &&
                target.ptr < source.ptr + slen; }();
 
@@ -485,6 +485,14 @@ $(HTTP sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
     src.retro.copy(dest.retro);
     assert(dest == [0, 0, 1, 2, 4]);
 }
+
+// Test CTFE copy.
+@safe unittest
+{
+    enum c = copy([1,2,3], [4,5,6,7]);
+    assert(c == [7]);
+}
+
 
 @safe unittest
 {
