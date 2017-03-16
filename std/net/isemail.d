@@ -26,21 +26,22 @@ module std.net.isemail;
 
 // FIXME
 import std.range.primitives; // : ElementType;
+import std.regex;
 import std.traits;
+import std.typecons : Flag, Yes, No;
 
 /**
  * Check that an email address conforms to RFCs 5321, 5322 and others.
  *
- * As of Version 3.0, we are now distinguishing clearly between a Mailbox as defined
- * by RFC 5321 and an addr-spec as defined by RFC 5322. Depending on the context,
- * either can be regarded as a valid email address. The RFC 5321 Mailbox specification
- * is more restrictive (comments, white space and obsolete forms are not allowed).
+ * Distinguishes between a Mailbox as defined  by RFC 5321 and an addr-spec as
+ * defined by RFC 5322. Depending on the context, either can be regarded as a
+ * valid email address.
  *
  * Note: The DNS check is currently not implemented.
  *
  * Params:
  *     email = The email address to check
- *     checkDNS = If CheckDns.yes then a DNS check for MX records will be made
+ *     checkDNS = If $(D Yes.checkDns) then a DNS check for MX records will be made
  *     errorLevel = Determines the boundary between valid and invalid addresses.
  *                  Status codes above this number will be returned as-is,
  *                  status codes below will be returned as EmailStatusCode.valid.
@@ -54,21 +55,27 @@ import std.traits;
  *                  either considered valid or not. Email status code will either be
  *                  EmailStatusCode.valid or EmailStatusCode.error.
  *
- * Returns: an EmailStatus, indicating the status of the email address.
+ * Returns:
+ *     An $(LREF EmailStatus), indicating the status of the email address.
  */
-EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no,
-    EmailStatusCode errorLevel = EmailStatusCode.none) if (isSomeChar!(Char))
+EmailStatus isEmail(Char)(const(Char)[] email, CheckDns checkDNS = No.checkDns,
+EmailStatusCode errorLevel = EmailStatusCode.none)
+if (isSomeChar!(Char))
 {
-    import std.algorithm.iteration : uniq;
-    import std.algorithm.searching : canFind;
+    import std.algorithm.iteration : uniq, filter, map;
+    import std.algorithm.searching : canFind, maxElement;
     import std.exception : enforce;
     import std.array : array, split;
     import std.conv : to;
-    import std.regex : match, regex;
     import std.string : indexOf, lastIndexOf;
     import std.uni : isNumber;
 
     alias tstring = const(Char)[];
+    alias Token = TokenImpl!(Char);
+
+    static ipRegex = ctRegex!(`\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}`~
+                        `(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`.to!(const(Char)[]));
+    static fourChars = ctRegex!(`^[0-9A-Fa-f]{0,4}$`.to!(const(Char)[]));
 
     enum defaultThreshold = 16;
     int threshold;
@@ -241,7 +248,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                         else
                         {
                             contextPrior = context;
-                            auto c = token.front;
+                            immutable c = token.front;
 
                             if (c < '!' || c > '~' || c == '\n' || Token.specials.canFind(token))
                                 returnStatus ~= EmailStatusCode.errorExpectingText;
@@ -359,7 +366,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
 
                         }
 
-                        auto c = token.front;
+                        immutable c = token.front;
                         hyphenFlag = false;
 
                         if (c < '!' || c > '~' || Token.specials.canFind(token))
@@ -386,14 +393,12 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                 switch (token)
                 {
                     case Token.closeBracket:
-                        if (returnStatus.max() < EmailStatusCode.deprecated_)
+                        if (returnStatus.maxElement() < EmailStatusCode.deprecated_)
                         {
                             auto maxGroups = 8;
                             size_t index = -1;
                             auto addressLiteral = parseData[EmailPart.componentLiteral];
-                            enum regexStr = `\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}`~
-                                            `(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`;
-                            auto matchesIp = array(addressLiteral.match(regex!tstring(regexStr)).captures);
+                            auto matchesIp = addressLiteral.matchAll(ipRegex).map!(a => a.hit).array;
 
                             if (!matchesIp.empty)
                             {
@@ -406,14 +411,14 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                             if (index == 0)
                                 returnStatus ~= EmailStatusCode.rfc5321AddressLiteral;
 
-                            else if (addressLiteral.compareFirstN(Token.ipV6Tag, 5, true))
+                            else if (addressLiteral.compareFirstN(Token.ipV6Tag, 5))
                                 returnStatus ~= EmailStatusCode.rfc5322DomainLiteral;
 
                             else
                             {
                                 auto ipV6 = addressLiteral.substr(5);
                                 matchesIp = ipV6.split(Token.colon);
-                                auto groupCount = matchesIp.length;
+                                immutable groupCount = matchesIp.length;
                                 index = ipV6.indexOf(Token.doubleColon);
 
                                 if (index == -1)
@@ -446,7 +451,9 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                                 else if (ipV6.substr(-1) == Token.colon && ipV6.substr(-2, -1) != Token.colon)
                                     returnStatus ~= EmailStatusCode.rfc5322IpV6ColonEnd;
 
-                                else if (!matchesIp.grep(regex!(tstring)(`^[0-9A-Fa-f]{0,4}$`), true).empty)
+                                else if (!matchesIp
+                                        .filter!(a => a.matchFirst(fourChars).empty)
+                                        .empty)
                                     returnStatus ~= EmailStatusCode.rfc5322IpV6BadChar;
 
                                 else
@@ -486,7 +493,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                     break;
 
                     default:
-                        auto c = token.front;
+                        immutable c = token.front;
 
                         if (c > AsciiToken.delete_ || c == '\0' || token == Token.openBracket)
                         {
@@ -539,7 +546,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                     break;
 
                     default:
-                        auto c = token.front;
+                        immutable c = token.front;
 
                         if (c > AsciiToken.delete_ || c == '\0' || c == '\n')
                             returnStatus ~= EmailStatusCode.errorExpectingQuotedText;
@@ -554,7 +561,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
             break;
 
             case EmailPart.contextQuotedPair:
-                auto c = token.front;
+                immutable c = token.front;
 
                 if (c > AsciiToken.delete_)
                     returnStatus ~= EmailStatusCode.errorExpectingQuotedPair;
@@ -622,7 +629,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                     break;
 
                     default:
-                        auto c = token.front;
+                        immutable c = token.front;
 
                         if (c > AsciiToken.delete_ || c == '\0' || c == '\n')
                         {
@@ -686,11 +693,11 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
                 throw new Exception("Unkown context: " ~ to!(string)(context));
         }
 
-        if (returnStatus.max() > EmailStatusCode.rfc5322)
+        if (returnStatus.maxElement() > EmailStatusCode.rfc5322)
             break;
     }
 
-    if (returnStatus.max() < EmailStatusCode.rfc5322)
+    if (returnStatus.maxElement() < EmailStatusCode.rfc5322)
     {
         if (context == EmailPart.contextQuotedString)
             returnStatus ~= EmailStatusCode.errorUnclosedQuotedString;
@@ -729,12 +736,12 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
 
     auto dnsChecked = false;
 
-    if (checkDNS == CheckDns.yes && returnStatus.max() < EmailStatusCode.dnsWarning)
+    if (checkDNS == Yes.checkDns && returnStatus.maxElement() < EmailStatusCode.dnsWarning)
     {
         assert(false, "DNS check is currently not implemented");
     }
 
-    if (!dnsChecked && returnStatus.max() < EmailStatusCode.dnsWarning)
+    if (!dnsChecked && returnStatus.maxElement() < EmailStatusCode.dnsWarning)
     {
         if (elementCount == 0)
             returnStatus ~= EmailStatusCode.rfc5321TopLevelDomain;
@@ -744,7 +751,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
     }
 
     returnStatus = array(uniq(returnStatus));
-    auto finalStatus = returnStatus.max();
+    auto finalStatus = returnStatus.maxElement();
 
     if (returnStatus.length != 1)
         returnStatus.popFront();
@@ -770,496 +777,509 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = CheckDns.no
     return EmailStatus(valid, to!(string)(localPart), to!(string)(domainPart), finalStatus);
 }
 
-unittest
+@safe unittest
 {
-    assert(`test.test@iana.org`.isEmail(CheckDns.no).statusCode == EmailStatusCode.valid);
-    assert(`test.test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.none).statusCode == EmailStatusCode.valid);
+    assert(`test.test@iana.org`.isEmail(No.checkDns).statusCode == EmailStatusCode.valid);
+    assert(`test.test@iana.org`.isEmail(No.checkDns, EmailStatusCode.none).statusCode == EmailStatusCode.valid);
 
-    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666::8888]`.isEmail(CheckDns.no,
+    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666::8888]`.isEmail(No.checkDns,
         EmailStatusCode.none).statusCode == EmailStatusCode.valid);
 
-    assert(`test`.isEmail(CheckDns.no, EmailStatusCode.none).statusCode == EmailStatusCode.error);
-    assert(`(comment)test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.none).statusCode == EmailStatusCode.error);
+    assert(`test`.isEmail(No.checkDns, EmailStatusCode.none).statusCode == EmailStatusCode.error);
+    assert(`(comment)test@iana.org`.isEmail(No.checkDns, EmailStatusCode.none).statusCode == EmailStatusCode.error);
 
-    assert(``.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoDomain);
-    assert(`test`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoDomain);
-    assert(`@`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoLocalPart);
-    assert(`test@`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoDomain);
+    assert(``.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoDomain);
+    assert(`test`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoDomain);
+    assert(`@`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoLocalPart);
+    assert(`test@`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoDomain);
 
-    // assert(`test@io`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid,
+    // assert(`test@io`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.valid,
     //     `io. currently has an MX-record (Feb 2011). Some DNS setups seem to find it, some don't.`
     //     ` If you don't see the MX for io. then try setting your DNS server to 8.8.8.8 (the Google DNS server)`);
 
-    assert(`@io`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoLocalPart,
+    assert(`@io`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoLocalPart,
         `io. currently has an MX-record (Feb 2011)`);
 
-    assert(`@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoLocalPart);
-    assert(`test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
-    assert(`test@nominet.org.uk`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
-    assert(`test@about.museum`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
-    assert(`a@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
+    assert(`@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoLocalPart);
+    assert(`test@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
+    assert(`test@nominet.org.uk`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
+    assert(`test@about.museum`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
+    assert(`a@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
 
-    //assert(`test@e.com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord);
+    //assert(`test@e.com`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord);
         // DNS check is currently not implemented
 
-    //assert(`test@iana.a`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord);
+    //assert(`test@iana.a`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord);
         // DNS check is currently not implemented
 
-    assert(`test.test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
-    assert(`.test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotStart);
-    assert(`test.@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotEnd);
+    assert(`test.test@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
+    assert(`.test@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotStart);
+    assert(`test.@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotEnd);
 
-    assert(`test..iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test .. iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorConsecutiveDots);
 
-    assert(`test_exa-mple.com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoDomain);
-    assert("!#$%&`*+/=?^`{|}~@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
+    assert(`test_exa-mple.com`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoDomain);
+    assert("!#$%&`*+/=?^`{|}~@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
 
-    assert(`test\@test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test\@test@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorExpectingText);
 
-    assert(`123@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
-    assert(`test@123.com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
+    assert(`123@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
+    assert(`test@123.com`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
 
-    assert(`test@iana.123`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@iana.123`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5321TopLevelDomainNumeric);
-    assert(`test@255.255.255.255`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@255.255.255.255`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5321TopLevelDomainNumeric);
 
-    assert(`abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklm@iana.org`.isEmail(CheckDns.no,
+    assert(`abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklm@iana.org`.isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.valid);
 
-    assert(`abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklmn@iana.org`.isEmail(CheckDns.no,
+    assert(`abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklmn@iana.org`.isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322LocalTooLong);
 
-    // assert(`test@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.com`.isEmail(CheckDns.no,
+    // assert(`test@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.com`.isEmail(No.checkDns,
     //     EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord);
         // DNS check is currently not implemented
 
-    assert(`test@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklm.com`.isEmail(CheckDns.no,
+    assert(`test@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklm.com`.isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322LabelTooLong);
 
-    assert(`test@mason-dixon.com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
+    assert(`test@mason-dixon.com`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
 
-    assert(`test@-iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@-iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorDomainHyphenStart);
 
-    assert(`test@iana-.com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@iana-.com`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorDomainHyphenEnd);
 
-    assert(`test@g--a.com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
+    assert(`test@g--a.com`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.valid);
 
-    //assert(`test@iana.co-uk`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    //assert(`test@iana.co-uk`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         //EmailStatusCode.dnsWarningNoRecord); // DNS check is currently not implemented
 
-    assert(`test@.iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotStart);
-    assert(`test@iana.org.`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotEnd);
-    assert(`test@iana..com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@.iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotStart);
+    assert(`test@iana.org.`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotEnd);
+    assert(`test@iana .. com`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorConsecutiveDots);
 
     //assert(`a@a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z`
     //        `.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z`
-    //        `.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    //        `.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
     //        EmailStatusCode.dnsWarningNoRecord); // DNS check is currently not implemented
 
     // assert(`abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklm@abcdefghijklmnopqrstuvwxyz`
     //         `abcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.`
-    //         `abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghi`.isEmail(CheckDns.no,
+    //         `abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghi`.isEmail(No.checkDns,
     //         EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord);
         // DNS check is currently not implemented
 
     assert((`abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklm@abcdefghijklmnopqrstuvwxyz`~
         `abcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.`~
-        `abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghij`).isEmail(CheckDns.no,
+        `abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghij`).isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322TooLong);
 
     assert((`a@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyz`~
         `abcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.`~
-        `abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefg.hij`).isEmail(CheckDns.no,
+        `abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefg.hij`).isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322TooLong);
 
     assert((`a@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyz`~
         `abcdefghijklmnopqrstuvwxyzabcdefghikl.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.`~
-        `abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefg.hijk`).isEmail(CheckDns.no,
+        `abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefg.hijk`).isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322DomainTooLong);
 
-    assert(`"test"@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`"test"@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5321QuotedString);
 
-    assert(`""@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321QuotedString);
-    assert(`"""@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorExpectingText);
-    assert(`"\a"@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321QuotedString);
-    assert(`"\""@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321QuotedString);
+    assert(`""@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321QuotedString);
+    assert(`"""@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorExpectingText);
+    assert(`"\a"@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321QuotedString);
+    assert(`"\""@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321QuotedString);
 
-    assert(`"\"@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`"\"@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorUnclosedQuotedString);
 
-    assert(`"\\"@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321QuotedString);
-    assert(`test"@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorExpectingText);
+    assert(`"\\"@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321QuotedString);
+    assert(`test"@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorExpectingText);
 
-    assert(`"test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`"test@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorUnclosedQuotedString);
 
-    assert(`"test"test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`"test"test@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorTextAfterQuotedString);
 
-    assert(`test"text"@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test"text"@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorExpectingText);
 
-    assert(`"test""test"@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`"test""test"@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorExpectingText);
 
-    assert(`"test"."test"@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`"test"."test"@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.deprecatedLocalPart);
 
-    assert(`"test\ test"@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`"test\ test"@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5321QuotedString);
 
-    assert(`"test".test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`"test".test@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.deprecatedLocalPart);
 
-    assert("\"test\u0000\"@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("\"test\u0000\"@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorExpectingQuotedText);
 
-    assert("\"test\\\u0000\"@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("\"test\\\u0000\"@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.deprecatedQuotedPair);
 
-    assert(`"abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz abcdefghj"@iana.org`.isEmail(CheckDns.no,
+    assert(`"abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz abcdefghj"@iana.org`.isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322LocalTooLong,
         `Quotes are still part of the length restriction`);
 
-    assert(`"abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz abcdefg\h"@iana.org`.isEmail(CheckDns.no,
+    assert(`"abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz abcdefg\h"@iana.org`.isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322LocalTooLong,
         `Quoted pair is still part of the length restriction`);
 
-    assert(`test@[255.255.255.255]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[255.255.255.255]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5321AddressLiteral);
 
-    assert(`test@a[255.255.255.255]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@a[255.255.255.255]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorExpectingText);
 
-    assert(`test@[255.255.255]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[255.255.255]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5322DomainLiteral);
 
-    assert(`test@[255.255.255.255.255]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[255.255.255.255.255]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5322DomainLiteral);
 
-    assert(`test@[255.255.255.256]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[255.255.255.256]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5322DomainLiteral);
 
-    assert(`test@[1111:2222:3333:4444:5555:6666:7777:8888]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[1111:2222:3333:4444:5555:6666:7777:8888]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5322DomainLiteral);
 
-    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666:7777]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666:7777]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5322IpV6GroupCount);
 
-    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666:7777:8888]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode
+    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666:7777:8888]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode
         == EmailStatusCode.rfc5321AddressLiteral);
 
-    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666:7777:8888:9999]`.isEmail(CheckDns.no,
+    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666:7777:8888:9999]`.isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322IpV6GroupCount);
 
-    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666:7777:888G]`.isEmail(CheckDns.no,
+    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666:7777:888G]`.isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322IpV6BadChar);
 
-    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666::8888]`.isEmail(CheckDns.no,
+    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666::8888]`.isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321IpV6Deprecated);
 
-    assert(`test@[IPv6:1111:2222:3333:4444:5555::8888]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[IPv6:1111:2222:3333:4444:5555::8888]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5321AddressLiteral);
 
-    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666::7777:8888]`.isEmail(CheckDns.no,
+    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666::7777:8888]`.isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322IpV6MaxGroups);
 
-    assert(`test@[IPv6::3333:4444:5555:6666:7777:8888]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[IPv6::3333:4444:5555:6666:7777:8888]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5322IpV6ColonStart);
 
-    assert(`test@[IPv6:::3333:4444:5555:6666:7777:8888]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[IPv6:::3333:4444:5555:6666:7777:8888]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5321AddressLiteral);
 
-    assert(`test@[IPv6:1111::4444:5555::8888]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[IPv6:1111::4444:5555::8888]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5322IpV6TooManyDoubleColons);
 
-    assert(`test@[IPv6:::]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[IPv6:::]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5321AddressLiteral);
 
-    assert(`test@[IPv6:1111:2222:3333:4444:5555:255.255.255.255]`.isEmail(CheckDns.no,
+    assert(`test@[IPv6:1111:2222:3333:4444:5555:255.255.255.255]`.isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322IpV6GroupCount);
 
-    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666:255.255.255.255]`.isEmail(CheckDns.no,
+    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666:255.255.255.255]`.isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321AddressLiteral);
 
-    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666:7777:255.255.255.255]`.isEmail(CheckDns.no,
+    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666:7777:255.255.255.255]`.isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322IpV6GroupCount);
 
-    assert(`test@[IPv6:1111:2222:3333:4444::255.255.255.255]`.isEmail(CheckDns.no,
+    assert(`test@[IPv6:1111:2222:3333:4444::255.255.255.255]`.isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321AddressLiteral);
 
-    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666::255.255.255.255]`.isEmail(CheckDns.no,
+    assert(`test@[IPv6:1111:2222:3333:4444:5555:6666::255.255.255.255]`.isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322IpV6MaxGroups);
 
-    assert(`test@[IPv6:1111:2222:3333:4444:::255.255.255.255]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode
+    assert(`test@[IPv6:1111:2222:3333:4444:::255.255.255.255]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode
         == EmailStatusCode.rfc5322IpV6TooManyDoubleColons);
 
-    assert(`test@[IPv6::255.255.255.255]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[IPv6::255.255.255.255]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5322IpV6ColonStart);
 
-    assert(` test @iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(` test @iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt);
 
-    assert(`test@ iana .com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@ iana .com`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt);
 
-    assert(`test . test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test . test@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.deprecatedFoldingWhitespace);
 
-    assert("\u000D\u000A test@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("\u000D\u000A test@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.foldingWhitespace, `Folding whitespace`);
 
-    assert("\u000D\u000A \u000D\u000A test@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("\u000D\u000A \u000D\u000A test@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.deprecatedFoldingWhitespace, `FWS with one line composed entirely of WSP`~
         ` -- only allowed as obsolete FWS (someone might allow only non-obsolete FWS)`);
 
-    assert(`(comment)test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.comment);
-    assert(`((comment)test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`(comment)test@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.comment);
+    assert(`((comment)test@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorUnclosedComment);
 
-    assert(`(comment(comment))test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`(comment(comment))test@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.comment);
 
-    assert(`test@(comment)iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@(comment)iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt);
 
-    assert(`test(comment)test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test(comment)test@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorTextAfterCommentFoldingWhitespace);
 
-    assert(`test@(comment)[255.255.255.255]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@(comment)[255.255.255.255]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt);
 
-    assert(`(comment)abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklm@iana.org`.isEmail(CheckDns.no,
+    assert(`(comment)abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghiklm@iana.org`.isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.comment);
 
-    assert(`test@(comment)abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.com`.isEmail(CheckDns.no,
+    assert(`test@(comment)abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghikl.com`.isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.deprecatedCommentFoldingWhitespaceNearAt);
 
     assert((`(comment)test@abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghik.abcdefghijklmnopqrstuvwxyz`~
         `abcdefghijklmnopqrstuvwxyzabcdefghik.abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk.`~
-        `abcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstu`).isEmail(CheckDns.no,
+        `abcdefghijklmnopqrstuvwxyzabcdefghijk.abcdefghijklmnopqrstu`).isEmail(No.checkDns,
         EmailStatusCode.any).statusCode == EmailStatusCode.comment);
 
-    assert("test@iana.org\u000A".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("test@iana.org\u000A".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorExpectingText);
 
-    assert(`test@xn--hxajbheg2az3al.xn--jxalpdlp`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@xn--hxajbheg2az3al.xn--jxalpdlp`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.valid, `A valid IDN from ICANN's <a href="http://idn.icann.org/#The_example.test_names">`~
         `IDN TLD evaluation gateway</a>`);
 
-    assert(`xn--test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.valid,
+    assert(`xn--test@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.valid,
         `RFC 3490: "unless the email standards are revised to invite the use of IDNA for local parts, a domain label`~
         ` that holds the local part of an email address SHOULD NOT begin with the ACE prefix, and even if it does,`~
         ` it is to be interpreted literally as a local part that happens to begin with the ACE prefix"`);
 
-    assert(`test@iana.org-`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@iana.org-`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorDomainHyphenEnd);
 
-    assert(`"test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`"test@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorUnclosedQuotedString);
 
-    assert(`(test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`(test@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorUnclosedComment);
 
-    assert(`test@(iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@(iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorUnclosedComment);
 
-    assert(`test@[1.2.3.4`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[1.2.3.4`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorUnclosedDomainLiteral);
 
-    assert(`"test\"@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`"test\"@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorUnclosedQuotedString);
 
-    assert(`(comment\)test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`(comment\)test@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorUnclosedComment);
 
-    assert(`test@iana.org(comment\)`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@iana.org(comment\)`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorUnclosedComment);
 
-    assert(`test@iana.org(comment\`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@iana.org(comment\`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorBackslashEnd);
 
-    assert(`test@[RFC-5322-domain-literal]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[RFC-5322-domain-literal]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5322DomainLiteral);
 
-    assert(`test@[RFC-5322]-domain-literal]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[RFC-5322]-domain-literal]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorTextAfterDomainLiteral);
 
-    assert(`test@[RFC-5322-[domain-literal]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[RFC-5322-[domain-literal]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorExpectingDomainText);
 
-    assert("test@[RFC-5322-\\\u0007-domain-literal]".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("test@[RFC-5322-\\\u0007-domain-literal]".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5322DomainLiteralObsoleteText, `obs-dtext <strong>and</strong> obs-qp`);
 
-    assert("test@[RFC-5322-\\\u0009-domain-literal]".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("test@[RFC-5322-\\\u0009-domain-literal]".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5322DomainLiteralObsoleteText);
 
-    assert(`test@[RFC-5322-\]-domain-literal]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[RFC-5322-\]-domain-literal]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5322DomainLiteralObsoleteText);
 
-    assert(`test@[RFC-5322-domain-literal\]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[RFC-5322-domain-literal\]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorUnclosedDomainLiteral);
 
-    assert(`test@[RFC-5322-domain-literal\`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[RFC-5322-domain-literal\`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorBackslashEnd);
 
-    assert(`test@[RFC 5322 domain literal]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[RFC 5322 domain literal]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5322DomainLiteral, `Spaces are FWS in a domain literal`);
 
-    assert(`test@[RFC-5322-domain-literal] (comment)`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[RFC-5322-domain-literal] (comment)`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5322DomainLiteral);
 
-    assert("\u007F@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("\u007F@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorExpectingText);
-    assert("test@\u007F.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("test@\u007F.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorExpectingText);
-    assert("\"\u007F\"@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("\"\u007F\"@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.deprecatedQuotedText);
 
-    assert("\"\\\u007F\"@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("\"\\\u007F\"@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
             EmailStatusCode.deprecatedQuotedPair);
 
-    assert("(\u007F)test@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("(\u007F)test@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.deprecatedCommentText);
 
-    assert("test@iana.org\u000D".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
+    assert("test@iana.org\u000D".isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
         `No LF after the CR`);
 
-    assert("\u000Dtest@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
+    assert("\u000Dtest@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
         `No LF after the CR`);
 
-    assert("\"\u000Dtest\"@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("\"\u000Dtest\"@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorCrNoLf, `No LF after the CR`);
 
-    assert("(\u000D)test@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
+    assert("(\u000D)test@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
         `No LF after the CR`);
 
-    assert("(\u000D".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
+    assert("(\u000D".isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
         `No LF after the CR`);
 
-    assert("test@iana.org(\u000D)".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
+    assert("test@iana.org(\u000D)".isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorCrNoLf,
         `No LF after the CR`);
 
-    assert("\u000Atest@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("\u000Atest@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorExpectingText);
 
-    assert("\"\u000A\"@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("\"\u000A\"@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorExpectingQuotedText);
 
-    assert("\"\\\u000A\"@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("\"\\\u000A\"@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.deprecatedQuotedPair);
 
-    assert("(\u000A)test@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("(\u000A)test@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorExpectingCommentText);
 
-    assert("\u0007@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("\u0007@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorExpectingText);
 
-    assert("test@\u0007.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("test@\u0007.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorExpectingText);
 
-    assert("\"\u0007\"@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("\"\u0007\"@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.deprecatedQuotedText);
 
-    assert("\"\\\u0007\"@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("\"\\\u0007\"@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.deprecatedQuotedPair);
 
-    assert("(\u0007)test@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("(\u0007)test@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.deprecatedCommentText);
 
-    assert("\u000D\u000Atest@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("\u000D\u000Atest@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorFoldingWhitespaceCrLfEnd, `Not FWS because no actual white space`);
 
-    assert("\u000D\u000A \u000D\u000Atest@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("\u000D\u000A \u000D\u000Atest@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorFoldingWhitespaceCrLfEnd, `Not obs-FWS because there must be white space on each "fold"`);
 
-    assert(" \u000D\u000Atest@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(" \u000D\u000Atest@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorFoldingWhitespaceCrLfEnd, `Not FWS because no white space after the fold`);
 
-    assert(" \u000D\u000A test@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(" \u000D\u000A test@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.foldingWhitespace, `FWS`);
 
-    assert(" \u000D\u000A \u000D\u000Atest@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(" \u000D\u000A \u000D\u000Atest@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorFoldingWhitespaceCrLfEnd, `Not FWS because no white space after the second fold`);
 
-    assert(" \u000D\u000A\u000D\u000Atest@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(" \u000D\u000A\u000D\u000Atest@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorFoldingWhitespaceCrflX2, `Not FWS because no white space after either fold`);
 
-    assert(" \u000D\u000A\u000D\u000A test@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(" \u000D\u000A\u000D\u000A test@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorFoldingWhitespaceCrflX2, `Not FWS because no white space after the first fold`);
 
-    assert("test@iana.org\u000D\u000A ".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("test@iana.org\u000D\u000A ".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.foldingWhitespace, `FWS`);
 
-    assert("test@iana.org\u000D\u000A \u000D\u000A ".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("test@iana.org\u000D\u000A \u000D\u000A ".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.deprecatedFoldingWhitespace, `FWS with one line composed entirely of WSP -- `~
         `only allowed as obsolete FWS (someone might allow only non-obsolete FWS)`);
 
-    assert("test@iana.org\u000D\u000A".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("test@iana.org\u000D\u000A".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorFoldingWhitespaceCrLfEnd, `Not FWS because no actual white space`);
 
-    assert("test@iana.org\u000D\u000A \u000D\u000A".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("test@iana.org\u000D\u000A \u000D\u000A".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorFoldingWhitespaceCrLfEnd, `Not obs-FWS because there must be white space on each "fold"`);
 
-    assert("test@iana.org \u000D\u000A".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("test@iana.org \u000D\u000A".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorFoldingWhitespaceCrLfEnd, `Not FWS because no white space after the fold`);
 
-    assert("test@iana.org \u000D\u000A ".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("test@iana.org \u000D\u000A ".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.foldingWhitespace, `FWS`);
 
-    assert("test@iana.org \u000D\u000A \u000D\u000A".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("test@iana.org \u000D\u000A \u000D\u000A".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorFoldingWhitespaceCrLfEnd, `Not FWS because no white space after the second fold`);
 
-    assert("test@iana.org \u000D\u000A\u000D\u000A".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("test@iana.org \u000D\u000A\u000D\u000A".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorFoldingWhitespaceCrflX2, `Not FWS because no white space after either fold`);
 
-    assert("test@iana.org \u000D\u000A\u000D\u000A ".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("test@iana.org \u000D\u000A\u000D\u000A ".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorFoldingWhitespaceCrflX2, `Not FWS because no white space after the first fold`);
 
-    assert(" test@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.foldingWhitespace);
-    assert(`test@iana.org `.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.foldingWhitespace);
+    assert(" test@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.foldingWhitespace);
+    assert(`test@iana.org `.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.foldingWhitespace);
 
-    assert(`test@[IPv6:1::2:]`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test@[IPv6:1::2:]`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.rfc5322IpV6ColonEnd);
 
-    assert("\"test\\\u00A9\"@iana.org".isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert("\"test\\\u00A9\"@iana.org".isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorExpectingQuotedPair);
 
-    assert(`test@iana/icann.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322Domain);
+    assert(`test@iana/icann.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5322Domain);
 
-    assert(`test.(comment)test@iana.org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    assert(`test.(comment)test@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.deprecatedComment);
 
-    assert(`test@org`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321TopLevelDomain);
+    assert(`test@org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.rfc5321TopLevelDomain);
 
-    // assert(`test@test.com`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode ==
+    // assert(`test@test.com`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
             //EmailStatusCode.dnsWarningNoMXRecord, `test.com has an A-record but not an MX-record`);
             // DNS check is currently not implemented
     //
-    // assert(`test@nic.no`.isEmail(CheckDns.no, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord,
+    // assert(`test@nic.no`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.dnsWarningNoRecord,
     //     `nic.no currently has no MX-records or A-records (Feb 2011). If you are seeing an A-record for nic.io then`
     //       ` try setting your DNS server to 8.8.8.8 (the Google DNS server) - your DNS server may be faking an A-record`
     //     ` (OpenDNS does this, for instance).`); // DNS check is currently not implemented
 }
 
-/// Enum for indicating if the isEmail function should perform a DNS check or not.
-enum CheckDns
+// https://issues.dlang.org/show_bug.cgi?id=17217
+@safe unittest
 {
-    /// Does not perform DNS checking
-    no,
+    wstring a = `test.test@iana.org`w;
+    dstring b = `test.test@iana.org`d;
+    const(wchar)[] c = `test.test@iana.org`w;
+    const(dchar)[] d = `test.test@iana.org`d;
 
-    /// Performs DNS checking
-    yes
+    assert(a.isEmail(No.checkDns).statusCode == EmailStatusCode.valid);
+    assert(b.isEmail(No.checkDns).statusCode == EmailStatusCode.valid);
+    assert(c.isEmail(No.checkDns).statusCode == EmailStatusCode.valid);
+    assert(d.isEmail(No.checkDns).statusCode == EmailStatusCode.valid);
 }
 
-/// This struct represents the status of an email address
+/**
+ * Flag for indicating if the isEmail function should perform a DNS check or not.
+ *
+ * If set to $(D CheckDns.no), isEmail does not perform DNS checking.
+ *
+ * Otherwise if set to $(D CheckDns.yes), isEmail performs DNS checking.
+ */
+alias CheckDns = Flag!"checkDns";
+
+/// Represents the status of an email address
 struct EmailStatus
 {
     private
@@ -1270,7 +1290,7 @@ struct EmailStatus
         EmailStatusCode statusCode_;
     }
 
-    ///
+    /// Self aliases to a `bool` representing if the email is valid or not
     alias valid this;
 
     /*
@@ -1280,7 +1300,7 @@ struct EmailStatus
      *     domainPart = the domain part of the email address
      *        statusCode = the status code
      */
-    private this (bool valid, string localPart, string domainPart, EmailStatusCode statusCode)
+    private this (bool valid, string localPart, string domainPart, EmailStatusCode statusCode) @safe @nogc pure nothrow
     {
         this.valid_ = valid;
         this.localPart_ = localPart;
@@ -1288,38 +1308,38 @@ struct EmailStatus
         this.statusCode_ = statusCode;
     }
 
-    /// Indicates if the email address is valid or not.
-    @property bool valid () const
+    /// Returns: If the email address is valid or not.
+    @property bool valid() const @safe @nogc pure nothrow
     {
         return valid_;
     }
 
-    /// The local part of the email address, that is, the part before the @ sign.
-    @property string localPart () const
+    /// Returns: The local part of the email address, that is, the part before the @ sign.
+    @property string localPart() const @safe @nogc pure nothrow
     {
         return localPart_;
     }
 
-    /// The domain part of the email address, that is, the part after the @ sign.
-    @property string domainPart () const
+    /// Returns: The domain part of the email address, that is, the part after the @ sign.
+    @property string domainPart() const @safe @nogc pure nothrow
     {
         return domainPart_;
     }
 
-    /// The email status code
-    @property EmailStatusCode statusCode () const
+    /// Returns: The email status code
+    @property EmailStatusCode statusCode() const @safe @nogc pure nothrow
     {
         return statusCode_;
     }
 
-    /// Returns a describing string of the status code
-    @property string status () const
+    /// Returns: A describing string of the status code
+    @property string status() const @safe @nogc pure nothrow
     {
         return statusCodeDescription(statusCode_);
     }
 
-    /// Returns a textual representation of the email status
-    string toString () const
+    /// Returns: A textual representation of the email status
+    string toString() const @safe pure
     {
         import std.format : format;
         return format("EmailStatus\n{\n\tvalid: %s\n\tlocalPart: %s\n\tdomainPart: %s\n\tstatusCode: %s\n}", valid,
@@ -1327,8 +1347,13 @@ struct EmailStatus
     }
 }
 
-/// Returns a describing string of the given status code
-string statusCodeDescription (EmailStatusCode statusCode)
+/**
+ * Params:
+ *     statusCode = The $(LREF EmailStatusCode) to read
+ * Returns:
+ *     A detailed string describing the given status code
+ */
+string statusCodeDescription(EmailStatusCode statusCode) @safe @nogc pure nothrow
 {
     final switch (statusCode)
     {
@@ -1710,9 +1735,9 @@ enum EmailPart
 }
 
 // Miscellaneous string constants
-struct Token
+struct TokenImpl(Char)
 {
-    enum
+    enum : const(Char)[]
     {
         at = "@",
         backslash = `\`,
@@ -1741,34 +1766,6 @@ enum AsciiToken
     horizontalTab = 9,
     unitSeparator = 31,
     delete_ = 127
-}
-
-/*
- * Returns the maximum of the values in the given array.
- *
- * Params:
- *     arr = the array containing the values to return the maximum of
- *
- * Returns: the maximum value
- */
-T max (T) (T[] arr)
-{
-    static import std.algorithm.comparison;
-
-    auto max = arr.front;
-
-    foreach (i ; 0 .. arr.length - 1)
-        max = std.algorithm.comparison.max(max, arr[i + 1]);
-
-    return max;
-}
-
-///
-unittest
-{
-    assert([1, 2, 3, 4].max() == 4);
-    assert([3, 5, 9, 2, 5].max() == 9);
-    assert([7, 13, 9, 12, 0].max() == 13);
 }
 
 /*
@@ -1846,15 +1843,14 @@ T[] substr (T) (T[] str, ptrdiff_t start = 0, ptrdiff_t length = ptrdiff_t.min)
     return str[start .. end];
 }
 
-///
-unittest
+@safe unittest
 {
     assert("abcdef".substr(-1) == "f");
     assert("abcdef".substr(-2) == "ef");
     assert("abcdef".substr(-3, 1) == "d");
 }
 
-unittest
+@safe unittest
 {
     assert("abcdef".substr(0, -1) == "abcde");
     assert("abcdef".substr(2, -1) == "cde");
@@ -1884,58 +1880,25 @@ unittest
  * $(TR $(TD $(D > 0))  $(TD $(D s1 > s2)))
  * )
  */
-int compareFirstN (alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length, bool caseInsensitive = false)
-    if (is(Unqual!(ElementType!(S1)) == dchar) && is(Unqual!(ElementType!(S2)) == dchar))
+int compareFirstN(alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length)
+if (is(Unqual!(ElementType!(S1)) == dchar) && is(Unqual!(ElementType!(S2)) == dchar))
 {
     import std.uni : icmp;
-    import std.algorithm.comparison : cmp;
     auto s1End = length <= s1.length ? length : s1.length;
     auto s2End = length <= s2.length ? length : s2.length;
 
     auto slice1 = s1[0 .. s1End];
     auto slice2 = s2[0 .. s2End];
 
-    return caseInsensitive ? slice1.icmp(slice2) : slice1.cmp(slice2);
+    return slice1.icmp(slice2);
 }
 
-///
-unittest
+@safe unittest
 {
     assert("abc".compareFirstN("abcdef", 3) == 0);
-    assert("abc".compareFirstN("Abc", 3, true) == 0);
+    assert("abc".compareFirstN("Abc", 3) == 0);
     assert("abc".compareFirstN("abcdef", 6) < 0);
     assert("abcdef".compareFirstN("abc", 6) > 0);
-}
-
-/*
- * Returns a range consisting of the elements of the $(D_PARAM input) range that
- * matches the given $(D_PARAM pattern).
- *
- * Params:
- *     input = the input range
- *     pattern = the regular expression pattern to search for
- *     invert = if $(D_KEYWORD true), this function returns the elements of the
- *              input range that do $(B not) match the given $(D_PARAM pattern).
- *
- * Returns: a range containing the matched elements
- */
-auto grep (Range, Regex) (Range input, Regex pattern, bool invert = false)
-{
-    import std.regex : match;
-    import std.algorithm.iteration : filter;
-    auto dg = invert ? (ElementType!(Range) e) { return e.match(pattern).empty; } :
-                       (ElementType!(Range) e) { return !e.match(pattern).empty; };
-
-    return filter!(dg)(input);
-}
-
-///
-unittest
-{
-    import std.algorithm.comparison : equal;
-    import std.regex;
-    assert(equal(["ab", "0a", "cd", "1b"].grep(regex(`\d\w`)), ["0a", "1b"]));
-    assert(equal(["abc", "0123", "defg", "4567"].grep(regex(`4567`), true), ["abc", "0123", "defg"]));
 }
 
 /*
@@ -1946,15 +1909,15 @@ unittest
  *
  * Returns: the popped element
  */
-ElementType!(A) pop (A) (ref A a) if (isDynamicArray!(A) && !isNarrowString!(A) && isMutable!(A) && !is(A == void[]))
+ElementType!(A) pop (A) (ref A a)
+if (isDynamicArray!(A) && !isNarrowString!(A) && isMutable!(A) && !is(A == void[]))
 {
     auto e = a.back;
     a.popBack();
     return e;
 }
 
-///
-unittest
+@safe unittest
 {
     auto array = [0, 1, 2, 3];
     auto result = array.pop();
@@ -1980,13 +1943,13 @@ const(T)[] get (T) (const(T)[] str, size_t index, dchar c)
     return str[index .. index + codeLength!(T)(c)];
 }
 
-unittest
+@safe unittest
 {
     assert("abc".get(1, 'b') == "b");
     assert("löv".get(1, 'ö') == "ö");
 }
 
-unittest
+@safe unittest
 {
     assert("abc".get(1, 'b') == "b");
     assert("löv".get(1, 'ö') == "ö");

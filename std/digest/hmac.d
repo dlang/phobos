@@ -31,7 +31,7 @@ import std.meta : allSatisfy;
 
 version(StdDdoc)
 /// Computes an HMAC over data read from stdin.
-unittest
+@safe unittest
 {
     import std.stdio, std.digest.hmac, std.digest.sha;
     import std.string : representation;
@@ -270,7 +270,7 @@ if (isDigest!H)
     {
         import std.digest.sha, std.digest.hmac;
         import std.string : representation;
-        import std.algorithm : map;
+        import std.algorithm.iteration : map;
         string data = "Hello, world";
         auto digest = data.representation
                       .map!(a => cast(ubyte)(a+1))

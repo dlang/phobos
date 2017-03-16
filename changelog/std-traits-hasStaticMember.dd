@@ -1,0 +1,14 @@
+Added `std.traits.hasStaticMember` to check whether a symbol is a static member of a type.
+
+-------
+import std.traits : hasStaticMember;
+
+struct S
+{
+    static int staticVar;
+    int nonstaticVar;
+}
+
+assert( hasStaticMember!(S, "staticVar"));
+assert(!hasStaticMember!(S, "nonstaticVar"));
+-------

@@ -69,7 +69,7 @@ class MultiLogger : Logger
     */
     Logger removeLogger(in char[] toRemove) @safe
     {
-        import std.algorithm : copy;
+        import std.algorithm.mutation : copy;
         import std.range.primitives : back, popBack;
         for (size_t i = 0; i < this.logger.length; ++i)
         {
@@ -136,11 +136,11 @@ class MultiLogger : Logger
     assert(n0.msg == "Hello TestLogger");
     assert(n0.line == line);
     assert(n1.msg == "Hello TestLogger");
-    assert(n0.line == line);
+    assert(n1.line == line);
 }
 
 // Issue #16
-unittest
+@system unittest
 {
     import std.file : deleteme;
     import std.stdio : File;
@@ -186,12 +186,12 @@ unittest
 
 @safe unittest
 {
-    auto dl = cast(FileLogger)sharedLog;
+    auto dl = cast(FileLogger) sharedLog;
     assert(dl !is null);
     assert(dl.logLevel == LogLevel.all);
     assert(globalLogLevel == LogLevel.all);
 
-    auto tl = cast(StdForwardLogger)stdThreadLocalLog;
+    auto tl = cast(StdForwardLogger) stdThreadLocalLog;
     assert(tl !is null);
     stdThreadLocalLog.logLevel = LogLevel.all;
 }

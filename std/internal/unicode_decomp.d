@@ -1,7 +1,7 @@
 module std.internal.unicode_decomp;
 import std.internal.unicode_tables;
 
-@safe pure nothrow @nogc:
+@safe pure nothrow @nogc package(std):
 
 static if (size_t.sizeof == 8)
 {

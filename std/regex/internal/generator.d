@@ -47,18 +47,18 @@ module std.regex.internal.generator;
             switch (re.ir[pc].code)
             {
             case IR.Char:
-                    formattedWrite(app,"%s", cast(dchar)re.ir[pc].data);
+                    formattedWrite(app,"%s", cast(dchar) re.ir[pc].data);
                     pc += IRL!(IR.Char);
                     break;
                 case IR.OrChar:
                     uint len = re.ir[pc].sequence;
-                    formattedWrite(app, "%s", cast(dchar)re.ir[pc + rand(len)].data);
+                    formattedWrite(app, "%s", cast(dchar) re.ir[pc + rand(len)].data);
                     pc += len;
                     break;
                 case IR.CodepointSet:
                 case IR.Trie:
                     auto set = re.charsets[re.ir[pc].data];
-                    auto x = rand(cast(uint)set.byInterval.length);
+                    auto x = rand(cast(uint) set.byInterval.length);
                     auto y = rand(set.byInterval[x].b - set.byInterval[x].a);
                     formattedWrite(app, "%s", cast(dchar)(set.byInterval[x].a+y));
                     pc += IRL!(IR.CodepointSet);
@@ -69,7 +69,7 @@ module std.regex.internal.generator;
                     {
                         x = rand(0x11_000);
                     }while (x == '\r' || x == '\n' || !isValidDchar(x));
-                    formattedWrite(app, "%s", cast(dchar)x);
+                    formattedWrite(app, "%s", cast(dchar) x);
                     pc += IRL!(IR.Any);
                     break;
                 case IR.GotoEndOr:
@@ -144,7 +144,7 @@ module std.regex.internal.generator;
                         pc += IRL!(IR.InfiniteEnd);
                         break;
                     }
-                    dataLenOld = cast(uint)app.data.length;
+                    dataLenOld = cast(uint) app.data.length;
                     if (app.data.length < limit && rand(3) > 0)
                         pc = pc - len;
                     else
@@ -175,7 +175,7 @@ module std.regex.internal.generator;
     }
 }
 
-unittest
+@system unittest
 {
     import std.range, std.regex;
     auto re = regex(`P[a-z]{3,}q`);

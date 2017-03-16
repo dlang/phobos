@@ -52,6 +52,8 @@
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_signals.d)
+ *
+ * $(SCRIPT inhibitQuickIndex = 1;)
  */
 /*          Copyright Digital Mars 2000 - 2009.
  * Distributed under the Boost Software License, Version 1.0.
@@ -97,12 +99,35 @@ mixin template Signal(T1...)
 
     /***
      * Call each of the connected slots, passing the argument(s) i to them.
+     * Nested call will be ignored.
      */
     final void emit( T1 i )
     {
+        if (status >= ST.inemitting || !slots.length)
+            return; // should not nest
+
+        status = ST.inemitting;
+        scope (exit)
+            status = ST.idle;
+
         foreach (slot; slots[0 .. slots_idx])
         {   if (slot)
                 slot(i);
+        }
+
+        assert(status >= ST.inemitting);
+        if (status == ST.inemitting_disconnected)
+        {
+            for (size_t j = 0; j < slots_idx;)
+            {
+                if (slots[j] is null)
+                {
+                    slots_idx--;
+                    slots[j] = slots[slots_idx];
+                }
+                else
+                    j++;
+            }
         }
     }
 
@@ -124,7 +149,7 @@ mixin template Signal(T1...)
                 auto p = core.stdc.stdlib.calloc(slot_t.sizeof, len);
                 if (!p)
                     core.exception.onOutOfMemoryError();
-                slots = (cast(slot_t*)p)[0 .. len];
+                slots = (cast(slot_t*) p)[0 .. len];
             }
             else
             {
@@ -137,7 +162,7 @@ mixin template Signal(T1...)
                 auto p = core.stdc.stdlib.realloc(slots.ptr, nbytes);
                 if (!p)
                     core.exception.onOutOfMemoryError();
-                slots = (cast(slot_t*)p)[0 .. len];
+                slots = (cast(slot_t*) p)[0 .. len];
                 slots[slots_idx + 1 .. $] = null;
             }
         }
@@ -154,20 +179,47 @@ mixin template Signal(T1...)
     final void disconnect(slot_t slot)
     {
         debug (signal) writefln("Signal.disconnect(slot)");
-        for (size_t i = 0; i < slots_idx; )
+        size_t disconnectedSlots = 0;
+        size_t instancePreviousSlots = 0;
+        if (status >= ST.inemitting)
         {
-            if (slots[i] == slot)
-            {   slots_idx--;
-                slots[i] = slots[slots_idx];
-                slots[slots_idx] = null;        // not strictly necessary
-
-                Object o = _d_toObject(slot.ptr);
-                rt_detachDisposeEvent(o, &unhook);
+            foreach (i, sloti; slots[0 .. slots_idx])
+            {
+                if (sloti.ptr == slot.ptr &&
+                    ++instancePreviousSlots &&
+                    sloti == slot)
+                {
+                    disconnectedSlots++;
+                    slots[i] = null;
+                    status = ST.inemitting_disconnected;
+                }
             }
-            else
-                i++;
         }
-    }
+        else
+        {
+            for (size_t i = 0; i < slots_idx; )
+            {
+                if (slots[i].ptr == slot.ptr &&
+                    ++instancePreviousSlots &&
+                    slots[i] == slot)
+                {
+                    slots_idx--;
+                    disconnectedSlots++;
+                    slots[i] = slots[slots_idx];
+                    slots[slots_idx] = null;        // not strictly necessary
+                }
+                else
+                    i++;
+            }
+        }
+
+         // detach object from dispose event if all its slots have been removed
+        if (instancePreviousSlots == disconnectedSlots)
+        {
+            Object o = _d_toObject(slot.ptr);
+            rt_detachDisposeEvent(o, &unhook);
+        }
+     }
 
     /* **
      * Special function called when o is destroyed.
@@ -175,8 +227,9 @@ mixin template Signal(T1...)
      * of slots to be called by emit().
      */
     final void unhook(Object o)
-    {
-        debug (signal) writefln("Signal.unhook(o = %s)", cast(void*)o);
+    in { assert( status == ST.idle ); }
+    body {
+        debug (signal) writefln("Signal.unhook(o = %s)", cast(void*) o);
         for (size_t i = 0; i < slots_idx; )
         {
             if (_d_toObject(slots[i].ptr) is o)
@@ -216,6 +269,9 @@ mixin template Signal(T1...)
   private:
     slot_t[] slots;             // the slots to call from emit()
     size_t slots_idx;           // used length of slots[]
+
+    enum ST { idle, inemitting, inemitting_disconnected }
+    ST status;
 }
 
 ///
@@ -555,6 +611,34 @@ void linkin() { }
     a.value6 = 46;
 }
 
+// Triggers bug from issue 15341
+@system unittest
+{
+    class Observer
+    {
+       void watch() { }
+       void watch2() { }
+    }
+
+    class Bar
+    {
+       mixin Signal!();
+    }
+
+   auto a = new Bar;
+   auto o = new Observer;
+
+   //Connect both observer methods for the same instance
+   a.connect(&o.watch);
+   a.connect(&o.watch2); // not connecting watch2() or disconnecting it manually fixes the issue
+
+   //Disconnect a single method of the two
+   a.disconnect(&o.watch); // NOT disconnecting watch() fixes the issue
+
+   destroy(o); // destroying o should automatically call unhook and disconnect the slot for watch2
+   a.emit(); // should not raise segfault since &o.watch2 is no longer connected
+}
+
 version(none) // Disabled because of dmd @@@BUG5028@@@
 @system unittest
 {
@@ -568,3 +652,57 @@ version(none) // Disabled because of dmd @@@BUG5028@@@
         mixin Signal!(string, int) s2;
     }
 }
+
+// Triggers bug from issue 16249
+@system unittest
+{
+    class myLINE
+    {
+        mixin Signal!( myLINE, int );
+
+        void value( int v )
+        {
+            if ( v >= 0 ) emit( this, v );
+            else          emit( new myLINE, v );
+        }
+    }
+
+    class Dot
+    {
+        int value;
+
+        myLINE line_;
+        void line( myLINE line_x )
+        {
+            if ( line_ is line_x ) return;
+
+            if ( line_ !is null )
+            {
+                line_.disconnect( &watch );
+            }
+            line_ = line_x;
+            line_.connect( &watch );
+        }
+
+        void watch( myLINE line_x, int value_x )
+        {
+            line = line_x;
+            value = value_x;
+        }
+    }
+
+    auto dot1 = new Dot;
+    auto dot2 = new Dot;
+    auto line = new myLINE;
+    dot1.line = line;
+    dot2.line = line;
+
+    line.value = 11;
+    assert( dot1.value == 11 );
+    assert( dot2.value == 11 );
+
+    line.value = -22;
+    assert( dot1.value == -22 );
+    assert( dot2.value == -22 );
+}
+

@@ -16,7 +16,7 @@ COREREF = $(HTTP dlang.org/phobos/core_$1.html#$2, $(D core.$1.$2))
 module std.internal.cstring;
 
 ///
-unittest
+@safe unittest
 {
     version(Posix)
     {
@@ -66,6 +66,8 @@ The value returned is implicitly convertible to $(D const To*) and
 has two properties: $(D ptr) to access $(I C string) as $(D const To*)
 and $(D buffPtr) to access it as $(D To*).
 
+The value returned can be indexed by [] to access it as an array.
+
 The temporary $(I C string) is valid unless returned object is destroyed.
 Thus if returned object is assigned to a variable the temporary is
 valid unless the variable goes out of scope. If returned object isn't
@@ -85,13 +87,13 @@ See $(RED WARNING) in $(B Examples) section.
 */
 
 auto tempCString(To = char, From)(From str)
-    if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
-        isSomeChar!(ElementEncodingType!From))
+if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
+    isSomeChar!(ElementEncodingType!From))
 {
 
     alias CF = Unqual!(ElementEncodingType!From);
 
-    enum To* useStack = () @trusted { return cast(To*)size_t.max; }();
+    enum To* useStack = () @trusted { return cast(To*) size_t.max; }();
 
     static struct Res
     {
@@ -112,6 +114,11 @@ auto tempCString(To = char, From)(From str)
             return buffPtr;
         }
 
+        const(To)[] opIndex() const pure
+        {
+            return buffPtr[0 .. _length];
+        }
+
         ~this()
         {
             if (_ptr != useStack)
@@ -123,6 +130,7 @@ auto tempCString(To = char, From)(From str)
 
     private:
         To* _ptr;
+        size_t _length;        // length of the string
         version (unittest)
         {
             enum buffLength = 16 / To.sizeof;   // smaller size to trigger reallocations
@@ -159,7 +167,7 @@ auto tempCString(To = char, From)(From str)
             size_t newlen = res.length * 3 / 2;
             if (newlen <= strLength)
                 newlen = strLength + 1; // +1 for terminating 0
-            auto ptr = cast(To*)malloc(newlen * To.sizeof);
+            auto ptr = cast(To*) malloc(newlen * To.sizeof);
             if (!ptr)
                 onOutOfMemoryError();
             memcpy(ptr, res.ptr, i * To.sizeof);
@@ -170,7 +178,7 @@ auto tempCString(To = char, From)(From str)
             if (buf.length >= size_t.max / (2 * To.sizeof))
                 onOutOfMemoryError();
             const newlen = buf.length * 3 / 2;
-            auto ptr = cast(To*)realloc(buf.ptr, newlen * To.sizeof);
+            auto ptr = cast(To*) realloc(buf.ptr, newlen * To.sizeof);
             if (!ptr)
                 onOutOfMemoryError();
             return ptr[0 .. newlen];
@@ -206,12 +214,13 @@ auto tempCString(To = char, From)(From str)
         q[i++] = c;
     }
     q[i] = 0;
+    res._length = i;
     res._ptr = p_is_onstack ? useStack : &p[0];
     return res;
 }
 
 ///
-nothrow @nogc unittest
+nothrow @nogc @system unittest
 {
     import core.stdc.string;
 
@@ -242,10 +251,11 @@ nothrow @nogc unittest
     char[300] abc = 'a';
     assert(tempCString(abc[].byChar).buffPtr.asArray == abc);
     assert(tempCString(abc[].byWchar).buffPtr.asArray == abc);
+    assert(tempCString(abc[].byChar)[] == abc);
 }
 
 // Bugzilla 14980
-nothrow @nogc unittest
+nothrow @nogc @safe unittest
 {
     const(char[]) str = null;
     auto res = tempCString(str);

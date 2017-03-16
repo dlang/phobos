@@ -6,19 +6,20 @@ This module is a submodule of $(MREF std, container).
 
 Source: $(PHOBOSSRC std/container/_dlist.d)
 
-Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code
-copyright 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
+Copyright: 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
 
 License: Distributed under the Boost Software License, Version 1.0.
 (See accompanying file LICENSE_1_0.txt or copy at $(HTTP
 boost.org/LICENSE_1_0.txt)).
 
-Authors: Steven Schveighoffer, $(HTTP erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
+
+$(SCRIPT inhibitQuickIndex = 1;)
 */
 module std.container.dlist;
 
 ///
-unittest
+@safe unittest
 {
     import std.container : DList;
     import std.algorithm.comparison : equal;
@@ -91,7 +92,7 @@ The base DList Range. Contains Range primitives that don't depend on payload typ
  +/
 private struct DRange
 {
-    unittest
+    @safe unittest
     {
         static assert(isBidirectionalRange!DRange);
         static assert(is(ElementType!DRange == BaseNode*));
@@ -408,14 +409,6 @@ Appends the contents of the argument $(D rhs) into $(D this).
     {
         insertBack(rhs);
         return this;
-    }
-
-    // Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
-    deprecated("Please, use `dlist ~= dlist[];` instead.")
-    DList opOpAssign(string op)(DList rhs)
-    if (op == "~")
-    {
-        return this ~= rhs[];
     }
 
 /+ ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ +/

@@ -1,6 +1,8 @@
 module std.internal.unicode_grapheme;
 import std.internal.unicode_tables;
 
+package(std):
+
 static if (size_t.sizeof == 8)
 {
     //832 bytes

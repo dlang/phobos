@@ -247,10 +247,10 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 
         static if (hasMember!(SmallAllocator, "resolveInternalPointer")
                 && hasMember!(LargeAllocator, "resolveInternalPointer"))
-        void[] resolveInternalPointer(void* p)
+        Ternary resolveInternalPointer(void* p, ref void[] result)
         {
-            if (auto r = _small.resolveInternalPointer(p)) return r;
-            return _large.resolveInternalPointer(p);
+            Ternary r = _small.resolveInternalPointer(p, result);
+            return r == Ternary.no ? _large.resolveInternalPointer(p, result) : r;
         }
     }
 
@@ -274,7 +274,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.mallocator : Mallocator;
@@ -317,7 +317,8 @@ to $(D A4). If some particular range should not be handled, $(D NullAllocator)
 may be used appropriately.
 
 */
-template Segregator(Args...) if (Args.length > 3)
+template Segregator(Args...)
+if (Args.length > 3)
 {
     // Binary search
     private enum cutPoint = ((Args.length - 2) / 4) * 2;
@@ -341,7 +342,7 @@ template Segregator(Args...) if (Args.length > 3)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.mallocator : Mallocator;

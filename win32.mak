@@ -159,12 +159,9 @@ SRC_STD_4= \
 SRC_STD_6= \
 	std\variant.d \
 	std\zlib.d \
-	std\stream.d \
 	std\socket.d \
-	std\socketstream.d \
 	std\conv.d \
-	std\zip.d \
-	std\cstream.d
+	std\zip.d
 
 SRC_STD_7= \
 	std\stdint.d \
@@ -270,7 +267,8 @@ SRC_STD_C_FREEBSD= \
 
 SRC_STD_INTERNAL= \
 	std\internal\cstring.d \
-	std\internal\phobosinit.d \
+	std\internal\encodinginit.d \
+	std\internal\processinit.d \
 	std\internal\unicode_tables.d \
 	std\internal\unicode_comp.d \
 	std\internal\unicode_decomp.d \
@@ -293,7 +291,7 @@ SRC_STD_INTERNAL_WINDOWS= \
 	std\internal\windows\advapi32.d
 
 SRC_STD_EXP= \
-	std\experimental\typecons.d
+	std\experimental\checkedint.d std\experimental\typecons.d
 
 SRC_STD_EXP_ALLOC_BB= \
 	std\experimental\allocator\building_blocks\affix_allocator.d \
@@ -329,13 +327,6 @@ SRC_STD_EXP_LOGGER= \
 	std\experimental\logger\nulllogger.d \
 	std\experimental\logger\package.d
 
-SRC_STD_EXP_NDSLICE= \
-	std\experimental\ndslice\package.d \
-	std\experimental\ndslice\iteration.d \
-	std\experimental\ndslice\selection.d \
-	std\experimental\ndslice\slice.d \
-	std\experimental\ndslice\internal.d
-
 SRC_ETC=
 
 SRC_ETC_C= \
@@ -365,7 +356,6 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_EXP) \
 	$(SRC_STD_EXP_ALLOC) \
 	$(SRC_STD_EXP_LOGGER) \
-	$(SRC_STD_EXP_NDSLICE) \
 	$(SRC_ETC) \
 	$(SRC_ETC_C)
 
@@ -456,7 +446,6 @@ DOCS= \
 	$(DOC)\std_digest_hmac.html \
 	$(DOC)\std_digest_digest.html \
 	$(DOC)\std_digest_hmac.html \
-	$(DOC)\std_cstream.html \
 	$(DOC)\std_csv.html \
 	$(DOC)\std_datetime.html \
 	$(DOC)\std_demangle.html \
@@ -483,10 +472,8 @@ DOCS= \
 	$(DOC)\std_regex.html \
 	$(DOC)\std_signals.html \
 	$(DOC)\std_socket.html \
-	$(DOC)\std_socketstream.html \
 	$(DOC)\std_stdint.html \
 	$(DOC)\std_stdio.html \
-	$(DOC)\std_stream.html \
 	$(DOC)\std_string.html \
 	$(DOC)\std_system.html \
 	$(DOC)\std_traits.html \
@@ -528,10 +515,6 @@ DOCS= \
 	$(DOC)\std_experimental_allocator_showcase.html \
 	$(DOC)\std_experimental_allocator_typed.html \
 	$(DOC)\std_experimental_allocator.html \
-	$(DOC)\std_experimental_ndslice_iteration.html \
-	$(DOC)\std_experimental_ndslice_selection.html \
-	$(DOC)\std_experimental_ndslice_slice.html \
-	$(DOC)\std_experimental_ndslice.html \
 	$(DOC)\std_experimental_typecons.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_windows_registry.html \
@@ -576,8 +559,7 @@ UNITTEST_OBJS= \
 		unittest8c.obj \
 		unittest8d.obj \
 		unittest8e.obj \
-		unittest8f.obj \
-		unittest9a.obj
+		unittest8f.obj
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1)
@@ -596,7 +578,6 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8d.obj $(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8e.obj $(SRC_ETC) $(SRC_ETC_C)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8f.obj $(SRC_STD_EXP)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest9a.obj $(SRC_STD_EXP_NDSLICE)
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(UNITTEST_OBJS) \
 		$(ZLIB) $(DRUNTIMELIB)
 	.\unittest.exe
@@ -664,9 +645,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=95 -unittest -main -run std\algorithm\sorting.d
 	$(DMD) -conf= -cov=83 -unittest -main -run std\variant.d
 	$(DMD) -conf= -cov=58 -unittest -main -run std\zlib.d
-	$(DMD) -conf= -cov=54 -unittest -main -run std\stream.d
 	$(DMD) -conf= -cov=53 -unittest -main -run std\socket.d
-	$(DMD) -conf= -cov=0  -unittest -main -run std\socketstream.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\container\array.d
 	$(DMD) -conf= -cov=68 -unittest -main -run std\container\binaryheap.d
 	$(DMD) -conf= -cov=91 -unittest -main -run std\container\dlist.d
@@ -676,7 +655,6 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=100 -unittest -main -run std\container\package.d
 	$(DMD) -conf= -cov=90 -unittest -main -run std\conv.d
 	$(DMD) -conf= -cov=0  -unittest -main -run std\zip.d
-	$(DMD) -conf= -cov=92 -unittest -main -run std\cstream.d
 	$(DMD) -conf= -cov=77 -unittest -main -run std\regex\tests.d
 	$(DMD) -conf= -cov=92 -unittest -main -run std\json.d
 	$(DMD) -conf= -cov=87 -unittest -main -run std\parallelism.d
@@ -842,9 +820,6 @@ $(DOC)\std_range_primitives.html : $(STDDOC) std\range\primitives.d
 $(DOC)\std_range_interfaces.html : $(STDDOC) std\range\interfaces.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_range_interfaces.html $(STDDOC) std\range\interfaces.d
 
-$(DOC)\std_cstream.html : $(STDDOC) std\cstream.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_cstream.html $(STDDOC) std\cstream.d
-
 $(DOC)\std_csv.html : $(STDDOC) std\csv.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_csv.html $(STDDOC) std\csv.d
 
@@ -914,17 +889,11 @@ $(DOC)\std_signals.html : $(STDDOC) std\signals.d
 $(DOC)\std_socket.html : $(STDDOC) std\socket.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_socket.html $(STDDOC) std\socket.d
 
-$(DOC)\std_socketstream.html : $(STDDOC) std\socketstream.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_socketstream.html $(STDDOC) std\socketstream.d
-
 $(DOC)\std_stdint.html : $(STDDOC) std\stdint.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stdint.html $(STDDOC) std\stdint.d
 
 $(DOC)\std_stdio.html : $(STDDOC) std\stdio.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stdio.html $(STDDOC) std\stdio.d
-
-$(DOC)\std_stream.html : $(STDDOC) std\stream.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_stream.html $(STDDOC) std\stream.d
 
 $(DOC)\std_string.html : $(STDDOC) std\string.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_string.html $(STDDOC) std\string.d
@@ -1072,18 +1041,6 @@ $(DOC)\std_experimental_allocator.html : $(STDDOC) std\experimental\allocator\pa
 
 $(DOC)\std_experimental_typecons.html : $(STDDOC) std\experimental\typecons.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_typecons.html $(STDDOC) std\experimental\typecons.d
-
-$(DOC)\std_experimental_ndslice_iteration.html : $(STDDOC) std\experimental\ndslice\iteration.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice_iteration.html $(STDDOC) std\experimental\ndslice\iteration.d
-
-$(DOC)\std_experimental_ndslice_selection.html : $(STDDOC) std\experimental\ndslice\selection.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice_selection.html $(STDDOC) std\experimental\ndslice\selection.d
-
-$(DOC)\std_experimental_ndslice_slice.html : $(STDDOC) std\experimental\ndslice\slice.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice_slice.html $(STDDOC) std\experimental\ndslice\slice.d
-
-$(DOC)\std_experimental_ndslice.html : $(STDDOC) std\experimental\ndslice\package.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice.html $(STDDOC) std\experimental\ndslice\package.d
 
 $(DOC)\std_digest_crc.html : $(STDDOC) std\digest\crc.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_crc.html $(STDDOC) std\digest\crc.d

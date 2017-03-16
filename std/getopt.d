@@ -432,7 +432,8 @@ GetoptResult getopt(T...)(ref string[] args, T opts)
     GetoptResult rslt;
 
     GetOptException excep;
-    getoptImpl(args, cfg, rslt, excep, opts);
+    void[][string] visitedLongOpts, visitedShortOpts;
+    getoptImpl(args, cfg, rslt, excep, visitedLongOpts, visitedShortOpts, opts);
 
     if (!rslt.helpWanted && excep !is null)
     {
@@ -468,15 +469,15 @@ GetoptResult getopt(T...)(ref string[] args, T opts)
 enum config {
     /// Turn case sensitivity on
     caseSensitive,
-    /// Turn case sensitivity off
+    /// Turn case sensitivity off (default)
     caseInsensitive,
     /// Turn bundling on
     bundling,
-    /// Turn bundling off
+    /// Turn bundling off (default)
     noBundling,
     /// Pass unrecognized arguments through
     passThrough,
-    /// Signal unrecognized arguments as errors
+    /// Signal unrecognized arguments as errors (default)
     noPassThrough,
     /// Stop at first argument that does not look like an option
     stopOnFirstNonOption,
@@ -516,12 +517,35 @@ private pure Option splitAndGet(string opt) @trusted nothrow
         ret.optLong = "--" ~ (sp[0].length > sp[1].length ?
             sp[0] : sp[1]);
     }
-    else
+    else if (sp[0].length > 1)
     {
         ret.optLong = "--" ~ sp[0];
     }
+    else
+    {
+        ret.optShort = "-" ~ sp[0];
+    }
 
     return ret;
+}
+
+@safe unittest
+{
+    auto oshort = splitAndGet("f");
+    assert(oshort.optShort == "-f");
+    assert(oshort.optLong == "");
+
+    auto olong = splitAndGet("foo");
+    assert(olong.optShort == "");
+    assert(olong.optLong == "--foo");
+
+    auto oshortlong = splitAndGet("f|foo");
+    assert(oshortlong.optShort == "-f");
+    assert(oshortlong.optLong == "--foo");
+
+    auto olongshort = splitAndGet("foo|f");
+    assert(olongshort.optShort == "-f");
+    assert(olongshort.optLong == "--foo");
 }
 
 /*
@@ -541,7 +565,7 @@ private template optionValidator(A...)
     import std.format : format;
 
     enum fmt = "getopt validator: %s (at position %d)";
-    enum isReceiver(T) = isPointer!T || (is(T==function)) || (is(T==delegate));
+    enum isReceiver(T) = isPointer!T || (is(T == function)) || (is(T == delegate));
     enum isOptionStr(T) = isSomeString!T || isSomeChar!T;
 
     auto validator()
@@ -654,7 +678,8 @@ private template optionValidator(A...)
 }
 
 private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
-    ref GetoptResult rslt, ref GetOptException excep, T opts)
+    ref GetoptResult rslt, ref GetOptException excep,
+    void[][string] visitedLongOpts, void[][string] visitedShortOpts, T opts)
 {
     enum validationMessage = optionValidator!T;
     static assert(validationMessage == "", validationMessage);
@@ -667,7 +692,8 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
         {
             // it's a configuration flag, act on it
             setConfig(cfg, opts[0]);
-            return getoptImpl(args, cfg, rslt, excep, opts[1 .. $]);
+            return getoptImpl(args, cfg, rslt, excep, visitedLongOpts,
+                visitedShortOpts, opts[1 .. $]);
         }
         else
         {
@@ -680,6 +706,23 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             }
             Option optionHelp = splitAndGet(option);
             optionHelp.required = cfg.required;
+
+            if (optionHelp.optLong.length)
+            {
+                assert(optionHelp.optLong !in visitedLongOpts,
+                    "Long option " ~ optionHelp.optLong ~ " is multiply defined");
+
+                visitedLongOpts[optionHelp.optLong] = [];
+            }
+
+            if (optionHelp.optShort.length)
+            {
+                assert(optionHelp.optShort !in visitedShortOpts,
+                    "Short option " ~ optionHelp.optShort
+                    ~ " is multiply defined");
+
+                visitedShortOpts[optionHelp.optShort] = [];
+            }
 
             static if (is(typeof(opts[1]) : string))
             {
@@ -712,7 +755,8 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             }
             cfg.required = false;
 
-            getoptImpl(args, cfg, rslt, excep, opts[lowSliceIdx .. $]);
+            getoptImpl(args, cfg, rslt, excep, visitedLongOpts,
+                visitedShortOpts, opts[lowSliceIdx .. $]);
         }
     }
     else
@@ -1020,7 +1064,7 @@ dchar assignChar = '=';
  */
 string arraySep = "";
 
-enum autoIncrementChar = '+';
+private enum autoIncrementChar = '+';
 
 private struct configuration
 {
@@ -1059,7 +1103,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
     }
     else
     {
-        if (!isLong && eqPos==1)
+        if (!isLong && eqPos == 1)
         {
             // argument looks like -o=value
             value = arg[2 .. $];
@@ -1664,4 +1708,15 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
     }
 
     assert(rslt.helpWanted);
+}
+
+// throw on duplicate options
+@system unittest
+{
+    import core.exception;
+    auto args = ["prog", "--abc", "1"];
+    int abc, def;
+    assertThrown!AssertError(getopt(args, "abc", &abc, "abc", &abc));
+    assertThrown!AssertError(getopt(args, "abc|a", &abc, "def|a", &def));
+    assertNotThrown!AssertError(getopt(args, "abc", &abc, "def", &def));
 }

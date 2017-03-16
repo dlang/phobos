@@ -4,6 +4,36 @@
     This module defines functions related to exceptions and general error
     handling. It also defines functions intended to aid in unit testing.
 
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Assumptions) $(TD
+        $(LREF assertNotThrown)
+        $(LREF assertThrown)
+        $(LREF assumeUnique)
+        $(LREF assumeWontThrow)
+        $(LREF mayPointTo)
+))
+$(TR $(TD Enforce) $(TD
+        $(LREF doesPointTo)
+        $(LREF enforce)
+        $(LREF enforceEx)
+        $(LREF errnoEnforce)
+))
+$(TR $(TD Handlers) $(TD
+        $(LREF collectException)
+        $(LREF collectExceptionMsg)
+        $(LREF ifThrown)
+        $(LREF handle)
+))
+$(TR $(TD Other) $(TD
+        $(LREF basicExceptionCtors)
+        $(LREF emptyExceptionMsg)
+        $(LREF ErrnoException)
+        $(LREF RangePrimitive)
+))
+)
+
     Synopsis of some of std.exception's functions:
     --------------------
     string synopsis()
@@ -333,7 +363,7 @@ void assertThrown(T : Throwable = Exception, E)
         file = The source file of the caller.
         line = The line number of the caller.
 
-    Returns: $(D value), if `cast(bool)value` is true. Otherwise,
+    Returns: $(D value), if `cast(bool) value` is true. Otherwise,
     $(D new Exception(msg)) is thrown.
 
     Note:
@@ -352,19 +382,10 @@ void assertThrown(T : Throwable = Exception, E)
     --------------------
  +/
 T enforce(E : Throwable = Exception, T)(T value, lazy const(char)[] msg = null,
-    string file = __FILE__, size_t line = __LINE__) if (is(typeof({ if (!value) {} })))
+string file = __FILE__, size_t line = __LINE__)
+if (is(typeof({ if (!value) {} })))
 {
     if (!value) bailOut!E(file, line, msg);
-    return value;
-}
-
-// Explicitly undocumented. It will be removed in August 2016. @@@DEPRECATED_2016-08@@@
-deprecated("Use the overload of enforce that takes file and line as function arguments.")
-T enforce(T, string file, size_t line = __LINE__)
-    (T value, lazy const(char)[] msg = null)
-    if (is(typeof({ if (!value) {} })))
-{
-    if (!value) bailOut(file, line, msg);
     return value;
 }
 
@@ -377,7 +398,7 @@ T enforce(T, string file, size_t line = __LINE__)
         file = The source file of the caller.
         line = The line number of the caller.
 
-    Returns: $(D value), if `cast(bool)value` is true. Otherwise, the given
+    Returns: $(D value), if `cast(bool) value` is true. Otherwise, the given
     delegate is called.
 
     The safety and purity of this function are inferred from $(D Dg)'s safety
@@ -385,8 +406,8 @@ T enforce(T, string file, size_t line = __LINE__)
  +/
 T enforce(T, Dg, string file = __FILE__, size_t line = __LINE__)
     (T value, scope Dg dg)
-    if (isSomeFunction!Dg && is(typeof( dg() )) &&
-        is(typeof({ if (!value) {} })))
+if (isSomeFunction!Dg && is(typeof( dg() )) &&
+    is(typeof({ if (!value) {} })))
 {
     if (!value) dg();
     return value;
@@ -411,18 +432,18 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
 
 @safe unittest
 {
-    assert (enforce(123) == 123);
+    assert(enforce(123) == 123);
 
     try
     {
         enforce(false, "error");
-        assert (false);
+        assert(false);
     }
     catch (Exception e)
     {
-        assert (e.msg == "error");
-        assert (e.file == __FILE__);
-        assert (e.line == __LINE__-7);
+        assert(e.msg == "error");
+        assert(e.file == __FILE__);
+        assert(e.line == __LINE__-7);
     }
 }
 
@@ -476,7 +497,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
         static int g;
         ~this() {}  // impure & unsafe destructor
         bool opCast(T:bool)() {
-            int* p = cast(int*)0;   // unsafe operation
+            int* p = cast(int*) 0;   // unsafe operation
             int n = g;              // impure operation
             return true;
         }
@@ -502,23 +523,6 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
     enforce!E2(s);
 }
 
-@system deprecated unittest
-{
-    struct S
-    {
-        static int g;
-        ~this() {}  // impure & unsafe destructor
-        bool opCast(T:bool)() {
-            int* p = cast(int*)0;   // unsafe operation
-            int n = g;              // impure operation
-            return true;
-        }
-    }
-    S s;
-
-    enforce!(S, __FILE__, __LINE__)(s, "");
-}
-
 @safe unittest
 {
     // Issue 14685
@@ -537,7 +541,7 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
         value = The value to test.
         ex = The exception to throw if the value evaluates to false.
 
-    Returns: $(D value), if `cast(bool)value` is true. Otherwise, $(D ex) is
+    Returns: $(D value), if `cast(bool) value` is true. Otherwise, $(D ex) is
     thrown.
 
     Example:
@@ -567,7 +571,7 @@ T enforce(T)(T value, lazy Throwable ex)
         value = The value to test.
         msg = The message to include in the `ErrnoException` if it is thrown.
 
-    Returns: $(D value), if `cast(bool)value` is true. Otherwise,
+    Returns: $(D value), if `cast(bool) value` is true. Otherwise,
     $(D new ErrnoException(msg)) is thrown.  It is assumed that the last
     operation set $(D errno) to an error code corresponding with the failed
     condition.
@@ -603,7 +607,7 @@ T errnoEnforce(T, string file = __FILE__, size_t line = __LINE__)
     --------------------
  +/
 template enforceEx(E : Throwable)
-    if (is(typeof(new E("", __FILE__, __LINE__))))
+if (is(typeof(new E("", __FILE__, __LINE__))))
 {
     /++ Ditto +/
     T enforceEx(T)(T value, lazy string msg = "", string file = __FILE__, size_t line = __LINE__)
@@ -615,7 +619,7 @@ template enforceEx(E : Throwable)
 
 /++ Ditto +/
 template enforceEx(E : Throwable)
-    if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LINE__))))
+if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LINE__))))
 {
     /++ Ditto +/
     T enforceEx(T)(T value, string file = __FILE__, size_t line = __LINE__)
@@ -778,7 +782,7 @@ string collectExceptionMsg(T = Exception, E)(lazy E expression)
     {
         expression();
 
-        return cast(string)null;
+        return cast(string) null;
     }
     catch (T e)
         return e.msg.empty ? emptyExceptionMsg : e.msg;
@@ -909,6 +913,13 @@ immutable(T)[] assumeUnique(T)(ref T[] array) pure nothrow
     array = null;
     return result;
 }
+/// ditto
+immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
+{
+    auto result = cast(immutable(T[U])) array;
+    array = null;
+    return result;
+}
 
 @system unittest
 {
@@ -916,13 +927,6 @@ immutable(T)[] assumeUnique(T)(ref T[] array) pure nothrow
     int[] arr = new int[1];
     auto arr1 = assumeUnique(arr);
     assert(is(typeof(arr1) == immutable(int)[]) && arr == null);
-}
-
-immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
-{
-    auto result = cast(immutable(T[U])) array;
-    array = null;
-    return result;
 }
 
 // @@@BUG@@@
@@ -987,7 +991,7 @@ T assumeWontThrow(T)(lazy T expr,
     {
         if (x < 0)
             throw new Exception("Tried to take root of negative number");
-        return cast(int)sqrt(cast(double)x);
+        return cast(int) sqrt(cast(double) x);
     }
 
     // This function never throws.
@@ -1057,8 +1061,8 @@ as the language is free to assume objects don't have internal pointers
 (TDPL 7.1.3.5).
 */
 bool doesPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
-    if (__traits(isRef, source) || isDynamicArray!S ||
-        isPointer!S || is(S == class))
+if (__traits(isRef, source) || isDynamicArray!S ||
+    isPointer!S || is(S == class))
 {
     static if (isPointer!S || is(S == class) || is(S == interface))
     {
@@ -1083,7 +1087,7 @@ bool doesPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target)
     else static if (isDynamicArray!S)
     {
         import std.array : overlap;
-        return overlap(cast(void[])source, cast(void[])(&target)[0 .. 1]).length != 0;
+        return overlap(cast(void[]) source, cast(void[])(&target)[0 .. 1]).length != 0;
     }
     else
     {
@@ -1100,8 +1104,8 @@ bool doesPointTo(S, T)(auto ref const shared S source, ref const shared T target
 
 /// ditto
 bool mayPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) @trusted pure nothrow
-    if (__traits(isRef, source) || isDynamicArray!S ||
-        isPointer!S || is(S == class))
+if (__traits(isRef, source) || isDynamicArray!S ||
+    isPointer!S || is(S == class))
 {
     static if (isPointer!S || is(S == class) || is(S == interface))
     {
@@ -1125,7 +1129,7 @@ bool mayPointTo(S, T, Tdummy=void)(auto ref const S source, ref const T target) 
     else static if (isDynamicArray!S)
     {
         import std.array : overlap;
-        return overlap(cast(void[])source, cast(void[])(&target)[0 .. 1]).length != 0;
+        return overlap(cast(void[]) source, cast(void[])(&target)[0 .. 1]).length != 0;
     }
     else
     {
@@ -1223,6 +1227,8 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
     //To check the class payload itself, iterate on its members:
     ()
     {
+        import std.traits : Fields;
+
         foreach (index, _; Fields!C)
             if (doesPointTo(a.tupleof[index], i))
                 return;
@@ -1265,7 +1271,7 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
         static struct NoCopy { this(this) { assert(0); } }
         static struct Holder { NoCopy a, b, c; }
         Holder h;
-        cast(void)doesPointTo(h, h);
+        cast(void) doesPointTo(h, h);
     }
 
     shared S3 sh3;
@@ -1281,8 +1287,8 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
     //But they do point their elements
     foreach (i; 0 .. 4)
         assert(doesPointTo(darr, darr[i]));
-    assert(doesPointTo(darr[0..3], darr[2]));
-    assert(!doesPointTo(darr[0..3], darr[3]));
+    assert(doesPointTo(darr[0 .. 3], darr[2]));
+    assert(!doesPointTo(darr[0 .. 3], darr[3]));
 }
 
 @system unittest
@@ -1399,8 +1405,8 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
     S s = S(&j);
     assert(!doesPointTo(s, i));
     assert( doesPointTo(s, j));
-    assert( doesPointTo(cast(int*)s, i));
-    assert(!doesPointTo(cast(int*)s, j));
+    assert( doesPointTo(cast(int*) s, i));
+    assert(!doesPointTo(cast(int*) s, j));
 }
 @safe unittest //more alias this opCast
 {
@@ -1482,6 +1488,10 @@ class ErrnoException : Exception
     this(string msg, string file = null, size_t line = 0) @trusted
     {
         import core.stdc.errno : errno;
+        this(msg, errno, file, line);
+    }
+    this(string msg, int errno, string file = null, size_t line = 0) @trusted
+    {
         import core.stdc.string : strlen;
 
         _errno = errno;
@@ -1496,7 +1506,26 @@ class ErrnoException : Exception
             import core.stdc.string : strerror;
             auto s = strerror(errno);
         }
-        super(msg ~ " (" ~ s[0..s.strlen].idup ~ ")", file, line);
+        super(msg ~ " (" ~ s[0 .. s.strlen].idup ~ ")", file, line);
+    }
+
+    @system unittest
+    {
+        import core.stdc.errno : errno, EAGAIN;
+
+        auto old = errno;
+        scope(exit) errno = old;
+
+        errno = EAGAIN;
+        auto ex = new ErrnoException("oh no");
+        assert(ex.errno == EAGAIN);
+    }
+
+    @system unittest
+    {
+        import core.stdc.errno : EAGAIN;
+        auto ex = new ErrnoException("oh no", EAGAIN);
+        assert(ex.errno == EAGAIN);
     }
 }
 
@@ -1531,8 +1560,8 @@ class ErrnoException : Exception
     //Chaining multiple calls to ifThrown to attempt multiple things in a row:
     string s="true";
     assert(s.to!int().
-            ifThrown(cast(int)s.to!double()).
-            ifThrown(cast(int)s.to!bool())
+            ifThrown(cast(int) s.to!double()).
+            ifThrown(cast(int) s.to!bool())
             == 1);
 
     //Respond differently to different types of errors
@@ -1637,8 +1666,8 @@ CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate
     //Chaining multiple calls to ifThrown to attempt multiple things in a row:
     string s="true";
     assert(s.to!int().
-            ifThrown(cast(int)s.to!double()).
-            ifThrown(cast(int)s.to!bool())
+            ifThrown(cast(int) s.to!double()).
+            ifThrown(cast(int) s.to!bool())
             == 1);
 
     //Respond differently to different types of errors
@@ -1699,8 +1728,8 @@ CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate
 version(unittest) package
 @property void assertCTFEable(alias dg)()
 {
-    static assert({ cast(void)dg(); return true; }());
-    cast(void)dg();
+    static assert({ cast(void) dg(); return true; }());
+    cast(void) dg();
 }
 
 /** This $(D enum) is used to select the primitives of the range to handle by the
@@ -1757,7 +1786,7 @@ this by $(D take)ing 0 from the return value of the handler function and
 returning that when an exception is caught.
 */
 auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Range)(Range input)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     static struct Handler
     {
@@ -1991,7 +2020,8 @@ auto handle(E : Throwable, RangePrimitive primitivesToHandle, alias handler, Ran
 ///
 pure @safe unittest
 {
-    import std.algorithm : equal, map, splitter;
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map, splitter;
     import std.conv : to, ConvException;
 
     auto s = "12,1337z32,54,2,7,9,1z,6,8";
@@ -2008,7 +2038,7 @@ pure @safe unittest
 ///
 pure @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : retro;
     import std.utf : UTFException;
 
@@ -2167,8 +2197,8 @@ pure nothrow @safe unittest
     Convenience mixin for trivially sub-classing exceptions
 
     Even trivially sub-classing an exception involves writing boilerplate code
-    for the constructor to: 1) correctly pass in the source file and line number
-    the exception was thrown from; 2) be usable with $(LREF enforce) which
+    for the constructor to: 1$(RPAREN) correctly pass in the source file and line number
+    the exception was thrown from; 2$(RPAREN) be usable with $(LREF enforce) which
     expects exception constructors to take arguments in a fixed order. This
     mixin provides that boilerplate code.
 

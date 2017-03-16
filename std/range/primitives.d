@@ -4,29 +4,30 @@ This module is a submodule of $(MREF std, range).
 It provides basic range functionality by defining several templates for testing
 whether a given object is a _range, and what kind of _range it is:
 
+$(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE ,
-    $(TR $(TD $(D $(LREF isInputRange)))
+    $(TR $(TD $(LREF isInputRange))
         $(TD Tests if something is an $(I input _range), defined to be
         something from which one can sequentially read data using the
         primitives $(D front), $(D popFront), and $(D empty).
     ))
-    $(TR $(TD $(D $(LREF isOutputRange)))
+    $(TR $(TD $(LREF isOutputRange))
         $(TD Tests if something is an $(I output _range), defined to be
         something to which one can sequentially write data using the
-        $(D $(LREF put)) primitive.
+        $(LREF put) primitive.
     ))
-    $(TR $(TD $(D $(LREF isForwardRange)))
+    $(TR $(TD $(LREF isForwardRange))
         $(TD Tests if something is a $(I forward _range), defined to be an
         input _range with the additional capability that one can save one's
         current position with the $(D save) primitive, thus allowing one to
         iterate over the same _range multiple times.
     ))
-    $(TR $(TD $(D $(LREF isBidirectionalRange)))
+    $(TR $(TD $(LREF isBidirectionalRange))
         $(TD Tests if something is a $(I bidirectional _range), that is, a
         forward _range that allows reverse traversal using the primitives $(D
         back) and $(D popBack).
     ))
-    $(TR $(TD $(D $(LREF isRandomAccessRange)))
+    $(TR $(TD $(LREF isRandomAccessRange))
         $(TD Tests if something is a $(I random access _range), which is a
         bidirectional _range that also supports the array subscripting
         operation via the primitive $(D opIndex).
@@ -36,66 +37,69 @@ $(BOOKTABLE ,
 It also provides number of templates that test for various _range capabilities:
 
 $(BOOKTABLE ,
-    $(TR $(TD $(D $(LREF hasMobileElements)))
+    $(TR $(TD $(LREF hasMobileElements))
         $(TD Tests if a given _range's elements can be moved around using the
         primitives $(D moveFront), $(D moveBack), or $(D moveAt).
     ))
-    $(TR $(TD $(D $(LREF ElementType)))
+    $(TR $(TD $(LREF ElementType))
         $(TD Returns the element type of a given _range.
     ))
-    $(TR $(TD $(D $(LREF ElementEncodingType)))
+    $(TR $(TD $(LREF ElementEncodingType))
         $(TD Returns the encoding element type of a given _range.
     ))
-    $(TR $(TD $(D $(LREF hasSwappableElements)))
+    $(TR $(TD $(LREF hasSwappableElements))
         $(TD Tests if a _range is a forward _range with swappable elements.
     ))
-    $(TR $(TD $(D $(LREF hasAssignableElements)))
+    $(TR $(TD $(LREF hasAssignableElements))
         $(TD Tests if a _range is a forward _range with mutable elements.
     ))
-    $(TR $(TD $(D $(LREF hasLvalueElements)))
+    $(TR $(TD $(LREF hasLvalueElements))
         $(TD Tests if a _range is a forward _range with elements that can be
         passed by reference and have their address taken.
     ))
-    $(TR $(TD $(D $(LREF hasLength)))
+    $(TR $(TD $(LREF hasLength))
         $(TD Tests if a given _range has the $(D length) attribute.
     ))
-    $(TR $(TD $(D $(LREF isInfinite)))
+    $(TR $(TD $(LREF isInfinite))
         $(TD Tests if a given _range is an $(I infinite _range).
     ))
-    $(TR $(TD $(D $(LREF hasSlicing)))
+    $(TR $(TD $(LREF hasSlicing))
         $(TD Tests if a given _range supports the array slicing operation $(D
-        R[x..y]).
+        R[x .. y]).
     ))
 )
 
 Finally, it includes some convenience functions for manipulating ranges:
 
 $(BOOKTABLE ,
-    $(TR $(TD $(D $(LREF popFrontN)))
+    $(TR $(TD $(LREF popFrontN))
         $(TD Advances a given _range by up to $(I n) elements.
     ))
-    $(TR $(TD $(D $(LREF popBackN)))
+    $(TR $(TD $(LREF popBackN))
         $(TD Advances a given bidirectional _range from the right by up to
         $(I n) elements.
     ))
-    $(TR $(TD $(D $(LREF popFrontExactly)))
+    $(TR $(TD $(LREF popFrontExactly))
         $(TD Advances a given _range by up exactly $(I n) elements.
     ))
-    $(TR $(TD $(D $(LREF popBackExactly)))
+    $(TR $(TD $(LREF popBackExactly))
         $(TD Advances a given bidirectional _range from the right by exactly
         $(I n) elements.
     ))
-    $(TR $(TD $(D $(LREF moveFront)))
+    $(TR $(TD $(LREF moveFront))
         $(TD Removes the front element of a _range.
     ))
-    $(TR $(TD $(D $(LREF moveBack)))
+    $(TR $(TD $(LREF moveBack))
         $(TD Removes the back element of a bidirectional _range.
     ))
-    $(TR $(TD $(D $(LREF moveAt)))
+    $(TR $(TD $(LREF moveAt))
         $(TD Removes the $(I i)'th element of a random-access _range.
     ))
-    $(TR $(TD $(D $(LREF walkLength)))
+    $(TR $(TD $(LREF walkLength))
         $(TD Computes the length of any _range in O(n) time.
+    ))
+    $(TR $(TD $(LREF put))
+        $(TD Outputs element $(D e) to a _range.
     ))
 )
 
@@ -164,7 +168,7 @@ template isInputRange(R)
     {
         R r = R.init;     // can define a range object
         if (r.empty) {}   // can test for empty
-        r.popFront();     // can invoke popFront()
+        r.popFront;       // can invoke popFront()
         auto h = r.front; // can get the front of the range
     }));
 }
@@ -223,33 +227,33 @@ private void doPut(R, E)(ref R r, auto ref E e)
     }
     else
     {
-        static assert (false,
+        static assert(false,
             "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
     }
 }
 
 @safe unittest
 {
-    static assert (!isNativeOutputRange!(int,     int));
-    static assert ( isNativeOutputRange!(int[],   int));
-    static assert (!isNativeOutputRange!(int[][], int));
+    static assert(!isNativeOutputRange!(int,     int));
+    static assert( isNativeOutputRange!(int[],   int));
+    static assert(!isNativeOutputRange!(int[][], int));
 
-    static assert (!isNativeOutputRange!(int,     int[]));
-    static assert (!isNativeOutputRange!(int[],   int[]));
-    static assert ( isNativeOutputRange!(int[][], int[]));
+    static assert(!isNativeOutputRange!(int,     int[]));
+    static assert(!isNativeOutputRange!(int[],   int[]));
+    static assert( isNativeOutputRange!(int[][], int[]));
 
-    static assert (!isNativeOutputRange!(int,     int[][]));
-    static assert (!isNativeOutputRange!(int[],   int[][]));
-    static assert (!isNativeOutputRange!(int[][], int[][]));
+    static assert(!isNativeOutputRange!(int,     int[][]));
+    static assert(!isNativeOutputRange!(int[],   int[][]));
+    static assert(!isNativeOutputRange!(int[][], int[][]));
 
-    static assert (!isNativeOutputRange!(int[4],   int));
-    static assert ( isNativeOutputRange!(int[4][], int)); //Scary!
-    static assert ( isNativeOutputRange!(int[4][], int[4]));
+    static assert(!isNativeOutputRange!(int[4],   int));
+    static assert( isNativeOutputRange!(int[4][], int)); //Scary!
+    static assert( isNativeOutputRange!(int[4][], int[4]));
 
-    static assert (!isNativeOutputRange!( char[],   char));
-    static assert (!isNativeOutputRange!( char[],  dchar));
-    static assert ( isNativeOutputRange!(dchar[],   char));
-    static assert ( isNativeOutputRange!(dchar[],  dchar));
+    static assert(!isNativeOutputRange!( char[],   char));
+    static assert(!isNativeOutputRange!( char[],  dchar));
+    static assert( isNativeOutputRange!(dchar[],   char));
+    static assert( isNativeOutputRange!(dchar[],  dchar));
 
 }
 
@@ -315,7 +319,7 @@ void put(R, E)(ref R r, E e)
             doPut(r, arr[]);
         }
         else
-            doPut(r, (ref e) @trusted { return (&e)[0..1]; }(e));
+            doPut(r, (ref e) @trusted { return (&e)[0 .. 1]; }(e));
     }
     //special case for char to string.
     else static if (isSomeChar!E && is(typeof(putChar(r, e))))
@@ -344,7 +348,7 @@ void put(R, E)(ref R r, E e)
     }
     else
     {
-        static assert (false, "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
+        static assert(false, "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
     }
 }
 
@@ -398,11 +402,11 @@ if (isSomeChar!E)
     }
     else
     {
-        static assert (false, "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
+        static assert(false, "Cannot put a " ~ E.stringof ~ " into a " ~ R.stringof ~ ".");
     }
 }
 
-pure unittest
+pure @safe unittest
 {
     auto f = delegate (const(char)[]) {};
     putChar(f, cast(dchar)'a');
@@ -416,7 +420,7 @@ pure unittest
     putChar(r, 'a');
 }
 
-unittest
+@safe unittest
 {
     struct A {}
     static assert(!isInputRange!(A));
@@ -428,7 +432,7 @@ unittest
     put(b, 5);
 }
 
-unittest
+@safe unittest
 {
     int[] a = [1, 2, 3], b = [10, 20];
     auto c = a;
@@ -437,7 +441,7 @@ unittest
     assert(a == [3]);
 }
 
-unittest
+@safe unittest
 {
     int[] a = new int[10];
     int b;
@@ -445,14 +449,14 @@ unittest
     put(a, b);
 }
 
-unittest
+@safe unittest
 {
     void myprint(in char[] s) { }
     auto r = &myprint;
     put(r, 'a');
 }
 
-unittest
+@safe unittest
 {
     int[] a = new int[10];
     static assert(!__traits(compiles, put(a, 1.0L)));
@@ -468,7 +472,7 @@ unittest
     assert(a.length == 6);
 }
 
-unittest
+@safe unittest
 {
     char[] a = new char[10];
     static assert(!__traits(compiles, put(a, 1.0L)));
@@ -478,7 +482,7 @@ unittest
     static assert(!__traits(compiles, put(a, "ABC")));
 }
 
-unittest
+@safe unittest
 {
     int[][] a = new int[][10];
     int[]   b = new int[10];
@@ -490,7 +494,7 @@ unittest
     static assert(!__traits(compiles, put(a, c)));
 }
 
-unittest
+@safe unittest
 {
     int[][] a = new int[][](3);
     int[]   b = [1];
@@ -505,7 +509,7 @@ unittest
     assert(a == [[2], [2], [2]]);
 }
 
-unittest
+@safe unittest
 {
     // Test fix for bug 7476.
     struct LockingTextWriter
@@ -524,7 +528,7 @@ unittest
     put(w, r);
 }
 
-unittest
+@system unittest
 {
     import std.conv : to;
     import std.meta : AliasSeq;
@@ -533,7 +537,7 @@ unittest
     static struct PutC(C)
     {
         string result;
-        void put(const(C) c) { result ~= to!string((&c)[0..1]); }
+        void put(const(C) c) { result ~= to!string((&c)[0 .. 1]); }
     }
     static struct PutS(C)
     {
@@ -587,7 +591,7 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     static struct CharRange
     {
@@ -604,7 +608,7 @@ unittest
     put(c, "hello"d);
 }
 
-unittest
+@system unittest
 {
     // issue 9823
     const(char)[] r;
@@ -613,7 +617,7 @@ unittest
     assert(r == "ABC");
 }
 
-unittest
+@safe unittest
 {
     // issue 10571
     import std.format;
@@ -622,7 +626,7 @@ unittest
     assert(buf == "hello");
 }
 
-unittest
+@safe unittest
 {
     import std.format;
     import std.meta : AliasSeq;
@@ -698,7 +702,6 @@ package(std) template isNativeOutputRange(R, E)
     }));
 }
 
-///
 @safe unittest
 {
     int[] r = new int[](4);
@@ -776,7 +779,7 @@ The following code should compile for any forward range.
 static assert(isInputRange!R);
 R r1;
 auto s1 = r1.save;
-static assert (is(typeof(s1) == R));
+static assert(is(typeof(s1) == R));
 ----
 
 Saving a range is not duplicating it; in the example above, $(D r1)
@@ -798,7 +801,7 @@ template isForwardRange(R)
         // because typeof may not check the right type there, and
         // because we want to ensure the range can be copied.
         auto s1 = r1.save;
-        static assert (is(typeof(s1) == R));
+        static assert(is(typeof(s1) == R));
     }));
 }
 
@@ -844,7 +847,7 @@ template isBidirectionalRange(R)
     (inout int = 0)
     {
         R r = R.init;
-        r.popBack();
+        r.popBack;
         auto t = r.back;
         auto w = r.front;
         static assert(is(typeof(t) == typeof(w)));
@@ -852,7 +855,7 @@ template isBidirectionalRange(R)
 }
 
 ///
-unittest
+@safe unittest
 {
     alias R = int[];
     R r = [0,1];
@@ -933,8 +936,10 @@ template isRandomAccessRange(R)
 }
 
 ///
-unittest
+@safe unittest
 {
+    import std.traits : isNarrowString;
+
     alias R = int[];
 
     // range is finite and bidirectional or infinite and forward.
@@ -1078,7 +1083,7 @@ template hasMobileElements(R)
 ///
 @safe unittest
 {
-    import std.algorithm : map;
+    import std.algorithm.iteration : map;
     import std.range : iota, repeat;
 
     static struct HasPostblit
@@ -1260,7 +1265,7 @@ R r;
 static assert(isInputRange!R);
 swap(r.front, r.front);
 static if (isBidirectionalRange!R) swap(r.back, r.front);
-static if (isRandomAccessRange!R) swap(r[], r.front);
+static if (isRandomAccessRange!R) swap(r[0], r.front);
 ----
  */
 template hasSwappableElements(R)
@@ -1606,7 +1611,7 @@ Infinite ranges are compatible, provided the parameter $(D upTo) is
 specified, in which case the implementation simply returns upTo.
  */
 auto walkLength(Range)(Range range)
-    if (isInputRange!Range && !isInfinite!Range)
+if (isInputRange!Range && !isInfinite!Range)
 {
     static if (hasLength!Range)
         return range.length;
@@ -1620,7 +1625,7 @@ auto walkLength(Range)(Range range)
 }
 /// ditto
 auto walkLength(Range)(Range range, const size_t upTo)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     static if (hasLength!Range)
         return range.length;
@@ -1637,7 +1642,7 @@ auto walkLength(Range)(Range range, const size_t upTo)
 
 @safe unittest
 {
-    import std.algorithm : filter;
+    import std.algorithm.iteration : filter;
     import std.range : recurrence, take;
 
     //hasLength Range
@@ -1675,9 +1680,11 @@ auto walkLength(Range)(Range range, const size_t upTo)
 
     $(D popBackN) will behave the same but instead removes elements from
     the back of the (bidirectional) range instead of the front.
+
+    See_Also: $(REF drop, std, range), $(REF dropBack, std, range)
 */
 size_t popFrontN(Range)(ref Range r, size_t n)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     static if (hasLength!Range)
     {
@@ -1713,7 +1720,7 @@ size_t popFrontN(Range)(ref Range r, size_t n)
 
 /// ditto
 size_t popBackN(Range)(ref Range r, size_t n)
-    if (isBidirectionalRange!Range)
+if (isBidirectionalRange!Range)
 {
     static if (hasLength!Range)
     {
@@ -1760,7 +1767,7 @@ size_t popBackN(Range)(ref Range r, size_t n)
 ///
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : iota;
     auto LL = iota(1L, 7L);
     auto r = popFrontN(LL, 2);
@@ -1781,7 +1788,7 @@ size_t popBackN(Range)(ref Range r, size_t n)
 ///
 @safe unittest
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     import std.range : iota;
     auto LL = iota(1L, 7L);
     auto r = popBackN(LL, 2);
@@ -1806,9 +1813,11 @@ size_t popBackN(Range)(ref Range r, size_t n)
 
     $(D popBackExactly) will behave the same but instead removes elements from
     the back of the (bidirectional) range instead of the front.
+
+    See_Also: $(REF dropExcatly, std, range), $(REF dropBackExactly, std, range)
 */
 void popFrontExactly(Range)(ref Range r, size_t n)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     static if (hasLength!Range)
         assert(n <= r.length, "range is smaller than amount of items to pop");
@@ -1824,7 +1833,7 @@ void popFrontExactly(Range)(ref Range r, size_t n)
 
 /// ditto
 void popBackExactly(Range)(ref Range r, size_t n)
-    if (isBidirectionalRange!Range)
+if (isBidirectionalRange!Range)
 {
     static if (hasLength!Range)
         assert(n <= r.length, "range is smaller than amount of items to pop");
@@ -1841,7 +1850,8 @@ void popBackExactly(Range)(ref Range r, size_t n)
 ///
 @safe unittest
 {
-    import std.algorithm : filterBidirectional, equal;
+    import std.algorithm.iteration : filterBidirectional;
+    import std.algorithm.comparison : equal;
 
     auto a = [1, 2, 3];
     a.popFrontExactly(1);
@@ -1968,7 +1978,7 @@ ElementType!R moveBack(R)(R r)
 
 /**
    Moves element at index $(D i) of $(D r) out and returns it. Leaves $(D
-   r.front) in a destroyable state that does not allocate any resources
+   r[i]) in a destroyable state that does not allocate any resources
    (usually equal to its $(D .init) value).
 */
 ElementType!R moveAt(R)(R r, size_t i)
@@ -2097,34 +2107,29 @@ version(unittest)
 void popFront(C)(ref C[] str) @trusted pure nothrow
 if (isNarrowString!(C[]))
 {
-    import std.algorithm : min;
+    import std.algorithm.comparison : min;
 
     assert(str.length, "Attempting to popFront() past the end of an array of " ~ C.stringof);
 
     static if (is(Unqual!C == char))
     {
+        __gshared static immutable ubyte[] charWidthTab = [
+            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+            2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+            3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+            4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 1, 1
+        ];
+
         immutable c = str[0];
-        if (c < 0x80)
+        if (c < 192)
         {
-            //ptr is used to avoid unnnecessary bounds checking.
-            str = str.ptr[1 .. str.length];
-        }
-        else if (c == 0xff)
-        {
-            // bsr undefined for 0
             str = str.ptr[1 .. str.length];
         }
         else
         {
-             import core.bitop : bsr;
-             auto msbs = 7 - bsr(~c);
-             if ((msbs < 2) | (msbs > 6))
-             {
-                 //Invalid UTF-8
-                 msbs = 1;
-             }
-             str = str.ptr[min(msbs, str.length) .. str.length];
+            str = str.ptr[min(str.length, charWidthTab.ptr[c - 192]) .. str.length];
         }
+
     }
     else static if (is(Unqual!C == wchar))
     {
@@ -2170,7 +2175,7 @@ if (isNarrowString!(C[]))
     static assert(checkCTFEW.empty);
 }
 
-unittest // issue 16090
+@safe unittest // issue 16090
 {
     string s = "\u00E4";
     assert(s.length == 2);
@@ -2180,7 +2185,7 @@ unittest // issue 16090
     assert(s.empty);
 }
 
-unittest
+@safe unittest
 {
     wstring s = "\U00010000";
     assert(s.length == 2);
@@ -2293,7 +2298,8 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 }
 
 /// ditto
-@property dchar front(T)(T[] a) @safe pure if (isNarrowString!(T[]))
+@property dchar front(T)(T[] a) @safe pure
+if (isNarrowString!(T[]))
 {
     import std.utf : decode;
     assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
@@ -2336,7 +2342,8 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
 
 /// ditto
 // Specialization for strings
-@property dchar back(T)(T[] a) @safe pure if (isNarrowString!(T[]))
+@property dchar back(T)(T[] a) @safe pure
+if (isNarrowString!(T[]))
 {
     import std.utf : decode, strideBack;
     assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);

@@ -11,7 +11,8 @@ version(unittest) import std.stdio;
 
 /**
 
-Given an $(LUCKY object factory) of type `Factory` or a factory function
+Given an $(LINK2 https://en.wikipedia.org/wiki/Factory_(object-oriented_programming),
+object factory) of type `Factory` or a factory function
 `factoryFunction`, and optionally also `BookkeepingAllocator` as a supplemental
 allocator for bookkeeping, `AllocatorList` creates an allocator that lazily
 creates as many allocators are needed for satisfying client allocation requests.
@@ -532,14 +533,15 @@ template AllocatorList(alias factoryFunction,
 }
 
 ///
-version(Posix) unittest
+version(Posix) @system unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
-    import std.experimental.allocator.mmap_allocator : MmapAllocator;
+    import std.experimental.allocator.building_blocks.free_list : ContiguousFreeList;
     import std.experimental.allocator.building_blocks.segregator : Segregator;
-    import std.experimental.allocator.building_blocks.free_list
-        : ContiguousFreeList;
+    import std.experimental.allocator.building_blocks.null_allocator : NullAllocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.mmap_allocator : MmapAllocator;
 
     // Ouroboros allocator list based upon 4MB regions, fetched directly from
     // mmap. All memory is released upon destruction.
@@ -574,7 +576,7 @@ version(Posix) unittest
     assert(b1.length == 1024 * 10);
 }
 
-unittest
+@system unittest
 {
     // Create an allocator based upon 4MB regions, fetched from the GC heap.
     import std.algorithm.comparison : max;
@@ -588,7 +590,7 @@ unittest
     a.deallocateAll();
 }
 
-unittest
+@system unittest
 {
     // Create an allocator based upon 4MB regions, fetched from the GC heap.
     import std.algorithm.comparison : max;
@@ -601,7 +603,7 @@ unittest
     a.deallocateAll();
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
@@ -616,7 +618,7 @@ unittest
     assert(a.empty == Ternary.yes);
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
     enum bs = GCAllocator.alignment;

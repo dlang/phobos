@@ -38,7 +38,7 @@ $(BR) $(LINK2 https://en.wikipedia.org/wiki/MurmurHash, Wikipedia)
 module std.digest.murmurhash;
 
 ///
-unittest
+@safe unittest
 {
     // MurmurHash3!32, MurmurHash3!(128, 32) and MurmurHash3!(128, 64) implement
     // the std.digest.digest Template API.
@@ -48,7 +48,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     // One can also hash ubyte data piecewise by instanciating a hasher and call
     // the 'put' method.
@@ -65,7 +65,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     // Using `putElements`, `putRemainder` and `finalize` you gain full
     // control over which part of the algorithm to run.
@@ -632,7 +632,7 @@ version (unittest)
     }
 }
 
-unittest
+@safe unittest
 {
     // dfmt off
     checkResult!(MurmurHash3!32)([
@@ -666,7 +666,7 @@ unittest
     // dfmt on
 }
 
-unittest
+@safe unittest
 {
     // dfmt off
     checkResult!(MurmurHash3!(128,32))([
@@ -700,7 +700,7 @@ unittest
     // dfmt on
 }
 
-unittest
+@safe unittest
 {
     // dfmt off
     checkResult!(MurmurHash3!(128,64))([
@@ -734,14 +734,14 @@ unittest
     // dfmt on
 }
 
-unittest
+@safe unittest
 {
     // Pushing unaligned data and making sure the result is still coherent.
     void testUnalignedHash(H)()
     {
         immutable ubyte[1025] data = 0xAC;
-        immutable alignedHash = digest!H(data[0 .. $ - 1]); // 0..1023
-        immutable unalignedHash = digest!H(data[1 .. $]); // 1..1024
+        immutable alignedHash = digest!H(data[0 .. $ - 1]); // 0 .. 1023
+        immutable unalignedHash = digest!H(data[1 .. $]); // 1 .. 1024
         assert(alignedHash == unalignedHash);
     }
 

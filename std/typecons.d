@@ -47,11 +47,26 @@ import std.traits;
 debug(Unique) import std.stdio;
 
 /**
-Encapsulates unique ownership of a resource.  Resource of type $(D T) is
-deleted at the end of the scope, unless it is transferred.  The
-transfer can be explicit, by calling $(D release), or implicit, when
-returning Unique from a function. The resource can be a polymorphic
-class object or instance of an interface, in which case Unique behaves polymorphically too.
+Encapsulates unique ownership of a resource.
+
+When a $(D Unique!T) goes out of scope it will call $(D destroy)
+on the resource $(D T) that it manages, unless it is transferred.
+One important consequence of $(D destroy) is that it will call the
+destructor of the resource $(D T).  GC-managed references are not
+guaranteed to be valid during a destructor call, but other members of
+$(D T), such as file handles or pointers to $(D malloc) memory, will
+still be valid during the destructor call.  This allows the resource
+$(D T) to deallocate or clean up any non-GC resources.
+
+If it is desirable to persist a $(D Unique!T) outside of its original
+scope, then it can be transferred.  The transfer can be explicit, by
+calling $(D release), or implicit, when returning Unique from a
+function. The resource $(D T) can be a polymorphic class object or 
+instance of an interface, in which case Unique behaves polymorphically
+too.
+
+If $(D T) is a value type, then $(D Unique!T) will be implemented
+as a reference to a $(D T).
 */
 struct Unique(T)
 {
@@ -146,25 +161,30 @@ public:
     ~this()
     {
         debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
-        if (_p !is null) delete _p;
-        _p = null;
+        if (_p !is null)
+        {
+            destroy(_p);
+            _p = null;
+        }
     }
+
     /** Returns whether the resource exists. */
     @property bool isEmpty() const
     {
         return _p is null;
     }
-    /** Transfer ownership to a $(D Unique) rvalue. Nullifies the current contents. */
+    /** Transfer ownership to a $(D Unique) rvalue. Nullifies the current contents.
+    Same as calling std.algorithm.move on it.
+    */
     Unique release()
     {
-        debug(Unique) writeln("Release");
-        auto u = Unique(_p);
-        assert(_p is null);
-        debug(Unique) writeln("return from Release");
-        return u;
+        debug(Unique) writeln("Unique Release");
+        import std.algorithm.mutation : move;
+        return this.move;
     }
+
     /** Forwards member access to contents. */
-    auto opDot() inout { return _p; }
+    mixin Proxy!_p;
 
     /**
     Postblit operator is undefined to prevent the cloning of $(D Unique) objects.
@@ -297,6 +317,7 @@ private:
     {
         ~this() { debug(Unique) writeln("    Foo destructor"); }
         int val() const { return 3; }
+        @disable this(this);
     }
     alias UFoo = Unique!(Foo);
 
@@ -351,7 +372,7 @@ private template sharedToString(alias field)
 }
 
 /**
-Tuple of values, for example $(D Tuple!(int, string)) is a record that
+_Tuple of values, for example $(D Tuple!(int, string)) is a record that
 stores an $(D int) and a $(D string). $(D Tuple) can be used to bundle
 values together, notably when returning multiple values from a
 function. If $(D obj) is a `Tuple`, the individual members are
@@ -359,9 +380,11 @@ accessible with the syntax $(D obj[0]) for the first field, $(D obj[1])
 for the second, and so on.
 
 The choice of zero-based indexing instead of one-base indexing was
-motivated by the ability to use value `Tuple`s with various compile-time
+motivated by the ability to use value tuples with various compile-time
 loop constructs (e.g. $(REF AliasSeq, std,meta) iteration), all of which use
 zero-based indexing.
+
+See_Also: $(LREF tuple).
 
 Params:
     Specs = A list of types (and optionally, member names) that the `Tuple` contains.
@@ -493,7 +516,7 @@ template Tuple(Specs...)
         alias Types = staticMap!(extractType, fieldSpecs);
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             alias Fields = Tuple!(int, "id", string, float);
             static assert(is(Fields.Types == AliasSeq!(int, string, float)));
@@ -505,7 +528,7 @@ template Tuple(Specs...)
         alias fieldNames = staticMap!(extractName, fieldSpecs);
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             alias Fields = Tuple!(int, "id", string, float);
             static assert(Fields.fieldNames == AliasSeq!("id", "", ""));
@@ -521,7 +544,7 @@ template Tuple(Specs...)
         mixin(injectNamedFields());
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             auto t1 = tuple(1, " hello ", 2.3);
             assert(t1.toString() == `Tuple!(int, string, double)(1, " hello ", 2.3)`);
@@ -579,7 +602,7 @@ template Tuple(Specs...)
         }
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             alias ISD = Tuple!(int, string, double);
             auto tup = ISD(1, "test", 3.2);
@@ -603,7 +626,7 @@ template Tuple(Specs...)
         }
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             int[2] ints;
             Tuple!(int, int) t = ints;
@@ -626,7 +649,7 @@ template Tuple(Specs...)
         }
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             alias IntVec = Tuple!(int, int, int);
             alias DubVec = Tuple!(double, double, double);
@@ -673,7 +696,7 @@ template Tuple(Specs...)
         }
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             Tuple!(int, string) t1 = tuple(1, "test");
             Tuple!(double, string) t2 =  tuple(1.0, "test");
@@ -729,7 +752,7 @@ template Tuple(Specs...)
             The first `v1` for which `v1 > v2` is true determines
             the result. This could lead to unexpected behaviour.
          */
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             auto tup1 = tuple(1, 1, 1);
             auto tup2 = tuple(1, 100, 100);
@@ -774,6 +797,209 @@ template Tuple(Specs...)
         }
 
         /**
+         * Renames the elements of a $(LREF Tuple).
+         *
+         * `rename` uses the passed `names` and returns a new
+         * $(LREF Tuple) using these names, with the content
+         * unchanged.
+         * If fewer names are passed than there are members
+         * of the $(LREF Tuple) then those trailing members are unchanged.
+         * An empty string will remove the name for that member.
+         * It is an compile-time error to pass more names than
+         * there are members of the $(LREF Tuple).
+         */
+        ref rename(names...)() return
+        if (names.length == 0 || allSatisfy!(isSomeString, typeof(names)))
+        {
+            import std.algorithm.comparison : equal;
+            // to circumvent bug 16418
+            static if (names.length == 0 || equal([names], [fieldNames]))
+                return this;
+            else
+            {
+                enum nT = Types.length;
+                enum nN = names.length;
+                static assert(nN <= nT, "Cannot have more names than tuple members");
+                alias allNames = AliasSeq!(names, fieldNames[nN .. $]);
+
+                template GetItem(size_t idx)
+                {
+                    import std.array : empty;
+                    static if (idx < nT)
+                        alias GetItem = Alias!(Types[idx]);
+                    else static if (allNames[idx - nT].empty)
+                        alias GetItem = AliasSeq!();
+                    else
+                        alias GetItem = Alias!(allNames[idx - nT]);
+                }
+
+                import std.range : roundRobin, iota;
+                alias NewTupleT = Tuple!(staticMap!(GetItem, aliasSeqOf!(
+                        roundRobin(iota(nT), iota(nT, 2*nT)))));
+                return *(() @trusted => cast(NewTupleT*)&this)();
+            }
+        }
+
+        ///
+        static if (Specs.length == 0) @safe unittest
+        {
+            auto t0 = tuple(4, "hello");
+
+            auto t0Named = t0.rename!("val", "tag");
+            assert(t0Named.val == 4);
+            assert(t0Named.tag == "hello");
+
+            Tuple!(float, "dat", size_t[2], "pos") t1;
+            t1.pos = [2, 1];
+            auto t1Named = t1.rename!"height";
+            t1Named.height = 3.4f;
+            assert(t1Named.height == 3.4f);
+            assert(t1Named.pos == [2, 1]);
+            t1Named.rename!"altitude".altitude = 5;
+            assert(t1Named.height == 5);
+
+            Tuple!(int, "a", int, int, "c") t2;
+            t2 = tuple(3,4,5);
+            auto t2Named = t2.rename!("", "b");
+            // "a" no longer has a name
+            static assert(!hasMember!(typeof(t2Named), "a"));
+            assert(t2Named[0] == 3);
+            assert(t2Named.b == 4);
+            assert(t2Named.c == 5);
+
+            // not allowed to specify more names than the tuple has members
+            static assert(!__traits(compiles, t2.rename!("a","b","c","d")));
+
+            // use it in a range pipeline
+            import std.range : iota, zip;
+            import std.algorithm.iteration : map, sum;
+            auto res = zip(iota(1, 4), iota(10, 13))
+                .map!(t => t.rename!("a", "b"))
+                .map!(t => t.a * t.b)
+                .sum;
+            assert(res == 68);
+        }
+
+        /**
+         * Overload of $(LREF _rename) that takes an associative array
+         * `translate` as a template parameter, where the keys are
+         * either the names or indices of the members to be changed
+         * and the new names are the corresponding values.
+         * Every key in `translate` must be the name of a member of the
+         * $(LREF tuple).
+         * The same rules for empty strings apply as for the variadic
+         * template overload of $(LREF _rename).
+        */
+        ref rename(alias translate)()
+        if (is(typeof(translate) : V[K], V, K) && isSomeString!V &&
+                (isSomeString!K || is(K : size_t)))
+        {
+            import std.range : ElementType;
+            static if (isSomeString!(ElementType!(typeof(translate.keys))))
+            {
+                {
+                    import std.conv : to;
+                    import std.algorithm.iteration : filter;
+                    import std.algorithm.searching : canFind;
+                    enum notFound = translate.keys
+                        .filter!(k => fieldNames.canFind(k) == -1);
+                    static assert(notFound.empty, "Cannot find members "
+                        ~ notFound.to!string ~ " in type "
+                        ~ typeof(this).stringof);
+                }
+                return this.rename!(aliasSeqOf!(
+                    {
+                        import std.array : empty;
+                        auto names = [fieldNames];
+                        foreach (ref n; names)
+                            if (!n.empty)
+                                if (auto p = n in translate)
+                                    n = *p;
+                        return names;
+                    }()));
+            }
+            else
+            {
+                {
+                    import std.algorithm.iteration : filter;
+                    import std.conv : to;
+                    enum invalid = translate.keys.
+                        filter!(k => k < 0 || k >= this.length);
+                    static assert(invalid.empty, "Indices " ~ invalid.to!string
+                        ~ " are out of bounds for tuple with length "
+                        ~ this.length.to!string);
+                }
+                return this.rename!(aliasSeqOf!(
+                    {
+                        auto names = [fieldNames];
+                        foreach (k, v; translate)
+                            names[k] = v;
+                        return names;
+                    }()));
+            }
+        }
+
+        ///
+        static if (Specs.length == 0) @safe unittest
+        {
+            //replacing names by their current name
+
+            Tuple!(float, "dat", size_t[2], "pos") t1;
+            t1.pos = [2, 1];
+            auto t1Named = t1.rename!(["dat": "height"]);
+            t1Named.height = 3.4;
+            assert(t1Named.pos == [2, 1]);
+            t1Named.rename!(["height": "altitude"]).altitude = 5;
+            assert(t1Named.height == 5);
+
+            Tuple!(int, "a", int, "b") t2;
+            t2 = tuple(3, 4);
+            auto t2Named = t2.rename!(["a": "b", "b": "c"]);
+            assert(t2Named.b == 3);
+            assert(t2Named.c == 4);
+        }
+
+        ///
+        static if (Specs.length == 0) @safe unittest
+        {
+            //replace names by their position
+
+            Tuple!(float, "dat", size_t[2], "pos") t1;
+            t1.pos = [2, 1];
+            auto t1Named = t1.rename!([0: "height"]);
+            t1Named.height = 3.4;
+            assert(t1Named.pos == [2, 1]);
+            t1Named.rename!([0: "altitude"]).altitude = 5;
+            assert(t1Named.height == 5);
+
+            Tuple!(int, "a", int, "b", int, "c") t2;
+            t2 = tuple(3, 4, 5);
+            auto t2Named = t2.rename!([0: "c", 2: "a"]);
+            assert(t2Named.a == 5);
+            assert(t2Named.b == 4);
+            assert(t2Named.c == 3);
+        }
+
+        static if (Specs.length == 0) @safe unittest
+        {
+            //check that empty translations work fine
+            enum string[string] a0 = null;
+            enum string[int] a1 = null;
+            Tuple!(float, "a", float, "b") t0;
+
+            auto t1 = t0.rename!a0;
+
+            t1.a = 3;
+            t1.b = 4;
+            auto t2 = t0.rename!a1;
+            t2.a = 3;
+            t2.b = 4;
+            auto t3 = t0.rename;
+            t3.a = 3;
+            t3.b = 4;
+        }
+
+        /**
          * Takes a slice of this `Tuple`.
          *
          * Params:
@@ -793,7 +1019,7 @@ template Tuple(Specs...)
         }
 
         ///
-        @safe unittest
+        static if (Specs.length == 0) @safe unittest
         {
             Tuple!(int, string, float, double) a;
             a[1] = "abc";
@@ -991,15 +1217,15 @@ template Tuple(Specs...)
 }
 
 /**
-    Create a copy of a `Tuple` with its fields in reverse order.
+    Creates a copy of a $(LREF Tuple) with its fields in _reverse order.
 
     Params:
         t = The `Tuple` to copy.
 
     Returns:
-        A copy of `t` with its fields in reverse order.
+        A new `Tuple`.
  */
-ReverseTupleType!T reverse(T)(T t)
+auto reverse(T)(T t)
     if (isTuple!T)
 {
     import std.meta : Reverse;
@@ -1008,7 +1234,7 @@ ReverseTupleType!T reverse(T)(T t)
     // @@@BUG@@@ 9929 Need 'this' when calling template with expanded tuple
     // return tuple(Reverse!(t.expand));
 
-    typeof(return) result;
+    ReverseTupleType!T result;
     auto tup = t.expand;
     result.expand = Reverse!tup;
     return result;
@@ -1047,6 +1273,12 @@ private template ReverseTupleSpecs(T...)
     {
         alias ReverseTupleSpecs = T;
     }
+}
+
+// ensure that internal Tuple unittests are compiled
+unittest
+{
+    Tuple!() t;
 }
 
 @safe unittest
@@ -1222,9 +1454,9 @@ private template ReverseTupleSpecs(T...)
     }
     {
         Tuple!(wchar, dchar, int, "x", string, "y", char, byte, float) tup;
-        tup = tuple('a', 'b', 3, "4", 'c', cast(byte)0x0D, 0.00);
+        tup = tuple('a', 'b', 3, "4", 'c', cast(byte) 0x0D, 0.00);
         auto rev = tup.reverse;
-        assert(rev == tuple(0.00, cast(byte)0x0D, 'c', "4", 3, 'b', 'a'));
+        assert(rev == tuple(0.00, cast(byte) 0x0D, 'c', "4", 3, 'b', 'a'));
         assert(rev.x == 3 && rev.y == "4");
     }
 }
@@ -1451,7 +1683,7 @@ private template ReverseTupleSpecs(T...)
     import std.exception : assertThrown;
 
     // enum tupStr = tuple(1, 1.0).toString; // toString is *impure*.
-    //static assert (tupStr == `Tuple!(int, double)(1, 1)`);
+    //static assert(tupStr == `Tuple!(int, double)(1, 1)`);
 
     Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
 
@@ -1486,24 +1718,26 @@ private template ReverseTupleSpecs(T...)
 }
 
 /**
-    Constructs a $(D Tuple) object instantiated and initialized according to
+    Constructs a $(LREF Tuple) object instantiated and initialized according to
     the given arguments.
 
     Params:
-        Names = A list of strings naming each successive field of the `Tuple`.
+        Names = An optional list of strings naming each successive field of the `Tuple`.
                 Each name matches up with the corresponding field given by `Args`.
                 A name does not have to be provided for every field, but as
                 the names must proceed in order, it is not possible to skip
                 one field and name the next after it.
-
+*/
+template tuple(Names...)
+{
+    /**
+    Params:
         args = Values to initialize the `Tuple` with. The `Tuple`'s type will
                be inferred from the types of the values given.
 
     Returns:
         A new `Tuple` with its type inferred from the arguments given.
-*/
-template tuple(Names...)
-{
+     */
     auto tuple(Args...)(Args args)
     {
         static if (Names.length == 0)
@@ -1893,7 +2127,7 @@ template UnqualRef(T)
 {
     class C { }
     alias T = UnqualRef!(const shared C);
-    static assert (is(typeof(T.stripped) == C));
+    static assert(is(typeof(T.stripped) == C));
 }
 
 
@@ -1930,7 +2164,7 @@ string alignForSize(E...)(const char[][] names...)
     foreach (i, T; E)
     {
         auto a = T.alignof;
-        auto k = a>=64? 0 : a>=32? 1 : a>=16? 2 : a>=8? 3 : a>=4? 4 : a>=2? 5 : 6;
+        auto k = a >= 64? 0 : a >= 32? 1 : a >= 16? 2 : a >= 8? 3 : a >= 4? 4 : a >= 2? 5 : 6;
         declaration[k] ~= T.stringof ~ " " ~ names[i] ~ ";\n";
     }
 
@@ -1998,6 +2232,69 @@ Params:
     {
         _value = value;
         _isNull = false;
+    }
+
+    /**
+      If they are both null, then they are equal. If one is null and the other
+      is not, then they are not equal. If they are both non-null, then they are
+      equal if their values are equal.
+      */
+    bool opEquals()(auto ref const(typeof(this)) rhs) const
+    {
+        if (_isNull)
+            return rhs._isNull;
+        if (rhs._isNull)
+            return false;
+        return _value == rhs._value;
+    }
+
+    /// Ditto
+    bool opEquals()(auto ref const(T) rhs) const
+    {
+        return _isNull ? false : rhs == _value;
+    }
+
+    ///
+    @safe unittest
+    {
+        Nullable!int empty;
+        Nullable!int a = 42;
+        Nullable!int b = 42;
+        Nullable!int c = 27;
+
+        assert(empty == empty);
+        assert(empty == Nullable!int.init);
+        assert(empty != a);
+        assert(empty != b);
+        assert(empty != c);
+
+        assert(a == b);
+        assert(a != c);
+
+        assert(empty != 42);
+        assert(a == 42);
+        assert(c != 42);
+    }
+
+    @safe unittest
+    {
+        // Test constness
+        immutable Nullable!int a = 42;
+        Nullable!int b = 42;
+        immutable Nullable!int c = 29;
+        Nullable!int d = 29;
+        immutable e = 42;
+        int f = 29;
+        assert(a == a);
+        assert(a == b);
+        assert(a != c);
+        assert(a != d);
+        assert(a == e);
+        assert(a != f);
+
+        // Test rvalue
+        assert(a == const Nullable!int(42));
+        assert(a != Nullable!int(29));
     }
 
     template toString()
@@ -2132,15 +2429,19 @@ Returns:
 ///
 @system unittest
 {
+    import core.exception : AssertError;
     import std.exception : assertThrown, assertNotThrown;
 
     Nullable!int ni;
+    int i = 42;
     //`get` is implicitly called. Will throw
     //an AssertError in non-release mode
-    assertThrown!Throwable(ni == 0);
+    assertThrown!AssertError(i = ni);
+    assert(i == 42);
 
-    ni = 0;
-    assertNotThrown!Throwable(ni == 0);
+    ni = 5;
+    assertNotThrown!AssertError(i = ni);
+    assert(i == 5);
 }
 
 /**
@@ -2148,6 +2449,12 @@ Implicitly converts to $(D T).
 $(D this) must not be in the null state.
  */
     alias get this;
+}
+
+/// ditto
+auto nullable(T)(T t)
+{
+    return Nullable!T(t);
 }
 
 ///
@@ -2180,6 +2487,20 @@ $(D this) must not be in the null state.
     {
         //Add the customer to the database
     }
+}
+
+///
+@system unittest
+{
+    import std.exception : assertThrown;
+
+    auto a = 42.nullable;
+    assert(!a.isNull);
+    assert(a.get == 42);
+
+    a.nullify();
+    assert(a.isNull);
+    assertThrown!Throwable(a.get);
 }
 
 @system unittest
@@ -2523,6 +2844,12 @@ Returns:
         {
             return _value is nullValue;
         }
+        //Need to use 'is' if T is a float type
+        //because NaN != NaN
+        else static if (isFloatingPoint!T)
+        {
+            return _value is nullValue;
+        }
         else
         {
             return _value == nullValue;
@@ -2538,6 +2865,25 @@ Returns:
 
     ni = 0;
     assert(!ni.isNull);
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=11135
+// disable test until https://issues.dlang.org/show_bug.cgi?id=15316 gets fixed
+version (none) unittest
+{
+    foreach (T; AliasSeq!(float, double, real))
+    {
+        Nullable!(T, T.init) nf;
+        //Initialized to "null" state
+        assert(nf.isNull);
+        assert(nf is typeof(nf).init);
+
+        nf = 0;
+        assert(!nf.isNull);
+
+        nf.nullify();
+        assert(nf.isNull);
+    }
 }
 
 /**
@@ -2585,7 +2931,7 @@ Params:
 @system unittest
 {
     //Passes
-    enum nullVal = cast(int*)0xCAFEBABE;
+    enum nullVal = cast(int*) 0xCAFEBABE;
     Nullable!(int*, nullVal) npi;
     assert(npi.isNull);
 
@@ -2631,6 +2977,13 @@ $(D this) must not be in the null state.
     alias get this;
 }
 
+/// ditto
+auto nullable(alias nullValue, T)(T t)
+    if (is (typeof(nullValue) == T))
+{
+    return Nullable!(T, nullValue)(t);
+}
+
 ///
 @safe unittest
 {
@@ -2661,6 +3014,8 @@ $(D this) must not be in the null state.
     //And there's no overhead
     static assert(Nullable!(size_t, size_t.max).sizeof == size_t.sizeof);
 }
+
+///
 @system unittest
 {
     import std.exception : assertThrown;
@@ -2673,13 +3028,16 @@ $(D this) must not be in the null state.
     assert(a == 5);
     static assert(a.sizeof == int.sizeof);
 }
+
+///
 @safe unittest
 {
-    auto a = Nullable!(int, int.min)(8);
+    auto a = nullable!(int.min)(8);
     assert(a == 8);
     a.nullify();
     assert(a.isNull);
 }
+
 @safe unittest
 {
     static int f(in Nullable!(int, int.min) x) {
@@ -2952,12 +3310,19 @@ $(D this) must not be in the null state.
     alias get this;
 }
 
+/// ditto
+auto nullableRef(T)(T* t)
+{
+    return NullableRef!T(t);
+}
+
+///
 @system unittest
 {
     import std.exception : assertThrown;
 
     int x = 5, y = 7;
-    auto a = NullableRef!(int)(&x);
+    auto a = nullableRef(&x);
     assert(!a.isNull);
     assert(a == 5);
     assert(x == 5);
@@ -2981,7 +3346,7 @@ $(D this) must not be in the null state.
         return x.isNull ? 42 : x.get;
     }
     int x = 5;
-    auto a = NullableRef!int(&x);
+    auto a = nullableRef(&x);
     assert(f(a) == 5);
     a.nullify();
     assert(f(a) == 42);
@@ -3593,6 +3958,47 @@ private static:
     }+/
 }
 
+// Issue 17177 - AutoImplement fails on function overload sets with "cannot infer type from overloaded function symbol"
+@system unittest
+{
+    static class Issue17177
+    {
+        private string n_;
+
+        public {
+            Issue17177 overloaded(string n)
+            {
+                this.n_ = n;
+
+                return this;
+            }
+
+            string overloaded()
+            {
+                return this.n_;
+            }
+        }
+    }
+
+    static string how(C, alias fun)()
+    {
+        static if (!is(ReturnType!fun == void))
+        {
+            return q{
+                return parent(args);
+            };
+        }
+        else
+        {
+            return q{
+                parent(args);
+            };
+        }
+    }
+
+    alias Implementation = AutoImplement!(Issue17177, how, templateNot!isFinalFunction);
+}
+
 version(unittest)
 {
     // Issue 10647
@@ -3859,8 +4265,7 @@ private static:
             {
                 preamble ~= "alias self = " ~ name ~ ";\n";
                 if (WITH_BASE_CLASS && !__traits(isAbstractFunction, func))
-                    //preamble ~= "alias super." ~ name ~ " parent;\n"; // [BUG 2540]
-                    preamble ~= "auto parent = &super." ~ name ~ ";\n";
+                    preamble ~= "alias parent = AliasSeq!(__traits(getMember, super, \"" ~ name ~ "\"))[0];";
             }
 
             // Function body
@@ -4001,7 +4406,7 @@ if (is(T == class) || is(T == interface))
         }
         else
         {
-            return cast(T)typecons_d_toObject(*cast(void**)(&source));
+            return cast(T) typecons_d_toObject(*cast(void**)(&source));
         }
     }
 }
@@ -4010,7 +4415,7 @@ if (is(T == class) || is(T == interface))
 {
     class C { @disable opCast(T)() {} }
     auto c = new C;
-    static assert(!__traits(compiles, cast(Object)c));
+    static assert(!__traits(compiles, cast(Object) c));
     auto o = dynamicCast!Object(c);
     assert(c is o);
 
@@ -4018,7 +4423,7 @@ if (is(T == class) || is(T == interface))
     interface J { @disable opCast(T)() {} Object instance(); }
     class D : I, J { Object instance() { return this; } }
     I i = new D();
-    static assert(!__traits(compiles, cast(J)i));
+    static assert(!__traits(compiles, cast(J) i));
     J j = dynamicCast!J(i);
     assert(i.instance() is j.instance());
 }
@@ -4766,9 +5171,17 @@ struct RefCounted(T, RefCountedAutoInitialize autoInit =
         RefCountedAutoInitialize.yes)
 if (!is(T == class) && !(is(T == interface)))
 {
+    extern(C) private pure nothrow @nogc static // TODO remove pure when https://issues.dlang.org/show_bug.cgi?id=15862 has been fixed
+    {
+        pragma(mangle, "free") void pureFree( void *ptr );
+        pragma(mangle, "gc_addRange") void pureGcAddRange( in void* p, size_t sz, const TypeInfo ti = null );
+        pragma(mangle, "gc_removeRange") void pureGcRemoveRange( in void* p );
+    }
+
     /// $(D RefCounted) storage implementation.
     struct RefCountedStore
     {
+        import core.memory : pureMalloc;
         private struct Impl
         {
             T _payload;
@@ -4780,15 +5193,13 @@ if (!is(T == class) && !(is(T == interface)))
         private void initialize(A...)(auto ref A args)
         {
             import core.exception : onOutOfMemoryError;
-            import core.memory : GC;
-            import core.stdc.stdlib : malloc;
             import std.conv : emplace;
 
-            _store = cast(Impl*)malloc(Impl.sizeof);
+            _store = cast(Impl*) pureMalloc(Impl.sizeof);
             if (_store is null)
                 onOutOfMemoryError();
             static if (hasIndirections!T)
-                GC.addRange(&_store._payload, T.sizeof);
+                pureGcAddRange(&_store._payload, T.sizeof);
             emplace(&_store._payload, args);
             _store._count = 1;
         }
@@ -4796,15 +5207,13 @@ if (!is(T == class) && !(is(T == interface)))
         private void move(ref T source)
         {
             import core.exception : onOutOfMemoryError;
-            import core.memory : GC;
-            import core.stdc.stdlib : malloc;
             import core.stdc.string : memcpy, memset;
 
-            _store = cast(Impl*)malloc(Impl.sizeof);
+            _store = cast(Impl*) pureMalloc(Impl.sizeof);
             if (_store is null)
                 onOutOfMemoryError();
             static if (hasIndirections!T)
-                GC.addRange(&_store._payload, T.sizeof);
+                pureGcAddRange(&_store._payload, T.sizeof);
 
             // Can't use std.algorithm.move(source, _store._payload)
             // here because it requires the target to be initialized.
@@ -4917,11 +5326,10 @@ to deallocate the corresponding resource.
         .destroy(_refCounted._store._payload);
         static if (hasIndirections!T)
         {
-            import core.memory : GC;
-            GC.removeRange(&_refCounted._store._payload);
+            pureGcRemoveRange(&_refCounted._store._payload);
         }
-        import core.stdc.stdlib : free;
-        free(_refCounted._store);
+
+        pureFree(_refCounted._store);
         _refCounted._store = null;
     }
 
@@ -5006,7 +5414,7 @@ assert(refCountedStore.isInitialized)).
 }
 
 ///
-@system unittest
+pure @system nothrow @nogc unittest
 {
     // A pair of an $(D int) and a $(D size_t) - the latter being the
     // reference count - will be dynamically allocated
@@ -5020,7 +5428,7 @@ assert(refCountedStore.isInitialized)).
     // the pair will be freed when rc1 and rc2 go out of scope
 }
 
-@system unittest
+pure @system unittest
 {
     RefCounted!int* p;
     {
@@ -5059,7 +5467,7 @@ assert(refCountedStore.isInitialized)).
     assert(a.x._refCounted._store._count == 2, "BUG 4356 still unfixed");
 }
 
-@system unittest
+pure @system nothrow @nogc unittest
 {
     import std.algorithm.mutation : swap;
 
@@ -5068,7 +5476,7 @@ assert(refCountedStore.isInitialized)).
 }
 
 // 6606
-@safe unittest
+@safe pure nothrow @nogc unittest
 {
     union U {
        size_t i;
@@ -5083,7 +5491,7 @@ assert(refCountedStore.isInitialized)).
 }
 
 // 6436
-@system unittest
+@system pure unittest
 {
     struct S { this(ref int val) { assert(val == 3); ++val; } }
 
@@ -5092,7 +5500,15 @@ assert(refCountedStore.isInitialized)).
     assert(val == 4);
 }
 
-@system unittest
+// gc_addRange coverage
+@system pure unittest
+{
+    struct S { int* p; }
+
+    auto s = RefCounted!S(null);
+}
+
+@system pure nothrow @nogc unittest
 {
     RefCounted!int a;
     a = 5; //This should not assert
@@ -5101,6 +5517,8 @@ assert(refCountedStore.isInitialized)).
     RefCounted!int b;
     b = a; //This should not assert either
     assert(b == 5);
+
+    RefCounted!(int*) c;
 }
 
 /**
@@ -5166,8 +5584,14 @@ RefCounted!(T, RefCountedAutoInitialize.no) refCounted(T)(T val)
 mixin template Proxy(alias a)
 {
     private alias ValueType = typeof({ return a; }());
+
+    /* Determine if 'T.a' can referenced via a const(T).
+     * Use T* as the parameter because 'scope' inference needs a fully
+     * analyzed T, which doesn't work when accessibleFrom() is used in a
+     * 'static if' in the definition of Proxy or T.
+     */
     private enum bool accessibleFrom(T) =
-        is(typeof((ref T self){ cast(void)mixin("self."~__traits(identifier, a)); }));
+        is(typeof((T* self){ cast(void) mixin("(*self)."~__traits(identifier, a)); }));
 
     static if (is(typeof(this) == class))
     {
@@ -5267,16 +5691,16 @@ mixin template Proxy(alias a)
 
     auto ref opCall(this X, Args...)(auto ref Args args) { return a(args); }
 
-    auto ref opCast(T, this X)() { return cast(T)a; }
+    auto ref opCast(T, this X)() { return cast(T) a; }
 
     auto ref opIndex(this X, D...)(auto ref D i)               { return a[i]; }
     auto ref opSlice(this X      )()                           { return a[]; }
-    auto ref opSlice(this X, B, E)(auto ref B b, auto ref E e) { return a[b..e]; }
+    auto ref opSlice(this X, B, E)(auto ref B b, auto ref E e) { return a[b .. e]; }
 
     auto ref opUnary     (string op, this X      )()                           { return mixin(op~"a"); }
     auto ref opIndexUnary(string op, this X, D...)(auto ref D i)               { return mixin(op~"a[i]"); }
     auto ref opSliceUnary(string op, this X      )()                           { return mixin(op~"a[]"); }
-    auto ref opSliceUnary(string op, this X, B, E)(auto ref B b, auto ref E e) { return mixin(op~"a[b..e]"); }
+    auto ref opSliceUnary(string op, this X, B, E)(auto ref B b, auto ref E e) { return mixin(op~"a[b .. e]"); }
 
     auto ref opBinary(string op, this X, B)(auto ref B b)
     if (op == "in" && is(typeof(a in b)) || op != "in")
@@ -5305,12 +5729,12 @@ mixin template Proxy(alias a)
     auto ref opAssign     (this X, V      )(auto ref V v) if (!is(V == typeof(this))) { return a       = v; }
     auto ref opIndexAssign(this X, V, D...)(auto ref V v, auto ref D i)               { return a[i]    = v; }
     auto ref opSliceAssign(this X, V      )(auto ref V v)                             { return a[]     = v; }
-    auto ref opSliceAssign(this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return a[b..e] = v; }
+    auto ref opSliceAssign(this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return a[b .. e] = v; }
 
     auto ref opOpAssign     (string op, this X, V      )(auto ref V v)                             { return mixin("a "      ~op~"= v"); }
     auto ref opIndexOpAssign(string op, this X, V, D...)(auto ref V v, auto ref D i)               { return mixin("a[i] "   ~op~"= v"); }
     auto ref opSliceOpAssign(string op, this X, V      )(auto ref V v)                             { return mixin("a[] "    ~op~"= v"); }
-    auto ref opSliceOpAssign(string op, this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return mixin("a[b..e] "~op~"= v"); }
+    auto ref opSliceOpAssign(string op, this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return mixin("a[b .. e] "~op~"= v"); }
 
     template opDispatch(string name)
     {
@@ -5391,7 +5815,7 @@ mixin template Proxy(alias a)
 {
     struct NewIntType
     {
-        //Won't work; the literal '1' is
+        //Won't work; the literal '1'
         //is an rvalue, not an lvalue
         //mixin Proxy!1;
 
@@ -5467,7 +5891,7 @@ mixin template Proxy(alias a)
         assert(m < 20);
         assert(+m == 10);
         assert(-m == -10);
-        assert(cast(double)m == 10.0);
+        assert(cast(double) m == 10.0);
         assert(m + 10 == 20);
         assert(m - 5 == 5);
         assert(m * 20 == 200);
@@ -5512,23 +5936,23 @@ mixin template Proxy(alias a)
         assert(a != [5,6,7,8]);
         assert(+a[0]    == 1);
         version (LittleEndian)
-            assert(cast(ulong[])a == [0x0000_0002_0000_0001, 0x0000_0004_0000_0003]);
+            assert(cast(ulong[]) a == [0x0000_0002_0000_0001, 0x0000_0004_0000_0003]);
         else
-            assert(cast(ulong[])a == [0x0000_0001_0000_0002, 0x0000_0003_0000_0004]);
+            assert(cast(ulong[]) a == [0x0000_0001_0000_0002, 0x0000_0003_0000_0004]);
         assert(a ~ [10,11] == [1,2,3,4,10,11]);
         assert(a[0]    == 1);
         assert(a[]     == [1,2,3,4]);
-        assert(a[2..4] == [3,4]);
+        assert(a[2 .. 4] == [3,4]);
         static if (is(T == MyArray))    // mutable
         {
             a = a;
             a = [5,6,7,8];  assert(a == [5,6,7,8]);
             a[0]     = 0;   assert(a == [0,6,7,8]);
             a[]      = 1;   assert(a == [1,1,1,1]);
-            a[0..3]  = 2;   assert(a == [2,2,2,1]);
+            a[0 .. 3]  = 2;   assert(a == [2,2,2,1]);
             a[0]    += 2;   assert(a == [4,2,2,1]);
             a[]     *= 2;   assert(a == [8,4,4,2]);
-            a[0..2] /= 2;   assert(a == [4,2,4,2]);
+            a[0 .. 2] /= 2;   assert(a == [4,2,4,2]);
         }
     }
 }
@@ -5599,10 +6023,10 @@ mixin template Proxy(alias a)
 
     // bug5896 test
     assert(h.opCast!int() == 0);
-    assert(cast(int)h == 0);
+    assert(cast(int) h == 0);
     const ih = new const Hoge(new Foo());
     static assert(!__traits(compiles, ih.opCast!int()));
-    static assert(!__traits(compiles, cast(int)ih));
+    static assert(!__traits(compiles, cast(int) ih));
 
     // template member function
     assert(h.tempfunc!int() == 0);
@@ -5639,9 +6063,9 @@ mixin template Proxy(alias a)
     Object c = new MyClass2(5);
     Object d = new MyClass3(5);
     assert(a == b);
-    assert((cast(MyClass)a) == 5);
-    assert(5 == (cast(MyClass)b));
-    assert(5 == cast(MyClass2)c);
+    assert((cast(MyClass) a) == 5);
+    assert(5 == (cast(MyClass) b));
+    assert(5 == cast(MyClass2) c);
     assert(a != d);
 
     assert(c != a);
@@ -5651,23 +6075,23 @@ mixin template Proxy(alias a)
     // MyClass.opEquals doesn't know MyClass2.
     // so, c.opEquals(a) is true, but a.opEquals(c) is false.
     // furthermore, opEquals(T) couldn't be invoked.
-    assert((cast(MyClass2)c) != (cast(MyClass)a));
+    assert((cast(MyClass2) c) != (cast(MyClass) a));
 
     // opCmp
     Object e = new MyClass2(7);
-    assert(a < cast(MyClass2)e); // OK. and
+    assert(a < cast(MyClass2) e); // OK. and
     assert(e > a); // OK, but...
     // assert(a < e); // RUNTIME ERROR!
-    // assert((cast(MyClass)a) < e); // RUNTIME ERROR!
-    assert(3 < cast(MyClass)a);
-    assert((cast(MyClass2)e) < 11);
+    // assert((cast(MyClass) a) < e); // RUNTIME ERROR!
+    assert(3 < cast(MyClass) a);
+    assert((cast(MyClass2) e) < 11);
 
     // opCall
-    assert((cast(MyClass2)e)("hello") == "hello");
+    assert((cast(MyClass2) e)("hello") == "hello");
 
     // opCast
-    assert((cast(MyClass)(cast(MyClass2)c)) == a);
-    assert((cast(int)(cast(MyClass2)c)) == 5);
+    assert((cast(MyClass)(cast(MyClass2) c)) == a);
+    assert((cast(int)(cast(MyClass2) c)) == 5);
 
     // opIndex
     class MyClass4
@@ -5688,27 +6112,27 @@ mixin template Proxy(alias a)
     assert(f[1] == 'e');
 
     // opSlice
-    assert(f[2..4] == "ll");
+    assert(f[2 .. 4] == "ll");
 
     // opUnary
-    assert(-(cast(MyClass2)c) == -5);
+    assert(-(cast(MyClass2) c) == -5);
 
     // opBinary
-    assert((cast(MyClass)a) + (cast(MyClass2)c) == 10);
-    assert(5 + cast(MyClass)a == 10);
+    assert((cast(MyClass) a) + (cast(MyClass2) c) == 10);
+    assert(5 + cast(MyClass) a == 10);
 
     // opAssign
-    (cast(MyClass2)c) = 11;
-    assert((cast(MyClass2)c) == 11);
-    (cast(MyClass2)c) = new MyClass(13);
-    assert((cast(MyClass2)c) == 13);
+    (cast(MyClass2) c) = 11;
+    assert((cast(MyClass2) c) == 11);
+    (cast(MyClass2) c) = new MyClass(13);
+    assert((cast(MyClass2) c) == 13);
 
     // opOpAssign
-    assert((cast(MyClass2)c) += 4);
-    assert((cast(MyClass2)c) == 17);
+    assert((cast(MyClass2) c) += 4);
+    assert((cast(MyClass2) c) == 17);
 
     // opDispatch
-    assert((cast(MyClass2)c).pow(2) == 289);
+    assert((cast(MyClass2) c).pow(2) == 289);
 
     // opDollar
     assert(f[2..$-1] == "ll");
@@ -5804,11 +6228,11 @@ mixin template Proxy(alias a)
     }
     static void allFail(T0, T1)(T0 a, T1 b)
     {
-        assert(!(a==b));
+        assert(!(a == b));
         assert(!(a<b));
-        assert(!(a<=b));
+        assert(!(a <= b));
         assert(!(a>b));
-        assert(!(a>=b));
+        assert(!(a >= b));
     }
     foreach (T1; AliasSeq!(MyFloatImpl, Typedef!float, Typedef!double,
         float, real, Typedef!int, int))
@@ -5824,18 +6248,18 @@ mixin template Proxy(alias a)
             allFail(a, b);
 
             b = 4;
-            assert(a!=b);
+            assert(a != b);
             assert(a<b);
-            assert(a<=b);
+            assert(a <= b);
             assert(!(a>b));
-            assert(!(a>=b));
+            assert(!(a >= b));
 
             a = 4;
-            assert(a==b);
+            assert(a == b);
             assert(!(a<b));
-            assert(a<=b);
+            assert(a <= b);
             assert(!(a>b));
-            assert(a>=b);
+            assert(a >= b);
         }
     }
 }
@@ -5905,19 +6329,45 @@ struct Typedef(T, T init = T.init, string cookie=null)
         this(tdef.Typedef_payload);
     }
 
-    // We need to add special overload for cast(Typedef!X)exp,
+    // We need to add special overload for cast(Typedef!X) exp,
     // thus we can't simply inherit Proxy!Typedef_payload
     T2 opCast(T2 : Typedef!(T, Unused), this X, T, Unused...)()
     {
-        return T2(cast(T)Typedef_payload);
+        return T2(cast(T) Typedef_payload);
     }
 
     auto ref opCast(T2, this X)()
     {
-        return cast(T2)Typedef_payload;
+        return cast(T2) Typedef_payload;
     }
 
     mixin Proxy!Typedef_payload;
+
+    pure nothrow @nogc @safe @property
+    {
+        alias TD = typeof(this);
+        static if (isIntegral!T)
+        {
+            static TD min() {return TD(T.min);}
+            static TD max() {return TD(T.max);}
+        }
+        else static if (isFloatingPoint!T)
+        {
+            static TD infinity() {return TD(T.infinity);}
+            static TD nan() {return TD(T.nan);}
+            static TD dig() {return TD(T.dig);}
+            static TD epsilon() {return TD(T.epsilon);}
+            static TD mant_dig() {return TD(T.mant_dig);}
+            static TD max_10_exp() {return TD(T.max_10_exp);}
+            static TD max_exp()  {return TD(T.max_exp);}
+            static TD min_10_exp() {return TD(T.min_10_exp);}
+            static TD min_exp() {return TD(T.min_exp);}
+            static TD max() {return TD(T.max);}
+            static TD min_normal() {return TD(T.min_normal);}
+            TD re() {return TD(Typedef_payload.re);}
+            TD im() {return TD(Typedef_payload.im);}
+        }
+    }
 }
 
 /**
@@ -5951,7 +6401,7 @@ template TypedefType(T)
     assert(myInt == 5);
 
     // cast to the underlying type to get the value that's being wrapped
-    int x = cast(TypedefType!MyInt)myInt;
+    int x = cast(TypedefType!MyInt) myInt;
 
     alias MyIntInit = Typedef!(int, 42);
     static assert(is(TypedefType!MyIntInit == int));
@@ -5983,11 +6433,11 @@ template TypedefType(T)
     static assert(typeof(sa).length == 3);
 
     Typedef!(int[3]) dollar1;
-    assert(dollar1[0..$] is dollar1[0..3]);
+    assert(dollar1[0..$] is dollar1[0 .. 3]);
 
     Typedef!(int[]) dollar2;
     dollar2.length = 3;
-    assert(dollar2[0..$] is dollar2[0..3]);
+    assert(dollar2[0..$] is dollar2[0 .. 3]);
 
     static struct Dollar1
     {
@@ -5999,7 +6449,7 @@ template TypedefType(T)
 
     Typedef!Dollar1 drange1;
     assert(drange1[0..$] == 1);
-    assert(drange1[0..1] == 2);
+    assert(drange1[0 .. 1] == 2);
 
     static struct Dollar2
     {
@@ -6018,6 +6468,21 @@ template TypedefType(T)
 
     Typedef!Dollar3 drange3;
     assert(drange3[$] == 123);
+}
+
+@safe @nogc pure nothrow unittest // Bugzilla 11703
+{
+    alias I = Typedef!int;
+    static assert(is(typeof(I.min) == I));
+    static assert(is(typeof(I.max) == I));
+
+    alias F = Typedef!double;
+    static assert(is(typeof(F.infinity) == F));
+    static assert(is(typeof(F.epsilon) == F));
+
+    F f;
+    assert(!is(typeof(F.re).stringof == double));
+    assert(!is(typeof(F.im).stringof == double));
 }
 
 @safe unittest
@@ -6110,9 +6575,9 @@ template TypedefType(T)
     alias String = Typedef!(char[]);
     alias CString = Typedef!(const(char)[]);
     CString cs = "fubar";
-    String s = cast(String)cs;
+    String s = cast(String) cs;
     assert(cs == s);
-    char[] s2 = cast(char[])cs;
+    char[] s2 = cast(char[]) cs;
     const(char)[] cs2 = cast(const(char)[])s;
     assert(s2 == cs2);
 }
@@ -6671,10 +7136,10 @@ template isBitFlagEnum(E)
     enum A
     {
         None,
-        A = 1<<0,
-        B = 1<<1,
-        C = 1<<2,
-        D = 1<<3,
+        A = 1 << 0,
+        B = 1 << 1,
+        C = 1 << 2,
+        D = 1 << 3,
     }
 
     static assert(isBitFlagEnum!A);
@@ -6691,8 +7156,8 @@ template isBitFlagEnum(E)
 
     enum C: double
     {
-        A = 1<<0,
-        B = 1<<1
+        A = 1 << 0,
+        B = 1 << 1
     }
 
     static assert(!isBitFlagEnum!C);
@@ -6710,8 +7175,8 @@ the OR combination, which can produce surprising effects like this:
 ----
 enum E
 {
-    A = 1<<0,
-    B = 1<<1
+    A = 1 << 0,
+    B = 1 << 1
 }
 E e = E.A | E.B;
 // will throw SwitchError
@@ -6858,9 +7323,9 @@ public:
     enum Enum
     {
         None,
-        A = 1<<0,
-        B = 1<<1,
-        C = 1<<2
+        A = 1 << 0,
+        B = 1 << 1,
+        C = 1 << 2
     }
     BitFlags!Enum flags1;
     assert(!(flags1 & (Enum.A | Enum.B | Enum.C)));
@@ -6902,7 +7367,7 @@ public:
 
     // use & between BitFlags for intersection
     immutable BitFlags!Enum flags_BC = BitFlags!Enum(Enum.B, Enum.C);
-    assert (flags_B == (flags_BC & flags_AB));
+    assert(flags_B == (flags_BC & flags_AB));
 
     // All the binary operators work in their assignment version
     BitFlags!Enum temp = flags_empty;
@@ -6929,7 +7394,7 @@ public:
     assert(flags_AB & Enum.A);
 
     // Finally, you can of course get you raw value out of flags
-    auto value = cast(int)flags_A;
+    auto value = cast(int) flags_A;
     assert(value == Enum.A);
 }
 
@@ -7092,7 +7557,7 @@ private template replaceTypeInFunctionType(From, To, fun)
         static if (attributes & FunctionAttribute.system)
             result ~= " @system";
         static if (attributes & FunctionAttribute.const_)
-            result ~= " @const";
+            result ~= " const";
         static if (attributes & FunctionAttribute.immutable_)
             result ~= " immutable";
         static if (attributes & FunctionAttribute.inout_)
@@ -7195,6 +7660,14 @@ private template replaceTypeInFunctionType(From, To, fun)
         ubyte, ubyte, T2, T2,
         ubyte, ubyte, T3, T3,
     );
+}
+
+@safe unittest // Bugzilla 17116
+{
+    alias ConstDg = void delegate(float) const;
+    alias B = void delegate(int) const;
+    alias A = ReplaceType!(float, int, ConstDg);
+    static assert(is(B == A));
 }
 
 /**

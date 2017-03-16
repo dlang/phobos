@@ -41,9 +41,10 @@ struct NullAllocator
     /// Returns $(D Ternary.no).
     Ternary owns(void[]) shared const { return Ternary.no; }
     /**
-    Returns $(D null).
+    Returns $(D Ternary.no).
     */
-    void[] resolveInternalPointer(void*) shared const { return null; }
+    Ternary resolveInternalPointer(void*, ref void[]) shared const
+    { return Ternary.no; }
     /**
     No-op.
     Precondition: $(D b is null)
@@ -63,12 +64,22 @@ struct NullAllocator
     static shared NullAllocator instance;
 }
 
-unittest
+@system unittest
 {
+    assert(NullAllocator.instance.alignedAllocate(100, 0) is null);
+    assert(NullAllocator.instance.allocateAll() is null);
     auto b = NullAllocator.instance.allocate(100);
     assert(b is null);
+    assert(NullAllocator.instance.expand(b, 0));
+    assert(!NullAllocator.instance.expand(b, 42));
+    assert(!NullAllocator.instance.reallocate(b, 42));
+    assert(!NullAllocator.instance.alignedReallocate(b, 42, 0));
     NullAllocator.instance.deallocate(b);
     NullAllocator.instance.deallocateAll();
+
     import std.typecons : Ternary;
+    assert(NullAllocator.instance.empty() == Ternary.yes);
     assert(NullAllocator.instance.owns(null) == Ternary.no);
+    void[] p;
+    assert(NullAllocator.instance.resolveInternalPointer(null, p) == Ternary.no);
 }

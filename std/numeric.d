@@ -40,20 +40,23 @@ public enum CustomFloatFlags
      * Store values in normalized form by default. The actual precision of the
      * significand is extended by 1 bit by assuming an implicit leading bit of 1
      * instead of 0. i.e. $(D 1.nnnn) instead of $(D 0.nnnn).
-     * True for all $(LUCKY IEE754) types
+     * True for all $(LINK2 https://en.wikipedia.org/wiki/IEEE_floating_point, IEE754) types
      */
     storeNormalized = 2,
 
     /**
-     * Stores the significand in $(LUCKY IEEE754 denormalized) form when the
-     * exponent is 0. Required to express the value 0.
+     * Stores the significand in $(LINK2 https://en.wikipedia.org/wiki/IEEE_754-1985#Denormalized_numbers,
+     * IEEE754 denormalized) form when the exponent is 0. Required to express the value 0.
      */
     allowDenorm = 4,
 
-    /// Allows the storage of $(LUCKY IEEE754 _infinity) values.
+    /**
+      * Allows the storage of $(LINK2 https://en.wikipedia.org/wiki/IEEE_754-1985#Positive_and_negative_infinity,
+      * IEEE754 _infinity) values.
+      */
     infinity = 8,
 
-    /// Allows the storage of $(LUCKY IEEE754 Not a Number) values.
+    /// Allows the storage of $(LINK2 https://en.wikipedia.org/wiki/NaN, IEEE754 Not a Number) values.
     nan = 16,
 
     /**
@@ -66,12 +69,13 @@ public enum CustomFloatFlags
     /// If set, unsigned custom floats are assumed to be negative.
     negativeUnsigned = 64,
 
-    /**If set, 0 is the only allowed $(LUCKY IEEE754 denormalized) number.
+    /**If set, 0 is the only allowed $(LINK2 https://en.wikipedia.org/wiki/IEEE_754-1985#Denormalized_numbers,
+     * IEEE754 denormalized) number.
      * Requires allowDenorm and storeNormalized.
      */
     allowDenormZeroOnly = 128 | allowDenorm | storeNormalized,
 
-    /// Include _all of the $(LUCKY IEEE754) options.
+    /// Include _all of the $(LINK2 https://en.wikipedia.org/wiki/IEEE_floating_point, IEEE754) options.
     ieee = signed | storeNormalized | allowDenorm | infinity | nan ,
 
     /// Include none of the above options.
@@ -109,14 +113,14 @@ private template CustomFloatParams(uint precision, uint exponentWidth, CustomFlo
  * result can be stored in a custom floating-point value via assignment.
  */
 template CustomFloat(uint bits)
-    if (bits == 8 || bits == 16 || bits == 32 || bits == 64 || bits == 80)
+if (bits == 8 || bits == 16 || bits == 32 || bits == 64 || bits == 80)
 {
     alias CustomFloat = CustomFloat!(CustomFloatParams!(bits));
 }
 
 /// ditto
 template CustomFloat(uint precision, uint exponentWidth, CustomFloatFlags flags = CustomFloatFlags.ieee)
-    if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision + exponentWidth > 0)
+if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision + exponentWidth > 0)
 {
     alias CustomFloat = CustomFloat!(CustomFloatParams!(precision, exponentWidth, flags));
 }
@@ -124,6 +128,8 @@ template CustomFloat(uint precision, uint exponentWidth, CustomFloatFlags flags 
 ///
 @safe unittest
 {
+    import std.math : sin, cos;
+
     // Define a 16-bit floating point values
     CustomFloat!16                                x;     // Using the number of bits
     CustomFloat!(10, 5)                           y;     // Using the precision and exponent width
@@ -136,7 +142,7 @@ template CustomFloat(uint precision, uint exponentWidth, CustomFloatFlags flags 
     // Functions calls require conversion
     z = sin(+x)           + cos(+y);                     // Use unary plus to concisely convert to a real
     z = sin(x.get!float)  + cos(y.get!float);            // Or use get!T
-    z = sin(cast(float)x) + cos(cast(float)y);           // Or use cast(T) to explicitly convert
+    z = sin(cast(float) x) + cos(cast(float) y);           // Or use cast(T) to explicitly convert
 
     // Define a 8-bit custom float for storing probabilities
     alias Probability = CustomFloat!(4, 4, CustomFloatFlags.ieee^CustomFloatFlags.probability^CustomFloatFlags.signed );
@@ -148,8 +154,8 @@ struct CustomFloat(uint             precision,  // fraction bits (23 for float)
                    uint             exponentWidth,  // exponent bits (8 for float)  Exponent width
                    CustomFloatFlags flags,
                    uint             bias)
-    if (((flags & flags.signed)  + precision + exponentWidth) % 8 == 0 &&
-        precision + exponentWidth > 0)
+if (((flags & flags.signed)  + precision + exponentWidth) % 8 == 0 &&
+    precision + exponentWidth > 0)
 {
     import std.bitmanip : bitfields;
     import std.meta : staticIndexOf;
@@ -237,7 +243,7 @@ private:
         }
         if ((~flags&Flags.storeNormalized) ||
             // Convert denormalized form to normalized form
-            ((flags&Flags.allowDenorm) && exp==0))
+            ((flags&Flags.allowDenorm) && exp == 0))
         {
             if (sig > 0)
             {
@@ -475,7 +481,7 @@ public:
     static @property CustomFloat im() { return CustomFloat(0.0f); }
 
     /// Initialize from any $(D real) compatible type.
-    this(F)(F input) if (__traits(compiles, cast(real)input ))
+    this(F)(F input) if (__traits(compiles, cast(real) input ))
     {
         this = input;
     }
@@ -491,7 +497,7 @@ public:
 
     /// Assigns from any $(D real) compatible type.
     void opAssign(F)(F input)
-        if (__traits(compiles, cast(real)input))
+        if (__traits(compiles, cast(real) input))
     {
         import std.conv : text;
 
@@ -582,18 +588,18 @@ public:
 
     /// ditto
     int opCmp(T)(auto ref T b)
-        if (__traits(compiles, cast(real)b))
+        if (__traits(compiles, cast(real) b))
     {
         auto x = get!real;
         auto y = cast(real) b;
-        return  (x>=y)-(x<=y);
+        return  (x >= y)-(x <= y);
     }
 
     /// ditto
     void opOpAssign(string op, T)(auto ref T b)
-        if (__traits(compiles, mixin(`get!real`~op~`cast(real)b`)))
+        if (__traits(compiles, mixin(`get!real`~op~`cast(real) b`)))
     {
-        return mixin(`this = this `~op~` cast(real)b`);
+        return mixin(`this = this `~op~` cast(real) b`);
     }
 
     /// ditto
@@ -676,7 +682,7 @@ always be fastest, as the speed of floating-point calculations depends
 on very many factors.
  */
 template FPTemporary(F)
-    if (isFloatingPoint!F)
+if (isFloatingPoint!F)
 {
     version(X86)
         alias FPTemporary = real;
@@ -687,6 +693,8 @@ template FPTemporary(F)
 ///
 @safe unittest
 {
+    import std.math : approxEqual;
+
     // Average numbers in an array
     double avg(in double[] a)
     {
@@ -730,6 +738,8 @@ template secantMethod(alias fun)
 ///
 @safe unittest
 {
+    import std.math : approxEqual, cos;
+
     float f(float x)
     {
         return cos(x) - x*x*x;
@@ -766,7 +776,7 @@ public:
 
 /**  Find a real root of a real function f(x) via bracketing.
  *
- * Given a function `f` and a range `[a..b]` such that `f(a)`
+ * Given a function `f` and a range `[a .. b]` such that `f(a)`
  * and `f(b)` have opposite signs or at least one of them equals ±0,
  * returns the value of `x` in
  * the range which is closest to a root of `f(x)`.  If `f(x)`
@@ -791,10 +801,10 @@ public:
  */
 T findRoot(T, DF, DT)(scope DF f, in T a, in T b,
     scope DT tolerance) //= (T a, T b) => false)
-    if (
-        isFloatingPoint!T &&
-        is(typeof(tolerance(T.init, T.init)) : bool) &&
-        is(typeof(f(T.init)) == R, R) && isFloatingPoint!R
+if (
+    isFloatingPoint!T &&
+    is(typeof(tolerance(T.init, T.init)) : bool) &&
+    is(typeof(f(T.init)) == R, R) && isFloatingPoint!R
     )
 {
     immutable fa = f(a);
@@ -849,10 +859,10 @@ T findRoot(T, DF)(scope DF f, in T a, in T b)
  */
 Tuple!(T, T, R, R) findRoot(T, R, DF, DT)(scope DF f, in T ax, in T bx, in R fax, in R fbx,
     scope DT tolerance) // = (T a, T b) => false)
-    if (
-        isFloatingPoint!T &&
-        is(typeof(tolerance(T.init, T.init)) : bool) &&
-        is(typeof(f(T.init)) == R) && isFloatingPoint!R
+if (
+    isFloatingPoint!T &&
+    is(typeof(tolerance(T.init, T.init)) : bool) &&
+    is(typeof(f(T.init)) == R) && isFloatingPoint!R
     )
 in
 {
@@ -865,7 +875,7 @@ body
     // (www.netlib.org).  The changes to improve the worst-cast performance are
     // entirely original.
 
-    T a, b, d;  // [a..b] is our current bracket. d is the third best guess.
+    T a, b, d;  // [a .. b] is our current bracket. d is the third best guess.
     R fa, fb, fd; // Values of f at a, b, d.
     bool done = false; // Has a root been found?
 
@@ -918,7 +928,7 @@ body
     */
     static T secant_interpolate(T a, T b, R fa, R fb)
     {
-        if (( ((a - b) == a) && b!=0) || (a!=0 && ((b - a) == b)))
+        if (( ((a - b) == a) && b != 0) || (a != 0 && ((b - a) == b)))
         {
             // Catastrophic cancellation
             if (a == 0)
@@ -941,10 +951,10 @@ body
         return c;
     }
 
-    /* Uses 'numsteps' newton steps to approximate the zero in [a..b] of the
+    /* Uses 'numsteps' newton steps to approximate the zero in [a .. b] of the
        quadratic polynomial interpolating f(x) at a, b, and d.
        Returns:
-         The approximate zero in [a..b] of the quadratic polynomial.
+         The approximate zero in [a .. b] of the quadratic polynomial.
     */
     T newtonQuadratic(int numsteps)
     {
@@ -957,7 +967,7 @@ body
         T c = oppositeSigns(a2, fa) ? a  : b;
 
         // start the safeguarded newton steps.
-        foreach (int i; 0..numsteps)
+        foreach (int i; 0 .. numsteps)
         {
             immutable T pc = a0 + (a1 + a2 * (c - b))*(c - a);
             immutable T pdc = a1 + a2*((2 * c) - (a + b));
@@ -1000,7 +1010,7 @@ whileloop:
         T a0 = a, b0 = b; // record the brackets
 
         // Do two higher-order (cubic or parabolic) interpolation steps.
-        foreach (int QQ; 0..2)
+        foreach (int QQ; 0 .. 2)
         {
             // Cubic inverse interpolation requires that
             // all four function values fa, fb, fd, and fe are distinct;
@@ -1081,7 +1091,7 @@ whileloop:
 
         // DAC: If the secant predicts a value equal to an endpoint, it's
         // probably false.
-        if (c==a || c==b || c.isNaN() || fabs(c - u) > (b - a) / 2)
+        if (c == a || c == b || c.isNaN() || fabs(c - u) > (b - a) / 2)
         {
             if ((a-b) == a || (b-a) == b)
             {
@@ -1089,9 +1099,9 @@ whileloop:
                     c = 0;
                 else
                 {
-                    if (a==0)
+                    if (a == 0)
                         c = ieeeMean(copysign(T(0), b), b);
-                    else if (b==0)
+                    else if (b == 0)
                         c = ieeeMean(copysign(T(0), a), a);
                     else
                         c = ieeeMean(a, b);
@@ -1114,7 +1124,7 @@ whileloop:
         // yet, or if we don't yet know what the exponent is,
         // perform a binary chop.
 
-        if ((a==0 || b==0 ||
+        if ((a == 0 || b == 0 ||
             (fabs(a) >= T(0.5) * fabs(b) && fabs(b) >= T(0.5) * fabs(a)))
             &&  (b - a) < T(0.25) * (b0 - a0))
         {
@@ -1128,7 +1138,7 @@ whileloop:
 
         if ((b - a) < T(0.25) * (b0 - a0))
             baditer = 1;
-        foreach (int QQ; 0..baditer)
+        foreach (int QQ; 0 .. baditer)
         {
             e = d;
             fe = fd;
@@ -1182,7 +1192,7 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
 
         auto flo = f(result[0]);
         auto fhi = f(result[1]);
-        if (flo!=0)
+        if (flo != 0)
         {
             assert(oppositeSigns(flo, fhi));
         }
@@ -1298,7 +1308,7 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
 
     numProblems=0;
     //testFindRoot(&alefeld0, PI_2, PI);
-    for (n=1; n<=10; ++n)
+    for (n=1; n <= 10; ++n)
     {
         //testFindRoot(&alefeld0, n*n+1e-9L, (n+1)*(n+1)-1e-9L);
     }
@@ -1380,14 +1390,14 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
 @system unittest
 {
     // @system due to the case in the 2nd line
-    static assert(__traits(compiles, findRoot((float x)=>cast(real)x, float.init, float.init)));
-    static assert(__traits(compiles, findRoot!real((x)=>cast(double)x, real.init, real.init)));
-    static assert(__traits(compiles, findRoot((real x)=>cast(double)x, real.init, real.init)));
+    static assert(__traits(compiles, findRoot((float x)=>cast(real) x, float.init, float.init)));
+    static assert(__traits(compiles, findRoot!real((x)=>cast(double) x, real.init, real.init)));
+    static assert(__traits(compiles, findRoot((real x)=>cast(double) x, real.init, real.init)));
 }
 
 /++
 Find a real minimum of a real function `f(x)` via bracketing.
-Given a function `f` and a range `(ax..bx)`,
+Given a function `f` and a range `(ax .. bx)`,
 returns the value of `x` in the range which is closest to a minimum of `f(x)`.
 `f` is never evaluted at the endpoints of `ax` and `bx`.
 If `f(x)` has more than one minimum in the range, one will be chosen arbitrarily.
@@ -1426,8 +1436,8 @@ findLocalMin(T, DF)(
         in T relTolerance = sqrt(T.epsilon),
         in T absTolerance = sqrt(T.epsilon),
         )
-    if (isFloatingPoint!T
-        && __traits(compiles, {T _ = DF.init(T.init);}))
+if (isFloatingPoint!T
+    && __traits(compiles, {T _ = DF.init(T.init);}))
 in
 {
     assert(isFinite(ax), "ax is not finite");
@@ -1568,6 +1578,8 @@ body
 ///
 @safe unittest
 {
+    import std.math : approxEqual;
+
     auto ret = findLocalMin((double x) => (x-4)^^2, -1e7, 1e7);
     assert(ret.x.approxEqual(4.0));
     assert(ret.y.approxEqual(0.0));
@@ -1616,7 +1628,8 @@ body
 }
 
 /**
-Computes $(LUCKY Euclidean distance) between input ranges $(D a) and
+Computes $(LINK2 https://en.wikipedia.org/wiki/Euclidean_distance,
+Euclidean distance) between input ranges $(D a) and
 $(D b). The two ranges must have the same length. The three-parameter
 version stops computation as soon as the distance is greater than or
 equal to $(D limit) (this is useful to save computation if a small
@@ -1624,7 +1637,7 @@ distance is sought).
  */
 CommonType!(ElementType!(Range1), ElementType!(Range2))
 euclideanDistance(Range1, Range2)(Range1 a, Range2 b)
-    if (isInputRange!(Range1) && isInputRange!(Range2))
+if (isInputRange!(Range1) && isInputRange!(Range2))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) assert(a.length == b.length);
@@ -1641,7 +1654,7 @@ euclideanDistance(Range1, Range2)(Range1 a, Range2 b)
 /// Ditto
 CommonType!(ElementType!(Range1), ElementType!(Range2))
 euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
-    if (isInputRange!(Range1) && isInputRange!(Range2))
+if (isInputRange!(Range1) && isInputRange!(Range2))
 {
     limit *= limit;
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
@@ -1676,15 +1689,16 @@ euclideanDistance(Range1, Range2, F)(Range1 a, Range2 b, F limit)
 }
 
 /**
-Computes the $(LUCKY dot product) of input ranges $(D a) and $(D
+Computes the $(LINK2 https://en.wikipedia.org/wiki/Dot_product,
+dot product) of input ranges $(D a) and $(D
 b). The two ranges must have the same length. If both ranges define
 length, the check is done once; otherwise, it is done at each
 iteration.
  */
 CommonType!(ElementType!(Range1), ElementType!(Range2))
 dotProduct(Range1, Range2)(Range1 a, Range2 b)
-    if (isInputRange!(Range1) && isInputRange!(Range2) &&
-        !(isArray!(Range1) && isArray!(Range2)))
+if (isInputRange!(Range1) && isInputRange!(Range2) &&
+    !(isArray!(Range1) && isArray!(Range2)))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) assert(a.length == b.length);
@@ -1773,14 +1787,15 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 }
 
 /**
-Computes the $(LUCKY cosine similarity) of input ranges $(D a) and $(D
+Computes the $(LINK2 https://en.wikipedia.org/wiki/Cosine_similarity,
+cosine similarity) of input ranges $(D a) and $(D
 b). The two ranges must have the same length. If both ranges define
 length, the check is done once; otherwise, it is done at each
 iteration. If either range has all-zero elements, return 0.
  */
 CommonType!(ElementType!(Range1), ElementType!(Range2))
 cosineSimilarity(Range1, Range2)(Range1 a, Range2 b)
-    if (isInputRange!(Range1) && isInputRange!(Range2))
+if (isInputRange!(Range1) && isInputRange!(Range2))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) assert(a.length == b.length);
@@ -1821,7 +1836,7 @@ Returns: $(D true) if normalization completed normally, $(D false) if
 all elements in $(D range) were zero or if $(D range) is empty.
  */
 bool normalize(R)(R range, ElementType!(R) sum = 1)
-    if (isForwardRange!(R))
+if (isForwardRange!(R))
 {
     ElementType!(R) s = 0;
     // Step 1: Compute sum and length of the range
@@ -1878,7 +1893,7 @@ Compute the sum of binary logarithms of the input range $(D r).
 The error of this method is much smaller than with a naive sum of log2.
  */
 ElementType!Range sumOfLog2s(Range)(Range r)
-    if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
+if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
 {
     long exp = 0;
     Unqual!(typeof(return)) x = 1;
@@ -1901,6 +1916,8 @@ ElementType!Range sumOfLog2s(Range)(Range r)
 ///
 @safe unittest
 {
+    import std.math : isNaN;
+
     assert(sumOfLog2s(new double[0]) == 0);
     assert(sumOfLog2s([0.0L]) == -real.infinity);
     assert(sumOfLog2s([-0.0L]) == -real.infinity);
@@ -1914,14 +1931,16 @@ ElementType!Range sumOfLog2s(Range)(Range r)
 }
 
 /**
-Computes $(LUCKY _entropy) of input range $(D r) in bits. This
+Computes $(LINK2 https://en.wikipedia.org/wiki/Entropy_(information_theory),
+_entropy) of input range $(D r) in bits. This
 function assumes (without checking) that the values in $(D r) are all
 in $(D [0, 1]). For the entropy to be meaningful, often $(D r) should
 be normalized too (i.e., its values should sum to 1). The
 two-parameter version stops evaluating as soon as the intermediate
 result is greater than or equal to $(D max).
  */
-ElementType!Range entropy(Range)(Range r) if (isInputRange!Range)
+ElementType!Range entropy(Range)(Range r)
+if (isInputRange!Range)
 {
     Unqual!(typeof(return)) result = 0.0;
     for (;!r.empty; r.popFront)
@@ -1961,7 +1980,8 @@ if (isInputRange!Range &&
 }
 
 /**
-Computes the $(LUCKY Kullback-Leibler divergence) between input ranges
+Computes the $(LINK2 https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence,
+Kullback-Leibler divergence) between input ranges
 $(D a) and $(D b), which is the sum $(D ai * log(ai / bi)). The base
 of logarithm is 2. The ranges are assumed to contain elements in $(D
 [0, 1]). Usually the ranges are normalized probability distributions,
@@ -1974,7 +1994,7 @@ positive.
  */
 CommonType!(ElementType!Range1, ElementType!Range2)
 kullbackLeiblerDivergence(Range1, Range2)(Range1 a, Range2 b)
-    if (isInputRange!(Range1) && isInputRange!(Range2))
+if (isInputRange!(Range1) && isInputRange!(Range2))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) assert(a.length == b.length);
@@ -1995,6 +2015,8 @@ kullbackLeiblerDivergence(Range1, Range2)(Range1 a, Range2 b)
 ///
 @safe unittest
 {
+    import std.math : approxEqual;
+
     double[] p = [ 0.0, 0, 0, 1 ];
     assert(kullbackLeiblerDivergence(p, p) == 0);
     double[] p1 = [ 0.25, 0.25, 0.25, 0.25 ];
@@ -2007,7 +2029,8 @@ kullbackLeiblerDivergence(Range1, Range2)(Range1 a, Range2 b)
 }
 
 /**
-Computes the $(LUCKY Jensen-Shannon divergence) between $(D a) and $(D
+Computes the $(LINK2 https://en.wikipedia.org/wiki/Jensen%E2%80%93Shannon_divergence,
+Jensen-Shannon divergence) between $(D a) and $(D
 b), which is the sum $(D (ai * log(2 * ai / (ai + bi)) + bi * log(2 *
 bi / (ai + bi))) / 2). The base of logarithm is 2. The ranges are
 assumed to contain elements in $(D [0, 1]). Usually the ranges are
@@ -2019,8 +2042,8 @@ or equal to $(D limit).
  */
 CommonType!(ElementType!Range1, ElementType!Range2)
 jensenShannonDivergence(Range1, Range2)(Range1 a, Range2 b)
-    if (isInputRange!Range1 && isInputRange!Range2 &&
-        is(CommonType!(ElementType!Range1, ElementType!Range2)))
+if (isInputRange!Range1 && isInputRange!Range2 &&
+    is(CommonType!(ElementType!Range1, ElementType!Range2)))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) assert(a.length == b.length);
@@ -2046,9 +2069,9 @@ jensenShannonDivergence(Range1, Range2)(Range1 a, Range2 b)
 /// Ditto
 CommonType!(ElementType!Range1, ElementType!Range2)
 jensenShannonDivergence(Range1, Range2, F)(Range1 a, Range2 b, F limit)
-   if (isInputRange!Range1 && isInputRange!Range2 &&
-       is(typeof(CommonType!(ElementType!Range1, ElementType!Range2).init
-                           >= F.init) : bool))
+if (isInputRange!Range1 && isInputRange!Range2 &&
+    is(typeof(CommonType!(ElementType!Range1, ElementType!Range2).init
+    >= F.init) : bool))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) assert(a.length == b.length);
@@ -2076,6 +2099,8 @@ jensenShannonDivergence(Range1, Range2, F)(Range1 a, Range2 b, F limit)
 ///
 @safe unittest
 {
+    import std.math : approxEqual;
+
     double[] p = [ 0.0, 0, 0, 1 ];
     assert(jensenShannonDivergence(p, p) == 0);
     double[] p1 = [ 0.25, 0.25, 0.25, 0.25 ];
@@ -2159,8 +2184,8 @@ t.length)) extra bytes of memory and $(BIGOH s.length * t.length) time
 to complete.
  */
 F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
-    if (isRandomAccessRange!(R1) && hasLength!(R1) &&
-        isRandomAccessRange!(R2) && hasLength!(R2))
+if (isRandomAccessRange!(R1) && hasLength!(R1) &&
+    isRandomAccessRange!(R2) && hasLength!(R2))
 {
     import std.functional : binaryFun;
     import std.algorithm.mutation : swap;
@@ -2170,7 +2195,7 @@ F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
     if (s.length < t.length) return gapWeightedSimilarity(t, s, lambda);
     if (!t.length) return 0;
 
-    auto dpvi = cast(F*)malloc(F.sizeof * 2 * t.length);
+    auto dpvi = cast(F*) malloc(F.sizeof * 2 * t.length);
     if (!dpvi)
         onOutOfMemoryError();
 
@@ -2240,8 +2265,8 @@ as $(D sSelfSim) and $(D tSelfSim), respectively.
 Select!(isFloatingPoint!(F), F, double)
 gapWeightedSimilarityNormalized(alias comp = "a == b", R1, R2, F)
         (R1 s, R2 t, F lambda, F sSelfSim = F.init, F tSelfSim = F.init)
-    if (isRandomAccessRange!(R1) && hasLength!(R1) &&
-        isRandomAccessRange!(R2) && hasLength!(R2))
+if (isRandomAccessRange!(R1) && hasLength!(R1) &&
+    isRandomAccessRange!(R2) && hasLength!(R2))
 {
     static bool uncomputed(F n)
     {
@@ -2264,6 +2289,8 @@ gapWeightedSimilarityNormalized(alias comp = "a == b", R1, R2, F)
 ///
 @system unittest
 {
+    import std.math : approxEqual, sqrt;
+
     string[] s = ["Hello", "brave", "new", "world"];
     string[] t = ["Hello", "new", "world"];
     assert(gapWeightedSimilarity(s, s, 1) == 15);
@@ -2287,7 +2314,7 @@ by Rousu et al., with additional algorithmic and systems-level
 optimizations.
  */
 struct GapWeightedSimilarityIncremental(Range, F = double)
-    if (isRandomAccessRange!(Range) && hasLength!(Range))
+if (isRandomAccessRange!(Range) && hasLength!(Range))
 {
     import core.stdc.stdlib : malloc, realloc, alloca, free;
 
@@ -2349,7 +2376,7 @@ time and computes all matches of length 1.
         this.s = s;
         this.t = t;
 
-        kl = cast(F*)malloc(s.length * t.length * F.sizeof);
+        kl = cast(F*) malloc(s.length * t.length * F.sizeof);
         if (!kl)
             onOutOfMemoryError();
 
@@ -2572,7 +2599,8 @@ GapWeightedSimilarityIncremental!(R, F) gapWeightedSimilarityIncremental(R, F)
 
 /**
 Computes the greatest common divisor of $(D a) and $(D b) by using
-Euclid's algorithm.
+an efficient algorithm such as $(HTTPS en.wikipedia.org/wiki/Euclidean_algorithm, Euclid's)
+or $(HTTPS en.wikipedia.org/wiki/Binary_GCD_algorithm, Stein's) algorithm.
  */
 T gcd(T)(T a, T b)
 {
@@ -2580,11 +2608,11 @@ T gcd(T)(T a, T b)
     {
         return gcd!(Unqual!T)(a, b);
     }
-    else
+    else version(DigitalMars)
     {
         static if (T.min < 0)
         {
-            assert(a >= 0 && b >=0);
+            assert(a >= 0 && b >= 0);
         }
         while (b)
         {
@@ -2593,6 +2621,29 @@ T gcd(T)(T a, T b)
             a = t;
         }
         return a;
+    }
+    else
+    {
+        if (a == 0)
+            return b;
+        if (b == 0)
+            return a;
+
+        import core.bitop : bsf;
+        import std.algorithm.mutation : swap;
+
+        immutable uint shift = bsf(a | b);
+        a >>= a.bsf;
+
+        do
+        {
+            b >>= b.bsf;
+            if (a > b)
+                swap(a, b);
+            b -= a;
+        } while (b);
+
+        return a << shift;
     }
 }
 
@@ -2746,7 +2797,7 @@ private:
 
                 typeof(this) opSlice(size_t lower, size_t upper)
                 {
-                    return typeof(this)(source[lower * 2..upper * 2]);
+                    return typeof(this)(source[lower * 2 .. upper * 2]);
                 }
             }
 
@@ -2762,7 +2813,7 @@ private:
         evenFft[0].im = 0;
         // evenFft[0].re is already right b/c it's aliased with buf[0].re.
 
-        foreach (k; 1..halfN / 2 + 1)
+        foreach (k; 1 .. halfN / 2 + 1)
         {
             immutable bufk = buf[k];
             immutable bufnk = buf[buf.length / 2 - k];
@@ -2876,11 +2927,11 @@ private:
         auto table = new lookup_t[][bsf(size) + 1];
 
         table[$ - 1] = memSpace[$ - size..$];
-        memSpace = memSpace[0..size];
+        memSpace = memSpace[0 .. size];
 
         auto lastRow = table[$ - 1];
         lastRow[0] = 0;  // -sin(0) == 0.
-        foreach (ptrdiff_t i; 1..size)
+        foreach (ptrdiff_t i; 1 .. size)
         {
             // The hard coded cases are for improved accuracy and to prevent
             // annoying non-zeroness when stuff should be zero.
@@ -2896,7 +2947,7 @@ private:
         }
 
         // Fill in all the other rows with strided versions.
-        foreach (i; 1..table.length - 1)
+        foreach (i; 1 .. table.length - 1)
         {
             immutable strideLength = size / (2 ^^ i);
             auto strided = Stride!(lookup_t[])(lastRow, strideLength);
@@ -3066,8 +3117,8 @@ private enum string MakeLocalFft = q{
     import core.stdc.stdlib;
     import core.exception : onOutOfMemoryError;
 
-    auto lookupBuf = (cast(lookup_t*)malloc(range.length * 2 * lookup_t.sizeof))
-                     [0..2 * range.length];
+    auto lookupBuf = (cast(lookup_t*) malloc(range.length * 2 * lookup_t.sizeof))
+                     [0 .. 2 * range.length];
     if (!lookupBuf.ptr)
         onOutOfMemoryError();
 
@@ -3232,12 +3283,12 @@ struct Stride(R)
     {
         if (range.length >= _nSteps)
         {
-            range = range[_nSteps..range.length];
+            range = range[_nSteps .. range.length];
             _length--;
         }
         else
         {
-            range = range[0..0];
+            range = range[0 .. 0];
             _length = 0;
         }
     }
@@ -3245,7 +3296,7 @@ struct Stride(R)
     // Pops half the range's stride.
     void popHalf()
     {
-        range = range[_nSteps / 2..range.length];
+        range = range[_nSteps / 2 .. range.length];
     }
 
     bool empty() const @property
@@ -3300,7 +3351,7 @@ void slowFourier4(Ret, R)(R range, Ret buf)
 }
 
 N roundDownToPowerOf2(N)(N num)
-    if (isScalarType!N && !isFloatingPoint!N)
+if (isScalarType!N && !isFloatingPoint!N)
 {
     import core.bitop : bsr;
     return num & (cast(N) 1 << bsr(num));

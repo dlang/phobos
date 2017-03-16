@@ -18,7 +18,8 @@ flags (e.g. for dmd, `-L-lodbc` on Posix and `-Lodbc32.lib` on Windows) to link
 with the ODBC library. On Windows, using $(D pragma(lib, "odbc32")) in D
 code at top level is also appropriate.
 
-See_Also: $(LUCKY ODBC API Reference on MSN Online)
+See_Also: $(LINK2 https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/odbc-api-reference,
+            ODBC API Reference on MSN Online)
 */
 
 module etc.c.odbc.sql;
@@ -67,17 +68,17 @@ enum
     SQL_HANDLE_DESC                 = 4,
 
     // * environment attribute *
-    SQL_ATTR_OUTPUT_NTS             = 10001,
+    SQL_ATTR_OUTPUT_NTS             = 10_001,
 
     // * connection attributes *
-    SQL_ATTR_AUTO_IPD               = 10001,
-    SQL_ATTR_METADATA_ID            = 10014,
+    SQL_ATTR_AUTO_IPD               = 10_001,
+    SQL_ATTR_METADATA_ID            = 10_014,
 
     // * statement attributes *
-    SQL_ATTR_APP_ROW_DESC           = 10010,
-    SQL_ATTR_APP_PARAM_DESC         = 10011,
-    SQL_ATTR_IMP_ROW_DESC           = 10012,
-    SQL_ATTR_IMP_PARAM_DESC         = 10013,
+    SQL_ATTR_APP_ROW_DESC           = 10_010,
+    SQL_ATTR_APP_PARAM_DESC         = 10_011,
+    SQL_ATTR_IMP_ROW_DESC           = 10_012,
+    SQL_ATTR_IMP_PARAM_DESC         = 10_013,
     SQL_ATTR_CURSOR_SCROLLABLE      = (-1),
     SQL_ATTR_CURSOR_SENSITIVITY     = (-2),
 
@@ -284,13 +285,13 @@ enum
 }
 
 // * null handles returned by SQLAllocHandle() *
-enum SQLHANDLE SQL_NULL_HENV  = cast(SQLHANDLE)0;
-enum SQLHANDLE SQL_NULL_HDBC  = cast(SQLHANDLE)0;
-enum SQLHANDLE SQL_NULL_HSTMT = cast(SQLHANDLE)0;
-enum SQLHANDLE SQL_NULL_HDESC = cast(SQLHANDLE)0;
+enum SQLHANDLE SQL_NULL_HENV  = cast(SQLHANDLE) 0;
+enum SQLHANDLE SQL_NULL_HDBC  = cast(SQLHANDLE) 0;
+enum SQLHANDLE SQL_NULL_HSTMT = cast(SQLHANDLE) 0;
+enum SQLHANDLE SQL_NULL_HDESC = cast(SQLHANDLE) 0;
 
 // * null handle used in place of parent handle when allocating HENV *
-enum SQLHANDLE SQL_NULL_HANDLE = cast(SQLHANDLE)0L;
+enum SQLHANDLE SQL_NULL_HANDLE = cast(SQLHANDLE) 0L;
 
 // * Values that may appear in the result set of SQLSpecialColumns() *
 enum
@@ -453,12 +454,12 @@ enum
 
 enum
 {
-    SQL_XOPEN_CLI_YEAR            = 10000,
-    SQL_CURSOR_SENSITIVITY        = 10001,
-    SQL_DESCRIBE_PARAMETER        = 10002,
-    SQL_CATALOG_NAME              = 10003,
-    SQL_COLLATION_SEQ             = 10004,
-    SQL_MAX_IDENTIFIER_LEN        = 10005,
+    SQL_XOPEN_CLI_YEAR            = 10_000,
+    SQL_CURSOR_SENSITIVITY        = 10_001,
+    SQL_DESCRIBE_PARAMETER        = 10_002,
+    SQL_CATALOG_NAME              = 10_003,
+    SQL_COLLATION_SEQ             = 10_004,
+    SQL_MAX_IDENTIFIER_LEN        = 10_005,
     SQL_MAXIMUM_IDENTIFIER_LENGTH = SQL_MAX_IDENTIFIER_LEN
 }
 

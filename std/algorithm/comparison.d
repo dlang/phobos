@@ -3,6 +3,7 @@
 This is a submodule of $(MREF std, algorithm).
 It contains generic _comparison algorithms.
 
+$(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 $(T2 among,
@@ -27,11 +28,13 @@ $(T2 isSameLength,
         $(D isSameLength([1, 2, 3], [4, 5, 6])) returns $(D true).)
 $(T2 levenshteinDistance,
         $(D levenshteinDistance("kitten", "sitting")) returns $(D 3) by using
-        the $(LUCKY Levenshtein distance _algorithm).)
+        the $(LINK2 https://en.wikipedia.org/wiki/Levenshtein_distance,
+        Levenshtein distance _algorithm).)
 $(T2 levenshteinDistanceAndPath,
         $(D levenshteinDistanceAndPath("kitten", "sitting")) returns
-        $(D tuple(3, "snnnsni")) by using the $(LUCKY Levenshtein distance
-        _algorithm).)
+        $(D tuple(3, "snnnsni")) by using the
+        $(LINK2 https://en.wikipedia.org/wiki/Levenshtein_distance,
+        Levenshtein distance _algorithm).)
 $(T2 max,
         $(D max(3, 4, 2)) returns $(D 4).)
 $(T2 min,
@@ -60,7 +63,7 @@ import std.functional; // : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
 // FIXME
-import std.typecons; // : tuple, Tuple, Flag;
+import std.typecons; // : tuple, Tuple, Flag, Yes;
 import std.meta : allSatisfy;
 
 /**
@@ -84,7 +87,7 @@ range.
 */
 uint among(alias pred = (a, b) => a == b, Value, Values...)
     (Value value, Values values)
-    if (Values.length != 0)
+if (Values.length != 0)
 {
     foreach (uint i, ref v; values)
     {
@@ -96,7 +99,7 @@ uint among(alias pred = (a, b) => a == b, Value, Values...)
 
 /// Ditto
 template among(values...)
-    if (isExpressionTuple!values)
+if (isExpressionTuple!values)
 {
     uint among(Value)(Value value)
         if (!is(CommonType!(Value, values) == void))
@@ -237,6 +240,7 @@ Note: $(D castSwitch) can only be used with object types.
 auto castSwitch(choices...)(Object switchObject)
 {
     import core.exception : SwitchError;
+    import std.format : format;
 
     // Check to see if all handlers return void.
     enum areAllHandlersVoidResult = {
@@ -270,7 +274,7 @@ auto castSwitch(choices...)(Object switchObject)
 
                 // Check for overshadowing:
                 immutable indexOfOvershadowingChoice =
-                    indexOfFirstOvershadowingChoiceOnLast!(choices[0..index + 1]);
+                    indexOfFirstOvershadowingChoiceOnLast!(choices[0 .. index + 1]);
                 static assert(indexOfOvershadowingChoice == index,
                         "choice number %d(type %s) is overshadowed by choice number %d(type %s)".format(
                             index + 1, CastClass.stringof, indexOfOvershadowingChoice + 1,
@@ -334,7 +338,7 @@ auto castSwitch(choices...)(Object switchObject)
             static if (Parameters!(choice).length == 0)
             {
                 immutable indexOfOvershadowingChoice =
-                    indexOfFirstOvershadowingChoiceOnLast!(choices[0..index + 1]);
+                    indexOfFirstOvershadowingChoiceOnLast!(choices[0 .. index + 1]);
 
                 // Check for overshadowing:
                 static assert(indexOfOvershadowingChoice == index,
@@ -416,7 +420,7 @@ auto castSwitch(choices...)(Object switchObject)
 
     // Void handlers are also allowed if all the handlers are void:
     new A().castSwitch!(
-        (A a) { assert(true); },
+        (A a) { },
         (B b) { assert(false); },
     )();
 }
@@ -484,7 +488,7 @@ auto castSwitch(choices...)(Object switchObject)
     // All-void handlers work for the null case:
     null.castSwitch!(
         (Object o) { assert(false); },
-        ()         { assert(true); },
+        ()         { },
     )();
 
     // Throwing void handlers work for the null case:
@@ -492,6 +496,23 @@ auto castSwitch(choices...)(Object switchObject)
                                (Object o) => 1,
                                ()            { throw new Exception("null"); },
                            )());
+}
+
+@system unittest
+{
+    interface I { }
+    class B : I { }
+    class C : I { }
+
+    assert((new B()).castSwitch!(
+            (B b) => "class B",
+            (I i) => "derived from I",
+    ) == "class B");
+
+    assert((new C()).castSwitch!(
+            (B b) => "class B",
+            (I i) => "derived from I",
+    ) == "derived from I");
 }
 
 /** Clamps a value into the given bounds.
@@ -561,7 +582,8 @@ body
 
 // cmp
 /**********************************
-Performs three-way lexicographical comparison on two input ranges
+Performs three-way lexicographical comparison on two
+$(REF_ALTTEXT input ranges, isInputRange, std,range,primitives)
 according to predicate $(D pred). Iterating $(D r1) and $(D r2) in
 lockstep, $(D cmp) compares each element $(D e1) of $(D r1) with the
 corresponding element $(D e2) in $(D r2). If one of the ranges has been
@@ -599,7 +621,8 @@ if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
 }
 
 /// ditto
-int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSomeString!R2)
+int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2)
+if (isSomeString!R1 && isSomeString!R2)
 {
     import core.stdc.string : memcmp;
     import std.utf : decode;
@@ -710,10 +733,15 @@ Compares two ranges for equality, as defined by predicate $(D pred)
 */
 template equal(alias pred = "a == b")
 {
+    enum isEmptyRange(R) =
+        isInputRange!R && __traits(compiles, {static assert(R.empty);});
+
+    enum hasFixedLength(T) = hasLength!T || isNarrowString!T;
+
     /++
-    This function compares to ranges for equality. The ranges may have
-    different element types, as long as $(D pred(a, b)) evaluates to $(D bool)
-    for $(D a) in $(D r1) and $(D b) in $(D r2).
+    Compares two ranges for equality. The ranges may have
+    different element types, as long as $(D pred(r1.front, r2.front))
+    evaluates to $(D bool).
     Performs $(BIGOH min(r1.length, r2.length)) evaluations of $(D pred).
 
     Params:
@@ -721,17 +749,31 @@ template equal(alias pred = "a == b")
         r2 = The second range to be compared.
 
     Returns:
-        $(D true) if and only if the two ranges compare equal element
+        $(D true) if and only if the two ranges compare _equal element
         for element, according to binary predicate $(D pred).
 
     See_Also:
         $(HTTP sgi.com/tech/stl/_equal.html, STL's _equal)
     +/
     bool equal(Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!Range1 && isInputRange!Range2 && is(typeof(binaryFun!pred(r1.front, r2.front))))
+    if (isInputRange!Range1 && isInputRange!Range2 &&
+        is(typeof(binaryFun!pred(r1.front, r2.front))))
     {
-        //Start by detecting default pred and compatible dynamicarray.
-        static if (is(typeof(pred) == string) && pred == "a == b" &&
+        static assert(!(isInfinite!Range1 && isInfinite!Range2),
+            "Both ranges are known to be infinite");
+
+        //No pred calls necessary
+        static if (isEmptyRange!Range1 || isEmptyRange!Range2)
+        {
+            return r1.empty && r2.empty;
+        }
+        else static if ((isInfinite!Range1 && hasFixedLength!Range2) ||
+            (hasFixedLength!Range1 && isInfinite!Range2))
+        {
+            return false;
+        }
+        //Detect default pred and compatible dynamic array
+        else static if (is(typeof(pred) == string) && pred == "a == b" &&
             isArray!Range1 && isArray!Range2 && is(typeof(r1 == r2)))
         {
             return r1 == r2;
@@ -746,16 +788,12 @@ template equal(alias pred = "a == b")
 
             static if (isAutodecodableString!Range1)
             {
-                auto codeUnits = r1.byCodeUnit;
-                alias other = r2;
+                return equal(r1.byCodeUnit, r2);
             }
             else
             {
-                auto codeUnits = r2.byCodeUnit;
-                alias other = r1;
+                return equal(r2.byCodeUnit, r1);
             }
-
-            return equal(codeUnits, other);
         }
         //Try a fast implementation when the ranges have comparable lengths
         else static if (hasLength!Range1 && hasLength!Range2 && is(typeof(r1.length == r2.length)))
@@ -765,7 +803,7 @@ template equal(alias pred = "a == b")
             if (len1 != len2) return false; //Short circuit return
 
             //Lengths are the same, so we need to do an actual comparison
-            //Good news is we can sqeeze out a bit of performance by not checking if r2 is empty
+            //Good news is we can squeeze out a bit of performance by not checking if r2 is empty
             for (; !r1.empty; r1.popFront(), r2.popFront())
             {
                 if (!binaryFun!(pred)(r1.front, r2.front)) return false;
@@ -780,7 +818,8 @@ template equal(alias pred = "a == b")
                 if (r2.empty) return false;
                 if (!binaryFun!(pred)(r1.front, r2.front)) return false;
             }
-            return r2.empty;
+            static if (!isInfinite!Range1)
+                return r2.empty;
         }
     }
 }
@@ -789,11 +828,12 @@ template equal(alias pred = "a == b")
 @safe unittest
 {
     import std.math : approxEqual;
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
 
     int[] a = [ 1, 2, 4, 3 ];
     assert(!equal(a, a[1..$]));
     assert(equal(a, a));
+    assert(equal!((a, b) => a == b)(a, a));
 
     // different types
     double[] b = [ 1.0, 2, 4, 3];
@@ -814,7 +854,7 @@ range of range (of range...) comparisons.
 @safe unittest
 {
     import std.range : iota, chunks;
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     assert(equal!(equal!equal)(
         [[[0, 1], [2, 3]], [[4, 5], [6, 7]]],
         iota(0, 8).chunks(2).chunks(2)
@@ -879,9 +919,13 @@ range of range (of range...) comparisons.
     cir = new ReferenceInputRange!int([1, 2, 8, 1]);
     assert(!equal(cir, cfr));
 
-    //Test with an infinte range
-    ReferenceInfiniteForwardRange!int ifr = new ReferenceInfiniteForwardRange!int;
+    //Test with an infinite range
+    auto ifr = new ReferenceInfiniteForwardRange!int;
     assert(!equal(a, ifr));
+    assert(!equal(ifr, a));
+    //Test InputRange without length
+    assert(!equal(ifr, cir));
+    assert(!equal(cir, ifr));
 }
 
 @safe pure unittest
@@ -896,9 +940,30 @@ range of range (of range...) comparisons.
     assert(equal("æøå"d, "æøå".byDchar));
 }
 
+@safe pure unittest
+{
+    struct R(bool _empty) {
+        enum empty = _empty;
+        @property char front(){assert(0);}
+        void popFront(){assert(0);}
+    }
+    alias I = R!false;
+    static assert(!__traits(compiles, I().equal(I())));
+    // strings have fixed length so don't need to compare elements
+    assert(!I().equal("foo"));
+    assert(!"bar".equal(I()));
+
+    alias E = R!true;
+    assert(E().equal(E()));
+    assert(E().equal(""));
+    assert("".equal(E()));
+    assert(!E().equal("foo"));
+    assert(!"bar".equal(E()));
+}
+
 // MaxType
 private template MaxType(T...)
-    if (T.length >= 1)
+if (T.length >= 1)
 {
     static if (T.length == 1)
     {
@@ -1013,7 +1078,7 @@ private:
             import core.exception : onOutOfMemoryError;
             const nbytes = mulu(rc, _matrix[0].sizeof, overflow);
             if (overflow) assert(0);
-            auto m = cast(CostType *)realloc(_matrix.ptr, nbytes);
+            auto m = cast(CostType *) realloc(_matrix.ptr, nbytes);
             if (!m)
                 onOutOfMemoryError();
             _matrix = m[0 .. r * c];
@@ -1140,7 +1205,7 @@ Does not allocate GC memory.
 */
 size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
     (Range1 s, Range2 t)
-    if (isForwardRange!(Range1) && isForwardRange!(Range2))
+if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
     alias eq = binaryFun!(equals);
 
@@ -1211,7 +1276,7 @@ size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
 /// ditto
 size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
     (auto ref Range1 s, auto ref Range2 t)
-    if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
+if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
 {
     import std.meta : staticMap;
     alias Types = staticMap!(convertToString, Range1, Range2);
@@ -1252,7 +1317,7 @@ Allocates GC memory for the returned EditOp[] array.
 Tuple!(size_t, EditOp[])
 levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
     (Range1 s, Range2 t)
-    if (isForwardRange!(Range1) && isForwardRange!(Range2))
+if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
     Levenshtein!(Range1, binaryFun!(equals)) lev;
     auto d = lev.distanceWithPath(s, t);
@@ -1284,7 +1349,7 @@ levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
 Tuple!(size_t, EditOp[])
 levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
     (auto ref Range1 s, auto ref Range2 t)
-    if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
+if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
 {
     import std.meta : staticMap;
     alias Types = staticMap!(convertToString, Range1, Range2);
@@ -1315,7 +1380,7 @@ See_Also:
     $(REF maxElement, std,algorithm,searching)
 */
 MaxType!T max(T...)(T args)
-    if (T.length >= 2)
+if (T.length >= 2)
 {
     //Get "a"
     static if (T.length <= 2)
@@ -1332,7 +1397,7 @@ MaxType!T max(T...)(T args)
     alias T1 = typeof(b);
 
     import std.algorithm.internal : algoFormat;
-    static assert (is(typeof(a < b)),
+    static assert(is(typeof(a < b)),
         algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
 
     //Do the "max" proper with a and b
@@ -1388,7 +1453,7 @@ MaxType!T max(T...)(T args)
 
 // MinType
 private template MinType(T...)
-    if (T.length >= 1)
+if (T.length >= 1)
 {
     static if (T.length == 1)
     {
@@ -1429,7 +1494,7 @@ See_Also:
     $(REF minElement, std,algorithm,searching)
 */
 MinType!T min(T...)(T args)
-    if (T.length >= 2)
+if (T.length >= 2)
 {
     //Get "a"
     static if (T.length <= 2)
@@ -1446,7 +1511,7 @@ MinType!T min(T...)(T args)
     alias T1 = typeof(b);
 
     import std.algorithm.internal : algoFormat;
-    static assert (is(typeof(a < b)),
+    static assert(is(typeof(a < b)),
         algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
 
     //Do the "min" proper with a and b
@@ -1500,7 +1565,7 @@ See_Also:
 */
 Tuple!(Range1, Range2)
 mismatch(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!(Range1) && isInputRange!(Range2))
+if (isInputRange!(Range1) && isInputRange!(Range2))
 {
     for (; !r1.empty && !r2.empty; r1.popFront(), r2.popFront())
     {
@@ -1678,17 +1743,17 @@ If both ranges have a length member, this function is $(BIGOH 1). Otherwise,
 this function is $(BIGOH min(r1.length, r2.length)).
 
 Params:
-    r1 = a finite input range
-    r2 = a finite input range
+    r1 = a finite $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+    r2 = a finite $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
 
 Returns:
     $(D true) if both ranges have the same length, $(D false) otherwise.
 */
 bool isSameLength(Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!Range1 &&
-        isInputRange!Range2 &&
-        !isInfinite!Range1 &&
-        !isInfinite!Range2)
+if (isInputRange!Range1 &&
+    isInputRange!Range2 &&
+    !isInfinite!Range1 &&
+    !isInfinite!Range2)
 {
     static if (hasLength!(Range1) && hasLength!(Range2))
     {
@@ -1804,8 +1869,8 @@ alias AllocateGC = Flag!"allocateGC";
 /**
 Checks if both ranges are permutations of each other.
 
-This function can allocate if the $(D AllocateGC.yes) flag is passed. This has
-the benefit of have better complexity than the $(D AllocateGC.no) option. However,
+This function can allocate if the $(D Yes.allocateGC) flag is passed. This has
+the benefit of have better complexity than the $(D Yes.allocateGC) option. However,
 this option is only available for ranges whose equality can be determined via each
 element's $(D toHash) method. If customized equality is needed, then the $(D pred)
 template parameter can be passed, and the function will automatically switch to
@@ -1818,9 +1883,9 @@ Allocating forward range option: amortized $(BIGOH r1.length) + $(BIGOH r2.lengt
 
 Params:
     pred = an optional parameter to change how equality is defined
-    allocate_gc = AllocateGC.yes/no
-    r1 = A finite forward range
-    r2 = A finite forward range
+    allocate_gc = $(D Yes.allocateGC)/$(D No.allocateGC)
+    r1 = A finite $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
+    r2 = A finite $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
 
 Returns:
     $(D true) if all of the elements in $(D r1) appear the same number of times in $(D r2).
@@ -1829,11 +1894,11 @@ Returns:
 
 bool isPermutation(AllocateGC allocate_gc, Range1, Range2)
 (Range1 r1, Range2 r2)
-    if (allocate_gc == AllocateGC.yes &&
-        isForwardRange!Range1 &&
-        isForwardRange!Range2 &&
-        !isInfinite!Range1 &&
-        !isInfinite!Range2)
+if (allocate_gc == Yes.allocateGC &&
+    isForwardRange!Range1 &&
+    isForwardRange!Range2 &&
+    !isInfinite!Range1 &&
+    !isInfinite!Range2)
 {
     alias E1 = Unqual!(ElementType!Range1);
     alias E2 = Unqual!(ElementType!Range2);
@@ -1877,11 +1942,11 @@ bool isPermutation(AllocateGC allocate_gc, Range1, Range2)
 /// ditto
 bool isPermutation(alias pred = "a == b", Range1, Range2)
 (Range1 r1, Range2 r2)
-    if (is(typeof(binaryFun!(pred))) &&
-        isForwardRange!Range1 &&
-        isForwardRange!Range2 &&
-        !isInfinite!Range1 &&
-        !isInfinite!Range2)
+if (is(typeof(binaryFun!(pred))) &&
+    isForwardRange!Range1 &&
+    isForwardRange!Range2 &&
+    !isInfinite!Range1 &&
+    !isInfinite!Range2)
 {
     import std.algorithm.searching : count;
 
@@ -1949,6 +2014,8 @@ bool isPermutation(alias pred = "a == b", Range1, Range2)
 ///
 @safe pure unittest
 {
+    import std.typecons : Yes;
+
     assert(isPermutation([1, 2, 3], [3, 2, 1]));
     assert(isPermutation([1.1, 2.3, 3.5], [2.3, 3.5, 1.1]));
     assert(isPermutation("abc", "bca"));
@@ -1958,8 +2025,8 @@ bool isPermutation(alias pred = "a == b", Range1, Range2)
     assert(!isPermutation([1, 1], [1, 1, 1]));
 
     // Faster, but allocates GC handled memory
-    assert(isPermutation!(AllocateGC.yes)([1.1, 2.3, 3.5], [2.3, 3.5, 1.1]));
-    assert(!isPermutation!(AllocateGC.yes)([1, 2], [3, 4]));
+    assert(isPermutation!(Yes.allocateGC)([1.1, 2.3, 3.5], [2.3, 3.5, 1.1]));
+    assert(!isPermutation!(Yes.allocateGC)([1, 2], [3, 4]));
 }
 
 // Test @nogc inference
@@ -1984,7 +2051,7 @@ bool isPermutation(alias pred = "a == b", Range1, Range2)
 
     auto r3 = new ReferenceForwardRange!int([1, 2, 3, 4]);
     auto r4 = new ReferenceForwardRange!int([4, 2, 1, 3]);
-    assert(isPermutation!(AllocateGC.yes)(r3, r4));
+    assert(isPermutation!(Yes.allocateGC)(r3, r4));
 
     auto r5 = new ReferenceForwardRange!int([1, 2, 3]);
     auto r6 = new ReferenceForwardRange!int([4, 2, 1, 3]);
@@ -1992,7 +2059,7 @@ bool isPermutation(alias pred = "a == b", Range1, Range2)
 
     auto r7 = new ReferenceForwardRange!int([4, 2, 1, 3]);
     auto r8 = new ReferenceForwardRange!int([1, 2, 3]);
-    assert(!isPermutation!(AllocateGC.yes)(r7, r8));
+    assert(!isPermutation!(Yes.allocateGC)(r7, r8));
 
     DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random) r9;
     DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random) r10;
@@ -2000,7 +2067,7 @@ bool isPermutation(alias pred = "a == b", Range1, Range2)
 
     DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random) r11;
     DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random) r12;
-    assert(isPermutation!(AllocateGC.yes)(r11, r12));
+    assert(isPermutation!(Yes.allocateGC)(r11, r12));
 
     alias mytuple = Tuple!(int, int);
 
@@ -2031,9 +2098,9 @@ Returns:
     The _first argument that passes the test `pred`.
 */
 CommonType!(T, Ts) either(alias pred = a => a, T, Ts...)(T first, lazy Ts alternatives)
-    if (alternatives.length >= 1 &&
-        !is(CommonType!(T, Ts) == void) &&
-        allSatisfy!(ifTestable, T, Ts))
+if (alternatives.length >= 1 &&
+    !is(CommonType!(T, Ts) == void) &&
+    allSatisfy!(ifTestable, T, Ts))
 {
     alias predFun = unaryFun!pred;
 

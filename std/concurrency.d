@@ -74,13 +74,8 @@ private
     import core.thread;
     import core.sync.mutex;
     import core.sync.condition;
-    import std.algorithm;
-    import std.exception;
-    import std.meta;
-    import std.range;
-    import std.string;
+    import std.range.primitives;
     import std.traits;
-    import std.typecons;
     import std.concurrencybase;
 
     template hasLocalAliasing(T...)
@@ -104,33 +99,34 @@ private
         MsgType type;
         Variant data;
 
-        this(T...)( MsgType t, T vals )
-            if ( T.length < 1 )
+        this(T...)(MsgType t, T vals) if (T.length > 0)
         {
-            static assert( false, "messages must contain at least one item" );
-        }
+            static if (T.length == 1)
+            {
+                type = t;
+                data = vals[0];
+            }
+            else
+            {
+                import std.typecons : Tuple;
 
-        this(T...)( MsgType t, T vals )
-            if ( T.length == 1 )
-        {
-            type = t;
-            data = vals[0];
-        }
-
-        this(T...)( MsgType t, T vals )
-            if ( T.length > 1 )
-        {
-            type = t;
-            data = Tuple!(T)( vals );
+                type = t;
+                data = Tuple!(T)(vals);
+            }
         }
 
         @property auto convertsTo(T...)()
         {
             static if ( T.length == 1 )
+            {
                 return is( T[0] == Variant ) ||
                        data.convertsTo!(T);
+            }
             else
+            {
+                import std.typecons : Tuple;
                 return data.convertsTo!(Tuple!(T));
+            }
         }
 
         @property auto get(T...)()
@@ -144,6 +140,7 @@ private
             }
             else
             {
+                import std.typecons : Tuple;
                 return data.get!(Tuple!(T));
             }
         }
@@ -161,6 +158,7 @@ private
             }
             else
             {
+                import std.typecons : Tuple;
                 return op( data.get!(Tuple!(Args)).expand );
             }
         }
@@ -193,7 +191,7 @@ private
         }
     }
 
-    @property ref ThreadInfo thisInfo()
+    @property ref ThreadInfo thisInfo() nothrow
     {
         if ( scheduler is null )
             return ThreadInfo.thisInfo;
@@ -208,9 +206,7 @@ static ~this()
 }
 
 
-//////////////////////////////////////////////////////////////////////////////
 // Exceptions
-//////////////////////////////////////////////////////////////////////////////
 
 
 /**
@@ -219,7 +215,8 @@ static ~this()
  */
 class MessageMismatch : Exception
 {
-    this( string msg = "Unexpected message type" )
+    ///
+    this( string msg = "Unexpected message type" ) @safe pure nothrow @nogc
     {
         super( msg );
     }
@@ -232,7 +229,8 @@ class MessageMismatch : Exception
  */
 class OwnerTerminated : Exception
 {
-    this( Tid t, string msg = "Owner terminated" )
+    ///
+    this( Tid t, string msg = "Owner terminated" ) @safe pure nothrow @nogc
     {
         super( msg );
         tid = t;
@@ -247,7 +245,8 @@ class OwnerTerminated : Exception
  */
 class LinkTerminated : Exception
 {
-    this( Tid t, string msg = "Link terminated" )
+    ///
+    this( Tid t, string msg = "Link terminated" ) @safe pure nothrow @nogc
     {
         super( msg );
         tid = t;
@@ -264,6 +263,7 @@ class LinkTerminated : Exception
  */
 class PriorityMessageException : Exception
 {
+    ///
     this( Variant vals )
     {
         super( "Priority message" );
@@ -283,7 +283,8 @@ class PriorityMessageException : Exception
  */
 class MailboxFull : Exception
 {
-    this( Tid t, string msg = "Mailbox full" )
+    ///
+    this( Tid t, string msg = "Mailbox full" ) @safe pure nothrow @nogc
     {
         super( msg );
         tid = t;
@@ -299,13 +300,13 @@ class MailboxFull : Exception
  */
 class TidMissingException : Exception
 {
+    import std.exception : basicExceptionCtors;
+    ///
     mixin basicExceptionCtors;
 }
 
 
-//////////////////////////////////////////////////////////////////////////////
 // Thread ID
-//////////////////////////////////////////////////////////////////////////////
 
 
 /**
@@ -314,7 +315,7 @@ class TidMissingException : Exception
 struct Tid
 {
 private:
-    this( MessageBox m ) @safe
+    this( MessageBox m ) @safe pure nothrow @nogc
     {
         mbox = m;
     }
@@ -334,7 +335,7 @@ public:
     void toString(scope void delegate(const(char)[]) sink)
     {
         import std.format : formattedWrite;
-        formattedWrite(sink, "Tid(%x)", cast(void*)mbox);
+        formattedWrite(sink, "Tid(%x)", cast(void*) mbox);
     }
 
 }
@@ -353,18 +354,18 @@ public:
 
 
 /**
- * Returns the caller's Tid.
+ * Returns: The $(LREF Tid) of the caller's thread.
  */
 @property Tid thisTid() @safe
 {
     // TODO: remove when concurrency is safe
-    auto trus = delegate() @trusted
+    static auto trus() @trusted
     {
         if ( thisInfo.ident != Tid.init )
             return thisInfo.ident;
         thisInfo.ident = Tid( new MessageBox );
         return thisInfo.ident;
-    };
+    }
 
     return trus();
 }
@@ -377,6 +378,8 @@ public:
  */
 @property Tid ownerTid()
 {
+    import std.exception : enforce;
+
     enforce!TidMissingException(thisInfo.owner.mbox !is null,
                                   "Error: Thread has no owner thread.");
     return thisInfo.owner;
@@ -384,6 +387,8 @@ public:
 
 @system unittest
 {
+    import std.exception : assertThrown;
+
     static void fun()
     {
         string res = receiveOnly!string();
@@ -398,9 +403,7 @@ public:
     assert(res == "Child responding");
 }
 
-//////////////////////////////////////////////////////////////////////////////
 // Thread Creation
-//////////////////////////////////////////////////////////////////////////////
 
 private template isSpawnable(F, T...)
 {
@@ -476,7 +479,7 @@ private template isSpawnable(F, T...)
  * ---
  */
 Tid spawn(F, T...)( F fn, T args )
-    if ( isSpawnable!(F, T) )
+if ( isSpawnable!(F, T) )
 {
     static assert( !hasLocalAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
@@ -504,7 +507,7 @@ Tid spawn(F, T...)( F fn, T args )
  *  A Tid representing the new thread.
  */
 Tid spawnLinked(F, T...)( F fn, T args )
-    if ( isSpawnable!(F, T) )
+if ( isSpawnable!(F, T) )
 {
     static assert( !hasLocalAliasing!(T),
                    "Aliases to mutable thread-local data not allowed." );
@@ -516,7 +519,7 @@ Tid spawnLinked(F, T...)( F fn, T args )
  *
  */
 private Tid _spawn(F, T...)( bool linked, F fn, T args )
-    if ( isSpawnable!(F, T) )
+if ( isSpawnable!(F, T) )
 {
     // TODO: MessageList and &exec should be shared.
     auto spawnTid = Tid( new MessageBox );
@@ -564,16 +567,16 @@ private Tid _spawn(F, T...)( bool linked, F fn, T args )
     static assert(!__traits(compiles, spawn(dg6, 6)));
 
     auto callable1  = new class{ void opCall(int) shared {} };
-    auto callable2  = cast(shared)new class{ void opCall(int) shared {} };
+    auto callable2  = cast(shared) new class{ void opCall(int) shared {} };
     auto callable3  = new class{ void opCall(int) immutable {} };
-    auto callable4  = cast(immutable)new class{ void opCall(int) immutable {} };
+    auto callable4  = cast(immutable) new class{ void opCall(int) immutable {} };
     auto callable5  = new class{ void opCall(int) {} };
-    auto callable6  = cast(shared)new class{ void opCall(int) immutable {} };
-    auto callable7  = cast(immutable)new class{ void opCall(int) shared {} };
-    auto callable8  = cast(shared)new class{ void opCall(int) const shared {} };
-    auto callable9  = cast(const shared)new class{ void opCall(int) shared {} };
-    auto callable10 = cast(const shared)new class{ void opCall(int) const shared {} };
-    auto callable11 = cast(immutable)new class{ void opCall(int) const shared {} };
+    auto callable6  = cast(shared) new class{ void opCall(int) immutable {} };
+    auto callable7  = cast(immutable) new class{ void opCall(int) shared {} };
+    auto callable8  = cast(shared) new class{ void opCall(int) const shared {} };
+    auto callable9  = cast(const shared) new class{ void opCall(int) shared {} };
+    auto callable10 = cast(const shared) new class{ void opCall(int) const shared {} };
+    auto callable11 = cast(immutable) new class{ void opCall(int) const shared {} };
     static assert(!__traits(compiles, spawn(callable1,  1)));
     static assert( __traits(compiles, spawn(callable2,  2)));
     static assert(!__traits(compiles, spawn(callable3,  3)));
@@ -588,9 +591,7 @@ private Tid _spawn(F, T...)( bool linked, F fn, T args )
 }
 
 
-//////////////////////////////////////////////////////////////////////////////
 // Sending and Receiving Messages
-//////////////////////////////////////////////////////////////////////////////
 
 
 /**
@@ -729,9 +730,14 @@ version (unittest)
 private template receiveOnlyRet(T...)
 {
     static if ( T.length == 1 )
+    {
         alias receiveOnlyRet = T[0];
+    }
     else
+    {
+        import std.typecons : Tuple;
         alias receiveOnlyRet = Tuple!(T);
+    }
 }
 
 /**
@@ -770,6 +776,9 @@ in
 }
 body
 {
+    import std.format : format;
+    import std.typecons : Tuple;
+
     Tuple!(T) ret;
 
     thisInfo.ident.mbox.get(
@@ -872,9 +881,7 @@ body
 }
 
 
-//////////////////////////////////////////////////////////////////////////////
 // MessageBox Limits
-//////////////////////////////////////////////////////////////////////////////
 
 
 /**
@@ -890,19 +897,19 @@ enum OnCrowding
 
 private
 {
-    bool onCrowdingBlock( Tid tid )
+    bool onCrowdingBlock( Tid tid ) @safe pure nothrow @nogc
     {
         return true;
     }
 
 
-    bool onCrowdingThrow( Tid tid )
+    bool onCrowdingThrow( Tid tid ) @safe pure
     {
         throw new MailboxFull( tid );
     }
 
 
-    bool onCrowdingIgnore( Tid tid )
+    bool onCrowdingIgnore( Tid tid ) @safe pure nothrow @nogc
     {
         return false;
     }
@@ -923,7 +930,7 @@ private
  *  doThis   = The behavior executed when a message is sent to a full
  *             mailbox.
  */
-void setMaxMailboxSize( Tid tid, size_t messages, OnCrowding doThis )
+void setMaxMailboxSize( Tid tid, size_t messages, OnCrowding doThis ) @safe pure
 {
     final switch ( doThis )
     {
@@ -956,9 +963,7 @@ void setMaxMailboxSize( Tid tid, size_t messages, bool function(Tid) onCrowdingD
 }
 
 
-//////////////////////////////////////////////////////////////////////////////
 // Name Registration
-//////////////////////////////////////////////////////////////////////////////
 
 
 private
@@ -1034,6 +1039,9 @@ bool register( string name, Tid tid )
  */
 bool unregister( string name )
 {
+    import std.algorithm.searching : countUntil;
+    import std.algorithm.mutation : remove, SwapStrategy;
+
     synchronized( registryLock )
     {
         if ( auto tid = name in tidByName )
@@ -1069,15 +1077,13 @@ Tid locate( string name )
 }
 
 
-//////////////////////////////////////////////////////////////////////////////
 // Scheduler
-//////////////////////////////////////////////////////////////////////////////
 
 
 /**
  * Encapsulates all implementation-level data needed for scheduling.
  *
- * When definining a Scheduler, an instance of this struct must be associated
+ * When defining a Scheduler, an instance of this struct must be associated
  * with each logical thread.  It contains all implementation-level information
  * needed by the internal API.
  */
@@ -1413,7 +1419,7 @@ private:
         }
 
     private:
-        final void switchContext() nothrow
+        void switchContext() nothrow
         {
             mutex_nothrow.unlock_nothrow();
             scope(exit) mutex_nothrow.lock_nothrow();
@@ -1425,7 +1431,7 @@ private:
 
 
 private:
-    final void dispatch()
+    void dispatch()
     {
         import std.algorithm.mutation : remove;
 
@@ -1447,7 +1453,7 @@ private:
     }
 
 
-    final void create( void delegate() op ) nothrow
+    void create( void delegate() op ) nothrow
     {
         void wrap()
         {
@@ -1521,9 +1527,7 @@ private:
 __gshared Scheduler scheduler;
 
 
-//////////////////////////////////////////////////////////////////////////////
 // Generator
-//////////////////////////////////////////////////////////////////////////////
 
 
 /**
@@ -1716,16 +1720,7 @@ void yield(T)(T value)
     yield(value);
 }
 
-
-version (Win64)
-{
-    // fibers are broken on Win64
-}
-else version (Win32)
-{
-    // fibers are broken in Win32 under server 2012: bug 13821
-}
-else @system unittest
+@system unittest
 {
     import core.exception;
     import std.exception;
@@ -1779,9 +1774,7 @@ else @system unittest
 }
 
 
-//////////////////////////////////////////////////////////////////////////////
 // MessageBox Implementation
-//////////////////////////////////////////////////////////////////////////////
 
 
 private
@@ -1795,7 +1788,7 @@ private
      */
     class MessageBox
     {
-        this() @trusted /* TODO: make @safe after relevant druntime PR gets merged */
+        this() @trusted nothrow /* TODO: make @safe after relevant druntime PR gets merged */
         {
             m_lock      = new Mutex;
             m_closed    = false;
@@ -1813,7 +1806,7 @@ private
         }
 
         ///
-        final @property bool isClosed()
+        final @property bool isClosed() @safe @nogc pure
         {
             synchronized( m_lock )
             {
@@ -1832,7 +1825,7 @@ private
          *         unbounded.
          *  call = The routine to call when the queue is full.
          */
-        final void setMaxMsgs( size_t num, bool function(Tid) call )
+        final void setMaxMsgs( size_t num, bool function(Tid) call ) @safe @nogc pure
         {
             synchronized( m_lock )
             {
@@ -1907,8 +1900,10 @@ private
          * if the owner thread terminates and no existing messages match the
          * supplied ops.
          */
-        final bool get(T...)( scope T vals )
+        bool get(T...)( scope T vals )
         {
+            import std.meta : AliasSeq;
+
             static assert( T.length );
 
             static if ( isImplicitlyConvertible!(T[0], Duration) )
@@ -2124,7 +2119,7 @@ private
          */
         final void close()
         {
-            void onLinkDeadMsg( ref Message msg )
+            static void onLinkDeadMsg( ref Message msg )
             {
                 assert( msg.convertsTo!(Tid) );
                 auto tid = msg.get!(Tid);
@@ -2134,7 +2129,7 @@ private
                     thisInfo.owner = Tid.init;
             }
 
-            void sweep( ref ListT list )
+            static void sweep( ref ListT list )
             {
                 for ( auto range = list[]; !range.empty; range.popFront() )
                 {
@@ -2157,62 +2152,54 @@ private
 
 
     private:
-        //////////////////////////////////////////////////////////////////////
         // Routines involving shared data, m_lock must be held.
-        //////////////////////////////////////////////////////////////////////
 
 
-        bool mboxFull()
+        bool mboxFull() @safe @nogc pure nothrow
         {
             return m_maxMsgs &&
                    m_maxMsgs <= m_localMsgs + m_sharedBox.length;
         }
 
 
-        void updateMsgCount()
+        void updateMsgCount() @safe @nogc pure nothrow
         {
             m_localMsgs = m_localBox.length;
         }
 
 
     private:
-        //////////////////////////////////////////////////////////////////////
         // Routines involving local data only, no lock needed.
-        //////////////////////////////////////////////////////////////////////
 
 
-        pure final bool isControlMsg( ref Message msg )
+        bool isControlMsg( ref Message msg ) @safe @nogc pure nothrow
         {
             return msg.type != MsgType.standard &&
                    msg.type != MsgType.priority;
         }
 
 
-        pure final bool isPriorityMsg( ref Message msg )
+        bool isPriorityMsg( ref Message msg ) @safe @nogc pure nothrow
         {
             return msg.type == MsgType.priority;
         }
 
 
-        pure final bool isLinkDeadMsg( ref Message msg )
+        bool isLinkDeadMsg( ref Message msg ) @safe @nogc pure nothrow
         {
             return msg.type == MsgType.linkDead;
         }
 
 
     private:
-        //////////////////////////////////////////////////////////////////////
         // Type declarations.
-        //////////////////////////////////////////////////////////////////////
 
 
         alias OnMaxFn = bool function(Tid);
         alias ListT   = List!(Message);
 
     private:
-        //////////////////////////////////////////////////////////////////////
         // Local data, no lock needed.
-        //////////////////////////////////////////////////////////////////////
 
 
         ListT       m_localBox;
@@ -2220,9 +2207,7 @@ private
 
 
     private:
-        //////////////////////////////////////////////////////////////////////
         // Shared data, m_lock must be held on access.
-        //////////////////////////////////////////////////////////////////////
 
 
         Mutex       m_lock;
@@ -2246,6 +2231,8 @@ private
     {
         struct Range
         {
+            import std.exception : enforce;
+
             @property bool empty() const
             {
                 return !m_prev.next;
@@ -2327,6 +2314,8 @@ private
          */
         void removeAt( Range r )
         {
+            import std.exception : enforce;
+
             assert( m_count );
             Node* n = r.m_prev;
             enforce( n && n.next, "attempting to remove invalid list node" );
@@ -2400,7 +2389,7 @@ private
 
                 if (sm_head)
                 {
-                    n = cast(Node*)sm_head;
+                    n = cast(Node*) sm_head;
                     sm_head = sm_head.next;
                 }
             }
@@ -2457,6 +2446,7 @@ private
 version( unittest )
 {
     import std.stdio;
+    import std.typecons : tuple, Tuple;
 
     void testfn( Tid tid )
     {
@@ -2520,9 +2510,7 @@ version( unittest )
     }
 }
 
-//////////////////////////////////////////////////////////////////////////////
 // initOnce
-//////////////////////////////////////////////////////////////////////////////
 
 private @property Mutex initOnceLock()
 {
@@ -2530,7 +2518,7 @@ private @property Mutex initOnceLock()
     if (auto mtx = atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock))
         return mtx;
     auto mtx = new Mutex;
-    if (cas(cast(shared)&lock, cast(shared)null, cast(shared)mtx))
+    if (cas(cast(shared)&lock, cast(shared) null, cast(shared) mtx))
         return mtx;
     return atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock);
 }
@@ -2632,6 +2620,8 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
 /// Use a separate mutex when init blocks on another thread that might also call initOnce.
 @system unittest
 {
+    import core.sync.mutex : Mutex;
+
     static shared bool varA, varB;
     __gshared Mutex m;
     m = new Mutex;

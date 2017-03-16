@@ -56,6 +56,10 @@ DRUNTIME_PATH = ../druntime
 ZIPFILE = phobos.zip
 ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
+DUB=dub
+GIT_HOME=https://github.com/dlang
+TOOLS_DIR=../tools
+
 # Documentation-related stuff
 DOCSRC = ../dlang.org
 WEBSITE_DIR = ../web
@@ -86,7 +90,7 @@ ifeq ($(OS),win32wine)
 	DMD = wine dmd.exe
 	RUN = wine
 else
-	DMD = ../dmd/src/dmd
+	DMD = ../dmd/generated/$(OS)/release/$(MODEL)/dmd
 	ifeq ($(OS),win32)
 		CC = dmc
 	else
@@ -129,7 +133,7 @@ endif
 LINKDL:=$(if $(findstring $(OS),linux),-L-ldl,)
 
 # use timelimit to avoid deadlocks if available
-TIMELIMIT:=$(if $(shell which timelimit 2>/dev/null || true),timelimit -t 60 ,)
+TIMELIMIT:=$(if $(shell which timelimit 2>/dev/null || true),timelimit -t 90 ,)
 
 # Set VERSION, where the file is that contains the version string
 VERSION=../dmd/VERSION
@@ -162,19 +166,18 @@ P2MODULES=$(foreach P,$1,$(addprefix $P/,$(PACKAGE_$(subst /,_,$P))))
 STD_PACKAGES = std $(addprefix std/,\
   algorithm container digest experimental/allocator \
   experimental/allocator/building_blocks experimental/logger \
-  experimental/ndslice \
   net \
   experimental range regex)
 
 # Modules broken down per package
 
 PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
-  conv cstream csv datetime demangle encoding exception file format \
+  conv csv datetime demangle encoding exception file format \
   functional getopt json math mathspecial meta mmfile numeric \
-  outbuffer parallelism path process random signals socket socketstream stdint \
-  stdio stdiobase stream string system traits typecons typetuple uni \
+  outbuffer parallelism path process random signals socket stdint \
+  stdio string system traits typecons typetuple uni \
   uri utf uuid variant xml zip zlib
-PACKAGE_std_experimental = typecons
+PACKAGE_std_experimental = checkedint typecons
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
   sorting
 PACKAGE_std_container = array binaryheap dlist package rbtree slist util
@@ -188,11 +191,10 @@ PACKAGE_std_experimental_allocator_building_blocks = \
   fallback_allocator free_list free_tree bitmapped_block \
   kernighan_ritchie null_allocator package quantizer \
   region scoped_allocator segregator stats_collector
-PACKAGE_std_experimental_ndslice = package iteration selection slice
 PACKAGE_std_net = curl isemail
 PACKAGE_std_range = interfaces package primitives
 PACKAGE_std_regex = package $(addprefix internal/,generator ir parser \
-  backtracking kickstart tests thompson)
+  backtracking tests thompson kickstart)
 
 # Modules in std (including those in packages)
 STD_MODULES=$(call P2MODULES,$(STD_PACKAGES))
@@ -211,16 +213,17 @@ EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
 
 EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_COMMON)
 
-EXTRA_MODULES_INTERNAL := $(addprefix			\
-	std/concurrencybase \
-	std/internal/digest/, sha_SSSE3 ) $(addprefix \
-	std/internal/math/, biguintcore biguintnoasm biguintx86	\
-	gammafunction errorfunction) $(addprefix std/internal/, \
-	cstring phobosinit unicode_tables scopebuffer\
-	unicode_comp unicode_decomp unicode_grapheme unicode_norm) \
-	$(addprefix std/internal/test/, dummyrange) \
-	$(addprefix std/experimental/ndslice/, internal) \
-	$(addprefix std/algorithm/, internal)
+EXTRA_MODULES_INTERNAL := $(addprefix std/, \
+	algorithm/internal concurrencybase \
+	$(addprefix internal/, \
+		cstring digest/sha_SSSE3 encodinginit \
+		$(addprefix math/, biguintcore biguintnoasm biguintx86	\
+						   errorfunction gammafunction ) \
+		processinit scopebuffer test/dummyrange \
+		$(addprefix unicode_, comp decomp grapheme norm tables) \
+	) \
+	stdiobase \
+)
 
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(EXTRA_MODULES_INTERNAL)
 
@@ -361,9 +364,11 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 # For example: "make std/algorithm/mutation.test"
 # The mktemp business is needed so .o files don't clash in concurrent unittesting.
 %.test : %.d $(LIB)
-	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` && \
-	  $(DMD) -od$$T $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= $(LINKDL) -cov -run $< && \
-	  rm -rf $$T
+	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` &&                                                              \
+	  (                                                                                                     \
+	    $(DMD) -od$$T $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= $(LINKDL) -cov -run $< ;     \
+	    RET=$$? ; rm -rf $$T ; exit $$RET                                                                   \
+	  )
 
 # Target for quickly unittesting all modules and packages within a package,
 # transitively. For example: "make std/algorithm.test"
@@ -471,8 +476,11 @@ changelog.html: changelog.dd
 CWS_TOCHECK = posix.mak win32.mak win64.mak osmodel.mak
 CWS_TOCHECK += $(ALL_D_FILES) index.d
 
-checkwhitespace: $(LIB)
-	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -run ../dmd/src/checkwhitespace.d $(CWS_TOCHECK)
+checkwhitespace: $(LIB) $(TOOLS_DIR)/checkwhitespace.d
+	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -run $(TOOLS_DIR)/checkwhitespace.d $(CWS_TOCHECK)
+
+$(TOOLS_DIR)/checkwhitespace.d:
+	git clone --depth=1 ${GIT_HOME}/tools $(TOOLS_DIR)
 
 #############################
 # Submission to Phobos are required to conform to the DStyle
@@ -482,15 +490,16 @@ checkwhitespace: $(LIB)
 
 ../dscanner:
 	git clone https://github.com/Hackerpilot/Dscanner ../dscanner
-	git -C ../dscanner checkout tags/v0.4.0-alpha.8
+	git -C ../dscanner checkout tags/v0.4.0
 	git -C ../dscanner submodule update --init --recursive
 
 ../dscanner/dsc: ../dscanner
 	# debug build is faster, but disable 'missing import' messages (missing core from druntime)
-	sed 's/dparse_verbose/StdLoggerDisableWarning/' -i ../dscanner/makefile
+	sed 's/dparse_verbose/StdLoggerDisableWarning/' ../dscanner/makefile > dscanner_makefile_tmp
+	mv dscanner_makefile_tmp ../dscanner/makefile
 	make -C ../dscanner githash debug
 
-style: ../dscanner/dsc
+style: ../dscanner/dsc $(LIB) has_public_example publictests
 	@echo "Check for trailing whitespace"
 	grep -nr '[[:blank:]]$$' etc std ; test $$? -eq 1
 
@@ -500,12 +509,55 @@ style: ../dscanner/dsc
 	@echo "Enforce whitespace between colon(:) for import statements (doesn't catch everything)"
 	grep -nr 'import [^/,=]*:.*;' $$(find . -name '*.d') | grep -vE "import ([^ ]+) :\s"; test $$? -eq 1
 
+	@echo "Check for package wide std.algorithm imports"
+	grep -nr 'import std.algorithm : ' $$(find . -name '*.d') ; test $$? -eq 1
+
 	@echo "Enforce Allman style"
 	grep -nrE '(if|for|foreach|foreach_reverse|while|unittest|switch|else|version) .*{$$' $$(find . -name '*.d'); test $$? -eq 1
 
+	@echo "Enforce do { to be in Allman style"
+	grep -nr 'do *{$$' $$(find . -name '*.d') ; test $$? -eq 1
+
+	@echo "Enforce no space between assert and the opening brace, i.e. assert("
+	grep -nrE 'assert +\(' $$(find . -name '*.d') ; test $$? -eq 1
+
+	@echo "Enforce space after cast(...)"
+	grep -nrE '[^"]cast\([^)]*?\)[[:alnum:]]' $$(find . -name '*.d') ; test $$? -eq 1
+
+	@echo "Enforce space between a .. b"
+	grep -nrE '[[:alnum:]][.][.][[:alnum:]]|[[:alnum:]] [.][.][[:alnum:]]|[[:alnum:]][.][.] [[:alnum:]]' $$(find . -name '*.d' | grep -vE 'std/string.d|std/uni.d') ; test $$? -eq 1
+
+	@echo "Enforce space between binary operators"
+	grep -nrE "[[:alnum:]](==|!=|<=|<<|>>|>>>|^^)[[:alnum:]]|[[:alnum:]] (==|!=|<=|<<|>>|>>>|^^)[[:alnum:]]|[[:alnum:]](==|!=|<=|<<|>>|>>>|^^) [[:alnum:]]" $$(find . -name '*.d'); test $$? -eq 1
+
+	@echo "Validate changelog files (Do _not_ use REF in the title!)"
+	@for file in $$(find changelog -name '*.dd') ; do  \
+		cat $$file | head -n1 | grep -nqE '\$$\((REF|LINK2|HTTP|MREF)' && \
+		{ echo "$$file: The title line can't contain links - it's already a link" && exit 1; } ;\
+		cat $$file | head -n2 | tail -n1 | grep -q '^$$' || \
+		{ echo "$$file: After the title line an empty, separating line is expected" && exit 1; } ;\
+		cat $$file | head -n3 | tail -n1 | grep -nqE '^.{1,}$$'  || \
+		{ echo "$$file: The title is supposed to be followed by a long description" && exit 1; } ;\
+	done
+
+	@echo "Check that Ddoc runs without errors"
+	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -w -D -main -c -o- $$(find etc std -type f -name '*.d') 2>&1 | grep -v "Deprecation:"; test $$? -eq 1
+
 	# at the moment libdparse has problems to parse some modules (->excludes)
 	@echo "Running DScanner"
-	../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d|std/conv.d') -I.
+	../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d') -I.
+
+publictests: $(LIB)
+	# parse all public unittests from Phobos and runs them (for now some modules are excluded)
+	rm -rf ./out
+	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) --compiler=$${PWD}/$(DMD) --root=../tools/styles -c tests_extractor -- --inputdir . --ignore "base64.d,building_blocks/free_list,building_blocks/quantizer,digest/hmac.d,file.d,index.d,math.d,stdio.d,traits.d,typecons.d,uuid.d" --outputdir ./out
+	# execute all parsed tests
+	for file in $$(find out -name '*.d'); do echo "executing $${file}" && $(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -main -unittest -run $$file || exit 1 ; done
+
+has_public_example: $(LIB)
+	#  checks whether public function have public examples (for now some modules are excluded)
+	rm -rf ./out
+	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) --compiler=$${PWD}/$(DMD) --root=../tools/styles -c has_public_example -- --inputdir . --ignore "etc,array.d,allocator,base64.d,bitmanip.d,concurrency.d,conv.d,csv.d,datetime.d,demangle.d,digest/hmac.d,digest/sha.d,encoding.d,exception.d,file.d,format.d,getopt.d,index.d,internal,isemail.d,json.d,logger/core.d,logger/nulllogger.d,math.d,mathspecial.d,net/curl.d,numeric.d,parallelism.d,path.d,process.d,random.d,range,regex/package.d,socket.d,stdio.d,string.d,traits.d,typecons.d,uni.d,unittest.d,uri.d,utf.d,uuid.d,xml.d,zlib.d"
 
 .PHONY : auto-tester-build
 auto-tester-build: all checkwhitespace

@@ -288,14 +288,26 @@ struct FreeTree(ParentAllocator)
     void[] allocate(size_t n)
     {
         assertValid;
-        auto result = findAndRemove(root, goodAllocSize(n));
+        if (n == 0) return null;
+
+        immutable s = goodAllocSize(n);
+
+        // Consult the free tree.
+        auto result = findAndRemove(root, s);
+        if (result.ptr) return result.ptr[0 .. n];
+
+        // No block found, try the parent allocator.
+        result = parent.allocate(s);
         if (result.ptr) return result.ptr[0 .. n];
 
         // Parent ran out of juice, desperation mode on
         static if (hasMember!(ParentAllocator, "deallocate"))
         {
             clear;
-            return parent.allocate(n);
+            // Try parent allocator again.
+            result = parent.allocate(s);
+            if (result.ptr) return result.ptr[0 .. n];
+            return null;
         }
         else
         {
@@ -320,7 +332,7 @@ struct FreeTree(ParentAllocator)
         return true;
     }
 
-    unittest // test a few simple configurations
+    @system unittest // test a few simple configurations
     {
         import std.experimental.allocator.gc_allocator;
         FreeTree!GCAllocator a;
@@ -341,7 +353,7 @@ struct FreeTree(ParentAllocator)
         assert(a.formatSizes == "(_)", a.formatSizes);
     }
 
-    unittest // build a complex free tree
+    @system unittest // build a complex free tree
     {
         import std.experimental.allocator.gc_allocator, std.range;
         FreeTree!GCAllocator a;
@@ -396,8 +408,80 @@ struct FreeTree(ParentAllocator)
     }
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.gc_allocator;
     testAllocator!(() => FreeTree!GCAllocator());
+}
+
+@system unittest // issue 16506
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    static void f(ParentAllocator)(size_t sz)
+    {
+        static FreeTree!ParentAllocator myAlloc;
+        byte[] _payload = cast(byte[]) myAlloc.allocate(sz);
+        assert(_payload, "_payload is null");
+        _payload[] = 0;
+        myAlloc.deallocate(_payload);
+    }
+
+    f!Mallocator(33);
+    f!Mallocator(43);
+    f!GCAllocator(1);
+}
+
+@system unittest // issue 16507
+{
+    static struct MyAllocator
+    {
+        byte dummy;
+        static bool alive = true;
+        void[] allocate(size_t s) { return new byte[](s); }
+        bool deallocate(void[] ) { if (alive) assert(false); return true; }
+        enum alignment = size_t.sizeof;
+    }
+
+    FreeTree!MyAllocator ft;
+    void[] x = ft.allocate(1);
+    ft.deallocate(x);
+    ft.allocate(1000);
+    MyAllocator.alive = false;
+}
+
+@system unittest // "desperation mode"
+{
+    uint myDeallocCounter = 0;
+
+    struct MyAllocator
+    {
+        byte[] allocation;
+        void[] allocate(size_t s)
+        {
+            if (allocation.ptr) return null;
+            allocation = new byte[](s);
+            return allocation;
+        }
+        bool deallocate(void[] )
+        {
+            ++myDeallocCounter;
+            allocation = null;
+            return true;
+        }
+        enum alignment = size_t.sizeof;
+    }
+
+    FreeTree!MyAllocator ft;
+    void[] x = ft.allocate(1);
+    ft.deallocate(x);
+    assert(myDeallocCounter == 0);
+    x = ft.allocate(1000); // Triggers "desperation mode".
+    assert(myDeallocCounter == 1);
+    assert(x.ptr);
+    void[] y = ft.allocate(1000); /* Triggers "desperation mode" but there's
+        nothing to deallocate so MyAllocator can't deliver. */
+    assert(myDeallocCounter == 1);
+    assert(y.ptr is null);
 }

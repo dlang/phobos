@@ -7,18 +7,12 @@ Serialize data to $(D ubyte) arrays.
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_outbuffer.d)
+ *
+ * $(SCRIPT inhibitQuickIndex = 1;)
  */
 module std.outbuffer;
 
-private
-{
-    import core.memory;
-    import core.stdc.stdarg;
-    import core.stdc.stdio;
-    import core.stdc.stdlib;
-    import std.algorithm;
-    import std.string;
-}
+import core.stdc.stdarg; // : va_list;
 
 /*********************************************
  * OutBuffer provides a way to build up an array of bytes out
@@ -39,21 +33,14 @@ class OutBuffer
 
     invariant()
     {
-        //printf("this = %p, offset = %x, data.length = %u\n", this, offset, data.length);
         assert(offset <= data.length);
     }
 
   pure nothrow @safe
   {
-    this()
-    {
-        //printf("in OutBuffer constructor\n");
-    }
-
     /*********************************
      * Convert to array of bytes.
      */
-
     ubyte[] toBytes() { return data[0 .. offset]; }
 
     /***********************************
@@ -63,8 +50,6 @@ class OutBuffer
      * speed optimization, a good guess at the maximum size of the resulting
      * buffer will improve performance by eliminating reallocations and copying.
      */
-
-
     void reserve(size_t nbytes) @trusted
         in
         {
@@ -76,12 +61,11 @@ class OutBuffer
         }
         body
         {
-            //c.stdio.printf("OutBuffer.reserve: length = %d, offset = %d, nbytes = %d\n", data.length, offset, nbytes);
             if (data.length < offset + nbytes)
             {
                 void[] vdata = data;
                 vdata.length = (offset + nbytes + 7) * 2; // allocates as void[] to not set BlkAttr.NO_SCAN
-                data = cast(ubyte[])vdata;
+                data = cast(ubyte[]) vdata;
             }
         }
 
@@ -118,9 +102,9 @@ class OutBuffer
             offset += ubyte.sizeof;
         }
 
-    void write(byte b) { write(cast(ubyte)b); }         /// ditto
-    void write(char c) { write(cast(ubyte)c); }         /// ditto
-    void write(dchar c) { write(cast(uint)c); }         /// ditto
+    void write(byte b) { write(cast(ubyte) b); }         /// ditto
+    void write(char c) { write(cast(ubyte) c); }         /// ditto
+    void write(dchar c) { write(cast(uint) c); }         /// ditto
 
     void write(ushort w) @trusted                /// ditto
     {
@@ -129,7 +113,7 @@ class OutBuffer
         offset += ushort.sizeof;
     }
 
-    void write(short s) { write(cast(ushort)s); }               /// ditto
+    void write(short s) { write(cast(ushort) s); }               /// ditto
 
     void write(wchar c) @trusted        /// ditto
     {
@@ -145,7 +129,7 @@ class OutBuffer
         offset += uint.sizeof;
     }
 
-    void write(int i) { write(cast(uint)i); }           /// ditto
+    void write(int i) { write(cast(uint) i); }           /// ditto
 
     void write(ulong l) @trusted         /// ditto
     {
@@ -154,7 +138,7 @@ class OutBuffer
         offset += ulong.sizeof;
     }
 
-    void write(long l) { write(cast(ulong)l); }         /// ditto
+    void write(long l) { write(cast(ulong) l); }         /// ditto
 
     void write(float f) @trusted         /// ditto
     {
@@ -179,7 +163,7 @@ class OutBuffer
 
     void write(in char[] s) @trusted             /// ditto
     {
-        write(cast(ubyte[])s);
+        write(cast(ubyte[]) s);
     }
 
     void write(OutBuffer buf)           /// ditto
@@ -225,7 +209,7 @@ class OutBuffer
     void align2()
     {
         if (offset & 1)
-            write(cast(byte)0);
+            write(cast(byte) 0);
     }
 
     /****************************************
@@ -257,6 +241,10 @@ class OutBuffer
 
     void vprintf(string format, va_list args) @trusted nothrow
     {
+        import std.string : toStringz;
+        import core.stdc.stdio : vsnprintf;
+        import core.stdc.stdlib : alloca;
+
         version (unittest)
             char[3] buffer = void;      // trigger reallocation
         else
@@ -270,59 +258,26 @@ class OutBuffer
         auto psize = buffer.length;
         for (;;)
         {
-            version(Windows)
+            va_list args2;
+            va_copy(args2, args);
+            count = vsnprintf(p, psize, f, args2);
+            va_end(args2);
+            if (count == -1)
             {
-                va_list args2;
-                va_copy(args2, args);
-                count = vsnprintf(p,psize,f,args2);
-                va_end(args2);
-                if (count != -1)
-                    break;
-
                 if (psize > psize.max / 2) assert(0); // overflow check
                 psize *= 2;
-
-                p = cast(char *) alloca(psize); // buffer too small, try again with larger size
             }
-            else version(Posix)
+            else if (count >= psize)
             {
-                va_list args2;
-                va_copy(args2, args);
-                count = vsnprintf(p, psize, f, args2);
-                va_end(args2);
-                if (count == -1)
-                {
-                    if (psize > psize.max / 2) assert(0); // overflow check
-                    psize *= 2;
-                }
-                else if (count >= psize)
-                {
-                    if (count == count.max) assert(0); // overflow check
-                    psize = count + 1;
-                }
-                else
-                    break;
-
-                /+
-                if (p != buffer)
-                    c.stdlib.free(p);
-                p = (char *) c.stdlib.malloc(psize);    // buffer too small, try again with larger size
-                +/
-                p = cast(char *) alloca(psize); // buffer too small, try again with larger size
+                if (count == count.max) assert(0); // overflow check
+                psize = count + 1;
             }
             else
-            {
-                static assert(0);
-            }
+                break;
+
+            p = cast(char *) alloca(psize); // buffer too small, try again with larger size
         }
         write(cast(ubyte[]) p[0 .. count]);
-        /+
-        version (Posix)
-        {
-            if (p != buffer)
-                c.stdlib.free(p);
-        }
-        +/
     }
 
     /*****************************************
@@ -415,19 +370,15 @@ class OutBuffer
 
 @safe unittest
 {
-    //printf("Starting OutBuffer test\n");
+    import std.string : cmp;
 
     OutBuffer buf = new OutBuffer();
 
-    //printf("buf = %p\n", buf);
-    //printf("buf.offset = %x\n", buf.offset);
     assert(buf.offset == 0);
     buf.write("hello"[]);
-    buf.write(cast(byte)0x20);
+    buf.write(cast(byte) 0x20);
     buf.write("world"[]);
     buf.printf(" %d", 62665);
-    //auto s = buf.toString();
-    //printf("buf = '%.*s'\n", s.length, s.ptr);
     assert(cmp(buf.toString(), "hello world 62665") == 0);
 }
 

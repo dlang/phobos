@@ -1,6 +1,8 @@
 module std.internal.unicode_norm;
 import std.internal.unicode_tables;
 
+package(std):
+
 static if (size_t.sizeof == 8)
 {
     //1600 bytes
