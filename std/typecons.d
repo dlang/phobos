@@ -290,7 +290,15 @@ private:
     }
     class BarImpl : Bar
     {
-        ~this() { debug(Unique) writeln("    C destructor"); }
+        static int count;
+        this()
+        {
+            count++;
+        }
+        ~this()
+        {
+            count--;
+        }
         int val() const { return 4; };
     }
     alias UBar = Unique!Bar;
@@ -299,7 +307,13 @@ private:
         debug(Unique) writeln("inside g");
         return u.release;
     }
+    void consume(UBar u)
+    {
+        assert(u.val() == 4);
+        // Resource automatically deleted here
+    }
     auto ub = UBar(new BarImpl);
+    assert(BarImpl.count == 1);
     assert(!ub.isEmpty);
     assert(ub.val == 4);
     static assert(!__traits(compiles, {auto ub3 = g(ub);}));
@@ -308,6 +322,8 @@ private:
     debug(Unique) writeln("Returned from g");
     assert(ub.isEmpty);
     assert(!ub2.isEmpty);
+    consume(ub2.release);
+    assert(BarImpl.count == 0);
 }
 
 @system unittest
