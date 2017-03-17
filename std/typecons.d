@@ -61,7 +61,7 @@ $(D T) to deallocate or clean up any non-GC resources.
 If it is desirable to persist a $(D Unique!T) outside of its original
 scope, then it can be transferred.  The transfer can be explicit, by
 calling $(D release), or implicit, when returning Unique from a
-function. The resource $(D T) can be a polymorphic class object or 
+function. The resource $(D T) can be a polymorphic class object or
 instance of an interface, in which case Unique behaves polymorphically
 too.
 
