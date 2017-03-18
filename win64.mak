@@ -218,7 +218,14 @@ SRC_STD_CONTAINER= \
 	std\container\package.d
 
 SRC_STD_DATETIME= \
-	std\datetime\package.d
+	std\datetime\common.d \
+	std\datetime\date.d \
+	std\datetime\datetime.d \
+	std\datetime\interval.d \
+	std\datetime\package.d \
+	std\datetime\systime.d \
+	std\datetime\timeofday.d \
+	std\datetime\timezone.d
 
 SRC_STD_DIGEST= \
 	std\digest\crc.d \
@@ -470,6 +477,13 @@ DOCS= \
 	$(DOC)\std_digest_hmac.html \
 	$(DOC)\std_csv.html \
 	$(DOC)\std_datetime.html \
+	$(DOC)\std_datetime_common.html \
+	$(DOC)\std_datetime_date.html \
+	$(DOC)\std_datetime_datetime.html \
+	$(DOC)\std_datetime_interval.html \
+	$(DOC)\std_datetime_systime.html \
+	$(DOC)\std_datetime_timeofday.html \
+	$(DOC)\std_datetime_timezone.html \
 	$(DOC)\std_demangle.html \
 	$(DOC)\std_encoding.html \
 	$(DOC)\std_exception.html \
@@ -800,6 +814,27 @@ $(DOC)\std_csv.html : $(STDDOC) std\csv.d
 
 $(DOC)\std_datetime.html : $(STDDOC) std\datetime\package.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime.html $(STDDOC) std\datetime\package.d
+
+$(DOC)\std_datetime_common.html : $(STDDOC) std\datetime\common.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_common.html $(STDDOC) std\datetime\common.d
+
+$(DOC)\std_datetime_date.html : $(STDDOC) std\datetime\date.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_date.html $(STDDOC) std\datetime\date.d
+
+$(DOC)\std_datetime_datetime.html : $(STDDOC) std\datetime\datetime.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_datetime.html $(STDDOC) std\datetime\datetime.d
+
+$(DOC)\std_datetime_interval.html : $(STDDOC) std\datetime\interval.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_interval.html $(STDDOC) std\datetime\interval.d
+
+$(DOC)\std_datetime_systime.html : $(STDDOC) std\datetime\systime.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_systime.html $(STDDOC) std\datetime\systime.d
+
+$(DOC)\std_datetime_timeofday.html : $(STDDOC) std\datetime\timeofday.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_timeofday.html $(STDDOC) std\datetime\timeofday.d
+
+$(DOC)\std_datetime_timezone.html : $(STDDOC) std\datetime\timezone.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_timezone.html $(STDDOC) std\datetime\timezone.d
 
 $(DOC)\std_demangle.html : $(STDDOC) std\demangle.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_demangle.html $(STDDOC) std\demangle.d
