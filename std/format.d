@@ -419,6 +419,7 @@ My friends are John, Nancy.
 )
  */
 uint formattedWrite(alias fmt, Writer, A...)(Writer w, A args)
+if (isSomeString!(typeof(fmt)))
 {
     alias e = checkFormatException!(fmt, A);
     static assert(!e, e.msg);
@@ -581,6 +582,7 @@ Throws:
     An `Exception` if `S.length == 0` and `fmt` has format specifiers
  */
 uint formattedRead(alias fmt, R, S...)(ref R r, auto ref S args)
+if (isSomeString!(typeof(fmt)))
 {
     alias e = checkFormatException!(fmt, S);
     static assert(!e, e.msg);
@@ -5483,7 +5485,7 @@ package static const checkFormatException(alias fmt, Args...) =
     try
         .format(fmt, Args.init);
     catch (Exception e)
-        return (e.msg is ctfpMessage) ? null : e;
+        return (e.msg == ctfpMessage) ? null : e;
     return null;
 }();
 
@@ -5494,6 +5496,7 @@ package static const checkFormatException(alias fmt, Args...) =
  *         args = Variadic list of arguments to _format into returned string.
  */
 typeof(fmt) format(alias fmt, Args...)(Args args)
+if (isSomeString!(typeof(fmt)))
 {
     alias e = checkFormatException!(fmt, Args);
     static assert(!e, e.msg);
@@ -5581,6 +5584,7 @@ if (isSomeChar!Char)
  *     than the number of format specifiers in `fmt`.
  */
 char[] sformat(alias fmt, Args...)(char[] buf, Args args)
+if (isSomeString!(typeof(fmt)))
 {
     alias e = checkFormatException!(fmt, Args);
     static assert(!e, e.msg);
