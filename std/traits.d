@@ -5489,6 +5489,34 @@ enum bool isBoolean(T) = is(BooleanTypeOf!T) && !isAggregateType!T;
  */
 enum bool isIntegral(T) = is(IntegralTypeOf!T) && !isAggregateType!T;
 
+///
+@safe unittest
+{
+    static assert(
+        isIntegral!byte &&
+        isIntegral!short &&
+        isIntegral!int &&
+        isIntegral!long &&
+        isIntegral!(const(long)) &&
+        isIntegral!(immutable(long))
+    );
+
+    static assert(
+        !isIntegral!bool &&
+        !isIntegral!char &&
+        !isIntegral!double
+    );
+
+    // types which act as integral values do not pass
+    struct S
+    {
+        int val;
+        alias val this;
+    }
+
+    static assert(!isIntegral!S);
+}
+
 @safe unittest
 {
     foreach (T; IntegralTypeList)
@@ -5506,13 +5534,6 @@ enum bool isIntegral(T) = is(IntegralTypeOf!T) && !isAggregateType!T;
     enum EI : int { a = -1, b = 0, c = 1 }  // base type is signed (bug 7909)
     static assert(isIntegral!EU &&  isUnsigned!EU && !isSigned!EU);
     static assert(isIntegral!EI && !isUnsigned!EI &&  isSigned!EI);
-
-    static struct S(T)
-    {
-        T t;
-        alias t this;
-    }
-    static assert(!isIntegral!(S!int));
 }
 
 /**
@@ -5524,6 +5545,35 @@ enum bool isFloatingPoint(T) = __traits(isFloating, T) && !(is(Unqual!T == cfloa
                                                             is(Unqual!T == ifloat) ||
                                                             is(Unqual!T == idouble) ||
                                                             is(Unqual!T == ireal));
+
+///
+@safe unittest
+{
+    static assert(
+        isFloatingPoint!float &&
+        isFloatingPoint!double &&
+        isFloatingPoint!real &&
+        isFloatingPoint!(const(real)) &&
+        isFloatingPoint!(immutable(real))
+    );
+
+    static assert(!isFloatingPoint!int);
+
+    // complex and imaginary numbers do not pass
+    static assert(
+        !isFloatingPoint!cfloat &&
+        !isFloatingPoint!ifloat
+    );
+
+    // types which act as floating point values do not pass
+    struct S
+    {
+        float val;
+        alias val this;
+    }
+
+    static assert(!isFloatingPoint!S);
+}
 
 @safe unittest
 {
@@ -5544,13 +5594,6 @@ enum bool isFloatingPoint(T) = __traits(isFloating, T) && !(is(Unqual!T == cfloa
             static assert(!isFloatingPoint!(Q!T));
         }
     }
-
-    static struct S(T)
-    {
-        T t;
-        alias t this;
-    }
-    static assert(!isFloatingPoint!(S!float));
 }
 
 // https://issues.dlang.org/show_bug.cgi?id=17195
@@ -5573,11 +5616,41 @@ enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == char) ||
                                                         is(Unqual!T == wchar) ||
                                                         is(Unqual!T == dchar));
 
+///
 @safe unittest
 {
-    static assert(!isNumeric!(char));
-    static assert(!isNumeric!(wchar));
-    static assert(!isNumeric!(dchar));
+    static assert(
+        isNumeric!bool &&
+        isNumeric!byte &&
+        isNumeric!short &&
+        isNumeric!int &&
+        isNumeric!long &&
+        isNumeric!float &&
+        isNumeric!double &&
+        isNumeric!real &&
+        isNumeric!(const(real)) &&
+        isNumeric!(immutable(real))
+    );
+
+    static assert(
+        !isNumeric!void &&
+        !isNumeric!char &&
+        !isNumeric!wchar &&
+        !isNumeric!dchar
+    );
+
+    // types which act as numeric values do not pass
+    struct S
+    {
+        int val;
+        alias val this;
+    }
+
+    static assert(!isIntegral!S);
+}
+
+@safe unittest
+{
     foreach (T; TypeTuple!(NumericTypeList))
     {
         foreach (Q; TypeQualifierList)
@@ -5659,6 +5732,24 @@ enum bool isUnsigned(T) = __traits(isUnsigned, T) && !(is(Unqual!T == char) ||
                                                        is(Unqual!T == dchar) ||
                                                        is(Unqual!T == bool));
 
+///
+@safe unittest
+{
+    static assert(
+        isUnsigned!uint &&
+        isUnsigned!ulong
+    );
+
+    static assert(
+        !isUnsigned!char &&
+        !isUnsigned!int &&
+        !isUnsigned!long &&
+        !isUnsigned!char &&
+        !isUnsigned!wchar &&
+        !isUnsigned!dchar
+    );
+}
+
 @safe unittest
 {
     foreach (T; TypeTuple!(UnsignedIntTypeList))
@@ -5682,6 +5773,20 @@ enum bool isUnsigned(T) = __traits(isUnsigned, T) && !(is(Unqual!T == char) ||
  * Detect whether $(D T) is a built-in signed numeric type.
  */
 enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T);
+
+///
+@safe unittest
+{
+    static assert(
+        isSigned!int &&
+        isSigned!long
+    );
+
+    static assert(
+        !isSigned!uint &&
+        !isSigned!ulong
+    );
+}
 
 @safe unittest
 {
@@ -6117,6 +6222,13 @@ enum bool isPointer(T) = is(T == U*, U) && !isAggregateType!T;
 Returns the target type of a pointer.
 */
 alias PointerTarget(T : T*) = T;
+
+///
+@safe unittest
+{
+    static assert(is(PointerTarget!(int*) == int));
+    static assert(is(PointerTarget!(void*) == void));
+}
 
 /**
  * Detect whether type $(D T) is an aggregate type.
