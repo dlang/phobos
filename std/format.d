@@ -586,9 +586,8 @@ uint formattedRead(R, Char)(ref R r, const(Char)[] fmt)
 }
 
 /// ditto
-deprecated("do not use '&' before parameters and let them bind by ref insted")
+deprecated("do not use pointers as parameters; dereference the pointer and let it bind by ref insted")
 uint formattedRead(R, Char, T, S...)(ref R r, const(Char)[] fmt, auto ref T* arg, auto ref S args)
-    if (!__traits(isRef, arg))
 {
     import std.functional : forward;
     return formattedRead(r, fmt, *arg, forward!args);
@@ -596,6 +595,7 @@ uint formattedRead(R, Char, T, S...)(ref R r, const(Char)[] fmt, auto ref T* arg
 
 /// ditto
 uint formattedRead(R, Char, T, S...)(ref R r, const(Char)[] fmt, ref T arg, auto ref S args)
+    if (!is(T : const(S*), S))
 {
     import std.typecons : isTuple;
 
