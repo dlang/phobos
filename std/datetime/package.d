@@ -106,6 +106,14 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
 module std.datetime;
 
 public import core.time;
+public import std.datetime.common;
+public import std.datetime.date;
+public import std.datetime.datetime;
+public import std.datetime.interval;
+public import std.datetime.systime;
+public import std.datetime.timeofday;
+public import std.datetime.timezone;
+
 
 import core.exception; // AssertError
 
