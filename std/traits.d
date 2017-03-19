@@ -5996,7 +5996,7 @@ $(D wchar) or $(D dchar), with or without qualifiers.
 Static arrays of characters (like $(D char[80])) are not considered
 built-in string types.
  */
-enum bool isSomeString(T) = is(StringTypeOf!T) && !isAggregateType!T && !isStaticArray!T;
+enum bool isSomeString(T) = is(StringTypeOf!T) && !isAggregateType!T && !isStaticArray!T && !is(T == enum);
 
 ///
 @safe unittest
@@ -6008,15 +6008,22 @@ enum bool isSomeString(T) = is(StringTypeOf!T) && !isAggregateType!T && !isStati
     static assert( isSomeString!(typeof("aaa")));
     static assert( isSomeString!(const(char)[]));
 
-    enum ES : string { a = "aaa", b = "bbb" }
-    static assert( isSomeString!ES);
-
     //Non string types
     static assert(!isSomeString!int);
     static assert(!isSomeString!(int[]));
     static assert(!isSomeString!(byte[]));
     static assert(!isSomeString!(typeof(null)));
     static assert(!isSomeString!(char[4]));
+
+    enum ES : string { a = "aaa", b = "bbb" }
+    static assert(!isSomeString!ES);
+
+    static struct Stringish
+    {
+        string str;
+        alias str this;
+    }
+    static assert(!isSomeString!Stringish);
 }
 
 @safe unittest
@@ -6034,7 +6041,7 @@ enum bool isSomeString(T) = is(StringTypeOf!T) && !isAggregateType!T && !isStati
  * All arrays that use char, wchar, and their qualified versions are narrow
  * strings. (Those include string and wstring).
  */
-enum bool isNarrowString(T) = (is(T : const char[]) || is(T : const wchar[])) && !isAggregateType!T && !isStaticArray!T;
+enum bool isNarrowString(T) = isSomeString!T && !is(T : const dchar[]);
 
 ///
 @safe unittest
@@ -6046,6 +6053,19 @@ enum bool isNarrowString(T) = (is(T : const char[]) || is(T : const wchar[])) &&
 
     static assert(!isNarrowString!dstring);
     static assert(!isNarrowString!(dchar[]));
+
+    static assert(!isNarrowString!(typeof(null)));
+    static assert(!isNarrowString!(char[4]));
+
+    enum ES : string { a = "aaa", b = "bbb" }
+    static assert(!isNarrowString!ES);
+
+    static struct Stringish
+    {
+        string str;
+        alias str this;
+    }
+    static assert(!isNarrowString!Stringish);
 }
 
 @safe unittest
