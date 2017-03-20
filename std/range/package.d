@@ -3643,11 +3643,12 @@ nothrow:
 }
 
 /// Ditto
-Cycle!R cycle(R)(R input)
-if (isForwardRange!R && !isInfinite!R)
+auto cycle(R)(R input)
+if (isForwardRange!R)
 {
     assert(!input.empty, "Attempting to pass an empty input to cycle");
-    return Cycle!R(input);
+    static if (isInfinite!R) return input;
+    else return Cycle!R(input);
 }
 
 ///
@@ -3669,13 +3670,6 @@ if (isRandomAccessRange!R && !isInfinite!R)
 {
     assert(!input.empty, "Attempting to pass an empty input to cycle");
     return Cycle!R(input, index);
-}
-
-/// Ditto
-Cycle!R cycle(R)(R input)
-if (isInfinite!R)
-{
-    return input;
 }
 
 /// Ditto
@@ -3773,11 +3767,21 @@ if (isStaticArray!R)
         void popFront() { }
         @property int front() { return 0; }
         enum empty = false;
+        auto save() { return this; }
+    }
+    struct NonForwardInfRange
+    {
+        void popFront() { }
+        @property int front() { return 0; }
+        enum empty = false;
     }
 
     InfRange i;
+    NonForwardInfRange j;
     auto c = cycle(i);
     assert(c == i);
+    //make sure it requires a forward range even when infinite
+    static assert(!is(typeof(j.cycle)));
 }
 
 @safe unittest
