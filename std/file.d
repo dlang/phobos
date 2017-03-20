@@ -316,6 +316,7 @@ if (isInputRange!R && isSomeChar!(ElementEncodingType!R) && !isInfinite!R &&
     assert((cast(const(ubyte)[])read(deleteme)).length == 4);
 }
 
+/// ditto
 void[] read(R)(auto ref R name, size_t upTo = size_t.max)
 if (isConvertibleToString!R)
 {
@@ -498,6 +499,7 @@ if (isSomeString!S &&
     enforce(content == "abc");
 }
 
+/// ditto
 S readText(S = string, R)(auto ref R name)
 if (isConvertibleToString!R)
 {
@@ -546,6 +548,7 @@ if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || is
    assert(cast(int[]) read(deleteme) == a);
 }
 
+/// ditto
 void write(R)(auto ref R name, const void[] buffer)
 if (isConvertibleToString!R)
 {
@@ -594,6 +597,7 @@ if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || is
    assert(cast(int[]) read(deleteme) == a ~ b);
 }
 
+/// ditto
 void append(R)(auto ref R name, const void[] buffer)
 if (isConvertibleToString!R)
 {
@@ -709,6 +713,7 @@ if ((isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) ||
     renameImpl(f, t, fromz, toz);
 }
 
+/// ditto
 void rename(RF, RT)(auto ref RF from, auto ref RT to)
 if (isConvertibleToString!RF || isConvertibleToString!RT)
 {
@@ -790,6 +795,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         removeImpl(null, name.tempCString!FSChar());
 }
 
+/// ditto
 void remove(R)(auto ref R name)
 if (isConvertibleToString!R)
 {
@@ -898,6 +904,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     }
 }
 
+/// ditto
 ulong getSize(R)(auto ref R name)
 if (isConvertibleToString!R)
 {
@@ -990,6 +997,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     }
 }
 
+/// ditto
 void getTimes(R)(auto ref R name,
               out SysTime accessTime,
               out SysTime modificationTime)
@@ -1286,6 +1294,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     }
 }
 
+/// ditto
 void setTimes(R)(auto ref R name,
               SysTime accessTime,
               SysTime modificationTime)
@@ -1371,6 +1380,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     }
 }
 
+/// ditto
 SysTime timeLastModified(R)(auto ref R name)
 if (isConvertibleToString!R)
 {
@@ -1505,6 +1515,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     return existsImpl(name.tempCString!FSChar());
 }
 
+/// ditto
 bool exists(R)(auto ref R name)
 if (isConvertibleToString!R)
 {
@@ -1623,6 +1634,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     }
 }
 
+/// ditto
 uint getAttributes(R)(auto ref R name)
 if (isConvertibleToString!R)
 {
@@ -1678,6 +1690,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     }
 }
 
+/// ditto
 uint getLinkAttributes(R)(auto ref R name)
 if (isConvertibleToString!R)
 {
@@ -1732,6 +1745,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     }
 }
 
+/// ditto
 void setAttributes(R)(auto ref R name, uint attributes)
 if (isConvertibleToString!R)
 {
@@ -1775,6 +1789,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     }
 }
 
+/// ditto
 @property bool isDir(R)(auto ref R name)
 if (isConvertibleToString!R)
 {
@@ -1921,6 +1936,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         return (getAttributes(name) & S_IFMT) == S_IFREG;
 }
 
+/// ditto
 @property bool isFile(R)(auto ref R name)
 if (isConvertibleToString!R)
 {
@@ -2055,6 +2071,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         return (getLinkAttributes(name) & S_IFMT) == S_IFLNK;
 }
 
+/// ditto
 @property bool isSymlink(R)(auto ref R name)
 if (isConvertibleToString!R)
 {
@@ -2201,6 +2218,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     cenforce(trustedChdir(pathz), pathStr, pathz);
 }
 
+/// ditto
 void chdir(R)(auto ref R pathname)
 if (isConvertibleToString!R)
 {
@@ -2253,6 +2271,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     }
 }
 
+/// ditto
 void mkdir(R)(auto ref R pathname)
 if (isConvertibleToString!R)
 {
@@ -2397,6 +2416,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     cenforce(trustedRmdir(pathz), pathStr, pathz);
 }
 
+/// ditto
 void rmdir(R)(auto ref R pathname)
 if (isConvertibleToString!R)
 {
@@ -3380,6 +3400,7 @@ if (isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) && 
     copyImpl(f, t, fromz, toz, preserve);
 }
 
+/// ditto
 void copy(RF, RT)(auto ref RF from, auto ref RT to, PreserveAttributes preserve = preserveAttributesDefault)
 if (isConvertibleToString!RF || isConvertibleToString!RT)
 {
@@ -3887,8 +3908,8 @@ public:
     Returns an input range of DirEntry that lazily iterates a given directory,
     also provides two ways of foreach iteration. The iteration variable can be of
     type $(D_PARAM string) if only the name is needed, or $(D_PARAM DirEntry)
-    if additional details are needed. The span mode dictates the how the
-    directory is traversed. The name of the each directory entry iterated
+    if additional details are needed. The span mode dictates how the
+    directory is traversed. The name of each iterated directory entry
     contains the absolute path.
 
     Params:

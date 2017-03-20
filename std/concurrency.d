@@ -99,26 +99,20 @@ private
         MsgType type;
         Variant data;
 
-        this(T...)( MsgType t, T vals )
-            if ( T.length < 1 )
+        this(T...)(MsgType t, T vals) if (T.length > 0)
         {
-            static assert( false, "messages must contain at least one item" );
-        }
+            static if (T.length == 1)
+            {
+                type = t;
+                data = vals[0];
+            }
+            else
+            {
+                import std.typecons : Tuple;
 
-        this(T...)( MsgType t, T vals )
-            if ( T.length == 1 )
-        {
-            type = t;
-            data = vals[0];
-        }
-
-        this(T...)( MsgType t, T vals )
-            if ( T.length > 1 )
-        {
-            import std.typecons : Tuple;
-
-            type = t;
-            data = Tuple!(T)( vals );
+                type = t;
+                data = Tuple!(T)(vals);
+            }
         }
 
         @property auto convertsTo(T...)()
@@ -221,7 +215,8 @@ static ~this()
  */
 class MessageMismatch : Exception
 {
-    this( string msg = "Unexpected message type" ) @safe pure
+    ///
+    this( string msg = "Unexpected message type" ) @safe pure nothrow @nogc
     {
         super( msg );
     }
@@ -234,7 +229,8 @@ class MessageMismatch : Exception
  */
 class OwnerTerminated : Exception
 {
-    this( Tid t, string msg = "Owner terminated" ) @safe pure
+    ///
+    this( Tid t, string msg = "Owner terminated" ) @safe pure nothrow @nogc
     {
         super( msg );
         tid = t;
@@ -249,7 +245,8 @@ class OwnerTerminated : Exception
  */
 class LinkTerminated : Exception
 {
-    this( Tid t, string msg = "Link terminated" ) @safe pure
+    ///
+    this( Tid t, string msg = "Link terminated" ) @safe pure nothrow @nogc
     {
         super( msg );
         tid = t;
@@ -266,6 +263,7 @@ class LinkTerminated : Exception
  */
 class PriorityMessageException : Exception
 {
+    ///
     this( Variant vals )
     {
         super( "Priority message" );
@@ -285,7 +283,8 @@ class PriorityMessageException : Exception
  */
 class MailboxFull : Exception
 {
-    this( Tid t, string msg = "Mailbox full" ) @safe pure
+    ///
+    this( Tid t, string msg = "Mailbox full" ) @safe pure nothrow @nogc
     {
         super( msg );
         tid = t;
@@ -302,6 +301,7 @@ class MailboxFull : Exception
 class TidMissingException : Exception
 {
     import std.exception : basicExceptionCtors;
+    ///
     mixin basicExceptionCtors;
 }
 
@@ -315,7 +315,7 @@ class TidMissingException : Exception
 struct Tid
 {
 private:
-    this( MessageBox m ) @safe
+    this( MessageBox m ) @safe pure nothrow @nogc
     {
         mbox = m;
     }
@@ -354,18 +354,18 @@ public:
 
 
 /**
- * Returns the caller's Tid.
+ * Returns: The $(LREF Tid) of the caller's thread.
  */
 @property Tid thisTid() @safe
 {
     // TODO: remove when concurrency is safe
-    auto trus = delegate() @trusted
+    static auto trus() @trusted
     {
         if ( thisInfo.ident != Tid.init )
             return thisInfo.ident;
         thisInfo.ident = Tid( new MessageBox );
         return thisInfo.ident;
-    };
+    }
 
     return trus();
 }
@@ -897,7 +897,7 @@ enum OnCrowding
 
 private
 {
-    bool onCrowdingBlock( Tid tid ) @safe pure
+    bool onCrowdingBlock( Tid tid ) @safe pure nothrow @nogc
     {
         return true;
     }
@@ -909,7 +909,7 @@ private
     }
 
 
-    bool onCrowdingIgnore( Tid tid ) @safe pure
+    bool onCrowdingIgnore( Tid tid ) @safe pure nothrow @nogc
     {
         return false;
     }
@@ -930,7 +930,7 @@ private
  *  doThis   = The behavior executed when a message is sent to a full
  *             mailbox.
  */
-void setMaxMailboxSize( Tid tid, size_t messages, OnCrowding doThis )
+void setMaxMailboxSize( Tid tid, size_t messages, OnCrowding doThis ) @safe pure
 {
     final switch ( doThis )
     {
@@ -1083,7 +1083,7 @@ Tid locate( string name )
 /**
  * Encapsulates all implementation-level data needed for scheduling.
  *
- * When definining a Scheduler, an instance of this struct must be associated
+ * When defining a Scheduler, an instance of this struct must be associated
  * with each logical thread.  It contains all implementation-level information
  * needed by the internal API.
  */
@@ -1788,7 +1788,7 @@ private
      */
     class MessageBox
     {
-        this() @trusted /* TODO: make @safe after relevant druntime PR gets merged */
+        this() @trusted nothrow /* TODO: make @safe after relevant druntime PR gets merged */
         {
             m_lock      = new Mutex;
             m_closed    = false;
@@ -1806,7 +1806,7 @@ private
         }
 
         ///
-        final @property bool isClosed()
+        final @property bool isClosed() @safe @nogc pure
         {
             synchronized( m_lock )
             {
@@ -1825,7 +1825,7 @@ private
          *         unbounded.
          *  call = The routine to call when the queue is full.
          */
-        final void setMaxMsgs( size_t num, bool function(Tid) call )
+        final void setMaxMsgs( size_t num, bool function(Tid) call ) @safe @nogc pure
         {
             synchronized( m_lock )
             {
@@ -2119,7 +2119,7 @@ private
          */
         final void close()
         {
-            void onLinkDeadMsg( ref Message msg )
+            static void onLinkDeadMsg( ref Message msg )
             {
                 assert( msg.convertsTo!(Tid) );
                 auto tid = msg.get!(Tid);
@@ -2129,7 +2129,7 @@ private
                     thisInfo.owner = Tid.init;
             }
 
-            void sweep( ref ListT list )
+            static void sweep( ref ListT list )
             {
                 for ( auto range = list[]; !range.empty; range.popFront() )
                 {
@@ -2155,14 +2155,14 @@ private
         // Routines involving shared data, m_lock must be held.
 
 
-        bool mboxFull()
+        bool mboxFull() @safe @nogc pure nothrow
         {
             return m_maxMsgs &&
                    m_maxMsgs <= m_localMsgs + m_sharedBox.length;
         }
 
 
-        void updateMsgCount()
+        void updateMsgCount() @safe @nogc pure nothrow
         {
             m_localMsgs = m_localBox.length;
         }
@@ -2172,20 +2172,20 @@ private
         // Routines involving local data only, no lock needed.
 
 
-        pure bool isControlMsg( ref Message msg )
+        bool isControlMsg( ref Message msg ) @safe @nogc pure nothrow
         {
             return msg.type != MsgType.standard &&
                    msg.type != MsgType.priority;
         }
 
 
-        pure bool isPriorityMsg( ref Message msg )
+        bool isPriorityMsg( ref Message msg ) @safe @nogc pure nothrow
         {
             return msg.type == MsgType.priority;
         }
 
 
-        pure bool isLinkDeadMsg( ref Message msg )
+        bool isLinkDeadMsg( ref Message msg ) @safe @nogc pure nothrow
         {
             return msg.type == MsgType.linkDead;
         }

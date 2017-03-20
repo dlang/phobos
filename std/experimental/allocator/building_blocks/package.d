@@ -103,11 +103,12 @@ or linear time with a low multiplication factor). Traditional allocators such as
 the C heap do not define such functionality. If $(D b is null), the allocator
 shall return `Ternary.no`, i.e. no allocator owns the `null` slice.))
 
-$(TR $(TDC void[] resolveInternalPointer(void* p);) $(TD If $(D p) is a pointer
-somewhere inside a block allocated with this allocator, returns a pointer to the
-beginning of the allocated block. Otherwise, returns $(D null). If the pointer
-points immediately after an allocated block, the result is implementation
-defined.))
+$(TR $(TDC Ternary resolveInternalPointer(void* p, ref void[] result);) $(TD If
+`p` is a pointer somewhere inside a block allocated with this allocator,
+`result` holds a pointer to the beginning of the allocated block and returns
+`Ternary.yes`. Otherwise, `result` holds `null` and returns `Ternary.no`.
+If the pointer points immediately after an allocated block, the result is
+implementation defined.))
 
 $(TR $(TDC bool deallocate(void[] b);) $(TD If $(D b is null), does
 nothing and returns `true`. Otherwise, deallocates memory previously allocated

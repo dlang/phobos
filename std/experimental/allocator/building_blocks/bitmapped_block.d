@@ -996,22 +996,23 @@ struct BitmappedBlockWithInternalPointers(
     }
 
     /// Ditto
-    void[] resolveInternalPointer(void* p)
+    Ternary resolveInternalPointer(void* p, ref void[] result)
     {
         if (p < _heap._payload.ptr
             || p >= _heap._payload.ptr + _heap._payload.length)
         {
-            return null;
+            return Ternary.no;
         }
         // Find block start
         auto block = (p - _heap._payload.ptr) / _heap.blockSize;
-        if (block >= _allocStart.length) return null;
+        if (block >= _allocStart.length) return Ternary.no;
         // Within an allocation, must find the 1 just to the left of it
         auto i = _allocStart.find1Backward(block);
-        if (i == i.max) return null;
+        if (i == i.max) return Ternary.no;
         auto j = _allocStart.find1(i + 1);
-        return _heap._payload.ptr[cast(size_t) (_heap.blockSize * i)
-            .. cast(size_t) (_heap.blockSize * j)];
+        result = _heap._payload.ptr[cast(size_t) (_heap.blockSize * i)
+                                    .. cast(size_t) (_heap.blockSize * j)];
+        return Ternary.yes;
     }
 
     /// Ditto
@@ -1061,20 +1062,32 @@ struct BitmappedBlockWithInternalPointers(
 
 @system unittest
 {
+    import std.typecons : Ternary;
+
     auto h = BitmappedBlockWithInternalPointers!(4096)(new void[4096 * 1024]);
     auto b = h.allocate(123);
     assert(b.length == 123);
-    const p = h.resolveInternalPointer(b.ptr + 17);
+
+    void[] p;
+    Ternary r = h.resolveInternalPointer(b.ptr + 17, p);
     assert(p.ptr is b.ptr);
     assert(p.length >= b.length);
     b = h.allocate(4096);
-    assert(h.resolveInternalPointer(b.ptr) is b);
-    assert(h.resolveInternalPointer(b.ptr + 11) is b);
-    assert(h.resolveInternalPointer(b.ptr - 40_970) is null);
+
+    h.resolveInternalPointer(b.ptr, p);
+    assert(p is b);
+
+    h.resolveInternalPointer(b.ptr + 11, p);
+    assert(p is b);
+
+    void[] unchanged = p;
+    h.resolveInternalPointer(b.ptr - 40_970, p);
+    assert(p is unchanged);
 
     assert(h.expand(b, 1));
     assert(b.length == 4097);
-    assert(h.resolveInternalPointer(b.ptr + 4096).ptr is b.ptr);
+    h.resolveInternalPointer(b.ptr + 4096, p);
+    assert(p.ptr is b.ptr);
 }
 
 /**

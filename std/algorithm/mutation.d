@@ -78,7 +78,7 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 module std.algorithm.mutation;
 
 import std.range.primitives;
-import std.traits : isArray, isBlitAssignable, isNarrowString, Unqual;
+import std.traits : isArray, isBlitAssignable, isNarrowString, Unqual, isSomeChar;
 // FIXME
 import std.typecons; // : tuple, Tuple;
 
@@ -375,7 +375,7 @@ if (areCopyCompatibleArrays!(SourceRange, TargetRange))
     assert(tlen >= slen,
             "Cannot copy a source range into a smaller target range.");
 
-    immutable overlaps = () @trusted {
+    immutable overlaps = __ctfe || () @trusted {
         return source.ptr < target.ptr + tlen &&
                target.ptr < source.ptr + slen; }();
 
@@ -486,6 +486,14 @@ $(HTTP sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
     assert(dest == [0, 0, 1, 2, 4]);
 }
 
+// Test CTFE copy.
+@safe unittest
+{
+    enum c = copy([1,2,3], [4,5,6,7]);
+    assert(c == [7]);
+}
+
+
 @safe unittest
 {
     import std.algorithm.iteration : filter;
@@ -543,8 +551,9 @@ See_Also:
         $(LREF uninitializedFill)
         $(LREF initializeAll)
  */
-void fill(Range, Value)(Range range, Value value)
-if (isInputRange!Range && is(typeof(range.front = value)))
+void fill(Range, Value)(auto ref Range range, auto ref Value value)
+if ((isInputRange!Range && is(typeof(range.front = value)) ||
+    isSomeChar!Value && is(typeof(range[] = value))))
 {
     alias T = ElementType!Range;
 
@@ -572,6 +581,69 @@ if (isInputRange!Range && is(typeof(range.front = value)))
     fill(a, 5);
     assert(a == [ 5, 5, 5, 5 ]);
 }
+
+// issue 16342, test fallback on mutable narrow strings
+@safe unittest
+{
+    char[] chars = ['a', 'b'];
+    fill(chars, 'c');
+    assert(chars == "cc");
+
+    char[2] chars2 = ['a', 'b'];
+    fill(chars2, 'c');
+    assert(chars2 == "cc");
+
+    wchar[] wchars = ['a', 'b'];
+    fill(wchars, wchar('c'));
+    assert(wchars == "cc"w);
+
+    dchar[] dchars = ['a', 'b'];
+    fill(dchars, dchar('c'));
+    assert(dchars == "cc"d);
+}
+
+@nogc @safe unittest
+{
+    const(char)[] chars;
+    static assert(!__traits(compiles, fill(chars, 'c')));
+    wstring wchars;
+    static assert(!__traits(compiles, fill(wchars, wchar('c'))));
+}
+
+@nogc @safe unittest
+{
+    char[] chars;
+    fill(chars, 'c');
+    assert(chars == ""c);
+}
+
+@safe unittest
+{
+    shared(char)[] chrs = ['r'];
+    fill(chrs, 'c');
+    assert(chrs == [shared(char)('c')]);
+}
+
+@nogc @safe unittest
+{
+    struct Str(size_t len)
+    {
+        private char[len] _data;
+        void opIndexAssign(char value) @safe @nogc
+        {_data[] = value;}
+    }
+    Str!2 str;
+    str.fill(':');
+    assert(str._data == "::");
+}
+
+@safe unittest
+{
+    char[] chars = ['a','b','c','d'];
+    chars[1 .. 3].fill(':');
+    assert(chars == "a::d");
+}
+// end issue 16342
 
 @safe unittest
 {

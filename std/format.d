@@ -168,7 +168,7 @@ $(I Integer):
 $(I Digit):
     $(B '0')|$(B '1')|$(B '2')|$(B '3')|$(B '4')|$(B '5')|$(B '6')|$(B '7')|$(B '8')|$(B '9')
 $(I FormatChar):
-    $(B 's')|$(B 'c')|$(B 'b')|$(B 'd')|$(B 'o')|$(B 'x')|$(B 'X')|$(B 'e')|$(B 'E')|$(B 'f')|$(B 'F')|$(B 'g')|$(B 'G')|$(B 'a')|$(B 'A')
+    $(B 's')|$(B 'c')|$(B 'b')|$(B 'd')|$(B 'o')|$(B 'x')|$(B 'X')|$(B 'e')|$(B 'E')|$(B 'f')|$(B 'F')|$(B 'g')|$(B 'G')|$(B 'a')|$(B 'A')|$(B '|')
 )
 
     $(BOOKTABLE Flags affect formatting depending on the specifier as
@@ -325,20 +325,6 @@ $(I FormatChar):
     $(B infinity) if the
     $(I FormatChar) is lower case, or $(B INF) or $(B INFINITY) if upper.
 
-    Example:
-    -----------------
-    import std.array : appender;
-    import std.format : formattedWrite;
-
-    auto writer = appender!string();
-    formattedWrite(writer, "%s is the ultimate %s.", 42, "answer");
-    assert(writer.data == "42 is the ultimate answer.");
-    // Clear the writer
-    writer = appender!string();
-    formattedWrite(writer, "Date: %2$s %1$s", "October", 5);
-    assert(writer.data == "Date: 5 October");
-    -----------------
-
     The positional and non-positional styles can be mixed in the same
     format string. (POSIX leaves this behavior undefined.) The internal
     counter for non-positional parameters tracks the next parameter after
@@ -432,11 +418,36 @@ My friends are "John", "Nancy".
 My friends are John, Nancy.
 )
  */
+uint formattedWrite(alias fmt, Writer, A...)(Writer w, A args)
+if (isSomeString!(typeof(fmt)))
+{
+    alias e = checkFormatException!(fmt, A);
+    static assert(!e, e.msg);
+    return .formattedWrite(w, fmt, args);
+}
+
+/// The format string can be checked at compile-time (see $(LREF format) for details):
+@safe pure unittest
+{
+    import std.array : appender;
+    import std.format : formattedWrite;
+
+    auto writer = appender!string();
+    writer.formattedWrite!"%s is the ultimate %s."(42, "answer");
+    assert(writer.data == "42 is the ultimate answer.");
+
+    // Clear the writer
+    writer = appender!string();
+    formattedWrite(writer, "Date: %2$s %1$s", "October", 5);
+    assert(writer.data == "Date: 5 October");
+}
+
+/// ditto
 uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 {
     import std.conv : text, to;
 
-    alias FPfmt = void function(Writer, scope const(void)*, ref FormatSpec!Char) @safe pure nothrow;
+    alias FPfmt = void function(Writer, scope const(void)*, const ref FormatSpec!Char) @safe pure nothrow;
 
     auto spec = FormatSpec!Char(fmt);
 
@@ -596,6 +607,19 @@ uint formattedRead(R, Char, T, S...)(ref R r, const(Char)[] fmt, auto ref T* arg
 /// ditto
 uint formattedRead(R, Char, T, S...)(ref R r, const(Char)[] fmt, ref T arg, auto ref S args)
     if (!is(T : const(S*), S))
+
+/// ditto
+uint formattedRead(alias fmt, R, S...)(ref R r, auto ref S args)
+if (isSomeString!(typeof(fmt)))
+{
+    alias e = checkFormatException!(fmt, S);
+    static assert(!e, e.msg);
+    return .formattedRead(r, fmt, args);
+}
+
+/// ditto
+uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, auto ref S args)
+
 {
     import std.typecons : isTuple;
 
@@ -634,14 +658,14 @@ uint formattedRead(R, Char, T, S...)(ref R r, const(Char)[] fmt, ref T arg, auto
     return 1 + formattedRead(r, spec.trailing, forward!args);
 }
 
-///
+/// The format string can be checked at compile-time (see $(LREF format) for details):
 @safe pure unittest
 {
     string s = "hello!124:34.5";
     string a;
     int b;
     double c;
-    formattedRead(s, "%s!%s:%s", a, b, c);
+    s.formattedRead!"%s!%s:%s"(a, b, c);
     assert(a == "hello" && b == 124 && c == 34.5);
 }
 
@@ -1543,10 +1567,10 @@ if (is(Unqual!Char == Char))
 
 /**
 Helper function that returns a $(D FormatSpec) for a single specifier given
-in $(D fmt)
+in $(D fmt).
 
 Params:
-    fmt = A format specifier
+    fmt = A format specifier.
 
 Returns:
     A $(D FormatSpec) with the specifier parsed.
@@ -1599,7 +1623,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
 if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     BooleanTypeOf!T val = obj;
@@ -1681,7 +1705,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
 if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 {
     enforceFmt(f.spec == 's',
@@ -1717,7 +1741,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
 if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     alias U = IntegralTypeOf!T;
@@ -1960,6 +1984,8 @@ private void formatUnsigned(Writer, T, Char)(Writer w, T arg, const ref FormatSp
     assert(result == "9");
 }
 
+private enum ctfpMessage = "Cannot format floating point types at compile-time";
+
 /**
 Floating-point values are formatted like $(D printf) does.
 
@@ -1968,7 +1994,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
 if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     import std.algorithm.searching : find;
@@ -1996,6 +2022,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     }
     enforceFmt(find("fgFGaAeEs", fs.spec).length,
         "incompatible format character for floating point type");
+    enforceFmt(!__ctfe, ctfpMessage);
 
     version (CRuntime_Microsoft)
     {
@@ -2013,7 +2040,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
           {
             return formatValue(w, s, f);
           }
-          else  // FIXME:workaroun
+          else  // FIXME:workaround
           {
             s = s[0 .. f.precision < $ ? f.precision : $];
             if (!f.flDash)
@@ -2118,7 +2145,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
 if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
 {
     immutable creal val = obj;
@@ -2174,7 +2201,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
 if (is(Unqual!T : ireal) && !is(T == enum) && !hasToString!(T, Char))
 {
     immutable ireal val = obj;
@@ -2221,7 +2248,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
 if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     CharTypeOf!T val = obj;
@@ -2294,7 +2321,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
 if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     Unqual!(StringTypeOf!T) val = obj;  // for `alias this`, see bug5371
@@ -2372,7 +2399,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, auto ref T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, auto ref T obj, const ref FormatSpec!Char f)
 if (is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     formatValue(w, obj[], f);
@@ -2415,7 +2442,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
 if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     static if (is(const(ArrayTypeOf!T) == const(void[])))
@@ -2629,7 +2656,7 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
 }
 
 // input range formatting
-private void formatRange(Writer, T, Char)(ref Writer w, ref T val, ref FormatSpec!Char f)
+private void formatRange(Writer, T, Char)(ref Writer w, ref T val, const ref FormatSpec!Char f)
 if (isInputRange!T)
 {
     import std.conv : text;
@@ -2831,7 +2858,7 @@ private void formatChar(Writer)(Writer w, in dchar c, in char quote)
 
 // undocumented because of deprecation
 // string elements are formatted like UTF-8 string literals.
-void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatElement(Writer, T, Char)(Writer w, T val, const ref FormatSpec!Char f)
 if (is(StringTypeOf!T) && !is(T == enum))
 {
     import std.utf : UTFException;
@@ -2916,7 +2943,7 @@ if (is(StringTypeOf!T) && !is(T == enum))
 
 // undocumented because of deprecation
 // Character elements are formatted like UTF-8 character literals.
-void formatElement(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatElement(Writer, T, Char)(Writer w, T val, const ref FormatSpec!Char f)
 if (is(CharTypeOf!T) && !is(T == enum))
 {
     if (f.spec == 's')
@@ -2942,7 +2969,7 @@ if (is(CharTypeOf!T) && !is(T == enum))
 
 // undocumented
 // Maybe T is noncopyable struct, so receive it by 'auto ref'.
-void formatElement(Writer, T, Char)(Writer w, auto ref T val, ref FormatSpec!Char f)
+void formatElement(Writer, T, Char)(Writer w, auto ref T val, const ref FormatSpec!Char f)
 if (!is(StringTypeOf!T) && !is(CharTypeOf!T) || is(T == enum))
 {
     formatValue(w, val, f);
@@ -2957,7 +2984,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
 if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     AssocArrayTypeOf!T val = obj;
@@ -3099,7 +3126,7 @@ template hasToString(T, Char)
 }
 
 // object formatting with toString
-private void formatObject(Writer, T, Char)(ref Writer w, ref T val, ref FormatSpec!Char f)
+private void formatObject(Writer, T, Char)(ref Writer w, ref T val, const ref FormatSpec!Char f)
 if (hasToString!(T, Char))
 {
     static if (is(typeof(val.toString((const(char)[] s){}, f))))
@@ -3122,7 +3149,7 @@ if (hasToString!(T, Char))
         static assert(0);
 }
 
-void enforceValidFormatSpec(T, Char)(ref FormatSpec!Char f)
+void enforceValidFormatSpec(T, Char)(const ref FormatSpec!Char f)
 {
     static if (!isInputRange!T && hasToString!(T, Char) != 4)
     {
@@ -3200,7 +3227,7 @@ const string toString();
 
    Otherwise, are formatted just as their type name.
  */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T val, const ref FormatSpec!Char f)
 if (is(T == class) && !is(T == enum))
 {
     enforceValidFormatSpec!(T, Char)(f);
@@ -3319,7 +3346,7 @@ if (is(T == class) && !is(T == enum))
     class C1
     {
         mixin(inputRangeCode);
-        void toString(scope void delegate(const(char)[]) dg, ref FormatSpec!char f) const { dg("[012]"); }
+        void toString(scope void delegate(const(char)[]) dg, const ref FormatSpec!char f) const { dg("[012]"); }
     }
     class C2
     {
@@ -3349,7 +3376,7 @@ if (is(T == class) && !is(T == enum))
 }
 
 /// ditto
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T val, const ref FormatSpec!Char f)
 if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
 {
     enforceValidFormatSpec!(T, Char)(f);
@@ -3429,7 +3456,7 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
 
 /// ditto
 // Maybe T is noncopyable struct, so receive it by 'auto ref'.
-void formatValue(Writer, T, Char)(Writer w, auto ref T val, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, auto ref T val, const ref FormatSpec!Char f)
 if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
 {
     enforceValidFormatSpec!(T, Char)(f);
@@ -3564,7 +3591,7 @@ Params:
     val = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T val, const ref FormatSpec!Char f)
 if (is(T == enum))
 {
     if (f.spec == 's')
@@ -3633,7 +3660,7 @@ if (is(T == enum))
 /**
    Pointers are formatted as hex integers.
  */
-void formatValue(Writer, T, Char)(Writer w, T val, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, T val, const ref FormatSpec!Char f)
 if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 {
     static if (isInputRange!T)
@@ -3738,7 +3765,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 /**
    Delegates are formatted by 'ReturnType delegate(Parameters) FunctionAttributes'
  */
-void formatValue(Writer, T, Char)(Writer w, scope T, ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(Writer w, scope T, const ref FormatSpec!Char f)
 if (isDelegate!T)
 {
     formatValue(w, T.stringof, f);
@@ -3777,12 +3804,12 @@ if (isDelegate!T)
   'D'. The untyped signature is for the sake of taking this function's
   address.
  */
-private void formatGeneric(Writer, D, Char)(Writer w, const(void)* arg, ref FormatSpec!Char f)
+private void formatGeneric(Writer, D, Char)(Writer w, const(void)* arg, const ref FormatSpec!Char f)
 {
     formatValue(w, *cast(D*) arg, f);
 }
 
-private void formatNth(Writer, Char, A...)(Writer w, ref FormatSpec!Char f, size_t index, A args)
+private void formatNth(Writer, Char, A...)(Writer w, const ref FormatSpec!Char f, size_t index, A args)
 {
     import std.conv : to;
     static string gencode(size_t count)()
@@ -4561,7 +4588,7 @@ void formatReflectTest(T)(ref T val, string fmt, string[] formatted, string fn =
 }
 
 //------------------------------------------------------------------------------
-private void skipData(Range, Char)(ref Range input, ref FormatSpec!Char spec)
+private void skipData(Range, Char)(ref Range input, const ref FormatSpec!Char spec)
 {
     import std.ascii : isDigit;
     import std.conv : text;
@@ -4604,7 +4631,7 @@ private template acceptedSpecs(T)
  * See_Also:
  *     $(REF parse, std, conv) and $(REF to, std, conv)
  */
-T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+T unformatValue(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
 {
     return unformatValueImpl!T(input, spec);
 }
@@ -4716,7 +4743,7 @@ T unformatValue(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
     assert(result[0] == 'a');
 }
 
-private T unformatValueImpl(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+private T unformatValueImpl(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
 if (isInputRange!Range && is(Unqual!T == bool))
 {
     import std.algorithm.searching : find;
@@ -4730,7 +4757,7 @@ if (isInputRange!Range && is(Unqual!T == bool))
     return unformatValue!long(input, spec) != 0;
 }
 
-private T unformatValueImpl(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+private T unformatValueImpl(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
 if (isInputRange!Range && is(T == typeof(null)))
 {
     import std.conv : parse, text;
@@ -4741,7 +4768,7 @@ if (isInputRange!Range && is(T == typeof(null)))
 }
 
 /// ditto
-private T unformatValueImpl(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+private T unformatValueImpl(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
 if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
 
@@ -4775,7 +4802,7 @@ if (isInputRange!Range && isIntegral!T && !is(T == enum) && isSomeChar!(ElementT
 }
 
 /// ditto
-private T unformatValueImpl(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+private T unformatValueImpl(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
 if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
     && isSomeChar!(ElementType!Range)&& !is(Range == enum))
 {
@@ -4799,7 +4826,7 @@ if (isFloatingPoint!T && !is(T == enum) && isInputRange!Range
 }
 
 /// ditto
-private T unformatValueImpl(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+private T unformatValueImpl(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
 if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
     import std.algorithm.searching : find;
@@ -4824,7 +4851,7 @@ if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementT
 }
 
 /// ditto
-private T unformatValueImpl(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+private T unformatValueImpl(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
 if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
 {
     import std.conv : text;
@@ -4877,7 +4904,7 @@ if (isInputRange!Range && is(StringTypeOf!T) && !isAggregateType!T && !is(T == e
 }
 
 /// ditto
-private T unformatValueImpl(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+private T unformatValueImpl(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
 if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T && !is(T == enum))
 {
     import std.conv : parse, text;
@@ -4892,7 +4919,7 @@ if (isInputRange!Range && isArray!T && !is(StringTypeOf!T) && !isAggregateType!T
 }
 
 /// ditto
-private T unformatValueImpl(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+private T unformatValueImpl(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
 if (isInputRange!Range && isAssociativeArray!T && !is(T == enum))
 {
     import std.conv : parse, text;
@@ -4940,7 +4967,7 @@ if (is(Unqual!(ElementEncodingType!Range) == char)
 
 //debug = unformatRange;
 
-private T unformatRange(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+private T unformatRange(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
 in
 {
     assert(spec.spec == '(');
@@ -5041,7 +5068,7 @@ body
 }
 
 // Undocumented
-T unformatElement(T, Range, Char)(ref Range input, ref FormatSpec!Char spec)
+T unformatElement(T, Range, Char)(ref Range input, const ref FormatSpec!Char spec)
 if (isInputRange!Range)
 {
     import std.conv : parseElement;
@@ -5148,7 +5175,7 @@ private TypeInfo primitiveTypeInfo(Mangle m)
     return p ? *p : null;
 }
 
-private bool needToSwapEndianess(Char)(ref FormatSpec!Char f)
+private bool needToSwapEndianess(Char)(const ref FormatSpec!Char f)
 {
     import std.system : endian, Endian;
 
@@ -5483,12 +5510,42 @@ private bool needToSwapEndianess(Char)(ref FormatSpec!Char f)
     assert(stream.data == "C");
 }
 
+// Used to check format strings are compatible with argument types
+package static const checkFormatException(alias fmt, Args...) =
+{
+    try
+        .format(fmt, Args.init);
+    catch (Exception e)
+        return (e.msg == ctfpMessage) ? null : e;
+    return null;
+}();
+
 /*****************************************************
  * Format arguments into a string.
  *
- * Params: fmt  = Format string. For detailed specification, see $(REF formattedWrite, std,_format).
- *         args = Variadic list of arguments to format into returned string.
+ * Params: fmt  = Format string. For detailed specification, see $(LREF formattedWrite).
+ *         args = Variadic list of arguments to _format into returned string.
  */
+typeof(fmt) format(alias fmt, Args...)(Args args)
+if (isSomeString!(typeof(fmt)))
+{
+    alias e = checkFormatException!(fmt, Args);
+    static assert(!e, e.msg);
+    return .format(fmt, args);
+}
+
+/// Type checking can be done when fmt is known at compile-time:
+@safe unittest
+{
+    auto s = format!"%s is %s"("Pi", 3.14);
+    assert(s == "Pi is 3.14");
+
+    static assert(!__traits(compiles, {s = format!"%l"();}));     // missing arg
+    static assert(!__traits(compiles, {s = format!""(404);}));    // surplus arg
+    static assert(!__traits(compiles, {s = format!"%d"(4.03);})); // incompatible arg
+}
+
+/// ditto
 immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args)
 if (isSomeChar!Char)
 {
@@ -5557,6 +5614,15 @@ if (isSomeChar!Char)
  *     A $(LREF FormatException) if the length of `args` is different
  *     than the number of format specifiers in `fmt`.
  */
+char[] sformat(alias fmt, Args...)(char[] buf, Args args)
+if (isSomeString!(typeof(fmt)))
+{
+    alias e = checkFormatException!(fmt, Args);
+    static assert(!e, e.msg);
+    return .sformat(buf, fmt, args);
+}
+
+/// ditto
 char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
 {
     import core.exception : onRangeError;
@@ -5612,12 +5678,12 @@ char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
     return buf[0 .. i];
 }
 
-///
+/// The format string can be checked at compile-time (see $(LREF format) for details):
 @system unittest
 {
     char[10] buf;
 
-    assert(sformat(buf[], "foo%s", 'C') == "fooC");
+    assert(buf[].sformat!"foo%s"('C') == "fooC");
     assert(sformat(buf[], "%s foo", "bar") == "bar foo");
 }
 
