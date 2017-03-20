@@ -471,13 +471,6 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
     uint currentArg = 0;
     while (spec.writeUpToNextSpec(w))
     {
-        if (currentArg == funs.length && !spec.indexStart)
-        {
-            // leftover spec?
-            enforceFmt(fmt.length == 0,
-                text("Orphan format specifier: %", spec.spec));
-            break;
-        }
         if (spec.width == spec.DYNAMIC)
         {
             auto width = to!(typeof(spec.width))(getNthInt(currentArg, args));
@@ -524,6 +517,13 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
             // else negative precision is same as no precision
             else spec.precision = spec.UNSPECIFIED;
         }
+        if (currentArg == A.length && !spec.indexStart)
+        {
+            // leftover spec?
+            enforceFmt(fmt.length == 0,
+                text("Orphan format specifier: %", spec.spec));
+            break;
+        }
         // Format!
         if (spec.indexStart > 0)
         {
@@ -534,7 +534,7 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
             {
                 foreach (i; spec.indexStart - 1 .. spec.indexEnd)
                 {
-                    if (funs.length <= i) break;
+                    if (A.length <= i) break;
                     if (__ctfe)
                         formatNth(w, spec, i, args);
                     else
@@ -3841,8 +3841,16 @@ private int getNthInt(A...)(uint index, A args)
     }
     else
     {
-        throw new FormatException("int expected");
+        throw new FormatException("missing integer width/precision argument");
     }
+}
+
+@safe unittest
+{
+    assertThrown!FormatException(format("%*.d", 5.1, 2));   // float width
+    assertThrown!FormatException(format("%.*d", 5.1, 2));   // float precision
+    assertThrown!FormatException(format("%*.d", 5));        // missing arg
+    assertThrown!FormatException(format("%*.*d", 5, 4));    // missing arg
 }
 
 /* ======================== Unit Tests ====================================== */
