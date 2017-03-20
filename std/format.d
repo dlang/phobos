@@ -1678,7 +1678,7 @@ void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
 if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 {
     enforceFmt(f.spec == 's',
-        "null");
+        "null literal cannot match %" ~ f.spec);
 
     put(w, "null");
 }
@@ -1742,7 +1742,7 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         f.spec == 's' || f.spec == 'd' || f.spec == 'u' ? 10 :
         0;
     enforceFmt(base > 0,
-        "integral");
+        "incompatible format character for integral argument: %" ~ f.spec);
 
     // Forward on to formatIntegral to handle both U and const(U)
     // Saves duplication of code for both versions.
@@ -1990,7 +1990,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         return;
     }
     enforceFmt(find("fgFGaAeEs", fs.spec).length,
-        "incompatible format character for floating point type");
+        "incompatible format character for floating point argument: %" ~ fs.spec);
     enforceFmt(!__ctfe, ctfpMessage);
 
     version (CRuntime_Microsoft)
@@ -2959,7 +2959,7 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     AssocArrayTypeOf!T val = obj;
 
     enforceFmt(f.spec == 's' || f.spec == '(',
-        "associative");
+        "incompatible format character for associative array argument: %" ~ f.spec);
 
     enum const(Char)[] defSpec = "%s" ~ f.keySeparator ~ "%s" ~ f.seqSeparator;
     auto fmtSpec = f.spec == '(' ? f.nested : defSpec;
@@ -3822,6 +3822,7 @@ private void formatNth(Writer, Char, A...)(Writer w, const ref FormatSpec!Char f
 private int getNthInt(A...)(uint index, A args)
 {
     import std.conv : to;
+
     static if (A.length)
     {
         if (index)
@@ -3834,7 +3835,8 @@ private int getNthInt(A...)(uint index, A args)
         }
         else
         {
-            throw new FormatException("int expected");
+            throw new FormatException("width/precision must be an integer, not "
+                ~ typeof(args[0]).stringof);
         }
     }
     else
