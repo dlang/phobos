@@ -570,6 +570,7 @@ to $(D fmt), and writes them to $(D args).
 Params:
     r = The range to read from.
     fmt = The format of the data to read.
+    arg = The next data to read.
     args = The drain of the data read.
 
 Returns:
@@ -589,66 +590,62 @@ if (isSomeString!(typeof(fmt)))
     return .formattedRead(r, fmt, args);
 }
 
+uint formattedRead(R, Char)(ref R r, const(Char)[] fmt)
+{
+    auto spec = FormatSpec!Char(fmt);
+    spec.readUpToNextSpec(r);
+    enforce(spec.trailing.empty, "Trailing characters in formattedRead format string");
+    return 0;
+}
+
+///ditto
+uint formattedRead(R, Char, T, S...)(ref R r, const(Char)[] fmt, auto ref T* arg, auto ref S args)
+{
+    import std.functional : forward;
+    return formattedRead(r, fmt, *arg, forward!args);
+}
+
 /// ditto
-uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, auto ref S args)
+uint formattedRead(R, Char, T, S...)(ref R r, const(Char)[] fmt, ref T arg, auto ref S args)
+if (!is(T : const(S*), S))
 {
     import std.typecons : isTuple;
 
     auto spec = FormatSpec!Char(fmt);
-    static if (!S.length)
+
+    // The function below accounts for '*' == fields meant to be
+    // read and skipped
+    void skipUnstoredFields()
     {
-        spec.readUpToNextSpec(r);
-        enforce(spec.trailing.empty, "Trailing characters in formattedRead format string");
-        return 0;
+        for (;;)
+        {
+            spec.readUpToNextSpec(r);
+            if (spec.width != spec.DYNAMIC) break;
+            // must skip this field
+            skipData(r, spec);
+        }
+    }
+
+    skipUnstoredFields();
+    if (r.empty) return 0;  // Input is empty, nothing to read
+
+    alias A = typeof(arg);
+
+    static if (isTuple!A)
+    {
+        foreach (i, T; A.Types)
+        {
+            arg[i] = unformatValue!(T)(r, spec);
+            skipUnstoredFields();
+        }
     }
     else
     {
-        enum hasPointer = isPointer!(typeof(args[0]));
-
-        // The function below accounts for '*' == fields meant to be
-        // read and skipped
-        void skipUnstoredFields()
-        {
-            for (;;)
-            {
-                spec.readUpToNextSpec(r);
-                if (spec.width != spec.DYNAMIC) break;
-                // must skip this field
-                skipData(r, spec);
-            }
-        }
-
-        skipUnstoredFields();
-        if (r.empty)
-        {
-            // Input is empty, nothing to read
-            return 0;
-        }
-        static if (hasPointer)
-            alias A = typeof(*args[0]);
-        else
-            alias A = typeof(args[0]);
-
-        static if (isTuple!A)
-        {
-            foreach (i, T; A.Types)
-            {
-                static if (hasPointer)
-                    (*args[0])[i] = unformatValue!(T)(r, spec);
-                else
-                    args[0][i] = unformatValue!(T)(r, spec);
-                skipUnstoredFields();
-            }
-        }
-        else
-        {
-            static if (hasPointer)
-                *args[0] = unformatValue!(A)(r, spec);
-            else
-                args[0] = unformatValue!(A)(r, spec);
-        }
-        return 1 + formattedRead(r, spec.trailing, args[1 .. $]);
+        arg = unformatValue!(A)(r, spec);
     }
+
+    import std.functional : forward;
+    return 1 + formattedRead(r, spec.trailing, forward!args);
 }
 
 /// The format string can be checked at compile-time (see $(LREF format) for details):
@@ -711,46 +708,46 @@ uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, auto ref S args)
     assert(isNaN(z));
 }
 
-@system pure unittest
+@safe pure unittest
 {
     string line;
 
     bool f1;
 
     line = "true";
-    formattedRead(line, "%s", &f1);
+    formattedRead(line, "%s", f1);
     assert(f1);
 
     line = "TrUE";
-    formattedRead(line, "%s", &f1);
+    formattedRead(line, "%s", f1);
     assert(f1);
 
     line = "false";
-    formattedRead(line, "%s", &f1);
+    formattedRead(line, "%s", f1);
     assert(!f1);
 
     line = "fALsE";
-    formattedRead(line, "%s", &f1);
+    formattedRead(line, "%s", f1);
     assert(!f1);
 
     line = "1";
-    formattedRead(line, "%d", &f1);
+    formattedRead(line, "%d", f1);
     assert(f1);
 
     line = "-1";
-    formattedRead(line, "%d", &f1);
+    formattedRead(line, "%d", f1);
     assert(f1);
 
     line = "0";
-    formattedRead(line, "%d", &f1);
+    formattedRead(line, "%d", f1);
     assert(!f1);
 
     line = "-0";
-    formattedRead(line, "%d", &f1);
+    formattedRead(line, "%d", f1);
     assert(!f1);
 }
 
-@system pure unittest
+@safe pure unittest
 {
      union B
      {
@@ -761,11 +758,11 @@ uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, auto ref S args)
      b.typed = 5;
      char[] input = b.untyped[];
      int witness;
-     formattedRead(input, "%r", &witness);
+     formattedRead(input, "%r", witness);
      assert(witness == b.typed);
 }
 
-@system pure unittest
+@safe pure unittest
 {
     union A
     {
@@ -776,156 +773,180 @@ uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, auto ref S args)
     a.typed = 5.5;
     char[] input = a.untyped[];
     float witness;
-    formattedRead(input, "%r", &witness);
+    formattedRead(input, "%r", witness);
     assert(witness == a.typed);
 }
 
-@system pure unittest
+@safe pure unittest
 {
     import std.typecons;
     char[] line = "1 2".dup;
     int a, b;
-    formattedRead(line, "%s %s", &a, &b);
+    formattedRead(line, "%s %s", a, b);
     assert(a == 1 && b == 2);
 
     line = "10 2 3".dup;
-    formattedRead(line, "%d ", &a);
+    formattedRead(line, "%d ", a);
     assert(a == 10);
     assert(line == "2 3");
 
     Tuple!(int, float) t;
     line = "1 2.125".dup;
-    formattedRead(line, "%d %g", &t);
+    formattedRead(line, "%d %g", t);
     assert(t[0] == 1 && t[1] == 2.125);
 
     line = "1 7643 2.125".dup;
-    formattedRead(line, "%s %*u %s", &t);
+    formattedRead(line, "%s %*u %s", t);
     assert(t[0] == 1 && t[1] == 2.125);
 }
 
-@system pure unittest
+@safe pure unittest
 {
     string line;
 
     char c1, c2;
 
     line = "abc";
-    formattedRead(line, "%s%c", &c1, &c2);
+    formattedRead(line, "%s%c", c1, c2);
     assert(c1 == 'a' && c2 == 'b');
     assert(line == "c");
 }
 
-@system pure unittest
+@safe pure unittest
 {
     string line;
 
     line = "[1,2,3]";
     int[] s1;
-    formattedRead(line, "%s", &s1);
+    formattedRead(line, "%s", s1);
     assert(s1 == [1,2,3]);
 }
 
-@system pure unittest
+@safe pure unittest
 {
     string line;
 
     line = "[1,2,3]";
     int[] s1;
-    formattedRead(line, "[%(%s,%)]", &s1);
+    formattedRead(line, "[%(%s,%)]", s1);
     assert(s1 == [1,2,3]);
 
     line = `["hello", "world"]`;
     string[] s2;
-    formattedRead(line, "[%(%s, %)]", &s2);
+    formattedRead(line, "[%(%s, %)]", s2);
     assert(s2 == ["hello", "world"]);
 
     line = "123 456";
     int[] s3;
-    formattedRead(line, "%(%s %)", &s3);
+    formattedRead(line, "%(%s %)", s3);
     assert(s3 == [123, 456]);
 
     line = "h,e,l,l,o; w,o,r,l,d";
     string[] s4;
-    formattedRead(line, "%(%(%c,%); %)", &s4);
+    formattedRead(line, "%(%(%c,%); %)", s4);
     assert(s4 == ["hello", "world"]);
 }
 
-@system pure unittest
+@safe pure unittest
 {
     string line;
 
     int[4] sa1;
     line = `[1,2,3,4]`;
-    formattedRead(line, "%s", &sa1);
+    formattedRead(line, "%s", sa1);
     assert(sa1 == [1,2,3,4]);
 
     int[4] sa2;
     line = `[1,2,3]`;
-    assertThrown(formattedRead(line, "%s", &sa2));
+    assertThrown(formattedRead(line, "%s", sa2));
 
     int[4] sa3;
     line = `[1,2,3,4,5]`;
-    assertThrown(formattedRead(line, "%s", &sa3));
+    assertThrown(formattedRead(line, "%s", sa3));
 }
 
-@system pure unittest
+@safe pure unittest
 {
     string input;
 
     int[4] sa1;
     input = `[1,2,3,4]`;
-    formattedRead(input, "[%(%s,%)]", &sa1);
+    formattedRead(input, "[%(%s,%)]", sa1);
     assert(sa1 == [1,2,3,4]);
 
     int[4] sa2;
     input = `[1,2,3]`;
-    assertThrown(formattedRead(input, "[%(%s,%)]", &sa2));
+    assertThrown(formattedRead(input, "[%(%s,%)]", sa2));
 }
 
-@system pure unittest
+@safe pure unittest
 {
     string line;
 
     string s1, s2;
 
     line = "hello, world";
-    formattedRead(line, "%s", &s1);
+    formattedRead(line, "%s", s1);
     assert(s1 == "hello, world", s1);
 
     line = "hello, world;yah";
-    formattedRead(line, "%s;%s", &s1, &s2);
+    formattedRead(line, "%s;%s", s1, s2);
     assert(s1 == "hello, world", s1);
     assert(s2 == "yah", s2);
 
     line = `['h','e','l','l','o']`;
     string s3;
-    formattedRead(line, "[%(%s,%)]", &s3);
+    formattedRead(line, "[%(%s,%)]", s3);
     assert(s3 == "hello");
 
     line = `"hello"`;
     string s4;
-    formattedRead(line, "\"%(%c%)\"", &s4);
+    formattedRead(line, "\"%(%c%)\"", s4);
     assert(s4 == "hello");
 }
 
-@system pure unittest
+@safe pure unittest
 {
     string line;
 
     string[int] aa1;
     line = `[1:"hello", 2:"world"]`;
-    formattedRead(line, "%s", &aa1);
+    formattedRead(line, "%s", aa1);
     assert(aa1 == [1:"hello", 2:"world"]);
 
     int[string] aa2;
     line = `{"hello"=1; "world"=2}`;
-    formattedRead(line, "{%(%s=%s; %)}", &aa2);
+    formattedRead(line, "{%(%s=%s; %)}", aa2);
     assert(aa2 == ["hello":1, "world":2]);
 
     int[string] aa3;
     line = `{[hello=1]; [world=2]}`;
-    formattedRead(line, "{%([%(%c%)=%s]%|; %)}", &aa3);
+    formattedRead(line, "{%([%(%c%)=%s]%|; %)}", aa3);
     assert(aa3 == ["hello":1, "world":2]);
+}
+
+@safe pure unittest
+{
+    int* p;
+    // reading pointers not supported.
+    static assert(!__traits(compiles,
+        formattedRead("%p", p) // new interface
+    ));
+
+    ref returnsPtrByRef() { return p; }
+
+    static assert(!__traits(compiles,
+        formattedRead("%p", returnsPtrByRef()) // new interface
+    ));
+}
+
+@system pure unittest
+{
+    int* p;
+    // reading pointers not supported.
+    static assert(!__traits(compiles,
+        formattedRead("%p", &p) // deprecated interface
+    ));
 }
 
 template FormatSpec(Char)
@@ -4365,7 +4386,7 @@ here:
     string a;
     int b;
     double c;
-    formattedRead(s, "%s!%s:%s", &a, &b, &c);
+    formattedRead(s, "%s!%s:%s", a, b, c);
     assert(a == "hello" && b == 124 && c == 34.5);
 }
 
@@ -4383,7 +4404,7 @@ void formatReflectTest(T)(ref T val, string fmt, string formatted, string fn = _
             input, fn, ln);
 
     T val2;
-    formattedRead(input, fmt, &val2);
+    formattedRead(input, fmt, val2);
     static if (isAssociativeArray!T)
     if (__ctfe)
     {

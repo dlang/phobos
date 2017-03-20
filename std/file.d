@@ -4210,7 +4210,7 @@ slurp(Types...)(string filename, in char[] format)
     scope(exit) f.close();
     foreach (line; f.byLine())
     {
-        formattedRead(line, format, &toAdd);
+        formattedRead(line, format, toAdd);
         enforce(line.empty,
                 text("Trailing characters at the end of line: `", line,
                         "'"));
