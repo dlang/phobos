@@ -597,6 +597,15 @@ uint formattedRead(R, Char)(ref R r, const(Char)[] fmt)
 }
 
 /// ditto
+uint formattedRead(alias fmt, R, S...)(ref R r, auto ref S args)
+if (isSomeString!(typeof(fmt)))
+{
+    alias e = checkFormatException!(fmt, S);
+    static assert(!e, e.msg);
+    return .formattedRead(r, fmt, args);
+}
+
+/// ditto
 deprecated("do not use pointers as parameters; dereference the pointer and let it bind by ref insted")
 uint formattedRead(R, Char, T, S...)(ref R r, const(Char)[] fmt, auto ref T* arg, auto ref S args)
 {
@@ -607,19 +616,6 @@ uint formattedRead(R, Char, T, S...)(ref R r, const(Char)[] fmt, auto ref T* arg
 /// ditto
 uint formattedRead(R, Char, T, S...)(ref R r, const(Char)[] fmt, ref T arg, auto ref S args)
     if (!is(T : const(S*), S))
-
-/// ditto
-uint formattedRead(alias fmt, R, S...)(ref R r, auto ref S args)
-if (isSomeString!(typeof(fmt)))
-{
-    alias e = checkFormatException!(fmt, S);
-    static assert(!e, e.msg);
-    return .formattedRead(r, fmt, args);
-}
-
-/// ditto
-uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, auto ref S args)
-
 {
     import std.typecons : isTuple;
 
