@@ -1450,6 +1450,12 @@ Throws: $(D Exception) if the file is not opened.
 Writes its arguments in text format to the file, according to the
 format string fmt.
 
+Params:
+fmt = The $(LINK2 std_format.html#format-string, format string).
+When passed as a compile-time argument, the string will be statically checked
+against the argument types passed.
+args = Items to write.
+
 Throws: $(D Exception) if the file is not opened.
         $(D ErrnoException) on an error writing to the file.
 */
@@ -1471,13 +1477,7 @@ Throws: $(D Exception) if the file is not opened.
         formattedWrite(lockingTextWriter(), fmt, args);
     }
 
-/**
-Writes its arguments in text format to the file, according to the
-format string fmt, followed by a newline.
-
-Throws: $(D Exception) if the file is not opened.
-        $(D ErrnoException) on an error writing to the file.
-*/
+    /// Equivalent to `file.writef(fmt, args, '\n')`.
     void writefln(alias fmt, A...)(A args)
     if (isSomeString!(typeof(fmt)))
     {
@@ -1786,9 +1786,12 @@ is recommended if you want to process a complete file.
     }
 
     /**
-     * Reads data from the file according to the specified
-     * $(LINK2 std_format.html#_format-string, _format specifier) using
-     * $(REF formattedRead, std,_format).
+     * Reads formatted _data from the file using $(REF formattedRead, std,_format).
+     * Params:
+     * format = The $(LINK2 std_format.html#_format-string, _format string).
+     * When passed as a compile-time argument, the string will be statically checked
+     * against the argument types passed.
+     * data = Items to be read.
      * Example:
 ----
 // test.d
@@ -3701,11 +3704,9 @@ void writeln(T...)(T args)
 Writes formatted data to standard output (without a trailing newline).
 
 Params:
-fmt = The format string, specifying
-how to format the rest of the arguments. For a full description of the syntax
-of the format string and how it controls the formatting of the rest of the
-arguments, please refer to the documentation for $(REF formattedWrite,
-std,format).
+fmt = The $(LINK2 std_format.html#format-string, format string).
+When passed as a compile-time argument, the string will be statically checked
+against the argument types passed.
 args = Items to write.
 
 Note: In older versions of Phobos, it used to be possible to write:
@@ -3814,9 +3815,12 @@ void writefln(Char, A...)(in Char[] fmt, A args)
 }
 
 /**
- * Read data from $(D stdin) according to the specified
- * $(LINK2 std_format.html#_format-string, _format specifier) using
- * $(REF formattedRead, std,_format).
+ * Reads formatted data from $(D stdin) using $(REF formattedRead, std,_format).
+ * Params:
+ * format = The $(LINK2 std_format.html#_format-string, _format string).
+ * When passed as a compile-time argument, the string will be statically checked
+ * against the argument types passed.
+ * args = Items to be read.
  * Example:
 ----
 // test.d
