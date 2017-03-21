@@ -1018,9 +1018,9 @@ template Tuple(Specs...)
          * $(THEAD Format, Description)
          * $(TROW $(P `%s`), $(P Format like `Tuple!(types)(elements formatted with %s each)`.))
          * $(TROW $(P `%t`), $(P Format like `(elements formatted with %s each)`.))
-         * $(TROW $(P `%(inner%)`), $(P The format `inner` is applied the expanded `Tuple`, so
+         * $(TROW $(P `%(inner%)`), $(P The format `inner` is applied the expanded `Tuple`$(COMMA) so
          *      it may contain as many formats as the `Tuple` has fields.))
-         * $(TROW $(P `%(inner%|sep%)`), $(P The format `inner` is one format, that is applied
+         * $(TROW $(P `%(inner%|sep%)`), $(P The format `inner` is one format$(COMMA) that is applied
          *      on all fields of the `Tuple`. The inner format must be compatible to all
          *      of them.)))
          * ---
