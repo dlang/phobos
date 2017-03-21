@@ -209,7 +209,7 @@ interface InputAssignable(E) : InputRange!E {
     ///
     @property void front(E newVal);
 
-    @property E front();
+    alias front = InputRange!E.front; // overload base interface method
 }
 
 @safe unittest
