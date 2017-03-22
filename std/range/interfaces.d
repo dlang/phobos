@@ -208,6 +208,13 @@ interface RandomAccessInfinite(E) : ForwardRange!E {
 interface InputAssignable(E) : InputRange!E {
     ///
     @property void front(E newVal);
+
+    alias front = InputRange!E.front; // overload base interface method
+}
+
+@safe unittest
+{
+    static assert(isInputRange!(InputAssignable!int));
 }
 
 /**Adds assignable elements to ForwardRange.*/
