@@ -201,13 +201,16 @@ SRC_STD_ALGO_1= \
 
 SRC_STD_ALGO_2= \
 	std\algorithm\searching.d \
-	std\algorithm\setops.d \
+	std\algorithm\setops.d
+
+SRC_STD_ALGO_3= \
 	std\algorithm\sorting.d \
 	std\algorithm\internal.d
 
 SRC_STD_ALGO= \
 	$(SRC_STD_ALGO_1) \
-	$(SRC_STD_ALGO_2)
+	$(SRC_STD_ALGO_2) \
+	$(SRC_STD_ALGO_3)
 
 SRC_STD_CONTAINER= \
 	std\container\array.d \
@@ -574,6 +577,7 @@ UNITTEST_OBJS= \
 		unittest4.obj \
 		unittest5a.obj \
 		unittest5b.obj \
+		unittest5c.obj \
 		unittest6a.obj \
 		unittest6c.obj \
 		unittest6e.obj \
@@ -601,6 +605,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest4.obj $(SRC_STD_4) $(SRC_STD_DIGEST)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5a.obj $(SRC_STD_ALGO_1)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5b.obj $(SRC_STD_ALGO_2)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5c.obj $(SRC_STD_ALGO_3)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6a.obj $(SRC_STD_6a)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6c.obj $(SRC_STD_6c)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6e.obj $(SRC_STD_6e)
