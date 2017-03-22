@@ -469,15 +469,15 @@ GetoptResult getopt(T...)(ref string[] args, T opts)
 enum config {
     /// Turn case sensitivity on
     caseSensitive,
-    /// Turn case sensitivity off
+    /// Turn case sensitivity off (default)
     caseInsensitive,
     /// Turn bundling on
     bundling,
-    /// Turn bundling off
+    /// Turn bundling off (default)
     noBundling,
     /// Pass unrecognized arguments through
     passThrough,
-    /// Signal unrecognized arguments as errors
+    /// Signal unrecognized arguments as errors (default)
     noPassThrough,
     /// Stop at first argument that does not look like an option
     stopOnFirstNonOption,
@@ -517,12 +517,35 @@ private pure Option splitAndGet(string opt) @trusted nothrow
         ret.optLong = "--" ~ (sp[0].length > sp[1].length ?
             sp[0] : sp[1]);
     }
-    else
+    else if (sp[0].length > 1)
     {
         ret.optLong = "--" ~ sp[0];
     }
+    else
+    {
+        ret.optShort = "-" ~ sp[0];
+    }
 
     return ret;
+}
+
+@safe unittest
+{
+    auto oshort = splitAndGet("f");
+    assert(oshort.optShort == "-f");
+    assert(oshort.optLong == "");
+
+    auto olong = splitAndGet("foo");
+    assert(olong.optShort == "");
+    assert(olong.optLong == "--foo");
+
+    auto oshortlong = splitAndGet("f|foo");
+    assert(oshortlong.optShort == "-f");
+    assert(oshortlong.optLong == "--foo");
+
+    auto olongshort = splitAndGet("foo|f");
+    assert(olongshort.optShort == "-f");
+    assert(olongshort.optLong == "--foo");
 }
 
 /*
@@ -542,7 +565,7 @@ private template optionValidator(A...)
     import std.format : format;
 
     enum fmt = "getopt validator: %s (at position %d)";
-    enum isReceiver(T) = isPointer!T || (is(T==function)) || (is(T==delegate));
+    enum isReceiver(T) = isPointer!T || (is(T == function)) || (is(T == delegate));
     enum isOptionStr(T) = isSomeString!T || isSomeChar!T;
 
     auto validator()
@@ -684,10 +707,13 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             Option optionHelp = splitAndGet(option);
             optionHelp.required = cfg.required;
 
-            assert(optionHelp.optLong !in visitedLongOpts,
-                "Long option " ~ optionHelp.optLong ~ " is multiply defined");
+            if (optionHelp.optLong.length)
+            {
+                assert(optionHelp.optLong !in visitedLongOpts,
+                    "Long option " ~ optionHelp.optLong ~ " is multiply defined");
 
-            visitedLongOpts[optionHelp.optLong] = [];
+                visitedLongOpts[optionHelp.optLong] = [];
+            }
 
             if (optionHelp.optShort.length)
             {
@@ -1077,7 +1103,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
     }
     else
     {
-        if (!isLong && eqPos==1)
+        if (!isLong && eqPos == 1)
         {
             // argument looks like -o=value
             value = arg[2 .. $];
@@ -1685,7 +1711,7 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
 }
 
 // throw on duplicate options
-unittest
+@system unittest
 {
     import core.exception;
     auto args = ["prog", "--abc", "1"];

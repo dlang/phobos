@@ -409,7 +409,7 @@ final class ZipArchive
 
                     case CompressionMethod.deflate:
                         import std.zlib : compress;
-                        de._compressedData = cast(ubyte[])compress(cast(void[])de._expandedData);
+                        de._compressedData = cast(ubyte[]) compress(cast(void[]) de._expandedData);
                         de._compressedData = de._compressedData[2 .. de._compressedData.length - 4];
                         break;
 
@@ -419,7 +419,7 @@ final class ZipArchive
 
                 de._compressedSize = to!uint(de._compressedData.length);
                 import std.zlib : crc32;
-                de._crc32 = crc32(0, cast(void[])de._expandedData);
+                de._crc32 = crc32(0, cast(void[]) de._expandedData);
             }
             assert(de._compressedData.length == de._compressedSize);
 
@@ -438,7 +438,7 @@ final class ZipArchive
 
         if (!isZip64 && _directory.length > ushort.max)
             _isZip64 = true;
-        uint dataSize = archiveSize + directorySize + 22 + cast(uint)comment.length;
+        uint dataSize = archiveSize + directorySize + 22 + cast(uint) comment.length;
         if (isZip64)
             dataSize += eocd64LocLength + eocd64Length;
 
@@ -455,17 +455,17 @@ final class ZipArchive
             putUshort(i + 4,  de.extractVersion);
             putUshort(i + 6,  de.flags);
             putUshort(i + 8,  de._compressionMethod);
-            putUint  (i + 10, cast(uint)de.time);
+            putUint  (i + 10, cast(uint) de.time);
             putUint  (i + 14, de.crc32);
             putUint  (i + 18, de.compressedSize);
             putUint  (i + 22, to!uint(de.expandedSize));
-            putUshort(i + 26, cast(ushort)de.name.length);
-            putUshort(i + 28, cast(ushort)de.extra.length);
+            putUshort(i + 26, cast(ushort) de.name.length);
+            putUshort(i + 28, cast(ushort) de.extra.length);
             i += 30;
 
-            _data[i .. i + de.name.length] = (cast(ubyte[])de.name)[];
+            _data[i .. i + de.name.length] = (cast(ubyte[]) de.name)[];
             i += de.name.length;
-            _data[i .. i + de.extra.length] = (cast(ubyte[])de.extra)[];
+            _data[i .. i + de.extra.length] = (cast(ubyte[]) de.extra)[];
             i += de.extra.length;
             _data[i .. i + de.compressedSize] = de.compressedData[];
             i += de.compressedSize;
@@ -481,24 +481,24 @@ final class ZipArchive
             putUshort(i + 6,  de.extractVersion);
             putUshort(i + 8,  de.flags);
             putUshort(i + 10, de._compressionMethod);
-            putUint  (i + 12, cast(uint)de.time);
+            putUint  (i + 12, cast(uint) de.time);
             putUint  (i + 16, de.crc32);
             putUint  (i + 20, de.compressedSize);
             putUint  (i + 24, de.expandedSize);
-            putUshort(i + 28, cast(ushort)de.name.length);
-            putUshort(i + 30, cast(ushort)de.extra.length);
-            putUshort(i + 32, cast(ushort)de.comment.length);
+            putUshort(i + 28, cast(ushort) de.name.length);
+            putUshort(i + 30, cast(ushort) de.extra.length);
+            putUshort(i + 32, cast(ushort) de.comment.length);
             putUshort(i + 34, de.diskNumber);
             putUshort(i + 36, de.internalAttributes);
             putUint  (i + 38, de._externalAttributes);
             putUint  (i + 42, de.offset);
             i += 46;
 
-            _data[i .. i + de.name.length] = (cast(ubyte[])de.name)[];
+            _data[i .. i + de.name.length] = (cast(ubyte[]) de.name)[];
             i += de.name.length;
-            _data[i .. i + de.extra.length] = (cast(ubyte[])de.extra)[];
+            _data[i .. i + de.extra.length] = (cast(ubyte[]) de.extra)[];
             i += de.extra.length;
-            _data[i .. i + de.comment.length] = (cast(ubyte[])de.comment)[];
+            _data[i .. i + de.comment.length] = (cast(ubyte[]) de.comment)[];
             i += de.comment.length;
             _numEntries++;
         }
@@ -531,20 +531,20 @@ final class ZipArchive
         // Write end record
         endrecOffset = i;
         _data[i .. i + 4] = cast(ubyte[])"PK\x05\x06";
-        putUshort(i + 4,  cast(ushort)diskNumber);
-        putUshort(i + 6,  cast(ushort)diskStartDir);
-        putUshort(i + 8,  (numEntries > ushort.max ? ushort.max : cast(ushort)numEntries));
-        putUshort(i + 10, (totalEntries > ushort.max ? ushort.max : cast(ushort)totalEntries));
+        putUshort(i + 4,  cast(ushort) diskNumber);
+        putUshort(i + 6,  cast(ushort) diskStartDir);
+        putUshort(i + 8,  (numEntries > ushort.max ? ushort.max : cast(ushort) numEntries));
+        putUshort(i + 10, (totalEntries > ushort.max ? ushort.max : cast(ushort) totalEntries));
         putUint  (i + 12, directorySize);
         putUint  (i + 16, directoryOffset);
-        putUshort(i + 20, cast(ushort)comment.length);
+        putUshort(i + 20, cast(ushort) comment.length);
         i += 22;
 
         // Write archive comment
         assert(i + comment.length == data.length);
-        _data[i .. data.length] = (cast(ubyte[])comment)[];
+        _data[i .. data.length] = (cast(ubyte[]) comment)[];
 
-        return cast(void[])data;
+        return cast(void[]) data;
     }
 
     /* ============ Reading an existing archive =================== */
@@ -577,7 +577,7 @@ final class ZipArchive
             throw new ZipException("zip files bigger than 4 GB are unsupported");
 
         // Find 'end record index' by searching backwards for signature
-        iend = (data.length > 66000 ? to!uint(data.length - 66000) : 0);
+        iend = (data.length > 66_000 ? to!uint(data.length - 66_000) : 0);
         for (i = to!uint(data.length) - 22; 1; i--)
         {
             if (i < iend || i >= data.length)
@@ -682,8 +682,8 @@ final class ZipArchive
             de._madeVersion = getUshort(i + 4);
             de._extractVersion = getUshort(i + 6);
             de.flags = getUshort(i + 8);
-            de._compressionMethod = cast(CompressionMethod)getUshort(i + 10);
-            de.time = cast(DosFileTime)getUint(i + 12);
+            de._compressionMethod = cast(CompressionMethod) getUshort(i + 10);
+            de.time = cast(DosFileTime) getUint(i + 12);
             de._crc32 = getUint(i + 16);
             de._compressedSize = getUint(i + 20);
             de._expandedSize = getUint(i + 24);
@@ -735,8 +735,8 @@ final class ZipArchive
         // These values should match what is in the main zip archive directory
         de._extractVersion = getUshort(de.offset + 4);
         de.flags = getUshort(de.offset + 6);
-        de._compressionMethod = cast(CompressionMethod)getUshort(de.offset + 8);
-        de.time = cast(DosFileTime)getUint(de.offset + 10);
+        de._compressionMethod = cast(CompressionMethod) getUshort(de.offset + 8);
+        de.time = cast(DosFileTime) getUint(de.offset + 10);
         de._crc32 = getUint(de.offset + 14);
         de._compressedSize = max(getUint(de.offset + 18), de.compressedSize);
         de._expandedSize = max(getUint(de.offset + 22), de.expandedSize);
@@ -773,7 +773,7 @@ final class ZipArchive
                 // It has the effect of not requiring the 2 byte header
                 // and 4 byte trailer.
                 import std.zlib : uncompress;
-                de._expandedData = cast(ubyte[])uncompress(cast(void[])de.compressedData, de.expandedSize, -15);
+                de._expandedData = cast(ubyte[]) uncompress(cast(void[]) de.compressedData, de.expandedSize, -15);
                 return de.expandedData;
 
             default:
@@ -821,7 +821,7 @@ debug(print)
 {
     @safe void arrayPrint(ubyte[] array)
     {
-        printf("array %p,%d\n", cast(void*)array, array.length);
+        printf("array %p,%d\n", cast(void*) array, array.length);
         for (int i = 0; i < array.length; i++)
         {
             printf("%02x ", array[i]);
@@ -856,13 +856,13 @@ debug(print)
     import std.stdio, std.conv;
     MinstdRand0 gen;
     const uint itemCount = 20, minSize = 10, maxSize = 500;
-    foreach (variant; 0..2)
+    foreach (variant; 0 .. 2)
     {
         bool useZip64 = !!variant;
         zip1 = new ZipArchive();
         zip1.isZip64 = useZip64;
         ArchiveMember[itemCount] ams;
-        foreach (i; 0..itemCount)
+        foreach (i; 0 .. itemCount)
         {
             ams[i] = new ArchiveMember();
             ams[i].name = to!string(i);
@@ -894,7 +894,7 @@ debug(print)
     string[] names;
     int value = 0;
     // Generate a series of unique numbers as filenames.
-    foreach (i; 0..20)
+    foreach (i; 0 .. 20)
     {
         value += 1 + rand.front & 0xFFFF;
         rand.popFront;
@@ -907,8 +907,8 @@ debug(print)
     {
         auto member = new ArchiveMember();
         member.name = name;
-        member.expandedData = cast(ubyte[])name;
-        member.index = cast(int)i;
+        member.expandedData = cast(ubyte[]) name;
+        member.index = cast(int) i;
         zip1.addMember(member);
     }
     auto data = zip1.build();
@@ -932,8 +932,8 @@ debug(print)
 "the quick brown fox jumps over the lazy dog\r
 the quick brown fox jumps over the lazy dog\r
 ";
-    auto dst = cast(ubyte[])compress(cast(void[])src);
-    auto after = cast(ubyte[])uncompress(cast(void[])dst);
+    auto dst = cast(ubyte[]) compress(cast(void[]) src);
+    auto after = cast(ubyte[]) uncompress(cast(void[]) dst);
     assert(src == after);
 }
 
@@ -980,7 +980,7 @@ version(Posix) @system unittest
     mkdirRecurse(deleteme);
     scope(exit) rmdirRecurse(deleteme);
     string zipFile = buildPath(deleteme, "foo.zip");
-    std.file.write(zipFile, cast(byte[])data2);
+    std.file.write(zipFile, cast(byte[]) data2);
 
     auto result = executeShell(format("unzip -l %s", zipFile));
     scope(failure) writeln(result.output);

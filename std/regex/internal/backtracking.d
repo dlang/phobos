@@ -26,7 +26,7 @@ template BacktrackingMatcher(bool CTregex)
         }
         static assert(State.sizeof % size_t.sizeof == 0);
         enum stateSize = State.sizeof / size_t.sizeof;
-        enum initialStack = 1<<11; // items in a block of segmented stack
+        enum initialStack = 1 << 11; // items in a block of segmented stack
         alias String = const(Char)[];
         alias RegEx = Regex!Char;
         alias MatchFn = bool function (ref BacktrackingMatcher!(Char, Stream));
@@ -125,7 +125,7 @@ template BacktrackingMatcher(bool CTregex)
         bool prevStack()
         {
             // pointer to previous block
-            size_t* prev = cast(size_t*)memory.ptr[-2];
+            size_t* prev = cast(size_t*) memory.ptr[-2];
             if (!prev)
             {
                 // The last segment is freed in RegexMatch

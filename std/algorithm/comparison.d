@@ -3,6 +3,7 @@
 This is a submodule of $(MREF std, algorithm).
 It contains generic _comparison algorithms.
 
+$(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 $(T2 among,
@@ -27,11 +28,13 @@ $(T2 isSameLength,
         $(D isSameLength([1, 2, 3], [4, 5, 6])) returns $(D true).)
 $(T2 levenshteinDistance,
         $(D levenshteinDistance("kitten", "sitting")) returns $(D 3) by using
-        the $(LUCKY Levenshtein distance _algorithm).)
+        the $(LINK2 https://en.wikipedia.org/wiki/Levenshtein_distance,
+        Levenshtein distance _algorithm).)
 $(T2 levenshteinDistanceAndPath,
         $(D levenshteinDistanceAndPath("kitten", "sitting")) returns
-        $(D tuple(3, "snnnsni")) by using the $(LUCKY Levenshtein distance
-        _algorithm).)
+        $(D tuple(3, "snnnsni")) by using the
+        $(LINK2 https://en.wikipedia.org/wiki/Levenshtein_distance,
+        Levenshtein distance _algorithm).)
 $(T2 max,
         $(D max(3, 4, 2)) returns $(D 4).)
 $(T2 min,
@@ -84,7 +87,7 @@ range.
 */
 uint among(alias pred = (a, b) => a == b, Value, Values...)
     (Value value, Values values)
-    if (Values.length != 0)
+if (Values.length != 0)
 {
     foreach (uint i, ref v; values)
     {
@@ -96,7 +99,7 @@ uint among(alias pred = (a, b) => a == b, Value, Values...)
 
 /// Ditto
 template among(values...)
-    if (isExpressionTuple!values)
+if (isExpressionTuple!values)
 {
     uint among(Value)(Value value)
         if (!is(CommonType!(Value, values) == void))
@@ -271,7 +274,7 @@ auto castSwitch(choices...)(Object switchObject)
 
                 // Check for overshadowing:
                 immutable indexOfOvershadowingChoice =
-                    indexOfFirstOvershadowingChoiceOnLast!(choices[0..index + 1]);
+                    indexOfFirstOvershadowingChoiceOnLast!(choices[0 .. index + 1]);
                 static assert(indexOfOvershadowingChoice == index,
                         "choice number %d(type %s) is overshadowed by choice number %d(type %s)".format(
                             index + 1, CastClass.stringof, indexOfOvershadowingChoice + 1,
@@ -335,7 +338,7 @@ auto castSwitch(choices...)(Object switchObject)
             static if (Parameters!(choice).length == 0)
             {
                 immutable indexOfOvershadowingChoice =
-                    indexOfFirstOvershadowingChoiceOnLast!(choices[0..index + 1]);
+                    indexOfFirstOvershadowingChoiceOnLast!(choices[0 .. index + 1]);
 
                 // Check for overshadowing:
                 static assert(indexOfOvershadowingChoice == index,
@@ -417,7 +420,7 @@ auto castSwitch(choices...)(Object switchObject)
 
     // Void handlers are also allowed if all the handlers are void:
     new A().castSwitch!(
-        (A a) { assert(true); },
+        (A a) { },
         (B b) { assert(false); },
     )();
 }
@@ -485,7 +488,7 @@ auto castSwitch(choices...)(Object switchObject)
     // All-void handlers work for the null case:
     null.castSwitch!(
         (Object o) { assert(false); },
-        ()         { assert(true); },
+        ()         { },
     )();
 
     // Throwing void handlers work for the null case:
@@ -579,7 +582,8 @@ body
 
 // cmp
 /**********************************
-Performs three-way lexicographical comparison on two input ranges
+Performs three-way lexicographical comparison on two
+$(REF_ALTTEXT input ranges, isInputRange, std,range,primitives)
 according to predicate $(D pred). Iterating $(D r1) and $(D r2) in
 lockstep, $(D cmp) compares each element $(D e1) of $(D r1) with the
 corresponding element $(D e2) in $(D r2). If one of the ranges has been
@@ -617,7 +621,8 @@ if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
 }
 
 /// ditto
-int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2) if (isSomeString!R1 && isSomeString!R2)
+int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2)
+if (isSomeString!R1 && isSomeString!R2)
 {
     import core.stdc.string : memcmp;
     import std.utf : decode;
@@ -958,7 +963,7 @@ range of range (of range...) comparisons.
 
 // MaxType
 private template MaxType(T...)
-    if (T.length >= 1)
+if (T.length >= 1)
 {
     static if (T.length == 1)
     {
@@ -1073,7 +1078,7 @@ private:
             import core.exception : onOutOfMemoryError;
             const nbytes = mulu(rc, _matrix[0].sizeof, overflow);
             if (overflow) assert(0);
-            auto m = cast(CostType *)realloc(_matrix.ptr, nbytes);
+            auto m = cast(CostType *) realloc(_matrix.ptr, nbytes);
             if (!m)
                 onOutOfMemoryError();
             _matrix = m[0 .. r * c];
@@ -1200,7 +1205,7 @@ Does not allocate GC memory.
 */
 size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
     (Range1 s, Range2 t)
-    if (isForwardRange!(Range1) && isForwardRange!(Range2))
+if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
     alias eq = binaryFun!(equals);
 
@@ -1271,7 +1276,7 @@ size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
 /// ditto
 size_t levenshteinDistance(alias equals = (a,b) => a == b, Range1, Range2)
     (auto ref Range1 s, auto ref Range2 t)
-    if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
+if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
 {
     import std.meta : staticMap;
     alias Types = staticMap!(convertToString, Range1, Range2);
@@ -1312,7 +1317,7 @@ Allocates GC memory for the returned EditOp[] array.
 Tuple!(size_t, EditOp[])
 levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
     (Range1 s, Range2 t)
-    if (isForwardRange!(Range1) && isForwardRange!(Range2))
+if (isForwardRange!(Range1) && isForwardRange!(Range2))
 {
     Levenshtein!(Range1, binaryFun!(equals)) lev;
     auto d = lev.distanceWithPath(s, t);
@@ -1344,7 +1349,7 @@ levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
 Tuple!(size_t, EditOp[])
 levenshteinDistanceAndPath(alias equals = (a,b) => a == b, Range1, Range2)
     (auto ref Range1 s, auto ref Range2 t)
-    if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
+if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
 {
     import std.meta : staticMap;
     alias Types = staticMap!(convertToString, Range1, Range2);
@@ -1375,7 +1380,7 @@ See_Also:
     $(REF maxElement, std,algorithm,searching)
 */
 MaxType!T max(T...)(T args)
-    if (T.length >= 2)
+if (T.length >= 2)
 {
     //Get "a"
     static if (T.length <= 2)
@@ -1392,7 +1397,7 @@ MaxType!T max(T...)(T args)
     alias T1 = typeof(b);
 
     import std.algorithm.internal : algoFormat;
-    static assert (is(typeof(a < b)),
+    static assert(is(typeof(a < b)),
         algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
 
     //Do the "max" proper with a and b
@@ -1448,7 +1453,7 @@ MaxType!T max(T...)(T args)
 
 // MinType
 private template MinType(T...)
-    if (T.length >= 1)
+if (T.length >= 1)
 {
     static if (T.length == 1)
     {
@@ -1489,7 +1494,7 @@ See_Also:
     $(REF minElement, std,algorithm,searching)
 */
 MinType!T min(T...)(T args)
-    if (T.length >= 2)
+if (T.length >= 2)
 {
     //Get "a"
     static if (T.length <= 2)
@@ -1506,7 +1511,7 @@ MinType!T min(T...)(T args)
     alias T1 = typeof(b);
 
     import std.algorithm.internal : algoFormat;
-    static assert (is(typeof(a < b)),
+    static assert(is(typeof(a < b)),
         algoFormat("Invalid arguments: Cannot compare types %s and %s.", T0.stringof, T1.stringof));
 
     //Do the "min" proper with a and b
@@ -1560,7 +1565,7 @@ See_Also:
 */
 Tuple!(Range1, Range2)
 mismatch(alias pred = "a == b", Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!(Range1) && isInputRange!(Range2))
+if (isInputRange!(Range1) && isInputRange!(Range2))
 {
     for (; !r1.empty && !r2.empty; r1.popFront(), r2.popFront())
     {
@@ -1738,17 +1743,17 @@ If both ranges have a length member, this function is $(BIGOH 1). Otherwise,
 this function is $(BIGOH min(r1.length, r2.length)).
 
 Params:
-    r1 = a finite input range
-    r2 = a finite input range
+    r1 = a finite $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+    r2 = a finite $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
 
 Returns:
     $(D true) if both ranges have the same length, $(D false) otherwise.
 */
 bool isSameLength(Range1, Range2)(Range1 r1, Range2 r2)
-    if (isInputRange!Range1 &&
-        isInputRange!Range2 &&
-        !isInfinite!Range1 &&
-        !isInfinite!Range2)
+if (isInputRange!Range1 &&
+    isInputRange!Range2 &&
+    !isInfinite!Range1 &&
+    !isInfinite!Range2)
 {
     static if (hasLength!(Range1) && hasLength!(Range2))
     {
@@ -1879,8 +1884,8 @@ Allocating forward range option: amortized $(BIGOH r1.length) + $(BIGOH r2.lengt
 Params:
     pred = an optional parameter to change how equality is defined
     allocate_gc = $(D Yes.allocateGC)/$(D No.allocateGC)
-    r1 = A finite forward range
-    r2 = A finite forward range
+    r1 = A finite $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
+    r2 = A finite $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
 
 Returns:
     $(D true) if all of the elements in $(D r1) appear the same number of times in $(D r2).
@@ -1889,11 +1894,11 @@ Returns:
 
 bool isPermutation(AllocateGC allocate_gc, Range1, Range2)
 (Range1 r1, Range2 r2)
-    if (allocate_gc == Yes.allocateGC &&
-        isForwardRange!Range1 &&
-        isForwardRange!Range2 &&
-        !isInfinite!Range1 &&
-        !isInfinite!Range2)
+if (allocate_gc == Yes.allocateGC &&
+    isForwardRange!Range1 &&
+    isForwardRange!Range2 &&
+    !isInfinite!Range1 &&
+    !isInfinite!Range2)
 {
     alias E1 = Unqual!(ElementType!Range1);
     alias E2 = Unqual!(ElementType!Range2);
@@ -1937,11 +1942,11 @@ bool isPermutation(AllocateGC allocate_gc, Range1, Range2)
 /// ditto
 bool isPermutation(alias pred = "a == b", Range1, Range2)
 (Range1 r1, Range2 r2)
-    if (is(typeof(binaryFun!(pred))) &&
-        isForwardRange!Range1 &&
-        isForwardRange!Range2 &&
-        !isInfinite!Range1 &&
-        !isInfinite!Range2)
+if (is(typeof(binaryFun!(pred))) &&
+    isForwardRange!Range1 &&
+    isForwardRange!Range2 &&
+    !isInfinite!Range1 &&
+    !isInfinite!Range2)
 {
     import std.algorithm.searching : count;
 
@@ -2093,9 +2098,9 @@ Returns:
     The _first argument that passes the test `pred`.
 */
 CommonType!(T, Ts) either(alias pred = a => a, T, Ts...)(T first, lazy Ts alternatives)
-    if (alternatives.length >= 1 &&
-        !is(CommonType!(T, Ts) == void) &&
-        allSatisfy!(ifTestable, T, Ts))
+if (alternatives.length >= 1 &&
+    !is(CommonType!(T, Ts) == void) &&
+    allSatisfy!(ifTestable, T, Ts))
 {
     alias predFun = unaryFun!pred;
 

@@ -22,7 +22,7 @@ import std.traits;
 public import std.container.util;
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : take;
@@ -175,7 +175,8 @@ heap.
 
 /**
 Clears the heap. Returns the portion of the store from $(D 0) up to
-$(D length), which satisfies the $(LUCKY heap property).
+$(D length), which satisfies the $(LINK2 https://en.wikipedia.org/wiki/Heap_(data_structure),
+heap property).
      */
     auto release()
     {
@@ -403,7 +404,7 @@ leaves the heap unaffected and returns $(D false).
 }
 
 /// Example from "Introduction to Algorithms" Cormen et al, p 146
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
@@ -416,7 +417,7 @@ unittest
 
 /// $(D BinaryHeap) implements the standard input range interface, allowing
 /// lazy iteration of the underlying range in descending order.
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : take;
@@ -436,9 +437,11 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
     return BinaryHeap!(Store, less)(s, initialSize);
 }
 
-unittest
+///
+@system unittest
 {
     import std.conv : to;
+    import std.range.primitives;
     {
         // example from "Introduction to Algorithms" Cormen et al., p 146
         int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
@@ -466,7 +469,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     // Test range interface.
     import std.algorithm.comparison : equal;
@@ -476,7 +479,7 @@ unittest
     assert(h.equal([16, 14, 10, 9, 8, 7, 4, 3, 2, 1]));
 }
 
-unittest // 15675
+@system unittest // 15675
 {
     import std.container.array : Array;
 
@@ -485,7 +488,7 @@ unittest // 15675
     assert(heap.front == 12);
 }
 
-unittest // 16072
+@system unittest // 16072
 {
     auto q = heapify!"a > b"([2, 4, 5]);
     q.insert(1);
@@ -495,13 +498,13 @@ unittest // 16072
     // test more multiple grows
     int[] arr;
     auto r = heapify!"a < b"(arr);
-    foreach (i; 0..100)
+    foreach (i; 0 .. 100)
         r.insert(i);
 
     assert(r.front == 99);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     int[] a = [4, 1, 3, 2, 16, 9, 10, 14, 8, 7];
@@ -510,7 +513,7 @@ unittest
     assert(dup.equal([16, 14, 10, 9, 8, 7, 4, 3, 2, 1]));
 }
 
-unittest
+@safe unittest
 {
     static struct StructWithoutDup
     {
@@ -540,7 +543,7 @@ unittest
         }));
 }
 
-unittest
+@safe unittest
 {
     static struct StructWithDup
     {
@@ -562,7 +565,7 @@ unittest
         }));
 }
 
-unittest
+@system unittest
 {
     import std.internal.test.dummyrange;
     import std.algorithm.comparison : equal;

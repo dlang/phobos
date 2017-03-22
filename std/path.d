@@ -32,9 +32,53 @@
     returned, it is usually a slice of an input string.  If a function
     allocates, this is explicitly mentioned in the documentation.
 
-    Upgrading:
-        $(HTTP digitalmars.com/d/1.0/phobos/std_path.html#fnmatch) can
-        be replaced with $(D globMatch).
+$(SCRIPT inhibitQuickIndex = 1;)
+$(DIVC quickindex,
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Normalization) $(TD
+          $(LREF absolutePath)
+          $(LREF asAbsolutePath)
+          $(LREF asNormalizedPath)
+          $(LREF asRelativePath)
+          $(LREF buildNormalizedPath)
+          $(LREF buildPath)
+          $(LREF chainPath)
+          $(LREF expandTilde)
+))
+$(TR $(TD Partitioning) $(TD
+          $(LREF baseName)
+          $(LREF dirName)
+          $(LREF dirSeparator)
+          $(LREF driveName)
+          $(LREF pathSeparator)
+          $(LREF pathSplitter)
+          $(LREF relativePath)
+          $(LREF rootName)
+          $(LREF stripDrive)
+))
+$(TR $(TD Validation) $(TD
+          $(LREF isAbsolute)
+          $(LREF isDirSeparator)
+          $(LREF isRooted)
+          $(LREF isValidFilename)
+          $(LREF isValidPath)
+))
+$(TR $(TD Extension) $(TD
+          $(LREF defaultExtension)
+          $(LREF extension)
+          $(LREF setExtension)
+          $(LREF stripExtension)
+          $(LREF withDefaultExtension)
+          $(LREF withExtension)
+))
+$(TR $(TD Other) $(TD
+          $(LREF filenameCharCmp)
+          $(LREF filenameCmp)
+          $(LREF globMatch)
+          $(LREF CaseSensitive)
+))
+))
 
     Authors:
         Lars Tandle Kyllingstad,
@@ -80,7 +124,7 @@ private:
 */
 version(Posix)          enum string dirSeparator = "/";
 else version(Windows)   enum string dirSeparator = "\\";
-else static assert (0, "unsupported platform");
+else static assert(0, "unsupported platform");
 
 
 
@@ -90,7 +134,7 @@ else static assert (0, "unsupported platform");
 */
 version(Posix)          enum string pathSeparator = ":";
 else version(Windows)   enum string pathSeparator = ";";
-else static assert (0, "unsupported platform");
+else static assert(0, "unsupported platform");
 
 
 
@@ -134,8 +178,8 @@ version(Posix) private alias isSeparator = isDirSeparator;
     is found.
 */
 private ptrdiff_t lastSeparator(R)(R path)
-    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-        isNarrowString!R)
+if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R)
 {
     auto i = (cast(ptrdiff_t) path.length) - 1;
     while (i >= 0 && !isSeparator(path[i])) --i;
@@ -146,17 +190,17 @@ private ptrdiff_t lastSeparator(R)(R path)
 version (Windows)
 {
     private bool isUNC(R)(R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R)
     {
         return path.length >= 3 && isDirSeparator(path[0]) && isDirSeparator(path[1])
             && !isDirSeparator(path[2]);
     }
 
     private ptrdiff_t uncRootLength(R)(R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
-        in { assert (isUNC(path)); }
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R)
+        in { assert(isUNC(path)); }
         body
     {
         ptrdiff_t i = 3;
@@ -175,15 +219,15 @@ version (Windows)
     }
 
     private bool hasDrive(R)(R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R)
     {
         return path.length >= 2 && isDriveSeparator(path[1]);
     }
 
     private bool isDriveRoot(R)(R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            isNarrowString!R)
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        isNarrowString!R)
     {
         return path.length >= 3 && isDriveSeparator(path[1])
             && isDirSeparator(path[2]);
@@ -195,8 +239,8 @@ version (Windows)
     from a path.
 */
 private auto ltrimDirSeparators(R)(R path)
-    if (isInputRange!R && isSomeChar!(ElementType!R) ||
-        isNarrowString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R)
 {
     static if (isRandomAccessRange!R && hasSlicing!R || isNarrowString!R)
     {
@@ -224,8 +268,8 @@ private auto ltrimDirSeparators(R)(R path)
 }
 
 private auto rtrimDirSeparators(R)(R path)
-    if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
-        isNarrowString!R)
+if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R)
 {
     static if (isRandomAccessRange!R && hasSlicing!R && hasLength!R || isNarrowString!R)
     {
@@ -254,8 +298,8 @@ private auto rtrimDirSeparators(R)(R path)
 }
 
 private auto trimDirSeparators(R)(R path)
-    if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
-        isNarrowString!R)
+if (isBidirectionalRange!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R)
 {
     return ltrimDirSeparators(rtrimDirSeparators(path));
 }
@@ -295,7 +339,7 @@ enum CaseSensitive : bool
 version (Windows)    private enum osDefaultCaseSensitivity = false;
 else version (OSX)   private enum osDefaultCaseSensitivity = false;
 else version (Posix) private enum osDefaultCaseSensitivity = true;
-else static assert (0);
+else static assert(0);
 
 
 
@@ -317,16 +361,16 @@ else static assert (0);
 
     Example:
     ---
-    assert (baseName("dir/file.ext")         == "file.ext");
-    assert (baseName("dir/file.ext", ".ext") == "file");
-    assert (baseName("dir/file.ext", ".xyz") == "file.ext");
-    assert (baseName("dir/filename", "name") == "file");
-    assert (baseName("dir/subdir/")          == "subdir");
+    assert(baseName("dir/file.ext")         == "file.ext");
+    assert(baseName("dir/file.ext", ".ext") == "file");
+    assert(baseName("dir/file.ext", ".xyz") == "file.ext");
+    assert(baseName("dir/filename", "name") == "file");
+    assert(baseName("dir/subdir/")          == "subdir");
 
     version (Windows)
     {
-        assert (baseName(`d:file.ext`)      == "file.ext");
-        assert (baseName(`d:\dir\file.ext`) == "file.ext");
+        assert(baseName(`d:file.ext`)      == "file.ext");
+        assert(baseName(`d:\dir\file.ext`) == "file.ext");
     }
     ---
 
@@ -338,7 +382,7 @@ else static assert (0);
     To obtain the filename without leading directories and without
     an extension, combine the functions like this:
     ---
-    assert (baseName(stripExtension("dir/file.ext")) == "file");
+    assert(baseName(stripExtension("dir/file.ext")) == "file");
     ---
 
     Standards:
@@ -348,15 +392,15 @@ else static assert (0);
     (with suitable adaptations for Windows paths).
 */
 auto baseName(R)(R path)
-    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-        is(StringTypeOf!R))
+if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+    is(StringTypeOf!R))
 {
     auto p1 = stripDrive!(BaseOf!R)(path);
     if (p1.empty)
     {
         version (Windows) if (isUNC!(BaseOf!R)(path))
         {
-            return path[0..1];
+            return path[0 .. 1];
         }
         static if (is(StringTypeOf!R))
             return StringTypeOf!R.init[];   // which is null
@@ -374,7 +418,7 @@ auto baseName(R)(R path)
 inout(C)[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
     (inout(C)[] path, in C1[] suffix)
     @safe pure //TODO: nothrow (because of filenameCmp())
-    if (isSomeChar!C && isSomeChar!C1)
+if (isSomeChar!C && isSomeChar!C1)
 {
     auto p = baseName(path);
     if (p.length > suffix.length
@@ -388,22 +432,22 @@ inout(C)[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
 
 @safe unittest
 {
-    assert (baseName("").empty);
-    assert (baseName("file.ext"w) == "file.ext");
-    assert (baseName("file.ext"d, ".ext") == "file");
-    assert (baseName("file", "file"w.dup) == "file");
-    assert (baseName("dir/file.ext"d.dup) == "file.ext");
-    assert (baseName("dir/file.ext", ".ext"d) == "file");
-    assert (baseName("dir/file"w, "file"d) == "file");
-    assert (baseName("dir///subdir////") == "subdir");
-    assert (baseName("dir/subdir.ext/", ".ext") == "subdir");
-    assert (baseName("dir/subdir/".dup, "subdir") == "subdir");
-    assert (baseName("/"w.dup) == "/");
-    assert (baseName("//"d.dup) == "/");
-    assert (baseName("///") == "/");
+    assert(baseName("").empty);
+    assert(baseName("file.ext"w) == "file.ext");
+    assert(baseName("file.ext"d, ".ext") == "file");
+    assert(baseName("file", "file"w.dup) == "file");
+    assert(baseName("dir/file.ext"d.dup) == "file.ext");
+    assert(baseName("dir/file.ext", ".ext"d) == "file");
+    assert(baseName("dir/file"w, "file"d) == "file");
+    assert(baseName("dir///subdir////") == "subdir");
+    assert(baseName("dir/subdir.ext/", ".ext") == "subdir");
+    assert(baseName("dir/subdir/".dup, "subdir") == "subdir");
+    assert(baseName("/"w.dup) == "/");
+    assert(baseName("//"d.dup) == "/");
+    assert(baseName("///") == "/");
 
-    assert (baseName!(CaseSensitive.yes)("file.ext", ".EXT") == "file.ext");
-    assert (baseName!(CaseSensitive.no)("file.ext", ".EXT") == "file");
+    assert(baseName!(CaseSensitive.yes)("file.ext", ".EXT") == "file.ext");
+    assert(baseName!(CaseSensitive.no)("file.ext", ".EXT") == "file");
 
     {
         auto r = MockRange!(immutable(char))(`dir/file.ext`);
@@ -414,23 +458,23 @@ inout(C)[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
 
     version (Windows)
     {
-        assert (baseName(`dir\file.ext`) == `file.ext`);
-        assert (baseName(`dir\file.ext`, `.ext`) == `file`);
-        assert (baseName(`dir\file`, `file`) == `file`);
-        assert (baseName(`d:file.ext`) == `file.ext`);
-        assert (baseName(`d:file.ext`, `.ext`) == `file`);
-        assert (baseName(`d:file`, `file`) == `file`);
-        assert (baseName(`dir\\subdir\\\`) == `subdir`);
-        assert (baseName(`dir\subdir.ext\`, `.ext`) == `subdir`);
-        assert (baseName(`dir\subdir\`, `subdir`) == `subdir`);
-        assert (baseName(`\`) == `\`);
-        assert (baseName(`\\`) == `\`);
-        assert (baseName(`\\\`) == `\`);
-        assert (baseName(`d:\`) == `\`);
-        assert (baseName(`d:`).empty);
-        assert (baseName(`\\server\share\file`) == `file`);
-        assert (baseName(`\\server\share\`) == `\`);
-        assert (baseName(`\\server\share`) == `\`);
+        assert(baseName(`dir\file.ext`) == `file.ext`);
+        assert(baseName(`dir\file.ext`, `.ext`) == `file`);
+        assert(baseName(`dir\file`, `file`) == `file`);
+        assert(baseName(`d:file.ext`) == `file.ext`);
+        assert(baseName(`d:file.ext`, `.ext`) == `file`);
+        assert(baseName(`d:file`, `file`) == `file`);
+        assert(baseName(`dir\\subdir\\\`) == `subdir`);
+        assert(baseName(`dir\subdir.ext\`, `.ext`) == `subdir`);
+        assert(baseName(`dir\subdir\`, `subdir`) == `subdir`);
+        assert(baseName(`\`) == `\`);
+        assert(baseName(`\\`) == `\`);
+        assert(baseName(`\\\`) == `\`);
+        assert(baseName(`d:\`) == `\`);
+        assert(baseName(`d:`).empty);
+        assert(baseName(`\\server\share\file`) == `file`);
+        assert(baseName(`\\server\share\`) == `\`);
+        assert(baseName(`\\server\share`) == `\`);
 
         auto r = MockRange!(immutable(char))(`\\server\share`);
         auto s = r.baseName();
@@ -438,10 +482,10 @@ inout(C)[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
             assert(s[i] == c);
     }
 
-    assert (baseName(stripExtension("dir/file.ext")) == "file");
+    assert(baseName(stripExtension("dir/file.ext")) == "file");
 
-    static assert (baseName("dir/file.ext") == "file.ext");
-    static assert (baseName("dir/file.ext", ".ext") == "file");
+    static assert(baseName("dir/file.ext") == "file.ext");
+    static assert(baseName("dir/file.ext", ".ext") == "file");
 
     static struct DirEntry { string s; alias s this; }
     assert(baseName(DirEntry("dir/file.ext")) == "file.ext");
@@ -466,11 +510,11 @@ inout(C)[] baseName(CaseSensitive cs = CaseSensitive.osDefault, C, C1)
     (with suitable adaptations for Windows paths).
 */
 auto dirName(R)(R path)
-    if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-         isNarrowString!R) &&
-        !isConvertibleToString!R)
+if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R) &&
+    !isConvertibleToString!R)
 {
-    static auto result(bool dot, typeof(path[0..1]) p)
+    static auto result(bool dot, typeof(path[0 .. 1]) p)
     {
         static if (isSomeString!R)
             return dot ? "." : p;
@@ -517,43 +561,43 @@ auto dirName(R)(R path)
 ///
 @safe unittest
 {
-    assert (dirName("") == ".");
-    assert (dirName("file"w) == ".");
-    assert (dirName("dir/"d) == ".");
-    assert (dirName("dir///") == ".");
-    assert (dirName("dir/file"w.dup) == "dir");
-    assert (dirName("dir///file"d.dup) == "dir");
-    assert (dirName("dir/subdir/") == "dir");
-    assert (dirName("/dir/file"w) == "/dir");
-    assert (dirName("/file"d) == "/");
-    assert (dirName("/") == "/");
-    assert (dirName("///") == "/");
+    assert(dirName("") == ".");
+    assert(dirName("file"w) == ".");
+    assert(dirName("dir/"d) == ".");
+    assert(dirName("dir///") == ".");
+    assert(dirName("dir/file"w.dup) == "dir");
+    assert(dirName("dir///file"d.dup) == "dir");
+    assert(dirName("dir/subdir/") == "dir");
+    assert(dirName("/dir/file"w) == "/dir");
+    assert(dirName("/file"d) == "/");
+    assert(dirName("/") == "/");
+    assert(dirName("///") == "/");
 
     version (Windows)
     {
-        assert (dirName(`dir\`) == `.`);
-        assert (dirName(`dir\\\`) == `.`);
-        assert (dirName(`dir\file`) == `dir`);
-        assert (dirName(`dir\\\file`) == `dir`);
-        assert (dirName(`dir\subdir\`) == `dir`);
-        assert (dirName(`\dir\file`) == `\dir`);
-        assert (dirName(`\file`) == `\`);
-        assert (dirName(`\`) == `\`);
-        assert (dirName(`\\\`) == `\`);
-        assert (dirName(`d:`) == `d:`);
-        assert (dirName(`d:file`) == `d:`);
-        assert (dirName(`d:\`) == `d:\`);
-        assert (dirName(`d:\file`) == `d:\`);
-        assert (dirName(`d:\dir\file`) == `d:\dir`);
-        assert (dirName(`\\server\share\dir\file`) == `\\server\share\dir`);
-        assert (dirName(`\\server\share\file`) == `\\server\share`);
-        assert (dirName(`\\server\share\`) == `\\server\share`);
-        assert (dirName(`\\server\share`) == `\\server\share`);
+        assert(dirName(`dir\`) == `.`);
+        assert(dirName(`dir\\\`) == `.`);
+        assert(dirName(`dir\file`) == `dir`);
+        assert(dirName(`dir\\\file`) == `dir`);
+        assert(dirName(`dir\subdir\`) == `dir`);
+        assert(dirName(`\dir\file`) == `\dir`);
+        assert(dirName(`\file`) == `\`);
+        assert(dirName(`\`) == `\`);
+        assert(dirName(`\\\`) == `\`);
+        assert(dirName(`d:`) == `d:`);
+        assert(dirName(`d:file`) == `d:`);
+        assert(dirName(`d:\`) == `d:\`);
+        assert(dirName(`d:\file`) == `d:\`);
+        assert(dirName(`d:\dir\file`) == `d:\dir`);
+        assert(dirName(`\\server\share\dir\file`) == `\\server\share\dir`);
+        assert(dirName(`\\server\share\file`) == `\\server\share`);
+        assert(dirName(`\\server\share\`) == `\\server\share`);
+        assert(dirName(`\\server\share`) == `\\server\share`);
     }
 }
 
 auto dirName(R)(auto ref R path)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return dirName!(StringTypeOf!R)(path);
 }
@@ -565,44 +609,44 @@ auto dirName(R)(auto ref R path)
 
 @system unittest
 {
-    static assert (dirName("dir/file") == "dir");
+    static assert(dirName("dir/file") == "dir");
 
     import std.array;
     import std.utf : byChar, byWchar, byDchar;
 
-    assert (dirName("".byChar).array == ".");
-    assert (dirName("file"w.byWchar).array == "."w);
-    assert (dirName("dir/"d.byDchar).array == "."d);
-    assert (dirName("dir///".byChar).array == ".");
-    assert (dirName("dir/subdir/".byChar).array == "dir");
-    assert (dirName("/dir/file"w.byWchar).array == "/dir"w);
-    assert (dirName("/file"d.byDchar).array == "/"d);
-    assert (dirName("/".byChar).array == "/");
-    assert (dirName("///".byChar).array == "/");
+    assert(dirName("".byChar).array == ".");
+    assert(dirName("file"w.byWchar).array == "."w);
+    assert(dirName("dir/"d.byDchar).array == "."d);
+    assert(dirName("dir///".byChar).array == ".");
+    assert(dirName("dir/subdir/".byChar).array == "dir");
+    assert(dirName("/dir/file"w.byWchar).array == "/dir"w);
+    assert(dirName("/file"d.byDchar).array == "/"d);
+    assert(dirName("/".byChar).array == "/");
+    assert(dirName("///".byChar).array == "/");
 
     version (Windows)
     {
-        assert (dirName(`dir\`.byChar).array == `.`);
-        assert (dirName(`dir\\\`.byChar).array == `.`);
-        assert (dirName(`dir\file`.byChar).array == `dir`);
-        assert (dirName(`dir\\\file`.byChar).array == `dir`);
-        assert (dirName(`dir\subdir\`.byChar).array == `dir`);
-        assert (dirName(`\dir\file`.byChar).array == `\dir`);
-        assert (dirName(`\file`.byChar).array == `\`);
-        assert (dirName(`\`.byChar).array == `\`);
-        assert (dirName(`\\\`.byChar).array == `\`);
-        assert (dirName(`d:`.byChar).array == `d:`);
-        assert (dirName(`d:file`.byChar).array == `d:`);
-        assert (dirName(`d:\`.byChar).array == `d:\`);
-        assert (dirName(`d:\file`.byChar).array == `d:\`);
-        assert (dirName(`d:\dir\file`.byChar).array == `d:\dir`);
-        assert (dirName(`\\server\share\dir\file`.byChar).array == `\\server\share\dir`);
-        assert (dirName(`\\server\share\file`) == `\\server\share`);
-        assert (dirName(`\\server\share\`.byChar).array == `\\server\share`);
-        assert (dirName(`\\server\share`.byChar).array == `\\server\share`);
+        assert(dirName(`dir\`.byChar).array == `.`);
+        assert(dirName(`dir\\\`.byChar).array == `.`);
+        assert(dirName(`dir\file`.byChar).array == `dir`);
+        assert(dirName(`dir\\\file`.byChar).array == `dir`);
+        assert(dirName(`dir\subdir\`.byChar).array == `dir`);
+        assert(dirName(`\dir\file`.byChar).array == `\dir`);
+        assert(dirName(`\file`.byChar).array == `\`);
+        assert(dirName(`\`.byChar).array == `\`);
+        assert(dirName(`\\\`.byChar).array == `\`);
+        assert(dirName(`d:`.byChar).array == `d:`);
+        assert(dirName(`d:file`.byChar).array == `d:`);
+        assert(dirName(`d:\`.byChar).array == `d:\`);
+        assert(dirName(`d:\file`.byChar).array == `d:\`);
+        assert(dirName(`d:\dir\file`.byChar).array == `d:\dir`);
+        assert(dirName(`\\server\share\dir\file`.byChar).array == `\\server\share\dir`);
+        assert(dirName(`\\server\share\file`) == `\\server\share`);
+        assert(dirName(`\\server\share\`.byChar).array == `\\server\share`);
+        assert(dirName(`\\server\share`.byChar).array == `\\server\share`);
     }
 
-    //static assert (dirName("dir/file".byChar).array == "dir");
+    //static assert(dirName("dir/file".byChar).array == "dir");
 }
 
 
@@ -618,9 +662,9 @@ auto dirName(R)(auto ref R path)
         A slice of $(D path).
 */
 auto rootName(R)(R path)
-    if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-         isNarrowString!R) &&
-        !isConvertibleToString!R)
+if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R) &&
+    !isConvertibleToString!R)
 {
     if (path.empty)
         goto Lnull;
@@ -642,36 +686,36 @@ auto rootName(R)(R path)
             return path[0 .. 3];
         }
     }
-    else static assert (0, "unsupported platform");
+    else static assert(0, "unsupported platform");
 
-    assert (!isRooted(path));
+    assert(!isRooted(path));
 Lnull:
     static if (is(StringTypeOf!R))
         return null; // legacy code may rely on null return rather than slice
     else
-        return path[0..0];
+        return path[0 .. 0];
 }
 
 ///
 @safe unittest
 {
-    assert (rootName("") is null);
-    assert (rootName("foo") is null);
-    assert (rootName("/") == "/");
-    assert (rootName("/foo/bar") == "/");
+    assert(rootName("") is null);
+    assert(rootName("foo") is null);
+    assert(rootName("/") == "/");
+    assert(rootName("/foo/bar") == "/");
 
     version (Windows)
     {
-        assert (rootName("d:foo") is null);
-        assert (rootName(`d:\foo`) == `d:\`);
-        assert (rootName(`\\server\share\foo`) == `\\server\share`);
-        assert (rootName(`\\server\share`) == `\\server\share`);
+        assert(rootName("d:foo") is null);
+        assert(rootName(`d:\foo`) == `d:\`);
+        assert(rootName(`\\server\share\foo`) == `\\server\share`);
+        assert(rootName(`\\server\share`) == `\\server\share`);
     }
 }
 
 @safe unittest
 {
-    assert (testAliasedString!rootName("/foo/bar"));
+    assert(testAliasedString!rootName("/foo/bar"));
 }
 
 @safe unittest
@@ -679,22 +723,22 @@ Lnull:
     import std.array;
     import std.utf : byChar;
 
-    assert (rootName("".byChar).array == "");
-    assert (rootName("foo".byChar).array == "");
-    assert (rootName("/".byChar).array == "/");
-    assert (rootName("/foo/bar".byChar).array == "/");
+    assert(rootName("".byChar).array == "");
+    assert(rootName("foo".byChar).array == "");
+    assert(rootName("/".byChar).array == "/");
+    assert(rootName("/foo/bar".byChar).array == "/");
 
     version (Windows)
     {
-        assert (rootName("d:foo".byChar).array == "");
-        assert (rootName(`d:\foo`.byChar).array == `d:\`);
-        assert (rootName(`\\server\share\foo`.byChar).array == `\\server\share`);
-        assert (rootName(`\\server\share`.byChar).array == `\\server\share`);
+        assert(rootName("d:foo".byChar).array == "");
+        assert(rootName(`d:\foo`.byChar).array == `d:\`);
+        assert(rootName(`\\server\share\foo`.byChar).array == `\\server\share`);
+        assert(rootName(`\\server\share`.byChar).array == `\\server\share`);
     }
 }
 
 auto rootName(R)(R path)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return rootName!(StringTypeOf!R)(path);
 }
@@ -714,9 +758,9 @@ auto rootName(R)(R path)
         Always returns an empty range on POSIX.
 */
 auto driveName(R)(R path)
-    if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-         isNarrowString!R) &&
-        !isConvertibleToString!R)
+if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R) &&
+    !isConvertibleToString!R)
 {
     version (Windows)
     {
@@ -726,32 +770,32 @@ auto driveName(R)(R path)
             return path[0 .. uncRootLength(path)];
     }
     static if (isSomeString!R)
-        return cast(ElementEncodingType!R[])null; // legacy code may rely on null return rather than slice
+        return cast(ElementEncodingType!R[]) null; // legacy code may rely on null return rather than slice
     else
-        return path[0..0];
+        return path[0 .. 0];
 }
 
 ///
 @safe unittest
 {
     import std.range : empty;
-    version (Posix)  assert (driveName("c:/foo").empty);
+    version (Posix)  assert(driveName("c:/foo").empty);
     version (Windows)
     {
-        assert (driveName(`dir\file`).empty);
-        assert (driveName(`d:file`) == "d:");
-        assert (driveName(`d:\file`) == "d:");
-        assert (driveName("d:") == "d:");
-        assert (driveName(`\\server\share\file`) == `\\server\share`);
-        assert (driveName(`\\server\share\`) == `\\server\share`);
-        assert (driveName(`\\server\share`) == `\\server\share`);
+        assert(driveName(`dir\file`).empty);
+        assert(driveName(`d:file`) == "d:");
+        assert(driveName(`d:\file`) == "d:");
+        assert(driveName("d:") == "d:");
+        assert(driveName(`\\server\share\file`) == `\\server\share`);
+        assert(driveName(`\\server\share\`) == `\\server\share`);
+        assert(driveName(`\\server\share`) == `\\server\share`);
 
-        static assert (driveName(`d:\file`) == "d:");
+        static assert(driveName(`d:\file`) == "d:");
     }
 }
 
 auto driveName(R)(auto ref R path)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return driveName!(StringTypeOf!R)(path);
 }
@@ -766,18 +810,18 @@ auto driveName(R)(auto ref R path)
     import std.array;
     import std.utf : byChar;
 
-    version (Posix)  assert (driveName("c:/foo".byChar).empty);
+    version (Posix)  assert(driveName("c:/foo".byChar).empty);
     version (Windows)
     {
-        assert (driveName(`dir\file`.byChar).empty);
-        assert (driveName(`d:file`.byChar).array == "d:");
-        assert (driveName(`d:\file`.byChar).array == "d:");
-        assert (driveName("d:".byChar).array == "d:");
-        assert (driveName(`\\server\share\file`.byChar).array == `\\server\share`);
-        assert (driveName(`\\server\share\`.byChar).array == `\\server\share`);
-        assert (driveName(`\\server\share`.byChar).array == `\\server\share`);
+        assert(driveName(`dir\file`.byChar).empty);
+        assert(driveName(`d:file`.byChar).array == "d:");
+        assert(driveName(`d:\file`.byChar).array == "d:");
+        assert(driveName("d:".byChar).array == "d:");
+        assert(driveName(`\\server\share\file`.byChar).array == `\\server\share`);
+        assert(driveName(`\\server\share\`.byChar).array == `\\server\share`);
+        assert(driveName(`\\server\share`.byChar).array == `\\server\share`);
 
-        static assert (driveName(`d:\file`).array == "d:");
+        static assert(driveName(`d:\file`).array == "d:");
     }
 }
 
@@ -791,9 +835,9 @@ auto driveName(R)(auto ref R path)
     Returns: A slice of path without the drive component.
 */
 auto stripDrive(R)(R path)
-    if ((isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-         isNarrowString!R) &&
-        !isConvertibleToString!R)
+if ((isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -808,13 +852,13 @@ auto stripDrive(R)(R path)
 {
     version (Windows)
     {
-        assert (stripDrive(`d:\dir\file`) == `\dir\file`);
-        assert (stripDrive(`\\server\share\dir\file`) == `\dir\file`);
+        assert(stripDrive(`d:\dir\file`) == `\dir\file`);
+        assert(stripDrive(`\\server\share\dir\file`) == `\dir\file`);
     }
 }
 
 auto stripDrive(R)(auto ref R path)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return stripDrive!(StringTypeOf!R)(path);
 }
@@ -828,9 +872,9 @@ auto stripDrive(R)(auto ref R path)
 {
     version(Windows)
     {
-        assert (stripDrive(`d:\dir\file`) == `\dir\file`);
-        assert (stripDrive(`\\server\share\dir\file`) == `\dir\file`);
-        static assert (stripDrive(`d:\dir\file`) == `\dir\file`);
+        assert(stripDrive(`d:\dir\file`) == `\dir\file`);
+        assert(stripDrive(`\\server\share\dir\file`) == `\dir\file`);
+        static assert(stripDrive(`d:\dir\file`) == `\dir\file`);
 
         auto r = MockRange!(immutable(char))(`d:\dir\file`);
         auto s = r.stripDrive();
@@ -839,7 +883,7 @@ auto stripDrive(R)(auto ref R path)
     }
     version(Posix)
     {
-        assert (stripDrive(`d:\dir\file`) == `d:\dir\file`);
+        assert(stripDrive(`d:\dir\file`) == `d:\dir\file`);
 
         auto r = MockRange!(immutable(char))(`d:\dir\file`);
         auto s = r.stripDrive();
@@ -858,8 +902,8 @@ auto stripDrive(R)(auto ref R path)
         index of extension separator (the dot), or -1 if not found
 */
 private ptrdiff_t extSeparatorPos(R)(const R path)
-    if (isRandomAccessRange!R && hasLength!R && isSomeChar!(ElementType!R) ||
-        isNarrowString!R)
+if (isRandomAccessRange!R && hasLength!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R)
 {
     for (auto i = path.length; i-- > 0 && !isSeparator(path[i]); )
     {
@@ -871,38 +915,38 @@ private ptrdiff_t extSeparatorPos(R)(const R path)
 
 @safe unittest
 {
-    assert (extSeparatorPos("file") == -1);
-    assert (extSeparatorPos("file.ext"w) == 4);
-    assert (extSeparatorPos("file.ext1.ext2"d) == 9);
-    assert (extSeparatorPos(".foo".dup) == -1);
-    assert (extSeparatorPos(".foo.ext"w.dup) == 4);
+    assert(extSeparatorPos("file") == -1);
+    assert(extSeparatorPos("file.ext"w) == 4);
+    assert(extSeparatorPos("file.ext1.ext2"d) == 9);
+    assert(extSeparatorPos(".foo".dup) == -1);
+    assert(extSeparatorPos(".foo.ext"w.dup) == 4);
 }
 
 @safe unittest
 {
-    assert (extSeparatorPos("dir/file"d.dup) == -1);
-    assert (extSeparatorPos("dir/file.ext") == 8);
-    assert (extSeparatorPos("dir/file.ext1.ext2"w) == 13);
-    assert (extSeparatorPos("dir/.foo"d) == -1);
-    assert (extSeparatorPos("dir/.foo.ext".dup) == 8);
+    assert(extSeparatorPos("dir/file"d.dup) == -1);
+    assert(extSeparatorPos("dir/file.ext") == 8);
+    assert(extSeparatorPos("dir/file.ext1.ext2"w) == 13);
+    assert(extSeparatorPos("dir/.foo"d) == -1);
+    assert(extSeparatorPos("dir/.foo.ext".dup) == 8);
 
     version(Windows)
     {
-        assert (extSeparatorPos("dir\\file") == -1);
-        assert (extSeparatorPos("dir\\file.ext") == 8);
-        assert (extSeparatorPos("dir\\file.ext1.ext2") == 13);
-        assert (extSeparatorPos("dir\\.foo") == -1);
-        assert (extSeparatorPos("dir\\.foo.ext") == 8);
+        assert(extSeparatorPos("dir\\file") == -1);
+        assert(extSeparatorPos("dir\\file.ext") == 8);
+        assert(extSeparatorPos("dir\\file.ext1.ext2") == 13);
+        assert(extSeparatorPos("dir\\.foo") == -1);
+        assert(extSeparatorPos("dir\\.foo.ext") == 8);
 
-        assert (extSeparatorPos("d:file") == -1);
-        assert (extSeparatorPos("d:file.ext") == 6);
-        assert (extSeparatorPos("d:file.ext1.ext2") == 11);
-        assert (extSeparatorPos("d:.foo") == -1);
-        assert (extSeparatorPos("d:.foo.ext") == 6);
+        assert(extSeparatorPos("d:file") == -1);
+        assert(extSeparatorPos("d:file.ext") == 6);
+        assert(extSeparatorPos("d:file.ext1.ext2") == 11);
+        assert(extSeparatorPos("d:.foo") == -1);
+        assert(extSeparatorPos("d:.foo.ext") == 6);
     }
 
-    static assert (extSeparatorPos("file") == -1);
-    static assert (extSeparatorPos("file.ext"w) == 4);
+    static assert(extSeparatorPos("file") == -1);
+    static assert(extSeparatorPos("file.ext"w) == 4);
 }
 
 
@@ -913,8 +957,8 @@ private ptrdiff_t extSeparatorPos(R)(const R path)
     If there is no _extension, $(D null) is returned.
 */
 auto extension(R)(R path)
-    if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-        is(StringTypeOf!R))
+if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+    is(StringTypeOf!R))
 {
     auto i = extSeparatorPos!(BaseOf!R)(path);
     if (i == -1)
@@ -931,15 +975,15 @@ auto extension(R)(R path)
 @safe unittest
 {
     import std.range : empty;
-    assert (extension("file").empty);
-    assert (extension("file.") == ".");
-    assert (extension("file.ext"w) == ".ext");
-    assert (extension("file.ext1.ext2"d) == ".ext2");
-    assert (extension(".foo".dup).empty);
-    assert (extension(".foo.ext"w.dup) == ".ext");
+    assert(extension("file").empty);
+    assert(extension("file.") == ".");
+    assert(extension("file.ext"w) == ".ext");
+    assert(extension("file.ext1.ext2"d) == ".ext2");
+    assert(extension(".foo".dup).empty);
+    assert(extension(".foo.ext"w.dup) == ".ext");
 
-    static assert (extension("file").empty);
-    static assert (extension("file.ext") == ".ext");
+    static assert(extension("file").empty);
+    static assert(extension("file.ext") == ".ext");
 }
 
 @safe unittest
@@ -952,7 +996,7 @@ auto extension(R)(R path)
     }
 
     static struct DirEntry { string s; alias s this; }
-    assert (extension(DirEntry("file")).empty);
+    assert(extension(DirEntry("file")).empty);
 }
 
 
@@ -965,9 +1009,9 @@ auto extension(R)(R path)
         slice of path with the extension (if any) stripped off
 */
 auto stripExtension(R)(R path)
-    if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-         isNarrowString!R) &&
-        !isConvertibleToString!R)
+if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R) &&
+    !isConvertibleToString!R)
 {
     auto i = extSeparatorPos(path);
     return (i == -1) ? path : path[0 .. i];
@@ -976,37 +1020,37 @@ auto stripExtension(R)(R path)
 ///
 @safe unittest
 {
-    assert (stripExtension("file")           == "file");
-    assert (stripExtension("file.ext")       == "file");
-    assert (stripExtension("file.ext1.ext2") == "file.ext1");
-    assert (stripExtension("file.")          == "file");
-    assert (stripExtension(".file")          == ".file");
-    assert (stripExtension(".file.ext")      == ".file");
-    assert (stripExtension("dir/file.ext")   == "dir/file");
+    assert(stripExtension("file")           == "file");
+    assert(stripExtension("file.ext")       == "file");
+    assert(stripExtension("file.ext1.ext2") == "file.ext1");
+    assert(stripExtension("file.")          == "file");
+    assert(stripExtension(".file")          == ".file");
+    assert(stripExtension(".file.ext")      == ".file");
+    assert(stripExtension("dir/file.ext")   == "dir/file");
 }
 
 auto stripExtension(R)(auto ref R path)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return stripExtension!(StringTypeOf!R)(path);
 }
 
 @safe unittest
 {
-    assert (testAliasedString!stripExtension("file"));
+    assert(testAliasedString!stripExtension("file"));
 }
 
 @safe unittest
 {
-    assert (stripExtension("file.ext"w) == "file");
-    assert (stripExtension("file.ext1.ext2"d) == "file.ext1");
+    assert(stripExtension("file.ext"w) == "file");
+    assert(stripExtension("file.ext1.ext2"d) == "file.ext1");
 
     import std.array;
     import std.utf : byChar, byWchar, byDchar;
 
-    assert (stripExtension("file".byChar).array == "file");
-    assert (stripExtension("file.ext"w.byWchar).array == "file");
-    assert (stripExtension("file.ext1.ext2"d.byDchar).array == "file.ext1");
+    assert(stripExtension("file".byChar).array == "file");
+    assert(stripExtension("file.ext"w.byWchar).array == "file");
+    assert(stripExtension("file.ext1.ext2"d.byDchar).array == "file.ext1");
 }
 
 
@@ -1034,7 +1078,7 @@ auto stripExtension(R)(auto ref R path)
         $(LREF withExtension) which does not allocate and returns a lazy range.
 */
 immutable(Unqual!C1)[] setExtension(C1, C2)(in C1[] path, in C2[] ext)
-    if (isSomeChar!C1 && !is(C1 == immutable) && is(Unqual!C1 == Unqual!C2))
+if (isSomeChar!C1 && !is(C1 == immutable) && is(Unqual!C1 == Unqual!C2))
 {
     try
     {
@@ -1049,7 +1093,7 @@ immutable(Unqual!C1)[] setExtension(C1, C2)(in C1[] path, in C2[] ext)
 
 ///ditto
 immutable(C1)[] setExtension(C1, C2)(immutable(C1)[] path, const(C2)[] ext)
-    if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
+if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
     if (ext.length == 0)
         return stripExtension(path);
@@ -1068,32 +1112,32 @@ immutable(C1)[] setExtension(C1, C2)(immutable(C1)[] path, const(C2)[] ext)
 ///
 @safe unittest
 {
-    assert (setExtension("file", "ext") == "file.ext");
-    assert (setExtension("file"w, ".ext"w) == "file.ext");
-    assert (setExtension("file."d, "ext"d) == "file.ext");
-    assert (setExtension("file.", ".ext") == "file.ext");
-    assert (setExtension("file.old"w, "new"w) == "file.new");
-    assert (setExtension("file.old"d, ".new"d) == "file.new");
+    assert(setExtension("file", "ext") == "file.ext");
+    assert(setExtension("file"w, ".ext"w) == "file.ext");
+    assert(setExtension("file."d, "ext"d) == "file.ext");
+    assert(setExtension("file.", ".ext") == "file.ext");
+    assert(setExtension("file.old"w, "new"w) == "file.new");
+    assert(setExtension("file.old"d, ".new"d) == "file.new");
 }
 
 @safe unittest
 {
-    assert (setExtension("file"w.dup, "ext"w) == "file.ext");
-    assert (setExtension("file"w.dup, ".ext"w) == "file.ext");
-    assert (setExtension("file."w, "ext"w.dup) == "file.ext");
-    assert (setExtension("file."w, ".ext"w.dup) == "file.ext");
-    assert (setExtension("file.old"d.dup, "new"d) == "file.new");
-    assert (setExtension("file.old"d.dup, ".new"d) == "file.new");
+    assert(setExtension("file"w.dup, "ext"w) == "file.ext");
+    assert(setExtension("file"w.dup, ".ext"w) == "file.ext");
+    assert(setExtension("file."w, "ext"w.dup) == "file.ext");
+    assert(setExtension("file."w, ".ext"w.dup) == "file.ext");
+    assert(setExtension("file.old"d.dup, "new"d) == "file.new");
+    assert(setExtension("file.old"d.dup, ".new"d) == "file.new");
 
-    static assert (setExtension("file", "ext") == "file.ext");
-    static assert (setExtension("file.old", "new") == "file.new");
+    static assert(setExtension("file", "ext") == "file.ext");
+    static assert(setExtension("file.old", "new") == "file.new");
 
-    static assert (setExtension("file"w.dup, "ext"w) == "file.ext");
-    static assert (setExtension("file.old"d.dup, "new"d) == "file.new");
+    static assert(setExtension("file"w.dup, "ext"w) == "file.ext");
+    static assert(setExtension("file.old"d.dup, "new"d) == "file.new");
 
     // Issue 10601
-    assert (setExtension("file", "") == "file");
-    assert (setExtension("file.ext", "") == "file");
+    assert(setExtension("file", "") == "file");
+    assert(setExtension("file.ext", "") == "file");
 }
 
 /************
@@ -1109,10 +1153,10 @@ immutable(C1)[] setExtension(C1, C2)(immutable(C1)[] path, const(C2)[] ext)
  *      $(LREF setExtension)
  */
 auto withExtension(R, C)(R path, C[] ext)
-    if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-         isNarrowString!R) &&
-        !isConvertibleToString!R &&
-        isSomeChar!C)
+if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R) &&
+    !isConvertibleToString!R &&
+    isSomeChar!C)
 {
     import std.range : only, chain;
     import std.utf : byUTF;
@@ -1128,25 +1172,25 @@ auto withExtension(R, C)(R path, C[] ext)
 @safe unittest
 {
     import std.array;
-    assert (withExtension("file", "ext").array == "file.ext");
-    assert (withExtension("file"w, ".ext"w).array == "file.ext");
-    assert (withExtension("file.ext"w, ".").array == "file.");
+    assert(withExtension("file", "ext").array == "file.ext");
+    assert(withExtension("file"w, ".ext"w).array == "file.ext");
+    assert(withExtension("file.ext"w, ".").array == "file.");
 
     import std.utf : byChar, byWchar;
-    assert (withExtension("file".byChar, "ext").array == "file.ext");
-    assert (withExtension("file"w.byWchar, ".ext"w).array == "file.ext"w);
-    assert (withExtension("file.ext"w.byWchar, ".").array == "file."w);
+    assert(withExtension("file".byChar, "ext").array == "file.ext");
+    assert(withExtension("file"w.byWchar, ".ext"w).array == "file.ext"w);
+    assert(withExtension("file.ext"w.byWchar, ".").array == "file."w);
 }
 
 auto withExtension(R, C)(auto ref R path, C[] ext)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return withExtension!(StringTypeOf!R)(path, ext);
 }
 
 @safe unittest
 {
-    assert (testAliasedString!withExtension("file", "ext"));
+    assert(testAliasedString!withExtension("file", "ext"));
 }
 
 /** Params:
@@ -1162,7 +1206,7 @@ auto withExtension(R, C)(auto ref R path, C[] ext)
     path is immutable and already has an extension.
 */
 immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
-    if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
+if (isSomeChar!C1 && is(Unqual!C1 == Unqual!C2))
 {
     import std.conv : to;
     return withDefaultExtension(path, ext).to!(typeof(return));
@@ -1171,23 +1215,23 @@ immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
 ///
 @safe unittest
 {
-    assert (defaultExtension("file", "ext") == "file.ext");
-    assert (defaultExtension("file", ".ext") == "file.ext");
-    assert (defaultExtension("file.", "ext")     == "file.");
-    assert (defaultExtension("file.old", "new") == "file.old");
-    assert (defaultExtension("file.old", ".new") == "file.old");
+    assert(defaultExtension("file", "ext") == "file.ext");
+    assert(defaultExtension("file", ".ext") == "file.ext");
+    assert(defaultExtension("file.", "ext")     == "file.");
+    assert(defaultExtension("file.old", "new") == "file.old");
+    assert(defaultExtension("file.old", ".new") == "file.old");
 }
 
 @safe unittest
 {
-    assert (defaultExtension("file"w.dup, "ext"w) == "file.ext");
-    assert (defaultExtension("file.old"d.dup, "new"d) == "file.old");
+    assert(defaultExtension("file"w.dup, "ext"w) == "file.ext");
+    assert(defaultExtension("file.old"d.dup, "new"d) == "file.old");
 
-    static assert (defaultExtension("file", "ext") == "file.ext");
-    static assert (defaultExtension("file.old", "new") == "file.old");
+    static assert(defaultExtension("file", "ext") == "file.ext");
+    static assert(defaultExtension("file.old", "new") == "file.old");
 
-    static assert (defaultExtension("file"w.dup, "ext"w) == "file.ext");
-    static assert (defaultExtension("file.old"d.dup, "new"d) == "file.old");
+    static assert(defaultExtension("file"w.dup, "ext"w) == "file.ext");
+    static assert(defaultExtension("file.old"d.dup, "new"d) == "file.old");
 }
 
 
@@ -1201,10 +1245,10 @@ immutable(Unqual!C1)[] defaultExtension(C1, C2)(in C1[] path, in C2[] ext)
  *      range with the result
  */
 auto withDefaultExtension(R, C)(R path, C[] ext)
-    if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-         isNarrowString!R) &&
-        !isConvertibleToString!R &&
-        isSomeChar!C)
+if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R) &&
+    !isConvertibleToString!R &&
+    isSomeChar!C)
 {
     import std.range : only, chain;
     import std.utf : byUTF;
@@ -1230,27 +1274,27 @@ auto withDefaultExtension(R, C)(R path, C[] ext)
 @safe unittest
 {
     import std.array;
-    assert (withDefaultExtension("file", "ext").array == "file.ext");
-    assert (withDefaultExtension("file"w, ".ext").array == "file.ext"w);
-    assert (withDefaultExtension("file.", "ext").array == "file.");
-    assert (withDefaultExtension("file", "").array == "file.");
+    assert(withDefaultExtension("file", "ext").array == "file.ext");
+    assert(withDefaultExtension("file"w, ".ext").array == "file.ext"w);
+    assert(withDefaultExtension("file.", "ext").array == "file.");
+    assert(withDefaultExtension("file", "").array == "file.");
 
     import std.utf : byChar, byWchar;
-    assert (withDefaultExtension("file".byChar, "ext").array == "file.ext");
-    assert (withDefaultExtension("file"w.byWchar, ".ext").array == "file.ext"w);
-    assert (withDefaultExtension("file.".byChar, "ext"d).array == "file.");
-    assert (withDefaultExtension("file".byChar, "").array == "file.");
+    assert(withDefaultExtension("file".byChar, "ext").array == "file.ext");
+    assert(withDefaultExtension("file"w.byWchar, ".ext").array == "file.ext"w);
+    assert(withDefaultExtension("file.".byChar, "ext"d).array == "file.");
+    assert(withDefaultExtension("file".byChar, "").array == "file.");
 }
 
 auto withDefaultExtension(R, C)(auto ref R path, C[] ext)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return withDefaultExtension!(StringTypeOf!R, C)(path, ext);
 }
 
 @safe unittest
 {
-    assert (testAliasedString!withDefaultExtension("file", "ext"));
+    assert(testAliasedString!withDefaultExtension("file", "ext"));
 }
 
 /** Combines one or more path segments.
@@ -1277,7 +1321,7 @@ auto withDefaultExtension(R, C)(auto ref R path, C[] ext)
 */
 immutable(ElementEncodingType!(ElementType!Range))[]
     buildPath(Range)(Range segments)
-        if (isInputRange!Range && isSomeString!(ElementType!Range))
+    if (isInputRange!Range && !isInfinite!Range && isSomeString!(ElementType!Range))
 {
     if (segments.empty) return null;
 
@@ -1318,7 +1362,7 @@ immutable(ElementEncodingType!(ElementType!Range))[]
 /// ditto
 immutable(C)[] buildPath(C)(const(C)[][] paths...)
     @safe pure nothrow
-    if (isSomeChar!C)
+if (isSomeChar!C)
 {
     return buildPath!(typeof(paths))(paths);
 }
@@ -1328,18 +1372,18 @@ immutable(C)[] buildPath(C)(const(C)[][] paths...)
 {
     version (Posix)
     {
-        assert (buildPath("foo", "bar", "baz") == "foo/bar/baz");
-        assert (buildPath("/foo/", "bar/baz")  == "/foo/bar/baz");
-        assert (buildPath("/foo", "/bar")      == "/bar");
+        assert(buildPath("foo", "bar", "baz") == "foo/bar/baz");
+        assert(buildPath("/foo/", "bar/baz")  == "/foo/bar/baz");
+        assert(buildPath("/foo", "/bar")      == "/bar");
     }
 
     version (Windows)
     {
-        assert (buildPath("foo", "bar", "baz") == `foo\bar\baz`);
-        assert (buildPath(`c:\foo`, `bar\baz`) == `c:\foo\bar\baz`);
-        assert (buildPath("foo", `d:\bar`)     == `d:\bar`);
-        assert (buildPath("foo", `\bar`)       == `\bar`);
-        assert (buildPath(`c:\foo`, `\bar`)    == `c:\bar`);
+        assert(buildPath("foo", "bar", "baz") == `foo\bar\baz`);
+        assert(buildPath(`c:\foo`, `bar\baz`) == `c:\foo\bar\baz`);
+        assert(buildPath("foo", `d:\bar`)     == `d:\bar`);
+        assert(buildPath("foo", `\bar`)       == `\bar`);
+        assert(buildPath(`c:\foo`, `\bar`)    == `c:\bar`);
     }
 }
 
@@ -1351,75 +1395,75 @@ immutable(C)[] buildPath(C)(const(C)[][] paths...)
     InputRange!(C[]) ir(C)(C[][] p...) { return inputRangeObject(p); }
     version (Posix)
     {
-        assert (buildPath("foo") == "foo");
-        assert (buildPath("/foo/") == "/foo/");
-        assert (buildPath("foo", "bar") == "foo/bar");
-        assert (buildPath("foo", "bar", "baz") == "foo/bar/baz");
-        assert (buildPath("foo/".dup, "bar") == "foo/bar");
-        assert (buildPath("foo///", "bar".dup) == "foo///bar");
-        assert (buildPath("/foo"w, "bar"w) == "/foo/bar");
-        assert (buildPath("foo"w.dup, "/bar"w) == "/bar");
-        assert (buildPath("foo"w, "bar/"w.dup) == "foo/bar/");
-        assert (buildPath("/"d, "foo"d) == "/foo");
-        assert (buildPath(""d.dup, "foo"d) == "foo");
-        assert (buildPath("foo"d, ""d.dup) == "foo");
-        assert (buildPath("foo", "bar".dup, "baz") == "foo/bar/baz");
-        assert (buildPath("foo"w, "/bar"w, "baz"w.dup) == "/bar/baz");
+        assert(buildPath("foo") == "foo");
+        assert(buildPath("/foo/") == "/foo/");
+        assert(buildPath("foo", "bar") == "foo/bar");
+        assert(buildPath("foo", "bar", "baz") == "foo/bar/baz");
+        assert(buildPath("foo/".dup, "bar") == "foo/bar");
+        assert(buildPath("foo///", "bar".dup) == "foo///bar");
+        assert(buildPath("/foo"w, "bar"w) == "/foo/bar");
+        assert(buildPath("foo"w.dup, "/bar"w) == "/bar");
+        assert(buildPath("foo"w, "bar/"w.dup) == "foo/bar/");
+        assert(buildPath("/"d, "foo"d) == "/foo");
+        assert(buildPath(""d.dup, "foo"d) == "foo");
+        assert(buildPath("foo"d, ""d.dup) == "foo");
+        assert(buildPath("foo", "bar".dup, "baz") == "foo/bar/baz");
+        assert(buildPath("foo"w, "/bar"w, "baz"w.dup) == "/bar/baz");
 
-        static assert (buildPath("foo", "bar", "baz") == "foo/bar/baz");
-        static assert (buildPath("foo", "/bar", "baz") == "/bar/baz");
+        static assert(buildPath("foo", "bar", "baz") == "foo/bar/baz");
+        static assert(buildPath("foo", "/bar", "baz") == "/bar/baz");
 
         // The following are mostly duplicates of the above, except that the
         // range version does not accept mixed constness.
-        assert (buildPath(ir("foo")) == "foo");
-        assert (buildPath(ir("/foo/")) == "/foo/");
-        assert (buildPath(ir("foo", "bar")) == "foo/bar");
-        assert (buildPath(ir("foo", "bar", "baz")) == "foo/bar/baz");
-        assert (buildPath(ir("foo/".dup, "bar".dup)) == "foo/bar");
-        assert (buildPath(ir("foo///".dup, "bar".dup)) == "foo///bar");
-        assert (buildPath(ir("/foo"w, "bar"w)) == "/foo/bar");
-        assert (buildPath(ir("foo"w.dup, "/bar"w.dup)) == "/bar");
-        assert (buildPath(ir("foo"w.dup, "bar/"w.dup)) == "foo/bar/");
-        assert (buildPath(ir("/"d, "foo"d)) == "/foo");
-        assert (buildPath(ir(""d.dup, "foo"d.dup)) == "foo");
-        assert (buildPath(ir("foo"d, ""d)) == "foo");
-        assert (buildPath(ir("foo", "bar", "baz")) == "foo/bar/baz");
-        assert (buildPath(ir("foo"w.dup, "/bar"w.dup, "baz"w.dup)) == "/bar/baz");
+        assert(buildPath(ir("foo")) == "foo");
+        assert(buildPath(ir("/foo/")) == "/foo/");
+        assert(buildPath(ir("foo", "bar")) == "foo/bar");
+        assert(buildPath(ir("foo", "bar", "baz")) == "foo/bar/baz");
+        assert(buildPath(ir("foo/".dup, "bar".dup)) == "foo/bar");
+        assert(buildPath(ir("foo///".dup, "bar".dup)) == "foo///bar");
+        assert(buildPath(ir("/foo"w, "bar"w)) == "/foo/bar");
+        assert(buildPath(ir("foo"w.dup, "/bar"w.dup)) == "/bar");
+        assert(buildPath(ir("foo"w.dup, "bar/"w.dup)) == "foo/bar/");
+        assert(buildPath(ir("/"d, "foo"d)) == "/foo");
+        assert(buildPath(ir(""d.dup, "foo"d.dup)) == "foo");
+        assert(buildPath(ir("foo"d, ""d)) == "foo");
+        assert(buildPath(ir("foo", "bar", "baz")) == "foo/bar/baz");
+        assert(buildPath(ir("foo"w.dup, "/bar"w.dup, "baz"w.dup)) == "/bar/baz");
     }
     version (Windows)
     {
-        assert (buildPath("foo") == "foo");
-        assert (buildPath(`\foo/`) == `\foo/`);
-        assert (buildPath("foo", "bar", "baz") == `foo\bar\baz`);
-        assert (buildPath("foo", `\bar`) == `\bar`);
-        assert (buildPath(`c:\foo`, "bar") == `c:\foo\bar`);
-        assert (buildPath("foo"w, `d:\bar`w.dup) ==  `d:\bar`);
-        assert (buildPath(`c:\foo\bar`, `\baz`) == `c:\baz`);
-        assert (buildPath(`\\foo\bar\baz`d, `foo`d, `\bar`d) == `\\foo\bar\bar`d);
+        assert(buildPath("foo") == "foo");
+        assert(buildPath(`\foo/`) == `\foo/`);
+        assert(buildPath("foo", "bar", "baz") == `foo\bar\baz`);
+        assert(buildPath("foo", `\bar`) == `\bar`);
+        assert(buildPath(`c:\foo`, "bar") == `c:\foo\bar`);
+        assert(buildPath("foo"w, `d:\bar`w.dup) ==  `d:\bar`);
+        assert(buildPath(`c:\foo\bar`, `\baz`) == `c:\baz`);
+        assert(buildPath(`\\foo\bar\baz`d, `foo`d, `\bar`d) == `\\foo\bar\bar`d);
 
-        static assert (buildPath("foo", "bar", "baz") == `foo\bar\baz`);
-        static assert (buildPath("foo", `c:\bar`, "baz") == `c:\bar\baz`);
+        static assert(buildPath("foo", "bar", "baz") == `foo\bar\baz`);
+        static assert(buildPath("foo", `c:\bar`, "baz") == `c:\bar\baz`);
 
-        assert (buildPath(ir("foo")) == "foo");
-        assert (buildPath(ir(`\foo/`)) == `\foo/`);
-        assert (buildPath(ir("foo", "bar", "baz")) == `foo\bar\baz`);
-        assert (buildPath(ir("foo", `\bar`)) == `\bar`);
-        assert (buildPath(ir(`c:\foo`, "bar")) == `c:\foo\bar`);
-        assert (buildPath(ir("foo"w.dup, `d:\bar`w.dup)) ==  `d:\bar`);
-        assert (buildPath(ir(`c:\foo\bar`, `\baz`)) == `c:\baz`);
-        assert (buildPath(ir(`\\foo\bar\baz`d, `foo`d, `\bar`d)) == `\\foo\bar\bar`d);
+        assert(buildPath(ir("foo")) == "foo");
+        assert(buildPath(ir(`\foo/`)) == `\foo/`);
+        assert(buildPath(ir("foo", "bar", "baz")) == `foo\bar\baz`);
+        assert(buildPath(ir("foo", `\bar`)) == `\bar`);
+        assert(buildPath(ir(`c:\foo`, "bar")) == `c:\foo\bar`);
+        assert(buildPath(ir("foo"w.dup, `d:\bar`w.dup)) ==  `d:\bar`);
+        assert(buildPath(ir(`c:\foo\bar`, `\baz`)) == `c:\baz`);
+        assert(buildPath(ir(`\\foo\bar\baz`d, `foo`d, `\bar`d)) == `\\foo\bar\bar`d);
     }
 
     // Test that allocation works as it should.
     auto manyShort = "aaa".repeat(1000).array();
     auto manyShortCombined = join(manyShort, dirSeparator);
-    assert (buildPath(manyShort) == manyShortCombined);
-    assert (buildPath(ir(manyShort)) == manyShortCombined);
+    assert(buildPath(manyShort) == manyShortCombined);
+    assert(buildPath(ir(manyShort)) == manyShortCombined);
 
     auto fewLong = 'b'.repeat(500).array().repeat(10).array();
     auto fewLongCombined = join(fewLong, dirSeparator);
-    assert (buildPath(fewLong) == fewLongCombined);
-    assert (buildPath(ir(fewLong)) == fewLongCombined);
+    assert(buildPath(fewLong) == fewLongCombined);
+    assert(buildPath(ir(fewLong)) == fewLongCombined);
 }
 
 @safe unittest
@@ -1428,11 +1472,11 @@ immutable(C)[] buildPath(C)(const(C)[][] paths...)
     string[] ary = ["a", "b"];
     version (Posix)
     {
-        assert (buildPath(ary) == "a/b");
+        assert(buildPath(ary) == "a/b");
     }
     else version (Windows)
     {
-        assert (buildPath(ary) == `a\b`);
+        assert(buildPath(ary) == `a\b`);
     }
 }
 
@@ -1451,14 +1495,14 @@ immutable(C)[] buildPath(C)(const(C)[][] paths...)
  *      $(LREF buildPath)
  */
 auto chainPath(R1, R2, Ranges...)(R1 r1, R2 r2, Ranges ranges)
-    if ((isRandomAccessRange!R1 && hasSlicing!R1 && hasLength!R1 && isSomeChar!(ElementType!R1) ||
-         isNarrowString!R1 &&
-        !isConvertibleToString!R1) &&
-        (isRandomAccessRange!R2 && hasSlicing!R2 && hasLength!R2 && isSomeChar!(ElementType!R2) ||
-         isNarrowString!R2 &&
-        !isConvertibleToString!R2) &&
-        (Ranges.length == 0 || is(typeof(chainPath(r2, ranges))))
-       )
+if ((isRandomAccessRange!R1 && hasSlicing!R1 && hasLength!R1 && isSomeChar!(ElementType!R1) ||
+    isNarrowString!R1 &&
+    !isConvertibleToString!R1) &&
+    (isRandomAccessRange!R2 && hasSlicing!R2 && hasLength!R2 && isSomeChar!(ElementType!R2) ||
+    isNarrowString!R2 &&
+    !isConvertibleToString!R2) &&
+    (Ranges.length == 0 || is(typeof(chainPath(r2, ranges))))
+    )
 {
     static if (Ranges.length)
     {
@@ -1513,41 +1557,41 @@ auto chainPath(R1, R2, Ranges...)(R1 r1, R2 r2, Ranges ranges)
     import std.array;
     version (Posix)
     {
-        assert (chainPath("foo", "bar", "baz").array == "foo/bar/baz");
-        assert (chainPath("/foo/", "bar/baz").array  == "/foo/bar/baz");
-        assert (chainPath("/foo", "/bar").array      == "/bar");
+        assert(chainPath("foo", "bar", "baz").array == "foo/bar/baz");
+        assert(chainPath("/foo/", "bar/baz").array  == "/foo/bar/baz");
+        assert(chainPath("/foo", "/bar").array      == "/bar");
     }
 
     version (Windows)
     {
-        assert (chainPath("foo", "bar", "baz").array == `foo\bar\baz`);
-        assert (chainPath(`c:\foo`, `bar\baz`).array == `c:\foo\bar\baz`);
-        assert (chainPath("foo", `d:\bar`).array     == `d:\bar`);
-        assert (chainPath("foo", `\bar`).array       == `\bar`);
-        assert (chainPath(`c:\foo`, `\bar`).array    == `c:\bar`);
+        assert(chainPath("foo", "bar", "baz").array == `foo\bar\baz`);
+        assert(chainPath(`c:\foo`, `bar\baz`).array == `c:\foo\bar\baz`);
+        assert(chainPath("foo", `d:\bar`).array     == `d:\bar`);
+        assert(chainPath("foo", `\bar`).array       == `\bar`);
+        assert(chainPath(`c:\foo`, `\bar`).array    == `c:\bar`);
     }
 
     import std.utf : byChar;
     version (Posix)
     {
-        assert (chainPath("foo", "bar", "baz").array == "foo/bar/baz");
-        assert (chainPath("/foo/".byChar, "bar/baz").array  == "/foo/bar/baz");
-        assert (chainPath("/foo", "/bar".byChar).array      == "/bar");
+        assert(chainPath("foo", "bar", "baz").array == "foo/bar/baz");
+        assert(chainPath("/foo/".byChar, "bar/baz").array  == "/foo/bar/baz");
+        assert(chainPath("/foo", "/bar".byChar).array      == "/bar");
     }
 
     version (Windows)
     {
-        assert (chainPath("foo", "bar", "baz").array == `foo\bar\baz`);
-        assert (chainPath(`c:\foo`.byChar, `bar\baz`).array == `c:\foo\bar\baz`);
-        assert (chainPath("foo", `d:\bar`).array     == `d:\bar`);
-        assert (chainPath("foo", `\bar`.byChar).array       == `\bar`);
-        assert (chainPath(`c:\foo`, `\bar`w).array    == `c:\bar`);
+        assert(chainPath("foo", "bar", "baz").array == `foo\bar\baz`);
+        assert(chainPath(`c:\foo`.byChar, `bar\baz`).array == `c:\foo\bar\baz`);
+        assert(chainPath("foo", `d:\bar`).array     == `d:\bar`);
+        assert(chainPath("foo", `\bar`.byChar).array       == `\bar`);
+        assert(chainPath(`c:\foo`, `\bar`w).array    == `c:\bar`);
     }
 }
 
 auto chainPath(Ranges...)(auto ref Ranges ranges)
-    if (Ranges.length >= 2 &&
-        std.meta.anySatisfy!(isConvertibleToString, Ranges))
+if (Ranges.length >= 2 &&
+    std.meta.anySatisfy!(isConvertibleToString, Ranges))
 {
     import std.meta : staticMap;
     alias Types = staticMap!(convertToString, Ranges);
@@ -1584,7 +1628,7 @@ auto chainPath(Ranges...)(auto ref Ranges ranges)
 */
 immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     @trusted pure nothrow
-    if (isSomeChar!C)
+if (isSomeChar!C)
 {
     import std.array : array;
 
@@ -1603,102 +1647,102 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
 ///
 @safe unittest
 {
-    assert (buildNormalizedPath("foo", "..") == ".");
+    assert(buildNormalizedPath("foo", "..") == ".");
 
     version (Posix)
     {
-        assert (buildNormalizedPath("/foo/./bar/..//baz/") == "/foo/baz");
-        assert (buildNormalizedPath("../foo/.") == "../foo");
-        assert (buildNormalizedPath("/foo", "bar/baz/") == "/foo/bar/baz");
-        assert (buildNormalizedPath("/foo", "/bar/..", "baz") == "/baz");
-        assert (buildNormalizedPath("foo/./bar", "../../", "../baz") == "../baz");
-        assert (buildNormalizedPath("/foo/./bar", "../../baz") == "/baz");
+        assert(buildNormalizedPath("/foo/./bar/..//baz/") == "/foo/baz");
+        assert(buildNormalizedPath("../foo/.") == "../foo");
+        assert(buildNormalizedPath("/foo", "bar/baz/") == "/foo/bar/baz");
+        assert(buildNormalizedPath("/foo", "/bar/..", "baz") == "/baz");
+        assert(buildNormalizedPath("foo/./bar", "../../", "../baz") == "../baz");
+        assert(buildNormalizedPath("/foo/./bar", "../../baz") == "/baz");
     }
 
     version (Windows)
     {
-        assert (buildNormalizedPath(`c:\foo\.\bar/..\\baz\`) == `c:\foo\baz`);
-        assert (buildNormalizedPath(`..\foo\.`) == `..\foo`);
-        assert (buildNormalizedPath(`c:\foo`, `bar\baz\`) == `c:\foo\bar\baz`);
-        assert (buildNormalizedPath(`c:\foo`, `bar/..`) == `c:\foo`);
-        assert (buildNormalizedPath(`\\server\share\foo`, `..\bar`) ==
+        assert(buildNormalizedPath(`c:\foo\.\bar/..\\baz\`) == `c:\foo\baz`);
+        assert(buildNormalizedPath(`..\foo\.`) == `..\foo`);
+        assert(buildNormalizedPath(`c:\foo`, `bar\baz\`) == `c:\foo\bar\baz`);
+        assert(buildNormalizedPath(`c:\foo`, `bar/..`) == `c:\foo`);
+        assert(buildNormalizedPath(`\\server\share\foo`, `..\bar`) ==
                 `\\server\share\bar`);
     }
 }
 
 @safe unittest
 {
-    assert (buildNormalizedPath(".", ".") == ".");
-    assert (buildNormalizedPath("foo", "..") == ".");
-    assert (buildNormalizedPath("", "") is null);
-    assert (buildNormalizedPath("", ".") == ".");
-    assert (buildNormalizedPath(".", "") == ".");
-    assert (buildNormalizedPath(null, "foo") == "foo");
-    assert (buildNormalizedPath("", "foo") == "foo");
-    assert (buildNormalizedPath("", "") == "");
-    assert (buildNormalizedPath("", null) == "");
-    assert (buildNormalizedPath(null, "") == "");
-    assert (buildNormalizedPath!(char)(null, null) == "");
+    assert(buildNormalizedPath(".", ".") == ".");
+    assert(buildNormalizedPath("foo", "..") == ".");
+    assert(buildNormalizedPath("", "") is null);
+    assert(buildNormalizedPath("", ".") == ".");
+    assert(buildNormalizedPath(".", "") == ".");
+    assert(buildNormalizedPath(null, "foo") == "foo");
+    assert(buildNormalizedPath("", "foo") == "foo");
+    assert(buildNormalizedPath("", "") == "");
+    assert(buildNormalizedPath("", null) == "");
+    assert(buildNormalizedPath(null, "") == "");
+    assert(buildNormalizedPath!(char)(null, null) == "");
 
     version (Posix)
     {
-        assert (buildNormalizedPath("/", "foo", "bar") == "/foo/bar");
-        assert (buildNormalizedPath("foo", "bar", "baz") == "foo/bar/baz");
-        assert (buildNormalizedPath("foo", "bar/baz") == "foo/bar/baz");
-        assert (buildNormalizedPath("foo", "bar//baz///") == "foo/bar/baz");
-        assert (buildNormalizedPath("/foo", "bar/baz") == "/foo/bar/baz");
-        assert (buildNormalizedPath("/foo", "/bar/baz") == "/bar/baz");
-        assert (buildNormalizedPath("/foo/..", "/bar/./baz") == "/bar/baz");
-        assert (buildNormalizedPath("/foo/..", "bar/baz") == "/bar/baz");
-        assert (buildNormalizedPath("/foo/../../", "bar/baz") == "/bar/baz");
-        assert (buildNormalizedPath("/foo/bar", "../baz") == "/foo/baz");
-        assert (buildNormalizedPath("/foo/bar", "../../baz") == "/baz");
-        assert (buildNormalizedPath("/foo/bar", ".././/baz/..", "wee/") == "/foo/wee");
-        assert (buildNormalizedPath("//foo/bar", "baz///wee") == "/foo/bar/baz/wee");
-        static assert (buildNormalizedPath("/foo/..", "/bar/./baz") == "/bar/baz");
+        assert(buildNormalizedPath("/", "foo", "bar") == "/foo/bar");
+        assert(buildNormalizedPath("foo", "bar", "baz") == "foo/bar/baz");
+        assert(buildNormalizedPath("foo", "bar/baz") == "foo/bar/baz");
+        assert(buildNormalizedPath("foo", "bar//baz///") == "foo/bar/baz");
+        assert(buildNormalizedPath("/foo", "bar/baz") == "/foo/bar/baz");
+        assert(buildNormalizedPath("/foo", "/bar/baz") == "/bar/baz");
+        assert(buildNormalizedPath("/foo/..", "/bar/./baz") == "/bar/baz");
+        assert(buildNormalizedPath("/foo/..", "bar/baz") == "/bar/baz");
+        assert(buildNormalizedPath("/foo/../../", "bar/baz") == "/bar/baz");
+        assert(buildNormalizedPath("/foo/bar", "../baz") == "/foo/baz");
+        assert(buildNormalizedPath("/foo/bar", "../../baz") == "/baz");
+        assert(buildNormalizedPath("/foo/bar", ".././/baz/..", "wee/") == "/foo/wee");
+        assert(buildNormalizedPath("//foo/bar", "baz///wee") == "/foo/bar/baz/wee");
+        static assert(buildNormalizedPath("/foo/..", "/bar/./baz") == "/bar/baz");
     }
     else version (Windows)
     {
-        assert (buildNormalizedPath(`\`, `foo`, `bar`) == `\foo\bar`);
-        assert (buildNormalizedPath(`foo`, `bar`, `baz`) == `foo\bar\baz`);
-        assert (buildNormalizedPath(`foo`, `bar\baz`) == `foo\bar\baz`);
-        assert (buildNormalizedPath(`foo`, `bar\\baz\\\`) == `foo\bar\baz`);
-        assert (buildNormalizedPath(`\foo`, `bar\baz`) == `\foo\bar\baz`);
-        assert (buildNormalizedPath(`\foo`, `\bar\baz`) == `\bar\baz`);
-        assert (buildNormalizedPath(`\foo\..`, `\bar\.\baz`) == `\bar\baz`);
-        assert (buildNormalizedPath(`\foo\..`, `bar\baz`) == `\bar\baz`);
-        assert (buildNormalizedPath(`\foo\..\..\`, `bar\baz`) == `\bar\baz`);
-        assert (buildNormalizedPath(`\foo\bar`, `..\baz`) == `\foo\baz`);
-        assert (buildNormalizedPath(`\foo\bar`, `../../baz`) == `\baz`);
-        assert (buildNormalizedPath(`\foo\bar`, `..\.\/baz\..`, `wee\`) == `\foo\wee`);
+        assert(buildNormalizedPath(`\`, `foo`, `bar`) == `\foo\bar`);
+        assert(buildNormalizedPath(`foo`, `bar`, `baz`) == `foo\bar\baz`);
+        assert(buildNormalizedPath(`foo`, `bar\baz`) == `foo\bar\baz`);
+        assert(buildNormalizedPath(`foo`, `bar\\baz\\\`) == `foo\bar\baz`);
+        assert(buildNormalizedPath(`\foo`, `bar\baz`) == `\foo\bar\baz`);
+        assert(buildNormalizedPath(`\foo`, `\bar\baz`) == `\bar\baz`);
+        assert(buildNormalizedPath(`\foo\..`, `\bar\.\baz`) == `\bar\baz`);
+        assert(buildNormalizedPath(`\foo\..`, `bar\baz`) == `\bar\baz`);
+        assert(buildNormalizedPath(`\foo\..\..\`, `bar\baz`) == `\bar\baz`);
+        assert(buildNormalizedPath(`\foo\bar`, `..\baz`) == `\foo\baz`);
+        assert(buildNormalizedPath(`\foo\bar`, `../../baz`) == `\baz`);
+        assert(buildNormalizedPath(`\foo\bar`, `..\.\/baz\..`, `wee\`) == `\foo\wee`);
 
-        assert (buildNormalizedPath(`c:\`, `foo`, `bar`) == `c:\foo\bar`);
-        assert (buildNormalizedPath(`c:foo`, `bar`, `baz`) == `c:foo\bar\baz`);
-        assert (buildNormalizedPath(`c:foo`, `bar\baz`) == `c:foo\bar\baz`);
-        assert (buildNormalizedPath(`c:foo`, `bar\\baz\\\`) == `c:foo\bar\baz`);
-        assert (buildNormalizedPath(`c:\foo`, `bar\baz`) == `c:\foo\bar\baz`);
-        assert (buildNormalizedPath(`c:\foo`, `\bar\baz`) == `c:\bar\baz`);
-        assert (buildNormalizedPath(`c:\foo\..`, `\bar\.\baz`) == `c:\bar\baz`);
-        assert (buildNormalizedPath(`c:\foo\..`, `bar\baz`) == `c:\bar\baz`);
-        assert (buildNormalizedPath(`c:\foo\..\..\`, `bar\baz`) == `c:\bar\baz`);
-        assert (buildNormalizedPath(`c:\foo\bar`, `..\baz`) == `c:\foo\baz`);
-        assert (buildNormalizedPath(`c:\foo\bar`, `..\..\baz`) == `c:\baz`);
-        assert (buildNormalizedPath(`c:\foo\bar`, `..\.\\baz\..`, `wee\`) == `c:\foo\wee`);
+        assert(buildNormalizedPath(`c:\`, `foo`, `bar`) == `c:\foo\bar`);
+        assert(buildNormalizedPath(`c:foo`, `bar`, `baz`) == `c:foo\bar\baz`);
+        assert(buildNormalizedPath(`c:foo`, `bar\baz`) == `c:foo\bar\baz`);
+        assert(buildNormalizedPath(`c:foo`, `bar\\baz\\\`) == `c:foo\bar\baz`);
+        assert(buildNormalizedPath(`c:\foo`, `bar\baz`) == `c:\foo\bar\baz`);
+        assert(buildNormalizedPath(`c:\foo`, `\bar\baz`) == `c:\bar\baz`);
+        assert(buildNormalizedPath(`c:\foo\..`, `\bar\.\baz`) == `c:\bar\baz`);
+        assert(buildNormalizedPath(`c:\foo\..`, `bar\baz`) == `c:\bar\baz`);
+        assert(buildNormalizedPath(`c:\foo\..\..\`, `bar\baz`) == `c:\bar\baz`);
+        assert(buildNormalizedPath(`c:\foo\bar`, `..\baz`) == `c:\foo\baz`);
+        assert(buildNormalizedPath(`c:\foo\bar`, `..\..\baz`) == `c:\baz`);
+        assert(buildNormalizedPath(`c:\foo\bar`, `..\.\\baz\..`, `wee\`) == `c:\foo\wee`);
 
-        assert (buildNormalizedPath(`\\server\share`, `foo`, `bar`) == `\\server\share\foo\bar`);
-        assert (buildNormalizedPath(`\\server\share\`, `foo`, `bar`) == `\\server\share\foo\bar`);
-        assert (buildNormalizedPath(`\\server\share\foo`, `bar\baz`) == `\\server\share\foo\bar\baz`);
-        assert (buildNormalizedPath(`\\server\share\foo`, `\bar\baz`) == `\\server\share\bar\baz`);
-        assert (buildNormalizedPath(`\\server\share\foo\..`, `\bar\.\baz`) == `\\server\share\bar\baz`);
-        assert (buildNormalizedPath(`\\server\share\foo\..`, `bar\baz`) == `\\server\share\bar\baz`);
-        assert (buildNormalizedPath(`\\server\share\foo\..\..\`, `bar\baz`) == `\\server\share\bar\baz`);
-        assert (buildNormalizedPath(`\\server\share\foo\bar`, `..\baz`) == `\\server\share\foo\baz`);
-        assert (buildNormalizedPath(`\\server\share\foo\bar`, `..\..\baz`) == `\\server\share\baz`);
-        assert (buildNormalizedPath(`\\server\share\foo\bar`, `..\.\\baz\..`, `wee\`) == `\\server\share\foo\wee`);
+        assert(buildNormalizedPath(`\\server\share`, `foo`, `bar`) == `\\server\share\foo\bar`);
+        assert(buildNormalizedPath(`\\server\share\`, `foo`, `bar`) == `\\server\share\foo\bar`);
+        assert(buildNormalizedPath(`\\server\share\foo`, `bar\baz`) == `\\server\share\foo\bar\baz`);
+        assert(buildNormalizedPath(`\\server\share\foo`, `\bar\baz`) == `\\server\share\bar\baz`);
+        assert(buildNormalizedPath(`\\server\share\foo\..`, `\bar\.\baz`) == `\\server\share\bar\baz`);
+        assert(buildNormalizedPath(`\\server\share\foo\..`, `bar\baz`) == `\\server\share\bar\baz`);
+        assert(buildNormalizedPath(`\\server\share\foo\..\..\`, `bar\baz`) == `\\server\share\bar\baz`);
+        assert(buildNormalizedPath(`\\server\share\foo\bar`, `..\baz`) == `\\server\share\foo\baz`);
+        assert(buildNormalizedPath(`\\server\share\foo\bar`, `..\..\baz`) == `\\server\share\baz`);
+        assert(buildNormalizedPath(`\\server\share\foo\bar`, `..\.\\baz\..`, `wee\`) == `\\server\share\foo\wee`);
 
-        static assert (buildNormalizedPath(`\foo\..\..\`, `bar\baz`) == `\bar\baz`);
+        static assert(buildNormalizedPath(`\foo\..\..\`, `bar\baz`) == `\bar\baz`);
     }
-    else static assert (0);
+    else static assert(0);
 }
 
 @safe unittest
@@ -1707,11 +1751,11 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
     string[] ary = ["a", "b"];
     version (Posix)
     {
-        assert (buildNormalizedPath(ary) == "a/b");
+        assert(buildNormalizedPath(ary) == "a/b");
     }
     else version (Windows)
     {
-        assert (buildNormalizedPath(ary) == `a\b`);
+        assert(buildNormalizedPath(ary) == `a\b`);
     }
 }
 
@@ -1737,12 +1781,12 @@ immutable(C)[] buildNormalizedPath(C)(const(C[])[] paths...)
 */
 
 auto asNormalizedPath(R)(R path)
-    if (isSomeChar!(ElementEncodingType!R) &&
-        (isRandomAccessRange!R && hasSlicing!R && hasLength!R || isNarrowString!R) &&
-        !isConvertibleToString!R)
+if (isSomeChar!(ElementEncodingType!R) &&
+    (isRandomAccessRange!R && hasSlicing!R && hasLength!R || isNarrowString!R) &&
+    !isConvertibleToString!R)
 {
     alias C = Unqual!(ElementEncodingType!R);
-    alias S = typeof(path[0..0]);
+    alias S = typeof(path[0 .. 0]);
 
     static struct Result
     {
@@ -1770,7 +1814,7 @@ auto asNormalizedPath(R)(R path)
             {
                 if (elements.empty)
                 {
-                    element = element[0..0];
+                    element = element[0 .. 0];
                     return;
                 }
                 element = elements.front;
@@ -1794,7 +1838,7 @@ auto asNormalizedPath(R)(R path)
                             if (n == 0)
                             {
                                 elements = elements2;
-                                element = element[0..0];
+                                element = element[0 .. 0];
                                 continue L1;
                             }
                         }
@@ -1872,7 +1916,7 @@ auto asNormalizedPath(R)(R path)
         bool rooted;    // the path starts with a root directory
         C c;
         S element;
-        typeof(pathSplitter(path[0..0])) elements;
+        typeof(pathSplitter(path[0 .. 0])) elements;
     }
 
     return Result(path);
@@ -1882,29 +1926,29 @@ auto asNormalizedPath(R)(R path)
 @safe unittest
 {
     import std.array;
-    assert (asNormalizedPath("foo/..").array == ".");
+    assert(asNormalizedPath("foo/..").array == ".");
 
     version (Posix)
     {
-        assert (asNormalizedPath("/foo/./bar/..//baz/").array == "/foo/baz");
-        assert (asNormalizedPath("../foo/.").array == "../foo");
-        assert (asNormalizedPath("/foo/bar/baz/").array == "/foo/bar/baz");
-        assert (asNormalizedPath("/foo/./bar/../../baz").array == "/baz");
+        assert(asNormalizedPath("/foo/./bar/..//baz/").array == "/foo/baz");
+        assert(asNormalizedPath("../foo/.").array == "../foo");
+        assert(asNormalizedPath("/foo/bar/baz/").array == "/foo/bar/baz");
+        assert(asNormalizedPath("/foo/./bar/../../baz").array == "/baz");
     }
 
     version (Windows)
     {
-        assert (asNormalizedPath(`c:\foo\.\bar/..\\baz\`).array == `c:\foo\baz`);
-        assert (asNormalizedPath(`..\foo\.`).array == `..\foo`);
-        assert (asNormalizedPath(`c:\foo\bar\baz\`).array == `c:\foo\bar\baz`);
-        assert (asNormalizedPath(`c:\foo\bar/..`).array == `c:\foo`);
-        assert (asNormalizedPath(`\\server\share\foo\..\bar`).array ==
+        assert(asNormalizedPath(`c:\foo\.\bar/..\\baz\`).array == `c:\foo\baz`);
+        assert(asNormalizedPath(`..\foo\.`).array == `..\foo`);
+        assert(asNormalizedPath(`c:\foo\bar\baz\`).array == `c:\foo\bar\baz`);
+        assert(asNormalizedPath(`c:\foo\bar/..`).array == `c:\foo`);
+        assert(asNormalizedPath(`\\server\share\foo\..\bar`).array ==
                 `\\server\share\bar`);
     }
 }
 
 auto asNormalizedPath(R)(auto ref R path)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return asNormalizedPath!(StringTypeOf!R)(path);
 }
@@ -1919,11 +1963,11 @@ auto asNormalizedPath(R)(auto ref R path)
     import std.array;
     import std.utf : byChar;
 
-    assert (asNormalizedPath("").array is null);
-    assert (asNormalizedPath("foo").array == "foo");
-    assert (asNormalizedPath(".").array == ".");
-    assert (asNormalizedPath("./.").array == ".");
-    assert (asNormalizedPath("foo/..").array == ".");
+    assert(asNormalizedPath("").array is null);
+    assert(asNormalizedPath("foo").array == "foo");
+    assert(asNormalizedPath(".").array == ".");
+    assert(asNormalizedPath("./.").array == ".");
+    assert(asNormalizedPath("foo/..").array == ".");
 
     auto save = asNormalizedPath("fob").save;
     save.popFront();
@@ -1931,75 +1975,75 @@ auto asNormalizedPath(R)(auto ref R path)
 
     version (Posix)
     {
-        assert (asNormalizedPath("/foo/bar").array == "/foo/bar");
-        assert (asNormalizedPath("foo/bar/baz").array == "foo/bar/baz");
-        assert (asNormalizedPath("foo/bar/baz").array == "foo/bar/baz");
-        assert (asNormalizedPath("foo/bar//baz///").array == "foo/bar/baz");
-        assert (asNormalizedPath("/foo/bar/baz").array == "/foo/bar/baz");
-        assert (asNormalizedPath("/foo/../bar/baz").array == "/bar/baz");
-        assert (asNormalizedPath("/foo/../..//bar/baz").array == "/bar/baz");
-        assert (asNormalizedPath("/foo/bar/../baz").array == "/foo/baz");
-        assert (asNormalizedPath("/foo/bar/../../baz").array == "/baz");
-        assert (asNormalizedPath("/foo/bar/.././/baz/../wee/").array == "/foo/wee");
-        assert (asNormalizedPath("//foo/bar/baz///wee").array == "/foo/bar/baz/wee");
+        assert(asNormalizedPath("/foo/bar").array == "/foo/bar");
+        assert(asNormalizedPath("foo/bar/baz").array == "foo/bar/baz");
+        assert(asNormalizedPath("foo/bar/baz").array == "foo/bar/baz");
+        assert(asNormalizedPath("foo/bar//baz///").array == "foo/bar/baz");
+        assert(asNormalizedPath("/foo/bar/baz").array == "/foo/bar/baz");
+        assert(asNormalizedPath("/foo/../bar/baz").array == "/bar/baz");
+        assert(asNormalizedPath("/foo/../..//bar/baz").array == "/bar/baz");
+        assert(asNormalizedPath("/foo/bar/../baz").array == "/foo/baz");
+        assert(asNormalizedPath("/foo/bar/../../baz").array == "/baz");
+        assert(asNormalizedPath("/foo/bar/.././/baz/../wee/").array == "/foo/wee");
+        assert(asNormalizedPath("//foo/bar/baz///wee").array == "/foo/bar/baz/wee");
 
-        assert (asNormalizedPath("foo//bar").array == "foo/bar");
-        assert (asNormalizedPath("foo/bar").array == "foo/bar");
+        assert(asNormalizedPath("foo//bar").array == "foo/bar");
+        assert(asNormalizedPath("foo/bar").array == "foo/bar");
 
         //Curent dir path
-        assert (asNormalizedPath("./").array == ".");
-        assert (asNormalizedPath("././").array == ".");
-        assert (asNormalizedPath("./foo/..").array == ".");
-        assert (asNormalizedPath("foo/..").array == ".");
+        assert(asNormalizedPath("./").array == ".");
+        assert(asNormalizedPath("././").array == ".");
+        assert(asNormalizedPath("./foo/..").array == ".");
+        assert(asNormalizedPath("foo/..").array == ".");
     }
     else version (Windows)
     {
-        assert (asNormalizedPath(`\foo\bar`).array == `\foo\bar`);
-        assert (asNormalizedPath(`foo\bar\baz`).array == `foo\bar\baz`);
-        assert (asNormalizedPath(`foo\bar\baz`).array == `foo\bar\baz`);
-        assert (asNormalizedPath(`foo\bar\\baz\\\`).array == `foo\bar\baz`);
-        assert (asNormalizedPath(`\foo\bar\baz`).array == `\foo\bar\baz`);
-        assert (asNormalizedPath(`\foo\..\\bar\.\baz`).array == `\bar\baz`);
-        assert (asNormalizedPath(`\foo\..\bar\baz`).array == `\bar\baz`);
-        assert (asNormalizedPath(`\foo\..\..\\bar\baz`).array == `\bar\baz`);
+        assert(asNormalizedPath(`\foo\bar`).array == `\foo\bar`);
+        assert(asNormalizedPath(`foo\bar\baz`).array == `foo\bar\baz`);
+        assert(asNormalizedPath(`foo\bar\baz`).array == `foo\bar\baz`);
+        assert(asNormalizedPath(`foo\bar\\baz\\\`).array == `foo\bar\baz`);
+        assert(asNormalizedPath(`\foo\bar\baz`).array == `\foo\bar\baz`);
+        assert(asNormalizedPath(`\foo\..\\bar\.\baz`).array == `\bar\baz`);
+        assert(asNormalizedPath(`\foo\..\bar\baz`).array == `\bar\baz`);
+        assert(asNormalizedPath(`\foo\..\..\\bar\baz`).array == `\bar\baz`);
 
-        assert (asNormalizedPath(`\foo\bar\..\baz`).array == `\foo\baz`);
-        assert (asNormalizedPath(`\foo\bar\../../baz`).array == `\baz`);
-        assert (asNormalizedPath(`\foo\bar\..\.\/baz\..\wee\`).array == `\foo\wee`);
+        assert(asNormalizedPath(`\foo\bar\..\baz`).array == `\foo\baz`);
+        assert(asNormalizedPath(`\foo\bar\../../baz`).array == `\baz`);
+        assert(asNormalizedPath(`\foo\bar\..\.\/baz\..\wee\`).array == `\foo\wee`);
 
-        assert (asNormalizedPath(`c:\foo\bar`).array == `c:\foo\bar`);
-        assert (asNormalizedPath(`c:foo\bar\baz`).array == `c:foo\bar\baz`);
-        assert (asNormalizedPath(`c:foo\bar\baz`).array == `c:foo\bar\baz`);
-        assert (asNormalizedPath(`c:foo\bar\\baz\\\`).array == `c:foo\bar\baz`);
-        assert (asNormalizedPath(`c:\foo\bar\baz`).array == `c:\foo\bar\baz`);
+        assert(asNormalizedPath(`c:\foo\bar`).array == `c:\foo\bar`);
+        assert(asNormalizedPath(`c:foo\bar\baz`).array == `c:foo\bar\baz`);
+        assert(asNormalizedPath(`c:foo\bar\baz`).array == `c:foo\bar\baz`);
+        assert(asNormalizedPath(`c:foo\bar\\baz\\\`).array == `c:foo\bar\baz`);
+        assert(asNormalizedPath(`c:\foo\bar\baz`).array == `c:\foo\bar\baz`);
 
-        assert (asNormalizedPath(`c:\foo\..\\bar\.\baz`).array == `c:\bar\baz`);
-        assert (asNormalizedPath(`c:\foo\..\bar\baz`).array == `c:\bar\baz`);
-        assert (asNormalizedPath(`c:\foo\..\..\\bar\baz`).array == `c:\bar\baz`);
-        assert (asNormalizedPath(`c:\foo\bar\..\baz`).array == `c:\foo\baz`);
-        assert (asNormalizedPath(`c:\foo\bar\..\..\baz`).array == `c:\baz`);
-        assert (asNormalizedPath(`c:\foo\bar\..\.\\baz\..\wee\`).array == `c:\foo\wee`);
-        assert (asNormalizedPath(`\\server\share\foo\bar`).array == `\\server\share\foo\bar`);
-        assert (asNormalizedPath(`\\server\share\\foo\bar`).array == `\\server\share\foo\bar`);
-        assert (asNormalizedPath(`\\server\share\foo\bar\baz`).array == `\\server\share\foo\bar\baz`);
-        assert (asNormalizedPath(`\\server\share\foo\..\\bar\.\baz`).array == `\\server\share\bar\baz`);
-        assert (asNormalizedPath(`\\server\share\foo\..\bar\baz`).array == `\\server\share\bar\baz`);
-        assert (asNormalizedPath(`\\server\share\foo\..\..\\bar\baz`).array == `\\server\share\bar\baz`);
-        assert (asNormalizedPath(`\\server\share\foo\bar\..\baz`).array == `\\server\share\foo\baz`);
-        assert (asNormalizedPath(`\\server\share\foo\bar\..\..\baz`).array == `\\server\share\baz`);
-        assert (asNormalizedPath(`\\server\share\foo\bar\..\.\\baz\..\wee\`).array == `\\server\share\foo\wee`);
+        assert(asNormalizedPath(`c:\foo\..\\bar\.\baz`).array == `c:\bar\baz`);
+        assert(asNormalizedPath(`c:\foo\..\bar\baz`).array == `c:\bar\baz`);
+        assert(asNormalizedPath(`c:\foo\..\..\\bar\baz`).array == `c:\bar\baz`);
+        assert(asNormalizedPath(`c:\foo\bar\..\baz`).array == `c:\foo\baz`);
+        assert(asNormalizedPath(`c:\foo\bar\..\..\baz`).array == `c:\baz`);
+        assert(asNormalizedPath(`c:\foo\bar\..\.\\baz\..\wee\`).array == `c:\foo\wee`);
+        assert(asNormalizedPath(`\\server\share\foo\bar`).array == `\\server\share\foo\bar`);
+        assert(asNormalizedPath(`\\server\share\\foo\bar`).array == `\\server\share\foo\bar`);
+        assert(asNormalizedPath(`\\server\share\foo\bar\baz`).array == `\\server\share\foo\bar\baz`);
+        assert(asNormalizedPath(`\\server\share\foo\..\\bar\.\baz`).array == `\\server\share\bar\baz`);
+        assert(asNormalizedPath(`\\server\share\foo\..\bar\baz`).array == `\\server\share\bar\baz`);
+        assert(asNormalizedPath(`\\server\share\foo\..\..\\bar\baz`).array == `\\server\share\bar\baz`);
+        assert(asNormalizedPath(`\\server\share\foo\bar\..\baz`).array == `\\server\share\foo\baz`);
+        assert(asNormalizedPath(`\\server\share\foo\bar\..\..\baz`).array == `\\server\share\baz`);
+        assert(asNormalizedPath(`\\server\share\foo\bar\..\.\\baz\..\wee\`).array == `\\server\share\foo\wee`);
 
-        static assert (asNormalizedPath(`\foo\..\..\\bar\baz`).array == `\bar\baz`);
+        static assert(asNormalizedPath(`\foo\..\..\\bar\baz`).array == `\bar\baz`);
 
-        assert (asNormalizedPath("foo//bar").array == `foo\bar`);
+        assert(asNormalizedPath("foo//bar").array == `foo\bar`);
 
         //Curent dir path
-        assert (asNormalizedPath(`.\`).array == ".");
-        assert (asNormalizedPath(`.\.\`).array == ".");
-        assert (asNormalizedPath(`.\foo\..`).array == ".");
-        assert (asNormalizedPath(`foo\..`).array == ".");
+        assert(asNormalizedPath(`.\`).array == ".");
+        assert(asNormalizedPath(`.\.\`).array == ".");
+        assert(asNormalizedPath(`.\foo\..`).array == ".");
+        assert(asNormalizedPath(`foo\..`).array == ".");
     }
-    else static assert (0);
+    else static assert(0);
 }
 
 @safe unittest
@@ -2009,105 +2053,105 @@ auto asNormalizedPath(R)(auto ref R path)
     version (Posix)
     {
         // Trivial
-        assert (asNormalizedPath("").empty);
-        assert (asNormalizedPath("foo/bar").array == "foo/bar");
+        assert(asNormalizedPath("").empty);
+        assert(asNormalizedPath("foo/bar").array == "foo/bar");
 
         // Correct handling of leading slashes
-        assert (asNormalizedPath("/").array == "/");
-        assert (asNormalizedPath("///").array == "/");
-        assert (asNormalizedPath("////").array == "/");
-        assert (asNormalizedPath("/foo/bar").array == "/foo/bar");
-        assert (asNormalizedPath("//foo/bar").array == "/foo/bar");
-        assert (asNormalizedPath("///foo/bar").array == "/foo/bar");
-        assert (asNormalizedPath("////foo/bar").array == "/foo/bar");
+        assert(asNormalizedPath("/").array == "/");
+        assert(asNormalizedPath("///").array == "/");
+        assert(asNormalizedPath("////").array == "/");
+        assert(asNormalizedPath("/foo/bar").array == "/foo/bar");
+        assert(asNormalizedPath("//foo/bar").array == "/foo/bar");
+        assert(asNormalizedPath("///foo/bar").array == "/foo/bar");
+        assert(asNormalizedPath("////foo/bar").array == "/foo/bar");
 
         // Correct handling of single-dot symbol (current directory)
-        assert (asNormalizedPath("/./foo").array == "/foo");
-        assert (asNormalizedPath("/foo/./bar").array == "/foo/bar");
+        assert(asNormalizedPath("/./foo").array == "/foo");
+        assert(asNormalizedPath("/foo/./bar").array == "/foo/bar");
 
-        assert (asNormalizedPath("./foo").array == "foo");
-        assert (asNormalizedPath("././foo").array == "foo");
-        assert (asNormalizedPath("foo/././bar").array == "foo/bar");
+        assert(asNormalizedPath("./foo").array == "foo");
+        assert(asNormalizedPath("././foo").array == "foo");
+        assert(asNormalizedPath("foo/././bar").array == "foo/bar");
 
         // Correct handling of double-dot symbol (previous directory)
-        assert (asNormalizedPath("/foo/../bar").array == "/bar");
-        assert (asNormalizedPath("/foo/../../bar").array == "/bar");
-        assert (asNormalizedPath("/../foo").array == "/foo");
-        assert (asNormalizedPath("/../../foo").array == "/foo");
-        assert (asNormalizedPath("/foo/..").array == "/");
-        assert (asNormalizedPath("/foo/../..").array == "/");
+        assert(asNormalizedPath("/foo/../bar").array == "/bar");
+        assert(asNormalizedPath("/foo/../../bar").array == "/bar");
+        assert(asNormalizedPath("/../foo").array == "/foo");
+        assert(asNormalizedPath("/../../foo").array == "/foo");
+        assert(asNormalizedPath("/foo/..").array == "/");
+        assert(asNormalizedPath("/foo/../..").array == "/");
 
-        assert (asNormalizedPath("foo/../bar").array == "bar");
-        assert (asNormalizedPath("foo/../../bar").array == "../bar");
-        assert (asNormalizedPath("../foo").array == "../foo");
-        assert (asNormalizedPath("../../foo").array == "../../foo");
-        assert (asNormalizedPath("../foo/../bar").array == "../bar");
-        assert (asNormalizedPath(".././../foo").array == "../../foo");
-        assert (asNormalizedPath("foo/bar/..").array == "foo");
-        assert (asNormalizedPath("/foo/../..").array == "/");
+        assert(asNormalizedPath("foo/../bar").array == "bar");
+        assert(asNormalizedPath("foo/../../bar").array == "../bar");
+        assert(asNormalizedPath("../foo").array == "../foo");
+        assert(asNormalizedPath("../../foo").array == "../../foo");
+        assert(asNormalizedPath("../foo/../bar").array == "../bar");
+        assert(asNormalizedPath(".././../foo").array == "../../foo");
+        assert(asNormalizedPath("foo/bar/..").array == "foo");
+        assert(asNormalizedPath("/foo/../..").array == "/");
 
         // The ultimate path
-        assert (asNormalizedPath("/foo/../bar//./../...///baz//").array == "/.../baz");
-        static assert (asNormalizedPath("/foo/../bar//./../...///baz//").array == "/.../baz");
+        assert(asNormalizedPath("/foo/../bar//./../...///baz//").array == "/.../baz");
+        static assert(asNormalizedPath("/foo/../bar//./../...///baz//").array == "/.../baz");
     }
     else version (Windows)
     {
         // Trivial
-        assert (asNormalizedPath("").empty);
-        assert (asNormalizedPath(`foo\bar`).array == `foo\bar`);
-        assert (asNormalizedPath("foo/bar").array == `foo\bar`);
+        assert(asNormalizedPath("").empty);
+        assert(asNormalizedPath(`foo\bar`).array == `foo\bar`);
+        assert(asNormalizedPath("foo/bar").array == `foo\bar`);
 
         // Correct handling of absolute paths
-        assert (asNormalizedPath("/").array == `\`);
-        assert (asNormalizedPath(`\`).array == `\`);
-        assert (asNormalizedPath(`\\\`).array == `\`);
-        assert (asNormalizedPath(`\\\\`).array == `\`);
-        assert (asNormalizedPath(`\foo\bar`).array == `\foo\bar`);
-        assert (asNormalizedPath(`\\foo`).array == `\\foo`);
-        assert (asNormalizedPath(`\\foo\\`).array == `\\foo`);
-        assert (asNormalizedPath(`\\foo/bar`).array == `\\foo\bar`);
-        assert (asNormalizedPath(`\\\foo\bar`).array == `\foo\bar`);
-        assert (asNormalizedPath(`\\\\foo\bar`).array == `\foo\bar`);
-        assert (asNormalizedPath(`c:\`).array == `c:\`);
-        assert (asNormalizedPath(`c:\foo\bar`).array == `c:\foo\bar`);
-        assert (asNormalizedPath(`c:\\foo\bar`).array == `c:\foo\bar`);
+        assert(asNormalizedPath("/").array == `\`);
+        assert(asNormalizedPath(`\`).array == `\`);
+        assert(asNormalizedPath(`\\\`).array == `\`);
+        assert(asNormalizedPath(`\\\\`).array == `\`);
+        assert(asNormalizedPath(`\foo\bar`).array == `\foo\bar`);
+        assert(asNormalizedPath(`\\foo`).array == `\\foo`);
+        assert(asNormalizedPath(`\\foo\\`).array == `\\foo`);
+        assert(asNormalizedPath(`\\foo/bar`).array == `\\foo\bar`);
+        assert(asNormalizedPath(`\\\foo\bar`).array == `\foo\bar`);
+        assert(asNormalizedPath(`\\\\foo\bar`).array == `\foo\bar`);
+        assert(asNormalizedPath(`c:\`).array == `c:\`);
+        assert(asNormalizedPath(`c:\foo\bar`).array == `c:\foo\bar`);
+        assert(asNormalizedPath(`c:\\foo\bar`).array == `c:\foo\bar`);
 
         // Correct handling of single-dot symbol (current directory)
-        assert (asNormalizedPath(`\./foo`).array == `\foo`);
-        assert (asNormalizedPath(`\foo/.\bar`).array == `\foo\bar`);
+        assert(asNormalizedPath(`\./foo`).array == `\foo`);
+        assert(asNormalizedPath(`\foo/.\bar`).array == `\foo\bar`);
 
-        assert (asNormalizedPath(`.\foo`).array == `foo`);
-        assert (asNormalizedPath(`./.\foo`).array == `foo`);
-        assert (asNormalizedPath(`foo\.\./bar`).array == `foo\bar`);
+        assert(asNormalizedPath(`.\foo`).array == `foo`);
+        assert(asNormalizedPath(`./.\foo`).array == `foo`);
+        assert(asNormalizedPath(`foo\.\./bar`).array == `foo\bar`);
 
         // Correct handling of double-dot symbol (previous directory)
-        assert (asNormalizedPath(`\foo\..\bar`).array == `\bar`);
-        assert (asNormalizedPath(`\foo\../..\bar`).array == `\bar`);
-        assert (asNormalizedPath(`\..\foo`).array == `\foo`);
-        assert (asNormalizedPath(`\..\..\foo`).array == `\foo`);
-        assert (asNormalizedPath(`\foo\..`).array == `\`);
-        assert (asNormalizedPath(`\foo\../..`).array == `\`);
+        assert(asNormalizedPath(`\foo\..\bar`).array == `\bar`);
+        assert(asNormalizedPath(`\foo\../..\bar`).array == `\bar`);
+        assert(asNormalizedPath(`\..\foo`).array == `\foo`);
+        assert(asNormalizedPath(`\..\..\foo`).array == `\foo`);
+        assert(asNormalizedPath(`\foo\..`).array == `\`);
+        assert(asNormalizedPath(`\foo\../..`).array == `\`);
 
-        assert (asNormalizedPath(`foo\..\bar`).array == `bar`);
-        assert (asNormalizedPath(`foo\..\../bar`).array == `..\bar`);
+        assert(asNormalizedPath(`foo\..\bar`).array == `bar`);
+        assert(asNormalizedPath(`foo\..\../bar`).array == `..\bar`);
 
-        assert (asNormalizedPath(`..\foo`).array == `..\foo`);
-        assert (asNormalizedPath(`..\..\foo`).array == `..\..\foo`);
-        assert (asNormalizedPath(`..\foo\..\bar`).array == `..\bar`);
-        assert (asNormalizedPath(`..\.\..\foo`).array == `..\..\foo`);
-        assert (asNormalizedPath(`foo\bar\..`).array == `foo`);
-        assert (asNormalizedPath(`\foo\..\..`).array == `\`);
-        assert (asNormalizedPath(`c:\foo\..\..`).array == `c:\`);
+        assert(asNormalizedPath(`..\foo`).array == `..\foo`);
+        assert(asNormalizedPath(`..\..\foo`).array == `..\..\foo`);
+        assert(asNormalizedPath(`..\foo\..\bar`).array == `..\bar`);
+        assert(asNormalizedPath(`..\.\..\foo`).array == `..\..\foo`);
+        assert(asNormalizedPath(`foo\bar\..`).array == `foo`);
+        assert(asNormalizedPath(`\foo\..\..`).array == `\`);
+        assert(asNormalizedPath(`c:\foo\..\..`).array == `c:\`);
 
         // Correct handling of non-root path with drive specifier
-        assert (asNormalizedPath(`c:foo`).array == `c:foo`);
-        assert (asNormalizedPath(`c:..\foo\.\..\bar`).array == `c:..\bar`);
+        assert(asNormalizedPath(`c:foo`).array == `c:foo`);
+        assert(asNormalizedPath(`c:..\foo\.\..\bar`).array == `c:..\bar`);
 
         // The ultimate path
-        assert (asNormalizedPath(`c:\foo\..\bar\\.\..\...\\\baz\\`).array == `c:\...\baz`);
-        static assert (asNormalizedPath(`c:\foo\..\bar\\.\..\...\\\baz\\`).array == `c:\...\baz`);
+        assert(asNormalizedPath(`c:\foo\..\bar\\.\..\...\\\baz\\`).array == `c:\...\baz`);
+        static assert(asNormalizedPath(`c:\foo\..\bar\\.\..\...\\\baz\\`).array == `c:\...\baz`);
     }
-    else static assert (false);
+    else static assert(false);
 }
 
 /** Slice up a path into its elements.
@@ -2119,9 +2163,9 @@ auto asNormalizedPath(R)(auto ref R path)
         bidirectional range of slices of `path`
 */
 auto pathSplitter(R)(R path)
-    if ((isRandomAccessRange!R && hasSlicing!R ||
-         isNarrowString!R) &&
-        !isConvertibleToString!R)
+if ((isRandomAccessRange!R && hasSlicing!R ||
+    isNarrowString!R) &&
+    !isConvertibleToString!R)
 {
     static struct PathSplitter
     {
@@ -2233,7 +2277,7 @@ auto pathSplitter(R)(R path)
                 }
                 else
                 {
-                    assert (!isRooted(_path));
+                    assert(!isRooted(_path));
                     popFront();
                 }
             }
@@ -2250,7 +2294,7 @@ auto pathSplitter(R)(R path)
                     popFront();
                 }
             }
-            else static assert (0);
+            else static assert(0);
 
             if (ps == pe)
             {
@@ -2288,26 +2332,26 @@ auto pathSplitter(R)(R path)
     import std.algorithm.comparison : equal;
     import std.conv : to;
 
-    assert (equal(pathSplitter("/"), ["/"]));
-    assert (equal(pathSplitter("/foo/bar"), ["/", "foo", "bar"]));
-    assert (equal(pathSplitter("foo/../bar//./"), ["foo", "..", "bar", "."]));
+    assert(equal(pathSplitter("/"), ["/"]));
+    assert(equal(pathSplitter("/foo/bar"), ["/", "foo", "bar"]));
+    assert(equal(pathSplitter("foo/../bar//./"), ["foo", "..", "bar", "."]));
 
     version (Posix)
     {
-        assert (equal(pathSplitter("//foo/bar"), ["/", "foo", "bar"]));
+        assert(equal(pathSplitter("//foo/bar"), ["/", "foo", "bar"]));
     }
 
     version (Windows)
     {
-        assert (equal(pathSplitter(`foo\..\bar\/.\`), ["foo", "..", "bar", "."]));
-        assert (equal(pathSplitter("c:"), ["c:"]));
-        assert (equal(pathSplitter(`c:\foo\bar`), [`c:\`, "foo", "bar"]));
-        assert (equal(pathSplitter(`c:foo\bar`), ["c:foo", "bar"]));
+        assert(equal(pathSplitter(`foo\..\bar\/.\`), ["foo", "..", "bar", "."]));
+        assert(equal(pathSplitter("c:"), ["c:"]));
+        assert(equal(pathSplitter(`c:\foo\bar`), [`c:\`, "foo", "bar"]));
+        assert(equal(pathSplitter(`c:foo\bar`), ["c:foo", "bar"]));
     }
 }
 
 auto pathSplitter(R)(auto ref R path)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return pathSplitter!(StringTypeOf!R)(path);
 }
@@ -2315,7 +2359,7 @@ auto pathSplitter(R)(auto ref R path)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    assert (testAliasedString!pathSplitter("/"));
+    assert(testAliasedString!pathSplitter("/"));
 }
 
 @safe unittest
@@ -2326,60 +2370,60 @@ auto pathSplitter(R)(auto ref R path)
     import std.algorithm;
     bool equal2(R1, R2)(R1 r1, R2 r2)
     {
-        static assert (isBidirectionalRange!R1);
+        static assert(isBidirectionalRange!R1);
         return equal(r1, r2) && equal(retro(r1), retro(r2));
     }
 
-    assert (pathSplitter("").empty);
+    assert(pathSplitter("").empty);
 
     // Root directories
-    assert (equal2(pathSplitter("/"), ["/"]));
-    assert (equal2(pathSplitter("//"), ["/"]));
-    assert (equal2(pathSplitter("///"w), ["/"w]));
+    assert(equal2(pathSplitter("/"), ["/"]));
+    assert(equal2(pathSplitter("//"), ["/"]));
+    assert(equal2(pathSplitter("///"w), ["/"w]));
 
     // Absolute paths
-    assert (equal2(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
+    assert(equal2(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
 
     // General
-    assert (equal2(pathSplitter("foo/bar"d.dup), ["foo"d, "bar"d]));
-    assert (equal2(pathSplitter("foo//bar"), ["foo", "bar"]));
-    assert (equal2(pathSplitter("foo/bar//"w), ["foo"w, "bar"w]));
-    assert (equal2(pathSplitter("foo/../bar//./"d), ["foo"d, ".."d, "bar"d, "."d]));
+    assert(equal2(pathSplitter("foo/bar"d.dup), ["foo"d, "bar"d]));
+    assert(equal2(pathSplitter("foo//bar"), ["foo", "bar"]));
+    assert(equal2(pathSplitter("foo/bar//"w), ["foo"w, "bar"w]));
+    assert(equal2(pathSplitter("foo/../bar//./"d), ["foo"d, ".."d, "bar"d, "."d]));
 
     // save()
     auto ps1 = pathSplitter("foo/bar/baz");
     auto ps2 = ps1.save;
     ps1.popFront();
-    assert (equal2(ps1, ["bar", "baz"]));
-    assert (equal2(ps2, ["foo", "bar", "baz"]));
+    assert(equal2(ps1, ["bar", "baz"]));
+    assert(equal2(ps2, ["foo", "bar", "baz"]));
 
     // Platform specific
     version (Posix)
     {
-        assert (equal2(pathSplitter("//foo/bar"w.dup), ["/"w, "foo"w, "bar"w]));
+        assert(equal2(pathSplitter("//foo/bar"w.dup), ["/"w, "foo"w, "bar"w]));
     }
     version (Windows)
     {
-        assert (equal2(pathSplitter(`\`), [`\`]));
-        assert (equal2(pathSplitter(`foo\..\bar\/.\`), ["foo", "..", "bar", "."]));
-        assert (equal2(pathSplitter("c:"), ["c:"]));
-        assert (equal2(pathSplitter(`c:\foo\bar`), [`c:\`, "foo", "bar"]));
-        assert (equal2(pathSplitter(`c:foo\bar`), ["c:foo", "bar"]));
-        assert (equal2(pathSplitter(`\\foo\bar`), [`\\foo\bar`]));
-        assert (equal2(pathSplitter(`\\foo\bar\\`), [`\\foo\bar`]));
-        assert (equal2(pathSplitter(`\\foo\bar\baz`), [`\\foo\bar`, "baz"]));
+        assert(equal2(pathSplitter(`\`), [`\`]));
+        assert(equal2(pathSplitter(`foo\..\bar\/.\`), ["foo", "..", "bar", "."]));
+        assert(equal2(pathSplitter("c:"), ["c:"]));
+        assert(equal2(pathSplitter(`c:\foo\bar`), [`c:\`, "foo", "bar"]));
+        assert(equal2(pathSplitter(`c:foo\bar`), ["c:foo", "bar"]));
+        assert(equal2(pathSplitter(`\\foo\bar`), [`\\foo\bar`]));
+        assert(equal2(pathSplitter(`\\foo\bar\\`), [`\\foo\bar`]));
+        assert(equal2(pathSplitter(`\\foo\bar\baz`), [`\\foo\bar`, "baz"]));
     }
 
     import std.exception;
     assertCTFEable!(
     {
-        assert (equal(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
+        assert(equal(pathSplitter("/foo/bar".dup), ["/", "foo", "bar"]));
     });
 
     static assert(is(typeof(pathSplitter!(const(char)[])(null).front) == const(char)[]));
 
     import std.utf : byDchar;
-    assert (equal2(pathSplitter("foo/bar"d.byDchar), ["foo"d, "bar"d]));
+    assert(equal2(pathSplitter("foo/bar"d.byDchar), ["foo"d, "bar"d]));
 }
 
 
@@ -2395,10 +2439,10 @@ auto pathSplitter(R)(auto ref R path)
     ---
     version (Posix)
     {
-        assert (isRooted("/"));
-        assert (isRooted("/foo"));
-        assert (!isRooted("foo"));
-        assert (!isRooted("../foo"));
+        assert(isRooted("/"));
+        assert(isRooted("/foo"));
+        assert(!isRooted("foo"));
+        assert(!isRooted("../foo"));
     }
     ---
 
@@ -2408,18 +2452,18 @@ auto pathSplitter(R)(auto ref R path)
     ---
     version (Windows)
     {
-        assert (isRooted(`\`));
-        assert (isRooted(`\foo`));
-        assert (isRooted(`d:\foo`));
-        assert (isRooted(`\\foo\bar`));
-        assert (!isRooted("foo"));
-        assert (!isRooted("d:foo"));
+        assert(isRooted(`\`));
+        assert(isRooted(`\foo`));
+        assert(isRooted(`d:\foo`));
+        assert(isRooted(`\\foo\bar`));
+        assert(!isRooted("foo"));
+        assert(!isRooted("d:foo"));
     }
     ---
 */
 bool isRooted(R)(R path)
-    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-        is(StringTypeOf!R))
+if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+    is(StringTypeOf!R))
 {
     if (path.length >= 1 && isDirSeparator(path[0])) return true;
     version (Posix)         return false;
@@ -2429,26 +2473,26 @@ bool isRooted(R)(R path)
 
 @safe unittest
 {
-    assert (isRooted("/"));
-    assert (isRooted("/foo"));
-    assert (!isRooted("foo"));
-    assert (!isRooted("../foo"));
+    assert(isRooted("/"));
+    assert(isRooted("/foo"));
+    assert(!isRooted("foo"));
+    assert(!isRooted("../foo"));
 
     version (Windows)
     {
-    assert (isRooted(`\`));
-    assert (isRooted(`\foo`));
-    assert (isRooted(`d:\foo`));
-    assert (isRooted(`\\foo\bar`));
-    assert (!isRooted("foo"));
-    assert (!isRooted("d:foo"));
+    assert(isRooted(`\`));
+    assert(isRooted(`\foo`));
+    assert(isRooted(`d:\foo`));
+    assert(isRooted(`\\foo\bar`));
+    assert(!isRooted("foo"));
+    assert(!isRooted("d:foo"));
     }
 
-    static assert (isRooted("/foo"));
-    static assert (!isRooted("foo"));
+    static assert(isRooted("/foo"));
+    static assert(!isRooted("foo"));
 
     static struct DirEntry { string s; alias s this; }
-    assert (!isRooted(DirEntry("foo")));
+    assert(!isRooted(DirEntry("foo")));
 }
 
 
@@ -2466,10 +2510,10 @@ bool isRooted(R)(R path)
     ---
     version (Posix)
     {
-        assert (isAbsolute("/"));
-        assert (isAbsolute("/foo"));
-        assert (!isAbsolute("foo"));
-        assert (!isAbsolute("../foo"));
+        assert(isAbsolute("/"));
+        assert(isAbsolute("/foo"));
+        assert(!isAbsolute("foo"));
+        assert(!isAbsolute("../foo"));
     }
     ---
 
@@ -2480,26 +2524,26 @@ bool isRooted(R)(R path)
     ---
     version (Windows)
     {
-        assert (isAbsolute(`d:\`));
-        assert (isAbsolute(`d:\foo`));
-        assert (isAbsolute(`\\foo\bar`));
-        assert (!isAbsolute(`\`));
-        assert (!isAbsolute(`\foo`));
-        assert (!isAbsolute("d:foo"));
+        assert(isAbsolute(`d:\`));
+        assert(isAbsolute(`d:\foo`));
+        assert(isAbsolute(`\\foo\bar`));
+        assert(!isAbsolute(`\`));
+        assert(!isAbsolute(`\foo`));
+        assert(!isAbsolute("d:foo"));
     }
     ---
 */
 version (StdDdoc)
 {
     bool isAbsolute(R)(R path) pure nothrow @safe
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            is(StringTypeOf!R));
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        is(StringTypeOf!R));
 }
 else version (Windows)
 {
     bool isAbsolute(R)(R path)
-        if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-            is(StringTypeOf!R))
+    if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+        is(StringTypeOf!R))
     {
         return isDriveRoot!(BaseOf!R)(path) || isUNC!(BaseOf!R)(path);
     }
@@ -2512,27 +2556,27 @@ else version (Posix)
 
 @safe unittest
 {
-    assert (!isAbsolute("foo"));
-    assert (!isAbsolute("../foo"w));
-    static assert (!isAbsolute("foo"));
+    assert(!isAbsolute("foo"));
+    assert(!isAbsolute("../foo"w));
+    static assert(!isAbsolute("foo"));
 
     version (Posix)
     {
-    assert (isAbsolute("/"d));
-    assert (isAbsolute("/foo".dup));
-    static assert (isAbsolute("/foo"));
+    assert(isAbsolute("/"d));
+    assert(isAbsolute("/foo".dup));
+    static assert(isAbsolute("/foo"));
     }
 
     version (Windows)
     {
-    assert (isAbsolute("d:\\"w));
-    assert (isAbsolute("d:\\foo"d));
-    assert (isAbsolute("\\\\foo\\bar"));
-    assert (!isAbsolute("\\"w.dup));
-    assert (!isAbsolute("\\foo"d.dup));
-    assert (!isAbsolute("d:"));
-    assert (!isAbsolute("d:foo"));
-    static assert (isAbsolute(`d:\foo`));
+    assert(isAbsolute("d:\\"w));
+    assert(isAbsolute("d:\\foo"d));
+    assert(isAbsolute("\\\\foo\\bar"));
+    assert(!isAbsolute("\\"w.dup));
+    assert(!isAbsolute("\\foo"d.dup));
+    assert(!isAbsolute("d:"));
+    assert(!isAbsolute("d:foo"));
+    static assert(isAbsolute(`d:\foo`));
     }
 
     {
@@ -2589,18 +2633,18 @@ string absolutePath(string path, lazy string base = getcwd())
 {
     version (Posix)
     {
-        assert (absolutePath("some/file", "/foo/bar")  == "/foo/bar/some/file");
-        assert (absolutePath("../file", "/foo/bar")    == "/foo/bar/../file");
-        assert (absolutePath("/some/file", "/foo/bar") == "/some/file");
+        assert(absolutePath("some/file", "/foo/bar")  == "/foo/bar/some/file");
+        assert(absolutePath("../file", "/foo/bar")    == "/foo/bar/../file");
+        assert(absolutePath("/some/file", "/foo/bar") == "/some/file");
     }
 
     version (Windows)
     {
-        assert (absolutePath(`some\file`, `c:\foo\bar`)    == `c:\foo\bar\some\file`);
-        assert (absolutePath(`..\file`, `c:\foo\bar`)      == `c:\foo\bar\..\file`);
-        assert (absolutePath(`c:\some\file`, `c:\foo\bar`) == `c:\some\file`);
-        assert (absolutePath(`\`, `c:\`)                   == `c:\`);
-        assert (absolutePath(`\some\file`, `c:\foo\bar`)   == `c:\some\file`);
+        assert(absolutePath(`some\file`, `c:\foo\bar`)    == `c:\foo\bar\some\file`);
+        assert(absolutePath(`..\file`, `c:\foo\bar`)      == `c:\foo\bar\..\file`);
+        assert(absolutePath(`c:\some\file`, `c:\foo\bar`) == `c:\some\file`);
+        assert(absolutePath(`\`, `c:\`)                   == `c:\`);
+        assert(absolutePath(`\some\file`, `c:\foo\bar`)   == `c:\some\file`);
     }
 }
 
@@ -2608,12 +2652,12 @@ string absolutePath(string path, lazy string base = getcwd())
 {
     version (Posix)
     {
-        static assert (absolutePath("some/file", "/foo/bar") == "/foo/bar/some/file");
+        static assert(absolutePath("some/file", "/foo/bar") == "/foo/bar/some/file");
     }
 
     version (Windows)
     {
-        static assert (absolutePath(`some\file`, `c:\foo\bar`) == `c:\foo\bar\some\file`);
+        static assert(absolutePath(`some\file`, `c:\foo\bar`) == `c:\foo\bar\some\file`);
     }
 
     import std.exception;
@@ -2640,9 +2684,9 @@ string absolutePath(string path, lazy string base = getcwd())
         $(LREF absolutePath) which returns an allocated string
 */
 auto asAbsolutePath(R)(R path)
-    if ((isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
-         isNarrowString!R) &&
-        !isConvertibleToString!R)
+if ((isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R) &&
+    !isConvertibleToString!R)
 {
     import std.file : getcwd;
     string base = null;
@@ -2655,7 +2699,7 @@ auto asAbsolutePath(R)(R path)
 @system unittest
 {
     import std.array;
-    assert(asAbsolutePath(cast(string)null).array == "");
+    assert(asAbsolutePath(cast(string) null).array == "");
     version (Posix)
     {
         assert(asAbsolutePath("/foo").array == "/foo");
@@ -2668,7 +2712,7 @@ auto asAbsolutePath(R)(R path)
 }
 
 auto asAbsolutePath(R)(auto ref R path)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return asAbsolutePath!(StringTypeOf!R)(path);
 }
@@ -2734,44 +2778,44 @@ string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
 ///
 @system unittest
 {
-    assert (relativePath("foo") == "foo");
+    assert(relativePath("foo") == "foo");
 
     version (Posix)
     {
-        assert (relativePath("foo", "/bar") == "foo");
-        assert (relativePath("/foo/bar", "/foo/bar") == ".");
-        assert (relativePath("/foo/bar", "/foo/baz") == "../bar");
-        assert (relativePath("/foo/bar/baz", "/foo/woo/wee") == "../../bar/baz");
-        assert (relativePath("/foo/bar/baz", "/foo/bar") == "baz");
+        assert(relativePath("foo", "/bar") == "foo");
+        assert(relativePath("/foo/bar", "/foo/bar") == ".");
+        assert(relativePath("/foo/bar", "/foo/baz") == "../bar");
+        assert(relativePath("/foo/bar/baz", "/foo/woo/wee") == "../../bar/baz");
+        assert(relativePath("/foo/bar/baz", "/foo/bar") == "baz");
     }
     version (Windows)
     {
-        assert (relativePath("foo", `c:\bar`) == "foo");
-        assert (relativePath(`c:\foo\bar`, `c:\foo\bar`) == ".");
-        assert (relativePath(`c:\foo\bar`, `c:\foo\baz`) == `..\bar`);
-        assert (relativePath(`c:\foo\bar\baz`, `c:\foo\woo\wee`) == `..\..\bar\baz`);
-        assert (relativePath(`c:\foo\bar\baz`, `c:\foo\bar`) == "baz");
-        assert (relativePath(`c:\foo\bar`, `d:\foo`) == `c:\foo\bar`);
+        assert(relativePath("foo", `c:\bar`) == "foo");
+        assert(relativePath(`c:\foo\bar`, `c:\foo\bar`) == ".");
+        assert(relativePath(`c:\foo\bar`, `c:\foo\baz`) == `..\bar`);
+        assert(relativePath(`c:\foo\bar\baz`, `c:\foo\woo\wee`) == `..\..\bar\baz`);
+        assert(relativePath(`c:\foo\bar\baz`, `c:\foo\bar`) == "baz");
+        assert(relativePath(`c:\foo\bar`, `d:\foo`) == `c:\foo\bar`);
     }
 }
 
 @system unittest
 {
     import std.exception;
-    assert (relativePath("foo") == "foo");
+    assert(relativePath("foo") == "foo");
     version (Posix)
     {
         relativePath("/foo");
-        assert (relativePath("/foo/bar", "/foo/baz") == "../bar");
+        assert(relativePath("/foo/bar", "/foo/baz") == "../bar");
         assertThrown(relativePath("/foo", "bar"));
     }
     else version (Windows)
     {
         relativePath(`\foo`);
-        assert (relativePath(`c:\foo\bar\baz`, `c:\foo\bar`) == "baz");
+        assert(relativePath(`c:\foo\bar\baz`, `c:\foo\bar`) == "baz");
         assertThrown(relativePath(`c:\foo`, "bar"));
     }
-    else static assert (0);
+    else static assert(0);
 }
 
 /** Transforms `path` into a _path relative to `base`.
@@ -2812,12 +2856,12 @@ string relativePath(CaseSensitive cs = CaseSensitive.osDefault)
 */
 auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R1, R2)
     (R1 path, R2 base)
-    if ((isNarrowString!R1 ||
-         (isRandomAccessRange!R1 && hasSlicing!R1 && isSomeChar!(ElementType!R1)) &&
-        !isConvertibleToString!R1) &&
-        (isNarrowString!R2 ||
-         (isRandomAccessRange!R2 && hasSlicing!R2 && isSomeChar!(ElementType!R2)) &&
-         !isConvertibleToString!R2))
+if ((isNarrowString!R1 ||
+    (isRandomAccessRange!R1 && hasSlicing!R1 && isSomeChar!(ElementType!R1)) &&
+    !isConvertibleToString!R1) &&
+    (isNarrowString!R2 ||
+    (isRandomAccessRange!R2 && hasSlicing!R2 && isSomeChar!(ElementType!R2)) &&
+    !isConvertibleToString!R2))
 {
     bool choosePath = !isAbsolute(path);
 
@@ -2868,22 +2912,22 @@ auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R1, R2)
     import std.array;
     version (Posix)
     {
-        assert (asRelativePath("foo", "/bar").array == "foo");
-        assert (asRelativePath("/foo/bar", "/foo/bar").array == ".");
-        assert (asRelativePath("/foo/bar", "/foo/baz").array == "../bar");
-        assert (asRelativePath("/foo/bar/baz", "/foo/woo/wee").array == "../../bar/baz");
-        assert (asRelativePath("/foo/bar/baz", "/foo/bar").array == "baz");
+        assert(asRelativePath("foo", "/bar").array == "foo");
+        assert(asRelativePath("/foo/bar", "/foo/bar").array == ".");
+        assert(asRelativePath("/foo/bar", "/foo/baz").array == "../bar");
+        assert(asRelativePath("/foo/bar/baz", "/foo/woo/wee").array == "../../bar/baz");
+        assert(asRelativePath("/foo/bar/baz", "/foo/bar").array == "baz");
     }
     else version (Windows)
     {
-        assert (asRelativePath("foo", `c:\bar`).array == "foo");
-        assert (asRelativePath(`c:\foo\bar`, `c:\foo\bar`).array == ".");
-        assert (asRelativePath(`c:\foo\bar`, `c:\foo\baz`).array == `..\bar`);
-        assert (asRelativePath(`c:\foo\bar\baz`, `c:\foo\woo\wee`).array == `..\..\bar\baz`);
-        assert (asRelativePath(`c:/foo/bar/baz`, `c:\foo\woo\wee`).array == `..\..\bar\baz`);
-        assert (asRelativePath(`c:\foo\bar\baz`, `c:\foo\bar`).array == "baz");
-        assert (asRelativePath(`c:\foo\bar`, `d:\foo`).array == `c:\foo\bar`);
-        assert (asRelativePath(`\\foo\bar`, `c:\foo`).array == `\\foo\bar`);
+        assert(asRelativePath("foo", `c:\bar`).array == "foo");
+        assert(asRelativePath(`c:\foo\bar`, `c:\foo\bar`).array == ".");
+        assert(asRelativePath(`c:\foo\bar`, `c:\foo\baz`).array == `..\bar`);
+        assert(asRelativePath(`c:\foo\bar\baz`, `c:\foo\woo\wee`).array == `..\..\bar\baz`);
+        assert(asRelativePath(`c:/foo/bar/baz`, `c:\foo\woo\wee`).array == `..\..\bar\baz`);
+        assert(asRelativePath(`c:\foo\bar\baz`, `c:\foo\bar`).array == "baz");
+        assert(asRelativePath(`c:\foo\bar`, `d:\foo`).array == `c:\foo\bar`);
+        assert(asRelativePath(`\\foo\bar`, `c:\foo`).array == `\\foo\bar`);
     }
     else
         static assert(0);
@@ -2891,7 +2935,7 @@ auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R1, R2)
 
 auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R1, R2)
     (auto ref R1 path, auto ref R2 base)
-    if (isConvertibleToString!R1 || isConvertibleToString!R2)
+if (isConvertibleToString!R1 || isConvertibleToString!R2)
 {
     import std.meta : staticMap;
     alias Types = staticMap!(convertToString, R1, R2);
@@ -2902,9 +2946,9 @@ auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R1, R2)
 {
     import std.array;
     version (Posix)
-        assert (asRelativePath(TestAliasedString("foo"), TestAliasedString("/bar")).array == "foo");
+        assert(asRelativePath(TestAliasedString("foo"), TestAliasedString("/bar")).array == "foo");
     else version (Windows)
-        assert (asRelativePath(TestAliasedString("foo"), TestAliasedString(`c:\bar`)).array == "foo");
+        assert(asRelativePath(TestAliasedString("foo"), TestAliasedString(`c:\bar`)).array == "foo");
     assert(asRelativePath(TestAliasedString("foo"), "bar").array == "foo");
     assert(asRelativePath("foo", TestAliasedString("bar")).array == "foo");
     assert(asRelativePath(TestAliasedString("foo"), TestAliasedString("bar")).array == "foo");
@@ -2917,15 +2961,15 @@ auto asRelativePath(CaseSensitive cs = CaseSensitive.osDefault, R1, R2)
     import std.array, std.utf : bCU=byCodeUnit;
     version (Posix)
     {
-        assert (asRelativePath("/foo/bar/baz".bCU, "/foo/bar".bCU).array == "baz");
-        assert (asRelativePath("/foo/bar/baz"w.bCU, "/foo/bar"w.bCU).array == "baz"w);
-        assert (asRelativePath("/foo/bar/baz"d.bCU, "/foo/bar"d.bCU).array == "baz"d);
+        assert(asRelativePath("/foo/bar/baz".bCU, "/foo/bar".bCU).array == "baz");
+        assert(asRelativePath("/foo/bar/baz"w.bCU, "/foo/bar"w.bCU).array == "baz"w);
+        assert(asRelativePath("/foo/bar/baz"d.bCU, "/foo/bar"d.bCU).array == "baz"d);
     }
     else version (Windows)
     {
-        assert (asRelativePath(`\\foo\bar`.bCU, `c:\foo`.bCU).array == `\\foo\bar`);
-        assert (asRelativePath(`\\foo\bar`w.bCU, `c:\foo`w.bCU).array == `\\foo\bar`w);
-        assert (asRelativePath(`\\foo\bar`d.bCU, `c:\foo`d.bCU).array == `\\foo\bar`d);
+        assert(asRelativePath(`\\foo\bar`.bCU, `c:\foo`.bCU).array == `\\foo\bar`);
+        assert(asRelativePath(`\\foo\bar`w.bCU, `c:\foo`w.bCU).array == `\\foo\bar`w);
+        assert(asRelativePath(`\\foo\bar`d.bCU, `c:\foo`d.bCU).array == `\\foo\bar`d);
     }
 }
 
@@ -2964,42 +3008,42 @@ int filenameCharCmp(CaseSensitive cs = CaseSensitive.osDefault)(dchar a, dchar b
 ///
 @safe unittest
 {
-    assert (filenameCharCmp('a', 'a') == 0);
-    assert (filenameCharCmp('a', 'b') < 0);
-    assert (filenameCharCmp('b', 'a') > 0);
+    assert(filenameCharCmp('a', 'a') == 0);
+    assert(filenameCharCmp('a', 'b') < 0);
+    assert(filenameCharCmp('b', 'a') > 0);
 
     version (linux)
     {
         // Same as calling filenameCharCmp!(CaseSensitive.yes)(a, b)
-        assert (filenameCharCmp('A', 'a') < 0);
-        assert (filenameCharCmp('a', 'A') > 0);
+        assert(filenameCharCmp('A', 'a') < 0);
+        assert(filenameCharCmp('a', 'A') > 0);
     }
     version (Windows)
     {
         // Same as calling filenameCharCmp!(CaseSensitive.no)(a, b)
-        assert (filenameCharCmp('a', 'A') == 0);
-        assert (filenameCharCmp('a', 'B') < 0);
-        assert (filenameCharCmp('A', 'b') < 0);
+        assert(filenameCharCmp('a', 'A') == 0);
+        assert(filenameCharCmp('a', 'B') < 0);
+        assert(filenameCharCmp('A', 'b') < 0);
     }
 }
 
 @safe unittest
 {
-    assert (filenameCharCmp!(CaseSensitive.yes)('A', 'a') < 0);
-    assert (filenameCharCmp!(CaseSensitive.yes)('a', 'A') > 0);
+    assert(filenameCharCmp!(CaseSensitive.yes)('A', 'a') < 0);
+    assert(filenameCharCmp!(CaseSensitive.yes)('a', 'A') > 0);
 
-    assert (filenameCharCmp!(CaseSensitive.no)('a', 'a') == 0);
-    assert (filenameCharCmp!(CaseSensitive.no)('a', 'b') < 0);
-    assert (filenameCharCmp!(CaseSensitive.no)('b', 'a') > 0);
-    assert (filenameCharCmp!(CaseSensitive.no)('A', 'a') == 0);
-    assert (filenameCharCmp!(CaseSensitive.no)('a', 'A') == 0);
-    assert (filenameCharCmp!(CaseSensitive.no)('a', 'B') < 0);
-    assert (filenameCharCmp!(CaseSensitive.no)('B', 'a') > 0);
-    assert (filenameCharCmp!(CaseSensitive.no)('A', 'b') < 0);
-    assert (filenameCharCmp!(CaseSensitive.no)('b', 'A') > 0);
+    assert(filenameCharCmp!(CaseSensitive.no)('a', 'a') == 0);
+    assert(filenameCharCmp!(CaseSensitive.no)('a', 'b') < 0);
+    assert(filenameCharCmp!(CaseSensitive.no)('b', 'a') > 0);
+    assert(filenameCharCmp!(CaseSensitive.no)('A', 'a') == 0);
+    assert(filenameCharCmp!(CaseSensitive.no)('a', 'A') == 0);
+    assert(filenameCharCmp!(CaseSensitive.no)('a', 'B') < 0);
+    assert(filenameCharCmp!(CaseSensitive.no)('B', 'a') > 0);
+    assert(filenameCharCmp!(CaseSensitive.no)('A', 'b') < 0);
+    assert(filenameCharCmp!(CaseSensitive.no)('b', 'A') > 0);
 
-    version (Posix)   assert (filenameCharCmp('\\', '/') != 0);
-    version (Windows) assert (filenameCharCmp('\\', '/') == 0);
+    version (Posix)   assert(filenameCharCmp('\\', '/') != 0);
+    version (Windows) assert(filenameCharCmp('\\', '/') == 0);
 }
 
 
@@ -3026,8 +3070,12 @@ int filenameCharCmp(CaseSensitive cs = CaseSensitive.osDefault)(dchar a, dchar b
 */
 int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, Range1, Range2)
     (Range1 filename1, Range2 filename2)
-    if (isInputRange!Range1 && isSomeChar!(ElementEncodingType!Range1) && !isConvertibleToString!Range1 &&
-        isInputRange!Range2 && isSomeChar!(ElementEncodingType!Range2) && !isConvertibleToString!Range2)
+if (isInputRange!Range1 && !isInfinite!Range1 &&
+    isSomeChar!(ElementEncodingType!Range1) &&
+    !isConvertibleToString!Range1 &&
+    isInputRange!Range2 && !isInfinite!Range2 &&
+    isSomeChar!(ElementEncodingType!Range2) &&
+    !isConvertibleToString!Range2)
 {
     alias C1 = Unqual!(ElementEncodingType!Range1);
     alias C2 = Unqual!(ElementEncodingType!Range2);
@@ -3064,31 +3112,31 @@ int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, Range1, Range2)
 ///
 @safe unittest
 {
-    assert (filenameCmp("abc", "abc") == 0);
-    assert (filenameCmp("abc", "abd") < 0);
-    assert (filenameCmp("abc", "abb") > 0);
-    assert (filenameCmp("abc", "abcd") < 0);
-    assert (filenameCmp("abcd", "abc") > 0);
+    assert(filenameCmp("abc", "abc") == 0);
+    assert(filenameCmp("abc", "abd") < 0);
+    assert(filenameCmp("abc", "abb") > 0);
+    assert(filenameCmp("abc", "abcd") < 0);
+    assert(filenameCmp("abcd", "abc") > 0);
 
     version (linux)
     {
         // Same as calling filenameCmp!(CaseSensitive.yes)(filename1, filename2)
-        assert (filenameCmp("Abc", "abc") < 0);
-        assert (filenameCmp("abc", "Abc") > 0);
+        assert(filenameCmp("Abc", "abc") < 0);
+        assert(filenameCmp("abc", "Abc") > 0);
     }
     version (Windows)
     {
         // Same as calling filenameCmp!(CaseSensitive.no)(filename1, filename2)
-        assert (filenameCmp("Abc", "abc") == 0);
-        assert (filenameCmp("abc", "Abc") == 0);
-        assert (filenameCmp("Abc", "abD") < 0);
-        assert (filenameCmp("abc", "AbB") > 0);
+        assert(filenameCmp("Abc", "abc") == 0);
+        assert(filenameCmp("abc", "Abc") == 0);
+        assert(filenameCmp("Abc", "abD") < 0);
+        assert(filenameCmp("abc", "AbB") > 0);
     }
 }
 
 int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, Range1, Range2)
     (auto ref Range1 filename1, auto ref Range2 filename2)
-    if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
+if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
 {
     import std.meta : staticMap;
     alias Types = staticMap!(convertToString, Range1, Range2);
@@ -3097,28 +3145,28 @@ int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, Range1, Range2)
 
 @safe unittest
 {
-    assert (filenameCmp!(CaseSensitive.yes)(TestAliasedString("Abc"), "abc") < 0);
-    assert (filenameCmp!(CaseSensitive.yes)("Abc", TestAliasedString("abc")) < 0);
-    assert (filenameCmp!(CaseSensitive.yes)(TestAliasedString("Abc"), TestAliasedString("abc")) < 0);
+    assert(filenameCmp!(CaseSensitive.yes)(TestAliasedString("Abc"), "abc") < 0);
+    assert(filenameCmp!(CaseSensitive.yes)("Abc", TestAliasedString("abc")) < 0);
+    assert(filenameCmp!(CaseSensitive.yes)(TestAliasedString("Abc"), TestAliasedString("abc")) < 0);
 }
 
 @safe unittest
 {
-    assert (filenameCmp!(CaseSensitive.yes)("Abc", "abc") < 0);
-    assert (filenameCmp!(CaseSensitive.yes)("abc", "Abc") > 0);
+    assert(filenameCmp!(CaseSensitive.yes)("Abc", "abc") < 0);
+    assert(filenameCmp!(CaseSensitive.yes)("abc", "Abc") > 0);
 
-    assert (filenameCmp!(CaseSensitive.no)("abc", "abc") == 0);
-    assert (filenameCmp!(CaseSensitive.no)("abc", "abd") < 0);
-    assert (filenameCmp!(CaseSensitive.no)("abc", "abb") > 0);
-    assert (filenameCmp!(CaseSensitive.no)("abc", "abcd") < 0);
-    assert (filenameCmp!(CaseSensitive.no)("abcd", "abc") > 0);
-    assert (filenameCmp!(CaseSensitive.no)("Abc", "abc") == 0);
-    assert (filenameCmp!(CaseSensitive.no)("abc", "Abc") == 0);
-    assert (filenameCmp!(CaseSensitive.no)("Abc", "abD") < 0);
-    assert (filenameCmp!(CaseSensitive.no)("abc", "AbB") > 0);
+    assert(filenameCmp!(CaseSensitive.no)("abc", "abc") == 0);
+    assert(filenameCmp!(CaseSensitive.no)("abc", "abd") < 0);
+    assert(filenameCmp!(CaseSensitive.no)("abc", "abb") > 0);
+    assert(filenameCmp!(CaseSensitive.no)("abc", "abcd") < 0);
+    assert(filenameCmp!(CaseSensitive.no)("abcd", "abc") > 0);
+    assert(filenameCmp!(CaseSensitive.no)("Abc", "abc") == 0);
+    assert(filenameCmp!(CaseSensitive.no)("abc", "Abc") == 0);
+    assert(filenameCmp!(CaseSensitive.no)("Abc", "abD") < 0);
+    assert(filenameCmp!(CaseSensitive.no)("abc", "AbB") > 0);
 
-    version (Posix)   assert (filenameCmp(`abc\def`, `abc/def`) != 0);
-    version (Windows) assert (filenameCmp(`abc\def`, `abc/def`) == 0);
+    version (Posix)   assert(filenameCmp(`abc\def`, `abc/def`) != 0);
+    version (Windows) assert(filenameCmp(`abc\def`, `abc/def`) == 0);
 }
 
 /** Matches a pattern against a path.
@@ -3164,8 +3212,9 @@ int filenameCmp(CaseSensitive cs = CaseSensitive.osDefault, Range1, Range2)
 bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C, Range)
     (Range path, const(C)[] pattern)
     @safe pure nothrow
-    if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) && !isConvertibleToString!Range &&
-        isSomeChar!C && is(Unqual!C == Unqual!(ElementEncodingType!Range)))
+if (isForwardRange!Range && !isInfinite!Range &&
+    isSomeChar!(ElementEncodingType!Range) && !isConvertibleToString!Range &&
+    isSomeChar!C && is(Unqual!C == Unqual!(ElementEncodingType!Range)))
 in
 {
     // Verify that pattern[] is valid
@@ -3272,7 +3321,7 @@ body
                         else
                         {
                             /* Match for:
-                             *   pattern[pi0..pi-1] ~ pattern[piRemain..$]
+                             *   pattern[pi0 .. pi-1] ~ pattern[piRemain..$]
                              */
                             if (pattmp is null)
                                 // Allocate this only once per function invocation.
@@ -3313,46 +3362,46 @@ body
 ///
 @safe unittest
 {
-    assert (globMatch("foo.bar", "*"));
-    assert (globMatch("foo.bar", "*.*"));
-    assert (globMatch(`foo/foo\bar`, "f*b*r"));
-    assert (globMatch("foo.bar", "f???bar"));
-    assert (globMatch("foo.bar", "[fg]???bar"));
-    assert (globMatch("foo.bar", "[!gh]*bar"));
-    assert (globMatch("bar.fooz", "bar.{foo,bif}z"));
-    assert (globMatch("bar.bifz", "bar.{foo,bif}z"));
+    assert(globMatch("foo.bar", "*"));
+    assert(globMatch("foo.bar", "*.*"));
+    assert(globMatch(`foo/foo\bar`, "f*b*r"));
+    assert(globMatch("foo.bar", "f???bar"));
+    assert(globMatch("foo.bar", "[fg]???bar"));
+    assert(globMatch("foo.bar", "[!gh]*bar"));
+    assert(globMatch("bar.fooz", "bar.{foo,bif}z"));
+    assert(globMatch("bar.bifz", "bar.{foo,bif}z"));
 
     version (Windows)
     {
         // Same as calling globMatch!(CaseSensitive.no)(path, pattern)
-        assert (globMatch("foo", "Foo"));
-        assert (globMatch("Goo.bar", "[fg]???bar"));
+        assert(globMatch("foo", "Foo"));
+        assert(globMatch("Goo.bar", "[fg]???bar"));
     }
     version (linux)
     {
         // Same as calling globMatch!(CaseSensitive.yes)(path, pattern)
-        assert (!globMatch("foo", "Foo"));
-        assert (!globMatch("Goo.bar", "[fg]???bar"));
+        assert(!globMatch("foo", "Foo"));
+        assert(!globMatch("Goo.bar", "[fg]???bar"));
     }
 }
 
 bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C, Range)
     (auto ref Range path, const(C)[] pattern)
     @safe pure nothrow
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return globMatch!(cs, C, StringTypeOf!Range)(path, pattern);
 }
 
 @safe unittest
 {
-    assert (testAliasedString!globMatch("foo.bar", "*"));
+    assert(testAliasedString!globMatch("foo.bar", "*"));
 }
 
 @safe unittest
 {
-    assert (globMatch!(CaseSensitive.no)("foo", "Foo"));
-    assert (!globMatch!(CaseSensitive.yes)("foo", "Foo"));
+    assert(globMatch!(CaseSensitive.no)("foo", "Foo"));
+    assert(!globMatch!(CaseSensitive.yes)("foo", "Foo"));
 
     assert(globMatch("foo", "*"));
     assert(globMatch("foo.bar"w, "*"w));
@@ -3434,9 +3483,9 @@ bool globMatch(CaseSensitive cs = CaseSensitive.osDefault, C, Range)
 
 */
 bool isValidFilename(Range)(Range filename)
-    if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && isSomeChar!(ElementEncodingType!Range) ||
-         isNarrowString!Range) &&
-        !isConvertibleToString!Range)
+if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && isSomeChar!(ElementEncodingType!Range) ||
+    isNarrowString!Range) &&
+    !isConvertibleToString!Range)
 {
     import core.stdc.stdio : FILENAME_MAX;
     if (filename.length == 0 || filename.length >= FILENAME_MAX) return false;
@@ -3468,7 +3517,7 @@ bool isValidFilename(Range)(Range filename)
         {
             if (c == 0 || c == '/') return false;
         }
-        else static assert (0);
+        else static assert(0);
     }
     version (Windows)
     {
@@ -3490,7 +3539,7 @@ unittest
 }
 
 bool isValidFilename(Range)(auto ref Range filename)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return isValidFilename!(StringTypeOf!Range)(filename);
 }
@@ -3509,16 +3558,16 @@ unittest
     auto pfdep = [`foo\bar`, "*.txt"];
     version (Windows) invalid ~= pfdep;
     else version (Posix) valid ~= pfdep;
-    else static assert (0);
+    else static assert(0);
 
     import std.meta : AliasSeq;
     foreach (T; AliasSeq!(char[], const(char)[], string, wchar[],
         const(wchar)[], wstring, dchar[], const(dchar)[], dstring))
     {
         foreach (fn; valid)
-            assert (isValidFilename(to!T(fn)));
+            assert(isValidFilename(to!T(fn)));
         foreach (fn; invalid)
-            assert (!isValidFilename(to!T(fn)));
+            assert(!isValidFilename(to!T(fn)));
     }
 
     {
@@ -3536,7 +3585,7 @@ unittest
         {
             char[3] buf;
             buf[0] = 'a';
-            buf[1] = i <= 31 ? cast(char)i : cases[i - 32];
+            buf[1] = i <= 31 ? cast(char) i : cases[i - 32];
             buf[2] = 'b';
             assert(!isValidFilename(buf[]));
         }
@@ -3577,9 +3626,9 @@ unittest
         true if $(D path) is a valid _path.
 */
 bool isValidPath(Range)(Range path)
-    if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && isSomeChar!(ElementEncodingType!Range) ||
-         isNarrowString!Range) &&
-        !isConvertibleToString!Range)
+if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && isSomeChar!(ElementEncodingType!Range) ||
+    isNarrowString!Range) &&
+    !isConvertibleToString!Range)
 {
     alias C = Unqual!(ElementEncodingType!Range);
 
@@ -3589,7 +3638,7 @@ bool isValidPath(Range)(Range path)
     // isValidFilename.
     bool isValidComponent(Range component)
     {
-        assert (component.length > 0);
+        assert(component.length > 0);
         if (component[0] == '.')
         {
             if (component.length == 1) return true;
@@ -3656,7 +3705,7 @@ bool isValidPath(Range)(Range path)
     {
         remainder = path;
     }
-    else static assert (0);
+    else static assert(0);
     remainder = ltrimDirSeparators(remainder);
 
     // Check that each component satisfies isValidComponent.
@@ -3664,7 +3713,7 @@ bool isValidPath(Range)(Range path)
     {
         size_t i = 0;
         while (i < remainder.length && !isDirSeparator(remainder[i])) ++i;
-        assert (i > 0);
+        assert(i > 0);
         if (!isValidComponent(remainder[0 .. i])) return false;
         remainder = ltrimDirSeparators(remainder[i .. $]);
     }
@@ -3677,43 +3726,43 @@ bool isValidPath(Range)(Range path)
 @safe pure @nogc nothrow
 unittest
 {
-    assert (isValidPath("/foo/bar"));
-    assert (!isValidPath("/foo\0/bar"));
-    assert (isValidPath("/"));
-    assert (isValidPath("a"));
+    assert(isValidPath("/foo/bar"));
+    assert(!isValidPath("/foo\0/bar"));
+    assert(isValidPath("/"));
+    assert(isValidPath("a"));
 
     version (Windows)
     {
-        assert (isValidPath(`c:\`));
-        assert (isValidPath(`c:\foo`));
-        assert (isValidPath(`c:\foo\.\bar\\\..\`));
-        assert (!isValidPath(`!:\foo`));
-        assert (!isValidPath(`c::\foo`));
-        assert (!isValidPath(`c:\foo?`));
-        assert (!isValidPath(`c:\foo.`));
+        assert(isValidPath(`c:\`));
+        assert(isValidPath(`c:\foo`));
+        assert(isValidPath(`c:\foo\.\bar\\\..\`));
+        assert(!isValidPath(`!:\foo`));
+        assert(!isValidPath(`c::\foo`));
+        assert(!isValidPath(`c:\foo?`));
+        assert(!isValidPath(`c:\foo.`));
 
-        assert (isValidPath(`\\server\share`));
-        assert (isValidPath(`\\server\share\foo`));
-        assert (isValidPath(`\\server\share\\foo`));
-        assert (!isValidPath(`\\\server\share\foo`));
-        assert (!isValidPath(`\\server\\share\foo`));
-        assert (!isValidPath(`\\ser*er\share\foo`));
-        assert (!isValidPath(`\\server\sha?e\foo`));
-        assert (!isValidPath(`\\server\share\|oo`));
+        assert(isValidPath(`\\server\share`));
+        assert(isValidPath(`\\server\share\foo`));
+        assert(isValidPath(`\\server\share\\foo`));
+        assert(!isValidPath(`\\\server\share\foo`));
+        assert(!isValidPath(`\\server\\share\foo`));
+        assert(!isValidPath(`\\ser*er\share\foo`));
+        assert(!isValidPath(`\\server\sha?e\foo`));
+        assert(!isValidPath(`\\server\share\|oo`));
 
-        assert (isValidPath(`\\?\<>:"?*|/\..\.`));
-        assert (!isValidPath("\\\\?\\foo\0bar"));
+        assert(isValidPath(`\\?\<>:"?*|/\..\.`));
+        assert(!isValidPath("\\\\?\\foo\0bar"));
 
-        assert (!isValidPath(`\\.\PhysicalDisk1`));
-        assert (!isValidPath(`\\`));
+        assert(!isValidPath(`\\.\PhysicalDisk1`));
+        assert(!isValidPath(`\\`));
     }
 
     import std.utf : byCodeUnit;
-    assert (isValidPath("/foo/bar".byCodeUnit));
+    assert(isValidPath("/foo/bar".byCodeUnit));
 }
 
 bool isValidPath(Range)(auto ref Range path)
-    if (isConvertibleToString!Range)
+if (isConvertibleToString!Range)
 {
     return isValidPath!(StringTypeOf!Range)(path);
 }
@@ -3845,7 +3894,7 @@ string expandTilde(string inputPath) nothrow
                 auto last_char = indexOf(path, dirSeparator[0]);
 
                 size_t username_len = (last_char == -1) ? path.length : last_char;
-                char* username = cast(char*)malloc(username_len * char.sizeof);
+                char* username = cast(char*) malloc(username_len * char.sizeof);
                 if (!username)
                     onOutOfMemoryError();
                 scope(exit) free(username);
@@ -3871,7 +3920,7 @@ string expandTilde(string inputPath) nothrow
                 passwd result;
                 while (1)
                 {
-                    extra_memory = cast(char*)realloc(extra_memory, extra_memory_size * char.sizeof);
+                    extra_memory = cast(char*) realloc(extra_memory, extra_memory_size * char.sizeof);
                     if (extra_memory == null)
                         onOutOfMemoryError();
 

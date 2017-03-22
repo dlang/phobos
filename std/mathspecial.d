@@ -135,7 +135,7 @@ real sgnGamma(real x)
     return n & 1 ? 1.0 : -1.0;
 }
 
-unittest
+@safe unittest
 {
     assert(sgnGamma(5.0) == 1.0);
     assert(isNaN(sgnGamma(-3.0)));
@@ -159,7 +159,7 @@ real beta(real x, real y)
     } else return gamma(x) * gamma(y) / gamma(x+y);
 }
 
-unittest
+@safe unittest
 {
     assert(isIdentical(beta(NaN(0xABC), 4), NaN(0xABC)));
     assert(isIdentical(beta(2, NaN(0xABC)), NaN(0xABC)));
@@ -351,7 +351,7 @@ real normalDistribution(real x)
  */
 real normalDistributionInverse(real p)
 in {
-  assert(p>=0.0L && p<=1.0L, "Domain error");
+  assert(p >= 0.0L && p <= 1.0L, "Domain error");
 }
 body
 {

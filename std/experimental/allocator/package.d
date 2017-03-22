@@ -36,7 +36,7 @@ D's allocators have a layered structure in both implementation and documentation
 
 $(OL
 $(LI A high-level, dynamically-typed layer (described further down in this
-module). It consists of an interface called $(LREF IAllocator), which concrete
+module). It consists of an interface called $(LREF IAllocator), which concret;
 allocators need to implement. The interface primitives themselves are oblivious
 to the type of the objects being allocated; they only deal in `void[]`, by
 necessity of the interface being dynamic (as opposed to type-parameterized).
@@ -200,7 +200,7 @@ public import std.experimental.allocator.common,
     std.experimental.allocator.typed;
 
 // Example in the synopsis above
-unittest
+@system unittest
 {
     import std.algorithm.comparison : min, max;
     import std.experimental.allocator.building_blocks.free_list : FreeList;
@@ -371,7 +371,7 @@ nothrow @safe @nogc @property void theAllocator(IAllocator a)
 }
 
 ///
-unittest
+@system unittest
 {
     // Install a new allocator that is faster for 128-byte allocations.
     import std.experimental.allocator.building_blocks.free_list : FreeList;
@@ -402,7 +402,7 @@ allocator can be cast to $(D shared).
     _processAllocator = a;
 }
 
-unittest
+@system unittest
 {
     assert(processAllocator);
     assert(processAllocator is theAllocator);
@@ -446,7 +446,7 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
         else
         {
             // Assume cast is safe as allocation succeeded for `stateSize!T`
-            auto p = () @trusted { return cast(T*)m.ptr; }();
+            auto p = () @trusted { return cast(T*) m.ptr; }();
             emplaceRef(*p, args);
             return p;
         }
@@ -471,7 +471,7 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
 }
 
 ///
-unittest
+@system unittest
 {
     // Dynamically allocate one integer
     const int* p1 = theAllocator.make!int;
@@ -517,7 +517,7 @@ unittest
     assert(outer.x == inner.getX);
 }
 
-unittest // bugzilla 15639 & 15772
+@system unittest // bugzilla 15639 & 15772
 {
     abstract class Foo {}
     class Bar: Foo {}
@@ -525,7 +525,7 @@ unittest // bugzilla 15639 & 15772
     static assert( is(typeof(theAllocator.make!Bar)));
 }
 
-unittest
+@system unittest
 {
     void test(Allocator)(auto ref Allocator alloc)
     {
@@ -683,7 +683,7 @@ private void fillWithMemcpy(T)(void[] array, auto ref T filler) nothrow
     }
 }
 
-unittest
+@system unittest
 {
     int[] a;
     fillWithMemcpy(a, 42);
@@ -701,17 +701,17 @@ private T[] uninitializedFillDefault(T)(T[] array) nothrow
 }
 
 pure nothrow @nogc
-unittest
+@system unittest
 {
     static struct S { int x = 42; @disable this(this); }
 
     int[5] expected = [42, 42, 42, 42, 42];
     S[5] arr = void;
     uninitializedFillDefault(arr);
-    assert ((cast(int*)arr.ptr)[0 .. arr.length] == expected);
+    assert((cast(int*) arr.ptr)[0 .. arr.length] == expected);
 }
 
-unittest
+@system unittest
 {
     int[] a = [1, 2, 4];
     uninitializedFillDefault(a);
@@ -746,7 +746,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
     return () @trusted { return cast(T[]) uninitializedFillDefault(cast(U[]) m); }();
 }
 
-unittest
+@system unittest
 {
     void test1(A)(auto ref A alloc)
     {
@@ -848,7 +848,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
 }
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     static void test(T)()
@@ -1045,7 +1045,7 @@ if (isInputRange!R && !isInfinite!R)
     }
 }
 
-unittest
+@system unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -1066,7 +1066,7 @@ unittest
 }
 
 // infer types for strings
-unittest
+@system unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -1225,7 +1225,7 @@ version(unittest)
     }
 }
 
-unittest
+@system unittest
 {
     import std.array : array;
     import std.range : iota;
@@ -1284,7 +1284,7 @@ bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
     return true;
 }
 
-unittest
+@system unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -1313,7 +1313,7 @@ bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
     return true;
 }
 
-unittest
+@system unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -1387,7 +1387,7 @@ if (isInputRange!R)
 }
 
 ///
-unittest
+@system unittest
 {
     auto arr = theAllocator.makeArray!int([1, 2, 3]);
     assert(theAllocator.expandArray(arr, 2));
@@ -1397,7 +1397,7 @@ unittest
     assert(arr == [1, 2, 3, 0, 0, 4, 5]);
 }
 
-unittest
+@system unittest
 {
     auto arr = theAllocator.makeArray!int([1, 2, 3]);
     ForcedInputRange r;
@@ -1471,7 +1471,7 @@ bool shrinkArray(T, Allocator)(auto ref Allocator alloc,
 }
 
 ///
-unittest
+@system unittest
 {
     int[] a = theAllocator.makeArray!int(100, 42);
     assert(a.length == 100);
@@ -1480,7 +1480,7 @@ unittest
     assert(a == [42, 42]);
 }
 
-unittest
+@system unittest
 {
     void test(A)(auto ref A alloc)
     {
@@ -1510,7 +1510,7 @@ void dispose(A, T)(auto ref A alloc, T* p)
     {
         destroy(*p);
     }
-    alloc.deallocate((cast(void*)p)[0 .. T.sizeof]);
+    alloc.deallocate((cast(void*) p)[0 .. T.sizeof]);
 }
 
 /// Ditto
@@ -1548,7 +1548,7 @@ void dispose(A, T)(auto ref A alloc, T[] array)
     alloc.deallocate(array);
 }
 
-unittest
+@system unittest
 {
     static int x;
     static interface I
@@ -1586,7 +1586,7 @@ unittest
     theAllocator.dispose(arr);
 }
 
-unittest //bugzilla 15721
+@system unittest //bugzilla 15721
 {
     import std.experimental.allocator.mallocator : Mallocator;
 
@@ -1598,6 +1598,130 @@ unittest //bugzilla 15721
     bar = Mallocator.instance.make!Bar;
     foo = cast(Foo) bar;
     Mallocator.instance.dispose(foo);
+}
+
+/**
+Allocates a multidimensional array of elements of type T.
+
+Params:
+N = number of dimensions
+T = element type of an element of the multidimensional arrat
+alloc = the allocator used for getting memory
+lengths = static array containing the size of each dimension
+
+Returns:
+An N-dimensional array with individual elements of type T.
+*/
+auto makeMultidimensionalArray(T, Allocator, size_t N)(auto ref Allocator alloc, size_t[N] lengths...)
+{
+    static if (N == 1)
+    {
+        return makeArray!T(alloc, lengths[0]);
+    }
+    else
+    {
+        alias E = typeof(makeMultidimensionalArray!(T, Allocator, N - 1)(alloc, lengths[1 .. $]));
+        auto ret = makeArray!E(alloc, lengths[0]);
+        foreach (ref e; ret)
+            e = makeMultidimensionalArray!(T, Allocator, N - 1)(alloc, lengths[1 .. $]);
+        return ret;
+    }
+}
+
+///
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    auto mArray = Mallocator.instance.makeMultidimensionalArray!int(2, 3, 6);
+
+    // deallocate when exiting scope
+    scope(exit)
+    {
+        Mallocator.instance.disposeMultidimensionalArray(mArray);
+    }
+
+    assert(mArray.length == 2);
+    foreach (lvl2Array; mArray)
+    {
+        assert(lvl2Array.length == 3);
+        foreach (lvl3Array; lvl2Array)
+            assert(lvl3Array.length == 6);
+    }
+}
+
+/**
+Destroys and then deallocates a multidimensional array, assuming it was
+created with makeMultidimensionalArray and the same allocator was used.
+
+Params:
+T = element type of an element of the multidimensional array
+alloc = the allocator used for getting memory
+array = the multidimensional array that is to be deallocated
+*/
+void disposeMultidimensionalArray(T, Allocator)(auto ref Allocator alloc, T[] array)
+{
+    static if (isArray!T)
+    {
+        foreach (ref e; array)
+            disposeMultidimensionalArray(alloc, e);
+    }
+
+    dispose(alloc, array);
+}
+
+///
+@system unittest
+{
+    struct TestAllocator
+    {
+        import std.experimental.allocator.common : platformAlignment;
+        import std.experimental.allocator.mallocator : Mallocator;
+
+        alias allocator = Mallocator.instance;
+
+        private static struct ByteRange
+        {
+            void* ptr;
+            size_t length;
+        }
+
+        private ByteRange[] _allocations;
+
+        enum uint alignment = platformAlignment;
+
+        void[] allocate(size_t numBytes)
+        {
+             auto ret = allocator.allocate(numBytes);
+             _allocations ~= ByteRange(ret.ptr, ret.length);
+             return ret;
+        }
+
+        bool deallocate(void[] bytes)
+        {
+            import std.algorithm.mutation : remove;
+            import std.algorithm.searching : canFind;
+
+            bool pred(ByteRange other)
+            { return other.ptr == bytes.ptr && other.length == bytes.length; }
+
+            assert(_allocations.canFind!pred);
+
+             _allocations = _allocations.remove!pred;
+             return allocator.deallocate(bytes);
+        }
+
+        ~this()
+        {
+            assert(!_allocations.length);
+        }
+    }
+
+    TestAllocator allocator;
+
+    auto mArray = allocator.makeMultidimensionalArray!int(2, 3, 5, 6, 7, 2);
+
+    allocator.disposeMultidimensionalArray(mArray);
 }
 
 /**
@@ -1676,7 +1800,7 @@ CAllocatorImpl!(A, Yes.indirect) allocatorObject(A)(A* pa)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     IAllocator a = allocatorObject(Mallocator.instance);
@@ -1806,8 +1930,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     {
         static if (hasMember!(Allocator, "resolveInternalPointer"))
         {
-            result = impl.resolveInternalPointer(p);
-            return Ternary(result.ptr !is null);
+            return impl.resolveInternalPointer(p, result);
         }
         else
         {
@@ -1883,22 +2006,31 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
 }
 
 // Example in intro above
-unittest
+@system unittest
 {
     // Allocate an int, initialize it with 42
     int* p = theAllocator.make!int(42);
     assert(*p == 42);
+
     // Destroy and deallocate it
     theAllocator.dispose(p);
 
     // Allocate using the global process allocator
     p = processAllocator.make!int(100);
     assert(*p == 100);
+
     // Destroy and deallocate
     processAllocator.dispose(p);
 
     // Create an array of 50 doubles initialized to -1.0
     double[] arr = theAllocator.makeArray!double(50, -1.0);
+
+    // Check internal pointer
+    void[] result;
+    assert(theAllocator.resolveInternalPointer(null, result) == Ternary.no);
+    Ternary r = theAllocator.resolveInternalPointer(arr.ptr, result);
+    assert(result.ptr is arr.ptr && result.length >= arr.length);
+
     // Append two zeros to it
     theAllocator.expandArray(arr, 2, 0.0);
     // On second thought, take that back
@@ -2240,7 +2372,8 @@ private struct InternalPointersTree(Allocator)
     /// Ditto
     Ternary owns(void[] b)
     {
-        return Ternary(resolveInternalPointer(b.ptr) !is null);
+        void[] result;
+        return resolveInternalPointer(b.ptr, result);
     }
 
     /// Ditto
@@ -2252,7 +2385,7 @@ private struct InternalPointersTree(Allocator)
     /** Returns the block inside which $(D p) resides, or $(D null) if the
     pointer does not belong.
     */
-    void[] resolveInternalPointer(void* p)
+    Ternary resolveInternalPointer(void* p, ref void[] result)
     {
         // Must define a custom find
         Tree.Node* find()
@@ -2276,8 +2409,9 @@ private struct InternalPointersTree(Allocator)
         }
 
         auto n = find();
-        if (!n) return null;
-        return (cast(void*) (n + 1))[0 .. n.payload];
+        if (!n) return Ternary.no;
+        result = (cast(void*) (n + 1))[0 .. n.payload];
+        return Ternary.yes;
     }
 }
 
@@ -2294,14 +2428,15 @@ unittest
 
     foreach (b; allox)
     {
-        auto p = a.resolveInternalPointer(b.ptr);
+        void[] p;
+        Ternary r = a.resolveInternalPointer(b.ptr, p);
         assert(p.ptr is b.ptr && p.length >= b.length);
-        p = a.resolveInternalPointer(b.ptr + b.length);
+        r = a.resolveInternalPointer(b.ptr + b.length, p);
         assert(p.ptr is b.ptr && p.length >= b.length);
-        p = a.resolveInternalPointer(b.ptr + b.length / 2);
+        r = a.resolveInternalPointer(b.ptr + b.length / 2, p);
         assert(p.ptr is b.ptr && p.length >= b.length);
         auto bogus = new void[b.length];
-        assert(a.resolveInternalPointer(bogus.ptr) is null);
+        assert(a.resolveInternalPointer(bogus.ptr, p) == Ternary.no);
     }
 
     foreach (b; allox.randomCover)

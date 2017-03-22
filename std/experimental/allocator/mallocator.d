@@ -7,7 +7,7 @@ import std.experimental.allocator.common;
  */
 struct Mallocator
 {
-    unittest { testAllocator!(() => Mallocator.instance); }
+    @system unittest { testAllocator!(() => Mallocator.instance); }
 
     /**
     The alignment is a static constant equal to $(D platformAlignment), which
@@ -69,7 +69,7 @@ struct Mallocator
 
 ///
 @nogc nothrow
-unittest
+@system unittest
 {
     auto buffer = Mallocator.instance.allocate(1024 * 1024 * 4);
     scope(exit) Mallocator.instance.deallocate(buffer);
@@ -77,7 +77,7 @@ unittest
 }
 
 @nogc nothrow
-unittest
+@system unittest
 {
     @nogc nothrow
     static void test(A)()
@@ -92,7 +92,7 @@ unittest
 }
 
 @nogc nothrow
-unittest
+@system unittest
 {
     static void test(A)()
     {
@@ -203,7 +203,7 @@ version (Windows)
  */
 struct AlignedMallocator
 {
-    unittest { testAllocator!(() => typeof(this).instance); }
+    @system unittest { testAllocator!(() => typeof(this).instance); }
 
     /**
     The default alignment is $(D platformAlignment).
@@ -243,7 +243,7 @@ struct AlignedMallocator
                 ~"multiple of (void*).sizeof, according to posix_memalign!");
         }
         else if (code != 0)
-            assert (0, "posix_memalign returned an unknown code!");
+            assert(0, "posix_memalign returned an unknown code!");
 
         else
             return result[0 .. bytes];
@@ -328,7 +328,7 @@ struct AlignedMallocator
 
 ///
 @nogc nothrow
-unittest
+@system unittest
 {
     auto buffer = AlignedMallocator.instance.alignedAllocate(1024 * 1024 * 4,
         128);
@@ -342,7 +342,7 @@ size_t addr(ref void* ptr) { return cast(size_t) ptr; }
 
 version(CRuntime_DigitalMars)
 @nogc nothrow
-unittest
+@system unittest
 {
     void* m;
 
@@ -370,7 +370,7 @@ unittest
     m = _aligned_malloc(16, 0x10);
     if (m)
     {
-        assert((cast(size_t)m & 0xF) == 0);
+        assert((cast(size_t) m & 0xF) == 0);
         m = _aligned_realloc(m, 32, 0x10000);
         if (m) assert((m.addr & 0xFFFF) == 0);
         _aligned_free(m);

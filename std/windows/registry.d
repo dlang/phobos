@@ -84,7 +84,7 @@ class Win32Exception : WindowsException
 
 version(unittest) import std.string : startsWith, endsWith;
 
-unittest
+@safe unittest
 {
     // Test that we can throw and catch one by its own type
     string message = "Test W1";
@@ -94,7 +94,7 @@ unittest
     assert(e.msg.startsWith(message));
 }
 
-unittest
+@system unittest
 {
     // ditto
     string message = "Test W2";
@@ -139,7 +139,7 @@ public:
     }
 }
 
-unittest
+@system unittest
 {
     // (i) Test that we can throw and catch one by its own type
     string message = "Test 1";
@@ -151,7 +151,7 @@ unittest
     assert(e.msg.startsWith(message));
 }
 
-unittest
+@safe unittest
 {
     // ditto
     string message = "Test 2";
@@ -282,9 +282,9 @@ body
      * these hive keys is ignored, we'd rather not trust the Win32
      * API.
      */
-    if (cast(uint)hkey & 0x80000000)
+    if (cast(uint) hkey & 0x80000000)
     {
-        switch (cast(uint)hkey)
+        switch (cast(uint) hkey)
         {
             case HKEY_CLASSES_ROOT:
             case HKEY_CURRENT_USER:
@@ -376,9 +376,9 @@ in
 body
 {
     /* Can't duplicate standard keys, but don't need to, so can just return */
-    if (cast(uint)hkey & 0x80000000)
+    if (cast(uint) hkey & 0x80000000)
     {
-        switch (cast(uint)hkey)
+        switch (cast(uint) hkey)
         {
             case HKEY_CLASSES_ROOT:
             case HKEY_CURRENT_USER:
@@ -564,12 +564,12 @@ body
             version(LittleEndian)
                 value = to!string(u.dw);
             else
-                value = to!string(core.bitop.bswap(u.dw));
+                value = to!string(bswap(u.dw));
             break;
 
         case REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
             version(LittleEndian)
-                value = to!string(core.bitop.bswap(u.dw));
+                value = to!string(bswap(u.dw));
             else
                 value = to!string(u.dw);
             break;
@@ -650,12 +650,12 @@ body
             version(LittleEndian)
                 static assert(REG_VALUE_TYPE.REG_DWORD == REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN);
             else
-                value = core.bitop.bswap(value);
+                value = bswap(value);
             break;
 
         case REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN:
             version(LittleEndian)
-                value = core.bitop.bswap(value);
+                value = bswap(value);
             else
                 static assert(REG_VALUE_TYPE.REG_DWORD == REG_VALUE_TYPE.REG_DWORD_BIG_ENDIAN);
             break;
@@ -966,7 +966,7 @@ public:
         Params:
             name = The name of the key to delete. May not be $(D null).
      */
-    void deleteKey(string name, REGSAM access = cast(REGSAM)0)
+    void deleteKey(string name, REGSAM access = cast(REGSAM) 0)
     {
         enforce(!name.empty, new RegistryException("Key name is invalid"));
 
@@ -1738,7 +1738,7 @@ private:
 }
 
 
-unittest
+@system unittest
 {
     debug(winreg) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(winreg) writefln("std.windows.registry.unittest read");
@@ -1771,7 +1771,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     debug(winreg) scope(success) writeln("unittest @", __FILE__, ":", __LINE__, " succeeded.");
     debug(winreg) writefln("std.windows.registry.unittest write");

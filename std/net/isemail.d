@@ -26,16 +26,16 @@ module std.net.isemail;
 
 // FIXME
 import std.range.primitives; // : ElementType;
+import std.regex;
 import std.traits;
 import std.typecons : Flag, Yes, No;
 
 /**
  * Check that an email address conforms to RFCs 5321, 5322 and others.
  *
- * As of Version 3.0, we are now distinguishing clearly between a Mailbox as defined
- * by RFC 5321 and an addr-spec as defined by RFC 5322. Depending on the context,
- * either can be regarded as a valid email address. The RFC 5321 Mailbox specification
- * is more restrictive (comments, white space and obsolete forms are not allowed).
+ * Distinguishes between a Mailbox as defined  by RFC 5321 and an addr-spec as
+ * defined by RFC 5322. Depending on the context, either can be regarded as a
+ * valid email address.
  *
  * Note: The DNS check is currently not implemented.
  *
@@ -55,21 +55,27 @@ import std.typecons : Flag, Yes, No;
  *                  either considered valid or not. Email status code will either be
  *                  EmailStatusCode.valid or EmailStatusCode.error.
  *
- * Returns: an EmailStatus, indicating the status of the email address.
+ * Returns:
+ *     An $(LREF EmailStatus), indicating the status of the email address.
  */
-EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns,
-    EmailStatusCode errorLevel = EmailStatusCode.none) if (isSomeChar!(Char))
+EmailStatus isEmail(Char)(const(Char)[] email, CheckDns checkDNS = No.checkDns,
+EmailStatusCode errorLevel = EmailStatusCode.none)
+if (isSomeChar!(Char))
 {
-    import std.algorithm.iteration : uniq;
+    import std.algorithm.iteration : uniq, filter, map;
     import std.algorithm.searching : canFind, maxElement;
     import std.exception : enforce;
     import std.array : array, split;
     import std.conv : to;
-    import std.regex : match, regex;
     import std.string : indexOf, lastIndexOf;
     import std.uni : isNumber;
 
     alias tstring = const(Char)[];
+    alias Token = TokenImpl!(Char);
+
+    static ipRegex = ctRegex!(`\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}`~
+                        `(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`.to!(const(Char)[]));
+    static fourChars = ctRegex!(`^[0-9A-Fa-f]{0,4}$`.to!(const(Char)[]));
 
     enum defaultThreshold = 16;
     int threshold;
@@ -242,7 +248,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
                         else
                         {
                             contextPrior = context;
-                            auto c = token.front;
+                            immutable c = token.front;
 
                             if (c < '!' || c > '~' || c == '\n' || Token.specials.canFind(token))
                                 returnStatus ~= EmailStatusCode.errorExpectingText;
@@ -360,7 +366,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
 
                         }
 
-                        auto c = token.front;
+                        immutable c = token.front;
                         hyphenFlag = false;
 
                         if (c < '!' || c > '~' || Token.specials.canFind(token))
@@ -392,9 +398,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
                             auto maxGroups = 8;
                             size_t index = -1;
                             auto addressLiteral = parseData[EmailPart.componentLiteral];
-                            enum regexStr = `\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}`~
-                                            `(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$`;
-                            auto matchesIp = array(addressLiteral.match(regex!tstring(regexStr)).captures);
+                            auto matchesIp = addressLiteral.matchAll(ipRegex).map!(a => a.hit).array;
 
                             if (!matchesIp.empty)
                             {
@@ -407,14 +411,14 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
                             if (index == 0)
                                 returnStatus ~= EmailStatusCode.rfc5321AddressLiteral;
 
-                            else if (addressLiteral.compareFirstN(Token.ipV6Tag, 5, true))
+                            else if (addressLiteral.compareFirstN(Token.ipV6Tag, 5))
                                 returnStatus ~= EmailStatusCode.rfc5322DomainLiteral;
 
                             else
                             {
                                 auto ipV6 = addressLiteral.substr(5);
                                 matchesIp = ipV6.split(Token.colon);
-                                auto groupCount = matchesIp.length;
+                                immutable groupCount = matchesIp.length;
                                 index = ipV6.indexOf(Token.doubleColon);
 
                                 if (index == -1)
@@ -447,7 +451,9 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
                                 else if (ipV6.substr(-1) == Token.colon && ipV6.substr(-2, -1) != Token.colon)
                                     returnStatus ~= EmailStatusCode.rfc5322IpV6ColonEnd;
 
-                                else if (!matchesIp.grep(regex!(tstring)(`^[0-9A-Fa-f]{0,4}$`), true).empty)
+                                else if (!matchesIp
+                                        .filter!(a => a.matchFirst(fourChars).empty)
+                                        .empty)
                                     returnStatus ~= EmailStatusCode.rfc5322IpV6BadChar;
 
                                 else
@@ -487,7 +493,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
                     break;
 
                     default:
-                        auto c = token.front;
+                        immutable c = token.front;
 
                         if (c > AsciiToken.delete_ || c == '\0' || token == Token.openBracket)
                         {
@@ -540,7 +546,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
                     break;
 
                     default:
-                        auto c = token.front;
+                        immutable c = token.front;
 
                         if (c > AsciiToken.delete_ || c == '\0' || c == '\n')
                             returnStatus ~= EmailStatusCode.errorExpectingQuotedText;
@@ -555,7 +561,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
             break;
 
             case EmailPart.contextQuotedPair:
-                auto c = token.front;
+                immutable c = token.front;
 
                 if (c > AsciiToken.delete_)
                     returnStatus ~= EmailStatusCode.errorExpectingQuotedPair;
@@ -623,7 +629,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
                     break;
 
                     default:
-                        auto c = token.front;
+                        immutable c = token.front;
 
                         if (c > AsciiToken.delete_ || c == '\0' || c == '\n')
                         {
@@ -771,7 +777,7 @@ EmailStatus isEmail (Char) (const(Char)[] email, CheckDns checkDNS = No.checkDns
     return EmailStatus(valid, to!(string)(localPart), to!(string)(domainPart), finalStatus);
 }
 
-unittest
+@safe unittest
 {
     assert(`test.test@iana.org`.isEmail(No.checkDns).statusCode == EmailStatusCode.valid);
     assert(`test.test@iana.org`.isEmail(No.checkDns, EmailStatusCode.none).statusCode == EmailStatusCode.valid);
@@ -810,7 +816,7 @@ unittest
     assert(`.test@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotStart);
     assert(`test.@iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotEnd);
 
-    assert(`test..iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
+    assert(`test .. iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorConsecutiveDots);
 
     assert(`test_exa-mple.com`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorNoDomain);
@@ -855,7 +861,7 @@ unittest
 
     assert(`test@.iana.org`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotStart);
     assert(`test@iana.org.`.isEmail(No.checkDns, EmailStatusCode.any).statusCode == EmailStatusCode.errorDotEnd);
-    assert(`test@iana..com`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
+    assert(`test@iana .. com`.isEmail(No.checkDns, EmailStatusCode.any).statusCode ==
         EmailStatusCode.errorConsecutiveDots);
 
     //assert(`a@a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z.a.b.c.d.e.f.g.h.i.j.k.l.m.n.o.p.q.r.s.t.u.v.w.x.y.z`
@@ -1250,6 +1256,20 @@ unittest
     //     ` (OpenDNS does this, for instance).`); // DNS check is currently not implemented
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=17217
+@safe unittest
+{
+    wstring a = `test.test@iana.org`w;
+    dstring b = `test.test@iana.org`d;
+    const(wchar)[] c = `test.test@iana.org`w;
+    const(dchar)[] d = `test.test@iana.org`d;
+
+    assert(a.isEmail(No.checkDns).statusCode == EmailStatusCode.valid);
+    assert(b.isEmail(No.checkDns).statusCode == EmailStatusCode.valid);
+    assert(c.isEmail(No.checkDns).statusCode == EmailStatusCode.valid);
+    assert(d.isEmail(No.checkDns).statusCode == EmailStatusCode.valid);
+}
+
 /**
  * Flag for indicating if the isEmail function should perform a DNS check or not.
  *
@@ -1259,7 +1279,7 @@ unittest
  */
 alias CheckDns = Flag!"checkDns";
 
-/// This struct represents the status of an email address
+/// Represents the status of an email address
 struct EmailStatus
 {
     private
@@ -1270,7 +1290,7 @@ struct EmailStatus
         EmailStatusCode statusCode_;
     }
 
-    ///
+    /// Self aliases to a `bool` representing if the email is valid or not
     alias valid this;
 
     /*
@@ -1280,7 +1300,7 @@ struct EmailStatus
      *     domainPart = the domain part of the email address
      *        statusCode = the status code
      */
-    private this (bool valid, string localPart, string domainPart, EmailStatusCode statusCode)
+    private this (bool valid, string localPart, string domainPart, EmailStatusCode statusCode) @safe @nogc pure nothrow
     {
         this.valid_ = valid;
         this.localPart_ = localPart;
@@ -1288,38 +1308,38 @@ struct EmailStatus
         this.statusCode_ = statusCode;
     }
 
-    /// Indicates if the email address is valid or not.
-    @property bool valid () const
+    /// Returns: If the email address is valid or not.
+    @property bool valid() const @safe @nogc pure nothrow
     {
         return valid_;
     }
 
-    /// The local part of the email address, that is, the part before the @ sign.
-    @property string localPart () const
+    /// Returns: The local part of the email address, that is, the part before the @ sign.
+    @property string localPart() const @safe @nogc pure nothrow
     {
         return localPart_;
     }
 
-    /// The domain part of the email address, that is, the part after the @ sign.
-    @property string domainPart () const
+    /// Returns: The domain part of the email address, that is, the part after the @ sign.
+    @property string domainPart() const @safe @nogc pure nothrow
     {
         return domainPart_;
     }
 
-    /// The email status code
-    @property EmailStatusCode statusCode () const
+    /// Returns: The email status code
+    @property EmailStatusCode statusCode() const @safe @nogc pure nothrow
     {
         return statusCode_;
     }
 
-    /// Returns a describing string of the status code
-    @property string status () const
+    /// Returns: A describing string of the status code
+    @property string status() const @safe @nogc pure nothrow
     {
         return statusCodeDescription(statusCode_);
     }
 
-    /// Returns a textual representation of the email status
-    string toString () const
+    /// Returns: A textual representation of the email status
+    string toString() const @safe pure
     {
         import std.format : format;
         return format("EmailStatus\n{\n\tvalid: %s\n\tlocalPart: %s\n\tdomainPart: %s\n\tstatusCode: %s\n}", valid,
@@ -1327,8 +1347,13 @@ struct EmailStatus
     }
 }
 
-/// Returns a describing string of the given status code
-string statusCodeDescription (EmailStatusCode statusCode)
+/**
+ * Params:
+ *     statusCode = The $(LREF EmailStatusCode) to read
+ * Returns:
+ *     A detailed string describing the given status code
+ */
+string statusCodeDescription(EmailStatusCode statusCode) @safe @nogc pure nothrow
 {
     final switch (statusCode)
     {
@@ -1710,9 +1735,9 @@ enum EmailPart
 }
 
 // Miscellaneous string constants
-struct Token
+struct TokenImpl(Char)
 {
-    enum
+    enum : const(Char)[]
     {
         at = "@",
         backslash = `\`,
@@ -1818,14 +1843,14 @@ T[] substr (T) (T[] str, ptrdiff_t start = 0, ptrdiff_t length = ptrdiff_t.min)
     return str[start .. end];
 }
 
-unittest
+@safe unittest
 {
     assert("abcdef".substr(-1) == "f");
     assert("abcdef".substr(-2) == "ef");
     assert("abcdef".substr(-3, 1) == "d");
 }
 
-unittest
+@safe unittest
 {
     assert("abcdef".substr(0, -1) == "abcde");
     assert("abcdef".substr(2, -1) == "cde");
@@ -1855,56 +1880,25 @@ unittest
  * $(TR $(TD $(D > 0))  $(TD $(D s1 > s2)))
  * )
  */
-int compareFirstN (alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length, bool caseInsensitive = false)
-    if (is(Unqual!(ElementType!(S1)) == dchar) && is(Unqual!(ElementType!(S2)) == dchar))
+int compareFirstN(alias pred = "a < b", S1, S2) (S1 s1, S2 s2, size_t length)
+if (is(Unqual!(ElementType!(S1)) == dchar) && is(Unqual!(ElementType!(S2)) == dchar))
 {
     import std.uni : icmp;
-    import std.algorithm.comparison : cmp;
     auto s1End = length <= s1.length ? length : s1.length;
     auto s2End = length <= s2.length ? length : s2.length;
 
     auto slice1 = s1[0 .. s1End];
     auto slice2 = s2[0 .. s2End];
 
-    return caseInsensitive ? slice1.icmp(slice2) : slice1.cmp(slice2);
+    return slice1.icmp(slice2);
 }
 
-unittest
+@safe unittest
 {
     assert("abc".compareFirstN("abcdef", 3) == 0);
-    assert("abc".compareFirstN("Abc", 3, true) == 0);
+    assert("abc".compareFirstN("Abc", 3) == 0);
     assert("abc".compareFirstN("abcdef", 6) < 0);
     assert("abcdef".compareFirstN("abc", 6) > 0);
-}
-
-/*
- * Returns a range consisting of the elements of the $(D_PARAM input) range that
- * matches the given $(D_PARAM pattern).
- *
- * Params:
- *     input = the input range
- *     pattern = the regular expression pattern to search for
- *     invert = if $(D_KEYWORD true), this function returns the elements of the
- *              input range that do $(B not) match the given $(D_PARAM pattern).
- *
- * Returns: a range containing the matched elements
- */
-auto grep (Range, Regex) (Range input, Regex pattern, bool invert = false)
-{
-    import std.regex : match;
-    import std.algorithm.iteration : filter;
-    auto dg = invert ? (ElementType!(Range) e) { return e.match(pattern).empty; } :
-                       (ElementType!(Range) e) { return !e.match(pattern).empty; };
-
-    return filter!(dg)(input);
-}
-
-unittest
-{
-    import std.algorithm.comparison : equal;
-    import std.regex;
-    assert(equal(["ab", "0a", "cd", "1b"].grep(regex(`\d\w`)), ["0a", "1b"]));
-    assert(equal(["abc", "0123", "defg", "4567"].grep(regex(`4567`), true), ["abc", "0123", "defg"]));
 }
 
 /*
@@ -1915,14 +1909,15 @@ unittest
  *
  * Returns: the popped element
  */
-ElementType!(A) pop (A) (ref A a) if (isDynamicArray!(A) && !isNarrowString!(A) && isMutable!(A) && !is(A == void[]))
+ElementType!(A) pop (A) (ref A a)
+if (isDynamicArray!(A) && !isNarrowString!(A) && isMutable!(A) && !is(A == void[]))
 {
     auto e = a.back;
     a.popBack();
     return e;
 }
 
-unittest
+@safe unittest
 {
     auto array = [0, 1, 2, 3];
     auto result = array.pop();
@@ -1948,13 +1943,13 @@ const(T)[] get (T) (const(T)[] str, size_t index, dchar c)
     return str[index .. index + codeLength!(T)(c)];
 }
 
-unittest
+@safe unittest
 {
     assert("abc".get(1, 'b') == "b");
     assert("löv".get(1, 'ö') == "ö");
 }
 
-unittest
+@safe unittest
 {
     assert("abc".get(1, 'b') == "b");
     assert("löv".get(1, 'ö') == "ö");
