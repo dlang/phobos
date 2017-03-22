@@ -84,7 +84,9 @@ template BacktrackingMatcher(bool CTregex)
 
         static size_t stackSize(const ref RegEx re)
         {
-            return initialStack*(stateSize + re.ngroup*(Group!DataIndex).sizeof/size_t.sizeof)+1;
+            size_t itemSize = stateSize
+                + re.ngroup * (Group!DataIndex).sizeof / size_t.sizeof;
+            return initialStack * itemSize + 2;
         }
 
         @property bool atStart(){ return index == 0; }
@@ -115,7 +117,30 @@ template BacktrackingMatcher(bool CTregex)
         {
             auto chunk = mallocArray!(size_t)(stackSize(re));
             chunk[0] = cast(size_t)(memory.ptr);
-            memory = chunk[1..$];
+            chunk[1] = lastState;
+            memory = chunk[2..$];
+            lastState = 0;
+        }
+
+        bool prevStack()
+        {
+            // pointer to previous block
+            size_t* prev = cast(size_t*) memory.ptr[-2];
+            if (!prev)
+            {
+                // The last segment is freed in RegexMatch
+                return false;
+            }
+            else
+            {
+                import core.stdc.stdlib : free;
+                // memory used in previous block
+                size_t size = memory.ptr[-1];
+                free(memory.ptr-2);
+                memory = prev[0 .. size];
+                lastState = size;
+                return true;
+            }
         }
 
         void initExternalMemory(void[] memBlock)
@@ -123,8 +148,9 @@ template BacktrackingMatcher(bool CTregex)
             merge = arrayInChunk!(Trace)(re.hotspotTableSize, memBlock);
             merge[] = Trace.init;
             memory = cast(size_t[]) memBlock;
-            memory[0] = 0; //hidden pointer
-            memory = memory[1..$];
+            memory[0] = 0; // hidden pointer
+            memory[1] = 0; // used size
+            memory = memory[2..$];
         }
 
         void initialize(ref RegEx program, Stream stream, void[] memBlock)
@@ -277,6 +303,7 @@ template BacktrackingMatcher(bool CTregex)
                 pc = 0;
                 counter = 0;
                 lastState = 0;
+                matches[] = Group!DataIndex.init;
                 auto start = s._index;
                 debug(std_regex_matcher)
                     writeln("Try match starting at ", s[index .. s.lastIndex]);
@@ -628,6 +655,8 @@ template BacktrackingMatcher(bool CTregex)
                     case IR.LookbehindEnd:
                     case IR.NeglookbehindEnd:
                     case IR.End:
+                        // cleanup stale stack blocks if any
+                        while (prevStack()) {}
                         return re.ir[pc].data;
                     default:
                         debug printBytecode(re.ir[0..$]);
@@ -647,23 +676,6 @@ template BacktrackingMatcher(bool CTregex)
         @property size_t stackAvail()
         {
             return memory.length - lastState;
-        }
-
-        bool prevStack()
-        {
-            size_t* prev = memory.ptr-1;
-            prev = cast(size_t*)*prev;//take out hidden pointer
-            if (!prev)
-                return false;
-            else
-            {
-                import core.stdc.stdlib : free;
-                free(memory.ptr);//last segment is freed in RegexMatch
-                immutable size = initialStack*(stateSize + 2*re.ngroup);
-                memory = prev[0 .. size];
-                lastState = size;
-                return true;
-            }
         }
 
         void stackPush(T)(T val)
@@ -709,10 +721,9 @@ template BacktrackingMatcher(bool CTregex)
             //helper function, saves engine state
             void pushState(uint pc, uint counter)
             {
-                if (stateSize + matches.length > stackAvail)
+                if (stateSize + 2 * matches.length > stackAvail)
                 {
                     newStack();
-                    lastState = 0;
                 }
                 *cast(State*)&memory[lastState] =
                     State(index, pc, counter, infiniteNesting);
@@ -727,8 +738,8 @@ template BacktrackingMatcher(bool CTregex)
             //helper function, restores engine state
             bool popState()
             {
-                if (!lastState)
-                    return prevStack();
+                if (!lastState && !prevStack())
+                    return false;
                 lastState -= 2*matches.length;
                 auto pm = cast(size_t[]) matches;
                 pm[] = memory[lastState .. lastState + 2 * matches.length];
@@ -850,7 +861,6 @@ struct CtContext
                     if (stackAvail < $$*(Group!(DataIndex)).sizeof/size_t.sizeof + $$)
                     {
                         newStack();
-                        lastState = 0;
                     }", match - reserved, cast(int) counter + 2);
         if (match < total_matches)
             text ~= ctSub("
@@ -1439,6 +1449,7 @@ struct CtContext
             pc = 0;
             counter = 0;
             lastState = 0;
+            matches[] = Group!DataIndex.init;
             auto start = s._index;`;
         r ~= `
             goto StartLoop;
@@ -1467,6 +1478,8 @@ struct CtContext
             default:
                 assert(0);
             }
+            // cleanup stale stack blocks
+            while (prevStack()) {}
             return true;
             }
         `;

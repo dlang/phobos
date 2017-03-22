@@ -1050,9 +1050,35 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     assertThrown(regex("(?#..."));
 }
 
+// bugzilla 17075
+@safe unittest
+{
+    enum titlePattern = `<title>(.+)</title>`;
+    static titleRegex = ctRegex!titlePattern;
+    string input = "<title>" ~ "<".repeat(100_000).join;
+    assert(input.matchFirst(titleRegex).empty);
+}
+
 // bugzilla 17212
 @safe unittest
 {
     auto r = regex(" [a] ", "x");
     assert("a".matchFirst(r));
+}
+
+// bugzilla 17157
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    auto ctr = ctRegex!"(a)|(b)|(c)|(d)";
+    auto r = regex("(a)|(b)|(c)|(d)", "g");
+    auto s = "--a--b--c--d--";
+    auto outcomes = [
+        ["a", "a", "", "", ""],
+        ["b", "", "b", "", ""],
+        ["c", "", "", "c", ""],
+        ["d", "", "", "", "d"]
+    ];
+    assert(equal!equal(s.matchAll(ctr), outcomes));
+    assert(equal!equal(s.bmatch(r), outcomes));
 }

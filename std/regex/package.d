@@ -1637,7 +1637,7 @@ if (
 @system unittest
 {
     import std.algorithm.comparison : equal;
-    import std.typecons;
+    import std.typecons : Yes;
 
     auto pattern = regex(`([\.,])`);
 
