@@ -206,18 +206,19 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     resolveInternalPointer), and tries it for each bucket in turn.
     */
     static if (hasMember!(Allocator, "resolveInternalPointer"))
-    void[] resolveInternalPointer(void* p)
+    Ternary resolveInternalPointer(void* p, ref void[] result)
     {
         foreach (ref a; buckets)
         {
-            if (auto r = a.resolveInternalPointer(p)) return r;
+            Ternary r = a.resolveInternalPointer(p, result);
+            if (r == Ternary.yes) return r;
         }
-        return null;
+        return Ternary.no;
     }
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.allocator_list : AllocatorList;
     import std.experimental.allocator.building_blocks.free_list : FreeList;
@@ -235,5 +236,6 @@ unittest
     auto b = a.allocate(400);
     assert(b.length == 400);
     assert(a.owns(b) == Ternary.yes);
+    void[] p;
     a.deallocate(b);
 }

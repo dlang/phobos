@@ -88,7 +88,7 @@ template AliasSeq(TList...)
 
     int foo(TL td)  // same as int foo(int, double);
     {
-        return td[0] + cast(int)td[1];
+        return td[0] + cast(int) td[1];
     }
 }
 
@@ -246,13 +246,15 @@ package template OldAlias(alias a)
 
 import std.traits : isAggregateType, Unqual;
 
-package template OldAlias(T) if (!isAggregateType!T || is(Unqual!T == T))
+package template OldAlias(T)
+if (!isAggregateType!T || is(Unqual!T == T))
 {
     alias OldAlias = T;
 }
 
 deprecated("Alias will stop to unqualify user defined types.")
-package template OldAlias(T) if (isAggregateType!T && !is(Unqual!T == T))
+package template OldAlias(T)
+if (isAggregateType!T && !is(Unqual!T == T))
 {
     alias OldAlias = Unqual!T;
 }
@@ -298,7 +300,7 @@ template staticIndexOf(alias T, TList...)
 
 // [internal]
 private template genericIndexOf(args...)
-    if (args.length >= 1)
+if (args.length >= 1)
 {
     alias e     = OldAlias!(args[0]);
     alias tuple = args[1 .. $];
@@ -375,7 +377,7 @@ template Erase(alias T, TList...)
 
 // [internal]
 private template GenericErase(args...)
-    if (args.length >= 1)
+if (args.length >= 1)
 {
     alias e     = OldAlias!(args[0]);
     alias tuple = args[1 .. $] ;
@@ -434,7 +436,7 @@ template EraseAll(alias T, TList...)
 
 // [internal]
 private template GenericEraseAll(args...)
-    if (args.length >= 1)
+if (args.length >= 1)
 {
     alias e     = OldAlias!(args[0]);
     alias tuple = args[1 .. $];
@@ -485,13 +487,13 @@ template NoDuplicates(TList...)
         }
         else
         {
-            alias EraseAllN = EraseAllN!(N-1, T[1..N], EraseAll!(T[0], T[N..$]));
+            alias EraseAllN = EraseAllN!(N-1, T[1 .. N], EraseAll!(T[0], T[N..$]));
         }
     }
     static if (TList.length > 500)
     {
         enum steps = 16;
-        alias first = NoDuplicates!(TList[0..steps]);
+        alias first = NoDuplicates!(TList[0 .. steps]);
         alias NoDuplicates = NoDuplicates!(EraseAllN!(first.length, first, TList[steps..$]));
     }
     else static if (TList.length == 0)
@@ -565,7 +567,7 @@ template Replace(alias T, alias U, TList...)
 
 // [internal]
 private template GenericReplace(args...)
-    if (args.length >= 2)
+if (args.length >= 2)
 {
     alias from  = OldAlias!(args[0]);
     alias to    = OldAlias!(args[1]);
@@ -645,7 +647,7 @@ template ReplaceAll(alias T, alias U, TList...)
 
 // [internal]
 private template GenericReplaceAll(args...)
-    if (args.length >= 2)
+if (args.length >= 2)
 {
     alias from  = OldAlias!(args[0]);
     alias to    = OldAlias!(args[1]);
@@ -852,8 +854,8 @@ template allSatisfy(alias F, T...)
 Tests whether any given items satisfy a template predicate, i.e. evaluates to
 $(D F!(T[0]) || F!(T[1]) || ... || F!(T[$ - 1])).
 
-Evaluation is $(I not) short-circuited if a true result is encountered; the
-template predicate must be instantiable with all the given items.
+Evaluation is short-circuited if a true result is encountered; the
+template predicate must be instantiable with one of the given items.
  */
 template anySatisfy(alias F, T...)
 {
@@ -1318,7 +1320,8 @@ private template SmartAlias(T...)
 /**
  * Creates an `AliasSeq` which repeats a type or an `AliasSeq` exactly `n` times.
  */
-template Repeat(size_t n, TList...) if (n > 0)
+template Repeat(size_t n, TList...)
+if (n > 0)
 {
     static if (n == 1)
     {
@@ -1445,7 +1448,7 @@ private template staticMerge(alias cmp, int half, Seq...)
 }
 
 private template isLessEq(alias cmp, Seq...)
-    if (Seq.length == 2)
+if (Seq.length == 2)
 {
     private enum Result = cmp!(Seq[1], Seq[0]);
     static if (is(typeof(Result) == bool))
@@ -1483,7 +1486,7 @@ template staticIsSorted(alias cmp, Seq...)
 }
 
 ///
-unittest
+@safe unittest
 {
     enum Comp(int N1, int N2) = N1 < N2;
     static assert( staticIsSorted!(Comp, 2, 2));
@@ -1492,7 +1495,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     enum Comp(T1, T2) = __traits(isUnsigned, T2) - __traits(isUnsigned, T1);
     static assert( staticIsSorted!(Comp, uint, ubyte, ulong, short, long));
@@ -1513,7 +1516,7 @@ private:
  *                          templates, etc.)
  */
 private template isSame(ab...)
-    if (ab.length == 2)
+if (ab.length == 2)
 {
     static if (__traits(compiles, expectType!(ab[0]),
                                   expectType!(ab[1])))

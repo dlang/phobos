@@ -32,9 +32,9 @@ import std.traits : isArray;
 
 // Range that's useful for testing other higher order ranges,
 // can be parametrized with attributes.  It just dumbs down an array of
-// numbers 1..10.
+// numbers 1 .. 10.
 struct DummyRange(ReturnBy _r, Length _l, RangeType _rt, T = uint[])
-        if (isArray!T)
+if (isArray!T)
 {
     private static immutable uinttestData =
         [1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U, 10U];
@@ -166,7 +166,7 @@ struct DummyRange(ReturnBy _r, Length _l, RangeType _rt, T = uint[])
         typeof(this) opSlice(size_t lower, size_t upper)
         {
             auto ret = this;
-            ret.arr = arr[lower..upper];
+            ret.arr = arr[lower .. upper];
             return ret;
         }
 
@@ -303,7 +303,7 @@ class ReferenceBidirectionalRange(T) : ReferenceForwardRange!T
     final void popBack(){_payload.popBack();}
 }
 
-unittest
+@safe unittest
 {
     static assert(isInputRange!(ReferenceInputRange!int));
     static assert(isInputRange!(ReferenceInfiniteInputRange!int));
@@ -316,15 +316,16 @@ unittest
 
 private:
 
-pure struct Cmp(T) if (is(T == uint))
+pure struct Cmp(T)
+if (is(T == uint))
 {
     static auto iota(size_t low = 1, size_t high = 11)
     {
         import std.range : iota;
-        return iota(cast(uint)low, cast(uint)high);
+        return iota(cast(uint) low, cast(uint) high);
     }
 
-    static void init(ref uint[] arr)
+    static void initialize(ref uint[] arr)
     {
         import std.array : array;
         arr = iota().array;
@@ -336,17 +337,18 @@ pure struct Cmp(T) if (is(T == uint))
     enum dummyValueRslt = 1337U * 2;
 }
 
-pure struct Cmp(T) if (is(T == double))
+pure struct Cmp(T)
+if (is(T == double))
 {
     import std.math : approxEqual;
 
     static auto iota(size_t low = 1, size_t high = 11)
     {
         import std.range : iota;
-        return iota(cast(double)low, cast(double)high, 1.0);
+        return iota(cast(double) low, cast(double) high, 1.0);
     }
 
-    static void init(ref double[] arr)
+    static void initialize(ref double[] arr)
     {
         import std.array : array;
         arr = iota().array;
@@ -381,7 +383,8 @@ struct TestFoo
     }
 }
 
-pure struct Cmp(T) if (is(T == TestFoo))
+pure struct Cmp(T)
+if (is(T == TestFoo))
 {
     import std.math : approxEqual;
 
@@ -389,10 +392,10 @@ pure struct Cmp(T) if (is(T == TestFoo))
     {
         import std.range : iota;
         import std.algorithm.iteration : map;
-        return iota(cast(int)low, cast(int)high).map!(a => TestFoo(a));
+        return iota(cast(int) low, cast(int) high).map!(a => TestFoo(a));
     }
 
-    static void init(ref TestFoo[] arr)
+    static void initialize(ref TestFoo[] arr)
     {
         import std.array : array;
         arr = iota().array;
@@ -414,7 +417,7 @@ pure struct Cmp(T) if (is(T == TestFoo))
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : iota, retro, repeat;
@@ -423,7 +426,7 @@ unittest
     static void testInputRange(T,Cmp)()
     {
         T it;
-        Cmp.init(it.arr);
+        Cmp.initialize(it.arr);
         for (size_t numRuns = 0; numRuns < 2; ++numRuns)
         {
             if (numRuns == 1)
@@ -433,7 +436,7 @@ unittest
                     it.reinit();
                 }
 
-                Cmp.init(it.arr);
+                Cmp.initialize(it.arr);
             }
 
             assert(equal!(Cmp.cmp)(it, Cmp.iota(1, 11)));
@@ -475,7 +478,7 @@ unittest
     static void testForwardRange(T,Cmp)()
     {
         T it;
-        Cmp.init(it.arr);
+        Cmp.initialize(it.arr);
         auto s = it.save();
         s.popFront();
         assert(!Cmp.cmp(s.front, it.front));
@@ -484,7 +487,7 @@ unittest
     static void testBidirectionalRange(T,Cmp)()
     {
         T it;
-        Cmp.init(it.arr);
+        Cmp.initialize(it.arr);
         assert(equal!(Cmp.cmp)(it.retro, Cmp.iota().retro));
 
         auto s = it.back;
@@ -497,7 +500,7 @@ unittest
     static void testRandomAccessRange(T,Cmp)()
     {
         T it;
-        Cmp.init(it.arr);
+        Cmp.initialize(it.arr);
         size_t idx = 0;
         foreach (jt; it)
         {

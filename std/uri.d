@@ -25,21 +25,14 @@ module std.uri;
 
 //debug=uri;        // uncomment to turn on debugging writefln's
 debug(uri) private import std.stdio;
-
-/* ====================== URI Functions ================ */
-
-private import std.ascii;
-private import core.stdc.stdlib;
-private import std.utf;
 private import std.traits : isSomeChar;
-import core.exception : OutOfMemoryError;
-import std.exception;
 
 /** This Exception is thrown if something goes wrong when encoding or
 decoding a URI.
 */
 class URIException : Exception
 {
+    import std.exception : basicExceptionCtors;
     mixin basicExceptionCtors;
 }
 
@@ -52,9 +45,9 @@ private enum
     URI_Hash = 0x10,        // '#'
 }
 
-immutable char[16] hex2ascii = "0123456789ABCDEF";
+private immutable char[16] hex2ascii = "0123456789ABCDEF";
 
-immutable ubyte[128] uri_flags =      // indexed by character
+private immutable ubyte[128] uri_flags =      // indexed by character
     ({
         ubyte[128] uflags;
 
@@ -72,8 +65,11 @@ immutable ubyte[128] uri_flags =      // indexed by character
         return uflags;
     })();
 
-private string URI_Encode(dstring string, uint unescapedSet)
+private string URI_Encode(dstring str, uint unescapedSet)
 {
+    import core.exception : OutOfMemoryError;
+    import core.stdc.stdlib : alloca;
+
     uint j;
     uint k;
     dchar V;
@@ -85,7 +81,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
     uint Rlen;
     uint Rsize; // alloc'd size
 
-    auto len = string.length;
+    immutable len = str.length;
 
     R = buffer.ptr;
     Rsize = buffer.length;
@@ -93,7 +89,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
 
     for (k = 0; k != len; k++)
     {
-        C = string[k];
+        C = str[k];
         // if (C in unescapedSet)
         if (C < uri_flags.length && uri_flags[C] & unescapedSet)
         {
@@ -108,14 +104,14 @@ private string URI_Encode(dstring string, uint unescapedSet)
                 }
                 else
                 {
-                    R2 = cast(char *)alloca(Rsize * char.sizeof);
+                    R2 = cast(char *) alloca(Rsize * char.sizeof);
                     if (!R2)
                         throw new OutOfMemoryError("Alloca failure");
                 }
-                R2[0..Rlen] = R[0..Rlen];
+                R2[0 .. Rlen] = R[0 .. Rlen];
                 R = R2;
             }
-            R[Rlen] = cast(char)C;
+            R[Rlen] = cast(char) C;
             Rlen++;
         }
         else
@@ -152,27 +148,6 @@ private string URI_Encode(dstring string, uint unescapedSet)
                 Octet[3] = cast(char)(0x80 | (V & 0x3F));
                 L = 4;
             }
-            /+
-            else if (V <= 0x3FFFFFF)
-            {
-                Octet[0] = cast(char)(0xF8 | (V >> 24));
-                Octet[1] = cast(char)(0x80 | ((V >> 18) & 0x3F));
-                Octet[2] = cast(char)(0x80 | ((V >> 12) & 0x3F));
-                Octet[3] = cast(char)(0x80 | ((V >> 6) & 0x3F));
-                Octet[4] = cast(char)(0x80 | (V & 0x3F));
-                L = 5;
-            }
-            else if (V <= 0x7FFFFFFF)
-            {
-                Octet[0] = cast(char)(0xFC | (V >> 30));
-                Octet[1] = cast(char)(0x80 | ((V >> 24) & 0x3F));
-                Octet[2] = cast(char)(0x80 | ((V >> 18) & 0x3F));
-                Octet[3] = cast(char)(0x80 | ((V >> 12) & 0x3F));
-                Octet[4] = cast(char)(0x80 | ((V >> 6) & 0x3F));
-                Octet[5] = cast(char)(0x80 | (V & 0x3F));
-                L = 6;
-            }
-            +/
             else
             {
                 throw new URIException("Undefined UTF-32 code point");
@@ -189,11 +164,11 @@ private string URI_Encode(dstring string, uint unescapedSet)
                 }
                 else
                 {
-                    R2 = cast(char *)alloca(Rsize * char.sizeof);
+                    R2 = cast(char *) alloca(Rsize * char.sizeof);
                     if (!R2)
                         throw new OutOfMemoryError("Alloca failure");
                 }
-                R2[0..Rlen] = R[0..Rlen];
+                R2[0 .. Rlen] = R[0 .. Rlen];
                 R = R2;
             }
 
@@ -208,18 +183,23 @@ private string URI_Encode(dstring string, uint unescapedSet)
         }
     }
 
-    return R[0..Rlen].idup;
+    return R[0 .. Rlen].idup;
 }
 
-uint ascii2hex(dchar c)
+private uint ascii2hex(dchar c) @nogc @safe pure nothrow
 {
     return (c <= '9') ? c - '0' :
         (c <= 'F') ? c - 'A' + 10 :
         c - 'a' + 10;
 }
 
-private dstring URI_Decode(Char)(in Char[] uri, uint reservedSet) if (isSomeChar!Char)
+private dstring URI_Decode(Char)(in Char[] uri, uint reservedSet)
+if (isSomeChar!Char)
 {
+    import core.exception : OutOfMemoryError;
+    import core.stdc.stdlib : alloca;
+    import std.ascii : isHexDigit;
+
     uint j;
     uint k;
     uint V;
@@ -229,7 +209,7 @@ private dstring URI_Decode(Char)(in Char[] uri, uint reservedSet) if (isSomeChar
     dchar* R;
     uint Rlen;
 
-    auto len = uri.length;
+    immutable len = uri.length;
     auto s = uri.ptr;
 
     // Preallocate result buffer R guaranteed to be large enough for result
@@ -240,7 +220,7 @@ private dstring URI_Decode(Char)(in Char[] uri, uint reservedSet) if (isSomeChar
     }
     else
     {
-        R = cast(dchar *)alloca(Rsize * dchar.sizeof);
+        R = cast(dchar *) alloca(Rsize * dchar.sizeof);
         if (!R)
             throw new OutOfMemoryError("Alloca failure");
     }
@@ -310,7 +290,7 @@ private dstring URI_Decode(Char)(in Char[] uri, uint reservedSet) if (isSomeChar
         if (C < uri_flags.length && uri_flags[C] & reservedSet)
         {
             // R ~= s[start .. k + 1];
-            int width = (k + 1) - start;
+            immutable width = (k + 1) - start;
             for (int ii = 0; ii < width; ii++)
                 R[Rlen + ii] = s[start + ii];
             Rlen += width;
@@ -324,7 +304,7 @@ private dstring URI_Decode(Char)(in Char[] uri, uint reservedSet) if (isSomeChar
     assert(Rlen <= Rsize);  // enforce our preallocation size guarantee
 
     // Copy array on stack to array in memory
-    return R[0..Rlen].idup;
+    return R[0 .. Rlen].idup;
 }
 
 /*************************************
@@ -333,8 +313,12 @@ private dstring URI_Decode(Char)(in Char[] uri, uint reservedSet) if (isSomeChar
  * Escape sequences that resolve to the '#' character are not replaced.
  */
 
-string decode(Char)(in Char[] encodedURI) if (isSomeChar!Char)
+string decode(Char)(in Char[] encodedURI)
+if (isSomeChar!Char)
 {
+    // selective imports trigger wrong deprecation
+    // https://issues.dlang.org/show_bug.cgi?id=17193
+    static import std.utf;
     auto s = URI_Decode(encodedURI, URI_Reserved | URI_Hash);
     return std.utf.toUTF8(s);
 }
@@ -344,8 +328,12 @@ string decode(Char)(in Char[] encodedURI) if (isSomeChar!Char)
  * escape sequences are decoded.
  */
 
-string decodeComponent(Char)(in Char[] encodedURIComponent) if (isSomeChar!Char)
+string decodeComponent(Char)(in Char[] encodedURIComponent)
+if (isSomeChar!Char)
 {
+    // selective imports trigger wrong deprecation
+    // https://issues.dlang.org/show_bug.cgi?id=17193
+    static import std.utf;
     auto s = URI_Decode(encodedURIComponent, 0);
     return std.utf.toUTF8(s);
 }
@@ -355,9 +343,11 @@ string decodeComponent(Char)(in Char[] encodedURIComponent) if (isSomeChar!Char)
  * not a valid URI character is escaped. The '#' character is not escaped.
  */
 
-string encode(Char)(in Char[] uri) if (isSomeChar!Char)
+string encode(Char)(in Char[] uri)
+if (isSomeChar!Char)
 {
-    auto s = std.utf.toUTF32(uri);
+    import std.utf : toUTF32;
+    auto s = toUTF32(uri);
     return URI_Encode(s, URI_Reserved | URI_Hash | URI_Alpha | URI_Digit | URI_Mark);
 }
 
@@ -366,9 +356,11 @@ string encode(Char)(in Char[] uri) if (isSomeChar!Char)
  * Any character not a letter, digit, or one of -_.!~*'() is escaped.
  */
 
-string encodeComponent(Char)(in Char[] uriComponent) if (isSomeChar!Char)
+string encodeComponent(Char)(in Char[] uriComponent)
+if (isSomeChar!Char)
 {
-    auto s = std.utf.toUTF32(uriComponent);
+    import std.utf : toUTF32;
+    auto s = toUTF32(uriComponent);
     return URI_Encode(s, URI_Alpha | URI_Digit | URI_Mark);
 }
 
@@ -416,16 +408,18 @@ package string urlEncode(in string[string] values)
  * Does string s[] start with a URL?
  * Returns:
  *  -1   it does not
- *  len  it does, and s[0..len] is the slice of s[] that is that URL
+ *  len  it does, and s[0 .. len] is the slice of s[] that is that URL
  */
 
-ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
+ptrdiff_t uriLength(Char)(in Char[] s)
+if (isSomeChar!Char)
 {
     /* Must start with one of:
      *  http://
      *  https://
      *  www.
      */
+    import std.ascii : isAlphaNum;
     import std.uni : icmp;
 
     ptrdiff_t i;
@@ -444,8 +438,6 @@ ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
         else
             return -1;
     }
-    //    if (icmp(s[0 .. 4], "www.") == 0)
-    //  i = 4;
 
     ptrdiff_t lastdot;
     for (; i < s.length; i++)
@@ -465,7 +457,6 @@ ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
         }
         break;
     }
-    //if (!lastdot || (i - lastdot != 3 && i - lastdot != 4))
     if (!lastdot)
         return -1;
 
@@ -476,10 +467,10 @@ ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
 @safe unittest
 {
     string s1 = "http://www.digitalmars.com/~fred/fredsRX.html#foo end!";
-    assert (uriLength(s1) == 49);
+    assert(uriLength(s1) == 49);
     string s2 = "no uri here";
-    assert (uriLength(s2) == -1);
-    assert (uriLength("issue 14924") < 0);
+    assert(uriLength(s2) == -1);
+    assert(uriLength("issue 14924") < 0);
 }
 
 
@@ -487,12 +478,15 @@ ptrdiff_t uriLength(Char)(in Char[] s) if (isSomeChar!Char)
  * Does string s[] start with an email address?
  * Returns:
  *  -1    it does not
- *  len   it does, and s[0..i] is the slice of s[] that is that email address
+ *  len   it does, and s[0 .. i] is the slice of s[] that is that email address
  * References:
  *  RFC2822
  */
-ptrdiff_t emailLength(Char)(in Char[] s) if (isSomeChar!Char)
+ptrdiff_t emailLength(Char)(in Char[] s)
+if (isSomeChar!Char)
 {
+    import std.ascii : isAlpha, isAlphaNum;
+
     ptrdiff_t i;
 
     if (!isAlpha(s[0]))
@@ -540,10 +534,10 @@ ptrdiff_t emailLength(Char)(in Char[] s) if (isSomeChar!Char)
 @safe unittest
 {
     string s1 = "my.e-mail@www.example-domain.com with garbage added";
-    assert (emailLength(s1) == 32);
+    assert(emailLength(s1) == 32);
     string s2 = "no email address here";
-    assert (emailLength(s2) == -1);
-    assert (emailLength("issue 14924") < 0);
+    assert(emailLength(s2) == -1);
+    assert(emailLength("issue 14924") < 0);
 }
 
 

@@ -44,6 +44,16 @@ unittest
 }
 
 /**
+Returns `true` if the `Allocator` has the alignment known at compile time;
+otherwise it returns `false`.
+ */
+template hasStaticallyKnownAlignment(Allocator)
+{
+    enum hasStaticallyKnownAlignment = __traits(compiles,
+                                                {enum x = Allocator.alignment;});
+}
+
+/**
 $(D chooseAtRuntime) is a compile-time constant of type $(D size_t) that several
 parameterized structures in this module recognize to mean deferral to runtime of
 the exact value. For example, $(D BitmappedBlock!(Allocator, 4096)) (described in
@@ -158,7 +168,7 @@ package void[] roundUpToAlignment(void[] b, uint a)
 }
 
 @nogc nothrow pure
-unittest
+@system unittest
 {
     void[] empty;
     assert(roundUpToAlignment(empty, 4) == null);
@@ -191,7 +201,7 @@ package void[] roundStartToMultipleOf(void[] s, uint base)
 }
 
 nothrow pure
-unittest
+@system unittest
 {
     void[] p;
     assert(roundStartToMultipleOf(p, 16) is null);
@@ -280,7 +290,7 @@ package uint effectiveAlignment(void* ptr)
 }
 
 @nogc nothrow pure
-unittest
+@system unittest
 {
     int x;
     assert(effectiveAlignment(&x) >= int.alignof);
@@ -507,26 +517,27 @@ package void testAllocator(alias make)()
 
     static if (hasMember!(A, "resolveInternalPointer"))
     {{
-        assert(a.resolveInternalPointer(null) is null);
-        auto p = a.resolveInternalPointer(b1.ptr);
+        void[] p;
+        assert(a.resolveInternalPointer(null, p) == Ternary.no);
+        Ternary r = a.resolveInternalPointer(b1.ptr, p);
         assert(p.ptr is b1.ptr && p.length >= b1.length);
-        p = a.resolveInternalPointer(b1.ptr + b1.length / 2);
+        r = a.resolveInternalPointer(b1.ptr + b1.length / 2, p);
         assert(p.ptr is b1.ptr && p.length >= b1.length);
-        p = a.resolveInternalPointer(b2.ptr);
+        r = a.resolveInternalPointer(b2.ptr, p);
         assert(p.ptr is b2.ptr && p.length >= b2.length);
-        p = a.resolveInternalPointer(b2.ptr + b2.length / 2);
+        r = a.resolveInternalPointer(b2.ptr + b2.length / 2, p);
         assert(p.ptr is b2.ptr && p.length >= b2.length);
-        p = a.resolveInternalPointer(b6.ptr);
+        r = a.resolveInternalPointer(b6.ptr, p);
         assert(p.ptr is b6.ptr && p.length >= b6.length);
-        p = a.resolveInternalPointer(b6.ptr + b6.length / 2);
+        r = a.resolveInternalPointer(b6.ptr + b6.length / 2, p);
         assert(p.ptr is b6.ptr && p.length >= b6.length);
         static int[10] b7 = [ 1, 2, 3 ];
-        assert(a.resolveInternalPointer(b7.ptr) is null);
-        assert(a.resolveInternalPointer(b7.ptr + b7.length / 2) is null);
-        assert(a.resolveInternalPointer(b7.ptr + b7.length) is null);
+        assert(a.resolveInternalPointer(b7.ptr, p) == Ternary.no);
+        assert(a.resolveInternalPointer(b7.ptr + b7.length / 2, p) == Ternary.no);
+        assert(a.resolveInternalPointer(b7.ptr + b7.length, p) == Ternary.no);
         int[3] b8 = [ 1, 2, 3 ];
-        assert(a.resolveInternalPointer(b8.ptr).ptr is null);
-        assert(a.resolveInternalPointer(b8.ptr + b8.length / 2) is null);
-        assert(a.resolveInternalPointer(b8.ptr + b8.length) is null);
+        assert(a.resolveInternalPointer(b8.ptr, p) == Ternary.no);
+        assert(a.resolveInternalPointer(b8.ptr + b8.length / 2, p) == Ternary.no);
+        assert(a.resolveInternalPointer(b8.ptr + b8.length, p) == Ternary.no);
     }}
 }

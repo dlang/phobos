@@ -170,7 +170,7 @@ template IRL(IR code)
 {
     enum uint IRL =  lengthOfIR(code);
 }
-static assert (IRL!(IR.LookaheadStart) == 3);
+static assert(IRL!(IR.LookaheadStart) == 3);
 
 //how many parameters follow the IR, should be optimized fixing some IR bits
 int immediateParamsIR(IR i){
@@ -238,18 +238,18 @@ struct Bytecode
     uint raw;
     //natural constraints
     enum maxSequence = 2+4;
-    enum maxData = 1<<22;
-    enum maxRaw = 1<<31;
+    enum maxData = 1 << 22;
+    enum maxRaw = 1 << 31;
 
     this(IR code, uint data)
     {
-        assert(data < (1<<22) && code < 256);
-        raw = code<<24 | data;
+        assert(data < (1 << 22) && code < 256);
+        raw = code << 24 | data;
     }
 
     this(IR code, uint data, uint seq)
     {
-        assert(data < (1<<22) && code < 256 );
+        assert(data < (1 << 22) && code < 256 );
         assert(seq >= 2 && seq < maxSequence);
         raw = code << 24 | (seq - 2)<<22 | data;
     }
@@ -277,7 +277,7 @@ struct Bytecode
 
     //ditto
     //0-arg template due to @@@BUG@@@ 10985
-    @property IR code()() const { return cast(IR)(raw>>24); }
+    @property IR code()() const { return cast(IR)(raw >> 24); }
 
     //ditto
     @property bool hotspot() const { return hasMerge(code); }
@@ -390,10 +390,10 @@ struct Group(DataIndex)
     switch (irb[pc].code)
     {
     case IR.Char:
-        formattedWrite(output, " %s (0x%x)",cast(dchar)irb[pc].data, irb[pc].data);
+        formattedWrite(output, " %s (0x%x)",cast(dchar) irb[pc].data, irb[pc].data);
         break;
     case IR.OrChar:
-        formattedWrite(output, " %s (0x%x) seq=%d", cast(dchar)irb[pc].data, irb[pc].data, irb[pc].sequence);
+        formattedWrite(output, " %s (0x%x) seq=%d", cast(dchar) irb[pc].data, irb[pc].data, irb[pc].sequence);
         break;
     case IR.RepeatStart, IR.InfiniteStart, IR.InfiniteBloomStart,
     IR.Option, IR.GotoEndOr, IR.OrStart:
@@ -592,7 +592,7 @@ package(std.regex):
 
 //Simple UTF-string abstraction compatible with stream interface
 struct Input(Char)
-    if (is(Char :dchar))
+if (is(Char :dchar))
 {
     import std.utf : decode;
     alias DataIndex = size_t;
@@ -635,7 +635,7 @@ struct Input(Char)
     //support for backtracker engine, might not be present
     void reset(size_t index){   _index = index;  }
 
-    String opSlice(size_t start, size_t end){   return _origin[start..end]; }
+    String opSlice(size_t start, size_t end){   return _origin[start .. end]; }
 
     auto loopBack(size_t index){   return BackLooper!Input(this, index); }
 }
@@ -671,7 +671,7 @@ struct BackLooperImpl(Input)
     //void reset(size_t index){   _index = index ? index-std.utf.strideBack(_origin, index) : 0;  }
     void reset(size_t index){   _index = index;  }
 
-    String opSlice(size_t start, size_t end){   return _origin[end..start]; }
+    String opSlice(size_t start, size_t end){   return _origin[end .. start]; }
     //index of at End position
     @property size_t lastIndex(){   return 0; }
 }
@@ -693,13 +693,13 @@ template BackLooper(E)
 @system T[] mallocArray(T)(size_t len)
 {
     import core.stdc.stdlib : malloc;
-    return (cast(T*)malloc(len * T.sizeof))[0 .. len];
+    return (cast(T*) malloc(len * T.sizeof))[0 .. len];
 }
 
 //very unsafe, no initialization
 @system T[] arrayInChunk(T)(size_t len, ref void[] chunk)
 {
-    auto ret = (cast(T*)chunk.ptr)[0..len];
+    auto ret = (cast(T*) chunk.ptr)[0 .. len];
     chunk = chunk[len * T.sizeof .. $];
     return ret;
 }
@@ -747,7 +747,7 @@ struct BitTable {
     this(CodepointSet set){
         foreach (iv; set.byInterval)
         {
-            foreach (v; iv.a..iv.b)
+            foreach (v; iv.a .. iv.b)
                 add(v);
         }
     }

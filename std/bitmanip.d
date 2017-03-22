@@ -3,6 +3,37 @@
 /**
 Bit-level manipulation facilities.
 
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Bit constructs) $(TD
+    $(LREF BitArray)
+    $(LREF bitfields)
+    $(LREF bitsSet)
+))
+$(TR $(TD Endianness conversion) $(TD
+    $(LREF bigEndianToNative)
+    $(LREF littleEndianToNative)
+    $(LREF nativeToBigEndian)
+    $(LREF nativeToLittleEndian)
+    $(LREF swapEndian)
+))
+$(TR $(TD Integral ranges) $(TD
+    $(LREF append)
+    $(LREF peek)
+    $(LREF read)
+    $(LREF write)
+))
+$(TR $(TD Floating-Point manipulation) $(TD
+    $(LREF DoubleRep)
+    $(LREF FloatRep)
+))
+$(TR $(TD Tagging) $(TD
+    $(LREF taggedClassRef)
+    $(LREF taggedPointer)
+))
+)
+
 Copyright: Copyright Digital Mars 2007 - 2011.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP digitalmars.com, Walter Bright),
@@ -38,7 +69,7 @@ private string myToString(ulong n)
     import core.internal.string : UnsignedStringBuf, unsignedToTempString;
     UnsignedStringBuf buf;
     auto s = unsignedToTempString(n, buf);
-    return cast(string)s ~ (n > uint.max ? "UL" : "U");
+    return cast(string) s ~ (n > uint.max ? "UL" : "U");
 }
 
 private template createAccessors(
@@ -1099,7 +1130,7 @@ public:
         auto p1 = this._ptr;
         auto p2 = a2._ptr;
 
-        if (p1[0..fullWords] != p2[0..fullWords])
+        if (p1[0 .. fullWords] != p2[0 .. fullWords])
             return false;
 
         if (!endBits)
@@ -1247,7 +1278,7 @@ public:
         foreach (i; 0 .. fullBytes)
         {
             hash *= 3559;
-            hash += (cast(byte*)this._ptr)[i];
+            hash += (cast(byte*) this._ptr)[i];
         }
         foreach (i; 8*fullBytes .. _len)
         {
@@ -1255,20 +1286,6 @@ public:
             hash += this[i];
         }
         return hash;
-    }
-
-    // Explicitly undocumented. It will be removed in January 2017. @@@DEPRECATED_2017-01@@@
-    deprecated("Use the constructor instead.")
-    void init(bool[] ba) pure nothrow
-    {
-        this = BitArray(ba);
-    }
-
-    // Explicitly undocumented. It will be removed in January 2017. @@@DEPRECATED_2017-01@@@
-    deprecated("Use the constructor instead.")
-    void init(void[] v, size_t numbits) pure nothrow
-    {
-        this = BitArray(v, numbits);
     }
 
     /***************************************
@@ -1306,7 +1323,7 @@ public:
     }
     body
     {
-        _ptr = cast(size_t*)v.ptr;
+        _ptr = cast(size_t*) v.ptr;
         _len = numbits;
         if (endBits)
         {
@@ -1324,7 +1341,7 @@ public:
         auto a = BitArray(ba);
         void[] v;
 
-        v = cast(void[])a;
+        v = cast(void[]) a;
         auto b = BitArray(v, a.length);
 
         assert(b[0] == 1);
@@ -1362,7 +1379,7 @@ public:
         static bool[] ba = [1,0,1,0,1];
 
         auto a = BitArray(ba);
-        void[] v = cast(void[])a;
+        void[] v = cast(void[]) a;
 
         assert(v.length == a.dim * size_t.sizeof);
     }
@@ -1377,7 +1394,7 @@ public:
         BitArray result;
         result.length = _len;
 
-        result._ptr[0..dim] = ~this._ptr[0..dim];
+        result._ptr[0 .. dim] = ~this._ptr[0 .. dim];
 
         // Avoid putting garbage in extra bits
         // Remove once we zero on length extension
@@ -1421,9 +1438,9 @@ public:
         result.length = _len;
 
         static if (op == "-")
-            result._ptr[0..dim] = this._ptr[0..dim] & ~e2._ptr[0..dim];
+            result._ptr[0 .. dim] = this._ptr[0 .. dim] & ~e2._ptr[0 .. dim];
         else
-            mixin("result._ptr[0..dim] = this._ptr[0..dim]"~op~" e2._ptr[0..dim];");
+            mixin("result._ptr[0 .. dim] = this._ptr[0 .. dim]"~op~" e2._ptr[0 .. dim];");
 
         // Avoid putting garbage in extra bits
         // Remove once we zero on length extension
@@ -2160,18 +2177,18 @@ public:
     Swaps the endianness of the given integral value or character.
   +/
 T swapEndian(T)(T val) @safe pure nothrow @nogc
-    if (isIntegral!T || isSomeChar!T || isBoolean!T)
+if (isIntegral!T || isSomeChar!T || isBoolean!T)
 {
     static if (val.sizeof == 1)
         return val;
     else static if (isUnsigned!T)
         return swapEndianImpl(val);
     else static if (isIntegral!T)
-        return cast(T)swapEndianImpl(cast(Unsigned!T) val);
+        return cast(T) swapEndianImpl(cast(Unsigned!T) val);
     else static if (is(Unqual!T == wchar))
-        return cast(T)swapEndian(cast(ushort)val);
+        return cast(T) swapEndian(cast(ushort) val);
     else static if (is(Unqual!T == dchar))
-        return cast(T)swapEndian(cast(uint)val);
+        return cast(T) swapEndian(cast(uint) val);
     else
         static assert(0, T.stringof ~ " unsupported by swapEndian.");
 }
@@ -2191,7 +2208,7 @@ private uint swapEndianImpl(uint val) @trusted pure nothrow @nogc
 private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
 {
     import core.bitop : bswap;
-    immutable ulong res = bswap(cast(uint)val);
+    immutable ulong res = bswap(cast(uint) val);
     return res << 32 | bswap(cast(uint)(val >> 32));
 }
 
@@ -2223,7 +2240,7 @@ private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
         }
 
         static if (isSigned!T)
-            assert(swapEndian(swapEndian(cast(T)0)) == 0);
+            assert(swapEndian(swapEndian(cast(T) 0)) == 0);
 
         // used to trigger BUG6354
         static if (T.sizeof > 1 && isUnsigned!T)
@@ -2245,7 +2262,7 @@ private ulong swapEndianImpl(ulong val) @trusted pure nothrow @nogc
 
 
 private union EndianSwapper(T)
-    if (canSwapEndianness!T)
+if (canSwapEndianness!T)
 {
     Unqual!T value;
     ubyte[T.sizeof] array;
@@ -2272,7 +2289,7 @@ private union EndianSwapper(T)
     unusable if you tried to transfer it to another machine).
   +/
 auto nativeToBigEndian(T)(T val) @safe pure nothrow @nogc
-    if (canSwapEndianness!T)
+if (canSwapEndianness!T)
 {
     return nativeToBigEndianImpl(val);
 }
@@ -2290,7 +2307,7 @@ auto nativeToBigEndian(T)(T val) @safe pure nothrow @nogc
 }
 
 private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
-    if (isIntegral!T || isSomeChar!T || isBoolean!T)
+if (isIntegral!T || isSomeChar!T || isBoolean!T)
 {
     EndianSwapper!T es = void;
 
@@ -2303,7 +2320,7 @@ private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
 }
 
 private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
-    if (isFloatOrDouble!T)
+if (isFloatOrDouble!T)
 {
     version(LittleEndian)
         return floatEndianImpl!(T, true)(val);
@@ -2340,7 +2357,7 @@ private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
         assert(bigEndianToNative!T(nativeToBigEndian(T.max)) == T.max);
 
         static if (isSigned!T)
-            assert(bigEndianToNative!T(nativeToBigEndian(cast(T)0)) == 0);
+            assert(bigEndianToNative!T(nativeToBigEndian(cast(T) 0)) == 0);
 
         static if (!is(T == bool))
         {
@@ -2394,7 +2411,7 @@ private auto nativeToBigEndianImpl(T)(T val) @safe pure nothrow @nogc
     can't actually have swapped floating point values as floating point values).
   +/
 T bigEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
-    if (canSwapEndianness!T && n == T.sizeof)
+if (canSwapEndianness!T && n == T.sizeof)
 {
     return bigEndianToNativeImpl!(T, n)(val);
 }
@@ -2412,8 +2429,8 @@ T bigEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
 }
 
 private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
-    if ((isIntegral!T || isSomeChar!T || isBoolean!T) &&
-       n == T.sizeof)
+if ((isIntegral!T || isSomeChar!T || isBoolean!T) &&
+    n == T.sizeof)
 {
     EndianSwapper!T es = void;
     es.array = val;
@@ -2427,7 +2444,7 @@ private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @n
 }
 
 private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
-    if (isFloatOrDouble!T && n == T.sizeof)
+if (isFloatOrDouble!T && n == T.sizeof)
 {
     version(LittleEndian)
         return cast(T) floatEndianImpl!(n, true)(val);
@@ -2446,7 +2463,7 @@ private T bigEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @n
     can't actually have swapped floating point values as floating point values).
   +/
 auto nativeToLittleEndian(T)(T val) @safe pure nothrow @nogc
-    if (canSwapEndianness!T)
+if (canSwapEndianness!T)
 {
     return nativeToLittleEndianImpl(val);
 }
@@ -2464,7 +2481,7 @@ auto nativeToLittleEndian(T)(T val) @safe pure nothrow @nogc
 }
 
 private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
-    if (isIntegral!T || isSomeChar!T || isBoolean!T)
+if (isIntegral!T || isSomeChar!T || isBoolean!T)
 {
     EndianSwapper!T es = void;
 
@@ -2477,7 +2494,7 @@ private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
 }
 
 private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
-    if (isFloatOrDouble!T)
+if (isFloatOrDouble!T)
 {
     version(BigEndian)
         return floatEndianImpl!(T, true)(val);
@@ -2505,7 +2522,7 @@ private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
         assert(littleEndianToNative!T(nativeToLittleEndian(T.max)) == T.max);
 
         static if (isSigned!T)
-            assert(littleEndianToNative!T(nativeToLittleEndian(cast(T)0)) == 0);
+            assert(littleEndianToNative!T(nativeToLittleEndian(cast(T) 0)) == 0);
 
         static if (!is(T == bool))
         {
@@ -2541,7 +2558,7 @@ private auto nativeToLittleEndianImpl(T)(T val) @safe pure nothrow @nogc
     unusable if you tried to transfer it to another machine).
   +/
 T littleEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
-    if (canSwapEndianness!T && n == T.sizeof)
+if (canSwapEndianness!T && n == T.sizeof)
 {
     return littleEndianToNativeImpl!T(val);
 }
@@ -2559,8 +2576,8 @@ T littleEndianToNative(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
 }
 
 private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
-    if ((isIntegral!T || isSomeChar!T || isBoolean!T) &&
-       n == T.sizeof)
+if ((isIntegral!T || isSomeChar!T || isBoolean!T) &&
+    n == T.sizeof)
 {
     EndianSwapper!T es = void;
     es.array = val;
@@ -2574,8 +2591,8 @@ private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
 }
 
 private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow @nogc
-    if (((isFloatOrDouble!T) &&
-       n == T.sizeof))
+if (((isFloatOrDouble!T) &&
+    n == T.sizeof))
 {
     version(BigEndian)
         return floatEndianImpl!(n, true)(val);
@@ -2584,7 +2601,7 @@ private T littleEndianToNativeImpl(T, size_t n)(ubyte[n] val) @safe pure nothrow
 }
 
 private auto floatEndianImpl(T, bool swap)(T val) @safe pure nothrow @nogc
-    if (isFloatOrDouble!T)
+if (isFloatOrDouble!T)
 {
     EndianSwapper!T es = void;
     es.value = val;
@@ -2596,7 +2613,7 @@ private auto floatEndianImpl(T, bool swap)(T val) @safe pure nothrow @nogc
 }
 
 private auto floatEndianImpl(size_t n, bool swap)(ubyte[n] val) @safe pure nothrow @nogc
-    if (n == 4 || n == 8)
+if (n == 4 || n == 8)
 {
     static if (n == 4)       EndianSwapper!float es = void;
     else static if (n == 8)  EndianSwapper!double es = void;
@@ -2686,9 +2703,9 @@ private template canSwapEndianness(T)
   +/
 
 T peek(T, Endian endianness = Endian.bigEndian, R)(R range)
-    if (canSwapEndianness!T &&
-        isForwardRange!R &&
-        is(ElementType!R : const ubyte))
+if (canSwapEndianness!T &&
+    isForwardRange!R &&
+    is(ElementType!R : const ubyte))
 {
     static if (hasSlicing!R)
         const ubyte[T.sizeof] bytes = range[0 .. T.sizeof];
@@ -2713,20 +2730,20 @@ T peek(T, Endian endianness = Endian.bigEndian, R)(R range)
 
 /++ Ditto +/
 T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t index)
-    if (canSwapEndianness!T &&
-       isForwardRange!R &&
-       hasSlicing!R &&
-       is(ElementType!R : const ubyte))
+if (canSwapEndianness!T &&
+    isForwardRange!R &&
+    hasSlicing!R &&
+    is(ElementType!R : const ubyte))
 {
     return peek!(T, endianness)(range, &index);
 }
 
 /++ Ditto +/
 T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t* index)
-    if (canSwapEndianness!T &&
-       isForwardRange!R &&
-       hasSlicing!R &&
-       is(ElementType!R : const ubyte))
+if (canSwapEndianness!T &&
+    isForwardRange!R &&
+    hasSlicing!R &&
+    is(ElementType!R : const ubyte))
 {
     assert(index);
 
@@ -2988,9 +3005,9 @@ T peek(T, Endian endianness = Endian.bigEndian, R)(R range, size_t* index)
         range = The range to read from.
   +/
 T read(T, Endian endianness = Endian.bigEndian, R)(ref R range)
-    if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
+if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
 {
-    static if (hasSlicing!R)
+    static if (hasSlicing!R && is(typeof(R.init[0 .. 0]) : const(ubyte)[]))
     {
         const ubyte[T.sizeof] bytes = range[0 .. T.sizeof];
         range.popFrontN(T.sizeof);
@@ -3219,6 +3236,32 @@ T read(T, Endian endianness = Endian.bigEndian, R)(ref R range)
     assert(range.empty);
 }
 
+// issue 17247
+@safe unittest
+{
+    struct UbyteRange
+    {
+        ubyte[] impl;
+        @property bool empty() { return impl.empty; }
+        @property ubyte front() { return impl.front; }
+        void popFront() { impl.popFront(); }
+        @property UbyteRange save() { return this; }
+
+        // N.B. support slicing but do not return ubyte[] slices.
+        UbyteRange opSlice(size_t start, size_t end)
+        {
+            return UbyteRange(impl[start .. end]);
+        }
+        @property size_t length() { return impl.length; }
+        size_t opDollar() { return impl.length; }
+    }
+    static assert(hasSlicing!UbyteRange);
+
+    auto r = UbyteRange([0x01, 0x00, 0x00, 0x00]);
+    int x = r.read!(int, Endian.littleEndian)();
+    assert(x == 1);
+}
+
 
 /++
     Takes an integral value, converts it to the given endianness, and writes it
@@ -3234,20 +3277,20 @@ T read(T, Endian endianness = Endian.bigEndian, R)(ref R range)
                 is updated to the index after the bytes read.
   +/
 void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t index)
-    if (canSwapEndianness!T &&
-       isForwardRange!R &&
-       hasSlicing!R &&
-       is(ElementType!R : ubyte))
+if (canSwapEndianness!T &&
+    isForwardRange!R &&
+    hasSlicing!R &&
+    is(ElementType!R : ubyte))
 {
     write!(T, endianness)(range, value, &index);
 }
 
 /++ Ditto +/
 void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t* index)
-    if (canSwapEndianness!T &&
-       isForwardRange!R &&
-       hasSlicing!R &&
-       is(ElementType!R : ubyte))
+if (canSwapEndianness!T &&
+    isForwardRange!R &&
+    hasSlicing!R &&
+    is(ElementType!R : ubyte))
 {
     assert(index);
 
@@ -3578,7 +3621,7 @@ void write(T, Endian endianness = Endian.bigEndian, R)(R range, T value, size_t*
         value = The value to _append.
   +/
 void append(T, Endian endianness = Endian.bigEndian, R)(R range, T value)
-    if (canSwapEndianness!T && isOutputRange!(R, ubyte))
+if (canSwapEndianness!T && isOutputRange!(R, ubyte))
 {
     static if (endianness == Endian.bigEndian)
         immutable bytes = nativeToBigEndian!T(value);
@@ -3750,7 +3793,7 @@ void append(T, Endian endianness = Endian.bigEndian, R)(R range, T value)
         size_t length = 0;
         foreach (T; Types)
         {
-            toWrite.append!(T, endianness)(cast(T)values[index++]);
+            toWrite.append!(T, endianness)(cast(T) values[index++]);
             length += T.sizeof;
         }
 
@@ -3779,7 +3822,7 @@ Counts the number of set bits in the binary representation of $(D value).
 For signed integers, the sign bit is included in the count.
 */
 private uint countBitsSet(T)(T value) @nogc pure nothrow
-    if (isIntegral!T)
+if (isIntegral!T)
 {
     // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
     static if (T.sizeof == 8)
@@ -3816,7 +3859,7 @@ private uint countBitsSet(T)(T value) @nogc pure nothrow
     {
         static assert(false, "countBitsSet only supports 1, 2, 4, or 8 byte sized integers.");
     }
-    return cast(uint)c;
+    return cast(uint) c;
 }
 
 @safe unittest
@@ -3832,13 +3875,13 @@ private uint countBitsSet(T)(T value) @nogc pure nothrow
     import std.meta;
     foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
-        assert(countBitsSet(cast(T)0) == 0);
-        assert(countBitsSet(cast(T)1) == 1);
-        assert(countBitsSet(cast(T)2) == 1);
-        assert(countBitsSet(cast(T)3) == 2);
-        assert(countBitsSet(cast(T)4) == 1);
-        assert(countBitsSet(cast(T)5) == 2);
-        assert(countBitsSet(cast(T)127) == 7);
+        assert(countBitsSet(cast(T) 0) == 0);
+        assert(countBitsSet(cast(T) 1) == 1);
+        assert(countBitsSet(cast(T) 2) == 1);
+        assert(countBitsSet(cast(T) 3) == 2);
+        assert(countBitsSet(cast(T) 4) == 1);
+        assert(countBitsSet(cast(T) 5) == 2);
+        assert(countBitsSet(cast(T) 127) == 7);
         static if (isSigned!T)
         {
             assert(countBitsSet(cast(T)-1) == 8 * T.sizeof);
@@ -3850,7 +3893,7 @@ private uint countBitsSet(T)(T value) @nogc pure nothrow
         }
     }
     assert(countBitsSet(1_000_000) == 7);
-    foreach (i; 0..63)
+    foreach (i; 0 .. 63)
         assert(countBitsSet(1UL << i) == 1);
 }
 
@@ -3918,7 +3961,7 @@ Index 0 corresponds to the least significant bit.
 For signed integers, the highest index corresponds to the sign bit.
 */
 auto bitsSet(T)(T value) @nogc pure nothrow
-    if (isIntegral!T)
+if (isIntegral!T)
 {
     return BitsSet!T(value);
 }
@@ -3943,13 +3986,13 @@ auto bitsSet(T)(T value) @nogc pure nothrow
     import std.meta;
     foreach (T; AliasSeq!(byte, ubyte, short, ushort, int, uint, long, ulong))
     {
-        assert(bitsSet(cast(T)0).empty);
-        assert(bitsSet(cast(T)1).equal([0]));
-        assert(bitsSet(cast(T)2).equal([1]));
-        assert(bitsSet(cast(T)3).equal([0, 1]));
-        assert(bitsSet(cast(T)4).equal([2]));
-        assert(bitsSet(cast(T)5).equal([0, 2]));
-        assert(bitsSet(cast(T)127).equal(iota(7)));
+        assert(bitsSet(cast(T) 0).empty);
+        assert(bitsSet(cast(T) 1).equal([0]));
+        assert(bitsSet(cast(T) 2).equal([1]));
+        assert(bitsSet(cast(T) 3).equal([0, 1]));
+        assert(bitsSet(cast(T) 4).equal([2]));
+        assert(bitsSet(cast(T) 5).equal([0, 2]));
+        assert(bitsSet(cast(T) 127).equal(iota(7)));
         static if (isSigned!T)
         {
             assert(bitsSet(cast(T)-1).equal(iota(8 * T.sizeof)));
@@ -3961,6 +4004,6 @@ auto bitsSet(T)(T value) @nogc pure nothrow
         }
     }
     assert(bitsSet(1_000_000).equal([6, 9, 14, 16, 17, 18, 19]));
-    foreach (i; 0..63)
+    foreach (i; 0 .. 63)
         assert(bitsSet(1UL << i).equal([i]));
 }

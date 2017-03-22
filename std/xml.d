@@ -30,7 +30,7 @@ import std.file;
 
 void main()
 {
-    string s = cast(string)std.file.read("books.xml");
+    string s = cast(string) std.file.read("books.xml");
 
     // Check for well-formedness
     check(s);
@@ -64,7 +64,7 @@ struct Book
 
 void main()
 {
-    string s = cast(string)std.file.read("books.xml");
+    string s = cast(string) std.file.read("books.xml");
 
     // Check for well-formedness
     check(s);
@@ -161,26 +161,26 @@ bool isChar(dchar c) @safe @nogc pure nothrow // rule 2
 
 @safe @nogc nothrow pure unittest
 {
-    assert(!isChar(cast(dchar)0x8));
-    assert( isChar(cast(dchar)0x9));
-    assert( isChar(cast(dchar)0xA));
-    assert(!isChar(cast(dchar)0xB));
-    assert(!isChar(cast(dchar)0xC));
-    assert( isChar(cast(dchar)0xD));
-    assert(!isChar(cast(dchar)0xE));
-    assert(!isChar(cast(dchar)0x1F));
-    assert( isChar(cast(dchar)0x20));
+    assert(!isChar(cast(dchar) 0x8));
+    assert( isChar(cast(dchar) 0x9));
+    assert( isChar(cast(dchar) 0xA));
+    assert(!isChar(cast(dchar) 0xB));
+    assert(!isChar(cast(dchar) 0xC));
+    assert( isChar(cast(dchar) 0xD));
+    assert(!isChar(cast(dchar) 0xE));
+    assert(!isChar(cast(dchar) 0x1F));
+    assert( isChar(cast(dchar) 0x20));
     assert( isChar('J'));
-    assert( isChar(cast(dchar)0xD7FF));
-    assert(!isChar(cast(dchar)0xD800));
-    assert(!isChar(cast(dchar)0xDFFF));
-    assert( isChar(cast(dchar)0xE000));
-    assert( isChar(cast(dchar)0xFFFD));
-    assert(!isChar(cast(dchar)0xFFFE));
-    assert(!isChar(cast(dchar)0xFFFF));
-    assert( isChar(cast(dchar)0x10000));
-    assert( isChar(cast(dchar)0x10FFFF));
-    assert(!isChar(cast(dchar)0x110000));
+    assert( isChar(cast(dchar) 0xD7FF));
+    assert(!isChar(cast(dchar) 0xD800));
+    assert(!isChar(cast(dchar) 0xDFFF));
+    assert( isChar(cast(dchar) 0xE000));
+    assert( isChar(cast(dchar) 0xFFFD));
+    assert(!isChar(cast(dchar) 0xFFFE));
+    assert(!isChar(cast(dchar) 0xFFFF));
+    assert( isChar(cast(dchar) 0x10000));
+    assert( isChar(cast(dchar) 0x10FFFF));
+    assert(!isChar(cast(dchar) 0x110000));
 
     debug (stdxml_TestHardcodedChecks)
     {
@@ -482,7 +482,7 @@ string decode(string s, DecodeMode mode=DecodeMode.LOOSE) @system pure
             }
         }
     }
-    return (buffer.length == 0) ? s : cast(string)buffer;
+    return (buffer.length == 0) ? s : cast(string) buffer;
 }
 
 @system pure unittest
@@ -593,7 +593,7 @@ class Document : Element
         {
             const doc = toType!(const Document)(o);
             return prolog == doc.prolog
-                && (cast()this).Element.opEquals(cast()doc)
+                && (cast() this).Element.opEquals(cast() doc)
                 && epilog == doc.epilog;
         }
 
@@ -614,7 +614,7 @@ class Document : Element
             const doc = toType!(const Document)(o);
             if (prolog != doc.prolog)
                 return prolog < doc.prolog ? -1 : 1;
-            if (int cmp = (cast()this).Element.opCmp(cast()doc))
+            if (int cmp = (cast() this).Element.opCmp(cast() doc))
                 return cmp;
             if (epilog != doc.epilog)
                 return epilog < doc.epilog ? -1 : 1;
@@ -629,14 +629,14 @@ class Document : Element
          */
         override size_t toHash() @trusted
         {
-            return hash(prolog, hash(epilog, (cast()this).Element.toHash()));
+            return hash(prolog, hash(epilog, (cast() this).Element.toHash()));
         }
 
         /**
          * Returns the string representation of a Document. (That is, the
          * complete XML of a document).
          */
-        override string toString()
+        override string toString() @safe
         {
             return prolog ~ super.toString() ~ epilog;
         }
@@ -842,7 +842,7 @@ class Element : Item
         if (len != element.items.length) return false;
         foreach (i; 0 .. len)
         {
-            if (!items[i].opEquals(cast()element.items[i])) return false;
+            if (!items[i].opEquals(cast() element.items[i])) return false;
         }
         return true;
     }
@@ -868,7 +868,7 @@ class Element : Item
             if (i == items.length) return -1;
             if (i == element.items.length) return 1;
             if (items[i] != element.items[i])
-                return items[i].opCmp(cast()element.items[i]);
+                return items[i].opCmp(cast() element.items[i]);
         }
     }
 
@@ -878,7 +878,7 @@ class Element : Item
      * You should rarely need to call this function. It exists so that Elements
      * can be used as associative array keys.
      */
-    override size_t toHash() const
+    override size_t toHash() const @safe
     {
         size_t hash = tag.toHash();
         foreach (item;items) hash += item.toHash();
@@ -904,7 +904,7 @@ class Element : Item
             string buffer;
             foreach (item;items)
             {
-                Text t = cast(Text)item;
+                Text t = cast(Text) item;
                 if (t is null) throw new DecodeException(item.toString());
                 buffer ~= decode(t.toString(),mode);
             }
@@ -956,7 +956,7 @@ class Element : Item
          * writefln(element.toString()); // writes "<br />"
          * --------------
          */
-        override string toString()
+        override string toString() @safe
         {
             if (isEmptyXML) return tag.toEmptyString();
 
@@ -1134,7 +1134,7 @@ class Tag
             // Note that attr is an AA, so the comparison is nonsensical (bug 10381)
             return
                 ((name != tag.name) ? ( name < tag.name ? -1 : 1 ) :
-                ((attr != tag.attr) ? ( cast(void *)attr < cast(void*)tag.attr ? -1 : 1 ) :
+                ((attr != tag.attr) ? ( cast(void *) attr < cast(void*) tag.attr ? -1 : 1 ) :
                 ((type != tag.type) ? ( type < tag.type ? -1 : 1 ) :
             0 )));
         }
@@ -1159,7 +1159,7 @@ class Tag
          * writefln(tag.toString()); // writes "<book>"
          * --------------
          */
-        override string toString()
+        override string toString() @safe
         {
             if (isEmpty) return toEmptyString();
             return (isEnd) ? toEndString() : toStartString();
@@ -1167,7 +1167,7 @@ class Tag
 
         private
         {
-            string toNonEndString()
+            string toNonEndString() @safe
             {
                 import std.format : format;
 
@@ -1177,11 +1177,11 @@ class Tag
                 return s;
             }
 
-            string toStartString() { return toNonEndString() ~ ">"; }
+            string toStartString() @safe { return toNonEndString() ~ ">"; }
 
-            string toEndString() { return "</" ~ name ~ ">"; }
+            string toEndString() @safe { return "</" ~ name ~ ">"; }
 
-            string toEmptyString() { return toNonEndString() ~ " />"; }
+            string toEmptyString() @safe { return toNonEndString() ~ " />"; }
         }
 
         /**
@@ -1259,7 +1259,7 @@ class Comment : Item
     override bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(Comment)item;
+        const t = cast(Comment) item;
         return t !is null && content == t.content;
     }
 
@@ -1278,7 +1278,7 @@ class Comment : Item
     override int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(Comment)item;
+        const t = cast(Comment) item;
         return t !is null && (content != t.content
             ? (content < t.content ? -1 : 1 ) : 0 );
     }
@@ -1299,7 +1299,7 @@ class Comment : Item
     override @property @safe @nogc pure nothrow bool isEmptyXML() const { return false; } /// Returns false always
 }
 
-unittest // issue 16241
+@safe unittest // issue 16241
 {
     import std.exception : assertThrown;
     auto c = new Comment("==");
@@ -1347,7 +1347,7 @@ class CData : Item
     override bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(CData)item;
+        const t = cast(CData) item;
         return t !is null && content == t.content;
     }
 
@@ -1366,7 +1366,7 @@ class CData : Item
     override int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(CData)item;
+        const t = cast(CData) item;
         return t !is null && (content != t.content
             ? (content < t.content ? -1 : 1 ) : 0 );
     }
@@ -1424,7 +1424,7 @@ class Text : Item
     override bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(Text)item;
+        const t = cast(Text) item;
         return t !is null && content == t.content;
     }
 
@@ -1443,7 +1443,7 @@ class Text : Item
     override int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(Text)item;
+        const t = cast(Text) item;
         return t !is null
             && (content != t.content ? (content < t.content ? -1 : 1 ) : 0 );
     }
@@ -1507,7 +1507,7 @@ class XMLInstruction : Item
     override bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(XMLInstruction)item;
+        const t = cast(XMLInstruction) item;
         return t !is null && content == t.content;
     }
 
@@ -1526,7 +1526,7 @@ class XMLInstruction : Item
     override int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(XMLInstruction)item;
+        const t = cast(XMLInstruction) item;
         return t !is null
             && (content != t.content ? (content < t.content ? -1 : 1 ) : 0 );
     }
@@ -1587,7 +1587,7 @@ class ProcessingInstruction : Item
     override bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(ProcessingInstruction)item;
+        const t = cast(ProcessingInstruction) item;
         return t !is null && content == t.content;
     }
 
@@ -1606,7 +1606,7 @@ class ProcessingInstruction : Item
     override int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(ProcessingInstruction)item;
+        const t = cast(ProcessingInstruction) item;
         return t !is null
             && (content != t.content ? (content < t.content ? -1 : 1 ) : 0 );
     }
@@ -1642,7 +1642,7 @@ abstract class Item
     abstract override size_t toHash() const;
 
     /// Returns a string representation of this item
-    abstract override string toString() const;
+    abstract override string toString() @safe const;
 
     /**
      * Returns an indented string representation of this item
@@ -2217,7 +2217,7 @@ private
             n = i;
             break;
         }
-        name = s[0..n];
+        name = s[0 .. n];
         s = s[n..$];
     }
 
@@ -2926,7 +2926,7 @@ private
     string chop(ref string s, size_t n) @safe pure nothrow
     {
         if (n == -1) n = s.length;
-        string t = s[0..n];
+        string t = s[0 .. n];
         s = s[n..$];
         return t;
     }
@@ -3040,7 +3040,7 @@ private
             auto m = (table.length >> 1) & ~1;
             if (c < table[m])
             {
-                table = table[0..m];
+                table = table[0 .. m];
             }
             else if (c > table[m+1])
             {

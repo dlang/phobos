@@ -716,7 +716,8 @@ private struct RBRange(N)
 }
 
 /**
- * Implementation of a $(LUCKY red-black tree) container.
+ * Implementation of a $(LINK2 https://en.wikipedia.org/wiki/Red%E2%80%93black_tree,
+ * red-black tree) container.
  *
  * All inserts, removes, searches, and any function in general has complexity
  * of $(BIGOH lg(n)).
@@ -736,7 +737,7 @@ private struct RBRange(N)
  * inserted after all existing duplicate elements.
  */
 final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
-    if (is(typeof(binaryFun!less(T.init, T.init))))
+if (is(typeof(binaryFun!less(T.init, T.init))))
 {
     import std.meta : allSatisfy;
     import std.range.primitives : isInputRange, walkLength;
@@ -755,7 +756,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
             enum doUnittest = false;
 
         // note, this must be final so it does not affect the vtable layout
-        final bool arrayEqual(T[] arr)
+        bool arrayEqual(T[] arr)
         {
             if (walkLength(this[]) == arr.length)
             {
@@ -995,7 +996,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         auto ts2 = ts.dup;
         assert(ts2.length == 5);
         assert(equal(ts[], ts2[]));
-        ts2.insert(cast(Elem)6);
+        ts2.insert(cast(Elem) 6);
         assert(!equal(ts[], ts2[]));
         assert(ts.length == 5 && ts2.length == 6);
     }
@@ -1056,8 +1057,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     static if (doUnittest) @safe pure unittest
     {
         auto ts = new RedBlackTree(1, 2, 3, 4, 5);
-        assert(cast(Elem)3 in ts);
-        assert(cast(Elem)6 !in ts);
+        assert(cast(Elem) 3 in ts);
+        assert(cast(Elem) 6 !in ts);
     }
 
     /**
@@ -1069,7 +1070,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
     {
         import std.algorithm.comparison : equal;
 
-        RedBlackTree that = cast(RedBlackTree)rhs;
+        RedBlackTree that = cast(RedBlackTree) rhs;
         if (that is null) return false;
 
         // If there aren't the same number of nodes, we can't be equal.
@@ -1081,7 +1082,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
                      (thisRange, thatRange);
     }
 
-    static if (doUnittest) unittest
+    static if (doUnittest) @system unittest
     {
         auto t1 = new RedBlackTree(1,2,3,4);
         auto t2 = new RedBlackTree(1,2,3,4);
@@ -1178,8 +1179,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
             assert(ts.length == 7);
             assert(ts.stableInsert(cast(Elem[])[7, 8, 6, 9, 10, 8]) == 6);
             assert(ts.length == 13);
-            assert(ts.stableInsert(cast(Elem)11) == 1 && ts.length == 14);
-            assert(ts.stableInsert(cast(Elem)7) == 1 && ts.length == 15);
+            assert(ts.stableInsert(cast(Elem) 11) == 1 && ts.length == 14);
+            assert(ts.stableInsert(cast(Elem) 7) == 1 && ts.length == 15);
 
             static if (less == "a < b")
                 assert(ts.arrayEqual([1,2,2,3,4,5,5,6,7,7,8,8,9,10,11]));
@@ -1191,8 +1192,8 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
             assert(ts.length == 5);
             assert(ts.stableInsert(cast(Elem[])[7, 8, 6, 9, 10, 8]) == 5);
             assert(ts.length == 10);
-            assert(ts.stableInsert(cast(Elem)11) == 1 && ts.length == 11);
-            assert(ts.stableInsert(cast(Elem)7) == 0 && ts.length == 11);
+            assert(ts.stableInsert(cast(Elem) 11) == 1 && ts.length == 11);
+            assert(ts.stableInsert(cast(Elem) 7) == 0 && ts.length == 11);
 
             static if (less == "a < b")
                 assert(ts.arrayEqual([1,2,3,4,5,6,7,8,9,10,11]));
@@ -1225,7 +1226,7 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
         auto x = ts.removeAny();
         assert(ts.length == 4);
         Elem[] arr;
-        foreach (Elem i; 1..6)
+        foreach (Elem i; 1 .. 6)
             if (i != x) arr ~= i;
         assert(ts.arrayEqual(arr));
     }
@@ -1457,10 +1458,10 @@ assert(equal(rbt[], [5]));
         static if (allowDuplicates)
         {
             assert(rbt.length == 11);
-            assert(rbt.removeKey(cast(Elem)4) == 1 && rbt.length == 10);
+            assert(rbt.removeKey(cast(Elem) 4) == 1 && rbt.length == 10);
             assert(rbt.arrayEqual([1,2,2,3,5,6,7,7,19,45]) && rbt.length == 10);
 
-            assert(rbt.removeKey(cast(Elem)6, cast(Elem)2, cast(Elem)1) == 3);
+            assert(rbt.removeKey(cast(Elem) 6, cast(Elem) 2, cast(Elem) 1) == 3);
             assert(rbt.arrayEqual([2,3,5,7,7,19,45]) && rbt.length == 7);
 
             assert(rbt.removeKey(cast(Elem)(42)) == 0 && rbt.length == 7);
@@ -1474,10 +1475,10 @@ assert(equal(rbt[], [5]));
         else
         {
             assert(rbt.length == 9);
-            assert(rbt.removeKey(cast(Elem)4) == 1 && rbt.length == 8);
+            assert(rbt.removeKey(cast(Elem) 4) == 1 && rbt.length == 8);
             assert(rbt.arrayEqual([1,2,3,5,6,7,19,45]));
 
-            assert(rbt.removeKey(cast(Elem)6, cast(Elem)2, cast(Elem)1) == 3);
+            assert(rbt.removeKey(cast(Elem) 6, cast(Elem) 2, cast(Elem) 1) == 3);
             assert(rbt.arrayEqual([3,5,7,19,45]) && rbt.length == 5);
 
             assert(rbt.removeKey(cast(Elem)(42)) == 0 && rbt.length == 5);
@@ -1790,11 +1791,11 @@ assert(equal(rbt[], [5]));
         assert(equal(rbt[], [1, 2, 4, 12, 27, 500]));
         assert(rbt.removeKey(1u) == 1);
         assert(equal(rbt[], [2, 4, 12, 27, 500]));
-        assert(rbt.removeKey(cast(byte)1) == 0);
+        assert(rbt.removeKey(cast(byte) 1) == 0);
         assert(equal(rbt[], [2, 4, 12, 27, 500]));
-        assert(rbt.removeKey(1, 12u, cast(byte)27) == 2);
+        assert(rbt.removeKey(1, 12u, cast(byte) 27) == 2);
         assert(equal(rbt[], [2, 4, 500]));
-        assert(rbt.removeKey([cast(short)0, cast(short)500, cast(short)1]) == 1);
+        assert(rbt.removeKey([cast(short) 0, cast(short) 500, cast(short) 1]) == 1);
         assert(equal(rbt[], [2, 4]));
     }
 }
@@ -1819,6 +1820,9 @@ assert(equal(rbt[], [5]));
     test!byte();
 }
 
+import std.range.primitives : isInputRange, isSomeString, ElementType;
+import std.traits : isArray;
+
 /++
     Convenience function for creating a $(D RedBlackTree!E) from a list of
     values.
@@ -1842,24 +1846,20 @@ auto redBlackTree(bool allowDuplicates, E)(E[] elems...)
 
 /++ Ditto +/
 auto redBlackTree(alias less, E)(E[] elems...)
-    if (is(typeof(binaryFun!less(E.init, E.init))))
+if (is(typeof(binaryFun!less(E.init, E.init))))
 {
     return new RedBlackTree!(E, less)(elems);
 }
 
 /++ Ditto +/
 auto redBlackTree(alias less, bool allowDuplicates, E)(E[] elems...)
-    if (is(typeof(binaryFun!less(E.init, E.init))))
+if (is(typeof(binaryFun!less(E.init, E.init))))
 {
     //We shouldn't need to instantiate less here, but for some reason,
     //dmd can't handle it if we don't (even though the template which
     //takes less but not allowDuplicates works just fine).
     return new RedBlackTree!(E, binaryFun!less, allowDuplicates)(elems);
 }
-
-
-import std.range.primitives : isInputRange, isSomeString, ElementType;
-import std.traits : isArray;
 
 /++ Ditto +/
 auto redBlackTree(Stuff)(Stuff range)
@@ -1885,8 +1885,8 @@ if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init
 
 /++ Ditto +/
 auto redBlackTree(alias less, bool allowDuplicates, Stuff)(Stuff range)
-    if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init)))
-         && isInputRange!Stuff && !isArray!(Stuff))
+if ( is(typeof(binaryFun!less((ElementType!Stuff).init, (ElementType!Stuff).init)))
+    && isInputRange!Stuff && !isArray!(Stuff))
 {
     //We shouldn't need to instantiate less here, but for some reason,
     //dmd can't handle it if we don't (even though the template which
@@ -2006,7 +2006,7 @@ auto redBlackTree(alias less, bool allowDuplicates, Stuff)(Stuff range)
     assert(array(rt4[]) == ["hello"]);
 }
 
-unittest
+@system unittest
 {
     import std.conv : to;
 
@@ -2054,5 +2054,5 @@ unittest
 @safe pure unittest
 {
     class C {}
-    RedBlackTree!(C, "cast(void*)a < cast(void*)b") tree;
+    RedBlackTree!(C, "cast(void*)a < cast(void*) b") tree;
 }

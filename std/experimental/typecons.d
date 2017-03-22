@@ -53,16 +53,16 @@ if (is(T == class) || is(T == interface))
         }
         else
         {
-            return cast(T)typecons_d_toObject(*cast(void**)(&source));
+            return cast(T) typecons_d_toObject(*cast(void**)(&source));
         }
     }
 }
 
-unittest
+@system unittest
 {
     class C { @disable opCast(T)() {} }
     auto c = new C;
-    static assert(!__traits(compiles, cast(Object)c));
+    static assert(!__traits(compiles, cast(Object) c));
     auto o = dynamicCast!Object(c);
     assert(c is o);
 
@@ -70,7 +70,7 @@ unittest
     interface J { @disable opCast(T)() {} Object instance(); }
     class D : I, J { Object instance() { return this; } }
     I i = new D();
-    static assert(!__traits(compiles, cast(J)i));
+    static assert(!__traits(compiles, cast(J) i));
     J j = dynamicCast!J(i);
     assert(i.instance() is j.instance());
 }
@@ -131,7 +131,7 @@ if (Targets.length >= 1 && !allSatisfy!(isMutable, Targets))
     alias implementsInterface = .implementsInterface!(Source, staticMap!(Unqual, Targets));
 }
 
-unittest
+@safe unittest
 {
     interface Foo {
         void foo();
@@ -271,7 +271,7 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
                 static if (is(Source == class) || is(Source == interface))
                 {
                     // BUG: making private should work with NVI.
-                    protected final inout(Object) _wrap_getSource() inout @safe
+                    protected inout(Object) _wrap_getSource() inout @safe
                     {
                         return dynamicCast!(inout Object)(_wrap_source);
                     }
@@ -279,7 +279,7 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
                 else
                 {
                     // BUG: making private should work with NVI.
-                    protected final inout(Source) _wrap_getSource() inout @safe
+                    protected inout(Source) _wrap_getSource() inout @safe
                     {
                         return _wrap_source;
                     }
@@ -377,7 +377,7 @@ private template wrapperSignature(alias fun)
         ~ name~"("~wrapperParameters~")"~mod;
 }
 
-unittest
+@safe unittest
 {
     interface M
     {
@@ -429,7 +429,7 @@ version(StdDdoc)
 }
 
 ///
-unittest
+@system unittest
 {
     interface Quack
     {
@@ -510,7 +510,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.traits : functionAttributes, FunctionAttribute;
     interface A { int run(); }
@@ -611,7 +611,7 @@ template unwrap(Target)
     }
 }
 
-unittest
+@system unittest
 {
     // Validate const/immutable
     class A
@@ -658,7 +658,7 @@ unittest
         assert(d.draw(10) == 10);
     }
 }
-unittest
+@system unittest
 {
     // Bugzilla 10377
     import std.range, std.algorithm;
@@ -675,7 +675,7 @@ unittest
     auto r = iota(0,10,1).inputRangeObject().wrap!(MyInputRange!int)();
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
 }
-unittest
+@system unittest
 {
     // Bugzilla 10536
     interface Interface
@@ -691,7 +691,7 @@ unittest
     Interface i = new Pluggable().wrap!Interface;
     assert(i.foo() == 1);
 }
-unittest
+@system unittest
 {
     // Enhancement 10538
     interface Interface

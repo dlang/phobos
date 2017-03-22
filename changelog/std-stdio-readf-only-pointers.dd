@@ -1,0 +1,14 @@
+`std.stdio.readf` now accepts `ref` parameters as input arguments.
+
+-------
+import std.stdio : readf;
+void main() {
+    // assume every line from stdin is similar to "1 2 3";
+    int a, b, c;
+    readf(" %d %d %d", a, b, c);
+    // pointers can still be used
+    readf(" %d %d %d, &a, &b, &c);
+    // and even combined:
+    readf(" %d %d %d, a, &b, c);
+}
+-------

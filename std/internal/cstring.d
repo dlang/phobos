@@ -16,7 +16,7 @@ COREREF = $(HTTP dlang.org/phobos/core_$1.html#$2, $(D core.$1.$2))
 module std.internal.cstring;
 
 ///
-unittest
+@safe unittest
 {
     version(Posix)
     {
@@ -87,13 +87,13 @@ See $(RED WARNING) in $(B Examples) section.
 */
 
 auto tempCString(To = char, From)(From str)
-    if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
-        isSomeChar!(ElementEncodingType!From))
+if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
+    isSomeChar!(ElementEncodingType!From))
 {
 
     alias CF = Unqual!(ElementEncodingType!From);
 
-    enum To* useStack = () @trusted { return cast(To*)size_t.max; }();
+    enum To* useStack = () @trusted { return cast(To*) size_t.max; }();
 
     static struct Res
     {
@@ -167,7 +167,7 @@ auto tempCString(To = char, From)(From str)
             size_t newlen = res.length * 3 / 2;
             if (newlen <= strLength)
                 newlen = strLength + 1; // +1 for terminating 0
-            auto ptr = cast(To*)malloc(newlen * To.sizeof);
+            auto ptr = cast(To*) malloc(newlen * To.sizeof);
             if (!ptr)
                 onOutOfMemoryError();
             memcpy(ptr, res.ptr, i * To.sizeof);
@@ -178,7 +178,7 @@ auto tempCString(To = char, From)(From str)
             if (buf.length >= size_t.max / (2 * To.sizeof))
                 onOutOfMemoryError();
             const newlen = buf.length * 3 / 2;
-            auto ptr = cast(To*)realloc(buf.ptr, newlen * To.sizeof);
+            auto ptr = cast(To*) realloc(buf.ptr, newlen * To.sizeof);
             if (!ptr)
                 onOutOfMemoryError();
             return ptr[0 .. newlen];
@@ -220,7 +220,7 @@ auto tempCString(To = char, From)(From str)
 }
 
 ///
-nothrow @nogc unittest
+nothrow @nogc @system unittest
 {
     import core.stdc.string;
 
@@ -255,7 +255,7 @@ nothrow @nogc unittest
 }
 
 // Bugzilla 14980
-nothrow @nogc unittest
+nothrow @nogc @safe unittest
 {
     const(char[]) str = null;
     auto res = tempCString(str);
