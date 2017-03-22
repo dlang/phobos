@@ -1448,11 +1448,28 @@ Throws: $(D Exception) if the file is not opened.
 
 /**
 Writes its arguments in text format to the file, according to the
-format in the first argument.
+format string fmt.
+
+Params:
+fmt = The $(LINK2 std_format.html#format-string, format string).
+When passed as a compile-time argument, the string will be statically checked
+against the argument types passed.
+args = Items to write.
 
 Throws: $(D Exception) if the file is not opened.
         $(D ErrnoException) on an error writing to the file.
 */
+    void writef(alias fmt, A...)(A args)
+    if (isSomeString!(typeof(fmt)))
+    {
+        import std.format : checkFormatException;
+
+        alias e = checkFormatException!(fmt, A);
+        static assert(!e, e.msg);
+        return this.writef(fmt, args);
+    }
+
+    /// ditto
     void writef(Char, A...)(in Char[] fmt, A args)
     {
         import std.format : formattedWrite;
@@ -1460,13 +1477,18 @@ Throws: $(D Exception) if the file is not opened.
         formattedWrite(lockingTextWriter(), fmt, args);
     }
 
-/**
-Writes its arguments in text format to the file, according to the
-format in the first argument, followed by a newline.
+    /// Equivalent to `file.writef(fmt, args, '\n')`.
+    void writefln(alias fmt, A...)(A args)
+    if (isSomeString!(typeof(fmt)))
+    {
+        import std.format : checkFormatException;
 
-Throws: $(D Exception) if the file is not opened.
-        $(D ErrnoException) on an error writing to the file.
-*/
+        alias e = checkFormatException!(fmt, A);
+        static assert(!e, e.msg);
+        return this.writefln(fmt, args);
+    }
+
+    /// ditto
     void writefln(Char, A...)(in Char[] fmt, A args)
     {
         import std.format : formattedWrite;
@@ -1764,9 +1786,12 @@ is recommended if you want to process a complete file.
     }
 
     /**
-     * Read data from the file according to the specified
-     * $(LINK2 std_format.html#_format-string, _format specifier) using
-     * $(REF formattedRead, std,_format).
+     * Reads formatted _data from the file using $(REF formattedRead, std,_format).
+     * Params:
+     * format = The $(LINK2 std_format.html#_format-string, _format string).
+     * When passed as a compile-time argument, the string will be statically checked
+     * against the argument types passed.
+     * data = Items to be read.
      * Example:
 ----
 // test.d
@@ -1777,7 +1802,7 @@ void main()
     foreach (_; 0 .. 3)
     {
         int a;
-        f.readf(" %d", a);
+        f.readf!" %d"(a);
         writeln(++a);
     }
 }
@@ -1790,6 +1815,17 @@ $(CONSOLE
 4
 )
      */
+    uint readf(alias format, Data...)(auto ref Data data)
+    if (isSomeString!(typeof(format)))
+    {
+        import std.format : checkFormatException;
+
+        alias e = checkFormatException!(format, Data);
+        static assert(!e, e.msg);
+        return this.readf(format, data);
+    }
+
+    /// ditto
     uint readf(Data...)(in char[] format, auto ref Data data)
     {
         import std.format : formattedRead;
@@ -1809,7 +1845,7 @@ $(CONSOLE
         scope(exit) std.file.remove(deleteme);
         string s;
         auto f = File(deleteme);
-        f.readf("%s\n", s);
+        f.readf!"%s\n"(s);
         assert(s == "hello", "["~s~"]");
         f.readf("%s\n", s);
         assert(s == "world", "["~s~"]");
@@ -3668,11 +3704,10 @@ void writeln(T...)(T args)
 Writes formatted data to standard output (without a trailing newline).
 
 Params:
-args = The first argument $(D args[0]) should be the format string, specifying
-how to format the rest of the arguments. For a full description of the syntax
-of the format string and how it controls the formatting of the rest of the
-arguments, please refer to the documentation for $(REF formattedWrite,
-std,format).
+fmt = The $(LINK2 std_format.html#format-string, format string).
+When passed as a compile-time argument, the string will be statically checked
+against the argument types passed.
+args = Items to write.
 
 Note: In older versions of Phobos, it used to be possible to write:
 
@@ -3688,10 +3723,20 @@ stderr.writef("%s", "message");
 ------
 
 */
-
-void writef(T...)(T args)
+void writef(alias fmt, A...)(A args)
+if (isSomeString!(typeof(fmt)))
 {
-    trustedStdout.writef(args);
+    import std.format : checkFormatException;
+
+    alias e = checkFormatException!(fmt, A);
+    static assert(!e, e.msg);
+    return .writef(fmt, args);
+}
+
+/// ditto
+void writef(Char, A...)(in Char[] fmt, A args)
+{
+    trustedStdout.writef(fmt, args);
 }
 
 @system unittest
@@ -3704,24 +3749,35 @@ void writef(T...)(T args)
     auto deleteme = testFilename();
     auto f = File(deleteme, "w");
     scope(exit) { std.file.remove(deleteme); }
-    f.writef("Hello, %s world number %s!", "nice", 42);
+    f.writef!"Hello, %s world number %s!"("nice", 42);
     f.close();
     assert(cast(char[]) std.file.read(deleteme) ==  "Hello, nice world number 42!");
     // test write on stdout
     auto saveStdout = stdout;
     scope(exit) stdout = saveStdout;
     stdout.open(deleteme, "w");
-    writef("Hello, %s world number %s!", "nice", 42);
+    writef!"Hello, %s world number %s!"("nice", 42);
     stdout.close();
     assert(cast(char[]) std.file.read(deleteme) == "Hello, nice world number 42!");
 }
 
 /***********************************
- * Equivalent to $(D writef(args, '\n')).
+ * Equivalent to $(D writef(fmt, args, '\n')).
  */
-void writefln(T...)(T args)
+void writefln(alias fmt, A...)(A args)
+if (isSomeString!(typeof(fmt)))
 {
-    trustedStdout.writefln(args);
+    import std.format : checkFormatException;
+
+    alias e = checkFormatException!(fmt, A);
+    static assert(!e, e.msg);
+    return .writefln(fmt, args);
+}
+
+/// ditto
+void writefln(Char, A...)(in Char[] fmt, A args)
+{
+    trustedStdout.writefln(fmt, args);
 }
 
 @system unittest
@@ -3730,11 +3786,11 @@ void writefln(T...)(T args)
 
     scope(failure) printf("Failed test at line %d\n", __LINE__);
 
-    // test writefln
+    // test File.writefln
     auto deleteme = testFilename();
     auto f = File(deleteme, "w");
     scope(exit) { std.file.remove(deleteme); }
-    f.writefln("Hello, %s world number %s!", "nice", 42);
+    f.writefln!"Hello, %s world number %s!"("nice", 42);
     f.close();
     version (Windows)
         assert(cast(char[]) std.file.read(deleteme) ==
@@ -3743,12 +3799,28 @@ void writefln(T...)(T args)
         assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, nice world number 42!\n",
                 cast(char[]) std.file.read(deleteme));
+
+    // test writefln
+    auto saveStdout = stdout;
+    scope(exit) stdout = saveStdout;
+    stdout.open(deleteme, "w");
+    writefln!"Hello, %s world number %s!"("nice", 42);
+    stdout.close();
+    version (Windows)
+        assert(cast(char[]) std.file.read(deleteme) ==
+                "Hello, nice world number 42!\r\n");
+    else
+        assert(cast(char[]) std.file.read(deleteme) ==
+                "Hello, nice world number 42!\n");
 }
 
 /**
- * Read data from $(D stdin) according to the specified
- * $(LINK2 std_format.html#_format-string, _format specifier) using
- * $(REF formattedRead, std,_format).
+ * Reads formatted data from $(D stdin) using $(REF formattedRead, std,_format).
+ * Params:
+ * format = The $(LINK2 std_format.html#_format-string, _format string).
+ * When passed as a compile-time argument, the string will be statically checked
+ * against the argument types passed.
+ * args = Items to be read.
  * Example:
 ----
 // test.d
@@ -3758,7 +3830,7 @@ void main()
     foreach (_; 0 .. 3)
     {
         int a;
-        readf(" %d", a);
+        readf!" %d"(a);
         writeln(++a);
     }
 }
@@ -3770,6 +3842,17 @@ $(CONSOLE
 4
 )
  */
+uint readf(alias format, A...)(auto ref A args)
+if (isSomeString!(typeof(format)))
+{
+    import std.format : checkFormatException;
+
+    alias e = checkFormatException!(format, A);
+    static assert(!e, e.msg);
+    return .readf(format, args);
+}
+
+/// ditto
 uint readf(A...)(in char[] format, auto ref A args)
 {
     return stdin.readf(format, args);
