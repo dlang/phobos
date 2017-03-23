@@ -1983,7 +1983,7 @@ if (isInputRange!RoR &&
     `sink`.
 
     Params:
-        sink = an output range
+        sink = an $(REF_ALTTEXT output range, isOutputRange, std,range,primitives)
         subject = the array to scan
         from = the item to replace
         to = the item to replace all instances of `from` with
@@ -1992,6 +1992,9 @@ if (isInputRange!RoR &&
         If `sink` isn't defined, a new array without changing the
         contents of `subject`, or the original array if no match
         is found.
+
+    See_Also:
+        $(REF map, std,algorithm,iteration) which can act as a lazy replace
  +/
 E[] replace(E, R1, R2)(E[] subject, R1 from, R2 to)
 if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
@@ -2240,9 +2243,15 @@ if (isInputRange!Range &&
 }
 
 /++
-    Replaces elements from $(D array) with indices ranging from $(D from)
-    (inclusive) to $(D to) (exclusive) with the range $(D stuff). Expands or
+    Replaces elements from `array` with indices ranging from `from`
+    (inclusive) to `to` (exclusive) with the range `stuff`. Expands or
     shrinks the array as needed.
+
+    Params:
+        array = the _array to scan
+        from = the starting index
+        to = the ending index
+        stuff = the items to replace in-between `from` and `to`
  +/
 void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
 if (is(typeof(replace(array, from, to, stuff))))
@@ -2652,8 +2661,18 @@ if (isDynamicArray!(E[]) &&
 }
 
 /++
-    Returns a new array that is $(D s) with $(D slice) replaced by
-    $(D replacement[]).
+    Creates a new array such that the items in `slice` are replaced with the
+    items in `replacement`. `slice` and `replacement` do not need to be the
+    same length. The result will grow or shrink based on the items given.
+
+    Params:
+        s = the base of the new array
+        slice = the slice of `s` to be replaced
+        replacement = the items to replace `slice` with
+
+    Returns:
+        A new array that is `s` with `slice` replaced by
+        `replacement[]`.
  +/
 inout(T)[] replaceSlice(T)(inout(T)[] s, in T[] slice, in T[] replacement)
 in
@@ -2750,7 +2769,7 @@ if (isDynamicArray!A)
 
     /**
      * Reserve at least newCapacity elements for appending.  Note that more elements
-     * may be reserved than requested.  If `newCapacity <= capacity`, then nothing is
+     * may be reserved than requested. If `newCapacity <= capacity`, then nothing is
      * done.
      */
     void reserve(size_t newCapacity) @safe pure nothrow
@@ -2767,9 +2786,9 @@ if (isDynamicArray!A)
     }
 
     /**
-     * Returns the capacity of the array (the maximum number of elements the
-     * managed array can accommodate before triggering a reallocation).  If any
-     * appending will reallocate, $(D capacity) returns $(D 0).
+     * Returns: the capacity of the array (the maximum number of elements the
+     * managed array can accommodate before triggering a reallocation). If any
+     * appending will reallocate, `0` will be returned.
      */
     @property size_t capacity() const @safe pure nothrow
     {
@@ -2777,7 +2796,7 @@ if (isDynamicArray!A)
     }
 
     /**
-     * Returns the managed array.
+     * Returns: The managed array.
      */
     @property inout(ElementEncodingType!A)[] data() inout @trusted pure nothrow
     {
