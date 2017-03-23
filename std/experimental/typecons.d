@@ -1034,6 +1034,7 @@ pure nothrow @nogc @system unittest
     static assert(!__traits(compiles,
         fp = &i // direct assignment
     ));
+    static assert(is(typeof(*fp) == int));
     *fp = 2; // indirect assignment
     assert(*fp == 2);
     int* p = fp;
