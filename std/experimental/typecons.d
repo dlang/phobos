@@ -875,7 +875,7 @@ else
         alias final_get this;
 
         /// Ditto
-        auto opUnary(string op)()
+        auto ref opUnary(string op)()
             if (__traits(compiles, mixin(op ~ "T.init")))
         {
             return mixin(op ~ "this.final_value");
@@ -1025,9 +1025,17 @@ pure nothrow @safe unittest
     assert((arr ~ 4) == [1, 2, 3, 4]);
 }
 
+// issue 17270
 pure nothrow @nogc @system unittest
 {
     int i = 1;
     Final!(int*) fp = &i;
     assert(*fp == 1);
+    static assert(!__traits(compiles,
+        fp = &i // direct assignment
+    ));
+    *fp = 2; // indirect assignment
+    assert(*fp == 2);
+    int* p = fp;
+    assert(*p == 2);
 }
