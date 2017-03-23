@@ -286,14 +286,14 @@ public:
     static if (hasMember!(Allocator, "owns"))
     {
         static if ((perCallFlags & Options.numOwns) == 0)
-        Ternary owns(void[] b)
+        @safe Ternary owns(void[] b)
         { return ownsImpl(b); }
         else
-        Ternary owns(string f = __FILE, uint n = line)(void[] b)
+        @safe Ternary owns(string f = __FILE, uint n = line)(void[] b)
         { return ownsImpl!(f, n)(b); }
     }
 
-    private Ternary ownsImpl(string f = null, uint n = 0)(void[] b)
+    @safe private Ternary ownsImpl(string f = null, uint n = 0)(void[] b)
     {
         up!"numOwns";
         addPerCall!(f, n, "numOwns")(1);
@@ -310,17 +310,17 @@ public:
         & (Options.numAllocate | Options.numAllocateOK
             | Options.bytesAllocated)))
     {
-        void[] allocate(size_t n)
+        @safe void[] allocate(size_t n)
         { return allocateImpl(n); }
     }
     else
     {
-        void[] allocate(string f = __FILE__, ulong n = __LINE__)
+        @safe void[] allocate(string f = __FILE__, ulong n = __LINE__)
             (size_t bytes)
         { return allocateImpl!(f, n)(bytes); }
     }
 
-    private void[] allocateImpl(string f = null, ulong n = 0)(size_t bytes)
+    @safe private void[] allocateImpl(string f = null, ulong n = 0)(size_t bytes)
     {
         auto result = parent.allocate(bytes);
         add!"bytesUsed"(result.length);
@@ -654,7 +654,7 @@ public:
 }
 
 ///
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.free_list : FreeList;
@@ -662,8 +662,10 @@ public:
 
     Allocator alloc;
     auto b = alloc.allocate(10);
-    alloc.reallocate(b, 20);
-    alloc.deallocate(b);
+    () @trusted {
+        alloc.reallocate(b, 20);
+        alloc.deallocate(b);
+    }();
 
     import std.file : deleteme, remove;
     import std.stdio : File;
@@ -673,20 +675,22 @@ public:
     scope(exit) remove(f);
     Allocator.reportPerCallStatistics(File(f, "w"));
     alloc.reportStatistics(File(f, "a"));
-    assert(File(f).byLine.walkLength == 22);
+    () @trusted { assert(File(f).byLine.walkLength == 22); }();
 }
 
-@system unittest
+@safe unittest
 {
-    void test(Allocator)()
+    @safe void test(Allocator)()
     {
         import std.range : walkLength;
         import std.stdio : writeln;
         Allocator a;
         auto b1 = a.allocate(100);
         assert(a.numAllocate == 1);
-        assert(a.expand(b1, 0));
-        assert(a.reallocate(b1, b1.length + 1));
+        () @trusted {
+            assert(a.expand(b1, 0));
+            assert(a.reallocate(b1, b1.length + 1));
+        }();
         auto b2 = a.allocate(101);
         assert(a.numAllocate == 2);
         assert(a.bytesAllocated == 202);
@@ -695,11 +699,11 @@ public:
         assert(a.numAllocate == 3);
         assert(a.bytesAllocated == 404);
 
-        a.deallocate(b2);
+        () @trusted { a.deallocate(b2); }();
         assert(a.numDeallocate == 1);
-        a.deallocate(b1);
+        () @trusted { a.deallocate(b1); }();
         assert(a.numDeallocate == 2);
-        a.deallocate(b3);
+        () @trusted { a.deallocate(b3); }();
         assert(a.numDeallocate == 3);
         assert(a.numAllocate == a.numDeallocate);
         assert(a.bytesUsed == 0);
@@ -712,22 +716,26 @@ public:
         Options.all));
 }
 
-@system unittest
+@safe unittest
 {
-    void test(Allocator)()
+    @safe void test(Allocator)()
     {
         import std.range : walkLength;
         import std.stdio : writeln;
         Allocator a;
         auto b1 = a.allocate(100);
-        assert(a.expand(b1, 0));
-        assert(a.reallocate(b1, b1.length + 1));
+        () @trusted {
+            assert(a.expand(b1, 0));
+            assert(a.reallocate(b1, b1.length + 1));
+        }();
         auto b2 = a.allocate(101);
         auto b3 = a.allocate(202);
 
-        a.deallocate(b2);
-        a.deallocate(b1);
-        a.deallocate(b3);
+        () @trusted {
+            a.deallocate(b2);
+            a.deallocate(b1);
+            a.deallocate(b3);
+        }();
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.free_list : FreeList;

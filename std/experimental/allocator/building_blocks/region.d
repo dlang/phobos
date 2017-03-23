@@ -67,7 +67,7 @@ struct Region(ParentAllocator = NullAllocator,
     $(D parent.allocate(n)) returns $(D null), the region will be initialized
     as empty (correctly initialized but unable to allocate).
     */
-    this(ubyte[] store)
+    @trusted this(ubyte[] store)
     {
         store = cast(ubyte[])(store.roundUpToAlignment(alignment));
         store = store[0 .. $.roundDownToAlignment(alignment)];
@@ -121,7 +121,7 @@ struct Region(ParentAllocator = NullAllocator,
     A properly-aligned buffer of size $(D n) or $(D null) if request could not
     be satisfied.
     */
-    void[] allocate(size_t n)
+    @trusted void[] allocate(size_t n)
     {
         static if (growDownwards)
         {
@@ -162,7 +162,7 @@ struct Region(ParentAllocator = NullAllocator,
     Returns:
     Either a suitable block of $(D n) bytes aligned at $(D a), or $(D null).
     */
-    void[] alignedAllocate(size_t n, uint a)
+    @trusted void[] alignedAllocate(size_t n, uint a)
     {
         import std.math : isPowerOf2;
         assert(a.isPowerOf2);
@@ -195,7 +195,7 @@ struct Region(ParentAllocator = NullAllocator,
     }
 
     /// Allocates and returns all memory available to this region.
-    void[] allocateAll()
+    @trusted void[] allocateAll()
     {
         static if (growDownwards)
         {
@@ -298,7 +298,7 @@ struct Region(ParentAllocator = NullAllocator,
     $(D true) if $(D b) has been allocated with this region, $(D false)
     otherwise.
     */
-    Ternary owns(void[] b) const
+    @trusted Ternary owns(void[] b) const
     {
         return Ternary(b.ptr >= _begin && b.ptr + b.length <= _end);
     }
@@ -420,7 +420,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     */
     alias alignment = minAlign;
 
-    private void lazyInit()
+    @safe private void lazyInit()
     {
         assert(!_impl._current);
         _impl = typeof(_impl)(_store);
@@ -432,7 +432,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     accommodate the request. For efficiency reasons, if $(D bytes == 0) the
     function returns an empty non-null slice.
     */
-    void[] allocate(size_t n)
+    @safe void[] allocate(size_t n)
     {
         // Fast path
     entry:
@@ -448,7 +448,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     /**
     As above, but the memory allocated is aligned at $(D a) bytes.
     */
-    void[] alignedAllocate(size_t n, uint a)
+    @safe void[] alignedAllocate(size_t n, uint a)
     {
         // Fast path
     entry:
@@ -482,7 +482,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     Returns `Ternary.yes` if `b` is the result of a previous allocation,
     `Ternary.no` otherwise.
     */
-    Ternary owns(void[] b)
+    @safe Ternary owns(void[] b)
     {
         if (!_impl._current) return Ternary.no;
         return _impl.owns(b);
@@ -511,7 +511,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     /**
     Allocates all memory available with this allocator.
     */
-    void[] allocateAll()
+    @safe void[] allocateAll()
     {
         if (!_impl._current) lazyInit;
         return _impl.allocateAll;
@@ -528,7 +528,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
 }
 
 ///
-@system unittest
+@safe unittest
 {
     // 128KB region, allocated to x86's cache line
     InSituRegion!(128 * 1024, 16) r1;
@@ -550,19 +550,21 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     // Reap with GC fallback.
     InSituRegion!(128 * 1024, 8) tmp3;
     FallbackAllocator!(BitmappedBlock!(64, 8), GCAllocator) r3;
-    r3.primary = BitmappedBlock!(64, 8)(cast(ubyte[])(tmp3.allocateAll()));
+    ubyte[] store = () @trusted { return cast(ubyte[])(tmp3.allocateAll()); }();
+    r3.primary = BitmappedBlock!(64, 8)(store);
     const a3 = r3.allocate(103);
     assert(a3.length == 103);
 
     // Reap/GC with a freelist for small objects up to 16 bytes.
     InSituRegion!(128 * 1024, 64) tmp4;
     FreeList!(FallbackAllocator!(BitmappedBlock!(64, 64), GCAllocator), 0, 16) r4;
-    r4.parent.primary = BitmappedBlock!(64, 64)(cast(ubyte[])(tmp4.allocateAll()));
+    store = () @trusted { return cast(ubyte[])(tmp4.allocateAll()); }();
+    r4.parent.primary = BitmappedBlock!(64, 64)(store);
     const a4 = r4.allocate(104);
     assert(a4.length == 104);
 }
 
-@system unittest
+@safe unittest
 {
     InSituRegion!(4096, 1) r1;
     auto a = r1.allocate(2001);
@@ -612,7 +614,7 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     enum uint alignment = minAlign;
 
     /// Ditto
-    void[] allocate(size_t bytes) shared
+    @trusted void[] allocate(size_t bytes) shared
     {
         static if (minAlign > 1)
             const rounded = bytes.roundUpToMultipleOf(alignment);
@@ -640,7 +642,7 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     }
 
     /// Ditto
-    void[] alignedAllocate(size_t bytes, uint a) shared
+    @trusted void[] alignedAllocate(size_t bytes, uint a) shared
     {
         pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) == 0 || assert(0);
         scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex) == 0
@@ -700,7 +702,7 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     }
 
     /// Ditto
-    Ternary owns(void[] b) shared
+    @trusted Ternary owns(void[] b) shared
     {
         // No need to lock here.
         assert(!_brkCurrent || b.ptr + b.length <= _brkCurrent);
@@ -765,7 +767,7 @@ version(Posix) @system unittest
     sbrk(-4096);
 }
 
-version(Posix) @system unittest
+version(Posix) @safe unittest
 {
     import std.typecons : Ternary;
     alias alloc = SbrkRegion!(8).instance;
@@ -778,7 +780,9 @@ version(Posix) @system unittest
     // reducing the brk does not work on OSX
     version(OSX) {} else
     {
-        assert(alloc.deallocate(b));
-        assert(alloc.deallocateAll);
+        () @trusted {
+            assert(alloc.deallocate(b));
+            assert(alloc.deallocateAll);
+        }();
     }
 }

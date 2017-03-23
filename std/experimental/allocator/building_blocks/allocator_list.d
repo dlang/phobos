@@ -162,7 +162,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     fails, subsequent calls to $(D allocate) will not cause more calls to $(D
     make).
     */
-    void[] allocate(size_t s)
+    @safe void[] allocate(size_t s)
     {
         for (auto p = &root, n = *p; n; p = &n.next, n = *p)
         {
@@ -247,7 +247,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     }
 
     static if (ouroboros)
-    private Node* addAllocator(size_t atLeastBytes)
+    @trusted private Node* addAllocator(size_t atLeastBytes)
     {
         void[] t = allocators;
         static if (hasMember!(Allocator, "expand")
@@ -300,7 +300,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     }
 
     static if (!ouroboros)
-    private Node* addAllocator(size_t atLeastBytes)
+    @trusted private Node* addAllocator(size_t atLeastBytes)
     {
         void[] t = allocators;
         static if (hasMember!(BookkeepingAllocator, "expand"))
@@ -349,7 +349,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     returned  `Ternary.unknown`.
     */
     static if (hasMember!(Allocator, "owns"))
-    Ternary owns(void[] b)
+    @safe Ternary owns(void[] b)
     {
         auto result = Ternary.no;
         for (auto p = &root, n = *p; n; p = &n.next, n = *p)
@@ -533,7 +533,7 @@ template AllocatorList(alias factoryFunction,
 }
 
 ///
-version(Posix) @system unittest
+version(Posix) @safe unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
@@ -569,7 +569,7 @@ version(Posix) @system unittest
     A4 a;
     auto small = a.allocate(64);
     assert(small);
-    a.deallocate(small);
+    () @trusted { a.deallocate(small); }();
     auto b1 = a.allocate(1024 * 8192);
     assert(b1 !is null); // still works due to overdimensioning
     b1 = a.allocate(1024 * 10);

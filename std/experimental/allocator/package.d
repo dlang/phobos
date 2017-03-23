@@ -289,18 +289,18 @@ interface IAllocator
     /**
     Returns the alignment offered.
     */
-    @property uint alignment();
+    @property @safe uint alignment();
 
     /**
     Returns the good allocation size that guarantees zero internal
     fragmentation.
     */
-    size_t goodAllocSize(size_t s);
+    @safe size_t goodAllocSize(size_t s);
 
     /**
     Allocates `n` bytes of memory.
     */
-    void[] allocate(size_t, TypeInfo ti = null);
+    @safe void[] allocate(size_t, TypeInfo ti = null);
 
     /**
     Allocates `n` bytes of memory with specified alignment `a`. Implementations
@@ -334,13 +334,13 @@ interface IAllocator
     cannot be determined. Implementations that don't support this primitive
     should always return `Ternary.unknown`.
     */
-    Ternary owns(void[] b);
+    @safe Ternary owns(void[] b);
 
     /**
     Resolves an internal pointer to the full block allocated. Implementations
     that don't support this primitive should always return `Ternary.unknown`.
     */
-    Ternary resolveInternalPointer(const void* p, ref void[] result);
+    @safe Ternary resolveInternalPointer(const void* p, ref void[] result);
 
     /**
     Deallocates a memory block. Implementations that don't support this
@@ -2134,7 +2134,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     static if (indirect)
     {
         private Allocator* pimpl;
-        ref Allocator impl()
+        @safe ref Allocator impl()
         {
             return *pimpl;
         }
@@ -2804,13 +2804,15 @@ private struct InternalPointersTree(Allocator)
     else alias parent = Parent.instance;
 
     /// Allocator API.
-    void[] allocate(size_t bytes)
+    @safe void[] allocate(size_t bytes)
     {
         auto r = parent.allocate(bytes);
         if (!r.ptr) return r;
-        Tree.Node* n = &parent.prefix(r);
-        n.payload = bytes;
-        blockMap.insert(n) || assert(0);
+        () @trusted {
+            Tree.Node* n = &parent.prefix(r);
+            n.payload = bytes;
+            blockMap.insert(n) || assert(0);
+        }();
         return r;
     }
 
@@ -2846,7 +2848,7 @@ private struct InternalPointersTree(Allocator)
     }
 
     /// Ditto
-    Ternary owns(void[] b)
+    @safe Ternary owns(void[] b)
     {
         void[] result;
         return resolveInternalPointer(b.ptr, result);
@@ -2861,7 +2863,7 @@ private struct InternalPointersTree(Allocator)
     /** Returns the block inside which $(D p) resides, or $(D null) if the
     pointer does not belong.
     */
-    Ternary resolveInternalPointer(const void* p, ref void[] result)
+    @trusted Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
         // Must define a custom find
         Tree.Node* find()

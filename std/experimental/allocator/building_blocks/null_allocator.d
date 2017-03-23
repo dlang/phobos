@@ -20,10 +20,13 @@ struct NullAllocator
     //size_t goodAllocSize(size_t n) shared const
     //{ return .goodAllocSize(this, n); }
     /// Always returns $(D null).
+    @safe pure nothrow
     void[] allocate(size_t) shared { return null; }
     /// Always returns $(D null).
+    @safe pure nothrow
     void[] alignedAllocate(size_t, uint) shared { return null; }
     /// Always returns $(D null).
+    @safe pure nothrow
     void[] allocateAll() shared { return null; }
     /**
     These methods return $(D false).
@@ -39,24 +42,29 @@ struct NullAllocator
     bool alignedReallocate(ref void[] b, size_t, uint) shared
     { assert(b is null); return false; }
     /// Returns $(D Ternary.no).
+    @safe pure nothrow
     Ternary owns(void[]) shared const { return Ternary.no; }
     /**
     Returns $(D Ternary.no).
     */
+    @safe pure nothrow
     Ternary resolveInternalPointer(const void*, ref void[]) shared const
     { return Ternary.no; }
     /**
     No-op.
     Precondition: $(D b is null)
     */
+    pure nothrow
     bool deallocate(void[] b) shared { assert(b is null); return true; }
     /**
     No-op.
     */
+    pure nothrow
     bool deallocateAll() shared { return true; }
     /**
     Returns $(D Ternary.yes).
     */
+    @safe pure nothrow
     Ternary empty() shared const { return Ternary.yes; }
     /**
     Returns the $(D shared) global instance of the $(D NullAllocator).
@@ -64,18 +72,20 @@ struct NullAllocator
     static shared NullAllocator instance;
 }
 
-@system unittest
+@safe unittest
 {
     assert(NullAllocator.instance.alignedAllocate(100, 0) is null);
     assert(NullAllocator.instance.allocateAll() is null);
     auto b = NullAllocator.instance.allocate(100);
     assert(b is null);
-    assert(NullAllocator.instance.expand(b, 0));
-    assert(!NullAllocator.instance.expand(b, 42));
-    assert(!NullAllocator.instance.reallocate(b, 42));
-    assert(!NullAllocator.instance.alignedReallocate(b, 42, 0));
-    NullAllocator.instance.deallocate(b);
-    NullAllocator.instance.deallocateAll();
+    () @trusted {
+        assert(NullAllocator.instance.expand(b, 0));
+        assert(!NullAllocator.instance.expand(b, 42));
+        assert(!NullAllocator.instance.reallocate(b, 42));
+        assert(!NullAllocator.instance.alignedReallocate(b, 42, 0));
+        NullAllocator.instance.deallocate(b);
+        NullAllocator.instance.deallocateAll();
+    }();
 
     import std.typecons : Ternary;
     assert(NullAllocator.instance.empty() == Ternary.yes);

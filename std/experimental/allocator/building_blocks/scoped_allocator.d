@@ -72,7 +72,7 @@ struct ScopedAllocator(ParentAllocator)
     Forwards to $(D parent.goodAllocSize) (which accounts for the management
     overhead).
     */
-    size_t goodAllocSize(size_t n)
+    @safe size_t goodAllocSize(size_t n)
     {
         return parent.goodAllocSize(n);
     }
@@ -81,17 +81,19 @@ struct ScopedAllocator(ParentAllocator)
     Allocates memory. For management it actually allocates extra memory from
     the parent.
     */
-    void[] allocate(size_t n)
+    @safe void[] allocate(size_t n)
     {
         auto b = parent.allocate(n);
         if (!b.ptr) return b;
-        Node* toInsert = & parent.prefix(b);
-        toInsert.prev = null;
-        toInsert.next = root;
-        toInsert.length = n;
-        assert(!root || !root.prev);
-        if (root) root.prev = toInsert;
-        root = toInsert;
+        () @trusted {
+            Node* toInsert = & parent.prefix(b);
+            toInsert.prev = null;
+            toInsert.next = root;
+            toInsert.length = n;
+            assert(!root || !root.prev);
+            if (root) root.prev = toInsert;
+            root = toInsert;
+        }();
         return b;
     }
 
@@ -140,7 +142,7 @@ struct ScopedAllocator(ParentAllocator)
     Forwards to $(D parent.owns(b)).
     */
     static if (hasMember!(Allocator, "owns"))
-    Ternary owns(void[] b)
+    @safe Ternary owns(void[] b)
     {
         return parent.owns(b);
     }

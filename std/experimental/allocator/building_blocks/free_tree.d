@@ -75,7 +75,7 @@ struct FreeTree(ParentAllocator)
     {
         assert(which);
         assert(!which.sibling);
-        auto result = (cast(ubyte*) which)[0 .. which.size];
+        auto result = () @trusted { return (cast(ubyte*) which)[0 ..  which.size]; }();
         if (!which.right) which = which.left;
         else if (!which.left) which = which.right;
         else
@@ -86,7 +86,7 @@ struct FreeTree(ParentAllocator)
             toggler = !toggler;
             auto newRoot = which.kid[toggler], orphan = which.kid[!toggler];
             which = newRoot;
-            for (Node* n = void; (n = newRoot.kid[!toggler]) !is null; )
+            for (Node* n = null; (n = newRoot.kid[!toggler]) !is null; )
             {
                 newRoot = n;
             }
@@ -95,7 +95,7 @@ struct FreeTree(ParentAllocator)
         return result;
     }
 
-    private void[] findAndRemove(ref Node* n, size_t s)
+    @safe private void[] findAndRemove(ref Node* n, size_t s)
     {
         if (!n) return null;
         if (s == n.size)
@@ -103,7 +103,7 @@ struct FreeTree(ParentAllocator)
             if (auto sis = n.sibling)
             {
                 // Nice, give away one from the freelist
-                auto result = (cast(ubyte*) sis)[0 .. sis.size];
+                auto result = () @trusted { return (cast(ubyte*) sis)[0 ..  sis.size]; }();
                 n.sibling = sis.sibling;
                 return result;
             }
@@ -263,12 +263,12 @@ struct FreeTree(ParentAllocator)
     Returns $(D parent.goodAllocSize(max(Node.sizeof, s))).
     */
     static if (stateSize!ParentAllocator)
-        size_t goodAllocSize(size_t s)
+        @safe size_t goodAllocSize(size_t s)
         {
             return parent.goodAllocSize(max(Node.sizeof, s));
         }
     else
-        static size_t goodAllocSize(size_t s)
+        static @safe size_t goodAllocSize(size_t s)
         {
             return parent.goodAllocSize(max(Node.sizeof, s));
         }
@@ -285,8 +285,9 @@ struct FreeTree(ParentAllocator)
     TODO: Splitting and coalescing should be implemented if $(D ParentAllocator) does not defined $(D deallocate).
 
     */
-    void[] allocate(size_t n)
+    @trusted void[] allocate(size_t n)
     {
+        // Temporarly mark this as trusted
         assertValid;
         if (n == 0) return null;
 
@@ -414,18 +415,19 @@ struct FreeTree(ParentAllocator)
     testAllocator!(() => FreeTree!GCAllocator());
 }
 
-@system unittest // issue 16506
+@safe unittest // issue 16506
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.mallocator : Mallocator;
 
-    static void f(ParentAllocator)(size_t sz)
+    static @safe void f(ParentAllocator)(size_t sz)
     {
         static FreeTree!ParentAllocator myAlloc;
-        byte[] _payload = cast(byte[]) myAlloc.allocate(sz);
+        void[] _r = myAlloc.allocate(sz);
+        byte[] _payload = () @trusted { return cast(byte[])(_r); }();
         assert(_payload, "_payload is null");
         _payload[] = 0;
-        myAlloc.deallocate(_payload);
+        () @trusted { myAlloc.deallocate(_payload); }();
     }
 
     f!Mallocator(33);
@@ -433,20 +435,20 @@ struct FreeTree(ParentAllocator)
     f!GCAllocator(1);
 }
 
-@system unittest // issue 16507
+@trusted unittest // issue 16507
 {
     static struct MyAllocator
     {
         byte dummy;
         static bool alive = true;
-        void[] allocate(size_t s) { return new byte[](s); }
+        @safe void[] allocate(size_t s) { return new byte[](s); }
         bool deallocate(void[] ) { if (alive) assert(false); return true; }
         enum alignment = size_t.sizeof;
     }
 
     FreeTree!MyAllocator ft;
     void[] x = ft.allocate(1);
-    ft.deallocate(x);
+    () @trusted { ft.deallocate(x); }();
     ft.allocate(1000);
     MyAllocator.alive = false;
 }

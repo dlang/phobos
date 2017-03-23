@@ -55,7 +55,7 @@ struct FallbackAllocator(Primary, Fallback)
     Allocates memory trying the primary allocator first. If it returns $(D
     null), the fallback allocator is tried.
     */
-    void[] allocate(size_t s)
+    @safe void[] allocate(size_t s)
     {
         auto result = primary.allocate(s);
         return result.length == s ? result : fallback.allocate(s);
@@ -67,7 +67,7 @@ struct FallbackAllocator(Primary, Fallback)
     */
     static if (hasMember!(Primary, "alignedAllocate")
         || hasMember!(Fallback, "alignedAllocate"))
-    void[] alignedAllocate(size_t s, uint a)
+    @safe void[] alignedAllocate(size_t s, uint a)
     {
         static if (hasMember!(Primary, "alignedAllocate"))
         {{
@@ -196,7 +196,7 @@ struct FallbackAllocator(Primary, Fallback)
     Returns $(D primary.owns(b) | fallback.owns(b)).
     */
     static if (hasMember!(Primary, "owns") && hasMember!(Fallback, "owns"))
-    Ternary owns(void[] b)
+    @safe Ternary owns(void[] b)
     {
         return primary.owns(b) | fallback.owns(b);
     }
@@ -207,7 +207,7 @@ struct FallbackAllocator(Primary, Fallback)
     */
     static if (hasMember!(Primary, "resolveInternalPointer")
         && hasMember!(Fallback, "resolveInternalPointer"))
-    Ternary resolveInternalPointer(const void* p, ref void[] result)
+    @safe Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
         Ternary r = primary.resolveInternalPointer(p, result);
         return r == Ternary.no ? fallback.resolveInternalPointer(p, result) : r;
@@ -254,7 +254,7 @@ struct FallbackAllocator(Primary, Fallback)
     }
 }
 
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.building_blocks.region : InSituRegion;
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -268,8 +268,10 @@ struct FallbackAllocator(Primary, Fallback)
     // This large allocation will go to the Mallocator
     auto b2 = a.allocate(1024 * 1024);
     assert(a.primary.owns(b2) == Ternary.no);
-    a.deallocate(b1);
-    a.deallocate(b2);
+    () @trusted {
+        a.deallocate(b1);
+        a.deallocate(b2);
+    }();
 }
 
 /*

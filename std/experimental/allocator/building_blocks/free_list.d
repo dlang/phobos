@@ -236,7 +236,7 @@ struct FreeList(ParentAllocator,
     Postcondition:
     $(D result >= bytes)
     */
-    size_t goodAllocSize(size_t bytes)
+    @safe size_t goodAllocSize(size_t bytes)
     {
         assert(minSize != chooseAtRuntime && maxSize != chooseAtRuntime);
         static if (maxSize != unbounded)
@@ -252,13 +252,14 @@ struct FreeList(ParentAllocator,
         return parent.goodAllocSize(bytes);
     }
 
-    private void[] allocateEligible(size_t bytes)
+    @safe private void[] allocateEligible(size_t bytes)
     {
         assert(bytes);
         if (root)
         {
             // faster
-            auto result = (cast(ubyte*) root)[0 .. bytes];
+            ubyte[] result;
+            () @trusted { result = (cast(ubyte*) root)[0 .. bytes]; }();
             root = root.next;
             return result;
         }
@@ -275,7 +276,7 @@ struct FreeList(ParentAllocator,
         auto result = parent.allocate(toAllocate);
         static if (hasTolerance)
         {
-            if (result) result = result.ptr[0 .. bytes];
+            if (result) () @trusted { result = result.ptr[0 .. bytes]; }();
         }
         static if (adaptive == Yes.adaptive)
         {
@@ -305,7 +306,7 @@ struct FreeList(ParentAllocator,
 
     Postcondition: $(D result.length == bytes || result is null)
     */
-    void[] allocate(size_t n)
+    @safe void[] allocate(size_t n)
     {
         static if (adaptive == Yes.adaptive) ++accumSamples;
         assert(n < size_t.max / 2);
@@ -389,7 +390,7 @@ struct FreeList(ParentAllocator,
     }
 }
 
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     FreeList!(GCAllocator, 0, 8) fl;
@@ -397,7 +398,7 @@ struct FreeList(ParentAllocator,
     auto b1 = fl.allocate(7);
     fl.allocate(8);
     assert(fl.root is null);
-    fl.deallocate(b1);
+    () @trusted { fl.deallocate(b1); }();
     assert(fl.root !is null);
     fl.allocate(8);
     assert(fl.root is null);
@@ -453,7 +454,7 @@ struct ContiguousFreeList(ParentAllocator,
     /// Alignment offered.
     enum uint alignment = (void*).alignof;
 
-    private void initialize(ubyte[] buffer, size_t itemSize = fl.max)
+    private @trusted void initialize(ubyte[] buffer, size_t itemSize = fl.max)
     {
         assert(itemSize != unbounded && itemSize != chooseAtRuntime);
         assert(buffer.ptr.alignedAt(alignment));
@@ -514,14 +515,18 @@ struct ContiguousFreeList(ParentAllocator,
     static if (!stateSize!ParentAllocator)
     this(size_t bytes)
     {
-        initialize(cast(ubyte[])(ParentAllocator.instance.allocate(bytes)));
+        initialize(() @trusted {
+                return cast(ubyte[])(ParentAllocator.instance.allocate(bytes));
+        }() );
     }
 
     /// ditto
     static if (stateSize!ParentAllocator)
     this(ParentAllocator parent, size_t bytes)
     {
-        initialize(cast(ubyte[])(parent.allocate(bytes)));
+        initialize(() @trusted {
+                return cast(ubyte[])(parent.allocate(bytes));
+        }() );
         this.parent = SParent(parent);
     }
 
@@ -532,7 +537,8 @@ struct ContiguousFreeList(ParentAllocator,
     {
         static if (maxSize == chooseAtRuntime) fl.max = max;
         static if (minSize == chooseAtRuntime) fl.min = max;
-        initialize(cast(ubyte[])(parent.allocate(bytes)), max);
+        initialize(() @trusted { return cast(ubyte[])(parent.allocate(bytes)); }()
+                   , max);
     }
 
     /// ditto
@@ -542,7 +548,8 @@ struct ContiguousFreeList(ParentAllocator,
     {
         static if (maxSize == chooseAtRuntime) fl.max = max;
         static if (minSize == chooseAtRuntime) fl.min = max;
-        initialize(cast(ubyte[])(parent.allocate(bytes)), max);
+        initialize(() @trusted { return cast(ubyte[])(parent.allocate(bytes)); }()
+                   , max);
         this.parent = SParent(parent);
     }
 
@@ -554,7 +561,8 @@ struct ContiguousFreeList(ParentAllocator,
     {
         static if (maxSize == chooseAtRuntime) fl.max = max;
         fl.min = min;
-        initialize(cast(ubyte[])(parent.allocate(bytes)), max);
+        initialize(() @trusted { return cast(ubyte[])(parent.allocate(bytes)); }()
+                   , max);
         static if (stateSize!ParentAllocator)
             this.parent = SParent(parent);
     }
@@ -567,7 +575,8 @@ struct ContiguousFreeList(ParentAllocator,
     {
         static if (maxSize == chooseAtRuntime) fl.max = max;
         fl.min = min;
-        initialize(cast(ubyte[])(parent.allocate(bytes)), max);
+        initialize(() @trusted { return cast(ubyte[])(parent.allocate(bytes)); }()
+                   , max);
         static if (stateSize!ParentAllocator)
             this.parent = SParent(parent);
     }
@@ -583,7 +592,7 @@ struct ContiguousFreeList(ParentAllocator,
     Postcondition:
     $(D result >= bytes)
     */
-    size_t goodAllocSize(size_t n)
+    @safe size_t goodAllocSize(size_t n)
     {
         if (fl.freeListEligible(n)) return fl.max;
         return parent.goodAllocSize(n);
@@ -594,7 +603,7 @@ struct ContiguousFreeList(ParentAllocator,
     freelist is not empty, pops the memory off the free list. In all other
     cases, uses the parent allocator.
     */
-    void[] allocate(size_t n)
+    @safe void[] allocate(size_t n)
     {
         auto result = fl.allocate(n);
         if (result)
@@ -612,9 +621,12 @@ struct ContiguousFreeList(ParentAllocator,
     belongs to this allocator.
     */
     static if (hasMember!(SParent, "owns") || unchecked)
-    Ternary owns(void[] b)
+    @safe Ternary owns(void[] b)
     {
-        if (support.ptr <= b.ptr && b.ptr < support.ptr + support.length)
+        auto r = () @trusted {
+            return support.ptr <= b.ptr && b.ptr < support.ptr + support.length;
+        }();
+        if (r)
             return Ternary.yes;
         static if (unchecked)
             return Ternary.no;
@@ -684,7 +696,7 @@ struct ContiguousFreeList(ParentAllocator,
     );
 }
 
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.building_blocks.null_allocator
         : NullAllocator;
@@ -700,13 +712,13 @@ struct ContiguousFreeList(ParentAllocator,
     auto b = a.allocate(100);
     assert(a.empty == Ternary.yes);
     assert(b.length == 0);
-    a.deallocate(b);
+    () @trusted { a.deallocate(b); }();
     b = a.allocate(64);
     assert(a.empty == Ternary.no);
     assert(b.length == 64);
     assert(a.owns(b) == Ternary.yes);
     assert(a.owns(null) == Ternary.no);
-    a.deallocate(b);
+    () @trusted { a.deallocate(b); }();
 }
 
 @system unittest
@@ -736,7 +748,7 @@ struct ContiguousFreeList(ParentAllocator,
     a.deallocate(b);
 }
 
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     alias A = ContiguousFreeList!(GCAllocator, 64, 64);
@@ -800,7 +812,7 @@ struct SharedFreeList(ParentAllocator,
         }
     }
 
-    private bool tooSmall(size_t n) const shared
+    private pure nothrow @nogc bool tooSmall(size_t n) const shared
     {
         static if (minSize == 0) return false;
         else static if (minSize == chooseAtRuntime) return n < _min;
@@ -823,14 +835,14 @@ struct SharedFreeList(ParentAllocator,
         }
     }
 
-    private bool tooLarge(size_t n) const shared
+    private pure nothrow @nogc bool tooLarge(size_t n) const shared
     {
         static if (maxSize == unbounded) return false;
         else static if (maxSize == chooseAtRuntime) return n > _max;
         else return n > maxSize;
     }
 
-    private bool freeListEligible(size_t n) const shared
+    private pure nothrow @nogc bool freeListEligible(size_t n) const shared
     {
         static if (minSize == maxSize && minSize != chooseAtRuntime)
             return n == maxSize;
@@ -951,7 +963,7 @@ struct SharedFreeList(ParentAllocator,
     enum uint alignment = ParentAllocator.alignment;
 
     /// Ditto
-    size_t goodAllocSize(size_t bytes) shared
+    @safe size_t goodAllocSize(size_t bytes) shared
     {
         if (freeListEligible(bytes)) return maxSize == unbounded ? bytes : max;
         return parent.goodAllocSize(bytes);
@@ -959,7 +971,7 @@ struct SharedFreeList(ParentAllocator,
 
     /// Ditto
     static if (hasMember!(ParentAllocator, "owns"))
-    Ternary owns(void[] b) shared const
+    @safe Ternary owns(void[] b) shared const
     {
         return parent.owns(b);
     }
@@ -972,7 +984,7 @@ struct SharedFreeList(ParentAllocator,
     }
 
     /// Ditto
-    void[] allocate(size_t bytes) shared
+    @safe void[] allocate(size_t bytes) shared
     {
         assert(bytes < size_t.max / 2);
         if (!freeListEligible(bytes)) return parent.allocate(bytes);
@@ -991,11 +1003,11 @@ struct SharedFreeList(ParentAllocator,
             _root = _root.next;
             decNodes();
             lock.unlock();
-            return (cast(ubyte*) oldRoot)[0 .. bytes];
+            return () @trusted{ return (cast(ubyte*) oldRoot)[0 .. bytes]; }();
         }
     }
 
-    private void[] allocateFresh(const size_t bytes) shared
+    @safe private void[] allocateFresh(const size_t bytes) shared
     {
         assert(bytes == max || max == unbounded);
         return parent.allocate(bytes);
@@ -1079,19 +1091,19 @@ struct SharedFreeList(ParentAllocator,
     tg.joinAll();
 }
 
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
     auto b = a.allocate(100);
-    a.deallocate(b);
+    () @trusted { a.deallocate(b); }();
     assert(a.nodes == 1);
     b = [];
-    a.deallocateAll();
+    () @trusted { a.deallocateAll(); }();
     assert(a.nodes == 0);
 }
 
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
@@ -1101,21 +1113,21 @@ struct SharedFreeList(ParentAllocator,
     a.deallocate(c);
 }
 
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime, chooseAtRuntime) a;
     a.allocate(64);
 }
 
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, 30, 40) a;
     a.allocate(64);
 }
 
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, 30, 40, chooseAtRuntime) a;

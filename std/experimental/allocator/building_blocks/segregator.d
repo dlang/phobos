@@ -127,21 +127,21 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 
     private template Impl()
     {
-        size_t goodAllocSize(size_t s)
+        @safe size_t goodAllocSize(size_t s)
         {
             return s <= threshold
                 ? _small.goodAllocSize(s)
                 : _large.goodAllocSize(s);
         }
 
-        void[] allocate(size_t s)
+        @safe void[] allocate(size_t s)
         {
             return s <= threshold ? _small.allocate(s) : _large.allocate(s);
         }
 
         static if (hasMember!(SmallAllocator, "alignedAllocate")
                 && hasMember!(LargeAllocator, "alignedAllocate"))
-        void[] alignedAllocate(size_t s, uint a)
+        @safe void[] alignedAllocate(size_t s, uint a)
         {
             return s <= threshold
                 ? _small.alignedAllocate(s, a)
@@ -215,7 +215,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 
         static if (hasMember!(SmallAllocator, "owns")
                 && hasMember!(LargeAllocator, "owns"))
-        Ternary owns(void[] b)
+        @safe Ternary owns(void[] b)
         {
             return Ternary(b.length <= threshold
                 ? _small.owns(b) : _large.owns(b));
@@ -247,7 +247,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 
         static if (hasMember!(SmallAllocator, "resolveInternalPointer")
                 && hasMember!(LargeAllocator, "resolveInternalPointer"))
-        Ternary resolveInternalPointer(const void* p, ref void[] result)
+        @safe Ternary resolveInternalPointer(const void* p, ref void[] result)
         {
             Ternary r = _small.resolveInternalPointer(p, result);
             return r == Ternary.no ? _large.resolveInternalPointer(p, result) : r;
@@ -274,7 +274,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 }
 
 ///
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.mallocator : Mallocator;
@@ -292,7 +292,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
     A a;
     auto b = a.allocate(200);
     assert(b.length == 200);
-    a.deallocate(b);
+    () @trusted { a.deallocate(b); }();
 }
 
 /**
@@ -342,7 +342,7 @@ if (Args.length > 3)
 }
 
 ///
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.mallocator : Mallocator;
@@ -357,5 +357,5 @@ if (Args.length > 3)
     A a;
     auto b = a.allocate(201);
     assert(b.length == 201);
-    a.deallocate(b);
+    () @trusted { a.deallocate(b); }();
 }

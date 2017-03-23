@@ -153,7 +153,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     ParentAllocator.deallocate).)
     )
     */
-    this(ubyte[] data)
+    @trusted this(ubyte[] data)
     {
         immutable a = data.ptr.effectiveAlignment;
         assert(a >= size_t.alignof || !data.ptr,
@@ -240,7 +240,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     Returns the actual bytes allocated when $(D n) bytes are requested, i.e.
     $(D n.roundUpToMultipleOf(blockSize)).
     */
-    size_t goodAllocSize(size_t n)
+    @safe size_t goodAllocSize(size_t n)
     {
         return n.roundUpToMultipleOf(blockSize);
     }
@@ -302,7 +302,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     Otherwise, it attempts to overallocate and then adjust the result for
     proper alignment. In the worst case the slack memory is around two blocks.
     */
-    void[] alignedAllocate(size_t n, uint a)
+    @trusted void[] alignedAllocate(size_t n, uint a)
     {
         import std.math : isPowerOf2;
         assert(a.isPowerOf2);
@@ -338,7 +338,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     all memory within and returns a slice to it. Otherwise, returns $(D null)
     (i.e. no attempt is made to allocate the largest available block).
     */
-    void[] allocateAll()
+    @safe void[] allocateAll()
     {
         if (empty != Ternary.yes) return null;
         _control[] = 1;
@@ -350,7 +350,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     `Ternary.no` otherwise. Never returns `Ternary.unkown`. (This
     method is somewhat tolerant in that accepts an interior slice.)
     */
-    Ternary owns(void[] b) const
+    @trusted Ternary owns(void[] b) const
     {
         //if (!b.ptr) return Ternary.no;
         assert(b.ptr !is null || b.length == 0, "Corrupt block.");
@@ -690,13 +690,14 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 }
 
 ///
-@system unittest
+@safe unittest
 {
     // Create a block allocator on top of a 10KB stack region.
     import std.experimental.allocator.building_blocks.region : InSituRegion;
     import std.traits : hasMember;
     InSituRegion!(10_240, 64) r;
-    auto a = BitmappedBlock!(64, 64)(cast(ubyte[])(r.allocateAll()));
+    ubyte[] store = () @trusted { return cast(ubyte[])(r.allocateAll()); }();
+    auto a = BitmappedBlock!(64, 64)(store);
     static assert(hasMember!(InSituRegion!(10_240, 64), "allocateAll"));
     const b = a.allocate(100);
     assert(b.length == 100);
@@ -921,7 +922,7 @@ struct BitmappedBlockWithInternalPointers(
     }
 
     /// Ditto
-    void[] allocate(size_t bytes)
+    @trusted void[] allocate(size_t bytes)
     {
         auto r = _heap.allocate(bytes);
         if (!r.ptr) return r;
@@ -997,7 +998,7 @@ struct BitmappedBlockWithInternalPointers(
     }
 
     /// Ditto
-    Ternary resolveInternalPointer(const void* p, ref void[] result)
+    @trusted Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
         if (p < _heap._payload.ptr
             || p >= _heap._payload.ptr + _heap._payload.length)
@@ -1061,7 +1062,7 @@ struct BitmappedBlockWithInternalPointers(
     }
 }
 
-@system unittest
+@safe unittest
 {
     import std.typecons : Ternary;
 
@@ -1070,24 +1071,31 @@ struct BitmappedBlockWithInternalPointers(
     assert(b.length == 123);
 
     void[] p;
-    Ternary r = h.resolveInternalPointer(b.ptr + 17, p);
+    void* forwardPtr;
+    () @trusted { forwardPtr = b.ptr + 17; }();
+    Ternary r = h.resolveInternalPointer(forwardPtr, p);
+    assert(r == Ternary.yes);
     assert(p.ptr is b.ptr);
     assert(p.length >= b.length);
     b = h.allocate(4096);
 
-    h.resolveInternalPointer(b.ptr, p);
+    h.resolveInternalPointer(&b[0], p);
     assert(p is b);
 
-    h.resolveInternalPointer(b.ptr + 11, p);
+    () @trusted { forwardPtr = b.ptr + 11; }();
+    h.resolveInternalPointer(forwardPtr, p);
     assert(p is b);
 
     void[] unchanged = p;
-    h.resolveInternalPointer(b.ptr - 40_970, p);
+    void* backwardsPtr;
+    () @trusted { backwardsPtr = b.ptr - 40_970; }();
+    h.resolveInternalPointer(backwardsPtr, p);
     assert(p is unchanged);
 
-    assert(h.expand(b, 1));
+    () @trusted { assert(h.expand(b, 1)); }();
     assert(b.length == 4097);
-    h.resolveInternalPointer(b.ptr + 4096, p);
+    () @trusted { forwardPtr = b.ptr + 4096; }();
+    h.resolveInternalPointer(forwardPtr, p);
     assert(p.ptr is b.ptr);
 }
 
@@ -1095,7 +1103,7 @@ struct BitmappedBlockWithInternalPointers(
 Returns the number of most significant ones before a zero can be found in $(D
 x). If $(D x) contains no zeros (i.e. is equal to $(D ulong.max)), returns 64.
 */
-private uint leadingOnes(ulong x)
+private @safe uint leadingOnes(ulong x)
 {
     uint result = 0;
     while (cast(long) x < 0)
@@ -1106,7 +1114,7 @@ private uint leadingOnes(ulong x)
     return result;
 }
 
-@system unittest
+@safe unittest
 {
     assert(leadingOnes(0) == 0);
     assert(leadingOnes(~0UL) == 64);
@@ -1120,7 +1128,7 @@ private uint leadingOnes(ulong x)
 /**
 Finds a run of contiguous ones in $(D x) of length at least $(D n).
 */
-private uint findContigOnes(ulong x, uint n)
+private @safe uint findContigOnes(ulong x, uint n)
 {
     while (n > 1)
     {
@@ -1131,7 +1139,7 @@ private uint findContigOnes(ulong x, uint n)
     return leadingOnes(~x);
 }
 
-@system unittest
+@safe unittest
 {
     assert(findContigOnes(0x0000_0000_0000_0300, 2) == 54);
 
@@ -1148,14 +1156,14 @@ private uint findContigOnes(ulong x, uint n)
 /*
 Unconditionally sets the bits from lsb through msb in w to zero.
 */
-private void setBits(ref ulong w, uint lsb, uint msb)
+private @safe void setBits(ref ulong w, uint lsb, uint msb)
 {
     assert(lsb <= msb && msb < 64);
     const mask = (ulong.max << lsb) & (ulong.max >> (63 - msb));
     w |= mask;
 }
 
-@system unittest
+@safe unittest
 {
     ulong w;
     w = 0; setBits(w, 0, 63); assert(w == ulong.max);
@@ -1167,7 +1175,7 @@ private void setBits(ref ulong w, uint lsb, uint msb)
 /* Are bits from lsb through msb in w zero? If so, make then 1
 and return the resulting w. Otherwise, just return 0.
 */
-private bool setBitsIfZero(ref ulong w, uint lsb, uint msb)
+private @safe bool setBitsIfZero(ref ulong w, uint lsb, uint msb)
 {
     assert(lsb <= msb && msb < 64);
     const mask = (ulong.max << lsb) & (ulong.max >> (63 - msb));
@@ -1177,7 +1185,7 @@ private bool setBitsIfZero(ref ulong w, uint lsb, uint msb)
 }
 
 // Assigns bits in w from lsb through msb to zero.
-private void resetBits(ref ulong w, uint lsb, uint msb)
+private @safe void resetBits(ref ulong w, uint lsb, uint msb)
 {
     assert(lsb <= msb && msb < 64);
     const mask = (ulong.max << lsb) & (ulong.max >> (63 - msb));
@@ -1193,11 +1201,11 @@ private struct BitVector
 
     auto rep() { return _rep; }
 
-    this(ulong[] data) { _rep = data; }
+    @safe this(ulong[] data) { _rep = data; }
 
-    void opSliceAssign(bool b) { _rep[] = b ? ulong.max : 0; }
+    @safe void opSliceAssign(bool b) { _rep[] = b ? ulong.max : 0; }
 
-    void opSliceAssign(bool b, ulong x, ulong y)
+    @safe void opSliceAssign(bool b, ulong x, ulong y)
     {
         assert(x <= y && y <= _rep.length * 64);
         if (x == y) return;
@@ -1228,14 +1236,14 @@ private struct BitVector
         }
     }
 
-    bool opIndex(ulong x)
+    @safe bool opIndex(ulong x)
     {
         assert(x < length);
         return (_rep[cast(size_t) (x / 64)]
             & (0x8000_0000_0000_0000UL >> (x % 64))) != 0;
     }
 
-    void opIndexAssign(bool b, ulong x)
+    @safe void opIndexAssign(bool b, ulong x)
     {
         assert(x / 64 <= size_t.max);
         immutable i = cast(size_t) (x / 64);
@@ -1244,7 +1252,7 @@ private struct BitVector
         else _rep[i] &= ~j;
     }
 
-    ulong length() const
+    @safe ulong length() const
     {
         return _rep.length * 64;
     }
@@ -1252,7 +1260,7 @@ private struct BitVector
     /* Returns the index of the first 1 to the right of i (including i itself),
     or length if not found.
     */
-    ulong find1(ulong i)
+    @safe ulong find1(ulong i)
     {
         assert(i < length);
         assert(i / 64 <= size_t.max);
@@ -1279,7 +1287,7 @@ private struct BitVector
     /* Returns the index of the first 1 to the left of i (including i itself),
     or ulong.max if not found.
     */
-    ulong find1Backward(ulong i)
+    @safe ulong find1Backward(ulong i)
     {
         assert(i < length);
         auto w = cast(size_t) (i / 64);
@@ -1304,20 +1312,20 @@ private struct BitVector
     }
 
     /// Are all bits zero?
-    bool allAre0() const
+    @safe bool allAre0() const
     {
         foreach (w; _rep) if (w) return false;
         return true;
     }
 
     /// Are all bits one?
-    bool allAre1() const
+    @safe bool allAre1() const
     {
         foreach (w; _rep) if (w != ulong.max) return false;
         return true;
     }
 
-    ulong findZeros(immutable size_t howMany, ulong start)
+    @safe ulong findZeros(immutable size_t howMany, ulong start)
     {
         assert(start < length);
         assert(howMany > 64);
@@ -1353,7 +1361,7 @@ private struct BitVector
     }
 }
 
-@system unittest
+@safe unittest
 {
     auto v = BitVector(new ulong[10]);
     assert(v.length == 640);

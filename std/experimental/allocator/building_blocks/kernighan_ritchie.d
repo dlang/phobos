@@ -311,7 +311,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
     n = Capacity desired. This constructor is defined only if $(D
     ParentAllocator) is not $(D NullAllocator).
     */
-    this(ubyte[] b)
+    @trusted this(ubyte[] b)
     {
         if (b.length < Node.sizeof)
         {
@@ -382,7 +382,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
 
     Returns: A word-aligned buffer of $(D n) bytes, or $(D null).
     */
-    void[] allocate(size_t n)
+    @trusted void[] allocate(size_t n)
     {
         if (!n || !root) return null;
         const actualBytes = goodAllocSize(n);
@@ -536,7 +536,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
     at the front of the free list. These blocks get coalesced, whether
     $(D allocateAll) succeeds or fails due to fragmentation.
     */
-    void[] allocateAll()
+    @trusted void[] allocateAll()
     {
         if (regionMode) switchToFreeList;
         if (root && root.next == root)
@@ -578,7 +578,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
     It does a simple $(BIGOH 1) range check. $(D b) should be a buffer either
     allocated with $(D this) or obtained through other means.
     */
-    Ternary owns(void[] b)
+    @trusted Ternary owns(void[] b)
     {
         debug(KRRegion) assertValid("owns");
         debug(KRRegion) scope(exit) assertValid("owns");
@@ -590,7 +590,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
     Adjusts $(D n) to a size suitable for allocation (two words or larger,
     word-aligned).
     */
-    static size_t goodAllocSize(size_t n)
+    static @safe size_t goodAllocSize(size_t n)
     {
         import std.experimental.allocator.common : roundUpToMultipleOf;
         return n <= Node.sizeof
@@ -613,7 +613,7 @@ allocator if $(D deallocate) is needed, yet the actual deallocation traffic is
 relatively low. The example below shows a $(D KRRegion) using stack storage
 fronting the GC allocator.
 */
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.fallback_allocator

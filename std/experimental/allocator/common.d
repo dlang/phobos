@@ -158,7 +158,7 @@ Advances the beginning of `b` to start at alignment `a`. The resulting buffer
 may therefore be shorter. Returns the adjusted buffer, or null if obtaining a
 non-empty buffer is impossible.
 */
-@nogc nothrow pure
+@trusted @nogc nothrow pure
 package void[] roundUpToAlignment(void[] b, uint a)
 {
     auto e = b.ptr + b.length;
@@ -168,7 +168,7 @@ package void[] roundUpToAlignment(void[] b, uint a)
 }
 
 @nogc nothrow pure
-@system unittest
+@safe unittest
 {
     void[] empty;
     assert(roundUpToAlignment(empty, 4) == null);
@@ -190,7 +190,7 @@ package size_t divideRoundUp(size_t a, size_t b)
 /**
 Returns `s` rounded up to a multiple of `base`.
 */
-@nogc nothrow pure
+@trusted @nogc nothrow pure
 package void[] roundStartToMultipleOf(void[] s, uint base)
 {
     assert(base);
@@ -201,7 +201,7 @@ package void[] roundStartToMultipleOf(void[] s, uint base)
 }
 
 nothrow pure
-@system unittest
+@safe unittest
 {
     void[] p;
     assert(roundStartToMultipleOf(p, 16) is null);
@@ -300,7 +300,7 @@ package uint effectiveAlignment(void* ptr)
 Aligns a pointer down to a specified alignment. The resulting pointer is less
 than or equal to the given pointer.
 */
-@nogc nothrow pure
+@trusted @nogc nothrow pure
 package void* alignDownTo(void* ptr, uint alignment)
 {
     import std.math : isPowerOf2;
@@ -312,7 +312,7 @@ package void* alignDownTo(void* ptr, uint alignment)
 Aligns a pointer up to a specified alignment. The resulting pointer is greater
 than or equal to the given pointer.
 */
-@nogc nothrow pure
+@trusted @nogc nothrow pure
 package void* alignUpTo(void* ptr, uint alignment)
 {
     import std.math : isPowerOf2;

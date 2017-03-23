@@ -56,7 +56,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     /**
     Returns $(D roundingFunction(n)).
     */
-    size_t goodAllocSize(size_t n)
+    @safe size_t goodAllocSize(size_t n)
     {
         auto result = roundingFunction(n);
         assert(result >= n);
@@ -73,10 +73,10 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     $(D parent.allocate(goodAllocSize(n))). If $(D buf) is $(D null), returns
     $(D null). Otherwise, returns $(D buf[0 .. n]).
     */
-    void[] allocate(size_t n)
+    @safe void[] allocate(size_t n)
     {
         auto result = parent.allocate(goodAllocSize(n));
-        return result.ptr ? result.ptr[0 .. n] : null;
+        return () @trusted { return result.ptr ? result.ptr[0 .. n] : null; }();
     }
 
     /**
@@ -85,10 +85,10 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     $(D parent.alignedAllocate(goodAllocSize(n), a)).
     */
     static if (hasMember!(ParentAllocator, "alignedAllocate"))
-    void[] alignedAllocate(size_t n, uint)
+    void[] alignedAllocate()(size_t n, uint)
     {
         auto result = parent.alignedAllocate(goodAllocSize(n));
-        return result.ptr ? result.ptr[0 .. n] : null;
+        return () @trusted { return result.ptr ? result.ptr[0 .. n] : null; }();
     }
 
     /**
@@ -231,4 +231,14 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     alias MyAlloc = Quantizer!(GCAllocator,
         (size_t n) => n.roundUpToMultipleOf(64));
     testAllocator!(() => MyAlloc());
+}
+
+@safe unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    alias MyAlloc = Quantizer!(GCAllocator,
+        (size_t n) => n.roundUpToMultipleOf(64));
+    MyAlloc alloc;
+    const buf = alloc.allocate(256);
+    assert(buf !is null);
 }
