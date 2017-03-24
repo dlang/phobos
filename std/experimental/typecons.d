@@ -1040,3 +1040,18 @@ pure nothrow @nogc @system unittest
     int* p = fp;
     assert(*p == 2);
 }
+
+pure nothrow @system unittest
+{
+    Final!(int[]) arr;
+    static assert(!__traits(compiles,
+        arr.length++
+    ));
+    arr.length = 10;
+    static assert(!__traits(compiles,
+        arr.ptr = null
+    ));
+    static assert(!__traits(compiles,
+        arr.ptr++
+    ));
+}
