@@ -3081,7 +3081,7 @@ if (isDynamicArray!A)
         bool empty() const { return true; }
         void popFront() {}
     }
-    
+
     auto app = appender!(R[]);
     const(R)[1] r;
     app.put(r[0]);
