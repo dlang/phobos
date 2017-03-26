@@ -1,5 +1,6 @@
 ![D Logo](http://dlang.org/images/dlogo.png) Phobos Standard Library
 ===================================================================
+[![Gitter](https://badges.gitter.im/Join Chat.svg)](https://gitter.im/D-Programming-Language/phobos?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 [![GitHub tag](https://img.shields.io/github/tag/dlang/phobos.svg?maxAge=86400)](#)
 [![Build status](https://img.shields.io/circleci/project/dlang/phobos/master.svg?maxAge=86400)](https://circleci.com/gh/dlang/phobos)
