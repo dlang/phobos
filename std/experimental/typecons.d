@@ -848,7 +848,7 @@ else
         }
 
         // Attaching function attributes gives less noisy error messages
-        pure nothrow @safe @nogc @disable
+        pure nothrow @safe @nogc
         {
             /++
              + All operators, including member access, are forwarded to the
