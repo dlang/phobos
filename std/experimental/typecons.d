@@ -848,17 +848,39 @@ else
         }
 
         // Attaching function attributes gives less noisy error messages
-        pure nothrow @safe @nogc @disable
+        pure nothrow @safe @nogc
         {
             /++
              + All operators, including member access, are forwarded to the
              + underlying value of type `T` except for these mutating operators,
              + which are disabled.
              +/
-            void opAssign(Other)(Other other);
-            void opOpAssign(string op, Other)(Other other); /// Ditto
-            void opUnary(string op : "--")(); /// Ditto
-            void opUnary(string op : "++")(); /// Ditto
+            void opAssign(Other)(Other other)
+            {
+                static assert(0, typeof(this).stringof ~
+                                 " cannot be reassigned.");
+            }
+
+            /// Ditto
+            void opOpAssign(string op, Other)(Other other)
+            {
+                static assert(0, typeof(this).stringof ~
+                                 " cannot be reassigned.");
+            }
+
+            /// Ditto
+            void opUnary(string op : "--")()
+            {
+                static assert(0, typeof(this).stringof ~
+                                 " cannot be mutated.");
+            }
+
+            /// Ditto
+            void opUnary(string op : "++")()
+            {
+                static assert(0, typeof(this).stringof ~
+                                 " cannot be mutated.");
+            }
         }
 
         /**
