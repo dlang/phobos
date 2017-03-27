@@ -3,6 +3,12 @@
 /**
 Facilities for random number generation.
 
+$(RED Disclaimer:) The _random number generators and API provided in this
+module are not designed to be cryptographically secure, and are therefore
+unsuitable for cryptographic or security-related purposes such as generating
+authentication tokens or network sequence numbers. For such needs, please use a
+reputable cryptographic library instead.
+
 The new-style generator objects hold their own state so they are
 immune of threading issues. The generators feature a number of
 well-known and well-documented methods of generating random
