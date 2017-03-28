@@ -3377,7 +3377,8 @@ public:
 Repeats the given forward range ad infinitum. If the original range is
 infinite (fact that would make $(D Cycle) the identity application),
 $(D Cycle) detects that and aliases itself to the range type
-itself. If the original range has random access, $(D Cycle) offers
+itself. That works for non-forward ranges too.
+If the original range has random access, $(D Cycle) offers
 random access and also offers a constructor taking an initial position
 $(D index). $(D Cycle) works with static arrays in addition to ranges,
 mostly for performance reasons.
@@ -3644,8 +3645,11 @@ nothrow:
 
 /// Ditto
 auto cycle(R)(R input)
-if (isForwardRange!R)
+if (isInputRange!R)
 {
+    static assert(isForwardRange!R || isInfinite!R,
+        "Cycle requires a forward range argument unless it's statically known"
+         ~ " to be infinite");
     assert(!input.empty, "Attempting to pass an empty input to cycle");
     static if (isInfinite!R) return input;
     else return Cycle!R(input);
@@ -3780,8 +3784,8 @@ if (isStaticArray!R)
     NonForwardInfRange j;
     auto c = cycle(i);
     assert(c == i);
-    //make sure it requires a forward range even when infinite
-    static assert(!is(typeof(j.cycle)));
+    //make sure it can alias out even non-forward infinite ranges
+    static assert(is(typeof(j.cycle) == typeof(j)));
 }
 
 @safe unittest
