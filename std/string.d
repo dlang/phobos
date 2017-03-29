@@ -6922,6 +6922,9 @@ return it typed as a UTF string.
 $(D ubyte) becomes $(D char), $(D ushort) becomes $(D wchar) and $(D uint)
 becomes $(D dchar). Type qualifiers are preserved.
 
+When compiled with debug mode, this function performs an extra check to make
+sure the return value is a valid Unicode string.
+
 Params:
     arr = array of bytes, ubytes, shorts, ushorts, ints, or uints
 
