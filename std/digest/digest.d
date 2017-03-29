@@ -65,6 +65,7 @@ module std.digest.digest;
 
 import std.meta : allSatisfy;
 import std.traits;
+import std.range.primitives;
 public import std.ascii : LetterCase;
 
 
@@ -1020,4 +1021,151 @@ if (isDigest!T) : Digest
     assert(hash.peek().toHexString() == "39A34F41");
     ubyte[5] buf;
     assert(hash.peek(buf).toHexString() == "39A34F41");
+}
+
+/**
+ * Securely compares two digest representations while protecting against timing
+ * attacks. Do not use `==` to compare digest representations.
+ *
+ * The attack happens as follows:
+ *
+ * $(OL
+ *     $(LI An attacker wants to send harmful data to your server, which
+ *     requires a integrity HMAC SHA1 token signed with a secret.)
+ *     $(LI The length of the token is known to be 40 characters long due to its format,
+ *     so the attacker first sends `"0000000000000000000000000000000000000000"`,
+ *     then `"1000000000000000000000000000000000000000"`, and so on.)
+ *     $(LI The given HMAC token is compared with the expected token using the
+ *     `==` string comparison, which returns `false` as soon as the first wrong
+ *     element is found. If a wrong element is found, then a rejection is sent
+ *     back to the sender.)
+ *     $(LI Eventually, the attacker is able to determine the first character in
+ *     the correct token because the sever takes slightly longer to return a
+ *     rejection. This is due to the comparison moving on to second item in
+ *     the two arrays, seeing they are different, and then sending the rejection.)
+ *     $(LI It may seem like too small of a difference in time for the attacker
+ *     to notice, but security researchers have shown that differences as
+ *     small as $(LINK2 http://www.cs.rice.edu/~dwallach/pub/crosby-timing2009.pdf,
+ *     20µs can be reliably distinguished) even with network inconsistencies.)
+ *     $(LI Repeat the process for each character until the attacker has the whole
+ *     correct token and the server accepts the harmful data. This can be done
+ *     in a week with the attacker pacing the attack to 10 requests per second
+ *     with only one client.)
+ * )
+ *
+ * This function defends against this attack by always comparing every single
+ * item in the array if the two arrays are the same length. Therefore, this
+ * function is always $(BIGOH n) for ranges of the same length.
+ *
+ * This attack can also be mitigated via rate limiting and banning IPs which have too
+ * many rejected requests. However, this does not completely solve the problem,
+ * as the attacker could be in control of a bot net. To fully defend against
+ * the timing attack, rate limiting, banning IPs, and using this function
+ * should be used together.
+ *
+ * Params:
+ *     r1 = A digest representation
+ *     r2 = A digest representation
+ * Returns:
+ *     `true` if both representations are equal, `false` otherwise
+ * See_Also:
+ *     $(LINK2 https://en.wikipedia.org/wiki/Timing_attack, The Wikipedia article
+ *     on timing attacks).
+ */
+bool secureEqual(R1, R2)(R1 r1, R2 r2)
+if (isInputRange!R1 && isInputRange!R2 && !isInfinite!R1 && !isInfinite!R2 &&
+    (isIntegral!(ElementEncodingType!R1) || isSomeChar!(ElementEncodingType!R1)) &&
+    !is(CommonType!(ElementEncodingType!R1, ElementEncodingType!R2) == void))
+{
+    static if (hasLength!R1 && hasLength!R2)
+        if (r1.length != r2.length)
+            return false;
+
+    int result;
+
+    static if (isRandomAccessRange!R1 && isRandomAccessRange!R2 &&
+               hasLength!R1 && hasLength!R2)
+    {
+        foreach (i; 0 .. r1.length)
+            result |= r1[i] ^ r2[i];
+    }
+    else static if (hasLength!R1 && hasLength!R2)
+    {
+        // Lengths are the same so we can squeeze out a bit of performance
+        // by not checking if r2 is empty
+        for (; !r1.empty; r1.popFront(), r2.popFront())
+        {
+            result |= r1.front ^ r2.front;
+        }
+    }
+    else
+    {
+        // Generic case, walk both ranges
+        for (; !r1.empty; r1.popFront(), r2.popFront())
+        {
+            if (r2.empty) return false;
+            result |= r1.front ^ r2.front;
+        }
+        if (!r2.empty) return false;
+    }
+
+    return result == 0;
+}
+
+///
+@system pure unittest
+{
+    import std.digest.hmac : hmac;
+    import std.digest.sha : SHA1;
+    import std.string : representation;
+
+    // a typical HMAC data integrity verification
+    auto secret = "A7GZIP6TAQA6OHM7KZ42KB9303CEY0MOV5DD6NTV".representation;
+    auto data = "data".representation;
+
+    string hex1 = data.hmac!SHA1(secret).toHexString;
+    string hex2 = data.hmac!SHA1(secret).toHexString;
+    string hex3 = "data1".representation.hmac!SHA1(secret).toHexString;
+
+    assert( secureEqual(hex1, hex2));
+    assert(!secureEqual(hex1, hex3));
+}
+
+@system pure unittest
+{
+    import std.internal.test.dummyrange : ReferenceInputRange;
+    import std.range : takeExactly;
+    import std.string : representation;
+    import std.utf : byWchar, byDchar;
+
+    {
+        auto hex1 = "02CA3484C375EDD3C0F08D3F50D119E61077".representation;
+        auto hex2 = "02CA3484C375EDD3C0F08D3F50D119E610779018".representation;
+        assert(!secureEqual(hex1, hex2));
+    }
+    {
+        auto hex1 = "02CA3484C375EDD3C0F08D3F50D119E610779018"w.representation;
+        auto hex2 = "02CA3484C375EDD3C0F08D3F50D119E610779018"d.representation;
+        assert(secureEqual(hex1, hex2));
+    }
+    {
+        auto hex1 = "02CA3484C375EDD3C0F08D3F50D119E610779018".byWchar;
+        auto hex2 = "02CA3484C375EDD3C0F08D3F50D119E610779018".byDchar;
+        assert(secureEqual(hex1, hex2));
+    }
+    {
+        auto hex1 = "02CA3484C375EDD3C0F08D3F50D119E61077".byWchar;
+        auto hex2 = "02CA3484C375EDD3C0F08D3F50D119E610779018".byDchar;
+        assert(!secureEqual(hex1, hex2));
+    }
+    {
+        auto hex1 = new ReferenceInputRange!int([0, 1, 2, 3, 4, 5, 6, 7, 8]).takeExactly(9);
+        auto hex2 = new ReferenceInputRange!int([0, 1, 2, 3, 4, 5, 6, 7, 8]).takeExactly(9);
+        assert(secureEqual(hex1, hex2));
+    }
+    {
+        auto hex1 = new ReferenceInputRange!int([0, 1, 2, 3, 4, 5, 6, 7, 8]).takeExactly(9);
+        auto hex2 = new ReferenceInputRange!int([0, 1, 2, 3, 4, 5, 6, 7, 9]).takeExactly(9);
+        assert(!secureEqual(hex1, hex2));
+    }
 }
