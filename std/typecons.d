@@ -5123,18 +5123,18 @@ enum RefCountedAutoInitialize
 Defines a reference-counted object containing a $(D T) value as
 payload.
 
-$(D RefCounted) is implemented as a pointer to a data structure, which
-is referred to as the $(I store) or $(I storage implementation struct) in
-this documentation.  The store contains a reference count and the
-$(D T) payload.  $(D RefCounted) uses $(D malloc) to allocate the
-store.  As instances of $(D RefCounted) are copied or go out of scope,
-they will automatically increment or decrement the reference count on
-the store that they point to.  When the reference count goes down to
-zero, $(D RefCounted) will call $(D destroy) against the payload and
-call $(D free) to deallocate the store.  If the $(D T) payload contains
-any references to GC-allocated memory, then $(RefCounted) will add it
-to the GC memory that is scanned for pointers, and remove it from GC
-scanning before $(D free) is called on the store.
+An instance of $(D RefCounted) is a reference to a structure,
+which is referred to as the $(I store), or $(I storage implementation
+struct) in this documentation.  The store contains a reference count
+and the $(D T) payload.  $(D RefCounted) uses $(D malloc) to allocate
+the store.  As instances of $(D RefCounted) are copied or go out of
+scope, they will automatically increment or decrement the reference
+count.  When the reference count goes down to zero, $(D RefCounted)
+will call $(D destroy) against the payload and call $(D free) to
+deallocate the store.  If the $(D T) payload contains any references
+to GC-allocated memory, then $(RefCounted) will add it to the GC memory
+that is scanned for pointers, and remove it from GC scanning before
+$(D free) is called on the store.
 
 One important consequence of $(D destroy) is that it will call the
 destructor of the $(D T) payload.  GC-managed references are not
