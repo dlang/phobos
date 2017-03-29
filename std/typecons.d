@@ -5124,7 +5124,7 @@ Defines a reference-counted object containing a $(D T) value as
 payload.
 
 $(D RefCounted) is implemented as a pointer to a data structure, which
-is refered to as the $(I store) or $(I storage implentation struct) in
+is referred to as the $(I store) or $(I storage implementation struct) in
 this documentation.  The store contains a reference count and the
 $(D T) payload.  $(D RefCounted) uses $(D malloc) to allocate the
 store.  As instances of $(D RefCounted) are copied or go out of scope,
