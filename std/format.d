@@ -3847,10 +3847,14 @@ private int getNthInt(A...)(uint index, A args)
 
 @safe unittest
 {
-    assertThrown!FormatException(format("%*.d", 5.1, 2));   // float width
-    assertThrown!FormatException(format("%.*d", 5.1, 2));   // float precision
-    assertThrown!FormatException(format("%*.d", 5));        // missing arg
-    assertThrown!FormatException(format("%*.*d", 5, 4));    // missing arg
+    assert(collectExceptionMsg!FormatException(format("%*.d", 5.1, 2))
+        == "width/precision must be an integer, not double");
+    assert(collectExceptionMsg!FormatException(format("%.*d", '5', 2))
+        == "width/precision must be an integer, not char");
+    assert(collectExceptionMsg!FormatException(format("%.*d", 5))
+        == "Orphan format specifier: %d");
+    assert(collectExceptionMsg!FormatException(format("%*.*d", 5))
+        == "missing integer width/precision argument");
 }
 
 /* ======================== Unit Tests ====================================== */
