@@ -1696,6 +1696,8 @@ if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 
 @safe pure unittest
 {
+    assert(collectExceptionMsg!FormatException(format("%p", null)).back == 'p');
+
     assertCTFEable!(
     {
         formatTest( null, "null" );
@@ -1882,6 +1884,8 @@ private void formatUnsigned(Writer, T, Char)(Writer w, T arg, const ref FormatSp
 
 @safe pure unittest
 {
+    assert(collectExceptionMsg!FormatException(format("%c", 5)).back == 'c');
+
     assertCTFEable!(
     {
         formatTest(9, "9");
@@ -2079,6 +2083,9 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 @safe /*pure*/ unittest     // formatting floating point values is now impure
 {
     import std.conv : to;
+
+    assert(collectExceptionMsg!FormatException(format("%d", 5.1)).back == 'd');
+
     foreach (T; AliasSeq!(float, double, real))
     {
         formatTest( to!(          T)(5.5), "5.5" );
@@ -2788,6 +2795,11 @@ if (isInputRange!T)
         throw new Exception(text("Incorrect format specifier for range: %", f.spec));
 }
 
+@safe pure unittest
+{
+    assert(collectExceptionMsg(format("%d", "hi")).back == 'd');
+}
+
 // character formatting with ecaping
 private void formatChar(Writer)(Writer w, in dchar c, in char quote)
 {
@@ -3015,6 +3027,8 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
 @safe unittest
 {
+    assert(collectExceptionMsg!FormatException(format("%d", [0:1])).back == 'd');
+
     int[string] aa0;
     formatTest( aa0, `[]` );
 
