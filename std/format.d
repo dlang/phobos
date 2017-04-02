@@ -579,7 +579,7 @@ can match the expected number of readings or fewer, even zero, if a
 matching failure happens.
 
 Throws:
-    An `Exception` if `S.length == 0` and `fmt` has format specifiers
+    An `Exception` if `S.length == 0` and `fmt` has format specifiers.
  */
 uint formattedRead(alias fmt, R, S...)(ref R r, auto ref S args)
 if (isSomeString!(typeof(fmt)))
