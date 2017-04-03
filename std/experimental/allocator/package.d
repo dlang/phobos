@@ -339,7 +339,7 @@ interface IAllocator
     Resolves an internal pointer to the full block allocated. Implementations
     that don't support this primitive should always return `Ternary.unknown`.
     */
-    Ternary resolveInternalPointer(void* p, ref void[] result);
+    Ternary resolveInternalPointer(const void* p, ref void[] result);
 
     /**
     Deallocates a memory block. Implementations that don't support this
@@ -1953,7 +1953,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     }
 
     // Undocumented for now
-    Ternary resolveInternalPointer(void* p, ref void[] result)
+    Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
         static if (hasMember!(Allocator, "resolveInternalPointer"))
         {
@@ -2412,7 +2412,7 @@ private struct InternalPointersTree(Allocator)
     /** Returns the block inside which $(D p) resides, or $(D null) if the
     pointer does not belong.
     */
-    Ternary resolveInternalPointer(void* p, ref void[] result)
+    Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
         // Must define a custom find
         Tree.Node* find()
