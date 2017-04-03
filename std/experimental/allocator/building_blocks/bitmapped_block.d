@@ -996,7 +996,7 @@ struct BitmappedBlockWithInternalPointers(
     }
 
     /// Ditto
-    Ternary resolveInternalPointer(void* p, ref void[] result)
+    Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
         if (p < _heap._payload.ptr
             || p >= _heap._payload.ptr + _heap._payload.length)

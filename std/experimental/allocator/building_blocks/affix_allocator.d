@@ -175,7 +175,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         }
 
         static if (hasMember!(Allocator, "resolveInternalPointer"))
-        Ternary resolveInternalPointer(void* p, ref void[] result)
+        Ternary resolveInternalPointer(const void* p, ref void[] result)
         {
             void[] p1;
             Ternary r = parent.resolveInternalPointer(p, p1);

@@ -206,7 +206,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     resolveInternalPointer), and tries it for each bucket in turn.
     */
     static if (hasMember!(Allocator, "resolveInternalPointer"))
-    Ternary resolveInternalPointer(void* p, ref void[] result)
+    Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
         foreach (ref a; buckets)
         {
