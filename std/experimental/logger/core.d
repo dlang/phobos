@@ -744,12 +744,14 @@ abstract class Logger
         Logger logger;
     }
 
-    /** This constructor takes a name of type $(D string), and a $(D LogLevel).
+    /**
+    Every subclass of `Logger` has to call this constructor from their
+    constructor. It sets the `LogLevel`, and creates a fatal handler. The fatal
+    handler will throw an `Error` if a log call is made with level
+    `LogLevel.fatal`.
 
-    Every subclass of $(D Logger) has to call this constructor from their
-    constructor. It sets the $(D LogLevel), the name of the $(D Logger), and
-    creates a fatal handler. The fatal handler will throw an $(D Error) if a
-    log call is made with a $(D LogLevel) $(D LogLevel.fatal).
+    Params:
+         lv = `LogLevel` to use for this `Logger` instance.
     */
     this(LogLevel lv) @safe
     {
