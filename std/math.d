@@ -7300,6 +7300,18 @@ deprecated("Phobos1 math functions are deprecated, use isInfinity ") alias isinf
     auto y = ceil(1.2);
 }
 
+@safe pure nothrow unittest
+{
+    // relative comparison depends on rhs, make sure proper side is used when
+    // comparing range to single value. Based on bugzilla issue 15763
+    auto a = [2e-3 - 1e-5];
+    auto b = 2e-3 + 1e-5;
+    assert(a[0].approxEqual(b));
+    assert(!b.approxEqual(a[0]));
+    assert(a.approxEqual(b));
+    assert(!b.approxEqual(a));
+}
+
 /***********************************
  * Defines a total order on all floating-point numbers.
  *
