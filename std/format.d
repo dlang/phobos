@@ -471,13 +471,6 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
     uint currentArg = 0;
     while (spec.writeUpToNextSpec(w))
     {
-        if (currentArg == funs.length && !spec.indexStart)
-        {
-            // leftover spec?
-            enforceFmt(fmt.length == 0,
-                text("Orphan format specifier: %", spec.spec));
-            break;
-        }
         if (spec.width == spec.DYNAMIC)
         {
             auto width = to!(typeof(spec.width))(getNthInt(currentArg, args));
@@ -524,6 +517,13 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
             // else negative precision is same as no precision
             else spec.precision = spec.UNSPECIFIED;
         }
+        if (currentArg == A.length && !spec.indexStart)
+        {
+            // leftover spec?
+            enforceFmt(fmt.length == 0,
+                text("Orphan format specifier: %", spec.spec));
+            break;
+        }
         // Format!
         if (spec.indexStart > 0)
         {
@@ -534,7 +534,7 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
             {
                 foreach (i; spec.indexStart - 1 .. spec.indexEnd)
                 {
-                    if (funs.length <= i) break;
+                    if (A.length <= i) break;
                     if (__ctfe)
                         formatNth(w, spec, i, args);
                     else
@@ -1678,7 +1678,7 @@ void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
 if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 {
     enforceFmt(f.spec == 's',
-        "null");
+        "null literal cannot match %" ~ f.spec);
 
     put(w, "null");
 }
@@ -1696,6 +1696,8 @@ if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 
 @safe pure unittest
 {
+    assert(collectExceptionMsg!FormatException(format("%p", null)).back == 'p');
+
     assertCTFEable!(
     {
         formatTest( null, "null" );
@@ -1742,7 +1744,7 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         f.spec == 's' || f.spec == 'd' || f.spec == 'u' ? 10 :
         0;
     enforceFmt(base > 0,
-        "integral");
+        "incompatible format character for integral argument: %" ~ f.spec);
 
     // Forward on to formatIntegral to handle both U and const(U)
     // Saves duplication of code for both versions.
@@ -1882,6 +1884,8 @@ private void formatUnsigned(Writer, T, Char)(Writer w, T arg, const ref FormatSp
 
 @safe pure unittest
 {
+    assert(collectExceptionMsg!FormatException(format("%c", 5)).back == 'c');
+
     assertCTFEable!(
     {
         formatTest(9, "9");
@@ -1990,7 +1994,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         return;
     }
     enforceFmt(find("fgFGaAeEs", fs.spec).length,
-        "incompatible format character for floating point type");
+        "incompatible format character for floating point argument: %" ~ fs.spec);
     enforceFmt(!__ctfe, ctfpMessage);
 
     version (CRuntime_Microsoft)
@@ -2079,6 +2083,9 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 @safe /*pure*/ unittest     // formatting floating point values is now impure
 {
     import std.conv : to;
+
+    assert(collectExceptionMsg!FormatException(format("%d", 5.1)).back == 'd');
+
     foreach (T; AliasSeq!(float, double, real))
     {
         formatTest( to!(          T)(5.5), "5.5" );
@@ -2788,6 +2795,11 @@ if (isInputRange!T)
         throw new Exception(text("Incorrect format specifier for range: %", f.spec));
 }
 
+@safe pure unittest
+{
+    assert(collectExceptionMsg(format("%d", "hi")).back == 'd');
+}
+
 // character formatting with ecaping
 private void formatChar(Writer)(Writer w, in dchar c, in char quote)
 {
@@ -2959,7 +2971,7 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     AssocArrayTypeOf!T val = obj;
 
     enforceFmt(f.spec == 's' || f.spec == '(',
-        "associative");
+        "incompatible format character for associative array argument: %" ~ f.spec);
 
     enum const(Char)[] defSpec = "%s" ~ f.keySeparator ~ "%s" ~ f.seqSeparator;
     auto fmtSpec = f.spec == '(' ? f.nested : defSpec;
@@ -3015,6 +3027,8 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
 @safe unittest
 {
+    assert(collectExceptionMsg!FormatException(format("%d", [0:1])).back == 'd');
+
     int[string] aa0;
     formatTest( aa0, `[]` );
 
@@ -3822,6 +3836,7 @@ private void formatNth(Writer, Char, A...)(Writer w, const ref FormatSpec!Char f
 private int getNthInt(A...)(uint index, A args)
 {
     import std.conv : to;
+
     static if (A.length)
     {
         if (index)
@@ -3834,13 +3849,26 @@ private int getNthInt(A...)(uint index, A args)
         }
         else
         {
-            throw new FormatException("int expected");
+            throw new FormatException("width/precision must be an integer, not "
+                ~ typeof(args[0]).stringof);
         }
     }
     else
     {
-        throw new FormatException("int expected");
+        throw new FormatException("missing integer width/precision argument");
     }
+}
+
+@safe unittest
+{
+    assert(collectExceptionMsg!FormatException(format("%*.d", 5.1, 2))
+        == "width/precision must be an integer, not double");
+    assert(collectExceptionMsg!FormatException(format("%.*d", '5', 2))
+        == "width/precision must be an integer, not char");
+    assert(collectExceptionMsg!FormatException(format("%.*d", 5))
+        == "Orphan format specifier: %d");
+    assert(collectExceptionMsg!FormatException(format("%*.*d", 5))
+        == "missing integer width/precision argument");
 }
 
 /* ======================== Unit Tests ====================================== */
