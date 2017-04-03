@@ -4813,7 +4813,7 @@ if (!isMutable!Target)
 }
 
 // Make a tuple of non-static function symbols
-private template GetOverloadedMethods(T)
+package template GetOverloadedMethods(T)
 {
     import std.meta : Filter;
 
@@ -4955,7 +4955,7 @@ version(unittest)
     static assert(findCovariantFunction!(UnittestFuncInfo!nomatch,  B, methodsB) == ptrdiff_t.max);
 }
 
-private template DerivedFunctionType(T...)
+package template DerivedFunctionType(T...)
 {
     static if (!T.length)
     {
@@ -5080,7 +5080,7 @@ package template staticIota(int beg, int end)
     }
 }
 
-private template mixinAll(mixins...)
+package template mixinAll(mixins...)
 {
     static if (mixins.length == 1)
     {
@@ -5101,7 +5101,7 @@ private template mixinAll(mixins...)
     }
 }
 
-private template Bind(alias Template, args1...)
+package template Bind(alias Template, args1...)
 {
     alias Bind(args2...) = Template!(args1, args2);
 }
