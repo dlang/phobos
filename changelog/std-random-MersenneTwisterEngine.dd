@@ -14,7 +14,7 @@ have no noticeable effect.  However, these will be breaking changes for
 anyone using the `MersenneTwisterEngine` template directly.
 
 The internal implementation has been reworked to use Ilya Yaroshenko's
-highly optimized algorithm from `mir.random`.  This should have a very
+highly optimized algorithm from $(LINK2 https://github.com/libmir/mir-random, mir-random).  This should have a very
 noticeable positive effect for anyone who cares about generating a lot
 of random numbers quickly.
 
