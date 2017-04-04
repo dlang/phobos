@@ -249,8 +249,9 @@ public import std.experimental.allocator.common,
         2048, Bucketizer!(FList, 1025, 2048, 256),
         3584, Bucketizer!(FList, 2049, 3584, 512),
         4072 * 1024, AllocatorList!(
-            (n) => BitmappedBlock!(4096)(GCAllocator.instance.allocate(
-                max(n, 4072 * 1024)))),
+            (n) => BitmappedBlock!(4096)(
+                    cast(ubyte[])(GCAllocator.instance.allocate(
+                        max(n, 4072 * 1024))))),
         GCAllocator
     );
     A tuMalloc;

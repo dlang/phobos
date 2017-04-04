@@ -67,9 +67,9 @@ struct Region(ParentAllocator = NullAllocator,
     $(D parent.allocate(n)) returns $(D null), the region will be initialized
     as empty (correctly initialized but unable to allocate).
     */
-    this(void[] store)
+    this(ubyte[] store)
     {
-        store = store.roundUpToAlignment(alignment);
+        store = cast(ubyte[])(store.roundUpToAlignment(alignment));
         store = store[0 .. $.roundDownToAlignment(alignment)];
         assert(store.ptr.alignedAt(minAlign));
         assert(store.length % minAlign == 0);
@@ -85,7 +85,7 @@ struct Region(ParentAllocator = NullAllocator,
     static if (!is(ParentAllocator == NullAllocator))
     this(size_t n)
     {
-        this(parent.allocate(n.roundUpToAlignment(alignment)));
+        this(cast(ubyte[])(parent.allocate(n.roundUpToAlignment(alignment))));
     }
 
     /*
@@ -550,14 +550,14 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     // Reap with GC fallback.
     InSituRegion!(128 * 1024, 8) tmp3;
     FallbackAllocator!(BitmappedBlock!(64, 8), GCAllocator) r3;
-    r3.primary = BitmappedBlock!(64, 8)(tmp3.allocateAll());
+    r3.primary = BitmappedBlock!(64, 8)(cast(ubyte[])(tmp3.allocateAll()));
     const a3 = r3.allocate(103);
     assert(a3.length == 103);
 
     // Reap/GC with a freelist for small objects up to 16 bytes.
     InSituRegion!(128 * 1024, 64) tmp4;
     FreeList!(FallbackAllocator!(BitmappedBlock!(64, 64), GCAllocator), 0, 16) r4;
-    r4.parent.primary = BitmappedBlock!(64, 64)(tmp4.allocateAll());
+    r4.parent.primary = BitmappedBlock!(64, 64)(cast(ubyte[])(tmp4.allocateAll()));
     const a4 = r4.allocate(104);
     assert(a4.length == 104);
 }
