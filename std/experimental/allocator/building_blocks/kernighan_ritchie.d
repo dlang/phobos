@@ -311,7 +311,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
     n = Capacity desired. This constructor is defined only if $(D
     ParentAllocator) is not $(D NullAllocator).
     */
-    this(void[] b)
+    this(ubyte[] b)
     {
         if (b.length < Node.sizeof)
         {
@@ -338,7 +338,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
     this(size_t n)
     {
         assert(n > Node.sizeof);
-        this(parent.allocate(n));
+        this(cast(ubyte[])(parent.allocate(n)));
     }
 
     /// Ditto
@@ -751,7 +751,8 @@ it actually returns memory to the operating system when possible.
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.typecons : Ternary;
-    auto alloc = KRRegion!()(GCAllocator.instance.allocate(1024 * 1024));
+    auto alloc = KRRegion!()(
+                    cast(ubyte[])(GCAllocator.instance.allocate(1024 * 1024)));
     const store = alloc.allocate(KRRegion!().sizeof);
     auto p = cast(KRRegion!()* ) store.ptr;
     import std.conv : emplace;
@@ -783,7 +784,8 @@ it actually returns memory to the operating system when possible.
 @system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    auto alloc = KRRegion!()(GCAllocator.instance.allocate(1024 * 1024));
+    auto alloc = KRRegion!()(
+                    cast(ubyte[])(GCAllocator.instance.allocate(1024 * 1024)));
     auto p = alloc.allocateAll();
     assert(p.length == 1024 * 1024);
     alloc.deallocateAll();
