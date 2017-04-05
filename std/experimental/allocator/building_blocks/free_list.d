@@ -453,7 +453,7 @@ struct ContiguousFreeList(ParentAllocator,
     /// Alignment offered.
     enum uint alignment = (void*).alignof;
 
-    private void initialize(ubyte[] buffer, size_t itemSize = fl.max)
+    private void initialize(void[] buffer, size_t itemSize = fl.max)
     {
         assert(itemSize != unbounded && itemSize != chooseAtRuntime);
         assert(buffer.ptr.alignedAt(alignment));
@@ -497,14 +497,14 @@ struct ContiguousFreeList(ParentAllocator,
     initialized with $(D max).
     */
     static if (!stateSize!ParentAllocator)
-    this(ubyte[] buffer)
+    this(void[] buffer)
     {
         initialize(buffer);
     }
 
     /// ditto
     static if (stateSize!ParentAllocator)
-    this(ParentAllocator parent, ubyte[] buffer)
+    this(ParentAllocator parent, void[] buffer)
     {
         initialize(buffer);
         this.parent = SParent(parent);
@@ -514,14 +514,14 @@ struct ContiguousFreeList(ParentAllocator,
     static if (!stateSize!ParentAllocator)
     this(size_t bytes)
     {
-        initialize(cast(ubyte[])(ParentAllocator.instance.allocate(bytes)));
+        initialize(ParentAllocator.instance.allocate(bytes));
     }
 
     /// ditto
     static if (stateSize!ParentAllocator)
     this(ParentAllocator parent, size_t bytes)
     {
-        initialize(cast(ubyte[])(parent.allocate(bytes)));
+        initialize(parent.allocate(bytes));
         this.parent = SParent(parent);
     }
 
@@ -532,7 +532,7 @@ struct ContiguousFreeList(ParentAllocator,
     {
         static if (maxSize == chooseAtRuntime) fl.max = max;
         static if (minSize == chooseAtRuntime) fl.min = max;
-        initialize(cast(ubyte[])(parent.allocate(bytes)), max);
+        initialize(parent.allocate(bytes), max);
     }
 
     /// ditto
@@ -542,7 +542,7 @@ struct ContiguousFreeList(ParentAllocator,
     {
         static if (maxSize == chooseAtRuntime) fl.max = max;
         static if (minSize == chooseAtRuntime) fl.min = max;
-        initialize(cast(ubyte[])(parent.allocate(bytes)), max);
+        initialize(parent.allocate(bytes), max);
         this.parent = SParent(parent);
     }
 
@@ -554,7 +554,7 @@ struct ContiguousFreeList(ParentAllocator,
     {
         static if (maxSize == chooseAtRuntime) fl.max = max;
         fl.min = min;
-        initialize(cast(ubyte[])(parent.allocate(bytes)), max);
+        initialize(parent.allocate(bytes), max);
         static if (stateSize!ParentAllocator)
             this.parent = SParent(parent);
     }
@@ -567,7 +567,7 @@ struct ContiguousFreeList(ParentAllocator,
     {
         static if (maxSize == chooseAtRuntime) fl.max = max;
         fl.min = min;
-        initialize(cast(ubyte[])(parent.allocate(bytes)), max);
+        initialize(parent.allocate(bytes), max);
         static if (stateSize!ParentAllocator)
             this.parent = SParent(parent);
     }
@@ -690,7 +690,7 @@ struct ContiguousFreeList(ParentAllocator,
         : NullAllocator;
     import std.typecons : Ternary;
     alias A = ContiguousFreeList!(NullAllocator, 0, 64);
-    auto a = A(new ubyte[1024]);
+    auto a = A(new void[1024]);
 
     assert(a.empty == Ternary.yes);
 
