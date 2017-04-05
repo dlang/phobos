@@ -357,6 +357,25 @@ struct Region(ParentAllocator = NullAllocator,
     // Destructor will free the memory
 }
 
+@system unittest
+{
+    import core.memory: GC;
+    import std.experimental.allocator: make;
+
+    struct S { int* p; }
+    auto buf = new void[](S.sizeof);
+    auto r = Region!(NullAllocator, 1)(buf);
+    S* s = r.make!S(new int);
+    *(*s).p = 42;
+    assert(*(*s).p);
+    // clear stack for the GC collection
+    static void stomp() { ubyte[4096] a = 0; }
+    stomp();
+    GC.collect();
+    *(new int) = 13;
+    assert(*(*s).p != 13);
+}
+
 /**
 
 $(D InSituRegion) is a convenient region that carries its storage within itself
