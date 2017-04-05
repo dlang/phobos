@@ -359,8 +359,8 @@ struct Region(ParentAllocator = NullAllocator,
 
 @system unittest
 {
-    import core.memory: GC;
-    import std.experimental.allocator: make;
+    import core.memory : GC;
+    import std.experimental.allocator : make;
 
     struct S { int* p; }
     auto buf = new void[](S.sizeof);
