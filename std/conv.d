@@ -1945,7 +1945,7 @@ if (isInputRange!Source &&
             }
 
             static if (isNarrowString!Source)
-                source = s.castUTF;
+                source = cast(Source) s;
 
             return result;
         }
@@ -2102,13 +2102,13 @@ if (isSomeChar!(ElementType!Source) &&
                 v = -v;
 
             static if (isNarrowString!Source)
-                s = source.castUTF;
+                s = cast(Source) source;
 
             return v;
         }
 Lerr:
         static if (isNarrowString!Source)
-            throw convError!(Source, Target)(source.castUTF);
+            throw convError!(Source, Target)(cast(Source) source);
         else
             throw convError!(Source, Target)(source);
     }
@@ -2432,7 +2432,7 @@ body
     } while (!s.empty);
 
     static if (isNarrowString!Source)
-        source = s.castUTF;
+        source = cast(Source) s;
 
     return v;
 }
@@ -2638,7 +2638,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                 // 'inf'
                 p.popFront();
                 static if (isNarrowString!Source)
-                    source = p.castUTF;
+                    source = cast(Source) p;
                 return sign ? -Target.infinity : Target.infinity;
             }
         }
@@ -2654,7 +2654,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         if (p.empty)
         {
             static if (isNarrowString!Source)
-                source = p.castUTF;
+                source = cast(Source) p;
             return sign ? -0.0 : 0.0;
         }
 
@@ -2878,7 +2878,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
             // skip past the last 'n'
             p.popFront();
             static if (isNarrowString!Source)
-                source = p.castUTF;
+                source = cast(Source) p;
             return typeof(return).nan;
         }
 
@@ -2992,7 +2992,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 
   L1:
     static if (isNarrowString!Source)
-        source = p.castUTF;
+        source = cast(Source) p;
     return sign ? -ldval : ldval;
 }
 
@@ -3924,19 +3924,6 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
     !isSomeString!Target && !isSomeChar!Target)
 {
     return parse!Target(s);
-}
-
-// function for https://issues.dlang.org/show_bug.cgi?id=17282
-// exact copy of std.string.assumeUTF but does no checking
-// even in debug mode
-private auto castUTF(T)(T[] arr)
-if (staticIndexOf!(Unqual!T, ubyte, ushort, uint) != -1)
-{
-    import std.traits : ModifyTypePreservingTQ;
-    import std.utf : validate;
-    alias ToUTFType(U) = AliasSeq!(char, wchar, dchar)[U.sizeof / 2];
-    auto asUTF = cast(ModifyTypePreservingTQ!(ToUTFType, T)[])arr;
-    return asUTF;
 }
 
 
