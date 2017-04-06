@@ -1922,7 +1922,7 @@ if (isInputRange!Source &&
 
     static if (isNarrowString!Source)
     {
-        import std.string : representation, assumeUTF;
+        import std.string : representation;
         auto s = source.representation;
     }
     else
@@ -1945,7 +1945,7 @@ if (isInputRange!Source &&
             }
 
             static if (isNarrowString!Source)
-                source = s.assumeUTF;
+                source = cast(Source) s;
 
             return result;
         }
@@ -2037,7 +2037,7 @@ if (isSomeChar!(ElementType!Source) &&
 
         static if (isNarrowString!Source)
         {
-            import std.string : representation, assumeUTF;
+            import std.string : representation;
             auto source = s.representation;
         }
         else
@@ -2102,13 +2102,13 @@ if (isSomeChar!(ElementType!Source) &&
                 v = -v;
 
             static if (isNarrowString!Source)
-                s = source.assumeUTF;
+                s = cast(Source) source;
 
             return v;
         }
 Lerr:
         static if (isNarrowString!Source)
-            throw convError!(Source, Target)(source.assumeUTF);
+            throw convError!(Source, Target)(cast(Source) source);
         else
             throw convError!(Source, Target)(source);
     }
@@ -2395,7 +2395,7 @@ body
 
     static if (isNarrowString!Source)
     {
-        import std.string : representation, assumeUTF;
+        import std.string : representation;
         auto s = source.representation;
     }
     else
@@ -2432,7 +2432,7 @@ body
     } while (!s.empty);
 
     static if (isNarrowString!Source)
-        source = s.assumeUTF;
+        source = cast(Source) s;
 
     return v;
 }
@@ -2471,6 +2471,12 @@ body
     import std.exception;
     foreach (s; ["fff", "123"])
         assertThrown!ConvOverflowException(s.parse!ubyte(16));
+}
+
+@safe pure unittest // bugzilla 17282
+{
+    auto str = "0=\x00\x02\x55\x40&\xff\xf0\n\x00\x04\x55\x40\xff\xf0~4+10\n";
+    assert(parse!uint(str) == 0);
 }
 
 /**
@@ -2580,7 +2586,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 
     static if (isNarrowString!Source)
     {
-        import std.string : representation, assumeUTF;
+        import std.string : representation;
         auto p = source.representation;
     }
     else
@@ -2632,7 +2638,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                 // 'inf'
                 p.popFront();
                 static if (isNarrowString!Source)
-                    source = p.assumeUTF;
+                    source = cast(Source) p;
                 return sign ? -Target.infinity : Target.infinity;
             }
         }
@@ -2648,7 +2654,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         if (p.empty)
         {
             static if (isNarrowString!Source)
-                source = p.assumeUTF;
+                source = cast(Source) p;
             return sign ? -0.0 : 0.0;
         }
 
@@ -2872,7 +2878,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
             // skip past the last 'n'
             p.popFront();
             static if (isNarrowString!Source)
-                source = p.assumeUTF;
+                source = cast(Source) p;
             return typeof(return).nan;
         }
 
@@ -2986,7 +2992,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 
   L1:
     static if (isNarrowString!Source)
-        source = p.assumeUTF;
+        source = cast(Source) p;
     return sign ? -ldval : ldval;
 }
 
