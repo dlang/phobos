@@ -6534,7 +6534,7 @@ immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args) if (isSomeChar
  */
 char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
 {
-    import core.exception : onRangeError, RangeError;
+    import core.exception : RangeError;
     import std.utf : encode;
     import std.format : formattedWrite, FormatException;
 
