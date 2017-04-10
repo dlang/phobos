@@ -7098,13 +7098,23 @@ private real polyImpl(real x, in real[] A) @trusted pure nothrow @nogc
 
 
 /**
-   Computes whether $(D lhs) is approximately equal to $(D rhs)
-   admitting a maximum relative difference $(D maxRelDiff) and a
-   maximum absolute difference $(D maxAbsDiff).
+   Computes whether two values are approximately equal, admitting a maximum
+   relative difference, and a maximum absolute difference.
 
-   If the two inputs are ranges, $(D approxEqual) returns true if and
-   only if the ranges have the same number of elements and if $(D
-   approxEqual) evaluates to $(D true) for each pair of elements.
+   Params:
+        lhs = First item to compare.
+        rhs = Second item to compare.
+        maxRelDiff = Maximum allowable difference relative to `rhs`.
+        maxAbsDiff = Maximum absolute difference.
+
+   Returns:
+       `true` if the two items are approximately equal under either criterium.
+       If one item is a range, and the other is a single value, then the result
+       is the logical and-ing of calling `approxEqual` on each element of the
+       ranged item against the single item. If both items are ranges, then
+       `approxEqual` returns `true` if and only if the ranges have the same
+       number of elements and if `approxEqual` evaluates to `true` for each
+       pair of elements.
  */
 bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
 {
@@ -7142,8 +7152,13 @@ bool approxEqual(T, U, V)(T lhs, U rhs, V maxRelDiff, V maxAbsDiff = 1e-5)
     {
         static if (isInputRange!U)
         {
-            // lhs is number, rhs is array
-            return approxEqual(rhs, lhs, maxRelDiff, maxAbsDiff);
+            // lhs is number, rhs is range
+            for (; !rhs.empty; rhs.popFront())
+            {
+                if (!approxEqual(lhs, rhs.front, maxRelDiff, maxAbsDiff))
+                    return false;
+            }
+            return true;
         }
         else static if (isIntegral!T || isIntegral!U)
         {
@@ -7283,6 +7298,18 @@ deprecated("Phobos1 math functions are deprecated, use isInfinity ") alias isinf
     // issue 6381: floor/ceil should be usable in pure function.
     auto x = floor(1.2);
     auto y = ceil(1.2);
+}
+
+@safe pure nothrow unittest
+{
+    // relative comparison depends on rhs, make sure proper side is used when
+    // comparing range to single value. Based on bugzilla issue 15763
+    auto a = [2e-3 - 1e-5];
+    auto b = 2e-3 + 1e-5;
+    assert(a[0].approxEqual(b));
+    assert(!b.approxEqual(a[0]));
+    assert(a.approxEqual(b));
+    assert(!b.approxEqual(a));
 }
 
 /***********************************
