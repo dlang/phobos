@@ -157,7 +157,6 @@ SRC_STD_3c= \
 	std\concurrencybase.d
 
 SRC_STD_3d= \
-	std\datetime.d \
 	std\bitmanip.d \
 	std\typecons.d
 
@@ -220,6 +219,16 @@ SRC_STD_CONTAINER= \
 	std\container\slist.d \
 	std\container\util.d \
 	std\container\package.d
+
+SRC_STD_DATETIME= \
+	std\datetime\common.d \
+	std\datetime\date.d \
+	std\datetime\datetime.d \
+	std\datetime\interval.d \
+	std\datetime\package.d \
+	std\datetime\systime.d \
+	std\datetime\timeofday.d \
+	std\datetime\timezone.d
 
 SRC_STD_DIGEST= \
 	std\digest\crc.d \
@@ -364,6 +373,7 @@ SRC_TO_COMPILE= \
 	$(SRC_STD) \
 	$(SRC_STD_ALGO) \
 	$(SRC_STD_CONTAINER) \
+	$(SRC_STD_DATETIME) \
 	$(SRC_STD_DIGEST) \
 	$(SRC_STD_NET) \
 	$(SRC_STD_RANGE) \
@@ -470,6 +480,13 @@ DOCS= \
 	$(DOC)\std_digest_hmac.html \
 	$(DOC)\std_csv.html \
 	$(DOC)\std_datetime.html \
+	$(DOC)\std_datetime_common.html \
+	$(DOC)\std_datetime_date.html \
+	$(DOC)\std_datetime_datetime.html \
+	$(DOC)\std_datetime_interval.html \
+	$(DOC)\std_datetime_systime.html \
+	$(DOC)\std_datetime_timeofday.html \
+	$(DOC)\std_datetime_timezone.html \
 	$(DOC)\std_demangle.html \
 	$(DOC)\std_encoding.html \
 	$(DOC)\std_exception.html \
@@ -601,7 +618,7 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3b.obj $(SRC_STD_3b)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3c.obj $(SRC_STD_3c)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3d.obj $(SRC_STD_3d)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3d.obj $(SRC_STD_3d) $(SRC_STD_DATETIME)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest4.obj $(SRC_STD_4) $(SRC_STD_DIGEST)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5a.obj $(SRC_STD_ALGO_1)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5b.obj $(SRC_STD_ALGO_2)
@@ -800,8 +817,29 @@ $(DOC)\std_range_interfaces.html : $(STDDOC) std\range\interfaces.d
 $(DOC)\std_csv.html : $(STDDOC) std\csv.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_csv.html $(STDDOC) std\csv.d
 
-$(DOC)\std_datetime.html : $(STDDOC) std\datetime.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime.html $(STDDOC) std\datetime.d
+$(DOC)\std_datetime.html : $(STDDOC) std\datetime\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime.html $(STDDOC) std\datetime\package.d
+
+$(DOC)\std_datetime_common.html : $(STDDOC) std\datetime\common.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_common.html $(STDDOC) std\datetime\common.d
+
+$(DOC)\std_datetime_date.html : $(STDDOC) std\datetime\date.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_date.html $(STDDOC) std\datetime\date.d
+
+$(DOC)\std_datetime_datetime.html : $(STDDOC) std\datetime\datetime.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_datetime.html $(STDDOC) std\datetime\datetime.d
+
+$(DOC)\std_datetime_interval.html : $(STDDOC) std\datetime\interval.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_interval.html $(STDDOC) std\datetime\interval.d
+
+$(DOC)\std_datetime_systime.html : $(STDDOC) std\datetime\systime.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_systime.html $(STDDOC) std\datetime\systime.d
+
+$(DOC)\std_datetime_timeofday.html : $(STDDOC) std\datetime\timeofday.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_timeofday.html $(STDDOC) std\datetime\timeofday.d
+
+$(DOC)\std_datetime_timezone.html : $(STDDOC) std\datetime\timezone.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_timezone.html $(STDDOC) std\datetime\timezone.d
 
 $(DOC)\std_demangle.html : $(STDDOC) std\demangle.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_demangle.html $(STDDOC) std\demangle.d
