@@ -983,15 +983,15 @@ pure nothrow @safe unittest
     a.i = 42;
     assert(a.i == 42);
 
-    Final!int i = 42;
-    static assert(!__traits(compiles, i = 24));
-    static assert(!__traits(compiles, --i));
-    static assert(!__traits(compiles, ++i));
-    assert(i == 42);
-    int iCopy = i;
-    assert(iCopy == 42);
-    iCopy = -i; // non-mutating unary operators must work
-    assert(iCopy == -42);
+    Final!int f = 42;
+    static assert(!__traits(compiles, f = 24));
+    static assert(!__traits(compiles, --f));
+    static assert(!__traits(compiles, ++f));
+    assert(f == 42);
+    int fCopy = f;
+    assert(fCopy == 42);
+    fCopy = -f; // non-mutating unary operators must work
+    assert(fCopy == -42);
 
     static struct S
     {

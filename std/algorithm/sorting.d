@@ -2021,8 +2021,8 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
         bool proxySwapCalled;
         struct S
         {
-            int i;
-            alias i this;
+            int m;
+            alias m this;
             void proxySwap(ref S other) { swap(i, other.i); proxySwapCalled = true; }
             @disable void opAssign(S value);
         }

@@ -26,10 +26,6 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
     version (StdDdoc)
     {
         /**
-        The alignment offered is the minimum of the two allocators' alignment.
-        */
-        enum uint alignment;
-        /**
         This method is defined only if at least one of the allocators defines
         it. The good allocation size is obtained from $(D SmallAllocator) if $(D
         s <= threshold), or $(D LargeAllocator) otherwise. (If one of the
@@ -122,6 +118,9 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
             else return _large;
     }
 
+    /**
+    The alignment offered is the minimum of the two allocators' alignment.
+    */
     enum uint alignment = min(SmallAllocator.alignment,
         LargeAllocator.alignment);
 
