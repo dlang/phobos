@@ -282,7 +282,7 @@ and $(D length == capacity), throws an exception.
             import std.traits : isDynamicArray;
             static if (isDynamicArray!Store)
             {
-                if(length == _store.length)
+                if (length == _store.length)
                     _store.length = (length < 6 ? 8 : length * 3 / 2);
                 _store[_length] = value;
             }
