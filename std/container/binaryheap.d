@@ -282,10 +282,8 @@ and $(D length == capacity), throws an exception.
             import std.traits : isDynamicArray;
             static if (isDynamicArray!Store)
             {
-                if (_store.length == 0)
-                    _store.length = 8;
-                else if (length == _store.length)
-                    _store.length = length * 3 / 2;
+                if (length == _store.length)
+                    _store.length = (length < 6 ? 8 : length * 3 / 2);
                 _store[_length] = value;
             }
             else
@@ -585,4 +583,13 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
 
     assert(equal(heap, [ 5, 5, 4, 4, 3, 3, 2, 2, 1, 1]));
     assert(equal(b, [10, 9, 8, 7, 6, 6, 7, 8, 9, 10]));
+}
+
+@system unittest // Issue 17314
+{
+    import std.algorithm.comparison : equal;
+    int[] a = [5];
+    auto heap = heapify(a);
+    heap.insert(6);
+    assert(equal(heap, [6, 5]));
 }
