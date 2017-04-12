@@ -47,39 +47,10 @@ CharMatcher[CodepointSet] matcherCache;
     }
 }
 
-@trusted auto memoizeExpr(string expr)()
-{
-    if (__ctfe)
-        return mixin(expr);
-    alias T = typeof(mixin(expr));
-    static T slot;
-    static bool initialized;
-    if (!initialized)
-    {
-        slot =  mixin(expr);
-        initialized = true;
-    }
-    return slot;
-}
-
-//property for \w character class
-@property CodepointSet wordCharacter()
-{
-    return memoizeExpr!("unicode.Alphabetic | unicode.Mn | unicode.Mc
-        | unicode.Me | unicode.Nd | unicode.Pc")();
-}
-
-@property CharMatcher wordMatcher()
-{
-    return memoizeExpr!("CharMatcher(wordCharacter)")();
-}
+static CharMatcher wordMatcher = CharMatcher(wordCharacter);
 
 // some special Unicode white space characters
 private enum NEL = '\u0085', LS = '\u2028', PS = '\u2029';
-
-// Characters that need escaping in string posed as regular expressions
-alias Escapables = AliasSeq!('[', ']', '\\', '^', '$', '.', '|', '?', ',', '-',
-    ';', ':', '#', '&', '%', '/', '<', '>', '`',  '*', '+', '(', ')', '{', '}',  '~');
 
 //Regular expression engine/parser options:
 // global - search  all nonoverlapping matches in input

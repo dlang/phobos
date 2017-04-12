@@ -4,10 +4,10 @@
 */
 module std.regex.internal.parser;
 
-static import std.ascii;
+import std.regex.internal.ir;
 import std.range.primitives, std.uni, std.meta,
     std.traits, std.typecons, std.exception;
-import std.regex.internal.ir;
+static import std.ascii;
 
 // package relevant info from parser into a regex object
 auto makeRegex(S, CG)(Parser!(S, CG) p)
@@ -155,98 +155,6 @@ if (isSomeString!S)
         stack.pop();
     }
     code[] = rev[];
-}
-
-//test if a given string starts with hex number of maxDigit that's a valid codepoint
-//returns it's value and skips these maxDigit chars on success, throws on failure
-dchar parseUniHex(Char)(ref Char[] str, size_t maxDigit)
-{
-    //std.conv.parse is both @system and bogus
-    enforce(str.length >= maxDigit,"incomplete escape sequence");
-    uint val;
-    for (int k = 0; k < maxDigit; k++)
-    {
-        immutable current = str[k];//accepts ascii only, so it's OK to index directly
-        if ('0' <= current && current <= '9')
-            val = val * 16 + current - '0';
-        else if ('a' <= current && current <= 'f')
-            val = val * 16 + current -'a' + 10;
-        else if ('A' <= current && current <= 'F')
-            val = val * 16 + current - 'A' + 10;
-        else
-            throw new Exception("invalid escape sequence");
-    }
-    enforce(val <= 0x10FFFF, "invalid codepoint");
-    str = str[maxDigit..$];
-    return val;
-}
-
-@system unittest //BUG canFind is system
-{
-    import std.algorithm.searching : canFind;
-    string[] non_hex = [ "000j", "000z", "FffG", "0Z"];
-    string[] hex = [ "01", "ff", "00af", "10FFFF" ];
-    int[] value = [ 1, 0xFF, 0xAF, 0x10FFFF ];
-    foreach (v; non_hex)
-        assert(collectException(parseUniHex(v, v.length)).msg
-          .canFind("invalid escape sequence"));
-    foreach (i, v; hex)
-        assert(parseUniHex(v, v.length) == value[i]);
-    string over = "0011FFFF";
-    assert(collectException(parseUniHex(over, over.length)).msg
-      .canFind("invalid codepoint"));
-}
-
-auto caseEnclose(CodepointSet set)
-{
-    auto cased = set & unicode.LC;
-    foreach (dchar ch; cased.byCodepoint)
-    {
-        foreach (c; simpleCaseFoldings(ch))
-            set |= c;
-    }
-    return set;
-}
-
-/+
-    fetch codepoint set corresponding to a name (InBlock or binary property)
-+/
-@trusted CodepointSet getUnicodeSet(in char[] name, bool negated,  bool casefold)
-{
-    CodepointSet s = unicode(name);
-    //FIXME: caseEnclose for new uni as Set | CaseEnclose(SET && LC)
-    if (casefold)
-       s = caseEnclose(s);
-    if (negated)
-        s = s.inverted;
-    return s;
-}
-
-//basic stack, just in case it gets used anywhere else then Parser
-@trusted struct Stack(T)
-{
-    T[] data;
-    @property bool empty(){ return data.empty; }
-
-    @property size_t length(){ return data.length; }
-
-    void push(T val){ data ~= val;  }
-
-    T pop()
-    {
-        assert(!empty);
-        auto val = data[$ - 1];
-        data = data[0 .. $ - 1];
-        if (!__ctfe)
-            cast(void) data.assumeSafeAppend();
-        return val;
-    }
-
-    @property ref T top()
-    {
-        assert(!empty);
-        return data[$ - 1];
-    }
 }
 
 struct CodeGen
@@ -688,15 +596,6 @@ if (isForwardRange!R && is(ElementType!R : dchar))
         return r;
     }
 
-    //parse control code of form \cXXX, c assumed to be the current symbol
-    dchar parseControlCode()
-    {
-        enforce(next(), "Unfinished escape sequence");
-        enforce(('a' <= current && current <= 'z') || ('A' <= current && current <= 'Z'),
-            "Only letters are allowed after \\c");
-        return current & 0x1f;
-    }
-
     //
     @trusted void parseFlags(S)(S flags)
     {//@@@BUG@@@ text is @system
@@ -986,430 +885,16 @@ if (isForwardRange!R && is(ElementType!R : dchar))
         }
     }
 
-
-
-    //CodepointSet operations relatively in order of priority
-    enum Operator:uint {
-        Open = 0, Negate,  Difference, SymDifference, Intersection, Union, None
-    }
-
-    //parse unit of CodepointSet spec, most notably escape sequences and char ranges
-    //also fetches next set operation
-    Tuple!(CodepointSet,Operator) parseCharTerm()
-    {
-        enum State{ Start, Char, Escape, CharDash, CharDashEscape,
-            PotentialTwinSymbolOperator }
-        Operator op = Operator.None;
-        dchar last;
-        CodepointSet set;
-        State state = State.Start;
-
-        static void addWithFlags(ref CodepointSet set, uint ch, uint re_flags)
-        {
-            if (re_flags & RegexOption.casefold)
-            {
-                auto range = simpleCaseFoldings(ch);
-                foreach (v; range)
-                    set |= v;
-            }
-            else
-                set |= ch;
-        }
-
-        static Operator twinSymbolOperator(dchar symbol)
-        {
-            switch (symbol)
-            {
-            case '|':
-                return Operator.Union;
-            case '-':
-                return Operator.Difference;
-            case '~':
-                return Operator.SymDifference;
-            case '&':
-                return Operator.Intersection;
-            default:
-                assert(false);
-            }
-        }
-
-        L_CharTermLoop:
-        for (;;)
-        {
-            final switch (state)
-            {
-            case State.Start:
-                switch (current)
-                {
-                case '|':
-                case '-':
-                case '~':
-                case '&':
-                    state = State.PotentialTwinSymbolOperator;
-                    last = current;
-                    break;
-                case '[':
-                    op = Operator.Union;
-                    goto case;
-                case ']':
-                    break L_CharTermLoop;
-                case '\\':
-                    state = State.Escape;
-                    break;
-                default:
-                    state = State.Char;
-                    last = current;
-                }
-                break;
-            case State.Char:
-                // xxx last current xxx
-                switch (current)
-                {
-                case '|':
-                case '~':
-                case '&':
-                    // then last is treated as normal char and added as implicit union
-                    state = State.PotentialTwinSymbolOperator;
-                    addWithFlags(set, last, re_flags);
-                    last = current;
-                    break;
-                case '-': // still need more info
-                    state = State.CharDash;
-                    break;
-                case '\\':
-                    set |= last;
-                    state = State.Escape;
-                    break;
-                case '[':
-                    op = Operator.Union;
-                    goto case;
-                case ']':
-                    addWithFlags(set, last, re_flags);
-                    break L_CharTermLoop;
-                default:
-                    state = State.Char;
-                    addWithFlags(set, last, re_flags);
-                    last = current;
-                }
-                break;
-            case State.PotentialTwinSymbolOperator:
-                // xxx last current xxxx
-                // where last = [|-&~]
-                if (current == last)
-                {
-                    op = twinSymbolOperator(last);
-                    next();//skip second twin char
-                    break L_CharTermLoop;
-                }
-                goto case State.Char;
-            case State.Escape:
-                // xxx \ current xxx
-                switch (current)
-                {
-                case 'f':
-                    last = '\f';
-                    state = State.Char;
-                    break;
-                case 'n':
-                    last = '\n';
-                    state = State.Char;
-                    break;
-                case 'r':
-                    last = '\r';
-                    state = State.Char;
-                    break;
-                case 't':
-                    last = '\t';
-                    state = State.Char;
-                    break;
-                case 'v':
-                    last = '\v';
-                    state = State.Char;
-                    break;
-                case 'c':
-                    last = parseControlCode();
-                    state = State.Char;
-                    break;
-                foreach (val; Escapables)
-                {
-                case val:
-                }
-                    last = current;
-                    state = State.Char;
-                    break;
-                case 'p':
-                    set.add(parseUnicodePropertySpec(false));
-                    state = State.Start;
-                    continue L_CharTermLoop; //next char already fetched
-                case 'P':
-                    set.add(parseUnicodePropertySpec(true));
-                    state = State.Start;
-                    continue L_CharTermLoop; //next char already fetched
-                case 'x':
-                    last = parseUniHex(pat, 2);
-                    state = State.Char;
-                    break;
-                case 'u':
-                    last = parseUniHex(pat, 4);
-                    state = State.Char;
-                    break;
-                case 'U':
-                    last = parseUniHex(pat, 8);
-                    state = State.Char;
-                    break;
-                case 'd':
-                    set.add(unicode.Nd);
-                    state = State.Start;
-                    break;
-                case 'D':
-                    set.add(unicode.Nd.inverted);
-                    state = State.Start;
-                    break;
-                case 's':
-                    set.add(unicode.White_Space);
-                    state = State.Start;
-                    break;
-                case 'S':
-                    set.add(unicode.White_Space.inverted);
-                    state = State.Start;
-                    break;
-                case 'w':
-                    set.add(wordCharacter);
-                    state = State.Start;
-                    break;
-                case 'W':
-                    set.add(wordCharacter.inverted);
-                    state = State.Start;
-                    break;
-                default:
-                    if (current >= privateUseStart && current <= privateUseEnd)
-                       enforce(false, "no matching ']' found while parsing character class");
-                    enforce(false, "invalid escape sequence");
-                }
-                break;
-            case State.CharDash:
-                // xxx last - current xxx
-                switch (current)
-                {
-                case '[':
-                    op = Operator.Union;
-                    goto case;
-                case ']':
-                    //means dash is a single char not an interval specifier
-                    addWithFlags(set, last, re_flags);
-                    addWithFlags(set, '-', re_flags);
-                    break L_CharTermLoop;
-                 case '-'://set Difference again
-                    addWithFlags(set, last, re_flags);
-                    op = Operator.Difference;
-                    next();//skip '-'
-                    break L_CharTermLoop;
-                case '\\':
-                    state = State.CharDashEscape;
-                    break;
-                default:
-                    enforce(last <= current, "inverted range");
-                    if (re_flags & RegexOption.casefold)
-                    {
-                        for (uint ch = last; ch <= current; ch++)
-                            addWithFlags(set, ch, re_flags);
-                    }
-                    else
-                        set.add(last, current + 1);
-                    state = State.Start;
-                }
-                break;
-            case State.CharDashEscape:
-            //xxx last - \ current xxx
-                uint end;
-                switch (current)
-                {
-                case 'f':
-                    end = '\f';
-                    break;
-                case 'n':
-                    end = '\n';
-                    break;
-                case 'r':
-                    end = '\r';
-                    break;
-                case 't':
-                    end = '\t';
-                    break;
-                case 'v':
-                    end = '\v';
-                    break;
-                foreach (val; Escapables)
-                {
-                case val:
-                }
-                    end = current;
-                    break;
-                case 'c':
-                    end = parseControlCode();
-                    break;
-                case 'x':
-                    end = parseUniHex(pat, 2);
-                    break;
-                case 'u':
-                    end = parseUniHex(pat, 4);
-                    break;
-                case 'U':
-                    end = parseUniHex(pat, 8);
-                    break;
-                default:
-                    if (current >= privateUseStart && current <= privateUseEnd)
-                       enforce(false, "no matching ']' found while parsing character class");
-                    error("invalid escape sequence");
-                }
-                // Lookahead to check if it's a \T
-                // where T is sub-pattern terminator in multi-pattern scheme
-                if (end == '\\' && !pat.empty)
-                {
-                    if (pat.front >= privateUseStart && pat.front <= privateUseEnd)
-                        enforce(false, "invalid escape sequence");
-                }
-                enforce(last <= end,"inverted range");
-                set.add(last, end + 1);
-                state = State.Start;
-                break;
-            }
-            enforce(next(), "unexpected end of CodepointSet");
-        }
-        return tuple(set, op);
-    }
-
-    alias ValStack = Stack!(CodepointSet);
-    alias OpStack = Stack!(Operator);
-
     //parse and store IR for CodepointSet
     void parseCharset()
     {
         const save = re_flags;
         re_flags &= ~RegexOption.freeform; // stop ignoring whitespace if we did
-        parseCharsetImpl();
+        bool casefold = cast(bool)(re_flags & RegexOption.casefold);
+        g.charsetToIr(unicode.parseSet(this, casefold));
         re_flags = save;
-        // Last next() in parseCharsetImp is executed w/o freeform flag
+        // Last next() in parseCharset is executed w/o freeform flag
         if (re_flags & RegexOption.freeform) skipSpace();
-    }
-
-    void parseCharsetImpl()
-    {
-        ValStack vstack;
-        OpStack opstack;
-        import std.functional : unaryFun;
-        //
-        static bool apply(Operator op, ref ValStack stack)
-        {
-            switch (op)
-            {
-            case Operator.Negate:
-                enforce(!stack.empty, "no operand for '^'");
-                stack.top = stack.top.inverted;
-                break;
-            case Operator.Union:
-                auto s = stack.pop();//2nd operand
-                enforce(!stack.empty, "no operand for '||'");
-                stack.top.add(s);
-                break;
-            case Operator.Difference:
-                auto s = stack.pop();//2nd operand
-                enforce(!stack.empty, "no operand for '--'");
-                stack.top.sub(s);
-                break;
-            case Operator.SymDifference:
-                auto s = stack.pop();//2nd operand
-                enforce(!stack.empty, "no operand for '~~'");
-                stack.top ~= s;
-                break;
-            case Operator.Intersection:
-                auto s = stack.pop();//2nd operand
-                enforce(!stack.empty, "no operand for '&&'");
-                stack.top.intersect(s);
-                break;
-            default:
-                return false;
-            }
-            return true;
-        }
-        static bool unrollWhile(alias cond)(ref ValStack vstack, ref OpStack opstack)
-        {
-            while (cond(opstack.top))
-            {
-                if (!apply(opstack.pop(),vstack))
-                    return false;//syntax error
-                if (opstack.empty)
-                    return false;
-            }
-            return true;
-        }
-
-        L_CharsetLoop:
-        do
-        {
-            switch (current)
-            {
-            case '[':
-                opstack.push(Operator.Open);
-                enforce(next(), "unexpected end of character class");
-                if (current == '^')
-                {
-                    opstack.push(Operator.Negate);
-                    enforce(next(), "unexpected end of character class");
-                }
-                else if (current == ']') // []...] is special cased
-                {
-                    enforce(next(), "wrong character set");
-                    auto pair = parseCharTerm();
-                    pair[0].add(']', ']'+1);
-                    if (pair[1] != Operator.None)
-                    {
-                        if (opstack.top == Operator.Union)
-                            unrollWhile!(unaryFun!"a == a.Union")(vstack, opstack);
-                        opstack.push(pair[1]);
-                    }
-                    vstack.push(pair[0]);
-                }
-                break;
-            case ']':
-                enforce(unrollWhile!(unaryFun!"a != a.Open")(vstack, opstack),
-                    "character class syntax error");
-                enforce(!opstack.empty, "unmatched ']'");
-                opstack.pop();
-                if (!next() || opstack.empty)
-                    break L_CharsetLoop;
-                auto pair  = parseCharTerm();
-                if (!pair[0].empty)//not only operator e.g. -- or ~~
-                {
-                    vstack.top.add(pair[0]);//apply union
-                }
-                if (pair[1] != Operator.None)
-                {
-                    if (opstack.top == Operator.Union)
-                        unrollWhile!(unaryFun!"a == a.Union")(vstack, opstack);
-                    opstack.push(pair[1]);
-                }
-                break;
-            //
-            default://yet another pair of term(op)?
-                auto pair = parseCharTerm();
-                if (pair[1] != Operator.None)
-                {
-                    if (opstack.top == Operator.Union)
-                        unrollWhile!(unaryFun!"a == a.Union")(vstack, opstack);
-                    opstack.push(pair[1]);
-                }
-                vstack.push(pair[0]);
-            }
-        }while (!empty || !opstack.empty);
-        while (!opstack.empty)
-        {
-            enforce(opstack.top != Operator.Open,
-                "no matching ']' found while parsing character class");
-            apply(opstack.pop(), vstack);
-        }
-        assert(vstack.length == 1);
-        g.charsetToIr(vstack.top);
     }
 
     //parse and generate IR for escape stand alone escape sequence
@@ -1451,8 +936,9 @@ if (isForwardRange!R && is(ElementType!R : dchar))
             g.charsetToIr(wordCharacter.inverted);
             break;
         case 'p': case 'P':
-            auto CodepointSet = parseUnicodePropertySpec(current == 'P');
-            g.charsetToIr(CodepointSet);
+            bool casefold = cast(bool)(re_flags & RegexOption.casefold);
+            auto set = unicode.parsePropertySpec(this, current == 'P', casefold);
+            g.charsetToIr(set);
             break;
         case 'x':
             immutable code = parseUniHex(pat, 2);
@@ -1465,7 +951,7 @@ if (isForwardRange!R && is(ElementType!R : dchar))
             g.put(Bytecode(IR.Char, code));
             break;
         case 'c': //control codes
-            Bytecode code = Bytecode(IR.Char, parseControlCode());
+            Bytecode code = Bytecode(IR.Char, unicode.parseControlCode(this));
             next();
             g.put(code);
             break;
@@ -1513,34 +999,6 @@ if (isForwardRange!R && is(ElementType!R : dchar))
             next();
             g.put(op);
         }
-    }
-
-    //parse and return a CodepointSet for \p{...Property...} and \P{...Property..},
-    //\ - assumed to be processed, p - is current
-    CodepointSet parseUnicodePropertySpec(bool negated)
-    {
-        enum MAX_PROPERTY = 128;
-        char[MAX_PROPERTY] result;
-        uint k = 0;
-        enforce(next(), "eof parsing unicode property spec");
-        if (current == '{')
-        {
-            while (k < MAX_PROPERTY && next() && current !='}' && current !=':')
-                if (current != '-' && current != ' ' && current != '_')
-                    result[k++] = cast(char) std.ascii.toLower(current);
-            enforce(k != MAX_PROPERTY, "invalid property name");
-            enforce(current == '}', "} expected ");
-        }
-        else
-        {//single char properties e.g.: \pL, \pN ...
-            enforce(current < 0x80, "invalid property name");
-            result[k++] = cast(char) current;
-        }
-        auto s = getUnicodeSet(result[0 .. k], negated,
-            cast(bool)(re_flags & RegexOption.casefold));
-        enforce(!s.empty, "unrecognized unicode property spec");
-        next();
-        return s;
     }
 
     //
