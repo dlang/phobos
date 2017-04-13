@@ -2061,6 +2061,116 @@ if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
 }
 
 /**
+Generates a random floating-point number drawn from an
+exponential distribution with rate parameter $(D lambda),
+i.e. with cumulative distribution function
+    F(x) = 1 - exp(-lambda * x)
+and probability density function
+    f(x) = lambda * exp(-lambda * x).
+
+Example:
+
+----
+Random gen(unpredictableSeed);
+// Generate a random number from an exponential distribution
+// with exponent 1, i.e. PDF f(x) = exp(-x)
+auto a = exponential(1.0, gen);
+----
+*/
+auto exponential(T = double)
+(T lambda)
+if(isFloatingPoint!T)
+{
+    return exponential!T(lambda, rndGen);
+}
+
+unittest
+{
+    Xorshift gen;
+    foreach(i; 0..20)
+    {
+        auto x = exponential(1.0);
+        assert(0 <= x);
+    }
+    foreach(i; 0..20)
+    {
+        auto x = exponential(2.0, gen);
+        assert(0 <= x);
+    }
+}
+
+/// Ditto
+auto exponential(T = double, UniformRandomNumberGenerator)
+(T lambda, ref UniformRandomNumberGenerator urng)
+if(isFloatingPoint!T && isUniformRNG!UniformRandomNumberGenerator)
+in
+{
+    assert(lambda > 0);
+}
+body
+{
+    T u = uniform!("[)",T, T, UniformRandomNumberGenerator)(0.0, 1.0, urng);
+    return -log(1 - u)/lambda;
+}
+
+/**
+Generates a Pareto-distributed number with exponent $(D alpha)
+and minimum value $(D min), i.e. with cumulative distribution
+function
+    F(x) = 1 - (min/x)^^alpha
+and probability density function
+    f(x) = alpha * (min^^alpha / x^^(alpha+1)).
+
+Example:
+
+----
+Random gen(unpredictableSeed);
+// Generate a random number from a Pareto distribution
+// with exponent alpha = 0.5 and minimum 0.1, i.e. with
+// CDF F(x) = 1 - (0.1/x)^^0.5
+auto a = pareto(0.5, 0.1, gen);
+----
+*/
+auto pareto(T1 = double, T2 = double)
+(T1 alpha, T2 min)
+if(!is(CommonType!(T1, T2) == void))
+{
+    return pareto!(T1, T2, Random)(alpha, min, rndGen);
+}
+
+/// Ditto
+auto pareto(T1 = double, T2 = double, UniformRandomNumberGenerator)
+(T1 alpha, T2 min, ref UniformRandomNumberGenerator urng)
+if(isFloatingPoint!(CommonType!(T1, T2)))
+in
+{
+    assert(alpha > 0 && min > 0);
+}
+body
+{
+    alias Unqual!(CommonType!(T1, T2)) NumberType;
+    NumberType _alpha = alpha;
+    NumberType _min = min;
+    NumberType u = uniform!("[)", NumberType, NumberType, UniformRandomNumberGenerator)(0.0, 1.0, urng);
+    return _min/((1-u)^^(1/_alpha));
+}
+
+unittest
+{
+    Random gen;
+    foreach(i; 0..20)
+    {
+        auto x = pareto(0.5, 0.001);
+        assert(0.001 <= x);
+    }
+    foreach(i; 0..20)
+    {
+        auto x = pareto(0.1, 1.0, gen);
+        assert(1.0 <= x);
+    }
+}
+
+/**
 Shuffles elements of $(D r) using $(D gen) as a shuffler. $(D r) must be
 a random-access range with length.  If no RNG is specified, $(D rndGen)
 will be used.
