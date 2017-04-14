@@ -52,7 +52,7 @@ License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP erdani.org, Andrei Alexandrescu)
            Masahiro Nakagawa (Xorshift random generator)
            $(HTTP braingam.es, Joseph Rushton Wakeling) (Algorithm D for random sampling)
-           Ilya Yaroshenko (Mersenne Twister implementation, adapted from $(HTTPS github.com/libmir/mir-random, mir.random))
+           Ilya Yaroshenko (Mersenne Twister implementation, adapted from $(HTTPS github.com/libmir/mir-random, Mir Random))
 Credits:   The entire random number library architecture is derived from the
            excellent $(HTTP open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf, C++0X)
            random number facility proposed by Jens Maurer and contributed to by
