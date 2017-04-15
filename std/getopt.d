@@ -413,7 +413,8 @@ description for this option. The $(D getopt) function returns a struct of type
 $(D GetoptResult). This return value contains information about all passed options
 as well a $(D bool GetoptResult.helpWanted) flag indicating whether information
 about these options was requested. The $(D getopt) function always adds an option for
-`--help|-h` to set the flag if the option is seen on the command line.
+`--help|-h` to set the flag if the option is seen on the command line and if
+`config.noInternalHelp` is not passed.
 
 Options_Terminator:
 A lone double-dash terminates $(D getopt) gathering. It is used to
@@ -466,7 +467,8 @@ GetoptResult getopt(T...)(ref string[] args, T opts)
    You can pass them to $(D getopt) in any position, except in between an option
    string and its bound pointer.
 */
-enum config {
+enum config
+{
     /// Turn case sensitivity on
     caseSensitive,
     /// Turn case sensitivity off (default)
@@ -484,21 +486,30 @@ enum config {
     /// Do not erase the endOfOptions separator from args
     keepEndOfOptions,
     /// Make the next option a required option
-    required
+    required,
+    /// Deactivate internal handling of the "-h" or "--help" options
+    noInternalHelp
 }
 
 /** The result of the $(D getopt) function.
 
 $(D helpWanted) is set if the option `--help` or `-h` was passed to the option parser.
 */
-struct GetoptResult {
-    bool helpWanted; /// Flag indicating if help was requested
-    Option[] options; /// All possible options
+struct GetoptResult
+{
+    /**
+     * Flag indicating if help was requested. When config.noInternalHelp is
+     * passed it's never set to true, even if `--help` or `-h` were passed.
+     */
+    bool helpWanted;
+    /// All possible options
+    Option[] options;
 }
 
 /** Information about an option.
 */
-struct Option {
+struct Option
+{
     string optShort; /// The short symbol for this option
     string optLong; /// The long symbol for this option
     string help; /// The description of this option
@@ -781,8 +792,15 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             }
             if (a == "--help" || a == "-h")
             {
-                rslt.helpWanted = true;
-                args = args.remove(i);
+                if (!cfg.noInternalHelp)
+                {
+                    rslt.helpWanted = true;
+                    args = args.remove(i);
+                }
+                else
+                {
+                    i++;
+                }
                 continue;
             }
             if (!cfg.passThrough)
@@ -792,11 +810,14 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             ++i;
         }
 
-        Option helpOpt;
-        helpOpt.optShort = "-h";
-        helpOpt.optLong = "--help";
-        helpOpt.help = "This help information.";
-        rslt.options ~= helpOpt;
+        if (!cfg.noInternalHelp)
+        {
+            Option helpOpt;
+            helpOpt.optShort = "-h";
+            helpOpt.optLong = "--help";
+            helpOpt.help = "This help information.";
+            rslt.options ~= helpOpt;
+        }
     }
 }
 
@@ -1076,7 +1097,8 @@ private struct configuration
                 bool, "stopOnFirstNonOption", 1,
                 bool, "keepEndOfOptions", 1,
                 bool, "required", 1,
-                ubyte, "", 2));
+                bool, "noInternalHelp", 1,
+                ubyte, "", 1));
 }
 
 private bool optMatch(string arg, string optPattern, ref string value,
@@ -1151,10 +1173,9 @@ private void setConfig(ref configuration cfg, config option)
     case config.passThrough: cfg.passThrough = true; break;
     case config.noPassThrough: cfg.passThrough = false; break;
     case config.required: cfg.required = true; break;
-    case config.stopOnFirstNonOption:
-        cfg.stopOnFirstNonOption = true; break;
-    case config.keepEndOfOptions:
-        cfg.keepEndOfOptions = true; break;
+    case config.stopOnFirstNonOption: cfg.stopOnFirstNonOption = true; break;
+    case config.keepEndOfOptions: cfg.keepEndOfOptions = true; break;
+    case config.noInternalHelp: cfg.noInternalHelp = true; break;
     default: assert(false);
     }
 }
@@ -1719,4 +1740,17 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
     assertThrown!AssertError(getopt(args, "abc", &abc, "abc", &abc));
     assertThrown!AssertError(getopt(args, "abc|a", &abc, "def|a", &def));
     assertNotThrown!AssertError(getopt(args, "abc", &abc, "def", &def));
+}
+
+@system unittest // Issue 16684
+{
+    bool h, i;
+    string[] args = ["prog", "-h", "-i"];
+
+    getopt(args, config.noInternalHelp, config.passThrough, "i" , &i);
+    assert(i);
+
+    // h was consummed in first call
+    getopt(args, "h", &h);
+    assert(h);
 }
