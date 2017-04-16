@@ -1939,6 +1939,8 @@ version(StdDdoc)
         override @property sockaddr* name() { return null; }
         override @property const(sockaddr)* name() const { return null; }
         override @property socklen_t nameLen() const { return 0; }
+    protected:
+        this() pure nothrow @nogc {}
     }
 }
 else
