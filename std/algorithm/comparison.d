@@ -580,6 +580,130 @@ body
 
 }
 
+/**
+Defines an object that wraps a value type $(D TValue) which remains clamped across
+assignment and initialization. As a result, the contained value is guaranteed
+to always be bounded by $(D lower) and $(D upper).
+ */
+struct Clamped(TValue, TLower = TValue, TUpper = TValue)
+    if (!is (TValue == class) && !is (TValue == interface)
+     && !is (TLower == class) && !is (TLower == interface)
+     && !is (TUpper == class) && !is (TUpper == interface))
+{
+    private:
+        TValue _value;
+        const TLower _lower;
+        const TUpper _upper;
+    public:
+/**
+Constructor that initializes the stored value to its clamped $(D init) value.
+ */
+        this(TLower lower, TLower upper) {
+            assert(upper.greaterThan(lower));
+
+            _lower = lower;
+            _upper = upper;
+            _value = TValue.init.clamp(lower, upper);
+        }
+
+/**
+Constructor that initializes the stored value to the passed, clamped, value.
+ */
+        this(TValue value, TLower lower, TUpper upper) {
+            assert(upper.greaterThan(lower));
+
+            _lower = lower;
+            _upper = upper;
+            _value = value.clamp(lower, upper);
+        }
+
+/// Returns the contained value.
+        alias _value this;
+
+/// Ditto
+        @property TValue value() {
+            return _value;
+        }
+
+/// Returns the lower bound.
+        @property const TLower lower() {
+            return _lower;
+        }
+
+/// Returns the upper bound.
+        @property const TUpper upper() {
+            return _upper;
+        }
+
+        TValue opAssign(TValue t) {
+            return _value = clamp(t, _lower, _upper);
+        }
+
+        invariant {
+            assert(_upper.greaterThan(_lower));
+            assert(!_value.lessThan(_lower));
+            assert(!_value.greaterThan(_upper));
+        }
+}
+
+///
+@safe unittest
+{
+    auto x = Clamped!int(0, 5, 10);
+    assert(x == 5);
+
+    x = 4;
+    assert(x == 5);
+
+    x = 7;
+    assert(x == 7);
+    
+    x = 15;
+    assert(x == 10);
+}
+
+@safe unittest
+{
+    auto t1 = Clamped!int(0, -4, 10);
+    assert(t1.lower == -4);
+    assert(t1.upper == 10);
+
+    t1 = -5;
+    assert(t1 == -4);
+    t1 = -4;
+    assert(t1 == -4);
+    t1 = -3;
+    assert(t1 == -3);
+    t1 = 9;
+    assert(t1 == 9);
+    t1 = 10;
+    assert(t1 == 10);
+    t1 = 11;
+    assert(t1 == 10);
+
+    // .init clamping
+    auto t2 = Clamped!int(5, 6);
+    assert(t2.lower == 5);
+    assert(t2.upper == 6);
+    assert(t2 == 5);
+
+    // user type
+    import std.datetime : Date;
+    auto t3 = Clamped!Date(Date(1012, 12, 21), Date(2012, 12, 21));
+    assert(t3.lower == Date(1012, 12, 21));
+    assert(t3.upper == Date(2012, 12, 21));
+
+    t3 = Date(1999, 4, 28);
+    assert(t3 == Date(1999, 4, 28));
+
+    t3 = Date(1011, 1, 5);
+    assert(t3 == Date(1012, 12, 21));
+
+    t3 = Date(2015, 2, 5);
+    assert(t3 == Date(2012, 12, 21));
+}
+
+
 // cmp
 /**********************************
 Performs three-way lexicographical comparison on two
