@@ -855,16 +855,16 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
 
         static if (is(typeof(*receiver) == bool))
         {
-            // parse '--b=true/false'
             if (val.length)
             {
+                // parse '--b=true/false'
                 *receiver = to!(typeof(*receiver))(val);
-                continue;
             }
-
-            // no argument means set it to true
-            *receiver = true;
-            continue;
+            else
+            {
+                // no argument means set it to true
+                *receiver = true;
+            }
         }
         else
         {
