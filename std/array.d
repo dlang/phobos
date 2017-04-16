@@ -1571,7 +1571,7 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
 
    For now, we only assume arrays are cheap to iterate.
  +/
-private enum bool hasCheapIteration(R) = isArray!R;
+private enum bool hasCheapIteration = isArray!R;
 
 /++
    Eagerly concatenates all of the ranges in `ror` together (with the GC)
