@@ -573,6 +573,11 @@ if (is(Num* : const(ifloat*)) || is(Num* : const(idouble*))
         assert(abs(f) == hypot(f.re, f.im));
         assert(abs(-f) == hypot(f.re, f.im));
     }
+    assert(abs(creal(-1+1i)) == sqrt(2.0L));
+    cdouble c = -1+1i;
+    double d = 2.0, e = 2.0;
+    assert(sqrt(e) == sqrt(d));
+    assert(abs(c) == sqrt(d));
 }
 
 /***********************************
@@ -3642,38 +3647,43 @@ float fabs(float x) @safe pure nothrow @nogc { return fabs(cast(real) x); }
  *  )
  */
 
-real hypot(real x, real y) @safe pure nothrow @nogc
+CommonType!(T1, T2) hypot(T1, T2)(in T1 x, in T2 y) @safe pure nothrow @nogc
+    if(isFloatingPoint!T1 && isFloatingPoint!T2)
 {
     // Scale x and y to avoid underflow and overflow.
     // If one is huge and the other tiny, return the larger.
-    // If both are huge, avoid overflow by scaling by 1/sqrt(real.max/2).
-    // If both are tiny, avoid underflow by scaling by sqrt(real.min_normal*real.epsilon).
+    // If both are huge, avoid overflow by scaling by 1/sqrt(T.max/2).
+    // If both are tiny, avoid underflow by scaling by sqrt(T.min_normal*T.epsilon).
+    alias T = typeof(return);
 
-    enum real SQRTMIN = 0.5 * sqrt(real.min_normal); // This is a power of 2.
-    enum real SQRTMAX = 1.0L / SQRTMIN; // 2^^((max_exp)/2) = nextUp(sqrt(real.max))
+    enum T SQRTMIN = 0.5 * sqrt(T.min_normal); // This is a power of 2.
+    enum T SQRTMAX = 1.0L / SQRTMIN; // 2^^((max_exp)/2) = nextUp(sqrt(T.max))
 
-    static assert(2*(SQRTMAX/2)*(SQRTMAX/2) <= real.max);
+    static assert(2*(SQRTMAX/2)*(SQRTMAX/2) <= T.max);
 
-    // Proves that sqrt(real.max) ~~  0.5/sqrt(real.min_normal)
-    static assert(real.min_normal*real.max > 2 && real.min_normal*real.max <= 4);
+    // Proves that sqrt(T.max) ~~  0.5/sqrt(T.min_normal)
+    static assert(T.min_normal*T.max > 2 && T.min_normal*T.max <= 4);
 
-    real u = fabs(x);
-    real v = fabs(y);
+    T u = fabs(x);
+    T v = fabs(y);
     if (!(u >= v))  // check for NaN as well.
     {
         v = u;
         u = fabs(y);
-        if (u == real.infinity) return u; // hypot(inf, nan) == inf
-        if (v == real.infinity) return v; // hypot(nan, inf) == inf
+        if (u == T.infinity) return u; // hypot(inf, nan) == inf
+        if (v == T.infinity) return v; // hypot(nan, inf) == inf
     }
 
     // Now u >= v, or else one is NaN.
-    if (v >= SQRTMAX*0.5)
+    if (v >= SQRTMAX*0.5f)
     {
             // hypot(huge, huge) -- avoid overflow
-        u *= SQRTMIN*0.5;
-        v *= SQRTMIN*0.5;
-        return sqrt(u*u + v*v) * SQRTMAX * 2.0;
+        u *= SQRTMIN*0.5f;
+        v *= SQRTMIN*0.5f;
+        u *= u;
+        v *= v;
+        v += u;
+        return sqrt(v) * SQRTMAX * 2.0f;
     }
 
     if (u <= SQRTMIN)
@@ -3681,51 +3691,61 @@ real hypot(real x, real y) @safe pure nothrow @nogc
         // hypot (tiny, tiny) -- avoid underflow
         // This is only necessary to avoid setting the underflow
         // flag.
-        u *= SQRTMAX / real.epsilon;
-        v *= SQRTMAX / real.epsilon;
-        return sqrt(u*u + v*v) * SQRTMIN * real.epsilon;
+        u *= SQRTMAX / T.epsilon;
+        v *= SQRTMAX / T.epsilon;
+        u *= u;
+        v *= v;
+        v += u;
+        return sqrt(v) * SQRTMIN * T.epsilon;
     }
 
-    if (u * real.epsilon > v)
+    if (u * T.epsilon > v)
     {
         // hypot (huge, tiny) = huge
         return u;
     }
 
     // both are in the normal range
-    return sqrt(u*u + v*v);
+    u *= u;
+    v *= v;
+    v += u;
+    return sqrt(v);
 }
 
 @safe unittest
 {
-    static real[3][] vals =     // x,y,hypot
+    import std.typetuple;
+    foreach(T; TypeTuple!(real, double, float))
+    {
+        T[3][] vals =     // x,y,hypot
         [
-            [ 0.0,     0.0,   0.0],
-            [ 0.0,    -0.0,   0.0],
-            [ -0.0,   -0.0,   0.0],
-            [ 3.0,     4.0,   5.0],
-            [ -300,   -400,   500],
-            [0.0,      7.0,   7.0],
-            [9.0,   9*real.epsilon,   9.0],
-            [88/(64*sqrt(real.min_normal)), 105/(64*sqrt(real.min_normal)), 137/(64*sqrt(real.min_normal))],
-            [88/(128*sqrt(real.min_normal)), 105/(128*sqrt(real.min_normal)), 137/(128*sqrt(real.min_normal))],
-            [3*real.min_normal*real.epsilon, 4*real.min_normal*real.epsilon, 5*real.min_normal*real.epsilon],
-            [ real.min_normal, real.min_normal, sqrt(2.0L)*real.min_normal],
-            [ real.max/sqrt(2.0L), real.max/sqrt(2.0L), real.max],
-            [ real.infinity, real.nan, real.infinity],
-            [ real.nan, real.infinity, real.infinity],
-            [ real.nan, real.nan, real.nan],
-            [ real.nan, real.max, real.nan],
-            [ real.max, real.nan, real.nan],
+            [cast(T) 0,     0,   0],
+            [cast(T) 0,    -0,   0],
+            [cast(T)-0,    -0,   0],
+            [cast(T) 3,     4,   5],
+            [cast(T)-300,  -400, 500],
+            [cast(T) 0,     7,   7],
+            [cast(T) 9,   9*T.epsilon,   9],
+            [cast(T) 88/(64*sqrt(T.min_normal)), 105/(64*sqrt(T.min_normal)), 137/(64*sqrt(T.min_normal))],
+            [cast(T) 88/(128*sqrt(T.min_normal)), 105/(128*sqrt(T.min_normal)), 137/(128*sqrt(T.min_normal))],
+            [3*T.min_normal*T.epsilon, 4*T.min_normal*T.epsilon, 5*T.min_normal*T.epsilon],
+            [ T.min_normal, T.min_normal, sqrt(T(2))*T.min_normal],
+            [cast(T) (T.max/sqrt(real(2))), cast(T) (T.max/sqrt(real(2))), T.max],
+            [ T.infinity, T.nan, T.infinity],
+            [ T.nan, T.infinity, T.infinity],
+            [ T.nan, T.nan, T.nan],
+            [ T.nan, T.max, T.nan],
+            [ T.max, T.nan, T.nan],
         ];
-        for (int i = 0; i < vals.length; i++)
+        foreach(i, val; vals)
         {
-            real x = vals[i][0];
-            real y = vals[i][1];
-            real z = vals[i][2];
-            real h = hypot(x, y);
-            assert(isIdentical(z,h) || feqrel(z, h) >= real.mant_dig - 1);
+            T x = val[0];
+            T y = val[1];
+            T z = val[2];
+            T h = hypot(x, y);
+            assert(isIdentical(z,h) || feqrel(z, h) >= T.mant_dig - 1);
         }
+    }
 }
 
 /**************************************
