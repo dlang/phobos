@@ -291,7 +291,7 @@ Macros:
     REG_TITLE = $(TR $(TD $(B $1)) $(TD $(B $2)) )
     REG_TABLE = <table border="1" cellspacing="0" cellpadding="5" > $0 </table>
     REG_START = <h3><div align="center"> $0 </div></h3>
-    SECTION = <h3><a id="$1">$0</a></h3>
+    SECTION = <h3><a id="$1" href="#$1" class="anchor">$0</a></h3>
     S_LINK = <a href="#$1">$+</a>
  +/
 module std.regex;
