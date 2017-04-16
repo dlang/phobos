@@ -1214,8 +1214,8 @@ L_Replace_Loop:
     Params:
     input = string to search
     re = compiled regular expression to use
-    format = format string to generate replacements from,
-    see $(S_LINK Replace format string, the format string).
+    format = _format string to generate replacements from,
+    see $(S_LINK Replace _format string, the _format string).
 
     Returns:
     A string of the same type with the first match (if any) replaced.
@@ -1331,8 +1331,8 @@ if (isOutputRange!(Sink, dchar) && isSomeString!R && isRegexFor!(RegEx, R))
     Params:
     input = string to search
     re = compiled regular expression to use
-    format = format string to generate replacements from,
-    see $(S_LINK Replace format string, the format string).
+    format = _format string to generate replacements from,
+    see $(S_LINK Replace _format string, the _format string).
 
     Returns:
     A string of the same type as $(D input) with the all
