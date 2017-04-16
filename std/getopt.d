@@ -855,16 +855,16 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
 
         static if (is(typeof(*receiver) == bool))
         {
-            // parse '--b=true/false'
             if (val.length)
             {
+                // parse '--b=true/false'
                 *receiver = to!(typeof(*receiver))(val);
-                break;
             }
-
-            // no argument means set it to true
-            *receiver = true;
-            break;
+            else
+            {
+                // no argument means set it to true
+                *receiver = true;
+            }
         }
         else
         {
@@ -1719,4 +1719,57 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
     assertThrown!AssertError(getopt(args, "abc", &abc, "abc", &abc));
     assertThrown!AssertError(getopt(args, "abc|a", &abc, "def|a", &def));
     assertNotThrown!AssertError(getopt(args, "abc", &abc, "def", &def));
+}
+
+@system unittest // Issue 17327 repeated option use
+{
+    long num = 0;
+
+    string[] args = ["program", "--num", "3"];
+    getopt(args, "n|num", &num);
+    assert(num == 3);
+
+    args = ["program", "--num", "3", "--num", "5"];
+    getopt(args, "n|num", &num);
+    assert(num == 5);
+
+    args = ["program", "--n", "3", "--num", "5", "-n", "-7"];
+    getopt(args, "n|num", &num);
+    assert(num == -7);
+
+    void add1() { num++; }
+    void add2(string option) { num += 2; }
+    void addN(string option, string value)
+    {
+        import std.conv : to;
+        num += value.to!long;
+    }
+
+    num = 0;
+    args = ["program", "--add1", "--add2", "--add1", "--add", "5", "--add2", "--add", "10"];
+    getopt(args,
+           "add1", "Add 1 to num", &add1,
+           "add2", "Add 2 to num", &add2,
+           "add", "Add N to num", &addN,);
+    assert(num == 21);
+
+    bool flag = false;
+    args = ["program", "--flag"];
+    getopt(args, "f|flag", "Boolean", &flag);
+    assert(flag);
+
+    flag = false;
+    args = ["program", "-f", "-f"];
+    getopt(args, "f|flag", "Boolean", &flag);
+    assert(flag);
+
+    flag = false;
+    args = ["program", "--flag=true", "--flag=false"];
+    getopt(args, "f|flag", "Boolean", &flag);
+    assert(!flag);
+
+    flag = false;
+    args = ["program", "--flag=true", "--flag=false", "-f"];
+    getopt(args, "f|flag", "Boolean", &flag);
+    assert(flag);
 }
