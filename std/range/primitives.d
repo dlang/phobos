@@ -163,6 +163,9 @@ Returns:
  */
 template isInputRange(R)
 {
+    static if (isStaticArray!R)
+        pragma(msg, "Error: Static arrays are not ranges. Try using slices instead.");
+
     enum bool isInputRange = is(typeof(
     (inout int = 0)
     {
