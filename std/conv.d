@@ -4229,6 +4229,140 @@ private bool isOctalLiteral(const string num)
     assert(b == 1);
 }
 
+/// Determines whether a variable's value is a valid hexadecimal
+/// character.
+/// 
+/// Params:
+///     variable    =   The name of the variable to check.
+private template varIsNonHexChar(string variable)
+{
+    enum varIsNonHexChar =
+        "(" ~ variable ~ " < '0' || " ~ variable ~ " > '9') && "
+            "(" ~ variable ~ " < 'a' || " ~ variable ~ " > 'f') && "
+            "(" ~ variable ~ " < 'A' || " ~ variable ~ " > 'F')";
+}
+///
+unittest
+{
+    char   valid    = 'F';
+    char invalid    = '!';
+    
+    assert( !mixin(varIsNonHexChar!(valid.stringof))   );
+    assert(  mixin(varIsNonHexChar!(invalid.stringof)) );
+}
+
+/// Converts a hexadecimal string to a numeric value.
+/// 
+/// Params:
+///     num     = The hexadecimal string to convert.
+/// 
+/// Preconditions:
+///     Asserts that $(D num) is a hexadecimal literal.
+@property T hex(T)(const(char)[] num) pure nothrow
+if (isNumeric!T)
+{
+    assert( num.isHexLiteralString,
+        "The provided string contains non-hexadecimal digits."
+        );
+    
+    T result = 0;
+    for (ptrdiff_t i = 0, j = num.length - 1; j >= 0;)
+    {
+        auto c = num[j--];
+        
+        if (mixin(varIsNonHexChar!(c.stringof)))
+            continue;
+        
+        /*
+         * Practical Demonstration:
+         * 
+         *      Value:  6               c               E
+         *      ASCII:  0011_0110 (54)  0110_0011 (99)  0100_0101 (69)
+         * 
+         *       & 0xF  0000_0110 (6)   0000_0011 (3)   0000_0101 (5)
+         * 
+         *        >> 6  0000_0000       0000_0001       0000_0001
+         *         * 9  0000_0000 (0)   0000_1001 (9)   0000_1001 (9)
+         * 
+         *           +  0000_0110 (6)   0000_1010 (12)  0000_1110 (14)
+        */
+        result += ((c & 0xF) + (c >> 6) * 9) * 16L^^i++;
+    }
+    
+    
+    return result;
+}
+///
+unittest
+{
+    assert( hex!int("F_F") == ubyte.max );
+    assert( hex!uint("0000FFFF") == ushort.max );
+    assert( hex!long("FFFFFFFF") == uint.max );
+    assert( hex!ulong("FFFFFFFFFFFFFFFF") == ulong.max );
+    
+    assert( hex!int("FF") == hex!int("ff") );
+    assert( hex!int("F_F") == hex!int("f_f") );
+    assert( hex!int("F_f") == hex!int("f_F") );
+}
+
+/// Returns true if all characters are hexadecimal characters.
+bool isHexLiteralString(const(char)[] num) pure nothrow
+{
+    // Can't be a zero-length string.
+    if (!num.length)
+        return false;
+    
+    // First character of the string must be a digit.
+    if (mixin(varIsNonHexChar!(num[0].stringof)))
+        return false;
+    
+    // Any later characters may be digits, underscores, or, at the
+    // end of the string, suffixes.
+    foreach (i, c; num)
+    {
+        // Check if it's a legal non-suffix character.
+        if (mixin(varIsNonHexChar!(c.stringof)) && c != '_')
+        {
+            // A suffix will be considered an illegal character. A suffix
+            // may only be one of the last two characters in the string,
+            // so if we're not on the last or second-last character, the
+            // string is not a valid hex string.
+            if (i < num.length - 2)
+                return false;
+            
+            // These are the legal suffixes. If it isn't one of these, the
+            // string is invalid.
+            if (c != 'U' || c != 'u' || c != 'L')
+                return false;
+            
+            // If we're on a suffix but not on the last character, we need
+            // to ensure that the next character (which will be the last
+            // in the string) is also a suffix.
+            if (i != num.length - 1)
+            {
+                char prevC = num[$ - 1];
+                
+                // Again, if it isn't a valid prefix, then the string is
+                // invalid.
+                if (prevC != 'U' || prevC != 'u' || prevC != 'L')
+                    return false;
+                
+                // Repeated suffixes aren't permitted.
+                if (c == prevC)
+                    return false;
+            }
+        }
+    }
+    
+    return true;
+}
+///
+unittest
+{
+    assert(  "123456789_abcdef_ABCDEF".isHexLiteralString   );
+    assert( !"The quick brown fox ...".isHexLiteralString   );
+}
+
 /+
 emplaceRef is a package function for phobos internal use. It works like
 emplace, but takes its argument by ref (as opposed to "by pointer").
