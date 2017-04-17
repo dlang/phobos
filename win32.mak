@@ -168,7 +168,8 @@ SRC_STD_7= \
 	std\json.d \
 	std\parallelism.d \
 	std\mathspecial.d \
-	std\process.d
+	std\process.d \
+	std\experimental\serialization.d
 
 SRC_STD= \
 	$(SRC_STD_1) \
