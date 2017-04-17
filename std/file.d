@@ -682,6 +682,133 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
     cenforce(sum == size && CloseHandle(h), name, namez);
 }
 
+/** Definitions of common Byte Order Marks
+*/
+enum BOM {
+    ascii,    /// []
+    utf8,     /// [0xEF, 0xBB, 0xBF]
+    utf16be,  /// [0xFE, 0xFF]
+    utf16le,  /// [0xFF, 0xFE]
+    utf32be,  /// [0x00, 0x00, 0xFE, 0xFF]
+    utf32le,  /// [0x00, 0x00, 0xFF, 0xFE]
+    utf7,     /*  [0x00, 0x00, 0xFF, 0xFE],
+                  [0x2B, 0x2F, 0x76, 0x38],
+                  [0x2B, 0x2F, 0x76, 0x39],
+                  [0x2B, 0x2F, 0x76, 0x2B],
+                  [0x2B, 0x2F, 0x76, 0x2F],
+                  [0x2B, 0x2F, 0x76, 0x38, 0x2D]
+              */
+    utf1,     /// [0xF7, 0x64, 0x4C]
+    utfebcdic,/// [0xDD, 0x73, 0x66, 0x73]
+    scsu,     /// [0x0E, 0xFE, 0xFF]
+    bocu1,    /// [0xFB, 0xEE, 0x28]
+    gb18030   /// [0x84, 0x31, 0x95, 0x33]
+}
+
+/* Mapping of byte sequence to $(B Byte Order Mark (BOM))
+*/
+private immutable bomTable = [
+    tuple(to!(ubyte[])([0xEF, 0xBB, 0xBF]), BOM.utf8),
+    tuple(to!(ubyte[])([0xFE, 0xFF]), BOM.utf16be),
+    tuple(to!(ubyte[])([0xFF, 0xFE]), BOM.utf16le),
+    tuple(to!(ubyte[])([0x00, 0x00, 0xFE, 0xFF]), BOM.utf32be),
+    tuple(to!(ubyte[])([0xFF, 0xFE, 0x00, 0x00]), BOM.utf32le),
+    tuple(to!(ubyte[])([0x2B, 0x2F, 0x76, 0x38]), BOM.utf7),
+    tuple(to!(ubyte[])([0x2B, 0x2F, 0x76, 0x39]), BOM.utf7),
+    tuple(to!(ubyte[])([0x2B, 0x2F, 0x76, 0x2B]), BOM.utf7),
+    tuple(to!(ubyte[])([0x2B, 0x2F, 0x76, 0x2F]), BOM.utf7),
+    tuple(to!(ubyte[])([0x2B, 0x2F, 0x76, 0x38, 0x2D]), BOM.utf7),
+    tuple(to!(ubyte[])([0xF7, 0x64, 0x4C]), BOM.utf1),
+    tuple(to!(ubyte[])([0xDD, 0x73, 0x66, 0x73]), BOM.utfebcdic),
+    tuple(to!(ubyte[])([0x0E, 0xFE, 0xFF]), BOM.scsu),
+    tuple(to!(ubyte[])([0xFB, 0xEE, 0x28]), BOM.bocu1),
+    tuple(to!(ubyte[])([0x84, 0x31, 0x95, 0x33]), BOM.gb18030),
+    tuple(to!(ubyte[])(cast(byte[])[]), BOM.ascii)
+];
+
+/** Returns the $(D BOM) for a given $(D input) of $(D ubyte)s.
+If no $(D BOM) can be matched the $(D input) is assumed to be encoded in ASCII.
+
+Params:
+    input = The $(D ubyte) sequence to check for the $(D BOM)
+
+Returns:
+    the found $(D BOM) or $(D BOM.ascii).
+*/
+BOM determineBOM(in ubyte[] input) pure @safe nothrow @nogc
+{
+    foreach (it; bomTable)
+    {
+        if (input.length >= it[0].length && input[0 .. it[0].length] == it[0])
+        {
+           return it[1];
+        }
+    }
+
+    return BOM.ascii;
+}
+
+///
+pure @safe nothrow unittest
+{
+    ubyte[] input;
+    assert(determineBOM(input) == BOM.ascii);
+
+    input = [0xEF, 0xBB, 0xBF];
+    assert(determineBOM(input) == BOM.utf8);
+}
+
+/** Returns the $(D BOM) $(D ubyte) sequence for a given $(D BOM).
+
+Params:
+    bom = The $(D BOM) to return the $(D ubyte) sequence for.
+
+Returns:
+    the found $(D BOM) sequence.
+*/
+immutable(ubyte[]) bomSequence(in BOM bom) pure @safe nothrow @nogc
+{
+    import std.array : back;
+
+    foreach (it; bomTable)
+    {
+        if (it[1] == bom)
+        {
+            return it[0];
+        }
+    }
+
+    return bomTable.back[0];
+}
+
+///
+pure @safe nothrow unittest
+{
+    assert(bomSequence(BOM.utf8) == [0xEF, 0xBB, 0xBF]);
+}
+
+/** Returns the number of bytes for a given $(D BOM).
+
+Params:
+    bom = The $(D BOM) to return the length for
+
+Returns:
+    the length of the $(D BOM) sequence.  For UTF-7 the value $(D 4) is
+    returned.
+*/
+size_t bomLength(in BOM bom) pure @safe nothrow @nogc
+{
+    return bomSequence(bom).length;
+}
+
+///
+pure @safe nothrow @nogc unittest
+{
+    assert(bomLength(BOM.utf8) == 3);
+    assert(bomLength(BOM.ascii) == 0);
+    assert(bomLength(BOM.utf32le) == 4);
+}
+
 /***************************************************
  * Rename file $(D from) to $(D to).
  * If the target file exists, it is overwritten.
