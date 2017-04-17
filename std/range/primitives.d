@@ -191,6 +191,19 @@ template isInputRange(R)
     static assert( isInputRange!(inout(int)[]));
 }
 
+/**
+ Returns $(D true) if $(D R) is an input range with elements of type $(D E);
+ */
+enum isInputRangeOf(R, E) = isInputRange!R && is(ElementType!R: E);
+
+///
+@safe unittest {
+    static assert(isInputRangeOf!(int[], int));
+    static assert(isInputRangeOf!(const(int)[], const(int)));
+    static assert(isInputRangeOf!(int[], long));
+    static assert(!isInputRangeOf!(int, int));
+}
+
 /+
 puts the whole raw element $(D e) into $(D r). doPut will not attempt to
 iterate, slice or transcode $(D e) in any way shape or form. It will $(B only)
