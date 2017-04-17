@@ -507,7 +507,7 @@ Throws: $(D ErrnoException) in case of error.
 
         enforce(isOpen, "Attempting to reopen() an unopened file");
 
-        auto namez = name.tempCString!FSChar();
+        auto namez = (name == null ? _name : name).tempCString!FSChar();
         auto modez = stdioOpenmode.tempCString!FSChar();
 
         FILE* fd = _p.handle;
