@@ -524,7 +524,7 @@ enum infinite = ~0u;
 struct Parser(R, Generator)
 if (isForwardRange!R && is(ElementType!R : dchar))
 {
-    dchar _current;
+    dchar front;
     bool empty;
     R pat, origin;       //keep full pattern for pretty printing error messages
     uint re_flags = 0;   //global flags e.g. multiline + internal ones
@@ -536,8 +536,8 @@ if (isForwardRange!R && is(ElementType!R : dchar))
         pat = origin = pattern;
         //reserve slightly more then avg as sampled from unittests
         parseFlags(flags);
-        _current = ' ';//a safe default for freeform parsing
-        next();
+        front = ' ';//a safe default for freeform parsing
+        popFront();
         g.start(cast(uint) pat.length);
         try
         {
@@ -550,48 +550,43 @@ if (isForwardRange!R && is(ElementType!R : dchar))
         g.endPattern(1);
     }
 
-    @property dchar current(){ return _current; }
-
-    bool _next()
+    void _popFront()
     {
         if (pat.empty)
         {
             empty =  true;
-            return false;
         }
-        _current = pat.front;
-        pat.popFront();
-        return true;
+        else
+        {
+            front = pat.front;
+            pat.popFront();
+        }
     }
 
     void skipSpace()
     {
-        while (isWhite(current) && _next()){ }
+        while (!empty && isWhite(front)) _popFront();
     }
 
-    bool next()
+    void popFront()
     {
-        if (re_flags & RegexOption.freeform)
-        {
-            immutable r = _next();
-            skipSpace();
-            return r;
-        }
-        else
-            return _next();
+        _popFront();
+        if (re_flags & RegexOption.freeform) skipSpace();
     }
+
+    auto save(){ return this; }
 
     //parsing number with basic overflow check
     uint parseDecimal()
     {
         uint r = 0;
-        while (std.ascii.isDigit(current))
+        while (std.ascii.isDigit(front))
         {
             if (r >= (uint.max/10))
                 error("Overflow in decimal number");
-            r = 10*r + cast(uint)(current-'0');
-            if (!next())
-                break;
+            r = 10*r + cast(uint)(front-'0');
+            popFront();
+            if (empty) break;
         }
         return r;
     }
@@ -629,73 +624,74 @@ if (isForwardRange!R && is(ElementType!R : dchar))
         {
             debug(std_regex_parser)
                 __ctfe || writeln("*LR*\nSource: ", pat, "\nStack: ",fixupStack.data);
-            switch (current)
+            switch (front)
             {
             case '(':
-                next();
-                if (current == '?')
+                popFront();
+                if (front == '?')
                 {
-                    next();
-                    switch (current)
+                    popFront();
+                    switch (front)
                     {
                     case '#':
                         for (;;)
                         {
-                            if (!next())
-                                error("Unexpected end of pattern");
-                            if (current == ')')
+                            popFront();
+                            enforce(!empty, "Unexpected end of pattern");
+                            if (front == ')')
                             {
-                                next();
+                                popFront();
                                 break;
                             }
                         }
                         break;
                     case ':':
                         g.genLogicGroup();
-                        next();
+                        popFront();
                         break;
                     case '=':
                         g.genLookaround(IR.LookaheadStart);
-                        next();
+                        popFront();
                         break;
                     case '!':
                         g.genLookaround(IR.NeglookaheadStart);
-                        next();
+                        popFront();
                         break;
                     case 'P':
-                        next();
-                        if (current != '<')
-                            error("Expected '<' in named group");
+                        popFront();
+                        enforce(front == '<', "Expected '<' in named group");
                         string name;
-                        if (!next() || !(isAlpha(current) || current == '_'))
+                        popFront();
+                        if (empty || !(isAlpha(front) || front == '_'))
                             error("Expected alpha starting a named group");
-                        name ~= current;
-                        while (next() && (isAlpha(current) ||
-                            current == '_' || std.ascii.isDigit(current)))
+                        name ~= front;
+                        popFront();
+                        while (!empty && (isAlpha(front) ||
+                            front == '_' || std.ascii.isDigit(front)))
                         {
-                            name ~= current;
+                            name ~= front;
+                            popFront();
                         }
-                        if (current != '>')
-                            error("Expected '>' closing named group");
-                        next();
+                        enforce(front == '>', "Expected '>' closing named group");
+                        popFront();
                         g.genNamedGroup(name);
                         break;
                     case '<':
-                        next();
-                        if (current == '=')
+                        popFront();
+                        if (front == '=')
                             g.genLookaround(IR.LookbehindStart);
-                        else if (current == '!')
+                        else if (front == '!')
                             g.genLookaround(IR.NeglookbehindStart);
                         else
                             error("'!' or '=' expected after '<'");
-                        next();
+                        popFront();
                         break;
                     default:
                         uint enableFlags, disableFlags;
                         bool enable = true;
                         do
                         {
-                            switch (current)
+                            switch (front)
                             {
                             case 's':
                                 if (enable)
@@ -729,9 +725,9 @@ if (isForwardRange!R && is(ElementType!R : dchar))
                             default:
                                 error(" 's', 'x', 'i', 'm' or '-' expected after '(?' ");
                             }
-                            next();
-                        }while (current != ')');
-                        next();
+                            popFront();
+                        }while (front != ')');
+                        popFront();
                         re_flags |= enableFlags;
                         re_flags &= ~disableFlags;
                     }
@@ -743,13 +739,13 @@ if (isForwardRange!R && is(ElementType!R : dchar))
                 break;
             case ')':
                 enforce(g.nesting, "Unmatched ')'");
-                next();
+                popFront();
                 auto pair = g.onClose();
                 if (pair[0])
                     parseQuantifier(pair[1]);
                 break;
             case '|':
-                next();
+                popFront();
                 g.fixAlternation();
                 break;
             default://no groups or whatever
@@ -774,7 +770,7 @@ if (isForwardRange!R && is(ElementType!R : dchar))
         if (empty)
             return g.fixRepetition(offset);
         uint min, max;
-        switch (current)
+        switch (front)
         {
         case '*':
             min = 0;
@@ -789,28 +785,27 @@ if (isForwardRange!R && is(ElementType!R : dchar))
             max = infinite;
             break;
         case '{':
-            enforce(next(), "Unexpected end of regex pattern");
-            enforce(std.ascii.isDigit(current), "First number required in repetition");
+            popFront();
+            enforce(!empty, "Unexpected end of regex pattern");
+            enforce(std.ascii.isDigit(front), "First number required in repetition");
             min = parseDecimal();
-            if (current == '}')
+            if (front == '}')
                 max = min;
-            else if (current == ',')
+            else if (front == ',')
             {
-                next();
-                if (std.ascii.isDigit(current))
+                popFront();
+                if (std.ascii.isDigit(front))
                     max = parseDecimal();
-                else if (current == '}')
+                else if (front == '}')
                     max = infinite;
                 else
                     error("Unexpected symbol in regex pattern");
                 skipSpace();
-                if (current != '}')
-                    error("Unmatched '{' in regex pattern");
+                enforce(front == '}', "Unmatched '{' in regex pattern");
             }
             else
                 error("Unexpected symbol in regex pattern");
-            if (min > max)
-                error("Illegal {n,m} quantifier");
+            enforce(min <= max, "Illegal {n,m} quantifier");
             break;
         default:
             g.fixRepetition(offset);
@@ -818,10 +813,11 @@ if (isForwardRange!R && is(ElementType!R : dchar))
         }
         bool greedy = true;
         //check only if we managed to get new symbol
-        if (next() && current == '?')
+        popFront();
+        if (!empty && front == '?')
         {
             greedy = false;
-            next();
+            popFront();
         }
         g.fixRepetition(offset, min, max, greedy);
     }
@@ -831,7 +827,7 @@ if (isForwardRange!R && is(ElementType!R : dchar))
     {
         if (empty)
             return;
-        switch (current)
+        switch (front)
         {
         case '*', '?', '+', '|', '{', '}':
             error("'*', '+', '?', '{', '}' not allowed in atom");
@@ -844,13 +840,14 @@ if (isForwardRange!R && is(ElementType!R : dchar))
                 CodepointSet set;
                 g.charsetToIr(set.add('\n','\n'+1).add('\r', '\r'+1).inverted);
             }
-            next();
+            popFront();
             break;
         case '[':
             parseCharset();
             break;
         case '\\':
-            enforce(_next(), "Unfinished escape sequence");
+            _popFront();
+            enforce(!empty, "Unfinished escape sequence");
             parseEscape();
             break;
         case '^':
@@ -858,20 +855,19 @@ if (isForwardRange!R && is(ElementType!R : dchar))
                 g.put(Bytecode(IR.Bol, 0));
             else
                 g.put(Bytecode(IR.Bof, 0));
-            next();
+            popFront();
             break;
         case '$':
             if (re_flags & RegexOption.multiline)
                 g.put(Bytecode(IR.Eol, 0));
             else
                 g.put(Bytecode(IR.Eof, 0));
-            next();
+            popFront();
             break;
         default:
-            //FIXME: getCommonCasing in new std uni
             if (re_flags & RegexOption.casefold)
             {
-                auto range = simpleCaseFoldings(current);
+                auto range = simpleCaseFoldings(front);
                 assert(range.length <= 5);
                 if (range.length == 1)
                     g.put(Bytecode(IR.Char, range.front));
@@ -880,8 +876,8 @@ if (isForwardRange!R && is(ElementType!R : dchar))
                         g.put(Bytecode(IR.OrChar, v, cast(uint) range.length));
             }
             else
-                g.put(Bytecode(IR.Char, current));
-            next();
+                g.put(Bytecode(IR.Char, front));
+            popFront();
         }
     }
 
@@ -901,73 +897,75 @@ if (isForwardRange!R && is(ElementType!R : dchar))
     @trusted void parseEscape()
     {//accesses array of appender
         import std.algorithm.iteration : sum;
-        switch (current)
+        switch (front)
         {
-        case 'f':   next(); g.put(Bytecode(IR.Char, '\f')); break;
-        case 'n':   next(); g.put(Bytecode(IR.Char, '\n')); break;
-        case 'r':   next(); g.put(Bytecode(IR.Char, '\r')); break;
-        case 't':   next(); g.put(Bytecode(IR.Char, '\t')); break;
-        case 'v':   next(); g.put(Bytecode(IR.Char, '\v')); break;
+        case 'f':   popFront(); g.put(Bytecode(IR.Char, '\f')); break;
+        case 'n':   popFront(); g.put(Bytecode(IR.Char, '\n')); break;
+        case 'r':   popFront(); g.put(Bytecode(IR.Char, '\r')); break;
+        case 't':   popFront(); g.put(Bytecode(IR.Char, '\t')); break;
+        case 'v':   popFront(); g.put(Bytecode(IR.Char, '\v')); break;
 
         case 'd':
-            next();
+            popFront();
             g.charsetToIr(unicode.Nd);
             break;
         case 'D':
-            next();
+            popFront();
             g.charsetToIr(unicode.Nd.inverted);
             break;
-        case 'b':   next(); g.put(Bytecode(IR.Wordboundary, 0)); break;
-        case 'B':   next(); g.put(Bytecode(IR.Notwordboundary, 0)); break;
+        case 'b':   popFront(); g.put(Bytecode(IR.Wordboundary, 0)); break;
+        case 'B':   popFront(); g.put(Bytecode(IR.Notwordboundary, 0)); break;
         case 's':
-            next();
+            popFront();
             g.charsetToIr(unicode.White_Space);
             break;
         case 'S':
-            next();
+            popFront();
             g.charsetToIr(unicode.White_Space.inverted);
             break;
         case 'w':
-            next();
+            popFront();
             g.charsetToIr(wordCharacter);
             break;
         case 'W':
-            next();
+            popFront();
             g.charsetToIr(wordCharacter.inverted);
             break;
         case 'p': case 'P':
             bool casefold = cast(bool)(re_flags & RegexOption.casefold);
-            auto set = unicode.parsePropertySpec(this, current == 'P', casefold);
+            auto set = unicode.parsePropertySpec(this, front == 'P', casefold);
             g.charsetToIr(set);
             break;
         case 'x':
             immutable code = parseUniHex(pat, 2);
-            next();
+            popFront();
             g.put(Bytecode(IR.Char,code));
             break;
         case 'u': case 'U':
-            immutable code = parseUniHex(pat, current == 'u' ? 4 : 8);
-            next();
+            immutable code = parseUniHex(pat, front == 'u' ? 4 : 8);
+            popFront();
             g.put(Bytecode(IR.Char, code));
             break;
         case 'c': //control codes
             Bytecode code = Bytecode(IR.Char, unicode.parseControlCode(this));
-            next();
+            popFront();
             g.put(code);
             break;
         case '0':
-            next();
+            popFront();
             g.put(Bytecode(IR.Char, 0));//NUL character
             break;
         case '1': .. case '9':
-            uint nref = cast(uint) current - '0';
+            uint nref = cast(uint) front - '0';
             immutable maxBackref = sum(g.groupStack.data);
             enforce(nref < maxBackref, "Backref to unseen group");
             //perl's disambiguation rule i.e.
             //get next digit only if there is such group number
-            while (nref < maxBackref && next() && std.ascii.isDigit(current))
+            popFront();
+            while (nref < maxBackref && !empty && std.ascii.isDigit(front))
             {
-                nref = nref * 10 + current - '0';
+                nref = nref * 10 + front - '0';
+                popFront();
             }
             if (nref >= maxBackref)
                 nref /= 10;
@@ -983,20 +981,18 @@ if (isForwardRange!R && is(ElementType!R : dchar))
             g.markBackref(nref);
             break;
         default:
-            // Lookahead to check if it's a \T
-            // where T is sub-pattern terminator in multi-pattern scheme
-            if (current == '\\' && !pat.empty)
+            if (front == '\\' && !pat.empty)
             {
-                if (pat.front >= privateUseStart && current <= privateUseEnd)
+                if (pat.front >= privateUseStart && pat.front <= privateUseEnd)
                     enforce(false, "invalid escape sequence");
             }
-            if (current >= privateUseStart && current <= privateUseEnd)
+            if (front >= privateUseStart && front <= privateUseEnd)
             {
-                g.endPattern(current - privateUseStart + 1);
+                g.endPattern(front - privateUseStart + 1);
                 break;
             }
-            auto op = Bytecode(IR.Char, current);
-            next();
+            auto op = Bytecode(IR.Char, front);
+            popFront();
             g.put(op);
         }
     }

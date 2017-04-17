@@ -6150,14 +6150,15 @@ package struct Stack(T)
 
 //test if a given string starts with hex number of maxDigit that's a valid codepoint
 //returns it's value and skips these maxDigit chars on success, throws on failure
-package dchar parseUniHex(Char)(ref Char[] str, size_t maxDigit)
+package dchar parseUniHex(Range)(ref Range str, size_t maxDigit)
 {
     //std.conv.parse is both @system and bogus
-    enforce(str.length >= maxDigit,"incomplete escape sequence");
     uint val;
     for (int k = 0; k < maxDigit; k++)
     {
-        immutable current = str[k];//accepts ascii only, so it's OK to index directly
+        enforce(!str.empty, "incomplete escape sequence");
+        //accepts ascii only, so it's OK to index directly
+        immutable current = str.front;
         if ('0' <= current && current <= '9')
             val = val * 16 + current - '0';
         else if ('a' <= current && current <= 'f')
@@ -6166,9 +6167,9 @@ package dchar parseUniHex(Char)(ref Char[] str, size_t maxDigit)
             val = val * 16 + current - 'A' + 10;
         else
             throw new Exception("invalid escape sequence");
+        str.popFront();
     }
     enforce(val <= 0x10FFFF, "invalid codepoint");
-    str = str[maxDigit..$];
     return val;
 }
 
@@ -6213,13 +6214,15 @@ auto caseEnclose(CodepointSet set)
     return s;
 }
 
-@safe struct UnicodeSetParser(Parser)
+@safe struct UnicodeSetParser(Range)
 {
     import std.typecons : tuple, Tuple;
-    Parser parser;
+    Range range;
     bool casefold_;
 
-    alias parser this;
+    @property bool empty(){ return range.empty; }
+    @property dchar front(){ return range.front; }
+    void popFront(){ range.popFront(); }
 
     //CodepointSet operations relatively in order of priority
     enum Operator:uint {
@@ -6230,6 +6233,8 @@ auto caseEnclose(CodepointSet set)
     //also fetches next set operation
     Tuple!(CodepointSet,Operator) parseCharTerm()
     {
+        import std.range : drop;
+        enum privateUseStart = '\U000F0000', privateUseEnd ='\U000FFFFD';
         enum State{ Start, Char, Escape, CharDash, CharDashEscape,
             PotentialTwinSymbolOperator }
         Operator op = Operator.None;
@@ -6272,14 +6277,14 @@ auto caseEnclose(CodepointSet set)
             final switch (state)
             {
             case State.Start:
-                switch (current)
+                switch (front)
                 {
                 case '|':
                 case '-':
                 case '~':
                 case '&':
                     state = State.PotentialTwinSymbolOperator;
-                    last = current;
+                    last = front;
                     break;
                 case '[':
                     op = Operator.Union;
@@ -6291,12 +6296,12 @@ auto caseEnclose(CodepointSet set)
                     break;
                 default:
                     state = State.Char;
-                    last = current;
+                    last = front;
                 }
                 break;
             case State.Char:
-                // xxx last current xxx
-                switch (current)
+                // xxx last front xxx
+                switch (front)
                 {
                 case '|':
                 case '~':
@@ -6304,7 +6309,7 @@ auto caseEnclose(CodepointSet set)
                     // then last is treated as normal char and added as implicit union
                     state = State.PotentialTwinSymbolOperator;
                     addWithFlags(set, last);
-                    last = current;
+                    last = front;
                     break;
                 case '-': // still need more info
                     state = State.CharDash;
@@ -6322,22 +6327,22 @@ auto caseEnclose(CodepointSet set)
                 default:
                     state = State.Char;
                     addWithFlags(set, last);
-                    last = current;
+                    last = front;
                 }
                 break;
             case State.PotentialTwinSymbolOperator:
-                // xxx last current xxxx
+                // xxx last front xxxx
                 // where last = [|-&~]
-                if (current == last)
+                if (front == last)
                 {
                     op = twinSymbolOperator(last);
-                    next();//skip second twin char
+                    popFront();//skip second twin char
                     break L_CharTermLoop;
                 }
                 goto case State.Char;
             case State.Escape:
-                // xxx \ current xxx
-                switch (current)
+                // xxx \ front xxx
+                switch (front)
                 {
                 case 'f':
                     last = '\f';
@@ -6367,7 +6372,7 @@ auto caseEnclose(CodepointSet set)
                 {
                 case val:
                 }
-                    last = current;
+                    last = front;
                     state = State.Char;
                     break;
                 case 'p':
@@ -6379,17 +6384,20 @@ auto caseEnclose(CodepointSet set)
                     state = State.Start;
                     continue L_CharTermLoop; //next char already fetched
                 case 'x':
-                    last = parseUniHex(pat, 2);
+                    popFront();
+                    last = parseUniHex(this, 2);
                     state = State.Char;
-                    break;
+                    continue L_CharTermLoop;
                 case 'u':
-                    last = parseUniHex(pat, 4);
+                    popFront();
+                    last = parseUniHex(this, 4);
                     state = State.Char;
-                    break;
+                    continue L_CharTermLoop;
                 case 'U':
-                    last = parseUniHex(pat, 8);
+                    popFront();
+                    last = parseUniHex(this, 8);
                     state = State.Char;
-                    break;
+                    continue L_CharTermLoop;
                 case 'd':
                     set.add(unicode.Nd);
                     state = State.Start;
@@ -6415,12 +6423,14 @@ auto caseEnclose(CodepointSet set)
                     state = State.Start;
                     break;
                 default:
+                    if (front >= privateUseStart && front <= privateUseEnd)
+                        enforce(false, "no matching ']' found while parsing character class");
                     enforce(false, "invalid escape sequence");
                 }
                 break;
             case State.CharDash:
-                // xxx last - current xxx
-                switch (current)
+                // xxx last - front xxx
+                switch (front)
                 {
                 case '[':
                     op = Operator.Union;
@@ -6433,27 +6443,27 @@ auto caseEnclose(CodepointSet set)
                  case '-'://set Difference again
                     addWithFlags(set, last);
                     op = Operator.Difference;
-                    next();//skip '-'
+                    popFront();//skip '-'
                     break L_CharTermLoop;
                 case '\\':
                     state = State.CharDashEscape;
                     break;
                 default:
-                    enforce(last <= current, "inverted range");
+                    enforce(last <= front, "inverted range");
                     if (casefold_)
                     {
-                        for (uint ch = last; ch <= current; ch++)
+                        for (uint ch = last; ch <= front; ch++)
                             addWithFlags(set, ch);
                     }
                     else
-                        set.add(last, current + 1);
+                        set.add(last, front + 1);
                     state = State.Start;
                 }
                 break;
             case State.CharDashEscape:
-            //xxx last - \ current xxx
+            //xxx last - \ front xxx
                 uint end;
-                switch (current)
+                switch (front)
                 {
                 case 'f':
                     end = '\f';
@@ -6474,29 +6484,52 @@ auto caseEnclose(CodepointSet set)
                 {
                 case val:
                 }
-                    end = current;
+                    end = front;
                     break;
                 case 'c':
                     end = unicode.parseControlCode(this);
                     break;
                 case 'x':
-                    end = parseUniHex(pat, 2);
-                    break;
+                    popFront();
+                    end = parseUniHex(this, 2);
+                    enforce(last <= end,"inverted range");
+                    set.add(last, end + 1);
+                    state = State.Start;
+                    continue L_CharTermLoop;
                 case 'u':
-                    end = parseUniHex(pat, 4);
-                    break;
+                    popFront();
+                    end = parseUniHex(this, 4);
+                    enforce(last <= end,"inverted range");
+                    set.add(last, end + 1);
+                    state = State.Start;
+                    continue L_CharTermLoop;
                 case 'U':
-                    end = parseUniHex(pat, 8);
-                    break;
+                    popFront();
+                    end = parseUniHex(this, 8);
+                    enforce(last <= end,"inverted range");
+                    set.add(last, end + 1);
+                    state = State.Start;
+                    continue L_CharTermLoop;
                 default:
-                    error("invalid escape sequence");
+                    if (front >= privateUseStart && front <= privateUseEnd)
+                        enforce(false, "no matching ']' found while parsing character class");
+                    enforce(false, "invalid escape sequence");
+                }
+                // Lookahead to check if it's a \T
+                // where T is sub-pattern terminator in multi-pattern scheme
+                auto lookahead = range.save.drop(1);
+                if (end == '\\' && !lookahead.empty)
+                {
+                    if (lookahead.front >= privateUseStart && lookahead.front <= privateUseEnd)
+                        enforce(false, "no matching ']' found while parsing character class");
                 }
                 enforce(last <= end,"inverted range");
                 set.add(last, end + 1);
                 state = State.Start;
                 break;
             }
-            enforce(next(), "unexpected end of CodepointSet");
+            popFront();
+            enforce(!empty, "unexpected end of CodepointSet");
         }
         return tuple(set, op);
     }
@@ -6509,12 +6542,15 @@ auto caseEnclose(CodepointSet set)
         ValStack vstack;
         OpStack opstack;
         import std.functional : unaryFun;
+        enforce(!empty, "unexpected end of input");
+        enforce(front == '[', "expected '[' at the start of unicode set");
         //
         static bool apply(Operator op, ref ValStack stack)
         {
             switch (op)
             {
             case Operator.Negate:
+                enforce(!stack.empty, "no operand for '^'");
                 stack.top = stack.top.inverted;
                 break;
             case Operator.Union:
@@ -6557,19 +6593,22 @@ auto caseEnclose(CodepointSet set)
         L_CharsetLoop:
         do
         {
-            switch (current)
+            switch (front)
             {
             case '[':
                 opstack.push(Operator.Open);
-                enforce(next(), "unexpected end of character class");
-                if (current == '^')
+                popFront();
+                enforce(!empty, "unexpected end of character class");
+                if (front == '^')
                 {
                     opstack.push(Operator.Negate);
-                    enforce(next(), "unexpected end of character class");
+                    popFront();
+                    enforce(!empty, "unexpected end of character class");
                 }
-                else if (current == ']') // []...] is special cased
+                else if (front == ']') // []...] is special cased
                 {
-                    enforce(next(), "wrong character set");
+                    popFront();
+                    enforce(!empty, "wrong character set");
                     auto pair = parseCharTerm();
                     pair[0].add(']', ']'+1);
                     if (pair[1] != Operator.None)
@@ -6586,7 +6625,7 @@ auto caseEnclose(CodepointSet set)
                     "character class syntax error");
                 enforce(!opstack.empty, "unmatched ']'");
                 opstack.pop();
-                next();
+                popFront();
                 if (opstack.empty)
                     break L_CharsetLoop;
                 auto pair  = parseCharTerm();
@@ -6613,7 +6652,7 @@ auto caseEnclose(CodepointSet set)
                 vstack.push(pair[0]);
             }
 
-        }while (!parser.empty || !opstack.empty);
+        }while (!empty || !opstack.empty);
         while (!opstack.empty)
             apply(opstack.pop(),vstack);
         assert(vstack.length == 1);
@@ -6774,55 +6813,77 @@ auto caseEnclose(CodepointSet set)
     {
         with(p)
         {
-            enforce(next(), "Unfinished escape sequence");
-            enforce(('a' <= current && current <= 'z')
-                || ('A' <= current && current <= 'Z'),
+            popFront();
+            enforce(!empty, "Unfinished escape sequence");
+            enforce(('a' <= front && front <= 'z')
+                || ('A' <= front && front <= 'Z'),
             "Only letters are allowed after \\c");
-            return current & 0x1f;
+            return front & 0x1f;
         }
     }
 
     //parse and return a CodepointSet for \p{...Property...} and \P{...Property..},
     //\ - assumed to be processed, p - is current
-    static package CodepointSet parsePropertySpec(Parser)(ref Parser p,
+    static package CodepointSet parsePropertySpec(Range)(ref Range p,
         bool negated, bool casefold)
     {
-        static import std.ascii;
+        import std.ascii;
         with(p)
         {
             enum MAX_PROPERTY = 128;
             char[MAX_PROPERTY] result;
             uint k = 0;
-            enforce(next(), "eof parsing unicode property spec");
-            if (current == '{')
+            popFront();
+            enforce(!empty, "eof parsing unicode property spec");
+            if (front == '{')
             {
-                while (k < MAX_PROPERTY && next() && current !='}'
-                    && current !=':')
+                popFront();
+                while (k < MAX_PROPERTY && !empty && front !='}'
+                    && front !=':')
                 {
-                    if (current != '-' && current != ' ' && current != '_')
-                        result[k++] = cast(char) std.ascii.toLower(current);
+                    if (front != '-' && front != ' ' && front != '_')
+                        result[k++] = cast(char) std.ascii.toLower(front);
+                    popFront();
                 }
                 enforce(k != MAX_PROPERTY, "invalid property name");
-                enforce(current == '}', "} expected ");
+                enforce(front == '}', "} expected ");
             }
             else
             {//single char properties e.g.: \pL, \pN ...
-                enforce(current < 0x80, "invalid property name");
-                result[k++] = cast(char) current;
+                enforce(front < 0x80, "invalid property name");
+                result[k++] = cast(char) front;
             }
             auto s = getUnicodeSet(result[0 .. k], negated, casefold);
             enforce(!s.empty, "unrecognized unicode property spec");
-            next();
+            popFront();
             return s;
         }
     }
 
-    static CodepointSet parseSet(Parser)(ref Parser p, bool casefold)
+    /**
+        Parse unicode codepoint set from given `range` using standard regex
+        syntax '[...]'. The range is advanced skiping over regex set definition.
+        `casefold` parameter determines if the set should be casefolded - that is
+        include both lower and upper case versions for any letters in the set.
+    */
+    static CodepointSet parseSet(Range)(ref Range range, bool casefold=false)
+    if (isInputRange!Range && is(ElementType!Range : dchar))
     {
-        auto usParser = UnicodeSetParser!Parser(p, casefold);
+        auto usParser = UnicodeSetParser!Range(range, casefold);
         auto set = usParser.parseSet();
-        p = usParser;
+        range = usParser.range;
         return set;
+    }
+
+    ///
+    @safe unittest
+    {
+        import std.uni;
+        string pat = "[a-zA-Z0-9]hello";
+        auto set = unicode.parseSet(pat);
+        // check some of the codepoints
+        assert(set['a'] && set['A'] && set['9']);
+        assert(pat == "hello");
     }
 
 private:
