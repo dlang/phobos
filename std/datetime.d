@@ -31723,6 +31723,10 @@ version(Windows) version(UpdateWindowsTZTranslations) deprecated @system unittes
    of the system clock varies from system to system, and other system-dependent
    and situation-dependent stuff (such as the overhead of a context switch
    between threads) can also affect $(D StopWatch)'s accuracy.
+
+   $(RED Warning: $(D StopWatch) relies on $(LREF TickDuration) which will be deprecated
+   in the near future. Until $(D StopWatch) is modified to use $(LREF MonoTime), the proposed
+   replacement of $(LREF TickDuration), you might use $(LREF MonoTime) directly if possible.)
   +/
 @safe struct StopWatch
 {
