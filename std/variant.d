@@ -2233,6 +2233,61 @@ if (Handlers.length > 0)
     assert(which == -1);
 }
 
+/**
+ * Behaves as $(D visit) but use a function object instead of visiting functions.
+ *
+ * The visiting function object should cover all of variant element types,
+ * and it's statically checked.
+ *
+ * Returns: The return type of visitWithObj is deduced from the visiting function object and
+ * must be the same across all overloads.
+ */
+public auto visitWithObj(VariantType, Handler)(VariantType variant, Handler handler)
+    if (isAlgebraic!VariantType)
+{
+    alias AllowedTypes = VariantType.AllowedTypes;
+
+    // statically check the handler can handler all of variant element types or not.
+    foreach (T; AllowedTypes) {
+        static assert(__traits(compiles, handler(T.init)),
+                Handler.stringof ~ " does not cover " ~ T.stringof);
+    }
+
+    foreach (T; AllowedTypes) {
+        if (T* ptr = variant.peek!T)
+        {
+            return handler(*ptr);
+        }
+    }
+    assert(0);
+}
+
+///
+unittest {
+    import std.conv : to;
+    alias V = Algebraic!(int, string, char, int[]);
+
+    class Visitor
+    {
+    public:
+        string opCall(int x) { return to!string(x); }
+        string opCall(string x) { return x; }
+        string opCall(T)(T x) { return T.stringof; }
+    }
+
+    Visitor visitor = new Visitor;
+    V x;
+
+    x = 4;
+    assert("4" == x.visitWithObj(visitor));
+
+    x = "abc";
+    assert("abc" == x.visitWithObj(visitor));
+
+    x = [1, 2, 3];
+    assert("int[]" == x.visitWithObj(visitor));
+}
+
 private template isAlgebraic(Type)
 {
     static if (is(Type _ == VariantN!T, T...))
