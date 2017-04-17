@@ -93,6 +93,7 @@
  *           $(LREF isDynamicArray)
  *           $(LREF isFloatingPoint)
  *           $(LREF isIntegral)
+ *           $(LREF isMultiDimensionalArray)
  *           $(LREF isNarrowString)
  *           $(LREF isConvertibleToString)
  *           $(LREF isNumeric)
@@ -133,6 +134,7 @@
  *           $(LREF Promoted)
  * ))
  * $(TR $(TD Misc) $(TD
+ *           $(LREF dimensionCount)
  *           $(LREF mangledName)
  *           $(LREF Select)
  *           $(LREF select)
@@ -6153,6 +6155,63 @@ enum bool isAssociativeArray(T) = __traits(isAssociativeArray, T);
 
     //enum EAA : int[int] { a = [1:1], b = [2:2] }
     //static assert( isAssociativeArray!EAA);
+}
+
+/**
+ * Detect whether type $(D T) is a multi dimensional built-in array.
+ * Params:
+ *      T = type to be tested
+ *
+ * Returns:
+ *      true if T is a multi dimensional array
+ */
+template isMultiDimensionalArray(T)
+{
+    static if (!isArray!T)
+        enum isMultiDimensionalArray = false;
+    else
+    {
+        import std.range.primitives: hasLength;
+        alias DT = typeof(T.init[0]);
+        enum isMultiDimensionalArray = hasLength!DT || isNarrowString!DT;
+    }
+}
+///
+unittest
+{
+    assert(isMultiDimensionalArray!(string[]));
+    assert(isMultiDimensionalArray!(int[][]));
+    assert(!isMultiDimensionalArray!(int[]));
+    assert(!isMultiDimensionalArray!(int));
+    assert(!isMultiDimensionalArray!(string));
+    assert(!isMultiDimensionalArray!(int[][] function()));
+    assert(!isMultiDimensionalArray!void);
+}
+
+/**
+ * Retrieve the dimension count of a built-in array.
+ * Params:
+ *      T = type to be tested, must be an array
+ *
+ * Returns:
+ *      an integer value at least equal to 1
+ */
+template dimensionCount(T)
+if (isArray!T)
+{
+    static if (isMultiDimensionalArray!T)
+    {
+        alias DT = typeof(T.init[0]);
+        enum dimensionCount = dimensionCount!DT + 1;
+    }
+    else enum dimensionCount = 1;
+}
+///
+unittest
+{
+    assert(dimensionCount!(int[]) == 1);
+    assert(dimensionCount!(int[][]) == 2);
+    assert(dimensionCount!(int[][][]) == 3);
 }
 
 /**
