@@ -7043,6 +7043,97 @@ if (isForwardRange!Source)
     return typeof(return)(source, chunkSize);
 }
 
+// allows chunks to be used with InputRanges by buffering them
+private struct ChunksBuffered(bool withCopies = true, Source)
+{
+    private Source _source;
+    private size_t _chunkSize;
+    private ElementType!(Source)[] _els;
+    private bool _isBuffered;
+
+    this (Source source, size_t chunkSize)
+    {
+        this._source = source;
+        this._chunkSize = chunkSize;
+        this._els  = new ElementType!(Source)[](_chunkSize);
+    }
+
+    private void _pop()
+    {
+        // create new array -> make other mutable
+        if(_source.empty)
+        {
+            // soft catch in case we reached the end
+            _els = null;
+        }
+        else
+        {
+            if (!_isBuffered)
+                _isBuffered = true;
+
+            // sometime the user does want to store the output
+            if (withCopies)
+                this._els  = new ElementType!(Source)[](_chunkSize);
+
+            for (int i = 0; i < _chunkSize; i++)
+            {
+                if(_source.empty)
+                {
+                    _els.length = i;
+                    break;
+                }
+                ElementType!Source el = _source.front;
+                _els[i] = el;
+                _source.popFront();
+            }
+        }
+    }
+
+    void popFront(){
+        assert(!empty, "empty array");
+        if (!_isBuffered){
+            // call twice if not called before
+            _pop();
+        }
+        _pop();
+    }
+
+    @property bool empty(){
+        return _source.empty && _els is null;
+    }
+
+    @property auto ref front(){
+        assert(!empty, "r is already empty");
+        if (!_isBuffered){
+            // load buffer if called for the first time
+            _pop();
+        }
+        return _els;
+    }
+
+    static if (hasLength!Source)
+    {
+        @property size_t length()
+        {
+            // see overflow warning from chunks
+            return cast(size_t)((cast(ulong)(_source.length) + _chunkSize - 1) / _chunkSize);
+        }
+    }
+
+}
+
+/// Ditto
+ChunksBuffered!(withCopies, Source) chunkss(bool withCopies = false, Source)(Source source, size_t chunkSize)
+if ((!isForwardRange!Source) && isInputRange!Source)
+in
+{
+    assert(chunkSize >= 1, "Invalid chunkSize");
+}
+body
+{
+    return ChunksBuffered!(withCopies, Source)(source, chunkSize);
+}
+
 ///
 @safe unittest
 {
@@ -7132,7 +7223,40 @@ if (isForwardRange!Source)
     assert(equal!`equal(a, b)`(oddsByPairs[3 .. $].take(2), [[13, 15], [17, 19]]));
 }
 
+unittest
+{
+    // test chunks with only input ranges
+    import std.algorithm : equal;
 
+    // this might conflict with std.stdio.chunks
+    // this import checks that!
+    import std.stdio;
+
+    int i = 0;
+    auto r = generate!(() => i++)().take(6);
+    assert(isInputRange!(typeof(r)) && !isForwardRange!(typeof(r)));
+
+    // if the underlying source buffer has a length, so do we
+    assert(r.chunkss(2).length == 3);
+
+    // by default it will override its buffer
+    assert(r.chunkss(2).array == [[4, 5], [4, 5], [4, 5]]);
+
+    // it is intended for one-time consuming ranges
+    i = 0;
+    auto r2 = generate!(() => i++)().take(6);
+    assert(r2.chunkss(2).equal([[0, 1], [2, 3], [4, 5]]));
+
+    // however just in case there is flag to make copies
+    i = 0;
+    //auto r3 = generate!(() => i++)().take(6);
+    //assert(r3.chunkss!true(2).array == [[0, 1], [2, 3], [4, 5]]);
+
+    // non-equal sized ranges are supported too
+    i = 0;
+    auto r4 = generate!(() => i++)().take(4);
+    assert(r4.chunkss(3).equal([[0, 1, 2], [3]]));
+}
 
 /**
 This range splits a $(D source) range into $(D chunkCount) chunks of
