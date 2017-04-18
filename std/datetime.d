@@ -462,7 +462,7 @@ public:
                     return unixTimeToStdTime(core.stdc.time.time(null));
                 else
                 {
-                    import core.sys.posix.sys.time : timeval;
+                    import core.sys.posix.sys.time : gettimeofday, timeval;
                     timeval tv;
                     if (gettimeofday(&tv, null) != 0)
                         throw new TimeException("Call to gettimeofday() failed");
@@ -28336,10 +28336,10 @@ public:
             {
                 setTZEnvVar("America/Los_Angeles");
                 assert(LocalTime().dstName == "PDT");
-            }
 
-            setTZEnvVar("America/New_York");
-            assert(LocalTime().dstName == "EDT");
+                setTZEnvVar("America/New_York");
+                assert(LocalTime().dstName == "EDT");
+            }
         }
     }
 
