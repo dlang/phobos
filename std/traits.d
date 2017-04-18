@@ -664,7 +664,6 @@ private template fqnType(T,
 
     string functionAttributeString(T)() @property
     {
-        alias FA = FunctionAttribute;
         enum attrs = functionAttributes!T;
 
         static if (attrs == FA.none)
@@ -1337,6 +1336,8 @@ enum FunctionAttribute : uint
     scope_     = 1 << 13, /// ditto
 }
 
+alias FA = FunctionAttribute; // shorten the enum name
+
 /// ditto
 template functionAttributes(func...)
     if (func.length == 1 && isCallable!func)
@@ -1352,9 +1353,7 @@ template functionAttributes(func...)
 ///
 @safe unittest
 {
-    import std.traits : functionAttributes, FunctionAttribute;
-
-    alias FA = FunctionAttribute; // shorten the enum name
+    import std.traits : functionAttributes, FA;
 
     real func(real x) pure nothrow @safe
     {
@@ -1367,8 +1366,6 @@ template functionAttributes(func...)
 
 @system unittest
 {
-    alias FA = FunctionAttribute;
-
     struct S
     {
         int noF() { return 0; }
@@ -2187,7 +2184,6 @@ version (unittest)
 {
     import std.algorithm.iteration : reduce;
 
-    alias FA = FunctionAttribute;
     foreach (BaseT; TypeTuple!(typeof(&sc), typeof(&novar), typeof(&cstyle),
         typeof(&dstyle), typeof(&typesafe)))
     {
@@ -4833,7 +4829,6 @@ template isCovariantWith(F, G)
          */
         template checkAttributes()
         {
-            alias FA = FunctionAttribute;
             enum uprAtts = functionAttributes!Upr;
             enum lwrAtts = functionAttributes!Lwr;
             //
