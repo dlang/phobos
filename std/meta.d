@@ -409,6 +409,37 @@ if (args.length >= 1)
         equals!(real, 3,    4, 1, 5, 9));
 }
 
+/**
+ * Returns an AliasSeq consisting of all `args` for which `pred!(arg)` returns true.
+ */
+template Filter(alias pred, args...)
+{
+    static if (args.length == 0)
+        alias Filter = AliasSeq!();
+    else static if (args.length == 1)
+    {
+        static if (pred!(args[0]))
+            alias Filter = AliasSeq!(args[0]);
+        else
+            alias Filter = AliasSeq!();
+    }
+    else
+        alias Filter = AliasSeq!(
+            Filter!(pred, args[0..$/2]),
+            Filter!(pred, args[$/2..$])
+        );
+}
+
+unittest
+{
+    enum typeIsInt(alias v) = is(typeof(v) == int);
+    static assert(Filter!(typeIsInt, 0, "asdf", false) == AliasSeq!(0));
+    static assert(Filter!(templateNot!typeIsInt, 0, "asdf", false) == AliasSeq!("asdf", false));
+
+    enum isInt(T) = is(T == int);
+    static assert(is(Filter!(isInt, int, float, int, bool, double, int) == AliasSeq!(int, int, int));
+    static assert(is(Filter!(templateNot!isInt, int, float, int, bool, double, int) == AliasSeq!(float, bool, double)));
+}
 
 /**
  * Returns a typetuple created from TList with the all occurrences,
