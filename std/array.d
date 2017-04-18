@@ -750,7 +750,7 @@ if (is(typeof(r1.ptr < r2.ptr) == bool))
     return b < e ? b[0 .. e - b] : null;
 }
 
-///
+// ///
 @safe pure /*nothrow*/ unittest
 {
     int[] a = [ 10, 11, 12, 13, 14 ];
