@@ -8,18 +8,25 @@ $(SCRIPT inhibitQuickIndex = 1;)
 
 $(DIVC quickindex,
 $(BOOKTABLE ,
-$(TR $(TH Category) $(TH Functions)
+$(TR
+    $(TH Category)
+    $(TH Functions)
 )
-$(TR $(TDNW Template API) $(TD $(MYREF SHA1)
-)
-)
-$(TR $(TDNW OOP API) $(TD $(MYREF SHA1Digest))
-)
-$(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
-)
+$(TR
+    $(TDNW Template API)
+    $(TD $(MYREF SHA1)
 )
 )
-
+$(TR
+    $(TDNW OOP API)
+    $(TD $(MYREF SHA1Digest))
+)
+$(TR
+    $(TDNW Helpers)
+    $(TD $(MYREF sha1Of))
+)
+)
+)
  * SHA2 comes in several different versions, all supported by this module:
  * SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/224 and SHA-512/256.
  *

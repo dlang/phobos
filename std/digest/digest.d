@@ -4,26 +4,34 @@
  * can be used with every _digest type.
  *
 $(SCRIPT inhibitQuickIndex = 1;)
-
 $(DIVC quickindex,
 $(BOOKTABLE ,
-$(TR $(TH Category) $(TH Functions)
+$(TR
+    $(TH Category)
+    $(TH Functions)
 )
-$(TR $(TDNW Template API) $(TD $(MYREF isDigest) $(MYREF DigestType) $(MYREF hasPeek)
-  $(MYREF hasBlockSize)
-  $(MYREF ExampleDigest) $(MYREF _digest) $(MYREF hexDigest) $(MYREF makeDigest)
-)
-)
-$(TR $(TDNW OOP API) $(TD $(MYREF Digest)
-)
-)
-$(TR $(TDNW Helper functions) $(TD $(MYREF toHexString))
-)
-$(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDigest))
+$(TR
+    $(TDNW Template API)
+    $(TD $(MYREF isDigest) $(MYREF DigestType) $(MYREF hasPeek)
+         $(MYREF hasBlockSize)
+         $(MYREF ExampleDigest) $(MYREF _digest) $(MYREF hexDigest) $(MYREF makeDigest)
 )
 )
+$(TR
+    $(TDNW OOP API)
+    $(TD $(MYREF Digest)
 )
-
+)
+$(TR
+    $(TDNW Helper functions)
+    $(TD $(MYREF toHexString))
+)
+$(TR
+    $(TDNW Implementation helpers)
+    $(TD $(MYREF digestLength) $(MYREF WrapperDigest))
+)
+)
+)
  * APIs:
  * There are two APIs for digests: The template API and the OOP API. The template API uses structs
  * and template helpers like $(LREF isDigest). The OOP API implements digests as classes inheriting
