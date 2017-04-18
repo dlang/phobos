@@ -237,6 +237,7 @@ Complexity: $(BIGOH n).
     {
         return SList(this[]);
     }
+    alias save = dup;
 
 /**
 Returns a range that iterates over all elements of the container, in
@@ -421,6 +422,7 @@ Complexity: $(BIGOH 1).
 
     /// ditto
     alias stableRemoveFront = removeFront;
+    alias popFront = removeFront;
 
 /**
 Removes $(D howMany) values at the front or back of the
@@ -843,4 +845,12 @@ Complexity: $(BIGOH n)
 
     s.reverse();
     assert(s[].equal([3, 2, 1]));
+}
+
+unittest
+{
+    import std.range;
+    // should be an input and forward range
+    assert(isInputRange!(SList!int));
+    assert(isForwardRange!(SList!int));
 }
