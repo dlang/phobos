@@ -15,6 +15,24 @@ immutable
     /++
         Operating system.
 
+        Example:
+        ----
+        import std.system, std.stdio;
+
+        int main(string[] args)
+        {
+            writeln(os);
+            if (os == OS.win64 || os == OS.win32)
+            {
+                writeln("it's Windows");
+            }
+            else if (os == OS.linux)
+            {
+                writeln("it's Linux");
+            }
+        }
+        ----
+
         Note:
             This is for cases where you need a value representing the OS at
             runtime. If you're doing something which should compile differently
