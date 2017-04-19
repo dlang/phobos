@@ -4027,25 +4027,14 @@ private void formatGeneric(Writer, D, Char)(Writer w, const(void)* arg, const re
 
 private void formatNth(Writer, Char, A...)(Writer w, const ref FormatSpec!Char f, size_t index, A args)
 {
-    import std.conv : to;
-    static string gencode(size_t count)()
-    {
-        string result;
-        foreach (n; 0 .. count)
-        {
-            auto num = to!string(n);
-            result ~=
-                "case "~num~":"~
-                "    formatValue(w, args["~num~"], f);"~
-                "    break;";
-        }
-        return result;
-    }
-
     switch (index)
     {
-        mixin(gencode!(A.length)());
-
+        foreach (n, _; A)
+        {
+            case n:
+                formatValue(w, args[n], f);
+                return;
+        }
         default:
             assert(0, "n = "~cast(char)(index + '0'));
     }
