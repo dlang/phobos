@@ -7234,6 +7234,103 @@ unittest
     }
 }
 
+//Helper template for CopyShared and friends. Takes any symbol
+//and returns its type if it has one, filtering out templates
+private template Typeof(item...)
+if (item.length == 1)
+{
+    //Templates have type void, so check for that
+    static if ((is(item[0] T) || is(typeof(item[0]) T)) && !is(T == void))
+    {
+        alias Typeof = T;
+    }
+    else
+    {
+        import std.string: format;
+
+        static assert(false, "'%s' is not a type or has an invalid type".format(source[0].stringof));
+    }      
+}
+
+/**
+Returns the type of $(D Target) with the "sharedness" of $(D source). $(D source) may be a type,
+a literal value, or a symbol, but the symbol cannot be something that doesn't have a type, such as
+a module name. If $(D source) is unshared, the returned type will be the same as $(D Target).
+*/
+template CopyShared(Target, source...)
+if (source.length == 1)
+{
+    alias Source = Typeof!source;
+
+    //immutable is implicitly shared
+    static if (is(Source == shared) || is(Source == immutable))
+    {
+        import std.format;
+        
+        static assert(is(shared Target), "Type '%s' cannot be created".format(Result.stringof));
+        
+        alias CopyShared = shared Target;
+    }
+    else
+    {
+        alias CopyShared = Target;
+    }
+}
+
+///
+unittest
+{
+    shared int i;
+    CopyShared!(float, i) f;
+    assert(is(typeof(f) == shared(float)));
+
+    CopyShared!(uint, char) u;
+    assert(is(typeof(u) == uint));
+
+    //immutable is implicitly shared, so this is okay
+    immutable bool b;
+    assert(is(CopyShared!(int, b) == shared int));
+
+    //Careful, shared(int)[] is an unshared array of shared(int)
+    alias MutArr = CopyShared!(int, shared(int)[]);
+    assert(!is(MutArr == shared(int)));
+
+    //Okay, shared(int[]) applies to array and contained ints
+    alias CstArr = CopyShared!(int, shared(int[]));
+    assert(is(CstArr == shared(int)));
+
+    assert(!__traits(compiles, CopyShared!(int, std.traits)));
+
+    assert(!__traits(compiles, CopyShared!(char, CopyConstness)));
+}
+
+unittest
+{
+    struct Test
+    {
+        void method1() {}
+        void method2() shared {}
+        void method3() inout shared {}
+    }
+
+    assert(is(CopyShared!(real, Test.method1) == real));
+
+    assert(is(CopyShared!(byte, Test.method2) == shared(byte)));
+
+    assert(is(CopyShared!(long, Test.method3) == shared(long)));
+}
+
+unittest
+{
+    static assert(is(CopyShared!(int,                    real) ==             int));
+    static assert(is(CopyShared!(int, shared             real) ==      shared int));
+    static assert(is(CopyShared!(int, shared       const real) ==      shared int));
+    static assert(is(CopyShared!(int, shared inout       real) ==      shared int));
+    static assert(is(CopyShared!(int, shared inout const real) ==      shared int));
+    static assert(is(CopyShared!(int,          immutable real) ==      shared int));
+}
+
+
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // Misc.
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
