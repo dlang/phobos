@@ -2689,7 +2689,7 @@ abstract class EncodingScheme
                  "iso-ir-6",
                  "us"
  */
-class EncodingSchemeASCII : EncodingScheme
+final class EncodingSchemeASCII : EncodingScheme
 {
     /* // moved to std.internal.phobosinit
     shared static this()
@@ -2775,7 +2775,7 @@ class EncodingSchemeASCII : EncodingScheme
                  "l1",
                  "latin1"
  */
-class EncodingSchemeLatin1 : EncodingScheme
+final class EncodingSchemeLatin1 : EncodingScheme
 {
     /* // moved to std.internal.phobosinit
     shared static this()
@@ -2855,7 +2855,7 @@ class EncodingSchemeLatin1 : EncodingScheme
                  "ISO_8859-2:1999",
                  "Windows-28592"
  */
-class EncodingSchemeLatin2 : EncodingScheme
+final class EncodingSchemeLatin2 : EncodingScheme
 {
     /* // moved to std.internal.phobosinit
     shared static this()
@@ -2927,7 +2927,7 @@ class EncodingSchemeLatin2 : EncodingScheme
  This scheme recognises the following names:
                  "windows-1250"
  */
-class EncodingSchemeWindows1250 : EncodingScheme
+final class EncodingSchemeWindows1250 : EncodingScheme
 {
     /* // moved to std.internal.phobosinit
     shared static this()
@@ -2995,7 +2995,7 @@ class EncodingSchemeWindows1250 : EncodingScheme
  This scheme recognises the following names:
                  "windows-1252"
  */
-class EncodingSchemeWindows1252 : EncodingScheme
+final class EncodingSchemeWindows1252 : EncodingScheme
 {
     /* // moved to std.internal.phobosinit
     shared static this()
@@ -3063,7 +3063,7 @@ class EncodingSchemeWindows1252 : EncodingScheme
  This scheme recognises the following names:
                  "UTF-8"
  */
-class EncodingSchemeUtf8 : EncodingScheme
+final class EncodingSchemeUtf8 : EncodingScheme
 {
     /* // moved to std.internal.phobosinit
     shared static this()
@@ -3132,7 +3132,7 @@ class EncodingSchemeUtf8 : EncodingScheme
                  "UTF-16LE" (little-endian architecture only)
                  "UTF-16BE" (big-endian architecture only)
  */
-class EncodingSchemeUtf16Native : EncodingScheme
+final class EncodingSchemeUtf16Native : EncodingScheme
 {
     /* // moved to std.internal.phobosinit
     shared static this()
@@ -3228,7 +3228,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
                  "UTF-32LE" (little-endian architecture only)
                  "UTF-32BE" (big-endian architecture only)
  */
-class EncodingSchemeUtf32Native : EncodingScheme
+final class EncodingSchemeUtf32Native : EncodingScheme
 {
     /* // moved to std.internal.phobosinit
     shared static this()
