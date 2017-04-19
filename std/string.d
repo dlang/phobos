@@ -1185,7 +1185,7 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
     if (sub.empty)
         return -1;
 
-    if (walkLength(sub) == 1)
+    if (sub.walkLength(2) == 1)
         return lastIndexOf(s, sub.front, cs);
 
     if (cs == Yes.caseSensitive)
