@@ -8245,7 +8245,7 @@ if (isInputRange!Range)
     }
 
     /// Range primitives.
-    @property bool empty()             //const
+    @property bool empty() const
     {
         return this._input.empty;
     }
@@ -8261,7 +8261,7 @@ if (isInputRange!Range)
     }
 
     /// Ditto
-    @property auto ref front()
+    @property auto ref front() const
     {
         return _input.front;
     }
@@ -8275,7 +8275,7 @@ if (isInputRange!Range)
     /// Ditto
     static if (isBidirectionalRange!Range)
     {
-        @property auto ref back()
+        @property auto ref back() const
         {
             return _input.back;
         }
@@ -8310,7 +8310,7 @@ if (isInputRange!Range)
     /// Ditto
     static if (hasLength!Range)
     {
-        @property size_t length()          //const
+        @property size_t length() const
         {
             return _input.length;
         }
