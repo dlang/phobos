@@ -7234,6 +7234,111 @@ unittest
     }
 }
 
+/**
+Returns the type of $(D Target) with the constness of $(D source). $(D source) may be a type,
+a literal value, or a symbol, but the symbol cannot be something that doesn't have a type, such as
+a module name. If $(D source) has no constness, the returned type will be the same as $(D Target).
+*/
+template CopyConstness(Target, source...)
+if (source.length == 1)
+{
+    import std.string: format;
+    //Templates have type void, so check for that
+    static if ((is(source[0] SourceT) || is(typeof(source[0]) SourceT)) && !is(SourceT == void))
+    {
+        alias Source = SourceT;
+    }
+    else
+    {
+        static assert(false, "'%s' is not a type or has an invalid type".format(source[0].stringof));
+    }
+
+    alias Unshared(T) = T;
+    alias Unshared(T: shared U, U) = U;
+    alias TargetType(T) = Target;
+
+    alias Result = ModifyTypePreservingSTC!(TargetType, Unshared!Source);
+    static assert(is(Result), "Type '%s' cannot be created".format(Result.stringof));
+
+    alias CopyConstness = Result;
+}
+
+///
+unittest
+{
+    const(int) i;
+    CopyConstness!(float, i) f;
+    assert(is(typeof(f) == const(float)));
+
+    CopyConstness!(uint, char) u;
+    assert(is(typeof(u) == uint));
+
+    //The 'shared' qualifier will not be copied
+    shared bool b;
+    assert(!is(CopyConstness!(int, b) == shared int));
+
+    //But the constness will be
+    shared const real s;
+    assert(is(CopyConstness!(double, s) == const double));
+
+    //Careful, const(int)[] is a mutable array of const(int)
+    alias MutArr = CopyConstness!(int, const(int)[]);
+    assert(!is(MutArr == const(int)));
+
+    //Okay, const(int[]) applies to array and contained ints
+    alias CstArr = CopyConstness!(int, const(int[]));
+    assert(is(CstArr == const(int)));
+
+    assert(!__traits(compiles, CopyConstness!(int, std.traits)));
+
+    assert(!__traits(compiles, CopyConstness!(char, CopyConstness)));
+}
+
+unittest
+{
+    struct Test
+    {
+        void method1() {}
+        void method2() const {}
+        void method3() immutable {}
+    }
+
+    assert(is(CopyConstness!(real, Test.method1) == real));
+
+    assert(is(CopyConstness!(byte, Test.method2) == const(byte)));
+
+    assert(is(CopyConstness!(string, Test.method3) == immutable(string)));
+}
+
+unittest
+{
+    (inout(int)[] ia)
+    {
+        assert(!is(CopyConstness!(int[], ia) == inout(int[])));
+    }
+    ([1, 2, 3]);
+
+    (inout(int[]) ia)
+    {
+        assert(is(CopyConstness!(int[], ia) == inout(int[])));
+    }
+    ([1, 2, 3]);
+}
+
+unittest
+{
+    static assert(is(CopyConstness!(int,                    real) ==             int));
+    static assert(is(CopyConstness!(int,              const real) ==       const int));
+    static assert(is(CopyConstness!(int,        inout       real) ==       inout int));
+    static assert(is(CopyConstness!(int,        inout const real) == inout const int));
+    static assert(is(CopyConstness!(int, shared             real) ==             int));
+    static assert(is(CopyConstness!(int, shared       const real) ==       const int));
+    static assert(is(CopyConstness!(int, shared inout       real) == inout       int));
+    static assert(is(CopyConstness!(int, shared inout const real) == inout const int));
+    static assert(is(CopyConstness!(int,          immutable real) ==   immutable int));
+}
+
+
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // Misc.
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
