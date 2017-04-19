@@ -125,6 +125,34 @@ bool isAlphaNum(dchar c) @safe pure nothrow @nogc
         assert(!isAlphaNum(c));
 }
 
+/**
+    Params: c = The character to test.
+    Returns: `true` if `c` is a number [0..9], `false` otherwise.
+    See_Also: $(REF isNumber, std,uni)
+*/
+bool isNumber(dchar c) @safe pure nothrow @nogc
+{
+    return c >= '0' && c <= '9';
+}
+
+///
+@safe pure nothrow @nogc unittest
+{
+    assert('1'.isNumber);
+    assert('9'.isNumber);
+
+    // Unicode is not supported
+    assert(!'\u17E0'.isNumber);
+}
+
+@safe pure unittest
+{
+    foreach (c; chain(digits, octalDigits))
+        assert(isNumber(c));
+
+    foreach (c; chain(whitespace, letters, lowercase, uppercase))
+        assert(!isNumber(c));
+}
 
 /++
     Params: c = The character to test.
