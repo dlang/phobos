@@ -4060,29 +4060,27 @@ private int getNthInt(A...)(uint index, A args)
     return getNth!(isIntegral,int)(index, args);
 }
 
-private T getNth(alias Condition, T,A...)(uint index, A args)
+private T getNth(alias Condition, T, A...)(uint index, A args)
 {
     import std.conv : to;
 
-    static if (A.length)
+    switch (index)
     {
-        if (index)
+        foreach (n, _; A)
         {
-            return getNth!(Condition,T)(index - 1, args[1 .. $]);
+            case n:
+                static if (Condition!(typeof(args[n])))
+                {
+                    return to!T(args[n]);
+                }
+                else
+                {
+                    throw new FormatException(T.stringof ~ " expected, not " ~
+                            typeof(args[n]).stringof);
+                }
         }
-        static if (Condition!(typeof(args[0])))
-        {
-            return to!T(args[0]);
-        }
-        else
-        {
-            throw new FormatException(T.stringof ~ " expected, not " ~
-                    typeof(args[0]).stringof);
-        }
-    }
-    else
-    {
-        throw new FormatException("missing integer width/precision argument");
+        default:
+            throw new FormatException("missing argument #" ~ to!string(index + 1));
     }
 }
 
@@ -4095,7 +4093,7 @@ private T getNth(alias Condition, T,A...)(uint index, A args)
     assert(collectExceptionMsg!FormatException(format("%.*d", 5))
         == "Orphan format specifier: %d");
     assert(collectExceptionMsg!FormatException(format("%*.*d", 5))
-        == "missing integer width/precision argument");
+        == "missing argument #2");
 }
 
 /* ======================== Unit Tests ====================================== */
