@@ -59,7 +59,7 @@ public:
      *     s = a finite bidirectional range of any character type
      *
      * Throws:
-     *     $(D ConvException) if the string doesn't represent a valid number
+     *     $(REF ConvException, std,conv) if the string doesn't represent a valid number
      */
     this(Range)(Range s) if (
         isBidirectionalRange!Range &&
