@@ -341,6 +341,28 @@ private template sharedToString(alias field)
     alias sharedToString = field;
 }
 
+// Used to align Tuple slices
+private struct TuplePad(size_t byteCount)
+{
+    private align(1) byte[byteCount] padding;
+    static assert(typeof(this).sizeof == byteCount);
+    static assert(typeof(this).alignof == 1);
+}
+
+@safe unittest
+{
+    // Phobos issue #15645
+    Tuple!(int, bool, string) foo = tuple(-3175, true, "F0O");
+    const bar = foo.slice!(1, 3)();
+
+    alias Foo = typeof(foo);
+    alias Bar = typeof(bar);
+    static assert((Foo[2].offsetof - Foo[1].offsetof) == (Bar[1].offsetof - Bar[0].offsetof));
+
+    assert(bar[0] == foo[1]);
+    assert(bar[1] == foo[2]);
+}
+
 /**
 _Tuple of values, for example $(D Tuple!(int, string)) is a record that
 stores an $(D int) and a $(D string). $(D Tuple) can be used to bundle
@@ -399,7 +421,16 @@ template Tuple(Specs...)
         alias name = s;
     }
 
-    alias fieldSpecs = parseSpecs!Specs;
+    static if (Specs.length > 0 && isInstanceOf!(TuplePad, Specs[0]))
+    {
+        private alias SlicePad = Specs[0];
+        alias fieldSpecs = parseSpecs!(Specs[1 .. $]);
+    }
+    else
+    {
+        private alias SlicePad = void;
+        alias fieldSpecs = parseSpecs!Specs;
+    }
 
     // Used with staticMap.
     alias extractType(alias spec) = spec.Type;
@@ -429,8 +460,17 @@ template Tuple(Specs...)
 
     // Returns Specs for a subtuple this[from .. to] preserving field
     // names if any.
-    alias sliceSpecs(size_t from, size_t to) =
-        staticMap!(expandSpec, fieldSpecs[from .. to]);
+    template sliceSpecs(size_t from, size_t to)
+    {
+    private:
+        alias userSpecs = staticMap!(expandSpec, fieldSpecs[from .. to]);
+        enum slicePad = Tuple[from].offsetof % Tuple.alignof;
+    public:
+        static if (slicePad)
+            alias sliceSpecs = AliasSeq!(TuplePad!slicePad, userSpecs);
+        else
+            alias sliceSpecs = userSpecs;
+    }
 
     template expandSpec(alias spec)
     {
@@ -480,6 +520,9 @@ template Tuple(Specs...)
 
     struct Tuple
     {
+        static if (!is(SlicePad : void))
+            private SlicePad alignSlice;
+
         /**
          * The types of the `Tuple`'s components.
          */
@@ -978,25 +1021,36 @@ template Tuple(Specs...)
          *
          * Returns:
          *     A new `Tuple` that is a slice from `[from, to$(RPAREN)` of the original.
-         *     It has the same types and values as the range `[from, to$(RPAREN)` in
-         *     the original.
+         *     It has the same values and `Types` as the range `[from, to$(RPAREN)` in
+         *     the original, but may include an additional hidden padding member for
+         *     memory alignment reasons.
          */
         @property
-        ref Tuple!(sliceSpecs!(from, to)) slice(size_t from, size_t to)() @trusted
+        ref inout(Tuple!(sliceSpecs!(from, to))) slice(size_t from, size_t to)() inout @trusted
         if (from <= to && to <= Types.length)
         {
-            return *cast(typeof(return)*) &(field[from]);
+            enum sliceOff = expand[from].offsetof - typeof(return)._0.offsetof;
+            return *cast(typeof(return)*) ((cast(void*) &this) + sliceOff);
         }
 
         ///
         static if (Specs.length == 0) @safe unittest
         {
-            Tuple!(int, string, float, double) a;
-            a[1] = "abc";
+            Tuple!(int, char, double, string) a;
+            a[1] = 'z';
             a[2] = 4.5;
+
             auto s = a.slice!(1, 3);
-            static assert(is(typeof(s) == Tuple!(string, float)));
-            assert(s[0] == "abc" && s[1] == 4.5);
+            assert(s[0] == 'z' && s[1] == 4.5);
+
+            // A slice value can be assigned to a regular Tuple with the same Types...
+            Tuple!(char, double) p = s;
+            static assert( is(s.Types == p.Types));
+            assert(p[0] == 'z' && p[1] == 4.5);
+
+            // ...but for alignment reasons the slice itself may not be a regular Tuple.
+            static if(double.alignof > int.alignof)
+                static assert(!is(typeof(s) == typeof(p)));
         }
 
         /**
@@ -1184,6 +1238,32 @@ template Tuple(Specs...)
     Tuple!(int, "x", int, "y") point1;
     Tuple!(int, int) point2;
     assert(!is(typeof(point1) == typeof(point2)));
+}
+
+@safe unittest
+{
+    class A
+    {
+        int x;
+        this(int x)
+        {
+            this.x = x;
+        }
+    }
+    static bool isConst(T)(ref T slice)
+    {
+        return is(T == const(T));
+    }
+
+    // Verify that slice is by ref:
+    Tuple!(A) foo = tuple(new A(1));
+    foo.slice!(0, 1)[0].x = 2;
+    assert(foo[0].x == 2);
+
+    // Verify that constness is preserved:
+    assert(!isConst(foo.slice!(0, 1)()));
+    const bar = foo;
+    assert( isConst(bar.slice!(0, 1)()));
 }
 
 /**
