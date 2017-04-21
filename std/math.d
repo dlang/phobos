@@ -249,8 +249,504 @@ enum RealFormat
     ieeeQuadruple,
 }
 
-// Constants used for extracting the components of the representation.
-// They supplement the built-in floating point properties.
+/* Low-level access to the individual parts of a floating-point value.
+
+   TODO: Make this publically available through std.bitmanip once the API
+   is stable and tested.
+*/
+union RealRep(N)
+if (isFloatingPoint!N &&  is(N == Unqual!N))
+{
+pure: @safe: nothrow: @nogc:
+pragma(inline, true):
+
+    // The floating-point number who's bit fields will be exposed.
+    N num = N.init;
+    alias num this;
+    this(const N num) inout
+    {
+        this.num = num;
+    }
+
+    static if (N.mant_dig == 106 && N.max_exp == 0x400)
+    {
+        /* N has IBM's double + double format, which is actually two ieeeDouble
+        (see below) stuck together. Pretending otherwise is not helpful at this
+        level. */
+        enum format = RealFormat.ibmExtended;
+
+        struct
+        {
+            version(LittleEndian)
+            {
+                RealRep!double lo;
+                RealRep!double hi;
+            }
+            else
+            {
+                RealRep!double hi;
+                RealRep!double lo;
+            }
+        }
+    }
+    else // N has some IEEE-like format:
+    {
+// Bitwise layout
+        /+
+            /* The number of "excess" binary digits of precision found at the
+            least significant end of the mantissa. Those digits should normally
+            be zero. This field is included to support ieeeExtended53. */
+            enum int excessDig;
+
+            /* True if this format explicitly stores the leading one of the
+            mantissa for normalized values. This field is included to support
+            ieeeExtended and ieeeExtended53. */
+            enum bool storeWhole;
+
+            // The number of binary digits in the raw exponent.
+            enum int expDig;
+
+            /* An unsigned integral type which is large enough to store the
+            complete mantissa (including the leading one) without loss of
+            precision. */
+            alias Mant;
+        +/
+
+        static if (N.mant_dig == 11 && N.max_exp == 0x10)
+        {
+            // N has the IEEE binary16 format.
+            enum format = RealFormat.ieeeHalf,
+                 excessDig = 0,
+                 storeWhole = false,
+                 expDig = 5;
+            alias Mant = ushort;
+        }
+        else static if (N.mant_dig == 24 && N.max_exp == 0x80)
+        {
+            // N has the IEEE binary32 format.
+            enum format = RealFormat.ieeeSingle,
+                 excessDig = 0,
+                 storeWhole = false,
+                 expDig = 8;
+            alias Mant = uint;
+        }
+        else static if (N.mant_dig == 53 && N.max_exp == 0x400)
+        {
+            // N has the IEEE binary64 format.
+            enum format = RealFormat.ieeeDouble,
+                 excessDig = 0,
+                 storeWhole = false,
+                 expDig = 11;
+            alias Mant = ulong;
+        }
+        else static if (N.mant_dig == 53 && N.max_exp == 0x4000)
+        {
+            /* N has the Intel 80-bit extended format, but rounded so as to
+            limit the precision to be the same as the IEEE binary64 format. */
+            enum format = RealFormat.ieeeExtended53,
+                 excessDig = 11,
+                 storeWhole = true,
+                 expDig = 15;
+            alias Mant = ulong;
+        }
+        else static if (N.mant_dig == 64 && N.max_exp == 0x4000)
+        {
+            // N has the Intel 80-bit extended format.
+            enum format = RealFormat.ieeeExtended,
+                 excessDig = 0,
+                 storeWhole = true,
+                 expDig = 15;
+            alias Mant = ulong;
+        }
+        else static if (N.mant_dig == 113 && N.max_exp == 0x4000)
+        {
+            // N has the IEEE binary128 format.
+            enum format = RealFormat.ieeeQuadruple,
+                 excessDig = 0,
+                 storeWhole = false,
+                 expDig = 15;
+            alias Mant = ucent;
+        }
+        else
+            static assert(false, "Unrecognized floating-point format");
+
+        /* The total number of binary digits in the mantissa, including the
+        leading one (even if it is not explicitly stored) and any "excess"
+        bits. */
+        enum mantExDig = excessDig + N.mant_dig;
+
+        /* The total number of binary digits in the fractional part of the
+        mantissa field, including any "excess" precision but excluding the
+        leading one (regardless of whether it is explicitly stored). */
+        enum fracExDig = mantExDig - 1;
+
+        // The size, in bits, of the explicitly stored mantissa field.
+        enum usedBits = fracExDig + storeWhole + expDig + 1;
+
+        /* An unsigned integral type which is large enough to store all of
+        the "excess" precision from the mantissa. */
+        alias Excess = ushort;
+
+        /* A signed integral type which is large enough to store the
+        sign bit and the raw exponent bits together. */
+        alias Exp = short;
+
+        static assert(
+            8*Mant.sizeof <= usedBits &&
+            8*Mant.sizeof >= mantExDig &&
+            8*Excess.sizeof >= excessDig &&
+            usedBits % (8*Exp.sizeof) == 0 &&
+            8*Exp.sizeof >= (expDig + 1));
+
+// Raw overlapped fields
+        /* Direct access to the raw bits of this type's "excess" precision,
+        if any. WARNING: Because this field may overlap with others, `excess`,
+        below, should normally be used instead. */
+        Excess excessBits;
+
+        /* Direct access to the raw bits of the mantissa. WARNING: Because this
+        field may overlap with others, normally one of the properties below
+        should be used instead, such as `fracEx`. */
+        Mant mantBits;
+
+        /* Direct access to all of the raw bits of `num` (excluding any
+        alignment padding). The chunk size is optimized for working with the
+        exponent field. */
+        Exp[usedBits / (8*Exp.sizeof)] allBits;
+
+// Mantissa (shifted to the high end of the Mant)
+        /* The number of bits by which the raw mantissa bits must be shifted
+        higher to position the leading one in the most significant bit of a
+        `Mant` value. */
+        enum mantShift = 8*Mant.sizeof - mantExDig;
+
+        /* A bit mask that distinguishes the explicitly stored mantissa
+        (including any "excess" digits) from the other bit fields. */
+        enum mantExMask = cast(Mant) (~Mant(0) >>> mantShift);
+
+        /* Get the leading one (even if it's not explicitly stored), the
+        fractional part, and any "excess" bits of the mantissa all shifted
+        to the most significant end of the returned `Mant` value.
+
+        Note that unless `storeWhole` is true, `fracEx` is faster. */
+        Mant mantEx() const
+        {
+            static if (storeWhole)
+                return mantBits << mantShift;
+            else
+                return (fracEx >>> 1) | (Mant(whole) << (8*Mant.sizeof - 1));
+        }
+        static if (storeWhole)
+        {
+            /* Set the mantissa (as described above). This operation is only
+            available if the leading one is explicitly stored, as it is for
+            ieeeExtended and ieeeExtended53. */
+            void mantEx(Mant newMant)
+            {
+                mantBits = (mantBits & ~mantExMask) | (newMant >>> mantShift);
+            }
+        }
+
+// Fraction (shifted to the high end of the Mant)
+        /* The number of bits by which the fractional part of the raw mantissa
+        bits must be shifted higher to position them at the most significant end
+        of a `Mant` value. */
+        enum fracShift = mantShift + 1;
+
+        /* A bit mask that selects for the fractional part of the mantissa, as
+        well as for any "excess" precision. */
+        enum fracExMask = cast(Mant) (~Mant(0) >>> fracShift);
+
+        /* Get the fractional part of the mantissa, plus any "excess" bits all
+        shifted to the most significant end of the returned `Mant` value. */
+        Mant fracEx() const
+        {
+            return mantBits << fracShift;
+        }
+
+        // Set the fractional part of the mantissa, plus any "excess" bits.
+        void fracEx(Mant newFrac)
+        {
+            mantBits = (mantBits & ~fracExMask) | (newFrac >>> fracShift);
+        }
+
+// Excess precision (for ieeeExtended53)
+        static assert(excessDig == 0 || mantShift == 0);
+
+        // A bit mask that selects for the "excess" bits of the mantissa.
+        enum excessMask = ~cast(Excess) (~Excess(0) << excessDig);
+
+        /* Get the current value of any "excess" bits from the least
+        significant end of the mantissa. */
+        Excess excess() const
+        {
+            return excessBits & cast(Excess) excessMask;
+        }
+
+        // Set the "excess" bits.
+        void excess(Excess newEx)
+        {
+            excessBits = (excessBits & ~excessMask) | (newEx & excessMask);
+        }
+
+// Whole
+        /* The little-endian index of the chunk in `allBits` which contains
+        the explicitly stored leading one (if there is any). */
+        enum wholeXLE = fracExDig / (8 * Exp.sizeof);
+
+        /* The number of bits by which the explicit leading one must be shifted
+        lower to place it in the least significant bit, starting from the
+        appropriate chunk in `allBits`. */
+        enum wholeShift = fracExDig - (8 * Exp.sizeof * wholeXLE);
+
+        /* A bit mask that selects for the explicitly stored leading one
+        within the appropriate chunk of `allBits`. */
+        enum wholeMask = cast(Exp) (Exp(1) << wholeShift);
+
+        /* Get the value of the leading one of the mantissa. Note that this
+        is equally fast whether the leading one is explicitly stored (as in
+        ieeeExtended), or not (as in most other formats). */
+        bool whole() const
+        {
+            static if (storeWhole)
+                return (end!wholeXLE(allBits) & wholeMask) != 0;
+            else
+                return (end!(-1)(allBits) & expMask) != 0;
+        }
+        static if (storeWhole)
+        {
+            // Explicitly set the value of the leading one in the mantissa.
+            void whole(bool newWhole)
+            {
+                end!wholeXLE(allBits) =
+                    cast(Exp) ((end!wholeXLE(allBits) & ~wholeMask) | (cast(Exp) newWhole << wholeShift));
+            }
+
+            /* Get the portion of the mantissa which is explicitly stored.
+            This is the fastest way to access the mantissa when the presence
+            or absence of the leading one is not important. */
+            alias mantStored = mantEx;
+        }
+        else
+            alias mantStored = fracEx;
+
+// Exponent (raw)
+        /* A bias must be subtracted from the stored exponent to get the
+        true exponent. Note that IEEE 754 and C/C++ disagree as to the precise
+        definition; see below. */
+
+        /* The number of bits by which the exponent must be shifted lower to
+        place it at the least significant end, starting from the appropriate
+        chunk in `allBits`. */
+        enum expShift = (8*Exp.sizeof - 1) - expDig;
+
+        // A bit mask that selects for the (biased) exponent.
+        enum expMask = cast(Exp) (Exp.min ^ (~Exp(0) << expShift));
+
+        // The raw exponent which indicates an infinite or NaN value.
+        enum expRawNonFinite = expMask;
+
+        /* Get the raw exponent value, which is the biased value shifted
+        `expShift` bits higher. */
+        Exp expRaw() const
+        {
+            return end!(-1)(allBits) & expMask;
+        }
+
+        // Set the raw exponent value.
+        void expRaw(Exp newRaw)
+        {
+            end!(-1)(allBits) = (end!(-1)(allBits) & ~expMask) | (newRaw & expMask);
+        }
+
+// Exponent (IEEE)
+        /* The IEEE bias which must be subtracted from the stored value, so that
+        1.0 has an exponent of 0. */
+        enum expIeeeBias = cast(Exp) ((Exp(1) << (expDig - 1)) - 1);
+
+        // The maximum possible IEEE exponent for a finite value.
+        enum expIeeeMaxNormal =  expIeeeBias;
+
+        // The minimum possible IEEE exponent for a normalized, non-zero value.
+        enum expIeeeMinNormal = -expIeeeBias + 1;
+
+        // The IEEE exponent which indicates an infinite or NaN value.
+        enum expIeeeNonFinite =  expIeeeBias + 1;
+
+        /* Convert a raw exponent to an IEEE exponent value by shifting it to
+        the least significant end and subtracting the IEEE bias. */
+        static Exp toExpIeee(Exp raw)
+        {
+            return cast(Exp) ((raw >>> expShift) - expIeeeBias);
+        }
+
+        // Get the IEEE exponent value.
+        Exp expIeee() const
+        {
+            return toExpIeee(expRaw);
+        }
+
+        // Set the IEEE exponent value.
+        void expIeee(Exp newIeee)
+        {
+            expRaw = cast(Exp) ((newIeee + expIeeeBias) << expShift);
+        }
+
+// Exponent (C++)
+        /* C and C++ use a non-standard bias such that 0.5 has an exponent of 0.
+        D's built-in `.min_exp` and `.max_exp` properties assume C++ bias. */
+        enum expCppBias = expIeeeBias - 1;
+
+        // The maximum possible C++ exponent for a finite value.
+        enum expCppMaxNormal =  expCppBias;
+
+        // The minimum possible C++ exponent for a normalized, non-zero value.
+        enum expCppMinNormal = -expCppBias + 1;
+
+        // The C++ exponent which indicates an infinite or NaN value.
+        enum expCppNonFinite =  expCppBias + 1;
+
+        /* Convert a raw exponent to a C++ exponent value by shifting it to the
+        least significant end and subtracting the C++ bias. */
+        static Exp toExpCpp(Exp raw)
+        {
+            return cast(Exp) ((raw >>> expShift) - expCppBias);
+        }
+
+        // Get the C++ exponent value.
+        Exp expCpp() const
+        {
+            return toExpCpp(expRaw);
+        }
+
+        // Set the C++ exponent value.
+        void expCpp(Exp newCpp)
+        {
+            expRaw = cast(Exp) ((newCpp + expCppBias) << expShift);
+        }
+
+// Sign
+        /* The number of bits by which the sign must be shifted lower to place
+        it at the least significant end, starting from the appropriate chunk in
+        `allBits`. */
+        enum signShift = (8*Exp.sizeof) - 1;
+
+        // A bit mask that selects for the sign bit.
+        enum signMask = cast(Exp) (Exp(1) << signShift);
+
+        // Get the raw sign bit, still shifted to bit number `signShift`.
+        Exp signRaw() const
+        {
+            return end!(-1)(allBits) & signMask;
+        }
+
+        // Set the raw sign bit.
+        void signRaw(Exp newRaw)
+        {
+            end!(-1)(allBits) = (end!(-1)(allBits) & ~signMask) | (newRaw & signMask);
+        }
+
+        /* Get the sign bit, shifted to the least significant end:
+        0 for positive and 1 for negative. */
+        int sign() const
+        {
+            return cast(Unsigned!Exp) end!(-1)(allBits) >>> signShift;
+        }
+
+        // Set the sign bit.
+        void sign(int newSign)
+        {
+            end!(-1)(allBits) = cast(Exp) ((end!(-1)(allBits) & ~signMask) | (newSign << signShift));
+        }
+    }
+}
+template RealRep(N)
+if (isFloatingPoint!N && !is(N == Unqual!N))
+{
+    alias RealRep = RealRep!(Unqual!N);
+}
+
+pure @safe nothrow @nogc unittest
+{
+    import std.meta : AliasSeq;
+    import core.bitop : popcnt;
+
+    static if (is(real == double) || (RealRep!(real).format == RealFormat.ibmExtended))
+        alias TestNs = AliasSeq!(float, double);
+    else
+        alias TestNs = AliasSeq!(float, double, real);
+
+    static void test(N)(const N num, bool sign, int expCpp, bool whole, int pcFrac = -1)
+    {
+        const RealRep!N rep = num;
+        assert(rep.sign == sign);
+        assert(rep.expCpp == expCpp);
+        assert(rep.whole == whole);
+        if (pcFrac >= 0)
+            assert(rep.fracEx.popcnt == pcFrac);
+        assert((rep.mantEx ^ (rep.fracEx >>> 1)).popcnt == whole);
+        assert(rep.excess == 0);
+    }
+
+    real zero;
+    foreach (N; TestNs)
+    {
+        zero = 0.0L;
+        test!N(zero, false, N.min_exp - 1, false, 0);
+        zero = -zero;
+        test!N(zero, true,  N.min_exp - 1, false, 0);
+
+        // Normal
+        test!N( 0.5, false, 0, true, 0);
+        test!N(-0.5, true,  0, true, 0);
+        test!N( 1 + N.epsilon, false, 1, true, 1);
+        test!N(-1 - N.epsilon, true,  1, true, 1);
+        test!N( N.min_normal, false, N.min_exp, true, 0);
+        test!N(-N.min_normal, true,  N.min_exp, true, 0);
+        test!N( N.max, false, N.max_exp, true, N.mant_dig - 1);
+        test!N(-N.max, true,  N.max_exp, true, N.mant_dig - 1);
+
+        // Subnormal
+        const RealRep!N minSub = N.min_normal * N.epsilon;
+        assert((minSub.fracEx >>> minSub.fracShift) == 1);
+        assert((minSub.mantEx >>> minSub.mantShift) == 1);
+
+        test!N( minSub.num, false, N.min_exp - 1, false, 1);
+        test!N(-minSub.num, true,  N.min_exp - 1, false, 1);
+        test!N(3 * ( minSub.num), false, N.min_exp - 1, false, 2);
+        test!N(3 * (-minSub.num), true,  N.min_exp - 1, false, 2);
+
+        // Non-finite
+        test!N( N.nan, false, N.max_exp + 1, true);
+        test!N(-N.nan, true,  N.max_exp + 1, true);
+        test!N( N.infinity, false, N.max_exp + 1, true, 0);
+        test!N(-N.infinity, true,  N.max_exp + 1, true, 0);
+    }
+}
+
+/* Access arr using a little-endian index. On big-endian
+    systems the index will be translated at compile-time.
+
+    If `xLE` is negative, the little-endian index is computed
+    by adding `arr.length`, as in `arr[$ + xLE]`.
+*/
+ref auto end(ptrdiff_t xLE, A)(ref inout(A) arr)
+{
+    version(LittleEndian)
+        enum xTE = xLE;
+    else
+        enum xTE = -(xLE + 1);
+    enum x = xTE >= 0 ? xTE : arr.length + xTE;
+
+    return arr[x];
+}
+
+/* Constants used for extracting the components of the representation.
+   They supplement the built-in floating point properties.
+
+   TODO: This is deprecated, and should be removed once everything has
+   been converted to use RealRep, instead.
+*/
 template floatTraits(T)
 {
     // EXPMASK is a ushort mask to select the exponent portion (without sign)
@@ -380,7 +876,11 @@ template floatTraits(T)
         static assert(false, "No traits support for " ~ T.stringof);
 }
 
-// These apply to all floating-point types
+/* These apply to all floating-point types.
+
+   TODO: These are deprecated, and should be removed once everything
+   has been converted to use RealRep, instead.
+*/
 version(LittleEndian)
 {
     enum MANTISSA_LSB = 0;
