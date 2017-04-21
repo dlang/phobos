@@ -267,6 +267,7 @@ install :
 		DMD=$(DMD) install2
 
 .PHONY : unittest
+test: unittest
 ifeq (1,$(BUILD_WAS_SPECIFIED))
 unittest : $(addsuffix .run,$(addprefix unittest/,$(D_MODULES)))
 else

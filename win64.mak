@@ -593,6 +593,8 @@ UNITTEST_OBJS= \
 		unittest8f.obj \
 		unittest9.obj
 
+test: unittest
+
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest1.obj $(SRC_STD_1)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest2.obj $(SRC_STD_RANGE)
