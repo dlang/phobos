@@ -5582,41 +5582,32 @@ private:
  * returns:
  *  $(D true) if $(D_PARAM x) is Nan.
  */
-bool isNaN(X)(X x) @nogc @trusted pure nothrow
+bool isNaN(X)(const X x) @nogc @trusted pure nothrow
 if (isFloatingPoint!(X))
 {
-    alias F = floatTraits!(X);
-    static if (F.realFormat == RealFormat.ieeeSingle)
+    const RealRep!X rep = x;
+    static if (rep.format == RealFormat.ibmExtended)
     {
-        const uint p = *cast(uint *)&x;
-        return ((p & 0x7F80_0000) == 0x7F80_0000)
-            && p & 0x007F_FFFF; // not infinity
-    }
-    else static if (F.realFormat == RealFormat.ieeeDouble)
-    {
-        const ulong  p = *cast(ulong *)&x;
-        return ((p & 0x7FF0_0000_0000_0000) == 0x7FF0_0000_0000_0000)
-            && p & 0x000F_FFFF_FFFF_FFFF; // not infinity
-    }
-    else static if (F.realFormat == RealFormat.ieeeExtended)
-    {
-        const ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        const ulong ps = *cast(ulong *)&x;
-        return e == F.EXPMASK &&
-            ps & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
-    }
-    else static if (F.realFormat == RealFormat.ieeeQuadruple)
-    {
-        const ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        const ulong psLsb = (cast(ulong *)&x)[MANTISSA_LSB];
-        const ulong psMsb = (cast(ulong *)&x)[MANTISSA_MSB];
-        return e == F.EXPMASK &&
-            (psLsb | (psMsb& 0x0000_FFFF_FFFF_FFFF)) != 0;
+        // This is equivalent to isNaN(rep.hi + rep.lo)
+
+        const hiNonFinite = (rep.hi.expRaw == rep.hi.expRawNonFinite);
+        if (hiNonFinite && rep.hi.fracEx != 0)
+            return true;
+
+        const loNonFinite = (rep.lo.expRaw == rep.lo.expRawNonFinite);
+        if (loNonFinite)
+        {
+            if (rep.lo != 0)
+                return true; // lo is NaN
+
+            assert(!hiNonFinite || (rep.hi.signRaw == rep.lo.signRaw), // (+inf) + (-inf) is -nan
+                "The hi and lo parts of an ibmExtended real have mismatched signs");
+        }
+
+        return false;
     }
     else
-    {
-        return x != x;
-    }
+        return (rep.expRaw == rep.expRawNonFinite) && (rep.fracEx != 0);
 }
 
 ///
@@ -5670,11 +5661,14 @@ if (isFloatingPoint!(X))
  * returns:
  *  $(D true) if $(D_PARAM x) is finite.
  */
-bool isFinite(X)(X x) @trusted pure nothrow @nogc
+bool isFinite(X)(const X x) @trusted pure nothrow @nogc
+if (isFloatingPoint!X)
 {
-    alias F = floatTraits!(X);
-    ushort* pe = cast(ushort *)&x;
-    return (pe[F.EXPPOS_SHORT] & F.EXPMASK) != F.EXPMASK;
+    const RealRep!X rep = x;
+    static if (rep.format == RealFormat.ibmExtended)
+        return isFinite(x.hi) && isFinite(x.lo);
+    else
+        return rep.expRaw != rep.expRawNonFinite;
 }
 
 ///
@@ -5713,22 +5707,28 @@ bool isFinite(X)(X x) @trusted pure nothrow @nogc
  * returns:
  *  $(D true) if $(D_PARAM x) is normalized.
  */
-
-/* Need one for each format because subnormal floats might
- * be converted to normal reals.
- */
-bool isNormal(X)(X x) @trusted pure nothrow @nogc
+bool isNormal(X)(const X x) @trusted pure nothrow @nogc
+if (isFloatingPoint!X)
 {
-    alias F = floatTraits!(X);
-    static if (F.realFormat == RealFormat.ibmExtended)
+    const RealRep!X rep = x;
+    static if (rep.format == RealFormat.ibmExtended)
     {
-        // doubledouble is normal if the least significant part is normal.
-        return isNormal((cast(double*)&x)[MANTISSA_LSB]);
+        assert(!(abs(rep.hi) < abs(rep.lo)), // else swap hi and lo below
+            "The hi and lo parts of an ibmExtended real are out of order");
+
+        /* hi must be large enough not to overlap lo, to meet the expectation
+           that a normal floating-point value has the full X.mant_dig precision.
+           lo == 0.0L must be allowed; otherwise 1.0L would be considered subnormal.
+         */
+        const hiExpR = rep.hi.expRaw;
+        return (hiExpR >= rep.lo.mant_dig) &&
+            (hiExpR != rep.hi.expRawNonFinite) &&
+            (rep.lo.expRaw != rep.lo.expRawNonFinite);
     }
     else
     {
-        ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        return (e != F.EXPMASK && e != 0);
+        const expRaw = rep.expRaw;
+        return (expRaw != 0) && (expRaw != rep.expRawNonFinite);
     }
 }
 
@@ -5763,46 +5763,19 @@ bool isNormal(X)(X x) @trusted pure nothrow @nogc
  * returns:
  *  $(D true) if $(D_PARAM x) is a denormal number.
  */
-bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
+bool isSubnormal(X)(const X x) @trusted pure nothrow @nogc
+if (isFloatingPoint!X)
 {
-    /*
-        Need one for each format because subnormal floats might
-        be converted to normal reals.
-    */
-    alias F = floatTraits!(X);
-    static if (F.realFormat == RealFormat.ieeeSingle)
+    const RealRep!X rep = x;
+    static if (rep.format == RealFormat.ibmExtended)
     {
-        uint *p = cast(uint *)&x;
-        return (*p & F.EXPMASK_INT) == 0 && *p & F.MANTISSAMASK_INT;
-    }
-    else static if (F.realFormat == RealFormat.ieeeDouble)
-    {
-        uint *p = cast(uint *)&x;
-        return (p[MANTISSA_MSB] & F.EXPMASK_INT) == 0
-            && (p[MANTISSA_LSB] || p[MANTISSA_MSB] & F.MANTISSAMASK_INT);
-    }
-    else static if (F.realFormat == RealFormat.ieeeQuadruple)
-    {
-        ushort e = F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT];
-        long*   ps = cast(long *)&x;
-        return (e == 0 &&
-          ((ps[MANTISSA_LSB]|(ps[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF)) != 0));
-    }
-    else static if (F.realFormat == RealFormat.ieeeExtended)
-    {
-        ushort* pe = cast(ushort *)&x;
-        long*   ps = cast(long *)&x;
+        assert(!(abs(rep.hi) < abs(rep.lo)), // else check lo below
+            "The hi and lo parts of an ibmExtended real are out of order");
 
-        return (pe[F.EXPPOS_SHORT] & F.EXPMASK) == 0 && *ps > 0;
-    }
-    else static if (F.realFormat == RealFormat.ibmExtended)
-    {
-        return isSubnormal((cast(double*)&x)[MANTISSA_MSB]);
+        return (rep.hi.expRaw < rep.lo.mant_dig) && (rep.hi.mantStored != 0);
     }
     else
-    {
-        static assert(false, "Not implemented for this architecture");
-    }
+        return (rep.expRaw == 0) && (rep.mantStored != 0);
 }
 
 ///
@@ -5825,43 +5798,38 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
  * returns:
  *  $(D true) if $(D_PARAM x) is $(PLUSMN)$(INFIN).
  */
-bool isInfinity(X)(X x) @nogc @trusted pure nothrow
+bool isInfinity(X)(const X x) @nogc @trusted pure nothrow
 if (isFloatingPoint!(X))
 {
-    alias F = floatTraits!(X);
-    static if (F.realFormat == RealFormat.ieeeSingle)
+    const RealRep!X rep = x;
+    static if (rep.format == RealFormat.ibmExtended)
     {
-        return ((*cast(uint *)&x) & 0x7FFF_FFFF) == 0x7F80_0000;
-    }
-    else static if (F.realFormat == RealFormat.ieeeDouble)
-    {
-        return ((*cast(ulong *)&x) & 0x7FFF_FFFF_FFFF_FFFF)
-            == 0x7FF0_0000_0000_0000;
-    }
-    else static if (F.realFormat == RealFormat.ieeeExtended)
-    {
-        const ushort e = cast(ushort)(F.EXPMASK & (cast(ushort *)&x)[F.EXPPOS_SHORT]);
-        const ulong ps = *cast(ulong *)&x;
+        // This is equivalent to isInfinity(rep.hi + rep.lo)
 
-        // On Motorola 68K, infinity can have hidden bit = 1 or 0. On x86, it is always 1.
-        return e == F.EXPMASK && (ps & 0x7FFF_FFFF_FFFF_FFFF) == 0;
+        const hiNonFinite = (rep.hi.expRaw == rep.hi.expRawNonFinite);
+        if (hiNonFinite && (rep.hi.fracEx != 0))
+            return false; // hi is NaN
+
+        const loNonFinite = (rep.lo.expRaw == rep.lo.expRawNonFinite);
+        if (loNonFinite)
+        {
+            if (rep.lo != 0)
+                return false; // lo is NaN
+
+            assert(!hiNonFinite || (rep.hi.signRaw == rep.lo.signRaw), // (+inf) + (-inf) is NaN
+                "The hi and lo parts of an ibmExtended real have mistached signs");
+        }
+
+        return hiNonFinite || loNonFinite;
     }
-    else static if (F.realFormat == RealFormat.ibmExtended)
+    else static if (rep.usedBits == 8*(rep.Mant).sizeof)
     {
-        return (((cast(ulong *)&x)[MANTISSA_MSB]) & 0x7FFF_FFFF_FFFF_FFFF)
-            == 0x7FF8_0000_0000_0000;
+        // When the conditions are right, this way is faster.
+        enum infBits = cast(rep.Mant)(rep.expRawNonFinite) << (rep.usedBits - 8*(rep.Exp).sizeof);
+        return ((rep.mantBits ^ infBits) << 1) == 0; // For ucent, maybe only shift the high word?
     }
-    else static if (F.realFormat == RealFormat.ieeeQuadruple)
-    {
-        const long psLsb = (cast(long *)&x)[MANTISSA_LSB];
-        const long psMsb = (cast(long *)&x)[MANTISSA_MSB];
-        return (psLsb == 0)
-            && (psMsb & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_0000_0000_0000;
-    }
-    else
-    {
-        return (x < -X.max) || (X.max < x);
-    }
+    else // 80-bit extended
+        return (rep.expRaw == rep.expRawNonFinite) && (rep.fracEx == 0);
 }
 
 ///
@@ -5944,34 +5912,34 @@ if (isFloatingPoint!(X))
  */
 bool isIdentical(real x, real y) @trusted pure nothrow @nogc
 {
-    // We're doing a bitwise comparison so the endianness is irrelevant.
-    long*   pxs = cast(long *)&x;
-    long*   pys = cast(long *)&y;
-    alias F = floatTraits!(real);
-    static if (F.realFormat == RealFormat.ieeeDouble)
-    {
-        return pxs[0] == pys[0];
-    }
-    else static if (F.realFormat == RealFormat.ieeeQuadruple
-                 || F.realFormat == RealFormat.ibmExtended)
-    {
-        return pxs[0] == pys[0] && pxs[1] == pys[1];
-    }
-    else
-    {
-        ushort* pxe = cast(ushort *)&x;
-        ushort* pye = cast(ushort *)&y;
-        return pxe[4] == pye[4] && pxs[0] == pys[0];
-    }
+    alias Rep = RealRep!real;
+    const Rep xRep = x,
+             yRep = y;
+
+    static if (Rep.format == RealFormat.ibmExtended)
+        return isIdentical(x.hi, y.hi) && isIdentical(x.lo, y.lo);
+    else static if (8*Rep.Mant.sizeof == Rep.usedBits)
+        return xRep.mantBits == yRep.mantBits;
+    else // 80-bit extended
+        return (end!(-1)(xRep.allBits) == end!(-1)(yRep.allBits)) && (xRep.mantBits == yRep.mantBits);
 }
 
 /*********************************
  * Return 1 if sign bit of e is set, 0 if not.
  */
-int signbit(X)(X x) @nogc @trusted pure nothrow
+int signbit(X)(const X x) @nogc @trusted pure nothrow
+if (isFloatingPoint!X)
 {
-    alias F = floatTraits!(X);
-    return ((cast(ubyte *)&x)[F.SIGNPOS_BYTE] & 0x80) != 0;
+    const RealRep!X rep = x;
+    static if (rep.format == RealFormat.ibmExtended)
+    {
+        assert(!(abs(rep.hi) < abs(rep.lo)), // else return lo.sign
+            "The hi and lo parts of the double+double are out of order");
+
+        return rep.hi.sign;
+    }
+    else
+        return rep.sign;
 }
 
 ///
@@ -6012,14 +5980,30 @@ int signbit(X)(X x) @nogc @trusted pure nothrow
 R copysign(R, X)(R to, X from) @trusted pure nothrow @nogc
 if (isFloatingPoint!(R) && isFloatingPoint!(X))
 {
-    ubyte* pto   = cast(ubyte *)&to;
-    const ubyte* pfrom = cast(ubyte *)&from;
+    const RealRep!X fRep = from;
+    static if (fRep.format == RealFormat.ibmExtended)
+    {
+        assert(!(abs(fRep.hi) < abs(fRep.lo)), // else fSR = lo.signRaw
+            "The hi and lo parts of the double+double are out of order");
 
-    alias T = floatTraits!(R);
-    alias F = floatTraits!(X);
-    pto[T.SIGNPOS_BYTE] &= 0x7F;
-    pto[T.SIGNPOS_BYTE] |= pfrom[F.SIGNPOS_BYTE] & 0x80;
-    return to;
+        const fSR = fRep.hi.signRaw;
+    }
+    else
+        const fSR = fRep.signRaw;
+
+    RealRep!R tRep = to;
+    static if (tRep.format == RealFormat.ibmExtended)
+    {
+        assert(tRep.hi.signRaw == tRep.lo.signRaw, // else lo.signRaw = !fSR
+            "The hi and lo parts of the double+double have mismatched signs");
+
+        tRep.hi.signRaw = fSR;
+        tRep.lo.signRaw = fSR;
+    }
+    else
+        tRep.signRaw = fSR;
+
+    return tRep;
 }
 
 // ditto
