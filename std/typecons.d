@@ -970,7 +970,7 @@ template Tuple(Specs...)
         }
 
         /**
-         * Takes a slice of this `Tuple`.
+         * Takes a slice by-reference of this `Tuple`.
          *
          * Params:
          *     from = A `size_t` designating the starting position of the slice.
@@ -982,9 +982,14 @@ template Tuple(Specs...)
          *     the original.
          */
         @property
-        ref Tuple!(sliceSpecs!(from, to)) slice(size_t from, size_t to)() @trusted
+        ref inout(Tuple!(sliceSpecs!(from, to))) slice(size_t from, size_t to)() inout @trusted
         if (from <= to && to <= Types.length)
         {
+            static assert(
+                (typeof(this).alignof % typeof(return).alignof == 0) &&
+                (expand[from].offsetof % typeof(return).alignof == 0),
+                "Slicing by reference is impossible because of an alignment mistmatch. (See Phobos issue #15645.)");
+
             return *cast(typeof(return)*) &(field[from]);
         }
 
@@ -997,6 +1002,10 @@ template Tuple(Specs...)
             auto s = a.slice!(1, 3);
             static assert(is(typeof(s) == Tuple!(string, float)));
             assert(s[0] == "abc" && s[1] == 4.5);
+
+            // Phobos issue #15645
+            Tuple!(int, short, bool, double) b;
+            static assert(!__traits(compiles, b.slice!(2, 4)));
         }
 
         /**
