@@ -7659,9 +7659,13 @@ template getSymbolsByUDA(alias symbol, alias attribute) {
                   .format(names[0]));
     }
 
+    // filtering not compiled members such as not accessible members
+    enum noNotCompiledMembers(string name) = (__traits(compiles, __traits(getMember, symbol, name)));
+    alias membersWithoutNotCompiled = Filter!(noNotCompiledMembers, __traits(allMembers, symbol));
+
     // filtering out nested class context
     enum noThisMember(string name) = (name != "this");
-    alias membersWithoutNestedCC = Filter!(noThisMember, __traits(allMembers, symbol));
+    alias membersWithoutNestedCC = Filter!(noThisMember, membersWithoutNotCompiled);
 
     enum hasSpecificUDA(string name) = mixin("hasUDA!(symbol.%s, attribute)".format(name));
     alias membersWithUDA = toSymbols!(Filter!(hasSpecificUDA, membersWithoutNestedCC));
@@ -7743,9 +7747,23 @@ template getSymbolsByUDA(alias symbol, alias attribute) {
 {
     // HasPrivateMembers has, well, private members, one of which has a UDA.
     import std.internal.test.uda : Attr, HasPrivateMembers;
-    static assert(getSymbolsByUDA!(HasPrivateMembers, Attr).length == 2);
+    // Trying acces to private member from another file therefore we do not have access
+    // for this otherwise we get deprecation warning - not visible from module
+    static assert(getSymbolsByUDA!(HasPrivateMembers, Attr).length == 1);
     static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[0], Attr));
-    static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[1], Attr));
+
+    struct A
+    {
+        @Attr int a;
+        int b;
+        @Attr private int c;
+        private int d;
+    }
+
+    // Here everything is fine, we have access to private member c
+    static assert(getSymbolsByUDA!(A, Attr).length == 2);
+    static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[0], Attr));
+    static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[1], Attr));
 }
 
 // #16387: getSymbolsByUDA works with structs but fails with classes
