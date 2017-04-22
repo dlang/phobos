@@ -2143,7 +2143,7 @@ private dchar _utfException(UseReplacementDchar useReplacementDchar)(string msg,
     Throws:
         $(D UTFException) if $(D c) is not a valid UTF code point.
   +/
-size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
+ubyte encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     ref char[4] buf, dchar c) @safe pure
 {
     if (c <= 0x7F)
@@ -2218,7 +2218,7 @@ size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
 
 
 /// Ditto
-size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
+ubyte encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     ref wchar[2] buf, dchar c) @safe pure
 {
     if (c <= 0xFFFF)
@@ -2271,7 +2271,7 @@ size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
 
 
 /// Ditto
-size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
+ubyte encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
     ref dchar[1] buf, dchar c) @safe pure
 {
     if ((0xD800 <= c && c <= 0xDFFF) || 0x10FFFF < c)
@@ -4058,7 +4058,7 @@ if (isSomeChar!C)
                             }
                             else
                                 dchar dc = () @trusted { return decodeFront!(Yes.useReplacementDchar)(r); }();
-                            fill = cast(ushort) encode!(Yes.useReplacementDchar)(buf, dc);
+                            fill = encode!(Yes.useReplacementDchar)(buf, dc);
                         }
                     }
                     return buf[pos];
