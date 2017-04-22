@@ -108,12 +108,15 @@ else
 endif
 
 # Set DFLAGS
-DFLAGS=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -dip25 $(MODEL_FLAG) $(PIC)
+UDFLAGS=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w $(MODEL_FLAG) $(PIC)
 ifeq ($(BUILD),debug)
-	DFLAGS += -g -debug
+	UDFLAGS += -g -debug
+	DFLAGS=$(UDFLAGS)
 else
-	DFLAGS += -O -release
+	UDFLAGS += -O -release
+	DFLAGS=$(UDFLAGS) # TODO: add -inline ?
 endif
+UDFLAGS += -dip25 # only for tests, see Bugzilla 17072
 
 ifdef ENABLE_COVERAGE
 DFLAGS  += -cov
@@ -325,18 +328,18 @@ $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 UT_D_OBJS:=$(addprefix $(ROOT)/unittest/,$(addsuffix .o,$(D_MODULES)))
 $(UT_D_OBJS): $(ROOT)/unittest/%.o: %.d
 	@mkdir -p $(dir $@)
-	$(DMD) $(DFLAGS) -unittest -c -of$@ -deps=$(@:.o=.deps.tmp) $<
+	$(DMD) $(UDFLAGS) -unittest -c -of$@ -deps=$(@:.o=.deps.tmp) $<
 	@echo $@: `sed 's|.*(\(.*\)).*|\1|' $(@:.o=.deps.tmp) | sort | uniq` \
 	   >$(@:.o=.deps)
 	@rm $(@:.o=.deps.tmp)
-#	$(DMD) $(DFLAGS) -unittest -c -of$@ $*.d
+#	$(DMD) $(UDFLAGS) -unittest -c -of$@ $*.d
 
 ifneq (1,$(SHARED))
 
 $(UT_D_OBJS): $(DRUNTIME)
 
 $(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME)
-	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) $(LINKDL) -defaultlib= -debuglib=
+	$(DMD) $(UDFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) $(LINKDL) -defaultlib= -debuglib=
 
 else
 
@@ -346,10 +349,10 @@ $(UT_D_OBJS): $(DRUNTIMESO)
 
 $(UT_LIBSO): override PIC:=-fPIC
 $(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO)
-	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) -defaultlib= -debuglib=
+	$(DMD) $(UDFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) -defaultlib= -debuglib=
 
 $(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
-	$(DMD) $(DFLAGS) -of$@ $< -L$(UT_LIBSO) -defaultlib= -debuglib=
+	$(DMD) $(UDFLAGS) -of$@ $< -L$(UT_LIBSO) -defaultlib= -debuglib=
 
 endif
 
@@ -363,10 +366,13 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 # Target for quickly running a single unittest (using static phobos library).
 # For example: "make std/algorithm/mutation.test"
 # The mktemp business is needed so .o files don't clash in concurrent unittesting.
+#
+# NOTE: differences between DFLAGS (used to build LIB) and UDFLAGS
+# (used for unittests) can cause ABI incompatibilites.
 %.test : %.d $(LIB)
 	T=`mktemp -d /tmp/.dmd-run-test.XXXXXX` &&                                                              \
 	  (                                                                                                     \
-	    $(DMD) -od$$T $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= $(LINKDL) -cov -run $< ;     \
+	    $(DMD) -od$$T $(UDFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= $(LINKDL) -cov -run $< ;     \
 	    RET=$$? ; rm -rf $$T ; exit $$RET                                                                   \
 	  )
 
