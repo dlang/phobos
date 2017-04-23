@@ -7659,7 +7659,7 @@ template getSymbolsByUDA(alias symbol, alias attribute) {
                   .format(names[0]));
     }
 
-    // filtering not compiled members such as inaccessible members
+    // filtering inaccessible members
     enum noInaccessibleMembers(string name) = (__traits(compiles, __traits(getMember, symbol, name)));
     alias withoutInaccessibleMembers = Filter!(noInaccessibleMembers, __traits(allMembers, symbol));
 
@@ -7667,8 +7667,12 @@ template getSymbolsByUDA(alias symbol, alias attribute) {
     enum noThisMember(string name) = (name != "this");
     alias membersWithoutNestedCC = Filter!(noThisMember, withoutInaccessibleMembers);
 
+    // filtering not compiled members such as alias of basic types
+    enum noIncorrectMembers(string name) = (__traits(compiles, mixin("hasUDA!(symbol.%s, attribute)".format(name))));
+    alias withoutIncorrectMembers = Filter!(noIncorrectMembers, membersWithoutNestedCC);
+
     enum hasSpecificUDA(string name) = mixin("hasUDA!(symbol.%s, attribute)".format(name));
-    alias membersWithUDA = toSymbols!(Filter!(hasSpecificUDA, membersWithoutNestedCC));
+    alias membersWithUDA = toSymbols!(Filter!(hasSpecificUDA, withoutIncorrectMembers));
 
     // if the symbol itself has the UDA, tack it on to the front of the list
     static if (hasUDA!(symbol, attribute))
@@ -7754,6 +7758,8 @@ template getSymbolsByUDA(alias symbol, alias attribute) {
 
     struct A
     {
+        alias int INT;
+        alias void function(INT) SomeFunction;
         @Attr int a;
         int b;
         @Attr private int c;
