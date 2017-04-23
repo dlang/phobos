@@ -685,17 +685,17 @@ uint formattedRead(R, Char, S...)(ref R r, const(Char)[] fmt, auto ref S args)
     assert(a == "hello" && b == 124 && c == 34.5);
 
     // mix pointers and auto-ref
-    s = "world!200:42.2";
+    s = "world!200:42.25";
     formattedRead(s, "%s!%s:%s", a, &b, &c);
-    assert(a == "world" && b == 200 && c == 42.2);
+    assert(a == "world" && b == 200 && c == 42.25);
 
-    s = "world1!201:42.3";
+    s = "world1!201:42.5";
     formattedRead(s, "%s!%s:%s", &a, &b, c);
-    assert(a == "world1" && b == 201 && c == 42.3);
+    assert(a == "world1" && b == 201 && c == 42.5);
 
-    s = "world2!202:42.4";
+    s = "world2!202:42.75";
     formattedRead(s, "%s!%s:%s", a, b, &c);
-    assert(a == "world2" && b == 202 && c == 42.4);
+    assert(a == "world2" && b == 202 && c == 42.75);
 }
 
 // for backwards compatibility
