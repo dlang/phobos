@@ -3422,6 +3422,137 @@ auto nullableRef(T)(T* t)
 }
 
 
+
+/**
+ * Define non-nullable type.
+ */
+struct NotNull(T)
+if (is(typeof(T.init is null))) // T has nullify check.
+{
+    private T _store;
+    private this(T t) { _store = t; }
+
+    // Having this invariant is essentially redundant.
+    // We should always construct NotNull object through assumeNotNull function,
+    // so we can guarantee that NotNull is always storing non-null pointer.
+    // But, keeping this invariant enable is useful to catch bugs not yet found.
+    invariant() { assert(_store !is null); }
+
+    @property inout(T) _payload() inout { return _store; }
+    alias _payload this;
+
+    ///
+    @disable this();
+    /// ditto
+    @disable this(typeof(null));
+    /// ditto
+    this(NotNull!T nn) { _store = nn._store; }
+
+    ///
+    @disable void opAssign(typeof(null));
+    /// ditto
+    ref NotNull!T opAssign(NotNull!T rhs)
+    {
+        this._store = rhs._store;
+        return this;
+    }
+}
+
+// This is kept just for design review. Will remove before this is merged.
+version(none)
+{
+    alias assumeNotNull = enforceNotNull;
+
+    /**
+     * Create non-nullable object with runtime check.
+     * This is only one NotNull!T entry - do conversion and construction at once.
+     */
+    NotNull!T enforceNotNull(T)(T t)
+    {
+        import std.exception;
+        enforce(t !is null);
+        return NotNull!T(t);
+    }
+    /// ditto
+    NotNull!T enforceNotNull(T)(NotNull!T nn)
+    {
+        /// Do nothing, just for supporting transparency in generic code.
+        return nn;
+    }
+    // / Rejects null literal
+    @disable NotNull!T enforceNotNull()(typeof(null) n);
+}
+
+/**
+ * Create non-nullable object with assertion.
+ * This is only one NotNull!T entry - do conversion and construction at once.
+ */
+NotNull!T assumeNotNull(T)(T t) @safe
+{
+    /* If an end programmer want to stop @safe-D check explicitly
+     * (dmd does it when -release switch is specified), this assertion
+     * will be removed.
+     * Otherwise, this assertion would be tested notmally because
+     * assumeNotNull is annotated with @safe.
+     */
+    assert(t !is null);
+
+    return NotNull!T(t);
+}
+/// ditto
+NotNull!T assumeNotNull(T)(NotNull!T nn)
+{
+    // Do nothing, just for supporting transparency in generic code.
+    return nn;
+}
+// / Rejects null literal
+@disable NotNull!T assumeNotNull()(typeof(null) n);
+
+unittest
+{
+    int num;
+
+    // default construction and null initialization should fail.
+    static assert(!__traits(compiles, { NotNull!(int*) nn; }));
+    static assert(!__traits(compiles, { NotNull!(int*) nn = null; }));
+  //static assert(!__traits(compiles, { NotNull!(int*) nn = &num; }));
+  //--> cannot test here, because private is bypassed
+
+    // construction
+    int* nap = &num;                    // NullAble Ptr
+    auto nnp = assumeNotNull(&num);     // NonNull Ptr
+    auto nnp2 = nnp;                    // copy construction
+
+    static assert(!__traits(compiles, { nnp = assumeNotNull(null); }));
+    static assert(!__traits(compiles, { nnp = null; }));
+    static assert(!__traits(compiles, { nnp = nap; }));
+    nnp = assumeNotNull(nap);
+    nnp = nnp2;
+
+    // NotNull!T is a subtype of T
+    void takeNAP(int* a) {}
+    takeNAP(nap);
+    takeNAP(nnp);
+
+    // nullable T is not implicitly convertible to NonNull!T
+    void takeNNP(NotNull!(int*) a) {}
+    static assert(!__traits(compiles, { takeNNP(assumeNotNull(null)); }));
+    static assert(!__traits(compiles, { takeNNP(null); }));
+    static assert(!__traits(compiles, { takeNNP(nap); }));
+    takeNNP(assumeNotNull(nap));
+    takeNNP(nnp);
+
+    // const NotNull!T
+    void takeCNNP(const NotNull!(int*) a) {}
+    takeCNNP(assumeNotNull(nap));
+
+    // runtime null check
+    import core.exception, std.exception;
+    int* nullptr = null;
+    assertThrown!AssertError(assumeNotNull(nullptr));
+}
+
+
 /**
 $(D BlackHole!Base) is a subclass of $(D Base) which automatically implements
 all abstract member functions in $(D Base) as do-nothing functions.  Each
