@@ -1785,7 +1785,7 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
             import std.conv : to;
             dest += n.to!long;
         }
-        
+
         return (option, value) => addN(dest, value);
     }
 
