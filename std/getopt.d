@@ -1773,3 +1773,37 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
     getopt(args, "f|flag", "Boolean", &flag);
     assert(flag);
 }
+
+@system unittest  // Delegates as callbacks
+{
+    alias TwoArgOptionHandler = void delegate(string option, string value);
+    
+    TwoArgOptionHandler makeAddNHandler(ref long dest)
+    {
+        void addN(ref long dest, string n)
+        {
+            import std.conv : to;
+            dest += n.to!long;
+        }
+        
+        return (option, value) => addN(dest, value);
+    }
+    
+    long x = 0;
+    long y = 0;
+    
+    string[] args =
+        ["program", "--x-plus-1", "--x-plus-1", "--x-plus-5", "--x-plus-n", "10",
+         "--y-plus-n", "25", "--y-plus-7", "--y-plus-n", "15", "--y-plus-3"];
+    
+    getopt(args,
+           "x-plus-1", "Add one to x", delegate void() { x += 1; },
+           "x-plus-5", "Add five to x", delegate void(string option) { x += 5; },
+           "x-plus-n", "Add NUM to x", makeAddNHandler(x),
+           "y-plus-7", "Add seven to y", delegate void() { y += 7; },
+           "y-plus-3", "Add three to y", delegate void(string option) { y += 3; },
+           "y-plus-n", "Add NUM to x", makeAddNHandler(y),);
+    
+    assert(x == 17);
+    assert(y == 50);
+}
