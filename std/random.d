@@ -2274,6 +2274,504 @@ body
 }
 
 /**
+Provides a Range interface to $(LREF dice). It rolls a dice based on the
+relative $(D proportions) provided and gives the corresponding index in
+$(D front). To generate a new dice roll, call $(D popFront). $(D proportions)
+may be any $(D InputRange) with a numeric $(D ElementType).
+
+$(LREF dice) might be more appropriate for single-use die, but if you plan to
+roll the same die multiple times, $(D RandomDie) will be significantly more
+efficient. Additionally, its interface makes it appropriate for use with other
+ranges when you use its convenience function, $(LREF randomDie).
+
+See $(LREF randomDie) for simple example usage.
+
+Tip:
+The $(XREF range,SearchPolicy) $(D Policy) is used internally to quickly search
+for a solution to a dice roll. If you are sure your data has a very strong
+negative skew (that is, your proportions are significantly higher with lower
+indices), you might benefit from choosing $(D SearchPolicy.gallop). Similarly,
+if your data has a very strong positive skew, $(D SearchPolicy.gallopBackwards)
+may improve performance slightly.
+
+Note:
+The default $(D Policy) is very effective at handling most cases and you
+may not actually benefit from changing the $(D Policy) even in cases with
+obvious skew.
+
+Tip:
+$(D RandomDie)s also have a configurable $(D StorageType), but it isn't exposed
+in the helper methods. By default, it uses a larger-than-necessary type except
+when it cannot, as is the case when the type is $(D ulong) or $(D real), which
+are the largest of their types. If you are certain that a smaller type can be
+used (and keep in mind that $(D StorageType) must be large enough to accommidate
+the sum of all of the proportions), then explicitly constructing a
+$(D RandomDie) with a smaller type can decrease memory usage and improve
+performance by increasing the likelyhood that the internal array can be fully
+contained in the processor's cache.
+
+If compiled with $(D debug) checks on, $(D RandomDie) check for integer overflow
+and significant loss of precision of floating point numbers. This can be used to
+help verify that your choice of smaller type does not cause issues.
+
+These user specified $(D StorageType)s must be Unqualified (immutable, const,
+and shared types are not accepted) because, regardless of the qualifiers, the
+internal storage is immutable after it is created anyway.
+*/
+struct RandomDie(SearchPolicy Policy, StorageType, Rng = void)
+if(isNumeric!StorageType && is(Unqual!StorageType == StorageType)
+    && ( isUniformRNG!Rng || is(Rng == void) ))
+{
+    private SortedRange!( immutable(StorageType)[] ) _propCumSumSorted;
+    private size_t _front;
+
+    static if(is(Rng == void))
+    {
+        this(InRange)(InRange proportions)
+        if(isInputRange!InRange && isNumeric!(ElementType!InRange)
+            && !isInfinite!InRange
+            && isImplicitlyConvertible!(ElementType!InRange, StorageType))
+        in
+        {
+            assert(!proportions.empty, "Proportions cannot be empty");
+        }
+        body
+        {
+            prepareCumulativeSumArray(proportions);
+        }
+    }
+    else
+    {
+        private Rng _rng;
+
+        this(InRange)(InRange proportions, ref Rng rng)
+        if(isInputRange!InRange && isNumeric!(ElementType!InRange)
+            && !isInfinite!InRange
+            && isImplicitlyConvertible!(ElementType!InRange, StorageType))
+        in
+        {
+            assert(!proportions.empty, "Proportions cannot be empty");
+        }
+        body
+        {
+            _rng = rng;
+
+            prepareCumulativeSumArray(proportions);
+        }
+    }
+
+    private void prepareCumulativeSumArray(InRange)(InRange proportions)
+    {
+        static if(isImplicitlyConvertible!( typeof(proportions.array), StorageType[] ))
+        {
+            StorageType[] propArray = proportions.array;
+        }
+        else
+        {
+           StorageType[] propArray = proportions.map!(to!StorageType).array;
+        }
+
+        // In the case of floating points, we need to avoid losing precision
+        // as we sum everything up.
+        alias AccumulatorType =
+            Select!(isFloatingPoint!StorageType, real, StorageType);
+
+        AccumulatorType accumulator = 0;
+        foreach(ref e; propArray)
+        {
+            debug
+            {
+                enforce(e >= 0, "Proportions in a dice must be non-negative");
+                AccumulatorType preAccumulation = accumulator;
+            }
+
+            accumulator += e;
+
+            debug
+            {
+                static if (isIntegral!StorageType)
+                {
+                    enforce(preAccumulation <= accumulator, "Overflow detected");
+                }
+                else static if(isFloatingPoint!StorageType)
+                {
+                    if(e > 0.0)
+                    {
+                        enforce(accumulator > preAccumulation, "Floating point loss of precision detected");
+                    }
+                }
+                else
+                    static assert(0);
+            }
+
+            e = accumulator;
+        }
+
+        // Cumulative sum arrays are naturally sorted "a < b"
+        _propCumSumSorted = assumeSorted( assumeUnique(propArray)[] );
+
+        // Prime the next dice roll with popFront
+        popFront();
+    }
+    void popFront()
+    {
+        immutable sum = _propCumSumSorted.back;
+        static if(is(Rng == void))
+        {
+            immutable point = uniform(0, sum);
+        }
+        else
+        {
+            immutable point = uniform(0, sum, _rng);
+        }
+        
+        assert(point < sum);
+
+        // Return the number of elements that are not strictly greater than point
+        _front = _propCumSumSorted.length - _propCumSumSorted.upperBound!Policy(point).length;
+    }
+
+    enum bool empty = false;
+
+    @property
+    size_t front()
+    {
+        return _front;
+    }
+}
+
+// Pick an appropriate storage type for the element type of Range
+private template RandomDieStorageFor(Range)
+{
+    private alias E = Unqual!(ElementType!Range);
+    static if (!isNumeric!E)
+    {
+        static assert(false,
+            "No appropriate RandomDie storage exists for " ~ E.stringof);
+    }
+
+    static if(isIntegral!E)
+    {
+        static if(is( Largest!(ushort, Unsigned!E) == ushort ))
+        {
+            alias RandomDieStorageFor = uint;
+        }
+        else static if(is( Largest!(ulong, Unsigned!E) == ulong ))
+        {
+            alias RandomDieStorageFor = ulong;
+        }
+        else // Some future type that is bigger
+            static assert(0);
+    }
+    else static if(isFloatingPoint!E)
+    {
+        alias RandomDieStorageFor = Largest!(double, E);
+    }
+    else
+        static assert(false);
+}
+
+/**
+Convenience functions for creating a $(D RandomDie) that uses specified
+$(D proportions) and a particular $(D rng).
+If no $(D rng) is provided, $(LREF rndGen) is used.
+
+Examples:
+----
+// Throw the dice 1000 times to choose elements out of list in the specified
+// proportions
+auto list = ["somewhat common", "very common", "rare"];
+auto choices = [25, 50, 1].randomDie().map!(e => list[e]).take(1000).array();
+----
+
+----
+// You want to create a realistic simulation of 500,000 people.
+// file.in contains records of names and counts of those names formated like:
+// NAME,count
+// The file may be arbitrarily large.
+auto data = File("file.in").byLine.map!(e => e.text.split(",")).array;
+auto simulatedNames = data.map!( e => e[1].to!size_t ).randomDie()
+                        .map!(e => data[e][0])
+                        .take(500_000).array;
+----
+
+In the last example, comparable usage of $(LREF dice) might not finish in a
+reasonable amount of time (possibly exceeding 10 minutes), especially if the
+number of proportions the file lists is higher than 50,000, which may be
+reasonable for a comprehensive list of names. However, a $(D RandomDie) will
+finish in under a second.
+
+$(B WARNING:) If an alternative RNG is desired, it is essential for this
+to be a $(I new) RNG seeded in an unpredictable manner. Passing it a RNG
+used elsewhere in the program will result in unintended correlations,
+due to the current implementation of RNGs as value types.
+
+Example:
+----
+int[] a = [ 0, 1, 2, 3, 4, 5, 6, 7, 8 ];
+foreach (e; randomDie(a, Random(unpredictableSeed)))  // correct!
+{
+    writeln(e);
+}
+
+foreach (e; randomDie(a, rndGen))  // DANGEROUS!! rndGen gets copied by value
+{
+    writeln(e);
+}
+
+foreach (e; randomDie(a, rndGen))  // ... so this second random die
+{                                  // will output the same sequence as
+    writeln(e);                    // the previous one.
+}
+----
+
+These issues will be resolved in a second-generation std.random that
+re-implements random number generators as reference types.
+*/
+auto randomDie(Rng, Range)(Range proportions, ref Rng rng)
+if(isInputRange!Range && isNumeric!(ElementType!Range)
+    && !isInfinite!Range && isUniformRNG!Rng)
+{
+    return RandomDie!(SearchPolicy.binarySearch, RandomDieStorageFor!Range, Rng)(proportions, rng);
+}
+
+/// ditto
+auto randomDie(Range)(Range proportions)
+if(isInputRange!Range && isNumeric!(ElementType!Range) && !isInfinite!Range)
+{
+    return RandomDie!(SearchPolicy.binarySearch, RandomDieStorageFor!Range, void)(proportions);
+}
+
+unittest
+{
+    import std.range;
+
+    auto rnd = Random(unpredictableSeed);
+
+    alias Const(T) = const T;
+    alias Immutable(T) = immutable T;
+
+    alias UnqualTypes = TypeTuple!(byte, short, int, long,
+                ubyte, ushort, uint, ulong,
+                float, double, real);
+    alias ConstTypes = staticMap!(Const, UnqualTypes);
+    alias ImmutableTypes = staticMap!(Immutable, UnqualTypes);
+
+    alias InputTypes = TypeTuple!(UnqualTypes, ConstTypes, ImmutableTypes);
+
+    //UnqualTypes are all of the possible user-specified RandomDie StorageTypes
+    //while InputTypes are all possible ElementTypes that should be supported
+    //by randomDie.
+
+    foreach(GoodUserType; UnqualTypes)
+    {
+        static assert(__traits(compiles, (){
+                GoodUserType[] range = [0];
+                auto dicer = RandomDie!(SearchPolicy.binarySearch,
+                                        GoodUserType,
+                                        typeof(rnd))(range, rnd);
+            }));
+    }
+    foreach(BadUserType; TypeTuple!(ConstTypes, Immutable))
+    {
+        static assert(!__traits(compiles, (){
+                BadUserType[] range = [0];
+                auto dicer = RandomDie!(SearchPolicy.binarySearch,
+                                        BadUserType,
+                                        typeof(rnd))(range, rnd);
+            }));
+    }
+    foreach(InType; InputTypes)
+    {
+        static assert(__traits(compiles, (){
+                InType[] range = [0];
+                auto dicer = range.randomDie(rnd);
+            }));
+    }
+
+    // Basic relability tests...
+    {
+        alias Answers = TypeTuple!(0,1);
+
+        foreach(InType; InputTypes)
+        {
+            foreach(answer; Answers) {
+                static if(answer == 0)
+                {
+                    InType[] props = [1,0];
+                }
+                else
+                {
+                    InType[] props = [0,1];
+                }
+
+                auto turboDicer = props.randomDie(rnd);
+                assert(equal( repeat(answer).take(3), turboDicer.take(3) ));
+
+                static assert(isInputRange!( typeof(turboDicer) ));
+                static assert(isInfinite!( typeof(turboDicer) ));
+            }
+        }
+    }
+
+    // Check that randomDie actually chooses different items when used correctly
+    {
+        // using a new, reproducable rng for this test...
+        auto reproRng = Xorshift(87324);
+
+        auto turboDicer = [1,1,1].randomDie(reproRng);
+        auto counts = [0,0,0];
+        foreach(i; turboDicer.take(100))
+        {
+            counts[i] += 1;
+        }
+        foreach(e; counts)
+        {
+            assert(e != 0);
+        }
+    }
+
+    // Check that two randomDie using the default rng choose different items
+    {
+        auto dicer1 = repeat(1).take(31).randomDie().take(500);
+        auto dicer2 = repeat(1).take(31).randomDie().take(500);
+        bool different = false;
+
+        foreach(a, b; lockstep(dicer1, dicer2))
+        {
+            if(a != b)
+            {
+                different = true;
+                break;
+            }
+        }
+
+        assert(different, "2 randomDies each using default rng are behaving the same");
+    }
+
+    {
+        // Also, test the randomeDies that don't take an rng
+        ulong[] props = [1, 0];
+        auto turboDicer = props.randomDie();
+        assert(equal(0.only, turboDicer.take(1)));
+
+        static assert(isInputRange!( typeof(turboDicer) ));
+        static assert(isInfinite!( typeof(turboDicer) ));
+    }
+
+    {
+        // Test out all user-specified template parameters except RNGs
+
+        alias SearchPolicies = TypeTuple!(SearchPolicy.gallop,
+                SearchPolicy.gallopBackwards, SearchPolicy.trot,
+                SearchPolicy.trotBackwards, SearchPolicy.binarySearch);
+
+        // using a new, reproducable rng for this test...
+        auto reproRng = Xorshift(87324);
+
+        foreach(Policy; SearchPolicies)
+        {
+            foreach(InType; UnqualTypes)
+            {
+                size_t len = uniform(3, 50, reproRng);
+                size_t answerIdx = uniform(0, len, reproRng);
+
+                static if(isIntegral!InType)
+                {
+                    InType answerValue = InType.max;
+                }
+                else static if(isFloatingPoint!InType)
+                {
+                    InType answerValue = 1.0;
+                }
+                else
+                    static assert(0);
+
+                InType zero = 0;
+
+                InType[] props = chain(
+                                    repeat(zero).take(answerIdx).array, 
+                                    only(answerValue).array,
+                                    repeat(zero).take(len - (answerIdx + 1)).array
+                                ).array;
+
+                assert(props.length == len);
+                assert(count!"a != b"(props, 0) == 1);
+
+                auto turboDicer =
+                    RandomDie!(Policy,
+                            InType,
+                            typeof(reproRng))
+                        (props, reproRng);
+
+                assert(equal( repeat(answerIdx).take(20), turboDicer.take(20) ));
+
+                static assert(isInputRange!( typeof(turboDicer) ));
+                static assert(isInfinite!( typeof(turboDicer) ));
+            }
+        }
+    }
+
+    {
+        // It should be a drop-in replacement for using dice
+        // (at least when floating point numbers are used...)
+        auto rnd1 = Random(313371776);
+        auto rnd2 = Random(313371776);
+        double[] props = [1.0, 2.0, 3.0];
+        auto oldDice = iota(30).map!(e => dice(rnd1, props));
+        auto turboDicer = props.randomDie(rnd2).take(30);
+        assert(equal(oldDice, turboDicer));
+    }
+
+    {
+        // randomDie has a relaxed constraint for proportions
+        // and can accept simple input ranges!
+        struct InputRangeDummy
+        {
+            int[] arr;
+            @property bool empty() { return arr.empty; }
+            @property int front() { return arr.front; }
+            void popFront() { arr = arr[1..$]; }
+        }
+        auto props1 = InputRangeDummy([1,0]);
+        auto turboDicer1 = props1.randomDie(rnd);
+        assert(equal([0,0,0], turboDicer1.take(3)));
+
+        auto props2 = InputRangeDummy([0,1]);
+        auto turboDicer2 = props2.randomDie(rnd);
+        assert(equal([1,1,1], turboDicer2.take(3)));
+    }
+
+    {
+        // Some dice ranges can be assigned to eachother
+        // Groups:
+        // {byte, ubyte, short, ushort}
+        // {int, uint, long, ulong}
+        // {double, float}
+        byte[] propByte = [0,1];
+        auto dicer1 = propByte.randomDie(rnd);
+        foreach(CompatType; TypeTuple!(ubyte, short, ushort))
+        {
+            CompatType[] compatProp = [0,1];
+            dicer1 = compatProp.randomDie(rnd);
+        }
+
+        int[] propInt = [0,1];
+        auto dicer2 = propInt.randomDie(rnd);
+        foreach(CompatType; TypeTuple!(uint, long, ulong))
+        {
+            CompatType[] compatProp = [0, 1];
+            dicer2 = compatProp.randomDie(rnd);
+        }
+
+        float[] propFloat = [0.0, 1.0];
+        auto dicer3 = propFloat.randomDie(rnd);
+        double[] propDouble = [0.0, 1.0];
+        dicer3 = propDouble.randomDie(rnd);
+    }
+}
+
+/**
 Covers a given range $(D r) in a random manner, i.e. goes through each
 element of $(D r) once and only once, just in a random order. $(D r)
 must be a random-access range with length.
