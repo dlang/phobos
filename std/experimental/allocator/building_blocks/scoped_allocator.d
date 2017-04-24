@@ -29,7 +29,7 @@ struct ScopedAllocator(ParentAllocator)
 
     private struct Node
     {
-        Node* prev;
+        Node** prev;
         Node* next;
         size_t length;
     }
@@ -86,8 +86,9 @@ struct ScopedAllocator(ParentAllocator)
         auto b = parent.allocate(n);
         if (!b.ptr) return b;
         Node* toInsert = & parent.prefix(b);
-        toInsert.prev = null;
+        toInsert.prev = &root;
         toInsert.next = root;
+        if (root) root.prev = &toInsert.next;
         toInsert.length = n;
         assert(!root || !root.prev);
         if (root) root.prev = toInsert;
@@ -118,16 +119,15 @@ struct ScopedAllocator(ParentAllocator)
         if (b.ptr)
         {
             Node* n = & parent.prefix(b);
-            if (n.prev) n.prev.next = n.next;
-            else root = n.next;
-            if (n.next) n.next.prev = n.prev;
+            *(n.prev) = n.next;
+            if (n.next) n.next.prev = &n.next;
         }
         auto result = parent.reallocate(b, s);
         // Add back to list
         if (b.ptr)
         {
             Node* n = & parent.prefix(b);
-            n.prev = null;
+            n.prev = &root;
             n.next = root;
             n.length = s;
             if (root) root.prev = n;
@@ -155,9 +155,8 @@ struct ScopedAllocator(ParentAllocator)
         if (b.ptr)
         {
             Node* n = & parent.prefix(b);
-            if (n.prev) n.prev.next = n.next;
-            else root = n.next;
-            if (n.next) n.next.prev = n.prev;
+            *(n.prev) = n.next;
+            if (n.next) n.next.prev = &n.next;
         }
         return parent.deallocate(b);
     }
@@ -197,9 +196,17 @@ struct ScopedAllocator(ParentAllocator)
     import std.typecons : Ternary;
     ScopedAllocator!Mallocator alloc;
     assert(alloc.empty == Ternary.yes);
-    const b = alloc.allocate(10);
+    auto b = alloc.allocate(10);
+    auto c = alloc.allocate(20);
     assert(b.length == 10);
+    assert(c.length == 20);
     assert(alloc.empty == Ternary.no);
+
+    alloc.deallocate(b);
+    assert(alloc.empty == Ternary.no);
+
+    alloc.deallocate(c);
+    assert(alloc.empty == Ternary.yes);
 }
 
 @system unittest
