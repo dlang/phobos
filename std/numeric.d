@@ -2656,6 +2656,89 @@ T gcd(T)(T a, T b)
     assert(gcd(a, b) == 13);
 }
 
+// This overload is for non-builtin numerical types like BigInt or
+// user-defined types.
+/// ditto
+T gcd(T)(T a, T b)
+    if (!isIntegral!T &&
+        is(typeof(T.init % T.init)) &&
+        is(typeof(T.init == 0 || T.init > 0)))
+{
+    import std.algorithm.mutation : swap;
+
+    enum canUseBinaryGcd = is(typeof(() {
+        T t, u;
+        t <<= 1;
+        t >>= 1;
+        t -= u;
+        bool b = (t & 1) == 0;
+        swap(t, u);
+    }));
+
+    assert(a >= 0 && b >= 0);
+
+    static if (canUseBinaryGcd)
+    {
+        uint shift = 0;
+        while ((a & 1) == 0 && (b & 1) == 0)
+        {
+            a >>= 1;
+            b >>= 1;
+            shift++;
+        }
+
+        do
+        {
+            assert((a & 1) != 0);
+            while ((b & 1) == 0)
+                b >>= 1;
+            if (a > b)
+                swap(a, b);
+            b -= a;
+        } while (b);
+
+        return a << shift;
+    }
+    else
+    {
+        // The only thing we have is %; fallback to Euclidean algorithm.
+        while (b != 0)
+        {
+            auto t = b;
+            b = a % b;
+            a = t;
+        }
+        return a;
+    }
+}
+
+// Issue 7102
+unittest
+{
+    import std.bigint : BigInt;
+    assert(gcd(BigInt("71_000_000_000_000_000_000"),
+               BigInt("31_000_000_000_000_000_000")) ==
+           BigInt("1_000_000_000_000_000_000"));
+}
+
+unittest
+{
+    // A numerical type that only supports % and - (to force gcd implementation
+    // to use Euclidean algorithm).
+    struct CrippledInt
+    {
+        int impl;
+        CrippledInt opBinary(string op : "%")(CrippledInt i)
+        {
+            return CrippledInt(impl % i.impl);
+        }
+        int opEquals(CrippledInt i) { return impl == i.impl; }
+        int opEquals(int i) { return impl == i; }
+        int opCmp(int i) { return (impl < i) ? -1 : (impl > i) ? 1 : 0; }
+    }
+    assert(gcd(CrippledInt(2310), CrippledInt(1309)) == CrippledInt(77));
+}
+
 // This is to make tweaking the speed/size vs. accuracy tradeoff easy,
 // though floats seem accurate enough for all practical purposes, since
 // they pass the "approxEqual(inverseFft(fft(arr)), arr)" test even for
