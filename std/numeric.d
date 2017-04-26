@@ -2601,6 +2601,13 @@ GapWeightedSimilarityIncremental!(R, F) gapWeightedSimilarityIncremental(R, F)
 Computes the greatest common divisor of $(D a) and $(D b) by using
 an efficient algorithm such as $(HTTPS en.wikipedia.org/wiki/Euclidean_algorithm, Euclid's)
 or $(HTTPS en.wikipedia.org/wiki/Binary_GCD_algorithm, Stein's) algorithm.
+
+Params:
+    T = Any numerical type that supports the modulo operator `%`. If
+        bit-shifting `<<` and `>>` are also supported, Stein's algorithm will
+        be used; otherwise, Euclid's algorithm is used as _a fallback.
+Returns:
+    The greatest common divisor of the given arguments.
  */
 T gcd(T)(T a, T b)
     if (isIntegral!T)
