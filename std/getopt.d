@@ -1140,9 +1140,9 @@ private bool optMatch(string arg, string optPattern, ref string value,
     return false;
 }
 
-private void setConfig(ref configuration cfg, config option) @safe
+private void setConfig(ref configuration cfg, config option) @safe pure nothrow @nogc
 {
-    switch (option)
+    final switch (option)
     {
     case config.caseSensitive: cfg.caseSensitive = true; break;
     case config.caseInsensitive: cfg.caseSensitive = false; break;
@@ -1155,7 +1155,6 @@ private void setConfig(ref configuration cfg, config option) @safe
         cfg.stopOnFirstNonOption = true; break;
     case config.keepEndOfOptions:
         cfg.keepEndOfOptions = true; break;
-    default: assert(false);
     }
 }
 
