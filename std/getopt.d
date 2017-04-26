@@ -1080,7 +1080,7 @@ private struct configuration
 }
 
 private bool optMatch(string arg, string optPattern, ref string value,
-    configuration cfg)
+    configuration cfg) @safe
 {
     import std.uni : toUpper;
     import std.string : indexOf;
@@ -1140,7 +1140,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
     return false;
 }
 
-private void setConfig(ref configuration cfg, config option)
+private void setConfig(ref configuration cfg, config option) @safe
 {
     switch (option)
     {
@@ -1339,6 +1339,16 @@ private void setConfig(ref configuration cfg, config option)
     args = ["program.name", "--verbose", "2"];
     try { getopt(args, "verbose", &myStaticHandler3); assert(0); }
     catch (MyEx ex) { assert(ex.option == "verbose" && ex.value == "2"); }
+}
+
+@safe unittest // @safe std.getopt.config option use
+{
+    long x = 0;
+    string[] args = ["program", "--inc-x", "--inc-x"];
+    getopt(args,
+           std.getopt.config.caseSensitive,
+           "inc-x", "Add one to x", delegate void() { x++; });
+    assert(x == 2);
 }
 
 @system unittest
@@ -1774,9 +1784,9 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
     assert(flag);
 }
 
-@system unittest  // Delegates as callbacks
+@safe unittest  // Delegates as callbacks
 {
-    alias TwoArgOptionHandler = void delegate(string option, string value);
+    alias TwoArgOptionHandler = void delegate(string option, string value) @safe;
 
     TwoArgOptionHandler makeAddNHandler(ref long dest)
     {
