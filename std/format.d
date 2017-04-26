@@ -579,7 +579,11 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
             {
                 foreach (i; spec.indexStart - 1 .. spec.indexEnd)
                 {
-                    if (A.length <= i) break;
+                    if (A.length <= i)
+                        throw new FormatException(
+                            text("Positional specifier %", i + 1, '$', spec.spec,
+                                " index exceeds ", A.length));
+
                     if (__ctfe)
                         formatNth(w, spec, i, args);
                     else
@@ -4042,11 +4046,6 @@ private void formatNth(Writer, Char, A...)(Writer w, const ref FormatSpec!Char f
 
 @safe pure unittest
 {
-    assert(format("%2$s, %1$s", "2nd", "1st") == "1st, 2nd");
-}
-
-@safe pure unittest
-{
     int[] a = [ 1, 3, 2 ];
     formatTest( "testing %(%s & %) embedded", a,
                 "testing 1 & 3 & 2 embedded");
@@ -4225,6 +4224,9 @@ void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, s
             42, 0);
     assert(w.data == "Numbers 0 and 42 are reversed and 420 repeated",
             w.data);
+    assert(collectExceptionMsg!FormatException(formattedWrite(w, "%1$s, %3$s", 1, 2))
+        == "Positional specifier %3$s index exceeds 2");
+
     w.clear();
     formattedWrite(w, "asd%s", 23);
     assert(w.data == "asd23", w.data);
