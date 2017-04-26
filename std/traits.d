@@ -7668,10 +7668,10 @@ template getSymbolsByUDA(alias symbol, alias attribute) {
     alias membersWithoutNestedCC = Filter!(noThisMember, withoutInaccessibleMembers);
 
     // filtering not compiled members such as alias of basic types
-    enum noIncorrectMembers(string name) = (__traits(compiles, mixin("hasUDA!(symbol.%s, attribute)".format(name))));
-    alias withoutIncorrectMembers = Filter!(noIncorrectMembers, membersWithoutNestedCC);
+    enum hasSpecificUDA(string name) = mixin("hasUDA!(symbol." ~ name ~ ", attribute)");
+    enum noIncorrectMembers(string name) = (__traits(compiles, hasSpecificUDA!(name)));
 
-    enum hasSpecificUDA(string name) = mixin("hasUDA!(symbol.%s, attribute)".format(name));
+    alias withoutIncorrectMembers = Filter!(noIncorrectMembers, membersWithoutNestedCC);
     alias membersWithUDA = toSymbols!(Filter!(hasSpecificUDA, withoutIncorrectMembers));
 
     // if the symbol itself has the UDA, tack it on to the front of the list
