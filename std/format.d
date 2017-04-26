@@ -4042,6 +4042,11 @@ private void formatNth(Writer, Char, A...)(Writer w, const ref FormatSpec!Char f
 
 @safe pure unittest
 {
+    assert(format("%2$s, %1$s", "2nd", "1st") == "1st, 2nd");
+}
+
+@safe pure unittest
+{
     int[] a = [ 1, 3, 2 ];
     formatTest( "testing %(%s & %) embedded", a,
                 "testing 1 & 3 & 2 embedded");
@@ -4086,6 +4091,8 @@ private T getNth(alias Condition, T, A...)(uint index, A args)
 
 @safe unittest
 {
+    assert(format("%*.d, %.*f", 3, 7, 2, 3.1415) == "  7, 3.14");
+
     assert(collectExceptionMsg!FormatException(format("%*.d", 5.1, 2))
         == "int expected, not double");
     assert(collectExceptionMsg!FormatException(format("%.*d", '5', 2))
