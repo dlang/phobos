@@ -2720,7 +2720,7 @@ T gcd(T)(T a, T b)
 }
 
 // Issue 7102
-unittest
+@system pure unittest
 {
     import std.bigint : BigInt;
     assert(gcd(BigInt("71_000_000_000_000_000_000"),
@@ -2728,7 +2728,7 @@ unittest
            BigInt("1_000_000_000_000_000_000"));
 }
 
-unittest
+@safe pure nothrow unittest
 {
     // A numerical type that only supports % and - (to force gcd implementation
     // to use Euclidean algorithm).
