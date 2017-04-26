@@ -540,7 +540,7 @@ public:
     /**
         Implements BigInt unary operators.
      */
-    BigInt opUnary(string op)() pure nothrow const @safe
+    BigInt opUnary(string op)() pure nothrow const
     if (op=="+" || op=="-" || op=="~")
     {
        static if (op=="-")
@@ -559,7 +559,7 @@ public:
 
     // non-const unary operations
     /// ditto
-    BigInt opUnary(string op)() pure nothrow @safe if (op=="++" || op=="--")
+    BigInt opUnary(string op)() pure nothrow if (op=="++" || op=="--")
     {
         static if (op=="++")
         {
