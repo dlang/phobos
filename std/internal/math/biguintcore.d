@@ -506,7 +506,8 @@ public:
     // If wantSub is false, return x + y, leaving sign unchanged
     // If wantSub is true, return abs(x - y), negating sign if x < y
     static BigUint addOrSubInt(Tulong)(const BigUint x, Tulong y,
-            bool wantSub, ref bool sign) pure nothrow if (is(Tulong == ulong))
+            bool wantSub, ref bool sign) pure nothrow @safe
+    if (is(Tulong == ulong))
     {
         BigUint r;
         if (wantSub)
@@ -1288,7 +1289,7 @@ BigDigit [] add(const BigDigit [] a, const BigDigit [] b) pure nothrow
 
 /**  return x + y
  */
-BigDigit [] addInt(const BigDigit[] x, ulong y) pure nothrow
+BigDigit [] addInt(const BigDigit[] x, ulong y) pure nothrow @safe
 {
     uint hi = cast(uint)(y >>> 32);
     uint lo = cast(uint)(y& 0xFFFF_FFFF);
@@ -1315,7 +1316,7 @@ BigDigit [] addInt(const BigDigit[] x, ulong y) pure nothrow
 /** Return x - y.
  *  x must be greater than y.
  */
-BigDigit [] subInt(const BigDigit[] x, ulong y) pure nothrow
+BigDigit [] subInt(const BigDigit[] x, ulong y) pure nothrow @safe
 {
     uint hi = cast(uint)(y >>> 32);
     uint lo = cast(uint)(y & 0xFFFF_FFFF);

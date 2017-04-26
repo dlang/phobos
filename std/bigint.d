@@ -540,7 +540,8 @@ public:
     /**
         Implements BigInt unary operators.
      */
-    BigInt opUnary(string op)() pure nothrow const if (op=="+" || op=="-" || op=="~")
+    BigInt opUnary(string op)() pure nothrow const @safe
+    if (op=="+" || op=="-" || op=="~")
     {
        static if (op=="-")
        {
@@ -558,7 +559,7 @@ public:
 
     // non-const unary operations
     /// ditto
-    BigInt opUnary(string op)() pure nothrow if (op=="++" || op=="--")
+    BigInt opUnary(string op)() pure nothrow @safe if (op=="++" || op=="--")
     {
         static if (op=="++")
         {
@@ -744,7 +745,7 @@ public:
         Implements 3-way comparisons of BigInt with BigInt or BigInt with
         built-in integers.
      */
-    int opCmp(ref const BigInt y) pure nothrow @nogc const
+    int opCmp(ref const BigInt y) pure nothrow @nogc const @safe
     {
         // Simply redirect to the "real" opCmp implementation.
         return this.opCmp!BigInt(y);
@@ -1672,7 +1673,7 @@ unittest
 }
 
 // issue 15678
-@system unittest
+@safe unittest
 {
     import std.exception : assertThrown;
     assertThrown!ConvException(BigInt(""));
@@ -1681,7 +1682,7 @@ unittest
 }
 
 // Issue 6447
-@system unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : iota;
@@ -1695,4 +1696,3 @@ unittest
         BigInt(1_000_000_000_002)
     ]));
 }
-
