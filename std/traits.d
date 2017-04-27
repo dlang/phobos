@@ -5612,7 +5612,8 @@ enum bool isFloatingPoint(T) = __traits(isFloating, T) && !(is(Unqual!T == cfloa
  * Detect whether $(D T) is a built-in numeric type (integral or floating
  * point).
  */
-enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == char) ||
+enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == bool) ||
+                                                        is(Unqual!T == char) ||
                                                         is(Unqual!T == wchar) ||
                                                         is(Unqual!T == dchar));
 
@@ -5620,7 +5621,6 @@ enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == char) ||
 @safe unittest
 {
     static assert(
-        isNumeric!bool &&
         isNumeric!byte &&
         isNumeric!short &&
         isNumeric!int &&
@@ -5634,6 +5634,7 @@ enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == char) ||
 
     static assert(
         !isNumeric!void &&
+        !isNumeric!bool &&
         !isNumeric!char &&
         !isNumeric!wchar &&
         !isNumeric!dchar
