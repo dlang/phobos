@@ -966,7 +966,7 @@ struct SharedFreeList(ParentAllocator,
 
     /// Ditto
     static if (hasMember!(ParentAllocator, "reallocate"))
-    bool reallocate(void[] b, size_t s)
+    bool reallocate(ref void[] b, size_t s) shared
     {
         return parent.reallocate(b, s);
     }
@@ -1095,7 +1095,10 @@ struct SharedFreeList(ParentAllocator,
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
-    a.allocate(64);
+    auto c = a.allocate(64);
+    assert(a.reallocate(c, 96));
+    assert(c.length == 96);
+    a.deallocate(c);
 }
 
 @system unittest
