@@ -1631,7 +1631,7 @@ private @property Logger defaultSharedLoggerImpl() @trusted
     import std.conv : emplace;
     import std.stdio : stderr;
 
-    static __gshared ubyte[__traits(classInstanceSize, FileLogger)] _buffer;
+    static __gshared align(FileLogger.alignof) void[__traits(classInstanceSize, FileLogger)] _buffer;
 
     synchronized (stdSharedLoggerMutex)
     {
@@ -1763,7 +1763,7 @@ private @property Logger stdThreadLocalLogImpl() @trusted
 {
     import std.conv : emplace;
 
-    static ubyte[__traits(classInstanceSize, StdForwardLogger)] _buffer;
+    static void*[(__traits(classInstanceSize, StdForwardLogger) - 1) / (void*).sizeof + 1] _buffer;
 
     auto buffer = cast(ubyte[]) _buffer;
 
