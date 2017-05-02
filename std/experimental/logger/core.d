@@ -1763,7 +1763,7 @@ private @property Logger stdThreadLocalLogImpl() @trusted
 {
     import std.conv : emplace;
 
-    static align(StdForwardLogger.alignof) void[__traits(classInstanceSize, StdForwardLogger)] _buffer;
+    static void*[(__traits(classInstanceSize, StdForwardLogger) - 1) / (void*).sizeof + 1] _buffer;
 
     auto buffer = cast(ubyte[]) _buffer;
 
