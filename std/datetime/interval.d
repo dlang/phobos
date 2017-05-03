@@ -9,7 +9,7 @@
 +/
 module std.datetime.interval;
 
-import core.time : Duration;
+import core.time : Duration, dur;
 import std.datetime.common;
 import std.exception : enforce;
 import std.traits : isIntegral, Unqual;
@@ -17,9 +17,8 @@ import std.typecons : Flag;
 
 version(unittest) import std.exception : assertThrown;
 
-import core.time : dur; // temporary
 import std.datetime : Date, DateTime, SysTime, TimeOfDay; // temporary
-import std.datetime : NegInfIntervalRange; // temporary
+
 
 /++
     Indicates a direction in time. One example of its use is $(LREF2 .Interval, Interval)'s
@@ -1513,7 +1512,6 @@ public:
 
 
 private:
-package: // temporary
 
     /+
         Since we have two versions of toString, we have _toStringImpl
@@ -4052,7 +4050,6 @@ assert(!range.empty);
     }
 
 private:
-package: // temporary
 
     /+
         Since we have two versions of toString(), we have _toStringImpl()
@@ -6226,7 +6223,6 @@ assert(!range.empty);
     }
 
 private:
-package: // temporary
 
     /+
         Since we have two versions of toString(), we have _toStringImpl()
@@ -8015,7 +8011,6 @@ public:
 
 
 private:
-package: // temporary
 
     /+
         Params:
@@ -8461,7 +8456,6 @@ public:
 
 
 private:
-package: // temporary
 
     /+
         Params:
@@ -8608,6 +8602,275 @@ package: // temporary
     auto interval = PosInfInterval!Date(Date(2010, 7, 4));
     auto func = everyDayOfWeek!Date(DayOfWeek.fri);
     auto range = interval.fwdRange(func);
+
+    assert(range.func == func);
+}
+
+
+/++
+    A range over a $(D NegInfInterval). It is an infinite range.
+
+    $(D NegInfIntervalRange) is only ever constructed by $(D NegInfInterval).
+    However, when it is constructed, it is given a function, $(D func), which
+    is used to generate the time points which are iterated over. $(D func)
+    takes a time point and returns a time point of the same type. For
+    instance, to iterate
+    over all of the days in the interval $(D NegInfInterval!Date), pass a function to
+    $(D NegInfInterval)'s $(D bwdRange) where that function took a $(LREF Date) and
+    returned a $(LREF Date) which was one day earlier. That function would then be
+    used by $(D NegInfIntervalRange)'s $(D popFront) to iterate over the
+    $(LREF Date)s in the interval - though obviously, since the range is infinite,
+    use a function such as $(D std.range.take) with it rather than
+    iterating over $(I all) of the dates.
+
+    As the interval goes to negative infinity, the range is always iterated over
+    backwards, never forwards. $(D func) must generate a time point going in
+    the proper direction of iteration, or a $(LREF DateTimeException) will be
+    thrown. So, the time points that $(D func) generates must be earlier in time
+    than the one passed to it. If it's either identical or later in time, then a
+    $(LREF DateTimeException) will be thrown.
+
+    Also note that while normally the $(D end) of an interval is excluded from
+    it, $(D NegInfIntervalRange) treats it as if it were included. This allows
+    for the same behavior as with $(D PosInfIntervalRange). This works
+    because none of $(D NegInfInterval)'s functions which care about whether
+    $(D end) is included or excluded are ever called by
+    $(D NegInfIntervalRange). $(D interval) returns a normal interval, so any
+    $(D NegInfInterval) functions which are called on it which care about
+    whether $(D end) is included or excluded will treat $(D end) as excluded.
+  +/
+struct NegInfIntervalRange(TP)
+if (isTimePoint!TP)
+{
+public:
+
+    /++
+        Params:
+            rhs = The $(D NegInfIntervalRange) to assign to this one.
+      +/
+    ref NegInfIntervalRange opAssign(ref NegInfIntervalRange rhs) pure nothrow
+    {
+        _interval = rhs._interval;
+        _func = rhs._func;
+
+        return this;
+    }
+
+
+    /++ Ditto +/
+    ref NegInfIntervalRange opAssign(NegInfIntervalRange rhs) pure nothrow
+    {
+        return this = rhs;
+    }
+
+
+    /++
+        This is an infinite range, so it is never empty.
+      +/
+    enum bool empty = false;
+
+
+    /++
+        The first time point in the range.
+      +/
+    @property TP front() const pure nothrow
+    {
+        return _interval.end;
+    }
+
+
+    /++
+        Pops $(D front) from the range, using $(D func) to generate the next
+        time point in the range.
+
+        Throws:
+            $(LREF DateTimeException) if the generated time point is greater than
+            $(D front).
+      +/
+    void popFront()
+    {
+        auto end = _func(_interval.end);
+        _enforceCorrectDirection(end);
+        _interval.end = end;
+    }
+
+
+    /++
+        Returns a copy of $(D this).
+      +/
+    @property NegInfIntervalRange save() pure nothrow
+    {
+        return this;
+    }
+
+
+    /++
+        The interval that this range currently covers.
+      +/
+    @property NegInfInterval!TP interval() const pure nothrow
+    {
+        return cast(NegInfInterval!TP)_interval;
+    }
+
+
+    /++
+        The function used to generate the next time point in the range.
+      +/
+    TP delegate(in TP) func() pure nothrow @property
+    {
+        return _func;
+    }
+
+
+private:
+
+    /+
+        Params:
+            interval = The interval that this range covers.
+            func     = The function used to generate the time points which are
+                       iterated over.
+      +/
+    this(in NegInfInterval!TP interval, TP delegate(in TP) func) pure nothrow
+    {
+        _func = func;
+        _interval = interval;
+    }
+
+
+    /+
+        Throws:
+            $(LREF DateTimeException) if $(D_PARAM newTP) is in the wrong
+            direction.
+      +/
+    void _enforceCorrectDirection(in TP newTP, size_t line = __LINE__) const
+    {
+        import std.format : format;
+
+        enforce(newTP < _interval._end,
+                new DateTimeException(format("Generated time point is before previous end: prev [%s] new [%s]",
+                                             interval._end,
+                                             newTP),
+                                             __FILE__,
+                                             line));
+    }
+
+
+    NegInfInterval!TP  _interval;
+    TP delegate(in TP) _func;
+}
+
+//Test that NegInfIntervalRange satisfies the range predicates that it's supposed to satisfy.
+@safe unittest
+{
+    import std.range.primitives;
+    static assert(isInputRange!(NegInfIntervalRange!Date));
+    static assert(isForwardRange!(NegInfIntervalRange!Date));
+    static assert(isInfinite!(NegInfIntervalRange!Date));
+
+    //Commented out due to bug http://d.puremagic.com/issues/show_bug.cgi?id=4895
+    //static assert(!isOutputRange!(NegInfIntervalRange!Date, Date));
+    static assert(!isBidirectionalRange!(NegInfIntervalRange!Date));
+    static assert(!isRandomAccessRange!(NegInfIntervalRange!Date));
+    static assert(!hasSwappableElements!(NegInfIntervalRange!Date));
+    static assert(!hasAssignableElements!(NegInfIntervalRange!Date));
+    static assert(!hasLength!(NegInfIntervalRange!Date));
+    static assert(!hasSlicing!(NegInfIntervalRange!Date));
+
+    static assert(is(ElementType!(NegInfIntervalRange!Date) == Date));
+    static assert(is(ElementType!(NegInfIntervalRange!TimeOfDay) == TimeOfDay));
+    static assert(is(ElementType!(NegInfIntervalRange!DateTime) == DateTime));
+}
+
+//Test construction of NegInfIntervalRange.
+@safe unittest
+{
+    {
+        Date dateFunc(in Date date) { return date; }
+        auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+        auto ir = NegInfIntervalRange!Date(negInfInterval, &dateFunc);
+    }
+
+    {
+        TimeOfDay todFunc(in TimeOfDay tod) { return tod; }
+        auto negInfInterval = NegInfInterval!TimeOfDay(TimeOfDay(14, 0, 0));
+        auto ir = NegInfIntervalRange!(TimeOfDay)(negInfInterval, &todFunc);
+    }
+
+    {
+        DateTime dtFunc(in DateTime dt) { return dt; }
+        auto negInfInterval = NegInfInterval!DateTime(DateTime(2012, 1, 7, 14, 0, 0));
+        auto ir = NegInfIntervalRange!(DateTime)(negInfInterval, &dtFunc);
+    }
+
+    {
+        SysTime stFunc(in SysTime st) { return cast(SysTime)(st); }
+        auto negInfInterval = NegInfInterval!SysTime(SysTime(DateTime(2012, 1, 7, 14, 0, 0)));
+        auto ir = NegInfIntervalRange!(SysTime)(negInfInterval, &stFunc);
+    }
+}
+
+//Test NegInfIntervalRange's front.
+@system unittest
+{
+    auto range = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed));
+    assert(range.front == Date(2012, 1, 7));
+
+    auto poppedRange = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(
+        everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+    assert(poppedRange.front == Date(2012, 1, 4));
+
+    const cRange = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
+    assert(cRange.front != Date.init);
+}
+
+//Test NegInfIntervalRange's popFront().
+@system unittest
+{
+    import std.range : take;
+
+    auto range = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(
+        everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.wed), PopFirst.yes);
+    auto expected = range.front;
+
+    foreach (date; take(range, 79))
+    {
+        assert(date == expected);
+        expected += dur!"days"(-7);
+    }
+
+    const cRange = NegInfInterval!Date(Date(2012, 1, 7)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri));
+    static assert(!__traits(compiles, cRange.popFront()));
+}
+
+//Test NegInfIntervalRange's save.
+@system unittest
+{
+    auto interval = NegInfInterval!Date(Date(2012, 1, 7));
+    auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
+    auto range = interval.bwdRange(func);
+
+    assert(range.save == range);
+}
+
+//Test NegInfIntervalRange's interval.
+@system unittest
+{
+    auto interval = NegInfInterval!Date(Date(2012, 1, 7));
+    auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
+    auto range = interval.bwdRange(func);
+
+    assert(range.interval == interval);
+
+    const cRange = range;
+    assert(!cRange.interval.empty);
+}
+
+//Test NegInfIntervalRange's func.
+@system unittest
+{
+    auto interval = NegInfInterval!Date(Date(2012, 1, 7));
+    auto func = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri);
+    auto range = interval.bwdRange(func);
 
     assert(range.func == func);
 }
