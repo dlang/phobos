@@ -1021,19 +1021,17 @@ if (is(Unqual!Char == Char))
     int precision = UNSPECIFIED;
 
     /**
-       Separator. Its value defines how many digits are printed between
-       $(D SeparatorChar).
+       Number of digits printed between _separators.
     */
     int separators = UNSPECIFIED;
 
     /**
-       Separator. Its value defines how many digits are printed between
-       $(D SeparatorChar).
+       Set to `DYNAMIC` when the separator character is supplied at runtime.
     */
     int separatorCharPos = UNSPECIFIED;
 
     /**
-       SeparatorChar. The character that is inserted every $(D separators) character.
+       Character to insert between digits.
     */
     dchar separatorChar = ',';
 
