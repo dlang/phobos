@@ -19,7 +19,7 @@ version(unittest) import std.exception : assertThrown;
 
 import core.time : dur; // temporary
 import std.datetime : Date, DateTime, SysTime, TimeOfDay; // temporary
-import std.datetime : NegInfInterval, IntervalRange, PosInfIntervalRange, NegInfIntervalRange; // temporary
+import std.datetime : IntervalRange, PosInfIntervalRange, NegInfIntervalRange; // temporary
 import std.datetime : everyDayOfWeek; // temporary
 
 /++
@@ -1578,10 +1578,8 @@ package: // temporary
 
     // Verify Examples.
     Interval!Date(Date(1996, 1, 2), Date(2012, 3, 1));
-    assert(Interval!Date(Date(1996, 1, 2), dur!"weeks"(3)) ==
-           Interval!Date(Date(1996, 1, 2), Date(1996, 1, 23)));
-    assert(Interval!Date(Date(1996, 1, 2), dur!"days"(3)) ==
-           Interval!Date(Date(1996, 1, 2), Date(1996, 1, 5)));
+    assert(Interval!Date(Date(1996, 1, 2), dur!"weeks"(3)) == Interval!Date(Date(1996, 1, 2), Date(1996, 1, 23)));
+    assert(Interval!Date(Date(1996, 1, 2), dur!"days"(3)) == Interval!Date(Date(1996, 1, 2), Date(1996, 1, 5)));
     assert(Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), dur!"hours"(3)) ==
            Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), DateTime(1996, 1, 2, 15, 0, 0)));
     assert(Interval!DateTime(DateTime(1996, 1, 2, 12, 0, 0), dur!"minutes"(3)) ==
@@ -2610,31 +2608,19 @@ package: // temporary
     assert(Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9)).span(interval) ==
            Interval!Date(Date(2010, 7, 4), Date(2012, 1, 9)));
 
-    assert(interval.span(PosInfInterval!Date(Date(2010, 7, 3))) ==
-           PosInfInterval!Date(Date(2010, 7, 3)));
-    assert(interval.span(PosInfInterval!Date(Date(2010, 7, 4))) ==
-           PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(interval.span(PosInfInterval!Date(Date(2010, 7, 5))) ==
-           PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(interval.span(PosInfInterval!Date(Date(2012, 1, 6))) ==
-           PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(interval.span(PosInfInterval!Date(Date(2012, 1, 7))) ==
-           PosInfInterval!Date(Date(2010, 7, 4)));
-    assert(interval.span(PosInfInterval!Date(Date(2012, 1, 8))) ==
-           PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(interval.span(PosInfInterval!Date(Date(2010, 7, 3))) == PosInfInterval!Date(Date(2010, 7, 3)));
+    assert(interval.span(PosInfInterval!Date(Date(2010, 7, 4))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(interval.span(PosInfInterval!Date(Date(2010, 7, 5))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(interval.span(PosInfInterval!Date(Date(2012, 1, 6))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(interval.span(PosInfInterval!Date(Date(2012, 1, 7))) == PosInfInterval!Date(Date(2010, 7, 4)));
+    assert(interval.span(PosInfInterval!Date(Date(2012, 1, 8))) == PosInfInterval!Date(Date(2010, 7, 4)));
 
-    assert(interval.span(NegInfInterval!Date(Date(2010, 7, 3))) ==
-           NegInfInterval!Date(Date(2012, 1, 7)));
-    assert(interval.span(NegInfInterval!Date(Date(2010, 7, 4))) ==
-           NegInfInterval!Date(Date(2012, 1, 7)));
-    assert(interval.span(NegInfInterval!Date(Date(2010, 7, 5))) ==
-           NegInfInterval!Date(Date(2012, 1, 7)));
-    assert(interval.span(NegInfInterval!Date(Date(2012, 1, 6))) ==
-           NegInfInterval!Date(Date(2012, 1, 7)));
-    assert(interval.span(NegInfInterval!Date(Date(2012, 1, 7))) ==
-           NegInfInterval!Date(Date(2012, 1, 7)));
-    assert(interval.span(NegInfInterval!Date(Date(2012, 1, 8))) ==
-           NegInfInterval!Date(Date(2012, 1, 8)));
+    assert(interval.span(NegInfInterval!Date(Date(2010, 7, 3))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(interval.span(NegInfInterval!Date(Date(2010, 7, 4))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(interval.span(NegInfInterval!Date(Date(2010, 7, 5))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(interval.span(NegInfInterval!Date(Date(2012, 1, 6))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(interval.span(NegInfInterval!Date(Date(2012, 1, 7))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(interval.span(NegInfInterval!Date(Date(2012, 1, 8))) == NegInfInterval!Date(Date(2012, 1, 8)));
 
     const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
     immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
@@ -5052,7 +5038,7 @@ package: // temporary
         auto interval = PosInfInterval!Date(Date(2010, 7, 4));
 
         static void testInterval(I)(I interval, int years, int months, AllowDayOverflow allow,
-            in I expected, size_t line = __LINE__)
+                                    in I expected, size_t line = __LINE__)
         {
             interval.shift(years, months, allow);
             assert(interval == expected);
@@ -5225,4 +5211,2187 @@ package: // temporary
     immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
     assert(cPosInfInterval.toString());
     assert(iPosInfInterval.toString());
+}
+
+
+/++
+    Represents an interval of time which has negative infinity as its starting
+    point.
+
+    Any ranges which iterate over a $(D NegInfInterval) are infinite. So, the
+    main purpose of using $(D NegInfInterval) is to create an infinite range
+    which starts at negative infinity and goes to a fixed end point.
+    Iterate over it in reverse.
+  +/
+struct NegInfInterval(TP)
+{
+public:
+
+    /++
+        Params:
+            end = The time point which ends the interval.
+
+        Example:
+--------------------
+auto interval = PosInfInterval!Date(Date(1996, 1, 2));
+--------------------
+      +/
+    this(in TP end) pure nothrow
+    {
+        _end = cast(TP) end;
+    }
+
+
+    /++
+        Params:
+            rhs = The $(D NegInfInterval) to assign to this one.
+      +/
+    ref NegInfInterval opAssign(const ref NegInfInterval rhs) pure nothrow
+    {
+        _end = cast(TP) rhs._end;
+        return this;
+    }
+
+
+    /++
+        Params:
+            rhs = The $(D NegInfInterval) to assign to this one.
+      +/
+    ref NegInfInterval opAssign(NegInfInterval rhs) pure nothrow
+    {
+        _end = cast(TP) rhs._end;
+        return this;
+    }
+
+
+    /++
+        The end point of the interval. It is excluded from the interval.
+
+        Example:
+--------------------
+assert(NegInfInterval!Date(Date(2012, 3, 1)).end == Date(2012, 3, 1));
+--------------------
+      +/
+    @property TP end() const pure nothrow
+    {
+        return cast(TP)_end;
+    }
+
+
+    /++
+        The end point of the interval. It is excluded from the interval.
+
+        Params:
+            timePoint = The time point to set end to.
+      +/
+    @property void end(TP timePoint) pure nothrow
+    {
+        _end = timePoint;
+    }
+
+
+    /++
+        Whether the interval's length is 0. Always returns false.
+
+        Example:
+--------------------
+assert(!NegInfInterval!Date(Date(1996, 1, 2)).empty);
+--------------------
+      +/
+    enum bool empty = false;
+
+
+    /++
+        Whether the given time point is within this interval.
+
+        Params:
+            timePoint = The time point to check for inclusion in this interval.
+
+        Example:
+--------------------
+assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(1994, 12, 24)));
+assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(2000, 1, 5)));
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(2012, 3, 1)));
+--------------------
+      +/
+    bool contains(TP timePoint) const pure nothrow
+    {
+        return timePoint < _end;
+    }
+
+
+    /++
+        Whether the given interval is completely within this interval.
+
+        Params:
+            interval = The interval to check for inclusion in this interval.
+
+        Throws:
+            $(LREF DateTimeException) if the given interval is empty.
+
+        Example:
+--------------------
+assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
+            Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
+--------------------
+      +/
+    bool contains(in Interval!TP interval) const pure
+    {
+        interval._enforceNotEmpty();
+        return interval._end <= _end;
+    }
+
+
+    /++
+        Whether the given interval is completely within this interval.
+
+        Always returns false because an interval beginning at negative
+        infinity can never contain an interval going to positive infinity.
+
+        Params:
+            interval = The interval to check for inclusion in this interval.
+
+        Example:
+--------------------
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
+            PosInfInterval!Date(Date(1999, 5, 4))));
+--------------------
+      +/
+    bool contains(in PosInfInterval!TP interval) const pure nothrow
+    {
+        return false;
+    }
+
+
+    /++
+        Whether the given interval is completely within this interval.
+
+        Params:
+            interval = The interval to check for inclusion in this interval.
+
+        Example:
+--------------------
+assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(
+            NegInfInterval!Date(Date(1996, 5, 4))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(
+            NegInfInterval!Date(Date(2013, 7, 9))));
+--------------------
+      +/
+    bool contains(in NegInfInterval interval) const pure nothrow
+    {
+        return interval._end <= _end;
+    }
+
+
+    /++
+        Whether this interval is before the given time point.
+
+        Params:
+            timePoint = The time point to check whether this interval is
+                        before it.
+
+        Example:
+--------------------
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(1994, 12, 24)));
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2000, 1, 5)));
+assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2012, 3, 1)));
+--------------------
+      +/
+    bool isBefore(in TP timePoint) const pure nothrow
+    {
+        return timePoint >= _end;
+    }
+
+
+    /++
+        Whether this interval is before the given interval and does not
+        intersect it.
+
+        Params:
+            interval = The interval to check for against this interval.
+
+        Throws:
+            $(LREF DateTimeException) if the given interval is empty
+
+        Example:
+--------------------
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
+--------------------
+      +/
+    bool isBefore(in Interval!TP interval) const pure
+    {
+        interval._enforceNotEmpty();
+        return _end <= interval._begin;
+    }
+
+
+    /++
+        Whether this interval is before the given interval and does not
+        intersect it.
+
+        Params:
+            interval = The interval to check for against this interval.
+
+        Example:
+--------------------
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            PosInfInterval!Date(Date(1999, 5, 4))));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            PosInfInterval!Date(Date(2012, 3, 1))));
+--------------------
+      +/
+    bool isBefore(in PosInfInterval!TP interval) const pure nothrow
+    {
+        return _end <= interval._begin;
+    }
+
+
+    /++
+        Whether this interval is before the given interval and does not
+        intersect it.
+
+        Always returns false because an interval beginning at negative
+        infinity can never be before another interval beginning at negative
+        infinity.
+
+        Params:
+            interval = The interval to check for against this interval.
+
+        Example:
+--------------------
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            NegInfInterval!Date(Date(1996, 5, 4))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(
+            NegInfInterval!Date(Date(2013, 7, 9))));
+--------------------
+      +/
+    bool isBefore(in NegInfInterval interval) const pure nothrow
+    {
+        return false;
+    }
+
+
+    /++
+        Whether this interval is after the given time point.
+
+        Always returns false because an interval beginning at negative infinity
+        can never be after any time point.
+
+        Params:
+            timePoint = The time point to check whether this interval is after
+                        it.
+
+        Example:
+--------------------
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(1994, 12, 24)));
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2000, 1, 5)));
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2012, 3, 1)));
+--------------------
+      +/
+    bool isAfter(in TP timePoint) const pure nothrow
+    {
+        return false;
+    }
+
+
+    /++
+        Whether this interval is after the given interval and does not
+        intersect it.
+
+        Always returns false (unless the given interval is empty) because an
+        interval beginning at negative infinity can never be after any other
+        interval.
+
+        Params:
+            interval = The interval to check against this interval.
+
+        Throws:
+            $(LREF DateTimeException) if the given interval is empty.
+
+        Example:
+--------------------
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
+--------------------
+      +/
+    bool isAfter(in Interval!TP interval) const pure
+    {
+        interval._enforceNotEmpty();
+        return false;
+    }
+
+
+    /++
+        Whether this interval is after the given interval and does not intersect
+        it.
+
+        Always returns false because an interval beginning at negative infinity
+        can never be after any other interval.
+
+        Params:
+            interval = The interval to check against this interval.
+
+        Example:
+--------------------
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            PosInfInterval!Date(Date(1999, 5, 4))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            PosInfInterval!Date(Date(2012, 3, 1))));
+--------------------
+      +/
+    bool isAfter(in PosInfInterval!TP interval) const pure nothrow
+    {
+        return false;
+    }
+
+
+    /++
+        Whether this interval is after the given interval and does not intersect
+        it.
+
+        Always returns false because an interval beginning at negative infinity
+        can never be after any other interval.
+
+        Params:
+            interval = The interval to check against this interval.
+
+        Example:
+--------------------
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            NegInfInterval!Date(Date(1996, 5, 4))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
+            NegInfInterval!Date(Date(2013, 7, 9))));
+--------------------
+      +/
+    bool isAfter(in NegInfInterval interval) const pure nothrow
+    {
+        return false;
+    }
+
+
+    /++
+        Whether the given interval overlaps this interval.
+
+        Params:
+            interval = The interval to check for intersection with this interval.
+
+        Throws:
+            $(LREF DateTimeException) if the given interval is empty.
+
+        Example:
+--------------------
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
+--------------------
+      +/
+    bool intersects(in Interval!TP interval) const pure
+    {
+        interval._enforceNotEmpty();
+        return interval._begin < _end;
+    }
+
+
+    /++
+        Whether the given interval overlaps this interval.
+
+        Params:
+            interval = The interval to check for intersection with this
+                       interval.
+
+        Example:
+--------------------
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            PosInfInterval!Date(Date(1999, 5, 4))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            PosInfInterval!Date(Date(2012, 3, 1))));
+--------------------
+      +/
+    bool intersects(in PosInfInterval!TP interval) const pure nothrow
+    {
+        return interval._begin < _end;
+    }
+
+
+    /++
+        Whether the given interval overlaps this interval.
+
+        Always returns true because two intervals beginning at negative infinity
+        always overlap.
+
+        Params:
+            interval = The interval to check for intersection with this interval.
+
+        Example:
+--------------------
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            NegInfInterval!Date(Date(1996, 5, 4))));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
+            NegInfInterval!Date(Date(2013, 7, 9))));
+--------------------
+      +/
+    bool intersects(in NegInfInterval!TP interval) const pure nothrow
+    {
+        return true;
+    }
+
+
+    /++
+        Returns the intersection of two intervals
+
+        Params:
+            interval = The interval to intersect with this interval.
+
+        Throws:
+            $(LREF DateTimeException) if the two intervals do not intersect or if
+            the given interval is empty.
+
+        Example:
+--------------------
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+       Interval!Date(Date(1990, 7 , 6), Date(2000, 8, 2)));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+            Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
+       Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
+--------------------
+      +/
+    Interval!TP intersection(in Interval!TP interval) const
+    {
+        import std.format : format;
+
+        enforce(this.intersects(interval),
+                new DateTimeException(format("%s and %s do not intersect.", this, interval)));
+
+        auto end = _end < interval._end ? _end : interval._end;
+
+        return Interval!TP(interval._begin, end);
+    }
+
+
+    /++
+        Returns the intersection of two intervals
+
+        Params:
+            interval = The interval to intersect with this interval.
+
+        Throws:
+            $(LREF DateTimeException) if the two intervals do not intersect.
+
+        Example:
+--------------------
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+            PosInfInterval!Date(Date(1990, 7, 6))) ==
+       Interval!Date(Date(1990, 7 , 6), Date(2012, 3, 1)));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+            PosInfInterval!Date(Date(1999, 1, 12))) ==
+       Interval!Date(Date(1999, 1 , 12), Date(2012, 3, 1)));
+--------------------
+      +/
+    Interval!TP intersection(in PosInfInterval!TP interval) const
+    {
+        import std.format : format;
+
+        enforce(this.intersects(interval),
+                new DateTimeException(format("%s and %s do not intersect.", this, interval)));
+
+        return Interval!TP(interval._begin, _end);
+    }
+
+
+    /++
+        Returns the intersection of two intervals
+
+        Params:
+            interval = The interval to intersect with this interval.
+
+        Example:
+--------------------
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+            NegInfInterval!Date(Date(1999, 7, 6))) ==
+       NegInfInterval!Date(Date(1999, 7 , 6)));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
+            NegInfInterval!Date(Date(2013, 1, 12))) ==
+       NegInfInterval!Date(Date(2012, 3 , 1)));
+--------------------
+      +/
+    NegInfInterval intersection(in NegInfInterval interval) const nothrow
+    {
+        return NegInfInterval(_end < interval._end ? _end : interval._end);
+    }
+
+
+    /++
+        Whether the given interval is adjacent to this interval.
+
+        Params:
+            interval = The interval to check whether its adjecent to this
+                       interval.
+
+        Throws:
+            $(LREF DateTimeException) if the given interval is empty.
+
+        Example:
+--------------------
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            Interval!Date(Date(1999, 1, 12), Date(2012, 3, 1))));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            Interval!Date(Date(2012, 3, 1), Date(2019, 2, 2))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
+--------------------
+      +/
+    bool isAdjacent(in Interval!TP interval) const pure
+    {
+        interval._enforceNotEmpty();
+        return interval._begin == _end;
+    }
+
+
+    /++
+        Whether the given interval is adjacent to this interval.
+
+        Params:
+            interval = The interval to check whether its adjecent to this
+                       interval.
+
+        Example:
+--------------------
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            PosInfInterval!Date(Date(1999, 5, 4))));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            PosInfInterval!Date(Date(2012, 3, 1))));
+--------------------
+      +/
+    bool isAdjacent(in PosInfInterval!TP interval) const pure nothrow
+    {
+        return interval._begin == _end;
+    }
+
+
+    /++
+        Whether the given interval is adjacent to this interval.
+
+        Always returns false because two intervals beginning at negative
+        infinity can never be adjacent to one another.
+
+        Params:
+            interval = The interval to check whether its adjecent to this
+                       interval.
+
+        Example:
+--------------------
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            NegInfInterval!Date(Date(1996, 5, 4))));
+
+assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
+            NegInfInterval!Date(Date(2012, 3, 1))));
+--------------------
+      +/
+    bool isAdjacent(in NegInfInterval interval) const pure nothrow
+    {
+        return false;
+    }
+
+
+    /++
+        Returns the union of two intervals
+
+        Params:
+            interval = The interval to merge with this interval.
+
+        Throws:
+            $(LREF DateTimeException) if the two intervals do not intersect and are
+            not adjacent or if the given interval is empty.
+
+        Note:
+            There is no overload for $(D merge) which takes a
+            $(D PosInfInterval), because an interval
+            going from negative infinity to positive infinity
+            is not possible.
+
+        Example:
+--------------------
+assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+       NegInfInterval!Date(Date(2012, 3 , 1)));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
+            Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
+       NegInfInterval!Date(Date(2015, 9 , 2)));
+--------------------
+      +/
+    NegInfInterval merge(in Interval!TP interval) const
+    {
+        import std.format : format;
+
+        enforce(this.isAdjacent(interval) || this.intersects(interval),
+                new DateTimeException(format("%s and %s are not adjacent and do not intersect.", this, interval)));
+
+        return NegInfInterval(_end > interval._end ? _end : interval._end);
+    }
+
+
+    /++
+        Returns the union of two intervals
+
+        Params:
+            interval = The interval to merge with this interval.
+
+        Note:
+            There is no overload for $(D merge) which takes a
+            $(D PosInfInterval), because an interval
+            going from negative infinity to positive infinity
+            is not possible.
+
+        Example:
+--------------------
+assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
+            NegInfInterval!Date(Date(1999, 7, 6))) ==
+       NegInfInterval!Date(Date(2012, 3 , 1)));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
+            NegInfInterval!Date(Date(2013, 1, 12))) ==
+       NegInfInterval!Date(Date(2013, 1 , 12)));
+--------------------
+      +/
+    NegInfInterval merge(in NegInfInterval interval) const pure nothrow
+    {
+        return NegInfInterval(_end > interval._end ? _end : interval._end);
+    }
+
+
+    /++
+        Returns an interval that covers from the earliest time point of two
+        intervals up to (but not including) the latest time point of two
+        intervals.
+
+        Params:
+            interval = The interval to create a span together with this
+                       interval.
+
+        Throws:
+            $(LREF DateTimeException) if the given interval is empty.
+
+        Note:
+            There is no overload for $(D span) which takes a
+            $(D PosInfInterval), because an interval
+            going from negative infinity to positive infinity
+            is not possible.
+
+        Example:
+--------------------
+assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
+            Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+       NegInfInterval!Date(Date(2012, 3 , 1)));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
+            Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
+       NegInfInterval!Date(Date(2015, 9 , 2)));
+
+assert(NegInfInterval!Date(Date(1600, 1, 7)).span(
+            Interval!Date(Date(2012, 3, 11), Date(2017, 7, 1))) ==
+       NegInfInterval!Date(Date(2017, 7 , 1)));
+--------------------
+      +/
+    NegInfInterval span(in Interval!TP interval) const pure
+    {
+        interval._enforceNotEmpty();
+        return NegInfInterval(_end > interval._end ? _end : interval._end);
+    }
+
+
+    /++
+        Returns an interval that covers from the earliest time point of two
+        intervals up to (but not including) the latest time point of two
+        intervals.
+
+        Params:
+            interval = The interval to create a span together with this
+                       interval.
+
+        Note:
+            There is no overload for $(D span) which takes a
+            $(D PosInfInterval), because an interval
+            going from negative infinity to positive infinity
+            is not possible.
+
+        Example:
+--------------------
+assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
+            NegInfInterval!Date(Date(1999, 7, 6))) ==
+       NegInfInterval!Date(Date(2012, 3 , 1)));
+
+assert(NegInfInterval!Date(Date(2012, 3, 1)).span(
+            NegInfInterval!Date(Date(2013, 1, 12))) ==
+       NegInfInterval!Date(Date(2013, 1 , 12)));
+--------------------
+      +/
+    NegInfInterval span(in NegInfInterval interval) const pure nothrow
+    {
+        return NegInfInterval(_end > interval._end ? _end : interval._end);
+    }
+
+
+    /++
+        Shifts the $(D end) of this interval forward or backwards in time by the
+        given duration (a positive duration shifts the interval forward; a
+        negative duration shifts it backward). Effectively, it does
+        $(D end += duration).
+
+        Params:
+            duration = The duration to shift the interval by.
+
+        Example:
+--------------------
+auto interval1 = NegInfInterval!Date(Date(2012, 4, 5));
+auto interval2 = NegInfInterval!Date(Date(2012, 4, 5));
+
+interval1.shift(dur!"days"(50));
+assert(interval1 == NegInfInterval!Date(Date(2012, 5, 25)));
+
+interval2.shift(dur!"days"(-50));
+assert(interval2 == NegInfInterval!Date( Date(2012, 2, 15)));
+--------------------
+      +/
+    void shift(D)(D duration) pure nothrow
+        if (__traits(compiles, end + duration))
+    {
+        _end += duration;
+    }
+
+
+    static if (__traits(compiles, end.add!"months"(1)) &&
+               __traits(compiles, end.add!"years"(1)))
+    {
+        /++
+            Shifts the $(D end) of this interval forward or backwards in time by
+            the given number of years and/or months (a positive number of years
+            and months shifts the interval forward; a negative number shifts it
+            backward). It adds the years the given years and months to end. It
+            effectively calls $(D add!"years"()) and then $(D add!"months"())
+            on end with the given number of years and months.
+
+            Params:
+                years         = The number of years to shift the interval by.
+                months        = The number of months to shift the interval by.
+                allowOverflow = Whether the days should be allowed to overflow
+                                on $(D end), causing its month to increment.
+
+            Throws:
+                $(LREF DateTimeException) if empty is true or if the resulting
+                interval would be invalid.
+
+            Example:
+--------------------
+auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
+auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
+
+interval1.shift(2);
+assert(interval1 == NegInfInterval!Date(Date(2014, 3, 1)));
+
+interval2.shift(-2);
+assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
+--------------------
+          +/
+        void shift(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
+            if (isIntegral!T)
+        {
+            auto end = _end;
+
+            end.add!"years"(years, allowOverflow);
+            end.add!"months"(months, allowOverflow);
+
+            _end = end;
+        }
+    }
+
+
+    /++
+        Expands the interval forwards in time. Effectively, it does
+        $(D end += duration).
+
+        Params:
+            duration = The duration to expand the interval by.
+
+        Example:
+--------------------
+auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
+auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
+
+interval1.expand(dur!"days"(2));
+assert(interval1 == NegInfInterval!Date(Date(2012, 3, 3)));
+
+interval2.expand(dur!"days"(-2));
+assert(interval2 == NegInfInterval!Date(Date(2012, 2, 28)));
+--------------------
+      +/
+    void expand(D)(D duration) pure nothrow
+        if (__traits(compiles, end + duration))
+    {
+        _end += duration;
+    }
+
+
+    static if (__traits(compiles, end.add!"months"(1)) &&
+               __traits(compiles, end.add!"years"(1)))
+    {
+        /++
+            Expands the interval forwards and/or backwards in time. Effectively,
+            it adds the given number of months/years to end.
+
+            Params:
+                years         = The number of years to expand the interval by.
+                months        = The number of months to expand the interval by.
+                allowOverflow = Whether the days should be allowed to overflow
+                                on $(D end), causing their month to increment.
+
+            Throws:
+                $(LREF DateTimeException) if empty is true or if the resulting
+                interval would be invalid.
+
+            Example:
+--------------------
+auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
+auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
+
+interval1.expand(2);
+assert(interval1 == NegInfInterval!Date(Date(2014, 3, 1)));
+
+interval2.expand(-2);
+assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
+--------------------
+          +/
+        void expand(T)(T years, T months = 0, AllowDayOverflow allowOverflow = AllowDayOverflow.yes)
+            if (isIntegral!T)
+        {
+            auto end = _end;
+
+            end.add!"years"(years, allowOverflow);
+            end.add!"months"(months, allowOverflow);
+
+            _end = end;
+        }
+    }
+
+
+    /++
+        Returns a range which iterates backwards over the interval, starting
+        at $(D end), using $(D_PARAM func) to generate each successive time
+        point.
+
+        The range's $(D front) is the interval's $(D end). $(D_PARAM func) is
+        used to generate the next $(D front) when $(D popFront) is called. If
+        $(D_PARAM popFirst) is $(D PopFirst.yes), then $(D popFront) is called
+        before the range is returned (so that $(D front) is a time point which
+        $(D_PARAM func) would generate).
+
+        If $(D_PARAM func) ever generates a time point greater than or equal to
+        the current $(D front) of the range, then a $(LREF DateTimeException) will
+        be thrown.
+
+        There are helper functions in this module which generate common
+        delegates to pass to $(D bwdRange). Their documentation starts with
+        "Range-generating function," to make them easily searchable.
+
+        Params:
+            func     = The function used to generate the time points of the
+                       range over the interval.
+            popFirst = Whether $(D popFront) should be called on the range
+                       before returning it.
+
+        Throws:
+            $(LREF DateTimeException) if this interval is empty.
+
+        Warning:
+            $(D_PARAM func) must be logically pure. Ideally, $(D_PARAM func)
+            would be a function pointer to a pure function, but forcing
+            $(D_PARAM func) to be pure is far too restrictive to be useful, and
+            in order to have the ease of use of having functions which generate
+            functions to pass to $(D fwdRange), $(D_PARAM func) must be a
+            delegate.
+
+            If $(D_PARAM func) retains state which changes as it is called, then
+            some algorithms will not work correctly, because the range's
+            $(D save) will have failed to have really saved the range's state.
+            To avoid such bugs, don't pass a delegate which is
+            not logically pure to $(D fwdRange). If $(D_PARAM func) is given the
+            same time point with two different calls, it must return the same
+            result both times.
+
+            Of course, none of the functions in this module have this problem,
+            so it's only relevant for custom delegates.
+
+        Example:
+--------------------
+auto interval = NegInfInterval!Date(Date(2010, 9, 9));
+auto func = delegate (in Date date) //For iterating over even-numbered days.
+            {
+                if ((date.day & 1) == 0)
+                    return date - dur!"days"(2);
+
+                return date - dur!"days"(1);
+            };
+auto range = interval.bwdRange(func);
+
+assert(range.front == Date(2010, 9, 9)); //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
+
+range.popFront();
+assert(range.front == Date(2010, 9, 8));
+
+range.popFront();
+assert(range.front == Date(2010, 9, 6));
+
+range.popFront();
+assert(range.front == Date(2010, 9, 4));
+
+range.popFront();
+assert(range.front == Date(2010, 9, 2));
+
+range.popFront();
+assert(!range.empty);
+--------------------
+      +/
+    NegInfIntervalRange!(TP) bwdRange(TP delegate(in TP) func, PopFirst popFirst = PopFirst.no) const
+    {
+        auto range = NegInfIntervalRange!(TP)(this, func);
+
+        if (popFirst == PopFirst.yes)
+            range.popFront();
+
+        return range;
+    }
+
+
+    /+
+        Converts this interval to a string.
+      +/
+    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
+    //have versions of toString() with extra modifiers, so we define one version
+    //with modifiers and one without.
+    string toString()
+    {
+        return _toStringImpl();
+    }
+
+
+    /++
+        Converts this interval to a string.
+      +/
+    //Due to bug http://d.puremagic.com/issues/show_bug.cgi?id=3715 , we can't
+    //have versions of toString() with extra modifiers, so we define one version
+    //with modifiers and one without.
+    string toString() const nothrow
+    {
+        return _toStringImpl();
+    }
+
+private:
+package: // temporary
+
+    /+
+        Since we have two versions of toString(), we have _toStringImpl()
+        so that they can share implementations.
+      +/
+    string _toStringImpl() const nothrow
+    {
+        import std.format : format;
+        try
+            return format("[-∞ - %s)", _end);
+        catch (Exception e)
+            assert(0, "format() threw.");
+    }
+
+
+    TP _end;
+}
+
+//Test NegInfInterval's constructor.
+@safe unittest
+{
+    NegInfInterval!Date(Date.init);
+    NegInfInterval!TimeOfDay(TimeOfDay.init);
+    NegInfInterval!DateTime(DateTime.init);
+    NegInfInterval!SysTime(SysTime(0));
+}
+
+//Test NegInfInterval's end.
+@safe unittest
+{
+    assert(NegInfInterval!Date(Date(2010, 1, 1)).end == Date(2010, 1, 1));
+    assert(NegInfInterval!Date(Date(2010, 1, 1)).end == Date(2010, 1, 1));
+    assert(NegInfInterval!Date(Date(1998, 1, 1)).end == Date(1998, 1, 1));
+
+    const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    assert(cNegInfInterval.end != Date.init);
+    assert(iNegInfInterval.end != Date.init);
+
+    //Verify Examples.
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).end == Date(2012, 3, 1));
+}
+
+//Test NegInfInterval's empty.
+@safe unittest
+{
+    assert(!NegInfInterval!Date(Date(2010, 1, 1)).empty);
+    assert(!NegInfInterval!TimeOfDay(TimeOfDay(0, 30, 0)).empty);
+    assert(!NegInfInterval!DateTime(DateTime(2010, 1, 1, 0, 30, 0)).empty);
+    assert(!NegInfInterval!SysTime(SysTime(DateTime(2010, 1, 1, 0, 30, 0))).empty);
+
+    const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    assert(!cNegInfInterval.empty);
+    assert(!iNegInfInterval.empty);
+
+    //Verify Examples.
+    assert(!NegInfInterval!Date(Date(1996, 1, 2)).empty);
+}
+
+//Test NegInfInterval's contains(time point).
+@safe unittest
+{
+    auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+
+    assert(negInfInterval.contains(Date(2009, 7, 4)));
+    assert(negInfInterval.contains(Date(2010, 7, 3)));
+    assert(negInfInterval.contains(Date(2010, 7, 4)));
+    assert(negInfInterval.contains(Date(2010, 7, 5)));
+    assert(negInfInterval.contains(Date(2011, 7, 1)));
+    assert(negInfInterval.contains(Date(2012, 1, 6)));
+    assert(!negInfInterval.contains(Date(2012, 1, 7)));
+    assert(!negInfInterval.contains(Date(2012, 1, 8)));
+    assert(!negInfInterval.contains(Date(2013, 1, 7)));
+
+    const cdate = Date(2010, 7, 6);
+    const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    assert(negInfInterval.contains(cdate));
+    assert(cNegInfInterval.contains(cdate));
+    assert(iNegInfInterval.contains(cdate));
+
+    //Verify Examples.
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(1994, 12, 24)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(2000, 1, 5)));
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(2012, 3, 1)));
+}
+
+//Test NegInfInterval's contains(Interval).
+@safe unittest
+{
+    auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+
+    static void testInterval(in NegInfInterval!Date negInfInterval, in Interval!Date interval)
+    {
+        negInfInterval.contains(interval);
+    }
+
+    assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+
+    assert(negInfInterval.contains(negInfInterval));
+    assert(negInfInterval.contains(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
+    assert(!negInfInterval.contains(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))));
+    assert(negInfInterval.contains(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))));
+    assert(negInfInterval.contains(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))));
+    assert(negInfInterval.contains(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))));
+    assert(!negInfInterval.contains(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))));
+    assert(negInfInterval.contains(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))));
+    assert(negInfInterval.contains(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))));
+    assert(negInfInterval.contains(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))));
+    assert(!negInfInterval.contains(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))));
+    assert(!negInfInterval.contains(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8))));
+    assert(!negInfInterval.contains(Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))));
+
+    assert(negInfInterval.contains(NegInfInterval!Date(Date(2010, 7, 3))));
+    assert(negInfInterval.contains(NegInfInterval!Date(Date(2010, 7, 4))));
+    assert(negInfInterval.contains(NegInfInterval!Date(Date(2010, 7, 5))));
+    assert(negInfInterval.contains(NegInfInterval!Date(Date(2012, 1, 6))));
+    assert(negInfInterval.contains(NegInfInterval!Date(Date(2012, 1, 7))));
+    assert(!negInfInterval.contains(NegInfInterval!Date(Date(2012, 1, 8))));
+
+    assert(!NegInfInterval!Date(Date(2010, 7, 3)).contains(negInfInterval));
+    assert(!NegInfInterval!Date(Date(2010, 7, 4)).contains(negInfInterval));
+    assert(!NegInfInterval!Date(Date(2010, 7, 5)).contains(negInfInterval));
+    assert(!NegInfInterval!Date(Date(2012, 1, 6)).contains(negInfInterval));
+    assert(NegInfInterval!Date(Date(2012, 1, 7)).contains(negInfInterval));
+    assert(NegInfInterval!Date(Date(2012, 1, 8)).contains(negInfInterval));
+
+    assert(!negInfInterval.contains(PosInfInterval!Date(Date(2010, 7, 3))));
+    assert(!negInfInterval.contains(PosInfInterval!Date(Date(2010, 7, 4))));
+    assert(!negInfInterval.contains(PosInfInterval!Date(Date(2010, 7, 5))));
+    assert(!negInfInterval.contains(PosInfInterval!Date(Date(2012, 1, 6))));
+    assert(!negInfInterval.contains(PosInfInterval!Date(Date(2012, 1, 7))));
+    assert(!negInfInterval.contains(PosInfInterval!Date(Date(2012, 1, 8))));
+
+    auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    assert(negInfInterval.contains(interval));
+    assert(negInfInterval.contains(cInterval));
+    assert(negInfInterval.contains(iInterval));
+    assert(!negInfInterval.contains(posInfInterval));
+    assert(!negInfInterval.contains(cPosInfInterval));
+    assert(!negInfInterval.contains(iPosInfInterval));
+    assert(negInfInterval.contains(negInfInterval));
+    assert(negInfInterval.contains(cNegInfInterval));
+    assert(negInfInterval.contains(iNegInfInterval));
+    assert(cNegInfInterval.contains(interval));
+    assert(cNegInfInterval.contains(cInterval));
+    assert(cNegInfInterval.contains(iInterval));
+    assert(!cNegInfInterval.contains(posInfInterval));
+    assert(!cNegInfInterval.contains(cPosInfInterval));
+    assert(!cNegInfInterval.contains(iPosInfInterval));
+    assert(cNegInfInterval.contains(negInfInterval));
+    assert(cNegInfInterval.contains(cNegInfInterval));
+    assert(cNegInfInterval.contains(iNegInfInterval));
+    assert(iNegInfInterval.contains(interval));
+    assert(iNegInfInterval.contains(cInterval));
+    assert(iNegInfInterval.contains(iInterval));
+    assert(!iNegInfInterval.contains(posInfInterval));
+    assert(!iNegInfInterval.contains(cPosInfInterval));
+    assert(!iNegInfInterval.contains(iPosInfInterval));
+    assert(iNegInfInterval.contains(negInfInterval));
+    assert(iNegInfInterval.contains(cNegInfInterval));
+    assert(iNegInfInterval.contains(iNegInfInterval));
+
+    //Verify Examples.
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(Interval!Date(Date(1998, 2, 28), Date(2013, 5, 1))));
+
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(PosInfInterval!Date(Date(1999, 5, 4))));
+
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).contains(NegInfInterval!Date(Date(1996, 5, 4))));
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(NegInfInterval!Date(Date(2013, 7, 9))));
+}
+
+//Test NegInfInterval's isBefore(time point).
+@safe unittest
+{
+    auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+
+    assert(!negInfInterval.isBefore(Date(2009, 7, 4)));
+    assert(!negInfInterval.isBefore(Date(2010, 7, 3)));
+    assert(!negInfInterval.isBefore(Date(2010, 7, 4)));
+    assert(!negInfInterval.isBefore(Date(2010, 7, 5)));
+    assert(!negInfInterval.isBefore(Date(2011, 7, 1)));
+    assert(!negInfInterval.isBefore(Date(2012, 1, 6)));
+    assert(negInfInterval.isBefore(Date(2012, 1, 7)));
+    assert(negInfInterval.isBefore(Date(2012, 1, 8)));
+    assert(negInfInterval.isBefore(Date(2013, 1, 7)));
+
+    const cdate = Date(2010, 7, 6);
+    const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    assert(!negInfInterval.isBefore(cdate));
+    assert(!cNegInfInterval.isBefore(cdate));
+    assert(!iNegInfInterval.isBefore(cdate));
+
+    //Verify Examples.
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(1994, 12, 24)));
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2000, 1, 5)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2012, 3, 1)));
+}
+
+//Test NegInfInterval's isBefore(Interval).
+@safe unittest
+{
+    auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+
+    static void testInterval(in NegInfInterval!Date negInfInterval, in Interval!Date interval)
+    {
+        negInfInterval.isBefore(interval);
+    }
+
+    assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+
+    assert(!negInfInterval.isBefore(negInfInterval));
+    assert(!negInfInterval.isBefore(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
+    assert(!negInfInterval.isBefore(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))));
+    assert(!negInfInterval.isBefore(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))));
+    assert(!negInfInterval.isBefore(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))));
+    assert(!negInfInterval.isBefore(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))));
+    assert(!negInfInterval.isBefore(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))));
+    assert(!negInfInterval.isBefore(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))));
+    assert(!negInfInterval.isBefore(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))));
+    assert(!negInfInterval.isBefore(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))));
+    assert(!negInfInterval.isBefore(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))));
+    assert(negInfInterval.isBefore(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8))));
+    assert(negInfInterval.isBefore(Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))));
+
+    assert(!negInfInterval.isBefore(NegInfInterval!Date(Date(2010, 7, 3))));
+    assert(!negInfInterval.isBefore(NegInfInterval!Date(Date(2010, 7, 4))));
+    assert(!negInfInterval.isBefore(NegInfInterval!Date(Date(2010, 7, 5))));
+    assert(!negInfInterval.isBefore(NegInfInterval!Date(Date(2012, 1, 6))));
+    assert(!negInfInterval.isBefore(NegInfInterval!Date(Date(2012, 1, 7))));
+    assert(!negInfInterval.isBefore(NegInfInterval!Date(Date(2012, 1, 8))));
+
+    assert(!NegInfInterval!Date(Date(2010, 7, 3)).isBefore(negInfInterval));
+    assert(!NegInfInterval!Date(Date(2010, 7, 4)).isBefore(negInfInterval));
+    assert(!NegInfInterval!Date(Date(2010, 7, 5)).isBefore(negInfInterval));
+    assert(!NegInfInterval!Date(Date(2012, 1, 6)).isBefore(negInfInterval));
+    assert(!NegInfInterval!Date(Date(2012, 1, 7)).isBefore(negInfInterval));
+    assert(!NegInfInterval!Date(Date(2012, 1, 8)).isBefore(negInfInterval));
+
+    assert(!negInfInterval.isBefore(PosInfInterval!Date(Date(2010, 7, 3))));
+    assert(!negInfInterval.isBefore(PosInfInterval!Date(Date(2010, 7, 4))));
+    assert(!negInfInterval.isBefore(PosInfInterval!Date(Date(2010, 7, 5))));
+    assert(!negInfInterval.isBefore(PosInfInterval!Date(Date(2012, 1, 6))));
+    assert(negInfInterval.isBefore(PosInfInterval!Date(Date(2012, 1, 7))));
+    assert(negInfInterval.isBefore(PosInfInterval!Date(Date(2012, 1, 8))));
+
+    auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    assert(!negInfInterval.isBefore(interval));
+    assert(!negInfInterval.isBefore(cInterval));
+    assert(!negInfInterval.isBefore(iInterval));
+    assert(!negInfInterval.isBefore(posInfInterval));
+    assert(!negInfInterval.isBefore(cPosInfInterval));
+    assert(!negInfInterval.isBefore(iPosInfInterval));
+    assert(!negInfInterval.isBefore(negInfInterval));
+    assert(!negInfInterval.isBefore(cNegInfInterval));
+    assert(!negInfInterval.isBefore(iNegInfInterval));
+    assert(!cNegInfInterval.isBefore(interval));
+    assert(!cNegInfInterval.isBefore(cInterval));
+    assert(!cNegInfInterval.isBefore(iInterval));
+    assert(!cNegInfInterval.isBefore(posInfInterval));
+    assert(!cNegInfInterval.isBefore(cPosInfInterval));
+    assert(!cNegInfInterval.isBefore(iPosInfInterval));
+    assert(!cNegInfInterval.isBefore(negInfInterval));
+    assert(!cNegInfInterval.isBefore(cNegInfInterval));
+    assert(!cNegInfInterval.isBefore(iNegInfInterval));
+    assert(!iNegInfInterval.isBefore(interval));
+    assert(!iNegInfInterval.isBefore(cInterval));
+    assert(!iNegInfInterval.isBefore(iInterval));
+    assert(!iNegInfInterval.isBefore(posInfInterval));
+    assert(!iNegInfInterval.isBefore(cPosInfInterval));
+    assert(!iNegInfInterval.isBefore(iPosInfInterval));
+    assert(!iNegInfInterval.isBefore(negInfInterval));
+    assert(!iNegInfInterval.isBefore(cNegInfInterval));
+    assert(!iNegInfInterval.isBefore(iNegInfInterval));
+
+    //Verify Examples.
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
+
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(PosInfInterval!Date(Date(1999, 5, 4))));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(PosInfInterval!Date(Date(2012, 3, 1))));
+
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(NegInfInterval!Date(Date(1996, 5, 4))));
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isBefore(NegInfInterval!Date(Date(2013, 7, 9))));
+}
+
+//Test NegInfInterval's isAfter(time point).
+@safe unittest
+{
+    auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+
+    assert(!negInfInterval.isAfter(Date(2009, 7, 4)));
+    assert(!negInfInterval.isAfter(Date(2010, 7, 3)));
+    assert(!negInfInterval.isAfter(Date(2010, 7, 4)));
+    assert(!negInfInterval.isAfter(Date(2010, 7, 5)));
+    assert(!negInfInterval.isAfter(Date(2011, 7, 1)));
+    assert(!negInfInterval.isAfter(Date(2012, 1, 6)));
+    assert(!negInfInterval.isAfter(Date(2012, 1, 7)));
+    assert(!negInfInterval.isAfter(Date(2012, 1, 8)));
+    assert(!negInfInterval.isAfter(Date(2013, 1, 7)));
+
+    const cdate = Date(2010, 7, 6);
+    const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    assert(!negInfInterval.isAfter(cdate));
+    assert(!cNegInfInterval.isAfter(cdate));
+    assert(!iNegInfInterval.isAfter(cdate));
+}
+
+//Test NegInfInterval's isAfter(Interval).
+@safe unittest
+{
+    auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+
+    static void testInterval(in NegInfInterval!Date negInfInterval, in Interval!Date interval)
+    {
+        negInfInterval.isAfter(interval);
+    }
+
+    assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+
+    assert(!negInfInterval.isAfter(negInfInterval));
+    assert(!negInfInterval.isAfter(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
+    assert(!negInfInterval.isAfter(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))));
+    assert(!negInfInterval.isAfter(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))));
+    assert(!negInfInterval.isAfter(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))));
+    assert(!negInfInterval.isAfter(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))));
+    assert(!negInfInterval.isAfter(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))));
+    assert(!negInfInterval.isAfter(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))));
+    assert(!negInfInterval.isAfter(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))));
+    assert(!negInfInterval.isAfter(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))));
+    assert(!negInfInterval.isAfter(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))));
+    assert(!negInfInterval.isAfter(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8))));
+    assert(!negInfInterval.isAfter(Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))));
+
+    assert(!negInfInterval.isAfter(NegInfInterval!Date(Date(2010, 7, 3))));
+    assert(!negInfInterval.isAfter(NegInfInterval!Date(Date(2010, 7, 4))));
+    assert(!negInfInterval.isAfter(NegInfInterval!Date(Date(2010, 7, 5))));
+    assert(!negInfInterval.isAfter(NegInfInterval!Date(Date(2012, 1, 6))));
+    assert(!negInfInterval.isAfter(NegInfInterval!Date(Date(2012, 1, 7))));
+    assert(!negInfInterval.isAfter(NegInfInterval!Date(Date(2012, 1, 8))));
+
+    assert(!NegInfInterval!Date(Date(2010, 7, 3)).isAfter(negInfInterval));
+    assert(!NegInfInterval!Date(Date(2010, 7, 4)).isAfter(negInfInterval));
+    assert(!NegInfInterval!Date(Date(2010, 7, 5)).isAfter(negInfInterval));
+    assert(!NegInfInterval!Date(Date(2012, 1, 6)).isAfter(negInfInterval));
+    assert(!NegInfInterval!Date(Date(2012, 1, 7)).isAfter(negInfInterval));
+    assert(!NegInfInterval!Date(Date(2012, 1, 8)).isAfter(negInfInterval));
+
+    assert(!negInfInterval.isAfter(PosInfInterval!Date(Date(2010, 7, 3))));
+    assert(!negInfInterval.isAfter(PosInfInterval!Date(Date(2010, 7, 4))));
+    assert(!negInfInterval.isAfter(PosInfInterval!Date(Date(2010, 7, 5))));
+    assert(!negInfInterval.isAfter(PosInfInterval!Date(Date(2012, 1, 6))));
+    assert(!negInfInterval.isAfter(PosInfInterval!Date(Date(2012, 1, 7))));
+    assert(!negInfInterval.isAfter(PosInfInterval!Date(Date(2012, 1, 8))));
+
+    auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    assert(!negInfInterval.isAfter(interval));
+    assert(!negInfInterval.isAfter(cInterval));
+    assert(!negInfInterval.isAfter(iInterval));
+    assert(!negInfInterval.isAfter(posInfInterval));
+    assert(!negInfInterval.isAfter(cPosInfInterval));
+    assert(!negInfInterval.isAfter(iPosInfInterval));
+    assert(!negInfInterval.isAfter(negInfInterval));
+    assert(!negInfInterval.isAfter(cNegInfInterval));
+    assert(!negInfInterval.isAfter(iNegInfInterval));
+    assert(!cNegInfInterval.isAfter(interval));
+    assert(!cNegInfInterval.isAfter(cInterval));
+    assert(!cNegInfInterval.isAfter(iInterval));
+    assert(!cNegInfInterval.isAfter(posInfInterval));
+    assert(!cNegInfInterval.isAfter(cPosInfInterval));
+    assert(!cNegInfInterval.isAfter(iPosInfInterval));
+    assert(!cNegInfInterval.isAfter(negInfInterval));
+    assert(!cNegInfInterval.isAfter(cNegInfInterval));
+    assert(!cNegInfInterval.isAfter(iNegInfInterval));
+    assert(!iNegInfInterval.isAfter(interval));
+    assert(!iNegInfInterval.isAfter(cInterval));
+    assert(!iNegInfInterval.isAfter(iInterval));
+    assert(!iNegInfInterval.isAfter(posInfInterval));
+    assert(!iNegInfInterval.isAfter(cPosInfInterval));
+    assert(!iNegInfInterval.isAfter(iPosInfInterval));
+    assert(!iNegInfInterval.isAfter(negInfInterval));
+    assert(!iNegInfInterval.isAfter(cNegInfInterval));
+    assert(!iNegInfInterval.isAfter(iNegInfInterval));
+
+    //Verify Examples.
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(1994, 12, 24)));
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2000, 1, 5)));
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2012, 3, 1)));
+
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
+
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(PosInfInterval!Date(Date(1999, 5, 4))));
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(PosInfInterval!Date(Date(2012, 3, 1))));
+
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(NegInfInterval!Date(Date(1996, 5, 4))));
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(NegInfInterval!Date(Date(2013, 7, 9))));
+}
+
+//Test NegInfInterval's intersects().
+@safe unittest
+{
+    auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+
+    static void testInterval(in NegInfInterval!Date negInfInterval, in Interval!Date interval)
+    {
+        negInfInterval.intersects(interval);
+    }
+
+    assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+
+    assert(negInfInterval.intersects(negInfInterval));
+    assert(negInfInterval.intersects(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
+    assert(negInfInterval.intersects(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))));
+    assert(negInfInterval.intersects(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))));
+    assert(negInfInterval.intersects(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))));
+    assert(negInfInterval.intersects(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))));
+    assert(negInfInterval.intersects(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))));
+    assert(negInfInterval.intersects(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))));
+    assert(negInfInterval.intersects(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))));
+    assert(negInfInterval.intersects(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))));
+    assert(negInfInterval.intersects(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))));
+    assert(!negInfInterval.intersects(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8))));
+    assert(!negInfInterval.intersects(Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))));
+
+    assert(negInfInterval.intersects(NegInfInterval!Date(Date(2010, 7, 3))));
+    assert(negInfInterval.intersects(NegInfInterval!Date(Date(2010, 7, 4))));
+    assert(negInfInterval.intersects(NegInfInterval!Date(Date(2010, 7, 5))));
+    assert(negInfInterval.intersects(NegInfInterval!Date(Date(2012, 1, 6))));
+    assert(negInfInterval.intersects(NegInfInterval!Date(Date(2012, 1, 7))));
+    assert(negInfInterval.intersects(NegInfInterval!Date(Date(2012, 1, 8))));
+
+    assert(NegInfInterval!Date(Date(2010, 7, 3)).intersects(negInfInterval));
+    assert(NegInfInterval!Date(Date(2010, 7, 4)).intersects(negInfInterval));
+    assert(NegInfInterval!Date(Date(2010, 7, 5)).intersects(negInfInterval));
+    assert(NegInfInterval!Date(Date(2012, 1, 6)).intersects(negInfInterval));
+    assert(NegInfInterval!Date(Date(2012, 1, 7)).intersects(negInfInterval));
+    assert(NegInfInterval!Date(Date(2012, 1, 8)).intersects(negInfInterval));
+
+    assert(negInfInterval.intersects(PosInfInterval!Date(Date(2010, 7, 3))));
+    assert(negInfInterval.intersects(PosInfInterval!Date(Date(2010, 7, 4))));
+    assert(negInfInterval.intersects(PosInfInterval!Date(Date(2010, 7, 5))));
+    assert(negInfInterval.intersects(PosInfInterval!Date(Date(2012, 1, 6))));
+    assert(!negInfInterval.intersects(PosInfInterval!Date(Date(2012, 1, 7))));
+    assert(!negInfInterval.intersects(PosInfInterval!Date(Date(2012, 1, 8))));
+
+    auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    assert(negInfInterval.intersects(interval));
+    assert(negInfInterval.intersects(cInterval));
+    assert(negInfInterval.intersects(iInterval));
+    assert(negInfInterval.intersects(posInfInterval));
+    assert(negInfInterval.intersects(cPosInfInterval));
+    assert(negInfInterval.intersects(iPosInfInterval));
+    assert(negInfInterval.intersects(negInfInterval));
+    assert(negInfInterval.intersects(cNegInfInterval));
+    assert(negInfInterval.intersects(iNegInfInterval));
+    assert(cNegInfInterval.intersects(interval));
+    assert(cNegInfInterval.intersects(cInterval));
+    assert(cNegInfInterval.intersects(iInterval));
+    assert(cNegInfInterval.intersects(posInfInterval));
+    assert(cNegInfInterval.intersects(cPosInfInterval));
+    assert(cNegInfInterval.intersects(iPosInfInterval));
+    assert(cNegInfInterval.intersects(negInfInterval));
+    assert(cNegInfInterval.intersects(cNegInfInterval));
+    assert(cNegInfInterval.intersects(iNegInfInterval));
+    assert(iNegInfInterval.intersects(interval));
+    assert(iNegInfInterval.intersects(cInterval));
+    assert(iNegInfInterval.intersects(iInterval));
+    assert(iNegInfInterval.intersects(posInfInterval));
+    assert(iNegInfInterval.intersects(cPosInfInterval));
+    assert(iNegInfInterval.intersects(iPosInfInterval));
+    assert(iNegInfInterval.intersects(negInfInterval));
+    assert(iNegInfInterval.intersects(cNegInfInterval));
+    assert(iNegInfInterval.intersects(iNegInfInterval));
+
+    //Verify Examples.
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(Interval!Date(Date(1999, 1, 12), Date(2011, 9, 17))));
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
+
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(PosInfInterval!Date(Date(1999, 5, 4))));
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).intersects(PosInfInterval!Date(Date(2012, 3, 1))));
+
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(NegInfInterval!Date(Date(1996, 5, 4))));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(NegInfInterval!Date(Date(2013, 7, 9))));
+}
+
+//Test NegInfInterval's intersection().
+@safe unittest
+{
+    auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+
+    static void testInterval(I, J)(in I interval1, in J interval2)
+    {
+        interval1.intersection(interval2);
+    }
+
+    assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+
+    assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8))));
+    assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))));
+
+    assertThrown!DateTimeException(testInterval(negInfInterval, PosInfInterval!Date(Date(2012, 1, 7))));
+    assertThrown!DateTimeException(testInterval(negInfInterval, PosInfInterval!Date(Date(2012, 1, 8))));
+
+    assert(negInfInterval.intersection(negInfInterval) == negInfInterval);
+    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))) ==
+           Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3)));
+    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))) ==
+           Interval!Date(Date(2010, 7, 1), Date(2012, 1, 7)));
+    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))) ==
+           Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4)));
+    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))) ==
+           Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5)));
+    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))) ==
+           Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
+    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))) ==
+           Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7)));
+    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))) ==
+           Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6)));
+    assert(negInfInterval.intersection(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))) ==
+           Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7)));
+    assert(negInfInterval.intersection(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))) ==
+           Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)));
+    assert(negInfInterval.intersection(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))) ==
+           Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7)));
+
+    assert(negInfInterval.intersection(NegInfInterval!Date(Date(2010, 7, 3))) == NegInfInterval!Date(Date(2010, 7, 3)));
+    assert(negInfInterval.intersection(NegInfInterval!Date(Date(2010, 7, 4))) == NegInfInterval!Date(Date(2010, 7, 4)));
+    assert(negInfInterval.intersection(NegInfInterval!Date(Date(2010, 7, 5))) == NegInfInterval!Date(Date(2010, 7, 5)));
+    assert(negInfInterval.intersection(NegInfInterval!Date(Date(2012, 1, 6))) == NegInfInterval!Date(Date(2012, 1, 6)));
+    assert(negInfInterval.intersection(NegInfInterval!Date(Date(2012, 1, 7))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.intersection(NegInfInterval!Date(Date(2012, 1, 8))) == NegInfInterval!Date(Date(2012, 1, 7)));
+
+    assert(NegInfInterval!Date(Date(2010, 7, 3)).intersection(negInfInterval) == NegInfInterval!Date(Date(2010, 7, 3)));
+    assert(NegInfInterval!Date(Date(2010, 7, 4)).intersection(negInfInterval) == NegInfInterval!Date(Date(2010, 7, 4)));
+    assert(NegInfInterval!Date(Date(2010, 7, 5)).intersection(negInfInterval) == NegInfInterval!Date(Date(2010, 7, 5)));
+    assert(NegInfInterval!Date(Date(2012, 1, 6)).intersection(negInfInterval) == NegInfInterval!Date(Date(2012, 1, 6)));
+    assert(NegInfInterval!Date(Date(2012, 1, 7)).intersection(negInfInterval) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(NegInfInterval!Date(Date(2012, 1, 8)).intersection(negInfInterval) == NegInfInterval!Date(Date(2012, 1, 7)));
+
+    assert(negInfInterval.intersection(PosInfInterval!Date(Date(2010, 7, 3))) ==
+           Interval!Date(Date(2010, 7, 3), Date(2012, 1 ,7)));
+    assert(negInfInterval.intersection(PosInfInterval!Date(Date(2010, 7, 4))) ==
+           Interval!Date(Date(2010, 7, 4), Date(2012, 1 ,7)));
+    assert(negInfInterval.intersection(PosInfInterval!Date(Date(2010, 7, 5))) ==
+           Interval!Date(Date(2010, 7, 5), Date(2012, 1 ,7)));
+    assert(negInfInterval.intersection(PosInfInterval!Date(Date(2012, 1, 6))) ==
+           Interval!Date(Date(2012, 1, 6), Date(2012, 1 ,7)));
+
+    auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    assert(!negInfInterval.intersection(interval).empty);
+    assert(!negInfInterval.intersection(cInterval).empty);
+    assert(!negInfInterval.intersection(iInterval).empty);
+    assert(!negInfInterval.intersection(posInfInterval).empty);
+    assert(!negInfInterval.intersection(cPosInfInterval).empty);
+    assert(!negInfInterval.intersection(iPosInfInterval).empty);
+    assert(!negInfInterval.intersection(negInfInterval).empty);
+    assert(!negInfInterval.intersection(cNegInfInterval).empty);
+    assert(!negInfInterval.intersection(iNegInfInterval).empty);
+    assert(!cNegInfInterval.intersection(interval).empty);
+    assert(!cNegInfInterval.intersection(cInterval).empty);
+    assert(!cNegInfInterval.intersection(iInterval).empty);
+    assert(!cNegInfInterval.intersection(posInfInterval).empty);
+    assert(!cNegInfInterval.intersection(cPosInfInterval).empty);
+    assert(!cNegInfInterval.intersection(iPosInfInterval).empty);
+    assert(!cNegInfInterval.intersection(negInfInterval).empty);
+    assert(!cNegInfInterval.intersection(cNegInfInterval).empty);
+    assert(!cNegInfInterval.intersection(iNegInfInterval).empty);
+    assert(!iNegInfInterval.intersection(interval).empty);
+    assert(!iNegInfInterval.intersection(cInterval).empty);
+    assert(!iNegInfInterval.intersection(iInterval).empty);
+    assert(!iNegInfInterval.intersection(posInfInterval).empty);
+    assert(!iNegInfInterval.intersection(cPosInfInterval).empty);
+    assert(!iNegInfInterval.intersection(iPosInfInterval).empty);
+    assert(!iNegInfInterval.intersection(negInfInterval).empty);
+    assert(!iNegInfInterval.intersection(cNegInfInterval).empty);
+    assert(!iNegInfInterval.intersection(iNegInfInterval).empty);
+
+    //Verify Examples.
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+           Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
+           Interval!Date(Date(1999, 1, 12), Date(2012, 3, 1)));
+
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(PosInfInterval!Date(Date(1990, 7, 6))) ==
+           Interval!Date(Date(1990, 7, 6), Date(2012, 3, 1)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(PosInfInterval!Date(Date(1999, 1, 12))) ==
+           Interval!Date(Date(1999, 1, 12), Date(2012, 3, 1)));
+
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(NegInfInterval!Date(Date(1999, 7, 6))) ==
+           NegInfInterval!Date(Date(1999, 7, 6)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(NegInfInterval!Date(Date(2013, 1, 12))) ==
+           NegInfInterval!Date(Date(2012, 3, 1)));
+}
+
+//Test NegInfInterval's isAdjacent().
+@safe unittest
+{
+    auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+
+    static void testInterval(in NegInfInterval!Date negInfInterval, in Interval!Date interval)
+    {
+        negInfInterval.isAdjacent(interval);
+    }
+
+    assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+
+    assert(!negInfInterval.isAdjacent(negInfInterval));
+    assert(!negInfInterval.isAdjacent(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))));
+    assert(!negInfInterval.isAdjacent(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))));
+    assert(!negInfInterval.isAdjacent(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))));
+    assert(!negInfInterval.isAdjacent(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))));
+    assert(!negInfInterval.isAdjacent(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))));
+    assert(!negInfInterval.isAdjacent(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))));
+    assert(!negInfInterval.isAdjacent(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))));
+    assert(!negInfInterval.isAdjacent(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))));
+    assert(!negInfInterval.isAdjacent(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))));
+    assert(!negInfInterval.isAdjacent(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))));
+    assert(negInfInterval.isAdjacent(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8))));
+    assert(!negInfInterval.isAdjacent(Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))));
+
+    assert(!negInfInterval.isAdjacent(NegInfInterval!Date(Date(2010, 7, 3))));
+    assert(!negInfInterval.isAdjacent(NegInfInterval!Date(Date(2010, 7, 4))));
+    assert(!negInfInterval.isAdjacent(NegInfInterval!Date(Date(2010, 7, 5))));
+    assert(!negInfInterval.isAdjacent(NegInfInterval!Date(Date(2012, 1, 6))));
+    assert(!negInfInterval.isAdjacent(NegInfInterval!Date(Date(2012, 1, 7))));
+    assert(!negInfInterval.isAdjacent(NegInfInterval!Date(Date(2012, 1, 8))));
+
+    assert(!NegInfInterval!Date(Date(2010, 7, 3)).isAdjacent(negInfInterval));
+    assert(!NegInfInterval!Date(Date(2010, 7, 4)).isAdjacent(negInfInterval));
+    assert(!NegInfInterval!Date(Date(2010, 7, 5)).isAdjacent(negInfInterval));
+    assert(!NegInfInterval!Date(Date(2012, 1, 6)).isAdjacent(negInfInterval));
+    assert(!NegInfInterval!Date(Date(2012, 1, 7)).isAdjacent(negInfInterval));
+    assert(!NegInfInterval!Date(Date(2012, 1, 8)).isAdjacent(negInfInterval));
+
+    assert(!negInfInterval.isAdjacent(PosInfInterval!Date(Date(2010, 7, 3))));
+    assert(!negInfInterval.isAdjacent(PosInfInterval!Date(Date(2010, 7, 4))));
+    assert(!negInfInterval.isAdjacent(PosInfInterval!Date(Date(2010, 7, 5))));
+    assert(!negInfInterval.isAdjacent(PosInfInterval!Date(Date(2012, 1, 6))));
+    assert(negInfInterval.isAdjacent(PosInfInterval!Date(Date(2012, 1, 7))));
+    assert(!negInfInterval.isAdjacent(PosInfInterval!Date(Date(2012, 1, 8))));
+
+    auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    assert(!negInfInterval.isAdjacent(interval));
+    assert(!negInfInterval.isAdjacent(cInterval));
+    assert(!negInfInterval.isAdjacent(iInterval));
+    assert(!negInfInterval.isAdjacent(posInfInterval));
+    assert(!negInfInterval.isAdjacent(cPosInfInterval));
+    assert(!negInfInterval.isAdjacent(iPosInfInterval));
+    assert(!negInfInterval.isAdjacent(negInfInterval));
+    assert(!negInfInterval.isAdjacent(cNegInfInterval));
+    assert(!negInfInterval.isAdjacent(iNegInfInterval));
+    assert(!cNegInfInterval.isAdjacent(interval));
+    assert(!cNegInfInterval.isAdjacent(cInterval));
+    assert(!cNegInfInterval.isAdjacent(iInterval));
+    assert(!cNegInfInterval.isAdjacent(posInfInterval));
+    assert(!cNegInfInterval.isAdjacent(cPosInfInterval));
+    assert(!cNegInfInterval.isAdjacent(iPosInfInterval));
+    assert(!cNegInfInterval.isAdjacent(negInfInterval));
+    assert(!cNegInfInterval.isAdjacent(cNegInfInterval));
+    assert(!cNegInfInterval.isAdjacent(iNegInfInterval));
+    assert(!iNegInfInterval.isAdjacent(interval));
+    assert(!iNegInfInterval.isAdjacent(cInterval));
+    assert(!iNegInfInterval.isAdjacent(iInterval));
+    assert(!iNegInfInterval.isAdjacent(posInfInterval));
+    assert(!iNegInfInterval.isAdjacent(cPosInfInterval));
+    assert(!iNegInfInterval.isAdjacent(iPosInfInterval));
+    assert(!iNegInfInterval.isAdjacent(negInfInterval));
+    assert(!iNegInfInterval.isAdjacent(cNegInfInterval));
+    assert(!iNegInfInterval.isAdjacent(iNegInfInterval));
+
+    //Verify Examples.
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))));
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(Interval!Date(Date(1999, 1, 12), Date(2012, 3, 1))));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(Interval!Date(Date(2012, 3, 1), Date(2019, 2, 2))));
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(Interval!Date(Date(2022, 10, 19), Date(2027, 6, 3))));
+
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(PosInfInterval!Date(Date(1999, 5, 4))));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(PosInfInterval!Date(Date(2012, 3, 1))));
+
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(NegInfInterval!Date(Date(1996, 5, 4))));
+    assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(NegInfInterval!Date(Date(2012, 3, 1))));
+}
+
+//Test NegInfInterval's merge().
+@safe unittest
+{
+    auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+
+    static void testInterval(I, J)(in I interval1, in J interval2)
+    {
+        interval1.merge(interval2);
+    }
+
+    assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+
+    assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))));
+
+    assert(negInfInterval.merge(negInfInterval) == negInfInterval);
+    assert(negInfInterval.merge(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))) ==
+           NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.merge(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))) ==
+           NegInfInterval!Date(Date(2013, 7, 3)));
+    assert(negInfInterval.merge(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))) ==
+           NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.merge(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))) ==
+           NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.merge(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))) ==
+           NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.merge(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))) ==
+           NegInfInterval!Date(Date(2012, 1, 8)));
+    assert(negInfInterval.merge(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))) ==
+           NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.merge(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))) ==
+           NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.merge(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))) ==
+           NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.merge(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))) ==
+           NegInfInterval!Date(Date(2012, 1, 8)));
+    assert(negInfInterval.merge(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8))) ==
+           NegInfInterval!Date(Date(2012, 1, 8)));
+
+    assert(negInfInterval.merge(NegInfInterval!Date(Date(2010, 7, 3))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.merge(NegInfInterval!Date(Date(2010, 7, 4))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.merge(NegInfInterval!Date(Date(2010, 7, 5))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.merge(NegInfInterval!Date(Date(2012, 1, 6))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.merge(NegInfInterval!Date(Date(2012, 1, 7))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.merge(NegInfInterval!Date(Date(2012, 1, 8))) == NegInfInterval!Date(Date(2012, 1, 8)));
+
+    assert(NegInfInterval!Date(Date(2010, 7, 3)).merge(negInfInterval) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(NegInfInterval!Date(Date(2010, 7, 4)).merge(negInfInterval) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(NegInfInterval!Date(Date(2010, 7, 5)).merge(negInfInterval) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(NegInfInterval!Date(Date(2012, 1, 6)).merge(negInfInterval) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(NegInfInterval!Date(Date(2012, 1, 7)).merge(negInfInterval) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(NegInfInterval!Date(Date(2012, 1, 8)).merge(negInfInterval) == NegInfInterval!Date(Date(2012, 1, 8)));
+
+    static assert(!__traits(compiles, negInfInterval.merge(PosInfInterval!Date(Date(2010, 7, 3)))));
+    static assert(!__traits(compiles, negInfInterval.merge(PosInfInterval!Date(Date(2010, 7, 4)))));
+    static assert(!__traits(compiles, negInfInterval.merge(PosInfInterval!Date(Date(2010, 7, 5)))));
+    static assert(!__traits(compiles, negInfInterval.merge(PosInfInterval!Date(Date(2012, 1, 6)))));
+    static assert(!__traits(compiles, negInfInterval.merge(PosInfInterval!Date(Date(2012, 1, 7)))));
+    static assert(!__traits(compiles, negInfInterval.merge(PosInfInterval!Date(Date(2012, 1, 8)))));
+
+    auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    assert(!negInfInterval.merge(interval).empty);
+    assert(!negInfInterval.merge(cInterval).empty);
+    assert(!negInfInterval.merge(iInterval).empty);
+    static assert(!__traits(compiles, negInfInterval.merge(posInfInterval)));
+    static assert(!__traits(compiles, negInfInterval.merge(cPosInfInterval)));
+    static assert(!__traits(compiles, negInfInterval.merge(iPosInfInterval)));
+    assert(!negInfInterval.merge(negInfInterval).empty);
+    assert(!negInfInterval.merge(cNegInfInterval).empty);
+    assert(!negInfInterval.merge(iNegInfInterval).empty);
+    assert(!cNegInfInterval.merge(interval).empty);
+    assert(!cNegInfInterval.merge(cInterval).empty);
+    assert(!cNegInfInterval.merge(iInterval).empty);
+    static assert(!__traits(compiles, cNegInfInterval.merge(posInfInterval)));
+    static assert(!__traits(compiles, cNegInfInterval.merge(cPosInfInterval)));
+    static assert(!__traits(compiles, cNegInfInterval.merge(iPosInfInterval)));
+    assert(!cNegInfInterval.merge(negInfInterval).empty);
+    assert(!cNegInfInterval.merge(cNegInfInterval).empty);
+    assert(!cNegInfInterval.merge(iNegInfInterval).empty);
+    assert(!iNegInfInterval.merge(interval).empty);
+    assert(!iNegInfInterval.merge(cInterval).empty);
+    assert(!iNegInfInterval.merge(iInterval).empty);
+    static assert(!__traits(compiles, iNegInfInterval.merge(posInfInterval)));
+    static assert(!__traits(compiles, iNegInfInterval.merge(cPosInfInterval)));
+    static assert(!__traits(compiles, iNegInfInterval.merge(iPosInfInterval)));
+    assert(!iNegInfInterval.merge(negInfInterval).empty);
+    assert(!iNegInfInterval.merge(cNegInfInterval).empty);
+    assert(!iNegInfInterval.merge(iNegInfInterval).empty);
+
+    //Verify Examples.
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+           NegInfInterval!Date(Date(2012, 3, 1)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
+           NegInfInterval!Date(Date(2015, 9, 2)));
+
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(NegInfInterval!Date(Date(1999, 7, 6))) ==
+           NegInfInterval!Date(Date(2012, 3, 1)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(NegInfInterval!Date(Date(2013, 1, 12))) ==
+           NegInfInterval!Date(Date(2013, 1, 12)));
+}
+
+//Test NegInfInterval's span().
+@safe unittest
+{
+    auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+
+    static void testInterval(I, J)(in I interval1, in J interval2)
+    {
+        interval1.span(interval2);
+    }
+
+    assertThrown!DateTimeException(testInterval(negInfInterval, Interval!Date(Date(2010, 7, 4), dur!"days"(0))));
+
+    assert(negInfInterval.span(negInfInterval) == negInfInterval);
+    assert(negInfInterval.span(Interval!Date(Date(2010, 7, 1), Date(2010, 7, 3))) ==
+           NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.span(Interval!Date(Date(2010, 7, 1), Date(2013, 7, 3))) ==
+           NegInfInterval!Date(Date(2013, 7, 3)));
+    assert(negInfInterval.span(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 4))) ==
+           NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.span(Interval!Date(Date(2010, 7, 3), Date(2010, 7, 5))) ==
+           NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.span(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 7))) ==
+           NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.span(Interval!Date(Date(2010, 7, 3), Date(2012, 1, 8))) ==
+           NegInfInterval!Date(Date(2012, 1, 8)));
+    assert(negInfInterval.span(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 6))) ==
+           NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.span(Interval!Date(Date(2010, 7, 5), Date(2012, 1, 7))) ==
+           NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.span(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 7))) ==
+           NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.span(Interval!Date(Date(2012, 1, 6), Date(2012, 1, 8))) ==
+           NegInfInterval!Date(Date(2012, 1, 8)));
+    assert(negInfInterval.span(Interval!Date(Date(2012, 1, 7), Date(2012, 1, 8))) ==
+           NegInfInterval!Date(Date(2012, 1, 8)));
+    assert(negInfInterval.span(Interval!Date(Date(2012, 1, 8), Date(2012, 1, 9))) ==
+           NegInfInterval!Date(Date(2012, 1, 9)));
+
+    assert(negInfInterval.span(NegInfInterval!Date(Date(2010, 7, 3))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.span(NegInfInterval!Date(Date(2010, 7, 4))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.span(NegInfInterval!Date(Date(2010, 7, 5))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.span(NegInfInterval!Date(Date(2012, 1, 6))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.span(NegInfInterval!Date(Date(2012, 1, 7))) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(negInfInterval.span(NegInfInterval!Date(Date(2012, 1, 8))) == NegInfInterval!Date(Date(2012, 1, 8)));
+
+    assert(NegInfInterval!Date(Date(2010, 7, 3)).span(negInfInterval) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(NegInfInterval!Date(Date(2010, 7, 4)).span(negInfInterval) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(NegInfInterval!Date(Date(2010, 7, 5)).span(negInfInterval) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(NegInfInterval!Date(Date(2012, 1, 6)).span(negInfInterval) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(NegInfInterval!Date(Date(2012, 1, 7)).span(negInfInterval) == NegInfInterval!Date(Date(2012, 1, 7)));
+    assert(NegInfInterval!Date(Date(2012, 1, 8)).span(negInfInterval) == NegInfInterval!Date(Date(2012, 1, 8)));
+
+    static assert(!__traits(compiles, negInfInterval.span(PosInfInterval!Date(Date(2010, 7, 3)))));
+    static assert(!__traits(compiles, negInfInterval.span(PosInfInterval!Date(Date(2010, 7, 4)))));
+    static assert(!__traits(compiles, negInfInterval.span(PosInfInterval!Date(Date(2010, 7, 5)))));
+    static assert(!__traits(compiles, negInfInterval.span(PosInfInterval!Date(Date(2012, 1, 6)))));
+    static assert(!__traits(compiles, negInfInterval.span(PosInfInterval!Date(Date(2012, 1, 7)))));
+    static assert(!__traits(compiles, negInfInterval.span(PosInfInterval!Date(Date(2012, 1, 8)))));
+
+    auto interval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    const cInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    immutable iInterval = Interval!Date(Date(2010, 7, 4), Date(2012, 1, 7));
+    auto posInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    const cPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    immutable iPosInfInterval = PosInfInterval!Date(Date(2010, 7, 4));
+    const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    assert(!negInfInterval.span(interval).empty);
+    assert(!negInfInterval.span(cInterval).empty);
+    assert(!negInfInterval.span(iInterval).empty);
+    static assert(!__traits(compiles, negInfInterval.span(posInfInterval)));
+    static assert(!__traits(compiles, negInfInterval.span(cPosInfInterval)));
+    static assert(!__traits(compiles, negInfInterval.span(iPosInfInterval)));
+    assert(!negInfInterval.span(negInfInterval).empty);
+    assert(!negInfInterval.span(cNegInfInterval).empty);
+    assert(!negInfInterval.span(iNegInfInterval).empty);
+    assert(!cNegInfInterval.span(interval).empty);
+    assert(!cNegInfInterval.span(cInterval).empty);
+    assert(!cNegInfInterval.span(iInterval).empty);
+    static assert(!__traits(compiles, cNegInfInterval.span(posInfInterval)));
+    static assert(!__traits(compiles, cNegInfInterval.span(cPosInfInterval)));
+    static assert(!__traits(compiles, cNegInfInterval.span(iPosInfInterval)));
+    assert(!cNegInfInterval.span(negInfInterval).empty);
+    assert(!cNegInfInterval.span(cNegInfInterval).empty);
+    assert(!cNegInfInterval.span(iNegInfInterval).empty);
+    assert(!iNegInfInterval.span(interval).empty);
+    assert(!iNegInfInterval.span(cInterval).empty);
+    assert(!iNegInfInterval.span(iInterval).empty);
+    static assert(!__traits(compiles, iNegInfInterval.span(posInfInterval)));
+    static assert(!__traits(compiles, iNegInfInterval.span(cPosInfInterval)));
+    static assert(!__traits(compiles, iNegInfInterval.span(iPosInfInterval)));
+    assert(!iNegInfInterval.span(negInfInterval).empty);
+    assert(!iNegInfInterval.span(cNegInfInterval).empty);
+    assert(!iNegInfInterval.span(iNegInfInterval).empty);
+
+    //Verify Examples.
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).span(Interval!Date(Date(1990, 7, 6), Date(2000, 8, 2))) ==
+           NegInfInterval!Date(Date(2012, 3, 1)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).span(Interval!Date(Date(1999, 1, 12), Date(2015, 9, 2))) ==
+           NegInfInterval!Date(Date(2015, 9, 2)));
+    assert(NegInfInterval!Date(Date(1600, 1, 7)).span(Interval!Date(Date(2012, 3, 11), Date(2017, 7, 1))) ==
+           NegInfInterval!Date(Date(2017, 7, 1)));
+
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).span(NegInfInterval!Date(Date(1999, 7, 6))) ==
+           NegInfInterval!Date(Date(2012, 3, 1)));
+    assert(NegInfInterval!Date(Date(2012, 3, 1)).span(NegInfInterval!Date(Date(2013, 1, 12))) ==
+           NegInfInterval!Date(Date(2013, 1, 12)));
+}
+
+//Test NegInfInterval's shift().
+@safe unittest
+{
+    auto interval = NegInfInterval!Date(Date(2012, 1, 7));
+
+    static void testInterval(I)(I interval, in Duration duration, in I expected, size_t line = __LINE__)
+    {
+        interval.shift(duration);
+        assert(interval == expected);
+    }
+
+    testInterval(interval, dur!"days"(22), NegInfInterval!Date(Date(2012, 1, 29)));
+    testInterval(interval, dur!"days"(-22), NegInfInterval!Date(Date(2011, 12, 16)));
+
+    const cInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable iInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    static assert(!__traits(compiles, cInterval.shift(dur!"days"(5))));
+    static assert(!__traits(compiles, iInterval.shift(dur!"days"(5))));
+
+    //Verify Examples.
+    auto interval1 = NegInfInterval!Date(Date(2012, 4, 5));
+    auto interval2 = NegInfInterval!Date(Date(2012, 4, 5));
+
+    interval1.shift(dur!"days"(50));
+    assert(interval1 == NegInfInterval!Date(Date(2012, 5, 25)));
+
+    interval2.shift(dur!"days"(-50));
+    assert(interval2 == NegInfInterval!Date( Date(2012, 2, 15)));
+}
+
+//Test NegInfInterval's shift(int, int, AllowDayOverflow).
+@safe unittest
+{
+    {
+        auto interval = NegInfInterval!Date(Date(2012, 1, 7));
+
+        static void testIntervalFail(I)(I interval, int years, int months)
+        {
+            interval.shift(years, months);
+        }
+
+        static void testInterval(I)(I interval, int years, int months, AllowDayOverflow allow,
+                                    in I expected, size_t line = __LINE__)
+        {
+            interval.shift(years, months, allow);
+            assert(interval == expected);
+        }
+
+        testInterval(interval, 5, 0, AllowDayOverflow.yes, NegInfInterval!Date(Date(2017, 1, 7)));
+        testInterval(interval, -5, 0, AllowDayOverflow.yes, NegInfInterval!Date(Date(2007, 1, 7)));
+
+        auto interval2 = NegInfInterval!Date(Date(2010, 5, 31));
+
+        testInterval(interval2, 1, 1, AllowDayOverflow.yes, NegInfInterval!Date(Date(2011, 7, 1)));
+        testInterval(interval2, 1, -1, AllowDayOverflow.yes, NegInfInterval!Date(Date(2011, 5, 1)));
+        testInterval(interval2, -1, -1, AllowDayOverflow.yes, NegInfInterval!Date(Date(2009, 5, 1)));
+        testInterval(interval2, -1, 1, AllowDayOverflow.yes, NegInfInterval!Date(Date(2009, 7, 1)));
+
+        testInterval(interval2, 1, 1, AllowDayOverflow.no, NegInfInterval!Date(Date(2011, 6, 30)));
+        testInterval(interval2, 1, -1, AllowDayOverflow.no, NegInfInterval!Date(Date(2011, 4, 30)));
+        testInterval(interval2, -1, -1, AllowDayOverflow.no, NegInfInterval!Date(Date(2009, 4, 30)));
+        testInterval(interval2, -1, 1, AllowDayOverflow.no, NegInfInterval!Date(Date(2009, 6, 30)));
+    }
+
+    const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    static assert(!__traits(compiles, cNegInfInterval.shift(1)));
+    static assert(!__traits(compiles, iNegInfInterval.shift(1)));
+
+    //Verify Examples.
+    auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
+    auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
+
+    interval1.shift(2);
+    assert(interval1 == NegInfInterval!Date(Date(2014, 3, 1)));
+
+    interval2.shift(-2);
+    assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
+}
+
+//Test NegInfInterval's expand().
+@safe unittest
+{
+    auto interval = NegInfInterval!Date(Date(2012, 1, 7));
+
+    static void testInterval(I)(I interval, in Duration duration, in I expected, size_t line = __LINE__)
+    {
+        interval.expand(duration);
+        assert(interval == expected);
+    }
+
+    testInterval(interval, dur!"days"(22), NegInfInterval!Date(Date(2012, 1, 29)));
+    testInterval(interval, dur!"days"(-22), NegInfInterval!Date(Date(2011, 12, 16)));
+
+    const cInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable iInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    static assert(!__traits(compiles, cInterval.expand(dur!"days"(5))));
+    static assert(!__traits(compiles, iInterval.expand(dur!"days"(5))));
+
+    //Verify Examples.
+    auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
+    auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
+
+    interval1.expand(dur!"days"(2));
+    assert(interval1 == NegInfInterval!Date(Date(2012, 3, 3)));
+
+    interval2.expand(dur!"days"(-2));
+    assert(interval2 == NegInfInterval!Date(Date(2012, 2, 28)));
+}
+
+//Test NegInfInterval's expand(int, int, AllowDayOverflow).
+@safe unittest
+{
+    {
+        auto interval = NegInfInterval!Date(Date(2012, 1, 7));
+
+        static void testInterval(I)(I interval, int years, int months, AllowDayOverflow allow,
+                                    in I expected, size_t line = __LINE__)
+        {
+            interval.expand(years, months, allow);
+            assert(interval == expected);
+        }
+
+        testInterval(interval, 5, 0, AllowDayOverflow.yes, NegInfInterval!Date(Date(2017, 1, 7)));
+        testInterval(interval, -5, 0, AllowDayOverflow.yes, NegInfInterval!Date(Date(2007, 1, 7)));
+
+        auto interval2 = NegInfInterval!Date(Date(2010, 5, 31));
+
+        testInterval(interval2, 1, 1, AllowDayOverflow.yes, NegInfInterval!Date(Date(2011, 7, 1)));
+        testInterval(interval2, 1, -1, AllowDayOverflow.yes, NegInfInterval!Date(Date(2011, 5, 1)));
+        testInterval(interval2, -1, -1, AllowDayOverflow.yes, NegInfInterval!Date(Date(2009, 5, 1)));
+        testInterval(interval2, -1, 1, AllowDayOverflow.yes, NegInfInterval!Date(Date(2009, 7, 1)));
+
+        testInterval(interval2, 1, 1, AllowDayOverflow.no, NegInfInterval!Date(Date(2011, 6, 30)));
+        testInterval(interval2, 1, -1, AllowDayOverflow.no, NegInfInterval!Date(Date(2011, 4, 30)));
+        testInterval(interval2, -1, -1, AllowDayOverflow.no, NegInfInterval!Date(Date(2009, 4, 30)));
+        testInterval(interval2, -1, 1, AllowDayOverflow.no, NegInfInterval!Date( Date(2009, 6, 30)));
+    }
+
+    const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    static assert(!__traits(compiles, cNegInfInterval.expand(1)));
+    static assert(!__traits(compiles, iNegInfInterval.expand(1)));
+
+    //Verify Examples.
+    auto interval1 = NegInfInterval!Date(Date(2012, 3, 1));
+    auto interval2 = NegInfInterval!Date(Date(2012, 3, 1));
+
+    interval1.expand(2);
+    assert(interval1 == NegInfInterval!Date(Date(2014, 3, 1)));
+
+    interval2.expand(-2);
+    assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
+}
+
+//Test NegInfInterval's bwdRange().
+@system unittest
+{
+    auto negInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+
+    static void testInterval(NegInfInterval!Date negInfInterval)
+    {
+        negInfInterval.bwdRange(everyDayOfWeek!(Date, Direction.fwd)(DayOfWeek.fri)).popFront();
+    }
+
+    assertThrown!DateTimeException(testInterval(negInfInterval));
+
+    assert(NegInfInterval!Date(Date(2010, 10, 1)).bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri)).front ==
+           Date(2010, 10, 1));
+
+    assert(NegInfInterval!Date(Date(2010, 10, 1)).bwdRange(
+               everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri), PopFirst.yes).front == Date(2010, 9, 24));
+
+    //Verify Examples.
+    auto interval = NegInfInterval!Date(Date(2010, 9, 9));
+    auto func = delegate (in Date date)
+                {
+                    if ((date.day & 1) == 0)
+                        return date - dur!"days"(2);
+                    return date - dur!"days"(1);
+                };
+    auto range = interval.bwdRange(func);
+
+    //An odd day. Using PopFirst.yes would have made this Date(2010, 9, 8).
+    assert(range.front == Date(2010, 9, 9));
+
+    range.popFront();
+    assert(range.front == Date(2010, 9, 8));
+
+    range.popFront();
+    assert(range.front == Date(2010, 9, 6));
+
+    range.popFront();
+    assert(range.front == Date(2010, 9, 4));
+
+    range.popFront();
+    assert(range.front == Date(2010, 9, 2));
+
+    range.popFront();
+    assert(!range.empty);
+
+    const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    assert(!cNegInfInterval.bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri)).empty);
+    assert(!iNegInfInterval.bwdRange(everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.fri)).empty);
+}
+
+//Test NegInfInterval's toString().
+@safe unittest
+{
+    assert(NegInfInterval!Date(Date(2012, 1, 7)).toString() == "[-∞ - 2012-Jan-07)");
+
+    const cNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
+    assert(cNegInfInterval.toString());
+    assert(iNegInfInterval.toString());
 }
