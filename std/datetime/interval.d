@@ -20,7 +20,6 @@ version(unittest) import std.exception : assertThrown;
 import core.time : dur; // temporary
 import std.datetime : Date, DateTime, SysTime, TimeOfDay; // temporary
 import std.datetime : IntervalRange, PosInfIntervalRange, NegInfIntervalRange; // temporary
-import std.datetime : everyDayOfWeek; // temporary
 
 /++
     Indicates a direction in time. One example of its use is $(LREF2 .Interval, Interval)'s
@@ -7394,4 +7393,451 @@ package: // temporary
     immutable iNegInfInterval = NegInfInterval!Date(Date(2012, 1, 7));
     assert(cNegInfInterval.toString());
     assert(iNegInfInterval.toString());
+}
+
+
+/++
+    Range-generating function.
+
+    Returns a delegate which returns the next time point with the given
+    $(D DayOfWeek) in a range.
+
+    Using this delegate allows iteration over successive time points which
+    are all the same day of the week. e.g. passing $(D DayOfWeek.mon) to
+    $(D everyDayOfWeek) would result in a delegate which could be used to
+    iterate over all of the Mondays in a range.
+
+    Params:
+        dir       = The direction to iterate in. If passing the return value to
+                    $(D fwdRange), use $(D Direction.fwd). If passing it to
+                    $(D bwdRange), use $(D Direction.bwd).
+        dayOfWeek = The week that each time point in the range will be.
+  +/
+TP delegate(in TP) everyDayOfWeek(TP, Direction dir = Direction.fwd)(DayOfWeek dayOfWeek) nothrow
+if (isTimePoint!TP &&
+    (dir == Direction.fwd || dir == Direction.bwd) &&
+    __traits(hasMember, TP, "dayOfWeek") &&
+    !__traits(isStaticFunction, TP.dayOfWeek) &&
+    is(typeof(TP.dayOfWeek) == DayOfWeek))
+{
+    TP func(in TP tp)
+    {
+        TP retval = cast(TP) tp;
+        immutable days = daysToDayOfWeek(retval.dayOfWeek, dayOfWeek);
+
+        static if (dir == Direction.fwd)
+            immutable adjustedDays = days == 0 ? 7 : days;
+        else
+            immutable adjustedDays = days == 0 ? -7 : days - 7;
+
+        return retval += dur!"days"(adjustedDays);
+    }
+
+    return &func;
+}
+
+///
+@system unittest
+{
+    auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
+    auto func = everyDayOfWeek!Date(DayOfWeek.mon);
+    auto range = interval.fwdRange(func);
+
+    // A Thursday. Using PopFirst.yes would have made this Date(2010, 9, 6).
+    assert(range.front == Date(2010, 9, 2));
+
+    range.popFront();
+    assert(range.front == Date(2010, 9, 6));
+
+    range.popFront();
+    assert(range.front == Date(2010, 9, 13));
+
+    range.popFront();
+    assert(range.front == Date(2010, 9, 20));
+
+    range.popFront();
+    assert(range.empty);
+}
+
+@system unittest
+{
+    auto funcFwd = everyDayOfWeek!Date(DayOfWeek.mon);
+    auto funcBwd = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.mon);
+
+    assert(funcFwd(Date(2010, 8, 28)) == Date(2010, 8, 30));
+    assert(funcFwd(Date(2010, 8, 29)) == Date(2010, 8, 30));
+    assert(funcFwd(Date(2010, 8, 30)) == Date(2010, 9, 6));
+    assert(funcFwd(Date(2010, 8, 31)) == Date(2010, 9, 6));
+    assert(funcFwd(Date(2010, 9, 1)) == Date(2010, 9, 6));
+    assert(funcFwd(Date(2010, 9, 2)) == Date(2010, 9, 6));
+    assert(funcFwd(Date(2010, 9, 3)) == Date(2010, 9, 6));
+    assert(funcFwd(Date(2010, 9, 4)) == Date(2010, 9, 6));
+    assert(funcFwd(Date(2010, 9, 5)) == Date(2010, 9, 6));
+    assert(funcFwd(Date(2010, 9, 6)) == Date(2010, 9, 13));
+    assert(funcFwd(Date(2010, 9, 7)) == Date(2010, 9, 13));
+
+    assert(funcBwd(Date(2010, 8, 28)) == Date(2010, 8, 23));
+    assert(funcBwd(Date(2010, 8, 29)) == Date(2010, 8, 23));
+    assert(funcBwd(Date(2010, 8, 30)) == Date(2010, 8, 23));
+    assert(funcBwd(Date(2010, 8, 31)) == Date(2010, 8, 30));
+    assert(funcBwd(Date(2010, 9, 1)) == Date(2010, 8, 30));
+    assert(funcBwd(Date(2010, 9, 2)) == Date(2010, 8, 30));
+    assert(funcBwd(Date(2010, 9, 3)) == Date(2010, 8, 30));
+    assert(funcBwd(Date(2010, 9, 4)) == Date(2010, 8, 30));
+    assert(funcBwd(Date(2010, 9, 5)) == Date(2010, 8, 30));
+    assert(funcBwd(Date(2010, 9, 6)) == Date(2010, 8, 30));
+    assert(funcBwd(Date(2010, 9, 7)) == Date(2010, 9, 6));
+
+    static assert(!__traits(compiles, everyDayOfWeek!(TimeOfDay)(DayOfWeek.mon)));
+    assert(everyDayOfWeek!(DateTime)(DayOfWeek.mon) !is null);
+    assert(everyDayOfWeek!(SysTime)(DayOfWeek.mon) !is null);
+}
+
+
+/++
+    Range-generating function.
+
+    Returns a delegate which returns the next time point with the given month
+    which would be reached by adding months to the given time point.
+
+    So, using this delegate allows iteration over successive time points
+    which are in the same month but different years. For example,
+    iterate over each successive December 25th in an interval by starting with a
+    date which had the 25th as its day and passed $(D Month.dec) to
+    $(D everyMonth) to create the delegate.
+
+    Since it wouldn't really make sense to be iterating over a specific month
+    and end up with some of the time points in the succeeding month or two years
+    after the previous time point, $(D AllowDayOverflow.no) is always used when
+    calculating the next time point.
+
+    Params:
+        dir   = The direction to iterate in. If passing the return value to
+                $(D fwdRange), use $(D Direction.fwd). If passing it to
+                $(D bwdRange), use $(D Direction.bwd).
+        month = The month that each time point in the range will be in.
+  +/
+TP delegate(in TP) everyMonth(TP, Direction dir = Direction.fwd)(int month)
+if (isTimePoint!TP &&
+    (dir == Direction.fwd || dir == Direction.bwd) &&
+    __traits(hasMember, TP, "month") &&
+    !__traits(isStaticFunction, TP.month) &&
+    is(typeof(TP.month) == Month))
+{
+    enforceValid!"months"(month);
+
+    TP func(in TP tp)
+    {
+        TP retval = cast(TP) tp;
+        immutable months = monthsToMonth(retval.month, month);
+
+        static if (dir == Direction.fwd)
+            immutable adjustedMonths = months == 0 ? 12 : months;
+        else
+            immutable adjustedMonths = months == 0 ? -12 : months - 12;
+
+        retval.add!"months"(adjustedMonths, AllowDayOverflow.no);
+
+        if (retval.month != month)
+        {
+            retval.add!"months"(-1);
+            assert(retval.month == month);
+        }
+
+        return retval;
+    }
+
+    return &func;
+}
+
+///
+@system unittest
+{
+    auto interval = Interval!Date(Date(2000, 1, 30), Date(2004, 8, 5));
+    auto func = everyMonth!Date(Month.feb);
+    auto range = interval.fwdRange(func);
+
+    // Using PopFirst.yes would have made this Date(2010, 2, 29).
+    assert(range.front == Date(2000, 1, 30));
+
+    range.popFront();
+    assert(range.front == Date(2000, 2, 29));
+
+    range.popFront();
+    assert(range.front == Date(2001, 2, 28));
+
+    range.popFront();
+    assert(range.front == Date(2002, 2, 28));
+
+    range.popFront();
+    assert(range.front == Date(2003, 2, 28));
+
+    range.popFront();
+    assert(range.front == Date(2004, 2, 28));
+
+    range.popFront();
+    assert(range.empty);
+}
+
+@system unittest
+{
+    auto funcFwd = everyMonth!Date(Month.jun);
+    auto funcBwd = everyMonth!(Date, Direction.bwd)(Month.jun);
+
+    assert(funcFwd(Date(2010, 5, 31)) == Date(2010, 6, 30));
+    assert(funcFwd(Date(2010, 6, 30)) == Date(2011, 6, 30));
+    assert(funcFwd(Date(2010, 7, 31)) == Date(2011, 6, 30));
+    assert(funcFwd(Date(2010, 8, 31)) == Date(2011, 6, 30));
+    assert(funcFwd(Date(2010, 9, 30)) == Date(2011, 6, 30));
+    assert(funcFwd(Date(2010, 10, 31)) == Date(2011, 6, 30));
+    assert(funcFwd(Date(2010, 11, 30)) == Date(2011, 6, 30));
+    assert(funcFwd(Date(2010, 12, 31)) == Date(2011, 6, 30));
+    assert(funcFwd(Date(2011, 1, 31)) == Date(2011, 6, 30));
+    assert(funcFwd(Date(2011, 2, 28)) == Date(2011, 6, 28));
+    assert(funcFwd(Date(2011, 3, 31)) == Date(2011, 6, 30));
+    assert(funcFwd(Date(2011, 4, 30)) == Date(2011, 6, 30));
+    assert(funcFwd(Date(2011, 5, 31)) == Date(2011, 6, 30));
+    assert(funcFwd(Date(2011, 6, 30)) == Date(2012, 6, 30));
+    assert(funcFwd(Date(2011, 7, 31)) == Date(2012, 6, 30));
+
+    assert(funcBwd(Date(2010, 5, 31)) == Date(2009, 6, 30));
+    assert(funcBwd(Date(2010, 6, 30)) == Date(2009, 6, 30));
+    assert(funcBwd(Date(2010, 7, 31)) == Date(2010, 6, 30));
+    assert(funcBwd(Date(2010, 8, 31)) == Date(2010, 6, 30));
+    assert(funcBwd(Date(2010, 9, 30)) == Date(2010, 6, 30));
+    assert(funcBwd(Date(2010, 10, 31)) == Date(2010, 6, 30));
+    assert(funcBwd(Date(2010, 11, 30)) == Date(2010, 6, 30));
+    assert(funcBwd(Date(2010, 12, 31)) == Date(2010, 6, 30));
+    assert(funcBwd(Date(2011, 1, 31)) == Date(2010, 6, 30));
+    assert(funcBwd(Date(2011, 2, 28)) == Date(2010, 6, 28));
+    assert(funcBwd(Date(2011, 3, 31)) == Date(2010, 6, 30));
+    assert(funcBwd(Date(2011, 4, 30)) == Date(2010, 6, 30));
+    assert(funcBwd(Date(2011, 5, 31)) == Date(2010, 6, 30));
+    assert(funcBwd(Date(2011, 6, 30)) == Date(2010, 6, 30));
+    assert(funcBwd(Date(2011, 7, 30)) == Date(2011, 6, 30));
+
+    static assert(!__traits(compiles, everyMonth!TimeOfDay(Month.jan)));
+    assert(everyMonth!DateTime(Month.jan) !is null);
+    assert(everyMonth!SysTime(Month.jan) !is null);
+}
+
+
+/++
+    Range-generating function.
+
+    Returns a delegate which returns the next time point which is the given
+    duration later.
+
+    Using this delegate allows iteration over successive time points which
+    are apart by the given duration e.g. passing $(D dur!"days"(3)) to
+    $(D everyDuration) would result in a delegate which could be used to iterate
+    over a range of days which are each 3 days apart.
+
+    Params:
+        dir      = The direction to iterate in. If passing the return value to
+                   $(D fwdRange), use $(D Direction.fwd). If passing it to
+                   $(D bwdRange), use $(D Direction.bwd).
+        duration = The duration which separates each successive time point in
+                   the range.
+  +/
+TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)(D duration) nothrow
+if (isTimePoint!TP &&
+    __traits(compiles, TP.init + duration) &&
+    (dir == Direction.fwd || dir == Direction.bwd))
+{
+    TP func(in TP tp)
+    {
+        static if (dir == Direction.fwd)
+            return tp + duration;
+        else
+            return tp - duration;
+    }
+
+    return &func;
+}
+
+///
+@system unittest
+{
+    auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
+    auto func = everyDuration!Date(dur!"days"(8));
+    auto range = interval.fwdRange(func);
+
+    // Using PopFirst.yes would have made this Date(2010, 9, 10).
+    assert(range.front == Date(2010, 9, 2));
+
+    range.popFront();
+    assert(range.front == Date(2010, 9, 10));
+
+    range.popFront();
+    assert(range.front == Date(2010, 9, 18));
+
+    range.popFront();
+    assert(range.front == Date(2010, 9, 26));
+
+    range.popFront();
+    assert(range.empty);
+}
+
+@system unittest
+{
+    auto funcFwd = everyDuration!Date(dur!"days"(27));
+    auto funcBwd = everyDuration!(Date, Direction.bwd)(dur!"days"(27));
+
+    assert(funcFwd(Date(2009, 12, 25)) == Date(2010, 1, 21));
+    assert(funcFwd(Date(2009, 12, 26)) == Date(2010, 1, 22));
+    assert(funcFwd(Date(2009, 12, 27)) == Date(2010, 1, 23));
+    assert(funcFwd(Date(2009, 12, 28)) == Date(2010, 1, 24));
+
+    assert(funcBwd(Date(2010, 1, 21)) == Date(2009, 12, 25));
+    assert(funcBwd(Date(2010, 1, 22)) == Date(2009, 12, 26));
+    assert(funcBwd(Date(2010, 1, 23)) == Date(2009, 12, 27));
+    assert(funcBwd(Date(2010, 1, 24)) == Date(2009, 12, 28));
+
+    assert(everyDuration!Date(dur!"hnsecs"(1)) !is null);
+    assert(everyDuration!TimeOfDay(dur!"hnsecs"(1)) !is null);
+    assert(everyDuration!DateTime(dur!"hnsecs"(1)) !is null);
+    assert(everyDuration!SysTime(dur!"hnsecs"(1)) !is null);
+}
+
+
+/++
+    Range-generating function.
+
+    Returns a delegate which returns the next time point which is the given
+    number of years, month, and duration later.
+
+    The difference between this version of $(D everyDuration) and the version
+    which just takes a $(REF Duration, core,time) is that this one also takes the number of
+    years and months (along with an $(D AllowDayOverflow) to indicate whether
+    adding years and months should allow the days to overflow).
+
+    Note that if iterating forward, $(D add!"years"()) is called on the given
+    time point, then $(D add!"months"()), and finally the duration is added
+    to it. However, if iterating backwards, the duration is added first, then
+    $(D add!"months"()) is called, and finally $(D add!"years"()) is called.
+    That way, going backwards generates close to the same time points that
+    iterating forward does, but since adding years and months is not entirely
+    reversible (due to possible day overflow, regardless of whether
+    $(D AllowDayOverflow.yes) or $(D AllowDayOverflow.no) is used), it can't be
+    guaranteed that iterating backwards will give the same time points as
+    iterating forward would have (even assuming that the end of the range is a
+    time point which would be returned by the delegate when iterating forward
+    from $(D begin)).
+
+    Params:
+        dir           = The direction to iterate in. If passing the return
+                        value to $(D fwdRange), use $(D Direction.fwd). If
+                        passing it to $(D bwdRange), use $(D Direction.bwd).
+        years         = The number of years to add to the time point passed to
+                        the delegate.
+        months        = The number of months to add to the time point passed to
+                        the delegate.
+        allowOverflow = Whether the days should be allowed to overflow on
+                        $(D begin) and $(D end), causing their month to
+                        increment.
+        duration      = The duration to add to the time point passed to the
+                        delegate.
+  +/
+TP delegate(in TP) everyDuration(TP, Direction dir = Direction.fwd, D)
+                                 (int years,
+                                 int months = 0,
+                                 AllowDayOverflow allowOverflow = AllowDayOverflow.yes,
+                                 D duration = dur!"days"(0)) nothrow
+if (isTimePoint!TP &&
+    __traits(compiles, TP.init + duration) &&
+    __traits(compiles, TP.init.add!"years"(years)) &&
+    __traits(compiles, TP.init.add!"months"(months)) &&
+    (dir == Direction.fwd || dir == Direction.bwd))
+{
+    TP func(in TP tp)
+    {
+        static if (dir == Direction.fwd)
+        {
+            TP retval = cast(TP) tp;
+
+            retval.add!"years"(years, allowOverflow);
+            retval.add!"months"(months, allowOverflow);
+
+            return retval + duration;
+        }
+        else
+        {
+            TP retval = tp - duration;
+
+            retval.add!"months"(-months, allowOverflow);
+            retval.add!"years"(-years, allowOverflow);
+
+            return retval;
+        }
+    }
+
+    return &func;
+}
+
+///
+@system unittest
+{
+    import std.typecons : Yes;
+
+    auto interval = Interval!Date(Date(2010, 9, 2), Date(2025, 9, 27));
+    auto func = everyDuration!Date(4, 1, AllowDayOverflow.yes, dur!"days"(2));
+    auto range = interval.fwdRange(func);
+
+    // Using PopFirst.yes would have made this Date(2014, 10, 12).
+    assert(range.front == Date(2010, 9, 2));
+
+    range.popFront();
+    assert(range.front == Date(2014, 10, 4));
+
+    range.popFront();
+    assert(range.front == Date(2018, 11, 6));
+
+    range.popFront();
+    assert(range.front == Date(2022, 12, 8));
+
+    range.popFront();
+    assert(range.empty);
+}
+
+@system unittest
+{
+    {
+        auto funcFwd = everyDuration!Date(1, 2, AllowDayOverflow.yes, dur!"days"(3));
+        auto funcBwd = everyDuration!(Date, Direction.bwd)(1, 2, AllowDayOverflow.yes, dur!"days"(3));
+
+        assert(funcFwd(Date(2009, 12, 25)) == Date(2011, 2, 28));
+        assert(funcFwd(Date(2009, 12, 26)) == Date(2011, 3, 1));
+        assert(funcFwd(Date(2009, 12, 27)) == Date(2011, 3, 2));
+        assert(funcFwd(Date(2009, 12, 28)) == Date(2011, 3, 3));
+        assert(funcFwd(Date(2009, 12, 29)) == Date(2011, 3, 4));
+
+        assert(funcBwd(Date(2011, 2, 28)) == Date(2009, 12, 25));
+        assert(funcBwd(Date(2011, 3, 1)) == Date(2009, 12, 26));
+        assert(funcBwd(Date(2011, 3, 2)) == Date(2009, 12, 27));
+        assert(funcBwd(Date(2011, 3, 3)) == Date(2009, 12, 28));
+        assert(funcBwd(Date(2011, 3, 4)) == Date(2010, 1, 1));
+    }
+
+    {
+        auto funcFwd = everyDuration!Date(1, 2, AllowDayOverflow.no, dur!"days"(3));
+        auto funcBwd = everyDuration!(Date, Direction.bwd)(1, 2, AllowDayOverflow.yes, dur!"days"(3));
+
+        assert(funcFwd(Date(2009, 12, 25)) == Date(2011, 2, 28));
+        assert(funcFwd(Date(2009, 12, 26)) == Date(2011, 3, 1));
+        assert(funcFwd(Date(2009, 12, 27)) == Date(2011, 3, 2));
+        assert(funcFwd(Date(2009, 12, 28)) == Date(2011, 3, 3));
+        assert(funcFwd(Date(2009, 12, 29)) == Date(2011, 3, 3));
+
+        assert(funcBwd(Date(2011, 2, 28)) == Date(2009, 12, 25));
+        assert(funcBwd(Date(2011, 3, 1)) == Date(2009, 12, 26));
+        assert(funcBwd(Date(2011, 3, 2)) == Date(2009, 12, 27));
+        assert(funcBwd(Date(2011, 3, 3)) == Date(2009, 12, 28));
+        assert(funcBwd(Date(2011, 3, 4)) == Date(2010, 1, 1));
+    }
+
+    assert(everyDuration!Date(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1)) !is null);
+    static assert(!__traits(compiles, everyDuration!TimeOfDay(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1))));
+    assert(everyDuration!DateTime(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1)) !is null);
+    assert(everyDuration!SysTime(1, 2, AllowDayOverflow.yes, dur!"hnsecs"(1)) !is null);
 }
