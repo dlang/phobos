@@ -4066,7 +4066,7 @@ private int getNthInt(A...)(uint index, A args)
 
 private T getNth(alias Condition, T, A...)(uint index, A args)
 {
-    import std.conv : to;
+    import std.conv : text, to;
 
     switch (index)
     {
@@ -4084,14 +4084,14 @@ private T getNth(alias Condition, T, A...)(uint index, A args)
                 }
         }
         default:
-            throw new FormatException("missing argument #" ~ to!string(index + 1));
+            throw new FormatException(
+                text("Missing ", T.stringof, " for argument #", index + 1));
     }
 }
 
 @safe unittest
 {
-    assert(format("%*.d, %.*f", 3, 7, 2, 3.1415) == "  7, 3.14");
-
+    // width/precision
     assert(collectExceptionMsg!FormatException(format("%*.d", 5.1, 2))
         == "int expected, not double");
     assert(collectExceptionMsg!FormatException(format("%.*d", '5', 2))
@@ -4099,7 +4099,15 @@ private T getNth(alias Condition, T, A...)(uint index, A args)
     assert(collectExceptionMsg!FormatException(format("%.*d", 5))
         == "Orphan format specifier: %d");
     assert(collectExceptionMsg!FormatException(format("%*.*d", 5))
-        == "missing argument #2");
+        == "Missing int for argument #2");
+
+    // separatorCharPos
+    assert(collectExceptionMsg!FormatException(format("%,?d", 5))
+        == "dchar expected, not int");
+    assert(collectExceptionMsg!FormatException(format("%,?d", '?'))
+        == "Orphan format specifier: %d");
+    assert(collectExceptionMsg!FormatException(format("%.*,?d", 5))
+        == "Missing dchar for argument #2");
 }
 
 /* ======================== Unit Tests ====================================== */
