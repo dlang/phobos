@@ -17,8 +17,6 @@ import std.typecons : Flag;
 
 version(unittest) import std.exception : assertThrown;
 
-import std.datetime : SysTime; // temporary
-
 
 /++
     Indicates a direction in time. One example of its use is $(LREF2 .Interval, Interval)'s
@@ -1566,6 +1564,7 @@ private:
 {
     import std.datetime.date;
     import std.datetime.datetime;
+    import std.datetime.systime;
     import std.datetime.timeofday;
 
     assertThrown!DateTimeException(Interval!Date(Date(2010, 1, 1), Date(1, 1, 1)));
@@ -1632,6 +1631,7 @@ private:
 {
     import std.datetime.date;
     import std.datetime.datetime;
+    import std.datetime.systime;
     import std.datetime.timeofday;
 
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).length == dur!"days"(0));
@@ -1656,6 +1656,7 @@ private:
 {
     import std.datetime.date;
     import std.datetime.datetime;
+    import std.datetime.systime;
     import std.datetime.timeofday;
 
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).empty);
@@ -4125,6 +4126,7 @@ private:
 {
     import std.datetime.date;
     import std.datetime.datetime;
+    import std.datetime.systime;
     import std.datetime.timeofday;
 
     PosInfInterval!Date(Date.init);
@@ -4159,6 +4161,7 @@ private:
 {
     import std.datetime.date;
     import std.datetime.datetime;
+    import std.datetime.systime;
     import std.datetime.timeofday;
 
     assert(!PosInfInterval!Date(Date(2010, 1, 1)).empty);
@@ -6341,6 +6344,7 @@ private:
 {
     import std.datetime.date;
     import std.datetime.datetime;
+    import std.datetime.systime;
     import std.datetime.timeofday;
 
     NegInfInterval!Date(Date.init);
@@ -6372,6 +6376,7 @@ private:
 {
     import std.datetime.date;
     import std.datetime.datetime;
+    import std.datetime.systime;
     import std.datetime.timeofday;
 
     assert(!NegInfInterval!Date(Date(2010, 1, 1)).empty);
@@ -7600,6 +7605,7 @@ if (isTimePoint!TP &&
 {
     import std.datetime.date;
     import std.datetime.datetime;
+    import std.datetime.systime;
     import std.datetime.timeofday;
 
     auto funcFwd = everyDayOfWeek!Date(DayOfWeek.mon);
@@ -7726,6 +7732,7 @@ if (isTimePoint!TP &&
 {
     import std.datetime.date;
     import std.datetime.datetime;
+    import std.datetime.systime;
 
     auto funcFwd = everyMonth!Date(Month.jun);
     auto funcBwd = everyMonth!(Date, Direction.bwd)(Month.jun);
@@ -7831,6 +7838,7 @@ if (isTimePoint!TP &&
 {
     import std.datetime.date;
     import std.datetime.datetime;
+    import std.datetime.systime;
     import std.datetime.timeofday;
 
     auto funcFwd = everyDuration!Date(dur!"days"(27));
@@ -7956,6 +7964,7 @@ if (isTimePoint!TP &&
 {
     import std.datetime.date;
     import std.datetime.datetime;
+    import std.datetime.systime;
     import std.datetime.timeofday;
 
     {
@@ -8237,6 +8246,7 @@ private:
 {
     import std.datetime.date;
     import std.datetime.datetime;
+    import std.datetime.systime;
     import std.datetime.timeofday;
     import std.range.primitives;
 
@@ -8265,6 +8275,7 @@ private:
 {
     import std.datetime.date;
     import std.datetime.datetime;
+    import std.datetime.systime;
     import std.datetime.timeofday;
 
     {
@@ -8681,6 +8692,7 @@ private:
 {
     import std.datetime.date;
     import std.datetime.datetime;
+    import std.datetime.systime;
     import std.datetime.timeofday;
     import std.range.primitives;
 
@@ -8708,6 +8720,7 @@ private:
 {
     import std.datetime.date;
     import std.datetime.datetime;
+    import std.datetime.systime;
     import std.datetime.timeofday;
 
     {
@@ -8731,7 +8744,7 @@ private:
     {
         SysTime stFunc(in SysTime st) { return cast(SysTime) st; }
         auto posInfInterval = PosInfInterval!SysTime(SysTime(DateTime(2010, 7, 4, 12, 1, 7)));
-        auto ir = PosInfIntervalRange!(SysTime)(posInfInterval, &stFunc);
+        auto ir = PosInfIntervalRange!SysTime(posInfInterval, &stFunc);
     }
 }
 
@@ -8992,6 +9005,7 @@ private:
 {
     import std.datetime.date;
     import std.datetime.datetime;
+    import std.datetime.systime;
     import std.datetime.timeofday;
 
     {

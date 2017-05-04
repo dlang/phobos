@@ -4362,7 +4362,7 @@ DayOfWeek getDayOfWeek(int day) @safe pure nothrow
 
 @safe unittest
 {
-    import std.datetime : SysTime; // temporary
+    import std.datetime.systime : SysTime;
 
     // Test A.D.
     assert(getDayOfWeek(SysTime(Date(1, 1, 1)).dayOfGregorianCal) == DayOfWeek.mon);
