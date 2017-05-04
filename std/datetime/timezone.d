@@ -2806,3 +2806,454 @@ private:
     // Whether DST is in effect for this time zone at any point in time.
     immutable bool _hasDST;
 }
+
+
+version(StdDdoc)
+{
+    /++
+        $(BLUE This class is Windows-Only.)
+
+        Represents a time zone from the Windows registry. Unfortunately, Windows
+        does not use the TZ Database. To use the TZ Database, use
+        $(LREF PosixTimeZone) (which reads its information from the TZ Database
+        files on disk) on Windows by providing the TZ Database files and telling
+        $(D PosixTimeZone.getTimeZone) where the directory holding them is.
+
+        The TZ Database files and Windows' time zone information frequently
+        do not match. Windows has many errors with regards to when DST switches
+        occur (especially for historical dates). Also, the TZ Database files
+        include far more time zones than Windows does. So, for accurate
+        time zone information, use the TZ Database files with
+        $(LREF PosixTimeZone) rather than $(D WindowsTimeZone). However, because
+        $(D WindowsTimeZone) uses Windows system calls to deal with the time,
+        it's far more likely to match the behavior of other Windows programs.
+        Be aware of the differences when selecting a method.
+
+        $(D WindowsTimeZone) does not exist on Posix systems.
+
+        To get a $(D WindowsTimeZone), either call
+        $(D WindowsTimeZone.getTimeZone) or call $(D TimeZone.getTimeZone)
+        (which will give a $(LREF PosixTimeZone) on Posix systems and a
+         $(D WindowsTimeZone) on Windows systems).
+
+        See_Also:
+            $(HTTP www.iana.org/time-zones, Home of the TZ Database files)
+      +/
+    final class WindowsTimeZone : TimeZone
+    {
+    public:
+
+        /++
+            Whether this time zone has Daylight Savings Time at any point in
+            time. Note that for some time zone types it may not have DST for
+            current dates but will still return true for $(D hasDST) because the
+            time zone did at some point have DST.
+          +/
+        @property override bool hasDST() @safe const nothrow;
+
+
+        /++
+            Takes the number of hnsecs (100 ns) since midnight, January 1st,
+            1 A.D. in UTC time (i.e. std time) and returns whether DST is in
+            effect in this time zone at the given point in time.
+
+            Params:
+                stdTime = The UTC time that needs to be checked for DST in this
+                          time zone.
+          +/
+        override bool dstInEffect(long stdTime) @safe const nothrow;
+
+
+        /++
+            Takes the number of hnsecs (100 ns) since midnight, January 1st,
+            1 A.D. in UTC time (i.e. std time) and converts it to this time
+                zone's time.
+
+            Params:
+                stdTime = The UTC time that needs to be adjusted to this time
+                          zone's time.
+          +/
+        override long utcToTZ(long stdTime) @safe const nothrow;
+
+
+        /++
+            Takes the number of hnsecs (100 ns) since midnight, January 1st,
+            1 A.D. in this time zone's time and converts it to UTC (i.e. std
+            time).
+
+            Params:
+                adjTime = The time in this time zone that needs to be adjusted
+                          to UTC time.
+          +/
+        override long tzToUTC(long adjTime) @safe const nothrow;
+
+
+        /++
+            Returns a $(LREF2 .TimeZone, TimeZone) with the given name per the Windows time
+            zone names. The time zone information is fetched from the Windows
+            registry.
+
+            See_Also:
+                $(HTTP en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
+                  Database)<br>
+                $(HTTP en.wikipedia.org/wiki/List_of_tz_database_time_zones, List
+                  of Time Zones)
+
+            Params:
+                name = The TZ Database name of the desired time zone.
+
+            Throws:
+                $(LREF DateTimeException) if the given time zone could not be
+                found.
+
+            Example:
+    --------------------
+    auto tz = WindowsTimeZone.getTimeZone("Pacific Standard Time");
+    --------------------
+          +/
+        static immutable(WindowsTimeZone) getTimeZone(string name) @safe;
+
+
+        /++
+            Returns a list of the names of the time zones installed on the
+            system. The list returned by WindowsTimeZone contains the Windows
+            TZ names, not the TZ Database names. However,
+            $(D TimeZone.getinstalledTZNames) will return the TZ Database names
+            which are equivalent to the Windows TZ names.
+          +/
+        static string[] getInstalledTZNames() @safe;
+
+    private:
+
+        version(Windows)
+        {}
+        else
+            alias TIME_ZONE_INFORMATION = void*;
+
+        static bool _dstInEffect(const TIME_ZONE_INFORMATION* tzInfo, long stdTime) nothrow;
+        static long _utcToTZ(const TIME_ZONE_INFORMATION* tzInfo, long stdTime, bool hasDST) nothrow;
+        static long _tzToUTC(const TIME_ZONE_INFORMATION* tzInfo, long adjTime, bool hasDST) nothrow;
+
+        this() immutable pure
+        {
+            super("", "", "");
+        }
+    }
+
+}
+else version(Windows)
+{
+    final class WindowsTimeZone : TimeZone
+    {
+        import std.algorithm.sorting : sort;
+        import std.array : appender;
+        import std.conv : to;
+        import std.format : format;
+
+    public:
+
+        @property override bool hasDST() @safe const nothrow
+        {
+            return _tzInfo.DaylightDate.wMonth != 0;
+        }
+
+
+        override bool dstInEffect(long stdTime) @safe const nothrow
+        {
+            return _dstInEffect(&_tzInfo, stdTime);
+        }
+
+
+        override long utcToTZ(long stdTime) @safe const nothrow
+        {
+            return _utcToTZ(&_tzInfo, stdTime, hasDST);
+        }
+
+
+        override long tzToUTC(long adjTime) @safe const nothrow
+        {
+            return _tzToUTC(&_tzInfo, adjTime, hasDST);
+        }
+
+
+        static immutable(WindowsTimeZone) getTimeZone(string name) @trusted
+        {
+            import std.utf : toUTF16;
+
+            scope baseKey = Registry.localMachine.getKey(`Software\Microsoft\Windows NT\CurrentVersion\Time Zones`);
+
+            foreach (tzKeyName; baseKey.keyNames)
+            {
+                if (tzKeyName != name)
+                    continue;
+
+                scope tzKey = baseKey.getKey(tzKeyName);
+
+                scope stdVal = tzKey.getValue("Std");
+                auto stdName = stdVal.value_SZ;
+
+                scope dstVal = tzKey.getValue("Dlt");
+                auto dstName = dstVal.value_SZ;
+
+                scope tziVal = tzKey.getValue("TZI");
+                auto binVal = tziVal.value_BINARY;
+                assert(binVal.length == REG_TZI_FORMAT.sizeof);
+                auto tziFmt = cast(REG_TZI_FORMAT*) binVal.ptr;
+
+                TIME_ZONE_INFORMATION tzInfo;
+
+                auto wstdName = toUTF16(stdName);
+                auto wdstName = toUTF16(dstName);
+                auto wstdNameLen = wstdName.length > 32 ? 32 : wstdName.length;
+                auto wdstNameLen = wdstName.length > 32 ? 32 : wdstName.length;
+
+                tzInfo.Bias = tziFmt.Bias;
+                tzInfo.StandardName[0 .. wstdNameLen] = wstdName[0 .. wstdNameLen];
+                tzInfo.StandardName[wstdNameLen .. $] = '\0';
+                tzInfo.StandardDate = tziFmt.StandardDate;
+                tzInfo.StandardBias = tziFmt.StandardBias;
+                tzInfo.DaylightName[0 .. wdstNameLen] = wdstName[0 .. wdstNameLen];
+                tzInfo.DaylightName[wdstNameLen .. $] = '\0';
+                tzInfo.DaylightDate = tziFmt.DaylightDate;
+                tzInfo.DaylightBias = tziFmt.DaylightBias;
+
+                return new immutable WindowsTimeZone(name, tzInfo);
+            }
+            throw new DateTimeException(format("Failed to find time zone: %s", name));
+        }
+
+        static string[] getInstalledTZNames() @trusted
+        {
+            auto timezones = appender!(string[])();
+
+            scope baseKey = Registry.localMachine.getKey(`Software\Microsoft\Windows NT\CurrentVersion\Time Zones`);
+
+            foreach (tzKeyName; baseKey.keyNames)
+                timezones.put(tzKeyName);
+            sort(timezones.data);
+
+            return timezones.data;
+        }
+
+        @safe unittest
+        {
+            import std.exception : assertNotThrown;
+            import std.stdio : writefln;
+            static void testWTZSuccess(string tzName)
+            {
+                scope(failure) writefln("TZName which threw: %s", tzName);
+
+                WindowsTimeZone.getTimeZone(tzName);
+            }
+
+            auto tzNames = getInstalledTZNames();
+
+            foreach (tzName; tzNames)
+                assertNotThrown!DateTimeException(testWTZSuccess(tzName));
+        }
+
+
+    private:
+
+        static bool _dstInEffect(const TIME_ZONE_INFORMATION* tzInfo, long stdTime) @trusted nothrow
+        {
+            try
+            {
+                if (tzInfo.DaylightDate.wMonth == 0)
+                    return false;
+
+                auto utcDateTime = cast(DateTime) SysTime(stdTime, UTC());
+
+                //The limits of what SystemTimeToTzSpecificLocalTime will accept.
+                if (utcDateTime.year < 1601)
+                {
+                    if (utcDateTime.month == Month.feb && utcDateTime.day == 29)
+                        utcDateTime.day = 28;
+                    utcDateTime.year = 1601;
+                }
+                else if (utcDateTime.year > 30_827)
+                {
+                    if (utcDateTime.month == Month.feb && utcDateTime.day == 29)
+                        utcDateTime.day = 28;
+                    utcDateTime.year = 30_827;
+                }
+
+                //SystemTimeToTzSpecificLocalTime doesn't act correctly at the
+                //beginning or end of the year (bleh). Unless some bizarre time
+                //zone changes DST on January 1st or December 31st, this should
+                //fix the problem.
+                if (utcDateTime.month == Month.jan)
+                {
+                    if (utcDateTime.day == 1)
+                        utcDateTime.day = 2;
+                }
+                else if (utcDateTime.month == Month.dec && utcDateTime.day == 31)
+                    utcDateTime.day = 30;
+
+                SYSTEMTIME utcTime = void;
+                SYSTEMTIME otherTime = void;
+
+                utcTime.wYear = utcDateTime.year;
+                utcTime.wMonth = utcDateTime.month;
+                utcTime.wDay = utcDateTime.day;
+                utcTime.wHour = utcDateTime.hour;
+                utcTime.wMinute = utcDateTime.minute;
+                utcTime.wSecond = utcDateTime.second;
+                utcTime.wMilliseconds = 0;
+
+                immutable result = SystemTimeToTzSpecificLocalTime(cast(TIME_ZONE_INFORMATION*) tzInfo,
+                                                                   &utcTime,
+                                                                   &otherTime);
+                assert(result);
+
+                immutable otherDateTime = DateTime(otherTime.wYear,
+                                                   otherTime.wMonth,
+                                                   otherTime.wDay,
+                                                   otherTime.wHour,
+                                                   otherTime.wMinute,
+                                                   otherTime.wSecond);
+                immutable diff = utcDateTime - otherDateTime;
+                immutable minutes = diff.total!"minutes" - tzInfo.Bias;
+
+                if (minutes == tzInfo.DaylightBias)
+                    return true;
+
+                assert(minutes == tzInfo.StandardBias);
+
+                return false;
+            }
+            catch (Exception e)
+                assert(0, "DateTime's constructor threw.");
+        }
+
+        @system unittest
+        {
+            TIME_ZONE_INFORMATION tzInfo;
+            GetTimeZoneInformation(&tzInfo);
+
+            foreach (year; [1600, 1601, 30_827, 30_828])
+                WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(year, 1, 1)).stdTime);
+        }
+
+
+        static long _utcToTZ(const TIME_ZONE_INFORMATION* tzInfo, long stdTime, bool hasDST) @safe nothrow
+        {
+            if (hasDST && WindowsTimeZone._dstInEffect(tzInfo, stdTime))
+                return stdTime - convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.DaylightBias);
+
+            return stdTime - convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.StandardBias);
+        }
+
+
+        static long _tzToUTC(const TIME_ZONE_INFORMATION* tzInfo, long adjTime, bool hasDST) @trusted nothrow
+        {
+            if (hasDST)
+            {
+                try
+                {
+                    bool dstInEffectForLocalDateTime(DateTime localDateTime)
+                    {
+                        // The limits of what SystemTimeToTzSpecificLocalTime will accept.
+                        if (localDateTime.year < 1601)
+                        {
+                            if (localDateTime.month == Month.feb && localDateTime.day == 29)
+                                localDateTime.day = 28;
+
+                            localDateTime.year = 1601;
+                        }
+                        else if (localDateTime.year > 30_827)
+                        {
+                            if (localDateTime.month == Month.feb && localDateTime.day == 29)
+                                localDateTime.day = 28;
+
+                            localDateTime.year = 30_827;
+                        }
+
+                        // SystemTimeToTzSpecificLocalTime doesn't act correctly at the
+                        // beginning or end of the year (bleh). Unless some bizarre time
+                        // zone changes DST on January 1st or December 31st, this should
+                        // fix the problem.
+                        if (localDateTime.month == Month.jan)
+                        {
+                            if (localDateTime.day == 1)
+                                localDateTime.day = 2;
+                        }
+                        else if (localDateTime.month == Month.dec && localDateTime.day == 31)
+                            localDateTime.day = 30;
+
+                        SYSTEMTIME utcTime = void;
+                        SYSTEMTIME localTime = void;
+
+                        localTime.wYear = localDateTime.year;
+                        localTime.wMonth = localDateTime.month;
+                        localTime.wDay = localDateTime.day;
+                        localTime.wHour = localDateTime.hour;
+                        localTime.wMinute = localDateTime.minute;
+                        localTime.wSecond = localDateTime.second;
+                        localTime.wMilliseconds = 0;
+
+                        immutable result = TzSpecificLocalTimeToSystemTime(cast(TIME_ZONE_INFORMATION*) tzInfo,
+                                                                           &localTime,
+                                                                           &utcTime);
+                        assert(result);
+
+                        immutable utcDateTime = DateTime(utcTime.wYear,
+                                                         utcTime.wMonth,
+                                                         utcTime.wDay,
+                                                         utcTime.wHour,
+                                                         utcTime.wMinute,
+                                                         utcTime.wSecond);
+
+                        immutable diff = localDateTime - utcDateTime;
+                        immutable minutes = -tzInfo.Bias - diff.total!"minutes";
+
+                        if (minutes == tzInfo.DaylightBias)
+                            return true;
+
+                        assert(minutes == tzInfo.StandardBias);
+
+                        return false;
+                    }
+
+                    auto localDateTime = cast(DateTime) SysTime(adjTime, UTC());
+                    auto localDateTimeBefore = localDateTime - dur!"hours"(1);
+                    auto localDateTimeAfter = localDateTime + dur!"hours"(1);
+
+                    auto dstInEffectNow = dstInEffectForLocalDateTime(localDateTime);
+                    auto dstInEffectBefore = dstInEffectForLocalDateTime(localDateTimeBefore);
+                    auto dstInEffectAfter = dstInEffectForLocalDateTime(localDateTimeAfter);
+
+                    bool isDST;
+
+                    if (dstInEffectBefore && dstInEffectNow && dstInEffectAfter)
+                        isDST = true;
+                    else if (!dstInEffectBefore && !dstInEffectNow && !dstInEffectAfter)
+                        isDST = false;
+                    else if (!dstInEffectBefore && dstInEffectAfter)
+                        isDST = false;
+                    else if (dstInEffectBefore && !dstInEffectAfter)
+                        isDST = dstInEffectNow;
+                    else
+                        assert(0, "Bad Logic.");
+
+                    if (isDST)
+                        return adjTime + convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.DaylightBias);
+                }
+                catch (Exception e)
+                    assert(0, "SysTime's constructor threw.");
+            }
+
+            return adjTime + convert!("minutes", "hnsecs")(tzInfo.Bias + tzInfo.StandardBias);
+        }
+
+
+        this(string name, TIME_ZONE_INFORMATION tzInfo) @trusted immutable pure
+        {
+            super(name, to!string(tzInfo.StandardName.ptr), to!string(tzInfo.DaylightName.ptr));
+            _tzInfo = tzInfo;
+        }
+
+
+        TIME_ZONE_INFORMATION _tzInfo;
+    }
+}
