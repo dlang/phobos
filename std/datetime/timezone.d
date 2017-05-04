@@ -9,7 +9,7 @@
 +/
 module std.datetime.timezone;
 
-import core.time : Duration, dur;
+import core.time : convert, Duration, dur;
 import std.datetime.common;
 import std.exception : enforce;
 
@@ -34,7 +34,8 @@ else version(Posix)
 
 version(unittest) import std.exception : assertThrown;
 
-import std.datetime : clearTZEnvVar, Date, DateTime, PosixTimeZone, setTZEnvVar, SysTime, TimeOfDay, UTC; // temporary
+import std.datetime : clearTZEnvVar, Clock, Date, DateTime, PosixTimeZone, setTZEnvVar, stdTimeToUnixTime, SysTime,
+                      TimeOfDay, UTC; // temporary
 
 /++
     Represents a time zone. It is used with $(LREF SysTime) to indicate the time
@@ -619,4 +620,584 @@ private:
     immutable string _name;
     immutable string _stdName;
     immutable string _dstName;
+}
+
+
+/++
+    A TimeZone which represents the current local time zone on
+    the system running your program.
+
+    This uses the underlying C calls to adjust the time rather than using
+    specific D code based off of system settings to calculate the time such as
+    $(LREF PosixTimeZone) and $(LREF WindowsTimeZone) do. That also means that it will
+    use whatever the current time zone is on the system, even if the system's
+    time zone changes while the program is running.
+  +/
+final class LocalTime : TimeZone
+{
+public:
+
+    /++
+        $(LREF LocalTime) is a singleton class. $(LREF LocalTime) returns its only
+        instance.
+      +/
+    static immutable(LocalTime) opCall() @trusted pure nothrow
+    {
+        alias FuncType = @safe pure nothrow immutable(LocalTime) function();
+        return (cast(FuncType)&singleton)();
+    }
+
+
+    version(StdDdoc)
+    {
+        /++
+            The name of the time zone per the TZ Database. This is the name used to
+            get a $(LREF2 .TimeZone, TimeZone) by name with $(D TimeZone.getTimeZone).
+
+            Note that this always returns the empty string. This is because time
+            zones cannot be uniquely identified by the attributes given by the
+            OS (such as the $(D stdName) and $(D dstName)), and neither Posix
+            systems nor Windows systems provide an easy way to get the TZ
+            Database name of the local time zone.
+
+            See_Also:
+                $(HTTP en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
+                  Database)<br>
+                $(HTTP en.wikipedia.org/wiki/List_of_tz_database_time_zones, List
+                  of Time Zones)
+          +/
+        @property override string name() @safe const nothrow;
+    }
+
+
+    /++
+        Typically, the abbreviation (generally 3 or 4 letters) for the time zone
+        when DST is $(I not) in effect (e.g. PST). It is not necessarily unique.
+
+        However, on Windows, it may be the unabbreviated name (e.g. Pacific
+        Standard Time). Regardless, it is not the same as name.
+
+        This property is overridden because the local time of the system could
+        change while the program is running and we need to determine it
+        dynamically rather than it being fixed like it would be with most time
+        zones.
+      +/
+    @property override string stdName() @trusted const nothrow
+    {
+        version(Posix)
+        {
+            import core.stdc.time : tzname;
+            import std.conv : to;
+            try
+                return to!string(tzname[0]);
+            catch (Exception e)
+                assert(0, "to!string(tzname[0]) failed.");
+        }
+        else version(Windows)
+        {
+            TIME_ZONE_INFORMATION tzInfo;
+            GetTimeZoneInformation(&tzInfo);
+
+            // Cannot use to!string() like this should, probably due to bug
+            // http://d.puremagic.com/issues/show_bug.cgi?id=5016
+            //return to!string(tzInfo.StandardName);
+
+            wchar[32] str;
+
+            foreach (i, ref wchar c; str)
+                c = tzInfo.StandardName[i];
+
+            string retval;
+
+            try
+            {
+                foreach (dchar c; str)
+                {
+                    if (c == '\0')
+                        break;
+
+                    retval ~= c;
+                }
+
+                return retval;
+            }
+            catch (Exception e)
+                assert(0, "GetTimeZoneInformation() returned invalid UTF-16.");
+        }
+    }
+
+    @safe unittest
+    {
+        assert(LocalTime().stdName !is null);
+
+        version(Posix)
+        {
+            scope(exit) clearTZEnvVar();
+
+            setTZEnvVar("America/Los_Angeles");
+            assert(LocalTime().stdName == "PST");
+
+            setTZEnvVar("America/New_York");
+            assert(LocalTime().stdName == "EST");
+        }
+    }
+
+
+    /++
+        Typically, the abbreviation (generally 3 or 4 letters) for the time zone
+        when DST $(I is) in effect (e.g. PDT). It is not necessarily unique.
+
+        However, on Windows, it may be the unabbreviated name (e.g. Pacific
+        Daylight Time). Regardless, it is not the same as name.
+
+        This property is overridden because the local time of the system could
+        change while the program is running and we need to determine it
+        dynamically rather than it being fixed like it would be with most time
+        zones.
+      +/
+    @property override string dstName() @trusted const nothrow
+    {
+        version(Posix)
+        {
+            import core.stdc.time : tzname;
+            import std.conv : to;
+            try
+                return to!string(tzname[1]);
+            catch (Exception e)
+                assert(0, "to!string(tzname[1]) failed.");
+        }
+        else version(Windows)
+        {
+            TIME_ZONE_INFORMATION tzInfo;
+            GetTimeZoneInformation(&tzInfo);
+
+            // Cannot use to!string() like this should, probably due to bug
+            // http://d.puremagic.com/issues/show_bug.cgi?id=5016
+            //return to!string(tzInfo.DaylightName);
+
+            wchar[32] str;
+
+            foreach (i, ref wchar c; str)
+                c = tzInfo.DaylightName[i];
+
+            string retval;
+
+            try
+            {
+                foreach (dchar c; str)
+                {
+                    if (c == '\0')
+                        break;
+
+                    retval ~= c;
+                }
+
+                return retval;
+            }
+            catch (Exception e)
+                assert(0, "GetTimeZoneInformation() returned invalid UTF-16.");
+        }
+    }
+
+    @safe unittest
+    {
+        assert(LocalTime().dstName !is null);
+
+        version(Posix)
+        {
+            scope(exit) clearTZEnvVar();
+
+            version(FreeBSD)
+            {
+                // A bug on FreeBSD 9+ makes it so that this test fails.
+                // https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=168862
+            }
+            else version(NetBSD)
+            {
+                // The same bug on NetBSD 7+
+            }
+            else
+            {
+                setTZEnvVar("America/Los_Angeles");
+                assert(LocalTime().dstName == "PDT");
+
+                setTZEnvVar("America/New_York");
+                assert(LocalTime().dstName == "EDT");
+            }
+        }
+    }
+
+
+    /++
+        Whether this time zone has Daylight Savings Time at any point in time.
+        Note that for some time zone types it may not have DST for current
+        dates but will still return true for $(D hasDST) because the time zone
+        did at some point have DST.
+      +/
+    @property override bool hasDST() @trusted const nothrow
+    {
+        version(Posix)
+        {
+            static if (is(typeof(daylight)))
+                return cast(bool)(daylight);
+            else
+            {
+                try
+                {
+                    auto currYear = (cast(Date) Clock.currTime()).year;
+                    auto janOffset = SysTime(Date(currYear, 1, 4), cast(immutable) this).stdTime -
+                                     SysTime(Date(currYear, 1, 4), UTC()).stdTime;
+                    auto julyOffset = SysTime(Date(currYear, 7, 4), cast(immutable) this).stdTime -
+                                      SysTime(Date(currYear, 7, 4), UTC()).stdTime;
+
+                    return janOffset != julyOffset;
+                }
+                catch (Exception e)
+                    assert(0, "Clock.currTime() threw.");
+            }
+        }
+        else version(Windows)
+        {
+            TIME_ZONE_INFORMATION tzInfo;
+            GetTimeZoneInformation(&tzInfo);
+
+            return tzInfo.DaylightDate.wMonth != 0;
+        }
+    }
+
+    @safe unittest
+    {
+        LocalTime().hasDST;
+
+        version(Posix)
+        {
+            scope(exit) clearTZEnvVar();
+
+            setTZEnvVar("America/Los_Angeles");
+            assert(LocalTime().hasDST);
+
+            setTZEnvVar("America/New_York");
+            assert(LocalTime().hasDST);
+
+            setTZEnvVar("UTC");
+            assert(!LocalTime().hasDST);
+        }
+    }
+
+
+    /++
+        Takes the number of hnsecs (100 ns) since midnight, January 1st, 1 A.D.
+        in UTC time (i.e. std time) and returns whether DST is in effect in this
+        time zone at the given point in time.
+
+        Params:
+            stdTime = The UTC time that needs to be checked for DST in this time
+                      zone.
+      +/
+    override bool dstInEffect(long stdTime) @trusted const nothrow
+    {
+        import core.stdc.time : localtime, tm;
+        time_t unixTime = stdTimeToUnixTime(stdTime);
+
+        version(Posix)
+        {
+            tm* timeInfo = localtime(&unixTime);
+
+            return cast(bool)(timeInfo.tm_isdst);
+        }
+        else version(Windows)
+        {
+            // Apparently Windows isn't smart enough to deal with negative time_t.
+            if (unixTime >= 0)
+            {
+                tm* timeInfo = localtime(&unixTime);
+
+                if (timeInfo)
+                    return cast(bool)(timeInfo.tm_isdst);
+            }
+
+            TIME_ZONE_INFORMATION tzInfo;
+            GetTimeZoneInformation(&tzInfo);
+
+            return WindowsTimeZone._dstInEffect(&tzInfo, stdTime);
+        }
+    }
+
+    @safe unittest
+    {
+        auto currTime = Clock.currStdTime;
+        LocalTime().dstInEffect(currTime);
+    }
+
+
+    /++
+        Returns hnsecs in the local time zone using the standard C function
+        calls on Posix systems and the standard Windows system calls on Windows
+        systems to adjust the time to the appropriate time zone from std time.
+
+        Params:
+            stdTime = The UTC time that needs to be adjusted to this time zone's
+                      time.
+
+        See_Also:
+            $(D TimeZone.utcToTZ)
+      +/
+    override long utcToTZ(long stdTime) @trusted const nothrow
+    {
+        version(Solaris)
+            return stdTime + convert!("seconds", "hnsecs")(tm_gmtoff(stdTime));
+        else version(Posix)
+        {
+            import core.stdc.time : localtime, tm;
+            time_t unixTime = stdTimeToUnixTime(stdTime);
+            tm* timeInfo = localtime(&unixTime);
+
+            return stdTime + convert!("seconds", "hnsecs")(timeInfo.tm_gmtoff);
+        }
+        else version(Windows)
+        {
+            TIME_ZONE_INFORMATION tzInfo;
+            GetTimeZoneInformation(&tzInfo);
+
+            return WindowsTimeZone._utcToTZ(&tzInfo, stdTime, hasDST);
+        }
+    }
+
+    @safe unittest
+    {
+        LocalTime().utcToTZ(0);
+    }
+
+
+    /++
+        Returns std time using the standard C function calls on Posix systems
+        and the standard Windows system calls on Windows systems to adjust the
+        time to UTC from the appropriate time zone.
+
+        See_Also:
+            $(D TimeZone.tzToUTC)
+
+        Params:
+            adjTime = The time in this time zone that needs to be adjusted to
+                      UTC time.
+      +/
+    override long tzToUTC(long adjTime) @trusted const nothrow
+    {
+        version(Posix)
+        {
+            import core.stdc.time : localtime, tm;
+            time_t unixTime = stdTimeToUnixTime(adjTime);
+
+            immutable past = unixTime - cast(time_t) convert!("days", "seconds")(1);
+            tm* timeInfo = localtime(past < unixTime ? &past : &unixTime);
+            immutable pastOffset = timeInfo.tm_gmtoff;
+
+            immutable future = unixTime + cast(time_t) convert!("days", "seconds")(1);
+            timeInfo = localtime(future > unixTime ? &future : &unixTime);
+            immutable futureOffset = timeInfo.tm_gmtoff;
+
+            if (pastOffset == futureOffset)
+                return adjTime - convert!("seconds", "hnsecs")(pastOffset);
+
+            if (pastOffset < futureOffset)
+                unixTime -= cast(time_t) convert!("hours", "seconds")(1);
+
+            unixTime -= pastOffset;
+            timeInfo = localtime(&unixTime);
+
+            return adjTime - convert!("seconds", "hnsecs")(timeInfo.tm_gmtoff);
+        }
+        else version(Windows)
+        {
+            TIME_ZONE_INFORMATION tzInfo;
+            GetTimeZoneInformation(&tzInfo);
+
+            return WindowsTimeZone._tzToUTC(&tzInfo, adjTime, hasDST);
+        }
+    }
+
+    @safe unittest
+    {
+        import core.exception : AssertError;
+        import std.format : format;
+        import std.typecons : tuple;
+
+        assert(LocalTime().tzToUTC(LocalTime().utcToTZ(0)) == 0);
+        assert(LocalTime().utcToTZ(LocalTime().tzToUTC(0)) == 0);
+
+        assert(LocalTime().tzToUTC(LocalTime().utcToTZ(0)) == 0);
+        assert(LocalTime().utcToTZ(LocalTime().tzToUTC(0)) == 0);
+
+        version(Posix)
+        {
+            scope(exit) clearTZEnvVar();
+
+            auto tzInfos = [tuple("America/Los_Angeles", DateTime(2012, 3, 11), DateTime(2012, 11, 4), 2, 2),
+                            tuple("America/New_York",    DateTime(2012, 3, 11), DateTime(2012, 11, 4), 2, 2),
+                            //tuple("America/Santiago",    DateTime(2011, 8, 21), DateTime(2011, 5, 8), 0, 0),
+                            tuple("Atlantic/Azores",     DateTime(2011, 3, 27), DateTime(2011, 10, 30), 0, 1),
+                            tuple("Europe/London",       DateTime(2012, 3, 25), DateTime(2012, 10, 28), 1, 2),
+                            tuple("Europe/Paris",        DateTime(2012, 3, 25), DateTime(2012, 10, 28), 2, 3),
+                            tuple("Australia/Adelaide",  DateTime(2012, 10, 7), DateTime(2012, 4, 1), 2, 3)];
+
+            foreach (i; 0 .. tzInfos.length)
+            {
+                auto tzName = tzInfos[i][0];
+                setTZEnvVar(tzName);
+                immutable spring = tzInfos[i][3];
+                immutable fall = tzInfos[i][4];
+                auto stdOffset = SysTime(tzInfos[i][1] + dur!"hours"(-12)).utcOffset;
+                auto dstOffset = stdOffset + dur!"hours"(1);
+
+                // Verify that creating a SysTime in the given time zone results
+                // in a SysTime with the correct std time during and surrounding
+                // a DST switch.
+                foreach (hour; -12 .. 13)
+                {
+                    auto st = SysTime(tzInfos[i][1] + dur!"hours"(hour));
+                    immutable targetHour = hour < 0 ? hour + 24 : hour;
+
+                    static void testHour(SysTime st, int hour, string tzName, size_t line = __LINE__)
+                    {
+                        enforce(st.hour == hour,
+                                new AssertError(format("[%s] [%s]: [%s] [%s]", st, tzName, st.hour, hour),
+                                                __FILE__, line));
+                    }
+
+                    void testOffset1(Duration offset, bool dstInEffect, size_t line = __LINE__)
+                    {
+                        AssertError msg(string tag)
+                        {
+                            return new AssertError(format("%s [%s] [%s]: [%s] [%s] [%s]",
+                                                          tag, st, tzName, st.utcOffset, stdOffset, dstOffset),
+                                                   __FILE__, line);
+                        }
+
+                        enforce(st.dstInEffect == dstInEffect, msg("1"));
+                        enforce(st.utcOffset == offset, msg("2"));
+                        enforce((st + dur!"minutes"(1)).utcOffset == offset, msg("3"));
+                    }
+
+                    if (hour == spring)
+                    {
+                        testHour(st, spring + 1, tzName);
+                        testHour(st + dur!"minutes"(1), spring + 1, tzName);
+                    }
+                    else
+                    {
+                        testHour(st, targetHour, tzName);
+                        testHour(st + dur!"minutes"(1), targetHour, tzName);
+                    }
+
+                    if (hour < spring)
+                        testOffset1(stdOffset, false);
+                    else
+                        testOffset1(dstOffset, true);
+
+                    st = SysTime(tzInfos[i][2] + dur!"hours"(hour));
+                    testHour(st, targetHour, tzName);
+
+                    // Verify that 01:00 is the first 01:00 (or whatever hour before the switch is).
+                    if (hour == fall - 1)
+                        testHour(st + dur!"hours"(1), targetHour, tzName);
+
+                    if (hour < fall)
+                        testOffset1(dstOffset, true);
+                    else
+                        testOffset1(stdOffset, false);
+                }
+
+                // Verify that converting a time in UTC to a time in another
+                // time zone results in the correct time during and surrounding
+                // a DST switch.
+                bool first = true;
+                auto springSwitch = SysTime(tzInfos[i][1] + dur!"hours"(spring), UTC()) - stdOffset;
+                auto fallSwitch = SysTime(tzInfos[i][2] + dur!"hours"(fall), UTC()) - dstOffset;
+                // @@@BUG@@@ 3659 makes this necessary.
+                auto fallSwitchMinus1 = fallSwitch - dur!"hours"(1);
+
+                foreach (hour; -24 .. 25)
+                {
+                    auto utc = SysTime(tzInfos[i][1] + dur!"hours"(hour), UTC());
+                    auto local = utc.toLocalTime();
+
+                    void testOffset2(Duration offset, size_t line = __LINE__)
+                    {
+                        AssertError msg(string tag)
+                        {
+                            return new AssertError(format("%s [%s] [%s]: [%s] [%s]", tag, hour, tzName, utc, local),
+                                                   __FILE__, line);
+                        }
+
+                        enforce((utc + offset).hour == local.hour, msg("1"));
+                        enforce((utc + offset + dur!"minutes"(1)).hour == local.hour, msg("2"));
+                    }
+
+                    if (utc < springSwitch)
+                        testOffset2(stdOffset);
+                    else
+                        testOffset2(dstOffset);
+
+                    utc = SysTime(tzInfos[i][2] + dur!"hours"(hour), UTC());
+                    local = utc.toLocalTime();
+
+                    if (utc == fallSwitch || utc == fallSwitchMinus1)
+                    {
+                        if (first)
+                        {
+                            testOffset2(dstOffset);
+                            first = false;
+                        }
+                        else
+                            testOffset2(stdOffset);
+                    }
+                    else if (utc > fallSwitch)
+                        testOffset2(stdOffset);
+                    else
+                        testOffset2(dstOffset);
+                }
+            }
+        }
+    }
+
+
+private:
+
+    this() @safe immutable pure
+    {
+        super("", "", "");
+    }
+
+
+    // This is done so that we can maintain purity in spite of doing an impure
+    // operation the first time that LocalTime() is called.
+    static immutable(LocalTime) singleton() @trusted
+    {
+        import core.stdc.time : tzset;
+        import std.concurrency : initOnce;
+        static instance = new immutable(LocalTime)();
+        static shared bool guard;
+        initOnce!guard({tzset(); return true;}());
+        return instance;
+    }
+
+
+    // The Solaris version of struct tm has no tm_gmtoff field, so do it here
+    version(Solaris)
+    {
+        long tm_gmtoff(long stdTime) @trusted const nothrow
+        {
+            import core.stdc.time : localtime, gmtime, tm;
+
+            time_t unixTime = stdTimeToUnixTime(stdTime);
+            tm* buf = localtime(&unixTime);
+            tm timeInfo = *buf;
+            buf = gmtime(&unixTime);
+            tm timeInfoGmt = *buf;
+
+            return timeInfo.tm_sec - timeInfoGmt.tm_sec +
+                   convert!("minutes", "seconds")(timeInfo.tm_min - timeInfoGmt.tm_min) +
+                   convert!("hours", "seconds")(timeInfo.tm_hour - timeInfoGmt.tm_hour);
+        }
+    }
 }
