@@ -3,9 +3,7 @@
 /++
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis
-    Source:    $(PHOBOSSRC std/_datetime.d)
-    Macros:
-        LREF2=<a href="#$1">$(D $2)</a>
+    Source:    $(PHOBOSSRC std/datetime/_timeofday.d)
 +/
 module std.datetime.timeofday;
 
@@ -31,8 +29,8 @@ public:
             second = Second of the minute [0 - 60$(RPAREN).
 
         Throws:
-            $(LREF DateTimeException) if the resulting $(LREF TimeOfDay) would be not
-            be valid.
+            $(REF std,datetime,common,DateTimeException) if the resulting
+            $(LREF TimeOfDay) would be not be valid.
      +/
     this(int hour, int minute, int second = 0) @safe pure
     {
@@ -170,8 +168,8 @@ public:
             hour = The hour of the day to set this $(LREF TimeOfDay)'s hour to.
 
         Throws:
-            $(LREF DateTimeException) if the given hour would result in an invalid
-            $(LREF TimeOfDay).
+            $(REF std,datetime,common,DateTimeException) if the given hour would
+            result in an invalid $(LREF TimeOfDay).
      +/
     @property void hour(int hour) @safe pure
     {
@@ -221,8 +219,8 @@ public:
             minute = The minute to set this $(LREF TimeOfDay)'s minute to.
 
         Throws:
-            $(LREF DateTimeException) if the given minute would result in an
-            invalid $(LREF TimeOfDay).
+            $(REF std,datetime,common,DateTimeException) if the given minute
+            would result in an invalid $(LREF TimeOfDay).
      +/
     @property void minute(int minute) @safe pure
     {
@@ -272,8 +270,8 @@ public:
             second = The second to set this $(LREF TimeOfDay)'s second to.
 
         Throws:
-            $(LREF DateTimeException) if the given second would result in an
-            invalid $(LREF TimeOfDay).
+            $(REF std,datetime,common,DateTimeException) if the given second
+            would result in an invalid $(LREF TimeOfDay).
      +/
     @property void second(int second) @safe pure
     {
@@ -297,8 +295,8 @@ public:
 
 
     /++
-        Adds the given number of units to this $(LREF TimeOfDay). A negative number
-        will subtract.
+        Adds the given number of units to this $(LREF TimeOfDay). A negative
+        number will subtract.
 
         The difference between rolling and adding is that rolling does not
         affect larger units. For instance, rolling a $(LREF TimeOfDay)
@@ -540,8 +538,8 @@ public:
 
 
     /++
-        Gives the result of adding or subtracting a $(REF Duration, core,time) from
-        this $(LREF TimeOfDay).
+        Gives the result of adding or subtracting a $(REF Duration, core,time)
+        from this $(LREF TimeOfDay).
 
         The legal types of arithmetic for $(LREF TimeOfDay) using this operator
         are
@@ -649,8 +647,8 @@ public:
 
 
     /++
-        Gives the result of adding or subtracting a $(REF Duration, core,time) from
-        this $(LREF TimeOfDay), as well as assigning the result to this
+        Gives the result of adding or subtracting a $(REF Duration, core,time)
+        from this $(LREF TimeOfDay), as well as assigning the result to this
         $(LREF TimeOfDay).
 
         The legal types of arithmetic for $(LREF TimeOfDay) using this operator
@@ -761,7 +759,8 @@ public:
     /++
         Gives the difference between two $(LREF TimeOfDay)s.
 
-        The legal types of arithmetic for $(LREF TimeOfDay) using this operator are
+        The legal types of arithmetic for $(LREF TimeOfDay) using this operator
+        are
 
         $(BOOKTABLE,
         $(TR $(TD TimeOfDay) $(TD -) $(TD TimeOfDay) $(TD -->) $(TD duration))
@@ -895,8 +894,9 @@ public:
             isoString = A string formatted in the ISO format for times.
 
         Throws:
-            $(LREF DateTimeException) if the given string is not in the ISO format
-            or if the resulting $(LREF TimeOfDay) would not be valid.
+            $(REF std,datetime,common,DateTimeException) if the given string is
+            not in the ISO format or if the resulting $(LREF TimeOfDay) would
+            not be valid.
       +/
     static TimeOfDay fromISOString(S)(in S isoString) @safe pure
         if (isSomeString!S)
@@ -1000,12 +1000,13 @@ public:
         Whitespace is stripped from the given string.
 
         Params:
-            isoExtString = A string formatted in the ISO Extended format for times.
+            isoExtString = A string formatted in the ISO Extended format for
+            times.
 
         Throws:
-            $(LREF DateTimeException) if the given string is not in the ISO
-            Extended format or if the resulting $(LREF TimeOfDay) would not be
-            valid.
+            $(REF std,datetime,common,DateTimeException) if the given string is
+            not in the ISO Extended format or if the resulting $(LREF TimeOfDay)
+            would not be valid.
       +/
     static TimeOfDay fromISOExtString(S)(in S isoExtString) @safe pure
         if (isSomeString!S)

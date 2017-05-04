@@ -3,9 +3,7 @@
 /++
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis
-    Source:    $(PHOBOSSRC std/_datetime.d)
-    Macros:
-        LREF2=<a href="#$1">$(D $2)</a>
+    Source:    $(PHOBOSSRC std/datetime/_common.d)
 +/
 module std.datetime.common;
 
@@ -14,9 +12,9 @@ import std.typecons : Flag;
 
 
 /++
-    Exception type used by std.datetime. It's an alias to $(REF TimeException, core,time).
-    Either can be caught without concern about which
-    module it came from.
+    Exception type used by std.datetime. It's an alias to
+    $(REF TimeException, core,time). Either can be caught without concern about
+    which module it came from.
   +/
 alias DateTimeException = TimeException;
 

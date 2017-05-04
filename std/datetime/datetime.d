@@ -3,7 +3,7 @@
 /++
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis
-    Source:    $(PHOBOSSRC std/_datetime.d)
+    Source:    $(PHOBOSSRC std/datetime/_datetime.d)
     Macros:
         LREF2=<a href="#$1">$(D $2)</a>
 +/
@@ -25,13 +25,14 @@ version(unittest) import std.exception : assertThrown;
 
 
 /++
-   Combines the $(LREF Date) and $(LREF TimeOfDay) structs to give an object
-   which holds both the date and the time. It is optimized for calendar-based
-   operations and has no concept of time zone. For an object which is
-   optimized for time operations based on the system time, use
-   $(LREF SysTime). $(LREF SysTime) has a concept of time zone and has much higher
-   precision (hnsecs). $(D DateTime) is intended primarily for calendar-based
-   uses rather than precise time operations.
+   Combines the $(REF std,datetime,date,Date) and
+   $(REF std,datetime,timeofday,TimeOfDay) structs to give an object which holds
+   both the date and the time. It is optimized for calendar-based operations and
+   has no concept of time zone. For an object which is optimized for time
+   operations based on the system time, use $(REF std,datetime,systime,SysTime).
+   $(REF std,datetime,systime,SysTime) has a concept of time zone and has much
+   higher precision (hnsecs). $(D DateTime) is intended primarily for
+   calendar-based uses rather than precise time operations.
   +/
 struct DateTime
 {
@@ -401,8 +402,8 @@ public:
         The time portion of $(LREF DateTime).
 
         Params:
-            tod = The $(LREF TimeOfDay) to set this $(LREF DateTime)'s time portion
-                  to.
+            tod = The $(REF std,datetime,timeofday,TimeOfDay) to set this
+                  $(LREF DateTime)'s time portion to.
       +/
     @property void timeOfDay(in TimeOfDay tod) @safe pure nothrow
     {
@@ -453,8 +454,8 @@ public:
             year = The year to set this $(LREF DateTime)'s year to.
 
         Throws:
-            $(LREF DateTimeException) if the new year is not a leap year and if the
-            resulting date would be on February 29th.
+            $(REF std,datetime,common,DateTimeException) if the new year is not
+            a leap year and if the resulting date would be on February 29th.
      +/
     @property void year(int year) @safe pure
     {
@@ -498,7 +499,7 @@ public:
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Throws:
-            $(LREF DateTimeException) if $(D isAD) is true.
+            $(REF std,datetime,common,DateTimeException) if $(D isAD) is true.
      +/
     @property short yearBC() @safe const pure
     {
@@ -534,7 +535,8 @@ public:
             year = The year B.C. to set this $(LREF DateTime)'s year to.
 
         Throws:
-            $(LREF DateTimeException) if a non-positive value is given.
+            $(REF std,datetime,common,DateTimeException) if a non-positive value
+            is given.
      +/
     @property void yearBC(int year) @safe pure
     {
@@ -602,7 +604,8 @@ public:
             month = The month to set this $(LREF DateTime)'s month to.
 
         Throws:
-            $(LREF DateTimeException) if the given month is not a valid month.
+            $(REF std,datetime,common,DateTimeException) if the given month is
+            not a valid month.
      +/
     @property void month(Month month) @safe pure
     {
@@ -684,8 +687,8 @@ public:
             day = The day of the month to set this $(LREF DateTime)'s day to.
 
         Throws:
-            $(LREF DateTimeException) if the given day is not a valid day of the
-            current month.
+            $(REF std,datetime,common,DateTimeException) if the given day is not
+            a valid day of the current month.
      +/
     @property void day(int day) @safe pure
     {
@@ -805,8 +808,8 @@ public:
             hour = The hour of the day to set this $(LREF DateTime)'s hour to.
 
         Throws:
-            $(LREF DateTimeException) if the given hour would result in an invalid
-            $(LREF DateTime).
+            $(REF std,datetime,common,DateTimeException) if the given hour would
+            result in an invalid $(LREF DateTime).
      +/
     @property void hour(int hour) @safe pure
     {
@@ -855,8 +858,8 @@ public:
             minute = The minute to set this $(LREF DateTime)'s minute to.
 
         Throws:
-            $(LREF DateTimeException) if the given minute would result in an
-            invalid $(LREF DateTime).
+            $(REF std,datetime,common,DateTimeException) if the given minute
+            would result in an invalid $(LREF DateTime).
      +/
     @property void minute(int minute) @safe pure
     {
@@ -905,8 +908,8 @@ public:
             second = The second to set this $(LREF DateTime)'s second to.
 
         Throws:
-            $(LREF DateTimeException) if the given seconds would result in an
-            invalid $(LREF DateTime).
+            $(REF std,datetime,common,DateTimeException) if the given seconds
+            would result in an invalid $(LREF DateTime).
      +/
     @property void second(int second) @safe pure
     {
@@ -1061,8 +1064,8 @@ public:
 
 
     /++
-        Adds the given number of units to this $(LREF DateTime). A negative number
-        will subtract.
+        Adds the given number of units to this $(LREF DateTime). A negative
+        number will subtract.
 
         The difference between rolling and adding is that rolling does not
         affect larger units. For instance, rolling a $(LREF DateTime) one
@@ -1073,7 +1076,8 @@ public:
 
         Params:
             units = The units to add.
-            value = The number of $(D_PARAM units) to add to this $(LREF DateTime).
+            value = The number of $(D_PARAM units) to add to this
+                    $(LREF DateTime).
       +/
     ref DateTime roll(string units)(long value) @safe pure nothrow
         if (units == "days")
@@ -1988,8 +1992,8 @@ public:
 
 
     /++
-        Gives the result of adding or subtracting a $(REF Duration, core,time) from
-        this $(LREF DateTime).
+        Gives the result of adding or subtracting a $(REF Duration, core,time)
+        from this $(LREF DateTime).
 
         The legal types of arithmetic for $(LREF DateTime) using this operator
         are
@@ -2105,9 +2109,11 @@ public:
 
     /++
         Gives the result of adding or subtracting a duration from this
-        $(LREF DateTime), as well as assigning the result to this $(LREF DateTime).
+        $(LREF DateTime), as well as assigning the result to this
+        $(LREF DateTime).
 
-        The legal types of arithmetic for $(LREF DateTime) using this operator are
+        The legal types of arithmetic for $(LREF DateTime) using this operator
+        are
 
         $(BOOKTABLE,
         $(TR $(TD DateTime) $(TD +) $(TD duration) $(TD -->) $(TD DateTime))
@@ -2339,12 +2345,12 @@ public:
 
         To get the difference in years, subtract the year property
         of two $(LREF DateTime)s. To get the difference in days or weeks,
-        subtract the $(LREF DateTime)s themselves and use the $(REF Duration, core,time)
-        that results. Because converting between months and smaller
-        units requires a specific date (which $(REF Duration, core,time)s don't have),
-        getting the difference in months requires some math using both
-        the year and month properties, so this is a convenience function for
-        getting the difference in months.
+        subtract the $(LREF DateTime)s themselves and use the
+        $(REF Duration, core,time) that results. Because converting between
+        months and smaller units requires a specific date (which
+        $(REF Duration, core,time)s don't have), getting the difference in
+        months requires some math using both the year and month properties, so
+        this is a convenience function for getting the difference in months.
 
         Note that the number of days in the months or how far into the month
         either date is is irrelevant. It is the difference in the month property
@@ -2591,8 +2597,9 @@ public:
 
 
     /++
-        $(LREF DateTime) for the last day in the month that this $(LREF DateTime) is
-        in. The time portion of endOfMonth is always 23:59:59.
+        $(LREF DateTime) for the last day in the month that this
+        $(LREF DateTime) is in. The time portion of endOfMonth is always
+        23:59:59.
       +/
     @property DateTime endOfMonth() @safe const pure nothrow
     {
@@ -2966,8 +2973,9 @@ public:
             isoString = A string formatted in the ISO format for dates and times.
 
         Throws:
-            $(LREF DateTimeException) if the given string is not in the ISO format
-            or if the resulting $(LREF DateTime) would not be valid.
+            $(REF std,datetime,common,DateTimeException) if the given string is
+            not in the ISO format or if the resulting $(LREF DateTime) would not
+            be valid.
       +/
     static DateTime fromISOString(S)(in S isoString) @safe pure
         if (isSomeString!S)
@@ -3054,9 +3062,9 @@ public:
                            and times.
 
         Throws:
-            $(LREF DateTimeException) if the given string is not in the ISO
-            Extended format or if the resulting $(LREF DateTime) would not be
-            valid.
+            $(REF std,datetime,common,DateTimeException) if the given string is
+            not in the ISO Extended format or if the resulting $(LREF DateTime)
+            would not be valid.
       +/
     static DateTime fromISOExtString(S)(in S isoExtString) @safe pure
         if (isSomeString!(S))
@@ -3142,8 +3150,9 @@ public:
                            formats dates and times.
 
         Throws:
-            $(LREF DateTimeException) if the given string is not in the correct
-            format or if the resulting $(LREF DateTime) would not be valid.
+            $(REF std,datetime,common,DateTimeException) if the given string is
+            not in the correct format or if the resulting $(LREF DateTime)
+            would not be valid.
       +/
     static DateTime fromSimpleString(S)(in S simpleString) @safe pure
         if (isSomeString!(S))
@@ -3225,8 +3234,8 @@ public:
 
 
     /++
-        Returns the $(LREF DateTime) farthest in the past which is representable by
-        $(LREF DateTime).
+        Returns the $(LREF DateTime) farthest in the past which is representable
+        by $(LREF DateTime).
       +/
     @property static DateTime min() @safe pure nothrow
     out(result)
@@ -3252,8 +3261,8 @@ public:
 
 
     /++
-        Returns the $(LREF DateTime) farthest in the future which is representable
-        by $(LREF DateTime).
+        Returns the $(LREF DateTime) farthest in the future which is
+        representable by $(LREF DateTime).
       +/
     @property static DateTime max() @safe pure nothrow
     out(result)

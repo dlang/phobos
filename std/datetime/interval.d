@@ -3,9 +3,7 @@
 /++
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis
-    Source:    $(PHOBOSSRC std/_datetime.d)
-    Macros:
-        LREF2=<a href="#$1">$(D $2)</a>
+    Source:    $(PHOBOSSRC std/datetime/_interval.d)
 +/
 module std.datetime.interval;
 
@@ -19,9 +17,10 @@ version(unittest) import std.exception : assertThrown;
 
 
 /++
-    Indicates a direction in time. One example of its use is $(LREF2 .Interval, Interval)'s
-    $(LREF expand, expand) function which uses it to indicate whether the interval should
-    be expanded backwards (into the past), forwards (into the future), or both.
+    Indicates a direction in time. One example of its use is $(LREF Interval)'s
+    $(LREF expand) function which uses it to indicate whether the interval
+    should be expanded backwards (into the past), forwards (into the future), or
+    both.
   +/
 enum Direction
 {
@@ -100,7 +99,8 @@ public:
                     interval.
 
         Throws:
-            $(LREF DateTimeException) if $(D_PARAM end) is before $(D_PARAM begin).
+            $(REF std,datetime,common,DateTimeException) if $(D_PARAM end) is
+            before $(D_PARAM begin).
 
         Example:
         --------------------
@@ -123,8 +123,8 @@ public:
             duration = The duration from the starting point to the end point.
 
         Throws:
-            $(LREF DateTimeException) if the resulting $(D end) is before
-            $(D begin).
+            $(REF std,datetime,common,DateTimeException) if the resulting
+            $(D end) is before $(D begin).
 
         Example:
         --------------------
@@ -144,7 +144,7 @@ public:
 
     /++
         Params:
-            rhs = The $(LREF2 .Interval, Interval) to assign to this one.
+            rhs = The $(LREF Interval) to assign to this one.
       +/
     ref Interval opAssign(const ref Interval rhs) pure nothrow
     {
@@ -156,7 +156,7 @@ public:
 
     /++
         Params:
-            rhs = The $(LREF2 .Interval, Interval) to assign to this one.
+            rhs = The $(LREF Interval) to assign to this one.
       +/
     ref Interval opAssign(Interval rhs) pure nothrow
     {
@@ -188,7 +188,8 @@ public:
             timePoint = The time point to set $(D begin) to.
 
         Throws:
-            $(LREF DateTimeException) if the resulting interval would be invalid.
+            $(REF std,datetime,common,DateTimeException) if the resulting
+            interval would be invalid.
       +/
     @property void begin(TP timePoint) pure
     {
@@ -220,7 +221,8 @@ public:
             timePoint = The time point to set end to.
 
         Throws:
-            $(LREF DateTimeException) if the resulting interval would be invalid.
+            $(REF std,datetime,common,DateTimeException) if the resulting
+            interval would be invalid.
       +/
     @property void end(TP timePoint) pure
     {
@@ -267,7 +269,8 @@ public:
             timePoint = The time point to check for inclusion in this interval.
 
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
 
         Example:
         --------------------
@@ -294,7 +297,8 @@ public:
             interval = The interval to check for inclusion in this interval.
 
         Throws:
-            $(LREF DateTimeException) if either interval is empty.
+            $(REF std,datetime,common,DateTimeException) if either interval is
+            empty.
 
         Example:
         --------------------
@@ -329,7 +333,8 @@ public:
             interval = The interval to check for inclusion in this interval.
 
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
 
         Example:
         --------------------
@@ -355,7 +360,8 @@ public:
             interval = The interval to check for inclusion in this interval.
 
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
 
         Example:
         --------------------
@@ -378,7 +384,8 @@ public:
                         it.
 
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
 
         Example:
         --------------------
@@ -407,7 +414,8 @@ public:
             interval = The interval to check for against this interval.
 
         Throws:
-            $(LREF DateTimeException) if either interval is empty.
+            $(REF std,datetime,common,DateTimeException) if either interval is
+            empty.
 
         Example:
         --------------------
@@ -437,7 +445,8 @@ public:
             interval = The interval to check for against this interval.
 
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
 
         Example:
         --------------------
@@ -466,7 +475,8 @@ public:
             interval = The interval to check for against this interval.
 
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
 
         Example:
         --------------------
@@ -489,7 +499,8 @@ public:
                         it.
 
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
 
         Example:
         --------------------
@@ -518,7 +529,8 @@ public:
             interval = The interval to check against this interval.
 
         Throws:
-            $(LREF DateTimeException) if either interval is empty.
+            $(REF std,datetime,common,DateTimeException) if either interval is
+            empty.
 
         Example:
         --------------------
@@ -551,7 +563,8 @@ public:
             interval = The interval to check against this interval.
 
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
 
         Example:
         --------------------
@@ -574,7 +587,8 @@ public:
             interval = The interval to check against this interval.
 
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
 
         Example:
         --------------------
@@ -596,7 +610,8 @@ public:
             interval = The interval to check for intersection with this interval.
 
         Throws:
-            $(LREF DateTimeException) if either interval is empty.
+            $(REF std,datetime,common,DateTimeException) if either interval is
+            empty.
 
         Example:
         --------------------
@@ -625,7 +640,8 @@ public:
             interval = The interval to check for intersection with this interval.
 
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
 
         Example:
         --------------------
@@ -650,7 +666,8 @@ public:
             interval = The interval to check for intersection with this interval.
 
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
 
         Example:
         --------------------
@@ -675,8 +692,8 @@ public:
             interval = The interval to intersect with this interval.
 
         Throws:
-            $(LREF DateTimeException) if the two intervals do not intersect or if
-            either interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the two intervals do
+            not intersect or if either interval is empty.
 
         Example:
         --------------------
@@ -710,8 +727,8 @@ public:
             interval = The interval to intersect with this interval.
 
         Throws:
-            $(LREF DateTimeException) if the two intervals do not intersect or if
-            this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the two intervals do
+            not intersect or if this interval is empty.
 
         Example:
         --------------------
@@ -742,8 +759,8 @@ public:
             interval = The interval to intersect with this interval.
 
         Throws:
-            $(LREF DateTimeException) if the two intervals do not intersect or if
-            this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the two intervals do
+            not intersect or if this interval is empty.
 
         Example:
         --------------------
@@ -775,7 +792,8 @@ public:
                        interval.
 
         Throws:
-            $(LREF DateTimeException) if either interval is empty.
+            $(REF std,datetime,common,DateTimeException) if either interval is
+            empty.
 
         Example:
         --------------------
@@ -805,7 +823,8 @@ public:
                        interval.
 
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
 
         Example:
         --------------------
@@ -831,7 +850,8 @@ public:
                        interval.
 
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
 
         Example:
         --------------------
@@ -856,8 +876,8 @@ public:
             interval = The interval to merge with this interval.
 
         Throws:
-            $(LREF DateTimeException) if the two intervals do not intersect and are
-            not adjacent or if either interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the two intervals do
+            not intersect and are not adjacent or if either interval is empty.
 
         Example:
         --------------------
@@ -891,8 +911,8 @@ public:
             interval = The interval to merge with this interval.
 
         Throws:
-            $(LREF DateTimeException) if the two intervals do not intersect and are
-            not adjacent or if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the two intervals do
+            not intersect and are not adjacent or if this interval is empty.
 
         Example:
         --------------------
@@ -923,8 +943,8 @@ public:
             interval = The interval to merge with this interval.
 
         Throws:
-            $(LREF DateTimeException) if the two intervals do not intersect and are not
-            adjacent or if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the two intervals do
+            not intersect and are not adjacent or if this interval is empty.
 
         Example:
         --------------------
@@ -957,7 +977,8 @@ public:
             interval = The interval to create a span together with this interval.
 
         Throws:
-            $(LREF DateTimeException) if either interval is empty.
+            $(REF std,datetime,common,DateTimeException) if either interval is
+            empty.
 
         Example:
         --------------------
@@ -991,7 +1012,8 @@ public:
             interval = The interval to create a span together with this interval.
 
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
 
         Example:
         --------------------
@@ -1020,7 +1042,8 @@ public:
             interval = The interval to create a span together with this interval.
 
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
 
         Example:
         --------------------
@@ -1050,8 +1073,8 @@ public:
             duration = The duration to shift the interval by.
 
         Throws:
-            $(LREF DateTimeException) this interval is empty or if the resulting
-            interval would be invalid.
+            $(REF std,datetime,common,DateTimeException) this interval is empty
+            or if the resulting interval would be invalid.
 
         Example:
         --------------------
@@ -1100,8 +1123,8 @@ public:
                                 to increment.
 
             Throws:
-                $(LREF DateTimeException) if this interval is empty or if the
-                resulting interval would be invalid.
+                $(REF std,datetime,common,DateTimeException) if this interval is
+                empty or if the resulting interval would be invalid.
 
             Example:
             --------------------
@@ -1147,8 +1170,8 @@ public:
             dir      = The direction in time to expand the interval.
 
         Throws:
-            $(LREF DateTimeException) this interval is empty or if the resulting
-            interval would be invalid.
+            $(REF std,datetime,common,DateTimeException) this interval is empty
+            or if the resulting interval would be invalid.
 
         Example:
         --------------------
@@ -1225,8 +1248,8 @@ public:
                 dir           = The direction in time to expand the interval.
 
             Throws:
-                $(LREF DateTimeException) if this interval is empty or if the
-                resulting interval would be invalid.
+                $(REF std,datetime,common,DateTimeException) if this interval is
+                empty or if the resulting interval would be invalid.
 
             Example:
             --------------------
@@ -1311,10 +1334,10 @@ public:
         $(D_PARAM func) would generate).
 
         If $(D_PARAM func) ever generates a time point less than or equal to the
-        current $(D front) of the range, then a $(LREF DateTimeException) will be
-        thrown. The range will be empty and iteration complete when
-        $(D_PARAM func) generates a time point equal to or beyond the $(D end)
-        of the interval.
+        current $(D front) of the range, then a
+        $(REF std,datetime,common,DateTimeException) will be thrown. The range
+        will be empty and iteration complete when $(D_PARAM func) generates a
+        time point equal to or beyond the $(D end) of the interval.
 
         There are helper functions in this module which generate common
         delegates to pass to $(D fwdRange). Their documentation starts with
@@ -1327,7 +1350,8 @@ public:
                        before returning it.
 
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
 
         Warning:
             $(D_PARAM func) must be logically pure. Ideally, $(D_PARAM func)
@@ -1404,10 +1428,10 @@ public:
         $(D_PARAM func) would generate).
 
         If $(D_PARAM func) ever generates a time point greater than or equal to
-        the current $(D front) of the range, then a $(LREF DateTimeException) will
-        be thrown. The range will be empty and iteration complete when
-        $(D_PARAM func) generates a time point equal to or less than the
-        $(D begin) of the interval.
+        the current $(D front) of the range, then a
+        $(REF std,datetime,common,DateTimeException) will be thrown. The range
+        will be empty and iteration complete when $(D_PARAM func) generates a
+        time point equal to or less than the $(D begin) of the interval.
 
         There are helper functions in this module which generate common
         delegates to pass to $(D bwdRange). Their documentation starts with
@@ -1420,7 +1444,8 @@ public:
                        before returning it.
 
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
 
         Warning:
             $(D_PARAM func) must be logically pure. Ideally, $(D_PARAM func)
@@ -1527,7 +1552,8 @@ private:
 
     /+
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
       +/
     void _enforceNotEmpty(size_t line = __LINE__) const pure
     {
@@ -3215,7 +3241,8 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).contains(Date(2000, 1, 5)));
             interval = The interval to check for inclusion in this interval.
 
         Throws:
-            $(LREF DateTimeException) if the given interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the given interval
+            is empty.
 
         Example:
 --------------------
@@ -3312,7 +3339,8 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isBefore(Date(2000, 1, 5)));
             interval = The interval to check for against this interval.
 
         Throws:
-            $(LREF DateTimeException) if the given interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the given interval
+            is empty.
 
         Example:
 --------------------
@@ -3404,7 +3432,8 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(Date(2000, 1, 5)));
             interval = The interval to check against this interval.
 
         Throws:
-            $(LREF DateTimeException) if the given interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the given interval
+            is empty.
 
         Example:
 --------------------
@@ -3479,7 +3508,8 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAfter(
             interval = The interval to check for intersection with this interval.
 
         Throws:
-            $(LREF DateTimeException) if the given interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the given interval
+            is empty.
 
         Example:
 --------------------
@@ -3554,8 +3584,8 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersects(
             interval = The interval to intersect with this interval.
 
         Throws:
-            $(LREF DateTimeException) if the two intervals do not intersect or if
-            the given interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the two intervals do
+            not intersect or if the given interval is empty.
 
         Example:
 --------------------
@@ -3611,7 +3641,8 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
             interval = The interval to intersect with this interval.
 
         Throws:
-            $(LREF DateTimeException) if the two intervals do not intersect.
+            $(REF std,datetime,common,DateTimeException) if the two intervals do
+            not intersect.
 
         Example:
 --------------------
@@ -3643,7 +3674,8 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).intersection(
                        interval.
 
         Throws:
-            $(LREF DateTimeException) if the given interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the given interval
+            is empty.
 
         Example:
 --------------------
@@ -3715,8 +3747,9 @@ assert(!PosInfInterval!Date(Date(1996, 1, 2)).isAdjacent(
             interval = The interval to merge with this interval.
 
         Throws:
-            $(LREF DateTimeException) if the two intervals do not intersect and are
-            not adjacent or if the given interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the two intervals do
+            not intersect and are not adjacent or if the given interval is
+            empty.
 
         Note:
             There is no overload for $(D merge) which takes a
@@ -3785,7 +3818,8 @@ assert(PosInfInterval!Date(Date(1996, 1, 2)).merge(
                        interval.
 
         Throws:
-            $(LREF DateTimeException) if the given interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the given interval
+            is empty.
 
         Note:
             There is no overload for $(D span) which takes a
@@ -3880,9 +3914,9 @@ assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
     {
         /++
             Shifts the $(D begin) of this interval forward or backwards in time
-            by the given number of years and/or months (a positive number of years
-            and months shifts the interval forward; a negative number shifts it
-            backward). It adds the years the given years and months to
+            by the given number of years and/or months (a positive number of
+            years and months shifts the interval forward; a negative number
+            shifts it backward). It adds the years the given years and months to
             $(D begin). It effectively calls $(D add!"years"()) and then
             $(D add!"months"()) on $(D begin) with the given number of years and
             months.
@@ -3894,8 +3928,8 @@ assert(interval2 == PosInfInterval!Date(Date(1995, 11, 13)));
                                 on $(D begin), causing its month to increment.
 
             Throws:
-                $(LREF DateTimeException) if this interval is empty or if the
-                resulting interval would be invalid.
+                $(REF std,datetime,common,DateTimeException) if this interval is
+                empty or if the resulting interval would be invalid.
 
             Example:
 --------------------
@@ -3962,8 +3996,8 @@ assert(interval2 == PosInfInterval!Date(Date(1996, 1, 4)));
                                 on $(D begin), causing its month to increment.
 
             Throws:
-                $(LREF DateTimeException) if this interval is empty or if the
-                resulting interval would be invalid.
+                $(REF std,datetime,common,DateTimeException) if this interval is
+                empty or if the resulting interval would be invalid.
 
             Example:
 --------------------
@@ -4002,8 +4036,8 @@ assert(interval2 == PosInfInterval!Date(Date(1998, 1, 2)));
         $(D_PARAM func) would generate).
 
         If $(D_PARAM func) ever generates a time point less than or equal to the
-        current $(D front) of the range, then a $(LREF DateTimeException) will be
-        thrown.
+        current $(D front) of the range, then a
+        $(REF std,datetime,common,DateTimeException) will be thrown.
 
         There are helper functions in this module which generate common
         delegates to pass to $(D fwdRange). Their documentation starts with
@@ -4016,7 +4050,8 @@ assert(interval2 == PosInfInterval!Date(Date(1998, 1, 2)));
                        before returning it.
 
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
 
         Warning:
             $(D_PARAM func) must be logically pure. Ideally, $(D_PARAM func)
@@ -5421,7 +5456,8 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).contains(Date(2012, 3, 1)));
             interval = The interval to check for inclusion in this interval.
 
         Throws:
-            $(LREF DateTimeException) if the given interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the given interval
+            is empty.
 
         Example:
 --------------------
@@ -5512,7 +5548,8 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).isBefore(Date(2012, 3, 1)));
             interval = The interval to check for against this interval.
 
         Throws:
-            $(LREF DateTimeException) if the given interval is empty
+            $(REF std,datetime,common,DateTimeException) if the given interval
+            is empty
 
         Example:
 --------------------
@@ -5616,7 +5653,8 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(Date(2012, 3, 1)));
             interval = The interval to check against this interval.
 
         Throws:
-            $(LREF DateTimeException) if the given interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the given interval
+            is empty.
 
         Example:
 --------------------
@@ -5694,7 +5732,8 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAfter(
             interval = The interval to check for intersection with this interval.
 
         Throws:
-            $(LREF DateTimeException) if the given interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the given interval
+            is empty.
 
         Example:
 --------------------
@@ -5768,8 +5807,8 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersects(
             interval = The interval to intersect with this interval.
 
         Throws:
-            $(LREF DateTimeException) if the two intervals do not intersect or if
-            the given interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the two intervals do
+            not intersect or if the given interval is empty.
 
         Example:
 --------------------
@@ -5802,7 +5841,8 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
             interval = The interval to intersect with this interval.
 
         Throws:
-            $(LREF DateTimeException) if the two intervals do not intersect.
+            $(REF std,datetime,common,DateTimeException) if the two intervals do
+            not intersect.
 
         Example:
 --------------------
@@ -5857,7 +5897,8 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).intersection(
                        interval.
 
         Throws:
-            $(LREF DateTimeException) if the given interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the given interval
+            is empty.
 
         Example:
 --------------------
@@ -5935,8 +5976,8 @@ assert(!NegInfInterval!Date(Date(2012, 3, 1)).isAdjacent(
             interval = The interval to merge with this interval.
 
         Throws:
-            $(LREF DateTimeException) if the two intervals do not intersect and are
-            not adjacent or if the given interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the two intervals do
+            not intersect and are not adjacent or if the given interval is empty.
 
         Note:
             There is no overload for $(D merge) which takes a
@@ -6005,7 +6046,8 @@ assert(NegInfInterval!Date(Date(2012, 3, 1)).merge(
                        interval.
 
         Throws:
-            $(LREF DateTimeException) if the given interval is empty.
+            $(REF std,datetime,common,DateTimeException) if the given interval
+            is empty.
 
         Note:
             There is no overload for $(D span) which takes a
@@ -6113,8 +6155,8 @@ assert(interval2 == NegInfInterval!Date( Date(2012, 2, 15)));
                                 on $(D end), causing its month to increment.
 
             Throws:
-                $(LREF DateTimeException) if empty is true or if the resulting
-                interval would be invalid.
+                $(REF std,datetime,common,DateTimeException) if empty is true or
+                if the resulting interval would be invalid.
 
             Example:
 --------------------
@@ -6181,8 +6223,8 @@ assert(interval2 == NegInfInterval!Date(Date(2012, 2, 28)));
                                 on $(D end), causing their month to increment.
 
             Throws:
-                $(LREF DateTimeException) if empty is true or if the resulting
-                interval would be invalid.
+                $(REF std,datetime,common,DateTimeException) if empty is true or
+                if the resulting interval would be invalid.
 
             Example:
 --------------------
@@ -6221,8 +6263,8 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
         $(D_PARAM func) would generate).
 
         If $(D_PARAM func) ever generates a time point greater than or equal to
-        the current $(D front) of the range, then a $(LREF DateTimeException) will
-        be thrown.
+        the current $(D front) of the range, then a
+        $(REF std,datetime,common,DateTimeException) will be thrown.
 
         There are helper functions in this module which generate common
         delegates to pass to $(D bwdRange). Their documentation starts with
@@ -6235,7 +6277,8 @@ assert(interval2 == NegInfInterval!Date(Date(2010, 3, 1)));
                        before returning it.
 
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
 
         Warning:
             $(D_PARAM func) must be logically pure. Ideally, $(D_PARAM func)
@@ -7868,9 +7911,9 @@ if (isTimePoint!TP &&
     number of years, month, and duration later.
 
     The difference between this version of $(D everyDuration) and the version
-    which just takes a $(REF Duration, core,time) is that this one also takes the number of
-    years and months (along with an $(D AllowDayOverflow) to indicate whether
-    adding years and months should allow the days to overflow).
+    which just takes a $(REF Duration, core,time) is that this one also takes
+    the number of years and months (along with an $(D AllowDayOverflow) to
+    indicate whether adding years and months should allow the days to overflow).
 
     Note that if iterating forward, $(D add!"years"()) is called on the given
     time point, then $(D add!"months"()), and finally the duration is added
@@ -8009,28 +8052,30 @@ if (isTimePoint!TP &&
 
 
 /++
-    A range over an $(LREF2 .Interval, Interval).
+    A range over an $(LREF Interval).
 
-    $(D IntervalRange) is only ever constructed by $(LREF2 .Interval, Interval). However, when
+    $(D IntervalRange) is only ever constructed by $(LREF Interval). However, when
     it is constructed, it is given a function, $(D func), which is used to
     generate the time points which are iterated over. $(D func) takes a time
     point and returns a time point of the same type. For instance,
     to iterate over all of the days in
-    the interval $(D Interval!Date), pass a function to $(LREF2 .Interval, Interval)'s $(D fwdRange)
-    where that function took a $(LREF Date) and returned a $(LREF Date) which was one
-    day later. That function would then be used by $(D IntervalRange)'s
-    $(D popFront) to iterate over the $(LREF Date)s in the interval.
+    the interval $(D Interval!Date), pass a function to $(LREF Interval)'s
+    $(D fwdRange) where that function took a $(REF std,datetime,date,Date) and
+    returned a $(REF std,datetime,date,Date) which was one day later. That
+    function would then be used by $(D IntervalRange)'s $(D popFront) to iterate
+    over the $(REF std,datetime,date,Date)s in the interval.
 
     If $(D dir == Direction.fwd), then a range iterates forward in time, whereas
     if $(D dir == Direction.bwd), then it iterates backwards in time. So, if
     $(D dir == Direction.fwd) then $(D front == interval.begin), whereas if
     $(D dir == Direction.bwd) then $(D front == interval.end). $(D func) must
     generate a time point going in the proper direction of iteration, or a
-    $(LREF DateTimeException) will be thrown. So, to iterate forward in
-    time, the time point that $(D func) generates must be later in time than the
-    one passed to it. If it's either identical or earlier in time, then a
-    $(LREF DateTimeException) will be thrown. To iterate backwards, then
-    the generated time point must be before the time point which was passed in.
+    $(REF std,datetime,common,DateTimeException) will be thrown. So, to iterate
+    forward in time, the time point that $(D func) generates must be later in
+    time than the one passed to it. If it's either identical or earlier in time,
+    then a $(REF std,datetime,common,DateTimeException) will be thrown. To
+    iterate backwards, then the generated time point must be before the time
+    point which was passed in.
 
     If the generated time point is ever passed the edge of the range in the
     proper direction, then the edge of that range will be used instead. So, if
@@ -8043,10 +8088,10 @@ if (isTimePoint!TP &&
     it and its $(D end) is excluded from it, if $(D dir == Direction.bwd), then
     $(D begin) is treated as excluded and $(D end) is treated as included. This
     allows for the same behavior in both directions. This works because none of
-    $(LREF2 .Interval, Interval)'s functions which care about whether $(D begin) or $(D end) is
-    included or excluded are ever called by $(D IntervalRange). $(D interval)
+    $(LREF Interval)'s functions which care about whether $(D begin) or $(D end)
+    is included or excluded are ever called by $(D IntervalRange). $(D interval)
     returns a normal interval, regardless of whether $(D dir == Direction.fwd)
-    or if $(D dir == Direction.bwd), so any $(LREF2 .Interval, Interval) functions which are
+    or if $(D dir == Direction.bwd), so any $(LREF Interval) functions which are
     called on it which care about whether $(D begin) or $(D end) are included or
     excluded will treat $(D begin) as included and $(D end) as excluded.
   +/
@@ -8087,7 +8132,7 @@ public:
         The first time point in the range.
 
         Throws:
-            $(LREF DateTimeException) if the range is empty.
+            $(REF std,datetime,common,DateTimeException) if the range is empty.
       +/
     @property TP front() const pure
     {
@@ -8110,10 +8155,10 @@ public:
         than the interval's $(D begin), then $(D front) is set to $(D begin).
 
         Throws:
-            $(LREF DateTimeException) if the range is empty or if the generated
-            time point is in the wrong direction (i.e. if iterating
-            forward and the generated time point is before $(D front), or if
-            iterating backwards and the generated time point is after
+            $(REF std,datetime,common,DateTimeException) if the range is empty
+            or if the generated time point is in the wrong direction (i.e. if
+            iterating forward and the generated time point is before $(D front),
+            or if iterating backwards and the generated time point is after
             $(D front)).
       +/
     void popFront()
@@ -8198,7 +8243,8 @@ private:
 
     /+
         Throws:
-            $(LREF DateTimeException) if this interval is empty.
+            $(REF std,datetime,common,DateTimeException) if this interval is
+            empty.
       +/
     void _enforceNotEmpty(size_t line = __LINE__) const pure
     {
@@ -8209,8 +8255,8 @@ private:
 
     /+
         Throws:
-            $(LREF DateTimeException) if $(D_PARAM newTP) is in the wrong
-            direction.
+            $(REF std,datetime,common,DateTimeException) if $(D_PARAM newTP) is
+            in the wrong direction.
       +/
     void _enforceCorrectDirection(in TP newTP, size_t line = __LINE__) const
     {
@@ -8553,20 +8599,22 @@ private:
     is used to generate the time points which are iterated over. $(D func)
     takes a time point and returns a time point of the same type. For
     instance, to iterate
-    over all of the days in the interval $(D PosInfInterval!Date), pass a function to
-    $(D PosInfInterval)'s $(D fwdRange) where that function took a $(LREF Date) and
-    returned a $(LREF Date) which was one day later. That function would then be
-    used by $(D PosInfIntervalRange)'s $(D popFront) to iterate over the
-    $(LREF Date)s in the interval - though obviously, since the range is infinite,
-    use a function such as $(D std.range.take) with it rather than
-    iterating over $(I all) of the dates.
+    over all of the days in the interval $(D PosInfInterval!Date), pass a
+    function to $(D PosInfInterval)'s $(D fwdRange) where that function took a
+    $(REF std,datetime,date,Date) and returned a $(REF std,datetime,date,Date)
+    which was one day later. That function would then be used by
+    $(D PosInfIntervalRange)'s $(D popFront) to iterate over the
+    $(REF std,datetime,date,Date)s in the interval - though obviously, since the
+    range is infinite, use a function such as $(D std.range.take) with it rather
+    than iterating over $(I all) of the dates.
 
     As the interval goes to positive infinity, the range is always iterated over
     forwards, never backwards. $(D func) must generate a time point going in
-    the proper direction of iteration, or a $(LREF DateTimeException) will be
-    thrown. So, the time points that $(D func) generates must be later in time
-    than the one passed to it. If it's either identical or earlier in time, then
-    a $(LREF DateTimeException) will be thrown.
+    the proper direction of iteration, or a
+    $(REF std,datetime,common,DateTimeException) will be thrown. So, the time
+    points that $(D func) generates must be later in time than the one passed to
+    it. If it's either identical or earlier in time, then a
+    $(REF std,datetime,common,DateTimeException) will be thrown.
   +/
 struct PosInfIntervalRange(TP)
 if (isTimePoint!TP)
@@ -8612,8 +8660,8 @@ public:
         time point in the range.
 
         Throws:
-            $(LREF DateTimeException) if the generated time point is less than
-            $(D front).
+            $(REF std,datetime,common,DateTimeException) if the generated time
+            point is less than $(D front).
       +/
     void popFront()
     {
@@ -8667,8 +8715,8 @@ private:
 
     /+
         Throws:
-            $(LREF DateTimeException) if $(D_PARAM newTP) is in the wrong
-            direction.
+            $(REF std,datetime,common,DateTimeException) if $(D_PARAM newTP) is
+            in the wrong direction.
       +/
     void _enforceCorrectDirection(in TP newTP, size_t line = __LINE__) const
     {
@@ -8829,21 +8877,22 @@ private:
     However, when it is constructed, it is given a function, $(D func), which
     is used to generate the time points which are iterated over. $(D func)
     takes a time point and returns a time point of the same type. For
-    instance, to iterate
-    over all of the days in the interval $(D NegInfInterval!Date), pass a function to
-    $(D NegInfInterval)'s $(D bwdRange) where that function took a $(LREF Date) and
-    returned a $(LREF Date) which was one day earlier. That function would then be
-    used by $(D NegInfIntervalRange)'s $(D popFront) to iterate over the
-    $(LREF Date)s in the interval - though obviously, since the range is infinite,
-    use a function such as $(D std.range.take) with it rather than
-    iterating over $(I all) of the dates.
+    instance, to iterate over all of the days in the interval
+    $(D NegInfInterval!Date), pass a function to $(D NegInfInterval)'s
+    $(D bwdRange) where that function took a $(REF std,datetime,date,Date) and
+    returned a $(REF std,datetime,date,Date) which was one day earlier. That
+    function would then be used by $(D NegInfIntervalRange)'s $(D popFront) to
+    iterate over the $(REF std,datetime,date,Date)s in the interval - though
+    obviously, since the range is infinite, use a function such as
+    $(D std.range.take) with it rather than iterating over $(I all) of the dates.
 
     As the interval goes to negative infinity, the range is always iterated over
     backwards, never forwards. $(D func) must generate a time point going in
-    the proper direction of iteration, or a $(LREF DateTimeException) will be
-    thrown. So, the time points that $(D func) generates must be earlier in time
-    than the one passed to it. If it's either identical or later in time, then a
-    $(LREF DateTimeException) will be thrown.
+    the proper direction of iteration, or a
+    $(REF std,datetime,common,DateTimeException) will be thrown. So, the time
+    points that $(D func) generates must be earlier in time than the one passed
+    to it. If it's either identical or later in time, then a
+    $(REF std,datetime,common,DateTimeException) will be thrown.
 
     Also note that while normally the $(D end) of an interval is excluded from
     it, $(D NegInfIntervalRange) treats it as if it were included. This allows
@@ -8899,8 +8948,8 @@ public:
         time point in the range.
 
         Throws:
-            $(LREF DateTimeException) if the generated time point is greater than
-            $(D front).
+            $(REF std,datetime,common,DateTimeException) if the generated time
+            point is greater than $(D front).
       +/
     void popFront()
     {
@@ -8954,8 +9003,8 @@ private:
 
     /+
         Throws:
-            $(LREF DateTimeException) if $(D_PARAM newTP) is in the wrong
-            direction.
+            $(REF std,datetime,common,DateTimeException) if $(D_PARAM newTP) is
+            in the wrong direction.
       +/
     void _enforceCorrectDirection(in TP newTP, size_t line = __LINE__) const
     {

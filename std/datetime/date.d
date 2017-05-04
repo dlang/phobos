@@ -3,9 +3,7 @@
 /++
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis
-    Source:    $(PHOBOSSRC std/_datetime.d)
-    Macros:
-        LREF2=<a href="#$1">$(D $2)</a>
+    Source:    $(PHOBOSSRC std/datetime/_date.d)
 +/
 module std.datetime.date;
 
@@ -24,10 +22,9 @@ version(unittest) import std.exception : assertThrown;
 
 /++
     Represents a date in the
-    $(HTTP en.wikipedia.org/wiki/Proleptic_Gregorian_calendar, Proleptic Gregorian Calendar)
-    ranging from
-    32,768 B.C. to 32,767 A.D. Positive years are A.D. Non-positive years are
-    B.C.
+    $(HTTP en.wikipedia.org/wiki/Proleptic_Gregorian_calendar, Proleptic
+    Gregorian Calendar) ranging from 32,768 B.C. to 32,767 A.D. Positive years
+    are A.D. Non-positive years are B.C.
 
     Year, month, and day are kept separately internally so that $(D Date) is
     optimized for calendar-based operations.
@@ -35,8 +32,8 @@ version(unittest) import std.exception : assertThrown;
     $(D Date) uses the Proleptic Gregorian Calendar, so it assumes the Gregorian
     leap year calculations for its entire length. As per
     $(HTTP en.wikipedia.org/wiki/ISO_8601, ISO 8601), it treats 1 B.C. as
-    year 0, i.e. 1 B.C. is 0, 2 B.C. is -1, etc. Use $(LREF yearBC) to use B.C. as
-    a positive integer with 1 B.C. being the year prior to 1 A.D.
+    year 0, i.e. 1 B.C. is 0, 2 B.C. is -1, etc. Use $(LREF yearBC) to use B.C.
+    as a positive integer with 1 B.C. being the year prior to 1 A.D.
 
     Year 0 is a leap year.
  +/
@@ -46,7 +43,8 @@ public:
 
     /++
         Throws:
-            $(LREF DateTimeException) if the resulting $(LREF Date) would not be valid.
+            $(REF std,datetime,common,DateTimeException) if the resulting
+            $(LREF Date) would not be valid.
 
         Params:
             year  = Year of the Gregorian Calendar. Positive values are A.D.
@@ -415,8 +413,8 @@ public:
             year = The year to set this Date's year to.
 
         Throws:
-            $(LREF DateTimeException) if the new year is not a leap year and the
-            resulting date would be on February 29th.
+            $(REF std,datetime,common,DateTimeException) if the new year is not
+            a leap year and the resulting date would be on February 29th.
      +/
     @property void year(int year) @safe pure
     {
@@ -462,7 +460,7 @@ public:
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Throws:
-            $(LREF DateTimeException) if $(D isAD) is true.
+            $(REF std,datetime,common,DateTimeException) if $(D isAD) is true.
      +/
     @property ushort yearBC() @safe const pure
     {
@@ -501,7 +499,8 @@ public:
             year = The year B.C. to set this $(LREF Date)'s year to.
 
         Throws:
-            $(LREF DateTimeException) if a non-positive value is given.
+            $(REF std,datetime,common,DateTimeException) if a non-positive value
+            is given.
      +/
     @property void yearBC(int year) @safe pure
     {
@@ -570,8 +569,9 @@ public:
             month = The month to set this $(LREF Date)'s month to.
 
         Throws:
-            $(LREF DateTimeException) if the given month is not a valid month or if
-            the current day would not be valid in the given month.
+            $(REF std,datetime,common,DateTimeException) if the given month is
+            not a valid month or if the current day would not be valid in the
+            given month.
      +/
     @property void month(Month month) @safe pure
     {
@@ -649,8 +649,8 @@ public:
             day = The day of the month to set this $(LREF Date)'s day to.
 
         Throws:
-            $(LREF DateTimeException) if the given day is not a valid day of the
-            current month.
+            $(REF std,datetime,common,DateTimeException) if the given day is not
+            a valid day of the current month.
      +/
     @property void day(int day) @safe pure
     {
@@ -747,8 +747,8 @@ public:
 
 
     /++
-        Adds the given number of years or months to this $(LREF Date). A negative
-        number will subtract.
+        Adds the given number of years or months to this $(LREF Date). A
+        negative number will subtract.
 
         Note that if day overflow is allowed, and the date with the adjusted
         year/month overflows the number of days in the new month, then the month
@@ -1532,8 +1532,8 @@ public:
 
         The difference between rolling and adding is that rolling does not
         affect larger units. Rolling a $(LREF Date) 12 months gets
-        the exact same $(LREF Date). However, the days can still be affected due to
-        the differing number of days in each month.
+        the exact same $(LREF Date). However, the days can still be affected due
+        to the differing number of days in each month.
 
         Because there are no units larger than years, there is no difference
         between adding and rolling years.
@@ -2170,8 +2170,8 @@ public:
 
 
     /++
-        Adds the given number of units to this $(LREF Date). A negative number will
-        subtract.
+        Adds the given number of units to this $(LREF Date). A negative number
+        will subtract.
 
         The difference between rolling and adding is that rolling does not
         affect larger units. For instance, rolling a $(LREF Date) one
@@ -2407,7 +2407,8 @@ public:
 
 
     /++
-        Gives the result of adding or subtracting a $(REF Duration, core,time) from
+        Gives the result of adding or subtracting a $(REF Duration, core,time)
+        from
 
         The legal types of arithmetic for $(LREF Date) using this operator are
 
@@ -2518,8 +2519,9 @@ public:
 
 
     /++
-        Gives the result of adding or subtracting a $(REF Duration, core,time) from
-        this $(LREF Date), as well as assigning the result to this $(LREF Date).
+        Gives the result of adding or subtracting a $(REF Duration, core,time)
+        from this $(LREF Date), as well as assigning the result to this
+        $(LREF Date).
 
         The legal types of arithmetic for $(LREF Date) using this operator are
 
@@ -2684,13 +2686,13 @@ public:
         Returns the difference between the two $(LREF Date)s in months.
 
         To get the difference in years, subtract the year property
-        of two $(LREF SysTime)s. To get the difference in days or weeks,
-        subtract the $(LREF SysTime)s themselves and use the $(REF Duration, core,time)
-        that results. Because converting between months and smaller
-        units requires a specific date (which $(REF Duration, core,time)s don't have),
-        getting the difference in months requires some math using both
-        the year and month properties, so this is a convenience function for
-        getting the difference in months.
+        of two $(LREF Date)s. To get the difference in days or weeks,
+        subtract the $(LREF Date)s themselves and use the
+        $(REF Duration, core,time) that results. Because converting between
+        months and smaller units requires a specific date (which
+        $(REF Duration, core,time)s don't have), getting the difference in
+        months requires some math using both the year and month properties, so
+        this is a convenience function for getting the difference in months.
 
         Note that the number of days in the months or how far into the month
         either $(LREF Date) is is irrelevant. It is the difference in the month
@@ -3028,8 +3030,8 @@ public:
                   $(LREF Date) is on.
 
         Throws:
-            $(LREF DateTimeException) if the given day is an invalid day of the
-            year.
+            $(REF std,datetime,common,DateTimeException) if the given day is an
+            invalid day of the year.
       +/
     @property void dayOfYear(int day) @safe pure
     {
@@ -3710,8 +3712,9 @@ public:
             isoString = A string formatted in the ISO format for dates.
 
         Throws:
-            $(LREF DateTimeException) if the given string is not in the ISO format
-            or if the resulting $(LREF Date) would not be valid.
+            $(REF std,datetime,common,DateTimeException) if the given string is
+            not in the ISO format or if the resulting $(LREF Date) would not be
+            valid.
       +/
     static Date fromISOString(S)(in S isoString) @safe pure
         if (isSomeString!S)
@@ -3825,16 +3828,17 @@ public:
 
 
     /++
-        Creates a $(LREF Date) from a string with the format YYYY-MM-DD. Whitespace
-        is stripped from the given string.
+        Creates a $(LREF Date) from a string with the format YYYY-MM-DD.
+        Whitespace is stripped from the given string.
 
         Params:
             isoExtString = A string formatted in the ISO Extended format for
                            dates.
 
         Throws:
-            $(LREF DateTimeException) if the given string is not in the ISO
-            Extended format or if the resulting $(LREF Date) would not be valid.
+            $(REF std,datetime,common,DateTimeException) if the given string is
+            not in the ISO Extended format or if the resulting $(LREF Date)
+            would not be valid.
       +/
     static Date fromISOExtString(S)(in S isoExtString) @safe pure
         if (isSomeString!(S))
@@ -3961,8 +3965,9 @@ public:
                            formats dates.
 
         Throws:
-            $(LREF DateTimeException) if the given string is not in the correct
-            format or if the resulting $(LREF Date) would not be valid.
+            $(REF std,datetime,common,DateTimeException) if the given string is
+            not in the correct format or if the resulting $(LREF Date) would not
+            be valid.
       +/
     static Date fromSimpleString(S)(in S simpleString) @safe pure
         if (isSomeString!(S))
@@ -4099,8 +4104,8 @@ public:
 
 
     /++
-        Returns the $(LREF Date) farthest in the future which is representable by
-        $(LREF Date).
+        Returns the $(LREF Date) farthest in the future which is representable
+        by $(LREF Date).
       +/
     @property static Date max() @safe pure nothrow
     {
@@ -4140,8 +4145,8 @@ private:
 package:
 
     /+
-        Adds the given number of days to this $(LREF Date). A negative number will
-        subtract.
+        Adds the given number of days to this $(LREF Date). A negative number
+        will subtract.
 
         The month will be adjusted along with the day if the number of days
         added (or subtracted) would overflow (or underflow) the current month.
@@ -4454,7 +4459,8 @@ string monthToString(Month month) @safe pure
         monthStr = The string representation of the month to get the Month for.
 
     Throws:
-        $(LREF DateTimeException) if the given month is not a valid month string.
+        $(REF std,datetime,common,DateTimeException) if the given month is not a
+        valid month string.
   +/
 Month monthFromString(string monthStr) @safe pure
 {

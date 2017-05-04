@@ -3,9 +3,7 @@
 /++
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis
-    Source:    $(PHOBOSSRC std/_datetime.d)
-    Macros:
-        LREF2=<a href="#$1">$(D $2)</a>
+    Source:    $(PHOBOSSRC std/datetime/_timezone.d)
 +/
 module std.datetime.timezone;
 
@@ -41,8 +39,8 @@ version(unittest) import std.exception : assertThrown;
 
 
 /++
-    Represents a time zone. It is used with $(LREF SysTime) to indicate the time
-    zone of a $(LREF SysTime).
+    Represents a time zone. It is used with $(REF std,datetime,systime,SysTime)
+    to indicate the time zone of a $(REF std,datetime,systime,SysTime).
   +/
 abstract class TimeZone
 {
@@ -50,7 +48,7 @@ public:
 
     /++
         The name of the time zone per the TZ Database. This is the name used to
-        get a $(LREF2 .TimeZone, TimeZone) by name with $(D TimeZone.getTimeZone).
+        get a $(LREF TimeZone) by name with $(D TimeZone.getTimeZone).
 
         See_Also:
             $(HTTP en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
@@ -155,7 +153,7 @@ public:
               Phobos and have them be properly up-to-date. TimeZone.getTimeZone
               will be removed in July 2017.)
 
-        Returns a $(LREF2 .TimeZone, TimeZone) with the give name per the TZ Database.
+        Returns a $(LREF TimeZone) with the give name per the TZ Database.
 
         This returns a $(LREF PosixTimeZone) on Posix systems and a
         $(LREF WindowsTimeZone) on Windows systems. For
@@ -180,7 +178,8 @@ public:
             name = The TZ Database name of the desired time zone
 
         Throws:
-            $(LREF DateTimeException) if the given time zone could not be found.
+            $(REF std,datetime,common,DateTimeException) if the given time zone
+            could not be found.
       +/
     deprecated("Use PosixTimeZone.getTimeZone or WindowsTimeZone.getTimeZone instead")
     static immutable(TimeZone) getTimeZone(string name) @safe
@@ -553,8 +552,8 @@ public:
 
         Throws:
             $(D FileException) on Posix systems if it fails to read from disk.
-            $(LREF DateTimeException) on Windows systems if it fails to read the
-            registry.
+            $(REF std,datetime,common,DateTimeException) on Windows systems if
+            it fails to read the registry.
       +/
     deprecated("Use PosixTimeZone.getInstalledTZNames or WindowsTimeZone.getInstalledTZNames instead")
     static string[] getInstalledTZNames(string subName = "") @safe
@@ -632,17 +631,17 @@ private:
 
     This uses the underlying C calls to adjust the time rather than using
     specific D code based off of system settings to calculate the time such as
-    $(LREF PosixTimeZone) and $(LREF WindowsTimeZone) do. That also means that it will
-    use whatever the current time zone is on the system, even if the system's
-    time zone changes while the program is running.
+    $(LREF PosixTimeZone) and $(LREF WindowsTimeZone) do. That also means that
+    it will use whatever the current time zone is on the system, even if the
+    system's time zone changes while the program is running.
   +/
 final class LocalTime : TimeZone
 {
 public:
 
     /++
-        $(LREF LocalTime) is a singleton class. $(LREF LocalTime) returns its only
-        instance.
+        $(LREF LocalTime) is a singleton class. $(LREF LocalTime) returns its
+        only instance.
       +/
     static immutable(LocalTime) opCall() @trusted pure nothrow
     {
@@ -654,8 +653,8 @@ public:
     version(StdDdoc)
     {
         /++
-            The name of the time zone per the TZ Database. This is the name used to
-            get a $(LREF2 .TimeZone, TimeZone) by name with $(D TimeZone.getTimeZone).
+            The name of the time zone per the TZ Database. This is the name used
+            to get a $(LREF TimeZone) by name with $(D TimeZone.getTimeZone).
 
             Note that this always returns the empty string. This is because time
             zones cannot be uniquely identified by the attributes given by the
@@ -1207,7 +1206,7 @@ private:
 
 
 /++
-    A $(LREF2 .TimeZone, TimeZone) which represents UTC.
+    A $(LREF TimeZone) which represents UTC.
   +/
 final class UTC : TimeZone
 {
@@ -1333,8 +1332,9 @@ private:
     Represents a time zone with an offset (in minutes, west is negative) from
     UTC but no DST.
 
-    It's primarily used as the time zone in the result of $(LREF SysTime)'s
-    $(D fromISOString), $(D fromISOExtString), and $(D fromSimpleString).
+    It's primarily used as the time zone in the result of
+    $(REF std,datetime,systime,SysTime)'s $(D fromISOString),
+    $(D fromISOExtString), and $(D fromSimpleString).
 
     $(D name) and $(D dstName) are always the empty string since this time zone
     has no DST, and while it may be meant to represent a time zone which is in
@@ -2043,9 +2043,9 @@ public:
 
 
     /++
-        Returns a $(LREF2 .TimeZone, TimeZone) with the give name per the TZ Database. The time
-        zone information is fetched from the TZ Database time zone files in the
-        given directory.
+        Returns a $(LREF TimeZone) with the give name per the TZ Database. The
+        time zone information is fetched from the TZ Database time zone files in
+        the given directory.
 
         See_Also:
             $(HTTP en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
@@ -2062,8 +2062,9 @@ public:
                             use $(LREF PosixTimeZone)s.
 
         Throws:
-            $(LREF DateTimeException) if the given time zone could not be found or
-            $(D FileException) if the TZ Database file could not be opened.
+            $(REF std,datetime,common,DateTimeException) if the given time zone
+            could not be found or $(D FileException) if the TZ Database file
+            could not be opened.
       +/
     // TODO make it possible for tzDatabaseDir to be gzipped tar file rather than an uncompressed
     //      directory.
@@ -2667,7 +2668,7 @@ private:
 
     /+
         Throws:
-            $(LREF DateTimeException) if $(D result) is false.
+            $(REF std,datetime,common,DateTimeException) if $(D result) is false.
       +/
     static void _enforceValidTZFile(bool result, size_t line = __LINE__) @safe pure
     {
@@ -2891,7 +2892,7 @@ version(StdDdoc)
 
 
         /++
-            Returns a $(LREF2 .TimeZone, TimeZone) with the given name per the Windows time
+            Returns a $(LREF TimeZone) with the given name per the Windows time
             zone names. The time zone information is fetched from the Windows
             registry.
 
@@ -2905,8 +2906,8 @@ version(StdDdoc)
                 name = The TZ Database name of the desired time zone.
 
             Throws:
-                $(LREF DateTimeException) if the given time zone could not be
-                found.
+                $(REF std,datetime,common,DateTimeException) if the given time
+                zone could not be found.
 
             Example:
     --------------------

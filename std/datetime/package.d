@@ -1,15 +1,19 @@
-//Written in the D programming language
+// Written in the D programming language
 
 /++
     Module containing Date/Time functionality.
 
     This module provides:
     $(UL
-        $(LI Types to represent points in time: $(LREF SysTime), $(LREF Date),
-             $(LREF TimeOfDay), and $(LREF2 .DateTime, DateTime).)
+        $(LI Types to represent points in time:
+             $(REF std,datetime,systime,SysTime),
+             $(REF std,datetime,date,Date),
+             $(REF std,datetime,timeofday,TimeOfDay),
+             $(REF std,datetime,datetime,DateTime).)
         $(LI Types to represent intervals of time.)
         $(LI Types to represent ranges over intervals of time.)
-        $(LI Types to represent time zones (used by $(LREF SysTime)).)
+        $(LI Types to represent time zones (used by
+             $(REF std,datetime,systime,SysTime)).)
         $(LI A platform-independent, high precision stopwatch type:
              $(LREF StopWatch))
         $(LI Benchmarking functions.)
@@ -45,21 +49,22 @@
     be done on a series of time points.
 
     The types that the typical user is most likely to be interested in are
-    $(LREF Date) (if they want dates but don't care about time), $(LREF DateTime)
-    (if they want dates and times but don't care about time zones), $(LREF SysTime)
-    (if they want the date and time from the OS and/or do care about time
-    zones), and StopWatch (a platform-independent, high precision stop watch).
-    $(LREF Date) and $(LREF DateTime) are optimized for calendar-based operations,
-    while $(LREF SysTime) is designed for dealing with time from the OS. Check out
-    their specific documentation for more details.
+    $(REF std,datetime,date,Date) (if they want dates but don't care about
+    time), $(REF std,datetime,datetime,DateTime) (if they want dates and times
+    but don't care about time zones), $(REF std,datetime,systime,SysTime) (if
+    they want the date and time from the OS and/or do care about time zones),
+    and StopWatch (a platform-independent, high precision stop watch).
+    $(REF std,datetime,date,Date) and $(REF std,datetime,datetime,DateTime) are
+    optimized for calendar-based operations, while
+    $(REF std,datetime,systime,SysTime) is designed for dealing with time from
+    the OS. Check out their specific documentation for more details.
 
-    To get the current time, use $(LREF2 .Clock.currTime, Clock.currTime).
-    It will return the current
-    time as a $(LREF SysTime). To print it, $(D toString) is
-    sufficient, but if using $(D toISOString), $(D toISOExtString), or
-    $(D toSimpleString), use the corresponding $(D fromISOString),
-    $(D fromISOExtString), or $(D fromSimpleString) to create a
-    $(LREF SysTime) from the string.
+    To get the current time, use $(REF std,datetime,systime,Clock.currTime).
+    It will return the current time as a $(REF std,datetime,systime,SysTime). To
+    print it, $(D toString) is sufficient, but if using $(D toISOString),
+    $(D toISOExtString), or $(D toSimpleString), use the corresponding
+    $(D fromISOString), $(D fromISOExtString), or $(D fromSimpleString) to
+    create a $(REF std,datetime,systime,SysTime) from the string.
 
 --------------------
 auto currentTime = Clock.currTime();
@@ -82,11 +87,12 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
     weren't).
 
     Note:
-        $(LREF DateTimeException) is an alias for $(REF TimeException, core,time),
-        so you don't need to worry about core.time functions and std.datetime
-        functions throwing different exception types (except in the rare case
-        that they throw something other than $(REF TimeException, core,time) or
-        $(LREF DateTimeException)).
+        $(REF std,datetime,common,DateTimeException) is an alias for
+        $(REF TimeException, core,time), so you don't need to worry about
+        core.time functions and std.datetime functions throwing different
+        exception types (except in the rare case that they throw something other
+        than $(REF TimeException, core,time) or
+        $(REF std,datetime,common,DateTimeException)).
 
     See_Also:
         $(DDLINK intro-to-_datetime, Introduction to std.datetime,
@@ -99,9 +105,7 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis and Kato Shoichi
-    Source:    $(PHOBOSSRC std/_datetime.d)
-    Macros:
-        LREF2=<a href="#$1">$(D $2)</a>
+    Source:    $(PHOBOSSRC std/_datetime/package.d)
 +/
 module std.datetime;
 
@@ -120,7 +124,7 @@ import std.functional : unaryFun;
 import std.traits;
 
 
-//Verify module example.
+// Verify module example.
 @safe unittest
 {
     auto currentTime = Clock.currTime();
@@ -128,7 +132,7 @@ import std.traits;
     auto restoredTime = SysTime.fromISOExtString(timeString);
 }
 
-//Verify Examples for core.time.Duration which couldn't be in core.time.
+// Verify Examples for core.time.Duration which couldn't be in core.time.
 @safe unittest
 {
     assert(std.datetime.Date(2010, 9, 7) + dur!"days"(5) ==
