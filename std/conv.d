@@ -4248,6 +4248,19 @@ buffer, without breaking the type system with unsafe casts.
 +/
 package void emplaceRef(T, UT, Args...)(ref UT chunk, auto ref Args args)
 {
+    // ensure args contains a context pointer to initialize chunk
+    static if (Args.length == 1)
+    {
+        enum gotCP = is(Unqual!Args == UT) || (isStaticArray!T &&
+            (is(Unqual!Args == ElementType!UT) ||
+                (isArray!Args && is(Unqual!(ElementType!Args) == ElementType!UT))));
+    }
+    else
+        enum gotCP = false;
+
+    static assert(!hasNested!T || gotCP,
+        convFormat("Cannot emplace a %s without a context pointer", T.stringof));
+
     static if (args.length == 0)
     {
         static assert(is(typeof({static T i;})),
@@ -4360,8 +4373,8 @@ T* emplace(T)(T* chunk) @safe pure nothrow
 ///
 @system unittest
 {
-    interface I {}
-    class K : I {}
+    static interface I {}
+    static class K : I {}
 
     K k = void;
     emplace(&k);
@@ -4611,8 +4624,8 @@ version(unittest) private class __conv_EmplaceTestClass
 
 @system unittest // bugzilla 15772
 {
-    abstract class Foo {}
-    class Bar: Foo {}
+    static abstract class Foo {}
+    static class Bar: Foo {}
     void[] memory;
     // test in emplaceInitializer
     static assert(!is(typeof(emplace!Foo(cast(Foo*) memory.ptr))));
@@ -4624,7 +4637,7 @@ version(unittest) private class __conv_EmplaceTestClass
 
 @system unittest
 {
-    struct S { @disable this(); }
+    static struct S { @disable this(); }
     S s = void;
     static assert(!__traits(compiles, emplace(&s)));
     emplace(&s, S.init);
@@ -4632,10 +4645,10 @@ version(unittest) private class __conv_EmplaceTestClass
 
 @system unittest
 {
-    struct S1
+    static struct S1
     {}
 
-    struct S2
+    static struct S2
     {
         void opAssign(S2);
     }
@@ -4672,7 +4685,7 @@ version(unittest) private class __conv_EmplaceTestClass
 
 @system unittest
 {
-    struct S
+    static struct S
     {
         immutable int i;
     }
@@ -4691,8 +4704,8 @@ version(unittest) private class __conv_EmplaceTestClass
 
 @system unittest
 {
-    interface I {}
-    class K : I {}
+    static interface I {}
+    static class K : I {}
 
     K k = null, k2 = new K;
     assert(k !is k2);
@@ -4723,7 +4736,7 @@ version(unittest) private class __conv_EmplaceTestClass
 // Test constructor branch
 @system unittest
 {
-    struct S
+    static struct S
     {
         double x = 5, y = 6;
         this(int a, int b)
@@ -4759,7 +4772,7 @@ version(unittest) private class __conv_EmplaceTestClass
 // Test matching fields branch
 @system unittest
 {
-    struct S { uint n; }
+    static struct S { uint n; }
     S s;
     emplace!S(&s, 2U);
     assert(s.n == 2);
@@ -4767,14 +4780,14 @@ version(unittest) private class __conv_EmplaceTestClass
 
 @safe unittest
 {
-    struct S { int a, b; this(int){} }
+    static struct S { int a, b; this(int){} }
     S s;
     static assert(!__traits(compiles, emplace!S(&s, 2, 3)));
 }
 
 @system unittest
 {
-    struct S { int a, b = 7; }
+    static struct S { int a, b = 7; }
     S s1 = void, s2 = void;
 
     emplace!S(&s1, 2);
@@ -4959,6 +4972,7 @@ version(unittest) private class __conv_EmplaceTestClass
             void foo(){++i;}
         }
         S1 sa = void;
+        static assert(!__traits(compiles, emplace(&sa)));
         S1 sb;
         emplace(&sa, sb);
         sa.foo();
@@ -4971,11 +4985,32 @@ version(unittest) private class __conv_EmplaceTestClass
             this(this){}
         }
         S2 sa = void;
+        static assert(!__traits(compiles, emplace(&sa)));
         S2 sb;
         emplace(&sa, sb);
         sa.foo();
         assert(i == 2);
     }
+}
+
+@system unittest
+{
+    int i;
+    struct S
+    {
+        this(int){}
+        void f(){i++;}
+    }
+    auto buf = new void[S.sizeof];
+
+    // no context pointer
+    static assert(!__traits(compiles, emplace!S(buf)));
+    static assert(!__traits(compiles, emplace!S(buf, 4)));
+
+    S s;
+    auto ps = emplace!S(buf, s);
+    ps.f;
+    assert(i == 1);
 }
 
 //Alias this
@@ -5119,7 +5154,7 @@ version(unittest)
 
 @system unittest
 {
-    struct S
+    static struct S
     {
         int[2] get(){return [1, 2];}
         alias get this;
