@@ -11,6 +11,7 @@ module std.datetime.timezone;
 
 import core.time;
 import std.datetime.common;
+import std.datetime.date;
 import std.exception : enforce;
 import std.range.primitives;
 import std.traits : isIntegral, isSomeString, Unqual;
@@ -36,7 +37,7 @@ else version(Posix)
 
 version(unittest) import std.exception : assertThrown;
 
-import std.datetime : Clock, Date, DateTime, stdTimeToUnixTime, SysTime; // temporary
+import std.datetime : Clock, DateTime, stdTimeToUnixTime, SysTime; // temporary
 
 /++
     Represents a time zone. It is used with $(LREF SysTime) to indicate the time
