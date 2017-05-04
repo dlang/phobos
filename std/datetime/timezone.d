@@ -12,7 +12,8 @@ module std.datetime.timezone;
 import core.time;
 import std.datetime.common;
 import std.exception : enforce;
-import std.traits : isSomeString;
+import std.range.primitives;
+import std.traits : isIntegral, isSomeString, Unqual;
 
 version(Windows)
 {
@@ -35,7 +36,7 @@ else version(Posix)
 
 version(unittest) import std.exception : assertThrown;
 
-import std.datetime : clearTZEnvVar, Clock, Date, DateTime, PosixTimeZone, setTZEnvVar, stdTimeToUnixTime, SysTime,
+import std.datetime : clearTZEnvVar, Clock, Date, DateTime, setTZEnvVar, stdTimeToUnixTime, SysTime,
                       TimeOfDay; // temporary
 
 /++
@@ -1588,7 +1589,6 @@ package: // temporary
         import std.ascii : isDigit;
         import std.conv : to;
         import std.format : format;
-        import std.range.primitives;
 
         auto dstr = to!dstring(isoString);
 
@@ -1733,7 +1733,6 @@ package: // temporary
         import std.ascii : isDigit;
         import std.conv : to;
         import std.format : format;
-        import std.range.primitives;
 
         auto dstr = to!dstring(isoExtString);
 
@@ -1869,4 +1868,941 @@ package: // temporary
 
 
     immutable Duration _utcOffset;
+}
+
+
+/++
+    Represents a time zone from a TZ Database time zone file. Files from the TZ
+    Database are how Posix systems hold their time zone information.
+    Unfortunately, Windows does not use the TZ Database. To use the TZ Database,
+    use $(D PosixTimeZone) (which reads its information from the TZ Database
+    files on disk) on Windows by providing the TZ Database files and telling
+    $(D PosixTimeZone.getTimeZone) where the directory holding them is.
+
+    To get a $(D PosixTimeZone), either call $(D PosixTimeZone.getTimeZone)
+    (which allows specifying the location the time zone files) or call
+    $(D TimeZone.getTimeZone) (which will give a $(D PosixTimeZone) on Posix
+    systems and a $(LREF WindowsTimeZone) on Windows systems).
+
+    Note:
+        Unless your system's local time zone deals with leap seconds (which is
+        highly unlikely), then the only way to get a time zone which
+        takes leap seconds into account is to use $(D PosixTimeZone) with a
+        time zone whose name starts with "right/". Those time zone files do
+        include leap seconds, and $(D PosixTimeZone) will take them into account
+        (though posix systems which use a "right/" time zone as their local time
+        zone will $(I not) take leap seconds into account even though they're
+        in the file).
+
+    See_Also:
+        $(HTTP www.iana.org/time-zones, Home of the TZ Database files)<br>
+        $(HTTP en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ Database)<br>
+        $(HTTP en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of Time
+          Zones)
+  +/
+final class PosixTimeZone : TimeZone
+{
+    import std.algorithm.searching : countUntil, canFind, startsWith;
+    import std.file : isDir, isFile, exists, dirEntries, SpanMode, DirEntry;
+    import std.path : extension;
+    import std.stdio : File;
+    import std.string : strip, representation;
+    import std.traits : isArray, isSomeChar;
+public:
+
+    /++
+        Whether this time zone has Daylight Savings Time at any point in time.
+        Note that for some time zone types it may not have DST for current
+        dates but will still return true for $(D hasDST) because the time zone
+        did at some point have DST.
+      +/
+    @property override bool hasDST() @safe const nothrow
+    {
+        return _hasDST;
+    }
+
+
+    /++
+        Takes the number of hnsecs (100 ns) since midnight, January 1st, 1 A.D.
+        in UTC time (i.e. std time) and returns whether DST is in effect in this
+        time zone at the given point in time.
+
+        Params:
+            stdTime = The UTC time that needs to be checked for DST in this time
+                      zone.
+      +/
+    override bool dstInEffect(long stdTime) @safe const nothrow
+    {
+        assert(!_transitions.empty);
+
+        immutable unixTime = stdTimeToUnixTime(stdTime);
+        immutable found = countUntil!"b < a.timeT"(_transitions, unixTime);
+
+        if (found == -1)
+            return _transitions.back.ttInfo.isDST;
+
+        immutable transition = found == 0 ? _transitions[0] : _transitions[found - 1];
+
+        return transition.ttInfo.isDST;
+    }
+
+
+    /++
+        Takes the number of hnsecs (100 ns) since midnight, January 1st, 1 A.D.
+        in UTC time (i.e. std time) and converts it to this time zone's time.
+
+        Params:
+            stdTime = The UTC time that needs to be adjusted to this time zone's
+                      time.
+      +/
+    override long utcToTZ(long stdTime) @safe const nothrow
+    {
+        assert(!_transitions.empty);
+
+        immutable leapSecs = calculateLeapSeconds(stdTime);
+        immutable unixTime = stdTimeToUnixTime(stdTime);
+        immutable found = countUntil!"b < a.timeT"(_transitions, unixTime);
+
+        if (found == -1)
+            return stdTime + convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
+
+        immutable transition = found == 0 ? _transitions[0] : _transitions[found - 1];
+
+        return stdTime + convert!("seconds", "hnsecs")(transition.ttInfo.utcOffset + leapSecs);
+    }
+
+
+    /++
+        Takes the number of hnsecs (100 ns) since midnight, January 1st, 1 A.D.
+        in this time zone's time and converts it to UTC (i.e. std time).
+
+        Params:
+            adjTime = The time in this time zone that needs to be adjusted to
+                      UTC time.
+      +/
+    override long tzToUTC(long adjTime) @safe const nothrow
+    {
+        assert(!_transitions.empty);
+
+        immutable leapSecs = calculateLeapSeconds(adjTime);
+        time_t unixTime = stdTimeToUnixTime(adjTime);
+        immutable past = unixTime - convert!("days", "seconds")(1);
+        immutable future = unixTime + convert!("days", "seconds")(1);
+
+        immutable pastFound = countUntil!"b < a.timeT"(_transitions, past);
+
+        if (pastFound == -1)
+            return adjTime - convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
+
+        immutable futureFound = countUntil!"b < a.timeT"(_transitions[pastFound .. $], future);
+        immutable pastTrans = pastFound == 0 ? _transitions[0] : _transitions[pastFound - 1];
+
+        if (futureFound == 0)
+            return adjTime - convert!("seconds", "hnsecs")(pastTrans.ttInfo.utcOffset + leapSecs);
+
+        immutable futureTrans = futureFound == -1 ? _transitions.back
+                                                  : _transitions[pastFound + futureFound - 1];
+        immutable pastOffset = pastTrans.ttInfo.utcOffset;
+
+        if (pastOffset < futureTrans.ttInfo.utcOffset)
+            unixTime -= convert!("hours", "seconds")(1);
+
+        immutable found = countUntil!"b < a.timeT"(_transitions[pastFound .. $], unixTime - pastOffset);
+
+        if (found == -1)
+            return adjTime - convert!("seconds", "hnsecs")(_transitions.back.ttInfo.utcOffset + leapSecs);
+
+        immutable transition = found == 0 ? pastTrans : _transitions[pastFound + found - 1];
+
+        return adjTime - convert!("seconds", "hnsecs")(transition.ttInfo.utcOffset + leapSecs);
+    }
+
+
+    version(Android)
+    {
+        // Android concatenates all time zone data into a single file and stores it here.
+        enum defaultTZDatabaseDir = "/system/usr/share/zoneinfo/";
+    }
+    else version(Posix)
+    {
+        /++
+            The default directory where the TZ Database files are. It's empty
+            for Windows, since Windows doesn't have them.
+          +/
+        enum defaultTZDatabaseDir = "/usr/share/zoneinfo/";
+    }
+    else version(Windows)
+    {
+        /++ The default directory where the TZ Database files are. It's empty
+            for Windows, since Windows doesn't have them.
+          +/
+        enum defaultTZDatabaseDir = "";
+    }
+
+
+    /++
+        Returns a $(LREF2 .TimeZone, TimeZone) with the give name per the TZ Database. The time
+        zone information is fetched from the TZ Database time zone files in the
+        given directory.
+
+        See_Also:
+            $(HTTP en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
+              Database)<br>
+            $(HTTP en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of
+              Time Zones)
+
+        Params:
+            name          = The TZ Database name of the desired time zone
+            tzDatabaseDir = The directory where the TZ Database files are
+                            located. Because these files are not located on
+                            Windows systems, provide them
+                            and give their location here to
+                            use $(LREF PosixTimeZone)s.
+
+        Throws:
+            $(LREF DateTimeException) if the given time zone could not be found or
+            $(D FileException) if the TZ Database file could not be opened.
+      +/
+    // TODO make it possible for tzDatabaseDir to be gzipped tar file rather than an uncompressed
+    //      directory.
+    static immutable(PosixTimeZone) getTimeZone(string name, string tzDatabaseDir = defaultTZDatabaseDir) @trusted
+    {
+        import std.algorithm.sorting : sort;
+        import std.range : retro;
+        import std.format : format;
+        import std.path : asNormalizedPath, chainPath;
+        import std.conv : to;
+
+        name = strip(name);
+
+        enforce(tzDatabaseDir.exists(), new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
+        enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
+
+        version(Android)
+        {
+            auto tzfileOffset = name in tzdataIndex(tzDatabaseDir);
+            enforce(tzfileOffset, new DateTimeException(format("The time zone %s is not listed.", name)));
+            string tzFilename = separate_index ? "zoneinfo.dat" : "tzdata";
+            const file = asNormalizedPath(chainPath(tzDatabaseDir, tzFilename)).to!string;
+        }
+        else
+            const file = asNormalizedPath(chainPath(tzDatabaseDir, name)).to!string;
+
+        enforce(file.exists(), new DateTimeException(format("File %s does not exist.", file)));
+        enforce(file.isFile, new DateTimeException(format("%s is not a file.", file)));
+
+        auto tzFile = File(file);
+        version(Android) tzFile.seek(*tzfileOffset);
+        immutable gmtZone = name.representation().canFind("GMT");
+
+        try
+        {
+            _enforceValidTZFile(readVal!(char[])(tzFile, 4) == "TZif");
+
+            immutable char tzFileVersion = readVal!char(tzFile);
+            _enforceValidTZFile(tzFileVersion == '\0' || tzFileVersion == '2' || tzFileVersion == '3');
+
+            {
+                auto zeroBlock = readVal!(ubyte[])(tzFile, 15);
+                bool allZeroes = true;
+
+                foreach (val; zeroBlock)
+                {
+                    if (val != 0)
+                    {
+                        allZeroes = false;
+                        break;
+                    }
+                }
+
+                _enforceValidTZFile(allZeroes);
+            }
+
+
+            // The number of UTC/local indicators stored in the file.
+            auto tzh_ttisgmtcnt = readVal!int(tzFile);
+
+            // The number of standard/wall indicators stored in the file.
+            auto tzh_ttisstdcnt = readVal!int(tzFile);
+
+            // The number of leap seconds for which data is stored in the file.
+            auto tzh_leapcnt = readVal!int(tzFile);
+
+            // The number of "transition times" for which data is stored in the file.
+            auto tzh_timecnt = readVal!int(tzFile);
+
+            // The number of "local time types" for which data is stored in the file (must not be zero).
+            auto tzh_typecnt = readVal!int(tzFile);
+            _enforceValidTZFile(tzh_typecnt != 0);
+
+            // The number of characters of "timezone abbreviation strings" stored in the file.
+            auto tzh_charcnt = readVal!int(tzFile);
+
+            // time_ts where DST transitions occur.
+            auto transitionTimeTs = new long[](tzh_timecnt);
+            foreach (ref transition; transitionTimeTs)
+                transition = readVal!int(tzFile);
+
+            // Indices into ttinfo structs indicating the changes
+            // to be made at the corresponding DST transition.
+            auto ttInfoIndices = new ubyte[](tzh_timecnt);
+            foreach (ref ttInfoIndex; ttInfoIndices)
+                ttInfoIndex = readVal!ubyte(tzFile);
+
+            // ttinfos which give info on DST transitions.
+            auto tempTTInfos = new TempTTInfo[](tzh_typecnt);
+            foreach (ref ttInfo; tempTTInfos)
+                ttInfo = readVal!TempTTInfo(tzFile);
+
+            // The array of time zone abbreviation characters.
+            auto tzAbbrevChars = readVal!(char[])(tzFile, tzh_charcnt);
+
+            auto leapSeconds = new LeapSecond[](tzh_leapcnt);
+            foreach (ref leapSecond; leapSeconds)
+            {
+                // The time_t when the leap second occurs.
+                auto timeT = readVal!int(tzFile);
+
+                // The total number of leap seconds to be applied after
+                // the corresponding leap second.
+                auto total = readVal!int(tzFile);
+
+                leapSecond = LeapSecond(timeT, total);
+            }
+
+            // Indicate whether each corresponding DST transition were specified
+            // in standard time or wall clock time.
+            auto transitionIsStd = new bool[](tzh_ttisstdcnt);
+            foreach (ref isStd; transitionIsStd)
+                isStd = readVal!bool(tzFile);
+
+            // Indicate whether each corresponding DST transition associated with
+            // local time types are specified in UTC or local time.
+            auto transitionInUTC = new bool[](tzh_ttisgmtcnt);
+            foreach (ref inUTC; transitionInUTC)
+                inUTC = readVal!bool(tzFile);
+
+            _enforceValidTZFile(!tzFile.eof);
+
+            // If version 2 or 3, the information is duplicated in 64-bit.
+            if (tzFileVersion == '2' || tzFileVersion == '3')
+            {
+                _enforceValidTZFile(readVal!(char[])(tzFile, 4) == "TZif");
+
+                immutable char tzFileVersion2 = readVal!(char)(tzFile);
+                _enforceValidTZFile(tzFileVersion2 == '2' || tzFileVersion2 == '3');
+
+                {
+                    auto zeroBlock = readVal!(ubyte[])(tzFile, 15);
+                    bool allZeroes = true;
+
+                    foreach (val; zeroBlock)
+                    {
+                        if (val != 0)
+                        {
+                            allZeroes = false;
+                            break;
+                        }
+                    }
+
+                    _enforceValidTZFile(allZeroes);
+                }
+
+
+                // The number of UTC/local indicators stored in the file.
+                tzh_ttisgmtcnt = readVal!int(tzFile);
+
+                // The number of standard/wall indicators stored in the file.
+                tzh_ttisstdcnt = readVal!int(tzFile);
+
+                // The number of leap seconds for which data is stored in the file.
+                tzh_leapcnt = readVal!int(tzFile);
+
+                // The number of "transition times" for which data is stored in the file.
+                tzh_timecnt = readVal!int(tzFile);
+
+                // The number of "local time types" for which data is stored in the file (must not be zero).
+                tzh_typecnt = readVal!int(tzFile);
+                _enforceValidTZFile(tzh_typecnt != 0);
+
+                // The number of characters of "timezone abbreviation strings" stored in the file.
+                tzh_charcnt = readVal!int(tzFile);
+
+                // time_ts where DST transitions occur.
+                transitionTimeTs = new long[](tzh_timecnt);
+                foreach (ref transition; transitionTimeTs)
+                    transition = readVal!long(tzFile);
+
+                // Indices into ttinfo structs indicating the changes
+                // to be made at the corresponding DST transition.
+                ttInfoIndices = new ubyte[](tzh_timecnt);
+                foreach (ref ttInfoIndex; ttInfoIndices)
+                    ttInfoIndex = readVal!ubyte(tzFile);
+
+                // ttinfos which give info on DST transitions.
+                tempTTInfos = new TempTTInfo[](tzh_typecnt);
+                foreach (ref ttInfo; tempTTInfos)
+                    ttInfo = readVal!TempTTInfo(tzFile);
+
+                // The array of time zone abbreviation characters.
+                tzAbbrevChars = readVal!(char[])(tzFile, tzh_charcnt);
+
+                leapSeconds = new LeapSecond[](tzh_leapcnt);
+                foreach (ref leapSecond; leapSeconds)
+                {
+                    // The time_t when the leap second occurs.
+                    auto timeT = readVal!long(tzFile);
+
+                    // The total number of leap seconds to be applied after
+                    // the corresponding leap second.
+                    auto total = readVal!int(tzFile);
+
+                    leapSecond = LeapSecond(timeT, total);
+                }
+
+                // Indicate whether each corresponding DST transition were specified
+                // in standard time or wall clock time.
+                transitionIsStd = new bool[](tzh_ttisstdcnt);
+                foreach (ref isStd; transitionIsStd)
+                    isStd = readVal!bool(tzFile);
+
+                // Indicate whether each corresponding DST transition associated with
+                // local time types are specified in UTC or local time.
+                transitionInUTC = new bool[](tzh_ttisgmtcnt);
+                foreach (ref inUTC; transitionInUTC)
+                    inUTC = readVal!bool(tzFile);
+            }
+
+            _enforceValidTZFile(tzFile.readln().strip().empty);
+
+            cast(void) tzFile.readln();
+
+            version(Android)
+            {
+                // Android uses a single file for all timezone data, so the file
+                // doesn't end here.
+            }
+            else
+            {
+                _enforceValidTZFile(tzFile.readln().strip().empty);
+                _enforceValidTZFile(tzFile.eof);
+            }
+
+
+            auto transitionTypes = new TransitionType*[](tempTTInfos.length);
+
+            foreach (i, ref ttype; transitionTypes)
+            {
+                bool isStd = false;
+
+                if (i < transitionIsStd.length && !transitionIsStd.empty)
+                    isStd = transitionIsStd[i];
+
+                bool inUTC = false;
+
+                if (i < transitionInUTC.length && !transitionInUTC.empty)
+                    inUTC = transitionInUTC[i];
+
+                ttype = new TransitionType(isStd, inUTC);
+            }
+
+            auto ttInfos = new immutable(TTInfo)*[](tempTTInfos.length);
+            foreach (i, ref ttInfo; ttInfos)
+            {
+                auto tempTTInfo = tempTTInfos[i];
+
+                if (gmtZone)
+                    tempTTInfo.tt_gmtoff = -tempTTInfo.tt_gmtoff;
+
+                auto abbrevChars = tzAbbrevChars[tempTTInfo.tt_abbrind .. $];
+                string abbrev = abbrevChars[0 .. abbrevChars.countUntil('\0')].idup;
+
+                ttInfo = new immutable(TTInfo)(tempTTInfos[i], abbrev);
+            }
+
+            auto tempTransitions = new TempTransition[](transitionTimeTs.length);
+            foreach (i, ref tempTransition; tempTransitions)
+            {
+                immutable ttiIndex = ttInfoIndices[i];
+                auto transitionTimeT = transitionTimeTs[i];
+                auto ttype = transitionTypes[ttiIndex];
+                auto ttInfo = ttInfos[ttiIndex];
+
+                tempTransition = TempTransition(transitionTimeT, ttInfo, ttype);
+            }
+
+            if (tempTransitions.empty)
+            {
+                _enforceValidTZFile(ttInfos.length == 1 && transitionTypes.length == 1);
+                tempTransitions ~= TempTransition(0, ttInfos[0], transitionTypes[0]);
+            }
+
+            sort!"a.timeT < b.timeT"(tempTransitions);
+            sort!"a.timeT < b.timeT"(leapSeconds);
+
+            auto transitions = new Transition[](tempTransitions.length);
+            foreach (i, ref transition; transitions)
+            {
+                auto tempTransition = tempTransitions[i];
+                auto transitionTimeT = tempTransition.timeT;
+                auto ttInfo = tempTransition.ttInfo;
+
+                _enforceValidTZFile(i == 0 || transitionTimeT > tempTransitions[i - 1].timeT);
+
+                transition = Transition(transitionTimeT, ttInfo);
+            }
+
+            string stdName;
+            string dstName;
+            bool hasDST = false;
+
+            foreach (transition; retro(transitions))
+            {
+                auto ttInfo = transition.ttInfo;
+
+                if (ttInfo.isDST)
+                {
+                    if (dstName.empty)
+                        dstName = ttInfo.abbrev;
+                    hasDST = true;
+                }
+                else
+                {
+                    if (stdName.empty)
+                        stdName = ttInfo.abbrev;
+                }
+
+                if (!stdName.empty && !dstName.empty)
+                    break;
+            }
+
+            return new immutable PosixTimeZone(transitions.idup, leapSeconds.idup, name, stdName, dstName, hasDST);
+        }
+        catch (DateTimeException dte)
+            throw dte;
+        catch (Exception e)
+            throw new DateTimeException("Not a valid TZ data file", __FILE__, __LINE__, e);
+    }
+
+    ///
+    @safe unittest
+    {
+        version(Posix)
+        {
+            auto tz = PosixTimeZone.getTimeZone("America/Los_Angeles");
+
+            assert(tz.name == "America/Los_Angeles");
+            assert(tz.stdName == "PST");
+            assert(tz.dstName == "PDT");
+        }
+    }
+
+    /++
+        Returns a list of the names of the time zones installed on the system.
+
+        Providing a sub-name narrows down the list of time zones (which
+        can number in the thousands). For example,
+        passing in "America" as the sub-name returns only the time zones which
+        begin with "America".
+
+        Params:
+            subName       = The first part of the desired time zones.
+            tzDatabaseDir = The directory where the TZ Database files are
+                            located.
+
+        Throws:
+            $(D FileException) if it fails to read from disk.
+      +/
+    static string[] getInstalledTZNames(string subName = "", string tzDatabaseDir = defaultTZDatabaseDir) @trusted
+    {
+        import std.algorithm.sorting : sort;
+        import std.array : appender;
+        import std.format : format;
+
+        version(Posix)
+            subName = strip(subName);
+        else version(Windows)
+        {
+            import std.array : replace;
+            import std.path : dirSeparator;
+            subName = replace(strip(subName), "/", dirSeparator);
+        }
+
+        enforce(tzDatabaseDir.exists(), new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
+        enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
+
+        auto timezones = appender!(string[])();
+
+        version(Android)
+        {
+            import std.algorithm.iteration : filter;
+            import std.algorithm.mutation : copy;
+            tzdataIndex(tzDatabaseDir).byKey.filter!(a => a.startsWith(subName)).copy(timezones);
+        }
+        else
+        {
+            foreach (DirEntry de; dirEntries(tzDatabaseDir, SpanMode.depth))
+            {
+                if (de.isFile)
+                {
+                    auto tzName = de.name[tzDatabaseDir.length .. $];
+
+                    if (!tzName.extension().empty ||
+                        !tzName.startsWith(subName) ||
+                        tzName == "leapseconds" ||
+                        tzName == "+VERSION")
+                    {
+                        continue;
+                    }
+
+                    timezones.put(tzName);
+                }
+            }
+        }
+
+        sort(timezones.data);
+
+        return timezones.data;
+    }
+
+    version(Posix) @system unittest
+    {
+        import std.exception : assertNotThrown;
+        import std.stdio : writefln;
+        static void testPTZSuccess(string tzName)
+        {
+            scope(failure) writefln("TZName which threw: %s", tzName);
+
+            PosixTimeZone.getTimeZone(tzName);
+        }
+
+        static void testPTZFailure(string tzName)
+        {
+            scope(success) writefln("TZName which was supposed to throw: %s", tzName);
+
+            PosixTimeZone.getTimeZone(tzName);
+        }
+
+        auto tzNames = getInstalledTZNames();
+
+        foreach (tzName; tzNames)
+            assertNotThrown!DateTimeException(testPTZSuccess(tzName));
+
+        // No timezone directories on Android, just a single tzdata file
+        version(Android)
+        {}
+        else
+        {
+            foreach (DirEntry de; dirEntries(defaultTZDatabaseDir, SpanMode.depth))
+            {
+                if (de.isFile)
+                {
+                    auto tzName = de.name[defaultTZDatabaseDir.length .. $];
+
+                    if (!canFind(tzNames, tzName))
+                        assertThrown!DateTimeException(testPTZFailure(tzName));
+                }
+            }
+        }
+    }
+
+
+private:
+
+    /+
+        Holds information on when a time transition occures (usually a
+        transition to or from DST) as well as a pointer to the $(D TTInfo) which
+        holds information on the utc offset past the transition.
+      +/
+    struct Transition
+    {
+        this(long timeT, immutable (TTInfo)* ttInfo) @safe pure
+        {
+            this.timeT = timeT;
+            this.ttInfo = ttInfo;
+        }
+
+        long    timeT;
+        immutable (TTInfo)* ttInfo;
+    }
+
+
+    /+
+        Holds information on when a leap second occurs.
+      +/
+    struct LeapSecond
+    {
+        this(long timeT, int total) @safe pure
+        {
+            this.timeT = timeT;
+            this.total = total;
+        }
+
+        long timeT;
+        int total;
+    }
+
+    /+
+        Holds information on the utc offset after a transition as well as
+        whether DST is in effect after that transition.
+      +/
+    struct TTInfo
+    {
+        this(in TempTTInfo tempTTInfo, string abbrev) @safe immutable pure
+        {
+            utcOffset = tempTTInfo.tt_gmtoff;
+            isDST = tempTTInfo.tt_isdst;
+            this.abbrev = abbrev;
+        }
+
+        immutable int    utcOffset;  // Offset from UTC.
+        immutable bool   isDST;      // Whether DST is in effect.
+        immutable string abbrev;     // The current abbreviation for the time zone.
+    }
+
+
+    /+
+        Struct used to hold information relating to $(D TTInfo) while organizing
+        the time zone information prior to putting it in its final form.
+      +/
+    struct TempTTInfo
+    {
+        this(int gmtOff, bool isDST, ubyte abbrInd) @safe pure
+        {
+            tt_gmtoff = gmtOff;
+            tt_isdst = isDST;
+            tt_abbrind = abbrInd;
+        }
+
+        int   tt_gmtoff;
+        bool  tt_isdst;
+        ubyte tt_abbrind;
+    }
+
+
+    /+
+        Struct used to hold information relating to $(D Transition) while
+        organizing the time zone information prior to putting it in its final
+        form.
+      +/
+    struct TempTransition
+    {
+        this(long timeT, immutable (TTInfo)* ttInfo, TransitionType* ttype) @safe pure
+        {
+            this.timeT = timeT;
+            this.ttInfo = ttInfo;
+            this.ttype = ttype;
+        }
+
+        long                timeT;
+        immutable (TTInfo)* ttInfo;
+        TransitionType*     ttype;
+    }
+
+
+    /+
+        Struct used to hold information relating to $(D Transition) and
+        $(D TTInfo) while organizing the time zone information prior to putting
+        it in its final form.
+      +/
+    struct TransitionType
+    {
+        this(bool isStd, bool inUTC) @safe pure
+        {
+            this.isStd = isStd;
+            this.inUTC = inUTC;
+        }
+
+        // Whether the transition is in std time (as opposed to wall clock time).
+        bool isStd;
+
+        // Whether the transition is in UTC (as opposed to local time).
+        bool inUTC;
+    }
+
+
+    /+
+        Reads an int from a TZ file.
+      +/
+    static T readVal(T)(ref File tzFile) @trusted
+        if ((isIntegral!T || isSomeChar!T) || is(Unqual!T == bool))
+    {
+        import std.bitmanip : bigEndianToNative;
+        T[1] buff;
+
+        _enforceValidTZFile(!tzFile.eof);
+        tzFile.rawRead(buff);
+
+        return bigEndianToNative!T(cast(ubyte[T.sizeof]) buff);
+    }
+
+    /+
+        Reads an array of values from a TZ file.
+      +/
+    static T readVal(T)(ref File tzFile, size_t length) @trusted
+        if (isArray!T)
+    {
+        auto buff = new T(length);
+
+        _enforceValidTZFile(!tzFile.eof);
+        tzFile.rawRead(buff);
+
+        return buff;
+    }
+
+
+    /+
+        Reads a $(D TempTTInfo) from a TZ file.
+      +/
+    static T readVal(T)(ref File tzFile) @safe
+        if (is(T == TempTTInfo))
+    {
+        return TempTTInfo(readVal!int(tzFile),
+                          readVal!bool(tzFile),
+                          readVal!ubyte(tzFile));
+    }
+
+
+    /+
+        Throws:
+            $(LREF DateTimeException) if $(D result) is false.
+      +/
+    static void _enforceValidTZFile(bool result, size_t line = __LINE__) @safe pure
+    {
+        if (!result)
+            throw new DateTimeException("Not a valid tzdata file.", __FILE__, line);
+    }
+
+
+    int calculateLeapSeconds(long stdTime) @safe const pure nothrow
+    {
+        if (_leapSeconds.empty)
+            return 0;
+
+        immutable unixTime = stdTimeToUnixTime(stdTime);
+
+        if (_leapSeconds.front.timeT >= unixTime)
+            return 0;
+
+        immutable found = countUntil!"b < a.timeT"(_leapSeconds, unixTime);
+
+        if (found == -1)
+            return _leapSeconds.back.total;
+
+        immutable leapSecond = found == 0 ? _leapSeconds[0] : _leapSeconds[found - 1];
+
+        return leapSecond.total;
+    }
+
+
+    this(immutable Transition[] transitions,
+         immutable LeapSecond[] leapSeconds,
+         string name,
+         string stdName,
+         string dstName,
+         bool hasDST) @safe immutable pure
+    {
+        if (dstName.empty && !stdName.empty)
+            dstName = stdName;
+        else if (stdName.empty && !dstName.empty)
+            stdName = dstName;
+
+        super(name, stdName, dstName);
+
+        if (!transitions.empty)
+        {
+            foreach (i, transition; transitions[0 .. $-1])
+                _enforceValidTZFile(transition.timeT < transitions[i + 1].timeT);
+        }
+
+        foreach (i, leapSecond; leapSeconds)
+            _enforceValidTZFile(i == leapSeconds.length - 1 || leapSecond.timeT < leapSeconds[i + 1].timeT);
+
+        _transitions = transitions;
+        _leapSeconds = leapSeconds;
+        _hasDST = hasDST;
+    }
+
+    // Android concatenates the usual timezone directories into a single file,
+    // tzdata, along with an index to jump to each timezone's offset.  In older
+    // versions of Android, the index was stored in a separate file, zoneinfo.idx,
+    // whereas now it's stored at the beginning of tzdata.
+    version(Android)
+    {
+        // Keep track of whether there's a separate index, zoneinfo.idx.  Only
+        // check this after calling tzdataIndex, as it's initialized there.
+        static shared bool separate_index;
+
+        // Extracts the name of each time zone and the offset where its data is
+        // located in the tzdata file from the index and caches it for later.
+        static const(uint[string]) tzdataIndex(string tzDir)
+        {
+            import std.concurrency : initOnce;
+
+            static __gshared uint[string] _tzIndex;
+
+            // _tzIndex is initialized once and then shared across all threads.
+            initOnce!_tzIndex(
+            {
+                import std.conv : to;
+                import std.format : format;
+                import std.path : asNormalizedPath, chainPath;
+
+                enum indexEntrySize = 52;
+                const combinedFile = asNormalizedPath(chainPath(tzDir, "tzdata")).to!string;
+                const indexFile = asNormalizedPath(chainPath(tzDir, "zoneinfo.idx")).to!string;
+                File tzFile;
+                uint indexEntries, dataOffset;
+                uint[string] initIndex;
+
+                // Check for the combined file tzdata, which stores the index
+                // and the time zone data together.
+                if (combinedFile.exists() && combinedFile.isFile)
+                {
+                    tzFile = File(combinedFile);
+                    _enforceValidTZFile(readVal!(char[])(tzFile, 6) == "tzdata");
+                    auto tzDataVersion = readVal!(char[])(tzFile, 6);
+                    _enforceValidTZFile(tzDataVersion[5] == '\0');
+
+                    uint indexOffset = readVal!uint(tzFile);
+                    dataOffset = readVal!uint(tzFile);
+                    readVal!uint(tzFile);
+
+                    indexEntries = (dataOffset - indexOffset) / indexEntrySize;
+                    separate_index = false;
+                }
+                else if (indexFile.exists() && indexFile.isFile)
+                {
+                    tzFile = File(indexFile);
+                    indexEntries = to!uint(tzFile.size/indexEntrySize);
+                    separate_index = true;
+                }
+                else
+                {
+                    throw new DateTimeException(format("Both timezone files %s and %s do not exist.",
+                                                       combinedFile, indexFile));
+                }
+
+                foreach (_; 0 .. indexEntries)
+                {
+                    string tzName = to!string(readVal!(char[])(tzFile, 40).ptr);
+                    uint tzOffset = readVal!uint(tzFile);
+                    readVal!(uint[])(tzFile, 2);
+                    initIndex[tzName] = dataOffset + tzOffset;
+                }
+                initIndex.rehash;
+                return initIndex;
+            }());
+            return _tzIndex;
+        }
+    }
+
+    // List of times when the utc offset changes.
+    immutable Transition[] _transitions;
+
+    // List of leap second occurrences.
+    immutable LeapSecond[] _leapSeconds;
+
+    // Whether DST is in effect for this time zone at any point in time.
+    immutable bool _hasDST;
 }
