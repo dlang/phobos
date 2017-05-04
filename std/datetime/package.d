@@ -114,35 +114,11 @@ public import std.datetime.systime;
 public import std.datetime.timeofday;
 public import std.datetime.timezone;
 
-
-import core.exception; // AssertError
-
+import core.exception : AssertError;
 import std.typecons : Flag, Yes, No;
-import std.exception; // assertThrown, enforce
-import std.range.primitives; // back, ElementType, empty, front, hasLength,
-    // hasSlicing, isRandomAccessRange, popFront
-import std.traits; // isIntegral, isSafe, isSigned, isSomeString, Unqual
-// FIXME
-import std.functional; //: unaryFun;
+import std.functional : unaryFun;
+import std.traits;
 
-version(Windows)
-{
-    import core.stdc.time; // time_t
-    import core.sys.windows.windows;
-    import core.sys.windows.winsock2;
-    import std.windows.registry;
-
-    // Uncomment and run unittests to print missing Windows TZ translations.
-    // Please subscribe to Microsoft Daylight Saving Time & Time Zone Blog
-    // (https://blogs.technet.microsoft.com/dst2007/) if you feel responsible
-    // for updating the translations.
-    // version = UpdateWindowsTZTranslations;
-}
-else version(Posix)
-{
-    import core.sys.posix.signal : timespec;
-    import core.sys.posix.sys.types; // time_t
-}
 
 //Verify module example.
 @safe unittest
@@ -162,10 +138,22 @@ else version(Posix)
            dur!"days"(-26));
 }
 
+@safe unittest
+{
+    import std.traits : hasUnsharedAliasing;
+    /* Issue 6642 */
+    static assert(!hasUnsharedAliasing!Date);
+    static assert(!hasUnsharedAliasing!TimeOfDay);
+    static assert(!hasUnsharedAliasing!DateTime);
+    static assert(!hasUnsharedAliasing!SysTime);
+}
+
 
 //==============================================================================
-// Section with public enums and constants.
+// Everything after here will be deprecated after we have replacements which
+// use MonoTime and Duration.
 //==============================================================================
+
 
 /++
    Used by StopWatch to indicate whether it should start immediately upon
@@ -179,10 +167,6 @@ else version(Posix)
   +/
 alias AutoStart = Flag!"autoStart";
 
-
-//==============================================================================
-// Section with StopWatch and Benchmark Code.
-//==============================================================================
 
 /++
    $(D StopWatch) measures time as precisely as possible.
@@ -721,100 +705,4 @@ if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
     auto safeResult  = measureTime!((a){safeFunc();})();
     auto trustResult = measureTime!((a){trustFunc();})();
     auto sysResult   = measureTime!((a){sysFunc();})();
-}
-
-//==============================================================================
-// Private Section.
-//==============================================================================
-private:
-
-//==============================================================================
-// Section with private helper functions and templates.
-//==============================================================================
-
-/+
-    Template to help with converting between time units.
- +/
-template hnsecsPer(string units)
-if (CmpTimeUnits!(units, "months") < 0)
-{
-    static if (units == "hnsecs")
-        enum hnsecsPer = 1L;
-    else static if (units == "usecs")
-        enum hnsecsPer = 10L;
-    else static if (units == "msecs")
-        enum hnsecsPer = 1000 * hnsecsPer!"usecs";
-    else static if (units == "seconds")
-        enum hnsecsPer = 1000 * hnsecsPer!"msecs";
-    else static if (units == "minutes")
-        enum hnsecsPer = 60 * hnsecsPer!"seconds";
-    else static if (units == "hours")
-        enum hnsecsPer = 60 * hnsecsPer!"minutes";
-    else static if (units == "days")
-        enum hnsecsPer = 24 * hnsecsPer!"hours";
-    else static if (units == "weeks")
-        enum hnsecsPer = 7 * hnsecsPer!"days";
-}
-
-
-/+
-    The time units which are one step smaller than the given units.
-  +/
-template nextSmallerTimeUnits(string units)
-if (validTimeUnits(units) &&
-    timeStrings.front != units)
-{
-    import std.algorithm.searching : countUntil;
-    enum nextSmallerTimeUnits = timeStrings[countUntil(timeStrings, units) - 1];
-}
-
-@safe unittest
-{
-    assert(nextSmallerTimeUnits!"years" == "months");
-    assert(nextSmallerTimeUnits!"months" == "weeks");
-    assert(nextSmallerTimeUnits!"weeks" == "days");
-    assert(nextSmallerTimeUnits!"days" == "hours");
-    assert(nextSmallerTimeUnits!"hours" == "minutes");
-    assert(nextSmallerTimeUnits!"minutes" == "seconds");
-    assert(nextSmallerTimeUnits!"seconds" == "msecs");
-    assert(nextSmallerTimeUnits!"msecs" == "usecs");
-    assert(nextSmallerTimeUnits!"usecs" == "hnsecs");
-    static assert(!__traits(compiles, nextSmallerTimeUnits!"hnsecs"));
-}
-
-
-/+
-    The time units which are one step larger than the given units.
-  +/
-template nextLargerTimeUnits(string units)
-if (validTimeUnits(units) &&
-    timeStrings.back != units)
-{
-    import std.algorithm.searching : countUntil;
-    enum nextLargerTimeUnits = timeStrings[countUntil(timeStrings, units) + 1];
-}
-
-@safe unittest
-{
-    assert(nextLargerTimeUnits!"hnsecs" == "usecs");
-    assert(nextLargerTimeUnits!"usecs" == "msecs");
-    assert(nextLargerTimeUnits!"msecs" == "seconds");
-    assert(nextLargerTimeUnits!"seconds" == "minutes");
-    assert(nextLargerTimeUnits!"minutes" == "hours");
-    assert(nextLargerTimeUnits!"hours" == "days");
-    assert(nextLargerTimeUnits!"days" == "weeks");
-    assert(nextLargerTimeUnits!"weeks" == "months");
-    assert(nextLargerTimeUnits!"months" == "years");
-    static assert(!__traits(compiles, nextLargerTimeUnits!"years"));
-}
-
-
-@safe unittest
-{
-    import std.traits : hasUnsharedAliasing;
-    /* Issue 6642 */
-    static assert(!hasUnsharedAliasing!Date);
-    static assert(!hasUnsharedAliasing!TimeOfDay);
-    static assert(!hasUnsharedAliasing!DateTime);
-    static assert(!hasUnsharedAliasing!SysTime);
 }
