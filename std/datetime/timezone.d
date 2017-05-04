@@ -36,7 +36,7 @@ else version(Posix)
 
 version(unittest) import std.exception : assertThrown;
 
-import std.datetime : Clock, Date, DateTime, stdTimeToUnixTime, SysTime, TimeOfDay; // temporary
+import std.datetime : Clock, Date, DateTime, stdTimeToUnixTime, SysTime; // temporary
 
 /++
     Represents a time zone. It is used with $(LREF SysTime) to indicate the time

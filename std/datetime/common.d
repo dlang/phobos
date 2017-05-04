@@ -215,7 +215,7 @@ int daysToDayOfWeek(DayOfWeek currDoW, DayOfWeek dow) @safe pure nothrow
         return 0;
     if (currDoW < dow)
         return dow - currDoW;
-    return (DayOfWeek.sat - currDoW) + dow + 1;
+    return DayOfWeek.sat - currDoW + dow + 1;
 }
 
 @safe unittest
@@ -295,7 +295,7 @@ int monthsToMonth(int currMonth, int month) @safe pure
         return 0;
     if (currMonth < month)
         return month - currMonth;
-    return (Month.dec - currMonth) + month;
+    return Month.dec - currMonth + month;
 }
 
 @safe unittest
@@ -373,7 +373,7 @@ bool yearIsLeapYear(int year) @safe pure nothrow
 {
     import std.format : format;
     foreach (year; [1, 2, 3, 5, 6, 7, 100, 200, 300, 500, 600, 700, 1998, 1999,
-                   2001, 2002, 2003, 2005, 2006, 2007, 2009, 2010, 2011])
+                    2001, 2002, 2003, 2005, 2006, 2007, 2009, 2010, 2011])
     {
         assert(!yearIsLeapYear(year), format("year: %s.", year));
         assert(!yearIsLeapYear(-year), format("year: %s.", year));
@@ -455,14 +455,14 @@ private:
 @safe unittest
 {
     import core.time : Duration;
-    import std.datetime : Date, DateTime, Interval, SysTime, TimeOfDay; // temporary
+    import std.datetime : Date, DateTime, Interval, SysTime; // temporary
     /+
     import std.datetime.date : Date;
     import std.datetime.datetime : DateTime;
     import std.datetime.interval : Interval;
     import std.datetime.systime : SysTime;
-    import std.datetime.timeofday : TimeOfDay;
     +/
+    import std.datetime.timeofday;
 
     static assert(isTimePoint!Date);
     static assert(isTimePoint!DateTime);
@@ -477,14 +477,12 @@ private:
 @safe unittest
 {
     import core.time;
-    import std.datetime : Date, DateTime, Interval, NegInfInterval, PosInfInterval, SysTime, TimeOfDay; // temporary
-    /+
-    import std.datetime.date;
-    import std.datetime.datetime;
+    import std.datetime : Date, DateTime, SysTime; // temporary
+    //import std.datetime.date;
+    //import std.datetime.datetime;
     import std.datetime.interval;
-    import std.datetime.systime;
+    //import std.datetime.systime;
     import std.datetime.timeofday;
-    +/
     import std.meta : AliasSeq;
 
     foreach (TP; AliasSeq!(Date, DateTime, SysTime, TimeOfDay))
@@ -497,6 +495,150 @@ private:
         static assert(!isTimePoint!T, T.stringof);
 }
 
+
+/++
+    Whether all of the given strings are valid units of time.
+
+    $(D "nsecs") is not considered a valid unit of time. Nothing in std.datetime
+    can handle precision greater than hnsecs, and the few functions in core.time
+    which deal with "nsecs" deal with it explicitly.
+  +/
+bool validTimeUnits(string[] units...) @safe pure nothrow
+{
+    import std.algorithm.searching : canFind;
+    foreach (str; units)
+    {
+        if (!canFind(timeStrings[], str))
+            return false;
+    }
+    return true;
+}
+
+
+/++
+    Compares two time unit strings. $(D "years") are the largest units and
+    $(D "hnsecs") are the smallest.
+
+    Returns:
+        $(BOOKTABLE,
+        $(TR $(TD this &lt; rhs) $(TD &lt; 0))
+        $(TR $(TD this == rhs) $(TD 0))
+        $(TR $(TD this &gt; rhs) $(TD &gt; 0))
+        )
+
+    Throws:
+        $(LREF DateTimeException) if either of the given strings is not a valid
+        time unit string.
+ +/
+int cmpTimeUnits(string lhs, string rhs) @safe pure
+{
+    import std.algorithm.searching : countUntil;
+    import std.exception : enforce;
+    import std.format : format;
+
+    auto tstrings = timeStrings;
+    immutable indexOfLHS = countUntil(tstrings, lhs);
+    immutable indexOfRHS = countUntil(tstrings, rhs);
+
+    enforce(indexOfLHS != -1, format("%s is not a valid TimeString", lhs));
+    enforce(indexOfRHS != -1, format("%s is not a valid TimeString", rhs));
+
+    if (indexOfLHS < indexOfRHS)
+        return -1;
+    if (indexOfLHS > indexOfRHS)
+        return 1;
+
+    return 0;
+}
+
+@safe unittest
+{
+    foreach (i, outerUnits; timeStrings)
+    {
+        assert(cmpTimeUnits(outerUnits, outerUnits) == 0);
+
+        // For some reason, $ won't compile.
+        foreach (innerUnits; timeStrings[i + 1 .. timeStrings.length])
+            assert(cmpTimeUnits(outerUnits, innerUnits) == -1);
+    }
+
+    foreach (i, outerUnits; timeStrings)
+    {
+        foreach (innerUnits; timeStrings[0 .. i])
+            assert(cmpTimeUnits(outerUnits, innerUnits) == 1);
+    }
+}
+
+
+/++
+    Compares two time unit strings at compile time. $(D "years") are the largest
+    units and $(D "hnsecs") are the smallest.
+
+    This template is used instead of $(D cmpTimeUnits) because exceptions
+    can't be thrown at compile time and $(D cmpTimeUnits) must enforce that
+    the strings it's given are valid time unit strings. This template uses a
+    template constraint instead.
+
+    Returns:
+        $(BOOKTABLE,
+        $(TR $(TD this &lt; rhs) $(TD &lt; 0))
+        $(TR $(TD this == rhs) $(TD 0))
+        $(TR $(TD this &gt; rhs) $(TD &gt; 0))
+        )
+ +/
+template CmpTimeUnits(string lhs, string rhs)
+if (validTimeUnits(lhs, rhs))
+{
+    enum CmpTimeUnits = cmpTimeUnitsCTFE(lhs, rhs);
+}
+
+
+/+
+    Helper function for $(D CmpTimeUnits).
+ +/
+private int cmpTimeUnitsCTFE(string lhs, string rhs) @safe pure nothrow
+{
+    import std.algorithm.searching : countUntil;
+    auto tstrings = timeStrings;
+    immutable indexOfLHS = countUntil(tstrings, lhs);
+    immutable indexOfRHS = countUntil(tstrings, rhs);
+
+    if (indexOfLHS < indexOfRHS)
+        return -1;
+    if (indexOfLHS > indexOfRHS)
+        return 1;
+
+    return 0;
+}
+
+@safe unittest
+{
+    import std.format : format;
+    import std.meta : AliasSeq;
+
+    static string genTest(size_t index)
+    {
+        auto currUnits = timeStrings[index];
+        auto test = format(`assert(CmpTimeUnits!("%s", "%s") == 0);`, currUnits, currUnits);
+
+        foreach (units; timeStrings[index + 1 .. $])
+            test ~= format(`assert(CmpTimeUnits!("%s", "%s") == -1);`, currUnits, units);
+
+        foreach (units; timeStrings[0 .. index])
+            test ~= format(`assert(CmpTimeUnits!("%s", "%s") == 1);`, currUnits, units);
+
+        return test;
+    }
+
+    static assert(timeStrings.length == 10);
+    foreach (n; AliasSeq!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
+        mixin(genTest(n));
+}
+
+
+//==============================================================================
+// Section with package-level helper functions and templates.
+//==============================================================================
 
 package:
 
