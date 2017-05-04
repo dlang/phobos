@@ -17,7 +17,7 @@ import std.typecons : Flag;
 
 version(unittest) import std.exception : assertThrown;
 
-import std.datetime : DateTime, SysTime; // temporary
+import std.datetime : SysTime; // temporary
 
 
 /++
@@ -1565,6 +1565,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
+    import std.datetime.datetime;
     import std.datetime.timeofday;
 
     assertThrown!DateTimeException(Interval!Date(Date(2010, 1, 1), Date(1, 1, 1)));
@@ -1630,6 +1631,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
+    import std.datetime.datetime;
     import std.datetime.timeofday;
 
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).length == dur!"days"(0));
@@ -1653,6 +1655,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
+    import std.datetime.datetime;
     import std.datetime.timeofday;
 
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).empty);
@@ -4121,6 +4124,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
+    import std.datetime.datetime;
     import std.datetime.timeofday;
 
     PosInfInterval!Date(Date.init);
@@ -4154,6 +4158,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
+    import std.datetime.datetime;
     import std.datetime.timeofday;
 
     assert(!PosInfInterval!Date(Date(2010, 1, 1)).empty);
@@ -6335,6 +6340,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
+    import std.datetime.datetime;
     import std.datetime.timeofday;
 
     NegInfInterval!Date(Date.init);
@@ -6365,6 +6371,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
+    import std.datetime.datetime;
     import std.datetime.timeofday;
 
     assert(!NegInfInterval!Date(Date(2010, 1, 1)).empty);
@@ -7592,6 +7599,7 @@ if (isTimePoint!TP &&
 @system unittest
 {
     import std.datetime.date;
+    import std.datetime.datetime;
     import std.datetime.timeofday;
 
     auto funcFwd = everyDayOfWeek!Date(DayOfWeek.mon);
@@ -7717,6 +7725,7 @@ if (isTimePoint!TP &&
 @system unittest
 {
     import std.datetime.date;
+    import std.datetime.datetime;
 
     auto funcFwd = everyMonth!Date(Month.jun);
     auto funcBwd = everyMonth!(Date, Direction.bwd)(Month.jun);
@@ -7821,6 +7830,7 @@ if (isTimePoint!TP &&
 @system unittest
 {
     import std.datetime.date;
+    import std.datetime.datetime;
     import std.datetime.timeofday;
 
     auto funcFwd = everyDuration!Date(dur!"days"(27));
@@ -7945,6 +7955,7 @@ if (isTimePoint!TP &&
 @system unittest
 {
     import std.datetime.date;
+    import std.datetime.datetime;
     import std.datetime.timeofday;
 
     {
@@ -8225,6 +8236,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
+    import std.datetime.datetime;
     import std.datetime.timeofday;
     import std.range.primitives;
 
@@ -8252,6 +8264,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
+    import std.datetime.datetime;
     import std.datetime.timeofday;
 
     {
@@ -8667,6 +8680,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
+    import std.datetime.datetime;
     import std.datetime.timeofday;
     import std.range.primitives;
 
@@ -8693,6 +8707,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
+    import std.datetime.datetime;
     import std.datetime.timeofday;
 
     {
@@ -8950,6 +8965,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
+    import std.datetime.datetime;
     import std.datetime.timeofday;
     import std.range.primitives;
 
@@ -8975,6 +8991,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
+    import std.datetime.datetime;
     import std.datetime.timeofday;
 
     {

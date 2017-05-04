@@ -455,13 +455,11 @@ private:
 @safe unittest
 {
     import core.time : Duration;
-    import std.datetime : Date, DateTime, Interval, SysTime; // temporary
-    /+
-    import std.datetime.date : Date;
-    import std.datetime.datetime : DateTime;
+    import std.datetime : SysTime; // temporary
+    import std.datetime.date;
+    import std.datetime.datetime;
     import std.datetime.interval : Interval;
-    import std.datetime.systime : SysTime;
-    +/
+    //import std.datetime.systime;
     import std.datetime.timeofday;
 
     static assert(isTimePoint!Date);
@@ -477,9 +475,9 @@ private:
 @safe unittest
 {
     import core.time;
-    import std.datetime : Date, DateTime, SysTime; // temporary
-    //import std.datetime.date;
-    //import std.datetime.datetime;
+    import std.datetime : SysTime; // temporary
+    import std.datetime.date;
+    import std.datetime.datetime;
     import std.datetime.interval;
     //import std.datetime.systime;
     import std.datetime.timeofday;
