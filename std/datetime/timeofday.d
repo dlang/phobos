@@ -564,6 +564,8 @@ public:
     ///
     @safe unittest
     {
+        import core.time : hours, minutes, seconds;
+
         assert(TimeOfDay(12, 12, 12) + seconds(1) == TimeOfDay(12, 12, 13));
         assert(TimeOfDay(12, 12, 12) + minutes(1) == TimeOfDay(12, 13, 12));
         assert(TimeOfDay(12, 12, 12) + hours(1) == TimeOfDay(13, 12, 12));

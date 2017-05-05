@@ -465,6 +465,9 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.date : Date;
+        import std.datetime.timeofday : TimeOfDay;
+
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).year == 1999);
         assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).year == 2010);
         assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).year == -7);
@@ -509,6 +512,9 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.date : Date;
+        import std.datetime.timeofday : TimeOfDay;
+
         assert(DateTime(Date(0, 1, 1), TimeOfDay(12, 30, 33)).yearBC == 1);
         assert(DateTime(Date(-1, 1, 1), TimeOfDay(10, 7, 2)).yearBC == 2);
         assert(DateTime(Date(-100, 1, 1), TimeOfDay(4, 59, 0)).yearBC == 101);
@@ -546,6 +552,9 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.date : Date;
+        import std.datetime.timeofday : TimeOfDay;
+
         auto dt = DateTime(Date(2010, 1, 1), TimeOfDay(7, 30, 0));
         dt.yearBC = 1;
         assert(dt == DateTime(Date(0, 1, 1), TimeOfDay(7, 30, 0)));
@@ -579,6 +588,9 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.date : Date;
+        import std.datetime.timeofday : TimeOfDay;
+
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).month == 7);
         assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).month == 10);
         assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).month == 4);
@@ -649,6 +661,9 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.date : Date;
+        import std.datetime.timeofday : TimeOfDay;
+
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(9, 7, 5)).day == 6);
         assert(DateTime(Date(2010, 10, 4), TimeOfDay(0, 0, 30)).day == 4);
         assert(DateTime(Date(-7, 4, 5), TimeOfDay(7, 45, 2)).day == 5);
@@ -961,6 +976,8 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.common : AllowDayOverflow;
+
         auto dt1 = DateTime(2010, 1, 1, 12, 30, 33);
         dt1.add!"months"(11);
         assert(dt1 == DateTime(2010, 12, 1, 12, 30, 33));
@@ -1023,6 +1040,8 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.common : AllowDayOverflow;
+
         auto dt1 = DateTime(2010, 1, 1, 12, 33, 33);
         dt1.roll!"months"(1);
         assert(dt1 == DateTime(2010, 2, 1, 12, 33, 33));
@@ -2018,6 +2037,8 @@ public:
     ///
     @safe unittest
     {
+        import core.time : hours, seconds;
+
         assert(DateTime(2015, 12, 31, 23, 59, 59) + seconds(1) ==
                DateTime(2016, 1, 1, 0, 0, 0));
 
@@ -2450,6 +2471,9 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.date : Date;
+        import std.datetime.timeofday : TimeOfDay;
+
         assert(DateTime(Date(1999, 1, 1), TimeOfDay(12, 22, 7)).dayOfYear == 1);
         assert(DateTime(Date(1999, 12, 31), TimeOfDay(7, 2, 59)).dayOfYear == 365);
         assert(DateTime(Date(2000, 12, 31), TimeOfDay(21, 20, 0)).dayOfYear == 366);
@@ -2501,6 +2525,9 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.date : Date;
+        import std.datetime.timeofday : TimeOfDay;
+
         assert(DateTime(Date(1, 1, 1), TimeOfDay(0, 0, 0)).dayOfGregorianCal == 1);
         assert(DateTime(Date(1, 12, 31), TimeOfDay(23, 59, 59)).dayOfGregorianCal == 365);
         assert(DateTime(Date(2, 1, 1), TimeOfDay(2, 2, 2)).dayOfGregorianCal == 366);
@@ -2539,6 +2566,9 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.date : Date;
+        import std.datetime.timeofday : TimeOfDay;
+
         auto dt = DateTime(Date.init, TimeOfDay(12, 0, 0));
         dt.dayOfGregorianCal = 1;
         assert(dt == DateTime(Date(1, 1, 1), TimeOfDay(12, 0, 0)));
@@ -2612,6 +2642,9 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.date : Date;
+        import std.datetime.timeofday : TimeOfDay;
+
         assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).endOfMonth ==
                DateTime(Date(1999, 1, 31), TimeOfDay(23, 59, 59)));
 
@@ -2675,6 +2708,9 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.date : Date;
+        import std.datetime.timeofday : TimeOfDay;
+
         assert(DateTime(Date(1999, 1, 6), TimeOfDay(0, 0, 0)).daysInMonth == 31);
         assert(DateTime(Date(1999, 2, 7), TimeOfDay(19, 30, 0)).daysInMonth == 28);
         assert(DateTime(Date(2000, 2, 7), TimeOfDay(5, 12, 27)).daysInMonth == 29);
@@ -2701,6 +2737,9 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.date : Date;
+        import std.datetime.timeofday : TimeOfDay;
+
         assert(DateTime(Date(1, 1, 1), TimeOfDay(12, 7, 0)).isAD);
         assert(DateTime(Date(2010, 12, 31), TimeOfDay(0, 0, 0)).isAD);
         assert(!DateTime(Date(0, 12, 31), TimeOfDay(23, 59, 59)).isAD);
@@ -2803,6 +2842,9 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.date : Date;
+        import std.datetime.timeofday : TimeOfDay;
+
         assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOString() ==
                "20100704T070612");
 
@@ -2856,6 +2898,9 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.date : Date;
+        import std.datetime.timeofday : TimeOfDay;
+
         assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toISOExtString() ==
                "2010-07-04T07:06:12");
 
@@ -2908,6 +2953,9 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.date : Date;
+        import std.datetime.timeofday : TimeOfDay;
+
         assert(DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)).toSimpleString() ==
                "2010-Jul-04 07:06:12");
 
@@ -3002,6 +3050,9 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.date : Date;
+        import std.datetime.timeofday : TimeOfDay;
+
         assert(DateTime.fromISOString("20100704T070612") ==
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
 
@@ -3091,6 +3142,9 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.date : Date;
+        import std.datetime.timeofday : TimeOfDay;
+
         assert(DateTime.fromISOExtString("2010-07-04T07:06:12") ==
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
 
@@ -3179,6 +3233,9 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.date : Date;
+        import std.datetime.timeofday : TimeOfDay;
+
         assert(DateTime.fromSimpleString("2010-Jul-04 07:06:12") ==
                DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
         assert(DateTime.fromSimpleString("1998-Dec-25 02:15:00") ==

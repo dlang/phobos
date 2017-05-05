@@ -787,6 +787,8 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.common : AllowDayOverflow;
+
         auto d1 = Date(2010, 1, 1);
         d1.add!"months"(11);
         assert(d1 == Date(2010, 12, 1));
@@ -1554,6 +1556,8 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.common : AllowDayOverflow;
+
         auto d1 = Date(2010, 1, 1);
         d1.roll!"months"(1);
         assert(d1 == Date(2010, 2, 1));
@@ -2432,6 +2436,8 @@ public:
     ///
     @safe unittest
     {
+        import core.time : days;
+
         assert(Date(2015, 12, 31) + days(1) == Date(2016, 1, 1));
         assert(Date(2004, 2, 26) + days(4) == Date(2004, 3, 1));
 
@@ -4410,7 +4416,7 @@ private:
 
 enum daysInYear     = 365;  // The number of days in a non-leap year.
 enum daysInLeapYear = 366;  // The numbef or days in a leap year.
-enum daysIn4Years   = daysInYear * 3 + daysInLeapYear;  /// Number of days in 4 years.
+enum daysIn4Years   = daysInYear * 3 + daysInLeapYear;  // Number of days in 4 years.
 enum daysIn100Years = daysIn4Years * 25 - 1;  // The number of days in 100 years.
 enum daysIn400Years = daysIn100Years * 4 + 1; // The number of days in 400 years.
 
