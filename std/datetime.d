@@ -31739,7 +31739,7 @@ public:
 
     @nogc @safe unittest
     {
-        auto sw = StopWatch(Yes.autoStart);
+        auto sw = StopWatch(AutoStart.yes);
         sw.stop();
     }
 
@@ -31902,7 +31902,7 @@ public:
         assert(sw1.running);
         sw1.stop();
         assert(!sw1.running);
-        StopWatch sw2 = Yes.autoStart;
+        StopWatch sw2 = AutoStart.yes;
         assert(sw2.running);
         sw2.stop();
         assert(!sw2.running);
@@ -33997,7 +33997,7 @@ static int daysToDayOfWeek(DayOfWeek currDoW, DayOfWeek dow) @safe pure nothrow
 
 --------------------
 {
-    auto sw = StopWatch(Yes.autoStart);
+    auto sw = StopWatch(AutoStart.yes);
     scope(exit)
     {
         TickDuration a = sw.peek();
@@ -34025,7 +34025,7 @@ if (isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
             unaryFun!(func)(_sw.peek());
         }
     }
-    return Result(Yes.autoStart);
+    return Result(AutoStart.yes);
 }
 
 auto measureTime(alias func)()
@@ -34043,7 +34043,7 @@ if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
             unaryFun!(func)(_sw.peek());
         }
     }
-    return Result(Yes.autoStart);
+    return Result(AutoStart.yes);
 }
 
 // Verify Example.
@@ -34056,7 +34056,7 @@ if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
     }
 
     {
-        auto sw = StopWatch(Yes.autoStart);
+        auto sw = StopWatch(AutoStart.yes);
         scope(exit)
         {
             TickDuration a = sw.peek();
