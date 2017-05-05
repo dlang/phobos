@@ -465,7 +465,7 @@ if (isSomeString!(typeof(fmt)))
 /// ditto
 uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 {
-    import std.conv : text, to;
+    import std.conv : text;
 
     alias FPfmt = void function(Writer, scope const(void)*, const ref FormatSpec!Char) @safe pure nothrow;
 
@@ -501,7 +501,7 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 
         if (spec.width == spec.DYNAMIC)
         {
-            auto width = to!(typeof(spec.width))(getNthInt(currentArg, args));
+            auto width = getNthInt!"integer width"(currentArg, args);
             if (width < 0)
             {
                 spec.flDash = true;
@@ -515,7 +515,7 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
             // means: get width as a positional parameter
             auto index = cast(uint) -spec.width;
             assert(index > 0);
-            auto width = to!(typeof(spec.width))(getNthInt(index - 1, args));
+            auto width = getNthInt!"integer width"(index - 1, args);
             if (currentArg < index) currentArg = index;
             if (width < 0)
             {
@@ -527,8 +527,7 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 
         if (spec.precision == spec.DYNAMIC)
         {
-            auto precision = to!(typeof(spec.precision))(
-                getNthInt(currentArg, args));
+            auto precision = getNthInt!"integer precision"(currentArg, args);
             if (precision >= 0) spec.precision = precision;
             // else negative precision is same as no precision
             else spec.precision = spec.UNSPECIFIED;
@@ -539,8 +538,7 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
             // means: get precision as a positional parameter
             auto index = cast(uint) -spec.precision;
             assert(index > 0);
-            auto precision = to!(typeof(spec.precision))(
-                getNthInt(index- 1, args));
+            auto precision = getNthInt!"integer precision"(index- 1, args);
             if (currentArg < index) currentArg = index;
             if (precision >= 0) spec.precision = precision;
             // else negative precision is same as no precision
@@ -549,14 +547,15 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 
         if (spec.separators == spec.DYNAMIC)
         {
-            auto separators = to!(typeof(spec.width))(getNthInt(currentArg, args));
+            auto separators = getNthInt!"separator digit width"(currentArg, args);
             spec.separators = separators;
             ++currentArg;
         }
 
         if (spec.separatorCharPos == spec.DYNAMIC)
         {
-            auto separatorChar = getNth!(isSomeChar,dchar)(currentArg, args);
+            auto separatorChar =
+                getNth!("separator character", isSomeChar, dchar)(currentArg, args);
             spec.separatorChar = separatorChar;
             ++currentArg;
         }
@@ -4057,12 +4056,12 @@ private void formatNth(Writer, Char, A...)(Writer w, const ref FormatSpec!Char f
 
 //------------------------------------------------------------------------------
 // Fix for issue 1591
-private int getNthInt(A...)(uint index, A args)
+private int getNthInt(string kind, A...)(uint index, A args)
 {
-    return getNth!(isIntegral,int)(index, args);
+    return getNth!(kind, isIntegral,int)(index, args);
 }
 
-private T getNth(alias Condition, T, A...)(uint index, A args)
+private T getNth(string kind, alias Condition, T, A...)(uint index, A args)
 {
     import std.conv : text, to;
 
@@ -4077,13 +4076,14 @@ private T getNth(alias Condition, T, A...)(uint index, A args)
                 }
                 else
                 {
-                    throw new FormatException(T.stringof ~ " expected, not " ~
-                            typeof(args[n]).stringof);
+                    throw new FormatException(
+                        text(kind, " expected, not ", typeof(args[n]).stringof,
+                            " for argument #", index + 1));
                 }
         }
         default:
             throw new FormatException(
-                text("Missing ", T.stringof, " for argument #", index + 1));
+                text("Missing ", kind, " argument"));
     }
 }
 
@@ -4091,21 +4091,21 @@ private T getNth(alias Condition, T, A...)(uint index, A args)
 {
     // width/precision
     assert(collectExceptionMsg!FormatException(format("%*.d", 5.1, 2))
-        == "int expected, not double");
+        == "integer width expected, not double for argument #1");
     assert(collectExceptionMsg!FormatException(format("%.*d", '5', 2))
-        == "int expected, not char");
+        == "integer precision expected, not char for argument #1");
     assert(collectExceptionMsg!FormatException(format("%.*d", 5))
         == "Orphan format specifier: %d");
     assert(collectExceptionMsg!FormatException(format("%*.*d", 5))
-        == "Missing int for argument #2");
+        == "Missing integer precision argument");
 
     // separatorCharPos
     assert(collectExceptionMsg!FormatException(format("%,?d", 5))
-        == "dchar expected, not int");
+        == "separator character expected, not int for argument #1");
     assert(collectExceptionMsg!FormatException(format("%,?d", '?'))
         == "Orphan format specifier: %d");
-    assert(collectExceptionMsg!FormatException(format("%.*,?d", 5))
-        == "Missing dchar for argument #2");
+    assert(collectExceptionMsg!FormatException(format("%.*,*?d", 5))
+        == "Missing separator digit width argument");
 }
 
 /* ======================== Unit Tests ====================================== */
