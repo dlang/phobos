@@ -817,9 +817,6 @@ public:
 
     /**********************************************
      * Sets the amount of bits in the $(D BitArray).
-     * $(RED Warning: increasing length may overwrite bits in
-     * final word up to the next word boundary. i.e. D dynamic
-     * array extension semantics are not followed.)
      */
     @property size_t length(size_t newlen) pure nothrow @system
     {
@@ -836,9 +833,79 @@ public:
                 _ptr = b.ptr;
             }
 
+            // Set any padding bits to 0
+            if (endBits)
+                _ptr[newdim - 1] &= endMask;
+
             _len = newlen;
         }
         return _len;
+    }
+
+    @system unittest
+    {
+        debug(bitarray) printf("BitArray.length.unittest\n");
+
+        // Creates a BitArray long enough to occupy more than one size_t
+        // and sets all the bits.
+        auto bit_array = BitArray([
+            1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1]);
+
+        auto initial_num_bits = bit_array.length;
+        assert(initial_num_bits > bitsPerSizeT); // test self-verification
+
+        // Increases the length of the BitArray and checks the former bits
+        // remain set and the new ones are not.
+        enum greater_num_bits = bitsPerSizeT + 48;
+        assert(greater_num_bits > initial_num_bits); // test self-verification
+
+        bit_array.length = greater_num_bits;
+        foreach (pos, bit; bit_array)
+        {
+            if (pos < initial_num_bits)
+                assert(bit == 1);
+            else
+                assert(bit == 0);
+        }
+
+        // Decreases the length of the BitArray to a shorter length than the
+        // initial one and checks all bits remain set.
+        enum lower_num_bits = bitsPerSizeT + 8;
+        assert(lower_num_bits < initial_num_bits); // test self-verification
+
+        bit_array.length = lower_num_bits;
+        foreach (bit; bit_array)
+            assert(bit == 1);
+
+        // Resizes back to the initial length of the BitArray to check the bits
+        // reassigned after decreasing the length of the BitArray are not set.
+        bit_array.length = initial_num_bits;
+        foreach (pos, bit; bit_array)
+        {
+            if (pos < lower_num_bits)
+                assert(bit == 1);
+            else
+                assert(bit == 0);
+        }
+
+        // Checks the bits are reset to zero resizing the BitArray without
+        // changing its dimension (the BitArray is large enough to hold the
+        // new length).
+        bit_array = BitArray([1, 1, 1, 1]);
+
+        bit_array.length = 2;
+        assert(bit_array[0] == 1);
+        assert(bit_array[1] == 1);
+
+        bit_array.length = 4;
+        assert(bit_array[0] == 1);
+        assert(bit_array[1] == 1);
+        assert(bit_array[2] == 0);
+        assert(bit_array[3] == 0);
     }
 
     /**********************************************
