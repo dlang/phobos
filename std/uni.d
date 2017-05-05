@@ -7027,7 +7027,7 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
 }
 
 ///
-@safe @nogc nothrow unittest
+@safe @nogc pure nothrow unittest
 {
     assert(sicmp("Август", "авгусТ") == 0);
     // Greek also works as long as there is no 1:M mapping in sight
@@ -7053,7 +7053,6 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
 }
 
 private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
-    @trusted pure nothrow
 {
     import std.algorithm.searching : skipOver;
     import std.internal.unicode_tables : fullCaseTable; // generated file
@@ -7147,7 +7146,7 @@ if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
 }
 
 ///
-@safe @nogc nothrow unittest
+@safe @nogc pure nothrow unittest
 {
     assert(icmp("Rußland", "Russland") == 0);
     assert(icmp("ᾩ -> \u1F70\u03B9", "\u1F61\u03B9 -> ᾲ") == 0);
@@ -7225,6 +7224,15 @@ if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
     //bugzilla 11057
     assert( icmp("K", "L") < 0 );
     });
+}
+
+// issue 17372
+@safe pure unittest
+{
+    import std.algorithm.iteration : joiner, map;
+    import std.algorithm.sorting : sort;
+    import std.array : array;
+    auto a = [["foo", "bar"], ["baz"]].map!(line => line.joiner(" ")).array.sort!((a, b) => icmp(a, b) < 0);
 }
 
 // This is package for the moment to be used as a support tool for std.regex
