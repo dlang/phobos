@@ -3,18 +3,31 @@
 /**
 This module defines the notion of a range. Ranges generalize the concept of
 arrays, lists, or anything that involves sequential access. This abstraction
-enables the same set of algorithms (see $(LINK2 std_algorithm.html,
-std.algorithm)) to be used with a vast variety of different concrete types. For
-example, a linear search algorithm such as $(LINK2 std_algorithm.html#find,
-std.algorithm.find) works not just for arrays, but for linked-lists, input
-files, incoming network data, etc. See also Ali Çehreli's
-$(HTTP ddili.org/ders/d.en/ranges.html, tutorial on ranges) for the basics
-of working with and creating range-based code.
+enables the same set of algorithms (see $(MREF std, algorithm)) to be used
+with a vast variety of different concrete types. For example,
+a linear search algorithm such as $(REF find, std, algorithm, searching)
+works not just for arrays, but for linked-lists, input files,
+incoming network data, etc.
 
-For more detailed information about the conceptual aspect of ranges and the
-motivation behind them, see Andrei Alexandrescu's article
-$(LINK2 http://www.informit.com/articles/printerfriendly.aspx?p=1407357$(AMP)rll=1,
-$(I On Iteration)).
+Guides:
+
+There are many articles available that can bolster understanding ranges:
+
+$(UL
+    $(LI Ali Çehreli's $(HTTP ddili.org/ders/d.en/ranges.html, tutorial on _ranges)
+        for the basics of working with and creating range-based code.)
+    $(LI Jonathan M. Davis $(LINK2 http://dconf.org/2015/talks/davis.html, $(I Introduction to Ranges))
+        talk at DConf 2015 a vivid introduction from its core constructs to practical advice.)
+    $(LI The DLang Tour's $(LINK2 http://tour.dlang.org/tour/en/basics/ranges, chapter on ranges)
+        for an interactive introduction.)
+    $(LI H. S. Teoh's $(LINK2 http://wiki.dlang.org/Component_programming_with_ranges, tutorial on
+        component programming with ranges) for a real-world showcase of the influence
+        of _range-based programming on complex algorithms.)
+    $(LI Andrei Alexandrescu's article
+        $(LINK2 http://www.informit.com/articles/printerfriendly.aspx?p=1407357$(AMP)rll=1,
+        $(I On Iteration)) for conceptual aspect of ranges and the motivation
+    )
+)
 
 Submodules:
 
@@ -32,6 +45,8 @@ polymorphism.
 The remainder of this module provides a rich set of _range creation and
 composition templates that let you construct new ranges out of existing ranges:
 
+
+$(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE ,
     $(TR $(TD $(LREF chain))
         $(TD Concatenates several ranges into a single _range.
@@ -54,13 +69,25 @@ $(BOOKTABLE ,
         $(TD Creates the _range that results from discarding the first $(I n)
         elements from the given _range.
     ))
+    $(TR $(TD $(LREF dropBack))
+        $(TD Creates the _range that results from discarding the last $(I n)
+        elements from the given _range.
+    ))
     $(TR $(TD $(LREF dropExactly))
         $(TD Creates the _range that results from discarding exactly $(I n)
         of the first elements from the given _range.
     ))
+    $(TR $(TD $(LREF dropBackExactly))
+        $(TD Creates the _range that results from discarding exactly $(I n)
+        of the last elements from the given _range.
+    ))
     $(TR $(TD $(LREF dropOne))
         $(TD Creates the _range that results from discarding
-        the first elements from the given _range.
+        the first element from the given _range.
+    ))
+    $(TR $(TD $(D $(LREF dropBackOne)))
+        $(TD Creates the _range that results from discarding
+        the last element from the given _range.
     ))
     $(TR $(TD $(LREF enumerate))
         $(TD Iterates a _range with an attached index variable.
@@ -72,6 +99,10 @@ $(BOOKTABLE ,
     $(TR $(TD $(LREF frontTransversal))
         $(TD Creates a _range that iterates over the first elements of the
         given ranges.
+    ))
+    $(TR $(TD $(LREF generate))
+        $(TD Creates a _range by successive calls to a given function. This
+        allows to create ranges as a single delegate.
     ))
     $(TR $(TD $(LREF indexed))
         $(TD Creates a _range that offers a view of a given _range as though
@@ -94,7 +125,7 @@ $(BOOKTABLE ,
     ))
     $(TR $(TD $(LREF padLeft))
         $(TD Pads a _range to a specified length by adding a given element to
-        the front of the _range. Is lazy if the range has a known length.
+        the front of the _range. Is lazy if the _range has a known length.
     ))
     $(TR $(TD $(LREF padRight))
         $(TD Lazily pads a _range to a specified length by adding a given element to
@@ -108,6 +139,11 @@ $(BOOKTABLE ,
     $(TR $(TD $(LREF recurrence))
         $(TD Creates a forward _range whose values are defined by a
         mathematical recurrence relation.
+    ))
+    $(TR $(TD $(LREF refRange))
+        $(TD Pass a _range by reference. Both the original _range and the RefRange
+        will always have the exact same elements.
+        Any operation done on one will affect the other.
     ))
     $(TR $(TD $(LREF repeat))
         $(TD Creates a _range that consists of a single element repeated $(I n)
@@ -166,11 +202,13 @@ $(BOOKTABLE ,
     ))
 )
 
+Sortedness:
+
 Ranges whose elements are sorted afford better efficiency with certain
 operations. For this, the $(LREF assumeSorted) function can be used to
 construct a $(LREF SortedRange) from a pre-sorted _range. The $(REF
 sort, std, algorithm, sorting) function also conveniently
-returns a $(D SortedRange). $(D SortedRange) objects provide some additional
+returns a $(LREF SortedRange). $(LREF SortedRange) objects provide some additional
 _range operations that take advantage of the fact that the _range is sorted.
 
 Source: $(PHOBOSSRC std/_range/_package.d)
