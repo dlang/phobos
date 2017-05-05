@@ -499,7 +499,9 @@ $(TOOLS_DIR)/checkwhitespace.d:
 	mv dscanner_makefile_tmp ../dscanner/makefile
 	make -C ../dscanner githash debug
 
-style: ../dscanner/dsc $(LIB) has_public_example publictests
+style: has_public_example publictests style_lint
+
+style_lint: ../dscanner/dsc $(LIB)
 	@echo "Check for trailing whitespace"
 	grep -nr '[[:blank:]]$$' etc std ; test $$? -eq 1
 
