@@ -2088,7 +2088,7 @@ public:
         returning.
 
         Params:
-            timezone = The $(REF TimeZone,std,datetime,timezone) to set this
+            timezone = The $(REF _TimeZone,std,datetime,_timezone) to set this
                        $(LREF SysTime)'s time zone to.
       +/
     @property void timezone(immutable TimeZone timezone) @safe pure nothrow
