@@ -6,14 +6,14 @@
     This module provides:
     $(UL
         $(LI Types to represent points in time:
-             $(REF std,datetime,systime,SysTime),
-             $(REF std,datetime,date,Date),
-             $(REF std,datetime,timeofday,TimeOfDay),
-             $(REF std,datetime,datetime,DateTime).)
+             $(REF SysTime,std,datetime,systime),
+             $(REF Date,std,datetime,date),
+             $(REF TimeOfDay,std,datetime,date),
+             $(REF DateTime,std,datetime,date).)
         $(LI Types to represent intervals of time.)
         $(LI Types to represent ranges over intervals of time.)
         $(LI Types to represent time zones (used by
-             $(REF std,datetime,systime,SysTime)).)
+             $(REF SysTime,std,datetime,systime)).)
         $(LI A platform-independent, high precision stopwatch type:
              $(LREF StopWatch))
         $(LI Benchmarking functions.)
@@ -49,22 +49,22 @@
     be done on a series of time points.
 
     The types that the typical user is most likely to be interested in are
-    $(REF std,datetime,date,Date) (if they want dates but don't care about
-    time), $(REF std,datetime,datetime,DateTime) (if they want dates and times
-    but don't care about time zones), $(REF std,datetime,systime,SysTime) (if
+    $(REF Date,std,datetime,date) (if they want dates but don't care about
+    time), $(REF DateTime,std,datetime,date) (if they want dates and times
+    but don't care about time zones), $(REF SysTime,std,datetime,systime) (if
     they want the date and time from the OS and/or do care about time zones),
     and StopWatch (a platform-independent, high precision stop watch).
-    $(REF std,datetime,date,Date) and $(REF std,datetime,datetime,DateTime) are
+    $(REF Date,std,datetime,date) and $(REF DateTime,std,datetime,date) are
     optimized for calendar-based operations, while
-    $(REF std,datetime,systime,SysTime) is designed for dealing with time from
+    $(REF SysTime,std,datetime,systime) is designed for dealing with time from
     the OS. Check out their specific documentation for more details.
 
-    To get the current time, use $(REF std,datetime,systime,Clock.currTime).
-    It will return the current time as a $(REF std,datetime,systime,SysTime). To
+    To get the current time, use $(REF Clock.currTime,std,datetime,systime).
+    It will return the current time as a $(REF SysTime,std,datetime,systime). To
     print it, $(D toString) is sufficient, but if using $(D toISOString),
     $(D toISOExtString), or $(D toSimpleString), use the corresponding
     $(D fromISOString), $(D fromISOExtString), or $(D fromSimpleString) to
-    create a $(REF std,datetime,systime,SysTime) from the string.
+    create a $(REF SysTime,std,datetime,systime) from the string.
 
 --------------------
 auto currentTime = Clock.currTime();
@@ -87,12 +87,12 @@ auto restoredTime = SysTime.fromISOExtString(timeString);
     weren't).
 
     Note:
-        $(REF std,datetime,common,DateTimeException) is an alias for
+        $(REF DateTimeException,std,datetime,date) is an alias for
         $(REF TimeException, core,time), so you don't need to worry about
         core.time functions and std.datetime functions throwing different
         exception types (except in the rare case that they throw something other
         than $(REF TimeException, core,time) or
-        $(REF std,datetime,common,DateTimeException)).
+        $(REF DateTimeException,std,datetime,date)).
 
     See_Also:
         $(DDLINK intro-to-_datetime, Introduction to std.datetime,

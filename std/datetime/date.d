@@ -97,12 +97,12 @@ immutable string[] timeStrings = ["hnsecs", "usecs", "msecs", "seconds", "minute
 
 
 /++
-   Combines the $(REF std,datetime,date,Date) and
-   $(REF std,datetime,timeofday,TimeOfDay) structs to give an object which holds
+   Combines the $(REF Date,std,datetime,date) and
+   $(REF TimeOfDay,std,datetime,date) structs to give an object which holds
    both the date and the time. It is optimized for calendar-based operations and
    has no concept of time zone. For an object which is optimized for time
-   operations based on the system time, use $(REF std,datetime,systime,SysTime).
-   $(REF std,datetime,systime,SysTime) has a concept of time zone and has much
+   operations based on the system time, use $(REF SysTime,std,datetime,systime).
+   $(REF SysTime,std,datetime,systime) has a concept of time zone and has much
    higher precision (hnsecs). $(D DateTime) is intended primarily for
    calendar-based uses rather than precise time operations.
   +/
@@ -474,7 +474,7 @@ public:
         The time portion of $(LREF DateTime).
 
         Params:
-            tod = The $(REF std,datetime,timeofday,TimeOfDay) to set this
+            tod = The $(REF TimeOfDay,std,datetime,date) to set this
                   $(LREF DateTime)'s time portion to.
       +/
     @property void timeOfDay(in TimeOfDay tod) @safe pure nothrow
@@ -526,7 +526,7 @@ public:
             year = The year to set this $(LREF DateTime)'s year to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the new year is not
+            $(REF DateTimeException,std,datetime,date) if the new year is not
             a leap year and if the resulting date would be on February 29th.
      +/
     @property void year(int year) @safe pure
@@ -571,7 +571,7 @@ public:
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if $(D isAD) is true.
+            $(REF DateTimeException,std,datetime,date) if $(D isAD) is true.
      +/
     @property short yearBC() @safe const pure
     {
@@ -607,7 +607,7 @@ public:
             year = The year B.C. to set this $(LREF DateTime)'s year to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if a non-positive value
+            $(REF DateTimeException,std,datetime,date) if a non-positive value
             is given.
      +/
     @property void yearBC(int year) @safe pure
@@ -676,7 +676,7 @@ public:
             month = The month to set this $(LREF DateTime)'s month to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given month is
+            $(REF DateTimeException,std,datetime,date) if the given month is
             not a valid month.
      +/
     @property void month(Month month) @safe pure
@@ -759,7 +759,7 @@ public:
             day = The day of the month to set this $(LREF DateTime)'s day to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given day is not
+            $(REF DateTimeException,std,datetime,date) if the given day is not
             a valid day of the current month.
      +/
     @property void day(int day) @safe pure
@@ -880,7 +880,7 @@ public:
             hour = The hour of the day to set this $(LREF DateTime)'s hour to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given hour would
+            $(REF DateTimeException,std,datetime,date) if the given hour would
             result in an invalid $(LREF DateTime).
      +/
     @property void hour(int hour) @safe pure
@@ -930,7 +930,7 @@ public:
             minute = The minute to set this $(LREF DateTime)'s minute to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given minute
+            $(REF DateTimeException,std,datetime,date) if the given minute
             would result in an invalid $(LREF DateTime).
      +/
     @property void minute(int minute) @safe pure
@@ -980,7 +980,7 @@ public:
             second = The second to set this $(LREF DateTime)'s second to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given seconds
+            $(REF DateTimeException,std,datetime,date) if the given seconds
             would result in an invalid $(LREF DateTime).
      +/
     @property void second(int second) @safe pure
@@ -3047,7 +3047,7 @@ public:
             isoString = A string formatted in the ISO format for dates and times.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given string is
+            $(REF DateTimeException,std,datetime,date) if the given string is
             not in the ISO format or if the resulting $(LREF DateTime) would not
             be valid.
       +/
@@ -3136,7 +3136,7 @@ public:
                            and times.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given string is
+            $(REF DateTimeException,std,datetime,date) if the given string is
             not in the ISO Extended format or if the resulting $(LREF DateTime)
             would not be valid.
       +/
@@ -3224,7 +3224,7 @@ public:
                            formats dates and times.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given string is
+            $(REF DateTimeException,std,datetime,date) if the given string is
             not in the correct format or if the resulting $(LREF DateTime)
             would not be valid.
       +/
@@ -3602,7 +3602,7 @@ public:
 
     /++
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the resulting
+            $(REF DateTimeException,std,datetime,date) if the resulting
             $(LREF Date) would not be valid.
 
         Params:
@@ -3972,7 +3972,7 @@ public:
             year = The year to set this Date's year to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the new year is not
+            $(REF DateTimeException,std,datetime,date) if the new year is not
             a leap year and the resulting date would be on February 29th.
      +/
     @property void year(int year) @safe pure
@@ -4019,7 +4019,7 @@ public:
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if $(D isAD) is true.
+            $(REF DateTimeException,std,datetime,date) if $(D isAD) is true.
      +/
     @property ushort yearBC() @safe const pure
     {
@@ -4058,7 +4058,7 @@ public:
             year = The year B.C. to set this $(LREF Date)'s year to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if a non-positive value
+            $(REF DateTimeException,std,datetime,date) if a non-positive value
             is given.
      +/
     @property void yearBC(int year) @safe pure
@@ -4128,7 +4128,7 @@ public:
             month = The month to set this $(LREF Date)'s month to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given month is
+            $(REF DateTimeException,std,datetime,date) if the given month is
             not a valid month or if the current day would not be valid in the
             given month.
      +/
@@ -4208,7 +4208,7 @@ public:
             day = The day of the month to set this $(LREF Date)'s day to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given day is not
+            $(REF DateTimeException,std,datetime,date) if the given day is not
             a valid day of the current month.
      +/
     @property void day(int day) @safe pure
@@ -6591,7 +6591,7 @@ public:
                   $(LREF Date) is on.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given day is an
+            $(REF DateTimeException,std,datetime,date) if the given day is an
             invalid day of the year.
       +/
     @property void dayOfYear(int day) @safe pure
@@ -7273,7 +7273,7 @@ public:
             isoString = A string formatted in the ISO format for dates.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given string is
+            $(REF DateTimeException,std,datetime,date) if the given string is
             not in the ISO format or if the resulting $(LREF Date) would not be
             valid.
       +/
@@ -7397,7 +7397,7 @@ public:
                            dates.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given string is
+            $(REF DateTimeException,std,datetime,date) if the given string is
             not in the ISO Extended format or if the resulting $(LREF Date)
             would not be valid.
       +/
@@ -7526,7 +7526,7 @@ public:
                            formats dates.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given string is
+            $(REF DateTimeException,std,datetime,date) if the given string is
             not in the correct format or if the resulting $(LREF Date) would not
             be valid.
       +/
@@ -7916,7 +7916,7 @@ public:
             second = Second of the minute [0 - 60$(RPAREN).
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the resulting
+            $(REF DateTimeException,std,datetime,date) if the resulting
             $(LREF TimeOfDay) would be not be valid.
      +/
     this(int hour, int minute, int second = 0) @safe pure
@@ -8055,7 +8055,7 @@ public:
             hour = The hour of the day to set this $(LREF TimeOfDay)'s hour to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given hour would
+            $(REF DateTimeException,std,datetime,date) if the given hour would
             result in an invalid $(LREF TimeOfDay).
      +/
     @property void hour(int hour) @safe pure
@@ -8106,7 +8106,7 @@ public:
             minute = The minute to set this $(LREF TimeOfDay)'s minute to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given minute
+            $(REF DateTimeException,std,datetime,date) if the given minute
             would result in an invalid $(LREF TimeOfDay).
      +/
     @property void minute(int minute) @safe pure
@@ -8157,7 +8157,7 @@ public:
             second = The second to set this $(LREF TimeOfDay)'s second to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given second
+            $(REF DateTimeException,std,datetime,date) if the given second
             would result in an invalid $(LREF TimeOfDay).
      +/
     @property void second(int second) @safe pure
@@ -8783,7 +8783,7 @@ public:
             isoString = A string formatted in the ISO format for times.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given string is
+            $(REF DateTimeException,std,datetime,date) if the given string is
             not in the ISO format or if the resulting $(LREF TimeOfDay) would
             not be valid.
       +/
@@ -8893,7 +8893,7 @@ public:
             times.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given string is
+            $(REF DateTimeException,std,datetime,date) if the given string is
             not in the ISO Extended format or if the resulting $(LREF TimeOfDay)
             would not be valid.
       +/
@@ -9973,7 +9973,7 @@ string monthToString(Month month) @safe pure
         monthStr = The string representation of the month to get the Month for.
 
     Throws:
-        $(REF std,datetime,common,DateTimeException) if the given month is not a
+        $(REF DateTimeException,std,datetime,date) if the given month is not a
         valid month string.
   +/
 Month monthFromString(string monthStr) @safe pure

@@ -58,7 +58,7 @@ public:
             tz = The time zone for the SysTime that's returned.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if it fails to get the
+            $(REF DateTimeException,std,datetime,date) if it fails to get the
             time.
       +/
     static SysTime currTime(ClockType clockType = ClockType.normal)(immutable TimeZone tz = LocalTime()) @safe
@@ -113,7 +113,7 @@ public:
                         need to use anything other than the default.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if it fails to get the
+            $(REF DateTimeException,std,datetime,date) if it fails to get the
             time.
       +/
     static @property long currStdTime(ClockType clockType = ClockType.normal)() @trusted
@@ -299,46 +299,46 @@ private:
 /++
     $(D SysTime) is the type used to get the current time from the
     system or doing anything that involves time zones. Unlike
-    $(REF std,datetime,datetime,DateTime), the time zone is an integral part of
+    $(REF DateTime,std,datetime,date), the time zone is an integral part of
     $(D SysTime) (though for local time applications, time zones can be ignored
     and it will work, since it defaults to using the local time zone). It holds
     its internal time in std time (hnsecs since midnight, January 1st, 1 A.D.
     UTC), so it interfaces well with the system time. However, that means that,
-    unlike $(REF std,datetime,datetime,DateTime), it is not optimized for
+    unlike $(REF DateTime,std,datetime,date), it is not optimized for
     calendar-based operations, and getting individual units from it such as
     years or days is going to involve conversions and be less efficient.
 
     For calendar-based operations that don't
-    care about time zones, then $(REF std,datetime,datetime,DateTime) would be
+    care about time zones, then $(REF DateTime,std,datetime,date) would be
     the type to use. For system time, use $(D SysTime).
 
     $(LREF Clock.currTime) will return the current time as a $(D SysTime).
-    To convert a $(D SysTime) to a $(REF std,datetime,date,Date) or
-    $(REF std,datetime,datetime,DateTime), simply cast it. To convert a
-    $(REF std,datetime,date,Date) or $(REF std,datetime,datetime,DateTime) to a
+    To convert a $(D SysTime) to a $(REF Date,std,datetime,date) or
+    $(REF DateTime,std,datetime,date), simply cast it. To convert a
+    $(REF Date,std,datetime,date) or $(REF DateTime,std,datetime,date) to a
     $(D SysTime), use $(D SysTime)'s constructor, and pass in the ntended time
-    zone with it (or don't pass in a $(REF std,datetime,timezone,TimeZone), and
+    zone with it (or don't pass in a $(REF TimeZone,std,datetime,timezone), and
     the local time zone will be used). Be aware, however, that converting from a
-    $(REF std,datetime,datetime,DateTime) to a $(D SysTime) will not necessarily
+    $(REF DateTime,std,datetime,date) to a $(D SysTime) will not necessarily
     be 100% accurate due to DST (one hour of the year doesn't exist and another
     occurs twice). To not risk any conversion errors, keep times as
     $(D SysTime)s. Aside from DST though, there shouldn't be any conversion
     problems.
 
     For using time zones other than local time or UTC, use
-    $(REF std,datetime,timezone,PosixTimeZone) on Posix systems (or on Windows,
+    $(REF PosixTimeZone,std,datetime,timezone) on Posix systems (or on Windows,
     if providing the TZ Database files), and use
-    $(REF std,datetime,timezone,WindowsTimeZone) on Windows systems. The time in
+    $(REF WindowsTimeZone,std,datetime,timezone) on Windows systems. The time in
     $(D SysTime) is kept internally in hnsecs from midnight, January 1st, 1 A.D.
     UTC. Conversion error cannot happen when changing the time zone of a
-    $(D SysTime). $(REF std,datetime,timezone,LocalTime) is the
-    $(REF std,datetime,timezone,TimeZone) class which represents the local time,
-    and $(D UTC) is the $(REF std,datetime,timezone,TimeZone) class which
-    represents UTC. $(D SysTime) uses $(REF std,datetime,timezone,LocalTime) if
-    no $(REF std,datetime,timezone,TimeZone) is provided. For more details on
-    time zones, see the documentation for $(REF std,datetime,timezone,TimeZone),
-    $(REF std,datetime,timezone,PosixTimeZone), and
-    $(REF std,datetime,timezone,WindowsTimeZone).
+    $(D SysTime). $(REF LocalTime,std,datetime,timezone) is the
+    $(REF TimeZone,std,datetime,timezone) class which represents the local time,
+    and $(D UTC) is the $(REF TimeZone,std,datetime,timezone) class which
+    represents UTC. $(D SysTime) uses $(REF LocalTime,std,datetime,timezone) if
+    no $(REF TimeZone,std,datetime,timezone) is provided. For more details on
+    time zones, see the documentation for $(REF TimeZone,std,datetime,timezone),
+    $(REF PosixTimeZone,std,datetime,timezone), and
+    $(REF WindowsTimeZone,std,datetime,timezone).
 
     $(D SysTime)'s range is from approximately 29,000 B.C. to approximately
     29,000 A.D.
@@ -353,14 +353,14 @@ public:
 
     /++
         Params:
-            dateTime = The $(REF std,datetime,datetime,DateTime) to use to set
+            dateTime = The $(REF DateTime,std,datetime,date) to use to set
                        this $(LREF SysTime)'s internal std time. As
-                       $(REF std,datetime,datetime,DateTime) has no concept of
+                       $(REF DateTime,std,datetime,date) has no concept of
                        time zone, tz is used as its time zone.
-            tz       = The $(REF std,datetime,timezone,TimeZone) to use for this
+            tz       = The $(REF TimeZone,std,datetime,timezone) to use for this
                        $(LREF SysTime). If null,
-                       $(REF std,datetime,timezone,LocalTime) will be used. The
-                       given $(REF std,datetime,datetime,DateTime) is assumed to
+                       $(REF LocalTime,std,datetime,timezone) will be used. The
+                       given $(REF DateTime,std,datetime,date) is assumed to
                        be in the given time zone.
       +/
     this(in DateTime dateTime, immutable TimeZone tz = null) @safe nothrow
@@ -394,19 +394,19 @@ public:
 
     /++
         Params:
-            dateTime = The $(REF std,datetime,datetime,DateTime) to use to set
+            dateTime = The $(REF DateTime,std,datetime,date) to use to set
                        this $(LREF SysTime)'s internal std time. As
-                       $(REF std,datetime,datetime,DateTime) has no concept of
+                       $(REF DateTime,std,datetime,date) has no concept of
                        time zone, tz is used as its time zone.
             fracSecs = The fractional seconds portion of the time.
-            tz       = The $(REF std,datetime,timezone,TimeZone) to use for this
+            tz       = The $(REF TimeZone,std,datetime,timezone) to use for this
                        $(LREF SysTime). If null,
-                       $(REF std,datetime,timezone,LocalTime) will be used. The
-                       given $(REF std,datetime,datetime,DateTime) is assumed to
+                       $(REF LocalTime,std,datetime,timezone) will be used. The
+                       given $(REF DateTime,std,datetime,date) is assumed to
                        be in the given time zone.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if $(D fracSecs) is negative or if it's
+            $(REF DateTimeException,std,datetime,date) if $(D fracSecs) is negative or if it's
             greater than or equal to one second.
       +/
     this(in DateTime dateTime, in Duration fracSecs, immutable TimeZone tz = null) @safe
@@ -495,14 +495,14 @@ public:
 
     /++
         Params:
-            date = The $(REF std,datetime,date,Date) to use to set this
+            date = The $(REF Date,std,datetime,date) to use to set this
                    $(LREF SysTime)'s internal std time. As
-                   $(REF std,datetime,date,Date) has no concept of time zone, tz
+                   $(REF Date,std,datetime,date) has no concept of time zone, tz
                    is used as its time zone.
-            tz   = The $(REF std,datetime,timezone,TimeZone) to use for this
+            tz   = The $(REF TimeZone,std,datetime,timezone) to use for this
                    $(LREF SysTime). If null,
-                   $(REF std,datetime,timezone,LocalTime) will be used. The
-                   given $(REF std,datetime,date,Date) is assumed to be in the
+                   $(REF LocalTime,std,datetime,timezone) will be used. The
+                   given $(REF Date,std,datetime,date) is assumed to be in the
                    given time zone.
       +/
     this(in Date date, immutable TimeZone tz = null) @safe nothrow
@@ -549,9 +549,9 @@ public:
         Params:
             stdTime = The number of hnsecs since midnight, January 1st, 1 A.D.
                       UTC.
-            tz      = The $(REF std,datetime,timezone,TimeZone) to use for this
+            tz      = The $(REF TimeZone,std,datetime,timezone) to use for this
                       $(LREF SysTime). If null,
-                      $(REF std,datetime,timezone,LocalTime) will be used.
+                      $(REF LocalTime,std,datetime,timezone) will be used.
       +/
     this(long stdTime, immutable TimeZone tz = null) @safe pure nothrow
     {
@@ -839,7 +839,7 @@ public:
             year = The year to set this $(LREF SysTime)'s year to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the new year is not
+            $(REF DateTimeException,std,datetime,date) if the new year is not
             a leap year and the resulting date would be on February 29th.
      +/
     @property void year(int year) @safe
@@ -923,7 +923,7 @@ public:
         Year B.C. of the Gregorian Calendar counting year 0 as 1 B.C.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if $(D isAD) is true.
+            $(REF DateTimeException,std,datetime,date) if $(D isAD) is true.
      +/
     @property ushort yearBC() @safe const
     {
@@ -970,7 +970,7 @@ public:
             year = The year B.C. to set this $(LREF SysTime)'s year to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if a non-positive value
+            $(REF DateTimeException,std,datetime,date) if a non-positive value
             is given.
      +/
     @property void yearBC(int year) @safe
@@ -1119,7 +1119,7 @@ public:
             month = The month to set this $(LREF SysTime)'s month to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given month is
+            $(REF DateTimeException,std,datetime,date) if the given month is
             not a valid month.
      +/
     @property void month(Month month) @safe
@@ -1281,7 +1281,7 @@ public:
             day = The day of the month to set this $(LREF SysTime)'s day to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given day is not
+            $(REF DateTimeException,std,datetime,date) if the given day is not
             a valid day of the current month.
      +/
     @property void day(int day) @safe
@@ -1440,7 +1440,7 @@ public:
             hour = The hours to set this $(LREF SysTime)'s hour to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given hour are
+            $(REF DateTimeException,std,datetime,date) if the given hour are
             not a valid hour of the day.
      +/
     @property void hour(int hour) @safe
@@ -1560,7 +1560,7 @@ public:
             minute = The minute to set this $(LREF SysTime)'s minute to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given minute are
+            $(REF DateTimeException,std,datetime,date) if the given minute are
             not a valid minute of an hour.
      +/
     @property void minute(int minute) @safe
@@ -1684,7 +1684,7 @@ public:
             second = The second to set this $(LREF SysTime)'s second to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given second are
+            $(REF DateTimeException,std,datetime,date) if the given second are
             not a valid second of a minute.
      +/
     @property void second(int second) @safe
@@ -1817,7 +1817,7 @@ public:
                        seconds to.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given duration
+            $(REF DateTimeException,std,datetime,date) if the given duration
             is negative or if it's greater than or equal to one second.
      +/
     @property void fracSecs(Duration fracSecs) @safe
@@ -2088,7 +2088,7 @@ public:
         returning.
 
         Params:
-            timezone = The $(REF std,datetime,timezone,TimeZone) to set this
+            timezone = The $(REF TimeZone,std,datetime,timezone) to set this
                        $(LREF SysTime)'s time zone to.
       +/
     @property void timezone(immutable TimeZone timezone) @safe pure nothrow
@@ -2122,7 +2122,7 @@ public:
 
     /++
         Returns a $(LREF SysTime) with the same std time as this one, but with
-        $(REF std,datetime,timezone,LocalTime) as its time zone.
+        $(REF LocalTime,std,datetime,timezone) as its time zone.
       +/
     SysTime toLocalTime() @safe const pure nothrow
     {
@@ -7602,7 +7602,7 @@ public:
 
 
     /++
-        Returns a $(REF std,datetime,date,Date) equivalent to this $(LREF SysTime).
+        Returns a $(REF Date,std,datetime,date) equivalent to this $(LREF SysTime).
       +/
     Date opCast(T)() @safe const nothrow
         if (is(Unqual!T == Date))
@@ -7636,7 +7636,7 @@ public:
 
 
     /++
-        Returns a $(REF std,datetime,datetime,DateTime) equivalent to this
+        Returns a $(REF DateTime,std,datetime,date) equivalent to this
         $(LREF SysTime).
       +/
     DateTime opCast(T)() @safe const nothrow
@@ -7696,7 +7696,7 @@ public:
 
 
     /++
-        Returns a $(REF std,datetime,timeofday,TimeOfDay) equivalent to this
+        Returns a $(REF TimeOfDay,std,datetime,date) equivalent to this
         $(LREF SysTime).
       +/
     TimeOfDay opCast(T)() @safe const nothrow
@@ -7769,7 +7769,7 @@ public:
         there is no decimal point.
 
         If this $(LREF SysTime)'s time zone is
-        $(REF std,datetime,timezone,LocalTime), then TZ is empty. If its time
+        $(REF LocalTime,std,datetime,timezone), then TZ is empty. If its time
         zone is $(D UTC), then it is "Z". Otherwise, it is the offset from UTC
         (e.g. +0100 or -0700). Note that the offset from UTC is $(I not) enough
         to uniquely identify the time zone.
@@ -7779,8 +7779,8 @@ public:
         $(RED Warning:
             Previously, toISOString did the same as $(LREF toISOExtString) and
             generated +HH:MM or -HH:MM for the time zone when it was not
-            $(REF std,datetime,timezone,LocalTime) or
-            $(REF std,datetime,timezone,UTC), which is not in conformance with
+            $(REF LocalTime,std,datetime,timezone) or
+            $(REF UTC,std,datetime,timezone), which is not in conformance with
             ISO 9601 for the non-extended string format. This has now been
             fixed. However, for now, fromISOString will continue to accept the
             extended format for the time zone so that any code which has been
@@ -7912,7 +7912,7 @@ public:
         there is no decimal point.
 
         If this $(LREF SysTime)'s time zone is
-        $(REF std,datetime,timezone,LocalTime), then TZ is empty. If its time
+        $(REF LocalTime,std,datetime,timezone), then TZ is empty. If its time
         zone is $(D UTC), then it is "Z". Otherwise, it is the offset from UTC
         (e.g. +01:00 or -07:00). Note that the offset from UTC is $(I not)
         enough to uniquely identify the time zone.
@@ -8048,7 +8048,7 @@ public:
         there is no decimal point.
 
         If this $(LREF SysTime)'s time zone is
-        $(REF std,datetime,timezone,LocalTime), then TZ is empty. If its time
+        $(REF LocalTime,std,datetime,timezone), then TZ is empty. If its time
         zone is $(D UTC), then it is "Z". Otherwise, it is the offset from UTC
         (e.g. +01:00 or -07:00). Note that the offset from UTC is $(I not)
         enough to uniquely identify the time zone.
@@ -8204,9 +8204,9 @@ public:
         invalid.
 
         If there is no time zone in the string, then
-        $(REF std,datetime,timezone,LocalTime) is used. If the time zone is "Z",
+        $(REF LocalTime,std,datetime,timezone) is used. If the time zone is "Z",
         then $(D UTC) is used. Otherwise, a
-        $(REF std,datetime,timezone,SimpleTimeZone) which corresponds to the
+        $(REF SimpleTimeZone,std,datetime,timezone) which corresponds to the
         given offset from UTC is used. To get the returned $(LREF SysTime) to be
         a particular time zone, pass in that time zone and the $(LREF SysTime)
         to be returned will be converted to that time zone (though it will still
@@ -8218,8 +8218,8 @@ public:
         $(RED Warning:
             Previously, $(LREF toISOString) did the same as
             $(LREF toISOExtString) and generated +HH:MM or -HH:MM for the time
-            zone when it was not $(REF std,datetime,timezone,LocalTime) or
-            $(REF std,datetime,timezone,UTC), which is not in conformance with
+            zone when it was not $(REF LocalTime,std,datetime,timezone) or
+            $(REF UTC,std,datetime,timezone), which is not in conformance with
             ISO 9601 for the non-extended string format. This has now been
             fixed. However, for now, fromISOString will continue to accept the
             extended format for the time zone so that any code which has been
@@ -8232,7 +8232,7 @@ public:
                         conversion occurs if null).
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given string is
+            $(REF DateTimeException,std,datetime,date) if the given string is
             not in the ISO format or if the resulting $(LREF SysTime) would not
             be valid.
       +/
@@ -8456,9 +8456,9 @@ public:
         it is invalid.
 
         If there is no time zone in the string, then
-        $(REF std,datetime,timezone,LocalTime) is used. If the time zone is "Z",
+        $(REF LocalTime,std,datetime,timezone) is used. If the time zone is "Z",
         then $(D UTC) is used. Otherwise, a
-        $(REF std,datetime,timezone,SimpleTimeZone) which corresponds to the
+        $(REF SimpleTimeZone,std,datetime,timezone) which corresponds to the
         given offset from UTC is used. To get the returned $(LREF SysTime) to be
         a particular time zone, pass in that time zone and the $(LREF SysTime)
         to be returned will be converted to that time zone (though it will still
@@ -8474,7 +8474,7 @@ public:
                            conversion occurs if null).
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given string is
+            $(REF DateTimeException,std,datetime,date) if the given string is
             not in the ISO format or if the resulting $(LREF SysTime) would not
             be valid.
       +/
@@ -8672,9 +8672,9 @@ public:
         invalid.
 
         If there is no time zone in the string, then
-        $(REF std,datetime,timezone,LocalTime) is used. If the time zone is "Z",
+        $(REF LocalTime,std,datetime,timezone) is used. If the time zone is "Z",
         then $(D UTC) is used. Otherwise, a
-        $(REF std,datetime,timezone,SimpleTimeZone) which corresponds to the
+        $(REF SimpleTimeZone,std,datetime,timezone) which corresponds to the
         given offset from UTC is used. To get the returned $(LREF SysTime) to be
         a particular time zone, pass in that time zone and the $(LREF SysTime)
         to be returned will be converted to that time zone (though it will still
@@ -8690,7 +8690,7 @@ public:
                            conversion occurs if null).
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given string is
+            $(REF DateTimeException,std,datetime,date) if the given string is
             not in the ISO format or if the resulting $(LREF SysTime) would not
             be valid.
       +/
@@ -9151,7 +9151,7 @@ version(StdDdoc)
                  or UTC, depending on the call).
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given
+            $(REF DateTimeException,std,datetime,date) if the given
             $(D SYSTEMTIME) will not fit in a $(LREF SysTime), which is highly
             unlikely to happen given that $(D SysTime.max) is in 29,228 A.D. and
             the maximum $(D SYSTEMTIME) is in 30,827 A.D.
@@ -9172,7 +9172,7 @@ version(StdDdoc)
             sysTime = The $(LREF SysTime) to convert.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given
+            $(REF DateTimeException,std,datetime,date) if the given
             $(LREF SysTime) will not fit in a $(D SYSTEMTIME). This will only
             happen if the $(LREF SysTime)'s date is prior to 1601 A.D.
       +/
@@ -9189,7 +9189,7 @@ version(StdDdoc)
             ft = The $(D FILETIME) struct to convert.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given
+            $(REF DateTimeException,std,datetime,date) if the given
             $(D FILETIME) cannot be represented as the return value.
       +/
     long FILETIMEToStdTime(scope const FILETIME* ft) @safe;
@@ -9206,7 +9206,7 @@ version(StdDdoc)
                  ($(D FILETIME)s are in UTC).
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given
+            $(REF DateTimeException,std,datetime,date) if the given
             $(D FILETIME) will not fit in a $(LREF SysTime).
       +/
     SysTime FILETIMEToSysTime(scope const FILETIME* ft, immutable TimeZone tz = LocalTime()) @safe;
@@ -9223,7 +9223,7 @@ version(StdDdoc)
                       UTC.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given value will
+            $(REF DateTimeException,std,datetime,date) if the given value will
             not fit in a $(D FILETIME).
       +/
     FILETIME stdTimeToFILETIME(long stdTime) @safe;
@@ -9240,7 +9240,7 @@ version(StdDdoc)
             sysTime = The $(LREF SysTime) to convert.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given
+            $(REF DateTimeException,std,datetime,date) if the given
             $(LREF SysTime) will not fit in a $(D FILETIME).
       +/
     FILETIME SysTimeToFILETIME(SysTime sysTime) @safe;
@@ -9431,7 +9431,7 @@ alias DosFileTime = uint;
         tz  = The time zone which the DOS file time is assumed to be in.
 
     Throws:
-        $(REF std,datetime,common,DateTimeException) if the $(D DosFileTime) is
+        $(REF DateTimeException,std,datetime,date) if the $(D DosFileTime) is
         invalid.
   +/
 SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime()) @safe
@@ -9469,7 +9469,7 @@ SysTime DosFileTimeToSysTime(DosFileTime dft, immutable TimeZone tz = LocalTime(
         sysTime = The $(LREF SysTime) to convert.
 
     Throws:
-        $(REF std,datetime,common,DateTimeException) if the given
+        $(REF DateTimeException,std,datetime,date) if the given
         $(LREF SysTime) cannot be converted to a $(D DosFileTime).
   +/
 DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
@@ -9520,9 +9520,9 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
 
     If the time zone is $(D "-0000") (or considered to be equivalent to
     $(D "-0000") by section 4.3 of the spec), a
-    $(REF std,datetime,timezone,SimpleTimeZone) with a utc offset of $(D 0) is
-    used rather than $(REF std,datetime,timezone,UTC), whereas $(D "+0000") uses
-    $(REF std,datetime,timezone,UTC).
+    $(REF SimpleTimeZone,std,datetime,timezone) with a utc offset of $(D 0) is
+    used rather than $(REF UTC,std,datetime,timezone), whereas $(D "+0000") uses
+    $(REF UTC,std,datetime,timezone).
 
     Note that because $(LREF SysTime) does not currently support having a second
     value of 60 (as is sometimes done for leap seconds), if the date-time value
@@ -9533,7 +9533,7 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
     HTTP spec requires it.
 
     Throws:
-        $(REF std,datetime,common,DateTimeException) if the given string doesn't
+        $(REF DateTimeException,std,datetime,date) if the given string doesn't
         follow the grammar for a date-time field or if the resulting
         $(LREF SysTime) is invalid.
   +/

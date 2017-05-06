@@ -37,8 +37,8 @@ version(unittest) import std.exception : assertThrown;
 
 
 /++
-    Represents a time zone. It is used with $(REF std,datetime,systime,SysTime)
-    to indicate the time zone of a $(REF std,datetime,systime,SysTime).
+    Represents a time zone. It is used with $(REF SysTime,std,datetime,systime)
+    to indicate the time zone of a $(REF SysTime,std,datetime,systime).
   +/
 abstract class TimeZone
 {
@@ -176,7 +176,7 @@ public:
             name = The TZ Database name of the desired time zone
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given time zone
+            $(REF DateTimeException,std,datetime,date) if the given time zone
             could not be found.
       +/
     deprecated("Use PosixTimeZone.getTimeZone or WindowsTimeZone.getTimeZone instead")
@@ -550,7 +550,7 @@ public:
 
         Throws:
             $(D FileException) on Posix systems if it fails to read from disk.
-            $(REF std,datetime,common,DateTimeException) on Windows systems if
+            $(REF DateTimeException,std,datetime,date) on Windows systems if
             it fails to read the registry.
       +/
     deprecated("Use PosixTimeZone.getInstalledTZNames or WindowsTimeZone.getInstalledTZNames instead")
@@ -1331,7 +1331,7 @@ private:
     UTC but no DST.
 
     It's primarily used as the time zone in the result of
-    $(REF std,datetime,systime,SysTime)'s $(D fromISOString),
+    $(REF SysTime,std,datetime,systime)'s $(D fromISOString),
     $(D fromISOExtString), and $(D fromSimpleString).
 
     $(D name) and $(D dstName) are always the empty string since this time zone
@@ -2060,7 +2060,7 @@ public:
                             use $(LREF PosixTimeZone)s.
 
         Throws:
-            $(REF std,datetime,common,DateTimeException) if the given time zone
+            $(REF DateTimeException,std,datetime,date) if the given time zone
             could not be found or $(D FileException) if the TZ Database file
             could not be opened.
       +/
@@ -2666,7 +2666,7 @@ private:
 
     /+
         Throws:
-            $(REF std,datetime,common,DateTimeException) if $(D result) is false.
+            $(REF DateTimeException,std,datetime,date) if $(D result) is false.
       +/
     static void _enforceValidTZFile(bool result, size_t line = __LINE__) @safe pure
     {
@@ -2904,7 +2904,7 @@ version(StdDdoc)
                 name = The TZ Database name of the desired time zone.
 
             Throws:
-                $(REF std,datetime,common,DateTimeException) if the given time
+                $(REF DateTimeException,std,datetime,date) if the given time
                 zone could not be found.
 
             Example:
