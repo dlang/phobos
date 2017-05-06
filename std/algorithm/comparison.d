@@ -1402,7 +1402,25 @@ if (T.length >= 2)
 
     //Do the "max" proper with a and b
     import std.functional : lessThan;
-    immutable chooseB = lessThan!(T0, T1)(a, b);
+    bool chooseB = lessThan!(T0, T1)(a, b);
+
+    // bug 10448, fixes NaN comparison
+    static if (isFloatingPoint!T0 || isFloatingPoint!T1)
+    {
+        import std.math : isNaN;
+        if (chooseB)
+        {
+            // If T1 is not numeric, it might have a custom opCmp()
+            static if (isFloatingPoint!T0 && !isNumeric!T1)
+                chooseB = !(a.isNaN);
+        }
+        else
+        {
+            static if (isFloatingPoint!T1)
+                chooseB = b.isNaN;
+        }
+    }
+
     return cast(typeof(return)) (chooseB ? b : a);
 }
 
@@ -1418,6 +1436,15 @@ if (T.length >= 2)
     auto e = min(a, b, c);
     assert(is(typeof(e) == double));
     assert(e == 2);
+}
+
+/// Any comparison with NaN will always return NaN
+@safe unittest
+{
+    import std.math : isNaN;
+
+    assert(max(10, double.nan).isNaN);
+    assert(max(real.nan, double.infinity).isNaN);
 }
 
 @safe unittest
@@ -1516,7 +1543,25 @@ if (T.length >= 2)
 
     //Do the "min" proper with a and b
     import std.functional : lessThan;
-    immutable chooseA = lessThan!(T0, T1)(a, b);
+    bool chooseA = lessThan!(T0, T1)(a, b);
+
+    // bug 10448, fixes NaN comparison
+    static if (isFloatingPoint!T0 || isFloatingPoint!T1)
+    {
+        import std.math : isNaN;
+        if (chooseA)
+        {
+            // If T0 is not numeric, it might have a custom opCmp()
+            static if (isFloatingPoint!T1 && !isNumeric!T0)
+                chooseA = !(b.isNaN);
+        }
+        else
+        {
+            static if (isFloatingPoint!T0)
+                chooseA = a.isNaN;
+        }
+    }
+
     return cast(typeof(return)) (chooseA ? a : b);
 }
 
@@ -1550,6 +1595,15 @@ if (T.length >= 2)
     assert(min(Date.max, Date(1982, 1, 4)) == Date(1982, 1, 4));
     assert(min(Date.min, Date.max) == Date.min);
     assert(min(Date.max, Date.min) == Date.min);
+}
+
+/// Any comparison with NaN will always return NaN
+@safe unittest
+{
+    import std.math : isNaN;
+
+    assert(min(10, double.nan).isNaN);
+    assert(min(real.nan, double.infinity).isNaN);
 }
 
 // mismatch
