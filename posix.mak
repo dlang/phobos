@@ -181,7 +181,7 @@ PACKAGE_std_experimental = checkedint typecons
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
   sorting
 PACKAGE_std_container = array binaryheap dlist package rbtree slist util
-PACKAGE_std_datetime = common date datetime interval package systime timeofday timezone
+PACKAGE_std_datetime = date interval package systime timezone
 PACKAGE_std_digest = crc digest hmac md murmurhash ripemd sha
 PACKAGE_std_experimental_logger = core filelogger \
   nulllogger multilogger package
@@ -558,7 +558,7 @@ publictests: $(LIB)
 has_public_example: $(LIB)
 	#  checks whether public function have public examples (for now some modules are excluded)
 	rm -rf ./out
-	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) --compiler=$${PWD}/$(DMD) --root=../tools/styles -c has_public_example -- --inputdir . --ignore "etc,array.d,allocator,base64.d,bitmanip.d,concurrency.d,conv.d,csv.d,datetime/common.d,datetime/date.d,datetime/datetime.d,datetime/interval.d,datetime/package.d,datetime/systime.d,datetime/timeofday.d,datetime/timezone.d,demangle.d,digest/hmac.d,digest/sha.d,encoding.d,exception.d,file.d,format.d,getopt.d,index.d,internal,isemail.d,json.d,logger/core.d,logger/nulllogger.d,math.d,mathspecial.d,net/curl.d,numeric.d,parallelism.d,path.d,process.d,random.d,range,regex/package.d,socket.d,stdio.d,string.d,traits.d,typecons.d,uni.d,unittest.d,uri.d,utf.d,uuid.d,xml.d,zlib.d"
+	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) --compiler=$${PWD}/$(DMD) --root=../tools/styles -c has_public_example -- --inputdir . --ignore "etc,array.d,allocator,base64.d,bitmanip.d,concurrency.d,conv.d,csv.d,datetime/date.d,datetime/interval.d,datetime/package.d,datetime/systime.d,datetime/timezone.d,demangle.d,digest/hmac.d,digest/sha.d,encoding.d,exception.d,file.d,format.d,getopt.d,index.d,internal,isemail.d,json.d,logger/core.d,logger/nulllogger.d,math.d,mathspecial.d,net/curl.d,numeric.d,parallelism.d,path.d,process.d,random.d,range,regex/package.d,socket.d,stdio.d,string.d,traits.d,typecons.d,uni.d,unittest.d,uri.d,utf.d,uuid.d,xml.d,zlib.d"
 
 .PHONY : auto-tester-build
 auto-tester-build: all checkwhitespace
