@@ -1,0 +1,39 @@
+std.datetime has been split into a package.
+
+std.datetime is now a package containing the following modules:
+
+$(UL
+    $(LI $(LINK2 $(PHOBOS_PATH)std_datetime_date.html, std.datetime.date))
+    $(LI $(LINK2 $(PHOBOS_PATH)std_datetime_interval.html, std.datetime.interval))
+    $(LI $(LINK2 $(PHOBOS_PATH)std_datetime_systime.html, std.datetime.systime))
+    $(LI $(LINK2 $(PHOBOS_PATH)std_datetime_timezone.html, std.datetime.timezone))
+)
+
+$(LINK2 $(PHOBOS_PATH)std_datetime.html, std.datetime.package) publicly imports
+all of those modules. So, it should be the case that no existing code will
+break, as everything in std.datetime will still be imported by importing
+std.datetime. New code can choose to import the modules individually or to
+import the entire package.
+
+$(LINK2 $(PHOBOS_PATH)std_datetime_date.html, std.datetime.date) contains Date,
+TimeOfDay, DateTime, and the related free functions. It also contains
+DateTimeException.
+
+$(LINK2 $(PHOBOS_PATH)std_datetime_interval.html, std.datetime.interval)
+contains the *Interval and *IntervalRange types as well as the related free
+functions.
+
+$(LINK2 $(PHOBOS_PATH)std_datetime_systime.html, std.datetime.systime)
+contains SysTime and the related free functions.
+
+$(LINK2 $(PHOBOS_PATH)std_datetime_timezone.html, std.datetime.timezone)
+contains the time zone types.
+
+$(LINK2 $(PHOBOS_PATH)std_datetime.html, std.datetime.package) contains
+StopWatch and the benchmarking functions (so, they can only be imported via
+std.datetime and not via a submodule). As those functions use TickDuration,
+they are slated for deprecation and will be replaced with corresponding
+functions that use MonoTime and Duration.  Eventually, the new functions will
+end up in a submodule of std.datetime, and the old ones will have been removed,
+leaving nothing in std.datetime.package except for documentation and the public
+imports of the rest of std.datetime.
