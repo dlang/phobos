@@ -3,46 +3,39 @@ std.datetime has been split into a package.
 std.datetime is now a package containing the following modules:
 
 $(UL
-    $(LI $(LINK2 $(PHOBOS_PATH)std_datetime_date.html, std.datetime.date))
-    $(LI $(LINK2 $(PHOBOS_PATH)std_datetime_interval.html, std.datetime.interval))
-    $(LI $(LINK2 $(PHOBOS_PATH)std_datetime_stopwatch.html, std.datetime.stopwatch))
-    $(LI $(LINK2 $(PHOBOS_PATH)std_datetime_systime.html, std.datetime.systime))
-    $(LI $(LINK2 $(PHOBOS_PATH)std_datetime_timezone.html, std.datetime.timezone))
+    $(LI $(MREF std,datetime,date))
+    $(LI $(MREF std,datetime,interval))
+    $(LI $(MREF std,datetime,stopwatch))
+    $(LI $(MREF std,datetime,systime))
+    $(LI $(MREF std,datetime,timezone))
 )
 
-$(LINK2 $(PHOBOS_PATH)std_datetime.html, std.datetime.package) publicly imports
-all of those modules. So, it should be the case that no existing code will
-break, as everything in std.datetime will still be imported by importing
-std.datetime. New code can choose to import the modules individually or to
-import the entire package.
+$(MREF std,datetime,package) publicly imports all of those modules. So, it
+should be the case that no existing code will break, as everything in
+std.datetime will still be imported by importing std.datetime. New code can
+choose to import the modules individually or to import the entire package.
 
-$(LINK2 $(PHOBOS_PATH)std_datetime_date.html, std.datetime.date) contains Date,
-TimeOfDay, DateTime, and the related free functions. It also contains
-DateTimeException.
+$(MREF std,datetime,date) contains Date, TimeOfDay, DateTime, and the related
+free functions. It also contains DateTimeException.
 
-$(LINK2 $(PHOBOS_PATH)std_datetime_interval.html, std.datetime.interval)
-contains the *Interval and *IntervalRange types as well as the related free
-functions.
+$(MREF std,datetime,interval) contains the *Interval and *IntervalRange types
+as well as the related free functions.
 
-$(LINK2 $(PHOBOS_PATH)std_datetime_systime.html, std.datetime.systime)
-contains SysTime and the related free functions.
+$(MREF std,datetime,systime) contains SysTime and the related free functions.
 
-$(LINK2 $(PHOBOS_PATH)std_datetime_timezone.html, std.datetime.timezone)
-contains the time zone types.
+$(MREF std,datetime,timezone) contains the time zone types.
 
-$(LINK2 $(PHOBOS_PATH)std_datetime.html, std.datetime.package) contains
-StopWatch and the benchmarking functions (so, they can only be imported via
-std.datetime and not via a submodule). As those functions use
-$(REF TickDuration,core,time) (which is being replaced by
+$(MREF std,datetime,package) contains StopWatch and the benchmarking functions
+(so, they can only be imported via std.datetime and not via a submodule). As
+those functions use $(REF TickDuration,core,time) (which is being replaced by
 $(REF MonoTime,core,time), they are slated for deprecation.
 
-$(LINK2 $(PHOBOS_PATH)std_datetime_stopwatch.html, std.datetime.stopwatch) has
-been added. It contains versions of StopWatch and benchmark which have almost
-the same API as the existing symbols, but they use $(REF MonoTime,core,time) and
-$(REF Duration,core,time) instead of $(REF TickDuration,core,time). In the next
-major release, the old functions in std.datetime.package will be deprecated, so
-code which uses the old benchmarking functions should be updated to use
-std.datetime.stopwatch.
+$(MREF std,datetime,stopwatch) has been added. It contains versions of
+StopWatch and benchmark which have almost the same API as the existing symbols,
+but they use $(REF MonoTime,core,time) and $(REF Duration,core,time) instead of
+$(REF TickDuration,core,time). In the next major release, the old functions in
+std.datetime.package will be deprecated, so code which uses the old
+benchmarking functions should be updated to use std.datetime.stopwatch.
 
 However, note that in order to avoid irreconcilable symbol conflicts between
 the new and old versions, std.datetime.stopwatch will not be publicly imported
