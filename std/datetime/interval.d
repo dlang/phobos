@@ -1590,9 +1590,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
-    import std.datetime.datetime;
     import std.datetime.systime;
-    import std.datetime.timeofday;
 
     assertThrown!DateTimeException(Interval!Date(Date(2010, 1, 1), Date(1, 1, 1)));
 
@@ -1657,9 +1655,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
-    import std.datetime.datetime;
     import std.datetime.systime;
-    import std.datetime.timeofday;
 
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).length == dur!"days"(0));
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 4, 1)).length == dur!"days"(90));
@@ -1682,9 +1678,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
-    import std.datetime.datetime;
     import std.datetime.systime;
-    import std.datetime.timeofday;
 
     assert(Interval!Date(Date(2010, 1, 1), Date(2010, 1, 1)).empty);
     assert(!Interval!Date(Date(2010, 1, 1), Date(2010, 4, 1)).empty);
@@ -4161,9 +4155,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
-    import std.datetime.datetime;
     import std.datetime.systime;
-    import std.datetime.timeofday;
 
     PosInfInterval!Date(Date.init);
     PosInfInterval!TimeOfDay(TimeOfDay.init);
@@ -4196,9 +4188,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
-    import std.datetime.datetime;
     import std.datetime.systime;
-    import std.datetime.timeofday;
 
     assert(!PosInfInterval!Date(Date(2010, 1, 1)).empty);
     assert(!PosInfInterval!TimeOfDay(TimeOfDay(0, 30, 0)).empty);
@@ -6387,9 +6377,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
-    import std.datetime.datetime;
     import std.datetime.systime;
-    import std.datetime.timeofday;
 
     NegInfInterval!Date(Date.init);
     NegInfInterval!TimeOfDay(TimeOfDay.init);
@@ -6419,9 +6407,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
-    import std.datetime.datetime;
     import std.datetime.systime;
-    import std.datetime.timeofday;
 
     assert(!NegInfInterval!Date(Date(2010, 1, 1)).empty);
     assert(!NegInfInterval!TimeOfDay(TimeOfDay(0, 30, 0)).empty);
@@ -7648,9 +7634,7 @@ if (isTimePoint!TP &&
 @system unittest
 {
     import std.datetime.date;
-    import std.datetime.datetime;
     import std.datetime.systime;
-    import std.datetime.timeofday;
 
     auto funcFwd = everyDayOfWeek!Date(DayOfWeek.mon);
     auto funcBwd = everyDayOfWeek!(Date, Direction.bwd)(DayOfWeek.mon);
@@ -7777,7 +7761,6 @@ if (isTimePoint!TP &&
 @system unittest
 {
     import std.datetime.date;
-    import std.datetime.datetime;
     import std.datetime.systime;
 
     auto funcFwd = everyMonth!Date(Month.jun);
@@ -7884,9 +7867,7 @@ if (isTimePoint!TP &&
 @system unittest
 {
     import std.datetime.date;
-    import std.datetime.datetime;
     import std.datetime.systime;
-    import std.datetime.timeofday;
 
     auto funcFwd = everyDuration!Date(dur!"days"(27));
     auto funcBwd = everyDuration!(Date, Direction.bwd)(dur!"days"(27));
@@ -8011,9 +7992,7 @@ if (isTimePoint!TP &&
 @system unittest
 {
     import std.datetime.date;
-    import std.datetime.datetime;
     import std.datetime.systime;
-    import std.datetime.timeofday;
 
     {
         auto funcFwd = everyDuration!Date(1, 2, AllowDayOverflow.yes, dur!"days"(3));
@@ -8296,9 +8275,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
-    import std.datetime.datetime;
     import std.datetime.systime;
-    import std.datetime.timeofday;
     import std.range.primitives;
 
     static assert(isInputRange!(IntervalRange!(Date, Direction.fwd)));
@@ -8325,9 +8302,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
-    import std.datetime.datetime;
     import std.datetime.systime;
-    import std.datetime.timeofday;
 
     {
         Date dateFunc(in Date date) { return date; }
@@ -8744,9 +8719,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
-    import std.datetime.datetime;
     import std.datetime.systime;
-    import std.datetime.timeofday;
     import std.range.primitives;
 
     static assert(isInputRange!(PosInfIntervalRange!Date));
@@ -8772,9 +8745,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
-    import std.datetime.datetime;
     import std.datetime.systime;
-    import std.datetime.timeofday;
 
     {
         Date dateFunc(in Date date) { return date; }
@@ -9032,8 +9003,6 @@ private:
 @safe unittest
 {
     import std.datetime.date;
-    import std.datetime.datetime;
-    import std.datetime.timeofday;
     import std.range.primitives;
 
     static assert(isInputRange!(NegInfIntervalRange!Date));
@@ -9058,9 +9027,7 @@ private:
 @safe unittest
 {
     import std.datetime.date;
-    import std.datetime.datetime;
     import std.datetime.systime;
-    import std.datetime.timeofday;
 
     {
         Date dateFunc(in Date date) { return date; }

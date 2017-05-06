@@ -6,5 +6,3 @@
     Source:    $(PHOBOSSRC std/datetime/_timeofday.d)
 +/
 module std.datetime.timeofday;
-
-public import std.datetime.date;

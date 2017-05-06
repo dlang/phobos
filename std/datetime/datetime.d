@@ -8,5 +8,3 @@
         LREF2=<a href="#$1">$(D $2)</a>
 +/
 module std.datetime.datetime;
-
-public import std.datetime.date;

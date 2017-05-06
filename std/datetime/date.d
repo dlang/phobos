@@ -8,7 +8,6 @@
 module std.datetime.date;
 
 import core.time;
-import std.datetime.common;
 import std.traits : isSomeString, Unqual;
 import std.typecons : Flag;
 
@@ -9550,11 +9549,8 @@ private:
 @safe unittest
 {
     import core.time : Duration;
-    import std.datetime.date : Date;
-    import std.datetime.datetime : DateTime;
     import std.datetime.interval : Interval;
     import std.datetime.systime : SysTime;
-    import std.datetime.timeofday : TimeOfDay;
 
     static assert(isTimePoint!Date);
     static assert(isTimePoint!DateTime);
@@ -9569,11 +9565,8 @@ private:
 @safe unittest
 {
     import core.time;
-    import std.datetime.date;
-    import std.datetime.datetime;
     import std.datetime.interval;
     import std.datetime.systime;
-    import std.datetime.timeofday;
     import std.meta : AliasSeq;
 
     foreach (TP; AliasSeq!(Date, DateTime, SysTime, TimeOfDay))
