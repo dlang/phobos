@@ -3,12 +3,9 @@ std.datetime has been split into a package.
 std.datetime is now a package containing the following modules:
 
 $(UL
-    $(LI $(LINK2 $(PHOBOS_PATH)std_datetime_common.html, std.datetime.common))
     $(LI $(LINK2 $(PHOBOS_PATH)std_datetime_date.html, std.datetime.date))
-    $(LI $(LINK2 $(PHOBOS_PATH)std_datetime_datetime.html, std.datetime.datetime))
     $(LI $(LINK2 $(PHOBOS_PATH)std_datetime_interval.html, std.datetime.interval))
     $(LI $(LINK2 $(PHOBOS_PATH)std_datetime_systime.html, std.datetime.systime))
-    $(LI $(LINK2 $(PHOBOS_PATH)std_datetime_timeofday.html, std.datetime.timeofday))
     $(LI $(LINK2 $(PHOBOS_PATH)std_datetime_timezone.html, std.datetime.timezone))
 )
 
@@ -18,24 +15,16 @@ break, as everything in std.datetime will still be imported by importing
 std.datetime. New code can choose to import the modules individually or to
 import the entire package.
 
-$(LINK2 $(PHOBOS_PATH)std_datetime_common.html, std.datetime.common) contains a
-few types and free functions that are used by the other modules (such as Month
-and isTimePoint).
-
-$(LINK2 $(PHOBOS_PATH)std_datetime_date.html, std.datetime.date) contains Date.
-
-$(LINK2 $(PHOBOS_PATH)std_datetime_datetime.html, std.datetime.datetime)
-contains DateTime.
+$(LINK2 $(PHOBOS_PATH)std_datetime_date.html, std.datetime.date) contains Date,
+TimeOfDay, DateTime, and the related free functions. It also contains
+DateTimeException.
 
 $(LINK2 $(PHOBOS_PATH)std_datetime_interval.html, std.datetime.interval)
 contains the *Interval and *IntervalRange types as well as the related free
 functions.
 
-$(LINK2 $(PHOBOS_PATH)std_datetime_systime.html, std.datetime.systime) contains
-SysTime and the related free functions.
-
-$(LINK2 $(PHOBOS_PATH)std_datetime_timeofday.html, std.datetime.timeofday)
-contains TimeOfDay.
+$(LINK2 $(PHOBOS_PATH)std_datetime_systime.html, std.datetime.systime)
+contains SysTime and the related free functions.
 
 $(LINK2 $(PHOBOS_PATH)std_datetime_timezone.html, std.datetime.timezone)
 contains the time zone types.
