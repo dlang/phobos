@@ -3698,8 +3698,7 @@ public:
     ///
     @safe unittest
     {
-        import std.datetime.common : AllowDayOverflow;
-        import std.datetime.datetime : DateTime;
+        import std.datetime.date : AllowDayOverflow, DateTime;
 
         auto st1 = SysTime(DateTime(2010, 1, 1, 12, 33, 33));
         st1.roll!"months"(1);
@@ -9755,8 +9754,7 @@ afterMon: stripAndCheckLen(value[3 .. value.length], "1200:00A".length);
 @safe unittest
 {
     import core.time : hours;
-    import std.datetime.common : DateTimeException;
-    import std.datetime.datetime : DateTime;
+    import std.datetime.date : DateTime, DateTimeException;
     import std.datetime.timezone : SimpleTimeZone, UTC;
     import std.exception : assertThrown;
 

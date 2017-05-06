@@ -8,7 +8,8 @@
 module std.datetime.interval;
 
 import core.time : Duration, dur;
-import std.datetime.common;
+import std.datetime.date : AllowDayOverflow, DateTimeException, daysToDayOfWeek,
+                           DayOfWeek, isTimePoint, Month;
 import std.exception : enforce;
 import std.traits : isIntegral, Unqual;
 import std.typecons : Flag;
@@ -7622,8 +7623,7 @@ if (isTimePoint!TP &&
 ///
 @system unittest
 {
-    import std.datetime.common : DayOfWeek;
-    import std.datetime.date : Date;
+    import std.datetime.date : Date, DayOfWeek;
 
     auto interval = Interval!Date(Date(2010, 9, 2), Date(2010, 9, 27));
     auto func = everyDayOfWeek!Date(DayOfWeek.mon);
@@ -7715,6 +7715,8 @@ if (isTimePoint!TP &&
     !__traits(isStaticFunction, TP.month) &&
     is(typeof(TP.month) == Month))
 {
+    import std.datetime.date : enforceValid, monthsToMonth;
+
     enforceValid!"months"(month);
 
     TP func(in TP tp)
@@ -7744,8 +7746,7 @@ if (isTimePoint!TP &&
 ///
 @system unittest
 {
-    import std.datetime.common : Month;
-    import std.datetime.date : Date;
+    import std.datetime.date : Date, Month;
 
     auto interval = Interval!Date(Date(2000, 1, 30), Date(2004, 8, 5));
     auto func = everyMonth!Date(Month.feb);
@@ -7985,8 +7986,7 @@ if (isTimePoint!TP &&
 @system unittest
 {
     import core.time : dur;
-    import std.datetime.common : AllowDayOverflow;
-    import std.datetime.date : Date;
+    import std.datetime.date : AllowDayOverflow, Date;
 
     auto interval = Interval!Date(Date(2010, 9, 2), Date(2025, 9, 27));
     auto func = everyDuration!Date(4, 1, AllowDayOverflow.yes, dur!"days"(2));
