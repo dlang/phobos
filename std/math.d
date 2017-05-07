@@ -7217,14 +7217,6 @@ bool approxEqual(T, U)(T lhs, U rhs)
     assert(approxEqual(10, a));
 }
 
-// Explicitly undocumented. They will be removed in March 2017. @@@DEPRECATED_2017-03@@@
-// Included for backwards compatibility with Phobos1
-deprecated("Phobos1 math functions are deprecated, use isNaN") alias isnan = isNaN;
-deprecated("Phobos1 math functions are deprecated, use isFinite ") alias isfinite = isFinite;
-deprecated("Phobos1 math functions are deprecated, use isNormal ") alias isnormal = isNormal;
-deprecated("Phobos1 math functions are deprecated, use isSubnormal ") alias issubnormal = isSubnormal;
-deprecated("Phobos1 math functions are deprecated, use isInfinity ") alias isinf = isInfinity;
-
 @safe pure nothrow @nogc unittest
 {
     real num = real.infinity;

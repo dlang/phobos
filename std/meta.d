@@ -252,13 +252,6 @@ if (!isAggregateType!T || is(Unqual!T == T))
     alias OldAlias = T;
 }
 
-deprecated("Alias will stop to unqualify user defined types.")
-package template OldAlias(T)
-if (isAggregateType!T && !is(Unqual!T == T))
-{
-    alias OldAlias = Unqual!T;
-}
-
 @safe unittest
 {
     static struct Foo {}
@@ -347,10 +340,6 @@ if (args.length >= 1)
     static assert(staticIndexOf!(void, 0, "void", void) == 2);
     static assert(staticIndexOf!("void", 0, void, "void") == 2);
 }
-
-// Explicitly undocumented. It will be removed in February 2017. @@@DEPRECATED_2017-02@@@
-deprecated("Please use staticIndexOf")
-alias IndexOf = staticIndexOf;
 
 /**
  * Returns a typetuple created from TList with the first occurrence,

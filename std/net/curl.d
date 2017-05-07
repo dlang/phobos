@@ -826,16 +826,6 @@ if (is(T == char) || is(T == ubyte))
     return _basicHTTP!(T)(url, null, conn);
 }
 
-// Explicitly undocumented. It will be removed in February 2017. @@@DEPRECATED_2017-02@@@
-deprecated("options does not send any data")
-T[] options(T = char, OptionsUnit)(const(char)[] url,
-                                   const(OptionsUnit)[] optionsData = null,
-                                   HTTP conn = HTTP())
-if (is(T == char) || is(T == ubyte))
-{
-    return options!T(url, conn);
-}
-
 @system unittest
 {
     import std.algorithm.searching : canFind;

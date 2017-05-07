@@ -195,6 +195,3 @@ public import std.algorithm.searching;
 public import std.algorithm.sorting;
 
 static import std.functional;
-// Explicitly undocumented. It will be removed in March 2017. @@@DEPRECATED_2017-03@@@
-deprecated("Please use std.functional.forward instead.")
-alias forward = std.functional.forward;
