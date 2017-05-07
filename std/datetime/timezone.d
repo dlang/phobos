@@ -728,17 +728,29 @@ public:
 
     @safe unittest
     {
-        assert(LocalTime().stdName !is null);
-
-        version(Posix)
+        version(FreeBSD)
         {
-            scope(exit) clearTZEnvVar();
+            // A bug on FreeBSD 9+ makes it so that this test fails.
+            // https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=168862
+        }
+        else version(NetBSD)
+        {
+            // The same bug on NetBSD 7+
+        }
+        else
+        {
+            assert(LocalTime().stdName !is null);
 
-            setTZEnvVar("America/Los_Angeles");
-            assert(LocalTime().stdName == "PST");
+            version(Posix)
+            {
+                scope(exit) clearTZEnvVar();
 
-            setTZEnvVar("America/New_York");
-            assert(LocalTime().stdName == "EST");
+                setTZEnvVar("America/Los_Angeles");
+                assert(LocalTime().stdName == "PST");
+
+                setTZEnvVar("America/New_York");
+                assert(LocalTime().stdName == "EST");
+            }
         }
     }
 
