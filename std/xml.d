@@ -1056,27 +1056,42 @@ class Tag
      */
     private this(ref string s, bool dummy) @safe pure
     {
-        import std.ascii : whitespace;
-        import std.string : munch;
+        import std.algorithm.searching : countUntil;
+        import std.ascii : isWhite;
+        import std.utf : byCodeUnit;
 
         tagString = s;
         try
         {
             reqc(s,'<');
             if (optc(s,'/')) type = TagType.END;
-            name = munch(s,"^/>"~whitespace);
-            munch(s,whitespace);
+            ptrdiff_t i = s.byCodeUnit.countUntil(">", "/>", " ", "\t", "\v", "\r", "\n", "\f");
+            name = s[0 .. i];
+            s = s[i .. $];
+
+            i = s.byCodeUnit.countUntil!(a => !isWhite(a));
+            s = s[i .. $];
+
             while (s.length > 0 && s[0] != '>' && s[0] != '/')
             {
-                string key = munch(s,"^="~whitespace);
-                munch(s,whitespace);
+                i = s.byCodeUnit.countUntil("=", " ", "\t", "\v", "\r", "\n", "\f");
+                string key = s[0 .. i];
+                s = s[i .. $];
+
+                i = s.byCodeUnit.countUntil!(a => !isWhite(a));
+                s = s[i .. $];
                 reqc(s,'=');
-                munch(s,whitespace);
+                i = s.byCodeUnit.countUntil!(a => !isWhite(a));
+                s = s[i .. $];
+
                 immutable char quote = requireOneOf(s,"'\"");
-                char[2] notQuote = ['^', quote];
-                string val = decode(munch(s,notQuote[]), DecodeMode.LOOSE);
+                i = s.byCodeUnit.countUntil(quote);
+                string val = decode(s[0 .. i], DecodeMode.LOOSE);
+                s = s[i .. $];
                 reqc(s,quote);
-                munch(s,whitespace);
+
+                i = s.byCodeUnit.countUntil!(a => !isWhite(a));
+                s = s[i .. $];
                 attr[key] = val;
             }
             if (optc(s,'/'))
@@ -2194,10 +2209,16 @@ private
 
     void checkSpace(ref string s) @safe pure // rule 3
     {
-        import std.string : munch;
+        import std.algorithm.searching : countUntil;
+        import std.ascii : isWhite;
+        import std.utf : byCodeUnit;
 
         mixin Check!("Whitespace");
-        munch(s,"\u0020\u0009\u000A\u000D");
+        ptrdiff_t i = s.byCodeUnit.countUntil!(a => !isWhite(a));
+        if (i == -1 && s.length > 0 && isWhite(s[0]))
+            s = s[$ .. $];
+        else if (i > -1)
+            s = s[i .. $];
         if (s is old) fail();
     }
 
@@ -2222,7 +2243,8 @@ private
 
     void checkAttValue(ref string s) @safe pure // rule 10
     {
-        import std.string : munch;
+        import std.algorithm.searching : countUntil;
+        import std.utf : byCodeUnit;
 
         mixin Check!("AttValue");
 
@@ -2233,7 +2255,7 @@ private
         s = s[1..$];
         for (;;)
         {
-            munch(s,"^<&"~c);
+            s = s[s.byCodeUnit.countUntil(c) .. $];
             if (s.length == 0) fail("unterminated attribute value");
             if (s[0] == '<') fail("< found in attribute value");
             if (s[0] == c) break;
@@ -2356,11 +2378,12 @@ private
 
     void checkVersionNum(ref string s) @safe pure // rule 26
     {
-        import std.string : munch;
+        import std.algorithm.searching : countUntil;
+        import std.utf : byCodeUnit;
 
         mixin Check!("VersionNum");
 
-        munch(s,"a-zA-Z0-9_.:-");
+        s = s[s.byCodeUnit.countUntil('\"') .. $];
         if (s is old) fail();
     }
 
@@ -2583,13 +2606,15 @@ private
 
     void checkEncName(ref string s) @safe pure // rule 81
     {
-        import std.string : munch;
+        import std.algorithm.searching : countUntil;
+        import std.ascii : isAlpha;
+        import std.utf : byCodeUnit;
 
         mixin Check!("EncName");
 
-        munch(s,"a-zA-Z");
+        s = s[s.byCodeUnit.countUntil!(a => !isAlpha(a)) .. $];
         if (s is old) fail();
-        munch(s,"a-zA-Z0-9_.-");
+        s = s[s.byCodeUnit.countUntil('\"', '\'') .. $];
     }
 
     void checkEncodingDecl(ref string s) @safe pure // rule 80
