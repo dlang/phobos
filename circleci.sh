@@ -121,6 +121,10 @@ coverage()
 
     # instead we run all tests individually
     make -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test")
+
+    # Remove coverage information from lines with non-deterministic coverage.
+    # These lines are annotated with a comment containing "nocoverage".
+    sed -i 's/^ *[0-9]*\(|.*nocoverage.*\)$/       \1/' ./*.lst
 }
 
 case $1 in
