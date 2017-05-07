@@ -225,6 +225,8 @@ module std.experimental.allocator;
 
 public import std.experimental.allocator.common,
     std.experimental.allocator.typed;
+import std.meta: allSatisfy;
+import std.typecons: Yes, No, Flag;
 
 // Example in the synopsis above
 @system unittest
@@ -380,87 +382,142 @@ Methods returning $(D Ternary) return $(D Ternary.yes) upon success,
 $(D Ternary.no) upon failure, and $(D Ternary.unknown) if the primitive is not
 implemented by the allocator instance.
 */
-interface ISharedAllocator
+mixin(addAttributes!(No.override_, IAllocator, "ISharedAllocator", "shared"));
+
+/**
+@nogc variant of `IAllocator`. Equivalent except for every member function
+is `@nogc`.
+ */
+mixin(addAttributes!(Yes.override_, IAllocator, "INoGcAllocator", "@nogc"));
+
+
+@nogc unittest
 {
-    /**
-    Returns the alignment offered.
-    */
-    @property uint alignment() shared;
-
-    /**
-    Returns the good allocation size that guarantees zero internal
-    fragmentation.
-    */
-    size_t goodAllocSize(size_t s) shared;
-
-    /**
-    Allocates `n` bytes of memory.
-    */
-    void[] allocate(size_t, TypeInfo ti = null) shared;
-
-    /**
-    Allocates `n` bytes of memory with specified alignment `a`. Implementations
-    that do not support this primitive should always return `null`.
-    */
-    void[] alignedAllocate(size_t n, uint a) shared;
-
-    /**
-    Allocates and returns all memory available to this allocator.
-    Implementations that do not support this primitive should always return
-    `null`.
-    */
-    void[] allocateAll() shared;
-
-    /**
-    Expands a memory block in place and returns `true` if successful.
-    Implementations that don't support this primitive should always return
-    `false`.
-    */
-    bool expand(ref void[], size_t) shared;
-
-    /// Reallocates a memory block.
-    bool reallocate(ref void[], size_t) shared;
-
-    /// Reallocates a memory block with specified alignment.
-    bool alignedReallocate(ref void[] b, size_t size, uint alignment) shared;
-
-    /**
-    Returns $(D Ternary.yes) if the allocator owns $(D b), $(D Ternary.no) if
-    the allocator doesn't own $(D b), and $(D Ternary.unknown) if ownership
-    cannot be determined. Implementations that don't support this primitive
-    should always return `Ternary.unknown`.
-    */
-    Ternary owns(void[] b) shared;
-
-    /**
-    Resolves an internal pointer to the full block allocated. Implementations
-    that don't support this primitive should always return `Ternary.unknown`.
-    */
-    Ternary resolveInternalPointer(const void* p, ref void[] result) shared;
-
-    /**
-    Deallocates a memory block. Implementations that don't support this
-    primitive should always return `false`. A simple way to check that an
-    allocator supports deallocation is to call $(D deallocate(null)).
-    */
-    bool deallocate(void[] b) shared;
-
-    /**
-    Deallocates all memory. Implementations that don't support this primitive
-    should always return `false`.
-    */
-    bool deallocateAll() shared;
-
-    /**
-    Returns $(D Ternary.yes) if no memory is currently allocated from this
-    allocator, $(D Ternary.no) if some allocations are currently active, or
-    $(D Ternary.unknown) if not supported.
-    */
-    Ternary empty() shared;
+    // just to see if it compiles
+    void fun(INoGcAllocator allocator) @nogc
+    {
+        allocator.allocate(10);
+    }
 }
+
+unittest
+{
+    // just to see if it compiles
+    void fun(shared ISharedAllocator allocator)
+    {
+        allocator.allocate(10);
+    }
+}
+
 
 shared ISharedAllocator _processAllocator;
 IAllocator _threadAllocator;
+
+private enum isString(alias T) = !is(T) && is(typeof(T) == string);
+private alias Identity(alias T) = T;
+
+/**
+   Define a new interface with the same member functions as the
+   passed in interface, adding attributes to the declarations.
+   If override_ is true, the new interface derives from it, if
+   false it's a completely separate interface.
+
+   Example:
+   -----------
+   interface IFoo { int foo(double d); }
+   // the line below is equivalent to writing by hand:
+   // interface INoGcFoo: IFoo { int foo(double d) @nogc; }
+   mixin(addAttributes!(Yes.override_, IFoo, "Foo", "@nogc"));
+   -----------
+ */
+private string addAttributes(Flag!"override_" override_, parent, string child, attributes...)()
+    if (is(parent == interface) && attributes.length > 0 && allSatisfy!(isString, attributes))
+{
+    import std.array: join;
+    import std.format: format;
+
+    if(!__ctfe) return null;
+
+    enum isPrivate(T, string member) = !__traits(compiles, __traits(getMember, T, member));
+
+    string[] lines;
+
+    if (override_)
+        lines ~= `interface %s: %s {`.format(child, parent.stringof);
+    else
+        lines ~= `interface ` ~ child  ~ `{`;
+
+    string implMethodStr(alias method,  attributes...)()
+    {
+        import std.traits:
+            ReturnType, Parameters, ParameterStorageClass,
+            ParameterStorageClassTuple, ParameterDefaults;
+
+        if (!__ctfe) return "";
+
+        // arguments and types declaration within parentheses
+        string args()
+        {
+            import std.array: join;
+            import std.conv: to;
+
+            string[] ret;
+
+            foreach (i, param; Parameters!method)
+            {
+                string classes;
+                alias storages = ParameterStorageClassTuple!method;
+                // TODO: other storage classes
+                if (storages[i] & ParameterStorageClass.ref_) classes ~= `ref `;
+
+                static if (is(ParameterDefaults!method[i] == void))
+                    enum default_ = "";
+                else
+                    enum default_ = ` = ` ~ ParameterDefaults!method[i].to!string;
+
+                ret ~= classes ~ Parameters!method[i].stringof ~ default_;
+            }
+
+            return `(` ~ ret.join(", ") ~ `)`;
+        }
+
+        string overrideStr;
+        if(override_) overrideStr = "override";
+        return `    ` ~ overrideStr ~ ` ` ~
+            ReturnType!method.stringof ~ " " ~ __traits(identifier, method) ~
+            args ~ " " ~ joinWithSpaces!attributes ~ `;`;
+
+    }
+
+    string joinWithSpaces(attributes...)()
+    {
+        import std.array: join;
+
+        if (!__ctfe) return "";
+
+        string[] parts;
+        foreach (a; attributes) parts ~= a;
+        return parts.join(" ");
+    }
+
+    foreach (memberName; __traits(allMembers, parent))
+    {
+        static if (!isPrivate!(parent, memberName))
+        {
+
+            alias member = Identity!(__traits(getMember, parent, memberName));
+
+            static if (__traits(isAbstractFunction, member))
+                foreach (overload; __traits(getOverloads, parent, memberName))
+                    lines ~= implMethodStr!(overload, attributes);
+        }
+    }
+
+
+    lines ~= `}`;
+    return lines.join("\n");
+}
+
 
 shared static this()
 {
