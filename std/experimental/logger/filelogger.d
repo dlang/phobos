@@ -4,6 +4,13 @@ module std.experimental.logger.filelogger;
 import std.experimental.logger.core;
 import std.stdio;
 
+import std.typecons : Flag;
+
+/** An option for a $(D FileLogger) constructor to possibly create the folder the
+$(D FileLogger) should create its log file.
+*/
+alias CreateFolder = Flag!"CreateFolder";
+
 /** This $(D Logger) implementation writes log messages to the associated
 file. The name of the file has to be passed on construction time. If the file
 is already present new log messages will be append at its end.
@@ -21,17 +28,38 @@ class FileLogger : Logger
       file can not be opened for writting an exception will be thrown.
       lv = The $(D LogLevel) for the $(D FileLogger). By default the
       $(D LogLevel) for $(D FileLogger) is $(D LogLevel.all).
+      createFileNameFolder = if yes and fn contains a folder name, this
+      folder will be created.
 
     Example:
     -------------
     auto l1 = new FileLogger("logFile");
     auto l2 = new FileLogger("logFile", LogLevel.fatal);
+    auto l3 = new FileLogger("logFile", LogLevel.fatal, CreateFolder.yes);
     -------------
     */
     this(in string fn, const LogLevel lv = LogLevel.all) @safe
     {
+        this(fn, lv, CreateFolder.yes);
+    }
+
+    this(in string fn, const LogLevel lv, CreateFolder createFileNameFolder) @safe
+    {
+        import std.file : exists, mkdirRecurse;
+        import std.path : dirName;
+        import std.conv : text;
+
         super(lv);
         this.filename = fn;
+
+        if (createFileNameFolder)
+        {
+            auto d = dirName(this.filename);
+            mkdirRecurse(d);
+            assert(exists(d), text("The folder the FileLogger should have been",
+                " created in '", d, "' could not be created."));
+        }
+
         this.file_.open(this.filename, "a");
     }
 
@@ -199,4 +227,23 @@ class FileLogger : Logger
     auto tl = cast(StdForwardLogger) stdThreadLocalLog;
     assert(tl !is null);
     stdThreadLocalLog.logLevel = LogLevel.all;
+}
+
+@safe unittest
+{
+    import std.file : exists, rmdirRecurse;
+
+    string logpath = "super/long/path/";
+    string logname = logpath ~ "output.log";
+    scope(exit)
+    {
+        () @trusted { rmdirRecurse(logpath); }();
+    }
+
+    assert(!exists(logpath));
+    auto fl = new FileLogger(logname, LogLevel.all, CreateFolder.yes);
+    fl.log("Hello World");
+    assert(exists(logpath));
+
+    fl.file.close();
 }
