@@ -275,10 +275,6 @@ unittest-%:
 	$(MAKE) -f $(MAKEFILE) unittest OS=$(OS) MODEL=$(MODEL) DMD=$(DMD) BUILD=$*
 endif
 
-depend: $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
-
--include $(addprefix $(ROOT)/unittest/,$(addsuffix .deps,$(D_MODULES)))
-
 ################################################################################
 # Patterns begin here
 ################################################################################
@@ -323,13 +319,11 @@ $(addprefix $(ROOT)/unittest/,$(DISABLED_TESTS)) :
 	@echo Testing $@ - disabled
 
 UT_D_OBJS:=$(addprefix $(ROOT)/unittest/,$(addsuffix .o,$(D_MODULES)))
+# need to recompile all unittest objects whenever sth. changes
+$(UT_D_OBJS): $(ALL_D_FILES)
 $(UT_D_OBJS): $(ROOT)/unittest/%.o: %.d
 	@mkdir -p $(dir $@)
-	$(DMD) $(DFLAGS) -unittest -c -of$@ -deps=$(@:.o=.deps.tmp) $<
-	@echo $@: `sed 's|.*(\(.*\)).*|\1|' $(@:.o=.deps.tmp) | sort | uniq` \
-	   >$(@:.o=.deps)
-	@rm $(@:.o=.deps.tmp)
-#	$(DMD) $(DFLAGS) -unittest -c -of$@ $*.d
+	$(DMD) $(DFLAGS) -unittest -c -of$@ $<
 
 ifneq (1,$(SHARED))
 
