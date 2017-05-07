@@ -541,7 +541,7 @@ style: ../dscanner/dsc $(LIB) has_public_example publictests
 	done
 
 	@echo "Check that Ddoc runs without errors"
-	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -w -D -main -c -o- $$(find etc std -type f -name '*.d') 2>&1 | grep -v "Deprecation:"; test $$? -eq 1
+	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -w -D -Df/dev/null -main -c -o- $$(find etc std -type f -name '*.d') 2>&1 | grep -v "Deprecation:"; test $$? -eq 1
 
 	# at the moment libdparse has problems to parse some modules (->excludes)
 	@echo "Running DScanner"
