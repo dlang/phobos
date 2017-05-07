@@ -3144,3 +3144,51 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
     tl.log("123456789"d);
     assert(tl.msg == "123456789");
 }
+
+// Issue 15517
+@system unittest
+{
+    import std.stdio : File;
+    import std.string : indexOf;
+    import std.file : exists, remove;
+
+    string fn = "logfile.log";
+    if (exists(fn))
+    {
+        remove(fn);
+    }
+
+    auto oldShared = sharedLog;
+    scope(exit)
+    {
+        sharedLog = oldShared;
+        if (exists(fn))
+        {
+            remove(fn);
+        }
+    }
+
+    auto ts = [ "Test log 1", "Test log 2", "Test log 3"];
+
+    auto fl = new FileLogger(fn);
+    sharedLog = fl;
+    assert(exists(fn));
+
+    foreach (t; ts)
+    {
+        log(t);
+    }
+
+    auto f = File(fn);
+    auto l = f.byLine();
+    assert(!l.empty);
+    size_t idx;
+    foreach (it; l)
+    {
+        assert(it.indexOf(ts[idx]) != -1, it);
+        ++idx;
+    }
+
+    assert(exists(fn));
+    fl.file.close();
+}
