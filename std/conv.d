@@ -4428,10 +4428,10 @@ private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignmen
 /**
 Given a raw memory area $(D chunk), constructs an object of $(D class)
 type $(D T) at that address. The constructor is passed the arguments
-$(D Args).
+$(D args).
 
 If `T` is an inner class whose `outer` field can be used to access an instance
-of the enclosing class, then `Args` must not be empty, and the first member of it
+of the enclosing class, then `args` must not be empty, and the first member of it
 must be a valid initializer for that `outer` field. Correct initialization of
 this field is essential to access members of the outer class inside `T` methods.
 
@@ -4470,6 +4470,10 @@ if (is(T == class))
         result.outer = args[0];
         alias args1 = args[1..$];
     }
+    else static if (hasNested!T)
+    {
+        static assert(false, "Cannot initialize non-inner nested class");
+    }
     else alias args1 = args;
 
     // Call the ctor if any
@@ -4503,7 +4507,7 @@ if (is(T == class))
 
 @system unittest
 {
-    class Outer
+    static class Outer
     {
         int i = 3;
         class Inner
@@ -4515,6 +4519,18 @@ if (is(T == class))
     auto innerBuf = new void[__traits(classInstanceSize, Outer.Inner)];
     auto inner = innerBuf.emplace!(Outer.Inner)(outerBuf.emplace!Outer);
     assert(inner.getI == 3);
+}
+
+// context pointer
+unittest
+{
+    int i;
+    class C
+    {
+        void f(){i++;}
+    }
+    auto buf = new void[__traits(classInstanceSize, C)];
+    static assert(!__traits(compiles, emplace!C(buf)));
 }
 
 @nogc pure nothrow @system unittest
@@ -5473,7 +5489,7 @@ pure nothrow @safe /* @nogc */ unittest
 
 @system unittest
 {
-    class A
+    static class A
     {
         int x = 5;
         int y = 42;
