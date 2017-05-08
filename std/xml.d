@@ -430,13 +430,13 @@ enum DecodeMode
  * writefln(decode("a &gt; b")); // writes "a > b"
  * --------------
  */
-string decode(string s, DecodeMode mode=DecodeMode.LOOSE) @system pure
+string decode(string s, DecodeMode mode=DecodeMode.LOOSE) @safe pure
 {
     import std.algorithm.searching : startsWith;
 
     if (mode == DecodeMode.NONE) return s;
 
-    char[] buffer;
+    string buffer;
     foreach (ref i; 0 .. s.length)
     {
         char c = s[i];
@@ -482,10 +482,10 @@ string decode(string s, DecodeMode mode=DecodeMode.LOOSE) @system pure
             }
         }
     }
-    return (buffer.length == 0) ? s : cast(string) buffer;
+    return (buffer.length == 0) ? s : buffer;
 }
 
-@system pure unittest
+@safe pure unittest
 {
     void assertNot(string s) pure
     {
@@ -1054,12 +1054,11 @@ class Tag
      * The second parameter is a dummy parameter only, required solely to
      * distinguish this constructor from the public one.
      */
-    private this(ref string s, bool dummy) @system
+    private this(ref string s, bool dummy) @safe pure
     {
         import std.ascii : whitespace;
         import std.string : munch;
 
-        // @system because of decode
         tagString = s;
         try
         {
@@ -1086,11 +1085,11 @@ class Tag
                 type = TagType.EMPTY;
             }
             reqc(s,'>');
-            tagString.length = (s.ptr - tagString.ptr);
+            tagString.length = tagString.length - s.length;
         }
         catch (XMLException e)
         {
-            tagString.length = (s.ptr - tagString.ptr);
+            tagString.length = tagString.length - s.length;
             throw new TagException(tagString);
         }
     }
