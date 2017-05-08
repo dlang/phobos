@@ -5027,6 +5027,12 @@ version(unittest) private class __conv_EmplaceTestClass
     auto ps = emplace!S(buf, s);
     ps.f;
     assert(i == 1);
+
+    S[3] sa = void;
+    static assert(!__traits(compiles, emplace(&sa)));
+    emplace(&sa, s);
+    sa[2].f;
+    assert(i == 2);
 }
 
 //Alias this
