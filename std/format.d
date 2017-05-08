@@ -4092,8 +4092,13 @@ private T getNth(string kind, alias Condition, T, A...)(uint index, A args)
     // width/precision
     assert(collectExceptionMsg!FormatException(format("%*.d", 5.1, 2))
         == "integer width expected, not double for argument #1");
+    assert(collectExceptionMsg!FormatException(format("%-1*.d", 5.1, 2))
+        == "integer width expected, not double for argument #1");
+
     assert(collectExceptionMsg!FormatException(format("%.*d", '5', 2))
         == "integer precision expected, not char for argument #1");
+    assert(collectExceptionMsg!FormatException(format("%-1.*d", 4.7, 3))
+        == "integer precision expected, not double for argument #1");
     assert(collectExceptionMsg!FormatException(format("%.*d", 5))
         == "Orphan format specifier: %d");
     assert(collectExceptionMsg!FormatException(format("%*.*d", 5))
@@ -5601,11 +5606,17 @@ private bool needToSwapEndianess(Char)(const ref FormatSpec!Char f)
     r = format("%-3d", 7);
     assert(r == "7  ");
 
+    r = format("%-1*d", 4, 3);
+    assert(r == "3   ");
+
     r = format("%*d", -3, 7);
     assert(r == "7  ");
 
     r = format("%.*d", -3, 7);
     assert(r == "7");
+
+    r = format("%-1.*f", 2, 3.1415);
+    assert(r == "3.14");
 
     r = format("abc"c);
     assert(r == "abc");
