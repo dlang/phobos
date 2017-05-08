@@ -485,15 +485,22 @@ html_consolidated :
 changelog.html: changelog.dd
 	$(DMD) -Df$@ $<
 
+################################################################################
+# Automatically create dlang/tools repository if non-existent
+################################################################################
+
+${TOOLS_DIR}:
+	git clone --depth=1 ${GIT_HOME}/$(@F) $@
+$(TOOLS_DIR)/checkwhitespace.d: | $(TOOLS_DIR)
+$(TOOLS_DIR)/styles/tests_extractor.d: | $(TOOLS_DIR)
+$(TOOLS_DIR)/styles/has_public_example.d: | $(TOOLS_DIR)
+
 #################### test for undesired white spaces ##########################
 CWS_TOCHECK = posix.mak win32.mak win64.mak osmodel.mak
 CWS_TOCHECK += $(ALL_D_FILES) index.d
 
 checkwhitespace: $(LIB) $(TOOLS_DIR)/checkwhitespace.d
 	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -run $(TOOLS_DIR)/checkwhitespace.d $(CWS_TOCHECK)
-
-$(TOOLS_DIR)/checkwhitespace.d:
-	git clone --depth=1 ${GIT_HOME}/tools $(TOOLS_DIR)
 
 #############################
 # Submission to Phobos are required to conform to the DStyle
