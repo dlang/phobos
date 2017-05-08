@@ -3103,6 +3103,7 @@ static:
     /**
     Assigns the given $(D value) to the environment variable with the given
     $(D name).
+    If $(D value) is null the variable is removed from environment.
 
     If the variable does not exist, it will be created. If it already exists,
     it will be overwritten.
@@ -3124,6 +3125,11 @@ static:
         version (Posix)
         {
             import std.exception : enforce, errnoEnforce;
+            if (value is null)
+            {
+                remove(name);
+                return value;
+            }
             if (core.sys.posix.stdlib.setenv(name.tempCString(), value.tempCString(), 1) != -1)
             {
                 return value;
@@ -3432,6 +3438,10 @@ private:
     import std.conv : text;
     assert(aa == aa2, text(aa, " != ", aa2));
     assert("std_process" in environment);
+
+    // Setting null must have the same effect as remove
+    environment["std_process"] = null;
+    assert("std_process" !in environment);
 }
 
 
