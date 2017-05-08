@@ -564,7 +564,7 @@ class Document : Element
         this(xml.tag);
         prolog = s[0 .. tagString.ptr - s.ptr];
         parse(xml);
-        epilog = *xml.s;
+        epilog = xml.s;
     }
 
     /**
@@ -1707,7 +1707,7 @@ class DocumentParser : ElementParser
     body
     {
         xmlText = xmlText_;
-        s = &xmlText;
+        s = xmlText;
         super();    // Initialize everything
         parse();    // Parse through the root tag (but not beyond)
     }
@@ -1734,7 +1734,7 @@ class ElementParser
     {
         Tag tag_;
         string elementStart;
-        string* s;
+        string s;
 
         Handler commentHandler = null;
         Handler cdataHandler = null;
@@ -1752,7 +1752,7 @@ class ElementParser
         }
 
         // Private constructor for empty tags
-        this(Tag tag, string* t) @safe @nogc pure nothrow
+        this(Tag tag, string t) @safe @nogc pure nothrow
         {
             s = t;
             this();
@@ -1835,7 +1835,7 @@ class ElementParser
 
     protected this() @safe @nogc pure nothrow
     {
-        elementStart = *s;
+        elementStart = s;
     }
 
     /**
@@ -1991,37 +1991,37 @@ class ElementParser
 
         while (s.length != 0)
         {
-            if (startsWith(*s,"<!--"))
+            if (startsWith(s,"<!--"))
             {
-                chop(*s,4);
-                t = chop(*s,indexOf(*s,"-->"));
+                chop(s,4);
+                t = chop(s,indexOf(s,"-->"));
                 if (commentHandler.funcptr !is null) commentHandler(t);
-                chop(*s,3);
+                chop(s,3);
             }
-            else if (startsWith(*s,"<![CDATA["))
+            else if (startsWith(s,"<![CDATA["))
             {
-                chop(*s,9);
-                t = chop(*s,indexOf(*s,"]]>"));
+                chop(s,9);
+                t = chop(s,indexOf(s,"]]>"));
                 if (cdataHandler.funcptr !is null) cdataHandler(t);
-                chop(*s,3);
+                chop(s,3);
             }
-            else if (startsWith(*s,"<!"))
+            else if (startsWith(s,"<!"))
             {
-                chop(*s,2);
-                t = chop(*s,indexOf(*s,">"));
+                chop(s,2);
+                t = chop(s,indexOf(s,">"));
                 if (xiHandler.funcptr !is null) xiHandler(t);
-                chop(*s,1);
+                chop(s,1);
             }
-            else if (startsWith(*s,"<?"))
+            else if (startsWith(s,"<?"))
             {
-                chop(*s,2);
-                t = chop(*s,indexOf(*s,"?>"));
+                chop(s,2);
+                t = chop(s,indexOf(s,"?>"));
                 if (piHandler.funcptr !is null) piHandler(t);
-                chop(*s,2);
+                chop(s,2);
             }
-            else if (startsWith(*s,"<"))
+            else if (startsWith(s,"<"))
             {
-                tag_ = new Tag(*s,true);
+                tag_ = new Tag(s,true);
                 if (root is null)
                     return; // Return to constructor of derived class
 
@@ -2074,7 +2074,7 @@ class ElementParser
 
                     // Handle the pretend start tag
                     string s2;
-                    auto parser = new ElementParser(startTag,&s2);
+                    auto parser = new ElementParser(startTag,s2);
                     auto handler1 = startTag.name in onStartTag;
                     if (handler1 !is null) (*handler1)(parser);
                     else
@@ -2096,7 +2096,7 @@ class ElementParser
             }
             else
             {
-                t = chop(*s,indexOf(*s,"<"));
+                t = chop(s,indexOf(s,"<"));
                 if (rawTextHandler.funcptr !is null)
                     rawTextHandler(t);
                 else if (textHandler.funcptr !is null)
