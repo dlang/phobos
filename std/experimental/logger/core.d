@@ -1661,6 +1661,9 @@ While getting and setting $(D sharedLog) is thread-safe, it has to be considered
 that the returned reference is only a current snapshot and in the following
 code, you must make sure no other thread reassigns to it between reading and
 writing $(D sharedLog).
+
+$(D sharedLog) is only thread-safe if the the used $(D Logger) is thread-safe.
+The default $(D Logger) is thread-safe.
 -------------
 if (sharedLog !is myLogger)
     sharedLog = new myLogger;
