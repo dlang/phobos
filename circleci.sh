@@ -100,11 +100,6 @@ style()
     # dscanner needs a more up-to-date DMD version
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$DSCANNER_DMD_VER --activate)"
 
-    # some style tools are at the tools repo
-    clone https://github.com/dlang/tools.git ../tools master
-    # fix to a specific version of https://github.com/dlang/tools/tree/master/styles
-    git -C ../tools checkout 60583c8363ff25d00017dffdb18c7ee7e7d9a343
-
     make -f posix.mak style DUB=$DUB
 }
 
