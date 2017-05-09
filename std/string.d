@@ -1551,7 +1551,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
 }
 
 /**
-    Returns the index of the first occurence of any of the elements in $(D
+    Returns the index of the first occurrence of any of the elements in $(D
     needles) in $(D haystack). If no element of $(D needles) is found,
     then $(D -1) is returned. The $(D startIdx) slices $(D haystack) in the
     following way $(D haystack[startIdx .. $]). $(D startIdx) represents a
@@ -1722,7 +1722,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
 }
 
 /**
-    Returns the index of the last occurence of any of the elements in $(D
+    Returns the index of the last occurrence of any of the elements in $(D
     needles) in $(D haystack). If no element of $(D needles) is found,
     then $(D -1) is returned. The $(D stopIdx) slices $(D haystack) in the
     following way $(D s[0 .. stopIdx]). $(D stopIdx) represents a codeunit
@@ -1909,7 +1909,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
 }
 
 /**
-    Returns the index of the first occurence of any character not an elements
+    Returns the index of the first occurrence of any character not an elements
     in $(D needles) in $(D haystack). If all element of $(D haystack) are
     element of $(D needles) $(D -1) is returned.
 
@@ -6348,7 +6348,7 @@ body
  *
  * This is useful in cases where the user is expected to type
  * in one of a known set of strings, and the program will helpfully
- * autocomplete the string once sufficient characters have been
+ * auto-complete the string once sufficient characters have been
  * entered that uniquely identify it.
  */
 
