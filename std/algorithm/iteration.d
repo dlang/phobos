@@ -5047,6 +5047,14 @@ private struct UniqResult(alias pred, Range)
     }
 }
 
+@safe unittest // https://issues.dlang.org/show_bug.cgi?id=17264
+{
+    import std.algorithm.comparison : equal;
+
+    const(int)[] var = [0, 1, 1, 2];
+    assert(var.uniq.equal([0, 1, 2]));
+}
+
 /**
 Lazily computes all _permutations of $(D r) using $(HTTP
 en.wikipedia.org/wiki/Heap%27s_algorithm, Heap's algorithm).
