@@ -256,6 +256,18 @@ MAKEFILE = $(firstword $(MAKEFILE_LIST))
 # build with shared library support (defaults to true on supported platforms)
 SHARED=$(if $(findstring $(OS),linux freebsd),1,)
 
+# Check for missing imports in public unittest examples.
+# A blacklist of ignored module is provided as not all public unittest in
+# Phobos are independently runnable yet
+IGNORED_PUBLICTESTS= $(addprefix std/, \
+						base64 $(addprefix experimental/allocator/, \
+								building_blocks/free_list building_blocks/quantizer \
+						) digest/hmac \
+						file math stdio traits typecons uuid)
+PUBLICTESTS= $(addsuffix .publictests,$(filter-out $(IGNORED_PUBLICTESTS), $(D_MODULES)))
+TEST_EXTRACTOR=$(TOOLS_DIR)/styles/test_extractor
+PUBLICTESTS_DIR=$(ROOT)/publictests
+
 ################################################################################
 # Rules begin here
 ################################################################################
@@ -487,15 +499,22 @@ html_consolidated :
 changelog.html: changelog.dd
 	$(DMD) -Df$@ $<
 
+################################################################################
+# Automatically create dlang/tools repository if non-existent
+################################################################################
+
+${TOOLS_DIR}:
+	git clone --depth=1 ${GIT_HOME}/$(@F) $@
+$(TOOLS_DIR)/checkwhitespace.d: | $(TOOLS_DIR)
+$(TOOLS_DIR)/styles/tests_extractor.d: | $(TOOLS_DIR)
+$(TOOLS_DIR)/styles/has_public_example.d: | $(TOOLS_DIR)
+
 #################### test for undesired white spaces ##########################
 CWS_TOCHECK = posix.mak win32.mak win64.mak osmodel.mak
 CWS_TOCHECK += $(ALL_D_FILES) index.d
 
 checkwhitespace: $(LIB) $(TOOLS_DIR)/checkwhitespace.d
 	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -run $(TOOLS_DIR)/checkwhitespace.d $(CWS_TOCHECK)
-
-$(TOOLS_DIR)/checkwhitespace.d:
-	git clone --depth=1 ${GIT_HOME}/tools $(TOOLS_DIR)
 
 #############################
 # Submission to Phobos are required to conform to the DStyle
@@ -564,12 +583,22 @@ style_lint: ../dscanner/dsc $(LIB)
 	@echo "Running DScanner"
 	../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d') -I.
 
-publictests: $(LIB)
-	# parse all public unittests from Phobos and runs them (for now some modules are excluded)
-	rm -rf ./out
-	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) --compiler=$${PWD}/$(DMD) --root=../tools/styles -c tests_extractor -- --inputdir . --ignore "base64.d,building_blocks/free_list,building_blocks/quantizer,digest/hmac.d,file.d,index.d,math.d,stdio.d,traits.d,typecons.d,uuid.d" --outputdir ./out
-	# execute all parsed tests
-	for file in $$(find out -name '*.d'); do echo "executing $${file}" && $(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -main -unittest -run $$file || exit 1 ; done
+################################################################################
+# Check for missing imports in public unittest examples.
+################################################################################
+publictests: $(PUBLICTESTS)
+
+$(TEST_EXTRACTOR): $(TOOLS_DIR)/styles/tests_extractor.d
+	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) build --compiler=$${PWD}/$(DMD) --root=$(TOOLS_DIR)/styles -c tests_extractor
+
+################################################################################
+# Extract public tests of a module and test them in an separate file (i.e. without its module)
+# This is done to check for potentially missing imports in the examples, e.g.
+# make -f posix.mak std/format.publictests
+################################################################################
+%.publictests: %.d $(LIB) $(TEST_EXTRACTOR)
+	@$(TEST_EXTRACTOR) --inputdir  $< --outputdir $(PUBLICTESTS_DIR)
+	@$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -main -unittest -run $(PUBLICTESTS_DIR)/$(subst /,_,$<)
 
 has_public_example: $(LIB)
 	#  checks whether public function have public examples (for now some modules are excluded)
