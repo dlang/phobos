@@ -13,6 +13,8 @@
 #
 # make BUILD=debug unittest => builds all unittests (for debug) and runs them
 #
+# make DEBUGGER=ddd std/XXXXX.debug => builds the module XXXXX and executes it in the debugger ddd
+#
 # make html => makes html documentation
 #
 # make install => copies library to /usr/lib
@@ -27,6 +29,8 @@
 # determined by using uname
 
 QUIET:=
+
+DEBUGGER=gdb
 
 include osmodel.mak
 
@@ -369,6 +373,22 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 # transitively. For example: "make std/algorithm.test"
 %.test : $(LIB)
 	$(MAKE) -f $(MAKEFILE) $(addsuffix .test,$(patsubst %.d,%,$(wildcard $*/*)))
+
+# Recursive target for %.debug
+# It has to be recursive as %.debug depends on $(LIB) and we don't want to
+# force the user to call make with BUILD=debug.
+# Therefore we call %.debug_with_debugger and pass BUILD=debug from %.debug
+# This forces all of phobos to have debug symbols, which we need as we don't
+# know where debugging is leading us.
+%.debug_with_debugger : %.d $(LIB)
+	$(DMD) $(DFLAGS) -main -unittest $(LIB) -defaultlib= -debuglib= $(LINKDL) $<
+	$(DEBUGGER) ./$(basename $(notdir $<))
+
+# Target for quickly debugging a single module
+# For example: make -f posix.mak DEBUGGER=ddd std/format.debug
+# ddd in this case is a graphical frontend to gdb
+%.debug : %.d
+	 BUILD=debug $(MAKE) -f $(MAKEFILE) $(basename $<).debug_with_debugger
 
 ################################################################################
 # More stuff
