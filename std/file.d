@@ -2241,7 +2241,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     !isConvertibleToString!R)
 {
     // Place outside of @trusted block
-    auto pathz = pathname.tempCString!FSChar();
+    const pathz = pathname.tempCString!FSChar();
 
     version(Windows)
     {
@@ -2287,13 +2287,14 @@ if (isConvertibleToString!R)
 // Same as mkdir but ignores "already exists" errors.
 // Returns: "true" if the directory was created,
 //   "false" if it already existed.
-private bool ensureDirExists(in char[] pathname)
+private bool ensureDirExists()(in char[] pathname)
 {
     import std.exception : enforce;
+    const pathz = pathname.tempCString!FSChar();
 
     version(Windows)
     {
-        if (CreateDirectoryW(pathname.tempCStringW(), null))
+        if (() @trusted { return CreateDirectoryW(pathz, null); }())
             return true;
         cenforce(GetLastError() == ERROR_ALREADY_EXISTS, pathname.idup);
     }
@@ -2301,7 +2302,7 @@ private bool ensureDirExists(in char[] pathname)
     {
         import std.conv : octal;
 
-        if (core.sys.posix.sys.stat.mkdir(pathname.tempCString(), octal!777) == 0)
+        if (() @trusted { return core.sys.posix.sys.stat.mkdir(pathz, octal!777); }() == 0)
             return true;
         cenforce(errno == EEXIST || errno == EISDIR, pathname);
     }
@@ -2318,7 +2319,7 @@ private bool ensureDirExists(in char[] pathname)
  * Throws: $(D FileException) on error.
  */
 
-void mkdirRecurse(in char[] pathname)
+void mkdirRecurse()(in char[] pathname)
 {
     import std.path : dirName, baseName;
 
@@ -2333,14 +2334,14 @@ void mkdirRecurse(in char[] pathname)
     }
 }
 
-@system unittest
+@safe unittest
 {
     import std.exception : assertThrown;
     {
         import std.path : buildPath, buildNormalizedPath;
 
         immutable basepath = deleteme ~ "_dir";
-        scope(exit) rmdirRecurse(basepath);
+        scope(exit) () @trusted { rmdirRecurse(basepath); }();
 
         auto path = buildPath(basepath, "a", "..", "b");
         mkdirRecurse(path);
@@ -2375,7 +2376,7 @@ void mkdirRecurse(in char[] pathname)
 
         mkdirRecurse(path);
         assert(basepath.exists && basepath.isDir);
-        scope(exit) rmdirRecurse(basepath);
+        scope(exit) () @trusted { rmdirRecurse(basepath); }();
         assert(path.exists && path.isDir);
     }
 }
