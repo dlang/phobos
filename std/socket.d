@@ -3479,6 +3479,32 @@ class TcpSocket: Socket
         this(connectTo.addressFamily);
         connect(connectTo);
     }
+
+    /// Create new socket Handle for reconnect, it can reuse socket object to prevent GC,
+    /// when process tens of thousands connection for server high concurrency programming.
+    void createSocketHandle()
+    {
+        close();
+        
+        auto handle = cast(socket_t) socket(_family, SocketType.STREAM, ProtocolType.TCP);
+        if(handle == socket_t.init)
+            throw new SocketOSException("Unable to create socket");
+        setSock(handle);
+    }
+
+}
+
+unittest
+{
+    TcpSocket stTcpSocket = new TcpSocket();
+    assert(stTcpSocket.handle != socket_t.init);
+    
+    stTcpSocket.close();
+    assert(stTcpSocket.handle == socket_t.init);
+    
+    stTcpSocket.createSocketHandle();
+    assert(stTcpSocket.handle != socket_t.init);
+
 }
 
 
