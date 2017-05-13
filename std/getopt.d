@@ -283,8 +283,7 @@ int main(string[] args)
       case "verbose": verbosityLevel = 2; break;
       case "shouting": verbosityLevel = verbosityLevel.max; break;
       default :
-        stderr.writeln("Dunno how verbose you want me to be by saying ",
-          value);
+        stderr.writeln("Unknown verbosity level ", value);
         handlerFailed = true;
         break;
     }
@@ -965,10 +964,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
                     setHash(receiver, val.splitter(arraySep));
             }
             else
-            {
-                static assert(false, "Dunno how to deal with type " ~
-                        typeof(receiver).stringof);
-            }
+                static assert(false, "getopt does not know how to handle the type " ~ typeof(receiver).stringof);
         }
     }
 
