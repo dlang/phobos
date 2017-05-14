@@ -199,6 +199,7 @@ SRC_STD_DATETIME= \
 	std\datetime\date.d \
 	std\datetime\interval.d \
 	std\datetime\package.d \
+	std\datetime\stopwatch.d \
 	std\datetime\systime.d \
 	std\datetime\timezone.d
 
@@ -454,6 +455,7 @@ DOCS= \
 	$(DOC)\std_datetime.html \
 	$(DOC)\std_datetime_date.html \
 	$(DOC)\std_datetime_interval.html \
+	$(DOC)\std_datetime_stopwatch.html \
 	$(DOC)\std_datetime_systime.html \
 	$(DOC)\std_datetime_timezone.html \
 	$(DOC)\std_demangle.html \
@@ -639,6 +641,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\date.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\interval.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\package.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\stopwatch.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\systime.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\timezone.d
 	$(DMD) -conf= -cov=96 -unittest -main -run std\uuid.d
@@ -843,6 +846,9 @@ $(DOC)\std_datetime_date.html : $(STDDOC) std\datetime\date.d
 
 $(DOC)\std_datetime_interval.html : $(STDDOC) std\datetime\interval.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_interval.html $(STDDOC) std\datetime\interval.d
+
+$(DOC)\std_datetime_stopwatch.html : $(STDDOC) std\datetime\stopwatch.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_stopwatch.html $(STDDOC) std\datetime\stopwatch.d
 
 $(DOC)\std_datetime_systime.html : $(STDDOC) std\datetime\systime.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_systime.html $(STDDOC) std\datetime\systime.d

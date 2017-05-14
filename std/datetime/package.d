@@ -170,6 +170,12 @@ alias AutoStart = Flag!"autoStart";
 
 
 /++
+    $(RED This will be deprecated in 2.076. Please use
+          $(REF StopWatch,std,datetime,stopwatch) instead. It uses
+          $(REF Monotime,core,time) and $(REF Duration,core,time) rather
+          than $(REF TickDuration,core,time), which will also be deprecated in
+          2.076.)
+
    $(D StopWatch) measures time as precisely as possible.
 
    This class uses a high-performance counter. On Windows systems, it uses
@@ -416,6 +422,12 @@ private:
 
 
 /++
+    $(RED This will be deprecated in 2.076. Please use
+          $(REF benchmark,std,datetime,stopwatch) instead. It uses
+          $(REF Monotime,core,time) and $(REF Duration,core,time) rather
+          than $(REF TickDuration,core,time), which will also be deprecated in
+          2.076.)
+
     Benchmarks code for speed assessment and comparison.
 
     Params:
@@ -526,6 +538,12 @@ private:
 
 
 /++
+    $(RED This will be deprecated in 2.076. Please use
+          $(REF benchmark,std,datetime,stopwatch) instead. This function has
+          not been ported to $(REF Monotime,core,time) and
+          $(REF Duration,core,time), because it is a trivial wrapper around
+          benchmark.)
+
    Benchmark with two functions comparing.
 
    Params:
@@ -568,6 +586,12 @@ ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
 
 
 /++
+    $(RED This will be deprecated in 2.076. Please use
+          $(REF StopWatch,std,datetime,stopwatch) instead. This function has
+          not been ported to $(REF Monotime,core,time) and
+          $(REF Duration,core,time), because it is a trivial wrapper around
+          StopWatch.)
+
     Function for starting to a stop watch time when the function is called
     and stopping it when its return value goes out of scope and is destroyed.
 
