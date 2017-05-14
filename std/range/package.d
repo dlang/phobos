@@ -5209,6 +5209,7 @@ auto sequence(alias fun, State...)(State args)
     assert(s.front != s.front);  // no caching
 }
 
+// iota
 /**
    Construct a range of values that span the given starting and stopping
    values.
@@ -5277,24 +5278,23 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
 
         this(Value current, Value pastLast, StepType step)
         {
-            if ((current < pastLast && step >= 0) ||
-                    (current > pastLast && step <= 0))
+            if ((current < pastLast && step > 0) ||
+                    (current > pastLast && step < 0))
             {
                 this.step = step;
                 this.current = current;
                 if (step > 0)
                 {
                     assert(unsigned((pastLast - current) / step) <= size_t.max);
-
-                    this.pastLast = pastLast - 1;
+                    // Cast below can't fail because current < pastLast
+                    this.pastLast = cast(Value) (pastLast - 1);
                     this.pastLast -= (this.pastLast - current) % step;
                 }
                 else
                 {
-                    if (step < 0)
-                        assert(unsigned((current - pastLast) / -step) <= size_t.max);
-
-                    this.pastLast = pastLast + 1;
+                    assert(step == 0 || unsigned((current - pastLast) / -step) <= size_t.max);
+                    // Cast below can't fail because current > pastLast
+                    this.pastLast = cast(Value) (pastLast + 1);
                     this.pastLast += (current - this.pastLast) % -step;
                 }
                 this.pastLast += step;
@@ -5311,7 +5311,11 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         @property inout(Value) front() inout { assert(!empty); return current; }
         void popFront() { assert(!empty); current += step; }
 
-        @property inout(Value) back() inout { assert(!empty); return pastLast - step; }
+        @property inout(Value) back() inout
+        {
+            assert(!empty);
+            return cast(Value) (pastLast - step);
+        }
         void popBack() { assert(!empty); pastLast -= step; }
 
         @property auto save() { return this; }
@@ -5744,6 +5748,18 @@ debug @system unittest
         const s1 = cRange[];
         const s2 = cRange[0 .. 3];
         const l = cRange.length;
+    }
+}
+
+@safe @nogc nothrow unittest
+{
+    {
+        ushort start = 0, end = 10, step = 2;
+        foreach (i; iota(start, end, step)) {}
+    }
+    {
+        ubyte start = 0, end = 10, step = 2;
+        foreach (i; iota(start, end, step)) {}
     }
 }
 
