@@ -1070,6 +1070,7 @@ public:
     assert(s.x == 2);
 }
 
+// filter
 /**
 $(D auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range));)
 
@@ -1130,14 +1131,27 @@ private struct FilterResult(alias pred, Range)
 {
     alias R = Unqual!Range;
     R _input;
+    private bool _primed;
 
-    this(R r)
+    private void prime()
     {
-        _input = r;
+        if (_primed) return;
         while (!_input.empty && !pred(_input.front))
         {
             _input.popFront();
         }
+        _primed = true;
+    }
+
+    this(R r)
+    {
+        _input = r;
+    }
+
+    private this(R r, bool primed)
+    {
+        _input = r;
+        _primed = primed;
     }
 
     auto opSlice() { return this; }
@@ -1148,7 +1162,7 @@ private struct FilterResult(alias pred, Range)
     }
     else
     {
-        @property bool empty() { return _input.empty; }
+        @property bool empty() { prime; return _input.empty; }
     }
 
     void popFront()
@@ -1157,10 +1171,12 @@ private struct FilterResult(alias pred, Range)
         {
             _input.popFront();
         } while (!_input.empty && !pred(_input.front));
+        _primed = true;
     }
 
     @property auto ref front()
     {
+        prime;
         assert(!empty, "Attempting to fetch the front of an empty filter.");
         return _input.front;
     }
@@ -1169,7 +1185,7 @@ private struct FilterResult(alias pred, Range)
     {
         @property auto save()
         {
-            return typeof(this)(_input.save);
+            return typeof(this)(_input.save, _primed);
         }
     }
 }
@@ -1179,6 +1195,8 @@ private struct FilterResult(alias pred, Range)
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
     import std.range;
+
+    auto shouldNotLoop4ever = repeat(1).filter!(x => x % 2 == 0);
 
     int[] a = [ 3, 4, 2 ];
     auto r = filter!("a > 3")(a);
