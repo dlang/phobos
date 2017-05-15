@@ -231,7 +231,7 @@ public:
         sw.stop();
         assert(!sw.running);
         immutable t2 = sw.peek();
-        assert(t2 > t1);
+        assert(t2 >= t1);
         immutable t3 = sw.peek();
         assert(t2 == t3);
     }
