@@ -131,7 +131,7 @@ public struct UUID
 
     private:
         alias skipSeq = AliasSeq!(8, 13, 18, 23);
-        alias byteSeq = AliasSeq!(0,2,4,6,/++/9,11,/++/14,16,/++/19,21,/++/24,26,28,30,32,34);
+        alias byteSeq = AliasSeq!(0,2,4,6,9,11,14,16,19,21,24,26,28,30,32,34);
 
         @safe pure nothrow @nogc Char toChar(Char)(size_t i) const
         {
@@ -240,7 +240,7 @@ public struct UUID
             assert(tmp.data == cast(ubyte[16])[0,1,3,3,4,5,6,7,8,9,10,11,
                 12,13,14,15]);
 
-            auto tmp2 = cast(immutable UUID)tmp;
+            auto tmp2 = cast(immutable UUID) tmp;
             assert(tmp2.data == cast(ubyte[16])[0,1,3,3,4,5,6,7,8,9,10,11,
                 12,13,14,15]);
         }
@@ -528,7 +528,7 @@ public struct UUID
         {
             //variant is stored in octet 7
             //which is index 8, since indexes count backwards
-            auto octet7 = data[8]; //octet 7 is array index 8
+            immutable octet7 = data[8]; //octet 7 is array index 8
 
             if ((octet7 & 0x80) == 0x00) //0b0xxxxxxx
                 return Variant.ncs;
@@ -589,7 +589,7 @@ public struct UUID
         {
             //version is stored in octet 9
             //which is index 6, since indexes count backwards
-            auto octet9 = data[6];
+            immutable octet9 = data[6];
             if ((octet9 & 0xF0) == 0x10)
                 return Version.timeBased;
             else if ((octet9 & 0xF0) == 0x20)
@@ -643,7 +643,7 @@ public struct UUID
          */
         @safe pure nothrow @nogc void swap(ref UUID rhs)
         {
-            auto bck = data;
+            immutable bck = data;
             data = rhs.data;
             rhs.data = bck;
         }
@@ -935,7 +935,7 @@ public struct UUID
             import std.encoding : Char = AsciiChar;
             enum  utfstr = "8ab3060e-2cba-4f23-b74c-b52db3bdfb46";
             alias String = immutable(Char)[];
-            enum String s = cast(String)utfstr;
+            enum String s = cast(String) utfstr;
             enum id = UUID(utfstr);
             //nogc
             Char[36] str;
@@ -998,9 +998,7 @@ public struct UUID
     return md5UUID(cast(const(ubyte[]))name, namespace);
 }
 
-/**
- * ditto
- */
+/// ditto
 @safe pure nothrow @nogc UUID md5UUID(const(ubyte[]) data, const UUID namespace = UUID.init)
 {
     import std.digest.md : MD5;
@@ -1111,9 +1109,7 @@ public struct UUID
     return sha1UUID(cast(const(ubyte[]))name, namespace);
 }
 
-/**
- * ditto
- */
+/// ditto
 @safe pure nothrow @nogc UUID sha1UUID(in ubyte[] data, const UUID namespace = UUID.init)
 {
     import std.digest.sha : SHA1;
@@ -1190,9 +1186,11 @@ public struct UUID
  * This function generates a random number based UUID from a random
  * number generator.
  *
- * CTFE:
  * This function is not supported at compile time.
  *
+ * Params:
+ *      randomGen = uniform RNG
+ * See_Also: $(REF isUniformRNG, std,random)
  */
 @safe UUID randomUUID()
 {
@@ -1200,24 +1198,17 @@ public struct UUID
     return randomUUID(rndGen);
 }
 
-/**
- * ditto
- */
-/**
- * Params:
- *      randomGen = uniform RNG
- * See_Also: $(REF isUniformRNG, std,random)
- */
+/// ditto
 UUID randomUUID(RNG)(ref RNG randomGen)
 if (isInputRange!RNG && isIntegral!(ElementType!RNG))
 {
     import std.random : isUniformRNG;
-    static assert (isUniformRNG!RNG, "randomGen must be a uniform RNG");
+    static assert(isUniformRNG!RNG, "randomGen must be a uniform RNG");
 
     alias E = ElementEncodingType!RNG;
     enum size_t elemSize = E.sizeof;
-    static assert (elemSize <= 16);
-    static assert (16 % elemSize == 0);
+    static assert(elemSize <= 16);
+    static assert(16 % elemSize == 0);
 
     UUID u;
     foreach (ref E e ; u.asArrayOf!E())
@@ -1312,13 +1303,15 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
  * caused by a malformed UUID parsed at compile time can be cryptic,
  * but errors are detected and reported at compile time.
  */
-UUID parseUUID(T)(T uuidString) if (isSomeString!T)
+UUID parseUUID(T)(T uuidString)
+if (isSomeString!T)
 {
     return parseUUID(uuidString);
 }
 
 ///ditto
-UUID parseUUID(Range)(ref Range uuidRange) if (isInputRange!Range
+UUID parseUUID(Range)(ref Range uuidRange)
+if (isInputRange!Range
     && is(Unqual!(ElementType!Range) == dchar))
 {
     import std.conv : ConvException, parse;
@@ -1385,7 +1378,7 @@ UUID parseUUID(Range)(ref Range uuidRange) if (isInputRange!Range
 
     parseLoop: while (!uuidRange.empty)
     {
-        dchar character = uuidRange.front;
+        immutable character = uuidRange.front;
 
         if (character == '-')
         {

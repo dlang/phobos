@@ -44,6 +44,7 @@
  *           $(LREF hasElaborateDestructor)
  *           $(LREF hasIndirections)
  *           $(LREF hasMember)
+ *           $(LREF hasStaticMember)
  *           $(LREF hasNested)
  *           $(LREF hasUnsharedAliasing)
  *           $(LREF InterfacesTuple)
@@ -991,9 +992,9 @@ template arity(alias func)
 @safe unittest
 {
     void foo(){}
-    static assert(arity!foo==0);
+    static assert(arity!foo == 0);
     void bar(uint){}
-    static assert(arity!bar==1);
+    static assert(arity!bar == 1);
     void variadicFoo(uint...){}
     static assert(!__traits(compiles, arity!variadicFoo));
 }
@@ -1134,9 +1135,9 @@ template ParameterIdentifierTuple(func...)
         {
             static if (!isFunctionPointer!func && !isDelegate!func
                        // Unnamed parameters yield CT error.
-                       && is(typeof(__traits(identifier, PT[i..i+1]))))
+                       && is(typeof(__traits(identifier, PT[i .. i+1]))))
             {
-                enum Get = __traits(identifier, PT[i..i+1]);
+                enum Get = __traits(identifier, PT[i .. i+1]);
             }
             else
             {
@@ -1222,7 +1223,7 @@ template ParameterDefaults(func...)
             // workaround scope escape check, see
             // https://issues.dlang.org/show_bug.cgi?id=16582
             // should use return scope once available
-            enum get = (PT[i..i+1] __args) @trusted
+            enum get = (PT[i .. i+1] __args) @trusted
             {
                 // If __args[0] is lazy, we force it to be evaluated like this.
                 PT[i] __pd_value = __args[0];
@@ -3554,6 +3555,182 @@ enum hasMember(T, string name) = __traits(hasMember, T, name);
 }
 
 /**
+ * Whether the symbol represented by the string, member, exists and is a static member of T.
+ *
+ * Params:
+ *     T = Type containing symbol $(D member).
+ *     member = Name of symbol to test that resides in $(D T).
+ *
+ * Returns:
+ *     $(D true) iff $(D member) exists and is static.
+ */
+template hasStaticMember(T, string member)
+{
+    static if (__traits(hasMember, T, member))
+    {
+        import std.meta : Alias;
+        alias sym = Alias!(__traits(getMember, T, member));
+
+        static if (__traits(getOverloads, T, member).length == 0)
+            enum bool hasStaticMember = __traits(compiles, &sym);
+        else
+            enum bool hasStaticMember = __traits(isStaticFunction, sym);
+    }
+    else
+    {
+        enum bool hasStaticMember = false;
+    }
+}
+
+///
+@safe unittest
+{
+    static struct S
+    {
+        static void sf() {}
+        void f() {}
+
+        static int si;
+        int i;
+    }
+
+    static assert( hasStaticMember!(S, "sf"));
+    static assert(!hasStaticMember!(S, "f"));
+
+    static assert( hasStaticMember!(S, "si"));
+    static assert(!hasStaticMember!(S, "i"));
+
+    static assert(!hasStaticMember!(S, "hello"));
+}
+
+@safe unittest
+{
+    static struct S
+    {
+        enum X = 10;
+        enum Y
+        {
+            i = 10
+        }
+        struct S {}
+        class C {}
+
+        static int sx = 0;
+        __gshared int gx = 0;
+
+        Y y;
+        static Y sy;
+
+        static void f();
+        static void f2() pure nothrow @nogc @safe;
+
+        shared void g();
+
+        static void function() fp;
+        __gshared void function() gfp;
+        void function() fpm;
+
+        void delegate() dm;
+        static void delegate() sd;
+
+        void m();
+        final void m2() const pure nothrow @nogc @safe;
+
+        inout(int) iom() inout;
+        static inout(int) iosf(inout int x);
+
+        @property int p();
+        static @property int sp();
+    }
+
+    static class C
+    {
+        enum X = 10;
+        enum Y
+        {
+            i = 10
+        }
+        struct S {}
+        class C {}
+
+        static int sx = 0;
+        __gshared int gx = 0;
+
+        Y y;
+        static Y sy;
+
+        static void f();
+        static void f2() pure nothrow @nogc @safe;
+
+        shared void g() { }
+
+        static void function() fp;
+        __gshared void function() gfp;
+        void function() fpm;
+
+        void delegate() dm;
+        static void delegate() sd;
+
+        void m() {}
+        final void m2() const pure nothrow @nogc @safe;
+
+        inout(int) iom() inout { return 10; }
+        static inout(int) iosf(inout int x);
+
+        @property int p() { return 10; }
+        static @property int sp();
+    }
+
+    static assert(!hasStaticMember!(S, "X"));
+    static assert(!hasStaticMember!(S, "Y"));
+    static assert(!hasStaticMember!(S, "Y.i"));
+    static assert(!hasStaticMember!(S, "S"));
+    static assert(!hasStaticMember!(S, "C"));
+    static assert( hasStaticMember!(S, "sx"));
+    static assert( hasStaticMember!(S, "gx"));
+    static assert(!hasStaticMember!(S, "y"));
+    static assert( hasStaticMember!(S, "sy"));
+    static assert( hasStaticMember!(S, "f"));
+    static assert( hasStaticMember!(S, "f2"));
+    static assert(!hasStaticMember!(S, "dm"));
+    static assert( hasStaticMember!(S, "sd"));
+    static assert(!hasStaticMember!(S, "g"));
+    static assert( hasStaticMember!(S, "fp"));
+    static assert( hasStaticMember!(S, "gfp"));
+    static assert(!hasStaticMember!(S, "fpm"));
+    static assert(!hasStaticMember!(S, "m"));
+    static assert(!hasStaticMember!(S, "m2"));
+    static assert(!hasStaticMember!(S, "iom"));
+    static assert( hasStaticMember!(S, "iosf"));
+    static assert(!hasStaticMember!(S, "p"));
+    static assert( hasStaticMember!(S, "sp"));
+
+    static assert(!hasStaticMember!(C, "X"));
+    static assert(!hasStaticMember!(C, "Y"));
+    static assert(!hasStaticMember!(C, "Y.i"));
+    static assert(!hasStaticMember!(C, "S"));
+    static assert(!hasStaticMember!(C, "C"));
+    static assert( hasStaticMember!(C, "sx"));
+    static assert( hasStaticMember!(C, "gx"));
+    static assert(!hasStaticMember!(C, "y"));
+    static assert( hasStaticMember!(C, "sy"));
+    static assert( hasStaticMember!(C, "f"));
+    static assert( hasStaticMember!(C, "f2"));
+    static assert(!hasStaticMember!(S, "dm"));
+    static assert( hasStaticMember!(S, "sd"));
+    static assert(!hasStaticMember!(C, "g"));
+    static assert( hasStaticMember!(C, "fp"));
+    static assert( hasStaticMember!(C, "gfp"));
+    static assert(!hasStaticMember!(C, "fpm"));
+    static assert(!hasStaticMember!(C, "m"));
+    static assert(!hasStaticMember!(C, "m2"));
+    static assert(!hasStaticMember!(C, "iom"));
+    static assert( hasStaticMember!(C, "iosf"));
+    static assert(!hasStaticMember!(C, "p"));
+    static assert( hasStaticMember!(C, "sp"));
+}
+
+/**
 Retrieves the members of an enumerated type $(D enum E).
 
 Params:
@@ -5312,6 +5489,34 @@ enum bool isBoolean(T) = is(BooleanTypeOf!T) && !isAggregateType!T;
  */
 enum bool isIntegral(T) = is(IntegralTypeOf!T) && !isAggregateType!T;
 
+///
+@safe unittest
+{
+    static assert(
+        isIntegral!byte &&
+        isIntegral!short &&
+        isIntegral!int &&
+        isIntegral!long &&
+        isIntegral!(const(long)) &&
+        isIntegral!(immutable(long))
+    );
+
+    static assert(
+        !isIntegral!bool &&
+        !isIntegral!char &&
+        !isIntegral!double
+    );
+
+    // types which act as integral values do not pass
+    struct S
+    {
+        int val;
+        alias val this;
+    }
+
+    static assert(!isIntegral!S);
+}
+
 @safe unittest
 {
     foreach (T; IntegralTypeList)
@@ -5329,19 +5534,46 @@ enum bool isIntegral(T) = is(IntegralTypeOf!T) && !isAggregateType!T;
     enum EI : int { a = -1, b = 0, c = 1 }  // base type is signed (bug 7909)
     static assert(isIntegral!EU &&  isUnsigned!EU && !isSigned!EU);
     static assert(isIntegral!EI && !isUnsigned!EI &&  isSigned!EI);
-
-    static struct S(T)
-    {
-        T t;
-        alias t this;
-    }
-    static assert(!isIntegral!(S!int));
 }
 
 /**
  * Detect whether $(D T) is a built-in floating point type.
  */
-enum bool isFloatingPoint(T) = __traits(isFloating, T);
+enum bool isFloatingPoint(T) = __traits(isFloating, T) && !(is(Unqual!T == cfloat) ||
+                                                            is(Unqual!T == cdouble) ||
+                                                            is(Unqual!T == creal) ||
+                                                            is(Unqual!T == ifloat) ||
+                                                            is(Unqual!T == idouble) ||
+                                                            is(Unqual!T == ireal));
+
+///
+@safe unittest
+{
+    static assert(
+        isFloatingPoint!float &&
+        isFloatingPoint!double &&
+        isFloatingPoint!real &&
+        isFloatingPoint!(const(real)) &&
+        isFloatingPoint!(immutable(real))
+    );
+
+    static assert(!isFloatingPoint!int);
+
+    // complex and imaginary numbers do not pass
+    static assert(
+        !isFloatingPoint!cfloat &&
+        !isFloatingPoint!ifloat
+    );
+
+    // types which act as floating point values do not pass
+    struct S
+    {
+        float val;
+        alias val this;
+    }
+
+    static assert(!isFloatingPoint!S);
+}
 
 @safe unittest
 {
@@ -5362,13 +5594,18 @@ enum bool isFloatingPoint(T) = __traits(isFloating, T);
             static assert(!isFloatingPoint!(Q!T));
         }
     }
+}
 
-    static struct S(T)
-    {
-        T t;
-        alias t this;
-    }
-    static assert(!isFloatingPoint!(S!float));
+// https://issues.dlang.org/show_bug.cgi?id=17195
+@safe unittest
+{
+    static assert(!isFloatingPoint!cfloat);
+    static assert(!isFloatingPoint!cdouble);
+    static assert(!isFloatingPoint!creal);
+
+    static assert(!isFloatingPoint!ifloat);
+    static assert(!isFloatingPoint!idouble);
+    static assert(!isFloatingPoint!ireal);
 }
 
 /**
@@ -5379,11 +5616,41 @@ enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == char) ||
                                                         is(Unqual!T == wchar) ||
                                                         is(Unqual!T == dchar));
 
+///
 @safe unittest
 {
-    static assert(!isNumeric!(char));
-    static assert(!isNumeric!(wchar));
-    static assert(!isNumeric!(dchar));
+    static assert(
+        isNumeric!bool &&
+        isNumeric!byte &&
+        isNumeric!short &&
+        isNumeric!int &&
+        isNumeric!long &&
+        isNumeric!float &&
+        isNumeric!double &&
+        isNumeric!real &&
+        isNumeric!(const(real)) &&
+        isNumeric!(immutable(real))
+    );
+
+    static assert(
+        !isNumeric!void &&
+        !isNumeric!char &&
+        !isNumeric!wchar &&
+        !isNumeric!dchar
+    );
+
+    // types which act as numeric values do not pass
+    struct S
+    {
+        int val;
+        alias val this;
+    }
+
+    static assert(!isIntegral!S);
+}
+
+@safe unittest
+{
     foreach (T; TypeTuple!(NumericTypeList))
     {
         foreach (Q; TypeQualifierList)
@@ -5462,7 +5729,26 @@ enum bool isBasicType(T) = isScalarType!T || is(Unqual!T == void);
  */
 enum bool isUnsigned(T) = __traits(isUnsigned, T) && !(is(Unqual!T == char) ||
                                                        is(Unqual!T == wchar) ||
-                                                       is(Unqual!T == dchar));
+                                                       is(Unqual!T == dchar) ||
+                                                       is(Unqual!T == bool));
+
+///
+@safe unittest
+{
+    static assert(
+        isUnsigned!uint &&
+        isUnsigned!ulong
+    );
+
+    static assert(
+        !isUnsigned!char &&
+        !isUnsigned!int &&
+        !isUnsigned!long &&
+        !isUnsigned!char &&
+        !isUnsigned!wchar &&
+        !isUnsigned!dchar
+    );
+}
 
 @safe unittest
 {
@@ -5488,6 +5774,20 @@ enum bool isUnsigned(T) = __traits(isUnsigned, T) && !(is(Unqual!T == char) ||
  */
 enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T);
 
+///
+@safe unittest
+{
+    static assert(
+        isSigned!int &&
+        isSigned!long
+    );
+
+    static assert(
+        !isSigned!uint &&
+        !isSigned!ulong
+    );
+}
+
 @safe unittest
 {
     enum E { e1 = 0 }
@@ -5511,6 +5811,13 @@ enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T);
         alias t this;
     }
     static assert(!isSigned!(S!uint));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=17196
+@safe unittest
+{
+    static assert(isUnsigned!bool == false);
+    static assert(isSigned!bool == false);
 }
 
 /**
@@ -5915,6 +6222,13 @@ enum bool isPointer(T) = is(T == U*, U) && !isAggregateType!T;
 Returns the target type of a pointer.
 */
 alias PointerTarget(T : T*) = T;
+
+///
+@safe unittest
+{
+    static assert(is(PointerTarget!(int*) == int));
+    static assert(is(PointerTarget!(void*) == void));
+}
 
 /**
  * Detect whether type $(D T) is an aggregate type.

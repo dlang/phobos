@@ -3,6 +3,7 @@
 This is a submodule of $(MREF std, algorithm).
 It contains generic _sorting algorithms.
 
+$(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 $(T2 completeSort,
@@ -50,7 +51,7 @@ $(T2 pivotPartition,
         than or equal, and greater than or equal to the given pivot, passed as
         an index in the range.)
 $(T2 schwartzSort,
-        Sorts with the help of the $(LUCKY Schwartzian transform).)
+        Sorts with the help of the $(LINK2 https://en.wikipedia.org/wiki/Schwartzian_transform, Schwartzian transform).)
 $(T2 sort,
         Sorts.)
 $(T2 topN,
@@ -141,9 +142,9 @@ if (hasLength!(RandomAccessRange2) && hasSlicing!(RandomAccessRange2))
 
 // isSorted
 /**
-Checks whether a forward range is sorted according to the comparison
-operation $(D less). Performs $(BIGOH r.length) evaluations of $(D
-less).
+Checks whether a $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
+is sorted according to the comparison operation $(D less). Performs $(BIGOH r.length)
+evaluations of $(D less).
 
 Unlike `isSorted`, `isStrictlyMonotonic` does not allow for equal values,
 i.e. values for which both `less(a, b)` and `less(b, a)` are false.
@@ -160,7 +161,8 @@ Returns:
     `true` if the range is sorted, false otherwise. `isSorted` allows
     duplicates, `isStrictlyMonotonic` not.
 */
-bool isSorted(alias less = "a < b", Range)(Range r) if (isForwardRange!(Range))
+bool isSorted(alias less = "a < b", Range)(Range r)
+if (isForwardRange!(Range))
 {
     if (r.empty) return true;
 
@@ -395,7 +397,7 @@ See_Also:
     STL's $(HTTP sgi.com/tech/stl/stable_partition.html, stable_partition)
 */
 Range partition(alias predicate, SwapStrategy ss, Range)(Range r)
-    if (ss == SwapStrategy.stable && isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
+if (ss == SwapStrategy.stable && isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
 {
     import std.algorithm.mutation : bringToFront;
 
@@ -417,7 +419,7 @@ Range partition(alias predicate, SwapStrategy ss, Range)(Range r)
 
 ///ditto
 Range partition(alias predicate, SwapStrategy ss = SwapStrategy.unstable, Range)(Range r)
-    if (ss != SwapStrategy.stable && isInputRange!Range && hasSwappableElements!Range)
+if (ss != SwapStrategy.stable && isInputRange!Range && hasSwappableElements!Range)
 {
     import std.algorithm.mutation : swap;
     alias pred = unaryFun!(predicate);
@@ -572,7 +574,8 @@ Range partition(alias predicate, SwapStrategy ss = SwapStrategy.unstable, Range)
 /**
 
 Partitions `r` around `pivot` using comparison function `less`, algorithm akin
-to $(LUCKY Hoare partition). Specifically, permutes elements of `r` and returns
+to $(LINK2 https://en.wikipedia.org/wiki/Quicksort#Hoare_partition_scheme,
+Hoare partition). Specifically, permutes elements of `r` and returns
 an index $(D k < r.length) such that:
 
 $(UL
@@ -593,9 +596,10 @@ elements fairly to the left and right of `k` such that `k` stays close to  $(D
 r.length / 2).
 
 Params:
-less = The predicate used for comparison, modeled as a $(LUCKY strict weak
-ordering) (irreflexive, antisymmetric, transitive, and implying a transitive
-equivalence)
+less = The predicate used for comparison, modeled as a
+        $(LINK2 https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings,
+        strict weak ordering) (irreflexive, antisymmetric, transitive, and implying a transitive
+        equivalence)
 r = The range being partitioned
 pivot = The index of the pivot for partitioning, must be less than `r.length` or
 `0` is `r.length` is `0`
@@ -772,7 +776,7 @@ Params:
 Returns: $(D true) if $(D r) is partitioned according to predicate $(D pred).
  */
 bool isPartitioned(alias pred, Range)(Range r)
-    if (isForwardRange!(Range))
+if (isForwardRange!(Range))
 {
     for (; !r.empty; r.popFront())
     {
@@ -882,26 +886,31 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
 
 @safe unittest
 {
-    import std.random : uniform;
+    import std.random : Random, uniform, unpredictableSeed;
 
-    auto a = new int[](uniform(0, 100));
-    foreach (ref e; a)
+    immutable uint[] seeds = [3923355730, 1927035882, unpredictableSeed];
+    foreach (s; seeds)
     {
-        e = uniform(0, 50);
-    }
-    auto pieces = partition3(a, 25);
-    assert(pieces[0].length + pieces[1].length + pieces[2].length == a.length);
-    foreach (e; pieces[0])
-    {
-        assert(e < 25);
-    }
-    foreach (e; pieces[1])
-    {
-        assert(e == 25);
-    }
-    foreach (e; pieces[2])
-    {
-        assert(e > 25);
+        auto r = Random(s);
+        auto a = new int[](uniform(0, 100, r));
+        foreach (ref e; a)
+        {
+            e = uniform(0, 50);
+        }
+        auto pieces = partition3(a, 25);
+        assert(pieces[0].length + pieces[1].length + pieces[2].length == a.length);
+        foreach (e; pieces[0])
+        {
+            assert(e < 25);
+        }
+        foreach (e; pieces[1])
+        {
+            assert(e == 25);
+        }
+        foreach (e; pieces[2])
+        {
+            assert(e > 25);
+        }
     }
 }
 
@@ -921,7 +930,8 @@ collection. The complexity is the same as $(D sort)'s.
 
 The first overload of $(D makeIndex) writes to a range containing
 pointers, and the second writes to a range containing offsets. The
-first overload requires $(D Range) to be a forward range, and the
+first overload requires $(D Range) to be a
+$(REF_ALTTEXT forward range, isForwardRange, std,range,primitives), and the
 latter requires it to be a random-access range.
 
 $(D makeIndex) overwrites its second argument with the result, but
@@ -949,8 +959,8 @@ makeIndex(
     Range,
     RangeIndex)
 (Range r, RangeIndex index)
-    if (isForwardRange!(Range) && isRandomAccessRange!(RangeIndex)
-            && is(ElementType!(RangeIndex) : ElementType!(Range)*))
+if (isForwardRange!(Range) && isRandomAccessRange!(RangeIndex)
+    && is(ElementType!(RangeIndex) : ElementType!(Range)*))
 {
     import std.algorithm.internal : addressOf;
     import std.exception : enforce;
@@ -1000,7 +1010,7 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
 }
 
 ///
-unittest
+@system unittest
 {
     immutable(int[]) arr = [ 2, 3, 1, 5, 0 ];
     // index using pointers
@@ -1015,10 +1025,8 @@ unittest
         (index2));
 }
 
-unittest
+@system unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     immutable(int)[] arr = [ 2, 3, 1, 5, 0 ];
     // index using pointers
     auto index1 = new immutable(int)*[arr.length];
@@ -1049,9 +1057,9 @@ unittest
 }
 
 struct Merge(alias less = "a < b", Rs...)
-    if (Rs.length >= 2 &&
-        allSatisfy!(isInputRange, Rs) &&
-        !is(CommonType!(staticMap!(ElementType, Rs)) == void))
+if (Rs.length >= 2 &&
+    allSatisfy!(isInputRange, Rs) &&
+    !is(CommonType!(staticMap!(ElementType, Rs)) == void))
 {
     public Rs source;
     private size_t _lastFrontIndex = size_t.max;
@@ -1286,9 +1294,9 @@ All of its inputs are assumed to be sorted. This can mean that inputs are
    `false`).
 */
 Merge!(less, Rs) merge(alias less = "a < b", Rs...)(Rs rs)
-    if (Rs.length >= 2 &&
-        allSatisfy!(isInputRange, Rs) &&
-        !is(CommonType!(staticMap!(ElementType, Rs)) == void))
+if (Rs.length >= 2 &&
+    allSatisfy!(isInputRange, Rs) &&
+    !is(CommonType!(staticMap!(ElementType, Rs)) == void))
 {
     return typeof(return)(rs);
 }
@@ -1568,7 +1576,7 @@ private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
     assert(arr == [[1, 0], [1, 1], [1, 2], [2, 0]]);
 }
 
-unittest //Issue 16413 - @system comparison function
+@safe unittest //Issue 16413 - @system comparison function
 {
     bool lt(int a, int b) { return a < b; } static @system
     auto a = [2, 1];
@@ -1693,9 +1701,6 @@ private void shortSort(alias less, Range)(Range r)
 @safe unittest
 {
     import std.random : Random, uniform;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     auto rnd = Random(1);
     auto a = new int[uniform(100, 200, rnd)];
@@ -1829,12 +1834,12 @@ See_Also:
 SortedRange!(Range, less)
 sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
         Range)(Range r)
-    if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
-                                          hasAssignableElements!Range)) ||
-         (ss != SwapStrategy.unstable && hasAssignableElements!Range)) &&
-        isRandomAccessRange!Range &&
-        hasSlicing!Range &&
-        hasLength!Range)
+if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
+    hasAssignableElements!Range)) ||
+    (ss != SwapStrategy.unstable && hasAssignableElements!Range)) &&
+    isRandomAccessRange!Range &&
+    hasSlicing!Range &&
+    hasLength!Range)
     /+ Unstable sorting uses the quicksort algorithm, which uses swapAt,
        which either uses swap(...), requiring swappable elements, or just
        swaps using assignment.
@@ -1903,7 +1908,7 @@ sort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
     assert(numbers.equal!isIdentical(sorted));
 }
 
-unittest
+@safe unittest
 {
     // Simple regression benchmark
     import std.random, std.algorithm.iteration, std.algorithm.mutation;
@@ -1936,9 +1941,6 @@ unittest
     import std.algorithm.mutation : swapRanges;
     import std.random : Random, unpredictableSeed, uniform;
     import std.uni : toUpper;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     // sort using delegate
     auto a = new int[100];
@@ -2006,7 +2008,7 @@ unittest
         size_t[] arr;
         arr.length = 1024;
 
-        foreach (k; 0..arr.length) arr[k] = k;
+        foreach (k; 0 .. arr.length) arr[k] = k;
         swapRanges(arr[0..$/2], arr[$/2..$]);
 
         sort!(pred, SwapStrategy.unstable)(arr);
@@ -2326,7 +2328,7 @@ private template TimSortImpl(alias pred, R)
     size_t minRunLength()(size_t n)
     {
         immutable shift = bsr(n)-5;
-        auto result = (n>>shift) + !!(n & ~((1<<shift)-1));
+        auto result = (n >> shift) + !!(n & ~((1 << shift)-1));
         return result;
     }
 
@@ -2888,7 +2890,7 @@ SortedRange!(R, ((a, b) => binaryFun!less(unaryFun!transform(a),
                                           unaryFun!transform(b))))
 schwartzSort(alias transform, alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable, R)(R r)
-    if (isRandomAccessRange!R && hasLength!R)
+if (isRandomAccessRange!R && hasLength!R)
 {
     import std.conv : emplace;
     import std.string : representation;
@@ -2965,9 +2967,6 @@ schwartzSort(alias transform, alias less = "a < b",
     import std.algorithm.iteration : map;
     import std.numeric : entropy;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     auto lowEnt = [ 1.0, 0, 0 ],
         midEnt = [ 0.1, 0.1, 0.8 ],
         highEnt = [ 0.31, 0.29, 0.4 ];
@@ -3017,13 +3016,13 @@ Params:
 */
 void partialSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
     Range)(Range r, size_t n)
-    if (isRandomAccessRange!(Range) && hasLength!(Range) && hasSlicing!(Range))
+if (isRandomAccessRange!(Range) && hasLength!(Range) && hasSlicing!(Range))
 {
     partialSort!(less, ss)(r[0 .. n], r[n .. $]);
 }
 
 ///
-unittest
+@system unittest
 {
     int[] a = [ 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 ];
     partialSort(a, 5);
@@ -3042,15 +3041,15 @@ Params:
 
 void partialSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
     Range1, Range2)(Range1 r1, Range2 r2)
-    if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
-            isInputRange!Range2 && is(ElementType!Range1 == ElementType!Range2) &&
-            hasLvalueElements!Range1 && hasLvalueElements!Range2)
+if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
+    isInputRange!Range2 && is(ElementType!Range1 == ElementType!Range2) &&
+    hasLvalueElements!Range1 && hasLvalueElements!Range2)
 {
     topN!(less, ss)(r1, r2);
     sort!(less, ss)(r1);
 }
 ///
-unittest
+@system unittest
 {
     int[] a = [5, 7, 2, 6, 7];
     int[] b = [2, 1, 5, 6, 7, 3, 0];
@@ -3092,7 +3091,7 @@ Stable topN has not been implemented yet.
 auto topN(alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable,
         Range)(Range r, size_t nth)
-    if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
+if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
 {
     static assert(ss == SwapStrategy.unstable,
             "Stable topN not yet implemented");
@@ -3422,7 +3421,7 @@ done:
     return pivot;
 }
 
-unittest
+@safe unittest
 {
     auto a = [ 10, 5, 3, 4, 8,  11,  13, 3, 9, 4, 10 ];
     assert(expandPartition!((a, b) => a < b)(a, 4, 5, 6) == 9);
@@ -3448,10 +3447,6 @@ private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
     import std.algorithm.comparison : max, min;
     import std.algorithm.iteration : reduce;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    //scope(failure) writeln(stderr, "Failure testing algorithm");
-    //auto v = [ 25, 7, 9, 2, 0, 5, 21 ];
     int[] v = [ 7, 6, 5, 4, 3, 2, 1, 0 ];
     ptrdiff_t n = 3;
     topN!("a < b")(v, n);
@@ -3498,24 +3493,28 @@ private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
 {
     import std.algorithm.comparison : max, min;
     import std.algorithm.iteration : reduce;
-    import std.random : uniform;
+    import std.random : Random, uniform, unpredictableSeed;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    immutable uint[] seeds = [90027751, 2709791795, 1374631933, 995751648, 3541495258, 984840953, unpredictableSeed];
+    foreach (s; seeds)
+    {
+        auto r = Random(s);
 
-    int[] a = new int[uniform(1, 10000)];
-        foreach (ref e; a) e = uniform(-1000, 1000);
-    auto k = uniform(0, a.length);
-    topN(a, k);
-    if (k > 0)
-    {
-        auto left = reduce!max(a[0 .. k]);
-        assert(left <= a[k]);
-    }
-    if (k + 1 < a.length)
-    {
-        auto right = reduce!min(a[k + 1 .. $]);
-        assert(right >= a[k]);
+        int[] a = new int[uniform(1, 10000, r)];
+        foreach (ref e; a) e = uniform(-1000, 1000, r);
+
+        auto k = uniform(0, a.length, r);
+        topN(a, k);
+        if (k > 0)
+        {
+            auto left = reduce!max(a[0 .. k]);
+            assert(left <= a[k]);
+        }
+        if (k + 1 < a.length)
+        {
+            auto right = reduce!min(a[k + 1 .. $]);
+            assert(right >= a[k]);
+        }
     }
 }
 
@@ -3541,9 +3540,9 @@ Params:
 auto topN(alias less = "a < b",
         SwapStrategy ss = SwapStrategy.unstable,
         Range1, Range2)(Range1 r1, Range2 r2)
-    if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
-            isInputRange!Range2 && is(ElementType!Range1 == ElementType!Range2) &&
-            hasLvalueElements!Range1 && hasLvalueElements!Range2)
+if (isRandomAccessRange!(Range1) && hasLength!Range1 &&
+    isInputRange!Range2 && is(ElementType!Range1 == ElementType!Range2) &&
+    hasLvalueElements!Range1 && hasLvalueElements!Range2)
 {
     import std.container : BinaryHeap;
 
@@ -3560,7 +3559,7 @@ auto topN(alias less = "a < b",
 }
 
 ///
-unittest
+@system unittest
 {
     int[] a = [ 5, 7, 2, 6, 7 ];
     int[] b = [ 2, 1, 5, 6, 7, 3, 0 ];
@@ -3570,7 +3569,7 @@ unittest
 }
 
 // bug 15421
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
@@ -3614,7 +3613,7 @@ unittest
 }
 
 // bug 15421
-unittest
+@system unittest
 {
     auto a = [ 9, 8, 0, 3, 5, 25, 43, 4, 2, 0, 7 ];
     auto b = [ 9, 8, 0, 3, 5, 25, 43, 4, 2, 0, 7 ];
@@ -3633,7 +3632,7 @@ unittest
 }
 
 // bug 12987
-unittest
+@system unittest
 {
     int[] a = [ 5, 7, 2, 6, 7 ];
     int[] b = [ 2, 1, 5, 6, 7, 3, 0 ];
@@ -3643,7 +3642,7 @@ unittest
 }
 
 // bug 15420
-unittest
+@system unittest
 {
     int[] a = [ 5, 7, 2, 6, 7 ];
     int[] b = [ 2, 1, 5, 6, 7, 3, 0 ];
@@ -3653,7 +3652,8 @@ unittest
 }
 
 /**
-Copies the top $(D n) elements of the input range $(D source) into the
+Copies the top $(D n) elements of the
+$(REF_ALTTEXT input range, isInputRange, std,range,primitives) $(D source) into the
 random-access range $(D target), where $(D n =
 target.length). Elements of $(D source) are not touched. If $(D
 sorted) is $(D true), the target is sorted. Otherwise, the target
@@ -3669,8 +3669,8 @@ Returns: The slice of `target` containing the copied elements.
  */
 TRange topNCopy(alias less = "a < b", SRange, TRange)
     (SRange source, TRange target, SortOutput sorted = No.sortOutput)
-    if (isInputRange!(SRange) && isRandomAccessRange!(TRange)
-            && hasLength!(TRange) && hasSlicing!(TRange))
+if (isInputRange!(SRange) && isRandomAccessRange!(TRange)
+    && hasLength!(TRange) && hasSlicing!(TRange))
 {
     import std.container : BinaryHeap;
 
@@ -3686,7 +3686,7 @@ TRange topNCopy(alias less = "a < b", SRange, TRange)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.typecons : Yes;
 
@@ -3696,13 +3696,10 @@ unittest
     assert(b == [ 0, 1, 2 ]);
 }
 
-unittest
+@system unittest
 {
     import std.random : Random, unpredictableSeed, uniform, randomShuffle;
     import std.typecons : Yes;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     auto r = Random(unpredictableSeed);
     ptrdiff_t[] a = new ptrdiff_t[uniform(1, 1000, r)];
@@ -3749,10 +3746,10 @@ ignored.
 void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
                Range, RangeIndex)
               (Range r, RangeIndex index, SortOutput sorted = No.sortOutput)
-    if (isRandomAccessRange!Range &&
-        isRandomAccessRange!RangeIndex &&
-        hasAssignableElements!RangeIndex &&
-        isIntegral!(ElementType!(RangeIndex)))
+if (isRandomAccessRange!Range &&
+    isRandomAccessRange!RangeIndex &&
+    hasAssignableElements!RangeIndex &&
+    isIntegral!(ElementType!(RangeIndex)))
 {
     static assert(ss == SwapStrategy.unstable,
                   "Stable swap strategy not implemented yet.");
@@ -3782,10 +3779,10 @@ void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
 void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
                Range, RangeIndex)
               (Range r, RangeIndex index, SortOutput sorted = No.sortOutput)
-    if (isRandomAccessRange!Range &&
-        isRandomAccessRange!RangeIndex &&
-        hasAssignableElements!RangeIndex &&
-        is(ElementType!(RangeIndex) == ElementType!(Range)*))
+if (isRandomAccessRange!Range &&
+    isRandomAccessRange!RangeIndex &&
+    hasAssignableElements!RangeIndex &&
+    is(ElementType!(RangeIndex) == ElementType!(Range)*))
 {
     static assert(ss == SwapStrategy.unstable,
                   "Stable swap strategy not implemented yet.");
@@ -3810,7 +3807,7 @@ void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
 }
 
 ///
-unittest
+@system unittest
 {
     import std.typecons : Yes;
 
@@ -3826,26 +3823,21 @@ unittest
     assert(ptrIndex == [ &a[5], &a[1], &a[3] ]);
 }
 
-unittest
+@system unittest
 {
     import std.conv : text;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     {
         int[] a = [ 10, 8, 9, 2, 4, 6, 7, 1, 3, 5 ];
         int*[] b = new int*[5];
         topNIndex!("a > b")(a, b, Yes.sortOutput);
-        //foreach (e; b) writeln(*e);
         assert(b == [ &a[0], &a[2], &a[1], &a[6], &a[5]]);
     }
     {
         int[] a = [ 10, 8, 9, 2, 4, 6, 7, 1, 3, 5 ];
         auto b = new ubyte[5];
         topNIndex!("a > b")(a, b, Yes.sortOutput);
-        //foreach (e; b) writeln(e, ":", a[e]);
-        assert(b == [ cast(ubyte) 0, cast(ubyte)2, cast(ubyte)1, cast(ubyte)6, cast(ubyte)5], text(b));
+        assert(b == [ cast(ubyte) 0, cast(ubyte) 2, cast(ubyte) 1, cast(ubyte) 6, cast(ubyte) 5], text(b));
     }
 }
 
@@ -3861,9 +3853,9 @@ with the median of `r[a]`, `r[b]`, and `r[c]`, but also puts the minimum in
 `r[a]` and the maximum in `r[c]`.
 
 Params:
-less = The comparison predicate used, modeled as a $(LUCKY strict weak
-ordering) (irreflexive, antisymmetric, transitive, and implying a transitive
-equivalence).
+less = The comparison predicate used, modeled as a
+    $(LINK2 https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings, strict weak ordering)
+    (irreflexive, antisymmetric, transitive, and implying a transitive equivalence).
 flag = Used only for even values of `T.length`. If `No.leanRight`, the median
 "leans left", meaning $(D medianOf(r, a, b, c, d)) puts the lower median of the
 four in `r[b]`, the minimum in `r[a]`, and the two others in `r[c]` and `r[d]`.
@@ -3954,15 +3946,15 @@ if (isRandomAccessRange!Range && hasLength!Range &&
         static if (flag == No.leanRight)
         {
             // Eliminate the rightmost from the competition
-            if (lt(r[d], r[c])) r.swapAt(c, d); // c<=d
-            if (lt(r[d], r[b])) r.swapAt(b, d); // b<=d
+            if (lt(r[d], r[c])) r.swapAt(c, d); // c <= d
+            if (lt(r[d], r[b])) r.swapAt(b, d); // b <= d
             medianOf!lt(r, a, b, c);
         }
         else
         {
             // Eliminate the leftmost from the competition
-            if (lt(r[b], r[a])) r.swapAt(a, b); // a<=b
-            if (lt(r[c], r[a])) r.swapAt(a, c); // a<=c
+            if (lt(r[b], r[a])) r.swapAt(a, b); // a <= b
+            if (lt(r[c], r[a])) r.swapAt(a, c); // a <= c
             medianOf!lt(r, b, c, d);
         }
     }
@@ -3997,7 +3989,7 @@ if (isRandomAccessRange!Range && hasLength!Range &&
     }
 }
 
-unittest
+@safe unittest
 {
     // Verify medianOf for all permutations of [1, 2, 2, 3, 4].
     int[5] data = [1, 2, 2, 3, 4];
@@ -4066,8 +4058,8 @@ do
  */
 bool nextPermutation(alias less="a < b", BidirectionalRange)
                     (BidirectionalRange range)
-    if (isBidirectionalRange!BidirectionalRange &&
-        hasSwappableElements!BidirectionalRange)
+if (isBidirectionalRange!BidirectionalRange &&
+    hasSwappableElements!BidirectionalRange)
 {
     import std.algorithm.mutation : reverse, swap;
     import std.algorithm.searching : find;
@@ -4323,8 +4315,8 @@ do
  */
 bool nextEvenPermutation(alias less="a < b", BidirectionalRange)
                         (BidirectionalRange range)
-    if (isBidirectionalRange!BidirectionalRange &&
-        hasSwappableElements!BidirectionalRange)
+if (isBidirectionalRange!BidirectionalRange &&
+    hasSwappableElements!BidirectionalRange)
 {
     import std.algorithm.mutation : reverse, swap;
     import std.algorithm.searching : find;

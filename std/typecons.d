@@ -47,11 +47,25 @@ import std.traits;
 debug(Unique) import std.stdio;
 
 /**
-Encapsulates unique ownership of a resource.  Resource of type $(D T) is
-deleted at the end of the scope, unless it is transferred.  The
-transfer can be explicit, by calling $(D release), or implicit, when
-returning Unique from a function. The resource can be a polymorphic
-class object, in which case Unique behaves polymorphically too.
+Encapsulates unique ownership of a resource.
+
+When a $(D Unique!T) goes out of scope it will call $(D destroy)
+on the resource $(D T) that it manages, unless it is transferred.
+One important consequence of $(D destroy) is that it will call the
+destructor of the resource $(D T).  GC-managed references are not
+guaranteed to be valid during a destructor call, but other members of
+$(D T), such as file handles or pointers to $(D malloc) memory, will
+still be valid during the destructor call.  This allows the resource
+$(D T) to deallocate or clean up any non-GC resources.
+
+If it is desirable to persist a $(D Unique!T) outside of its original
+scope, then it can be transferred.  The transfer can be explicit, by
+calling $(D release), or implicit, when returning Unique from a
+function. The resource $(D T) can be a polymorphic class object, in
+which case Unique behaves polymorphically too.
+
+If $(D T) is a value type, then $(D Unique!T) will be implemented
+as a reference to a $(D T).
 */
 struct Unique(T)
 {
@@ -146,22 +160,26 @@ public:
     ~this()
     {
         debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
-        if (_p !is null) destroy(_p);
-        _p = null;
+        if (_p !is null)
+        {
+            destroy(_p);
+            _p = null;
+        }
     }
+
     /** Returns whether the resource exists. */
     @property bool isEmpty() const
     {
         return _p is null;
     }
-    /** Transfer ownership to a $(D Unique) rvalue. Nullifies the current contents. */
+    /** Transfer ownership to a $(D Unique) rvalue. Nullifies the current contents.
+    Same as calling std.algorithm.move on it.
+    */
     Unique release()
     {
-        debug(Unique) writeln("Release");
-        auto u = Unique(_p);
-        assert(_p is null);
-        debug(Unique) writeln("return from Release");
-        return u;
+        debug(Unique) writeln("Unique Release");
+        import std.algorithm.mutation : move;
+        return this.move;
     }
 
     /** Forwards member access to contents. */
@@ -269,6 +287,7 @@ private:
     {
         ~this() { debug(Unique) writeln("    Foo destructor"); }
         int val() const { return 3; }
+        @disable this(this);
     }
     alias UFoo = Unique!(Foo);
 
@@ -1405,9 +1424,9 @@ unittest
     }
     {
         Tuple!(wchar, dchar, int, "x", string, "y", char, byte, float) tup;
-        tup = tuple('a', 'b', 3, "4", 'c', cast(byte)0x0D, 0.00);
+        tup = tuple('a', 'b', 3, "4", 'c', cast(byte) 0x0D, 0.00);
         auto rev = tup.reverse;
-        assert(rev == tuple(0.00, cast(byte)0x0D, 'c', "4", 3, 'b', 'a'));
+        assert(rev == tuple(0.00, cast(byte) 0x0D, 'c', "4", 3, 'b', 'a'));
         assert(rev.x == 3 && rev.y == "4");
     }
 }
@@ -1634,7 +1653,7 @@ unittest
     import std.exception : assertThrown;
 
     // enum tupStr = tuple(1, 1.0).toString; // toString is *impure*.
-    //static assert (tupStr == `Tuple!(int, double)(1, 1)`);
+    //static assert(tupStr == `Tuple!(int, double)(1, 1)`);
 
     Tuple!(int, double)[3] tupList = [ tuple(1, 1.0), tuple(2, 4.0), tuple(3, 9.0) ];
 
@@ -2078,7 +2097,7 @@ template UnqualRef(T)
 {
     class C { }
     alias T = UnqualRef!(const shared C);
-    static assert (is(typeof(T.stripped) == C));
+    static assert(is(typeof(T.stripped) == C));
 }
 
 
@@ -2115,7 +2134,7 @@ string alignForSize(E...)(const char[][] names...)
     foreach (i, T; E)
     {
         auto a = T.alignof;
-        auto k = a>=64? 0 : a>=32? 1 : a>=16? 2 : a>=8? 3 : a>=4? 4 : a>=2? 5 : 6;
+        auto k = a >= 64? 0 : a >= 32? 1 : a >= 16? 2 : a >= 8? 3 : a >= 4? 4 : a >= 2? 5 : 6;
         declaration[k] ~= T.stringof ~ " " ~ names[i] ~ ";\n";
     }
 
@@ -2882,7 +2901,7 @@ Params:
 @system unittest
 {
     //Passes
-    enum nullVal = cast(int*)0xCAFEBABE;
+    enum nullVal = cast(int*) 0xCAFEBABE;
     Nullable!(int*, nullVal) npi;
     assert(npi.isNull);
 
@@ -3909,6 +3928,47 @@ private static:
     }+/
 }
 
+// Issue 17177 - AutoImplement fails on function overload sets with "cannot infer type from overloaded function symbol"
+@system unittest
+{
+    static class Issue17177
+    {
+        private string n_;
+
+        public {
+            Issue17177 overloaded(string n)
+            {
+                this.n_ = n;
+
+                return this;
+            }
+
+            string overloaded()
+            {
+                return this.n_;
+            }
+        }
+    }
+
+    static string how(C, alias fun)()
+    {
+        static if (!is(ReturnType!fun == void))
+        {
+            return q{
+                return parent(args);
+            };
+        }
+        else
+        {
+            return q{
+                parent(args);
+            };
+        }
+    }
+
+    alias Implementation = AutoImplement!(Issue17177, how, templateNot!isFinalFunction);
+}
+
 version(unittest)
 {
     // Issue 10647
@@ -4175,8 +4235,7 @@ private static:
             {
                 preamble ~= "alias self = " ~ name ~ ";\n";
                 if (WITH_BASE_CLASS && !__traits(isAbstractFunction, func))
-                    //preamble ~= "alias super." ~ name ~ " parent;\n"; // [BUG 2540]
-                    preamble ~= "auto parent = &super." ~ name ~ ";\n";
+                    preamble ~= "alias parent = AliasSeq!(__traits(getMember, super, \"" ~ name ~ "\"))[0];";
             }
 
             // Function body
@@ -4317,7 +4376,7 @@ if (is(T == class) || is(T == interface))
         }
         else
         {
-            return cast(T)typecons_d_toObject(*cast(void**)(&source));
+            return cast(T) typecons_d_toObject(*cast(void**)(&source));
         }
     }
 }
@@ -4326,7 +4385,7 @@ if (is(T == class) || is(T == interface))
 {
     class C { @disable opCast(T)() {} }
     auto c = new C;
-    static assert(!__traits(compiles, cast(Object)c));
+    static assert(!__traits(compiles, cast(Object) c));
     auto o = dynamicCast!Object(c);
     assert(c is o);
 
@@ -4334,7 +4393,7 @@ if (is(T == class) || is(T == interface))
     interface J { @disable opCast(T)() {} Object instance(); }
     class D : I, J { Object instance() { return this; } }
     I i = new D();
-    static assert(!__traits(compiles, cast(J)i));
+    static assert(!__traits(compiles, cast(J) i));
     J j = dynamicCast!J(i);
     assert(i.instance() is j.instance());
 }
@@ -4754,7 +4813,7 @@ if (!isMutable!Target)
 }
 
 // Make a tuple of non-static function symbols
-private template GetOverloadedMethods(T)
+package template GetOverloadedMethods(T)
 {
     import std.meta : Filter;
 
@@ -4896,7 +4955,7 @@ version(unittest)
     static assert(findCovariantFunction!(UnittestFuncInfo!nomatch,  B, methodsB) == ptrdiff_t.max);
 }
 
-private template DerivedFunctionType(T...)
+package template DerivedFunctionType(T...)
 {
     static if (!T.length)
     {
@@ -5021,7 +5080,7 @@ package template staticIota(int beg, int end)
     }
 }
 
-private template mixinAll(mixins...)
+package template mixinAll(mixins...)
 {
     static if (mixins.length == 1)
     {
@@ -5042,7 +5101,7 @@ private template mixinAll(mixins...)
     }
 }
 
-private template Bind(alias Template, args1...)
+package template Bind(alias Template, args1...)
 {
     alias Bind(args2...) = Template!(args1, args2);
 }
@@ -5062,9 +5121,28 @@ enum RefCountedAutoInitialize
 
 /**
 Defines a reference-counted object containing a $(D T) value as
-payload. $(D RefCounted) keeps track of all references of an object,
-and when the reference count goes down to zero, frees the underlying
-store. $(D RefCounted) uses $(D malloc) and $(D free) for operation.
+payload.
+
+An instance of $(D RefCounted) is a reference to a structure,
+which is referred to as the $(I store), or $(I storage implementation
+struct) in this documentation.  The store contains a reference count
+and the $(D T) payload.  $(D RefCounted) uses $(D malloc) to allocate
+the store.  As instances of $(D RefCounted) are copied or go out of
+scope, they will automatically increment or decrement the reference
+count.  When the reference count goes down to zero, $(D RefCounted)
+will call $(D destroy) against the payload and call $(D free) to
+deallocate the store.  If the $(D T) payload contains any references
+to GC-allocated memory, then $(RefCounted) will add it to the GC memory
+that is scanned for pointers, and remove it from GC scanning before
+$(D free) is called on the store.
+
+One important consequence of $(D destroy) is that it will call the
+destructor of the $(D T) payload.  GC-managed references are not
+guaranteed to be valid during a destructor call, but other members of
+$(D T), such as file handles or pointers to $(D malloc) memory, will
+still be valid during the destructor call.  This allows the $(D T) to
+deallocate or clean up any non-GC resources immediately after the
+reference count has reached zero.
 
 $(D RefCounted) is unsafe and should be used with care. No references
 to the payload should be escaped outside the $(D RefCounted) object.
@@ -5106,7 +5184,7 @@ if (!is(T == class) && !(is(T == interface)))
             import core.exception : onOutOfMemoryError;
             import std.conv : emplace;
 
-            _store = cast(Impl*)pureMalloc(Impl.sizeof);
+            _store = cast(Impl*) pureMalloc(Impl.sizeof);
             if (_store is null)
                 onOutOfMemoryError();
             static if (hasIndirections!T)
@@ -5120,7 +5198,7 @@ if (!is(T == class) && !(is(T == interface)))
             import core.exception : onOutOfMemoryError;
             import core.stdc.string : memcpy, memset;
 
-            _store = cast(Impl*)pureMalloc(Impl.sizeof);
+            _store = cast(Impl*) pureMalloc(Impl.sizeof);
             if (_store is null)
                 onOutOfMemoryError();
             static if (hasIndirections!T)
@@ -5502,7 +5580,7 @@ mixin template Proxy(alias a)
      * 'static if' in the definition of Proxy or T.
      */
     private enum bool accessibleFrom(T) =
-        is(typeof((T* self){ cast(void)mixin("(*self)."~__traits(identifier, a)); }));
+        is(typeof((T* self){ cast(void) mixin("(*self)."~__traits(identifier, a)); }));
 
     static if (is(typeof(this) == class))
     {
@@ -5602,16 +5680,16 @@ mixin template Proxy(alias a)
 
     auto ref opCall(this X, Args...)(auto ref Args args) { return a(args); }
 
-    auto ref opCast(T, this X)() { return cast(T)a; }
+    auto ref opCast(T, this X)() { return cast(T) a; }
 
     auto ref opIndex(this X, D...)(auto ref D i)               { return a[i]; }
     auto ref opSlice(this X      )()                           { return a[]; }
-    auto ref opSlice(this X, B, E)(auto ref B b, auto ref E e) { return a[b..e]; }
+    auto ref opSlice(this X, B, E)(auto ref B b, auto ref E e) { return a[b .. e]; }
 
     auto ref opUnary     (string op, this X      )()                           { return mixin(op~"a"); }
     auto ref opIndexUnary(string op, this X, D...)(auto ref D i)               { return mixin(op~"a[i]"); }
     auto ref opSliceUnary(string op, this X      )()                           { return mixin(op~"a[]"); }
-    auto ref opSliceUnary(string op, this X, B, E)(auto ref B b, auto ref E e) { return mixin(op~"a[b..e]"); }
+    auto ref opSliceUnary(string op, this X, B, E)(auto ref B b, auto ref E e) { return mixin(op~"a[b .. e]"); }
 
     auto ref opBinary(string op, this X, B)(auto ref B b)
     if (op == "in" && is(typeof(a in b)) || op != "in")
@@ -5640,12 +5718,12 @@ mixin template Proxy(alias a)
     auto ref opAssign     (this X, V      )(auto ref V v) if (!is(V == typeof(this))) { return a       = v; }
     auto ref opIndexAssign(this X, V, D...)(auto ref V v, auto ref D i)               { return a[i]    = v; }
     auto ref opSliceAssign(this X, V      )(auto ref V v)                             { return a[]     = v; }
-    auto ref opSliceAssign(this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return a[b..e] = v; }
+    auto ref opSliceAssign(this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return a[b .. e] = v; }
 
     auto ref opOpAssign     (string op, this X, V      )(auto ref V v)                             { return mixin("a "      ~op~"= v"); }
     auto ref opIndexOpAssign(string op, this X, V, D...)(auto ref V v, auto ref D i)               { return mixin("a[i] "   ~op~"= v"); }
     auto ref opSliceOpAssign(string op, this X, V      )(auto ref V v)                             { return mixin("a[] "    ~op~"= v"); }
-    auto ref opSliceOpAssign(string op, this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return mixin("a[b..e] "~op~"= v"); }
+    auto ref opSliceOpAssign(string op, this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return mixin("a[b .. e] "~op~"= v"); }
 
     template opDispatch(string name)
     {
@@ -5802,7 +5880,7 @@ mixin template Proxy(alias a)
         assert(m < 20);
         assert(+m == 10);
         assert(-m == -10);
-        assert(cast(double)m == 10.0);
+        assert(cast(double) m == 10.0);
         assert(m + 10 == 20);
         assert(m - 5 == 5);
         assert(m * 20 == 200);
@@ -5847,23 +5925,23 @@ mixin template Proxy(alias a)
         assert(a != [5,6,7,8]);
         assert(+a[0]    == 1);
         version (LittleEndian)
-            assert(cast(ulong[])a == [0x0000_0002_0000_0001, 0x0000_0004_0000_0003]);
+            assert(cast(ulong[]) a == [0x0000_0002_0000_0001, 0x0000_0004_0000_0003]);
         else
-            assert(cast(ulong[])a == [0x0000_0001_0000_0002, 0x0000_0003_0000_0004]);
+            assert(cast(ulong[]) a == [0x0000_0001_0000_0002, 0x0000_0003_0000_0004]);
         assert(a ~ [10,11] == [1,2,3,4,10,11]);
         assert(a[0]    == 1);
         assert(a[]     == [1,2,3,4]);
-        assert(a[2..4] == [3,4]);
+        assert(a[2 .. 4] == [3,4]);
         static if (is(T == MyArray))    // mutable
         {
             a = a;
             a = [5,6,7,8];  assert(a == [5,6,7,8]);
             a[0]     = 0;   assert(a == [0,6,7,8]);
             a[]      = 1;   assert(a == [1,1,1,1]);
-            a[0..3]  = 2;   assert(a == [2,2,2,1]);
+            a[0 .. 3]  = 2;   assert(a == [2,2,2,1]);
             a[0]    += 2;   assert(a == [4,2,2,1]);
             a[]     *= 2;   assert(a == [8,4,4,2]);
-            a[0..2] /= 2;   assert(a == [4,2,4,2]);
+            a[0 .. 2] /= 2;   assert(a == [4,2,4,2]);
         }
     }
 }
@@ -5934,10 +6012,10 @@ mixin template Proxy(alias a)
 
     // bug5896 test
     assert(h.opCast!int() == 0);
-    assert(cast(int)h == 0);
+    assert(cast(int) h == 0);
     const ih = new const Hoge(new Foo());
     static assert(!__traits(compiles, ih.opCast!int()));
-    static assert(!__traits(compiles, cast(int)ih));
+    static assert(!__traits(compiles, cast(int) ih));
 
     // template member function
     assert(h.tempfunc!int() == 0);
@@ -5974,9 +6052,9 @@ mixin template Proxy(alias a)
     Object c = new MyClass2(5);
     Object d = new MyClass3(5);
     assert(a == b);
-    assert((cast(MyClass)a) == 5);
-    assert(5 == (cast(MyClass)b));
-    assert(5 == cast(MyClass2)c);
+    assert((cast(MyClass) a) == 5);
+    assert(5 == (cast(MyClass) b));
+    assert(5 == cast(MyClass2) c);
     assert(a != d);
 
     assert(c != a);
@@ -5986,23 +6064,23 @@ mixin template Proxy(alias a)
     // MyClass.opEquals doesn't know MyClass2.
     // so, c.opEquals(a) is true, but a.opEquals(c) is false.
     // furthermore, opEquals(T) couldn't be invoked.
-    assert((cast(MyClass2)c) != (cast(MyClass)a));
+    assert((cast(MyClass2) c) != (cast(MyClass) a));
 
     // opCmp
     Object e = new MyClass2(7);
-    assert(a < cast(MyClass2)e); // OK. and
+    assert(a < cast(MyClass2) e); // OK. and
     assert(e > a); // OK, but...
     // assert(a < e); // RUNTIME ERROR!
-    // assert((cast(MyClass)a) < e); // RUNTIME ERROR!
-    assert(3 < cast(MyClass)a);
-    assert((cast(MyClass2)e) < 11);
+    // assert((cast(MyClass) a) < e); // RUNTIME ERROR!
+    assert(3 < cast(MyClass) a);
+    assert((cast(MyClass2) e) < 11);
 
     // opCall
-    assert((cast(MyClass2)e)("hello") == "hello");
+    assert((cast(MyClass2) e)("hello") == "hello");
 
     // opCast
-    assert((cast(MyClass)(cast(MyClass2)c)) == a);
-    assert((cast(int)(cast(MyClass2)c)) == 5);
+    assert((cast(MyClass)(cast(MyClass2) c)) == a);
+    assert((cast(int)(cast(MyClass2) c)) == 5);
 
     // opIndex
     class MyClass4
@@ -6023,27 +6101,27 @@ mixin template Proxy(alias a)
     assert(f[1] == 'e');
 
     // opSlice
-    assert(f[2..4] == "ll");
+    assert(f[2 .. 4] == "ll");
 
     // opUnary
-    assert(-(cast(MyClass2)c) == -5);
+    assert(-(cast(MyClass2) c) == -5);
 
     // opBinary
-    assert((cast(MyClass)a) + (cast(MyClass2)c) == 10);
-    assert(5 + cast(MyClass)a == 10);
+    assert((cast(MyClass) a) + (cast(MyClass2) c) == 10);
+    assert(5 + cast(MyClass) a == 10);
 
     // opAssign
-    (cast(MyClass2)c) = 11;
-    assert((cast(MyClass2)c) == 11);
-    (cast(MyClass2)c) = new MyClass(13);
-    assert((cast(MyClass2)c) == 13);
+    (cast(MyClass2) c) = 11;
+    assert((cast(MyClass2) c) == 11);
+    (cast(MyClass2) c) = new MyClass(13);
+    assert((cast(MyClass2) c) == 13);
 
     // opOpAssign
-    assert((cast(MyClass2)c) += 4);
-    assert((cast(MyClass2)c) == 17);
+    assert((cast(MyClass2) c) += 4);
+    assert((cast(MyClass2) c) == 17);
 
     // opDispatch
-    assert((cast(MyClass2)c).pow(2) == 289);
+    assert((cast(MyClass2) c).pow(2) == 289);
 
     // opDollar
     assert(f[2..$-1] == "ll");
@@ -6139,11 +6217,11 @@ mixin template Proxy(alias a)
     }
     static void allFail(T0, T1)(T0 a, T1 b)
     {
-        assert(!(a==b));
+        assert(!(a == b));
         assert(!(a<b));
-        assert(!(a<=b));
+        assert(!(a <= b));
         assert(!(a>b));
-        assert(!(a>=b));
+        assert(!(a >= b));
     }
     foreach (T1; AliasSeq!(MyFloatImpl, Typedef!float, Typedef!double,
         float, real, Typedef!int, int))
@@ -6159,18 +6237,18 @@ mixin template Proxy(alias a)
             allFail(a, b);
 
             b = 4;
-            assert(a!=b);
+            assert(a != b);
             assert(a<b);
-            assert(a<=b);
+            assert(a <= b);
             assert(!(a>b));
-            assert(!(a>=b));
+            assert(!(a >= b));
 
             a = 4;
-            assert(a==b);
+            assert(a == b);
             assert(!(a<b));
-            assert(a<=b);
+            assert(a <= b);
             assert(!(a>b));
-            assert(a>=b);
+            assert(a >= b);
         }
     }
 }
@@ -6240,16 +6318,16 @@ struct Typedef(T, T init = T.init, string cookie=null)
         this(tdef.Typedef_payload);
     }
 
-    // We need to add special overload for cast(Typedef!X)exp,
+    // We need to add special overload for cast(Typedef!X) exp,
     // thus we can't simply inherit Proxy!Typedef_payload
     T2 opCast(T2 : Typedef!(T, Unused), this X, T, Unused...)()
     {
-        return T2(cast(T)Typedef_payload);
+        return T2(cast(T) Typedef_payload);
     }
 
     auto ref opCast(T2, this X)()
     {
-        return cast(T2)Typedef_payload;
+        return cast(T2) Typedef_payload;
     }
 
     mixin Proxy!Typedef_payload;
@@ -6312,7 +6390,7 @@ template TypedefType(T)
     assert(myInt == 5);
 
     // cast to the underlying type to get the value that's being wrapped
-    int x = cast(TypedefType!MyInt)myInt;
+    int x = cast(TypedefType!MyInt) myInt;
 
     alias MyIntInit = Typedef!(int, 42);
     static assert(is(TypedefType!MyIntInit == int));
@@ -6344,11 +6422,11 @@ template TypedefType(T)
     static assert(typeof(sa).length == 3);
 
     Typedef!(int[3]) dollar1;
-    assert(dollar1[0..$] is dollar1[0..3]);
+    assert(dollar1[0..$] is dollar1[0 .. 3]);
 
     Typedef!(int[]) dollar2;
     dollar2.length = 3;
-    assert(dollar2[0..$] is dollar2[0..3]);
+    assert(dollar2[0..$] is dollar2[0 .. 3]);
 
     static struct Dollar1
     {
@@ -6360,7 +6438,7 @@ template TypedefType(T)
 
     Typedef!Dollar1 drange1;
     assert(drange1[0..$] == 1);
-    assert(drange1[0..1] == 2);
+    assert(drange1[0 .. 1] == 2);
 
     static struct Dollar2
     {
@@ -6486,9 +6564,9 @@ template TypedefType(T)
     alias String = Typedef!(char[]);
     alias CString = Typedef!(const(char)[]);
     CString cs = "fubar";
-    String s = cast(String)cs;
+    String s = cast(String) cs;
     assert(cs == s);
-    char[] s2 = cast(char[])cs;
+    char[] s2 = cast(char[]) cs;
     const(char)[] cs2 = cast(const(char)[])s;
     assert(s2 == cs2);
 }
@@ -7047,10 +7125,10 @@ template isBitFlagEnum(E)
     enum A
     {
         None,
-        A = 1<<0,
-        B = 1<<1,
-        C = 1<<2,
-        D = 1<<3,
+        A = 1 << 0,
+        B = 1 << 1,
+        C = 1 << 2,
+        D = 1 << 3,
     }
 
     static assert(isBitFlagEnum!A);
@@ -7067,8 +7145,8 @@ template isBitFlagEnum(E)
 
     enum C: double
     {
-        A = 1<<0,
-        B = 1<<1
+        A = 1 << 0,
+        B = 1 << 1
     }
 
     static assert(!isBitFlagEnum!C);
@@ -7086,8 +7164,8 @@ the OR combination, which can produce surprising effects like this:
 ----
 enum E
 {
-    A = 1<<0,
-    B = 1<<1
+    A = 1 << 0,
+    B = 1 << 1
 }
 E e = E.A | E.B;
 // will throw SwitchError
@@ -7234,9 +7312,9 @@ public:
     enum Enum
     {
         None,
-        A = 1<<0,
-        B = 1<<1,
-        C = 1<<2
+        A = 1 << 0,
+        B = 1 << 1,
+        C = 1 << 2
     }
     BitFlags!Enum flags1;
     assert(!(flags1 & (Enum.A | Enum.B | Enum.C)));
@@ -7278,7 +7356,7 @@ public:
 
     // use & between BitFlags for intersection
     immutable BitFlags!Enum flags_BC = BitFlags!Enum(Enum.B, Enum.C);
-    assert (flags_B == (flags_BC & flags_AB));
+    assert(flags_B == (flags_BC & flags_AB));
 
     // All the binary operators work in their assignment version
     BitFlags!Enum temp = flags_empty;
@@ -7305,7 +7383,7 @@ public:
     assert(flags_AB & Enum.A);
 
     // Finally, you can of course get you raw value out of flags
-    auto value = cast(int)flags_A;
+    auto value = cast(int) flags_A;
     assert(value == Enum.A);
 }
 

@@ -67,9 +67,9 @@ struct Region(ParentAllocator = NullAllocator,
     $(D parent.allocate(n)) returns $(D null), the region will be initialized
     as empty (correctly initialized but unable to allocate).
     */
-    this(void[] store)
+    this(ubyte[] store)
     {
-        store = store.roundUpToAlignment(alignment);
+        store = cast(ubyte[])(store.roundUpToAlignment(alignment));
         store = store[0 .. $.roundDownToAlignment(alignment)];
         assert(store.ptr.alignedAt(minAlign));
         assert(store.length % minAlign == 0);
@@ -85,7 +85,7 @@ struct Region(ParentAllocator = NullAllocator,
     static if (!is(ParentAllocator == NullAllocator))
     this(size_t n)
     {
-        this(parent.allocate(n.roundUpToAlignment(alignment)));
+        this(cast(ubyte[])(parent.allocate(n.roundUpToAlignment(alignment))));
     }
 
     /*
@@ -327,7 +327,7 @@ struct Region(ParentAllocator = NullAllocator,
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     import std.experimental.allocator.building_blocks.allocator_list
@@ -346,7 +346,7 @@ unittest
     // Destructor will free the memory
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     // Create a 64 KB region allocated with malloc
@@ -528,7 +528,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
 }
 
 ///
-unittest
+@system unittest
 {
     // 128KB region, allocated to x86's cache line
     InSituRegion!(128 * 1024, 16) r1;
@@ -550,19 +550,19 @@ unittest
     // Reap with GC fallback.
     InSituRegion!(128 * 1024, 8) tmp3;
     FallbackAllocator!(BitmappedBlock!(64, 8), GCAllocator) r3;
-    r3.primary = BitmappedBlock!(64, 8)(tmp3.allocateAll());
+    r3.primary = BitmappedBlock!(64, 8)(cast(ubyte[])(tmp3.allocateAll()));
     const a3 = r3.allocate(103);
     assert(a3.length == 103);
 
     // Reap/GC with a freelist for small objects up to 16 bytes.
     InSituRegion!(128 * 1024, 64) tmp4;
     FreeList!(FallbackAllocator!(BitmappedBlock!(64, 64), GCAllocator), 0, 16) r4;
-    r4.parent.primary = BitmappedBlock!(64, 64)(tmp4.allocateAll());
+    r4.parent.primary = BitmappedBlock!(64, 64)(cast(ubyte[])(tmp4.allocateAll()));
     const a4 = r4.allocate(104);
     assert(a4.length == 104);
 }
 
-unittest
+@system unittest
 {
     InSituRegion!(4096, 1) r1;
     auto a = r1.allocate(2001);
@@ -581,9 +581,10 @@ private extern(C) int brk(shared void*);
 
 /**
 
-Allocator backed by $(D $(LUCKY sbrk)) for Posix systems. Due to the fact that
-$(D sbrk) is not thread-safe $(HTTP lifecs.likai.org/2010/02/sbrk-is-not-thread-
-safe.html, by design), $(D SbrkRegion) uses a mutex internally. This implies
+Allocator backed by $(D $(LINK2 https://en.wikipedia.org/wiki/Sbrk, sbrk))
+for Posix systems. Due to the fact that $(D sbrk) is not thread-safe
+$(HTTP lifecs.likai.org/2010/02/sbrk-is-not-thread-safe.html, by design),
+$(D SbrkRegion) uses a mutex internally. This implies
 that uncontrolled calls to $(D brk) and $(D sbrk) may affect the workings of $(D
 SbrkRegion) adversely.
 
@@ -752,7 +753,7 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     }
 }
 
-version(Posix) unittest
+version(Posix) @system unittest
 {
     // Let's test the assumption that sbrk(n) returns the old address
     const p1 = sbrk(0);
@@ -764,7 +765,7 @@ version(Posix) unittest
     sbrk(-4096);
 }
 
-version(Posix) unittest
+version(Posix) @system unittest
 {
     import std.typecons : Ternary;
     alias alloc = SbrkRegion!(8).instance;

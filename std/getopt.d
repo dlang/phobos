@@ -283,8 +283,7 @@ int main(string[] args)
       case "verbose": verbosityLevel = 2; break;
       case "shouting": verbosityLevel = verbosityLevel.max; break;
       default :
-        stderr.writeln("Dunno how verbose you want me to be by saying ",
-          value);
+        stderr.writeln("Unknown verbosity level ", value);
         handlerFailed = true;
         break;
     }
@@ -469,15 +468,15 @@ GetoptResult getopt(T...)(ref string[] args, T opts)
 enum config {
     /// Turn case sensitivity on
     caseSensitive,
-    /// Turn case sensitivity off
+    /// Turn case sensitivity off (default)
     caseInsensitive,
     /// Turn bundling on
     bundling,
-    /// Turn bundling off
+    /// Turn bundling off (default)
     noBundling,
     /// Pass unrecognized arguments through
     passThrough,
-    /// Signal unrecognized arguments as errors
+    /// Signal unrecognized arguments as errors (default)
     noPassThrough,
     /// Stop at first argument that does not look like an option
     stopOnFirstNonOption,
@@ -517,12 +516,35 @@ private pure Option splitAndGet(string opt) @trusted nothrow
         ret.optLong = "--" ~ (sp[0].length > sp[1].length ?
             sp[0] : sp[1]);
     }
-    else
+    else if (sp[0].length > 1)
     {
         ret.optLong = "--" ~ sp[0];
     }
+    else
+    {
+        ret.optShort = "-" ~ sp[0];
+    }
 
     return ret;
+}
+
+@safe unittest
+{
+    auto oshort = splitAndGet("f");
+    assert(oshort.optShort == "-f");
+    assert(oshort.optLong == "");
+
+    auto olong = splitAndGet("foo");
+    assert(olong.optShort == "");
+    assert(olong.optLong == "--foo");
+
+    auto oshortlong = splitAndGet("f|foo");
+    assert(oshortlong.optShort == "-f");
+    assert(oshortlong.optLong == "--foo");
+
+    auto olongshort = splitAndGet("foo|f");
+    assert(olongshort.optShort == "-f");
+    assert(olongshort.optLong == "--foo");
 }
 
 /*
@@ -542,7 +564,7 @@ private template optionValidator(A...)
     import std.format : format;
 
     enum fmt = "getopt validator: %s (at position %d)";
-    enum isReceiver(T) = isPointer!T || (is(T==function)) || (is(T==delegate));
+    enum isReceiver(T) = isPointer!T || (is(T == function)) || (is(T == delegate));
     enum isOptionStr(T) = isSomeString!T || isSomeChar!T;
 
     auto validator()
@@ -684,10 +706,13 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             Option optionHelp = splitAndGet(option);
             optionHelp.required = cfg.required;
 
-            assert(optionHelp.optLong !in visitedLongOpts,
-                "Long option " ~ optionHelp.optLong ~ " is multiply defined");
+            if (optionHelp.optLong.length)
+            {
+                assert(optionHelp.optLong !in visitedLongOpts,
+                    "Long option " ~ optionHelp.optLong ~ " is multiply defined");
 
-            visitedLongOpts[optionHelp.optLong] = [];
+                visitedLongOpts[optionHelp.optLong] = [];
+            }
 
             if (optionHelp.optShort.length)
             {
@@ -829,16 +854,16 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
 
         static if (is(typeof(*receiver) == bool))
         {
-            // parse '--b=true/false'
             if (val.length)
             {
+                // parse '--b=true/false'
                 *receiver = to!(typeof(*receiver))(val);
-                break;
             }
-
-            // no argument means set it to true
-            *receiver = true;
-            break;
+            else
+            {
+                // no argument means set it to true
+                *receiver = true;
+            }
         }
         else
         {
@@ -939,10 +964,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
                     setHash(receiver, val.splitter(arraySep));
             }
             else
-            {
-                static assert(false, "Dunno how to deal with type " ~
-                        typeof(receiver).stringof);
-            }
+                static assert(false, "getopt does not know how to handle the type " ~ typeof(receiver).stringof);
         }
     }
 
@@ -1054,7 +1076,7 @@ private struct configuration
 }
 
 private bool optMatch(string arg, string optPattern, ref string value,
-    configuration cfg)
+    configuration cfg) @safe
 {
     import std.uni : toUpper;
     import std.string : indexOf;
@@ -1077,7 +1099,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
     }
     else
     {
-        if (!isLong && eqPos==1)
+        if (!isLong && eqPos == 1)
         {
             // argument looks like -o=value
             value = arg[2 .. $];
@@ -1114,9 +1136,9 @@ private bool optMatch(string arg, string optPattern, ref string value,
     return false;
 }
 
-private void setConfig(ref configuration cfg, config option)
+private void setConfig(ref configuration cfg, config option) @safe pure nothrow @nogc
 {
-    switch (option)
+    final switch (option)
     {
     case config.caseSensitive: cfg.caseSensitive = true; break;
     case config.caseInsensitive: cfg.caseSensitive = false; break;
@@ -1129,7 +1151,6 @@ private void setConfig(ref configuration cfg, config option)
         cfg.stopOnFirstNonOption = true; break;
     case config.keepEndOfOptions:
         cfg.keepEndOfOptions = true; break;
-    default: assert(false);
     }
 }
 
@@ -1313,6 +1334,16 @@ private void setConfig(ref configuration cfg, config option)
     args = ["program.name", "--verbose", "2"];
     try { getopt(args, "verbose", &myStaticHandler3); assert(0); }
     catch (MyEx ex) { assert(ex.option == "verbose" && ex.value == "2"); }
+}
+
+@safe unittest // @safe std.getopt.config option use
+{
+    long x = 0;
+    string[] args = ["program", "--inc-x", "--inc-x"];
+    getopt(args,
+           std.getopt.config.caseSensitive,
+           "inc-x", "Add one to x", delegate void() { x++; });
+    assert(x == 2);
 }
 
 @system unittest
@@ -1685,7 +1716,7 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
 }
 
 // throw on duplicate options
-unittest
+@system unittest
 {
     import core.exception;
     auto args = ["prog", "--abc", "1"];
@@ -1693,4 +1724,91 @@ unittest
     assertThrown!AssertError(getopt(args, "abc", &abc, "abc", &abc));
     assertThrown!AssertError(getopt(args, "abc|a", &abc, "def|a", &def));
     assertNotThrown!AssertError(getopt(args, "abc", &abc, "def", &def));
+}
+
+@system unittest // Issue 17327 repeated option use
+{
+    long num = 0;
+
+    string[] args = ["program", "--num", "3"];
+    getopt(args, "n|num", &num);
+    assert(num == 3);
+
+    args = ["program", "--num", "3", "--num", "5"];
+    getopt(args, "n|num", &num);
+    assert(num == 5);
+
+    args = ["program", "--n", "3", "--num", "5", "-n", "-7"];
+    getopt(args, "n|num", &num);
+    assert(num == -7);
+
+    void add1() { num++; }
+    void add2(string option) { num += 2; }
+    void addN(string option, string value)
+    {
+        import std.conv : to;
+        num += value.to!long;
+    }
+
+    num = 0;
+    args = ["program", "--add1", "--add2", "--add1", "--add", "5", "--add2", "--add", "10"];
+    getopt(args,
+           "add1", "Add 1 to num", &add1,
+           "add2", "Add 2 to num", &add2,
+           "add", "Add N to num", &addN,);
+    assert(num == 21);
+
+    bool flag = false;
+    args = ["program", "--flag"];
+    getopt(args, "f|flag", "Boolean", &flag);
+    assert(flag);
+
+    flag = false;
+    args = ["program", "-f", "-f"];
+    getopt(args, "f|flag", "Boolean", &flag);
+    assert(flag);
+
+    flag = false;
+    args = ["program", "--flag=true", "--flag=false"];
+    getopt(args, "f|flag", "Boolean", &flag);
+    assert(!flag);
+
+    flag = false;
+    args = ["program", "--flag=true", "--flag=false", "-f"];
+    getopt(args, "f|flag", "Boolean", &flag);
+    assert(flag);
+}
+
+@safe unittest  // Delegates as callbacks
+{
+    alias TwoArgOptionHandler = void delegate(string option, string value) @safe;
+
+    TwoArgOptionHandler makeAddNHandler(ref long dest)
+    {
+        void addN(ref long dest, string n)
+        {
+            import std.conv : to;
+            dest += n.to!long;
+        }
+
+        return (option, value) => addN(dest, value);
+    }
+
+    long x = 0;
+    long y = 0;
+
+    string[] args =
+        ["program", "--x-plus-1", "--x-plus-1", "--x-plus-5", "--x-plus-n", "10",
+         "--y-plus-n", "25", "--y-plus-7", "--y-plus-n", "15", "--y-plus-3"];
+
+    getopt(args,
+           "x-plus-1", "Add one to x", delegate void() { x += 1; },
+           "x-plus-5", "Add five to x", delegate void(string option) { x += 5; },
+           "x-plus-n", "Add NUM to x", makeAddNHandler(x),
+           "y-plus-7", "Add seven to y", delegate void() { y += 7; },
+           "y-plus-3", "Add three to y", delegate void(string option) { y += 3; },
+           "y-plus-n", "Add NUM to x", makeAddNHandler(y),);
+
+    assert(x == 17);
+    assert(y == 50);
 }

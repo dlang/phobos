@@ -34,7 +34,8 @@ import std.traits;
         be $(D Complex!double).  Otherwise, the return type is
         deduced using $(D std.traits.CommonType!(R, I)).
 */
-auto complex(R)(R re)  @safe pure nothrow @nogc  if (is(R : double))
+auto complex(R)(R re)  @safe pure nothrow @nogc
+if (is(R : double))
 {
     static if (isFloatingPoint!R)
         return Complex!R(re, 0);
@@ -44,7 +45,7 @@ auto complex(R)(R re)  @safe pure nothrow @nogc  if (is(R : double))
 
 /// ditto
 auto complex(R, I)(R re, I im)  @safe pure nothrow @nogc
-    if (is(R : double) && is(I : double))
+if (is(R : double) && is(I : double))
 {
     static if (isFloatingPoint!R || isFloatingPoint!I)
         return Complex!(CommonType!(R, I))(re, im);
@@ -56,46 +57,47 @@ auto complex(R, I)(R re, I im)  @safe pure nothrow @nogc
 @safe pure nothrow unittest
 {
     auto a = complex(1.0);
-    static assert (is(typeof(a) == Complex!double));
-    assert (a.re == 1.0);
-    assert (a.im == 0.0);
+    static assert(is(typeof(a) == Complex!double));
+    assert(a.re == 1.0);
+    assert(a.im == 0.0);
 
     auto b = complex(2.0L);
-    static assert (is(typeof(b) == Complex!real));
-    assert (b.re == 2.0L);
-    assert (b.im == 0.0L);
+    static assert(is(typeof(b) == Complex!real));
+    assert(b.re == 2.0L);
+    assert(b.im == 0.0L);
 
     auto c = complex(1.0, 2.0);
-    static assert (is(typeof(c) == Complex!double));
-    assert (c.re == 1.0);
-    assert (c.im == 2.0);
+    static assert(is(typeof(c) == Complex!double));
+    assert(c.re == 1.0);
+    assert(c.im == 2.0);
 
     auto d = complex(3.0, 4.0L);
-    static assert (is(typeof(d) == Complex!real));
-    assert (d.re == 3.0);
-    assert (d.im == 4.0L);
+    static assert(is(typeof(d) == Complex!real));
+    assert(d.re == 3.0);
+    assert(d.im == 4.0L);
 
     auto e = complex(1);
-    static assert (is(typeof(e) == Complex!double));
-    assert (e.re == 1);
-    assert (e.im == 0);
+    static assert(is(typeof(e) == Complex!double));
+    assert(e.re == 1);
+    assert(e.im == 0);
 
     auto f = complex(1L, 2);
-    static assert (is(typeof(f) == Complex!double));
-    assert (f.re == 1L);
-    assert (f.im == 2);
+    static assert(is(typeof(f) == Complex!double));
+    assert(f.re == 1L);
+    assert(f.im == 2);
 
     auto g = complex(3, 4.0L);
-    static assert (is(typeof(g) == Complex!real));
-    assert (g.re == 3);
-    assert (g.im == 4.0L);
+    static assert(is(typeof(g) == Complex!real));
+    assert(g.re == 3);
+    assert(g.im == 4.0L);
 }
 
 
 /** A complex number parametrised by a type $(D T), which must be either
     $(D float), $(D double) or $(D real).
 */
-struct Complex(T)  if (isFloatingPoint!T)
+struct Complex(T)
+if (isFloatingPoint!T)
 {
     import std.format : FormatSpec;
     import std.range.primitives : isOutputRange;
@@ -440,73 +442,73 @@ struct Complex(T)  if (isFloatingPoint!T)
     // Check unary operations.
     auto c2 = Complex!double(0.5, 2.0);
 
-    assert (c2 == +c2);
+    assert(c2 == +c2);
 
-    assert ((-c2).re == -(c2.re));
-    assert ((-c2).im == -(c2.im));
-    assert (c2 == -(-c2));
+    assert((-c2).re == -(c2.re));
+    assert((-c2).im == -(c2.im));
+    assert(c2 == -(-c2));
 
     // Check complex-complex operations.
     auto cpc = c1 + c2;
-    assert (cpc.re == c1.re + c2.re);
-    assert (cpc.im == c1.im + c2.im);
+    assert(cpc.re == c1.re + c2.re);
+    assert(cpc.im == c1.im + c2.im);
 
     auto cmc = c1 - c2;
-    assert (cmc.re == c1.re - c2.re);
-    assert (cmc.im == c1.im - c2.im);
+    assert(cmc.re == c1.re - c2.re);
+    assert(cmc.im == c1.im - c2.im);
 
     auto ctc = c1 * c2;
-    assert (approxEqual(abs(ctc), abs(c1)*abs(c2), EPS));
-    assert (approxEqual(arg(ctc), arg(c1)+arg(c2), EPS));
+    assert(approxEqual(abs(ctc), abs(c1)*abs(c2), EPS));
+    assert(approxEqual(arg(ctc), arg(c1)+arg(c2), EPS));
 
     auto cdc = c1 / c2;
-    assert (approxEqual(abs(cdc), abs(c1)/abs(c2), EPS));
-    assert (approxEqual(arg(cdc), arg(c1)-arg(c2), EPS));
+    assert(approxEqual(abs(cdc), abs(c1)/abs(c2), EPS));
+    assert(approxEqual(arg(cdc), arg(c1)-arg(c2), EPS));
 
     auto cec = c1^^c2;
-    assert (approxEqual(cec.re, 0.11524131979943839881, EPS));
-    assert (approxEqual(cec.im, 0.21870790452746026696, EPS));
+    assert(approxEqual(cec.re, 0.11524131979943839881, EPS));
+    assert(approxEqual(cec.im, 0.21870790452746026696, EPS));
 
     // Check complex-real operations.
     double a = 123.456;
 
     auto cpr = c1 + a;
-    assert (cpr.re == c1.re + a);
-    assert (cpr.im == c1.im);
+    assert(cpr.re == c1.re + a);
+    assert(cpr.im == c1.im);
 
     auto cmr = c1 - a;
-    assert (cmr.re == c1.re - a);
-    assert (cmr.im == c1.im);
+    assert(cmr.re == c1.re - a);
+    assert(cmr.im == c1.im);
 
     auto ctr = c1 * a;
-    assert (ctr.re == c1.re*a);
-    assert (ctr.im == c1.im*a);
+    assert(ctr.re == c1.re*a);
+    assert(ctr.im == c1.im*a);
 
     auto cdr = c1 / a;
-    assert (approxEqual(abs(cdr), abs(c1)/a, EPS));
-    assert (approxEqual(arg(cdr), arg(c1), EPS));
+    assert(approxEqual(abs(cdr), abs(c1)/a, EPS));
+    assert(approxEqual(arg(cdr), arg(c1), EPS));
 
     auto cer = c1^^3.0;
-    assert (approxEqual(abs(cer), abs(c1)^^3, EPS));
-    assert (approxEqual(arg(cer), arg(c1)*3, EPS));
+    assert(approxEqual(abs(cer), abs(c1)^^3, EPS));
+    assert(approxEqual(arg(cer), arg(c1)*3, EPS));
 
     auto rpc = a + c1;
-    assert (rpc == cpr);
+    assert(rpc == cpr);
 
     auto rmc = a - c1;
-    assert (rmc.re == a-c1.re);
-    assert (rmc.im == -c1.im);
+    assert(rmc.re == a-c1.re);
+    assert(rmc.im == -c1.im);
 
     auto rtc = a * c1;
-    assert (rtc == ctr);
+    assert(rtc == ctr);
 
     auto rdc = a / c1;
-    assert (approxEqual(abs(rdc), a/abs(c1), EPS));
-    assert (approxEqual(arg(rdc), -arg(c1), EPS));
+    assert(approxEqual(abs(rdc), a/abs(c1), EPS));
+    assert(approxEqual(arg(rdc), -arg(c1), EPS));
 
     rdc = a / c2;
-    assert (approxEqual(abs(rdc), a/abs(c2), EPS));
-    assert (approxEqual(arg(rdc), -arg(c2), EPS));
+    assert(approxEqual(abs(rdc), a/abs(c2), EPS));
+    assert(approxEqual(arg(rdc), -arg(c2), EPS));
 
     auto rec1a = 1.0 ^^ c1;
     assert(rec1a.re == 1.0);
@@ -564,13 +566,13 @@ struct Complex(T)  if (isFloatingPoint!T)
     assert(rer4.im == 0.0);
 
     // Check Complex-int operations.
-    foreach (i; 0..6)
+    foreach (i; 0 .. 6)
     {
         auto cei = c1^^i;
-        assert (approxEqual(abs(cei), abs(c1)^^i, EPS));
+        assert(approxEqual(abs(cei), abs(c1)^^i, EPS));
         // Use cos() here to deal with arguments that go outside
         // the (-pi,pi] interval (only an issue for i>3).
-        assert (approxEqual(std.math.cos(arg(cei)), std.math.cos(arg(c1)*i), EPS));
+        assert(approxEqual(std.math.cos(arg(cei)), std.math.cos(arg(c1)*i), EPS));
     }
 
     // Check operations between different complex types.
@@ -578,10 +580,10 @@ struct Complex(T)  if (isFloatingPoint!T)
     auto cr = Complex!real(1.0, 1.0);
     auto c1pcf = c1 + cf;
     auto c1pcr = c1 + cr;
-    static assert (is(typeof(c1pcf) == Complex!double));
-    static assert (is(typeof(c1pcr) == Complex!real));
-    assert (c1pcf.re == c1pcr.re);
-    assert (c1pcf.im == c1pcr.im);
+    static assert(is(typeof(c1pcf) == Complex!double));
+    static assert(is(typeof(c1pcr) == Complex!real));
+    assert(c1pcf.re == c1pcr.re);
+    assert(c1pcf.im == c1pcr.im);
 
     auto c1c = c1;
     auto c2c = c2;
@@ -609,11 +611,11 @@ struct Complex(T)  if (isFloatingPoint!T)
 {
     // Initialization
     Complex!double a = 1;
-    assert (a.re == 1 && a.im == 0);
+    assert(a.re == 1 && a.im == 0);
     Complex!double b = 1.0;
-    assert (b.re == 1.0 && b.im == 0);
+    assert(b.re == 1.0 && b.im == 0);
     Complex!double c = Complex!real(1.0, 2);
-    assert (c.re == 1.0 && c.im == 2);
+    assert(c.re == 1.0 && c.im == 2);
 }
 
 @safe pure nothrow unittest
@@ -622,26 +624,26 @@ struct Complex(T)  if (isFloatingPoint!T)
     Complex!double z;
 
     z = 1;
-    assert (z == 1);
-    assert (z.re == 1.0  &&  z.im == 0.0);
+    assert(z == 1);
+    assert(z.re == 1.0  &&  z.im == 0.0);
 
     z = 2.0;
-    assert (z == 2.0);
-    assert (z.re == 2.0  &&  z.im == 0.0);
+    assert(z == 2.0);
+    assert(z.re == 2.0  &&  z.im == 0.0);
 
     z = 1.0L;
-    assert (z == 1.0L);
-    assert (z.re == 1.0  &&  z.im == 0.0);
+    assert(z == 1.0L);
+    assert(z.re == 1.0  &&  z.im == 0.0);
 
     auto w = Complex!real(1.0, 1.0);
     z = w;
-    assert (z == w);
-    assert (z.re == 1.0  &&  z.im == 1.0);
+    assert(z == w);
+    assert(z.re == 1.0  &&  z.im == 1.0);
 
     auto c = Complex!float(2.0, 2.0);
     z = c;
-    assert (z == c);
-    assert (z.re == 2.0  &&  z.im == 2.0);
+    assert(z == c);
+    assert(z.re == 2.0  &&  z.im == 2.0);
 }
 
 
@@ -658,14 +660,15 @@ struct Complex(T)  if (isFloatingPoint!T)
     ---
     The above will work if T is both real and complex.
 */
-template Complex(T) if (is(T R == Complex!R))
+template Complex(T)
+if (is(T R == Complex!R))
 {
     alias Complex = T;
 }
 
 @safe pure nothrow unittest
 {
-    static assert (is(Complex!(Complex!real) == Complex!real));
+    static assert(is(Complex!(Complex!real) == Complex!real));
 
     Complex!T addI(T)(T x)
     {
@@ -673,11 +676,11 @@ template Complex(T) if (is(T R == Complex!R))
     }
 
     auto z1 = addI(1.0);
-    assert (z1.re == 1.0 && z1.im == 1.0);
+    assert(z1.re == 1.0 && z1.im == 1.0);
 
     enum one = Complex!double(1.0, 0.0);
     auto z2 = addI(one);
-    assert (z1 == z2);
+    assert(z1 == z2);
 }
 
 
@@ -695,9 +698,9 @@ T abs(T)(Complex!T z) @safe pure nothrow @nogc
 @safe pure nothrow unittest
 {
     static import std.math;
-    assert (abs(complex(1.0)) == 1.0);
-    assert (abs(complex(0.0, 1.0)) == 1.0);
-    assert (abs(complex(1.0L, -2.0L)) == std.math.sqrt(5.0L));
+    assert(abs(complex(1.0)) == 1.0);
+    assert(abs(complex(0.0, 1.0)) == 1.0);
+    assert(abs(complex(1.0L, -2.0L)) == std.math.sqrt(5.0L));
 }
 
 
@@ -717,17 +720,17 @@ T sqAbs(T)(Complex!T z) @safe pure nothrow @nogc
 @safe pure nothrow unittest
 {
     import std.math;
-    assert (sqAbs(complex(0.0)) == 0.0);
-    assert (sqAbs(complex(1.0)) == 1.0);
-    assert (sqAbs(complex(0.0, 1.0)) == 1.0);
-    assert (approxEqual(sqAbs(complex(1.0L, -2.0L)), 5.0L));
-    assert (approxEqual(sqAbs(complex(-3.0L, 1.0L)), 10.0L));
-    assert (approxEqual(sqAbs(complex(1.0f,-1.0f)), 2.0f));
+    assert(sqAbs(complex(0.0)) == 0.0);
+    assert(sqAbs(complex(1.0)) == 1.0);
+    assert(sqAbs(complex(0.0, 1.0)) == 1.0);
+    assert(approxEqual(sqAbs(complex(1.0L, -2.0L)), 5.0L));
+    assert(approxEqual(sqAbs(complex(-3.0L, 1.0L)), 10.0L));
+    assert(approxEqual(sqAbs(complex(1.0f,-1.0f)), 2.0f));
 }
 
 /// ditto
 T sqAbs(T)(T x) @safe pure nothrow @nogc
-    if (isFloatingPoint!T)
+if (isFloatingPoint!T)
 {
     return x*x;
 }
@@ -735,10 +738,10 @@ T sqAbs(T)(T x) @safe pure nothrow @nogc
 @safe pure nothrow unittest
 {
     import std.math;
-    assert (sqAbs(0.0) == 0.0);
-    assert (sqAbs(-1.0) == 1.0);
-    assert (approxEqual(sqAbs(-3.0L), 9.0L));
-    assert (approxEqual(sqAbs(-5.0f), 25.0f));
+    assert(sqAbs(0.0) == 0.0);
+    assert(sqAbs(-1.0) == 1.0);
+    assert(approxEqual(sqAbs(-3.0L), 9.0L));
+    assert(approxEqual(sqAbs(-5.0f), 25.0f));
 }
 
 
@@ -756,9 +759,9 @@ T arg(T)(Complex!T z) @safe pure nothrow @nogc
 @safe pure nothrow unittest
 {
     import std.math;
-    assert (arg(complex(1.0)) == 0.0);
-    assert (arg(complex(0.0L, 1.0L)) == PI_2);
-    assert (arg(complex(1.0L, 1.0L)) == PI_4);
+    assert(arg(complex(1.0)) == 0.0);
+    assert(arg(complex(0.0L, 1.0L)) == PI_2);
+    assert(arg(complex(1.0L, 1.0L)) == PI_4);
 }
 
 
@@ -774,8 +777,8 @@ Complex!T conj(T)(Complex!T z) @safe pure nothrow @nogc
 ///
 @safe pure nothrow unittest
 {
-    assert (conj(complex(1.0)) == complex(1.0));
-    assert (conj(complex(1.0, 2.0)) == complex(1.0, -2.0));
+    assert(conj(complex(1.0)) == complex(1.0));
+    assert(conj(complex(1.0, 2.0)) == complex(1.0, -2.0));
 }
 
 
@@ -799,8 +802,8 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
 {
     import std.math;
     auto z = fromPolar(std.math.sqrt(2.0), PI_4);
-    assert (approxEqual(z.re, 1.0L, real.epsilon));
-    assert (approxEqual(z.im, 1.0L, real.epsilon));
+    assert(approxEqual(z.re, 1.0L, real.epsilon));
+    assert(approxEqual(z.im, 1.0L, real.epsilon));
 }
 
 
@@ -928,9 +931,9 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
 @safe pure nothrow unittest
 {
     static import std.math;
-    assert (sqrt(complex(0.0)) == 0.0);
-    assert (sqrt(complex(1.0L, 0)) == std.math.sqrt(1.0L));
-    assert (sqrt(complex(-1.0L, 0)) == complex(0, 1.0L));
+    assert(sqrt(complex(0.0)) == 0.0);
+    assert(sqrt(complex(1.0L, 0)) == std.math.sqrt(1.0L));
+    assert(sqrt(complex(-1.0L, 0)) == complex(0, 1.0L));
 }
 
 @safe pure nothrow unittest
@@ -941,12 +944,12 @@ Complex!T sqrt(T)(Complex!T z)  @safe pure nothrow @nogc
     auto c2 = Complex!double(0.5, 2.0);
 
     auto c1s = sqrt(c1);
-    assert (approxEqual(c1s.re, 1.09868411));
-    assert (approxEqual(c1s.im, 0.45508986));
+    assert(approxEqual(c1s.re, 1.09868411));
+    assert(approxEqual(c1s.im, 0.45508986));
 
     auto c2s = sqrt(c2);
-    assert (approxEqual(c2s.re, 1.1317134));
-    assert (approxEqual(c2s.im, 0.8836155));
+    assert(approxEqual(c2s.re, 1.1317134));
+    assert(approxEqual(c2s.im, 0.8836155));
 }
 
 // Issue 10881: support %f formatting of complex numbers

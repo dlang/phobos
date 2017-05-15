@@ -31,7 +31,7 @@ import std.meta : allSatisfy;
 
 version(StdDdoc)
 /// Computes an HMAC over data read from stdin.
-unittest
+@safe unittest
 {
     import std.stdio, std.digest.hmac, std.digest.sha;
     import std.string : representation;
@@ -208,12 +208,14 @@ if (hashBlockSize % 8 == 0)
     }
 }
 
+/// Convenience constructor for $(LREF HMAC).
 template hmac(H)
 if (isDigest!H && hasBlockSize!H)
 {
     alias hmac = hmac!(H, H.blockSize);
 }
 
+/// ditto
 template hmac(H, size_t blockSize)
 if (isDigest!H)
 {
@@ -224,7 +226,6 @@ if (isDigest!H)
      * An instance of HMAC that can be fed data as desired, and finished
      * to compute the final hash when done.
      */
-
     auto hmac(scope const(ubyte)[] secret)
     {
         return HMAC!(H, blockSize)(secret);
@@ -254,7 +255,6 @@ if (isDigest!H)
      * Returns:
      * The final _HMAC hash.
      */
-
     DigestType!H hmac(T...)(scope T data, scope const(ubyte)[] secret)
     if (allSatisfy!(isDigestibleRange, typeof(data)))
     {

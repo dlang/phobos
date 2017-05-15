@@ -700,10 +700,11 @@ Params:
     options = enable decoding string representations of NaN/Inf as float values
 */
 JSONValue parseJSON(T)(T json, int maxDepth = -1, JSONOptions options = JSONOptions.none)
-if (isInputRange!T)
+if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 {
     import std.ascii : isWhite, isDigit, isHexDigit, toUpper, toLower;
-    import std.utf : toUTF8;
+    import std.typecons : Yes;
+    import std.utf : encode;
 
     JSONValue root;
     root.type_tag = JSON_TYPE.NULL;
@@ -823,7 +824,8 @@ if (isInputRange!T)
                             val += (isDigit(hex) ? hex - '0' : hex - ('A' - 10)) << (4 * i);
                         }
                         char[4] buf;
-                        str.put(toUTF8(buf, val));
+                        immutable len = encode!(Yes.useReplacementDchar)(buf, val);
+                        str.put(buf[0 .. len]);
                         break;
 
                     default:
@@ -1068,7 +1070,7 @@ Params:
     options = enable decoding string representations of NaN/Inf as float values
 */
 JSONValue parseJSON(T)(T json, JSONOptions options)
-if (isInputRange!T)
+if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 {
     return parseJSON!T(json, -1, options);
 }
@@ -1353,7 +1355,7 @@ class JSONException : Exception
     assert(jv.type == JSON_TYPE.INTEGER);
     assertNotThrown(jv.integer);
 
-    jv = cast(uint)3;
+    jv = cast(uint) 3;
     assert(jv.type == JSON_TYPE.UINTEGER);
     assertNotThrown(jv.uinteger);
 
@@ -1459,12 +1461,12 @@ class JSONException : Exception
     // Adding new json element via array() / object() directly
 
     JSONValue jarr = JSONValue([10]);
-    foreach (i; 0..9)
+    foreach (i; 0 .. 9)
         jarr.array ~= JSONValue(i);
     assert(jarr.array.length == 10);
 
     JSONValue jobj = JSONValue(["key" : JSONValue("value")]);
-    foreach (i; 0..9)
+    foreach (i; 0 .. 9)
         jobj.object[text("key", i)] = JSONValue(text("value", i));
     assert(jobj.object.length == 10);
 }
@@ -1474,12 +1476,12 @@ class JSONException : Exception
     // Adding new json element without array() / object() access
 
     JSONValue jarr = JSONValue([10]);
-    foreach (i; 0..9)
+    foreach (i; 0 .. 9)
         jarr ~= [JSONValue(i)];
     assert(jarr.array.length == 10);
 
     JSONValue jobj = JSONValue(["key" : JSONValue("value")]);
-    foreach (i; 0..9)
+    foreach (i; 0 .. 9)
         jobj[text("key", i)] = JSONValue(text("value", i));
     assert(jobj.object.length == 10);
 

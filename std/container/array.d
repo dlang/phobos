@@ -1,19 +1,21 @@
 /**
-This module provides an $(D Array) type with deterministic memory usage not
-reliant on the GC, as an alternative to the built-in arrays.
-
-This module is a submodule of $(MREF std, container).
-
-Source: $(PHOBOSSRC std/container/_array.d)
-
-Copyright: 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
-
-License: Distributed under the Boost Software License, Version 1.0.
-(See accompanying file LICENSE_1_0.txt or copy at $(HTTP
-boost.org/LICENSE_1_0.txt)).
-
-Authors: $(HTTP erdani.com, Andrei Alexandrescu)
-*/
+ * This module provides an `Array` type with deterministic memory usage not
+ * reliant on the GC, as an alternative to the built-in arrays.
+ *
+ * This module is a submodule of $(MREF std, container).
+ *
+ * Source: $(PHOBOSSRC std/container/_array.d)
+ *
+ * Copyright: 2010- Andrei Alexandrescu. All rights reserved by the respective holders.
+ *
+ * License: Distributed under the Boost Software License, Version 1.0.
+ * (See accompanying file LICENSE_1_0.txt or copy at $(HTTP
+ * boost.org/LICENSE_1_0.txt)).
+ *
+ * Authors: $(HTTP erdani.com, Andrei Alexandrescu)
+ *
+ * $(SCRIPT inhibitQuickIndex = 1;)
+ */
 module std.container.array;
 
 import std.range.primitives;
@@ -23,7 +25,7 @@ import core.exception : RangeError;
 public import std.container.util;
 
 ///
-unittest
+@system unittest
 {
     auto arr = Array!int(0, 2, 3);
     assert(arr[0] == 0);
@@ -50,7 +52,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto arr = Array!int(1, 2, 3);
@@ -61,15 +63,15 @@ unittest
     assert(arr.length == 6);
 
     // slicing
-    assert(arr[1..3].equal([2, 3]));
+    assert(arr[1 .. 3].equal([2, 3]));
 
     // remove
-    arr.linearRemove(arr[1..3]);
-    assert(arr[0..2].equal([1, 11]));
+    arr.linearRemove(arr[1 .. 3]);
+    assert(arr[0 .. 2].equal([1, 11]));
 }
 
 /// `Array!bool` packs together values efficiently by allocating one bit per element
-unittest
+@system unittest
 {
     Array!bool arr;
     arr.insert([true, true, false, true, false]);
@@ -115,24 +117,24 @@ private struct RangeT(A)
 
     @property ref inout(E) front() inout
     {
-        version (assert) if (empty) throw new RangeError();
+        assert(!empty, "Attempting to access the front of an empty Array");
         return _outer[_a];
     }
     @property ref inout(E) back() inout
     {
-        version (assert) if (empty) throw new RangeError();
+        assert(!empty, "Attempting to access the back of an empty Array");
         return _outer[_b - 1];
     }
 
-    void popFront() @safe pure nothrow
+    void popFront() @safe @nogc pure nothrow
     {
-        version (assert) if (empty) throw new RangeError();
+        assert(!empty, "Attempting to popFront an empty Array");
         ++_a;
     }
 
-    void popBack() @safe pure nothrow
+    void popBack() @safe @nogc pure nothrow
     {
-        version (assert) if (empty) throw new RangeError();
+        assert(!empty, "Attempting to popBack an empty Array");
         --_b;
     }
 
@@ -142,26 +144,26 @@ private struct RangeT(A)
 
         E moveFront()
         {
-            version (assert) if (empty || _a >= _outer.length) throw new RangeError();
+            assert(!empty && _a < _outer.length);
             return move(_outer._data._payload[_a]);
         }
 
         E moveBack()
         {
-            version (assert) if (empty || _b  > _outer.length) throw new RangeError();
+            assert(!empty && _b  <= _outer.length);
             return move(_outer._data._payload[_b - 1]);
         }
 
         E moveAt(size_t i)
         {
-            version (assert) if (_a + i >= _b || _a + i >= _outer.length) throw new RangeError();
+            assert(_a + i < _b && _a + i < _outer.length);
             return move(_outer._data._payload[_a + i]);
         }
     }
 
     ref inout(E) opIndex(size_t i) inout
     {
-        version (assert) if (_a + i >= _b) throw new RangeError();
+        assert(_a + i < _b);
         return _outer[_a + i];
     }
 
@@ -172,7 +174,7 @@ private struct RangeT(A)
 
     RangeT opSlice(size_t i, size_t j)
     {
-        version (assert) if (i > j || _a + j > _b) throw new RangeError();
+        assert(i <= j && _a + j <= _b);
         return typeof(return)(_outer, _a + i, _a + j);
     }
 
@@ -183,7 +185,7 @@ private struct RangeT(A)
 
     RangeT!(const(A)) opSlice(size_t i, size_t j) const
     {
-        version (assert) if (i > j || _a + j > _b) throw new RangeError();
+        assert(i <= j && _a + j <= _b);
         return typeof(return)(_outer, _a + i, _a + j);
     }
 
@@ -191,60 +193,60 @@ private struct RangeT(A)
     {
         void opSliceAssign(E value)
         {
-            version (assert) if (_b > _outer.length) throw new RangeError();
+            assert(_b <= _outer.length);
             _outer[_a .. _b] = value;
         }
 
         void opSliceAssign(E value, size_t i, size_t j)
         {
-            version (assert) if (_a + j > _b) throw new RangeError();
+            assert(_a + j <= _b);
             _outer[_a + i .. _a + j] = value;
         }
 
         void opSliceUnary(string op)()
         if (op == "++" || op == "--")
         {
-            version (assert) if (_b > _outer.length) throw new RangeError();
+            assert(_b <= _outer.length);
             mixin(op~"_outer[_a .. _b];");
         }
 
         void opSliceUnary(string op)(size_t i, size_t j)
         if (op == "++" || op == "--")
         {
-            version (assert) if (_a + j > _b) throw new RangeError();
+            assert(_a + j <= _b);
             mixin(op~"_outer[_a + i .. _a + j];");
         }
 
         void opSliceOpAssign(string op)(E value)
         {
-            version (assert) if (_b > _outer.length) throw new RangeError();
+            assert(_b <= _outer.length);
             mixin("_outer[_a .. _b] "~op~"= value;");
         }
 
         void opSliceOpAssign(string op)(E value, size_t i, size_t j)
         {
-            version (assert) if (_a + j > _b) throw new RangeError();
+            assert(_a + j <= _b);
             mixin("_outer[_a + i .. _a + j] "~op~"= value;");
         }
     }
 }
 
 /**
-Array type with deterministic control of memory. The memory allocated
-for the array is reclaimed as soon as possible; there is no reliance
-on the garbage collector. $(D Array) uses $(D malloc) and $(D free)
-for managing its own memory.
-
-This means that pointers to elements of an $(D Array) will become
-dangling as soon as the element is removed from the $(D Array). On the other hand
-the memory allocated by an $(D Array) will be scanned by the GC and
-GC managed objects referenced from an $(D Array) will be kept alive.
-
-Note:
-
-When using $(D Array) with range-based functions like those in $(D std.algorithm),
-$(D Array) must be sliced to get a range (for example, use $(D array[].map!)
-instead of $(D array.map!)). The container itself is not a range.
+ * _Array type with deterministic control of memory. The memory allocated
+ * for the array is reclaimed as soon as possible; there is no reliance
+ * on the garbage collector. `Array` uses `malloc`, `realloc` and `free`
+ * for managing its own memory.
+ *
+ * This means that pointers to elements of an `Array` will become
+ * dangling as soon as the element is removed from the `Array`. On the other hand
+ * the memory allocated by an `Array` will be scanned by the GC and
+ * GC managed objects referenced from an `Array` will be kept alive.
+ *
+ * Note:
+ *
+ * When using `Array` with range-based functions like those in `std.algorithm`,
+ * `Array` must be sliced to get a range (for example, use `array[].map!`
+ * instead of `array.map!`). The container itself is not a range.
  */
 struct Array(T)
 if (!is(Unqual!T == bool))
@@ -263,14 +265,13 @@ if (!is(Unqual!T == bool))
         size_t _capacity;
         T[] _payload;
 
-        // Convenience constructor
         this(T[] p) { _capacity = p.length; _payload = p; }
 
         // Destructor releases array memory
         ~this()
         {
-            //Warning: destroy will also destroy class instances.
-            //The hasElaborateDestructor protects us here.
+            // Warning: destroy would destroy also class instances.
+            // The hasElaborateDestructor protects us here.
             static if (hasElaborateDestructor!T)
                 foreach (ref e; _payload)
                     .destroy(e);
@@ -281,33 +282,15 @@ if (!is(Unqual!T == bool))
             free(_payload.ptr);
         }
 
-        this(this)
-        {
-            assert(0);
-        }
+        this(this) @disable;
 
-        void opAssign(Payload rhs)
-        {
-            assert(false);
-        }
+        void opAssign(Payload rhs) @disable;
 
-        // Duplicate data
-        // @property Payload dup()
-        // {
-        //     Payload result;
-        //     result._payload = _payload.dup;
-        //     // Conservatively assume initial capacity == length
-        //     result._capacity = result._payload.length;
-        //     return result;
-        // }
-
-        // length
         @property size_t length() const
         {
             return _payload.length;
         }
 
-        // length
         @property void length(size_t newLength)
         {
             import std.algorithm.mutation : initializeAll;
@@ -322,32 +305,40 @@ if (!is(Unqual!T == bool))
                 _payload = _payload.ptr[0 .. newLength];
                 return;
             }
-            // enlarge
-            auto startEmplace = length;
-            import core.checkedint : mulu;
-            bool overflow;
-            const nbytes = mulu(newLength, T.sizeof, overflow);
-            if (overflow) assert(0);
-            _payload = (cast(T*) realloc(_payload.ptr,
-                            nbytes))[0 .. newLength];
-            initializeAll(_payload.ptr[startEmplace .. length]);
+            immutable startEmplace = length;
+            if (_capacity < newLength)
+            {
+                // enlarge
+                import core.checkedint : mulu;
+
+                bool overflow;
+                const nbytes = mulu(newLength, T.sizeof, overflow);
+                if (overflow)
+                    assert(0);
+                _payload = (cast(T*) realloc(_payload.ptr, nbytes))[0 .. newLength];
+                _capacity = newLength;
+            }
+            else
+            {
+                _payload = _payload.ptr[0 .. newLength];
+            }
+            initializeAll(_payload.ptr[startEmplace .. newLength]);
         }
 
-        // capacity
         @property size_t capacity() const
         {
             return _capacity;
         }
 
-        // reserve
         void reserve(size_t elements)
         {
             if (elements <= capacity) return;
             import core.checkedint : mulu;
             bool overflow;
             const sz = mulu(elements, T.sizeof, overflow);
-            if (overflow) assert(0);
-            static if (hasIndirections!T)       // should use hasPointers instead
+            if (overflow)
+                assert(0);
+            static if (hasIndirections!T)
             {
                 /* Because of the transactional nature of this
                  * relative to the garbage collector, ensure no
@@ -355,12 +346,14 @@ if (!is(Unqual!T == bool))
                  * than realloc.
                  */
                 immutable oldLength = length;
-                auto newPayload =
-                    enforce(cast(T*) malloc(sz))[0 .. oldLength];
+
+                auto newPayloadPtr = cast(T*) malloc(sz);
+                newPayloadPtr || assert(false, "std.container.Array.reserve failed to allocate memory");
+                auto newPayload = newPayloadPtr[0 .. oldLength];
+
                 // copy old data over to new array
                 memcpy(newPayload.ptr, _payload.ptr, T.sizeof * oldLength);
-                // Zero out unused capacity to prevent gc from seeing
-                // false pointers
+                // Zero out unused capacity to prevent gc from seeing false pointers
                 memset(newPayload.ptr + oldLength,
                         0,
                         (elements - oldLength) * T.sizeof);
@@ -371,19 +364,18 @@ if (!is(Unqual!T == bool))
             }
             else
             {
-                /* These can't have pointers, so no need to zero
-                 * unused region
-                 */
-                auto newPayload =
-                    enforce(cast(T*) realloc(_payload.ptr, sz))[0 .. length];
+                // These can't have pointers, so no need to zero unused region
+                auto newPayloadPtr = cast(T*) realloc(_payload.ptr, sz);
+                newPayloadPtr || assert(false, "std.container.Array.reserve failed to allocate memory");
+                auto newPayload = newPayloadPtr[0 .. length];
                 _payload = newPayload;
             }
             _capacity = elements;
         }
 
         // Insert one item
-        size_t insertBack(Stuff)(Stuff stuff)
-        if (isImplicitlyConvertible!(Stuff, T))
+        size_t insertBack(Elem)(Elem elem)
+        if (isImplicitlyConvertible!(Elem, T))
         {
             import std.conv : emplace;
             if (_capacity == length)
@@ -391,29 +383,29 @@ if (!is(Unqual!T == bool))
                 reserve(1 + capacity * 3 / 2);
             }
             assert(capacity > length && _payload.ptr);
-            emplace(_payload.ptr + _payload.length, stuff);
+            emplace(_payload.ptr + _payload.length, elem);
             _payload = _payload.ptr[0 .. _payload.length + 1];
             return 1;
         }
 
-        /// Insert a range of items
-        size_t insertBack(Stuff)(Stuff stuff)
-        if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T))
+        // Insert a range of items
+        size_t insertBack(Range)(Range r)
+        if (isInputRange!Range && isImplicitlyConvertible!(ElementType!Range, T))
         {
-            static if (hasLength!Stuff)
+            static if (hasLength!Range)
             {
                 immutable oldLength = length;
-                reserve(oldLength + stuff.length);
+                reserve(oldLength + r.length);
             }
             size_t result;
-            foreach (item; stuff)
+            foreach (item; r)
             {
                 insertBack(item);
                 ++result;
             }
-            static if (hasLength!Stuff)
+            static if (hasLength!Range)
             {
-                assert(length == oldLength + stuff.length);
+                assert(length == oldLength + r.length);
             }
             return result;
         }
@@ -421,10 +413,11 @@ if (!is(Unqual!T == bool))
     private alias Data = RefCounted!(Payload, RefCountedAutoInitialize.no);
     private Data _data;
 
-/**
-Constructor taking a number of items
+    /**
+     * Constructor taking a number of items.
      */
-    this(U)(U[] values...) if (isImplicitlyConvertible!(U, T))
+    this(U)(U[] values...)
+    if (isImplicitlyConvertible!(U, T))
     {
         import std.conv : emplace;
         import core.checkedint : mulu;
@@ -445,18 +438,17 @@ Constructor taking a number of items
         _data = Data(p[0 .. values.length]);
     }
 
-/**
-Constructor taking an input range
+    /**
+     * Constructor taking an input range
      */
-    this(Stuff)(Stuff stuff)
-    if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, T) && !is(Stuff == T[]))
+    this(Range)(Range r)
+    if (isInputRange!Range && isImplicitlyConvertible!(ElementType!Range, T) && !is(Range == T[]))
     {
-        insertBack(stuff);
+        insertBack(r);
     }
 
-
-/**
-Comparison for equality.
+    /**
+     * Comparison for equality.
      */
     bool opEquals(const Array rhs) const
     {
@@ -471,21 +463,25 @@ Comparison for equality.
         return _data._payload == rhs._data._payload;
     }
 
-/**
-   Defines the container's primary range, which is a random-access range.
-
-   ConstRange is a variant with const elements.
-   ImmutableRange is a variant with immutable elements.
-*/
+    /**
+     *  Defines the array's primary range, which is a random-access range.
+     *
+     *  `ConstRange` is a variant with `const` elements.
+     *  `ImmutableRange` is a variant with `immutable` elements.
+     */
     alias Range = RangeT!Array;
-    alias ConstRange = RangeT!(const Array); /// ditto
-    alias ImmutableRange = RangeT!(immutable Array); /// ditto
 
-/**
-Duplicates the container. The elements themselves are not transitively
-duplicated.
+    /// ditto
+    alias ConstRange = RangeT!(const Array);
 
-Complexity: $(BIGOH n).
+    /// ditto
+    alias ImmutableRange = RangeT!(immutable Array);
+
+    /**
+     * Duplicates the array. The elements themselves are not transitively
+     * duplicated.
+     *
+     * Complexity: $(BIGOH length).
      */
     @property Array dup()
     {
@@ -493,21 +489,20 @@ Complexity: $(BIGOH n).
         return Array(_data._payload);
     }
 
-/**
-Property returning $(D true) if and only if the container has no
-elements.
-
-Complexity: $(BIGOH 1)
+    /**
+     * Returns: `true` if and only if the array has no elements.
+     *
+     * Complexity: $(BIGOH 1)
      */
     @property bool empty() const
     {
         return !_data.refCountedStore.isInitialized || _data._payload.empty;
     }
 
-/**
-Returns the number of elements in the container.
-
-Complexity: $(BIGOH 1).
+    /**
+     * Returns: The number of elements in the array.
+     *
+     * Complexity: $(BIGOH 1).
      */
     @property size_t length() const
     {
@@ -520,23 +515,27 @@ Complexity: $(BIGOH 1).
         return length;
     }
 
-/**
-Returns the maximum number of elements the container can store without
-   (a) allocating memory, (b) invalidating iterators upon insertion.
-
-Complexity: $(BIGOH 1)
+    /**
+     * Returns: The maximum number of elements the array can store without
+     * reallocating memory and invalidating iterators upon insertion.
+     *
+     * Complexity: $(BIGOH 1)
      */
     @property size_t capacity()
     {
         return _data.refCountedStore.isInitialized ? _data._capacity : 0;
     }
 
-/**
-Ensures sufficient capacity to accommodate $(D e) elements.
-
-Postcondition: $(D capacity >= e)
-
-Complexity: $(BIGOH 1)
+    /**
+     * Ensures sufficient capacity to accommodate `e` _elements.
+     * If `e < capacity`, this method does nothing.
+     *
+     * Postcondition: `capacity >= e`
+     *
+     * Note: If the capacity is increased, one should assume that all
+     * iterators to the elements are invalidated.
+     *
+     * Complexity: at most $(BIGOH length) if `e > capacity`, otherwise $(BIGOH 1).
      */
     void reserve(size_t elements)
     {
@@ -547,7 +546,8 @@ Complexity: $(BIGOH 1)
             bool overflow;
             const sz = mulu(elements, T.sizeof, overflow);
             if (overflow) assert(0);
-            auto p = enforce(malloc(sz));
+            auto p = malloc(sz);
+            p || assert(false, "std.container.Array.reserve failed to allocate memory");
             static if (hasIndirections!T)
             {
                 GC.addRange(p, sz);
@@ -561,88 +561,98 @@ Complexity: $(BIGOH 1)
         }
     }
 
-/**
-Returns a range that iterates over elements of the container, in
-forward order.
-
-Complexity: $(BIGOH 1)
+    /**
+     * Returns: A range that iterates over elements of the array in
+     * forward order.
+     *
+     * Complexity: $(BIGOH 1)
      */
     Range opSlice()
     {
         return typeof(return)(this, 0, length);
     }
+
     ConstRange opSlice() const
     {
         return typeof(return)(this, 0, length);
     }
+
     ImmutableRange opSlice() immutable
     {
         return typeof(return)(this, 0, length);
     }
 
-/**
-Returns a range that iterates over elements of the container from
-index $(D i) up to (excluding) index $(D j).
-
-Precondition: $(D i <= j && j <= length)
-
-Complexity: $(BIGOH 1)
-*/
+    /**
+     * Returns: A range that iterates over elements of the array from
+     * index `i` up to (excluding) index `j`.
+     *
+     * Precondition: `i <= j && j <= length`
+     *
+     * Complexity: $(BIGOH 1)
+     */
     Range opSlice(size_t i, size_t j)
     {
-        version (assert) if (i > j || j > length) throw new RangeError();
+        assert(i <= j && j <= length);
         return typeof(return)(this, i, j);
     }
+
     ConstRange opSlice(size_t i, size_t j) const
     {
-        version (assert) if (i > j || j > length) throw new RangeError();
+        assert(i <= j && j <= length);
         return typeof(return)(this, i, j);
     }
+
     ImmutableRange opSlice(size_t i, size_t j) immutable
     {
-        version (assert) if (i > j || j > length) throw new RangeError();
+        assert(i <= j && j <= length);
         return typeof(return)(this, i, j);
     }
 
-/**
-Forward to $(D opSlice().front) and $(D opSlice().back), respectively.
-
-Precondition: $(D !empty)
-
-Complexity: $(BIGOH 1)
+    /**
+     * Returns: The first element of the array.
+     *
+     * Precondition: `empty == false`
+     *
+     * Complexity: $(BIGOH 1)
      */
     @property ref inout(T) front() inout
     {
-        version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
+        assert(_data.refCountedStore.isInitialized);
         return _data._payload[0];
     }
 
-    /// ditto
+    /**
+     * Returns: The last element of the array.
+     *
+     * Precondition: `empty == false`
+     *
+     * Complexity: $(BIGOH 1)
+     */
     @property ref inout(T) back() inout
     {
-        version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
+        assert(_data.refCountedStore.isInitialized);
         return _data._payload[$ - 1];
     }
 
-/**
-Indexing operators yield or modify the value at a specified index.
-
-Precondition: $(D i < length)
-
-Complexity: $(BIGOH 1)
+    /**
+     * Returns: The element or a reference to the element at the specified index.
+     *
+     * Precondition: `i < length`
+     *
+     * Complexity: $(BIGOH 1)
      */
     ref inout(T) opIndex(size_t i) inout
     {
-        version (assert) if (!_data.refCountedStore.isInitialized) throw new RangeError();
+        assert(_data.refCountedStore.isInitialized);
         return _data._payload[i];
     }
 
-/**
-Slicing operations execute an operation on an entire slice.
-
-Precondition: $(D i < j && j < length)
-
-Complexity: $(BIGOH slice.length)
+    /**
+     * Slicing operators executing the specified operation on the entire slice.
+     *
+     * Precondition: `i < j && j < length`
+     *
+     * Complexity: $(BIGOH slice.length)
      */
     void opSliceAssign(T value)
     {
@@ -661,7 +671,7 @@ Complexity: $(BIGOH slice.length)
 
     /// ditto
     void opSliceUnary(string op)()
-        if (op == "++" || op == "--")
+    if (op == "++" || op == "--")
     {
         if (!_data.refCountedStore.isInitialized) return;
         mixin(op~"_data._payload[];");
@@ -669,7 +679,7 @@ Complexity: $(BIGOH slice.length)
 
     /// ditto
     void opSliceUnary(string op)(size_t i, size_t j)
-        if (op == "++" || op == "--")
+    if (op == "++" || op == "--")
     {
         auto slice = _data.refCountedStore.isInitialized ? _data._payload : T[].init;
         mixin(op~"slice[i .. j];");
@@ -689,30 +699,64 @@ Complexity: $(BIGOH slice.length)
         mixin("slice[i .. j] "~op~"= value;");
     }
 
-/**
-Returns a new container that's the concatenation of $(D this) and its
-argument. $(D opBinaryRight) is only defined if $(D Stuff) does not
-define $(D opBinary).
+    private enum hasSliceWithLength(T) = is(typeof({ T t = T.init; t[].length; }));
 
-Complexity: $(BIGOH n + m), where m is the number of elements in $(D
-stuff)
+    /**
+     * Returns: A new array which is a concatenation of `this` and its argument.
+     *
+     * Complexity:
+     * $(BIGOH length + m), where `m` is the number of elements in `stuff`.
      */
     Array opBinary(string op, Stuff)(Stuff stuff)
-        if (op == "~")
+    if (op == "~")
     {
-        // TODO: optimize
         Array result;
-        result ~= this[];
-        assert(result.length == length);
-        result ~= stuff[];
+
+        static if (hasLength!Stuff || isNarrowString!Stuff)
+            result.reserve(length + stuff.length);
+        else static if (hasSliceWithLength!Stuff)
+            result.reserve(length + stuff[].length);
+        else static if (isImplicitlyConvertible!(Stuff, T))
+            result.reserve(length + 1);
+
+        result.insertBack(this[]);
+        result ~= stuff;
         return result;
     }
 
-/**
-Forwards to $(D insertBack(stuff)).
+    @nogc @system unittest
+    {
+        auto a = Array!int(0, 1, 2);
+        int[3] b = [3, 4, 5];
+        short[3] ci = [0, 1, 0];
+        auto c = Array!short(ci);
+        assert(Array!int(0, 1, 2, 0, 1, 2) == a ~ a);
+        assert(Array!int(0, 1, 2, 3, 4, 5) == a ~ b);
+        assert(Array!int(0, 1, 2, 3) == a ~ 3);
+        assert(Array!int(0, 1, 2, 0, 1, 0) == a ~ c);
+    }
+
+    @nogc @system unittest
+    {
+        auto a = Array!char('a', 'b');
+        assert(Array!char("abc") == a ~ 'c');
+        import std.utf : byCodeUnit;
+        assert(Array!char("abcd") == a ~ "cd".byCodeUnit);
+    }
+
+    @nogc @system unittest
+    {
+        auto a = Array!dchar("ąćę"d);
+        assert(Array!dchar("ąćęϢϖ"d) == a ~ "Ϣϖ"d);
+        wchar x = 'Ϣ';
+        assert(Array!dchar("ąćęϢz"d) == a ~ x ~ 'z');
+    }
+
+    /**
+     * Forwards to `insertBack`.
      */
     void opOpAssign(string op, Stuff)(Stuff stuff)
-        if (op == "~")
+    if (op == "~")
     {
         static if (is(typeof(stuff[])))
         {
@@ -724,28 +768,28 @@ Forwards to $(D insertBack(stuff)).
         }
     }
 
-/**
-Removes all contents from the container. The container decides how $(D
-capacity) is affected.
-
-Postcondition: $(D empty)
-
-Complexity: $(BIGOH n)
+    /**
+     * Removes all the elements from the array and releases allocated memory.
+     *
+     * Postcondition: `empty == true && capacity == 0`
+     *
+     * Complexity: $(BIGOH length)
      */
     void clear()
     {
         _data = Data.init;
     }
 
-/**
-Sets the number of elements in the container to $(D newSize). If $(D
-newSize) is greater than $(D length), the added elements are added to
-unspecified positions in the container and initialized with $(D
-T.init).
-
-Complexity: $(BIGOH abs(n - newLength))
-
-Postcondition: $(D length == newLength)
+    /**
+     * Sets the number of elements in the array to `newLength`. If `newLength`
+     * is greater than `length`, the new elements are added to the end of the
+     * array and initialized with `T.init`.
+     *
+     * Complexity:
+     * Guaranteed $(BIGOH abs(length - newLength)) if `capacity >= newLength`.
+     * If `capacity < newLength` the worst case is $(BIGOH newLength).
+     *
+     * Postcondition: `length == newLength`
      */
     @property void length(size_t newLength)
     {
@@ -753,16 +797,18 @@ Postcondition: $(D length == newLength)
         _data.length = newLength;
     }
 
-/**
-Picks one value in an unspecified position in the container, removes
-it from the container, and returns it. The stable version behaves the same,
-but guarantees that ranges iterating over the container are never invalidated.
-
-Precondition: $(D !empty)
-
-Returns: The element removed.
-
-Complexity: $(BIGOH log(n)).
+    /**
+     * Removes the last element from the array and returns it.
+     * Both stable and non-stable versions behave the same and guarantee
+     * that ranges iterating over the array are never invalidated.
+     *
+     * Precondition: `empty == false`
+     *
+     * Returns: The element removed.
+     *
+     * Complexity: $(BIGOH 1).
+     *
+     * Throws: `Exception` if the array is empty.
      */
     T removeAny()
     {
@@ -770,19 +816,19 @@ Complexity: $(BIGOH log(n)).
         removeBack();
         return result;
     }
+
     /// ditto
     alias stableRemoveAny = removeAny;
 
-/**
-Inserts $(D value) to the front or back of the container. $(D stuff)
-can be a value convertible to $(D T) or a range of objects convertible
-to $(D T). The stable version behaves the same, but guarantees that
-ranges iterating over the container are never invalidated.
-
-Returns: The number of elements inserted
-
-Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
-elements in $(D stuff)
+    /**
+     * Inserts the specified elements at the back of the array. `stuff` can be
+     * a value convertible to `T` or a range of objects convertible to `T`.
+     *
+     * Returns: The number of elements inserted.
+     *
+     * Complexity:
+     * $(BIGOH length + m) if reallocation takes place, otherwise $(BIGOH m),
+     * where `m` is the number of elements in `stuff`.
      */
     size_t insertBack(Stuff)(Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T) ||
@@ -791,17 +837,20 @@ elements in $(D stuff)
         _data.refCountedStore.ensureInitialized();
         return _data.insertBack(stuff);
     }
+
     /// ditto
     alias insert = insertBack;
 
-/**
-Removes the value at the back of the container. The stable version
-behaves the same, but guarantees that ranges iterating over the
-container are never invalidated.
-
-Precondition: $(D !empty)
-
-Complexity: $(BIGOH log(n)).
+    /**
+     * Removes the value from the back of the array. Both stable and non-stable
+     * versions behave the same and guarantee that ranges iterating over the
+     * array are never invalidated.
+     *
+     * Precondition: `empty == false`
+     *
+     * Complexity: $(BIGOH 1).
+     *
+     * Throws: `Exception` if the array is empty.
      */
     void removeBack()
     {
@@ -811,21 +860,22 @@ Complexity: $(BIGOH log(n)).
 
         _data._payload = _data._payload[0 .. $ - 1];
     }
+
     /// ditto
     alias stableRemoveBack = removeBack;
 
-/**
-Removes $(D howMany) values at the front or back of the
-container. Unlike the unparameterized versions above, these functions
-do not throw if they could not remove $(D howMany) elements. Instead,
-if $(D howMany > n), all elements are removed. The returned value is
-the effective number of elements removed. The stable version behaves
-the same, but guarantees that ranges iterating over the container are
-never invalidated.
-
-Returns: The number of elements removed
-
-Complexity: $(BIGOH howMany).
+    /**
+     * Removes `howMany` values from the back of the array.
+     * Unlike the unparameterized versions above, these functions
+     * do not throw if they could not remove `howMany` elements. Instead,
+     * if `howMany > n`, all elements are removed. The returned value is
+     * the effective number of elements removed. Both stable and non-stable
+     * versions behave the same and guarantee that ranges iterating over
+     * the array are never invalidated.
+     *
+     * Returns: The number of elements removed.
+     *
+     * Complexity: $(BIGOH howMany).
      */
     size_t removeBack(size_t howMany)
     {
@@ -837,19 +887,22 @@ Complexity: $(BIGOH howMany).
         _data._payload = _data._payload[0 .. $ - howMany];
         return howMany;
     }
+
     /// ditto
     alias stableRemoveBack = removeBack;
 
-/**
-Inserts $(D stuff) before, after, or instead range $(D r), which must
-be a valid range previously extracted from this container. $(D stuff)
-can be a value convertible to $(D T) or a range of objects convertible
-to $(D T). The stable version behaves the same, but guarantees that
-ranges iterating over the container are never invalidated.
-
-Returns: The number of values inserted.
-
-Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
+    /**
+     * Inserts `stuff` before, after, or instead range `r`, which must
+     * be a valid range previously extracted from this array. `stuff`
+     * can be a value convertible to `T` or a range of objects convertible
+     * to `T`. Both stable and non-stable version behave the same and
+     * guarantee that ranges iterating over the array are never invalidated.
+     *
+     * Returns: The number of values inserted.
+     *
+     * Complexity: $(BIGOH length + m), where `m` is the length of `stuff`.
+     *
+     * Throws: `Exception` if `r` is not a range extracted from this array.
      */
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     if (isImplicitlyConvertible!(Stuff, T))
@@ -908,6 +961,9 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
     }
 
     /// ditto
+    alias stableInsertBefore = insertBefore;
+
+    /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
         import std.algorithm.mutation : bringToFront;
@@ -961,17 +1017,16 @@ Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
         return 1;
     }
 
-/**
-Removes all elements belonging to $(D r), which must be a range
-obtained originally from this container. The stable version behaves
-the same, but guarantees that ranges iterating over the container are
-never invalidated.
-
-Returns: A range spanning the remaining elements in the container that
-initially were right after $(D r).
-
-Complexity: $(BIGOH n - m), where $(D m) is the number of elements in
-$(D r)
+    /**
+     * Removes all elements belonging to `r`, which must be a range
+     * obtained originally from this array.
+     *
+     * Returns: A range spanning the remaining elements in the array that
+     * initially were right after `r`.
+     *
+     * Complexity: $(BIGOH length)
+     *
+     * Throws: `Exception` if `r` is not a valid range extracted from this array.
      */
     Range linearRemove(Range r)
     {
@@ -990,13 +1045,65 @@ $(D r)
     }
 }
 
-unittest
+@system unittest
 {
     Array!int a;
     assert(a.empty);
 }
 
-unittest
+@system unittest
+{
+    Array!int a;
+    a.length = 10;
+    assert(a.length == 10);
+    assert(a.capacity >= a.length);
+}
+
+@system unittest
+{
+    struct Dumb { int x = 5; }
+    Array!Dumb a;
+    a.length = 10;
+    assert(a.length == 10);
+    assert(a.capacity >= a.length);
+    immutable cap = a.capacity;
+    foreach (ref e; a)
+        e.x = 10;
+    a.length = 5;
+    assert(a.length == 5);
+    // do not realloc if length decreases
+    assert(a.capacity == cap);
+    foreach (ref e; a)
+        assert(e.x == 10);
+
+    a.length = 8;
+    assert(a.length == 8);
+    // do not realloc if capacity sufficient
+    assert(a.capacity == cap);
+    assert(Dumb.init.x == 5);
+    foreach (i; 0 .. 5)
+        assert(a[i].x == 10);
+    foreach (i; 5 .. a.length)
+        assert(a[i].x == Dumb.init.x);
+
+    // realloc required, check if values properly copied
+    a[] = Dumb(1);
+    a.length = 20;
+    assert(a.capacity >= 20);
+    foreach (i; 0 .. 8)
+        assert(a[i].x == 1);
+    foreach (i; 8 .. a.length)
+        assert(a[i].x == Dumb.init.x);
+
+    // check if overlapping elements properly initialized
+    a.length = 1;
+    a.length = 20;
+    assert(a[0].x == 1);
+    foreach (e; a[1 .. $])
+        assert(e.x == Dumb.init.x);
+}
+
+@system unittest
 {
     Array!int a = Array!int(1, 2, 3);
     //a._data._refCountedDebug = true;
@@ -1007,13 +1114,13 @@ unittest
     assert(a == Array!int(1, 2, 3));
 }
 
-unittest
+@system unittest
 {
     auto a = Array!int(1, 2, 3);
     assert(a.length == 3);
 }
 
-unittest
+@system unittest
 {
     const Array!int a = [1, 2];
 
@@ -1034,14 +1141,14 @@ unittest
     }
 }
 
-unittest
+@safe unittest
 {
     // REG https://issues.dlang.org/show_bug.cgi?id=13621
     import std.container : Array, BinaryHeap;
     alias Heap = BinaryHeap!(Array!int);
 }
 
-unittest
+@system unittest
 {
     Array!int a;
     a.reserve(1000);
@@ -1056,14 +1163,14 @@ unittest
     assert(p == a._data._payload.ptr);
 }
 
-unittest
+@system unittest
 {
     auto a = Array!int(1, 2, 3);
     a[1] *= 42;
     assert(a[1] == 84);
 }
 
-unittest
+@system unittest
 {
     auto a = Array!int(1, 2, 3);
     auto b = Array!int(11, 12, 13);
@@ -1073,7 +1180,7 @@ unittest
     assert(a ~ [4,5] == Array!int(1,2,3,4,5));
 }
 
-unittest
+@system unittest
 {
     auto a = Array!int(1, 2, 3);
     auto b = Array!int(11, 12, 13);
@@ -1081,14 +1188,14 @@ unittest
     assert(a == Array!int(1, 2, 3, 11, 12, 13));
 }
 
-unittest
+@system unittest
 {
     auto a = Array!int(1, 2, 3, 4);
     assert(a.removeAny() == 4);
     assert(a == Array!int(1, 2, 3));
 }
 
-unittest
+@system unittest
 {
     auto a = Array!int(1, 2, 3, 4, 5);
     auto r = a[2 .. a.length];
@@ -1099,7 +1206,7 @@ unittest
     assert(a == Array!int(1, 2, 8, 9, 42, 3, 4, 5));
 }
 
-unittest
+@system unittest
 {
     auto a = Array!int(0, 1, 2, 3, 4, 5, 6, 7, 8);
     a.linearRemove(a[4 .. 6]);
@@ -1107,7 +1214,7 @@ unittest
 }
 
 // Give the Range object some testing.
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : retro;
@@ -1122,10 +1229,10 @@ unittest
 
     assert(equal(retro(b), a));
     assert(a.length == 7);
-    assert(equal(a[1..4], [1, 2, 3]));
+    assert(equal(a[1 .. 4], [1, 2, 3]));
 }
 // Test issue 5920
-unittest
+@system unittest
 {
     struct structBug5920
     {
@@ -1142,7 +1249,7 @@ unittest
     uint dMask;
 
     auto arr = Array!S(cast(S[])[]);
-    foreach (i; 0..8)
+    foreach (i; 0 .. 8)
         arr.insertBack(S(i, &dMask));
     // don't check dMask now as S may be copied multiple times (it's ok?)
     {
@@ -1164,7 +1271,7 @@ unittest
     assert(dMask == 0b1111_1111);   // make sure the d'tor is called once only.
 }
 // Test issue 5792 (mainly just to check if this piece of code is compilable)
-unittest
+@system unittest
 {
     auto a = Array!(int[])([[1,2],[3,4]]);
     a.reserve(4);
@@ -1180,7 +1287,7 @@ unittest
 }
 
 // test replace!Stuff with range Stuff
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto a = Array!int([1, 42, 5]);
@@ -1189,28 +1296,28 @@ unittest
 }
 
 // test insertBefore and replace with empty Arrays
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.insertBefore(a[], 1);
     assert(equal(a[], [1]));
 }
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.insertBefore(a[], [1, 2]);
     assert(equal(a[], [1, 2]));
 }
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto a = Array!int();
     a.replace(a[], [1, 2]);
     assert(equal(a[], [1, 2]));
 }
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto a = Array!int();
@@ -1218,9 +1325,10 @@ unittest
     assert(equal(a[], [1]));
 }
 // make sure that Array instances refuse ranges that don't belong to them
-unittest
+@system unittest
 {
-    import std.exception;
+    import std.exception : assertThrown;
+
     Array!int a = [1, 2, 3];
     auto r = a.dup[];
     assertThrown(a.insertBefore(r, 42));
@@ -1230,7 +1338,7 @@ unittest
     assertThrown(a.replace(r, [42]));
     assertThrown(a.linearRemove(r));
 }
-unittest
+@system unittest
 {
     auto a = Array!int([1, 1]);
     a[1]  = 0; //Check Array.opIndexAssign
@@ -1261,7 +1369,7 @@ unittest
     assert(~r[0] == ~3);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1307,7 +1415,7 @@ unittest
 }
 
 // Test issue 11194
-unittest
+@system unittest
 {
     static struct S {
         int i = 1337;
@@ -1321,7 +1429,7 @@ unittest
     arr ~= s;
 }
 
-unittest //11459
+@safe unittest //11459
 {
     static struct S
     {
@@ -1332,18 +1440,18 @@ unittest //11459
     alias B = Array!(shared bool);
 }
 
-unittest //11884
+@system unittest //11884
 {
     import std.algorithm.iteration : filter;
     auto a = Array!int([1, 2, 2].filter!"true"());
 }
 
-unittest //8282
+@safe unittest //8282
 {
     auto arr = new Array!int;
 }
 
-unittest //6998
+@system unittest //6998
 {
     static int i = 0;
     class C
@@ -1366,9 +1474,9 @@ unittest //6998
     assert(i == 1);
 
     //Just to make sure the GC doesn't collect before the above test.
-    assert(c.dummy ==1);
+    assert(c.dummy == 1);
 }
-unittest //6998-2
+@system unittest //6998-2
 {
     static class C {int i;}
     auto c = new C;
@@ -1379,13 +1487,13 @@ unittest //6998-2
     assert(c.i == 42); //fails
 }
 
-unittest
+@safe unittest
 {
     static assert(is(Array!int.Range));
     static assert(is(Array!int.ConstRange));
 }
 
-unittest // const/immutable Array and Ranges
+@system unittest // const/immutable Array and Ranges
 {
     static void test(A, R, E, S)()
     {
@@ -1414,14 +1522,28 @@ unittest // const/immutable Array and Ranges
         A.ImmutableRange);
 }
 
+// ensure @nogc
+@nogc @system unittest
+{
+    Array!int ai;
+    ai ~= 1;
+    assert(ai.front == 1);
+
+    ai.reserve(10);
+    assert(ai.capacity == 10);
+
+    static immutable arr = [1, 2, 3];
+    ai.insertBack(arr);
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Array!bool
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
-_Array specialized for $(D bool). Packs together values efficiently by
-allocating one bit per element.
+ * _Array specialized for `bool`. Packs together values efficiently by
+ * allocating one bit per element.
  */
 struct Array(T)
 if (is(Unqual!T == bool))
@@ -1444,7 +1566,7 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Defines the container's primary range.
+     * Defines the array's primary range.
      */
     struct Range
     {
@@ -1471,49 +1593,49 @@ if (is(Unqual!T == bool))
         /// Ditto
         @property T front()
         {
-            enforce(!empty);
+            enforce(!empty, "Attempting to access the front of an empty Array");
             return _outer[_a];
         }
         /// Ditto
         @property void front(bool value)
         {
-            enforce(!empty);
+            enforce(!empty, "Attempting to set the front of an empty Array");
             _outer[_a] = value;
         }
         /// Ditto
         T moveFront()
         {
-            enforce(!empty);
+            enforce(!empty, "Attempting to move the front of an empty Array");
             return _outer.moveAt(_a);
         }
         /// Ditto
         void popFront()
         {
-            enforce(!empty);
+            enforce(!empty, "Attempting to popFront an empty Array");
             ++_a;
         }
         /// Ditto
         @property T back()
         {
-            enforce(!empty);
+            enforce(!empty, "Attempting to access the back of an empty Array");
             return _outer[_b - 1];
         }
         /// Ditto
         @property void back(bool value)
         {
-            enforce(!empty);
+            enforce(!empty, "Attempting to set the back of an empty Array");
             _outer[_b - 1] = value;
         }
         /// Ditto
         T moveBack()
         {
-            enforce(!empty);
+            enforce(!empty, "Attempting to move the back of an empty Array");
             return _outer.moveAt(_b - 1);
         }
         /// Ditto
         void popBack()
         {
-            enforce(!empty);
+            enforce(!empty, "Attempting to popBack an empty Array");
             --_b;
         }
         /// Ditto
@@ -1541,36 +1663,37 @@ if (is(Unqual!T == bool))
         /// ditto
         Range opSlice(size_t low, size_t high)
         {
-            assert(_a <= low && low <= high && high <= _b);
+            assert(
+                _a <= low && low <= high && high <= _b,
+                "Using out of bounds indexes on an Array"
+            );
             return Range(_outer, _a + low, _a + high);
         }
     }
 
     /**
-       Property returning $(D true) if and only if the container has
-       no elements.
-
-       Complexity: $(BIGOH 1)
+     * Property returning `true` if and only if the array has
+     * no elements.
+     *
+     * Complexity: $(BIGOH 1)
      */
     @property bool empty()
     {
         return !length;
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
-        //a._store._refCountedDebug = true;
         assert(a.empty);
         a.insertBack(false);
         assert(!a.empty);
     }
 
     /**
-       Returns a duplicate of the container. The elements themselves
-       are not transitively duplicated.
-
-       Complexity: $(BIGOH n).
+     * Returns: A duplicate of the array.
+     *
+     * Complexity: $(BIGOH length).
      */
     @property Array dup()
     {
@@ -1579,7 +1702,7 @@ if (is(Unqual!T == bool))
         return result;
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         assert(a.empty);
@@ -1590,10 +1713,10 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Returns the number of elements in the container.
-
-       Complexity: $(BIGOH log(n)).
-    */
+     * Returns the number of elements in the array.
+     *
+     * Complexity: $(BIGOH 1).
+     */
     @property size_t length() const
     {
         return _store.refCountedStore.isInitialized ? _store._length : 0;
@@ -1603,7 +1726,7 @@ if (is(Unqual!T == bool))
         return length;
     }
 
-    unittest
+    @system unittest
     {
         import std.conv : to;
         Array!bool a;
@@ -1613,11 +1736,10 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Returns the maximum number of elements the container can store
-       without (a) allocating memory, (b) invalidating iterators upon
-       insertion.
-
-       Complexity: $(BIGOH log(n)).
+     * Returns: The maximum number of elements the array can store without
+     * reallocating memory and invalidating iterators upon insertion.
+     *
+     * Complexity: $(BIGOH 1).
      */
     @property size_t capacity()
     {
@@ -1626,7 +1748,7 @@ if (is(Unqual!T == bool))
             : 0;
     }
 
-    unittest
+    @system unittest
     {
         import std.conv : to;
         Array!bool a;
@@ -1639,12 +1761,15 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Ensures sufficient capacity to accommodate $(D n) elements.
-
-       Postcondition: $(D capacity >= n)
-
-       Complexity: $(BIGOH log(e - capacity)) if $(D e > capacity),
-       otherwise $(BIGOH 1).
+     * Ensures sufficient capacity to accommodate `e` _elements.
+     * If `e < capacity`, this method does nothing.
+     *
+     * Postcondition: `capacity >= e`
+     *
+     * Note: If the capacity is increased, one should assume that all
+     * iterators to the elements are invalidated.
+     *
+     * Complexity: at most $(BIGOH length) if `e > capacity`, otherwise $(BIGOH 1).
      */
     void reserve(size_t e)
     {
@@ -1653,28 +1778,27 @@ if (is(Unqual!T == bool))
         _store._backend.reserve(to!size_t((e + bitsPerWord - 1) / bitsPerWord));
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         assert(a.capacity == 0);
         a.reserve(15657);
         assert(a.capacity >= 15657);
+        a.reserve(100);
+        assert(a.capacity >= 15657);
     }
 
     /**
-       Returns a range that iterates over all elements of the
-       container, in a container-defined order. The container should
-       choose the most convenient and fast method of iteration for $(D
-       opSlice()).
-
-       Complexity: $(BIGOH log(n))
+     * Returns: A range that iterates over all elements of the array in forward order.
+     *
+     * Complexity: $(BIGOH 1)
      */
     Range opSlice()
     {
         return Range(this, 0, length);
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         a.insertBack([true, false, true, true]);
@@ -1682,10 +1806,9 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Returns a range that iterates the container between two
-       specified positions.
-
-       Complexity: $(BIGOH log(n))
+     * Returns: A range that iterates the array between two specified positions.
+     *
+     * Complexity: $(BIGOH 1)
      */
     Range opSlice(size_t a, size_t b)
     {
@@ -1693,7 +1816,7 @@ if (is(Unqual!T == bool))
         return Range(this, a, b);
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         a.insertBack([true, false, true, true]);
@@ -1701,10 +1824,13 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Equivalent to $(D opSlice().front) and $(D opSlice().back),
-       respectively.
-
-       Complexity: $(BIGOH log(n))
+     * Returns: The first element of the array.
+     *
+     * Precondition: `empty == false`
+     *
+     * Complexity: $(BIGOH 1)
+     *
+     * Throws: `Exception` if the array is empty.
      */
     @property bool front()
     {
@@ -1720,7 +1846,7 @@ if (is(Unqual!T == bool))
         else data.ptr[0] &= ~cast(size_t) 1;
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         a.insertBack([true, false, true, true]);
@@ -1729,11 +1855,19 @@ if (is(Unqual!T == bool))
         assert(!a.front);
     }
 
-    /// Ditto
+    /**
+     * Returns: The last element of the array.
+     *
+     * Precondition: `empty == false`
+     *
+     * Complexity: $(BIGOH 1)
+     *
+     * Throws: `Exception` if the array is empty.
+     */
     @property bool back()
     {
         enforce(!empty);
-        return cast(bool)(data.back & (cast(size_t)1 << ((_store._length - 1) % bitsPerWord)));
+        return cast(bool)(data.back & (cast(size_t) 1 << ((_store._length - 1) % bitsPerWord)));
     }
 
     /// Ditto
@@ -1742,16 +1876,16 @@ if (is(Unqual!T == bool))
         enforce(!empty);
         if (value)
         {
-            data.back |= (cast(size_t)1 << ((_store._length - 1) % bitsPerWord));
+            data.back |= (cast(size_t) 1 << ((_store._length - 1) % bitsPerWord));
         }
         else
         {
             data.back &=
-                ~(cast(size_t)1 << ((_store._length - 1) % bitsPerWord));
+                ~(cast(size_t) 1 << ((_store._length - 1) % bitsPerWord));
         }
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         a.insertBack([true, false, true, true]);
@@ -1761,47 +1895,54 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Indexing operators yield or modify the value at a specified index.
+     * Indexing operators yielding or modifyng the value at the specified index.
+     *
+     * Precondition: `i < length`
+     *
+     * Complexity: $(BIGOH 1)
      */
     bool opIndex(size_t i)
     {
         auto div = cast(size_t) (i / bitsPerWord);
         auto rem = i % bitsPerWord;
         enforce(div < data.length);
-        return cast(bool)(data.ptr[div] & (cast(size_t)1 << rem));
+        return cast(bool)(data.ptr[div] & (cast(size_t) 1 << rem));
     }
+
     /// ditto
     void opIndexAssign(bool value, size_t i)
     {
         auto div = cast(size_t) (i / bitsPerWord);
         auto rem = i % bitsPerWord;
         enforce(div < data.length);
-        if (value) data.ptr[div] |= (cast(size_t)1 << rem);
-        else data.ptr[div] &= ~(cast(size_t)1 << rem);
+        if (value) data.ptr[div] |= (cast(size_t) 1 << rem);
+        else data.ptr[div] &= ~(cast(size_t) 1 << rem);
     }
+
     /// ditto
     void opIndexOpAssign(string op)(bool value, size_t i)
     {
         auto div = cast(size_t) (i / bitsPerWord);
         auto rem = i % bitsPerWord;
         enforce(div < data.length);
-        auto oldValue = cast(bool) (data.ptr[div] & (cast(size_t)1 << rem));
+        auto oldValue = cast(bool) (data.ptr[div] & (cast(size_t) 1 << rem));
         // Do the deed
         auto newValue = mixin("oldValue "~op~" value");
         // Write back the value
         if (newValue != oldValue)
         {
-            if (newValue) data.ptr[div] |= (cast(size_t)1 << rem);
-            else data.ptr[div] &= ~(cast(size_t)1 << rem);
+            if (newValue) data.ptr[div] |= (cast(size_t) 1 << rem);
+            else data.ptr[div] &= ~(cast(size_t) 1 << rem);
         }
     }
+
     /// Ditto
     T moveAt(size_t i)
     {
         return this[i];
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         a.insertBack([true, false, true, true]);
@@ -1811,19 +1952,29 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Returns a new container that's the concatenation of $(D this)
-       and its argument.
-
-       Complexity: $(BIGOH n + m), where m is the number of elements
-       in $(D stuff)
+     * Returns: A new array which is a concatenation of `this` and its argument.
+     *
+     * Complexity:
+     * $(BIGOH length + m), where `m` is the number of elements in `stuff`.
      */
-    Array!bool opBinary(string op, Stuff)(Stuff rhs) if (op == "~")
+    Array!bool opBinary(string op, Stuff)(Stuff rhs)
+    if (op == "~")
     {
-        auto result = this;
-        return result ~= rhs;
+        Array!bool result;
+
+        static if (hasLength!Stuff)
+            result.reserve(length + rhs.length);
+        else static if (is(typeof(rhs[])) && hasLength!(typeof(rhs[])))
+            result.reserve(length + rhs[].length);
+        else static if (isImplicitlyConvertible!(Stuff, bool))
+            result.reserve(length + 1);
+
+        result.insertBack(this[]);
+        result ~= rhs;
+        return result;
     }
 
-    unittest
+    @system unittest
     {
         import std.algorithm.comparison : equal;
         Array!bool a;
@@ -1832,27 +1983,24 @@ if (is(Unqual!T == bool))
         b.insertBack([true, true, false, true]);
         assert(equal((a ~ b)[],
                         [true, false, true, true, true, true, false, true]));
+        assert((a ~ [true, false])[].equal([true, false, true, true, true, false]));
+        Array!bool c;
+        c.insertBack(true);
+        assert((c ~ false)[].equal([true, false]));
     }
 
-    // /// ditto
-    // TotalContainer opBinaryRight(Stuff, string op)(Stuff lhs) if (op == "~")
-    // {
-    //     assert(0);
-    // }
-
     /**
-       Forwards to $(D insertAfter(this[], stuff)).
+     * Forwards to `insertBack`.
      */
-    // @@@BUG@@@
-    //ref Array!bool opOpAssign(string op, Stuff)(Stuff stuff) if (op == "~")
-    Array!bool opOpAssign(string op, Stuff)(Stuff stuff) if (op == "~")
+    Array!bool opOpAssign(string op, Stuff)(Stuff stuff)
+    if (op == "~")
     {
         static if (is(typeof(stuff[]))) insertBack(stuff[]);
         else insertBack(stuff);
         return this;
     }
 
-    unittest
+    @system unittest
     {
         import std.algorithm.comparison : equal;
         Array!bool a;
@@ -1866,19 +2014,18 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Removes all contents from the container. The container decides
-       how $(D capacity) is affected.
-
-       Postcondition: $(D empty)
-
-       Complexity: $(BIGOH n)
+     * Removes all the elements from the array and releases allocated memory.
+     *
+     * Postcondition: `empty == true && capacity == 0`
+     *
+     * Complexity: $(BIGOH length)
      */
     void clear()
     {
         this = Array();
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         a.insertBack([true, false, true, true]);
@@ -1887,14 +2034,15 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Sets the number of elements in the container to $(D
-       newSize). If $(D newSize) is greater than $(D length), the
-       added elements are added to the container and initialized with
-       $(D ElementType.init).
-
-       Complexity: $(BIGOH abs(n - newLength))
-
-       Postcondition: $(D _length == newLength)
+     * Sets the number of elements in the array to `newLength`. If `newLength`
+     * is greater than `length`, the new elements are added to the end of the
+     * array and initialized with `false`.
+     *
+     * Complexity:
+     * Guaranteed $(BIGOH abs(length - newLength)) if `capacity >= newLength`.
+     * If `capacity < newLength` the worst case is $(BIGOH newLength).
+     *
+     * Postcondition: `length == newLength`
      */
     @property void length(size_t newLength)
     {
@@ -1906,54 +2054,35 @@ if (is(Unqual!T == bool))
         _store._length = newLength;
     }
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         a.length = 1057;
         assert(a.length == 1057);
+        assert(a.capacity >= a.length);
         foreach (e; a)
         {
             assert(!e);
         }
+        immutable cap = a.capacity;
+        a.length = 100;
+        assert(a.length == 100);
+        // do not realloc if length decreases
+        assert(a.capacity == cap);
     }
 
     /**
-       Inserts $(D stuff) in the container. $(D stuff) can be a value
-       convertible to $(D ElementType) or a range of objects
-       convertible to $(D ElementType).
-
-       The $(D stable) version guarantees that ranges iterating over
-       the container are never invalidated. Client code that counts on
-       non-invalidating insertion should use $(D stableInsert).
-
-       Returns: The number of elements added.
-
-       Complexity: $(BIGOH m * log(n)), where $(D m) is the number of
-       elements in $(D stuff)
-     */
-    alias insert = insertBack;
-    ///ditto
-    alias stableInsert = insertBack;
-
-    /**
-       Same as $(D insert(stuff)) and $(D stableInsert(stuff))
-       respectively, but relax the complexity constraint to linear.
-     */
-    alias linearInsert = insertBack;
-    ///ditto
-    alias stableLinearInsert = insertBack;
-
-    /**
-       Picks one value in the container, removes it from the
-       container, and returns it. The stable version behaves the same,
-       but guarantees that ranges iterating over the container are
-       never invalidated.
-
-       Precondition: $(D !empty)
-
-       Returns: The element removed.
-
-       Complexity: $(BIGOH log(n))
+     * Removes the last element from the array and returns it.
+     * Both stable and non-stable versions behave the same and guarantee
+     * that ranges iterating over the array are never invalidated.
+     *
+     * Precondition: `empty == false`
+     *
+     * Returns: The element removed.
+     *
+     * Complexity: $(BIGOH 1).
+     *
+     * Throws: `Exception` if the array is empty.
      */
     T removeAny()
     {
@@ -1961,10 +2090,11 @@ if (is(Unqual!T == bool))
         removeBack();
         return result;
     }
+
     /// ditto
     alias stableRemoveAny = removeAny;
 
-    unittest
+    @system unittest
     {
         Array!bool a;
         a.length = 1057;
@@ -1977,17 +2107,17 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Inserts $(D value) to the back of the container. $(D stuff) can
-       be a value convertible to $(D ElementType) or a range of
-       objects convertible to $(D ElementType). The stable version
-       behaves the same, but guarantees that ranges iterating over the
-       container are never invalidated.
-
-       Returns: The number of elements inserted
-
-       Complexity: $(BIGOH log(n))
+     * Inserts the specified elements at the back of the array. `stuff` can be
+     * a value convertible to `bool` or a range of objects convertible to `bool`.
+     *
+     * Returns: The number of elements inserted.
+     *
+     * Complexity:
+     * $(BIGOH length + m) if reallocation takes place, otherwise $(BIGOH m),
+     * where `m` is the number of elements in `stuff`.
      */
-    size_t insertBack(Stuff)(Stuff stuff) if (is(Stuff : bool))
+    size_t insertBack(Stuff)(Stuff stuff)
+    if (is(Stuff : bool))
     {
         _store.refCountedStore.ensureInitialized();
         auto rem = _store._length % bitsPerWord;
@@ -1996,11 +2126,11 @@ if (is(Unqual!T == bool))
             // Fits within the current array
             if (stuff)
             {
-                data[$ - 1] |= (cast(size_t)1 << rem);
+                data[$ - 1] |= (cast(size_t) 1 << rem);
             }
             else
             {
-                data[$ - 1] &= ~(cast(size_t)1 << rem);
+                data[$ - 1] &= ~(cast(size_t) 1 << rem);
             }
         }
         else
@@ -2011,7 +2141,8 @@ if (is(Unqual!T == bool))
         ++_store._length;
         return 1;
     }
-    /// Ditto
+
+    /// ditto
     size_t insertBack(Stuff)(Stuff stuff)
     if (isInputRange!Stuff && is(ElementType!Stuff : bool))
     {
@@ -2024,10 +2155,23 @@ if (is(Unqual!T == bool))
         static if (!hasLength!Stuff) return result;
         else return stuff.length;
     }
+
     /// ditto
     alias stableInsertBack = insertBack;
 
-    unittest
+    /// ditto
+    alias insert = insertBack;
+
+    /// ditto
+    alias stableInsert = insertBack;
+
+    /// ditto
+    alias linearInsert = insertBack;
+
+    /// ditto
+    alias stableLinearInsert = insertBack;
+
+    @system unittest
     {
         Array!bool a;
         for (int i = 0; i < 100; ++i)
@@ -2037,16 +2181,15 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Removes the value at the front or back of the container. The
-       stable version behaves the same, but guarantees that ranges
-       iterating over the container are never invalidated. The
-       optional parameter $(D howMany) instructs removal of that many
-       elements. If $(D howMany > n), all elements are removed and no
-       exception is thrown.
-
-       Precondition: $(D !empty)
-
-       Complexity: $(BIGOH log(n)).
+     * Removes the value from the back of the array. Both stable and non-stable
+     * versions behave the same and guarantee that ranges iterating over the
+     * array are never invalidated.
+     *
+     * Precondition: `empty == false`
+     *
+     * Complexity: $(BIGOH 1).
+     *
+     * Throws: `Exception` if the array is empty.
      */
     void removeBack()
     {
@@ -2063,23 +2206,22 @@ if (is(Unqual!T == bool))
             _store._backend.length = _store._backend.length - 1;
         }
     }
+
     /// ditto
     alias stableRemoveBack = removeBack;
 
     /**
-       Removes $(D howMany) values at the front or back of the
-       container. Unlike the unparameterized versions above, these
-       functions do not throw if they could not remove $(D howMany)
-       elements. Instead, if $(D howMany > n), all elements are
-       removed. The returned value is the effective number of elements
-       removed. The stable version behaves the same, but guarantees
-       that ranges iterating over the container are never invalidated.
-
-       Returns: The number of elements removed
-
-       Complexity: $(BIGOH howMany * log(n)).
+     * Removes `howMany` values from the back of the array. Unlike the
+     * unparameterized versions above, these functions do not throw if
+     * they could not remove `howMany` elements. Instead, if `howMany > n`,
+     * all elements are removed. The returned value is the effective number
+     * of elements removed. Both stable and non-stable versions behave the same
+     * and guarantee that ranges iterating over the array are never invalidated.
+     *
+     * Returns: The number of elements removed.
+     *
+     * Complexity: $(BIGOH howMany).
      */
-    /// ditto
     size_t removeBack(size_t howMany)
     {
         if (howMany >= length)
@@ -2094,7 +2236,10 @@ if (is(Unqual!T == bool))
         return howMany;
     }
 
-    unittest
+    /// ditto
+    alias stableRemoveBack = removeBack;
+
+    @system unittest
     {
         Array!bool a;
         a.length = 1057;
@@ -2107,17 +2252,15 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Inserts $(D stuff) before, after, or instead range $(D r),
-       which must be a valid range previously extracted from this
-       container. $(D stuff) can be a value convertible to $(D
-       ElementType) or a range of objects convertible to $(D
-       ElementType). The stable version behaves the same, but
-       guarantees that ranges iterating over the container are never
-       invalidated.
-
-       Returns: The number of values inserted.
-
-       Complexity: $(BIGOH n + m), where $(D m) is the length of $(D stuff)
+     * Inserts `stuff` before, after, or instead range `r`, which must
+     * be a valid range previously extracted from this array. `stuff`
+     * can be a value convertible to `bool` or a range of objects convertible
+     * to `bool`. Both stable and non-stable version behave the same and
+     * guarantee that ranges iterating over the array are never invalidated.
+     *
+     * Returns: The number of values inserted.
+     *
+     * Complexity: $(BIGOH length + m), where `m` is the length of `stuff`.
      */
     size_t insertBefore(Stuff)(Range r, Stuff stuff)
     {
@@ -2130,10 +2273,11 @@ if (is(Unqual!T == bool))
             this[tailLength .. length]);
         return inserted;
     }
+
     /// ditto
     alias stableInsertBefore = insertBefore;
 
-    unittest
+    @system unittest
     {
         import std.conv : to;
         Array!bool a;
@@ -2145,6 +2289,9 @@ if (is(Unqual!T == bool))
         assert(a.length == 1, to!string(a.length));
         a.insertBefore(a[], false);
         assert(a.length == 2, to!string(a.length));
+        a.insertBefore(a[1 .. $], true);
+        import std.algorithm.comparison : equal;
+        assert(a[].equal([false, true, true]));
     }
 
     /// ditto
@@ -2159,10 +2306,11 @@ if (is(Unqual!T == bool))
             this[tailLength .. length]);
         return inserted;
     }
+
     /// ditto
     alias stableInsertAfter = insertAfter;
 
-    unittest
+    @system unittest
     {
         import std.conv : to;
         Array!bool a;
@@ -2171,8 +2319,10 @@ if (is(Unqual!T == bool))
         assert(a.length == 11, to!string(a.length));
         assert(a[5]);
     }
+
     /// ditto
-    size_t replace(Stuff)(Range r, Stuff stuff) if (is(Stuff : bool))
+    size_t replace(Stuff)(Range r, Stuff stuff)
+    if (is(Stuff : bool))
     {
         if (!r.empty)
         {
@@ -2188,10 +2338,11 @@ if (is(Unqual!T == bool))
         }
         return 1;
     }
+
     /// ditto
     alias stableReplace = replace;
 
-    unittest
+    @system unittest
     {
         import std.conv : to;
         Array!bool a;
@@ -2202,15 +2353,13 @@ if (is(Unqual!T == bool))
     }
 
     /**
-       Removes all elements belonging to $(D r), which must be a range
-       obtained originally from this container. The stable version
-       behaves the same, but guarantees that ranges iterating over the
-       container are never invalidated.
-
-       Returns: A range spanning the remaining elements in the container that
-       initially were right after $(D r).
-
-       Complexity: $(BIGOH n)
+     * Removes all elements belonging to `r`, which must be a range
+     * obtained originally from this array.
+     *
+     * Returns: A range spanning the remaining elements in the array that
+     * initially were right after `r`.
+     *
+     * Complexity: $(BIGOH length)
      */
     Range linearRemove(Range r)
     {
@@ -2221,13 +2370,13 @@ if (is(Unqual!T == bool))
     }
 }
 
-unittest
+@system unittest
 {
     Array!bool a;
     assert(a.empty);
 }
 
-unittest
+@system unittest
 {
     Array!bool arr;
     arr.insert([false, false, false, false]);
@@ -2249,7 +2398,7 @@ unittest
 }
 
 // issue 16331 - uncomparable values are valid values for an array
-unittest
+@system unittest
 {
     double[] values = [double.nan, double.nan];
     auto arr = Array!double(values);

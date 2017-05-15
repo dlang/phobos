@@ -30,7 +30,7 @@ import std.file;
 
 void main()
 {
-    string s = cast(string)std.file.read("books.xml");
+    string s = cast(string) std.file.read("books.xml");
 
     // Check for well-formedness
     check(s);
@@ -64,7 +64,7 @@ struct Book
 
 void main()
 {
-    string s = cast(string)std.file.read("books.xml");
+    string s = cast(string) std.file.read("books.xml");
 
     // Check for well-formedness
     check(s);
@@ -161,26 +161,26 @@ bool isChar(dchar c) @safe @nogc pure nothrow // rule 2
 
 @safe @nogc nothrow pure unittest
 {
-    assert(!isChar(cast(dchar)0x8));
-    assert( isChar(cast(dchar)0x9));
-    assert( isChar(cast(dchar)0xA));
-    assert(!isChar(cast(dchar)0xB));
-    assert(!isChar(cast(dchar)0xC));
-    assert( isChar(cast(dchar)0xD));
-    assert(!isChar(cast(dchar)0xE));
-    assert(!isChar(cast(dchar)0x1F));
-    assert( isChar(cast(dchar)0x20));
+    assert(!isChar(cast(dchar) 0x8));
+    assert( isChar(cast(dchar) 0x9));
+    assert( isChar(cast(dchar) 0xA));
+    assert(!isChar(cast(dchar) 0xB));
+    assert(!isChar(cast(dchar) 0xC));
+    assert( isChar(cast(dchar) 0xD));
+    assert(!isChar(cast(dchar) 0xE));
+    assert(!isChar(cast(dchar) 0x1F));
+    assert( isChar(cast(dchar) 0x20));
     assert( isChar('J'));
-    assert( isChar(cast(dchar)0xD7FF));
-    assert(!isChar(cast(dchar)0xD800));
-    assert(!isChar(cast(dchar)0xDFFF));
-    assert( isChar(cast(dchar)0xE000));
-    assert( isChar(cast(dchar)0xFFFD));
-    assert(!isChar(cast(dchar)0xFFFE));
-    assert(!isChar(cast(dchar)0xFFFF));
-    assert( isChar(cast(dchar)0x10000));
-    assert( isChar(cast(dchar)0x10FFFF));
-    assert(!isChar(cast(dchar)0x110000));
+    assert( isChar(cast(dchar) 0xD7FF));
+    assert(!isChar(cast(dchar) 0xD800));
+    assert(!isChar(cast(dchar) 0xDFFF));
+    assert( isChar(cast(dchar) 0xE000));
+    assert( isChar(cast(dchar) 0xFFFD));
+    assert(!isChar(cast(dchar) 0xFFFE));
+    assert(!isChar(cast(dchar) 0xFFFF));
+    assert( isChar(cast(dchar) 0x10000));
+    assert( isChar(cast(dchar) 0x10FFFF));
+    assert(!isChar(cast(dchar) 0x110000));
 
     debug (stdxml_TestHardcodedChecks)
     {
@@ -430,13 +430,13 @@ enum DecodeMode
  * writefln(decode("a &gt; b")); // writes "a > b"
  * --------------
  */
-string decode(string s, DecodeMode mode=DecodeMode.LOOSE) @system pure
+string decode(string s, DecodeMode mode=DecodeMode.LOOSE) @safe pure
 {
     import std.algorithm.searching : startsWith;
 
     if (mode == DecodeMode.NONE) return s;
 
-    char[] buffer;
+    string buffer;
     foreach (ref i; 0 .. s.length)
     {
         char c = s[i];
@@ -482,10 +482,10 @@ string decode(string s, DecodeMode mode=DecodeMode.LOOSE) @system pure
             }
         }
     }
-    return (buffer.length == 0) ? s : cast(string)buffer;
+    return (buffer.length == 0) ? s : buffer;
 }
 
-@system pure unittest
+@safe pure unittest
 {
     void assertNot(string s) pure
     {
@@ -564,7 +564,7 @@ class Document : Element
         this(xml.tag);
         prolog = s[0 .. tagString.ptr - s.ptr];
         parse(xml);
-        epilog = *xml.s;
+        epilog = xml.s;
     }
 
     /**
@@ -593,7 +593,7 @@ class Document : Element
         {
             const doc = toType!(const Document)(o);
             return prolog == doc.prolog
-                && (cast()this).Element.opEquals(cast()doc)
+                && (cast() this).Element.opEquals(cast() doc)
                 && epilog == doc.epilog;
         }
 
@@ -614,7 +614,7 @@ class Document : Element
             const doc = toType!(const Document)(o);
             if (prolog != doc.prolog)
                 return prolog < doc.prolog ? -1 : 1;
-            if (int cmp = (cast()this).Element.opCmp(cast()doc))
+            if (int cmp = (cast() this).Element.opCmp(cast() doc))
                 return cmp;
             if (epilog != doc.epilog)
                 return epilog < doc.epilog ? -1 : 1;
@@ -629,7 +629,7 @@ class Document : Element
          */
         override size_t toHash() @trusted
         {
-            return hash(prolog, hash(epilog, (cast()this).Element.toHash()));
+            return hash(prolog, hash(epilog, (cast() this).Element.toHash()));
         }
 
         /**
@@ -842,7 +842,7 @@ class Element : Item
         if (len != element.items.length) return false;
         foreach (i; 0 .. len)
         {
-            if (!items[i].opEquals(cast()element.items[i])) return false;
+            if (!items[i].opEquals(cast() element.items[i])) return false;
         }
         return true;
     }
@@ -868,7 +868,7 @@ class Element : Item
             if (i == items.length) return -1;
             if (i == element.items.length) return 1;
             if (items[i] != element.items[i])
-                return items[i].opCmp(cast()element.items[i]);
+                return items[i].opCmp(cast() element.items[i]);
         }
     }
 
@@ -904,7 +904,7 @@ class Element : Item
             string buffer;
             foreach (item;items)
             {
-                Text t = cast(Text)item;
+                Text t = cast(Text) item;
                 if (t is null) throw new DecodeException(item.toString());
                 buffer ~= decode(t.toString(),mode);
             }
@@ -1054,30 +1054,44 @@ class Tag
      * The second parameter is a dummy parameter only, required solely to
      * distinguish this constructor from the public one.
      */
-    private this(ref string s, bool dummy) @system
+    private this(ref string s, bool dummy) @safe pure
     {
-        import std.ascii : whitespace;
-        import std.string : munch;
+        import std.algorithm.searching : countUntil;
+        import std.ascii : isWhite;
+        import std.utf : byCodeUnit;
 
-        // @system because of decode
         tagString = s;
         try
         {
             reqc(s,'<');
             if (optc(s,'/')) type = TagType.END;
-            name = munch(s,"^/>"~whitespace);
-            munch(s,whitespace);
+            ptrdiff_t i = s.byCodeUnit.countUntil(">", "/>", " ", "\t", "\v", "\r", "\n", "\f");
+            name = s[0 .. i];
+            s = s[i .. $];
+
+            i = s.byCodeUnit.countUntil!(a => !isWhite(a));
+            s = s[i .. $];
+
             while (s.length > 0 && s[0] != '>' && s[0] != '/')
             {
-                string key = munch(s,"^="~whitespace);
-                munch(s,whitespace);
+                i = s.byCodeUnit.countUntil("=", " ", "\t", "\v", "\r", "\n", "\f");
+                string key = s[0 .. i];
+                s = s[i .. $];
+
+                i = s.byCodeUnit.countUntil!(a => !isWhite(a));
+                s = s[i .. $];
                 reqc(s,'=');
-                munch(s,whitespace);
+                i = s.byCodeUnit.countUntil!(a => !isWhite(a));
+                s = s[i .. $];
+
                 immutable char quote = requireOneOf(s,"'\"");
-                char[2] notQuote = ['^', quote];
-                string val = decode(munch(s,notQuote[]), DecodeMode.LOOSE);
+                i = s.byCodeUnit.countUntil(quote);
+                string val = decode(s[0 .. i], DecodeMode.LOOSE);
+                s = s[i .. $];
                 reqc(s,quote);
-                munch(s,whitespace);
+
+                i = s.byCodeUnit.countUntil!(a => !isWhite(a));
+                s = s[i .. $];
                 attr[key] = val;
             }
             if (optc(s,'/'))
@@ -1086,11 +1100,11 @@ class Tag
                 type = TagType.EMPTY;
             }
             reqc(s,'>');
-            tagString.length = (s.ptr - tagString.ptr);
+            tagString.length = tagString.length - s.length;
         }
         catch (XMLException e)
         {
-            tagString.length = (s.ptr - tagString.ptr);
+            tagString.length = tagString.length - s.length;
             throw new TagException(tagString);
         }
     }
@@ -1134,7 +1148,7 @@ class Tag
             // Note that attr is an AA, so the comparison is nonsensical (bug 10381)
             return
                 ((name != tag.name) ? ( name < tag.name ? -1 : 1 ) :
-                ((attr != tag.attr) ? ( cast(void *)attr < cast(void*)tag.attr ? -1 : 1 ) :
+                ((attr != tag.attr) ? ( cast(void *) attr < cast(void*) tag.attr ? -1 : 1 ) :
                 ((type != tag.type) ? ( type < tag.type ? -1 : 1 ) :
             0 )));
         }
@@ -1259,7 +1273,7 @@ class Comment : Item
     override bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(Comment)item;
+        const t = cast(Comment) item;
         return t !is null && content == t.content;
     }
 
@@ -1278,7 +1292,7 @@ class Comment : Item
     override int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(Comment)item;
+        const t = cast(Comment) item;
         return t !is null && (content != t.content
             ? (content < t.content ? -1 : 1 ) : 0 );
     }
@@ -1299,7 +1313,7 @@ class Comment : Item
     override @property @safe @nogc pure nothrow bool isEmptyXML() const { return false; } /// Returns false always
 }
 
-unittest // issue 16241
+@safe unittest // issue 16241
 {
     import std.exception : assertThrown;
     auto c = new Comment("==");
@@ -1347,7 +1361,7 @@ class CData : Item
     override bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(CData)item;
+        const t = cast(CData) item;
         return t !is null && content == t.content;
     }
 
@@ -1366,7 +1380,7 @@ class CData : Item
     override int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(CData)item;
+        const t = cast(CData) item;
         return t !is null && (content != t.content
             ? (content < t.content ? -1 : 1 ) : 0 );
     }
@@ -1424,7 +1438,7 @@ class Text : Item
     override bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(Text)item;
+        const t = cast(Text) item;
         return t !is null && content == t.content;
     }
 
@@ -1443,7 +1457,7 @@ class Text : Item
     override int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(Text)item;
+        const t = cast(Text) item;
         return t !is null
             && (content != t.content ? (content < t.content ? -1 : 1 ) : 0 );
     }
@@ -1507,7 +1521,7 @@ class XMLInstruction : Item
     override bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(XMLInstruction)item;
+        const t = cast(XMLInstruction) item;
         return t !is null && content == t.content;
     }
 
@@ -1526,7 +1540,7 @@ class XMLInstruction : Item
     override int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(XMLInstruction)item;
+        const t = cast(XMLInstruction) item;
         return t !is null
             && (content != t.content ? (content < t.content ? -1 : 1 ) : 0 );
     }
@@ -1587,7 +1601,7 @@ class ProcessingInstruction : Item
     override bool opEquals(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(ProcessingInstruction)item;
+        const t = cast(ProcessingInstruction) item;
         return t !is null && content == t.content;
     }
 
@@ -1606,7 +1620,7 @@ class ProcessingInstruction : Item
     override int opCmp(Object o)
     {
         const item = toType!(const Item)(o);
-        const t = cast(ProcessingInstruction)item;
+        const t = cast(ProcessingInstruction) item;
         return t !is null
             && (content != t.content ? (content < t.content ? -1 : 1 ) : 0 );
     }
@@ -1707,7 +1721,7 @@ class DocumentParser : ElementParser
     body
     {
         xmlText = xmlText_;
-        s = &xmlText;
+        s = xmlText;
         super();    // Initialize everything
         parse();    // Parse through the root tag (but not beyond)
     }
@@ -1734,7 +1748,7 @@ class ElementParser
     {
         Tag tag_;
         string elementStart;
-        string* s;
+        string s;
 
         Handler commentHandler = null;
         Handler cdataHandler = null;
@@ -1752,7 +1766,7 @@ class ElementParser
         }
 
         // Private constructor for empty tags
-        this(Tag tag, string* t) @safe @nogc pure nothrow
+        this(Tag tag, string t) @safe @nogc pure nothrow
         {
             s = t;
             this();
@@ -1835,7 +1849,7 @@ class ElementParser
 
     protected this() @safe @nogc pure nothrow
     {
-        elementStart = *s;
+        elementStart = s;
     }
 
     /**
@@ -1991,37 +2005,37 @@ class ElementParser
 
         while (s.length != 0)
         {
-            if (startsWith(*s,"<!--"))
+            if (startsWith(s,"<!--"))
             {
-                chop(*s,4);
-                t = chop(*s,indexOf(*s,"-->"));
+                chop(s,4);
+                t = chop(s,indexOf(s,"-->"));
                 if (commentHandler.funcptr !is null) commentHandler(t);
-                chop(*s,3);
+                chop(s,3);
             }
-            else if (startsWith(*s,"<![CDATA["))
+            else if (startsWith(s,"<![CDATA["))
             {
-                chop(*s,9);
-                t = chop(*s,indexOf(*s,"]]>"));
+                chop(s,9);
+                t = chop(s,indexOf(s,"]]>"));
                 if (cdataHandler.funcptr !is null) cdataHandler(t);
-                chop(*s,3);
+                chop(s,3);
             }
-            else if (startsWith(*s,"<!"))
+            else if (startsWith(s,"<!"))
             {
-                chop(*s,2);
-                t = chop(*s,indexOf(*s,">"));
+                chop(s,2);
+                t = chop(s,indexOf(s,">"));
                 if (xiHandler.funcptr !is null) xiHandler(t);
-                chop(*s,1);
+                chop(s,1);
             }
-            else if (startsWith(*s,"<?"))
+            else if (startsWith(s,"<?"))
             {
-                chop(*s,2);
-                t = chop(*s,indexOf(*s,"?>"));
+                chop(s,2);
+                t = chop(s,indexOf(s,"?>"));
                 if (piHandler.funcptr !is null) piHandler(t);
-                chop(*s,2);
+                chop(s,2);
             }
-            else if (startsWith(*s,"<"))
+            else if (startsWith(s,"<"))
             {
-                tag_ = new Tag(*s,true);
+                tag_ = new Tag(s,true);
                 if (root is null)
                     return; // Return to constructor of derived class
 
@@ -2074,7 +2088,7 @@ class ElementParser
 
                     // Handle the pretend start tag
                     string s2;
-                    auto parser = new ElementParser(startTag,&s2);
+                    auto parser = new ElementParser(startTag,s2);
                     auto handler1 = startTag.name in onStartTag;
                     if (handler1 !is null) (*handler1)(parser);
                     else
@@ -2096,7 +2110,7 @@ class ElementParser
             }
             else
             {
-                t = chop(*s,indexOf(*s,"<"));
+                t = chop(s,indexOf(s,"<"));
                 if (rawTextHandler.funcptr !is null)
                     rawTextHandler(t);
                 else if (textHandler.funcptr !is null)
@@ -2195,10 +2209,16 @@ private
 
     void checkSpace(ref string s) @safe pure // rule 3
     {
-        import std.string : munch;
+        import std.algorithm.searching : countUntil;
+        import std.ascii : isWhite;
+        import std.utf : byCodeUnit;
 
         mixin Check!("Whitespace");
-        munch(s,"\u0020\u0009\u000A\u000D");
+        ptrdiff_t i = s.byCodeUnit.countUntil!(a => !isWhite(a));
+        if (i == -1 && s.length > 0 && isWhite(s[0]))
+            s = s[$ .. $];
+        else if (i > -1)
+            s = s[i .. $];
         if (s is old) fail();
     }
 
@@ -2217,13 +2237,14 @@ private
             n = i;
             break;
         }
-        name = s[0..n];
+        name = s[0 .. n];
         s = s[n..$];
     }
 
     void checkAttValue(ref string s) @safe pure // rule 10
     {
-        import std.string : munch;
+        import std.algorithm.searching : countUntil;
+        import std.utf : byCodeUnit;
 
         mixin Check!("AttValue");
 
@@ -2234,7 +2255,7 @@ private
         s = s[1..$];
         for (;;)
         {
-            munch(s,"^<&"~c);
+            s = s[s.byCodeUnit.countUntil(c) .. $];
             if (s.length == 0) fail("unterminated attribute value");
             if (s[0] == '<') fail("< found in attribute value");
             if (s[0] == c) break;
@@ -2357,11 +2378,12 @@ private
 
     void checkVersionNum(ref string s) @safe pure // rule 26
     {
-        import std.string : munch;
+        import std.algorithm.searching : countUntil;
+        import std.utf : byCodeUnit;
 
         mixin Check!("VersionNum");
 
-        munch(s,"a-zA-Z0-9_.:-");
+        s = s[s.byCodeUnit.countUntil('\"') .. $];
         if (s is old) fail();
     }
 
@@ -2584,13 +2606,15 @@ private
 
     void checkEncName(ref string s) @safe pure // rule 81
     {
-        import std.string : munch;
+        import std.algorithm.searching : countUntil;
+        import std.ascii : isAlpha;
+        import std.utf : byCodeUnit;
 
         mixin Check!("EncName");
 
-        munch(s,"a-zA-Z");
+        s = s[s.byCodeUnit.countUntil!(a => !isAlpha(a)) .. $];
         if (s is old) fail();
-        munch(s,"a-zA-Z0-9_.-");
+        s = s[s.byCodeUnit.countUntil('\"', '\'') .. $];
     }
 
     void checkEncodingDecl(ref string s) @safe pure // rule 80
@@ -2926,7 +2950,7 @@ private
     string chop(ref string s, size_t n) @safe pure nothrow
     {
         if (n == -1) n = s.length;
-        string t = s[0..n];
+        string t = s[0 .. n];
         s = s[n..$];
         return t;
     }
@@ -3040,7 +3064,7 @@ private
             auto m = (table.length >> 1) & ~1;
             if (c < table[m])
             {
-                table = table[0..m];
+                table = table[0 .. m];
             }
             else if (c > table[m+1])
             {

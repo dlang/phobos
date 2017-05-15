@@ -7,6 +7,8 @@ Serialize data to $(D ubyte) arrays.
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_outbuffer.d)
+ *
+ * $(SCRIPT inhibitQuickIndex = 1;)
  */
 module std.outbuffer;
 
@@ -63,7 +65,7 @@ class OutBuffer
             {
                 void[] vdata = data;
                 vdata.length = (offset + nbytes + 7) * 2; // allocates as void[] to not set BlkAttr.NO_SCAN
-                data = cast(ubyte[])vdata;
+                data = cast(ubyte[]) vdata;
             }
         }
 
@@ -100,9 +102,9 @@ class OutBuffer
             offset += ubyte.sizeof;
         }
 
-    void write(byte b) { write(cast(ubyte)b); }         /// ditto
-    void write(char c) { write(cast(ubyte)c); }         /// ditto
-    void write(dchar c) { write(cast(uint)c); }         /// ditto
+    void write(byte b) { write(cast(ubyte) b); }         /// ditto
+    void write(char c) { write(cast(ubyte) c); }         /// ditto
+    void write(dchar c) { write(cast(uint) c); }         /// ditto
 
     void write(ushort w) @trusted                /// ditto
     {
@@ -111,7 +113,7 @@ class OutBuffer
         offset += ushort.sizeof;
     }
 
-    void write(short s) { write(cast(ushort)s); }               /// ditto
+    void write(short s) { write(cast(ushort) s); }               /// ditto
 
     void write(wchar c) @trusted        /// ditto
     {
@@ -127,7 +129,7 @@ class OutBuffer
         offset += uint.sizeof;
     }
 
-    void write(int i) { write(cast(uint)i); }           /// ditto
+    void write(int i) { write(cast(uint) i); }           /// ditto
 
     void write(ulong l) @trusted         /// ditto
     {
@@ -136,7 +138,7 @@ class OutBuffer
         offset += ulong.sizeof;
     }
 
-    void write(long l) { write(cast(ulong)l); }         /// ditto
+    void write(long l) { write(cast(ulong) l); }         /// ditto
 
     void write(float f) @trusted         /// ditto
     {
@@ -161,7 +163,7 @@ class OutBuffer
 
     void write(in char[] s) @trusted             /// ditto
     {
-        write(cast(ubyte[])s);
+        write(cast(ubyte[]) s);
     }
 
     void write(OutBuffer buf)           /// ditto
@@ -207,7 +209,7 @@ class OutBuffer
     void align2()
     {
         if (offset & 1)
-            write(cast(byte)0);
+            write(cast(byte) 0);
     }
 
     /****************************************
@@ -374,7 +376,7 @@ class OutBuffer
 
     assert(buf.offset == 0);
     buf.write("hello"[]);
-    buf.write(cast(byte)0x20);
+    buf.write(cast(byte) 0x20);
     buf.write("world"[]);
     buf.printf(" %d", 62665);
     assert(cmp(buf.toString(), "hello world 62665") == 0);

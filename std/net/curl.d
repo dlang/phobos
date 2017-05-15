@@ -202,7 +202,7 @@ version(unittest)
                     handler = receiveOnly!(typeof(handler));
                 catch (OwnerTerminated)
                     return;
-                handler((cast()listener).accept);
+                handler((cast() listener).accept);
             }
             catch (Throwable e)
             {
@@ -219,7 +219,7 @@ version(unittest)
         sock.bind(new InternetAddress(INADDR_LOOPBACK, InternetAddress.PORT_ANY));
         sock.listen(1);
         auto addr = sock.localAddress.toString();
-        auto tid = spawn(&TestServer.loop, cast(shared)sock);
+        auto tid = spawn(&TestServer.loop, cast(shared) sock);
         return TestServer(addr, tid);
     }
 
@@ -256,7 +256,7 @@ version(unittest)
             if (bdy.empty)
                 continue;
 
-            auto hdrs = cast(string)buf[0 .. $ - bdy.length];
+            auto hdrs = cast(string) buf[0 .. $ - bdy.length];
             bdy.popFrontN(4);
             // no support for chunked transfer-encoding
             if (auto m = hdrs.matchFirst(ctRegex!(`Content-Length: ([0-9]+)`, "i")))
@@ -398,7 +398,7 @@ private template isCurlConn(Conn)
  * ----
  */
 void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn conn = Conn())
-    if (isCurlConn!Conn)
+if (isCurlConn!Conn)
 {
     static if (is(Conn : HTTP) || is(Conn : FTP))
     {
@@ -417,7 +417,7 @@ void download(Conn = AutoProtocol)(const(char)[] url, string saveToPath, Conn co
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
     static import std.file;
@@ -451,7 +451,7 @@ unittest
  * ----
  */
 void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn conn = Conn())
-    if (isCurlConn!Conn)
+if (isCurlConn!Conn)
 {
     static if (is(Conn : HTTP))
     {
@@ -476,14 +476,14 @@ void upload(Conn = AutoProtocol)(string loadFromPath, const(char)[] url, Conn co
         import std.stdio : File;
         auto f = File(loadFromPath, "rb");
         conn.onSend = buf => f.rawRead(buf).length;
-        auto sz = f.size;
+        immutable sz = f.size;
         if (sz != ulong.max)
             conn.contentLength = sz;
         conn.perform();
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
     static import std.file;
@@ -532,7 +532,7 @@ unittest
  * See_Also: $(LREF HTTP.Method)
  */
 T[] get(Conn = AutoProtocol, T = char)(const(char)[] url, Conn conn = Conn())
-    if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
+if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
 {
     static if (is(Conn : HTTP))
     {
@@ -553,7 +553,7 @@ T[] get(Conn = AutoProtocol, T = char)(const(char)[] url, Conn conn = Conn())
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -606,7 +606,7 @@ if (is(T == char) || is(T == ubyte))
     return _basicHTTP!(T)(url, postData, conn);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -623,13 +623,13 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
     auto data = new ubyte[](256);
     foreach (i, ref ub; data)
-        ub = cast(ubyte)i;
+        ub = cast(ubyte) i;
 
     testServer.handle((s) {
         auto req = s.recvReq!ubyte;
@@ -650,7 +650,7 @@ if (is(T == char) || is(T == ubyte))
     return post(url, urlEncode(postDict), conn);
 }
 
-unittest
+@system unittest
 {
     foreach (host; [testServer.addr, "http://" ~ testServer.addr])
     {
@@ -693,7 +693,7 @@ unittest
  */
 T[] put(Conn = AutoProtocol, T = char, PutUnit)(const(char)[] url, const(PutUnit)[] putData,
                                                   Conn conn = Conn())
-    if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
+if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
 {
     static if (is(Conn : HTTP))
     {
@@ -713,7 +713,7 @@ T[] put(Conn = AutoProtocol, T = char, PutUnit)(const(char)[] url, const(PutUnit
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -747,7 +747,7 @@ unittest
  * See_Also: $(LREF HTTP.Method)
  */
 void del(Conn = AutoProtocol)(const(char)[] url, Conn conn = Conn())
-    if (isCurlConn!Conn)
+if (isCurlConn!Conn)
 {
     static if (is(Conn : HTTP))
     {
@@ -780,7 +780,7 @@ void del(Conn = AutoProtocol)(const(char)[] url, Conn conn = Conn())
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -820,23 +820,13 @@ unittest
  * See_Also: $(LREF HTTP.Method)
  */
 T[] options(T = char)(const(char)[] url, HTTP conn = HTTP())
-    if (is(T == char) || is(T == ubyte))
+if (is(T == char) || is(T == ubyte))
 {
     conn.method = HTTP.Method.options;
     return _basicHTTP!(T)(url, null, conn);
 }
 
-// Explicitly undocumented. It will be removed in February 2017. @@@DEPRECATED_2017-02@@@
-deprecated("options does not send any data")
-T[] options(T = char, OptionsUnit)(const(char)[] url,
-                                   const(OptionsUnit)[] optionsData = null,
-                                   HTTP conn = HTTP())
-    if (is(T == char) || is(T == ubyte))
-{
-    return options!T(url, conn);
-}
-
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -872,13 +862,13 @@ unittest
  * See_Also: $(LREF HTTP.Method)
  */
 T[] trace(T = char)(const(char)[] url, HTTP conn = HTTP())
-   if (is(T == char) || is(T == ubyte))
+if (is(T == char) || is(T == ubyte))
 {
     conn.method = HTTP.Method.trace;
     return _basicHTTP!(T)(url, cast(void[]) null, conn);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -913,13 +903,13 @@ unittest
  * See_Also: $(LREF HTTP.Method)
  */
 T[] connect(T = char)(const(char)[] url, HTTP conn = HTTP())
-   if (is(T == char) || is(T == ubyte))
+if (is(T == char) || is(T == ubyte))
 {
     conn.method = HTTP.Method.connect;
     return _basicHTTP!(T)(url, cast(void[]) null, conn);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -959,13 +949,13 @@ unittest
  */
 T[] patch(T = char, PatchUnit)(const(char)[] url, const(PatchUnit)[] patchData,
                                HTTP conn = HTTP())
-    if (is(T == char) || is(T == ubyte))
+if (is(T == char) || is(T == ubyte))
 {
     conn.method = HTTP.Method.patch;
     return _basicHTTP!(T)(url, patchData, conn);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -1027,7 +1017,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         {
             size_t minLen = min(buf.length, remainingData.length);
             if (minLen == 0) return 0;
-            buf[0..minLen] = remainingData[0..minLen];
+            buf[0 .. minLen] = remainingData[0 .. minLen];
             remainingData = remainingData[minLen..$];
             return minLen;
         };
@@ -1036,7 +1026,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
             switch (mode)
             {
                 case CurlSeekPos.set:
-                    remainingData = sendData[cast(size_t)offset..$];
+                    remainingData = sendData[cast(size_t) offset..$];
                     return CurlSeek.ok;
                 default:
                     // As of curl 7.18.0, libcurl will not pass
@@ -1064,7 +1054,7 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     return _decodeContent!T(content.data, client.p.charset);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -1078,7 +1068,7 @@ unittest
 }
 
 // Bugzilla 14760 - content length must be reset after post
-unittest
+@system unittest
 {
     import std.algorithm.searching : canFind;
 
@@ -1103,7 +1093,7 @@ unittest
     assert(res == "TRACERESPONSE");
 }
 
-unittest // charset detection and transcoding to T
+@system unittest // charset detection and transcoding to T
 {
     testServer.handle((s) {
         s.send("HTTP/1.1 200 OK\r\n"~
@@ -1164,7 +1154,7 @@ private auto _basicFTP(T)(const(char)[] url, const(void)[] sendData, FTP client)
         {
             size_t minLen = min(buf.length, sendData.length);
             if (minLen == 0) return 0;
-            buf[0..minLen] = sendData[0..minLen];
+            buf[0 .. minLen] = sendData[0 .. minLen];
             sendData = sendData[minLen..$];
             return minLen;
         };
@@ -1333,7 +1323,7 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
     return SyncLineInputRange(result, keepTerminator == Yes.keepTerminator, terminator);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1370,7 +1360,7 @@ unittest
  */
 auto byChunk(Conn = AutoProtocol)
             (const(char)[] url, size_t chunkSize = 1024, Conn conn = Conn())
-    if (isCurlConn!(Conn))
+if (isCurlConn!(Conn))
 {
     static struct SyncChunkInputRange
     {
@@ -1393,7 +1383,7 @@ auto byChunk(Conn = AutoProtocol)
         {
             size_t nextOffset = offset + chunkSize;
             if (nextOffset > _bytes.length) nextOffset = _bytes.length;
-            return _bytes[offset..nextOffset];
+            return _bytes[offset .. nextOffset];
         }
 
         @safe void popFront()
@@ -1407,7 +1397,7 @@ auto byChunk(Conn = AutoProtocol)
     return SyncChunkInputRange(result, chunkSize);
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1582,7 +1572,7 @@ private static struct AsyncLineInputRange(Char)
         // Send buffers to other thread for it to use.  Since no mechanism is in
         // place for moving ownership a cast to shared is done here and casted
         // back to non-shared in the receiving end.
-        foreach (i ; 0..transmitBuffers)
+        foreach (i ; 0 .. transmitBuffers)
         {
             auto arr = new Char[](bufferSize);
             workerTid.send(cast(immutable(Char[]))arr);
@@ -1653,7 +1643,7 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char, PostUnit)
              KeepTerminator keepTerminator = No.keepTerminator,
              Terminator terminator = '\n',
              size_t transmitBuffers = 10, Conn conn = Conn())
-    if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
+if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
 {
     static if (is(Conn : AutoProtocol))
     {
@@ -1689,20 +1679,20 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char)
     static if (is(Conn : AutoProtocol))
     {
         if (isFTPUrl(url))
-            return byLineAsync(url, cast(void[])null, keepTerminator,
+            return byLineAsync(url, cast(void[]) null, keepTerminator,
                                terminator, transmitBuffers, FTP());
         else
-            return byLineAsync(url, cast(void[])null, keepTerminator,
+            return byLineAsync(url, cast(void[]) null, keepTerminator,
                                terminator, transmitBuffers, HTTP());
     }
     else
     {
-        return byLineAsync(url, cast(void[])null, keepTerminator,
+        return byLineAsync(url, cast(void[]) null, keepTerminator,
                            terminator, transmitBuffers, conn);
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1735,7 +1725,7 @@ private static struct AsyncChunkInputRange
         // Send buffers to other thread for it to use.  Since no mechanism is in
         // place for moving ownership a cast to shared is done here and a cast
         // back to non-shared in the receiving end.
-        foreach (i ; 0..transmitBuffers)
+        foreach (i ; 0 .. transmitBuffers)
         {
             ubyte[] arr = new ubyte[](chunkSize);
             workerTid.send(cast(immutable(ubyte[]))arr);
@@ -1803,7 +1793,7 @@ auto byChunkAsync(Conn = AutoProtocol, PostUnit)
            (const(char)[] url, const(PostUnit)[] postData,
             size_t chunkSize = 1024, size_t transmitBuffers = 10,
             Conn conn = Conn())
-    if (isCurlConn!(Conn))
+if (isCurlConn!(Conn))
 {
     static if (is(Conn : AutoProtocol))
     {
@@ -1832,25 +1822,25 @@ auto byChunkAsync(Conn = AutoProtocol)
            (const(char)[] url,
             size_t chunkSize = 1024, size_t transmitBuffers = 10,
             Conn conn = Conn())
-    if (isCurlConn!(Conn))
+if (isCurlConn!(Conn))
 {
     static if (is(Conn : AutoProtocol))
     {
         if (isFTPUrl(url))
-            return byChunkAsync(url, cast(void[])null, chunkSize,
+            return byChunkAsync(url, cast(void[]) null, chunkSize,
                                 transmitBuffers, FTP());
         else
-            return byChunkAsync(url, cast(void[])null, chunkSize,
+            return byChunkAsync(url, cast(void[]) null, chunkSize,
                                 transmitBuffers, HTTP());
     }
     else
     {
-        return byChunkAsync(url, cast(void[])null, chunkSize,
+        return byChunkAsync(url, cast(void[]) null, chunkSize,
                             transmitBuffers, conn);
     }
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1897,14 +1887,14 @@ private void _asyncDuplicateConnection(Conn, PostData)
             connDup.handle.set(CurlOption.copypostfields,
                                cast(void*) postData.ptr);
         }
-        tid.send(cast(ulong)connDup.handle.handle);
+        tid.send(cast(ulong) connDup.handle.handle);
         tid.send(connDup.method);
     }
     else
     {
         enforce!CurlException(postData is null,
                                 "Cannot put ftp data using byLineAsync()");
-        tid.send(cast(ulong)connDup.handle.handle);
+        tid.send(cast(ulong) connDup.handle.handle);
         tid.send(HTTP.Method.undefined);
     }
     connDup.p.curl.handle = null; // make sure handle is not freed
@@ -2054,7 +2044,7 @@ private mixin template Protocol()
     */
     @property void localPort(ushort port)
     {
-        p.curl.set(CurlOption.localport, cast(long)port);
+        p.curl.set(CurlOption.localport, cast(long) port);
     }
 
     /**
@@ -2066,7 +2056,7 @@ private mixin template Protocol()
     */
     @property void localPortRange(ushort range)
     {
-        p.curl.set(CurlOption.localportrange, cast(long)range);
+        p.curl.set(CurlOption.localportrange, cast(long) range);
     }
 
     /** Set the tcp no-delay socket option on or off.
@@ -2117,7 +2107,7 @@ private mixin template Protocol()
         p.curl.set(CurlOption.userpwd, format("%s:%s", username, password));
     }
 
-    unittest
+    @system unittest
     {
         import std.algorithm.searching : canFind;
 
@@ -2173,10 +2163,10 @@ private mixin template Protocol()
      * auto client = HTTP("dlang.org");
      * client.onSend = delegate size_t(void[] data)
      * {
-     *     auto m = cast(void[])msg;
+     *     auto m = cast(void[]) msg;
      *     size_t length = m.length > data.length ? data.length : m.length;
      *     if (length == 0) return 0;
-     *     data[0..length] = m[0..length];
+     *     data[0 .. length] = m[0 .. length];
      *     msg = msg[length..$];
      *     return length;
      * };
@@ -2264,10 +2254,10 @@ decodeString(Char = char)(const(ubyte)[] data,
     size_t charsDecoded = 0;
     while (data.length && charsDecoded < maxChars)
     {
-        dchar dc = scheme.safeDecode(data);
+        immutable dchar dc = scheme.safeDecode(data);
         if (dc == INVALID_SEQUENCE)
         {
-            return typeof(return)(size_t.max, cast(Char[])null);
+            return typeof(return)(size_t.max, cast(Char[]) null);
         }
         charsDecoded++;
         res ~= dc;
@@ -2310,7 +2300,7 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
                      4 : basesrc.length + src.length;
         basesrc.length = len;
 
-        dchar dc = scheme.safeDecode(basesrc);
+        immutable dchar dc = scheme.safeDecode(basesrc);
         if (dc == INVALID_SEQUENCE)
         {
             enforce!CurlException(len != 4, "Invalid code sequence");
@@ -2364,10 +2354,10 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   * http.contentLength = msg.length;
   * http.onSend = (void[] data)
   * {
-  *     auto m = cast(void[])msg;
+  *     auto m = cast(void[]) msg;
   *     size_t len = m.length > data.length ? data.length : m.length;
   *     if (len == 0) return len;
-  *     data[0..len] = m[0..len];
+  *     data[0 .. len] = m[0 .. len];
   *     msg = msg[len..$];
   *     return len;
   * };
@@ -2774,10 +2764,10 @@ struct HTTP
          * auto client = HTTP("dlang.org");
          * client.onSend = delegate size_t(void[] data)
          * {
-         *     auto m = cast(void[])msg;
+         *     auto m = cast(void[]) msg;
          *     size_t length = m.length > data.length ? data.length : m.length;
          *     if (length == 0) return 0;
-         *     data[0..length] = m[0..length];
+         *     data[0 .. length] = m[0 .. length];
          *     msg = msg[length..$];
          *     return length;
          * };
@@ -2892,7 +2882,7 @@ struct HTTP
         if (!userAgent.length)
         {
             auto curlVer = Curl.curl.version_info(CURLVERSION_NOW).version_num;
-            userAgent = cast(immutable)sformat(
+            userAgent = cast(immutable) sformat(
                 buf, fmt, version_major, version_minor,
                 curlVer >> 16 & 0xFF, curlVer >> 8 & 0xFF, curlVer & 0xFF);
         }
@@ -3088,13 +3078,13 @@ struct HTTP
         // cannot use callback when specifying data directly so it is disabled here.
         p.curl.clear(CurlOption.readfunction);
         addRequestHeader("Content-Type", contentType);
-        p.curl.set(CurlOption.postfields, cast(void*)data.ptr);
+        p.curl.set(CurlOption.postfields, cast(void*) data.ptr);
         p.curl.set(CurlOption.postfieldsize, data.length);
         if (method == Method.undefined)
             method = Method.post;
     }
 
-    unittest
+    @system unittest
     {
         import std.algorithm.searching : canFind;
 
@@ -3107,7 +3097,7 @@ struct HTTP
         });
         auto data = new ubyte[](256);
         foreach (i, ref ub; data)
-            ub = cast(ubyte)i;
+            ub = cast(ubyte) i;
 
         auto http = HTTP(testServer.addr~"/path");
         http.postData = data;
@@ -3263,7 +3253,7 @@ struct HTTP
 
 } // HTTP
 
-unittest // charset/Charset/CHARSET/...
+@system unittest // charset/Charset/CHARSET/...
 {
     import std.meta : AliasSeq;
 
@@ -3665,7 +3655,7 @@ struct FTP
         return p.curl.getTiming(timing, val);
     }
 
-    unittest
+    @system unittest
     {
         auto client = FTP();
 
@@ -3732,7 +3722,7 @@ struct SMTP
             {
                 if (!msg.length) return 0;
                 size_t to_copy = min(data.length, _message.length);
-                data[0..to_copy] = (cast(void[])_message)[0..to_copy];
+                data[0 .. to_copy] = (cast(void[])_message)[0 .. to_copy];
                 _message = _message[to_copy..$];
                 return to_copy;
             };
@@ -4534,10 +4524,10 @@ struct Curl
       * string msg = "Hello world";
       * curl.onSend = (void[] data)
       * {
-      *     auto m = cast(void[])msg;
+      *     auto m = cast(void[]) msg;
       *     size_t length = m.length > data.length ? data.length : m.length;
       *     if (length == 0) return 0;
-      *     data[0..length] = m[0..length];
+      *     data[0 .. length] = m[0 .. length];
       *     msg = msg[length..$];
       *     return length;
       * };
@@ -4677,7 +4667,7 @@ struct Curl
     {
         auto b = cast(Curl*) ptr;
         if (b._onReceive != null)
-            return b._onReceive(cast(InData)(str[0..size*nmemb]));
+            return b._onReceive(cast(InData)(str[0 .. size*nmemb]));
         return size*nmemb;
     }
 
@@ -4688,7 +4678,7 @@ struct Curl
         import std.string : chomp;
 
         auto b = cast(Curl*) ptr;
-        auto s = str[0..size*nmemb].chomp();
+        auto s = str[0 .. size*nmemb].chomp();
         if (b._onReceiveHeader != null)
             b._onReceiveHeader(s);
 
@@ -4699,7 +4689,7 @@ struct Curl
     size_t _sendCallback(char *str, size_t size, size_t nmemb, void *ptr)
     {
         Curl* b = cast(Curl*) ptr;
-        auto a = cast(void[]) str[0..size*nmemb];
+        auto a = cast(void[]) str[0 .. size*nmemb];
         if (b._onSend == null)
             return 0;
         return b._onSend(a);
@@ -4739,8 +4729,8 @@ struct Curl
             return 0;
 
         // return: 0 ok, 1 fail
-        return b._onProgress(cast(size_t)dltotal, cast(size_t)dlnow,
-                             cast(size_t)ultotal, cast(size_t)ulnow);
+        return b._onProgress(cast(size_t) dltotal, cast(size_t) dlnow,
+                             cast(size_t) ultotal, cast(size_t) ulnow);
     }
 
 }
@@ -4824,12 +4814,12 @@ private static size_t _receiveAsyncChunks(ubyte[] data, ref ubyte[] outdata,
             // them.
             receive((immutable(ubyte)[] buf)
                     {
-                        buffer = cast(ubyte[])buf;
+                        buffer = cast(ubyte[]) buf;
                         outdata = buffer[];
                     },
                     (bool flag) { aborted = true; }
                     );
-            if (aborted) return cast(size_t)0;
+            if (aborted) return cast(size_t) 0;
         }
         if (outdata.empty)
         {
@@ -4841,7 +4831,7 @@ private static size_t _receiveAsyncChunks(ubyte[] data, ref ubyte[] outdata,
         auto copyBytes = outdata.length < data.length ?
             outdata.length : data.length;
 
-        outdata[0..copyBytes] = data[0..copyBytes];
+        outdata[0 .. copyBytes] = data[0 .. copyBytes];
         outdata = outdata[copyBytes..$];
         data = data[copyBytes..$];
 
@@ -4895,14 +4885,14 @@ private static size_t _receiveAsyncLines(Terminator, Unit)
             // reuse them.
             receive((immutable(Unit)[] buf)
                     {
-                        buffer = cast(Unit[])buf;
+                        buffer = cast(Unit[]) buf;
                         buffer.length = 0;
                         buffer.assumeSafeAppend();
                         bufferValid = true;
                     },
                     (bool flag) { aborted = true; }
                     );
-            if (aborted) return cast(size_t)0;
+            if (aborted) return cast(size_t) 0;
         }
         if (!bufferValid)
         {
@@ -4954,7 +4944,7 @@ private static size_t _receiveAsyncLines(Terminator, Unit)
         catch (CurlException ex)
         {
             prioritySend(fromTid, cast(immutable(CurlException))ex);
-            return cast(size_t)0;
+            return cast(size_t) 0;
         }
     }
     return datalen;
@@ -5004,7 +4994,7 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
     }
 
     // no move semantic available in std.concurrency ie. must use casting.
-    auto connDup = cast(CURL*)receiveOnly!ulong();
+    auto connDup = cast(CURL*) receiveOnly!ulong();
     auto client = Conn();
     client.p.curl.handle = connDup;
 

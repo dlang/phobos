@@ -114,20 +114,22 @@ If this module exists and it contains a $(D LogLevel) called logLevel this $(D
 LogLevel) will be used. This parent lookup is continued until there is no
 parent module. Then the moduleLogLevel is $(D LogLevel.all).
 */
-template moduleLogLevel(string moduleName) if (!moduleName.length)
+template moduleLogLevel(string moduleName)
+if (!moduleName.length)
 {
     // default
     enum moduleLogLevel = LogLevel.all;
 }
 
 ///
-unittest
+@system unittest
 {
     static assert(moduleLogLevel!"" == LogLevel.all);
 }
 
 /// ditto
-template moduleLogLevel(string moduleName) if (moduleName.length)
+template moduleLogLevel(string moduleName)
+if (moduleName.length)
 {
     import std.string : format;
     mixin(q{
@@ -146,7 +148,7 @@ template moduleLogLevel(string moduleName) if (moduleName.length)
 }
 
 ///
-unittest
+@system unittest
 {
     static assert(moduleLogLevel!"not.amodule.path" == LogLevel.all);
 }
@@ -165,11 +167,11 @@ $(LREF std.datatime.DateTime.toISOExtString) except the fractional second part.
 The fractional second part is in milliseconds and is always 3 digits.
 */
 void systimeToISOString(OutputRange)(OutputRange o, const ref SysTime time)
-    if (isOutputRange!(OutputRange,string))
+if (isOutputRange!(OutputRange,string))
 {
     import std.format : formattedWrite;
 
-    const auto dt = cast(DateTime)time;
+    const auto dt = cast(DateTime) time;
     const auto fsec = time.fracSecs.total!"msecs";
 
     formattedWrite(o, "%04d-%02d-%02dT%02d:%02d:%02d.%03d",
@@ -197,7 +199,7 @@ void log(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(const LogLevel ll,
     lazy bool condition, lazy A args)
-    if (args.length != 1)
+if (args.length != 1)
 {
     static if (isLoggingActive)
     {
@@ -241,7 +243,7 @@ log(LogLevel.warning, "Hello World", 3.1415);
 void log(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(const LogLevel ll, lazy A args)
-    if (args.length > 1 && !is(Unqual!(A[0]) : bool))
+if (args.length > 1 && !is(Unqual!(A[0]) : bool))
 {
     static if (isLoggingActive)
     {
@@ -286,7 +288,7 @@ log(true, "Hello World", 3.1415);
 void log(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(lazy bool condition, lazy A args)
-    if (args.length != 1)
+if (args.length != 1)
 {
     static if (isLoggingActive)
     {
@@ -323,9 +325,9 @@ log("Hello World", 3.1415);
 void log(int line = __LINE__, string file = __FILE__,
     string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
     string moduleName = __MODULE__, A...)(lazy A args)
-    if ((args.length > 1 && !is(Unqual!(A[0]) : bool)
-            && !is(Unqual!(A[0]) == LogLevel))
-        || args.length == 0)
+if ((args.length > 1 && !is(Unqual!(A[0]) : bool)
+    && !is(Unqual!(A[0]) == LogLevel))
+    || args.length == 0)
 {
     static if (isLoggingActive)
     {
@@ -665,7 +667,7 @@ private void formatString(A...)(MsgRange oRange, A args)
     }
 }
 
-unittest
+@system unittest
 {
     void dummy() @safe
     {
@@ -742,12 +744,14 @@ abstract class Logger
         Logger logger;
     }
 
-    /** This constructor takes a name of type $(D string), and a $(D LogLevel).
+    /**
+    Every subclass of `Logger` has to call this constructor from their
+    constructor. It sets the `LogLevel`, and creates a fatal handler. The fatal
+    handler will throw an `Error` if a log call is made with level
+    `LogLevel.fatal`.
 
-    Every subclass of $(D Logger) has to call this constructor from their
-    constructor. It sets the $(D LogLevel), the name of the $(D Logger), and
-    creates a fatal handler. The fatal handler will throw an $(D Error) if a
-    log call is made with a $(D LogLevel) $(D LogLevel.fatal).
+    Params:
+         lv = `LogLevel` to use for this `Logger` instance.
     */
     this(LogLevel lv) @safe
     {
@@ -1627,7 +1631,7 @@ private @property Logger defaultSharedLoggerImpl() @trusted
     import std.conv : emplace;
     import std.stdio : stderr;
 
-    static __gshared ubyte[__traits(classInstanceSize, FileLogger)] _buffer;
+    static __gshared align(FileLogger.alignof) void[__traits(classInstanceSize, FileLogger)] _buffer;
 
     synchronized (stdSharedLoggerMutex)
     {
@@ -1657,6 +1661,9 @@ While getting and setting $(D sharedLog) is thread-safe, it has to be considered
 that the returned reference is only a current snapshot and in the following
 code, you must make sure no other thread reassigns to it between reading and
 writing $(D sharedLog).
+
+$(D sharedLog) is only thread-safe if the the used $(D Logger) is thread-safe.
+The default $(D Logger) is thread-safe.
 -------------
 if (sharedLog !is myLogger)
     sharedLog = new myLogger;
@@ -1759,7 +1766,7 @@ private @property Logger stdThreadLocalLogImpl() @trusted
 {
     import std.conv : emplace;
 
-    static ubyte[__traits(classInstanceSize, StdForwardLogger)] _buffer;
+    static void*[(__traits(classInstanceSize, StdForwardLogger) - 1) / (void*).sizeof + 1] _buffer;
 
     auto buffer = cast(ubyte[]) _buffer;
 
@@ -1798,7 +1805,7 @@ functions.
 }
 
 /// Ditto
-unittest
+@system unittest
 {
     import std.experimental.logger.filelogger : FileLogger;
     import std.file : deleteme, remove;
@@ -2081,7 +2088,7 @@ version(unittest) private void testFuncNames(Logger logger) @safe
     assert(l.logLevel == LogLevel.all);
 }
 
-unittest // default logger
+@system unittest // default logger
 {
     import std.file : deleteme, exists, remove;
     import std.stdio : File;
@@ -2121,7 +2128,7 @@ unittest // default logger
     file.close();
 }
 
-unittest
+@system unittest
 {
     import std.file : deleteme, remove;
     import std.stdio : File;
@@ -2958,7 +2965,7 @@ unittest
     assert(tl.msg.indexOf("error") == 0);
 }
 
-unittest
+@system unittest
 {
     import std.exception : assertThrown;
     auto tl = new TestLogger();
@@ -2966,7 +2973,7 @@ unittest
 }
 
 // log objects with non-safe toString
-unittest
+@system unittest
 {
     struct Test
     {
@@ -2997,7 +3004,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
 
 // check that thread-local logging does not propagate
 // to shared logger
-unittest
+@system unittest
 {
     import std.concurrency, core.atomic, core.thread;
 
@@ -3042,7 +3049,7 @@ unittest
     sharedLog = new IgnoredLog;
     Thread[] spawned;
 
-    foreach (i; 0..4)
+    foreach (i; 0 .. 4)
     {
         spawned ~= new Thread({
             stdThreadLocalLog = new TestLog;
@@ -3054,17 +3061,17 @@ unittest
     foreach (t; spawned)
         t.join();
 
-    assert (atomicOp!"=="(logged_count, 4));
+    assert(atomicOp!"=="(logged_count, 4));
 }
 
 @safe unittest
 {
-    auto dl = cast(FileLogger)sharedLog;
+    auto dl = cast(FileLogger) sharedLog;
     assert(dl !is null);
     assert(dl.logLevel == LogLevel.all);
     assert(globalLogLevel == LogLevel.all);
 
-    auto tl = cast(StdForwardLogger)stdThreadLocalLog;
+    auto tl = cast(StdForwardLogger) stdThreadLocalLog;
     assert(tl !is null);
     stdThreadLocalLog.logLevel = LogLevel.all;
 }
@@ -3081,7 +3088,7 @@ unittest
 }
 
 // Ensure @system toString methods work
-unittest
+@system unittest
 {
     enum SystemToStringMsg = "SystemToString";
     static struct SystemToString

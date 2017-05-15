@@ -570,7 +570,7 @@ int deflateInit2(z_streamp strm,
    this version of the library.
 
      The windowBits parameter is the base two logarithm of the window size
-   (the size of the history buffer).  It should be in the range 8..15 for this
+   (the size of the history buffer).  It should be in the range 8 .. 15 for this
    version of the library.  Larger values of this parameter result in better
    compression at the expense of memory usage.  The default value is 15 if
    deflateInit is used instead.
@@ -728,7 +728,7 @@ int deflateParams(z_streamp strm, int level, int strategy);
    strategy is changed, and if any input has been consumed in a previous
    deflate() call, then the input available so far is compressed with the old
    level and strategy using deflate(strm, Z_BLOCK).  There are three approaches
-   for the compression levels 0, 1..3, and 4..9 respectively.  The new level
+   for the compression levels 0, 1 .. 3, and 4 .. 9 respectively.  The new level
    and strategy will take effect at the next call of deflate().
 
      If a deflate(strm, Z_BLOCK) is performed by deflateParams(), and it does
@@ -842,7 +842,7 @@ int inflateInit2(z_streamp strm, int windowBits)
    before by the caller.
 
      The windowBits parameter is the base two logarithm of the maximum window
-   size (the size of the history buffer).  It should be in the range 8..15 for
+   size (the size of the history buffer).  It should be in the range 8 .. 15 for
    this version of the library.  The default value is 15 if inflateInit is used
    instead.  windowBits must be greater than or equal to the windowBits value
    provided to deflateInit2() while compressing, or it must be equal to 15 if
@@ -1073,7 +1073,7 @@ int inflateBackInit(z_stream* strm, int windowBits, ubyte* window)
    calls.  The fields zalloc, zfree and opaque in strm must be initialized
    before the call.  If zalloc and zfree are Z_NULL, then the default library-
    derived memory allocation routines are used.  windowBits is the base two
-   logarithm of the window size, in the range 8..15.  window is a caller
+   logarithm of the window size, in the range 8 .. 15.  window is a caller
    supplied buffer of that size.  Except for special applications where it is
    assured that deflate was used with small window sizes, windowBits must be 15
    and a 32K byte window must be supplied to be able to decompress general
@@ -1127,7 +1127,7 @@ int inflateBack(z_stream* strm,
    number of bytes of provided input, and a pointer to that input in buf.  If
    there is no input available, in() must return zero -- buf is ignored in that
    case -- and inflateBack() will return a buffer error.  inflateBack() will
-   call out(out_desc, buf, len) to write the uncompressed data buf[0..len-1].
+   call out(out_desc, buf, len) to write the uncompressed data buf[0 .. len-1].
    out() should return zero on success, or non-zero on failure.  If out()
    returns non-zero, inflateBack() will return with an error.  Neither in() nor
    out() are permitted to change the contents of the window provided to
@@ -1684,7 +1684,7 @@ void gzclearerr(gzFile file);
 
 uint adler32(uint adler, const(ubyte)* buf, uint len);
 /*
-     Update a running Adler-32 checksum with the bytes buf[0..len-1] and
+     Update a running Adler-32 checksum with the bytes buf[0 .. len-1] and
    return the updated checksum.  If buf is Z_NULL, this function returns the
    required initial value for the checksum.
 
@@ -1718,7 +1718,7 @@ uint adler32_combine(uint adler1, uint adler2, z_off_t len2);
 
 uint crc32(uint crc, const(ubyte)* buf, uint len);
 /*
-     Update a running CRC-32 with the bytes buf[0..len-1] and return the
+     Update a running CRC-32 with the bytes buf[0 .. len-1] and return the
    updated CRC-32.  If buf is Z_NULL, this function returns the required
    initial value for the crc.  Pre- and post-conditioning (one's complement) is
    performed within this function so it shouldn't be done by the application.

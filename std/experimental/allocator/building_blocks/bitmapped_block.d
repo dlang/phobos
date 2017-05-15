@@ -50,12 +50,12 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     import std.conv : text;
     import std.typecons : Ternary;
 
-    unittest
+    @system unittest
     {
         import std.experimental.allocator.mallocator : AlignedMallocator;
         import std.algorithm.comparison : max;
-        auto m = AlignedMallocator.instance.alignedAllocate(1024 * 64,
-            max(theAlignment, cast(uint) size_t.sizeof));
+        auto m = cast(ubyte[])(AlignedMallocator.instance.alignedAllocate(1024 * 64,
+                                max(theAlignment, cast(uint) size_t.sizeof)));
         scope(exit) AlignedMallocator.instance.deallocate(m);
         testAllocator!(() => BitmappedBlock(m));
     }
@@ -153,7 +153,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     ParentAllocator.deallocate).)
     )
     */
-    this(void[] data)
+    this(ubyte[] data)
     {
         immutable a = data.ptr.effectiveAlignment;
         assert(a >= size_t.alignof || !data.ptr,
@@ -177,7 +177,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
                 // Overestimated
                 continue;
             }
-            _control = BitVector((cast(ulong*)data.ptr)[0 .. controlWords]);
+            _control = BitVector((cast(ulong*) data.ptr)[0 .. controlWords]);
             _control[] = 0;
             _payload = payload;
             break;
@@ -189,7 +189,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     this(size_t capacity)
     {
         size_t toAllocate = totalAllocation(capacity);
-        auto data = parent.allocate(toAllocate);
+        auto data = cast(ubyte[])(parent.allocate(toAllocate));
         this(data);
         assert(_blocks * blockSize >= capacity);
     }
@@ -690,25 +690,25 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 }
 
 ///
-unittest
+@system unittest
 {
     // Create a block allocator on top of a 10KB stack region.
     import std.experimental.allocator.building_blocks.region : InSituRegion;
     import std.traits : hasMember;
     InSituRegion!(10_240, 64) r;
-    auto a = BitmappedBlock!(64, 64)(r.allocateAll());
+    auto a = BitmappedBlock!(64, 64)(cast(ubyte[])(r.allocateAll()));
     static assert(hasMember!(InSituRegion!(10_240, 64), "allocateAll"));
     const b = a.allocate(100);
     assert(b.length == 100);
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     testAllocator!(() => BitmappedBlock!(64, 8, GCAllocator)(1024 * 64));
 }
 
-unittest
+@system unittest
 {
     static void testAllocateAll(size_t bs)(uint blocks, uint blocksAtATime)
     {
@@ -716,7 +716,8 @@ unittest
         assert(bs);
         import std.experimental.allocator.gc_allocator : GCAllocator;
         auto a = BitmappedBlock!(bs, min(bs, platformAlignment))(
-            GCAllocator.instance.allocate((blocks * bs * 8 + blocks) / 8)
+            cast(ubyte[])(GCAllocator.instance.allocate((blocks * bs * 8 +
+                        blocks) / 8))
         );
         import std.conv : text;
         assert(blocks >= a._blocks, text(blocks, " < ", a._blocks));
@@ -823,7 +824,7 @@ unittest
 }
 
 // Test totalAllocation
-unittest
+@safe unittest
 {
     BitmappedBlock!(8, 8, NullAllocator) h1;
     assert(h1.totalAllocation(1) >= 8);
@@ -860,11 +861,11 @@ struct BitmappedBlockWithInternalPointers(
 {
     import std.conv : text;
     import std.typecons : Ternary;
-    unittest
+    @system unittest
     {
         import std.experimental.allocator.mallocator : AlignedMallocator;
-        auto m = AlignedMallocator.instance.alignedAllocate(1024 * 64,
-            theAlignment);
+        auto m = cast(ubyte[])(AlignedMallocator.instance.alignedAllocate(1024 * 64,
+            theAlignment));
         scope(exit) AlignedMallocator.instance.deallocate(m);
         testAllocator!(() => BitmappedBlockWithInternalPointers(m));
     }
@@ -878,7 +879,7 @@ struct BitmappedBlockWithInternalPointers(
     Constructors accepting desired capacity or a preallocated buffer, similar
     in semantics to those of $(D BitmappedBlock).
     */
-    this(void[] data)
+    this(ubyte[] data)
     {
         _heap = BitmappedBlock!(theBlockSize, theAlignment, ParentAllocator)(data);
     }
@@ -996,22 +997,23 @@ struct BitmappedBlockWithInternalPointers(
     }
 
     /// Ditto
-    void[] resolveInternalPointer(void* p)
+    Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
         if (p < _heap._payload.ptr
             || p >= _heap._payload.ptr + _heap._payload.length)
         {
-            return null;
+            return Ternary.no;
         }
         // Find block start
         auto block = (p - _heap._payload.ptr) / _heap.blockSize;
-        if (block >= _allocStart.length) return null;
+        if (block >= _allocStart.length) return Ternary.no;
         // Within an allocation, must find the 1 just to the left of it
         auto i = _allocStart.find1Backward(block);
-        if (i == i.max) return null;
+        if (i == i.max) return Ternary.no;
         auto j = _allocStart.find1(i + 1);
-        return _heap._payload.ptr[cast(size_t) (_heap.blockSize * i)
-            .. cast(size_t) (_heap.blockSize * j)];
+        result = _heap._payload.ptr[cast(size_t) (_heap.blockSize * i)
+                                    .. cast(size_t) (_heap.blockSize * j)];
+        return Ternary.yes;
     }
 
     /// Ditto
@@ -1059,22 +1061,34 @@ struct BitmappedBlockWithInternalPointers(
     }
 }
 
-unittest
+@system unittest
 {
-    auto h = BitmappedBlockWithInternalPointers!(4096)(new void[4096 * 1024]);
+    import std.typecons : Ternary;
+
+    auto h = BitmappedBlockWithInternalPointers!(4096)(new ubyte[4096 * 1024]);
     auto b = h.allocate(123);
     assert(b.length == 123);
-    const p = h.resolveInternalPointer(b.ptr + 17);
+
+    void[] p;
+    Ternary r = h.resolveInternalPointer(b.ptr + 17, p);
     assert(p.ptr is b.ptr);
     assert(p.length >= b.length);
     b = h.allocate(4096);
-    assert(h.resolveInternalPointer(b.ptr) is b);
-    assert(h.resolveInternalPointer(b.ptr + 11) is b);
-    assert(h.resolveInternalPointer(b.ptr - 40_970) is null);
+
+    h.resolveInternalPointer(b.ptr, p);
+    assert(p is b);
+
+    h.resolveInternalPointer(b.ptr + 11, p);
+    assert(p is b);
+
+    void[] unchanged = p;
+    h.resolveInternalPointer(b.ptr - 40_970, p);
+    assert(p is unchanged);
 
     assert(h.expand(b, 1));
     assert(b.length == 4097);
-    assert(h.resolveInternalPointer(b.ptr + 4096).ptr is b.ptr);
+    h.resolveInternalPointer(b.ptr + 4096, p);
+    assert(p.ptr is b.ptr);
 }
 
 /**
@@ -1092,7 +1106,7 @@ private uint leadingOnes(ulong x)
     return result;
 }
 
-unittest
+@system unittest
 {
     assert(leadingOnes(0) == 0);
     assert(leadingOnes(~0UL) == 64);
@@ -1117,7 +1131,7 @@ private uint findContigOnes(ulong x, uint n)
     return leadingOnes(~x);
 }
 
-unittest
+@system unittest
 {
     assert(findContigOnes(0x0000_0000_0000_0300, 2) == 54);
 
@@ -1141,7 +1155,7 @@ private void setBits(ref ulong w, uint lsb, uint msb)
     w |= mask;
 }
 
-unittest
+@system unittest
 {
     ulong w;
     w = 0; setBits(w, 0, 63); assert(w == ulong.max);
@@ -1339,7 +1353,7 @@ private struct BitVector
     }
 }
 
-unittest
+@system unittest
 {
     auto v = BitVector(new ulong[10]);
     assert(v.length == 640);

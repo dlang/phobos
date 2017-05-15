@@ -167,7 +167,7 @@ alias curl_progress_callback = int function(void *clientp, double dltotal, doubl
    time for those who feel adventurous. The practical minimum is about
    400 bytes since libcurl uses a buffer of this size as a scratch area
    (unrelated to network send operations). */
-enum CURL_MAX_WRITE_SIZE = 16384;
+enum CURL_MAX_WRITE_SIZE = 16_384;
 
 /** The only reason to have a max limit for this is to avoid the risk of a bad
    server feeding libcurl with a never-ending header that will cause reallocs
@@ -555,7 +555,7 @@ enum CurlAuth : long {
   gssnegotiate = 4,  /** GSS-Negotiate */
   ntlm =         8,  /** NTLM */
   digest_ie =    16, /** Digest with IE flavour */
-  only =         2147483648, /** used together with a single other
+  only =         2_147_483_648, /** used together with a single other
                                 type to force no auth or just that
                                 single type */
   any = -17,     /* (~CURLAUTH_DIGEST_IE) */  /** all fine types set */
@@ -691,18 +691,18 @@ enum CurlProto {
   tftp   = 2048,        ///
   imap   = 4096,        ///
   imaps  = 8192,        ///
-  pop3   = 16384,       ///
-  pop3s  = 32768,       ///
-  smtp   = 65536,       ///
-  smtps  = 131072,      ///
-  rtsp   = 262144,      ///
-  rtmp   = 524288,      ///
-  rtmpt  = 1048576,     ///
-  rtmpe  = 2097152,     ///
-  rtmpte = 4194304,     ///
-  rtmps  = 8388608,     ///
-  rtmpts = 16777216,    ///
-  gopher = 33554432,    ///
+  pop3   = 16_384,       ///
+  pop3s  = 32_768,       ///
+  smtp   = 65_536,       ///
+  smtps  = 131_072,      ///
+  rtsp   = 262_144,      ///
+  rtmp   = 524_288,      ///
+  rtmpt  = 1_048_576,     ///
+  rtmpe  = 2_097_152,     ///
+  rtmpte = 4_194_304,     ///
+  rtmps  = 8_388_608,     ///
+  rtmpts = 16_777_216,    ///
+  gopher = 33_554_432,    ///
   all    = -1 /** enable everything */
 }
 
@@ -710,12 +710,12 @@ enum CurlProto {
    but 32 */
 enum CURLOPTTYPE_LONG = 0;
 /// ditto
-enum CURLOPTTYPE_OBJECTPOINT = 10000;
+enum CURLOPTTYPE_OBJECTPOINT = 10_000;
 /// ditto
-enum CURLOPTTYPE_FUNCTIONPOINT = 20000;
+enum CURLOPTTYPE_FUNCTIONPOINT = 20_000;
 
 /// ditto
-enum CURLOPTTYPE_OFF_T = 30000;
+enum CURLOPTTYPE_OFF_T = 30_000;
 /** name is uppercase CURLOPT_$(LT)name$(GT),
    type is one of the defined CURLOPTTYPE_$(LT)type$(GT)
    number is unique identifier */
@@ -733,13 +733,13 @@ alias OFF_T = CURLOPTTYPE_OFF_T;
 ///
 enum CurlOption {
   /** This is the FILE * or void * the regular output should be written to. */
-  file = 10001,
+  file = 10_001,
   /** The full URL to get/put */
   url,
   /** Port number to connect to, if other than default. */
   port = 3,
   /** Name of proxy to use. */
-  proxy = 10004,
+  proxy = 10_004,
   /** "name:password" to use when fetching. */
   userpwd,
   /** "name:password" to use with proxy. */
@@ -749,13 +749,13 @@ enum CurlOption {
   /** not used */
 
   /** Specified file stream to upload from (use as input): */
-  infile = 10009,
+  infile = 10_009,
   /** Buffer to receive error messages in, must be at least CURL_ERROR_SIZE
    * bytes big. If this is not used, error messages go to stderr instead: */
   errorbuffer,
   /** Function that will be called to store the output (instead of fwrite). The
    * parameters will use fwrite() syntax, make sure to follow them. */
-  writefunction = 20011,
+  writefunction = 20_011,
   /** Function that will be called to read the input (instead of fread). The
    * parameters will use fread() syntax, make sure to follow them. */
   readfunction,
@@ -772,7 +772,7 @@ enum CurlOption {
    */
   infilesize,
   /** POST static input fields. */
-  postfields = 10015,
+  postfields = 10_015,
   /** Set the referrer page (needed by some CGIs) */
   referer,
   /** Set the FTP PORT string (interface name, named or numerical IP address)
@@ -798,7 +798,7 @@ enum CurlOption {
    */
   resume_from,
   /** Set cookie in request: */
-  cookie = 10022,
+  cookie = 10_022,
   /** This points to a linked list of headers, struct curl_slist kind */
   httpheader,
   /** This points to a linked list of post entries, struct curl_httppost */
@@ -810,13 +810,13 @@ enum CurlOption {
   /** send TYPE parameter? */
   crlf = 27,
   /** send linked-list of QUOTE commands */
-  quote = 10028,
+  quote = 10_028,
   /** send FILE * or void * to store headers to, if you use a callback it
      is simply passed to the callback unmodified */
   writeheader,
   /** point to a file to read the initial cookies from, also enables
      "cookie awareness" */
-  cookiefile = 10031,
+  cookiefile = 10_031,
   /** What version to specifically try to use.
      See CURL_SSLVERSION defines below. */
   sslversion = 32,
@@ -831,13 +831,13 @@ enum CurlOption {
      HTTP: DELETE, TRACE and others
      FTP: to use a different list command
      */
-  customrequest = 10036,
+  customrequest = 10_036,
   /** HTTP request, for odd commands like DELETE, TRACE and others */
   stderr,
   /* 38 is not used */
 
   /** send linked-list of post-transfer QUOTE commands */
-  postquote = 10039,
+  postquote = 10_039,
   /** Pass a pointer to string of the output using full variable-replacement
      as described elsewhere. */
   writeinfo,
@@ -861,9 +861,9 @@ enum CurlOption {
   /** Function that will be called instead of the internal progress display
    * function. This function should be defined as the curl_progress_callback
    * prototype defines. */
-  progressfunction = 20056,
+  progressfunction = 20_056,
   /** Data passed to the progress callback */
-  progressdata = 10057,
+  progressdata = 10_057,
   /** We want the referrer field set automatically when following locations */
   autoreferer = 58,
   /** Port of the proxy, can be set in the proxy string as well with:
@@ -874,7 +874,7 @@ enum CurlOption {
   /** tunnel non-http operations through a HTTP proxy */
   httpproxytunnel,
   /** Set the interface string to use as outgoing network interface */
-  intrface = 10062,
+  intrface = 10_062,
   /** Set the krb4/5 security level, this also enables krb4/5 awareness.  This
    * is a string, 'clear', 'safe', 'confidential' or 'private'.  If the string
    * is set but doesn't match one of these, 'private' will be used.  */
@@ -883,7 +883,7 @@ enum CurlOption {
   ssl_verifypeer = 64,
   /** The CApath or CAfile used to validate the peer certificate
      this option is used only if SSL_VERIFYPEER is true */
-  cainfo = 10065,
+  cainfo = 10_065,
   /* 66 = OBSOLETE */
   /* 67 = OBSOLETE */
 
@@ -893,7 +893,7 @@ enum CurlOption {
      possible)! Pass a zero to shut it off. */
   filetime,
   /** This points to a linked list of telnet options */
-  telnetoptions = 10070,
+  telnetoptions = 10_070,
   /** Max amount of cached alive connections */
   maxconnects = 71,
   /** What policy to use when closing connections when the cache is filled
@@ -911,7 +911,7 @@ enum CurlOption {
   forbid_reuse,
   /** Set to a file name that contains random data for libcurl to use to
      seed the random engine when doing SSL connects. */
-  random_file = 10076,
+  random_file = 10_076,
   /** Set to the Entropy Gathering Daemon socket pathname */
   egdsocket,
   /** Time-out connect operations after this amount of seconds, if connects
@@ -920,7 +920,7 @@ enum CurlOption {
   connecttimeout = 78,
   /** Function that will be called to store headers (instead of fwrite). The
    * parameters will use fwrite() syntax, make sure to follow them. */
-  headerfunction = 20079,
+  headerfunction = 20_079,
   /** Set this to force the HTTP request to get back to GET. Only really usable
      if POST, PUT or a custom request have been used first.
    */
@@ -931,7 +931,7 @@ enum CurlOption {
   ssl_verifyhost,
   /** Specify which file name to write all known cookies in after completed
      operation. Set file name to "-" (dash) to make it go to stdout. */
-  cookiejar = 10082,
+  cookiejar = 10_082,
   /** Specify which SSL ciphers to use */
   ssl_cipher_list,
   /** Specify which HTTP version to use! This must be set to one of the
@@ -942,7 +942,7 @@ enum CurlOption {
      PASV command. */
   ftp_use_epsv,
   /** type of the file keeping your SSL-certificate ("DER", "PEM", "ENG") */
-  sslcerttype = 10086,
+  sslcerttype = 10_086,
   /** name of the file keeping your private SSL-key */
   sslkey,
   /** type of the file keeping your private SSL-key ("DER", "PEM", "ENG") */
@@ -958,16 +958,16 @@ enum CurlOption {
   /** DNS cache timeout */
   dns_cache_timeout,
   /** send linked-list of pre-transfer QUOTE commands */
-  prequote = 10093,
+  prequote = 10_093,
   /** set the debug function */
-  debugfunction = 20094,
+  debugfunction = 20_094,
   /** set the data for the debug function */
-  debugdata = 10095,
+  debugdata = 10_095,
   /** mark this as start of a cookie session */
   cookiesession = 96,
   /** The CApath directory used to validate the peer certificate
      this option is used only if SSL_VERIFYPEER is true */
-  capath = 10097,
+  capath = 10_097,
   /** Instruct libcurl to use a smaller receive buffer */
   buffersize = 98,
   /** Instruct libcurl to not use any signal/alarm handlers, even when using
@@ -975,13 +975,13 @@ enum CurlOption {
      See libcurl-the-guide for more background information. */
   nosignal,
   /** Provide a CURLShare for mutexing non-ts data */
-  share = 10100,
+  share = 10_100,
   /** indicates type of proxy. accepted values are CURLPROXY_HTTP (default),
      CURLPROXY_SOCKS4, CURLPROXY_SOCKS4A and CURLPROXY_SOCKS5. */
   proxytype = 101,
   /** Set the Accept-Encoding string. Use this to tell a server you would like
      the response to be compressed. */
-  encoding = 10102,
+  encoding = 10_102,
   /** Set pointer to private data */
   private_opt,
   /** Set aliases for HTTP 200 in the HTTP Response header */
@@ -1001,10 +1001,10 @@ enum CurlOption {
   /** Set the ssl context callback function, currently only for OpenSSL ssl_ctx
      in second argument. The function must be matching the
      curl_ssl_ctx_callback proto. */
-  ssl_ctx_function = 20108,
+  ssl_ctx_function = 20_108,
   /** Set the userdata for the ssl context callback function's third
      argument */
-  ssl_ctx_data = 10109,
+  ssl_ctx_data = 10_109,
   /** FTP Option that causes missing dirs to be created on the remote server.
      In 7.19.4 we introduced the convenience enums for this option using the
      CURLFTP_CREATE_DIR prefix.
@@ -1032,7 +1032,7 @@ enum CurlOption {
   /** See the comment for INFILESIZE above, but in short, specifies
    * the size of the file being uploaded.  -1 means unknown.
    */
-  infilesize_large = 30115,
+  infilesize_large = 30_115,
   /** Sets the continuation offset.  There is also a LONG version of this;
    * look above for RESUME_FROM.
    */
@@ -1045,7 +1045,7 @@ enum CurlOption {
      to parse (using the CURLOPT_NETRC option). If not set, libcurl will do
      a poor attempt to find the user's home directory and check for a .netrc
      file in there. */
-  netrc_file = 10118,
+  netrc_file = 10_118,
   /** Enable SSL/TLS for FTP, pick one of:
      CURLFTPSSL_TRY     - try using SSL, proceed anyway otherwise
      CURLFTPSSL_CONTROL - SSL for the control connection or fail
@@ -1053,7 +1053,7 @@ enum CurlOption {
   */
   use_ssl = 119,
   /** The _LARGE version of the standard POSTFIELDSIZE option */
-  postfieldsize_large = 30120,
+  postfieldsize_large = 30_120,
   /** Enable/disable the TCP Nagle algorithm */
   tcp_nodelay = 121,
   /* 122 OBSOLETE, used in 7.12.3. Gone in 7.13.0 */
@@ -1075,14 +1075,14 @@ enum CurlOption {
      CURLFTPAUTH_TLS     - try "AUTH TLS" first, then SSL
   */
   ftpsslauth = 129,
-  ioctlfunction = 20130,        ///
-  ioctldata = 10131,            ///
+  ioctlfunction = 20_130,        ///
+  ioctldata = 10_131,            ///
   /* 132 OBSOLETE. Gone in 7.16.0 */
   /* 133 OBSOLETE. Gone in 7.16.0 */
 
   /** zero terminated string for pass on to the FTP server when asked for
      "account" info */
-  ftp_account = 10134,
+  ftp_account = 10_134,
   /** feed cookies into cookie engine */
   cookielist,
   /** ignore Content-Length */
@@ -1106,7 +1106,7 @@ enum CurlOption {
   connect_only,
   /** Function that will be called to convert from the
      network encoding (instead of using the iconv calls in libcurl) */
-  conv_from_network_function = 20142,
+  conv_from_network_function = 20_142,
   /** Function that will be called to convert to the
      network encoding (instead of using the iconv calls in libcurl) */
   conv_to_network_function,
@@ -1117,20 +1117,20 @@ enum CurlOption {
   /** If the connection proceeds too quickly then need to slow it down */
   /** */
   /** limit-rate: maximum number of bytes per second to send or receive */
-  max_send_speed_large = 30145,
+  max_send_speed_large = 30_145,
   max_recv_speed_large, /// ditto
   /** Pointer to command string to send if USER/PASS fails. */
-  ftp_alternative_to_user = 10147,
+  ftp_alternative_to_user = 10_147,
   /** callback function for setting socket options */
-  sockoptfunction = 20148,
-  sockoptdata = 10149,
+  sockoptfunction = 20_148,
+  sockoptdata = 10_149,
   /** set to 0 to disable session ID re-use for this transfer, default is
      enabled (== 1) */
   ssl_sessionid_cache = 150,
   /** allowed SSH authentication methods */
   ssh_auth_types,
   /** Used by scp/sftp to do public/private key authentication */
-  ssh_public_keyfile = 10152,
+  ssh_public_keyfile = 10_152,
   ssh_private_keyfile,
   /** Send CCC (Clear Command Channel) after authentication */
   ftp_ssl_ccc = 154,
@@ -1149,20 +1149,20 @@ enum CurlOption {
      of CURL_REDIR* defines below. This used to be called CURLOPT_POST301 */
   postredir,
   /** used by scp/sftp to verify the host's public key */
-  ssh_host_public_key_md5 = 10162,
+  ssh_host_public_key_md5 = 10_162,
   /** Callback function for opening socket (instead of socket(2)). Optionally,
      callback is able change the address or refuse to connect returning
      CURL_SOCKET_BAD.  The callback should have type
      curl_opensocket_callback */
-  opensocketfunction = 20163,
-  opensocketdata = 10164,       /// ditto
+  opensocketfunction = 20_163,
+  opensocketdata = 10_164,       /// ditto
   /** POST volatile input fields. */
   copypostfields,
   /** set transfer mode (;type=$(LT)a|i$(GT)) when doing FTP via an HTTP proxy */
   proxy_transfer_mode = 166,
   /** Callback function for seeking in the input stream */
-  seekfunction = 20167,
-  seekdata = 10168,     /// ditto
+  seekfunction = 20_167,
+  seekdata = 10_168,     /// ditto
   /** CRL file */
   crlfile,
   /** Issuer certificate */
@@ -1174,7 +1174,7 @@ enum CurlOption {
      working with OpenSSL-powered builds. */
   certinfo,
   /** "name" and "pwd" to use when fetching. */
-  username = 10173,
+  username = 10_173,
   password,     /// ditto
   /** "name" and "pwd" to use with Proxy when fetching. */
   proxyusername,
@@ -1190,7 +1190,7 @@ enum CurlOption {
   /** block size for TFTP transfers */
   tftp_blksize = 178,
   /** Socks Service */
-  socks5_gssapi_service = 10179,
+  socks5_gssapi_service = 10_179,
   /** Socks Service */
   socks5_gssapi_nec = 180,
   /** set the bitmask for the protocols that are allowed to be used for the
@@ -1204,12 +1204,12 @@ enum CurlOption {
      to all protocols except FILE and SCP. */
   redir_protocols,
   /** set the SSH knownhost file name to use */
-  ssh_knownhosts = 10183,
+  ssh_knownhosts = 10_183,
   /** set the SSH host key callback, must point to a curl_sshkeycallback
      function */
-  ssh_keyfunction = 20184,
+  ssh_keyfunction = 20_184,
   /** set the SSH host key callback custom pointer */
-  ssh_keydata = 10185,
+  ssh_keydata = 10_185,
   /** set the SMTP mail originator */
   mail_from,
   /** set the SMTP mail receiver(s) */
@@ -1219,7 +1219,7 @@ enum CurlOption {
   /** RTSP request method (OPTIONS, SETUP, PLAY, etc...) */
   rtsp_request,
   /** The RTSP session identifier */
-  rtsp_session_id = 10190,
+  rtsp_session_id = 10_190,
   /** The RTSP stream URI */
   rtsp_stream_uri,
   /** The Transport: header to use in RTSP requests */
@@ -1229,21 +1229,21 @@ enum CurlOption {
   /** Manually initialize the server RTSP CSeq for this handle */
   rtsp_server_cseq,
   /** The stream to pass to INTERLEAVEFUNCTION. */
-  interleavedata = 10195,
+  interleavedata = 10_195,
   /** Let the application define a custom write method for RTP data */
-  interleavefunction = 20196,
+  interleavefunction = 20_196,
   /** Turn on wildcard matching */
   wildcardmatch = 197,
   /** Directory matching callback called before downloading of an
      individual file (chunk) started */
-  chunk_bgn_function = 20198,
+  chunk_bgn_function = 20_198,
   /** Directory matching callback called after the file (chunk)
      was downloaded, or skipped */
   chunk_end_function,
   /** Change match (fnmatch-like) callback for wildcard matching */
   fnmatch_function,
   /** Let the application define custom chunk data pointer */
-  chunk_data = 10201,
+  chunk_data = 10_201,
   /** FNMATCH_FUNCTION user pointer */
   fnmatch_data,
   /** send linked-list of name:port:address sets */
@@ -1652,9 +1652,9 @@ enum CURLINFO_TYPEMASK = 0xf00000;
 ///
 enum CurlInfo {
     none,       ///
-    effective_url = 1048577,    ///
-    response_code = 2097154,    ///
-    total_time = 3145731,       ///
+    effective_url = 1_048_577,    ///
+    response_code = 2_097_154,    ///
+    total_time = 3_145_731,       ///
     namelookup_time,    ///
     connect_time,       ///
     pretransfer_time,   ///
@@ -1662,38 +1662,38 @@ enum CurlInfo {
     size_download,      ///
     speed_download,     ///
     speed_upload,       ///
-    header_size = 2097163,      ///
+    header_size = 2_097_163,      ///
     request_size,       ///
     ssl_verifyresult,   ///
     filetime,   ///
-    content_length_download = 3145743,  ///
+    content_length_download = 3_145_743,  ///
     content_length_upload,      ///
     starttransfer_time, ///
-    content_type = 1048594,     ///
-    redirect_time = 3145747,    ///
-    redirect_count = 2097172,   ///
-    private_info = 1048597,     ///
-    http_connectcode = 2097174, ///
+    content_type = 1_048_594,     ///
+    redirect_time = 3_145_747,    ///
+    redirect_count = 2_097_172,   ///
+    private_info = 1_048_597,     ///
+    http_connectcode = 2_097_174, ///
     httpauth_avail,     ///
     proxyauth_avail,    ///
     os_errno,   ///
     num_connects,       ///
-    ssl_engines = 4194331,      ///
+    ssl_engines = 4_194_331,      ///
     cookielist, ///
-    lastsocket = 2097181,       ///
-    ftp_entry_path = 1048606,   ///
+    lastsocket = 2_097_181,       ///
+    ftp_entry_path = 1_048_606,   ///
     redirect_url,       ///
     primary_ip, ///
-    appconnect_time = 3145761,  ///
-    certinfo = 4194338, ///
-    condition_unmet = 2097187,  ///
-    rtsp_session_id = 1048612,  ///
-    rtsp_client_cseq = 2097189, ///
+    appconnect_time = 3_145_761,  ///
+    certinfo = 4_194_338, ///
+    condition_unmet = 2_097_187,  ///
+    rtsp_session_id = 1_048_612,  ///
+    rtsp_client_cseq = 2_097_189, ///
     rtsp_server_cseq,   ///
     rtsp_cseq_recv,     ///
     primary_port,       ///
-    local_ip = 1048617, ///
-    local_port = 2097194,       ///
+    local_ip = 1_048_617, ///
+    local_port = 2_097_194,       ///
     /** Fill in new entries below here! */
     lastone = 42
 }
@@ -1867,7 +1867,7 @@ enum CurlVersion {
   sspi         = 2048,  /** SSPI is supported */
   conv         = 4096,  /** character conversions supported */
   curldebug    = 8192,  /** debug memory tracking supported */
-  tlsauth_srp  = 16384  /** TLS-SRP auth is supported */
+  tlsauth_srp  = 16_384  /** TLS-SRP auth is supported */
 }
 
 extern (C) {
@@ -2304,11 +2304,11 @@ extern (C) CURLMcode  curl_multi_timeout(CURLM *multi_handle, c_long *millisecon
 
 ///
 enum CurlMOption {
-    socketfunction = 20001,    /** This is the socket callback function pointer */
-    socketdata = 10002,        /** This is the argument passed to the socket callback */
+    socketfunction = 20_001,    /** This is the socket callback function pointer */
+    socketdata = 10_002,        /** This is the argument passed to the socket callback */
     pipelining = 3,             /** set to 1 to enable pipelining for this multi handle */
-    timerfunction = 20004,     /** This is the timer callback function pointer */
-    timerdata = 10005,          /** This is the argument passed to the timer callback */
+    timerfunction = 20_004,     /** This is the timer callback function pointer */
+    timerdata = 10_005,          /** This is the argument passed to the timer callback */
     maxconnects = 6,            /** maximum number of entries in the connection cache */
     lastentry   ///
 }

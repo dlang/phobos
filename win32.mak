@@ -150,9 +150,6 @@ SRC_STD_3a= \
 	std\concurrency.d \
 	std\concurrencybase.d
 
-SRC_STD_3b= \
-	std\datetime.d
-
 SRC_STD_4= \
 	std\uuid.d
 
@@ -175,7 +172,6 @@ SRC_STD= \
 	$(SRC_STD_2a) \
 	$(SRC_STD_3) \
 	$(SRC_STD_3a) \
-	$(SRC_STD_3b) \
 	$(SRC_STD_4) \
 	$(SRC_STD_6) \
 	$(SRC_STD_7)
@@ -199,6 +195,14 @@ SRC_STD_CONTAINER= \
 	std\container\util.d \
 	std\container\package.d
 
+SRC_STD_DATETIME= \
+	std\datetime\date.d \
+	std\datetime\interval.d \
+	std\datetime\package.d \
+	std\datetime\stopwatch.d \
+	std\datetime\systime.d \
+	std\datetime\timezone.d
+
 SRC_STD_DIGEST= \
 	std\digest\crc.d \
 	std\digest\sha.d \
@@ -220,19 +224,12 @@ SRC_STD_RANGE= \
 SRC_STD_REGEX= \
 	std\regex\internal\ir.d \
 	std\regex\package.d \
-	std\regex\internal\tests.d \
-	std\regex\internal\generator.d
-
-SRC_STD_REGEX_2 = \
 	std\regex\internal\parser.d \
+	std\regex\internal\tests.d \
 	std\regex\internal\backtracking.d \
 	std\regex\internal\thompson.d \
-	std\regex\internal\tests2.d
-
-SRC_STD_REGEX_3 = \
-	std\regex\internal\shiftor.d \
-	std\regex\internal\bitnfa.d \
-	std\regex\internal\tests3.d
+	std\regex\internal\kickstart.d \
+	std\regex\internal\generator.d
 
 SRC_STD_C= \
 	std\c\process.d \
@@ -298,7 +295,7 @@ SRC_STD_INTERNAL_WINDOWS= \
 	std\internal\windows\advapi32.d
 
 SRC_STD_EXP= \
-	std\experimental\typecons.d
+	std\experimental\checkedint.d std\experimental\typecons.d
 
 SRC_STD_EXP_ALLOC_BB= \
 	std\experimental\allocator\building_blocks\affix_allocator.d \
@@ -334,13 +331,6 @@ SRC_STD_EXP_LOGGER= \
 	std\experimental\logger\nulllogger.d \
 	std\experimental\logger\package.d
 
-SRC_STD_EXP_NDSLICE= \
-	std\experimental\ndslice\package.d \
-	std\experimental\ndslice\iteration.d \
-	std\experimental\ndslice\selection.d \
-	std\experimental\ndslice\slice.d \
-	std\experimental\ndslice\internal.d
-
 SRC_ETC=
 
 SRC_ETC_C= \
@@ -356,12 +346,11 @@ SRC_TO_COMPILE= \
 	$(SRC_STD) \
 	$(SRC_STD_ALGO) \
 	$(SRC_STD_CONTAINER) \
+	$(SRC_STD_DATETIME) \
 	$(SRC_STD_DIGEST) \
 	$(SRC_STD_NET) \
 	$(SRC_STD_RANGE) \
 	$(SRC_STD_REGEX) \
-	$(SRC_STD_REGEX_2) \
-	$(SRC_STD_REGEX_3) \
 	$(SRC_STD_C) \
 	$(SRC_STD_WIN) \
 	$(SRC_STD_C_WIN) \
@@ -372,7 +361,6 @@ SRC_TO_COMPILE= \
 	$(SRC_STD_EXP) \
 	$(SRC_STD_EXP_ALLOC) \
 	$(SRC_STD_EXP_LOGGER) \
-	$(SRC_STD_EXP_NDSLICE) \
 	$(SRC_ETC) \
 	$(SRC_ETC_C)
 
@@ -465,6 +453,11 @@ DOCS= \
 	$(DOC)\std_digest_hmac.html \
 	$(DOC)\std_csv.html \
 	$(DOC)\std_datetime.html \
+	$(DOC)\std_datetime_date.html \
+	$(DOC)\std_datetime_interval.html \
+	$(DOC)\std_datetime_stopwatch.html \
+	$(DOC)\std_datetime_systime.html \
+	$(DOC)\std_datetime_timezone.html \
 	$(DOC)\std_demangle.html \
 	$(DOC)\std_encoding.html \
 	$(DOC)\std_exception.html \
@@ -532,10 +525,6 @@ DOCS= \
 	$(DOC)\std_experimental_allocator_showcase.html \
 	$(DOC)\std_experimental_allocator_typed.html \
 	$(DOC)\std_experimental_allocator.html \
-	$(DOC)\std_experimental_ndslice_iteration.html \
-	$(DOC)\std_experimental_ndslice_selection.html \
-	$(DOC)\std_experimental_ndslice_slice.html \
-	$(DOC)\std_experimental_ndslice.html \
 	$(DOC)\std_experimental_typecons.html \
 	$(DOC)\std_windows_charset.html \
 	$(DOC)\std_windows_registry.html \
@@ -580,10 +569,7 @@ UNITTEST_OBJS= \
 		unittest8c.obj \
 		unittest8d.obj \
 		unittest8e.obj \
-		unittest8f.obj \
-		unittest8g.obj \
-		unittest8h.obj \
-		unittest9a.obj
+		unittest8f.obj
 
 unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest1.obj $(SRC_STD_1)
@@ -591,20 +577,17 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest2a.obj $(SRC_STD_2a)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3.obj $(SRC_STD_3)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3b.obj $(SRC_STD_3b)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest3b.obj $(SRC_STD_DATETIME)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest4.obj $(SRC_STD_4) $(SRC_STD_DIGEST)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest5.obj $(SRC_STD_ALGO)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest6.obj $(SRC_STD_6) $(SRC_STD_CONTAINER) $(SRC_STD_EXP_ALLOC) $(SRC_STD_EXP_LOGGER)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest7.obj $(SRC_STD_7)
 	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8a.obj $(SRC_STD_REGEX)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8b.obj $(SRC_STD_REGEX_2)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8c.obj $(SRC_STD_REGEX_3)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8d.obj $(SRC_STD_NET)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8e.obj $(SRC_STD_C) $(SRC_STD_WIN) $(SRC_STD_C_WIN)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8f.obj $(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8g.obj $(SRC_ETC) $(SRC_ETC_C)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8h.obj $(SRC_STD_EXP)
-	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest9a.obj $(SRC_STD_EXP_NDSLICE)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8b.obj $(SRC_STD_NET)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8c.obj $(SRC_STD_C) $(SRC_STD_WIN) $(SRC_STD_C_WIN)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8d.obj $(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8e.obj $(SRC_ETC) $(SRC_ETC_C)
+	$(DMD) $(UDFLAGS) -L/co -c -unittest -ofunittest8f.obj $(SRC_STD_EXP)
 	$(DMD) $(UDFLAGS) -L/co -unittest unittest.d $(UNITTEST_OBJS) \
 		$(ZLIB) $(DRUNTIMELIB)
 	.\unittest.exe
@@ -655,7 +638,12 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=92 -unittest -main -run std\exception.d
 	$(DMD) -conf= -cov=73 -unittest -main -run std\concurrency.d
 	$(DMD) -conf= -cov=100 -unittest -main -run std\concurrencybase.d
-	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\date.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\interval.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\package.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\stopwatch.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\systime.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\timezone.d
 	$(DMD) -conf= -cov=96 -unittest -main -run std\uuid.d
 	$(DMD) -conf= -cov=100 -unittest -main -run std\digest\crc.d
 	$(DMD) -conf= -cov=55 -unittest -main -run std\digest\sha.d
@@ -850,8 +838,23 @@ $(DOC)\std_range_interfaces.html : $(STDDOC) std\range\interfaces.d
 $(DOC)\std_csv.html : $(STDDOC) std\csv.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_csv.html $(STDDOC) std\csv.d
 
-$(DOC)\std_datetime.html : $(STDDOC) std\datetime.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime.html $(STDDOC) std\datetime.d
+$(DOC)\std_datetime.html : $(STDDOC) std\datetime\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime.html $(STDDOC) std\datetime\package.d
+
+$(DOC)\std_datetime_date.html : $(STDDOC) std\datetime\date.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_date.html $(STDDOC) std\datetime\date.d
+
+$(DOC)\std_datetime_interval.html : $(STDDOC) std\datetime\interval.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_interval.html $(STDDOC) std\datetime\interval.d
+
+$(DOC)\std_datetime_stopwatch.html : $(STDDOC) std\datetime\stopwatch.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_stopwatch.html $(STDDOC) std\datetime\stopwatch.d
+
+$(DOC)\std_datetime_systime.html : $(STDDOC) std\datetime\systime.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_systime.html $(STDDOC) std\datetime\systime.d
+
+$(DOC)\std_datetime_timezone.html : $(STDDOC) std\datetime\timezone.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_timezone.html $(STDDOC) std\datetime\timezone.d
 
 $(DOC)\std_demangle.html : $(STDDOC) std\demangle.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_demangle.html $(STDDOC) std\demangle.d
@@ -1068,18 +1071,6 @@ $(DOC)\std_experimental_allocator.html : $(STDDOC) std\experimental\allocator\pa
 
 $(DOC)\std_experimental_typecons.html : $(STDDOC) std\experimental\typecons.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_typecons.html $(STDDOC) std\experimental\typecons.d
-
-$(DOC)\std_experimental_ndslice_iteration.html : $(STDDOC) std\experimental\ndslice\iteration.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice_iteration.html $(STDDOC) std\experimental\ndslice\iteration.d
-
-$(DOC)\std_experimental_ndslice_selection.html : $(STDDOC) std\experimental\ndslice\selection.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice_selection.html $(STDDOC) std\experimental\ndslice\selection.d
-
-$(DOC)\std_experimental_ndslice_slice.html : $(STDDOC) std\experimental\ndslice\slice.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice_slice.html $(STDDOC) std\experimental\ndslice\slice.d
-
-$(DOC)\std_experimental_ndslice.html : $(STDDOC) std\experimental\ndslice\package.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_experimental_ndslice.html $(STDDOC) std\experimental\ndslice\package.d
 
 $(DOC)\std_digest_crc.html : $(STDDOC) std\digest\crc.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_digest_crc.html $(STDDOC) std\digest\crc.d
