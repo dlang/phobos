@@ -7427,8 +7427,8 @@ Params:
     windowSize = Sliding window size
     stepSize = Steps between the windows (by default 1)
 
-Returns: Range of all sliding windows with propagated bidirectionality,
-         forwarding, conditional random access and slicing.
+Returns: Range of all sliding windows with propagated bi-directionality,
+         forwarding, conditional random access, and slicing.
 
 See_Also: $(LREF chunks)
 */
@@ -7454,15 +7454,15 @@ private:
     else
     {
         // if there's no information about the length, track needs to be kept manually
-        private Source _nextSource;
+        Source _nextSource;
         enum needsEndTracker = true;
     }
 
-    private bool _empty;
+    bool _empty;
 
     static if (hasSlicing!Source)
     {
-        private enum hasSliceToEnd = hasSlicing!Source && is(typeof(Source.init[0 .. $]) == Source);
+        enum hasSliceToEnd = hasSlicing!Source && is(typeof(Source.init[0 .. $]) == Source);
     }
 
 public:
@@ -7516,7 +7516,7 @@ public:
     /// Forward range primitives. Always present.
     @property auto front()
     {
-        assert(!empty, "Attempting to access front on an empty range");
+        assert(!empty, "Attempting to access front on an empty slides");
         static if (hasSlicing!Source && hasLength!Source)
         {
             import std.algorithm.comparison : min;
@@ -7531,7 +7531,7 @@ public:
     /// Ditto
     void popFront()
     {
-        assert(!empty, "Attempting to call popFront() on an empty range");
+        assert(!empty, "Attempting to call popFront() on an empty slides");
         _source.popFrontN(_stepSize);
 
         // if the range has less elements than its window size,
@@ -7593,7 +7593,7 @@ public:
     {
         /**
         Indexing and slicing operations. Provided only if
-        $(D hasSlicing!Source) is $(D true).
+        `hasSlicing!Source` is `true`.
          */
         auto opIndex(size_t index)
         {
@@ -7617,6 +7617,7 @@ public:
 
         static if (!isInfinite!Source)
         {
+            /// ditto
             typeof(this) opSlice(size_t lower, size_t upper)
             {
                 import std.algorithm.comparison : min;
@@ -7738,7 +7739,7 @@ public:
             {
                 import std.algorithm.comparison : max;
 
-                assert(!empty, "Attempting to access front on an empty slice");
+                assert(!empty, "Attempting to access front on an empty slides");
 
                 immutable len = _source.length;
                 /*
@@ -7793,7 +7794,7 @@ public:
             /// Ditto
             void popBack()
             {
-                assert(!empty, "Attempting to call popBack() on an empty range");
+                assert(!empty, "Attempting to call popBack() on an empty slides");
 
                 immutable end = _source.length > _stepSize ? _source.length - _stepSize : 0;
                 _source = _source[0 .. end];
