@@ -5209,6 +5209,7 @@ auto sequence(alias fun, State...)(State args)
     assert(s.front != s.front);  // no caching
 }
 
+// iota
 /**
    Construct a range of values that span the given starting and stopping
    values.
@@ -5272,47 +5273,57 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
 
     static struct Result
     {
-        private Value current, pastLast;
-        private StepType step;
+        private Value current, last;
+        private StepType step; // by convention, 0 if range is empty
 
         this(Value current, Value pastLast, StepType step)
         {
-            if ((current < pastLast && step >= 0) ||
-                    (current > pastLast && step <= 0))
+            if (current < pastLast && step > 0)
             {
-                this.step = step;
-                this.current = current;
-                if (step > 0)
-                {
-                    assert(unsigned((pastLast - current) / step) <= size_t.max);
-
-                    this.pastLast = pastLast - 1;
-                    this.pastLast -= (this.pastLast - current) % step;
-                }
-                else
-                {
-                    if (step < 0)
-                        assert(unsigned((current - pastLast) / -step) <= size_t.max);
-
-                    this.pastLast = pastLast + 1;
-                    this.pastLast += (current - this.pastLast) % -step;
-                }
-                this.pastLast += step;
+                // Iterating upward
+                assert(unsigned((pastLast - current) / step) <= size_t.max);
+                // Cast below can't fail because current < pastLast
+                this.last = cast(Value) (pastLast - 1);
+                this.last -= unsigned(this.last - current) % step;
+            }
+            else if (current > pastLast && step < 0)
+            {
+                // Iterating downward
+                assert(unsigned((current - pastLast) / -step) <= size_t.max);
+                // Cast below can't fail because current > pastLast
+                this.last = cast(Value) (pastLast + 1);
+                this.last += unsigned(current - this.last) % -step;
             }
             else
             {
                 // Initialize an empty range
-                this.current = this.pastLast = current;
-                this.step = 1;
+                this.step = 0;
+                return;
             }
+            this.step = step;
+            this.current = current;
         }
 
-        @property bool empty() const { return current == pastLast; }
+        @property bool empty() const { return step == 0; }
         @property inout(Value) front() inout { assert(!empty); return current; }
-        void popFront() { assert(!empty); current += step; }
+        void popFront()
+        {
+            assert(!empty);
+            if (current == last) step = 0;
+            else current += step;
+        }
 
-        @property inout(Value) back() inout { assert(!empty); return pastLast - step; }
-        void popBack() { assert(!empty); pastLast -= step; }
+        @property inout(Value) back() inout
+        {
+            assert(!empty);
+            return last;
+        }
+        void popBack()
+        {
+            assert(!empty);
+            if (current == last) step = 0;
+            else last -= step;
+        }
 
         @property auto save() { return this; }
 
@@ -5329,20 +5340,18 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         {
             assert(upper >= lower && upper <= this.length);
 
-            return cast(inout Result) Result(cast(Value)(current + lower * step),
-                                            cast(Value)(pastLast - (length - upper) * step),
-                                            step);
+            return cast(inout Result) Result(
+                cast(Value)(current + lower * step),
+                cast(Value)(current + upper * step),
+                step);
         }
         @property size_t length() const
         {
             if (step > 0)
-            {
-                return cast(size_t)((pastLast - current) / step);
-            }
-            else
-            {
-                return cast(size_t)((current - pastLast) / -step);
-            }
+                return 1 + cast(size_t) ((last - current) / step);
+            if (step < 0)
+                return 1 + cast(size_t) ((current - last) / -step);
+            return 0;
         }
 
         alias opDollar = length;
@@ -5744,6 +5753,26 @@ debug @system unittest
         const s1 = cRange[];
         const s2 = cRange[0 .. 3];
         const l = cRange.length;
+    }
+}
+
+@nogc nothrow pure @safe
+unittest
+{
+    {
+        ushort start = 0, end = 10, step = 2;
+        foreach (i; iota(start, end, step))
+            static assert(is(typeof(i) == ushort));
+    }
+    {
+        ubyte start = 0, end = 255, step = 128;
+        uint x;
+        foreach (i; iota(start, end, step))
+        {
+            static assert(is(typeof(i) == ubyte));
+            ++x;
+        }
+        assert(x == 2);
     }
 }
 
