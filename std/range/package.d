@@ -5217,7 +5217,7 @@ auto sequence(alias fun, State...)(State args)
 
 // iota
 /**
-   Construct a range of values that span the given starting and stopping
+   Creates a range of values that span the given starting and stopping
    values.
 
    Params:
@@ -5354,9 +5354,9 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         @property size_t length() const
         {
             if (step > 0)
-                return 1 + cast(size_t) ((last - current) / step);
+                return 1 + cast(size_t) (unsigned(last - current) / step);
             if (step < 0)
-                return 1 + cast(size_t) ((current - last) / -step);
+                return 1 + cast(size_t) (unsigned(current - last) / -step);
             return 0;
         }
 
@@ -5553,6 +5553,12 @@ nothrow @nogc @safe unittest
     auto t1 = iota(0, 10, 2);
     auto t2 = iota(1, 1, 0);
     //float overloads use std.conv.to so can't be @nogc or nothrow
+    alias ssize_t = Signed!size_t;
+    assert(iota(ssize_t.max, 0, -1).length == ssize_t.max);
+    assert(iota(ssize_t.max, ssize_t.min, -1).length == size_t.max);
+    assert(iota(ssize_t.max, ssize_t.min, -2).length == 1 + size_t.max / 2);
+    assert(iota(ssize_t.min, ssize_t.max, 2).length == 1 + size_t.max / 2);
+    assert(iota(ssize_t.max, ssize_t.min, -3).length == size_t.max / 3);
 }
 
 debug @system unittest
