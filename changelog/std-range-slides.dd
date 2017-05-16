@@ -26,8 +26,8 @@ assert(6.iota.slide(2, 4).equal!equal(
 ));
 
 // allow slide with less elements than the window size
-assert(3.iota.slide!(No.slideWithLessElements)(4).empty);
-assert(3.iota.slide!(Yes.slideWithLessElements)(4).equal!equal(
+assert(3.iota.slide!(No.withFewerElements)(4).empty);
+assert(3.iota.slide!(Yes.withFewerElements)(4).equal!equal(
     [[0, 1, 2]]
 ));
 ---

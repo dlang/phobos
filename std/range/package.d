@@ -7419,10 +7419,10 @@ For `windowSize = 1` it splits the range into single element groups (aka `unflat
 For `windowSize = 2` it is similar to `zip(source, source.save.dropOne)`.
 
 Params:
-    f = If `Yes.slideWithLessElements` slide with fewer
+    f = If `Yes.withFewerElements` slide with fewer
         elements than `windowSize`. This can only happen if the initial range
         contains less elements than `windowSize`. In this case
-        if `No.slideWithLessElements` an empty range will be returned.
+        if `No.withFewerElements` an empty range will be returned.
     r = Range from which the slide will be selected
     windowSize = Sliding window size
     stepSize = Steps between the windows (by default 1)
@@ -7432,14 +7432,14 @@ Returns: Range of all sliding windows with propagated bi-directionality,
 
 See_Also: $(LREF chunks)
 */
-auto slide(Flag!"slideWithLessElements" f = Yes.slideWithLessElements,
+auto slide(Flag!"withFewerElements" f = Yes.withFewerElements,
             Source)(Source source, size_t windowSize, size_t stepSize = 1)
     if (isForwardRange!Source)
 {
     return Slides!(f, Source)(source, windowSize, stepSize);
 }
 
-private struct Slides(Flag!"slideWithLessElements" slideWithLessElements = Yes.slideWithLessElements, Source)
+private struct Slides(Flag!"withFewerElements" withFewerElements = Yes.withFewerElements, Source)
     if (isForwardRange!Source)
 {
 private:
@@ -7482,7 +7482,7 @@ public:
             _nextSource.popFrontN(windowSize);
         }
 
-        static if (!slideWithLessElements)
+        static if (!withFewerElements)
         {
             // empty source range is needed, s.t. length, slicing etc. works properly
             static if (needsEndTracker)
@@ -7577,7 +7577,7 @@ public:
         {
             if (_source.length < _windowSize)
             {
-                static if (slideWithLessElements)
+                static if (withFewerElements)
                     return 1;
                 else
                     return 0;
@@ -7832,8 +7832,8 @@ public:
     ));
 
     // allow slide with less elements than the window size
-    assert(3.iota.slide!(No.slideWithLessElements)(4).empty);
-    assert(3.iota.slide!(Yes.slideWithLessElements)(4).equal!equal(
+    assert(3.iota.slide!(No.withFewerElements)(4).empty);
+    assert(3.iota.slide!(Yes.withFewerElements)(4).equal!equal(
         [[0, 1, 2]]
     ));
 }
@@ -8023,31 +8023,31 @@ unittest
     assert(iota(3).slide(4, 3)[$ .. 1].empty);
 }
 
-// test No.slideWithLessElements
+// test No.withFewerElements
 @safe pure nothrow unittest
 {
     assert(iota(3).slide(4).length == 1);
     assert(iota(3).slide(4, 4).length == 1);
 
-    assert(iota(3).slide!(No.slideWithLessElements)(4).empty);
-    assert(iota(3, 3).slide!(No.slideWithLessElements)(4).empty);
-    assert(iota(3).slide!(No.slideWithLessElements)(4).length == 0);
-    assert(iota(3).slide!(No.slideWithLessElements)(4, 4).length == 0);
+    assert(iota(3).slide!(No.withFewerElements)(4).empty);
+    assert(iota(3, 3).slide!(No.withFewerElements)(4).empty);
+    assert(iota(3).slide!(No.withFewerElements)(4).length == 0);
+    assert(iota(3).slide!(No.withFewerElements)(4, 4).length == 0);
 
-    assert(iota(3).slide!(No.slideWithLessElements)(400).empty);
-    assert(iota(3).slide!(No.slideWithLessElements)(400).length == 0);
-    assert(iota(3).slide!(No.slideWithLessElements)(400, 10).length == 0);
+    assert(iota(3).slide!(No.withFewerElements)(400).empty);
+    assert(iota(3).slide!(No.withFewerElements)(400).length == 0);
+    assert(iota(3).slide!(No.withFewerElements)(400, 10).length == 0);
 
-    assert(iota(3).slide!(No.slideWithLessElements)(4)[0 .. $].empty);
-    assert(iota(3).slide!(No.slideWithLessElements)(4)[$ .. $].empty);
-    assert(iota(3).slide!(No.slideWithLessElements)(4)[$ .. 0].empty);
-    assert(iota(3).slide!(No.slideWithLessElements)(4)[$/2 .. $].empty);
+    assert(iota(3).slide!(No.withFewerElements)(4)[0 .. $].empty);
+    assert(iota(3).slide!(No.withFewerElements)(4)[$ .. $].empty);
+    assert(iota(3).slide!(No.withFewerElements)(4)[$ .. 0].empty);
+    assert(iota(3).slide!(No.withFewerElements)(4)[$/2 .. $].empty);
 
     // with different step sizes
-    assert(iota(3).slide!(No.slideWithLessElements)(4, 5)[0 .. $].empty);
-    assert(iota(3).slide!(No.slideWithLessElements)(4, 6)[$ .. $].empty);
-    assert(iota(3).slide!(No.slideWithLessElements)(4, 7)[$ .. 0].empty);
-    assert(iota(3).slide!(No.slideWithLessElements)(4, 8)[$/2 .. $].empty);
+    assert(iota(3).slide!(No.withFewerElements)(4, 5)[0 .. $].empty);
+    assert(iota(3).slide!(No.withFewerElements)(4, 6)[$ .. $].empty);
+    assert(iota(3).slide!(No.withFewerElements)(4, 7)[$ .. 0].empty);
+    assert(iota(3).slide!(No.withFewerElements)(4, 8)[$/2 .. $].empty);
 }
 
 // test with infinite ranges
@@ -8203,7 +8203,7 @@ unittest
             [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]]
         ));
 
-        assert(r.slide!(No.slideWithLessElements)(15).empty);
+        assert(r.slide!(No.withFewerElements)(15).empty);
     }
 
     alias BackwardsDummyRanges = AliasSeq!(
@@ -8356,11 +8356,11 @@ unittest
         Range r;
         r.arr = 10.iota.array; // for clarity
 
-        assert(r.slide!(No.slideWithLessElements)(6).equal!equal(
+        assert(r.slide!(No.withFewerElements)(6).equal!equal(
             [[0, 1, 2, 3, 4, 5], [1, 2, 3, 4, 5, 6], [2, 3, 4, 5, 6, 7],
             [3, 4, 5, 6, 7, 8], [4, 5, 6, 7, 8, 9]]
         ));
-        assert(r.slide!(No.slideWithLessElements)(16).empty);
+        assert(r.slide!(No.withFewerElements)(16).empty);
 
         assert(r.slide(4)[0 .. $].equal(r.slide(4)));
         assert(r.slide(2)[$/2 .. $].equal!equal([[4, 5], [5, 6], [6, 7], [7, 8], [8, 9]]));
