@@ -1,33 +1,33 @@
-`std.range.slides` (a fixed-size sliding window range) was added
+`std.range.slide` (a fixed-size sliding window range) was added
 
-$(REF slides, std, range) allows to iterate a range in sliding windows:
+$(REF slide, std, range) allows to iterate a range in sliding windows:
 
 ---
 import std.array : array;
 import std.algorithm.comparison : equal;
 
-assert([0, 1, 2, 3].slides(2).equal!equal(
+assert([0, 1, 2, 3].slide(2).equal!equal(
     [[0, 1], [1, 2], [2, 3]]
 ));
-assert(5.iota.slides(3).equal!equal(
+assert(5.iota.slide(3).equal!equal(
     [[0, 1, 2], [1, 2, 3], [2, 3, 4]]
 ));
 
-assert(iota(7).slides(2, 2).equal!equal([[0, 1], [2, 3], [4, 5]]));
-assert(iota(12).slides(2, 4).equal!equal([[0, 1], [4, 5], [8, 9]]));
+assert(iota(7).slide(2, 2).equal!equal([[0, 1], [2, 3], [4, 5]]));
+assert(iota(12).slide(2, 4).equal!equal([[0, 1], [4, 5], [8, 9]]));
 
 // set a custom stepsize (default 1)
-assert(6.iota.slides(1, 2).equal!equal(
+assert(6.iota.slide(1, 2).equal!equal(
     [[0], [2], [4]]
 ));
 
-assert(6.iota.slides(2, 4).equal!equal(
+assert(6.iota.slide(2, 4).equal!equal(
     [[0, 1], [4, 5]]
 ));
 
-// allow slides with less elements than the window size
-assert(3.iota.slides!(No.slidesWithLessElements)(4).empty);
-assert(3.iota.slides!(Yes.slidesWithLessElements)(4).equal!equal(
+// allow slide with less elements than the window size
+assert(3.iota.slide!(No.withFewerElements)(4).empty);
+assert(3.iota.slide!(Yes.withFewerElements)(4).equal!equal(
     [[0, 1, 2]]
 ));
 ---
