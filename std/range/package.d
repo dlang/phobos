@@ -2503,7 +2503,7 @@ The type returned by $(D takeOne) is a random-access range with length
 regardless of $(D R)'s capabilities, as long as it is a forward range.
 (another feature that distinguishes $(D takeOne) from $(D take)). If
 (D R) is an input range but not a forward range, return type is an input
-range with all random-access capabilites except save.
+range with all random-access capabilities except save.
  */
 auto takeOne(R)(R source)
 if (isInputRange!R)
@@ -9720,7 +9720,7 @@ $(D SortedRange) is currently restricted to random-access ranges.
 
 No copy of the original range is ever made. If the underlying range is
 changed concurrently with its corresponding $(D SortedRange) in ways
-that break its sortedness, $(D SortedRange) will work erratically.
+that break its sorted-ness, $(D SortedRange) will work erratically.
 */
 @safe unittest
 {
@@ -9860,13 +9860,13 @@ that break its sortedness, $(D SortedRange) will work erratically.
 Assumes $(D r) is sorted by predicate $(D pred) and returns the
 corresponding $(D SortedRange!(pred, R)) having $(D r) as support. To
 keep the checking costs low, the cost is $(BIGOH 1) in release mode
-(no checks for sortedness are performed). In debug mode, a few random
-elements of $(D r) are checked for sortedness. The size of the sample
+(no checks for sorted-ness are performed). In debug mode, a few random
+elements of $(D r) are checked for sorted-ness. The size of the sample
 is proportional $(BIGOH log(r.length)). That way, checking has no
 effect on the complexity of subsequent operations specific to sorted
 ranges (such as binary search). The probability of an arbitrary
 unsorted range failing the test is very high (however, an
-almost-sorted range is likely to pass it). To check for sortedness at
+almost-sorted range is likely to pass it). To check for sorted-ness at
 cost $(BIGOH n), use $(REF isSorted, std,algorithm,sorting).
  */
 auto assumeSorted(alias pred = "a < b", R)(R r)
@@ -11262,7 +11262,7 @@ struct NullSink
   calling `front` is enough to have `tee` mirror elements to `outputRange` (or,
   respectively, `fun`). If `No.pipeOnPop`, only elements for which `front` does
   get called will be also sent to `outputRange`/`fun`.
-  inputRange = The input range beeing passed through.
+  inputRange = The input range being passed through.
   outputRange = This range will receive elements of `inputRange` progressively
   as iteration proceeds.
   fun = This function will be called with elements of `inputRange`
