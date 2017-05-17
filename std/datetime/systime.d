@@ -8201,7 +8201,11 @@ public:
         The exact format is exactly as described in $(D toISOString) except that
         trailing zeroes are permitted - including having fractional seconds with
         all zeroes. However, a decimal point with nothing following it is
-        invalid.
+        invalid. Also, while $(LREF toISOString) will never generate a string
+        with more than 7 digits in the fractional seconds (because that's the
+        limit with hecto-nanosecond precision), it will allow more than 7 digits
+        in order to read strings from other sources that have higher precision
+        (however, any digits beyond 7 will be truncated).
 
         If there is no time zone in the string, then
         $(REF LocalTime,std,datetime,timezone) is used. If the time zone is "Z",
@@ -8315,6 +8319,9 @@ public:
         assert(SysTime.fromISOString("00000105T230959.00002") ==
                SysTime(DateTime(0, 1, 5, 23, 9, 59), usecs(20)));
 
+        assert(SysTime.fromISOString("20130207T043937.000050392") ==
+               SysTime(DateTime(2013, 2, 7, 4, 39, 37), hnsecs(503)));
+
         assert(SysTime.fromISOString("-00040105T000002") ==
                SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
 
@@ -8337,7 +8344,7 @@ public:
     {
         foreach (str; ["", "20100704000000", "20100704 000000", "20100704t000000",
                        "20100704T000000.", "20100704T000000.A", "20100704T000000.Z",
-                       "20100704T000000.00000000", "20100704T000000.00000000",
+                       "20100704T000000.0000000A", "20100704T000000.00000000A",
                        "20100704T000000+", "20100704T000000-", "20100704T000000:",
                        "20100704T000000-:", "20100704T000000+:", "20100704T000000-1:",
                        "20100704T000000+1:", "20100704T000000+1:0",
@@ -8386,6 +8393,9 @@ public:
         test("19070707T121212.0", SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
         test("19070707T121212.0000000", SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
         test("19070707T121212.0000001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), hnsecs(1)));
+        test("20100704T000000.00000000", SysTime(Date(2010, 07, 04)));
+        test("20100704T000000.00000009", SysTime(Date(2010, 07, 04)));
+        test("20100704T000000.00000019", SysTime(DateTime(2010, 07, 04), hnsecs(1)));
         test("19070707T121212.000001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
         test("19070707T121212.0000010", SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
         test("19070707T121212.001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
@@ -8453,7 +8463,11 @@ public:
         The exact format is exactly as described in $(D toISOExtString)
         except that trailing zeroes are permitted - including having fractional
         seconds with all zeroes. However, a decimal point with nothing following
-        it is invalid.
+        it is invalid. Also, while $(LREF toISOExtString) will never generate a
+        string with more than 7 digits in the fractional seconds (because that's
+        the limit with hecto-nanosecond precision), it will allow more than 7
+        digits in order to read strings from other sources that have higher
+        precision (however, any digits beyond 7 will be truncated).
 
         If there is no time zone in the string, then
         $(REF LocalTime,std,datetime,timezone) is used. If the time zone is "Z",
@@ -8554,6 +8568,9 @@ public:
         assert(SysTime.fromISOExtString("0000-01-05T23:09:59.00002") ==
                SysTime(DateTime(0, 1, 5, 23, 9, 59), usecs(20)));
 
+        assert(SysTime.fromISOExtString("2013-02-07T04:39:37.000050392") ==
+               SysTime(DateTime(2013, 2, 7, 4, 39, 37), hnsecs(503)));
+
         assert(SysTime.fromISOExtString("-0004-01-05T00:00:02") ==
                SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
 
@@ -8578,7 +8595,7 @@ public:
                        "2010-07:0400:00:00", "2010-07-04 00:00:00",
                        "2010-07-04 00:00:00", "2010-07-04t00:00:00",
                        "2010-07-04T00:00:00.", "2010-07-04T00:00:00.A", "2010-07-04T00:00:00.Z",
-                       "2010-07-04T00:00:00.00000000", "2010-07-04T00:00:00.00000000",
+                       "2010-07-04T00:00:00.0000000A", "2010-07-04T00:00:00.00000000A",
                        "2010-07-04T00:00:00+", "2010-07-04T00:00:00-",
                        "2010-07-04T00:00:00:", "2010-07-04T00:00:00-:", "2010-07-04T00:00:00+:",
                        "2010-07-04T00:00:00-1:", "2010-07-04T00:00:00+1:", "2010-07-04T00:00:00+1:0",
@@ -8624,6 +8641,9 @@ public:
         test("1907-07-07T12:12:12.0", SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
         test("1907-07-07T12:12:12.0000000", SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
         test("1907-07-07T12:12:12.0000001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), hnsecs(1)));
+        test("2010-07-04T00:00:00.00000000", SysTime(Date(2010, 07, 04)));
+        test("2010-07-04T00:00:00.00000009", SysTime(Date(2010, 07, 04)));
+        test("2010-07-04T00:00:00.00000019", SysTime(DateTime(2010, 07, 04), hnsecs(1)));
         test("1907-07-07T12:12:12.000001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
         test("1907-07-07T12:12:12.0000010", SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
         test("1907-07-07T12:12:12.001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), msecs(1)));
@@ -8669,7 +8689,11 @@ public:
         The exact format is exactly as described in $(D toSimpleString) except
         that trailing zeroes are permitted - including having fractional seconds
         with all zeroes. However, a decimal point with nothing following it is
-        invalid.
+        invalid. Also, while $(LREF toSimpleString) will never generate a
+        string with more than 7 digits in the fractional seconds (because that's
+        the limit with hecto-nanosecond precision), it will allow more than 7
+        digits in order to read strings from other sources that have higher
+        precision (however, any digits beyond 7 will be truncated).
 
         If there is no time zone in the string, then
         $(REF LocalTime,std,datetime,timezone) is used. If the time zone is "Z",
@@ -8770,6 +8794,9 @@ public:
         assert(SysTime.fromSimpleString("0000-Jan-05 23:09:59.00002") ==
                SysTime(DateTime(0, 1, 5, 23, 9, 59), usecs(20)));
 
+        assert(SysTime.fromSimpleString("2013-Feb-07 04:39:37.000050392") ==
+               SysTime(DateTime(2013, 2, 7, 4, 39, 37), hnsecs(503)));
+
         assert(SysTime.fromSimpleString("-0004-Jan-05 00:00:02") ==
                SysTime(DateTime(-4, 1, 5, 0, 0, 2)));
 
@@ -8796,7 +8823,7 @@ public:
                        "2010-07-04T00:00:00.", "2010-07-04T00:00:00.0",
                        "2010-Jul-0400:00:00", "2010-Jul-04t00:00:00", "2010-Jul-04T00:00:00",
                        "2010-Jul-04 00:00:00.", "2010-Jul-04 00:00:00.A", "2010-Jul-04 00:00:00.Z",
-                       "2010-Jul-04 00:00:00.00000000", "2010-Jul-04 00:00:00.00000000",
+                       "2010-Jul-04 00:00:00.0000000A", "2010-Jul-04 00:00:00.00000000A",
                        "2010-Jul-04 00:00:00+", "2010-Jul-04 00:00:00-",
                        "2010-Jul-04 00:00:00:", "2010-Jul-04 00:00:00-:",
                        "2010-Jul-04 00:00:00+:", "2010-Jul-04 00:00:00-1:",
@@ -8842,6 +8869,9 @@ public:
 
         test("1907-Jul-07 12:12:12.0", SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
         test("1907-Jul-07 12:12:12.0000000", SysTime(DateTime(1907, 07, 07, 12, 12, 12)));
+        test("2010-Jul-04 00:00:00.00000000", SysTime(Date(2010, 07, 04)));
+        test("2010-Jul-04 00:00:00.00000009", SysTime(Date(2010, 07, 04)));
+        test("2010-Jul-04 00:00:00.00000019", SysTime(DateTime(2010, 07, 04), hnsecs(1)));
         test("1907-Jul-07 12:12:12.0000001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), hnsecs(1)));
         test("1907-Jul-07 12:12:12.000001", SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
         test("1907-Jul-07 12:12:12.0000010", SysTime(DateTime(1907, 07, 07, 12, 12, 12), usecs(1)));
@@ -10347,8 +10377,7 @@ if (isSomeString!S)
     enforce(str[0] == '.', new DateTimeException("Invalid ISO String"));
     str.popFront();
 
-    enforce(!str.empty && str.length <= 7, new DateTimeException("Invalid ISO String"));
-    enforce(all!isDigit(str), new DateTimeException("Invalid ISO String"));
+    enforce(!str.empty && all!isDigit(str), new DateTimeException("Invalid ISO String"));
 
     dchar[7] fullISOString = void;
     foreach (i, ref dchar c; fullISOString)
@@ -10373,11 +10402,13 @@ if (isSomeString!S)
     assertThrown!DateTimeException(testFSInvalid("0."));
     assertThrown!DateTimeException(testFSInvalid("0"));
     assertThrown!DateTimeException(testFSInvalid("0000000"));
-    assertThrown!DateTimeException(testFSInvalid(".00000000"));
-    assertThrown!DateTimeException(testFSInvalid(".00000001"));
     assertThrown!DateTimeException(testFSInvalid("T"));
     assertThrown!DateTimeException(testFSInvalid("T."));
     assertThrown!DateTimeException(testFSInvalid(".T"));
+    assertThrown!DateTimeException(testFSInvalid(".00000Q0"));
+    assertThrown!DateTimeException(testFSInvalid(".000000Q"));
+    assertThrown!DateTimeException(testFSInvalid(".0000000Q"));
+    assertThrown!DateTimeException(testFSInvalid(".0000000000Q"));
 
     assert(fracSecsFromISOString("") == Duration.zero);
     assert(fracSecsFromISOString(".0000001") == hnsecs(1));
@@ -10412,6 +10443,11 @@ if (isSomeString!S)
     assert(fracSecsFromISOString(".00999") == hnsecs(99_900));
     assert(fracSecsFromISOString(".0999000") == hnsecs(999_000));
     assert(fracSecsFromISOString(".0999") == hnsecs(999_000));
+    assert(fracSecsFromISOString(".00000000") == Duration.zero);
+    assert(fracSecsFromISOString(".00000001") == Duration.zero);
+    assert(fracSecsFromISOString(".00000009") == Duration.zero);
+    assert(fracSecsFromISOString(".1234567890") == hnsecs(1_234_567));
+    assert(fracSecsFromISOString(".12345678901234567890") == hnsecs(1_234_567));
 }
 
 
