@@ -172,7 +172,7 @@ public:
         sw.reset();
         assert(sw.peek() < msecs(1));
         assert(sw._timeStarted > before);
-        assert(sw._timeStarted < MonoTime.currTime);
+        assert(sw._timeStarted <= MonoTime.currTime);
     }
 
 
