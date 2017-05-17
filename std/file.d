@@ -2319,7 +2319,7 @@ private bool ensureDirExists()(in char[] pathname)
  * Throws: $(D FileException) on error.
  */
 
-void mkdirRecurse()(in char[] pathname)
+void mkdirRecurse(in char[] pathname) @safe
 {
     import std.path : dirName, baseName;
 
