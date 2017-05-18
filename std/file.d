@@ -111,42 +111,44 @@ else version (Posix)
 else
     static assert(0);
 
-// Purposefully not documented. Use at your own risk
-@property string deleteme() @safe
+version(unittest)
 {
-    import std.conv : to;
-    import std.path : buildPath;
-    import std.process : thisProcessID;
-
-    static _deleteme = "deleteme.dmd.unittest.pid";
-    static _first = true;
-
-    if (_first)
+    package @property string deleteme() @safe
     {
-        _deleteme = buildPath(tempDir(), _deleteme) ~ to!string(thisProcessID);
-        _first = false;
+        import std.conv : to;
+        import std.path : buildPath;
+        import std.process : thisProcessID;
+
+        static _deleteme = "deleteme.dmd.unittest.pid";
+        static _first = true;
+
+        if (_first)
+        {
+            _deleteme = buildPath(tempDir(), _deleteme) ~ to!string(thisProcessID);
+            _first = false;
+        }
+
+        return _deleteme;
     }
 
-    return _deleteme;
-}
+    private struct TestAliasedString
+    {
+        string get() @safe @nogc pure nothrow { return _s; }
+        alias get this;
+        @disable this(this);
+        string _s;
+    }
 
-version (unittest) private struct TestAliasedString
-{
-    string get() @safe @nogc pure nothrow { return _s; }
-    alias get this;
-    @disable this(this);
-    string _s;
-}
-
-version(Android)
-{
-    package enum system_directory = "/system/etc";
-    package enum system_file      = "/system/etc/hosts";
-}
-else version(Posix)
-{
-    package enum system_directory = "/usr/include";
-    package enum system_file      = "/usr/include/assert.h";
+    version(Android)
+    {
+        package enum system_directory = "/system/etc";
+        package enum system_file      = "/system/etc/hosts";
+    }
+    else version(Posix)
+    {
+        package enum system_directory = "/usr/include";
+        package enum system_file      = "/usr/include/assert.h";
+    }
 }
 
 
