@@ -7282,33 +7282,39 @@ public:
     {
         import std.algorithm.searching : all, startsWith;
         import std.ascii : isDigit;
-        import std.conv : to;
+        import std.conv : to, text, ConvException;
         import std.exception : enforce;
-        import std.format : format;
         import std.string : strip;
 
-        auto dstr = to!dstring(strip(isoString));
+        auto str = isoString.strip;
 
-        enforce(dstr.length >= 8, new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        enforce!DateTimeException(str.length >= 8, text("Invalid ISO String: ", isoString));
 
-        auto day = dstr[$-2 .. $];
-        auto month = dstr[$-4 .. $-2];
-        auto year = dstr[0 .. $-4];
+        int day, month;
 
-        enforce(all!isDigit(day), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        enforce(all!isDigit(month), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        try
+        {
+            day = to!int(str[$ - 2 .. $]);
+            month = to!int(str[$ - 4 .. $ - 2]);
+        }
+        catch (ConvException)
+        {
+            throw new DateTimeException(text("Invalid ISO String: ", isoString));
+        }
+
+        auto year = str[0 .. $ - 4];
 
         if (year.length > 4)
         {
-            enforce(year.startsWith('-', '+'),
-                    new DateTimeException(format("Invalid ISO String: %s", isoString)));
-            enforce(all!isDigit(year[1..$]),
-                    new DateTimeException(format("Invalid ISO String: %s", isoString)));
+            enforce!DateTimeException(year.startsWith('-', '+'),
+                    text("Invalid ISO String: ", isoString));
+            enforce!DateTimeException(all!isDigit(year[1 .. $]),
+                    text("Invalid ISO String: ", isoString));
         }
         else
-            enforce(all!isDigit(year), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+            enforce!DateTimeException(all!isDigit(year), text("Invalid ISO String: ", isoString));
 
-        return Date(to!short(year), to!ubyte(month), to!ubyte(day));
+        return Date(to!int(year), month, day);
     }
 
     ///
