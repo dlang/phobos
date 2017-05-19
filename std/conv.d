@@ -4235,6 +4235,27 @@ private bool isOctalLiteral(const string num)
     assert(b == 1);
 }
 
+// asOriginalType
+/**
+Returns the representation of an enumerated value, i.e. the value converted to
+the base type of the enumeration.
+*/
+OriginalType!E asOriginalType(E)(E value) if (is(E == enum))
+{
+    return value;
+}
+
+///
+unittest
+{
+    enum A { a = 42 }
+    static assert(is(typeof(A.a.asOriginalType) == int));
+    assert(A.a.asOriginalType == 42);
+    enum B : double { a = 43 }
+    static assert(is(typeof(B.a.asOriginalType) == double));
+    assert(B.a.asOriginalType == 43);
+}
+
 /+
 emplaceRef is a package function for phobos internal use. It works like
 emplace, but takes its argument by ref (as opposed to "by pointer").
