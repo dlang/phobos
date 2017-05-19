@@ -629,7 +629,7 @@ struct Task(alias fun, Args...)
 
         if (exception)
         {
-            throw exception;
+            throw exception; // nocoverage
         }
 
         static if (!is(ReturnType == void))
