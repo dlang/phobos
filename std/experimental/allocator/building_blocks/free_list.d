@@ -430,6 +430,7 @@ struct ContiguousFreeList(ParentAllocator,
         : NullAllocator;
     import std.experimental.allocator.building_blocks.stats_collector
         : StatsCollector, Options;
+    import std.experimental.allocator : OpaquePointer;
     import std.traits : hasMember;
     import std.typecons : Ternary;
 
@@ -477,13 +478,20 @@ struct ContiguousFreeList(ParentAllocator,
         }
     }
 
+    private @trusted void initialize(OpaquePointer[] buffer, size_t itemSize = fl.max)
+    {
+        initialize(cast(ubyte[]) buffer, itemSize);
+    }
+
     /**
     Constructors setting up the memory structured as a free list.
 
     Params:
-    buffer = Buffer to structure as a free list. If $(D ParentAllocator) is not
-    $(D NullAllocator), the buffer is assumed to be allocated by $(D parent)
-    and will be freed in the destructor.
+    buffer = Buffer to structure as a free list. If `ParentAllocator` is not
+    `NullAllocator`, the buffer is assumed to be allocated by `parent` and will
+    be freed in the destructor. The buffer must be of $(LREF OpaquePointer)
+    type for a safe allocation of objects that may contain pointers, and thus
+    for a safe allocator.
     parent = Parent allocator. For construction from stateless allocators, use
     their `instance` static member.
     bytes = Bytes (not items) to be allocated for the free list. Memory will be
@@ -493,18 +501,20 @@ struct ContiguousFreeList(ParentAllocator,
     == unbounded).
     min = Minimum size eligible for freelisting. Construction with this
     parameter is defined only if $(D minSize == chooseAtRuntime). If this
-    condition is met and no $(D min) parameter is present, $(D min) is
-    initialized with $(D max).
+    condition is met and no `min` parameter is present, `min` is initialized
+    with `max`.
     */
     static if (!stateSize!ParentAllocator)
-    this(ubyte[] buffer)
+    this(T)(T[] buffer)
+    if(is(T == ubyte) || is(T == OpaquePointer))
     {
         initialize(buffer);
     }
 
     /// ditto
     static if (stateSize!ParentAllocator)
-    this(ParentAllocator parent, ubyte[] buffer)
+    this(T)(ParentAllocator parent, T[] buffer)
+    if(is(T == ubyte) || is(T == OpaquePointer))
     {
         initialize(buffer);
         this.parent = SParent(parent);
@@ -514,14 +524,16 @@ struct ContiguousFreeList(ParentAllocator,
     static if (!stateSize!ParentAllocator)
     this(size_t bytes)
     {
-        initialize(cast(ubyte[])(ParentAllocator.instance.allocate(bytes)));
+        auto nb = bytes.roundUpToAlignment(OpaquePointer.alignof);
+        initialize(cast(OpaquePointer[])(ParentAllocator.instance.allocate(nb)));
     }
 
     /// ditto
     static if (stateSize!ParentAllocator)
     this(ParentAllocator parent, size_t bytes)
     {
-        initialize(cast(ubyte[])(parent.allocate(bytes)));
+        auto nb = bytes.roundUpToAlignment(OpaquePointer.alignof);
+        initialize(cast(OpaquePointer[])(parent.allocate(nb)));
         this.parent = SParent(parent);
     }
 
@@ -532,7 +544,8 @@ struct ContiguousFreeList(ParentAllocator,
     {
         static if (maxSize == chooseAtRuntime) fl.max = max;
         static if (minSize == chooseAtRuntime) fl.min = max;
-        initialize(cast(ubyte[])(parent.allocate(bytes)), max);
+        auto nb = bytes.roundUpToAlignment(OpaquePointer.alignof);
+        initialize(cast(OpaquePointer[])(parent.allocate(nb)), max);
     }
 
     /// ditto
@@ -542,7 +555,8 @@ struct ContiguousFreeList(ParentAllocator,
     {
         static if (maxSize == chooseAtRuntime) fl.max = max;
         static if (minSize == chooseAtRuntime) fl.min = max;
-        initialize(cast(ubyte[])(parent.allocate(bytes)), max);
+        auto nb = bytes.roundUpToAlignment(OpaquePointer.alignof);
+        initialize(cast(OpaquePointer[])(parent.allocate(nb)), max);
         this.parent = SParent(parent);
     }
 
@@ -554,7 +568,8 @@ struct ContiguousFreeList(ParentAllocator,
     {
         static if (maxSize == chooseAtRuntime) fl.max = max;
         fl.min = min;
-        initialize(cast(ubyte[])(parent.allocate(bytes)), max);
+        auto nb = bytes.roundUpToAlignment(OpaquePointer.alignof);
+        initialize(cast(OpaquePointer[])(parent.allocate(nb)), max);
         static if (stateSize!ParentAllocator)
             this.parent = SParent(parent);
     }
@@ -567,9 +582,21 @@ struct ContiguousFreeList(ParentAllocator,
     {
         static if (maxSize == chooseAtRuntime) fl.max = max;
         fl.min = min;
-        initialize(cast(ubyte[])(parent.allocate(bytes)), max);
+        auto nb = bytes.roundUpToAlignment(OpaquePointer.alignof);
+        initialize(cast(OpaquePointer[])(parent.allocate(nb)), max);
         static if (stateSize!ParentAllocator)
             this.parent = SParent(parent);
+    }
+
+    /**
+    If $(D ParentAllocator) is not $(D NullAllocator) and defines $(D
+    deallocate), the destructor is defined to deallocate the block held.
+    */
+    static if (!is(ParentAllocator == NullAllocator)
+        && hasMember!(ParentAllocator, "deallocate"))
+    ~this()
+    {
+        parent.deallocate(support);
     }
 
     /**
@@ -686,20 +713,14 @@ struct ContiguousFreeList(ParentAllocator,
 
 @system unittest
 {
-    import std.experimental.allocator.building_blocks.null_allocator
-        : NullAllocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.common : unbounded;
     import std.typecons : Ternary;
-    alias A = ContiguousFreeList!(NullAllocator, 0, 64);
-    auto a = A(new ubyte[1024]);
 
-    assert(a.empty == Ternary.yes);
-
-    assert(a.goodAllocSize(15) == 64);
-    assert(a.goodAllocSize(65) == NullAllocator.instance.goodAllocSize(65));
+    auto a = ContiguousFreeList!(GCAllocator, 0, unbounded)(4096, 8);
 
     auto b = a.allocate(100);
-    assert(a.empty == Ternary.yes);
-    assert(b.length == 0);
+    assert(b.length == 100);
     a.deallocate(b);
     b = a.allocate(64);
     assert(a.empty == Ternary.no);
@@ -707,6 +728,36 @@ struct ContiguousFreeList(ParentAllocator,
     assert(a.owns(b) == Ternary.yes);
     assert(a.owns(null) == Ternary.no);
     a.deallocate(b);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.null_allocator
+        : NullAllocator;
+    import std.experimental.allocator : OpaquePointer;
+    import std.typecons : Ternary;
+    import std.meta : AliasSeq;
+
+    alias A = ContiguousFreeList!(NullAllocator, 0, 64);
+    foreach(T; AliasSeq!(ubyte, OpaquePointer))
+    {
+        auto a = A(new T[1024]);
+        assert(a.empty == Ternary.yes);
+
+        assert(a.goodAllocSize(15) == 64);
+        assert(a.goodAllocSize(65) == NullAllocator.instance.goodAllocSize(65));
+
+        auto b = a.allocate(100);
+        assert(a.empty == Ternary.yes);
+        assert(b.length == 0);
+        a.deallocate(b);
+        b = a.allocate(64);
+        assert(a.empty == Ternary.no);
+        assert(b.length == 64);
+        assert(a.owns(b) == Ternary.yes);
+        assert(a.owns(null) == Ternary.no);
+        a.deallocate(b);
+    }
 }
 
 @system unittest
