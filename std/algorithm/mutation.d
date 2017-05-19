@@ -368,61 +368,57 @@ See_Also:
     $(HTTP sgi.com/tech/stl/_copy.html, STL's _copy)
  */
 TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
-if (isInputRange!SourceRange)
+if (areCopyCompatibleArrays!(SourceRange, TargetRange))
 {
-    static if (areCopyCompatibleArrays!(SourceRange, TargetRange))
-    {
-        const tlen = target.length;
-        const slen = source.length;
-        assert(tlen >= slen,
-                "Cannot copy a source range into a smaller target range.");
+    const tlen = target.length;
+    const slen = source.length;
+    assert(tlen >= slen,
+            "Cannot copy a source range into a smaller target range.");
 
-        immutable overlaps = __ctfe || () @trusted {
-            return source.ptr < target.ptr + tlen &&
-                   target.ptr < source.ptr + slen; }();
+    immutable overlaps = __ctfe || () @trusted {
+        return source.ptr < target.ptr + tlen &&
+               target.ptr < source.ptr + slen; }();
 
-        if (overlaps)
-        {
-            foreach (idx; 0 .. slen)
-                target[idx] = source[idx];
-            return target[slen .. tlen];
-        }
-        else
-        {
-            // Array specialization.  This uses optimized memory copying
-            // routines under the hood and is about 10-20x faster than the
-            // generic implementation.
-            target[0 .. slen] = source[];
-            return target[slen .. $];
-        }
-    }
-    else static if (isOutputRange!(TargetRange, ElementType!SourceRange))
+    if (overlaps)
     {
-        // Specialize for 2 random access ranges.
-        // Typically 2 random access ranges are faster iterated by common
-        // index than by x.popFront(), y.popFront() pair
-        static if (isRandomAccessRange!SourceRange &&
-                   hasLength!SourceRange &&
-                   hasSlicing!TargetRange &&
-                   isRandomAccessRange!TargetRange &&
-                   hasLength!TargetRange)
-        {
-            auto len = source.length;
-            foreach (idx; 0 .. len)
-                target[idx] = source[idx];
-            return target[len .. target.length];
-        }
-        else
-        {
-            put(target, source);
-            return target;
-        }
+        foreach (idx; 0 .. slen)
+            target[idx] = source[idx];
+        return target[slen .. tlen];
     }
     else
     {
-        enum msg = "TargetRange is neither copy-compatible with the SourceRange" ~
-                   "nor an OutputRange with the same ElementType.";
-        static assert(0, msg);
+        // Array specialization.  This uses optimized memory copying
+        // routines under the hood and is about 10-20x faster than the
+        // generic implementation.
+        target[0 .. slen] = source[];
+        return target[slen .. $];
+    }
+}
+
+/// ditto
+TargetRange copy(SourceRange, TargetRange)(SourceRange source, TargetRange target)
+if (!areCopyCompatibleArrays!(SourceRange, TargetRange) &&
+    isInputRange!SourceRange &&
+    isOutputRange!(TargetRange, ElementType!SourceRange))
+{
+    // Specialize for 2 random access ranges.
+    // Typically 2 random access ranges are faster iterated by common
+    // index than by x.popFront(), y.popFront() pair
+    static if (isRandomAccessRange!SourceRange &&
+               hasLength!SourceRange &&
+               hasSlicing!TargetRange &&
+               isRandomAccessRange!TargetRange &&
+               hasLength!TargetRange)
+    {
+        auto len = source.length;
+        foreach (idx; 0 .. len)
+            target[idx] = source[idx];
+        return target[len .. target.length];
+    }
+    else
+    {
+        put(target, source);
+        return target;
     }
 }
 
@@ -847,60 +843,59 @@ See_Also:
         $(LREF uninitializeFill)
  */
 void initializeAll(Range)(Range range)
-if (isInputRange!Range)
+if (isInputRange!Range && hasLvalueElements!Range && hasAssignableElements!Range)
 {
-    static if (hasLvalueElements!Range && hasAssignableElements!Range)
-    {
-        import core.stdc.string : memset, memcpy;
-        import std.traits : hasElaborateAssign, isDynamicArray;
+    import core.stdc.string : memset, memcpy;
+    import std.traits : hasElaborateAssign, isDynamicArray;
 
-        alias T = ElementType!Range;
-        static if (hasElaborateAssign!T)
+    alias T = ElementType!Range;
+    static if (hasElaborateAssign!T)
+    {
+        import std.algorithm.internal : addressOf;
+        //Elaborate opAssign. Must go the memcpy road.
+        //We avoid calling emplace here, because our goal is to initialize to
+        //the static state of T.init,
+        //So we want to avoid any un-necassarilly CC'ing of T.init
+        auto p = typeid(T).initializer();
+        if (p.ptr)
         {
-            import std.algorithm.internal : addressOf;
-            //Elaborate opAssign. Must go the memcpy road.
-            //We avoid calling emplace here, because our goal is to initialize to
-            //the static state of T.init,
-            //So we want to avoid any un-necassarilly CC'ing of T.init
-            auto p = typeid(T).initializer();
-            if (p.ptr)
+            for ( ; !range.empty ; range.popFront() )
             {
-                for ( ; !range.empty ; range.popFront() )
+                static if (__traits(isStaticArray, T))
                 {
-                    static if (__traits(isStaticArray, T))
+                    // static array initializer only contains initialization
+                    // for one element of the static array.
+                    auto elemp = cast(void *) addressOf(range.front);
+                    auto endp = elemp + T.sizeof;
+                    while (elemp < endp)
                     {
-                        // static array initializer only contains initialization
-                        // for one element of the static array.
-                        auto elemp = cast(void *) addressOf(range.front);
-                        auto endp = elemp + T.sizeof;
-                        while (elemp < endp)
-                        {
-                            memcpy(elemp, p.ptr, p.length);
-                            elemp += p.length;
-                        }
-                    }
-                    else
-                    {
-                        memcpy(addressOf(range.front), p.ptr, T.sizeof);
+                        memcpy(elemp, p.ptr, p.length);
+                        elemp += p.length;
                     }
                 }
-            }
-            else
-                static if (isDynamicArray!Range)
-                    memset(range.ptr, 0, range.length * T.sizeof);
                 else
-                    for ( ; !range.empty ; range.popFront() )
-                        memset(addressOf(range.front), 0, T.sizeof);
+                {
+                    memcpy(addressOf(range.front), p.ptr, T.sizeof);
+                }
+            }
         }
         else
-            fill(range, T.init);
+            static if (isDynamicArray!Range)
+                memset(range.ptr, 0, range.length * T.sizeof);
+            else
+                for ( ; !range.empty ; range.popFront() )
+                    memset(addressOf(range.front), 0, T.sizeof);
     }
-    else static if (is(Range == char[]) || is(Range == wchar[]))
-    {
-        alias T = ElementEncodingType!Range;
-        range[] = T.init;
-    }
-    else static assert(0, "Range doesn't have assignable elements.");
+    else
+        fill(range, T.init);
+}
+
+/// ditto
+void initializeAll(Range)(Range range)
+if (is(Range == char[]) || is(Range == wchar[]))
+{
+    alias T = ElementEncodingType!Range;
+    range[] = T.init;
 }
 
 ///
@@ -1750,133 +1745,138 @@ Returns:
 Range remove
 (SwapStrategy s = SwapStrategy.stable, Range, Offset...)
 (Range range, Offset offset)
-if (isBidirectionalRange!Range
+if (s != SwapStrategy.stable
+    && isBidirectionalRange!Range
     && hasLvalueElements!Range
     && hasLength!Range
     && Offset.length >= 1)
 {
-    static if (s == SwapStrategy.unstable)
+    Tuple!(size_t, "pos", size_t, "len")[offset.length] blackouts;
+    foreach (i, v; offset)
     {
-        Tuple!(size_t, "pos", size_t, "len")[offset.length] blackouts;
-        foreach (i, v; offset)
+        static if (is(typeof(v[0]) : size_t) && is(typeof(v[1]) : size_t))
         {
-            static if (is(typeof(v[0]) : size_t) && is(typeof(v[1]) : size_t))
+            blackouts[i].pos = v[0];
+            blackouts[i].len = v[1] - v[0];
+        }
+        else
+        {
+            static assert(is(typeof(v) : size_t), typeof(v).stringof);
+            blackouts[i].pos = v;
+            blackouts[i].len = 1;
+        }
+        static if (i > 0)
+        {
+            import std.exception : enforce;
+
+            enforce(blackouts[i - 1].pos + blackouts[i - 1].len
+                    <= blackouts[i].pos,
+                "remove(): incorrect ordering of elements to remove");
+        }
+    }
+
+    size_t left = 0, right = offset.length - 1;
+    auto tgt = range.save;
+    size_t tgtPos = 0;
+
+    while (left <= right)
+    {
+        // Look for a blackout on the right
+        if (blackouts[right].pos + blackouts[right].len >= range.length)
+        {
+            range.popBackExactly(blackouts[right].len);
+
+            // Since right is unsigned, we must check for this case, otherwise
+            // we might turn it into size_t.max and the loop condition will not
+            // fail when it should.
+            if (right > 0)
             {
-                blackouts[i].pos = v[0];
-                blackouts[i].len = v[1] - v[0];
+                --right;
+                continue;
             }
             else
-            {
-                static assert(is(typeof(v) : size_t), typeof(v).stringof);
-                blackouts[i].pos = v;
-                blackouts[i].len = 1;
-            }
-            static if (i > 0)
-            {
-                import std.exception : enforce;
+                break;
+        }
+        // Advance to next blackout on the left
+        assert(blackouts[left].pos >= tgtPos);
+        tgt.popFrontExactly(blackouts[left].pos - tgtPos);
+        tgtPos = blackouts[left].pos;
 
-                enforce(blackouts[i - 1].pos + blackouts[i - 1].len
-                        <= blackouts[i].pos,
+        // Number of elements to the right of blackouts[right]
+        immutable tailLen = range.length - (blackouts[right].pos + blackouts[right].len);
+        size_t toMove = void;
+        if (tailLen < blackouts[left].len)
+        {
+            toMove = tailLen;
+            blackouts[left].pos += toMove;
+            blackouts[left].len -= toMove;
+        }
+        else
+        {
+            toMove = blackouts[left].len;
+            ++left;
+        }
+        tgtPos += toMove;
+        foreach (i; 0 .. toMove)
+        {
+            move(range.back, tgt.front);
+            range.popBack();
+            tgt.popFront();
+        }
+    }
+
+    return range;
+}
+
+/// Ditto
+Range remove
+(SwapStrategy s = SwapStrategy.stable, Range, Offset...)
+(Range range, Offset offset)
+if (s == SwapStrategy.stable
+    && isBidirectionalRange!Range
+    && hasLvalueElements!Range
+    && Offset.length >= 1)
+{
+    auto result = range;
+    auto src = range, tgt = range;
+    size_t pos;
+    foreach (pass, i; offset)
+    {
+        static if (is(typeof(i[0])) && is(typeof(i[1])))
+        {
+            auto from = i[0], delta = i[1] - i[0];
+        }
+        else
+        {
+            auto from = i;
+            enum delta = 1;
+        }
+
+        static if (pass > 0)
+        {
+            import std.exception : enforce;
+            enforce(pos <= from,
                     "remove(): incorrect ordering of elements to remove");
+
+            for (; pos < from; ++pos, src.popFront(), tgt.popFront())
+            {
+                move(src.front, tgt.front);
             }
         }
-
-        size_t left = 0, right = offset.length - 1;
-        auto tgt = range.save;
-        size_t tgtPos = 0;
-
-        while (left <= right)
+        else
         {
-            // Look for a blackout on the right
-            if (blackouts[right].pos + blackouts[right].len >= range.length)
-            {
-                range.popBackExactly(blackouts[right].len);
-
-                // Since right is unsigned, we must check for this case, otherwise
-                // we might turn it into size_t.max and the loop condition will not
-                // fail when it should.
-                if (right > 0)
-                {
-                    --right;
-                    continue;
-                }
-                else
-                    break;
-            }
-            // Advance to next blackout on the left
-            assert(blackouts[left].pos >= tgtPos);
-            tgt.popFrontExactly(blackouts[left].pos - tgtPos);
-            tgtPos = blackouts[left].pos;
-
-            // Number of elements to the right of blackouts[right]
-            immutable tailLen = range.length - (blackouts[right].pos + blackouts[right].len);
-            size_t toMove = void;
-            if (tailLen < blackouts[left].len)
-            {
-                toMove = tailLen;
-                blackouts[left].pos += toMove;
-                blackouts[left].len -= toMove;
-            }
-            else
-            {
-                toMove = blackouts[left].len;
-                ++left;
-            }
-            tgtPos += toMove;
-            foreach (i; 0 .. toMove)
-            {
-                move(range.back, tgt.front);
-                range.popBack();
-                tgt.popFront();
-            }
+            src.popFrontExactly(from);
+            tgt.popFrontExactly(from);
+            pos = from;
         }
-
-        return range;
+        // now skip source to the "to" position
+        src.popFrontExactly(delta);
+        result.popBackExactly(delta);
+        pos += delta;
     }
-    else static if (s == SwapStrategy.stable)
-    {
-        auto result = range;
-        auto src = range, tgt = range;
-        size_t pos;
-        foreach (pass, i; offset)
-        {
-            static if (is(typeof(i[0])) && is(typeof(i[1])))
-            {
-                auto from = i[0], delta = i[1] - i[0];
-            }
-            else
-            {
-                auto from = i;
-                enum delta = 1;
-            }
-
-            static if (pass > 0)
-            {
-                import std.exception : enforce;
-                enforce(pos <= from,
-                        "remove(): incorrect ordering of elements to remove");
-
-                for (; pos < from; ++pos, src.popFront(), tgt.popFront())
-                {
-                    move(src.front, tgt.front);
-                }
-            }
-            else
-            {
-                src.popFrontExactly(from);
-                tgt.popFrontExactly(from);
-                pos = from;
-            }
-            // now skip source to the "to" position
-            src.popFrontExactly(delta);
-            result.popBackExactly(delta);
-            pos += delta;
-        }
-        // leftover move
-        moveAll(src, tgt);
-        return result;
-    }
-    else static assert(0, "SwapStrategy.semistable is not supported.");
+    // leftover move
+    moveAll(src, tgt);
+    return result;
 }
 
 ///
@@ -2132,67 +2132,24 @@ if (isBidirectionalRange!Range
 /**
 Reverses $(D r) in-place.  Performs $(D r.length / 2) evaluations of $(D
 swap).
-UTF sequences consisting of multiple code units are preserved properly.
-
 Params:
     r = a $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
-        with swappable elements, a random access range with a length member or a
-        narrow string.
+    with swappable elements or a random access range with a length member
 
 See_Also:
     $(HTTP sgi.com/tech/stl/_reverse.html, STL's _reverse), $(REF retro, std,range) for a lazy reversed range view
-
-Bugs:
-    When passing a sting with unicode modifiers on characters, such as $(D \u0301),
-    this function will not properly keep the position of the modifier. For example,
-    reversing $(D ba\u0301d) ("bád") will result in d\u0301ab ("d́ab") instead of
-    $(D da\u0301b) ("dáb").
 */
 void reverse(Range)(Range r)
-if (isBidirectionalRange!Range)
+if (isBidirectionalRange!Range && !isRandomAccessRange!Range
+    && hasSwappableElements!Range)
 {
-    static if (isRandomAccessRange!Range)
+    while (!r.empty)
     {
-        //swapAt is in fact the only way to swap non lvalue ranges
-        immutable last = r.length-1;
-        immutable steps = r.length/2;
-        for (size_t i = 0; i < steps; i++)
-        {
-            r.swapAt(i, last-i);
-        }
+        swap(r.front, r.back);
+        r.popFront();
+        if (r.empty) break;
+        r.popBack();
     }
-    else static if (hasSwappableElements!Range)
-    {
-        while (!r.empty)
-        {
-            swap(r.front, r.back);
-            r.popFront();
-            if (r.empty) break;
-            r.popBack();
-        }
-    }
-    else static if (isNarrowString!Range && !is(ElementType!Range == const) && !is(ElementType!Range == immutable))
-    {
-        import std.string : representation;
-        import std.utf : stride;
-
-        auto repr = representation(r);
-        for (size_t i = 0; i < r.length; )
-        {
-            immutable step = stride(r, i);
-            if (step > 1)
-            {
-                .reverse(repr[i .. i + step]);
-                i += step;
-            }
-            else
-            {
-                ++i;
-            }
-        }
-        reverse(repr);
-    }
-    else static assert(0, "Range is neither RandomAccess, has swappable elements nor a narrow string.");
 }
 
 ///
@@ -2203,12 +2160,17 @@ if (isBidirectionalRange!Range)
     assert(arr == [ 3, 2, 1 ]);
 }
 
-///
-@safe unittest
+///ditto
+void reverse(Range)(Range r)
+if (isRandomAccessRange!Range && hasLength!Range)
 {
-    char[] arr = "hello\U00010143\u0100\U00010143".dup;
-    reverse(arr);
-    assert(arr == "\U00010143\u0100\U00010143olleh");
+    //swapAt is in fact the only way to swap non lvalue ranges
+    immutable last = r.length-1;
+    immutable steps = r.length/2;
+    for (size_t i = 0; i < steps; i++)
+    {
+        r.swapAt(i, last-i);
+    }
 }
 
 @safe unittest
@@ -2224,6 +2186,51 @@ if (isBidirectionalRange!Range)
     range = [1, 2, 3];
     reverse(range);
     assert(range == [3, 2, 1]);
+}
+
+/**
+Reverses $(D r) in-place, where $(D r) is a narrow string (having
+elements of type $(D char) or $(D wchar)). UTF sequences consisting of
+multiple code units are preserved properly.
+
+Params:
+    s = a narrow string
+
+Bugs:
+    When passing a sting with unicode modifiers on characters, such as $(D \u0301),
+    this function will not properly keep the position of the modifier. For example,
+    reversing $(D ba\u0301d) ("bád") will result in d\u0301ab ("d́ab") instead of
+    $(D da\u0301b) ("dáb").
+*/
+void reverse(Char)(Char[] s)
+if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
+{
+    import std.string : representation;
+    import std.utf : stride;
+
+    auto r = representation(s);
+    for (size_t i = 0; i < s.length; )
+    {
+        immutable step = stride(s, i);
+        if (step > 1)
+        {
+            .reverse(r[i .. i + step]);
+            i += step;
+        }
+        else
+        {
+            ++i;
+        }
+    }
+    reverse(r);
+}
+
+///
+@safe unittest
+{
+    char[] arr = "hello\U00010143\u0100\U00010143".dup;
+    reverse(arr);
+    assert(arr == "\U00010143\u0100\U00010143olleh");
 }
 
 @safe unittest
