@@ -7280,8 +7280,7 @@ public:
     static Date fromISOString(S)(in S isoString) @safe pure
         if (isSomeString!S)
     {
-        import std.algorithm.searching : all, startsWith;
-        import std.ascii : isDigit;
+        import std.algorithm.searching : startsWith;
         import std.conv : to, text, ConvException;
         import std.exception : enforce;
         import std.string : strip;
@@ -7290,31 +7289,33 @@ public:
 
         enforce!DateTimeException(str.length >= 8, text("Invalid ISO String: ", isoString));
 
-        int day, month;
+        int day, month, year;
+        auto yearStr = str[0 .. $ - 4];
 
         try
         {
-            day = to!int(str[$ - 2 .. $]);
-            month = to!int(str[$ - 4 .. $ - 2]);
+            // using conversion to uint plus cast because it checks for +/-
+            // for us quickly while throwing ConvException
+            day = cast(int) to!uint(str[$ - 2 .. $]);
+            month = cast(int) to!uint(str[$ - 4 .. $ - 2]);
+
+            if (yearStr.length > 4)
+            {
+                enforce!DateTimeException(yearStr.startsWith('-', '+'),
+                        text("Invalid ISO String: ", isoString));
+                year = to!int(yearStr);
+            }
+            else
+            {
+                year = cast(int) to!uint(yearStr);
+            }
         }
         catch (ConvException)
         {
             throw new DateTimeException(text("Invalid ISO String: ", isoString));
         }
 
-        auto year = str[0 .. $ - 4];
-
-        if (year.length > 4)
-        {
-            enforce!DateTimeException(year.startsWith('-', '+'),
-                    text("Invalid ISO String: ", isoString));
-            enforce!DateTimeException(all!isDigit(year[1 .. $]),
-                    text("Invalid ISO String: ", isoString));
-        }
-        else
-            enforce!DateTimeException(all!isDigit(year), text("Invalid ISO String: ", isoString));
-
-        return Date(to!int(year), month, day);
+        return Date(year, month, day);
     }
 
     ///
