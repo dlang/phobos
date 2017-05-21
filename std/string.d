@@ -357,10 +357,21 @@ alias CaseSensitive = Flag!"caseSensitive";
 
     See_Also: $(REF countUntil, std,algorithm,searching)
   +/
-ptrdiff_t indexOf(Range)(Range s, in dchar c,
-        in CaseSensitive cs = Yes.caseSensitive)
-if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-    !isConvertibleToString!Range)
+ptrdiff_t indexOf(Range)(Range s, dchar c, CaseSensitive cs = Yes.caseSensitive)
+if (isInputRange!Range && isSomeChar!(ElementType!Range) && !isSomeString!Range)
+{
+    return _indexOf(s, c, cs);
+}
+
+/// Ditto
+ptrdiff_t indexOf(C)(C[] s, dchar c, CaseSensitive cs = Yes.caseSensitive)
+if (isSomeChar!C)
+{
+    return _indexOf(s, c, cs);
+}
+
+private ptrdiff_t _indexOf(Range)(Range s, dchar c, CaseSensitive cs = Yes.caseSensitive)
+if (isInputRange!Range && isSomeChar!(ElementType!Range))
 {
     static import std.ascii;
     static import std.uni;
@@ -485,10 +496,21 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 }
 
 /// Ditto
-ptrdiff_t indexOf(Range)(Range s, in dchar c, in size_t startIdx,
-        in CaseSensitive cs = Yes.caseSensitive)
-if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
-    !isConvertibleToString!Range)
+ptrdiff_t indexOf(Range)(Range s, dchar c, size_t startIdx, CaseSensitive cs = Yes.caseSensitive)
+if (isInputRange!Range && isSomeChar!(ElementType!Range) && !isSomeString!Range)
+{
+    return _indexOf(s, c, startIdx, cs);
+}
+
+/// Ditto
+ptrdiff_t indexOf(C)(C[] s, dchar c, size_t startIdx, CaseSensitive cs = Yes.caseSensitive)
+if (isSomeChar!C)
+{
+    return _indexOf(s, c, startIdx, cs);
+}
+
+private ptrdiff_t _indexOf(Range)(Range s, dchar c, size_t startIdx, CaseSensitive cs = Yes.caseSensitive)
+if (isInputRange!Range && isSomeChar!(ElementType!Range))
 {
     static if (isSomeString!(typeof(s)) ||
                 (hasSlicing!(typeof(s)) && hasLength!(typeof(s))))
@@ -541,23 +563,15 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     assert(indexOf(s, 'w', 3, No.caseSensitive) == 6);
 }
 
-ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c,
-        in CaseSensitive cs = Yes.caseSensitive)
-if (isConvertibleToString!Range)
-{
-    return indexOf!(StringTypeOf!Range)(s, c, cs);
-}
-
-ptrdiff_t indexOf(Range)(auto ref Range s, in dchar c, in size_t startIdx,
-        in CaseSensitive cs = Yes.caseSensitive)
-if (isConvertibleToString!Range)
-{
-    return indexOf!(StringTypeOf!Range)(s, c, startIdx, cs);
-}
-
 @safe pure unittest
 {
     assert(testAliasedString!indexOf("std/string.d", '/'));
+
+    enum S : string { a = "std/string.d" }
+    assert(S.a.indexOf('/') == 3);
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.indexOf('/') == 3);
 }
 
 @safe pure unittest
@@ -613,7 +627,19 @@ if (isConvertibleToString!Range)
 
 @safe pure unittest
 {
-    assert(testAliasedString!indexOf("std/string.d", '/', 3));
+    assert(testAliasedString!indexOf("std/string.d", '/', 0));
+    assert(testAliasedString!indexOf("std/string.d", '/', 1));
+    assert(testAliasedString!indexOf("std/string.d", '/', 4));
+
+    enum S : string { a = "std/string.d" }
+    assert(S.a.indexOf('/', 0) == 3);
+    assert(S.a.indexOf('/', 1) == 3);
+    assert(S.a.indexOf('/', 4) == -1);
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.indexOf('/', 0) == 3);
+    assert(sa.indexOf('/', 1) == 3);
+    assert(sa.indexOf('/', 4) == -1);
 }
 
 @safe pure unittest
