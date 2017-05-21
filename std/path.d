@@ -688,9 +688,21 @@ if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementT
         A slice of $(D path).
 */
 auto rootName(R)(R path)
-if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R) &&
-    !isConvertibleToString!R)
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) && !isSomeString!R)
+{
+    return _rootName(path);
+}
+
+/// ditto
+auto rootName(C)(C[] path)
+if (isSomeChar!C)
+{
+    return _rootName(path);
+}
+
+private auto _rootName(R)(R path)
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R)
 {
     if (path.empty)
         goto Lnull;
@@ -742,6 +754,12 @@ Lnull:
 @safe unittest
 {
     assert(testAliasedString!rootName("/foo/bar"));
+
+    enum S : string { a = "/foo/bar" }
+    assert(S.a.rootName == "/");
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.rootName == "/");
 }
 
 @safe unittest
@@ -761,12 +779,6 @@ Lnull:
         assert(rootName(`\\server\share\foo`.byChar).array == `\\server\share`);
         assert(rootName(`\\server\share`.byChar).array == `\\server\share`);
     }
-}
-
-auto rootName(R)(R path)
-if (isConvertibleToString!R)
-{
-    return rootName!(StringTypeOf!R)(path);
 }
 
 
