@@ -2135,12 +2135,12 @@ Lerr:
 ///
 @safe pure unittest
 {
-    import std.string : munch;
+    import std.string : tr;
     string test = "123 \t  76.14";
     auto a = parse!uint(test);
     assert(a == 123);
     assert(test == " \t  76.14"); // parse bumps string
-    munch(test, " \t\n\r"); // skip ws
+    test = tr(test, " \t\n\r", "", "d"); // skip ws
     assert(test == "76.14");
     auto b = parse!double(test);
     assert(b == 76.14);
