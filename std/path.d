@@ -890,9 +890,20 @@ if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementT
     Returns: A slice of path without the drive component.
 */
 auto stripDrive(R)(R path)
-if ((isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R) &&
-    !isConvertibleToString!R)
+if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) && !isSomeString!R)
+{
+    return _stripDrive(path);
+}
+
+/// ditto
+auto stripDrive(C)(C[] path)
+{
+    return _stripDrive(path);
+}
+
+private auto _stripDrive(R)(R path)
+if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R)
 {
     version(Windows)
     {
@@ -912,15 +923,20 @@ if ((isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
     }
 }
 
-auto stripDrive(R)(auto ref R path)
-if (isConvertibleToString!R)
-{
-    return stripDrive!(StringTypeOf!R)(path);
-}
-
 @safe unittest
 {
-    assert(testAliasedString!stripDrive(`d:\dir\file`));
+    assert(testAliasedString!stripDrive("d:/dir/file"));
+
+    version(Posix)
+        immutable result = "d:/dir/file";
+    else version(Windows)
+        immutable result = "/dir/file";
+
+    enum S : string { a = "d:/dir/file" }
+    assert(S.a.stripDrive == result);
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.stripDrive == result);
 }
 
 @safe unittest
