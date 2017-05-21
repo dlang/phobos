@@ -392,18 +392,28 @@ else static assert(0);
     (with suitable adaptations for Windows paths).
 */
 auto baseName(R)(R path)
-if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-    is(StringTypeOf!R))
+if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) && !isSomeString!R)
 {
-    auto p1 = stripDrive!(BaseOf!R)(path);
+    return _baseName(path);
+}
+
+/// ditto
+auto baseName(C)(C[] path)
+if (isSomeChar!C)
+{
+    return _baseName(path);
+}
+
+private R _baseName(R)(R path)
+if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) || isNarrowString!R)
+{
+    auto p1 = stripDrive(path);
     if (p1.empty)
     {
-        version (Windows) if (isUNC!(BaseOf!R)(path))
-        {
+        version (Windows) if (isUNC(path))
             return path[0 .. 1];
-        }
-        static if (is(StringTypeOf!R))
-            return StringTypeOf!R.init[];   // which is null
+        static if (isSomeString!R)
+            return null;
         else
             return p1; // which is empty
     }
@@ -428,7 +438,6 @@ if (isSomeChar!C && isSomeChar!C1)
     }
     else return p;
 }
-
 
 @safe unittest
 {
@@ -491,8 +500,16 @@ if (isSomeChar!C && isSomeChar!C1)
     assert(baseName(DirEntry("dir/file.ext")) == "file.ext");
 }
 
+@safe unittest
+{
+    assert(testAliasedString!baseName("file"));
 
+    enum S : string { a = "file/path/to/test" }
+    assert(S.a.baseName == "test");
 
+    char[S.a.length] sa = S.a[];
+    assert(sa.baseName == "test");
+}
 
 /** Returns the directory part of a path.  On Windows, this
     includes the drive letter if present.
@@ -510,9 +527,21 @@ if (isSomeChar!C && isSomeChar!C1)
     (with suitable adaptations for Windows paths).
 */
 auto dirName(R)(R path)
-if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R) &&
-    !isConvertibleToString!R)
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) && !isSomeString!R)
+{
+    return _dirName(path);
+}
+
+/// ditto
+auto dirName(C)(C[] path)
+if (isSomeChar!C)
+{
+    return _dirName(path);
+}
+
+private auto _dirName(R)(R path)
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R)
 {
     static auto result(bool dot, typeof(path[0 .. 1]) p)
     {
@@ -596,15 +625,15 @@ if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(Element
     }
 }
 
-auto dirName(R)(auto ref R path)
-if (isConvertibleToString!R)
-{
-    return dirName!(StringTypeOf!R)(path);
-}
-
 @safe unittest
 {
     assert(testAliasedString!dirName("file"));
+
+    enum S : string { a = "file/path/to/test" }
+    assert(S.a.dirName == "file/path/to");
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.dirName == "file/path/to");
 }
 
 @system unittest
