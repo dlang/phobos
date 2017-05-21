@@ -4816,7 +4816,7 @@ public:
     assert(ieeeFlags == f);
 }
 
-@system unittest
+version(D_HardFloat) @system unittest
 {
     import std.meta : AliasSeq;
 
@@ -5260,7 +5260,7 @@ private:
     ensureDefaults();
 }
 
-@system unittest // rounding
+version(D_HardFloat) @system unittest // rounding
 {
     import std.meta : AliasSeq;
 
