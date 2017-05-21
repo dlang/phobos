@@ -784,9 +784,21 @@ if (isConvertibleToString!R)
         Always returns an empty range on POSIX.
 */
 auto driveName(R)(R path)
-if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R) &&
-    !isConvertibleToString!R)
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) && !isSomeString!R)
+{
+    return _driveName(path);
+}
+
+/// ditto
+auto driveName(C)(C[] path)
+if (isSomeChar!C)
+{
+    return _driveName(path);
+}
+
+private auto _driveName(R)(R path)
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R)
 {
     version (Windows)
     {
@@ -820,15 +832,20 @@ if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(Element
     }
 }
 
-auto driveName(R)(auto ref R path)
-if (isConvertibleToString!R)
-{
-    return driveName!(StringTypeOf!R)(path);
-}
-
 @safe unittest
 {
-    assert(testAliasedString!driveName(`d:\file`));
+    assert(testAliasedString!driveName("d:/file"));
+
+    version(Posix)
+        immutable result = "";
+    else version(Windows)
+        immutable result = "d:";
+
+    enum S : string { a = "d:/file" }
+    assert(S.a.driveName == result);
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.driveName == result);
 }
 
 @safe unittest
