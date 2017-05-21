@@ -1108,9 +1108,9 @@ struct SharedFreeList(ParentAllocator,
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
     auto c = a.allocate(64);
-    assert(a.reallocate(c, 96));
+    () @trusted { assert(a.reallocate(c, 96)); }();
     assert(c.length == 96);
-    a.deallocate(c);
+    () @trusted { a.deallocate(c); }();
 }
 
 @safe unittest

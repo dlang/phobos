@@ -385,18 +385,18 @@ interface ISharedAllocator
     /**
     Returns the alignment offered.
     */
-    @property uint alignment() shared;
+    @property uint alignment() shared @safe;
 
     /**
     Returns the good allocation size that guarantees zero internal
     fragmentation.
     */
-    size_t goodAllocSize(size_t s) shared;
+    size_t goodAllocSize(size_t s) shared @safe;
 
     /**
     Allocates `n` bytes of memory.
     */
-    void[] allocate(size_t, TypeInfo ti = null) shared;
+    void[] allocate(size_t, TypeInfo ti = null) shared @safe;
 
     /**
     Allocates `n` bytes of memory with specified alignment `a`. Implementations
@@ -430,13 +430,13 @@ interface ISharedAllocator
     cannot be determined. Implementations that don't support this primitive
     should always return `Ternary.unknown`.
     */
-    Ternary owns(void[] b) shared;
+    Ternary owns(void[] b) shared @safe;
 
     /**
     Resolves an internal pointer to the full block allocated. Implementations
     that don't support this primitive should always return `Ternary.unknown`.
     */
-    Ternary resolveInternalPointer(const void* p, ref void[] result) shared;
+    Ternary resolveInternalPointer(const void* p, ref void[] result) shared @safe;
 
     /**
     Deallocates a memory block. Implementations that don't support this
@@ -476,17 +476,17 @@ static this()
     */
     static class ThreadAllocator : IAllocator
     {
-        override @property uint alignment()
+        override @property @safe uint alignment()
         {
             return _processAllocator.alignment();
         }
 
-        override size_t goodAllocSize(size_t s)
+        override size_t goodAllocSize(size_t s) @safe
         {
             return _processAllocator.goodAllocSize(s);
         }
 
-        override void[] allocate(size_t n, TypeInfo ti = null)
+        override void[] allocate(size_t n, TypeInfo ti = null) @safe
         {
             return _processAllocator.allocate(n, ti);
         }
@@ -516,12 +516,13 @@ static this()
             return _processAllocator.alignedReallocate(b, size, alignment);
         }
 
-        override Ternary owns(void[] b)
+        override Ternary owns(void[] b) @safe
         {
             return _processAllocator.owns(b);
         }
 
-        override Ternary resolveInternalPointer(const void* p, ref void[] result)
+        override
+        Ternary resolveInternalPointer(const void* p, ref void[] result) @safe
         {
             return _processAllocator.resolveInternalPointer(p, result);
         }
@@ -2134,7 +2135,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     static if (indirect)
     {
         private Allocator* pimpl;
-        @safe ref Allocator impl()
+        ref Allocator impl() @safe
         {
             return *pimpl;
         }
@@ -2317,7 +2318,7 @@ class CSharedAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     static if (indirect)
     {
         private shared Allocator* pimpl;
-        ref Allocator impl() shared
+        ref Allocator impl() shared @safe
         {
             return *pimpl;
         }
