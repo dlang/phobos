@@ -2384,14 +2384,14 @@ if (!isSomeString!S && is(StringTypeOf!S))
 alias KeepTerminator = Flag!"keepTerminator";
 
 /// ditto
-S[] splitLines(S)(S s, in KeepTerminator keepTerm = No.keepTerminator) @safe pure
-if (isSomeString!S)
+C[][] splitLines(C)(C[] s, KeepTerminator keepTerm = No.keepTerminator) @safe pure
+if (isSomeChar!C)
 {
     import std.array : appender;
     import std.uni : lineSep, paraSep;
 
     size_t iStart = 0;
-    auto retval = appender!(S[])();
+    auto retval = appender!(C[][])();
 
     for (size_t i; i < s.length; ++i)
     {
@@ -2480,15 +2480,15 @@ if (isSomeString!S)
     assert(splitLines(s) == [s]);
 }
 
-auto splitLines(S)(auto ref S s, in KeepTerminator keepTerm = No.keepTerminator)
-if (!isSomeString!S && is(StringTypeOf!S))
-{
-    return splitLines!(StringTypeOf!S)(s, keepTerm);
-}
-
 @safe pure nothrow unittest
 {
     assert(testAliasedString!splitLines("hello\nworld"));
+
+    enum S : string { a = "hello\nworld" }
+    assert(S.a.splitLines() == ["hello", "world"]);
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.splitLines() == ["hello", "world"]);
 }
 
 @safe pure unittest
