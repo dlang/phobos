@@ -6,7 +6,7 @@ constant time regardless of the equality of the two ranges in order to protect
 against timing attacks. For more information on the attack, please refer to
 the docs on $(REF secureEqual, std, digest, digest).
 
-```
+-----
 import std.digest.digest : secureEqual, toHexString;
 import std.digest.hmac : hmac;
 import std.digest.sha : SHA1;
@@ -26,4 +26,4 @@ void main()
     assert( secureEqual(hex1, hex2));
     assert(!secureEqual(hex1, hex3));
 }
-```
+-----
