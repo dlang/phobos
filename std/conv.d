@@ -1947,7 +1947,7 @@ if (isInputRange!Source &&
             foreach (c; result ? "rue" : "alse")
             {
                 if (s.empty || toLower(s.front) != c)
-                    goto Lerr;
+                    throw parseError("bool should be case-insensitive 'true' or 'false'");
                 s.popFront();
             }
 
@@ -1957,8 +1957,6 @@ if (isInputRange!Source &&
             return result;
         }
     }
-Lerr:
-    throw parseError("bool should be case-insensitive 'true' or 'false'");
 }
 
 ///
