@@ -8790,26 +8790,29 @@ public:
     static TimeOfDay fromISOString(S)(in S isoString) @safe pure
         if (isSomeString!S)
     {
-        import std.algorithm.searching : all;
-        import std.ascii : isDigit;
-        import std.conv : to;
+        import std.conv : to, text, ConvException;
         import std.exception : enforce;
-        import std.format : format;
         import std.string : strip;
 
-        auto dstr = to!dstring(strip(isoString));
+        int hours, minutes, seconds;
+        auto str = strip(isoString);
 
-        enforce(dstr.length == 6, new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        enforce!DateTimeException(str.length == 6, text("Invalid ISO String: ", isoString));
 
-        auto hours = dstr[0 .. 2];
-        auto minutes = dstr[2 .. 4];
-        auto seconds = dstr[4 .. $];
+        try
+        {
+            // cast to int from uint is used because it checks for
+            // non digits without extra loops
+            hours = cast(int) to!uint(str[0 .. 2]);
+            minutes = cast(int) to!uint(str[2 .. 4]);
+            seconds = cast(int) to!uint(str[4 .. $]);
+        }
+        catch (ConvException)
+        {
+            throw new DateTimeException(text("Invalid ISO String: ", isoString));
+        }
 
-        enforce(all!isDigit(hours), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        enforce(all!isDigit(minutes), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        enforce(all!isDigit(seconds), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-
-        return TimeOfDay(to!int(hours), to!int(minutes), to!int(seconds));
+        return TimeOfDay(hours, minutes, seconds);
     }
 
     ///
