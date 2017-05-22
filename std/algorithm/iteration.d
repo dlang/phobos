@@ -1,12 +1,11 @@
 // Written in the D programming language.
 /**
-This is a submodule of $(LINK2 std_algorithm.html, std.algorithm).
+This is a submodule of $(MREF std, algorithm).
 It contains generic _iteration algorithms.
 
+$(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE Cheat Sheet,
-
 $(TR $(TH Function Name) $(TH Description))
-
 $(T2 cache,
         Eagerly evaluates and caches another range's $(D front).)
 $(T2 cacheBidirectional,
@@ -16,6 +15,10 @@ $(T2 chunkBy,
         returns a range containing 3 subranges: the first with just
         $(D [1, 1]); the second with the elements $(D [1, 2]) and $(D [2, 2]);
         and the third with just $(D [2, 1]).)
+$(T2 cumulativeFold,
+        $(D cumulativeFold!((a, b) => a + b)([1, 2, 3, 4])) returns a
+        lazily-evaluated range containing the successive reduced values `1`,
+        `3`, `6`, `10`.)
 $(T2 each,
         $(D each!writeln([1, 2, 3])) eagerly prints the numbers $(D 1), $(D 2)
         and $(D 3) on their own lines.)
@@ -52,9 +55,9 @@ $(T2 uniq,
 
 Copyright: Andrei Alexandrescu 2008-.
 
-License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/algorithm/_iteration.d)
 
@@ -68,7 +71,8 @@ import std.functional; // : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
 
-template aggregate(fun...) if (fun.length >= 1)
+private template aggregate(fun...)
+if (fun.length >= 1)
 {
     /* --Intentionally not ddoc--
      * Aggregates elements in each subrange of the given range of ranges using
@@ -91,7 +95,7 @@ template aggregate(fun...) if (fun.length >= 1)
         return ror.map!(reduce!fun);
     }
 
-    unittest
+    @safe unittest
     {
         import std.algorithm.comparison : equal, max, min;
 
@@ -120,12 +124,13 @@ The result is then directly returned when $(D front) is called,
 rather than re-evaluated.
 
 This can be a useful function to place in a chain, after functions
-that have expensive evaluation, as a lazy alternative to $(XREF array,array).
+that have expensive evaluation, as a lazy alternative to $(REF array, std,array).
 In particular, it can be placed after a call to $(D map), or before a call
 to $(D filter).
 
-$(D cache) may provide bidirectional iteration if needed, but since
-this comes at an increased cost, it must be explicitly requested via the
+$(D cache) may provide
+$(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
+iteration if needed, but since this comes at an increased cost, it must be explicitly requested via the
 call to $(D cacheBidirectional). Furthermore, a bidirectional cache will
 evaluate the "center" element twice, when there is only one element left in
 the range.
@@ -134,11 +139,11 @@ $(D cache) does not provide random access primitives,
 as $(D cache) would be unable to cache the random accesses.
 If $(D Range) provides slicing primitives,
 then $(D cache) will provide the same slicing primitives,
-but $(D hasSlicing!Cache) will not yield true (as the $(XREF_PACK _range,primitives,hasSlicing)
+but $(D hasSlicing!Cache) will not yield true (as the $(REF hasSlicing, std,_range,primitives)
 trait also checks for random access).
 
 Params:
-    range = an input range
+    range = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
 
 Returns:
     an input range with the cached values of range
@@ -200,10 +205,10 @@ if (isBidirectionalRange!Range)
 
 /++
 Tip: $(D cache) is eager when evaluating elements. If calling front on the
-underlying _range has a side effect, it will be observeable before calling
+underlying _range has a side effect, it will be observable before calling
 front on the actual cached _range.
 
-Furthermore, care should be taken composing $(D cache) with $(XREF _range,take).
+Furthermore, care should be taken composing $(D cache) with $(REF take, std,_range).
 By placing $(D take) before $(D cache), then $(D cache) will be "aware"
 of when the _range ends, and correctly stop caching elements when needed.
 If calling front has no side effect though, placing $(D take) after $(D cache)
@@ -317,7 +322,13 @@ private struct _Cache(R, bool bidir)
         CacheTypes caches;
 
         static assert(isAssignable!(UE, E) && is(UE : E),
-            algoFormat("Cannot instantiate range with %s because %s elements are not assignable to %s.", R.stringof, E.stringof, UE.stringof));
+            algoFormat(
+                "Cannot instantiate range with %s because %s elements are not assignable to %s.",
+                R.stringof,
+                E.stringof,
+                UE.stringof
+            )
+        );
     }
 
     this(R range)
@@ -414,12 +425,12 @@ private struct _Cache(R, bool bidir)
             auto opSlice(size_t low, size_t high)
             in
             {
-                assert(low <= high);
+                assert(low <= high, "Bounds error when slicing cache.");
             }
             body
             {
-                import std.range : take;
-                return this[low .. $].take(high - low);
+                import std.range : takeExactly;
+                return this[low .. $].takeExactly(high - low);
             }
         }
     }
@@ -435,17 +446,18 @@ left to right for all elements $(D a) in $(D range). The original ranges are
 not changed. Evaluation is done lazily.
 
 Params:
-    fun = one or more functions
-    r = an input range
+    fun = one or more transformation functions
+    r = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
 
 Returns:
     a range with each fun applied to all the elements. If there is more than one
     fun, the element type will be $(D Tuple) containing one element for each fun.
 
 See_Also:
-    $(WEB en.wikipedia.org/wiki/Map_(higher-order_function), Map (higher-order function))
+    $(HTTP en.wikipedia.org/wiki/Map_(higher-order_function), Map (higher-order function))
 */
-template map(fun...) if (fun.length >= 1)
+template map(fun...)
+if (fun.length >= 1)
 {
     auto map(Range)(Range r) if (isInputRange!(Unqual!Range))
     {
@@ -544,11 +556,13 @@ private struct MapResult(alias fun, Range)
     {
         @property auto ref back()()
         {
+            assert(!empty, "Attempting to fetch the back of an empty map.");
             return fun(_input.back);
         }
 
         void popBack()()
         {
+            assert(!empty, "Attempting to popBack an empty map.");
             _input.popBack();
         }
     }
@@ -573,11 +587,13 @@ private struct MapResult(alias fun, Range)
 
     void popFront()
     {
+        assert(!empty, "Attempting to popFront an empty map.");
         _input.popFront();
     }
 
     @property auto ref front()
     {
+        assert(!empty, "Attempting to fetch the front of an empty map.");
         return fun(_input.front);
     }
 
@@ -629,8 +645,8 @@ private struct MapResult(alias fun, Range)
 
             auto opSlice(opSlice_t low, opSlice_t high)
             {
-                import std.range : take;
-                return this[low .. $].take(high - low);
+                import std.range : takeExactly;
+                return this[low .. $].takeExactly(high - low);
             }
         }
     }
@@ -650,9 +666,6 @@ private struct MapResult(alias fun, Range)
     import std.conv : to;
     import std.functional : adjoin;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     alias stringize = map!(to!string);
     assert(equal(stringize([ 1, 2, 3, 4 ]), [ "1", "2", "3", "4" ]));
 
@@ -666,7 +679,7 @@ private struct MapResult(alias fun, Range)
     //assert(equal(countAndSquare([ 10, 2 ]), [ tuple(0u, 100), tuple(1u, 4) ]));
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
@@ -674,8 +687,6 @@ unittest
     import std.range;
     import std.typecons : tuple;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] arr1 = [ 1, 2, 3, 4 ];
     const int[] arr1Const = arr1;
     int[] arr2 = [ 5, 6 ];
@@ -716,7 +727,7 @@ unittest
     assert(squares[3] == 16);
 
     // Test slicing.
-    auto squareSlice = squares[1..squares.length - 1];
+    auto squareSlice = squares[1 .. squares.length - 1];
     assert(equal(squareSlice, [4, 9][]));
     assert(squareSlice.back == 9);
     assert(squareSlice[1] == 9);
@@ -756,9 +767,9 @@ unittest
     static assert(!is(ms1[0])); //narrow strings can't be indexed
     assert(ms2[0] == '日');
     assert(ms3[0] == 'H');
-    static assert(!is(ms1[0..1])); //narrow strings can't be sliced
-    assert(equal(ms2[0..2], "日本"w));
-    assert(equal(ms3[0..2], "HE"));
+    static assert(!is(ms1[0 .. 1])); //narrow strings can't be sliced
+    assert(equal(ms2[0 .. 2], "日本"w));
+    assert(equal(ms3[0 .. 2], "HE"));
 
     // Issue 5753
     static void voidFun(int) {}
@@ -832,18 +843,21 @@ can be avoided by explicitly specifying a predicate lambda with a
 $(D lazy) parameter.
 
 $(D each) also supports $(D opApply)-based iterators, so it will work
-with e.g. $(XREF parallelism, parallel).
+with e.g. $(REF parallel, std,parallelism).
 
 Params:
     pred = predicate to apply to each element of the range
     r = range or iterable over which each iterates
 
-See_Also: $(XREF range,tee)
+See_Also: $(REF tee, std,range)
 
  */
 template each(alias pred = "a")
 {
     import std.meta : AliasSeq;
+    import std.traits : Parameters;
+
+private:
     alias BinaryArgs = AliasSeq!(pred, "i", "a");
 
     enum isRangeUnaryIterable(R) =
@@ -859,62 +873,88 @@ template each(alias pred = "a")
     enum isForeachUnaryIterable(R) =
         is(typeof((R r) {
             foreach (ref a; r)
-                cast(void)unaryFun!pred(a);
+                cast(void) unaryFun!pred(a);
         }));
 
     enum isForeachBinaryIterable(R) =
         is(typeof((R r) {
-            foreach (i, ref a; r)
-                cast(void)binaryFun!BinaryArgs(i, a);
+            foreach (ref i, ref a; r)
+                cast(void) binaryFun!BinaryArgs(i, a);
         }));
 
     enum isForeachIterable(R) =
         (!isForwardRange!R || isDynamicArray!R) &&
         (isForeachUnaryIterable!R || isForeachBinaryIterable!R);
 
+public:
     void each(Range)(Range r)
-    if (isRangeIterable!Range && !isForeachIterable!Range)
+    if (!isForeachIterable!Range && (
+        isRangeIterable!Range ||
+        __traits(compiles, typeof(r.front).length)))
     {
-        debug(each) pragma(msg, "Using while for ", Range.stringof);
-        static if (isRangeUnaryIterable!Range)
+        static if (isRangeIterable!Range)
         {
-            while (!r.empty)
+            debug(each) pragma(msg, "Using while for ", Range.stringof);
+            static if (isRangeUnaryIterable!Range)
             {
-                cast(void)unaryFun!pred(r.front);
-                r.popFront();
+                while (!r.empty)
+                {
+                    cast(void) unaryFun!pred(r.front);
+                    r.popFront();
+                }
+            }
+            else // if (isRangeBinaryIterable!Range)
+            {
+                size_t i = 0;
+                while (!r.empty)
+                {
+                    cast(void) binaryFun!BinaryArgs(i, r.front);
+                    r.popFront();
+                    i++;
+                }
             }
         }
-        else // if (isRangeBinaryIterable!Range)
+        else
         {
-            size_t i = 0;
-            while (!r.empty)
-            {
-                cast(void)binaryFun!BinaryArgs(i, r.front);
-                r.popFront();
-                i++;
-            }
+            // range interface with >2 parameters.
+            for (auto range = r; !range.empty; range.popFront())
+                pred(range.front.expand);
         }
     }
 
-    void each(Iterable)(Iterable r)
-        if (isForeachIterable!Iterable)
+    void each(Iterable)(auto ref Iterable r)
+    if (isForeachIterable!Iterable ||
+        __traits(compiles, Parameters!(Parameters!(r.opApply))))
     {
-        debug(each) pragma(msg, "Using foreach for ", Iterable.stringof);
-        static if (isForeachUnaryIterable!Iterable)
+        static if (isForeachIterable!Iterable)
         {
-            foreach (ref e; r)
-                cast(void)unaryFun!pred(e);
+            debug(each) pragma(msg, "Using foreach for ", Iterable.stringof);
+            static if (isForeachUnaryIterable!Iterable)
+            {
+                foreach (ref e; r)
+                    cast(void) unaryFun!pred(e);
+            }
+            else // if (isForeachBinaryIterable!Iterable)
+            {
+                foreach (ref i, ref e; r)
+                    cast(void) binaryFun!BinaryArgs(i, e);
+            }
         }
-        else // if (isForeachBinaryIterable!Iterable)
+        else
         {
-            foreach (i, ref e; r)
-                cast(void)binaryFun!BinaryArgs(i, e);
+            // opApply with >2 parameters. count the delegate args.
+            // only works if it is not templated (otherwise we cannot count the args)
+            auto dg(Parameters!(Parameters!(r.opApply)) params) {
+                pred(params);
+                return 0; // tells opApply to continue iteration
+            }
+            r.opApply(&dg);
         }
     }
 }
 
 ///
-unittest
+@system unittest
 {
     import std.range : iota;
 
@@ -943,17 +983,99 @@ unittest
     assert(arr == [0, 1, 2, 3, 4]);
 
     // opApply iterators work as well
-    static assert(is(typeof({
-        import std.parallelism;
-        arr.parallel.each!"a++";
-    })));
+    static class S
+    {
+        int x;
+        int opApply(scope int delegate(ref int _x) dg) { return dg(x); }
+    }
+
+    auto s = new S;
+    s.each!"a++";
+    assert(s.x == 1);
 }
 
+// binary foreach with two ref args
+@system unittest
+{
+    import std.range : lockstep;
+
+    auto a = [ 1, 2, 3 ];
+    auto b = [ 2, 3, 4 ];
+
+    a.lockstep(b).each!((ref x, ref y) { ++x; ++y; });
+
+    assert(a == [ 2, 3, 4 ]);
+    assert(b == [ 3, 4, 5 ]);
+}
+
+// #15358: application of `each` with >2 args (opApply)
+@system unittest
+{
+    import std.range : lockstep;
+    auto a = [0,1,2];
+    auto b = [3,4,5];
+    auto c = [6,7,8];
+
+    lockstep(a, b, c).each!((ref x, ref y, ref z) { ++x; ++y; ++z; });
+
+    assert(a == [1,2,3]);
+    assert(b == [4,5,6]);
+    assert(c == [7,8,9]);
+}
+
+// #15358: application of `each` with >2 args (range interface)
+@safe unittest
+{
+    import std.range : zip;
+    auto a = [0,1,2];
+    auto b = [3,4,5];
+    auto c = [6,7,8];
+
+    int[] res;
+
+    zip(a, b, c).each!((x, y, z) { res ~= x + y + z; });
+
+    assert(res == [9, 12, 15]);
+}
+
+// #16255: `each` on opApply doesn't support ref
+@safe unittest
+{
+    int[] dynamicArray = [1, 2, 3, 4, 5];
+    int[5] staticArray = [1, 2, 3, 4, 5];
+
+    dynamicArray.each!((ref x) => x++);
+    assert(dynamicArray == [2, 3, 4, 5, 6]);
+
+    staticArray.each!((ref x) => x++);
+    assert(staticArray == [2, 3, 4, 5, 6]);
+
+    staticArray[].each!((ref x) => x++);
+    assert(staticArray == [3, 4, 5, 6, 7]);
+}
+
+// #16255: `each` on opApply doesn't support ref
+@system unittest
+{
+    struct S
+    {
+       int x;
+       int opApply(int delegate(ref int _x) dg) { return dg(x); }
+    }
+
+    S s;
+    foreach (ref a; s) ++a;
+    assert(s.x == 1);
+    s.each!"++a";
+    assert(s.x == 2);
+}
+
+// filter
 /**
 $(D auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range));)
 
 Implements the higher order _filter function. The predicate is passed to
-$(XREF functional,unaryFun), and can either accept a string, or any callable
+$(REF unaryFun, std,functional), and can either accept a string, or any callable
 that can be executed via $(D pred(element)).
 
 Params:
@@ -965,9 +1087,10 @@ Returns:
     which $(D predicate(x)) returns $(D true).
 
 See_Also:
-    $(WEB en.wikipedia.org/wiki/Filter_(higher-order_function), Filter (higher-order function))
+    $(HTTP en.wikipedia.org/wiki/Filter_(higher-order_function), Filter (higher-order function))
  */
-template filter(alias predicate) if (is(typeof(unaryFun!predicate)))
+template filter(alias predicate)
+if (is(typeof(unaryFun!predicate)))
 {
     auto filter(Range)(Range range) if (isInputRange!(Unqual!Range))
     {
@@ -1008,14 +1131,27 @@ private struct FilterResult(alias pred, Range)
 {
     alias R = Unqual!Range;
     R _input;
+    private bool _primed;
 
-    this(R r)
+    private void prime()
     {
-        _input = r;
+        if (_primed) return;
         while (!_input.empty && !pred(_input.front))
         {
             _input.popFront();
         }
+        _primed = true;
+    }
+
+    this(R r)
+    {
+        _input = r;
+    }
+
+    private this(R r, bool primed)
+    {
+        _input = r;
+        _primed = primed;
     }
 
     auto opSlice() { return this; }
@@ -1026,7 +1162,7 @@ private struct FilterResult(alias pred, Range)
     }
     else
     {
-        @property bool empty() { return _input.empty; }
+        @property bool empty() { prime; return _input.empty; }
     }
 
     void popFront()
@@ -1035,10 +1171,13 @@ private struct FilterResult(alias pred, Range)
         {
             _input.popFront();
         } while (!_input.empty && !pred(_input.front));
+        _primed = true;
     }
 
     @property auto ref front()
     {
+        prime;
+        assert(!empty, "Attempting to fetch the front of an empty filter.");
         return _input.front;
     }
 
@@ -1046,7 +1185,7 @@ private struct FilterResult(alias pred, Range)
     {
         @property auto save()
         {
-            return typeof(this)(_input.save);
+            return typeof(this)(_input.save, _primed);
         }
     }
 }
@@ -1057,8 +1196,8 @@ private struct FilterResult(alias pred, Range)
     import std.internal.test.dummyrange;
     import std.range;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    auto shouldNotLoop4ever = repeat(1).filter!(x => x % 2 == 0);
+
     int[] a = [ 3, 4, 2 ];
     auto r = filter!("a > 3")(a);
     static assert(isForwardRange!(typeof(r)));
@@ -1078,12 +1217,14 @@ private struct FilterResult(alias pred, Range)
     static assert(isInfinite!(typeof(infinite)));
     static assert(isForwardRange!(typeof(infinite)));
 
-    foreach (DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges)
+    {
         DummyType d;
         auto f = filter!"a & 1"(d);
         assert(equal(f, [1,3,5,7,9]));
 
-        static if (isForwardRange!DummyType) {
+        static if (isForwardRange!DummyType)
+        {
             static assert(isForwardRange!(typeof(f)));
         }
     }
@@ -1151,14 +1292,15 @@ private struct FilterResult(alias pred, Range)
 /**
  * $(D auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range));)
  *
- * Similar to $(D filter), except it defines a bidirectional
- * range. There is a speed disadvantage - the constructor spends time
+ * Similar to $(D filter), except it defines a
+ * $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives).
+ * There is a speed disadvantage - the constructor spends time
  * finding the last element in the range that satisfies the filtering
  * condition (in addition to finding the first one). The advantage is
  * that the filtered range can be spanned from both directions. Also,
- * $(XREF range, retro) can be applied against the filtered range.
+ * $(REF retro, std,range) can be applied against the filtered range.
  *
- * The predicate is passed to $(XREF functional,unaryFun), and can either
+ * The predicate is passed to $(REF unaryFun, std,functional), and can either
  * accept a string, or any callable that can be executed via $(D pred(element)).
  *
  * Params:
@@ -1219,6 +1361,7 @@ private struct FilterBidiResult(alias pred, Range)
 
     @property auto ref front()
     {
+        assert(!empty, "Attempting to fetch the front of an empty filterBidirectional.");
         return _input.front;
     }
 
@@ -1232,6 +1375,7 @@ private struct FilterBidiResult(alias pred, Range)
 
     @property auto ref back()
     {
+        assert(!empty, "Attempting to fetch the back of an empty filterBidirectional.");
         return _input.back;
     }
 
@@ -1241,8 +1385,39 @@ private struct FilterBidiResult(alias pred, Range)
     }
 }
 
-// group
-struct Group(alias pred, R) if (isInputRange!R)
+/**
+Groups consecutively equivalent elements into a single tuple of the element and
+the number of its repetitions.
+
+Similarly to $(D uniq), $(D group) produces a range that iterates over unique
+consecutive elements of the given range. Each element of this range is a tuple
+of the element and the number of times it is repeated in the original range.
+Equivalence of elements is assessed by using the predicate $(D pred), which
+defaults to $(D "a == b").  The predicate is passed to $(REF binaryFun, std,functional),
+and can either accept a string, or any callable that can be executed via
+$(D pred(element, element)).
+
+Params:
+    pred = Binary predicate for determining equivalence of two elements.
+    r = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to
+        iterate over.
+
+Returns: A range of elements of type $(D Tuple!(ElementType!R, uint)),
+representing each consecutively unique element and its respective number of
+occurrences in that run.  This will be an input range if $(D R) is an input
+range, and a forward range in all other cases.
+
+See_Also: $(LREF chunkBy), which chunks an input range into subranges
+    of equivalent adjacent elements.
+*/
+Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
+{
+    return typeof(return)(r);
+}
+
+/// ditto
+struct Group(alias pred, R)
+if (isInputRange!R)
 {
     import std.typecons : Rebindable, tuple, Tuple;
 
@@ -1266,12 +1441,14 @@ struct Group(alias pred, R) if (isInputRange!R)
     private R _input;
     private Tuple!(MutableE, uint) _current;
 
+    ///
     this(R input)
     {
         _input = input;
         if (!_input.empty) popFront();
     }
 
+    ///
     void popFront()
     {
         if (_input.empty)
@@ -1292,23 +1469,28 @@ struct Group(alias pred, R) if (isInputRange!R)
 
     static if (isInfinite!R)
     {
+        ///
         enum bool empty = false;  // Propagate infiniteness.
     }
     else
     {
+        ///
         @property bool empty()
         {
             return _current[1] == 0;
         }
     }
 
+    ///
     @property auto ref front()
     {
-        assert(!empty);
+        assert(!empty, "Attempting to fetch the front of an empty Group.");
         return _current;
     }
 
-    static if (isForwardRange!R) {
+    static if (isForwardRange!R)
+    {
+        ///
         @property typeof(this) save() {
             typeof(this) ret = this;
             ret._input = this._input.save;
@@ -1316,33 +1498,6 @@ struct Group(alias pred, R) if (isInputRange!R)
             return ret;
         }
     }
-}
-
-/**
-Groups consecutively equivalent elements into a single tuple of the element and
-the number of its repetitions.
-
-Similarly to $(D uniq), $(D group) produces a range that iterates over unique
-consecutive elements of the given range. Each element of this range is a tuple
-of the element and the number of times it is repeated in the original range.
-Equivalence of elements is assessed by using the predicate $(D pred), which
-defaults to $(D "a == b").  The predicate is passed to $(XREF functional,binaryFun),
-and can either accept a string, or any callable that can be executed via
-$(D pred(element, element)).
-
-Params:
-    pred = Binary predicate for determining equivalence of two elements.
-    r = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to
-        iterate over.
-
-Returns: A range of elements of type $(D Tuple!(ElementType!R, uint)),
-representing each consecutively unique element and its respective number of
-occurrences in that run.  This will be an input range if $(D R) is an input
-range, and a forward range in all other cases.
-*/
-Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
-{
-    return typeof(return)(r);
 }
 
 ///
@@ -1356,20 +1511,37 @@ Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
         tuple(4, 3u), tuple(5, 1u) ][]));
 }
 
+/**
+ * Using group, an associative array can be easily generated with the count of each
+ * unique element in the range.
+ */
+@safe unittest
+{
+    import std.algorithm.sorting : sort;
+    import std.array : assocArray;
+
+    uint[string] result;
+    auto range = ["a", "b", "a", "c", "b", "c", "c", "d", "e"];
+    result = range.sort!((a, b) => a < b)
+        .group
+        .assocArray;
+
+    assert(result == ["a": 2U, "b": 2U, "c": 3U, "d": 1U, "e": 1U]);
+}
+
 @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
     import std.typecons : tuple, Tuple;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
     assert(equal(group(arr), [ tuple(1, 1u), tuple(2, 4u), tuple(3, 1u),
                             tuple(4, 3u), tuple(5, 1u) ][]));
     static assert(isForwardRange!(typeof(group(arr))));
 
-    foreach (DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges)
+    {
         DummyType d;
         auto g = group(d);
 
@@ -1381,7 +1553,7 @@ Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
     }
 }
 
-unittest
+@safe unittest
 {
     // Issue 13857
     immutable(int)[] a1 = [1,1,2,2,2,3,4,4,5,6,6,7,8,9,9,9];
@@ -1409,7 +1581,7 @@ unittest
 
 // Used by implementation of chunkBy for non-forward input ranges.
 private struct ChunkByChunkImpl(alias pred, Range)
-    if (isInputRange!Range && !isForwardRange!Range)
+if (isInputRange!Range && !isForwardRange!Range)
 {
     alias fun = binaryFun!pred;
 
@@ -1448,7 +1620,7 @@ private template ChunkByImplIsUnary(alias pred, Range)
 
 // Implementation of chunkBy for non-forward input ranges.
 private struct ChunkByImpl(alias pred, Range)
-    if (isInputRange!Range && !isForwardRange!Range)
+if (isInputRange!Range && !isForwardRange!Range)
 {
     enum bool isUnary = ChunkByImplIsUnary!(pred, Range);
 
@@ -1512,7 +1684,7 @@ private struct ChunkByImpl(alias pred, Range)
 
 // Single-pass implementation of chunkBy for forward ranges.
 private struct ChunkByImpl(alias pred, Range)
-    if (isForwardRange!Range)
+if (isForwardRange!Range)
 {
     import std.typecons : RefCounted;
 
@@ -1633,7 +1805,7 @@ private struct ChunkByImpl(alias pred, Range)
     static assert(isForwardRange!(typeof(this)));
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1641,6 +1813,8 @@ unittest
     class RefFwdRange
     {
         int[]  impl;
+
+        @safe nothrow:
 
         this(int[] data) { impl = data; }
         @property bool empty() { return impl.empty; }
@@ -1688,10 +1862,12 @@ unittest
 
 /**
  * Chunks an input range into subranges of equivalent adjacent elements.
+ * In other languages this is often called `partitionBy`, `groupBy`
+ * or `sliceWhen`.
  *
  * Equivalence is defined by the predicate $(D pred), which can be either
- * binary, which is passed to $(XREF functional,binaryFun), or unary, which is
- * passed to $(XREF functional,unaryFun). In the binary form, two _range elements
+ * binary, which is passed to $(REF binaryFun, std,functional), or unary, which is
+ * passed to $(REF unaryFun, std,functional). In the binary form, two _range elements
  * $(D a) and $(D b) are considered equivalent if $(D pred(a,b)) is true. In
  * unary form, two elements are considered equivalent if $(D pred(a) == pred(b))
  * is true.
@@ -1704,7 +1880,7 @@ unittest
  *
  * Params:
  *  pred = Predicate for determining equivalence.
- *  r = The range to be chunked.
+ *  r = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to be chunked.
  *
  * Returns: With a binary predicate, a range of ranges is returned in which
  * all elements in a given subrange are equivalent under the given predicate.
@@ -1724,13 +1900,13 @@ unittest
  * element.
  */
 auto chunkBy(alias pred, Range)(Range r)
-    if (isInputRange!Range)
+if (isInputRange!Range)
 {
     return ChunkByImpl!(pred, Range)(r);
 }
 
 /// Showing usage with binary predicate:
-/*FIXME: @safe*/ unittest
+/*FIXME: @safe*/ @system unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -1757,7 +1933,7 @@ auto chunkBy(alias pred, Range)(Range r)
 }
 
 version(none) // this example requires support for non-equivalence relations
-unittest
+@safe unittest
 {
     auto data = [
         [1, 1],
@@ -1780,10 +1956,11 @@ unittest
 }
 
 /// Showing usage with unary predicate:
-/* FIXME: pure @safe nothrow*/ unittest
+/* FIXME: pure @safe nothrow*/ @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
+    import std.range.primitives;
 
     // Grouping by particular attribute of each element:
     auto range =
@@ -1828,7 +2005,7 @@ unittest
     }
 }
 
-/*FIXME: pure @safe nothrow*/ unittest
+/*FIXME: pure @safe nothrow*/ @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
@@ -1906,7 +2083,7 @@ unittest
 
 // Issue 13595
 version(none) // This requires support for non-equivalence relations
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     auto r = [1, 2, 3, 4, 5, 6, 7, 8, 9].chunkBy!((x, y) => ((x*y) % 3) == 0);
@@ -1919,7 +2096,7 @@ unittest
 }
 
 // Issue 13805
-unittest
+@system unittest
 {
     [""].map!((s) => s).chunkBy!((x, y) => true);
 }
@@ -1928,13 +2105,13 @@ unittest
 /**
 Lazily joins a range of ranges with a separator. The separator itself
 is a range. If a separator is not provided, then the ranges are
-joined directly without anything in between them (often called $(D flatten)
+joined directly without anything in between them (often called `flatten`
 in other languages).
 
 Params:
-    r = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) of input
+    r = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of input
         ranges to be joined.
-    sep = A $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range) of
+    sep = A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) of
         element(s) to serve as separators in the joined range.
 
 Returns:
@@ -1943,7 +2120,7 @@ both outer and inner ranges of $(D RoR) are forward ranges; otherwise it will
 be only an input range.
 
 See_also:
-$(XREF range,chain), which chains a sequence of ranges with compatible elements
+$(REF chain, std,range), which chains a sequence of ranges with compatible elements
 into a single range.
  */
 auto joiner(RoR, Separator)(RoR r, Separator sep)
@@ -2062,13 +2239,13 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
         @property ElementType!(ElementType!RoR) front()
         {
             if (!_currentSep.empty) return _currentSep.front;
-            assert(!_current.empty);
+            assert(!_current.empty, "Attempting to fetch the front of an empty joiner.");
             return _current.front;
         }
 
         void popFront()
         {
-            assert(!_items.empty);
+            assert(!_items.empty, "Attempting to popFront an empty joiner.");
             // Using separator?
             if (!_currentSep.empty)
             {
@@ -2116,17 +2293,17 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
     assert(["", ""].joiner("xyz").equal("xyz"));
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range.primitives;
     import std.range.interfaces;
     // joiner() should work for non-forward ranges too.
     auto r = inputRangeObject(["abc", "def"]);
-    assert (equal(joiner(r, "xyz"), "abcxyzdef"));
+    assert(equal(joiner(r, "xyz"), "abcxyzdef"));
 }
 
-unittest
+@system unittest
 {
     import std.algorithm.comparison : equal;
     import std.range;
@@ -2222,7 +2399,7 @@ unittest
     assert(equal(joiner(tr5, [0,1]), [1,2,0,1,3,4,0,1,0,1]));
 }
 
-unittest
+@safe unittest
 {
     static assert(isInputRange!(typeof(joiner([""], ""))));
     static assert(isForwardRange!(typeof(joiner([""], ""))));
@@ -2254,6 +2431,11 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
             else
                 _current = _items.front;
         };
+        this(RoR items, ElementType!RoR current)
+        {
+            _items = items;
+            _current = current;
+        }
     public:
         this(RoR r)
         {
@@ -2290,12 +2472,12 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         }
         @property auto ref front()
         {
-            assert(!empty);
+            assert(!empty, "Attempting to fetch the front of an empty joiner.");
             return _current.front;
         }
         void popFront()
         {
-            assert(!_current.empty);
+            assert(!_current.empty, "Attempting to popFront an empty joiner.");
             _current.popFront();
             if (_current.empty)
             {
@@ -2308,24 +2490,34 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
         {
             @property auto save()
             {
-                Result copy = this;
-                copy._items = _items.save;
-                copy._current = _current.save;
-                return copy;
+                return Result(_items.save, _current.save);
+            }
+        }
+
+        static if (hasAssignableElements!(ElementType!RoR))
+        {
+            @property void front(ElementType!(ElementType!RoR) element)
+            {
+                assert(!empty, "Attempting to assign to front of an empty joiner.");
+                _current.front = element;
+            }
+
+            @property void front(ref ElementType!(ElementType!RoR) element)
+            {
+                assert(!empty, "Attempting to assign to front of an empty joiner.");
+                _current.front = element;
             }
         }
     }
     return Result(r);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.range.interfaces;
+    import std.range.interfaces : inputRangeObject;
     import std.range : repeat;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     static assert(isInputRange!(typeof(joiner([""]))));
     static assert(isForwardRange!(typeof(joiner([""]))));
     assert(equal(joiner([""]), ""));
@@ -2335,13 +2527,20 @@ unittest
     assert(equal(joiner(["abc", "def"]), "abcdef"));
     assert(equal(joiner(["Mary", "has", "a", "little", "lamb"]),
                     "Maryhasalittlelamb"));
-    assert(equal(joiner(std.range.repeat("abc", 3)), "abcabcabc"));
+    assert(equal(joiner(repeat("abc", 3)), "abcabcabc"));
 
     // joiner allows in-place mutation!
     auto a = [ [1, 2, 3], [42, 43] ];
     auto j = joiner(a);
     j.front = 44;
     assert(a == [ [44, 2, 3], [42, 43] ]);
+}
+
+
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range.interfaces : inputRangeObject;
 
     // bugzilla 8240
     assert(equal(joiner([inputRangeObject("")]), ""));
@@ -2398,7 +2597,8 @@ unittest
     // Can't use array() or equal() directly because they fail with transient
     // .front.
     int[] result;
-    foreach (c; rr.joiner()) {
+    foreach (c; rr.joiner())
+    {
         result ~= c;
     }
 
@@ -2443,7 +2643,8 @@ unittest
     // Can't use array() or equal() directly because they fail with transient
     // .front.
     dchar[] result;
-    foreach (c; rr.joiner()) {
+    foreach (c; rr.joiner())
+    {
         result ~= c;
     }
 
@@ -2454,7 +2655,7 @@ unittest
 }
 
 // Issue 8061
-unittest
+@system unittest
 {
     import std.range.interfaces;
     import std.conv : to;
@@ -2464,6 +2665,51 @@ unittest
 
     auto str = to!string(r);
     assert(str == "abcd");
+}
+
+@safe unittest
+{
+    import std.range : repeat;
+
+    class AssignableRange
+    {
+    @safe:
+        int element;
+        @property int front()
+        {
+            return element;
+        }
+
+        enum empty = false;
+
+        void popFront()
+        {
+        }
+
+        @property void front(int newValue)
+        {
+            element = newValue;
+        }
+    }
+
+    static assert(isInputRange!AssignableRange);
+    static assert(is(ElementType!AssignableRange == int));
+    static assert(hasAssignableElements!AssignableRange);
+    static assert(!hasLvalueElements!AssignableRange);
+
+    auto range = new AssignableRange();
+    assert(range.element == 0);
+
+    auto joined = joiner(repeat(range));
+    joined.front = 5;
+    assert(range.element == 5);
+    assert(joined.front == 5);
+
+    joined.popFront;
+    int byRef = 7;
+    joined.front = byRef;
+    assert(range.element == byRef);
+    assert(joined.front == byRef);
 }
 
 /++
@@ -2482,17 +2728,21 @@ seed (the range must be non-empty).
 Returns:
     the accumulated $(D result)
 
+Params:
+    fun = one or more functions
+
 See_Also:
-    $(WEB en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
+    $(HTTP en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
 
     $(LREF fold) is functionally equivalent to $(LREF reduce) with the argument order reversed,
     and without the need to use $(LREF tuple) for multiple seeds. This makes it easier
     to use in UFCS chains.
 
     $(LREF sum) is similar to $(D reduce!((a, b) => a + b)) that offers
-    precise summing of floating point numbers.
+    pairwise summing of floating point numbers.
 +/
-template reduce(fun...) if (fun.length >= 1)
+template reduce(fun...)
+if (fun.length >= 1)
 {
     import std.meta : staticMap;
 
@@ -2514,7 +2764,6 @@ template reduce(fun...) if (fun.length >= 1)
     If $(D r) is empty, an $(D Exception) is thrown.
 
     Params:
-        fun = one or more functions
         r = an iterable value as defined by $(D isIterable)
 
     Returns:
@@ -2544,7 +2793,7 @@ template reduce(fun...) if (fun.length >= 1)
     /++
     Seed version. The seed should be a single value if $(D fun) is a
     single function. If $(D fun) is multiple functions, then $(D seed)
-    should be a $(XREF typecons,Tuple), with one field per function in $(D f).
+    should be a $(REF Tuple, std,typecons), with one field per function in $(D f).
 
     For convenience, if the seed is const, or has qualified fields, then
     $(D reduce) will operate on an unqualified copy. If this happens
@@ -2553,7 +2802,6 @@ template reduce(fun...) if (fun.length >= 1)
     Use $(D fold) instead of $(D reduce) to use the seed version in a UFCS chain.
 
     Params:
-        fun = one or more functions
         seed = the initial value of the accumulator
         r = an iterable value as defined by $(D isIterable)
 
@@ -2597,7 +2845,13 @@ template reduce(fun...) if (fun.length >= 1)
             foreach (i, f; binfuns)
             {
                 static assert(!is(typeof(f(args[i], e))) || is(typeof(args[i] = f(args[i], e))),
-                    algoFormat("Incompatible function/seed/element: %s/%s/%s", fullyQualifiedName!f, Args[i].stringof, E.stringof));
+                    algoFormat(
+                        "Incompatible function/seed/element: %s/%s/%s",
+                        fullyQualifiedName!f,
+                        Args[i].stringof,
+                        E.stringof
+                    )
+                );
             }
 
             static if (mustInitialize) if (initialized == false)
@@ -2612,7 +2866,9 @@ template reduce(fun...) if (fun.length >= 1)
             foreach (i, f; binfuns)
                 args[i] = f(args[i], e);
         }
-        static if (mustInitialize) if (!initialized) throw new Exception("Cannot reduce an empty iterable w/o an explicit seed value.");
+        static if (mustInitialize)
+        if (!initialized)
+            throw new Exception("Cannot reduce an empty iterable w/o an explicit seed value.");
 
         static if (Args.length == 1)
             return args[0];
@@ -2678,7 +2934,7 @@ Sometimes it is very useful to compute multiple aggregates in one pass.
 One advantage is that the computation is faster because the looping overhead
 is shared. That's why $(D reduce) accepts multiple functions.
 If two or more functions are passed, $(D reduce) returns a
-$(XREF typecons, Tuple) object with one member per passed-in function.
+$(REF Tuple, std,typecons) object with one member per passed-in function.
 The number of seeds must be correspondingly increased.
 */
 @safe unittest
@@ -2703,11 +2959,10 @@ The number of seeds must be correspondingly increased.
     auto stdev = sqrt(r[1] / a.length - avg * avg);
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : max, min;
-    import std.exception : assertThrown;
-    import std.range;
+    import std.range : chain;
     import std.typecons : tuple, Tuple;
 
     double[] a = [ 3, 4 ];
@@ -2731,18 +2986,26 @@ unittest
     // Stringize with commas
     string rep = reduce!("a ~ `, ` ~ to!(string)(b)")("", a);
     assert(rep[2 .. $] == "1, 2, 3, 4, 5", "["~rep[2 .. $]~"]");
+}
+
+@system unittest
+{
+    import std.algorithm.comparison : max, min;
+    import std.exception : assertThrown;
+    import std.range : iota;
+    import std.typecons : tuple, Tuple;
 
     // Test the opApply case.
     static struct OpApply
     {
         bool actEmpty;
 
-        int opApply(int delegate(ref int) dg)
+        int opApply(scope int delegate(ref int) dg)
         {
             int res;
             if (actEmpty) return res;
 
-            foreach (i; 0..100)
+            foreach (i; 0 .. 100)
             {
                 res = dg(i);
                 if (res) break;
@@ -2759,7 +3022,7 @@ unittest
     assert(reduce!("a + b", max)(tuple(5, 0), oa) == tuple(hundredSum + 5, 99));
 
     // Test for throwing on empty range plus no seed.
-    assertThrown(reduce!"a + b"([1, 2][0..0]));
+    assertThrown(reduce!"a + b"([1, 2][0 .. 0]));
 
     oa.actEmpty = true;
     assertThrown(reduce!"a + b"(oa));
@@ -2767,8 +3030,6 @@ unittest
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     const float a = 0.0;
     const float[] b = [ 1.2, 3, 3.3 ];
     float[] c = [ 1.2, 3, 3.3 ];
@@ -2802,7 +3063,7 @@ unittest
     assert(r2 == tuple(3, 3));
 }
 
-unittest
+@system unittest
 {
     int i = 0;
     static struct OpApply
@@ -2821,7 +3082,7 @@ unittest
         }
     }
     //test CTFE and functions with context
-    int fun(int a, int b){return a + b + 1;}
+    int fun(int a, int b) @safe {return a + b + 1;}
     auto foo()
     {
         import std.algorithm.comparison : max;
@@ -2848,7 +3109,8 @@ unittest
     //http://forum.dlang.org/post/oghtttkopzjshsuflelk@forum.dlang.org
     //Seed is tuple of const.
     static auto minmaxElement(alias F = min, alias G = max, R)(in R range)
-        @safe pure nothrow if (isInputRange!R)
+    @safe pure nothrow
+    if (isInputRange!R)
     {
         return reduce!(F, G)(tuple(ElementType!R.max,
                                    ElementType!R.min), range);
@@ -2859,7 +3121,7 @@ unittest
 @safe unittest //12569
 {
     import std.algorithm.comparison : max, min;
-    import std.typecons: tuple;
+    import std.typecons : tuple;
     dchar c = 'a';
     reduce!(min, max)(tuple(c, c), "hello"); // OK
     static assert(!is(typeof(reduce!(min, max)(tuple(c), "hello"))));
@@ -2896,7 +3158,12 @@ private template ReduceSeedType(E)
         ReduceSeedType s = ReduceSeedType.init;
         static assert(is(typeof({ReduceSeedType s = lvalueOf!E;})) &&
             is(typeof(lvalueOf!ReduceSeedType = fun(lvalueOf!ReduceSeedType, lvalueOf!E))),
-            algoFormat("Unable to deduce an acceptable seed type for %s with element type %s.", fullyQualifiedName!fun, E.stringof));
+            algoFormat(
+                "Unable to deduce an acceptable seed type for %s with element type %s.",
+                fullyQualifiedName!fun,
+                E.stringof
+            )
+        );
     }
 }
 
@@ -2916,7 +3183,7 @@ Returns:
     the accumulated $(D result)
 
 See_Also:
-    $(WEB en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
+    $(HTTP en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
 
     $(LREF sum) is similar to $(D fold!((a, b) => a + b)) that offers
     precise summing of floating point numbers.
@@ -2924,7 +3191,8 @@ See_Also:
     This is functionally equivalent to $(LREF reduce) with the argument order reversed,
     and without the need to use $(LREF tuple) for multiple seeds.
 +/
-template fold(fun...) if (fun.length >= 1)
+template fold(fun...)
+if (fun.length >= 1)
 {
     auto fold(R, S...)(R r, S seed)
     {
@@ -2934,7 +3202,7 @@ template fold(fun...) if (fun.length >= 1)
         }
         else
         {
-            import std.typecons: tuple;
+            import std.typecons : tuple;
             return reduce!fun(tuple(seed), r);
         }
     }
@@ -2951,8 +3219,8 @@ template fold(fun...) if (fun.length >= 1)
     // Sum all elements with explicit seed
     assert(arr.fold!((a, b) => a + b)(6) == 21);
 
-    import std.algorithm.comparison: min, max;
-    import std.typecons: tuple;
+    import std.algorithm.comparison : min, max;
+    import std.typecons : tuple;
 
     // Compute minimum and maximum at the same time
     assert(arr.fold!(min, max) == tuple(1, 5));
@@ -2962,6 +3230,9 @@ template fold(fun...) if (fun.length >= 1)
 
     // Can be used in a UFCS chain
     assert(arr.map!(a => a + 1).fold!((a, b) => a + b) == 20);
+
+    // Return the last element of any range
+    assert(arr.fold!((a, b) => b) == 5);
 }
 
 @safe @nogc pure nothrow unittest
@@ -2973,6 +3244,392 @@ template fold(fun...) if (fun.length >= 1)
     static assert(is(typeof(arr.fold!((a, b) => a)(1))));
 }
 
+/++
+Similar to `fold`, but returns a range containing the successive reduced values.
+The call $(D cumulativeFold!(fun)(range, seed)) first assigns `seed` to an
+internal variable `result`, also called the accumulator.
+The returned range contains the values $(D result = fun(result, x)) lazily
+evaluated for each element `x` in `range`. Finally, the last element has the
+same value as $(D fold!(fun)(seed, range)).
+The one-argument version $(D cumulativeFold!(fun)(range)) works similarly, but
+it returns the first element unchanged and uses it as seed for the next
+elements.
+This function is also known as
+    $(HTTP en.cppreference.com/w/cpp/algorithm/partial_sum, partial_sum),
+    $(HTTP docs.python.org/3/library/itertools.html#itertools.accumulate, accumulate),
+    $(HTTP hackage.haskell.org/package/base-4.8.2.0/docs/Prelude.html#v:scanl, scan),
+    $(HTTP mathworld.wolfram.com/CumulativeSum.html, Cumulative Sum).
+
+Params:
+    fun = one or more functions to use as fold operation
+
+Returns:
+    The function returns a range containing the consecutive reduced values. If
+    there is more than one `fun`, the element type will be $(REF Tuple,
+    std,typecons) containing one element for each `fun`.
+
+See_Also:
+    $(HTTP en.wikipedia.org/wiki/Prefix_sum, Prefix Sum)
++/
+template cumulativeFold(fun...)
+if (fun.length >= 1)
+{
+    import std.meta : staticMap;
+    private alias binfuns = staticMap!(binaryFun, fun);
+
+    /++
+    No-seed version. The first element of `r` is used as the seed's value.
+    For each function `f` in `fun`, the corresponding seed type `S` is
+    $(D Unqual!(typeof(f(e, e)))), where `e` is an element of `r`:
+    `ElementType!R`.
+    Once `S` has been determined, then $(D S s = e;) and $(D s = f(s, e);) must
+    both be legal.
+
+    Params:
+        range = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+    Returns:
+        a range containing the consecutive reduced values.
+    +/
+    auto cumulativeFold(R)(R range)
+    if (isInputRange!(Unqual!R))
+    {
+        return cumulativeFoldImpl(range);
+    }
+
+    /++
+    Seed version. The seed should be a single value if `fun` is a single
+    function. If `fun` is multiple functions, then `seed` should be a
+    $(REF Tuple, std,typecons), with one field per function in `f`.
+    For convenience, if the seed is `const`, or has qualified fields, then
+    `cumulativeFold` will operate on an unqualified copy. If this happens
+    then the returned type will not perfectly match `S`.
+
+    Params:
+        range = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+        seed = the initial value of the accumulator
+    Returns:
+        a range containing the consecutive reduced values.
+    +/
+    auto cumulativeFold(R, S)(R range, S seed)
+    if (isInputRange!(Unqual!R))
+    {
+        static if (fun.length == 1)
+            return cumulativeFoldImpl(range, seed);
+        else
+            return cumulativeFoldImpl(range, seed.expand);
+    }
+
+    private auto cumulativeFoldImpl(R, Args...)(R range, ref Args args)
+    {
+        import std.algorithm.internal : algoFormat;
+
+        static assert(Args.length == 0 || Args.length == fun.length,
+            algoFormat("Seed %s does not have the correct amount of fields (should be %s)",
+                Args.stringof, fun.length));
+
+        static if (args.length)
+            alias State = staticMap!(Unqual, Args);
+        else
+            alias State = staticMap!(ReduceSeedType!(ElementType!R), binfuns);
+
+        foreach (i, f; binfuns)
+        {
+            static assert(!__traits(compiles, f(args[i], e)) || __traits(compiles,
+                    { args[i] = f(args[i], e); }()),
+                algoFormat("Incompatible function/seed/element: %s/%s/%s",
+                    fullyQualifiedName!f, Args[i].stringof, E.stringof));
+        }
+
+        static struct Result
+        {
+        private:
+            R source;
+            State state;
+
+            this(R range, ref Args args)
+            {
+                source = range;
+                if (source.empty)
+                    return;
+
+                foreach (i, f; binfuns)
+                {
+                    static if (args.length)
+                        state[i] = f(args[i], source.front);
+                    else
+                        state[i] = source.front;
+                }
+            }
+
+        public:
+            @property bool empty()
+            {
+                return source.empty;
+            }
+
+            @property auto front()
+            {
+                assert(!empty, "Attempting to fetch the front of an empty cumulativeFold.");
+                static if (fun.length > 1)
+                {
+                    import std.typecons : tuple;
+                    return tuple(state);
+                }
+                else
+                {
+                    return state[0];
+                }
+            }
+
+            void popFront()
+            {
+                assert(!empty, "Attempting to popFront an empty cumulativeFold.");
+                source.popFront;
+
+                if (source.empty)
+                    return;
+
+                foreach (i, f; binfuns)
+                    state[i] = f(state[i], source.front);
+            }
+
+            static if (isForwardRange!R)
+            {
+                @property auto save()
+                {
+                    auto result = this;
+                    result.source = source.save;
+                    return result;
+                }
+            }
+
+            static if (hasLength!R)
+            {
+                @property size_t length()
+                {
+                    return source.length;
+                }
+            }
+        }
+
+        return Result(range, args);
+    }
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.comparison : max, min;
+    import std.array : array;
+    import std.math : approxEqual;
+    import std.range : chain;
+
+    int[] arr = [1, 2, 3, 4, 5];
+    // Partial sum of all elements
+    auto sum = cumulativeFold!((a, b) => a + b)(arr, 0);
+    assert(sum.array == [1, 3, 6, 10, 15]);
+
+    // Partial sum again, using a string predicate with "a" and "b"
+    auto sum2 = cumulativeFold!"a + b"(arr, 0);
+    assert(sum2.array == [1, 3, 6, 10, 15]);
+
+    // Compute the partial maximum of all elements
+    auto largest = cumulativeFold!max(arr);
+    assert(largest.array == [1, 2, 3, 4, 5]);
+
+    // Partial max again, but with Uniform Function Call Syntax (UFCS)
+    largest = arr.cumulativeFold!max;
+    assert(largest.array == [1, 2, 3, 4, 5]);
+
+    // Partial count of odd elements
+    auto odds = arr.cumulativeFold!((a, b) => a + (b & 1))(0);
+    assert(odds.array == [1, 1, 2, 2, 3]);
+
+    // Compute the partial sum of squares
+    auto ssquares = arr.cumulativeFold!((a, b) => a + b * b)(0);
+    assert(ssquares.array == [1, 5, 14, 30, 55]);
+
+    // Chain multiple ranges into seed
+    int[] a = [3, 4];
+    int[] b = [100];
+    auto r = cumulativeFold!"a + b"(chain(a, b));
+    assert(r.array == [3, 7, 107]);
+
+    // Mixing convertible types is fair game, too
+    double[] c = [2.5, 3.0];
+    auto r1 = cumulativeFold!"a + b"(chain(a, b, c));
+    assert(approxEqual(r1, [3, 7, 107, 109.5, 112.5]));
+
+    // To minimize nesting of parentheses, Uniform Function Call Syntax can be used
+    auto r2 = chain(a, b, c).cumulativeFold!"a + b";
+    assert(approxEqual(r2, [3, 7, 107, 109.5, 112.5]));
+}
+
+/**
+Sometimes it is very useful to compute multiple aggregates in one pass.
+One advantage is that the computation is faster because the looping overhead
+is shared. That's why `cumulativeFold` accepts multiple functions.
+If two or more functions are passed, `cumulativeFold` returns a $(REF Tuple,
+std,typecons) object with one member per passed-in function.
+The number of seeds must be correspondingly increased.
+*/
+@safe unittest
+{
+    import std.algorithm.comparison : max, min;
+    import std.algorithm.iteration : map;
+    import std.math : approxEqual;
+    import std.typecons : tuple;
+
+    double[] a = [3.0, 4, 7, 11, 3, 2, 5];
+    // Compute minimum and maximum in one pass
+    auto r = a.cumulativeFold!(min, max);
+    // The type of r is Tuple!(int, int)
+    assert(approxEqual(r.map!"a[0]", [3, 3, 3, 3, 3, 2, 2]));     // minimum
+    assert(approxEqual(r.map!"a[1]", [3, 4, 7, 11, 11, 11, 11])); // maximum
+
+    // Compute sum and sum of squares in one pass
+    auto r2 = a.cumulativeFold!("a + b", "a + b * b")(tuple(0.0, 0.0));
+    assert(approxEqual(r2.map!"a[0]", [3, 7, 14, 25, 28, 30, 35]));      // sum
+    assert(approxEqual(r2.map!"a[1]", [9, 25, 74, 195, 204, 208, 233])); // sum of squares
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal, max, min;
+    import std.conv : to;
+    import std.range : chain;
+    import std.typecons : tuple;
+
+    double[] a = [3, 4];
+    auto r = a.cumulativeFold!("a + b")(0.0);
+    assert(r.equal([3, 7]));
+    auto r2 = cumulativeFold!("a + b")(a);
+    assert(r2.equal([3, 7]));
+    auto r3 = cumulativeFold!(min)(a);
+    assert(r3.equal([3, 3]));
+    double[] b = [100];
+    auto r4 = cumulativeFold!("a + b")(chain(a, b));
+    assert(r4.equal([3, 7, 107]));
+
+    // two funs
+    auto r5 = cumulativeFold!("a + b", "a - b")(a, tuple(0.0, 0.0));
+    assert(r5.equal([tuple(3, -3), tuple(7, -7)]));
+    auto r6 = cumulativeFold!("a + b", "a - b")(a);
+    assert(r6.equal([tuple(3, 3), tuple(7, -1)]));
+
+    a = [1, 2, 3, 4, 5];
+    // Stringize with commas
+    auto rep = cumulativeFold!("a ~ `, ` ~ to!string(b)")(a, "");
+    assert(rep.map!"a[2 .. $]".equal(["1", "1, 2", "1, 2, 3", "1, 2, 3, 4", "1, 2, 3, 4, 5"]));
+
+    // Test for empty range
+    a = [];
+    assert(a.cumulativeFold!"a + b".empty);
+    assert(a.cumulativeFold!"a + b"(2.0).empty);
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : max, min;
+    import std.array : array;
+    import std.math : approxEqual;
+    import std.typecons : tuple;
+
+    const float a = 0.0;
+    const float[] b = [1.2, 3, 3.3];
+    float[] c = [1.2, 3, 3.3];
+
+    auto r = cumulativeFold!"a + b"(b, a);
+    assert(approxEqual(r, [1.2, 4.2, 7.5]));
+
+    auto r2 = cumulativeFold!"a + b"(c, a);
+    assert(approxEqual(r2, [1.2, 4.2, 7.5]));
+
+    const numbers = [10, 30, 20];
+    enum m = numbers.cumulativeFold!(min).array;
+    assert(m == [10, 10, 10]);
+    enum minmax = numbers.cumulativeFold!(min, max).array;
+    assert(minmax == [tuple(10, 10), tuple(10, 30), tuple(10, 30)]);
+}
+
+@safe unittest
+{
+    import std.math : approxEqual;
+    import std.typecons : tuple;
+
+    enum foo = "a + 0.5 * b";
+    auto r = [0, 1, 2, 3];
+    auto r1 = r.cumulativeFold!foo;
+    auto r2 = r.cumulativeFold!(foo, foo);
+    assert(approxEqual(r1, [0, 0.5, 1.5, 3]));
+    assert(approxEqual(r2.map!"a[0]", [0, 0.5, 1.5, 3]));
+    assert(approxEqual(r2.map!"a[1]", [0, 0.5, 1.5, 3]));
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal, max, min;
+    import std.array : array;
+    import std.typecons : tuple;
+
+    //Seed is tuple of const.
+    static auto minmaxElement(alias F = min, alias G = max, R)(in R range)
+    @safe pure nothrow
+    if (isInputRange!R)
+    {
+        return range.cumulativeFold!(F, G)(tuple(ElementType!R.max, ElementType!R.min));
+    }
+
+    assert(minmaxElement([1, 2, 3]).equal([tuple(1, 1), tuple(1, 2), tuple(1, 3)]));
+}
+
+@safe unittest //12569
+{
+    import std.algorithm.comparison : equal, max, min;
+    import std.typecons : tuple;
+
+    dchar c = 'a';
+
+    assert(cumulativeFold!(min, max)("hello", tuple(c, c)).equal([tuple('a', 'h'),
+        tuple('a', 'h'), tuple('a', 'l'), tuple('a', 'l'), tuple('a', 'o')]));
+    static assert(!__traits(compiles, cumulativeFold!(min, max)("hello", tuple(c))));
+    static assert(!__traits(compiles, cumulativeFold!(min, max)("hello", tuple(c, c, c))));
+
+    //"Seed dchar should be a Tuple"
+    static assert(!__traits(compiles, cumulativeFold!(min, max)("hello", c)));
+    //"Seed (dchar) does not have the correct amount of fields (should be 2)"
+    static assert(!__traits(compiles, cumulativeFold!(min, max)("hello", tuple(c))));
+    //"Seed (dchar, dchar, dchar) does not have the correct amount of fields (should be 2)"
+    static assert(!__traits(compiles, cumulativeFold!(min, max)("hello", tuple(c, c, c))));
+    //"Incompatable function/seed/element: all(alias pred = "a")/int/dchar"
+    static assert(!__traits(compiles, cumulativeFold!all("hello", 1)));
+    static assert(!__traits(compiles, cumulativeFold!(all, all)("hello", tuple(1, 1))));
+}
+
+@safe unittest //13304
+{
+    int[] data;
+    assert(data.cumulativeFold!((a, b) => a + b).empty);
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange : AllDummyRanges, propagatesLength,
+        propagatesRangeType, RangeType;
+
+    foreach (DummyType; AllDummyRanges)
+    {
+        DummyType d;
+        auto m = d.cumulativeFold!"a * b";
+
+        static assert(propagatesLength!(typeof(m), DummyType));
+        static if (DummyType.rt <= RangeType.Forward)
+            static assert(propagatesRangeType!(typeof(m), DummyType));
+
+        assert(m.equal([1, 2, 6, 24, 120, 720, 5040, 40_320, 362_880, 3_628_800]));
+    }
+}
 
 // splitter
 /**
@@ -2984,7 +3641,7 @@ Two adjacent separators are considered to surround an empty element in
 the split range. Use $(D filter!(a => !a.empty)) on the result to compress
 empty elements.
 
-The predicate is passed to $(XREF functional,binaryFun), and can either accept
+The predicate is passed to $(REF binaryFun, std,functional), and can either accept
 a string, or any callable that can be executed via $(D pred(element, s)).
 
 If the empty range is given, the result is a range with one empty
@@ -2998,7 +3655,7 @@ below).
 Params:
     pred = The predicate for comparing each element with the separator,
         defaulting to $(D "a == b").
-    r = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to be
+    r = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to be
         split. Must support slicing and $(D .length).
     s = The element to be treated as the separator between range segments to be
         split.
@@ -3009,11 +3666,12 @@ Constraints:
 
 Returns:
     An input range of the subranges of elements between separators. If $(D r)
-    is a forward range or bidirectional range, the returned range will be
-    likewise.
+    is a $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
+    or $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives),
+    the returned range will be likewise.
 
 See_Also:
- $(XREF regex, _splitter) for a version that splits using a regular
+ $(REF _splitter, std,regex) for a version that splits using a regular
 expression defined separator.
 */
 auto splitter(alias pred = "a == b", Range, Separator)(Range r, Separator s)
@@ -3064,6 +3722,8 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
                 _separatorLength = codeLength!(ElementEncodingType!Range)(separator);
             }
+            if (_input.empty)
+                _frontLength = _atEnd;
         }
 
         static if (isInfinite!Range)
@@ -3080,7 +3740,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
         @property Range front()
         {
-            assert(!empty);
+            assert(!empty, "Attempting to fetch the front of an empty splitter.");
             if (_frontLength == _unComputed)
             {
                 auto r = _input.find!pred(_separator);
@@ -3091,7 +3751,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
         void popFront()
         {
-            assert(!empty);
+            assert(!empty, "Attempting to popFront an empty splitter.");
             if (_frontLength == _unComputed)
             {
                 front;
@@ -3126,7 +3786,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
         {
             @property Range back()
             {
-                assert(!empty);
+                assert(!empty, "Attempting to fetch the back of an empty splitter.");
                 if (_backLength == _unComputed)
                 {
                     immutable lastIndex = lastIndexOf(_input, _separator);
@@ -3144,7 +3804,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
             void popBack()
             {
-                assert(!empty);
+                assert(!empty, "Attempting to popBack an empty splitter.");
                 if (_backLength == _unComputed)
                 {
                     // evaluate back to make sure it's computed
@@ -3193,21 +3853,15 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     import std.array : array;
     import std.range : retro;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    assert(equal(splitter("", ' '), [ "" ]));
     assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
     assert(equal(splitter("žlutoučkýřkůň", 'ř'), [ "žlutoučký", "kůň" ]));
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
     int[][] w = [ [1, 2], [], [3], [4, 5], [] ];
     static assert(isForwardRange!(typeof(splitter(a, 0))));
 
-    // foreach (x; splitter(a, 0)) {
-    //     writeln("[", x, "]");
-    // }
     assert(equal(splitter(a, 0), w));
     a = null;
-    assert(equal(splitter(a, 0), [ (int[]).init ][]));
+    assert(equal(splitter(a, 0),  (int[][]).init));
     a = [ 0 ];
     assert(equal(splitter(a, 0), [ (int[]).init, (int[]).init ][]));
     a = [ 0, 1 ];
@@ -3240,7 +3894,8 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     assert(split.back == "r ");
 
     foreach (DummyType; AllDummyRanges) {  // Bug 4408
-        static if (isRandomAccessRange!DummyType) {
+        static if (isRandomAccessRange!DummyType)
+        {
             static assert(isBidirectionalRange!DummyType);
             DummyType d;
             auto s = splitter(d, 5);
@@ -3269,7 +3924,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 Similar to the previous overload of $(D splitter), except this one uses another
 range as a separator. This can be used with any narrow string type or sliceable
 range type, but is most popular with string types. The predicate is passed to
-$(XREF functional,binaryFun), and can either accept a string, or any callable
+$(REF binaryFun, std,functional), and can either accept a string, or any callable
 that can be executed via $(D pred(r.front, s.front)).
 
 Two adjacent separators are considered to surround an empty element in
@@ -3279,9 +3934,9 @@ empty elements.
 Params:
     pred = The predicate for comparing each element with the separator,
         defaulting to $(D "a == b").
-    r = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to be
+    r = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to be
         split.
-    s = The $(XREF_PACK_NAMED range,primitives,isForwardRange,forward range) to
+    s = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to
         be treated as the separator between segments of $(D r) to be split.
 
 Constraints:
@@ -3290,10 +3945,10 @@ Constraints:
 
 Returns:
     An input range of the subranges of elements between separators. If $(D r)
-    is a forward range or bidirectional range, the returned range will be
-    likewise.
+    is a forward range or $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives),
+    the returned range will be likewise.
 
-See_Also: $(XREF regex, _splitter) for a version that splits using a regular
+See_Also: $(REF _splitter, std,regex) for a version that splits using a regular
 expression defined separator.
  */
 auto splitter(alias pred = "a == b", Range, Separator)(Range r, Separator s)
@@ -3310,17 +3965,17 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     private:
         Range _input;
         Separator _separator;
-        enum size_t _unComputed = size_t.max - 1, _atEnd = size_t.max;
-        // _frontLength == _atEnd means empty
-        size_t _frontLength = _unComputed;
+        // _frontLength == size_t.max means empty
+        size_t _frontLength = size_t.max;
         static if (isBidirectionalRange!Range)
-            size_t _backLength = _unComputed;
+            size_t _backLength = size_t.max;
 
         @property auto separatorLength() { return _separator.length; }
 
         void ensureFrontLength()
         {
-            if (_frontLength != _unComputed) return;
+            if (_frontLength != _frontLength.max) return;
+            assert(!_input.empty);
             // compute front length
             _frontLength = (_separator.empty) ? 1 :
                            _input.length - find!pred(_input, _separator).length;
@@ -3331,7 +3986,8 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         void ensureBackLength()
         {
             static if (isBidirectionalRange!Range)
-                if (_backLength != _unComputed) return;
+                if (_backLength != _backLength.max) return;
+            assert(!_input.empty);
             // compute back length
             static if (isBidirectionalRange!Range && isBidirectionalRange!Separator)
             {
@@ -3350,7 +4006,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 
         @property Range front()
         {
-            assert(!empty);
+            assert(!empty, "Attempting to fetch the front of an empty splitter.");
             ensureFrontLength();
             return _input[0 .. _frontLength];
         }
@@ -3363,21 +4019,21 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
         {
             @property bool empty()
             {
-                return _frontLength == _atEnd;
+                return _frontLength == size_t.max && _input.empty;
             }
         }
 
         void popFront()
         {
-            assert(!empty);
+            assert(!empty, "Attempting to popFront an empty splitter.");
             ensureFrontLength();
             if (_frontLength == _input.length)
             {
                 // done, there's no separator in sight
                 _input = _input[_frontLength .. _frontLength];
-                _frontLength = _atEnd;
+                _frontLength = _frontLength.max;
                 static if (isBidirectionalRange!Range)
-                    _backLength = _atEnd;
+                    _backLength = _backLength.max;
                 return;
             }
             if (_frontLength + separatorLength == _input.length)
@@ -3394,7 +4050,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
             // reading the next item
             _input = _input[_frontLength + separatorLength .. _input.length];
             // mark _frontLength as uninitialized
-            _frontLength = _unComputed;
+            _frontLength = _frontLength.max;
         }
 
         static if (isForwardRange!Range)
@@ -3442,18 +4098,12 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     import std.conv : text;
     import std.array : split;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-    assert(equal(splitter("", "  "), [ "" ]));
-
     auto s = ",abc, de, fg,hi,";
     auto sp0 = splitter(s, ',');
-    // //foreach (e; sp0) writeln("[", e, "]");
     assert(equal(sp0, ["", "abc", " de", " fg", "hi", ""][]));
 
     auto s1 = ", abc, de,  fg, hi, ";
     auto sp1 = splitter(s1, ", ");
-    //foreach (e; sp1) writeln("[", e, "]");
     assert(equal(sp1, ["", "abc", "de", " fg", "hi", ""][]));
     static assert(isForwardRange!(typeof(sp1)));
 
@@ -3497,14 +4147,9 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     auto s6 = ",";
     auto sp6 = splitter(s6, ',');
-    foreach (e; sp6)
-    {
-        //writeln("{", e, "}");
-    }
+    foreach (e; sp6) {}
     assert(equal(sp6, ["", ""][]));
 }
 
@@ -3542,7 +4187,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 
 Similar to the previous overload of $(D splitter), except this one does not use a separator.
 Instead, the predicate is an unary function on the input range's element type.
-The $(D isTerminator) predicate is passed to $(XREF functional,unaryFun) and can
+The $(D isTerminator) predicate is passed to $(REF unaryFun, std,functional) and can
 either accept a string, or any callable that can be executed via $(D pred(element, s)).
 
 Two adjacent separators are considered to surround an empty element in
@@ -3551,7 +4196,7 @@ empty elements.
 
 Params:
     isTerminator = The predicate for deciding where to split the range.
-    input = The $(XREF_PACK_NAMED range,primitives,isInputRange,input range) to
+    input = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to
         be split.
 
 Constraints:
@@ -3559,10 +4204,10 @@ Constraints:
 
 Returns:
     An input range of the subranges of elements between separators. If $(D input)
-    is a forward range or bidirectional range, the returned range will be
-    likewise.
+    is a forward range or $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives),
+    the returned range will be likewise.
 
-See_Also: $(XREF regex, _splitter) for a version that splits using a regular
+See_Also: $(REF _splitter, std,regex) for a version that splits using a regular
 expression defined separator.
  */
 auto splitter(alias isTerminator, Range)(Range input)
@@ -3575,6 +4220,7 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(input.front))))
 @safe unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range.primitives : front;
 
     assert(equal(splitter!(a => a == ' ')("hello  world"), [ "hello", "", "world" ]));
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
@@ -3620,7 +4266,10 @@ private struct SplitterResult(alias isTerminator, Range)
         static if (!fullSlicing)
             _next = _input.save;
 
-        findTerminator();
+        if (!_input.empty)
+            findTerminator();
+        else
+            _end = size_t.max;
     }
 
     static if (isInfinite!Range)
@@ -3715,8 +4364,6 @@ private struct SplitterResult(alias isTerminator, Range)
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     void compare(string sentence, string[] witness)
     {
         auto r = splitter!"a == ' '"(sentence);
@@ -3729,7 +4376,7 @@ private struct SplitterResult(alias isTerminator, Range)
             ["Mary", "", "has", "a", "little", "lamb.", "", "", ""]);
     compare("Mary  has a little lamb.",
             ["Mary", "", "has", "a", "little", "lamb."]);
-    compare("", [""]);
+    compare("", (string[]).init);
     compare(" ", ["", ""]);
 
     static assert(isForwardRange!(typeof(splitter!"a == ' '"("ABC"))));
@@ -3759,7 +4406,7 @@ private struct SplitterResult(alias isTerminator, Range)
         int[][] result;
     }
     Entry[] entries = [
-        Entry(0, 0, [[]]),
+        Entry(0, 0, []),
         Entry(0, 1, [[0]]),
         Entry(1, 2, [[], []]),
         Entry(2, 7, [[2], [4], [6]]),
@@ -3779,8 +4426,14 @@ private struct SplitterResult(alias isTerminator, Range)
     import std.uni : isWhite;
 
     //@@@6791@@@
-    assert(equal(splitter("là dove terminava quella valle"), ["là", "dove", "terminava", "quella", "valle"]));
-    assert(equal(splitter!(std.uni.isWhite)("là dove terminava quella valle"), ["là", "dove", "terminava", "quella", "valle"]));
+    assert(equal(
+        splitter("là dove terminava quella valle"),
+        ["là", "dove", "terminava", "quella", "valle"]
+    ));
+    assert(equal(
+        splitter!(std.uni.isWhite)("là dove terminava quella valle"),
+        ["là", "dove", "terminava", "quella", "valle"]
+    ));
     assert(equal(splitter!"a=='本'"("日本語"), ["日", "語"]));
 }
 
@@ -3795,7 +4448,7 @@ Params:
     s = The string to be split.
 
 Returns:
-    An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) of slices of
+    An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of slices of
     the original string split by whitespace.
  +/
 auto splitter(C)(C[] s)
@@ -3805,7 +4458,7 @@ if (isSomeChar!C)
     static struct Result
     {
     private:
-        import core.exception;
+        import core.exception : RangeError;
         C[] _s;
         size_t _frontLength;
 
@@ -3888,11 +4541,13 @@ if (isSomeChar!C)
     lines[0] = "line one".dup;
     lines[1] = "line \ttwo".dup;
     lines[2] = "yah            last   line\ryah".dup;
-    foreach (line; lines) {
-       foreach (word; splitter(strip(line))) {
+    foreach (line; lines)
+    {
+       foreach (word; splitter(strip(line)))
+       {
             if (word in dictionary) continue; // Nothing to do
             auto newID = dictionary.length;
-            dictionary[to!string(word)] = cast(uint)newID;
+            dictionary[to!string(word)] = cast(uint) newID;
         }
     }
     assert(dictionary.length == 5);
@@ -3978,21 +4633,21 @@ if (isSomeChar!C)
 // sum
 /**
 Sums elements of $(D r), which must be a finite
-$(XREF_PACK_NAMED range,primitives,isInputRange,input range). Although
+$(REF_ALTTEXT input range, isInputRange, std,range,primitives). Although
 conceptually $(D sum(r)) is equivalent to $(LREF fold)!((a, b) => a +
 b)(r, 0), $(D sum) uses specialized algorithms to maximize accuracy,
 as follows.
 
 $(UL
-$(LI If $(D $(XREF_PACK range,primitives,ElementType)!R) is a floating-point
+$(LI If $(D $(REF ElementType, std,range,primitives)!R) is a floating-point
 type and $(D R) is a
-$(XREF_PACK_NAMED range,primitives,isRandomAccessRange,random-access range) with
+$(REF_ALTTEXT random-access range, isRandomAccessRange, std,range,primitives) with
 length and slicing, then $(D sum) uses the
-$(WEB en.wikipedia.org/wiki/Pairwise_summation, pairwise summation)
+$(HTTP en.wikipedia.org/wiki/Pairwise_summation, pairwise summation)
 algorithm.)
 $(LI If $(D ElementType!R) is a floating-point type and $(D R) is a
 finite input range (but not a random-access range with slicing), then
-$(D sum) uses the $(WEB en.wikipedia.org/wiki/Kahan_summation,
+$(D sum) uses the $(HTTP en.wikipedia.org/wiki/Kahan_summation,
 Kahan summation) algorithm.)
 $(LI In all other cases, a simple element by element addition is done.)
 )
@@ -4064,9 +4719,9 @@ if (isInputRange!R && !isInfinite!R)
     F[64] store = void;
     size_t idx = 0;
 
-    auto collapseStore(T)(T k)
+    void collapseStore(T)(T k)
     {
-        auto lastToKeep = idx - cast(uint)bsf(k+1);
+        auto lastToKeep = idx - cast(uint) bsf(k+1);
         while (idx > lastToKeep)
         {
             store[idx - 1] += store[idx];
@@ -4081,7 +4736,7 @@ if (isInputRange!R && !isInfinite!R)
             static if (isRandomAccessRange!R && hasSlicing!R)
             {
                 store[idx] = sumPairwise16!F(data);
-                data = data[16 .. $];
+                data = data[16 .. data.length];
             }
             else store[idx] = sumPairwiseN!(16, false, F)(data);
 
@@ -4120,10 +4775,10 @@ if (isInputRange!R && !isInfinite!R)
 private auto sumPairwise16(F, R)(R r)
 if (isRandomAccessRange!R)
 {
-    return (((cast(F)r[ 0] + r[ 1]) + (cast(F)r[ 2] + r[ 3]))
-          + ((cast(F)r[ 4] + r[ 5]) + (cast(F)r[ 6] + r[ 7])))
-         + (((cast(F)r[ 8] + r[ 9]) + (cast(F)r[10] + r[11]))
-          + ((cast(F)r[12] + r[13]) + (cast(F)r[14] + r[15])));
+    return (((cast(F) r[ 0] + r[ 1]) + (cast(F) r[ 2] + r[ 3]))
+          + ((cast(F) r[ 4] + r[ 5]) + (cast(F) r[ 6] + r[ 7])))
+         + (((cast(F) r[ 8] + r[ 9]) + (cast(F) r[10] + r[11]))
+          + ((cast(F) r[12] + r[13]) + (cast(F) r[14] + r[15])));
 }
 
 private auto sumPair(bool needEmptyChecks, F, R)(ref R r)
@@ -4141,7 +4796,8 @@ if (isForwardRange!R && !isRandomAccessRange!R)
 private auto sumPairwiseN(size_t N, bool needEmptyChecks, F, R)(ref R r)
 if (isForwardRange!R && !isRandomAccessRange!R)
 {
-    static assert(!(N & (N-1))); //isPow2
+    import std.math : isPowerOf2;
+    static assert(isPowerOf2(N));
     static if (N == 2) return sumPair!(needEmptyChecks, F)(r);
     else return sumPairwiseN!(N/2, needEmptyChecks, F)(r)
         + sumPairwiseN!(N/2, needEmptyChecks, F)(r);
@@ -4150,12 +4806,12 @@ if (isForwardRange!R && !isRandomAccessRange!R)
 // Kahan algo http://en.wikipedia.org/wiki/Kahan_summation_algorithm
 private auto sumKahan(Result, R)(Result result, R r)
 {
-    static assert (isFloatingPoint!Result && isMutable!Result);
+    static assert(isFloatingPoint!Result && isMutable!Result);
     Result c = 0;
     for (; !r.empty; r.popFront())
     {
-        auto y = r.front - c;
-        auto t = result + y;
+        immutable y = r.front - c;
+        immutable t = result + y;
         c = (t - result) - y;
         result = t;
     }
@@ -4194,8 +4850,8 @@ private auto sumKahan(Result, R)(Result result, R r)
 
 @safe pure nothrow unittest
 {
-    static assert(is(typeof(sum([cast( byte)1])) ==  int));
-    static assert(is(typeof(sum([cast(ubyte)1])) ==  int));
+    static assert(is(typeof(sum([cast( byte) 1])) ==  int));
+    static assert(is(typeof(sum([cast(ubyte) 1])) ==  int));
     static assert(is(typeof(sum([  1,   2,   3,   4])) ==  int));
     static assert(is(typeof(sum([ 1U,  2U,  3U,  4U])) == uint));
     static assert(is(typeof(sum([ 1L,  2L,  3L,  4L])) ==  long));
@@ -4247,7 +4903,7 @@ private auto sumKahan(Result, R)(Result result, R r)
     auto s2 = a.map!(x => x).sum; // Error
 }
 
-unittest
+@system unittest
 {
     import std.bigint;
     import std.range;
@@ -4270,20 +4926,21 @@ unittest
 // uniq
 /**
 Lazily iterates unique consecutive elements of the given range (functionality
-akin to the $(WEB wikipedia.org/wiki/_Uniq, _uniq) system
+akin to the $(HTTP wikipedia.org/wiki/_Uniq, _uniq) system
 utility). Equivalence of elements is assessed by using the predicate
 $(D pred), by default $(D "a == b"). The predicate is passed to
-$(XREF functional,binaryFun), and can either accept a string, or any callable
+$(REF binaryFun, std,functional), and can either accept a string, or any callable
 that can be executed via $(D pred(element, element)). If the given range is
-bidirectional, $(D uniq) also yields a bidirectional range.
+bidirectional, $(D uniq) also yields a
+$(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives).
 
 Params:
     pred = Predicate for determining equivalence between range elements.
-    r = An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) of
+    r = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of
         elements to filter.
 
 Returns:
-    An $(XREF_PACK_NAMED range,primitives,isInputRange,input range) of
+    An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of
     consecutively unique elements in the original range. If $(D r) is also a
     forward range or bidirectional range, the returned range will be likewise.
 */
@@ -4312,9 +4969,48 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
     assert(equal(uniq([ 1, 1, 2, 1, 1, 3, 1]), [1, 2, 1, 3, 1]));
 }
 
+///
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+
+    struct S
+    {
+        int i;
+        string s;
+    }
+
+    auto arr = [ S(1, "a"), S(1, "b"), S(2, "c"), S(2, "d") ];
+
+    // Let's consider just the 'i' member for equality
+    auto r = arr.uniq!((a, b) => a.i == b.i);
+    assert(r.equal([S(1, "a"), S(2, "c")]));
+    assert(r.front == S(1, "a"));
+    assert(r.back == S(2, "c"));
+
+    r.popBack;
+    assert(r.back == S(1, "a"));
+    assert(r.front == r.back);
+
+    r.popBack;
+    assert(r.empty);
+
+    import std.exception : assertThrown;
+
+    assertThrown!Error(r.front);
+    assertThrown!Error(r.back);
+    assertThrown!Error(r.popFront);
+    assertThrown!Error(r.popBack);
+}
+
 private struct UniqResult(alias pred, Range)
 {
-    Range _input;
+    private Range _input;
+    static if (isBidirectionalRange!Range)
+    {
+        private ElementType!Range _back;
+        private bool _isInBack;
+    }
 
     this(Range input)
     {
@@ -4328,29 +5024,70 @@ private struct UniqResult(alias pred, Range)
 
     void popFront()
     {
+        assert(!empty, "Attempting to popFront an empty uniq.");
+        static if (isBidirectionalRange!Range)
+        {
+            if (_input.empty)
+            {
+                _isInBack = false;
+                return;
+            }
+        }
+
         auto last = _input.front;
         do
         {
-            _input.popFront();
+            _input.popFront;
         }
         while (!_input.empty && pred(last, _input.front));
     }
 
-    @property ElementType!Range front() { return _input.front; }
+    @property ElementType!Range front()
+    {
+        assert(!empty, "Attempting to fetch the front of an empty uniq.");
+        static if (isBidirectionalRange!Range)
+        {
+            if (_input.empty && _isInBack)
+            {
+                return _back;
+            }
+        }
+        return _input.front;
+    }
 
     static if (isBidirectionalRange!Range)
     {
         void popBack()
         {
-            auto last = _input.back;
-            do
+            assert(!empty, "Attempting to popBack an empty uniq.");
+            if (_input.empty)
             {
-                _input.popBack();
+                _isInBack = false;
             }
-            while (!_input.empty && pred(last, _input.back));
+            else
+            {
+                _isInBack = true;
+                _back = _input.back;
+                ElementType!Range last;
+                do
+                {
+                    last = _input.back;
+                    _input.popBack;
+                }
+                while (!_input.empty && pred(_back, _input.back));
+                _back = last;
+            }
         }
 
-        @property ElementType!Range back() { return _input.back; }
+        @property ElementType!Range back()
+        {
+            assert(!empty, "Attempting to fetch the back of an empty uniq.");
+            if (!_isInBack)
+            {
+                popBack;
+            }
+            return _back;
+        }
     }
 
     static if (isInfinite!Range)
@@ -4359,10 +5096,21 @@ private struct UniqResult(alias pred, Range)
     }
     else
     {
-        @property bool empty() { return _input.empty; }
+        @property bool empty()
+        {
+            static if (isBidirectionalRange!Range)
+            {
+                return _input.empty && !_isInBack;
+            }
+            else
+            {
+                return _input.empty;
+            }
+        }
     }
 
-    static if (isForwardRange!Range) {
+    static if (isForwardRange!Range)
+    {
         @property typeof(this) save() {
             return typeof(this)(_input.save);
         }
@@ -4375,8 +5123,6 @@ private struct UniqResult(alias pred, Range)
     import std.internal.test.dummyrange;
     import std.range;
 
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
     auto r = uniq(arr);
     static assert(isForwardRange!(typeof(r)));
@@ -4384,65 +5130,116 @@ private struct UniqResult(alias pred, Range)
     assert(equal(r, [ 1, 2, 3, 4, 5 ][]));
     assert(equal(retro(r), retro([ 1, 2, 3, 4, 5 ][])));
 
-    foreach (DummyType; AllDummyRanges) {
+    foreach (DummyType; AllDummyRanges)
+    {
         DummyType d;
         auto u = uniq(d);
         assert(equal(u, [1,2,3,4,5,6,7,8,9,10]));
 
         static assert(d.rt == RangeType.Input || isForwardRange!(typeof(u)));
 
-        static if (d.rt >= RangeType.Bidirectional) {
+        static if (d.rt >= RangeType.Bidirectional)
+        {
             assert(equal(retro(u), [10,9,8,7,6,5,4,3,2,1]));
         }
     }
 }
 
-// permutations
-struct Permutations(Range)
-    if (isRandomAccessRange!Range && hasLength!Range)
-{
-    size_t[] indices, state;
-    Range r;
+/**
+Lazily computes all _permutations of $(D r) using $(HTTP
+en.wikipedia.org/wiki/Heap%27s_algorithm, Heap's algorithm).
 
+Returns:
+A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
+the elements of which are an $(REF indexed, std,range) view into $(D r).
+
+See_Also:
+$(REF nextPermutation, std,algorithm,sorting).
+*/
+Permutations!Range permutations(Range)(Range r)
+if (isRandomAccessRange!Range && hasLength!Range)
+{
+    return typeof(return)(r);
+}
+
+/// ditto
+struct Permutations(Range)
+if (isRandomAccessRange!Range && hasLength!Range)
+{
+    private size_t[] _indices, _state;
+    private Range _r;
+    private bool _empty;
+
+    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
+    deprecated("Private variable. Use front()")
+    @property size_t[] indices() pure nothrow @nogc @safe { return _indices; }
+
+    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
+    deprecated("Private variable. Don't set it manually")
+    @property void indices(size_t[] indices) pure nothrow @nogc @safe { _indices = indices; }
+
+    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
+    deprecated("Private variable. Use front()")
+    @property size_t[] state() pure nothrow @nogc @safe { return _state; }
+
+    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
+    deprecated("Private variable. Don't set it manually")
+    @property void state(size_t[] state) pure nothrow @nogc @safe { state = state; }
+
+    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
+    deprecated("Private variable. Access will be forbidden.")
+    @property Range r() pure nothrow @nogc @safe { return _r; }
+
+    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
+    deprecated("Private variable. Don't set it manually")
+    @property void r(Range r) pure nothrow @nogc @safe { _r = r; }
+
+    ///
     this(Range r)
     {
         import std.range : iota;
         import std.array : array;
 
-        this.r = r;
-        state = r.length ? new size_t[r.length-1] : null;
-        indices = iota(size_t(r.length)).array;
-        empty = r.length == 0;
+        this._r = r;
+        _state = r.length ? new size_t[r.length-1] : null;
+        _indices = iota(size_t(r.length)).array;
+        _empty = r.length == 0;
     }
 
-    bool empty;
+    ///
+    @property bool empty() const pure nothrow @safe @nogc
+    {
+        return _empty;
+    }
 
+    ///
     @property auto front()
     {
         import std.range : indexed;
-        return r.indexed(indices);
+        return _r.indexed(_indices);
     }
 
+    ///
     void popFront()
     {
         void next(int n)
         {
             import std.algorithm.mutation : swap;
 
-            if (n > indices.length)
+            if (n > _indices.length)
             {
-                empty = true;
+                _empty = true;
                 return;
             }
 
             if (n % 2 == 1)
-                swap(indices[0], indices[n-1]);
+                swap(_indices[0], _indices[n-1]);
             else
-                swap(indices[state[n-2]], indices[n-1]);
+                swap(_indices[_state[n-2]], _indices[n-1]);
 
-            if (++state[n-2] == n)
+            if (++_state[n-2] == n)
             {
-                state[n-2] = 0;
+                _state[n-2] = 0;
                 next(n+1);
             }
         }
@@ -4451,25 +5248,8 @@ struct Permutations(Range)
     }
 }
 
-/**
-Lazily computes all _permutations of $(D r) using $(WEB
-en.wikipedia.org/wiki/Heap%27s_algorithm, Heap's algorithm).
-
-Returns:
-A forward range the elements of which are an $(XREF range,
-indexed) view into $(D r).
-
-See_Also:
-$(XREF_PACK algorithm,sorting,nextPermutation).
-*/
-Permutations!Range permutations(Range)(Range r)
-    if (isRandomAccessRange!Range && hasLength!Range)
-{
-    return typeof(return)(r);
-}
-
 ///
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.range : iota;

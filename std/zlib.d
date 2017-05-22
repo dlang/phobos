@@ -1,7 +1,7 @@
 // Written in the D programming language.
 
 /**
- * Compress/decompress data using the $(WEB www._zlib.net, _zlib library).
+ * Compress/decompress data using the $(HTTP www._zlib.net, _zlib library).
  *
  * Examples:
  *
@@ -19,7 +19,7 @@
  * ubyte[] result;
  *
  * dst = compress(src);
- * result = cast(ubyte[])uncompress(dst);
+ * result = cast(ubyte[]) uncompress(dst);
  * assert(result == src);
  * -------
  *
@@ -29,8 +29,8 @@
  * -------
  * import std.zlib;
  * import std.stdio;
- * import std.conv: to;
- * import std.algorithm: map;
+ * import std.conv : to;
+ * import std.algorithm.iteration : map;
  *
  * UnCompress decmp = new UnCompress;
  * foreach (chunk; stdin.byChunk(4096).map!(x => decmp.uncompress(x)))
@@ -41,14 +41,11 @@
  * -------
  *
  * References:
- *  $(WEB en.wikipedia.org/wiki/Zlib, Wikipedia)
- *
- * Macros:
- *  WIKI = Phobos/StdZlib
+ *  $(HTTP en.wikipedia.org/wiki/Zlib, Wikipedia)
  *
  * Copyright: Copyright Digital Mars 2000 - 2011.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB digitalmars.com, Walter Bright)
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors:   $(HTTP digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_zlib.d)
  */
 /*          Copyright Digital Mars 2000 - 2011.
@@ -116,15 +113,15 @@ class ZlibException : Exception
 uint adler32(uint adler, const(void)[] buf)
 {
     import std.range : chunks;
-    foreach (chunk; (cast(ubyte[])buf).chunks(0xFFFF0000))
+    foreach (chunk; (cast(ubyte[]) buf).chunks(0xFFFF0000))
     {
-        adler = etc.c.zlib.adler32(adler, chunk.ptr, cast(uint)chunk.length);
+        adler = etc.c.zlib.adler32(adler, chunk.ptr, cast(uint) chunk.length);
     }
     return adler;
 }
 
 ///
-unittest
+@system unittest
 {
     static ubyte[] data = [1,2,3,4,5,6,7,8,9,10];
 
@@ -132,7 +129,7 @@ unittest
     assert(adler == 0xdc0037);
 }
 
-unittest
+@system unittest
 {
     static string data = "test";
 
@@ -159,21 +156,21 @@ unittest
 uint crc32(uint crc, const(void)[] buf)
 {
     import std.range : chunks;
-    foreach (chunk; (cast(ubyte[])buf).chunks(0xFFFF0000))
+    foreach (chunk; (cast(ubyte[]) buf).chunks(0xFFFF0000))
     {
-        crc = etc.c.zlib.crc32(crc, chunk.ptr, cast(uint)chunk.length);
+        crc = etc.c.zlib.crc32(crc, chunk.ptr, cast(uint) chunk.length);
     }
     return crc;
 }
 
-unittest
+@system unittest
 {
     static ubyte[] data = [1,2,3,4,5,6,7,8,9,10];
 
     uint crc;
 
     debug(zlib) printf("D.zlib.crc32.unittest\n");
-    crc = crc32(0u, cast(void[])data);
+    crc = crc32(0u, cast(void[]) data);
     debug(zlib) printf("crc = %x\n", crc);
     assert(crc == 0x2520577b);
 }
@@ -183,7 +180,7 @@ unittest
  *
  * Params:
  *     srcbuf = buffer containing the data to compress
- *     level = compression level. Legal values are -1..9, with -1 indicating
+ *     level = compression level. Legal values are -1 .. 9, with -1 indicating
  *             the default level (6), 0 indicating no compression, 1 being the
  *             least compression and 9 being the most.
  *
@@ -198,11 +195,13 @@ in
 }
 body
 {
+    import core.memory : GC;
     auto destlen = srcbuf.length + ((srcbuf.length + 1023) / 1024) + 12;
     auto destbuf = new ubyte[destlen];
-    auto err = etc.c.zlib.compress2(destbuf.ptr, &destlen, cast(ubyte *)srcbuf.ptr, srcbuf.length, level);
+    auto err = etc.c.zlib.compress2(destbuf.ptr, &destlen, cast(ubyte *) srcbuf.ptr, srcbuf.length, level);
     if (err)
-    {   delete destbuf;
+    {
+        GC.free(destbuf.ptr);
         throw new ZlibException(err);
     }
 
@@ -280,7 +279,7 @@ void[] uncompress(const(void)[] srcbuf, size_t destlen = 0u, int winbits = 15)
     assert(0);
 }
 
-unittest
+@system unittest
 {
     auto src =
 "the quick brown fox jumps over the lazy dog\r
@@ -292,12 +291,12 @@ the quick brown fox jumps over the lazy dog\r
     //arrayPrint(src);
     dst = compress(src);
     //arrayPrint(dst);
-    result = cast(ubyte[])uncompress(dst);
+    result = cast(ubyte[]) uncompress(dst);
     //arrayPrint(result);
     assert(result == src);
 }
 
-unittest
+@system unittest
 {
     ubyte[] src = new ubyte[1000000];
     ubyte[] dst;
@@ -313,7 +312,7 @@ unittest
 /+
 void arrayPrint(ubyte[] array)
 {
-    //printf("array %p,%d\n", cast(void*)array, array.length);
+    //printf("array %p,%d\n", cast(void*) array, array.length);
     for (size_t i = 0; i < array.length; i++)
     {
         printf("%02x ", array[i]);
@@ -337,7 +336,7 @@ enum HeaderFormat {
 
 class Compress
 {
-    import std.conv: to;
+    import std.conv : to;
 
   private:
     z_stream zs;
@@ -360,7 +359,7 @@ class Compress
      * Constructor.
      *
      * Params:
-     *    level = compression level. Legal values are 1..9, with 1 being the least
+     *    level = compression level. Legal values are 1 .. 9, with 1 being the least
      *            compression and 9 being the most. The default value is 6.
      *    header = sets the compression type to one of the options available
      *             in $(LREF HeaderFormat). Defaults to HeaderFormat.deflate.
@@ -405,7 +404,9 @@ class Compress
      *
      */
     const(void)[] compress(const(void)[] buf)
-    {   int err;
+    {
+        import core.memory : GC;
+        int err;
         ubyte[] destbuf;
 
         if (buf.length == 0)
@@ -431,7 +432,8 @@ class Compress
 
         err = deflate(&zs, Z_NO_FLUSH);
         if (err != Z_STREAM_END && err != Z_OK)
-        {   delete destbuf;
+        {
+            GC.free(destbuf.ptr);
             error(err);
         }
         destbuf.length = destbuf.length - zs.avail_out;
@@ -463,6 +465,7 @@ class Compress
     }
     body
     {
+        import core.memory : GC;
         ubyte[] destbuf;
         ubyte[512] tmpbuf = void;
         int err;
@@ -492,7 +495,7 @@ class Compress
                 }
                 err = Z_BUF_ERROR;
             }
-            delete destbuf;
+            GC.free(destbuf.ptr);
             error(err);
         }
         destbuf ~= tmpbuf[0 .. (tmpbuf.length - zs.avail_out)];
@@ -514,7 +517,7 @@ class Compress
 
 class UnCompress
 {
-    import std.conv: to;
+    import std.conv : to;
 
   private:
     z_stream zs;
@@ -571,7 +574,9 @@ class UnCompress
         assert(!done);
     }
     body
-    {   int err;
+    {
+        import core.memory : GC;
+        int err;
         ubyte[] destbuf;
 
         if (buf.length == 0)
@@ -605,7 +610,8 @@ class UnCompress
 
         err = inflate(&zs, Z_NO_FLUSH);
         if (err != Z_STREAM_END && err != Z_OK)
-        {   delete destbuf;
+        {
+            GC.free(destbuf.ptr);
             error(err);
         }
         destbuf.length = destbuf.length - zs.avail_out;
@@ -628,6 +634,7 @@ class UnCompress
     }
     body
     {
+        import core.memory : GC;
         ubyte[] extra;
         ubyte[] destbuf;
         int err;
@@ -649,7 +656,7 @@ class UnCompress
         }
         if (err != Z_STREAM_END)
         {
-            delete destbuf;
+            GC.free(destbuf.ptr);
             if (err == Z_OK)
                 err = Z_BUF_ERROR;
             error(err);
@@ -670,14 +677,14 @@ class UnCompress
 private import std.stdio;
 private import std.random;
 
-unittest // by Dave
+@system unittest // by Dave
 {
     debug(zlib) writeln("std.zlib.unittest");
 
     bool CompressThenUncompress (void[] src)
     {
         ubyte[] dst = std.zlib.compress(src);
-        double ratio = (dst.length / cast(double)src.length);
+        double ratio = (dst.length / cast(double) src.length);
         debug(zlib) writef("src.length: %1$d, dst: %2$d, Ratio = %3$f", src.length, dst.length, ratio);
         ubyte[] uncompressedBuf;
         uncompressedBuf = cast(ubyte[]) std.zlib.uncompress(dst);
@@ -689,31 +696,39 @@ unittest // by Dave
 
 
     // smallish buffers
-    for (int idx = 0; idx < 25; idx++) {
+    for (int idx = 0; idx < 25; idx++)
+    {
         char[] buf = new char[uniform(0, 100)];
 
         // Alternate between more & less compressible
         foreach (ref char c; buf)
             c = cast(char) (' ' + (uniform(0, idx % 2 ? 91 : 2)));
 
-        if (CompressThenUncompress(buf)) {
+        if (CompressThenUncompress(buf))
+        {
             debug(zlib) writeln("; Success.");
-        } else {
+        }
+        else
+        {
             return;
         }
     }
 
     // larger buffers
-    for (int idx = 0; idx < 25; idx++) {
+    for (int idx = 0; idx < 25; idx++)
+    {
         char[] buf = new char[uniform(0, 1000/*0000*/)];
 
         // Alternate between more & less compressible
         foreach (ref char c; buf)
             c = cast(char) (' ' + (uniform(0, idx % 2 ? 91 : 10)));
 
-        if (CompressThenUncompress(buf)) {
+        if (CompressThenUncompress(buf))
+        {
             debug(zlib) writefln("; Success.");
-        } else {
+        }
+        else
+        {
             return;
         }
     }
@@ -722,7 +737,7 @@ unittest // by Dave
 }
 
 
-unittest // by Artem Rebrov
+@system unittest // by Artem Rebrov
 {
     Compress cmp = new Compress;
     UnCompress decmp = new UnCompress;
@@ -734,12 +749,12 @@ unittest // by Artem Rebrov
     buf ~= cmp.flush();
     const(void)[] output = decmp.uncompress(buf);
 
-    //writefln("input = '%s'", cast(char[])input);
-    //writefln("output = '%s'", cast(char[])output);
+    //writefln("input = '%s'", cast(char[]) input);
+    //writefln("output = '%s'", cast(char[]) output);
     assert( output[] == input[] );
 }
 
-unittest
+@system unittest
 {
     static assert(__traits(compiles, etc.c.zlib.gzclose(null)));        // bugzilla 15457
 }

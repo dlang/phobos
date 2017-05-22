@@ -8,8 +8,6 @@
  * License: Public Domain
  * Standards:
  *      ISO/IEC 9899:1999 7.11
- * Macros:
- *      WIKI=Phobos/StdCLocale
  */
 deprecated("Import core.stdc.locale instead")
 module std.c.locale;

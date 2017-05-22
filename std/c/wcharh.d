@@ -7,8 +7,6 @@
  * C's &lt;wchar.h&gt;
  * Authors: Walter Bright, Digital Mars, www.digitalmars.com
  * License: Public Domain
- * Macros:
- *      WIKI=Phobos/StdCWchar
  */
 deprecated("Import core.stdc.wchar_ instead")
 module std.c.wcharh;

@@ -2,14 +2,13 @@
 
 /**
  * Read and write memory mapped files.
- * Macros:
- *  WIKI=Phobos/StdMmfile
- *
  * Copyright: Copyright Digital Mars 2004 - 2009.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB digitalmars.com, Walter Bright),
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors:   $(HTTP digitalmars.com, Walter Bright),
  *            Matthew Wilson
  * Source:    $(PHOBOSSRC std/_mmfile.d)
+ *
+ * $(SCRIPT inhibitQuickIndex = 1;)
  */
 /*          Copyright Digital Mars 2004 - 2009.
  * Distributed under the Boost Software License, Version 1.0.
@@ -142,9 +141,10 @@ class MmFile
 
         // Map the file into memory!
         size_t initial_map = (window && 2*window<size)
-            ? 2*window : cast(size_t)size;
+            ? 2*window : cast(size_t) size;
         auto p = mmap(address, initial_map, prot, flags, fd, 0);
-        if (p == MAP_FAILED) {
+        if (p == MAP_FAILED)
+        {
             errnoEnforce(false, "Could not map file into memory");
         }
         data = p[0 .. initial_map];
@@ -231,7 +231,7 @@ class MmFile
                         null,
                         dwCreationDisposition,
                         FILE_ATTRIBUTE_NORMAL,
-                        cast(HANDLE)null);
+                        cast(HANDLE) null);
                 wenforce(hFile != INVALID_HANDLE_VALUE, "CreateFileW");
             }
             else
@@ -246,9 +246,9 @@ class MmFile
                 }
             }
 
-            int hi = cast(int)(size>>32);
+            int hi = cast(int)(size >> 32);
             hFileMap = CreateFileMappingW(hFile, null, flProtect,
-                    hi, cast(uint)size, null);
+                    hi, cast(uint) size, null);
             wenforce(hFileMap, "CreateFileMapping");
             scope(failure)
             {
@@ -262,12 +262,12 @@ class MmFile
                 uint sizelow = GetFileSize(hFile, &sizehi);
                 wenforce(sizelow != INVALID_FILE_SIZE || GetLastError() != ERROR_SUCCESS,
                     "GetFileSize");
-                size = (cast(ulong)sizehi << 32) + sizelow;
+                size = (cast(ulong) sizehi << 32) + sizelow;
             }
             this.size = size;
 
             size_t initial_map = (window && 2*window<size)
-                ? 2*window : cast(size_t)size;
+                ? 2*window : cast(size_t) size;
             p = MapViewOfFileEx(hFileMap, dwDesiredAccess, 0, 0,
                     initial_map, address);
             wenforce(p, "MapViewOfFileEx");
@@ -348,7 +348,7 @@ class MmFile
             }
             this.size = size;
             size_t initial_map = (window && 2*window<size)
-                ? 2*window : cast(size_t)size;
+                ? 2*window : cast(size_t) size;
             p = mmap(address, initial_map, prot, flags, fd, 0);
             if (p == MAP_FAILED)
             {
@@ -421,7 +421,7 @@ class MmFile
         else version (Posix)
         {
             int i;
-            i = msync(cast(void*)data, data.length, MS_SYNC);   // sys/mman.h
+            i = msync(cast(void*) data, data.length, MS_SYNC);   // sys/mman.h
             errnoEnforce(i == 0, "msync failed");
         }
         else
@@ -477,7 +477,7 @@ class MmFile
         debug (MMFILE) printf("MmFile.opIndex(%lld)\n", i);
         ensureMapped(i);
         size_t off = cast(size_t)(i-start);
-        return (cast(ubyte[])data)[off];
+        return (cast(ubyte[]) data)[off];
     }
 
     /**
@@ -488,7 +488,7 @@ class MmFile
         debug (MMFILE) printf("MmFile.opIndex(%lld, %d)\n", i, value);
         ensureMapped(i);
         size_t off = cast(size_t)(i-start);
-        return (cast(ubyte[])data)[off] = value;
+        return (cast(ubyte[]) data)[off] = value;
     }
 
 
@@ -504,10 +504,13 @@ class MmFile
     private void unmap()
     {
         debug (MMFILE) printf("MmFile.unmap()\n");
-        version(Windows) {
+        version(Windows)
+        {
             wenforce(!data.ptr || UnmapViewOfFile(data.ptr) != FALSE, "UnmapViewOfFile");
-        } else {
-            errnoEnforce(!data.ptr || munmap(cast(void*)data, data.length) == 0,
+        }
+        else
+        {
+            errnoEnforce(!data.ptr || munmap(cast(void*) data, data.length) == 0,
                     "munmap failed");
         }
         data = null;
@@ -520,12 +523,15 @@ class MmFile
         void* p;
         if (start+len > size)
             len = cast(size_t)(size-start);
-        version(Windows) {
-            uint hi = cast(uint)(start>>32);
-            p = MapViewOfFileEx(hFileMap, dwDesiredAccess, hi, cast(uint)start, len, address);
+        version(Windows)
+        {
+            uint hi = cast(uint)(start >> 32);
+            p = MapViewOfFileEx(hFileMap, dwDesiredAccess, hi, cast(uint) start, len, address);
             wenforce(p, "MapViewOfFileEx");
-        } else {
-            p = mmap(address, len, prot, flags, fd, cast(off_t)start);
+        }
+        else
+        {
+            p = mmap(address, len, prot, flags, fd, cast(off_t) start);
             errnoEnforce(p != MAP_FAILED);
         }
         data = p[0 .. len];
@@ -536,11 +542,15 @@ class MmFile
     private void ensureMapped(ulong i)
     {
         debug (MMFILE) printf("MmFile.ensureMapped(%lld)\n", i);
-        if (!mapped(i)) {
+        if (!mapped(i))
+        {
             unmap();
-            if (window == 0) {
-                map(0,cast(size_t)size);
-            } else {
+            if (window == 0)
+            {
+                map(0,cast(size_t) size);
+            }
+            else
+            {
                 ulong block = i/window;
                 if (block == 0)
                     map(0,2*window);
@@ -554,16 +564,23 @@ class MmFile
     private void ensureMapped(ulong i, ulong j)
     {
         debug (MMFILE) printf("MmFile.ensureMapped(%lld, %lld)\n", i, j);
-        if (!mapped(i) || !mapped(j-1)) {
+        if (!mapped(i) || !mapped(j-1))
+        {
             unmap();
-            if (window == 0) {
-                map(0,cast(size_t)size);
-            } else {
+            if (window == 0)
+            {
+                map(0,cast(size_t) size);
+            }
+            else
+            {
                 ulong iblock = i/window;
                 ulong jblock = (j-1)/window;
-                if (iblock == 0) {
+                if (iblock == 0)
+                {
                     map(0,cast(size_t)(window*(jblock+2)));
-                } else {
+                }
+                else
+                {
                     map(window*(iblock-1),cast(size_t)(window*(jblock-iblock+3)));
                 }
             }
@@ -616,46 +633,53 @@ private:
     // }
 }
 
-unittest
+@system unittest
 {
     import std.file : deleteme;
+    import core.memory : GC;
 
     const size_t K = 1024;
     size_t win = 64*K; // assume the page size is 64K
-    version(Windows) {
+    version(Windows)
+    {
         /+ these aren't defined in core.sys.windows.windows so let's use default
          SYSTEM_INFO sysinfo;
          GetSystemInfo(&sysinfo);
          win = sysinfo.dwAllocationGranularity;
          +/
-    } else version (linux) {
+    }
+    else version (linux)
+    {
         // getpagesize() is not defined in the unix D headers so use the guess
     }
     string test_file = std.file.deleteme ~ "-testing.txt";
     MmFile mf = new MmFile(test_file,MmFile.Mode.readWriteNew,
             100*K,null,win);
     ubyte[] str = cast(ubyte[])"1234567890";
-    ubyte[] data = cast(ubyte[])mf[0 .. 10];
+    ubyte[] data = cast(ubyte[]) mf[0 .. 10];
     data[] = str[];
     assert( mf[0 .. 10] == str );
-    data = cast(ubyte[])mf[50 .. 60];
+    data = cast(ubyte[]) mf[50 .. 60];
     data[] = str[];
     assert( mf[50 .. 60] == str );
-    ubyte[] data2 = cast(ubyte[])mf[20*K .. 60*K];
+    ubyte[] data2 = cast(ubyte[]) mf[20*K .. 60*K];
     assert( data2.length == 40*K );
     assert( data2[$-1] == 0 );
     mf[100*K-1] = cast(ubyte)'b';
-    data2 = cast(ubyte[])mf[21*K .. 100*K];
+    data2 = cast(ubyte[]) mf[21*K .. 100*K];
     assert( data2.length == 79*K );
     assert( data2[$-1] == 'b' );
-    delete mf;
+
+    destroy(mf);
+    GC.free(&mf);
+
     std.file.remove(test_file);
     // Create anonymous mapping
     auto test = new MmFile(null, MmFile.Mode.readWriteNew, 1024*1024, null);
 }
 
 version(linux)
-unittest // Issue 14868
+@system unittest // Issue 14868
 {
     import std.typecons : scoped;
     import std.file : deleteme;
@@ -678,7 +702,7 @@ unittest // Issue 14868
     assert(.close(fd) == -1);
 }
 
-unittest // Issue 14994, 14995
+@system unittest // Issue 14994, 14995
 {
     import std.file : deleteme;
     import std.typecons : scoped;

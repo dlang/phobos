@@ -84,6 +84,10 @@ $(BOOKTABLE ,
     )
     $(LEADINGROW Data integrity)
     $(TR
+        $(TDNW $(LINK2 std_experimental_checkedint.html, std.experimental.checkedint))
+        $(TD Checked integral types.)
+    )
+    $(TR
         $(TDNW $(LINK2 std_digest_crc.html, std.digest.crc))
         $(TD Cyclic Redundancy Check (32-bit) implementation.)
     )
@@ -98,6 +102,10 @@ $(BOOKTABLE ,
     $(TR
         $(TDNW $(LINK2 std_digest_md.html, std.digest.md))
         $(TD Compute MD5 hash of arbitrary data.)
+    )
+    $(TR
+        $(TDNW $(LINK2 std_digest_murmurhash.html, std.digest.murmurhash))
+        $(TD Compute MurmurHash of arbitrary data.)
     )
     $(TR
         $(TDNW $(LINK2 std_digest_ripemd.html, std.digest.ripemd))
@@ -492,10 +500,7 @@ $(COMMENT
     )
     $(TR
         $(TDNW
-            $(LINK2 std_cstream.html, std.cstream)$(BR)
             $(LINK2 std_mmfile.html, std.mmfile)$(BR)
-            $(LINK2 std_socketstream.html, std.socketstream)$(BR)
-            $(LINK2 std_stream.html, std.stream)$(BR)
             $(LINK2 std_typetuple.html, std.typetuple)$(BR)
         )
         $(TD
@@ -519,6 +524,5 @@ $(COMMENT
 
 Macros:
         TITLE=Phobos Runtime Library
-        WIKI=Phobos
         DDOC_BLANKLINE=
         _=

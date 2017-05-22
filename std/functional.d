@@ -5,56 +5,52 @@ Functions that manipulate other functions.
 
 This module provides functions for compile time function composition. These
 functions are helpful when constructing predicates for the algorithms in
-$(LINK2 std_algorithm.html, std.algorithm) or $(LINK2 std_range.html,
-std.range).
+$(MREF std, algorithm) or $(MREF std, range).
 
+$(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(D $(LREF adjoin)))
+    $(TR $(TD $(LREF adjoin))
         $(TD Joins a couple of functions into one that executes the original
         functions independently and returns a tuple with all the results.
     ))
-    $(TR $(TD $(D $(LREF compose)), $(D $(LREF pipe)))
+    $(TR $(TD $(LREF compose)), $(LREF pipe)
         $(TD Join a couple of functions into one that executes the original
         functions one after the other, using one function's result for the next
         function's argument.
     ))
-    $(TR $(TD $(D $(LREF forward)))
+    $(TR $(TD $(LREF forward))
         $(TD Forwards function arguments while saving ref-ness.
     ))
-    $(TR $(TD $(D $(LREF lessThan)), $(D $(LREF greaterThan)), $(D $(LREF equalTo)))
+    $(TR $(TD $(LREF lessThan)), $(LREF greaterThan)), $(D $(LREF equalTo)
         $(TD Ready-made predicate functions to compare two values.
     ))
-    $(TR $(TD $(D $(LREF memoize)))
-        $(TD Creates a function that caches its result for fast re-evalation.
+    $(TR $(TD $(LREF memoize))
+        $(TD Creates a function that caches its result for fast re-evaluation.
     ))
-    $(TR $(TD $(D $(LREF not)))
+    $(TR $(TD $(LREF not))
         $(TD Creates a function that negates another.
     ))
-    $(TR $(TD $(D $(LREF partial)))
+    $(TR $(TD $(LREF partial))
         $(TD Creates a function that binds the first argument of a given function
         to a given value.
     ))
-    $(TR $(TD $(D $(LREF reverseArgs)), $(D $(LREF binaryReverseArgs)))
+    $(TR $(TD $(LREF reverseArgs)), $(LREF binaryReverseArgs)
         $(TD Predicate that reverses the order of its arguments.
     ))
-    $(TR $(TD $(D $(LREF toDelegate)))
+    $(TR $(TD $(LREF toDelegate))
         $(TD Converts a callable to a delegate.
     ))
-    $(TR $(TD $(D $(LREF unaryFun)), $(D $(LREF binaryFun)))
+    $(TR $(TD $(LREF unaryFun)), $(LREF binaryFun)
         $(TD Create a unary or binary function from a string. Most often
         used when defining algorithms on ranges.
     ))
 )
 
-Macros:
-
-WIKI = Phobos/StdFunctional
-
 Copyright: Copyright Andrei Alexandrescu 2008 - 2009.
-License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB erdani.org, Andrei Alexandrescu)
+License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(HTTP erdani.org, Andrei Alexandrescu)
 Source:    $(PHOBOSSRC std/_functional.d)
 */
 /*
@@ -65,7 +61,8 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.functional;
 
-import std.meta, std.traits;
+import std.meta; // AliasSeq, Reverse
+import std.traits; // isCallable, Parameters
 
 
 private template needOpCallAlias(alias fun)
@@ -87,8 +84,6 @@ private template needOpCallAlias(alias fun)
      */
     static if (is(typeof(fun.opCall) == function))
     {
-        import std.traits : Parameters;
-
         enum needOpCallAlias = !is(typeof(fun)) && __traits(compiles, () {
             return fun(Parameters!fun.init);
         });
@@ -131,14 +126,14 @@ template unaryFun(alias fun, string parmName = "a")
 }
 
 ///
-unittest
+@safe unittest
 {
     // Strings are compiled into functions:
     alias isEven = unaryFun!("(a & 1) == 0");
     assert(isEven(2) && !isEven(1));
 }
 
-unittest
+@safe unittest
 {
     static int f1(int a) { return a + 1; }
     static assert(is(typeof(unaryFun!(f1)(1)) == int));
@@ -218,7 +213,7 @@ template binaryFun(alias fun, string parm1Name = "a",
 }
 
 ///
-unittest
+@safe unittest
 {
     alias less = binaryFun!("a < b");
     assert(less(1, 2) && !less(2, 1));
@@ -226,7 +221,7 @@ unittest
     assert(!greater("1", "2") && greater("2", "1"));
 }
 
-unittest
+@safe unittest
 {
     static int f1(int a, string b) { return a + 1; }
     static assert(is(typeof(binaryFun!(f1)(1, "2")) == int));
@@ -260,7 +255,7 @@ unittest
     static assert(!is(typeof(binaryFun!FuncObj)));
 }
 
-// skip all ASCII chars except a..z, A..Z, 0..9, '_' and '.'.
+// skip all ASCII chars except a .. z, A .. Z, 0 .. 9, '_' and '.'.
 private uint _ctfeSkipOp(ref string op)
 {
     if (!__ctfe) assert(false);
@@ -298,7 +293,7 @@ private uint _ctfeSkipInteger(ref string op)
 private uint _ctfeSkipName(ref string op, string name)
 {
     if (!__ctfe) assert(false);
-    if (op.length >= name.length && op[0..name.length] == name)
+    if (op.length >= name.length && op[0 .. name.length] == name)
     {
         op = op[name.length..$];
         return 1;
@@ -310,7 +305,6 @@ private uint _ctfeSkipName(ref string op, string name)
 private uint _ctfeMatchUnary(string fun, string name)
 {
     if (!__ctfe) assert(false);
-    import std.stdio;
     fun._ctfeSkipOp();
     for (;;)
     {
@@ -331,7 +325,7 @@ private uint _ctfeMatchUnary(string fun, string name)
     return fun.length == 0;
 }
 
-unittest
+@safe unittest
 {
     static assert(!_ctfeMatchUnary("sqrt(ё)", "ё"));
     static assert(!_ctfeMatchUnary("ё.sqrt", "ё"));
@@ -341,9 +335,9 @@ unittest
     static assert(_ctfeMatchUnary("a+a", "a"));
     static assert(_ctfeMatchUnary("a + 10", "a"));
     static assert(_ctfeMatchUnary("4 == a", "a"));
-    static assert(_ctfeMatchUnary("2==a", "a"));
+    static assert(_ctfeMatchUnary("2 == a", "a"));
     static assert(_ctfeMatchUnary("1 != a", "a"));
-    static assert(_ctfeMatchUnary("a!=4", "a"));
+    static assert(_ctfeMatchUnary("a != 4", "a"));
     static assert(_ctfeMatchUnary("a< 1", "a"));
     static assert(_ctfeMatchUnary("434 < a", "a"));
     static assert(_ctfeMatchUnary("132 > a", "a"));
@@ -378,7 +372,8 @@ private uint _ctfeMatchBinary(string fun, string name1, string name2)
     return fun.length == 0;
 }
 
-unittest {
+@safe unittest
+{
 
     static assert(!_ctfeMatchBinary("sqrt(ё)", "ё", "b"));
     static assert(!_ctfeMatchBinary("ё.sqrt", "ё", "b"));
@@ -388,9 +383,9 @@ unittest {
     static assert(_ctfeMatchBinary("a+a", "a", "b"));
     static assert(_ctfeMatchBinary("a + 10", "a", "b"));
     static assert(_ctfeMatchBinary("4 == a", "a", "b"));
-    static assert(_ctfeMatchBinary("2==a", "a", "b"));
+    static assert(_ctfeMatchBinary("2 == a", "a", "b"));
     static assert(_ctfeMatchBinary("1 != a", "a", "b"));
-    static assert(_ctfeMatchBinary("a!=4", "a", "b"));
+    static assert(_ctfeMatchBinary("a != 4", "a", "b"));
     static assert(_ctfeMatchBinary("a< 1", "a", "b"));
     static assert(_ctfeMatchBinary("434 < a", "a", "b"));
     static assert(_ctfeMatchBinary("132 > a", "a", "b"));
@@ -408,9 +403,9 @@ unittest {
     static assert(_ctfeMatchBinary("a+b", "b", "a"));
     static assert(_ctfeMatchBinary("a + b", "b", "a"));
     static assert(_ctfeMatchBinary("b == a", "b", "a"));
-    static assert(_ctfeMatchBinary("b==a", "b", "a"));
+    static assert(_ctfeMatchBinary("b == a", "b", "a"));
     static assert(_ctfeMatchBinary("b != a", "b", "a"));
-    static assert(_ctfeMatchBinary("a!=b", "b", "a"));
+    static assert(_ctfeMatchBinary("a != b", "b", "a"));
     static assert(_ctfeMatchBinary("a< b", "b", "a"));
     static assert(_ctfeMatchBinary("b < a", "b", "a"));
     static assert(_ctfeMatchBinary("b > a", "b", "a"));
@@ -423,17 +418,20 @@ unittest {
 
 //undocumented
 template safeOp(string S)
-    if (S=="<"||S==">"||S=="<="||S==">="||S=="=="||S=="!=")
+if (S=="<"||S==">"||S=="<="||S==">="||S=="=="||S=="!=")
 {
+    import std.traits : isIntegral;
     private bool unsafeOp(ElementType1, ElementType2)(ElementType1 a, ElementType2 b) pure
         if (isIntegral!ElementType1 && isIntegral!ElementType2)
     {
+        import std.traits : CommonType;
         alias T = CommonType!(ElementType1, ElementType2);
-        return mixin("cast(T)a "~S~" cast(T)b");
+        return mixin("cast(T)a "~S~" cast(T) b");
     }
 
     bool safeOp(T0, T1)(auto ref T0 a, auto ref T1 b)
     {
+        import std.traits : mostNegative;
         static if (isIntegral!T0 && isIntegral!T1 &&
                    (mostNegative!T0 < 0) != (mostNegative!T1 < 0))
         {
@@ -454,7 +452,7 @@ template safeOp(string S)
         }
         else
         {
-            static assert (is(typeof(mixin("a "~S~" b"))),
+            static assert(is(typeof(mixin("a "~S~" b"))),
                 "Invalid arguments: Cannot compare types " ~ T0.stringof ~ " and " ~ T1.stringof ~ ".");
 
             immutable result = mixin("a "~S~" b");
@@ -463,9 +461,9 @@ template safeOp(string S)
     }
 }
 
-unittest //check user defined types
+@safe unittest //check user defined types
 {
-    import std.algorithm : equal;
+    import std.algorithm.comparison : equal;
     struct Foo
     {
         int a;
@@ -505,7 +503,7 @@ pure @safe @nogc nothrow unittest
 alias greaterThan = safeOp!">";
 
 ///
-unittest
+@safe unittest
 {
     assert(!greaterThan(2, 3));
     assert(!greaterThan(2U, 3U));
@@ -526,7 +524,7 @@ unittest
 alias equalTo = safeOp!"==";
 
 ///
-unittest
+@safe unittest
 {
     assert(equalTo(0U, 0));
     assert(equalTo(0, 0U));
@@ -546,7 +544,7 @@ template reverseArgs(alias pred)
 }
 
 ///
-unittest
+@safe unittest
 {
     alias gt = reverseArgs!(binaryFun!("a < b"));
     assert(gt(2, 1) && !gt(1, 1));
@@ -559,7 +557,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     int abc(int a, int b, int c) { return a * b + c; }
     alias cba = reverseArgs!abc;
@@ -567,7 +565,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     int a(int a) { return a * 2; }
     alias _a = reverseArgs!a;
@@ -575,7 +573,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     int b() { return 4; }
     alias _b = reverseArgs!b;
@@ -596,14 +594,14 @@ template binaryReverseArgs(alias pred)
 }
 
 ///
-unittest
+@safe unittest
 {
     alias gt = binaryReverseArgs!(binaryFun!("a < b"));
     assert(gt(2, 1) && !gt(1, 1));
 }
 
 ///
-unittest
+@safe unittest
 {
     int x = 42;
     bool xyz(int a, int b) { return a * x < b / x; }
@@ -632,16 +630,16 @@ template not(alias pred)
 }
 
 ///
-unittest
+@safe unittest
 {
+    import std.algorithm.searching : find;
     import std.functional;
-    import std.algorithm : find;
     import std.uni : isWhite;
     string a = "   Hello, world!";
     assert(find!(not!isWhite)(a) == "Hello, world!");
 }
 
-unittest
+@safe unittest
 {
     assert(not!"a != 5"(5));
     assert(not!"a != b"(5, 5));
@@ -660,6 +658,7 @@ template partial(alias fun, alias arg)
 {
     static if (is(typeof(fun) == delegate) || is(typeof(fun) == function))
     {
+        import std.traits : ReturnType;
         ReturnType!fun partial(Parameters!fun[1..$] args2)
         {
             return fun(arg, args2);
@@ -691,7 +690,7 @@ template partial(alias fun, alias arg)
 }
 
 ///
-unittest
+@safe unittest
 {
     int fun(int a, int b) { return a + b; }
     alias fun5 = partial!(fun, 5);
@@ -701,12 +700,8 @@ unittest
     // functions without committing to a particular type of the function.
 }
 
-// Explicitly undocumented. It will be removed in March 2016. @@@DEPRECATED_2016-03@@@
-deprecated("Please use std.functional.partial instead")
-alias curry = partial;
-
 // tests for partially evaluating callables
-unittest
+@safe unittest
 {
     static int f1(int a, int b) { return a + b; }
     assert(partial!(f1, 5)(6) == 11);
@@ -736,7 +731,7 @@ unittest
 }
 
 // tests for partially evaluating templated/overloaded callables
-unittest
+@safe unittest
 {
     static auto add(A, B)(A x, B y)
     {
@@ -793,7 +788,7 @@ unittest
 
 /**
 Takes multiple functions and adjoins them together. The result is a
-$(XREF typecons, Tuple) with one element per passed-in function. Upon
+$(REF Tuple, std,typecons) with one element per passed-in function. Upon
 invocation, the returned tuple is the adjoined results of all
 functions.
 
@@ -801,12 +796,14 @@ Note: In the special case where only a single function is provided
 ($(D F.length == 1)), adjoin simply aliases to the single passed function
 ($(D F[0])).
 */
-template adjoin(F...) if (F.length == 1)
+template adjoin(F...)
+if (F.length == 1)
 {
     alias adjoin = F[0];
 }
 /// ditto
-template adjoin(F...) if (F.length > 1)
+template adjoin(F...)
+if (F.length > 1)
 {
     auto adjoin(V...)(auto ref V a)
     {
@@ -829,9 +826,9 @@ template adjoin(F...) if (F.length > 1)
 }
 
 ///
-unittest
+@safe unittest
 {
-    import std.functional, std.typecons;
+    import std.functional, std.typecons : Tuple;
     static bool f1(int a) { return a != 0; }
     static int f2(int a) { return a / 2; }
     auto x = adjoin!(f1, f2)(5);
@@ -839,9 +836,9 @@ unittest
     assert(x[0] == true && x[1] == 2);
 }
 
-unittest
+@safe unittest
 {
-    import std.typecons;
+    import std.typecons : Tuple;
     static bool F1(int a) { return a != 0; }
     auto x1 = adjoin!(F1)(5);
     static int F2(int a) { return a / 2; }
@@ -856,7 +853,7 @@ unittest
     alias eff4 = adjoin!(F4);
     static struct S
     {
-        bool delegate(int) store;
+        bool delegate(int) @safe store;
         int fun() { return 42 + store(5); }
     }
     S s;
@@ -865,7 +862,7 @@ unittest
     assert(x4 == 43);
 }
 
-unittest
+@safe unittest
 {
     import std.meta : staticMap;
     import std.typecons : Tuple, tuple;
@@ -889,6 +886,8 @@ unittest
    function $(D f(x)) that in turn returns $(D
    fun[0](fun[1](...(x)))...). Each function can be a regular
    functions, a delegate, or a string.
+
+   See_Also: $(LREF pipe)
 */
 template compose(fun...)
 {
@@ -916,11 +915,12 @@ template compose(fun...)
 }
 
 ///
-unittest
+@safe unittest
 {
-    import std.algorithm: equal, map;
-    import std.array: split;
-    import std.conv: to;
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    import std.array : split;
+    import std.conv : to;
 
     // First split a string in whitespace-separated tokens and then
     // convert each token into an integer
@@ -941,10 +941,12 @@ unittest
 // integer
 int[] a = pipe!(readText, split, map!(to!(int)))("file.txt");
 ----
+
+   See_Also: $(LREF compose)
  */
 alias pipe(fun...) = compose!(Reverse!(fun));
 
-unittest
+@safe unittest
 {
     import std.conv : to;
     string foo(int a) { return to!(string)(a); }
@@ -962,11 +964,11 @@ unittest
 }
 
 /**
- * $(LUCKY Memoizes) a function so as to avoid repeated
- * computation. The memoization structure is a hash table keyed by a
+ * $(LINK2 https://en.wikipedia.org/wiki/Memoization, Memoizes) a function so as
+ * to avoid repeated computation. The memoization structure is a hash table keyed by a
  * tuple of the function's arguments. There is a speed gain if the
  * function is repeatedly called with the same arguments and is more
- * expensive than a hash table lookup. For more information on memoization, refer to $(WEB docs.google.com/viewer?url=http%3A%2F%2Fhop.perl.plover.com%2Fbook%2Fpdf%2F03CachingAndMemoization.pdf, this book chapter).
+ * expensive than a hash table lookup. For more information on memoization, refer to $(HTTP docs.google.com/viewer?url=http%3A%2F%2Fhop.perl.plover.com%2Fbook%2Fpdf%2F03CachingAndMemoization.pdf, this book chapter).
 
 Example:
 ----
@@ -990,6 +992,7 @@ is useful to memoize an impure function, too.
 */
 template memoize(alias fun)
 {
+    import std.traits : ReturnType;
     // alias Args = Parameters!fun; // Bugzilla 13580
 
     ReturnType!fun memoize(Parameters!fun args)
@@ -1008,9 +1011,11 @@ template memoize(alias fun)
 /// ditto
 template memoize(alias fun, uint maxSize)
 {
+    import std.traits : ReturnType;
     // alias Args = Parameters!fun; // Bugzilla 13580
     ReturnType!fun memoize(Parameters!fun args)
     {
+        import std.traits : hasIndirections;
         import std.typecons : tuple;
         static struct Value { Parameters!fun args; ReturnType!fun res; }
         static Value[] memo;
@@ -1018,12 +1023,16 @@ template memoize(alias fun, uint maxSize)
 
         if (!memo.length)
         {
-            import core.memory;
+            import core.memory : GC;
+
+            // Ensure no allocation overflows
+            static assert(maxSize < size_t.max / Value.sizeof);
+            static assert(maxSize < size_t.max - (8 * size_t.sizeof - 1));
 
             enum attr = GC.BlkAttr.NO_INTERIOR | (hasIndirections!Value ? 0 : GC.BlkAttr.NO_SCAN);
-            memo = (cast(Value*)GC.malloc(Value.sizeof * maxSize, attr))[0 .. maxSize];
+            memo = (cast(Value*) GC.malloc(Value.sizeof * maxSize, attr))[0 .. maxSize];
             enum nwords = (maxSize + 8 * size_t.sizeof - 1) / (8 * size_t.sizeof);
-            initialized = (cast(size_t*)GC.calloc(nwords * size_t.sizeof, attr | GC.BlkAttr.NO_SCAN))[0 .. nwords];
+            initialized = (cast(size_t*) GC.calloc(nwords * size_t.sizeof, attr | GC.BlkAttr.NO_SCAN))[0 .. nwords];
         }
 
         import core.bitop : bt, bts;
@@ -1043,7 +1052,7 @@ template memoize(alias fun, uint maxSize)
         else if (memo[idx1].args == args)
             return memo[idx1].res;
         // FNV prime
-        immutable idx2 = (hash * 16777619) % maxSize;
+        immutable idx2 = (hash * 16_777_619) % maxSize;
         if (!bt(initialized.ptr, idx2))
         {
             emplace(&memo[idx2], memo[idx1]);
@@ -1063,21 +1072,21 @@ template memoize(alias fun, uint maxSize)
  * To _memoize a recursive function, simply insert the memoized call in lieu of the plain recursive call.
  * For example, to transform the exponential-time Fibonacci implementation into a linear-time computation:
  */
-unittest
+@safe unittest
 {
-    ulong fib(ulong n)
+    ulong fib(ulong n) @safe
     {
-        return n < 2 ? 1 : memoize!fib(n - 2) + memoize!fib(n - 1);
+        return n < 2 ? n : memoize!fib(n - 2) + memoize!fib(n - 1);
     }
-    assert(fib(10) == 89);
+    assert(fib(10) == 55);
 }
 
 /**
  * To improve the speed of the factorial function,
  */
-unittest
+@safe unittest
 {
-    ulong fact(ulong n)
+    ulong fact(ulong n) @safe
     {
         return n < 2 ? 1 : n * memoize!fact(n - 1);
     }
@@ -1088,9 +1097,9 @@ unittest
  * This memoizes all values of $(D fact) up to the largest argument. To only cache the final
  * result, move $(D memoize) outside the function as shown below.
  */
-unittest
+@safe unittest
 {
-    ulong factImpl(ulong n)
+    ulong factImpl(ulong n) @safe
     {
         return n < 2 ? 1 : n * factImpl(n - 1);
     }
@@ -1102,7 +1111,7 @@ unittest
  * When the $(D maxSize) parameter is specified, memoize will used
  * a fixed size hash table to limit the number of cached entries.
  */
-unittest
+@system unittest // not @safe due to memoize
 {
     ulong fact(ulong n)
     {
@@ -1114,9 +1123,9 @@ unittest
     assert(fact(10) == 3628800);
 }
 
-unittest
+@system unittest // not @safe due to memoize
 {
-    import core.math;
+    import core.math : sqrt;
     alias msqrt = memoize!(function double(double x) { return sqrt(x); });
     auto y = msqrt(2.0);
     assert(y == msqrt(2.0));
@@ -1129,7 +1138,7 @@ unittest
 
     //alias mfib = memoize!fib;
 
-    static ulong fib(ulong n)
+    static ulong fib(ulong n) @safe
     {
         alias mfib = memoize!fib;
         return n < 2 ? 1 : mfib(n - 2) + mfib(n - 1);
@@ -1138,7 +1147,7 @@ unittest
     auto z = fib(10);
     assert(z == 89);
 
-    static ulong fact(ulong n)
+    static ulong fact(ulong n) @safe
     {
         alias mfact = memoize!fact;
         return n < 2 ? 1 : n * mfact(n - 1);
@@ -1154,7 +1163,7 @@ unittest
         return 1 + mLen2(s[1 .. $]);
     }
 
-    int _func(int x) { return 1; }
+    int _func(int x) @safe { return 1; }
     alias func = memoize!(_func, 10);
     assert(func(int.init) == 1);
     assert(func(int.init) == 1);
@@ -1162,7 +1171,7 @@ unittest
 
 private struct DelegateFaker(F)
 {
-    import std.typecons;
+    import std.typecons : FuncInfo, MemberFunctionGenerator;
 
     // for @safe
     static F castToF(THIS)(THIS x) @trusted
@@ -1211,7 +1220,7 @@ private struct DelegateFaker(F)
     alias FuncInfo_doIt = FuncInfo!(F);
 
     // Generate the member function doIt().
-    mixin( std.typecons.MemberFunctionGenerator!(GeneratingPolicy!())
+    mixin( MemberFunctionGenerator!(GeneratingPolicy!())
             .generateFunction!("FuncInfo_doIt", "doIt", F) );
 }
 
@@ -1239,7 +1248,8 @@ private struct DelegateFaker(F)
  *   $(LI Ignores C-style / D-style variadic arguments.)
  * )
  */
-auto toDelegate(F)(auto ref F fp) if (isCallable!(F))
+auto toDelegate(F)(auto ref F fp)
+if (isCallable!(F))
 {
     static if (is(F == delegate))
     {
@@ -1281,7 +1291,9 @@ auto toDelegate(F)(auto ref F fp) if (isCallable!(F))
     }
 }
 
-unittest {
+///
+@system unittest
+{
     static int inc(ref uint num) {
         num++;
         return 8675309;
@@ -1289,7 +1301,20 @@ unittest {
 
     uint myNum = 0;
     auto incMyNumDel = toDelegate(&inc);
-    static assert(is(typeof(incMyNumDel) == int delegate(ref uint)));
+    auto returnVal = incMyNumDel(myNum);
+    assert(myNum == 1);
+}
+
+@system unittest // not @safe due to toDelegate
+{
+    static int inc(ref uint num) {
+        num++;
+        return 8675309;
+    }
+
+    uint myNum = 0;
+    auto incMyNumDel = toDelegate(&inc);
+    int delegate(ref uint) dg = incMyNumDel;
     auto returnVal = incMyNumDel(myNum);
     assert(myNum == 1);
 
@@ -1328,37 +1353,29 @@ unittest {
         static int func_trusted() @trusted { return 5; }
         static int func_system() @system { return 6; }
         static int func_pure_nothrow() pure nothrow { return 7; }
-        static int func_pure_nothrow_safe() pure @safe { return 8; }
+        static int func_pure_nothrow_safe() pure nothrow @safe { return 8; }
 
         auto dg_ref = toDelegate(&func_ref);
-        auto dg_pure = toDelegate(&func_pure);
-        auto dg_nothrow = toDelegate(&func_nothrow);
-        auto dg_property = toDelegate(&func_property);
-        auto dg_safe = toDelegate(&func_safe);
-        auto dg_trusted = toDelegate(&func_trusted);
-        auto dg_system = toDelegate(&func_system);
-        auto dg_pure_nothrow = toDelegate(&func_pure_nothrow);
-        auto dg_pure_nothrow_safe = toDelegate(&func_pure_nothrow_safe);
+        int delegate() pure dg_pure = toDelegate(&func_pure);
+        int delegate() nothrow dg_nothrow = toDelegate(&func_nothrow);
+        int delegate() @property dg_property = toDelegate(&func_property);
+        int delegate() @safe dg_safe = toDelegate(&func_safe);
+        int delegate() @trusted dg_trusted = toDelegate(&func_trusted);
+        int delegate() @system dg_system = toDelegate(&func_system);
+        int delegate() pure nothrow dg_pure_nothrow = toDelegate(&func_pure_nothrow);
+        int delegate() @safe pure nothrow dg_pure_nothrow_safe = toDelegate(&func_pure_nothrow_safe);
 
         //static assert(is(typeof(dg_ref) == ref int delegate())); // [BUG@DMD]
-        static assert(is(typeof(dg_pure) == int delegate() pure));
-        static assert(is(typeof(dg_nothrow) == int delegate() nothrow));
-        static assert(is(typeof(dg_property) == int delegate() @property));
-        //static assert(is(typeof(dg_safe) == int delegate() @safe));
-        static assert(is(typeof(dg_trusted) == int delegate() @trusted));
-        static assert(is(typeof(dg_system) == int delegate() @system));
-        static assert(is(typeof(dg_pure_nothrow) == int delegate() pure nothrow));
-        //static assert(is(typeof(dg_pure_nothrow_safe) == int delegate() @safe pure nothrow));
 
         assert(dg_ref() == refvar);
         assert(dg_pure() == 1);
         assert(dg_nothrow() == 2);
         assert(dg_property() == 3);
-        //assert(dg_safe() == 4);
+        assert(dg_safe() == 4);
         assert(dg_trusted() == 5);
         assert(dg_system() == 6);
         assert(dg_pure_nothrow() == 7);
-        //assert(dg_pure_nothrow_safe() == 8);
+        assert(dg_pure_nothrow_safe() == 8);
     }
     /* test for linkage */
     {
@@ -1378,8 +1395,6 @@ Forwards function arguments with saving ref-ness.
 */
 template forward(args...)
 {
-    import std.meta;
-
     static if (args.length)
     {
         import std.algorithm.mutation : move;
@@ -1413,7 +1428,7 @@ template forward(args...)
 ///
 @safe unittest
 {
-    void foo(int n, ref string s) { s = null; foreach (i; 0..n) s ~= "Hello"; }
+    void foo(int n, ref string s) { s = null; foreach (i; 0 .. n) s ~= "Hello"; }
 
     // forwards all arguments which are bound to parameter tuple
     void bar(Args...)(auto ref Args args) { return foo(forward!args); }
@@ -1470,4 +1485,3 @@ template forward(args...)
     int value = 3;
     auto x2 = bar(value); // case of OK
 }
-

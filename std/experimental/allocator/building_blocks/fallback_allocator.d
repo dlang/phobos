@@ -1,3 +1,4 @@
+///
 module std.experimental.allocator.building_blocks.fallback_allocator;
 
 import std.experimental.allocator.common;
@@ -21,8 +22,9 @@ struct FallbackAllocator(Primary, Fallback)
 {
     import std.algorithm.comparison : min;
     import std.traits : hasMember;
+    import std.typecons : Ternary;
 
-    unittest
+    @system unittest
     {
         testAllocator!(() => FallbackAllocator());
     }
@@ -95,11 +97,7 @@ struct FallbackAllocator(Primary, Fallback)
     bool expand(ref void[] b, size_t delta)
     {
         if (!delta) return true;
-        if (!b.ptr)
-        {
-            b = allocate(delta);
-            return b.length == delta;
-        }
+        if (!b.ptr) return false;
         if (primary.owns(b) == Ternary.yes)
         {
             static if (hasMember!(Primary, "expand"))
@@ -209,11 +207,10 @@ struct FallbackAllocator(Primary, Fallback)
     */
     static if (hasMember!(Primary, "resolveInternalPointer")
         && hasMember!(Fallback, "resolveInternalPointer"))
-    void[] resolveInternalPointer(void* p)
+    Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
-        if (auto r = primary.resolveInternalPointer(p)) return r;
-        if (auto r = fallback.resolveInternalPointer(p)) return r;
-        return null;
+        Ternary r = primary.resolveInternalPointer(p, result);
+        return r == Ternary.no ? fallback.resolveInternalPointer(p, result) : r;
     }
 
     /**
@@ -257,11 +254,12 @@ struct FallbackAllocator(Primary, Fallback)
     }
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.region : InSituRegion;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.conv : text;
+    import std.typecons : Ternary;
     FallbackAllocator!(InSituRegion!16_384, GCAllocator) a;
     // This allocation uses the stack
     auto b1 = a.allocate(1024);
@@ -285,12 +283,12 @@ private auto ref forward(alias arg)()
     }
     else
     {
-        import std.algorithm : move;
+        import std.algorithm.mutation : move;
         return move(arg);
     }
 }
 
-unittest
+@safe unittest
 {
     void fun(T)(auto ref T, string) { /* ... */ }
     void gun(T...)(auto ref T args)
@@ -302,7 +300,7 @@ unittest
     gun(x, "hello");
 }
 
-unittest
+@safe unittest
 {
     static void checkByRef(T)(auto ref T value)
     {
@@ -328,7 +326,6 @@ FallbackAllocator!(Primary, Fallback)
 fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
 {
     alias R = FallbackAllocator!(Primary, Fallback);
-    import std.algorithm : move;
 
     static if (stateSize!Primary)
         static if (stateSize!Fallback)
@@ -343,10 +340,11 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
     import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.typecons : Ternary;
     auto a = fallbackAllocator(Region!GCAllocator(1024), GCAllocator.instance);
     auto b1 = a.allocate(1020);
     assert(b1.length == 1020);

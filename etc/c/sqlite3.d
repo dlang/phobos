@@ -41,7 +41,7 @@ extern (C) __gshared nothrow:
 */
 enum SQLITE_VERSION = "3.10.2";
 /// Ditto
-enum SQLITE_VERSION_NUMBER = 3010002;
+enum SQLITE_VERSION_NUMBER = 3_010_002;
 /// Ditto
 enum SQLITE_SOURCE_ID = "2016-01-20 15:27:19 17efb4209f97fb4971656086b138599a91a75ff9";
 
@@ -149,59 +149,59 @@ enum
 */
 enum
 {
-    SQLITE_IOERR_READ              = (SQLITE_IOERR | (1<<8)),
-    SQLITE_IOERR_SHORT_READ        = (SQLITE_IOERR | (2<<8)),
-    SQLITE_IOERR_WRITE             = (SQLITE_IOERR | (3<<8)),
-    SQLITE_IOERR_FSYNC             = (SQLITE_IOERR | (4<<8)),
-    SQLITE_IOERR_DIR_FSYNC         = (SQLITE_IOERR | (5<<8)),
-    SQLITE_IOERR_TRUNCATE          = (SQLITE_IOERR | (6<<8)),
-    SQLITE_IOERR_FSTAT             = (SQLITE_IOERR | (7<<8)),
-    SQLITE_IOERR_UNLOCK            = (SQLITE_IOERR | (8<<8)),
-    SQLITE_IOERR_RDLOCK            = (SQLITE_IOERR | (9<<8)),
-    SQLITE_IOERR_DELETE            = (SQLITE_IOERR | (10<<8)),
-    SQLITE_IOERR_BLOCKED           = (SQLITE_IOERR | (11<<8)),
-    SQLITE_IOERR_NOMEM             = (SQLITE_IOERR | (12<<8)),
-    SQLITE_IOERR_ACCESS            = (SQLITE_IOERR | (13<<8)),
-    SQLITE_IOERR_CHECKRESERVEDLOCK = (SQLITE_IOERR | (14<<8)),
-    SQLITE_IOERR_LOCK              = (SQLITE_IOERR | (15<<8)),
-    SQLITE_IOERR_CLOSE             = (SQLITE_IOERR | (16<<8)),
-    SQLITE_IOERR_DIR_CLOSE         = (SQLITE_IOERR | (17<<8)),
-    SQLITE_IOERR_SHMOPEN           = (SQLITE_IOERR | (18<<8)),
-    SQLITE_IOERR_SHMSIZE           = (SQLITE_IOERR | (19<<8)),
-    SQLITE_IOERR_SHMLOCK           = (SQLITE_IOERR | (20<<8)),
-    SQLITE_IOERR_SHMMAP            = (SQLITE_IOERR | (21<<8)),
-    SQLITE_IOERR_SEEK              = (SQLITE_IOERR | (22<<8)),
-    SQLITE_IOERR_DELETE_NOENT      = (SQLITE_IOERR | (23<<8)),
-    SQLITE_IOERR_MMAP              = (SQLITE_IOERR | (24<<8)),
-    SQLITE_LOCKED_SHAREDCACHE      = (SQLITE_LOCKED |  (1<<8)),
-    SQLITE_BUSY_RECOVERY           = (SQLITE_BUSY   |  (1<<8)),
-    SQLITE_CANTOPEN_NOTEMPDIR      = (SQLITE_CANTOPEN | (1<<8)),
-    SQLITE_IOERR_GETTEMPPATH       = (SQLITE_IOERR | (25<<8)),
-    SQLITE_IOERR_CONVPATH          = (SQLITE_IOERR | (26<<8)),
-    SQLITE_BUSY_SNAPSHOT           = (SQLITE_BUSY   |  (2<<8)),
-    SQLITE_CANTOPEN_ISDIR          = (SQLITE_CANTOPEN | (2<<8)),
-    SQLITE_CANTOPEN_FULLPATH       = (SQLITE_CANTOPEN | (3<<8)),
-    SQLITE_CANTOPEN_CONVPATH       = (SQLITE_CANTOPEN | (4<<8)),
-    SQLITE_CORRUPT_VTAB            = (SQLITE_CORRUPT | (1<<8)),
-    SQLITE_READONLY_RECOVERY       = (SQLITE_READONLY | (1<<8)),
-    SQLITE_READONLY_CANTLOCK       = (SQLITE_READONLY | (2<<8)),
-    SQLITE_READONLY_ROLLBACK       = (SQLITE_READONLY | (3<<8)),
-    SQLITE_READONLY_DBMOVED        = (SQLITE_READONLY | (4<<8)),
-    SQLITE_ABORT_ROLLBACK          = (SQLITE_ABORT | (2<<8)),
-    SQLITE_CONSTRAINT_CHECK        = (SQLITE_CONSTRAINT | (1<<8)),
-    SQLITE_CONSTRAINT_COMMITHOOK   = (SQLITE_CONSTRAINT | (2<<8)),
-    SQLITE_CONSTRAINT_FOREIGNKEY   = (SQLITE_CONSTRAINT | (3<<8)),
-    SQLITE_CONSTRAINT_FUNCTION     = (SQLITE_CONSTRAINT | (4<<8)),
-    SQLITE_CONSTRAINT_NOTNULL      = (SQLITE_CONSTRAINT | (5<<8)),
-    SQLITE_CONSTRAINT_PRIMARYKEY   = (SQLITE_CONSTRAINT | (6<<8)),
-    SQLITE_CONSTRAINT_TRIGGER      = (SQLITE_CONSTRAINT | (7<<8)),
-    SQLITE_CONSTRAINT_UNIQUE       = (SQLITE_CONSTRAINT | (8<<8)),
-    SQLITE_CONSTRAINT_VTAB         = (SQLITE_CONSTRAINT | (9<<8)),
-    SQLITE_CONSTRAINT_ROWID        = (SQLITE_CONSTRAINT |(10<<8)),
-    SQLITE_NOTICE_RECOVER_WAL      = (SQLITE_NOTICE | (1<<8)),
-    SQLITE_NOTICE_RECOVER_ROLLBACK = (SQLITE_NOTICE | (2<<8)),
-    SQLITE_WARNING_AUTOINDEX       = (SQLITE_WARNING | (1<<8)),
-    SQLITE_AUTH_USER               = (SQLITE_AUTH | (1<<8))
+    SQLITE_IOERR_READ              = (SQLITE_IOERR | (1 << 8)),
+    SQLITE_IOERR_SHORT_READ        = (SQLITE_IOERR | (2 << 8)),
+    SQLITE_IOERR_WRITE             = (SQLITE_IOERR | (3 << 8)),
+    SQLITE_IOERR_FSYNC             = (SQLITE_IOERR | (4 << 8)),
+    SQLITE_IOERR_DIR_FSYNC         = (SQLITE_IOERR | (5 << 8)),
+    SQLITE_IOERR_TRUNCATE          = (SQLITE_IOERR | (6 << 8)),
+    SQLITE_IOERR_FSTAT             = (SQLITE_IOERR | (7 << 8)),
+    SQLITE_IOERR_UNLOCK            = (SQLITE_IOERR | (8 << 8)),
+    SQLITE_IOERR_RDLOCK            = (SQLITE_IOERR | (9 << 8)),
+    SQLITE_IOERR_DELETE            = (SQLITE_IOERR | (10 << 8)),
+    SQLITE_IOERR_BLOCKED           = (SQLITE_IOERR | (11 << 8)),
+    SQLITE_IOERR_NOMEM             = (SQLITE_IOERR | (12 << 8)),
+    SQLITE_IOERR_ACCESS            = (SQLITE_IOERR | (13 << 8)),
+    SQLITE_IOERR_CHECKRESERVEDLOCK = (SQLITE_IOERR | (14 << 8)),
+    SQLITE_IOERR_LOCK              = (SQLITE_IOERR | (15 << 8)),
+    SQLITE_IOERR_CLOSE             = (SQLITE_IOERR | (16 << 8)),
+    SQLITE_IOERR_DIR_CLOSE         = (SQLITE_IOERR | (17 << 8)),
+    SQLITE_IOERR_SHMOPEN           = (SQLITE_IOERR | (18 << 8)),
+    SQLITE_IOERR_SHMSIZE           = (SQLITE_IOERR | (19 << 8)),
+    SQLITE_IOERR_SHMLOCK           = (SQLITE_IOERR | (20 << 8)),
+    SQLITE_IOERR_SHMMAP            = (SQLITE_IOERR | (21 << 8)),
+    SQLITE_IOERR_SEEK              = (SQLITE_IOERR | (22 << 8)),
+    SQLITE_IOERR_DELETE_NOENT      = (SQLITE_IOERR | (23 << 8)),
+    SQLITE_IOERR_MMAP              = (SQLITE_IOERR | (24 << 8)),
+    SQLITE_LOCKED_SHAREDCACHE      = (SQLITE_LOCKED |  (1 << 8)),
+    SQLITE_BUSY_RECOVERY           = (SQLITE_BUSY   |  (1 << 8)),
+    SQLITE_CANTOPEN_NOTEMPDIR      = (SQLITE_CANTOPEN | (1 << 8)),
+    SQLITE_IOERR_GETTEMPPATH       = (SQLITE_IOERR | (25 << 8)),
+    SQLITE_IOERR_CONVPATH          = (SQLITE_IOERR | (26 << 8)),
+    SQLITE_BUSY_SNAPSHOT           = (SQLITE_BUSY   |  (2 << 8)),
+    SQLITE_CANTOPEN_ISDIR          = (SQLITE_CANTOPEN | (2 << 8)),
+    SQLITE_CANTOPEN_FULLPATH       = (SQLITE_CANTOPEN | (3 << 8)),
+    SQLITE_CANTOPEN_CONVPATH       = (SQLITE_CANTOPEN | (4 << 8)),
+    SQLITE_CORRUPT_VTAB            = (SQLITE_CORRUPT | (1 << 8)),
+    SQLITE_READONLY_RECOVERY       = (SQLITE_READONLY | (1 << 8)),
+    SQLITE_READONLY_CANTLOCK       = (SQLITE_READONLY | (2 << 8)),
+    SQLITE_READONLY_ROLLBACK       = (SQLITE_READONLY | (3 << 8)),
+    SQLITE_READONLY_DBMOVED        = (SQLITE_READONLY | (4 << 8)),
+    SQLITE_ABORT_ROLLBACK          = (SQLITE_ABORT | (2 << 8)),
+    SQLITE_CONSTRAINT_CHECK        = (SQLITE_CONSTRAINT | (1 << 8)),
+    SQLITE_CONSTRAINT_COMMITHOOK   = (SQLITE_CONSTRAINT | (2 << 8)),
+    SQLITE_CONSTRAINT_FOREIGNKEY   = (SQLITE_CONSTRAINT | (3 << 8)),
+    SQLITE_CONSTRAINT_FUNCTION     = (SQLITE_CONSTRAINT | (4 << 8)),
+    SQLITE_CONSTRAINT_NOTNULL      = (SQLITE_CONSTRAINT | (5 << 8)),
+    SQLITE_CONSTRAINT_PRIMARYKEY   = (SQLITE_CONSTRAINT | (6 << 8)),
+    SQLITE_CONSTRAINT_TRIGGER      = (SQLITE_CONSTRAINT | (7 << 8)),
+    SQLITE_CONSTRAINT_UNIQUE       = (SQLITE_CONSTRAINT | (8 << 8)),
+    SQLITE_CONSTRAINT_VTAB         = (SQLITE_CONSTRAINT | (9 << 8)),
+    SQLITE_CONSTRAINT_ROWID        = (SQLITE_CONSTRAINT |(10 << 8)),
+    SQLITE_NOTICE_RECOVER_WAL      = (SQLITE_NOTICE | (1 << 8)),
+    SQLITE_NOTICE_RECOVER_ROLLBACK = (SQLITE_NOTICE | (2 << 8)),
+    SQLITE_WARNING_AUTOINDEX       = (SQLITE_WARNING | (1 << 8)),
+    SQLITE_AUTH_USER               = (SQLITE_AUTH | (1 << 8))
 }
 
 /**
@@ -1182,7 +1182,7 @@ int sqlite3_key_v2(
 
 /**
 ** Change the key on an open database.  If the current database is not
-** encrypted, this routine will encrypt it.  If pNew==0 or nNew==0, the
+** encrypted, this routine will encrypt it.  If pNew == 0 or nNew == 0, the
 ** database is decrypted.
 **
 ** The code to implement this API is not available in the public release

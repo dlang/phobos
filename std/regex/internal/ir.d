@@ -9,7 +9,7 @@ module std.regex.internal.ir;
 
 package(std.regex):
 
-import std.exception, std.uni, std.meta, std.traits, std.range;
+import std.exception, std.uni, std.meta, std.traits, std.range.primitives;
 
 debug(std_regex_parser) import std.stdio;
 // just a common trait, may be moved elsewhere
@@ -126,8 +126,8 @@ enum IR:uint {
     OrChar             = 0b1_00100_00,
     Nop                = 0b1_00101_00, //no operation (padding)
     End                = 0b1_00110_00, //end of program
-    Bol                = 0b1_00111_00, //beginning of a string ^
-    Eol                = 0b1_01000_00, //end of a string $
+    Bol                = 0b1_00111_00, //beginning of a line ^
+    Eol                = 0b1_01000_00, //end of a line $
     Wordboundary       = 0b1_01001_00, //boundary of a word
     Notwordboundary    = 0b1_01010_00, //not a word boundary
     Backref            = 0b1_01011_00, //backreference to a group (that has to be pinned, i.e. locally unique) (group index)
@@ -135,6 +135,8 @@ enum IR:uint {
     GroupEnd           = 0b1_01101_00, //end of a group (x) (groupIndex+groupPinning(1bit))
     Option             = 0b1_01110_00, //start of an option within an alternation x | y (length)
     GotoEndOr          = 0b1_01111_00, //end of an option (length of the rest)
+    Bof                = 0b1_10000_00, //begining of "file" (string) ^
+    Eof                = 0b1_10001_00, //end of "file" (string) $
     //... any additional atoms here
 
     OrStart            = 0b1_00000_01, //start of alternation group  (length)
@@ -168,11 +170,12 @@ template IRL(IR code)
 {
     enum uint IRL =  lengthOfIR(code);
 }
-static assert (IRL!(IR.LookaheadStart) == 3);
+static assert(IRL!(IR.LookaheadStart) == 3);
 
 //how many parameters follow the IR, should be optimized fixing some IR bits
 int immediateParamsIR(IR i){
-    switch (i){
+    switch (i)
+    {
     case IR.OrEnd,IR.InfiniteEnd,IR.InfiniteQEnd:
         return 1;  // merge table index
     case IR.InfiniteBloomEnd:
@@ -235,18 +238,18 @@ struct Bytecode
     uint raw;
     //natural constraints
     enum maxSequence = 2+4;
-    enum maxData = 1<<22;
-    enum maxRaw = 1<<31;
+    enum maxData = 1 << 22;
+    enum maxRaw = 1 << 31;
 
     this(IR code, uint data)
     {
-        assert(data < (1<<22) && code < 256);
-        raw = code<<24 | data;
+        assert(data < (1 << 22) && code < 256);
+        raw = code << 24 | data;
     }
 
     this(IR code, uint data, uint seq)
     {
-        assert(data < (1<<22) && code < 256 );
+        assert(data < (1 << 22) && code < 256 );
         assert(seq >= 2 && seq < maxSequence);
         raw = code << 24 | (seq - 2)<<22 | data;
     }
@@ -274,7 +277,7 @@ struct Bytecode
 
     //ditto
     //0-arg template due to @@@BUG@@@ 10985
-    @property IR code()() const { return cast(IR)(raw>>24); }
+    @property IR code()() const { return cast(IR)(raw >> 24); }
 
     //ditto
     @property bool hotspot() const { return hasMerge(code); }
@@ -322,7 +325,7 @@ struct Bytecode
     //human readable name of instruction
     @trusted @property string mnemonic()() const
     {//@@@BUG@@@ to is @system
-        import std.conv;
+        import std.conv : to;
         return to!string(code);
     }
 
@@ -369,7 +372,8 @@ struct Group(DataIndex)
     DataIndex begin, end;
     @trusted string toString()() const
     {
-        import std.format;
+        import std.array : appender;
+        import std.format : formattedWrite;
         auto a = appender!string();
         formattedWrite(a, "%s..%s", begin, end);
         return a.data;
@@ -379,16 +383,17 @@ struct Group(DataIndex)
 //debugging tool, prints out instruction along with opcodes
 @trusted string disassemble(in Bytecode[] irb, uint pc, in NamedGroup[] dict=[])
 {
-    import std.array, std.format;
+    import std.array : appender;
+    import std.format : formattedWrite;
     auto output = appender!string();
     formattedWrite(output,"%s", irb[pc].mnemonic);
     switch (irb[pc].code)
     {
     case IR.Char:
-        formattedWrite(output, " %s (0x%x)",cast(dchar)irb[pc].data, irb[pc].data);
+        formattedWrite(output, " %s (0x%x)",cast(dchar) irb[pc].data, irb[pc].data);
         break;
     case IR.OrChar:
-        formattedWrite(output, " %s (0x%x) seq=%d", cast(dchar)irb[pc].data, irb[pc].data, irb[pc].sequence);
+        formattedWrite(output, " %s (0x%x) seq=%d", cast(dchar) irb[pc].data, irb[pc].data, irb[pc].sequence);
         break;
     case IR.RepeatStart, IR.InfiniteStart, IR.InfiniteBloomStart,
     IR.Option, IR.GotoEndOr, IR.OrStart:
@@ -442,7 +447,7 @@ struct Group(DataIndex)
 //disassemble the whole chunk
 @trusted void printBytecode()(in Bytecode[] slice, in NamedGroup[] dict=[])
 {
-    import std.stdio;
+    import std.stdio : writeln;
     for (uint pc=0; pc<slice.length; pc += slice[pc].length)
         writeln("\t", disassemble(slice, pc, dict));
 }
@@ -531,17 +536,16 @@ package(std.regex):
     //check if searching is not needed
     void checkIfOneShot()
     {
-        if (flags & RegexOption.multiline)
-            return;
     L_CheckLoop:
         for (uint i = 0; i < ir.length; i += ir[i].length)
         {
             switch (ir[i].code)
             {
-                case IR.Bol:
+                case IR.Bof:
                     flags |= RegexInfo.oneShot;
                     break L_CheckLoop;
-                case IR.GroupStart, IR.GroupEnd, IR.Eol, IR.Wordboundary, IR.Notwordboundary:
+                case IR.GroupStart, IR.GroupEnd, IR.Bol, IR.Eol, IR.Eof,
+                IR.Wordboundary, IR.Notwordboundary:
                     break;
                 default:
                     break L_CheckLoop;
@@ -566,7 +570,7 @@ package(std.regex):
 /*public*/ struct StaticRegex(Char)
 {
 package(std.regex):
-    import std.regex.internal.backtracking;
+    import std.regex.internal.backtracking : BacktrackingMatcher;
     alias Matcher = BacktrackingMatcher!(true);
     alias MatchFn = bool function(ref Matcher!Char) @trusted;
     MatchFn nativeFn;
@@ -588,9 +592,9 @@ package(std.regex):
 
 //Simple UTF-string abstraction compatible with stream interface
 struct Input(Char)
-    if (is(Char :dchar))
+if (is(Char :dchar))
 {
-    import std.utf;
+    import std.utf : decode;
     alias DataIndex = size_t;
     enum bool isLoopback = false;
     alias String = const(Char)[];
@@ -605,15 +609,15 @@ struct Input(Char)
     }
 
     //codepoint at current stream position
-    bool nextChar(ref dchar res, ref size_t pos)
+    pragma(inline, true) bool nextChar(ref dchar res, ref size_t pos)
     {
         pos = _index;
         // DMD's inliner hates multiple return functions
         // but can live with single statement if/else bodies
-        if (_index == _origin.length)
-            return false;
-        else
-            return res = std.utf.decode(_origin, _index), true;
+        bool n = !(_index == _origin.length);
+        if (n)
+            res = decode(_origin, _index);
+        return n;
     }
     @property bool atEnd(){
         return _index == _origin.length;
@@ -631,14 +635,14 @@ struct Input(Char)
     //support for backtracker engine, might not be present
     void reset(size_t index){   _index = index;  }
 
-    String opSlice(size_t start, size_t end){   return _origin[start..end]; }
+    String opSlice(size_t start, size_t end){   return _origin[start .. end]; }
 
     auto loopBack(size_t index){   return BackLooper!Input(this, index); }
 }
 
 struct BackLooperImpl(Input)
 {
-    import std.utf;
+    import std.utf : strideBack;
     alias DataIndex = size_t;
     alias String = Input.String;
     enum bool isLoopback = true;
@@ -656,18 +660,18 @@ struct BackLooperImpl(Input)
             return false;
 
         res = _origin[0.._index].back;
-        _index -= std.utf.strideBack(_origin, _index);
+        _index -= strideBack(_origin, _index);
 
         return true;
     }
-    @property atEnd(){ return _index == 0 || _index == std.utf.strideBack(_origin, _index); }
+    @property atEnd(){ return _index == 0 || _index == strideBack(_origin, _index); }
     auto loopBack(size_t index){   return Input(_origin, index); }
 
     //support for backtracker engine, might not be present
     //void reset(size_t index){   _index = index ? index-std.utf.strideBack(_origin, index) : 0;  }
     void reset(size_t index){   _index = index;  }
 
-    String opSlice(size_t start, size_t end){   return _origin[end..start]; }
+    String opSlice(size_t start, size_t end){   return _origin[end .. start]; }
     //index of at End position
     @property size_t lastIndex(){   return 0; }
 }
@@ -688,14 +692,14 @@ template BackLooper(E)
 //unsafe, no initialization of elements
 @system T[] mallocArray(T)(size_t len)
 {
-    import core.stdc.stdlib;
-    return (cast(T*)malloc(len * T.sizeof))[0 .. len];
+    import core.stdc.stdlib : malloc;
+    return (cast(T*) malloc(len * T.sizeof))[0 .. len];
 }
 
 //very unsafe, no initialization
 @system T[] arrayInChunk(T)(size_t len, ref void[] chunk)
 {
-    auto ret = (cast(T*)chunk.ptr)[0..len];
+    auto ret = (cast(T*) chunk.ptr)[0 .. len];
     chunk = chunk[len * T.sizeof .. $];
     return ret;
 }
@@ -703,8 +707,10 @@ template BackLooper(E)
 //
 @trusted uint lookupNamedGroup(String)(NamedGroup[] dict, String name)
 {//equal is @system?
-    import std.conv;
-    import std.algorithm : map, equal;
+    import std.range : assumeSorted;
+    import std.conv : text;
+    import std.algorithm.iteration : map;
+    import std.algorithm.comparison : equal;
 
     auto fnd = assumeSorted!"cmp(a,b) < 0"(map!"a.name"(dict)).lowerBound(name).length;
     enforce(fnd < dict.length && equal(dict[fnd].name, name),
@@ -739,8 +745,9 @@ struct BitTable {
     uint[4] filter;
 
     this(CodepointSet set){
-        foreach (iv; set.byInterval){
-            foreach (v; iv.a..iv.b)
+        foreach (iv; set.byInterval)
+        {
+            foreach (v; iv.a .. iv.b)
                 add(v);
         }
     }

@@ -1,3 +1,4 @@
+///
 module std.experimental.allocator.building_blocks.region;
 
 import std.experimental.allocator.common;
@@ -33,8 +34,9 @@ struct Region(ParentAllocator = NullAllocator,
     static assert(ParentAllocator.alignment >= minAlign);
 
     import std.traits : hasMember;
+    import std.typecons : Ternary;
 
-    // state {
+    // state
     /**
     The _parent allocator. Depending on whether $(D ParentAllocator) holds state
     or not, this is a member variable or an alias for
@@ -49,7 +51,6 @@ struct Region(ParentAllocator = NullAllocator,
         alias parent = ParentAllocator.instance;
     }
     private void* _current, _begin, _end;
-    // }
 
     /**
     Constructs a region backed by a user-provided store. Assumes $(D store) is
@@ -66,9 +67,9 @@ struct Region(ParentAllocator = NullAllocator,
     $(D parent.allocate(n)) returns $(D null), the region will be initialized
     as empty (correctly initialized but unable to allocate).
     */
-    this(void[] store)
+    this(ubyte[] store)
     {
-        store = store.roundUpToAlignment(alignment);
+        store = cast(ubyte[])(store.roundUpToAlignment(alignment));
         store = store[0 .. $.roundDownToAlignment(alignment)];
         assert(store.ptr.alignedAt(minAlign));
         assert(store.length % minAlign == 0);
@@ -84,14 +85,13 @@ struct Region(ParentAllocator = NullAllocator,
     static if (!is(ParentAllocator == NullAllocator))
     this(size_t n)
     {
-        this(parent.allocate(n.roundUpToAlignment(alignment)));
+        this(cast(ubyte[])(parent.allocate(n.roundUpToAlignment(alignment))));
     }
 
     /*
-    TODO: The postblit of $(D BasicRegion) is disabled because such objects
+    TODO: The postblit of $(D BasicRegion) should be disabled because such objects
     should not be copied around naively.
     */
-    //@disable this(this);
 
     /**
     If `ParentAllocator` is not `NullAllocator` and defines `deallocate`, the region defines a destructor that uses `ParentAllocator.delete` to free the
@@ -164,6 +164,7 @@ struct Region(ParentAllocator = NullAllocator,
     */
     void[] alignedAllocate(size_t n, uint a)
     {
+        import std.math : isPowerOf2;
         assert(a.isPowerOf2);
         static if (growDownwards)
         {
@@ -219,11 +220,7 @@ struct Region(ParentAllocator = NullAllocator,
     {
         assert(owns(b) == Ternary.yes || b.ptr is null);
         assert(b.ptr + b.length <= _current || b.ptr is null);
-        if (!b.ptr)
-        {
-            b = allocate(delta);
-            return b.length == delta;
-        }
+        if (!b.ptr) return delta == 0;
         auto newLength = b.length + delta;
         if (_current < b.ptr + b.length + alignment)
         {
@@ -330,12 +327,12 @@ struct Region(ParentAllocator = NullAllocator,
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     import std.experimental.allocator.building_blocks.allocator_list
         : AllocatorList;
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     // Create a scalable list of regions. Each gets at least 1MB at a time by
     // using malloc.
     auto batchAllocator = AllocatorList!(
@@ -349,7 +346,7 @@ unittest
     // Destructor will free the memory
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     // Create a 64 KB region allocated with malloc
@@ -378,9 +375,10 @@ hot memory is used first.
 */
 struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
 {
-    import std.algorithm : max;
+    import std.algorithm.comparison : max;
     import std.conv : to;
     import std.traits : hasMember;
+    import std.typecons : Ternary;
 
     static assert(minAlign.isGoodStaticAlignment);
     static assert(size >= minAlign);
@@ -425,12 +423,6 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     private void lazyInit()
     {
         assert(!_impl._current);
-        //static if (alignment > double.alignof)
-        //{
-        //    auto p = _store.ptr.alignUpTo(alignment);
-        //}
-        //else
-        //    auto p = _store.ptr;
         _impl = typeof(_impl)(_store);
         assert(_impl._current.alignedAt(alignment));
     }
@@ -536,7 +528,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
 }
 
 ///
-unittest
+@system unittest
 {
     // 128KB region, allocated to x86's cache line
     InSituRegion!(128 * 1024, 16) r1;
@@ -558,19 +550,19 @@ unittest
     // Reap with GC fallback.
     InSituRegion!(128 * 1024, 8) tmp3;
     FallbackAllocator!(BitmappedBlock!(64, 8), GCAllocator) r3;
-    r3.primary = BitmappedBlock!(64, 8)(tmp3.allocateAll());
+    r3.primary = BitmappedBlock!(64, 8)(cast(ubyte[])(tmp3.allocateAll()));
     const a3 = r3.allocate(103);
     assert(a3.length == 103);
 
     // Reap/GC with a freelist for small objects up to 16 bytes.
     InSituRegion!(128 * 1024, 64) tmp4;
     FreeList!(FallbackAllocator!(BitmappedBlock!(64, 64), GCAllocator), 0, 16) r4;
-    r4.parent.primary = BitmappedBlock!(64, 64)(tmp4.allocateAll());
+    r4.parent.primary = BitmappedBlock!(64, 64)(cast(ubyte[])(tmp4.allocateAll()));
     const a4 = r4.allocate(104);
     assert(a4.length == 104);
 }
 
-unittest
+@system unittest
 {
     InSituRegion!(4096, 1) r1;
     auto a = r1.allocate(2001);
@@ -589,9 +581,10 @@ private extern(C) int brk(shared void*);
 
 /**
 
-Allocator backed by $(D $(LUCKY sbrk)) for Posix systems. Due to the fact that
-$(D sbrk) is not thread-safe $(WEB lifecs.likai.org/2010/02/sbrk-is-not-thread-
-safe.html, by design), $(D SbrkRegion) uses a mutex internally. This implies
+Allocator backed by $(D $(LINK2 https://en.wikipedia.org/wiki/Sbrk, sbrk))
+for Posix systems. Due to the fact that $(D sbrk) is not thread-safe
+$(HTTP lifecs.likai.org/2010/02/sbrk-is-not-thread-safe.html, by design),
+$(D SbrkRegion) uses a mutex internally. This implies
 that uncontrolled calls to $(D brk) and $(D sbrk) may affect the workings of $(D
 SbrkRegion) adversely.
 
@@ -602,21 +595,7 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
         pthread_mutex_t, pthread_mutex_lock, pthread_mutex_unlock,
         PTHREAD_MUTEX_INITIALIZER;
     private static shared pthread_mutex_t sbrkMutex = PTHREAD_MUTEX_INITIALIZER;
-
-    // workaround for https://issues.dlang.org/show_bug.cgi?id=14617
-    version(OSX)
-    {
-        shared static this()
-        {
-            pthread_mutex_init(cast(pthread_mutex_t*) &sbrkMutex, null) == 0
-                || assert(0);
-        }
-        shared static ~this()
-        {
-            pthread_mutex_destroy(cast(pthread_mutex_t*) &sbrkMutex) == 0
-                || assert(0);
-        }
-    }
+    import std.typecons : Ternary;
 
     static assert(minAlign.isGoodStaticAlignment);
     static assert(size_t.sizeof == (void*).sizeof);
@@ -699,7 +678,7 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     */
     bool expand(ref void[] b, size_t delta) shared
     {
-        if (b is null) return (b = allocate(delta)) !is null;
+        if (b is null) return delta == 0;
         assert(_brkInitial && _brkCurrent); // otherwise where did b come from?
         pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) == 0 || assert(0);
         scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex) == 0
@@ -774,7 +753,7 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     }
 }
 
-version(Posix) unittest
+version(Posix) @system unittest
 {
     // Let's test the assumption that sbrk(n) returns the old address
     const p1 = sbrk(0);
@@ -786,8 +765,9 @@ version(Posix) unittest
     sbrk(-4096);
 }
 
-version(Posix) unittest
+version(Posix) @system unittest
 {
+    import std.typecons : Ternary;
     alias alloc = SbrkRegion!(8).instance;
     auto a = alloc.alignedAllocate(2001, 4096);
     assert(a.length == 2001);

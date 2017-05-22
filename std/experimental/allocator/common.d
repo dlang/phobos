@@ -3,157 +3,10 @@ Utility and ancillary artifacts of `std.experimental.allocator`. This module
 shouldn't be used directly; its functionality will be migrated into more
 appropriate parts of `std`.
 
-Authors: $(WEB erdani.com, Andrei Alexandrescu), Timon Gehr (`Ternary`)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu), Timon Gehr (`Ternary`)
 */
 module std.experimental.allocator.common;
-import std.algorithm, std.traits;
-
-/**
-Ternary type with three thruth values.
-*/
-struct Ternary
-{
-    @safe @nogc nothrow pure:
-
-    package ubyte value = 6;
-    package static Ternary make(ubyte b)
-    {
-        Ternary r = void;
-        r.value = b;
-        return r;
-    }
-
-    /**
-    In addition to `false` and `true`, `Ternary` offers `unknown`.
-    */
-    enum no = make(0);
-    /// ditto
-    enum yes = make(2);
-    /// ditto
-    enum unknown = make(6);
-
-    /**
-     Construct and assign from a `bool`, receiving `no` for `false` and `yes`
-     for `true`.
-    */
-    this(bool b) { value = b << 1; }
-
-    /// ditto
-    void opAssign(bool b) { value = b << 1; }
-
-    /**
-    Construct a ternary value from another ternary value
-    */
-    this(const Ternary b) { value = b.value; }
-
-    /**
-    $(TABLE Truth table for logical operations,
-      $(TR $(TH `a`) $(TH `b`) $(TH `$(TILDE)a`) $(TH `a | b`) $(TH `a & b`) $(TH `a ^ b`))
-      $(TR $(TD `no`) $(TD `no`) $(TD `yes`) $(TD `no`) $(TD `no`) $(TD `no`))
-      $(TR $(TD `no`) $(TD `yes`) $(TD) $(TD `yes`) $(TD `no`) $(TD `yes`))
-      $(TR $(TD `no`) $(TD `unknown`) $(TD) $(TD `unknown`) $(TD `no`) $(TD `unknown`))
-      $(TR $(TD `yes`) $(TD `no`) $(TD `no`) $(TD `yes`) $(TD `no`) $(TD `yes`))
-      $(TR $(TD `yes`) $(TD `yes`) $(TD) $(TD `yes`) $(TD `yes`) $(TD `no`))
-      $(TR $(TD `yes`) $(TD `unknown`) $(TD) $(TD `yes`) $(TD `unknown`) $(TD `unknown`))
-      $(TR $(TD `unknown`) $(TD `no`) $(TD `unknown`) $(TD `unknown`) $(TD `no`) $(TD `unknown`))
-      $(TR $(TD `unknown`) $(TD `yes`) $(TD) $(TD `yes`) $(TD `unknown`) $(TD `unknown`))
-      $(TR $(TD `unknown`) $(TD `unknown`) $(TD) $(TD `unknown`) $(TD `unknown`) $(TD `unknown`))
-    )
-    */
-    Ternary opUnary(string s)() if (s == "~")
-    {
-        return make(386 >> value & 6);
-    }
-
-    /// ditto
-    Ternary opBinary(string s)(Ternary rhs) if (s == "|")
-    {
-        return make(25_512 >> value + rhs.value & 6);
-    }
-
-    /// ditto
-    Ternary opBinary(string s)(Ternary rhs) if (s == "&")
-    {
-        return make(26_144 >> value + rhs.value & 6);
-    }
-
-    /// ditto
-    Ternary opBinary(string s)(Ternary rhs) if (s == "^")
-    {
-        return make(26_504 >> value + rhs.value & 6);
-    }
-}
-
-@safe @nogc nothrow pure
-unittest
-{
-    alias f = Ternary.no, t = Ternary.yes, u = Ternary.unknown;
-    Ternary[27] truthTableAnd =
-    [
-        t, t, t,
-        t, u, u,
-        t, f, f,
-        u, t, u,
-        u, u, u,
-        u, f, f,
-        f, t, f,
-        f, u, f,
-        f, f, f,
-    ];
-
-    Ternary[27] truthTableOr =
-    [
-        t, t, t,
-        t, u, t,
-        t, f, t,
-        u, t, t,
-        u, u, u,
-        u, f, u,
-        f, t, t,
-        f, u, u,
-        f, f, f,
-    ];
-
-    Ternary[27] truthTableXor =
-    [
-        t, t, f,
-        t, u, u,
-        t, f, t,
-        u, t, u,
-        u, u, u,
-        u, f, u,
-        f, t, t,
-        f, u, u,
-        f, f, f,
-    ];
-
-    for (auto i = 0; i != truthTableAnd.length; i += 3)
-    {
-        assert((truthTableAnd[i] & truthTableAnd[i + 1])
-            == truthTableAnd[i + 2]);
-        assert((truthTableOr[i] | truthTableOr[i + 1])
-            == truthTableOr[i + 2]);
-        assert((truthTableXor[i] ^ truthTableXor[i + 1])
-            == truthTableXor[i + 2]);
-    }
-
-    Ternary a;
-    assert(a == Ternary.unknown);
-    static assert(!is(typeof({ if (a) {} })));
-    assert(!is(typeof({ auto b = Ternary(3); })));
-    a = true;
-    assert(a == Ternary.yes);
-    a = false;
-    assert(a == Ternary.no);
-    a = Ternary.unknown;
-    assert(a == Ternary.unknown);
-    Ternary b;
-    b = a;
-    assert(b == a);
-    assert(~Ternary.yes == Ternary.no);
-    assert(~Ternary.no == Ternary.yes);
-    assert(~Ternary.unknown == Ternary.unknown);
-}
+import std.algorithm.comparison, std.traits;
 
 /**
 Returns the size in bytes of the state that needs to be allocated to hold an
@@ -191,6 +44,16 @@ unittest
 }
 
 /**
+Returns `true` if the `Allocator` has the alignment known at compile time;
+otherwise it returns `false`.
+ */
+template hasStaticallyKnownAlignment(Allocator)
+{
+    enum hasStaticallyKnownAlignment = __traits(compiles,
+                                                {enum x = Allocator.alignment;});
+}
+
+/**
 $(D chooseAtRuntime) is a compile-time constant of type $(D size_t) that several
 parameterized structures in this module recognize to mean deferral to runtime of
 the exact value. For example, $(D BitmappedBlock!(Allocator, 4096)) (described in
@@ -214,7 +77,7 @@ enum unbounded = size_t.max;
 The alignment that is guaranteed to accommodate any D object allocation on the
 current platform.
 */
-enum uint platformAlignment = std.algorithm.max(double.alignof, real.alignof);
+enum uint platformAlignment = std.algorithm.comparison.max(double.alignof, real.alignof);
 
 /**
 The default good size allocation is deduced as $(D n) rounded up to the
@@ -251,6 +114,7 @@ Returns `n` rounded up to a multiple of alignment, which must be a power of 2.
 @safe @nogc nothrow pure
 package size_t roundUpToAlignment(size_t n, uint alignment)
 {
+    import std.math : isPowerOf2;
     assert(alignment.isPowerOf2);
     immutable uint slack = cast(uint) n & (alignment - 1);
     const result = slack
@@ -275,6 +139,7 @@ Returns `n` rounded down to a multiple of alignment, which must be a power of 2.
 @safe @nogc nothrow pure
 package size_t roundDownToAlignment(size_t n, uint alignment)
 {
+    import std.math : isPowerOf2;
     assert(alignment.isPowerOf2);
     return n & ~size_t(alignment - 1);
 }
@@ -303,7 +168,7 @@ package void[] roundUpToAlignment(void[] b, uint a)
 }
 
 @nogc nothrow pure
-unittest
+@system unittest
 {
     void[] empty;
     assert(roundUpToAlignment(empty, 4) == null);
@@ -336,7 +201,7 @@ package void[] roundStartToMultipleOf(void[] s, uint base)
 }
 
 nothrow pure
-unittest
+@system unittest
 {
     void[] p;
     assert(roundStartToMultipleOf(p, 16) is null);
@@ -425,7 +290,7 @@ package uint effectiveAlignment(void* ptr)
 }
 
 @nogc nothrow pure
-unittest
+@system unittest
 {
     int x;
     assert(effectiveAlignment(&x) >= int.alignof);
@@ -438,6 +303,7 @@ than or equal to the given pointer.
 @nogc nothrow pure
 package void* alignDownTo(void* ptr, uint alignment)
 {
+    import std.math : isPowerOf2;
     assert(alignment.isPowerOf2);
     return cast(void*) (cast(size_t) ptr & ~(alignment - 1UL));
 }
@@ -449,75 +315,25 @@ than or equal to the given pointer.
 @nogc nothrow pure
 package void* alignUpTo(void* ptr, uint alignment)
 {
+    import std.math : isPowerOf2;
     assert(alignment.isPowerOf2);
     immutable uint slack = cast(size_t) ptr & (alignment - 1U);
     return slack ? ptr + alignment - slack : ptr;
 }
 
-// Credit: Matthias Bentrup
-/**
-Returns `true` if `x` is a nonzero power of two.
-*/
-@safe @nogc nothrow pure
-package bool isPowerOf2(uint x)
-{
-    return (x & -x) > (x - 1);
-}
-
-@safe @nogc nothrow pure
-unittest
-{
-    assert(!isPowerOf2(0));
-    assert(isPowerOf2(1));
-    assert(isPowerOf2(2));
-    assert(!isPowerOf2(3));
-    assert(isPowerOf2(4));
-    assert(!isPowerOf2(5));
-    assert(!isPowerOf2(6));
-    assert(!isPowerOf2(7));
-    assert(isPowerOf2(8));
-    assert(!isPowerOf2(9));
-    assert(!isPowerOf2(10));
-    assert(isPowerOf2(1UL << 31));
-}
-
 @safe @nogc nothrow pure
 package bool isGoodStaticAlignment(uint x)
 {
+    import std.math : isPowerOf2;
     return x.isPowerOf2;
 }
 
 @safe @nogc nothrow pure
 package bool isGoodDynamicAlignment(uint x)
 {
+    import std.math : isPowerOf2;
     return x.isPowerOf2 && x >= (void*).sizeof;
 }
-
-/*
-If $(D b.length + delta <= a.goodAllocSize(b.length)), $(D expand) just adjusts
-$(D b) and returns $(D true). Otherwise, returns $(D false).
-
-$(D expand) does not attempt to use $(D Allocator.reallocate) even if
-defined. This is deliberate so allocators may use it internally within their own
-implementation of $(D expand).
-
-*/
-//bool expand(Allocator)(ref Allocator a, ref void[] b, size_t delta)
-//{
-//    if (!b.ptr)
-//    {
-//        b = a.allocate(delta);
-//        return b.length == delta;
-//    }
-//    if (delta == 0) return true;
-//    immutable length = b.length + delta;
-//    if (length <= a.goodAllocSize(b.length))
-//    {
-//        b = b.ptr[0 .. length];
-//        return true;
-//    }
-//    return false;
-//}
 
 /**
 The default $(D reallocate) function first attempts to use $(D expand). If $(D
@@ -601,121 +417,267 @@ Forwards each of the methods in `funs` (if defined) to `member`.
     return result;
 }
 
-package void testAllocator(alias make)()
+version(unittest)
 {
-    import std.conv : text;
-    import std.stdio : writeln, stderr;
-    alias A = typeof(make());
-    scope(failure) stderr.writeln("testAllocator failed for ", A.stringof);
+    import std.experimental.allocator : IAllocator, ISharedAllocator;
 
-    auto a = make();
-
-    // Test alignment
-    static assert(A.alignment.isPowerOf2);
-
-    // Test goodAllocSize
-    assert(a.goodAllocSize(1) >= A.alignment,
-        text(a.goodAllocSize(1), " < ", A.alignment));
-    assert(a.goodAllocSize(11) >= 11.roundUpToMultipleOf(A.alignment));
-    assert(a.goodAllocSize(111) >= 111.roundUpToMultipleOf(A.alignment));
-
-    // Test allocate
-    assert(a.allocate(0) is null);
-
-    auto b1 = a.allocate(1);
-    assert(b1.length == 1);
-    auto b2 = a.allocate(2);
-    assert(b2.length == 2);
-    assert(b2.ptr + b2.length <= b1.ptr || b1.ptr + b1.length <= b2.ptr);
-
-    // Test alignedAllocate
-    static if (hasMember!(A, "alignedAllocate"))
-    {{
-        auto b3 = a.alignedAllocate(1, 256);
-        assert(b3.length <= 1);
-        assert(b3.ptr.alignedAt(256));
-        assert(a.alignedReallocate(b3, 2, 512));
-        assert(b3.ptr.alignedAt(512));
-        static if (hasMember!(A, "alignedDeallocate"))
-        {
-            a.alignedDeallocate(b3);
-        }
-    }}
-    else
+    package void testAllocator(alias make)()
     {
-        static assert(!hasMember!(A, "alignedDeallocate"));
-        // This seems to be a bug in the compiler:
-        //static assert(!hasMember!(A, "alignedReallocate"), A.stringof);
+        import std.conv : text;
+        import std.stdio : writeln, stderr;
+        import std.math : isPowerOf2;
+        import std.typecons : Ternary;
+        alias A = typeof(make());
+        scope(failure) stderr.writeln("testAllocator failed for ", A.stringof);
+
+        auto a = make();
+
+        // Test alignment
+        static assert(A.alignment.isPowerOf2);
+
+        // Test goodAllocSize
+        assert(a.goodAllocSize(1) >= A.alignment,
+                text(a.goodAllocSize(1), " < ", A.alignment));
+        assert(a.goodAllocSize(11) >= 11.roundUpToMultipleOf(A.alignment));
+        assert(a.goodAllocSize(111) >= 111.roundUpToMultipleOf(A.alignment));
+
+        // Test allocate
+        assert(a.allocate(0) is null);
+
+        auto b1 = a.allocate(1);
+        assert(b1.length == 1);
+        auto b2 = a.allocate(2);
+        assert(b2.length == 2);
+        assert(b2.ptr + b2.length <= b1.ptr || b1.ptr + b1.length <= b2.ptr);
+
+        // Test alignedAllocate
+        static if (hasMember!(A, "alignedAllocate"))
+        {{
+             auto b3 = a.alignedAllocate(1, 256);
+             assert(b3.length <= 1);
+             assert(b3.ptr.alignedAt(256));
+             assert(a.alignedReallocate(b3, 2, 512));
+             assert(b3.ptr.alignedAt(512));
+             static if (hasMember!(A, "alignedDeallocate"))
+             {
+                 a.alignedDeallocate(b3);
+             }
+         }}
+        else
+        {
+            static assert(!hasMember!(A, "alignedDeallocate"));
+            // This seems to be a bug in the compiler:
+            //static assert(!hasMember!(A, "alignedReallocate"), A.stringof);
+        }
+
+        static if (hasMember!(A, "allocateAll"))
+        {{
+             auto aa = make();
+             if (aa.allocateAll().ptr)
+             {
+                 // Can't get any more memory
+                 assert(!aa.allocate(1).ptr);
+             }
+             auto ab = make();
+             const b4 = ab.allocateAll();
+             assert(b4.length);
+             // Can't get any more memory
+             assert(!ab.allocate(1).ptr);
+         }}
+
+        static if (hasMember!(A, "expand"))
+        {{
+             assert(a.expand(b1, 0));
+             auto len = b1.length;
+             if (a.expand(b1, 102))
+             {
+                 assert(b1.length == len + 102, text(b1.length, " != ", len + 102));
+             }
+             auto aa = make();
+             void[] b5 = null;
+             assert(aa.expand(b5, 0));
+             assert(b5 is null);
+             assert(!aa.expand(b5, 1));
+             assert(b5.length == 0);
+         }}
+
+        void[] b6 = null;
+        assert(a.reallocate(b6, 0));
+        assert(b6.length == 0);
+        assert(a.reallocate(b6, 1));
+        assert(b6.length == 1, text(b6.length));
+        assert(a.reallocate(b6, 2));
+        assert(b6.length == 2);
+
+        // Test owns
+        static if (hasMember!(A, "owns"))
+        {{
+             assert(a.owns(null) == Ternary.no);
+             assert(a.owns(b1) == Ternary.yes);
+             assert(a.owns(b2) == Ternary.yes);
+             assert(a.owns(b6) == Ternary.yes);
+         }}
+
+        static if (hasMember!(A, "resolveInternalPointer"))
+        {{
+             void[] p;
+             assert(a.resolveInternalPointer(null, p) == Ternary.no);
+             Ternary r = a.resolveInternalPointer(b1.ptr, p);
+             assert(p.ptr is b1.ptr && p.length >= b1.length);
+             r = a.resolveInternalPointer(b1.ptr + b1.length / 2, p);
+             assert(p.ptr is b1.ptr && p.length >= b1.length);
+             r = a.resolveInternalPointer(b2.ptr, p);
+             assert(p.ptr is b2.ptr && p.length >= b2.length);
+             r = a.resolveInternalPointer(b2.ptr + b2.length / 2, p);
+             assert(p.ptr is b2.ptr && p.length >= b2.length);
+             r = a.resolveInternalPointer(b6.ptr, p);
+             assert(p.ptr is b6.ptr && p.length >= b6.length);
+             r = a.resolveInternalPointer(b6.ptr + b6.length / 2, p);
+             assert(p.ptr is b6.ptr && p.length >= b6.length);
+             static int[10] b7 = [ 1, 2, 3 ];
+             assert(a.resolveInternalPointer(b7.ptr, p) == Ternary.no);
+             assert(a.resolveInternalPointer(b7.ptr + b7.length / 2, p) == Ternary.no);
+             assert(a.resolveInternalPointer(b7.ptr + b7.length, p) == Ternary.no);
+             int[3] b8 = [ 1, 2, 3 ];
+             assert(a.resolveInternalPointer(b8.ptr, p) == Ternary.no);
+             assert(a.resolveInternalPointer(b8.ptr + b8.length / 2, p) == Ternary.no);
+             assert(a.resolveInternalPointer(b8.ptr + b8.length, p) == Ternary.no);
+         }}
     }
 
-    static if (hasMember!(A, "allocateAll"))
-    {{
-        auto aa = make();
-        if (aa.allocateAll().ptr)
+    package void testAllocatorObject(AllocInterface)(AllocInterface a)
+        if (is(AllocInterface : IAllocator)
+            || is (AllocInterface : shared ISharedAllocator))
+    {
+        import std.conv : text;
+        import std.stdio : writeln, stderr;
+        import std.math : isPowerOf2;
+        import std.typecons : Ternary;
+        scope(failure) stderr.writeln("testAllocatorObject failed for ",
+                AllocInterface.stringof);
+
+        assert(a);
+
+        // Test alignment
+        assert(a.alignment.isPowerOf2);
+
+        // Test goodAllocSize
+        assert(a.goodAllocSize(1) >= a.alignment,
+                text(a.goodAllocSize(1), " < ", a.alignment));
+        assert(a.goodAllocSize(11) >= 11.roundUpToMultipleOf(a.alignment));
+        assert(a.goodAllocSize(111) >= 111.roundUpToMultipleOf(a.alignment));
+
+        // Test empty
+        assert(a.empty != Ternary.no);
+
+        // Test allocate
+        assert(a.allocate(0) is null);
+
+        auto b1 = a.allocate(1);
+        assert(b1.length == 1);
+        auto b2 = a.allocate(2);
+        assert(b2.length == 2);
+        assert(b2.ptr + b2.length <= b1.ptr || b1.ptr + b1.length <= b2.ptr);
+
+        // Test alignedAllocate
         {
-            // Can't get any more memory
-            assert(!aa.allocate(1).ptr);
+            // If not implemented it will return null, so those should pass
+            auto b3 = a.alignedAllocate(1, 256);
+            assert(b3.length <= 1);
+            assert(b3.ptr.alignedAt(256));
+            if (a.alignedReallocate(b3, 1, 256))
+            {
+                // If it is false, then the wrapped allocator did not implement
+                // this
+                assert(a.alignedReallocate(b3, 2, 512));
+                assert(b3.ptr.alignedAt(512));
+            }
         }
-        auto ab = make();
-        const b4 = ab.allocateAll();
-        assert(b4.length);
-        // Can't get any more memory
-        assert(!ab.allocate(1).ptr);
-    }}
 
-    static if (hasMember!(A, "expand"))
-    {{
-        assert(a.expand(b1, 0));
-        auto len = b1.length;
-        if (a.expand(b1, 102))
+        // Test allocateAll
         {
-            assert(b1.length == len + 102, text(b1.length, " != ", len + 102));
+            auto aa = a.allocateAll();
+            if (aa.ptr)
+            {
+                // Can't get any more memory
+                assert(!a.allocate(1).ptr);
+                a.deallocate(aa);
+            }
+            const b4 = a.allocateAll();
+            if (b4.ptr)
+            {
+                // Can't get any more memory
+                assert(!a.allocate(1).ptr);
+            }
         }
-        auto aa = make();
-        void[] b5 = null;
-        assert(aa.expand(b5, 0));
-        assert(b5 is null);
-        assert(aa.expand(b5, 1));
-        assert(b5.length == 1);
-    }}
 
-    void[] b6 = null;
-    assert(a.reallocate(b6, 0));
-    assert(b6.length == 0);
-    assert(a.reallocate(b6, 1));
-    assert(b6.length == 1, text(b6.length));
+        // Test expand
+        {
+            assert(a.expand(b1, 0));
+            auto len = b1.length;
+            if (a.expand(b1, 102))
+            {
+                assert(b1.length == len + 102, text(b1.length, " != ", len + 102));
+            }
+        }
 
-    // Test owns
-    static if (hasMember!(A, "owns"))
-    {{
-        assert(a.owns(null) == Ternary.no);
-        assert(a.owns(b1) == Ternary.yes);
-        assert(a.owns(b2) == Ternary.yes);
-        assert(a.owns(b6) == Ternary.yes);
-    }}
+        void[] b6 = null;
+        assert(a.reallocate(b6, 0));
+        assert(b6.length == 0);
+        assert(a.reallocate(b6, 1));
+        assert(b6.length == 1, text(b6.length));
+        assert(a.reallocate(b6, 2));
+        assert(b6.length == 2);
 
-    static if (hasMember!(A, "resolveInternalPointer"))
-    {{
-        assert(a.resolveInternalPointer(null) is null);
-        auto p = a.resolveInternalPointer(b1.ptr);
-        assert(p.ptr is b1.ptr && p.length >= b1.length);
-        p = a.resolveInternalPointer(b1.ptr + b1.length / 2);
-        assert(p.ptr is b1.ptr && p.length >= b1.length);
-        p = a.resolveInternalPointer(b2.ptr);
-        assert(p.ptr is b2.ptr && p.length >= b2.length);
-        p = a.resolveInternalPointer(b2.ptr + b2.length / 2);
-        assert(p.ptr is b2.ptr && p.length >= b2.length);
-        p = a.resolveInternalPointer(b6.ptr);
-        assert(p.ptr is b6.ptr && p.length >= b6.length);
-        p = a.resolveInternalPointer(b6.ptr + b6.length / 2);
-        assert(p.ptr is b6.ptr && p.length >= b6.length);
-        static int[10] b7 = [ 1, 2, 3 ];
-        assert(a.resolveInternalPointer(b7.ptr) is null);
-        assert(a.resolveInternalPointer(b7.ptr + b7.length / 2) is null);
-        assert(a.resolveInternalPointer(b7.ptr + b7.length) is null);
-        int[3] b8 = [ 1, 2, 3 ];
-        assert(a.resolveInternalPointer(b8.ptr).ptr is null);
-        assert(a.resolveInternalPointer(b8.ptr + b8.length / 2) is null);
-        assert(a.resolveInternalPointer(b8.ptr + b8.length) is null);
-    }}
+        // Test owns
+        {
+            if (a.owns(null) != Ternary.unknown)
+            {
+                assert(a.owns(null) == Ternary.no);
+                assert(a.owns(b1) == Ternary.yes);
+                assert(a.owns(b2) == Ternary.yes);
+                assert(a.owns(b6) == Ternary.yes);
+            }
+        }
+
+        // Test resolveInternalPointer
+        {
+            void[] p;
+            if (a.resolveInternalPointer(null, p) != Ternary.unknown)
+            {
+                assert(a.resolveInternalPointer(null, p) == Ternary.no);
+                Ternary r = a.resolveInternalPointer(b1.ptr, p);
+                assert(p.ptr is b1.ptr && p.length >= b1.length);
+                r = a.resolveInternalPointer(b1.ptr + b1.length / 2, p);
+                assert(p.ptr is b1.ptr && p.length >= b1.length);
+                r = a.resolveInternalPointer(b2.ptr, p);
+                assert(p.ptr is b2.ptr && p.length >= b2.length);
+                r = a.resolveInternalPointer(b2.ptr + b2.length / 2, p);
+                assert(p.ptr is b2.ptr && p.length >= b2.length);
+                r = a.resolveInternalPointer(b6.ptr, p);
+                assert(p.ptr is b6.ptr && p.length >= b6.length);
+                r = a.resolveInternalPointer(b6.ptr + b6.length / 2, p);
+                assert(p.ptr is b6.ptr && p.length >= b6.length);
+                static int[10] b7 = [ 1, 2, 3 ];
+                assert(a.resolveInternalPointer(b7.ptr, p) == Ternary.no);
+                assert(a.resolveInternalPointer(b7.ptr + b7.length / 2, p) == Ternary.no);
+                assert(a.resolveInternalPointer(b7.ptr + b7.length, p) == Ternary.no);
+                int[3] b8 = [ 1, 2, 3 ];
+                assert(a.resolveInternalPointer(b8.ptr, p) == Ternary.no);
+                assert(a.resolveInternalPointer(b8.ptr + b8.length / 2, p) == Ternary.no);
+                assert(a.resolveInternalPointer(b8.ptr + b8.length, p) == Ternary.no);
+            }
+        }
+
+        // Test deallocateAll
+        {
+            if (a.deallocateAll())
+            {
+                if (a.empty != Ternary.unknown)
+                {
+                    assert(a.empty == Ternary.yes);
+                }
+            }
+        }
+    }
 }

@@ -1,3 +1,4 @@
+///
 module std.experimental.allocator.building_blocks.quantizer;
 
 import std.experimental.allocator.common;
@@ -98,11 +99,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     */
     bool expand(ref void[] b, size_t delta)
     {
-        if (!b.ptr)
-        {
-            b = allocate(delta);
-            return b.length == delta;
-        }
+        if (!b.ptr) return delta == 0;
         immutable allocated = goodAllocSize(b.length),
             needed = b.length + delta,
             neededAllocation = goodAllocSize(needed);
@@ -212,10 +209,12 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.free_tree : FreeTree;
     import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.common : roundUpToMultipleOf;
+
     // Quantize small allocations to a multiple of cache line, large ones to a
     // multiple of page size
     alias MyAlloc = Quantizer!(
@@ -226,7 +225,7 @@ unittest
     assert(buf.ptr);
 }
 
-unittest
+@system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     alias MyAlloc = Quantizer!(GCAllocator,

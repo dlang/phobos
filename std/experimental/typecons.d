@@ -11,9 +11,9 @@ functionality.
 Source:    $(PHOBOSSRC std/experimental/_typecons.d)
 
 Copyright: Copyright the respective authors, 2008-
-License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB erdani.org, Andrei Alexandrescu),
-           $(WEB bartoszmilewski.wordpress.com, Bartosz Milewski),
+License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
+           $(HTTP bartoszmilewski.wordpress.com, Bartosz Milewski),
            Don Clugston,
            Shin Fujishiro,
            Kenji Hara
@@ -23,7 +23,7 @@ module std.experimental.typecons;
 import std.meta; // : AliasSeq, allSatisfy;
 import std.traits;
 
-import std.typecons: Tuple, tuple, Bind, DerivedFunctionType,
+import std.typecons : Tuple, tuple, Bind, DerivedFunctionType,
        isImplicitlyConvertible, mixinAll, staticIota,
        GetOverloadedMethods;
 
@@ -53,16 +53,16 @@ if (is(T == class) || is(T == interface))
         }
         else
         {
-            return cast(T)typecons_d_toObject(*cast(void**)(&source));
+            return cast(T) typecons_d_toObject(*cast(void**)(&source));
         }
     }
 }
 
-unittest
+@system unittest
 {
     class C { @disable opCast(T)() {} }
     auto c = new C;
-    static assert(!__traits(compiles, cast(Object)c));
+    static assert(!__traits(compiles, cast(Object) c));
     auto o = dynamicCast!Object(c);
     assert(c is o);
 
@@ -70,7 +70,7 @@ unittest
     interface J { @disable opCast(T)() {} Object instance(); }
     class D : I, J { Object instance() { return this; } }
     I i = new D();
-    static assert(!__traits(compiles, cast(J)i));
+    static assert(!__traits(compiles, cast(J) i));
     J j = dynamicCast!J(i);
     assert(i.instance() is j.instance());
 }
@@ -131,7 +131,8 @@ if (Targets.length >= 1 && !allSatisfy!(isMutable, Targets))
     alias implementsInterface = .implementsInterface!(Source, staticMap!(Unqual, Targets));
 }
 
-unittest {
+@safe unittest
+{
     interface Foo {
         void foo();
     }
@@ -270,7 +271,7 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
                 static if (is(Source == class) || is(Source == interface))
                 {
                     // BUG: making private should work with NVI.
-                    protected final inout(Object) _wrap_getSource() inout @safe
+                    protected inout(Object) _wrap_getSource() inout @safe
                     {
                         return dynamicCast!(inout Object)(_wrap_source);
                     }
@@ -278,7 +279,7 @@ if (Targets.length >= 1 && allSatisfy!(isInterface, Targets))
                 else
                 {
                     // BUG: making private should work with NVI.
-                    protected final inout(Source) _wrap_getSource() inout @safe
+                    protected inout(Source) _wrap_getSource() inout @safe
                     {
                         return _wrap_source;
                     }
@@ -376,7 +377,7 @@ private template wrapperSignature(alias fun)
         ~ name~"("~wrapperParameters~")"~mod;
 }
 
-unittest
+@safe unittest
 {
     interface M
     {
@@ -428,7 +429,7 @@ version(StdDdoc)
 }
 
 ///
-unittest
+@system unittest
 {
     interface Quack
     {
@@ -509,8 +510,9 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
+    import std.traits : functionAttributes, FunctionAttribute;
     interface A { int run(); }
     interface B { int stop(); @property int status(); }
     class X
@@ -568,7 +570,7 @@ template unwrap(Target)
                         break;
                 }
             } while (upCastSource);
-            import std.conv: ConvException;
+            import std.conv : ConvException;
             throw new ConvException(unwrapExceptionText!(Source,Target));
         }
         // structural downcast for class target
@@ -609,7 +611,7 @@ template unwrap(Target)
     }
 }
 
-unittest
+@system unittest
 {
     // Validate const/immutable
     class A
@@ -656,7 +658,7 @@ unittest
         assert(d.draw(10) == 10);
     }
 }
-unittest
+@system unittest
 {
     // Bugzilla 10377
     import std.range, std.algorithm;
@@ -673,7 +675,7 @@ unittest
     auto r = iota(0,10,1).inputRangeObject().wrap!(MyInputRange!int)();
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
 }
-unittest
+@system unittest
 {
     // Bugzilla 10536
     interface Interface
@@ -689,7 +691,7 @@ unittest
     Interface i = new Pluggable().wrap!Interface;
     assert(i.foo() == 1);
 }
-unittest
+@system unittest
 {
     // Enhancement 10538
     interface Interface
@@ -800,4 +802,277 @@ private template findCovariantFunction(alias finfo, Source, Fs...)
     }
     else
         enum ptrdiff_t findCovariantFunction = x;
+}
+
+/**
+Type constructor for final (aka head-const) variables.
+
+Final variables cannot be directly mutated or rebound, but references
+reached through the variable are typed with their original mutability.
+It is equivalent to `final` variables in D1 and Java, as well as
+`readonly` variables in C#.
+
+When `T` is a `const` or `immutable` type, `Final` aliases
+to `T`.
+*/
+template Final(T)
+{
+static if (is(T == const) || is(T == immutable))
+    alias Final = T;
+else
+{
+    struct Final
+    {
+        import std.typecons : Proxy;
+
+        private T final_value;
+        mixin Proxy!final_value;
+
+        /**
+         * Construction is forwarded to the underlying type.
+         */
+        this(T other)
+        {
+            this.final_value = other;
+        }
+
+        /// Ditto
+        this(Args...)(auto ref Args args)
+            if (__traits(compiles, T(args)))
+        {
+            static assert((!is(T == struct) && !is(T == union)) || !isNested!T,
+                "Non-static nested type " ~ fullyQualifiedName!T ~ " must be " ~
+                "constructed explicitly at the call-site (e.g. auto s = " ~
+                "makeFinal(" ~ T.stringof ~ "(...));)");
+            this.final_value = T(args);
+        }
+
+        // Attaching function attributes gives less noisy error messages
+        pure nothrow @safe @nogc
+        {
+            /++
+             + All operators, including member access, are forwarded to the
+             + underlying value of type `T` except for these mutating operators,
+             + which are disabled.
+             +/
+            void opAssign(Other)(Other other)
+            {
+                static assert(0, typeof(this).stringof ~
+                                 " cannot be reassigned.");
+            }
+
+            /// Ditto
+            void opOpAssign(string op, Other)(Other other)
+            {
+                static assert(0, typeof(this).stringof ~
+                                 " cannot be reassigned.");
+            }
+
+            /// Ditto
+            void opUnary(string op : "--")()
+            {
+                static assert(0, typeof(this).stringof ~
+                                 " cannot be mutated.");
+            }
+
+            /// Ditto
+            void opUnary(string op : "++")()
+            {
+                static assert(0, typeof(this).stringof ~
+                                 " cannot be mutated.");
+            }
+        }
+
+        /**
+         *
+         * `Final!T` implicitly converts to an rvalue of type `T` through
+         * `AliasThis`.
+         */
+        inout(T) final_get() inout
+        {
+            return final_value;
+        }
+
+        /// Ditto
+        alias final_get this;
+
+        /// Ditto
+        auto ref opUnary(string op)()
+            if (__traits(compiles, mixin(op ~ "T.init")))
+        {
+            return mixin(op ~ "this.final_value");
+        }
+    }
+}
+}
+
+/// Ditto
+Final!T makeFinal(T)(T t)
+{
+    return Final!T(t);
+}
+
+/// `Final` can be used to create class references which cannot be rebound:
+pure nothrow @safe unittest
+{
+    static class A
+    {
+        int i;
+
+        this(int i) pure nothrow @nogc @safe
+        {
+            this.i = i;
+        }
+    }
+
+    auto a = makeFinal(new A(42));
+    assert(a.i == 42);
+
+    //a = new A(24); // Reassignment is illegal,
+    a.i = 24; // But fields are still mutable.
+
+    assert(a.i == 24);
+}
+
+/// `Final` can also be used to create read-only data fields without using transitive immutability:
+pure nothrow @safe unittest
+{
+    static class A
+    {
+        int i;
+
+        this(int i) pure nothrow @nogc @safe
+        {
+            this.i = i;
+        }
+    }
+
+    static class B
+    {
+        Final!A a;
+
+        this(A a) pure nothrow @nogc @safe
+        {
+            this.a = a; // Construction, thus allowed.
+        }
+    }
+
+    auto b = new B(new A(42));
+    assert(b.a.i == 42);
+
+    // b.a = new A(24); // Reassignment is illegal,
+    b.a.i = 24; // but `a` is still mutable.
+
+    assert(b.a.i == 24);
+}
+
+pure nothrow @safe unittest
+{
+    static class A { int i; }
+    static assert(!is(Final!A == A));
+    static assert(is(Final!(const A) == const A));
+    static assert(is(Final!(immutable A) == immutable A));
+
+    Final!A a = new A;
+    static assert(!__traits(compiles, a = new A));
+
+    static void foo(ref A a) pure nothrow @safe @nogc {}
+    static assert(!__traits(compiles, foo(a)));
+
+    assert(a.i == 0);
+    a.i = 42;
+    assert(a.i == 42);
+
+    Final!int i = 42;
+    static assert(!__traits(compiles, i = 24));
+    static assert(!__traits(compiles, --i));
+    static assert(!__traits(compiles, ++i));
+    assert(i == 42);
+    int iCopy = i;
+    assert(iCopy == 42);
+    iCopy = -i; // non-mutating unary operators must work
+    assert(iCopy == -42);
+
+    static struct S
+    {
+        int i;
+
+        pure nothrow @safe @nogc:
+        this(int i){}
+        this(string s){}
+        this(int i, string s, float f){ this.i = i; }
+    }
+
+    Final!S sint = 42;
+    Final!S sstr = "foo";
+    static assert(!__traits(compiles, sint = sstr));
+
+    auto sboth = Final!S(42, "foo", 3.14);
+    assert(sboth.i == 42);
+
+    sboth.i = 24;
+    assert(sboth.i == 24);
+
+    struct NestedS
+    {
+        int i;
+        int get() pure nothrow @safe @nogc { return sboth.i + i; }
+    }
+
+    // Nested structs must be constructed at the call-site
+    static assert(!__traits(compiles, Final!NestedS(6)));
+    auto s = makeFinal(NestedS(6));
+    assert(s.i == 6);
+    assert(s.get == 30);
+
+    class NestedC
+    {
+        int i;
+
+        pure nothrow @safe @nogc:
+        this(int i) { this.i = i; }
+        int get() { return sboth.i + i; }
+    }
+
+    auto c = makeFinal(new NestedC(6));
+    assert(c.i == 6);
+    assert(c.get == 30);
+}
+
+pure nothrow @safe unittest
+{
+    auto arr = makeFinal([1, 2, 3]);
+    static assert(!__traits(compiles, arr = null));
+    static assert(!__traits(compiles, arr ~= 4));
+    assert((arr ~ 4) == [1, 2, 3, 4]);
+}
+
+// issue 17270
+pure nothrow @nogc @system unittest
+{
+    int i = 1;
+    Final!(int*) fp = &i;
+    assert(*fp == 1);
+    static assert(!__traits(compiles,
+        fp = &i // direct assignment
+    ));
+    static assert(is(typeof(*fp) == int));
+    *fp = 2; // indirect assignment
+    assert(*fp == 2);
+    int* p = fp;
+    assert(*p == 2);
+}
+
+pure nothrow @system unittest
+{
+    Final!(int[]) arr;
+    // static assert(!__traits(compiles,
+        // arr.length = 10; // bug!
+    // ));
+    static assert(!__traits(compiles,
+        arr.ptr = null
+    ));
+    static assert(!__traits(compiles,
+        arr.ptr++
+    ));
 }

@@ -1,3 +1,4 @@
+///
 module std.experimental.allocator.building_blocks.bucketizer;
 
 /**
@@ -17,27 +18,18 @@ for $(D Bucketizer). To handle them separately, $(D Segregator) may be of use.
 struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 {
     import std.traits : hasMember;
-    import common = std.experimental.allocator.common : roundUpToMultipleOf,
-        reallocate,
-        Ternary;
+    import common = std.experimental.allocator.common : roundUpToMultipleOf;
+    import std.typecons : Ternary;
 
     static assert((max - (min - 1)) % step == 0,
         "Invalid limits when instantiating " ~ Bucketizer.stringof);
 
-    //static if (min == chooseAtRuntime) size_t _min;
-    //else alias _min = min;
-    //static if (max == chooseAtRuntime) size_t _max;
-    //else alias _max = max;
-    //static if (step == chooseAtRuntime) size_t _step;
-    //else alias _step = step;
-
-    // state {
+    // state
     /**
     The array of allocators is publicly available for e.g. initialization and
     inspection.
     */
     Allocator[(max + 1 - min) / step] buckets;
-    // }
 
     private Allocator* allocatorFor(size_t n)
     {
@@ -100,11 +92,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     */
     bool expand(ref void[] b, size_t delta)
     {
-        if (!b.ptr)
-        {
-            b = allocate(delta);
-            return b.length == delta;
-        }
+        if (!b.ptr) return delta == 0;
         assert(b.length >= min && b.length <= max);
         const available = goodAllocSize(b.length);
         const desired = b.length + delta;
@@ -218,25 +206,27 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     resolveInternalPointer), and tries it for each bucket in turn.
     */
     static if (hasMember!(Allocator, "resolveInternalPointer"))
-    void[] resolveInternalPointer(void* p)
+    Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
         foreach (ref a; buckets)
         {
-            if (auto r = a.resolveInternalPointer(p)) return r;
+            Ternary r = a.resolveInternalPointer(p, result);
+            if (r == Ternary.yes) return r;
         }
-        return null;
+        return Ternary.no;
     }
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.allocator_list : AllocatorList;
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.building_blocks.region : Region;
     import std.experimental.allocator.mallocator : Mallocator;
-    import std.experimental.allocator.common : unbounded, Ternary;
-    import std.algorithm : max;
+    import std.experimental.allocator.common : unbounded;
+    import std.typecons : Ternary;
+    import std.algorithm.comparison : max;
     Bucketizer!(
         FreeList!(
             AllocatorList!(
@@ -246,5 +236,6 @@ unittest
     auto b = a.allocate(400);
     assert(b.length == 400);
     assert(a.owns(b) == Ternary.yes);
+    void[] p;
     a.deallocate(b);
 }

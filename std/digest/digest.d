@@ -43,7 +43,7 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
  * In this simplest case, the template API can even be used without templates: Just use the "$(B x)" structs
  * directly.
  *
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:
  * Johannes Pfau
  *
@@ -65,11 +65,12 @@ module std.digest.digest;
 
 import std.meta : allSatisfy;
 import std.traits;
+import std.range.primitives;
 public import std.ascii : LetterCase;
 
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
 
@@ -85,14 +86,15 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     //Generating the hashes of a file, idiomatic D way
     import std.digest.crc, std.digest.sha, std.digest.md;
     import std.stdio;
 
     // Digests a file and prints the result.
-    void digestFile(Hash)(string filename) if (isDigest!Hash)
+    void digestFile(Hash)(string filename)
+    if (isDigest!Hash)
     {
         auto file = File(filename);
         auto result = digest!Hash(file.byChunk(4096 * 1024));
@@ -110,13 +112,14 @@ unittest
     }
 }
 ///
-unittest
+@system unittest
 {
     //Generating the hashes of a file using the template API
     import std.digest.crc, std.digest.sha, std.digest.md;
     import std.stdio;
     // Digests a file and prints the result.
-    void digestFile(Hash)(ref Hash hash, string filename) if (isDigest!Hash)
+    void digestFile(Hash)(ref Hash hash, string filename)
+    if (isDigest!Hash)
     {
         File file = File(filename);
 
@@ -149,7 +152,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc, std.digest.sha, std.digest.md;
     import std.stdio;
@@ -204,15 +207,15 @@ version(ExampleDigest)
         public:
             /**
              * Use this to feed the digest with data.
-             * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+             * Also implements the $(REF isOutputRange, std,range,primitives)
              * interface for $(D ubyte) and $(D const(ubyte)[]).
              * The following usages of $(D put) must work for any type which
              * passes $(LREF isDigest):
              * Example:
              * ----
              * ExampleDigest dig;
-             * dig.put(cast(ubyte)0); //single ubyte
-             * dig.put(cast(ubyte)0, cast(ubyte)0); //variadic
+             * dig.put(cast(ubyte) 0); //single ubyte
+             * dig.put(cast(ubyte) 0, cast(ubyte) 0); //variadic
              * ubyte[10] buf;
              * dig.put(buf); //buffer
              * ----
@@ -253,10 +256,10 @@ version(ExampleDigest)
 }
 
 ///
-unittest
+@system unittest
 {
     //Using the OutputRange feature
-    import std.algorithm : copy;
+    import std.algorithm.mutation : copy;
     import std.range : repeat;
     import std.digest.md;
 
@@ -287,23 +290,24 @@ template isDigest(T)
         is(typeof(
         {
             T dig = void; //Can define
-            dig.put(cast(ubyte)0, cast(ubyte)0); //varags
+            dig.put(cast(ubyte) 0, cast(ubyte) 0); //varags
             dig.start(); //has start
             auto value = dig.finish(); //has finish
         }));
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     static assert(isDigest!CRC32);
 }
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
-    void myFunction(T)() if (isDigest!T)
+    void myFunction(T)()
+    if (isDigest!T)
     {
         T dig;
         dig.start();
@@ -331,13 +335,13 @@ template DigestType(T)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     assert(is(DigestType!(CRC32) == ubyte[4]));
 }
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     CRC32 dig;
@@ -367,17 +371,18 @@ template hasPeek(T)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc, std.digest.md;
     assert(!hasPeek!(MD5));
     assert(hasPeek!CRC32);
 }
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
-    void myFunction(T)() if (hasPeek!T)
+    void myFunction(T)()
+    if (hasPeek!T)
     {
         T dig;
         dig.start();
@@ -388,7 +393,7 @@ unittest
 
 /**
  * Checks whether the digest has a $(D blockSize) member, which contains the
- * digest's internal block size in bits. It is primarily used by $(XREF digest.hmac, HMAC).
+ * digest's internal block size in bits. It is primarily used by $(REF HMAC, std,digest.hmac).
  */
 
 template hasBlockSize(T)
@@ -398,7 +403,7 @@ if (isDigest!T)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md, std.digest.hmac;
     static assert(hasBlockSize!MD5        && MD5.blockSize      == 512);
@@ -424,10 +429,11 @@ package template isDigestibleRange(Range)
  * Params:
  *  range= an $(D InputRange) with $(D ElementType) $(D ubyte), $(D ubyte[]) or $(D ubyte[num])
  */
-DigestType!Hash digest(Hash, Range)(auto ref Range range) if (!isArray!Range
+DigestType!Hash digest(Hash, Range)(auto ref Range range)
+if (!isArray!Range
     && isDigestibleRange!Range)
 {
-    import std.algorithm : copy;
+    import std.algorithm.mutation : copy;
     Hash hash;
     hash.start();
     copy(range, &hash);
@@ -435,7 +441,7 @@ DigestType!Hash digest(Hash, Range)(auto ref Range range) if (!isArray!Range
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md;
     import std.range : repeat;
@@ -449,7 +455,8 @@ unittest
  * Params:
  *  data= one or more arrays of any type
  */
-DigestType!Hash digest(Hash, T...)(scope const T data) if (allSatisfy!(isArray, typeof(data)))
+DigestType!Hash digest(Hash, T...)(scope const T data)
+if (allSatisfy!(isArray, typeof(data)))
 {
     Hash hash;
     hash.start();
@@ -459,7 +466,7 @@ DigestType!Hash digest(Hash, T...)(scope const T data) if (allSatisfy!(isArray, 
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md, std.digest.sha, std.digest.crc;
     auto md5   = digest!MD5(  "The quick brown fox jumps over the lazy dog");
@@ -469,7 +476,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     auto crc32 = digest!CRC32("The quick ", "brown ", "fox jumps over the lazy dog");
@@ -486,13 +493,13 @@ unittest
  *  range= an $(D InputRange) with $(D ElementType) $(D ubyte), $(D ubyte[]) or $(D ubyte[num])
  */
 char[digestLength!(Hash)*2] hexDigest(Hash, Order order = Order.increasing, Range)(ref Range range)
-    if (!isArray!Range && isDigestibleRange!Range)
+if (!isArray!Range && isDigestibleRange!Range)
 {
     return toHexString!order(digest!Hash(range));
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md;
     import std.range : repeat;
@@ -508,19 +515,19 @@ unittest
  *  data= one or more arrays of any type
  */
 char[digestLength!(Hash)*2] hexDigest(Hash, Order order = Order.increasing, T...)(scope const T data)
-    if (allSatisfy!(isArray, typeof(data)))
+if (allSatisfy!(isArray, typeof(data)))
 {
     return toHexString!order(digest!Hash(data));
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     assert(hexDigest!(CRC32, Order.decreasing)("The quick brown fox jumps over the lazy dog") == "414FA339");
 }
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     assert(hexDigest!(CRC32, Order.decreasing)("The quick ", "brown ", "fox jumps over the lazy dog") == "414FA339");
@@ -538,7 +545,7 @@ Hash makeDigest(Hash)()
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md;
     auto md5 = makeDigest!MD5();
@@ -562,15 +569,15 @@ interface Digest
     public:
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * Also implements the $(REF isOutputRange, std,range,primitives)
          * interface for $(D ubyte) and $(D const(ubyte)[]).
          *
          * Example:
          * ----
          * void test(Digest dig)
          * {
-         *     dig.put(cast(ubyte)0); //single ubyte
-         *     dig.put(cast(ubyte)0, cast(ubyte)0); //variadic
+         *     dig.put(cast(ubyte) 0); //single ubyte
+         *     dig.put(cast(ubyte) 0, cast(ubyte) 0); //variadic
          *     ubyte[10] buf;
          *     dig.put(buf); //buffer
          * }
@@ -598,7 +605,7 @@ interface Digest
          */
         @trusted nothrow ubyte[] finish();
         ///ditto
-        nothrow ubyte[] finish(scope ubyte[] buf);
+        nothrow ubyte[] finish(ubyte[] buf);
         //@@@BUG@@@ http://d.puremagic.com/issues/show_bug.cgi?id=6549
         /*in
         {
@@ -612,16 +619,16 @@ interface Digest
         {
             this.reset();
             foreach (datum; data)
-                this.put(cast(ubyte[])datum);
+                this.put(cast(ubyte[]) datum);
             return this.finish();
         }
 }
 
 ///
-unittest
+@system unittest
 {
     //Using the OutputRange feature
-    import std.algorithm : copy;
+    import std.algorithm.mutation : copy;
     import std.range : repeat;
     import std.digest.md;
 
@@ -632,7 +639,7 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md, std.digest.sha, std.digest.crc;
     ubyte[] md5   = (new MD5Digest()).digest("The quick brown fox jumps over the lazy dog");
@@ -642,14 +649,14 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.crc;
     ubyte[] crc32 = (new CRC32Digest()).digest("The quick ", "brown ", "fox jumps over the lazy dog");
     assert(crcHexString(crc32) == "414FA339");
 }
 
-unittest
+@system unittest
 {
     import std.range : isOutputRange;
     assert(!isDigest!(Digest));
@@ -657,12 +664,12 @@ unittest
 }
 
 ///
-unittest
+@system unittest
 {
     void test(Digest dig)
     {
-        dig.put(cast(ubyte)0); //single ubyte
-        dig.put(cast(ubyte)0, cast(ubyte)0); //variadic
+        dig.put(cast(ubyte) 0); //single ubyte
+        dig.put(cast(ubyte) 0, cast(ubyte) 0); //variadic
         ubyte[10] buf;
         dig.put(buf); //buffer
     }
@@ -774,7 +781,8 @@ string toHexString(Order order = Order.increasing, LetterCase letterCase = Lette
         }
     }
     import std.exception : assumeUnique;
-    return assumeUnique(result);
+    // memory was just created, so casting to immutable is safe
+    return () @trusted { return assumeUnique(result); }();
 }
 
 ///ditto
@@ -786,7 +794,7 @@ string toHexString(LetterCase letterCase, Order order = Order.increasing)(in uby
 //For more example unittests, see Digest.digest, digest
 
 ///
-unittest
+@safe unittest
 {
     import std.digest.crc;
     //Test with template API:
@@ -799,7 +807,7 @@ unittest
 }
 
 ///
-unittest
+@safe unittest
 {
     import std.digest.crc;
     // With OOP API
@@ -808,7 +816,7 @@ unittest
     assert(toHexString!(Order.decreasing)(crc32) == "414FA339");
 }
 
-unittest
+@safe unittest
 {
     ubyte[16] data;
     assert(toHexString(data) == "00000000000000000000000000000000");
@@ -830,17 +838,27 @@ unittest
 ref T[N] asArray(size_t N, T)(ref T[] source, string errorMsg = "")
 {
      assert(source.length >= N, errorMsg);
-     return *cast(T[N]*)source.ptr;
+     return *cast(T[N]*) source.ptr;
 }
 
-/**
- * This helper is used internally in the WrapperDigest template, but it might be
- * useful for other purposes as well. It returns the length (in bytes) of the hash value
- * produced by T.
+/*
+ * Returns the length (in bytes) of the hash value produced by T.
  */
-template digestLength(T) if (isDigest!T)
+template digestLength(T)
+if (isDigest!T)
 {
     enum size_t digestLength = (ReturnType!(T.finish)).length;
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    import std.digest.md : MD5;
+    import std.digest.sha : SHA1, SHA256, SHA512;
+    assert(digestLength!MD5 == 16);
+    assert(digestLength!SHA1 == 20);
+    assert(digestLength!SHA256 == 32);
+    assert(digestLength!SHA512 == 64);
 }
 
 /**
@@ -848,7 +866,8 @@ template digestLength(T) if (isDigest!T)
  * Modules providing digest implementations will usually provide
  * an alias for this template (e.g. MD5Digest, SHA1Digest, ...).
  */
-class WrapperDigest(T) if (isDigest!T) : Digest
+class WrapperDigest(T)
+if (isDigest!T) : Digest
 {
     protected:
         T _digest;
@@ -864,7 +883,7 @@ class WrapperDigest(T) if (isDigest!T) : Digest
 
         /**
          * Use this to feed the digest with data.
-         * Also implements the $(XREF_PACK range,primitives,isOutputRange)
+         * Also implements the $(REF isOutputRange, std,range,primitives)
          * interface for $(D ubyte) and $(D const(ubyte)[]).
          */
         @trusted nothrow void put(scope const(ubyte)[] data...)
@@ -902,14 +921,14 @@ class WrapperDigest(T) if (isDigest!T) : Digest
          * import std.digest.md;
          * ubyte[16] buf;
          * auto hash = new WrapperDigest!MD5();
-         * hash.put(cast(ubyte)0);
+         * hash.put(cast(ubyte) 0);
          * auto result = hash.finish(buf[]);
          * //The result is now in result (and in buf). If you pass a buffer which is bigger than
          * //necessary, result will have the correct length, but buf will still have it's original
          * //length
          * --------
          */
-        nothrow ubyte[] finish(scope ubyte[] buf)
+        nothrow ubyte[] finish(ubyte[] buf)
         in
         {
             assert(buf.length >= this.length);
@@ -939,13 +958,13 @@ class WrapperDigest(T) if (isDigest!T) : Digest
              *
              * These functions are only available if $(D hasPeek!T) is true.
              */
-            @trusted ubyte[] peek(scope ubyte[] buf) const;
+            @trusted ubyte[] peek(ubyte[] buf) const;
             ///ditto
             @trusted ubyte[] peek() const;
         }
         else static if (hasPeek!T)
         {
-            @trusted ubyte[] peek(scope ubyte[] buf) const
+            @trusted ubyte[] peek(ubyte[] buf) const
             in
             {
                 assert(buf.length >= this.length);
@@ -969,25 +988,184 @@ class WrapperDigest(T) if (isDigest!T) : Digest
 }
 
 ///
-unittest
+@system unittest
 {
     import std.digest.md;
     //Simple example
     auto hash = new WrapperDigest!MD5();
-    hash.put(cast(ubyte)0);
+    hash.put(cast(ubyte) 0);
     auto result = hash.finish();
 }
 
 ///
-unittest
+@system unittest
 {
     //using a supplied buffer
     import std.digest.md;
     ubyte[16] buf;
     auto hash = new WrapperDigest!MD5();
-    hash.put(cast(ubyte)0);
+    hash.put(cast(ubyte) 0);
     auto result = hash.finish(buf[]);
     //The result is now in result (and in buf). If you pass a buffer which is bigger than
     //necessary, result will have the correct length, but buf will still have it's original
     //length
+}
+
+@safe unittest
+{
+    // Test peek & length
+    import std.digest.crc;
+    auto hash = new WrapperDigest!CRC32();
+    assert(hash.length == 4);
+    hash.put(cast(const(ubyte[]))"The quick brown fox jumps over the lazy dog");
+    assert(hash.peek().toHexString() == "39A34F41");
+    ubyte[5] buf;
+    assert(hash.peek(buf).toHexString() == "39A34F41");
+}
+
+/**
+ * Securely compares two digest representations while protecting against timing
+ * attacks. Do not use `==` to compare digest representations.
+ *
+ * The attack happens as follows:
+ *
+ * $(OL
+ *     $(LI An attacker wants to send harmful data to your server, which
+ *     requires a integrity HMAC SHA1 token signed with a secret.)
+ *     $(LI The length of the token is known to be 40 characters long due to its format,
+ *     so the attacker first sends `"0000000000000000000000000000000000000000"`,
+ *     then `"1000000000000000000000000000000000000000"`, and so on.)
+ *     $(LI The given HMAC token is compared with the expected token using the
+ *     `==` string comparison, which returns `false` as soon as the first wrong
+ *     element is found. If a wrong element is found, then a rejection is sent
+ *     back to the sender.)
+ *     $(LI Eventually, the attacker is able to determine the first character in
+ *     the correct token because the sever takes slightly longer to return a
+ *     rejection. This is due to the comparison moving on to second item in
+ *     the two arrays, seeing they are different, and then sending the rejection.)
+ *     $(LI It may seem like too small of a difference in time for the attacker
+ *     to notice, but security researchers have shown that differences as
+ *     small as $(LINK2 http://www.cs.rice.edu/~dwallach/pub/crosby-timing2009.pdf,
+ *     20µs can be reliably distinguished) even with network inconsistencies.)
+ *     $(LI Repeat the process for each character until the attacker has the whole
+ *     correct token and the server accepts the harmful data. This can be done
+ *     in a week with the attacker pacing the attack to 10 requests per second
+ *     with only one client.)
+ * )
+ *
+ * This function defends against this attack by always comparing every single
+ * item in the array if the two arrays are the same length. Therefore, this
+ * function is always $(BIGOH n) for ranges of the same length.
+ *
+ * This attack can also be mitigated via rate limiting and banning IPs which have too
+ * many rejected requests. However, this does not completely solve the problem,
+ * as the attacker could be in control of a bot net. To fully defend against
+ * the timing attack, rate limiting, banning IPs, and using this function
+ * should be used together.
+ *
+ * Params:
+ *     r1 = A digest representation
+ *     r2 = A digest representation
+ * Returns:
+ *     `true` if both representations are equal, `false` otherwise
+ * See_Also:
+ *     $(LINK2 https://en.wikipedia.org/wiki/Timing_attack, The Wikipedia article
+ *     on timing attacks).
+ */
+bool secureEqual(R1, R2)(R1 r1, R2 r2)
+if (isInputRange!R1 && isInputRange!R2 && !isInfinite!R1 && !isInfinite!R2 &&
+    (isIntegral!(ElementEncodingType!R1) || isSomeChar!(ElementEncodingType!R1)) &&
+    !is(CommonType!(ElementEncodingType!R1, ElementEncodingType!R2) == void))
+{
+    static if (hasLength!R1 && hasLength!R2)
+        if (r1.length != r2.length)
+            return false;
+
+    int result;
+
+    static if (isRandomAccessRange!R1 && isRandomAccessRange!R2 &&
+               hasLength!R1 && hasLength!R2)
+    {
+        foreach (i; 0 .. r1.length)
+            result |= r1[i] ^ r2[i];
+    }
+    else static if (hasLength!R1 && hasLength!R2)
+    {
+        // Lengths are the same so we can squeeze out a bit of performance
+        // by not checking if r2 is empty
+        for (; !r1.empty; r1.popFront(), r2.popFront())
+        {
+            result |= r1.front ^ r2.front;
+        }
+    }
+    else
+    {
+        // Generic case, walk both ranges
+        for (; !r1.empty; r1.popFront(), r2.popFront())
+        {
+            if (r2.empty) return false;
+            result |= r1.front ^ r2.front;
+        }
+        if (!r2.empty) return false;
+    }
+
+    return result == 0;
+}
+
+///
+@system pure unittest
+{
+    import std.digest.hmac : hmac;
+    import std.digest.sha : SHA1;
+    import std.string : representation;
+
+    // a typical HMAC data integrity verification
+    auto secret = "A7GZIP6TAQA6OHM7KZ42KB9303CEY0MOV5DD6NTV".representation;
+    auto data = "data".representation;
+
+    string hex1 = data.hmac!SHA1(secret).toHexString;
+    string hex2 = data.hmac!SHA1(secret).toHexString;
+    string hex3 = "data1".representation.hmac!SHA1(secret).toHexString;
+
+    assert( secureEqual(hex1, hex2));
+    assert(!secureEqual(hex1, hex3));
+}
+
+@system pure unittest
+{
+    import std.internal.test.dummyrange : ReferenceInputRange;
+    import std.range : takeExactly;
+    import std.string : representation;
+    import std.utf : byWchar, byDchar;
+
+    {
+        auto hex1 = "02CA3484C375EDD3C0F08D3F50D119E61077".representation;
+        auto hex2 = "02CA3484C375EDD3C0F08D3F50D119E610779018".representation;
+        assert(!secureEqual(hex1, hex2));
+    }
+    {
+        auto hex1 = "02CA3484C375EDD3C0F08D3F50D119E610779018"w.representation;
+        auto hex2 = "02CA3484C375EDD3C0F08D3F50D119E610779018"d.representation;
+        assert(secureEqual(hex1, hex2));
+    }
+    {
+        auto hex1 = "02CA3484C375EDD3C0F08D3F50D119E610779018".byWchar;
+        auto hex2 = "02CA3484C375EDD3C0F08D3F50D119E610779018".byDchar;
+        assert(secureEqual(hex1, hex2));
+    }
+    {
+        auto hex1 = "02CA3484C375EDD3C0F08D3F50D119E61077".byWchar;
+        auto hex2 = "02CA3484C375EDD3C0F08D3F50D119E610779018".byDchar;
+        assert(!secureEqual(hex1, hex2));
+    }
+    {
+        auto hex1 = new ReferenceInputRange!int([0, 1, 2, 3, 4, 5, 6, 7, 8]).takeExactly(9);
+        auto hex2 = new ReferenceInputRange!int([0, 1, 2, 3, 4, 5, 6, 7, 8]).takeExactly(9);
+        assert(secureEqual(hex1, hex2));
+    }
+    {
+        auto hex1 = new ReferenceInputRange!int([0, 1, 2, 3, 4, 5, 6, 7, 8]).takeExactly(9);
+        auto hex2 = new ReferenceInputRange!int([0, 1, 2, 3, 4, 5, 6, 7, 9]).takeExactly(9);
+        assert(!secureEqual(hex1, hex2));
+    }
 }

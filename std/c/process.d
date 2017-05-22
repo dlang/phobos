@@ -8,8 +8,6 @@
  * C's &lt;process.h&gt;
  * Authors: Walter Bright, Digital Mars, www.digitalmars.com
  * License: Public Domain
- * Macros:
- *      WIKI=Phobos/StdCProcess
  */
 deprecated("Import core.stdc.stdlib or the appropriate core.sys.posix.* modules instead")
 module std.c.process;

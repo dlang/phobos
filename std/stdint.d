@@ -9,10 +9,11 @@
     vs efficiency, in a manner compatible with the <tt>stdint.h</tt>
     definitions in C.
 
-    The exact aliases are types of exactly the specified number of bits.
-    The at least aliases are at least the specified number of bits
+    In the table below, the $(B exact alias)es are types of exactly the
+    specified number of bits.
+    The $(B at least alias)es are at least the specified number of bits
     large, and can be larger.
-    The fast aliases are the fastest integral type supported by the
+    The $(B fast alias)es are the fastest integral type supported by the
     processor that is at least as wide as the specified number of bits.
 
     The aliases are:
@@ -113,12 +114,11 @@
     ))
 
  * Macros:
- *  WIKI=Phobos/StdStdint
  *  ATABLE=<table border="1" cellspacing="0" cellpadding="5">$0</table>
  *
  * Copyright: Copyright Digital Mars 2000 - 2009.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB digitalmars.com, Walter Bright)
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors:   $(HTTP digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_stdint.d)
  */
 /*          Copyright Digital Mars 2000 - 2009.

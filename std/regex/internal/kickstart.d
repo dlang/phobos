@@ -7,7 +7,7 @@ module std.regex.internal.kickstart;
 package(std.regex):
 
 import std.regex.internal.ir;
-import std.algorithm, std.range, std.utf;
+import std.range.primitives, std.utf;
 
 //utility for shiftOr, returns a minimum number of bytes to test in a Char
 uint effectiveSize(Char)()
@@ -116,27 +116,31 @@ private:
         auto t = worklist[$-1];
         worklist.length -= 1;
         if (!__ctfe)
-            cast(void)worklist.assumeSafeAppend();
+            cast(void) worklist.assumeSafeAppend();
         return t;
     }
 
     static uint charLen(uint ch)
     {
         assert(ch <= 0x10FFFF);
-        return codeLength!Char(cast(dchar)ch)*charSize;
+        return codeLength!Char(cast(dchar) ch)*charSize;
     }
 
 public:
     @trusted this(ref Regex!Char re, uint[] memory)
     {
-        import std.conv;
+        static import std.algorithm.comparison;
+        import std.algorithm.searching : countUntil;
+        import std.conv : text;
+        import std.range : assumeSorted;
         assert(memory.length == 256);
         fChar = uint.max;
         // FNV-1a flavored hash (uses 32bits at a time)
         ulong hash(uint[] tab)
         {
             ulong h = 0xcbf29ce484222325;
-            foreach (v; tab){
+            foreach (v; tab)
+            {
                 h ^= v;
                 h *= 0x100000001b3;
             }
@@ -160,7 +164,7 @@ public:
                 case IR.GroupStart, IR.GroupEnd:
                     i += IRL!(IR.GroupStart);
                     break;
-                case IR.Bol, IR.Wordboundary, IR.Notwordboundary:
+                case IR.Bof, IR.Bol, IR.Wordboundary, IR.Notwordboundary:
                     i += IRL!(IR.Bol);
                     break;
                 default:
@@ -199,7 +203,7 @@ public:
                     for (uint i = 0; i < len; i++)
                     {
                         auto x = charLen(re.ir[t.pc+i].data);
-                        if (countUntil(s[0..numS], x) < 0)
+                        if (countUntil(s[0 .. numS], x) < 0)
                            s[numS++] = x;
                     }
                     for (uint i = t.pc; i < end; i++)
@@ -357,7 +361,7 @@ public:
                 case IR.GroupStart, IR.GroupEnd:
                     t.pc += IRL!(IR.GroupStart);
                     break;
-                case IR.Bol, IR.Wordboundary, IR.Notwordboundary:
+                case IR.Bof, IR.Bol, IR.Wordboundary, IR.Notwordboundary:
                     t.pc += IRL!(IR.Bol);
                     break;
                 case IR.LookaheadStart, IR.NeglookaheadStart, IR.LookbehindStart, IR.NeglookbehindStart:
@@ -367,7 +371,7 @@ public:
                 L_StopThread:
                     assert(re.ir[t.pc].code >= 0x80, text(re.ir[t.pc].code));
                     debug (fred_search) writeln("ShiftOr stumbled on ",re.ir[t.pc].mnemonic);
-                    n_length = min(t.idx, n_length);
+                    n_length = std.algorithm.comparison.min(t.idx, n_length);
                     break L_Eval_Thread;
                 }
             }
@@ -391,7 +395,8 @@ public:
     // (that given the haystack in question is valid UTF string)
     @trusted size_t search(const(Char)[] haystack, size_t idx)
     {//@BUG: apparently assumes little endian machines
-        import std.conv, core.stdc.string;
+        import std.conv : text;
+        import core.stdc.string : memchr;
         assert(!empty);
         auto p = cast(const(ubyte)*)(haystack.ptr+idx);
         uint state = uint.max;
@@ -400,7 +405,7 @@ public:
         if (fChar != uint.max)
         {
             const(ubyte)* end = cast(ubyte*)(haystack.ptr + haystack.length);
-            const orginalAlign = cast(size_t)p & (Char.sizeof-1);
+            const orginalAlign = cast(size_t) p & (Char.sizeof-1);
             while (p != end)
             {
                 if (!~state)
@@ -408,27 +413,27 @@ public:
                     for (;;)
                     {
                         assert(p <= end, text(p," vs ", end));
-                        p = cast(ubyte*)memchr(p, fChar, end - p);
+                        p = cast(ubyte*) memchr(p, fChar, end - p);
                         if (!p)
                             return haystack.length;
-                        if ((cast(size_t)p & (Char.sizeof-1)) == orginalAlign)
+                        if ((cast(size_t) p & (Char.sizeof-1)) == orginalAlign)
                             break;
                         if (++p == end)
                             return haystack.length;
                     }
                     state = ~1u;
-                    assert((cast(size_t)p & (Char.sizeof-1)) == orginalAlign);
+                    assert((cast(size_t) p & (Char.sizeof-1)) == orginalAlign);
                     static if (charSize == 3)
                     {
-                        state = (state<<1) | table[p[1]];
-                        state = (state<<1) | table[p[2]];
+                        state = (state << 1) | table[p[1]];
+                        state = (state << 1) | table[p[2]];
                         p += 4;
                     }
                     else
                         p++;
                     //first char is tested, see if that's all
                     if (!(state & limit))
-                        return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
+                        return (p-cast(ubyte*) haystack.ptr)/Char.sizeof
                             -length;
                 }
                 else
@@ -436,18 +441,18 @@ public:
                  //use the usual shift-or cycle
                     static if (charSize == 3)
                     {
-                        state = (state<<1) | table[p[0]];
-                        state = (state<<1) | table[p[1]];
-                        state = (state<<1) | table[p[2]];
+                        state = (state << 1) | table[p[0]];
+                        state = (state << 1) | table[p[1]];
+                        state = (state << 1) | table[p[2]];
                         p += 4;
                     }
                     else
                     {
-                        state = (state<<1) | table[p[0]];
+                        state = (state << 1) | table[p[0]];
                         p++;
                     }
                     if (!(state & limit))
-                        return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
+                        return (p-cast(ubyte*) haystack.ptr)/Char.sizeof
                             -length;
                 }
                 debug(std_regex_search) writefln("State: %32b", state);
@@ -461,12 +466,12 @@ public:
                 const(ubyte)* end = cast(ubyte*)(haystack.ptr + haystack.length);
                 while (p != end)
                 {
-                    state = (state<<1) | table[p[0]];
-                    state = (state<<1) | table[p[1]];
-                    state = (state<<1) | table[p[2]];
+                    state = (state << 1) | table[p[0]];
+                    state = (state << 1) | table[p[1]];
+                    state = (state << 1) | table[p[2]];
                     p += 4;
                     if (!(state & limit))//division rounds down for dchar
-                        return (p-cast(ubyte*)haystack.ptr)/Char.sizeof
+                        return (p-cast(ubyte*) haystack.ptr)/Char.sizeof
                         -length;
                 }
             }
@@ -476,17 +481,17 @@ public:
                 size_t i  = 0;
                 if (len & 1)
                 {
-                    state = (state<<1) | table[p[i++]];
+                    state = (state << 1) | table[p[i++]];
                     if (!(state & limit))
                         return idx+i/Char.sizeof-length;
                 }
                 while (i < len)
                 {
-                    state = (state<<1) | table[p[i++]];
+                    state = (state << 1) | table[p[i++]];
                     if (!(state & limit))
                         return idx+i/Char.sizeof
                             -length;
-                    state = (state<<1) | table[p[i++]];
+                    state = (state << 1) | table[p[i++]];
                     if (!(state & limit))
                         return idx+i/Char.sizeof
                             -length;
@@ -499,7 +504,7 @@ public:
 
     @system debug static void dump(uint[] table)
     {//@@@BUG@@@ writef(ln) is @system
-        import std.stdio;
+        import std.stdio : writefln;
         for (size_t i = 0; i < table.length; i += 4)
         {
             writefln("%32b %32b %32b %32b",table[i], table[i+1], table[i+2], table[i+3]);
@@ -507,7 +512,7 @@ public:
     }
 }
 
-unittest
+@system unittest
 {
     import std.conv, std.regex;
     @trusted void test_fixed(alias Kick)()

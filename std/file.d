@@ -4,20 +4,75 @@
 Utilities for manipulating files and scanning directories. Functions
 in this module handle files as a unit, e.g., read or write one _file
 at a time. For opening files and manipulating them via handles refer
-to module $(LINK2 std_stdio.html,$(D std.stdio)).
+to module $(MREF std, stdio).
 
-Macros:
-WIKI = Phobos/StdFile
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD General) $(TD
+          $(LREF exists)
+          $(LREF isDir)
+          $(LREF isFile)
+          $(LREF isSymlink)
+          $(LREF rename)
+          $(LREF thisExePath)
+))
+$(TR $(TD Directories) $(TD
+          $(LREF chdir)
+          $(LREF dirEntries)
+          $(LREF getcwd)
+          $(LREF mkdir)
+          $(LREF mkdirRecurse)
+          $(LREF rmdir)
+          $(LREF rmdirRecurse)
+          $(LREF tempDir)
+))
+$(TR $(TD Files) $(TD
+          $(LREF append)
+          $(LREF copy)
+          $(LREF read)
+          $(LREF readText)
+          $(LREF remove)
+          $(LREF slurp)
+          $(LREF write)
+))
+$(TR $(TD Symlinks) $(TD
+          $(LREF symlink)
+          $(LREF readLink)
+))
+$(TR $(TD Attributes) $(TD
+          $(LREF attrIsDir)
+          $(LREF attrIsFile)
+          $(LREF attrIsSymlink)
+          $(LREF getAttributes)
+          $(LREF getLinkAttributes)
+          $(LREF getSize)
+          $(LREF setAttributes)
+))
+$(TR $(TD Timestamp) $(TD
+          $(LREF getTimes)
+          $(LREF getTimesWin)
+          $(LREF setTimes)
+          $(LREF timeLastModified)
+))
+$(TR $(TD Other) $(TD
+          $(LREF DirEntry)
+          $(LREF FileException)
+          $(LREF PreserveAttributes)
+          $(LREF SpanMode)
+))
+)
+
 
 Copyright: Copyright Digital Mars 2007 - 2011.
-See_Also:  The $(WEB ddili.org/ders/d.en/files.html, official tutorial) for an
+See_Also:  The $(HTTP ddili.org/ders/d.en/files.html, official tutorial) for an
 introduction to working with files in D, module
-$(LINK2 std_stdio.html,$(D std.stdio)) for opening files and manipulating them
-via handles, and module $(LINK2 std_path.html,$(D std.path)) for manipulating
-path strings.
-License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
-Authors:   $(WEB digitalmars.com, Walter Bright),
-           $(WEB erdani.org, Andrei Alexandrescu),
+$(MREF std, stdio) for opening files and manipulating them via handles,
+and module $(MREF std, path) for manipulating path strings.
+
+License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Authors:   $(HTTP digitalmars.com, Walter Bright),
+           $(HTTP erdani.org, Andrei Alexandrescu),
            Jonathan M Davis
 Source:    $(PHOBOSSRC std/_file.d)
  */
@@ -25,11 +80,8 @@ module std.file;
 
 import core.stdc.stdlib, core.stdc.string, core.stdc.errno;
 
-import std.conv;
 import std.datetime;
-import std.exception;
 import std.meta;
-import std.path;
 import std.range.primitives;
 import std.traits;
 import std.typecons;
@@ -59,9 +111,13 @@ else version (Posix)
 else
     static assert(0);
 
-package @property string deleteme() @safe
+// Purposefully not documented. Use at your own risk
+@property string deleteme() @safe
 {
+    import std.conv : to;
+    import std.path : buildPath;
     import std.process : thisProcessID;
+
     static _deleteme = "deleteme.dmd.unittest.pid";
     static _first = true;
 
@@ -99,6 +155,8 @@ else version(Posix)
  +/
 class FileException : Exception
 {
+    import std.conv : text, to;
+
     /++
         OS error code.
      +/
@@ -170,7 +228,8 @@ private T cenforce(T)(T condition, lazy const(char)[] name, string file = __FILE
 
 version (Windows)
 @trusted
-private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez, string file = __FILE__, size_t line = __LINE__)
+private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez,
+    string file = __FILE__, size_t line = __LINE__)
 {
     if (condition)
         return condition;
@@ -179,7 +238,7 @@ private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez, str
         import core.stdc.wchar_ : wcslen;
         import std.conv : to;
 
-        auto len = wcslen(namez);
+        auto len = namez ? wcslen(namez) : 0;
         name = to!string(namez[0 .. len]);
     }
     throw new FileException(name, .GetLastError(), file, line);
@@ -187,7 +246,8 @@ private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez, str
 
 version (Posix)
 @trusted
-private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez, string file = __FILE__, size_t line = __LINE__)
+private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez,
+    string file = __FILE__, size_t line = __LINE__)
 {
     if (condition)
         return condition;
@@ -195,10 +255,21 @@ private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez, str
     {
         import core.stdc.string : strlen;
 
-        auto len = strlen(namez);
+        auto len = namez ? strlen(namez) : 0;
         name = namez[0 .. len].idup;
     }
     throw new FileException(name, .errno, file, line);
+}
+
+@safe unittest
+{
+    // issue 17102
+    try
+    {
+        cenforce(false, null, null,
+                __FILE__, __LINE__);
+    }
+    catch (FileException) {}
 }
 
 /* **********************************
@@ -220,8 +291,8 @@ Throws: $(LREF FileException) on error.
  */
 
 void[] read(R)(R name, size_t upTo = size_t.max)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && isSomeChar!(ElementEncodingType!R) && !isInfinite!R &&
+    !isConvertibleToString!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
         return readImpl(name, name.tempCString!FSChar(), upTo);
@@ -235,32 +306,34 @@ void[] read(R)(R name, size_t upTo = size_t.max)
     import std.utf : byChar;
     scope(exit)
     {
-        assert(exists("someUniqueFilename"));
-        remove("someUniqueFilename");
+        assert(exists(deleteme));
+        remove(deleteme);
     }
 
-    write("someUniqueFilename", "1234");
-    assert(read("someUniqueFilename", 2) == "12");
-    assert(read("someUniqueFilename".byChar) == "1234");
-    assert((cast(ubyte[])read("someUniqueFilename")).length == 4);
+    write(deleteme, "1234"); // deleteme is the name of a temporary file
+    assert(read(deleteme, 2) == "12");
+    assert(read(deleteme.byChar) == "1234");
+    assert((cast(const(ubyte)[])read(deleteme)).length == 4);
 }
 
+/// ditto
 void[] read(R)(auto ref R name, size_t upTo = size_t.max)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return read!(StringTypeOf!R)(name, upTo);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, read(TestAliasedString(null))));
 }
 
 version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo = size_t.max) @trusted
 {
-    import std.algorithm : min;
+    import std.algorithm.comparison : min;
     import std.array : uninitializedArray;
     import core.memory : GC;
+    import std.conv : to;
 
     // A few internal configuration parameters {
     enum size_t
@@ -282,7 +355,7 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
         ? min(statbuf.st_size + 1, maxInitialAlloc)
         : minInitialAlloc));
     void[] result = uninitializedArray!(ubyte[])(initialAlloc);
-    scope(failure) delete result;
+    scope(failure) GC.free(result.ptr);
     size_t size = 0;
 
     for (;;)
@@ -306,8 +379,9 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
 
 version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo = size_t.max) @safe
 {
-    import std.algorithm : min;
+    import std.algorithm.comparison : min;
     import std.array : uninitializedArray;
+    import core.memory : GC;
     static trustedCreateFileW(const(wchar)* namez, DWORD dwDesiredAccess, DWORD dwShareMode,
                               SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
                               DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
@@ -325,7 +399,7 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
     {
         DWORD sizeHigh;
         DWORD sizeLow = GetFileSize(hFile, &sizeHigh);
-        bool result = sizeLow != INVALID_FILE_SIZE;
+        const bool result = sizeLow != INVALID_FILE_SIZE;
         if (result)
             fileSize = makeUlong(sizeLow, sizeHigh);
         return result;
@@ -336,9 +410,9 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
         ulong totalNumRead = 0;
         while (totalNumRead != nNumberOfBytesToRead)
         {
-            uint chunkSize = min(nNumberOfBytesToRead - totalNumRead, 0xffff_0000);
+            const uint chunkSize = min(nNumberOfBytesToRead - totalNumRead, 0xffff_0000);
             DWORD numRead = void;
-            auto result = ReadFile(hFile, lpBuffer + totalNumRead, chunkSize, &numRead, null);
+            const result = ReadFile(hFile, lpBuffer + totalNumRead, chunkSize, &numRead, null);
             if (result == 0 || numRead != chunkSize)
                 return false;
             totalNumRead += chunkSize;
@@ -359,9 +433,14 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
     cenforce(trustedGetFileSize(h, fileSize), name, namez);
     size_t size = min(upTo, fileSize);
     auto buf = uninitializedArray!(ubyte[])(size);
-    scope(failure) delete buf;
 
-    cenforce(trustedReadFile(h, buf.ptr, size), name, namez);
+    scope(failure)
+    {
+        () @trusted { GC.free(buf.ptr); } ();
+    }
+
+    if (size)
+        cenforce(trustedReadFile(h, &buf[0], size), name, namez);
     return buf[0 .. size];
 }
 
@@ -383,7 +462,7 @@ version (linux) @safe unittest
 }
 
 /********************************************
-Read and validates (using $(XREF utf, validate)) a text file. $(D S)
+Read and validates (using $(REF validate, std,utf)) a text file. $(D S)
 can be a type of array of characters of any width and constancy. No
 width conversion is performed; if the width of the characters in file
 $(D name) is different from the width of elements of $(D S),
@@ -399,12 +478,12 @@ decoding error.
  */
 
 S readText(S = string, R)(R name)
-    if (isSomeString!S &&
-        (isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
-        !isConvertibleToString!R)
+if (isSomeString!S &&
+    (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
+    !isConvertibleToString!R)
 {
     import std.utf : validate;
-    static auto trustedCast(void[] buf) @trusted { return cast(S)buf; }
+    static auto trustedCast(void[] buf) @trusted { return cast(S) buf; }
     auto result = trustedCast(read(name));
     validate(result);
     return result;
@@ -413,23 +492,21 @@ S readText(S = string, R)(R name)
 ///
 @safe unittest
 {
-    import std.string;
-    write("someUniqueFilename", "abc\n");
-    scope(exit)
-    {
-        assert(exists("someUniqueFilename"));
-        remove("someUniqueFilename");
-    }
-    enforce(chomp(readText("someUniqueFilename")) == "abc");
+    import std.exception : enforce;
+    write(deleteme, "abc"); // deleteme is the name of a temporary file
+    scope(exit) remove(deleteme);
+    string content = readText(deleteme);
+    enforce(content == "abc");
 }
 
+/// ditto
 S readText(S = string, R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return readText!(S, StringTypeOf!R)(name);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, readText(TestAliasedString(null))));
 }
@@ -437,17 +514,19 @@ unittest
 /*********************************************
 Write $(D buffer) to file $(D name).
 
+Creates the file if it does not already exist.
+
 Params:
     name = string or range of characters representing the file _name
     buffer = data to be written to file
 
 Throws: $(D FileException) on error.
 
-See_also: $(XREF stdio,toFile)
+See_also: $(REF toFile, std,stdio)
  */
 void write(R)(R name, const void[] buffer)
-    if ((isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
-        !isConvertibleToString!R)
+if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
+    !isConvertibleToString!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
         writeImpl(name, name.tempCString!FSChar(), buffer, false);
@@ -456,32 +535,35 @@ void write(R)(R name, const void[] buffer)
 }
 
 ///
-unittest
+@system unittest
 {
    scope(exit)
    {
-       assert(exists("someUniqueFilename"));
-       remove("someUniqueFilename");
+       assert(exists(deleteme));
+       remove(deleteme);
    }
 
    int[] a = [ 0, 1, 1, 2, 3, 5, 8 ];
-   write("someUniqueFilename", a);
-   assert(cast(int[]) read("someUniqueFilename") == a);
+   write(deleteme, a); // deleteme is the name of a temporary file
+   assert(cast(int[]) read(deleteme) == a);
 }
 
+/// ditto
 void write(R)(auto ref R name, const void[] buffer)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     write!(StringTypeOf!R)(name, buffer);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, write(TestAliasedString(null), null)));
 }
 
 /*********************************************
 Appends $(D buffer) to file $(D name).
+
+Creates the file if it does not already exist.
 
 Params:
     name = string or range of characters representing the file _name
@@ -490,8 +572,8 @@ Params:
 Throws: $(D FileException) on error.
  */
 void append(R)(R name, const void[] buffer)
-    if ((isInputRange!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
-        !isConvertibleToString!R)
+if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
+    !isConvertibleToString!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
         writeImpl(name, name.tempCString!FSChar(), buffer, true);
@@ -500,28 +582,29 @@ void append(R)(R name, const void[] buffer)
 }
 
 ///
-unittest
+@system unittest
 {
    scope(exit)
    {
-       assert(exists("someUniqueFilename"));
-       remove("someUniqueFilename");
+       assert(exists(deleteme));
+       remove(deleteme);
    }
 
    int[] a = [ 0, 1, 1, 2, 3, 5, 8 ];
-   write("someUniqueFilename", a);
+   write(deleteme, a); // deleteme is the name of a temporary file
    int[] b = [ 13, 21 ];
-   append("someUniqueFilename", b);
-   assert(cast(int[]) read("someUniqueFilename") == a ~ b);
+   append(deleteme, b);
+   assert(cast(int[]) read(deleteme) == a ~ b);
 }
 
+/// ditto
 void append(R)(auto ref R name, const void[] buffer)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     append!(StringTypeOf!R)(name, buffer);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, append(TestAliasedString("foo"), [0, 1, 2, 3])));
 }
@@ -531,6 +614,8 @@ unittest
 version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
         in void[] buffer, bool append) @trusted
 {
+    import std.conv : octal;
+
     // append or write
     auto mode = append ? O_CREAT | O_WRONLY | O_APPEND
                        : O_CREAT | O_WRONLY | O_TRUNC;
@@ -539,10 +624,18 @@ version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
     cenforce(fd != -1, name, namez);
     {
         scope(failure) core.sys.posix.unistd.close(fd);
+
         immutable size = buffer.length;
-        cenforce(
-            core.sys.posix.unistd.write(fd, buffer.ptr, size) == size,
-            name, namez);
+        size_t sum, cnt = void;
+        while (sum != size)
+        {
+            cnt = (size - sum < 2^^30) ? (size - sum) : 2^^30;
+            const numwritten = core.sys.posix.unistd.write(fd, buffer.ptr + sum, cnt);
+            if (numwritten != cnt)
+                break;
+            sum += numwritten;
+        }
+        cenforce(sum == size, name, namez);
     }
     cenforce(core.sys.posix.unistd.close(fd) == 0, name, namez);
 }
@@ -552,6 +645,7 @@ version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
 version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez,
         in void[] buffer, bool append) @trusted
 {
+    HANDLE h;
     if (append)
     {
         alias defaults =
@@ -559,15 +653,10 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
                 HANDLE.init);
 
-        auto h = CreateFileW(namez, defaults);
-
+        h = CreateFileW(namez, defaults);
         cenforce(h != INVALID_HANDLE_VALUE, name, namez);
-        scope(exit) cenforce(CloseHandle(h), name, namez);
-        DWORD numwritten;
-        cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER
-                && WriteFile(h,buffer.ptr,to!DWORD(buffer.length),&numwritten,null) != 0
-                && buffer.length == numwritten,
-                name, namez);
+        cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER,
+            name, namez);
     }
     else // write
     {
@@ -576,15 +665,21 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
                 HANDLE.init);
 
-        auto h = CreateFileW(namez, defaults);
-
+        h = CreateFileW(namez, defaults);
         cenforce(h != INVALID_HANDLE_VALUE, name, namez);
-        scope(exit) cenforce(CloseHandle(h), name, namez);
-        DWORD numwritten;
-        cenforce(WriteFile(h, buffer.ptr, to!DWORD(buffer.length), &numwritten, null) != 0
-                && buffer.length == numwritten,
-                name, namez);
     }
+    immutable size = buffer.length;
+    size_t sum, cnt = void;
+    DWORD numwritten = void;
+    while (sum != size)
+    {
+        cnt = (size - sum < 2^^30) ? (size - sum) : 2^^30;
+        WriteFile(h, buffer.ptr + sum, cast(uint) cnt, &numwritten, null);
+        if (numwritten != cnt)
+            break;
+        sum += numwritten;
+    }
+    cenforce(sum == size && CloseHandle(h), name, namez);
 }
 
 /***************************************************
@@ -596,8 +691,10 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
  * Throws: $(D FileException) on error.
  */
 void rename(RF, RT)(RF from, RT to)
-    if ((isInputRange!RF && isSomeChar!(ElementEncodingType!RF) || isSomeString!RF) && !isConvertibleToString!RF &&
-        (isInputRange!RT && isSomeChar!(ElementEncodingType!RT) || isSomeString!RT) && !isConvertibleToString!RT)
+if ((isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) || isSomeString!RF)
+    && !isConvertibleToString!RF &&
+    (isInputRange!RT && !isInfinite!RT && isSomeChar!(ElementEncodingType!RT) || isSomeString!RT)
+    && !isConvertibleToString!RT)
 {
     // Place outside of @trusted block
     auto fromz = from.tempCString!FSChar();
@@ -616,15 +713,16 @@ void rename(RF, RT)(RF from, RT to)
     renameImpl(f, t, fromz, toz);
 }
 
+/// ditto
 void rename(RF, RT)(auto ref RF from, auto ref RT to)
-    if (isConvertibleToString!RF || isConvertibleToString!RT)
+if (isConvertibleToString!RF || isConvertibleToString!RT)
 {
     import std.meta : staticMap;
     alias Types = staticMap!(convertToString, RF, RT);
     rename!Types(from, to);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, rename(TestAliasedString(null), TestAliasedString(null))));
     static assert(__traits(compiles, rename("", TestAliasedString(null))));
@@ -637,11 +735,13 @@ private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, 
 {
     version(Windows)
     {
-        auto result = MoveFileExW(fromz, toz, MOVEFILE_REPLACE_EXISTING);
+        import std.exception : enforce;
+
+        const result = MoveFileExW(fromz, toz, MOVEFILE_REPLACE_EXISTING);
         if (!result)
         {
             import core.stdc.wchar_ : wcslen;
-            import std.conv : to;
+            import std.conv : to, text;
 
             if (!f)
                 f = to!(typeof(f))(fromz[0 .. wcslen(fromz)]);
@@ -656,7 +756,7 @@ private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, 
     }
     else version(Posix)
     {
-        import core.stdc.stdio;
+        static import core.stdc.stdio;
 
         cenforce(core.stdc.stdio.rename(fromz, toz) == 0, t, toz);
     }
@@ -686,8 +786,8 @@ Params:
 Throws: $(D FileException) on error.
  */
 void remove(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
         removeImpl(name, name.tempCString!FSChar());
@@ -695,13 +795,14 @@ void remove(R)(R name)
         removeImpl(null, name.tempCString!FSChar());
 }
 
+/// ditto
 void remove(R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     remove!(StringTypeOf!R)(name);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, remove(TestAliasedString("foo"))));
 }
@@ -714,7 +815,7 @@ private void removeImpl(const(char)[] name, const(FSChar)* namez) @trusted
     }
     else version(Posix)
     {
-        import core.stdc.stdio;
+        static import core.stdc.stdio;
 
         if (!name)
         {
@@ -728,7 +829,7 @@ private void removeImpl(const(char)[] name, const(FSChar)* namez) @trusted
 }
 
 version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
 {
     auto namez = name.tempCString!FSChar();
 
@@ -738,6 +839,7 @@ version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(R)(R nam
     {
         static void getFA(const(char)[] name, const(FSChar)* namez, out WIN32_FILE_ATTRIBUTE_DATA fad) @trusted
         {
+            import std.exception : enforce;
             enforce(GetFileAttributesExW(namez, GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad),
                 new FileException(name.idup));
         }
@@ -749,6 +851,7 @@ version(Windows) private WIN32_FILE_ATTRIBUTE_DATA getFileAttributesWin(R)(R nam
         {
             import core.stdc.wchar_ : wcslen;
             import std.conv : to;
+            import std.exception : enforce;
 
             enforce(GetFileAttributesExW(namez, GET_FILEEX_INFO_LEVELS.GetFileExInfoStandard, &fad),
                 new FileException(namez[0 .. wcslen(namez)].to!string));
@@ -775,8 +878,8 @@ Params:
 Throws: $(D FileException) on error (e.g., file not found).
  */
 ulong getSize(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -801,13 +904,14 @@ ulong getSize(R)(R name)
     }
 }
 
+/// ditto
 ulong getSize(R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return getSize!(StringTypeOf!R)(name);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, getSize(TestAliasedString("foo"))));
 }
@@ -861,8 +965,8 @@ private SysTime statTimeToStdTime(char which)(ref stat_t statbuf)
 void getTimes(R)(R name,
               out SysTime accessTime,
               out SysTime modificationTime)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -893,21 +997,22 @@ void getTimes(R)(R name,
     }
 }
 
+/// ditto
 void getTimes(R)(auto ref R name,
               out SysTime accessTime,
               out SysTime modificationTime)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return getTimes!(StringTypeOf!R)(name, accessTime, modificationTime);
 }
 
-unittest
+@safe unittest
 {
     SysTime atime, mtime;
     static assert(__traits(compiles, getTimes(TestAliasedString("foo"), atime, mtime)));
 }
 
-unittest
+@system unittest
 {
     import std.stdio : writefln;
 
@@ -985,8 +1090,8 @@ version(StdDdoc)
                         out SysTime fileCreationTime,
                         out SysTime fileAccessTime,
                         out SysTime fileModificationTime)
-        if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-            !isConvertibleToString!R);
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+        !isConvertibleToString!R);
 }
 else version(Windows)
 {
@@ -994,8 +1099,8 @@ else version(Windows)
                         out SysTime fileCreationTime,
                         out SysTime fileAccessTime,
                         out SysTime fileModificationTime)
-        if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-            !isConvertibleToString!R)
+    if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+        !isConvertibleToString!R)
     {
         with (getFileAttributesWin(name))
         {
@@ -1009,13 +1114,13 @@ else version(Windows)
                         out SysTime fileCreationTime,
                         out SysTime fileAccessTime,
                         out SysTime fileModificationTime)
-        if (isConvertibleToString!R)
+    if (isConvertibleToString!R)
     {
         getTimesWin!(StringTypeOf!R)(name, fileCreationTime, fileAccessTime, fileModificationTime);
     }
 }
 
-version(Windows) unittest
+version(Windows) @system unittest
 {
     import std.stdio : writefln;
     auto currTime = Clock.currTime();
@@ -1100,8 +1205,8 @@ version(Windows) unittest
 void setTimes(R)(R name,
               SysTime accessTime,
               SysTime modificationTime)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -1189,10 +1294,11 @@ void setTimes(R)(R name,
     }
 }
 
+/// ditto
 void setTimes(R)(auto ref R name,
               SysTime accessTime,
               SysTime modificationTime)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     setTimes!(StringTypeOf!R)(name, accessTime, modificationTime);
 }
@@ -1203,7 +1309,7 @@ void setTimes(R)(auto ref R name,
         setTimes(TestAliasedString("foo"), SysTime.init, SysTime.init);
 }
 
-unittest
+@system unittest
 {
     import std.stdio : File;
     string newdir = deleteme ~ r".dir";
@@ -1243,8 +1349,8 @@ unittest
         $(D FileException) if the given file does not exist.
 +/
 SysTime timeLastModified(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -1274,13 +1380,14 @@ SysTime timeLastModified(R)(R name)
     }
 }
 
+/// ditto
 SysTime timeLastModified(R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return timeLastModified!(StringTypeOf!R)(name);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, timeLastModified(TestAliasedString("foo"))));
 }
@@ -1290,7 +1397,7 @@ unittest
     file does not exist, returns $(D returnIfMissing).
 
     A frequent usage pattern occurs in build automation tools such as
-    $(WEB gnu.org/software/make, make) or $(WEB
+    $(HTTP gnu.org/software/make, make) or $(HTTP
     en.wikipedia.org/wiki/Apache_Ant, ant). To check whether file $(D
     target) must be rebuilt from file $(D source) (i.e., $(D target) is
     older than $(D source) or does not exist), use the comparison
@@ -1316,7 +1423,7 @@ else
 --------------------
 +/
 SysTime timeLastModified(R)(R name, SysTime returnIfMissing)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
 {
     version(Windows)
     {
@@ -1345,7 +1452,7 @@ SysTime timeLastModified(R)(R name, SysTime returnIfMissing)
     }
 }
 
-unittest
+@safe unittest
 {
     //std.process.system("echo a > deleteme") == 0 || assert(false);
     if (exists(deleteme))
@@ -1374,7 +1481,7 @@ unittest
 //   timestamps with 1-second precision.
 version (FreeBSD) {} else
 version (OSX) {} else
-unittest
+@system unittest
 {
     import core.thread;
 
@@ -1382,7 +1489,7 @@ unittest
         remove(deleteme);
 
     SysTime lastTime;
-    foreach (n; 0..3)
+    foreach (n; 0 .. 3)
     {
         write(deleteme, "a");
         auto time = timeLastModified(deleteme);
@@ -1402,14 +1509,15 @@ unittest
  *    true if the filename specified as input exists
  */
 bool exists(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     return existsImpl(name.tempCString!FSChar());
 }
 
+/// ditto
 bool exists(R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return exists!(StringTypeOf!R)(name);
 }
@@ -1460,16 +1568,21 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
     assert(exists(deleteme));
 }
 
+@safe unittest // Bugzilla 16573
+{
+    enum S : string { foo = "foo" }
+    assert(__traits(compiles, S.foo.exists));
+}
 
 /++
  Returns the attributes of the given file.
 
  Note that the file attributes on Windows and Posix systems are
  completely different. On Windows, they're what is returned by
- $(WEB msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx,
+ $(HTTP msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx,
  GetFileAttributes), whereas on Posix systems, they're the $(LUCKY
  st_mode) value which is part of the $(D stat struct) gotten by
- calling the $(WEB en.wikipedia.org/wiki/Stat_%28Unix%29, $(D stat))
+ calling the $(HTTP en.wikipedia.org/wiki/Stat_%28Unix%29, $(D stat))
  function.
 
  On Posix systems, if the given file is a symbolic link, then
@@ -1482,8 +1595,8 @@ private bool existsImpl(const(FSChar)* namez) @trusted nothrow @nogc
  Throws: $(D FileException) on error.
   +/
 uint getAttributes(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -1521,13 +1634,14 @@ uint getAttributes(R)(R name)
     }
 }
 
+/// ditto
 uint getAttributes(R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return getAttributes!(StringTypeOf!R)(name);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, getAttributes(TestAliasedString(null))));
 }
@@ -1552,8 +1666,8 @@ unittest
         $(D FileException) on error.
  +/
 uint getLinkAttributes(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -1576,13 +1690,14 @@ uint getLinkAttributes(R)(R name)
     }
 }
 
+/// ditto
 uint getLinkAttributes(R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return getLinkAttributes!(StringTypeOf!R)(name);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, getLinkAttributes(TestAliasedString(null))));
 }
@@ -1598,8 +1713,8 @@ unittest
         $(D FileException) if the given file does not exist.
  +/
 void setAttributes(R)(R name, uint attributes)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version (Windows)
     {
@@ -1626,17 +1741,18 @@ void setAttributes(R)(R name, uint attributes)
             alias names = name;
         else
             string names = null;
-        cenforce(!trustedChmod(namez, cast(mode_t)attributes), names, namez);
+        cenforce(!trustedChmod(namez, cast(mode_t) attributes), names, namez);
     }
 }
 
+/// ditto
 void setAttributes(R)(auto ref R name, uint attributes)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return setAttributes!(StringTypeOf!R)(name, attributes);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, setAttributes(TestAliasedString(null), 0)));
 }
@@ -1660,8 +1776,8 @@ assert("/usr/share/include".isDir);
 --------------------
   +/
 @property bool isDir(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
     {
@@ -1673,13 +1789,14 @@ assert("/usr/share/include".isDir);
     }
 }
 
+/// ditto
 @property bool isDir(R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return name.isDir!(StringTypeOf!R);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, TestAliasedString(null).isDir));
 }
@@ -1704,7 +1821,7 @@ unittest
     }
 }
 
-unittest
+@system unittest
 {
     version(Windows)
         enum dir = "C:\\Program Files\\";
@@ -1810,8 +1927,8 @@ assert(!"/usr/share/include".isFile);
 --------------------
   +/
 @property bool isFile(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
         return !name.isDir;
@@ -1819,19 +1936,20 @@ assert(!"/usr/share/include".isFile);
         return (getAttributes(name) & S_IFMT) == S_IFREG;
 }
 
+/// ditto
 @property bool isFile(R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return isFile!(StringTypeOf!R)(name);
 }
 
-unittest // bugzilla 15658
+@system unittest // bugzilla 15658
 {
     DirEntry e = DirEntry(".");
     static assert(is(typeof(isFile(e))));
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, TestAliasedString(null).isFile));
 }
@@ -1944,8 +2062,8 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
         $(D FileException) if the given file does not exist.
   +/
 @property bool isSymlink(R)(R name)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     version(Windows)
         return (getAttributes(name) & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
@@ -1953,18 +2071,19 @@ bool attrIsFile(uint attributes) @safe pure nothrow @nogc
         return (getLinkAttributes(name) & S_IFMT) == S_IFLNK;
 }
 
+/// ditto
 @property bool isSymlink(R)(auto ref R name)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return name.isSymlink!(StringTypeOf!R);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, TestAliasedString(null).isSymlink));
 }
 
-unittest
+@system unittest
 {
     version(Windows)
     {
@@ -2072,8 +2191,8 @@ bool attrIsSymlink(uint attributes) @safe pure nothrow @nogc
  * Throws: $(D FileException) on error.
  */
 void chdir(R)(R pathname)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     // Place outside of @trusted block
     auto pathz = pathname.tempCString!FSChar();
@@ -2099,13 +2218,14 @@ void chdir(R)(R pathname)
     cenforce(trustedChdir(pathz), pathStr, pathz);
 }
 
+/// ditto
 void chdir(R)(auto ref R pathname)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return chdir!(StringTypeOf!R)(pathname);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, chdir(TestAliasedString(null))));
 }
@@ -2117,11 +2237,11 @@ Throws: $(D FileException) on Posix or $(D WindowsException) on Windows
         if an error occured.
  */
 void mkdir(R)(R pathname)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     // Place outside of @trusted block
-    auto pathz = pathname.tempCString!FSChar();
+    const pathz = pathname.tempCString!FSChar();
 
     version(Windows)
     {
@@ -2137,6 +2257,8 @@ void mkdir(R)(R pathname)
     }
     else version(Posix)
     {
+        import std.conv : octal;
+
         static auto trustedMkdir(const(FSChar)* pathz, mode_t mode) @trusted
         {
             return core.sys.posix.sys.stat.mkdir(pathz, mode);
@@ -2149,31 +2271,38 @@ void mkdir(R)(R pathname)
     }
 }
 
+/// ditto
 void mkdir(R)(auto ref R pathname)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     return mkdir!(StringTypeOf!R)(pathname);
 }
 
-unittest
+@safe unittest
 {
+    import std.path : mkdir;
     static assert(__traits(compiles, mkdir(TestAliasedString(null))));
 }
 
 // Same as mkdir but ignores "already exists" errors.
 // Returns: "true" if the directory was created,
 //   "false" if it already existed.
-private bool ensureDirExists(in char[] pathname)
+private bool ensureDirExists()(in char[] pathname)
 {
+    import std.exception : enforce;
+    const pathz = pathname.tempCString!FSChar();
+
     version(Windows)
     {
-        if (CreateDirectoryW(pathname.tempCStringW(), null))
+        if (() @trusted { return CreateDirectoryW(pathz, null); }())
             return true;
         cenforce(GetLastError() == ERROR_ALREADY_EXISTS, pathname.idup);
     }
     else version(Posix)
     {
-        if (core.sys.posix.sys.stat.mkdir(pathname.tempCString(), octal!777) == 0)
+        import std.conv : octal;
+
+        if (() @trusted { return core.sys.posix.sys.stat.mkdir(pathz, octal!777); }() == 0)
             return true;
         cenforce(errno == EEXIST || errno == EISDIR, pathname);
     }
@@ -2190,8 +2319,10 @@ private bool ensureDirExists(in char[] pathname)
  * Throws: $(D FileException) on error.
  */
 
-void mkdirRecurse(in char[] pathname)
+void mkdirRecurse(in char[] pathname) @safe
 {
+    import std.path : dirName, baseName;
+
     const left = dirName(pathname);
     if (left.length != pathname.length && !exists(left))
     {
@@ -2203,11 +2334,14 @@ void mkdirRecurse(in char[] pathname)
     }
 }
 
-unittest
+@safe unittest
 {
+    import std.exception : assertThrown;
     {
+        import std.path : buildPath, buildNormalizedPath;
+
         immutable basepath = deleteme ~ "_dir";
-        scope(exit) rmdirRecurse(basepath);
+        scope(exit) () @trusted { rmdirRecurse(basepath); }();
 
         auto path = buildPath(basepath, "a", "..", "b");
         mkdirRecurse(path);
@@ -2242,7 +2376,7 @@ unittest
 
         mkdirRecurse(path);
         assert(basepath.exists && basepath.isDir);
-        scope(exit) rmdirRecurse(basepath);
+        scope(exit) () @trusted { rmdirRecurse(basepath); }();
         assert(path.exists && path.isDir);
     }
 }
@@ -2256,8 +2390,8 @@ Params:
 Throws: $(D FileException) on error.
  */
 void rmdir(R)(R pathname)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) &&
-        !isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
+    !isConvertibleToString!R)
 {
     // Place outside of @trusted block
     auto pathz = pathname.tempCString!FSChar();
@@ -2283,13 +2417,14 @@ void rmdir(R)(R pathname)
     cenforce(trustedRmdir(pathz), pathStr, pathz);
 }
 
+/// ditto
 void rmdir(R)(auto ref R pathname)
-    if (isConvertibleToString!R)
+if (isConvertibleToString!R)
 {
     rmdir!(StringTypeOf!R)(pathname);
 }
 
-unittest
+@safe unittest
 {
     static assert(__traits(compiles, rmdir(TestAliasedString(null))));
 }
@@ -2311,15 +2446,15 @@ unittest
         exists).
   +/
 version(StdDdoc) void symlink(RO, RL)(RO original, RL link)
-    if ((isInputRange!RO && isSomeChar!(ElementEncodingType!RO) ||
-            isConvertibleToString!RO) &&
-        (isInputRange!RL && isSomeChar!(ElementEncodingType!RL) ||
-            isConvertibleToString!RL));
+if ((isInputRange!RO && !isInfinite!RO && isSomeChar!(ElementEncodingType!RO) ||
+    isConvertibleToString!RO) &&
+    (isInputRange!RL && !isInfinite!RL && isSomeChar!(ElementEncodingType!RL) ||
+    isConvertibleToString!RL));
 else version(Posix) void symlink(RO, RL)(RO original, RL link)
-    if ((isInputRange!RO && isSomeChar!(ElementEncodingType!RO) ||
-            isConvertibleToString!RO) &&
-        (isInputRange!RL && isSomeChar!(ElementEncodingType!RL) ||
-            isConvertibleToString!RL))
+if ((isInputRange!RO && !isInfinite!RO && isSomeChar!(ElementEncodingType!RO) ||
+    isConvertibleToString!RO) &&
+    (isInputRange!RL && !isInfinite!RL && isSomeChar!(ElementEncodingType!RL) ||
+    isConvertibleToString!RL))
 {
     static if (isConvertibleToString!RO || isConvertibleToString!RL)
     {
@@ -2329,6 +2464,7 @@ else version(Posix) void symlink(RO, RL)(RO original, RL link)
     }
     else
     {
+        import std.conv : text;
         auto oz = original.tempCString();
         auto lz = link.tempCString();
         alias posixSymlink = core.sys.posix.unistd.symlink;
@@ -2380,7 +2516,7 @@ version(Posix) @safe unittest
     }
 }
 
-version(Posix) unittest
+version(Posix) @safe unittest
 {
     static assert(__traits(compiles,
         symlink(TestAliasedString(null), TestAliasedString(null))));
@@ -2399,11 +2535,11 @@ version(Posix) unittest
         $(D FileException) on error.
   +/
 version(StdDdoc) string readLink(R)(R link)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) ||
-        isConvertibleToString!R);
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) ||
+    isConvertibleToString!R);
 else version(Posix) string readLink(R)(R link)
-    if (isInputRange!R && isSomeChar!(ElementEncodingType!R) ||
-        isConvertibleToString!R)
+if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) ||
+    isConvertibleToString!R)
 {
     static if (isConvertibleToString!R)
     {
@@ -2411,6 +2547,8 @@ else version(Posix) string readLink(R)(R link)
     }
     else
     {
+        import std.conv : to;
+        import std.exception : assumeUnique;
         alias posixReadlink = core.sys.posix.unistd.readlink;
         enum bufferLen = 2048;
         enum maxCodeUnits = 6;
@@ -2451,7 +2589,9 @@ else version(Posix) string readLink(R)(R link)
 
 version(Posix) @safe unittest
 {
+    import std.exception : assertThrown;
     import std.string;
+
     foreach (file; [system_directory, system_file])
     {
         if (file.exists)
@@ -2472,13 +2612,13 @@ version(Posix) @safe unittest
     static assert(__traits(compiles, readLink(TestAliasedString("foo"))));
 }
 
-version(Posix) unittest // input range of dchars
+version(Posix) @system unittest // input range of dchars
 {
     mkdirRecurse(deleteme);
     scope(exit) if (deleteme.exists) rmdirRecurse(deleteme);
     write(deleteme ~ "/f", "");
-    import std.range.interfaces: InputRange, inputRangeObject;
-    import std.utf: byChar;
+    import std.range.interfaces : InputRange, inputRangeObject;
+    import std.utf : byChar;
     immutable string link = deleteme ~ "/l";
     symlink("f", link);
     InputRange!dchar linkr = inputRangeObject(link);
@@ -2495,6 +2635,7 @@ version(Posix) unittest // input range of dchars
  */
 version(Windows) string getcwd()
 {
+    import std.conv : to;
     import std.utf : toUTF8;
     /* GetCurrentDirectory's return value:
         1. function succeeds: the number of characters that are written to
@@ -2520,6 +2661,16 @@ version(Windows) string getcwd()
         return toUTF8(ptr[0 .. n2]);
     }
 }
+else version (Solaris) string getcwd()
+{
+    /* BUF_SIZE >= PATH_MAX */
+    enum BUF_SIZE = 4096;
+    /* The user should be able to specify any size buffer > 0 */
+    auto p = cenforce(core.sys.posix.unistd.getcwd(null, BUF_SIZE),
+            "cannot get cwd");
+    scope(exit) core.stdc.stdlib.free(p);
+    return p[0 .. core.stdc.string.strlen(p)].idup;
+}
 else version (Posix) string getcwd()
 {
     auto p = cenforce(core.sys.posix.unistd.getcwd(null, 0),
@@ -2528,7 +2679,7 @@ else version (Posix) string getcwd()
     return p[0 .. core.stdc.string.strlen(p)].idup;
 }
 
-unittest
+@system unittest
 {
     auto s = getcwd();
     assert(s.length);
@@ -2547,13 +2698,15 @@ else version (NetBSD)
  * Returns the full path of the current executable.
  *
  * Throws:
- * $(XREF object, Exception)
+ * $(REF Exception, std,object)
  */
 @trusted string thisExePath ()
 {
     version (OSX)
     {
         import core.sys.posix.stdlib : realpath;
+        import std.conv : to;
+        import std.exception : errnoEnforce;
 
         uint size;
 
@@ -2578,6 +2731,9 @@ else version (NetBSD)
     }
     else version (Windows)
     {
+        import std.conv : to;
+        import std.exception : enforce;
+
         wchar[MAX_PATH] buf;
         wchar[] buffer = buf[];
 
@@ -2592,6 +2748,7 @@ else version (NetBSD)
     }
     else version (FreeBSD)
     {
+        import std.exception : errnoEnforce, assumeUnique;
         enum
         {
             CTL_KERN = 1,
@@ -2629,6 +2786,7 @@ else version (NetBSD)
 
 @safe unittest
 {
+    import std.path : isAbsolute;
     auto path = thisExePath();
 
     assert(path.exists);
@@ -2765,7 +2923,7 @@ assert(!de2.isFile);
             Note that the file attributes on Windows and Posix systems are
             completely different. On, Windows, they're what is returned by
             $(D GetFileAttributes)
-            $(WEB msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx, GetFileAttributes)
+            $(HTTP msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx, GetFileAttributes)
             Whereas, an Posix systems, they're the $(D st_mode) value which is
             part of the $(D stat) struct gotten by calling $(D stat).
 
@@ -2826,11 +2984,12 @@ else version(Windows)
         private this(string path, in WIN32_FIND_DATAW *fd)
         {
             import core.stdc.wchar_ : wcslen;
+            import std.path : buildPath;
 
             size_t clength = wcslen(fd.cFileName.ptr);
             _name = toUTF8(fd.cFileName[0 .. clength]);
             _name = buildPath(path, toUTF8(fd.cFileName[0 .. clength]));
-            _size = (cast(ulong)fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
+            _size = (cast(ulong) fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
             _timeCreated = std.datetime.FILETIMEToSysTime(&fd.ftCreationTime);
             _timeLastAccessed = std.datetime.FILETIMEToSysTime(&fd.ftLastAccessTime);
             _timeLastModified = std.datetime.FILETIMEToSysTime(&fd.ftLastWriteTime);
@@ -2922,6 +3081,8 @@ else version(Posix)
 
         private this(string path, core.sys.posix.dirent.dirent* fd)
         {
+            import std.path : buildPath;
+
             immutable len = core.stdc.string.strlen(fd.d_name.ptr);
             _name = buildPath(path, fd.d_name[0 .. len]);
 
@@ -3034,6 +3195,8 @@ else version(Posix)
          +/
         void _ensureStatDone() @safe
         {
+            import std.exception : enforce;
+
             static auto trustedStat(in char[] path, stat_t* buf) @trusted
             {
                 return stat(path.tempCString(), buf);
@@ -3078,6 +3241,8 @@ else version(Posix)
          +/
         void _ensureLStatDone()
         {
+            import std.exception : enforce;
+
             if (_didLStat)
                 return;
 
@@ -3104,7 +3269,7 @@ else version(Posix)
     }
 }
 
-unittest
+@system unittest
 {
     version(Windows)
     {
@@ -3132,6 +3297,8 @@ unittest
     }
     else version(Posix)
     {
+        import std.exception : assertThrown;
+
         if (system_directory.exists)
         {
             {
@@ -3188,22 +3355,22 @@ alias PreserveAttributes = Flag!"preserveAttributes";
 
 version (StdDdoc)
 {
-    /// Defaults to PreserveAttributes.yes on Windows, and the opposite on all other platforms.
+    /// Defaults to $(D Yes.preserveAttributes) on Windows, and the opposite on all other platforms.
     PreserveAttributes preserveAttributesDefault;
 }
 else version(Windows)
 {
-    enum preserveAttributesDefault = PreserveAttributes.yes;
+    enum preserveAttributesDefault = Yes.preserveAttributes;
 }
 else
 {
-    enum preserveAttributesDefault = PreserveAttributes.no;
+    enum preserveAttributesDefault = No.preserveAttributes;
 }
 
 /***************************************************
 Copy file $(D from) to file $(D to). File timestamps are preserved.
-File attributes are preserved, if $(D preserve) equals $(D PreserveAttributes.yes).
-On Windows only $(D PreserveAttributes.yes) (the default on Windows) is supported.
+File attributes are preserved, if $(D preserve) equals $(D Yes.preserveAttributes).
+On Windows only $(D Yes.preserveAttributes) (the default on Windows) is supported.
 If the target file exists, it is overwritten.
 
 Params:
@@ -3214,8 +3381,8 @@ Params:
 Throws: $(D FileException) on error.
  */
 void copy(RF, RT)(RF from, RT to, PreserveAttributes preserve = preserveAttributesDefault)
-    if (isInputRange!RF && isSomeChar!(ElementEncodingType!RF) && !isConvertibleToString!RF &&
-        isInputRange!RT && isSomeChar!(ElementEncodingType!RT) && !isConvertibleToString!RT)
+if (isInputRange!RF && !isInfinite!RF && isSomeChar!(ElementEncodingType!RF) && !isConvertibleToString!RF &&
+    isInputRange!RT && !isInfinite!RT && isSomeChar!(ElementEncodingType!RT) && !isConvertibleToString!RT)
 {
     // Place outside of @trusted block
     auto fromz = from.tempCString!FSChar();
@@ -3234,19 +3401,18 @@ void copy(RF, RT)(RF from, RT to, PreserveAttributes preserve = preserveAttribut
     copyImpl(f, t, fromz, toz, preserve);
 }
 
+/// ditto
 void copy(RF, RT)(auto ref RF from, auto ref RT to, PreserveAttributes preserve = preserveAttributesDefault)
-    if (isConvertibleToString!RF || isConvertibleToString!RT)
+if (isConvertibleToString!RF || isConvertibleToString!RT)
 {
     import std.meta : staticMap;
     alias Types = staticMap!(convertToString, RF, RT);
     copy!Types(from, to, preserve);
 }
 
-unittest // issue 15319
+@safe unittest // issue 15319
 {
-    import std.file : dirEntries;
-    auto fs = dirEntries(getcwd, SpanMode.depth);
-    assert(__traits(compiles, copy(fs.front, fs.front)));
+    assert(__traits(compiles, copy("from.txt", "to.txt")));
 }
 
 private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, const(FSChar)* toz,
@@ -3269,8 +3435,8 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
     }
     else version(Posix)
     {
-        import core.stdc.stdio;
-        static import std.conv;
+        static import core.stdc.stdio;
+        import std.conv : to, octal;
 
         immutable fdr = core.sys.posix.fcntl.open(fromz, O_RDONLY);
         cenforce(fdr != -1, f, fromz);
@@ -3322,20 +3488,20 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
                 size -= toxfer;
             }
             if (preserve)
-                cenforce(fchmod(fdw, std.conv.to!mode_t(statbufr.st_mode)) == 0, f, fromz);
+                cenforce(fchmod(fdw, to!mode_t(statbufr.st_mode)) == 0, f, fromz);
         }
 
         cenforce(core.sys.posix.unistd.close(fdw) != -1, f, fromz);
 
         utimbuf utim = void;
-        utim.actime = cast(time_t)statbufr.st_atime;
-        utim.modtime = cast(time_t)statbufr.st_mtime;
+        utim.actime = cast(time_t) statbufr.st_atime;
+        utim.modtime = cast(time_t) statbufr.st_mtime;
 
         cenforce(utime(toz, &utim) != -1, f, fromz);
     }
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm, std.file; // issue 14817
     auto t1 = deleteme, t2 = deleteme~"2";
@@ -3352,8 +3518,9 @@ unittest
     assert(readText(t2.byChar) == "2");
 }
 
-version(Posix) unittest //issue 11434
+@safe version(Posix) @safe unittest //issue 11434
 {
+    import std.conv : octal;
     auto t1 = deleteme, t2 = deleteme~"2";
     scope(exit) foreach (t; [t1, t2]) if (t.exists) t.remove();
     write(t1, "1");
@@ -3363,8 +3530,9 @@ version(Posix) unittest //issue 11434
     assert(getAttributes(t2) == octal!100767);
 }
 
-unittest // issue 15865
+@safe unittest // issue 15865
 {
+    import std.exception : assertThrown;
     auto t = deleteme;
     write(t, "a");
     scope(exit) t.remove();
@@ -3384,7 +3552,7 @@ void rmdirRecurse(in char[] pathname)
 {
     //No references to pathname will be kept after rmdirRecurse,
     //so the cast is safe
-    rmdirRecurse(DirEntry(cast(string)pathname));
+    rmdirRecurse(DirEntry(cast(string) pathname));
 }
 
 /++
@@ -3430,17 +3598,19 @@ void rmdirRecurse(DirEntry de)
     rmdirRecurse(de);
 }
 
-version(Windows) unittest
+version(Windows) @system unittest
 {
+    import std.exception : enforce;
     auto d = deleteme ~ r".dir\a\b\c\d\e\f\g";
     mkdirRecurse(d);
     rmdirRecurse(deleteme ~ ".dir");
     enforce(!exists(deleteme ~ ".dir"));
 }
 
-version(Posix) unittest
+version(Posix) @system unittest
 {
-    import std.process: executeShell;
+    import std.exception : enforce, collectException;
+    import std.process : executeShell;
     collectException(rmdirRecurse(deleteme));
     auto d = deleteme~"/a/b/c/d/e/f/g";
     enforce(collectException(mkdir(d)));
@@ -3461,12 +3631,12 @@ version(Posix) unittest
     enforce(!exists(deleteme));
 }
 
-unittest
+@system unittest
 {
     void[] buf;
 
     buf = new void[10];
-    (cast(byte[])buf)[] = 3;
+    (cast(byte[]) buf)[] = 3;
     string unit_file = deleteme ~ "-unittest_write.tmp";
     if (exists(unit_file)) remove(unit_file);
     write(unit_file, buf);
@@ -3535,6 +3705,8 @@ private struct DirIteratorImpl
 
         bool stepIn(string directory)
         {
+            import std.path : chainPath;
+
             auto search_pattern = chainPath(directory, "*.*");
             WIN32_FIND_DATAW findinfo;
             HANDLE h = FindFirstFileW(search_pattern.tempCString!FSChar(), &findinfo);
@@ -3658,7 +3830,7 @@ private struct DirIteratorImpl
             alias pathnameStr = pathname;
         else
         {
-            import std.array;
+            import std.array : array;
             string pathnameStr = pathname.array;
         }
         if (stepIn(pathnameStr))
@@ -3737,8 +3909,8 @@ public:
     Returns an input range of DirEntry that lazily iterates a given directory,
     also provides two ways of foreach iteration. The iteration variable can be of
     type $(D_PARAM string) if only the name is needed, or $(D_PARAM DirEntry)
-    if additional details are needed. The span mode dictates the how the
-    directory is traversed. The name of the each directory entry iterated
+    if additional details are needed. The span mode dictates how the
+    directory is traversed. The name of each iterated directory entry
     contains the absolute path.
 
     Params:
@@ -3759,22 +3931,26 @@ Example:
 // Iterate a directory in depth
 foreach (string name; dirEntries("destroy/me", SpanMode.depth))
 {
- remove(name);
+    remove(name);
 }
+
 // Iterate the current directory in breadth
 foreach (string name; dirEntries("", SpanMode.breadth))
 {
- writeln(name);
+    writeln(name);
 }
+
 // Iterate a directory and get detailed info about it
 foreach (DirEntry e; dirEntries("dmd-testing", SpanMode.breadth))
 {
- writeln(e.name, "\t", e.size);
+    writeln(e.name, "\t", e.size);
 }
+
 // Iterate over all *.d files in current directory and all its subdirectories
 auto dFiles = dirEntries("", SpanMode.depth).filter!(f => f.name.endsWith(".d"));
 foreach (d; dFiles)
     writeln(d.name);
+
 // Hook it up with std.parallelism to compile them all in parallel:
 foreach (d; parallel(dFiles, 1)) //passes by 1 file to each thread
 {
@@ -3790,7 +3966,7 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 }
 
 /// Duplicate functionality of D1's $(D std.file.listdir()):
-unittest
+@safe unittest
 {
     string[] listdir(string pathname)
     {
@@ -3814,11 +3990,17 @@ unittest
      }
 }
 
-unittest
+@system unittest
 {
-    import std.algorithm;
-    import std.range;
-    import std.process;
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    import std.algorithm.searching : startsWith;
+    import std.array : array;
+    import std.conv : to;
+    import std.path : dirEntries, buildPath, absolutePath;
+    import std.process : thisProcessID;
+    import std.range.primitives : walkLength;
+
     version(Android)
         string testdir = deleteme; // This has to be an absolute path when
                                    // called from a shared library on Android,
@@ -3833,10 +4015,11 @@ unittest
     // testing range interface
     size_t equalEntries(string relpath, SpanMode mode)
     {
+        import std.exception : enforce;
         auto len = enforce(walkLength(dirEntries(absolutePath(relpath), mode)));
         assert(walkLength(dirEntries(relpath, mode)) == len);
         assert(equal(
-                   map!(a => std.path.absolutePath(a.name))(dirEntries(relpath, mode)),
+                   map!(a => absolutePath(a.name))(dirEntries(relpath, mode)),
                    map!(a => a.name)(dirEntries(absolutePath(relpath), mode))));
         return len;
     }
@@ -3884,7 +4067,7 @@ unittest
         path = The directory to iterate over.
         pattern  = String with wildcards, such as $(RED "*.d"). The supported
                    wildcard strings are described under
-                   $(XREF _path, globMatch).
+                   $(REF globMatch, std,_path).
         mode = Whether the directory's sub-directories should be iterated
                over depth-first ($(D_PARAM depth)), breadth-first
                ($(D_PARAM breadth)), or not at all ($(D_PARAM shallow)).
@@ -3907,12 +4090,14 @@ foreach (d; dFiles)
 auto dirEntries(string path, string pattern, SpanMode mode,
     bool followSymlink = true)
 {
-    import std.algorithm : filter;
+    import std.algorithm.iteration : filter;
+    import std.path : globMatch, baseName;
+
     bool f(DirEntry de) { return globMatch(baseName(de.name), pattern); }
     return filter!f(DirIterator(path, mode, followSymlink));
 }
 
-unittest
+@system unittest
 {
     import std.stdio : writefln;
     immutable dpath = deleteme ~ "_dir";
@@ -3990,7 +4175,26 @@ unittest
 
 
 /**
-Reads an entire file into an array.
+ * Reads a file line by line and parses the line into a single value or a
+ * $(REF Tuple, std,typecons) of values depending on the length of `Types`.
+ * The lines are parsed using the specified format string. The format string is
+ * passed to $(REF formattedRead, std,format), and therefore must conform to the
+ * format string specification outlined in $(MREF format).
+ *
+ * Params:
+ *     Types = the types that each of the elements in the line should be returned as
+ *     filename = the name of the file to read
+ *     format = the format string to use when reading
+ *
+ * Returns:
+ *     If only one type is passed, then an array of that type. Otherwise, an
+ *     array of $(REF Tuple, std,typecons)s.
+ *
+ * Throws:
+ *     `Exception` if the format string is malformed. Also, throws `Exception`
+ *     if any of the lines in the file are not fully consumed by the call
+ *     to $(REF formattedRead, std,format). Meaning that no empty lines or lines
+ *     with extra characters are allowed.
  */
 Select!(Types.length == 1, Types[0][], Tuple!(Types)[])
 slurp(Types...)(string filename, in char[] format)
@@ -3998,7 +4202,9 @@ slurp(Types...)(string filename, in char[] format)
     import std.stdio : File;
     import std.format : formattedRead;
     import std.array : appender;
-    typeof(return) result;
+    import std.conv : text;
+    import std.exception : enforce;
+
     auto app = appender!(typeof(return))();
     ElementType!(typeof(return)) toAdd;
     auto f = File(filename);
@@ -4015,19 +4221,19 @@ slurp(Types...)(string filename, in char[] format)
 }
 
 ///
-unittest
+@system unittest
 {
     scope(exit)
     {
-        assert(exists("someUniqueFilename"));
-        remove("someUniqueFilename");
+        assert(exists(deleteme));
+        remove(deleteme);
     }
 
-    write("someUniqueFilename", "12 12.25\n345 1.125");
+    write(deleteme, "12 12.25\n345 1.125"); // deleteme is the name of a temporary file
 
     // Load file; each line is an int followed by comma, whitespace and a
     // double.
-    auto a = slurp!(int, double)("someUniqueFilename", "%s %s");
+    auto a = slurp!(int, double)(deleteme, "%s %s");
     assert(a.length == 2);
     assert(a[0] == tuple(12, 12.25));
     assert(a[1] == tuple(345, 1.125));
@@ -4100,7 +4306,7 @@ string tempDir() @trusted
                                     "/var/tmp",
                                     "/usr/tmp");
         }
-        else static assert (false, "Unsupported platform");
+        else static assert(false, "Unsupported platform");
 
         if (cache is null) cache = getcwd();
     }

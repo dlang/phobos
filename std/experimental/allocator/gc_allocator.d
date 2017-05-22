@@ -1,3 +1,4 @@
+///
 module std.experimental.allocator.gc_allocator;
 import std.experimental.allocator.common;
 
@@ -7,7 +8,8 @@ D's built-in garbage-collected allocator.
 struct GCAllocator
 {
     import core.memory : GC;
-    unittest { testAllocator!(() => GCAllocator.instance); }
+    import std.typecons : Ternary;
+    @system unittest { testAllocator!(() => GCAllocator.instance); }
 
     /**
     The alignment is a static constant equal to $(D platformAlignment), which
@@ -20,7 +22,7 @@ struct GCAllocator
     deallocate) and $(D reallocate) methods are $(D @system) because they may
     move memory around, leaving dangling pointers in user code.
     */
-    @trusted void[] allocate(size_t bytes) shared
+    pure nothrow @trusted void[] allocate(size_t bytes) shared
     {
         if (!bytes) return null;
         auto p = GC.malloc(bytes);
@@ -31,11 +33,7 @@ struct GCAllocator
     @system bool expand(ref void[] b, size_t delta) shared
     {
         if (delta == 0) return true;
-        if (b is null)
-        {
-            b = allocate(delta);
-            return b.ptr != null; // we assume allocate will achieve the correct size.
-        }
+        if (b is null) return false;
         immutable curLength = GC.sizeOf(b.ptr);
         assert(curLength != 0); // we have a valid GC pointer here
         immutable desired = b.length + delta;
@@ -55,7 +53,7 @@ struct GCAllocator
     }
 
     /// Ditto
-    @system bool reallocate(ref void[] b, size_t newSize) shared
+    pure nothrow @system bool reallocate(ref void[] b, size_t newSize) shared
     {
         import core.exception : OutOfMemoryError;
         try
@@ -72,15 +70,17 @@ struct GCAllocator
     }
 
     /// Ditto
-    void[] resolveInternalPointer(void* p) shared
+    pure nothrow
+    Ternary resolveInternalPointer(const void* p, ref void[] result) shared
     {
-        auto r = GC.addrOf(p);
-        if (!r) return null;
-        return r[0 .. GC.sizeOf(r)];
+        auto r = GC.addrOf(cast(void*) p);
+        if (!r) return Ternary.no;
+        result = r[0 .. GC.sizeOf(r)];
+        return Ternary.yes;
     }
 
     /// Ditto
-    @system bool deallocate(void[] b) shared
+    pure nothrow @system bool deallocate(void[] b) shared
     {
         GC.free(b.ptr);
         return true;
@@ -94,7 +94,7 @@ struct GCAllocator
         if (n <= 16)
             return 16;
 
-        import core.bitop: bsr;
+        import core.bitop : bsr;
 
         auto largestBit = bsr(n-1) + 1;
         if (largestBit <= 12) // 4096 or less
@@ -113,14 +113,14 @@ struct GCAllocator
     static shared GCAllocator instance;
 
     // Leave it undocummented for now.
-    @trusted void collect() shared
+    nothrow @trusted void collect() shared
     {
         GC.collect();
     }
 }
 
 ///
-unittest
+@system unittest
 {
     auto buffer = GCAllocator.instance.allocate(1024 * 1024 * 4);
     // deallocate upon scope's end (alternatively: leave it to collection)
@@ -128,15 +128,16 @@ unittest
     //...
 }
 
-unittest
+@system unittest
 {
     auto b = GCAllocator.instance.allocate(10_000);
     assert(GCAllocator.instance.expand(b, 1));
 }
 
-unittest
+@system unittest
 {
-    import core.memory: GC;
+    import core.memory : GC;
+    import std.typecons : Ternary;
 
     // test allocation sizes
     assert(GCAllocator.instance.goodAllocSize(1) == 16);
@@ -147,6 +148,11 @@ unittest
 
         auto buffer = GCAllocator.instance.allocate(s);
         scope(exit) GCAllocator.instance.deallocate(buffer);
+
+        void[] p;
+        assert(GCAllocator.instance.resolveInternalPointer(null, p) == Ternary.no);
+        Ternary r = GCAllocator.instance.resolveInternalPointer(buffer.ptr, p);
+        assert(p.ptr is buffer.ptr && p.length >= buffer.length);
 
         assert(GC.sizeOf(buffer.ptr) == s);
 

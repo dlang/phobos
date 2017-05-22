@@ -5,8 +5,8 @@
  * tests on them.  Then, it prints out the arguments passed to main().
  *
  * Copyright: Copyright Digital Mars 2000 - 2009.
- * License:   $(WEB www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
- * Authors:   $(WEB digitalmars.com, Walter Bright)
+ * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * Authors:   $(HTTP digitalmars.com, Walter Bright)
  *
  *          Copyright Digital Mars 2000 - 2009.
  * Distributed under the Boost Software License, Version 1.0.
@@ -19,7 +19,6 @@ public import std.compiler;
 public import std.concurrency;
 public import std.conv;
 public import std.container;
-public import std.cstream;
 public import std.datetime;
 public import std.demangle;
 public import std.file;
@@ -37,10 +36,8 @@ public import std.regex;
 public import std.signals;
 //public import std.slist;
 public import std.socket;
-public import std.socketstream;
 public import std.stdint;
 public import std.stdio;
-public import std.stream;
 public import std.string;
 public import std.system;
 public import std.traits;
@@ -64,23 +61,23 @@ int main(string[] args)
 {
     // Bring in unit test for module by referencing function in it
 
-    cast(void)cmp("foo", "bar");                  // string
-    cast(void)filenameCharCmp('a', 'b');          // path
-    cast(void)isNaN(1.0);                         // math
+    cast(void) cmp("foo", "bar");                  // string
+    cast(void) filenameCharCmp('a', 'b');          // path
+    cast(void) isNaN(1.0);                         // math
     std.conv.to!double("1.0");          // std.conv
     OutBuffer b = new OutBuffer();      // outbuffer
     auto r = regex("");                 // regex
     uint ranseed = std.random.unpredictableSeed;
     thisTid;
     int[] a;
-    import std.algorithm : sort, reverse;
+    import std.algorithm.sorting : sort;
+    import std.algorithm.mutation : reverse;
     reverse(a);                         // adi
     sort(a);                            // qsort
     Clock.currTime();                   // datetime
-    Exception e = new ReadException(""); // stream
-    din.eof();                           // cstream
-    cast(void)isValidDchar(cast(dchar)0);          // utf
-    std.uri.ascii2hex(0);                // uri
+    cast(void) isValidDchar(cast(dchar) 0);          // utf
+    string s1 = "http://www.digitalmars.com/~fred/fredsRX.html#foo end!";
+    assert(uriLength(s1) == 49);
     std.zlib.adler32(0,null);            // D.zlib
     auto t = task!cmp("foo", "bar");  // parallelism
 
@@ -102,12 +99,12 @@ int main(string[] args)
     assert(x[1] == 3);
     assert(x[2] == 45);
 
-    cast(void)std.math.sin(3.0);
-    cast(void)std.mathspecial.gamma(6.2);
+    cast(void) std.math.sin(3.0);
+    cast(void) std.mathspecial.gamma(6.2);
 
     std.demangle.demangle("hello");
 
-    cast(void)std.uni.isAlpha('A');
+    cast(void) std.uni.isAlpha('A');
 
     std.file.exists("foo");
 

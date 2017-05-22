@@ -4,12 +4,12 @@
  * Support for Base64 encoding and decoding.
  *
  * This module provides two default implementations of Base64 encoding,
- * $(D $(LREF Base64)) with a standard encoding alphabet, and a variant
- * $(D $(LREF Base64URL)) that has a modified encoding alphabet designed to be
+ * $(LREF Base64) with a standard encoding alphabet, and a variant
+ * $(LREF Base64URL) that has a modified encoding alphabet designed to be
  * safe for embedding in URLs and filenames.
  *
  * Both variants are implemented as instantiations of the template
- * $(D $(LREF Base64Impl)). Most users will not need to use this template
+ * $(LREF Base64Impl). Most users will not need to use this template
  * directly; however, it can be used to create customized Base64 encodings,
  * such as one that omits padding characters, or one that is safe to embed
  * inside a regular expression.
@@ -45,11 +45,11 @@
  * -----
  *
  * References:
- * $(WEB tools.ietf.org/html/rfc4648, RFC 4648 - The Base16, Base32, and Base64
+ * $(LINK2 https://tools.ietf.org/html/rfc4648, RFC 4648 - The Base16, Base32, and Base64
  * Data Encodings)
  *
  * Copyright: Masahiro Nakagawa 2010-.
- * License:   $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+ * License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   Masahiro Nakagawa, Daniel Murphy (Single value Encoder and Decoder)
  * Source:    $(PHOBOSSRC std/_base64.d)
  * Macros:
@@ -62,7 +62,7 @@ import std.range.primitives;      // isInputRange, isOutputRange, isForwardRange
 import std.traits;     // isArray
 
 // Make sure module header code examples work correctly.
-unittest
+@safe unittest
 {
     ubyte[] data = [0x14, 0xfb, 0x9c, 0x03, 0xd9, 0x7e];
 
@@ -76,12 +76,12 @@ unittest
 /**
  * Implementation of standard _Base64 encoding.
  *
- * See $(D $(LREF Base64Impl)) for a description of available methods.
+ * See $(LREF Base64Impl) for a description of available methods.
  */
 alias Base64 = Base64Impl!('+', '/');
 
 ///
-unittest
+@safe unittest
 {
     ubyte[] data = [0x83, 0xd7, 0x30, 0x7a, 0x01, 0x3f];
     assert(Base64.encode(data) == "g9cwegE/");
@@ -92,12 +92,12 @@ unittest
 /**
  * Variation of Base64 encoding that is safe for use in URLs and filenames.
  *
- * See $(D $(LREF Base64Impl)) for a description of available methods.
+ * See $(LREF Base64Impl) for a description of available methods.
  */
 alias Base64URL = Base64Impl!('-', '_');
 
 ///
-unittest
+@safe unittest
 {
     ubyte[] data = [0x83, 0xd7, 0x30, 0x7a, 0x01, 0x3f];
     assert(Base64URL.encode(data) == "g9cwegE_");
@@ -109,8 +109,8 @@ unittest
  * Template for implementing Base64 encoding and decoding.
  *
  * For most purposes, direct usage of this template is not necessary; instead,
- * this module provides two default implementations: $(D $(LREF Base64)) and
- * $(D $(LREF Base64URL)), that implement basic Base64 encoding and a variant
+ * this module provides two default implementations: $(LREF Base64) and
+ * $(LREF Base64URL), that implement basic Base64 encoding and a variant
  * intended for use in URLs and filenames, respectively.
  *
  * Customized Base64 encoding schemes can be implemented by instantiating this
@@ -173,7 +173,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    unittest
+    @safe unittest
     {
         ubyte[] data = [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e];
 
@@ -222,7 +222,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         auto      bufptr = buffer.ptr;
         auto      srcptr = source.ptr;
 
-        foreach (Unused; 0..blocks)
+        foreach (Unused; 0 .. blocks)
         {
             immutable val = srcptr[0] << 16 | srcptr[1] << 8 | srcptr[2];
             *bufptr++ = EncodeMap[val >> 18       ];
@@ -256,11 +256,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // encode method can't assume buffer length. So, slice needed.
-        return buffer[0..bufptr - buffer.ptr];
+        return buffer[0 .. bufptr - buffer.ptr];
     }
 
     ///
-    unittest
+    @safe unittest
     {
         ubyte[] data = [0x83, 0xd7, 0x30, 0x7a, 0x01, 0x3f];
         char[32] buffer;    // much bigger than necessary
@@ -304,7 +304,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable remain = srcLen % 3;
         auto      bufptr = buffer.ptr;
 
-        foreach (Unused; 0..blocks)
+        foreach (Unused; 0 .. blocks)
         {
             immutable v1 = source.front; source.popFront();
             immutable v2 = source.front; source.popFront();
@@ -346,10 +346,14 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem. See comment on 'out'.
-        version (unittest) assert(bufptr - buffer.ptr == encodeLength(srcLen), "The length of result is different from Base64");
+        version (unittest)
+            assert(
+                bufptr - buffer.ptr == encodeLength(srcLen),
+                "The length of result is different from Base64"
+            );
 
         // encode method can't assume buffer length. So, slice needed.
-        return buffer[0..bufptr - buffer.ptr];
+        return buffer[0 .. bufptr - buffer.ptr];
     }
 
 
@@ -388,7 +392,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         auto      srcptr = source.ptr;
         size_t    pcount;
 
-        foreach (Unused; 0..blocks)
+        foreach (Unused; 0 .. blocks)
         {
             immutable val = srcptr[0] << 16 | srcptr[1] << 8 | srcptr[2];
             put(range, EncodeMap[val >> 18       ]);
@@ -433,12 +437,13 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    unittest
+    @system unittest
     {
+        // @system because encode for OutputRange is @system
         struct OutputRange
         {
             char[] result;
-            void put(const(char) ch) { result ~= ch; }
+            void put(const(char) ch) @safe { result ~= ch; }
         }
 
         ubyte[] data = [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e];
@@ -475,7 +480,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable remain = srcLen % 3;
         size_t    pcount;
 
-        foreach (Unused; 0..blocks)
+        foreach (Unused; 0 .. blocks)
         {
             immutable v1 = source.front; source.popFront();
             immutable v2 = source.front; source.popFront();
@@ -525,7 +530,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem.
-        version (unittest) assert(pcount == encodeLength(srcLen), "The number of put is different from the length of Base64");
+        version (unittest)
+            assert(
+                pcount == encodeLength(srcLen),
+                "The number of put is different from the length of Base64"
+            );
 
         return pcount;
     }
@@ -551,7 +560,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    unittest
+    @safe unittest
     {
         ubyte[] data = [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e];
         assert(Base64.encode(data) == "Gis8TV1u");
@@ -659,7 +668,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
                 encoder.range_   = range_.save;
                 encoder.buffer_  = buffer_.dup;
-                encoder.encoded_ = encoder.buffer_[0..encoded_.length];
+                encoder.encoded_ = encoder.buffer_[0 .. encoded_.length];
 
                 return encoder;
             }
@@ -919,7 +928,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto encoded = "Gis8TV1u";
 
@@ -973,7 +982,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
                                                              is(R2 == ubyte[]) && isOutputRange!(R2, ubyte))
     in
     {
-        assert(buffer.length >= decodeLength(source.length), "Insufficient buffer for decoding");
+        assert(buffer.length >= realDecodeLength(source), "Insufficient buffer for decoding");
     }
     out(result)
     {
@@ -992,7 +1001,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         auto      srcptr = source.ptr;
         auto      bufptr = buffer.ptr;
 
-        foreach (Unused; 0..blocks)
+        foreach (Unused; 0 .. blocks)
         {
             immutable v1 = decodeChar(*srcptr++);
             immutable v2 = decodeChar(*srcptr++);
@@ -1028,11 +1037,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
             }
         }
 
-        return buffer[0..bufptr - buffer.ptr];
+        return buffer[0 .. bufptr - buffer.ptr];
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto encoded = "Gis8TV1u";
         ubyte[32] buffer;   // much bigger than necessary
@@ -1077,7 +1086,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable blocks = srcLen / 4;
         auto      bufptr = buffer.ptr;
 
-        foreach (Unused; 0..blocks)
+        foreach (Unused; 0 .. blocks)
         {
             immutable v1 = decodeChar(source.front); source.popFront();
             immutable v2 = decodeChar(source.front); source.popFront();
@@ -1119,9 +1128,13 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem.
-        version (unittest) assert((bufptr - buffer.ptr) >= (decodeLength(srcLen) - 2), "The length of result is smaller than expected length");
+        version (unittest)
+            assert(
+                (bufptr - buffer.ptr) >= (decodeLength(srcLen) - 2),
+                "The length of result is smaller than expected length"
+            );
 
-        return buffer[0..bufptr - buffer.ptr];
+        return buffer[0 .. bufptr - buffer.ptr];
     }
 
 
@@ -1165,7 +1178,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         auto      srcptr = source.ptr;
         size_t    pcount;
 
-        foreach (Unused; 0..blocks)
+        foreach (Unused; 0 .. blocks)
         {
             immutable v1 = decodeChar(*srcptr++);
             immutable v2 = decodeChar(*srcptr++);
@@ -1212,7 +1225,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    unittest
+    @system unittest
     {
         struct OutputRange
         {
@@ -1253,7 +1266,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         immutable blocks = srcLen / 4;
         size_t    pcount;
 
-        foreach (Unused; 0..blocks)
+        foreach (Unused; 0 .. blocks)
         {
             immutable v1 = decodeChar(source.front); source.popFront();
             immutable v2 = decodeChar(source.front); source.popFront();
@@ -1300,7 +1313,11 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         }
 
         // @@@BUG@@@ Workaround for DbC problem.
-        version (unittest) assert(pcount >= (decodeLength(srcLen) - 2), "The length of result is smaller than expected length");
+        version (unittest)
+            assert(
+                pcount >= (decodeLength(srcLen) - 2),
+                "The length of result is smaller than expected length"
+            );
 
         return pcount;
     }
@@ -1326,7 +1343,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 
     ///
-    unittest
+    @safe unittest
     {
         auto data = "Gis8TV1u";
         assert(Base64.decode(data) == [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e]);
@@ -1430,7 +1447,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
                 decoder.range_   = range_.save;
                 decoder.buffer_  = buffer_.dup;
-                decoder.decoded_ = decoder.buffer_[0..decoded_.length];
+                decoder.decoded_ = decoder.buffer_[0 .. decoded_.length];
 
                 return decoder;
             }
@@ -1700,7 +1717,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         if (chr > 0x7f)
             throw new Base64Exception("Base64-encoded character must be a single byte");
 
-        return decodeChar(cast(char)chr);
+        return decodeChar(cast(char) chr);
     }
 }
 
@@ -1718,9 +1735,10 @@ class Base64Exception : Exception
 }
 
 
-unittest
+@system unittest
 {
-    import std.algorithm : sort, equal;
+    import std.algorithm.sorting : sort;
+    import std.algorithm.comparison : equal;
     import std.conv;
     import std.file;
     import std.stdio;
@@ -1967,23 +1985,23 @@ unittest
 
         foreach (u, e; tests)
         {
-            assert(equal(Base64.encoder(cast(ubyte[])u), e[0]));
-            assert(equal(Base64.decoder(Base64.encoder(cast(ubyte[])u)), u));
+            assert(equal(Base64.encoder(cast(ubyte[]) u), e[0]));
+            assert(equal(Base64.decoder(Base64.encoder(cast(ubyte[]) u)), u));
 
-            assert(equal(Base64URL.encoder(cast(ubyte[])u), e[1]));
-            assert(equal(Base64URL.decoder(Base64URL.encoder(cast(ubyte[])u)), u));
+            assert(equal(Base64URL.encoder(cast(ubyte[]) u), e[1]));
+            assert(equal(Base64URL.decoder(Base64URL.encoder(cast(ubyte[]) u)), u));
 
-            assert(equal(Base64NoPadding.encoder(cast(ubyte[])u), e[2]));
-            assert(equal(Base64NoPadding.decoder(Base64NoPadding.encoder(cast(ubyte[])u)), u));
+            assert(equal(Base64NoPadding.encoder(cast(ubyte[]) u), e[2]));
+            assert(equal(Base64NoPadding.decoder(Base64NoPadding.encoder(cast(ubyte[]) u)), u));
 
-            assert(equal(Base64Re.encoder(cast(ubyte[])u), e[3]));
-            assert(equal(Base64Re.decoder(Base64Re.encoder(cast(ubyte[])u)), u));
+            assert(equal(Base64Re.encoder(cast(ubyte[]) u), e[3]));
+            assert(equal(Base64Re.decoder(Base64Re.encoder(cast(ubyte[]) u)), u));
         }
     }
 }
 
 // Regression control for the output range ref bug in encode.
-unittest
+@system unittest
 {
     struct InputRange
     {
@@ -2013,7 +2031,7 @@ unittest
 }
 
 // Regression control for the output range ref bug in decode.
-unittest
+@system unittest
 {
     struct InputRange
     {

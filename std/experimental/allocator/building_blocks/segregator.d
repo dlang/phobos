@@ -1,3 +1,4 @@
+///
 module std.experimental.allocator.building_blocks.segregator;
 
 import std.experimental.allocator.common;
@@ -13,8 +14,9 @@ shared) methods.
 */
 struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 {
-    import std.algorithm : min;
+    import std.algorithm.comparison : min;
     import std.traits : hasMember;
+    import std.typecons : Ternary;
 
     static if (stateSize!SmallAllocator) private SmallAllocator _small;
     else private alias _small = SmallAllocator.instance;
@@ -150,6 +152,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
                 || hasMember!(LargeAllocator, "expand"))
         bool expand(ref void[] b, size_t delta)
         {
+            if (!delta) return true;
             if (b.length + delta <= threshold)
             {
                 // Old and new allocations handled by _small
@@ -244,10 +247,10 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 
         static if (hasMember!(SmallAllocator, "resolveInternalPointer")
                 && hasMember!(LargeAllocator, "resolveInternalPointer"))
-        void[] resolveInternalPointer(void* p)
+        Ternary resolveInternalPointer(const void* p, ref void[] result)
         {
-            if (auto r = _small.resolveInternalPointer(p)) return r;
-            return _large.resolveInternalPointer(p);
+            Ternary r = _small.resolveInternalPointer(p, result);
+            return r == Ternary.no ? _large.resolveInternalPointer(p, result) : r;
         }
     }
 
@@ -256,7 +259,6 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
         && !stateSize!LargeAllocator
         && is(typeof(SmallAllocator.instance) == shared)
         && is(typeof(LargeAllocator.instance) == shared);
-    //pragma(msg, sharedMethods);
 
     static if (sharedMethods)
     {
@@ -272,7 +274,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.mallocator : Mallocator;
@@ -315,7 +317,8 @@ to $(D A4). If some particular range should not be handled, $(D NullAllocator)
 may be used appropriately.
 
 */
-template Segregator(Args...) if (Args.length > 3)
+template Segregator(Args...)
+if (Args.length > 3)
 {
     // Binary search
     private enum cutPoint = ((Args.length - 2) / 4) * 2;
@@ -336,16 +339,10 @@ template Segregator(Args...) if (Args.length > 3)
             .Segregator!(Args[2 .. $])
         );
     }
-
-    // Linear search
-    //alias Segregator = .Segregator!(
-    //    Args[0], Args[1],
-    //    .Segregator!(Args[2 .. $])
-    //);
 }
 
 ///
-unittest
+@system unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.mallocator : Mallocator;

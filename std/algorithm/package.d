@@ -3,8 +3,8 @@
 /**
 This package implements generic algorithms oriented towards the processing of
 sequences. Sequences processed by these functions define range-based
-interfaces.  See also $(LINK2 std_range.html, Reference on ranges) and
-$(WEB ddili.org/ders/d.en/ranges.html, tutorial on ranges).
+interfaces.  See also $(MREF_ALTTEF Reference on ranges, std, range) and
+$(HTTP ddili.org/ders/d.en/ranges.html, tutorial on ranges).
 
 $(SCRIPT inhibitQuickIndex = 1;)
 
@@ -12,10 +12,10 @@ Algorithms are categorized into the following submodules:
 
 $(DIVC quickindex,
 $(BOOKTABLE ,
-$(TR $(TH Category) $(TH Submodule) $(TH Functions)
+$(TR $(TH Submodule) $(TH Functions)
 )
-$(TR $(TDNW Searching)
-     $(TDNW $(SUBMODULE searching))
+$(TR
+     $(TDNW $(SUBMODULE Searching, searching))
      $(TD
         $(SUBREF searching, all)
         $(SUBREF searching, any)
@@ -37,6 +37,8 @@ $(TR $(TDNW Searching)
         $(SUBREF searching, maxCount)
         $(SUBREF searching, minElement)
         $(SUBREF searching, maxElement)
+        $(SUBREF searching, minIndex)
+        $(SUBREF searching, maxIndex)
         $(SUBREF searching, minPos)
         $(SUBREF searching, maxPos)
         $(SUBREF searching, skipOver)
@@ -44,8 +46,8 @@ $(TR $(TDNW Searching)
         $(SUBREF searching, until)
     )
 )
-$(TR $(TDNW Comparison)
-    $(TDNW $(SUBMODULE comparison))
+$(TR
+    $(TDNW $(SUBMODULE Comparison, comparison))
     $(TD
         $(SUBREF comparison, among)
         $(SUBREF comparison, castSwitch)
@@ -63,12 +65,13 @@ $(TR $(TDNW Comparison)
         $(SUBREF comparison, predSwitch)
     )
 )
-$(TR $(TDNW Iteration)
-    $(TDNW $(SUBMODULE iteration))
+$(TR
+    $(TDNW $(SUBMODULE Iteration, iteration))
     $(TD
         $(SUBREF iteration, cache)
         $(SUBREF iteration, cacheBidirectional)
         $(SUBREF iteration, chunkBy)
+        $(SUBREF iteration, cumulativeFold)
         $(SUBREF iteration, each)
         $(SUBREF iteration, filter)
         $(SUBREF iteration, filterBidirectional)
@@ -83,8 +86,8 @@ $(TR $(TDNW Iteration)
         $(SUBREF iteration, uniq)
     )
 )
-$(TR $(TDNW Sorting)
-    $(TDNW $(SUBMODULE sorting))
+$(TR
+    $(TDNW $(SUBMODULE Sorting, sorting))
     $(TD
         $(SUBREF sorting, completeSort)
         $(SUBREF sorting, isPartitioned)
@@ -93,6 +96,7 @@ $(TR $(TDNW Sorting)
         $(SUBREF sorting, ordered)
         $(SUBREF sorting, strictlyOrdered)
         $(SUBREF sorting, makeIndex)
+        $(SUBREF sorting, merge)
         $(SUBREF sorting, multiSort)
         $(SUBREF sorting, nextEvenPermutation)
         $(SUBREF sorting, nextPermutation)
@@ -106,8 +110,8 @@ $(TR $(TDNW Sorting)
         $(SUBREF sorting, topNIndex)
     )
 )
-$(TR $(TDNW Set&nbsp;operations)
-    $(TDNW $(SUBMODULE setops))
+$(TR
+    $(TDNW Set operations $(BR)($(SUBMODULE setops, setops)))
     $(TD
         $(SUBREF setops, cartesianProduct)
         $(SUBREF setops, largestPartialIntersection)
@@ -116,11 +120,10 @@ $(TR $(TDNW Set&nbsp;operations)
         $(SUBREF setops, setDifference)
         $(SUBREF setops, setIntersection)
         $(SUBREF setops, setSymmetricDifference)
-        $(SUBREF setops, setUnion)
     )
 )
-$(TR $(TDNW Mutation)
-    $(TDNW $(SUBMODULE mutation))
+$(TR
+    $(TDNW $(SUBMODULE Mutation, mutation))
     $(TD
         $(SUBREF mutation, bringToFront)
         $(SUBREF mutation, copy)
@@ -129,6 +132,9 @@ $(TR $(TDNW Mutation)
         $(SUBREF mutation, move)
         $(SUBREF mutation, moveAll)
         $(SUBREF mutation, moveSome)
+        $(SUBREF mutation, moveEmplace)
+        $(SUBREF mutation, moveEmplaceAll)
+        $(SUBREF mutation, moveEmplaceSome)
         $(SUBREF mutation, remove)
         $(SUBREF mutation, reverse)
         $(SUBREF mutation, strip)
@@ -168,20 +174,18 @@ sort(a);                   // no predicate, "a < b" is implicit
 ----
 
 Macros:
-WIKI = Phobos/StdAlgorithm
-SUBMODULE = $(LINK2 std_algorithm_$1.html, std.algorithm.$1)
-SUBREF = $(LINK2 std_algorithm_$1.html#.$2, $(TT $2))$(NBSP)
+SUBMODULE = $(MREF_ALTTEXT $1, std, algorithm, $2)
+SUBREF = $(REF_ALTTEXT $(TT $2), $2, std, algorithm, $1)$(NBSP)
 
 Copyright: Andrei Alexandrescu 2008-.
 
-License: $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0).
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-Authors: $(WEB erdani.com, Andrei Alexandrescu)
+Authors: $(HTTP erdani.com, Andrei Alexandrescu)
 
 Source: $(PHOBOSSRC std/_algorithm/package.d)
  */
 module std.algorithm;
-//debug = std_algorithm;
 
 public import std.algorithm.comparison;
 public import std.algorithm.iteration;
@@ -191,6 +195,3 @@ public import std.algorithm.searching;
 public import std.algorithm.sorting;
 
 static import std.functional;
-// Explicitly undocumented. It will be removed in March 2017. @@@DEPRECATED_2017-03@@@
-deprecated("Please use std.functional.forward instead.")
-alias forward = std.functional.forward;

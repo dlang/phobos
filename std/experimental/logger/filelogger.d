@@ -1,3 +1,4 @@
+///
 module std.experimental.logger.filelogger;
 
 import std.stdio;
@@ -23,8 +24,8 @@ class FileLogger : Logger
 
     Example:
     -------------
-    auto l1 = new FileLogger("logFile", "loggerName");
-    auto l2 = new FileLogger("logFile", "loggerName", LogLevel.fatal);
+    auto l1 = new FileLogger("logFile");
+    auto l2 = new FileLogger("logFile", LogLevel.fatal);
     -------------
     */
     this(in string fn, const LogLevel lv = LogLevel.all) @safe
@@ -49,8 +50,8 @@ class FileLogger : Logger
     Example:
     -------------
     auto file = File("logFile.log", "w");
-    auto l1 = new FileLogger(file, "LoggerName");
-    auto l2 = new FileLogger(file, "LoggerName", LogLevel.fatal);
+    auto l1 = new FileLogger(file);
+    auto l2 = new FileLogger(file, LogLevel.fatal);
     -------------
     */
     this(File file, const LogLevel lv = LogLevel.all) @safe
@@ -128,7 +129,7 @@ class FileLogger : Logger
     private string filename;
 }
 
-unittest
+@system unittest
 {
     import std.file : deleteme, remove;
     import std.array : empty;
@@ -157,7 +158,7 @@ unittest
     assert(readLine.indexOf(notWritten) == -1, readLine);
 }
 
-unittest
+@system unittest
 {
     import std.file : deleteme, remove;
     import std.array : empty;
@@ -190,12 +191,12 @@ unittest
 
 @safe unittest
 {
-    auto dl = cast(FileLogger)sharedLog;
+    auto dl = cast(FileLogger) sharedLog;
     assert(dl !is null);
     assert(dl.logLevel == LogLevel.all);
     assert(globalLogLevel == LogLevel.all);
 
-    auto tl = cast(StdForwardLogger)stdThreadLocalLog;
+    auto tl = cast(StdForwardLogger) stdThreadLocalLog;
     assert(tl !is null);
     stdThreadLocalLog.logLevel = LogLevel.all;
 }

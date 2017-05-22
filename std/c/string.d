@@ -7,8 +7,6 @@
  * C's &lt;string.h&gt;
  * Authors: Walter Bright, Digital Mars, http://www.digitalmars.com
  * License: Public Domain
- * Macros:
- *      WIKI=Phobos/StdCString
  */
 deprecated("Import core.stdc.string instead")
 module std.c.string;

@@ -2,13 +2,14 @@
 Declarations for interfacing with the ODBC library.
 
 Adapted with minimal changes from the work of David L. Davis
-(refer to the $(WEB
+(refer to the $(HTTP
 forum.dlang.org/post/cfk7ql$(DOLLAR)1p4n$(DOLLAR)1@digitaldaemon.com,
 original announcement)).
 
 `etc.c.odbc.sqlucode` corresponds to the `sqlucode.h` C include file.
 
-See_Also: $(LUCKY ODBC API Reference on MSN Online)
+See_Also: $(LINK2 https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/odbc-api-reference,
+            ODBC API Reference on MSN Online)
 */
 
 /+

@@ -33,62 +33,58 @@ Warning:  Unless marked as $(D @trusted) or $(D @safe), artifacts in
           this module allow implicit data sharing between threads and cannot
           guarantee that client code is free from low level data races.
 
-Synopsis:
+Source:    $(PHOBOSSRC std/_parallelism.d)
+Author:  David Simcha
+Copyright:  Copyright (c) 2009-2011, David Simcha.
+License:    $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0)
+*/
+module std.parallelism;
 
----
-import std.algorithm, std.parallelism, std.range;
+///
+@system unittest
+{
+    import std.algorithm.iteration : map;
+    import std.range : iota;
+    import std.math : approxEqual;
+    import std.parallelism : taskPool;
 
-void main() {
     // Parallel reduce can be combined with
-    // std.algorithm.map to interesting effect.
+    // std.algorithm.iteration.map to interesting effect.
     // The following example (thanks to Russel Winder)
     // calculates pi by quadrature  using
     // std.algorithm.map and TaskPool.reduce.
     // getTerm is evaluated in parallel as needed by
     // TaskPool.reduce.
     //
-    // Timings on an Athlon 64 X2 dual core machine:
+    // Timings on an Intel i5-3450 quad core machine
+    // for n = 1_000_000_000:
     //
-    // TaskPool.reduce:       12.170 s
-    // std.algorithm.reduce:  24.065 s
+    // TaskPool.reduce:       1.067 s
+    // std.algorithm.reduce:  4.011 s
 
-    immutable n = 1_000_000_000;
-    immutable delta = 1.0 / n;
+    enum n = 1_000_000;
+    enum delta = 1.0 / n;
 
-    real getTerm(int i)
+    alias getTerm = (int i)
     {
         immutable x = ( i - 0.5 ) * delta;
         return delta / ( 1.0 + x * x ) ;
-    }
+    };
 
-    immutable pi = 4.0 * taskPool.reduce!"a + b"(
-        std.algorithm.map!getTerm(iota(n))
-    );
+    immutable pi = 4.0 * taskPool.reduce!"a + b"(n.iota.map!getTerm);
+
+    assert(pi.approxEqual(3.1415926));
 }
----
-
-Source:    $(PHOBOSSRC std/_parallelism.d)
-Author:  David Simcha
-Copyright:  Copyright (c) 2009-2011, David Simcha.
-License:    $(WEB boost.org/LICENSE_1_0.txt, Boost License 1.0)
-*/
-module std.parallelism;
 
 import core.atomic;
-import core.exception;
 import core.memory;
 import core.sync.condition;
 import core.thread;
 
-import std.algorithm;
-import std.conv;
-import std.exception;
 import std.functional;
-import std.math;
 import std.meta;
-import std.range;
+import std.range.primitives;
 import std.traits;
-import std.typecons;
 
 version(OSX)
 {
@@ -109,7 +105,8 @@ version(Windows)
     // BUGS:  Only works on Windows 2000 and above.
     shared static this()
     {
-        import core.sys.windows.windows;
+        import core.sys.windows.windows : SYSTEM_INFO, GetSystemInfo;
+        import std.algorithm.comparison : max;
 
         SYSTEM_INFO si;
         GetSystemInfo(&si);
@@ -119,19 +116,17 @@ version(Windows)
 }
 else version(linux)
 {
-    import core.sys.posix.unistd;
-
     shared static this()
     {
+        import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
         totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
 }
 else version(Solaris)
 {
-    import core.sys.posix.unistd;
-
     shared static this()
     {
+        import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
         totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
 }
@@ -248,7 +243,7 @@ private template isSafeTask(F)
         allSatisfy!(noUnsharedAliasing, Parameters!F);
 }
 
-unittest
+@safe unittest
 {
     alias F1 = void function() @safe;
     alias F2 = void function();
@@ -361,7 +356,7 @@ private template isRoundRobin(T)
     enum isRoundRobin = false;
 }
 
-unittest
+@safe unittest
 {
     static assert( isRoundRobin!(RoundRobinBuffer!(void delegate(char[]), bool delegate())));
     static assert(!isRoundRobin!(uint));
@@ -414,7 +409,7 @@ meaning that any memory writes made in the thread that executed the $(D Task)
 are guaranteed to be visible in the calling thread after one of these functions
 returns.
 
-The $(XREF parallelism, task) and $(XREF parallelism, scopedTask) functions can
+The $(REF task, std,parallelism) and $(REF scopedTask, std,parallelism) functions can
 be used to create an instance of this struct.  See $(D task) for usage examples.
 
 Function results are returned from $(D yieldForce), $(D spinForce) and
@@ -537,6 +532,7 @@ struct Task(alias fun, Args...)
 
     private void enforcePool()
     {
+        import std.exception : enforce;
         enforce(this.pool !is null, "Job not submitted yet.");
     }
 
@@ -633,7 +629,7 @@ struct Task(alias fun, Args...)
 
         if (exception)
         {
-            throw exception;
+            throw exception; // nocoverage
         }
 
         static if (!is(ReturnType == void))
@@ -733,7 +729,7 @@ struct Task(alias fun, Args...)
     newly created thread, then terminate the thread.  This can be used for
     future/promise parallelism.  An explicit priority may be given
     to the $(D Task).  If one is provided, its value is forwarded to
-    $(D core.thread.Thread.priority). See $(XREF parallelism, task) for
+    $(D core.thread.Thread.priority). See $(REF task, std,parallelism) for
     usage example.
     */
     void executeInNewThread() @trusted
@@ -771,8 +767,8 @@ ReturnType!F run(F, Args...)(F fpOrDelegate, ref Args args)
 /**
 Creates a $(D Task) on the GC heap that calls an alias.  This may be executed
 via $(D Task.executeInNewThread) or by submitting to a
-$(XREF parallelism, TaskPool).  A globally accessible instance of
-$(D TaskPool) is provided by $(XREF parallelism, taskPool).
+$(REF TaskPool, std,parallelism).  A globally accessible instance of
+$(D TaskPool) is provided by $(REF taskPool, std,parallelism).
 
 Returns:  A pointer to the $(D Task).
 
@@ -883,7 +879,7 @@ identical to the non-@safe case, but safety introduces some restrictions:
 1.  $(D fun) must be @safe or @trusted.
 
 2.  $(D F) must not have any unshared aliasing as defined by
-    $(XREF traits, hasUnsharedAliasing).  This means it
+    $(REF hasUnsharedAliasing, std,traits).  This means it
     may not be an unshared delegate or a non-shared class or struct
     with overloaded $(D opCall).  This also precludes accepting template
     alias parameters.
@@ -978,9 +974,7 @@ private final class ParallelismThread : Thread
 // Kill daemon threads.
 shared static ~this()
 {
-    auto allThreads = Thread.getAll();
-
-    foreach (thread; allThreads)
+    foreach (ref thread; Thread)
     {
         auto pthread = cast(ParallelismThread) thread;
         if (pthread is null) continue;
@@ -1000,7 +994,7 @@ thread that executes the $(D Task) at the front of the queue when one is
 available and sleeps when the queue is empty.
 
 This class should usually be used via the global instantiation
-available via the $(XREF parallelism, taskPool) property.
+available via the $(REF taskPool, std,parallelism) property.
 Occasionally it is useful to explicitly instantiate a $(D TaskPool):
 
 1.  When you want $(D TaskPool) instances with multiple priorities, for example
@@ -1069,7 +1063,7 @@ private:
         {
             job.job();
         }
-        catch(Throwable e)
+        catch (Throwable e)
         {
             job.exception = e;
         }
@@ -1189,6 +1183,8 @@ private:
     }
     out
     {
+        import std.conv : text;
+
         assert(tail.prev !is tail);
         assert(tail.next is null, text(tail.prev, '\t', tail.next));
         if (tail.prev !is null)
@@ -1215,7 +1211,8 @@ private:
             tail = task;
             tail.prev = null;
         }
-        else {
+        else
+        {
             assert(tail);
             task.prev = tail;
             tail.next = task;
@@ -1262,7 +1259,7 @@ private:
         {
             toExecute.job();
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             toExecute.exception = e;
         }
@@ -1402,6 +1399,8 @@ public:
     // as public API.
     size_t defaultWorkUnitSize(size_t rangeLen) const @safe pure nothrow
     {
+        import std.algorithm.comparison : max;
+
         if (this.size == 0)
         {
             return rangeLen;
@@ -1528,6 +1527,7 @@ public:
     */
     ParallelForeach!R parallel(R)(R range, size_t workUnitSize)
     {
+        import std.exception : enforce;
         enforce(workUnitSize > 0, "workUnitSize must be > 0.");
         alias RetType = ParallelForeach!R;
         return RetType(this, range, workUnitSize);
@@ -1561,13 +1561,13 @@ public:
         preferred where the memory requirements of eagerness are acceptable.
         $(D functions) are the functions to be evaluated, passed as template
         alias parameters in a style similar to
-        $(XREF_PACK algorithm,iteration,map).
+        $(REF map, std,algorithm,iteration).
         The first argument must be a random access range. For performance
         reasons, amap will assume the range elements have not yet been
         initialized. Elements will be overwritten without calling a destructor
         nor doing an assignment. As such, the range must not contain meaningful
-        data: either un-initialized objects, or objects in their $(D .init)
-        state.
+        data$(DDOC_COMMENT not a section): either un-initialized objects, or
+        objects in their $(D .init) state.
 
         ---
         auto numbers = iota(100_000_000.0);
@@ -1641,6 +1641,8 @@ public:
         auto amap(Args...)(Args args)
         if (isRandomAccessRange!(Args[0]))
         {
+            import std.conv : emplaceRef;
+
             alias fun = adjoin!(staticMap!(unaryFun, functions));
 
             alias range = args[0];
@@ -1652,6 +1654,9 @@ public:
                 is(MapType!(Args[0], functions) : ElementType!(Args[$ - 1]))
                 )
             {
+                import std.conv : text;
+                import std.exception : enforce;
+
                 alias buf = args[$ - 1];
                 alias args2 = args[0..$ - 1];
                 alias Args2 = Args[0..$ - 1];
@@ -1665,6 +1670,8 @@ public:
             }
             else
             {
+                import std.array : uninitializedArray;
+
                 auto buf = uninitializedArray!(MapType!(Args[0], functions)[])(len);
                 alias args2 = args;
                 alias Args2 = Args;
@@ -1707,6 +1714,8 @@ public:
 
             void doIt()
             {
+                import std.algorithm.comparison : min;
+
                 scope(failure)
                 {
                     // If an exception is thrown, all threads should bail.
@@ -1727,8 +1736,8 @@ public:
 
                     static if (hasSlicing!R)
                     {
-                        auto subrange = range[start..end];
-                        foreach (i; start..end)
+                        auto subrange = range[start .. end];
+                        foreach (i; start .. end)
                         {
                             emplaceRef(buf[i], fun(subrange.front));
                             subrange.popFront();
@@ -1736,7 +1745,7 @@ public:
                     }
                     else
                     {
-                        foreach (i; start..end)
+                        foreach (i; start .. end)
                         {
                             emplaceRef(buf[i], fun(range[i]));
                         }
@@ -1825,6 +1834,8 @@ public:
         map(S)(S source, size_t bufSize = 100, size_t workUnitSize = size_t.max)
         if (isInputRange!S)
         {
+            import std.exception : enforce;
+
             enforce(workUnitSize == size_t.max || workUnitSize <= bufSize,
                     "Work unit size must be smaller than buffer size.");
             alias fun = adjoin!(staticMap!(unaryFun, functions));
@@ -1855,7 +1866,9 @@ public:
 
                 void popSource()
                 {
-                    static if (__traits(compiles, source[0..source.length]))
+                    import std.algorithm.comparison : min;
+
+                    static if (__traits(compiles, source[0 .. source.length]))
                     {
                         source = source[min(buf1.length, source.length)..source.length];
                     }
@@ -1891,6 +1904,8 @@ public:
                 // No need to copy element by element.
                 FromType dumpToFrom()
                 {
+                    import std.algorithm.mutation : swap;
+
                     assert(source.buf1.length <= from.length);
                     from.length = source.buf1.length;
                     swap(source.buf1, from);
@@ -1927,7 +1942,7 @@ public:
                         from[i++] = source.front;
                     }
 
-                    from = from[0..i];
+                    from = from[0 .. i];
                     return from;
                 }
             }
@@ -1975,8 +1990,11 @@ public:
                 // case.
                 E[] fillBuf(E[] buf)
                 {
+                    import std.algorithm.comparison : min;
+
                     static if (isRandomAccessRange!S)
                     {
+                        import std.range : take;
                         auto toMap = take(source, buf.length);
                         scope(success) popSource();
                     }
@@ -1985,7 +2003,7 @@ public:
                         auto toMap = dumpToFrom();
                     }
 
-                    buf = buf[0..min(buf.length, toMap.length)];
+                    buf = buf[0 .. min(buf.length, toMap.length)];
 
                     // Handle as a special case:
                     if (pool.size == 0)
@@ -2068,14 +2086,14 @@ public:
                     }
                 }
 
-                static if (std.range.isInfinite!S)
+                static if (isInfinite!S)
                 {
                     enum bool empty = false;
                 }
                 else
                 {
 
-                    bool empty() @property
+                    bool empty() const @property
                     {
                         // popFront() sets this when source is empty
                         return buf1.length == 0;
@@ -2185,7 +2203,7 @@ public:
                     buf[i++] = source.front;
                 }
 
-                buf = buf[0..i];
+                buf = buf[0 .. i];
                 return buf;
             }
 
@@ -2248,7 +2266,7 @@ public:
                 }
             }
 
-            static if (std.range.isInfinite!S)
+            static if (isInfinite!S)
             {
                 enum bool empty = false;
             }
@@ -2344,7 +2362,7 @@ public:
     {
         /**
         Parallel reduce on a random access range.  Except as otherwise noted,
-        usage is similar to $(XREF_PACK algorithm,iteration,_reduce).  This
+        usage is similar to $(REF _reduce, std,algorithm,iteration).  This
         function works by splitting the range to be reduced into work units,
         which are slices to be reduced in parallel.  Once the results from all
         work units are computed, a final serial reduction is performed on these
@@ -2365,14 +2383,14 @@ public:
         algorithm. These take advantage of the instruction level parallelism of
         modern CPUs, in addition to the thread-level parallelism that the rest
         of this module exploits.  This can lead to better than linear speedups
-        relative to $(XREF_PACK algorithm,iteration,_reduce), especially for
+        relative to $(REF _reduce, std,algorithm,iteration), especially for
         fine-grained benchmarks like dot products.
 
         An explicit seed may be provided as the first argument.  If
         provided, it is used as the seed for all work units and for the final
         reduction of results from all work units.  Therefore, if it is not the
         identity value for the operation being performed, results may differ
-        from those generated by $(XREF_PACK algorithm,iteration,_reduce) or
+        from those generated by $(REF _reduce, std,algorithm,iteration) or
         depending on how many work units are used.  The next argument must be
         the range to be reduced.
         ---
@@ -2428,6 +2446,10 @@ public:
          */
         auto reduce(Args...)(Args args)
         {
+            import core.exception : OutOfMemoryError;
+            import std.conv : emplaceRef;
+            import std.exception : enforce;
+
             alias fun = reduceAdjoin!functions;
             alias finishFun = reduceFinish!functions;
 
@@ -2518,7 +2540,7 @@ public:
                         lowerBound++;
                     }
 
-                    foreach (i; lowerBound..upperBound)
+                    foreach (i; lowerBound .. upperBound)
                     {
                         result = fun(result, range[i]);
                     }
@@ -2546,7 +2568,7 @@ public:
                 }
 
                 immutable nLoop = subSize - (!explicitSeed);
-                foreach (i; 0..nLoop)
+                foreach (i; 0 .. nLoop)
                 {
                     foreach (j; ilpTuple)
                     {
@@ -2556,7 +2578,7 @@ public:
                 }
 
                 // Finish the remainder.
-                foreach (i; nILP * subSize + lowerBound..upperBound)
+                foreach (i; nILP * subSize + lowerBound .. upperBound)
                 {
                     results[$ - 1] = fun(results[$ - 1], range[i]);
                 }
@@ -2603,10 +2625,10 @@ public:
             byte[maxStack] buf = void;
             immutable size_t nBytesNeeded = nWorkUnits * RTask.sizeof;
 
-            import core.stdc.stdlib;
+            import core.stdc.stdlib : malloc, free;
             if (nBytesNeeded < maxStack)
             {
-                tasks = (cast(RTask*) buf.ptr)[0..nWorkUnits];
+                tasks = (cast(RTask*) buf.ptr)[0 .. nWorkUnits];
             }
             else
             {
@@ -2618,7 +2640,7 @@ public:
                     );
                 }
 
-                tasks = ptr[0..nWorkUnits];
+                tasks = ptr[0 .. nWorkUnits];
             }
 
             scope(exit)
@@ -2634,14 +2656,17 @@ public:
 
             // Hack to take the address of a nested function w/o
             // making a closure.
-            static auto scopedAddress(D)(scope D del)
+            static auto scopedAddress(D)(scope D del) @system
             {
-                return del;
+                auto tmp = del;
+                return tmp;
             }
 
             size_t curPos = 0;
             void useTask(ref RTask task)
             {
+                import std.algorithm.comparison : min;
+
                 task.pool = this;
                 task._args[0] = scopedAddress(&reduceOnRange);
                 task._args[3] = min(len, curPos + workUnitSize);  // upper bound.
@@ -2656,7 +2681,7 @@ public:
                 useTask(task);
             }
 
-            foreach (i; 1..tasks.length - 1)
+            foreach (i; 1 .. tasks.length - 1)
             {
                 tasks[i].next = tasks[i + 1].basePtr;
                 tasks[i + 1].prev = tasks[i].basePtr;
@@ -2679,7 +2704,7 @@ public:
                 {
                     tasks[0].job();
                 }
-                catch(Throwable e)
+                catch (Throwable e)
                 {
                     tasks[0].exception = e;
                 }
@@ -2704,7 +2729,7 @@ public:
                 {
                     task.yieldForce;
                 }
-                catch(Throwable e)
+                catch (Throwable e)
                 {
                     addToChain(e, firstException, lastException);
                     continue;
@@ -2740,7 +2765,8 @@ public:
     {
         auto filesHandles = new File[taskPool.size + 1];
         scope(exit) {
-            foreach (ref handle; fileHandles) {
+            foreach (ref handle; fileHandles)
+            {
                 handle.close();
             }
         }
@@ -2825,7 +2851,8 @@ public:
             {
                 return num;
             }
-            else {
+            else
+            {
                 return ((num / cacheLineSize) + 1) * cacheLineSize;
             }
         }
@@ -2856,16 +2883,17 @@ public:
             // Cache line align data ptr.
             data = cast(void*) roundToLine(cast(size_t) data);
 
-            foreach (i; 0..nElem)
+            foreach (i; 0 .. nElem)
             {
                 this.opIndex(i) = T.init;
             }
         }
 
-        ref T opIndex(size_t index)
+        ref opIndex(this Qualified)(size_t index)
         {
+            import std.conv : text;
             assert(index < size, text(index, '\t', uint.max));
-            return *(cast(T*) (data + elemSize * index));
+            return *(cast(CopyTypeQualifiers!(Qualified, T)*) (data + elemSize * index));
         }
 
         void opIndexAssign(T val, size_t index)
@@ -2888,7 +2916,7 @@ public:
         failure will result when calling this method.  This is not checked
         when assertions are disabled for performance reasons.
          */
-        ref T get() @property
+        ref get(this Qualified)() @property
         {
             assert(*stillThreadLocal,
                 "Cannot call get() on this instance of WorkerLocalStorage " ~
@@ -2968,12 +2996,12 @@ public:
         }
 
     public:
-        ref T front() @property
+        ref front(this Qualified)() @property
         {
             return this[0];
         }
 
-        ref T back() @property
+        ref back(this Qualified)() @property
         {
             return this[_length - 1];
         }
@@ -3000,7 +3028,7 @@ public:
             return this;
         }
 
-        ref T opIndex(size_t index)
+        ref opIndex(this Qualified)(size_t index)
         {
             assert(index < _length);
             return workerLocalStorage[index + beginOffset];
@@ -3021,12 +3049,12 @@ public:
             return typeof(this)(newWl);
         }
 
-        bool empty() @property
+        bool empty() const @property
         {
             return length == 0;
         }
 
-        size_t length() @property
+        size_t length() const @property
         {
             return _length;
         }
@@ -3042,7 +3070,7 @@ public:
     {
         WorkerLocalStorage!T ret;
         ret.initialize(this);
-        foreach (i; 0..size + 1)
+        foreach (i; 0 .. size + 1)
         {
             ret[i] = initialVal;
         }
@@ -3141,7 +3169,7 @@ public:
     Notes:
 
     @trusted overloads of this function are called for $(D Task)s if
-    $(XREF traits, hasUnsharedAliasing) is false for the $(D Task)'s
+    $(REF hasUnsharedAliasing, std,traits) is false for the $(D Task)'s
     return type or the function the $(D Task) executes is $(D pure).
     $(D Task) objects that meet all other requirements specified in the
     $(D @trusted) overloads of $(D task) and $(D scopedTask) may be created
@@ -3166,6 +3194,7 @@ public:
     void put(alias fun, Args...)(Task!(fun, Args)* task)
     if (!isSafeReturn!(typeof(*task)))
     {
+        import std.exception : enforce;
         enforce(task !is null, "Cannot put a null Task on a TaskPool queue.");
         put(*task);
     }
@@ -3180,6 +3209,7 @@ public:
     @trusted void put(alias fun, Args...)(Task!(fun, Args)* task)
     if (isSafeReturn!(typeof(*task)))
     {
+        import std.exception : enforce;
         enforce(task !is null, "Cannot put a null Task on a TaskPool queue.");
         put(*task);
     }
@@ -3299,7 +3329,8 @@ Example:
 // default TaskPool instance.
 auto logs = new double[1_000_000];
 
-foreach (i, ref elem; parallel(logs)) {
+foreach (i, ref elem; parallel(logs))
+{
     elem = log(i + 1.0);
 }
 ---
@@ -3337,10 +3368,11 @@ private void submitAndExecute(
     scope void delegate() doIt
 )
 {
+    import core.exception : OutOfMemoryError;
     immutable nThreads = pool.size + 1;
 
     alias PTask = typeof(scopedTask(doIt));
-    import core.stdc.stdlib;
+    import core.stdc.stdlib : malloc, free;
     import core.stdc.string : memcpy;
 
     // The logical thing to do would be to just use alloca() here, but that
@@ -3356,13 +3388,13 @@ private void submitAndExecute(
     PTask[] tasks;
     if (nThreads <= nBuf)
     {
-        tasks = (cast(PTask*) buf.ptr)[0..nThreads];
+        tasks = (cast(PTask*) buf.ptr)[0 .. nThreads];
     }
     else
     {
         auto ptr = cast(PTask*) malloc(nThreads * PTask.sizeof);
         if (!ptr) throw new OutOfMemoryError("Out of memory in std.parallelism.");
-        tasks = ptr[0..nThreads];
+        tasks = ptr[0 .. nThreads];
     }
 
     scope(exit)
@@ -3388,7 +3420,7 @@ private void submitAndExecute(
         t.pool = pool;
     }
 
-    foreach (i; 1..tasks.length - 1)
+    foreach (i; 1 .. tasks.length - 1)
     {
         tasks[i].next = tasks[i + 1].basePtr;
         tasks[i + 1].prev = tasks[i].basePtr;
@@ -3411,7 +3443,7 @@ private void submitAndExecute(
         {
             tasks[0].job();
         }
-        catch(Throwable e)
+        catch (Throwable e)
         {
             tasks[0].exception = e;
         }
@@ -3432,7 +3464,7 @@ private void submitAndExecute(
         {
             task.yieldForce;
         }
-        catch(Throwable e)
+        catch (Throwable e)
         {
             addToChain(e, firstException, lastException);
             continue;
@@ -3510,6 +3542,8 @@ private enum string parallelApplyMixinRandomAccess = q{
 
     void doIt()
     {
+        import std.algorithm.comparison : min;
+
         scope(failure)
         {
             // If an exception is thrown, all threads should bail.
@@ -3528,7 +3562,7 @@ private enum string parallelApplyMixinRandomAccess = q{
 
             immutable end = min(len, start + workUnitSize);
 
-            foreach (i; start..end)
+            foreach (i; start .. end)
             {
                 static if (withIndex)
                 {
@@ -3607,6 +3641,7 @@ enum string parallelApplyMixinInputRange = q{
             size_t makeTemp()
             {
                 import std.algorithm.internal : addressOf;
+                import std.array : uninitializedArray;
 
                 if (temp is null)
                 {
@@ -3622,7 +3657,7 @@ enum string parallelApplyMixinInputRange = q{
                     temp[i] = addressOf(range.front);
                 }
 
-                temp = temp[0..i];
+                temp = temp[0 .. i];
                 auto ret = nPopped;
                 nPopped += temp.length;
                 return ret;
@@ -3638,6 +3673,8 @@ enum string parallelApplyMixinInputRange = q{
             // Returns:  The previous value of nPopped.
             static if (!bufferTrick) size_t makeTemp()
             {
+                import std.array : uninitializedArray;
+
                 if (temp is null)
                 {
                     temp = uninitializedArray!Temp(workUnitSize);
@@ -3652,7 +3689,7 @@ enum string parallelApplyMixinInputRange = q{
                     temp[i] = range.front;
                 }
 
-                temp = temp[0..i];
+                temp = temp[0 .. i];
                 auto ret = nPopped;
                 nPopped += temp.length;
                 return ret;
@@ -3660,6 +3697,7 @@ enum string parallelApplyMixinInputRange = q{
 
             static if (bufferTrick) size_t makeTemp()
             {
+                import std.algorithm.mutation : swap;
                 rangeMutex.lock();
                 scope(exit) rangeMutex.unlock();
 
@@ -3692,7 +3730,7 @@ enum string parallelApplyMixinInputRange = q{
                 break;
             }
 
-            foreach (i; 0..temp.length)
+            foreach (i; 0 .. temp.length)
             {
                 scope(success) overallIndex++;
 
@@ -3891,8 +3929,17 @@ version(unittest)
 
 // These test basic functionality but don't stress test for threading bugs.
 // These are the tests that should be run every time Phobos is compiled.
-unittest
+@system unittest
 {
+    import std.algorithm.iteration : filter, map, reduce;
+    import std.algorithm.comparison : equal, min, max;
+    import std.array : split;
+    import std.conv : text;
+    import std.exception : assertThrown;
+    import std.math : approxEqual, sqrt, log;
+    import std.range : indexed, iota, join;
+    import std.typecons : Tuple, tuple;
+
     poolInstance = new TaskPool(2);
     scope(exit) poolInstance.stop();
 
@@ -4037,12 +4084,12 @@ unittest
 
     // Test amap with a non-array buffer.
     auto toIndex = new int[5];
-    auto indexed = std.range.indexed(toIndex, [3, 1, 4, 0, 2]);
-    poolInstance.amap!"a * 2"([1, 2, 3, 4, 5], indexed);
-    assert(equal(indexed, [2, 4, 6, 8, 10]));
+    auto ind = indexed(toIndex, [3, 1, 4, 0, 2]);
+    poolInstance.amap!"a * 2"([1, 2, 3, 4, 5], ind);
+    assert(equal(ind, [2, 4, 6, 8, 10]));
     assert(equal(toIndex, [8, 4, 10, 2, 6]));
-    poolInstance.amap!"a / 2"(indexed, indexed);
-    assert(equal(indexed, [1, 2, 3, 4, 5]));
+    poolInstance.amap!"a / 2"(ind, ind);
+    assert(equal(ind, [1, 2, 3, 4, 5]));
     assert(equal(toIndex, [4, 2, 5, 1, 3]));
 
     auto buf = new int[5];
@@ -4059,7 +4106,7 @@ unittest
     assert(poolInstance.reduce!("a + b", "a * b")(tuple(0, 1), [1,2,3,4]) ==
            tuple(10, 24));
 
-    immutable serialAns = std.algorithm.reduce!"a + b"(iota(1000));
+    immutable serialAns = reduce!"a + b"(iota(1000));
     assert(poolInstance.reduce!"a + b"(0, iota(1000)) == serialAns);
     assert(poolInstance.reduce!"a + b"(iota(1000)) == serialAns);
 
@@ -4073,8 +4120,8 @@ unittest
     auto wlRange = wl.toRange;
     auto parallelSum = poolInstance.reduce!"a + b"(wlRange);
     assert(parallelSum == 499500);
-    assert(wlRange[0..1][0] == wlRange[0]);
-    assert(wlRange[1..2][0] == wlRange[1]);
+    assert(wlRange[0 .. 1][0] == wlRange[0]);
+    assert(wlRange[1 .. 2][0] == wlRange[1]);
 
     // Test finish()
     {
@@ -4120,7 +4167,7 @@ unittest
 
     assert(equal(
                poolInstance.map!"a * a"(iota(30_000_001), 10_000),
-               std.algorithm.map!"a * a"(iota(30_000_001))
+               map!"a * a"(iota(30_000_001))
            ));
 
     // The filter is to kill random access and test the non-random access
@@ -4129,7 +4176,7 @@ unittest
                poolInstance.map!"a * a"(
                    filter!"a == a"(iota(30_000_001)
                                   ), 10_000, 1000),
-               std.algorithm.map!"a * a"(iota(30_000_001))
+               map!"a * a"(iota(30_000_001))
            ));
 
     assert(
@@ -4137,7 +4184,7 @@ unittest
                        poolInstance.map!"a * a"(iota(3_000_001), 10_000)
                       ) ==
         reduce!"a + b"(0UL,
-                       std.algorithm.map!"a * a"(iota(3_000_001))
+                       map!"a * a"(iota(3_000_001))
                       )
     );
 
@@ -4147,6 +4194,7 @@ unittest
            ));
 
     {
+        import std.conv : to;
         import std.file : deleteme;
 
         string temp_file = deleteme ~ "-tempDelMe.txt";
@@ -4293,7 +4341,7 @@ unittest
 // tons of stuff and should not be run every time make unittest is run.
 version(parallelismStressTest)
 {
-    unittest
+    @safe unittest
     {
         size_t attempt;
         for (; attempt < 10; attempt++)
@@ -4310,7 +4358,7 @@ version(parallelismStressTest)
             }
 
             // Make sure it works.
-            foreach (i; 0..numbers.length)
+            foreach (i; 0 .. numbers.length)
             {
                 assert(numbers[i] == i);
             }
@@ -4376,9 +4424,9 @@ version(parallelismStressTest)
 
     // These unittests are intended more for actual testing and not so much
     // as examples.
-    unittest
+    @safe unittest
     {
-        foreach (attempt; 0..10)
+        foreach (attempt; 0 .. 10)
         foreach (poolSize; [0, 4])
         {
             poolInstance = new TaskPool(poolSize);
@@ -4487,7 +4535,7 @@ version(parallelismStressTest)
                 // Test work waiting.
                 static void uselessFun()
                 {
-                    foreach (i; 0..1_000_000) {}
+                    foreach (i; 0 .. 1_000_000) {}
                 }
 
                 auto uselessTasks = new typeof(task(&uselessFun))[1000];
@@ -4542,19 +4590,37 @@ version(unittest)
 {
     struct __S_12733
     {
-        invariant() { assert(checksum == 1234567890); }
+        invariant() { assert(checksum == 1_234_567_890); }
         this(ulong u){n = u;}
         void opAssign(__S_12733 s){this.n = s.n;}
         ulong n;
-        ulong checksum = 1234567890;
+        ulong checksum = 1_234_567_890;
     }
 
     static auto __genPair_12733(ulong n) { return __S_12733(n); }
 }
 
-unittest
+@system unittest
 {
     immutable ulong[] data = [ 2UL^^59-1, 2UL^^59-1, 2UL^^59-1, 112_272_537_195_293UL ];
 
     auto result = taskPool.amap!__genPair_12733(data);
+}
+
+@safe unittest
+{
+    import std.range : iota;
+
+    // this test was in std.range, but caused cycles.
+    assert(__traits(compiles, { foreach (i; iota(0, 100UL).parallel) {} }));
+}
+
+@safe unittest
+{
+    import std.algorithm.iteration : each;
+
+    long[] arr;
+    static assert(is(typeof({
+        arr.parallel.each!"a++";
+    })));
 }

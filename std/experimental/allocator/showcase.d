@@ -39,7 +39,7 @@ alias StackFront(size_t stackSize, Allocator = GCAllocator) =
         Allocator);
 
 ///
-unittest
+@system unittest
 {
     StackFront!4096 a;
     auto b = a.allocate(4000);
@@ -61,7 +61,7 @@ auto mmapRegionList(size_t bytesPerRegion)
     static struct Factory
     {
         size_t bytesPerRegion;
-        private import std.algorithm : max;
+        private import std.algorithm.comparison : max;
         private import std.experimental.allocator.building_blocks.region
             : Region;
         private import std.experimental.allocator.mmap_allocator
@@ -84,7 +84,7 @@ auto mmapRegionList(size_t bytesPerRegion)
 }
 
 ///
-unittest
+@system unittest
 {
     auto alloc = mmapRegionList(1024 * 1024);
     const b = alloc.allocate(100);

@@ -14,7 +14,7 @@ allocated. Put simply, the client must pass the allocated size upon
 deallocation. Storing the size in the _allocator has significant negative
 performance implications, and is virtually always redundant because client code
 needs knowledge of the allocated size in order to avoid buffer overruns. (See
-more discussion in a $(WEB open-
+more discussion in a $(HTTP open-
 std.org/JTC1/SC22/WG21/docs/papers/2013/n3536.html, proposal) for sized
 deallocation in C++.) For this reason, allocators herein traffic in $(D void[])
 as opposed to $(D void*).)
@@ -42,7 +42,7 @@ alignedReallocate) APIs.))
 $(TR $(TDC size_t goodAllocSize(size_t n);, $(POST $(RES) >= n)) $(TD Allocators
 customarily allocate memory in discretely-sized chunks. Therefore, a request for
 $(D n) bytes may result in a larger allocation. The extra memory allocated goes
-unused and adds to the so-called $(WEB goo.gl/YoKffF,internal fragmentation).
+unused and adds to the so-called $(HTTP goo.gl/YoKffF,internal fragmentation).
 The function $(D goodAllocSize(n)) returns the actual number of bytes that would
 be allocated upon a request for $(D n) bytes. This module defines a default
 implementation that returns $(D n) rounded up to a multiple of the allocator's
@@ -62,7 +62,7 @@ $(TR $(TDC void[] allocateAll();) $(TD Offers all of allocator's memory to the
 caller, so it's usually defined by fixed-size allocators. If the allocator is
 currently NOT managing any memory, then $(D allocateAll()) shall allocate and
 return all memory available to the allocator, and subsequent calls to all
-allocation primitives should not succeed (e..g $(D allocate) shall return $(D
+allocation primitives should not succeed (e.g. $(D allocate) shall return $(D
 null) etc). Otherwise, $(D allocateAll) only works on a best-effort basis, and
 the allocator is allowed to return $(D null) even if does have available memory.
 Memory allocated with $(D allocateAll) is not otherwise special (e.g. can be
@@ -70,8 +70,8 @@ reallocated or deallocated with the usual primitives, if defined).))
 
 $(TR $(TDC bool expand(ref void[] b, size_t delta);, $(POST !$(RES) || b.length
 == $(I old)(b).length + delta)) $(TD Expands $(D b) by $(D delta) bytes. If $(D
-delta == 0), succeeds without changing $(D b). If $(D b is null), the call
-evaluates $(D b = allocate(delta)) and returns $(D b !is null). Otherwise, $(D
+delta == 0), succeeds without changing $(D b). If $(D b is null), returns
+`false` (the null pointer cannot be expanded in place). Otherwise, $(D
 b) must be a buffer previously allocated with the same allocator. If expansion
 was successful, $(D expand) changes $(D b)'s length to $(D b.length + delta) and
 returns $(D true). Upon failure, the call effects no change upon the allocator
@@ -103,11 +103,12 @@ or linear time with a low multiplication factor). Traditional allocators such as
 the C heap do not define such functionality. If $(D b is null), the allocator
 shall return `Ternary.no`, i.e. no allocator owns the `null` slice.))
 
-$(TR $(TDC void[] resolveInternalPointer(void* p);) $(TD If $(D p) is a pointer
-somewhere inside a block allocated with this allocator, returns a pointer to the
-beginning of the allocated block. Otherwise, returns $(D null). If the pointer
-points immediately after an allocated block, the result is implementation
-defined.))
+$(TR $(TDC Ternary resolveInternalPointer(void* p, ref void[] result);) $(TD If
+`p` is a pointer somewhere inside a block allocated with this allocator,
+`result` holds a pointer to the beginning of the allocated block and returns
+`Ternary.yes`. Otherwise, `result` holds `null` and returns `Ternary.no`.
+If the pointer points immediately after an allocated block, the result is
+implementation defined.))
 
 $(TR $(TDC bool deallocate(void[] b);) $(TD If $(D b is null), does
 nothing and returns `true`. Otherwise, deallocates memory previously allocated
@@ -135,7 +136,7 @@ thread-safe or not, this instance may be $(D shared).))
 
 $(H2 Sample Assembly)
 
-The example below features an _allocator modeled after $(WEB goo.gl/m7329l,
+The example below features an _allocator modeled after $(HTTP goo.gl/m7329l,
 jemalloc), which uses a battery of free-list allocators spaced so as to keep
 internal fragmentation to a minimum. The $(D FList) definitions specify no
 bounds for the freelist because the $(D Segregator) does all size selection in
@@ -201,8 +202,7 @@ or `import` `std.experimental.building_blocks`, which imports them all
 `public`ly. The building blocks can be assembled in unbounded ways and also
 combined with your own. For a collection of typical and useful preassembled
 allocators and for inspiration in defining more such assemblies, refer to
-$(LINK2 std_experimental_allocator_showcase.html,
-`std.experimental.allocator.building_blocks.showcase`).)
+$(MREF std,experimental,allocator,showcase).)
 
 $(BOOKTABLE,
 $(TR $(TH Allocator$(BR)) $(TH Description))
@@ -220,8 +220,8 @@ to leak.))
 
 $(TR $(TDC3 AlignedMallocator, mallocator) $(TD Interface to OS-specific _allocators that
 support specifying alignment:
-$(WEB man7.org/linux/man-pages/man3/posix_memalign.3.html, $(D posix_memalign))
-on Posix and $(WEB msdn.microsoft.com/en-us/library/fs9stz4e(v=vs.80).aspx,
+$(HTTP man7.org/linux/man-pages/man3/posix_memalign.3.html, $(D posix_memalign))
+on Posix and $(HTTP msdn.microsoft.com/en-us/library/fs9stz4e(v=vs.80).aspx,
 $(D __aligned_xxx)) on Windows.))
 
 $(TR $(TDC2 AffixAllocator, affix_allocator) $(TD Allocator that allows and manages allocating
@@ -236,7 +236,7 @@ $(TR $(TDC2 FallbackAllocator, fallback_allocator) $(TD Allocator that combines 
  upon failure are passed to the fallback. Useful for small and fast allocators
  fronting general-purpose ones.))
 
-$(TR $(TDC2 FreeList, free_list) $(TD Allocator that implements a $(WEB
+$(TR $(TDC2 FreeList, free_list) $(TD Allocator that implements a $(HTTP
 wikipedia.org/wiki/Free_list, free list) on top of any other allocator. The
 preferred size, tolerance, and maximum elements are configurable at compile- and
 run time.))
@@ -253,10 +253,11 @@ simple bump-the-pointer allocator.))
 $(TR $(TDC2 InSituRegion, region) $(TD Region holding its own allocation, most often on
 the stack. Has statically-determined size.))
 
-$(TR $(TDC2 SbrkRegion, region) $(TD Region using $(D $(LUCKY sbrk)) for allocating
-memory.))
+$(TR $(TDC2 SbrkRegion, region) $(TD Region using $(D $(LINK2 https://en.wikipedia.org/wiki/Sbrk,
+sbrk)) for allocating memory.))
 
-$(TR $(TDC3 MmapAllocator, mmap_allocator) $(TD Allocator using $(D $(LUCKY mmap)) directly.))
+$(TR $(TDC3 MmapAllocator, mmap_allocator) $(TD Allocator using
+            $(D $(LINK2 https://en.wikipedia.org/wiki/Mmap, mmap)) directly.))
 
 $(TR $(TDC2 StatsCollector, stats_collector) $(TD Collect statistics about any other
 allocator.))
@@ -280,9 +281,8 @@ pointers on top of another allocator.)))
 )
 
 Macros:
-MYREF = $(LINK2 std_experimental_allocator_building_blocks_$2.html, $1)&nbsp;
-MYREF2 = $(LINK2 std_experimental_allocator_building_blocks_$2.html#$1, $1)&nbsp;
-MYREF3 = $(LINK2 std_experimental_allocator_$2.html#$1, $1)&nbsp;
+MYREF2 = $(REF_SHORT $1, std,experimental,allocator,building_blocks,$2)
+MYREF3 = $(REF_SHORT $1, std,experimental,allocator,$2)
 TDC = $(TDNW $(D $1)$+)
 TDC2 = $(TDNW $(D $(MYREF2 $1,$+))$(BR)$(SMALL
 $(D std.experimental.allocator.building_blocks.$2)))
