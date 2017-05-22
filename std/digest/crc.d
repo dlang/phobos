@@ -478,6 +478,23 @@ ubyte[4] crc32Of(T...)(T data)
     return digest!(CRC32, T)(data);
 }
 
+///
+@system unittest
+{
+    ubyte[] data = [4,5,7,25];
+    assert(data.crc32Of == [167, 180, 199, 131]);
+
+    import std.utf : byChar;
+    assert("hello"d.byChar.crc32Of == [134, 166, 16, 54]);
+
+    ubyte[4] hash = "abc".crc32Of();
+    assert(hash == digest!CRC32("ab", "c"));
+
+    import std.range : iota;
+    enum ubyte S = 5, F = 66;
+    assert(iota(S, F).crc32Of == [59, 140, 234, 154]);
+}
+
 /**
  * This is a convenience alias for $(REF digest, std,digest,digest) using the
  * CRC64-ECMA implementation.
@@ -512,23 +529,6 @@ ubyte[8] crc64ECMAOf(T...)(T data)
 ubyte[8] crc64ISOOf(T...)(T data)
 {
     return digest!(CRC64ISO, T)(data);
-}
-
-///
-@system unittest
-{
-    ubyte[] data = [4,5,7,25];
-    assert(data.crc32Of == [167, 180, 199, 131]);
-
-    import std.utf : byChar;
-    assert("hello"d.byChar.crc32Of == [134, 166, 16, 54]);
-
-    ubyte[4] hash = "abc".crc32Of();
-    assert(hash == digest!CRC32("ab", "c"));
-
-    import std.range : iota;
-    enum ubyte S = 5, F = 66;
-    assert(iota(S, F).crc32Of == [59, 140, 234, 154]);
 }
 
 /**
