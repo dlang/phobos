@@ -1860,14 +1860,20 @@ template functionLinkage(func...)
 {
     alias Func = Unqual!(FunctionTypeOf!func);
 
-    enum string functionLinkage =
-        [
-            'F': "D",
-            'U': "C",
-            'W': "Windows",
-            'V': "Pascal",
-            'R': "C++"
-        ][ mangledName!Func[0] ];
+    static if (mangledName!Func[0] == 'N')
+        enum string functionLinkage =
+            [
+                'p': "Pascal",
+            ][ mangledName!Func[1] ];
+    else
+        enum string functionLinkage =
+            [
+                'F': "D",
+                'U': "C",
+                'W': "Windows",
+                'V': "Pascal",
+                'R': "C++"
+            ][ mangledName!Func[0] ];
 }
 
 ///
