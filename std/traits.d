@@ -1853,21 +1853,16 @@ template isUnsafe(alias func)
 
 
 /**
-Returns the calling convention of function as a string.
+Determine the linkage attribute of the function.
+Params:
+    func = the function symbol, or the type of a function, delegate, or pointer to function
+Returns:
+    one of the strings "D", "C", "Windows", "Pascal", or "Objective-C"
 */
 template functionLinkage(func...)
     if (func.length == 1 && isCallable!func)
 {
-    alias Func = Unqual!(FunctionTypeOf!func);
-
-    enum string functionLinkage =
-        [
-            'F': "D",
-            'U': "C",
-            'W': "Windows",
-            'V': "Pascal",
-            'R': "C++"
-        ][ mangledName!Func[0] ];
+    enum string functionLinkage = __traits(getLinkage, FunctionTypeOf!func);
 }
 
 ///
