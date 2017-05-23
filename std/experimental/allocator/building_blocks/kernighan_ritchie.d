@@ -813,7 +813,7 @@ it actually returns memory to the operating system when possible.
 
     void test(int[] sizes)
     {
-        ubyte[256 * 1024] buf;
+        align(size_t.sizeof) ubyte[256 * 1024] buf;
         auto a = KRRegion!()(buf);
 
         void[][] bufs;
@@ -855,7 +855,7 @@ it actually returns memory to the operating system when possible.
 
     void test(int[] sizes, int word)
     {
-        ubyte[256 * 1024] buf;
+        align(size_t.sizeof) ubyte[256 * 1024] buf;
         auto a = KRRegion!()(buf);
 
         void[][] bufs;
