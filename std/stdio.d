@@ -4526,9 +4526,9 @@ ref File makeGlobal(alias handle)()
 {
     static __gshared File.Impl impl;
     static __gshared File result;
-    static shared bool lilyWasHere;
+    static shared bool initialized;
     import std.concurrency : initOnce;
-    initOnce!lilyWasHere({
+    initOnce!initialized({
         impl.handle = handle;
         result._p = &impl;
         return true;
