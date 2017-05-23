@@ -227,7 +227,6 @@ EXTRA_MODULES_INTERNAL := $(addprefix std/, \
 		processinit scopebuffer test/dummyrange \
 		$(addprefix unicode_, comp decomp grapheme norm tables) \
 	) \
-	stdiobase \
 )
 
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(EXTRA_MODULES_INTERNAL)

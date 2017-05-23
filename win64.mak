@@ -112,7 +112,6 @@ SRC= \
 # The separation is a workaround for bug 4904 (optlink bug 3372).
 SRC_STD_1= \
 	std\stdio.d \
-	std\stdiobase.d \
 	std\string.d \
 	std\format.d \
 	std\file.d
