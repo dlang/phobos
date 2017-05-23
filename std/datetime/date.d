@@ -2869,9 +2869,18 @@ public:
     {
         import std.format : format;
         try
-            return format("%sT%s", _date.toISOString(), _tod.toISOString());
+        {
+            return format!("%sT%02d%02d%02d")(
+                _date.toISOString(),
+                _tod._hour,
+                _tod._minute,
+                _tod._second
+            );
+        }
         catch (Exception e)
+        {
             assert(0, "format() threw.");
+        }
     }
 
     ///
@@ -2922,9 +2931,18 @@ public:
     {
         import std.format : format;
         try
-            return format("%sT%s", _date.toISOExtString(), _tod.toISOExtString());
+        {
+            return format!("%sT%02d:%02d:%02d")(
+                _date.toISOExtString(),
+                _tod._hour,
+                _tod._minute,
+                _tod._second
+            );
+        }
         catch (Exception e)
+        {
             assert(0, "format() threw.");
+        }
     }
 
     ///
@@ -2974,9 +2992,18 @@ public:
     {
         import std.format : format;
         try
-            return format("%s %s", _date.toSimpleString(), _tod.toString());
+        {
+            return format!("%s %02d:%02d:%02d")(
+                _date.toSimpleString(),
+                _tod._hour,
+                _tod._minute,
+                _tod._second
+            );
+        }
         catch (Exception e)
+        {
             assert(0, "format() threw.");
+        }
     }
 
     ///
