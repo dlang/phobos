@@ -7336,14 +7336,16 @@ public:
         return (cast(Date) this).isoWeek;
     }
 
+    ///
     @safe unittest
     {
-        auto st = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        const cst = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
-        //immutable ist = SysTime(DateTime(1999, 7, 6, 12, 30, 33));
+        auto st = SysTime(Date(1999, 7, 6));
+        const cst = SysTime(Date(2010, 5, 1));
+        immutable ist = SysTime(Date(2015, 10, 10));
+
         assert(st.isoWeek == 27);
-        assert(cst.isoWeek == 27);
-        //assert(ist.isoWeek == 27);
+        assert(cst.isoWeek == 17);
+        assert(ist.isoWeek == 41);
     }
 
 
