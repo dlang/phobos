@@ -4521,18 +4521,22 @@ Initialize with a message and an error code.
     }
 }
 
-// Undocummented but public because std* handles are aliasing it
+// Undocummnted but public because the std* handles are aliasing it.
 ref File makeGlobal(alias handle)()
 {
     static __gshared File.Impl impl;
     static __gshared File result;
     static shared bool initialized;
-    import std.concurrency : initOnce;
-    initOnce!initialized({
-        impl.handle = handle;
-        result._p = &impl;
-        return true;
-    }());
+    if (!initialized)
+    {
+        // Use double-checking because initOnce is inefficient.
+        import std.concurrency : initOnce;
+        initOnce!initialized({
+            impl.handle = handle;
+            result._p = &impl;
+            return true;
+        }());
+    }
     return result;
 }
 
