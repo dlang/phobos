@@ -207,6 +207,13 @@ template to(T)
     {
         return toImpl!T(arg);
     }
+
+    // Fix issue 16108
+    T to(S)(ref S arg)
+        if (isAggregateType!S && !isCopyable!S)
+    {
+        return toImpl!T(arg);
+    }
 }
 
 /**
@@ -1004,6 +1011,51 @@ if (!(isImplicitlyConvertible!(S, T) &&
         test1(e, "");
         test1(e.ptr, "");
     }
+}
+
+/*
+    To string conversion for non copy-able structs
+ */
+private T toImpl(T, S)(ref S value)
+if (!(isImplicitlyConvertible!(S, T) &&
+    !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
+    !isInfinite!S && isExactSomeString!T && !isCopyable!S)
+{
+    import std.format : FormatSpec, formatValue;
+    import std.array : appender;
+
+    auto w = appender!T();
+    FormatSpec!(ElementEncodingType!T) f;
+    formatValue(w, value, f);
+    return w.data;
+}
+
+// Bugzilla 16108
+@system unittest
+{
+    static struct A
+    {
+        int val;
+        bool flag;
+
+        string toString() { return text(val, ":", flag); }
+
+        @disable this(this);
+    }
+
+    auto a = A();
+    assert(to!string(a) == "0:false");
+
+    static struct B
+    {
+        int val;
+        bool flag;
+
+        @disable this(this);
+    }
+
+    auto b = B();
+    assert(to!string(b) == "B(0, false)");
 }
 
 /*
