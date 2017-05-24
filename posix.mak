@@ -221,7 +221,7 @@ EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_WIN32) $(EXTRA_MOD
 EXTRA_MODULES_INTERNAL := $(addprefix std/, \
 	algorithm/internal concurrencybase \
 	$(addprefix internal/, \
-		cstring digest/sha_SSSE3 encodinginit \
+		cstring digest/sha_SSSE3 \
 		$(addprefix math/, biguintcore biguintnoasm biguintx86	\
 						   errorfunction gammafunction ) \
 		processinit scopebuffer test/dummyrange \

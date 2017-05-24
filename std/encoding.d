@@ -106,7 +106,6 @@ module std.encoding;
 import std.traits;
 import std.typecons;
 import std.range.primitives;
-import std.internal.encodinginit;
 
 @system unittest
 {
@@ -2461,6 +2460,22 @@ abstract class EncodingScheme
      */
     static EncodingScheme create(string encodingName)
     {
+        static bool registerDefaultEncodings()
+        {
+            EncodingScheme.register!EncodingSchemeASCII;
+            EncodingScheme.register!EncodingSchemeLatin1;
+            EncodingScheme.register!EncodingSchemeLatin2;
+            EncodingScheme.register!EncodingSchemeWindows1250;
+            EncodingScheme.register!EncodingSchemeWindows1252;
+            EncodingScheme.register!EncodingSchemeUtf8;
+            EncodingScheme.register!EncodingSchemeUtf16Native;
+            EncodingScheme.register!EncodingSchemeUtf32Native;
+            return true;
+        }
+
+        static shared bool initialized;
+        import std.concurrency : initOnce;
+        initOnce!initialized(registerDefaultEncodings());
         encodingName = toLower(encodingName);
 
         if (auto p = encodingName in supported)
@@ -3366,20 +3381,6 @@ class EncodingSchemeUtf32Native : EncodingScheme
     dchar dc = efrom.safeDecode(ub);
     assert(dc == 410);
     assert(ub.length == 8);
-}
-
-
-// shared static this() called from encodinginit to break ctor cycle
-extern(C) void std_encoding_shared_static_this()
-{
-    EncodingScheme.register!EncodingSchemeASCII;
-    EncodingScheme.register!EncodingSchemeLatin1;
-    EncodingScheme.register!EncodingSchemeLatin2;
-    EncodingScheme.register!EncodingSchemeWindows1250;
-    EncodingScheme.register!EncodingSchemeWindows1252;
-    EncodingScheme.register!EncodingSchemeUtf8;
-    EncodingScheme.register!EncodingSchemeUtf16Native;
-    EncodingScheme.register!EncodingSchemeUtf32Native;
 }
 
 //=============================================================================
