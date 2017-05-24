@@ -9035,3 +9035,220 @@ unittest
     assert((a ^ true) == Ternary.no);
     assert((a ^ false) == Ternary.yes);
 }
+
+/**
+Provides untyped storage of size `Size` aligned to `Alignment`.
+
+`Alignment` must be a power of 2.
+Default `Alignment` is the maximum alignment requirement on the current platform.
+
+Note: while this type ensures storage alignment on its own, it still obeys
+language rules. Therefore, care must be taken when using it in aggregate types,
+notably with custom `align` specification.
+
+Since aggregated object cannot test its alignment in an aggregate
+at compile time, an assert will be issued at runtime when a misaligned
+AlignedStorage is used.
+*/
+struct AlignedStorage(size_t Size, size_t Alignment = platformAlignment)
+{
+    /// Size of storage, in bytes
+    enum size = Size;
+
+    /// Alignment of storage, in bytes
+    enum alignment = Alignment;
+
+    @system @nogc nothrow:
+
+    /// Returns a pointer to the beginning of storage
+    @property inout(void)* ptr() inout
+    {
+        return &storage[0];
+    }
+
+    /// Returns storage as a slice
+    inout(void[]) opSlice() inout
+    {
+        return storage[];
+    }
+
+    /// Returns a slice `i`..`j` of storage
+    inout(void[]) opSlice(size_t i, size_t j) inout
+    {
+        return storage[i .. j];
+    }
+
+    /// Returns size of storage
+    size_t opDollar() const
+    {
+        return size;
+    }
+
+    invariant()
+    {
+        () @trusted {
+            // can't test this at compile time
+            assert(((cast(size_t) storage.ptr) & (alignment - 1)) == 0,
+                                "AlignedStorage alignment violation");
+        } ();
+    }
+
+private:
+    align(Alignment) void[Size] storage;
+}
+
+///
+@safe unittest
+{
+    struct A
+    {
+        bool flag;
+        AlignedStorage!(4,4) storage; // OK, storage will be aligned to 4 bytes
+    }
+
+    A a;
+    auto pa = (() @trusted => cast(int*) a.storage.ptr)();
+    import std.conv : emplace;
+    emplace(pa, 42);
+    assert(*pa == 42);
+}
+
+@safe unittest
+{
+    import std.range : iota;
+    import core.bitop : bsr;
+    // test all alignments up to and including platformAlignment
+    foreach (a; aliasSeqOf!(iota(bsr(platformAlignment)+1)))
+        static assert(AlignedStorage!(1,2^^a).alignof == 2^^a);
+}
+
+@safe unittest
+{
+    import std.range : iota;
+    import core.bitop : bsr;
+    static struct S(size_t a)
+    {
+        bool b;
+        AlignedStorage!(1, 2^^a) s;
+    }
+    // test all alignments up to and including platformAlignment
+    foreach (a; aliasSeqOf!(iota(bsr(platformAlignment)+1)))
+    {
+        static assert(S!a.s.offsetof == 2^^a);
+    }
+}
+
+private
+{
+    static if (is(cent))
+        alias CentType = cent;
+    else
+        alias CentType = AliasSeq!();
+}
+
+@system unittest
+{
+    foreach (T; AliasSeq!(bool,byte,char,short,wchar,int,
+                          dchar,long,float,double,real,CentType))
+    {{
+        AlignedStorage!(T.sizeof, T.alignof) s;
+        *(cast(T*) s.ptr) = cast(T) 42;
+        T a = cast(T) 42;
+        auto raw = (cast(void*) &a)[0 .. T.sizeof];
+        assert(s[0 .. $] == raw[0 .. $]);
+        assert(s[][0 .. $] == raw[0 .. $]);
+    }}
+}
+
+/**
+Provides untyped storage suitable for storing an instance of type `T`.
+For classes, the size and alignment of storage are the size and alignment
+of class instance representation, not those of class reference.
+*/
+template InstanceStorage(T)
+if (!is(T == interface))
+{
+    static if (is(T == class))
+    {
+        alias InstanceStorage = AlignedStorage!(__traits(classInstanceSize, T),
+            classInstanceAlignment!T);
+    }
+    else
+    {
+        alias InstanceStorage = AlignedStorage!(T.sizeof, T.alignof);
+    }
+}
+
+///
+@safe unittest
+{
+    class SafeClass
+    {
+        int x;
+        @safe this(int x) { this.x = x; }
+    }
+
+    InstanceStorage!SafeClass buf;
+    auto support = (() @trusted => cast(SafeClass) (buf.ptr))();
+    import std.conv : emplace;
+    auto safeClass = emplace!SafeClass(support, 5);
+    scope (exit) () @trusted { destroy(safeClass); } ();
+    assert(safeClass.x == 5);
+}
+
+@safe unittest
+{
+    foreach (T; AliasSeq!(bool,byte,char,short,wchar,int,
+                          dchar,long,float,double,real,CentType))
+    {
+        static assert(InstanceStorage!T.sizeof == T.sizeof);
+        static assert(InstanceStorage!T.alignof == T.alignof);
+    }
+}
+
+@safe unittest
+{
+    static assert(InstanceStorage!Object.sizeof == __traits(classInstanceSize, Object));
+    static assert(InstanceStorage!Object.alignof == classInstanceAlignment!Object);
+
+    class Arbitrary
+    {
+        bool b;
+        float[3] v;
+        char[17] c;
+    }
+
+    static assert(InstanceStorage!Arbitrary.sizeof == __traits(classInstanceSize, Arbitrary));
+    static assert(InstanceStorage!Arbitrary.alignof == classInstanceAlignment!Arbitrary);
+}
+
+@safe unittest
+{
+    struct Arbitrary
+    {
+        bool b;
+        float[3] v;
+        char[17] c;
+    }
+
+    static assert(InstanceStorage!Arbitrary.sizeof == Arbitrary.sizeof);
+    static assert(InstanceStorage!Arbitrary.alignof == Arbitrary.alignof);
+}
+
+private size_t platformAlignment() @safe @nogc nothrow pure
+{
+    import std.algorithm.comparison : max;
+    static if (is(cent))
+        return max(double.alignof, real.alignof, cent.alignof);
+    else
+        return max(double.alignof, real.alignof);
+}
+
+@safe unittest
+{
+    foreach (T; AliasSeq!(bool,byte,char,short,wchar,int,
+                          dchar,long,float,double,real,CentType))
+    {
+        static assert(T.alignof <= platformAlignment);
+    }
+}
