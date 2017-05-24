@@ -4192,9 +4192,24 @@ bool startsWith(alias pred = "a == b", R, E)(R doesThisStart, E withThis)
 if (isInputRange!R &&
     is(typeof(binaryFun!pred(doesThisStart.front, withThis)) : bool))
 {
-    return doesThisStart.empty
-        ? false
-        : binaryFun!pred(doesThisStart.front, withThis);
+    if (doesThisStart.empty)
+        return false;
+
+    alias predFunc = binaryFun!pred;
+
+    // auto-decoding special case
+    static if (isNarrowString!R)
+    {
+        // specialize for ASCII as to not change previous behavior
+        if (withThis <= 0x7F)
+            return predFunc(doesThisStart[0], withThis);
+        else
+            return predFunc(doesThisStart.front, withThis);
+    }
+    else
+    {
+        return predFunc(doesThisStart.front, withThis);
+    }
 }
 
 /// Ditto
