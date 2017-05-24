@@ -373,7 +373,7 @@ S encode(S)(S s)
     return result.data;
 }
 
-@safe unittest
+@safe pure unittest
 {
     auto s = "hello";
     assert(encode(s) is s);
@@ -2058,9 +2058,12 @@ class ElementParser
                     const startTag = startTags[tag_.name];
                     string text;
 
+                    if (startTag.tagString.length == 0)
+                        assert(0);
+
                     immutable(char)* p = startTag.tagString.ptr
                         + startTag.tagString.length;
-                    immutable(char)* q = tag_.tagString.ptr;
+                    immutable(char)* q = &tag_.tagString[0];
                     text = decode(p[0..(q-p)], DecodeMode.LOOSE);
 
                     auto element = new Element(startTag);
@@ -2713,7 +2716,7 @@ private
  * parse failure (the XML equivalent of a stack trace), giving the line and
  * column number of every failure at every level.
  */
-void check(string s) pure
+void check(string s) @safe pure
 {
     try
     {
@@ -2903,16 +2906,15 @@ class CheckException : XMLException
         this.err = err;
     }
 
-    private void complete(string entire) pure
+    private void complete(string entire) @safe pure
     {
-        import std.encoding : transcode;
         import std.string : count, lastIndexOf;
+        import std.utf : toUTF32;
 
         string head = entire[0..$-tail.length];
         ptrdiff_t n = head.lastIndexOf('\n') + 1;
         line = head.count("\n") + 1;
-        dstring t;
-        transcode(head[n..$],t);
+        dstring t = toUTF32(head[n..$]);
         column = t.length + 1;
         if (err !is null) err.complete(entire);
     }
