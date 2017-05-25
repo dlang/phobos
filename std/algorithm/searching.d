@@ -1105,9 +1105,24 @@ bool endsWith(alias pred = "a == b", R, E)(R doesThisEnd, E withThis)
 if (isBidirectionalRange!R &&
     is(typeof(binaryFun!pred(doesThisEnd.back, withThis)) : bool))
 {
-    return doesThisEnd.empty
-        ? false
-        : binaryFun!pred(doesThisEnd.back, withThis);
+    if (doesThisEnd.empty)
+        return false;
+
+    alias predFunc = binaryFun!pred;
+
+    // auto-decoding special case
+    static if (isNarrowString!R)
+    {
+        // specialize for ASCII as to not change previous behavior
+        if (withThis <= 0x7F)
+            return predFunc(doesThisEnd[$ - 1], withThis);
+        else
+            return predFunc(doesThisEnd.back, withThis);
+    }
+    else
+    {
+        return predFunc(doesThisEnd.back, withThis);
+    }
 }
 
 /// Ditto
