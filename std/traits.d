@@ -6255,31 +6255,144 @@ enum bool isAggregateType(T) = is(T == struct) || is(T == union) ||
  * a single loop variable of automatically inferred type, regardless of how
  * the $(D foreach) loop is implemented.  This includes ranges, structs/classes
  * that define $(D opApply) with a single loop variable, and builtin dynamic,
- * static and associative arrays.
+ * static and associative arrays, and tuples.
  */
-enum bool isIterable(T) = is(typeof({ foreach (elem; T.init) {} }));
+enum bool isAnyIterable(T) = is(typeof({ foreach (elem; T.init) {} }));
+
+/**
+ * Returns $(D true) if T can be iterated over using a $(D foreach) loop with
+ * a single loop variable of automatically inferred type, regardless of how
+ * the $(D foreach) loop is implemented.  This includes ranges, structs/classes
+ * that define $(D opApply) with a single loop variable, and builtin dynamic,
+ * static and associative arrays. Does not include tuples.
+ */
+enum bool isIterable(T) = (
+    is(typeof({
+        // Must be iterable via foreach
+        foreach(e; T.init){}
+        // Indexes must not be known at compile-time
+        // Because if they are, this is a tuple
+        static if(is(typeof({foreach(i, e; T.init){}}))){
+            foreach(i, e; T.init)
+            {
+                static assert(!is(typeof({enum x = i;})));
+            }
+        }
+    })) && !is(typeof({
+        // Must not be an empty tuple
+        foreach(e; T.init) static assert(false);
+    }))
+);
+
+/**
+ * Returns $(D true) if T can be iterated over using a $(D foreach_reverse)
+ * loop with a single loop variable of automatically inferred type, regardless
+ * of how the $(D foreach_reverse) loop is implemented.  This includes ranges,
+ * structs/classes that define $(D opApplyReverse) with a single loop variable, and
+ * builtin dynamic, static and associative arrays, and tuples.
+ */
+enum bool isAnyIterableReverse(T) = is(typeof({ foreach_reverse (elem; T.init) {} }));
+
+/**
+ * Returns $(D true) if T can be iterated over using a $(D foreach_reverse)
+ * loop with a single loop variable of automatically inferred type, regardless
+ * of how the $(D foreach_reverse) loop is implemented.  This includes ranges,
+ * structs/classes that define $(D opApplyReverse) with a single loop variable, and
+ * builtin dynamic, static and associative arrays. Does not include tuples.
+ */
+enum bool isIterableReverse(T) = (
+    is(typeof({
+        // Must be iterable via foreach_reverse
+        foreach_reverse(e; T.init){}
+        // Indexes must not be known at compile-time
+        // Because if they are, this is a tuple
+        static if(is(typeof({foreach_reverse(i, e; T.init){}}))){
+            foreach_reverse(i, e; T.init)
+            {
+                static assert(!is(typeof({enum x = i;})));
+            }
+        }
+    })) && !is(typeof({
+        // Must not be an empty tuple
+        foreach_reverse(e; T.init) static assert(false);
+    }))
+);
+
+
 
 ///
 @safe unittest
 {
+    import std.typecons : Tuple;
+    
     struct OpApply
     {
         int opApply(scope int delegate(ref uint) dg) { assert(0); }
     }
-
+    struct OpApplyReverse
+    {
+        int opApplyReverse(scope int delegate(ref uint) dg) { assert(0); }
+    }
+    struct OpApplyBoth
+    {
+        int opApply(scope int delegate(ref uint) dg) { assert(0); }
+        int opApplyReverse(scope int delegate(ref uint) dg) { assert(0); }
+    }
     struct Range
     {
         @property uint front() { assert(0); }
         void popFront() { assert(0); }
         enum bool empty = false;
     }
-
-    static assert( isIterable!(uint[]));
-    static assert( isIterable!OpApply);
-    static assert( isIterable!(uint[string]));
-    static assert( isIterable!Range);
-
-    static assert(!isIterable!uint);
+    struct BiRange
+    {
+        @property uint front() { assert(0); }
+        void popFront() { assert(0); }
+        @property uint back() { assert(0); }
+        void popBack() { assert(0); }
+        enum bool empty = false;
+    }
+    
+    foreach(tmpl; AliasSeq!(isIterable, isAnyIterable))
+    {
+        static assert(tmpl!(uint[]));
+        static assert(tmpl!OpApply);
+        static assert(tmpl!OpApplyBoth);
+        static assert(tmpl!(uint[string]));
+        static assert(tmpl!Range);
+        static assert(tmpl!BiRange);
+        static assert(!tmpl!void);
+        static assert(!tmpl!uint);
+        static assert(!tmpl!OpApplyReverse);
+    }
+    {
+        static assert(isAnyIterable!(Tuple!()));
+        static assert(isAnyIterable!(Tuple!(int)));
+        static assert(isAnyIterable!(Tuple!(int, int)));
+        static assert(!isIterable!(Tuple!()));
+        static assert(!isIterable!(Tuple!(int)));
+        static assert(!isIterable!(Tuple!(int, int)));
+    }
+    foreach(tmpl; AliasSeq!(isIterableReverse, isAnyIterableReverse))
+    {
+        static assert(tmpl!(uint[]));
+        static assert(tmpl!OpApplyReverse);
+        static assert(tmpl!OpApplyBoth);
+        static assert(tmpl!(uint[string]));
+        static assert(tmpl!BiRange);
+        static assert(!tmpl!void);
+        static assert(!tmpl!uint);
+        static assert(!tmpl!Range);
+        static assert(!tmpl!OpApply);
+    }
+    {
+        static assert(isAnyIterableReverse!(Tuple!()));
+        static assert(isAnyIterableReverse!(Tuple!(int)));
+        static assert(isAnyIterableReverse!(Tuple!(int, int)));
+        static assert(!isIterableReverse!(Tuple!()));
+        static assert(!isIterableReverse!(Tuple!(int)));
+        static assert(!isIterableReverse!(Tuple!(int, int)));
+    }
 }
 
 /**
