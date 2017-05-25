@@ -1527,6 +1527,25 @@ class ErrnoException : Exception
         auto ex = new ErrnoException("oh no", EAGAIN);
         assert(ex.errno == EAGAIN);
     }
+
+    unittest
+    {
+        import core.stdc.errno : errno, EAGAIN;
+
+        auto old = errno;
+        scope(exit) errno = old;
+
+        errno = EAGAIN;
+        auto ex = new ErrnoException("oh no");
+        assert (ex.errno == EAGAIN);
+    }
+
+    unittest
+    {
+        import core.stdc.errno : EAGAIN;
+        auto ex = new ErrnoException("oh no", EAGAIN);
+        assert (ex.errno == EAGAIN);
+    }
 }
 
 /++
