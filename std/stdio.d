@@ -4530,13 +4530,19 @@ ref File makeGlobal(alias handle)()
     import core.atomic;
     if (!atomicLoad(initialized))
     {
-        // Use double-checking because initOnce is inefficient.
-        import std.concurrency : initOnce;
-        initOnce!initialized({
-            impl.handle = handle;
-            result._p = &impl;
-            return true;
-        }());
+        for (;;)
+        {
+            if (atomicLoad(initialized) > uint.max / 2)
+                break;
+            if (atomicOp!"+="(initialized, 1) == 1)
+            {
+                impl.handle = handle;
+                result._p = &impl;
+                atomicOp!"+="(initialized, uint.max / 2);
+                break;
+            }
+            atomicOp!"-="(initialized, 1);
+        }
     }
     return result;
 }
