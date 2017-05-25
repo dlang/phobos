@@ -1005,10 +1005,48 @@ Tid locate(string name)
 {
     synchronized (registryLock)
     {
-        if (auto tid = name in tidByName)
-            return *tid;
-        return Tid.init;
+        return tidByName.get(name, Tid.init);
     }
+}
+
+///
+@system unittest
+{
+    auto tid = spawn(() {
+        auto id = thisTid();
+        assert(register("Main", id));
+        assert(locate("Main") == id);
+    });
+}
+
+/**
+ * Gets an array all of the names associated with the $(LREF Tid).
+ *
+ * Params:
+ *     tid = The $(LREF Tid) to locate within the registry.
+ *
+ * Returns:
+ *     An array of associated names, or `null` if `tid` is not registered.
+ *
+ * See_Also:
+ *     $(LREF register)
+ */
+string[] locate(Tid tid)
+{
+    synchronized (registryLock)
+    {
+        return namesByTid.get(tid, null);
+    }
+}
+
+///
+@system unittest
+{
+    auto tid = spawn(() {
+        auto id = thisTid();
+        assert(register("Main", id));
+        assert(locate(id) == ["Main"]);
+    });
 }
 
 /**
