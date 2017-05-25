@@ -2144,7 +2144,7 @@ private dchar _utfException(UseReplacementDchar useReplacementDchar)(string msg,
         $(D UTFException) if $(D c) is not a valid UTF code point.
   +/
 size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
-    ref char[4] buf, dchar c) @safe pure
+    out char[4] buf, dchar c) @safe pure
 {
     if (c <= 0x7F)
     {
@@ -2219,7 +2219,7 @@ size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
 
 /// Ditto
 size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
-    ref wchar[2] buf, dchar c) @safe pure
+    out wchar[2] buf, dchar c) @safe pure
 {
     if (c <= 0xFFFF)
     {
@@ -2272,7 +2272,7 @@ size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
 
 /// Ditto
 size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
-    ref dchar[1] buf, dchar c) @safe pure
+    out dchar[1] buf, dchar c) @safe pure
 {
     if ((0xD800 <= c && c <= 0xDFFF) || 0x10FFFF < c)
         c = _utfException!useReplacementDchar("Encoding an invalid code point in UTF-32", c);
@@ -2710,42 +2710,8 @@ if (isSomeString!S)
 deprecated("To be removed November 2017. Please use std.utf.encode instead.")
 char[] toUTF8(return out char[4] buf, dchar c) nothrow @nogc @safe pure
 {
-    if (c <= 0x7F)
-    {
-        buf[0] = cast(char) c;
-        return buf[0 .. 1];
-    }
-    else if (c <= 0x7FF)
-    {
-        buf[0] = cast(char)(0xC0 | (c >> 6));
-        buf[1] = cast(char)(0x80 | (c & 0x3F));
-        return buf[0 .. 2];
-    }
-    else if (c <= 0xFFFF)
-    {
-        if (c >= 0xD800 && c <= 0xDFFF)
-            c = replacementDchar;
-
-    L3:
-        buf[0] = cast(char)(0xE0 | (c >> 12));
-        buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
-        buf[2] = cast(char)(0x80 | (c & 0x3F));
-        return buf[0 .. 3];
-    }
-    else
-    {
-        if (c > 0x10FFFF)
-        {
-            c = replacementDchar;
-            goto L3;
-        }
-
-        buf[0] = cast(char)(0xF0 | (c >> 18));
-        buf[1] = cast(char)(0x80 | ((c >> 12) & 0x3F));
-        buf[2] = cast(char)(0x80 | ((c >> 6) & 0x3F));
-        buf[3] = cast(char)(0x80 | (c & 0x3F));
-        return buf[0 .. 4];
-    }
+    const sz = encode!(Yes.useReplacementDchar)(buf, c);
+    return buf[0 .. sz];
 }
 
 /**
@@ -2792,23 +2758,9 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
 //@@@DEPRECATED_2017-10@@@
 deprecated("To be removed November 2017. Please use std.utf.encode instead.")
 wchar[] toUTF16(return ref wchar[2] buf, dchar c) nothrow @nogc @safe pure
-in
 {
-    assert(isValidDchar(c));
-}
-body
-{
-    if (c <= 0xFFFF)
-    {
-        buf[0] = cast(wchar) c;
-        return buf[0 .. 1];
-    }
-    else
-    {
-        buf[0] = cast(wchar)((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
-        buf[1] = cast(wchar)(((c - 0x10000) & 0x3FF) + 0xDC00);
-        return buf[0 .. 2];
-    }
+    const sz = encode!(Yes.useReplacementDchar)(buf, c);
+    return buf[0 .. sz];
 }
 
 /**
