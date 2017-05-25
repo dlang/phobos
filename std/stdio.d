@@ -4527,22 +4527,16 @@ ref File makeGlobal(alias handle)()
     static __gshared File.Impl impl;
     static __gshared File result;
     static shared uint initialized;
-    if (!initialized)
+    import core.atomic;
+    if (!atomicLoad(initialized))
     {
-        for (;;)
-        {
-            if (initialized > uint.max / 2)
-                break;
-            import core.atomic;
-            if (atomicOp!"+="(initialized, 1) == 1)
-            {
-                impl.handle = handle;
-                result._p = &impl;
-                atomicOp!"+="(initialized, uint.max / 2);
-                break;
-            }
-            atomicOp!"-="(initialized, 1);
-        }
+        // Use double-checking because initOnce is inefficient.
+        import std.concurrency : initOnce;
+        initOnce!initialized({
+            impl.handle = handle;
+            result._p = &impl;
+            return true;
+        }());
     }
     return result;
 }
