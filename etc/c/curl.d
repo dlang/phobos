@@ -257,7 +257,7 @@ enum CurlChunkBgnFunc {
 /** if splitting of data transfer is enabled, this callback is called before
    download of an individual chunk started. Note that parameter "remains" works
    only for FTP wildcard downloading (for now), otherwise is not used */
-alias curl_chunk_bgn_callback = c_long function(void *transfer_info, void *ptr, int remains);
+alias curl_chunk_bgn_callback = c_long function(const(void) *transfer_info, void *ptr, int remains);
 
 /** return codes for CURLOPT_CHUNK_END_FUNCTION */
 enum CurlChunkEndFunc {
@@ -615,8 +615,8 @@ enum CurlKHMatch {
 ///
 alias curl_sshkeycallback =
         int function(CURL *easy,            /** easy handle */
-                     curl_khkey *knownkey,  /** known */
-                     curl_khkey *foundkey,  /** found */
+                     const curl_khkey *knownkey,  /** known */
+                     const curl_khkey *foundkey,  /** found */
                      CurlKHMatch m,         /** libcurl's view on the keys */
                      void *clientp          /** custom pointer passed from app */
                     );
@@ -1621,7 +1621,7 @@ void  curl_slist_free_all(curl_slist *);
  * the first argument. The time argument in the second parameter is unused
  * and should be set to NULL.
  */
-time_t  curl_getdate(char *p, time_t *unused);
+time_t  curl_getdate(const(char) *p, const time_t *unused);
 
 /** info about the certificate chain, only for OpenSSL builds. Asked
    for with CURLOPT_CERTINFO / CURLINFO_CERTINFO */
