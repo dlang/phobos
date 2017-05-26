@@ -588,15 +588,15 @@ style_lint: ../dscanner/dsc $(LIB)
 ################################################################################
 publictests: $(PUBLICTESTS)
 
-$(TEST_EXTRACTOR): $(TOOLS_DIR)/styles/tests_extractor.d
-	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) build --compiler=$${PWD}/$(DMD) --root=$(TOOLS_DIR)/styles -c tests_extractor
+$(TEST_EXTRACTOR): $(TOOLS_DIR)/styles/tests_extractor.d $(LIB)
+	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) build --force --compiler=$${PWD}/$(DMD) --root=$(TOOLS_DIR)/styles -c tests_extractor
 
 ################################################################################
 # Extract public tests of a module and test them in an separate file (i.e. without its module)
 # This is done to check for potentially missing imports in the examples, e.g.
 # make -f posix.mak std/format.publictests
 ################################################################################
-%.publictests: %.d $(LIB) $(TEST_EXTRACTOR)
+%.publictests: %.d $(LIB) $(TEST_EXTRACTOR) | $(PUBLICTESTS_DIR)/.directory
 	@$(TEST_EXTRACTOR) --inputdir  $< --outputdir $(PUBLICTESTS_DIR)
 	@$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -main -unittest -run $(PUBLICTESTS_DIR)/$(subst /,_,$<)
 
