@@ -1000,8 +1000,11 @@ template arity(alias func)
 }
 
 /**
-Returns a tuple consisting of the storage classes of the parameters of a
-function $(D func).
+Get tuple, one per function parameter, of the storage classes of the parameters.
+Params:
+    func = function symbol or type of function, delegate, or pointer to function
+Returns:
+    a tuple of ParameterStorageClass bits
  */
 enum ParameterStorageClass : uint
 {
@@ -1021,39 +1024,28 @@ enum ParameterStorageClass : uint
 template ParameterStorageClassTuple(func...)
     if (func.length == 1 && isCallable!func)
 {
-    alias Func = Unqual!(FunctionTypeOf!func);
+    alias Func = FunctionTypeOf!func;
 
-    /*
-     * TypeFuncion:
-     *     CallConvention FuncAttrs Arguments ArgClose Type
-     */
-    alias Params = Parameters!Func;
-
-    // chop off CallConvention and FuncAttrs
-    enum margs = demangleFunctionAttributes(mangledName!Func[1 .. $]).rest;
-
-    // demangle Arguments and store parameter storage classes in a tuple
-    template demangleNextParameter(string margs, size_t i = 0)
+    static if (is(Func PT == __parameters))
     {
-        static if (i < Params.length)
+        template StorageClass(size_t i)
         {
-            enum demang = demangleParameterStorageClass(margs);
-            enum skip = mangledName!(Params[i]).length; // for bypassing Type
-            enum rest = demang.rest;
-
-            alias demangleNextParameter =
-                TypeTuple!(
-                    demang.value + 0, // workaround: "not evaluatable at ..."
-                    demangleNextParameter!(rest[skip .. $], i + 1)
-                );
+            static if (i < PT.length)
+            {
+                alias StorageClass = TypeTuple!(
+                        extractParameterStorageClassFlags!(__traits(getParameterStorageClasses, Func, i)),
+                        StorageClass!(i + 1));
+            }
+            else
+                alias StorageClass = TypeTuple!();
         }
-        else // went thru all the parameters
-        {
-            alias demangleNextParameter = TypeTuple!();
-        }
+        alias ParameterStorageClassTuple = StorageClass!0;
     }
-
-    alias ParameterStorageClassTuple = demangleNextParameter!margs;
+    else
+    {
+        static assert(0, func[0].stringof ~ " is not a function");
+        alias ParameterStorageClassTuple = TypeTuple!();
+    }
 }
 
 ///
@@ -1069,6 +1061,35 @@ template ParameterStorageClassTuple(func...)
     static assert(pstc[0] == STC.ref_);
     static assert(pstc[1] == STC.out_);
     static assert(pstc[2] == STC.none);
+}
+
+/*****************
+ * Convert string tuple Attribs to ParameterStorageClass bits
+ * Params:
+ *      Attribs = string tuple
+ * Returns:
+ *      ParameterStorageClass bits
+ */
+ParameterStorageClass extractParameterStorageClassFlags(Attribs...)()
+{
+    auto result = ParameterStorageClass.none;
+    foreach (attrib; Attribs)
+    {
+        final switch (attrib) with (ParameterStorageClass)
+        {
+            case "scope":  result |= scope_;  break;
+            case "out":    result |= out_;    break;
+            case "ref":    result |= ref_;    break;
+            case "lazy":   result |= lazy_;   break;
+            case "return": result |= return_; break;
+        }
+    }
+    /* Mimic behavor of original version of ParameterStorageClassTuple()
+     * to avoid breaking existing code.
+     */
+    if (result == (ParameterStorageClass.ref_ | ParameterStorageClass.return_))
+        result = ParameterStorageClass.return_;
+    return result;
 }
 
 @safe unittest
