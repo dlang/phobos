@@ -636,8 +636,6 @@ private struct MsgRange
 
     private Logger log;
 
-    private char[] buffer;
-
     this(Logger log) @safe
     {
         this.log = log;
@@ -652,8 +650,9 @@ private struct MsgRange
     void put(dchar elem) @safe
     {
         import std.utf : encode;
-        encode(this.buffer, elem);
-        log.logMsgPart(this.buffer);
+        char[4] buffer;
+        size_t len = encode(buffer, elem);
+        log.logMsgPart(buffer[0 .. len]);
     }
 }
 
@@ -3104,4 +3103,44 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
     SystemToString sts;
     tl.logf("%s", sts);
     assert(tl.msg == SystemToStringMsg);
+}
+
+// Issue 17328
+@safe unittest
+{
+    import std.format : format;
+
+    ubyte[] data = [0];
+    string s = format("%(%02x%)", data); // format 00
+    assert(s == "00");
+
+    auto tl = new TestLogger();
+
+    tl.infof("%(%02x%)", data);    // infof    000
+
+    size_t i;
+    string fs = tl.msg;
+    for (; i < s.length; ++i)
+    {
+        assert(s[s.length - 1 - i] == fs[fs.length - 1 - i], fs);
+    }
+    assert(fs.length == 2);
+}
+
+// Issue 15954
+@safe unittest
+{
+    import std.conv : to;
+    auto tl = new TestLogger();
+    tl.log("123456789".to!wstring);
+    assert(tl.msg == "123456789");
+}
+
+// Issue 16256
+@safe unittest
+{
+    import std.conv : to;
+    auto tl = new TestLogger();
+    tl.log("123456789"d);
+    assert(tl.msg == "123456789");
 }
