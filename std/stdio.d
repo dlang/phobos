@@ -4521,27 +4521,32 @@ Initialize with a message and an error code.
     }
 }
 
-// Undocummnted but public because the std* handles are aliasing it.
+// Undocumented but public because the std* handles are aliasing it.
 ref File makeGlobal(alias handle)()
 {
     static __gshared File.Impl impl;
     static __gshared File result;
-    static shared uint initialized;
+
+    // Use an inline spinlock to make sure the initializer is only run once.
+    // We assume there will be at most uint.max / 2 threads trying to initialize
+    // `handle` at once and steal the high bit to indicate that the globals have
+    // been initialized.
+    static shared uint spinlock;
     import core.atomic;
-    if (atomicLoad(initialized) <= uint.max / 2)
+    if (atomicLoad(spinlock) <= uint.max / 2)
     {
         for (;;)
         {
-            if (atomicLoad(initialized) > uint.max / 2)
+            if (atomicLoad(spinlock) > uint.max / 2)
                 break;
-            if (atomicOp!"+="(initialized, 1) == 1)
+            if (atomicOp!"+="(spinlock, 1) == 1)
             {
                 impl.handle = handle;
                 result._p = &impl;
-                atomicOp!"+="(initialized, uint.max / 2);
+                atomicOp!"+="(spinlock, uint.max / 2);
                 break;
             }
-            atomicOp!"-="(initialized, 1);
+            atomicOp!"-="(spinlock, 1);
         }
     }
     return result;
