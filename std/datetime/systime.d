@@ -7339,6 +7339,8 @@ public:
     ///
     @safe unittest
     {
+        import std.datetime.date : Date;
+
         auto st = SysTime(Date(1999, 7, 6));
         const cst = SysTime(Date(2010, 5, 1));
         immutable ist = SysTime(Date(2015, 10, 10));
@@ -8308,7 +8310,7 @@ public:
     ///
     @safe unittest
     {
-        import core.time : hours, msecs, usecs;
+        import core.time : hours, msecs, usecs, hnsecs;
         import std.datetime.date : DateTime;
         import std.datetime.timezone : SimpleTimeZone, UTC;
 
@@ -8557,7 +8559,7 @@ public:
     ///
     @safe unittest
     {
-        import core.time : hours, msecs, usecs;
+        import core.time : hours, msecs, usecs, hnsecs;
         import std.datetime.date : DateTime;
         import std.datetime.timezone : SimpleTimeZone, UTC;
 
@@ -8783,7 +8785,7 @@ public:
     ///
     @safe unittest
     {
-        import core.time : hours, msecs, usecs;
+        import core.time : hours, msecs, usecs, hnsecs;
         import std.datetime.date : DateTime;
         import std.datetime.timezone : SimpleTimeZone, UTC;
 

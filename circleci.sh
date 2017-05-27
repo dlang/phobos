@@ -127,9 +127,16 @@ coverage()
     sed -i 's/^ *[0-9]*\(|.*nocoverage.*\)$/       \1/' ./*.lst
 }
 
+# extract publictests and run them independently
+publictests()
+{
+    make -f posix.mak -j$N publictests DUB=$DUB
+}
+
 case $1 in
     install-deps) install_deps ;;
     setup-repos) setup_repos ;;
     coverage) coverage ;;
+    publictests) publictests ;;
     style) style ;;
 esac
