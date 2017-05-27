@@ -4528,7 +4528,7 @@ ref File makeGlobal(alias handle)()
     static __gshared File result;
     static shared uint initialized;
     import core.atomic;
-    if (!atomicLoad(initialized))
+    if (atomicLoad(initialized) <= uint.max / 2)
     {
         for (;;)
         {
