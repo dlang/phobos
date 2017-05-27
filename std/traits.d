@@ -7264,8 +7264,8 @@ unittest
 /**
 Returns the mangled name of symbol or type $(D sth).
 
-$(D mangledName) is the same as builtin $(D .mangleof) property, except that
-the correct names of property functions are obtained.
+$(D mangledName) is the same as builtin $(D .mangleof) property, kept
+for compatibility as property functions used to behave differently.
 --------------------
 module test;
 import std.traits : mangledName;
@@ -7274,82 +7274,27 @@ class C
 {
     int value() @property;
 }
-pragma(msg, C.value.mangleof);      // prints "i"
+pragma(msg, C.value.mangleof);      // prints "_D4test1C5valueMFNdZi", was "i"
 pragma(msg, mangledName!(C.value)); // prints "_D4test1C5valueMFNdZi"
 --------------------
  */
 template mangledName(sth...)
     if (sth.length == 1)
 {
-    static if (is(typeof(sth[0]) X) && is(X == void))
-    {
-        // sth[0] is a template symbol
-        enum string mangledName = removeDummyEnvelope(Dummy!sth.Hook.mangleof);
-    }
-    else
-    {
-        enum string mangledName = sth[0].mangleof;
-    }
+     enum string mangledName = sth[0].mangleof;
 }
 
-private template Dummy(T...) { struct Hook {} }
-
-private string removeDummyEnvelope(string s)
-{
-    // remove --> S3std6traits ... Z4Hook
-    s = s[12 .. $ - 6];
-
-    // remove --> DIGIT+ __T5Dummy
-    foreach (i, c; s)
-    {
-        if (c < '0' || '9' < c)
-        {
-            s = s[i .. $];
-            break;
-        }
-    }
-    s = s[9 .. $]; // __T5Dummy
-
-    // remove --> T | V | S
-    immutable kind = s[0];
-    s = s[1 .. $];
-
-    if (kind == 'S') // it's a symbol
-    {
-        /*
-         * The mangled symbol name is packed in LName --> Number Name.  Here
-         * we are chopping off the useless preceding Number, which is the
-         * length of Name in decimal notation.
-         *
-         * NOTE: n = m + Log(m) + 1;  n = LName.length, m = Name.length.
-         */
-        immutable n = s.length;
-        size_t m_upb = 10;
-
-        foreach (k; 1 .. 5) // k = Log(m_upb)
-        {
-            if (n < m_upb + k + 1)
-            {
-                // Now m_upb/10 <= m < m_upb; hence k = Log(m) + 1.
-                s = s[k .. $];
-                break;
-            }
-            m_upb *= 10;
-        }
-    }
-
-    return s;
-}
+version(unittest) void freeFunc(string);
 
 @safe unittest
 {
     class C { int value() @property { return 0; } }
     static assert(mangledName!int == int.mangleof);
     static assert(mangledName!C == C.mangleof);
+    static assert(mangledName!(C.value) == C.value.mangleof);
     static assert(mangledName!(C.value)[$ - 12 .. $] == "5valueMFNdZi");
     static assert(mangledName!mangledName == "3std6traits11mangledName");
-    static assert(mangledName!removeDummyEnvelope ==
-            "_D3std6traits19removeDummyEnvelopeFAyaZAya");
+    static assert(mangledName!freeFunc == "_D3std6traits8freeFuncFAyaZv");
     int x;
   static if (is(typeof({ return x; }) : int delegate() pure))   // issue 9148
     static assert(mangledName!((int a) { return a+x; }) == "DFNaNbNiNfiZi");  // pure nothrow @safe @nogc
