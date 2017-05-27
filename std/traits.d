@@ -7661,14 +7661,14 @@ template getSymbolsByUDA(alias symbol, alias attribute) {
 
     // filtering inaccessible members
     enum isAccessibleMember(string name) = __traits(compiles, __traits(getMember, symbol, name));
-    alias withoutInaccessibleMembers = Filter!(isAccessibleMember, __traits(allMembers, symbol));
+    alias accessibleMembers = Filter!(isAccessibleMember, __traits(allMembers, symbol));
 
     // filtering not compiled members such as alias of basic types
     enum hasSpecificUDA(string name) = mixin("hasUDA!(symbol." ~ name ~ ", attribute)");
     enum isCorrectMember(string name) = __traits(compiles, hasSpecificUDA!(name));
 
-    alias withoutIncorrectMembers = Filter!(isCorrectMember, withoutInaccessibleMembers);
-    alias membersWithUDA = toSymbols!(Filter!(hasSpecificUDA, withoutIncorrectMembers));
+    alias correctMembers = Filter!(isCorrectMember, accessibleMembers);
+    alias membersWithUDA = toSymbols!(Filter!(hasSpecificUDA, correctMembers));
 
     // if the symbol itself has the UDA, tack it on to the front of the list
     static if (hasUDA!(symbol, attribute))
@@ -7751,7 +7751,12 @@ template getSymbolsByUDA(alias symbol, alias attribute) {
     // for this otherwise we get deprecation warning - not visible from module
     static assert(getSymbolsByUDA!(HasPrivateMembers, Attr).length == 1);
     static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[0], Attr));
+}
 
+///
+@safe unittest
+{
+    enum Attr;
     struct A
     {
         alias int INT;
