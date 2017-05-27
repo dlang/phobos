@@ -34,7 +34,7 @@ $(BOOKTABLE ,
     ))
 )
 
-It also provides number of templates that test for various _range capabilities:
+Templates that test for various input _range capabilities:
 
 $(BOOKTABLE ,
     $(TR $(TD $(LREF hasMobileElements))
@@ -69,7 +69,7 @@ $(BOOKTABLE ,
     ))
 )
 
-Finally, it includes some convenience functions for manipulating ranges:
+Convenience functions for manipulating input ranges:
 
 $(BOOKTABLE ,
     $(TR $(TD $(LREF popFrontN))
@@ -100,6 +100,29 @@ $(BOOKTABLE ,
     ))
     $(TR $(TD $(LREF put))
         $(TD Outputs element $(D e) to a _range.
+    ))
+)
+
+Templates that test for various output _range capabilities:
+
+$(BOOKTABLE ,
+    $(TR $(TD $(D $(LREF hasStart)))
+        $(TD Tests if a given output _range has the $(D start) function.
+    ))
+    $(TR $(TD $(D $(LREF hasFinish)))
+        $(TD Tests if a given output _range has the $(D finish) function.
+    ))
+)
+
+Convenience functions for manipulating output ranges:
+
+$(BOOKTABLE ,
+    $(TR $(TD $(D finish))
+        $(TD Tells output range that no more input is coming,
+        optionally returns a digest of the data.
+    ))
+    $(TR $(TD $(D start))
+        $(TD (Re)initialize the output range to its empty state.
     ))
 )
 
@@ -2350,3 +2373,63 @@ if (isNarrowString!(T[]))
     size_t i = a.length - strideBack(a, a.length);
     return decode(a, i);
 }
+
+/**
+Determines if output range $(D R) has a $(D start) function that (re)initializes
+the output range.
+
+Params:
+    R = output range to test
+Returns:
+    true if R has a $(D start) function
+ */
+template hasStart(R)
+{
+    enum bool hasStart = is(typeof(
+    (inout int = 0)
+    {
+        R r = R.init;
+        static assert(is(typeof(r.start()) : void));
+    }));
+}
+
+///
+@safe unittest
+{
+    static assert(!hasStart!(char[]));
+    import std.digest.md;
+    static assert(hasStart!MD5);
+}
+
+
+/**
+Determines if output range $(D R) has a $(D finish) function that signals
+the end of data being inserted into the range.
+The $(D finish) function may return a value that serves as a digest
+of the data inserted into the output range.
+
+Params:
+    R = output range to test
+Returns:
+    true if R has a $(D finish) function
+ */
+template hasFinish(R)
+{
+    enum bool hasFinish = is(typeof(
+    (inout int = 0)
+    {
+        R r = R.init;
+        static assert(is(typeof(r.finish())));
+    }));
+}
+
+///
+@safe unittest
+{
+    static assert(!hasFinish!(char[]));
+    import std.digest.md;
+    static assert(hasFinish!MD5);
+}
+
+
+
