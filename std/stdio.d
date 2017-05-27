@@ -4533,11 +4533,11 @@ ref File makeGlobal(alias handle)()
     // been initialized.
     static shared uint spinlock;
     import core.atomic;
-    if (atomicLoad(spinlock) <= uint.max / 2)
+    if (atomicLoad!(MemoryOrder.acq)(spinlock) <= uint.max / 2)
     {
         for (;;)
         {
-            if (atomicLoad(spinlock) > uint.max / 2)
+            if (atomicLoad!(MemoryOrder.acq)(spinlock) > uint.max / 2)
                 break;
             if (atomicOp!"+="(spinlock, 1) == 1)
             {
