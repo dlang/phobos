@@ -89,8 +89,8 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         @disable this(this);
 
         // Is this node unused?
-        void setUnused() { next = &this; }
-        bool unused() const { return next is &this; }
+        @trusted void setUnused() { next = &this; }
+        @safe bool unused() const { return next is &this; }
 
         // Just forward everything to the allocator
         alias a this;
@@ -162,7 +162,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     fails, subsequent calls to $(D allocate) will not cause more calls to $(D
     make).
     */
-    @safe void[] allocate(size_t s)
+    void[] allocate(size_t s)
     {
         for (auto p = &root, n = *p; n; p = &n.next, n = *p)
         {
@@ -194,11 +194,11 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         return null;
     }
 
-    private void moveAllocators(void[] newPlace)
+    private @safe void moveAllocators(void[] newPlace)
     {
-        assert(newPlace.ptr.alignedAt(Node.alignof));
+        assert((() @trusted => newPlace.ptr.alignedAt(Node.alignof))());
         assert(newPlace.length % Node.sizeof == 0);
-        auto newAllocators = cast(Node[]) newPlace;
+        auto newAllocators = (() @trusted => cast(Node[]) newPlace)();
         assert(allocators.length <= newAllocators.length);
 
         // Move allocators
@@ -210,11 +210,11 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
                 continue;
             }
             import core.stdc.string : memcpy;
-            memcpy(&newAllocators[i].a, &e.a, e.a.sizeof);
+            () @trusted { memcpy(&newAllocators[i].a, &e.a, e.a.sizeof); }();
             if (e.next)
             {
-                newAllocators[i].next = newAllocators.ptr
-                    + (e.next - allocators.ptr);
+                newAllocators[i].next = (() @trusted => newAllocators.ptr
+                                            + (e.next - allocators.ptr))();
             }
             else
             {
@@ -230,7 +230,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         auto toFree = allocators;
 
         // Change state
-        root = newAllocators.ptr + (root - allocators.ptr);
+        root = (() @trusted => newAllocators.ptr + (root - allocators.ptr))();
         allocators = newAllocators;
 
         // Free the olden buffer
@@ -238,16 +238,16 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         {
             static if (hasMember!(Allocator, "deallocate")
                     && hasMember!(Allocator, "owns"))
-                deallocate(toFree);
+                () @trusted { deallocate(toFree); }();
         }
         else
         {
-            bkalloc.deallocate(toFree);
+            () @trusted { bkalloc.deallocate(toFree); }();
         }
     }
 
     static if (ouroboros)
-    @trusted private Node* addAllocator(size_t atLeastBytes)
+    private Node* addAllocator(size_t atLeastBytes)
     {
         void[] t = allocators;
         static if (hasMember!(Allocator, "expand")
@@ -263,25 +263,31 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         {
             import std.c.string : memcpy;
             assert(t.length % Node.sizeof == 0);
-            assert(t.ptr.alignedAt(Node.alignof));
-            allocators = cast(Node[]) t;
+            assert((() @trusted => t.ptr.alignedAt(Node.alignof))());
+            allocators = (() @trusted => cast(Node[]) t)();
             allocators[$ - 1].setUnused;
-            auto newAlloc = SAllocator(make(atLeastBytes));
-            memcpy(&allocators[$ - 1].a, &newAlloc, newAlloc.sizeof);
-            emplace(&newAlloc);
+            () @trusted {
+                auto newAlloc = SAllocator(make(atLeastBytes));
+                memcpy(&allocators[$ - 1].a, &newAlloc, newAlloc.sizeof);
+                emplace(&newAlloc);
+            }();
         }
         else
         {
             immutable toAlloc = (allocators.length + 1) * Node.sizeof
                 + atLeastBytes + 128;
-            auto newAlloc = SAllocator(make(toAlloc));
-            auto newPlace = newAlloc.allocate(
-                (allocators.length + 1) * Node.sizeof);
-            if (!newPlace) return null;
-            moveAllocators(newPlace);
-            import core.stdc.string : memcpy;
-            memcpy(&allocators[$ - 1].a, &newAlloc, newAlloc.sizeof);
-            emplace(&newAlloc);
+            bool ok = () @trusted {
+                auto newAlloc = SAllocator(make(toAlloc));
+                auto newPlace = newAlloc.allocate(
+                                    (allocators.length + 1) * Node.sizeof);
+                if (!newPlace) return false;
+                moveAllocators(newPlace);
+                import core.stdc.string : memcpy;
+                memcpy(&allocators[$ - 1].a, &newAlloc, newAlloc.sizeof);
+                emplace(&newAlloc);
+                return true;
+            }();
+            if (!ok) return null;
             assert(allocators[$ - 1].owns(allocators) == Ternary.yes);
         }
         // Insert as new root
@@ -300,7 +306,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     }
 
     static if (!ouroboros)
-    @trusted private Node* addAllocator(size_t atLeastBytes)
+    private Node* addAllocator(size_t atLeastBytes)
     {
         void[] t = allocators;
         static if (hasMember!(BookkeepingAllocator, "expand"))
@@ -310,8 +316,8 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         if (expanded)
         {
             assert(t.length % Node.sizeof == 0);
-            assert(t.ptr.alignedAt(Node.alignof));
-            allocators = cast(Node[]) t;
+            assert((() @trusted => t.ptr.alignedAt(Node.alignof))());
+            allocators = (() @trusted => cast(Node[]) t)();
             allocators[$ - 1].setUnused;
         }
         else
@@ -319,14 +325,16 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
             // Could not expand, create a new block
             t = bkalloc.allocate((allocators.length + 1) * Node.sizeof);
             assert(t.length % Node.sizeof == 0);
-            if (!t.ptr) return null;
+            if (t is null) return null;
             moveAllocators(t);
         }
         assert(allocators[$ - 1].unused);
-        auto newAlloc = SAllocator(make(atLeastBytes));
-        import core.stdc.string : memcpy;
-        memcpy(&allocators[$ - 1].a, &newAlloc, newAlloc.sizeof);
-        emplace(&newAlloc);
+        () @trusted {
+            auto newAlloc = SAllocator(make(atLeastBytes));
+            import core.stdc.string : memcpy;
+            memcpy(&allocators[$ - 1].a, &newAlloc, newAlloc.sizeof);
+            emplace(&newAlloc);
+        }();
         // Creation succeeded, insert as root
         if (allocators.length == 1)
             allocators[$ - 1].next = null;
@@ -349,7 +357,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     returned  `Ternary.unknown`.
     */
     static if (hasMember!(Allocator, "owns"))
-    @safe Ternary owns(void[] b)
+    Ternary owns(void[] b)
     {
         auto result = Ternary.no;
         for (auto p = &root, n = *p; n; p = &n.next, n = *p)
@@ -583,10 +591,12 @@ version(Posix) @safe unittest
     import std.experimental.allocator.building_blocks.region : Region;
     AllocatorList!((n) => Region!GCAllocator(new ubyte[max(n, 1024 * 4096)]),
         NullAllocator) a;
-    const b1 = a.allocate(1024 * 8192);
-    assert(b1 !is null); // still works due to overdimensioning
-    const b2 = a.allocate(1024 * 10);
-    assert(b2.length == 1024 * 10);
+    () @safe {
+        const b1 = a.allocate(1024 * 8192);
+        assert(b1 !is null); // still works due to overdimensioning
+        const b2 = a.allocate(1024 * 10);
+        assert(b2.length == 1024 * 10);
+    }();
     a.deallocateAll();
 }
 
@@ -596,10 +606,12 @@ version(Posix) @safe unittest
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
     AllocatorList!((n) => Region!()(new ubyte[max(n, 1024 * 4096)])) a;
-    auto b1 = a.allocate(1024 * 8192);
-    assert(b1 !is null); // still works due to overdimensioning
-    b1 = a.allocate(1024 * 10);
-    assert(b1.length == 1024 * 10);
+    () @safe {
+        auto b1 = a.allocate(1024 * 8192);
+        assert(b1 !is null); // still works due to overdimensioning
+        b1 = a.allocate(1024 * 10);
+        assert(b1.length == 1024 * 10);
+    }();
     a.deallocateAll();
 }
 
@@ -609,11 +621,13 @@ version(Posix) @safe unittest
     import std.experimental.allocator.building_blocks.region : Region;
     import std.typecons : Ternary;
     AllocatorList!((n) => Region!()(new ubyte[max(n, 1024 * 4096)])) a;
-    auto b1 = a.allocate(1024 * 8192);
-    assert(b1 !is null);
-    b1 = a.allocate(1024 * 10);
-    assert(b1.length == 1024 * 10);
-    a.allocate(1024 * 4095);
+    () @safe {
+        auto b1 = a.allocate(1024 * 8192);
+        assert(b1 !is null);
+        b1 = a.allocate(1024 * 10);
+        assert(b1.length == 1024 * 10);
+        a.allocate(1024 * 4095);
+    }();
     a.deallocateAll();
     assert(a.empty == Ternary.yes);
 }
@@ -623,18 +637,20 @@ version(Posix) @safe unittest
     import std.experimental.allocator.building_blocks.region : Region;
     enum bs = GCAllocator.alignment;
     AllocatorList!((n) => Region!GCAllocator(256 * bs)) a;
-    auto b1 = a.allocate(192 * bs);
-    assert(b1.length == 192 * bs);
-    assert(a.allocators.length == 1);
-    auto b2 = a.allocate(64 * bs);
-    assert(b2.length == 64 * bs);
-    assert(a.allocators.length == 1);
-    auto b3 = a.allocate(192 * bs);
-    assert(b3.length == 192 * bs);
-    assert(a.allocators.length == 2);
-    a.deallocate(b1);
-    b1 = a.allocate(64 * bs);
-    assert(b1.length == 64 * bs);
-    assert(a.allocators.length == 2);
+    () @safe {
+        auto b1 = a.allocate(192 * bs);
+        assert(b1.length == 192 * bs);
+        assert(a.allocators.length == 1);
+        auto b2 = a.allocate(64 * bs);
+        assert(b2.length == 64 * bs);
+        assert(a.allocators.length == 1);
+        auto b3 = a.allocate(192 * bs);
+        assert(b3.length == 192 * bs);
+        assert(a.allocators.length == 2);
+        () @trusted { a.deallocate(b1); }();
+        b1 = a.allocate(64 * bs);
+        assert(b1.length == 64 * bs);
+        assert(a.allocators.length == 2);
+    }();
     a.deallocateAll();
 }

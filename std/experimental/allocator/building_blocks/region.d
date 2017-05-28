@@ -216,20 +216,20 @@ struct Region(ParentAllocator = NullAllocator,
     `No.growDownwards`.
     */
     static if (growDownwards == No.growDownwards)
-    bool expand(ref void[] b, size_t delta)
+    @safe bool expand(ref void[] b, size_t delta)
     {
         assert(owns(b) == Ternary.yes || b.ptr is null);
-        assert(b.ptr + b.length <= _current || b.ptr is null);
-        if (!b.ptr) return delta == 0;
+        assert((() @trusted => b.ptr + b.length <= _current || b.ptr is null)());
+        if (b is null) return delta == 0;
         auto newLength = b.length + delta;
-        if (_current < b.ptr + b.length + alignment)
+        if ((() @trusted => _current < b.ptr + b.length + alignment)())
         {
             // This was the last allocation! Allocate some more and we're done.
             if (this.goodAllocSize(b.length) == this.goodAllocSize(newLength)
                 || allocate(delta).length == delta)
             {
-                b = b.ptr[0 .. newLength];
-                assert(_current < b.ptr + b.length + alignment);
+                b = (() @trusted => b.ptr[0 .. newLength])();
+                assert((() @trusted => _current < b.ptr + b.length + alignment)());
                 return true;
             }
         }

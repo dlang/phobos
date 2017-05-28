@@ -55,7 +55,7 @@ struct FallbackAllocator(Primary, Fallback)
     Allocates memory trying the primary allocator first. If it returns $(D
     null), the fallback allocator is tried.
     */
-    @safe void[] allocate(size_t s)
+    void[] allocate(size_t s)
     {
         auto result = primary.allocate(s);
         return result.length == s ? result : fallback.allocate(s);
@@ -67,7 +67,7 @@ struct FallbackAllocator(Primary, Fallback)
     */
     static if (hasMember!(Primary, "alignedAllocate")
         || hasMember!(Fallback, "alignedAllocate"))
-    @safe void[] alignedAllocate(size_t s, uint a)
+    void[] alignedAllocate(size_t s, uint a)
     {
         static if (hasMember!(Primary, "alignedAllocate"))
         {{
@@ -97,7 +97,7 @@ struct FallbackAllocator(Primary, Fallback)
     bool expand(ref void[] b, size_t delta)
     {
         if (!delta) return true;
-        if (!b.ptr) return false;
+        if (b is null) return false;
         if (primary.owns(b) == Ternary.yes)
         {
             static if (hasMember!(Primary, "expand"))
@@ -196,7 +196,7 @@ struct FallbackAllocator(Primary, Fallback)
     Returns $(D primary.owns(b) | fallback.owns(b)).
     */
     static if (hasMember!(Primary, "owns") && hasMember!(Fallback, "owns"))
-    @safe Ternary owns(void[] b)
+    Ternary owns(void[] b)
     {
         return primary.owns(b) | fallback.owns(b);
     }
@@ -207,7 +207,7 @@ struct FallbackAllocator(Primary, Fallback)
     */
     static if (hasMember!(Primary, "resolveInternalPointer")
         && hasMember!(Fallback, "resolveInternalPointer"))
-    @safe Ternary resolveInternalPointer(const void* p, ref void[] result)
+    Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
         Ternary r = primary.resolveInternalPointer(p, result);
         return r == Ternary.no ? fallback.resolveInternalPointer(p, result) : r;
@@ -348,10 +348,12 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.typecons : Ternary;
     auto a = fallbackAllocator(Region!GCAllocator(1024), GCAllocator.instance);
-    auto b1 = a.allocate(1020);
-    assert(b1.length == 1020);
-    assert(a.primary.owns(b1) == Ternary.yes);
-    auto b2 = a.allocate(10);
-    assert(b2.length == 10);
-    assert(a.primary.owns(b2) == Ternary.no);
+    () @safe {
+        auto b1 = a.allocate(1020);
+        assert(b1.length == 1020);
+        assert(a.primary.owns(b1) == Ternary.yes);
+        auto b2 = a.allocate(10);
+        assert(b2.length == 10);
+        assert(a.primary.owns(b2) == Ternary.no);
+    }();
 }

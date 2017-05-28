@@ -119,7 +119,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
                 [0 .. actualAllocationSize(b.length)];
         }
 
-        @safe void[] allocate(size_t bytes)
+        void[] allocate(size_t bytes)
         {
             if (!bytes) return null;
             auto result = parent.allocate(actualAllocationSize(bytes));
@@ -139,7 +139,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
                     emplace!Suffix(cast(Suffix*)(suffixP));
                 }();
             }
-            return () @trusted { return result[stateSize!Prefix ..  stateSize!Prefix + bytes]; }();
+            return (() @trusted => result[stateSize!Prefix ..  stateSize!Prefix + bytes])();
         }
 
         static if (hasMember!(Allocator, "allocateAll"))
@@ -149,37 +149,40 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             if (result is null) return null;
             if (result.length < actualAllocationSize(1))
             {
-                deallocate(result);
+                () @trusted { deallocate(result); }();
                 return null;
             }
             static if (stateSize!Prefix)
             {
                 assert(result.length > stateSize!Prefix);
-                emplace!Prefix(cast(Prefix*) result.ptr);
+                () @trusted { emplace!Prefix(cast(Prefix*) result.ptr); }();
                 result = result[stateSize!Prefix .. $];
             }
             static if (stateSize!Suffix)
             {
                 assert(result.length > stateSize!Suffix);
                 // Ehm, find a properly aligned place for the suffix
-                auto p = (result.ptr + result.length - stateSize!Suffix)
-                    .alignDownTo(Suffix.alignof);
-                assert(p > result.ptr);
-                emplace!Suffix(cast(Suffix*) p);
-                result = result[0 .. p - result.ptr];
+                void *p;
+                () @trusted {
+                    p = (result.ptr + result.length - stateSize!Suffix)
+                             .alignDownTo(Suffix.alignof);
+                    assert(p > result.ptr);
+                    emplace!Suffix(cast(Suffix*) p);
+                }();
+                result = result[0 .. p - &result[0]];
             }
             return result;
         }
 
         static if (hasMember!(Allocator, "owns"))
-        @safe Ternary owns(void[] b)
+        Ternary owns(void[] b)
         {
             if (b is null) return Ternary.no;
             return parent.owns(actualAllocation(b));
         }
 
         static if (hasMember!(Allocator, "resolveInternalPointer"))
-        @safe Ternary resolveInternalPointer(const void* p, ref void[] result)
+        Ternary resolveInternalPointer(const void* p, ref void[] result)
         {
             void[] p1;
             Ternary r = parent.resolveInternalPointer(p, p1);
@@ -202,7 +205,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             auto t = actualAllocation(b);
             const result = parent.expand(t, delta);
             if (!result) return false;
-            b = b.ptr[0 .. b.length + delta];
+            b = (() @trusted => b.ptr[0 .. b.length + delta])();
             return true;
         }
 

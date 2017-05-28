@@ -30,17 +30,18 @@ struct GCAllocator
     }
 
     /// Ditto
-    @system bool expand(ref void[] b, size_t delta) shared
+    pure nothrow @safe bool expand(ref void[] b, size_t delta) shared
     {
         if (delta == 0) return true;
         if (b is null) return false;
-        immutable curLength = GC.sizeOf(b.ptr);
+        immutable curLength = (() @trusted => GC.sizeOf(b.ptr))();
         assert(curLength != 0); // we have a valid GC pointer here
         immutable desired = b.length + delta;
         if (desired > curLength) // check to see if the current block can't hold the data
         {
             immutable sizeRequest = desired - curLength;
-            immutable newSize = GC.extend(b.ptr, sizeRequest, sizeRequest);
+            immutable newSize = (() @trusted => GC.extend(b.ptr, sizeRequest,
+                                                          sizeRequest))();
             if (newSize == 0)
             {
                 // expansion unsuccessful
@@ -48,7 +49,7 @@ struct GCAllocator
             }
             assert(newSize >= desired);
         }
-        b = b.ptr[0 .. desired];
+        b = (() @trusted => b.ptr[0 .. desired])();
         return true;
     }
 
@@ -87,7 +88,7 @@ struct GCAllocator
     }
 
     /// Ditto
-    pure nothrow @trusted size_t goodAllocSize(size_t n) shared
+    pure nothrow @safe size_t goodAllocSize(size_t n) shared
     {
         if (n == 0)
             return 0;

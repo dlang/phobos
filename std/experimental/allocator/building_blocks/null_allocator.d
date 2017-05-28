@@ -33,6 +33,7 @@ struct NullAllocator
     Precondition: $(D b is null). This is because there is no other possible
     legitimate input.
     */
+    @safe pure nothrow
     bool expand(ref void[] b, size_t s) shared
     { assert(b is null); return s == 0; }
     /// Ditto

@@ -81,19 +81,17 @@ struct ScopedAllocator(ParentAllocator)
     Allocates memory. For management it actually allocates extra memory from
     the parent.
     */
-    @safe void[] allocate(size_t n)
+    void[] allocate(size_t n)
     {
         auto b = parent.allocate(n);
         if (!b.ptr) return b;
-        () @trusted {
-            Node* toInsert = & parent.prefix(b);
-            toInsert.prev = null;
-            toInsert.next = root;
-            toInsert.length = n;
-            assert(!root || !root.prev);
-            if (root) root.prev = toInsert;
-            root = toInsert;
-        }();
+        Node* toInsert = (() @trusted => & parent.prefix(b))();
+        toInsert.prev = null;
+        toInsert.next = root;
+        toInsert.length = n;
+        assert(!root || !root.prev);
+        if (root) root.prev = toInsert;
+        root = toInsert;
         return b;
     }
 
@@ -104,9 +102,9 @@ struct ScopedAllocator(ParentAllocator)
     bool expand(ref void[] b, size_t delta)
     {
         auto result = parent.expand(b, delta);
-        if (result && b.ptr)
+        if (result && (b !is null))
         {
-            parent.prefix(b).length = b.length;
+            () @trusted { parent.prefix(b).length = b.length; }();
         }
         return result;
     }
@@ -142,7 +140,7 @@ struct ScopedAllocator(ParentAllocator)
     Forwards to $(D parent.owns(b)).
     */
     static if (hasMember!(Allocator, "owns"))
-    @safe Ternary owns(void[] b)
+    Ternary owns(void[] b)
     {
         return parent.owns(b);
     }
@@ -198,10 +196,12 @@ struct ScopedAllocator(ParentAllocator)
     import std.experimental.allocator.mallocator : Mallocator;
     import std.typecons : Ternary;
     ScopedAllocator!Mallocator alloc;
-    assert(alloc.empty == Ternary.yes);
-    const b = alloc.allocate(10);
-    assert(b.length == 10);
-    assert(alloc.empty == Ternary.no);
+    () @safe {
+        assert(alloc.empty == Ternary.yes);
+        const b = alloc.allocate(10);
+        assert(b.length == 10);
+        assert(alloc.empty == Ternary.no);
+    }();
 }
 
 @system unittest

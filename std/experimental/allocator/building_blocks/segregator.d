@@ -134,14 +134,14 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
                 : _large.goodAllocSize(s);
         }
 
-        @safe void[] allocate(size_t s)
+        void[] allocate(size_t s)
         {
             return s <= threshold ? _small.allocate(s) : _large.allocate(s);
         }
 
         static if (hasMember!(SmallAllocator, "alignedAllocate")
                 && hasMember!(LargeAllocator, "alignedAllocate"))
-        @safe void[] alignedAllocate(size_t s, uint a)
+        void[] alignedAllocate(size_t s, uint a)
         {
             return s <= threshold
                 ? _small.alignedAllocate(s, a)
@@ -215,7 +215,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 
         static if (hasMember!(SmallAllocator, "owns")
                 && hasMember!(LargeAllocator, "owns"))
-        @safe Ternary owns(void[] b)
+        Ternary owns(void[] b)
         {
             return Ternary(b.length <= threshold
                 ? _small.owns(b) : _large.owns(b));
@@ -247,7 +247,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 
         static if (hasMember!(SmallAllocator, "resolveInternalPointer")
                 && hasMember!(LargeAllocator, "resolveInternalPointer"))
-        @safe Ternary resolveInternalPointer(const void* p, ref void[] result)
+        Ternary resolveInternalPointer(const void* p, ref void[] result)
         {
             Ternary r = _small.resolveInternalPointer(p, result);
             return r == Ternary.no ? _large.resolveInternalPointer(p, result) : r;

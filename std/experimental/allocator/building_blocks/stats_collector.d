@@ -286,14 +286,14 @@ public:
     static if (hasMember!(Allocator, "owns"))
     {
         static if ((perCallFlags & Options.numOwns) == 0)
-        @safe Ternary owns(void[] b)
+        Ternary owns(void[] b)
         { return ownsImpl(b); }
         else
-        @safe Ternary owns(string f = __FILE, uint n = line)(void[] b)
+        Ternary owns(string f = __FILE, uint n = line)(void[] b)
         { return ownsImpl!(f, n)(b); }
     }
 
-    @safe private Ternary ownsImpl(string f = null, uint n = 0)(void[] b)
+    private Ternary ownsImpl(string f = null, uint n = 0)(void[] b)
     {
         up!"numOwns";
         addPerCall!(f, n, "numOwns")(1);
@@ -310,17 +310,17 @@ public:
         & (Options.numAllocate | Options.numAllocateOK
             | Options.bytesAllocated)))
     {
-        @safe void[] allocate(size_t n)
+        void[] allocate(size_t n)
         { return allocateImpl(n); }
     }
     else
     {
-        @safe void[] allocate(string f = __FILE__, ulong n = __LINE__)
+        void[] allocate(string f = __FILE__, ulong n = __LINE__)
             (size_t bytes)
         { return allocateImpl!(f, n)(bytes); }
     }
 
-    @safe private void[] allocateImpl(string f = null, ulong n = 0)(size_t bytes)
+    private void[] allocateImpl(string f = null, ulong n = 0)(size_t bytes)
     {
         auto result = parent.allocate(bytes);
         add!"bytesUsed"(result.length);

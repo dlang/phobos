@@ -73,10 +73,10 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     $(D parent.allocate(goodAllocSize(n))). If $(D buf) is $(D null), returns
     $(D null). Otherwise, returns $(D buf[0 .. n]).
     */
-    @safe void[] allocate(size_t n)
+    void[] allocate(size_t n)
     {
         auto result = parent.allocate(goodAllocSize(n));
-        return () @trusted { return result.ptr ? result.ptr[0 .. n] : null; }();
+        return (() @trusted => result.ptr ? result.ptr[0 .. n] : null)();
     }
 
     /**
@@ -88,7 +88,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     void[] alignedAllocate()(size_t n, uint)
     {
         auto result = parent.alignedAllocate(goodAllocSize(n));
-        return () @trusted { return result.ptr ? result.ptr[0 .. n] : null; }();
+        return (() @trusted => result.ptr ? result.ptr[0 .. n] : null)();
     }
 
     /**
@@ -99,7 +99,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     */
     bool expand(ref void[] b, size_t delta)
     {
-        if (!b.ptr) return delta == 0;
+        if (b is null) return delta == 0;
         immutable allocated = goodAllocSize(b.length),
             needed = b.length + delta,
             neededAllocation = goodAllocSize(needed);
@@ -110,19 +110,19 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
         if (allocated == neededAllocation)
         {
             // Nice!
-            b = b.ptr[0 .. needed];
+            b = (() @trusted => b.ptr[0 .. needed])();
             return true;
         }
         // Hail Mary
         static if (hasMember!(ParentAllocator, "expand"))
         {
             // Expand to the appropriate quantum
-            auto original = b.ptr[0 .. allocated];
+            auto original = (() @trusted => b.ptr[0 .. allocated])();
             assert(goodAllocSize(needed) >= allocated);
             if (!parent.expand(original, neededAllocation - allocated))
                 return false;
             // Dial back the size
-            b = original.ptr[0 .. needed];
+            b = (() @trusted => original.ptr[0 .. needed])();
             return true;
         }
         else
