@@ -543,7 +543,7 @@ private template fqnSym(alias T : X!A, alias X, A...)
 
 private template fqnSym(alias T)
 {
-    static if (__traits(compiles, __traits(parent, T)))
+    static if (__traits(compiles, __traits(parent, T)) && !__traits(isSame, T, __traits(parent, T)))
         enum parentPrefix = fqnSym!(__traits(parent, T)) ~ ".";
     else
         enum parentPrefix = null;
@@ -583,6 +583,16 @@ private template fqnSym(alias T)
 
     import core.sync.barrier;
     static assert(fqn!Barrier == "core.sync.barrier.Barrier");
+}
+
+unittest
+{
+    struct TemplatedStruct()
+    {
+        enum foo = 0;
+    }
+    alias TemplatedStructAlias = TemplatedStruct;
+    assert("TemplatedStruct.foo" == fullyQualifiedName!(TemplatedStructAlias!().foo));
 }
 
 private template fqnType(T,
