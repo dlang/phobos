@@ -1767,14 +1767,87 @@ if (is(T == class) || is(T == interface))
 /// Ditto
 void dispose(A, T)(auto ref A alloc, T[] array)
 {
-    static if (hasElaborateDestructor!(typeof(array[0])))
+    import std.traits: isArray;
+
+    void disposeHelper(T)(T[] array)
     {
-        foreach (ref e; array)
+        static if(isArray!T)
         {
-            destroy(e);
+            foreach(ref e; array) {
+                disposeHelper(e);
+            }
+        }
+
+        static if (hasElaborateDestructor!(typeof(array[0])))
+        {
+            foreach (ref e; array)
+            {
+                destroy(e);
+            }
+        }
+
+        alloc.deallocate(array);
+    }
+
+    disposeHelper(array);
+}
+
+@safe unittest
+{
+    // test allocator that tracks memory leaks and bad deallocate calls
+    struct TestAllocator
+    {
+        import std.experimental.allocator.common: platformAlignment;
+
+        private static struct Allocation
+        {
+            void* ptr;
+            size_t length;
+        }
+        private Allocation[] _allocations;
+
+        enum uint alignment = platformAlignment;
+
+        void[] allocate(size_t numBytes) @safe nothrow
+        {
+            auto ret = new void[numBytes];
+            _allocations ~= Allocation(&ret[0], ret.length);
+            return ret;
+        }
+
+        bool deallocate(void[] bytes) @safe
+        {
+            import std.algorithm: remove, canFind;
+            import std.conv: text;
+
+            bool pred(Allocation other) { return other.ptr == bytes.ptr && other.length == bytes.length; }
+
+            assert(_allocations.canFind!pred,
+                   text("Unknown deallocate byte range. Ptr: ", &bytes[0], " length: ", bytes.length,
+                        " allocations: ", _allocations));
+            _allocations = _allocations.remove!pred;
+            return true; // GC memory doesn't need to be freed
+        }
+
+        ~this() @safe pure
+        {
+            import std.conv: text;
+            assert(!_allocations.length, text("Memory leak in TestAllocator. Allocations: ", _allocations));
         }
     }
-    alloc.deallocate(array);
+
+    TestAllocator allocator;
+    auto ints3d = allocator.makeArray!(int[][])(2);
+    foreach(ref ints2d; ints3d)
+    {
+        ints2d = allocator.makeArray!(int[])(3);
+        foreach(ref ints1d; ints2d)
+        {
+            ints1d = allocator.makeArray!int(4);
+        }
+    }
+
+    allocator.dispose(ints3d);
 }
 
 @system unittest
