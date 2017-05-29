@@ -1276,6 +1276,463 @@ alias Xorshift    = Xorshift128;                            /// ditto
     }
 }
 
+/**
+* Lagged Fibonacci generator.
+*
+* The engine can be instanciated with either an unsigned integral type,
+* or a floating point type. An unsigned integral engine will generate
+* numbers in the range [0 .. 2^^bits). A floating point engine will generate
+* floating points in the range [0 .. 1), with a step of 1/2^^bits.
+*
+* A $(D LaggedFibonacciEngine) must maintain a very large set of data
+* to function. Because of this, and contrary to all other generators
+* in this module, the engine is allocated on the heap, and uses
+* reference semantics.
+*
+* The engine must be seeded prior to use. Use of an un-seeded
+* (un-initialized) engine will generate an assertion error.
+*
+* The $(D LaggedFibonacciEngine) models an $(D Infinite)
+* $(D ForwardRange).
+*
+* Ported from boost 1.50 on July 30th 2012
+*/
+struct LaggedFibonacciEngine(Type, size_t bits, size_t longLag, size_t shortLag)
+  if (isUnsigned!Type || isFloatingPoint!Type)
+{
+  public:
+    /// Mark this as a Rng
+    enum bool isUniformRandom = true;
+    /// Always $(D false) (random generators are infinite ranges).
+    enum empty = false;
+    /// Returns the smallest value that the generator can produce.
+    enum Type min = 0;
+    /// Returns the largest value that the generator can produce.
+    enum Type max = maxPrivate;
+
+  private:
+    enum uint defaultSeed = 331u;
+    alias typeof(this) This; //A *non-qualified* alias for typof(this).
+
+    //Conditional Aliases/enums/asserts
+    static if (isUnsigned!Type)
+    {
+        static assert(UIntType.sizeof*8 >= bits, text("Provided UIntType not large enough to hold ", bits, "-bit integers."));
+
+        alias Type UIntType;
+        enum size_t kMax = (bits+31)/32; //Total amount of "u32" types needed to fill a type of size bits
+        enum UIntType mask = cast(UIntType)~(~cast(UIntType)0 << bits); //A mask that is the size of "bits"
+        enum UIntType maxPrivate = mask; //maxPrivate is needed to have a single documented max
+    }
+    else //static if (isFloatingPoint!Type)
+    {
+        alias Type RealType;
+        enum RealType two32 = 2.0^^32;
+        enum RealType divisor = 1.0/(2.0^^bits);
+        enum size_t kMax = bits/32; //Amount of whole "u32" types that can fit in a type of size bits
+        enum uint mask = ~((~cast(uint)0) << (bits%32)); //A mask of the remaining bits
+        enum RealType maxPrivate = 1; //maxPrivate is needed to have a single documented max
+    }
+
+  private:
+    //Payload; Reference semantics
+    static struct Payload
+    {
+        Type[longLag] x;
+        size_t i = 0;
+
+        void throwSeedException() const
+        {
+            throw new Exception(
+                text("LaggedFibonacciEngine.seed: Input range didn't provide enough elements: Need ",
+                    longLag, " elements."));
+        }
+
+        void seed(Range)(Range range)
+            //Range conditions were validated in public interface
+        {
+            i = 0;
+            static if (isUnsigned!Type)
+            {
+                foreach(j; 0..longLag)
+                {
+                    UIntType val = 0;
+                    foreach(k; 0..kMax)
+                    {
+                        if(range.empty) throwSeedException();
+                        val += cast(UIntType)range.front << 32*k;
+                        range.popFront();
+                    }
+                    x[j] = val & mask;
+                }
+            }
+            else //static if (isFloatingPoint!Type)
+            {
+                foreach(j; 0..longLag)
+                {
+                    RealType val = 0;
+                    RealType mult = divisor;
+                    foreach(k; 0..kMax)
+                    {
+                        if(range.empty) throwSeedException();
+                        val += cast(uint)range.front * mult;
+                        range.popFront();
+                        mult *= two32;
+                    }
+                    static if(mask != 0)
+                    {
+                        if(range.empty) throwSeedException();
+                        val += (cast(uint)range.front & mask) * mult;
+                        range.popFront();
+                    }
+                    assert(val >= 0.0, text("LaggedFibonacciEngine: Floating point value is smaller than 0: ", val));
+                    assert(val < 1.0, text("LaggedFibonacciEngine: Floating point value is bigger than 1: ", val));
+                    x[j] = val;
+                }
+            }
+            fill();
+        }
+
+        @safe nothrow
+        void fill()
+        {
+            //The basic algorithm might not be visible at first.
+            //
+            //It is the same for both integer/float:
+            //foreach(i; 0..longLag)
+            //{
+            //    x[i] += x[i - shortLag]; //*with modulo wrap around if negative*
+            //    x[i].ApplyMask
+            //}
+            //Where ApplyMask is
+            //*Integer: "x[i] &= mask"
+            //*Floats: "if(x[i]>1) x[i] -= 1"
+            //
+            //We exploit vectorial operations for perfomance.
+            //Data is iterated on in strips of shortLag length.
+            //Entire "stips at once" are processed in addAndMask.
+            //There is a special "first iteration" case to avoid the costly modulo operation
+            //There is a special "final iteration" for the last (shorter) strip
+            @safe nothrow void addAndMask(Type[] r1, Type[] r2) 
+            {
+                try //@@@ 8651
+                {
+                    r1[] += r2[];
+                    static if (isUnsigned!Type) r1[] &= mask;
+                    else foreach(ref t; r1[]) if(t >= 1.0) t -= 1.0;
+                }
+                catch(Exception) assert(0, "Unexpected exception in LaggedFibonacciEngine.Payload.Fill");
+            }
+    
+            addAndMask(x[0 .. shortLag], x[longLag - shortLag .. longLag]);
+            size_t low = shortLag;
+            for( ; low + shortLag <= longLag ; low += shortLag) //Iteration necessarry to avoid overlap operations
+                addAndMask(x[low .. low + shortLag], x[low - shortLag .. low]);
+            addAndMask(x[low .. longLag], x[low - shortLag .. longLag - shortLag]);
+        }
+
+        @property @safe nothrow const
+        Type front()
+        {
+            return x[i];
+        }
+
+        @safe nothrow
+        void popFront()
+        {
+            ++i;
+            if(i == longLag)
+            {
+                fill();
+                i = 0;
+            }
+        }
+
+        @safe nothrow
+        void discard(size_t n)
+        {
+            //Do NOT replace with n+=i, or risk an integer overflow
+            while(n >= longLag)
+            {
+                fill();
+                n -= longLag;
+            }
+            //Now that n is smaller, we can take i into account and do the last iteration
+            i += n;
+            if(i >= longLag)
+            {
+                fill();
+                i -= longLag;
+            }
+        }
+    }
+    Payload* payload;
+
+  public:
+/**
+Tells if the generator has been seeded/initialized
+*/
+    @property @safe nothrow const
+    bool seeded()
+    {
+        return payload != null;
+    }
+
+/**
+Seeds the $(D LaggedFibonacciEngine)
+Parameters:
+None: Uses a default seed.
+T value: Uses a $(D MinstdRand0) generator seeded with value
+InputRange range: Uses range.
+Throws:
+$(D Exception) if the InputRange didn't provide enough elements to seed the generator.
+The number of elements required is the 'longLag' template parameter of the LaggedFibonacciEngine struct.
+*/
+    void seed()()
+    {
+        seed(defaultSeed);
+    }
+
+/// ditto
+    void seed()(uint value)
+    {
+        auto gen = MinstdRand0(value);
+        seed(gen);
+    }
+
+/// ditto
+    void seed(InputRange)(InputRange range)
+        if ( isInputRange!InputRange && isIntegral!(ElementType!InputRange) &&
+            ( ElementType!InputRange.sizeof >= 4 || ElementType!InputRange.sizeof >= Type.sizeof ) )
+    {
+        if(!payload) payload = new Payload;
+        payload.seed(range);
+    }
+
+/**
+Creates a deep copy of the generator; Saves the range.
+$(BIGOH longLag) complexity.
+*/
+    @property const
+    auto dup()
+    {
+        This ret; //non qualified typeof(this)
+        if(payload)
+        {
+            ret.payload = new Payload;
+            *ret.payload = *payload;
+        }
+        return ret;
+    }
+
+/// dito
+    alias dup save;
+
+/**
+Returns true if the two generators will produce identical
+sequences of outputs.
+$(BIGOH 1) average case complexity.
+$(BIGOH longLag) worst case complexity.
+*/
+    @safe nothrow const
+    bool opEquals(const(This) b)
+    {
+        return (payload is b.payload) ||
+               (payload && b.payload && *payload == *b.payload);
+    }
+
+    private enum payloadErrorText = "LaggedFibonacciEngine: Attempt to use an un-initialized engine";
+
+/**
+Returns the current value of the generator. Constant complexity.
+*/
+    @property @safe nothrow const
+    Type front()
+    {
+        assert(payload, payloadErrorText);
+        return payload.front;
+    }
+
+/**
+Advances to the next value of the generator.
+
+Amortized constant time: $(BIGOH longLag) in case of generator refill,
+$(BIGOH 1) otherwise. The generator is refilled every time the generator
+is advanced by $(D longLag).
+*/
+    @safe nothrow
+    void popFront()
+    {
+        assert(payload, payloadErrorText);
+        payload.popFront();
+    }
+
+/**
+Advances the state of the generator by $(D z). More efficient than calling popFront $(D z) times.
+
+Amortized $(BIGOH z) time: advancing the get pointer is constant time, but each refill
+(every time the engine is advanced by $(D longLag)) will still require $(D longLag) time.
+*/
+    @safe nothrow
+    void discard(size_t z)
+    {
+        assert(payload, payloadErrorText);
+        payload.discard(z);
+    }
+}
+
+/**
+Define $(D_PARAM LaggedFibonacciEngine) generators with well-chosen
+parameters.
+$(D LaggedFibonacci) is an implementation chosen LaggedFibonacci engine.
+*/
+alias LaggedFibonacciEngine!(double, 48,   607,   273)   LaggedFibonacci607;
+alias LaggedFibonacciEngine!(double, 48,  1279,   418)  LaggedFibonacci1279; /// ditto
+alias LaggedFibonacciEngine!(double, 48,  2281,  1252)  LaggedFibonacci2281; /// ditto
+alias LaggedFibonacciEngine!(double, 48,  3217,   576)  LaggedFibonacci3217; /// ditto
+alias LaggedFibonacciEngine!(double, 48,  4423,  2098)  LaggedFibonacci4423; /// ditto
+alias LaggedFibonacciEngine!(double, 48,  9689,  5502)  laggedFibonacci9689; /// ditto
+alias LaggedFibonacciEngine!(double, 48, 19937,  9842) LaggedFibonacci19937; /// ditto
+alias LaggedFibonacciEngine!(double, 48, 23209, 13470) LaggedFibonacci23209; /// ditto
+alias LaggedFibonacciEngine!(double, 48, 44497, 21034) LaggedFibonacci44497; /// ditto
+alias LaggedFibonacci607 LaggedFibonacci;
+
+unittest
+{
+    //Data aquired from boost implementation
+
+    //First 5 numbers of the different implementations
+    immutable(long[][]) referenceInt = [
+        [111357645752581, 223546595107190, 276701472505536, 183354198929810, 259724424734707], //  607
+        [ 18516896918599, 266714042254566, 214677200432103, 238166017619873, 253427522088996], // 1279
+        [209321651636266, 234403323170313, 44940711525953,  270585935924073, 182951237378271], // 2281
+        [102247219917095, 111280010135238, 8455294141221,   268442649885962, 181826007198542], // 3217
+        [212931708246959,  67779908108345, 109786160258021, 197789232895085, 173746813492116], // 4423
+        [136413310818494,  11236510562599, 52970671921490,  193128799152157, 216674819310303], // 9689
+        [  7126909551884,  86072826243616, 80675133038411,  251970503587899, 124423863440468], //19937
+        [146111616638474, 136512418917669, 259280540566850, 250350614477568, 143029744160684], //23209
+        [263558154538665, 124374555248232, 92765545546811,  244707388756702, 173997194527172], //44497
+    ];
+
+    immutable(double[][]) referenceFloat = [
+        [ 0.395622,  0.794197,  0.983041, 0.651405, 0.922727], //  607
+        [0.0657852,  0.947559,  0.762687, 0.846136, 0.900355], // 1279
+        [  0.74366,  0.832768,  0.159661, 0.961314, 0.649973], // 2281
+        [ 0.363255,  0.395346, 0.0300392,   0.9537, 0.645976], // 3217
+        [ 0.756485,  0.240803,  0.390039, 0.702689, 0.617273], // 4423
+        [ 0.484637, 0.0399201,   0.18819, 0.686131, 0.769784], // 9689
+        [0.0253199,  0.305792,  0.286616, 0.895179, 0.442042], //19937
+        [ 0.519093,   0.48499,   0.92115, 0.889424, 0.508144], //23209
+        [ 0.936347,  0.441867,  0.329569, 0.869375, 0.618162], //44497
+    ];
+
+    //Numbers [5000-5005)
+    immutable(long[][]) referenceInt5000 = [
+        [266635669194050,  70515619676375,  83207904227719, 281373199363211, 116250967224354], //  607
+        [110135446738590,  36692226031177, 209483500649828, 268031999359600, 248891650590185], // 1279
+        [217776584741215, 215117240100973,  52618792839041,  22635584224685, 198265981921064], // 2281
+        [ 93750178568681, 165145932004335,  78808838225286, 232759037338400,  61858783708817], // 3217
+        [275211622257559,  20961152411805,  16486400488039, 239571949617653, 119147348429321], // 4423
+        [103616703846189, 134586041061516,   4244911899451,   5940954177811,  10074550564657], // 9689
+        [255367856135618, 277538191528067, 178667831440893,  22734204862614, 227099404643056], //19937
+        [121591596418969, 167750783695320,  32717268361943, 281360144972641, 255183279435442], //23209
+        [279851845097169, 249217869577016, 152361400411229, 261604351718748,  76994486632824], //44497
+    ];
+
+    immutable(double[][]) referenceFloat5000 = [
+        [ 0.94728, 0.250522,  0.295614,  0.999638, 0.413006], //  607
+        [ 0.39128, 0.130357,  0.744235,  0.952241, 0.884241], // 1279
+        [0.773698,  0.76425,   0.18694, 0.0804177, 0.704382], // 2281
+        [0.333068, 0.586716,  0.279985,  0.826926, 0.219767], // 3217
+        [0.977748, 0.074469, 0.0585715,  0.851131, 0.423296], // 4423
+        [ 0.36812, 0.478146,  0.015081, 0.0211065, 0.035792], // 9689
+        [0.907249, 0.986014,  0.634756, 0.0807681, 0.806819], //19937
+        [ 0.43198, 0.595971,  0.116235,  0.999592, 0.906593], //23209
+        [0.994233,   0.8854,  0.541296,  0.929405, 0.273539], //44497
+    ];
+
+    void doTests(T, V)(V values, V values5000)
+    {
+        foreach (I, Type; TypeTuple!(
+                  LaggedFibonacciEngine!(T, 48,   607,   273),
+                  LaggedFibonacciEngine!(T, 48,  1279,   418),
+                  LaggedFibonacciEngine!(T, 48,  2281,  1252),
+                  LaggedFibonacciEngine!(T, 48,  3217,   576),
+                  LaggedFibonacciEngine!(T, 48,  4423,  2098),
+                  LaggedFibonacciEngine!(T, 48,  9689,  5502),
+                  LaggedFibonacciEngine!(T, 48, 19937,  9842),
+                  LaggedFibonacciEngine!(T, 48, 23209, 13470),
+                  LaggedFibonacciEngine!(T, 48, 44497, 21034)
+              )
+        )
+        {
+            auto r = Type();
+            assert(!r.seeded);
+            r.seed();
+            assert(r.seeded);
+
+            assert(equal!approxEqual(r.take(5), values[I]));
+            r.discard(4995);
+            assert(equal!approxEqual(r.take(5), values5000[I]));
+
+            r.seed(); //check re-seed and save
+            assert(equal!approxEqual(r.save.take(5), values[I]));
+            r.discard(5000);
+            assert(equal!approxEqual(r.save.take(5), values5000[I]));
+
+            r.discard(5000);
+            assert(r == r);
+            assert(equal!approxEqual(r.save.take(5), r.save.take(5)));
+            auto ra = Type();
+            auto rb = Type();
+            ra.seed();
+            rb.seed();
+            assert(ra !is rb);
+            assert(ra == rb);
+            ra.popFront();
+            assert(ra != rb);
+        }
+
+        //Verify validity of output "steps"
+        auto fourGenerator = LaggedFibonacciEngine!(T, 4, 607, 273)();
+        fourGenerator.seed(unpredictableSeed());
+        T[] sixteen = [ 0,  1,  2,  3,
+                        4,  5,  6,  7,
+                        8,  9, 10, 11,
+                       12, 13, 14, 15];
+        static if(is(T == double))
+        {
+            sixteen[] /= 16.0;
+        }
+
+        foreach(v; fourGenerator.take(10))
+        {
+            sixteen.canFind!approxEqual(v);
+        }
+    }
+
+    doTests!(ulong)(referenceInt, referenceInt5000);
+    doTests!(double)(referenceFloat, referenceFloat5000);
+}
+unittest
+{
+    //Test everything works for an 8 bit generator
+    auto a = LaggedFibonacciEngine!(ushort, 8,   607,   273)();
+    ushort b = 5;
+    ulong c = 5;
+    a.seed(b); //Can be built seeded from a ushort
+    a.seed(cast(uint)c); //ulong needs a cast
+    a.seed(unpredictableSeed()); //unperdictable seed is fine
+}
+unittest
+{
+    auto a = LaggedFibonacci();
+    assertThrown(a.seed([1, 2, 3])); //Input range too short
+}
+unittest
+{
+    auto p = new LaggedFibonacci();
+}
 
 /**
 A "good" seed for initializing random number engines. Initializing
