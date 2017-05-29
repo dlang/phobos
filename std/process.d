@@ -1053,6 +1053,19 @@ version (Posix) @system unittest
     import std.exception : assertThrown;
     assertThrown!ProcessException(spawnProcess("ewrgiuhrifuheiohnmnvqweoijwf"));
     assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf"));
+
+    // can't execute malformed file with executable permissions
+    version(Posix)
+    {
+        import std.path : buildPath;
+        import std.file : remove, write, setAttributes;
+        import core.sys.posix.sys.stat : S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IXGRP, S_IROTH, S_IXOTH;
+        string deleteme = buildPath(tempDir(), "deleteme.std.process.unittest.pid") ~ to!string(thisProcessID);
+        write(deleteme, "");
+        scope(exit) remove(deleteme);
+        setAttributes(deleteme, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+        assertThrown!ProcessException(spawnProcess(deleteme));
+    }
 }
 
 @system unittest // Specifying a working directory.
