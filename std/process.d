@@ -333,6 +333,14 @@ Pid spawnProcess(in char[] program,
     return spawnProcess((&program)[0 .. 1], env, config, workDir);
 }
 
+version(Posix) private enum InternalError : ubyte
+{
+    noerror,
+    exec,
+    chdir,
+    getrlimit
+}
+
 /*
 Implementation of spawnProcess() for POSIX.
 
@@ -406,9 +414,42 @@ private Pid spawnProcessImpl(in char[][] args,
     auto stdoutFD = getFD(stdout);
     auto stderrFD = getFD(stderr);
 
+    int[2] forkPipe;
+    if (core.sys.posix.unistd.pipe(forkPipe) == 0)
+    {
+        setCLOEXEC(forkPipe[1], true);
+    }
+    else
+    {
+        throw ProcessException.newFromErrno("Could not create pipe to check startup of child");
+    }
+    scope(exit) close(forkPipe[0]);
+
+    static void abortOnError(int forkPipeOut, InternalError errorType, int error) nothrow
+    {
+        core.sys.posix.unistd.write(forkPipeOut, &errorType, errorType.sizeof);
+        core.sys.posix.unistd.write(forkPipeOut, &error, error.sizeof);
+        close(forkPipeOut);
+        core.sys.posix.unistd._exit(1);
+        assert(0);
+    }
+
+    static void ignorePipeErrors() nothrow
+    {
+        import core.sys.posix.signal;
+        import core.stdc.string : memset;
+        sigaction_t ignoreAction;
+        memset(&ignoreAction, 0, sigaction_t.sizeof);
+        ignoreAction.sa_handler = SIG_IGN;
+        sigaction(SIGPIPE, &ignoreAction, null);
+    }
+
     auto id = core.sys.posix.unistd.fork();
     if (id < 0)
+    {
+        close(forkPipe[1]);
         throw ProcessException.newFromErrno("Failed to spawn new process");
+    }
 
     void forkChild() nothrow @nogc
     {
@@ -417,6 +458,11 @@ private Pid spawnProcessImpl(in char[][] args,
 
         // Child process
 
+        ignorePipeErrors();
+        // no need for the read end of pipe on child side
+        close(forkPipe[0]);
+        immutable forkPipeOut = forkPipe[1];
+
         // Set the working directory.
         if (workDirFD >= 0)
         {
@@ -424,10 +470,7 @@ private Pid spawnProcessImpl(in char[][] args,
             {
                 // Fail. It is dangerous to run a program
                 // in an unexpected working directory.
-                core.sys.posix.stdio.perror("spawnProcess(): " ~
-                    "Failed to set working directory");
-                core.sys.posix.unistd._exit(1);
-                assert(0);
+                abortOnError(forkPipeOut, InternalError.chdir, .errno);
             }
             close(workDirFD);
         }
@@ -456,9 +499,7 @@ private Pid spawnProcessImpl(in char[][] args,
             rlimit r;
             if (getrlimit(RLIMIT_NOFILE, &r) != 0)
             {
-                core.sys.posix.stdio.perror("getrlimit");
-                core.sys.posix.unistd._exit(1);
-                assert(0);
+                abortOnError(forkPipeOut, InternalError.getrlimit, .errno);
             }
             immutable maxDescriptors = cast(int) r.rlim_cur;
 
@@ -477,6 +518,8 @@ private Pid spawnProcessImpl(in char[][] args,
             {
                 foreach (i; 0 .. maxToClose)
                 {
+                    // don't close pipe write end
+                    if (pfds[i].fd == forkPipeOut) continue;
                     // POLLNVAL will be set if the file descriptor is invalid.
                     if (!(pfds[i].revents & POLLNVAL)) close(pfds[i].fd);
                 }
@@ -484,7 +527,11 @@ private Pid spawnProcessImpl(in char[][] args,
             else
             {
                 // Fall back to closing everything.
-                foreach (i; 3 .. maxDescriptors) close(i);
+                foreach (i; 3 .. maxDescriptors)
+                {
+                    if (i == forkPipeOut) continue;
+                    close(i);
+                }
             }
         }
         else
@@ -501,8 +548,7 @@ private Pid spawnProcessImpl(in char[][] args,
         core.sys.posix.unistd.execve(argz[0], argz.ptr, envz);
 
         // If execution fails, exit as quickly as possible.
-        core.sys.posix.stdio.perror("spawnProcess(): Failed to execute program");
-        core.sys.posix.unistd._exit(1);
+        abortOnError(forkPipeOut, InternalError.exec, .errno);
     }
 
     if (id == 0)
@@ -512,6 +558,41 @@ private Pid spawnProcessImpl(in char[][] args,
     }
     else
     {
+        close(forkPipe[1]);
+        auto status = InternalError.noerror;
+        auto readExecResult = core.sys.posix.unistd.read(forkPipe[0], &status, status.sizeof);
+        if (readExecResult == -1)
+            throw ProcessException.newFromErrno("Could not read from pipe to get child status");
+
+        if (status != InternalError.noerror)
+        {
+            int error;
+            string errorMsg;
+            readExecResult = read(forkPipe[0], &error, error.sizeof);
+
+            switch(status)
+            {
+                case InternalError.chdir:
+                    errorMsg = "Failed to set working directory";
+                    break;
+                case InternalError.getrlimit:
+                    errorMsg = "getrlimit failed";
+                    break;
+                case InternalError.exec:
+                    errorMsg = "Failed to execute program";
+                    break;
+                default:
+                    errorMsg = "Unknown error occured";
+                    break;
+            }
+
+            if (readExecResult == error.sizeof) {
+                throw ProcessException.newFromErrno(error, errorMsg);
+            } else {
+                throw new ProcessException(errorMsg);
+            }
+        }
+
         // Parent process:  Close streams and return.
         if (!(config & Config.retainStdin ) && stdinFD  > STDERR_FILENO
                                             && stdinFD  != getFD(std.stdio.stdin ))
@@ -2329,18 +2410,27 @@ class ProcessException : Exception
                                          size_t line = __LINE__)
     {
         import core.stdc.errno : errno;
+        return newFromErrno(errno, customMsg, file, line);
+    }
+
+    // ditto, but error number is provided by caller
+    static ProcessException newFromErrno(int error,
+                                         string customMsg = null,
+                                         string file = __FILE__,
+                                         size_t line = __LINE__)
+    {
         import std.conv : to;
         version (CRuntime_Glibc)
         {
             import core.stdc.string : strerror_r;
             char[1024] buf;
             auto errnoMsg = to!string(
-                core.stdc.string.strerror_r(errno, buf.ptr, buf.length));
+                core.stdc.string.strerror_r(error, buf.ptr, buf.length));
         }
         else
         {
             import core.stdc.string : strerror;
-            auto errnoMsg = to!string(strerror(errno));
+            auto errnoMsg = to!string(strerror(error));
         }
         auto msg = customMsg.empty ? errnoMsg
                                    : customMsg ~ " (" ~ errnoMsg ~ ')';
