@@ -724,34 +724,6 @@ if (!is(Unqual!T == bool))
         return result;
     }
 
-    @nogc @system unittest
-    {
-        auto a = Array!int(0, 1, 2);
-        int[3] b = [3, 4, 5];
-        short[3] ci = [0, 1, 0];
-        auto c = Array!short(ci);
-        assert(Array!int(0, 1, 2, 0, 1, 2) == a ~ a);
-        assert(Array!int(0, 1, 2, 3, 4, 5) == a ~ b);
-        assert(Array!int(0, 1, 2, 3) == a ~ 3);
-        assert(Array!int(0, 1, 2, 0, 1, 0) == a ~ c);
-    }
-
-    @nogc @system unittest
-    {
-        auto a = Array!char('a', 'b');
-        assert(Array!char("abc") == a ~ 'c');
-        import std.utf : byCodeUnit;
-        assert(Array!char("abcd") == a ~ "cd".byCodeUnit);
-    }
-
-    @nogc @system unittest
-    {
-        auto a = Array!dchar("ąćę"d);
-        assert(Array!dchar("ąćęϢϖ"d) == a ~ "Ϣϖ"d);
-        wchar x = 'Ϣ';
-        assert(Array!dchar("ąćęϢz"d) == a ~ x ~ 'z');
-    }
-
     /**
      * Forwards to `insertBack`.
      */
@@ -1682,14 +1654,6 @@ if (is(Unqual!T == bool))
         return !length;
     }
 
-    @system unittest
-    {
-        Array!bool a;
-        assert(a.empty);
-        a.insertBack(false);
-        assert(!a.empty);
-    }
-
     /**
      * Returns: A duplicate of the array.
      *
@@ -1700,16 +1664,6 @@ if (is(Unqual!T == bool))
         Array result;
         result.insertBack(this[]);
         return result;
-    }
-
-    @system unittest
-    {
-        Array!bool a;
-        assert(a.empty);
-        auto b = a.dup;
-        assert(b.empty);
-        a.insertBack(true);
-        assert(b.empty);
     }
 
     /**
@@ -1726,15 +1680,6 @@ if (is(Unqual!T == bool))
         return length;
     }
 
-    @system unittest
-    {
-        import std.conv : to;
-        Array!bool a;
-        assert(a.length == 0);
-        a.insert(true);
-        assert(a.length == 1, to!string(a.length));
-    }
-
     /**
      * Returns: The maximum number of elements the array can store without
      * reallocating memory and invalidating iterators upon insertion.
@@ -1746,18 +1691,6 @@ if (is(Unqual!T == bool))
         return _store.refCountedStore.isInitialized
             ? cast(size_t) bitsPerWord * _store._backend.capacity
             : 0;
-    }
-
-    @system unittest
-    {
-        import std.conv : to;
-        Array!bool a;
-        assert(a.capacity == 0);
-        foreach (i; 0 .. 100)
-        {
-            a.insert(true);
-            assert(a.capacity >= a.length, to!string(a.capacity));
-        }
     }
 
     /**
@@ -1778,16 +1711,6 @@ if (is(Unqual!T == bool))
         _store._backend.reserve(to!size_t((e + bitsPerWord - 1) / bitsPerWord));
     }
 
-    @system unittest
-    {
-        Array!bool a;
-        assert(a.capacity == 0);
-        a.reserve(15657);
-        assert(a.capacity >= 15657);
-        a.reserve(100);
-        assert(a.capacity >= 15657);
-    }
-
     /**
      * Returns: A range that iterates over all elements of the array in forward order.
      *
@@ -1798,12 +1721,6 @@ if (is(Unqual!T == bool))
         return Range(this, 0, length);
     }
 
-    @system unittest
-    {
-        Array!bool a;
-        a.insertBack([true, false, true, true]);
-        assert(a[].length == 4);
-    }
 
     /**
      * Returns: A range that iterates the array between two specified positions.
@@ -1814,13 +1731,6 @@ if (is(Unqual!T == bool))
     {
         enforce(a <= b && b <= length);
         return Range(this, a, b);
-    }
-
-    @system unittest
-    {
-        Array!bool a;
-        a.insertBack([true, false, true, true]);
-        assert(a[0 .. 2].length == 2);
     }
 
     /**
@@ -1844,15 +1754,6 @@ if (is(Unqual!T == bool))
         enforce(!empty);
         if (value) data.ptr[0] |= 1;
         else data.ptr[0] &= ~cast(size_t) 1;
-    }
-
-    @system unittest
-    {
-        Array!bool a;
-        a.insertBack([true, false, true, true]);
-        assert(a.front);
-        a.front = false;
-        assert(!a.front);
     }
 
     /**
@@ -1883,15 +1784,6 @@ if (is(Unqual!T == bool))
             data.back &=
                 ~(cast(size_t) 1 << ((_store._length - 1) % bitsPerWord));
         }
-    }
-
-    @system unittest
-    {
-        Array!bool a;
-        a.insertBack([true, false, true, true]);
-        assert(a.back);
-        a.back = false;
-        assert(!a.back);
     }
 
     /**
@@ -1942,15 +1834,6 @@ if (is(Unqual!T == bool))
         return this[i];
     }
 
-    @system unittest
-    {
-        Array!bool a;
-        a.insertBack([true, false, true, true]);
-        assert(a[0] && !a[1]);
-        a[0] &= a[1];
-        assert(!a[0]);
-    }
-
     /**
      * Returns: A new array which is a concatenation of `this` and its argument.
      *
@@ -1974,21 +1857,6 @@ if (is(Unqual!T == bool))
         return result;
     }
 
-    @system unittest
-    {
-        import std.algorithm.comparison : equal;
-        Array!bool a;
-        a.insertBack([true, false, true, true]);
-        Array!bool b;
-        b.insertBack([true, true, false, true]);
-        assert(equal((a ~ b)[],
-                        [true, false, true, true, true, true, false, true]));
-        assert((a ~ [true, false])[].equal([true, false, true, true, true, false]));
-        Array!bool c;
-        c.insertBack(true);
-        assert((c ~ false)[].equal([true, false]));
-    }
-
     /**
      * Forwards to `insertBack`.
      */
@@ -1998,19 +1866,6 @@ if (is(Unqual!T == bool))
         static if (is(typeof(stuff[]))) insertBack(stuff[]);
         else insertBack(stuff);
         return this;
-    }
-
-    @system unittest
-    {
-        import std.algorithm.comparison : equal;
-        Array!bool a;
-        a.insertBack([true, false, true, true]);
-        Array!bool b;
-        a.insertBack([false, true, false, true, true]);
-        a ~= b;
-        assert(equal(
-                    a[],
-                    [true, false, true, true, false, true, false, true, true]));
     }
 
     /**
@@ -2023,14 +1878,6 @@ if (is(Unqual!T == bool))
     void clear()
     {
         this = Array();
-    }
-
-    @system unittest
-    {
-        Array!bool a;
-        a.insertBack([true, false, true, true]);
-        a.clear();
-        assert(a.capacity == 0);
     }
 
     /**
@@ -2052,23 +1899,6 @@ if (is(Unqual!T == bool))
             to!size_t((newLength + bitsPerWord - 1) / bitsPerWord);
         _store._backend.length = newDataLength;
         _store._length = newLength;
-    }
-
-    @system unittest
-    {
-        Array!bool a;
-        a.length = 1057;
-        assert(a.length == 1057);
-        assert(a.capacity >= a.length);
-        foreach (e; a)
-        {
-            assert(!e);
-        }
-        immutable cap = a.capacity;
-        a.length = 100;
-        assert(a.length == 100);
-        // do not realloc if length decreases
-        assert(a.capacity == cap);
     }
 
     /**
@@ -2093,18 +1923,6 @@ if (is(Unqual!T == bool))
 
     /// ditto
     alias stableRemoveAny = removeAny;
-
-    @system unittest
-    {
-        Array!bool a;
-        a.length = 1057;
-        assert(!a.removeAny());
-        assert(a.length == 1056);
-        foreach (e; a)
-        {
-            assert(!e);
-        }
-    }
 
     /**
      * Inserts the specified elements at the back of the array. `stuff` can be
@@ -2171,15 +1989,6 @@ if (is(Unqual!T == bool))
     /// ditto
     alias stableLinearInsert = insertBack;
 
-    @system unittest
-    {
-        Array!bool a;
-        for (int i = 0; i < 100; ++i)
-            a.insertBack(true);
-        foreach (e; a)
-            assert(e);
-    }
-
     /**
      * Removes the value from the back of the array. Both stable and non-stable
      * versions behave the same and guarantee that ranges iterating over the
@@ -2239,18 +2048,6 @@ if (is(Unqual!T == bool))
     /// ditto
     alias stableRemoveBack = removeBack;
 
-    @system unittest
-    {
-        Array!bool a;
-        a.length = 1057;
-        assert(a.removeBack(1000) == 1000);
-        assert(a.length == 57);
-        foreach (e; a)
-        {
-            assert(!e);
-        }
-    }
-
     /**
      * Inserts `stuff` before, after, or instead range `r`, which must
      * be a valid range previously extracted from this array. `stuff`
@@ -2277,23 +2074,6 @@ if (is(Unqual!T == bool))
     /// ditto
     alias stableInsertBefore = insertBefore;
 
-    @system unittest
-    {
-        import std.conv : to;
-        Array!bool a;
-        version (bugxxxx)
-        {
-            a._store.refCountedDebug = true;
-        }
-        a.insertBefore(a[], true);
-        assert(a.length == 1, to!string(a.length));
-        a.insertBefore(a[], false);
-        assert(a.length == 2, to!string(a.length));
-        a.insertBefore(a[1 .. $], true);
-        import std.algorithm.comparison : equal;
-        assert(a[].equal([false, true, true]));
-    }
-
     /// ditto
     size_t insertAfter(Stuff)(Range r, Stuff stuff)
     {
@@ -2309,16 +2089,6 @@ if (is(Unqual!T == bool))
 
     /// ditto
     alias stableInsertAfter = insertAfter;
-
-    @system unittest
-    {
-        import std.conv : to;
-        Array!bool a;
-        a.length = 10;
-        a.insertAfter(a[0 .. 5], true);
-        assert(a.length == 11, to!string(a.length));
-        assert(a[5]);
-    }
 
     /// ditto
     size_t replace(Stuff)(Range r, Stuff stuff)
@@ -2341,16 +2111,6 @@ if (is(Unqual!T == bool))
 
     /// ditto
     alias stableReplace = replace;
-
-    @system unittest
-    {
-        import std.conv : to;
-        Array!bool a;
-        a.length = 10;
-        a.replace(a[3 .. 5], true);
-        assert(a.length == 9, to!string(a.length));
-        assert(a[3]);
-    }
 
     /**
      * Removes all elements belonging to `r`, which must be a range
@@ -2402,4 +2162,241 @@ if (is(Unqual!T == bool))
 {
     double[] values = [double.nan, double.nan];
     auto arr = Array!double(values);
+}
+
+@nogc @system unittest
+{
+    auto a = Array!int(0, 1, 2);
+    int[3] b = [3, 4, 5];
+    short[3] ci = [0, 1, 0];
+    auto c = Array!short(ci);
+    assert(Array!int(0, 1, 2, 0, 1, 2) == a ~ a);
+    assert(Array!int(0, 1, 2, 3, 4, 5) == a ~ b);
+    assert(Array!int(0, 1, 2, 3) == a ~ 3);
+    assert(Array!int(0, 1, 2, 0, 1, 0) == a ~ c);
+}
+
+@nogc @system unittest
+{
+    auto a = Array!char('a', 'b');
+    assert(Array!char("abc") == a ~ 'c');
+    import std.utf : byCodeUnit;
+    assert(Array!char("abcd") == a ~ "cd".byCodeUnit);
+}
+
+@nogc @system unittest
+{
+    auto a = Array!dchar("ąćę"d);
+    assert(Array!dchar("ąćęϢϖ"d) == a ~ "Ϣϖ"d);
+    wchar x = 'Ϣ';
+    assert(Array!dchar("ąćęϢz"d) == a ~ x ~ 'z');
+}
+
+@system unittest
+{
+    Array!bool a;
+    assert(a.empty);
+    a.insertBack(false);
+    assert(!a.empty);
+}
+
+@system unittest
+{
+    Array!bool a;
+    assert(a.empty);
+    auto b = a.dup;
+    assert(b.empty);
+    a.insertBack(true);
+    assert(b.empty);
+}
+
+@system unittest
+{
+    import std.conv : to;
+    Array!bool a;
+    assert(a.length == 0);
+    a.insert(true);
+    assert(a.length == 1, to!string(a.length));
+}
+
+@system unittest
+{
+    import std.conv : to;
+    Array!bool a;
+    assert(a.capacity == 0);
+    foreach (i; 0 .. 100)
+    {
+        a.insert(true);
+        assert(a.capacity >= a.length, to!string(a.capacity));
+    }
+}
+
+@system unittest
+{
+    Array!bool a;
+    assert(a.capacity == 0);
+    a.reserve(15657);
+    assert(a.capacity >= 15657);
+    a.reserve(100);
+    assert(a.capacity >= 15657);
+}
+
+@system unittest
+{
+    Array!bool a;
+    a.insertBack([true, false, true, true]);
+    assert(a[0 .. 2].length == 2);
+}
+
+@system unittest
+{
+    Array!bool a;
+    a.insertBack([true, false, true, true]);
+    assert(a[].length == 4);
+}
+
+@system unittest
+{
+    Array!bool a;
+    a.insertBack([true, false, true, true]);
+    assert(a.front);
+    a.front = false;
+    assert(!a.front);
+}
+
+@system unittest
+{
+    Array!bool a;
+    a.insertBack([true, false, true, true]);
+    assert(a[].length == 4);
+}
+
+@system unittest
+{
+    Array!bool a;
+    a.insertBack([true, false, true, true]);
+    assert(a.back);
+    a.back = false;
+    assert(!a.back);
+}
+
+@system unittest
+{
+    Array!bool a;
+    a.insertBack([true, false, true, true]);
+    assert(a[0] && !a[1]);
+    a[0] &= a[1];
+    assert(!a[0]);
+}
+
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    Array!bool a;
+    a.insertBack([true, false, true, true]);
+    Array!bool b;
+    b.insertBack([true, true, false, true]);
+    assert(equal((a ~ b)[],
+                    [true, false, true, true, true, true, false, true]));
+    assert((a ~ [true, false])[].equal([true, false, true, true, true, false]));
+    Array!bool c;
+    c.insertBack(true);
+    assert((c ~ false)[].equal([true, false]));
+}
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    Array!bool a;
+    a.insertBack([true, false, true, true]);
+    Array!bool b;
+    a.insertBack([false, true, false, true, true]);
+    a ~= b;
+    assert(equal(
+                a[],
+                [true, false, true, true, false, true, false, true, true]));
+}
+
+@system unittest
+{
+    Array!bool a;
+    a.insertBack([true, false, true, true]);
+    a.clear();
+    assert(a.capacity == 0);
+}
+
+@system unittest
+{
+    Array!bool a;
+    a.length = 1057;
+    assert(a.length == 1057);
+    assert(a.capacity >= a.length);
+    foreach (e; a)
+    {
+        assert(!e);
+    }
+    immutable cap = a.capacity;
+    a.length = 100;
+    assert(a.length == 100);
+    // do not realloc if length decreases
+    assert(a.capacity == cap);
+}
+
+@system unittest
+{
+    Array!bool a;
+    a.length = 1057;
+    assert(!a.removeAny());
+    assert(a.length == 1056);
+    foreach (e; a)
+    {
+        assert(!e);
+    }
+}
+
+@system unittest
+{
+    Array!bool a;
+    for (int i = 0; i < 100; ++i)
+        a.insertBack(true);
+    foreach (e; a)
+        assert(e);
+}
+
+@system unittest
+{
+    Array!bool a;
+    a.length = 1057;
+    assert(a.removeBack(1000) == 1000);
+    assert(a.length == 57);
+    foreach (e; a)
+    {
+        assert(!e);
+    }
+}
+
+@system unittest
+{
+    import std.conv : to;
+    Array!bool a;
+    version (bugxxxx)
+    {
+        a._store.refCountedDebug = true;
+    }
+    a.insertBefore(a[], true);
+    assert(a.length == 1, to!string(a.length));
+    a.insertBefore(a[], false);
+    assert(a.length == 2, to!string(a.length));
+    a.insertBefore(a[1 .. $], true);
+    import std.algorithm.comparison : equal;
+    assert(a[].equal([false, true, true]));
+}
+
+@system unittest
+{
+    import std.conv : to;
+    Array!bool a;
+    a.length = 10;
+    a.insertAfter(a[0 .. 5], true);
+    assert(a.length == 11, to!string(a.length));
+    assert(a[5]);
 }
