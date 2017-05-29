@@ -2321,12 +2321,17 @@ have a context pointer.
 */
 template hasNested(T)
 {
-    import std.meta : anySatisfy;
+    import std.meta : anySatisfy, Filter;
+
     static if (isStaticArray!T && T.length)
         enum hasNested = hasNested!(typeof(T.init[0]));
     else static if (is(T == class) || is(T == struct) || is(T == union))
+    {
+        // prevent infinite recursion for class with member of same type
+        enum notSame(U) = !is(Unqual!T == Unqual!U);
         enum hasNested = isNested!T ||
-            anySatisfy!(.hasNested, Fields!T);
+            anySatisfy!(.hasNested, Filter!(notSame, Fields!T));
+    }
     else
         enum hasNested = false;
 }
@@ -2392,6 +2397,12 @@ template hasNested(T)
     static assert(!__traits(compiles, isNested!(NestedClass[1])));
     static assert( hasNested!(NestedClass[1]));
     static assert(!hasNested!(NestedClass[0]));
+
+    static class A
+    {
+        A a;
+    }
+    static assert(!hasNested!A);
 }
 
 

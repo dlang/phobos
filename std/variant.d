@@ -1602,8 +1602,8 @@ static class VariantException : Exception
     assertThrown!ConvException(a.coerce!bool);
 
     // Object tests
-    class B1 {}
-    class B2 : B1 {}
+    static class B1 {}
+    static class B2 : B1 {}
     a = new B2;
     assert(a.coerce!(B1) !is null);
     a = new B1;
@@ -2509,8 +2509,8 @@ if (isAlgebraic!VariantType && Handler.length > 0)
         assertThrown!VariantException(v.get!(qual!(int)[]));
     }
 
-    class A {}
-    class B : A {}
+    static class A {}
+    static class B : A {}
     B b = new B();
     v = b;
     foreach (qual; AliasSeq!(MutableOf, ConstOf))

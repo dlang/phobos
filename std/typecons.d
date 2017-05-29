@@ -5491,7 +5491,7 @@ pure @system nothrow @nogc unittest
 // 6436
 @system pure unittest
 {
-    struct S { this(ref int val) { assert(val == 3); ++val; } }
+    static struct S { pure this(ref int val) { assert(val == 3); ++val; } }
 
     int val = 3;
     auto s = RefCounted!S(val);
@@ -6657,7 +6657,7 @@ template scoped(T)
 ///
 @system unittest
 {
-    class A
+    static class A
     {
         int x;
         this()     {x = 0;}
@@ -6808,7 +6808,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
 
 @system unittest // Original Issue 6580 testcase
 {
-    class C { int i; byte b; }
+    static class C { int i; byte b; }
 
     auto sa = [scoped!C(), scoped!C()];
     assert(cast(uint)&sa[0].i % int.alignof == 0);
@@ -6817,7 +6817,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
 
 @system unittest
 {
-    class A { int x = 1; }
+    static class A { int x = 1; }
     auto a1 = scoped!A();
     assert(a1.x == 1);
     auto a2 = scoped!A();
@@ -6828,7 +6828,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
 
 @system unittest
 {
-    class A { int x = 1; this() { x = 2; } }
+    static class A { int x = 1; this() { x = 2; } }
     auto a1 = scoped!A();
     assert(a1.x == 2);
     auto a2 = scoped!A();
@@ -6839,7 +6839,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
 
 @system unittest
 {
-    class A { int x = 1; this(int y) { x = y; } ~this() {} }
+    static class A { int x = 1; this(int y) { x = y; } ~this() {} }
     auto a1 = scoped!A(5);
     assert(a1.x == 5);
     auto a2 = scoped!A(42);
@@ -6850,8 +6850,8 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
 
 @system unittest
 {
-    class A { static bool dead; ~this() { dead = true; } }
-    class B : A { static bool dead; ~this() { dead = true; } }
+    static class A { static bool dead; ~this() { dead = true; } }
+    static class B : A { static bool dead; ~this() { dead = true; } }
     {
         auto b = scoped!B();
     }
@@ -6885,7 +6885,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
 @system unittest
 {
     // bug4500
-    class A
+    static class A
     {
         this() { a = this; }
         this(int i) { a = this; }
@@ -6963,7 +6963,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
 
 @system unittest
 {
-    class C { this(ref int val) { assert(val == 3); ++val; } }
+    static class C { this(ref int val) { assert(val == 3); ++val; } }
 
     int val = 3;
     auto s = scoped!C(val);
@@ -6972,7 +6972,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
 
 @system unittest
 {
-    class C
+    static class C
     {
         this(){}
         this(int){}
