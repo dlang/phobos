@@ -291,7 +291,7 @@ Macros:
     REG_TITLE = $(TR $(TD $(B $1)) $(TD $(B $2)) )
     REG_TABLE = <table border="1" cellspacing="0" cellpadding="5" > $0 </table>
     REG_START = <h3><div align="center"> $0 </div></h3>
-    SECTION = <h3><a id="$1">$0</a></h3>
+    SECTION = <h3><a id="$1" href="#$1" class="anchor">$0</a></h3>
     S_LINK = <a href="#$1">$+</a>
  +/
 module std.regex;
@@ -1214,8 +1214,8 @@ L_Replace_Loop:
     Params:
     input = string to search
     re = compiled regular expression to use
-    format = format string to generate replacements from,
-    see $(S_LINK Replace format string, the format string).
+    format = _format string to generate replacements from,
+    see $(S_LINK Replace _format string, the _format string).
 
     Returns:
     A string of the same type with the first match (if any) replaced.
@@ -1331,8 +1331,8 @@ if (isOutputRange!(Sink, dchar) && isSomeString!R && isRegexFor!(RegEx, R))
     Params:
     input = string to search
     re = compiled regular expression to use
-    format = format string to generate replacements from,
-    see $(S_LINK Replace format string, the format string).
+    format = _format string to generate replacements from,
+    see $(S_LINK Replace _format string, the _format string).
 
     Returns:
     A string of the same type as $(D input) with the all
