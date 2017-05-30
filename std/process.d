@@ -559,7 +559,7 @@ private Pid spawnProcessImpl(in char[][] args,
             string errorMsg;
             readExecResult = read(forkPipe[0], &error, error.sizeof);
 
-            switch (status)
+            final switch (status)
             {
                 case InternalError.chdir:
                     errorMsg = "Failed to set working directory";
@@ -570,8 +570,8 @@ private Pid spawnProcessImpl(in char[][] args,
                 case InternalError.exec:
                     errorMsg = "Failed to execute program";
                     break;
-                default:
-                    assert(0);
+                case InternalError.noerror:
+                    assert(false);
             }
 
             if (readExecResult == error.sizeof) {
