@@ -956,9 +956,7 @@ if (!(isImplicitlyConvertible!(S, T) &&
         //Default case, delegate to format
         //Note: we don't call toStr directly, to avoid duplicate work.
         auto app = appender!T();
-        app.put("cast(");
-        app.put(S.stringof);
-        app.put(')');
+        app.put("cast(" ~ S.stringof ~ ")");
         FormatSpec!char f;
         formatValue(app, cast(OriginalType!S) value, f);
         return app.data;
