@@ -1081,6 +1081,17 @@ version (Posix) @system unittest
     std.file.write(directory, "foo");
     scope(exit) remove(directory);
     assertThrown!ProcessException(spawnProcess([prog.path], null, Config.none, directory));
+
+    // can't run in directory if user does not have search permission on this directory
+    version(Posix)
+    {
+        import core.sys.posix.sys.stat : S_IRUSR;
+        auto directoryNoSearch = uniqueTempPath();
+        mkdir(directoryNoSearch);
+        scope(exit) rmdirRecurse(directoryNoSearch);
+        setAttributes(directoryNoSearch, S_IRUSR);
+        assertThrown!ProcessException(spawnProcess(prog.path, null, Config.none, directoryNoSearch));
+    }
 }
 
 @system unittest // Specifying empty working directory.
