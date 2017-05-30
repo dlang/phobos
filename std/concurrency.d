@@ -1662,7 +1662,6 @@ void yield(T)(T value)
                 tid.send(e);
             }
         });
-        scheduler = null;
     }
 
     testScheduler(new ThreadScheduler);
@@ -2315,7 +2314,6 @@ version (unittest)
     {
         scheduler = new ThreadScheduler;
         simpleTest();
-        scheduler = null;
     }
 }
 
