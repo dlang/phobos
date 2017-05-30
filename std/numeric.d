@@ -1914,6 +1914,14 @@ if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
 }
 
 ///
+version (NetBSD)
+{
+    unittest
+    {
+        pragma(msg, "NetBSD does not support functions for real type");
+    }
+}
+else
 @safe unittest
 {
     import std.math : isNaN;

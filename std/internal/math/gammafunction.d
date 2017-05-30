@@ -524,6 +524,14 @@ real logGamma(real x)
     return q ;
 }
 
+version (NetBSD)
+{
+    unittest
+    {
+        pragma(msg, "NetBSD does not support functions for real type");
+    }
+}
+else
 @safe unittest
 {
     assert(isIdentical(logGamma(NaN(0xDEF)), NaN(0xDEF)));
@@ -990,6 +998,14 @@ done:
     return x;
 }
 
+version (NetBSD)
+{
+    unittest
+    {
+        pragma(msg, "NetBSD does not support functions for real type");
+    }
+}
+else
 @safe unittest { // also tested by the normal distribution
     // check NaN propagation
     assert(isIdentical(betaIncomplete(NaN(0xABC),2,3), NaN(0xABC)));
@@ -1552,6 +1568,14 @@ ihalve:
     return x;
 }
 
+version (NetBSD)
+{
+    unittest
+    {
+        pragma(msg, "NetBSD does not support functions for real type");
+    }
+}
+else
 @safe unittest
 {
 //Values from Excel's GammaInv(1-p, x, 1)
@@ -1675,6 +1699,14 @@ done:
     return y;
 }
 
+version (NetBSD)
+{
+    unittest
+    {
+        pragma(msg, "NetBSD does not support functions for real type");
+    }
+}
+else
 @safe unittest
 {
     // Exact values

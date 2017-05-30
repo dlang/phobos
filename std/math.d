@@ -972,6 +972,14 @@ Lret: {}
     assert(isIdentical( tan(NaN(0x0123L)), NaN(0x0123L) ));
 }
 
+version (NetBSD)
+{
+    unittest
+    {
+        pragma(msg, "NetBSD does not support sqrt function for real type");
+    }
+}
+else
 @system unittest
 {
     assert(equalsDigit(tan(PI / 3), std.math.sqrt(3.0), useDigits));
@@ -3433,6 +3441,14 @@ real log2(real x) @safe pure nothrow @nogc
 }
 
 ///
+version (NetBSD)
+{
+    unittest
+    {
+        pragma(msg, "NetBSD does not support log2 function for real type");
+    }
+}
+else
 @system unittest
 {
     // check if values are equal to 19 decimal digits of precision
