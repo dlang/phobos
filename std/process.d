@@ -434,16 +434,6 @@ private Pid spawnProcessImpl(in char[][] args,
         assert(0);
     }
 
-    static void ignorePipeErrors() nothrow
-    {
-        import core.sys.posix.signal;
-        import core.stdc.string : memset;
-        sigaction_t ignoreAction;
-        memset(&ignoreAction, 0, sigaction_t.sizeof);
-        ignoreAction.sa_handler = SIG_IGN;
-        sigaction(SIGPIPE, &ignoreAction, null);
-    }
-
     auto id = core.sys.posix.unistd.fork();
     if (id < 0)
     {
@@ -458,7 +448,6 @@ private Pid spawnProcessImpl(in char[][] args,
 
         // Child process
 
-        ignorePipeErrors();
         // no need for the read end of pipe on child side
         close(forkPipe[0]);
         immutable forkPipeOut = forkPipe[1];
@@ -570,7 +559,7 @@ private Pid spawnProcessImpl(in char[][] args,
             string errorMsg;
             readExecResult = read(forkPipe[0], &error, error.sizeof);
 
-            switch(status)
+            switch (status)
             {
                 case InternalError.chdir:
                     errorMsg = "Failed to set working directory";
@@ -582,8 +571,7 @@ private Pid spawnProcessImpl(in char[][] args,
                     errorMsg = "Failed to execute program";
                     break;
                 default:
-                    errorMsg = "Unknown error occured";
-                    break;
+                    assert(0);
             }
 
             if (readExecResult == error.sizeof) {
