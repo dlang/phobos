@@ -22,11 +22,10 @@ import std.traits;
 
     Params:
         R = (template parameter) type of real part of complex number
-        I = (template parameter) type of imaginary part of complex number,
-            0 if omitted.
+        I = (template parameter) type of imaginary part of complex number
 
         re = real part of complex number to be constructed
-        im = (optional) imaginary part of complex number
+        im = (optional) imaginary part of complex number, 0 if omitted.
 
     Returns:
         $(D Complex) instance with real and imaginary parts set
