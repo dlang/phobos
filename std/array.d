@@ -455,14 +455,17 @@ Construct a range iterating over an associative array by key/value tuples.
 Params: aa = The associative array to iterate over.
 
 Returns: A $(REF_ALTTEXT forward range, isForwardRange, std,_range,primitives)
-of Tuple's of key and value pairs from the given associative array.
+of Tuple's of key and value pairs from the given associative array. The members
+of each pair can be accessed by name (`.key` and `.value`). or by integer
+index (0 and 1 respectively).
 */
 auto byPair(AA : Value[Key], Value, Key)(AA aa)
 {
     import std.algorithm.iteration : map;
     import std.typecons : tuple;
 
-    return aa.byKeyValue.map!(pair => tuple(pair.key, pair.value));
+    return aa.byKeyValue
+        .map!(pair => tuple!("key", "value")(pair.key, pair.value));
 }
 
 ///
@@ -477,15 +480,18 @@ auto byPair(AA : Value[Key], Value, Key)(AA aa)
     // Iteration over key/value pairs.
     foreach (pair; aa.byPair)
     {
-        pairs ~= pair;
+        if (pair.key == "b")
+            pairs ~= tuple("B", pair.value);
+        else
+            pairs ~= pair;
     }
 
     // Iteration order is implementation-dependent, so we should sort it to get
     // a fixed order.
-    sort(pairs);
+    pairs.sort();
     assert(pairs == [
+        tuple("B", 2),
         tuple("a", 1),
-        tuple("b", 2),
         tuple("c", 3)
     ]);
 }
@@ -493,11 +499,14 @@ auto byPair(AA : Value[Key], Value, Key)(AA aa)
 @system unittest
 {
     import std.typecons : tuple, Tuple;
+    import std.meta : AliasSeq;
 
     auto aa = ["a":2];
     auto pairs = aa.byPair();
 
-    static assert(is(typeof(pairs.front) == Tuple!(string,int)));
+    alias PT = typeof(pairs.front);
+    static assert(is(PT : Tuple!(string,int)));
+    static assert(PT.fieldNames == AliasSeq!("key", "value"));
     static assert(isForwardRange!(typeof(pairs)));
 
     assert(!pairs.empty);
