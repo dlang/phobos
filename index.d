@@ -470,7 +470,6 @@ $(COMMENT
             $(LINK2 std_regex_internal_parser.html, std.regex.internal.parser)$(BR)
             $(LINK2 std_regex_internal_tests.html, std.regex.internal.tests)$(BR)
             $(LINK2 std_regex_internal_thompson.html, std.regex.internal.thompson)$(BR)
-            $(LINK2 std_stdiobase.html, std.stdiobase)$(BR)
         )
         $(TD
              Internal modules.

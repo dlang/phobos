@@ -19,7 +19,6 @@ import std.algorithm.mutation; // copy
 import std.meta; // allSatisfy
 import std.range.primitives; // ElementEncodingType, empty, front,
     // isBidirectionalRange, isInputRange, put
-import std.stdiobase;
 import std.traits; // isSomeChar, isSomeString, Unqual, isPointer
 import std.typecons; // Flag
 
@@ -4522,69 +4521,81 @@ Initialize with a message and an error code.
     }
 }
 
-extern(C) void std_stdio_static_this()
+// Undocumented but public because the std* handles are aliasing it.
+ref File makeGlobal(alias handle)()
 {
-    static import core.stdc.stdio;
-    //Bind stdin, stdout, stderr
-    __gshared File.Impl stdinImpl;
-    stdinImpl.handle = core.stdc.stdio.stdin;
-    .stdin._p = &stdinImpl;
-    // stdout
-    __gshared File.Impl stdoutImpl;
-    stdoutImpl.handle = core.stdc.stdio.stdout;
-    .stdout._p = &stdoutImpl;
-    // stderr
-    __gshared File.Impl stderrImpl;
-    stderrImpl.handle = core.stdc.stdio.stderr;
-    .stderr._p = &stderrImpl;
-}
+    static __gshared File.Impl impl;
+    static __gshared File result;
 
-//---------
-__gshared
-{
-    /** The standard input stream.
-        Bugs:
-            Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
-            it is thread un-safe to reassign `stdin` to a different `File` instance
-            than the default.
-     */
-    File stdin;
-    ///
-    @safe unittest
+    // Use an inline spinlock to make sure the initializer is only run once.
+    // We assume there will be at most uint.max / 2 threads trying to initialize
+    // `handle` at once and steal the high bit to indicate that the globals have
+    // been initialized.
+    static shared uint spinlock;
+    import core.atomic;
+    if (atomicLoad!(MemoryOrder.acq)(spinlock) <= uint.max / 2)
     {
-        // Read stdin, sort lines, write to stdout
-        import std.array : array;
-        import std.algorithm.sorting : sort;
-        import std.algorithm.mutation : copy;
-        import std.typecons : Yes;
-
-        void main() {
-            stdin                       // read from stdin
-            .byLineCopy(Yes.keepTerminator) // copying each line
-            .array()                    // convert to array of lines
-            .sort()                     // sort the lines
-            .copy(                      // copy output of .sort to an OutputRange
-                stdout.lockingTextWriter()); // the OutputRange
+        for (;;)
+        {
+            if (atomicLoad!(MemoryOrder.acq)(spinlock) > uint.max / 2)
+                break;
+            if (atomicOp!"+="(spinlock, 1) == 1)
+            {
+                impl.handle = handle;
+                result._p = &impl;
+                atomicOp!"+="(spinlock, uint.max / 2);
+                break;
+            }
+            atomicOp!"-="(spinlock, 1);
         }
     }
-
-    /**
-        The standard output stream.
-        Bugs:
-            Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
-            it is thread un-safe to reassign `stdout` to a different `File` instance
-            than the default.
-    */
-    File stdout;
-    /**
-        The standard error stream.
-        Bugs:
-            Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
-            it is thread un-safe to reassign `stderr` to a different `File` instance
-            than the default.
-    */
-    File stderr;
+    return result;
 }
+
+/** The standard input stream.
+    Bugs:
+        Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
+        it is thread un-safe to reassign `stdin` to a different `File` instance
+        than the default.
+*/
+alias stdin = makeGlobal!(core.stdc.stdio.stdin);
+
+///
+@safe unittest
+{
+    // Read stdin, sort lines, write to stdout
+    import std.array : array;
+    import std.algorithm.sorting : sort;
+    import std.algorithm.mutation : copy;
+    import std.typecons : Yes;
+
+    void main() {
+        stdin                       // read from stdin
+        .byLineCopy(Yes.keepTerminator) // copying each line
+        .array()                    // convert to array of lines
+        .sort()                     // sort the lines
+        .copy(                      // copy output of .sort to an OutputRange
+            stdout.lockingTextWriter()); // the OutputRange
+    }
+}
+
+/**
+    The standard output stream.
+    Bugs:
+        Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
+        it is thread un-safe to reassign `stdout` to a different `File` instance
+        than the default.
+*/
+alias stdout = makeGlobal!(core.stdc.stdio.stdout);
+
+/**
+    The standard error stream.
+    Bugs:
+        Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
+        it is thread un-safe to reassign `stderr` to a different `File` instance
+        than the default.
+*/
+alias stderr = makeGlobal!(core.stdc.stdio.stderr);
 
 @system unittest
 {

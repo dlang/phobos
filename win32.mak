@@ -108,7 +108,6 @@ SRC= \
 # The separation is a workaround for bug 4904 (optlink bug 3372).
 SRC_STD_1= \
 	std\stdio.d \
-	std\stdiobase.d \
 	std\string.d \
 	std\format.d \
 	std\file.d
@@ -603,7 +602,6 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 #	cov
 	del *.lst
 	$(DMD) -conf= -cov=83 -unittest -main -run std\stdio.d
-	$(DMD) -conf= -cov=100 -unittest -main -run std\stdiobase.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\string.d
 	$(DMD) -conf= -cov=71 -unittest -main -run std\format.d
 	$(DMD) -conf= -cov=83 -unittest -main -run std\file.d
