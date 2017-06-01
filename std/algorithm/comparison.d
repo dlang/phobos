@@ -554,8 +554,6 @@ body
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int a = 1;
     short b = 6;
     double c = 2;
@@ -867,9 +865,6 @@ range of range (of range...) comparisons.
     import std.math : approxEqual;
     import std.internal.test.dummyrange : ReferenceForwardRange,
         ReferenceInputRange, ReferenceInfiniteForwardRange;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
 
     // various strings
     assert(equal("æøå", "æøå")); //UTF8 vs UTF8
@@ -1335,8 +1330,6 @@ if (isForwardRange!(Range1) && isForwardRange!(Range2))
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     assert(levenshteinDistance("a", "a") == 0);
     assert(levenshteinDistance("a", "b") == 1);
     assert(levenshteinDistance("aa", "ab") == 1);
@@ -1422,8 +1415,6 @@ if (T.length >= 2)
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int a = 5;
     short b = 6;
     double c = 2;
@@ -1586,9 +1577,6 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     int[] a = [ 1, 2, 3 ];
     int[] b = [ 1, 2, 4, 5 ];
     auto mm = mismatch(a, b);
