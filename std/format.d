@@ -467,31 +467,13 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
 {
     import std.conv : text;
 
-    alias FPfmt = void function(Writer, scope const(void)*, const ref FormatSpec!Char) @safe pure nothrow;
-
     auto spec = FormatSpec!Char(fmt);
-
-    FPfmt[A.length] funs;
-    const(void)*[A.length] argsAddresses;
-    if (!__ctfe)
-    {
-        foreach (i, Arg; A)
-        {
-            funs[i] = ()@trusted{ return cast(FPfmt)&formatGeneric!(Writer, Arg, Char); }();
-            // We can safely cast away shared because all data is either
-            // immutable or completely owned by this function.
-            argsAddresses[i] = (ref arg)@trusted{ return cast(const void*) &arg; }(args[i]);
-
-            // Reflect formatting @safe/pure ability of each arguments to this function
-            if (0) formatValue(w, args[i], spec);
-        }
-    }
 
     // Are we already done with formats? Then just dump each parameter in turn
     uint currentArg = 0;
     while (spec.writeUpToNextSpec(w))
     {
-        if (currentArg == funs.length && !spec.indexStart)
+        if (currentArg == A.length && !spec.indexStart)
         {
             // leftover spec?
             enforceFmt(fmt.length == 0,
@@ -568,36 +550,43 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
             break;
         }
 
-        // Format!
-        if (spec.indexStart > 0)
-        {
-            // using positional parameters!
-
-            // Make the conditional compilation of this loop explicit, to avoid "statement not reachable" warnings.
-            static if (A.length > 0)
-            {
-                foreach (i; spec.indexStart - 1 .. spec.indexEnd)
-                {
-                    if (A.length <= i)
-                        throw new FormatException(
-                            text("Positional specifier %", i + 1, '$', spec.spec,
-                                " index exceeds ", A.length));
-
-                    if (__ctfe)
-                        formatNth(w, spec, i, args);
-                    else
-                        funs[i](w, argsAddresses[i], spec);
-                }
-            }
-            if (currentArg < spec.indexEnd) currentArg = spec.indexEnd;
-        }
+        // Format an argument
+        // This switch uses a static foreach to generate a jump table.
+        // Currently `spec.indexStart` use the special value '0' to signal
+        // we should use the current argument. An enhancement would be to
+        // always store the index.
+        size_t index = currentArg;
+        if (spec.indexStart != 0)
+            index = spec.indexStart - 1;
         else
-        {
-            if (__ctfe)
-                formatNth(w, spec, currentArg, args);
-            else
-                funs[currentArg](w, argsAddresses[currentArg], spec);
             ++currentArg;
+    SWITCH: switch (index)
+        {
+            foreach (i, Tunused; A)
+            {
+            case i:
+                formatValue(w, args[i], spec);
+                if (currentArg < spec.indexEnd)
+                    currentArg = spec.indexEnd;
+                // A little know feature of format is to format a range
+                // of arguments, e.g. `%1:3$` will format the first 3
+                // arguments. Since they have to be consecutive we can
+                // just use explicit fallthrough to cover that case.
+                if (i + 1 < spec.indexEnd)
+                {
+                    // You cannot goto case if the next case is the default
+                    static if (i + 1 < A.length)
+                        goto case;
+                    else
+                        goto default;
+                }
+                else
+                    break SWITCH;
+            }
+        default:
+            throw new FormatException(
+                text("Positional specifier %", spec.indexStart, '$', spec.spec,
+                     " index exceeds ", A.length));
         }
     }
     return currentArg;
@@ -4013,32 +4002,6 @@ if (isDelegate!T)
 {
     void func() @system { __gshared int x; ++x; throw new Exception("msg"); }
     version (linux) formatTest( &func, "void delegate() @system" );
-}
-
-/*
-  Formats an object of type 'D' according to 'f' and writes it to
-  'w'. The pointer 'arg' is assumed to point to an object of type
-  'D'. The untyped signature is for the sake of taking this function's
-  address.
- */
-private void formatGeneric(Writer, D, Char)(Writer w, const(void)* arg, const ref FormatSpec!Char f)
-{
-    formatValue(w, *cast(D*) arg, f);
-}
-
-private void formatNth(Writer, Char, A...)(Writer w, const ref FormatSpec!Char f, size_t index, A args)
-{
-    switch (index)
-    {
-        foreach (n, _; A)
-        {
-            case n:
-                formatValue(w, args[n], f);
-                return;
-        }
-        default:
-            assert(0, "n = "~cast(char)(index + '0'));
-    }
 }
 
 @safe pure unittest
