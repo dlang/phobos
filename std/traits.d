@@ -7670,12 +7670,16 @@ template getSymbolsByUDA(alias symbol, alias attribute) {
                   .format(names[0]));
     }
 
-    // filtering out nested class context
-    enum noThisMember(string name) = (name != "this");
-    alias membersWithoutNestedCC = Filter!(noThisMember, __traits(allMembers, symbol));
+    // filtering inaccessible members
+    enum isAccessibleMember(string name) = __traits(compiles, __traits(getMember, symbol, name));
+    alias accessibleMembers = Filter!(isAccessibleMember, __traits(allMembers, symbol));
 
-    enum hasSpecificUDA(string name) = mixin("hasUDA!(symbol.%s, attribute)".format(name));
-    alias membersWithUDA = toSymbols!(Filter!(hasSpecificUDA, membersWithoutNestedCC));
+    // filtering not compiled members such as alias of basic types
+    enum hasSpecificUDA(string name) = mixin("hasUDA!(symbol." ~ name ~ ", attribute)");
+    enum isCorrectMember(string name) = __traits(compiles, hasSpecificUDA!(name));
+
+    alias correctMembers = Filter!(isCorrectMember, accessibleMembers);
+    alias membersWithUDA = toSymbols!(Filter!(hasSpecificUDA, correctMembers));
 
     // if the symbol itself has the UDA, tack it on to the front of the list
     static if (hasUDA!(symbol, attribute))
@@ -7754,9 +7758,30 @@ template getSymbolsByUDA(alias symbol, alias attribute) {
 {
     // HasPrivateMembers has, well, private members, one of which has a UDA.
     import std.internal.test.uda : Attr, HasPrivateMembers;
-    static assert(getSymbolsByUDA!(HasPrivateMembers, Attr).length == 2);
+    // Trying access to private member from another file therefore we do not have access
+    // for this otherwise we get deprecation warning - not visible from module
+    static assert(getSymbolsByUDA!(HasPrivateMembers, Attr).length == 1);
     static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[0], Attr));
-    static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[1], Attr));
+}
+
+///
+@safe unittest
+{
+    enum Attr;
+    struct A
+    {
+        alias int INT;
+        alias void function(INT) SomeFunction;
+        @Attr int a;
+        int b;
+        @Attr private int c;
+        private int d;
+    }
+
+    // Here everything is fine, we have access to private member c
+    static assert(getSymbolsByUDA!(A, Attr).length == 2);
+    static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[0], Attr));
+    static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[1], Attr));
 }
 
 // #16387: getSymbolsByUDA works with structs but fails with classes
