@@ -541,6 +541,16 @@ public:
             }
         }
     }
+    ///Number of begin symbol
+    @property uint numBegin()
+	{
+		return matches[_f].begin;
+	}
+    ///Number of end symbol
+    @property uint numEnd()
+	{
+		return matches[_f].end;
+	}
     ///Slice of input prior to the match.
     @property R pre()
     {
