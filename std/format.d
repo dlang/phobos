@@ -6055,3 +6055,10 @@ char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
     tmp = format("%19,?f", '.', -1234567.891011);
     assert(tmp == " -1.234.567.891.011", "'" ~ tmp ~ "'");
 }
+
+// Test for multiple indexes
+@safe unittest
+{
+    auto tmp = format("%2:5$s", 1, 2, 3, 4, 5);
+    assert(tmp == "2345", tmp);
+}
