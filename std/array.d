@@ -1485,6 +1485,7 @@ alias splitter = std.algorithm.iteration.splitter;
     See_Also:
         $(REF splitter, std,algorithm,iteration) for the lazy version of this
         function.
+        $(REF split, std,regex) for splitting with a regular expression.
  +/
 auto split(Range, Separator)(Range range, Separator sep)
 if (isForwardRange!Range && is(typeof(ElementType!Range.init == Separator.init)))
