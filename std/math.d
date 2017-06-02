@@ -5009,6 +5009,16 @@ private:
     }
     ensureDefaults();
 
+    version(Posix)
+    {
+        double foo = 3.0;
+    }
+
+    if (FloatingPointControl.hasExceptionTraps)
+    {
+        double foo = 5.0;
+    }
+
     version(D_HardFloat)
     {
         {
