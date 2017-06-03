@@ -4240,9 +4240,55 @@ long lrint(real x) @trusted pure nothrow @nogc
 
             return sign ? -result : result;
         }
+        else static if (F.realFormat == RealFormat.ieeeQuadruple)
+        {
+            long result;
+
+            // Rounding limit when casting from real(128-bit) to ulong.
+            enum real OF = 0x1P+112;
+
+            ulong* vl = cast(ulong*)(&x);
+
+            enum EXPSHIFT_ULONG = 48;
+            enum MANTISSE = real.mant_dig - 1;
+
+            // Find the exponent and sign
+            ulong hi = vl[MANTISSA_MSB];
+            int exp = cast(int)((hi >> EXPSHIFT_ULONG) & F.EXPMASK) - F.EXPBIAS;
+            int sign = cast(int)(hi >> 63);
+
+            if (exp < 63)
+            {
+                // Adjust x and check result.
+                real j = sign ? -OF : OF;
+                x = (j + x) - j;
+                hi = vl[MANTISSA_MSB];
+                exp = cast(int)((hi >> EXPSHIFT_ULONG) & F.EXPMASK) - F.EXPBIAS;
+                hi &= 0xffff_ffffffff;
+                hi |= 0x10000_00000000;
+
+                if (exp < 0)
+                    result = 0;
+                else if (exp <= 48)
+                    result = cast(long) hi >> (EXPSHIFT_ULONG - exp);
+                else
+                {
+                    const lo = vl[MANTISSA_LSB];
+                    result = (cast(long) hi << (exp - EXPSHIFT_ULONG)) | (lo >> (MANTISSE - exp));
+                }
+            }
+            else
+            {
+                // It is left implementation defined when the number is too large
+                // to fit in a 64bit long.
+                return cast(long) x;
+            }
+
+            return sign ? -result : result;
+        }
         else
         {
-            static assert(false, "Only 64-bit and 80-bit reals are supported by lrint()");
+            static assert(false, "Only 64-bit, 80-bit and 128-bit reals are supported by lrint()");
         }
     }
 }
