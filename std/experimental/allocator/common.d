@@ -207,7 +207,6 @@ nothrow pure
     assert(roundStartToMultipleOf(p, 16) is null);
     p = new ulong[10];
     assert(roundStartToMultipleOf(p, 16) is p);
-    assert(roundStartToMultipleOf(p, 1 << 31) is null);
 }
 
 /**
