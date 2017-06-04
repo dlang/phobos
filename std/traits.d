@@ -7264,24 +7264,21 @@ unittest
 /**
 Returns the mangled name of symbol or type $(D sth).
 
-$(D mangledName) is the same as builtin $(D .mangleof) property, kept
-for compatibility as property functions used to behave differently.
---------------------
-module test;
-import std.traits : mangledName;
-
-class C
-{
-    int value() @property;
-}
-pragma(msg, C.value.mangleof);      // prints "_D4test1C5valueMFNdZi", was "i"
-pragma(msg, mangledName!(C.value)); // prints "_D4test1C5valueMFNdZi"
---------------------
+$(D mangledName) is the same as builtin $(D .mangleof) property, but
+might be more convenient in generic code, e.g. as a template argument
+when invoking staticMap.
  */
 template mangledName(sth...)
     if (sth.length == 1)
 {
-     enum string mangledName = sth[0].mangleof;
+    enum string mangledName = sth[0].mangleof;
+}
+
+///
+@safe unittest
+{
+    alias TL = staticMap!(mangledName, int, const int, immutable int);
+    static assert(TL == AliasSeq!("i", "xi", "yi"));
 }
 
 version(unittest) void freeFunc(string);
