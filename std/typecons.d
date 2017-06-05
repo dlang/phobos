@@ -1028,10 +1028,10 @@ template Tuple(Specs...)
          *  assert(format("%s", tuple("a", 1)) == `Tuple!(string, int)("a", 1)`);
          *
          *  // Tuple format
-         *  assert(format("%t", tuple("a", 1)) == `("a", 1)`);
+         *  assert(format("%t", tuple("a", 1)) == ("a", 1));
          *
          *  // Tuple format without escaping
-         *  assert(format("%-t", tuple("a", 1)) == `(a, 1)`);
+         *  assert(format("%-t", tuple("a", 1)) == (a, 1));
          *
          *  // One Format for each individual component (no escaping by default)
          *  assert(format("%(%#x | %.4f : %#x = %s%)", tuple(1, 1.0, 10, "one"))         == `0x1 | 1.0000 : 0xa = one`);
@@ -1077,16 +1077,14 @@ template Tuple(Specs...)
             switch (fmt.spec)
             {
                 case 's':
-                    sink(Unqual!(typeof(this)).stringof);
+                    // fmt.spec remains unchanged because of being able to
+                    // destinguish it from '(' later.
+                    sink(Unqual!(typeof(this)).stringof ~ "(");
                     goto case;
 
                 case 't':
-                    // fmt.spec remains unchanged because of being able to
-                    // destinguish it from '(' later.
                     fmt.nested = "%s";
                     fmt.sep = ", ";
-
-                    sink("(");
                     goto case;
 
                 case '(':
@@ -1126,10 +1124,7 @@ template Tuple(Specs...)
                     }
 
                     // see goto case.
-                    if (fmt.spec == 's' || fmt.spec == 't')
-                    {
-                        sink(")");
-                    }
+                    if (fmt.spec == 's') sink(")");
 
                     break;
 
@@ -1654,10 +1649,10 @@ unittest
     assert(format("%s", tuple("a", 1)) == `Tuple!(string, int)("a", 1)`);
 
     // Tuple format
-    assert(format("%t", tuple("a", 1)) == `("a", 1)`);
+    assert(format("%t", tuple("a", 1)) == `"a", 1`);
 
     // Tuple format without escaping
-    assert(format("%-t", tuple("a", 1)) == `(a, 1)`);
+    assert(format("%-t", tuple("a", 1)) == `a, 1`);
 
     // One Format for each individual component (no escaping by default)
     assert(format("%(%#x | %.4f : %#x = %s%)", tuple(1, 1.0, 10, "one"))         == `0x1 | 1.0000 : 0xa = one`);
