@@ -6800,21 +6800,15 @@ body
         ulong *yl = cast(ulong *)&y;
 
         // Multi-byte add, then multi-byte right shift.
-        ulong mh = ((xl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL)
-                    + (yl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL));
+        import core.checkedint : addu;
+        bool carry;
+        ulong ml = addu(xl[MANTISSA_LSB], yl[MANTISSA_LSB], carry);
 
-        // Discard the lowest bit (to avoid overflow)
-        ulong ml = (xl[MANTISSA_LSB]>>>1) + (yl[MANTISSA_LSB]>>>1);
+        ulong mh = carry + (xl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL) +
+            (yl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL);
 
-        // add the lowest bit back in, if necessary.
-        if (xl[MANTISSA_LSB] & yl[MANTISSA_LSB] & 1)
-        {
-            ++ml;
-            if (ml == 0) ++mh;
-        }
-        mh >>>=1;
-        ul[MANTISSA_MSB] = mh | (xl[MANTISSA_MSB] & 0x8000_0000_0000_0000);
-        ul[MANTISSA_LSB] = ml;
+        ul[MANTISSA_MSB] = (mh >>> 1) | (xl[MANTISSA_MSB] & 0x8000_0000_0000_0000);
+        ul[MANTISSA_LSB] = (ml >>> 1) | (mh & 1) << 63;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
