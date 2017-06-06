@@ -760,6 +760,51 @@ template DerivedToFront(TList...)
 }
 
 /**
+ * Returns $(D F!(F!(...(F!(X))...))) with `n` iterations of `F`.
+ * If the last application of F returns an AliasSeq with length > 1, the result is an ALias
+ */
+template Iterate(alias F, size_t n, X...)
+{
+    static if (n == 0)
+    {
+        static if (X.length == 1)
+            alias Iterate = Alias!(X[0]);
+        else
+            alias Iterate = X;
+    }
+    else
+        alias Iterate = Iterate!(F, n - 1, F!X);
+}
+
+///
+pure nothrow @nogc @safe unittest
+{
+    alias Array(T) = T[];
+    static assert(is(Iterate!(Array, 0, int) == int));
+    static assert(is(Iterate!(Array, 1, int) == int[]));
+    static assert(is(Iterate!(Array, 3, int) == int[][][]));
+
+    alias Arrays(T...) = staticMap!(Array, T);
+    static assert(is(Iterate!(Arrays, 0, int, uint) == AliasSeq!(int, uint)));
+    static assert(is(Iterate!(Arrays, 1, int, uint) == AliasSeq!(int[], uint[])));
+    static assert(is(Iterate!(Arrays, 3, int, uint) == AliasSeq!(int[][][], uint[][][])));
+}
+
+/** Returns a template that, applied to arguments X, does the same as Iterate.
+  */
+template Pow(alias F, size_t n)
+{
+    alias Pow(X...) = Iterate!(F, n, X);
+}
+
+pure nothrow @nogc @safe unittest
+{
+    alias Ptr(T) = T*;
+    alias TPtr = Pow!(Ptr, 3);
+    static assert(is(TPtr!int == int***));
+}
+
+/**
 Evaluates to $(D AliasSeq!(F!(T[0]), F!(T[1]), ..., F!(T[$ - 1]))).
  */
 template staticMap(alias F, T...)
