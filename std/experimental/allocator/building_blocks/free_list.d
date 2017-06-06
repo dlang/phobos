@@ -589,17 +589,6 @@ struct ContiguousFreeList(ParentAllocator,
     }
 
     /**
-    If $(D ParentAllocator) is not $(D NullAllocator) and defines $(D
-    deallocate), the destructor is defined to deallocate the block held.
-    */
-    static if (!is(ParentAllocator == NullAllocator)
-        && hasMember!(ParentAllocator, "deallocate"))
-    ~this()
-    {
-        parent.deallocate(support);
-    }
-
-    /**
     If $(D n) is eligible for freelisting, returns $(D max). Otherwise, returns
     $(D parent.goodAllocSize(n)).
 
