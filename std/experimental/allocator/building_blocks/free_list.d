@@ -570,7 +570,7 @@ struct ContiguousFreeList(ParentAllocator,
     */
     static if (!stateSize!ParentAllocator)
     this(T)(T[] buffer)
-    if(is(T == ubyte) || is(T == OpaquePointer))
+    if (is(T == ubyte) || is(T == OpaquePointer))
     {
         initialize(buffer);
     }
@@ -578,7 +578,7 @@ struct ContiguousFreeList(ParentAllocator,
     /// ditto
     static if (stateSize!ParentAllocator)
     this(T)(ParentAllocator parent, T[] buffer)
-    if(is(T == ubyte) || is(T == OpaquePointer))
+    if (is(T == ubyte) || is(T == OpaquePointer))
     {
         initialize(buffer);
         this.parent = SParent(parent);
@@ -650,17 +650,6 @@ struct ContiguousFreeList(ParentAllocator,
         initialize(cast(OpaquePointer[])(parent.allocate(nb)), max);
         static if (stateSize!ParentAllocator)
             this.parent = SParent(parent);
-    }
-
-    /**
-    If $(D ParentAllocator) is not $(D NullAllocator) and defines $(D
-    deallocate), the destructor is defined to deallocate the block held.
-    */
-    static if (!is(ParentAllocator == NullAllocator)
-        && hasMember!(ParentAllocator, "deallocate"))
-    ~this()
-    {
-        parent.deallocate(support);
     }
 
     /**
@@ -787,7 +776,7 @@ struct ContiguousFreeList(ParentAllocator,
     import std.meta : AliasSeq;
 
     alias A = ContiguousFreeList!(NullAllocator, 0, 64);
-    foreach(T; AliasSeq!(ubyte, OpaquePointer))
+    foreach (T; AliasSeq!(ubyte, OpaquePointer))
     {
         auto a = A(new T[1024]);
         assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);

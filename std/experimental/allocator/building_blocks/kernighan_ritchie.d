@@ -648,7 +648,7 @@ fronting the GC allocator.
     import std.typecons : Ternary;
     import std.meta : AliasSeq;
     // KRRegion fronting a general-purpose allocator
-    foreach(T; AliasSeq!(ubyte, OpaquePointer))
+    foreach (T; AliasSeq!(ubyte, OpaquePointer))
     {
         T[1024 * 128] buf;
         auto alloc = fallbackAllocator(KRRegion!()(buf), GCAllocator.instance);
@@ -787,7 +787,7 @@ it actually returns memory to the operating system when possible.
     import std.conv : emplace;
     import std.meta : AliasSeq;
 
-    foreach(T; AliasSeq!(ubyte, OpaquePointer))
+    foreach (T; AliasSeq!(ubyte, OpaquePointer))
     {
         auto alloc = KRRegion!()(
                 cast(T[])(GCAllocator.instance.allocate(1024 * 1024)));
@@ -823,7 +823,7 @@ it actually returns memory to the operating system when possible.
     import std.experimental.allocator : OpaquePointer;
     import std.meta : AliasSeq;
 
-    foreach(T; AliasSeq!(ubyte, OpaquePointer))
+    foreach (T; AliasSeq!(ubyte, OpaquePointer))
     {
         auto alloc = KRRegion!()(
                 cast(T[])(GCAllocator.instance.allocate(1024 * 1024)));
@@ -840,7 +840,7 @@ it actually returns memory to the operating system when possible.
     import std.experimental.allocator : OpaquePointer;
     import std.meta : AliasSeq;
 
-    foreach(T; AliasSeq!(ubyte, OpaquePointer))
+    foreach (T; AliasSeq!(ubyte, OpaquePointer))
     {
         T[] emptyBuf;
         auto alloc = KRRegion!()(emptyBuf);

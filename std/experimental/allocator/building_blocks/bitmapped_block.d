@@ -877,7 +877,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     import std.experimental.allocator : OpaquePointer;
     import std.meta : AliasSeq;
 
-    foreach(T; AliasSeq!(ubyte, OpaquePointer))
+    foreach (T; AliasSeq!(ubyte, OpaquePointer))
     {
         testAllocateAll!(1, T)(0, 1);
         testAllocateAll!(1, T)(8, 1);
