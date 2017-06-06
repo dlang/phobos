@@ -6823,8 +6823,8 @@ body
         ulong *yl = cast(ulong *)&y;
         ulong m = (((*xl) & 0x7FFF_FFFF_FFFF_FFFFL)
                    + ((*yl) & 0x7FFF_FFFF_FFFF_FFFFL)) >>> 1;
-                   m |= ((*xl) & 0x8000_0000_0000_0000L);
-                   *ul = m;
+        m |= ((*xl) & 0x8000_0000_0000_0000L);
+        *ul = m;
     }
     else static if (F.realFormat == RealFormat.ieeeSingle)
     {
