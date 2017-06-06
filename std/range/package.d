@@ -8518,7 +8518,7 @@ private struct OnlyResult(T, size_t arity : 1)
 
     T opIndex(size_t i)
     {
-        assert(!_empty && i == 0, "Attempting to fetch an out of bounds index from an Only range");
+        assert(i == 0, "Attempting to fetch an out of bounds index from an Only range");
         return _value;
     }
 
@@ -8688,6 +8688,11 @@ if (!is(CommonType!Values == void) || Values.length == 0)
         static assert(hasLength!A);
         static assert(hasSlicing!A);
     }
+    
+    auto idxtest = only(1);
+    assert(idxtest[0] == 1);
+    idxtest.popFront();
+    assert(idxtest[0] == 1);
 
     auto imm = only!(immutable int)(1);
     immutable int[] imme = [];
