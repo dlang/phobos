@@ -4240,9 +4240,45 @@ long lrint(real x) @trusted pure nothrow @nogc
 
             return sign ? -result : result;
         }
+        else static if (F.realFormat == RealFormat.ieeeQuadruple)
+        {
+            const vu = cast(ushort*)(&x);
+
+            // Find the exponent and sign
+            const sign = (vu[F.EXPPOS_SHORT] >> 15) & 1;
+            if ((vu[F.EXPPOS_SHORT] & F.EXPMASK) - (F.EXPBIAS + 1) > 63)
+            {
+                // The result is left implementation defined when the number is
+                // too large to fit in a 64 bit long.
+                return cast(long) x;
+            }
+
+            // Force rounding of lower bits according to current rounding
+            // mode by adding ±2^-112 and subtracting it again.
+            enum OF = 5.19229685853482762853049632922009600E33L;
+            const j = sign ? -OF : OF;
+            x = (j + x) - j;
+
+            const implicitOne = 1UL << 48;
+            auto vl = cast(ulong*)(&x);
+            vl[MANTISSA_MSB] &= implicitOne - 1;
+            vl[MANTISSA_MSB] |= implicitOne;
+
+            long result;
+
+            const exp = (vu[F.EXPPOS_SHORT] & F.EXPMASK) - (F.EXPBIAS + 1);
+            if (exp < 0)
+                result = 0;
+            else if (exp <= 48)
+                result = vl[MANTISSA_MSB] >> (48 - exp);
+            else
+                result = (vl[MANTISSA_MSB] << (exp - 48)) | (vl[MANTISSA_LSB] >> (112 - exp));
+
+            return sign ? -result : result;
+        }
         else
         {
-            static assert(false, "Only 64-bit and 80-bit reals are supported by lrint()");
+            static assert(false, "real type not supported by lrint()");
         }
     }
 }
@@ -4259,6 +4295,17 @@ long lrint(real x) @trusted pure nothrow @nogc
     assert(lrint(int.max + 0.5) == 2147483648L);
     assert(lrint(int.min - 0.5) == -2147483648L);
     assert(lrint(int.min + 0.5) == -2147483648L);
+}
+
+static if (real.mant_dig >= long.sizeof * 8)
+{
+    @safe pure nothrow @nogc unittest
+    {
+        assert(lrint(long.max - 1.5L) == long.max - 1);
+        assert(lrint(long.max - 0.5L) == long.max - 1);
+        assert(lrint(long.min + 0.5L) == long.min);
+        assert(lrint(long.min + 1.5L) == long.min + 2);
+    }
 }
 
 /*******************************************
