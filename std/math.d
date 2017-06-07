@@ -5828,25 +5828,22 @@ real nextUp(real x) @trusted pure nothrow @nogc
         {
             // NaN or Infinity
             if (x == -real.infinity) return -real.max;
-
             return x; // +Inf and NaN are unchanged.
         }
 
-        ulong*   ps = cast(ulong *)&e;
-        if (ps[MANTISSA_LSB] & 0x8000_0000_0000_0000)
+        auto ps = cast(ulong *)&x;
+        if (ps[MANTISSA_MSB] & 0x8000_0000_0000_0000)
         {
             // Negative number
-
-            if (ps[MANTISSA_LSB] == 0
-                && ps[MANTISSA_MSB] == 0x8000_0000_0000_0000)
+            if (ps[MANTISSA_LSB] == 0 && ps[MANTISSA_MSB] == 0x8000_0000_0000_0000)
             {
                 // it was negative zero, change to smallest subnormal
-                ps[MANTISSA_LSB] = 0x0000_0000_0000_0001;
+                ps[MANTISSA_LSB] = 1;
                 ps[MANTISSA_MSB] = 0;
                 return x;
             }
-            --*ps;
             if (ps[MANTISSA_LSB] == 0) --ps[MANTISSA_MSB];
+            --ps[MANTISSA_LSB];
         }
         else
         {
@@ -5855,7 +5852,6 @@ real nextUp(real x) @trusted pure nothrow @nogc
             if (ps[MANTISSA_LSB] == 0) ++ps[MANTISSA_MSB];
         }
         return x;
-
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
