@@ -7656,13 +7656,15 @@ template getUDAs(alias symbol, alias attribute)
  * This is not recursive; it will not search for symbols within symbols such as
  * nested structs or unions.
  */
-template getSymbolsByUDA(alias symbol, alias attribute) {
+template getSymbolsByUDA(alias symbol, alias attribute)
+{
     import std.format : format;
     import std.meta : AliasSeq, Filter;
 
     // translate a list of strings into symbols. mixing in the entire alias
     // avoids trying to access the symbol, which could cause a privacy violation
-    template toSymbols(names...) {
+    template toSymbols(names...)
+    {
         static if (names.length == 0)
             alias toSymbols = AliasSeq!();
         else
