@@ -1266,6 +1266,62 @@ final class Pid
         return _processID;
     }
 
+    version (Windows)
+    {
+        /**
+        A simple factory that returns a $(LREF Pid) handle when provided with a
+        global `pid`. This handle can be used to kill processes that haven't been
+        spawned by this process.
+        Note: this does not check whether the provided `pid` is valid and
+        corresponds to a running process within the operating system.
+
+        Params:
+            pid = a process id
+            desiredAccess = (Windows specific, optional) the desired access to the
+                            process object
+
+        Returns: an instance to a `Pid` that corresponds to the pid within the
+        operating system.
+
+        Throws: $(LREF ProcessException) if opening the process failed; this is
+        Windows specific.
+        */
+        static Pid fromSystemPid(int pid, DWORD desiredAccess = PROCESS_ALL_ACCESS)
+        {
+            import core.sys.windows.winbase : OpenProcess;
+            import std.conv : text;
+            HANDLE _handle = OpenProcess(desiredAccess, false, pid);
+            if (_handle is null)
+            {
+                throw new ProcessException(text("Failed to open process with pid: ", pid));
+            }
+            return new Pid(pid, _handle);
+        }
+    }
+    else version (Posix)
+    {
+        /**
+        A simple factory that returns a $(LREF Pid) handle when provided with a
+        global `pid`. This handle can be used to kill processes that haven't been
+        spawned by this process.
+        Note: this does not check whether the provided `pid` is valid and
+        corresponds to a running process within the operating system.
+
+        Params:
+            pid = a process id
+
+        Returns: an instance to a `Pid` that corresponds to the pid within the
+        operating system.
+
+        Throws: $(LREF ProcessException) if opening the process failed; this is
+        Windows specific.
+        */
+        static Pid fromSystemPid(int pid)
+        {
+            return new Pid(pid);
+        }
+    }
+
 private:
     /*
     Pid.performWait() does the dirty work for wait() and nonBlockingWait().
@@ -1441,6 +1497,33 @@ int wait(Pid pid) @safe
     assert(pid.processID < 0);
     version (Windows)    assert(pid.osHandle == INVALID_HANDLE_VALUE);
     else version (Posix) assert(pid.osHandle < 0);
+}
+
+@system unittest // Pid.fromSystemPid()
+{
+    version (Windows)    TestScript prog = "do { timeout 1 } while (1)";
+    else version (Posix) TestScript prog = "while true; do sleep 1; done";
+    auto pid = spawnProcess([prog.path, "10"]);
+
+    assert(pid.processID > 0);
+    auto fromSystemPid = Pid.fromSystemPid(pid.processID);
+
+    assert(fromSystemPid.processID == pid.processID);
+    version (Windows)    assert(fromSystemPid.osHandle != INVALID_HANDLE_VALUE);
+    else version (Posix) assert(fromSystemPid.osHandle == fromSystemPid.processID);
+
+    // Send SIGKILL
+    kill(fromSystemPid, 9);
+    version (Windows)    assert(wait(pid) == 9);
+    else version (Posix) assert(wait(pid) == -9); // Negative on Posix
+
+    version (Windows)
+    {
+        import std.exception : assertThrown;
+        // If the specified process is the System Process (0x00000000), the
+        // function fails (text from the OpenProcess function API description)
+        assertThrown!ProcessException(Pid.fromSystemPid(0));
+    }
 }
 
 
