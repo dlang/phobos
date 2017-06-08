@@ -395,11 +395,9 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     import std.experimental.allocator.building_blocks.bitmapped_block
         : BitmappedBlock;
     import std.experimental.allocator.common : testAllocator;
-    import std.experimental.allocator : OpaquePointer;
     testAllocator!({
         auto a = AffixAllocator!(BitmappedBlock!128, ulong, ulong)
-            (BitmappedBlock!128(
-                new OpaquePointer[128 * 4096 / OpaquePointer.sizeof]));
+            (BitmappedBlock!128(new ubyte[128 * 4096]));
         return a;
     });
 }

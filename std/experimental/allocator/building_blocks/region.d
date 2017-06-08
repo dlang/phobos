@@ -35,7 +35,6 @@ struct Region(ParentAllocator = NullAllocator,
 
     import std.traits : hasMember;
     import std.typecons : Ternary;
-    import std.experimental.allocator : OpaquePointer;
 
     // state
     /**
@@ -54,23 +53,21 @@ struct Region(ParentAllocator = NullAllocator,
     private void* _current, _begin, _end;
 
     /**
-    Constructs a region backed by a user-provided store. Assumes `store` is
-    aligned at `minAlign`. Also assumes the memory was allocated with
-    `ParentAllocator` (if different from `NullAllocator`).
+    Constructs a region backed by a user-provided store. Assumes $(D store) is
+    aligned at $(D minAlign). Also assumes the memory was allocated with $(D
+    ParentAllocator) (if different from $(D NullAllocator)).
 
     Params:
-    store = User-provided store backing up the region. `store` must be aligned
-    at `minAlign` (enforced with `assert`). If `ParentAllocator` is different
-    from `NullAllocator`, memory is assumed to have been allocated with
-    `ParentAllocator`.
-    The underlying `store` must be of $(LREF OpaquePointer) type for a safe
-    allocation of objects that may contain pointers, and thus for a safe allocator.
-    n = Bytes to allocate using `ParentAllocator`. This constructor is only
-    defined if `ParentAllocator` is different from `NullAllocator`. If
-    $(D parent.allocate(n)) returns `null`, the region will be initialized
+    store = User-provided store backing up the region. $(D store) must be
+    aligned at $(D minAlign) (enforced with $(D assert)). If $(D
+    ParentAllocator) is different from $(D NullAllocator), memory is assumed to
+    have been allocated with $(D ParentAllocator).
+    n = Bytes to allocate using $(D ParentAllocator). This constructor is only
+    defined If $(D ParentAllocator) is different from $(D NullAllocator). If
+    $(D parent.allocate(n)) returns $(D null), the region will be initialized
     as empty (correctly initialized but unable to allocate).
     */
-    @system this(ubyte[] store)
+    this(ubyte[] store)
     {
         store = cast(ubyte[])(store.roundUpToAlignment(alignment));
         store = store[0 .. $.roundDownToAlignment(alignment)];
@@ -84,19 +81,11 @@ struct Region(ParentAllocator = NullAllocator,
             _current = store.ptr;
     }
 
-    /// ditto
-    @trusted this(OpaquePointer[] store)
-    {
-        this(cast(ubyte[]) store);
-    }
-
     /// Ditto
     static if (!is(ParentAllocator == NullAllocator))
     this(size_t n)
     {
-        auto nb = n.roundUpToAlignment(alignment)
-                   .roundUpToAlignment(OpaquePointer.alignof);
-        this(cast(OpaquePointer[])(parent.allocate(nb)));
+        this(cast(ubyte[])(parent.allocate(n.roundUpToAlignment(alignment))));
     }
 
     /*
@@ -365,23 +354,7 @@ struct Region(ParentAllocator = NullAllocator,
         Yes.growDownwards)(1024 * 64);
     const b = reg.allocate(101);
     assert(b.length == 101);
-}
-
-@system unittest
-{
-    import std.experimental.allocator : OpaquePointer;
-    import std.meta : AliasSeq;
-
-    foreach (T; AliasSeq!(ubyte, OpaquePointer))
-    {
-        // Create a 64 KB region
-        auto reg = Region!()(new T[1024 * 64 / T.sizeof]);
-        const b = reg.allocate(101);
-        assert(b.length == 101);
-        assert(reg.deallocateAll());
-        auto c = reg.allocateAll();
-        assert(c.length == 1024 * 64);
-    }
+    // Destructor will free the memory
 }
 
 /**
@@ -570,8 +543,6 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.bitmapped_block
         : BitmappedBlock;
-    import std.experimental.allocator : OpaquePointer;
-
     FallbackAllocator!(InSituRegion!(128 * 1024), GCAllocator) r2;
     const a2 = r2.allocate(102);
     assert(a2.length == 102);

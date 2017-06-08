@@ -249,11 +249,9 @@ public import std.experimental.allocator.common,
         2048, Bucketizer!(FList, 1025, 2048, 256),
         3584, Bucketizer!(FList, 2049, 3584, 512),
         4072 * 1024, AllocatorList!(
-                (n) => BitmappedBlock!(4096)(
-                    cast(OpaquePointer[])(GCAllocator.instance.allocate(
-                        max(n, 4072 * 1024 / OpaquePointer.sizeof)
-                        .roundUpToAlignment(OpaquePointer.alignof)
-                )))),
+            (n) => BitmappedBlock!(4096)(
+                    cast(ubyte[])(GCAllocator.instance.allocate(
+                        max(n, 4072 * 1024))))),
         GCAllocator
     );
     A tuMalloc;
@@ -264,9 +262,6 @@ public import std.experimental.allocator.common,
     assert(tuMalloc.expand(c, 14));
     tuMalloc.deallocate(b);
     tuMalloc.deallocate(c);
-    auto d = tuMalloc.allocate(4072 * 100);
-    assert(d.length == 4072 * 100);
-    tuMalloc.deallocate(d);
 }
 
 import std.range.primitives;
@@ -2518,20 +2513,6 @@ class CSharedAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     theAllocator.shrinkArray(arr, 2);
     // Destroy and deallocate
     theAllocator.dispose(arr);
-}
-
-/**
-`OpaquePointer` should be used to provide a memory buffer to allocators that
-manage a buffer, such as $(LREF Region). Using `OpaquePointer` will ensure that
-the garbage collector will mark the memory for scanning.
-
-Note: the responsibility of allocating the buffer properly falls on the caller.
-*/
-
-struct OpaquePointer
-{
-    private void* pointer;
-    @disable this(void*);
 }
 
 __EOF__
