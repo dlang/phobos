@@ -188,20 +188,20 @@ package size_t divideRoundUp(size_t a, size_t b)
 }
 
 /**
-Returns `s` rounded up to a multiple of `base` or `null` if the resulted round
-up is out of the bounds of `s`.
+Returns `s` rounded up to a multiple of `base`.
 */
-@nogc nothrow pure @trusted
+@nogc nothrow pure
 package void[] roundStartToMultipleOf(void[] s, uint base)
 {
     assert(base);
-    auto p = cast(void*) roundUpToMultipleOf(cast(size_t) s.ptr, base);
+    auto p = cast(void*) roundUpToMultipleOf(
+        cast(size_t) s.ptr, base);
     auto end = s.ptr + s.length;
-    return cast(size_t) end > cast(size_t) p ? p[0 .. end - p] : null;
+    return p[0 .. end - p];
 }
 
 nothrow pure
-@safe unittest
+@system unittest
 {
     void[] p;
     assert(roundStartToMultipleOf(p, 16) is null);
