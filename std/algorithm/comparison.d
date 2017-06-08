@@ -967,15 +967,43 @@ if (T.length >= 1)
     else static if (T.length == 2)
     {
         static if (!is(typeof(T[0].min)))
-            alias MaxType = CommonType!T;
+            alias MaxTypeT = CommonType!T;
         else static if (T[1].max > T[0].max)
-            alias MaxType = T[1];
+            alias MaxTypeT = T[1];
         else
-            alias MaxType = T[0];
+            alias MaxTypeT = T[0];
+        static if (isPointer!MaxTypeT && is(PointerTarget!(T[0]) == const) ||
+            is(PointerTarget!(T[1]) == const))
+                alias MaxType = const(MaxTypeT);
+        else  static if (isPointer!MaxTypeT && is(PointerTarget!(T[0]) == immutable) ||
+            is(PointerTarget!(T[1]) == immutable))
+                alias MaxType = immutable(MaxTypeT);
+        else
+            alias MaxType = MaxTypeT;
     }
     else
     {
         alias MaxType = MaxType!(MaxType!(T[0 .. ($+1)/2]), MaxType!(T[($+1)/2 .. $]));
+    }
+}
+
+unittest // issue 15930
+{
+    int c1;
+    const int c2;
+    int i1;
+    immutable int i2;
+    {
+        auto c3 = max(&c1, &c2);
+        static assert(is(typeof(c3) == const(int*)));
+        auto i3 = max(&i1, &i2);
+        static assert(is(typeof(i3) == immutable(int*)));
+    }
+    {
+        auto c3 = min(&c1, &c2);
+        static assert(is(typeof(c3) == const(int*)));
+        auto i3 = min(&i1, &i2);
+        static assert(is(typeof(i3) == immutable(int*)));
     }
 }
 
@@ -1453,20 +1481,28 @@ if (T.length >= 1)
     else static if (T.length == 2)
     {
         static if (!is(typeof(T[0].min)))
-            alias MinType = CommonType!T;
+            alias MinTypeT = CommonType!T;
         else
         {
             enum hasMostNegative = is(typeof(mostNegative!(T[0]))) &&
                                    is(typeof(mostNegative!(T[1])));
             static if (hasMostNegative && mostNegative!(T[1]) < mostNegative!(T[0]))
-                alias MinType = T[1];
+                alias MinTypeT = T[1];
             else static if (hasMostNegative && mostNegative!(T[1]) > mostNegative!(T[0]))
-                alias MinType = T[0];
+                alias MinTypeT = T[0];
             else static if (T[1].max < T[0].max)
-                alias MinType = T[1];
+                alias MinTypeT = T[1];
             else
-                alias MinType = T[0];
+                alias MinTypeT = T[0];
         }
+        static if (isPointer!MinTypeT && is(PointerTarget!(T[0]) == const) ||
+            is(PointerTarget!(T[1]) == const))
+                alias MinType = const(MinTypeT);
+        else  static if (isPointer!MinTypeT && is(PointerTarget!(T[0]) == immutable) ||
+            is(PointerTarget!(T[1]) == immutable))
+                alias MinType = immutable(MinTypeT);
+        else
+            alias MinType = MinTypeT;
     }
     else
     {
