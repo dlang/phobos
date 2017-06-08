@@ -141,8 +141,8 @@ version (Windows)
             if (!basePtr) return null;
 
             // get aligned location within the chunk
-            void* alignedPtr = cast(void**)((cast(size_t)(basePtr) + offset)
-                & ~(alignment - 1));
+            void* alignedPtr = cast(void**)roundDownToAlignment(
+                cast(size_t)(basePtr + offset), cast(uint) alignment);
 
             // write the header before the aligned pointer
             AlignInfo* head = AlignInfo(alignedPtr);
@@ -200,6 +200,7 @@ version (Windows)
 
 /**
    Aligned allocator using OS-specific primitives, under a uniform API.
+   Note that the alignment must always be a power of 2.
  */
 struct AlignedMallocator
 {
@@ -229,9 +230,14 @@ struct AlignedMallocator
     version(Posix)
     @trusted @nogc nothrow
     void[] alignedAllocate(size_t bytes, uint a) shared
+    in
+    {
+        assert(a.isPowerOf2);
+        assert(a.isGoodDynamicAlignment);
+    }
+    body
     {
         import core.stdc.errno : ENOMEM, EINVAL;
-        assert(a.isGoodDynamicAlignment);
         void* result;
         auto code = posix_memalign(&result, a, bytes);
         if (code == ENOMEM)
@@ -251,6 +257,11 @@ struct AlignedMallocator
     else version(Windows)
     @trusted @nogc nothrow
     void[] alignedAllocate(size_t bytes, uint a) shared
+    in
+    {
+        assert(a.isPowerOf2);
+    }
+    body
     {
         auto result = _aligned_malloc(bytes, a);
         return result ? result[0 .. bytes] : null;
@@ -305,6 +316,11 @@ struct AlignedMallocator
     version (Windows)
     @system @nogc nothrow
     bool alignedReallocate(ref void[] b, size_t s, uint a) shared
+    in
+    {
+        assert(a.isPowerOf2);
+    }
+    body
     {
         if (!s)
         {
