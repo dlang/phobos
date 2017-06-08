@@ -4524,8 +4524,8 @@ Initialize with a message and an error code.
 // Undocumented but public because the std* handles are aliasing it.
 ref File makeGlobal(alias handle)()
 {
-    static __gshared File.Impl impl;
-    static __gshared File result;
+    __gshared File.Impl impl;
+    __gshared File result;
 
     // Use an inline spinlock to make sure the initializer is only run once.
     // We assume there will be at most uint.max / 2 threads trying to initialize
