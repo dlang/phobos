@@ -8019,7 +8019,8 @@ unittest
 enum bool callSupported(alias fun, string imports, Arg...) =
     is(typeof((ref Arg arg)
         {
-            static if (imports.length) mixin("import " ~ imports ~ ";"); fun(arg);
+            static if (imports.length) mixin("import " ~ imports ~ ";");
+            fun(arg);
         }
     ));
 
@@ -8038,4 +8039,62 @@ unittest
     static assert(callSupported!(fun, "", int, string));
     static assert(callSupported!(fun, "", short, string));
     static assert(!callSupported!(fun, "", double, string));
+}
+
+alias IndexedType(T, Index) =
+    typeof(((T* p, Index* i) => (*p)[*i])(null, null));
+///
+template IndexedType(T, Index, Default)
+{
+    static if (is(IndexedType!(T, Index) X))
+        alias IndexedType = X;
+    else
+        alias IndexedType = Default;
+}
+
+enum bool hasIndexing(T, Index, R) =
+    is(typeof(((T* p, Index* i) => (*p)[*i])(null, null)) == R);
+
+///
+unittest
+{
+    static assert(!hasIndexing!(int, size_t, int));
+    static assert(hasIndexing!(int[], size_t, int));
+}
+
+alias OpDollarType(T) = typeof(((T* p) => (*p)[$])(null));
+///
+template OpDollarType(T, Default)
+{
+    static if (is(OpDollarType!T X))
+        alias OpDollarType = X;
+    else
+        alias OpDollarType = Default;
+}
+
+///
+unittest
+{
+    static assert(is(OpDollarType!(int, void) == void));
+    static assert(is(OpDollarType!(int[], void) == int));
+    static assert(is(OpDollarType!(int[]) == int));
+}
+
+enum bool opDollarArrayCompatibleIfDefined(R) =
+    is(typeof((ref R r)
+    {
+        static if (is(typeof(r[$]) E))
+        {
+            import std.range.primitives;
+            static assert(is(E == ElementType!R));
+            static if (!isInfinite!R)
+                static assert(is(typeof(r[$ - 1]) == ElementType!R));
+        }
+    }));
+
+///
+unittest
+{
+    static assert(opDollarArrayCompatibleIfDefined!(int));
+    static assert(opDollarArrayCompatibleIfDefined!(int[]));
 }
