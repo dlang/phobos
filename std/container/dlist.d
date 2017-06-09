@@ -872,6 +872,19 @@ private:
     r.popBack();
     dl.popLastOf(r);
     assert(equal(dl[], [1, 3, 5]));
+    DList!int empty_list;
+    dl.popFirstOf(empty_list[]);
+    assert(equal(dl[], [1, 3, 5]));
+    dl.popLastOf(empty_list[]);
+    assert(equal(dl[], [1, 3, 5]));
+    dl = DList!int([0]);
+    r = dl[];
+    dl.popFirstOf(r);
+    assert(dl.empty);
+    dl = DList!int([0]);
+    r = dl[];
+    dl.popLastOf(r);
+    assert(dl.empty);
 }
 
 @safe unittest
