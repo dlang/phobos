@@ -7988,6 +7988,8 @@ enum isCopyable(S) = is(typeof(
     static assert(isCopyable!int);
 }
 
+/**
+*/
 enum bool hasGetter(T, string name, string imports, Result) =
     is(typeof( ((T* x)
         {
@@ -7997,9 +7999,10 @@ enum bool hasGetter(T, string name, string imports, Result) =
         }
     )(null) ) == Result);
 
+///
 enum bool hasGetter(T, string name, Result) =
     hasGetter!(T, name, "", Result);
-
+///
 enum bool hasGetter(T, string name, string imports) =
     is(typeof(((T* x)
         {
@@ -8016,6 +8019,8 @@ unittest
     static assert(hasGetter!(int[], "empty", "std.range.primitives", bool));
 }
 
+/**
+*/
 enum bool callSupported(alias fun, string imports, Arg...) =
     is(typeof((ref Arg arg)
         {
@@ -8024,6 +8029,7 @@ enum bool callSupported(alias fun, string imports, Arg...) =
         }
     ));
 
+///
 enum bool callSupported(string fun, string imports, Arg...) =
     is(typeof((ref Arg arg)
         {
@@ -8052,49 +8058,25 @@ template IndexedType(T, Index, Default)
         alias IndexedType = Default;
 }
 
-enum bool hasIndexing(T, Index, R) =
-    is(typeof(((T* p, Index* i) => (*p)[*i])(null, null)) == R);
-
-///
-unittest
+/**
+*/
+template DollarType(T)
 {
-    static assert(!hasIndexing!(int, size_t, int));
-    static assert(hasIndexing!(int[], size_t, int));
+    static if (isArray!T) alias DollarType = size_t;
+    else alias DollarType = typeof(T.init.opDollar());
 }
 
-alias OpDollarType(T) = typeof(((T* p) => (*p)[$])(null));
 ///
-template OpDollarType(T, Default)
+template DollarType(T, Default)
 {
-    static if (is(OpDollarType!T X))
-        alias OpDollarType = X;
-    else
-        alias OpDollarType = Default;
+    static if (is(DollarType!T X)) alias DollarType = X;
+    else alias DollarType = Default;
 }
 
 ///
 unittest
 {
-    static assert(is(OpDollarType!(int, void) == void));
-    static assert(is(OpDollarType!(int[], void) == int));
-    static assert(is(OpDollarType!(int[]) == int));
-}
-
-enum bool opDollarArrayCompatibleIfDefined(R) =
-    is(typeof((ref R r)
-    {
-        static if (is(typeof(r[$]) E))
-        {
-            import std.range.primitives;
-            static assert(is(E == ElementType!R));
-            static if (!isInfinite!R)
-                static assert(is(typeof(r[$ - 1]) == ElementType!R));
-        }
-    }));
-
-///
-unittest
-{
-    static assert(opDollarArrayCompatibleIfDefined!(int));
-    static assert(opDollarArrayCompatibleIfDefined!(int[]));
+    static assert(is(DollarType!(int, void) == void));
+    static assert(is(DollarType!(int[], void) == size_t));
+    static assert(is(DollarType!(int[]) == size_t));
 }

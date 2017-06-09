@@ -770,11 +770,8 @@ are the same as for an input range, with the additional requirement
 that backtracking must be possible by saving a copy of the range
 object with $(D save) and using it later.
  */
-template isForwardRange(R)
-{
-    enum bool isForwardRange = isInputRange!R
-        && hasGetter!(R, "save", "std.range.primitives", R);
-}
+enum bool isForwardRange(R) = isInputRange!R
+    && hasGetter!(R, "save", "std.range.primitives", R);
 
 ///
 @safe unittest
@@ -874,20 +871,10 @@ variable-length encodings (UTF-8 and UTF-16 respectively). These types
 are bidirectional ranges only.
  */
 enum bool isRandomAccessRange(R) =
-    //is(typeof((ref R r) => r[1]) : ElementType!R function(ref R))
-     is(IndexedType!(R, int, void) == ElementType!R)
+    is(IndexedType!(R, int, void) == ElementType!R) // kept int for bkcomp
     && !isNarrowString!R
-    && (hasLength!R || isInfinite!R)
     && (isBidirectionalRange!R || isForwardRange!R && isInfinite!R)
-    && is(typeof((ref R r)
-    {
-        static if (is(typeof(r[$]) E))
-        {
-            static assert(is(E == ElementType!R));
-            static if (!isInfinite!R)
-                static assert(is(typeof(r[$ - 1]) == ElementType!R));
-        }
-    }));
+    && (isInfinite!R || hasLength!R && is(DollarType!(R, size_t) : size_t));
 
 import std.functional;
 
