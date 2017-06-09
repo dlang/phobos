@@ -772,9 +772,8 @@ object with $(D save) and using it later.
  */
 template isForwardRange(R)
 {
-    enum bool isForwardRange = isInputRange!R &&
-        is(typeof((ref R r) => r.save) : R function(ref R));
-        //hasGetter!(R, "save", R);
+    enum bool isForwardRange = isInputRange!R
+        && hasGetter!(R, "save", "std.range.primitives", R);
 }
 
 ///
@@ -813,9 +812,9 @@ $(UL $(LI $(D r.back) returns (possibly a reference to) the last
 element in the range. Calling $(D r.back) is allowed only if calling
 $(D r.empty) has, or would have, returned $(D false).))
  */
-enum bool isBidirectionalRange(R) = isForwardRange!R &&
-    is(typeof((ref R r) => r.popBack)) &&
-    is(typeof((ref R r) => r.back) : ElementType!R function(ref R));
+enum bool isBidirectionalRange(R) = isForwardRange!R
+    && hasGetter!(R, "popBack", "std.range.primitives")
+    && hasGetter!(R, "back", "std.range.primitives", ElementType!R);
 
 ///
 @safe unittest
@@ -875,7 +874,8 @@ variable-length encodings (UTF-8 and UTF-16 respectively). These types
 are bidirectional ranges only.
  */
 enum bool isRandomAccessRange(R) =
-    is(typeof((ref R r) => r[1]) : ElementType!R function(ref R))
+    //is(typeof((ref R r) => r[1]) : ElementType!R function(ref R))
+     is(IndexedType!(R, int, void) == ElementType!R)
     && !isNarrowString!R
     && (hasLength!R || isInfinite!R)
     && (isBidirectionalRange!R || isForwardRange!R && isInfinite!R)
