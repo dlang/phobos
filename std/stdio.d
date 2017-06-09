@@ -4522,7 +4522,7 @@ Initialize with a message and an error code.
 }
 
 // Undocumented but public because the std* handles are aliasing it.
-ref File makeGlobal(alias handle)()
+@property ref File makeGlobal(alias handle)()
 {
     __gshared File.Impl impl;
     __gshared File result;
@@ -4619,6 +4619,15 @@ alias stderr = makeGlobal!(core.stdc.stdio.stderr);
         }
         assert(i == 3);
     }
+}
+
+unittest
+{
+    // Retain backwards compatibility
+    // https://issues.dlang.org/show_bug.cgi?id=17472
+    static assert(is(typeof(stdin) == File));
+    static assert(is(typeof(stdout) == File));
+    static assert(is(typeof(stderr) == File));
 }
 
 // roll our own appender, but with "safe" arrays
