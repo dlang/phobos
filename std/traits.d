@@ -7990,26 +7990,50 @@ enum isCopyable(S) = is(typeof(
     static assert(isCopyable!int);
 }
 
+/**
+*/
+alias DotCallType(T, string name) =
+    ReturnType!( (ref T x)
+        {
+            return mixin("x." ~ name);
+        }
+    );
+
+alias DotCallType(T, alias name) =
+    ReturnType!( (ref T x)
+        {
+            return x.name;
+        }
+    );
+
+unittest
+{
+    //static assert(is(DotCallType!("std.range.primitives", char[], "back") == dchar));
+}
+
+/**
+*/
 enum bool hasGetter(T, string name, string imports, Result) =
-    is(typeof( ((T* x)
+    is(ReturnType!( (T* x)
         {
             static if (imports.length)
                 mixin("import " ~ imports ~ ";");
             return mixin("(*x)." ~ name);
         }
-    )(null) ) == Result);
+    ) == Result);
 
+///
 enum bool hasGetter(T, string name, Result) =
     hasGetter!(T, name, "", Result);
-
+///
 enum bool hasGetter(T, string name, string imports) =
-    is(typeof(((T* x)
+    is(ReturnType!( (T* x)
         {
             static if (imports.length)
                 mixin("import " ~ imports ~ ";");
             return mixin("(*x)." ~ name);
         }
-    )(null)));
+    ));
 
 ///
 unittest
@@ -8018,16 +8042,19 @@ unittest
     static assert(hasGetter!(int[], "empty", "std.range.primitives", bool));
 }
 
+/**
+*/
 enum bool callSupported(alias fun, string imports, Arg...) =
-    is(typeof((ref Arg arg)
+    is(ReturnType!( (ref Arg arg)
         {
             static if (imports.length) mixin("import " ~ imports ~ ";");
             fun(arg);
         }
     ));
 
+///
 enum bool callSupported(string fun, string imports, Arg...) =
-    is(typeof((ref Arg arg)
+    is(ReturnType!((ref Arg arg)
         {
             static if (imports.length) mixin("import " ~ imports ~ ";");
             mixin(fun ~ "(arg);");
@@ -8044,7 +8071,7 @@ unittest
 }
 
 alias IndexedType(T, Index) =
-    typeof(((T* p, Index* i) => (*p)[*i])(null, null));
+    ReturnType!((T* p, Index* i) => (*p)[*i]);
 ///
 template IndexedType(T, Index, Default)
 {
@@ -8054,49 +8081,25 @@ template IndexedType(T, Index, Default)
         alias IndexedType = Default;
 }
 
-enum bool hasIndexing(T, Index, R) =
-    is(typeof(((T* p, Index* i) => (*p)[*i])(null, null)) == R);
-
-///
-unittest
+/**
+*/
+template DollarType(T)
 {
-    static assert(!hasIndexing!(int, size_t, int));
-    static assert(hasIndexing!(int[], size_t, int));
+    static if (isArray!T) alias DollarType = size_t;
+    else alias DollarType = ReturnType!((ref T x) => x.opDollar);
 }
 
-alias OpDollarType(T) = typeof(((T* p) => (*p)[$])(null));
 ///
-template OpDollarType(T, Default)
+template DollarType(T, Default)
 {
-    static if (is(OpDollarType!T X))
-        alias OpDollarType = X;
-    else
-        alias OpDollarType = Default;
+    static if (is(DollarType!T X)) alias DollarType = X;
+    else alias DollarType = Default;
 }
 
 ///
 unittest
 {
-    static assert(is(OpDollarType!(int, void) == void));
-    static assert(is(OpDollarType!(int[], void) == int));
-    static assert(is(OpDollarType!(int[]) == int));
-}
-
-enum bool opDollarArrayCompatibleIfDefined(R) =
-    is(typeof((ref R r)
-    {
-        static if (is(typeof(r[$]) E))
-        {
-            import std.range.primitives;
-            static assert(is(E == ElementType!R));
-            static if (!isInfinite!R)
-                static assert(is(typeof(r[$ - 1]) == ElementType!R));
-        }
-    }));
-
-///
-unittest
-{
-    static assert(opDollarArrayCompatibleIfDefined!(int));
-    static assert(opDollarArrayCompatibleIfDefined!(int[]));
+    static assert(is(DollarType!(int, void) == void));
+    static assert(is(DollarType!(int[], void) == size_t));
+    static assert(is(DollarType!(int[]) == size_t));
 }
