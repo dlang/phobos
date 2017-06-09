@@ -161,17 +161,11 @@ Params:
 Returns:
     true if R is an InputRange, false if not
  */
-template isInputRange(R)
-{
-    enum bool isInputRange = is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;     // can define a range object
-        if (r.empty) {}   // can test for empty
-        r.popFront;       // can invoke popFront()
-        auto h = r.front; // can get the front of the range
-    }));
-}
+enum bool isInputRange(R) =
+    is(typeof((ref R r) => r))
+    && hasGetter!(R, "empty", "std.range.primitives", bool)
+    && hasGetter!(R, "front", "std.range.primitives")
+    && hasGetter!(R, "popFront", "std.range.primitives");
 
 ///
 @safe unittest
@@ -691,16 +685,8 @@ are:
 2: if $(D E) is a non $(empty) $(D InputRange), then placing $(D e) is
 guaranteed to not overflow the range.
  +/
-package(std) template isNativeOutputRange(R, E)
-{
-    enum bool isNativeOutputRange = is(typeof(
-    (inout int = 0)
-    {
-        R r = void;
-        E e;
-        doPut(r, e);
-    }));
-}
+package(std) enum bool isNativeOutputRange(R, E) =
+    is(typeof((ref R r, ref E e) => doPut(r, e)));
 
 @safe unittest
 {
@@ -715,21 +701,14 @@ package(std) template isNativeOutputRange(R, E)
     if (!r.empty)
         put(r, [1, 2]); //May actually error out.
 }
+
 /++
 Returns $(D true) if $(D R) is an output range for elements of type
 $(D E). An output range is defined functionally as a range that
 supports the operation $(D put(r, e)) as defined above.
  +/
-template isOutputRange(R, E)
-{
-    enum bool isOutputRange = is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;
-        E e = E.init;
-        put(r, e);
-    }));
-}
+ enum bool isOutputRange(R, E) =
+     callSupported!("put", "std.range.primitives", R, E);
 
 ///
 @safe unittest
@@ -793,16 +772,9 @@ object with $(D save) and using it later.
  */
 template isForwardRange(R)
 {
-    enum bool isForwardRange = isInputRange!R && is(typeof(
-    (inout int = 0)
-    {
-        R r1 = R.init;
-        // NOTE: we cannot check typeof(r1.save) directly
-        // because typeof may not check the right type there, and
-        // because we want to ensure the range can be copied.
-        auto s1 = r1.save;
-        static assert(is(typeof(s1) == R));
-    }));
+    enum bool isForwardRange = isInputRange!R &&
+        is(typeof((ref R r) => r.save) : R function(ref R));
+        //hasGetter!(R, "save", R);
 }
 
 ///
@@ -841,18 +813,9 @@ $(UL $(LI $(D r.back) returns (possibly a reference to) the last
 element in the range. Calling $(D r.back) is allowed only if calling
 $(D r.empty) has, or would have, returned $(D false).))
  */
-template isBidirectionalRange(R)
-{
-    enum bool isBidirectionalRange = isForwardRange!R && is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;
-        r.popBack;
-        auto t = r.back;
-        auto w = r.front;
-        static assert(is(typeof(t) == typeof(w)));
-    }));
-}
+enum bool isBidirectionalRange(R) = isForwardRange!R &&
+    is(typeof((ref R r) => r.popBack)) &&
+    is(typeof((ref R r) => r.back) : ElementType!R function(ref R));
 
 ///
 @safe unittest
@@ -911,28 +874,35 @@ isRandomAccessRange) yields $(D false) for them because they use
 variable-length encodings (UTF-8 and UTF-16 respectively). These types
 are bidirectional ranges only.
  */
-template isRandomAccessRange(R)
-{
-    enum bool isRandomAccessRange = is(typeof(
-    (inout int = 0)
+enum bool isRandomAccessRange(R) =
+    is(typeof((ref R r) => r[1]) : ElementType!R function(ref R))
+    && !isNarrowString!R
+    && (hasLength!R || isInfinite!R)
+    && (isBidirectionalRange!R || isForwardRange!R && isInfinite!R)
+    && is(typeof((ref R r)
     {
-        static assert(isBidirectionalRange!R ||
-                      isForwardRange!R && isInfinite!R);
-        R r = R.init;
-        auto e = r[1];
-        auto f = r.front;
-        static assert(is(typeof(e) == typeof(f)));
-        static assert(!isNarrowString!R);
-        static assert(hasLength!R || isInfinite!R);
-
-        static if (is(typeof(r[$])))
+        static if (is(typeof(r[$]) E))
         {
-            static assert(is(typeof(f) == typeof(r[$])));
-
+            static assert(is(E == ElementType!R));
             static if (!isInfinite!R)
-                static assert(is(typeof(f) == typeof(r[$ - 1])));
+                static assert(is(typeof(r[$ - 1]) == ElementType!R));
         }
     }));
+
+import std.functional;
+
+bool xyz(alias pred = "a == b", R, E)(R doesThisEnd, E withThis)
+if (isBidirectionalRange!R &&
+    is(typeof(binaryFun!pred(doesThisEnd.back, withThis)) : bool))
+{
+    return true;
+}
+
+unittest
+{
+    char[] a;
+    char b;
+    assert(xyz(a, b));
 }
 
 ///
@@ -1065,20 +1035,13 @@ static if (isRandomAccessRange!R)
     static assert(is(typeof(moveAt(r, 0)) == E));
 ----
  */
-template hasMobileElements(R)
-{
-    enum bool hasMobileElements = isInputRange!R && is(typeof(
-    (inout int = 0)
-    {
-        alias E = ElementType!R;
-        R r = R.init;
-        static assert(is(typeof(moveFront(r)) == E));
-        static if (isBidirectionalRange!R)
-            static assert(is(typeof(moveBack(r)) == E));
-        static if (isRandomAccessRange!R)
-            static assert(is(typeof(moveAt(r, 0)) == E));
-    }));
-}
+enum bool hasMobileElements(R) =
+    isInputRange!R
+    && is(typeof(moveFront(R.init)) == ElementType!R)
+    && (!isBidirectionalRange!R
+        || is(typeof(moveBack(R.init)) == ElementType!R))
+    && (!isRandomAccessRange!R
+        || is(typeof(moveAt(R.init, 0)) == ElementType!R));
 
 ///
 @safe unittest
@@ -1271,14 +1234,12 @@ static if (isRandomAccessRange!R) swap(r[0], r.front);
 template hasSwappableElements(R)
 {
     import std.algorithm.mutation : swap;
-    enum bool hasSwappableElements = isInputRange!R && is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;
-        swap(r.front, r.front);
-        static if (isBidirectionalRange!R) swap(r.back, r.front);
-        static if (isRandomAccessRange!R) swap(r[0], r.front);
-    }));
+    enum bool hasSwappableElements = isInputRange!R
+        && is(typeof((ref R r) => swap(r.front, r.front)))
+        && (!isBidirectionalRange!R
+            || is(typeof((ref R r) => swap(r.back, r.front))))
+        && (!isRandomAccessRange!R
+            || is(typeof((ref R r) => swap(r[0], r.front))));
 }
 
 ///
@@ -1310,14 +1271,12 @@ static if (isRandomAccessRange!R) r[0] = r.front;
  */
 template hasAssignableElements(R)
 {
-    enum bool hasAssignableElements = isInputRange!R && is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;
-        r.front = r.front;
-        static if (isBidirectionalRange!R) r.back = r.front;
-        static if (isRandomAccessRange!R) r[0] = r.front;
-    }));
+    enum bool hasAssignableElements = isInputRange!R
+        && is(typeof((ref R r) => r.front = r.front))
+        && (!isBidirectionalRange!R
+            || is(typeof((ref R r) => r.front = r.front)))
+        && (!isRandomAccessRange!R
+            || is(typeof((ref R r) => r[0] = r.front)));
 }
 
 ///
@@ -1349,16 +1308,12 @@ static if (isRandomAccessRange!R) passByRef(r[0]);
 */
 template hasLvalueElements(R)
 {
-    enum bool hasLvalueElements = isInputRange!R && is(typeof(
-    (inout int = 0)
-    {
-        void checkRef(ref ElementType!R stuff);
-        R r = R.init;
-
-        checkRef(r.front);
-        static if (isBidirectionalRange!R) checkRef(r.back);
-        static if (isRandomAccessRange!R) checkRef(r[0]);
-    }));
+    enum bool hasLvalueElements = isInputRange!R
+        && is(typeof(((ref ElementType!R x) => x)(R.init.front)))
+        && (!isBidirectionalRange!R
+            || is(typeof(((ref ElementType!R x) => x)(R.init.back))))
+        && (!isRandomAccessRange!R
+            || is(typeof(((ref ElementType!R x) => x)(R.init[0]))));
 }
 
 ///

@@ -7987,3 +7987,55 @@ enum isCopyable(S) = is(typeof(
     static assert(isCopyable!C1);
     static assert(isCopyable!int);
 }
+
+enum bool hasGetter(T, string name, string imports, Result) =
+    is(typeof( ((T* x)
+        {
+            static if (imports.length)
+                mixin("import " ~ imports ~ ";");
+            return mixin("(*x)." ~ name);
+        }
+    )(null) ) == Result);
+
+enum bool hasGetter(T, string name, Result) =
+    hasGetter!(T, name, "", Result);
+
+enum bool hasGetter(T, string name, string imports) =
+    is(typeof(((T* x)
+        {
+            static if (imports.length)
+                mixin("import " ~ imports ~ ";");
+            return mixin("(*x)." ~ name);
+        }
+    )(null)));
+
+///
+unittest
+{
+    static assert(!hasGetter!(int, "empty", "std.range.primitives", bool));
+    static assert(hasGetter!(int[], "empty", "std.range.primitives", bool));
+}
+
+enum bool callSupported(alias fun, string imports, Arg...) =
+    is(typeof((ref Arg arg)
+        {
+            static if (imports.length) mixin("import " ~ imports ~ ";"); fun(arg);
+        }
+    ));
+
+enum bool callSupported(string fun, string imports, Arg...) =
+    is(typeof((ref Arg arg)
+        {
+            static if (imports.length) mixin("import " ~ imports ~ ";");
+            mixin(fun ~ "(arg);");
+        }
+    ));
+
+///
+unittest
+{
+    static void fun(int, string);
+    static assert(callSupported!(fun, "", int, string));
+    static assert(callSupported!(fun, "", short, string));
+    static assert(!callSupported!(fun, "", double, string));
+}
