@@ -630,6 +630,54 @@ Complexity: $(BIGOH 1)
     }
 
 /**
+Removes first element of $(D r), wich must be a range obrained originally
+from this container.
+
+Returns: A range spanning the remaining elements in the container that
+initially were right after the first element of $(D r).
+
+Compexity: $(BIGOH 1)
+     */
+    Range popFirstOf(Range r)
+    {
+        if (r.empty)
+            return r;
+
+        assert(_root !is null, "Cannot remove from an un-initialized List");
+        assert(r._first, "Remove: Range is empty");
+        BaseNode.connect(r._first._prev, r._first._next);
+        auto after = r._first._next;
+        if (after is _root)
+            return Range(null, null);
+        else
+            return Range(after, _last);
+    }
+
+/**
+Removes last element of $(D r), wich must be a range obrained originally
+from this container.
+
+Returns: A range spanning the remaining elements in the container that
+initially were right before the last element of $(D r).
+
+Compexity: $(BIGOH 1)
+     */
+    Range popLastOf(Range r)
+    {
+        if (r.empty)
+            return r;
+
+        assert(_root !is null, "Cannot remove from an un-initialized List");
+        assert(r._last, "Remove: Range is empty");
+        BaseNode.connect(r._last._prev, r._last._next);
+        auto before = r._last._prev;
+        if (before is _root)
+            return Range(null, null);
+        else
+            return Range(_first, before);
+    }
+
+/**
 $(D linearRemove) functions as $(D remove), but also accepts ranges that are
 result the of a $(D take) operation. This is a convenient way to remove a
 fixed amount of elements from the range.
@@ -810,6 +858,20 @@ private:
         }
     }
     assert(equal(list[],[0,3]));
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto dl = DList!int([1, 2, 3, 4, 5]);
+    auto r = dl[];
+    r.popFront();
+    dl.popFirstOf(r);
+    assert(equal(dl[], [1, 3, 4, 5]));
+    r.popBack();
+    dl.popLastOf(r);
+    assert(equal(dl[], [1, 3, 5]));
 }
 
 @safe unittest
