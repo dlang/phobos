@@ -1928,11 +1928,16 @@ template functionLinkage(func...)
 
 /**
 Determines what kind of variadic parameters function has.
+Params:
+    func = function symbol or type of function, delegate, or pointer to function
+Returns:
+    enum Variadic
  */
 enum Variadic
 {
     no,       /// Function is not variadic.
-    c,        /// Function is a _C-style variadic function.
+    c,        /// Function is a _C-style variadic function, which uses
+              /// core.stdc.stdarg
               /// Function is a _D-style variadic function, which uses
     d,        /// __argptr and __arguments.
     typesafe, /// Function is a typesafe variadic function.
@@ -1942,21 +1947,12 @@ enum Variadic
 template variadicFunctionStyle(func...)
     if (func.length == 1 && isCallable!func)
 {
-    alias Func = Unqual!(FunctionTypeOf!func);
-
-    // TypeFuncion --> CallConvention FuncAttrs Arguments ArgClose Type
-    enum callconv = functionLinkage!Func;
-    enum mfunc = mangledName!Func;
-    enum mtype = mangledName!(ReturnType!Func);
-    static assert(mfunc[$ - mtype.length .. $] == mtype, mfunc ~ "|" ~ mtype);
-
-    enum argclose = mfunc[$ - mtype.length - 1];
-    static assert(argclose >= 'X' && argclose <= 'Z');
-
+    enum string varargs = __traits(getFunctionVariadicStyle, FunctionTypeOf!func);
     enum Variadic variadicFunctionStyle =
-        argclose == 'X' ? Variadic.typesafe :
-        argclose == 'Y' ? (callconv == "C") ? Variadic.c : Variadic.d :
-        Variadic.no; // 'Z'
+        (varargs == "stdarg") ? Variadic.c :
+        (varargs == "argptr") ? Variadic.d :
+        (varargs == "typesafe") ? Variadic.typesafe :
+        (varargs == "none") ? Variadic.no : Variadic.no;
 }
 
 ///
