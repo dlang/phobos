@@ -25,7 +25,7 @@ import std.traits;
         I = (template parameter) type of imaginary part of complex number
 
         re = real part of complex number to be constructed
-        im = (optional) imaginary part of complex number
+        im = (optional) imaginary part of complex number, 0 if omitted.
 
     Returns:
         $(D Complex) instance with real and imaginary parts set
@@ -162,18 +162,25 @@ if (isFloatingPoint!T)
 
 @safe pure nothrow @nogc:
 
+    /** Construct a complex number with the specified real and
+    imaginary parts. In the case where a single argument is passed
+    that is not complex, the imaginary part of the result will be
+    zero.
+    */
     this(R : T)(Complex!R z)
     {
         re = z.re;
         im = z.im;
     }
 
+    /// ditto
     this(Rx : T, Ry : T)(Rx x, Ry y)
     {
         re = x;
         im = y;
     }
 
+    /// ditto
     this(R : T)(R r)
     {
         re = r;

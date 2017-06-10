@@ -1706,12 +1706,14 @@ pure nothrow @safe unittest // issue 15884
 
 @safe unittest // issue 15885
 {
+    enum bool realInDoublePrecision = real.mant_dig == double.mant_dig;
+
     static bool test(const double num0)
     {
         import std.math : feqrel;
         const json0 = JSONValue(num0);
         const num1 = to!double(toJSON(json0));
-        version(Win32)
+        static if (realInDoublePrecision)
             return feqrel(num1, num0) >= (double.mant_dig - 1);
         else
             return num1 == num0;
@@ -1725,8 +1727,11 @@ pure nothrow @safe unittest // issue 15884
     assert(test(30738.22));
 
     assert(test(1 + double.epsilon));
-    assert(test(-double.max));
     assert(test(double.min_normal));
+    static if (realInDoublePrecision)
+        assert(test(-double.max / 2));
+    else
+        assert(test(-double.max));
 
     const minSub = double.min_normal * double.epsilon;
     assert(test(minSub));

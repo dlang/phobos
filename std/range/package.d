@@ -165,7 +165,7 @@ $(BOOKTABLE ,
         $(TD Creates a _range that returns a fixed-size sliding window
         over the original _range. Unlike chunks,
         it advances a configurable number of items at a time,
-        not one chunk at a time).
+        not one chunk at a time.
     ))
     $(TR $(TD $(LREF stride))
         $(TD Iterates a _range with stride $(I n).

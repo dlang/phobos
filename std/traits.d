@@ -1010,8 +1010,11 @@ template arity(alias func)
 }
 
 /**
-Returns a tuple consisting of the storage classes of the parameters of a
-function $(D func).
+Get tuple, one per function parameter, of the storage classes of the parameters.
+Params:
+    func = function symbol or type of function, delegate, or pointer to function
+Returns:
+    a tuple of ParameterStorageClass bits
  */
 enum ParameterStorageClass : uint
 {
@@ -1031,39 +1034,28 @@ enum ParameterStorageClass : uint
 template ParameterStorageClassTuple(func...)
     if (func.length == 1 && isCallable!func)
 {
-    alias Func = Unqual!(FunctionTypeOf!func);
+    alias Func = FunctionTypeOf!func;
 
-    /*
-     * TypeFuncion:
-     *     CallConvention FuncAttrs Arguments ArgClose Type
-     */
-    alias Params = Parameters!Func;
-
-    // chop off CallConvention and FuncAttrs
-    enum margs = demangleFunctionAttributes(mangledName!Func[1 .. $]).rest;
-
-    // demangle Arguments and store parameter storage classes in a tuple
-    template demangleNextParameter(string margs, size_t __i = 0)
+    static if (is(Func PT == __parameters))
     {
-        static if (__i < Params.length)
+        template StorageClass(size_t __i)
         {
-            enum demang = demangleParameterStorageClass(margs);
-            enum skip = mangledName!(Params[__i]).length; // for bypassing Type
-            enum rest = demang.rest;
-
-            alias demangleNextParameter =
-                TypeTuple!(
-                    demang.value + 0, // workaround: "not evaluatable at ..."
-                    demangleNextParameter!(rest[skip .. $], __i + 1)
-                );
+            static if (__i < PT.length)
+            {
+                alias StorageClass = TypeTuple!(
+                        extractParameterStorageClassFlags!(__traits(getParameterStorageClasses, Func, __i)),
+                        StorageClass!(__i + 1));
+            }
+            else
+                alias StorageClass = TypeTuple!();
         }
-        else // went thru all the parameters
-        {
-            alias demangleNextParameter = TypeTuple!();
-        }
+        alias ParameterStorageClassTuple = StorageClass!0;
     }
-
-    alias ParameterStorageClassTuple = demangleNextParameter!margs;
+    else
+    {
+        static assert(0, func[0].stringof ~ " is not a function");
+        alias ParameterStorageClassTuple = TypeTuple!();
+    }
 }
 
 ///
@@ -1079,6 +1071,35 @@ template ParameterStorageClassTuple(func...)
     static assert(pstc[0] == STC.ref_);
     static assert(pstc[1] == STC.out_);
     static assert(pstc[2] == STC.none);
+}
+
+/*****************
+ * Convert string tuple Attribs to ParameterStorageClass bits
+ * Params:
+ *      Attribs = string tuple
+ * Returns:
+ *      ParameterStorageClass bits
+ */
+ParameterStorageClass extractParameterStorageClassFlags(Attribs...)()
+{
+    auto result = ParameterStorageClass.none;
+    foreach (attrib; Attribs)
+    {
+        final switch (attrib) with (ParameterStorageClass)
+        {
+            case "scope":  result |= scope_;  break;
+            case "out":    result |= out_;    break;
+            case "ref":    result |= ref_;    break;
+            case "lazy":   result |= lazy_;   break;
+            case "return": result |= return_; break;
+        }
+    }
+    /* Mimic behavor of original version of ParameterStorageClassTuple()
+     * to avoid breaking existing code.
+     */
+    if (result == (ParameterStorageClass.ref_ | ParameterStorageClass.return_))
+        result = ParameterStorageClass.return_;
+    return result;
 }
 
 @safe unittest
@@ -1917,11 +1938,16 @@ template functionLinkage(func...)
 
 /**
 Determines what kind of variadic parameters function has.
+Params:
+    func = function symbol or type of function, delegate, or pointer to function
+Returns:
+    enum Variadic
  */
 enum Variadic
 {
     no,       /// Function is not variadic.
-    c,        /// Function is a _C-style variadic function.
+    c,        /// Function is a _C-style variadic function, which uses
+              /// core.stdc.stdarg
               /// Function is a _D-style variadic function, which uses
     d,        /// __argptr and __arguments.
     typesafe, /// Function is a typesafe variadic function.
@@ -1931,21 +1957,12 @@ enum Variadic
 template variadicFunctionStyle(func...)
     if (func.length == 1 && isCallable!func)
 {
-    alias Func = Unqual!(FunctionTypeOf!func);
-
-    // TypeFuncion --> CallConvention FuncAttrs Arguments ArgClose Type
-    enum callconv = functionLinkage!Func;
-    enum mfunc = mangledName!Func;
-    enum mtype = mangledName!(ReturnType!Func);
-    static assert(mfunc[$ - mtype.length .. $] == mtype, mfunc ~ "|" ~ mtype);
-
-    enum argclose = mfunc[$ - mtype.length - 1];
-    static assert(argclose >= 'X' && argclose <= 'Z');
-
+    enum string varargs = __traits(getFunctionVariadicStyle, FunctionTypeOf!func);
     enum Variadic variadicFunctionStyle =
-        argclose == 'X' ? Variadic.typesafe :
-        argclose == 'Y' ? (callconv == "C") ? Variadic.c : Variadic.d :
-        Variadic.no; // 'Z'
+        (varargs == "stdarg") ? Variadic.c :
+        (varargs == "argptr") ? Variadic.d :
+        (varargs == "typesafe") ? Variadic.typesafe :
+        (varargs == "none") ? Variadic.no : Variadic.no;
 }
 
 ///
@@ -7666,13 +7683,15 @@ template getUDAs(alias symbol, alias attribute)
  * This is not recursive; it will not search for symbols within symbols such as
  * nested structs or unions.
  */
-template getSymbolsByUDA(alias symbol, alias attribute) {
+template getSymbolsByUDA(alias symbol, alias attribute)
+{
     import std.format : format;
     import std.meta : AliasSeq, Filter;
 
     // translate a list of strings into symbols. mixing in the entire alias
     // avoids trying to access the symbol, which could cause a privacy violation
-    template toSymbols(names...) {
+    template toSymbols(names...)
+    {
         static if (names.length == 0)
             alias toSymbols = AliasSeq!();
         else
@@ -7680,12 +7699,16 @@ template getSymbolsByUDA(alias symbol, alias attribute) {
                   .format(names[0]));
     }
 
-    // filtering out nested class context
-    enum noThisMember(string name) = (name != "this");
-    alias membersWithoutNestedCC = Filter!(noThisMember, __traits(allMembers, symbol));
+    // filtering inaccessible members
+    enum isAccessibleMember(string name) = __traits(compiles, __traits(getMember, symbol, name));
+    alias accessibleMembers = Filter!(isAccessibleMember, __traits(allMembers, symbol));
 
-    enum hasSpecificUDA(string name) = mixin("hasUDA!(symbol.%s, attribute)".format(name));
-    alias membersWithUDA = toSymbols!(Filter!(hasSpecificUDA, membersWithoutNestedCC));
+    // filtering not compiled members such as alias of basic types
+    enum hasSpecificUDA(string name) = mixin("hasUDA!(symbol." ~ name ~ ", attribute)");
+    enum isCorrectMember(string name) = __traits(compiles, hasSpecificUDA!(name));
+
+    alias correctMembers = Filter!(isCorrectMember, accessibleMembers);
+    alias membersWithUDA = toSymbols!(Filter!(hasSpecificUDA, correctMembers));
 
     // if the symbol itself has the UDA, tack it on to the front of the list
     static if (hasUDA!(symbol, attribute))
@@ -7764,9 +7787,30 @@ template getSymbolsByUDA(alias symbol, alias attribute) {
 {
     // HasPrivateMembers has, well, private members, one of which has a UDA.
     import std.internal.test.uda : Attr, HasPrivateMembers;
-    static assert(getSymbolsByUDA!(HasPrivateMembers, Attr).length == 2);
+    // Trying access to private member from another file therefore we do not have access
+    // for this otherwise we get deprecation warning - not visible from module
+    static assert(getSymbolsByUDA!(HasPrivateMembers, Attr).length == 1);
     static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[0], Attr));
-    static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[1], Attr));
+}
+
+///
+@safe unittest
+{
+    enum Attr;
+    struct A
+    {
+        alias int INT;
+        alias void function(INT) SomeFunction;
+        @Attr int a;
+        int b;
+        @Attr private int c;
+        private int d;
+    }
+
+    // Here everything is fine, we have access to private member c
+    static assert(getSymbolsByUDA!(A, Attr).length == 2);
+    static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[0], Attr));
+    static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[1], Attr));
 }
 
 // #16387: getSymbolsByUDA works with structs but fails with classes

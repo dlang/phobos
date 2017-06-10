@@ -7280,35 +7280,42 @@ public:
     static Date fromISOString(S)(in S isoString) @safe pure
         if (isSomeString!S)
     {
-        import std.algorithm.searching : all, startsWith;
-        import std.ascii : isDigit;
-        import std.conv : to;
+        import std.algorithm.searching : startsWith;
+        import std.conv : to, text, ConvException;
         import std.exception : enforce;
-        import std.format : format;
         import std.string : strip;
 
-        auto dstr = to!dstring(strip(isoString));
+        auto str = isoString.strip;
 
-        enforce(dstr.length >= 8, new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        enforce!DateTimeException(str.length >= 8, text("Invalid ISO String: ", isoString));
 
-        auto day = dstr[$-2 .. $];
-        auto month = dstr[$-4 .. $-2];
-        auto year = dstr[0 .. $-4];
+        int day, month, year;
+        auto yearStr = str[0 .. $ - 4];
 
-        enforce(all!isDigit(day), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        enforce(all!isDigit(month), new DateTimeException(format("Invalid ISO String: %s", isoString)));
-
-        if (year.length > 4)
+        try
         {
-            enforce(year.startsWith('-', '+'),
-                    new DateTimeException(format("Invalid ISO String: %s", isoString)));
-            enforce(all!isDigit(year[1..$]),
-                    new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        }
-        else
-            enforce(all!isDigit(year), new DateTimeException(format("Invalid ISO String: %s", isoString)));
+            // using conversion to uint plus cast because it checks for +/-
+            // for us quickly while throwing ConvException
+            day = cast(int) to!uint(str[$ - 2 .. $]);
+            month = cast(int) to!uint(str[$ - 4 .. $ - 2]);
 
-        return Date(to!short(year), to!ubyte(month), to!ubyte(day));
+            if (yearStr.length > 4)
+            {
+                enforce!DateTimeException(yearStr.startsWith('-', '+'),
+                        text("Invalid ISO String: ", isoString));
+                year = to!int(yearStr);
+            }
+            else
+            {
+                year = cast(int) to!uint(yearStr);
+            }
+        }
+        catch (ConvException)
+        {
+            throw new DateTimeException(text("Invalid ISO String: ", isoString));
+        }
+
+        return Date(year, month, day);
     }
 
     ///

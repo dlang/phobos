@@ -255,6 +255,7 @@ template floatTraits(T)
 {
     // EXPMASK is a ushort mask to select the exponent portion (without sign)
     // EXPSHIFT is the number of bits the exponent is left-shifted by in its ushort
+    // EXPBIAS is the exponent bias - 1 (exp == EXPBIAS yields ×2^-1).
     // EXPPOS_SHORT is the index of the exponent when represented as a ushort array.
     // SIGNPOS_BYTE is the index of the sign when represented as a ubyte array.
     // RECIP_EPSILON is the value such that (smallest_subnormal) * RECIP_EPSILON == T.min_normal
@@ -345,7 +346,7 @@ template floatTraits(T)
         // Quadruple precision float
         enum ushort EXPMASK = 0x7FFF;
         enum ushort EXPSHIFT = 0;
-        enum ushort EXPBIAS = 0x3FFF;
+        enum ushort EXPBIAS = 0x3FFE;
         enum realFormat = RealFormat.ieeeQuadruple;
         version(LittleEndian)
         {
@@ -2451,9 +2452,10 @@ if (isFloatingPoint!T)
         if (ex)     // If exponent is non-zero
         {
             if (ex == F.EXPMASK)
-            {   // infinity or NaN
+            {
+                // infinity or NaN
                 if (vl[MANTISSA_LSB] |
-                    ( vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF))  // NaN
+                    (vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF))  // NaN
                 {
                     // convert NaNS to NaNQ
                     vl[MANTISSA_MSB] |= 0x0000_8000_0000_0000;
@@ -2463,17 +2465,15 @@ if (isFloatingPoint!T)
                     exp = int.min;
                 else   // positive infinity
                     exp = int.max;
-
             }
             else
             {
                 exp = ex - F.EXPBIAS;
-                vu[F.EXPPOS_SHORT] =
-                    cast(ushort)((0x8000 & vu[F.EXPPOS_SHORT]) | 0x3FFE);
+                vu[F.EXPPOS_SHORT] = F.EXPBIAS | (0x8000 & vu[F.EXPPOS_SHORT]);
             }
         }
-        else if ((vl[MANTISSA_LSB]
-                       |(vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0)
+        else if ((vl[MANTISSA_LSB] |
+            (vl[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0)
         {
             // vf is +-0.0
             exp = 0;
@@ -2484,8 +2484,7 @@ if (isFloatingPoint!T)
             vf *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ex - F.EXPBIAS - T.mant_dig + 1;
-            vu[F.EXPPOS_SHORT] =
-                cast(ushort)((~F.EXPMASK & vu[F.EXPPOS_SHORT]) | 0x3FFE);
+            vu[F.EXPPOS_SHORT] = F.EXPBIAS | (0x8000 & vu[F.EXPPOS_SHORT]);
         }
         return vf;
     }
@@ -4240,9 +4239,45 @@ long lrint(real x) @trusted pure nothrow @nogc
 
             return sign ? -result : result;
         }
+        else static if (F.realFormat == RealFormat.ieeeQuadruple)
+        {
+            const vu = cast(ushort*)(&x);
+
+            // Find the exponent and sign
+            const sign = (vu[F.EXPPOS_SHORT] >> 15) & 1;
+            if ((vu[F.EXPPOS_SHORT] & F.EXPMASK) - (F.EXPBIAS + 1) > 63)
+            {
+                // The result is left implementation defined when the number is
+                // too large to fit in a 64 bit long.
+                return cast(long) x;
+            }
+
+            // Force rounding of lower bits according to current rounding
+            // mode by adding ±2^-112 and subtracting it again.
+            enum OF = 5.19229685853482762853049632922009600E33L;
+            const j = sign ? -OF : OF;
+            x = (j + x) - j;
+
+            const implicitOne = 1UL << 48;
+            auto vl = cast(ulong*)(&x);
+            vl[MANTISSA_MSB] &= implicitOne - 1;
+            vl[MANTISSA_MSB] |= implicitOne;
+
+            long result;
+
+            const exp = (vu[F.EXPPOS_SHORT] & F.EXPMASK) - (F.EXPBIAS + 1);
+            if (exp < 0)
+                result = 0;
+            else if (exp <= 48)
+                result = vl[MANTISSA_MSB] >> (48 - exp);
+            else
+                result = (vl[MANTISSA_MSB] << (exp - 48)) | (vl[MANTISSA_LSB] >> (112 - exp));
+
+            return sign ? -result : result;
+        }
         else
         {
-            static assert(false, "Only 64-bit and 80-bit reals are supported by lrint()");
+            static assert(false, "real type not supported by lrint()");
         }
     }
 }
@@ -4259,6 +4294,17 @@ long lrint(real x) @trusted pure nothrow @nogc
     assert(lrint(int.max + 0.5) == 2147483648L);
     assert(lrint(int.min - 0.5) == -2147483648L);
     assert(lrint(int.min + 0.5) == -2147483648L);
+}
+
+static if (real.mant_dig >= long.sizeof * 8)
+{
+    @safe pure nothrow @nogc unittest
+    {
+        assert(lrint(long.max - 1.5L) == long.max - 1);
+        assert(lrint(long.max - 0.5L) == long.max - 1);
+        assert(lrint(long.min + 0.5L) == long.min);
+        assert(lrint(long.min + 1.5L) == long.min + 2);
+    }
 }
 
 /*******************************************
@@ -5782,25 +5828,22 @@ real nextUp(real x) @trusted pure nothrow @nogc
         {
             // NaN or Infinity
             if (x == -real.infinity) return -real.max;
-
             return x; // +Inf and NaN are unchanged.
         }
 
-        ulong*   ps = cast(ulong *)&e;
-        if (ps[MANTISSA_LSB] & 0x8000_0000_0000_0000)
+        auto ps = cast(ulong *)&x;
+        if (ps[MANTISSA_MSB] & 0x8000_0000_0000_0000)
         {
             // Negative number
-
-            if (ps[MANTISSA_LSB] == 0
-                && ps[MANTISSA_MSB] == 0x8000_0000_0000_0000)
+            if (ps[MANTISSA_LSB] == 0 && ps[MANTISSA_MSB] == 0x8000_0000_0000_0000)
             {
                 // it was negative zero, change to smallest subnormal
-                ps[MANTISSA_LSB] = 0x0000_0000_0000_0001;
+                ps[MANTISSA_LSB] = 1;
                 ps[MANTISSA_MSB] = 0;
                 return x;
             }
-            --*ps;
             if (ps[MANTISSA_LSB] == 0) --ps[MANTISSA_MSB];
+            --ps[MANTISSA_LSB];
         }
         else
         {
@@ -5809,7 +5852,6 @@ real nextUp(real x) @trusted pure nothrow @nogc
             if (ps[MANTISSA_LSB] == 0) ++ps[MANTISSA_MSB];
         }
         return x;
-
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
@@ -6800,21 +6842,15 @@ body
         ulong *yl = cast(ulong *)&y;
 
         // Multi-byte add, then multi-byte right shift.
-        ulong mh = ((xl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL)
-                    + (yl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL));
+        import core.checkedint : addu;
+        bool carry;
+        ulong ml = addu(xl[MANTISSA_LSB], yl[MANTISSA_LSB], carry);
 
-        // Discard the lowest bit (to avoid overflow)
-        ulong ml = (xl[MANTISSA_LSB]>>>1) + (yl[MANTISSA_LSB]>>>1);
+        ulong mh = carry + (xl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL) +
+            (yl[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL);
 
-        // add the lowest bit back in, if necessary.
-        if (xl[MANTISSA_LSB] & yl[MANTISSA_LSB] & 1)
-        {
-            ++ml;
-            if (ml == 0) ++mh;
-        }
-        mh >>>=1;
-        ul[MANTISSA_MSB] = mh | (xl[MANTISSA_MSB] & 0x8000_0000_0000_0000);
-        ul[MANTISSA_LSB] = ml;
+        ul[MANTISSA_MSB] = (mh >>> 1) | (xl[MANTISSA_MSB] & 0x8000_0000_0000_0000);
+        ul[MANTISSA_LSB] = (ml >>> 1) | (mh & 1) << 63;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
@@ -6823,8 +6859,8 @@ body
         ulong *yl = cast(ulong *)&y;
         ulong m = (((*xl) & 0x7FFF_FFFF_FFFF_FFFFL)
                    + ((*yl) & 0x7FFF_FFFF_FFFF_FFFFL)) >>> 1;
-                   m |= ((*xl) & 0x8000_0000_0000_0000L);
-                   *ul = m;
+        m |= ((*xl) & 0x8000_0000_0000_0000L);
+        *ul = m;
     }
     else static if (F.realFormat == RealFormat.ieeeSingle)
     {
