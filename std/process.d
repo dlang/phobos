@@ -112,47 +112,47 @@ version (Win32) version (CRuntime_DigitalMars) version = DMC_RUNTIME;
 private
 {
 
-// Microsoft Visual C Runtime (MSVCRT) declarations.
-version (Windows)
-{
-    version (DMC_RUNTIME) { } else
+    // Microsoft Visual C Runtime (MSVCRT) declarations.
+    version (Windows)
     {
-        import core.stdc.stdint;
-        enum
+        version (DMC_RUNTIME) { } else
         {
-            STDIN_FILENO  = 0,
-            STDOUT_FILENO = 1,
-            STDERR_FILENO = 2,
-        }
-    }
-}
-
-// POSIX API declarations.
-version (Posix)
-{
-    version (OSX)
-    {
-        private extern(C) char*** _NSGetEnviron() nothrow;
-        private const(char**) getEnvironPtr() @property @trusted
-        {
-            return *_NSGetEnviron;
-        }
-    }
-    else
-    {
-        // Made available by the C runtime:
-        private extern(C) extern __gshared const char** environ;
-        private const(char**) getEnvironPtr() @property @trusted
-        {
-            return environ;
+            import core.stdc.stdint;
+            enum
+            {
+                STDIN_FILENO  = 0,
+                STDOUT_FILENO = 1,
+                STDERR_FILENO = 2,
+            }
         }
     }
 
-    @system unittest
+    // POSIX API declarations.
+    version (Posix)
     {
-        new Thread({assert(getEnvironPtr !is null);}).start();
+        version (OSX)
+        {
+            private extern(C) char*** _NSGetEnviron() nothrow;
+            private const(char**) getEnvironPtr() @property @trusted
+            {
+                return *_NSGetEnviron;
+            }
+        }
+        else
+        {
+            // Made available by the C runtime:
+            private extern(C) extern __gshared const char** environ;
+            private const(char**) getEnvironPtr() @property @trusted
+            {
+                return environ;
+            }
+        }
+
+        @system unittest
+        {
+            new Thread({assert(getEnvironPtr !is null);}).start();
+        }
     }
-}
 
 
 } // private
