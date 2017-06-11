@@ -99,7 +99,6 @@ version (Windows)
 }
 
 import std.internal.cstring;
-import std.internal.processinit;
 import std.range.primitives;
 import std.stdio;
 
@@ -133,20 +132,25 @@ version (Posix)
 {
     version (OSX)
     {
-        extern(C) char*** _NSGetEnviron() nothrow;
-        private __gshared const(char**)* environPtr;
-        extern(C) void std_process_shared_static_this() { environPtr = _NSGetEnviron(); }
-        const(char**) environ() @property @trusted nothrow { return *environPtr; }
+        private extern(C) char*** _NSGetEnviron() nothrow;
+        private const(char**) getEnvironPtr() @property @trusted
+        {
+            return *_NSGetEnviron;
+        }
     }
     else
     {
         // Made available by the C runtime:
-        extern(C) extern __gshared const char** environ;
+        private extern(C) extern __gshared const char** environ;
+        private const(char**) getEnvironPtr() @property @trusted
+        {
+            return environ;
+        }
     }
 
     @system unittest
     {
-        new Thread({assert(environ !is null);}).start();
+        new Thread({assert(getEnvironPtr !is null);}).start();
     }
 }
 
@@ -703,6 +707,7 @@ private const(char*)* createEnv(const string[string] childEnv,
 {
     // Determine the number of strings in the parent's environment.
     int parentEnvLength = 0;
+    auto environ = getEnvironPtr;
     if (mergeWithParentEnv)
     {
         if (childEnv.length == 0) return environ;
@@ -737,6 +742,7 @@ version (Posix) @system unittest
     auto e2 = createEnv(null, true);
     assert(e2 != null);
     int i = 0;
+    auto environ = getEnvironPtr;
     for (; environ[i] != null; ++i)
     {
         assert(e2[i] != null);
@@ -3333,6 +3339,7 @@ static:
         string[string] aa;
         version (Posix)
         {
+            auto environ = getEnvironPtr;
             for (int i=0; environ[i] != null; ++i)
             {
                 import std.string : indexOf;
@@ -3902,4 +3909,3 @@ else version (Posix)
 }
 else
     static assert(0, "os not supported");
-
