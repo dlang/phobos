@@ -555,7 +555,7 @@ version(Posix) @system unittest
     // Ouroboros allocator list based upon 4MB regions, fetched from the garbage
     // collector. Memory is left to the collector.
     alias A3 = AllocatorList!(
-        (n) => Region!NullAllocator(new ubyte[max(n, 1024 * 4096)]),
+        (n) => Region!NullAllocator(new void[max(n, 1024 * 4096)]),
         NullAllocator);
 
     // Allocator list that creates one freelist for all objects
@@ -563,7 +563,7 @@ version(Posix) @system unittest
         Segregator!(
             64, AllocatorList!(
                 (n) => ContiguousFreeList!(NullAllocator, 0, 64)(
-                    cast(ubyte[])(GCAllocator.instance.allocate(4096)))),
+                    GCAllocator.instance.allocate(4096))),
             GCAllocator);
 
     A4 a;
@@ -581,7 +581,7 @@ version(Posix) @system unittest
     // Create an allocator based upon 4MB regions, fetched from the GC heap.
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
-    AllocatorList!((n) => Region!GCAllocator(new ubyte[max(n, 1024 * 4096)]),
+    AllocatorList!((n) => Region!GCAllocator(new void[max(n, 1024 * 4096)]),
         NullAllocator) a;
     const b1 = a.allocate(1024 * 8192);
     assert(b1 !is null); // still works due to overdimensioning
@@ -595,7 +595,7 @@ version(Posix) @system unittest
     // Create an allocator based upon 4MB regions, fetched from the GC heap.
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
-    AllocatorList!((n) => Region!()(new ubyte[max(n, 1024 * 4096)])) a;
+    AllocatorList!((n) => Region!()(new void[max(n, 1024 * 4096)])) a;
     auto b1 = a.allocate(1024 * 8192);
     assert(b1 !is null); // still works due to overdimensioning
     b1 = a.allocate(1024 * 10);
@@ -608,7 +608,7 @@ version(Posix) @system unittest
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
     import std.typecons : Ternary;
-    AllocatorList!((n) => Region!()(new ubyte[max(n, 1024 * 4096)])) a;
+    AllocatorList!((n) => Region!()(new void[max(n, 1024 * 4096)])) a;
     auto b1 = a.allocate(1024 * 8192);
     assert(b1 !is null);
     b1 = a.allocate(1024 * 10);

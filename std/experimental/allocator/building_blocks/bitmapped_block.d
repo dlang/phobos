@@ -54,8 +54,8 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     {
         import std.experimental.allocator.mallocator : AlignedMallocator;
         import std.algorithm.comparison : max;
-        auto m = cast(ubyte[])(AlignedMallocator.instance.alignedAllocate(1024 * 64,
-                                max(theAlignment, cast(uint) size_t.sizeof)));
+        auto m = AlignedMallocator.instance.alignedAllocate(1024 * 64,
+            max(theAlignment, cast(uint) size_t.sizeof));
         scope(exit) AlignedMallocator.instance.deallocate(m);
         testAllocator!(() => BitmappedBlock(m));
     }
@@ -153,7 +153,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     ParentAllocator.deallocate).)
     )
     */
-    this(ubyte[] data)
+    this(void[] data)
     {
         immutable a = data.ptr.effectiveAlignment;
         assert(a >= size_t.alignof || !data.ptr,
@@ -189,7 +189,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     this(size_t capacity)
     {
         size_t toAllocate = totalAllocation(capacity);
-        auto data = cast(ubyte[])(parent.allocate(toAllocate));
+        auto data = parent.allocate(toAllocate);
         this(data);
         assert(_blocks * blockSize >= capacity);
     }
@@ -696,7 +696,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     import std.experimental.allocator.building_blocks.region : InSituRegion;
     import std.traits : hasMember;
     InSituRegion!(10_240, 64) r;
-    auto a = BitmappedBlock!(64, 64)(cast(ubyte[])(r.allocateAll()));
+    auto a = BitmappedBlock!(64, 64)(r.allocateAll());
     static assert(hasMember!(InSituRegion!(10_240, 64), "allocateAll"));
     const b = a.allocate(100);
     assert(b.length == 100);
@@ -716,8 +716,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         assert(bs);
         import std.experimental.allocator.gc_allocator : GCAllocator;
         auto a = BitmappedBlock!(bs, min(bs, platformAlignment))(
-            cast(ubyte[])(GCAllocator.instance.allocate((blocks * bs * 8 +
-                        blocks) / 8))
+            GCAllocator.instance.allocate((blocks * bs * 8 + blocks) / 8)
         );
         import std.conv : text;
         assert(blocks >= a._blocks, text(blocks, " < ", a._blocks));
@@ -864,8 +863,8 @@ struct BitmappedBlockWithInternalPointers(
     @system unittest
     {
         import std.experimental.allocator.mallocator : AlignedMallocator;
-        auto m = cast(ubyte[])(AlignedMallocator.instance.alignedAllocate(1024 * 64,
-            theAlignment));
+        auto m = AlignedMallocator.instance.alignedAllocate(1024 * 64,
+            theAlignment);
         scope(exit) AlignedMallocator.instance.deallocate(m);
         testAllocator!(() => BitmappedBlockWithInternalPointers(m));
     }
@@ -879,7 +878,7 @@ struct BitmappedBlockWithInternalPointers(
     Constructors accepting desired capacity or a preallocated buffer, similar
     in semantics to those of $(D BitmappedBlock).
     */
-    this(ubyte[] data)
+    this(void[] data)
     {
         _heap = BitmappedBlock!(theBlockSize, theAlignment, ParentAllocator)(data);
     }
@@ -1065,7 +1064,7 @@ struct BitmappedBlockWithInternalPointers(
 {
     import std.typecons : Ternary;
 
-    auto h = BitmappedBlockWithInternalPointers!(4096)(new ubyte[4096 * 1024]);
+    auto h = BitmappedBlockWithInternalPointers!(4096)(new void[4096 * 1024]);
     auto b = h.allocate(123);
     assert(b.length == 123);
 
