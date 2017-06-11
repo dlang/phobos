@@ -308,14 +308,38 @@ bool wouldHaveBlocked() nothrow @nogc
 }
 
 
-private immutable
+private //immutable
 {
-    typeof(&getnameinfo) getnameinfoPointer;
-    typeof(&getaddrinfo) getaddrinfoPointer;
-    typeof(&freeaddrinfo) freeaddrinfoPointer;
+    typeof(&getnameinfo) _getnameinfoPointer;
+    typeof(&getaddrinfo) _getaddrinfoPointer;
+    typeof(&freeaddrinfo) _freeaddrinfoPointer;
 }
 
-shared static this() @system
+@property typeof(&getnameinfo) getnameinfoPointer() @trusted
+{
+    import std.concurrency : initOnce;
+    initOnce!initialized(initialize);
+    return _getnameinfoPointer;
+}
+
+@property auto getaddrinfoPointer() @trusted
+{
+    import std.concurrency : initOnce;
+    initOnce!initialized(initialize);
+    return _getaddrinfoPointer;
+}
+
+@property auto freeaddrinfoPointer() @trusted
+{
+    import std.concurrency : initOnce;
+    initOnce!initialized(initialize);
+    return _freeaddrinfoPointer;
+}
+
+private shared bool initialized;
+
+//shared static this() @system
+bool initialize() @trusted
 {
     version(Windows)
     {
@@ -333,22 +357,22 @@ shared static this() @system
         auto ws2Lib = GetModuleHandleA("ws2_32.dll");
         if (ws2Lib)
         {
-            getnameinfoPointer = cast(typeof(getnameinfoPointer))
+            _getnameinfoPointer = cast(typeof(_getnameinfoPointer))
                                  GetProcAddress(ws2Lib, "getnameinfo");
-            getaddrinfoPointer = cast(typeof(getaddrinfoPointer))
+            _getaddrinfoPointer = cast(typeof(_getaddrinfoPointer))
                                  GetProcAddress(ws2Lib, "getaddrinfo");
-            freeaddrinfoPointer = cast(typeof(freeaddrinfoPointer))
+            _freeaddrinfoPointer = cast(typeof(_freeaddrinfoPointer))
                                  GetProcAddress(ws2Lib, "freeaddrinfo");
         }
     }
     else version(Posix)
     {
-        getnameinfoPointer = &getnameinfo;
-        getaddrinfoPointer = &getaddrinfo;
-        freeaddrinfoPointer = &freeaddrinfo;
+        _getnameinfoPointer = &getnameinfo;
+        _getaddrinfoPointer = &getaddrinfo;
+        _freeaddrinfoPointer = &freeaddrinfo;
     }
+    return true;
 }
-
 
 shared static ~this() @system nothrow @nogc
 {
@@ -979,16 +1003,18 @@ private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addr
 {
         import std.array : appender;
 
+    auto getaddrinfoPointer = .getaddrinfoPointer;
+    auto freeaddrinfoPointer = .freeaddrinfoPointer;
     if (getaddrinfoPointer && freeaddrinfoPointer)
     {
         addrinfo* ai_res;
 
-        int ret = getaddrinfoPointer(
+        int ret = (*getaddrinfoPointer)(
             node.tempCString(),
             service.tempCString(),
             hints, &ai_res);
         enforce(ret == 0, new SocketOSException("getaddrinfo error", ret, &formatGaiError));
-        scope(exit) freeaddrinfoPointer(ai_res);
+        scope(exit) (*freeaddrinfoPointer)(ai_res);
 
         auto result = appender!(AddressInfo[])();
 
@@ -1134,9 +1160,9 @@ Address[] getAddress(in char[] hostname, ushort port)
         if (getaddrinfoPointer)
         {
             // test via gethostbyname
-            auto getaddrinfoPointerBackup = getaddrinfoPointer;
-            cast() getaddrinfoPointer = null;
-            scope(exit) cast() getaddrinfoPointer = getaddrinfoPointerBackup;
+            auto getaddrinfoPointerBackup = getaddrinfoPointer();
+            cast() _getaddrinfoPointer = null;
+            scope(exit) _getaddrinfoPointer = getaddrinfoPointerBackup;
 
             addresses = getAddress("63.105.9.61");
             assert(addresses.length && addresses[0].toAddrString() == "63.105.9.61");
@@ -1215,8 +1241,8 @@ Address parseAddress(in char[] hostaddr, ushort port)
         {
             // test via inet_addr
             auto getaddrinfoPointerBackup = getaddrinfoPointer;
-            cast() getaddrinfoPointer = null;
-            scope(exit) cast() getaddrinfoPointer = getaddrinfoPointerBackup;
+            cast() _getaddrinfoPointer = null;
+            scope(exit) cast() _getaddrinfoPointer = getaddrinfoPointerBackup;
 
             address = parseAddress("63.105.9.61");
             assert(address.toAddrString() == "63.105.9.61");
@@ -1305,7 +1331,7 @@ abstract class Address
         if (getnameinfoPointer)
         {
             auto buf = new char[NI_MAXHOST];
-            auto ret = getnameinfoPointer(
+            auto ret = getnameinfoPointer()(
                         name, nameLen,
                         buf.ptr, cast(uint) buf.length,
                         null, 0,
@@ -1336,7 +1362,7 @@ abstract class Address
         if (getnameinfoPointer)
         {
             auto buf = new char[NI_MAXSERV];
-            enforce(getnameinfoPointer(
+            enforce(getnameinfoPointer()(
                         name, nameLen,
                         null, 0,
                         buf.ptr, cast(uint) buf.length,
@@ -1717,8 +1743,8 @@ public:
             {
                 // test reverse lookup, via gethostbyaddr
                 auto getnameinfoPointerBackup = getnameinfoPointer;
-                cast() getnameinfoPointer = null;
-                scope(exit) cast() getnameinfoPointer = getnameinfoPointerBackup;
+                cast() _getnameinfoPointer = null;
+                scope(exit) _getnameinfoPointer = getnameinfoPointerBackup;
 
                 assert(ia.toHostNameString() == "digitalmars.com");
             }
