@@ -69,7 +69,6 @@ import core.atomic;
 import core.sync.condition;
 import core.sync.mutex;
 import core.thread;
-import std.concurrencybase;
 import std.range.primitives;
 import std.traits;
 
@@ -910,12 +909,13 @@ private
 {
     __gshared Tid[string] tidByName;
     __gshared string[][Tid] namesByTid;
-    __gshared Mutex registryLock;
 }
 
-extern (C) void std_concurrency_static_this()
+private @property Mutex registryLock()
 {
-    registryLock = new Mutex;
+    __gshared Mutex impl;
+    initOnce!impl(new Mutex);
+    return impl;
 }
 
 private void unregisterMe()

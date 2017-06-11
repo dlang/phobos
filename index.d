@@ -461,7 +461,6 @@ $(COMMENT
     $(TR
         $(TDNW
             $(LINK2 core_sync_config.html, core.sync.config)$(BR)
-            $(LINK2 std_concurrencybase.html, std.concurrencybase)$(BR)
             $(LINK2 std_container_util.html, std.container.util)$(BR)
             $(LINK2 std_regex_internal_backtracking.html, std.regex.internal.backtracking)$(BR)
             $(LINK2 std_regex_internal_generator.html, std.regex.internal.generator)$(BR)

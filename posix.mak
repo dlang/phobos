@@ -219,7 +219,7 @@ EXTRA_MODULES_COMMON := $(addprefix etc/c/,curl odbc/sql odbc/sqlext \
 EXTRA_DOCUMENTABLES := $(EXTRA_MODULES_LINUX) $(EXTRA_MODULES_WIN32) $(EXTRA_MODULES_COMMON)
 
 EXTRA_MODULES_INTERNAL := $(addprefix std/, \
-	algorithm/internal concurrencybase \
+	algorithm/internal \
 	$(addprefix internal/, \
 		cstring digest/sha_SSSE3 \
 		$(addprefix math/, biguintcore biguintnoasm biguintx86	\
