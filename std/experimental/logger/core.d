@@ -8,11 +8,6 @@ import core.sync.mutex : Mutex;
 
 import std.experimental.logger.filelogger;
 
-shared static this()
-{
-    stdSharedLoggerMutex = new Mutex;
-}
-
 /** This template evaluates if the passed $(D LogLevel) is active.
 The previously described version statements are used to decide if the
 $(D LogLevel) is active. The version statements only influence the compile
@@ -1617,7 +1612,6 @@ abstract class Logger
 
 // Thread Global
 
-private __gshared Mutex stdSharedLoggerMutex;
 private __gshared Logger stdSharedDefaultLogger;
 private shared Logger stdSharedLogger;
 private shared LogLevel stdLoggerGlobalLogLevel = LogLevel.all;
@@ -1632,15 +1626,12 @@ private @property Logger defaultSharedLoggerImpl() @trusted
 
     static __gshared align(FileLogger.alignof) void[__traits(classInstanceSize, FileLogger)] _buffer;
 
-    synchronized (stdSharedLoggerMutex)
-    {
+    import std.concurrency : initOnce;
+    initOnce!stdSharedDefaultLogger({
         auto buffer = cast(ubyte[]) _buffer;
+        return emplace!FileLogger(buffer, stderr, LogLevel.all);
+    }());
 
-        if (stdSharedDefaultLogger is null)
-        {
-            stdSharedDefaultLogger = emplace!FileLogger(buffer, stderr, LogLevel.all);
-        }
-    }
     return stdSharedDefaultLogger;
 }
 
