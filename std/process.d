@@ -111,7 +111,6 @@ version (Win32) version (CRuntime_DigitalMars) version = DMC_RUNTIME;
 // Some of the following should be moved to druntime.
 private
 {
-
     // Microsoft Visual C Runtime (MSVCRT) declarations.
     version (Windows)
     {
@@ -132,8 +131,8 @@ private
     {
         version (OSX)
         {
-            private extern(C) char*** _NSGetEnviron() nothrow;
-            private const(char**) getEnvironPtr() @property @trusted
+            extern(C) char*** _NSGetEnviron() nothrow;
+            const(char**) getEnvironPtr() @trusted
             {
                 return *_NSGetEnviron;
             }
@@ -141,8 +140,8 @@ private
         else
         {
             // Made available by the C runtime:
-            private extern(C) extern __gshared const char** environ;
-            private const(char**) getEnvironPtr() @property @trusted
+            extern(C) extern __gshared const char** environ;
+            const(char**) getEnvironPtr() @trusted
             {
                 return environ;
             }
@@ -153,8 +152,6 @@ private
             new Thread({assert(getEnvironPtr !is null);}).start();
         }
     }
-
-
 } // private
 
 
