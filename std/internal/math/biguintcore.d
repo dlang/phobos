@@ -45,20 +45,21 @@ else
 alias multibyteAdd = multibyteAddSub!('+');
 alias multibyteSub = multibyteAddSub!('-');
 
-
-import core.cpuid;
+private import std.traits;
+private import std.range.primitives;
 public import std.ascii : LetterCase;
 import std.range.primitives;
 import std.traits;
 
-shared static this()
-{
-    CACHELIMIT = core.cpuid.datacache[0].size*1024/2;
-}
-
 private:
 // Limits for when to switch between algorithms.
-immutable size_t CACHELIMIT;   // Half the size of the data cache.
+// Half the size of the data cache.
+@nogc nothrow pure size_t getCacheLimit()
+{
+    import core.cpuid;
+    return (cast(size_t function() @nogc nothrow pure)
+        (() => core.cpuid.datacache[0].size * 1024 / 2))();
+}
 enum size_t FASTDIVLIMIT = 100; // crossover to recursive division
 
 
@@ -1355,6 +1356,7 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
             return;
         }
 
+        immutable CACHELIMIT = getCacheLimit;
         if (x.length + y.length < CACHELIMIT)
             return mulSimple(result, x, y);
 
