@@ -2407,9 +2407,6 @@ if (is(Unqual!T == bool))
     Array!V3 arr;
     arr ~= v;
     assert(arr[0] == [1, 2, 3]);
-
-    arr = arr ~ v;
-    assert(arr[1] == [1, 2, 3]);
 }
 @system unittest
 {
