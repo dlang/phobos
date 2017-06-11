@@ -161,17 +161,11 @@ Params:
 Returns:
     true if R is an InputRange, false if not
  */
-template isInputRange(R)
-{
-    enum bool isInputRange = is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;     // can define a range object
-        if (r.empty) {}   // can test for empty
-        r.popFront;       // can invoke popFront()
-        auto h = r.front; // can get the front of the range
-    }));
-}
+enum bool isInputRange(R) =
+    is(typeof((ref R r) => r))
+    && is(ReturnType!((R r) => r.empty) == bool)
+    && is(typeof(lvalueOf!R.front))
+    && is(typeof(lvalueOf!R.popFront));
 
 ///
 @safe unittest
@@ -691,16 +685,8 @@ are:
 2: if $(D E) is a non $(empty) $(D InputRange), then placing $(D e) is
 guaranteed to not overflow the range.
  +/
-package(std) template isNativeOutputRange(R, E)
-{
-    enum bool isNativeOutputRange = is(typeof(
-    (inout int = 0)
-    {
-        R r = void;
-        E e;
-        doPut(r, e);
-    }));
-}
+package(std) enum bool isNativeOutputRange(R, E) =
+    is(typeof(doPut(lvalueOf!R, lvalueOf!E)));
 
 @safe unittest
 {
@@ -715,21 +701,14 @@ package(std) template isNativeOutputRange(R, E)
     if (!r.empty)
         put(r, [1, 2]); //May actually error out.
 }
+
 /++
 Returns $(D true) if $(D R) is an output range for elements of type
 $(D E). An output range is defined functionally as a range that
 supports the operation $(D put(r, e)) as defined above.
  +/
-template isOutputRange(R, E)
-{
-    enum bool isOutputRange = is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;
-        E e = E.init;
-        put(r, e);
-    }));
-}
+ enum bool isOutputRange(R, E) =
+     is(typeof(put(lvalueOf!R, lvalueOf!E)));
 
 ///
 @safe unittest
@@ -791,19 +770,8 @@ are the same as for an input range, with the additional requirement
 that backtracking must be possible by saving a copy of the range
 object with $(D save) and using it later.
  */
-template isForwardRange(R)
-{
-    enum bool isForwardRange = isInputRange!R && is(typeof(
-    (inout int = 0)
-    {
-        R r1 = R.init;
-        // NOTE: we cannot check typeof(r1.save) directly
-        // because typeof may not check the right type there, and
-        // because we want to ensure the range can be copied.
-        auto s1 = r1.save;
-        static assert(is(typeof(s1) == R));
-    }));
-}
+enum bool isForwardRange(R) = isInputRange!R
+    && is(ReturnType!((R r) => r.save) == R);
 
 ///
 @safe unittest
@@ -841,18 +809,9 @@ $(UL $(LI $(D r.back) returns (possibly a reference to) the last
 element in the range. Calling $(D r.back) is allowed only if calling
 $(D r.empty) has, or would have, returned $(D false).))
  */
-template isBidirectionalRange(R)
-{
-    enum bool isBidirectionalRange = isForwardRange!R && is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;
-        r.popBack;
-        auto t = r.back;
-        auto w = r.front;
-        static assert(is(typeof(t) == typeof(w)));
-    }));
-}
+enum bool isBidirectionalRange(R) = isForwardRange!R
+    && is(typeof((ref R r) => r.popBack))
+    && is(ReturnType!((ref R r) => r.back) == ElementType!R);
 
 ///
 @safe unittest
@@ -911,28 +870,28 @@ isRandomAccessRange) yields $(D false) for them because they use
 variable-length encodings (UTF-8 and UTF-16 respectively). These types
 are bidirectional ranges only.
  */
-template isRandomAccessRange(R)
+enum bool isRandomAccessRange(R) =
+    is(typeof(lvalueOf!R[1]) == ElementType!R)
+    && !isNarrowString!R
+    && isForwardRange!R
+    && (isBidirectionalRange!R || isInfinite!R)
+    && (hasLength!R || isInfinite!R)
+    && (is(DollarType!(R, size_t) : size_t) || isInfinite!R);
+
+import std.functional;
+
+bool xyz(alias pred = "a == b", R, E)(R doesThisEnd, E withThis)
+if (isBidirectionalRange!R &&
+    is(typeof(binaryFun!pred(doesThisEnd.back, withThis)) : bool))
 {
-    enum bool isRandomAccessRange = is(typeof(
-    (inout int = 0)
-    {
-        static assert(isBidirectionalRange!R ||
-                      isForwardRange!R && isInfinite!R);
-        R r = R.init;
-        auto e = r[1];
-        auto f = r.front;
-        static assert(is(typeof(e) == typeof(f)));
-        static assert(!isNarrowString!R);
-        static assert(hasLength!R || isInfinite!R);
+    return true;
+}
 
-        static if (is(typeof(r[$])))
-        {
-            static assert(is(typeof(f) == typeof(r[$])));
-
-            static if (!isInfinite!R)
-                static assert(is(typeof(f) == typeof(r[$ - 1])));
-        }
-    }));
+unittest
+{
+    char[] a;
+    char b;
+    assert(xyz(a, b));
 }
 
 ///
@@ -1065,20 +1024,13 @@ static if (isRandomAccessRange!R)
     static assert(is(typeof(moveAt(r, 0)) == E));
 ----
  */
-template hasMobileElements(R)
-{
-    enum bool hasMobileElements = isInputRange!R && is(typeof(
-    (inout int = 0)
-    {
-        alias E = ElementType!R;
-        R r = R.init;
-        static assert(is(typeof(moveFront(r)) == E));
-        static if (isBidirectionalRange!R)
-            static assert(is(typeof(moveBack(r)) == E));
-        static if (isRandomAccessRange!R)
-            static assert(is(typeof(moveAt(r, 0)) == E));
-    }));
-}
+enum bool hasMobileElements(R) =
+    isInputRange!R
+    && is(typeof(moveFront(lvalueOf!R)) == ElementType!R)
+    && (!isBidirectionalRange!R
+        || is(typeof(moveBack(lvalueOf!R)) == ElementType!R))
+    && (!isRandomAccessRange!R
+        || is(typeof(moveAt(lvalueOf!R, 0)) == ElementType!R));
 
 ///
 @safe unittest
@@ -1271,14 +1223,12 @@ static if (isRandomAccessRange!R) swap(r[0], r.front);
 template hasSwappableElements(R)
 {
     import std.algorithm.mutation : swap;
-    enum bool hasSwappableElements = isInputRange!R && is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;
-        swap(r.front, r.front);
-        static if (isBidirectionalRange!R) swap(r.back, r.front);
-        static if (isRandomAccessRange!R) swap(r[0], r.front);
-    }));
+    enum bool hasSwappableElements = isInputRange!R
+        && is(typeof((ref R r) => swap(r.front, r.front)))
+        && (!isBidirectionalRange!R
+            || is(typeof((ref R r) => swap(r.back, r.front))))
+        && (!isRandomAccessRange!R
+            || is(typeof((ref R r) => swap(r[0], r.front))));
 }
 
 ///
@@ -1308,17 +1258,12 @@ static if (isBidirectionalRange!R) r.back = r.front;
 static if (isRandomAccessRange!R) r[0] = r.front;
 ----
  */
-template hasAssignableElements(R)
-{
-    enum bool hasAssignableElements = isInputRange!R && is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;
-        r.front = r.front;
-        static if (isBidirectionalRange!R) r.back = r.front;
-        static if (isRandomAccessRange!R) r[0] = r.front;
-    }));
-}
+enum bool hasAssignableElements(R) = isInputRange!R
+    && is(typeof(lvalueOf!R.front = lvalueOf!R.front))
+    && (!isBidirectionalRange!R
+        || is(typeof(lvalueOf!R.back = lvalueOf!R.back)))
+    && (!isRandomAccessRange!R
+        || is(typeof(lvalueOf!R[0] = lvalueOf!R.front)));
 
 ///
 @safe unittest
@@ -1347,19 +1292,12 @@ static if (isBidirectionalRange!R) passByRef(r.back);
 static if (isRandomAccessRange!R) passByRef(r[0]);
 ----
 */
-template hasLvalueElements(R)
-{
-    enum bool hasLvalueElements = isInputRange!R && is(typeof(
-    (inout int = 0)
-    {
-        void checkRef(ref ElementType!R stuff);
-        R r = R.init;
-
-        checkRef(r.front);
-        static if (isBidirectionalRange!R) checkRef(r.back);
-        static if (isRandomAccessRange!R) checkRef(r[0]);
-    }));
-}
+enum bool hasLvalueElements(R) = isInputRange!R
+    && is(typeof(((ref x) => x)(lvalueOf!R.front)))
+    && (!isBidirectionalRange!R
+        || is(typeof(((ref x) => x)(lvalueOf!R.back))))
+    && (!isRandomAccessRange!R
+        || is(typeof(((ref x) => x)(lvalueOf!R[0]))));
 
 ///
 @safe unittest
@@ -1404,15 +1342,8 @@ string's length does not reflect the number of characters, but instead
 the number of encoding units, and as such is not useful with
 range-oriented algorithms.
  */
-template hasLength(R)
-{
-    enum bool hasLength = !isNarrowString!R && is(typeof(
-    (inout int = 0)
-    {
-        R r = R.init;
-        ulong l = r.length;
-    }));
-}
+enum bool hasLength(R) = !isNarrowString!R
+    && is(ReturnType!((ref R r) => r.length) : ulong);
 
 ///
 @safe unittest

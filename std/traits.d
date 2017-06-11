@@ -8006,3 +8006,117 @@ enum isCopyable(S) = is(typeof(
     static assert(isCopyable!C1);
     static assert(isCopyable!int);
 }
+
+/**
+*/
+alias DotCallType(T, string name) =
+    ReturnType!( (ref T x)
+        {
+            return mixin("x." ~ name);
+        }
+    );
+
+alias DotCallType(T, alias name) =
+    ReturnType!( (ref T x)
+        {
+            return x.name;
+        }
+    );
+
+unittest
+{
+    //static assert(is(DotCallType!("std.range.primitives", char[], "back") == dchar));
+}
+
+/**
+*/
+enum bool hasGetter(T, string name, string imports, Result) =
+    is(ReturnType!( (T* x)
+        {
+            static if (imports.length)
+                mixin("import " ~ imports ~ ";");
+            return mixin("(*x)." ~ name);
+        }
+    ) == Result);
+
+///
+enum bool hasGetter(T, string name, Result) =
+    hasGetter!(T, name, "", Result);
+///
+enum bool hasGetter(T, string name, string imports) =
+    is(ReturnType!( (T* x)
+        {
+            static if (imports.length)
+                mixin("import " ~ imports ~ ";");
+            return mixin("(*x)." ~ name);
+        }
+    ));
+
+///
+unittest
+{
+    static assert(!hasGetter!(int, "empty", "std.range.primitives", bool));
+    static assert(hasGetter!(int[], "empty", "std.range.primitives", bool));
+}
+
+/**
+*/
+enum bool callSupported(alias fun, string imports, Arg...) =
+    is(ReturnType!( (ref Arg arg)
+        {
+            static if (imports.length) mixin("import " ~ imports ~ ";");
+            fun(arg);
+        }
+    ));
+
+///
+enum bool callSupported(string fun, string imports, Arg...) =
+    is(ReturnType!((ref Arg arg)
+        {
+            static if (imports.length) mixin("import " ~ imports ~ ";");
+            mixin(fun ~ "(arg);");
+        }
+    ));
+
+///
+unittest
+{
+    static void fun(int, string);
+    static assert(callSupported!(fun, "", int, string));
+    static assert(callSupported!(fun, "", short, string));
+    static assert(!callSupported!(fun, "", double, string));
+}
+
+alias IndexedType(T, Index) =
+    ReturnType!((T* p, Index* i) => (*p)[*i]);
+///
+template IndexedType(T, Index, Default)
+{
+    static if (is(IndexedType!(T, Index) X))
+        alias IndexedType = X;
+    else
+        alias IndexedType = Default;
+}
+
+/**
+*/
+template DollarType(T)
+{
+    static if (isArray!T) alias DollarType = size_t;
+    else alias DollarType = ReturnType!((ref T x) => x.opDollar);
+}
+
+///
+template DollarType(T, Default)
+{
+    static if (is(DollarType!T X)) alias DollarType = X;
+    else alias DollarType = Default;
+}
+
+///
+unittest
+{
+    static assert(is(DollarType!(int, void) == void));
+    static assert(is(DollarType!(int[], void) == size_t));
+    static assert(is(DollarType!(int[]) == size_t));
+}
