@@ -1038,13 +1038,13 @@ template ParameterStorageClassTuple(func...)
 
     static if (is(Func PT == __parameters))
     {
-        template StorageClass(size_t i)
+        template StorageClass(size_t __i)
         {
-            static if (i < PT.length)
+            static if (__i < PT.length)
             {
                 alias StorageClass = TypeTuple!(
-                        extractParameterStorageClassFlags!(__traits(getParameterStorageClasses, Func, i)),
-                        StorageClass!(i + 1));
+                        extractParameterStorageClassFlags!(__traits(getParameterStorageClasses, Func, __i)),
+                        StorageClass!(__i + 1));
             }
             else
                 alias StorageClass = TypeTuple!();
@@ -1162,13 +1162,13 @@ template ParameterIdentifierTuple(func...)
 {
     static if (is(FunctionTypeOf!func PT == __parameters))
     {
-        template Get(size_t i)
+        template Get(size_t __i)
         {
             static if (!isFunctionPointer!func && !isDelegate!func
                        // Unnamed parameters yield CT error.
-                       && is(typeof(__traits(identifier, PT[i .. i+1]))))
+                       && is(typeof(__traits(identifier, PT[__i .. __i+1]))))
             {
-                enum Get = __traits(identifier, PT[i .. i+1]);
+                enum Get = __traits(identifier, PT[__i .. __i+1]);
             }
             else
             {
@@ -1181,16 +1181,16 @@ template ParameterIdentifierTuple(func...)
         static assert(0, func[0].stringof ~ "is not a function");
 
         // Define dummy entities to avoid pointless errors
-        template Get(size_t i) { enum Get = ""; }
+        template Get(size_t __i) { enum Get = ""; }
         alias PT = TypeTuple!();
     }
 
-    template Impl(size_t i = 0)
+    template Impl(size_t __i = 0)
     {
-        static if (i == PT.length)
+        static if (__i == PT.length)
             alias Impl = TypeTuple!();
         else
-            alias Impl = TypeTuple!(Get!i, Impl!(i+1));
+            alias Impl = TypeTuple!(Get!__i, Impl!(__i+1));
     }
 
     alias ParameterIdentifierTuple = Impl!();
@@ -1249,16 +1249,16 @@ template ParameterDefaults(func...)
 {
     static if (is(FunctionTypeOf!(func[0]) PT == __parameters))
     {
-        template Get(size_t i)
+        template Get(size_t __i)
         {
             // workaround scope escape check, see
             // https://issues.dlang.org/show_bug.cgi?id=16582
             // should use return scope once available
-            enum get = (PT[i .. i+1] __args) @trusted
+            enum get = (PT[__i .. __i+1] __args) @trusted
             {
                 // If __args[0] is lazy, we force it to be evaluated like this.
-                PT[i] __pd_value = __args[0];
-                PT[i]* __pd_val = &__pd_value; // workaround Bugzilla 16582
+                PT[__i] __pd_value = __args[0];
+                PT[__i]* __pd_val = &__pd_value; // workaround Bugzilla 16582
                 return *__pd_val;
             };
             static if (is(typeof(get())))
@@ -1273,16 +1273,16 @@ template ParameterDefaults(func...)
         static assert(0, func[0].stringof ~ "is not a function");
 
         // Define dummy entities to avoid pointless errors
-        template Get(size_t i) { enum Get = ""; }
+        template Get(size_t __i) { enum Get = ""; }
         alias PT = TypeTuple!();
     }
 
-    template Impl(size_t i = 0)
+    template Impl(size_t __i = 0)
     {
-        static if (i == PT.length)
+        static if (__i == PT.length)
             alias Impl = TypeTuple!();
         else
-            alias Impl = TypeTuple!(Get!i, Impl!(i+1));
+            alias Impl = TypeTuple!(Get!__i, Impl!(__i+1));
     }
 
     alias ParameterDefaults = Impl!();
@@ -1296,6 +1296,16 @@ template ParameterDefaults(func...)
     static assert(   ParameterDefaults!foo[1] == "hello");
     static assert(   ParameterDefaults!foo[2] == [1,2,3]);
     static assert(   ParameterDefaults!foo[3] == 0);
+}
+
+unittest
+{
+    void func(int i) { }
+    void manele()
+    {
+        import std.traits : ParameterDefaults;
+        alias a = ParameterDefaults!func;
+    }
 }
 
 /**
