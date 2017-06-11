@@ -307,41 +307,41 @@ bool wouldHaveBlocked() nothrow @nogc
         static assert(0);
 }
 
-
-private //immutable
+version(Windows)
 {
-    typeof(&getnameinfo) _getnameinfoPointer;
-    typeof(&getaddrinfo) _getaddrinfoPointer;
-    typeof(&freeaddrinfo) _freeaddrinfoPointer;
+    private shared typeof(&getnameinfo) _getnameinfoPointer;
+    private shared typeof(&getaddrinfo) _getaddrinfoPointer;
+    private shared typeof(&freeaddrinfo) _freeaddrinfoPointer;
+    private shared bool initialized;
+}
+else version(Posix)
+{
+    immutable getnameinfoPointer = &getnameinfo;
+    immutable getaddrinfoPointer = &getaddrinfo;
+    immutable freeaddrinfoPointer = &freeaddrinfo;
+}
+else
+{
+    static assert(false, "Your code here.");
 }
 
-@property typeof(&getnameinfo) getnameinfoPointer() @trusted
+version(Windows)
 {
-    import std.concurrency : initOnce;
-    initOnce!initialized(initialize);
-    return _getnameinfoPointer;
-}
+    private @property auto get(alias which)() @trusted
+    {
+        import core.atomic : atomicLoad;
+        auto local = atomicLoad(which);
+        if (local) return local;
+        import std.concurrency : initOnce;
+        initOnce!initialized(initialize);
+        return atomicLoad(which);
+    }
 
-@property auto getaddrinfoPointer() @trusted
-{
-    import std.concurrency : initOnce;
-    initOnce!initialized(initialize);
-    return _getaddrinfoPointer;
-}
+    auto getnameinfoPointer() @trusted { return get!_getnameinfoPointer; }
+    auto getaddrinfoPointer() @trusted { return get!_getaddrinfoPointer; }
+    auto freeaddrinfoPointer() @trusted { return get!_freeaddrinfoPointer; }
 
-@property auto freeaddrinfoPointer() @trusted
-{
-    import std.concurrency : initOnce;
-    initOnce!initialized(initialize);
-    return _freeaddrinfoPointer;
-}
-
-private shared bool initialized;
-
-//shared static this() @system
-bool initialize() @trusted
-{
-    version(Windows)
+    private bool initialize() @trusted
     {
         WSADATA wd;
 
@@ -351,6 +351,10 @@ bool initialize() @trusted
         val = WSAStartup(0x2020, &wd);
         if (val)         // Request Winsock 2.2 for IPv6.
             throw new SocketOSException("Unable to initialize socket library", val);
+
+        // Now that we called WSAStartup, make sure we clean up, too.
+        import core.stdc.stdlib;
+        atexit(&WSACleanup);
 
         // These functions may not be present on older Windows versions.
         // See the comment in InternetAddress.toHostNameString() for details.
@@ -364,21 +368,7 @@ bool initialize() @trusted
             _freeaddrinfoPointer = cast(typeof(_freeaddrinfoPointer))
                                  GetProcAddress(ws2Lib, "freeaddrinfo");
         }
-    }
-    else version(Posix)
-    {
-        _getnameinfoPointer = &getnameinfo;
-        _getaddrinfoPointer = &getaddrinfo;
-        _freeaddrinfoPointer = &freeaddrinfo;
-    }
-    return true;
-}
-
-shared static ~this() @system nothrow @nogc
-{
-    version(Windows)
-    {
-        WSACleanup();
+        return true;
     }
 }
 
@@ -1042,8 +1032,8 @@ private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addr
         if (getaddrinfoPointer)
         {
             // Roundtrip DNS resolution
-            auto results = getAddressInfo("www.digitalmars.com");
-            assert(results[0].address.toHostNameString() == "digitalmars.com");
+            auto results = getAddressInfo("google.com");
+            assert(results[0].address.toHostNameString().length > 0);
 
             // Canonical name
             results = getAddressInfo("www.digitalmars.com",
@@ -1157,10 +1147,10 @@ Address[] getAddress(in char[] hostname, ushort port)
         auto addresses = getAddress("63.105.9.61");
         assert(addresses.length && addresses[0].toAddrString() == "63.105.9.61");
 
-        if (getaddrinfoPointer)
+        version(Windows) if (getaddrinfoPointer)
         {
             // test via gethostbyname
-            auto getaddrinfoPointerBackup = getaddrinfoPointer();
+            auto getaddrinfoPointerBackup = getaddrinfoPointerß;
             cast() _getaddrinfoPointer = null;
             scope(exit) _getaddrinfoPointer = getaddrinfoPointerBackup;
 
@@ -1237,7 +1227,7 @@ Address parseAddress(in char[] hostaddr, ushort port)
         auto address = parseAddress("63.105.9.61");
         assert(address.toAddrString() == "63.105.9.61");
 
-        if (getaddrinfoPointer)
+        version(Windows) if (getaddrinfoPointer)
         {
             // test via inet_addr
             auto getaddrinfoPointerBackup = getaddrinfoPointer;
@@ -1331,7 +1321,7 @@ abstract class Address
         if (getnameinfoPointer)
         {
             auto buf = new char[NI_MAXHOST];
-            auto ret = getnameinfoPointer()(
+            auto ret = (*getnameinfoPointer)(
                         name, nameLen,
                         buf.ptr, cast(uint) buf.length,
                         null, 0,
@@ -1362,7 +1352,7 @@ abstract class Address
         if (getnameinfoPointer)
         {
             auto buf = new char[NI_MAXSERV];
-            enforce(getnameinfoPointer()(
+            enforce((*getnameinfoPointer)(
                         name, nameLen,
                         null, 0,
                         buf.ptr, cast(uint) buf.length,
@@ -1739,7 +1729,7 @@ public:
             const ia = new InternetAddress(ih.addrList[0], 80);
             assert(ia.toHostNameString() == "digitalmars.com");
 
-            if (getnameinfoPointer)
+            version(Windows) if (getnameinfoPointer)
             {
                 // test reverse lookup, via gethostbyaddr
                 auto getnameinfoPointerBackup = getnameinfoPointer;
