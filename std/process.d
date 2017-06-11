@@ -1266,6 +1266,35 @@ final class Pid
         return _processID;
     }
 
+    version (Windows)
+    {
+        /**
+        Create a Pid from Windows process information.
+
+        Params:
+            pid = The process ID
+            handle = The Windows process handle
+        */
+        this(int pid, HANDLE handle) @safe pure nothrow
+        {
+            _processID = pid;
+            _handle = handle;
+        }
+    }
+    else
+    {
+        /**
+        Create a Pid from Posix process information.
+
+        Params:
+            pid = The process ID
+        */
+        this(int id) @safe pure nothrow
+        {
+            _processID = id;
+        }
+    }
+
 private:
     /*
     Pid.performWait() does the dirty work for wait() and nonBlockingWait().
@@ -1373,18 +1402,6 @@ private:
     version (Windows)
     {
         HANDLE _handle = INVALID_HANDLE_VALUE;
-        this(int pid, HANDLE handle) @safe pure nothrow
-        {
-            _processID = pid;
-            _handle = handle;
-        }
-    }
-    else
-    {
-        this(int id) @safe pure nothrow
-        {
-            _processID = id;
-        }
     }
 }
 
