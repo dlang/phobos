@@ -513,6 +513,24 @@ ubyte[8] crc64ECMAOf(T...)(T data)
     return digest!(CRC64ECMA, T)(data);
 }
 
+///
+@system unittest
+{
+    ubyte[] data = [4,5,7,25];
+    assert(data.crc64ECMAOf == [58, 142, 220, 214, 118, 98, 105, 69]);
+
+    import std.utf : byChar;
+    assert("hello"d.byChar.crc64ECMAOf == [177, 55, 185, 219, 229, 218, 30, 155]);
+
+    ubyte[8] hash = "abc".crc64ECMAOf();
+    assert("abc".crc64ECMAOf == [39, 118, 39, 26, 74, 9, 216, 44]);
+    assert(hash == digest!CRC64ECMA("ab", "c"));
+
+    import std.range : iota;
+    enum ubyte S = 5, F = 66;
+    assert(iota(S, F).crc64ECMAOf == [6, 184, 91, 238, 46, 213, 127, 188]);
+}
+
 /**
  * This is a convenience alias for $(REF digest, std,digest,digest) using the
  * CRC64-ISO implementation.
@@ -529,6 +547,25 @@ ubyte[8] crc64ECMAOf(T...)(T data)
 ubyte[8] crc64ISOOf(T...)(T data)
 {
     return digest!(CRC64ISO, T)(data);
+}
+
+///
+@system unittest
+{
+    ubyte[] data = [4,5,7,25];
+    assert(data.crc64ISOOf == [0, 0, 0, 80, 137, 232, 203, 120]);
+
+    import std.utf : byChar;
+    assert("hello"d.byChar.crc64ISOOf == [0, 0, 16, 216, 226, 238, 62, 60]);
+
+    ubyte[8] hash = "abc".crc64ISOOf();
+    assert("abc".crc64ISOOf == [0, 0, 0, 0, 32, 196, 118, 55]);
+    assert(hash == digest!CRC64ISO("ab", "c"));
+
+    import std.range : iota;
+    enum ubyte S = 5, F = 66;
+
+    assert(iota(S, F).crc64ISOOf == [21, 185, 116, 95, 219, 11, 54, 7]);
 }
 
 /**
