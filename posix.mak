@@ -602,7 +602,7 @@ $(TEST_EXTRACTOR): $(TOOLS_DIR)/styles/tests_extractor.d $(LIB)
 has_public_example: $(LIB)
 	#  checks whether public function have public examples (for now some modules are excluded)
 	rm -rf ./out
-	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) --compiler=$${PWD}/$(DMD) --root=../tools/styles -c has_public_example -- --inputdir . --ignore "etc,array.d,allocator,base64.d,bitmanip.d,concurrency.d,conv.d,csv.d,datetime/date.d,datetime/interval.d,datetime/package.d,datetime/stopwatch.d,datetime/systime.d,datetime/timezone.d,demangle.d,digest/hmac.d,digest/sha.d,encoding.d,exception.d,file.d,format.d,getopt.d,index.d,internal,isemail.d,json.d,logger/core.d,logger/nulllogger.d,math.d,mathspecial.d,net/curl.d,numeric.d,parallelism.d,path.d,process.d,random.d,range,regex/package.d,socket.d,stdio.d,string.d,traits.d,typecons.d,uni.d,unittest.d,uri.d,utf.d,uuid.d,xml.d,zlib.d"
+	DFLAGS="$(DFLAGS) $(LIB) $(LINKDL)" $(DUB) -v --compiler=$${PWD}/$(DMD) --root=../tools/styles -c has_public_example -- --inputdir std --ignore "array.d,allocator,base64.d,bitmanip.d,concurrency.d,conv.d,csv.d,datetime/date.d,datetime/interval.d,datetime/package.d,datetime/stopwatch.d,datetime/systime.d,datetime/timezone.d,demangle.d,digest/hmac.d,digest/sha.d,encoding.d,exception.d,file.d,format.d,getopt.d,index.d,internal,isemail.d,json.d,logger/core.d,logger/nulllogger.d,math.d,mathspecial.d,net/curl.d,numeric.d,parallelism.d,path.d,process.d,random.d,range,regex/package.d,socket.d,stdio.d,string.d,traits.d,typecons.d,uni.d,unittest.d,uri.d,utf.d,uuid.d,xml.d,zlib.d"
 
 .PHONY : auto-tester-build
 auto-tester-build: all checkwhitespace
