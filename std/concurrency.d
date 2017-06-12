@@ -747,13 +747,15 @@ body
 
     Tuple!(T) ret;
 
-    thisInfo.ident.mbox.get((T val) {
+    thisInfo.ident.mbox.get((T val)
+    {
         static if (T.length)
             ret.field = val;
     },
     (LinkTerminated e) { throw e; },
     (OwnerTerminated e) { throw e; },
-    (Variant val) {
+    (Variant val)
+    {
         static if (T.length > 1)
             string exp = T.stringof;
         else
@@ -813,20 +815,24 @@ body
 
 @safe unittest
 {
-    static assert(__traits(compiles, {
+    static assert(__traits(compiles,
+    {
         receiveTimeout(msecs(0), (Variant x) {});
         receiveTimeout(msecs(0), (int x) {}, (Variant x) {});
     }));
 
-    static assert(!__traits(compiles, {
+    static assert(!__traits(compiles,
+    {
         receiveTimeout(msecs(0), (Variant x) {}, (int x) {});
     }));
 
-    static assert(!__traits(compiles, {
+    static assert(!__traits(compiles,
+    {
         receiveTimeout(msecs(0), (int x) {}, (int x) {});
     }));
 
-    static assert(__traits(compiles, {
+    static assert(__traits(compiles,
+    {
         receiveTimeout(msecs(10), (int x) {}, (Variant x) {});
     }));
 }
@@ -1628,8 +1634,10 @@ void yield(T)(T value)
     static void testScheduler(Scheduler s)
     {
         scheduler = s;
-        scheduler.start({
-            auto tid = spawn({
+        scheduler.start(
+        {
+            auto tid = spawn(
+            {
                 int i;
 
                 try
@@ -1648,7 +1656,8 @@ void yield(T)(T value)
                 assert(i == 4);
             });
 
-            auto r = new Generator!int({
+            auto r = new Generator!int(
+            {
                 assertThrown!Exception(yield(2.0));
                 yield(); // ensure this is a no-op
                 yield(1);
@@ -2273,12 +2282,14 @@ version (unittest)
 
     void testfn(Tid tid)
     {
-        receive((float val) { assert(0); }, (int val, int val2) {
+        receive((float val) { assert(0); }, (int val, int val2)
+        {
             assert(val == 42 && val2 == 86);
         });
         receive((Tuple!(int, int) val) { assert(val[0] == 42 && val[1] == 86); });
         receive((Variant val) {  });
-        receive((string val) {
+        receive((string val)
+        {
             if ("the quick brown fox" != val)
                 return false;
             return true;
@@ -2436,7 +2447,8 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
     __gshared Mutex m;
     m = new Mutex;
 
-    spawn({
+    spawn(
+    {
         // use a different mutex for varB to avoid a dead-lock
         initOnce!varB(true, m);
         ownerTid.send(true);

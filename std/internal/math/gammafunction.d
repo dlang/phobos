@@ -27,7 +27,8 @@ nothrow:
 @safe:
 @nogc:
 
-private {
+private
+{
 
 enum real SQRT2PI = 2.50662827463100050242E0L; // sqrt(2pi)
 immutable real EULERGAMMA = 0.57721_56649_01532_86060_65120_90082_40243_10421_59335_93992L; /** Euler-Mascheroni constant 0.57721566.. */
@@ -574,7 +575,8 @@ real logGamma(real x)
 }
 
 
-private {
+private
+{
 static if (floatTraits!(real).realFormat == RealFormat.ieeeExtended)
 {
     enum real MAXLOG = 0x1.62e42fefa39ef358p+13L;  // log(real.max)
@@ -990,7 +992,8 @@ done:
     return x;
 }
 
-@safe unittest { // also tested by the normal distribution
+@safe unittest  // also tested by the normal distribution
+{
     // check NaN propagation
     assert(isIdentical(betaIncomplete(NaN(0xABC),2,3), NaN(0xABC)));
     assert(isIdentical(betaIncomplete(7,NaN(0xABC),3), NaN(0xABC)));
@@ -1060,7 +1063,8 @@ done:
 }
 
 
-private {
+private
+{
 // Implementation functions
 
 // Continued fraction expansion #1 for incomplete beta integral
@@ -1296,11 +1300,13 @@ real betaDistPowerSeries(real a, real b, real x )
  * values of a and x.
  */
 real gammaIncomplete(real a, real x )
-in {
+in
+{
    assert(x >= 0);
    assert(a > 0);
 }
-body {
+body
+{
     /* left tail of incomplete gamma function:
      *
      *          inf.      k
@@ -1340,11 +1346,13 @@ body {
 
 /** ditto */
 real gammaIncompleteCompl(real a, real x )
-in {
+in
+{
    assert(x >= 0);
    assert(a > 0);
 }
-body {
+body
+{
     if (x == 0)
         return 1.0L;
     if ( (x < 1.0L) || (x < a) )
@@ -1426,11 +1434,13 @@ body {
  * root of incompleteGammaCompl(a,x) - p = 0.
  */
 real gammaIncompleteComplInv(real a, real p)
-in {
+in
+{
   assert(p >= 0 && p <= 1);
   assert(a>0);
 }
-body {
+body
+{
     if (p == 0) return real.infinity;
 
     real y0 = p;

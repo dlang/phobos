@@ -493,7 +493,8 @@ if (isImplicitlyConvertible!(S, T) &&
     import std.exception;
     // Conversion between same size
     foreach (S; AliasSeq!(byte, short, int, long))
-    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    {
         alias U = Unsigned!S;
 
         foreach (Sint; AliasSeq!(S, const S, immutable S))
@@ -514,7 +515,8 @@ if (isImplicitlyConvertible!(S, T) &&
     // Conversion between different size
     foreach (i, S1; AliasSeq!(byte, short, int, long))
     foreach (   S2; AliasSeq!(byte, short, int, long)[i+1..$])
-    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    {
         alias U1 = Unsigned!S1;
         alias U2 = Unsigned!S2;
 
@@ -830,7 +832,8 @@ if (!isImplicitlyConvertible!(S, T) &&
 
     foreach (m1; AliasSeq!(0,1,2,3,4)) // enumerate modifiers
     foreach (m2; AliasSeq!(0,1,2,3,4)) // ditto
-    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    {
         alias srcmod = AddModifier!m1;
         alias tgtmod = AddModifier!m2;
 
@@ -921,7 +924,8 @@ if (!(isImplicitlyConvertible!(S, T) &&
     else static if (isPointer!S && isSomeChar!(PointerTarget!S))
     {
         // This is unsafe because we cannot guarantee that the pointer is null terminated.
-        return () @system {
+        return () @system
+        {
             static if (is(S : const(char)*))
                 import core.stdc.string : strlen;
             else
@@ -1062,7 +1066,8 @@ if (!(isImplicitlyConvertible!(S, T) &&
 */
 private template isSwitchable(E)
 {
-    enum bool isSwitchable = is(typeof({
+    enum bool isSwitchable = is(typeof(
+    {
         switch (E.init) { default: }
     }));
 }

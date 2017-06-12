@@ -1046,7 +1046,8 @@ private struct Levenshtein(Range, alias equals, CostType = size_t)
         return result;
     }
 
-    ~this() {
+    ~this()
+    {
         FreeMatrix();
     }
 
@@ -1060,7 +1061,8 @@ private:
     // Treat _matrix as a rectangular array
     ref CostType matrix(size_t row, size_t col) { return _matrix[row * cols + col]; }
 
-    void AllocMatrix(size_t r, size_t c) @trusted {
+    void AllocMatrix(size_t r, size_t c) @trusted
+    {
         import core.checkedint : mulu;
         bool overflow;
         const rc = mulu(r, c, overflow);
@@ -1081,14 +1083,16 @@ private:
         }
     }
 
-    void FreeMatrix() @trusted {
+    void FreeMatrix() @trusted
+    {
         import core.stdc.stdlib : free;
 
         free(_matrix.ptr);
         _matrix = null;
     }
 
-    void InitMatrix() {
+    void InitMatrix()
+    {
         foreach (r; 0 .. rows)
             matrix(r,0) = r * _deletionIncrement;
         foreach (c; 0 .. cols)

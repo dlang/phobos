@@ -1437,7 +1437,8 @@ if (isSomeString!S)
 @safe unittest //purity, ctfe ...
 {
     import std.exception;
-    void dg() @safe pure {
+    void dg() @safe pure
+    {
         assert(split("hello world"c) == ["hello"c, "world"c]);
         assert(split("hello world"w) == ["hello"w, "world"w]);
         assert(split("hello world"d) == ["hello"d, "world"d]);
@@ -1865,7 +1866,8 @@ if (isInputRange!RoR &&
         auto filteredWords    = filter!"true"(filteredWordsArr);
 
         foreach (S; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             assert(join(filteredWords, to!S(", ")) == "日本語, paul, jerry");
             assert(join(filteredWords, to!(ElementType!S)(',')) == "日本語,paul,jerry");
             assert(join(filteredWordsArr, to!(ElementType!(S))(',')) == "日本語,paul,jerry");
@@ -2073,7 +2075,8 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         foreach (T; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             auto s = to!S("This is a foo foo list");
             auto from = to!T("foo");
             auto into = to!S("silly");
@@ -2519,7 +2522,8 @@ if (isDynamicArray!(E[]) &&
     {
         foreach (T; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
                               const(char[]), immutable(char[])))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             auto s = to!S("This is a foo foo list");
             auto s2 = to!S("Thüs is a ßöö foo list");
             auto from = to!T("foo");
@@ -2634,7 +2638,8 @@ if (isDynamicArray!(E[]) &&
     {
         foreach (T; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
                               const(char[]), immutable(char[])))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             auto s = to!S("This is a foo foo list");
             auto s2 = to!S("Thüs is a ßöö ßöö list");
             auto from = to!T("foo");
@@ -3425,7 +3430,8 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
 @safe unittest
 {
     //9528
-    const(E)[] fastCopy(E)(E[] src) {
+    const(E)[] fastCopy(E)(E[] src)
+    {
             auto app = appender!(const(E)[])();
             foreach (i, e; src)
                     app.put(e);
@@ -3443,10 +3449,12 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
 {
     import std.algorithm.iteration : map;
     //10753
-    struct Foo {
+    struct Foo
+    {
        immutable dchar d;
     }
-    struct Bar {
+    struct Bar
+    {
        immutable int x;
     }
     "12".map!Foo.array;

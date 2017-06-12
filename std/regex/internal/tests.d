@@ -354,7 +354,8 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     {
         int i;
         foreach (Char; AliasSeq!( char, wchar, dchar))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             alias String = immutable(Char)[];
             String produceExpected(M,Range)(auto ref M m, Range fmt)
             {
@@ -429,11 +430,13 @@ alias Sequence(int B, int E) = staticIota!(B, E);
         else
             alias Tests = AliasSeq!(Sequence!(0, 30), Sequence!(235, tv.length-5));
         foreach (a, v; Tests)
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             enum tvd = tv[v];
             static if (tvd.result == "c")
             {
-                static assert(!__traits(compiles, (){
+                static assert(!__traits(compiles, ()
+                {
                     enum r = regex(tvd.pattern, tvd.flags);
                 }), "errornously compiles regex pattern: " ~ tvd.pattern);
             }
@@ -788,7 +791,8 @@ alias Sequence(int B, int E) = staticIota!(B, E);
 {// bugzilla 7679
     import std.algorithm.comparison : equal;
     foreach (S; AliasSeq!(string, wstring, dstring))
-    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    {
         enum re = ctRegex!(to!S(r"\."));
         auto str = to!S("a.b");
         assert(equal(std.regex.splitter(str, re), [to!S("a"), to!S("b")]));
@@ -902,10 +906,12 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     {
         return s.dup;
     }
-    () @system {
+    () @system
+    {
         replace!((a) => foo(a.hit))("blah", regex(`a`));
     }();
-    () @safe {
+    () @safe
+    {
         replace!((a) => bar(a.hit))("blah", regex(`a`));
     }();
 }

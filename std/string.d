@@ -227,7 +227,8 @@ class StringException : Exception
     The original data is not changed and not copied.
 +/
 
-inout(char)[] fromStringz(inout(char)* cString) @nogc @system pure nothrow {
+inout(char)[] fromStringz(inout(char)* cString) @nogc @system pure nothrow
+{
     import core.stdc.string : strlen;
     return cString ? cString[0 .. strlen(cString)] : null;
 }
@@ -842,7 +843,8 @@ if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             assert(indexOf(cast(S) null, to!T("a")) == -1);
             assert(indexOf(to!S("def"), to!T("a")) == -1);
             assert(indexOf(to!S("abba"), to!T("a")) == 0);
@@ -911,7 +913,8 @@ unittest
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             assert(indexOf(cast(S) null, to!T("a"), 1337) == -1);
             assert(indexOf(to!S("def"), to!T("a"), 0) == -1);
             assert(indexOf(to!S("abba"), to!T("a"), 2) == 3);
@@ -1317,7 +1320,8 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
             assert(lastIndexOf(cast(S) null, to!T("a")) == -1, typeStr);
@@ -1393,7 +1397,8 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
             assert(lastIndexOf(cast(S) null, to!T("a")) == -1, typeStr);
@@ -1643,7 +1648,8 @@ if (isSomeChar!Char && isSomeChar!Char2)
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             assert(indexOfAny(cast(S) null, to!T("a")) == -1);
             assert(indexOfAny(to!S("def"), to!T("rsa")) == -1);
             assert(indexOfAny(to!S("abba"), to!T("a")) == 0);
@@ -1682,7 +1688,8 @@ if (isSomeChar!Char && isSomeChar!Char2)
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             assert(indexOfAny(cast(S) null, to!T("a"), 1337) == -1);
             assert(indexOfAny(to!S("def"), to!T("AaF"), 0) == -1);
             assert(indexOfAny(to!S("abba"), to!T("NSa"), 2) == 3);
@@ -1811,7 +1818,8 @@ if (isSomeChar!Char && isSomeChar!Char2)
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             assert(lastIndexOfAny(cast(S) null, to!T("a")) == -1);
             assert(lastIndexOfAny(to!S("def"), to!T("rsa")) == -1);
             assert(lastIndexOfAny(to!S("abba"), to!T("a")) == 3);
@@ -1866,7 +1874,8 @@ if (isSomeChar!Char && isSomeChar!Char2)
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             enum typeStr = S.stringof ~ " " ~ T.stringof;
 
             assert(lastIndexOfAny(cast(S) null, to!T("a"), 1337) == -1,
@@ -1993,7 +2002,8 @@ if (isSomeChar!Char && isSomeChar!Char2)
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             assert(indexOfNeither(cast(S) null, to!T("a")) == -1);
             assert(indexOfNeither("abba", "a") == 1);
 
@@ -2039,7 +2049,8 @@ if (isSomeChar!Char && isSomeChar!Char2)
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             assert(indexOfNeither(cast(S) null, to!T("a"), 1) == -1);
             assert(indexOfNeither(to!S("def"), to!T("a"), 1) == 1,
                 to!string(indexOfNeither(to!S("def"), to!T("a"), 1)));
@@ -2151,7 +2162,8 @@ if (isSomeChar!Char && isSomeChar!Char2)
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             assert(lastIndexOfNeither(cast(S) null, to!T("a")) == -1);
             assert(lastIndexOfNeither(to!S("def"), to!T("rsa")) == 2);
             assert(lastIndexOfNeither(to!S("dfefffg"), to!T("fgh")) == 2);
@@ -2198,7 +2210,8 @@ if (isSomeChar!Char && isSomeChar!Char2)
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             assert(lastIndexOfNeither(cast(S) null, to!T("a"), 1337) == -1);
             assert(lastIndexOfNeither(to!S("def"), to!T("f")) == 1);
             assert(lastIndexOfNeither(to!S("dfefffg"), to!T("fgh")) == 2);
@@ -3379,7 +3392,8 @@ if (isConvertibleToString!Range)
         assert(chomp(to!S("hello\u2029\u0185")) == "hello\u2029\u0185");
 
         foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             // @@@ BUG IN COMPILER, MUST INSERT CAST
             assert(chomp(cast(S) null, cast(T) null) is null);
             assert(chomp(to!S("hello\n"), cast(T) null) == "hello");
@@ -3484,7 +3498,8 @@ unittest
     foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
         foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             assert(equal(chompPrefix(to!S("abcdefgh"), to!T("abcde")), "fgh"));
             assert(equal(chompPrefix(to!S("abcde"), to!T("abcdefgh")), "abcde"));
             assert(equal(chompPrefix(to!S("\uFF28el\uFF4co"), to!T("\uFF28el\uFF4co")), ""));
@@ -4847,7 +4862,8 @@ if (isSomeChar!C1 && isSomeChar!C2)
         foreach (T; AliasSeq!( char[], const( char)[], immutable( char)[],
                               wchar[], const(wchar)[], immutable(wchar)[],
                               dchar[], const(dchar)[], immutable(dchar)[]))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             foreach (R; AliasSeq!(dchar[dchar], const dchar[dchar],
                         immutable dchar[dchar]))
             {
@@ -4908,7 +4924,8 @@ if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
         foreach (T; AliasSeq!( char[], const( char)[], immutable( char)[],
                               wchar[], const(wchar)[], immutable(wchar)[],
                               dchar[], const(dchar)[], immutable(dchar)[]))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
 
             foreach (R; AliasSeq!(string[dchar], const string[dchar],
                         immutable string[dchar]))
@@ -5171,7 +5188,8 @@ body
                to!S("hello \U00010143 world"));
 
         foreach (T; AliasSeq!(char[], const(char)[], immutable(char)[]))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             assert(translate(to!S("hello world"), makeTransTable("hl", "q5"), to!T("r")) ==
                    to!S("qe55o wo5d"));
             assert(translate(to!S("hello \U00010143 world"), makeTransTable("hl", "q5"), to!T("r")) ==

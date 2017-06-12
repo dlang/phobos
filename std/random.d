@@ -1918,7 +1918,8 @@ body
     {
 
         foreach (T; std.meta.AliasSeq!(float, double, real))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             UniformRNG rng = UniformRNG(unpredictableSeed);
 
             auto a = uniform01();

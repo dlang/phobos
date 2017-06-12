@@ -462,7 +462,8 @@ public:
     }
 
     /// Returns: smallest representable normalized value that's not 0
-    static @property CustomFloat min_normal() {
+    static @property CustomFloat min_normal()
+    {
         CustomFloat value;
         static if (flags & Flags.signed)
         value.sign        = 0;
@@ -2673,7 +2674,8 @@ T gcd(T)(T a, T b)
 {
     import std.algorithm.mutation : swap;
 
-    enum canUseBinaryGcd = is(typeof(() {
+    enum canUseBinaryGcd = is(typeof(()
+    {
         T t, u;
         t <<= 1;
         t >>= 1;

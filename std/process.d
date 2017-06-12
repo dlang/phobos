@@ -2445,7 +2445,8 @@ version (Windows) private immutable string shellSwitch = "/C";
     tidA = thisThreadID;
 
     import core.thread;
-    auto t = new Thread({
+    auto t = new Thread(
+    {
         pidB = thisProcessID;
         tidB = thisThreadID;
     });

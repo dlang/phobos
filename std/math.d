@@ -1204,7 +1204,8 @@ real atan2(real y, real x) @trusted pure nothrow @nogc
     {
         version (Win64)
         {
-            asm pure nothrow @nogc {
+            asm pure nothrow @nogc
+            {
                 naked;
                 fld real ptr [RDX]; // y
                 fld real ptr [RCX]; // x
@@ -1214,7 +1215,8 @@ real atan2(real y, real x) @trusted pure nothrow @nogc
         }
         else
         {
-            asm pure nothrow @nogc {
+            asm pure nothrow @nogc
+            {
                 fld y;
                 fld x;
                 fpatan;
@@ -2809,7 +2811,8 @@ if (isFloatingPoint!T)
 @safe unittest
 {
     import std.meta : AliasSeq;
-    void foo() {
+    void foo()
+    {
         foreach (T; AliasSeq!(real, double, float))
         {
             int exp;
@@ -3695,7 +3698,8 @@ real scalbn(real x, int n) @trusted nothrow @nogc
         // scalbnl is not supported on DMD-Windows, so use asm pure nothrow @nogc.
         version (Win64)
         {
-            asm pure nothrow @nogc {
+            asm pure nothrow @nogc
+            {
                 naked                           ;
                 mov     16[RSP],RCX             ;
                 fild    word ptr 16[RSP]        ;
@@ -3707,7 +3711,8 @@ real scalbn(real x, int n) @trusted nothrow @nogc
         }
         else
         {
-            asm pure nothrow @nogc {
+            asm pure nothrow @nogc
+            {
                 fild n;
                 fld x;
                 fscale;
@@ -4764,7 +4769,8 @@ public:
 ///
 @system unittest
 {
-    static void func() {
+    static void func()
+    {
         int a = 10 * 10;
     }
 
@@ -5734,7 +5740,8 @@ if (isIntegral!(X) && isFloatingPoint!(R))
     foreach (X; AliasSeq!(float, double, real, int, long))
     {
         foreach (Y; AliasSeq!(float, double, real))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             X x = 21;
             Y y = 23.8;
             Y e = void;

@@ -113,7 +113,8 @@ private:
         opAssign(x);
     }
 
-    enum trustedAssumeUnique = function(BigDigit[] input) pure @trusted @nogc {
+    enum trustedAssumeUnique = function(BigDigit[] input) pure @trusted @nogc
+    {
         return assumeUnique(input);
     };
 public:

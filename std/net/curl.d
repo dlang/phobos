@@ -424,7 +424,8 @@ if (isCurlConn!Conn)
 
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
-        testServer.handle((s) {
+        testServer.handle((s)
+        {
             assert(s.recvReq.hdrs.canFind("GET /"));
             s.send(httpOK("Hello world"));
         });
@@ -493,7 +494,8 @@ if (isCurlConn!Conn)
         auto fn = std.file.deleteme;
         scope (exit) std.file.remove(fn);
         std.file.write(fn, "upload data\n");
-        testServer.handle((s) {
+        testServer.handle((s)
+        {
             auto req = s.recvReq;
             assert(req.hdrs.canFind("PUT /path"));
             assert(req.bdy.canFind("upload data"));
@@ -559,7 +561,8 @@ if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
 
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
-        testServer.handle((s) {
+        testServer.handle((s)
+        {
             assert(s.recvReq.hdrs.canFind("GET /path"));
             s.send(httpOK("GETRESPONSE"));
         });
@@ -612,7 +615,8 @@ if (is(T == char) || is(T == ubyte))
 
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
-        testServer.handle((s) {
+        testServer.handle((s)
+        {
             auto req = s.recvReq;
             assert(req.hdrs.canFind("POST /path"));
             assert(req.bdy.canFind("POSTBODY"));
@@ -631,7 +635,8 @@ if (is(T == char) || is(T == ubyte))
     foreach (i, ref ub; data)
         ub = cast(ubyte) i;
 
-    testServer.handle((s) {
+    testServer.handle((s)
+    {
         auto req = s.recvReq!ubyte;
         assert(req.bdy.canFind(cast(ubyte[])[0, 1, 2, 3, 4]));
         assert(req.bdy.canFind(cast(ubyte[])[253, 254, 255]));
@@ -654,7 +659,8 @@ if (is(T == char) || is(T == ubyte))
 {
     foreach (host; [testServer.addr, "http://" ~ testServer.addr])
     {
-        testServer.handle((s) {
+        testServer.handle((s)
+        {
             auto req = s.recvReq!char;
             s.send(httpOK(req.bdy));
         });
@@ -719,7 +725,8 @@ if ( isCurlConn!Conn && (is(T == char) || is(T == ubyte)) )
 
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
-        testServer.handle((s) {
+        testServer.handle((s)
+        {
             auto req = s.recvReq;
             assert(req.hdrs.canFind("PUT /path"));
             assert(req.bdy.canFind("PUTBODY"));
@@ -786,7 +793,8 @@ if (isCurlConn!Conn)
 
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
-        testServer.handle((s) {
+        testServer.handle((s)
+        {
             auto req = s.recvReq;
             assert(req.hdrs.canFind("DELETE /path"));
             s.send(httpOK());
@@ -830,7 +838,8 @@ if (is(T == char) || is(T == ubyte))
 {
     import std.algorithm.searching : canFind;
 
-    testServer.handle((s) {
+    testServer.handle((s)
+    {
         auto req = s.recvReq;
         assert(req.hdrs.canFind("OPTIONS /path"));
         s.send(httpOK("OPTIONSRESPONSE"));
@@ -872,7 +881,8 @@ if (is(T == char) || is(T == ubyte))
 {
     import std.algorithm.searching : canFind;
 
-    testServer.handle((s) {
+    testServer.handle((s)
+    {
         auto req = s.recvReq;
         assert(req.hdrs.canFind("TRACE /path"));
         s.send(httpOK("TRACERESPONSE"));
@@ -913,7 +923,8 @@ if (is(T == char) || is(T == ubyte))
 {
     import std.algorithm.searching : canFind;
 
-    testServer.handle((s) {
+    testServer.handle((s)
+    {
         auto req = s.recvReq;
         assert(req.hdrs.canFind("CONNECT /path"));
         s.send(httpOK("CONNECTRESPONSE"));
@@ -959,7 +970,8 @@ if (is(T == char) || is(T == ubyte))
 {
     import std.algorithm.searching : canFind;
 
-    testServer.handle((s) {
+    testServer.handle((s)
+    {
         auto req = s.recvReq;
         assert(req.hdrs.canFind("PATCH /path"));
         assert(req.bdy.canFind("PATCHBODY"));
@@ -1058,7 +1070,8 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
 {
     import std.algorithm.searching : canFind;
 
-    testServer.handle((s) {
+    testServer.handle((s)
+    {
         auto req = s.recvReq;
         assert(req.hdrs.canFind("GET /path"));
         s.send(httpNotFound());
@@ -1072,7 +1085,8 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
 {
     import std.algorithm.searching : canFind;
 
-    testServer.handle((s) {
+    testServer.handle((s)
+    {
         auto req = s.recvReq;
         assert(req.hdrs.canFind("POST /"));
         assert(req.bdy.canFind("POSTBODY"));
@@ -1095,7 +1109,8 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
 
 @system unittest // charset detection and transcoding to T
 {
-    testServer.handle((s) {
+    testServer.handle((s)
+    {
         s.send("HTTP/1.1 200 OK\r\n"~
         "Content-Length: 4\r\n"~
         "Content-Type: text/plain; charset=utf-8\r\n" ~
@@ -1106,7 +1121,8 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     auto result = _basicHTTP!char(testServer.addr, "", client);
     assert(result == "äbc");
 
-    testServer.handle((s) {
+    testServer.handle((s)
+    {
         s.send("HTTP/1.1 200 OK\r\n"~
         "Content-Length: 3\r\n"~
         "Content-Type: text/plain; charset=iso-8859-1\r\n" ~
@@ -1329,7 +1345,8 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
 
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
-        testServer.handle((s) {
+        testServer.handle((s)
+        {
             auto req = s.recvReq;
             s.send(httpOK("Line1\nLine2\nLine3"));
         });
@@ -1403,7 +1420,8 @@ if (isCurlConn!(Conn))
 
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
-        testServer.handle((s) {
+        testServer.handle((s)
+        {
             auto req = s.recvReq;
             s.send(httpOK(cast(ubyte[])[0, 1, 2, 3, 4, 5]));
         });
@@ -1698,7 +1716,8 @@ auto byLineAsync(Conn = AutoProtocol, Terminator = char, Char = char)
 
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
-        testServer.handle((s) {
+        testServer.handle((s)
+        {
             auto req = s.recvReq;
             s.send(httpOK("Line1\nLine2\nLine3"));
         });
@@ -1846,7 +1865,8 @@ if (isCurlConn!(Conn))
 
     foreach (host; [testServer.addr, "http://"~testServer.addr])
     {
-        testServer.handle((s) {
+        testServer.handle((s)
+        {
             auto req = s.recvReq;
             s.send(httpOK(cast(ubyte[])[0, 1, 2, 3, 4, 5]));
         });
@@ -2111,7 +2131,8 @@ private mixin template Protocol()
     {
         import std.algorithm.searching : canFind;
 
-        testServer.handle((s) {
+        testServer.handle((s)
+        {
             auto req = s.recvReq;
             assert(req.hdrs.canFind("GET /"));
             assert(req.hdrs.canFind("Basic dXNlcjpwYXNz"));
@@ -3088,7 +3109,8 @@ struct HTTP
     {
         import std.algorithm.searching : canFind;
 
-        testServer.handle((s) {
+        testServer.handle((s)
+        {
             auto req = s.recvReq!ubyte;
             assert(req.hdrs.canFind("POST /path"));
             assert(req.bdy.canFind(cast(ubyte[])[0, 1, 2, 3, 4]));
@@ -3260,7 +3282,8 @@ struct HTTP
     foreach (c; AliasSeq!("charset", "Charset", "CHARSET", "CharSet", "charSet",
         "ChArSeT", "cHaRsEt"))
     {
-        testServer.handle((s) {
+        testServer.handle((s)
+        {
             s.send("HTTP/1.1 200 OK\r\n"~
                 "Content-Length: 0\r\n"~
                 "Content-Type: text/plain; " ~ c ~ "=foo\r\n" ~
@@ -4249,7 +4272,8 @@ struct Curl
         copy.handle = curl.easy_duphandle(handle);
         copy._stopped = false;
 
-        with (CurlOption) {
+        with (CurlOption)
+        {
             auto tt = AliasSeq!(file, writefunction, writeheader,
                 headerfunction, infile, readfunction, ioctldata, ioctlfunction,
                 seekdata, seekfunction, sockoptdata, sockoptfunction,

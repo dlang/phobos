@@ -84,7 +84,8 @@ private template needOpCallAlias(alias fun)
      */
     static if (is(typeof(fun.opCall) == function))
     {
-        enum needOpCallAlias = !is(typeof(fun)) && __traits(compiles, () {
+        enum needOpCallAlias = !is(typeof(fun)) && __traits(compiles, ()
+        {
             return fun(Parameters!fun.init);
         });
     }
@@ -1155,7 +1156,8 @@ template memoize(alias fun, uint maxSize)
     assert(fact(10) == 3628800);
 
     // Issue 12568
-    static uint len2(const string s) { // Error
+    static uint len2(const string s)  // Error
+    {
     alias mLen2 = memoize!len2;
     if (s.length == 0)
         return 0;
@@ -1264,12 +1266,15 @@ if (isCallable!(F))
     {
         alias DelType = typeof(&(new DelegateFaker!(F)).doIt);
 
-        static struct DelegateFields {
-            union {
+        static struct DelegateFields
+        {
+            union
+            {
                 DelType del;
                 //pragma(msg, typeof(del));
 
-                struct {
+                struct
+                {
                     void* contextPtr;
                     void* funcPtr;
                 }
@@ -1294,7 +1299,8 @@ if (isCallable!(F))
 ///
 @system unittest
 {
-    static int inc(ref uint num) {
+    static int inc(ref uint num)
+    {
         num++;
         return 8675309;
     }
@@ -1307,7 +1313,8 @@ if (isCallable!(F))
 
 @system unittest // not @safe due to toDelegate
 {
-    static int inc(ref uint num) {
+    static int inc(ref uint num)
+    {
         num++;
         return 8675309;
     }

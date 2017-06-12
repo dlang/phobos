@@ -157,7 +157,8 @@ private:
     // the "handler" function below.
     enum OpID { getTypeInfo, get, compare, equals, testConversion, toString,
             index, indexAssign, catAssign, copyOut, length,
-            apply, postblit, destruct }
+            apply, postblit, destruct
+    }
 
     // state
     ptrdiff_t function(OpID selector, ubyte[size]* store, void* data) fptr
@@ -1783,7 +1784,8 @@ static class VariantException : Exception
 
 @system unittest
 {
-    struct Huge {
+    struct Huge
+    {
         real a, b, c, d, e, f, g;
     }
 
@@ -1824,11 +1826,14 @@ static class VariantException : Exception
 // http://d.puremagic.com/issues/show_bug.cgi?id=5424
 @system unittest
 {
-    interface A {
+    interface A
+    {
         void func1();
     }
-    static class AC: A {
-        void func1() {
+    static class AC: A
+    {
+        void func1()
+        {
         }
     }
 
@@ -1865,15 +1870,18 @@ static class VariantException : Exception
 // Const parameters with opCall, issue 11361.
 @system unittest
 {
-    static string t1(string c) {
+    static string t1(string c)
+    {
         return c ~ "a";
     }
 
-    static const(char)[] t2(const(char)[] p) {
+    static const(char)[] t2(const(char)[] p)
+    {
         return p ~ "b";
     }
 
-    static char[] t3(int p) {
+    static char[] t3(int p)
+    {
         import std.conv : text;
         return p.text.dup;
     }
@@ -2107,7 +2115,8 @@ if (Handlers.length > 0)
                                                 )()
                                                 ));
 
-    static size_t func(string s) {
+    static size_t func(string s)
+    {
         return s.length;
     }
 
@@ -2264,7 +2273,8 @@ if (isAlgebraic!VariantType && Handler.length > 0)
      */
     auto visitGetOverloadMap()
     {
-        struct Result {
+        struct Result
+        {
             int[AllowedTypes.length] indices;
             int exceptionFuncIdx = -1;
             int generalFuncIdx = -1;
@@ -2375,7 +2385,8 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     struct Bar { int depth; }
     alias FooBar = Algebraic!(Foo, Bar);
 
-    int depth(in FooBar fb) {
+    int depth(in FooBar fb)
+    {
         return fb.visit!((Foo foo) => foo.depth,
                          (Bar bar) => bar.depth);
     }
@@ -2719,7 +2730,8 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 @system unittest
 {
     // Bugzilla 13534
-    static assert(!__traits(compiles, () @safe {
+    static assert(!__traits(compiles, () @safe
+    {
         auto foo() @system { return 3; }
         auto v = Variant(&foo);
         v(); // foo is called in safe code!?

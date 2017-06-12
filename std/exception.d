@@ -496,7 +496,8 @@ private void bailOut(E : Throwable = Exception)(string file, size_t line, in cha
     {
         static int g;
         ~this() {}  // impure & unsafe destructor
-        bool opCast(T:bool)() {
+        bool opCast(T:bool)()
+        {
             int* p = cast(int*) 0;   // unsafe operation
             int n = g;              // impure operation
             return true;
@@ -2152,7 +2153,8 @@ pure nothrow @safe unittest
 
     auto save = f.handle!(Exception,
         RangePrimitive.save,
-        function(Exception e, ref ThrowingRange r) {
+        function(Exception e, ref ThrowingRange r)
+        {
             return ThrowingRange();
         })();
 

@@ -2810,7 +2810,8 @@ EOS";
 
     DocumentParser parser = new DocumentParser(test_xml);
     bool tested = false;
-    parser.onStartTag["stream:stream"] = (ElementParser p) {
+    parser.onStartTag["stream:stream"] = (ElementParser p)
+    {
         assert(p.tag.attr["xmlns"] == "jabber:'client'");
         assert(p.tag.attr["from"] == "jid.pl");
         assert(p.tag.attr["attr"] == "a\"b\"c");
@@ -2829,11 +2830,13 @@ EOS";
 EOS";
     auto xml = new DocumentParser(s);
 
-    xml.onStartTag["Test"] = (ElementParser xml) {
+    xml.onStartTag["Test"] = (ElementParser xml)
+    {
         assert(xml.tag.attr["thing"] == "What & Up");
     };
 
-    xml.onEndTag["Test"] = (in Element e) {
+    xml.onEndTag["Test"] = (in Element e)
+    {
         assert(e.text() == "What & Up Second");
     };
     xml.parse();

@@ -1315,12 +1315,14 @@ pure @safe nothrow unittest
             assert(myChain.front == 1);
 
             static if (isBidirectionalRange!DummyType1 &&
-                      isBidirectionalRange!DummyType2) {
+                      isBidirectionalRange!DummyType2)
+                      {
                 assert(myChain.back == 10);
             }
 
             static if (isRandomAccessRange!DummyType1 &&
-                      isRandomAccessRange!DummyType2) {
+                      isRandomAccessRange!DummyType2)
+                      {
                 assert(myChain[0] == 1);
             }
 
@@ -3392,7 +3394,8 @@ public:
     int[10] arr;
     int idx;
 
-    ref int fun() {
+    ref int fun()
+    {
         auto x = idx++;
         idx %= arr.length;
         return arr[x];
@@ -4413,7 +4416,8 @@ enum StoppingPolicy
         assert(equal(map!"a[0]"(zShortest), [1, 2]));
         assert(equal(map!"a[1]"(zShortest), [1, 2]));
 
-        try {
+        try
+        {
             auto zSame = zip(StoppingPolicy.requireSameLength, arr1, arr2);
             foreach (elem; zSame) {}
             assert(0);
@@ -4844,7 +4848,8 @@ if (allSatisfy!(isInputRange, Ranges))
     arr2.popBack();
     ls = lockstep(arr1, arr2, StoppingPolicy.requireSameLength);
 
-    try {
+    try
+    {
         foreach (a, b; ls) {}
         assert(0);
     } catch (Exception) {}
@@ -4906,7 +4911,8 @@ if (allSatisfy!(isInputRange, Ranges))
 
     // Since r1 is by-value only, the compiler should reject attempts to
     // foreach over it with ref.
-    static assert(!__traits(compiles, {
+    static assert(!__traits(compiles,
+    {
         foreach (ref a, ref b; lockstep(r1, r2)) { a++; }
     }));
 }
@@ -9174,7 +9180,8 @@ version(none) // @@@BUG@@@ 10939
 */
 template isTwoWayCompatible(alias fn, T1, T2)
 {
-    enum isTwoWayCompatible = is(typeof( (){
+    enum isTwoWayCompatible = is(typeof( ()
+    {
             T1 foo();
             T2 bar();
 
@@ -10737,7 +10744,8 @@ if (isInputRange!R && is(R == class))
     zip(r, r);
     roundRobin(r, r);
 
-    struct NRAR {
+    struct NRAR
+    {
         typeof(r) input;
         @property empty() { return input.empty; }
         @property front() { return input.front; }
@@ -10752,7 +10760,8 @@ if (isInputRange!R && is(R == class))
     // fix for std.range
     joiner([r], [9]);
 
-    struct NRAR2 {
+    struct NRAR2
+    {
         NRAR input;
         @property empty() { return true; }
         @property front() { return input; }

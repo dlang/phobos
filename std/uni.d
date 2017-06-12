@@ -1016,7 +1016,8 @@ private:
 @system unittest
 {
     import std.conv : text;
-    enum dg = (){
+    enum dg = ()
+    {
         // sizes are:
         // lvl0: 3, lvl1 : 2, lvl2: 1
         auto m = MultiArray!(int, ubyte, int)(3,2,1);
@@ -1100,12 +1101,14 @@ private:
     alias fn2 = sliceBits!( 9, 13);
     alias fn3 = sliceBits!( 6,  9);
     alias fn4 = sliceBits!( 0,  6);
-    static void check(size_t lvl, MA)(ref MA arr){
+    static void check(size_t lvl, MA)(ref MA arr)
+    {
         for (size_t i = 0; i< arr.length!lvl; i++)
             assert(arr.slice!(lvl)[i] == i, text("Mismatch on lvl ", lvl, " idx ", i, " value: ", arr.slice!(lvl)[i]));
     }
 
-    static void fillIdx(size_t lvl, MA)(ref MA arr){
+    static void fillIdx(size_t lvl, MA)(ref MA arr)
+    {
         for (size_t i = 0; i< arr.length!lvl; i++)
             arr.slice!(lvl)[i] = i;
     }
@@ -4667,7 +4670,8 @@ public struct MatcherConcept
 /**
     Test if $(D M) is an UTF Matcher for ranges of $(D Char).
 */
-public enum isUtfMatcher(M, C) = __traits(compiles, (){
+public enum isUtfMatcher(M, C) = __traits(compiles, ()
+{
     C[] s;
     auto d = s.decoder;
     M m;
@@ -4692,7 +4696,8 @@ public enum isUtfMatcher(M, C) = __traits(compiles, (){
     static assert(isUtfMatcher!(WcharMatcher, immutable(wchar)));
 }
 
-enum Mode {
+enum Mode
+{
     alwaysSkip,
     neverSkip,
     skipOnMatch
@@ -5413,7 +5418,8 @@ if (is(C : wchar) || is(C : char))
         "\xCF\x00\0x00\0x00\x00");
     foreach (msg; fails8)
     {
-        assert(collectException((){
+        assert(collectException(()
+        {
             auto s = msg;
             size_t idx = 0;
             utf8.test(s);
@@ -5423,7 +5429,8 @@ if (is(C : wchar) || is(C : char))
     alias fails16 = AliasSeq!([0xD811], [0xDC02]);
     foreach (msg; fails16)
     {
-        assert(collectException((){
+        assert(collectException(()
+        {
             auto s = msg.map!(x => cast(wchar) x);
             utf16.test(s);
         }()));
@@ -6310,7 +6317,8 @@ template genericDecodeGrapheme(bool getValue)
     Value genericDecodeGrapheme(Input)(ref Input range)
     {
         import std.internal.unicode_tables : isHangL, isHangT, isHangV; // generated file
-        enum GraphemeState {
+        enum GraphemeState
+        {
             Start,
             CR,
             RI,
@@ -7288,7 +7296,8 @@ if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
     {
         foreach (S1; AliasSeq!(string, wstring, dstring))
         foreach (S2; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             assert(cfunc("".to!S1(), "".to!S2()) == 0);
             assert(cfunc("A".to!S1(), "".to!S2()) > 0);
             assert(cfunc("".to!S1(), "0".to!S2()) < 0);
@@ -7413,7 +7422,8 @@ package auto simpleCaseFoldings(dchar ch) @safe
     import std.algorithm.searching : canFind;
     import std.array : array;
     import std.exception : assertCTFEable;
-    assertCTFEable!((){
+    assertCTFEable!(()
+    {
         auto r = simpleCaseFoldings('Э').array;
         assert(r.length == 2);
         assert(r.canFind('э') && r.canFind('Э'));
@@ -7459,7 +7469,8 @@ ubyte combiningClass(dchar ch) @safe pure nothrow @nogc
 }
 
 /// Unicode character decomposition type.
-enum UnicodeDecomposition {
+enum UnicodeDecomposition
+{
     /// Canonical decomposition. The result is canonically equivalent sequence.
     Canonical,
     /**
@@ -7474,7 +7485,8 @@ enum UnicodeDecomposition {
     Shorthand aliases for character decomposition type, passed as a
     template parameter to $(LREF decompose).
 */
-enum {
+enum
+{
     Canonical = UnicodeDecomposition.Canonical,
     Compatibility = UnicodeDecomposition.Compatibility
 }
@@ -7734,7 +7746,8 @@ dchar composeJamo(dchar lead, dchar vowel, dchar trailing=dchar.init) pure nothr
     Enumeration type for normalization forms,
     passed as template parameter for functions like $(LREF normalize).
 */
-enum NormalizationForm {
+enum NormalizationForm
+{
     NFC,
     NFD,
     NFKC,
@@ -7742,7 +7755,8 @@ enum NormalizationForm {
 }
 
 
-enum {
+enum
+{
     /**
         Shorthand aliases from values indicating normalization forms.
     */

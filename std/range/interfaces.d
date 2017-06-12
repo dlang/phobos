@@ -93,7 +93,8 @@ import std.traits;
  * See_Also:
  * $(LREF inputRangeObject)
  */
-interface InputRange(E) {
+interface InputRange(E)
+{
     ///
     @property E front();
 
@@ -131,7 +132,8 @@ interface InputRange(E) {
     import std.algorithm.iteration : map;
     import std.range : iota;
 
-    void useRange(InputRange!int range) {
+    void useRange(InputRange!int range)
+    {
         // Function body.
     }
 
@@ -146,13 +148,15 @@ interface InputRange(E) {
 }
 
 /**Interface for a forward range of type $(D E).*/
-interface ForwardRange(E) : InputRange!E {
+interface ForwardRange(E) : InputRange!E
+{
     ///
     @property ForwardRange!E save();
 }
 
 /**Interface for a bidirectional range of type $(D E).*/
-interface BidirectionalRange(E) : ForwardRange!(E) {
+interface BidirectionalRange(E) : ForwardRange!(E)
+{
     ///
     @property BidirectionalRange!E save();
 
@@ -167,7 +171,8 @@ interface BidirectionalRange(E) : ForwardRange!(E) {
 }
 
 /**Interface for a finite random access range of type $(D E).*/
-interface RandomAccessFinite(E) : BidirectionalRange!(E) {
+interface RandomAccessFinite(E) : BidirectionalRange!(E)
+{
     ///
     @property RandomAccessFinite!E save();
 
@@ -193,7 +198,8 @@ interface RandomAccessFinite(E) : BidirectionalRange!(E) {
 }
 
 /**Interface for an infinite random access range of type $(D E).*/
-interface RandomAccessInfinite(E) : ForwardRange!E {
+interface RandomAccessInfinite(E) : ForwardRange!E
+{
     ///
     E moveAt(size_t);
 
@@ -205,7 +211,8 @@ interface RandomAccessInfinite(E) : ForwardRange!E {
 }
 
 /**Adds assignable elements to InputRange.*/
-interface InputAssignable(E) : InputRange!E {
+interface InputAssignable(E) : InputRange!E
+{
     ///
     @property void front(E newVal);
 
@@ -218,13 +225,15 @@ interface InputAssignable(E) : InputRange!E {
 }
 
 /**Adds assignable elements to ForwardRange.*/
-interface ForwardAssignable(E) : InputAssignable!E, ForwardRange!E {
+interface ForwardAssignable(E) : InputAssignable!E, ForwardRange!E
+{
     ///
     @property ForwardAssignable!E save();
 }
 
 /**Adds assignable elements to BidirectionalRange.*/
-interface BidirectionalAssignable(E) : ForwardAssignable!E, BidirectionalRange!E {
+interface BidirectionalAssignable(E) : ForwardAssignable!E, BidirectionalRange!E
+{
     ///
     @property BidirectionalAssignable!E save();
 
@@ -233,7 +242,8 @@ interface BidirectionalAssignable(E) : ForwardAssignable!E, BidirectionalRange!E
 }
 
 /**Adds assignable elements to RandomAccessFinite.*/
-interface RandomFiniteAssignable(E) : RandomAccessFinite!E, BidirectionalAssignable!E {
+interface RandomFiniteAssignable(E) : RandomAccessFinite!E, BidirectionalAssignable!E
+{
     ///
     @property RandomFiniteAssignable!E save();
 
@@ -243,7 +253,8 @@ interface RandomFiniteAssignable(E) : RandomAccessFinite!E, BidirectionalAssigna
 
 /**Interface for an output range of type $(D E).  Usage is similar to the
  * $(D InputRange) interface and descendants.*/
-interface OutputRange(E) {
+interface OutputRange(E)
+{
     ///
     void put(E);
 }
@@ -274,13 +285,15 @@ private string putMethods(E...)()
 /**Implements the $(D OutputRange) interface for all types E and wraps the
  * $(D put) method for each type $(D E) in a virtual function.
  */
-class OutputRangeObject(R, E...) : staticMap!(OutputRange, E) {
+class OutputRangeObject(R, E...) : staticMap!(OutputRange, E)
+{
     // @BUG 4689:  There should be constraints on this template class, but
     // DMD won't let me put them in.
     private R _range;
 
     ///
-    this(R range) {
+    this(R range)
+    {
         this._range = range;
     }
 
@@ -363,17 +376,20 @@ if (isInputRange!(Unqual!R))
     {
 
         ///
-        class InputRangeObject : MostDerivedInputRange!(R) {
+        class InputRangeObject : MostDerivedInputRange!(R)
+        {
             private R _range;
             private alias E = ElementType!R;
 
-            this(R range) {
+            this(R range)
+            {
                 this._range = range;
             }
 
             @property E front() { return _range.front; }
 
-            E moveFront() {
+            E moveFront()
+            {
                 return _range.moveFront();
             }
 
@@ -382,14 +398,16 @@ if (isInputRange!(Unqual!R))
 
             static if (isForwardRange!R)
             {
-                @property typeof(this) save() {
+                @property typeof(this) save()
+                {
                     return new typeof(this)(_range.save);
                 }
             }
 
             static if (hasAssignableElements!R)
             {
-                @property void front(E newVal) {
+                @property void front(E newVal)
+                {
                     _range.front = newVal;
                 }
             }
@@ -398,7 +416,8 @@ if (isInputRange!(Unqual!R))
             {
                 @property E back() { return _range.back; }
 
-                E moveBack() {
+                E moveBack()
+                {
                     return _range.moveBack();
                 }
 
@@ -406,7 +425,8 @@ if (isInputRange!(Unqual!R))
 
                 static if (hasAssignableElements!R)
                 {
-                    @property void back(E newVal) {
+                    @property void back(E newVal)
+                    {
                         _range.back = newVal;
                     }
                 }
@@ -414,24 +434,28 @@ if (isInputRange!(Unqual!R))
 
             static if (isRandomAccessRange!R)
             {
-                E opIndex(size_t index) {
+                E opIndex(size_t index)
+                {
                     return _range[index];
                 }
 
-                E moveAt(size_t index) {
+                E moveAt(size_t index)
+                {
                     return _range.moveAt(index);
                 }
 
                 static if (hasAssignableElements!R)
                 {
-                    void opIndexAssign(E val, size_t index) {
+                    void opIndexAssign(E val, size_t index)
+                    {
                         _range[index] = val;
                     }
                 }
 
                 static if (!isInfinite!R)
                 {
-                    @property size_t length() {
+                    @property size_t length()
+                    {
                         return _range.length;
                     }
 
@@ -442,7 +466,8 @@ if (isInputRange!(Unqual!R))
                     // ranges are resolved.
                     version(none)
                     {
-                        typeof(this) opSlice(size_t lower, size_t upper) {
+                        typeof(this) opSlice(size_t lower, size_t upper)
+                        {
                             return new typeof(this)(_range[lower .. upper]);
                         }
                     }
@@ -451,7 +476,8 @@ if (isInputRange!(Unqual!R))
 
             // Optimization:  One delegate call is faster than three virtual
             // function calls.  Use opApply for foreach syntax.
-            int opApply(scope int delegate(E) dg) {
+            int opApply(scope int delegate(E) dg)
+            {
                 int res;
 
                 for (auto r = _range; !r.empty; r.popFront())
@@ -463,7 +489,8 @@ if (isInputRange!(Unqual!R))
                 return res;
             }
 
-            int opApply(scope int delegate(size_t, E) dg) {
+            int opApply(scope int delegate(size_t, E) dg)
+            {
                 int res;
 
                 size_t i = 0;
@@ -499,10 +526,12 @@ if (isInputRange!R)
 /**Convenience function for creating an $(D OutputRangeObject) with a base range
  * of type $(D R) that accepts types $(D E).
 */
-template outputRangeObject(E...) {
+template outputRangeObject(E...)
+{
 
     ///
-    OutputRangeObject!(R, E) outputRangeObject(R)(R range) {
+    OutputRangeObject!(R, E) outputRangeObject(R)(R range)
+    {
         return new OutputRangeObject!(R, E)(range);
     }
 }
@@ -523,7 +552,8 @@ template outputRangeObject(E...) {
     import std.array;
     import std.internal.test.dummyrange;
 
-    static void testEquality(R)(iInputRange r1, R r2) {
+    static void testEquality(R)(iInputRange r1, R r2)
+    {
         assert(equal(r1, r2));
     }
 

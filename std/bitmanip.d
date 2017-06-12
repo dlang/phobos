@@ -310,7 +310,8 @@ Following arguments works the same way as $(D bitfield)'s. The bitfield must fit
 bits known to be zero because of the pointer alignment.
 */
 
-template taggedPointer(T : T*, string name, Ts...) {
+template taggedPointer(T : T*, string name, Ts...)
+{
     enum taggedPointer = createTaggedReference!(T*, T.alignof, name, Ts).result;
 }
 
@@ -482,7 +483,8 @@ unittest
             Object, "a",
             uint, "b", 4)));
 
-    struct S {
+    struct S
+    {
         mixin(taggedClassRef!(
             Object, "a",
             bool, "b", 1));
@@ -497,7 +499,8 @@ unittest
 @safe unittest
 {
     // Bug #6686
-    union  S {
+    union  S
+    {
         ulong bits = ulong.max;
         mixin (bitfields!(
             ulong, "back",  31,
@@ -556,7 +559,8 @@ unittest
 @safe unittest
 {
     {
-        static struct Integrals {
+        static struct Integrals
+        {
             bool checkExpectations(bool eb, int ei, short es) { return b == eb && i == ei && s == es; }
 
             mixin(bitfields!(
@@ -578,7 +582,8 @@ unittest
 
     //Bug# 8876
     {
-        struct MoreIntegrals {
+        struct MoreIntegrals
+        {
             bool checkExpectations(uint eu, ushort es, uint ei) { return u == eu && s == es && i == ei; }
 
             mixin(bitfields!(
@@ -601,7 +606,8 @@ unittest
 
     enum A { True, False }
     enum B { One, Two, Three, Four }
-    static struct Enums {
+    static struct Enums
+    {
         bool checkExpectations(A ea, B eb) { return a == ea && b == eb; }
 
         mixin(bitfields!(
@@ -616,7 +622,8 @@ unittest
     e.b = B.Three;
     assert(e.checkExpectations(A.False, B.Three));
 
-    static struct SingleMember {
+    static struct SingleMember
+    {
         bool checkExpectations(bool eb) { return b == eb; }
 
         mixin(bitfields!(
@@ -751,7 +758,8 @@ struct DoubleRep
 @safe unittest
 {
     // Issue #15305
-    struct S {
+    struct S
+    {
             mixin(bitfields!(
                     bool, "alice", 1,
                     ulong, "bob", 63,

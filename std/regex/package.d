@@ -1677,7 +1677,8 @@ auto escaper(Range)(Range r)
         Range r;
         bool escaped;
 
-        @property ElementType!Range front(){
+        @property ElementType!Range front()
+        {
           if (escaped)
               return '\\';
           else
@@ -1686,7 +1687,8 @@ auto escaper(Range)(Range r)
 
         @property bool empty(){ return r.empty; }
 
-        void popFront(){
+        void popFront()
+        {
           if (escaped) escaped = false;
           else
           {

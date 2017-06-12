@@ -86,7 +86,8 @@ alias Escapables = AliasSeq!('[', ']', '\\', '^', '$', '.', '|', '?', ',', '-',
 // casefold - case insensitive matching, do casefolding on match in unicode mode
 // freeform - ignore whitespace in pattern, to match space use [ ] or \s
 // multiline - switch  ^, $ detect start and end of linesinstead of just start and end of input
-enum RegexOption: uint {
+enum RegexOption: uint
+{
     global = 0x1,
     casefold = 0x2,
     freeform = 0x4,
@@ -113,7 +114,8 @@ enum RegexInfo : uint { oneShot = 0x80 }
 //* reorganize groups to make n args easier to find, or simplify the check for groups of similar ops
 //  (like lookaround), or make it easier to identify hotspots.
 
-enum IR:uint {
+enum IR:uint
+{
     Char              = 0b1_00000_00, //a character
     Any               = 0b1_00001_00, //any character
     CodepointSet      = 0b1_00010_00, //a most generic CodepointSet [...]
@@ -173,7 +175,8 @@ template IRL(IR code)
 static assert(IRL!(IR.LookaheadStart) == 3);
 
 //how many parameters follow the IR, should be optimized fixing some IR bits
-int immediateParamsIR(IR i){
+int immediateParamsIR(IR i)
+{
     switch (i)
     {
     case IR.OrEnd,IR.InfiniteEnd,IR.InfiniteQEnd:
@@ -502,7 +505,8 @@ struct Regex(Char)
                        "Requested named group is out of range.");
                 return groups[start+i].name;
             }
-            NamedGroupRange opSlice(size_t low, size_t high) {
+            NamedGroupRange opSlice(size_t low, size_t high)
+            {
                 assert(low <= high);
                 assert(start + high <= end);
                 return NamedGroupRange(groups, start + low, start + high);
@@ -619,7 +623,8 @@ if (is(Char :dchar))
             res = decode(_origin, _index);
         return n;
     }
-    @property bool atEnd(){
+    @property bool atEnd()
+    {
         return _index == _origin.length;
     }
     bool search(Kickstart)(ref Kickstart kick, ref dchar res, ref size_t pos)
@@ -741,10 +746,12 @@ public class RegexException : Exception
 }
 
 // simple 128-entry bit-table used with a hash function
-struct BitTable {
+struct BitTable
+{
     uint[4] filter;
 
-    this(CodepointSet set){
+    this(CodepointSet set)
+    {
         foreach (iv; set.byInterval)
         {
             foreach (v; iv.a .. iv.b)
@@ -752,22 +759,26 @@ struct BitTable {
         }
     }
 
-    void add()(dchar ch){
+    void add()(dchar ch)
+    {
         immutable i = index(ch);
         filter[i >> 5]  |=  1<<(i & 31);
     }
     // non-zero -> might be present, 0 -> absent
-    bool opIndex()(dchar ch) const{
+    bool opIndex()(dchar ch) const
+    {
         immutable i = index(ch);
         return (filter[i >> 5]>>(i & 31)) & 1;
     }
 
-    static uint index()(dchar ch){
+    static uint index()(dchar ch)
+    {
         return ((ch >> 7) ^ ch) & 0x7F;
     }
 }
 
-struct CharMatcher {
+struct CharMatcher
+{
     BitTable ascii; // fast path for ASCII
     Trie trie;      // slow path for Unicode
 

@@ -750,7 +750,8 @@ abstract class Logger
     this(LogLevel lv) @safe
     {
         this.logLevel_ = lv;
-        this.fatalHandler_ = delegate() {
+        this.fatalHandler_ = delegate()
+        {
             throw new Error("A fatal log message was logged");
         };
 
@@ -1627,7 +1628,8 @@ private @property Logger defaultSharedLoggerImpl() @trusted
     static __gshared align(FileLogger.alignof) void[__traits(classInstanceSize, FileLogger)] _buffer;
 
     import std.concurrency : initOnce;
-    initOnce!stdSharedDefaultLogger({
+    initOnce!stdSharedDefaultLogger(
+    {
         auto buffer = cast(ubyte[]) _buffer;
         return emplace!FileLogger(buffer, stderr, LogLevel.all);
     }());
@@ -1877,7 +1879,8 @@ version(unittest) private void testFuncNames(Logger logger) @safe
     assert(tl1.line == __LINE__ - 3);
 
     auto oldunspecificLogger = sharedLog;
-    scope(exit) {
+    scope(exit)
+    {
         sharedLog = oldunspecificLogger;
     }
 
@@ -1928,7 +1931,8 @@ version(unittest) private void testFuncNames(Logger logger) @safe
 {
     bool errorThrown = false;
     auto tl = new TestLogger;
-    auto dele = delegate() {
+    auto dele = delegate()
+    {
         errorThrown = true;
     };
     tl.fatalHandler = dele;
@@ -1979,7 +1983,8 @@ version(unittest) private void testFuncNames(Logger logger) @safe
     assert(l.line == lineNumber);
     assert(l.logLevel == LogLevel.all);
 
-    () @trusted {
+    () @trusted
+    {
         assertThrown!Throwable(l.logf(LogLevel.fatal, msg, "Yet"));
     } ();
     lineNumber = __LINE__ - 2;
@@ -1987,7 +1992,8 @@ version(unittest) private void testFuncNames(Logger logger) @safe
     assert(l.line == lineNumber);
     assert(l.logLevel == LogLevel.all);
 
-    () @trusted {
+    () @trusted
+    {
         assertThrown!Throwable(l.logf(LogLevel.fatal, true, msg, "Yet"));
     } ();
     lineNumber = __LINE__ - 2;
@@ -2056,7 +2062,8 @@ version(unittest) private void testFuncNames(Logger logger) @safe
     assert(l.logLevel == LogLevel.all);
 
     msg = "%s Another message";
-    () @trusted {
+    () @trusted
+    {
         assertThrown!Throwable(logf(LogLevel.fatal, msg, "Yet"));
     } ();
     lineNumber = __LINE__ - 2;
@@ -2064,7 +2071,8 @@ version(unittest) private void testFuncNames(Logger logger) @safe
     assert(l.line == lineNumber);
     assert(l.logLevel == LogLevel.all);
 
-    () @trusted {
+    () @trusted
+    {
         assertThrown!Throwable(logf(LogLevel.fatal, true, msg, "Yet"));
     } ();
     lineNumber = __LINE__ - 2;
@@ -3041,7 +3049,8 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
 
     foreach (i; 0 .. 4)
     {
-        spawned ~= new Thread({
+        spawned ~= new Thread(
+        {
             stdThreadLocalLog = new TestLog;
             trace("zzzzzzzzzz");
         });

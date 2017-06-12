@@ -9848,7 +9848,8 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
                            function(string a){return cast(ubyte[]) a;},
                            function(string a){return a;},
                            function(string a){return map!(b => cast(char) b)(a.representation);}))
-    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    {
         scope(failure) writeln(typeof(cr).stringof);
         alias test = testParse822!cr;
         alias testBad = testBadParse822!cr;
@@ -10114,7 +10115,8 @@ version(unittest) void testBadParse822(alias cr)(string str, size_t line = __LIN
                            function(string a){return cast(ubyte[]) a;},
                            function(string a){return a;},
                            function(string a){return map!(b => cast(char) b)(a.representation);}))
-    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    {
         scope(failure) writeln(typeof(cr).stringof);
         alias test = testParse822!cr;
         {
@@ -10604,7 +10606,8 @@ if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
 
     foreach (cr; AliasSeq!(function(string a){return cast(ubyte[]) a;},
                            function(string a){return map!(b => cast(char) b)(a.representation);}))
-    (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+    {
         scope(failure) writeln(typeof(cr).stringof);
 
         assert(_stripCFWS(cr("")).empty);

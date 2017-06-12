@@ -375,9 +375,11 @@ if (areCopyCompatibleArrays!(SourceRange, TargetRange))
     assert(tlen >= slen,
             "Cannot copy a source range into a smaller target range.");
 
-    immutable overlaps = __ctfe || () @trusted {
+    immutable overlaps = __ctfe || () @trusted
+    {
         return source.ptr < target.ptr + tlen &&
-               target.ptr < source.ptr + slen; }();
+               target.ptr < source.ptr + slen;
+    }();
 
     if (overlaps)
     {
@@ -1003,12 +1005,14 @@ if (is(Range == char[]) || is(Range == wchar[]))
 // elaborate assigns.
 @system unittest
 {
-    struct Int {
+    struct Int
+    {
         ~this() {}
         int x = 3;
     }
     Int[2] xs = [Int(1), Int(2)];
-    struct R {
+    struct R
+    {
         bool done;
         bool empty() { return done; }
         ref Int[2] front() { return xs; }
@@ -1098,7 +1102,8 @@ pure nothrow @safe @nogc unittest
     import std.exception : assertCTFEable;
     import std.traits;
 
-    assertCTFEable!((){
+    assertCTFEable!(()
+    {
         Object obj1 = new Object;
         Object obj2 = obj1;
         Object obj3;
@@ -1212,7 +1217,8 @@ private T moveImpl(T)(ref T source)
     import std.exception : assertCTFEable;
     import std.traits;
 
-    assertCTFEable!((){
+    assertCTFEable!(()
+    {
         Object obj1 = new Object;
         Object obj2 = obj1;
         Object obj3 = move(obj2);

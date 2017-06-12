@@ -146,7 +146,8 @@ struct SQL_INTERVAL_STRUCT
     SQLINTERVAL interval_type;
     SQLSMALLINT interval_sign;
 
-    union  intval {
+    union  intval
+    {
         SQL_YEAR_MONTH_STRUCT year_month;
         SQL_DAY_SECOND_STRUCT day_second;
     }

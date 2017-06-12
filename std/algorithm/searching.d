@@ -547,7 +547,8 @@ if (isNarrowString!R1 && isNarrowString!R2)
                           dchar[], const(dchar)[], dstring))
     {
         foreach (T; AliasSeq!(string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             assert(commonPrefix(to!S(""), to!T("")).empty);
             assert(commonPrefix(to!S(""), to!T("hello")).empty);
             assert(commonPrefix(to!S("hello"), to!T("")).empty);
@@ -1176,7 +1177,8 @@ if (isInputRange!R &&
         assert(endsWith(to!S("abc\uFF28"), 'a', '\uFF28', 'c') == 2);
 
         foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             //Lots of strings
             assert(endsWith(to!S("abc"), to!T("")));
             assert(!endsWith(to!S("abc"), to!T("a")));
@@ -4283,7 +4285,8 @@ if (isInputRange!R &&
         assert(startsWith(to!S("\uFF28abc"), 'a', '\uFF28', 'c') == 2);
 
         foreach (T; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
-        (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+        {
             //Lots of strings
             assert(startsWith(to!S("abc"), to!T("")));
             assert(startsWith(to!S("ab"), to!T("a")));

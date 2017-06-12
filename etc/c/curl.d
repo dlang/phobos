@@ -183,7 +183,8 @@ enum CURL_WRITEFUNC_PAUSE = 0x10000001;
 alias curl_write_callback = size_t function(char *buffer, size_t size, size_t nitems, void *outstream);
 
 /** enumeration of file types */
-enum CurlFileType {
+enum CurlFileType
+{
     file,       ///
     directory,  ///
     symlink,    ///
@@ -199,7 +200,8 @@ enum CurlFileType {
 alias curlfiletype = int;
 
 ///
-enum CurlFInfoFlagKnown {
+enum CurlFInfoFlagKnown
+{
   filename    = 1,      ///
   filetype    = 2,      ///
   time        = 4,      ///
@@ -248,7 +250,8 @@ extern (C) struct curl_fileinfo
 }
 
 /** return codes for CURLOPT_CHUNK_BGN_FUNCTION */
-enum CurlChunkBgnFunc {
+enum CurlChunkBgnFunc
+{
   ok = 0,   ///
   fail = 1, /** tell the lib to end the task */
   skip = 2 /** skip this chunk over */
@@ -260,7 +263,8 @@ enum CurlChunkBgnFunc {
 alias curl_chunk_bgn_callback = c_long function(void *transfer_info, void *ptr, int remains);
 
 /** return codes for CURLOPT_CHUNK_END_FUNCTION */
-enum CurlChunkEndFunc {
+enum CurlChunkEndFunc
+{
   ok = 0,       ///
   fail = 1,     ///
 }
@@ -273,7 +277,8 @@ enum CurlChunkEndFunc {
 alias curl_chunk_end_callback = c_long function(void *ptr);
 
 /** return codes for FNMATCHFUNCTION */
-enum CurlFnMAtchFunc {
+enum CurlFnMAtchFunc
+{
   match = 0,    ///
   nomatch = 1,  ///
   fail = 2      ///
@@ -284,14 +289,16 @@ enum CurlFnMAtchFunc {
 alias curl_fnmatch_callback = int function(void *ptr, in char *pattern, in char *string);
 
 /// seek whence...
-enum CurlSeekPos {
+enum CurlSeekPos
+{
   set,          ///
   current,      ///
   end           ///
 }
 
 /** These are the return codes for the seek callbacks */
-enum CurlSeek {
+enum CurlSeek
+{
   ok,       ///
   fail,     /** fail the entire transfer */
   cantseek  /** tell libcurl seeking can't be done, so
@@ -302,7 +309,8 @@ enum CurlSeek {
 alias curl_seek_callback = int function(void *instream, curl_off_t offset, int origin);
 
 ///
-enum CurlReadFunc {
+enum CurlReadFunc
+{
   /** This is a return code for the read callback that, when returned, will
      signal libcurl to immediately abort the current transfer. */
   abort = 0x10000000,
@@ -317,7 +325,8 @@ enum CurlReadFunc {
 alias curl_read_callback = size_t function(char *buffer, size_t size, size_t nitems, void *instream);
 
 ///
-enum CurlSockType {
+enum CurlSockType
+{
     ipcxn, /** socket created for a specific IP connection */
     last   /** never use */
 }
@@ -355,7 +364,8 @@ enum CurlIoError
 alias curlioerr = int;
 
 ///
-enum CurlIoCmd {
+enum CurlIoCmd
+{
     nop,         /** command was unknown to callback */
     restartread, /** failed to restart the read */
     last,        /** never use */
@@ -383,7 +393,8 @@ alias curl_strdup_callback = char * function(in char *str);
 alias curl_calloc_callback = void* function(size_t nmemb, size_t size);
 
 /** the kind of data that is passed to information_callback*/
-enum CurlCallbackInfo {
+enum CurlCallbackInfo
+{
     text,       ///
     header_in,  ///
     header_out, ///
@@ -534,7 +545,8 @@ alias curl_ssl_ctx_callback =
                          );
 
 ///
-enum CurlProxy {
+enum CurlProxy
+{
     http,         /** added in 7.10, new in 7.19.4 default is to use CONNECT HTTP/1.1 */
     http_1_0,     /** added in 7.19.4, force to use CONNECT HTTP/1.0  */
     socks4 = 4,   /** support added in 7.15.2, enum existed already in 7.10 */
@@ -548,7 +560,8 @@ enum CurlProxy {
 alias curl_proxytype = int;
 
 ///
-enum CurlAuth : long {
+enum CurlAuth : long
+{
   none =         0,
   basic =        1,  /** Basic (default) */
   digest =       2,  /** Digest */
@@ -563,7 +576,8 @@ enum CurlAuth : long {
 }
 
 ///
-enum CurlSshAuth {
+enum CurlSshAuth
+{
   any       = -1,     /** all types supported by the server */
   none      = 0,      /** none allowed, silly but complete */
   publickey = 1, /** public/private key files */
@@ -594,7 +608,8 @@ extern (C) struct curl_khkey
 
 /** this is the set of return values expected from the curl_sshkeycallback
    callback */
-enum CurlKHStat {
+enum CurlKHStat
+{
     fine_add_to_file, ///
     fine,       ///
     reject,  /** reject the connection, return an error */
@@ -605,7 +620,8 @@ enum CurlKHStat {
 }
 
 /** this is the set of status codes pass in to the callback */
-enum CurlKHMatch {
+enum CurlKHMatch
+{
     ok,       /** match */
     mismatch, /** host found, key mismatch! */
     missing,  /** no matching host/key found */
@@ -622,7 +638,8 @@ alias curl_sshkeycallback =
                     );
 
 /** parameter for the CURLOPT_USE_SSL option */
-enum CurlUseSSL {
+enum CurlUseSSL
+{
     none,     /** do not attempt to use SSL */
     tryssl,   /** try using SSL, proceed anyway otherwise */
     control,  /** SSL for the control connection or fail */
@@ -633,7 +650,8 @@ enum CurlUseSSL {
 alias curl_usessl = int;
 
 /** parameter for the CURLOPT_FTP_SSL_CCC option */
-enum CurlFtpSSL {
+enum CurlFtpSSL
+{
     ccc_none,     /** do not send CCC */
     ccc_passive,  /** Let the server initiate the shutdown */
     ccc_active,   /** Initiate the shutdown */
@@ -643,7 +661,8 @@ enum CurlFtpSSL {
 alias curl_ftpccc = int;
 
 /** parameter for the CURLOPT_FTPSSLAUTH option */
-enum CurlFtpAuth {
+enum CurlFtpAuth
+{
     defaultauth, /** let libcurl decide */
     ssl,         /** use "AUTH SSL" */
     tls,         /** use "AUTH TLS" */
@@ -653,7 +672,8 @@ enum CurlFtpAuth {
 alias curl_ftpauth = int;
 
 /** parameter for the CURLOPT_FTP_CREATE_MISSING_DIRS option */
-enum CurlFtp {
+enum CurlFtp
+{
     create_dir_none,   /** do NOT create missing dirs! */
     create_dir,        /** (FTP/SFTP) if CWD fails, try MKD and then CWD again if MKD
                           succeeded, for SFTP this does similar magic */
@@ -665,7 +685,8 @@ enum CurlFtp {
 alias curl_ftpcreatedir = int;
 
 /** parameter for the CURLOPT_FTP_FILEMETHOD option */
-enum CurlFtpMethod {
+enum CurlFtpMethod
+{
     defaultmethod,    /** let libcurl pick */
     multicwd,         /** single CWD operation for each path part */
     nocwd,            /** no CWD at all */
@@ -676,7 +697,8 @@ enum CurlFtpMethod {
 alias curl_ftpmethod = int;
 
 /** CURLPROTO_ defines are for the CURLOPT_*PROTOCOLS options */
-enum CurlProto {
+enum CurlProto
+{
   http   = 1,   ///
   https  = 2,   ///
   ftp    = 4,   ///
@@ -731,7 +753,8 @@ alias FUNCTIONPOINT = CURLOPTTYPE_FUNCTIONPOINT;
 alias OFF_T = CURLOPTTYPE_OFF_T;
 
 ///
-enum CurlOption {
+enum CurlOption
+{
   /** This is the FILE * or void * the regular output should be written to. */
   file = 10_001,
   /** The full URL to get/put */
@@ -1270,7 +1293,8 @@ enum CURLOPT_SERVER_RESPONSE_TIMEOUT = CurlOption.ftp_response_timeout;
 /** Below here follows defines for the CURLOPT_IPRESOLVE option. If a host
    name resolves addresses using more than one IP protocol version, this
    option might be handy to force libcurl to use a specific IP version. */
-enum CurlIpResolve {
+enum CurlIpResolve
+{
   whatever = 0, /** default, resolves addresses to all IP versions that your system allows */
   v4 = 1,       /** resolve to ipv4 addresses */
   v6 = 2        /** resolve to ipv6 addresses */
@@ -1286,7 +1310,8 @@ enum CURLOPT_HEADERDATA = CurlOption.writeheader;
 enum CURLOPT_RTSPHEADER = CurlOption.httpheader;
 
 /** These enums are for use with the CURLOPT_HTTP_VERSION option. */
-enum CurlHttpVersion {
+enum CurlHttpVersion
+{
     none, /** setting this means we don't care, and that we'd
              like the library to choose the best possible
              for us! */
@@ -1298,7 +1323,8 @@ enum CurlHttpVersion {
 /**
  * Public API enums for RTSP requests
  */
-enum CurlRtspReq {
+enum CurlRtspReq
+{
     none,       ///
     options,    ///
     describe,   ///
@@ -1315,7 +1341,8 @@ enum CurlRtspReq {
 }
 
  /** These enums are for use with the CURLOPT_NETRC option. */
-enum CurlNetRcOption {
+enum CurlNetRcOption
+{
     ignored,  /** The .netrc will never be read. This is the default. */
     optional  /** A user:password in the URL will be preferred to one in the .netrc. */,
     required, /** A user:password in the URL will be ignored.
@@ -1325,7 +1352,8 @@ enum CurlNetRcOption {
 }
 
 ///
-enum CurlSslVersion {
+enum CurlSslVersion
+{
     default_version,    ///
     tlsv1,      ///
     sslv2,      ///
@@ -1334,7 +1362,8 @@ enum CurlSslVersion {
 }
 
 ///
-enum CurlTlsAuth {
+enum CurlTlsAuth
+{
     none,       ///
     srp,        ///
     last /** never use */
@@ -1343,7 +1372,8 @@ enum CurlTlsAuth {
 /** symbols to use with CURLOPT_POSTREDIR.
    CURL_REDIR_POST_301 and CURL_REDIR_POST_302 can be bitwise ORed so that
    CURL_REDIR_POST_301 | CURL_REDIR_POST_302 == CURL_REDIR_POST_ALL */
-enum CurlRedir {
+enum CurlRedir
+{
   get_all = 0,  ///
   post_301 = 1, ///
   post_302 = 2, ///
@@ -1351,7 +1381,8 @@ enum CurlRedir {
   post_all = (1 | 2) // (CURL_REDIR_POST_301|CURL_REDIR_POST_302);
 }
 ///
-enum CurlTimeCond {
+enum CurlTimeCond
+{
     none,       ///
     ifmodsince, ///
     ifunmodsince,       ///
@@ -1364,12 +1395,14 @@ alias curl_TimeCond = int;
 
 /** curl_strequal() and curl_strnequal() are subject for removal in a future
    libcurl, see lib/README.curlx for details */
-extern (C) {
+extern (C)
+{
 int  curl_strequal(in char *s1, in char *s2);
 /// ditto
 int  curl_strnequal(in char *s1, in char *s2, size_t n);
 }
-enum CurlForm {
+enum CurlForm
+{
     nothing, /********** the first one is unused ************/
     copyname,
     ptrname,
@@ -1422,7 +1455,8 @@ extern (C) struct curl_forms
  * )
  *
  ***************************************************************************/
-enum CurlFormAdd {
+enum CurlFormAdd
+{
     ok, /** first, no error */
     memory,     ///
     option_twice,       ///
@@ -1436,7 +1470,8 @@ enum CurlFormAdd {
 ///
 alias CURLFORMcode = int;
 
-extern (C) {
+extern (C)
+{
 
 /**
  * Name: curl_formadd()
@@ -1585,7 +1620,8 @@ void  curl_global_cleanup();
 }
 
 /** linked-list structure for the CURLOPT_QUOTE option (and other) */
-extern (C) {
+extern (C)
+{
 
 struct curl_slist
 {
@@ -1650,7 +1686,8 @@ enum CURLINFO_MASK = 0x0fffff;
 enum CURLINFO_TYPEMASK = 0xf00000;
 
 ///
-enum CurlInfo {
+enum CurlInfo
+{
     none,       ///
     effective_url = 1_048_577,    ///
     response_code = 2_097_154,    ///
@@ -1705,7 +1742,8 @@ alias CURLINFO = int;
 enum CURLINFO_HTTP_CODE = CurlInfo.response_code;
 
 ///
-enum CurlClosePolicy {
+enum CurlClosePolicy
+{
     none,       ///
     oldest,     ///
     least_recently_used,        ///
@@ -1718,7 +1756,8 @@ enum CurlClosePolicy {
 alias curl_closepolicy = int;
 
 ///
-enum CurlGlobal {
+enum CurlGlobal
+{
   ssl = 1,      ///
   win32 = 2,    ///
   ///
@@ -1732,7 +1771,8 @@ enum CurlGlobal {
  */
 
 /** Different data locks for a single share */
-enum CurlLockData {
+enum CurlLockData
+{
     none,       ///
     /**  CURL_LOCK_DATA_SHARE is used internally to say that
      *  the locking is just made to change the internal state of the share
@@ -1749,7 +1789,8 @@ enum CurlLockData {
 alias curl_lock_data = int;
 
 /** Different lock access types */
-enum CurlLockAccess {
+enum CurlLockAccess
+{
     none,            /** unspecified action */
     shared_access,   /** for read perhaps */
     single,          /** for write perhaps */
@@ -1767,7 +1808,8 @@ alias curl_unlock_function = void function(CURL *handle, curl_lock_data data, vo
 alias CURLSH = void;
 
 ///
-enum CurlShError {
+enum CurlShError
+{
     ok,          /** all is fine */
     bad_option,  /** 1 */
     in_use,      /** 2 */
@@ -1780,7 +1822,8 @@ alias CURLSHcode = int;
 
 /** pass in a user data pointer used in the lock/unlock callback
    functions */
-enum CurlShOption {
+enum CurlShOption
+{
     none,         /** don't use */
     share,        /** specify a data type to share */
     unshare,      /** specify which data type to stop sharing */
@@ -1793,7 +1836,8 @@ enum CurlShOption {
 ///
 alias CURLSHoption = int;
 
-extern (C) {
+extern (C)
+{
 ///
 CURLSH * curl_share_init();
 ///
@@ -1807,7 +1851,8 @@ CURLSHcode  curl_share_cleanup(CURLSH *);
  */
 
 // CURLVERSION_*
-enum CurlVer {
+enum CurlVer
+{
     first,      ///
     second,     ///
     third,      ///
@@ -1852,7 +1897,8 @@ alias curl_version_info_data = _N28;
 
 ///
 // CURL_VERSION_*
-enum CurlVersion {
+enum CurlVersion
+{
   ipv6         = 1,     /** IPv6-enabled */
   kerberos4    = 2,     /** kerberos auth is supported */
   ssl          = 4,     /** SSL options are present */
@@ -1870,7 +1916,8 @@ enum CurlVersion {
   tlsauth_srp  = 16_384  /** TLS-SRP auth is supported */
 }
 
-extern (C) {
+extern (C)
+{
 /**
  * Name: curl_version_info()
  *
@@ -1917,7 +1964,8 @@ CURLcode  curl_easy_pause(CURL *handle, int bitmask);
 
 
 ///
-enum CurlPause {
+enum CurlPause
+{
   recv      = 1,        ///
   recv_cont = 0,        ///
   send      = 4,        ///
@@ -1952,7 +2000,8 @@ enum CurlPause {
  *
  ***************************************************************************/
 
-extern (C) {
+extern (C)
+{
   ///
   CURL * curl_easy_init();
   ///
@@ -2062,7 +2111,8 @@ extern (C) CURLcode  curl_easy_send(CURL *curl, void *buffer, size_t buflen, siz
 alias CURLM = void;
 
 ///
-enum CurlM {
+enum CurlM
+{
     call_multi_perform = -1, /** please call curl_multi_perform() or curl_multi_socket*() soon */
     ok, ///
     bad_handle,              /** the passed-in handle is not a valid CURLM handle */
@@ -2235,7 +2285,8 @@ extern (C) const(char)* curl_multi_strerror(CURLMcode );
  *          detected to have "action" on them and let libcurl perform.
  *          See man page for details.
  */
-enum CurlPoll {
+enum CurlPoll
+{
   none_ = 0,   /** jdrewsen - underscored in order not to clash with reserved D symbols */
   in_ = 1,      ///
   out_ = 2,     ///
@@ -2247,13 +2298,15 @@ enum CurlPoll {
 alias CURL_SOCKET_TIMEOUT = CURL_SOCKET_BAD;
 
 ///
-enum CurlCSelect {
+enum CurlCSelect
+{
   in_ = 0x01,  /** jdrewsen - underscored in order not to clash with reserved D symbols */
   out_ = 0x02,  ///
   err_ = 0x04   ///
 }
 
-extern (C) {
+extern (C)
+{
   ///
   alias curl_socket_callback =
         int function(CURL *easy,            /** easy handle */
@@ -2274,7 +2327,8 @@ extern (C) {
  * Returns: The callback should return zero.
  */
 
-extern (C) {
+extern (C)
+{
   alias curl_multi_timer_callback =
         int function(CURLM *multi,          /** multi handle */
                      c_long timeout_ms,     /** see above */
@@ -2303,7 +2357,8 @@ extern (C) {
 extern (C) CURLMcode  curl_multi_timeout(CURLM *multi_handle, c_long *milliseconds);
 
 ///
-enum CurlMOption {
+enum CurlMOption
+{
     socketfunction = 20_001,    /** This is the socket callback function pointer */
     socketdata = 10_002,        /** This is the argument passed to the socket callback */
     pipelining = 3,             /** set to 1 to enable pipelining for this multi handle */

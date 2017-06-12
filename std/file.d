@@ -2554,7 +2554,8 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) ||
         enum maxCodeUnits = 6;
         char[bufferLen] buffer;
         const linkz = link.tempCString();
-        auto size = () @trusted {
+        auto size = () @trusted
+        {
             return posixReadlink(linkz, buffer.ptr, buffer.length);
         } ();
         cenforce(size != -1, to!string(link));
@@ -2566,7 +2567,8 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) ||
 
         foreach (i; 0 .. 10)
         {
-            size = () @trusted {
+            size = () @trusted
+            {
                 return posixReadlink(linkz, dynamicBuffer.ptr,
                     dynamicBuffer.length);
             } ();
@@ -2575,7 +2577,8 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) ||
             if (size <= dynamicBuffer.length - maxCodeUnits)
             {
                 dynamicBuffer.length = size;
-                return () @trusted {
+                return () @trusted
+                {
                     return assumeUnique(dynamicBuffer);
                 } ();
             }

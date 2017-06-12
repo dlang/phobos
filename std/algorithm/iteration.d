@@ -871,13 +871,15 @@ private:
         (isRangeUnaryIterable!R || isRangeBinaryIterable!R);
 
     enum isForeachUnaryIterable(R) =
-        is(typeof((R r) {
+        is(typeof((R r)
+        {
             foreach (ref a; r)
                 cast(void) unaryFun!pred(a);
         }));
 
     enum isForeachBinaryIterable(R) =
-        is(typeof((R r) {
+        is(typeof((R r)
+        {
             foreach (ref i, ref a; r)
                 cast(void) binaryFun!BinaryArgs(i, a);
         }));
@@ -944,7 +946,8 @@ public:
         {
             // opApply with >2 parameters. count the delegate args.
             // only works if it is not templated (otherwise we cannot count the args)
-            auto dg(Parameters!(Parameters!(r.opApply)) params) {
+            auto dg(Parameters!(Parameters!(r.opApply)) params)
+            {
                 pred(params);
                 return 0; // tells opApply to continue iteration
             }
@@ -1491,7 +1494,8 @@ if (isInputRange!R)
     static if (isForwardRange!R)
     {
         ///
-        @property typeof(this) save() {
+        @property typeof(this) save()
+        {
             typeof(this) ret = this;
             ret._input = this._input.save;
             ret._current = this._current;
@@ -3893,7 +3897,8 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     assert(split.front == "b ");
     assert(split.back == "r ");
 
-    foreach (DummyType; AllDummyRanges) {  // Bug 4408
+    foreach (DummyType; AllDummyRanges)   // Bug 4408
+    {
         static if (isRandomAccessRange!DummyType)
         {
             static assert(isBidirectionalRange!DummyType);
@@ -4167,7 +4172,8 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     import std.algorithm.comparison : equal;
 
     // Test by-reference separator
-    class RefSep {
+    class RefSep
+    {
     @safe:
         string _impl;
         this(string s) { _impl = s; }
@@ -5031,7 +5037,8 @@ private struct UniqResult(alias pred, Range)
 
     static if (isForwardRange!Range)
     {
-        @property typeof(this) save() {
+        @property typeof(this) save()
+        {
             return typeof(this)(_input.save);
         }
     }

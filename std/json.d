@@ -330,7 +330,8 @@ struct JSONValue
         {
             type_tag = JSON_TYPE.STRING;
             // FIXME: std.array.array(Range) is not deduced as 'pure'
-            () @trusted {
+            () @trusted
+            {
                 import std.utf : byUTF;
                 store.str = cast(immutable)(arg.byUTF!char.array);
             }();
@@ -842,7 +843,8 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
         return str.data.length ? str.data : "";
     }
 
-    bool tryGetSpecialFloat(string str, out double val) {
+    bool tryGetSpecialFloat(string str, out double val)
+    {
         switch (str)
         {
             case JSONFloatLiteral.nan:
@@ -1641,7 +1643,8 @@ EOF";
     import std.math : isInfinity, isNaN;
 
     // expected representations of NaN and Inf
-    enum {
+    enum
+    {
         nanString         = '"' ~ JSONFloatLiteral.nan         ~ '"',
         infString         = '"' ~ JSONFloatLiteral.inf         ~ '"',
         negativeInfString = '"' ~ JSONFloatLiteral.negativeInf ~ '"',
@@ -1692,7 +1695,8 @@ pure nothrow @safe @nogc unittest
 pure nothrow @safe unittest // issue 15884
 {
     import std.typecons;
-    void Test(C)() {
+    void Test(C)()
+    {
         C[] a = ['x'];
         JSONValue testVal = a;
         assert(testVal.type == JSON_TYPE.STRING);

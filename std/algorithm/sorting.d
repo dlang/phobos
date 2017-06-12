@@ -1043,7 +1043,8 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
     auto index2 = new long[arr.length];
     makeIndex(arr, index2);
     assert(isSorted!
-            ((long a, long b){
+            ((long a, long b)
+            {
                 return arr[cast(size_t) a] < arr[cast(size_t) b];
             })(index2));
 

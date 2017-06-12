@@ -30,7 +30,8 @@ nothrow:
 @safe:
 @nogc:
 
-private {
+private
+{
 immutable real EXP_2  = 0.135335283236612691893999494972484403L; /* exp(-2) */
 enum real SQRT2PI = 2.50662827463100050241576528481104525L; // sqrt(2pi)
 
@@ -45,7 +46,8 @@ T rationalPoly(T)(T x, const(T) [] numerator, const(T) [] denominator) pure noth
 }
 
 
-private {
+private
+{
 
 /* erfc(x) = exp(-x^2) P(1/x)/Q(1/x)
    1/8 <= 1/x <= 1
@@ -747,7 +749,8 @@ real erfc(real a)
 }
 
 
-private {
+private
+{
 /* Exponentially scaled erfc function
    exp(x^2) erfc(x)
    valid for x > 1.
@@ -1021,7 +1024,8 @@ assert(isIdentical(normalDistributionImpl(NaN(0x325)), NaN(0x325)));
  */
 // TODO: isIEEEQuadruple (128 bit) real implementation; not available from CEPHES.
 real normalDistributionInvImpl(real p)
-in {
+in
+{
   assert(p >= 0.0L && p <= 1.0L, "Domain error");
 }
 body

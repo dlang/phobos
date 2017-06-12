@@ -570,7 +570,8 @@ pure @safe unittest
         {
             //Testing PutC and PutS
             foreach (Type; AliasSeq!(PutC!TC, PutS!TC))
-            (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
+            () // avoid slow optimizations for large functions @@@BUG@@@ 2396
+            {
                 Type type;
                 auto sink = new Type();
 

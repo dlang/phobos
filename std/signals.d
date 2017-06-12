@@ -228,7 +228,8 @@ mixin template Signal(T1...)
      */
     final void unhook(Object o)
     in { assert( status == ST.idle ); }
-    body {
+    body
+    {
         debug (signal) writefln("Signal.unhook(o = %s)", cast(void*) o);
         for (size_t i = 0; i < slots_idx; )
         {
@@ -464,7 +465,8 @@ void linkin() { }
         mixin Signal!(string, long) s3;
     }
 
-    void test(T)(T a) {
+    void test(T)(T a)
+    {
         auto o1 = new Observer;
         auto o2 = new Observer;
         auto o3 = new Observer;

@@ -1359,7 +1359,8 @@ Removes the lock over the specified file segment.
         auto f = File(deleteme, "w+b");
 
         runForked
-        ({
+        (
+        {
             auto g = File(deleteme, "a+b");
             assert(g.tryLock());
             g.unlock();
@@ -1368,7 +1369,8 @@ Removes the lock over the specified file segment.
 
         assert(f.tryLock());
         runForked
-        ({
+        (
+        {
             auto g = File(deleteme, "a+b");
             assert(!g.tryLock());
             assert(!g.tryLock(LockType.read));
@@ -1377,7 +1379,8 @@ Removes the lock over the specified file segment.
 
         f.lock(LockType.read);
         runForked
-        ({
+        (
+        {
             auto g = File(deleteme, "a+b");
             assert(!g.tryLock());
             assert(g.tryLock(LockType.read));
@@ -4569,7 +4572,8 @@ alias stdin = makeGlobal!(core.stdc.stdio.stdin);
     import std.array : array;
     import std.typecons : Yes;
 
-    void main() {
+    void main()
+    {
         stdin                       // read from stdin
         .byLineCopy(Yes.keepTerminator) // copying each line
         .array()                    // convert to array of lines

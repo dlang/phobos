@@ -1460,7 +1460,8 @@ unittest
 
 @system unittest // 6850
 {
-    pure long pureTest() {
+    pure long pureTest()
+    {
         BigInt a = 1;
         BigInt b = 1336;
         a += b;
