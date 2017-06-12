@@ -643,8 +643,8 @@ Complexity: $(BIGOH 1)
     }
 
 /**
-Removes first element of $(D r), wich must be a range obrained originally
-from this container, from both DList instance and range.
+Removes first element of $(D r), wich must be a range obtained originally
+from this container, from both DList instance and range $(D r).
 
 Compexity: $(BIGOH 1)
      */
@@ -659,8 +659,8 @@ Compexity: $(BIGOH 1)
     }
 
 /**
-Removes last element of $(D r), wich must be a range obrained originally
-from this container, from both DList instance and range.
+Removes last element of $(D r), wich must be a range obtained originally
+from this container, from both DList instance and range $(D r).
 
 Compexity: $(BIGOH 1)
      */
