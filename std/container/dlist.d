@@ -868,7 +868,7 @@ private:
     assert(equal(dl[], [1, 3, 4, 5]));
     assert(equal(r, [3, 4, 5]));
     r.popBack();
-    auto before = dl.popLastOf(r);
+    dl.popLastOf(r);
     assert(equal(dl[], [1, 3, 5]));
     assert(equal(r, [3]));
     dl = DList!int([0]);
