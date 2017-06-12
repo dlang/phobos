@@ -21,8 +21,8 @@ module std.container.dlist;
 ///
 @safe unittest
 {
-    import std.container : DList;
     import std.algorithm.comparison : equal;
+    import std.container : DList;
 
     auto s = DList!int(1, 2, 3);
     assert(equal(s[], [1, 2, 3]));
@@ -39,7 +39,7 @@ module std.container.dlist;
 
     // If you want to apply range operations, simply slice it.
     import std.algorithm.searching : countUntil;
-    import std.range : popFrontN, popBackN, walkLength;
+    import std.range : popBackN, popFrontN, walkLength;
 
     auto sl = DList!int([1, 2, 3, 4, 5]);
     assert(countUntil(sl[], 2) == 1);

@@ -241,9 +241,9 @@ class OutBuffer
 
     void vprintf(string format, va_list args) @trusted nothrow
     {
-        import std.string : toStringz;
         import core.stdc.stdio : vsnprintf;
         import core.stdc.stdlib : alloca;
+        import std.string : toStringz;
 
         version (unittest)
             char[3] buffer = void;      // trigger reallocation

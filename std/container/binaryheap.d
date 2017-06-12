@@ -65,11 +65,11 @@ container.
 struct BinaryHeap(Store, alias less = "a < b")
 if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
 {
-    import std.functional : binaryFun;
-    import std.exception : enforce;
     import std.algorithm.comparison : min;
     import std.algorithm.mutation : move, swapAt;
     import std.algorithm.sorting : HeapOps;
+    import std.exception : enforce;
+    import std.functional : binaryFun;
     import std.typecons : RefCounted, RefCountedAutoInitialize;
 
     static if (isRandomAccessRange!Store)
@@ -565,8 +565,8 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
 
 @system unittest
 {
-    import std.internal.test.dummyrange;
     import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange;
 
     alias RefRange = DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random);
 

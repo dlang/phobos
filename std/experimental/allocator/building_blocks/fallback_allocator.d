@@ -256,9 +256,9 @@ struct FallbackAllocator(Primary, Fallback)
 
 @system unittest
 {
+    import std.conv : text;
     import std.experimental.allocator.building_blocks.region : InSituRegion;
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    import std.conv : text;
     import std.typecons : Ternary;
     FallbackAllocator!(InSituRegion!16_384, GCAllocator) a;
     // This allocation uses the stack

@@ -17,9 +17,9 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.json;
 
+import std.array;
 import std.conv;
 import std.range.primitives;
-import std.array;
 import std.traits;
 
 ///
@@ -100,7 +100,7 @@ JSON value node
 */
 struct JSONValue
 {
-    import std.exception : enforceEx, enforce;
+    import std.exception : enforce, enforceEx;
 
     union Store
     {
@@ -702,7 +702,7 @@ Params:
 JSONValue parseJSON(T)(T json, int maxDepth = -1, JSONOptions options = JSONOptions.none)
 if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 {
-    import std.ascii : isWhite, isDigit, isHexDigit, toUpper, toLower;
+    import std.ascii : isDigit, isHexDigit, isWhite, toLower, toUpper;
     import std.typecons : Yes;
     import std.utf : encode;
 
@@ -1224,7 +1224,7 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                 break;
 
             case JSON_TYPE.FLOAT:
-                import std.math : isNaN, isInfinity;
+                import std.math : isInfinity, isNaN;
 
                 auto val = value.store.floating;
 
@@ -1637,8 +1637,8 @@ EOF";
 // handling of special float values (NaN, Inf, -Inf)
 @safe unittest
 {
-    import std.math : isNaN, isInfinity;
     import std.exception : assertThrown;
+    import std.math : isInfinity, isNaN;
 
     // expected representations of NaN and Inf
     enum {

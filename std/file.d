@@ -78,14 +78,14 @@ Source:    $(PHOBOSSRC std/_file.d)
  */
 module std.file;
 
-import core.stdc.stdlib, core.stdc.string, core.stdc.errno;
+import core.stdc.errno, core.stdc.stdlib, core.stdc.string;
 
 import std.datetime;
+import std.internal.cstring;
 import std.meta;
 import std.range.primitives;
 import std.traits;
 import std.typecons;
-import std.internal.cstring;
 
 version (Windows)
 {
@@ -330,9 +330,9 @@ if (isConvertibleToString!R)
 
 version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo = size_t.max) @trusted
 {
+    import core.memory : GC;
     import std.algorithm.comparison : min;
     import std.array : uninitializedArray;
-    import core.memory : GC;
     import std.conv : to;
 
     // A few internal configuration parameters {
@@ -379,9 +379,9 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
 
 version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo = size_t.max) @safe
 {
+    import core.memory : GC;
     import std.algorithm.comparison : min;
     import std.array : uninitializedArray;
-    import core.memory : GC;
     static trustedCreateFileW(const(wchar)* namez, DWORD dwDesiredAccess, DWORD dwShareMode,
                               SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
                               DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
@@ -741,7 +741,7 @@ private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, 
         if (!result)
         {
             import core.stdc.wchar_ : wcslen;
-            import std.conv : to, text;
+            import std.conv : text, to;
 
             if (!f)
                 f = to!(typeof(f))(fromz[0 .. wcslen(fromz)]);
@@ -2321,7 +2321,7 @@ private bool ensureDirExists()(in char[] pathname)
 
 void mkdirRecurse(in char[] pathname) @safe
 {
-    import std.path : dirName, baseName;
+    import std.path : baseName, dirName;
 
     const left = dirName(pathname);
     if (left.length != pathname.length && !exists(left))
@@ -2338,7 +2338,7 @@ void mkdirRecurse(in char[] pathname) @safe
 {
     import std.exception : assertThrown;
     {
-        import std.path : buildPath, buildNormalizedPath;
+        import std.path : buildNormalizedPath, buildPath;
 
         immutable basepath = deleteme ~ "_dir";
         scope(exit) () @trusted { rmdirRecurse(basepath); }();
@@ -2748,7 +2748,7 @@ else version (NetBSD)
     }
     else version (FreeBSD)
     {
-        import std.exception : errnoEnforce, assumeUnique;
+        import std.exception : assumeUnique, errnoEnforce;
         enum
         {
             CTL_KERN = 1,
@@ -3436,7 +3436,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
     else version(Posix)
     {
         static import core.stdc.stdio;
-        import std.conv : to, octal;
+        import std.conv : octal, to;
 
         immutable fdr = core.sys.posix.fcntl.open(fromz, O_RDONLY);
         cenforce(fdr != -1, f, fromz);
@@ -3609,7 +3609,7 @@ version(Windows) @system unittest
 
 version(Posix) @system unittest
 {
-    import std.exception : enforce, collectException;
+    import std.exception : collectException, enforce;
     import std.process : executeShell;
     collectException(rmdirRecurse(deleteme));
     auto d = deleteme~"/a/b/c/d/e/f/g";
@@ -3970,10 +3970,10 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 {
     string[] listdir(string pathname)
     {
-        import std.file;
-        import std.path;
         import std.algorithm;
         import std.array;
+        import std.file;
+        import std.path;
 
         return std.file.dirEntries(pathname, SpanMode.shallow)
             .filter!(a => a.isFile)
@@ -3997,7 +3997,7 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
     import std.algorithm.searching : startsWith;
     import std.array : array;
     import std.conv : to;
-    import std.path : dirEntries, buildPath, absolutePath;
+    import std.path : absolutePath, buildPath, dirEntries;
     import std.process : thisProcessID;
     import std.range.primitives : walkLength;
 
@@ -4091,7 +4091,7 @@ auto dirEntries(string path, string pattern, SpanMode mode,
     bool followSymlink = true)
 {
     import std.algorithm.iteration : filter;
-    import std.path : globMatch, baseName;
+    import std.path : baseName, globMatch;
 
     bool f(DirEntry de) { return globMatch(baseName(de.name), pattern); }
     return filter!f(DirIterator(path, mode, followSymlink));
@@ -4199,11 +4199,11 @@ auto dirEntries(string path, string pattern, SpanMode mode,
 Select!(Types.length == 1, Types[0][], Tuple!(Types)[])
 slurp(Types...)(string filename, in char[] format)
 {
-    import std.stdio : File;
-    import std.format : formattedRead;
     import std.array : appender;
     import std.conv : text;
     import std.exception : enforce;
+    import std.format : formattedRead;
+    import std.stdio : File;
 
     auto app = appender!(typeof(return))();
     ElementType!(typeof(return)) toAdd;

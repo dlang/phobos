@@ -1,10 +1,10 @@
 ///
 module std.experimental.logger.core;
 
+import core.sync.mutex : Mutex;
 import std.datetime;
 import std.range.primitives;
 import std.traits;
-import core.sync.mutex : Mutex;
 
 import std.experimental.logger.filelogger;
 
@@ -627,7 +627,7 @@ alias fatalf = defaultLogFunctionf!(LogLevel.fatal);
 
 private struct MsgRange
 {
-    import std.traits : isSomeString, isSomeChar;
+    import std.traits : isSomeChar, isSomeString;
 
     private Logger log;
 
@@ -1939,7 +1939,7 @@ version(unittest) private void testFuncNames(Logger logger) @safe
 @safe unittest
 {
     import std.conv : to;
-    import std.exception : assertThrown, assertNotThrown;
+    import std.exception : assertNotThrown, assertThrown;
     import std.format : format;
 
     auto l = new TestLogger(LogLevel.all);
@@ -2174,8 +2174,8 @@ version(unittest) private void testFuncNames(Logger logger) @safe
 @safe unittest
 {
     import std.conv : to;
-    import std.string : indexOf;
     import std.format : format;
+    import std.string : indexOf;
 
     auto oldunspecificLogger = sharedLog;
 
@@ -2996,7 +2996,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
 // to shared logger
 @system unittest
 {
-    import std.concurrency, core.atomic, core.thread;
+    import core.atomic, core.thread, std.concurrency;
 
     static shared logged_count = 0;
 
@@ -3139,9 +3139,9 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
 // Issue 15517
 @system unittest
 {
+    import std.file : exists, remove;
     import std.stdio : File;
     import std.string : indexOf;
-    import std.file : exists, remove;
 
     string fn = "logfile.log";
     if (exists(fn))

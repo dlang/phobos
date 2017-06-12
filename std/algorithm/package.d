@@ -190,8 +190,8 @@ module std.algorithm;
 public import std.algorithm.comparison;
 public import std.algorithm.iteration;
 public import std.algorithm.mutation;
-public import std.algorithm.setops;
 public import std.algorithm.searching;
+public import std.algorithm.setops;
 public import std.algorithm.sorting;
 
 static import std.functional;

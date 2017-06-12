@@ -63,10 +63,10 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
  */
 module std.digest.digest;
 
-import std.meta : allSatisfy;
-import std.traits;
-import std.range.primitives;
 public import std.ascii : LetterCase;
+import std.meta : allSatisfy;
+import std.range.primitives;
+import std.traits;
 
 
 ///
@@ -89,7 +89,7 @@ public import std.ascii : LetterCase;
 @system unittest
 {
     //Generating the hashes of a file, idiomatic D way
-    import std.digest.crc, std.digest.sha, std.digest.md;
+    import std.digest.crc, std.digest.md, std.digest.sha;
     import std.stdio;
 
     // Digests a file and prints the result.
@@ -115,7 +115,7 @@ public import std.ascii : LetterCase;
 @system unittest
 {
     //Generating the hashes of a file using the template API
-    import std.digest.crc, std.digest.sha, std.digest.md;
+    import std.digest.crc, std.digest.md, std.digest.sha;
     import std.stdio;
     // Digests a file and prints the result.
     void digestFile(Hash)(ref Hash hash, string filename)
@@ -154,7 +154,7 @@ public import std.ascii : LetterCase;
 ///
 @system unittest
 {
-    import std.digest.crc, std.digest.sha, std.digest.md;
+    import std.digest.crc, std.digest.md, std.digest.sha;
     import std.stdio;
 
     // Digests a file and prints the result.
@@ -260,8 +260,8 @@ version(ExampleDigest)
 {
     //Using the OutputRange feature
     import std.algorithm.mutation : copy;
-    import std.range : repeat;
     import std.digest.md;
+    import std.range : repeat;
 
     auto oneMillionRange = repeat!ubyte(cast(ubyte)'a', 1000000);
     auto ctx = makeDigest!MD5();
@@ -405,7 +405,7 @@ if (isDigest!T)
 ///
 @system unittest
 {
-    import std.digest.md, std.digest.hmac;
+    import std.digest.hmac, std.digest.md;
     static assert(hasBlockSize!MD5        && MD5.blockSize      == 512);
     static assert(hasBlockSize!(HMAC!MD5) && HMAC!MD5.blockSize == 512);
 }
@@ -413,7 +413,7 @@ if (isDigest!T)
 package template isDigestibleRange(Range)
 {
     import std.digest.md;
-    import std.range : isInputRange, ElementType;
+    import std.range : ElementType, isInputRange;
     enum bool isDigestibleRange = isInputRange!Range && is(typeof(
           {
           MD5 ha; //Could use any conformant hash
@@ -468,7 +468,7 @@ if (allSatisfy!(isArray, typeof(data)))
 ///
 @system unittest
 {
-    import std.digest.md, std.digest.sha, std.digest.crc;
+    import std.digest.crc, std.digest.md, std.digest.sha;
     auto md5   = digest!MD5(  "The quick brown fox jumps over the lazy dog");
     auto sha1  = digest!SHA1( "The quick brown fox jumps over the lazy dog");
     auto crc32 = digest!CRC32("The quick brown fox jumps over the lazy dog");
@@ -629,8 +629,8 @@ interface Digest
 {
     //Using the OutputRange feature
     import std.algorithm.mutation : copy;
-    import std.range : repeat;
     import std.digest.md;
+    import std.range : repeat;
 
     auto oneMillionRange = repeat!ubyte(cast(ubyte)'a', 1000000);
     auto ctx = new MD5Digest();
@@ -641,7 +641,7 @@ interface Digest
 ///
 @system unittest
 {
-    import std.digest.md, std.digest.sha, std.digest.crc;
+    import std.digest.crc, std.digest.md, std.digest.sha;
     ubyte[] md5   = (new MD5Digest()).digest("The quick brown fox jumps over the lazy dog");
     ubyte[] sha1  = (new SHA1Digest()).digest("The quick brown fox jumps over the lazy dog");
     ubyte[] crc32 = (new CRC32Digest()).digest("The quick brown fox jumps over the lazy dog");
@@ -1136,7 +1136,7 @@ if (isInputRange!R1 && isInputRange!R2 && !isInfinite!R1 && !isInfinite!R2 &&
     import std.internal.test.dummyrange : ReferenceInputRange;
     import std.range : takeExactly;
     import std.string : representation;
-    import std.utf : byWchar, byDchar;
+    import std.utf : byDchar, byWchar;
 
     {
         auto hex1 = "02CA3484C375EDD3C0F08D3F50D119E61077".representation;

@@ -333,7 +333,7 @@ public struct UUID
          */
         this(T)(in T[] uuid) if (isSomeChar!(Unqual!T))
         {
-            import std.conv : to, parse;
+            import std.conv : parse, to;
             if (uuid.length < 36)
             {
                 throw new UUIDParsingException(to!string(uuid), 0,
@@ -402,9 +402,9 @@ public struct UUID
 
         @safe pure unittest
         {
+            import std.conv : to;
             import std.exception;
             import std.meta;
-            import std.conv : to;
 
             foreach (S; AliasSeq!(char[], const(char)[], immutable(char)[],
                                   wchar[], const(wchar)[], immutable(wchar)[],
@@ -1233,7 +1233,7 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
 ///
 @safe unittest
 {
-    import std.random : Xorshift192, unpredictableSeed;
+    import std.random : unpredictableSeed, Xorshift192;
 
     //simple call
     auto uuid = randomUUID();
@@ -1253,13 +1253,13 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
  */
 @safe unittest
 {
-    import std.random : rndGen, Mt19937;
+    import std.random : Mt19937, rndGen;
     static assert(is(typeof(rndGen) == Mt19937));
 }
 
 @safe unittest
 {
-    import std.random : Xorshift192, unpredictableSeed;
+    import std.random : unpredictableSeed, Xorshift192;
     //simple call
     auto uuid = randomUUID();
 
@@ -1314,8 +1314,8 @@ UUID parseUUID(Range)(ref Range uuidRange)
 if (isInputRange!Range
     && is(Unqual!(ElementType!Range) == dchar))
 {
-    import std.conv : ConvException, parse;
     import std.ascii : isHexDigit;
+    import std.conv : ConvException, parse;
 
     static if (isForwardRange!Range)
         auto errorCopy = uuidRange.save;
@@ -1475,9 +1475,9 @@ if (isInputRange!Range
 
 @safe pure unittest
 {
+    import std.conv : to;
     import std.exception;
     import std.meta;
-    import std.conv : to;
 
     struct TestRange(bool forward)
     {

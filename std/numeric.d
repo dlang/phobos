@@ -128,7 +128,7 @@ if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision +
 ///
 @safe unittest
 {
-    import std.math : sin, cos;
+    import std.math : cos, sin;
 
     // Define a 16-bit floating point values
     CustomFloat!16                                x;     // Using the number of bits
@@ -2187,10 +2187,10 @@ F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
 if (isRandomAccessRange!(R1) && hasLength!(R1) &&
     isRandomAccessRange!(R2) && hasLength!(R2))
 {
-    import std.functional : binaryFun;
-    import std.algorithm.mutation : swap;
-    import core.stdc.stdlib : malloc, free;
     import core.exception : onOutOfMemoryError;
+    import core.stdc.stdlib : free, malloc;
+    import std.algorithm.mutation : swap;
+    import std.functional : binaryFun;
 
     if (s.length < t.length) return gapWeightedSimilarity(t, s, lambda);
     if (!t.length) return 0;
@@ -2316,7 +2316,7 @@ optimizations.
 struct GapWeightedSimilarityIncremental(Range, F = double)
 if (isRandomAccessRange!(Range) && hasLength!(Range))
 {
-    import core.stdc.stdlib : malloc, realloc, alloca, free;
+    import core.stdc.stdlib : alloca, free, malloc, realloc;
 
 private:
     Range s, t;
@@ -2765,8 +2765,8 @@ private alias lookup_t = float;
  */
 final class Fft
 {
-    import std.algorithm.iteration : map;
     import core.bitop : bsf;
+    import std.algorithm.iteration : map;
     import std.array : uninitializedArray;
 
 private:
@@ -3255,8 +3255,8 @@ void inverseFft(Ret, R)(R range, Ret buf)
 @system unittest
 {
     import std.algorithm;
-    import std.range;
     import std.conv;
+    import std.range;
     // Test values from R and Octave.
     auto arr = [1,2,3,4,5,6,7,8];
     auto fft1 = fft(arr);

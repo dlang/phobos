@@ -1199,7 +1199,7 @@ private:
     {
         long tm_gmtoff(long stdTime) @trusted const nothrow
         {
-            import core.stdc.time : localtime, gmtime, tm;
+            import core.stdc.time : gmtime, localtime, tm;
 
             time_t unixTime = stdTimeToUnixTime(stdTime);
             tm* buf = localtime(&unixTime);
@@ -1595,7 +1595,7 @@ package:
     static immutable(SimpleTimeZone) fromISOString(S)(S isoString) @safe pure
         if (isSomeString!S)
     {
-        import std.algorithm.searching : startsWith, countUntil, all;
+        import std.algorithm.searching : all, countUntil, startsWith;
         import std.ascii : isDigit;
         import std.conv : to;
         import std.format : format;
@@ -1739,7 +1739,7 @@ package:
     static immutable(SimpleTimeZone) fromISOExtString(S)(S isoExtString) @safe pure
         if (isSomeString!S)
     {
-        import std.algorithm.searching : startsWith, countUntil, all;
+        import std.algorithm.searching : all, countUntil, startsWith;
         import std.ascii : isDigit;
         import std.conv : to;
         import std.format : format;
@@ -1914,11 +1914,11 @@ private:
   +/
 final class PosixTimeZone : TimeZone
 {
-    import std.algorithm.searching : countUntil, canFind, startsWith;
-    import std.file : isDir, isFile, exists, dirEntries, SpanMode, DirEntry;
+    import std.algorithm.searching : canFind, countUntil, startsWith;
+    import std.file : dirEntries, DirEntry, exists, isDir, isFile, SpanMode;
     import std.path : extension;
     import std.stdio : File;
-    import std.string : strip, representation;
+    import std.string : representation, strip;
     import std.traits : isArray, isSomeChar;
 public:
 
@@ -2081,10 +2081,10 @@ public:
     static immutable(PosixTimeZone) getTimeZone(string name, string tzDatabaseDir = defaultTZDatabaseDir) @trusted
     {
         import std.algorithm.sorting : sort;
-        import std.range : retro;
+        import std.conv : to;
         import std.format : format;
         import std.path : asNormalizedPath, chainPath;
-        import std.conv : to;
+        import std.range : retro;
 
         name = strip(name);
 

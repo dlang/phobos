@@ -21,8 +21,8 @@ module std.container.slist;
 ///
 @safe unittest
 {
-    import std.container : SList;
     import std.algorithm.comparison : equal;
+    import std.container : SList;
 
     auto s = SList!int(1, 2, 3);
     assert(equal(s[], [1, 2, 3]));
@@ -57,7 +57,7 @@ struct SList(T)
 {
     import std.exception : enforce;
     import std.range : Take;
-    import std.range.primitives : isInputRange, isForwardRange, ElementType;
+    import std.range.primitives : ElementType, isForwardRange, isInputRange;
     import std.traits : isImplicitlyConvertible;
 
     private struct Node

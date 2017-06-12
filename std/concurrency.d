@@ -975,8 +975,8 @@ bool register(string name, Tid tid)
  */
 bool unregister(string name)
 {
-    import std.algorithm.searching : countUntil;
     import std.algorithm.mutation : remove, SwapStrategy;
+    import std.algorithm.searching : countUntil;
 
     synchronized (registryLock)
     {
@@ -2269,7 +2269,7 @@ private
 version (unittest)
 {
     import std.stdio;
-    import std.typecons : tuple, Tuple;
+    import std.typecons : Tuple, tuple;
 
     void testfn(Tid tid)
     {
@@ -2410,7 +2410,7 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
     // check that var is global, can't take address of a TLS variable
     static assert(is(typeof({ __gshared p = &var; })),
         "var must be 'static shared' or '__gshared'.");
-    import core.atomic : atomicLoad, MemoryOrder, atomicStore;
+    import core.atomic : atomicLoad, atomicStore, MemoryOrder;
 
     static shared bool flag;
     if (!atomicLoad!(MemoryOrder.acq)(flag))

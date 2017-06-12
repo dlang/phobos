@@ -18,9 +18,9 @@
  */
 module std.container.array;
 
+import core.exception : RangeError;
 import std.range.primitives;
 import std.traits;
-import core.exception : RangeError;
 
 public import std.container.util;
 
@@ -251,7 +251,7 @@ private struct RangeT(A)
 struct Array(T)
 if (!is(Unqual!T == bool))
 {
-    import core.stdc.stdlib : malloc, realloc, free;
+    import core.stdc.stdlib : free, malloc, realloc;
     import core.stdc.string : memcpy, memmove, memset;
 
     import core.memory : GC;
@@ -419,8 +419,8 @@ if (!is(Unqual!T == bool))
     this(U)(U[] values...)
     if (isImplicitlyConvertible!(U, T))
     {
-        import std.conv : emplace;
         import core.checkedint : mulu;
+        import std.conv : emplace;
         bool overflow;
         const nbytes = mulu(values.length, T.sizeof, overflow);
         if (overflow) assert(0);

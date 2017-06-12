@@ -229,15 +229,15 @@ public import std.experimental.allocator.common,
 // Example in the synopsis above
 @system unittest
 {
-    import std.algorithm.comparison : min, max;
-    import std.experimental.allocator.building_blocks.free_list : FreeList;
-    import std.experimental.allocator.gc_allocator : GCAllocator;
-    import std.experimental.allocator.building_blocks.segregator : Segregator;
-    import std.experimental.allocator.building_blocks.bucketizer : Bucketizer;
+    import std.algorithm.comparison : max, min;
     import std.experimental.allocator.building_blocks.allocator_list
         : AllocatorList;
     import std.experimental.allocator.building_blocks.bitmapped_block
         : BitmappedBlock;
+    import std.experimental.allocator.building_blocks.bucketizer : Bucketizer;
+    import std.experimental.allocator.building_blocks.free_list : FreeList;
+    import std.experimental.allocator.building_blocks.segregator : Segregator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
 
     alias FList = FreeList!(GCAllocator, 0, unbounded);
     alias A = Segregator!(
@@ -601,10 +601,10 @@ allocator can be cast to $(D shared).
 
 @system unittest
 {
-    import std.experimental.allocator.mallocator : Mallocator;
-    import std.experimental.allocator.building_blocks.free_list : SharedFreeList;
-    import std.exception : assertThrown;
     import core.exception : AssertError;
+    import std.exception : assertThrown;
+    import std.experimental.allocator.building_blocks.free_list : SharedFreeList;
+    import std.experimental.allocator.mallocator : Mallocator;
 
     assert(processAllocator);
     assert(theAllocator);
@@ -1320,8 +1320,8 @@ if (isInputRange!R && !isInfinite!R)
 /*pure*/ nothrow @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.internal.test.dummyrange;
     import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.internal.test.dummyrange;
     import std.range : iota;
     foreach (DummyType; AllDummyRanges)
     {

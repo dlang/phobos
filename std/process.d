@@ -87,8 +87,8 @@ module std.process;
 
 version (Posix)
 {
-    import core.sys.posix.unistd;
     import core.sys.posix.sys.wait;
+    import core.sys.posix.unistd;
 }
 version (Windows)
 {
@@ -98,10 +98,10 @@ version (Windows)
     import std.windows.syserror;
 }
 
+import std.internal.cstring;
+import std.internal.processinit;
 import std.range.primitives;
 import std.stdio;
-import std.internal.processinit;
-import std.internal.cstring;
 
 
 // When the DMC runtime is used, we have to use some custom functions
@@ -350,9 +350,9 @@ private Pid spawnProcessImpl(in char[][] args,
     @trusted // TODO: Should be @safe
 {
     import core.exception : RangeError;
+    import std.algorithm.searching : any;
     import std.conv : text;
     import std.path : isDirSeparator;
-    import std.algorithm.searching : any;
     import std.string : toStringz;
 
     if (args.empty) throw new RangeError();
@@ -386,7 +386,7 @@ private Pid spawnProcessImpl(in char[][] args,
     scope(exit) if (workDirFD >= 0) close(workDirFD);
     if (workDir.length)
     {
-        import core.sys.posix.fcntl : open, O_RDONLY, stat_t, fstat, S_ISDIR;
+        import core.sys.posix.fcntl : fstat, open, O_RDONLY, stat_t, S_ISDIR;
         workDirFD = open(workDir.tempCString(), O_RDONLY);
         if (workDirFD < 0)
             throw ProcessException.newFromErrno("Failed to open working directory");
@@ -448,9 +448,9 @@ private Pid spawnProcessImpl(in char[][] args,
         setCLOEXEC(STDERR_FILENO, false);
         if (!(config & Config.inheritFDs))
         {
-            import core.sys.posix.poll : pollfd, poll, POLLNVAL;
-            import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
             import core.stdc.stdlib : malloc;
+            import core.sys.posix.poll : poll, pollfd, POLLNVAL;
+            import core.sys.posix.sys.resource : getrlimit, rlimit, RLIMIT_NOFILE;
 
             // Get the maximum number of file descriptors that could be open.
             rlimit r;
@@ -739,8 +739,8 @@ version (Posix)
 private string searchPathFor(in char[] executable)
     @trusted //TODO: @safe nothrow
 {
-    import std.conv : to;
     import std.algorithm.iteration : splitter;
+    import std.conv : to;
     import std.path : buildPath;
 
     auto pathz = core.stdc.stdlib.getenv("PATH");
@@ -778,7 +778,7 @@ version (Posix) @safe unittest
 version (Posix)
 private void setCLOEXEC(int fd, bool on) nothrow @nogc
 {
-    import core.sys.posix.fcntl : fcntl, F_GETFD, FD_CLOEXEC, F_SETFD;
+    import core.sys.posix.fcntl : fcntl, FD_CLOEXEC, F_GETFD, F_SETFD;
     auto flags = fcntl(fd, F_GETFD);
     if (flags >= 0)
     {
@@ -813,12 +813,12 @@ version (Posix) @system unittest
 {
     import core.sys.posix.fcntl : open, O_RDONLY;
     import core.sys.posix.unistd : close;
-    import std.path : buildPath;
     import std.algorithm.searching : canFind, findSplitBefore;
-    import std.functional : reverseArgs;
     import std.array : split;
     import std.conv : to;
     static import std.file;
+    import std.functional : reverseArgs;
+    import std.path : buildPath;
 
     auto directory = uniqueTempPath();
     std.file.mkdir(directory);
@@ -926,8 +926,8 @@ version (Posix) @system unittest
 
 @system unittest // Stream redirection in spawnProcess().
 {
-    import std.string;
     import std.path : buildPath;
+    import std.string;
     version (Windows) TestScript prog =
        "set /p INPUT=
         echo %INPUT% output %~1
@@ -1590,7 +1590,7 @@ void kill(Pid pid, int codeOrSignal)
     }
     else version (Posix)
     {
-        import core.sys.posix.signal : SIGTERM, SIGKILL;
+        import core.sys.posix.signal : SIGKILL, SIGTERM;
         TestScript prog = "while true; do sleep 1; done";
     }
     auto pid = spawnProcess(prog.path);
@@ -2236,9 +2236,9 @@ private auto executeImpl(alias pipeFunc, Cmd, ExtraPipeFuncArgs...)(
     in char[] workDir = null,
     ExtraPipeFuncArgs extraArgs = ExtraPipeFuncArgs.init)
 {
-    import std.typecons : Tuple;
-    import std.array : appender;
     import std.algorithm.comparison : min;
+    import std.array : appender;
+    import std.typecons : Tuple;
 
     auto p = pipeFunc(commandLine, Redirect.stdout | Redirect.stderrToStdout,
                       env, config, workDir, extraArgs);
@@ -2491,7 +2491,7 @@ private struct TestScript
 
     ~this()
     {
-        import std.file : remove, exists;
+        import std.file : exists, remove;
         if (!path.empty && exists(path))
         {
             try { remove(path); }
@@ -2806,10 +2806,10 @@ if (is(typeof(allocator(size_t.init)[0] = char.init)))
 
 version(Windows) version(unittest)
 {
-    import core.sys.windows.shellapi : CommandLineToArgvW;
-    import core.sys.windows.windows;
     import core.stdc.stddef;
     import core.stdc.wchar_ : wcslen;
+    import core.sys.windows.shellapi : CommandLineToArgvW;
+    import core.sys.windows.windows;
     import std.array;
 
     string[] parseCommandLine(string line)
@@ -3469,14 +3469,14 @@ Distributed under the Boost Software License, Version 1.0.
 */
 
 
-import core.stdc.stdlib;
 import core.stdc.errno;
-import core.thread;
+import core.stdc.stdlib;
 import core.stdc.string;
+import core.thread;
 
 version (Windows)
 {
-    import std.format, std.random, std.file;
+    import std.file, std.format, std.random;
 }
 version (Posix)
 {
@@ -3484,7 +3484,7 @@ version (Posix)
 }
 version (unittest)
 {
-    import std.file, std.conv, std.random;
+    import std.conv, std.file, std.random;
 }
 
 

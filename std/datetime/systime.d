@@ -10,8 +10,8 @@ module std.datetime.systime;
 import core.time;
 import std.datetime.date;
 import std.datetime.timezone;
-import std.format : format;
 import std.exception : enforce;
+import std.format : format;
 import std.range.primitives;
 import std.traits : isIntegral, isSigned, isSomeString, Unqual;
 
@@ -1758,7 +1758,7 @@ public:
     ///
     @safe unittest
     {
-        import core.time : msecs, usecs, hnsecs, nsecs;
+        import core.time : hnsecs, msecs, nsecs, usecs;
         import std.datetime.date : DateTime;
 
         auto dt = DateTime(1982, 4, 1, 20, 59, 22);
@@ -1846,7 +1846,7 @@ public:
     ///
     @safe unittest
     {
-        import core.time : Duration, msecs, hnsecs, nsecs;
+        import core.time : Duration, hnsecs, msecs, nsecs;
         import std.datetime.date : DateTime;
 
         auto st = SysTime(DateTime(1982, 4, 1, 20, 59, 22));
@@ -4564,7 +4564,7 @@ public:
     ///
     @safe unittest
     {
-        import core.time : msecs, hnsecs;
+        import core.time : hnsecs, msecs;
         import std.datetime.date : DateTime;
 
         auto st1 = SysTime(DateTime(2010, 1, 1, 11, 23, 12));
@@ -7383,7 +7383,7 @@ public:
     ///
     @safe unittest
     {
-        import core.time : msecs, usecs, hnsecs;
+        import core.time : hnsecs, msecs, usecs;
         import std.datetime.date : DateTime;
 
         assert(SysTime(DateTime(1999, 1, 6, 0, 0, 0)).endOfMonth ==
@@ -7834,7 +7834,7 @@ public:
     ///
     @safe unittest
     {
-        import core.time : msecs, hnsecs;
+        import core.time : hnsecs, msecs;
         import std.datetime.date : DateTime;
 
         assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOString() ==
@@ -7966,7 +7966,7 @@ public:
     ///
     @safe unittest
     {
-        import core.time : msecs, hnsecs;
+        import core.time : hnsecs, msecs;
         import std.datetime.date : DateTime;
 
         assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toISOExtString() ==
@@ -8102,7 +8102,7 @@ public:
     ///
     @safe unittest
     {
-        import core.time : msecs, hnsecs;
+        import core.time : hnsecs, msecs;
         import std.datetime.date : DateTime;
 
         assert(SysTime(DateTime(2010, 7, 4, 7, 6, 12)).toSimpleString() ==
@@ -8247,7 +8247,7 @@ public:
     static SysTime fromISOString(S)(in S isoString, immutable TimeZone tz = null) @safe
         if (isSomeString!S)
     {
-        import std.algorithm.searching : startsWith, find;
+        import std.algorithm.searching : find, startsWith;
         import std.conv : to;
         import std.string : strip;
 
@@ -8310,7 +8310,7 @@ public:
     ///
     @safe unittest
     {
-        import core.time : hours, msecs, usecs, hnsecs;
+        import core.time : hnsecs, hours, msecs, usecs;
         import std.datetime.date : DateTime;
         import std.datetime.timezone : SimpleTimeZone, UTC;
 
@@ -8559,7 +8559,7 @@ public:
     ///
     @safe unittest
     {
-        import core.time : hours, msecs, usecs, hnsecs;
+        import core.time : hnsecs, hours, msecs, usecs;
         import std.datetime.date : DateTime;
         import std.datetime.timezone : SimpleTimeZone, UTC;
 
@@ -8785,7 +8785,7 @@ public:
     ///
     @safe unittest
     {
-        import core.time : hours, msecs, usecs, hnsecs;
+        import core.time : hnsecs, hours, msecs, usecs;
         import std.datetime.date : DateTime;
         import std.datetime.timezone : SimpleTimeZone, UTC;
 
@@ -9582,8 +9582,8 @@ SysTime parseRFC822DateTime(R)(R value) @safe
 if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
     (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
 {
-    import std.algorithm.searching : find, all;
-    import std.ascii : isDigit, isAlpha, isPrintable;
+    import std.algorithm.searching : all, find;
+    import std.ascii : isAlpha, isDigit, isPrintable;
     import std.conv : to;
     import std.functional : not;
     import std.string : capitalize, format;

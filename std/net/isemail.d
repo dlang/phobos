@@ -28,7 +28,7 @@ module std.net.isemail;
 import std.range.primitives; // : ElementType;
 import std.regex;
 import std.traits;
-import std.typecons : Flag, Yes, No;
+import std.typecons : Flag, No, Yes;
 
 /**
  * Check that an email address conforms to RFCs 5321, 5322 and others.
@@ -62,11 +62,11 @@ EmailStatus isEmail(Char)(const(Char)[] email, CheckDns checkDNS = No.checkDns,
 EmailStatusCode errorLevel = EmailStatusCode.none)
 if (isSomeChar!(Char))
 {
-    import std.algorithm.iteration : uniq, filter, map;
+    import std.algorithm.iteration : filter, map, uniq;
     import std.algorithm.searching : canFind, maxElement;
-    import std.exception : enforce;
     import std.array : array, split;
     import std.conv : to;
+    import std.exception : enforce;
     import std.string : indexOf, lastIndexOf;
     import std.uni : isNumber;
 

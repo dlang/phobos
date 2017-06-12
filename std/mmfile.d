@@ -17,13 +17,13 @@
  */
 module std.mmfile;
 
-private import std.file;
+private import core.stdc.errno;
 private import core.stdc.stdio;
 private import core.stdc.stdlib;
-private import core.stdc.errno;
+import std.conv, std.exception, std.stdio;
+private import std.file;
 private import std.path;
 private import std.string;
-import std.conv, std.exception, std.stdio;
 
 import std.internal.cstring;
 
@@ -38,9 +38,9 @@ version (Windows)
 else version (Posix)
 {
     private import core.sys.posix.fcntl;
-    private import core.sys.posix.unistd;
     private import core.sys.posix.sys.mman;
     private import core.sys.posix.sys.stat;
+    private import core.sys.posix.unistd;
 }
 else
 {
@@ -635,8 +635,8 @@ private:
 
 @system unittest
 {
-    import std.file : deleteme;
     import core.memory : GC;
+    import std.file : deleteme;
 
     const size_t K = 1024;
     size_t win = 64*K; // assume the page size is 64K
@@ -681,8 +681,8 @@ private:
 version(linux)
 @system unittest // Issue 14868
 {
-    import std.typecons : scoped;
     import std.file : deleteme;
+    import std.typecons : scoped;
 
     // Test retaining ownership of File/fd
 

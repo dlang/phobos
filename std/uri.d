@@ -316,8 +316,8 @@ if (isSomeChar!Char)
 string decode(Char)(in Char[] encodedURI)
 if (isSomeChar!Char)
 {
-    import std.utf : encode;
     import std.algorithm.iteration : each;
+    import std.utf : encode;
     auto s = URI_Decode(encodedURI, URI_Reserved | URI_Hash);
     char[] r;
     s.each!(c => encode(r, c));
@@ -332,8 +332,8 @@ if (isSomeChar!Char)
 string decodeComponent(Char)(in Char[] encodedURIComponent)
 if (isSomeChar!Char)
 {
-    import std.utf : encode;
     import std.algorithm.iteration : each;
+    import std.utf : encode;
     auto s = URI_Decode(encodedURIComponent, 0);
     char[] r;
     s.each!(c => encode(r, c));

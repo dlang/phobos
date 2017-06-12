@@ -230,7 +230,7 @@ struct AlignedMallocator
     @trusted @nogc nothrow
     void[] alignedAllocate(size_t bytes, uint a) shared
     {
-        import core.stdc.errno : ENOMEM, EINVAL;
+        import core.stdc.errno : EINVAL, ENOMEM;
         assert(a.isGoodDynamicAlignment);
         void* result;
         auto code = posix_memalign(&result, a, bytes);

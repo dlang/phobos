@@ -13,8 +13,8 @@ Authors:   $(HTTP digitalmars.com, Walter Bright),
  */
 module std.stdio;
 
-public import core.stdc.stdio;
 import core.stdc.stddef; // wchar_t
+public import core.stdc.stdio;
 import std.algorithm.mutation; // copy
 import std.meta; // allSatisfy
 import std.range.primitives; // ElementEncodingType, empty, front,
@@ -350,7 +350,7 @@ Hello, Jimmy!
 struct File
 {
     import std.range.primitives : ElementEncodingType;
-    import std.traits : isScalarType, isArray;
+    import std.traits : isArray, isScalarType;
     enum Orientation { unknown, narrow, wide }
 
     private struct Impl
@@ -500,9 +500,9 @@ Throws: $(D ErrnoException) in case of error.
  */
     void reopen(string name, in char[] stdioOpenmode = "rb") @trusted
     {
-        import std.internal.cstring : tempCString;
-        import std.exception : enforce, errnoEnforce;
         import std.conv : text;
+        import std.exception : enforce, errnoEnforce;
+        import std.internal.cstring : tempCString;
 
         enforce(isOpen, "Attempting to reopen() an unopened file");
 
@@ -525,8 +525,8 @@ Throws: $(D ErrnoException) in case of error.
 
     @system unittest // Test changing filename
     {
+        import std.exception : assertNotThrown, assertThrown;
         static import std.file;
-        import std.exception : assertThrown, assertNotThrown;
 
         auto deleteme = testFilename();
         std.file.write(deleteme, "foo");
@@ -547,8 +547,8 @@ Throws: $(D ErrnoException) in case of error.
     version (CRuntime_Microsoft) {} else // Not implemented
     @system unittest // Test changing mode
     {
+        import std.exception : assertNotThrown, assertThrown;
         static import std.file;
-        import std.exception : assertThrown, assertNotThrown;
 
         auto deleteme = testFilename();
         std.file.write(deleteme, "foo");
@@ -649,9 +649,9 @@ Throws: $(D ErrnoException) in case of error.
     version(Windows)
     void windowsHandleOpen(HANDLE handle, in char[] stdioOpenmode)
     {
+        import core.stdc.stdint : intptr_t;
         import std.exception : errnoEnforce;
         import std.format : format;
-        import core.stdc.stdint : intptr_t;
 
         // Create file descriptors from the handles
         version (DIGITAL_MARS_STDIO)
@@ -838,8 +838,8 @@ Throws: $(D Exception) if the file is not opened or if the call to $(D fflush) f
     @safe unittest
     {
         // Issue 12349
-        static import std.file;
         import std.exception : assertThrown;
+        static import std.file;
 
         auto deleteme = testFilename();
         auto f = File(deleteme, "w");
@@ -1003,7 +1003,7 @@ Throws: $(D Exception) if the file is not opened.
  */
     void seek(long offset, int origin = SEEK_SET) @trusted
     {
-        import std.conv : to, text;
+        import std.conv : text, to;
         import std.exception : enforce, errnoEnforce;
 
         enforce(isOpen, "Attempting to seek() in an unopened file");
@@ -1031,8 +1031,8 @@ Throws: $(D Exception) if the file is not opened.
 
     @system unittest
     {
-        static import std.file;
         import std.conv : text;
+        static import std.file;
 
         auto deleteme = testFilename();
         auto f = File(deleteme, "w+");
@@ -1089,8 +1089,8 @@ Throws: $(D Exception) if the file is not opened.
     ///
     @system unittest
     {
-        static import std.file;
         import std.conv : text;
+        static import std.file;
 
         auto testFile = testFilename();
         std.file.write(testFile, "abcdefghijklmnopqrstuvwqxyz");
@@ -1152,7 +1152,7 @@ Throws: $(D Exception) if the file is not opened.
 
     version(Windows)
     {
-        import core.sys.windows.windows : ULARGE_INTEGER, OVERLAPPED, BOOL;
+        import core.sys.windows.windows : BOOL, OVERLAPPED, ULARGE_INTEGER;
 
         private BOOL lockImpl(alias F, Flags...)(ulong start, ulong length,
             Flags flags)
@@ -1172,8 +1172,8 @@ Throws: $(D Exception) if the file is not opened.
 
         private static T wenforce(T)(T cond, string str)
         {
-            import std.windows.syserror : sysErrorString;
             import core.sys.windows.windows : GetLastError;
+            import std.windows.syserror : sysErrorString;
 
             if (cond) return cond;
             throw new Exception(str ~ ": " ~ sysErrorString(GetLastError()));
@@ -1220,8 +1220,8 @@ $(UL
         enforce(isOpen, "Attempting to call lock() on an unopened file");
         version (Posix)
         {
-            import std.exception : errnoEnforce;
             import core.sys.posix.fcntl : F_RDLCK, F_SETLKW, F_WRLCK;
+            import std.exception : errnoEnforce;
             immutable short type = lockType == LockType.readWrite
                 ? F_WRLCK : F_RDLCK;
             errnoEnforce(lockImpl(F_SETLKW, type, start, length) != -1,
@@ -1254,9 +1254,9 @@ specified file segment was already locked.
         enforce(isOpen, "Attempting to call tryLock() on an unopened file");
         version (Posix)
         {
-            import std.exception : errnoEnforce;
             import core.stdc.errno : EACCES, EAGAIN, errno;
             import core.sys.posix.fcntl : F_RDLCK, F_SETLK, F_WRLCK;
+            import std.exception : errnoEnforce;
             immutable short type = lockType == LockType.readWrite
                 ? F_WRLCK : F_RDLCK;
             immutable res = lockImpl(F_SETLK, type, start, length);
@@ -1294,8 +1294,8 @@ Removes the lock over the specified file segment.
         enforce(isOpen, "Attempting to call unlock() on an unopened file");
         version (Posix)
         {
-            import std.exception : errnoEnforce;
             import core.sys.posix.fcntl : F_SETLK, F_UNLCK;
+            import std.exception : errnoEnforce;
             errnoEnforce(lockImpl(F_SETLK, F_UNLCK, start, length) != -1,
                     "Could not remove lock for file `"~_name~"'");
         }
@@ -1395,7 +1395,7 @@ Throws: $(D Exception) if the file is not opened.
 */
     void write(S...)(S args)
     {
-        import std.traits : isBoolean, isIntegral, isAggregateType;
+        import std.traits : isAggregateType, isBoolean, isIntegral;
         auto w = lockingTextWriter();
         foreach (arg; args)
         {
@@ -1540,8 +1540,8 @@ void main()
 
     @system unittest
     {
-        static import std.file;
         import std.algorithm.comparison : equal;
+        static import std.file;
         import std.meta : AliasSeq;
 
         auto deleteme = testFilename();
@@ -2300,8 +2300,8 @@ $(REF readText, std,file)
 
     @system unittest
     {
-        static import std.file;
         import std.algorithm.comparison : equal;
+        static import std.file;
 
         scope(failure) printf("Failed test at line %d\n", __LINE__);
         auto deleteme = testFilename();
@@ -3021,9 +3021,9 @@ void main()
 
     @system unittest
     {
-        static import std.file;
         import std.algorithm.mutation : reverse;
         import std.exception : collectException;
+        static import std.file;
         import std.range : only, retro;
         import std.string : format;
 
@@ -3231,8 +3231,8 @@ void main()
 
 @safe unittest
 {
-    static import std.file;
     import std.exception : collectException;
+    static import std.file;
 
     auto deleteme = testFilename();
     scope(exit) collectException(std.file.remove(deleteme));
@@ -3395,8 +3395,8 @@ struct LockingTextReader
 
 @system unittest // bugzilla 13686
 {
-    static import std.file;
     import std.algorithm.comparison : equal;
+    static import std.file;
     import std.utf : byDchar;
 
     auto deleteme = testFilename();
@@ -4564,9 +4564,9 @@ alias stdin = makeGlobal!(core.stdc.stdio.stdin);
 @safe unittest
 {
     // Read stdin, sort lines, write to stdout
-    import std.array : array;
-    import std.algorithm.sorting : sort;
     import std.algorithm.mutation : copy;
+    import std.algorithm.sorting : sort;
+    import std.array : array;
     import std.typecons : Yes;
 
     void main() {
@@ -5113,12 +5113,12 @@ version(linux)
 {
     File openNetwork(string host, ushort port)
     {
-        static import sock = core.sys.posix.sys.socket;
-        static import core.sys.posix.unistd;
         import core.stdc.string : memcpy;
         import core.sys.posix.arpa.inet : htons;
         import core.sys.posix.netdb : gethostbyname;
         import core.sys.posix.netinet.in_ : sockaddr_in;
+        static import core.sys.posix.unistd;
+        static import sock = core.sys.posix.sys.socket;
         import std.conv : to;
         import std.exception : enforce;
         import std.internal.cstring : tempCString;

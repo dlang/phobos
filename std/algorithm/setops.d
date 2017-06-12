@@ -41,10 +41,10 @@ module std.algorithm.setops;
 import std.range.primitives;
 
 // FIXME
-import std.functional; // : unaryFun, binaryFun;
+import std.functional; // : binaryFun, unaryFun;
 import std.traits;
 // FIXME
-import std.meta; // : AliasSeq, staticMap, allSatisfy, anySatisfy;
+import std.meta; // : AliasSeq, allSatisfy, anySatisfy, staticMap;
 
 import std.algorithm.sorting; // : Merge;
 import std.typecons : No;
@@ -82,13 +82,13 @@ auto cartesianProduct(R1, R2)(R1 range1, R2 range2)
 if (!allSatisfy!(isForwardRange, R1, R2) ||
     anySatisfy!(isInfinite, R1, R2))
 {
-    import std.algorithm.iteration : map, joiner;
+    import std.algorithm.iteration : joiner, map;
 
     static if (isInfinite!R1 && isInfinite!R2)
     {
         static if (isForwardRange!R1 && isForwardRange!R2)
         {
-            import std.range : zip, repeat, take, chain, sequence;
+            import std.range : chain, repeat, sequence, take, zip;
 
             // This algorithm traverses the cartesian product by alternately
             // covering the right and bottom edges of an increasing square area
@@ -107,13 +107,13 @@ if (!allSatisfy!(isForwardRange, R1, R2) ||
     }
     else static if (isInputRange!R1 && isForwardRange!R2 && !isInfinite!R2)
     {
-        import std.range : zip, repeat;
+        import std.range : repeat, zip;
         return joiner(map!((ElementType!R1 a) => zip(repeat(a), range2.save))
                           (range1));
     }
     else static if (isInputRange!R2 && isForwardRange!R1 && !isInfinite!R1)
     {
-        import std.range : zip, repeat;
+        import std.range : repeat, zip;
         return joiner(map!((ElementType!R2 a) => zip(range1.save, repeat(a)))
                           (range2));
     }
@@ -247,9 +247,9 @@ if (!allSatisfy!(isForwardRange, R1, R2) ||
 
 @safe unittest
 {
-    import std.algorithm.searching : canFind;
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
+    import std.algorithm.searching : canFind;
     import std.typecons : tuple;
 
     import std.range;

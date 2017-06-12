@@ -917,9 +917,9 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
 
 @safe unittest
 {
+    import std.algorithm;
     import std.exception;
     import std.range;
-    import std.algorithm;
 
     Mt19937 gen;
 
@@ -1287,7 +1287,7 @@ A single unsigned integer seed value, different on each successive call
 */
 @property uint unpredictableSeed() @trusted
 {
-    import core.thread : Thread, getpid, MonoTime;
+    import core.thread : getpid, MonoTime, Thread;
     static bool seeded;
     static MinstdRand0 rand;
     if (!seeded)
@@ -1424,8 +1424,8 @@ auto uniform(string boundaries = "[)",
 (T1 a, T2 b, ref UniformRandomNumberGenerator urng)
 if (isFloatingPoint!(CommonType!(T1, T2)) && isUniformRNG!UniformRandomNumberGenerator)
 {
-    import std.exception : enforce;
     import std.conv : text;
+    import std.exception : enforce;
     alias NumberType = Unqual!(CommonType!(T1, T2));
     static if (boundaries[0] == '(')
     {
@@ -1523,8 +1523,8 @@ auto uniform(string boundaries = "[)", T1, T2, RandomGen)
 if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
      isUniformRNG!RandomGen)
 {
-    import std.exception : enforce;
     import std.conv : text, unsigned;
+    import std.exception : enforce;
     alias ResultType = Unqual!(CommonType!(T1, T2));
     static if (boundaries[0] == '(')
     {
@@ -1966,8 +1966,8 @@ if (isFloatingPoint!F)
 
 @safe unittest
 {
-    import std.math;
     import std.algorithm;
+    import std.math;
     static assert(is(CommonType!(double, int) == double));
     auto a = uniformDistribution(5);
     assert(a.length == 5);
@@ -2048,8 +2048,8 @@ if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
 
 @system unittest
 {
-    import std.algorithm.searching : canFind;
     import std.algorithm.iteration : map;
+    import std.algorithm.searching : canFind;
 
     auto array = [1, 2, 3, 4, 5];
     auto elemAddr = &choice(array);
@@ -2123,8 +2123,8 @@ Params:
 void partialShuffle(Range, RandomGen)(Range r, in size_t n, ref RandomGen gen)
 if (isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
-    import std.exception : enforce;
     import std.algorithm.mutation : swapAt;
+    import std.exception : enforce;
     enforce(n <= r.length, "n must be <= r.length for partialShuffle.");
     foreach (i; 0 .. n)
     {
@@ -2242,8 +2242,8 @@ in
 }
 body
 {
-    import std.exception : enforce;
     import std.algorithm.iteration : reduce;
+    import std.exception : enforce;
     double sum = reduce!"a + b"(0.0, proportions.save);
     enforce(sum > 0, "Proportions in a dice cannot sum to zero");
     immutable point = uniform(0.0, sum, rng);
@@ -2659,8 +2659,8 @@ if (isInputRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
 
     private void initialize(size_t howMany, size_t total)
     {
-        import std.exception : enforce;
         import std.conv : text;
+        import std.exception : enforce;
         _available = total;
         _toSelect = howMany;
         enforce(_toSelect <= _available,
@@ -3011,9 +3011,9 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
 @system unittest
 {
     // @system because it takes the address of a local
+    import std.conv : text;
     import std.exception;
     import std.range;
-    import std.conv : text;
     // For test purposes, an infinite input range
     struct TestInputRange
     {

@@ -53,9 +53,9 @@
  * Source:    $(PHOBOSSRC std/_mathspecial.d)
  */
 module std.mathspecial;
-public import std.math;
-private import std.internal.math.gammafunction;
 private import std.internal.math.errorfunction;
+private import std.internal.math.gammafunction;
+public import std.math;
 
 /* ***********************************************
  *            GAMMA AND RELATED FUNCTIONS        *

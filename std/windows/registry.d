@@ -38,15 +38,15 @@
 module std.windows.registry;
 version (Windows):
 
-import std.array;
-import std.system : Endian, endian;
-import std.exception;
 import core.sys.windows.windows;
-import std.windows.syserror;
+import std.array;
 import std.conv;
-import std.utf : toUTF8, toUTF16;
-private import std.internal.windows.advapi32;
+import std.exception;
 import std.internal.cstring;
+private import std.internal.windows.advapi32;
+import std.system : Endian, endian;
+import std.utf : toUTF16, toUTF8;
+import std.windows.syserror;
 
 //debug = winreg;
 debug(winreg) import std.stdio;
@@ -82,7 +82,7 @@ class Win32Exception : WindowsException
     @property int error() { return super.code; }
 }
 
-version(unittest) import std.string : startsWith, endsWith;
+version(unittest) import std.string : endsWith, startsWith;
 
 @safe unittest
 {
