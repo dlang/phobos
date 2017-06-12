@@ -4532,7 +4532,7 @@ Initialize with a message and an error code.
     // `handle` at once and steal the high bit to indicate that the globals have
     // been initialized.
     static shared uint spinlock;
-    import core.atomic;
+    import core.atomic : atomicLoad, atomicOp, MemoryOrder;
     if (atomicLoad!(MemoryOrder.acq)(spinlock) <= uint.max / 2)
     {
         for (;;)
@@ -4621,7 +4621,7 @@ alias stderr = makeGlobal!(core.stdc.stdio.stderr);
     }
 }
 
-unittest
+@safe unittest
 {
     // Retain backwards compatibility
     // https://issues.dlang.org/show_bug.cgi?id=17472

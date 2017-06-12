@@ -6918,7 +6918,7 @@ divisible by $(D chunkSize), the back element of this range will contain
 fewer than $(D chunkSize) elements.
 
 Params:
-    r = Range from which the chunks will be selected
+    source = Range from which the chunks will be selected
     chunkSize = Chunk size
 
 See_Also: $(LREF slide)
@@ -7429,7 +7429,7 @@ Params:
         elements than `windowSize`. This can only happen if the initial range
         contains less elements than `windowSize`. In this case
         if `No.withFewerElements` an empty range will be returned.
-    r = Range from which the slide will be selected
+    source = Range from which the slide will be selected
     windowSize = Sliding window size
     stepSize = Steps between the windows (by default 1)
 
@@ -7638,14 +7638,14 @@ public:
                 * Notice that we only need to move for windowSize - 1 to the right:
                 * source = [0, 1, 2, 3] (length: 4)
                 * - source.slide(2) -> s = [[0, 1], [1, 2], [2, 3]]
-                *   right pos for s[0..3]: 3 (upper) + 2 (windowSize) - 1 = 4
+                *   right pos for s[0 .. 3]: 3 (upper) + 2 (windowSize) - 1 = 4
                 *
                 * - source.slide(3) -> s = [[0, 1, 2], [1, 2, 3]]
-                *   right pos for s[0..2]: 2 (upper) + 3 (windowSize) - 1 = 4
+                *   right pos for s[0 .. 2]: 2 (upper) + 3 (windowSize) - 1 = 4
                 *
                 * source = [0, 1, 2, 3, 4] (length: 5)
                 * - source.slide(4) -> s = [[0, 1, 2, 3], [1, 2, 3, 4]]
-                *   right pos for s[0..2]: 2 (upper) + 4 (windowSize) - 1 = 5
+                *   right pos for s[0 .. 2]: 2 (upper) + 4 (windowSize) - 1 = 5
                 */
                 return typeof(this)
                     (_source[min(lower, len) .. min(upper + _windowSize - 1, len)],
@@ -7888,7 +7888,7 @@ public:
     assert(iota(1, 4).slide(3).equal!equal([[1, 2, 3]]));
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -8250,17 +8250,17 @@ unittest
         ));
 
         // front = back
-        foreach (windowSize; 1..10)
-            foreach (stepSize; 1..10)
+        foreach (windowSize; 1 .. 10)
+            foreach (stepSize; 1 .. 10)
             {
                 auto slider = r.slide(windowSize, stepSize);
                 assert(slider.retro.retro.equal!equal(slider));
             }
     }
 
-    assert(iota(1, 12).slide(2, 4)[0..3].equal!equal([[1, 2], [5, 6], [9, 10]]));
-    assert(iota(1, 12).slide(2, 4)[0..$].equal!equal([[1, 2], [5, 6], [9, 10]]));
-    assert(iota(1, 12).slide(2, 4)[$/2..$].equal!equal([[5, 6], [9, 10]]));
+    assert(iota(1, 12).slide(2, 4)[0 .. 3].equal!equal([[1, 2], [5, 6], [9, 10]]));
+    assert(iota(1, 12).slide(2, 4)[0 .. $].equal!equal([[1, 2], [5, 6], [9, 10]]));
+    assert(iota(1, 12).slide(2, 4)[$/2 .. $].equal!equal([[5, 6], [9, 10]]));
 
     // reverse
     assert(iota(1, 12).slide(2, 4).retro.equal!equal([[9, 10], [5, 6], [1, 2]]));
@@ -8332,7 +8332,7 @@ unittest
         Range r;
         r.arr = 10.iota.array; // for clarity
 
-        static assert (isForwardRange!Range);
+        static assert(isForwardRange!Range);
         enum hasSliceToEnd = hasSlicing!Range && is(typeof(Range.init[0 .. $]) == Range);
 
         assert(r.slide(2)[0].equal([0, 1]));
@@ -8356,8 +8356,8 @@ unittest
 
     foreach (Range; AliasSeq!SliceableDummyRangesWithoutInfinity)
     {
-        static assert (hasSlicing!Range);
-        static assert (hasLength!Range);
+        static assert(hasSlicing!Range);
+        static assert(hasLength!Range);
 
         Range r;
         r.arr = 10.iota.array; // for clarity
