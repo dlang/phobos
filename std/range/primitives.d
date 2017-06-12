@@ -1364,7 +1364,7 @@ template hasLvalueElements(R)
 ///
 @safe unittest
 {
-    import std.range : chain, iota;
+    import std.range : iota, chain;
 
     static assert( hasLvalueElements!(int[]));
     static assert( hasLvalueElements!(const(int)[]));
@@ -1850,8 +1850,8 @@ if (isBidirectionalRange!Range)
 ///
 @safe unittest
 {
-    import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filterBidirectional;
+    import std.algorithm.comparison : equal;
 
     auto a = [1, 2, 3];
     a.popFrontExactly(1);

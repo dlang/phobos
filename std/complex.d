@@ -150,8 +150,8 @@ if (isFloatingPoint!T)
                         FormatSpec!Char formatSpec) const
         if (isOutputRange!(Writer, const(Char)[]))
     {
-        import std.format : formatValue;
         import std.math : signbit;
+        import std.format : formatValue;
         import std.range.primitives : put;
         formatValue(w, re, formatSpec);
         if (signbit(im) == 0)
@@ -298,7 +298,7 @@ if (isFloatingPoint!T)
     Complex!(CommonType!(T, R)) opBinaryRight(string op, R)(R lhs) const
         if (op == "^^" && isNumeric!R)
     {
-        import std.math : cos, exp, log, PI, sin;
+        import std.math : cos, exp, log, sin, PI;
         Unqual!(CommonType!(T, R)) ab = void, ar = void;
 
         if (lhs >= 0)
@@ -370,7 +370,7 @@ if (isFloatingPoint!T)
     ref Complex opOpAssign(string op, C)(C z)
         if (op == "^^" && is(C R == Complex!R))
     {
-        import std.math : cos, exp, log, sin;
+        import std.math : exp, log, cos, sin;
         immutable r = abs(this);
         immutable t = arg(this);
         immutable ab = r^^z.re * exp(-t*z.im);
@@ -440,8 +440,8 @@ if (isFloatingPoint!T)
 
 @safe pure nothrow unittest
 {
-    import std.complex;
     import std.math;
+    import std.complex;
 
     enum EPS = double.epsilon;
     auto c1 = complex(1.0, 1.0);
@@ -799,7 +799,7 @@ Complex!T conj(T)(Complex!T z) @safe pure nothrow @nogc
 Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
     @safe pure nothrow @nogc
 {
-    import std.math : cos, sin;
+    import std.math : sin, cos;
     return Complex!(CommonType!(T,U))
         (modulus*cos(argument), modulus*sin(argument));
 }
@@ -822,7 +822,7 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
 */
 Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 {
-    import std.math : coshisinh, expi;
+    import std.math : expi, coshisinh;
     auto cs = expi(z.re);
     auto csh = coshisinh(z.im);
     return typeof(return)(cs.im * csh.re, cs.re * csh.im);
@@ -840,7 +840,7 @@ Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 /// ditto
 Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
 {
-    import std.math : coshisinh, expi;
+    import std.math : expi, coshisinh;
     auto cs = expi(z.re);
     auto csh = coshisinh(z.im);
     return typeof(return)(cs.re * csh.re, - cs.im * csh.im);
@@ -849,8 +849,8 @@ Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
 ///
 @safe pure nothrow unittest
 {
-    import std.complex;
     import std.math;
+    import std.complex;
     assert(cos(complex(0.0)) == 1.0);
     assert(cos(complex(1.3L)) == std.math.cos(1.3L));
     assert(cos(complex(0, 5.2L)) == cosh(5.2L));

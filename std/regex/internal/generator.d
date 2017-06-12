@@ -12,11 +12,11 @@ module std.regex.internal.generator;
 */
 @trusted private struct SampleGenerator(Char)
 {
-    import std.array : Appender, appender;
+    import std.regex.internal.ir : Regex, IR, IRL;
+    import std.array : appender, Appender;
     import std.format : formattedWrite;
+    import std.utf : isValidDchar, byChar;
     import std.random : Xorshift;
-    import std.regex.internal.ir : IR, IRL, Regex;
-    import std.utf : byChar, isValidDchar;
     Regex!Char re;
     Appender!(char[]) app;
     uint limit, seed;

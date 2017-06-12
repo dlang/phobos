@@ -2,7 +2,7 @@
 module std.experimental.allocator.building_blocks.free_list;
 
 import std.experimental.allocator.common;
-import std.typecons : Flag, No, Yes;
+import std.typecons : Flag, Yes, No;
 
 /**
 
@@ -117,8 +117,8 @@ struct FreeList(ParentAllocator,
         ///
         @safe unittest
         {
-            import std.experimental.allocator.common : chooseAtRuntime;
             import std.experimental.allocator.mallocator : Mallocator;
+            import std.experimental.allocator.common : chooseAtRuntime;
 
             FreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
             a.min = 64;
@@ -673,9 +673,9 @@ struct ContiguousFreeList(ParentAllocator,
 ///
 @safe unittest
 {
+    import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.allocator_list
         : AllocatorList;
-    import std.experimental.allocator.gc_allocator : GCAllocator;
 
     import std.experimental.allocator.common : unbounded;
 
@@ -896,8 +896,8 @@ struct SharedFreeList(ParentAllocator,
         ///
         @safe unittest
         {
-            import std.experimental.allocator.common : chooseAtRuntime;
             import std.experimental.allocator.mallocator : Mallocator;
+            import std.experimental.allocator.common : chooseAtRuntime;
 
             shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
             // Set the maxSize first so setting the minSize doesn't throw
@@ -917,8 +917,8 @@ struct SharedFreeList(ParentAllocator,
         ///
         @safe unittest
         {
-            import std.experimental.allocator.common : chooseAtRuntime;
             import std.experimental.allocator.mallocator : Mallocator;
+            import std.experimental.allocator.common : chooseAtRuntime;
 
             shared SharedFreeList!(Mallocator, 50, 50, chooseAtRuntime) a;
             // Set the maxSize first so setting the minSize doesn't throw
@@ -1049,10 +1049,10 @@ struct SharedFreeList(ParentAllocator,
 
 @system unittest
 {
-    import core.thread : ThreadGroup;
     import std.algorithm.comparison : equal;
-    import std.experimental.allocator.mallocator : Mallocator;
     import std.range : repeat;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import core.thread : ThreadGroup;
 
     static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
 

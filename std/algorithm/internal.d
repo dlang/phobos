@@ -21,7 +21,7 @@ version(unittest)
 
     package string[] rndstuff(T : string)()
     {
-        import std.random : Random, uniform, unpredictableSeed;
+        import std.random : Random, unpredictableSeed, uniform;
 
         static Random rnd;
         static bool first = true;
@@ -46,7 +46,7 @@ version(unittest)
 
     package int[] rndstuff(T : int)()
     {
-        import std.random : Random, uniform, unpredictableSeed;
+        import std.random : Random, unpredictableSeed, uniform;
 
         static Random rnd;
         static bool first = true;

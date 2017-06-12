@@ -19,15 +19,15 @@ The following methods are defined if $(D Allocator) defines them, and forward to
  */
 struct AffixAllocator(Allocator, Prefix, Suffix = void)
 {
-    import std.algorithm.comparison : min;
     import std.conv : emplace;
-    import std.experimental.allocator : IAllocator, theAllocator;
     import std.experimental.allocator.common : stateSize, forwardToMember,
         roundUpToMultipleOf, alignedAt, alignDownTo, roundUpToMultipleOf,
         hasStaticallyKnownAlignment;
-    import std.math : isPowerOf2;
+    import std.experimental.allocator : IAllocator, theAllocator;
     import std.traits : hasMember;
+    import std.algorithm.comparison : min;
     import std.typecons : Ternary;
+    import std.math : isPowerOf2;
 
     static if (hasStaticallyKnownAlignment!Allocator)
     {
@@ -370,8 +370,8 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
 
 @system unittest
 {
-    import std.experimental.allocator : IAllocator, theAllocator;
     import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator : theAllocator, IAllocator;
 
     // One word before and after each allocation.
     auto A = AffixAllocator!(IAllocator, size_t, size_t)(theAllocator);
@@ -419,8 +419,8 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
 
 @system unittest
 {
-    import std.experimental.allocator;
     import std.experimental.allocator.gc_allocator;
+    import std.experimental.allocator;
     import std.typecons : Ternary;
     alias MyAllocator = AffixAllocator!(GCAllocator, uint);
     auto a = MyAllocator.instance.makeArray!(shared int)(100);

@@ -875,7 +875,7 @@ size_t replicateBits(size_t times, size_t bits)(size_t val) @safe pure nothrow @
 
 @safe pure nothrow @nogc unittest // for replicate
 {
-    import std.algorithm.iteration : map, sum;
+    import std.algorithm.iteration : sum, map;
     import std.range : iota;
     size_t m = 0b111;
     size_t m2 = 0b01;
@@ -3401,7 +3401,7 @@ private:
     import std.algorithm.comparison : equal;
     import std.algorithm.mutation : copy;
     import std.conv : text;
-    import std.range : chain, iota;
+    import std.range : iota, chain;
     import std.range.primitives : isBidirectionalRange, isOutputRange;
     void funcRef(T)(ref T u24)
     {
@@ -5762,7 +5762,7 @@ template idxTypes(Key, size_t fullBits, Prefix...)
 if (is(Char1 : dchar) && is(Char2 : dchar))
 {
     import std.algorithm.comparison : cmp;
-    import std.algorithm.iteration : filter, map;
+    import std.algorithm.iteration : map, filter;
     import std.ascii : toLower;
     static bool pred(dchar c) {return !c.isWhite && c != '-' && c != '_';}
     return cmp(
@@ -6542,7 +6542,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.range : drop, take;
+    import std.range : take, drop;
     import std.range.primitives : walkLength;
     auto text = "noe\u0308l"; // noël using e + combining diaeresis
     assert(text.walkLength == 5); // 5 code points
@@ -7492,7 +7492,7 @@ enum {
 public dchar compose(dchar first, dchar second) pure nothrow @safe
 {
     import std.algorithm.iteration : map;
-    import std.internal.unicode_comp : composeCntShift, composeIdxMask, compositionTable;
+    import std.internal.unicode_comp : compositionTable, composeCntShift, composeIdxMask;
     import std.range : assumeSorted;
     immutable packed = compositionJumpTrie[first];
     if (packed == ushort.max)
@@ -7539,7 +7539,7 @@ public dchar compose(dchar first, dchar second) pure nothrow @safe
 public Grapheme decompose(UnicodeDecomposition decompType=Canonical)(dchar ch) @safe
 {
     import std.algorithm.searching : until;
-    import std.internal.unicode_decomp : decompCanonTable, decompCompatTable;
+    import std.internal.unicode_decomp : decompCompatTable, decompCanonTable;
     static if (decompType == Canonical)
     {
         alias table = decompCanonTable;
@@ -8115,7 +8115,7 @@ public bool isWhite(dchar c)
 @safe pure nothrow @nogc
 bool isLower(dchar c)
 {
-    import std.ascii : isASCII, isLower;
+    import std.ascii : isLower, isASCII;
     if (isASCII(c))
         return isLower(c);
     return lowerCaseTrie[c];
@@ -8148,7 +8148,7 @@ bool isLower(dchar c)
 @safe pure nothrow @nogc
 bool isUpper(dchar c)
 {
-    import std.ascii : isASCII, isUpper;
+    import std.ascii : isUpper, isASCII;
     if (isASCII(c))
         return isUpper(c);
     return upperCaseTrie[c];
@@ -8744,7 +8744,7 @@ private size_t encodeTo(scope dchar[] buf, size_t idx, dchar c) @trusted pure no
 private void toCaseInPlace(alias indexFn, uint maxIdx, alias tableFn, C)(ref C[] s) @trusted pure
 if (is(C == char) || is(C == wchar)  || is(C == dchar))
 {
-    import std.utf : codeLength, decode;
+    import std.utf : decode, codeLength;
     size_t curIdx = 0;
     size_t destIdx = 0;
     alias slowToCase = toCaseInPlaceAlloc!(indexFn, maxIdx, tableFn);
@@ -8812,7 +8812,7 @@ private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
 {
     size_t toCaseLength(C)(in C[] str)
     {
-        import std.utf : codeLength, decode;
+        import std.utf : decode, codeLength;
         size_t codeLen = 0;
         size_t lastNonTrivial = 0;
         size_t curIdx = 0;
@@ -9024,8 +9024,8 @@ if (isSomeString!S)
 
 @system unittest //@@@BUG std.format is not @safe
 {
-    static import std.ascii;
     import std.format : format;
+    static import std.ascii;
     foreach (ch; 0 .. 0x80)
         assert(std.ascii.toLower(ch) == toLower(ch));
     assert(toLower('Я') == 'я');
@@ -9150,8 +9150,8 @@ dchar toUpper(dchar c)
 
 @safe unittest
 {
-    static import std.ascii;
     import std.format : format;
+    static import std.ascii;
     foreach (ch; 0 .. 0x80)
         assert(std.ascii.toUpper(ch) == toUpper(ch));
     assert(toUpper('я') == 'Я');

@@ -16,7 +16,7 @@ Source: $(PHOBOSSRC std/digest/_hmac.d)
 
 module std.digest.hmac;
 
-import std.digest.digest : DigestType, hasBlockSize, isDigest, isDigestibleRange;
+import std.digest.digest : isDigest, hasBlockSize, isDigestibleRange, DigestType;
 import std.meta : allSatisfy;
 
 /**
@@ -33,7 +33,7 @@ version(StdDdoc)
 /// Computes an HMAC over data read from stdin.
 @safe unittest
 {
-    import std.digest.hmac, std.digest.sha, std.stdio;
+    import std.stdio, std.digest.hmac, std.digest.sha;
     import std.string : representation;
 
     auto secret = "secret".representation;
@@ -89,7 +89,7 @@ if (hashBlockSize % 8 == 0)
     ///
     @safe pure nothrow @nogc unittest
     {
-        import std.digest.hmac, std.digest.sha;
+        import std.digest.sha, std.digest.hmac;
         import std.string : representation;
         auto hmac = HMAC!SHA1("My s3cR3T keY".representation);
         hmac.put("Hello, world".representation);
@@ -126,7 +126,7 @@ if (hashBlockSize % 8 == 0)
     ///
     @safe pure nothrow @nogc unittest
     {
-        import std.digest.hmac, std.digest.sha;
+        import std.digest.sha, std.digest.hmac;
         import std.string : representation;
         string data1 = "Hello, world", data2 = "Hola mundo";
         auto hmac = HMAC!SHA1("My s3cR3T keY".representation);
@@ -157,7 +157,7 @@ if (hashBlockSize % 8 == 0)
     ///
     @safe pure nothrow @nogc unittest
     {
-        import std.digest.hmac, std.digest.sha;
+        import std.digest.sha, std.digest.hmac;
         import std.string : representation;
         string data1 = "Hello, world", data2 = "Hola mundo";
         auto hmac = HMAC!SHA1("My s3cR3T keY".representation);
@@ -193,7 +193,7 @@ if (hashBlockSize % 8 == 0)
     ///
     @safe pure nothrow @nogc unittest
     {
-        import std.digest.hmac, std.digest.sha;
+        import std.digest.sha, std.digest.hmac;
         import std.string : representation;
         string data1 = "Hello, world", data2 = "Hola mundo";
         auto hmac = HMAC!SHA1("My s3cR3T keY".representation);
@@ -234,7 +234,7 @@ if (isDigest!H)
     ///
     @safe pure nothrow @nogc unittest
     {
-        import std.digest.hmac, std.digest.sha;
+        import std.digest.sha, std.digest.hmac;
         import std.string : representation;
         string data1 = "Hello, world", data2 = "Hola mundo";
         auto digest = hmac!SHA1("My s3cR3T keY".representation)
@@ -268,9 +268,9 @@ if (isDigest!H)
     ///
     @system pure nothrow @nogc unittest
     {
-        import std.algorithm.iteration : map;
-        import std.digest.hmac, std.digest.sha;
+        import std.digest.sha, std.digest.hmac;
         import std.string : representation;
+        import std.algorithm.iteration : map;
         string data = "Hello, world";
         auto digest = data.representation
                       .map!(a => cast(ubyte)(a+1))
@@ -286,7 +286,7 @@ if (isDigest!H)
 
 version(unittest)
 {
-    import std.digest.digest : LetterCase, toHexString;
+    import std.digest.digest : toHexString, LetterCase;
     alias hex = toHexString!(LetterCase.lower);
 }
 

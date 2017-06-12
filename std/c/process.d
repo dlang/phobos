@@ -13,7 +13,7 @@ deprecated("Import core.stdc.stdlib or the appropriate core.sys.posix.* modules 
 module std.c.process;
 
 private import core.stdc.stddef;
-public import core.stdc.stdlib : abort, exit, system;
+public import core.stdc.stdlib : exit, abort, system;
 
 extern (C):
 

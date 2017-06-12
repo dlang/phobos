@@ -76,13 +76,13 @@ Source: $(PHOBOSSRC std/_array.d)
 */
 module std.array;
 
-static import std.algorithm.iteration; // FIXME, remove with alias of splitter
-import std.functional;
 import std.meta;
 import std.traits;
+import std.functional;
+static import std.algorithm.iteration; // FIXME, remove with alias of splitter
 
 import std.range.primitives;
-public import std.range.primitives : back, empty, front, popBack, popFront, save;
+public import std.range.primitives : save, empty, popFront, popBack, front, back;
 
 /**
  * Allocates an array and initializes it with copies of the elements
@@ -316,8 +316,8 @@ if (isNarrowString!String)
 // Bugzilla 10220
 @safe unittest
 {
-    import std.algorithm.comparison : equal;
     import std.exception;
+    import std.algorithm.comparison : equal;
     import std.range : repeat;
 
     static struct S
@@ -418,8 +418,8 @@ of Tuple's of key and value pairs from the given associative array.
 */
 auto byPair(Key, Value)(Value[Key] aa)
 {
-    import std.algorithm.iteration : map;
     import std.typecons : tuple;
+    import std.algorithm.iteration : map;
 
     return aa.byKeyValue.map!(pair => tuple(pair.key, pair.value));
 }
@@ -427,8 +427,8 @@ auto byPair(Key, Value)(Value[Key] aa)
 ///
 @system unittest
 {
-    import std.algorithm.sorting : sort;
     import std.typecons : tuple, Tuple;
+    import std.algorithm.sorting : sort;
 
     auto aa = ["a": 1, "b": 2, "c": 3];
     Tuple!(string, int)[] pairs;
@@ -641,8 +641,8 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
         }
         else
         {
-            import core.memory : GC;
             import core.stdc.string : memset;
+            import core.memory : GC;
 
             import core.checkedint : mulu;
             bool overflow;
@@ -744,7 +744,7 @@ slice, returns that slice. Otherwise, returns the null slice.
 auto overlap(T, U)(T[] r1, U[] r2) @trusted pure nothrow
 if (is(typeof(r1.ptr < r2.ptr) == bool))
 {
-    import std.algorithm.comparison : max, min;
+    import std.algorithm.comparison : min, max;
     auto b = max(r1.ptr, r2.ptr);
     auto e = min(r1.ptr + r1.length, r2.ptr + r2.length);
     return b < e ? b[0 .. e - b] : null;
@@ -1031,9 +1031,9 @@ private template isInputRangeOrConvertible(E)
 @system unittest
 {
     // @system due to insertInPlace
-    import core.exception;
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
+    import core.exception;
     import std.conv : to;
     import std.exception;
 
@@ -1511,8 +1511,8 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
 
 @safe unittest
 {
-    import std.algorithm.comparison : cmp;
     import std.conv;
+    import std.algorithm.comparison : cmp;
 
     debug(std_array) printf("array.split\n");
     foreach (S; AliasSeq!(string, wstring, dstring,
@@ -1841,8 +1841,8 @@ if (isInputRange!RoR &&
 
 @system unittest
 {
-    import std.algorithm;
     import std.conv : to;
+    import std.algorithm;
     import std.range;
 
     debug(std_array) printf("array.join.unittest\n");
@@ -2065,8 +2065,8 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
 
 @safe unittest
 {
-    import std.algorithm.comparison : cmp;
     import std.conv : to;
+    import std.algorithm.comparison : cmp;
 
     debug(std_array) printf("array.replace.unittest\n");
 
@@ -2098,8 +2098,8 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
 
 @safe unittest
 {
-    import std.algorithm.searching : skipOver;
     import std.conv : to;
+    import std.algorithm.searching : skipOver;
 
     struct CheckOutput(C)
     {
@@ -2172,9 +2172,9 @@ if (isInputRange!Range &&
 @system unittest
 {
     import core.exception;
-    import std.algorithm.iteration : filter;
     import std.conv : to;
     import std.exception;
+    import std.algorithm.iteration : filter;
 
 
     auto a = [ 1, 2, 3, 4 ];
@@ -2333,8 +2333,8 @@ if (is(typeof(replace(array, from, to, stuff))))
 
     void testStringReplaceInPlace(T, U)()
     {
-        import std.algorithm.comparison : equal;
         import std.conv;
+        import std.algorithm.comparison : equal;
         auto a = unicoded.to!(U[]);
         auto b = unicodedLong.to!(U[]);
 
@@ -2376,9 +2376,9 @@ if (is(typeof(replace(array, from, to, stuff))))
 
 @system unittest
 {
-    import core.exception;
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
+    import core.exception;
     import std.conv : to;
     import std.exception;
 
@@ -2509,8 +2509,8 @@ if (isDynamicArray!(E[]) &&
 
 @safe unittest
 {
-    import std.algorithm.comparison : cmp;
     import std.conv : to;
+    import std.algorithm.comparison : cmp;
 
     debug(std_array) printf("array.replaceFirst.unittest\n");
 
@@ -2624,8 +2624,8 @@ if (isDynamicArray!(E[]) &&
 
 @safe unittest
 {
-    import std.algorithm.comparison : cmp;
     import std.conv : to;
+    import std.algorithm.comparison : cmp;
 
     debug(std_array) printf("array.replaceLast.unittest\n");
 
@@ -3359,8 +3359,8 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
 
 @safe unittest
 {
-    import std.algorithm;
     import std.typecons;
+    import std.algorithm;
     //10690
     [tuple(1)].filter!(t => true).array; // No error
     [tuple("A")].filter!(t => true).array; // error
@@ -3489,8 +3489,8 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
 
 @safe unittest //Test large allocations (for GC.extend)
 {
-    import std.algorithm.comparison : equal;
     import std.range;
+    import std.algorithm.comparison : equal;
     Appender!(char[]) app;
     app.reserve(1); //cover reserve on non-initialized
     foreach (_; 0 .. 100_000)

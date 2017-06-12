@@ -512,7 +512,7 @@ version(StdDdoc)
 ///
 @system unittest
 {
-    import std.traits : FunctionAttribute, functionAttributes;
+    import std.traits : functionAttributes, FunctionAttribute;
     interface A { int run(); }
     interface B { int stop(); @property int status(); }
     class X
@@ -661,7 +661,7 @@ template unwrap(Target)
 @system unittest
 {
     // Bugzilla 10377
-    import std.algorithm, std.range;
+    import std.range, std.algorithm;
 
     interface MyInputRange(T)
     {
