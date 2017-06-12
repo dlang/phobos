@@ -6918,7 +6918,7 @@ divisible by $(D chunkSize), the back element of this range will contain
 fewer than $(D chunkSize) elements.
 
 Params:
-    r = Range from which the chunks will be selected
+    source = Range from which the chunks will be selected
     chunkSize = Chunk size
 
 See_Also: $(LREF slide)
@@ -7429,7 +7429,7 @@ Params:
         elements than `windowSize`. This can only happen if the initial range
         contains less elements than `windowSize`. In this case
         if `No.withFewerElements` an empty range will be returned.
-    r = Range from which the slide will be selected
+    source = Range from which the slide will be selected
     windowSize = Sliding window size
     stepSize = Steps between the windows (by default 1)
 
