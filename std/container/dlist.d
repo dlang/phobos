@@ -52,9 +52,11 @@ module std.container.dlist;
 
     // DList.Range can be used to remove elements from the list
     auto nl = DList!int([1, 2, 3, 4, 5]);
-    for (auto rn = nl[]; !rn.empty; rn.popFront())
+    for (auto rn = nl[]; !rn.empty;)
         if (rn.front % 2 == 0)
-            nl.popFirstOf(rn);
+            rn = nl.popFirstOf(rn);
+        else
+            rn.popFront();
     assert(equal(nl[], [1, 3, 5]));
     auto rs = nl[];
     rs.popFront();
@@ -637,15 +639,14 @@ Complexity: $(BIGOH 1)
     /// ditto
     Range linearRemove(Range r)
     {
-         return remove(r);
+        return remove(r);
     }
 
 /**
 Removes first element of $(D r), wich must be a range obrained originally
 from this container.
 
-Returns: A range spanning the remaining elements in the container that
-initially were right after the first element of $(D r).
+Returns: A range spanning the remaining elements of $(D r).
 
 Compexity: $(BIGOH 1)
      */
@@ -658,15 +659,14 @@ Compexity: $(BIGOH 1)
         assert(r._first, "Remove: Range is empty");
         BaseNode.connect(r._first._prev, r._first._next);
         auto after = r._first._next;
-        return after is _root ? Range(null, null) : Range(after, _last);
+        return after is _root ? Range(null, null) : Range(after, r._last);
     }
 
 /**
 Removes last element of $(D r), wich must be a range obrained originally
 from this container.
 
-Returns: A range spanning the remaining elements in the container that
-initially were right before the last element of $(D r).
+Returns: A range spanning the remaining elements of $(D r).
 
 Compexity: $(BIGOH 1)
      */
@@ -679,7 +679,7 @@ Compexity: $(BIGOH 1)
         assert(r._last, "Remove: Range is empty");
         BaseNode.connect(r._last._prev, r._last._next);
         auto before = r._last._prev;
-        return before is _root ? Range(null, null) : Range(_first, before);
+        return before is _root ? Range(null, null) : Range(r._first, before);
     }
 
 /**
@@ -878,7 +878,7 @@ private:
     r.popBack();
     auto before = dl.popLastOf(r);
     assert(equal(dl[], [1, 3, 5]));
-    assert(equal(before, [1, 3]));
+    assert(equal(before, [3]));
     DList!int empty_list;
     dl.popFirstOf(empty_list[]);
     assert(equal(dl[], [1, 3, 5]));
