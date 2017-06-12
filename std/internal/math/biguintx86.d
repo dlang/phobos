@@ -742,7 +742,7 @@ string asmMulAdd_enter_odd(string OP, string M_ADDRESS) pure
  */
 uint multibyteMulAdd(char op)(uint [] dest, const uint [] src, uint
         multiplier, uint carry) pure
-        {
+{
     // Timing: This is the most time-critical bignum function.
     // Pentium M: 5.4 cycles/operation, still has 2 resource stalls + 1load block/iteration
 
@@ -835,7 +835,7 @@ L_enter_odd:
  */
 void multibyteMultiplyAccumulate(uint [] dest, const uint[] left,
         const uint [] right) pure
-        {
+{
     // Register usage
     // EDX:EAX = used in multiply
     // EBX = index

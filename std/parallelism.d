@@ -2352,7 +2352,8 @@ public:
         Parameters!C1.length == 1 &&
         Parameters!C2.length == 0 &&
         isArray!(Parameters!C1[0])
-    ) {
+    )
+    {
         auto roundRobin = RoundRobinBuffer!(C1, C2)(next, empty, initialBufSize, nBuffers);
         return asyncBuf(roundRobin, nBuffers / 2);
     }
@@ -3287,7 +3288,8 @@ terminating the main thread.
 {
     import std.concurrency : initOnce;
     __gshared TaskPool pool;
-    return initOnce!pool({
+    return initOnce!pool(
+    {
         auto p = new TaskPool(defaultPoolThreads);
         p.isDaemon = true;
         return p;
@@ -3867,7 +3869,8 @@ private struct RoundRobinBuffer(C1, C2)
         C2 emptyDel,
         size_t initialBufSize,
         size_t nBuffers
-    ) {
+    )
+    {
         this.nextDel = nextDel;
         this.emptyDel = emptyDel;
         bufs.length = nBuffers;
@@ -4004,7 +4007,8 @@ version(unittest)
     t3.spinForce++;
     assert(t3.args[0] == 1);
 
-    static void testSafe() @safe {
+    static void testSafe() @safe
+    {
         static int bump(int num)
         {
             return num + 1;
@@ -4620,7 +4624,8 @@ version(unittest)
     import std.algorithm.iteration : each;
 
     long[] arr;
-    static assert(is(typeof({
+    static assert(is(typeof(
+    {
         arr.parallel.each!"a++";
     })));
 }

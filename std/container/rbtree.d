@@ -1718,7 +1718,8 @@ assert(equal(rbt[], [5]));
      */
     static if (is(typeof((){FormatSpec!(char) fmt; formatValue((const(char)[]) {}, ConstRange.init, fmt);})))
     {
-        void toString(scope void delegate(const(char)[]) sink, FormatSpec!char fmt) const {
+        void toString(scope void delegate(const(char)[]) sink, FormatSpec!char fmt) const
+        {
             sink("RedBlackTree(");
             sink.formatValue(this[], fmt);
             sink(")");

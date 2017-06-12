@@ -133,28 +133,35 @@ if (Targets.length >= 1 && !allSatisfy!(isMutable, Targets))
 
 @safe unittest
 {
-    interface Foo {
+    interface Foo
+    {
         void foo();
     }
-    interface Bar {
+    interface Bar
+    {
         void bar();
     }
-    interface FooBar : Foo, Bar {
+    interface FooBar : Foo, Bar
+    {
         void foobar();
     }
 
-    struct A {
+    struct A
+    {
         void foo() {}
     }
-    struct B {
+    struct B
+    {
         void bar() {}
         void foobar() {}
     }
-    class C {
+    class C
+    {
         void foo() {}
         void bar() {}
     }
-    struct D {
+    struct D
+    {
         void foo() {}
         void bar() {}
         void foobar() {}

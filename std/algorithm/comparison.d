@@ -937,7 +937,8 @@ range of range (of range...) comparisons.
 
 @safe pure unittest
 {
-    struct R(bool _empty) {
+    struct R(bool _empty)
+    {
         enum empty = _empty;
         @property char front(){assert(0);}
         void popFront(){assert(0);}

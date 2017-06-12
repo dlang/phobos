@@ -486,7 +486,8 @@ class Protocol
 version(CRuntime_Bionic) {} else
 @safe unittest
 {
-    softUnittest({
+    softUnittest(
+    {
         Protocol proto = new Protocol;
         assert(proto.getProtocolByType(ProtocolType.TCP));
         //writeln("About protocol TCP:");
@@ -587,7 +588,8 @@ class Service
 
 @safe unittest
 {
-    softUnittest({
+    softUnittest(
+    {
         Service serv = new Service;
         if (serv.getServiceByName("epmap", "tcp"))
         {
@@ -970,7 +972,8 @@ AddressInfo[] getAddressInfo(T...)(in char[] node, T options)
         }
         alias breakSafety this;
     }
-    assert(!__traits(compiles, () {
+    assert(!__traits(compiles, ()
+    {
         getAddressInfo("", Oops.init);
     }), "getAddressInfo breaks @safe");
 }
@@ -1012,7 +1015,8 @@ private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addr
 
 @safe unittest
 {
-    softUnittest({
+    softUnittest(
+    {
         if (getaddrinfoPointer)
         {
             // Roundtrip DNS resolution
@@ -1127,7 +1131,8 @@ Address[] getAddress(in char[] hostname, ushort port)
 
 @safe unittest
 {
-    softUnittest({
+    softUnittest(
+    {
         auto addresses = getAddress("63.105.9.61");
         assert(addresses.length && addresses[0].toAddrString() == "63.105.9.61");
 
@@ -1207,7 +1212,8 @@ Address parseAddress(in char[] hostaddr, ushort port)
 
 @safe unittest
 {
-    softUnittest({
+    softUnittest(
+    {
         auto address = parseAddress("63.105.9.61");
         assert(address.toAddrString() == "63.105.9.61");
 
@@ -1674,12 +1680,14 @@ public:
 
 @safe unittest
 {
-    softUnittest({
+    softUnittest(
+    {
         const InternetAddress ia = new InternetAddress("63.105.9.61", 80);
         assert(ia.toString() == "63.105.9.61:80");
     });
 
-    softUnittest({
+    softUnittest(
+    {
         // test construction from a sockaddr_in
         sockaddr_in sin;
 
@@ -1691,7 +1699,8 @@ public:
         assert(ia.toString() == "127.0.0.1:80");
     });
 
-    softUnittest({
+    softUnittest(
+    {
         // test reverse lookup
         auto ih = new InternetHost;
         if (ih.getHostByName("digitalmars.com"))
@@ -1712,7 +1721,8 @@ public:
     });
 
     version (SlowTests)
-    softUnittest({
+    softUnittest(
+    {
         // test failing reverse lookup
         const InternetAddress ia = new InternetAddress("127.114.111.120", 80);
         assert(ia.toHostNameString() is null);
@@ -1881,12 +1891,14 @@ public:
 
 @safe unittest
 {
-    softUnittest({
+    softUnittest(
+    {
         const Internet6Address ia = new Internet6Address("::1", 80);
         assert(ia.toString() == "[::1]:80");
     });
 
-    softUnittest({
+    softUnittest(
+    {
         // test construction from a sockaddr_in6
         sockaddr_in6 sin;
 
@@ -2390,7 +2402,8 @@ public:
 
 @safe unittest
 {
-    softUnittest({
+    softUnittest(
+    {
         enum PAIRS = 768;
         version(Posix)
         () @trusted
@@ -2567,7 +2580,8 @@ private:
     @safe unittest
     {
         version(SlowTests)
-        softUnittest({
+        softUnittest(
+        {
             import std.datetime;
             import std.typecons;
 

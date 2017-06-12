@@ -989,7 +989,8 @@ if (isForwardRange!R && is(ElementType!R : dchar))
 
 
     //CodepointSet operations relatively in order of priority
-    enum Operator:uint {
+    enum Operator:uint
+    {
         Open = 0, Negate,  Difference, SymDifference, Intersection, Union, None
     }
 
@@ -997,8 +998,11 @@ if (isForwardRange!R && is(ElementType!R : dchar))
     //also fetches next set operation
     Tuple!(CodepointSet,Operator) parseCharTerm()
     {
-        enum State{ Start, Char, Escape, CharDash, CharDashEscape,
-            PotentialTwinSymbolOperator }
+        enum State
+        {
+            Start, Char, Escape, CharDash, CharDashEscape,
+            PotentialTwinSymbolOperator
+        }
         Operator op = Operator.None;
         dchar last;
         CodepointSet set;

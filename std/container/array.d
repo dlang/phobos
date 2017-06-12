@@ -1389,7 +1389,8 @@ if (!is(Unqual!T == bool))
 // Test issue 11194
 @system unittest
 {
-    static struct S {
+    static struct S
+    {
         int i = 1337;
         void* p;
         this(this) { assert(i == 1337); }

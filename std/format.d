@@ -1696,7 +1696,8 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
     enforce(fmt.length >= 2, "fmt must be at least 2 characters long");
     enforce(fmt.front == '%', "fmt must start with a '%' character");
 
-    static struct DummyOutputRange {
+    static struct DummyOutputRange
+    {
         void put(C)(C[] buf) {} // eat elements
     }
     auto a = DummyOutputRange();
@@ -1864,7 +1865,8 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     if (f.spec == 'r')
     {
         // raw write, skip all else and write the thing
-        auto raw = (ref val)@trusted{
+        auto raw = (ref val)@trusted
+        {
             return (cast(const char*) &val)[0 .. val.sizeof];
         }(val);
         if (needToSwapEndianess(f))
@@ -2144,7 +2146,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     if (fs.spec == 'r')
     {
         // raw write, skip all else and write the thing
-        auto raw = (ref val)@trusted{
+        auto raw = (ref val)@trusted
+        {
             return (cast(const char*) &val)[0 .. val.sizeof];
         }(val);
         if (needToSwapEndianess(f))
@@ -2220,7 +2223,8 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     //printf("format: '%s'; geeba: %g\n", sprintfSpec.ptr, val);
     char[512] buf = void;
 
-    immutable n = ()@trusted{
+    immutable n = ()@trusted
+    {
         import core.stdc.stdio : snprintf;
         return snprintf(buf.ptr, buf.length,
                         sprintfSpec.ptr,
@@ -3145,9 +3149,11 @@ if (is(StringTypeOf!T) && !is(T == enum))
     // Test for bug 8015
     import std.typecons;
 
-    struct MyStruct {
+    struct MyStruct
+    {
         string str;
-        @property string toStr() {
+        @property string toStr()
+        {
             return str;
         }
         alias toStr this;
@@ -3390,7 +3396,8 @@ void enforceValidFormatSpec(T, Char)(const ref FormatSpec!Char f)
     static class CF2 { override string toString() { return ""; } }
 
     static interface IK1 { void toString(scope void delegate(const(char)[]) sink,
-                           FormatSpec!char) const; }
+                           FormatSpec!char) const;
+    }
     static class CIK1 : IK1 { override void toString(scope void delegate(const(char)[]) sink,
                               FormatSpec!char) const { sink("CIK1"); } }
     static struct KS1 { void toString(scope void delegate(const(char)[]) sink,
@@ -3771,7 +3778,8 @@ if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(Builtin
     static struct Bug7230
     {
         string s = "hello";
-        union {
+        union
+        {
             string a;
             int b;
             double c;
@@ -5266,7 +5274,8 @@ body
 
                 result[key] = unformatElement!(typeof(T.init.values[0]))(input, fmt);
             }
-            debug (unformatRange) {
+            debug (unformatRange)
+            {
             if (input.empty) printf("-> front = [empty] ");
             else             printf("-> front = %c ", input.front);
             }
@@ -5281,7 +5290,8 @@ body
                 fmt.readUpToNextSpec(input);
             auto sep = spec.sep !is null ? spec.sep
                          : fmt.trailing;
-            debug (unformatRange) {
+            debug (unformatRange)
+            {
             if (!sep.empty && !input.empty) printf("-> %c, sep = %.*s\n", input.front, sep);
             else                            printf("\n");
             }
@@ -5975,7 +5985,8 @@ char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
 
 @safe unittest
 {
-    assertCTFEable!({
+    assertCTFEable!(
+    {
     auto tmp = format("%,d", 1000);
     assert(tmp == "1,000", "'" ~ tmp ~ "'");
 

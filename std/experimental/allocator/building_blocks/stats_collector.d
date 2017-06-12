@@ -615,7 +615,8 @@ public:
             import std.range : repeat;
 
             static PerCallStatistics s = { f, n, [ opts ],
-                repeat(0UL, opts.length).array };
+                repeat(0UL, opts.length).array
+            };
             static bool inserted;
 
             if (!inserted)
