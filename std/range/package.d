@@ -8332,7 +8332,7 @@ unittest
         Range r;
         r.arr = 10.iota.array; // for clarity
 
-        static assert (isForwardRange!Range);
+        static assert(isForwardRange!Range);
         enum hasSliceToEnd = hasSlicing!Range && is(typeof(Range.init[0 .. $]) == Range);
 
         assert(r.slide(2)[0].equal([0, 1]));
@@ -8356,8 +8356,8 @@ unittest
 
     foreach (Range; AliasSeq!SliceableDummyRangesWithoutInfinity)
     {
-        static assert (hasSlicing!Range);
-        static assert (hasLength!Range);
+        static assert(hasSlicing!Range);
+        static assert(hasLength!Range);
 
         Range r;
         r.arr = 10.iota.array; // for clarity
