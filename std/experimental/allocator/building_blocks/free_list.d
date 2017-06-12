@@ -2,7 +2,7 @@
 module std.experimental.allocator.building_blocks.free_list;
 
 import std.experimental.allocator.common;
-import std.typecons : Flag, Yes, No;
+import std.typecons : Flag, No, Yes;
 
 /**
 

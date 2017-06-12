@@ -118,7 +118,7 @@ public import std.datetime.timezone;
 import core.exception : AssertError;
 import std.functional : unaryFun;
 import std.traits;
-import std.typecons : Flag, Yes, No;
+import std.typecons : Flag, No, Yes;
 
 
 // Verify module example.

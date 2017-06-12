@@ -45,7 +45,7 @@ import std.exception;
 import std.internal.cstring;
 private import std.internal.windows.advapi32;
 import std.system : Endian, endian;
-import std.utf : toUTF8, toUTF16;
+import std.utf : toUTF16, toUTF8;
 import std.windows.syserror;
 
 //debug = winreg;
@@ -82,7 +82,7 @@ class Win32Exception : WindowsException
     @property int error() { return super.code; }
 }
 
-version(unittest) import std.string : startsWith, endsWith;
+version(unittest) import std.string : endsWith, startsWith;
 
 @safe unittest
 {

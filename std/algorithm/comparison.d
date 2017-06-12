@@ -64,7 +64,7 @@ import std.range.primitives;
 import std.traits;
 // FIXME
 import std.meta : allSatisfy;
-import std.typecons; // : tuple, Tuple, Flag, Yes;
+import std.typecons; // : Flag, Tuple, tuple, Yes;
 
 /**
 Find $(D value) _among $(D values), returning the 1-based index
@@ -852,7 +852,7 @@ range of range (of range...) comparisons.
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.range : iota, chunks;
+    import std.range : chunks, iota;
     assert(equal!(equal!equal)(
         [[[0, 1], [2, 3]], [[4, 5], [6, 7]]],
         iota(0, 8).chunks(2).chunks(2)
@@ -925,7 +925,7 @@ range of range (of range...) comparisons.
 
 @safe pure unittest
 {
-    import std.utf : byChar, byWchar, byDchar;
+    import std.utf : byChar, byDchar, byWchar;
 
     assert(equal("æøå".byChar, "æøå"));
     assert(equal("æøå", "æøå".byChar));

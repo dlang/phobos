@@ -641,7 +641,7 @@ if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementT
     static assert(dirName("dir/file") == "dir");
 
     import std.array;
-    import std.utf : byChar, byWchar, byDchar;
+    import std.utf : byChar, byDchar, byWchar;
 
     assert(dirName("".byChar).array == ".");
     assert(dirName("file"w.byWchar).array == "."w);
@@ -1075,7 +1075,7 @@ if (isConvertibleToString!R)
     assert(stripExtension("file.ext1.ext2"d) == "file.ext1");
 
     import std.array;
-    import std.utf : byChar, byWchar, byDchar;
+    import std.utf : byChar, byDchar, byWchar;
 
     assert(stripExtension("file".byChar).array == "file");
     assert(stripExtension("file.ext"w.byWchar).array == "file");
@@ -1187,7 +1187,7 @@ if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(Element
     !isConvertibleToString!R &&
     isSomeChar!C)
 {
-    import std.range : only, chain;
+    import std.range : chain, only;
     import std.utf : byUTF;
 
     alias CR = Unqual!(ElementEncodingType!R);
@@ -1279,7 +1279,7 @@ if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(Element
     !isConvertibleToString!R &&
     isSomeChar!C)
 {
-    import std.range : only, chain;
+    import std.range : chain, only;
     import std.utf : byUTF;
 
     alias CR = Unqual!(ElementEncodingType!R);
@@ -1539,7 +1539,7 @@ if ((isRandomAccessRange!R1 && hasSlicing!R1 && hasLength!R1 && isSomeChar!(Elem
     }
     else
     {
-        import std.range : only, chain;
+        import std.range : chain, only;
         import std.utf : byUTF;
 
         alias CR = Unqual!(ElementEncodingType!R1);
@@ -2906,9 +2906,9 @@ if ((isNarrowString!R1 ||
     import std.algorithm.comparison : mismatch;
     import std.algorithm.iteration : joiner;
     import std.array : array;
+    import std.range : chain, choose, repeat;
     import std.range.primitives : walkLength;
-    import std.range : repeat, chain, choose;
-    import std.utf : byCodeUnit, byChar;
+    import std.utf : byChar, byCodeUnit;
 
     // Remove matching prefix from basePS and pathPS
     auto tup = mismatch!((a, b) => filenameCmp!cs(a, b) == 0)(basePS, pathPS);
@@ -3850,8 +3850,8 @@ string expandTilde(string inputPath) nothrow
     version(Posix)
     {
         import core.exception : onOutOfMemoryError;
-        import core.stdc.errno : errno, ERANGE;
-        import core.stdc.stdlib : malloc, free, realloc;
+        import core.stdc.errno : ERANGE, errno;
+        import core.stdc.stdlib : free, malloc, realloc;
 
         /*  Joins a path from a C string to the remainder of path.
 
@@ -3913,7 +3913,7 @@ string expandTilde(string inputPath) nothrow
             }
             else
             {
-                import core.sys.posix.pwd : passwd, getpwnam_r;
+                import core.sys.posix.pwd : getpwnam_r, passwd;
                 import std.string : indexOf;
 
                 assert(path.length > 2 || (path.length == 2 && !isDirSeparator(path[1])));

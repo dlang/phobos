@@ -370,8 +370,8 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
 
 @system unittest
 {
+    import std.experimental.allocator : IAllocator, theAllocator;
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    import std.experimental.allocator : theAllocator, IAllocator;
 
     // One word before and after each allocation.
     auto A = AffixAllocator!(IAllocator, size_t, size_t)(theAllocator);

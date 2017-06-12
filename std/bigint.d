@@ -27,7 +27,7 @@ module std.bigint;
 
 import std.conv : ConvException;
 
-private import std.format : FormatSpec, FormatException;
+private import std.format : FormatException, FormatSpec;
 private import std.internal.math.biguintcore;
 private import std.range.primitives;
 private import std.traits;
@@ -674,7 +674,7 @@ public:
     ///
     @system unittest
     {
-        import std.conv : to, ConvOverflowException;
+        import std.conv : ConvOverflowException, to;
         import std.exception : assertThrown;
 
         assert(BigInt("0").to!int == 0);
@@ -687,7 +687,7 @@ public:
 
     @system unittest
     {
-        import std.conv : to, ConvOverflowException;
+        import std.conv : ConvOverflowException, to;
         import std.exception : assertThrown;
 
         assert(BigInt("-1").to!byte == -1);

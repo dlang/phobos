@@ -229,7 +229,7 @@ public import std.experimental.allocator.common,
 // Example in the synopsis above
 @system unittest
 {
-    import std.algorithm.comparison : min, max;
+    import std.algorithm.comparison : max, min;
     import std.experimental.allocator.building_blocks.allocator_list
         : AllocatorList;
     import std.experimental.allocator.building_blocks.bitmapped_block

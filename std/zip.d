@@ -97,7 +97,7 @@ enum CompressionMethod : ushort
  */
 final class ArchiveMember
 {
-    import std.conv : to, octal;
+    import std.conv : octal, to;
     import std.datetime : DosFileTime, SysTime, SysTimeToDosFileTime;
 
     /**
@@ -852,7 +852,7 @@ debug(print)
     assert(zip3.directory["foo"].compressedSize == am1.compressedSize);
 
     // Test if packing and unpacking produces the original data
-    import std.random : uniform, MinstdRand0;
+    import std.random : MinstdRand0, uniform;
     import std.stdio, std.conv;
     MinstdRand0 gen;
     const uint itemCount = 20, minSize = 10, maxSize = 500;

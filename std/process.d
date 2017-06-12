@@ -386,7 +386,7 @@ private Pid spawnProcessImpl(in char[][] args,
     scope(exit) if (workDirFD >= 0) close(workDirFD);
     if (workDir.length)
     {
-        import core.sys.posix.fcntl : open, O_RDONLY, stat_t, fstat, S_ISDIR;
+        import core.sys.posix.fcntl : fstat, open, O_RDONLY, stat_t, S_ISDIR;
         workDirFD = open(workDir.tempCString(), O_RDONLY);
         if (workDirFD < 0)
             throw ProcessException.newFromErrno("Failed to open working directory");
@@ -449,8 +449,8 @@ private Pid spawnProcessImpl(in char[][] args,
         if (!(config & Config.inheritFDs))
         {
             import core.stdc.stdlib : malloc;
-            import core.sys.posix.poll : pollfd, poll, POLLNVAL;
-            import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
+            import core.sys.posix.poll : poll, pollfd, POLLNVAL;
+            import core.sys.posix.sys.resource : getrlimit, rlimit, RLIMIT_NOFILE;
 
             // Get the maximum number of file descriptors that could be open.
             rlimit r;
@@ -778,7 +778,7 @@ version (Posix) @safe unittest
 version (Posix)
 private void setCLOEXEC(int fd, bool on) nothrow @nogc
 {
-    import core.sys.posix.fcntl : fcntl, F_GETFD, FD_CLOEXEC, F_SETFD;
+    import core.sys.posix.fcntl : fcntl, FD_CLOEXEC, F_GETFD, F_SETFD;
     auto flags = fcntl(fd, F_GETFD);
     if (flags >= 0)
     {
@@ -1590,7 +1590,7 @@ void kill(Pid pid, int codeOrSignal)
     }
     else version (Posix)
     {
-        import core.sys.posix.signal : SIGTERM, SIGKILL;
+        import core.sys.posix.signal : SIGKILL, SIGTERM;
         TestScript prog = "while true; do sleep 1; done";
     }
     auto pid = spawnProcess(prog.path);
@@ -2491,7 +2491,7 @@ private struct TestScript
 
     ~this()
     {
-        import std.file : remove, exists;
+        import std.file : exists, remove;
         if (!path.empty && exists(path))
         {
             try { remove(path); }

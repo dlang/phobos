@@ -512,7 +512,7 @@ version(StdDdoc)
 ///
 @system unittest
 {
-    import std.traits : functionAttributes, FunctionAttribute;
+    import std.traits : FunctionAttribute, functionAttributes;
     interface A { int run(); }
     interface B { int stop(); @property int status(); }
     class X

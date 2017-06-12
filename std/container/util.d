@@ -105,7 +105,7 @@ if (is(T == struct) || is(T == class))
 template make(alias Container, Args...)
 if (!is(Container))
 {
-    import std.range : isInputRange, isInfinite;
+    import std.range : isInfinite, isInputRange;
     import std.traits : isDynamicArray;
 
     auto make(Range)(Range range)

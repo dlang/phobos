@@ -1287,7 +1287,7 @@ A single unsigned integer seed value, different on each successive call
 */
 @property uint unpredictableSeed() @trusted
 {
-    import core.thread : Thread, getpid, MonoTime;
+    import core.thread : getpid, MonoTime, Thread;
     static bool seeded;
     static MinstdRand0 rand;
     if (!seeded)

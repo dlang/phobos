@@ -128,7 +128,7 @@ if (((flags & flags.signed) + precision + exponentWidth) % 8 == 0 && precision +
 ///
 @safe unittest
 {
-    import std.math : sin, cos;
+    import std.math : cos, sin;
 
     // Define a 16-bit floating point values
     CustomFloat!16                                x;     // Using the number of bits
@@ -2188,7 +2188,7 @@ if (isRandomAccessRange!(R1) && hasLength!(R1) &&
     isRandomAccessRange!(R2) && hasLength!(R2))
 {
     import core.exception : onOutOfMemoryError;
-    import core.stdc.stdlib : malloc, free;
+    import core.stdc.stdlib : free, malloc;
     import std.algorithm.mutation : swap;
     import std.functional : binaryFun;
 
@@ -2316,7 +2316,7 @@ optimizations.
 struct GapWeightedSimilarityIncremental(Range, F = double)
 if (isRandomAccessRange!(Range) && hasLength!(Range))
 {
-    import core.stdc.stdlib : malloc, realloc, alloca, free;
+    import core.stdc.stdlib : alloca, free, malloc, realloc;
 
 private:
     Range s, t;

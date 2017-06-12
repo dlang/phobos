@@ -772,7 +772,7 @@ struct BitArray
 {
 private:
 
-    import core.bitop : bts, btr, bsf, bt;
+    import core.bitop : bsf, bt, btr, bts;
     import std.format : FormatSpec;
 
     size_t _len;
@@ -2052,7 +2052,7 @@ public:
      */
     @property auto bitsSet() const nothrow
     {
-        import std.algorithm.iteration : filter, map, joiner;
+        import std.algorithm.iteration : filter, joiner, map;
         import std.range : iota;
 
         return iota(dim).

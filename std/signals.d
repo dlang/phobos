@@ -63,7 +63,7 @@
 module std.signals;
 
 import core.exception : onOutOfMemoryError;
-import core.stdc.stdlib : calloc, realloc, free;
+import core.stdc.stdlib : calloc, free, realloc;
 import std.stdio;
 
 // Special function for internal use only.

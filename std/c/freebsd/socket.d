@@ -14,4 +14,4 @@ public import core.sys.posix.netdb;
 public import core.sys.posix.netinet.in_ : IPPROTO_IGMP, IPPROTO_GGP,
                                           IPPROTO_PUP, IPPROTO_IDP, IPPROTO_ND,
                                           IPPROTO_MAX, INADDR_LOOPBACK, INADDR_NONE;
-public import core.sys.posix.sys.socket : AF_APPLETALK, AF_IPX, SOCK_RDM, MSG_NOSIGNAL;
+public import core.sys.posix.sys.socket : AF_APPLETALK, AF_IPX, MSG_NOSIGNAL, SOCK_RDM;

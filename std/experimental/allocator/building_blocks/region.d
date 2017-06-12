@@ -3,7 +3,7 @@ module std.experimental.allocator.building_blocks.region;
 
 import std.experimental.allocator.building_blocks.null_allocator;
 import std.experimental.allocator.common;
-import std.typecons : Flag, Yes, No;
+import std.typecons : Flag, No, Yes;
 
 /**
 A $(D Region) allocator allocates memory straight from one contiguous chunk.

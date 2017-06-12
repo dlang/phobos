@@ -75,7 +75,7 @@ debug (utf) import core.stdc.stdio : printf;
   +/
 class UTFException : Exception
 {
-    import core.internal.string : unsignedToTempString, UnsignedStringBuf;
+    import core.internal.string : UnsignedStringBuf, unsignedToTempString;
 
     uint[4] sequence;
     size_t  len;

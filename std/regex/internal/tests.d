@@ -1015,7 +1015,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
 @safe unittest
 {
     import std.array : appender;
-    import std.regex : replaceFirst, replaceFirstInto, regex;
+    import std.regex : regex, replaceFirst, replaceFirstInto;
     import std.stdio : writeln;
 
     auto example = "Hello, world!";

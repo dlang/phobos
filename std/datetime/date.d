@@ -7281,7 +7281,7 @@ public:
         if (isSomeString!S)
     {
         import std.algorithm.searching : startsWith;
-        import std.conv : to, text, ConvException;
+        import std.conv : ConvException, text, to;
         import std.exception : enforce;
         import std.string : strip;
 
@@ -8797,7 +8797,7 @@ public:
     static TimeOfDay fromISOString(S)(in S isoString) @safe pure
         if (isSomeString!S)
     {
-        import std.conv : to, text, ConvException;
+        import std.conv : ConvException, text, to;
         import std.exception : enforce;
         import std.string : strip;
 

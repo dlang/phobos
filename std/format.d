@@ -1004,7 +1004,7 @@ struct FormatSpec(Char)
 if (is(Unqual!Char == Char))
 {
     import std.algorithm.searching : startsWith;
-    import std.ascii : isDigit, isPunctuation, isAlpha;
+    import std.ascii : isAlpha, isDigit, isPunctuation;
     import std.conv : parse, text, to;
 
     /**
@@ -2165,7 +2165,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
     version (CRuntime_Microsoft)
     {
-        import std.math : isNaN, isInfinity;
+        import std.math : isInfinity, isNaN;
         immutable double tval = val; // convert early to get "inf" in case of overflow
         string s;
         if (isNaN(tval))
@@ -3653,7 +3653,7 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
     // Issue 11175
     version (Windows)
     {
-        import core.sys.windows.com : IUnknown, IID;
+        import core.sys.windows.com : IID, IUnknown;
         import core.sys.windows.windows : HRESULT;
 
         interface IUnknown2 : IUnknown { }
@@ -4250,7 +4250,7 @@ void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, s
 {
     import core.stdc.string : strlen;
     import std.array : appender;
-    import std.conv : text, octal;
+    import std.conv : octal, text;
     import std.c.stdio : snprintf;
 
     debug(format) printf("std.format.format.unittest\n");
@@ -5072,7 +5072,7 @@ private T unformatValueImpl(T, Range, Char)(ref Range input, const ref FormatSpe
 if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
     import std.algorithm.searching : find;
-    import std.conv : to, text;
+    import std.conv : text, to;
     if (spec.spec == 's' || spec.spec == 'c')
     {
         auto result = to!T(input.front);
@@ -5798,7 +5798,7 @@ immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args)
 if (isSomeChar!Char)
 {
     import std.array : appender;
-    import std.format : formattedWrite, FormatException;
+    import std.format : FormatException, formattedWrite;
     auto w = appender!(immutable(Char)[]);
     auto n = formattedWrite(w, fmt, args);
     version (all)
@@ -5874,7 +5874,7 @@ if (isSomeString!(typeof(fmt)))
 char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
 {
     import core.exception : RangeError;
-    import std.format : formattedWrite, FormatException;
+    import std.format : FormatException, formattedWrite;
     import std.utf : encode;
 
     size_t i;

@@ -230,7 +230,7 @@ module std.range;
 public import std.array;
 public import std.range.interfaces;
 public import std.range.primitives;
-public import std.typecons : Flag, Yes, No;
+public import std.typecons : Flag, No, Yes;
 
 import std.meta; // allSatisfy, staticMap
 import std.traits; // CommonType, isCallable, isFloatingPoint, isIntegral,
@@ -4197,7 +4197,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
                     return ranges[0].length;
 
                 //[min|max](ranges[0].length, ranges[1].length, ...)
-                import std.algorithm.comparison : min, max;
+                import std.algorithm.comparison : max, min;
                 if (stoppingPolicy == StoppingPolicy.shortest)
                     return mixin(q{min(%(ranges[%s].length%|, %))}.format(iota(0, R.length)));
                 else
@@ -4360,7 +4360,7 @@ enum StoppingPolicy
     import std.algorithm.mutation : swap;
     import std.algorithm.sorting : sort;
 
-    import std.exception : assertThrown, assertNotThrown;
+    import std.exception : assertNotThrown, assertThrown;
     import std.typecons : tuple;
 
     int[] a = [ 1, 2, 3 ];
@@ -5593,7 +5593,7 @@ debug @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.searching : count;
-    import std.math : approxEqual, nextUp, nextDown;
+    import std.math : approxEqual, nextDown, nextUp;
     import std.meta : AliasSeq;
 
     static assert(is(ElementType!(typeof(iota(0f))) == float));
@@ -8170,7 +8170,7 @@ public:
 @safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
-    import std.internal.test.dummyrange : DummyRange, Length, RangeType, ReturnBy, AllDummyRanges;
+    import std.internal.test.dummyrange : AllDummyRanges, DummyRange, Length, RangeType, ReturnBy;
     import std.meta : AliasSeq;
 
     alias AllForwardDummyRanges = AliasSeq!(
@@ -10729,7 +10729,7 @@ if (isInputRange!R && is(R == class))
 
 @safe unittest    // bug 9060
 {
-    import std.algorithm.iteration : map, joiner, group;
+    import std.algorithm.iteration : group, joiner, map;
     import std.algorithm.searching : until;
     // fix for std.algorithm
     auto r = map!(x => 0)([1]);
