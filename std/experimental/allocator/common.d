@@ -462,7 +462,7 @@ version(unittest)
              {
                  a.alignedDeallocate(b3);
              }
-         }}
+        }}
         else
         {
             static assert(!hasMember!(A, "alignedDeallocate"));
@@ -483,7 +483,7 @@ version(unittest)
              assert(b4.length);
              // Can't get any more memory
              assert(!ab.allocate(1).ptr);
-         }}
+        }}
 
         static if (hasMember!(A, "expand"))
         {{
@@ -499,7 +499,7 @@ version(unittest)
              assert(b5 is null);
              assert(!aa.expand(b5, 1));
              assert(b5.length == 0);
-         }}
+        }}
 
         void[] b6 = null;
         assert(a.reallocate(b6, 0));
@@ -516,7 +516,7 @@ version(unittest)
              assert(a.owns(b1) == Ternary.yes);
              assert(a.owns(b2) == Ternary.yes);
              assert(a.owns(b6) == Ternary.yes);
-         }}
+        }}
 
         static if (hasMember!(A, "resolveInternalPointer"))
         {{
@@ -542,7 +542,7 @@ version(unittest)
              assert(a.resolveInternalPointer(b8.ptr, p) == Ternary.no);
              assert(a.resolveInternalPointer(b8.ptr + b8.length / 2, p) == Ternary.no);
              assert(a.resolveInternalPointer(b8.ptr + b8.length, p) == Ternary.no);
-         }}
+        }}
     }
 
     package void testAllocatorObject(AllocInterface)(AllocInterface a)
