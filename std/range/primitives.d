@@ -2113,7 +2113,7 @@ if (isNarrowString!(C[]))
 
     static if (is(Unqual!C == char))
     {
-        __gshared static immutable ubyte[] charWidthTab = [
+        static immutable ubyte[] charWidthTab = [
             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
             3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
