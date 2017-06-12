@@ -296,9 +296,9 @@ Macros:
  +/
 module std.regex;
 
+import std.range.primitives, std.traits;
 import std.regex.internal.ir;
 import std.regex.internal.thompson; //TODO: get rid of this dependency
-import std.traits, std.range.primitives;
 import std.typecons; // : Flag, No, Yes;
 
 /++
@@ -418,7 +418,7 @@ if (isSomeString!(S))
 
 template ctRegexImpl(alias pattern, string flags=[])
 {
-    import std.regex.internal.parser, std.regex.internal.backtracking;
+    import std.regex.internal.backtracking, std.regex.internal.parser;
     enum r = regex(pattern, flags);
     alias Char = BasicElementOf!(typeof(pattern));
     enum source = ctGenRegExCode(r);
@@ -1422,7 +1422,7 @@ if (isOutputRange!(Sink, dchar) && isSomeString!R && isRegexFor!(RegEx, R))
 @system unittest
 {
     // insert comma as thousands delimiter in fifty randomly produced big numbers
-    import std.array, std.random, std.conv, std.range;
+    import std.array, std.conv, std.random, std.range;
     static re = regex(`(?<=\d)(?=(\d\d\d)+\b)`, "g");
     auto sink = appender!(char [])();
     enum ulong min = 10UL ^^ 10, max = 10UL ^^ 19;

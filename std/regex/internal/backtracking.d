@@ -6,7 +6,7 @@ module std.regex.internal.backtracking;
 
 package(std.regex):
 
-import std.range.primitives, std.typecons, std.traits, core.stdc.stdlib;
+import core.stdc.stdlib, std.range.primitives, std.traits, std.typecons;
 import std.regex.internal.ir;
 
 /+

@@ -165,7 +165,7 @@ if (isBidirectionalRange!Range)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.stdio, std.range;
+    import std.range, std.stdio;
     import std.typecons : tuple;
 
     ulong counter = 0;

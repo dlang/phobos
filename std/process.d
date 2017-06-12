@@ -3476,7 +3476,7 @@ import core.thread;
 
 version (Windows)
 {
-    import std.format, std.random, std.file;
+    import std.file, std.format, std.random;
 }
 version (Posix)
 {
@@ -3484,7 +3484,7 @@ version (Posix)
 }
 version (unittest)
 {
-    import std.file, std.conv, std.random;
+    import std.conv, std.file, std.random;
 }
 
 

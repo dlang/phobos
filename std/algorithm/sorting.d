@@ -1911,7 +1911,7 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
 @safe unittest
 {
     // Simple regression benchmark
-    import std.random, std.algorithm.iteration, std.algorithm.mutation;
+    import std.algorithm.iteration, std.algorithm.mutation, std.random;
     Random rng;
     int[] a = iota(20148).map!(_ => uniform(-1000, 1000, rng)).array;
     static uint comps;
@@ -2833,7 +2833,7 @@ private template TimSortImpl(alias pred, R)
 @safe unittest
 {
     // Issue 14223
-    import std.range, std.array;
+    import std.array, std.range;
     auto arr = chain(iota(0, 384), iota(0, 256), iota(0, 80), iota(0, 64), iota(0, 96)).array;
     sort!("a < b", SwapStrategy.stable)(arr);
 }

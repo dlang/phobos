@@ -661,7 +661,7 @@ template unwrap(Target)
 @system unittest
 {
     // Bugzilla 10377
-    import std.range, std.algorithm;
+    import std.algorithm, std.range;
 
     interface MyInputRange(T)
     {

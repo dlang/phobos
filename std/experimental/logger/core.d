@@ -2996,7 +2996,7 @@ private void trustedStore(T)(ref shared T dst, ref T src) @trusted
 // to shared logger
 @system unittest
 {
-    import std.concurrency, core.atomic, core.thread;
+    import core.atomic, core.thread, std.concurrency;
 
     static shared logged_count = 0;
 

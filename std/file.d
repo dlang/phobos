@@ -78,7 +78,7 @@ Source:    $(PHOBOSSRC std/_file.d)
  */
 module std.file;
 
-import core.stdc.stdlib, core.stdc.string, core.stdc.errno;
+import core.stdc.errno, core.stdc.stdlib, core.stdc.string;
 
 import std.datetime;
 import std.internal.cstring;

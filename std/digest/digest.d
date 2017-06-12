@@ -89,7 +89,7 @@ import std.traits;
 @system unittest
 {
     //Generating the hashes of a file, idiomatic D way
-    import std.digest.crc, std.digest.sha, std.digest.md;
+    import std.digest.crc, std.digest.md, std.digest.sha;
     import std.stdio;
 
     // Digests a file and prints the result.
@@ -115,7 +115,7 @@ import std.traits;
 @system unittest
 {
     //Generating the hashes of a file using the template API
-    import std.digest.crc, std.digest.sha, std.digest.md;
+    import std.digest.crc, std.digest.md, std.digest.sha;
     import std.stdio;
     // Digests a file and prints the result.
     void digestFile(Hash)(ref Hash hash, string filename)
@@ -154,7 +154,7 @@ import std.traits;
 ///
 @system unittest
 {
-    import std.digest.crc, std.digest.sha, std.digest.md;
+    import std.digest.crc, std.digest.md, std.digest.sha;
     import std.stdio;
 
     // Digests a file and prints the result.
@@ -405,7 +405,7 @@ if (isDigest!T)
 ///
 @system unittest
 {
-    import std.digest.md, std.digest.hmac;
+    import std.digest.hmac, std.digest.md;
     static assert(hasBlockSize!MD5        && MD5.blockSize      == 512);
     static assert(hasBlockSize!(HMAC!MD5) && HMAC!MD5.blockSize == 512);
 }
@@ -468,7 +468,7 @@ if (allSatisfy!(isArray, typeof(data)))
 ///
 @system unittest
 {
-    import std.digest.md, std.digest.sha, std.digest.crc;
+    import std.digest.crc, std.digest.md, std.digest.sha;
     auto md5   = digest!MD5(  "The quick brown fox jumps over the lazy dog");
     auto sha1  = digest!SHA1( "The quick brown fox jumps over the lazy dog");
     auto crc32 = digest!CRC32("The quick brown fox jumps over the lazy dog");
@@ -641,7 +641,7 @@ interface Digest
 ///
 @system unittest
 {
-    import std.digest.md, std.digest.sha, std.digest.crc;
+    import std.digest.crc, std.digest.md, std.digest.sha;
     ubyte[] md5   = (new MD5Digest()).digest("The quick brown fox jumps over the lazy dog");
     ubyte[] sha1  = (new SHA1Digest()).digest("The quick brown fox jumps over the lazy dog");
     ubyte[] crc32 = (new CRC32Digest()).digest("The quick brown fox jumps over the lazy dog");

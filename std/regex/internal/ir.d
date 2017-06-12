@@ -9,7 +9,7 @@ module std.regex.internal.ir;
 
 package(std.regex):
 
-import std.exception, std.uni, std.meta, std.traits, std.range.primitives;
+import std.exception, std.meta, std.range.primitives, std.traits, std.uni;
 
 debug(std_regex_parser) import std.stdio;
 // just a common trait, may be moved elsewhere
