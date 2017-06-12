@@ -49,6 +49,17 @@ module std.container.dlist;
     popBackN(r, 2);
     assert(r.equal([3]));
     assert(walkLength(r) == 1);
+
+    // DList.Range can be used to remove elements from the list
+    auto nl = DList!int([1, 2, 3, 4, 5]);
+    for (auto rn = nl[]; !rn.empty; rn.popFront())
+        if (rn.front % 2 == 0)
+            nl.popFirstOf(rn);
+    assert(equal(nl[], [1, 3, 5]));
+    auto rs = nl[];
+    rs.popFront();
+    nl.remove(rs);
+    assert(equal(nl[], [1]));
 }
 
 import std.range.primitives;
@@ -647,10 +658,7 @@ Compexity: $(BIGOH 1)
         assert(r._first, "Remove: Range is empty");
         BaseNode.connect(r._first._prev, r._first._next);
         auto after = r._first._next;
-        if (after is _root)
-            return Range(null, null);
-        else
-            return Range(after, _last);
+        return after is _root ? Range(null, null) : Range(after, _last);
     }
 
 /**
@@ -671,10 +679,7 @@ Compexity: $(BIGOH 1)
         assert(r._last, "Remove: Range is empty");
         BaseNode.connect(r._last._prev, r._last._next);
         auto before = r._last._prev;
-        if (before is _root)
-            return Range(null, null);
-        else
-            return Range(_first, before);
+        return before is _root ? Range(null, null) : Range(_first, before);
     }
 
 /**
@@ -867,11 +872,13 @@ private:
     auto dl = DList!int([1, 2, 3, 4, 5]);
     auto r = dl[];
     r.popFront();
-    dl.popFirstOf(r);
+    auto after = dl.popFirstOf(r);
     assert(equal(dl[], [1, 3, 4, 5]));
+    assert(equal(after, [3, 4, 5]));
     r.popBack();
-    dl.popLastOf(r);
+    auto before = dl.popLastOf(r);
     assert(equal(dl[], [1, 3, 5]));
+    assert(equal(before, [1, 3]));
     DList!int empty_list;
     dl.popFirstOf(empty_list[]);
     assert(equal(dl[], [1, 3, 5]));
