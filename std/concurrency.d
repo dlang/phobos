@@ -1573,10 +1573,9 @@ private:
             this.outer.yield();
         }
 
-        private bool notified;
+        bool notified;
     }
 
-private:
     void dispatch()
     {
         import std.algorithm.mutation : remove;
@@ -1600,7 +1599,6 @@ private:
         }
     }
 
-private:
     Fiber[] m_fibers;
     size_t m_pos;
 }
