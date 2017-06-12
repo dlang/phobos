@@ -975,8 +975,8 @@ bool register(string name, Tid tid)
  */
 bool unregister(string name)
 {
-    import std.algorithm.searching : countUntil;
     import std.algorithm.mutation : remove, SwapStrategy;
+    import std.algorithm.searching : countUntil;
 
     synchronized (registryLock)
     {

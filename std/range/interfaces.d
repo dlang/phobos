@@ -519,9 +519,9 @@ template outputRangeObject(E...) {
 
 @system unittest
 {
-    import std.internal.test.dummyrange;
     import std.algorithm.comparison : equal;
     import std.array;
+    import std.internal.test.dummyrange;
 
     static void testEquality(R)(iInputRange r1, R r2) {
         assert(equal(r1, r2));

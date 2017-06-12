@@ -21,8 +21,8 @@ module std.container.dlist;
 ///
 @safe unittest
 {
-    import std.container : DList;
     import std.algorithm.comparison : equal;
+    import std.container : DList;
 
     auto s = DList!int(1, 2, 3);
     assert(equal(s[], [1, 2, 3]));

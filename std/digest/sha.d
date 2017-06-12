@@ -882,8 +882,8 @@ alias SHA512_256 = SHA!(1024, 256); /// SHA alias for SHA-512/256, hash is ubyte
 
 @system unittest
 {
-    import std.range;
     import std.conv : hexString;
+    import std.range;
 
     ubyte[20] digest;
     ubyte[28] digest224;

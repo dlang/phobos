@@ -129,8 +129,8 @@ private
         }
         else
         {
-            import std.format : FormatSpec, formatValue;
             import std.array : appender;
+            import std.format : FormatSpec, formatValue;
 
             auto w = appender!T();
             FormatSpec!(ElementEncodingType!T) f;
@@ -957,8 +957,8 @@ if (!(isImplicitlyConvertible!(S, T) &&
             }
         }
 
-        import std.format : FormatSpec, formatValue;
         import std.array : appender;
+        import std.format : FormatSpec, formatValue;
 
         //Default case, delegate to format
         //Note: we don't call toStr directly, to avoid duplicate work.
@@ -1019,8 +1019,8 @@ if (!(isImplicitlyConvertible!(S, T) &&
     !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
     !isInfinite!S && isExactSomeString!T && !isCopyable!S)
 {
-    import std.format : FormatSpec, formatValue;
     import std.array : appender;
+    import std.format : FormatSpec, formatValue;
 
     auto w = appender!T();
     FormatSpec!(ElementEncodingType!T) f;
@@ -2021,8 +2021,8 @@ Lerr:
 
 @safe unittest
 {
-    import std.exception;
     import std.algorithm.comparison : equal;
+    import std.exception;
     struct InputString
     {
         string _s;
@@ -2637,9 +2637,9 @@ Target parse(Target, Source)(ref Source source)
 if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
     isFloatingPoint!Target && !is(Target == enum))
 {
+    import core.stdc.math : HUGE_VAL;
     import std.ascii : isDigit, isAlpha, toLower, toUpper, isHexDigit;
     import std.exception : enforce;
-    import core.stdc.math : HUGE_VAL;
 
     static if (isNarrowString!Source)
     {
@@ -5251,8 +5251,8 @@ version(unittest)
 @safe unittest //@@@9559@@@
 {
     import std.algorithm.iteration : map;
-    import std.typecons : Nullable;
     import std.array : array;
+    import std.typecons : Nullable;
     alias I = Nullable!int;
     auto ints = [0, 1, 2].map!(i => i & 1 ? I.init : I(i))();
     auto asArray = array(ints);

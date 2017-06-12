@@ -424,8 +424,8 @@ version(unittest)
     package void testAllocator(alias make)()
     {
         import std.conv : text;
-        import std.stdio : writeln, stderr;
         import std.math : isPowerOf2;
+        import std.stdio : writeln, stderr;
         import std.typecons : Ternary;
         alias A = typeof(make());
         scope(failure) stderr.writeln("testAllocator failed for ", A.stringof);
@@ -550,8 +550,8 @@ version(unittest)
             || is (AllocInterface : shared ISharedAllocator))
     {
         import std.conv : text;
-        import std.stdio : writeln, stderr;
         import std.math : isPowerOf2;
+        import std.stdio : writeln, stderr;
         import std.typecons : Ternary;
         scope(failure) stderr.writeln("testAllocatorObject failed for ",
                 AllocInterface.stringof);

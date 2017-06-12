@@ -98,8 +98,8 @@ if (isAssignable!T &&
     !hasElaborateCopyConstructor!T &&
     !hasElaborateAssign!T)
 {
-    import core.stdc.string : memcpy;
     import core.exception : onOutOfMemoryError;
+    import core.stdc.string : memcpy;
 
 
     /**************************

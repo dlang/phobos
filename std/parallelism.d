@@ -44,9 +44,9 @@ module std.parallelism;
 @system unittest
 {
     import std.algorithm.iteration : map;
-    import std.range : iota;
     import std.math : approxEqual;
     import std.parallelism : taskPool;
+    import std.range : iota;
 
     // Parallel reduce can be combined with
     // std.algorithm.iteration.map to interesting effect.
@@ -3931,8 +3931,8 @@ version(unittest)
 // These are the tests that should be run every time Phobos is compiled.
 @system unittest
 {
-    import std.algorithm.iteration : filter, map, reduce;
     import std.algorithm.comparison : equal, min, max;
+    import std.algorithm.iteration : filter, map, reduce;
     import std.array : split;
     import std.conv : text;
     import std.exception : assertThrown;

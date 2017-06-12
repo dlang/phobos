@@ -185,9 +185,9 @@ private:
     }
 }
 
-public import std.uni : icmp, toLower, toLowerInPlace, toUpper, toUpperInPlace;
 public import std.format : format, sformat;
 import std.typecons : Flag, Yes, No;
+public import std.uni : icmp, toLower, toLowerInPlace, toUpper, toUpperInPlace;
 
 import std.meta; // AliasSeq, staticIndexOf
 import std.range.primitives; // back, ElementEncodingType, ElementType, front,
@@ -2309,8 +2309,8 @@ S capitalize(S)(S input) @trusted pure
 if (isSomeString!S)
 {
     import std.array : array;
-    import std.utf : byUTF;
     import std.uni : asCapitalized;
+    import std.utf : byUTF;
 
     return input.asCapitalized.byUTF!(ElementEncodingType!(S)).array;
 }
@@ -5853,8 +5853,8 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
 
 @system pure unittest
 {
-    import std.exception : assertThrown;
     import core.exception : AssertError;
+    import std.exception : assertThrown;
     assertThrown!AssertError(tr("abcdef", "cd", "CD", "X"));
 }
 

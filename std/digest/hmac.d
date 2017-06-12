@@ -268,9 +268,9 @@ if (isDigest!H)
     ///
     @system pure nothrow @nogc unittest
     {
+        import std.algorithm.iteration : map;
         import std.digest.sha, std.digest.hmac;
         import std.string : representation;
-        import std.algorithm.iteration : map;
         string data = "Hello, world";
         auto digest = data.representation
                       .map!(a => cast(ubyte)(a+1))

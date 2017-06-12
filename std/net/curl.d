@@ -175,8 +175,8 @@ version(unittest)
 {
     // Run unit test with the PHOBOS_TEST_ALLOW_NET=1 set in order to
     // allow net traffic
-    import std.stdio;
     import std.range;
+    import std.stdio;
 
     import std.socket : Address, INADDR_LOOPBACK, Socket, TcpSocket;
 

@@ -59,11 +59,11 @@ $(TR $(TD Miscellaneous) $(TD
    +/
 module std.utf;
 
+import std.exception;  // basicExceptionCtors
 import std.meta;       // AliasSeq
 import std.range.primitives;
 import std.traits;     // isSomeChar, isSomeString
 import std.typecons;   // Flag, Yes, No
-import std.exception;  // basicExceptionCtors
 
 //debug=utf;           // uncomment to turn on debugging printf's
 
@@ -346,10 +346,10 @@ body
 
 @system unittest
 {
+    import core.exception : AssertError;
     import std.conv : to;
     import std.exception;
     import std.string : format;
-    import core.exception : AssertError;
     static void test(string s, dchar c, size_t i = 0, size_t line = __LINE__)
     {
         enforce(stride(s, i) == codeLength!char(c),
@@ -454,10 +454,10 @@ if (isInputRange!S && is(Unqual!(ElementType!S) == wchar))
 
 @system unittest
 {
+    import core.exception : AssertError;
     import std.conv : to;
     import std.exception;
     import std.string : format;
-    import core.exception : AssertError;
     static void test(wstring s, dchar c, size_t i = 0, size_t line = __LINE__)
     {
         enforce(stride(s, i) == codeLength!wchar(c),
@@ -533,10 +533,10 @@ if (is(S : const dchar[]) ||
 
 @system unittest
 {
+    import core.exception : AssertError;
     import std.conv : to;
     import std.exception;
     import std.string : format;
-    import core.exception : AssertError;
     static void test(dstring s, dchar c, size_t i = 0, size_t line = __LINE__)
     {
         enforce(stride(s, i) == codeLength!dchar(c),
@@ -679,10 +679,10 @@ if (isBidirectionalRange!S && is(Unqual!(ElementType!S) == char) && !isRandomAcc
 
 @system unittest
 {
+    import core.exception : AssertError;
     import std.conv : to;
     import std.exception;
     import std.string : format;
-    import core.exception : AssertError;
     static void test(string s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
     {
         enforce(strideBack(s, i == size_t.max ? s.length : i) == codeLength!char(c),
@@ -776,10 +776,10 @@ if (is(S : const wchar[]) ||
 
 @system unittest
 {
+    import core.exception : AssertError;
     import std.conv : to;
     import std.exception;
     import std.string : format;
-    import core.exception : AssertError;
     static void test(wstring s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
     {
         enforce(strideBack(s, i == size_t.max ? s.length : i) == codeLength!wchar(c),
@@ -861,10 +861,10 @@ if (isBidirectionalRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
 
 @system unittest
 {
+    import core.exception : AssertError;
     import std.conv : to;
     import std.exception;
     import std.string : format;
-    import core.exception : AssertError;
     static void test(dstring s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
     {
         enforce(strideBack(s, i == size_t.max ? s.length : i) == codeLength!dchar(c),
@@ -1747,8 +1747,8 @@ version(unittest) private void testDecode(R)(R range,
                                              size_t expectedIndex,
                                              size_t line = __LINE__)
 {
-    import std.string : format;
     import core.exception : AssertError;
+    import std.string : format;
 
     static if (hasLength!R)
         immutable lenBefore = range.length;
@@ -1775,8 +1775,8 @@ version(unittest) private void testDecodeFront(R)(ref R range,
                                                   size_t expectedNumCodeUnits,
                                                   size_t line = __LINE__)
 {
-    import std.string : format;
     import core.exception : AssertError;
+    import std.string : format;
 
     static if (hasLength!R)
         immutable lenBefore = range.length;
@@ -1805,8 +1805,8 @@ version(unittest) private void testDecodeBack(R)(ref R range,
         return;
     else
     {
-        import std.string : format;
         import core.exception : AssertError;
+        import std.string : format;
 
         static if (hasLength!R)
             immutable lenBefore = range.length;
@@ -1842,8 +1842,8 @@ version(unittest) private void testAllDecode(R)(R range,
 
 version(unittest) private void testBadDecode(R)(R range, size_t index, size_t line = __LINE__)
 {
-    import std.string : format;
     import core.exception : AssertError;
+    import std.string : format;
 
     immutable initialIndex = index;
 
@@ -1873,8 +1873,8 @@ version(unittest) private void testBadDecodeBack(R)(R range, size_t line = __LIN
         return;
     else
     {
-        import std.string : format;
         import core.exception : AssertError;
+        import std.string : format;
 
         static if (hasLength!R)
             immutable lenBefore = range.length;
@@ -2615,9 +2615,9 @@ if (isInputRange!InputRange && !isInfinite!InputRange && is(ElementType!InputRan
 
 @safe unittest
 {
+    import std.algorithm.iteration : filter;
     import std.conv : to;
     import std.exception;
-    import std.algorithm.iteration : filter;
 
     assertCTFEable!(
     {
@@ -2745,8 +2745,8 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
 
 @system pure unittest
 {
-    import std.internal.test.dummyrange : ReferenceInputRange;
     import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange : ReferenceInputRange;
 
     auto r1 = new ReferenceInputRange!dchar("Hellø");
     auto r2 = new ReferenceInputRange!dchar("𐐷");
@@ -2795,8 +2795,8 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
 
 @system pure unittest
 {
-    import std.internal.test.dummyrange : ReferenceInputRange;
     import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange : ReferenceInputRange;
 
     auto r1 = new ReferenceInputRange!dchar("𤭢");
     auto r2 = new ReferenceInputRange!dchar("𐐷");
@@ -3004,11 +3004,11 @@ if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
 
 @safe pure unittest
 {
+    import core.exception : AssertError;
+    import std.algorithm;
     import std.conv : to;
     import std.exception;
     import std.string : format;
-    import core.exception : AssertError;
-    import std.algorithm;
 
     assertCTFEable!(
     {

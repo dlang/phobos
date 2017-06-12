@@ -1,8 +1,8 @@
 ///
 module std.experimental.allocator.building_blocks.bitmapped_block;
 
-import std.experimental.allocator.common;
 import std.experimental.allocator.building_blocks.null_allocator;
+import std.experimental.allocator.common;
 
 /**
 
@@ -45,15 +45,15 @@ block size to the constructor.
 struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment,
     ParentAllocator = NullAllocator)
 {
-    import std.typecons : tuple, Tuple;
-    import std.traits : hasMember;
     import std.conv : text;
+    import std.traits : hasMember;
     import std.typecons : Ternary;
+    import std.typecons : tuple, Tuple;
 
     @system unittest
     {
-        import std.experimental.allocator.mallocator : AlignedMallocator;
         import std.algorithm.comparison : max;
+        import std.experimental.allocator.mallocator : AlignedMallocator;
         auto m = cast(ubyte[])(AlignedMallocator.instance.alignedAllocate(1024 * 64,
                                 max(theAlignment, cast(uint) size_t.sizeof)));
         scope(exit) AlignedMallocator.instance.deallocate(m);

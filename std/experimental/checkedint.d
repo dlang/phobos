@@ -214,8 +214,8 @@ struct Checked(T, Hook = Abort)
 if (isIntegral!T || is(T == Checked!(U, H), U, H))
 {
     import std.algorithm.comparison : among;
-    import std.traits : hasMember;
     import std.experimental.allocator.common : stateSize;
+    import std.traits : hasMember;
 
     /**
     The type of the integral subject to checking.

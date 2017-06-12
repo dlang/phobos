@@ -1,8 +1,8 @@
 ///
 module std.experimental.allocator.building_blocks.allocator_list;
 
-import std.experimental.allocator.common;
 import std.experimental.allocator.building_blocks.null_allocator;
+import std.experimental.allocator.common;
 import std.experimental.allocator.gc_allocator;
 version(unittest) import std.stdio;
 
@@ -64,11 +64,11 @@ called `factory`.
 */
 struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
 {
-    import std.traits : hasMember;
     import std.conv : emplace;
-    import std.typecons : Ternary;
     import std.experimental.allocator.building_blocks.stats_collector
         : StatsCollector, Options;
+    import std.traits : hasMember;
+    import std.typecons : Ternary;
 
     private enum ouroboros = is(BookkeepingAllocator == NullAllocator);
 
@@ -536,10 +536,10 @@ template AllocatorList(alias factoryFunction,
 version(Posix) @system unittest
 {
     import std.algorithm.comparison : max;
-    import std.experimental.allocator.building_blocks.region : Region;
     import std.experimental.allocator.building_blocks.free_list : ContiguousFreeList;
-    import std.experimental.allocator.building_blocks.segregator : Segregator;
     import std.experimental.allocator.building_blocks.null_allocator : NullAllocator;
+    import std.experimental.allocator.building_blocks.region : Region;
+    import std.experimental.allocator.building_blocks.segregator : Segregator;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.mmap_allocator : MmapAllocator;
 

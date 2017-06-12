@@ -98,9 +98,9 @@ module std.path;
 
 // FIXME
 import std.file; //: getcwd;
+static import std.meta;
 import std.range.primitives;
 import std.traits;
-static import std.meta;
 
 version (unittest)
 {
@@ -2395,8 +2395,8 @@ if (isConvertibleToString!R)
 {
     // equal2 verifies that the range is the same both ways, i.e.
     // through front/popFront and back/popBack.
-    import std.range;
     import std.algorithm;
+    import std.range;
     bool equal2(R1, R2)(R1 r1, R2 r2)
     {
         static assert(isBidirectionalRange!R1);
@@ -2903,11 +2903,11 @@ if ((isNarrowString!R1 ||
     basePS.popFront();
     pathPS.popFront();
 
-    import std.range.primitives : walkLength;
-    import std.range : repeat, chain, choose;
     import std.algorithm.comparison : mismatch;
     import std.algorithm.iteration : joiner;
     import std.array : array;
+    import std.range.primitives : walkLength;
+    import std.range : repeat, chain, choose;
     import std.utf : byCodeUnit, byChar;
 
     // Remove matching prefix from basePS and pathPS
@@ -3849,9 +3849,9 @@ string expandTilde(string inputPath) nothrow
 {
     version(Posix)
     {
-        import core.stdc.stdlib : malloc, free, realloc;
         import core.exception : onOutOfMemoryError;
         import core.stdc.errno : errno, ERANGE;
+        import core.stdc.stdlib : malloc, free, realloc;
 
         /*  Joins a path from a C string to the remainder of path.
 

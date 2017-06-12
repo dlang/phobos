@@ -6542,8 +6542,8 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.range : take, drop;
     import std.range.primitives : walkLength;
+    import std.range : take, drop;
     auto text = "noe\u0308l"; // noël using e + combining diaeresis
     assert(text.walkLength == 5); // 5 code points
 
@@ -9024,8 +9024,8 @@ if (isSomeString!S)
 
 @system unittest //@@@BUG std.format is not @safe
 {
-    import std.format : format;
     static import std.ascii;
+    import std.format : format;
     foreach (ch; 0 .. 0x80)
         assert(std.ascii.toLower(ch) == toLower(ch));
     assert(toLower('Я') == 'я');
@@ -9150,8 +9150,8 @@ dchar toUpper(dchar c)
 
 @safe unittest
 {
-    import std.format : format;
     static import std.ascii;
+    import std.format : format;
     foreach (ch; 0 .. 0x80)
         assert(std.ascii.toUpper(ch) == toUpper(ch));
     assert(toUpper('я') == 'Я');

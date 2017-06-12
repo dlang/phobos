@@ -10,8 +10,8 @@ module std.datetime.systime;
 import core.time;
 import std.datetime.date;
 import std.datetime.timezone;
-import std.format : format;
 import std.exception : enforce;
+import std.format : format;
 import std.range.primitives;
 import std.traits : isIntegral, isSigned, isSomeString, Unqual;
 

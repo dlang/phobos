@@ -65,11 +65,11 @@ else:
 
 version (Windows):
 
-import std.windows.charset;
+import core.sys.windows.windows;
 import std.array : appender;
 import std.conv : to;
 import std.format : formattedWrite;
-import core.sys.windows.windows;
+import std.windows.charset;
 
 string sysErrorString(
     DWORD errCode,
@@ -164,8 +164,8 @@ T wenforce(T)(T condition, const(char)[] name, const(wchar)* namez, string file 
     {
         static string trustedToString(const(wchar)* stringz) @trusted
         {
-            import std.conv : to;
             import core.stdc.wchar_ : wcslen;
+            import std.conv : to;
             auto len = wcslen(stringz);
             return to!string(stringz[0 .. len]);
         }
@@ -180,9 +180,9 @@ T wenforce(T)(T condition, const(char)[] name, const(wchar)* namez, string file 
 version(Windows)
 @system unittest
 {
+    import std.algorithm.searching : startsWith, endsWith;
     import std.exception;
     import std.string;
-    import std.algorithm.searching : startsWith, endsWith;
 
     auto e = collectException!WindowsException(
         DeleteFileA("unexisting.txt").wenforce("DeleteFile")

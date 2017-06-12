@@ -227,9 +227,9 @@ to $(HTTP fantascienza.net/leonardo/so/, Leonardo Maffi).
  */
 module std.range;
 
-public import std.range.primitives;
-public import std.range.interfaces;
 public import std.array;
+public import std.range.interfaces;
+public import std.range.primitives;
 public import std.typecons : Flag, Yes, No;
 
 import std.meta; // allSatisfy, staticMap
@@ -1221,8 +1221,8 @@ pure @safe nothrow unittest
  */
 pure @safe nothrow unittest
 {
-    import std.algorithm.sorting : sort;
     import std.algorithm.comparison : equal;
+    import std.algorithm.sorting : sort;
 
     int[] arr1 = [5, 2, 8];
     int[] arr2 = [3, 7, 9];
@@ -2871,8 +2871,8 @@ pure @safe nothrow unittest
     // tail --lines=n
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : joiner;
-    import std.string : lineSplitter;
     import std.exception : assumeWontThrow;
+    import std.string : lineSplitter;
     assert("one\ntwo\nthree"
         .lineSplitter
         .tail(2)
@@ -7815,8 +7815,8 @@ public:
 ///
 @safe pure nothrow unittest
 {
-    import std.array : array;
     import std.algorithm.comparison : equal;
+    import std.array : array;
 
     assert([0, 1, 2, 3].slide(2).equal!equal(
         [[0, 1], [1, 2], [2, 3]]
@@ -7870,8 +7870,8 @@ public:
 // different window sizes
 @safe pure nothrow unittest
 {
-    import std.array : array;
     import std.algorithm.comparison : equal;
+    import std.array : array;
 
     assert([0, 1, 2, 3].slide(1).array == [[0], [1], [2], [3]]);
     assert([0, 1, 2, 3].slide(2).array == [[0, 1], [1, 2], [2, 3]]);
@@ -7985,8 +7985,8 @@ public:
 // test slicing, length
 @safe pure nothrow unittest
 {
-    import std.array : array;
     import std.algorithm.comparison : equal;
+    import std.array : array;
 
     // test index
     assert(iota(3).slide(4)[0].equal([0, 1, 2]));
@@ -11058,8 +11058,8 @@ if (isInputRange!R && isIntegral!(ElementType!R))
 /// You can use bitwise to implement an uniform bool generator
 @safe unittest
 {
-    import std.random : rndGen;
     import std.algorithm.comparison : equal;
+    import std.random : rndGen;
 
     auto rb = rndGen.bitwise;
     static assert(isInfinite!(typeof(rb)));

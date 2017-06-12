@@ -2187,10 +2187,10 @@ F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
 if (isRandomAccessRange!(R1) && hasLength!(R1) &&
     isRandomAccessRange!(R2) && hasLength!(R2))
 {
-    import std.functional : binaryFun;
-    import std.algorithm.mutation : swap;
-    import core.stdc.stdlib : malloc, free;
     import core.exception : onOutOfMemoryError;
+    import core.stdc.stdlib : malloc, free;
+    import std.algorithm.mutation : swap;
+    import std.functional : binaryFun;
 
     if (s.length < t.length) return gapWeightedSimilarity(t, s, lambda);
     if (!t.length) return 0;
@@ -2765,8 +2765,8 @@ private alias lookup_t = float;
  */
 final class Fft
 {
-    import std.algorithm.iteration : map;
     import core.bitop : bsf;
+    import std.algorithm.iteration : map;
     import std.array : uninitializedArray;
 
 private:
@@ -3255,8 +3255,8 @@ void inverseFft(Ret, R)(R range, Ret buf)
 @system unittest
 {
     import std.algorithm;
-    import std.range;
     import std.conv;
+    import std.range;
     // Test values from R and Octave.
     auto arr = [1,2,3,4,5,6,7,8];
     auto fft1 = fft(arr);

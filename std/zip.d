@@ -286,8 +286,8 @@ final class ArchiveMember
  */
 final class ZipArchive
 {
-    import std.bitmanip : littleEndianToNative, nativeToLittleEndian;
     import std.algorithm.comparison : max;
+    import std.bitmanip : littleEndianToNative, nativeToLittleEndian;
     import std.conv : to;
     import std.datetime : DosFileTime;
 
@@ -887,8 +887,8 @@ debug(print)
 
 @system unittest
 {
-    import std.random : Mt19937, randomShuffle;
     import std.conv : to;
+    import std.random : Mt19937, randomShuffle;
     // Test if packing and unpacking preserves order.
     auto rand = Mt19937(15966);
     string[] names;

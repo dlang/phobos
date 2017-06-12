@@ -28,8 +28,8 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.getopt;
 
-import std.traits;
 import std.exception;  // basicExceptionCtors
+import std.traits;
 
 /**
 Thrown on one of the following conditions:
@@ -560,8 +560,8 @@ follow this pattern:
 */
 private template optionValidator(A...)
 {
-    import std.typecons : staticIota;
     import std.format : format;
+    import std.typecons : staticIota;
 
     enum fmt = "getopt validator: %s (at position %d)";
     enum isReceiver(T) = isPointer!T || (is(T == function)) || (is(T == delegate));
@@ -941,8 +941,8 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
                 alias V = typeof(receiver.values[0]);
 
                 import std.range : only;
-                import std.typecons : Tuple, tuple;
                 import std.string : indexOf;
+                import std.typecons : Tuple, tuple;
 
                 static Tuple!(K, V) getter(string input)
                 {
@@ -1078,9 +1078,9 @@ private struct configuration
 private bool optMatch(string arg, string optPattern, ref string value,
     configuration cfg) @safe
 {
-    import std.uni : toUpper;
-    import std.string : indexOf;
     import std.array : split;
+    import std.string : indexOf;
+    import std.uni : toUpper;
     //writeln("optMatch:\n  ", arg, "\n  ", optPattern, "\n  ", value);
     //scope(success) writeln("optMatch result: ", value);
     if (!arg.length || arg[0] != optionChar) return false;
@@ -1428,8 +1428,8 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
 
 @system unittest // 5228
 {
-    import std.exception;
     import std.conv;
+    import std.exception;
 
     auto args = ["prog", "--foo=bar"];
     int abc;
@@ -1614,8 +1614,8 @@ Params:
 */
 void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
 {
-    import std.format : formattedWrite;
     import std.algorithm.comparison : min, max;
+    import std.format : formattedWrite;
 
     output.formattedWrite("%s\n", text);
 
@@ -1669,9 +1669,9 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
 
 @system unittest
 {
+    import std.array ;
     import std.conv;
     import std.string;
-    import std.array ;
     bool a;
     auto args = ["prog", "--foo"];
     auto t = getopt(args, config.required, "foo|f", "Help", &a);

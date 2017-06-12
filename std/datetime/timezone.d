@@ -2081,10 +2081,10 @@ public:
     static immutable(PosixTimeZone) getTimeZone(string name, string tzDatabaseDir = defaultTZDatabaseDir) @trusted
     {
         import std.algorithm.sorting : sort;
-        import std.range : retro;
+        import std.conv : to;
         import std.format : format;
         import std.path : asNormalizedPath, chainPath;
-        import std.conv : to;
+        import std.range : retro;
 
         name = strip(name);
 

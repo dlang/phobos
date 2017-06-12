@@ -6,8 +6,8 @@ module std.regex.internal.backtracking;
 
 package(std.regex):
 
-import std.regex.internal.ir;
 import std.range.primitives, std.typecons, std.traits, core.stdc.stdlib;
+import std.regex.internal.ir;
 
 /+
     BacktrackingMatcher implements backtracking scheme of matching

@@ -18,9 +18,9 @@
  */
 module std.container.array;
 
+import core.exception : RangeError;
 import std.range.primitives;
 import std.traits;
-import core.exception : RangeError;
 
 public import std.container.util;
 
@@ -419,8 +419,8 @@ if (!is(Unqual!T == bool))
     this(U)(U[] values...)
     if (isImplicitlyConvertible!(U, T))
     {
-        import std.conv : emplace;
         import core.checkedint : mulu;
+        import std.conv : emplace;
         bool overflow;
         const nbytes = mulu(values.length, T.sizeof, overflow);
         if (overflow) assert(0);

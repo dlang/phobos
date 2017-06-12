@@ -1052,9 +1052,9 @@ if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 // another set of tests just to cover the new API
 @system unittest
 {
-    import std.conv : to;
-    import std.algorithm.iteration : map;
     import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    import std.conv : to;
 
     foreach (String; AliasSeq!(string, wstring, const(dchar)[]))
     {
@@ -1138,8 +1138,8 @@ if (isOutputRange!(OutR, ElementEncodingType!R[]) &&
     isOutputRange!(OutR, ElementEncodingType!(Capt.String)[]))
 {
     import std.algorithm.searching : find;
-    import std.conv : text, parse;
     import std.ascii : isDigit, isAlpha;
+    import std.conv : text, parse;
     import std.exception : enforce;
     enum State { Normal, Dollar }
     auto state = State.Normal;
@@ -1706,16 +1706,16 @@ auto escaper(Range)(Range r)
 ///
 @system unittest
 {
-    import std.regex;
     import std.algorithm.comparison;
+    import std.regex;
     string s = `This is {unfriendly} to *regex*`;
     assert(s.escaper.equal(`This is \{unfriendly\} to \*regex\*`));
 }
 
 @system unittest
 {
-    import std.conv;
     import std.algorithm.comparison;
+    import std.conv;
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
       auto s = "^".to!S;

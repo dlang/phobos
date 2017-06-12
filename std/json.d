@@ -17,9 +17,9 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.json;
 
+import std.array;
 import std.conv;
 import std.range.primitives;
-import std.array;
 import std.traits;
 
 ///
@@ -1637,8 +1637,8 @@ EOF";
 // handling of special float values (NaN, Inf, -Inf)
 @safe unittest
 {
-    import std.math : isNaN, isInfinity;
     import std.exception : assertThrown;
+    import std.math : isNaN, isInfinity;
 
     // expected representations of NaN and Inf
     enum {

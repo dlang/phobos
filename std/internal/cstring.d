@@ -38,8 +38,8 @@ module std.internal.cstring;
     }
 }
 
-import std.traits;
 import std.range;
+import std.traits;
 
 version(unittest)
 @property inout(C)[] asArray(C)(inout C* cstr) pure nothrow @nogc @trusted
@@ -159,8 +159,8 @@ if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
         pragma(inline, false);  // because it's rarely called
 
         import core.exception : onOutOfMemoryError;
-        import core.stdc.string : memcpy;
         import core.stdc.stdlib : malloc, realloc;
+        import core.stdc.string : memcpy;
 
         if (res_is_onstack)
         {

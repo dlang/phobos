@@ -150,8 +150,8 @@ if (isFloatingPoint!T)
                         FormatSpec!Char formatSpec) const
         if (isOutputRange!(Writer, const(Char)[]))
     {
-        import std.math : signbit;
         import std.format : formatValue;
+        import std.math : signbit;
         import std.range.primitives : put;
         formatValue(w, re, formatSpec);
         if (signbit(im) == 0)
@@ -440,8 +440,8 @@ if (isFloatingPoint!T)
 
 @safe pure nothrow unittest
 {
-    import std.math;
     import std.complex;
+    import std.math;
 
     enum EPS = double.epsilon;
     auto c1 = complex(1.0, 1.0);
@@ -849,8 +849,8 @@ Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
 ///
 @safe pure nothrow unittest
 {
-    import std.math;
     import std.complex;
+    import std.math;
     assert(cos(complex(0.0)) == 1.0);
     assert(cos(complex(1.3L)) == std.math.cos(1.3L));
     assert(cos(complex(0, 5.2L)) == cosh(5.2L));

@@ -92,9 +92,9 @@
 module std.csv;
 
 import std.conv;
+import std.exception;  // basicExceptionCtors
 import std.range.primitives;
 import std.traits;
-import std.exception;  // basicExceptionCtors
 
 /**
  * Exception containing the row and column for when an exception was thrown.

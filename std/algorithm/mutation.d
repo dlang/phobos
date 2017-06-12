@@ -148,8 +148,8 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
 private size_t bringToFrontImpl(InputRange, ForwardRange)(InputRange front, ForwardRange back)
 if (isInputRange!InputRange && isForwardRange!ForwardRange)
 {
-    import std.range : take, Take;
     import std.array : sameHead;
+    import std.range : take, Take;
     enum bool sameHeadExists = is(typeof(front.sameHead(back)));
     size_t result;
 
@@ -1095,8 +1095,8 @@ pure nothrow @safe @nogc unittest
 
 @safe unittest
 {
-    import std.traits;
     import std.exception : assertCTFEable;
+    import std.traits;
 
     assertCTFEable!((){
         Object obj1 = new Object;
@@ -1209,8 +1209,8 @@ private T moveImpl(T)(ref T source)
 
 @safe unittest
 {
-    import std.traits;
     import std.exception : assertCTFEable;
+    import std.traits;
 
     assertCTFEable!((){
         Object obj1 = new Object;

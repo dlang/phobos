@@ -63,10 +63,10 @@ $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDi
  */
 module std.digest.digest;
 
-import std.meta : allSatisfy;
-import std.traits;
-import std.range.primitives;
 public import std.ascii : LetterCase;
+import std.meta : allSatisfy;
+import std.range.primitives;
+import std.traits;
 
 
 ///
@@ -260,8 +260,8 @@ version(ExampleDigest)
 {
     //Using the OutputRange feature
     import std.algorithm.mutation : copy;
-    import std.range : repeat;
     import std.digest.md;
+    import std.range : repeat;
 
     auto oneMillionRange = repeat!ubyte(cast(ubyte)'a', 1000000);
     auto ctx = makeDigest!MD5();
@@ -629,8 +629,8 @@ interface Digest
 {
     //Using the OutputRange feature
     import std.algorithm.mutation : copy;
-    import std.range : repeat;
     import std.digest.md;
+    import std.range : repeat;
 
     auto oneMillionRange = repeat!ubyte(cast(ubyte)'a', 1000000);
     auto ctx = new MD5Digest();

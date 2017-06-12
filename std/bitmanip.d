@@ -632,9 +632,9 @@ unittest
 // Issue 12477
 @system unittest
 {
+    import core.exception : AssertError;
     import std.algorithm.searching : canFind;
     import std.bitmanip : bitfields;
-    import core.exception : AssertError;
 
     static struct S
     {
@@ -772,8 +772,8 @@ struct BitArray
 {
 private:
 
-    import std.format : FormatSpec;
     import core.bitop : bts, btr, bsf, bt;
+    import std.format : FormatSpec;
 
     size_t _len;
     size_t* _ptr;
@@ -3779,8 +3779,8 @@ if (canSwapEndianness!T && isOutputRange!(R, ubyte))
 
 @system unittest
 {
-    import std.format : format;
     import std.array;
+    import std.format : format;
     import std.meta;
     foreach (endianness; AliasSeq!(Endian.bigEndian, Endian.littleEndian))
     {
