@@ -390,36 +390,36 @@ unittest
 
     CRC64ECMA crc;
     crc.put(cast(ubyte[])"abcdefghijklmnopqrstuvwxyz");
-    assert(crc.peek() == cast(ubyte[])x"2f121b7575789626");
+    assert(crc.peek() == cast(ubyte[]) x"2f121b7575789626");
     crc.start();
     crc.put(cast(ubyte[])"");
-    assert(crc.finish() == cast(ubyte[])x"0000000000000000");
+    assert(crc.finish() == cast(ubyte[]) x"0000000000000000");
     digest = crc64ECMAOf("");
-    assert(digest == cast(ubyte[])x"0000000000000000");
+    assert(digest == cast(ubyte[]) x"0000000000000000");
 
     //Test vector from http://rosettacode.org/wiki/CRC-32
     assert(crcHexString(crc64ECMAOf("The quick brown fox jumps over the lazy dog")) == "5B5EB8C2E54AA1C4");
 
     digest = crc64ECMAOf("a");
-    assert(digest == cast(ubyte[])x"052b652e77840233");
+    assert(digest == cast(ubyte[]) x"052b652e77840233");
 
     digest = crc64ECMAOf("abc");
-    assert(digest == cast(ubyte[])x"2776271a4a09d82c");
+    assert(digest == cast(ubyte[]) x"2776271a4a09d82c");
 
     digest = crc64ECMAOf("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq");
-    assert(digest == cast(ubyte[])x"4b7cdce3746c449f");
+    assert(digest == cast(ubyte[]) x"4b7cdce3746c449f");
 
     digest = crc64ECMAOf("message digest");
-    assert(digest == cast(ubyte[])x"6f9b8a3156c9bc5d");
+    assert(digest == cast(ubyte[]) x"6f9b8a3156c9bc5d");
 
     digest = crc64ECMAOf("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
-    assert(digest == cast(ubyte[])x"2656b716e1bf0503");
+    assert(digest == cast(ubyte[]) x"2656b716e1bf0503");
 
     digest = crc64ECMAOf("1234567890123456789012345678901234567890"~
                          "1234567890123456789012345678901234567890");
-    assert(digest == cast(ubyte[])x"bd3eb7765d0a22ae");
+    assert(digest == cast(ubyte[]) x"bd3eb7765d0a22ae");
 
-    assert(crcHexString(cast(ubyte[8])x"c3fcd3d7efbeadde") == "DEADBEEFD7D3FCC3");
+    assert(crcHexString(cast(ubyte[8]) x"c3fcd3d7efbeadde") == "DEADBEEFD7D3FCC3");
 }
 
 unittest
@@ -428,36 +428,36 @@ unittest
 
     CRC64ISO crc;
     crc.put(cast(ubyte[])"abcdefghijklmnopqrstuvwxyz");
-    assert(crc.peek() == cast(ubyte[])x"f0494ab780989b42");
+    assert(crc.peek() == cast(ubyte[]) x"f0494ab780989b42");
     crc.start();
     crc.put(cast(ubyte[])"");
-    assert(crc.finish() == cast(ubyte[])x"0000000000000000");
+    assert(crc.finish() == cast(ubyte[]) x"0000000000000000");
     digest = crc64ISOOf("");
-    assert(digest == cast(ubyte[])x"0000000000000000");
+    assert(digest == cast(ubyte[]) x"0000000000000000");
 
     //Test vector from http://rosettacode.org/wiki/CRC-32
     assert(crcHexString(crc64ISOOf("The quick brown fox jumps over the lazy dog")) == "4EF14E19F4C6E28E");
 
     digest = crc64ISOOf("a");
-    assert(digest == cast(ubyte[])x"0000000000002034");
+    assert(digest == cast(ubyte[]) x"0000000000002034");
 
     digest = crc64ISOOf("abc");
-    assert(digest == cast(ubyte[])x"0000000020c47637");
+    assert(digest == cast(ubyte[]) x"0000000020c47637");
 
     digest = crc64ISOOf("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq");
-    assert(digest == cast(ubyte[])x"5173f717971365e5");
+    assert(digest == cast(ubyte[]) x"5173f717971365e5");
 
     digest = crc64ISOOf("message digest");
-    assert(digest == cast(ubyte[])x"a2c355bbc0b93f86");
+    assert(digest == cast(ubyte[]) x"a2c355bbc0b93f86");
 
     digest = crc64ISOOf("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
-    assert(digest == cast(ubyte[])x"598B258292E40084");
+    assert(digest == cast(ubyte[]) x"598B258292E40084");
 
     digest = crc64ISOOf("1234567890123456789012345678901234567890"~
                         "1234567890123456789012345678901234567890");
-    assert(digest == cast(ubyte[])x"760cd2d3588bf809");
+    assert(digest == cast(ubyte[]) x"760cd2d3588bf809");
 
-    assert(crcHexString(cast(ubyte[8])x"c3fcd3d7efbeadde") == "DEADBEEFD7D3FCC3");
+    assert(crcHexString(cast(ubyte[8]) x"c3fcd3d7efbeadde") == "DEADBEEFD7D3FCC3");
 }
 
 /**
