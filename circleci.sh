@@ -95,7 +95,7 @@ setup_repos()
 }
 
 # verify style guide
-style()
+style_lint()
 {
     # dscanner needs a more up-to-date DMD version
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$DSCANNER_DMD_VER --activate)"
@@ -105,7 +105,7 @@ style()
     # fix to a specific version of https://github.com/dlang/tools/tree/master/styles
     git -C ../tools checkout 60583c8363ff25d00017dffdb18c7ee7e7d9a343
 
-    make -f posix.mak style DUB=$DUB
+    make -f posix.mak style_lint DUB=$DUB
 }
 
 # run unittest with coverage
@@ -133,10 +133,18 @@ publictests()
     make -f posix.mak -j$N publictests DUB=$DUB
 }
 
+# check modules for public unittests
+has_public_example()
+{
+    make -f posix.mak -j$N has_public_example DUB=$DUB
+}
+
 case $1 in
     install-deps) install_deps ;;
     setup-repos) setup_repos ;;
     coverage) coverage ;;
     publictests) publictests ;;
-    style) style ;;
+    has_public_example) has_public_example;;
+    style_lint) style_lint ;;
+    *) echo "Unknown command"; exit 1;;
 esac
