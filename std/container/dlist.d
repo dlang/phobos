@@ -50,11 +50,11 @@ module std.container.dlist;
     assert(r.equal([3]));
     assert(walkLength(r) == 1);
 
-    // DList.Range can be used to remove elements from the list
+    // DList.Range can be used to remove elements from the list it spans
     auto nl = DList!int([1, 2, 3, 4, 5]);
     for (auto rn = nl[]; !rn.empty;)
         if (rn.front % 2 == 0)
-            rn = nl.popFirstOf(rn);
+            nl.popFirstOf(rn);
         else
             rn.popFront();
     assert(equal(nl[], [1, 3, 5]));
@@ -644,42 +644,34 @@ Complexity: $(BIGOH 1)
 
 /**
 Removes first element of $(D r), wich must be a range obrained originally
-from this container.
-
-Returns: A range spanning the remaining elements of $(D r).
+from this container, from both DList instance and range.
 
 Compexity: $(BIGOH 1)
      */
-    Range popFirstOf(Range r)
+    void popFirstOf(ref Range r)
     {
-        if (r.empty)
-            return r;
-
         assert(_root !is null, "Cannot remove from an un-initialized List");
-        assert(r._first, "Remove: Range is empty");
-        BaseNode.connect(r._first._prev, r._first._next);
-        auto after = r._first._next;
-        return after is _root ? Range(null, null) : Range(after, r._last);
+        assert(r._first, "popFirstOf: Range is empty");
+        auto prev = r._first._prev;
+        auto next = r._first._next;
+        r.popFront();
+        BaseNode.connect(prev, next);
     }
 
 /**
 Removes last element of $(D r), wich must be a range obrained originally
-from this container.
-
-Returns: A range spanning the remaining elements of $(D r).
+from this container, from both DList instance and range.
 
 Compexity: $(BIGOH 1)
      */
-    Range popLastOf(Range r)
+    void popLastOf(ref Range r)
     {
-        if (r.empty)
-            return r;
-
         assert(_root !is null, "Cannot remove from an un-initialized List");
-        assert(r._last, "Remove: Range is empty");
-        BaseNode.connect(r._last._prev, r._last._next);
-        auto before = r._last._prev;
-        return before is _root ? Range(null, null) : Range(r._first, before);
+        assert(r._first, "popLastOf: Range is empty");
+        auto prev = r._last._prev;
+        auto next = r._last._next;
+        r.popBack();
+        BaseNode.connect(prev, next);
     }
 
 /**
@@ -872,18 +864,13 @@ private:
     auto dl = DList!int([1, 2, 3, 4, 5]);
     auto r = dl[];
     r.popFront();
-    auto after = dl.popFirstOf(r);
+    dl.popFirstOf(r);
     assert(equal(dl[], [1, 3, 4, 5]));
-    assert(equal(after, [3, 4, 5]));
+    assert(equal(r, [3, 4, 5]));
     r.popBack();
     auto before = dl.popLastOf(r);
     assert(equal(dl[], [1, 3, 5]));
-    assert(equal(before, [3]));
-    DList!int empty_list;
-    dl.popFirstOf(empty_list[]);
-    assert(equal(dl[], [1, 3, 5]));
-    dl.popLastOf(empty_list[]);
-    assert(equal(dl[], [1, 3, 5]));
+    assert(equal(r, [3]));
     dl = DList!int([0]);
     r = dl[];
     dl.popFirstOf(r);
