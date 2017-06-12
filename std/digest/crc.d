@@ -384,7 +384,7 @@ struct CRC(uint N, ulong P) if (N == 32 || N == 64)
     assert(crcHexString(cast(ubyte[4]) x"c3fcd3d7") == "D7D3FCC3");
 }
 
-unittest
+@system unittest
 {
     ubyte[8] digest;
 
@@ -422,7 +422,7 @@ unittest
     assert(crcHexString(cast(ubyte[8]) x"c3fcd3d7efbeadde") == "DEADBEEFD7D3FCC3");
 }
 
-unittest
+@system unittest
 {
     ubyte[8] digest;
 

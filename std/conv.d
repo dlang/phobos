@@ -5534,7 +5534,8 @@ pure nothrow @safe /* @nogc */ unittest
 void toTextRange(T, W)(T value, W writer)
 if (isIntegral!T && isOutputRange!(W, char))
 {
-    import core.internal.string;
+    import core.internal.string : SignedStringBuf, signedToTempString,
+                                  UnsignedStringBuf, unsignedToTempString;
 
     if (value < 0)
     {
@@ -5712,7 +5713,7 @@ OriginalType!E asOriginalType(E)(E value) if (is(E == enum))
 }
 
 ///
-unittest
+@safe unittest
 {
     enum A { a = 42 }
     static assert(is(typeof(A.a.asOriginalType) == int));

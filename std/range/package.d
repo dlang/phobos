@@ -7888,7 +7888,7 @@ public:
     assert(iota(1, 4).slide(3).equal!equal([[1, 2, 3]]));
 }
 
-unittest
+@safe unittest
 {
     import std.algorithm.comparison : equal;
 
