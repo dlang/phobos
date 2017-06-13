@@ -13,10 +13,10 @@ module std.experimental.allocator.typed;
 
 import std.experimental.allocator;
 import std.experimental.allocator.common;
+import std.traits : isPointer, hasElaborateDestructor;
+import std.typecons : Flag, Yes, No;
 import std.range : isInputRange, isForwardRange, walkLength, save, empty,
     front, popFront;
-import std.traits : hasElaborateDestructor, isPointer;
-import std.typecons : Flag, No, Yes;
 
 /**
 Allocation-related flags dictated by type characteristics. `TypedAllocator`
@@ -122,9 +122,9 @@ type.
 */
 struct TypedAllocator(PrimaryAllocator, Policies...)
 {
-    import std.algorithm.sorting : isSorted;
-    import std.meta : AliasSeq;
     import std.typecons : Tuple;
+    import std.meta : AliasSeq;
+    import std.algorithm.sorting : isSorted;
 
     static assert(Policies.length == 0 || isSorted([Stride2!Policies]));
 

@@ -19,8 +19,8 @@ module std.container.rbtree;
 ///
 @safe pure unittest
 {
-    import std.algorithm.comparison : equal;
     import std.container.rbtree;
+    import std.algorithm.comparison : equal;
 
     auto rbt = redBlackTree(3, 1, 4, 2, 5);
     assert(rbt.front == 1);
@@ -56,8 +56,8 @@ module std.container.rbtree;
     assert(equal(ubt[], [0, 0, 1, 1]));
 }
 
-import std.format;
 import std.functional : binaryFun;
+import std.format;
 
 public import std.container.util;
 
@@ -740,9 +740,9 @@ final class RedBlackTree(T, alias less = "a < b", bool allowDuplicates = false)
 if (is(typeof(binaryFun!less(T.init, T.init))))
 {
     import std.meta : allSatisfy;
-    import std.range : Take;
     import std.range.primitives : isInputRange, walkLength;
-    import std.traits : isDynamicArray, isImplicitlyConvertible, isIntegral;
+    import std.range : Take;
+    import std.traits : isIntegral, isDynamicArray, isImplicitlyConvertible;
 
     alias _less = binaryFun!less;
 
@@ -1820,7 +1820,7 @@ assert(equal(rbt[], [5]));
     test!byte();
 }
 
-import std.range.primitives : ElementType, isInputRange, isSomeString;
+import std.range.primitives : isInputRange, isSomeString, ElementType;
 import std.traits : isArray;
 
 /++

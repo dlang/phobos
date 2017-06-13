@@ -175,8 +175,8 @@ version(unittest)
 {
     // Run unit test with the PHOBOS_TEST_ALLOW_NET=1 set in order to
     // allow net traffic
-    import std.range;
     import std.stdio;
+    import std.range;
 
     import std.socket : Address, INADDR_LOOPBACK, Socket, TcpSocket;
 
@@ -238,7 +238,7 @@ version(unittest)
     private Request!T recvReq(T=char)(Socket s)
     {
         import std.algorithm.comparison : min;
-        import std.algorithm.searching : canFind, find;
+        import std.algorithm.searching : find, canFind;
         import std.conv : to;
         import std.regex : ctRegex, matchFirst;
 
@@ -1287,7 +1287,7 @@ if (isCurlConn!Conn && isSomeChar!Char && isSomeChar!Terminator)
 
         void popFront()
         {
-            import std.algorithm.searching : findSplit, findSplitAfter;
+            import std.algorithm.searching : findSplitAfter, findSplit;
 
             enforce!CurlException(currentValid, "Cannot call popFront() on empty range");
             if (lines.empty)
@@ -2417,7 +2417,7 @@ struct HTTP
         {
             import std.algorithm.searching : startsWith;
             import std.conv : to;
-            import std.regex : match, regex;
+            import std.regex : regex, match;
             import std.uni : toLower;
 
             // Wrap incoming callback in order to separate http status line from
@@ -4061,7 +4061,7 @@ class CurlTimeoutException : CurlException
 /// Equal to $(REF CURLcode, etc,c,curl)
 alias CurlCode = CURLcode;
 
-import std.typecons : Flag, No, Yes;
+import std.typecons : Flag, Yes, No;
 /// Flag to specify whether or not an exception is thrown on error.
 alias ThrowOnError = Flag!"throwOnError";
 
@@ -4099,7 +4099,7 @@ private struct CurlAPI
     {
         version (Posix)
         {
-            import core.sys.posix.dlfcn : dlclose, dlopen, dlsym, RTLD_LAZY;
+            import core.sys.posix.dlfcn : dlsym, dlopen, dlclose, RTLD_LAZY;
             alias loadSym = dlsym;
         }
         else version (Windows)

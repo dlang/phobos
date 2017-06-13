@@ -631,8 +631,8 @@ if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LI
 
 @system unittest
 {
-    import core.exception : OutOfMemoryError;
     import std.array : empty;
+    import core.exception : OutOfMemoryError;
     assertNotThrown(enforceEx!Exception(true));
     assertNotThrown(enforceEx!Exception(true, "blah"));
     assertNotThrown(enforceEx!OutOfMemoryError(true));
@@ -1511,7 +1511,7 @@ class ErrnoException : Exception
 
     @system unittest
     {
-        import core.stdc.errno : EAGAIN, errno;
+        import core.stdc.errno : errno, EAGAIN;
 
         auto old = errno;
         scope(exit) errno = old;
@@ -1658,8 +1658,8 @@ CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate
 //Verify Examples
 @system unittest
 {
-    import std.conv;
     import std.string;
+    import std.conv;
     //Revert to a default value upon an error:
     assert("x".to!int().ifThrown(0) == 0);
 
@@ -1690,9 +1690,9 @@ CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate
 
 @system unittest
 {
-    import core.exception;
-    import std.conv;
     import std.string;
+    import std.conv;
+    import core.exception;
     //Basic behaviour - all versions.
     assert("1".to!int().ifThrown(0) == 1);
     assert("x".to!int().ifThrown(0) == 0);
@@ -2022,7 +2022,7 @@ pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map, splitter;
-    import std.conv : ConvException, to;
+    import std.conv : to, ConvException;
 
     auto s = "12,1337z32,54,2,7,9,1z,6,8";
 

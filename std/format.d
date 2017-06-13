@@ -1003,8 +1003,8 @@ if (!is(Unqual!Char == Char))
 struct FormatSpec(Char)
 if (is(Unqual!Char == Char))
 {
+    import std.ascii : isDigit, isPunctuation, isAlpha;
     import std.algorithm.searching : startsWith;
-    import std.ascii : isAlpha, isDigit, isPunctuation;
     import std.conv : parse, text, to;
 
     /**
@@ -2134,8 +2134,8 @@ Params:
 void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
 if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
-    import std.algorithm.comparison : min;
     import std.algorithm.searching : find;
+    import std.algorithm.comparison : min;
     import std.string : indexOf, indexOfAny, indexOfNeither;
 
     FormatSpec!Char fs = f; // fs is copy for change its values.
@@ -2165,7 +2165,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 
     version (CRuntime_Microsoft)
     {
-        import std.math : isInfinity, isNaN;
+        import std.math : isNaN, isInfinity;
         immutable double tval = val; // convert early to get "inf" in case of overflow
         string s;
         if (isNaN(tval))
@@ -3076,8 +3076,8 @@ private void formatChar(Writer)(Writer w, in dchar c, in char quote)
 void formatElement(Writer, T, Char)(Writer w, T val, const ref FormatSpec!Char f)
 if (is(StringTypeOf!T) && !is(T == enum))
 {
-    import std.array : appender;
     import std.utf : UTFException;
+    import std.array : appender;
 
     StringTypeOf!T str = val;   // bug 8015
 
@@ -3517,8 +3517,8 @@ if (is(T == class) && !is(T == enum))
  +/
 @safe pure unittest
 {
-   import std.array : appender;
    import std.format;
+   import std.array : appender;
 
    auto writer1 = appender!string();
    writer1.formattedWrite("%08b", 42);
@@ -3653,8 +3653,8 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
     // Issue 11175
     version (Windows)
     {
-        import core.sys.windows.com : IID, IUnknown;
         import core.sys.windows.windows : HRESULT;
+        import core.sys.windows.com : IUnknown, IID;
 
         interface IUnknown2 : IUnknown { }
 
@@ -4146,8 +4146,8 @@ version(unittest)
 void formatTest(T)(T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__)
 {
     import core.exception : AssertError;
-    import std.array : appender;
     import std.conv : text;
+    import std.array : appender;
     FormatSpec!char f;
     auto w = appender!string();
     formatValue(w, val, f);
@@ -4164,8 +4164,8 @@ version(unittest)
 void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, string fn = __FILE__) @safe
 {
     import core.exception : AssertError;
-    import std.array : appender;
     import std.conv : text;
+    import std.array : appender;
     auto w = appender!string();
     formattedWrite(w, fmt, val);
     foreach (cur; expected)
@@ -4248,10 +4248,10 @@ void formatTest(T)(string fmt, T val, string[] expected, size_t ln = __LINE__, s
 
 @safe unittest
 {
-    import core.stdc.string : strlen;
+    import std.conv : text, octal;
     import std.array : appender;
-    import std.conv : octal, text;
     import std.c.stdio : snprintf;
+    import core.stdc.string : strlen;
 
     debug(format) printf("std.format.format.unittest\n");
 
@@ -5072,7 +5072,7 @@ private T unformatValueImpl(T, Range, Char)(ref Range input, const ref FormatSpe
 if (isInputRange!Range && isSomeChar!T && !is(T == enum) && isSomeChar!(ElementType!Range))
 {
     import std.algorithm.searching : find;
-    import std.conv : text, to;
+    import std.conv : to, text;
     if (spec.spec == 's' || spec.spec == 'c')
     {
         auto result = to!T(input.front);
@@ -5797,8 +5797,8 @@ if (isSomeString!(typeof(fmt)))
 immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args)
 if (isSomeChar!Char)
 {
+    import std.format : formattedWrite, FormatException;
     import std.array : appender;
-    import std.format : FormatException, formattedWrite;
     auto w = appender!(immutable(Char)[]);
     auto n = formattedWrite(w, fmt, args);
     version (all)
@@ -5815,9 +5815,9 @@ if (isSomeChar!Char)
 
 @safe pure unittest
 {
+    import std.format;
     import core.exception;
     import std.exception;
-    import std.format;
     assertCTFEable!(
     {
 //  assert(format(null) == "");
@@ -5874,8 +5874,8 @@ if (isSomeString!(typeof(fmt)))
 char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
 {
     import core.exception : RangeError;
-    import std.format : FormatException, formattedWrite;
     import std.utf : encode;
+    import std.format : formattedWrite, FormatException;
 
     size_t i;
 

@@ -35,8 +35,8 @@
 
 module etc.c.curl;
 
-import core.stdc.config;
 import core.stdc.time;
+import core.stdc.config;
 import std.socket;
 
 // linux

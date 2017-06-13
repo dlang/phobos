@@ -686,7 +686,7 @@ float sin(float x) @safe pure nothrow @nogc { return sin(cast(real) x); }
 ///
 @safe unittest
 {
-    import std.math : PI, sin;
+    import std.math : sin, PI;
     import std.stdio : writefln;
 
     void someFunc()

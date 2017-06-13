@@ -47,9 +47,9 @@ alias multibyteSub = multibyteAddSub!('-');
 
 
 private import core.cpuid;
-public import std.ascii : LetterCase;
-private import std.range.primitives;
 private import std.traits;
+private import std.range.primitives;
+public import std.ascii : LetterCase;
 
 shared static this()
 {

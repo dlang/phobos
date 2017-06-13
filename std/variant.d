@@ -796,7 +796,7 @@ public:
 
     @property T coerce(T)()
     {
-        import std.conv : text, to;
+        import std.conv : to, text;
         static if (isNumeric!T || isBoolean!T)
         {
             if (convertsTo!real)
@@ -2690,7 +2690,7 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 
 @system unittest
 {
-    import std.exception : assertNotThrown, assertThrown;
+    import std.exception : assertThrown, assertNotThrown;
     // Make sure Variant can handle types with opDispatch but no length field.
     struct SWithNoLength
     {
@@ -2729,8 +2729,8 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 @system unittest
 {
     // Bugzilla 15039
-    import std.typecons;
     import std.variant;
+    import std.typecons;
 
     alias IntTypedef = Typedef!int;
     alias Obj = Algebraic!(int, IntTypedef, This[]);
