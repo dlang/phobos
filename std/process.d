@@ -574,11 +574,10 @@ private Pid spawnProcessImpl(in char[][] args,
                     assert(false);
             }
 
-            if (readExecResult == error.sizeof) {
+            if (readExecResult == error.sizeof)
                 throw ProcessException.newFromErrno(error, errorMsg);
-            } else {
+            else
                 throw new ProcessException(errorMsg);
-            }
         }
 
         // Parent process:  Close streams and return.
