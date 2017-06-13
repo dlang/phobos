@@ -459,86 +459,79 @@ interface ISharedAllocator
     Ternary empty() shared;
 }
 
-shared ISharedAllocator _processAllocator;
+private shared ISharedAllocator _processAllocator;
 IAllocator _threadAllocator;
-
-shared static this()
-{
-    assert(!_processAllocator);
-    import std.experimental.allocator.gc_allocator : GCAllocator;
-    _processAllocator = sharedAllocatorObject(GCAllocator.instance);
-}
 
 static this()
 {
     /*
-    Forwards the `_threadAllocator` calls to the `_processAllocator`
+    Forwards the `_threadAllocator` calls to the `processAllocator`
     */
     static class ThreadAllocator : IAllocator
     {
         override @property uint alignment()
         {
-            return _processAllocator.alignment();
+            return processAllocator.alignment();
         }
 
         override size_t goodAllocSize(size_t s)
         {
-            return _processAllocator.goodAllocSize(s);
+            return processAllocator.goodAllocSize(s);
         }
 
         override void[] allocate(size_t n, TypeInfo ti = null)
         {
-            return _processAllocator.allocate(n, ti);
+            return processAllocator.allocate(n, ti);
         }
 
         override void[] alignedAllocate(size_t n, uint a)
         {
-            return _processAllocator.alignedAllocate(n, a);
+            return processAllocator.alignedAllocate(n, a);
         }
 
         override void[] allocateAll()
         {
-            return _processAllocator.allocateAll();
+            return processAllocator.allocateAll();
         }
 
         override bool expand(ref void[] b, size_t size)
         {
-            return _processAllocator.expand(b, size);
+            return processAllocator.expand(b, size);
         }
 
         override bool reallocate(ref void[] b, size_t size)
         {
-            return _processAllocator.reallocate(b, size);
+            return processAllocator.reallocate(b, size);
         }
 
         override bool alignedReallocate(ref void[] b, size_t size, uint alignment)
         {
-            return _processAllocator.alignedReallocate(b, size, alignment);
+            return processAllocator.alignedReallocate(b, size, alignment);
         }
 
         override Ternary owns(void[] b)
         {
-            return _processAllocator.owns(b);
+            return processAllocator.owns(b);
         }
 
         override Ternary resolveInternalPointer(const void* p, ref void[] result)
         {
-            return _processAllocator.resolveInternalPointer(p, result);
+            return processAllocator.resolveInternalPointer(p, result);
         }
 
         override bool deallocate(void[] b)
         {
-            return _processAllocator.deallocate(b);
+            return processAllocator.deallocate(b);
         }
 
         override bool deallocateAll()
         {
-            return _processAllocator.deallocateAll();
+            return processAllocator.deallocateAll();
         }
 
         override Ternary empty()
         {
-            return _processAllocator.empty();
+            return processAllocator.empty();
         }
     }
 
@@ -589,7 +582,10 @@ allocator can be cast to $(D shared).
 */
 @property shared(ISharedAllocator) processAllocator()
 {
-    return _processAllocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.concurrency : initOnce;
+    return initOnce!_processAllocator(
+        sharedAllocatorObject(GCAllocator.instance));
 }
 
 /// Ditto
