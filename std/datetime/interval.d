@@ -7,7 +7,7 @@
 +/
 module std.datetime.interval;
 
-import core.time : dur, Duration;
+import core.time : Duration, dur;
 import std.datetime.date : AllowDayOverflow, DateTimeException, daysToDayOfWeek,
                            DayOfWeek, isTimePoint, Month;
 import std.exception : enforce;

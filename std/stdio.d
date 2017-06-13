@@ -350,7 +350,7 @@ Hello, Jimmy!
 struct File
 {
     import std.range.primitives : ElementEncodingType;
-    import std.traits : isArray, isScalarType;
+    import std.traits : isScalarType, isArray;
     enum Orientation { unknown, narrow, wide }
 
     private struct Impl
@@ -525,7 +525,7 @@ Throws: $(D ErrnoException) in case of error.
 
     @system unittest // Test changing filename
     {
-        import std.exception : assertNotThrown, assertThrown;
+        import std.exception : assertThrown, assertNotThrown;
         static import std.file;
 
         auto deleteme = testFilename();
@@ -547,7 +547,7 @@ Throws: $(D ErrnoException) in case of error.
     version (CRuntime_Microsoft) {} else // Not implemented
     @system unittest // Test changing mode
     {
-        import std.exception : assertNotThrown, assertThrown;
+        import std.exception : assertThrown, assertNotThrown;
         static import std.file;
 
         auto deleteme = testFilename();
@@ -1003,7 +1003,7 @@ Throws: $(D Exception) if the file is not opened.
  */
     void seek(long offset, int origin = SEEK_SET) @trusted
     {
-        import std.conv : text, to;
+        import std.conv : to, text;
         import std.exception : enforce, errnoEnforce;
 
         enforce(isOpen, "Attempting to seek() in an unopened file");
@@ -1152,7 +1152,7 @@ Throws: $(D Exception) if the file is not opened.
 
     version(Windows)
     {
-        import core.sys.windows.windows : BOOL, OVERLAPPED, ULARGE_INTEGER;
+        import core.sys.windows.windows : ULARGE_INTEGER, OVERLAPPED, BOOL;
 
         private BOOL lockImpl(alias F, Flags...)(ulong start, ulong length,
             Flags flags)
@@ -1395,7 +1395,7 @@ Throws: $(D Exception) if the file is not opened.
 */
     void write(S...)(S args)
     {
-        import std.traits : isAggregateType, isBoolean, isIntegral;
+        import std.traits : isBoolean, isIntegral, isAggregateType;
         auto w = lockingTextWriter();
         foreach (arg; args)
         {

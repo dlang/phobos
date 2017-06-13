@@ -95,7 +95,7 @@ information is available in client code at deallocation time.)
 */
 struct KRRegion(ParentAllocator = NullAllocator)
 {
-    import std.experimental.allocator.common : alignedAt, stateSize;
+    import std.experimental.allocator.common : stateSize, alignedAt;
     import std.traits : hasMember;
     import std.typecons : Ternary;
 

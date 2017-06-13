@@ -742,7 +742,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
     import std.meta : allSatisfy;
     import std.range : Take;
     import std.range.primitives : isInputRange, walkLength;
-    import std.traits : isDynamicArray, isImplicitlyConvertible, isIntegral;
+    import std.traits : isIntegral, isDynamicArray, isImplicitlyConvertible;
 
     alias _less = binaryFun!less;
 
@@ -1820,7 +1820,7 @@ assert(equal(rbt[], [5]));
     test!byte();
 }
 
-import std.range.primitives : ElementType, isInputRange, isSomeString;
+import std.range.primitives : isInputRange, isSomeString, ElementType;
 import std.traits : isArray;
 
 /++

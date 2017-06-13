@@ -116,7 +116,7 @@ void completeSort(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
 if (hasLength!(RandomAccessRange2) && hasSlicing!(RandomAccessRange2))
 {
     import std.algorithm.mutation : bringToFront;
-    import std.range : assumeSorted, chain;
+    import std.range : chain, assumeSorted;
     // Probably this algorithm can be optimized by using in-place
     // merge
     auto lhsOriginal = lhs.release();
@@ -619,7 +619,7 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
 {
     assert(pivot < r.length || r.length == 0 && pivot == 0);
     if (r.length <= 1) return 0;
-    import std.algorithm.mutation : move, swapAt;
+    import std.algorithm.mutation : swapAt, move;
     alias lt = binaryFun!less;
 
     // Pivot at the front
@@ -1939,7 +1939,7 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
 {
     import std.algorithm.internal : rndstuff;
     import std.algorithm.mutation : swapRanges;
-    import std.random : Random, uniform, unpredictableSeed;
+    import std.random : Random, unpredictableSeed, uniform;
     import std.uni : toUpper;
 
     // sort using delegate
@@ -2038,7 +2038,7 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
 
 private void quickSortImpl(alias less, Range)(Range r, size_t depth)
 {
-    import std.algorithm.comparison : max, min;
+    import std.algorithm.comparison : min, max;
     import std.algorithm.mutation : swap, swapAt;
 
     alias Elem = ElementType!(Range);
@@ -2736,7 +2736,7 @@ private template TimSortImpl(alias pred, R)
 
 @safe unittest
 {
-    import std.random : Random, randomShuffle, uniform;
+    import std.random : Random, uniform, randomShuffle;
 
     // Element type with two fields
     static struct E
@@ -2893,7 +2893,7 @@ schwartzSort(alias transform, alias less = "a < b",
 if (isRandomAccessRange!R && hasLength!R)
 {
     import std.conv : emplace;
-    import std.range : SortedRange, zip;
+    import std.range : zip, SortedRange;
     import std.string : representation;
 
     alias T = typeof(unaryFun!transform(r.front));
@@ -3437,7 +3437,7 @@ private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
     T minValue = 0, T maxValue = 255)
 {
     import std.algorithm.iteration : map;
-    import std.random : Random, uniform, unpredictableSeed;
+    import std.random : unpredictableSeed, Random, uniform;
     auto size = flag == Yes.exactSize ? maxSize : uniform(1, maxSize);
     return iota(0, size).map!(_ => uniform(minValue, maxValue)).array;
 }
@@ -3698,7 +3698,7 @@ if (isInputRange!(SRange) && isRandomAccessRange!(TRange)
 
 @system unittest
 {
-    import std.random : Random, randomShuffle, uniform, unpredictableSeed;
+    import std.random : Random, unpredictableSeed, uniform, randomShuffle;
     import std.typecons : Yes;
 
     auto r = Random(unpredictableSeed);

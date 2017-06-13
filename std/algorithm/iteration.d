@@ -2748,7 +2748,7 @@ if (fun.length >= 1)
 
     alias binfuns = staticMap!(binaryFun, fun);
     static if (fun.length > 1)
-        import std.typecons : isTuple, tuple;
+        import std.typecons : tuple, isTuple;
 
     /++
     No-seed version. The first element of $(D r) is used as the seed's value.
@@ -3219,7 +3219,7 @@ if (fun.length >= 1)
     // Sum all elements with explicit seed
     assert(arr.fold!((a, b) => a + b)(6) == 21);
 
-    import std.algorithm.comparison : max, min;
+    import std.algorithm.comparison : min, max;
     import std.typecons : tuple;
 
     // Compute minimum and maximum at the same time

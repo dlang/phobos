@@ -2269,7 +2269,7 @@ private
 version (unittest)
 {
     import std.stdio;
-    import std.typecons : Tuple, tuple;
+    import std.typecons : tuple, Tuple;
 
     void testfn(Tid tid)
     {
@@ -2410,7 +2410,7 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
     // check that var is global, can't take address of a TLS variable
     static assert(is(typeof({ __gshared p = &var; })),
         "var must be 'static shared' or '__gshared'.");
-    import core.atomic : atomicLoad, atomicStore, MemoryOrder;
+    import core.atomic : atomicLoad, MemoryOrder, atomicStore;
 
     static shared bool flag;
     if (!atomicLoad!(MemoryOrder.acq)(flag))

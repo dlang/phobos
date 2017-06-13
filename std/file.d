@@ -741,7 +741,7 @@ private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, 
         if (!result)
         {
             import core.stdc.wchar_ : wcslen;
-            import std.conv : text, to;
+            import std.conv : to, text;
 
             if (!f)
                 f = to!(typeof(f))(fromz[0 .. wcslen(fromz)]);
@@ -2321,7 +2321,7 @@ private bool ensureDirExists()(in char[] pathname)
 
 void mkdirRecurse(in char[] pathname) @safe
 {
-    import std.path : baseName, dirName;
+    import std.path : dirName, baseName;
 
     const left = dirName(pathname);
     if (left.length != pathname.length && !exists(left))
@@ -2338,7 +2338,7 @@ void mkdirRecurse(in char[] pathname) @safe
 {
     import std.exception : assertThrown;
     {
-        import std.path : buildNormalizedPath, buildPath;
+        import std.path : buildPath, buildNormalizedPath;
 
         immutable basepath = deleteme ~ "_dir";
         scope(exit) () @trusted { rmdirRecurse(basepath); }();
@@ -2748,7 +2748,7 @@ else version (NetBSD)
     }
     else version (FreeBSD)
     {
-        import std.exception : assumeUnique, errnoEnforce;
+        import std.exception : errnoEnforce, assumeUnique;
         enum
         {
             CTL_KERN = 1,
@@ -3436,7 +3436,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
     else version(Posix)
     {
         static import core.stdc.stdio;
-        import std.conv : octal, to;
+        import std.conv : to, octal;
 
         immutable fdr = core.sys.posix.fcntl.open(fromz, O_RDONLY);
         cenforce(fdr != -1, f, fromz);
@@ -3609,7 +3609,7 @@ version(Windows) @system unittest
 
 version(Posix) @system unittest
 {
-    import std.exception : collectException, enforce;
+    import std.exception : enforce, collectException;
     import std.process : executeShell;
     collectException(rmdirRecurse(deleteme));
     auto d = deleteme~"/a/b/c/d/e/f/g";
@@ -3997,7 +3997,7 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
     import std.algorithm.searching : startsWith;
     import std.array : array;
     import std.conv : to;
-    import std.path : absolutePath, buildPath, dirEntries;
+    import std.path : dirEntries, buildPath, absolutePath;
     import std.process : thisProcessID;
     import std.range.primitives : walkLength;
 
@@ -4091,7 +4091,7 @@ auto dirEntries(string path, string pattern, SpanMode mode,
     bool followSymlink = true)
 {
     import std.algorithm.iteration : filter;
-    import std.path : baseName, globMatch;
+    import std.path : globMatch, baseName;
 
     bool f(DirEntry de) { return globMatch(baseName(de.name), pattern); }
     return filter!f(DirIterator(path, mode, followSymlink));

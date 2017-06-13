@@ -259,7 +259,7 @@ template binaryFun(alias fun, string parm1Name = "a",
 private uint _ctfeSkipOp(ref string op)
 {
     if (!__ctfe) assert(false);
-    import std.ascii : isAlphaNum, isASCII;
+    import std.ascii : isASCII, isAlphaNum;
     immutable oldLength = op.length;
     while (op.length)
     {

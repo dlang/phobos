@@ -1851,7 +1851,7 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S) &&
 // bugzilla 15800
 @safe unittest
 {
-    import std.utf : byChar, byCodeUnit, byDchar, byWchar;
+    import std.utf : byCodeUnit, byChar, byWchar, byDchar;
 
     assert(to!int(byCodeUnit("10")) == 10);
     assert(to!int(byCodeUnit("10"), 10) == 10);
@@ -2439,7 +2439,7 @@ in
 }
 body
 {
-    import core.checkedint : addu, mulu;
+    import core.checkedint : mulu, addu;
     import std.exception : enforce;
 
     if (radix == 10)
@@ -2638,7 +2638,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     isFloatingPoint!Target && !is(Target == enum))
 {
     import core.stdc.math : HUGE_VAL;
-    import std.ascii : isAlpha, isDigit, isHexDigit, toLower, toUpper;
+    import std.ascii : isDigit, isAlpha, toLower, toUpper, isHexDigit;
     import std.exception : enforce;
 
     static if (isNarrowString!Source)
@@ -3065,7 +3065,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 @safe unittest
 {
     import std.exception;
-    import std.math : fabs, isNaN;
+    import std.math : isNaN, fabs;
 
     // Compare reals with given precision
     bool feq(in real rx, in real ry, in real precision = 0.000001L)
@@ -5814,7 +5814,7 @@ an even number of hexadecimal digits (regardless of the case).
 private bool isHexLiteral(String)(scope const String hexData)
 {
     import std.ascii : isHexDigit;
-    import std.uni : lineSep, nelSep, paraSep;
+    import std.uni : lineSep, paraSep, nelSep;
     size_t i;
     foreach (const dchar c; hexData)
     {

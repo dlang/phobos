@@ -627,7 +627,7 @@ alias fatalf = defaultLogFunctionf!(LogLevel.fatal);
 
 private struct MsgRange
 {
-    import std.traits : isSomeChar, isSomeString;
+    import std.traits : isSomeString, isSomeChar;
 
     private Logger log;
 
@@ -1939,7 +1939,7 @@ version(unittest) private void testFuncNames(Logger logger) @safe
 @safe unittest
 {
     import std.conv : to;
-    import std.exception : assertNotThrown, assertThrown;
+    import std.exception : assertThrown, assertNotThrown;
     import std.format : format;
 
     auto l = new TestLogger(LogLevel.all);

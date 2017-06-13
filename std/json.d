@@ -100,7 +100,7 @@ JSON value node
 */
 struct JSONValue
 {
-    import std.exception : enforce, enforceEx;
+    import std.exception : enforceEx, enforce;
 
     union Store
     {
@@ -702,7 +702,7 @@ Params:
 JSONValue parseJSON(T)(T json, int maxDepth = -1, JSONOptions options = JSONOptions.none)
 if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 {
-    import std.ascii : isDigit, isHexDigit, isWhite, toLower, toUpper;
+    import std.ascii : isWhite, isDigit, isHexDigit, toUpper, toLower;
     import std.typecons : Yes;
     import std.utf : encode;
 
@@ -1224,7 +1224,7 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                 break;
 
             case JSON_TYPE.FLOAT:
-                import std.math : isInfinity, isNaN;
+                import std.math : isNaN, isInfinity;
 
                 auto val = value.store.floating;
 
@@ -1638,7 +1638,7 @@ EOF";
 @safe unittest
 {
     import std.exception : assertThrown;
-    import std.math : isInfinity, isNaN;
+    import std.math : isNaN, isInfinity;
 
     // expected representations of NaN and Inf
     enum {

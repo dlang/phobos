@@ -1511,7 +1511,7 @@ class ErrnoException : Exception
 
     @system unittest
     {
-        import core.stdc.errno : EAGAIN, errno;
+        import core.stdc.errno : errno, EAGAIN;
 
         auto old = errno;
         scope(exit) errno = old;
@@ -2022,7 +2022,7 @@ pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map, splitter;
-    import std.conv : ConvException, to;
+    import std.conv : to, ConvException;
 
     auto s = "12,1337z32,54,2,7,9,1z,6,8";
 

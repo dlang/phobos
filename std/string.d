@@ -186,7 +186,7 @@ private:
 }
 
 public import std.format : format, sformat;
-import std.typecons : Flag, No, Yes;
+import std.typecons : Flag, Yes, No;
 public import std.uni : icmp, toLower, toLowerInPlace, toUpper, toUpperInPlace;
 
 import std.meta; // AliasSeq, staticIndexOf
@@ -199,8 +199,8 @@ import std.traits; // isConvertibleToString, isNarrowString, isSomeChar,
 
 //public imports for backward compatibility
 public import std.algorithm.comparison : cmp;
-public import std.algorithm.searching : count, endsWith, startsWith;
-public import std.array : empty, join, replace, replaceInPlace, split;
+public import std.algorithm.searching : startsWith, endsWith, count;
+public import std.array : join, replace, replaceInPlace, split, empty;
 
 /* ************* Exceptions *************** */
 
@@ -257,7 +257,7 @@ inout(char)[] fromStringz(inout(char)* cString) @nogc @system pure nothrow {
 immutable(char)* toStringz(const(char)[] s) @trusted pure nothrow
 out (result)
 {
-    import core.stdc.string : memcmp, strlen;
+    import core.stdc.string : strlen, memcmp;
     if (result)
     {
         auto slen = s.length;
@@ -378,7 +378,7 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 {
     static import std.ascii;
     static import std.uni;
-    import std.utf : byCodeUnit, byDchar, codeLength, UTFException;
+    import std.utf : byDchar, byCodeUnit, UTFException, codeLength;
     alias Char = Unqual!(ElementEncodingType!Range);
 
     if (cs == Yes.caseSensitive)
@@ -579,7 +579,7 @@ if (isConvertibleToString!Range)
     import std.conv : to;
     import std.exception : assertCTFEable;
     import std.traits : EnumMembers;
-    import std.utf : byChar, byDchar, byWchar;
+    import std.utf : byChar, byWchar, byDchar;
     debug(string) trustedPrintf("string.indexOf.unittest\n");
 
     assertCTFEable!(
@@ -635,7 +635,7 @@ if (isConvertibleToString!Range)
 {
     import std.conv : to;
     import std.traits : EnumMembers;
-    import std.utf : byChar, byCodeUnit, byWchar;
+    import std.utf : byCodeUnit, byChar, byWchar;
     debug(string) trustedPrintf("string.indexOf(startIdx).unittest\n");
 
     assert("hello".byCodeUnit.indexOf(cast(dchar)'l', 1) == 2);
@@ -3214,7 +3214,7 @@ if ((isRandomAccessRange!Range && isSomeChar!(ElementEncodingType!Range) ||
     isNarrowString!Range) &&
     !isConvertibleToString!Range)
 {
-    import std.uni : lineSep, nelSep, paraSep;
+    import std.uni : lineSep, paraSep, nelSep;
     if (str.empty)
         return str;
 
@@ -3308,7 +3308,7 @@ if ((isBidirectionalRange!Range && isSomeChar!(ElementEncodingType!Range) ||
 @safe pure
 unittest
 {
-    import std.uni : lineSep, nelSep, paraSep;
+    import std.uni : lineSep, paraSep, nelSep;
     import std.utf : decode;
     assert(chomp(" hello world  \n\r") == " hello world  \n");
     assert(chomp(" hello world  \r\n") == " hello world  ");
@@ -3396,7 +3396,7 @@ if (isConvertibleToString!Range)
 
     // Ranges
     import std.array : array;
-    import std.utf : byChar, byDchar, byWchar;
+    import std.utf : byChar, byWchar, byDchar;
     assert(chomp("hello world\r\n" .byChar ).array == "hello world");
     assert(chomp("hello world\r\n"w.byWchar).array == "hello world"w);
     assert(chomp("hello world\r\n"d.byDchar).array == "hello world"d);
@@ -3496,7 +3496,7 @@ unittest
 
     // Ranges
     import std.array : array;
-    import std.utf : byChar, byDchar, byWchar;
+    import std.utf : byChar, byWchar, byDchar;
     assert(chompPrefix("hello world" .byChar , "hello"d).array == " world");
     assert(chompPrefix("hello world"w.byWchar, "hello" ).array == " world"w);
     assert(chompPrefix("hello world"d.byDchar, "hello"w).array == " world"d);
@@ -3608,7 +3608,7 @@ if (isConvertibleToString!Range)
 @safe pure unittest
 {
     import std.array : array;
-    import std.utf : byChar, byCodeUnit, byDchar, byWchar, invalidUTFstrings;
+    import std.utf : byChar, byWchar, byDchar, byCodeUnit, invalidUTFstrings;
 
     assert(chop("hello world".byChar).array == "hello worl");
     assert(chop("hello world\n"w.byWchar).array == "hello world"w);
@@ -3719,7 +3719,7 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 
     static if (C.sizeof == 1)
     {
-        import std.utf : byChar, byDchar;
+        import std.utf : byDchar, byChar;
         return leftJustifier(r.byDchar, width, fillChar).byChar;
     }
     else static if (C.sizeof == 2)
@@ -3862,7 +3862,7 @@ if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 
     static if (C.sizeof == 1)
     {
-        import std.utf : byChar, byDchar;
+        import std.utf : byDchar, byChar;
         return rightJustifier(r.byDchar, width, fillChar).byChar;
     }
     else static if (C.sizeof == 2)
@@ -4090,7 +4090,7 @@ if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 
     static if (C.sizeof == 1)
     {
-        import std.utf : byChar, byDchar;
+        import std.utf : byDchar, byChar;
         return centerJustifier(r.byDchar, width, fillChar).byChar;
     }
     else static if (C.sizeof == 2)
@@ -4240,7 +4240,7 @@ auto detabber(Range)(Range r, size_t tabSize = 8)
 if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     !isConvertibleToString!Range)
 {
-    import std.uni : lineSep, nelSep, paraSep;
+    import std.uni : lineSep, paraSep, nelSep;
     import std.utf : codeUnitLimit, decodeFront;
 
     assert(tabSize > 0);
@@ -4471,7 +4471,7 @@ if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
 auto entabber(Range)(Range r, size_t tabSize = 8)
 if (isForwardRange!Range && !isConvertibleToString!Range)
 {
-    import std.uni : lineSep, nelSep, paraSep;
+    import std.uni : lineSep, paraSep, nelSep;
     import std.utf : codeUnitLimit, decodeFront;
 
     assert(tabSize > 0);
@@ -6513,7 +6513,7 @@ if ((isInputRange!Range && isSomeChar!(Unqual!(ElementEncodingType!Range)) ||
     else
     {
         // decoding not needed for wchars and dchars
-        import std.uni : lineSep, nelSep, paraSep;
+        import std.uni : lineSep, paraSep, nelSep;
 
         size_t column;
 
@@ -6545,7 +6545,7 @@ if ((isInputRange!Range && isSomeChar!(Unqual!(ElementEncodingType!Range)) ||
 ///
 @safe pure unittest
 {
-    import std.utf : byChar, byDchar, byWchar;
+    import std.utf : byChar, byWchar, byDchar;
 
     assert(column("1234 ") == 5);
     assert(column("1234 "w) == 5);

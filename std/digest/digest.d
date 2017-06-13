@@ -413,7 +413,7 @@ if (isDigest!T)
 package template isDigestibleRange(Range)
 {
     import std.digest.md;
-    import std.range : ElementType, isInputRange;
+    import std.range : isInputRange, ElementType;
     enum bool isDigestibleRange = isInputRange!Range && is(typeof(
           {
           MD5 ha; //Could use any conformant hash
@@ -1136,7 +1136,7 @@ if (isInputRange!R1 && isInputRange!R2 && !isInfinite!R1 && !isInfinite!R2 &&
     import std.internal.test.dummyrange : ReferenceInputRange;
     import std.range : takeExactly;
     import std.string : representation;
-    import std.utf : byDchar, byWchar;
+    import std.utf : byWchar, byDchar;
 
     {
         auto hex1 = "02CA3484C375EDD3C0F08D3F50D119E61077".representation;

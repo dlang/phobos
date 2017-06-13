@@ -105,7 +105,7 @@ version(Windows)
     // BUGS:  Only works on Windows 2000 and above.
     shared static this()
     {
-        import core.sys.windows.windows : GetSystemInfo, SYSTEM_INFO;
+        import core.sys.windows.windows : SYSTEM_INFO, GetSystemInfo;
         import std.algorithm.comparison : max;
 
         SYSTEM_INFO si;
@@ -118,7 +118,7 @@ else version(linux)
 {
     shared static this()
     {
-        import core.sys.posix.unistd : sysconf, _SC_NPROCESSORS_ONLN;
+        import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
         totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
 }
@@ -126,7 +126,7 @@ else version(Solaris)
 {
     shared static this()
     {
-        import core.sys.posix.unistd : sysconf, _SC_NPROCESSORS_ONLN;
+        import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
         totalCPUs = cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
 }
@@ -2625,7 +2625,7 @@ public:
             byte[maxStack] buf = void;
             immutable size_t nBytesNeeded = nWorkUnits * RTask.sizeof;
 
-            import core.stdc.stdlib : free, malloc;
+            import core.stdc.stdlib : malloc, free;
             if (nBytesNeeded < maxStack)
             {
                 tasks = (cast(RTask*) buf.ptr)[0 .. nWorkUnits];
@@ -3372,7 +3372,7 @@ private void submitAndExecute(
     immutable nThreads = pool.size + 1;
 
     alias PTask = typeof(scopedTask(doIt));
-    import core.stdc.stdlib : free, malloc;
+    import core.stdc.stdlib : malloc, free;
     import core.stdc.string : memcpy;
 
     // The logical thing to do would be to just use alloca() here, but that
@@ -3931,12 +3931,12 @@ version(unittest)
 // These are the tests that should be run every time Phobos is compiled.
 @system unittest
 {
-    import std.algorithm.comparison : equal, max, min;
+    import std.algorithm.comparison : equal, min, max;
     import std.algorithm.iteration : filter, map, reduce;
     import std.array : split;
     import std.conv : text;
     import std.exception : assertThrown;
-    import std.math : approxEqual, log, sqrt;
+    import std.math : approxEqual, sqrt, log;
     import std.range : indexed, iota, join;
     import std.typecons : Tuple, tuple;
 
