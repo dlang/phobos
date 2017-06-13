@@ -1336,7 +1336,7 @@ struct Throw
         auto x1 = cast(T) x;
         assert(x1 == 42);
         x = T.max + 1;
-        import std.exception : assertNotThrown, assertThrown;
+        import std.exception : assertThrown, assertNotThrown;
         assertThrown(cast(T) x);
         x = x.max;
         assertThrown(x += 42);
@@ -2277,7 +2277,7 @@ if (isIntegral!L && isIntegral!R)
     else
         alias Result = typeof(mixin("L() " ~ x ~ " R()"));
 
-    import core.checkedint : adds, addu, muls, mulu, subs, subu;
+    import core.checkedint : addu, adds, subs, muls, subu, mulu;
     import std.algorithm.comparison : among;
     static if (x == "==")
     {

@@ -78,7 +78,7 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 module std.algorithm.mutation;
 
 import std.range.primitives;
-import std.traits : isArray, isBlitAssignable, isNarrowString, isSomeChar, Unqual;
+import std.traits : isArray, isBlitAssignable, isNarrowString, Unqual, isSomeChar;
 // FIXME
 import std.typecons; // : tuple, Tuple;
 
@@ -279,7 +279,7 @@ Unicode integrity is not preserved:
 {
     import std.algorithm.comparison : equal;
     import std.conv : text;
-    import std.random : Random, uniform, unpredictableSeed;
+    import std.random : Random, unpredictableSeed, uniform;
 
     // a more elaborate test
     {
@@ -845,7 +845,7 @@ See_Also:
 void initializeAll(Range)(Range range)
 if (isInputRange!Range && hasLvalueElements!Range && hasAssignableElements!Range)
 {
-    import core.stdc.string : memcpy, memset;
+    import core.stdc.string : memset, memcpy;
     import std.traits : hasElaborateAssign, isDynamicArray;
 
     alias T = ElementType!Range;
@@ -901,7 +901,7 @@ if (is(Range == char[]) || is(Range == wchar[]))
 ///
 @system unittest
 {
-    import core.stdc.stdlib : free, malloc;
+    import core.stdc.stdlib : malloc, free;
 
     struct S
     {
@@ -2835,7 +2835,7 @@ if (isInputRange!Range && hasLvalueElements!Range && is(typeof(range.front = val
 ///
 nothrow @system unittest
 {
-    import core.stdc.stdlib : free, malloc;
+    import core.stdc.stdlib : malloc, free;
 
     auto s = (cast(int*) malloc(5 * int.sizeof))[0 .. 5];
     uninitializedFill(s, 42);

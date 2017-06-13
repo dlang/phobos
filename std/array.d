@@ -82,7 +82,7 @@ import std.meta;
 import std.traits;
 
 import std.range.primitives;
-public import std.range.primitives : back, empty, front, popBack, popFront, save;
+public import std.range.primitives : save, empty, popFront, popBack, front, back;
 
 /**
  * Allocates an array and initializes it with copies of the elements
@@ -744,7 +744,7 @@ slice, returns that slice. Otherwise, returns the null slice.
 auto overlap(T, U)(T[] r1, U[] r2) @trusted pure nothrow
 if (is(typeof(r1.ptr < r2.ptr) == bool))
 {
-    import std.algorithm.comparison : max, min;
+    import std.algorithm.comparison : min, max;
     auto b = max(r1.ptr, r2.ptr);
     auto e = min(r1.ptr + r1.length, r2.ptr + r2.length);
     return b < e ? b[0 .. e - b] : null;

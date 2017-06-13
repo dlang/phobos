@@ -333,7 +333,7 @@ public struct UUID
          */
         this(T)(in T[] uuid) if (isSomeChar!(Unqual!T))
         {
-            import std.conv : parse, to;
+            import std.conv : to, parse;
             if (uuid.length < 36)
             {
                 throw new UUIDParsingException(to!string(uuid), 0,
@@ -1233,7 +1233,7 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
 ///
 @safe unittest
 {
-    import std.random : unpredictableSeed, Xorshift192;
+    import std.random : Xorshift192, unpredictableSeed;
 
     //simple call
     auto uuid = randomUUID();
@@ -1253,13 +1253,13 @@ if (isInputRange!RNG && isIntegral!(ElementType!RNG))
  */
 @safe unittest
 {
-    import std.random : Mt19937, rndGen;
+    import std.random : rndGen, Mt19937;
     static assert(is(typeof(rndGen) == Mt19937));
 }
 
 @safe unittest
 {
-    import std.random : unpredictableSeed, Xorshift192;
+    import std.random : Xorshift192, unpredictableSeed;
     //simple call
     auto uuid = randomUUID();
 

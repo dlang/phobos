@@ -299,7 +299,7 @@ module std.regex;
 import std.range.primitives, std.traits;
 import std.regex.internal.ir;
 import std.regex.internal.thompson; //TODO: get rid of this dependency
-import std.typecons; // : Flag, No, Yes;
+import std.typecons; // : Flag, Yes, No;
 
 /++
     $(D Regex) object holds regular expression pattern in compiled form.
@@ -409,7 +409,7 @@ if (isSomeString!(S))
 public auto regexImpl(S)(S pattern, const(char)[] flags="")
 if (isSomeString!(S))
 {
-    import std.regex.internal.parser : CodeGen, Parser;
+    import std.regex.internal.parser : Parser, CodeGen;
     auto parser = Parser!(Unqual!(typeof(pattern)), CodeGen)(pattern, flags);
     auto r = parser.program;
     return r;
@@ -692,7 +692,7 @@ public:
 if (isSomeString!R)
 {
 private:
-    import core.stdc.stdlib : free, malloc;
+    import core.stdc.stdlib : malloc, free;
     alias Char = BasicElementOf!R;
     alias EngineType = Engine!Char;
     EngineType _engine;
@@ -810,7 +810,7 @@ public:
 
 private @trusted auto matchOnce(alias Engine, RegEx, R)(R input, RegEx re)
 {
-    import core.stdc.stdlib : free, malloc;
+    import core.stdc.stdlib : malloc, free;
     import std.exception : enforce;
     alias Char = BasicElementOf!R;
     alias EngineType = Engine!Char;
@@ -1138,8 +1138,8 @@ if (isOutputRange!(OutR, ElementEncodingType!R[]) &&
     isOutputRange!(OutR, ElementEncodingType!(Capt.String)[]))
 {
     import std.algorithm.searching : find;
-    import std.ascii : isAlpha, isDigit;
-    import std.conv : parse, text;
+    import std.ascii : isDigit, isAlpha;
+    import std.conv : text, parse;
     import std.exception : enforce;
     enum State { Normal, Dollar }
     auto state = State.Normal;

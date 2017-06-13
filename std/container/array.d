@@ -251,7 +251,7 @@ private struct RangeT(A)
 struct Array(T)
 if (!is(Unqual!T == bool))
 {
-    import core.stdc.stdlib : free, malloc, realloc;
+    import core.stdc.stdlib : malloc, realloc, free;
     import core.stdc.string : memcpy, memmove, memset;
 
     import core.memory : GC;

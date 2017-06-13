@@ -799,7 +799,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
 
 struct CtContext
 {
-    import std.conv : text, to;
+    import std.conv : to, text;
     //dirty flags
     bool counter;
     //to mark the portion of matches to save

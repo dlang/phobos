@@ -39,7 +39,7 @@ module std.container.dlist;
 
     // If you want to apply range operations, simply slice it.
     import std.algorithm.searching : countUntil;
-    import std.range : popBackN, popFrontN, walkLength;
+    import std.range : popFrontN, popBackN, walkLength;
 
     auto sl = DList!int([1, 2, 3, 4, 5]);
     assert(countUntil(sl[], 2) == 1);

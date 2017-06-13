@@ -97,7 +97,7 @@ enum CompressionMethod : ushort
  */
 final class ArchiveMember
 {
-    import std.conv : octal, to;
+    import std.conv : to, octal;
     import std.datetime : DosFileTime, SysTime, SysTimeToDosFileTime;
 
     /**
@@ -853,7 +853,7 @@ debug(print)
 
     // Test if packing and unpacking produces the original data
     import std.conv, std.stdio;
-    import std.random : MinstdRand0, uniform;
+    import std.random : uniform, MinstdRand0;
     MinstdRand0 gen;
     const uint itemCount = 20, minSize = 10, maxSize = 500;
     foreach (variant; 0 .. 2)

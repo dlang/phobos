@@ -1364,7 +1364,7 @@ template hasLvalueElements(R)
 ///
 @safe unittest
 {
-    import std.range : chain, iota;
+    import std.range : iota, chain;
 
     static assert( hasLvalueElements!(int[]));
     static assert( hasLvalueElements!(const(int)[]));

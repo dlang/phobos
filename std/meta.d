@@ -1164,7 +1164,7 @@ template aliasSeqOf(alias range)
 
 @safe unittest
 {
-    import std.conv : octal, to;
+    import std.conv : to, octal;
     import std.range : iota;
     //Testing compile time octal
     foreach (I2; aliasSeqOf!(iota(0, 8)))

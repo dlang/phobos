@@ -420,7 +420,7 @@ if (is(T == TestFoo))
 @system unittest
 {
     import std.algorithm.comparison : equal;
-    import std.range : iota, repeat, retro;
+    import std.range : iota, retro, repeat;
     import std.traits : Unqual;
 
     static void testInputRange(T,Cmp)()

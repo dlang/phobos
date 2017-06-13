@@ -15,8 +15,8 @@ import std.experimental.allocator;
 import std.experimental.allocator.common;
 import std.range : isInputRange, isForwardRange, walkLength, save, empty,
     front, popFront;
-import std.traits : hasElaborateDestructor, isPointer;
-import std.typecons : Flag, No, Yes;
+import std.traits : isPointer, hasElaborateDestructor;
+import std.typecons : Flag, Yes, No;
 
 /**
 Allocation-related flags dictated by type characteristics. `TypedAllocator`

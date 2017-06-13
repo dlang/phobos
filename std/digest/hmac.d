@@ -16,7 +16,7 @@ Source: $(PHOBOSSRC std/digest/_hmac.d)
 
 module std.digest.hmac;
 
-import std.digest.digest : DigestType, hasBlockSize, isDigest, isDigestibleRange;
+import std.digest.digest : isDigest, hasBlockSize, isDigestibleRange, DigestType;
 import std.meta : allSatisfy;
 
 /**
@@ -286,7 +286,7 @@ if (isDigest!H)
 
 version(unittest)
 {
-    import std.digest.digest : LetterCase, toHexString;
+    import std.digest.digest : toHexString, LetterCase;
     alias hex = toHexString!(LetterCase.lower);
 }
 

@@ -425,7 +425,7 @@ version(unittest)
     {
         import std.conv : text;
         import std.math : isPowerOf2;
-        import std.stdio : stderr, writeln;
+        import std.stdio : writeln, stderr;
         import std.typecons : Ternary;
         alias A = typeof(make());
         scope(failure) stderr.writeln("testAllocator failed for ", A.stringof);
@@ -551,7 +551,7 @@ version(unittest)
     {
         import std.conv : text;
         import std.math : isPowerOf2;
-        import std.stdio : stderr, writeln;
+        import std.stdio : writeln, stderr;
         import std.typecons : Ternary;
         scope(failure) stderr.writeln("testAllocatorObject failed for ",
                 AllocInterface.stringof);
