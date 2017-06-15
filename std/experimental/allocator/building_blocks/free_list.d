@@ -749,8 +749,8 @@ struct ContiguousFreeList(ParentAllocator,
 FreeList shared across threads. Allocation and deallocation are lock-free. The
 parameters have the same semantics as for $(D FreeList).
 
-$(D expand) is defined to forward to $(ParentAllocator.expand) (it must be also
-$(D shared)).
+$(D expand) is defined to forward to $(D ParentAllocator.expand)
+(it must be also $(D shared)).
 */
 struct SharedFreeList(ParentAllocator,
     size_t minSize, size_t maxSize = minSize, size_t approxMaxNodes = unbounded)

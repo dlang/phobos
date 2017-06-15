@@ -9496,10 +9496,10 @@ bool yearIsLeapYear(int year) @safe pure nothrow
     function as a time point.
 
     1. $(D T) must define a static property named $(D min) which is the smallest
-       value of $(D T) as $(Unqual!T).
+       value of $(D T) as $(D Unqual!T).
 
     2. $(D T) must define a static property named $(D max) which is the largest
-       value of $(D T) as $(Unqual!T).
+       value of $(D T) as $(D Unqual!T).
 
     3. $(D T) must define an $(D opBinary) for addition and subtraction that
        accepts $(REF Duration, core,time) and returns $(D Unqual!T).

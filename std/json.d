@@ -1090,7 +1090,7 @@ Any Object types will be serialized in a key-sorted order.
 
 If $(D pretty) is false no whitespaces are generated.
 If $(D pretty) is true serialized string is formatted to be human-readable.
-Set the $(specialFloatLiterals) flag is set in $(D options) to encode NaN/Infinity as strings.
+Set the $(LREF JSONOptions.specialFloatLiterals) flag is set in $(D options) to encode NaN/Infinity as strings.
 */
 string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions options = JSONOptions.none) @safe
 {

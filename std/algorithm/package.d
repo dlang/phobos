@@ -3,7 +3,7 @@
 /**
 This package implements generic algorithms oriented towards the processing of
 sequences. Sequences processed by these functions define range-based
-interfaces.  See also $(MREF_ALTTEF Reference on ranges, std, range) and
+interfaces.  See also $(MREF_ALTTEXT Reference on ranges, std, range) and
 $(HTTP ddili.org/ders/d.en/ranges.html, tutorial on ranges).
 
 $(SCRIPT inhibitQuickIndex = 1;)

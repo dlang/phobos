@@ -989,8 +989,9 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
  * Xorshift generator using 32bit algorithm.
  *
  * Implemented according to $(HTTP www.jstatsoft.org/v08/i14/paper, Xorshift RNGs).
+ * Supporting bits are below, $(D bits) means second parameter of XorshiftEngine.
  *
- * $(BOOKTABLE $(TEXTWITHCOMMAS Supporting bits are below, $(D bits) means second parameter of XorshiftEngine.),
+ * $(BOOKTABLE ,
  *  $(TR $(TH bits) $(TH period))
  *  $(TR $(TD 32)   $(TD 2^32 - 1))
  *  $(TR $(TD 64)   $(TD 2^64 - 1))
