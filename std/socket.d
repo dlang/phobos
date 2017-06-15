@@ -42,6 +42,8 @@
  * Source:  $(PHOBOSSRC std/_socket.d)
  */
 
+// It will be removed in December 2018. @@@DEPRECATED_2018-12@@@
+deprecated("Please use undead.socket instead. It will be removed in December 2018.")
 module std.socket;
 
 import core.stdc.stdint, core.stdc.stdlib, core.stdc.string, std.conv, std.string;
