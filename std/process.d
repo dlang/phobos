@@ -166,7 +166,8 @@ input, output, and error streams.
 
 The function returns immediately, leaving the child _process to execute
 in parallel with its parent.  It is recommended to always call $(LREF wait)
-on the returned $(LREF Pid), as detailed in the documentation for $(D wait).
+on the returned $(LREF Pid) unless the process was spawned with
+$(D Config.detached) flag, as detailed in the documentation for $(D wait).
 
 Command_line:
 There are four overloads of this function.  The first two take an array
@@ -334,88 +335,6 @@ Pid spawnProcess(in char[] program,
     return spawnProcess((&program)[0 .. 1], env, config, workDir);
 }
 
-/**
-Spawns a new process, optionally assigning it an arbitrary set of standard input, output, and error streams.
-
-The function returns immediately, leaving the spawned process to execute in parallel with its parent.
-
-The spawned process is detached from its parent, so you should not $(D wait) on the returned pid.
-
-Params:
-args = An array which contains the program name as the zeroth element and any command-line arguments in the following elements.
-stdin = The standard input stream of the spawned process.
-stdout = The standard output stream of the spawned process.
-stderr = The standard error stream of the spawned process.
-env = Additional environment variables for the child process.
-config = Flags that control process creation. Same as for $(D spawnProcess).
-workDir = The working directory for the new process.
-pid = Pointer to a variable that will get pid value in case $(D spawnProcessDetached) succeed. Not used if null.
-
-Throws:
-$(LREF ProcessException) on failure to start the process.$(BR)
-$(REF StdioException, std,stdio) on failure to pass one of the streams
-    to the child process (Windows only).$(BR)
-$(REF RangeError, core,exception) if $(D args) is empty.
-*/
-void spawnProcessDetached(in char[][] args,
-                 File stdin = std.stdio.stdin,
-                 File stdout = std.stdio.stdout,
-                 File stderr = std.stdio.stderr,
-                 const string[string] env = null,
-                 Config config = Config.none,
-                 in char[] workDir = null,
-                 int* pid = null)
-    @trusted // TODO: Should be @safe
-{
-    version (Windows)    auto  args2 = escapeShellArguments(args);
-    else version (Posix) alias args2 = args;
-    spawnProcessDetachedImpl(args2, stdin, stdout, stderr, env, config, workDir, pid);
-}
-
-/// ditto
-void spawnProcessDetached(in char[][] args,
-                 const string[string] env,
-                 Config config = Config.none,
-                 in char[] workDir = null,
-                 int* pid = null)
-    @trusted // TODO: Should be @safe
-{
-    spawnProcessDetached(args,
-                        std.stdio.stdin,
-                        std.stdio.stdout,
-                        std.stdio.stderr,
-                        env,
-                        config,
-                        workDir,
-                        pid);
-}
-
-/// ditto
-void spawnProcessDetached(in char[] program,
-                 File stdin = std.stdio.stdin,
-                 File stdout = std.stdio.stdout,
-                 File stderr = std.stdio.stderr,
-                 const string[string] env = null,
-                 Config config = Config.none,
-                 in char[] workDir = null,
-                 int* pid = null)
-    @trusted
-{
-    spawnProcessDetached((&program)[0 .. 1],
-                        stdin, stdout, stderr, env, config, workDir, pid);
-}
-
-/// ditto
-void spawnProcessDetached(in char[] program,
-                 const string[string] env,
-                 Config config = Config.none,
-                 in char[] workDir = null,
-                 int* pid = null)
-    @trusted
-{
-    spawnProcessDetached((&program)[0 .. 1], env, config, workDir, pid);
-}
-
 version(Posix) private enum InternalError : ubyte
 {
     noerror,
@@ -475,11 +394,6 @@ private:
         return workDirFD;
     }
 
-    int getFD(ref File f)
-    {
-        return core.stdc.stdio.fileno(f.getFP());
-    }
-
     void abortOnError(int forkPipeOut, InternalError errorType, int error) nothrow @nogc
     {
         core.sys.posix.unistd.write(forkPipeOut, &errorType, errorType.sizeof);
@@ -487,24 +401,6 @@ private:
         close(forkPipeOut);
         core.sys.posix.unistd._exit(1);
         assert(0);
-    }
-
-    void prepareStandardFDs(const int stdinFD, const int stdoutFD, ref int stderrFD) nothrow @nogc
-    {
-        // Redirect streams and close the old file descriptors.
-        // In the case that stderr is redirected to stdout, we need
-        // to backup the file descriptor since stdout may be redirected
-        // as well.
-        if (stderrFD == STDOUT_FILENO)  stderrFD = dup(stderrFD);
-        dup2(stdinFD,  STDIN_FILENO);
-        dup2(stdoutFD, STDOUT_FILENO);
-        dup2(stderrFD, STDERR_FILENO);
-
-        // Ensure that the standard streams aren't closed on execute, and
-        // optionally close all other file descriptors.
-        setCLOEXEC(STDIN_FILENO, false);
-        setCLOEXEC(STDOUT_FILENO, false);
-        setCLOEXEC(STDERR_FILENO, false);
     }
 
     void closeDescriptors(const int pipeOutFD) nothrow @nogc
@@ -553,15 +449,6 @@ private:
         }
     }
 
-    void closeOldStandardDescriptors(const int stdinFD, const int stdoutFD, const int stderrFD) nothrow @nogc
-    {
-        // Close the old file descriptors, unless they are
-        // either of the standard streams.
-        if (stdinFD  > STDERR_FILENO)  close(stdinFD);
-        if (stdoutFD > STDERR_FILENO)  close(stdoutFD);
-        if (stderrFD > STDERR_FILENO)  close(stderrFD);
-    }
-
     string errorMessage(InternalError error)
     {
         final switch (error)
@@ -577,17 +464,6 @@ private:
             case InternalError.noerror:
                 assert(false);
         }
-    }
-
-    void readAndThrowError(int readEndPipe, InternalError status)
-    {
-        int error;
-        auto readExecResult = read(readEndPipe, &error, error.sizeof);
-        string errorMsg = errorMessage(status);
-        if (readExecResult == error.sizeof)
-            throw ProcessException.newFromErrno(error, errorMsg);
-        else
-            throw new ProcessException(errorMsg);
     }
 }
 
@@ -624,6 +500,8 @@ private Pid spawnProcessImpl(in char[][] args,
     if (workDir.length)
         workDirFD = getWorkDirFD(workDir);
 
+    static int getFD(ref File f) { return core.stdc.stdio.fileno(f.getFP()); }
+
     // Get the file descriptors of the streams.
     // These could potentially be invalid, but that is OK.  If so, later calls
     // to dup2() and close() will just silently fail without causing any harm.
@@ -633,19 +511,32 @@ private Pid spawnProcessImpl(in char[][] args,
 
     int[2] forkPipe;
     if (core.sys.posix.unistd.pipe(forkPipe) == 0)
-    {
         setCLOEXEC(forkPipe[1], true);
-    }
     else
-    {
         throw ProcessException.newFromErrno("Could not create pipe to check startup of child");
-    }
     scope(exit) close(forkPipe[0]);
+
+    int[2] pidPipe;
+    if (config & Config.detached)
+    {
+        if (core.sys.posix.unistd.pipe(pidPipe) == 0)
+            setCLOEXEC(pidPipe[1], true);
+        else
+            throw ProcessException.newFromErrno("Could not create pipe to get process pid");
+    }
+    scope(exit) if (config & Config.detached) close(pidPipe[0]);
+
+    void closePipeWriteEnds()
+    {
+        close(forkPipe[1]);
+        if (config & Config.detached)
+            close(pidPipe[1]);
+    }
 
     auto id = core.sys.posix.unistd.fork();
     if (id < 0)
     {
-        close(forkPipe[1]);
+        closePipeWriteEnds();
         throw ProcessException.newFromErrno("Failed to spawn new process");
     }
 
@@ -658,31 +549,90 @@ private Pid spawnProcessImpl(in char[][] args,
 
         // no need for the read end of pipe on child side
         close(forkPipe[0]);
+        if (config & Config.detached)
+            close(pidPipe[0]);
         immutable forkPipeOut = forkPipe[1];
+        immutable pidPipeOut = pidPipe[1];
 
-        // Set the working directory.
-        if (workDirFD >= 0)
+        void setWorkDir()
         {
-            if (fchdir(workDirFD) < 0)
+            // Set the working directory.
+            if (workDirFD >= 0)
             {
-                // Fail. It is dangerous to run a program
-                // in an unexpected working directory.
-                abortOnError(forkPipeOut, InternalError.chdir, .errno);
+                if (fchdir(workDirFD) < 0)
+                {
+                    // Fail. It is dangerous to run a program
+                    // in an unexpected working directory.
+                    abortOnError(forkPipeOut, InternalError.chdir, .errno);
+                }
+                close(workDirFD);
             }
-            close(workDirFD);
         }
 
-        prepareStandardFDs(stdinFD, stdoutFD, stderrFD);
-        if (!(config & Config.inheritFDs))
-            closeDescriptors(forkPipeOut);
-        else // This is already done if we don't inherit descriptors.
-            closeOldStandardDescriptors(stdinFD, stdoutFD, stderrFD);
+        void execProcess()
+        {
+            // Redirect streams and close the old file descriptors.
+            // In the case that stderr is redirected to stdout, we need
+            // to backup the file descriptor since stdout may be redirected
+            // as well.
+            if (stderrFD == STDOUT_FILENO)  stderrFD = dup(stderrFD);
+            dup2(stdinFD,  STDIN_FILENO);
+            dup2(stdoutFD, STDOUT_FILENO);
+            dup2(stderrFD, STDERR_FILENO);
 
-        // Execute program.
-        core.sys.posix.unistd.execve(argz[0], argz.ptr, envz);
+            // Ensure that the standard streams aren't closed on execute, and
+            // optionally close all other file descriptors.
+            setCLOEXEC(STDIN_FILENO, false);
+            setCLOEXEC(STDOUT_FILENO, false);
+            setCLOEXEC(STDERR_FILENO, false);
 
-        // If execution fails, exit as quickly as possible.
-        abortOnError(forkPipeOut, InternalError.exec, .errno);
+            if (!(config & Config.inheritFDs))
+                closeDescriptors(forkPipeOut);
+            else // This is already done if we don't inherit descriptors.
+            {
+                // Close the old file descriptors, unless they are
+                // either of the standard streams.
+                if (stdinFD  > STDERR_FILENO)  close(stdinFD);
+                if (stdoutFD > STDERR_FILENO)  close(stdoutFD);
+                if (stderrFD > STDERR_FILENO)  close(stderrFD);
+            }
+
+            // Execute program.
+            core.sys.posix.unistd.execve(argz[0], argz.ptr, envz);
+
+            // If execution fails, exit as quickly as possible.
+            abortOnError(forkPipeOut, InternalError.exec, .errno);
+        }
+
+        if (config & Config.detached)
+        {
+            auto secondFork = core.sys.posix.unistd.fork();
+            if (secondFork == 0)
+            {
+                setsid();
+                close(pidPipeOut);
+                setWorkDir();
+                execProcess();
+            }
+            else if (secondFork == -1)
+            {
+                auto secondForkErrno = .errno;
+                close(pidPipeOut);
+                abortOnError(forkPipeOut, InternalError.doubleFork, secondForkErrno);
+            }
+            else
+            {
+                core.sys.posix.unistd.write(pidPipeOut, &secondFork, pid_t.sizeof);
+                close(pidPipeOut);
+                close(forkPipeOut);
+                _exit(0);
+            }
+        }
+        else
+        {
+            setWorkDir();
+            execProcess();
+        }
     }
 
     if (id == 0)
@@ -692,171 +642,42 @@ private Pid spawnProcessImpl(in char[][] args,
     }
     else
     {
-        close(forkPipe[1]);
+        closePipeWriteEnds();
         auto status = InternalError.noerror;
         auto readExecResult = core.sys.posix.unistd.read(forkPipe[0], &status, status.sizeof);
-        if (readExecResult == -1)
-            throw ProcessException.newFromErrno("Could not read from pipe to get child status");
-
-        if (status != InternalError.noerror)
-            readAndThrowError(forkPipe[0], status);
-
-        // Parent process:  Close streams and return.
-        if (!(config & Config.retainStdin ) && stdinFD  > STDERR_FILENO
-                                            && stdinFD  != getFD(std.stdio.stdin ))
-            stdin.close();
-        if (!(config & Config.retainStdout) && stdoutFD > STDERR_FILENO
-                                            && stdoutFD != getFD(std.stdio.stdout))
-            stdout.close();
-        if (!(config & Config.retainStderr) && stderrFD > STDERR_FILENO
-                                            && stderrFD != getFD(std.stdio.stderr))
-            stderr.close();
-        return new Pid(id);
-    }
-}
-
-/*
-Implementation of spawnProcessDetached() for Posix.
-This uses double fork technique and setsid to detach process from the caller process.
-*/
-version(Posix)
-private void spawnProcessDetachedImpl(in char[][] args,
-                             File stdin,
-                             File stdout,
-                             File stderr,
-                             const string[string] env,
-                             Config config,
-                             in char[] workDir,
-                             int* pid)
-    @trusted
-{
-    import core.exception : RangeError;
-
-    if (args.empty) throw new RangeError();
-    auto argz = getArgz(args);
-    auto envz = createEnv(env, !(config & Config.newEnv));
-    int workDirFD = -1;
-    scope(exit) if (workDirFD >= 0) close(workDirFD);
-    if (workDir.length)
-        workDirFD = getWorkDirFD(workDir);
-    auto stdinFD  = getFD(stdin);
-    auto stdoutFD = getFD(stdout);
-    auto stderrFD = getFD(stderr);
-
-    int[2] execPipe;
-    if (core.sys.posix.unistd.pipe(execPipe) == 0)
-        setCLOEXEC(execPipe[1], true);
-    else
-        throw ProcessException.newFromErrno("Could not create pipe to check startup of child");
-    scope(exit) close(execPipe[0]);
-
-    int[2] pidPipe;
-    if (core.sys.posix.unistd.pipe(pidPipe) == 0)
-        setCLOEXEC(pidPipe[1], true);
-    else
-        throw ProcessException.newFromErrno("Could not create pipe to get process pid");
-    scope(exit) close(pidPipe[0]);
-
-    auto firstFork = core.sys.posix.unistd.fork();
-    if (firstFork < 0)
-    {
-        close(execPipe[1]);
-        close(pidPipe[1]);
-        throw ProcessException.newFromErrno("Failed to fork");
-    }
-
-    void forkChild() nothrow @nogc
-    {
-        static import core.sys.posix.stdio;
-        pragma(inline, true);
-
-        // First fork
-
-        // no need for the read end of pipe on child side
-        close(execPipe[0]);
-        close(pidPipe[0]);
-        immutable execPipeOut = execPipe[1];
-        immutable pidPipeOut = pidPipe[1];
-
-        auto secondFork = core.sys.posix.unistd.fork();
-        if (secondFork == 0)
-        {
-            // Second fork
-
-            // assign new session ID
-            setsid();
-            close(pidPipeOut);
-
-            // Same as spawnProcessImpl
-            if (workDirFD >= 0)
-            {
-                if (fchdir(workDirFD) < 0)
-                    abortOnError(execPipeOut, InternalError.chdir, .errno);
-                close(workDirFD);
-            }
-
-            prepareStandardFDs(stdinFD, stdoutFD, stderrFD);
-            if (!(config & Config.inheritFDs))
-                closeDescriptors(execPipeOut);
-            else
-                closeOldStandardDescriptors(stdinFD, stdoutFD, stderrFD);
-
-            core.sys.posix.unistd.execve(argz[0], argz.ptr, envz);
-            abortOnError(execPipeOut, InternalError.exec, .errno);
-        }
-        else if (secondFork == -1)
-        {
-            // Save error number just in case if subsequent "close" fails and overrides errno
-            auto secondForkErrno = .errno;
-            close(pidPipeOut);
-            abortOnError(execPipeOut, InternalError.doubleFork, secondForkErrno);
-        }
-        else
-        {
-            core.sys.posix.unistd.write(pidPipeOut, &secondFork, pid_t.sizeof);
-            close(pidPipeOut);
-            close(execPipeOut);
-            _exit(0);
-        }
-    }
-
-    if (firstFork == 0)
-    {
-        forkChild();
-        assert(0);
-    }
-    else
-    {
-        close(execPipe[1]);
-        close(pidPipe[1]);
-        auto status = InternalError.noerror;
-        // This read should occur before waitpid because we need to ensure that error status is delivered in case of error.
-        auto readExecResult = core.sys.posix.unistd.read(execPipe[0], &status, status.sizeof);
         // Save error number just in case if subsequent "waitpid" fails and overrides errno
         auto lastError = .errno;
 
-        // Forked child exits right after creating second fork. So it should be safe to wait here.
-        import core.sys.posix.sys.wait : waitpid;
-        int waitResult;
-        waitpid(firstFork, &waitResult, 0);
+        if (config & Config.detached)
+        {
+            // Forked child exits right after creating second fork. So it should be safe to wait here.
+            import core.sys.posix.sys.wait : waitpid;
+            int waitResult;
+            waitpid(id, &waitResult, 0);
+        }
 
         if (readExecResult == -1)
-            throw ProcessException.newFromErrno(lastError, "Could not read from pipe to get spawned process status");
+            throw ProcessException.newFromErrno(lastError, "Could not read from pipe to get child status");
 
-        if (status == InternalError.noerror)
+        bool owned = true;
+        if (status != InternalError.noerror)
         {
-            if (pid !is null)
-            {
-                pid_t actualPid = 0;
-                if (read(pidPipe[0], &actualPid, pid_t.sizeof) >= 0)
-                    *pid = actualPid;
-                else
-                    *pid = 0; // Could not get pid even though process started without errors. Should this be considered error?
-            }
+            int error;
+            readExecResult = read(forkPipe[0], &error, error.sizeof);
+            string errorMsg = errorMessage(status);
+            if (readExecResult == error.sizeof)
+                throw ProcessException.newFromErrno(error, errorMsg);
+            else
+                throw new ProcessException(errorMsg);
         }
-        else
+        else if (config & Config.detached)
         {
-            readAndThrowError(execPipe[0], status);
+            owned = false;
+            typeof(id) actualPid;
+            if (read(pidPipe[0], &actualPid, id.sizeof) == id.sizeof)
+                id = actualPid;
+            else
+                throw ProcessException.newFromErrno("Could not read from pipe to get detached process id");
         }
 
         // Parent process:  Close streams and return.
@@ -869,6 +690,7 @@ private void spawnProcessDetachedImpl(in char[][] args,
         if (!(config & Config.retainStderr) && stderrFD > STDERR_FILENO
                                             && stderrFD != getFD(std.stdio.stderr))
             stderr.close();
+        return new Pid(id, owned);
     }
 }
 
@@ -966,22 +788,15 @@ private Pid spawnProcessImpl(in char[] commandLine,
 
     // close the thread handle in the process info structure
     CloseHandle(pi.hThread);
-
-    return new Pid(pi.dwProcessId, pi.hProcess);
-}
-
-version(Windows)
-private void spawnProcessDetachedImpl(in char[][] args,
-                             File stdin,
-                             File stdout,
-                             File stderr,
-                             const string[string] env,
-                             Config config,
-                             in char[] workDir,
-                             int* pid)
-    @trusted
-{
-    throw new ProcessException("Not implemented for Windows yet");
+    if (config & Config.detached)
+    {
+        CloseHandle(pi.hProcess);
+        return new Pid(pi.dwProcessId);
+    }
+    else
+    {
+        return new Pid(pi.dwProcessId, pi.hProcess);
+    }
 }
 
 // Converts childEnv to a zero-terminated array of zero-terminated strings
@@ -1334,8 +1149,8 @@ version (Posix) @system unittest
     import std.exception : assertThrown;
     assertThrown!ProcessException(spawnProcess("ewrgiuhrifuheiohnmnvqweoijwf"));
     assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf"));
-    assertThrown!ProcessException(spawnProcessDetached("ewrgiuhrifuheiohnmnvqweoijwf"));
-    assertThrown!ProcessException(spawnProcessDetached("./rgiuhrifuheiohnmnvqweoijwf"));
+    assertThrown!ProcessException(spawnProcess("ewrgiuhrifuheiohnmnvqweoijwf", null, Config.detached));
+    assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf", null, Config.detached));
 
     // can't execute malformed file with executable permissions
     version(Posix)
@@ -1348,7 +1163,7 @@ version (Posix) @system unittest
         scope(exit) remove(deleteme);
         setAttributes(deleteme, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
         assertThrown!ProcessException(spawnProcess(deleteme));
-        assertThrown!ProcessException(spawnProcessDetached(deleteme));
+        assertThrown!ProcessException(spawnProcess(deleteme, null, Config.detached));
     }
 }
 
@@ -1373,12 +1188,12 @@ version (Posix) @system unittest
 
     auto directory = uniqueTempPath();
     assertThrown!ProcessException(spawnProcess([prog.path], null, Config.none, directory));
-    assertThrown!ProcessException(spawnProcessDetached([prog.path], null, Config.none, directory));
+    assertThrown!ProcessException(spawnProcess([prog.path], null, Config.detached, directory));
 
     std.file.write(directory, "foo");
     scope(exit) remove(directory);
     assertThrown!ProcessException(spawnProcess([prog.path], null, Config.none, directory));
-    assertThrown!ProcessException(spawnProcessDetached([prog.path], null, Config.none, directory));
+    assertThrown!ProcessException(spawnProcess([prog.path], null, Config.detached, directory));
 
     // can't run in directory if user does not have search permission on this directory
     version(Posix)
@@ -1389,7 +1204,7 @@ version (Posix) @system unittest
         scope(exit) rmdirRecurse(directoryNoSearch);
         setAttributes(directoryNoSearch, S_IRUSR);
         assertThrown!ProcessException(spawnProcess(prog.path, null, Config.none, directoryNoSearch));
-        assertThrown!ProcessException(spawnProcessDetached(prog.path, null, Config.none, directoryNoSearch));
+        assertThrown!ProcessException(spawnProcess(prog.path, null, Config.detached, directoryNoSearch));
     }
 }
 
@@ -1616,6 +1431,12 @@ enum Config
     process.
     */
     inheritFDs = 32,
+
+    /**
+    Spawn process in detached state. This removes the need in calling
+    $(LREF wait) to clean up the process resources.
+    */
+    detached = 64,
 }
 
 
@@ -1658,6 +1479,15 @@ final class Pid
         return _processID;
     }
 
+    /**
+    This is $(D true) if process was spawned without $(LREF Config.detached), $(D false)
+    otherwise. You can't $(LREF wait) for or $(LREF kill) process you don't own.
+    */
+    @property bool owned() const @safe pure nothrow
+    {
+        return _owned;
+    }
+
 private:
     /*
     Pid.performWait() does the dirty work for wait() and nonBlockingWait().
@@ -1674,6 +1504,8 @@ private:
     version (Posix)
     int performWait(bool block) @trusted
     {
+        import std.exception : enforceEx;
+        enforceEx!ProcessException(_owned, "Attempt to wait for the not owned process");
         if (_processID == terminated) return _exitCode;
         int exitCode;
         while (true)
@@ -1722,6 +1554,8 @@ private:
     {
         int performWait(bool block) @trusted
         {
+            import std.exception : enforceEx;
+            enforceEx!ProcessException(_owned, "Attempt to wait for the not owned process");
             if (_processID == terminated) return _exitCode;
             assert(_handle != INVALID_HANDLE_VALUE);
             if (block)
@@ -1760,6 +1594,10 @@ private:
     // sensible value if _processID == terminated.
     int _exitCode;
 
+    // Whether the process can be waited for by wait() for or killed by kill().
+    // False if process was started as detached. True otherwise.
+    bool _owned;
+
     // Pids are only meant to be constructed inside this module, so
     // we make the constructor private.
     version (Windows)
@@ -1769,13 +1607,20 @@ private:
         {
             _processID = pid;
             _handle = handle;
+            _owned = true;
+        }
+        this(int pid) @safe pure nothrow
+        {
+            _processID = pid;
+            _owned = false;
         }
     }
     else
     {
-        this(int id) @safe pure nothrow
+        this(int id, bool owned) @safe pure nothrow
         {
             _processID = id;
+            _owned = owned;
         }
     }
 }
@@ -1786,9 +1631,11 @@ Waits for the process associated with $(D pid) to terminate, and returns
 its exit status.
 
 In general one should always _wait for child processes to terminate
-before exiting the parent process.  Otherwise, they may become
-"$(HTTP en.wikipedia.org/wiki/Zombie_process,zombies)" – processes
-that are defunct, yet still occupy a slot in the OS process table.
+before exiting the parent process unless the process was spawned as detached
+(that was spawned with $(D Config.detached) flag).
+Otherwise, they may become "$(HTTP en.wikipedia.org/wiki/Zombie_process,zombies)"
+– processes that are defunct, yet still occupy a slot in the OS process table.
+You should not and must not wait for detached processes, since you don't own them.
 
 If the process has already terminated, this function returns directly.
 The exit code is cached, so that if wait() is called multiple times on
@@ -1803,7 +1650,7 @@ Signal codes are defined in the $(D core.sys.posix.signal) module
 (which corresponds to the $(D signal.h) POSIX header).
 
 Throws:
-$(LREF ProcessException) on failure.
+$(LREF ProcessException) on failure or on attempt to wait for not owned process.
 
 Example:
 See the $(LREF spawnProcess) documentation.
@@ -1858,7 +1705,7 @@ Returns:
 An $(D std.typecons.Tuple!(bool, "terminated", int, "status")).
 
 Throws:
-$(LREF ProcessException) on failure.
+$(LREF ProcessException) on failure or on attempt to wait for not owned process.
 
 Example:
 ---
@@ -1936,6 +1783,7 @@ assert(wait(pid) == -SIGKILL); // Negative return value on POSIX!
 
 Throws:
 $(LREF ProcessException) on error (e.g. if codeOrSignal is invalid).
+    or on attempt to kill not owned process.
     Note that failure to terminate the process is considered a "normal"
     outcome, not an error.$(BR)
 */
@@ -1952,6 +1800,8 @@ void kill(Pid pid)
 /// ditto
 void kill(Pid pid, int codeOrSignal)
 {
+    import std.exception : enforceEx;
+    enforceEx!ProcessException(pid.owned(), "Attempt to kill not owned process");
     version (Windows)
     {
         if (codeOrSignal < 0) throw new ProcessException("Invalid exit code");
@@ -2006,6 +1856,17 @@ void kill(Pid pid, int codeOrSignal)
     do { s = tryWait(pid); } while (!s.terminated);
     version (Windows)    assert(s.status == 123);
     else version (Posix) assert(s.status == -SIGKILL);
+    assertThrown!ProcessException(kill(pid));
+}
+
+@system unittest // wait() and kill() detached process
+{
+    import std.exception : assertThrown;
+    TestScript prog = "exit 0";
+    auto pid = spawnProcess(prog.path, null, Config.detached);
+    assert(!pid.owned());
+    version(Windows) assert(pid.osHandle == INVALID_HANDLE_VALUE);
+    assertThrown!ProcessException(wait(pid));
     assertThrown!ProcessException(kill(pid));
 }
 
