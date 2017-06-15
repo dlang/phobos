@@ -1727,6 +1727,14 @@ class DocumentParser : ElementParser
     }
 }
 
+@system unittest
+{
+    auto doc = new Document("<root><child><grandchild/></child></root>");
+    assert(doc.elements.length == 1);
+    assert(doc.elements[0].tag.name == "child");
+    assert(doc.items == doc.elements);
+}
+
 /**
  * Class for parsing an XML element.
  *
