@@ -86,7 +86,13 @@ $(TR $(TDNW Hardware Control) $(TD
  *      SV  = $(TR $(TD $1) $(TD $2))
  *      TH3 = $(TR $(TH $1) $(TH $2) $(TH $3))
  *      TD3 = $(TR $(TD $1) $(TD $2) $(TD $3))
- *
+ *      TABLE_DOMRG = <table border="1" cellpadding="4" cellspacing="0">
+ *              $(SVH Domain X, Range Y)
+                $(SV $1, $2)
+ *              </table>
+ *      DOMAIN=$1
+ *      RANGE=$1
+
  *      NAN = $(RED NAN)
  *      SUP = <span style="vertical-align:super;font-size:smaller">$0</span>
  *      GAMMA = &#915;
@@ -1419,9 +1425,11 @@ public:
  *  Mathematically, acosh(x) = log(x + sqrt( x*x - 1))
  *
  * $(TABLE_DOMRG
- *  $(DOMAIN 1..$(INFIN))
- *  $(RANGE  1 .. log(real.max), $(INFIN)) )
- *      $(TABLE_SV
+ *    $(DOMAIN 1..$(INFIN)),
+ *    $(RANGE  0..$(INFIN))
+ * )
+ *
+ *  $(TABLE_SV
  *    $(SVH  x,     acosh(x) )
  *    $(SV  $(NAN), $(NAN) )
  *    $(SV  $(LT)1,     $(NAN) )
@@ -1501,10 +1509,11 @@ float asinh(float x) @safe pure nothrow @nogc { return asinh(cast(real) x); }
  *
  * Mathematically, atanh(x) = log( (1+x)/(1-x) ) / 2
  *
- *
  * $(TABLE_DOMRG
- *  $(DOMAIN -$(INFIN)..$(INFIN))
- *  $(RANGE  -1 .. 1) )
+ *    $(DOMAIN -$(INFIN)..$(INFIN)),
+ *    $(RANGE  -1 .. 1)
+ * )
+ * $(BR)
  * $(TABLE_SV
  *    $(SVH  x,     acosh(x) )
  *    $(SV  $(NAN), $(NAN) )

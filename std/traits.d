@@ -6852,7 +6852,7 @@ template CopyTypeQualifiers(FromType, ToType)
 }
 
 /**
-Returns the type of `Target` with the "constness" of `Source`. A type's $(BOLD constness)
+Returns the type of `Target` with the "constness" of `Source`. A type's $(B constness)
 refers to whether it is `const`, `immutable`, or `inout`. If `source` has no constness, the
 returned type will be the same as `Target`.
 */
