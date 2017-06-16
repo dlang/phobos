@@ -61,6 +61,7 @@ import std.traits;
 version(unittest)
 {
     import std.stdio;
+    import std.typecons : Flag, Yes, No;
 }
 
 
@@ -70,6 +71,18 @@ private string myToString(ulong n)
     UnsignedStringBuf buf;
     auto s = unsignedToTempString(n, buf);
     return cast(string) s ~ (n > uint.max ? "UL" : "U");
+}
+
+private template TypeName(T)
+{
+    static if (__traits(compiles, TemplateOf!T))
+    {
+        enum TypeName = T.stringof ~ "!" ~ TemplateArgsOf!T.stringof[5..$];
+    }
+    else
+    {
+        enum TypeName = T.stringof;
+    }
 }
 
 private template createAccessors(
@@ -105,15 +118,15 @@ private template createAccessors(
             enum extendSign = 0;
         }
 
-        static if (is(T == bool))
+        static if (is(T : bool))
         {
             static assert(len == 1);
             enum result =
             // getter
-                "@property bool " ~ name ~ "() @safe pure nothrow @nogc const { return "
-                ~"("~store~" & "~myToString(maskAllElse)~") != 0;}\n"
+                "@property " ~ TypeName!T ~ " " ~ name ~ "() @safe pure nothrow @nogc const { return "
+                ~"cast(" ~ TypeName!T ~ ")(("~store~" & "~myToString(maskAllElse)~") != 0);}\n"
             // setter
-                ~"@property void " ~ name ~ "(bool v) @safe pure nothrow @nogc { "
+                ~"@property void " ~ name ~ "(" ~ TypeName!T ~ " v) @safe pure nothrow @nogc { "
                 ~"if (v) "~store~" |= "~myToString(maskAllElse)~";"
                 ~"else "~store~" &= ~cast(typeof("~store~"))"~myToString(maskAllElse)~";}\n";
         }
@@ -551,6 +564,80 @@ unittest
     }
 
     test();
+}
+
+@safe unittest
+{
+    enum CustomFlag1 : bool
+    {
+        first = false, second = true
+    }
+    alias CustomFlag2 = Flag!"CustomFlag2";
+    template CustomFlag3(string name)
+    {
+        enum CustomFlag3 : bool
+        {
+            false_ = false,
+            true_ = true,
+        }
+    }
+    struct Test
+    {
+        mixin(bitfields!(
+            Flag!"a", "a", 1,
+            CustomFlag1, "b", 1,
+            CustomFlag2, "c", 1,
+            CustomFlag3!"something", "d", 1,
+            ubyte, "", 4));
+    }
+    Test t;
+
+    Flag!"a" a;
+    CustomFlag1 b;
+    CustomFlag2 c;
+    CustomFlag3!"something" d;
+
+    void check()
+    {
+        assert(a == t.a);
+        assert(b == t.b);
+        assert(c == t.c);
+        assert(d == t.d);
+    }
+
+    check();
+
+    a = Yes.a;
+    t.a = a;
+    check();
+
+    b = CustomFlag1.second;
+    t.b = b;
+    check();
+
+    c = Yes.CustomFlag2;
+    t.c = c;
+    check();
+
+    d = CustomFlag3!"something".true_;
+    t.d = d;
+    check();
+
+    a = No.a;
+    t.a = a;
+    check();
+
+    b = CustomFlag1.first;
+    t.b = b;
+    check();
+
+    c = No.CustomFlag2;
+    t.c = c;
+    check();
+
+    d = CustomFlag3!"something".false_;
+    t.d = d;
+    check();
 }
 
 @safe unittest

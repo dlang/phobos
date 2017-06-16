@@ -1,0 +1,41 @@
+Added support in the std.bitmanip.bitfields function for std.typecons.Flag and other user-defined types that inherit from bool.
+
+This change allows more types to be used in the $(REF bitfields,std,bitmanip) function, for example:
+------
+import std.bitmanip, std.typecons;
+
+enum CustomFlag1 : bool
+{
+    first = false, second = true
+}
+alias CustomFlag2 = Flag!"CustomFlag2";
+template CustomFlag3(string name)
+{
+    enum CustomFlag3 : bool
+    {
+        false_ = false,
+        true_ = true,
+    }
+}
+struct Test
+{
+    mixin(bitfields!(
+        Flag!"a", "a", 1,
+        CustomFlag1, "b", 1,
+        CustomFlag2, "c", 1,
+        CustomFlag3!"something", "d", 1,
+        ubyte, "", 4));
+}
+void main()
+{
+    Test t;
+    t.a = Yes.a;
+    t.b = CustomFlag1.second;
+    t.c = Yes.CustomFlag2;
+    t.d = CustomFlag3!"something".true_;
+    assert(t.a == Yes.a);
+    assert(t.b == CustomFlag1.second);
+    assert(t.c == Yes.CustomFlag2);
+    assert(t.c == CustomFlag3!"something".true_);
+}
+------
