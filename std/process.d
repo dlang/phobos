@@ -344,129 +344,6 @@ version(Posix) private enum InternalError : ubyte
     doubleFork
 }
 
-version(Posix)
-{
-private:
-    const(char)[] getExecutablePath(const(char)[] name)
-    {
-        import std.algorithm.searching : any;
-        import std.path : isDirSeparator;
-        import std.conv : text;
-        if (any!isDirSeparator(name))
-        {
-            if (!isExecutable(name))
-                throw new ProcessException(text("Not an executable file: ", name));
-        }
-        else
-        {
-            auto origName = name;
-            name = searchPathFor(name);
-            if (name is null)
-                throw new ProcessException(text("Executable file not found: ", origName));
-        }
-        return name;
-    }
-
-    const(char)*[] getArgz(in char[][] args)
-    {
-        import std.string : toStringz;
-        auto name = getExecutablePath(args[0]);
-        // Convert program name and arguments to C-style strings.
-        auto argz = new const(char)*[args.length+1];
-        argz[0] = toStringz(name);
-        foreach (i; 1 .. args.length) argz[i] = toStringz(args[i]);
-        argz[$-1] = null;
-        return argz;
-    }
-
-    int getWorkDirFD(in char[] workDir)
-    {
-        import core.sys.posix.fcntl : open, O_RDONLY, stat_t, fstat, S_ISDIR;
-        auto workDirFD = open(workDir.tempCString(), O_RDONLY);
-        if (workDirFD < 0)
-            throw ProcessException.newFromErrno("Failed to open working directory");
-        scope(failure) close(workDirFD);
-        stat_t s;
-        if (fstat(workDirFD, &s) < 0)
-            throw ProcessException.newFromErrno("Failed to stat working directory");
-        if (!S_ISDIR(s.st_mode))
-            throw new ProcessException("Not a directory: " ~ cast(string) workDir);
-        return workDirFD;
-    }
-
-    void abortOnError(int forkPipeOut, InternalError errorType, int error) nothrow @nogc
-    {
-        core.sys.posix.unistd.write(forkPipeOut, &errorType, errorType.sizeof);
-        core.sys.posix.unistd.write(forkPipeOut, &error, error.sizeof);
-        close(forkPipeOut);
-        core.sys.posix.unistd._exit(1);
-        assert(0);
-    }
-
-    void closeDescriptors(const int pipeOutFD) nothrow @nogc
-    {
-        import core.stdc.stdlib : malloc;
-        import core.sys.posix.poll : pollfd, poll, POLLNVAL;
-        import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
-
-        // Get the maximum number of file descriptors that could be open.
-        rlimit r;
-        if (getrlimit(RLIMIT_NOFILE, &r) != 0)
-        {
-            abortOnError(pipeOutFD, InternalError.getrlimit, .errno);
-        }
-        immutable maxDescriptors = cast(int) r.rlim_cur;
-
-        // The above, less stdin, stdout, and stderr
-        immutable maxToClose = maxDescriptors - 3;
-
-        // Call poll() to see which ones are actually open:
-        pollfd* pfds = cast(pollfd*) malloc(pollfd.sizeof * maxToClose);
-        foreach (i; 0 .. maxToClose)
-        {
-            pfds[i].fd = i + 3;
-            pfds[i].events = 0;
-            pfds[i].revents = 0;
-        }
-        if (poll(pfds, maxToClose, 0) >= 0)
-        {
-            foreach (i; 0 .. maxToClose)
-            {
-                // don't close pipe write end
-                if (pfds[i].fd == pipeOutFD) continue;
-                // POLLNVAL will be set if the file descriptor is invalid.
-                if (!(pfds[i].revents & POLLNVAL)) close(pfds[i].fd);
-            }
-        }
-        else
-        {
-            // Fall back to closing everything.
-            foreach (i; 3 .. maxDescriptors)
-            {
-                if (i == pipeOutFD) continue;
-                close(i);
-            }
-        }
-    }
-
-    string errorMessage(InternalError error)
-    {
-        final switch (error)
-        {
-            case InternalError.chdir:
-                return "Failed to set working directory";
-            case InternalError.getrlimit:
-                return "getrlimit failed";
-            case InternalError.exec:
-                return "Failed to execute program";
-            case InternalError.doubleFork:
-                return "Failed to fork twice";
-            case InternalError.noerror:
-                assert(false);
-        }
-    }
-}
-
 /*
 Implementation of spawnProcess() for POSIX.
 
@@ -484,9 +361,30 @@ private Pid spawnProcessImpl(in char[][] args,
     @trusted // TODO: Should be @safe
 {
     import core.exception : RangeError;
+    import std.algorithm.searching : any;
+    import std.conv : text;
+    import std.path : isDirSeparator;
+    import std.string : toStringz;
 
     if (args.empty) throw new RangeError();
-    auto argz = getArgz(args);
+    const(char)[] name = args[0];
+    if (any!isDirSeparator(name))
+    {
+        if (!isExecutable(name))
+            throw new ProcessException(text("Not an executable file: ", name));
+    }
+    else
+    {
+        name = searchPathFor(name);
+        if (name is null)
+            throw new ProcessException(text("Executable file not found: ", args[0]));
+    }
+
+    // Convert program name and arguments to C-style strings.
+    auto argz = new const(char)*[args.length+1];
+    argz[0] = toStringz(name);
+    foreach (i; 1 .. args.length) argz[i] = toStringz(args[i]);
+    argz[$-1] = null;
 
     // Prepare environment.
     auto envz = createEnv(env, !(config & Config.newEnv));
@@ -498,7 +396,17 @@ private Pid spawnProcessImpl(in char[][] args,
     int workDirFD = -1;
     scope(exit) if (workDirFD >= 0) close(workDirFD);
     if (workDir.length)
-        workDirFD = getWorkDirFD(workDir);
+    {
+        import core.sys.posix.fcntl : open, O_RDONLY, stat_t, fstat, S_ISDIR;
+        workDirFD = open(workDir.tempCString(), O_RDONLY);
+        if (workDirFD < 0)
+            throw ProcessException.newFromErrno("Failed to open working directory");
+        stat_t s;
+        if (fstat(workDirFD, &s) < 0)
+            throw ProcessException.newFromErrno("Failed to stat working directory");
+        if (!S_ISDIR(s.st_mode))
+            throw new ProcessException("Not a directory: " ~ cast(string) workDir);
+    }
 
     static int getFD(ref File f) { return core.stdc.stdio.fileno(f.getFP()); }
 
@@ -525,6 +433,15 @@ private Pid spawnProcessImpl(in char[][] args,
             throw ProcessException.newFromErrno("Could not create pipe to get process pid");
     }
     scope(exit) if (config & Config.detached) close(pidPipe[0]);
+
+    static void abortOnError(int forkPipeOut, InternalError errorType, int error) nothrow
+    {
+        core.sys.posix.unistd.write(forkPipeOut, &errorType, errorType.sizeof);
+        core.sys.posix.unistd.write(forkPipeOut, &error, error.sizeof);
+        close(forkPipeOut);
+        core.sys.posix.unistd._exit(1);
+        assert(0);
+    }
 
     void closePipeWriteEnds()
     {
@@ -587,7 +504,50 @@ private Pid spawnProcessImpl(in char[][] args,
             setCLOEXEC(STDERR_FILENO, false);
 
             if (!(config & Config.inheritFDs))
-                closeDescriptors(forkPipeOut);
+            {
+                import core.stdc.stdlib : malloc;
+                import core.sys.posix.poll : pollfd, poll, POLLNVAL;
+                import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
+
+                // Get the maximum number of file descriptors that could be open.
+                rlimit r;
+                if (getrlimit(RLIMIT_NOFILE, &r) != 0)
+                {
+                    abortOnError(forkPipeOut, InternalError.getrlimit, .errno);
+                }
+                immutable maxDescriptors = cast(int) r.rlim_cur;
+
+                // The above, less stdin, stdout, and stderr
+                immutable maxToClose = maxDescriptors - 3;
+
+                // Call poll() to see which ones are actually open:
+                pollfd* pfds = cast(pollfd*) malloc(pollfd.sizeof * maxToClose);
+                foreach (i; 0 .. maxToClose)
+                {
+                    pfds[i].fd = i + 3;
+                    pfds[i].events = 0;
+                    pfds[i].revents = 0;
+                }
+                if (poll(pfds, maxToClose, 0) >= 0)
+                {
+                    foreach (i; 0 .. maxToClose)
+                    {
+                        // don't close pipe write end
+                        if (pfds[i].fd == forkPipeOut) continue;
+                        // POLLNVAL will be set if the file descriptor is invalid.
+                        if (!(pfds[i].revents & POLLNVAL)) close(pfds[i].fd);
+                    }
+                }
+                else
+                {
+                    // Fall back to closing everything.
+                    foreach (i; 3 .. maxDescriptors)
+                    {
+                        if (i == forkPipeOut) continue;
+                        close(i);
+                    }
+                }
+            }
             else // This is already done if we don't inherit descriptors.
             {
                 // Close the old file descriptors, unless they are
@@ -664,7 +624,26 @@ private Pid spawnProcessImpl(in char[][] args,
         {
             int error;
             readExecResult = read(forkPipe[0], &error, error.sizeof);
-            string errorMsg = errorMessage(status);
+            string errorMsg;
+            final switch (status)
+            {
+                case InternalError.chdir:
+                    errorMsg = "Failed to set working directory";
+                    break;
+                case InternalError.getrlimit:
+                    errorMsg = "getrlimit failed";
+                    break;
+                case InternalError.exec:
+                    errorMsg = "Failed to execute program";
+                    break;
+                case InternalError.doubleFork:
+                    // Can happen only when starting detached process
+                    assert(config & Config.detached);
+                    errorMsg = "Failed to fork twice";
+                    break;
+                case InternalError.noerror:
+                    assert(false);
+            }
             if (readExecResult == error.sizeof)
                 throw ProcessException.newFromErrno(error, errorMsg);
             else
@@ -1435,6 +1414,9 @@ enum Config
     /**
     Spawn process in detached state. This removes the need in calling
     $(LREF wait) to clean up the process resources.
+
+    Note:
+    Calling $(LREF wait) or $(LREF kill) with the resulting $(D Pid) is invalid.
     */
     detached = 64,
 }
@@ -1479,16 +1461,12 @@ final class Pid
         return _processID;
     }
 
-    /**
-    This is $(D true) if process was spawned without $(LREF Config.detached), $(D false)
-    otherwise. You can't $(LREF wait) for or $(LREF kill) process you don't own.
-    */
+private:
     @property bool owned() const @safe pure nothrow
     {
         return _owned;
     }
 
-private:
     /*
     Pid.performWait() does the dirty work for wait() and nonBlockingWait().
 
@@ -1505,7 +1483,7 @@ private:
     int performWait(bool block) @trusted
     {
         import std.exception : enforceEx;
-        enforceEx!ProcessException(_owned, "Attempt to wait for the not owned process");
+        enforceEx!ProcessException(_owned, "Can't wait on a detached process");
         if (_processID == terminated) return _exitCode;
         int exitCode;
         while (true)
@@ -1555,7 +1533,7 @@ private:
         int performWait(bool block) @trusted
         {
             import std.exception : enforceEx;
-            enforceEx!ProcessException(_owned, "Attempt to wait for the not owned process");
+            enforceEx!ProcessException(_owned, "Can't wait on a detached process");
             if (_processID == terminated) return _exitCode;
             assert(_handle != INVALID_HANDLE_VALUE);
             if (block)
@@ -1650,7 +1628,7 @@ Signal codes are defined in the $(D core.sys.posix.signal) module
 (which corresponds to the $(D signal.h) POSIX header).
 
 Throws:
-$(LREF ProcessException) on failure or on attempt to wait for not owned process.
+$(LREF ProcessException) on failure or on attempt to wait for detached process.
 
 Example:
 See the $(LREF spawnProcess) documentation.
@@ -1705,7 +1683,7 @@ Returns:
 An $(D std.typecons.Tuple!(bool, "terminated", int, "status")).
 
 Throws:
-$(LREF ProcessException) on failure or on attempt to wait for not owned process.
+$(LREF ProcessException) on failure or on attempt to wait for detached process.
 
 Example:
 ---
@@ -1783,7 +1761,7 @@ assert(wait(pid) == -SIGKILL); // Negative return value on POSIX!
 
 Throws:
 $(LREF ProcessException) on error (e.g. if codeOrSignal is invalid).
-    or on attempt to kill not owned process.
+    or on attempt to kill detached process.
     Note that failure to terminate the process is considered a "normal"
     outcome, not an error.$(BR)
 */
@@ -1801,7 +1779,7 @@ void kill(Pid pid)
 void kill(Pid pid, int codeOrSignal)
 {
     import std.exception : enforceEx;
-    enforceEx!ProcessException(pid.owned(), "Attempt to kill not owned process");
+    enforceEx!ProcessException(pid.owned(), "Can't kill detached process");
     version (Windows)
     {
         if (codeOrSignal < 0) throw new ProcessException("Invalid exit code");
@@ -1861,9 +1839,17 @@ void kill(Pid pid, int codeOrSignal)
 
 @system unittest // wait() and kill() detached process
 {
+    import core.thread;
     import std.exception : assertThrown;
     TestScript prog = "exit 0";
-    auto pid = spawnProcess(prog.path, null, Config.detached);
+    auto pid = spawnProcess([prog.path], null, Config.detached);
+    /*
+    This sleep is needed because we can't wait() for detached process to end
+    and therefore TestScript destructor may run at the same time as /bin/sh tries to start the script.
+    This leads to the annoying message like "/bin/sh: 0: Can't open /tmp/std.process temporary file" to appear when running tests.
+    It does not happen in unittests with non-detached processes because we always wait() for them to finish.
+    */
+    Thread.sleep(dur!"msecs"(5));
     assert(!pid.owned());
     version(Windows) assert(pid.osHandle == INVALID_HANDLE_VALUE);
     assertThrown!ProcessException(wait(pid));
