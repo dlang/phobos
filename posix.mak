@@ -224,7 +224,7 @@ EXTRA_MODULES_INTERNAL := $(addprefix std/, \
 		cstring digest/sha_SSSE3 \
 		$(addprefix math/, biguintcore biguintnoasm biguintx86	\
 						   errorfunction gammafunction ) \
-		processinit scopebuffer test/dummyrange \
+		scopebuffer test/dummyrange \
 		$(addprefix unicode_, comp decomp grapheme norm tables) \
 	) \
 )

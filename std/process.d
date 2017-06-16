@@ -99,7 +99,6 @@ version (Windows)
 }
 
 import std.internal.cstring;
-import std.internal.processinit;
 import std.range.primitives;
 import std.stdio;
 
@@ -112,45 +111,47 @@ version (Win32) version (CRuntime_DigitalMars) version = DMC_RUNTIME;
 // Some of the following should be moved to druntime.
 private
 {
-
-// Microsoft Visual C Runtime (MSVCRT) declarations.
-version (Windows)
-{
-    version (DMC_RUNTIME) { } else
+    // Microsoft Visual C Runtime (MSVCRT) declarations.
+    version (Windows)
     {
-        import core.stdc.stdint;
-        enum
+        version (DMC_RUNTIME) { } else
         {
-            STDIN_FILENO  = 0,
-            STDOUT_FILENO = 1,
-            STDERR_FILENO = 2,
+            import core.stdc.stdint;
+            enum
+            {
+                STDIN_FILENO  = 0,
+                STDOUT_FILENO = 1,
+                STDERR_FILENO = 2,
+            }
         }
     }
-}
 
-// POSIX API declarations.
-version (Posix)
-{
-    version (OSX)
+    // POSIX API declarations.
+    version (Posix)
     {
-        extern(C) char*** _NSGetEnviron() nothrow;
-        private __gshared const(char**)* environPtr;
-        extern(C) void std_process_shared_static_this() { environPtr = _NSGetEnviron(); }
-        const(char**) environ() @property @trusted nothrow { return *environPtr; }
-    }
-    else
-    {
-        // Made available by the C runtime:
-        extern(C) extern __gshared const char** environ;
-    }
+        version (OSX)
+        {
+            extern(C) char*** _NSGetEnviron() nothrow;
+            const(char**) getEnvironPtr() @trusted
+            {
+                return *_NSGetEnviron;
+            }
+        }
+        else
+        {
+            // Made available by the C runtime:
+            extern(C) extern __gshared const char** environ;
+            const(char**) getEnvironPtr() @trusted
+            {
+                return environ;
+            }
+        }
 
-    @system unittest
-    {
-        new Thread({assert(environ !is null);}).start();
+        @system unittest
+        {
+            new Thread({assert(getEnvironPtr !is null);}).start();
+        }
     }
-}
-
-
 } // private
 
 
@@ -703,6 +704,7 @@ private const(char*)* createEnv(const string[string] childEnv,
 {
     // Determine the number of strings in the parent's environment.
     int parentEnvLength = 0;
+    auto environ = getEnvironPtr;
     if (mergeWithParentEnv)
     {
         if (childEnv.length == 0) return environ;
@@ -737,6 +739,7 @@ version (Posix) @system unittest
     auto e2 = createEnv(null, true);
     assert(e2 != null);
     int i = 0;
+    auto environ = getEnvironPtr;
     for (; environ[i] != null; ++i)
     {
         assert(e2[i] != null);
@@ -3333,6 +3336,7 @@ static:
         string[string] aa;
         version (Posix)
         {
+            auto environ = getEnvironPtr;
             for (int i=0; environ[i] != null; ++i)
             {
                 import std.string : indexOf;
@@ -3902,4 +3906,3 @@ else version (Posix)
 }
 else
     static assert(0, "os not supported");
-
