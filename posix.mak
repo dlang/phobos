@@ -178,9 +178,9 @@ STD_PACKAGES = std $(addprefix std/,\
 PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
   conv csv demangle encoding exception file format \
   functional getopt json math mathspecial meta mmfile numeric \
-  outbuffer parallelism path process random signals socket stdint \
+  parallelism path process random stdint \
   stdio string system traits typecons typetuple uni \
-  uri utf uuid variant xml zip zlib
+  uri utf uuid variant zip zlib
 PACKAGE_std_experimental = checkedint typecons
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
   sorting
@@ -227,6 +227,7 @@ EXTRA_MODULES_INTERNAL := $(addprefix std/, \
 		scopebuffer test/dummyrange \
 		$(addprefix unicode_, comp decomp grapheme norm tables) \
 	) \
+	outbuffer signals socket xml \
 )
 
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(EXTRA_MODULES_INTERNAL)

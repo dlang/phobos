@@ -10,6 +10,8 @@ Serialize data to $(D ubyte) arrays.
  *
  * $(SCRIPT inhibitQuickIndex = 1;)
  */
+// It will be removed in December 2018. @@@DEPRECATED_2018-12@@@
+deprecated("Please use undead.outbuffer instead. It will be removed in December 2018.")
 module std.outbuffer;
 
 import core.stdc.stdarg; // : va_list;

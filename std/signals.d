@@ -60,6 +60,9 @@
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
  */
+
+// It will be removed in December 2018. @@@DEPRECATED_2018-12@@@
+deprecated("Please use undead.signals instead. It will be removed in December 2018.")
 module std.signals;
 
 import core.exception : onOutOfMemoryError;
