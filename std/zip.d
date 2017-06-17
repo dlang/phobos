@@ -286,8 +286,8 @@ final class ArchiveMember
  */
 final class ZipArchive
 {
-    import std.bitmanip : littleEndianToNative, nativeToLittleEndian;
     import std.algorithm.comparison : max;
+    import std.bitmanip : littleEndianToNative, nativeToLittleEndian;
     import std.conv : to;
     import std.datetime : DosFileTime;
 
@@ -852,8 +852,8 @@ debug(print)
     assert(zip3.directory["foo"].compressedSize == am1.compressedSize);
 
     // Test if packing and unpacking produces the original data
+    import std.conv, std.stdio;
     import std.random : uniform, MinstdRand0;
-    import std.stdio, std.conv;
     MinstdRand0 gen;
     const uint itemCount = 20, minSize = 10, maxSize = 500;
     foreach (variant; 0 .. 2)
@@ -887,8 +887,8 @@ debug(print)
 
 @system unittest
 {
-    import std.random : Mt19937, randomShuffle;
     import std.conv : to;
+    import std.random : Mt19937, randomShuffle;
     // Test if packing and unpacking preserves order.
     auto rand = Mt19937(15966);
     string[] names;

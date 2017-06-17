@@ -1105,9 +1105,24 @@ bool endsWith(alias pred = "a == b", R, E)(R doesThisEnd, E withThis)
 if (isBidirectionalRange!R &&
     is(typeof(binaryFun!pred(doesThisEnd.back, withThis)) : bool))
 {
-    return doesThisEnd.empty
-        ? false
-        : binaryFun!pred(doesThisEnd.back, withThis);
+    if (doesThisEnd.empty)
+        return false;
+
+    alias predFunc = binaryFun!pred;
+
+    // auto-decoding special case
+    static if (isNarrowString!R)
+    {
+        // specialize for ASCII as to not change previous behavior
+        if (withThis <= 0x7F)
+            return predFunc(doesThisEnd[$ - 1], withThis);
+        else
+            return predFunc(doesThisEnd.back, withThis);
+    }
+    else
+    {
+        return predFunc(doesThisEnd.back, withThis);
+    }
 }
 
 /// Ditto
@@ -1149,8 +1164,8 @@ if (isInputRange!R &&
 @safe unittest
 {
     import std.algorithm.iteration : filterBidirectional;
-    import std.meta : AliasSeq;
     import std.conv : to;
+    import std.meta : AliasSeq;
 
     foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
     {
@@ -1616,8 +1631,8 @@ if (isInputRange!InputRange &&
 {
     import std.algorithm.comparison : equal;
     import std.container : SList;
-    import std.range.primitives : empty;
     import std.range;
+    import std.range.primitives : empty;
 
     auto arr = assumeSorted!"a < b"([1, 2, 4, 4, 4, 4, 5, 6, 9]);
     assert(find(arr, 4) == assumeSorted!"a < b"([4, 4, 4, 4, 5, 6, 9]));
@@ -1941,8 +1956,8 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
     // of the first element of the needle in haystack.
     // When it is found O(walklength(needle)) steps are performed.
     // 8829 enhancement
-    import std.range : SortedRange;
     import std.algorithm.comparison : mismatch;
+    import std.range : SortedRange;
     static if (is(R1 == R2)
             && is(R1 : SortedRange!TT, TT)
             && pred == "a == b")
@@ -2368,8 +2383,8 @@ if (Ranges.length > 1 && is(typeof(startsWith!pred(haystack, needles))))
 
 @safe unittest
 {
-    import std.algorithm.internal : rndstuff;
     import std.algorithm.comparison : equal;
+    import std.algorithm.internal : rndstuff;
     import std.meta : AliasSeq;
     import std.range : retro;
 
@@ -4192,9 +4207,24 @@ bool startsWith(alias pred = "a == b", R, E)(R doesThisStart, E withThis)
 if (isInputRange!R &&
     is(typeof(binaryFun!pred(doesThisStart.front, withThis)) : bool))
 {
-    return doesThisStart.empty
-        ? false
-        : binaryFun!pred(doesThisStart.front, withThis);
+    if (doesThisStart.empty)
+        return false;
+
+    alias predFunc = binaryFun!pred;
+
+    // auto-decoding special case
+    static if (isNarrowString!R)
+    {
+        // specialize for ASCII as to not change previous behavior
+        if (withThis <= 0x7F)
+            return predFunc(doesThisStart[0], withThis);
+        else
+            return predFunc(doesThisStart.front, withThis);
+    }
+    else
+    {
+        return predFunc(doesThisStart.front, withThis);
+    }
 }
 
 /// Ditto

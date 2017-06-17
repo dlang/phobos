@@ -98,9 +98,9 @@ module std.path;
 
 // FIXME
 import std.file; //: getcwd;
+static import std.meta;
 import std.range.primitives;
 import std.traits;
-static import std.meta;
 
 version (unittest)
 {
@@ -392,18 +392,28 @@ else static assert(0);
     (with suitable adaptations for Windows paths).
 */
 auto baseName(R)(R path)
-if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) ||
-    is(StringTypeOf!R))
+if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) && !isSomeString!R)
 {
-    auto p1 = stripDrive!(BaseOf!R)(path);
+    return _baseName(path);
+}
+
+/// ditto
+auto baseName(C)(C[] path)
+if (isSomeChar!C)
+{
+    return _baseName(path);
+}
+
+private R _baseName(R)(R path)
+if (isRandomAccessRange!R && hasSlicing!R && isSomeChar!(ElementType!R) || isNarrowString!R)
+{
+    auto p1 = stripDrive(path);
     if (p1.empty)
     {
-        version (Windows) if (isUNC!(BaseOf!R)(path))
-        {
+        version (Windows) if (isUNC(path))
             return path[0 .. 1];
-        }
-        static if (is(StringTypeOf!R))
-            return StringTypeOf!R.init[];   // which is null
+        static if (isSomeString!R)
+            return null;
         else
             return p1; // which is empty
     }
@@ -428,7 +438,6 @@ if (isSomeChar!C && isSomeChar!C1)
     }
     else return p;
 }
-
 
 @safe unittest
 {
@@ -491,8 +500,16 @@ if (isSomeChar!C && isSomeChar!C1)
     assert(baseName(DirEntry("dir/file.ext")) == "file.ext");
 }
 
+@safe unittest
+{
+    assert(testAliasedString!baseName("file"));
 
+    enum S : string { a = "file/path/to/test" }
+    assert(S.a.baseName == "test");
 
+    char[S.a.length] sa = S.a[];
+    assert(sa.baseName == "test");
+}
 
 /** Returns the directory part of a path.  On Windows, this
     includes the drive letter if present.
@@ -510,9 +527,21 @@ if (isSomeChar!C && isSomeChar!C1)
     (with suitable adaptations for Windows paths).
 */
 auto dirName(R)(R path)
-if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
-    isNarrowString!R) &&
-    !isConvertibleToString!R)
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) && !isSomeString!R)
+{
+    return _dirName(path);
+}
+
+/// ditto
+auto dirName(C)(C[] path)
+if (isSomeChar!C)
+{
+    return _dirName(path);
+}
+
+private auto _dirName(R)(R path)
+if (isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(ElementType!R) ||
+    isNarrowString!R)
 {
     static auto result(bool dot, typeof(path[0 .. 1]) p)
     {
@@ -596,15 +625,15 @@ if ((isRandomAccessRange!R && hasSlicing!R && hasLength!R && isSomeChar!(Element
     }
 }
 
-auto dirName(R)(auto ref R path)
-if (isConvertibleToString!R)
-{
-    return dirName!(StringTypeOf!R)(path);
-}
-
 @safe unittest
 {
     assert(testAliasedString!dirName("file"));
+
+    enum S : string { a = "file/path/to/test" }
+    assert(S.a.dirName == "file/path/to");
+
+    char[S.a.length] sa = S.a[];
+    assert(sa.dirName == "file/path/to");
 }
 
 @system unittest
@@ -2366,8 +2395,8 @@ if (isConvertibleToString!R)
 {
     // equal2 verifies that the range is the same both ways, i.e.
     // through front/popFront and back/popBack.
-    import std.range;
     import std.algorithm;
+    import std.range;
     bool equal2(R1, R2)(R1 r1, R2 r2)
     {
         static assert(isBidirectionalRange!R1);
@@ -2874,11 +2903,11 @@ if ((isNarrowString!R1 ||
     basePS.popFront();
     pathPS.popFront();
 
-    import std.range.primitives : walkLength;
-    import std.range : repeat, chain, choose;
     import std.algorithm.comparison : mismatch;
     import std.algorithm.iteration : joiner;
     import std.array : array;
+    import std.range.primitives : walkLength;
+    import std.range : repeat, chain, choose;
     import std.utf : byCodeUnit, byChar;
 
     // Remove matching prefix from basePS and pathPS
@@ -3820,9 +3849,9 @@ string expandTilde(string inputPath) nothrow
 {
     version(Posix)
     {
-        import core.stdc.stdlib : malloc, free, realloc;
         import core.exception : onOutOfMemoryError;
         import core.stdc.errno : errno, ERANGE;
+        import core.stdc.stdlib : malloc, free, realloc;
 
         /*  Joins a path from a C string to the remainder of path.
 
@@ -3913,7 +3942,10 @@ string expandTilde(string inputPath) nothrow
                 assert(last_char > 1);
 
                 // Reserve C memory for the getpwnam_r() function.
-                int extra_memory_size = 5 * 1024;
+                version (unittest)
+                    uint extra_memory_size = 2;
+                else
+                    uint extra_memory_size = 5 * 1024;
                 char* extra_memory;
                 scope(exit) free(extra_memory);
 
@@ -3937,11 +3969,16 @@ string expandTilde(string inputPath) nothrow
                         break;
                     }
 
-                    if (errno != ERANGE)
+                    if (errno != ERANGE &&
+                        // On FreeBSD and OSX, errno can be left at 0 instead of set to ERANGE
+                        errno != 0)
                         onOutOfMemoryError();
 
                     // extra_memory isn't large enough
-                    extra_memory_size *= 2;
+                    import core.checkedint : mulu;
+                    bool overflow;
+                    extra_memory_size = mulu(extra_memory_size, 2, overflow);
+                    if (overflow) assert(0);
                 }
                 return path;
             }

@@ -175,8 +175,8 @@ version(unittest)
 {
     // Run unit test with the PHOBOS_TEST_ALLOW_NET=1 set in order to
     // allow net traffic
-    import std.stdio;
     import std.range;
+    import std.stdio;
 
     import std.socket : Address, INADDR_LOOPBACK, Socket, TcpSocket;
 
@@ -824,16 +824,6 @@ if (is(T == char) || is(T == ubyte))
 {
     conn.method = HTTP.Method.options;
     return _basicHTTP!(T)(url, null, conn);
-}
-
-// Explicitly undocumented. It will be removed in February 2017. @@@DEPRECATED_2017-02@@@
-deprecated("options does not send any data")
-T[] options(T = char, OptionsUnit)(const(char)[] url,
-                                   const(OptionsUnit)[] optionsData = null,
-                                   HTTP conn = HTTP())
-if (is(T == char) || is(T == ubyte))
-{
-    return options!T(url, conn);
 }
 
 @system unittest

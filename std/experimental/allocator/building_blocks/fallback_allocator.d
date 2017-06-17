@@ -207,7 +207,7 @@ struct FallbackAllocator(Primary, Fallback)
     */
     static if (hasMember!(Primary, "resolveInternalPointer")
         && hasMember!(Fallback, "resolveInternalPointer"))
-    Ternary resolveInternalPointer(void* p, ref void[] result)
+    Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
         Ternary r = primary.resolveInternalPointer(p, result);
         return r == Ternary.no ? fallback.resolveInternalPointer(p, result) : r;
@@ -256,9 +256,9 @@ struct FallbackAllocator(Primary, Fallback)
 
 @system unittest
 {
+    import std.conv : text;
     import std.experimental.allocator.building_blocks.region : InSituRegion;
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    import std.conv : text;
     import std.typecons : Ternary;
     FallbackAllocator!(InSituRegion!16_384, GCAllocator) a;
     // This allocation uses the stack

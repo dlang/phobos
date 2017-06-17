@@ -252,13 +252,6 @@ if (!isAggregateType!T || is(Unqual!T == T))
     alias OldAlias = T;
 }
 
-deprecated("Alias will stop to unqualify user defined types.")
-package template OldAlias(T)
-if (isAggregateType!T && !is(Unqual!T == T))
-{
-    alias OldAlias = Unqual!T;
-}
-
 @safe unittest
 {
     static struct Foo {}
@@ -347,10 +340,6 @@ if (args.length >= 1)
     static assert(staticIndexOf!(void, 0, "void", void) == 2);
     static assert(staticIndexOf!("void", 0, void, "void") == 2);
 }
-
-// Explicitly undocumented. It will be removed in February 2017. @@@DEPRECATED_2017-02@@@
-deprecated("Please use staticIndexOf")
-alias IndexOf = staticIndexOf;
 
 /**
  * Returns a typetuple created from TList with the first occurrence,
@@ -514,7 +503,10 @@ template NoDuplicates(TList...)
 
     alias TL = NoDuplicates!(Types);
     static assert(is(TL == AliasSeq!(int, long, float)));
+}
 
+@safe unittest
+{
     // Bugzilla 14561: huge enums
     alias LongList = Repeat!(1500, int);
     static assert(NoDuplicates!LongList.length == 1);
@@ -1172,8 +1164,8 @@ template aliasSeqOf(alias range)
 
 @safe unittest
 {
-    import std.range : iota;
     import std.conv : to, octal;
+    import std.range : iota;
     //Testing compile time octal
     foreach (I2; aliasSeqOf!(iota(0, 8)))
         foreach (I1; aliasSeqOf!(iota(0, 8)))

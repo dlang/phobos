@@ -4,8 +4,99 @@
     $(P The $(D std.uni) module provides an implementation
     of fundamental Unicode algorithms and data structures.
     This doesn't include UTF encoding and decoding primitives,
-    see $(REF decode, std,_utf) and $(REF encode, std,_utf) in std.utf
+    see $(REF decode, std,_utf) and $(REF encode, std,_utf) in $(MREF std, utf)
     for this functionality. )
+
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Decode) $(TD
+    $(LREF byCodePoint)
+    $(LREF byGrapheme)
+    $(LREF decodeGrapheme)
+    $(LREF graphemeStride)
+))
+$(TR $(TD Comparison) $(TD
+    $(LREF icmp)
+    $(LREF sicmp)
+))
+$(TR $(TD Classification) $(TD
+    $(LREF isAlpha)
+    $(LREF isAlphaNum)
+    $(LREF isCodepointSet)
+    $(LREF isControl)
+    $(LREF isFormat)
+    $(LREF isGraphical)
+    $(LREF isIntegralPair)
+    $(LREF isMark)
+    $(LREF isNonCharacter)
+    $(LREF isNumber)
+    $(LREF isPrivateUse)
+    $(LREF isPunctuation)
+    $(LREF isSpace)
+    $(LREF isSurrogate)
+    $(LREF isSurrogateHi)
+    $(LREF isSurrogateLo)
+    $(LREF isSymbol)
+    $(LREF isWhite)
+))
+$(TR $(TD Normalization) $(TD
+    $(LREF NFC)
+    $(LREF NFD)
+    $(LREF NFKD)
+    $(LREF NormalizationForm)
+    $(LREF normalize)
+))
+$(TR $(TD Decompose) $(TD
+    $(LREF decompose)
+    $(LREF decomposeHangul)
+    $(LREF UnicodeDecomposition)
+))
+$(TR $(TD Compose) $(TD
+    $(LREF compose)
+    $(LREF composeJamo)
+))
+$(TR $(TD Sets) $(TD
+    $(LREF CodepointInterval)
+    $(LREF CodepointSet)
+    $(LREF InversionList)
+    $(LREF unicode)
+))
+$(TR $(TD Trie) $(TD
+    $(LREF codepointSetTrie)
+    $(LREF CodepointSetTrie)
+    $(LREF codepointTrie)
+    $(LREF CodepointTrie)
+    $(LREF toTrie)
+    $(LREF toDelegate)
+))
+$(TR $(TD Casing) $(TD
+    $(LREF asCapitalized)
+    $(LREF asLowerCase)
+    $(LREF asUpperCase)
+    $(LREF isLower)
+    $(LREF isUpper)
+    $(LREF toLower)
+    $(LREF toLowerInPlace)
+    $(LREF toUpper)
+    $(LREF toUpperInPlace)
+))
+$(TR $(TD Utf8Matcher) $(TD
+    $(LREF isUtfMatcher)
+    $(LREF MatcherConcept)
+    $(LREF utfMatcher)
+))
+$(TR $(TD Separators) $(TD
+    $(LREF lineSep)
+    $(LREF nelSep)
+    $(LREF paraSep)
+))
+$(TR $(TD Building blocks) $(TD
+    $(LREF allowedIn)
+    $(LREF combiningClass)
+    $(LREF Grapheme)
+))
+)
 
     $(P All primitives listed operate on Unicode characters and
         sets of characters. For functions which operate on ASCII characters
@@ -6451,8 +6542,8 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.range : take, drop;
     import std.range.primitives : walkLength;
+    import std.range : take, drop;
     auto text = "noe\u0308l"; // noël using e + combining diaeresis
     assert(text.walkLength == 5); // 5 code points
 
@@ -7027,7 +7118,7 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
 }
 
 ///
-@safe @nogc nothrow unittest
+@safe @nogc pure nothrow unittest
 {
     assert(sicmp("Август", "авгусТ") == 0);
     // Greek also works as long as there is no 1:M mapping in sight
@@ -7053,7 +7144,6 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
 }
 
 private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
-    @trusted pure nothrow
 {
     import std.algorithm.searching : skipOver;
     import std.internal.unicode_tables : fullCaseTable; // generated file
@@ -7147,7 +7237,7 @@ if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
 }
 
 ///
-@safe @nogc nothrow unittest
+@safe @nogc pure nothrow unittest
 {
     assert(icmp("Rußland", "Russland") == 0);
     assert(icmp("ᾩ -> \u1F70\u03B9", "\u1F61\u03B9 -> ᾲ") == 0);
@@ -7225,6 +7315,15 @@ if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
     //bugzilla 11057
     assert( icmp("K", "L") < 0 );
     });
+}
+
+// issue 17372
+@safe pure unittest
+{
+    import std.algorithm.iteration : joiner, map;
+    import std.algorithm.sorting : sort;
+    import std.array : array;
+    auto a = [["foo", "bar"], ["baz"]].map!(line => line.joiner(" ")).array.sort!((a, b) => icmp(a, b) < 0);
 }
 
 // This is package for the moment to be used as a support tool for std.regex
@@ -8925,8 +9024,8 @@ if (isSomeString!S)
 
 @system unittest //@@@BUG std.format is not @safe
 {
-    import std.format : format;
     static import std.ascii;
+    import std.format : format;
     foreach (ch; 0 .. 0x80)
         assert(std.ascii.toLower(ch) == toLower(ch));
     assert(toLower('Я') == 'я');
@@ -9051,8 +9150,8 @@ dchar toUpper(dchar c)
 
 @safe unittest
 {
-    import std.format : format;
     static import std.ascii;
+    import std.format : format;
     foreach (ch; 0 .. 0x80)
         assert(std.ascii.toUpper(ch) == toUpper(ch));
     assert(toUpper('я') == 'Я');

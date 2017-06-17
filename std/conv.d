@@ -7,6 +7,7 @@ $(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE,
 $(TR $(TH Category) $(TH Functions))
 $(TR $(TD Generic) $(TD
+        $(LREF asOriginalType)
         $(LREF castFrom)
         $(LREF emplace)
         $(LREF parse)
@@ -73,26 +74,32 @@ class ConvException : Exception
     mixin basicExceptionCtors;
 }
 
-private string convError_unexpected(S)(S source)
-{
-    return source.empty ? "end of input" : text("'", source.front, "'");
-}
-
 private auto convError(S, T)(S source, string fn = __FILE__, size_t ln = __LINE__)
 {
-    return new ConvException(
-        text("Unexpected ", convError_unexpected(source),
-             " when converting from type "~S.stringof~" to type "~T.stringof),
-        fn, ln);
+    string msg;
+
+    if (source.empty)
+        msg = "Unexpected end of input when converting from type " ~ S.stringof ~ " to type " ~ T.stringof;
+    else
+        msg =  text("Unexpected '", source.front,
+                 "' when converting from type " ~ S.stringof ~ " to type " ~ T.stringof);
+
+    return new ConvException(msg, fn, ln);
 }
 
 private auto convError(S, T)(S source, int radix, string fn = __FILE__, size_t ln = __LINE__)
 {
-    return new ConvException(
-        text("Unexpected ", convError_unexpected(source),
-             " when converting from type "~S.stringof~" base ", radix,
-             " to type "~T.stringof),
-        fn, ln);
+    string msg;
+
+    if (source.empty)
+        msg = text("Unexpected end of input when converting from type " ~ S.stringof ~ " base ", radix,
+                " to type " ~ T.stringof);
+    else
+        msg = text("Unexpected '", source.front,
+            "' when converting from type " ~ S.stringof ~ " base ", radix,
+            " to type " ~ T.stringof);
+
+    return new ConvException(msg, fn, ln);
 }
 
 @safe pure/* nothrow*/  // lazy parameter bug
@@ -122,8 +129,8 @@ private
         }
         else
         {
-            import std.format : FormatSpec, formatValue;
             import std.array : appender;
+            import std.format : FormatSpec, formatValue;
 
             auto w = appender!T();
             FormatSpec!(ElementEncodingType!T) f;
@@ -197,6 +204,13 @@ template to(T)
     // Fix issue 6175
     T to(S)(ref S arg)
         if (isStaticArray!S)
+    {
+        return toImpl!T(arg);
+    }
+
+    // Fix issue 16108
+    T to(S)(ref S arg)
+        if (isAggregateType!S && !isCopyable!S)
     {
         return toImpl!T(arg);
     }
@@ -943,15 +957,13 @@ if (!(isImplicitlyConvertible!(S, T) &&
             }
         }
 
-        import std.format : FormatSpec, formatValue;
         import std.array : appender;
+        import std.format : FormatSpec, formatValue;
 
         //Default case, delegate to format
         //Note: we don't call toStr directly, to avoid duplicate work.
         auto app = appender!T();
-        app.put("cast(");
-        app.put(S.stringof);
-        app.put(')');
+        app.put("cast(" ~ S.stringof ~ ")");
         FormatSpec!char f;
         formatValue(app, cast(OriginalType!S) value, f);
         return app.data;
@@ -997,6 +1009,51 @@ if (!(isImplicitlyConvertible!(S, T) &&
         test1(e, "");
         test1(e.ptr, "");
     }
+}
+
+/*
+    To string conversion for non copy-able structs
+ */
+private T toImpl(T, S)(ref S value)
+if (!(isImplicitlyConvertible!(S, T) &&
+    !isEnumStrToStr!(S, T) && !isNullToStr!(S, T)) &&
+    !isInfinite!S && isExactSomeString!T && !isCopyable!S)
+{
+    import std.array : appender;
+    import std.format : FormatSpec, formatValue;
+
+    auto w = appender!T();
+    FormatSpec!(ElementEncodingType!T) f;
+    formatValue(w, value, f);
+    return w.data;
+}
+
+// Bugzilla 16108
+@system unittest
+{
+    static struct A
+    {
+        int val;
+        bool flag;
+
+        string toString() { return text(val, ":", flag); }
+
+        @disable this(this);
+    }
+
+    auto a = A();
+    assert(to!string(a) == "0:false");
+
+    static struct B
+    {
+        int val;
+        bool flag;
+
+        @disable this(this);
+    }
+
+    auto b = B();
+    assert(to!string(b) == "B(0, false)");
 }
 
 /*
@@ -1964,8 +2021,8 @@ Lerr:
 
 @safe unittest
 {
-    import std.exception;
     import std.algorithm.comparison : equal;
+    import std.exception;
     struct InputString
     {
         string _s;
@@ -2128,12 +2185,12 @@ Lerr:
 ///
 @safe pure unittest
 {
-    import std.string : munch;
+    import std.string : tr;
     string test = "123 \t  76.14";
     auto a = parse!uint(test);
     assert(a == 123);
     assert(test == " \t  76.14"); // parse bumps string
-    munch(test, " \t\n\r"); // skip ws
+    test = tr(test, " \t\n\r", "", "d"); // skip ws
     assert(test == "76.14");
     auto b = parse!double(test);
     assert(b == 76.14);
@@ -2580,9 +2637,9 @@ Target parse(Target, Source)(ref Source source)
 if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum) &&
     isFloatingPoint!Target && !is(Target == enum))
 {
+    import core.stdc.math : HUGE_VAL;
     import std.ascii : isDigit, isAlpha, toLower, toUpper, isHexDigit;
     import std.exception : enforce;
-    import core.stdc.math : HUGE_VAL;
 
     static if (isNarrowString!Source)
     {
@@ -5194,8 +5251,8 @@ version(unittest)
 @safe unittest //@@@9559@@@
 {
     import std.algorithm.iteration : map;
-    import std.typecons : Nullable;
     import std.array : array;
+    import std.typecons : Nullable;
     alias I = Nullable!int;
     auto ints = [0, 1, 2].map!(i => i & 1 ? I.init : I(i))();
     auto asArray = array(ints);
@@ -5477,23 +5534,19 @@ pure nothrow @safe /* @nogc */ unittest
 void toTextRange(T, W)(T value, W writer)
 if (isIntegral!T && isOutputRange!(W, char))
 {
-    char[value.sizeof * 4] buffer = void;
-    uint i = cast(uint) (buffer.length - 1);
+    import core.internal.string : SignedStringBuf, signedToTempString,
+                                  UnsignedStringBuf, unsignedToTempString;
 
-    bool negative = value < 0;
-    Unqual!(Unsigned!T) v = negative ? -value : value;
-
-    while (v >= 10)
+    if (value < 0)
     {
-        auto c = cast(uint) (v % 10);
-        v /= 10;
-        buffer[i--] = cast(char) (c + '0');
+        SignedStringBuf buf = void;
+        put(writer, signedToTempString(value, buf, 10));
     }
-
-    buffer[i] = cast(char) (v + '0'); //hexDigits[cast(uint) v];
-    if (negative)
-        buffer[--i] = '-';
-    put(writer, buffer[i .. $]);
+    else
+    {
+        UnsignedStringBuf buf = void;
+        put(writer, unsignedToTempString(value, buf, 10));
+    }
 }
 
 @safe unittest
@@ -5647,6 +5700,27 @@ if (isIntegral!T)
     enum Test { a = 0 }
     ulong l = 0;
     auto t = l.to!Test;
+}
+
+// asOriginalType
+/**
+Returns the representation of an enumerated value, i.e. the value converted to
+the base type of the enumeration.
+*/
+OriginalType!E asOriginalType(E)(E value) if (is(E == enum))
+{
+    return value;
+}
+
+///
+@safe unittest
+{
+    enum A { a = 42 }
+    static assert(is(typeof(A.a.asOriginalType) == int));
+    assert(A.a.asOriginalType == 42);
+    enum B : double { a = 43 }
+    static assert(is(typeof(B.a.asOriginalType) == double));
+    assert(B.a.asOriginalType == 43);
 }
 
 /**

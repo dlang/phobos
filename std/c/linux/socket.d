@@ -16,8 +16,8 @@ version (linux):
 private import core.stdc.stdint;
 public import core.sys.posix.arpa.inet;
 public import core.sys.posix.netdb;
-public import core.sys.posix.netinet.tcp;
 public import core.sys.posix.netinet.in_;
+public import core.sys.posix.netinet.tcp;
 public import core.sys.posix.sys.select;
 public import core.sys.posix.sys.socket;
 

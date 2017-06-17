@@ -59,11 +59,11 @@ $(TR $(TD Miscellaneous) $(TD
    +/
 module std.utf;
 
+import std.exception;  // basicExceptionCtors
 import std.meta;       // AliasSeq
 import std.range.primitives;
 import std.traits;     // isSomeChar, isSomeString
 import std.typecons;   // Flag, Yes, No
-import std.exception;  // basicExceptionCtors
 
 //debug=utf;           // uncomment to turn on debugging printf's
 
@@ -346,10 +346,10 @@ body
 
 @system unittest
 {
+    import core.exception : AssertError;
     import std.conv : to;
     import std.exception;
     import std.string : format;
-    import core.exception : AssertError;
     static void test(string s, dchar c, size_t i = 0, size_t line = __LINE__)
     {
         enforce(stride(s, i) == codeLength!char(c),
@@ -454,10 +454,10 @@ if (isInputRange!S && is(Unqual!(ElementType!S) == wchar))
 
 @system unittest
 {
+    import core.exception : AssertError;
     import std.conv : to;
     import std.exception;
     import std.string : format;
-    import core.exception : AssertError;
     static void test(wstring s, dchar c, size_t i = 0, size_t line = __LINE__)
     {
         enforce(stride(s, i) == codeLength!wchar(c),
@@ -533,10 +533,10 @@ if (is(S : const dchar[]) ||
 
 @system unittest
 {
+    import core.exception : AssertError;
     import std.conv : to;
     import std.exception;
     import std.string : format;
-    import core.exception : AssertError;
     static void test(dstring s, dchar c, size_t i = 0, size_t line = __LINE__)
     {
         enforce(stride(s, i) == codeLength!dchar(c),
@@ -679,10 +679,10 @@ if (isBidirectionalRange!S && is(Unqual!(ElementType!S) == char) && !isRandomAcc
 
 @system unittest
 {
+    import core.exception : AssertError;
     import std.conv : to;
     import std.exception;
     import std.string : format;
-    import core.exception : AssertError;
     static void test(string s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
     {
         enforce(strideBack(s, i == size_t.max ? s.length : i) == codeLength!char(c),
@@ -776,10 +776,10 @@ if (is(S : const wchar[]) ||
 
 @system unittest
 {
+    import core.exception : AssertError;
     import std.conv : to;
     import std.exception;
     import std.string : format;
-    import core.exception : AssertError;
     static void test(wstring s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
     {
         enforce(strideBack(s, i == size_t.max ? s.length : i) == codeLength!wchar(c),
@@ -861,10 +861,10 @@ if (isBidirectionalRange!S && is(Unqual!(ElementEncodingType!S) == dchar))
 
 @system unittest
 {
+    import core.exception : AssertError;
     import std.conv : to;
     import std.exception;
     import std.string : format;
-    import core.exception : AssertError;
     static void test(dstring s, dchar c, size_t i = size_t.max, size_t line = __LINE__)
     {
         enforce(strideBack(s, i == size_t.max ? s.length : i) == codeLength!dchar(c),
@@ -1747,8 +1747,8 @@ version(unittest) private void testDecode(R)(R range,
                                              size_t expectedIndex,
                                              size_t line = __LINE__)
 {
-    import std.string : format;
     import core.exception : AssertError;
+    import std.string : format;
 
     static if (hasLength!R)
         immutable lenBefore = range.length;
@@ -1775,8 +1775,8 @@ version(unittest) private void testDecodeFront(R)(ref R range,
                                                   size_t expectedNumCodeUnits,
                                                   size_t line = __LINE__)
 {
-    import std.string : format;
     import core.exception : AssertError;
+    import std.string : format;
 
     static if (hasLength!R)
         immutable lenBefore = range.length;
@@ -1805,8 +1805,8 @@ version(unittest) private void testDecodeBack(R)(ref R range,
         return;
     else
     {
-        import std.string : format;
         import core.exception : AssertError;
+        import std.string : format;
 
         static if (hasLength!R)
             immutable lenBefore = range.length;
@@ -1842,8 +1842,8 @@ version(unittest) private void testAllDecode(R)(R range,
 
 version(unittest) private void testBadDecode(R)(R range, size_t index, size_t line = __LINE__)
 {
-    import std.string : format;
     import core.exception : AssertError;
+    import std.string : format;
 
     immutable initialIndex = index;
 
@@ -1873,8 +1873,8 @@ version(unittest) private void testBadDecodeBack(R)(R range, size_t line = __LIN
         return;
     else
     {
-        import std.string : format;
         import core.exception : AssertError;
+        import std.string : format;
 
         static if (hasLength!R)
             immutable lenBefore = range.length;
@@ -2144,7 +2144,7 @@ private dchar _utfException(UseReplacementDchar useReplacementDchar)(string msg,
         $(D UTFException) if $(D c) is not a valid UTF code point.
   +/
 size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
-    ref char[4] buf, dchar c) @safe pure
+    out char[4] buf, dchar c) @safe pure
 {
     if (c <= 0x7F)
     {
@@ -2219,7 +2219,7 @@ size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
 
 /// Ditto
 size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
-    ref wchar[2] buf, dchar c) @safe pure
+    out wchar[2] buf, dchar c) @safe pure
 {
     if (c <= 0xFFFF)
     {
@@ -2272,7 +2272,7 @@ size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
 
 /// Ditto
 size_t encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
-    ref dchar[1] buf, dchar c) @safe pure
+    out dchar[1] buf, dchar c) @safe pure
 {
     if ((0xD800 <= c && c <= 0xDFFF) || 0x10FFFF < c)
         c = _utfException!useReplacementDchar("Encoding an invalid code point in UTF-32", c);
@@ -2615,9 +2615,9 @@ if (isInputRange!InputRange && !isInfinite!InputRange && is(ElementType!InputRan
 
 @safe unittest
 {
+    import std.algorithm.iteration : filter;
     import std.conv : to;
     import std.exception;
-    import std.algorithm.iteration : filter;
 
     assertCTFEable!(
     {
@@ -2710,42 +2710,8 @@ if (isSomeString!S)
 deprecated("To be removed November 2017. Please use std.utf.encode instead.")
 char[] toUTF8(return out char[4] buf, dchar c) nothrow @nogc @safe pure
 {
-    if (c <= 0x7F)
-    {
-        buf[0] = cast(char) c;
-        return buf[0 .. 1];
-    }
-    else if (c <= 0x7FF)
-    {
-        buf[0] = cast(char)(0xC0 | (c >> 6));
-        buf[1] = cast(char)(0x80 | (c & 0x3F));
-        return buf[0 .. 2];
-    }
-    else if (c <= 0xFFFF)
-    {
-        if (c >= 0xD800 && c <= 0xDFFF)
-            c = replacementDchar;
-
-    L3:
-        buf[0] = cast(char)(0xE0 | (c >> 12));
-        buf[1] = cast(char)(0x80 | ((c >> 6) & 0x3F));
-        buf[2] = cast(char)(0x80 | (c & 0x3F));
-        return buf[0 .. 3];
-    }
-    else
-    {
-        if (c > 0x10FFFF)
-        {
-            c = replacementDchar;
-            goto L3;
-        }
-
-        buf[0] = cast(char)(0xF0 | (c >> 18));
-        buf[1] = cast(char)(0x80 | ((c >> 12) & 0x3F));
-        buf[2] = cast(char)(0x80 | ((c >> 6) & 0x3F));
-        buf[3] = cast(char)(0x80 | (c & 0x3F));
-        return buf[0 .. 4];
-    }
+    const sz = encode!(Yes.useReplacementDchar)(buf, c);
+    return buf[0 .. sz];
 }
 
 /**
@@ -2779,8 +2745,8 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
 
 @system pure unittest
 {
-    import std.internal.test.dummyrange : ReferenceInputRange;
     import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange : ReferenceInputRange;
 
     auto r1 = new ReferenceInputRange!dchar("Hellø");
     auto r2 = new ReferenceInputRange!dchar("𐐷");
@@ -2792,23 +2758,9 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
 //@@@DEPRECATED_2017-10@@@
 deprecated("To be removed November 2017. Please use std.utf.encode instead.")
 wchar[] toUTF16(return ref wchar[2] buf, dchar c) nothrow @nogc @safe pure
-in
 {
-    assert(isValidDchar(c));
-}
-body
-{
-    if (c <= 0xFFFF)
-    {
-        buf[0] = cast(wchar) c;
-        return buf[0 .. 1];
-    }
-    else
-    {
-        buf[0] = cast(wchar)((((c - 0x10000) >> 10) & 0x3FF) + 0xD800);
-        buf[1] = cast(wchar)(((c - 0x10000) & 0x3FF) + 0xDC00);
-        return buf[0 .. 2];
-    }
+    const sz = encode!(Yes.useReplacementDchar)(buf, c);
+    return buf[0 .. sz];
 }
 
 /**
@@ -2843,8 +2795,8 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S))
 
 @system pure unittest
 {
-    import std.internal.test.dummyrange : ReferenceInputRange;
     import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange : ReferenceInputRange;
 
     auto r1 = new ReferenceInputRange!dchar("𤭢");
     auto r2 = new ReferenceInputRange!dchar("𐐷");
@@ -3052,11 +3004,11 @@ if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
 
 @safe pure unittest
 {
+    import core.exception : AssertError;
+    import std.algorithm;
     import std.conv : to;
     import std.exception;
     import std.string : format;
-    import core.exception : AssertError;
-    import std.algorithm;
 
     assertCTFEable!(
     {

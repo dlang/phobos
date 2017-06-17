@@ -76,10 +76,10 @@ Source: $(PHOBOSSRC std/_array.d)
 */
 module std.array;
 
+static import std.algorithm.iteration; // FIXME, remove with alias of splitter
+import std.functional;
 import std.meta;
 import std.traits;
-import std.functional;
-static import std.algorithm.iteration; // FIXME, remove with alias of splitter
 
 import std.range.primitives;
 public import std.range.primitives : save, empty, popFront, popBack, front, back;
@@ -316,8 +316,8 @@ if (isNarrowString!String)
 // Bugzilla 10220
 @safe unittest
 {
-    import std.exception;
     import std.algorithm.comparison : equal;
+    import std.exception;
     import std.range : repeat;
 
     static struct S
@@ -418,8 +418,8 @@ of Tuple's of key and value pairs from the given associative array.
 */
 auto byPair(Key, Value)(Value[Key] aa)
 {
-    import std.typecons : tuple;
     import std.algorithm.iteration : map;
+    import std.typecons : tuple;
 
     return aa.byKeyValue.map!(pair => tuple(pair.key, pair.value));
 }
@@ -427,8 +427,8 @@ auto byPair(Key, Value)(Value[Key] aa)
 ///
 @system unittest
 {
-    import std.typecons : tuple, Tuple;
     import std.algorithm.sorting : sort;
+    import std.typecons : tuple, Tuple;
 
     auto aa = ["a": 1, "b": 2, "c": 3];
     Tuple!(string, int)[] pairs;
@@ -641,8 +641,8 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
         }
         else
         {
-            import core.stdc.string : memset;
             import core.memory : GC;
+            import core.stdc.string : memset;
 
             import core.checkedint : mulu;
             bool overflow;
@@ -1031,9 +1031,9 @@ private template isInputRangeOrConvertible(E)
 @system unittest
 {
     // @system due to insertInPlace
+    import core.exception;
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
-    import core.exception;
     import std.conv : to;
     import std.exception;
 
@@ -1511,8 +1511,8 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
 
 @safe unittest
 {
-    import std.conv;
     import std.algorithm.comparison : cmp;
+    import std.conv;
 
     debug(std_array) printf("array.split\n");
     foreach (S; AliasSeq!(string, wstring, dstring,
@@ -1841,8 +1841,8 @@ if (isInputRange!RoR &&
 
 @system unittest
 {
-    import std.conv : to;
     import std.algorithm;
+    import std.conv : to;
     import std.range;
 
     debug(std_array) printf("array.join.unittest\n");
@@ -1983,7 +1983,7 @@ if (isInputRange!RoR &&
     `sink`.
 
     Params:
-        sink = an output range
+        sink = an $(REF_ALTTEXT output range, isOutputRange, std,range,primitives)
         subject = the array to scan
         from = the item to replace
         to = the item to replace all instances of `from` with
@@ -1992,6 +1992,9 @@ if (isInputRange!RoR &&
         If `sink` isn't defined, a new array without changing the
         contents of `subject`, or the original array if no match
         is found.
+
+    See_Also:
+        $(REF map, std,algorithm,iteration) which can act as a lazy replace
  +/
 E[] replace(E, R1, R2)(E[] subject, R1 from, R2 to)
 if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
@@ -2062,8 +2065,8 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
 
 @safe unittest
 {
-    import std.conv : to;
     import std.algorithm.comparison : cmp;
+    import std.conv : to;
 
     debug(std_array) printf("array.replace.unittest\n");
 
@@ -2095,8 +2098,8 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
 
 @safe unittest
 {
-    import std.conv : to;
     import std.algorithm.searching : skipOver;
+    import std.conv : to;
 
     struct CheckOutput(C)
     {
@@ -2169,9 +2172,9 @@ if (isInputRange!Range &&
 @system unittest
 {
     import core.exception;
+    import std.algorithm.iteration : filter;
     import std.conv : to;
     import std.exception;
-    import std.algorithm.iteration : filter;
 
 
     auto a = [ 1, 2, 3, 4 ];
@@ -2240,9 +2243,15 @@ if (isInputRange!Range &&
 }
 
 /++
-    Replaces elements from $(D array) with indices ranging from $(D from)
-    (inclusive) to $(D to) (exclusive) with the range $(D stuff). Expands or
+    Replaces elements from `array` with indices ranging from `from`
+    (inclusive) to `to` (exclusive) with the range `stuff`. Expands or
     shrinks the array as needed.
+
+    Params:
+        array = the _array to scan
+        from = the starting index
+        to = the ending index
+        stuff = the items to replace in-between `from` and `to`
  +/
 void replaceInPlace(T, Range)(ref T[] array, size_t from, size_t to, Range stuff)
 if (is(typeof(replace(array, from, to, stuff))))
@@ -2324,8 +2333,8 @@ if (is(typeof(replace(array, from, to, stuff))))
 
     void testStringReplaceInPlace(T, U)()
     {
-        import std.conv;
         import std.algorithm.comparison : equal;
+        import std.conv;
         auto a = unicoded.to!(U[]);
         auto b = unicodedLong.to!(U[]);
 
@@ -2367,9 +2376,9 @@ if (is(typeof(replace(array, from, to, stuff))))
 
 @system unittest
 {
+    import core.exception;
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter;
-    import core.exception;
     import std.conv : to;
     import std.exception;
 
@@ -2500,8 +2509,8 @@ if (isDynamicArray!(E[]) &&
 
 @safe unittest
 {
-    import std.conv : to;
     import std.algorithm.comparison : cmp;
+    import std.conv : to;
 
     debug(std_array) printf("array.replaceFirst.unittest\n");
 
@@ -2615,8 +2624,8 @@ if (isDynamicArray!(E[]) &&
 
 @safe unittest
 {
-    import std.conv : to;
     import std.algorithm.comparison : cmp;
+    import std.conv : to;
 
     debug(std_array) printf("array.replaceLast.unittest\n");
 
@@ -2652,8 +2661,18 @@ if (isDynamicArray!(E[]) &&
 }
 
 /++
-    Returns a new array that is $(D s) with $(D slice) replaced by
-    $(D replacement[]).
+    Creates a new array such that the items in `slice` are replaced with the
+    items in `replacement`. `slice` and `replacement` do not need to be the
+    same length. The result will grow or shrink based on the items given.
+
+    Params:
+        s = the base of the new array
+        slice = the slice of `s` to be replaced
+        replacement = the items to replace `slice` with
+
+    Returns:
+        A new array that is `s` with `slice` replaced by
+        `replacement[]`.
  +/
 inout(T)[] replaceSlice(T)(inout(T)[] s, in T[] slice, in T[] replacement)
 in
@@ -2750,7 +2769,7 @@ if (isDynamicArray!A)
 
     /**
      * Reserve at least newCapacity elements for appending.  Note that more elements
-     * may be reserved than requested.  If `newCapacity <= capacity`, then nothing is
+     * may be reserved than requested. If `newCapacity <= capacity`, then nothing is
      * done.
      */
     void reserve(size_t newCapacity) @safe pure nothrow
@@ -2767,9 +2786,9 @@ if (isDynamicArray!A)
     }
 
     /**
-     * Returns the capacity of the array (the maximum number of elements the
-     * managed array can accommodate before triggering a reallocation).  If any
-     * appending will reallocate, $(D capacity) returns $(D 0).
+     * Returns: the capacity of the array (the maximum number of elements the
+     * managed array can accommodate before triggering a reallocation). If any
+     * appending will reallocate, `0` will be returned.
      */
     @property size_t capacity() const @safe pure nothrow
     {
@@ -2777,7 +2796,7 @@ if (isDynamicArray!A)
     }
 
     /**
-     * Returns the managed array.
+     * Returns: The managed array.
      */
     @property inout(ElementEncodingType!A)[] data() inout @trusted pure nothrow
     {
@@ -2861,7 +2880,8 @@ if (isDynamicArray!A)
     {
         enum bool canPutConstRange =
             isInputRange!(Unqual!Range) &&
-            !isInputRange!Range;
+            !isInputRange!Range &&
+            is(typeof(Appender.init.put(Range.init.front)));
     }
     private template canPutRange(Range)
     {
@@ -3051,6 +3071,21 @@ if (isDynamicArray!A)
     app.put(2);
     app.put(3);
     assert("%s".format(app) == "Appender!(int[])(%s)".format([1,2,3]));
+}
+
+@safe unittest // issue 17251
+{
+    static struct R
+    {
+        int front() const { return 0; }
+        bool empty() const { return true; }
+        void popFront() {}
+    }
+
+    auto app = appender!(R[]);
+    const(R)[1] r;
+    app.put(r[0]);
+    app.put(r[]);
 }
 
 //Calculates an efficient growth scheme based on the old capacity
@@ -3324,8 +3359,8 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
 
 @safe unittest
 {
-    import std.typecons;
     import std.algorithm;
+    import std.typecons;
     //10690
     [tuple(1)].filter!(t => true).array; // No error
     [tuple("A")].filter!(t => true).array; // error
@@ -3454,8 +3489,8 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
 
 @safe unittest //Test large allocations (for GC.extend)
 {
-    import std.range;
     import std.algorithm.comparison : equal;
+    import std.range;
     Appender!(char[]) app;
     app.reserve(1); //cover reserve on non-initialized
     foreach (_; 0 .. 100_000)

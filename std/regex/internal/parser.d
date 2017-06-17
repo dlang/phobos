@@ -4,10 +4,10 @@
 */
 module std.regex.internal.parser;
 
-import std.regex.internal.ir;
+static import std.ascii;
 import std.range.primitives, std.uni, std.meta,
     std.traits, std.typecons, std.exception;
-static import std.ascii;
+import std.regex.internal.ir;
 
 // package relevant info from parser into a regex object
 auto makeRegex(S, CG)(Parser!(S, CG) p)

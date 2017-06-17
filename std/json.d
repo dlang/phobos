@@ -17,9 +17,9 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.json;
 
+import std.array;
 import std.conv;
 import std.range.primitives;
-import std.array;
 import std.traits;
 
 ///
@@ -1090,7 +1090,7 @@ Any Object types will be serialized in a key-sorted order.
 
 If $(D pretty) is false no whitespaces are generated.
 If $(D pretty) is true serialized string is formatted to be human-readable.
-Set the $(specialFloatLiterals) flag is set in $(D options) to encode NaN/Infinity as strings.
+Set the $(LREF JSONOptions.specialFloatLiterals) flag is set in $(D options) to encode NaN/Infinity as strings.
 */
 string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions options = JSONOptions.none) @safe
 {
@@ -1637,8 +1637,8 @@ EOF";
 // handling of special float values (NaN, Inf, -Inf)
 @safe unittest
 {
-    import std.math : isNaN, isInfinity;
     import std.exception : assertThrown;
+    import std.math : isNaN, isInfinity;
 
     // expected representations of NaN and Inf
     enum {

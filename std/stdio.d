@@ -13,13 +13,12 @@ Authors:   $(HTTP digitalmars.com, Walter Bright),
  */
 module std.stdio;
 
-public import core.stdc.stdio;
 import core.stdc.stddef; // wchar_t
+public import core.stdc.stdio;
 import std.algorithm.mutation; // copy
 import std.meta; // allSatisfy
 import std.range.primitives; // ElementEncodingType, empty, front,
     // isBidirectionalRange, isInputRange, put
-import std.stdiobase;
 import std.traits; // isSomeChar, isSomeString, Unqual, isPointer
 import std.typecons; // Flag
 
@@ -501,13 +500,13 @@ Throws: $(D ErrnoException) in case of error.
  */
     void reopen(string name, in char[] stdioOpenmode = "rb") @trusted
     {
-        import std.internal.cstring : tempCString;
-        import std.exception : enforce, errnoEnforce;
         import std.conv : text;
+        import std.exception : enforce, errnoEnforce;
+        import std.internal.cstring : tempCString;
 
         enforce(isOpen, "Attempting to reopen() an unopened file");
 
-        auto namez = name.tempCString!FSChar();
+        auto namez = (name == null ? _name : name).tempCString!FSChar();
         auto modez = stdioOpenmode.tempCString!FSChar();
 
         FILE* fd = _p.handle;
@@ -526,8 +525,8 @@ Throws: $(D ErrnoException) in case of error.
 
     @system unittest // Test changing filename
     {
-        static import std.file;
         import std.exception : assertThrown, assertNotThrown;
+        static import std.file;
 
         auto deleteme = testFilename();
         std.file.write(deleteme, "foo");
@@ -548,8 +547,8 @@ Throws: $(D ErrnoException) in case of error.
     version (CRuntime_Microsoft) {} else // Not implemented
     @system unittest // Test changing mode
     {
-        static import std.file;
         import std.exception : assertThrown, assertNotThrown;
+        static import std.file;
 
         auto deleteme = testFilename();
         std.file.write(deleteme, "foo");
@@ -650,9 +649,9 @@ Throws: $(D ErrnoException) in case of error.
     version(Windows)
     void windowsHandleOpen(HANDLE handle, in char[] stdioOpenmode)
     {
+        import core.stdc.stdint : intptr_t;
         import std.exception : errnoEnforce;
         import std.format : format;
-        import core.stdc.stdint : intptr_t;
 
         // Create file descriptors from the handles
         version (DIGITAL_MARS_STDIO)
@@ -839,8 +838,8 @@ Throws: $(D Exception) if the file is not opened or if the call to $(D fflush) f
     @safe unittest
     {
         // Issue 12349
-        static import std.file;
         import std.exception : assertThrown;
+        static import std.file;
 
         auto deleteme = testFilename();
         auto f = File(deleteme, "w");
@@ -1032,8 +1031,8 @@ Throws: $(D Exception) if the file is not opened.
 
     @system unittest
     {
-        static import std.file;
         import std.conv : text;
+        static import std.file;
 
         auto deleteme = testFilename();
         auto f = File(deleteme, "w+");
@@ -1090,8 +1089,8 @@ Throws: $(D Exception) if the file is not opened.
     ///
     @system unittest
     {
-        static import std.file;
         import std.conv : text;
+        static import std.file;
 
         auto testFile = testFilename();
         std.file.write(testFile, "abcdefghijklmnopqrstuvwqxyz");
@@ -1173,8 +1172,8 @@ Throws: $(D Exception) if the file is not opened.
 
         private static T wenforce(T)(T cond, string str)
         {
-            import std.windows.syserror : sysErrorString;
             import core.sys.windows.windows : GetLastError;
+            import std.windows.syserror : sysErrorString;
 
             if (cond) return cond;
             throw new Exception(str ~ ": " ~ sysErrorString(GetLastError()));
@@ -1221,8 +1220,8 @@ $(UL
         enforce(isOpen, "Attempting to call lock() on an unopened file");
         version (Posix)
         {
-            import std.exception : errnoEnforce;
             import core.sys.posix.fcntl : F_RDLCK, F_SETLKW, F_WRLCK;
+            import std.exception : errnoEnforce;
             immutable short type = lockType == LockType.readWrite
                 ? F_WRLCK : F_RDLCK;
             errnoEnforce(lockImpl(F_SETLKW, type, start, length) != -1,
@@ -1255,9 +1254,9 @@ specified file segment was already locked.
         enforce(isOpen, "Attempting to call tryLock() on an unopened file");
         version (Posix)
         {
-            import std.exception : errnoEnforce;
             import core.stdc.errno : EACCES, EAGAIN, errno;
             import core.sys.posix.fcntl : F_RDLCK, F_SETLK, F_WRLCK;
+            import std.exception : errnoEnforce;
             immutable short type = lockType == LockType.readWrite
                 ? F_WRLCK : F_RDLCK;
             immutable res = lockImpl(F_SETLK, type, start, length);
@@ -1295,8 +1294,8 @@ Removes the lock over the specified file segment.
         enforce(isOpen, "Attempting to call unlock() on an unopened file");
         version (Posix)
         {
-            import std.exception : errnoEnforce;
             import core.sys.posix.fcntl : F_SETLK, F_UNLCK;
+            import std.exception : errnoEnforce;
             errnoEnforce(lockImpl(F_SETLK, F_UNLCK, start, length) != -1,
                     "Could not remove lock for file `"~_name~"'");
         }
@@ -1541,8 +1540,8 @@ void main()
 
     @system unittest
     {
-        static import std.file;
         import std.algorithm.comparison : equal;
+        static import std.file;
         import std.meta : AliasSeq;
 
         auto deleteme = testFilename();
@@ -2301,8 +2300,8 @@ $(REF readText, std,file)
 
     @system unittest
     {
-        static import std.file;
         import std.algorithm.comparison : equal;
+        static import std.file;
 
         scope(failure) printf("Failed test at line %d\n", __LINE__);
         auto deleteme = testFilename();
@@ -3022,9 +3021,9 @@ void main()
 
     @system unittest
     {
-        static import std.file;
         import std.algorithm.mutation : reverse;
         import std.exception : collectException;
+        static import std.file;
         import std.range : only, retro;
         import std.string : format;
 
@@ -3232,8 +3231,8 @@ void main()
 
 @safe unittest
 {
-    static import std.file;
     import std.exception : collectException;
+    static import std.file;
 
     auto deleteme = testFilename();
     scope(exit) collectException(std.file.remove(deleteme));
@@ -3396,8 +3395,8 @@ struct LockingTextReader
 
 @system unittest // bugzilla 13686
 {
-    static import std.file;
     import std.algorithm.comparison : equal;
+    static import std.file;
     import std.utf : byDchar;
 
     auto deleteme = testFilename();
@@ -4522,69 +4521,81 @@ Initialize with a message and an error code.
     }
 }
 
-extern(C) void std_stdio_static_this()
+// Undocumented but public because the std* handles are aliasing it.
+@property ref File makeGlobal(alias handle)()
 {
-    static import core.stdc.stdio;
-    //Bind stdin, stdout, stderr
-    __gshared File.Impl stdinImpl;
-    stdinImpl.handle = core.stdc.stdio.stdin;
-    .stdin._p = &stdinImpl;
-    // stdout
-    __gshared File.Impl stdoutImpl;
-    stdoutImpl.handle = core.stdc.stdio.stdout;
-    .stdout._p = &stdoutImpl;
-    // stderr
-    __gshared File.Impl stderrImpl;
-    stderrImpl.handle = core.stdc.stdio.stderr;
-    .stderr._p = &stderrImpl;
-}
+    __gshared File.Impl impl;
+    __gshared File result;
 
-//---------
-__gshared
-{
-    /** The standard input stream.
-        Bugs:
-            Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
-            it is thread un-safe to reassign `stdin` to a different `File` instance
-            than the default.
-     */
-    File stdin;
-    ///
-    @safe unittest
+    // Use an inline spinlock to make sure the initializer is only run once.
+    // We assume there will be at most uint.max / 2 threads trying to initialize
+    // `handle` at once and steal the high bit to indicate that the globals have
+    // been initialized.
+    static shared uint spinlock;
+    import core.atomic : atomicLoad, atomicOp, MemoryOrder;
+    if (atomicLoad!(MemoryOrder.acq)(spinlock) <= uint.max / 2)
     {
-        // Read stdin, sort lines, write to stdout
-        import std.array : array;
-        import std.algorithm.sorting : sort;
-        import std.algorithm.mutation : copy;
-        import std.typecons : Yes;
-
-        void main() {
-            stdin                       // read from stdin
-            .byLineCopy(Yes.keepTerminator) // copying each line
-            .array()                    // convert to array of lines
-            .sort()                     // sort the lines
-            .copy(                      // copy output of .sort to an OutputRange
-                stdout.lockingTextWriter()); // the OutputRange
+        for (;;)
+        {
+            if (atomicLoad!(MemoryOrder.acq)(spinlock) > uint.max / 2)
+                break;
+            if (atomicOp!"+="(spinlock, 1) == 1)
+            {
+                impl.handle = handle;
+                result._p = &impl;
+                atomicOp!"+="(spinlock, uint.max / 2);
+                break;
+            }
+            atomicOp!"-="(spinlock, 1);
         }
     }
-
-    /**
-        The standard output stream.
-        Bugs:
-            Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
-            it is thread un-safe to reassign `stdout` to a different `File` instance
-            than the default.
-    */
-    File stdout;
-    /**
-        The standard error stream.
-        Bugs:
-            Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
-            it is thread un-safe to reassign `stderr` to a different `File` instance
-            than the default.
-    */
-    File stderr;
+    return result;
 }
+
+/** The standard input stream.
+    Bugs:
+        Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
+        it is thread un-safe to reassign `stdin` to a different `File` instance
+        than the default.
+*/
+alias stdin = makeGlobal!(core.stdc.stdio.stdin);
+
+///
+@safe unittest
+{
+    // Read stdin, sort lines, write to stdout
+    import std.algorithm.mutation : copy;
+    import std.algorithm.sorting : sort;
+    import std.array : array;
+    import std.typecons : Yes;
+
+    void main() {
+        stdin                       // read from stdin
+        .byLineCopy(Yes.keepTerminator) // copying each line
+        .array()                    // convert to array of lines
+        .sort()                     // sort the lines
+        .copy(                      // copy output of .sort to an OutputRange
+            stdout.lockingTextWriter()); // the OutputRange
+    }
+}
+
+/**
+    The standard output stream.
+    Bugs:
+        Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
+        it is thread un-safe to reassign `stdout` to a different `File` instance
+        than the default.
+*/
+alias stdout = makeGlobal!(core.stdc.stdio.stdout);
+
+/**
+    The standard error stream.
+    Bugs:
+        Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
+        it is thread un-safe to reassign `stderr` to a different `File` instance
+        than the default.
+*/
+alias stderr = makeGlobal!(core.stdc.stdio.stderr);
 
 @system unittest
 {
@@ -4608,6 +4619,15 @@ __gshared
         }
         assert(i == 3);
     }
+}
+
+@safe unittest
+{
+    // Retain backwards compatibility
+    // https://issues.dlang.org/show_bug.cgi?id=17472
+    static assert(is(typeof(stdin) == File));
+    static assert(is(typeof(stdout) == File));
+    static assert(is(typeof(stderr) == File));
 }
 
 // roll our own appender, but with "safe" arrays
@@ -5093,12 +5113,12 @@ version(linux)
 {
     File openNetwork(string host, ushort port)
     {
-        static import sock = core.sys.posix.sys.socket;
-        static import core.sys.posix.unistd;
         import core.stdc.string : memcpy;
         import core.sys.posix.arpa.inet : htons;
         import core.sys.posix.netdb : gethostbyname;
         import core.sys.posix.netinet.in_ : sockaddr_in;
+        static import core.sys.posix.unistd;
+        static import sock = core.sys.posix.sys.socket;
         import std.conv : to;
         import std.exception : enforce;
         import std.internal.cstring : tempCString;

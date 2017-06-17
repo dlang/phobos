@@ -2729,8 +2729,8 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 @system unittest
 {
     // Bugzilla 15039
-    import std.variant;
     import std.typecons;
+    import std.variant;
 
     alias IntTypedef = Typedef!int;
     alias Obj = Algebraic!(int, IntTypedef, This[]);

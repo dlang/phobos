@@ -19,15 +19,15 @@ The following methods are defined if $(D Allocator) defines them, and forward to
  */
 struct AffixAllocator(Allocator, Prefix, Suffix = void)
 {
+    import std.algorithm.comparison : min;
     import std.conv : emplace;
+    import std.experimental.allocator : IAllocator, theAllocator;
     import std.experimental.allocator.common : stateSize, forwardToMember,
         roundUpToMultipleOf, alignedAt, alignDownTo, roundUpToMultipleOf,
         hasStaticallyKnownAlignment;
-    import std.experimental.allocator : IAllocator, theAllocator;
-    import std.traits : hasMember;
-    import std.algorithm.comparison : min;
-    import std.typecons : Ternary;
     import std.math : isPowerOf2;
+    import std.traits : hasMember;
+    import std.typecons : Ternary;
 
     static if (hasStaticallyKnownAlignment!Allocator)
     {
@@ -175,7 +175,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         }
 
         static if (hasMember!(Allocator, "resolveInternalPointer"))
-        Ternary resolveInternalPointer(void* p, ref void[] result)
+        Ternary resolveInternalPointer(const void* p, ref void[] result)
         {
             void[] p1;
             Ternary r = parent.resolveInternalPointer(p, p1);
@@ -397,7 +397,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     import std.experimental.allocator.common : testAllocator;
     testAllocator!({
         auto a = AffixAllocator!(BitmappedBlock!128, ulong, ulong)
-            (BitmappedBlock!128(new void[128 * 4096]));
+            (BitmappedBlock!128(new ubyte[128 * 4096]));
         return a;
     });
 }
@@ -419,8 +419,8 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
 
 @system unittest
 {
-    import std.experimental.allocator.gc_allocator;
     import std.experimental.allocator;
+    import std.experimental.allocator.gc_allocator;
     import std.typecons : Ternary;
     alias MyAllocator = AffixAllocator!(GCAllocator, uint);
     auto a = MyAllocator.instance.makeArray!(shared int)(100);

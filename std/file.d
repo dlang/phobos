@@ -78,14 +78,14 @@ Source:    $(PHOBOSSRC std/_file.d)
  */
 module std.file;
 
-import core.stdc.stdlib, core.stdc.string, core.stdc.errno;
+import core.stdc.errno, core.stdc.stdlib, core.stdc.string;
 
 import std.datetime;
+import std.internal.cstring;
 import std.meta;
 import std.range.primitives;
 import std.traits;
 import std.typecons;
-import std.internal.cstring;
 
 version (Windows)
 {
@@ -330,9 +330,9 @@ if (isConvertibleToString!R)
 
 version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo = size_t.max) @trusted
 {
+    import core.memory : GC;
     import std.algorithm.comparison : min;
     import std.array : uninitializedArray;
-    import core.memory : GC;
     import std.conv : to;
 
     // A few internal configuration parameters {
@@ -379,9 +379,9 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
 
 version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo = size_t.max) @safe
 {
+    import core.memory : GC;
     import std.algorithm.comparison : min;
     import std.array : uninitializedArray;
-    import core.memory : GC;
     static trustedCreateFileW(const(wchar)* namez, DWORD dwDesiredAccess, DWORD dwShareMode,
                               SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
                               DWORD dwFlagsAndAttributes, HANDLE hTemplateFile) @trusted
@@ -2241,7 +2241,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
     !isConvertibleToString!R)
 {
     // Place outside of @trusted block
-    auto pathz = pathname.tempCString!FSChar();
+    const pathz = pathname.tempCString!FSChar();
 
     version(Windows)
     {
@@ -2287,13 +2287,14 @@ if (isConvertibleToString!R)
 // Same as mkdir but ignores "already exists" errors.
 // Returns: "true" if the directory was created,
 //   "false" if it already existed.
-private bool ensureDirExists(in char[] pathname)
+private bool ensureDirExists()(in char[] pathname)
 {
     import std.exception : enforce;
+    const pathz = pathname.tempCString!FSChar();
 
     version(Windows)
     {
-        if (CreateDirectoryW(pathname.tempCStringW(), null))
+        if (() @trusted { return CreateDirectoryW(pathz, null); }())
             return true;
         cenforce(GetLastError() == ERROR_ALREADY_EXISTS, pathname.idup);
     }
@@ -2301,7 +2302,7 @@ private bool ensureDirExists(in char[] pathname)
     {
         import std.conv : octal;
 
-        if (core.sys.posix.sys.stat.mkdir(pathname.tempCString(), octal!777) == 0)
+        if (() @trusted { return core.sys.posix.sys.stat.mkdir(pathz, octal!777); }() == 0)
             return true;
         cenforce(errno == EEXIST || errno == EISDIR, pathname);
     }
@@ -2318,7 +2319,7 @@ private bool ensureDirExists(in char[] pathname)
  * Throws: $(D FileException) on error.
  */
 
-void mkdirRecurse(in char[] pathname)
+void mkdirRecurse(in char[] pathname) @safe
 {
     import std.path : dirName, baseName;
 
@@ -2333,14 +2334,14 @@ void mkdirRecurse(in char[] pathname)
     }
 }
 
-@system unittest
+@safe unittest
 {
     import std.exception : assertThrown;
     {
         import std.path : buildPath, buildNormalizedPath;
 
         immutable basepath = deleteme ~ "_dir";
-        scope(exit) rmdirRecurse(basepath);
+        scope(exit) () @trusted { rmdirRecurse(basepath); }();
 
         auto path = buildPath(basepath, "a", "..", "b");
         mkdirRecurse(path);
@@ -2375,7 +2376,7 @@ void mkdirRecurse(in char[] pathname)
 
         mkdirRecurse(path);
         assert(basepath.exists && basepath.isDir);
-        scope(exit) rmdirRecurse(basepath);
+        scope(exit) () @trusted { rmdirRecurse(basepath); }();
         assert(path.exists && path.isDir);
     }
 }
@@ -3969,10 +3970,10 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 {
     string[] listdir(string pathname)
     {
-        import std.file;
-        import std.path;
         import std.algorithm;
         import std.array;
+        import std.file;
+        import std.path;
 
         return std.file.dirEntries(pathname, SpanMode.shallow)
             .filter!(a => a.isFile)
@@ -4198,11 +4199,11 @@ auto dirEntries(string path, string pattern, SpanMode mode,
 Select!(Types.length == 1, Types[0][], Tuple!(Types)[])
 slurp(Types...)(string filename, in char[] format)
 {
-    import std.stdio : File;
-    import std.format : formattedRead;
     import std.array : appender;
     import std.conv : text;
     import std.exception : enforce;
+    import std.format : formattedRead;
+    import std.stdio : File;
 
     auto app = appender!(typeof(return))();
     ElementType!(typeof(return)) toAdd;

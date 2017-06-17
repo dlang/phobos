@@ -43,7 +43,7 @@ struct NullAllocator
     /**
     Returns $(D Ternary.no).
     */
-    Ternary resolveInternalPointer(void*, ref void[]) shared const
+    Ternary resolveInternalPointer(const void*, ref void[]) shared const
     { return Ternary.no; }
     /**
     No-op.

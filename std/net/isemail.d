@@ -64,9 +64,9 @@ if (isSomeChar!(Char))
 {
     import std.algorithm.iteration : uniq, filter, map;
     import std.algorithm.searching : canFind, maxElement;
-    import std.exception : enforce;
     import std.array : array, split;
     import std.conv : to;
+    import std.exception : enforce;
     import std.string : indexOf, lastIndexOf;
     import std.uni : isNumber;
 

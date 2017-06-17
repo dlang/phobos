@@ -661,7 +661,7 @@ template unwrap(Target)
 @system unittest
 {
     // Bugzilla 10377
-    import std.range, std.algorithm;
+    import std.algorithm, std.range;
 
     interface MyInputRange(T)
     {
@@ -848,17 +848,39 @@ else
         }
 
         // Attaching function attributes gives less noisy error messages
-        pure nothrow @safe @nogc @disable
+        pure nothrow @safe @nogc
         {
             /++
              + All operators, including member access, are forwarded to the
              + underlying value of type `T` except for these mutating operators,
              + which are disabled.
              +/
-            void opAssign(Other)(Other other);
-            void opOpAssign(string op, Other)(Other other); /// Ditto
-            void opUnary(string op : "--")(); /// Ditto
-            void opUnary(string op : "++")(); /// Ditto
+            void opAssign(Other)(Other other)
+            {
+                static assert(0, typeof(this).stringof ~
+                                 " cannot be reassigned.");
+            }
+
+            /// Ditto
+            void opOpAssign(string op, Other)(Other other)
+            {
+                static assert(0, typeof(this).stringof ~
+                                 " cannot be reassigned.");
+            }
+
+            /// Ditto
+            void opUnary(string op : "--")()
+            {
+                static assert(0, typeof(this).stringof ~
+                                 " cannot be mutated.");
+            }
+
+            /// Ditto
+            void opUnary(string op : "++")()
+            {
+                static assert(0, typeof(this).stringof ~
+                                 " cannot be mutated.");
+            }
         }
 
         /**
@@ -875,7 +897,7 @@ else
         alias final_get this;
 
         /// Ditto
-        T opUnary(string op)()
+        auto ref opUnary(string op)()
             if (__traits(compiles, mixin(op ~ "T.init")))
         {
             return mixin(op ~ "this.final_value");
@@ -1023,4 +1045,34 @@ pure nothrow @safe unittest
     static assert(!__traits(compiles, arr = null));
     static assert(!__traits(compiles, arr ~= 4));
     assert((arr ~ 4) == [1, 2, 3, 4]);
+}
+
+// issue 17270
+pure nothrow @nogc @system unittest
+{
+    int i = 1;
+    Final!(int*) fp = &i;
+    assert(*fp == 1);
+    static assert(!__traits(compiles,
+        fp = &i // direct assignment
+    ));
+    static assert(is(typeof(*fp) == int));
+    *fp = 2; // indirect assignment
+    assert(*fp == 2);
+    int* p = fp;
+    assert(*p == 2);
+}
+
+pure nothrow @system unittest
+{
+    Final!(int[]) arr;
+    // static assert(!__traits(compiles,
+        // arr.length = 10; // bug!
+    // ));
+    static assert(!__traits(compiles,
+        arr.ptr = null
+    ));
+    static assert(!__traits(compiles,
+        arr.ptr++
+    ));
 }

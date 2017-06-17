@@ -70,9 +70,10 @@ struct GCAllocator
     }
 
     /// Ditto
-    pure nothrow Ternary resolveInternalPointer(void* p, ref void[] result) shared
+    pure nothrow
+    Ternary resolveInternalPointer(const void* p, ref void[] result) shared
     {
-        auto r = GC.addrOf(p);
+        auto r = GC.addrOf(cast(void*) p);
         if (!r) return Ternary.no;
         result = r[0 .. GC.sizeOf(r)];
         return Ternary.yes;

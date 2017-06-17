@@ -402,9 +402,9 @@ public struct UUID
 
         @safe pure unittest
         {
+            import std.conv : to;
             import std.exception;
             import std.meta;
-            import std.conv : to;
 
             foreach (S; AliasSeq!(char[], const(char)[], immutable(char)[],
                                   wchar[], const(wchar)[], immutable(wchar)[],
@@ -1314,8 +1314,8 @@ UUID parseUUID(Range)(ref Range uuidRange)
 if (isInputRange!Range
     && is(Unqual!(ElementType!Range) == dchar))
 {
-    import std.conv : ConvException, parse;
     import std.ascii : isHexDigit;
+    import std.conv : ConvException, parse;
 
     static if (isForwardRange!Range)
         auto errorCopy = uuidRange.save;
@@ -1475,9 +1475,9 @@ if (isInputRange!Range
 
 @safe pure unittest
 {
+    import std.conv : to;
     import std.exception;
     import std.meta;
-    import std.conv : to;
 
     struct TestRange(bool forward)
     {

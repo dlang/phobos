@@ -54,8 +54,8 @@ if (is(T == struct) || is(T == class))
 ///
 @system unittest
 {
-    import std.container;
     import std.algorithm.comparison : equal;
+    import std.container;
 
     auto arr = make!(Array!int)([4, 2, 3, 1]);
     assert(equal(arr[], [4, 2, 3, 1]));
@@ -70,8 +70,8 @@ if (is(T == struct) || is(T == class))
 
 @system unittest
 {
-    import std.container;
     import std.algorithm.comparison : equal;
+    import std.container;
 
     auto arr1 = make!(Array!dchar)();
     assert(arr1.empty);
@@ -87,8 +87,8 @@ if (is(T == struct) || is(T == class))
 // Issue 8895
 @safe unittest
 {
-    import std.container;
     import std.algorithm.comparison : equal;
+    import std.container;
 
     auto a = make!(DList!int)(1,2,3,4);
     auto b = make!(DList!int)(1,2,3,4);
@@ -135,9 +135,9 @@ if (!is(Container))
 ///
 @system unittest
 {
+    import std.algorithm.comparison : equal;
     import std.container.array, std.container.rbtree, std.container.slist;
     import std.range : iota;
-    import std.algorithm.comparison : equal;
 
     auto arr = make!Array(iota(5));
     assert(equal(arr[], [0, 1, 2, 3, 4]));
@@ -155,8 +155,8 @@ if (!is(Container))
 
 @safe unittest
 {
-    import std.container.rbtree;
     import std.algorithm.comparison : equal;
+    import std.container.rbtree;
 
     auto rbtmin = make!(RedBlackTree, "a < b", false)(3, 2, 2, 1);
     assert(equal(rbtmin[], [1, 2, 3]));
