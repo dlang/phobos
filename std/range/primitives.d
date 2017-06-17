@@ -1371,7 +1371,29 @@ Deprecation: Historically `hasLength!R` yielded `true` for types whereby
 `hasLength` will yield `true` only if `R.length` yields the exact type `size_t`.
 */
 enum bool hasLength(R) = !isNarrowString!R
-    && is(ReturnType!((ref R r) => r.length) : ulong);
+    && is(ReturnType!((ref R r) => r.length) : ulong)
+    && lengthIsSizeT!R;
+
+template lengthIsSizeT(R)
+{
+    static if (is(ReturnType!((ref R r) => r.length) Length))
+    {
+        static if (is(Length == size_t))
+            enum lengthIsSizeT = true;
+        else
+        {
+            // @@@DEPRECATED_2017-12@@@
+            // Uncomment the deprecated(...) message and take the pragma(msg)
+            // out once https://issues.dlang.org/show_bug.cgi?id=10181 is fixed.
+            pragma(msg, "Note: length must have type size_t on all systems, but `"~R.stringof~".length` has type `"~Length.stringof~"`."~
+                   " Please update your code by December 2017.");
+            //deprecated("length must have type size_t on all systems")
+            enum lengthIsSizeT = true;
+        }
+    }
+    else
+        enum lengthIsSizeT = false;
+}
 
 ///
 @safe unittest
