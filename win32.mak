@@ -146,8 +146,7 @@ SRC_STD_3a= \
 	std\exception.d \
 	std\compiler.d \
 	std\system.d \
-	std\concurrency.d \
-	std\concurrencybase.d
+	std\concurrency.d
 
 SRC_STD_4= \
 	std\uuid.d
@@ -633,7 +632,6 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=79 -unittest -main -run std\random.d
 	$(DMD) -conf= -cov=92 -unittest -main -run std\exception.d
 	$(DMD) -conf= -cov=73 -unittest -main -run std\concurrency.d
-	$(DMD) -conf= -cov=100 -unittest -main -run std\concurrencybase.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\date.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\interval.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\datetime\package.d

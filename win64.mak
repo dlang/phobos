@@ -152,8 +152,7 @@ SRC_STD_3c= \
 	std\exception.d \
 	std\compiler.d \
 	std\system.d \
-	std\concurrency.d \
-	std\concurrencybase.d
+	std\concurrency.d
 
 SRC_STD_3d= \
 	std\bitmanip.d \
