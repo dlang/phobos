@@ -247,7 +247,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 
         static if (hasMember!(SmallAllocator, "resolveInternalPointer")
                 && hasMember!(LargeAllocator, "resolveInternalPointer"))
-        Ternary resolveInternalPointer(void* p, ref void[] result)
+        Ternary resolveInternalPointer(const void* p, ref void[] result)
         {
             Ternary r = _small.resolveInternalPointer(p, result);
             return r == Ternary.no ? _large.resolveInternalPointer(p, result) : r;
@@ -277,8 +277,8 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 @system unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
-    import std.experimental.allocator.mallocator : Mallocator;
     import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.mallocator : Mallocator;
     alias A =
         Segregator!(
             1024 * 4,
@@ -345,8 +345,8 @@ if (Args.length > 3)
 @system unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
-    import std.experimental.allocator.mallocator : Mallocator;
     import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.mallocator : Mallocator;
     alias A =
         Segregator!(
             128, FreeList!(Mallocator, 0, 128),

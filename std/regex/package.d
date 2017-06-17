@@ -296,9 +296,9 @@ Macros:
  +/
 module std.regex;
 
+import std.range.primitives, std.traits;
 import std.regex.internal.ir;
 import std.regex.internal.thompson; //TODO: get rid of this dependency
-import std.traits, std.range.primitives;
 import std.typecons; // : Flag, Yes, No;
 
 /++
@@ -418,7 +418,7 @@ if (isSomeString!(S))
 
 template ctRegexImpl(alias pattern, string flags=[])
 {
-    import std.regex.internal.parser, std.regex.internal.backtracking;
+    import std.regex.internal.backtracking, std.regex.internal.parser;
     enum r = regex(pattern, flags);
     alias Char = BasicElementOf!(typeof(pattern));
     enum source = ctGenRegExCode(r);
@@ -1052,9 +1052,9 @@ if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 // another set of tests just to cover the new API
 @system unittest
 {
-    import std.conv : to;
-    import std.algorithm.iteration : map;
     import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    import std.conv : to;
 
     foreach (String; AliasSeq!(string, wstring, const(dchar)[]))
     {
@@ -1138,8 +1138,8 @@ if (isOutputRange!(OutR, ElementEncodingType!R[]) &&
     isOutputRange!(OutR, ElementEncodingType!(Capt.String)[]))
 {
     import std.algorithm.searching : find;
-    import std.conv : text, parse;
     import std.ascii : isDigit, isAlpha;
+    import std.conv : text, parse;
     import std.exception : enforce;
     enum State { Normal, Dollar }
     auto state = State.Normal;
@@ -1422,7 +1422,7 @@ if (isOutputRange!(Sink, dchar) && isSomeString!R && isRegexFor!(RegEx, R))
 @system unittest
 {
     // insert comma as thousands delimiter in fifty randomly produced big numbers
-    import std.array, std.random, std.conv, std.range;
+    import std.array, std.conv, std.random, std.range;
     static re = regex(`(?<=\d)(?=(\d\d\d)+\b)`, "g");
     auto sink = appender!(char [])();
     enum ulong min = 10UL ^^ 10, max = 10UL ^^ 19;
@@ -1706,16 +1706,16 @@ auto escaper(Range)(Range r)
 ///
 @system unittest
 {
-    import std.regex;
     import std.algorithm.comparison;
+    import std.regex;
     string s = `This is {unfriendly} to *regex*`;
     assert(s.escaper.equal(`This is \{unfriendly\} to \*regex\*`));
 }
 
 @system unittest
 {
-    import std.conv;
     import std.algorithm.comparison;
+    import std.conv;
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
       auto s = "^".to!S;

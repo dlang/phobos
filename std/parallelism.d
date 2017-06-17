@@ -44,9 +44,9 @@ module std.parallelism;
 @system unittest
 {
     import std.algorithm.iteration : map;
-    import std.range : iota;
     import std.math : approxEqual;
     import std.parallelism : taskPool;
+    import std.range : iota;
 
     // Parallel reduce can be combined with
     // std.algorithm.iteration.map to interesting effect.
@@ -629,7 +629,7 @@ struct Task(alias fun, Args...)
 
         if (exception)
         {
-            throw exception;
+            throw exception; // nocoverage
         }
 
         static if (!is(ReturnType == void))
@@ -2093,7 +2093,7 @@ public:
                 else
                 {
 
-                    bool empty() @property
+                    bool empty() const @property
                     {
                         // popFront() sets this when source is empty
                         return buf1.length == 0;
@@ -2889,11 +2889,11 @@ public:
             }
         }
 
-        ref T opIndex(size_t index)
+        ref opIndex(this Qualified)(size_t index)
         {
             import std.conv : text;
             assert(index < size, text(index, '\t', uint.max));
-            return *(cast(T*) (data + elemSize * index));
+            return *(cast(CopyTypeQualifiers!(Qualified, T)*) (data + elemSize * index));
         }
 
         void opIndexAssign(T val, size_t index)
@@ -2916,7 +2916,7 @@ public:
         failure will result when calling this method.  This is not checked
         when assertions are disabled for performance reasons.
          */
-        ref T get() @property
+        ref get(this Qualified)() @property
         {
             assert(*stillThreadLocal,
                 "Cannot call get() on this instance of WorkerLocalStorage " ~
@@ -2996,12 +2996,12 @@ public:
         }
 
     public:
-        ref T front() @property
+        ref front(this Qualified)() @property
         {
             return this[0];
         }
 
-        ref T back() @property
+        ref back(this Qualified)() @property
         {
             return this[_length - 1];
         }
@@ -3028,7 +3028,7 @@ public:
             return this;
         }
 
-        ref T opIndex(size_t index)
+        ref opIndex(this Qualified)(size_t index)
         {
             assert(index < _length);
             return workerLocalStorage[index + beginOffset];
@@ -3049,12 +3049,12 @@ public:
             return typeof(this)(newWl);
         }
 
-        bool empty() @property
+        bool empty() const @property
         {
             return length == 0;
         }
 
-        size_t length() @property
+        size_t length() const @property
         {
             return _length;
         }
@@ -3931,8 +3931,8 @@ version(unittest)
 // These are the tests that should be run every time Phobos is compiled.
 @system unittest
 {
-    import std.algorithm.iteration : filter, map, reduce;
     import std.algorithm.comparison : equal, min, max;
+    import std.algorithm.iteration : filter, map, reduce;
     import std.array : split;
     import std.conv : text;
     import std.exception : assertThrown;

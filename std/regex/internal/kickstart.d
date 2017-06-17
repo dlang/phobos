@@ -6,8 +6,8 @@ module std.regex.internal.kickstart;
 
 package(std.regex):
 
-import std.regex.internal.ir;
 import std.range.primitives, std.utf;
+import std.regex.internal.ir;
 
 //utility for shiftOr, returns a minimum number of bytes to test in a Char
 uint effectiveSize(Char)()
@@ -395,8 +395,8 @@ public:
     // (that given the haystack in question is valid UTF string)
     @trusted size_t search(const(Char)[] haystack, size_t idx)
     {//@BUG: apparently assumes little endian machines
-        import std.conv : text;
         import core.stdc.string : memchr;
+        import std.conv : text;
         assert(!empty);
         auto p = cast(const(ubyte)*)(haystack.ptr+idx);
         uint state = uint.max;

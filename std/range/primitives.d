@@ -1390,28 +1390,56 @@ template hasLvalueElements(R)
 }
 
 /**
-Returns $(D true) if $(D R) has a $(D length) member that returns an
-integral type. $(D R) does not have to be a range. Note that $(D
-length) is an optional primitive as no range must implement it. Some
-ranges do not store their length explicitly, some cannot compute it
-without actually exhausting the range (e.g. socket streams), and some
-other ranges may be infinite.
+Yields `true` if `R` has a `length` member that returns a value of `size_t`
+type. `R` does not have to be a range. If `R` is a range, algorithms in the
+standard library are only guaranteed to support `length` with type `size_t`.
 
-Although narrow string types ($(D char[]), $(D wchar[]), and their
-qualified derivatives) do define a $(D length) property, $(D
-hasLength) yields $(D false) for them. This is because a narrow
-string's length does not reflect the number of characters, but instead
-the number of encoding units, and as such is not useful with
-range-oriented algorithms.
- */
+Note that `length` is an optional primitive as no range must implement it. Some
+ranges do not store their length explicitly, some cannot compute it without
+actually exhausting the range (e.g. socket streams), and some other ranges may
+be infinite.
+
+Although narrow string types (`char[]`, `wchar[]`, and their qualified
+derivatives) do define a `length` property, `hasLength` yields `false` for them.
+This is because a narrow string's length does not reflect the number of
+characters, but instead the number of encoding units, and as such is not useful
+with range-oriented algorithms. To use strings as random-access ranges with
+length, use $(REF representation, std, string) or $(REF byCodeUnit, std, utf).
+
+Deprecation: Historically `hasLength!R` yielded `true` for types whereby
+`R.length` returns other types convertible to `ulong`, such as `int`, `ushort`,
+`const(size_t)`, user-defined types using `alias this`, or notably `ulong` on
+32-bit systems. This behavior has  been deprecated. After December 2017,
+`hasLength` will yield `true` only if `R.length` yields the exact type `size_t`.
+*/
 template hasLength(R)
 {
-    enum bool hasLength = !isNarrowString!R && is(typeof(
-    (inout int = 0)
+    static if (is(typeof(((R* r) => r.length)(null)) Length))
     {
-        R r = R.init;
-        ulong l = r.length;
-    }));
+        static if (is(Length == size_t))
+        {
+            enum bool hasLength = !isNarrowString!R;
+        }
+        else static if (is(Length : ulong))
+        {
+            // @@@DEPRECATED_2017-12@@@
+            // Uncomment the deprecated(...) message and take the pragma(msg)
+            // out once https://issues.dlang.org/show_bug.cgi?id=10181 is fixed.
+            pragma(msg, __FILE__ ~ "(" ~ __LINE__.stringof ~
+                "): Note: length must have type size_t on all systems" ~
+                    ", please update your code by December 2017.");
+            //deprecated("length must have type size_t on all systems")
+            enum bool hasLength = true;
+        }
+        else
+        {
+            enum bool hasLength = false;
+        }
+    }
+    else
+    {
+        enum bool hasLength = false;
+    }
 }
 
 ///
@@ -1850,8 +1878,8 @@ if (isBidirectionalRange!Range)
 ///
 @safe unittest
 {
-    import std.algorithm.iteration : filterBidirectional;
     import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : filterBidirectional;
 
     auto a = [1, 2, 3];
     a.popFrontExactly(1);
@@ -2113,7 +2141,7 @@ if (isNarrowString!(C[]))
 
     static if (is(Unqual!C == char))
     {
-        __gshared static immutable ubyte[] charWidthTab = [
+        static immutable ubyte[] charWidthTab = [
             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
             2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
             3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,

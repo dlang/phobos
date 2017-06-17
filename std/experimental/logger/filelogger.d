@@ -1,8 +1,8 @@
 ///
 module std.experimental.logger.filelogger;
 
-import std.stdio;
 import std.experimental.logger.core;
+import std.stdio;
 
 /** This $(D Logger) implementation writes log messages to the associated
 file. The name of the file has to be passed on construction time. If the file
@@ -10,9 +10,9 @@ is already present new log messages will be append at its end.
 */
 class FileLogger : Logger
 {
-    import std.format : formattedWrite;
-    import std.datetime : SysTime;
     import std.concurrency : Tid;
+    import std.datetime : SysTime;
+    import std.format : formattedWrite;
 
     /** A constructor for the $(D FileLogger) Logger.
 
@@ -131,8 +131,8 @@ class FileLogger : Logger
 
 @system unittest
 {
-    import std.file : deleteme, remove;
     import std.array : empty;
+    import std.file : deleteme, remove;
     import std.string : indexOf;
 
     string filename = deleteme ~ __FUNCTION__ ~ ".tempLogFile";
@@ -160,8 +160,8 @@ class FileLogger : Logger
 
 @system unittest
 {
-    import std.file : deleteme, remove;
     import std.array : empty;
+    import std.file : deleteme, remove;
     import std.string : indexOf;
 
     string filename = deleteme ~ __FUNCTION__ ~ ".tempLogFile";

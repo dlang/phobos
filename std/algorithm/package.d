@@ -3,7 +3,7 @@
 /**
 This package implements generic algorithms oriented towards the processing of
 sequences. Sequences processed by these functions define range-based
-interfaces.  See also $(MREF_ALTTEF Reference on ranges, std, range) and
+interfaces.  See also $(MREF_ALTTEXT Reference on ranges, std, range) and
 $(HTTP ddili.org/ders/d.en/ranges.html, tutorial on ranges).
 
 $(SCRIPT inhibitQuickIndex = 1;)
@@ -190,11 +190,8 @@ module std.algorithm;
 public import std.algorithm.comparison;
 public import std.algorithm.iteration;
 public import std.algorithm.mutation;
-public import std.algorithm.setops;
 public import std.algorithm.searching;
+public import std.algorithm.setops;
 public import std.algorithm.sorting;
 
 static import std.functional;
-// Explicitly undocumented. It will be removed in March 2017. @@@DEPRECATED_2017-03@@@
-deprecated("Please use std.functional.forward instead.")
-alias forward = std.functional.forward;

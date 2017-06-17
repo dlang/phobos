@@ -27,10 +27,10 @@ module std.bigint;
 
 import std.conv : ConvException;
 
-private import std.internal.math.biguintcore;
 private import std.format : FormatSpec, FormatException;
-private import std.traits;
+private import std.internal.math.biguintcore;
 private import std.range.primitives;
+private import std.traits;
 
 /** A struct representing an arbitrary precision integer.
  *
@@ -59,7 +59,7 @@ public:
      *     s = a finite bidirectional range of any character type
      *
      * Throws:
-     *     $(D ConvException) if the string doesn't represent a valid number
+     *     $(REF ConvException, std,conv) if the string doesn't represent a valid number
      */
     this(Range)(Range s) if (
         isBidirectionalRange!Range &&
@@ -69,9 +69,9 @@ public:
     {
         import std.algorithm.iteration : filterBidirectional;
         import std.algorithm.searching : startsWith;
-        import std.utf : byChar;
-        import std.exception : enforce;
         import std.conv : ConvException;
+        import std.exception : enforce;
+        import std.utf : byChar;
 
         enforce!ConvException(!s.empty, "Can't initialize BigInt with an empty range");
 
@@ -125,8 +125,8 @@ public:
     @system unittest
     {
         // system because of the dummy ranges eventually call std.array!string
-        import std.internal.test.dummyrange;
         import std.exception : assertThrown;
+        import std.internal.test.dummyrange;
 
         auto r1 = new ReferenceBidirectionalRange!dchar("101");
         auto big1 = BigInt(r1);
@@ -1503,8 +1503,8 @@ unittest
     assert(__traits(compiles, foo(cbi)));
     assert(__traits(compiles, foo(ibi)));
 
-    import std.meta : AliasSeq;
     import std.conv : to;
+    import std.meta : AliasSeq;
 
     foreach (T1; AliasSeq!(BigInt, const(BigInt), immutable(BigInt)))
     {

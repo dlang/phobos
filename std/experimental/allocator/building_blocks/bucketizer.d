@@ -17,8 +17,8 @@ for $(D Bucketizer). To handle them separately, $(D Segregator) may be of use.
 */
 struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 {
-    import std.traits : hasMember;
     import common = std.experimental.allocator.common : roundUpToMultipleOf;
+    import std.traits : hasMember;
     import std.typecons : Ternary;
 
     static assert((max - (min - 1)) % step == 0,
@@ -206,7 +206,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     resolveInternalPointer), and tries it for each bucket in turn.
     */
     static if (hasMember!(Allocator, "resolveInternalPointer"))
-    Ternary resolveInternalPointer(void* p, ref void[] result)
+    Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
         foreach (ref a; buckets)
         {
@@ -220,13 +220,13 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 ///
 @system unittest
 {
+    import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.allocator_list : AllocatorList;
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.building_blocks.region : Region;
-    import std.experimental.allocator.mallocator : Mallocator;
     import std.experimental.allocator.common : unbounded;
+    import std.experimental.allocator.mallocator : Mallocator;
     import std.typecons : Ternary;
-    import std.algorithm.comparison : max;
     Bucketizer!(
         FreeList!(
             AllocatorList!(

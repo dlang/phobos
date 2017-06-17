@@ -105,8 +105,8 @@ template unaryFun(alias fun, string parmName = "a")
     {
         static if (!fun._ctfeMatchUnary(parmName))
         {
-            import std.traits, std.typecons, std.meta;
             import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+            import std.meta, std.traits, std.typecons;
         }
         auto unaryFun(ElementType)(auto ref ElementType __a)
         {
@@ -190,8 +190,8 @@ template binaryFun(alias fun, string parm1Name = "a",
     {
         static if (!fun._ctfeMatchBinary(parm1Name, parm2Name))
         {
-            import std.traits, std.typecons, std.meta;
             import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+            import std.meta, std.traits, std.typecons;
         }
         auto binaryFun(ElementType1, ElementType2)
             (auto ref ElementType1 __a, auto ref ElementType2 __b)

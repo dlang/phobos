@@ -247,9 +247,9 @@ if (!allSatisfy!(isForwardRange, R1, R2) ||
 
 @safe unittest
 {
-    import std.algorithm.searching : canFind;
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
+    import std.algorithm.searching : canFind;
     import std.typecons : tuple;
 
     import std.range;

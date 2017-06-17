@@ -5,8 +5,8 @@ Used with the dummy ranges for testing higher order ranges.
 module std.internal.test.dummyrange;
 
 import std.meta;
-import std.typecons;
 import std.range.primitives;
+import std.typecons;
 
 enum RangeType
 {
@@ -390,8 +390,8 @@ if (is(T == TestFoo))
 
     static auto iota(size_t low = 1, size_t high = 11)
     {
-        import std.range : iota;
         import std.algorithm.iteration : map;
+        import std.range : iota;
         return iota(cast(int) low, cast(int) high).map!(a => TestFoo(a));
     }
 

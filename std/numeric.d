@@ -2187,10 +2187,10 @@ F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
 if (isRandomAccessRange!(R1) && hasLength!(R1) &&
     isRandomAccessRange!(R2) && hasLength!(R2))
 {
-    import std.functional : binaryFun;
-    import std.algorithm.mutation : swap;
-    import core.stdc.stdlib : malloc, free;
     import core.exception : onOutOfMemoryError;
+    import core.stdc.stdlib : malloc, free;
+    import std.algorithm.mutation : swap;
+    import std.functional : binaryFun;
 
     if (s.length < t.length) return gapWeightedSimilarity(t, s, lambda);
     if (!t.length) return 0;
@@ -2601,8 +2601,16 @@ GapWeightedSimilarityIncremental!(R, F) gapWeightedSimilarityIncremental(R, F)
 Computes the greatest common divisor of $(D a) and $(D b) by using
 an efficient algorithm such as $(HTTPS en.wikipedia.org/wiki/Euclidean_algorithm, Euclid's)
 or $(HTTPS en.wikipedia.org/wiki/Binary_GCD_algorithm, Stein's) algorithm.
+
+Params:
+    T = Any numerical type that supports the modulo operator `%`. If
+        bit-shifting `<<` and `>>` are also supported, Stein's algorithm will
+        be used; otherwise, Euclid's algorithm is used as _a fallback.
+Returns:
+    The greatest common divisor of the given arguments.
  */
 T gcd(T)(T a, T b)
+    if (isIntegral!T)
 {
     static if (is(T == const) || is(T == immutable))
     {
@@ -2655,6 +2663,89 @@ T gcd(T)(T a, T b)
     assert(gcd(a, b) == 13);
 }
 
+// This overload is for non-builtin numerical types like BigInt or
+// user-defined types.
+/// ditto
+T gcd(T)(T a, T b)
+    if (!isIntegral!T &&
+        is(typeof(T.init % T.init)) &&
+        is(typeof(T.init == 0 || T.init > 0)))
+{
+    import std.algorithm.mutation : swap;
+
+    enum canUseBinaryGcd = is(typeof(() {
+        T t, u;
+        t <<= 1;
+        t >>= 1;
+        t -= u;
+        bool b = (t & 1) == 0;
+        swap(t, u);
+    }));
+
+    assert(a >= 0 && b >= 0);
+
+    static if (canUseBinaryGcd)
+    {
+        uint shift = 0;
+        while ((a & 1) == 0 && (b & 1) == 0)
+        {
+            a >>= 1;
+            b >>= 1;
+            shift++;
+        }
+
+        do
+        {
+            assert((a & 1) != 0);
+            while ((b & 1) == 0)
+                b >>= 1;
+            if (a > b)
+                swap(a, b);
+            b -= a;
+        } while (b);
+
+        return a << shift;
+    }
+    else
+    {
+        // The only thing we have is %; fallback to Euclidean algorithm.
+        while (b != 0)
+        {
+            auto t = b;
+            b = a % b;
+            a = t;
+        }
+        return a;
+    }
+}
+
+// Issue 7102
+@system pure unittest
+{
+    import std.bigint : BigInt;
+    assert(gcd(BigInt("71_000_000_000_000_000_000"),
+               BigInt("31_000_000_000_000_000_000")) ==
+           BigInt("1_000_000_000_000_000_000"));
+}
+
+@safe pure nothrow unittest
+{
+    // A numerical type that only supports % and - (to force gcd implementation
+    // to use Euclidean algorithm).
+    struct CrippledInt
+    {
+        int impl;
+        CrippledInt opBinary(string op : "%")(CrippledInt i)
+        {
+            return CrippledInt(impl % i.impl);
+        }
+        int opEquals(CrippledInt i) { return impl == i.impl; }
+        int opEquals(int i) { return impl == i; }
+        int opCmp(int i) { return (impl < i) ? -1 : (impl > i) ? 1 : 0; }
+    }
+    assert(gcd(CrippledInt(2310), CrippledInt(1309)) == CrippledInt(77));
+}
+
 // This is to make tweaking the speed/size vs. accuracy tradeoff easy,
 // though floats seem accurate enough for all practical purposes, since
 // they pass the "approxEqual(inverseFft(fft(arr)), arr)" test even for
@@ -2674,8 +2765,8 @@ private alias lookup_t = float;
  */
 final class Fft
 {
-    import std.algorithm.iteration : map;
     import core.bitop : bsf;
+    import std.algorithm.iteration : map;
     import std.array : uninitializedArray;
 
 private:
@@ -3164,8 +3255,8 @@ void inverseFft(Ret, R)(R range, Ret buf)
 @system unittest
 {
     import std.algorithm;
-    import std.range;
     import std.conv;
+    import std.range;
     // Test values from R and Octave.
     auto arr = [1,2,3,4,5,6,7,8];
     auto fft1 = fft(arr);

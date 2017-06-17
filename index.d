@@ -461,7 +461,6 @@ $(COMMENT
     $(TR
         $(TDNW
             $(LINK2 core_sync_config.html, core.sync.config)$(BR)
-            $(LINK2 std_concurrencybase.html, std.concurrencybase)$(BR)
             $(LINK2 std_container_util.html, std.container.util)$(BR)
             $(LINK2 std_regex_internal_backtracking.html, std.regex.internal.backtracking)$(BR)
             $(LINK2 std_regex_internal_generator.html, std.regex.internal.generator)$(BR)
@@ -470,7 +469,6 @@ $(COMMENT
             $(LINK2 std_regex_internal_parser.html, std.regex.internal.parser)$(BR)
             $(LINK2 std_regex_internal_tests.html, std.regex.internal.tests)$(BR)
             $(LINK2 std_regex_internal_thompson.html, std.regex.internal.thompson)$(BR)
-            $(LINK2 std_stdiobase.html, std.stdiobase)$(BR)
         )
         $(TD
              Internal modules.

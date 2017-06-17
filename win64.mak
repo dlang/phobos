@@ -112,7 +112,6 @@ SRC= \
 # The separation is a workaround for bug 4904 (optlink bug 3372).
 SRC_STD_1= \
 	std\stdio.d \
-	std\stdiobase.d \
 	std\string.d \
 	std\format.d \
 	std\file.d
@@ -153,11 +152,9 @@ SRC_STD_3c= \
 	std\exception.d \
 	std\compiler.d \
 	std\system.d \
-	std\concurrency.d \
-	std\concurrencybase.d
+	std\concurrency.d
 
 SRC_STD_3d= \
-	std\datetime.d \
 	std\bitmanip.d \
 	std\typecons.d
 
@@ -201,13 +198,16 @@ SRC_STD_ALGO_1= \
 
 SRC_STD_ALGO_2= \
 	std\algorithm\searching.d \
-	std\algorithm\setops.d \
+	std\algorithm\setops.d
+
+SRC_STD_ALGO_3= \
 	std\algorithm\sorting.d \
 	std\algorithm\internal.d
 
 SRC_STD_ALGO= \
 	$(SRC_STD_ALGO_1) \
-	$(SRC_STD_ALGO_2)
+	$(SRC_STD_ALGO_2) \
+	$(SRC_STD_ALGO_3)
 
 SRC_STD_CONTAINER= \
 	std\container\array.d \
@@ -217,6 +217,14 @@ SRC_STD_CONTAINER= \
 	std\container\slist.d \
 	std\container\util.d \
 	std\container\package.d
+
+SRC_STD_DATETIME= \
+	std\datetime\date.d \
+	std\datetime\interval.d \
+	std\datetime\package.d \
+	std\datetime\stopwatch.d \
+	std\datetime\systime.d \
+	std\datetime\timezone.d
 
 SRC_STD_DIGEST= \
 	std\digest\crc.d \
@@ -286,8 +294,6 @@ SRC_STD_C_FREEBSD= \
 
 SRC_STD_INTERNAL= \
 	std\internal\cstring.d \
-	std\internal\encodinginit.d \
-	std\internal\processinit.d \
 	std\internal\unicode_tables.d \
 	std\internal\unicode_comp.d \
 	std\internal\unicode_decomp.d \
@@ -361,6 +367,7 @@ SRC_TO_COMPILE= \
 	$(SRC_STD) \
 	$(SRC_STD_ALGO) \
 	$(SRC_STD_CONTAINER) \
+	$(SRC_STD_DATETIME) \
 	$(SRC_STD_DIGEST) \
 	$(SRC_STD_NET) \
 	$(SRC_STD_RANGE) \
@@ -467,6 +474,11 @@ DOCS= \
 	$(DOC)\std_digest_hmac.html \
 	$(DOC)\std_csv.html \
 	$(DOC)\std_datetime.html \
+	$(DOC)\std_datetime_date.html \
+	$(DOC)\std_datetime_interval.html \
+	$(DOC)\std_datetime_stopwatch.html \
+	$(DOC)\std_datetime_systime.html \
+	$(DOC)\std_datetime_timezone.html \
 	$(DOC)\std_demangle.html \
 	$(DOC)\std_encoding.html \
 	$(DOC)\std_exception.html \
@@ -574,6 +586,7 @@ UNITTEST_OBJS= \
 		unittest4.obj \
 		unittest5a.obj \
 		unittest5b.obj \
+		unittest5c.obj \
 		unittest6a.obj \
 		unittest6c.obj \
 		unittest6e.obj \
@@ -597,10 +610,11 @@ unittest : $(LIB)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3a.obj $(SRC_STD_3a)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3b.obj $(SRC_STD_3b)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3c.obj $(SRC_STD_3c)
-	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3d.obj $(SRC_STD_3d)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest3d.obj $(SRC_STD_3d) $(SRC_STD_DATETIME)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest4.obj $(SRC_STD_4) $(SRC_STD_DIGEST)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5a.obj $(SRC_STD_ALGO_1)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5b.obj $(SRC_STD_ALGO_2)
+	$(DMD) $(UDFLAGS) -c -unittest -ofunittest5c.obj $(SRC_STD_ALGO_3)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6a.obj $(SRC_STD_6a)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6c.obj $(SRC_STD_6c)
 	$(DMD) $(UDFLAGS) -c -unittest -ofunittest6e.obj $(SRC_STD_6e)
@@ -795,8 +809,23 @@ $(DOC)\std_range_interfaces.html : $(STDDOC) std\range\interfaces.d
 $(DOC)\std_csv.html : $(STDDOC) std\csv.d
 	$(DMD) -c -o- $(DFLAGS) -Df$(DOC)\std_csv.html $(STDDOC) std\csv.d
 
-$(DOC)\std_datetime.html : $(STDDOC) std\datetime.d
-	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime.html $(STDDOC) std\datetime.d
+$(DOC)\std_datetime.html : $(STDDOC) std\datetime\package.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime.html $(STDDOC) std\datetime\package.d
+
+$(DOC)\std_datetime_date.html : $(STDDOC) std\datetime\date.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_date.html $(STDDOC) std\datetime\date.d
+
+$(DOC)\std_datetime_interval.html : $(STDDOC) std\datetime\interval.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_interval.html $(STDDOC) std\datetime\interval.d
+
+$(DOC)\std_datetime_stopwatch.html : $(STDDOC) std\datetime\stopwatch.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_stopwatch.html $(STDDOC) std\datetime\stopwatch.d
+
+$(DOC)\std_datetime_systime.html : $(STDDOC) std\datetime\systime.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_systime.html $(STDDOC) std\datetime\systime.d
+
+$(DOC)\std_datetime_timezone.html : $(STDDOC) std\datetime\timezone.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_datetime_timezone.html $(STDDOC) std\datetime\timezone.d
 
 $(DOC)\std_demangle.html : $(STDDOC) std\demangle.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_demangle.html $(STDDOC) std\demangle.d

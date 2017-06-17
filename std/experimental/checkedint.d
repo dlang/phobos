@@ -214,8 +214,8 @@ struct Checked(T, Hook = Abort)
 if (isIntegral!T || is(T == Checked!(U, H), U, H))
 {
     import std.algorithm.comparison : among;
-    import std.traits : hasMember;
     import std.experimental.allocator.common : stateSize;
+    import std.traits : hasMember;
 
     /**
     The type of the integral subject to checking.
@@ -2263,13 +2263,13 @@ Params:
 x = The binary operator involved, e.g. `/`
 lhs = The left-hand side of the operator
 rhs = The right-hand side of the operator
-error = The error indicator (assigned `true` in case there's an error)
+overflow = The overflow indicator (assigned `true` in case there's an error)
 
 Returns:
 The result of the operation, which is the same as the built-in operator
 */
 typeof(mixin(x == "cmp" ? "0" : ("L() " ~ x ~ " R()")))
-opChecked(string x, L, R)(const L lhs, const R rhs, ref bool error)
+opChecked(string x, L, R)(const L lhs, const R rhs, ref bool overflow)
 if (isIntegral!L && isIntegral!R)
 {
     static if (x == "cmp")
@@ -2304,7 +2304,7 @@ if (isIntegral!L && isIntegral!R)
                 if (lhs >= 0)
                     return true;
             }
-            error = true;
+            overflow = true;
             return true;
         }
     }
@@ -2317,12 +2317,12 @@ if (isIntegral!L && isIntegral!R)
             static assert(isUnsigned!L != isUnsigned!R);
             if (!isUnsigned!L && lhs < 0)
             {
-                error = true;
+                overflow = true;
                 return -1;
             }
             if (!isUnsigned!R && rhs < 0)
             {
-                error = true;
+                overflow = true;
                 return 1;
             }
         }
@@ -2344,7 +2344,7 @@ if (isIntegral!L && isIntegral!R)
     else static if (x == "^^")
     {
         // Exponentiation is weird, handle separately
-        return pow(lhs, rhs, error);
+        return pow(lhs, rhs, overflow);
     }
     else static if (valueConvertible!(L, Result) &&
             valueConvertible!(R, Result))
@@ -2359,13 +2359,13 @@ if (isIntegral!L && isIntegral!R)
         {
             static if (isUnsigned!Result) alias impl = addu;
             else alias impl = adds;
-            return impl(Result(lhs), Result(rhs), error);
+            return impl(Result(lhs), Result(rhs), overflow);
         }
         else static if (x == "-")
         {
             static if (isUnsigned!Result) alias impl = subu;
             else alias impl = subs;
-            return impl(Result(lhs), Result(rhs), error);
+            return impl(Result(lhs), Result(rhs), overflow);
         }
         else static if (x == "*")
         {
@@ -2376,7 +2376,7 @@ if (isIntegral!L && isIntegral!R)
             }
             static if (isUnsigned!Result) alias impl = mulu;
             else alias impl = muls;
-            return impl(Result(lhs), Result(rhs), error);
+            return impl(Result(lhs), Result(rhs), overflow);
         }
         else static if (x == "/" || x == "%")
         {
@@ -2399,14 +2399,14 @@ if (isIntegral!L && isIntegral!R)
             static if (!isUnsigned!L)
             {
                 if (lhs < 0)
-                    return subu(Result(rhs), Result(-lhs), error);
+                    return subu(Result(rhs), Result(-lhs), overflow);
             }
             else static if (!isUnsigned!R)
             {
                 if (rhs < 0)
-                    return subu(Result(lhs), Result(-rhs), error);
+                    return subu(Result(lhs), Result(-rhs), overflow);
             }
-            return addu(Result(lhs), Result(rhs), error);
+            return addu(Result(lhs), Result(rhs), overflow);
         }
         else static if (x == "-")
         {
@@ -2417,9 +2417,9 @@ if (isIntegral!L && isIntegral!R)
             else static if (!isUnsigned!R)
             {
                 if (rhs < 0)
-                    return addu(Result(lhs), Result(-rhs), error);
+                    return addu(Result(lhs), Result(-rhs), overflow);
             }
-            return subu(Result(lhs), Result(rhs), error);
+            return subu(Result(lhs), Result(rhs), overflow);
         }
         else static if (x == "*")
         {
@@ -2431,7 +2431,7 @@ if (isIntegral!L && isIntegral!R)
             {
                 if (rhs < 0) goto fail;
             }
-            return mulu(Result(lhs), Result(rhs), error);
+            return mulu(Result(lhs), Result(rhs), overflow);
         }
         else static if (x == "/" || x == "%")
         {
@@ -2449,7 +2449,7 @@ if (isIntegral!L && isIntegral!R)
     }
     debug assert(false);
 fail:
-    error = true;
+    overflow = true;
     return Result(0);
 }
 

@@ -75,14 +75,14 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
  */
 module std.algorithm.sorting;
 
-import std.typecons : Flag;
 import std.algorithm.mutation : SwapStrategy;
 import std.functional; // : unaryFun, binaryFun;
 import std.range.primitives;
+import std.typecons : Flag;
 // FIXME
+import std.meta; // : allSatisfy;
 import std.range; // : SortedRange;
 import std.traits;
-import std.meta; // : allSatisfy;
 
 /**
 Specifies whether the output of certain algorithm is desired in sorted
@@ -518,10 +518,10 @@ if (ss != SwapStrategy.stable && isInputRange!Range && hasSwappableElements!Rang
 ///
 @safe unittest
 {
+    import std.algorithm.mutation : SwapStrategy;
     import std.algorithm.searching : count, find;
     import std.conv : text;
     import std.range.primitives : empty;
-    import std.algorithm.mutation : SwapStrategy;
 
     auto Arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     auto arr = Arr.dup;
@@ -746,8 +746,8 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
         assert(pivot == 0 || pivot == 1);
         assert(a == [ 42, 42 ]);
 
-        import std.random;
         import std.algorithm.iteration : map;
+        import std.random;
         import std.stdio;
         auto s = unpredictableSeed;
         auto g = Random(s);
@@ -830,8 +830,8 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
     // The algorithm is described in "Engineering a sort function" by
     // Jon Bentley et al, pp 1257.
 
-    import std.algorithm.mutation : swap, swapAt, swapRanges;
     import std.algorithm.comparison : min;
+    import std.algorithm.mutation : swap, swapAt, swapRanges;
     import std.typecons : tuple;
 
     alias lessFun = binaryFun!less;
@@ -986,8 +986,8 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
     isRandomAccessRange!RangeIndex && !isInfinite!RangeIndex &&
     isIntegral!(ElementType!RangeIndex))
 {
-    import std.exception : enforce;
     import std.conv : to;
+    import std.exception : enforce;
 
     alias IndexType = Unqual!(ElementType!RangeIndex);
     enforce(r.length == index.length,
@@ -1443,8 +1443,8 @@ template multiSort(less...) //if (less.length > 1)
     auto multiSort(Range)(Range r)
     if (validPredicates!(ElementType!Range, less))
     {
-        import std.range : assumeSorted;
         import std.meta : AliasSeq;
+        import std.range : assumeSorted;
         static if (is(typeof(less[$ - 1]) == SwapStrategy))
         {
             enum ss = less[$ - 1];
@@ -1899,8 +1899,8 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
     // Sorting floating-point numbers in presence of NaN
     double[] numbers = [-0.0, 3.0, -2.0, double.nan, 0.0, -double.nan];
 
-    import std.math : cmp, isIdentical;
     import std.algorithm.comparison : equal;
+    import std.math : cmp, isIdentical;
 
     sort!((a, b) => cmp(a, b) < 0)(numbers);
 
@@ -1911,7 +1911,7 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
 @safe unittest
 {
     // Simple regression benchmark
-    import std.random, std.algorithm.iteration, std.algorithm.mutation;
+    import std.algorithm.iteration, std.algorithm.mutation, std.random;
     Random rng;
     int[] a = iota(20148).map!(_ => uniform(-1000, 1000, rng)).array;
     static uint comps;
@@ -2038,8 +2038,8 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
 
 private void quickSortImpl(alias less, Range)(Range r, size_t depth)
 {
-    import std.algorithm.mutation : swap, swapAt;
     import std.algorithm.comparison : min, max;
+    import std.algorithm.mutation : swap, swapAt;
 
     alias Elem = ElementType!(Range);
     enum size_t shortSortGetsBetter = max(32, 1024 / Elem.sizeof);
@@ -2833,7 +2833,7 @@ private template TimSortImpl(alias pred, R)
 @safe unittest
 {
     // Issue 14223
-    import std.range, std.array;
+    import std.array, std.range;
     auto arr = chain(iota(0, 384), iota(0, 256), iota(0, 80), iota(0, 64), iota(0, 96)).array;
     sort!("a < b", SwapStrategy.stable)(arr);
 }
@@ -2893,14 +2893,14 @@ schwartzSort(alias transform, alias less = "a < b",
 if (isRandomAccessRange!R && hasLength!R)
 {
     import std.conv : emplace;
-    import std.string : representation;
     import std.range : zip, SortedRange;
+    import std.string : representation;
 
     alias T = typeof(unaryFun!transform(r.front));
     static trustedMalloc(size_t len) @trusted
     {
-        import core.stdc.stdlib : malloc;
         import core.checkedint : mulu;
+        import core.stdc.stdlib : malloc;
         bool overflow;
         const nbytes = mulu(len, T.sizeof, overflow);
         if (overflow) assert(0);
@@ -3436,8 +3436,8 @@ private T[] randomArray(Flag!"exactSize" flag = No.exactSize, T = int)(
     size_t maxSize = 1000,
     T minValue = 0, T maxValue = 255)
 {
-    import std.random : unpredictableSeed, Random, uniform;
     import std.algorithm.iteration : map;
+    import std.random : unpredictableSeed, Random, uniform;
     auto size = flag == Yes.exactSize ? maxSize : uniform(1, maxSize);
     return iota(0, size).map!(_ => uniform(minValue, maxValue)).array;
 }

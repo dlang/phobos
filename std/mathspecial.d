@@ -53,9 +53,9 @@
  * Source:    $(PHOBOSSRC std/_mathspecial.d)
  */
 module std.mathspecial;
-public import std.math;
-private import std.internal.math.gammafunction;
 private import std.internal.math.errorfunction;
+private import std.internal.math.gammafunction;
+public import std.math;
 
 /* ***********************************************
  *            GAMMA AND RELATED FUNCTIONS        *
@@ -348,6 +348,8 @@ real normalDistribution(real x)
  * Returns the argument, x, for which the area under the
  * Normal probability density function (integrated from
  * minus infinity to x) is equal to p.
+ *
+ * Note: This function is only implemented to 80 bit precision.
  */
 real normalDistributionInverse(real p)
 in {

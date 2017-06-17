@@ -165,7 +165,7 @@ if (isBidirectionalRange!Range)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.stdio, std.range;
+    import std.range, std.stdio;
     import std.typecons : tuple;
 
     ulong counter = 0;
@@ -682,8 +682,8 @@ private struct MapResult(alias fun, Range)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.internal.test.dummyrange;
     import std.ascii : toUpper;
+    import std.internal.test.dummyrange;
     import std.range;
     import std.typecons : tuple;
 
@@ -1070,6 +1070,7 @@ public:
     assert(s.x == 2);
 }
 
+// filter
 /**
 $(D auto filter(Range)(Range rs) if (isInputRange!(Unqual!Range));)
 
@@ -1130,14 +1131,27 @@ private struct FilterResult(alias pred, Range)
 {
     alias R = Unqual!Range;
     R _input;
+    private bool _primed;
 
-    this(R r)
+    private void prime()
     {
-        _input = r;
+        if (_primed) return;
         while (!_input.empty && !pred(_input.front))
         {
             _input.popFront();
         }
+        _primed = true;
+    }
+
+    this(R r)
+    {
+        _input = r;
+    }
+
+    private this(R r, bool primed)
+    {
+        _input = r;
+        _primed = primed;
     }
 
     auto opSlice() { return this; }
@@ -1148,7 +1162,7 @@ private struct FilterResult(alias pred, Range)
     }
     else
     {
-        @property bool empty() { return _input.empty; }
+        @property bool empty() { prime; return _input.empty; }
     }
 
     void popFront()
@@ -1157,10 +1171,12 @@ private struct FilterResult(alias pred, Range)
         {
             _input.popFront();
         } while (!_input.empty && !pred(_input.front));
+        _primed = true;
     }
 
     @property auto ref front()
     {
+        prime;
         assert(!empty, "Attempting to fetch the front of an empty filter.");
         return _input.front;
     }
@@ -1169,7 +1185,7 @@ private struct FilterResult(alias pred, Range)
     {
         @property auto save()
         {
-            return typeof(this)(_input.save);
+            return typeof(this)(_input.save, _primed);
         }
     }
 }
@@ -1179,6 +1195,8 @@ private struct FilterResult(alias pred, Range)
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange;
     import std.range;
+
+    auto shouldNotLoop4ever = repeat(1).filter!(x => x % 2 == 0);
 
     int[] a = [ 3, 4, 2 ];
     auto r = filter!("a > 3")(a);
@@ -1941,8 +1959,8 @@ version(none) // this example requires support for non-equivalence relations
 /* FIXME: pure @safe nothrow*/ @system unittest
 {
     import std.algorithm.comparison : equal;
-    import std.typecons : tuple;
     import std.range.primitives;
+    import std.typecons : tuple;
 
     // Grouping by particular attribute of each element:
     auto range =
@@ -2278,8 +2296,8 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 @system unittest
 {
     import std.algorithm.comparison : equal;
-    import std.range.primitives;
     import std.range.interfaces;
+    import std.range.primitives;
     // joiner() should work for non-forward ranges too.
     auto r = inputRangeObject(["abc", "def"]);
     assert(equal(joiner(r, "xyz"), "abcxyzdef"));
@@ -2589,8 +2607,8 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 
 @safe unittest
 {
-    import std.algorithm.internal : algoFormat;
     import std.algorithm.comparison : equal;
+    import std.algorithm.internal : algoFormat;
 
     struct TransientRange
     {
@@ -2639,8 +2657,8 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 // Issue 8061
 @system unittest
 {
-    import std.range.interfaces;
     import std.conv : to;
+    import std.range.interfaces;
 
     auto r = joiner([inputRangeObject("ab"), inputRangeObject("cd")]);
     assert(isForwardRange!(typeof(r)));
@@ -3830,9 +3848,9 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 
 @safe unittest
 {
-    import std.internal.test.dummyrange;
     import std.algorithm;
     import std.array : array;
+    import std.internal.test.dummyrange;
     import std.range : retro;
 
     assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
@@ -4077,8 +4095,8 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.conv : text;
     import std.array : split;
+    import std.conv : text;
 
     auto s = ",abc, de, fg,hi,";
     auto sp0 = splitter(s, ',');
@@ -4342,8 +4360,8 @@ private struct SplitterResult(alias isTerminator, Range)
 
 @safe unittest
 {
-    import std.algorithm.internal : algoFormat;
     import std.algorithm.comparison : equal;
+    import std.algorithm.internal : algoFormat;
     import std.internal.test.dummyrange;
 
     void compare(string sentence, string[] witness)
@@ -4377,8 +4395,8 @@ private struct SplitterResult(alias isTerminator, Range)
 
 @safe unittest
 {
-    import std.algorithm.internal : algoFormat;
     import std.algorithm.comparison : equal;
+    import std.algorithm.internal : algoFormat;
     import std.range;
 
     struct Entry
@@ -4542,10 +4560,10 @@ if (isSomeChar!C)
 
 @safe unittest
 {
-    import std.algorithm.internal : algoFormat;
     import std.algorithm.comparison : equal;
-    import std.conv : text;
+    import std.algorithm.internal : algoFormat;
     import std.array : split;
+    import std.conv : text;
 
     // Check consistency:
     // All flavors of split should produce the same results
@@ -4935,8 +4953,8 @@ if (isInputRange!Range && is(typeof(binaryFun!pred(r.front, r.front)) == bool))
 ///
 @safe unittest
 {
-    import std.algorithm.mutation : copy;
     import std.algorithm.comparison : equal;
+    import std.algorithm.mutation : copy;
 
     int[] arr = [ 1, 2, 2, 2, 2, 3, 4, 4, 4, 5 ];
     assert(equal(uniq(arr), [ 1, 2, 3, 4, 5 ][]));
@@ -5107,8 +5125,8 @@ if (isRandomAccessRange!Range && hasLength!Range)
     ///
     this(Range r)
     {
-        import std.range : iota;
         import std.array : array;
+        import std.range : iota;
 
         this._r = r;
         _state = r.length ? new size_t[r.length-1] : null;

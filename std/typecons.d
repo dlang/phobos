@@ -970,7 +970,7 @@ template Tuple(Specs...)
         }
 
         /**
-         * Takes a slice of this `Tuple`.
+         * Takes a slice by-reference of this `Tuple`.
          *
          * Params:
          *     from = A `size_t` designating the starting position of the slice.
@@ -982,9 +982,14 @@ template Tuple(Specs...)
          *     the original.
          */
         @property
-        ref Tuple!(sliceSpecs!(from, to)) slice(size_t from, size_t to)() @trusted
+        ref inout(Tuple!(sliceSpecs!(from, to))) slice(size_t from, size_t to)() inout @trusted
         if (from <= to && to <= Types.length)
         {
+            static assert(
+                (typeof(this).alignof % typeof(return).alignof == 0) &&
+                (expand[from].offsetof % typeof(return).alignof == 0),
+                "Slicing by reference is impossible because of an alignment mistmatch. (See Phobos issue #15645.)");
+
             return *cast(typeof(return)*) &(field[from]);
         }
 
@@ -997,6 +1002,10 @@ template Tuple(Specs...)
             auto s = a.slice!(1, 3);
             static assert(is(typeof(s) == Tuple!(string, float)));
             assert(s[0] == "abc" && s[1] == 4.5);
+
+            // Phobos issue #15645
+            Tuple!(int, short, bool, double) b;
+            static assert(!__traits(compiles, b.slice!(2, 4)));
         }
 
         /**
@@ -4813,7 +4822,7 @@ if (!isMutable!Target)
 }
 
 // Make a tuple of non-static function symbols
-private template GetOverloadedMethods(T)
+package template GetOverloadedMethods(T)
 {
     import std.meta : Filter;
 
@@ -4955,7 +4964,7 @@ version(unittest)
     static assert(findCovariantFunction!(UnittestFuncInfo!nomatch,  B, methodsB) == ptrdiff_t.max);
 }
 
-private template DerivedFunctionType(T...)
+package template DerivedFunctionType(T...)
 {
     static if (!T.length)
     {
@@ -5080,7 +5089,7 @@ package template staticIota(int beg, int end)
     }
 }
 
-private template mixinAll(mixins...)
+package template mixinAll(mixins...)
 {
     static if (mixins.length == 1)
     {
@@ -5101,7 +5110,7 @@ private template mixinAll(mixins...)
     }
 }
 
-private template Bind(alias Template, args1...)
+package template Bind(alias Template, args1...)
 {
     alias Bind(args2...) = Template!(args1, args2);
 }
@@ -5121,9 +5130,28 @@ enum RefCountedAutoInitialize
 
 /**
 Defines a reference-counted object containing a $(D T) value as
-payload. $(D RefCounted) keeps track of all references of an object,
-and when the reference count goes down to zero, frees the underlying
-store. $(D RefCounted) uses $(D malloc) and $(D free) for operation.
+payload.
+
+An instance of $(D RefCounted) is a reference to a structure,
+which is referred to as the $(I store), or $(I storage implementation
+struct) in this documentation.  The store contains a reference count
+and the $(D T) payload.  $(D RefCounted) uses $(D malloc) to allocate
+the store.  As instances of $(D RefCounted) are copied or go out of
+scope, they will automatically increment or decrement the reference
+count.  When the reference count goes down to zero, $(D RefCounted)
+will call $(D destroy) against the payload and call $(D free) to
+deallocate the store.  If the $(D T) payload contains any references
+to GC-allocated memory, then $(RefCounted) will add it to the GC memory
+that is scanned for pointers, and remove it from GC scanning before
+$(D free) is called on the store.
+
+One important consequence of $(D destroy) is that it will call the
+destructor of the $(D T) payload.  GC-managed references are not
+guaranteed to be valid during a destructor call, but other members of
+$(D T), such as file handles or pointers to $(D malloc) memory, will
+still be valid during the destructor call.  This allows the $(D T) to
+deallocate or clean up any non-GC resources immediately after the
+reference count has reached zero.
 
 $(D RefCounted) is unsafe and should be used with care. No references
 to the payload should be escaped outside the $(D RefCounted) object.

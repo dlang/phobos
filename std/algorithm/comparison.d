@@ -63,8 +63,8 @@ import std.functional; // : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
 // FIXME
-import std.typecons; // : tuple, Tuple, Flag, Yes;
 import std.meta : allSatisfy;
+import std.typecons; // : tuple, Tuple, Flag, Yes;
 
 /**
 Find $(D value) _among $(D values), returning the 1-based index
@@ -554,8 +554,6 @@ body
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int a = 1;
     short b = 6;
     double c = 2;
@@ -827,8 +825,8 @@ template equal(alias pred = "a == b")
 ///
 @safe unittest
 {
-    import std.math : approxEqual;
     import std.algorithm.comparison : equal;
+    import std.math : approxEqual;
 
     int[] a = [ 1, 2, 4, 3 ];
     assert(!equal(a, a[1..$]));
@@ -853,8 +851,8 @@ range of range (of range...) comparisons.
  +/
 @safe unittest
 {
-    import std.range : iota, chunks;
     import std.algorithm.comparison : equal;
+    import std.range : iota, chunks;
     assert(equal!(equal!equal)(
         [[[0, 1], [2, 3]], [[4, 5], [6, 7]]],
         iota(0, 8).chunks(2).chunks(2)
@@ -864,12 +862,9 @@ range of range (of range...) comparisons.
 @safe unittest
 {
     import std.algorithm.iteration : map;
-    import std.math : approxEqual;
     import std.internal.test.dummyrange : ReferenceForwardRange,
         ReferenceInputRange, ReferenceInfiniteForwardRange;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    import std.math : approxEqual;
 
     // various strings
     assert(equal("æøå", "æøå")); //UTF8 vs UTF8
@@ -1074,8 +1069,8 @@ private:
         cols = c;
         if (_matrix.length < rc)
         {
-            import core.stdc.stdlib : realloc;
             import core.exception : onOutOfMemoryError;
+            import core.stdc.stdlib : realloc;
             const nbytes = mulu(rc, _matrix[0].sizeof, overflow);
             if (overflow) assert(0);
             auto m = cast(CostType *) realloc(_matrix.ptr, nbytes);
@@ -1335,8 +1330,6 @@ if (isForwardRange!(Range1) && isForwardRange!(Range2))
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     assert(levenshteinDistance("a", "a") == 0);
     assert(levenshteinDistance("a", "b") == 1);
     assert(levenshteinDistance("aa", "ab") == 1);
@@ -1422,8 +1415,6 @@ if (T.length >= 2)
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int a = 5;
     short b = 6;
     double c = 2;
@@ -1586,9 +1577,6 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     int[] a = [ 1, 2, 3 ];
     int[] b = [ 1, 2, 4, 5 ];
     auto mm = mismatch(a, b);

@@ -44,7 +44,7 @@
 
 module std.socket;
 
-import core.stdc.stdint, core.stdc.string, std.string, core.stdc.stdlib, std.conv;
+import core.stdc.stdint, core.stdc.stdlib, core.stdc.string, std.conv, std.string;
 
 import core.stdc.config;
 import core.time : dur, Duration;
@@ -60,8 +60,8 @@ version(Windows)
     pragma (lib, "ws2_32.lib");
     pragma (lib, "wsock32.lib");
 
-    public import core.sys.windows.winsock2;
     private import core.sys.windows.windows, std.windows.syserror;
+    public import core.sys.windows.winsock2;
     private alias _ctimeval = core.sys.windows.winsock2.timeval;
     private alias _clinger = core.sys.windows.winsock2.linger;
 
@@ -85,16 +85,16 @@ else version(Posix)
         }
     }
 
-    import core.sys.posix.netdb;
-    import core.sys.posix.sys.un : sockaddr_un;
-    private import core.sys.posix.fcntl;
-    private import core.sys.posix.unistd;
     private import core.sys.posix.arpa.inet;
-    private import core.sys.posix.netinet.tcp;
+    private import core.sys.posix.fcntl;
+    import core.sys.posix.netdb;
     private import core.sys.posix.netinet.in_;
-    private import core.sys.posix.sys.time;
+    private import core.sys.posix.netinet.tcp;
     private import core.sys.posix.sys.select;
     private import core.sys.posix.sys.socket;
+    private import core.sys.posix.sys.time;
+    import core.sys.posix.sys.un : sockaddr_un;
+    private import core.sys.posix.unistd;
     private alias _ctimeval = core.sys.posix.sys.time.timeval;
     private alias _clinger = core.sys.posix.sys.socket.linger;
 
@@ -3291,7 +3291,7 @@ public:
     }
 
     /**
-     * Wait for a socket to change status. A wait timeout of $(Duration) or
+     * Wait for a socket to change status. A wait timeout of $(REF Duration, core, time) or
      * $(D TimeVal), may be specified; if a timeout is not specified or the
      * $(D TimeVal) is $(D null), the maximum timeout is used. The $(D TimeVal)
      * timeout has an unspecified value when $(D select) returns.

@@ -529,8 +529,8 @@ alias Sequence(int B, int E) = staticIota!(B, E);
 
 @safe unittest
 {
-    import std.algorithm.iteration : map;
     import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
     enum cx = ctRegex!"(A|B|C)";
     auto mx = match("B",cx);
     assert(mx);
@@ -560,8 +560,8 @@ alias Sequence(int B, int E) = staticIota!(B, E);
 
 @safe unittest
 {
-    import std.algorithm.iteration : map;
     import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
 //global matching
     void test_body(alias matchFn)()
     {
@@ -603,8 +603,8 @@ alias Sequence(int B, int E) = staticIota!(B, E);
 //tests for accumulated std.regex issues and other regressions
 @safe unittest
 {
-    import std.algorithm.iteration : map;
     import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
     void test_body(alias matchFn)()
     {
         //issue 5857
@@ -1014,9 +1014,9 @@ alias Sequence(int B, int E) = staticIota!(B, E);
 // bugzilla 14615
 @safe unittest
 {
-    import std.stdio : writeln;
-    import std.regex : replaceFirst, replaceFirstInto, regex;
     import std.array : appender;
+    import std.regex : replaceFirst, replaceFirstInto, regex;
+    import std.stdio : writeln;
 
     auto example = "Hello, world!";
     auto pattern = regex("^Hello, (bug)");  // won't find this one
