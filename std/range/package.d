@@ -2921,13 +2921,13 @@ pure @safe nothrow @nogc unittest
 
 /++
     Convenience function which calls
-    `range.$(REF popFrontN, std, range, primitives)(n) and returns `range`.
+    $(REF popFrontN, std, _range, primitives)`(range, n)` and returns `range`.
     `drop` makes it easier to pop elements from a range
     and then pass it to another function within a single expression,
     whereas `popFrontN` would require multiple statements.
 
     `dropBack` provides the same functionality but instead calls
-    `range.$(REF popBackN, std, range, primitives)(n)
+    $(REF popBackN, std, _range, primitives)`(range, n)`
 
     Note: `drop` and `dropBack` will only pop $(I up to)
     `n` elements but will stop if the range is empty first.
