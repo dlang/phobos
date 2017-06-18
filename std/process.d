@@ -417,6 +417,8 @@ private Pid spawnProcessImpl(in char[][] args,
     auto stdoutFD = getFD(stdout);
     auto stderrFD = getFD(stderr);
 
+    // We don't have direct access to the errors that may happen in a child process.
+    // So we use this pipe to deliver them.
     int[2] forkPipe;
     if (core.sys.posix.unistd.pipe(forkPipe) == 0)
         setCLOEXEC(forkPipe[1], true);
@@ -424,6 +426,11 @@ private Pid spawnProcessImpl(in char[][] args,
         throw ProcessException.newFromErrno("Could not create pipe to check startup of child");
     scope(exit) close(forkPipe[0]);
 
+    // To create detached process, we use double fork technique
+    // but we don't have a direct access to the second fork pid from the caller side thus use a pipe.
+    // We also can't reuse forkPipe for that purpose
+    // because we can't predict the order in which pid and possible error will be written
+    // since the first and the second forks will run in parallel.
     int[2] pidPipe;
     if (config & Config.detached)
     {
@@ -465,25 +472,25 @@ private Pid spawnProcessImpl(in char[][] args,
         // Child process
 
         // no need for the read end of pipe on child side
-        close(forkPipe[0]);
         if (config & Config.detached)
+        {
+            setsid();
             close(pidPipe[0]);
+        }
+        close(forkPipe[0]);
         immutable forkPipeOut = forkPipe[1];
         immutable pidPipeOut = pidPipe[1];
 
-        void setWorkDir()
+        // Set the working directory.
+        if (workDirFD >= 0)
         {
-            // Set the working directory.
-            if (workDirFD >= 0)
+            if (fchdir(workDirFD) < 0)
             {
-                if (fchdir(workDirFD) < 0)
-                {
-                    // Fail. It is dangerous to run a program
-                    // in an unexpected working directory.
-                    abortOnError(forkPipeOut, InternalError.chdir, .errno);
-                }
-                close(workDirFD);
+                // Fail. It is dangerous to run a program
+                // in an unexpected working directory.
+                abortOnError(forkPipeOut, InternalError.chdir, .errno);
             }
+            close(workDirFD);
         }
 
         void execProcess()
@@ -569,9 +576,7 @@ private Pid spawnProcessImpl(in char[][] args,
             auto secondFork = core.sys.posix.unistd.fork();
             if (secondFork == 0)
             {
-                setsid();
                 close(pidPipeOut);
-                setWorkDir();
                 execProcess();
             }
             else if (secondFork == -1)
@@ -590,7 +595,6 @@ private Pid spawnProcessImpl(in char[][] args,
         }
         else
         {
-            setWorkDir();
             execProcess();
         }
     }
@@ -1462,11 +1466,6 @@ final class Pid
     }
 
 private:
-    @property bool owned() const @safe pure nothrow
-    {
-        return _owned;
-    }
-
     /*
     Pid.performWait() does the dirty work for wait() and nonBlockingWait().
 
@@ -1483,7 +1482,7 @@ private:
     int performWait(bool block) @trusted
     {
         import std.exception : enforceEx;
-        enforceEx!ProcessException(_owned, "Can't wait on a detached process");
+        enforceEx!ProcessException(owned, "Can't wait on a detached process");
         if (_processID == terminated) return _exitCode;
         int exitCode;
         while (true)
@@ -1533,7 +1532,7 @@ private:
         int performWait(bool block) @trusted
         {
             import std.exception : enforceEx;
-            enforceEx!ProcessException(_owned, "Can't wait on a detached process");
+            enforceEx!ProcessException(owned, "Can't wait on a detached process");
             if (_processID == terminated) return _exitCode;
             assert(_handle != INVALID_HANDLE_VALUE);
             if (block)
@@ -1574,7 +1573,7 @@ private:
 
     // Whether the process can be waited for by wait() for or killed by kill().
     // False if process was started as detached. True otherwise.
-    bool _owned;
+    bool owned;
 
     // Pids are only meant to be constructed inside this module, so
     // we make the constructor private.
@@ -1585,12 +1584,12 @@ private:
         {
             _processID = pid;
             _handle = handle;
-            _owned = true;
+            this.owned = true;
         }
         this(int pid) @safe pure nothrow
         {
             _processID = pid;
-            _owned = false;
+            this.owned = false;
         }
     }
     else
@@ -1598,7 +1597,7 @@ private:
         this(int id, bool owned) @safe pure nothrow
         {
             _processID = id;
-            _owned = owned;
+            this.owned = owned;
         }
     }
 }
@@ -1779,7 +1778,7 @@ void kill(Pid pid)
 void kill(Pid pid, int codeOrSignal)
 {
     import std.exception : enforceEx;
-    enforceEx!ProcessException(pid.owned(), "Can't kill detached process");
+    enforceEx!ProcessException(pid.owned, "Can't kill detached process");
     version (Windows)
     {
         if (codeOrSignal < 0) throw new ProcessException("Invalid exit code");
@@ -1849,8 +1848,8 @@ void kill(Pid pid, int codeOrSignal)
     This leads to the annoying message like "/bin/sh: 0: Can't open /tmp/std.process temporary file" to appear when running tests.
     It does not happen in unittests with non-detached processes because we always wait() for them to finish.
     */
-    Thread.sleep(dur!"msecs"(5));
-    assert(!pid.owned());
+    Thread.sleep(dur!"msecs"(100));
+    assert(!pid.owned);
     version(Windows) assert(pid.osHandle == INVALID_HANDLE_VALUE);
     assertThrown!ProcessException(wait(pid));
     assertThrown!ProcessException(kill(pid));
