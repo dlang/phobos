@@ -2956,7 +2956,7 @@ public:
      * Returns: The number of bytes actually sent, or $(D Socket.ERROR) on
      * failure.
      */
-    ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags, Address to) @trusted
+    ptrdiff_t sendTo(const(void)[] buf, SocketFlags flags, in Address to) @trusted
     {
         static if (is(typeof(MSG_NOSIGNAL)))
         {
@@ -2972,7 +2972,7 @@ public:
     }
 
     /// ditto
-    ptrdiff_t sendTo(const(void)[] buf, Address to)
+    ptrdiff_t sendTo(const(void)[] buf, in Address to)
     {
         return sendTo(buf, SocketFlags.NONE, to);
     }
