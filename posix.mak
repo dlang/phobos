@@ -506,7 +506,6 @@ ${TOOLS_DIR}:
 	git clone --depth=1 ${GIT_HOME}/$(@F) $@
 $(TOOLS_DIR)/checkwhitespace.d: | $(TOOLS_DIR)
 $(TOOLS_DIR)/styles/tests_extractor.d: | $(TOOLS_DIR)
-$(TOOLS_DIR)/styles/has_public_example.d: | $(TOOLS_DIR)
 
 #################### test for undesired white spaces ##########################
 CWS_TOCHECK = posix.mak win32.mak win64.mak osmodel.mak
@@ -532,7 +531,7 @@ checkwhitespace: $(LIB) $(TOOLS_DIR)/checkwhitespace.d
 	mv dscanner_makefile_tmp ../dscanner/makefile
 	make -C ../dscanner githash debug
 
-style: has_public_example publictests style_lint
+style: publictests style_lint
 
 style_lint: ../dscanner/dsc $(LIB)
 	@echo "Check for trailing whitespace"
@@ -598,11 +597,6 @@ $(TEST_EXTRACTOR): $(TOOLS_DIR)/styles/tests_extractor.d $(LIB)
 %.publictests: %.d $(LIB) $(TEST_EXTRACTOR) | $(PUBLICTESTS_DIR)/.directory
 	@$(TEST_EXTRACTOR) --inputdir  $< --outputdir $(PUBLICTESTS_DIR)
 	@$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -main -unittest -run $(PUBLICTESTS_DIR)/$(subst /,_,$<)
-
-has_public_example: $(LIB)
-	#  checks whether public function have public examples (for now some modules are excluded)
-	rm -rf ./out
-	DFLAGS="$(DFLAGS) $(LIB) $(LINKDL)" $(DUB) -v --compiler=$${PWD}/$(DMD) --root=../tools/styles -c has_public_example -- --inputdir std --ignore "array.d,allocator,base64.d,bitmanip.d,concurrency.d,conv.d,csv.d,datetime/date.d,datetime/interval.d,datetime/package.d,datetime/stopwatch.d,datetime/systime.d,datetime/timezone.d,demangle.d,digest/hmac.d,digest/sha.d,encoding.d,exception.d,file.d,format.d,getopt.d,index.d,internal,isemail.d,json.d,logger/core.d,logger/nulllogger.d,math.d,mathspecial.d,net/curl.d,numeric.d,parallelism.d,path.d,process.d,random.d,range,regex/package.d,socket.d,stdio.d,string.d,traits.d,typecons.d,uni.d,unittest.d,uri.d,utf.d,uuid.d,xml.d,zlib.d"
 
 .PHONY : auto-tester-build
 auto-tester-build: all checkwhitespace

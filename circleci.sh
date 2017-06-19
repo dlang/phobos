@@ -133,18 +133,11 @@ publictests()
     make -f posix.mak -j$N publictests DUB=$DUB
 }
 
-# check modules for public unittests
-has_public_example()
-{
-    make -f posix.mak -j$N has_public_example DUB=$DUB
-}
-
 case $1 in
     install-deps) install_deps ;;
     setup-repos) setup_repos ;;
     coverage) coverage ;;
     publictests) publictests ;;
-    has_public_example) has_public_example;;
     style_lint) style_lint ;;
     *) echo "Unknown command"; exit 1;;
 esac
