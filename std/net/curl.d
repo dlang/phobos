@@ -2933,7 +2933,7 @@ struct HTTP
      *
      * code = http.getTiming(CurlInfo.namelookup_time, val);
      * assert(code == CurlError.ok);
-     *---
+     * ---
      */
     CurlCode getTiming(CurlInfo timing, ref double val)
     {
@@ -3648,7 +3648,7 @@ struct FTP
      *
      * code = http.getTiming(CurlInfo.namelookup_time, val);
      * assert(code == CurlError.ok);
-     *---
+     * ---
      */
     CurlCode getTiming(CurlInfo timing, ref double val)
     {

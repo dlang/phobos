@@ -3347,7 +3347,7 @@ else version(Posix)
     does.
 
     Params:
-        windowsZonesXMLFileText The text from
+        windowsZonesXMLText = The text from
         $(HTTP unicode.org/cldr/data/common/supplemental/windowsZones.xml, windowsZones.xml)
 
     Throws:
