@@ -522,8 +522,8 @@ checkwhitespace: $(LIB) $(TOOLS_DIR)/checkwhitespace.d
 #############################
 
 ../dscanner:
-	git clone https://github.com/Hackerpilot/Dscanner ../dscanner
-	git -C ../dscanner checkout tags/v0.4.0
+	git clone https://github.com/dlang-community/Dscanner ../dscanner
+	git -C ../dscanner checkout phobos
 	git -C ../dscanner submodule update --init --recursive
 
 ../dscanner/dsc: ../dscanner
