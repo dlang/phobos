@@ -525,11 +525,11 @@ checkwhitespace: $(LIB) $(TOOLS_DIR)/checkwhitespace.d
 	git -C ../dscanner checkout phobos
 	git -C ../dscanner submodule update --init --recursive
 
-../dscanner/dsc: ../dscanner
+../dscanner/dsc: ../dscanner $(DMD) $(LIB)
 	# debug build is faster, but disable 'missing import' messages (missing core from druntime)
 	sed 's/dparse_verbose/StdLoggerDisableWarning/' ../dscanner/makefile > dscanner_makefile_tmp
 	mv dscanner_makefile_tmp ../dscanner/makefile
-	make -C ../dscanner githash debug
+	DC=$(DMD) DFLAGS="$(DFLAGS) -defaultlib=$(LIB)" make -C ../dscanner githash debug
 
 style: publictests style_lint
 
