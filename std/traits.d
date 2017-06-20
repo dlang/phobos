@@ -166,6 +166,13 @@ module std.traits;
 
 import std.meta : AliasSeq, allSatisfy;
 
+// Legacy inheritance from std.typetuple
+// See also: https://github.com/dlang/phobos/pull/5484#discussion_r122602797
+import std.meta : staticMapMeta = staticMap;
+// TODO: find a way to trigger deprecation warnings
+//deprecated("staticMap is part of std.meta: Please import std.meta")
+alias staticMap = staticMapMeta;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Functions
 ///////////////////////////////////////////////////////////////////////////////
