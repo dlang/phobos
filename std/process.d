@@ -473,10 +473,7 @@ private Pid spawnProcessImpl(in char[][] args,
 
         // no need for the read end of pipe on child side
         if (config & Config.detached)
-        {
-            setsid();
             close(pidPipe[0]);
-        }
         close(forkPipe[0]);
         immutable forkPipeOut = forkPipe[1];
         immutable pidPipeOut = pidPipe[1];
