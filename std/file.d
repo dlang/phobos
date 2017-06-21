@@ -95,6 +95,22 @@ else version (Posix)
 {
     import core.sys.posix.dirent, core.sys.posix.fcntl, core.sys.posix.sys.stat,
         core.sys.posix.sys.time, core.sys.posix.unistd, core.sys.posix.utime;
+
+    template deintr(alias func)
+    if (isFunction!func && isIntegral!(ReturnType!func) &&
+        isSigned!(ReturnType!func) && functionLinkage!func == "C")
+    {
+        ReturnType!func deintr(Args...)(Parameters!func args, Args varArgs)
+        {
+            ReturnType!func result;
+            do
+            {
+                result = func(args, varArgs);
+            }
+            while (result == -1 && .errno == EINTR);
+            return result;
+        }
+    }
 }
 else
     static assert(false, "Module " ~ .stringof ~ " not implemented for this OS.");
@@ -343,10 +359,12 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
         maxSlackMemoryAllowed = 1024;
     // }
 
-    immutable fd = core.sys.posix.fcntl.open(namez,
-            core.sys.posix.fcntl.O_RDONLY);
+    alias dopen = deintr!(core.sys.posix.fcntl.open);
+    alias dclose = deintr!(core.sys.posix.unistd.close);
+    alias dread = deintr!(core.sys.posix.unistd.read);
+    immutable fd = dopen(namez, core.sys.posix.fcntl.O_RDONLY);
     cenforce(fd != -1, name);
-    scope(exit) core.sys.posix.unistd.close(fd);
+    scope(exit) dclose(fd);
 
     stat_t statbuf = void;
     cenforce(fstat(fd, &statbuf) == 0, name, namez);
@@ -360,7 +378,7 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
 
     for (;;)
     {
-        immutable actual = core.sys.posix.unistd.read(fd, result.ptr + size,
+        immutable actual = dread(fd, result.ptr + size,
                 min(result.length, upTo) - size);
         cenforce(actual != -1, name, namez);
         if (actual == 0) break;
@@ -620,24 +638,27 @@ version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
     auto mode = append ? O_CREAT | O_WRONLY | O_APPEND
                        : O_CREAT | O_WRONLY | O_TRUNC;
 
+    alias dopen = deintr!(core.sys.posix.fcntl.open);
+    alias dclose = deintr!(core.sys.posix.unistd.close);
+    alias dwrite = deintr!(core.sys.posix.unistd.write);
     immutable fd = core.sys.posix.fcntl.open(namez, mode, octal!666);
     cenforce(fd != -1, name, namez);
     {
-        scope(failure) core.sys.posix.unistd.close(fd);
+        scope(failure) dclose(fd);
 
         immutable size = buffer.length;
         size_t sum, cnt = void;
         while (sum != size)
         {
             cnt = (size - sum < 2^^30) ? (size - sum) : 2^^30;
-            const numwritten = core.sys.posix.unistd.write(fd, buffer.ptr + sum, cnt);
+            const numwritten = dwrite(fd, buffer.ptr + sum, cnt);
             if (numwritten != cnt)
                 break;
             sum += numwritten;
         }
         cenforce(sum == size, name, namez);
     }
-    cenforce(core.sys.posix.unistd.close(fd) == 0, name, namez);
+    cenforce(dclose(fd) == 0, name, namez);
 }
 
 // Windows implementation helper for write and append
@@ -3438,19 +3459,24 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
         static import core.stdc.stdio;
         import std.conv : to, octal;
 
-        immutable fdr = core.sys.posix.fcntl.open(fromz, O_RDONLY);
+        alias dopen = deintr!(core.sys.posix.fcntl.open);
+        alias dclose = deintr!(core.sys.posix.unistd.close);
+        alias dwrite = deintr!(core.sys.posix.unistd.write);
+        alias dread = deintr!(core.sys.posix.unistd.read);
+        alias dftruncate = deintr!(core.sys.posix.unistd.ftruncate);
+        immutable fdr = dopen(fromz, O_RDONLY);
         cenforce(fdr != -1, f, fromz);
-        scope(exit) core.sys.posix.unistd.close(fdr);
+        scope(exit) dclose(fdr);
 
         stat_t statbufr = void;
         cenforce(fstat(fdr, &statbufr) == 0, f, fromz);
         //cenforce(core.sys.posix.sys.stat.fstat(fdr, &statbufr) == 0, f, fromz);
 
-        immutable fdw = core.sys.posix.fcntl.open(toz,
+        immutable fdw = dopen(toz,
                 O_CREAT | O_WRONLY, octal!666);
         cenforce(fdw != -1, t, toz);
         {
-            scope(failure) core.sys.posix.unistd.close(fdw);
+            scope(failure) dclose(fdw);
 
             stat_t statbufw = void;
             cenforce(fstat(fdw, &statbufw) == 0, t, toz);
@@ -3460,8 +3486,8 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
 
         scope(failure) core.stdc.stdio.remove(toz);
         {
-            scope(failure) core.sys.posix.unistd.close(fdw);
-            cenforce(ftruncate(fdw, 0) == 0, t, toz);
+            scope(failure) dclose(fdw);
+            cenforce(dftruncate(fdw, 0) == 0, t, toz);
 
             auto BUFSIZ = 4096u * 16;
             auto buf = core.stdc.stdlib.malloc(BUFSIZ);
@@ -3481,8 +3507,8 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
             {
                 immutable toxfer = (size > BUFSIZ) ? BUFSIZ : cast(size_t) size;
                 cenforce(
-                    core.sys.posix.unistd.read(fdr, buf, toxfer) == toxfer
-                    && core.sys.posix.unistd.write(fdw, buf, toxfer) == toxfer,
+                    dread(fdr, buf, toxfer) == toxfer
+                    && dwrite(fdw, buf, toxfer) == toxfer,
                     f, fromz);
                 assert(size >= toxfer);
                 size -= toxfer;
@@ -3491,7 +3517,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
                 cenforce(fchmod(fdw, to!mode_t(statbufr.st_mode)) == 0, f, fromz);
         }
 
-        cenforce(core.sys.posix.unistd.close(fdw) != -1, f, fromz);
+        cenforce(dclose(fdw) != -1, f, fromz);
 
         utimbuf utim = void;
         utim.actime = cast(time_t) statbufr.st_atime;
