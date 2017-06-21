@@ -3500,7 +3500,7 @@ int doSizeZeroCase(R, Delegate)(ref ParallelForeach!R p, Delegate dg)
                 {
                     res = dg(elem);
                 }
-                if (res) foreachErr();
+                if (res) break;
                 index++;
             }
         }
@@ -3516,10 +3516,11 @@ int doSizeZeroCase(R, Delegate)(ref ParallelForeach!R p, Delegate dg)
                 {
                     res = dg(elem);
                 }
-                if (res) foreachErr();
+                if (res) break;
                 index++;
             }
         }
+        if (res) foreachErr;
         return res;
     }
 }
@@ -4623,4 +4624,13 @@ version(unittest)
     static assert(is(typeof({
         arr.parallel.each!"a++";
     })));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=17539
+@system unittest
+{
+    import std.random : rndGen;
+    // ensure compilation
+    try foreach (rnd; rndGen.parallel) break;
+    catch (ParallelForeachError e) {}
 }
