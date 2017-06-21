@@ -4566,7 +4566,8 @@ private string lockstepMixin(Ranges...)(bool withIndex, bool reverse)
         {
             indexDef = q{
                 size_t index = ranges[0].length-1;
-                enforce(_stoppingPolicy == StoppingPolicy.requireSameLength, "lockstep can only be used with foreach_reverse when stoppingPolicy == requireSameLength");
+                enforce(_stoppingPolicy == StoppingPolicy.requireSameLength,
+                        "lockstep can only be used with foreach_reverse when stoppingPolicy == requireSameLength");
 
                 foreach (range; ranges[1..$])
                     enforce(range.length == ranges[0].length);

@@ -6288,7 +6288,8 @@ enum EMPTY_CASE_TRIE = ushort.max;// from what gen_uni uses internally
 
 // control - '\r'
 enum controlSwitch = `
-    case '\u0000':..case '\u0008':case '\u000E':..case '\u001F':case '\u007F':..case '\u0084':case '\u0086':..case '\u009F': case '\u0009':..case '\u000C': case '\u0085':
+    case '\u0000':..case '\u0008':case '\u000E':..case '\u001F':case '\u007F':..
+    case '\u0084':case '\u0086':..case '\u009F': case '\u0009':..case '\u000C': case '\u0085':
 `;
 // TODO: redo the most of hangul stuff algorithmically in case of Graphemes too
 // kill unrolled switches
