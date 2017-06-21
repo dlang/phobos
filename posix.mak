@@ -522,7 +522,7 @@ checkwhitespace: $(LIB) $(TOOLS_DIR)/checkwhitespace.d
 
 ../dscanner:
 	git clone https://github.com/dlang-community/Dscanner ../dscanner
-	git -C ../dscanner checkout phobos
+	git -C ../dscanner checkout 455cc3fe50e6d0742c866737b4ac24669d51a992
 	git -C ../dscanner submodule update --init --recursive
 
 ../dscanner/dsc: ../dscanner $(DMD) $(LIB)
