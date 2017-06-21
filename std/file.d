@@ -96,7 +96,7 @@ else version (Posix)
     import core.sys.posix.dirent, core.sys.posix.fcntl, core.sys.posix.sys.stat,
         core.sys.posix.sys.time, core.sys.posix.unistd, core.sys.posix.utime;
 
-    template deintr(alias func)
+    private template deintr(alias func)
     if (isFunction!func && isIntegral!(ReturnType!func) &&
         isSigned!(ReturnType!func) && functionLinkage!func == "C")
     {
