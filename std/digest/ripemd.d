@@ -217,7 +217,7 @@ struct RIPEMD160
          * RIPEMD160 basic transformation. Transforms state based on block.
          */
 
-        private void transform(const(ubyte[64])* block)
+        void transform(const(ubyte[64])* block)
             pure nothrow @nogc
         {
             uint aa = _state[0],
@@ -237,7 +237,7 @@ struct RIPEMD160
             {
                 import std.bitmanip : littleEndianToNative;
 
-                for (size_t i = 0; i < 16; i++)
+                for (size_t i; i < 16; i++)
                 {
                     x[i] = littleEndianToNative!uint(*cast(ubyte[4]*)&(*block)[i*4]);
                 }
@@ -652,12 +652,12 @@ struct RIPEMD160
     assert(toHexString(cast(immutable ubyte[]) hexString!"f71c27109c692c1b56bbdceb5b9d2865b3708dbc")
         == "F71C27109C692C1B56BBDCEB5B9D2865B3708DBC");
 
-    ubyte[] onemilliona = new ubyte[1000000];
+    ubyte[] onemilliona = new ubyte[1_000_000];
     onemilliona[] = 'a';
     digest = ripemd160Of(onemilliona);
     assert(digest == cast(ubyte[]) hexString!"52783243c1697bdbe16d37f97f68f08325dc1528");
 
-    auto oneMillionRange = repeat!ubyte(cast(ubyte)'a', 1000000);
+    auto oneMillionRange = repeat!ubyte(cast(ubyte)'a', 1_000_000);
     digest = ripemd160Of(oneMillionRange);
     assert(digest == cast(ubyte[]) hexString!"52783243c1697bdbe16d37f97f68f08325dc1528");
 }
@@ -733,7 +733,7 @@ alias RIPEMD160Digest = WrapperDigest!RIPEMD160;
 
     debug
     {
-        import std.exception;
+        import std.exception : assertThrown;
         assertThrown!Error(md.finish(result[0 .. 19]));
     }
 
