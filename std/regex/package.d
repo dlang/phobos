@@ -350,7 +350,10 @@ public alias StaticRegex(Char) = std.regex.internal.ir.StaticRegex!(Char);
     the same character width as $(D pattern).
 
     Params:
-    pattern(s) = Regular expression(s) to match
+    pattern = A single regular expression to match.
+    patterns = An array of regular expression strings.
+        The resulting `Regex` object will match any expression;
+        use $(LREF whichPattern) to know which.
     flags = The _attributes (g, i, m and x accepted)
 
     Throws: $(D RegexException) if there were any errors during compilation.
