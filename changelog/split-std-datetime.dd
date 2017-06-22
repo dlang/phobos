@@ -28,7 +28,7 @@ $(MREF std,datetime,timezone) contains the time zone types.
 $(MREF std,datetime,package) contains StopWatch and the benchmarking functions
 (so, they can only be imported via std.datetime and not via a submodule). As
 those functions use $(REF TickDuration,core,time) (which is being replaced by
-$(REF MonoTime,core,time), they are slated for deprecation.
+$(REF MonoTime,core,time), they are slated for deprecation).
 
 $(MREF std,datetime,stopwatch) has been added. It contains versions of
 StopWatch and benchmark which have almost the same API as the existing symbols,
