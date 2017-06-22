@@ -649,7 +649,7 @@ struct RIPEMD160
                     "1234567890123456789012345678901234567890");
     assert(digest == cast(ubyte[]) hexString!"9b752e45573d4b39f4dbd3323cab82bf63326bfb");
 
-    assert(toHexString(cast(ubyte[20]) hexString!"f71c27109c692c1b56bbdceb5b9d2865b3708dbc")
+    assert(toHexString(cast(immutable ubyte[]) hexString!"f71c27109c692c1b56bbdceb5b9d2865b3708dbc")
         == "F71C27109C692C1B56BBDCEB5B9D2865B3708DBC");
 
     ubyte[] onemilliona = new ubyte[1000000];
