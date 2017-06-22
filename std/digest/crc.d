@@ -382,7 +382,7 @@ struct CRC(uint N, ulong P) if (N == 32 || N == 64)
                     "1234567890123456789012345678901234567890");
     assert(digest == cast(ubyte[]) hexString!"724aa97c");
 
-    assert(crcHexString(cast(ubyte[4]) hexString!"c3fcd3d7") == "D7D3FCC3");
+    assert(crcHexString(cast(immutable ubyte[]) hexString!"c3fcd3d7") == "D7D3FCC3");
 }
 
 @system unittest
@@ -421,7 +421,7 @@ struct CRC(uint N, ulong P) if (N == 32 || N == 64)
                          "1234567890123456789012345678901234567890");
     assert(digest == cast(ubyte[]) hexString!"bd3eb7765d0a22ae");
 
-    assert(crcHexString(cast(ubyte[8]) hexString!"c3fcd3d7efbeadde") == "DEADBEEFD7D3FCC3");
+    assert(crcHexString(cast(immutable ubyte[]) hexString!"c3fcd3d7efbeadde") == "DEADBEEFD7D3FCC3");
 }
 
 @system unittest
@@ -461,7 +461,7 @@ struct CRC(uint N, ulong P) if (N == 32 || N == 64)
                         "1234567890123456789012345678901234567890");
     assert(digest == cast(ubyte[]) hexString!"760cd2d3588bf809");
 
-    assert(crcHexString(cast(ubyte[8]) hexString!"c3fcd3d7efbeadde") == "DEADBEEFD7D3FCC3");
+    assert(crcHexString(cast(immutable ubyte[]) hexString!"c3fcd3d7efbeadde") == "DEADBEEFD7D3FCC3");
 }
 
 /**
