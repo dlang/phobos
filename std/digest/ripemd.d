@@ -237,7 +237,7 @@ struct RIPEMD160
             {
                 import std.bitmanip : littleEndianToNative;
 
-                for (size_t i = 0; i < 16; i++)
+                for (size_t i; i < 16; i++)
                 {
                     x[i] = littleEndianToNative!uint(*cast(ubyte[4]*)&(*block)[i*4]);
                 }

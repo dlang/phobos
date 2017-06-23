@@ -26,7 +26,7 @@ struct Thread(DataIndex)
 //head-tail singly-linked list
 struct ThreadList(DataIndex)
 {
-    Thread!DataIndex* tip = null, toe = null;
+    Thread!DataIndex* tip, toe;
     //add new thread to the start of list
     void insertFront(Thread!DataIndex* t)
     {
@@ -822,7 +822,7 @@ if (is(Char : dchar))
         opCacheBackTrue = arrayInChunk!(OpBackFunc)(re.ir.length, memory);
         opCacheBackFalse = arrayInChunk!(OpBackFunc)(re.ir.length, memory);
 
-        for (uint pc = 0; pc<re.ir.length; pc += re.ir[pc].length)
+        for (uint pc; pc<re.ir.length; pc += re.ir[pc].length)
         {
         L_dispatch:
             switch (re.ir[pc].code)

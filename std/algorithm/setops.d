@@ -423,7 +423,7 @@ if (ranges.length >= 2 &&
 
     // Test case where only one of the ranges is empty: the result should still
     // be empty.
-    int[] p=[1], q=[];
+    int[] p=[1], q;
     auto cprod2 = cartesianProduct(p,p,p,q,p);
     assert(cprod2.empty);
     foreach (_; cprod2) {} // should not crash

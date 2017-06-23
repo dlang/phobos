@@ -356,7 +356,7 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
         : minInitialAlloc));
     void[] result = uninitializedArray!(ubyte[])(initialAlloc);
     scope(failure) GC.free(result.ptr);
-    size_t size = 0;
+    size_t size;
 
     for (;;)
     {
@@ -407,7 +407,7 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
     static trustedReadFile(HANDLE hFile, void *lpBuffer, ulong nNumberOfBytesToRead) @trusted
     {
         // Read by chunks of size < 4GB (Windows API limit)
-        ulong totalNumRead = 0;
+        ulong totalNumRead;
         while (totalNumRead != nNumberOfBytesToRead)
         {
             const uint chunkSize = min(nNumberOfBytesToRead - totalNumRead, 0xffff_0000);

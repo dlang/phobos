@@ -184,7 +184,7 @@ private
     /* Demangles mstr as the storage class part of Argument. */
     Demangle!uint demangleParameterStorageClass(string mstr)
     {
-        uint pstc = 0; // parameter storage class
+        uint pstc; // parameter storage class
 
         // Argument --> Argument2 | M Argument2
         if (mstr.length > 0 && mstr[0] == 'M')
@@ -232,7 +232,7 @@ private
             'j': FunctionAttribute.return_,
             'l': FunctionAttribute.scope_
         ];
-        uint atts = 0;
+        uint atts;
 
         // FuncAttrs --> FuncAttr | FuncAttr FuncAttrs
         // FuncAttr  --> empty | Na | Nb | Nc | Nd | Ne | Nf | Ni | Nj
@@ -3616,8 +3616,8 @@ template hasStaticMember(T, string member)
         struct S {}
         class C {}
 
-        static int sx = 0;
-        __gshared int gx = 0;
+        static int sx;
+        __gshared int gx;
 
         Y y;
         static Y sy;
@@ -3654,8 +3654,8 @@ template hasStaticMember(T, string member)
         struct S {}
         class C {}
 
-        static int sx = 0;
-        __gshared int gx = 0;
+        static int sx;
+        __gshared int gx;
 
         Y y;
         static Y sy;
@@ -4659,7 +4659,7 @@ package template isBlitAssignable(T)
     {
         enum isBlitAssignable = isMutable!T &&
         {
-            size_t offset = 0;
+            size_t offset;
             bool assignable = true;
             foreach (i, F; FieldTypeTuple!T)
             {

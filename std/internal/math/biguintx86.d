@@ -73,12 +73,12 @@ private:
 string indexedLoopUnroll(int n, string s) pure @safe
 {
     string u;
-    for (int i = 0; i<n; ++i)
+    for (int i; i<n; ++i)
     {
         string nstr= (i>9 ? ""~ cast(char)('0'+i/10) : "") ~ cast(char)('0' + i%10);
 
-        int last = 0;
-        for (int j = 0; j<s.length; ++j)
+        int last;
+        for (int j; j<s.length; ++j)
         {
             if (s[j]=='@')
             {
@@ -182,7 +182,7 @@ done:
     uint [] a = new uint[40];
     uint [] b = new uint[40];
     uint [] c = new uint[40];
-    for (int i=0; i<a.length; ++i)
+    for (int i; i<a.length; ++i)
     {
         if (i&1) a[i]=0x8000_0000 + i;
         else a[i]=i;
@@ -194,7 +194,7 @@ done:
     assert(c[0]==0x8000_0003);
     assert(c[1]==4);
     assert(c[19]==0x3333_3333); // check for overrun
-    for (int i=0; i<a.length; ++i)
+    for (int i; i<a.length; ++i)
     {
         a[i]=b[i]=c[i]=0;
     }
@@ -205,11 +205,11 @@ done:
     a[5] =0x44444444;
     carry = multibyteAddSub!('-')(a[0 .. 12], a[0 .. 12], b[0 .. 12], 0);
     assert(a[11]==0);
-    for (int i=0; i<10; ++i) if (i != 5) assert(a[i]==0);
+    for (int i; i<10; ++i) if (i != 5) assert(a[i]==0);
 
     for (int q=3; q<36;++q)
     {
-        for (int i=0; i<a.length; ++i)
+        for (int i; i<a.length; ++i)
         {
             a[i]=b[i]=c[i]=0;
         }
@@ -579,7 +579,7 @@ uint multibyteMul(uint[] dest, const uint[] src, uint multiplier, uint carry)
     }
     else
     {
-        __gshared int zero = 0;
+        __gshared int zero;
     }
     asm pure nothrow {
         naked;
@@ -658,7 +658,7 @@ string asmMulAdd_innerloop(string OP, string M_ADDRESS) pure {
         // The first member of 'dest' which will be modified is [EDI+4*EBX].
         // EAX must already contain the first member of 'src', [ESI+4*EBX].
 
-    version(D_PIC) { bool using_PIC = true; } else { bool using_PIC = false; }
+    version(D_PIC) { bool using_PIC = true; } else { bool using_PIC; }
     return "
         // Entry point for even length
         add EBX, 1;
@@ -754,7 +754,7 @@ uint multibyteMulAdd(char op)(uint [] dest, const uint [] src, uint
     {
         // use p2 (load unit) instead of the overworked p0 or p1 (ALU units)
         // when initializing registers to zero.
-        __gshared int zero = 0;
+        __gshared int zero;
         // use p3/p4 units
         __gshared int storagenop; // write-only
     }
@@ -838,7 +838,7 @@ void multibyteMultiplyAccumulate(uint [] dest, const uint[] left,
     {
         // use p2 (load unit) instead of the overworked p0 or p1 (ALU units)
         // when initializing registers to zero.
-        __gshared int zero = 0;
+        __gshared int zero;
         // use p3/p4 units
         __gshared int storagenop; // write-only
     }
@@ -1018,10 +1018,10 @@ Lc:
 @system unittest
 {
     uint [] aa = new uint[101];
-    for (int i=0; i<aa.length; ++i) aa[i] = 0x8765_4321 * (i+3);
+    for (int i; i<aa.length; ++i) aa[i] = 0x8765_4321 * (i+3);
     uint overflow = multibyteMul(aa, aa, 0x8EFD_FCFB, 0x33FF_7461);
     uint r = multibyteDivAssign(aa, 0x8EFD_FCFB, overflow);
-    for (int i=0; i<aa.length-1; ++i) assert(aa[i] == 0x8765_4321 * (i+3));
+    for (int i; i<aa.length-1; ++i) assert(aa[i] == 0x8765_4321 * (i+3));
     assert(r == 0x33FF_7461);
 }
 
@@ -1072,17 +1072,17 @@ L1:
 {
     uint [] aa = new uint[13];
         uint [] bb = new uint[6];
-    for (int i=0; i<aa.length; ++i) aa[i] = 0x8000_0000;
-    for (int i=0; i<bb.length; ++i) bb[i] = i;
+    for (int i; i<aa.length; ++i) aa[i] = 0x8000_0000;
+    for (int i; i<bb.length; ++i) bb[i] = i;
         aa[$-1]= 7;
     multibyteAddDiagonalSquares(aa[0..$-1], bb);
         assert(aa[$-1]==7);
-        for (int i=0; i<bb.length; ++i) { assert(aa[2*i]==0x8000_0000+i*i); assert(aa[2*i+1]==0x8000_0000); }
+        for (int i; i<bb.length; ++i) { assert(aa[2*i]==0x8000_0000+i*i); assert(aa[2*i+1]==0x8000_0000); }
 }
 
 void multibyteTriangleAccumulateD(uint[] dest, uint[] x) pure
 {
-    for (int i = 0; i < x.length-3; ++i)
+    for (int i; i < x.length-3; ++i)
     {
         dest[i+x.length] = multibyteMulAdd!('+')(
              dest[i+i+1 .. i+x.length], x[i+1..$], x[i], 0);
@@ -1122,7 +1122,7 @@ void multibyteTriangleAccumulateAsm(uint[] dest, const uint[] src) pure
     {
         // use p2 (load unit) instead of the overworked p0 or p1 (ALU units)
         // when initializing registers to zero.
-        __gshared int zero = 0;
+        __gshared int zero;
         // use p3/p4 units
         __gshared int storagenop; // write-only
     }
@@ -1291,7 +1291,7 @@ void testPerformance() pure
     // a Windows device driver to access the CPU performance counters.
     // The code below is less accurate but more widely usable.
     // The value for division is quite inconsistent.
-    for (int i=0; i<X1.length; ++i) { X1[i]=i; Y1[i]=i; Z1[i]=i; }
+    for (int i; i<X1.length; ++i) { X1[i]=i; Y1[i]=i; Z1[i]=i; }
     int t, t0;
     multibyteShl(Z1[0 .. 2000], X1[0 .. 2000], 7);
     t0 = clock();

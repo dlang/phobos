@@ -518,7 +518,7 @@ pure @safe unittest
     }
     struct RetroResult
     {
-        bool end = false;
+        bool end;
         @property bool empty() const { return end; }
         @property dchar front(){ return 'a'; }
         void popFront(){ end = true; }
@@ -2331,7 +2331,7 @@ if (isNarrowString!(T[]))
 {
     import std.utf : decode;
     assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
-    size_t i = 0;
+    size_t i;
     return decode(a, i);
 }
 

@@ -188,7 +188,7 @@ private template createFields(string store, size_t offset, Ts...)
 
 private ulong getBitsForAlign(ulong a)
 {
-    ulong bits = 0;
+    ulong bits;
     while ((a & 0x01) == 0)
     {
         bits++;
@@ -1113,7 +1113,7 @@ public:
         __gshared size_t x = 0b1100011000;
         __gshared ba = BitArray(10, &x);
         ba.sort;
-        for (size_t i = 0; i < 6; i++)
+        for (size_t i; i < 6; i++)
             assert(ba[i] == false);
         for (size_t i = 6; i < 10; i++)
             assert(ba[i] == true);
@@ -2770,7 +2770,7 @@ if (canSwapEndianness!T &&
     assert(buffer.peek!ushort(2) == 5641);
     assert(buffer.peek!ubyte(2) == 22);
 
-    size_t index = 0;
+    size_t index;
     assert(buffer.peek!ushort(&index) == 261);
     assert(index == 2);
 
@@ -2789,7 +2789,7 @@ if (canSwapEndianness!T &&
         assert(buffer.peek!bool() == false);
         assert(buffer.peek!bool(1) == true);
 
-        size_t index = 0;
+        size_t index;
         assert(buffer.peek!bool(&index) == false);
         assert(index == 1);
 
@@ -2803,7 +2803,7 @@ if (canSwapEndianness!T &&
         assert(buffer.peek!char() == 'a');
         assert(buffer.peek!char(1) == 'b');
 
-        size_t index = 0;
+        size_t index;
         assert(buffer.peek!char(&index) == 'a');
         assert(index == 1);
 
@@ -2818,7 +2818,7 @@ if (canSwapEndianness!T &&
         assert(buffer.peek!wchar(2) == '”');
         assert(buffer.peek!wchar(4) == 'ć');
 
-        size_t index = 0;
+        size_t index;
         assert(buffer.peek!wchar(&index) == 'ą');
         assert(index == 2);
 
@@ -2836,7 +2836,7 @@ if (canSwapEndianness!T &&
         assert(buffer.peek!dchar(4) == '”');
         assert(buffer.peek!dchar(8) == 'ć');
 
-        size_t index = 0;
+        size_t index;
         assert(buffer.peek!dchar(&index) == 'ą');
         assert(index == 4);
 
@@ -2853,7 +2853,7 @@ if (canSwapEndianness!T &&
         assert(buffer.peek!float()== 32.0);
         assert(buffer.peek!float(4) == 25.0f);
 
-        size_t index = 0;
+        size_t index;
         assert(buffer.peek!float(&index) == 32.0f);
         assert(index == 4);
 
@@ -2867,7 +2867,7 @@ if (canSwapEndianness!T &&
         assert(buffer.peek!double() == 32.0);
         assert(buffer.peek!double(8) == 25.0);
 
-        size_t index = 0;
+        size_t index;
         assert(buffer.peek!double(&index) == 32.0);
         assert(index == 8);
 
@@ -2891,7 +2891,7 @@ if (canSwapEndianness!T &&
         assert(buffer.peek!Foo(4) == Foo.two);
         assert(buffer.peek!Foo(8) == Foo.three);
 
-        size_t index = 0;
+        size_t index;
         assert(buffer.peek!Foo(&index) == Foo.one);
         assert(index == 4);
 
@@ -2916,7 +2916,7 @@ if (canSwapEndianness!T &&
         assert(buffer.peek!Bool(0) == Bool.bfalse);
         assert(buffer.peek!Bool(1) == Bool.btrue);
 
-        size_t index = 0;
+        size_t index;
         assert(buffer.peek!Bool(&index) == Bool.bfalse);
         assert(index == 1);
 
@@ -2938,7 +2938,7 @@ if (canSwapEndianness!T &&
         assert(buffer.peek!Float(0) == Float.one);
         assert(buffer.peek!Float(4) == Float.two);
 
-        size_t index = 0;
+        size_t index;
         assert(buffer.peek!Float(&index) == Float.one);
         assert(index == 4);
 
@@ -2960,7 +2960,7 @@ if (canSwapEndianness!T &&
         assert(buffer.peek!Double(0) == Double.one);
         assert(buffer.peek!Double(8) == Double.two);
 
-        size_t index = 0;
+        size_t index;
         assert(buffer.peek!Double(&index) == Double.one);
         assert(index == 8);
 
@@ -3334,7 +3334,7 @@ if (canSwapEndianness!T &&
 
     {
         ubyte[] buffer = [0, 0, 0, 0, 0, 0, 0, 0];
-        size_t index = 0;
+        size_t index;
         buffer.write!ushort(261, &index);
         assert(buffer == [1, 5, 0, 0, 0, 0, 0, 0]);
         assert(index == 2);
@@ -3367,7 +3367,7 @@ if (canSwapEndianness!T &&
         buffer.write!bool(false, 1);
         assert(buffer == [1, 0]);
 
-        size_t index = 0;
+        size_t index;
         buffer.write!bool(false, &index);
         assert(buffer == [0, 0]);
         assert(index == 1);
@@ -3387,7 +3387,7 @@ if (canSwapEndianness!T &&
         buffer.write!char('b', 1);
         assert(buffer == [97, 98, 0]);
 
-        size_t index = 0;
+        size_t index;
         buffer.write!char('a', &index);
         assert(buffer == [97, 98, 0]);
         assert(index == 1);
@@ -3411,7 +3411,7 @@ if (canSwapEndianness!T &&
         buffer.write!wchar('”', 2);
         assert(buffer == [1, 5, 32, 29]);
 
-        size_t index = 0;
+        size_t index;
         buffer.write!wchar('ć', &index);
         assert(buffer == [1, 7, 32, 29]);
         assert(index == 2);
@@ -3431,7 +3431,7 @@ if (canSwapEndianness!T &&
         buffer.write!dchar('”', 4);
         assert(buffer == [0, 0, 1, 5, 0, 0, 32, 29]);
 
-        size_t index = 0;
+        size_t index;
         buffer.write!dchar('ć', &index);
         assert(buffer == [0, 0, 1, 7, 0, 0, 32, 29]);
         assert(index == 4);
@@ -3451,7 +3451,7 @@ if (canSwapEndianness!T &&
         buffer.write!float(25.0f, 4);
         assert(buffer == [66, 0, 0, 0, 65, 200, 0, 0]);
 
-        size_t index = 0;
+        size_t index;
         buffer.write!float(25.0f, &index);
         assert(buffer == [65, 200, 0, 0, 65, 200, 0, 0]);
         assert(index == 4);
@@ -3471,7 +3471,7 @@ if (canSwapEndianness!T &&
         buffer.write!double(25.0, 8);
         assert(buffer == [64, 64, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
 
-        size_t index = 0;
+        size_t index;
         buffer.write!double(25.0, &index);
         assert(buffer == [64, 57, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
         assert(index == 8);
@@ -3501,7 +3501,7 @@ if (canSwapEndianness!T &&
         buffer.write!Foo(Foo.three, 8);
         assert(buffer == [0, 0, 0, 10, 0, 0, 0, 20, 0, 0, 0, 30]);
 
-        size_t index = 0;
+        size_t index;
         buffer.write!Foo(Foo.three, &index);
         assert(buffer == [0, 0, 0, 30, 0, 0, 0, 20, 0, 0, 0, 30]);
         assert(index == 4);
@@ -3531,7 +3531,7 @@ if (canSwapEndianness!T &&
         buffer.write!Bool(Bool.btrue, 1);
         assert(buffer == [1, 1]);
 
-        size_t index = 0;
+        size_t index;
         buffer.write!Bool(Bool.bfalse, &index);
         assert(buffer == [0, 1]);
         assert(index == 1);
@@ -3557,7 +3557,7 @@ if (canSwapEndianness!T &&
         buffer.write!Float(Float.two, 4);
         assert(buffer == [66, 0, 0, 0, 65, 200, 0, 0]);
 
-        size_t index = 0;
+        size_t index;
         buffer.write!Float(Float.two, &index);
         assert(buffer == [65, 200, 0, 0, 65, 200, 0, 0]);
         assert(index == 4);
@@ -3583,7 +3583,7 @@ if (canSwapEndianness!T &&
         buffer.write!Double(Double.two, 8);
         assert(buffer == [64, 64, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
 
-        size_t index = 0;
+        size_t index;
         buffer.write!Double(Double.two, &index);
         assert(buffer == [64, 57, 0, 0, 0, 0, 0, 0, 64, 57, 0, 0, 0, 0, 0, 0]);
         assert(index == 8);
@@ -3789,8 +3789,8 @@ if (canSwapEndianness!T && isOutputRange!(R, ubyte))
         ulong[] values = [42, -11, long.max, 1098911981329L, 16, 255, 19012, 2, 17];
         assert(Types.length == values.length);
 
-        size_t index = 0;
-        size_t length = 0;
+        size_t index;
+        size_t length;
         foreach (T; Types)
         {
             toWrite.append!(T, endianness)(cast(T) values[index++]);

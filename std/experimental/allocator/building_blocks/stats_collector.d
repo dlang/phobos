@@ -420,7 +420,7 @@ public:
         const result = parent.reallocate(b, s);
 
         Signed!size_t slack = 0;
-        bool wasInPlace = false;
+        bool wasInPlace;
         Signed!size_t delta = 0;
 
         if (result)

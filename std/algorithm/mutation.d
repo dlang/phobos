@@ -1121,7 +1121,7 @@ pure nothrow @safe @nogc unittest
     // Issue 5661 test(1)
     static struct S3
     {
-        static struct X { int n = 0; ~this(){n = 0;} }
+        static struct X { int n; ~this(){n = 0;} }
         X x;
     }
     static assert(hasElaborateDestructor!S3);
@@ -1134,7 +1134,7 @@ pure nothrow @safe @nogc unittest
     // Issue 5661 test(2)
     static struct S4
     {
-        static struct X { int n = 0; this(this){n = 0;} }
+        static struct X { int n; this(this){n = 0;} }
         X x;
     }
     static assert(hasElaborateCopyConstructor!S4);
@@ -1233,7 +1233,7 @@ private T moveImpl(T)(ref T source)
     // Issue 5661 test(1)
     static struct S3
     {
-        static struct X { int n = 0; ~this(){n = 0;} }
+        static struct X { int n; ~this(){n = 0;} }
         X x;
     }
     static assert(hasElaborateDestructor!S3);
@@ -1246,7 +1246,7 @@ private T moveImpl(T)(ref T source)
     // Issue 5661 test(2)
     static struct S4
     {
-        static struct X { int n = 0; this(this){n = 0;} }
+        static struct X { int n; this(this){n = 0;} }
         X x;
     }
     static assert(hasElaborateCopyConstructor!S4);
@@ -1268,7 +1268,7 @@ private T moveImpl(T)(ref T source)
 
 @system unittest
 {
-    static struct S { int n = 0; ~this() @system { n = 0; } }
+    static struct S { int n; ~this() @system { n = 0; } }
     S a, b;
     static assert(!__traits(compiles, () @safe { move(a, b); }));
     static assert(!__traits(compiles, () @safe { move(a); }));
@@ -1775,9 +1775,9 @@ if (s != SwapStrategy.stable
         }
     }
 
-    size_t left = 0, right = offset.length - 1;
+    size_t left, right = offset.length - 1;
     auto tgt = range.save;
-    size_t tgtPos = 0;
+    size_t tgtPos;
 
     while (left <= right)
     {
@@ -2167,7 +2167,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
     //swapAt is in fact the only way to swap non lvalue ranges
     immutable last = r.length-1;
     immutable steps = r.length/2;
-    for (size_t i = 0; i < steps; i++)
+    for (size_t i; i < steps; i++)
     {
         r.swapAt(i, last-i);
     }
@@ -2175,7 +2175,7 @@ if (isRandomAccessRange!Range && hasLength!Range)
 
 @safe unittest
 {
-    int[] range = null;
+    int[] range;
     reverse(range);
     range = [ 1 ];
     reverse(range);
@@ -2209,7 +2209,7 @@ if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
     import std.utf : stride;
 
     auto r = representation(s);
-    for (size_t i = 0; i < s.length; )
+    for (size_t i; i < s.length; )
     {
         immutable step = stride(s, i);
         if (step > 1)

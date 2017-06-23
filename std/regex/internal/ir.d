@@ -448,7 +448,7 @@ struct Group(DataIndex)
 @trusted void printBytecode()(in Bytecode[] slice, in NamedGroup[] dict=[])
 {
     import std.stdio : writeln;
-    for (uint pc=0; pc<slice.length; pc += slice[pc].length)
+    for (uint pc; pc<slice.length; pc += slice[pc].length)
         writeln("\t", disassemble(slice, pc, dict));
 }
 
@@ -537,7 +537,7 @@ package(std.regex):
     void checkIfOneShot()
     {
     L_CheckLoop:
-        for (uint i = 0; i < ir.length; i += ir[i].length)
+        for (uint i; i < ir.length; i += ir[i].length)
         {
             switch (ir[i].code)
             {
@@ -556,7 +556,7 @@ package(std.regex):
     //print out disassembly a program's IR
     @trusted debug(std_regex_parser) void print() const
     {//@@@BUG@@@ write is system
-        for (uint i = 0; i < ir.length; i += ir[i].length)
+        for (uint i; i < ir.length; i += ir[i].length)
         {
             writefln("%d\t%s ", i, disassemble(ir, i, dict));
         }

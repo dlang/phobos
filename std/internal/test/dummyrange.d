@@ -427,7 +427,7 @@ if (is(T == TestFoo))
     {
         T it;
         Cmp.initialize(it.arr);
-        for (size_t numRuns = 0; numRuns < 2; ++numRuns)
+        for (size_t numRuns; numRuns < 2; ++numRuns)
         {
             if (numRuns == 1)
             {
@@ -454,7 +454,7 @@ if (is(T == TestFoo))
 
             auto cmp = Cmp.iota(1,11);
 
-            size_t jdx = 0;
+            size_t jdx;
             while (!it.empty && !cmp.empty)
             {
                 static if (hasLength!T)
@@ -501,7 +501,7 @@ if (is(T == TestFoo))
     {
         T it;
         Cmp.initialize(it.arr);
-        size_t idx = 0;
+        size_t idx;
         foreach (jt; it)
         {
             assert(it[idx] == jt);
@@ -516,7 +516,7 @@ if (is(T == TestFoo))
         {
             auto copy = it;
             copy.arr = it.arr.dup;
-            for (size_t i = 0; i < copy.length; ++i)
+            for (size_t i; i < copy.length; ++i)
             {
                 copy[i] = Cmp.dummyValue;
                 copy[i] += Cmp.dummyValue;
@@ -528,7 +528,7 @@ if (is(T == TestFoo))
         {
             T copy;
             copy.arr = it.arr.dup;
-            for (size_t i = 0; i < copy.length; ++i)
+            for (size_t i; i < copy.length; ++i)
             {
                 copy[i] = Cmp.dummyValue;
                 copy[i] += Cmp.dummyValue;

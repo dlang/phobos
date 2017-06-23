@@ -435,7 +435,7 @@ struct RBNode(V)
         else
             x = _right;
 
-        bool deferedUnlink = false;
+        bool deferedUnlink;
         if (x is null)
         {
             // pretend this is a null node, defer unlinking the node
@@ -845,7 +845,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
         static if (allowDuplicates)
         {
             inout(RBNode)* cur = _end.left;
-            inout(RBNode)* result = null;
+            inout(RBNode)* result;
             while (cur)
             {
                 if (_less(cur.value, e))
@@ -1148,7 +1148,7 @@ if (is(typeof(binaryFun!less(T.init, T.init))))
      */
     size_t stableInsert(Stuff)(Stuff stuff) if (isInputRange!Stuff && isImplicitlyConvertible!(ElementType!Stuff, Elem))
     {
-        size_t result = 0;
+        size_t result;
         static if (allowDuplicates)
         {
             foreach (e; stuff)
@@ -1636,14 +1636,14 @@ assert(equal(rbt[], [5]));
             if (n !is null)
             {
                 printTree(n.right, indent + 2);
-                for (int i = 0; i < indent; i++)
+                for (int i; i < indent; i++)
                     write(".");
                 writeln(n.color == n.color.Black ? "B" : "R");
                 printTree(n.left, indent + 2);
             }
             else
             {
-                for (int i = 0; i < indent; i++)
+                for (int i; i < indent; i++)
                     write(".");
                 writeln("N");
             }

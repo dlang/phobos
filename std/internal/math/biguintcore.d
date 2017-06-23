@@ -312,7 +312,7 @@ public:
                     buff[frontExtraBytes + (extraPad & 7)] = (padChar == ' ' ? ' ' : separator);
                     start += (extraPad & 7) + 1;
                 }
-                for (int i=0; i< (extraPad >> 3); ++i)
+                for (int i; i< (extraPad >> 3); ++i)
                 {
                     buff[start .. start + 8] = padChar;
                     buff[start + 8] = (padChar == ' ' ? ' ' : separator);
@@ -628,7 +628,7 @@ public:
         {
             assert(y != 0, "BigUint division by zero");
             // perfect power of 2
-            uint b = 0;
+            uint b;
             for (;y != 1; y>>=1)
             {
                 ++b;
@@ -756,7 +756,7 @@ public:
         // Length of the non-zero portion
         size_t nonzerolength = x.data.length - firstnonzero;
         ulong y0;
-        uint evenbits = 0; // number of even bits in the bottom of x
+        uint evenbits; // number of even bits in the bottom of x
         while (!(x0 & 1))
         {
             x0 >>= 1;
@@ -775,7 +775,7 @@ public:
         }
         // Now if (singledigit), x^^y  = (x0 ^^ y) * 2^^(evenbits * y) * 2^^(firstnonzero*y*BigDigitBits))
 
-        uint evenshiftbits = 0; // Total powers of 2 to shift by, at the end
+        uint evenshiftbits; // Total powers of 2 to shift by, at the end
 
         // Simplify, step 2: For singledigits, see if we can trivially reduce y
 
@@ -1566,7 +1566,7 @@ private:
 char [] biguintToHex(char [] buff, const BigDigit [] data, char separator=0,
         LetterCase letterCase = LetterCase.upper) pure nothrow @safe
 {
-    int x=0;
+    int x;
     for (ptrdiff_t i=data.length - 1; i >= 0; --i)
     {
         toHexZeroPadded(buff[x .. x+8], data[i], letterCase);
@@ -1596,8 +1596,8 @@ char [] biguintToHex(char [] buff, const BigDigit [] data, char separator=0,
 size_t biguintToOctal(char[] buff, const(BigDigit)[] data)
     pure nothrow @safe @nogc
 {
-    ubyte carry = 0;
-    int shift = 0;
+    ubyte carry;
+    int shift;
     size_t penPos = buff.length - 1;
     size_t lastNonZero = buff.length - 1;
 
@@ -1716,10 +1716,10 @@ body
     // TODO: This is inefficient for very large strings (it is O(n^^2)).
     // We should take advantage of fast multiplication once the numbers exceed
     // Karatsuba size.
-    uint lo = 0; // number of powers of digits, 0 .. 18
-    uint x = 0;
-    ulong y = 0;
-    uint hi = 0; // number of base 1e19 digits
+    uint lo; // number of powers of digits, 0 .. 18
+    uint x;
+    ulong y;
+    uint hi; // number of base 1e19 digits
     data[0] = 0; // initially number is 0.
     if (data.length > 1)
         data[1] = 0;
@@ -1782,7 +1782,7 @@ body
     }
     else
     {
-        for (int k=0; k<lo; ++k) y*=10;
+        for (int k; k<lo; ++k) y*=10;
         y+=x;
     }
     if (lo != 0)
@@ -2319,7 +2319,7 @@ pure nothrow @nogc @safe
 // Returns the lowest value of i for which x[i]!=0.
 int firstNonZeroDigit(const BigDigit [] x) pure nothrow @nogc @safe
 {
-    int k = 0;
+    int k;
     while (x[k]==0)
     {
         ++k;
@@ -2448,7 +2448,7 @@ void adjustRemainder(BigDigit[] quot, BigDigit[] rem, const(BigDigit)[] v,
 {
     assert(rem.length == v.length);
     mulInternal(scratch, quot, v[0 .. k]);
-    uint carry = 0;
+    uint carry;
     if (mayOverflow)
         carry = scratch[$-1] + subAssignSimple(rem, scratch[0..$-1]);
     else
@@ -2515,8 +2515,8 @@ pure nothrow
     uint [] a, b;
     a = new uint[43];
     b = new uint[179];
-    for (int i=0; i<a.length; ++i) a[i] = 0x1234_B6E9 + i;
-    for (int i=0; i<b.length; ++i) b[i] = 0x1BCD_8763 - i*546;
+    for (int i; i<a.length; ++i) a[i] = 0x1234_B6E9 + i;
+    for (int i; i<b.length; ++i) b[i] = 0x1BCD_8763 - i*546;
 
     a[$-1] |= 0x8000_0000;
     uint [] r = new uint[a.length];

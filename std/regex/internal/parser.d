@@ -82,7 +82,7 @@ if (isSomeString!S)
     Bytecode[] rev = new Bytecode[code.length];
     uint revPc = cast(uint) rev.length;
     Stack!(Tuple!(uint, uint, uint)) stack;
-    uint start = 0;
+    uint start;
     uint end = cast(uint) code.length;
     for (;;)
     {
@@ -164,7 +164,7 @@ dchar parseUniHex(Char)(ref Char[] str, size_t maxDigit)
     //std.conv.parse is both @system and bogus
     enforce(str.length >= maxDigit,"incomplete escape sequence");
     uint val;
-    for (int k = 0; k < maxDigit; k++)
+    for (int k; k < maxDigit; k++)
     {
         immutable current = str[k];//accepts ascii only, so it's OK to index directly
         if ('0' <= current && current <= '9')
@@ -255,9 +255,9 @@ struct CodeGen
     Stack!(uint) fixupStack;       // stack of opened start instructions
     NamedGroup[] dict;             // maps name -> user group number
     Stack!(uint) groupStack;       // stack of current number of group
-    uint nesting = 0;              // group nesting level and repetitions step
-    uint lookaroundNest = 0;       // nesting of lookaround
-    uint counterDepth = 0;         // current depth of nested counted repetitions
+    uint nesting;                  // group nesting level and repetitions step
+    uint lookaroundNest;           // nesting of lookaround
+    uint counterDepth;             // current depth of nested counted repetitions
     CodepointSet[] charsets;       // sets for char classes
     const(CharMatcher)[] matchers; // matchers for char classes
     uint[] backrefed;              // bitarray for groups refered by backref
@@ -619,7 +619,7 @@ if (isForwardRange!R && is(ElementType!R : dchar))
     dchar _current;
     bool empty;
     R pat, origin;       //keep full pattern for pretty printing error messages
-    uint re_flags = 0;   //global flags e.g. multiline + internal ones
+    uint re_flags;       //global flags e.g. multiline + internal ones
     Generator g;
 
     @trusted this(S)(R pattern, S flags)
@@ -676,7 +676,7 @@ if (isForwardRange!R && is(ElementType!R : dchar))
     //parsing number with basic overflow check
     uint parseDecimal()
     {
-        uint r = 0;
+        uint r ;
         while (std.ascii.isDigit(current))
         {
             if (r >= (uint.max/10))
@@ -1500,7 +1500,7 @@ if (isForwardRange!R && is(ElementType!R : dchar))
     {
         enum MAX_PROPERTY = 128;
         char[MAX_PROPERTY] result;
-        uint k = 0;
+        uint k;
         enforce(next(), "eof parsing unicode property spec");
         if (current == '{')
         {
@@ -1560,8 +1560,8 @@ if (isForwardRange!R && is(ElementType!R : dchar))
         }
         auto counterRange = FixedStack!uint(new uint[maxCounterDepth+1], -1);
         counterRange.push(1);
-        ulong cumRange = 0;
-        for (uint i = 0; i < ir.length; i += ir[i].length)
+        ulong cumRange;
+        for (uint i; i < ir.length; i += ir[i].length)
         {
             if (ir[i].hotspot)
             {
@@ -1616,7 +1616,7 @@ void fixupBytecode()(Bytecode[] ir)
 {
     Stack!uint fixups;
 
-    with(IR) for (uint i=0; i<ir.length; i+= ir[i].length)
+    with(IR) for (uint i; i<ir.length; i+= ir[i].length)
     {
         if (ir[i].isStart || ir[i].code == Option)
             fixups.push(i);
@@ -1684,7 +1684,7 @@ void optimize(Char)(ref Regex!Char zis)
         return set;
     }
 
-    with(zis) with(IR) for (uint i = 0; i < ir.length; i += ir[i].length)
+    with(zis) with(IR) for (uint i; i < ir.length; i += ir[i].length)
     {
         if (ir[i].code == InfiniteEnd)
         {
@@ -1709,7 +1709,7 @@ void optimize(Char)(ref Regex!Char zis)
     import std.conv : text;
     with(zis)
     {
-        for (uint pc = 0; pc < ir.length; pc += ir[pc].length)
+        for (uint pc; pc < ir.length; pc += ir[pc].length)
         {
             if (ir[pc].isStart || ir[pc].isEnd)
             {

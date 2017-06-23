@@ -50,9 +50,13 @@ immutable
 
 
     /**
-     * The version of the D Programming Language Specification
+     * The major version of the D Programming Language Specification
      * supported by the compiler.
      */
     uint D_major = 2;
+    /**
+     * The minor version of the D Programming Language Specification
+     * supported by the compiler.
+     */
     uint D_minor = 0;
 }

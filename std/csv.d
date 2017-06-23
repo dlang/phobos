@@ -1675,7 +1675,7 @@ if (isSomeChar!Separator && isInputRange!Range
                     4.0, 5.0, 6.0`;
 
     static struct Data { real a, b, c; }
-    size_t i = 0;
+    size_t i;
     foreach (data; csvReader!Data(csv)) with (data)
     {
         int[] row = [cast(int) a, cast(int) b, cast(int) c];

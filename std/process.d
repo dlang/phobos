@@ -703,7 +703,7 @@ private const(char*)* createEnv(const string[string] childEnv,
                                 bool mergeWithParentEnv)
 {
     // Determine the number of strings in the parent's environment.
-    int parentEnvLength = 0;
+    int parentEnvLength;
     auto environ = getEnvironPtr;
     if (mergeWithParentEnv)
     {
@@ -713,14 +713,14 @@ private const(char*)* createEnv(const string[string] childEnv,
 
     // Convert the "new" variables to C-style strings.
     auto envz = new const(char)*[parentEnvLength + childEnv.length + 1];
-    int pos = 0;
+    int pos;
     foreach (var, val; childEnv)
         envz[pos++] = (var~'='~val~'\0').ptr;
 
     // Add the parent's environment.
     foreach (environStr; environ[0 .. parentEnvLength])
     {
-        int eqPos = 0;
+        int eqPos;
         while (environStr[eqPos] != '=' && environStr[eqPos] != '\0') ++eqPos;
         if (environStr[eqPos] != '=') continue;
         auto var = environStr[0 .. eqPos];
@@ -738,7 +738,7 @@ version (Posix) @system unittest
 
     auto e2 = createEnv(null, true);
     assert(e2 != null);
-    int i = 0;
+    int i;
     auto environ = getEnvironPtr;
     for (; environ[i] != null; ++i)
     {
@@ -1100,8 +1100,8 @@ version (Posix) @system unittest
 {
     TestScript prog = "";
 
-    string directory = "";
-    assert(directory.ptr && !directory.length);
+    string directory;
+    assert(!directory.length);
     spawnProcess([prog.path], null, Config.none, directory).wait();
 }
 
@@ -2844,7 +2844,7 @@ if (is(typeof(allocator(size_t.init)[0] = char.init)))
 
     // Trailing backslashes must be escaped
     bool escaping = true;
-    bool needEscape = false;
+    bool needEscape;
     // Result size = input size + 2 for surrounding quotes + 1 for the
     // backslash for each escaped character.
     size_t size = 1 + arg.length + 1;
@@ -2980,7 +2980,7 @@ if (is(typeof(allocator(size_t.init)[0] = char.init)))
             size += 3;
 
     auto buf = allocator(size);
-    size_t p = 0;
+    size_t p;
     buf[p++] = '\'';
     foreach (char c; arg)
         if (c == '\'')
@@ -3337,7 +3337,7 @@ static:
         version (Posix)
         {
             auto environ = getEnvironPtr;
-            for (int i=0; environ[i] != null; ++i)
+            for (int i; environ[i] != null; ++i)
             {
                 import std.string : indexOf;
 
@@ -3364,7 +3364,7 @@ static:
             enforce(envBlock, "Failed to retrieve environment variables.");
             scope(exit) FreeEnvironmentStringsW(envBlock);
 
-            for (int i=0; envBlock[i] != '\0'; ++i)
+            for (int i; envBlock[i] != '\0'; ++i)
             {
                 auto start = i;
                 while (envBlock[i] != '=') ++i;
@@ -3776,9 +3776,8 @@ version(Posix)
     else
     {
         // No, so must traverse PATHs, looking for first match
-        string[]    envPaths    =   split(
-            to!string(core.stdc.stdlib.getenv("PATH")), ":");
-        int         iRet        =   0;
+        string[] envPaths = split(to!string(core.stdc.stdlib.getenv("PATH")), ":");
+        int iRet;
 
         // Note: if any call to execve() succeeds, this process will cease
         // execution, so there's no need to check the execve() result through

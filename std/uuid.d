@@ -494,7 +494,7 @@ public struct UUID
                 return data;
             }
 
-            for (size_t i = 0; i < 16; i++)
+            for (size_t i; i < 16; i++)
             {
                 assert(!UUID(getData(i)).empty);
             }
@@ -504,7 +504,7 @@ public struct UUID
 
             bool ctfeTest()
             {
-                for (size_t i = 0; i < 16; i++)
+                for (size_t i; i < 16; i++)
                 {
                     auto ctfeEmpty2 = UUID(getData(i)).empty;
                     assert(!ctfeEmpty2);
@@ -1355,7 +1355,7 @@ if (isInputRange!Range
 
     UUID result;
     size_t consumed;
-    size_t element = 0;
+    size_t element;
 
     //skip garbage
     size_t skip()()
@@ -1374,7 +1374,7 @@ if (isInputRange!Range
     if (uuidRange.empty)
         parserError(consumed, UUIDParsingException.Reason.tooLittle, "Insufficient Input");
 
-    bool dashAllowed = false;
+    bool dashAllowed;
 
     parseLoop: while (!uuidRange.empty)
     {

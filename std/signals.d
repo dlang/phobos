@@ -118,7 +118,7 @@ mixin template Signal(T1...)
         assert(status >= ST.inemitting);
         if (status == ST.inemitting_disconnected)
         {
-            for (size_t j = 0; j < slots_idx;)
+            for (size_t j; j < slots_idx;)
             {
                 if (slots[j] is null)
                 {
@@ -179,8 +179,8 @@ mixin template Signal(T1...)
     final void disconnect(slot_t slot)
     {
         debug (signal) writefln("Signal.disconnect(slot)");
-        size_t disconnectedSlots = 0;
-        size_t instancePreviousSlots = 0;
+        size_t disconnectedSlots;
+        size_t instancePreviousSlots;
         if (status >= ST.inemitting)
         {
             foreach (i, sloti; slots[0 .. slots_idx])
@@ -197,7 +197,7 @@ mixin template Signal(T1...)
         }
         else
         {
-            for (size_t i = 0; i < slots_idx; )
+            for (size_t i; i < slots_idx; )
             {
                 if (slots[i].ptr == slot.ptr &&
                     ++instancePreviousSlots &&
@@ -230,7 +230,7 @@ mixin template Signal(T1...)
     in { assert( status == ST.idle ); }
     body {
         debug (signal) writefln("Signal.unhook(o = %s)", cast(void*) o);
-        for (size_t i = 0; i < slots_idx; )
+        for (size_t i; i < slots_idx; )
         {
             if (_d_toObject(slots[i].ptr) is o)
             {   slots_idx--;
@@ -279,7 +279,7 @@ mixin template Signal(T1...)
 {
     import std.signals;
 
-    int observedMessageCounter = 0;
+    int observedMessageCounter;
 
     class Observer
     {   // our slot

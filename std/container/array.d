@@ -699,7 +699,7 @@ if (!is(Unqual!T == bool))
         mixin("slice[i .. j] "~op~"= value;");
     }
 
-    private enum hasSliceWithLength(T) = is(typeof({ T t = T.init; t[].length; }));
+    private enum hasSliceWithLength(T) = is(typeof({ T t; t[].length; }));
 
     /**
      * Returns: A new array which is a concatenation of `this` and its argument.
@@ -1425,7 +1425,7 @@ if (!is(Unqual!T == bool))
 
 @system unittest //6998
 {
-    static int i = 0;
+    static int i;
     class C
     {
         int dummy = 1;
@@ -2356,7 +2356,7 @@ if (is(Unqual!T == bool))
 @system unittest
 {
     Array!bool a;
-    for (int i = 0; i < 100; ++i)
+    for (int i; i < 100; ++i)
         a.insertBack(true);
     foreach (e; a)
         assert(e);

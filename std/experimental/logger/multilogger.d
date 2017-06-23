@@ -71,7 +71,7 @@ class MultiLogger : Logger
     {
         import std.algorithm.mutation : copy;
         import std.range.primitives : back, popBack;
-        for (size_t i = 0; i < this.logger.length; ++i)
+        for (size_t i; i < this.logger.length; ++i)
         {
             if (this.logger[i].name == toRemove)
             {

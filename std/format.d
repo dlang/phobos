@@ -488,7 +488,7 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
     }
 
     // Are we already done with formats? Then just dump each parameter in turn
-    uint currentArg = 0;
+    uint currentArg;
     while (spec.writeUpToNextSpec(w))
     {
         if (currentArg == funs.length && !spec.indexStart)
@@ -1010,7 +1010,7 @@ if (is(Unqual!Char == Char))
     /**
        Minimum _width, default $(D 0).
      */
-    int width = 0;
+    int width;
 
     /**
        Precision. Its semantics depends on the argument type. For
@@ -1178,7 +1178,7 @@ if (is(Unqual!Char == Char))
     {
         if (trailing.empty)
             return false;
-        for (size_t i = 0; i < trailing.length; ++i)
+        for (size_t i; i < trailing.length; ++i)
         {
             if (trailing[i] != '%') continue;
             put(writer, trailing[0 .. i]);
@@ -1256,7 +1256,7 @@ if (is(Unqual!Char == Char))
         precision = UNSPECIFIED;
         nested = null;
         // Parse the spec (we assume we're past '%' already)
-        for (size_t i = 0; i < trailing.length; )
+        for (size_t i; i < trailing.length; )
         {
             switch (trailing[i])
             {
@@ -1995,8 +1995,8 @@ private void formatUnsigned(Writer, T, Char)(Writer w, T arg, const ref FormatSp
         prefix1 = '0';
 
     size_t zerofill = precision > digits.length ? precision - digits.length : 0;
-    size_t leftpad = 0;
-    size_t rightpad = 0;
+    size_t leftpad;
+    size_t rightpad;
 
     immutable ptrdiff_t spacesToPrint =
         fs.width - (
@@ -2028,7 +2028,7 @@ private void formatUnsigned(Writer, T, Char)(Writer w, T arg, const ref FormatSp
 
     if (fs.flSeparator)
     {
-        for (size_t j = 0; j < digits.length; ++j)
+        for (size_t j; j < digits.length; ++j)
         {
             if (j != 0 && (digits.length - j) % fs.separators == 0)
             {
@@ -2079,7 +2079,7 @@ private void formatUnsigned(Writer, T, Char)(Writer w, T arg, const ref FormatSp
 
     static struct Foo
     {
-        int n = 0;
+        int n;
         alias n this;
         T opCast(T) () if (is(T == Frop))
         {
@@ -2749,7 +2749,7 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
     void[] val = cast(void[]) cast(ubyte[])[1, 2, 3];
     formatTest( val, "[1, 2, 3]" );
 
-    void[0] sval0 = [];
+    void[0] sval0;
     formatTest( sval0, "[]");
 
     void[3] sval = cast(void[3]) cast(ubyte[3])[1, 2, 3];
@@ -2912,7 +2912,7 @@ if (isInputRange!T)
                     else
                     {
                         enforce(f.width == 0, "Cannot right-align a range without length");
-                        size_t len = 0;
+                        size_t len;
                     }
                     if (f.precision != f.UNSPECIFIED && len > f.precision)
                         len = f.precision;
@@ -2924,7 +2924,7 @@ if (isInputRange!T)
                         put(w, val);
                     else
                     {
-                        size_t printed = 0;
+                        size_t printed;
                         for (; !val.empty && printed < f.precision; val.popFront(), ++printed)
                             put(w, val.front);
                     }
@@ -3088,7 +3088,7 @@ if (is(StringTypeOf!T) && !is(T == enum))
             // ignore other specifications and quote
             auto app = appender!(typeof(val[0])[])();
             put(app, '\"');
-            for (size_t i = 0; i < str.length; )
+            for (size_t i; i < str.length; )
             {
                 import std.utf : decode;
 
@@ -3210,7 +3210,7 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     enum const(Char)[] defSpec = "%s" ~ f.keySeparator ~ "%s" ~ f.seqSeparator;
     auto fmtSpec = f.spec == '(' ? f.nested : defSpec;
 
-    size_t i = 0;
+    size_t i;
     immutable end = val.length;
 
     if (f.spec == 's')
@@ -3938,7 +3938,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
     {
         string toString() const { return ""; }
     }
-    S* p = null;
+    S* p;
     formatTest( p, "null" );
 
     S* q = cast(S*) 0xFFEECCAA;
@@ -3967,7 +3967,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 @system pure unittest
 {
     // Test for issue 11778
-    int* p = null;
+    int* p;
     assertThrown(format("%d", p));
     assertThrown(format("%04d", p + 2));
 }
@@ -3975,7 +3975,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 @safe pure unittest
 {
     // Test for issue 12505
-    void* p = null;
+    void* p;
     formatTest( "%08X", p, "00000000" );
 }
 
@@ -4049,7 +4049,7 @@ private void formatNth(Writer, Char, A...)(Writer w, const ref FormatSpec!Char f
     formatTest( "testing %((%s) %)) wyda3", a,
                 "testing (1) (3) (2) wyda3" );
 
-    int[0] empt = [];
+    int[0] empt;
     formatTest( "(%s)", empt,
                 "([])" );
 }
@@ -4594,7 +4594,7 @@ here:
     //assert(stream.data == "[3:[h,e,l,l,o],4:[b,e,t,t,y]]");
 
     static const dchar[] ds = ['a','b'];
-    for (int j = 0; j < ds.length; ++j)
+    for (int j; j < ds.length; ++j)
     {
         stream.clear(); formattedWrite(stream, " %d", ds[j]);
         if (j == 0)
@@ -5225,7 +5225,7 @@ body
     }
 
     const(Char)[] cont = spec.trailing;
-    for (size_t j = 0; j < spec.trailing.length; ++j)
+    for (size_t j; j < spec.trailing.length; ++j)
     {
         if (spec.trailing[j] == '%')
         {
@@ -5723,7 +5723,7 @@ private bool needToSwapEndianess(Char)(const ref FormatSpec!Char f)
     assert(r == `[3:"hello", 4:"betty"]` || r == `[4:"betty", 3:"hello"]`);
 
     static const dchar[] ds = ['a','b'];
-    for (int j = 0; j < ds.length; ++j)
+    for (int j; j < ds.length; ++j)
     {
         r = format(" %d", ds[j]);
         if (j == 0)

@@ -1192,7 +1192,7 @@ struct CtContext
 
     string ctQuickTest(Bytecode[] ir, int id)
     {
-        uint pc = 0;
+        uint pc;
         while (pc < ir.length && ir[pc].isAtom)
         {
             if (ir[pc].code == IR.GroupStart || ir[pc].code == IR.GroupEnd)
@@ -1251,7 +1251,7 @@ struct CtContext
                     if (atEnd)
                         $$`, bailOut);
             immutable len = ir[0].sequence;
-            for (uint i = 0; i < len; i++)
+            for (uint i; i < len; i++)
             {
                 code ~= ctSub( `
                     if (front == $$)

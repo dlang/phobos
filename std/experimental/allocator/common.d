@@ -494,14 +494,14 @@ version(unittest)
                  assert(b1.length == len + 102, text(b1.length, " != ", len + 102));
              }
              auto aa = make();
-             void[] b5 = null;
+             void[] b5;
              assert(aa.expand(b5, 0));
              assert(b5 is null);
              assert(!aa.expand(b5, 1));
              assert(b5.length == 0);
          }}
 
-        void[] b6 = null;
+        void[] b6;
         assert(a.reallocate(b6, 0));
         assert(b6.length == 0);
         assert(a.reallocate(b6, 1));
@@ -621,7 +621,7 @@ version(unittest)
             }
         }
 
-        void[] b6 = null;
+        void[] b6;
         assert(a.reallocate(b6, 0));
         assert(b6.length == 0);
         assert(a.reallocate(b6, 1));

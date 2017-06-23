@@ -1097,7 +1097,7 @@ x). If $(D x) contains no zeros (i.e. is equal to $(D ulong.max)), returns 64.
 */
 private uint leadingOnes(ulong x)
 {
-    uint result = 0;
+    uint result;
     while (cast(long) x < 0)
     {
         ++result;

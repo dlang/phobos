@@ -180,7 +180,7 @@ auto assertNotThrown(T : Throwable = Exception, E)
     catch (AssertError) assert(0);
 
     {
-        bool thrown = false;
+        bool thrown;
         try
         {
             assertNotThrown!Exception(
@@ -191,7 +191,7 @@ auto assertNotThrown(T : Throwable = Exception, E)
     }
 
     {
-        bool thrown = false;
+        bool thrown;
         try
         {
             assertNotThrown!Exception(
@@ -202,7 +202,7 @@ auto assertNotThrown(T : Throwable = Exception, E)
     }
 
     {
-        bool thrown = false;
+        bool thrown;
         try
         {
             assertNotThrown!AssertError(
@@ -213,7 +213,7 @@ auto assertNotThrown(T : Throwable = Exception, E)
     }
 
     {
-        bool thrown = false;
+        bool thrown;
         try
         {
             assertNotThrown!AssertError(
@@ -312,7 +312,7 @@ void assertThrown(T : Throwable = Exception, E)
 
 
     {
-        bool thrown = false;
+        bool thrown;
         try
             assertThrown!Exception(nothrowEx());
         catch (AssertError)
@@ -322,7 +322,7 @@ void assertThrown(T : Throwable = Exception, E)
     }
 
     {
-        bool thrown = false;
+        bool thrown;
         try
             assertThrown!Exception(nothrowEx(), "It's a message");
         catch (AssertError)
@@ -332,7 +332,7 @@ void assertThrown(T : Throwable = Exception, E)
     }
 
     {
-        bool thrown = false;
+        bool thrown;
         try
             assertThrown!AssertError(nothrowEx());
         catch (AssertError)
@@ -342,7 +342,7 @@ void assertThrown(T : Throwable = Exception, E)
     }
 
     {
-        bool thrown = false;
+        bool thrown;
         try
             assertThrown!AssertError(nothrowEx(), "It's a message");
         catch (AssertError)
@@ -1147,8 +1147,8 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
 /// Pointers
 @system unittest
 {
-    int  i = 0;
-    int* p = null;
+    int  i;
+    int* p;
     assert(!p.doesPointTo(i));
     p = &i;
     assert( p.doesPointTo(i));
@@ -1345,14 +1345,14 @@ bool mayPointTo(S, T)(auto ref const shared S source, ref const shared T target)
     int i;
     union U //Named union
     {
-        size_t asInt = 0;
+        size_t asInt;
         int*   asPointer;
     }
     struct S
     {
         union //Anonymous union
         {
-            size_t asInt = 0;
+            size_t asInt;
             int*   asPointer;
         }
     }
@@ -1433,7 +1433,7 @@ it is not a single child.
 package enum isUnionAliased(T, size_t i) = isUnionAliasedImpl!T(T.tupleof[i].offsetof);
 private bool isUnionAliasedImpl(T)(size_t offset)
 {
-    int count = 0;
+    int count;
     foreach (i, U; typeof(T.tupleof))
         if (T.tupleof[i].offsetof == offset)
             ++count;

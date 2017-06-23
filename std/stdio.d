@@ -355,7 +355,7 @@ struct File
 
     private struct Impl
     {
-        FILE * handle = null; // Is null iff this Impl is closed by another File
+        FILE * handle; // Is null iff this Impl is closed by another File
         uint refs = uint.max / 2;
         bool isPopened; // true iff the stream has been created by popen()
         Orientation orientation;
@@ -1551,7 +1551,7 @@ void main()
         {
             auto witness = [ "hello\n", "world\n" ];
             auto f = File(deleteme);
-            uint i = 0;
+            uint i;
             String buf;
             while ((buf = f.readln!String()).length)
             {
@@ -1773,7 +1773,7 @@ is recommended if you want to process a complete file.
         {
             immutable(C)[][] witness = [ "hello\n\r", "world\nhow\n\r", "are ya" ];
             auto f = File(deleteme);
-            uint i = 0;
+            uint i;
             C[] buf;
             while (f.readln(buf, "\n\r"))
             {
@@ -4127,7 +4127,7 @@ struct lines
         {
             enum bool duplicate = is(Parms[$ - 1] == string)
                 || is(Parms[$ - 1] == wstring) || is(Parms[$ - 1] == dstring);
-            int result = 0;
+            int result;
             static if (is(Parms[$ - 1] : const(char)[]))
                 alias C = char;
             else static if (is(Parms[$ - 1] : const(wchar)[]))
@@ -4237,7 +4237,7 @@ struct lines
         // test looping with a file with three lines
         std.file.write(deleteme, "Line one\nline two\nline three\n");
         f.open(deleteme, "r");
-        uint i = 0;
+        uint i;
         foreach (T line; lines(f))
         {
             if (i == 0) assert(line == "Line one\n");
@@ -4279,7 +4279,7 @@ struct lines
         // test looping with a file with three lines
         std.file.write(deleteme, "Line one\nline two\nline three\n");
         f.open(deleteme, "r");
-        uint i = 0;
+        uint i;
         foreach (T line; lines(f))
         {
             if (i == 0) assert(cast(char[]) line == "Line one\n");
@@ -4313,7 +4313,7 @@ struct lines
         // using a counter too this time
         std.file.write(deleteme, "Line one\nline two\nline three");
         auto f = File(deleteme, "r");
-        uint i = 0;
+        uint i;
         foreach (ulong j, T line; lines(f))
         {
             if (i == 0) assert(cast(char[]) line == "Line one\n");
@@ -4380,7 +4380,7 @@ private struct ChunksImpl
             buffer = new ubyte[size];
         size_t r = void;
         int result = 1;
-        uint tally = 0;
+        uint tally;
         while ((r = trustedFread(f._p.handle, buffer)) > 0)
         {
             assert(r <= size);
@@ -4425,7 +4425,7 @@ private struct ChunksImpl
     // test looping with a file with three lines
     std.file.write(deleteme, "Line one\nline two\nline three\n");
     f = File(deleteme, "r");
-    uint i = 0;
+    uint i;
     foreach (ubyte[] line; chunks(f, 3))
     {
         if (i == 0) assert(cast(char[]) line == "Lin");
@@ -4635,7 +4635,7 @@ private struct ReadlnAppender
 {
     char[] buf;
     size_t pos;
-    bool safeAppend = false;
+    bool safeAppend;
 
     void initialize(char[] b)
     {
@@ -4930,8 +4930,8 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
         }
     }
 
-    static char *lineptr = null;
-    static size_t n = 0;
+    static char *lineptr;
+    static size_t n;
     scope(exit)
     {
         if (n > 128 * 1024)
@@ -5032,7 +5032,7 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
 
     // Narrow stream
     // First, fill the existing buffer
-    for (size_t bufPos = 0; bufPos < buf.length; )
+    for (size_t bufPos; bufPos < buf.length; )
     {
         immutable c = FGETC(fp);
         if (c == -1)

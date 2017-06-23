@@ -82,7 +82,7 @@ struct Mallocator
     @nogc nothrow
     static void test(A)()
     {
-        int* p = null;
+        int* p;
         p = cast(int*) A.instance.allocate(int.sizeof);
         scope(exit) A.instance.deallocate(p[0 .. int.sizeof]);
         *p = 42;

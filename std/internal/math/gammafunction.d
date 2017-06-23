@@ -556,7 +556,7 @@ real logGamma(real x)
     -3.5L,  -1.30902099609375L  + 1.43111007079536392848E-5L, 1.38887092635952890151E0L
     ];
    // TODO: test derivatives as well.
-    for (int i=0; i<testpoints.length; i+=3)
+    for (int i; i<testpoints.length; i+=3)
     {
         assert( feqrel(logGamma(testpoints[i]), testpoints[i+1]) > real.mant_dig-5);
         if (testpoints[i]<MAXGAMMA)
@@ -635,7 +635,7 @@ real betaIncomplete(real aa, real bb, real xx )
     real xc; // = 1 - x
 
     real a, b;
-    int flag = 0;
+    int flag;
 
     /* Reverse a and b if x is greater than the mean. */
     if ( xx > (aa/(aa+bb)) )
@@ -1176,7 +1176,7 @@ real betaDistExpansion2(real a, real b, real x )
     z = x / (1.0L-x);
     ans = 1.0L;
     r = 1.0L;
-    int n = 0;
+    int n;
     const real thresh = 3.0L * real.epsilon;
     do
     {

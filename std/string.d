@@ -324,7 +324,7 @@ pure nothrow @system unittest
     p = toStringz(foo[3 .. 5]);
     assert(strlen(p) == 2);
 
-    string test = "";
+    string test;
     p = toStringz(test);
     assert(*p == 0);
 
@@ -336,7 +336,7 @@ pure nothrow @system unittest
     p = toStringz(test);
     assert(p[0] == 'f' && p[1] == 'o' && p[2] == 'o' && p[3] == 0);
 
-    const string test2 = "";
+    const string test2;
     p = toStringz(test2);
     assert(*p == 0);
 }
@@ -749,7 +749,7 @@ if (isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 
         /* Classic double nested loop search algorithm
          */
-        ptrdiff_t index = 0;            // count code unit index into s
+        ptrdiff_t index;            // count code unit index into s
         for (auto sbydchar = s.byDchar(); !sbydchar.empty; sbydchar.popFront())
         {
             dchar c2 = sbydchar.front;
@@ -1489,7 +1489,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
         import std.range.primitives : walkLength;
         if (needles.length <= 16 && needles.walkLength(17))
         {
-            size_t si = 0;
+            size_t si;
             dchar[16] scratch = void;
             foreach ( dchar c; needles)
             {
@@ -2405,7 +2405,7 @@ if (isSomeString!S)
     import std.array : appender;
     import std.uni : lineSep, paraSep;
 
-    size_t iStart = 0;
+    size_t iStart;
     auto retval = appender!(S[])();
 
     for (size_t i; i < s.length; ++i)
@@ -3015,7 +3015,7 @@ if (isSomeString!Range ||
                 }
                 else
                 {
-                    size_t stride = 0;
+                    size_t stride;
 
                     while (1)
                     {
@@ -5070,7 +5070,7 @@ body
     foreach (char c; toRemove)
         remTable[c] = true;
 
-    size_t count = 0;
+    size_t count;
     foreach (char c; str)
     {
         if (!remTable[c])
@@ -5079,7 +5079,7 @@ body
 
     auto buffer = new char[count];
 
-    size_t i = 0;
+    size_t i;
     foreach (char c; str)
     {
         if (!remTable[c])
@@ -5257,8 +5257,8 @@ deprecated("This function is obsolete and will be removed May 2018. See the docs
 bool inPattern(S)(dchar c, in S pattern) @safe pure @nogc
 if (isSomeString!S)
 {
-    bool result = false;
-    int range = 0;
+    bool result;
+    int range;
     dchar lastc;
 
     foreach (size_t i, dchar p; pattern)
@@ -5393,7 +5393,7 @@ if (isSomeString!S)
     import std.utf : encode;
 
     Unqual!(typeof(s[0]))[] r;
-    bool changed = false;
+    bool changed;
 
     foreach (size_t i, dchar c; s)
     {
@@ -5725,9 +5725,9 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
         dchar lastf;
         dchar lastt;
         dchar newc;
-        int n = 0;
+        int n;
 
-        for (size_t i = 0; i < from.length; )
+        for (size_t i; i < from.length; )
         {
             immutable f = decode(from, i);
             if (f == '-' && lastf != dchar.init && i < from.length)
@@ -5761,7 +5761,7 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
 
         // Find the nth character in to[]
         dchar nextt;
-        for (size_t i = 0; i < to.length; )
+        for (size_t i; i < to.length; )
         {
             immutable t = decode(to, i);
             if (t == '-' && lastt != dchar.init && i < to.length)
@@ -5925,7 +5925,7 @@ if (isSomeString!S ||
     immutable iLen = codeUnits.length;
     bool bDecimalPoint, bExponent, bComplex, sawDigits;
 
-    for (size_t i = 0; i < iLen; i++)
+    for (size_t i; i < iLen; i++)
     {
         immutable c = codeUnits[i];
 
@@ -6221,7 +6221,7 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
           "01230120022455012623010202";
 
     char[4] result = void;
-    size_t b = 0;
+    size_t b;
     C lastc;
     foreach (C c; str)
     {
@@ -6401,7 +6401,7 @@ string[string] abbrev(string[] values) @safe pure
     string nv;
     string lv;
 
-    for (size_t i = 0; i < values_length; i = nexti)
+    for (size_t i; i < values_length; i = nexti)
     {
         string value = values[i];
 
@@ -6415,7 +6415,7 @@ string[string] abbrev(string[] values) @safe pure
 
         import std.utf : stride;
 
-        for (size_t j = 0; j < value.length; j += stride(value, j))
+        for (size_t j; j < value.length; j += stride(value, j))
         {
             string v = value[0 .. j];
 

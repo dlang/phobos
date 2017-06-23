@@ -1411,7 +1411,7 @@ if (!is(CommonType!(T1, T2) == void))
 
     foreach (i; 0 .. 20)
     {
-        immutable ubyte a = 0;
+        immutable ubyte a;
             immutable ubyte b = 15;
         auto x = uniform(a, b, gen);
             assert(a <= x && x < b);
@@ -1659,7 +1659,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
     }
 
     {
-        bool sawLB = false, sawUB = false;
+        bool sawLB, sawUB;
         foreach (i; 0 .. 50)
         {
             auto x = uniform!"[]"('a', 'd', reproRng);
@@ -1671,7 +1671,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
     }
 
     {
-        bool sawLB = false, sawUB = false;
+        bool sawLB, sawUB;
         foreach (i; 0 .. 50)
         {
             auto x = uniform('a', 'd', reproRng);
@@ -1683,7 +1683,7 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
     }
 
     {
-        bool sawLB = false, sawUB = false;
+        bool sawLB, sawUB;
         foreach (i; 0 .. 50)
         {
             immutable int lo = -2, hi = 2;
@@ -1696,10 +1696,10 @@ if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
     }
 
     {
-        bool sawLB = false, sawUB = false;
+        bool sawLB, sawUB;
         foreach (i; 0 .. 50)
         {
-            immutable ubyte lo = 0, hi = 5;
+            immutable ubyte lo, hi = 5;
             auto x = uniform(lo, hi, reproRng);
             if (x == lo) sawLB = true;
             if (x == (hi-1)) sawUB = true;
@@ -2251,7 +2251,7 @@ body
     assert(point < sum);
     auto mass = 0.0;
 
-    size_t i = 0;
+    size_t i;
     foreach (e; proportions)
     {
         mass += e;
@@ -2331,8 +2331,8 @@ if (isRandomAccessRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == vo
     private Range _input;
     private bool[] _chosen;
     private size_t _current;
-    private size_t _alreadyChosen = 0;
-    private bool _isEmpty = false;
+    private size_t _alreadyChosen;
+    private bool _isEmpty;
 
     static if (is(UniformRNG == void))
     {
@@ -2496,7 +2496,7 @@ if (isRandomAccessRange!Range)
 @safe unittest
 {
     // Bugzilla 12589
-    int[] r = [];
+    int[] r;
     auto rc = randomCover(r);
     assert(rc.length == 0);
     assert(rc.empty);
@@ -3112,7 +3112,7 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
          * correctly.
          */
         {
-            uint i = 0;
+            uint i;
             foreach (e; randomSample(a, a.length))
             {
                 assert(e == i);
@@ -3156,7 +3156,7 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
          */
         {
             // Small sample/source ratio, no specified RNG.
-            uint i = 0;
+            uint i;
             foreach (e; randomSample(randomCover(a), 5))
             {
                 ++i;
@@ -3290,7 +3290,7 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
             static assert(!isForwardRange!(typeof(sample1)));
             assert(sample1.length == 789);
             assert(sample1._available == 456_789);
-            uint i = 0;
+            uint i;
             for (; !sample1.empty; sample1.popFront())
             {
                 assert(sample1.front == sample1.index);

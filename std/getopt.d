@@ -806,7 +806,7 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
     import std.ascii : isAlpha;
     import std.conv : text, to;
     // Scan arguments looking for a match for this option
-    bool ret = false;
+    bool ret;
     for (size_t i = 1; i < args.length; )
     {
         auto a = args[i];
@@ -1058,7 +1058,7 @@ dchar assignChar = '=';
 
    Defaults to "" but can be assigned to prior to calling $(D getopt).
  */
-string arraySep = "";
+string arraySep;
 
 private enum autoIncrementChar = '+';
 
@@ -1177,7 +1177,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
 
     string data = "file.dat";
     int length = 24;
-    bool verbose = false;
+    bool verbose;
     args = ["program.name", "--length=5", "--file", "dat.file", "--verbose"];
     getopt(
         args,
@@ -1338,7 +1338,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
 
 @safe unittest // @safe std.getopt.config option use
 {
-    long x = 0;
+    long x;
     string[] args = ["program", "--inc-x", "--inc-x"];
     getopt(args,
            std.getopt.config.caseSensitive,
@@ -1568,7 +1568,7 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     scope(exit) endOfOptions = endOfOptionsBackup;
     endOfOptions = "endofoptions";
     string[] args = ["program", "endofoptions", "--option"];
-    bool b = false;
+    bool b;
     getopt(args, "option", &b);
     assert(!b);
     assert(args == ["program", "--option"]);
@@ -1620,7 +1620,7 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
     output.formattedWrite("%s\n", text);
 
     size_t ls, ll;
-    bool hasRequired = false;
+    bool hasRequired;
     foreach (it; opt)
     {
         ls = max(ls, it.optShort.length);
@@ -1728,7 +1728,7 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
 
 @system unittest // Issue 17327 repeated option use
 {
-    long num = 0;
+    long num;
 
     string[] args = ["program", "--num", "3"];
     getopt(args, "n|num", &num);
@@ -1758,7 +1758,7 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
            "add", "Add N to num", &addN,);
     assert(num == 21);
 
-    bool flag = false;
+    bool flag;
     args = ["program", "--flag"];
     getopt(args, "f|flag", "Boolean", &flag);
     assert(flag);
@@ -1794,8 +1794,8 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
         return (option, value) => addN(dest, value);
     }
 
-    long x = 0;
-    long y = 0;
+    long x;
+    long y;
 
     string[] args =
         ["program", "--x-plus-1", "--x-plus-1", "--x-plus-5", "--x-plus-n", "10",

@@ -805,7 +805,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     auto r = regex(
        r"^NAME   = (?P<comp>[a-zA-Z0-9_]+):*(?P<blk>[a-zA-Z0-9_]*)","gm");
     auto uniCapturesNew = match(uniFileOld, r);
-    for (int i = 0; i < 20; i++)
+    for (int i; i < 20; i++)
         foreach (matchNew; uniCapturesNew) {}
     //a second issue with same symptoms
     auto r2 = regex(`([а-яА-Я\-_]+\s*)+(?<=[\s\.,\^])`);

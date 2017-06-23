@@ -303,7 +303,7 @@ is ignored.
     {
         import std.algorithm.comparison : equal;
         ptrdiff_t virtual_begin = needle.length - offset - portion;
-        ptrdiff_t ignore = 0;
+        ptrdiff_t ignore;
         if (virtual_begin < 0)
         {
             ignore = -virtual_begin;
@@ -336,7 +336,7 @@ public:
         this.skip = new size_t[needle.length];
         foreach (a; 0 .. needle.length)
         {
-            size_t value = 0;
+            size_t value;
             while (value < needle.length
                    && !needlematch(needle, a, value))
             {
@@ -355,7 +355,7 @@ public:
         if (needle.length > haystack.length) return haystack[$ .. $];
         /* Search: */
         immutable limit = haystack.length - needle.length;
-        for (size_t hpos = 0; hpos <= limit; )
+        for (size_t hpos; hpos <= limit; )
         {
             size_t npos = needle.length - 1;
             while (pred(needle[npos], haystack[npos+hpos]))
@@ -448,7 +448,7 @@ if (isForwardRange!R1 && isInputRange!R2 &&
     {
         import std.range : takeExactly;
         auto result = r1.save;
-        size_t i = 0;
+        size_t i;
         for (;
              !r1.empty && !r2.empty && binaryFun!pred(r1.front, r2.front);
              ++i, r1.popFront(), r2.popFront())
@@ -472,9 +472,9 @@ if (isNarrowString!R1 && isInputRange!R2 &&
 
     auto result = r1.save;
     immutable len = r1.length;
-    size_t i = 0;
+    size_t i;
 
-    for (size_t j = 0; i < len && !r2.empty; r2.popFront(), i = j)
+    for (size_t j; i < len && !r2.empty; r2.popFront(), i = j)
     {
         immutable f = decode(r1, j);
         if (!binaryFun!pred(f, r2.front))
@@ -503,10 +503,10 @@ if (isNarrowString!R1 && isNarrowString!R2)
         import std.utf : stride, UTFException;
 
         immutable limit = min(r1.length, r2.length);
-        for (size_t i = 0; i < limit;)
+        for (size_t i; i < limit;)
         {
             immutable codeLen = stride(r1, i);
-            size_t j = 0;
+            size_t j;
 
             for (; j < codeLen && i < limit; ++i, ++j)
             {
@@ -1569,7 +1569,7 @@ if (isInputRange!InputRange &&
             //We choose a manual decoding approach, because it is faster than
             //the built-in foreach, or doing a front/popFront for-loop.
             immutable len = haystack.length;
-            size_t i = 0, next = 0;
+            size_t i, next;
             while (next < len)
             {
                 if (predFun(decode(haystack, next), needle))
@@ -1590,7 +1590,7 @@ if (isInputRange!InputRange &&
             {
                 import core.stdc.string : memchr;
 
-                EType* ptr = null;
+                EType* ptr;
                 //Note: we use "min/max" to handle sign mismatch.
                 if (min(EType.min, needle) == EType.min &&
                     max(EType.max, needle) == EType.max)
@@ -1762,7 +1762,7 @@ if (isInputRange!InputRange &&
     enum Foo : ubyte { A }
     assert([Foo.A].find(Foo.A).empty == false);
 
-    ubyte x = 0;
+    ubyte x;
     assert([x].find(x).empty == false);
 }
 
@@ -1805,7 +1805,7 @@ if (isInputRange!InputRange)
         import std.utf : decode;
 
         immutable len = haystack.length;
-        size_t i = 0, next = 0;
+        size_t i, next;
         while (next < len)
         {
             if (predFun(decode(haystack, next)))
@@ -1965,7 +1965,7 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
         auto needleFirstElem = needle[0];
         auto partitions      = haystack.trisect(needleFirstElem);
         auto firstElemLen    = partitions[1].length;
-        size_t count         = 0;
+        size_t count;
 
         if (firstElemLen == 0)
             return haystack[$ .. $];
@@ -1988,7 +1988,7 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
     {
         immutable lastIndex = needleLength - 1;
         auto last = needle[lastIndex];
-        size_t j = lastIndex, skip = 0;
+        size_t j = lastIndex, skip;
         for (; j < haystack.length;)
         {
             if (!binaryFun!pred(haystack[j], last))
@@ -1998,7 +1998,7 @@ if (isRandomAccessRange!R1 && hasLength!R1 && hasSlicing!R1 && isBidirectionalRa
             }
             immutable k = j - lastIndex;
             // last elements match
-            for (size_t i = 0;; ++i)
+            for (size_t i;; ++i)
             {
                 if (i == lastIndex)
                     return haystack[k .. haystack.length];
@@ -2184,7 +2184,7 @@ private R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, scope R2 needle)
     static if (hasLength!R1)
     {
         static if (!hasLength!R2)
-            size_t estimatedNeedleLength = 0;
+            size_t estimatedNeedleLength;
         else
             immutable size_t estimatedNeedleLength = needle.length;
     }
@@ -2222,7 +2222,7 @@ private R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, scope R2 needle)
             }
         }
         static if (estimateNeedleLength)
-            size_t matchLength = 0;
+            size_t matchLength;
         for (auto h = haystack.save, n = needle.save;
              !n.empty;
              h.popFront(), n.popFront())
@@ -3190,7 +3190,7 @@ if (isInputRange!Range && !isInfinite!Range &&
     }
     else static if (isAssignable!(UT, T) || (!hasElaborateAssign!UT && isAssignable!UT))
     {
-        UT v = UT.init;
+        UT v;
         static if (isAssignable!(UT, T)) v = range.front;
         else                             v = cast(UT) range.front;
 
@@ -3599,7 +3599,7 @@ if (isForwardRange!Range && !isInfinite!Range &&
     static if (hasSlicing!Range && isRandomAccessRange!Range && hasLength!Range)
     {
         // Prefer index-based access
-        size_t pos = 0;
+        size_t pos;
         foreach (i; 1 .. range.length)
         {
             if (binaryFun!pred(range[i], range[pos]))

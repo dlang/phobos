@@ -466,7 +466,7 @@ if (isInputRange!(Unqual!R))
             int opApply(scope int delegate(size_t, E) dg) {
                 int res;
 
-                size_t i = 0;
+                size_t i;
                 for (auto r = _range; !r.empty; r.popFront())
                 {
                     res = dg(i, r.front);

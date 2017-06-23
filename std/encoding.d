@@ -293,7 +293,7 @@ import std.typecons;
 
     // Make sure we can sanitize everything bad
     assert(invalidStrings.length == sanitizedStrings.length);
-    for (int i=0; i<invalidStrings.length; ++i)
+    for (int i; i<invalidStrings.length; ++i)
     {
         string s = cast(string) invalidStrings[i];
         string t = sanitize(s);
@@ -602,7 +602,7 @@ struct CodePoints(E)
 
     int opApply(scope int delegate(ref dchar) dg)
     {
-        int result = 0;
+        int result;
         while (s.length != 0)
         {
             dchar c = decode(s);
@@ -614,8 +614,8 @@ struct CodePoints(E)
 
     int opApply(scope int delegate(ref size_t, ref dchar) dg)
     {
-        size_t i = 0;
-        int result = 0;
+        size_t i;
+        int result;
         while (s.length != 0)
         {
             immutable len = s.length;
@@ -630,7 +630,7 @@ struct CodePoints(E)
 
     int opApplyReverse(scope int delegate(ref dchar) dg)
     {
-        int result = 0;
+        int result;
         while (s.length != 0)
         {
             dchar c = decodeReverse(s);
@@ -642,7 +642,7 @@ struct CodePoints(E)
 
     int opApplyReverse(scope int delegate(ref size_t, ref dchar) dg)
     {
-        int result = 0;
+        int result;
         while (s.length != 0)
         {
             dchar c = decodeReverse(s);
@@ -670,7 +670,7 @@ struct CodeUnits(E)
 
     int opApply(scope int delegate(ref E) dg)
     {
-        int result = 0;
+        int result;
         foreach (E c;s)
         {
             result = dg(c);
@@ -681,7 +681,7 @@ struct CodeUnits(E)
 
     int opApplyReverse(scope int delegate(ref E) dg)
     {
-        int result = 0;
+        int result;
         foreach_reverse (E c;s)
         {
             result = dg(c);
@@ -1253,7 +1253,7 @@ template EncoderInstance(CharType : char)
         auto c = read();
         if (c < 0xC0) return;
         int n = tails(cast(char) c);
-        for (size_t i=0; i<n; ++i)
+        for (size_t i; i<n; ++i)
         {
             read();
         }
@@ -1265,7 +1265,7 @@ template EncoderInstance(CharType : char)
         if (c < 0xC0) return c;
         int n = tails(cast(char) c);
         c &= (1 << (6 - n)) - 1;
-        for (size_t i=0; i<n; ++i)
+        for (size_t i; i<n; ++i)
         {
             c = (c << 6) + (read() & 0x3F);
         }
@@ -1292,7 +1292,7 @@ template EncoderInstance(CharType : char)
         );
 
         c &= (1 << (6 - n)) - 1;
-        for (size_t i=0; i<n; ++i)
+        for (size_t i; i<n; ++i)
         {
             if (!canRead) return INVALID_SEQUENCE;
             d = peek();
@@ -1307,9 +1307,9 @@ template EncoderInstance(CharType : char)
     {
         dchar c = read();
         if (c < 0x80) return c;
-        size_t shift = 0;
+        size_t shift;
         c &= 0x3F;
-        for (size_t i=0; i<4; ++i)
+        for (size_t i; i<4; ++i)
         {
             shift += 6;
             auto d = read();
@@ -1819,7 +1819,7 @@ in
 body
 {
     const(E)[] t = s;
-    for (size_t i=0; i<n; ++i) EncoderInstance!(E).skip(s);
+    for (size_t i; i<n; ++i) EncoderInstance!(E).skip(s);
     return t.length - s.length;
 }
 
@@ -2703,7 +2703,7 @@ abstract class EncodingScheme
     }
     body
     {
-        size_t n = 0;
+        size_t n;
         while (s.length != 0)
         {
             decode(s);
@@ -2731,7 +2731,7 @@ abstract class EncodingScheme
     body
     {
         const(ubyte)[] t = s;
-        for (size_t i=0; i<n; ++i) decode(s);
+        for (size_t i; i<n; ++i) decode(s);
         return t.length - s.length;
     }
 

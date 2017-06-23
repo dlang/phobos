@@ -344,7 +344,7 @@ private:
     // We track the ticks for the elapsed time rather than a Duration so that we
     // don't lose any precision.
 
-    bool _running = false; // Whether the StopWatch is currently running
+    bool _running; // Whether the StopWatch is currently running
     MonoTime _timeStarted; // The time the StopWatch started measuring (i.e. when it was started or reset).
     long _ticksElapsed;    // Total time that the StopWatch ran before it was stopped last.
 }

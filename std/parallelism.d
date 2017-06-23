@@ -167,7 +167,7 @@ immutable size_t cacheLineSize;
 shared static this()
 {
     import core.cpuid : datacache;
-    size_t lineSize = 0;
+    size_t lineSize;
     foreach (cachelevel; datacache)
     {
         if (cachelevel.lineSize > lineSize && cachelevel.lineSize < uint.max)
@@ -1700,7 +1700,7 @@ public:
             // Handle as a special case:
             if (size == 0)
             {
-                size_t index = 0;
+                size_t index;
                 foreach (elem; range)
                 {
                     emplaceRef(buf[index++], fun(elem));
@@ -2008,7 +2008,7 @@ public:
                     // Handle as a special case:
                     if (pool.size == 0)
                     {
-                        size_t index = 0;
+                        size_t index;
                         foreach (elem; toMap)
                         {
                             buf[index++] = fun(elem);
@@ -2662,7 +2662,7 @@ public:
                 return tmp;
             }
 
-            size_t curPos = 0;
+            size_t curPos;
             void useTask(ref RTask task)
             {
                 import std.algorithm.comparison : min;
@@ -3483,8 +3483,8 @@ int doSizeZeroCase(R, Delegate)(ref ParallelForeach!R p, Delegate dg)
 {
     with(p)
     {
-        int res = 0;
-        size_t index = 0;
+        int res;
+        size_t index;
 
         // The explicit ElementType!R in the foreach loops is necessary for
         // correct behavior when iterating over strings.
@@ -3992,7 +3992,7 @@ version(unittest)
     assert(ct.args[0] == 1);
 
     // Test ref return.
-    uint toInc = 0;
+    uint toInc;
     static ref T makeRef(T)(ref T num)
     {
         return num;
@@ -4384,7 +4384,7 @@ version(parallelismStressTest)
             auto sumFuture = task!( reduce!"a + b" )(numbers);
             poolInstance.put(sumFuture);
 
-            ulong sumSquares = 0;
+            ulong sumSquares;
             foreach (elem; numbers)
             {
                 sumSquares += elem * elem;

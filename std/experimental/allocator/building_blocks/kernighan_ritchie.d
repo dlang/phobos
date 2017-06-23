@@ -201,7 +201,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
             payload.ptr, payload.length,
             regionMode ? "(region)" : "(freelist)");
 
-        Node* lastNode = null;
+        Node* lastNode;
         if (!regionMode)
         {
             foreach (node; byNodePtr)

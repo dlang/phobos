@@ -1299,7 +1299,7 @@ if (isCallable!(F))
         return 8675309;
     }
 
-    uint myNum = 0;
+    uint myNum;
     auto incMyNumDel = toDelegate(&inc);
     auto returnVal = incMyNumDel(myNum);
     assert(myNum == 1);
@@ -1312,7 +1312,7 @@ if (isCallable!(F))
         return 8675309;
     }
 
-    uint myNum = 0;
+    uint myNum;
     auto incMyNumDel = toDelegate(&inc);
     int delegate(ref uint) dg = incMyNumDel;
     auto returnVal = incMyNumDel(myNum);
@@ -1447,7 +1447,7 @@ template forward(args...)
 {
     auto foo(TL...)(auto ref TL args)
     {
-        string result = "";
+        string result;
         foreach (i, _; args)
         {
             //pragma(msg, "[",i,"] ", __traits(isRef, args[i]) ? "L" : "R");

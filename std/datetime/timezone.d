@@ -2306,12 +2306,12 @@ public:
 
             foreach (i, ref ttype; transitionTypes)
             {
-                bool isStd = false;
+                bool isStd;
 
                 if (i < transitionIsStd.length && !transitionIsStd.empty)
                     isStd = transitionIsStd[i];
 
-                bool inUTC = false;
+                bool inUTC;
 
                 if (i < transitionInUTC.length && !transitionInUTC.empty)
                     inUTC = transitionInUTC[i];
@@ -2367,7 +2367,7 @@ public:
 
             string stdName;
             string dstName;
-            bool hasDST = false;
+            bool hasDST;
 
             foreach (transition; retro(transitions))
             {
