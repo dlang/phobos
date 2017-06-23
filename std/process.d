@@ -1101,7 +1101,7 @@ version (Posix) @system unittest
     TestScript prog = "";
 
     string directory;
-    assert(directory.ptr && !directory.length);
+    assert(!directory.length);
     spawnProcess([prog.path], null, Config.none, directory).wait();
 }
 

@@ -20,7 +20,7 @@ template stateSize(T)
     else static if (is(T == struct) || is(T == union))
         enum stateSize = Fields!T.length || isNested!T ? T.sizeof : 0;
     else static if (is(T == void))
-        enum size_t stateSize;
+        enum size_t stateSize = 0;
     else
         enum stateSize = T.sizeof;
 }

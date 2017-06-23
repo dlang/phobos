@@ -7964,7 +7964,7 @@ template isFinal(X...) if (X.length == 1)
  +  `true` if `S` can be copied. `false` otherwise.
  + ++/
 enum isCopyable(S) = is(typeof(
-    { S foo; S copy = foo; }
+    { S foo = S.init; S copy = foo; }
 ));
 
 ///
