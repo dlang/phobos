@@ -291,7 +291,7 @@ if (isSomeChar!Char)
         {
             // R ~= s[start .. k + 1];
             immutable width = (k + 1) - start;
-            for (int ii = 0; ii < width; ii++)
+            for (int ii; ii < width; ii++)
                 R[Rlen + ii] = s[start + ii];
             Rlen += width;
         }

@@ -704,7 +704,7 @@ pure @safe nothrow @nogc unittest
 debug pure nothrow @system unittest
 {//check the contract
     int[4] testArr = [1,2,3,4];
-    bool passed = false;
+    bool passed;
     scope (success) assert(passed);
     import core.exception : AssertError;
     //std.exception.assertThrown won't do because it can't infer nothrow
@@ -4308,7 +4308,7 @@ pure @safe unittest
 
     assert(result == [ "1a", "2b", "3c" ]);
 
-    size_t idx = 0;
+    size_t idx;
     // unpacking tuple elements with foreach
     foreach (e1, e2; zip(a, b))
     {
@@ -5773,12 +5773,12 @@ debug @system unittest
 unittest
 {
     {
-        ushort start = 0, end = 10, step = 2;
+        ushort start, end = 10, step = 2;
         foreach (i; iota(start, end, step))
             static assert(is(typeof(i) == ushort));
     }
     {
-        ubyte start = 0, end = 255, step = 128;
+        ubyte start, end = 255, step = 128;
         uint x;
         foreach (i; iota(start, end, step))
         {
@@ -6576,7 +6576,7 @@ private:
 @safe unittest
 {
     // Boundary case: transpose of empty range should be empty
-    int[][] ror = [];
+    int[][] ror;
     assert(transposed(ror).empty);
 }
 
@@ -7406,7 +7406,7 @@ if (isForwardRange!Source && hasLength!Source)
 {
     import std.algorithm.comparison : equal;
 
-    int[] source = [];
+    int[] source;
     auto chunks = source.evenChunks(0);
     assert(chunks.length == 0);
     chunks = source.evenChunks(3);
@@ -8467,8 +8467,8 @@ private struct OnlyResult(T, size_t arity)
         return result;
     }
 
-    private size_t frontIndex = 0;
-    private size_t backIndex = 0;
+    private size_t frontIndex;
+    private size_t backIndex;
 
     // @@@BUG@@@ 10643
     version(none)
@@ -8663,7 +8663,7 @@ if (!is(CommonType!Values == void) || Values.length == 0)
     foreach (x; tuple(1, '1', 1.0, "1", [1]))
     {
         auto a = only(x);
-        typeof(x)[] e = [];
+        typeof(x)[] e;
         assert(a.front == x);
         assert(a.back == x);
         assert(!a.empty);
@@ -8691,7 +8691,7 @@ if (!is(CommonType!Values == void) || Values.length == 0)
     }
 
     auto imm = only!(immutable int)(1);
-    immutable int[] imme = [];
+    immutable int[] imme;
     assert(imm.front == 1);
     assert(imm.back == 1);
     assert(!imm.empty);
@@ -9044,7 +9044,7 @@ pure @safe nothrow unittest
     saved.popFront();
     assert(saved.empty);
 
-    size_t control = 0;
+    size_t control;
     foreach (i, v; enumerated)
     {
         static assert(is(typeof(i) == size_t));
@@ -9394,7 +9394,7 @@ if (isInputRange!Range)
     private size_t getTransitionIndex(SearchPolicy sp, alias test, V)(V v)
     if (sp == SearchPolicy.binarySearch && isRandomAccessRange!Range && hasLength!Range)
     {
-        size_t first = 0, count = _input.length;
+        size_t first, count = _input.length;
         while (count > 0)
         {
             immutable step = count / 2, it = first + step;
@@ -9419,7 +9419,7 @@ if (isInputRange!Range)
         if (empty || test(front, v)) return 0;
         immutable count = length;
         if (count == 1) return 1;
-        size_t below = 0, above = 1, step = 2;
+        size_t below, above = 1, step = 2;
         while (!test(_input[above], v))
         {
             // Still too small, update below and increase gait
@@ -9565,7 +9565,7 @@ See_Also: STL's $(HTTP sgi.com/tech/stl/lower_bound.html,upper_bound).
     if (isTwoWayCompatible!(predFun, ElementType!Range, V)
         && isRandomAccessRange!Range)
     {
-        size_t first = 0, count = _input.length;
+        size_t first, count = _input.length;
         while (count > 0)
         {
             immutable step = count / 2;
@@ -9623,7 +9623,7 @@ equalRange). Completes the entire search in $(BIGOH log(n)) time.
         && isRandomAccessRange!Range && hasLength!Range)
     {
         import std.typecons : tuple;
-        size_t first = 0, count = _input.length;
+        size_t first, count = _input.length;
         while (count > 0)
         {
             immutable step = count / 2;
@@ -10675,7 +10675,7 @@ private:
     {
         @property int front() {return 0;}
         void popFront() {empty = true;}
-        bool empty = false;
+        bool empty;
     }
     R r;
     refRange(&r).popFront();
@@ -10688,7 +10688,7 @@ private:
     {
         Object front;
         alias back = front;
-        bool empty = false;
+        bool empty;
         void popFront() {empty = true;}
         alias popBack = popFront;
         @property R save() {return this;}
@@ -10702,7 +10702,7 @@ private:
         @property Object front() {return null;}
         @property const(Object) front() const {return null;}
         alias back = front;
-        bool empty = false;
+        bool empty;
         void popFront() {empty = true;}
         alias popBack = popFront;
         @property R2 save() {return this;}
@@ -11374,13 +11374,13 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
 
     // Sum values while copying
     int[] values = [1, 4, 9, 16, 25];
-    int sum = 0;
+    int sum ;
     auto newValues = values.tee!(a => sum += a).array;
     assert(equal(newValues, values));
     assert(sum == 1 + 4 + 9 + 16 + 25);
 
     // Count values that pass the first filter
-    int count = 0;
+    int count;
     auto newValues4 = values.filter!(a => a < 10)
                             .tee!(a => count++)
                             .map!(a => a + 1)
@@ -11400,7 +11400,7 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
 
     int[] values = [1, 4, 9, 16, 25];
 
-    int count = 0;
+    int count;
     auto newValues = values.filter!(a => a < 10)
         .tee!(a => count++, No.pipeOnPop)
         .map!(a => a + 1)
@@ -11418,7 +11418,7 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     newValues.front;
     assert(count == 2);
 
-    int[] preMap = new int[](3), postMap = [];
+    int[] preMap = new int[](3), postMap;
     auto mappedValues = values.filter!(a => a < 10)
         //Note the two different ways of using tee
         .tee(preMap)
@@ -11444,8 +11444,8 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
         return "AaEeIiOoUu".indexOf(c) != -1;
     }
 
-    int vowelCount = 0;
-    int shiftedCount = 0;
+    int vowelCount;
+    int shiftedCount;
     auto removeVowels = txt.tee!(c => isVowel(c) ? vowelCount++ : 0)
                                 .filter!(c => !isVowel(c))
                                 .map!(c => (c == ' ') ? c : c + 1)
@@ -11461,7 +11461,7 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     void testRange(Range)(Range r)
     {
         const int strideLen = 3;
-        int i = 0;
+        int i;
         ElementType!Range elem1;
         ElementType!Range elem2;
         while (!r.empty)
@@ -11481,12 +11481,12 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
 
     string txt = "abcdefghijklmnopqrstuvwxyz";
 
-    int popCount = 0;
+    int popCount;
     auto pipeOnPop = txt.tee!(a => popCount++);
     testRange(pipeOnPop);
     assert(popCount == 26);
 
-    int frontCount = 0;
+    int frontCount;
     auto pipeOnFront = txt.tee!(a => frontCount++, No.pipeOnPop);
     testRange(pipeOnFront);
     assert(frontCount == 9);
@@ -11500,17 +11500,17 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
     //Test diverting elements to an OutputRange
     string txt = "abcdefghijklmnopqrstuvwxyz";
 
-    dchar[] asink1 = [];
+    dchar[] asink1;
     auto fsink = (dchar c) { asink1 ~= c; };
     auto result1 = txt.tee(fsink).array;
     assert(equal(txt, result1) && (equal(result1, asink1)));
 
-    dchar[] _asink1 = [];
+    dchar[] _asink1;
     auto _result1 = txt.tee!((dchar c) { _asink1 ~= c; })().array;
     assert(equal(txt, _result1) && (equal(_result1, _asink1)));
 
     dchar[] asink2 = new dchar[](txt.length);
-    void fsink2(dchar c) { static int i = 0; asink2[i] = c; i++; }
+    void fsink2(dchar c) { static int i; asink2[i] = c; i++; }
     auto result2 = txt.tee(&fsink2).array;
     assert(equal(txt, result2) && equal(result2, asink2));
 

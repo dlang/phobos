@@ -941,8 +941,8 @@ if (isSomeChar!C)
         return index;
     else
     {
-        size_t n = 0;
-        size_t j = 0;
+        size_t n;
+        size_t j;
 
         for (; j < index; ++n)
             j += stride(str, j);
@@ -1272,7 +1272,7 @@ body
                 tmp.popBack();
             }
             const Char[] codePoint = codeUnits[0 .. numCodeUnits];
-            size_t index = 0;
+            size_t index;
             immutable retval = decodeImpl!(true, useReplacementDchar)(codePoint, index);
             str = tmp;
             return retval;
@@ -2097,16 +2097,16 @@ version(unittest) private void testBadDecodeBack(R)(R range, size_t line = __LIN
                           wchar[], const(wchar)[], wstring,
                           dchar[], const(dchar)[], dstring))
     {
-        static assert(isSafe!({ S str; size_t i = 0; decode(str, i);      }));
-        static assert(isSafe!({ S str; size_t i = 0; decodeFront(str, i); }));
+        static assert(isSafe!({ S str; size_t i; decode(str, i);      }));
+        static assert(isSafe!({ S str; size_t i; decodeFront(str, i); }));
         static assert(isSafe!({ S str; decodeFront(str); }));
-        static assert((functionAttributes!({ S str; size_t i = 0; decode(str, i); }) & FunctionAttribute.pure_) != 0);
+        static assert((functionAttributes!({ S str; size_t i; decode(str, i); }) & FunctionAttribute.pure_) != 0);
         static assert((functionAttributes!({
-            S str; size_t i = 0; decodeFront(str, i);
+            S str; size_t i; decodeFront(str, i);
         }) & FunctionAttribute.pure_) != 0);
         static assert((functionAttributes!({ S str; decodeFront(str); }) & FunctionAttribute.pure_) != 0);
         static assert((functionAttributes!({
-            S str; size_t i = 0; decodeBack(str, i);
+            S str; size_t i; decodeBack(str, i);
         }) & FunctionAttribute.pure_) != 0);
         static assert((functionAttributes!({ S str; decodeBack(str); }) & FunctionAttribute.pure_) != 0);
     }
@@ -2121,7 +2121,7 @@ version(unittest) private void testBadDecodeBack(R)(R range, size_t line = __LIN
     val[1] = 0b1011_1111;
     val[2] = 0b1011_1111;
     val[3] = 0b1011_1111;
-    size_t i = 0;
+    size_t i;
     assertThrown!UTFException((){ dchar ch = decode(val[], i); }());
 }
 /* =================== Encode ======================= */
@@ -2580,7 +2580,7 @@ if (isInputRange!InputRange && !isInfinite!InputRange && is(ElementType!InputRan
         return input.length;
     else
     {
-        size_t total = 0;
+        size_t total;
 
         foreach (dchar c; input)
             total += codeLength!C(c);
@@ -2690,7 +2690,7 @@ void validate(S)(in S str) @safe pure
 if (isSomeString!S)
 {
     immutable len = str.length;
-    for (size_t i = 0; i < len; )
+    for (size_t i; i < len; )
     {
         decode(str, i);
     }
@@ -3044,7 +3044,7 @@ if (isSomeString!S && isPointer!P && isSomeChar!(typeof(*P.init)) &&
     {
         static size_t zeroLen(C)(const(C)* ptr) @trusted
         {
-            size_t len = 0;
+            size_t len;
             while (*ptr != '\0') { ++ptr; ++len; }
             return len;
         }

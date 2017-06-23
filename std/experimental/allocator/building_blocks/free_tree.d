@@ -453,7 +453,7 @@ struct FreeTree(ParentAllocator)
 
 @system unittest // "desperation mode"
 {
-    uint myDeallocCounter = 0;
+    uint myDeallocCounter;
 
     struct MyAllocator
     {

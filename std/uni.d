@@ -758,7 +758,7 @@ void copyBackwards(T,U)(T[] src, U[] dest)
 void copyForward(T,U)(T[] src, U[] dest)
 {
     assert(src.length == dest.length);
-    for (size_t i=0; i<src.length; i++)
+    for (size_t i; i<src.length; i++)
         dest[i] = src[i];
 }
 
@@ -1101,12 +1101,12 @@ private:
     alias fn3 = sliceBits!( 6,  9);
     alias fn4 = sliceBits!( 0,  6);
     static void check(size_t lvl, MA)(ref MA arr){
-        for (size_t i = 0; i< arr.length!lvl; i++)
+        for (size_t i; i< arr.length!lvl; i++)
             assert(arr.slice!(lvl)[i] == i, text("Mismatch on lvl ", lvl, " idx ", i, " value: ", arr.slice!(lvl)[i]));
     }
 
     static void fillIdx(size_t lvl, MA)(ref MA arr){
-        for (size_t i = 0; i< arr.length!lvl; i++)
+        for (size_t i; i< arr.length!lvl; i++)
             arr.slice!(lvl)[i] = i;
     }
     Bitty m1;
@@ -1119,7 +1119,7 @@ private:
 
     m1.length!4 = 2^^16;
 
-    for (size_t i = 0; i< m1.length!4; i++)
+    for (size_t i; i< m1.length!4; i++)
         m1.slice!(4)[i] = i % 2;
 
     fillIdx!1(m1);
@@ -1133,7 +1133,7 @@ private:
     check!3(m1);
     check!2(m1);
     check!1(m1);
-    for (size_t i=0; i < 2^^16; i++)
+    for (size_t i; i < 2^^16; i++)
     {
         m1.slice!(4)[i] = i % 2;
         m1.slice!(0)[fn1(i)] = fn1(i);
@@ -1141,7 +1141,7 @@ private:
         m1.slice!(2)[fn3(i)] = fn3(i);
         m1.slice!(3)[fn4(i)] = fn4(i);
     }
-    for (size_t i=0; i < 2^^16; i++)
+    for (size_t i; i < 2^^16; i++)
     {
         assert(m1.slice!(4)[i] == i % 2);
         assert(m1.slice!(0)[fn1(i)] == fn1(i));
@@ -1431,7 +1431,7 @@ pure nothrow:
             return ptr.origin[s1/factor .. e1/factor]
                 == arr.ptr.origin[s2/factor .. e2/factor];
         }
-        for (size_t i=0;i<limit; i++)
+        for (size_t i;i<limit; i++)
             if (this[i] != arr[i])
                 return false;
         return true;
@@ -1516,7 +1516,7 @@ private struct SliceOverIndexed(T)
     {
         if (arr.length != length)
             return false;
-        for (size_t i=0; i <length; i++)
+        for (size_t i; i <length; i++)
             if (this[i] != arr[i])
                 return false;
         return true;
@@ -1574,7 +1574,7 @@ if (is(Unqual!T == T))
     assert(sliced[] == sliceOverIndexed(1, 2, &other));
     sliceOverIndexed(0, 2, &idxArray)[0 .. 2] = -1;
     assert(idxArray[0 .. 2] == [-1, -1]);
-    uint[] nullArr = null;
+    uint[] nullArr;
     auto nullSlice = sliceOverIndexed(0, 0, &idxArray);
     assert(nullSlice.empty);
 }
@@ -1634,7 +1634,7 @@ size_t uniformLowerBound(alias pred, Range, T)(Range range, T needle)
 if (is(T : ElementType!Range))
 {
     assert(isPow2OrZero(range.length));
-    size_t idx = 0, m = range.length/2;
+    size_t idx, m = range.length/2;
     while (m != 0)
     {
         if (pred(range[idx+m], needle))
@@ -1650,7 +1650,7 @@ size_t switchUniformLowerBound(alias pred, Range, T)(Range range, T needle)
 if (is(T : ElementType!Range))
 {
     assert(isPow2OrZero(range.length));
-    size_t idx = 0, m = range.length/2;
+    size_t idx, m = range.length/2;
     enum max = 1 << 10;
     while (m >= max)
     {
@@ -2119,7 +2119,7 @@ public:
     {
         import std.conv : text;
         assert(intervals.length % 2 == 0, "Odd number of interval bounds [a, b)!");
-        for (uint i = 0; i < intervals.length; i += 2)
+        for (uint i; i < intervals.length; i += 2)
         {
             auto a = intervals[i], b = intervals[i+1];
             assert(a < b, text("illegal interval [a, b): ", a, " > ", b));
@@ -2140,7 +2140,7 @@ public:
     {
         import std.conv : text;
         assert(intervals.length % 2 == 0, "Odd number of interval bounds [a, b)!");
-        for (uint i = 0; i < intervals.length; i += 2)
+        for (uint i; i < intervals.length; i += 2)
         {
             auto a = intervals[i], b = intervals[i+1];
             assert(a < b, text("illegal interval [a, b): ", a, " > ", b));
@@ -2215,7 +2215,7 @@ public:
     package auto scanFor()(dchar ch) const
     {
         immutable len = data.length;
-        for (size_t i = 0; i < len; i++)
+        for (size_t i; i < len; i++)
             if (ch < data[i])
                 return i & 1;
         return 0;
@@ -2224,7 +2224,7 @@ public:
     /// Number of $(CODEPOINTS) in this set
     @property size_t length()
     {
-        size_t sum = 0;
+        size_t sum;
         foreach (iv; byInterval)
         {
             sum += iv.b - iv.a;
@@ -2885,7 +2885,7 @@ private:
         //   the last kept element (at 'i').
         // - predicate mutates lhs (merges rhs into lhs)
         size_t len = ivals.length;
-        size_t i = 0;
+        size_t i;
         size_t j = 1;
         while (j < len)
         {
@@ -2905,7 +2905,7 @@ private:
             }
         }
         len = i + 1;
-        for (size_t k=0; k + 1 < len; k++)
+        for (size_t k; k + 1 < len; k++)
         {
             assert(ivals[k].a < ivals[k].b);
             assert(ivals[k].b < ivals[k+1].a);
@@ -4245,7 +4245,7 @@ template isValidArgsForTrie(Key, Args...)
 
 @property size_t sumOfIntegerTuple(ints...)()
 {
-    size_t count=0;
+    size_t count;
     foreach (v; ints)
         count += v;
     return count;
@@ -5415,7 +5415,7 @@ if (is(C : wchar) || is(C : char))
     {
         assert(collectException((){
             auto s = msg;
-            size_t idx = 0;
+            size_t idx;
             utf8.test(s);
         }()), format("%( %2x %)", cast(ubyte[]) msg));
     }
@@ -5648,7 +5648,7 @@ template Sequence(size_t start, size_t end)
         assert(trie[a]);
     for (int a='A'; a<'Z';a++)
         assert(trie[a]);
-    for (int a=0; a<'A'; a++)
+    for (int a; a<'A'; a++)
         assert(!trie[a]);
     for (int a ='Z'; a<'a'; a++)
         assert(!trie[a]);
@@ -5824,7 +5824,7 @@ package ubyte[] compressIntervals(Range)(Range intervals)
 if (isInputRange!Range && isIntegralPair!(ElementType!Range))
 {
     ubyte[] storage;
-    uint base = 0;
+    uint base;
     // RLE encode
     foreach (val; intervals)
     {
@@ -5850,7 +5850,7 @@ if (isInputRange!Range && isIntegralPair!(ElementType!Range))
     auto run2 = [tuple(0, (1 << 20)+512+1), tuple((1 << 20)+512+4, lastDchar+1)];
     ubyte[] enc2 = [cast(ubyte) 0, (0b1_01 << 5) | (1 << 4), 2, 1, 3]; // odd length-ed
     assert(compressIntervals(run2) == enc2);
-    size_t  idx = 0;
+    size_t  idx;
     assert(decompressFrom(enc, idx) == 80);
     assert(decompressFrom(enc, idx) == 47);
     assert(decompressFrom(enc, idx) == 1);
@@ -6611,7 +6611,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
     static struct Result
     {
         private Range _range;
-        private size_t i = 0;
+        private size_t i;
 
         bool empty() @property
         {
@@ -6928,7 +6928,7 @@ private:
         enum nbytes = 3 * (grow + 1);
         size_t k = smallLength;
         ubyte* p = cast(ubyte*) enforce(malloc(nbytes), "malloc failed");
-        for (int i=0; i<k; i++)
+        for (int i; i<k; i++)
             write24(p, read24(small_.ptr, i), i);
         // now we can overwrite small array data
         ptr_ = p;
@@ -7617,7 +7617,7 @@ int hangulSyllableIndex(dchar ch) pure nothrow @nogc @safe
 // internal helper: compose hangul syllables leaving dchar.init in holes
 void hangulRecompose(dchar[] seq) pure nothrow @nogc @safe
 {
-    for (size_t idx = 0; idx + 1 < seq.length; )
+    for (size_t idx; idx + 1 < seq.length; )
     {
         if (isJamoL(seq[idx]) && isJamoV(seq[idx+1]))
         {
@@ -7797,8 +7797,8 @@ inout(C)[] normalize(NormalizationForm norm=NFC, C)(inout(C)[] input)
                     decomposed ~= c;
             }
         ccc.length = decomposed.length;
-        size_t firstNonStable = 0;
-        ubyte lastClazz = 0;
+        size_t firstNonStable;
+        ubyte lastClazz;
 
         foreach (idx, dchar ch; decomposed)
         {
@@ -7955,7 +7955,7 @@ private size_t recompose(size_t start, dchar[] input, ubyte[] ccc) pure nothrow 
 private auto splitNormalized(NormalizationForm norm, C)(const(C)[] input)
 {
     import std.typecons : tuple;
-    ubyte lastCC = 0;
+    ubyte lastCC;
 
     foreach (idx, dchar ch; input)
     {
@@ -7986,7 +7986,7 @@ private auto seekStable(NormalizationForm norm, C)(size_t idx, in C[] input)
     import std.utf : codeLength;
 
     auto br = input[0 .. idx];
-    size_t region_start = 0;// default
+    size_t region_start;// default
     for (;;)
     {
         if (br.empty)// start is 0
@@ -8550,9 +8550,9 @@ if (isInputRange!Range &&
       private:
         Range r;
         typeof(r.asLowerCase) lwr; // range representing the lower case rest of string
-        bool lower = false;     // false for first character, true for rest of string
+        bool lower;     // false for first character, true for rest of string
         dchar[3] buf = void;
-        uint nLeft = 0;
+        uint nLeft;
     }
 
     return ToCapitalizerImpl(str);
@@ -8705,7 +8705,7 @@ private size_t encodeTo(scope char[] buf, size_t idx, dchar c) @trusted pure not
 @safe unittest
 {
     char[] s = "abcd".dup;
-    size_t i = 0;
+    size_t i;
     i = encodeTo(s, i, 'X');
     assert(s == "Xbcd");
 
@@ -8746,10 +8746,10 @@ private void toCaseInPlace(alias indexFn, uint maxIdx, alias tableFn, C)(ref C[]
 if (is(C == char) || is(C == wchar)  || is(C == dchar))
 {
     import std.utf : decode, codeLength;
-    size_t curIdx = 0;
-    size_t destIdx = 0;
+    size_t curIdx;
+    size_t destIdx;
     alias slowToCase = toCaseInPlaceAlloc!(indexFn, maxIdx, tableFn);
-    size_t lastUnchanged = 0;
+    size_t lastUnchanged;
     // in-buffer move of bytes to a new start index
     // the trick is that it may not need to copy at all
     static size_t moveTo(C[] str, size_t dest, size_t from, size_t to)
@@ -8814,9 +8814,9 @@ private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
     size_t toCaseLength(C)(in C[] str)
     {
         import std.utf : decode, codeLength;
-        size_t codeLen = 0;
-        size_t lastNonTrivial = 0;
-        size_t curIdx = 0;
+        size_t codeLen;
+        size_t lastNonTrivial;
+        size_t curIdx;
         while (curIdx != str.length)
         {
             immutable startIdx = curIdx;

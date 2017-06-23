@@ -852,7 +852,7 @@ if (!isSomeString!(T[])
 
         immutable oldLen = array.length;
 
-        size_t to_insert = 0;
+        size_t to_insert;
         foreach (i, E; U)
         {
             static if (is(E : T)) //a single convertible value, not a range
@@ -943,7 +943,7 @@ if (isSomeString!(T[]) && allSatisfy!(isCharOrStringOrDcharRange, U))
                 return ptr;
             }
         }
-        size_t to_insert = 0;
+        size_t to_insert;
         //count up the number of *codeunits* to insert
         foreach (i, E; U)
             to_insert += codeLength!T(stuff[i]);
@@ -1298,7 +1298,7 @@ if (isDynamicArray!S)
     else
     {
         immutable len = s.length, nlen = n * len;
-        for (size_t i = 0; i < nlen; i += len)
+        for (size_t i; i < nlen; i += len)
         {
             r[i .. i + len] = s[];
         }
@@ -1374,7 +1374,7 @@ S[] split(S)(S s) @safe pure
 if (isSomeString!S)
 {
     size_t istart;
-    bool inword = false;
+    bool inword;
     S[] result;
 
     foreach (i, dchar c ; s)
@@ -1960,7 +1960,7 @@ if (isInputRange!RoR &&
 {
     // Test that the range is iterated only once.
     import std.algorithm.iteration : map;
-    int c = 0;
+    int c;
     auto j1 = [1, 2, 3].map!(_ => [c++]).join;
     assert(c == 3);
     assert(j1 == [0, 1, 2]);
@@ -2733,7 +2733,7 @@ if (isDynamicArray!A)
     {
         size_t capacity;
         Unqual!T[] arr;
-        bool canExtend = false;
+        bool canExtend;
     }
 
     private Data* _data;

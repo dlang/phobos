@@ -91,7 +91,7 @@ string sysErrorString(
 
 bool putSysError(Writer)(DWORD code, Writer w, /*WORD*/int langId = 0)
 {
-    wchar *lpMsgBuf = null;
+    wchar *lpMsgBuf;
     auto res = FormatMessageW(
         FORMAT_MESSAGE_ALLOCATE_BUFFER |
         FORMAT_MESSAGE_FROM_SYSTEM |

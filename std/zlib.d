@@ -696,7 +696,7 @@ private import std.stdio;
 
 
     // smallish buffers
-    for (int idx = 0; idx < 25; idx++)
+    for (int idx; idx < 25; idx++)
     {
         char[] buf = new char[uniform(0, 100)];
 
@@ -715,7 +715,7 @@ private import std.stdio;
     }
 
     // larger buffers
-    for (int idx = 0; idx < 25; idx++)
+    for (int idx; idx < 25; idx++)
     {
         char[] buf = new char[uniform(0, 1000/*0000*/)];
 

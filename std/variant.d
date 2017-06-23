@@ -1316,7 +1316,7 @@ public:
 {
     alias Atom = Algebraic!(string, This[]);
 
-    Atom[] values = [];
+    Atom[] values;
     auto a = Atom(values);
 }
 
@@ -1561,7 +1561,7 @@ static class VariantException : Exception
     a = 42; b = 42.0; assert(a == b);
 
     // try failing conversions
-    bool failed = false;
+    bool failed;
     try
     {
         auto d = c.get!(int);
@@ -1899,7 +1899,7 @@ static class VariantException : Exception
     static struct Structure { int data; }
     alias VariantTest = Algebraic!(Structure delegate() pure nothrow @nogc @safe);
 
-    bool called = false;
+    bool called;
     Structure example() pure nothrow @nogc @safe
     {
         called = true;
@@ -2274,7 +2274,7 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 
         foreach (tidx, T; AllowedTypes)
         {
-            bool added = false;
+            bool added;
             foreach (dgidx, dg; Handler)
             {
                 // Handle normal function objects
@@ -2625,7 +2625,7 @@ if (isAlgebraic!VariantType && Handler.length > 0)
             --cnt;
             assert(cnt >= 0);
         }
-        static int cnt = 0;
+        static int cnt;
     }
 
     {

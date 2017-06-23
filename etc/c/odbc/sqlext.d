@@ -119,7 +119,7 @@ enum int SQL_ATTR_ANSI_APP = 115;
 // * SQL_ACCESS_MODE options *
 enum : uint
 {
-    SQL_MODE_READ_WRITE = 0UL,
+    SQL_MODE_READ_WRITE,
     SQL_MODE_READ_ONLY  = 1UL,
     SQL_MODE_DEFAULT    = SQL_MODE_READ_WRITE
 }
@@ -127,7 +127,7 @@ enum : uint
 // * SQL_AUTOCOMMIT options *
 enum : uint
 {
-    SQL_AUTOCOMMIT_OFF     = 0UL,
+    SQL_AUTOCOMMIT_OFF,
     SQL_AUTOCOMMIT_ON      = 1UL,
     SQL_AUTOCOMMIT_DEFAULT = SQL_AUTOCOMMIT_ON
 }
@@ -138,7 +138,7 @@ enum uint SQL_LOGIN_TIMEOUT_DEFAULT  = 15UL;
 // * SQL_OPT_TRACE options *
 enum : uint
 {
-    SQL_OPT_TRACE_OFF          = 0UL,
+    SQL_OPT_TRACE_OFF,
     SQL_OPT_TRACE_ON           = 1UL,
     SQL_OPT_TRACE_DEFAULT      = SQL_OPT_TRACE_OFF
 }
@@ -148,7 +148,7 @@ immutable char[] SQL_OPT_TRACE_FILE_DEFAULT = r"\SQL.LOG";
 // * SQL_ODBC_CURSORS options *
 enum : uint
 {
-    SQL_CUR_USE_IF_NEEDED = 0UL,
+    SQL_CUR_USE_IF_NEEDED,
     SQL_CUR_USE_ODBC      = 1UL,
     SQL_CUR_USE_DRIVER    = 2UL,
     SQL_CUR_DEFAULT       = SQL_CUR_USE_DRIVER
@@ -157,7 +157,7 @@ enum : uint
 enum
 {
     // * values for SQL_ATTR_DISCONNECT_BEHAVIOR *
-    SQL_DB_RETURN_TO_POOL = 0UL,
+    SQL_DB_RETURN_TO_POOL,
     SQL_DB_DISCONNECT     = 1UL,
     SQL_DB_DEFAULT        = SQL_DB_RETURN_TO_POOL,
 
@@ -168,7 +168,7 @@ enum
 
 // * values for SQL_ATTR_CONNECTION_DEAD *
 enum int SQL_CD_TRUE  = 1L; // * Connection is closed/dead    *
-enum int SQL_CD_FALSE = 0L; // * Connection is open/available *
+enum int SQL_CD_FALSE = 0L;      // * Connection is open/available *
 
 // * values for SQL_ATTR_ANSI_APP ( ODBC v3.51 ) *
 enum int SQL_AA_TRUE  = 1L; // * the application is an ANSI app   *
@@ -177,7 +177,7 @@ enum int SQL_AA_FALSE = 0L; // * the application is a Unicode app *
 // * statement attributes *
 enum
 {
-    SQL_QUERY_TIMEOUT   = 0,
+    SQL_QUERY_TIMEOUT,
     SQL_MAX_ROWS        = 1,
     SQL_NOSCAN          = 2,
     SQL_MAX_LENGTH      = 3,
@@ -238,15 +238,15 @@ enum
 // * the value of SQL_ATTR_PARAM_BIND_TYPE *
 enum : uint
 {
-    SQL_PARAM_BIND_BY_COLUMN    = 0UL,
+    SQL_PARAM_BIND_BY_COLUMN,
     SQL_PARAM_BIND_TYPE_DEFAULT = SQL_PARAM_BIND_BY_COLUMN
 }
 
 // * SQL_QUERY_TIMEOUT options *
-enum uint SQL_QUERY_TIMEOUT_DEFAULT = 0UL;
+enum uint SQL_QUERY_TIMEOUT_DEFAULT  = 0L;
 
 // * SQL_MAX_ROWS options *
-enum uint SQL_MAX_ROWS_DEFAULT = 0UL;
+enum uint SQL_MAX_ROWS_DEFAULT  = 0L;
 
 // * SQL_NOSCAN options *
 enum : uint
@@ -257,7 +257,7 @@ enum : uint
 }
 
 // * SQL_MAX_LENGTH options *
-enum uint SQL_MAX_LENGTH_DEFAULT = 0UL;
+enum uint SQL_MAX_LENGTH_DEFAULT  = 0L;
 
 // * values for SQL_ATTR_ASYNC_ENABLE *
 enum : uint
@@ -298,7 +298,7 @@ enum : uint
 enum uint SQL_ROWSET_SIZE_DEFAULT  = 1UL;
 
 // * SQL_KEYSET_SIZE options *
-enum uint SQL_KEYSET_SIZE_DEFAULT  = 0UL;
+enum uint SQL_KEYSET_SIZE_DEFAULT  = 0L;
 
 // * SQL_SIMULATE_CURSOR options *
 enum : uint
@@ -527,7 +527,7 @@ enum
     SQL_C_GUID        = SQL_GUID                             /* GUID              */
 }
 
-enum int SQL_TYPE_NULL =  0;
+enum int SQL_TYPE_NULL = 0L;
 
 // * define for SQL_DIAG_ROW_NUMBER and SQL_DIAG_COLUMN_NUMBER *
 enum : uint
@@ -1642,7 +1642,7 @@ enum
  ' defined in sql.d
  '
  +/
-enum int SQL_TABLE_STAT = 0;
+enum int SQL_TABLE_STAT = 0L;
 
 // * Defines for SQLTables *
 immutable char[] SQL_ALL_CATALOGS    = "%";

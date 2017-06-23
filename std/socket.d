@@ -932,7 +932,7 @@ private string formatGaiError(int err) @trusted
  */
 AddressInfo[] getAddressInfo(T...)(in char[] node, T options)
 {
-    const(char)[] service = null;
+    const(char)[] service;
     addrinfo hints;
     hints.ai_family = AF_UNSPEC;
 
@@ -2555,7 +2555,7 @@ private:
     AddressFamily _family;
 
     version(Windows)
-        bool _blocking = false;         /// Property to get or set whether the socket is blocking or nonblocking.
+        bool _blocking;         /// Property to get or set whether the socket is blocking or nonblocking.
 
     // The WinSock timeouts seem to be effectively skewed by a constant
     // offset of about half a second (value in milliseconds). This has
@@ -3345,7 +3345,7 @@ public:
     body
     {
         fd_set* fr, fw, fe;
-        int n = 0;
+        int n;
 
         version(Windows)
         {

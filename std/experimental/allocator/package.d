@@ -852,7 +852,7 @@ nothrow @safe @nogc unittest
 
     cast(void) Mallocator.instance.make!Pure(0);
 
-    static int g = 0;
+    static int g;
     static struct Impure { this(int) nothrow @nogc @safe {
         g++;
     } }
@@ -920,7 +920,7 @@ private void fillWithMemcpy(T)(void[] array, auto ref T filler) nothrow
 
 private T[] uninitializedFillDefault(T)(T[] array) nothrow
 {
-    T t = T.init;
+    T t;
     fillWithMemcpy(array, t);
     return array;
 }
@@ -1047,7 +1047,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
                 alloc.deallocate(m);
         }
 
-        size_t i = 0;
+        size_t i;
         static if (hasElaborateDestructor!T)
         {
             scope (failure)
@@ -1133,7 +1133,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
 {
     import std.exception : assertThrown, enforce;
 
-    static int i = 0;
+    static int i;
     struct Singleton
     {
         @disable this();
@@ -1179,7 +1179,7 @@ if (isInputRange!R && !isInfinite!R)
         if (!m.ptr) return null;
         auto result = () @trusted { return cast(T[]) m; } ();
 
-        size_t i = 0;
+        size_t i;
         scope (failure)
         {
             foreach (j; 0 .. i)
@@ -1220,7 +1220,7 @@ if (isInputRange!R && !isInfinite!R)
         if (!m.ptr) return null;
         auto result = () @trusted { return cast(T[]) m; } ();
 
-        size_t initialized = 0;
+        size_t initialized;
         void bailout()
         {
             foreach (i; 0 .. initialized + 1)

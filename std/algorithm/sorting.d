@@ -454,7 +454,7 @@ if (ss != SwapStrategy.stable && isInputRange!Range && hasSwappableElements!Rang
             import std.algorithm.mutation : swapAt;
             // For dynamic arrays prefer index-based manipulation
             if (!r.length) return r;
-            size_t lo = 0, hi = r.length - 1;
+            size_t lo, hi = r.length - 1;
             for (;;)
             {
                 for (;;)
@@ -634,7 +634,7 @@ if (isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range)
     {
         auto p = r[0];
         // Plant the pivot in the end as well as a sentinel
-        size_t lo = 0, hi = r.length - 1;
+        size_t lo, hi = r.length - 1;
         auto save = move(r[hi]);
         r[hi] = p; // Vacancy is in r[$ - 1] now
         // Start process
@@ -1950,7 +1950,7 @@ if (((ss == SwapStrategy.unstable && (hasSwappableElements!Range ||
         e = uniform(-100, 100, rnd);
     }
 
-    int i = 0;
+    int i;
     bool greater2(int a, int b) @safe { return a + i > b + i; }
     auto greater = &greater2;
     sort!(greater)(a);
@@ -2132,7 +2132,7 @@ package(std) template HeapOps(alias less, Range)
 
     bool isHeap()(Range r)
     {
-        size_t parent = 0;
+        size_t parent;
         foreach (child; 1 .. r.length)
         {
             if (lessFun(r[parent], r[child])) return false;
@@ -2251,12 +2251,12 @@ private template TimSortImpl(alias pred, R)
         immutable minTemp = min(range.length / 2, minimalStorage);
         size_t minGallop = minimalGallop;
         Slice[stackSize] stack = void;
-        size_t stackLen = 0;
+        size_t stackLen;
 
         // Allocate temporary memory if not provided by user
         if (temp.length < minTemp) temp = () @trusted { return uninitializedArray!(T[])(minTemp); }();
 
-        for (size_t i = 0; i < range.length; )
+        for (size_t i; i < range.length; )
         {
             // Find length of first run in list
             size_t runLen = firstRun(range[i .. range.length]);
@@ -2370,7 +2370,7 @@ private template TimSortImpl(alias pred, R)
         for (; sortedLen < range.length; ++sortedLen)
         {
             T item = range.moveAt(sortedLen);
-            size_t lower = 0;
+            size_t lower;
             size_t upper = sortedLen;
             while (upper != lower)
             {
@@ -2487,7 +2487,7 @@ private template TimSortImpl(alias pred, R)
         // Move first element into place
         range[0] = range[mid];
 
-        size_t i = 1, lef = 0, rig = mid + 1;
+        size_t i = 1, lef, rig = mid + 1;
         size_t count_lef, count_rig;
         immutable lef_end = temp.length - 1;
 
@@ -2664,7 +2664,7 @@ private template TimSortImpl(alias pred, R)
         }
         body
         {
-            size_t lower = 0, center = 1, upper = range.length;
+            size_t lower, center = 1, upper = range.length;
             alias gap = center;
 
             static if (forwardReverse)
@@ -3340,7 +3340,7 @@ body
     // We work with closed intervals!
     --hi;
 
-    size_t left = 0, rite = r.length - 1;
+    size_t left, rite = r.length - 1;
     loop: for (;; ++left, --rite)
     {
         for (;; ++left)
@@ -4132,7 +4132,7 @@ if (isBidirectionalRange!BidirectionalRange &&
 @safe unittest
 {
     // Boundary cases: arrays of 0 or 1 element.
-    int[] a1 = [];
+    int[] a1;
     assert(!nextPermutation(a1));
     assert(a1 == []);
 
@@ -4324,7 +4324,7 @@ if (isBidirectionalRange!BidirectionalRange &&
     // Ranges of 0 or 1 element have no distinct permutations.
     if (range.empty) return false;
 
-    bool oddParity = false;
+    bool oddParity;
     bool ret = true;
     do
     {

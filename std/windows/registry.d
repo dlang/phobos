@@ -1512,7 +1512,7 @@ public:
     ///
     int opApply(scope int delegate(ref Key key) dg)
     {
-        int result = 0;
+        int result;
         regProcessNthKey(m_key.m_hkey, (scope LONG delegate(DWORD, out string) getName)
         {
             for (DWORD index = 0; !result; ++index)
@@ -1621,7 +1621,7 @@ public:
     ///
     int opApply(scope int delegate(ref string name) dg)
     {
-        int result = 0;
+        int result;
         regProcessNthValue(m_key.m_hkey, (scope LONG delegate(DWORD, out string) getName)
         {
             for (DWORD index = 0; !result; ++index)
@@ -1715,7 +1715,7 @@ public:
     ///
     int opApply(scope int delegate(ref Value value) dg)
     {
-        int result = 0;
+        int result;
         regProcessNthValue(m_key.m_hkey, (scope LONG delegate(DWORD, out string) getName)
         {
             for (DWORD index = 0; !result; ++index)

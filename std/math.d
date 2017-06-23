@@ -421,7 +421,7 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
         int exp = ((y.vu[F.EXPPOS_SHORT] >> 7) & 0xff) - 0x7f;
 
         version (LittleEndian)
-            int pos = 0;
+            int pos;
         else
             int pos = 3;
     }
@@ -430,7 +430,7 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
         int exp = ((y.vu[F.EXPPOS_SHORT] >> 4) & 0x7ff) - 0x3ff;
 
         version (LittleEndian)
-            int pos = 0;
+            int pos;
         else
             int pos = 3;
     }
@@ -439,7 +439,7 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
         int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
 
         version (LittleEndian)
-            int pos = 0;
+            int pos;
         else
             int pos = 4;
     }
@@ -448,7 +448,7 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
         int exp = (y.vu[F.EXPPOS_SHORT] & 0x7fff) - 0x3fff;
 
         version (LittleEndian)
-            int pos = 0;
+            int pos;
         else
             int pos = 7;
         }
@@ -915,7 +915,7 @@ Lret: {}
             return real.nan;
 
         // Make argument positive but save the sign.
-        bool sign = false;
+        bool sign;
         if (signbit(x))
         {
             sign = true;
@@ -1142,7 +1142,7 @@ real atan(real x) @safe pure nothrow @nogc
             return copysign(PI_2, x);
 
         // Make argument positive but save the sign.
-        bool sign = false;
+        bool sign;
         if (signbit(x))
         {
             sign = true;
@@ -3878,7 +3878,7 @@ real hypot(real x, real y) @safe pure nothrow @nogc
             [ real.nan, real.max, real.nan],
             [ real.max, real.nan, real.nan],
         ];
-        for (int i = 0; i < vals.length; i++)
+        for (int i; i < vals.length; i++)
         {
             real x = vals[i][0];
             real y = vals[i][1];
@@ -5104,7 +5104,7 @@ public:
 private:
     ControlState savedState;
 
-    bool initialized = false;
+    bool initialized;
 
     version(ARM)
     {

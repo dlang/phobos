@@ -47,7 +47,7 @@ if (isSomeChar!C)
 in { assert(cstr); }
 body
 {
-    size_t length = 0;
+    size_t length;
     while (cstr[length])
         ++length;
     return cstr[0 .. length];

@@ -87,7 +87,7 @@ int main(string[] args)
     assert(c.im == 1);
 
     printf("args.length = %d\n", args.length);
-    for (int i = 0; i < args.length; i++)
+    for (int i; i < args.length; i++)
         printf("args[%d] = '%.*s'\n", i, args[i].length, args[i].ptr);
 
     int[3] x;

@@ -2251,7 +2251,7 @@ decodeString(Char = char)(const(ubyte)[] data,
 {
     Char[] res;
     immutable startLen = data.length;
-    size_t charsDecoded = 0;
+    size_t charsDecoded;
     while (data.length && charsDecoded < maxChars)
     {
         immutable dchar dc = scheme.safeDecode(data);
@@ -2514,7 +2514,7 @@ struct HTTP
         copy.initialize();
         copy.p.method = p.method;
         curl_slist* cur = p.headersOut;
-        curl_slist* newlist = null;
+        curl_slist* newlist;
         while (cur)
         {
             newlist = Curl.curl.slist_append(newlist, cur.data);
@@ -3345,7 +3345,7 @@ struct FTP
         copy.p.encoding = p.encoding;
         copy.p.curl = p.curl.dup();
         curl_slist* cur = p.commands;
-        curl_slist* newlist = null;
+        curl_slist* newlist;
         while (cur)
         {
             newlist = Curl.curl.slist_append(newlist, cur.data);
@@ -3994,7 +3994,7 @@ struct SMTP
     void mailTo()(const(char)[][] recipients...)
     {
         assert(!recipients.empty, "Recipient must not be empty");
-        curl_slist* recipients_list = null;
+        curl_slist* recipients_list;
         foreach (recipient; recipients)
         {
             recipients_list =
@@ -4972,7 +4972,7 @@ private static void _spawnAsync(Conn, Unit, Terminator = void)()
 
     // Number of bytes filled into active buffer
     Unit[] buffer;
-    bool aborted = false;
+    bool aborted;
 
     EncodingScheme encodingScheme;
     static if ( !is(Terminator == void))

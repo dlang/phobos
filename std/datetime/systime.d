@@ -9516,7 +9516,7 @@ DosFileTime SysTimeToDosFileTime(SysTime sysTime) @safe
     if (dateTime.year > 2107)
         throw new DateTimeException("DOS File Times cannot hold dates past 2107.");
 
-    uint retval = 0;
+    uint retval;
     retval = (dateTime.year - 1980) << 25;
     retval |= (dateTime.month & 0x0F) << 21;
     retval |= (dateTime.day & 0x1F) << 16;
@@ -9610,7 +9610,7 @@ if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
         char[4] temp;
         char[] sliceAsString(R str) @trusted
         {
-            size_t i = 0;
+            size_t i;
             foreach (c; str)
                 temp[i++] = cast(char) c;
             return temp[0 .. str.length];
@@ -10537,7 +10537,7 @@ if (isRandomAccessRange!R && hasSlicing!R && hasLength!R &&
     (is(Unqual!(ElementType!R) == char) || is(Unqual!(ElementType!R) == ubyte)))
 {
     immutable e = range.length;
-    outer: for (size_t i = 0; i < e; )
+    outer: for (size_t i; i < e; )
     {
         switch (range[i])
         {

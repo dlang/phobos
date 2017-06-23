@@ -380,7 +380,7 @@ public:
 private:
 
     // true if observing.
-    bool _flagStarted = false;
+    bool _flagStarted;
 
     // TickDuration at the time of StopWatch starting measurement.
     TickDuration _timeStart;

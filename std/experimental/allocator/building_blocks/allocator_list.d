@@ -306,7 +306,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         static if (hasMember!(BookkeepingAllocator, "expand"))
             immutable bool expanded = bkalloc.expand(t, Node.sizeof);
         else
-            immutable bool expanded = false;
+            immutable bool expanded;
         if (expanded)
         {
             assert(t.length % Node.sizeof == 0);

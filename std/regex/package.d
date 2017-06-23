@@ -872,7 +872,7 @@ private void replaceMatchesInto(alias output, Sink, R, T)
         (ref Sink sink, R input, T matches)
 if (isOutputRange!(Sink, dchar) && isSomeString!R)
 {
-    size_t offset = 0;
+    size_t offset;
     foreach (cap; matches)
     {
         sink.put(cap.pre[offset .. $]);
@@ -1519,7 +1519,7 @@ private:
     alias Rx = typeof(match(Range.init,RegEx.init));
     Rx _match;
 
-    static if (keepSeparators) bool onMatch = false;
+    static if (keepSeparators) bool onMatch;
 
     @trusted this(Range input, RegEx separator)
     {//@@@BUG@@@ generated opAssign of RegexMatch is not @trusted

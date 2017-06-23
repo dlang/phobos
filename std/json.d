@@ -513,7 +513,7 @@ struct JSONValue
     {
         enforceEx!JSONException(type == JSON_TYPE.OBJECT || type == JSON_TYPE.NULL,
                                 "JSONValue must be object or null");
-        JSONValue[string] aa = null;
+        JSONValue[string] aa;
         if (type == JSON_TYPE.OBJECT)
         {
             aa = this.objectNoRef;
@@ -713,7 +713,7 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 
     int depth = -1;
     dchar next = 0;
-    int line = 1, pos = 0;
+    int line = 1, pos;
 
     void error(string msg)
     {
@@ -1174,7 +1174,7 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                     // @@@BUG@@@ 14439
                     // auto names = obj.keys;  // aa.keys can't be called in @safe code
                     auto names = new string[obj.length];
-                    size_t i = 0;
+                    size_t i;
                     foreach (k, v; obj)
                     {
                         names[i] = k;

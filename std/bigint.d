@@ -47,7 +47,7 @@ struct BigInt
 {
 private:
     BigUint data;     // BigInt adds signed arithmetic to BigUint.
-    bool sign = false;
+    bool sign;
 public:
     /**
      * Construct a BigInt from a decimal or hexadecimal string. The number must
@@ -75,7 +75,7 @@ public:
 
         enforce!ConvException(!s.empty, "Can't initialize BigInt with an empty range");
 
-        bool neg = false;
+        bool neg;
         bool ok;
 
         data = 0UL;
@@ -1033,7 +1033,7 @@ Returns:
 */
 string toDecimalString(const(BigInt) x)
 {
-    string outbuff="";
+    string outbuff;
     void sink(const(char)[] s) { outbuff ~= s; }
     x.toString(&sink, "%d");
     return outbuff;
@@ -1061,7 +1061,7 @@ Returns:
 */
 string toHex(const(BigInt) x)
 {
-    string outbuff="";
+    string outbuff;
     void sink(const(char)[] s) { outbuff ~= s; }
     x.toString(&sink, "%X");
     return outbuff;

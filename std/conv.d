@@ -2085,7 +2085,7 @@ if (isSomeChar!(ElementType!Source) &&
         // int or larger types
 
         static if (Target.min < 0)
-            bool sign = false;
+            bool sign;
         else
             enum bool sign = false;
 
@@ -2423,7 +2423,7 @@ Lerr:
         char popFront() { return str[front_index++]; }
         bool empty() const @property { return str.length <= front_index; }
         string str;
-        size_t front_index = 0;
+        size_t front_index;
     }
     auto input = StrInputRange("777");
     assert(parse!int(input) == 777);
@@ -2481,7 +2481,7 @@ body
             }
         }
 
-        bool overflow = false;
+        bool overflow;
         auto nextv = v.mulu(radix, overflow).addu(c - '0', overflow);
         enforce!ConvOverflowException(!overflow && nextv <= Target.max, "Overflow in integral conversion");
         v = cast(Target) nextv;
@@ -2556,7 +2556,7 @@ if (isSomeString!Source && !is(Source == enum) &&
 {
     import std.algorithm.searching : startsWith;
     Target result;
-    size_t longest_match = 0;
+    size_t longest_match;
 
     foreach (i, e; EnumMembers!Target)
     {
@@ -2668,7 +2668,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 
     enforce(!p.empty, bailOut());
 
-    bool sign = false;
+    bool sign;
     switch (p.front)
     {
     case '-':
@@ -2703,7 +2703,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     default: {}
     }
 
-    bool isHex = false;
+    bool isHex;
     bool startsWithZero = p.front == '0';
     if (startsWithZero)
     {
@@ -2720,15 +2720,15 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
 
     real ldval = 0.0;
     char dot = 0;                        /* if decimal point has been seen */
-    int exp = 0;
-    long msdec = 0, lsdec = 0;
+    int exp;
+    long msdec, lsdec;
     ulong msscale = 1;
 
     if (isHex)
     {
-        int guard = 0;
-        int anydigits = 0;
-        uint ndigits = 0;
+        int guard;
+        int anydigits;
+        uint ndigits;
 
         p.popFront();
         while (!p.empty)
@@ -2999,7 +2999,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
                          break;
             default: {}
         }
-        bool sawDigits = 0;
+        bool sawDigits;
         e = 0;
         while (!p.empty && isDigit(p.front))
         {
@@ -3019,7 +3019,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
         ldval = ldval * msscale + lsdec;
     if (ldval)
     {
-        uint u = 0;
+        uint u;
         int pow = 4096;
 
         while (exp > 0)
@@ -3668,7 +3668,7 @@ if (isExactSomeString!Source &&
             return result;
         }
     }
-    for (size_t i = 0; ; s.popFront(), skipWS(s))
+    for (size_t i; ; s.popFront(), skipWS(s))
     {
         if (i == result.length)
             goto Lmanyerr;
@@ -4154,7 +4154,7 @@ private template octalFitsInInt(string octalNum)
 
 private string strippedOctalLiteral(string original)
 {
-    string stripped = "";
+    string stripped;
     foreach (c; original)
         if (c >= '0' && c <= '7')
             stripped ~= c;
@@ -4721,7 +4721,7 @@ version(unittest) private class __conv_EmplaceTestClass
     S2[2] ss2 = void;
     emplace(&ss1);
     static assert(!__traits(compiles, emplace(&ss2)));
-    S1 s1 = S1.init;
+    S1 s1;
     S2 s2 = S2.init;
     static assert(!__traits(compiles, emplace(&ss1, s1)));
     emplace(&ss2, s2);
@@ -5009,7 +5009,7 @@ version(unittest) private class __conv_EmplaceTestClass
 //Context pointer
 @system unittest
 {
-    int i = 0;
+    int i;
     {
         struct S1
         {
@@ -5227,7 +5227,7 @@ version(unittest)
     {
         static struct S2
         {
-            int i = 0;
+            int i;
             static S2 opCall(int*){assert(0);}
             static S2 opCall(int){assert(0);}
             this(int i){this.i = i;}
@@ -5240,7 +5240,7 @@ version(unittest)
     {
         static struct S3
         {
-            int i = 0;
+            int i;
             static S3 opCall(ref S3){assert(0);}
         }
         S3 s = void;
@@ -5283,7 +5283,7 @@ version(unittest)
         A a;
     }
 
-    B b1 = B.init;
+    B b1;
     assert(&b1); // verify that default eyes invariants are ok;
 
     auto b2 = B(SysTime(0, UTC()), 1, A(1));
@@ -5344,7 +5344,7 @@ version(unittest)
 
 @system unittest
 {
-    bool allowDestruction = false;
+    bool allowDestruction;
     struct S
     {
         int i;
@@ -5367,7 +5367,7 @@ version(unittest)
 @system unittest
 {
     //Checks postblit, construction, and context pointer
-    int count = 0;
+    int count;
     struct S
     {
         this(this)
@@ -5421,7 +5421,7 @@ version(unittest)
     S[2] ss = void;
     emplaceRef!(IS[2])(ss, IS());
 
-    IS[2] iss = IS.init;
+    IS[2] iss;
     emplaceRef!(IS[2])(ss, iss);
     emplaceRef!(IS[2])(ss, iss[]);
 }
@@ -5698,7 +5698,7 @@ if (isIntegral!T)
 {
     // issue 10874
     enum Test { a = 0 }
-    ulong l = 0;
+    ulong l;
     auto t = l.to!Test;
 }
 
@@ -6030,7 +6030,7 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
         {
             void initialize(UT value)
             {
-                bool neg = false;
+                bool neg;
                 if (value < 10)
                 {
                     if (value >= 0)
@@ -6271,7 +6271,7 @@ if ((radix == 2 || radix == 8 || radix == 10 || radix == 16) &&
 
         // opSlice vs popFront
         auto r = original.save;
-        size_t i = 0;
+        size_t i;
         for (; !r.empty; r.popFront(), ++i)
         {
             assert(original[i .. original.length].tupleof == r.tupleof);

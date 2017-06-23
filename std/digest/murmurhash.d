@@ -154,7 +154,7 @@ struct MurmurHash3(uint size /* 32 or 128 */ , uint opt = size_t.sizeof == 8 ? 6
             assert(data.length < Element.sizeof);
             assert(data.length >= 0);
             element_count += data.length;
-            uint k1 = 0;
+            uint k1;
             final switch (data.length & 3)
             {
             case 3:
@@ -231,10 +231,10 @@ struct MurmurHash3(uint size /* 32 or 128 */ , uint opt = size_t.sizeof == 8 ? 6
             assert(data.length < Element.sizeof);
             assert(data.length >= 0);
             element_count += data.length;
-            uint k1 = 0;
-            uint k2 = 0;
-            uint k3 = 0;
-            uint k4 = 0;
+            uint k1;
+            uint k2;
+            uint k3;
+            uint k4;
 
             final switch (data.length & 15)
             {
@@ -366,8 +366,8 @@ struct MurmurHash3(uint size /* 32 or 128 */ , uint opt = size_t.sizeof == 8 ? 6
             assert(data.length < Element.sizeof);
             assert(data.length >= 0);
             element_count += data.length;
-            ulong k1 = 0;
-            ulong k2 = 0;
+            ulong k1;
+            ulong k2;
             final switch (data.length & 15)
             {
             case 15:

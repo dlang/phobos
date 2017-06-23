@@ -244,7 +244,7 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementType!R) ||
 {
     static if (isRandomAccessRange!R && hasSlicing!R || isNarrowString!R)
     {
-        int i = 0;
+        int i;
         while (i < path.length && isDirSeparator(path[i]))
             ++i;
         return path[i .. path.length];
@@ -1358,14 +1358,14 @@ immutable(ElementEncodingType!(ElementType!Range))[]
     static if (isForwardRange!Range)
     {
         auto segments2 = segments.save;
-        size_t precalc = 0;
+        size_t precalc;
         foreach (segment; segments2) precalc += segment.length + 1;
     }
     // Otherwise, just venture a guess and resize later if necessary.
     else size_t precalc = 255;
 
     auto buf = new Unqual!(ElementEncodingType!(ElementType!Range))[](precalc);
-    size_t pos = 0;
+    size_t pos;
     foreach (segment; segments)
     {
         if (segment.empty) continue;
@@ -1544,7 +1544,7 @@ if ((isRandomAccessRange!R1 && hasSlicing!R1 && hasLength!R1 && isSomeChar!(Elem
 
         alias CR = Unqual!(ElementEncodingType!R1);
         auto sep = only(CR(dirSeparator[0]));
-        bool usesep = false;
+        bool usesep;
 
         auto pos = r1.length;
 
@@ -3740,7 +3740,7 @@ if ((isRandomAccessRange!Range && hasLength!Range && hasSlicing!Range && isSomeC
     // Check that each component satisfies isValidComponent.
     while (!remainder.empty)
     {
-        size_t i = 0;
+        size_t i;
         while (i < remainder.length && !isDirSeparator(remainder[i])) ++i;
         assert(i > 0);
         if (!isValidComponent(remainder[0 .. i])) return false;

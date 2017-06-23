@@ -41,7 +41,7 @@ module std.regex.internal.generator;
 
     void compose()
     {
-        uint pc = 0, counter = 0, dataLenOld = uint.max;
+        uint pc, counter, dataLenOld = uint.max;
         for (;;)
         {
             switch (re.ir[pc].code)
@@ -84,7 +84,7 @@ module std.regex.internal.generator;
                     goto case;
                 case IR.Option:
                     uint next = pc + re.ir[pc].data + IRL!(IR.Option);
-                    uint nOpt = 0;
+                    uint nOpt;
                     //queue next Option
                     while (re.ir[next].code == IR.Option)
                     {

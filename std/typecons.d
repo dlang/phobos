@@ -233,7 +233,7 @@ private:
 @system unittest
 {
     // test conversion to base ref
-    int deleted = 0;
+    int deleted;
     class C
     {
         ~this(){deleted++;}
@@ -413,7 +413,7 @@ template Tuple(Specs...)
     //       variable) and can't be aliased directly.
     string injectNamedFields()
     {
-        string decl = "";
+        string decl;
         foreach (i, name; staticMap!(extractName, fieldSpecs))
         {
             import std.format : format;
@@ -1016,7 +1016,7 @@ template Tuple(Specs...)
          */
         size_t toHash() const nothrow @trusted
         {
-            size_t h = 0;
+            size_t h;
             foreach (i, T; Types)
                 h += typeid(T).getHash(cast(const void*)&field[i]);
             return h;
@@ -4114,7 +4114,7 @@ private static:
      */
     public string generateCode(overloads...)() @property
     {
-        string code = "";
+        string code;
 
         // run through all the overload sets
         foreach (i_; CountUp!(0 + overloads.length)) // workaround
@@ -4141,7 +4141,7 @@ private static:
     // handle each overload set
     private string generateCodeForOverloadSet(alias oset)() @property
     {
-        string code = "";
+        string code;
 
         foreach (i_; CountUp!(0 + oset.contents.length)) // workaround
         {
@@ -4184,7 +4184,7 @@ private static:
             // return type with optional "ref"
             static string make_returnType()
             {
-                string rtype = "";
+                string rtype;
 
                 if (!isCtor)
                 {
@@ -4198,7 +4198,7 @@ private static:
             // function attributes attached after declaration
             static string make_postAtts()
             {
-                string poatts = "";
+                string poatts;
                 if (atts & FA.pure_   ) poatts ~= " pure";
                 if (atts & FA.nothrow_) poatts ~= " nothrow";
                 if (atts & FA.property) poatts ~= " @property";
@@ -4211,7 +4211,7 @@ private static:
             // function storage class
             static string make_storageClass()
             {
-                string postc = "";
+                string postc;
                 if (is(Func ==    shared)) postc ~= " shared";
                 if (is(Func ==     const)) postc ~= " const";
                 if (is(Func ==     inout)) postc ~= " inout";
@@ -4273,8 +4273,8 @@ private static:
         alias stcs = ParameterStorageClassTuple!(func);
         enum nparams = stcs.length;
 
-        string imports = ""; // any imports required
-        string params = ""; // parameters
+        string imports; // any imports required
+        string params; // parameters
 
         foreach (i, stc; stcs)
         {
@@ -4318,7 +4318,7 @@ private static:
     // separator.  "a0, a1, a2, a3"
     private string enumerateParameters(size_t n)() @property
     {
-        string params = "";
+        string params;
 
         foreach (i_; CountUp!(n))
         {

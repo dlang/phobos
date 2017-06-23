@@ -1023,7 +1023,7 @@ struct SharedFreeList(ParentAllocator,
     /// Ditto
     bool deallocateAll() shared
     {
-        bool result = false;
+        bool result;
         lock.lock();
         scope(exit) lock.unlock();
         static if (hasMember!(ParentAllocator, "deallocateAll"))

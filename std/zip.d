@@ -394,8 +394,8 @@ final class ZipArchive
             throw new ZipException("archive comment longer than 65535");
 
         // Compress each member; compute size
-        uint archiveSize = 0;
-        uint directorySize = 0;
+        uint archiveSize;
+        uint directorySize;
         auto directory = _directory.values().sort!((x, y) => x.index < y.index).release;
         foreach (ArchiveMember de; directory)
         {
@@ -661,7 +661,7 @@ final class ZipArchive
         }
 
         i = directoryOffset;
-        for (int n = 0; n < numEntries; n++)
+        for (int n; n < numEntries; n++)
         {
             /* The format of an entry is:
              *  'PK' 1, 2
@@ -822,7 +822,7 @@ debug(print)
     @safe void arrayPrint(ubyte[] array)
     {
         printf("array %p,%d\n", cast(void*) array, array.length);
-        for (int i = 0; i < array.length; i++)
+        for (int i; i < array.length; i++)
         {
             printf("%02x ", array[i]);
             if (((i + 1) & 15) == 0)
@@ -892,7 +892,7 @@ debug(print)
     // Test if packing and unpacking preserves order.
     auto rand = Mt19937(15966);
     string[] names;
-    int value = 0;
+    int value;
     // Generate a series of unique numbers as filenames.
     foreach (i; 0 .. 20)
     {

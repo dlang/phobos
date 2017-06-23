@@ -877,7 +877,7 @@ body
 
     T a, b, d;  // [a .. b] is our current bracket. d is the third best guess.
     R fa, fb, fd; // Values of f at a, b, d.
-    bool done = false; // Has a root been found?
+    bool done; // Has a root been found?
 
     // Allow ax and bx to be provided in reverse order
     if (ax <= bx)
@@ -1178,7 +1178,7 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
 
 @safe nothrow unittest
 {
-    int numProblems = 0;
+    int numProblems;
     int numCalls;
 
     void testFindRoot(real delegate(real) @nogc @safe nothrow pure f , real x1, real x2) @nogc @safe nothrow pure
@@ -1224,7 +1224,7 @@ T findRoot(T, R)(scope R delegate(T) f, in T a, in T b,
     int n;
     real ale_a, ale_b;
 
-    int powercalls = 0;
+    int powercalls;
 
     real power(real x)
     {
@@ -1850,7 +1850,7 @@ if (isForwardRange!(R))
     }
     else
     {
-        uint length = 0;
+        uint length;
         foreach (e; range)
         {
             s += e;
@@ -1878,7 +1878,7 @@ if (isForwardRange!(R))
 ///
 @safe unittest
 {
-    double[] a = [];
+    double[] a;
     assert(!normalize(a));
     a = [ 1.0, 3.0 ];
     assert(normalize(a));
@@ -1895,7 +1895,7 @@ The error of this method is much smaller than with a naive sum of log2.
 ElementType!Range sumOfLog2s(Range)(Range r)
 if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
 {
-    long exp = 0;
+    long exp;
     Unqual!(typeof(return)) x = 1;
     foreach (e; r)
     {
@@ -2209,7 +2209,7 @@ if (isRandomAccessRange!(R1) && hasLength!(R1) &&
     foreach (i; 0 .. s.length)
     {
         const si = s[i];
-        for (size_t j = 0;;)
+        for (size_t j;;)
         {
             F dpsij = void;
             if (binaryFun!(comp)(si, t[j]))
@@ -2341,7 +2341,7 @@ time and computes all matches of length 1.
         this.lambda2 = lambda * lambda; // for efficiency only
 
         size_t iMin = size_t.max, jMin = size_t.max,
-            iMax = 0, jMax = 0;
+            iMax, jMax;
         /* initialize */
         Tuple!(size_t, size_t) * k0;
         size_t k0len;
@@ -2423,7 +2423,7 @@ time and computes all matches of length 1.
             F Sij_1 = 0;
             F Si_1j_1 = 0;
             auto kli = kl + i * t.length;
-            for (size_t j = 0;;)
+            for (size_t j;;)
             {
                 const klij = kli[j];
                 const Si_1j = Si[j];
@@ -2686,7 +2686,7 @@ T gcd(T)(T a, T b)
 
     static if (canUseBinaryGcd)
     {
-        uint shift = 0;
+        uint shift;
         while ((a & 1) == 0 && (b & 1) == 0)
         {
             a >>= 1;
@@ -2952,7 +2952,7 @@ private:
         // This loop is unrolled and the two iterations are interleaved
         // relative to the textbook FFT to increase ILP.  This gives roughly 5%
         // speedups on DMD.
-        for (size_t k = 0; k < halfLen; k += 2)
+        for (size_t k; k < halfLen; k += 2)
         {
             immutable cosTwiddle1 = cosFromLookup(k);
             immutable sinTwiddle1 = negSinFromLookup(k);

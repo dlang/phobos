@@ -76,8 +76,8 @@ Also used for parts of the code that don't depend on the payload type.
  +/
 private struct BaseNode
 {
-    private BaseNode* _prev = null;
-    private BaseNode* _next = null;
+    private BaseNode* _prev;
+    private BaseNode* _next;
 
     /+
     Gets the payload associated with this node.
@@ -194,7 +194,7 @@ struct DList(T)
         BaseNode _base;
         alias _base this;
 
-        T _payload = T.init;
+        T _payload;
 
         inout(BaseNode)* asBaseNode() inout @trusted
         {
@@ -687,7 +687,7 @@ Complexity: $(BIGOH r.walkLength)
         assert(r.source._first, "Remove: Range is empty");
 
         BaseNode* first = r.source._first;
-        BaseNode* last = null;
+        BaseNode* last;
         do
         {
             last = r.source._first;

@@ -168,7 +168,7 @@ if (isBidirectionalRange!Range)
     import std.range, std.stdio;
     import std.typecons : tuple;
 
-    ulong counter = 0;
+    ulong counter;
     double fun(int x)
     {
         ++counter;
@@ -221,7 +221,7 @@ same cost or side effects.
 {
     import std.algorithm.comparison : equal;
     import std.range;
-    int i = 0;
+    int i;
 
     auto r = iota(0, 4).tee!((a){i = a;}, No.pipeOnPop);
     auto r1 = r.take(3).cache();
@@ -294,7 +294,7 @@ same cost or side effects.
 {
     static struct Range
     {
-        bool initialized = false;
+        bool initialized;
         bool front() @property {return initialized = true;}
         void popFront() {initialized = false;}
         enum empty = false;
@@ -514,7 +514,7 @@ function.
     auto sums = [2, 4, 6, 8];
     auto products = [1, 4, 9, 16];
 
-    size_t i = 0;
+    size_t i;
     foreach (result; [ 1, 2, 3, 4 ].map!("a + a", "a * a"))
     {
         assert(result[0] == sums[i]);
@@ -905,7 +905,7 @@ public:
             }
             else // if (isRangeBinaryIterable!Range)
             {
-                size_t i = 0;
+                size_t i;
                 while (!r.empty)
                 {
                     cast(void) binaryFun!BinaryArgs(i, r.front);
@@ -1809,7 +1809,7 @@ if (isForwardRange!Range)
 {
     import std.algorithm.comparison : equal;
 
-    size_t popCount = 0;
+    size_t popCount;
     class RefFwdRange
     {
         int[]  impl;
@@ -2839,7 +2839,7 @@ if (fun.length >= 1)
             algoFormat("Seed %s does not have the correct amount of fields (should be %s)", Args.stringof, fun.length));
         alias E = Select!(isInputRange!R, ElementType!R, ForeachType!R);
 
-        static if (mustInitialize) bool initialized = false;
+        static if (mustInitialize) bool initialized;
         foreach (/+auto ref+/ E e; r) // @@@4707@@@
         {
             foreach (i, f; binfuns)
@@ -3065,14 +3065,14 @@ The number of seeds must be correspondingly increased.
 
 @system unittest
 {
-    int i = 0;
+    int i;
     static struct OpApply
     {
         int opApply(int delegate(ref int) dg)
         {
             int[] a = [1, 2, 3];
 
-            int res = 0;
+            int res;
             foreach (ref e; a)
             {
                 res = dg(e);
@@ -3155,7 +3155,7 @@ private template ReduceSeedType(E)
         alias ReduceSeedType = Unqual!(typeof(fun(lvalueOf!E, lvalueOf!E)));
 
         //Check the Seed type is useable.
-        ReduceSeedType s = ReduceSeedType.init;
+        ReduceSeedType s;
         static assert(is(typeof({ReduceSeedType s = lvalueOf!E;})) &&
             is(typeof(lvalueOf!ReduceSeedType = fun(lvalueOf!ReduceSeedType, lvalueOf!E))),
             algoFormat(
@@ -4240,7 +4240,7 @@ private struct SplitterResult(alias isTerminator, Range)
     enum fullSlicing = (hasLength!Range && hasSlicing!Range) || isSomeString!Range;
 
     private Range _input;
-    private size_t _end = 0;
+    private size_t _end;
     static if (!fullSlicing)
         private Range _next;
 
@@ -4717,7 +4717,7 @@ if (isInputRange!R && !isInfinite!R)
     // elsewhere in std.algorithm and std.range on 64 bit platforms. The 16 in log2(16) comes
     // from the manual unrolling in sumPairWise16
     F[64] store = void;
-    size_t idx = 0;
+    size_t idx;
 
     void collapseStore(T)(T k)
     {
@@ -4744,7 +4744,7 @@ if (isInputRange!R && !isInfinite!R)
             ++idx;
         }
 
-        size_t i = 0;
+        size_t i;
         foreach (el; data)
         {
             store[idx] = el;
@@ -4755,7 +4755,7 @@ if (isInputRange!R && !isInfinite!R)
     }
     else
     {
-        size_t k = 0;
+        size_t k;
         while (!data.empty)
         {
             store[idx] = sumPairwiseN!(16, true, F)(data);

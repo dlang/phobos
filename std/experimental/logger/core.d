@@ -1926,7 +1926,7 @@ version(unittest) private void testFuncNames(Logger logger) @safe
 
 @safe unittest
 {
-    bool errorThrown = false;
+    bool errorThrown;
     auto tl = new TestLogger;
     auto dele = delegate() {
         errorThrown = true;
@@ -2189,7 +2189,7 @@ version(unittest) private void testFuncNames(Logger logger) @safe
         globalLogLevel = LogLevel.all;
     }
 
-    int value = 0;
+    int value;
     foreach (gll; [cast(LogLevel) LogLevel.all, LogLevel.trace,
             LogLevel.info, LogLevel.warning, LogLevel.error,
             LogLevel.critical, LogLevel.fatal, LogLevel.off])
@@ -2436,7 +2436,7 @@ version(unittest) private void testFuncNames(Logger logger) @safe
         globalLogLevel = LogLevel.all;
     }
 
-    int value = 0;
+    int value;
     foreach (gll; [cast(LogLevel) LogLevel.all, LogLevel.trace,
             LogLevel.info, LogLevel.warning, LogLevel.error,
             LogLevel.critical, LogLevel.fatal, LogLevel.off])

@@ -489,7 +489,7 @@ string decode(string s, DecodeMode mode=DecodeMode.LOOSE) @safe pure
 {
     void assertNot(string s) pure
     {
-        bool b = false;
+        bool b;
         try { decode(s,DecodeMode.STRICT); }
         catch (DecodeException e) { b = true; }
         assert(b,s);
@@ -862,7 +862,7 @@ class Element : Item
     override int opCmp(scope const Object o) @safe const
     {
         const element = toType!(const Element)(o);
-        for (uint i=0; ; ++i)
+        for (uint i; ; ++i)
         {
             if (i == items.length && i == element.items.length) return 0;
             if (i == items.length) return -1;
@@ -2428,7 +2428,7 @@ private
         }
         catch (Err e) { fail(e); }
 
-        int n = 0;
+        int n;
              if (s.startsWith("'yes'") || s.startsWith("\"yes\"")) n = 5;
         else if (s.startsWith("'no'" ) || s.startsWith("\"no\"" )) n = 4;
         else fail("standalone attribute value must be 'yes', \"yes\","~
@@ -2555,7 +2555,7 @@ private
         while (s.length != 0)
         {
             immutable char d = s[0];
-            int n = 0;
+            int n;
             switch (d)
             {
                 case 'F','f': ++n;      goto case;
@@ -2817,7 +2817,7 @@ EOS";
                         </stream:stream></r>`;
 
     DocumentParser parser = new DocumentParser(test_xml);
-    bool tested = false;
+    bool tested;
     parser.onStartTag["stream:stream"] = (ElementParser p) {
         assert(p.tag.attr["xmlns"] == "jabber:'client'");
         assert(p.tag.attr["from"] == "jid.pl");
@@ -2903,8 +2903,8 @@ class CheckException : XMLException
      * or specific error message
      */
     string msg;
-    size_t line = 0; /// Line number at which parse failure occurred
-    size_t column = 0; /// Column number at which parse failure occurred
+    size_t line; /// Line number at which parse failure occurred
+    size_t column; /// Column number at which parse failure occurred
 
     private this(string tail,string msg,Err err=null) @safe pure
     {
