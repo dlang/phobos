@@ -10,10 +10,8 @@ $(MREF std, string) on May 2018.
 If you still need to use these, please see $(LINK2 https://github.com/dlang/undeaD, undeaD).
 
 The following are examples of the deprecated functions, and their modern replacements.
-Note that the new code is based on the range model, and therefore does not have
-mutate against the original string, unlike the old code.
 
-$(REF munch, std, string):
+Use $(REF find, std, algorithm, searching) to replace $(REF munch, std, string):
 -------
 import std.algorithm;
 import std.ascii;
@@ -26,11 +24,10 @@ string s = "\tabc";
 s.munch(whitespace);
 
 // new
-size_t i = s.byCodeUnit.countUntil!(a => !isWhite(a));
-s = s[i .. $];
+s = s.find!(a => !isWhite(a));
 -------
 
-$(REF inPattern, std, string):
+Use $(REF matchFirst, std, regex) to replace $(REF inPattern, std, string):
 -------
 import std.string;
 import std.regex;
@@ -42,7 +39,7 @@ if (inPattern('x', "a-z")) { ... }
 if ("x".matchFirst(regex("[a-z]"))) { ... }
 -------
 
-$(REF removechars, std, string):
+Use $(REF replaceAll, std, regex) to replace $(REF removechars, std, string):
 -------
 import std.string;
 import std.regex;
@@ -54,7 +51,7 @@ import std.regex;
 "abc".replaceAll(regex("[a-z]"), "");
 -------
 
-$(REF squeeze, std, string):
+Use $(REF uniq, std, algorithm, iteration) to replace $(REF squeeze, std, string):
 -------
 import std.algorithm;
 import std.string;
