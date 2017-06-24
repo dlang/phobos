@@ -4178,8 +4178,8 @@ auto dirEntries(string path, string pattern, SpanMode mode,
  * Reads a file line by line and parses the line into a single value or a
  * $(REF Tuple, std,typecons) of values depending on the length of `Types`.
  * The lines are parsed using the specified format string. The format string is
- * passed to $(REF formattedRead, std,format), and therefore must conform to the
- * format string specification outlined in $(MREF format).
+ * passed to $(REF formattedRead, std,_format), and therefore must conform to the
+ * format string specification outlined in $(MREF std, _format).
  *
  * Params:
  *     Types = the types that each of the elements in the line should be returned as
@@ -4193,7 +4193,7 @@ auto dirEntries(string path, string pattern, SpanMode mode,
  * Throws:
  *     `Exception` if the format string is malformed. Also, throws `Exception`
  *     if any of the lines in the file are not fully consumed by the call
- *     to $(REF formattedRead, std,format). Meaning that no empty lines or lines
+ *     to $(REF formattedRead, std,_format). Meaning that no empty lines or lines
  *     with extra characters are allowed.
  */
 Select!(Types.length == 1, Types[0][], Tuple!(Types)[])
