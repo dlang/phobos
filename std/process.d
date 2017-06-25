@@ -1095,33 +1095,49 @@ version (Posix) @system unittest
         echo $INPUT error $2 >&2";
 
     // Pipes
-    auto pipei = pipe();
-    auto pipeo = pipe();
-    auto pipee = pipe();
-    auto pid = spawnProcess([prog.path, "foo", "bar"],
-                             pipei.readEnd, pipeo.writeEnd, pipee.writeEnd);
-    pipei.writeEnd.writeln("input");
-    pipei.writeEnd.flush();
-    assert(pipeo.readEnd.readln().chomp() == "input output foo");
-    assert(pipee.readEnd.readln().chomp().stripRight() == "input error bar");
-    wait(pid);
+    void testPipes(Config config)
+    {
+        auto pipei = pipe();
+        auto pipeo = pipe();
+        auto pipee = pipe();
+        auto pid = spawnProcess([prog.path, "foo", "bar"],
+                                    pipei.readEnd, pipeo.writeEnd, pipee.writeEnd, null, config);
+        pipei.writeEnd.writeln("input");
+        pipei.writeEnd.flush();
+        assert(pipeo.readEnd.readln().chomp() == "input output foo");
+        assert(pipee.readEnd.readln().chomp().stripRight() == "input error bar");
+        if (!(config & Config.detached))
+            wait(pid);
+    }
 
     // Files
-    import std.ascii, std.file, std.uuid;
-    auto pathi = buildPath(tempDir(), randomUUID().toString());
-    auto patho = buildPath(tempDir(), randomUUID().toString());
-    auto pathe = buildPath(tempDir(), randomUUID().toString());
-    std.file.write(pathi, "INPUT"~std.ascii.newline);
-    auto filei = File(pathi, "r");
-    auto fileo = File(patho, "w");
-    auto filee = File(pathe, "w");
-    pid = spawnProcess([prog.path, "bar", "baz" ], filei, fileo, filee);
-    wait(pid);
-    assert(readText(patho).chomp() == "INPUT output bar");
-    assert(readText(pathe).chomp().stripRight() == "INPUT error baz");
-    remove(pathi);
-    remove(patho);
-    remove(pathe);
+    void testFiles(Config config)
+    {
+        import std.ascii, std.file, std.uuid, core.thread;
+        auto pathi = buildPath(tempDir(), randomUUID().toString());
+        auto patho = buildPath(tempDir(), randomUUID().toString());
+        auto pathe = buildPath(tempDir(), randomUUID().toString());
+        std.file.write(pathi, "INPUT"~std.ascii.newline);
+        auto filei = File(pathi, "r");
+        auto fileo = File(patho, "w");
+        auto filee = File(pathe, "w");
+        auto pid = spawnProcess([prog.path, "bar", "baz" ], filei, fileo, filee, null, config);
+        if (!(config & Config.detached))
+            wait(pid);
+        else
+            // We need to wait a little to ensure that the process has finished and data was written to files
+            Thread.sleep(dur!"msecs"(200));
+        assert(readText(patho).chomp() == "INPUT output bar");
+        assert(readText(pathe).chomp().stripRight() == "INPUT error baz");
+        remove(pathi);
+        remove(patho);
+        remove(pathe);
+    }
+
+    testPipes(Config.none);
+    testFiles(Config.none);
+    testPipes(Config.detached);
+    testFiles(Config.detached);
 }
 
 @system unittest // Error handling in spawnProcess()
