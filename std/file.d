@@ -511,6 +511,13 @@ if (isConvertibleToString!R)
     static assert(__traits(compiles, readText(TestAliasedString(null))));
 }
 
+private enum WriteType
+{
+    normal, // truncate and write, create if needed
+    append, // write to the end
+    newFile // create new file and write
+}
+
 /*********************************************
 Write $(D buffer) to file $(D name).
 
@@ -529,9 +536,9 @@ if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || is
     !isConvertibleToString!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
-        writeImpl(name, name.tempCString!FSChar(), buffer, false);
+        writeImpl(name, name.tempCString!FSChar(), buffer, WriteType.normal);
     else
-        writeImpl(null, name.tempCString!FSChar(), buffer, false);
+        writeImpl(null, name.tempCString!FSChar(), buffer, WriteType.normal);
 }
 
 ///
@@ -576,9 +583,9 @@ if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || is
     !isConvertibleToString!R)
 {
     static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
-        writeImpl(name, name.tempCString!FSChar(), buffer, true);
+        writeImpl(name, name.tempCString!FSChar(), buffer, WriteType.append);
     else
-        writeImpl(null, name.tempCString!FSChar(), buffer, true);
+        writeImpl(null, name.tempCString!FSChar(), buffer, WriteType.append);
 }
 
 ///
@@ -609,17 +616,79 @@ if (isConvertibleToString!R)
     static assert(__traits(compiles, append(TestAliasedString("foo"), [0, 1, 2, 3])));
 }
 
+/*********************************************
+Create file $(D name) and write $(D buffer) to it
+ensuring that the file does not exist at the time of calling.
+
+Note:
+It's not the same as consecutive calling of $(D exists) and $(D write).
+This function does not suffer from the TOCTOU (time of check time of use) problem.
+
+Params:
+    name = string or range of characters representing the file _name
+    buffer = data to be written to file
+
+Throws: $(D FileException) on error.
+ */
+void writeNewFile(R)(R name, const void[] buffer)
+if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
+    !isConvertibleToString!R)
+{
+    static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
+        writeImpl(name, name.tempCString!FSChar(), buffer, WriteType.newFile);
+    else
+        writeImpl(null, name.tempCString!FSChar(), buffer, WriteType.newFile);
+}
+
+///
+@system unittest
+{
+    import std.exception : assertThrown;
+    scope(exit)
+    {
+        assert(exists(deleteme));
+        remove(deleteme);
+    }
+
+    int[] a = [ 0, 1, 1, 2, 3, 5, 8 ];
+    writeNewFile(deleteme, a); // deleteme is the name of a temporary file
+    assert(cast(int[]) read(deleteme) == a);
+    assertThrown!FileException(writeNewFile(deleteme, null)); // should throw because file still exists
+}
+
+/// ditto
+void writeNewFile(R)(auto ref R name, const void[] buffer)
+if (isConvertibleToString!R)
+{
+    writeNewFile!(StringTypeOf!R)(name, buffer);
+}
+
+@safe unittest
+{
+    static assert(__traits(compiles, writeNewFile(TestAliasedString("foo"), [0, 1, 2, 3])));
+}
+
 // Posix implementation helper for write and append
 
 version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
-        in void[] buffer, bool append) @trusted
+        in void[] buffer, WriteType writeType) @trusted
 {
     import std.conv : octal;
 
     // append or write
-    auto mode = append ? O_CREAT | O_WRONLY | O_APPEND
-                       : O_CREAT | O_WRONLY | O_TRUNC;
-
+    mode_t mode = O_CREAT | O_WRONLY;
+    final switch(writeType)
+    {
+        case WriteType.normal:
+            mode |= O_TRUNC;
+            break;
+        case WriteType.append:
+            mode |= O_APPEND;
+            break;
+        case WriteType.newFile:
+            mode |= O_EXCL;
+            break;
+    }
     immutable fd = core.sys.posix.fcntl.open(namez, mode, octal!666);
     cenforce(fd != -1, name, namez);
     {
@@ -643,30 +712,40 @@ version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
 // Windows implementation helper for write and append
 
 version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez,
-        in void[] buffer, bool append) @trusted
+        in void[] buffer, WriteType writeType) @trusted
 {
     HANDLE h;
-    if (append)
+    final switch(writeType)
     {
-        alias defaults =
-            AliasSeq!(GENERIC_WRITE, 0, null, OPEN_ALWAYS,
-                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
-                HANDLE.init);
+        case WriteType.append:
+            alias defaults =
+                AliasSeq!(GENERIC_WRITE, 0, null, OPEN_ALWAYS,
+                    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                    HANDLE.init);
 
-        h = CreateFileW(namez, defaults);
-        cenforce(h != INVALID_HANDLE_VALUE, name, namez);
-        cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER,
-            name, namez);
-    }
-    else // write
-    {
-        alias defaults =
-            AliasSeq!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
-                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
-                HANDLE.init);
+            h = CreateFileW(namez, defaults);
+            cenforce(h != INVALID_HANDLE_VALUE, name, namez);
+            cenforce(SetFilePointer(h, 0, null, FILE_END) != INVALID_SET_FILE_POINTER,
+                name, namez);
+            break;
+        case WriteType.normal:
+            alias defaults =
+                AliasSeq!(GENERIC_WRITE, 0, null, CREATE_ALWAYS,
+                    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                    HANDLE.init);
 
-        h = CreateFileW(namez, defaults);
-        cenforce(h != INVALID_HANDLE_VALUE, name, namez);
+            h = CreateFileW(namez, defaults);
+            cenforce(h != INVALID_HANDLE_VALUE, name, namez);
+            break;
+        case WriteType.newFile:
+            alias defaults =
+                AliasSeq!(GENERIC_WRITE, 0, null, CREATE_NEW,
+                    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                    HANDLE.init);
+
+            h = CreateFileW(namez, defaults);
+            cenforce(h != INVALID_HANDLE_VALUE, name, namez);
+            break;
     }
     immutable size = buffer.length;
     size_t sum, cnt = void;
