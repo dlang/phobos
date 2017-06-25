@@ -677,7 +677,7 @@ version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
 
     // append or write
     mode_t mode = O_CREAT | O_WRONLY;
-    final switch(writeType)
+    final switch (writeType)
     {
         case WriteType.normal:
             mode |= O_TRUNC;
@@ -715,7 +715,7 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
         in void[] buffer, WriteType writeType) @trusted
 {
     HANDLE h;
-    final switch(writeType)
+    final switch (writeType)
     {
         case WriteType.append:
             alias defaults =
