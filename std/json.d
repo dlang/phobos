@@ -704,8 +704,6 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 {
     import std.ascii : isWhite, isDigit, isHexDigit, toUpper, toLower;
     import std.typecons : Yes;
-    import std.utf : encode;
-
     JSONValue root;
     root.type_tag = JSON_TYPE.NULL;
 
@@ -805,7 +803,8 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 
     string parseString()
     {
-        import std.uni : isControl;
+        import std.uni : isControl, isSurrogateHi, isSurrogateLo;
+        import std.utf : encode, decode;
 
         auto str = appender!string();
 
@@ -830,7 +829,27 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
                     case 'r':       str.put('\r');  break;
                     case 't':       str.put('\t');  break;
                     case 'u':
-                        wchar val = parseWChar();
+                        wchar wc = parseWChar();
+                        dchar val;
+                        // Non-BMP characters are escaped as a pair of
+                        // UTF-16 surrogate characters (see RFC 4627).
+                        if (isSurrogateHi(wc))
+                        {
+                            wchar[2] pair;
+                            pair[0] = wc;
+                            if (getChar() != '\\') error("Expected escaped low surrogate after escaped high surrogate");
+                            if (getChar() != 'u') error("Expected escaped low surrogate after escaped high surrogate");
+                            pair[1] = parseWChar();
+                            size_t index = 0;
+                            val = decode(pair[], index);
+                            if (index != 2) error("Invalid escaped surrogate pair");
+                        }
+                        else
+                        if (isSurrogateLo(wc))
+                            error(text("Unexpected low surrogate"));
+                        else
+                            val = wc;
+
                         char[4] buf;
                         immutable len = encode!(Yes.useReplacementDchar)(buf, val);
                         str.put(buf[0 .. len]);
@@ -1763,4 +1782,11 @@ pure nothrow @safe unittest // issue 15884
     auto v = JSONValue("\U0001D11E");
     auto j = toJSON(v, false, JSONOptions.escapeNonAsciiChars);
     assert(j == `"\uD834\uDD1E"`);
+}
+
+@safe unittest // issue 5904
+{
+    string s = `"\uD834\uDD1E"`;
+    auto j = parseJSON(s);
+    assert(j.str == "\U0001D11E");
 }
