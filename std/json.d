@@ -791,6 +791,18 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
         return true;
     }
 
+    wchar parseWChar()
+    {
+        wchar val = 0;
+        foreach_reverse (i; 0 .. 4)
+        {
+            auto hex = toUpper(getChar());
+            if (!isHexDigit(hex)) error("Expecting hex character");
+            val += (isDigit(hex) ? hex - '0' : hex - ('A' - 10)) << (4 * i);
+        }
+        return val;
+    }
+
     string parseString()
     {
         import std.uni : isControl;
@@ -818,13 +830,7 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
                     case 'r':       str.put('\r');  break;
                     case 't':       str.put('\t');  break;
                     case 'u':
-                        dchar val = 0;
-                        foreach_reverse (i; 0 .. 4)
-                        {
-                            auto hex = toUpper(getChar());
-                            if (!isHexDigit(hex)) error("Expecting hex character");
-                            val += (isDigit(hex) ? hex - '0' : hex - ('A' - 10)) << (4 * i);
-                        }
+                        wchar val = parseWChar();
                         char[4] buf;
                         immutable len = encode!(Yes.useReplacementDchar)(buf, val);
                         str.put(buf[0 .. len]);
