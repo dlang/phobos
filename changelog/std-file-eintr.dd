@@ -1,0 +1,4 @@
+`std.file` `read`, `write` and `copy` are `EINTR` aware on Posix
+
+On Posix $(REF read, std, file), $(REF write, std, file) and $(REF copy, std, file)
+now keep retrying the respective system call if an `EINTR` signal was returned.
