@@ -707,7 +707,8 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
     JSONValue root;
     root.type_tag = JSON_TYPE.NULL;
 
-    // UTF decoding is unnecessary when parsing JSON.
+    // Avoid UTF decoding when possible, as it is unnecessary when
+    // processing JSON.
     static if (is(T : const(char)[]))
         alias Char = char;
     else
@@ -1142,11 +1143,11 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
 {
     auto json = appender!string();
 
-    void toString(string str) @safe
+    void toStringImpl(Char)(string str) @safe
     {
         json.put('"');
 
-        foreach (dchar c; str)
+        foreach (Char c; str)
         {
             switch (c)
             {
@@ -1160,8 +1161,13 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                 case '\t':      json.put("\\t");        break;
                 default:
                 {
-                    import std.uni : isControl;
+                    import std.ascii : isControl;
                     import std.utf : encode;
+
+                    // Make sure we do UTF decoding iff we want to
+                    // escape Unicode characters.
+                    assert(((options & JSONOptions.escapeNonAsciiChars) != 0)
+                        == is(Char == dchar));
 
                     with (JSONOptions) if (isControl(c) ||
                         ((options & escapeNonAsciiChars) >= escapeNonAsciiChars && c >= 0x80))
@@ -1190,6 +1196,16 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
         }
 
         json.put('"');
+    }
+
+    void toString(string str) @safe
+    {
+        // Avoid UTF decoding when possible, as it is unnecessary when
+        // processing JSON.
+        if (options & JSONOptions.escapeNonAsciiChars)
+            toStringImpl!dchar(str);
+        else
+            toStringImpl!char(str);
     }
 
     void toValue(ref in JSONValue value, ulong indentLevel) @safe
@@ -1812,4 +1828,10 @@ pure nothrow @safe unittest // issue 15884
 {
     assert(parseJSON("\"\xFF\"").str == "\xFF");
     assert(parseJSON("\"\U0001D11E\"").str == "\U0001D11E");
+}
+
+@safe unittest // issue 17553
+{
+    auto v = JSONValue("\xFF");
+    assert(toJSON(v) == "\"\xFF\"");
 }
