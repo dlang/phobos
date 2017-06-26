@@ -793,6 +793,8 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 
     string parseString()
     {
+        import std.uni : isControl;
+
         auto str = appender!string();
 
     Next:
@@ -835,7 +837,9 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 
             default:
                 auto c = getChar();
-                appendJSONChar(str, c, options);
+                if (isControl(c))
+                    error("Illegal control character.");
+                str.put(c);
                 goto Next;
         }
 
@@ -1734,4 +1738,11 @@ pure nothrow @safe unittest // issue 15884
     const minSub = double.min_normal * double.epsilon;
     assert(test(minSub));
     assert(test(3*minSub));
+}
+
+@safe unittest // issue 17555
+{
+    import std.exception : assertThrown;
+
+    assertThrown!JSONException(parseJSON("\"a\nb\""));
 }
