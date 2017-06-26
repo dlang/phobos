@@ -727,10 +727,10 @@ if (!is(Unqual!T == bool))
     /**
      * Forwards to `insertBack`.
      */
-    void opOpAssign(string op, Stuff)(Stuff stuff)
+    void opOpAssign(string op, Stuff)(auto ref Stuff stuff)
     if (op == "~")
     {
-        static if (is(typeof(stuff[])))
+        static if (is(typeof(stuff[])) && isImplicitlyConvertible!(typeof(stuff[0]), T))
         {
             insertBack(stuff[]);
         }
@@ -2399,4 +2399,21 @@ if (is(Unqual!T == bool))
     a.insertAfter(a[0 .. 5], true);
     assert(a.length == 11, to!string(a.length));
     assert(a[5]);
+}
+@system unittest
+{
+    alias V3 = int[3];
+    V3 v = [1, 2, 3];
+    Array!V3 arr;
+    arr ~= v;
+    assert(arr[0] == [1, 2, 3]);
+}
+@system unittest
+{
+    alias V3 = int[3];
+    V3[2] v = [[1, 2, 3], [4, 5, 6]];
+    Array!V3 arr;
+    arr ~= v;
+    assert(arr[0] == [1, 2, 3]);
+    assert(arr[1] == [4, 5, 6]);
 }
