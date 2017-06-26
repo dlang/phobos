@@ -1117,7 +1117,25 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                 case '\r':      json.put("\\r");        break;
                 case '\t':      json.put("\\t");        break;
                 default:
-                    appendJSONChar(json, c, options);
+                {
+                    import std.uni : isControl;
+
+                    with (JSONOptions) if (isControl(c) ||
+                        ((options & escapeNonAsciiChars) >= escapeNonAsciiChars && c >= 0x80))
+                    {
+                        json.put("\\u");
+                        foreach_reverse (i; 0 .. 4)
+                        {
+                            char ch = (c >>> (4 * i)) & 0x0f;
+                            ch += ch < 10 ? '0' : 'A' - 10;
+                            json.put(ch);
+                        }
+                    }
+                    else
+                    {
+                        json.put(c);
+                    }
+                }
             }
         }
 
@@ -1282,27 +1300,6 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
 
     toValue(root, 0);
     return json.data;
-}
-
-private void appendJSONChar(ref Appender!string dst, dchar c, JSONOptions opts) @safe
-{
-    import std.uni : isControl;
-
-    with (JSONOptions) if (isControl(c) ||
-        ((opts & escapeNonAsciiChars) >= escapeNonAsciiChars && c >= 0x80))
-    {
-        dst.put("\\u");
-        foreach_reverse (i; 0 .. 4)
-        {
-            char ch = (c >>> (4 * i)) & 0x0f;
-            ch += ch < 10 ? '0' : 'A' - 10;
-            dst.put(ch);
-        }
-    }
-    else
-    {
-        dst.put(c);
-    }
 }
 
 @safe unittest // bugzilla 12897
