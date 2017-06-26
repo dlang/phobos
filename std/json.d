@@ -1119,16 +1119,24 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                 default:
                 {
                     import std.uni : isControl;
+                    import std.utf : encode;
 
                     with (JSONOptions) if (isControl(c) ||
                         ((options & escapeNonAsciiChars) >= escapeNonAsciiChars && c >= 0x80))
                     {
-                        json.put("\\u");
-                        foreach_reverse (i; 0 .. 4)
+                        // Ensure non-BMP characters are encoded as a pair
+                        // of UTF-16 surrogate characters, as per RFC 4627.
+                        wchar[2] wchars; // 1 or 2 UTF-16 code units
+                        size_t wNum = encode(wchars, c); // number of UTF-16 code units
+                        foreach (wc; wchars[0..wNum])
                         {
-                            char ch = (c >>> (4 * i)) & 0x0f;
-                            ch += ch < 10 ? '0' : 'A' - 10;
-                            json.put(ch);
+                            json.put("\\u");
+                            foreach_reverse (i; 0 .. 4)
+                            {
+                                char ch = (wc >>> (4 * i)) & 0x0f;
+                                ch += ch < 10 ? '0' : 'A' - 10;
+                                json.put(ch);
+                            }
                         }
                     }
                     else
@@ -1742,4 +1750,11 @@ pure nothrow @safe unittest // issue 15884
     import std.exception : assertThrown;
 
     assertThrown!JSONException(parseJSON("\"a\nb\""));
+}
+
+@safe unittest // issue 17556
+{
+    auto v = JSONValue("\U0001D11E");
+    auto j = toJSON(v, false, JSONOptions.escapeNonAsciiChars);
+    assert(j == `"\uD834\uDD1E"`);
 }
