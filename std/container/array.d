@@ -727,7 +727,7 @@ if (!is(Unqual!T == bool))
     /**
      * Forwards to `insertBack`.
      */
-    void opOpAssign(string op, Stuff)(Stuff stuff)
+    void opOpAssign(string op, Stuff)(auto ref Stuff stuff)
     if (op == "~")
     {
         static if (is(typeof(stuff[])) && isImplicitlyConvertible!(typeof(stuff[0]), T))
