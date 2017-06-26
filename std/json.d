@@ -835,7 +835,7 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 
             default:
                 auto c = getChar();
-                appendJSONChar(str, c, options, &error);
+                appendJSONChar(str, c, options);
                 goto Next;
         }
 
@@ -1113,8 +1113,7 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                 case '\r':      json.put("\\r");        break;
                 case '\t':      json.put("\\t");        break;
                 default:
-                    appendJSONChar(json, c, options,
-                                   (msg) { throw new JSONException(msg); });
+                    appendJSONChar(json, c, options);
             }
         }
 
@@ -1281,8 +1280,7 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
     return json.data;
 }
 
-private void appendJSONChar(ref Appender!string dst, dchar c, JSONOptions opts,
-                            scope void delegate(string) error) @safe
+private void appendJSONChar(ref Appender!string dst, dchar c, JSONOptions opts) @safe
 {
     import std.uni : isControl;
 
