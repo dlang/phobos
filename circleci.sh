@@ -139,5 +139,7 @@ case $1 in
     coverage) coverage ;;
     publictests) publictests ;;
     style_lint) style_lint ;;
+    # has_public_example has been removed and is kept for compatibility with older PRs
+    has_public_example) echo "OK" ;;
     *) echo "Unknown command"; exit 1;;
 esac
