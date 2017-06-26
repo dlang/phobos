@@ -712,7 +712,7 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
     static if (is(T : const(char)[]))
         alias Char = char;
     else
-        alias Char = dchar;
+        alias Char = Unqual!(ElementType!T);
 
     if (json.empty) return root;
 
@@ -1834,4 +1834,11 @@ pure nothrow @safe unittest // issue 15884
 {
     auto v = JSONValue("\xFF");
     assert(toJSON(v) == "\"\xFF\"");
+}
+
+@safe unittest
+{
+    import std.utf;
+    assert(parseJSON("\"\xFF\"".byChar).str == "\xFF");
+    assert(parseJSON("\"\U0001D11E\"".byChar).str == "\U0001D11E");
 }
