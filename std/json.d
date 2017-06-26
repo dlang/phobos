@@ -707,10 +707,16 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
     JSONValue root;
     root.type_tag = JSON_TYPE.NULL;
 
+    // UTF decoding is unnecessary when parsing JSON.
+    static if (is(T : const(char)[]))
+        alias Char = char;
+    else
+        alias Char = dchar;
+
     if (json.empty) return root;
 
     int depth = -1;
-    dchar next = 0;
+    Char next = 0;
     int line = 1, pos = 0;
 
     void error(string msg)
@@ -718,11 +724,19 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
         throw new JSONException(msg, line, pos);
     }
 
-    dchar popChar()
+    Char popChar()
     {
         if (json.empty) error("Unexpected end of data.");
-        dchar c = json.front;
-        json.popFront();
+        static if (is(T : const(char)[]))
+        {
+            Char c = json[0];
+            json = json[1..$];
+        }
+        else
+        {
+            Char c = json.front;
+            json.popFront();
+        }
 
         if (c == '\n')
         {
@@ -737,7 +751,7 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
         return c;
     }
 
-    dchar peekChar()
+    Char peekChar()
     {
         if (!next)
         {
@@ -752,11 +766,11 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
         while (isWhite(peekChar())) next = 0;
     }
 
-    dchar getChar(bool SkipWhitespace = false)()
+    Char getChar(bool SkipWhitespace = false)()
     {
         static if (SkipWhitespace) skipWhitespace();
 
-        dchar c;
+        Char c;
         if (next)
         {
             c = next;
@@ -803,7 +817,8 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
 
     string parseString()
     {
-        import std.uni : isControl, isSurrogateHi, isSurrogateLo;
+        import std.ascii : isControl;
+        import std.uni : isSurrogateHi, isSurrogateLo;
         import std.utf : encode, decode;
 
         auto str = appender!string();
@@ -861,6 +876,8 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
                 goto Next;
 
             default:
+                // RFC 7159 states that control characters U+0000 through
+                // U+001F must not appear unescaped in a JSON string.
                 auto c = getChar();
                 if (isControl(c))
                     error("Illegal control character.");
@@ -1789,4 +1806,10 @@ pure nothrow @safe unittest // issue 15884
     string s = `"\uD834\uDD1E"`;
     auto j = parseJSON(s);
     assert(j.str == "\U0001D11E");
+}
+
+@safe unittest // issue 17557
+{
+    assert(parseJSON("\"\xFF\"").str == "\xFF");
+    assert(parseJSON("\"\U0001D11E\"").str == "\U0001D11E");
 }
