@@ -1,8 +1,0 @@
-`hasLength` now enforces that `length` has type `size_t`
-
-Historically `hasLength!R` yielded `true` for types whereby
-`R.length` returns other types convertible to `ulong`, such as `int`, `ushort`,
-`const(size_t)`, user-defined types using `alias this`, or notably `ulong` on
-32-bit systems. This behavior has  been deprecated. After December 2017,
-$(REF hasLength, std, range, primitives) will yield `true` only if `R.length`
-yields the exact type `size_t`.
