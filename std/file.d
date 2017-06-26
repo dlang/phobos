@@ -630,7 +630,7 @@ Params:
 
 Throws: $(D FileException) on error.
  */
-void writeNewFile(R)(R name, const void[] buffer)
+void writeNew(R)(R name, const void[] buffer)
 if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || isSomeString!R) &&
     !isConvertibleToString!R)
 {
@@ -643,7 +643,7 @@ if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || is
 ///
 @system unittest
 {
-    import std.exception : assertThrown;
+    import std.exception : assertThrown, collectException;
     scope(exit)
     {
         assert(exists(deleteme));
@@ -651,21 +651,22 @@ if ((isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) || is
     }
 
     int[] a = [ 0, 1, 1, 2, 3, 5, 8 ];
-    writeNewFile(deleteme, a); // deleteme is the name of a temporary file
+    collectException(remove(deleteme)); // ensure there is no leftover from other test
+    writeNew(deleteme, a); // deleteme is the name of a temporary file
     assert(cast(int[]) read(deleteme) == a);
-    assertThrown!FileException(writeNewFile(deleteme, null)); // should throw because file still exists
+    assertThrown!FileException(writeNew(deleteme, null)); // should throw because file still exists
 }
 
 /// ditto
-void writeNewFile(R)(auto ref R name, const void[] buffer)
+void writeNew(R)(auto ref R name, const void[] buffer)
 if (isConvertibleToString!R)
 {
-    writeNewFile!(StringTypeOf!R)(name, buffer);
+    writeNew!(StringTypeOf!R)(name, buffer);
 }
 
 @safe unittest
 {
-    static assert(__traits(compiles, writeNewFile(TestAliasedString("foo"), [0, 1, 2, 3])));
+    static assert(__traits(compiles, writeNew(TestAliasedString("foo"), [0, 1, 2, 3])));
 }
 
 // Posix implementation helper for write and append
