@@ -19,38 +19,6 @@
  * schedulers are available that multiplex fibers across the main thread or
  * use some combination of the two approaches.
  *
- * Synopsis:
- * ---
- * import std.stdio;
- * import std.concurrency;
- *
- * void spawnedFunc(Tid ownerTid)
- * {
- *     // Receive a message from the owner thread.
- *     receive(
- *         (int i) { writeln("Received the number ", i);}
- *     );
- *
- *     // Send a message back to the owner thread
- *     // indicating success.
- *     send(ownerTid, true);
- * }
- *
- * void main()
- * {
- *     // Start spawnedFunc in a new thread.
- *     auto childTid = spawn(&spawnedFunc, thisTid);
- *
- *     // Send the number 42 to this new thread.
- *     send(childTid, 42);
- *
- *     // Receive the result code.
- *     auto wasSuccessful = receiveOnly!(bool);
- *     assert(wasSuccessful);
- *     writeln("Successfully printed number.");
- * }
- * ---
- *
  * Copyright: Copyright Sean Kelly 2009 - 2014.
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   Sean Kelly, Alex Rønne Petersen, Martin Nowak
@@ -72,6 +40,39 @@ import core.thread;
 import std.range.primitives;
 import std.range.interfaces : InputRange;
 import std.traits;
+
+// Avoids writeln output during a normal test-suite run
+// Using writeln is very helpful for runnable unittest examples
+version(unittest)
+{
+    void writeln(T...)(T t){}
+}
+
+///
+@system unittest
+{
+    static void spawnedFunc(Tid ownerTid)
+    {
+        // Receive a message from the owner thread.
+        receive(
+            (int i) { writeln("Received the number ", i);}
+        );
+
+        // Send a message back to the owner thread
+        // indicating success.
+        send(ownerTid, true);
+    }
+
+    // Start spawnedFunc in a new thread.
+    auto childTid = spawn(&spawnedFunc, thisTid);
+
+    // Send the number 42 to this new thread.
+    send(childTid, 42);
+
+    // Receive the result code.
+    auto wasSuccessful = receiveOnly!(bool);
+    assert(wasSuccessful);
+}
 
 private
 {
