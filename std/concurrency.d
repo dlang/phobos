@@ -70,18 +70,11 @@ import core.sync.condition;
 import core.sync.mutex;
 import core.thread;
 import std.range.primitives;
+import std.range.interfaces : InputRange;
 import std.traits;
 
 private
 {
-    import core.atomic;
-    import core.thread;
-    import core.sync.mutex;
-    import core.sync.condition;
-    import std.range.primitives;
-    import std.range.interfaces;
-    import std.traits;
-
     template hasLocalAliasing(T...)
     {
         static if (!T.length)
@@ -1602,8 +1595,8 @@ class Generator(T) :
     }
 
     /**
-     * Returns the most recently generated value without excuting a copy
-     * contructor. Will not compile for element types defining a
+     * Returns the most recently generated value without executing a
+     * copy contructor. Will not compile for element types defining a
      * postblit, because Generator does not return by reference.
      */
     final T moveFront()
@@ -1615,7 +1608,7 @@ class Generator(T) :
         else
         {
             static assert(0,
-                    "Fiber front is rvalue and thus cannot be moved when it defines a postblit.");
+                    "Fiber front is always rvalue and thus cannot be moved since it defines a postblit.");
         }
     }
 
@@ -1672,7 +1665,6 @@ void yield(T)(T value)
 {
     import core.exception;
     import std.exception;
-    import std.range.interfaces;
 
     static void testScheduler(Scheduler s)
     {
@@ -1710,7 +1702,6 @@ void yield(T)(T value)
             {
                 tid.send(e);
             }
-
         });
         scheduler = null;
     }
@@ -1752,7 +1743,6 @@ void yield(T)(T value)
     assert(counter == [7, 21]);
 }
 
-// MessageBox Implementation
 private
 {
     /*
