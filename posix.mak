@@ -63,6 +63,8 @@ ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DUB=dub
 GIT_HOME=https://github.com/dlang
 TOOLS_DIR=../tools
+DSCANNER_HASH=455cc3fe50e6d0742c866737b4ac24669d51a992
+DSCANNER_DIR=../dscanner-$(DSCANNER_HASH)
 
 # Documentation-related stuff
 DOCSRC = ../dlang.org
@@ -520,20 +522,26 @@ checkwhitespace: $(LIB) $(TOOLS_DIR)/checkwhitespace.d
 # See also: http://dlang.org/dstyle.html
 #############################
 
-../dscanner:
-	git clone https://github.com/dlang-community/Dscanner ../dscanner
-	git -C ../dscanner checkout 455cc3fe50e6d0742c866737b4ac24669d51a992
-	git -C ../dscanner submodule update --init --recursive
+$(DSCANNER_DIR):
+	git clone https://github.com/dlang-community/Dscanner $@
+	git -C $@ checkout $(DSCANNER_HASH)
+	git -C $@ submodule update --init --recursive
 
-../dscanner/dsc: ../dscanner $(DMD) $(LIB)
+$(DSCANNER_DIR)/dsc: | $(DSCANNER_DIR) $(DMD) $(LIB)
 	# debug build is faster, but disable 'missing import' messages (missing core from druntime)
-	sed 's/dparse_verbose/StdLoggerDisableWarning/' ../dscanner/makefile > dscanner_makefile_tmp
-	mv dscanner_makefile_tmp ../dscanner/makefile
-	DC=$(DMD) DFLAGS="$(DFLAGS) -defaultlib=$(LIB)" make -C ../dscanner githash debug
+	sed 's/dparse_verbose/StdLoggerDisableWarning/' $(DSCANNER_DIR)/makefile > $(DSCANNER_DIR)/dscanner_makefile_tmp
+	mv $(DSCANNER_DIR)/dscanner_makefile_tmp $(DSCANNER_DIR)/makefile
+	DC=$(DMD) DFLAGS="$(DFLAGS) -defaultlib=$(LIB)" make -C $(DSCANNER_DIR) githash debug
 
 style: publictests style_lint
 
-style_lint: ../dscanner/dsc $(LIB)
+# runs static code analysis with Dscanner
+dscanner: | $(DSCANNER_DIR)/dsc
+	# at the moment libdparse has problems to parse some modules (->excludes)
+	@echo "Running DScanner"
+	$(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d') -I.
+
+style_lint: dscanner $(LIB)
 	@echo "Check for trailing whitespace"
 	grep -nr '[[:blank:]]$$' etc std ; test $$? -eq 1
 
@@ -576,10 +584,6 @@ style_lint: ../dscanner/dsc $(LIB)
 
 	@echo "Check that Ddoc runs without errors"
 	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -w -D -Df/dev/null -main -c -o- $$(find etc std -type f -name '*.d') 2>&1 | grep -v "Deprecation:"; test $$? -eq 1
-
-	# at the moment libdparse has problems to parse some modules (->excludes)
-	@echo "Running DScanner"
-	../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d') -I.
 
 ################################################################################
 # Check for missing imports in public unittest examples.
