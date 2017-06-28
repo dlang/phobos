@@ -19,7 +19,7 @@
  * schedulers are available that multiplex fibers across the main thread or
  * use some combination of the two approaches.
  *
- * Synposis:
+ * Synopsis:
  * ---
  * import std.stdio;
  * import std.concurrency;
