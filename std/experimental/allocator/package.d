@@ -460,7 +460,7 @@ interface ISharedAllocator
 }
 
 private shared ISharedAllocator _processAllocator;
-IAllocator _threadAllocator;
+private IAllocator _threadAllocator;
 
 private void setupThreadAllocator()
 @safe nothrow @nogc {
