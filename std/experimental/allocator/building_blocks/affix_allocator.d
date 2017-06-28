@@ -21,7 +21,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
 {
     import std.algorithm.comparison : min;
     import std.conv : emplace;
-    import std.experimental.allocator : IAllocator, theAllocator;
+    import std.experimental.allocator : IAllocator, threadAllocator;
     import std.experimental.allocator.common : stateSize, forwardToMember,
         roundUpToMultipleOf, alignedAt, alignDownTo, roundUpToMultipleOf,
         hasStaticallyKnownAlignment;
@@ -70,7 +70,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         {
             Allocator parent()
             {
-                if (_parent is null) _parent = theAllocator;
+                if (_parent is null) _parent = threadAllocator;
                 assert(alignment <= _parent.alignment);
                 return _parent;
             }
@@ -371,10 +371,10 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
 @system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    import std.experimental.allocator : theAllocator, IAllocator;
+    import std.experimental.allocator : threadAllocator, IAllocator;
 
     // One word before and after each allocation.
-    auto A = AffixAllocator!(IAllocator, size_t, size_t)(theAllocator);
+    auto A = AffixAllocator!(IAllocator, size_t, size_t)(threadAllocator);
     auto a = A.allocate(11);
     A.prefix(a) = 0xCAFE_BABE;
     A.suffix(a) = 0xDEAD_BEEF;
