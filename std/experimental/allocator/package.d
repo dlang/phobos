@@ -462,8 +462,8 @@ interface ISharedAllocator
 private shared ISharedAllocator _processAllocator;
 IAllocator _threadAllocator;
 
-static this()
-{
+private void setupThreadAllocator()
+@safe nothrow @nogc {
     /*
     Forwards the `_threadAllocator` calls to the `processAllocator`
     */
@@ -538,7 +538,7 @@ static this()
     assert(!_threadAllocator);
     import std.conv : emplace;
     static ulong[stateSize!(ThreadAllocator).divideRoundUp(ulong.sizeof)] _threadAllocatorState;
-    _threadAllocator = emplace!(ThreadAllocator)(_threadAllocatorState[]);
+    _threadAllocator = () @trusted { return emplace!(ThreadAllocator)(_threadAllocatorState[]); } ();
 }
 
 /**
@@ -550,6 +550,7 @@ in turn uses the garbage collected heap.
 */
 nothrow @safe @nogc @property IAllocator theAllocator()
 {
+    if (!_threadAllocator) setupThreadAllocator();
     return _threadAllocator;
 }
 
