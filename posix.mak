@@ -533,7 +533,13 @@ checkwhitespace: $(LIB) $(TOOLS_DIR)/checkwhitespace.d
 
 style: publictests style_lint
 
-style_lint: ../dscanner/dsc $(LIB)
+# runs static code analysis with Dscanner
+dscanner: | ../dscanner/dsc
+	# at the moment libdparse has problems to parse some modules (->excludes)
+	@echo "Running DScanner"
+	../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d') -I.
+
+style_lint: dscanner $(LIB)
 	@echo "Check for trailing whitespace"
 	grep -nr '[[:blank:]]$$' etc std ; test $$? -eq 1
 
@@ -576,10 +582,6 @@ style_lint: ../dscanner/dsc $(LIB)
 
 	@echo "Check that Ddoc runs without errors"
 	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -w -D -Df/dev/null -main -c -o- $$(find etc std -type f -name '*.d') 2>&1 | grep -v "Deprecation:"; test $$? -eq 1
-
-	# at the moment libdparse has problems to parse some modules (->excludes)
-	@echo "Running DScanner"
-	../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d') -I.
 
 ################################################################################
 # Check for missing imports in public unittest examples.
