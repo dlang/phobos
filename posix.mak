@@ -525,7 +525,7 @@ checkwhitespace: $(LIB) $(TOOLS_DIR)/checkwhitespace.d
 	git -C ../dscanner checkout 455cc3fe50e6d0742c866737b4ac24669d51a992
 	git -C ../dscanner submodule update --init --recursive
 
-../dscanner/dsc: ../dscanner $(DMD) $(LIB)
+../dscanner/dsc: | ../dscanner $(DMD) $(LIB)
 	# debug build is faster, but disable 'missing import' messages (missing core from druntime)
 	sed 's/dparse_verbose/StdLoggerDisableWarning/' ../dscanner/makefile > dscanner_makefile_tmp
 	mv dscanner_makefile_tmp ../dscanner/makefile
