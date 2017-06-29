@@ -1255,7 +1255,7 @@ private template ReverseTupleSpecs(T...)
 }
 
 // ensure that internal Tuple unittests are compiled
-unittest
+@safe unittest
 {
     Tuple!() t;
 }
@@ -2848,7 +2848,7 @@ Returns:
 
 // https://issues.dlang.org/show_bug.cgi?id=11135
 // disable test until https://issues.dlang.org/show_bug.cgi?id=15316 gets fixed
-version (none) unittest
+version (none) @system unittest
 {
     foreach (T; AliasSeq!(float, double, real))
     {
@@ -5729,10 +5729,22 @@ mixin template Proxy(alias a)
     auto ref opSliceAssign(this X, V      )(auto ref V v)                             { return a[]     = v; }
     auto ref opSliceAssign(this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return a[b .. e] = v; }
 
-    auto ref opOpAssign     (string op, this X, V      )(auto ref V v)                             { return mixin("a "      ~op~"= v"); }
-    auto ref opIndexOpAssign(string op, this X, V, D...)(auto ref V v, auto ref D i)               { return mixin("a[i] "   ~op~"= v"); }
-    auto ref opSliceOpAssign(string op, this X, V      )(auto ref V v)                             { return mixin("a[] "    ~op~"= v"); }
-    auto ref opSliceOpAssign(string op, this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return mixin("a[b .. e] "~op~"= v"); }
+    auto ref opOpAssign     (string op, this X, V      )(auto ref V v)
+    {
+        return mixin("a "      ~op~"= v");
+    }
+    auto ref opIndexOpAssign(string op, this X, V, D...)(auto ref V v, auto ref D i)
+    {
+        return mixin("a[i] "   ~op~"= v");
+    }
+    auto ref opSliceOpAssign(string op, this X, V      )(auto ref V v)
+    {
+        return mixin("a[] "    ~op~"= v");
+    }
+    auto ref opSliceOpAssign(string op, this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e)
+    {
+        return mixin("a[b .. e] "~op~"= v");
+    }
 
     template opDispatch(string name)
     {
@@ -6619,7 +6631,7 @@ template scoped(T)
             size_t* currD = cast(size_t*) &Scoped_store[$ - size_t.sizeof];
             if (d != *currD)
             {
-                import core.stdc.string;
+                import core.stdc.string : memmove;
                 memmove(alignedStore, Scoped_store.ptr + *currD, __traits(classInstanceSize, T));
                 *currD = d;
             }

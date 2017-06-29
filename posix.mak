@@ -537,9 +537,8 @@ style: publictests style_lint
 
 # runs static code analysis with Dscanner
 dscanner: | $(DSCANNER_DIR)/dsc
-	# at the moment libdparse has problems to parse some modules (->excludes)
 	@echo "Running DScanner"
-	$(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d') -I.
+	$(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
 
 style_lint: dscanner $(LIB)
 	@echo "Check for trailing whitespace"
