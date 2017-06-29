@@ -5878,7 +5878,7 @@ real NaN(ulong payload) @trusted pure nothrow @nogc
     }
 }
 
-@safe pure nothrow @nogc unittest
+@system pure nothrow @nogc unittest // not @safe because taking address of local.
 {
     static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble)
     {
