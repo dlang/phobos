@@ -5414,7 +5414,7 @@ assert(refCountedStore.isInitialized)).
 ///
 pure @system nothrow @nogc unittest
 {
-    // A pair of an $(D int) and a $(D size_t) - the latter being the
+    // A pair of an `int` and a `size_t` - the latter being the
     // reference count - will be dynamically allocated
     auto rc1 = RefCounted!int(5);
     assert(rc1 == 5);
@@ -7328,7 +7328,7 @@ public:
     BitFlags!Enum flags1;
     assert(!(flags1 & (Enum.A | Enum.B | Enum.C)));
 
-    // You need to specify the $(D unsafe) parameter for enum with custom values
+    // You need to specify the `unsafe` parameter for enum with custom values
     enum UnsafeEnum
     {
         A,

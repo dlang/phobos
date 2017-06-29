@@ -337,7 +337,7 @@ void main(string[] args)
     }
     f.writeln("!");
     // f exits scope, reference count falls to zero,
-    // underlying $(D FILE*) is closed.
+    // underlying `FILE*` is closed.
 }
 ----
 $(CONSOLE
@@ -1519,7 +1519,7 @@ Throws:
 
 Example:
 ---
-// Reads $(D stdin) and writes it to $(D stdout).
+// Reads `stdin` and writes it to `stdout`.
 import std.stdio;
 
 void main()
@@ -1603,9 +1603,9 @@ conversion error.
 
 Example:
 ---
-// Read lines from $(D stdin) into a string
+// Read lines from `stdin` into a string
 // Ignore lines starting with '#'
-// Write the string to $(D stdout)
+// Write the string to `stdout`
 
 void main()
 {
@@ -1635,7 +1635,7 @@ largest buffer returned by $(D readln):
 
 Example:
 ---
-// Read lines from $(D stdin) and count words
+// Read lines from `stdin` and count words
 
 void main()
 {

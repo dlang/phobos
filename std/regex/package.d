@@ -79,7 +79,7 @@ $(TR $(TD Objects) $(TD
   assert(m.front[1] == "12");
   ...
 
-  // The result of the $(D matchAll/matchFirst) is directly testable with if/assert/while.
+  // The result of the `matchAll/matchFirst` is directly testable with if/assert/while.
   // e.g. test if a string consists of letters:
   assert(matchFirst("Letter", `^\p{L}+$`));
   ---
