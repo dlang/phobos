@@ -63,7 +63,7 @@ ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DUB=dub
 GIT_HOME=https://github.com/dlang
 TOOLS_DIR=../tools
-DSCANNER_HASH=455cc3fe50e6d0742c866737b4ac24669d51a992
+DSCANNER_HASH=071cd08a6de9bbe1720c763b0aff4d19864b27f1
 DSCANNER_DIR=../dscanner-$(DSCANNER_HASH)
 
 # Documentation-related stuff
