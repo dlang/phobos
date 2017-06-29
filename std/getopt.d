@@ -947,6 +947,8 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
                 static Tuple!(K, V) getter(string input)
                 {
                     auto j = indexOf(input, assignChar);
+                    enforce!GetOptException(j != -1, "Could not find '"
+                        ~ to!string(assignChar) ~ "' in argument '" ~ input ~ "'.");
                     auto key = input[0 .. j];
                     auto value = input[j + 1 .. $];
                     return tuple(to!K(key), to!V(value));
