@@ -5141,7 +5141,7 @@ scope, they will automatically increment or decrement the reference
 count.  When the reference count goes down to zero, $(D RefCounted)
 will call $(D destroy) against the payload and call $(D free) to
 deallocate the store.  If the $(D T) payload contains any references
-to GC-allocated memory, then $(RefCounted) will add it to the GC memory
+to GC-allocated memory, then `RefCounted` will add it to the GC memory
 that is scanned for pointers, and remove it from GC scanning before
 $(D free) is called on the store.
 
