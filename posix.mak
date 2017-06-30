@@ -63,7 +63,7 @@ ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DUB=dub
 GIT_HOME=https://github.com/dlang
 TOOLS_DIR=../tools
-DSCANNER_HASH=455cc3fe50e6d0742c866737b4ac24669d51a992
+DSCANNER_HASH=071cd08a6de9bbe1720c763b0aff4d19864b27f1
 DSCANNER_DIR=../dscanner-$(DSCANNER_HASH)
 
 # Documentation-related stuff
@@ -537,9 +537,8 @@ style: publictests style_lint
 
 # runs static code analysis with Dscanner
 dscanner: | $(DSCANNER_DIR)/dsc
-	# at the moment libdparse has problems to parse some modules (->excludes)
 	@echo "Running DScanner"
-	$(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d') -I.
+	$(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
 
 style_lint: dscanner $(LIB)
 	@echo "Check for trailing whitespace"

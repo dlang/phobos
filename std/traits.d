@@ -590,7 +590,7 @@ private template fqnSym(alias T)
     static assert(fqn!Barrier == "core.sync.barrier.Barrier");
 }
 
-unittest
+@safe unittest
 {
     struct TemplatedStruct()
     {
@@ -854,7 +854,8 @@ private template fqnType(T,
         static assert(fqn!(typeof(data)) == format("shared(const(%s[string])[])", inner_name));
 
         // Function types + function attributes
-        static assert(fqn!(typeof(func)) == format("const(%s[string])(ref %s, scope lazy string) ref", inner_name, inner_name));
+        static assert(fqn!(typeof(func)) == format("const(%s[string])(ref %s, scope lazy string) ref",
+                    inner_name, inner_name));
         static assert(fqn!(typeof(retfunc)) == format("const(%s[string])(return %s) ref", inner_name, inner_name));
         static assert(fqn!(typeof(inoutFunc)) == format("inout(%s(inout(%s)))", inner_name, inner_name));
         static assert(fqn!(typeof(deleg)) == format("const(%s delegate(double, string) nothrow @safe)", inner_name));
@@ -1549,7 +1550,7 @@ template hasFunctionAttributes(args...)
 }
 
 ///
-unittest
+@safe unittest
 {
     real func(real x) pure nothrow @safe;
     static assert(hasFunctionAttributes!(func, "@safe", "pure"));
@@ -1564,7 +1565,7 @@ unittest
     static assert(!hasFunctionAttributes!(myFunc!bool, "shared"));
 }
 
-unittest
+@system unittest
 {
     struct S
     {
@@ -3640,7 +3641,7 @@ template hasStaticMember(T, string member)
         static void delegate() sd;
 
         void m();
-        final void m2() const pure nothrow @nogc @safe;
+        void m2() const pure nothrow @nogc @safe;
 
         inout(int) iom() inout;
         static inout(int) iosf(inout int x);
@@ -7213,7 +7214,7 @@ template Promoted(T)
 }
 
 ///
-unittest
+@safe unittest
 {
     ubyte a = 3, b = 5;
     static assert(is(typeof(a * b) == Promoted!ubyte));
@@ -7224,7 +7225,7 @@ unittest
     static assert(is(Promoted!double == double));
 }
 
-unittest
+@safe unittest
 {
     // promote to int:
     foreach (T; AliasSeq!(bool, byte, ubyte, short, ushort, char, wchar))
@@ -7788,7 +7789,7 @@ template getSymbolsByUDA(alias symbol, alias attribute)
 }
 
 // #16387: getSymbolsByUDA works with structs but fails with classes
-unittest
+@safe unittest
 {
     enum Attr;
     class A
