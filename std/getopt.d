@@ -947,6 +947,8 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
                 static Tuple!(K, V) getter(string input)
                 {
                     auto j = indexOf(input, assignChar);
+                    enforce!GetOptException(j != -1, "Could not find '"
+                        ~ to!string(assignChar) ~ "' in argument '" ~ input ~ "'.");
                     auto key = input[0 .. j];
                     auto value = input[j + 1 .. $];
                     return tuple(to!K(key), to!V(value));
@@ -969,6 +971,26 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
     }
 
     return ret;
+}
+
+// 17574
+@system unittest
+{
+    import std.algorithm.searching : startsWith;
+
+    try
+    {
+        string[string] mapping;
+        immutable as = arraySep;
+        arraySep = ",";
+        scope (exit)
+            arraySep = as;
+        string[] args = ["testProgram", "-m", "a=b,c=\"d,e,f\""];
+        args.getopt("m", &mapping);
+        assert(false, "Exception not thrown");
+    }
+    catch (GetOptException goe)
+        assert(goe.msg.startsWith("Could not find"));
 }
 
 // 5316 - arrays with arraySep
