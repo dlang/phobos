@@ -2547,7 +2547,7 @@ public:
             day = The day of the year to set which day of the year this
                   $(LREF DateTime) is on.
       +/
-    @property void dayOfYear(int day) @safe pure nothrow @nogc
+    @property void dayOfYear(int day) @safe pure
     {
         _date.dayOfYear = day;
     }
@@ -3738,20 +3738,14 @@ public:
             {
                 _year = cast(short) years;
 
-                try
-                    dayOfYear = day;
-                catch (Exception e)
-                    assert(0, "dayOfYear assignment threw.");
+                setDayOfYear(day);
             }
         }
         else if (day <= 0 && -day < daysInLeapYear)
         {
             _year = 0;
 
-            try
-                dayOfYear = (daysInLeapYear + day);
-            catch (Exception e)
-                assert(0, "dayOfYear assignment threw.");
+            setDayOfYear(daysInLeapYear + day);
         }
         else
         {
@@ -3803,10 +3797,7 @@ public:
                 _year = cast(short) years;
                 immutable newDoY = (yearIsLeapYear(_year) ? daysInLeapYear : daysInYear) + day + 1;
 
-                try
-                    dayOfYear = newDoY;
-                catch (Exception e)
-                    assert(0, "dayOfYear assignment threw.");
+                setDayOfYear(newDoY);
             }
         }
     }
@@ -6598,12 +6589,26 @@ public:
             $(REF DateTimeException,std,datetime,date) if the given day is an
             invalid day of the year.
       +/
-    @property void dayOfYear(int day) @safe pure nothrow @nogc
+    @property void dayOfYear(int day) @safe pure
+    {
+        setDayOfYear!true(day);
+    }
+
+    private void setDayOfYear(bool useExceptions = false)(int day)
     {
         immutable int[] lastDay = isLeapYear ? lastDayLeap : lastDayNonLeap;
 
-        if (day <= 0 || day > (isLeapYear ? daysInLeapYear : daysInYear))
-            assert(0, "Invalid day of the year.");
+        bool dayOutOfRange = day <= 0 || day > (isLeapYear ? daysInLeapYear : daysInYear);
+        enum errorMsg = "Invalid day of the year.";
+
+        static if (useExceptions)
+        {
+            if (dayOutOfRange) throw new DateTimeException(errorMsg);
+        }
+        else
+        {
+            assert(!dayOutOfRange, errorMsg);
+        }
 
         foreach (i; 1 .. lastDay.length)
         {
