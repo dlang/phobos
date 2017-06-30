@@ -1485,11 +1485,13 @@ class ErrnoException : Exception
 {
     final @property uint errno() { return _errno; } /// Operating system error code.
     private uint _errno;
+    /// Constructor which takes an error message. The current global $(D errno) value is used as error code.
     this(string msg, string file = null, size_t line = 0) @trusted
     {
         import core.stdc.errno : errno;
         this(msg, errno, file, line);
     }
+    /// Constructor which takes an error message and error code.
     this(string msg, int errno, string file = null, size_t line = 0) @trusted
     {
         import core.stdc.string : strlen;
