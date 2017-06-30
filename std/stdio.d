@@ -4477,31 +4477,9 @@ Initialize with a message and an error code.
 */
     this(string message, uint e = core.stdc.errno.errno) @trusted
     {
-        import std.conv : to;
-
+        import std.exception : errnoString;
         errno = e;
-        version (Posix)
-        {
-            import core.stdc.string : strerror_r;
-
-            char[256] buf = void;
-            version (CRuntime_Glibc)
-            {
-                auto s = strerror_r(errno, buf.ptr, buf.length);
-            }
-            else
-            {
-                strerror_r(errno, buf.ptr, buf.length);
-                auto s = buf.ptr;
-            }
-        }
-        else
-        {
-            import core.stdc.string : strerror;
-
-            auto s = strerror(errno);
-        }
-        auto sysmsg = to!string(s);
+        auto sysmsg = errnoString(errno);
         // If e is 0, we don't use the system error message.  (The message
         // is "Success", which is rather pointless for an exception.)
         super(e == 0 ? message

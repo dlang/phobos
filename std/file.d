@@ -208,8 +208,8 @@ class FileException : Exception
                              string file = __FILE__,
                              size_t line = __LINE__) @trusted
     {
-        auto s = strerror(errno);
-        this(name, to!string(s), file, line);
+        import std.exception : errnoString;
+        this(name, errnoString(errno), file, line);
         this.errno = errno;
     }
 }
