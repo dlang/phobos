@@ -973,6 +973,26 @@ private bool handleOption(R)(string option, R receiver, ref string[] args,
     return ret;
 }
 
+// 17574
+@system unittest
+{
+    import std.algorithm.searching : startsWith;
+
+    try
+    {
+        string[string] mapping;
+        immutable as = arraySep;
+        arraySep = ",";
+        scope (exit)
+            arraySep = as;
+        string[] args = ["testProgram", "-m", "a=b,c=\"d,e,f\""];
+        args.getopt("m", &mapping);
+        assert(false, "Exception not thrown");
+    }
+    catch (GetOptException goe)
+        assert(goe.msg.startsWith("Could not find"));
+}
+
 // 5316 - arrays with arraySep
 @system unittest
 {
