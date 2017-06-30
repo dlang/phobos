@@ -4158,29 +4158,30 @@ private struct CurlAPI
         enforce!CurlException(!_api.global_init(CurlGlobal.all),
                               "Failed to initialize libcurl");
 
+        static extern(C) void cleanup()
+        {
+            if (_handle is null) return;
+            _api.global_cleanup();
+            version (Posix)
+            {
+                import core.sys.posix.dlfcn : dlclose;
+                dlclose(_handle);
+            }
+            else version (Windows)
+            {
+                import core.sys.windows.windows : FreeLibrary;
+                FreeLibrary(_handle);
+            }
+            else
+                static assert(0, "unimplemented");
+            _api = API.init;
+            _handle = null;
+        }
+
+        import core.stdc.stdlib : atexit;
+        atexit(&cleanup);
+
         return handle;
-    }
-
-    shared static ~this()
-    {
-        if (_handle is null) return;
-
-        _api.global_cleanup();
-        version (Posix)
-        {
-            import core.sys.posix.dlfcn : dlclose;
-            dlclose(_handle);
-        }
-        else version (Windows)
-        {
-            import core.sys.windows.windows : FreeLibrary;
-            FreeLibrary(_handle);
-        }
-        else
-            static assert(0, "unimplemented");
-
-        _api = API.init;
-        _handle = null;
     }
 }
 
