@@ -79,8 +79,10 @@ Source:    $(PHOBOSSRC std/_file.d)
 module std.file;
 
 import core.stdc.errno, core.stdc.stdlib, core.stdc.string;
+import core.time : abs, dur, hnsecs, seconds;
 
-import std.datetime;
+import std.datetime.date : DateTime;
+import std.datetime.systime : Clock, SysTime, unixTimeToStdTime;
 import std.internal.cstring;
 import std.meta;
 import std.range.primitives;
@@ -970,6 +972,8 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
 {
     version(Windows)
     {
+        import std.datetime.systime : FILETIMEToSysTime;
+
         with (getFileAttributesWin(name))
         {
             accessTime = FILETIMEToSysTime(&ftLastAccessTime);
@@ -1102,11 +1106,13 @@ else version(Windows)
     if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R)
     {
+        import std.datetime.systime : FILETIMEToSysTime;
+
         with (getFileAttributesWin(name))
         {
-            fileCreationTime = std.datetime.FILETIMEToSysTime(&ftCreationTime);
-            fileAccessTime = std.datetime.FILETIMEToSysTime(&ftLastAccessTime);
-            fileModificationTime = std.datetime.FILETIMEToSysTime(&ftLastWriteTime);
+            fileCreationTime = FILETIMEToSysTime(&ftCreationTime);
+            fileAccessTime = FILETIMEToSysTime(&ftLastAccessTime);
+            fileModificationTime = FILETIMEToSysTime(&ftLastWriteTime);
         }
     }
 
@@ -1210,6 +1216,8 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
 {
     version(Windows)
     {
+        import std.datetime.systime : SysTimeToFILETIME;
+
         auto namez = name.tempCString!FSChar();
         static auto trustedCreateFileW(const(FSChar)* namez, DWORD dwDesiredAccess, DWORD dwShareMode,
                                        SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
@@ -2966,6 +2974,8 @@ else version(Windows)
 
         this(string path)
         {
+            import std.datetime.systime : FILETIMEToSysTime;
+
             if (!path.exists())
                 throw new FileException(path, "File does not exist");
 
@@ -2974,9 +2984,9 @@ else version(Windows)
             with (getFileAttributesWin(path))
             {
                 _size = makeUlong(nFileSizeLow, nFileSizeHigh);
-                _timeCreated = std.datetime.FILETIMEToSysTime(&ftCreationTime);
-                _timeLastAccessed = std.datetime.FILETIMEToSysTime(&ftLastAccessTime);
-                _timeLastModified = std.datetime.FILETIMEToSysTime(&ftLastWriteTime);
+                _timeCreated = FILETIMEToSysTime(&ftCreationTime);
+                _timeLastAccessed = FILETIMEToSysTime(&ftLastAccessTime);
+                _timeLastModified = FILETIMEToSysTime(&ftLastWriteTime);
                 _attributes = dwFileAttributes;
             }
         }
@@ -2984,15 +2994,16 @@ else version(Windows)
         private this(string path, in WIN32_FIND_DATAW *fd)
         {
             import core.stdc.wchar_ : wcslen;
+            import std.datetime.systime : FILETIMEToSysTime;
             import std.path : buildPath;
 
             size_t clength = wcslen(fd.cFileName.ptr);
             _name = toUTF8(fd.cFileName[0 .. clength]);
             _name = buildPath(path, toUTF8(fd.cFileName[0 .. clength]));
             _size = (cast(ulong) fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
-            _timeCreated = std.datetime.FILETIMEToSysTime(&fd.ftCreationTime);
-            _timeLastAccessed = std.datetime.FILETIMEToSysTime(&fd.ftLastAccessTime);
-            _timeLastModified = std.datetime.FILETIMEToSysTime(&fd.ftLastWriteTime);
+            _timeCreated = FILETIMEToSysTime(&fd.ftCreationTime);
+            _timeLastAccessed = FILETIMEToSysTime(&fd.ftLastAccessTime);
+            _timeLastModified = FILETIMEToSysTime(&fd.ftLastWriteTime);
             _attributes = fd.dwFileAttributes;
         }
 

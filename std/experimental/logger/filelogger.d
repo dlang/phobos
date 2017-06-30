@@ -11,7 +11,7 @@ is already present new log messages will be append at its end.
 class FileLogger : Logger
 {
     import std.concurrency : Tid;
-    import std.datetime : SysTime;
+    import std.datetime.systime : SysTime;
     import std.format : formattedWrite;
 
     /** A constructor for the $(D FileLogger) Logger.

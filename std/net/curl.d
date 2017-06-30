@@ -1471,7 +1471,7 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
     */
     bool wait(Duration d)
     {
-        import std.datetime : StopWatch;
+        import std.datetime.stopwatch : StopWatch;
 
         if (state == State.gotUnits)
             return true;
@@ -2384,7 +2384,7 @@ struct HTTP
 {
     mixin Protocol;
 
-    import std.datetime : SysTime;
+    import std.datetime.systime : SysTime;
 
     /// Authentication method equal to $(REF CurlAuth, etc,c,curl)
     alias AuthMethod = CurlAuth;
