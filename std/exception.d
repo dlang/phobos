@@ -1496,7 +1496,7 @@ package string errnoString(int errno) nothrow @trusted
         if (strerror_r(errno, buf.ptr, buf.length) == 0)
             s = buf.ptr;
         else
-            s = "Unknown error";
+            return "Unknown error";
     }
     else
     {
