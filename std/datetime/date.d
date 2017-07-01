@@ -146,7 +146,7 @@ public:
     /++
         Params:
             year   = The year portion of the date.
-            month  = The month portion of the date.
+            month  = The month portion of the date (January is 1).
             day    = The day portion of the date.
             hour   = The hour portion of the time;
             minute = The minute portion of the time;
@@ -3609,7 +3609,7 @@ public:
             year  = Year of the Gregorian Calendar. Positive values are A.D.
                     Non-positive values are B.C. with year 0 being the year
                     prior to 1 A.D.
-            month = Month of the year.
+            month = Month of the year (January is 1).
             day   = Day of the month.
      +/
     this(int year, int month, int day) @safe pure
@@ -9239,7 +9239,7 @@ if (units == "months" ||
     Params:
         units = The units of time to validate.
         year  = The year of the day to validate.
-        month = The month of the day to validate.
+        month = The month of the day to validate (January is 1).
         day   = The day to validate.
   +/
 bool valid(string units)(int year, int month, int day) @safe pure nothrow @nogc
