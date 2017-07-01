@@ -1478,7 +1478,7 @@ private bool isUnionAliasedImpl(T)(size_t offset)
         static assert( isUnionAliased!(S.A5, 1)); //a5.b1;
 }
 
-package string errnoString(int errno)
+package string errnoString(int errno) nothrow @trusted
 {
     import core.stdc.string : strlen;
     version (CRuntime_Glibc)
