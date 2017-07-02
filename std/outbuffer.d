@@ -3,6 +3,9 @@
 /**
 Serialize data to $(D ubyte) arrays.
 
+$(MESSAGE_BOX red, Warning - This module is considered out-dated and not up to Phobos'
+current standards.)
+
  * Copyright: Copyright Digital Mars 2000 - 2015.
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright)

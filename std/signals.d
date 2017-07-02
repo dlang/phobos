@@ -10,6 +10,10 @@
  * using it simpler and less error prone. In particular, it is no
  * longer necessary to instrument the slots.
  *
+ * $(MESSAGE_BOX red, Warning - This module is considered out-dated and not up to Phobos'
+ * current standards. Have a look at $(LINK2 vibe-core, https://github.com/vibe-d/vibe-core)
+ * for a modern approach.)
+ *
  * References:
  *      $(LUCKY A Deeper Look at Signals and Slots)$(BR)
  *      $(LINK2 http://en.wikipedia.org/wiki/Observer_pattern, Observer pattern)$(BR)

@@ -215,6 +215,9 @@ a value of _container type, $(D n$(SUBSCRIPT x)) represents the effective length
 value $(D x), which could be a single element (in which case $(D n$(SUBSCRIPT x)) is
 $(D 1)), a _container, or a range.
 
+$(MESSAGE_BOX orange, This module will be reworked $(LINK2 http://dconf.org/2017/talks/staniloiu.html, soon)
+to make containers `@nogc` and `@safe`.)
+
 $(BOOKTABLE Container primitives,
 $(TR
     $(TH Syntax)
