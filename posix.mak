@@ -266,7 +266,7 @@ IGNORED_PUBLICTESTS= $(addprefix std/, \
 						) digest/hmac \
 						file math stdio traits typecons uuid)
 PUBLICTESTS= $(addsuffix .publictests,$(filter-out $(IGNORED_PUBLICTESTS), $(D_MODULES)))
-TEST_EXTRACTOR=$(TOOLS_DIR)/styles/test_extractor
+TESTS_EXTRACTOR=$(ROOT)/tests_extractor
 PUBLICTESTS_DIR=$(ROOT)/publictests
 
 ################################################################################
@@ -506,8 +506,9 @@ changelog.html: changelog.dd
 
 ${TOOLS_DIR}:
 	git clone --depth=1 ${GIT_HOME}/$(@F) $@
+
 $(TOOLS_DIR)/checkwhitespace.d: | $(TOOLS_DIR)
-$(TOOLS_DIR)/styles/tests_extractor.d: | $(TOOLS_DIR)
+$(TOOLS_DIR)/tests_extractor.d: | $(TOOLS_DIR)
 
 #################### test for undesired white spaces ##########################
 CWS_TOCHECK = posix.mak win32.mak win64.mak osmodel.mak
@@ -589,16 +590,17 @@ style_lint: dscanner $(LIB)
 ################################################################################
 publictests: $(PUBLICTESTS)
 
-$(TEST_EXTRACTOR): $(TOOLS_DIR)/styles/tests_extractor.d $(LIB)
-	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) build --force --compiler=$${PWD}/$(DMD) --root=$(TOOLS_DIR)/styles -c tests_extractor
+$(TESTS_EXTRACTOR): $(TOOLS_DIR)/tests_extractor.d $(LIB)
+	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) build --force --compiler=$${PWD}/$(DMD) --single $<
+	mv $(TOOLS_DIR)/tests_extractor $@
 
 ################################################################################
 # Extract public tests of a module and test them in an separate file (i.e. without its module)
 # This is done to check for potentially missing imports in the examples, e.g.
 # make -f posix.mak std/format.publictests
 ################################################################################
-%.publictests: %.d $(LIB) $(TEST_EXTRACTOR) | $(PUBLICTESTS_DIR)/.directory
-	@$(TEST_EXTRACTOR) --inputdir  $< --outputdir $(PUBLICTESTS_DIR)
+%.publictests: %.d $(LIB) $(TESTS_EXTRACTOR) | $(PUBLICTESTS_DIR)/.directory
+	@$(TESTS_EXTRACTOR) --inputdir  $< --outputdir $(PUBLICTESTS_DIR)
 	@$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -main -unittest -run $(PUBLICTESTS_DIR)/$(subst /,_,$<)
 
 .PHONY : auto-tester-build
