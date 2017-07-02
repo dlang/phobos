@@ -477,19 +477,6 @@ $(COMMENT
     $(TR
         $(TDNW
             $(LINK2 core_vararg.html, core.vararg)$(BR)
-            $(LINK2 std_c_fenv.html, std.c.fenv)$(BR)
-            $(LINK2 std_c_linux_linux.html, std.c.linux_linux)$(BR)
-            $(LINK2 std_c_linux_socket.html, std.c.linux_socket)$(BR)
-            $(LINK2 std_c_locale.html, std.c.locale)$(BR)
-            $(LINK2 std_c_math.html, std.c.math)$(BR)
-            $(LINK2 std_c_process.html, std.c.process)$(BR)
-            $(LINK2 std_c_stdarg.html, std.c.stdarg)$(BR)
-            $(LINK2 std_c_stddef.html, std.c.stddef)$(BR)
-            $(LINK2 std_c_stdio.html, std.c.stdio)$(BR)
-            $(LINK2 std_c_stdlib.html, std.c.stdlib)$(BR)
-            $(LINK2 std_c_string.html, std.c.string)$(BR)
-            $(LINK2 std_c_time.html, std.c.time)$(BR)
-            $(LINK2 std_c_wcharh.html, std.c.wcharh)$(BR)
             $(LINK2 std_stdint.html, std.stdint)$(BR)
         )
         $(TDN

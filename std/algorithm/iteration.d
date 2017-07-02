@@ -5098,30 +5098,6 @@ if (isRandomAccessRange!Range && hasLength!Range)
     private Range _r;
     private bool _empty;
 
-    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
-    deprecated("Private variable. Use front()")
-    @property size_t[] indices() pure nothrow @nogc @safe { return _indices; }
-
-    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
-    deprecated("Private variable. Don't set it manually")
-    @property void indices(size_t[] indices) pure nothrow @nogc @safe { _indices = indices; }
-
-    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
-    deprecated("Private variable. Use front()")
-    @property size_t[] state() pure nothrow @nogc @safe { return _state; }
-
-    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
-    deprecated("Private variable. Don't set it manually")
-    @property void state(size_t[] state) pure nothrow @nogc @safe { state = state; }
-
-    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
-    deprecated("Private variable. Access will be forbidden.")
-    @property Range r() pure nothrow @nogc @safe { return _r; }
-
-    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
-    deprecated("Private variable. Don't set it manually")
-    @property void r(Range r) pure nothrow @nogc @safe { _r = r; }
-
     ///
     this(Range r)
     {
