@@ -86,6 +86,10 @@ setup_repos()
         fi
     done
 
+    # checkout a specific version of https://github.com/dlang/tools
+    clone https://github.com/dlang/tools.git ../tools master
+    git -C ../tools checkout 87c63705dcacac38ba7c84d19699f656d834139d
+
     # load environment for bootstrap compiler
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
 
@@ -99,11 +103,6 @@ style_lint()
 {
     # dscanner needs a more up-to-date DMD version
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$DSCANNER_DMD_VER --activate)"
-
-    # some style tools are at the tools repo
-    clone https://github.com/dlang/tools.git ../tools master
-    # fix to a specific version of https://github.com/dlang/tools/tree/master/styles
-    git -C ../tools checkout 60583c8363ff25d00017dffdb18c7ee7e7d9a343
 
     make -f posix.mak style_lint DUB=$DUB
 }
