@@ -3445,7 +3445,7 @@ private void submitAndExecute(
         }
         catch (Throwable e)
         {
-            tasks[0].exception = e;
+            tasks[0].exception = e; // nocoverage
         }
         tasks[0].taskStatus = TaskStatus.done;
 
@@ -3787,9 +3787,9 @@ private void addToChain(
 {
     if (firstException)
     {
-        assert(lastException);
-        lastException.next = e;
-        lastException = findLastException(e);
+        assert(lastException); // nocoverage
+        lastException.next = e; // nocoverage
+        lastException = findLastException(e); // nocoverage
     }
     else
     {
