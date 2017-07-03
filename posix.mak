@@ -31,8 +31,10 @@
 QUIET:=
 
 DEBUGGER=gdb
+GIT_HOME=https://github.com/dlang
+DMD_DIR=../dmd
 
-include osmodel.mak
+include $(DMD_DIR)/src/osmodel.mak
 
 ifeq (osx,$(OS))
 	export MACOSX_DEPLOYMENT_TARGET=10.7
@@ -61,7 +63,6 @@ ZIPFILE = phobos.zip
 ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DUB=dub
-GIT_HOME=https://github.com/dlang
 TOOLS_DIR=../tools
 DSCANNER_HASH=071cd08a6de9bbe1720c763b0aff4d19864b27f1
 DSCANNER_DIR=../dscanner-$(DSCANNER_HASH)
@@ -96,7 +97,7 @@ ifeq ($(OS),win32wine)
 	DMD = wine dmd.exe
 	RUN = wine
 else
-	DMD = ../dmd/generated/$(OS)/release/$(MODEL)/dmd
+	DMD = $(DMD_DIR)/generated/$(OS)/release/$(MODEL)/dmd
 	ifeq ($(OS),win32)
 		CC = dmc
 	else
@@ -142,7 +143,7 @@ LINKDL:=$(if $(findstring $(OS),linux),-L-ldl,)
 TIMELIMIT:=$(if $(shell which timelimit 2>/dev/null || true),timelimit -t 90 ,)
 
 # Set VERSION, where the file is that contains the version string
-VERSION=../dmd/VERSION
+VERSION=$(DMD_DIR)/VERSION
 
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
@@ -511,7 +512,7 @@ $(TOOLS_DIR)/checkwhitespace.d: | $(TOOLS_DIR)
 $(TOOLS_DIR)/tests_extractor.d: | $(TOOLS_DIR)
 
 #################### test for undesired white spaces ##########################
-CWS_TOCHECK = posix.mak win32.mak win64.mak osmodel.mak
+CWS_TOCHECK = posix.mak win32.mak win64.mak
 CWS_TOCHECK += $(ALL_D_FILES) index.d
 
 checkwhitespace: $(LIB) $(TOOLS_DIR)/checkwhitespace.d
