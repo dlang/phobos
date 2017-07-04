@@ -95,6 +95,232 @@ alias AllowDayOverflow = Flag!"allowDayOverflow";
 immutable string[] timeStrings = ["hnsecs", "usecs", "msecs", "seconds", "minutes",
                                   "hours", "days", "weeks", "months", "years"];
 
+/++
+    Creates a T structure representing a point in time from a string with a specific format.
+    The formats are : YYYYMMDD for $(LREF Date), YYYYMMDDTHHMMSS for $(LREF DateTime) and
+    HHMMSS for $(LREF TimeOfDay).
+    Whitespace is stripped from the given string.
+
+    Params:
+        isoString = A string formatted in the ISO format for times.
+        T = The type of the time representation. Can be one of the following:
+        $(LREF Date), $(LREF DateTime) or $(LREF TimeOfDay).
+
+    Throws:
+        $(REF DateTimeException,std,datetime,date) if the given string is
+        not in the ISO format or if the resulting $(LREF Date), $(LREF DateTime)
+        or $(LREF TimeOfDay) would not be valid.
+  +/
+T fromISOString(T, S)(in S isostring)
+    if (isSomeString!S)
+{
+    assert(__traits(compiles, T.fromISOString(isostring)));
+    return T.fromISOString(isostring);
+}
+
+///
+@safe unittest
+{
+    assert(fromISOString!DateTime("20100704T070612") ==
+           DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+
+    assert(fromISOString!Date("20100704") == Date(2010, 7, 4));
+
+    assert(fromISOString!TimeOfDay("000000") == TimeOfDay(0, 0, 0));
+}
+
+@safe unittest
+{
+    assert(fromISOString!DateTime("19981225T021500") ==
+           DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
+
+    assert(fromISOString!DateTime("00000105T230959") ==
+           DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
+
+    assert(fromISOString!DateTime("-00040105T000002") ==
+           DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
+
+    assert(fromISOString!DateTime(" 20100704T070612 ") ==
+           DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
+}
+
+@safe unittest
+{
+    assertThrown!DateTimeException(fromISOString!DateTime(""));
+    assertThrown!DateTimeException(fromISOString!DateTime("20100704000000"));
+    assertThrown!DateTimeException(fromISOString!DateTime("20100704 000000"));
+    assertThrown!DateTimeException(fromISOString!DateTime("20100704t000000"));
+    assertThrown!DateTimeException(fromISOString!DateTime("20100704T000000."));
+    assertThrown!DateTimeException(fromISOString!DateTime("20100704T000000.0"));
+
+    assertThrown!DateTimeException(fromISOString!DateTime("2010-07-0400:00:00"));
+    assertThrown!DateTimeException(fromISOString!DateTime("2010-07-04 00:00:00"));
+    assertThrown!DateTimeException(fromISOString!DateTime("2010-07-04t00:00:00"));
+    assertThrown!DateTimeException(fromISOString!DateTime("2010-07-04T00:00:00."));
+    assertThrown!DateTimeException(fromISOString!DateTime("2010-07-04T00:00:00.0"));
+
+    assertThrown!DateTimeException(fromISOString!DateTime("2010-Jul-0400:00:00"));
+    assertThrown!DateTimeException(fromISOString!DateTime("2010-Jul-04 00:00:00"));
+    assertThrown!DateTimeException(fromISOString!DateTime("2010-Jul-04t00:00:00"));
+    assertThrown!DateTimeException(fromISOString!DateTime("2010-Jul-04T00:00:00"));
+    assertThrown!DateTimeException(fromISOString!DateTime("2010-Jul-04 00:00:00."));
+    assertThrown!DateTimeException(fromISOString!DateTime("2010-Jul-04 00:00:00.0"));
+
+    assertThrown!DateTimeException(fromISOString!DateTime("2010-12-22T172201"));
+    assertThrown!DateTimeException(fromISOString!DateTime("2010-Dec-22 17:22:01"));
+
+    assert(fromISOString!DateTime("20101222T172201") == DateTime(Date(2010, 12, 22), TimeOfDay(17, 22, 01)));
+    assert(fromISOString!DateTime("19990706T123033") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+    assert(fromISOString!DateTime("-19990706T123033") == DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
+    assert(fromISOString!DateTime("+019990706T123033") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+    assert(fromISOString!DateTime("19990706T123033 ") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+    assert(fromISOString!DateTime(" 19990706T123033") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+    assert(fromISOString!DateTime(" 19990706T123033 ") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+}
+
+@safe unittest
+{
+    assert(fromISOString!Date("19981225") == Date(1998, 12, 25));
+    assert(fromISOString!Date("00000105") == Date(0, 1, 5));
+    assert(fromISOString!Date("-00040105") == Date(-4, 1, 5));
+    assert(fromISOString!Date(" 20100704 ") == Date(2010, 7, 4));
+}
+
+@safe unittest
+{
+    assertThrown!DateTimeException(fromISOString!Date(""));
+    assertThrown!DateTimeException(fromISOString!Date("990704"));
+    assertThrown!DateTimeException(fromISOString!Date("0100704"));
+    assertThrown!DateTimeException(fromISOString!Date("2010070"));
+    assertThrown!DateTimeException(fromISOString!Date("2010070 "));
+    assertThrown!DateTimeException(fromISOString!Date("120100704"));
+    assertThrown!DateTimeException(fromISOString!Date("-0100704"));
+    assertThrown!DateTimeException(fromISOString!Date("+0100704"));
+    assertThrown!DateTimeException(fromISOString!Date("2010070a"));
+    assertThrown!DateTimeException(fromISOString!Date("20100a04"));
+    assertThrown!DateTimeException(fromISOString!Date("2010a704"));
+
+    assertThrown!DateTimeException(fromISOString!Date("99-07-04"));
+    assertThrown!DateTimeException(fromISOString!Date("010-07-04"));
+    assertThrown!DateTimeException(fromISOString!Date("2010-07-0"));
+    assertThrown!DateTimeException(fromISOString!Date("2010-07-0 "));
+    assertThrown!DateTimeException(fromISOString!Date("12010-07-04"));
+    assertThrown!DateTimeException(fromISOString!Date("-010-07-04"));
+    assertThrown!DateTimeException(fromISOString!Date("+010-07-04"));
+    assertThrown!DateTimeException(fromISOString!Date("2010-07-0a"));
+    assertThrown!DateTimeException(fromISOString!Date("2010-0a-04"));
+    assertThrown!DateTimeException(fromISOString!Date("2010-a7-04"));
+    assertThrown!DateTimeException(fromISOString!Date("2010/07/04"));
+    assertThrown!DateTimeException(fromISOString!Date("2010/7/04"));
+    assertThrown!DateTimeException(fromISOString!Date("2010/7/4"));
+    assertThrown!DateTimeException(fromISOString!Date("2010/07/4"));
+    assertThrown!DateTimeException(fromISOString!Date("2010-7-04"));
+    assertThrown!DateTimeException(fromISOString!Date("2010-7-4"));
+    assertThrown!DateTimeException(fromISOString!Date("2010-07-4"));
+
+    assertThrown!DateTimeException(fromISOString!Date("99Jul04"));
+    assertThrown!DateTimeException(fromISOString!Date("010Jul04"));
+    assertThrown!DateTimeException(fromISOString!Date("2010Jul0"));
+    assertThrown!DateTimeException(fromISOString!Date("2010Jul0 "));
+    assertThrown!DateTimeException(fromISOString!Date("12010Jul04"));
+    assertThrown!DateTimeException(fromISOString!Date("-010Jul04"));
+    assertThrown!DateTimeException(fromISOString!Date("+010Jul04"));
+    assertThrown!DateTimeException(fromISOString!Date("2010Jul0a"));
+    assertThrown!DateTimeException(fromISOString!Date("2010Jua04"));
+    assertThrown!DateTimeException(fromISOString!Date("2010aul04"));
+
+    assertThrown!DateTimeException(fromISOString!Date("99-Jul-04"));
+    assertThrown!DateTimeException(fromISOString!Date("010-Jul-04"));
+    assertThrown!DateTimeException(fromISOString!Date("2010-Jul-0"));
+    assertThrown!DateTimeException(fromISOString!Date("2010-Jul-0 "));
+    assertThrown!DateTimeException(fromISOString!Date("12010-Jul-04"));
+    assertThrown!DateTimeException(fromISOString!Date("-010-Jul-04"));
+    assertThrown!DateTimeException(fromISOString!Date("+010-Jul-04"));
+    assertThrown!DateTimeException(fromISOString!Date("2010-Jul-0a"));
+    assertThrown!DateTimeException(fromISOString!Date("2010-Jua-04"));
+    assertThrown!DateTimeException(fromISOString!Date("2010-Jal-04"));
+    assertThrown!DateTimeException(fromISOString!Date("2010-aul-04"));
+
+    assertThrown!DateTimeException(fromISOString!Date("2010-07-04"));
+    assertThrown!DateTimeException(fromISOString!Date("2010-Jul-04"));
+
+    assert(fromISOString!Date("19990706") == Date(1999, 7, 6));
+    assert(fromISOString!Date("-19990706") == Date(-1999, 7, 6));
+    assert(fromISOString!Date("+019990706") == Date(1999, 7, 6));
+    assert(fromISOString!Date("19990706 ") == Date(1999, 7, 6));
+    assert(fromISOString!Date(" 19990706") == Date(1999, 7, 6));
+    assert(fromISOString!Date(" 19990706 ") == Date(1999, 7, 6));
+}
+
+@safe unittest
+{
+    assert(fromISOString!TimeOfDay("123033") == TimeOfDay(12, 30, 33));
+    assert(fromISOString!TimeOfDay(" 123033 ") == TimeOfDay(12, 30, 33));
+}
+
+@safe unittest
+{
+    assertThrown!DateTimeException(fromISOString!TimeOfDay(""));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("0"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("00"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("000"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("0000"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("00000"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("13033"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("1277"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("12707"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("12070"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("12303a"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("1230a3"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("123a33"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("12a033"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("1a0033"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("a20033"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("1200330"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("0120033"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("-120033"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("+120033"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("120033am"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("120033pm"));
+
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("0::"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay(":0:"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("::0"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("0:0:0"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("0:0:00"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("0:00:0"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("00:0:0"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("00:00:0"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("00:0:00"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("13:0:33"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("12:7:7"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("12:7:07"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("12:07:0"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("12:30:3a"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("12:30:a3"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("12:3a:33"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("12:a0:33"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("1a:00:33"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("a2:00:33"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("12:003:30"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("120:03:30"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("012:00:33"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("01:200:33"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("-12:00:33"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("+12:00:33"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("12:00:33am"));
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("12:00:33pm"));
+
+    assertThrown!DateTimeException(fromISOString!TimeOfDay("12:00:33"));
+
+    assert(fromISOString!TimeOfDay("011217") == TimeOfDay(1, 12, 17));
+    assert(fromISOString!TimeOfDay("001412") == TimeOfDay(0, 14, 12));
+    assert(fromISOString!TimeOfDay("000007") == TimeOfDay(0, 0, 7));
+    assert(fromISOString!TimeOfDay("011217 ") == TimeOfDay(1, 12, 17));
+    assert(fromISOString!TimeOfDay(" 011217") == TimeOfDay(1, 12, 17));
+    assert(fromISOString!TimeOfDay(" 011217 ") == TimeOfDay(1, 12, 17));
+}
+
 
 /++
    Combines the $(REF Date,std,datetime,date) and
@@ -3037,20 +3263,6 @@ public:
         assert(idt.toString());
     }
 
-
-
-    /++
-        Creates a $(LREF DateTime) from a string with the format YYYYMMDDTHHMMSS.
-        Whitespace is stripped from the given string.
-
-        Params:
-            isoString = A string formatted in the ISO format for dates and times.
-
-        Throws:
-            $(REF DateTimeException,std,datetime,date) if the given string is
-            not in the ISO format or if the resulting $(LREF DateTime) would not
-            be valid.
-      +/
     static DateTime fromISOString(S)(in S isoString) @safe pure
         if (isSomeString!S)
     {
@@ -3071,59 +3283,6 @@ public:
         immutable tod = TimeOfDay.fromISOString(dstr[t+1 .. $]);
 
         return DateTime(date, tod);
-    }
-
-    ///
-    @safe unittest
-    {
-        assert(DateTime.fromISOString("20100704T070612") ==
-               DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
-
-        assert(DateTime.fromISOString("19981225T021500") ==
-               DateTime(Date(1998, 12, 25), TimeOfDay(2, 15, 0)));
-
-        assert(DateTime.fromISOString("00000105T230959") ==
-               DateTime(Date(0, 1, 5), TimeOfDay(23, 9, 59)));
-
-        assert(DateTime.fromISOString("-00040105T000002") ==
-               DateTime(Date(-4, 1, 5), TimeOfDay(0, 0, 2)));
-
-        assert(DateTime.fromISOString(" 20100704T070612 ") ==
-               DateTime(Date(2010, 7, 4), TimeOfDay(7, 6, 12)));
-    }
-
-    @safe unittest
-    {
-        assertThrown!DateTimeException(DateTime.fromISOString(""));
-        assertThrown!DateTimeException(DateTime.fromISOString("20100704000000"));
-        assertThrown!DateTimeException(DateTime.fromISOString("20100704 000000"));
-        assertThrown!DateTimeException(DateTime.fromISOString("20100704t000000"));
-        assertThrown!DateTimeException(DateTime.fromISOString("20100704T000000."));
-        assertThrown!DateTimeException(DateTime.fromISOString("20100704T000000.0"));
-
-        assertThrown!DateTimeException(DateTime.fromISOString("2010-07-0400:00:00"));
-        assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04 00:00:00"));
-        assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04t00:00:00"));
-        assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04T00:00:00."));
-        assertThrown!DateTimeException(DateTime.fromISOString("2010-07-04T00:00:00.0"));
-
-        assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-0400:00:00"));
-        assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04 00:00:00"));
-        assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04t00:00:00"));
-        assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04T00:00:00"));
-        assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04 00:00:00."));
-        assertThrown!DateTimeException(DateTime.fromISOString("2010-Jul-04 00:00:00.0"));
-
-        assertThrown!DateTimeException(DateTime.fromISOString("2010-12-22T172201"));
-        assertThrown!DateTimeException(DateTime.fromISOString("2010-Dec-22 17:22:01"));
-
-        assert(DateTime.fromISOString("20101222T172201") == DateTime(Date(2010, 12, 22), TimeOfDay(17, 22, 01)));
-        assert(DateTime.fromISOString("19990706T123033") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        assert(DateTime.fromISOString("-19990706T123033") == DateTime(Date(-1999, 7, 6), TimeOfDay(12, 30, 33)));
-        assert(DateTime.fromISOString("+019990706T123033") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        assert(DateTime.fromISOString("19990706T123033 ") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        assert(DateTime.fromISOString(" 19990706T123033") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
-        assert(DateTime.fromISOString(" 19990706T123033 ") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
     }
 
 
@@ -7273,19 +7432,6 @@ public:
         assert(idate.toString());
     }
 
-
-    /++
-        Creates a $(LREF Date) from a string with the format YYYYMMDD. Whitespace
-        is stripped from the given string.
-
-        Params:
-            isoString = A string formatted in the ISO format for dates.
-
-        Throws:
-            $(REF DateTimeException,std,datetime,date) if the given string is
-            not in the ISO format or if the resulting $(LREF Date) would not be
-            valid.
-      +/
     static Date fromISOString(S)(in S isoString) @safe pure
         if (isSomeString!S)
     {
@@ -7325,82 +7471,6 @@ public:
         }
 
         return Date(year, month, day);
-    }
-
-    ///
-    @safe unittest
-    {
-        assert(Date.fromISOString("20100704") == Date(2010, 7, 4));
-        assert(Date.fromISOString("19981225") == Date(1998, 12, 25));
-        assert(Date.fromISOString("00000105") == Date(0, 1, 5));
-        assert(Date.fromISOString("-00040105") == Date(-4, 1, 5));
-        assert(Date.fromISOString(" 20100704 ") == Date(2010, 7, 4));
-    }
-
-    @safe unittest
-    {
-        assertThrown!DateTimeException(Date.fromISOString(""));
-        assertThrown!DateTimeException(Date.fromISOString("990704"));
-        assertThrown!DateTimeException(Date.fromISOString("0100704"));
-        assertThrown!DateTimeException(Date.fromISOString("2010070"));
-        assertThrown!DateTimeException(Date.fromISOString("2010070 "));
-        assertThrown!DateTimeException(Date.fromISOString("120100704"));
-        assertThrown!DateTimeException(Date.fromISOString("-0100704"));
-        assertThrown!DateTimeException(Date.fromISOString("+0100704"));
-        assertThrown!DateTimeException(Date.fromISOString("2010070a"));
-        assertThrown!DateTimeException(Date.fromISOString("20100a04"));
-        assertThrown!DateTimeException(Date.fromISOString("2010a704"));
-
-        assertThrown!DateTimeException(Date.fromISOString("99-07-04"));
-        assertThrown!DateTimeException(Date.fromISOString("010-07-04"));
-        assertThrown!DateTimeException(Date.fromISOString("2010-07-0"));
-        assertThrown!DateTimeException(Date.fromISOString("2010-07-0 "));
-        assertThrown!DateTimeException(Date.fromISOString("12010-07-04"));
-        assertThrown!DateTimeException(Date.fromISOString("-010-07-04"));
-        assertThrown!DateTimeException(Date.fromISOString("+010-07-04"));
-        assertThrown!DateTimeException(Date.fromISOString("2010-07-0a"));
-        assertThrown!DateTimeException(Date.fromISOString("2010-0a-04"));
-        assertThrown!DateTimeException(Date.fromISOString("2010-a7-04"));
-        assertThrown!DateTimeException(Date.fromISOString("2010/07/04"));
-        assertThrown!DateTimeException(Date.fromISOString("2010/7/04"));
-        assertThrown!DateTimeException(Date.fromISOString("2010/7/4"));
-        assertThrown!DateTimeException(Date.fromISOString("2010/07/4"));
-        assertThrown!DateTimeException(Date.fromISOString("2010-7-04"));
-        assertThrown!DateTimeException(Date.fromISOString("2010-7-4"));
-        assertThrown!DateTimeException(Date.fromISOString("2010-07-4"));
-
-        assertThrown!DateTimeException(Date.fromISOString("99Jul04"));
-        assertThrown!DateTimeException(Date.fromISOString("010Jul04"));
-        assertThrown!DateTimeException(Date.fromISOString("2010Jul0"));
-        assertThrown!DateTimeException(Date.fromISOString("2010Jul0 "));
-        assertThrown!DateTimeException(Date.fromISOString("12010Jul04"));
-        assertThrown!DateTimeException(Date.fromISOString("-010Jul04"));
-        assertThrown!DateTimeException(Date.fromISOString("+010Jul04"));
-        assertThrown!DateTimeException(Date.fromISOString("2010Jul0a"));
-        assertThrown!DateTimeException(Date.fromISOString("2010Jua04"));
-        assertThrown!DateTimeException(Date.fromISOString("2010aul04"));
-
-        assertThrown!DateTimeException(Date.fromISOString("99-Jul-04"));
-        assertThrown!DateTimeException(Date.fromISOString("010-Jul-04"));
-        assertThrown!DateTimeException(Date.fromISOString("2010-Jul-0"));
-        assertThrown!DateTimeException(Date.fromISOString("2010-Jul-0 "));
-        assertThrown!DateTimeException(Date.fromISOString("12010-Jul-04"));
-        assertThrown!DateTimeException(Date.fromISOString("-010-Jul-04"));
-        assertThrown!DateTimeException(Date.fromISOString("+010-Jul-04"));
-        assertThrown!DateTimeException(Date.fromISOString("2010-Jul-0a"));
-        assertThrown!DateTimeException(Date.fromISOString("2010-Jua-04"));
-        assertThrown!DateTimeException(Date.fromISOString("2010-Jal-04"));
-        assertThrown!DateTimeException(Date.fromISOString("2010-aul-04"));
-
-        assertThrown!DateTimeException(Date.fromISOString("2010-07-04"));
-        assertThrown!DateTimeException(Date.fromISOString("2010-Jul-04"));
-
-        assert(Date.fromISOString("19990706") == Date(1999, 7, 6));
-        assert(Date.fromISOString("-19990706") == Date(-1999, 7, 6));
-        assert(Date.fromISOString("+019990706") == Date(1999, 7, 6));
-        assert(Date.fromISOString("19990706 ") == Date(1999, 7, 6));
-        assert(Date.fromISOString(" 19990706") == Date(1999, 7, 6));
-        assert(Date.fromISOString(" 19990706 ") == Date(1999, 7, 6));
     }
 
 
@@ -8790,19 +8860,6 @@ public:
         assert(itod.toString());
     }
 
-
-    /++
-        Creates a $(LREF TimeOfDay) from a string with the format HHMMSS.
-        Whitespace is stripped from the given string.
-
-        Params:
-            isoString = A string formatted in the ISO format for times.
-
-        Throws:
-            $(REF DateTimeException,std,datetime,date) if the given string is
-            not in the ISO format or if the resulting $(LREF TimeOfDay) would
-            not be valid.
-      +/
     static TimeOfDay fromISOString(S)(in S isoString) @safe pure
         if (isSomeString!S)
     {
@@ -8829,77 +8886,6 @@ public:
         }
 
         return TimeOfDay(hours, minutes, seconds);
-    }
-
-    ///
-    @safe unittest
-    {
-        assert(TimeOfDay.fromISOString("000000") == TimeOfDay(0, 0, 0));
-        assert(TimeOfDay.fromISOString("123033") == TimeOfDay(12, 30, 33));
-        assert(TimeOfDay.fromISOString(" 123033 ") == TimeOfDay(12, 30, 33));
-    }
-
-    @safe unittest
-    {
-        assertThrown!DateTimeException(TimeOfDay.fromISOString(""));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("0"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("00"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("000"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("0000"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("00000"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("13033"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("1277"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("12707"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("12070"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("12303a"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("1230a3"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("123a33"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("12a033"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("1a0033"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("a20033"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("1200330"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("0120033"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("-120033"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("+120033"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("120033am"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("120033pm"));
-
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("0::"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString(":0:"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("::0"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("0:0:0"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("0:0:00"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("0:00:0"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("00:0:0"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("00:00:0"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("00:0:00"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("13:0:33"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:7:7"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:7:07"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:07:0"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:30:3a"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:30:a3"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:3a:33"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:a0:33"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("1a:00:33"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("a2:00:33"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:003:30"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("120:03:30"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("012:00:33"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("01:200:33"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("-12:00:33"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("+12:00:33"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:00:33am"));
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:00:33pm"));
-
-        assertThrown!DateTimeException(TimeOfDay.fromISOString("12:00:33"));
-
-        assert(TimeOfDay.fromISOString("011217") == TimeOfDay(1, 12, 17));
-        assert(TimeOfDay.fromISOString("001412") == TimeOfDay(0, 14, 12));
-        assert(TimeOfDay.fromISOString("000007") == TimeOfDay(0, 0, 7));
-        assert(TimeOfDay.fromISOString("011217 ") == TimeOfDay(1, 12, 17));
-        assert(TimeOfDay.fromISOString(" 011217") == TimeOfDay(1, 12, 17));
-        assert(TimeOfDay.fromISOString(" 011217 ") == TimeOfDay(1, 12, 17));
     }
 
 
