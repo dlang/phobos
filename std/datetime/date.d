@@ -7263,6 +7263,12 @@ public:
         return toSimpleString();
     }
 
+    ///
+    unittest
+    {
+        assert(Date(2010, 7, 4).toString() == "2010-Jul-04");
+    }
+
     @safe unittest
     {
         auto date = Date(1999, 7, 6);
