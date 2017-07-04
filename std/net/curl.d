@@ -2048,6 +2048,17 @@ private mixin template Protocol()
     }
 
     /**
+       Set the no proxy flag for the specified host names.
+       Params:
+       test = a list of comma host names that do not require
+              proxy to get reached
+    */
+    void setNoProxy(string hosts)
+    {
+        p.curl.set(CurlOption.noproxy, hosts);
+    }
+
+    /**
        Set the local outgoing port range to use.
        This can be used together with the localPort property.
        Params:
@@ -2122,6 +2133,9 @@ private mixin template Protocol()
         http.onReceive = (ubyte[] data) { return data.length; };
         http.setAuthentication("user", "pass");
         http.perform();
+
+        // Bugzilla 17540
+        http.setNoProxy("www.example.com");
     }
 
     /**
