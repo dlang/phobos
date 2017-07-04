@@ -7264,7 +7264,7 @@ public:
     }
 
     ///
-    unittest
+    @safe unittest
     {
         assert(Date(2010, 7, 4).toString() == "2010-Jul-04");
     }
