@@ -4762,9 +4762,9 @@ template Utf8Matcher()
     static auto encode(size_t sz)(dchar ch)
         if (sz > 1)
     {
-        import std.utf : encode;
+        import std.utf : encodeUTF = encode;
         char[4] buf;
-        std.utf.encode(buf, ch);
+        encodeUTF(buf, ch);
         char[sz] ret;
         buf[0] &= leadMask!sz;
         foreach (n; 1 .. sz)
@@ -7380,7 +7380,7 @@ package auto simpleCaseFoldings(dchar ch) @safe
             return len == 0;
         }
 
-        @property uint length() const
+        @property size_t length() const
         {
             if (isSmall)
             {

@@ -637,7 +637,7 @@ if (isInputRange!Range && !isInfinite!Range &&
     assert(count("ababab", "abab") == 1);
     assert(count("ababab", "abx") == 0);
     // fuzzy count range in range
-    assert(count!((a, b) => std.uni.toLower(a) == std.uni.toLower(b))("AbcAdFaBf", "ab") == 2);
+    assert(count!((a, b) => toLower(a) == toLower(b))("AbcAdFaBf", "ab") == 2);
     // count predicate in range
     assert(count!("a > 1")(a) == 8);
 }
