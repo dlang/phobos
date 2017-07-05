@@ -43,7 +43,7 @@ DRUNTIMELIB=$(DRUNTIME)\lib\druntime.lib
 
 ## Flags for dmd D compiler
 
-DFLAGS=-conf= -O -release -w -dip25 -I$(DRUNTIME)\import
+DFLAGS=-conf= -O -release -w -de -dip25 -I$(DRUNTIME)\import
 #DFLAGS=-unittest -g
 #DFLAGS=-unittest -cov -g
 
