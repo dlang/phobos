@@ -696,11 +696,16 @@ size_t count(alias pred = "true", R)(R haystack)
 if (isInputRange!R && !isInfinite!R &&
     is(typeof(unaryFun!pred(haystack.front)) : bool))
 {
-    size_t result;
-    alias T = ElementType!R; //For narrow strings forces dchar iteration
-    foreach (T elem; haystack)
-        if (unaryFun!pred(elem)) ++result;
-    return result;
+    static if (hasLength!R && is(typeof(unary!fun(pred) == unary!fun("true"))))
+        return haystack.length;
+    else
+    {
+        size_t result;
+        alias T = ElementType!R; //For narrow strings forces dchar iteration
+        foreach (T elem; haystack)
+            if (unaryFun!pred(elem)) ++result;
+        return result;
+    }
 }
 
 @safe unittest

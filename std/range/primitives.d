@@ -1638,6 +1638,7 @@ upTo) steps have been taken and returns $(D upTo).
 Infinite ranges are compatible, provided the parameter $(D upTo) is
 specified, in which case the implementation simply returns upTo.
  */
+deprecated("use std.algorithm.searching.count instead.")
 auto walkLength(Range)(Range range)
 if (isInputRange!Range && !isInfinite!Range)
 {
