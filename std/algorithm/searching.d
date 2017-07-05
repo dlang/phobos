@@ -692,20 +692,25 @@ if (isForwardRange!R1 && !isInfinite!R1 &&
 }
 
 /// Ditto
-size_t count(alias pred = "true", R)(R haystack)
+size_t count(alias pred, R)(R haystack)
 if (isInputRange!R && !isInfinite!R &&
     is(typeof(unaryFun!pred(haystack.front)) : bool))
 {
-    static if (hasLength!R && is(typeof(unary!fun(pred) == unary!fun("true"))))
+    size_t result;
+    alias T = ElementType!R; //For narrow strings forces dchar iteration
+    foreach (T elem; haystack)
+        if (unaryFun!pred(elem)) ++result;
+    return result;
+}
+
+/// Ditto
+size_t count(R)(R haystack)
+if (isInputRange!R && !isInfinite!R)
+{
+    static if (hasLength!R)
         return haystack.length;
     else
-    {
-        size_t result;
-        alias T = ElementType!R; //For narrow strings forces dchar iteration
-        foreach (T elem; haystack)
-            if (unaryFun!pred(elem)) ++result;
-        return result;
-    }
+        return count!"true"(haystack);
 }
 
 @safe unittest
