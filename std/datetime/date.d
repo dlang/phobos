@@ -3055,20 +3055,19 @@ public:
         if (isSomeString!S)
     {
         import std.algorithm.searching : countUntil;
-        import std.conv : to;
         import std.exception : enforce;
         import std.format : format;
         import std.string : strip;
 
-        immutable dstr = to!dstring(strip(isoString));
+        immutable str = strip(isoString);
 
-        enforce(dstr.length >= 15, new DateTimeException(format("Invalid ISO String: %s", isoString)));
-        auto t = dstr.countUntil('T');
+        enforce(str.length >= 15, new DateTimeException(format("Invalid ISO String: %s", isoString)));
+        auto t = str.countUntil('T');
 
         enforce(t != -1, new DateTimeException(format("Invalid ISO String: %s", isoString)));
 
-        immutable date = Date.fromISOString(dstr[0 .. t]);
-        immutable tod = TimeOfDay.fromISOString(dstr[t+1 .. $]);
+        immutable date = Date.fromISOString(str[0 .. t]);
+        immutable tod = TimeOfDay.fromISOString(str[t+1 .. $]);
 
         return DateTime(date, tod);
     }
@@ -3144,20 +3143,19 @@ public:
         if (isSomeString!(S))
     {
         import std.algorithm.searching : countUntil;
-        import std.conv : to;
         import std.exception : enforce;
         import std.format : format;
         import std.string : strip;
 
-        immutable dstr = to!dstring(strip(isoExtString));
+        immutable str = strip(isoExtString);
 
-        enforce(dstr.length >= 15, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
-        auto t = dstr.countUntil('T');
+        enforce(str.length >= 15, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
+        auto t = str.countUntil('T');
 
         enforce(t != -1, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
 
-        immutable date = Date.fromISOExtString(dstr[0 .. t]);
-        immutable tod = TimeOfDay.fromISOExtString(dstr[t+1 .. $]);
+        immutable date = Date.fromISOExtString(str[0 .. t]);
+        immutable tod = TimeOfDay.fromISOExtString(str[t+1 .. $]);
 
         return DateTime(date, tod);
     }
@@ -3232,20 +3230,19 @@ public:
         if (isSomeString!(S))
     {
         import std.algorithm.searching : countUntil;
-        import std.conv : to;
         import std.exception : enforce;
         import std.format : format;
         import std.string : strip;
 
-        immutable dstr = to!dstring(strip(simpleString));
+        immutable str = strip(simpleString);
 
-        enforce(dstr.length >= 15, new DateTimeException(format("Invalid string format: %s", simpleString)));
-        auto t = dstr.countUntil(' ');
+        enforce(str.length >= 15, new DateTimeException(format("Invalid string format: %s", simpleString)));
+        auto t = str.countUntil(' ');
 
         enforce(t != -1, new DateTimeException(format("Invalid string format: %s", simpleString)));
 
-        immutable date = Date.fromSimpleString(dstr[0 .. t]);
-        immutable tod = TimeOfDay.fromISOExtString(dstr[t+1 .. $]);
+        immutable date = Date.fromSimpleString(str[0 .. t]);
+        immutable tod = TimeOfDay.fromISOExtString(str[t+1 .. $]);
 
         return DateTime(date, tod);
     }
