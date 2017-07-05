@@ -3266,13 +3266,30 @@ void main()
 /// Get the size of the file, ulong.max if file is not searchable, but still throws if an actual error occurs.
     @property ulong size() @safe
     {
-        import std.exception : collectException;
+        import std.exception : enforce, collectException;
+
+        enforce(isOpen, "Attempting to get size() on an unopened file");
 
         ulong pos = void;
-        if (collectException(pos = tell)) return ulong.max;
+        if (collectException(pos = tell))
+            return ulong.max;
+
+        // Unfortunately there doesn't seem to be a reliable way to
+        // find out if a file is seekable without actually attempting
+        // to seek in it. Even seek(0, SEEK_CUR) will succeed in
+        // unseekable files.
+        if (collectException(seek(0, SEEK_END)))
+            return ulong.max;
+
         scope(exit) seek(pos);
-        seek(0, SEEK_END);
         return tell;
+    }
+
+    @system unittest // Issue 17228
+    {
+        import std.process;
+        auto p = pipe();
+        assert(p.readEnd.size == ulong.max);
     }
 }
 
@@ -3423,8 +3440,9 @@ void main()
     scope(exit) collectException(std.file.remove(deleteme));
     std.file.write(deleteme, "1 2 3");
     auto f = File(deleteme);
+    f.seek(2);
     assert(f.size == 5);
-    assert(f.tell == 0);
+    assert(f.tell == 2);
 }
 
 @system unittest
