@@ -4234,6 +4234,8 @@ slurp(Types...)(string filename, in char[] format)
 ///
 @system unittest
 {
+    import std.typecons : tuple;
+
     scope(exit)
     {
         assert(exists(deleteme));

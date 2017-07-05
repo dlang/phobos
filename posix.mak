@@ -261,11 +261,7 @@ SHARED=$(if $(findstring $(OS),linux freebsd),1,)
 # Check for missing imports in public unittest examples.
 # A blacklist of ignored module is provided as not all public unittest in
 # Phobos are independently runnable yet
-IGNORED_PUBLICTESTS= $(addprefix std/, \
-						base64 $(addprefix experimental/allocator/, \
-								building_blocks/free_list building_blocks/quantizer \
-						) digest/hmac \
-						file math stdio traits typecons uuid)
+IGNORED_PUBLICTESTS= $(addprefix std/, experimental/allocator/building_blocks/free_list traits typecons)
 PUBLICTESTS= $(addsuffix .publictests,$(filter-out $(IGNORED_PUBLICTESTS), $(D_MODULES)))
 TESTS_EXTRACTOR=$(ROOT)/tests_extractor
 PUBLICTESTS_DIR=$(ROOT)/publictests
