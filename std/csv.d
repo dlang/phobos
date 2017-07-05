@@ -1099,7 +1099,6 @@ public:
     }
 }
 
-///
 @safe pure unittest
 {
     import std.algorithm.comparison : equal;
