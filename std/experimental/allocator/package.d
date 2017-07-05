@@ -24,7 +24,7 @@ $(TR $(TD Modify) $(TD
 ))
 $(TR $(TD Global) $(TD
     $(LREF processAllocator)
-    $(LREF theAllocator)
+    $(LREF threadAllocator)
 ))
 $(TR $(TD Class interface) $(TD
     $(LREF allocatorObject)
@@ -36,10 +36,10 @@ $(TR $(TD Class interface) $(TD
 Synopsis:
 ---
 // Allocate an int, initialize it with 42
-int* p = theAllocator.make!int(42);
+int* p = threadAllocator.make!int(42);
 assert(*p == 42);
 // Destroy and deallocate it
-theAllocator.dispose(p);
+threadAllocator.dispose(p);
 
 // Allocate using the global process allocator
 p = processAllocator.make!int(100);
@@ -48,13 +48,13 @@ assert(*p == 100);
 processAllocator.dispose(p);
 
 // Create an array of 50 doubles initialized to -1.0
-double[] arr = theAllocator.makeArray!double(50, -1.0);
+double[] arr = threadAllocator.makeArray!double(50, -1.0);
 // Append two zeros to it
-theAllocator.expandArray(arr, 2, 0.0);
+threadAllocator.expandArray(arr, 2, 0.0);
 // On second thought, take that back
-theAllocator.shrinkArray(arr, 2);
+threadAllocator.shrinkArray(arr, 2);
 // Destroy and deallocate
-theAllocator.dispose(arr);
+threadAllocator.dispose(arr);
 ---
 
 $(H2 Layered Structure)
@@ -68,10 +68,10 @@ allocators need to implement. The interface primitives themselves are oblivious
 to the type of the objects being allocated; they only deal in `void[]`, by
 necessity of the interface being dynamic (as opposed to type-parameterized).
 Each thread has a current allocator it uses by default, which is a thread-local
-variable $(LREF theAllocator) of type $(LREF IAllocator). The process has a
+variable $(LREF threadAllocator) of type $(LREF IAllocator). The process has a
 global _allocator called $(LREF processAllocator), also of type $(LREF
 IAllocator). When a new thread is created, $(LREF processAllocator) is copied
-into $(LREF theAllocator). An application can change the objects to which these
+into $(LREF threadAllocator). An application can change the objects to which these
 references point. By default, at application startup, $(LREF processAllocator)
 refers to an object that uses D's garbage collected heap. This layer also
 include high-level functions such as $(LREF make) and $(LREF dispose) that
@@ -118,20 +118,20 @@ For casual creation and disposal of dynamically-allocated objects, use $(LREF
 make), $(LREF dispose), and the array-specific functions $(LREF makeArray),
 $(LREF expandArray), and $(LREF shrinkArray). These use by default D's garbage
 collected heap, but open the application to better configuration options. These
-primitives work either with `theAllocator` but also with any allocator obtained
+primitives work either with `threadAllocator` but also with any allocator obtained
 by combining heap building blocks. For example:
 
 ----
 void fun(size_t n)
 {
     // Use the current allocator
-    int[] a1 = theAllocator.makeArray!int(n);
-    scope(exit) theAllocator.dispose(a1);
+    int[] a1 = threadAllocator.makeArray!int(n);
+    scope(exit) threadAllocator.dispose(a1);
     ...
 }
 ----
 
-To experiment with alternative allocators, set $(LREF theAllocator) for the
+To experiment with alternative allocators, set $(LREF threadAllocator) for the
 current thread. For example, consider an application that allocates many 8-byte
 objects. These are not well supported by the default _allocator, so a
 $(MREF_ALTTEXT free list _allocator,
@@ -143,14 +143,14 @@ void main()
 {
     import std.experimental.allocator.building_blocks.free_list
         : FreeList;
-    theAllocator = allocatorObject(FreeList!8());
+    threadAllocator = allocatorObject(FreeList!8());
     ...
 }
 ----
 
 $(H3 Saving the `IAllocator` Reference For Later Use)
 
-As with any global resource, setting `theAllocator` and `processAllocator`
+As with any global resource, setting `threadAllocator` and `processAllocator`
 should not be done often and casually. In particular, allocating memory with
 one allocator and deallocating with another causes undefined behavior.
 Typically, these variables are set during application initialization phase and
@@ -159,14 +159,14 @@ last through the application.
 To avoid this, long-lived objects that need to perform allocations,
 reallocations, and deallocations relatively often may want to store a reference
 to the _allocator object they use throughout their lifetime. Then, instead of
-using `theAllocator` for internal allocation-related tasks, they'd use the
+using `threadAllocator` for internal allocation-related tasks, they'd use the
 internally held reference. For example, consider a user-defined hash table:
 
 ----
 struct HashTable
 {
     private IAllocator _allocator;
-    this(size_t buckets, IAllocator allocator = theAllocator) {
+    this(size_t buckets, IAllocator allocator = threadAllocator) {
         this._allocator = allocator;
         ...
     }
@@ -545,16 +545,16 @@ static this()
 Gets/sets the allocator for the current thread. This is the default allocator
 that should be used for allocating thread-local memory. For allocating memory
 to be shared across threads, use $(D processAllocator) (below). By default,
-$(D theAllocator) ultimately fetches memory from $(D processAllocator), which
+$(D threadAllocator) ultimately fetches memory from $(D processAllocator), which
 in turn uses the garbage collected heap.
 */
-nothrow @safe @nogc @property IAllocator theAllocator()
+nothrow @safe @nogc @property IAllocator threadAllocator()
 {
     return _threadAllocator;
 }
 
 /// Ditto
-nothrow @safe @nogc @property void theAllocator(IAllocator a)
+nothrow @safe @nogc @property void threadAllocator(IAllocator a)
 {
     assert(a);
     _threadAllocator = a;
@@ -566,11 +566,11 @@ nothrow @safe @nogc @property void theAllocator(IAllocator a)
     // Install a new allocator that is faster for 128-byte allocations.
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    auto oldAllocator = theAllocator;
-    scope(exit) theAllocator = oldAllocator;
-    theAllocator = allocatorObject(FreeList!(GCAllocator, 128)());
+    auto oldAllocator = threadAllocator;
+    scope(exit) threadAllocator = oldAllocator;
+    threadAllocator = allocatorObject(FreeList!(GCAllocator, 128)());
     // Use the now changed allocator to allocate an array
-    const ubyte[] arr = theAllocator.makeArray!ubyte(128);
+    const ubyte[] arr = threadAllocator.makeArray!ubyte(128);
     assert(arr.ptr);
     //...
 }
@@ -603,10 +603,10 @@ allocator can be cast to $(D shared).
     import std.experimental.allocator.mallocator : Mallocator;
 
     assert(processAllocator);
-    assert(theAllocator);
+    assert(threadAllocator);
 
     testAllocatorObject(processAllocator);
-    testAllocatorObject(theAllocator);
+    testAllocatorObject(threadAllocator);
 
     shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) sharedFL;
     shared ISharedAllocator sharedFLObj = sharedAllocatorObject(sharedFL);
@@ -619,7 +619,7 @@ allocator can be cast to $(D shared).
     assert(processAllocator is sharedFLObj);
 
     testAllocatorObject(processAllocator);
-    testAllocatorObject(theAllocator);
+    testAllocatorObject(threadAllocator);
     assertThrown!AssertError(processAllocator = null);
 
     // Restore initial processAllocator state
@@ -699,11 +699,11 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
 @system unittest
 {
     // Dynamically allocate one integer
-    const int* p1 = theAllocator.make!int;
+    const int* p1 = threadAllocator.make!int;
     // It's implicitly initialized with its .init value
     assert(*p1 == 0);
     // Dynamically allocate one double, initialize to 42.5
-    const double* p2 = theAllocator.make!double(42.5);
+    const double* p2 = threadAllocator.make!double(42.5);
     assert(*p2 == 42.5);
 
     // Dynamically allocate a struct
@@ -712,7 +712,7 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
         int x, y, z;
     }
     // Use the generated constructor taking field values in order
-    const Point* p = theAllocator.make!Point(1, 2);
+    const Point* p = threadAllocator.make!Point(1, 2);
     assert(p.x == 1 && p.y == 2 && p.z == 0);
 
     // Dynamically allocate a class object
@@ -723,9 +723,9 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
         this(uint id) { this.id = id; }
         // ...
     }
-    Customer cust = theAllocator.make!Customer;
+    Customer cust = threadAllocator.make!Customer;
     assert(cust.id == uint.max); // default initialized
-    cust = theAllocator.make!Customer(42);
+    cust = threadAllocator.make!Customer(42);
     assert(cust.id == 42);
 
     // explicit passing of outer pointer
@@ -737,8 +737,8 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
             auto getX() { return x; }
         }
     }
-    auto outer = theAllocator.make!Outer();
-    auto inner = theAllocator.make!(Outer.Inner)(outer);
+    auto outer = threadAllocator.make!Outer();
+    auto inner = threadAllocator.make!(Outer.Inner)(outer);
     assert(outer.x == inner.getX);
 }
 
@@ -746,8 +746,8 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
 {
     abstract class Foo {}
     class Bar: Foo {}
-    static assert(!is(typeof(theAllocator.make!Foo)));
-    static assert( is(typeof(theAllocator.make!Bar)));
+    static assert(!is(typeof(threadAllocator.make!Foo)));
+    static assert( is(typeof(threadAllocator.make!Bar)));
 }
 
 @system unittest
@@ -804,7 +804,7 @@ auto make(T, Allocator, A...)(auto ref Allocator alloc, auto ref A args)
 
     import std.experimental.allocator.gc_allocator : GCAllocator;
     test(GCAllocator.instance);
-    test(theAllocator);
+    test(threadAllocator);
 }
 
 // Attribute propagation
@@ -997,23 +997,23 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length)
     import std.experimental.allocator.mallocator : Mallocator;
     (alloc) /*pure nothrow*/ @safe { test1(alloc); test2(alloc);} (GCAllocator.instance);
     (alloc) nothrow @safe @nogc { test1(alloc); test2(alloc);} (Mallocator.instance);
-    test2(theAllocator);
+    test2(threadAllocator);
 }
 
 @system unittest
 {
     import std.algorithm.comparison : equal;
-    auto a = theAllocator.makeArray!(shared int)(5);
+    auto a = threadAllocator.makeArray!(shared int)(5);
     static assert(is(typeof(a) == shared(int)[]));
     assert(a.length == 5);
     assert(a.equal([0, 0, 0, 0, 0]));
 
-    auto b = theAllocator.makeArray!(const int)(5);
+    auto b = threadAllocator.makeArray!(const int)(5);
     static assert(is(typeof(b) == const(int)[]));
     assert(b.length == 5);
     assert(b.equal([0, 0, 0, 0, 0]));
 
-    auto c = theAllocator.makeArray!(immutable int)(5);
+    auto c = threadAllocator.makeArray!(immutable int)(5);
     static assert(is(typeof(c) == immutable(int)[]));
     assert(c.length == 5);
     assert(c.equal([0, 0, 0, 0, 0]));
@@ -1078,12 +1078,12 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
     import std.algorithm.comparison : equal;
     static void test(T)()
     {
-        T[] a = theAllocator.makeArray!T(2);
+        T[] a = threadAllocator.makeArray!T(2);
         assert(a.equal([0, 0]));
-        a = theAllocator.makeArray!T(3, 42);
+        a = threadAllocator.makeArray!T(3, 42);
         assert(a.equal([42, 42, 42]));
         import std.range : only;
-        a = theAllocator.makeArray!T(only(42, 43, 44));
+        a = threadAllocator.makeArray!T(only(42, 43, 44));
         assert(a.equal([42, 43, 44]));
     }
     test!int();
@@ -1104,7 +1104,7 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
     (alloc) /*pure nothrow*/ @safe { test(alloc); } (GCAllocator.instance);
-    test(theAllocator);
+    test(threadAllocator);
 }
 
 // test failure with a pure, failing struct
@@ -1287,7 +1287,7 @@ if (isInputRange!R && !isInfinite!R)
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
     (alloc) pure nothrow @safe { test(alloc); } (GCAllocator.instance);
-    test(theAllocator);
+    test(threadAllocator);
 }
 
 // infer types for strings
@@ -1310,7 +1310,7 @@ if (isInputRange!R && !isInfinite!R)
 
     import std.experimental.allocator.gc_allocator : GCAllocator;
     (alloc) pure nothrow @safe { test(alloc); } (GCAllocator.instance);
-    test(theAllocator);
+    test(threadAllocator);
 }
 
 /*pure*/ nothrow @safe unittest
@@ -1469,7 +1469,7 @@ version(unittest)
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
     (alloc) pure nothrow @safe { test(alloc); } (GCAllocator.instance);
-    test(theAllocator);
+    test(threadAllocator);
 }
 
 /**
@@ -1519,7 +1519,7 @@ bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
     test(GCAllocator.instance);
-    test(theAllocator);
+    test(threadAllocator);
 }
 
 /// Ditto
@@ -1548,7 +1548,7 @@ bool expandArray(T, Allocator)(auto ref Allocator alloc, ref T[] array,
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
     test(GCAllocator.instance);
-    test(theAllocator);
+    test(threadAllocator);
 }
 
 /// Ditto
@@ -1614,22 +1614,22 @@ if (isInputRange!R)
 ///
 @system unittest
 {
-    auto arr = theAllocator.makeArray!int([1, 2, 3]);
-    assert(theAllocator.expandArray(arr, 2));
+    auto arr = threadAllocator.makeArray!int([1, 2, 3]);
+    assert(threadAllocator.expandArray(arr, 2));
     assert(arr == [1, 2, 3, 0, 0]);
     import std.range : only;
-    assert(theAllocator.expandArray(arr, only(4, 5)));
+    assert(threadAllocator.expandArray(arr, only(4, 5)));
     assert(arr == [1, 2, 3, 0, 0, 4, 5]);
 }
 
 @system unittest
 {
-    auto arr = theAllocator.makeArray!int([1, 2, 3]);
+    auto arr = threadAllocator.makeArray!int([1, 2, 3]);
     ForcedInputRange r;
     int[] b = [ 1, 2, 3, 4 ];
     auto temp = b;
     r.array = &temp;
-    assert(theAllocator.expandArray(arr, r));
+    assert(threadAllocator.expandArray(arr, r));
     assert(arr == [1, 2, 3, 1, 2, 3, 4]);
 }
 
@@ -1698,9 +1698,9 @@ bool shrinkArray(T, Allocator)(auto ref Allocator alloc,
 ///
 @system unittest
 {
-    int[] a = theAllocator.makeArray!int(100, 42);
+    int[] a = threadAllocator.makeArray!int(100, 42);
     assert(a.length == 100);
-    assert(theAllocator.shrinkArray(a, 98));
+    assert(threadAllocator.shrinkArray(a, 98));
     assert(a.length == 2);
     assert(a == [42, 42]);
 }
@@ -1718,7 +1718,7 @@ bool shrinkArray(T, Allocator)(auto ref Allocator alloc,
     }
     import std.experimental.allocator.gc_allocator : GCAllocator;
     test(GCAllocator.instance);
-    test(theAllocator);
+    test(threadAllocator);
 }
 
 /**
@@ -1789,26 +1789,26 @@ void dispose(A, T)(auto ref A alloc, T[] array)
     static class B : A
     {
     }
-    auto a = theAllocator.make!A;
+    auto a = threadAllocator.make!A;
     a.method();
     assert(x == 21);
-    theAllocator.dispose(a);
+    threadAllocator.dispose(a);
     assert(x == 42);
 
-    B b = theAllocator.make!B;
+    B b = threadAllocator.make!B;
     b.method();
     assert(x == 21);
-    theAllocator.dispose(b);
+    threadAllocator.dispose(b);
     assert(x == 42);
 
-    I i = theAllocator.make!B;
+    I i = threadAllocator.make!B;
     i.method();
     assert(x == 21);
-    theAllocator.dispose(i);
+    threadAllocator.dispose(i);
     assert(x == 42);
 
-    int[] arr = theAllocator.makeArray!int(43);
-    theAllocator.dispose(arr);
+    int[] arr = threadAllocator.makeArray!int(43);
+    threadAllocator.dispose(arr);
 }
 
 @system unittest //bugzilla 15721
@@ -2117,7 +2117,7 @@ Implementation of `IAllocator` using `Allocator`. This adapts a
 statically-built allocator type to `IAllocator` that is directly usable by
 non-templated code.
 
-Usually `CAllocatorImpl` is used indirectly by calling $(LREF theAllocator).
+Usually `CAllocatorImpl` is used indirectly by calling $(LREF threadAllocator).
 */
 class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     : IAllocator
@@ -2481,11 +2481,11 @@ class CSharedAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
 @system unittest
 {
     // Allocate an int, initialize it with 42
-    int* p = theAllocator.make!int(42);
+    int* p = threadAllocator.make!int(42);
     assert(*p == 42);
 
     // Destroy and deallocate it
-    theAllocator.dispose(p);
+    threadAllocator.dispose(p);
 
     // Allocate using the global process allocator
     p = processAllocator.make!int(100);
@@ -2495,20 +2495,20 @@ class CSharedAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     processAllocator.dispose(p);
 
     // Create an array of 50 doubles initialized to -1.0
-    double[] arr = theAllocator.makeArray!double(50, -1.0);
+    double[] arr = threadAllocator.makeArray!double(50, -1.0);
 
     // Check internal pointer
     void[] result;
-    assert(theAllocator.resolveInternalPointer(null, result) == Ternary.no);
-    Ternary r = theAllocator.resolveInternalPointer(arr.ptr, result);
+    assert(threadAllocator.resolveInternalPointer(null, result) == Ternary.no);
+    Ternary r = threadAllocator.resolveInternalPointer(arr.ptr, result);
     assert(result.ptr is arr.ptr && result.length >= arr.length);
 
     // Append two zeros to it
-    theAllocator.expandArray(arr, 2, 0.0);
+    threadAllocator.expandArray(arr, 2, 0.0);
     // On second thought, take that back
-    theAllocator.shrinkArray(arr, 2);
+    threadAllocator.shrinkArray(arr, 2);
     // Destroy and deallocate
-    theAllocator.dispose(arr);
+    threadAllocator.dispose(arr);
 }
 
 __EOF__
