@@ -13,7 +13,7 @@ deprecated("Import the appropriate core.sys.posix.* modules instead")
 module std.c.linux.socket;
 
 version (linux):
-private import core.stdc.stdint;
+import core.stdc.stdint;
 public import core.sys.posix.arpa.inet;
 public import core.sys.posix.netdb;
 public import core.sys.posix.netinet.in_;

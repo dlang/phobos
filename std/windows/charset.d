@@ -50,10 +50,10 @@ else:
 
 version (Windows):
 
-private import core.sys.windows.windows;
-private import std.conv;
-private import std.string;
-private import std.windows.syserror;
+import core.sys.windows.windows;
+import std.conv;
+import std.string;
+import std.windows.syserror;
 
 import std.internal.cstring;
 

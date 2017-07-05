@@ -60,7 +60,7 @@ version(Windows)
     pragma (lib, "ws2_32.lib");
     pragma (lib, "wsock32.lib");
 
-    private import core.sys.windows.windows, std.windows.syserror;
+    import core.sys.windows.windows, std.windows.syserror;
     public import core.sys.windows.winsock2;
     private alias _ctimeval = core.sys.windows.winsock2.timeval;
     private alias _clinger = core.sys.windows.winsock2.linger;
@@ -85,20 +85,20 @@ else version(Posix)
         }
     }
 
-    private import core.sys.posix.arpa.inet;
-    private import core.sys.posix.fcntl;
+    import core.sys.posix.arpa.inet;
+    import core.sys.posix.fcntl;
     import core.sys.posix.netdb;
-    private import core.sys.posix.netinet.in_;
-    private import core.sys.posix.netinet.tcp;
-    private import core.sys.posix.sys.select;
-    private import core.sys.posix.sys.socket;
-    private import core.sys.posix.sys.time;
+    import core.sys.posix.netinet.in_;
+    import core.sys.posix.netinet.tcp;
+    import core.sys.posix.sys.select;
+    import core.sys.posix.sys.socket;
+    import core.sys.posix.sys.time;
     import core.sys.posix.sys.un : sockaddr_un;
-    private import core.sys.posix.unistd;
+    import core.sys.posix.unistd;
     private alias _ctimeval = core.sys.posix.sys.time.timeval;
     private alias _clinger = core.sys.posix.sys.socket.linger;
 
-    private import core.stdc.errno;
+    import core.stdc.errno;
 
     enum socket_t : int32_t { init = -1 }
     private const int _SOCKET_ERROR = -1;
@@ -125,7 +125,7 @@ version(unittest)
     static assert(is(uint32_t == uint));
     static assert(is(uint16_t == ushort));
 
-    private import std.stdio : writefln;
+    import std.stdio : writefln;
 
     // Print a message on exception instead of failing the unittest.
     private void softUnittest(void delegate() @safe test, int line = __LINE__) @trusted

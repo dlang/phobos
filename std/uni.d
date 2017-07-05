@@ -2436,7 +2436,7 @@ public:
         ---
     */
 
-    private import std.format : FormatException, FormatSpec;
+    import std.format : FormatException, FormatSpec;
 
     /***************************************
      * Obtain a textual representation of this InversionList
