@@ -88,7 +88,7 @@ setup_repos()
 
     # checkout a specific version of https://github.com/dlang/tools
     clone https://github.com/dlang/tools.git ../tools master
-    git -C ../tools checkout 87c63705dcacac38ba7c84d19699f656d834139d
+    git -C ../tools checkout df3dfa3061d25996ac98158d3bdb3525c8d89445
 
     # load environment for bootstrap compiler
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"

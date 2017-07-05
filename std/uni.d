@@ -2546,7 +2546,6 @@ private:
         return this;
     }
 
-    ///
     @safe unittest
     {
         assert(unicode.Cyrillic.intersect('-').byInterval.empty);
@@ -4340,7 +4339,6 @@ if (sumOfIntegerTuple!sizes == 21)
     }
 }
 
-///
 @system pure unittest
 {
     import std.algorithm.comparison : max;
@@ -4644,7 +4642,6 @@ public struct MatcherConcept
         return this;
     }
 
-    ///
     @safe unittest
     {
         auto m = utfMatcher!char(unicode.Number);
@@ -4762,9 +4759,9 @@ template Utf8Matcher()
     static auto encode(size_t sz)(dchar ch)
         if (sz > 1)
     {
-        import std.utf : encode;
+        import std.utf : encodeUTF = encode;
         char[4] buf;
-        std.utf.encode(buf, ch);
+        encodeUTF(buf, ch);
         char[sz] ret;
         buf[0] &= leadMask!sz;
         foreach (n; 1 .. sz)
@@ -7380,7 +7377,7 @@ package auto simpleCaseFoldings(dchar ch) @safe
             return len == 0;
         }
 
-        @property uint length() const
+        @property size_t length() const
         {
             if (isSmall)
             {

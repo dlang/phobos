@@ -5288,6 +5288,7 @@ if (isSomeString!S)
 }
 
 
+deprecated
 @safe pure @nogc unittest
 {
     import std.conv : to;
@@ -5363,6 +5364,7 @@ if (isSomeString!S && isSomeString!S1)
     return count;
 }
 
+deprecated
 @safe pure @nogc unittest
 {
     import std.conv : to;
@@ -5417,6 +5419,7 @@ if (isSomeString!S)
         return s;
 }
 
+deprecated
 @safe pure unittest
 {
     import std.conv : to;
@@ -5433,6 +5436,7 @@ if (isSomeString!S)
     });
 }
 
+deprecated
 @safe pure unittest
 {
     assert(removechars("abc", "x") == "abc");
@@ -5493,6 +5497,7 @@ S squeeze(S)(S s, in S pattern = null)
     return changed ? ((r is null) ? s[0 .. lasti] : cast(S) r) : s;
 }
 
+deprecated
 @system pure unittest
 {
     import std.conv : to;
@@ -5549,6 +5554,7 @@ S1 munch(S1, S2)(ref S1 s, S2 pattern) @safe pure @nogc
 }
 
 ///
+deprecated
 @safe pure @nogc unittest
 {
     string s = "123abc";
@@ -5558,6 +5564,7 @@ S1 munch(S1, S2)(ref S1 s, S2 pattern) @safe pure @nogc
     assert(t == "" && s == "abc");
 }
 
+deprecated
 @safe pure @nogc unittest
 {
     string s = "123€abc";
