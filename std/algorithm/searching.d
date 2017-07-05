@@ -3894,7 +3894,8 @@ if (isInputRange!Range && !isInfinite!Range &&
 
 /**
 Skip over the initial portion of the first given range that matches the second
-range, or do nothing if there is no match.
+range, or if no second range is given skip over the elements that fullfil pred.
+Do nothing if there is no match.
 
 Params:
     pred = The predicate that determines whether elements from each respective
@@ -3905,9 +3906,9 @@ Params:
         representing the initial segment of $(D r1) to skip over.
 
 Returns:
-true if the initial segment of $(D r1) matches $(D r2), and $(D r1) has been
-advanced to the point past this segment; otherwise false, and $(D r1) is left
-in its original position.
+true if the initial segment of $(D r1) matches $(D r2) or $(D pred) evaluates to true,
+and $(D r1) has been advanced to the point past this segment; otherwise false, and
+$(D r1) is left in its original position.
  */
 bool skipOver(R1, R2)(ref R1 r1, R2 r2)
 if (isForwardRange!R1 && isInputRange!R2
@@ -3953,6 +3954,20 @@ if (is(typeof(binaryFun!pred(r1.front, r2.front))) &&
     return r2.empty;
 }
 
+/// Ditto
+bool skipOver(alias pred, R)(ref R r1)
+if (isForwardRange!R &&
+    ifTestable!(typeof(r1.front), unaryFun!pred))
+{
+    if (r1.empty || !unaryFun!pred(r1.front))
+        return false;
+
+    do
+        r1.popFront();
+    while (!r1.empty && unaryFun!pred(r1.front));
+    return true;
+}
+
 ///
 @safe unittest
 {
@@ -3969,6 +3984,16 @@ if (is(typeof(binaryFun!pred(r1.front, r2.front))) &&
     assert(r1 == ["abc", "def", "hij"]);
     assert(skipOver!((a, b) => a.equal(b))(r1, r2));
     assert(r1 == ["def", "hij"]);
+
+    import std.ascii : isWhite;
+    import std.range.primitives : empty;
+
+    auto s2 = "\t\tvalue";
+    auto s3 = "";
+    auto s4 = "\t\t\t";
+    assert(s2.skipOver!isWhite && s2 == "value");
+    assert(!s3.skipOver!isWhite);
+    assert(s4.skipOver!isWhite && s3.empty);
 }
 
 /**
