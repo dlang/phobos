@@ -1176,7 +1176,7 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                         // of UTF-16 surrogate characters, as per RFC 4627.
                         wchar[2] wchars; // 1 or 2 UTF-16 code units
                         size_t wNum = encode(wchars, c); // number of UTF-16 code units
-                        foreach (wc; wchars[0..wNum])
+                        foreach (wc; wchars[0 .. wNum])
                         {
                             json.put("\\u");
                             foreach_reverse (i; 0 .. 4)
