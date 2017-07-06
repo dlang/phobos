@@ -279,7 +279,7 @@ private
 
 package
 {
-    /// Add the mutable qualifier to the given type T.
+    // Add the mutable qualifier to the given type T.
     template MutableOf(T)     { alias MutableOf     =              T  ; }
 }
 
