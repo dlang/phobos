@@ -2991,8 +2991,6 @@ else version(Windows)
 
         static immutable(WindowsTimeZone) getTimeZone(string name) @trusted
         {
-            import std.utf : toUTF16;
-
             scope baseKey = Registry.localMachine.getKey(`Software\Microsoft\Windows NT\CurrentVersion\Time Zones`);
 
             foreach (tzKeyName; baseKey.keyNames)
@@ -3015,8 +3013,8 @@ else version(Windows)
 
                 TIME_ZONE_INFORMATION tzInfo;
 
-                auto wstdName = toUTF16(stdName);
-                auto wdstName = toUTF16(dstName);
+                auto wstdName = stdName.to!wstring;
+                auto wdstName = dstName.to!wstring;
                 auto wstdNameLen = wstdName.length > 32 ? 32 : wstdName.length;
                 auto wdstNameLen = wdstName.length > 32 ? 32 : wdstName.length;
 
@@ -3347,7 +3345,7 @@ else version(Posix)
     does.
 
     Params:
-        windowsZonesXMLFileText The text from
+        windowsZonesXMLText = The text from
         $(HTTP unicode.org/cldr/data/common/supplemental/windowsZones.xml, windowsZones.xml)
 
     Throws:

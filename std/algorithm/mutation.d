@@ -1660,8 +1660,21 @@ enum SwapStrategy
 }
 
 /**
-Eliminates elements at given offsets from $(D range) and returns the
-shortened range. In the simplest call, one element is removed.
+Eliminates elements at given offsets from `range` and returns the shortened
+range.
+
+For example, here is how to _remove a single element from an array:
+
+----
+string[] a = [ "a", "b", "c", "d" ];
+a = a.remove(1); // remove element at offset 1
+assert(a == [ "a", "c", "d"]);
+----
+
+Note that `remove` does not change the length of the original _range directly;
+instead, it returns the shortened _range. If its return value is not assigned to
+the original _range, the original _range will retain its original length, though
+its contents will have changed:
 
 ----
 int[] a = [ 3, 5, 7, 8 ];
@@ -1669,15 +1682,13 @@ assert(remove(a, 1) == [ 3, 7, 8 ]);
 assert(a == [ 3, 7, 8, 8 ]);
 ----
 
-In the case above the element at offset $(D 1) is removed and $(D
-remove) returns the range smaller by one element. The original array
-has remained of the same length because all functions in $(D
-std.algorithm) only change $(I content), not $(I topology). The value
-$(D 8) is repeated because $(LREF move) was invoked to
-move elements around and on integers $(D move) simply copies the source to
-the destination. To replace $(D a) with the effect of the removal,
-simply assign $(D a = remove(a, 1)). The slice will be rebound to the
-shorter array and the operation completes with maximal efficiency.
+The element at _offset `1` has been removed and the rest of the elements have
+shifted up to fill its place, however, the original array remains of the same
+length. This is because all functions in `std.algorithm` only change $(I
+content), not $(I topology). The value `8` is repeated because $(LREF move) was
+invoked to rearrange elements, and on integers `move` simply copies the source
+to the destination.  To replace `a` with the effect of the removal, simply
+assign the slice returned by `remove` to it, as shown in the first example.
 
 Multiple indices can be passed into $(D remove). In that case,
 elements at the respective indices are all removed. The indices must
@@ -1689,7 +1700,7 @@ assert(remove(a, 1, 3, 5) ==
     [ 0, 2, 4, 6, 7, 8, 9, 10 ]);
 ----
 
-(Note how all indices refer to slots in the $(I original) array, not
+(Note that all indices refer to slots in the $(I original) array, not
 in the array as it is being progressively shortened.) Finally, any
 combination of integral offsets and tuples composed of two integral
 offsets can be passed in.

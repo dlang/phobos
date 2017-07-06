@@ -79,8 +79,10 @@ Source:    $(PHOBOSSRC std/_file.d)
 module std.file;
 
 import core.stdc.errno, core.stdc.stdlib, core.stdc.string;
+import core.time : abs, dur, hnsecs, seconds;
 
-import std.datetime;
+import std.datetime.date : DateTime;
+import std.datetime.systime : Clock, SysTime, unixTimeToStdTime;
 import std.internal.cstring;
 import std.meta;
 import std.range.primitives;
@@ -206,8 +208,8 @@ class FileException : Exception
                              string file = __FILE__,
                              size_t line = __LINE__) @trusted
     {
-        auto s = strerror(errno);
-        this(name, to!string(s), file, line);
+        import std.exception : errnoString;
+        this(name, errnoString(errno), file, line);
         this.errno = errno;
     }
 }
@@ -970,6 +972,8 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
 {
     version(Windows)
     {
+        import std.datetime.systime : FILETIMEToSysTime;
+
         with (getFileAttributesWin(name))
         {
             accessTime = FILETIMEToSysTime(&ftLastAccessTime);
@@ -1102,11 +1106,13 @@ else version(Windows)
     if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
         !isConvertibleToString!R)
     {
+        import std.datetime.systime : FILETIMEToSysTime;
+
         with (getFileAttributesWin(name))
         {
-            fileCreationTime = std.datetime.FILETIMEToSysTime(&ftCreationTime);
-            fileAccessTime = std.datetime.FILETIMEToSysTime(&ftLastAccessTime);
-            fileModificationTime = std.datetime.FILETIMEToSysTime(&ftLastWriteTime);
+            fileCreationTime = FILETIMEToSysTime(&ftCreationTime);
+            fileAccessTime = FILETIMEToSysTime(&ftLastAccessTime);
+            fileModificationTime = FILETIMEToSysTime(&ftLastWriteTime);
         }
     }
 
@@ -1210,6 +1216,8 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
 {
     version(Windows)
     {
+        import std.datetime.systime : SysTimeToFILETIME;
+
         auto namez = name.tempCString!FSChar();
         static auto trustedCreateFileW(const(FSChar)* namez, DWORD dwDesiredAccess, DWORD dwShareMode,
                                        SECURITY_ATTRIBUTES *lpSecurityAttributes, DWORD dwCreationDisposition,
@@ -2636,7 +2644,6 @@ version(Posix) @system unittest // input range of dchars
 version(Windows) string getcwd()
 {
     import std.conv : to;
-    import std.utf : toUTF8;
     /* GetCurrentDirectory's return value:
         1. function succeeds: the number of characters that are written to
     the buffer, not including the terminating null character.
@@ -2650,7 +2657,7 @@ version(Windows) string getcwd()
     // we can do it because toUTFX always produces a fresh string
     if (n < buffW.length)
     {
-        return toUTF8(buffW[0 .. n]);
+        return buffW[0 .. n].to!string;
     }
     else //staticBuff isn't enough
     {
@@ -2658,7 +2665,7 @@ version(Windows) string getcwd()
         scope(exit) free(ptr);
         immutable n2 = GetCurrentDirectoryW(n, ptr);
         cenforce(n2 && n2 < n, "getcwd");
-        return toUTF8(ptr[0 .. n2]);
+        return ptr[0 .. n2].to!string;
     }
 }
 else version (Solaris) string getcwd()
@@ -2698,7 +2705,7 @@ else version (NetBSD)
  * Returns the full path of the current executable.
  *
  * Throws:
- * $(REF Exception, std,object)
+ * $(REF1 Exception, object)
  */
 @trusted string thisExePath ()
 {
@@ -2960,12 +2967,13 @@ else version(Windows)
 {
     struct DirEntry
     {
-        import std.utf : toUTF8;
     public:
         alias name this;
 
         this(string path)
         {
+            import std.datetime.systime : FILETIMEToSysTime;
+
             if (!path.exists())
                 throw new FileException(path, "File does not exist");
 
@@ -2974,9 +2982,9 @@ else version(Windows)
             with (getFileAttributesWin(path))
             {
                 _size = makeUlong(nFileSizeLow, nFileSizeHigh);
-                _timeCreated = std.datetime.FILETIMEToSysTime(&ftCreationTime);
-                _timeLastAccessed = std.datetime.FILETIMEToSysTime(&ftLastAccessTime);
-                _timeLastModified = std.datetime.FILETIMEToSysTime(&ftLastWriteTime);
+                _timeCreated = FILETIMEToSysTime(&ftCreationTime);
+                _timeLastAccessed = FILETIMEToSysTime(&ftLastAccessTime);
+                _timeLastModified = FILETIMEToSysTime(&ftLastWriteTime);
                 _attributes = dwFileAttributes;
             }
         }
@@ -2984,15 +2992,16 @@ else version(Windows)
         private this(string path, in WIN32_FIND_DATAW *fd)
         {
             import core.stdc.wchar_ : wcslen;
+            import std.conv : to;
+            import std.datetime.systime : FILETIMEToSysTime;
             import std.path : buildPath;
 
             size_t clength = wcslen(fd.cFileName.ptr);
-            _name = toUTF8(fd.cFileName[0 .. clength]);
-            _name = buildPath(path, toUTF8(fd.cFileName[0 .. clength]));
+            _name = buildPath(path, fd.cFileName[0 .. clength].to!string);
             _size = (cast(ulong) fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
-            _timeCreated = std.datetime.FILETIMEToSysTime(&fd.ftCreationTime);
-            _timeLastAccessed = std.datetime.FILETIMEToSysTime(&fd.ftLastAccessTime);
-            _timeLastModified = std.datetime.FILETIMEToSysTime(&fd.ftLastWriteTime);
+            _timeCreated = FILETIMEToSysTime(&fd.ftCreationTime);
+            _timeLastAccessed = FILETIMEToSysTime(&fd.ftLastAccessTime);
+            _timeLastModified = FILETIMEToSysTime(&fd.ftLastWriteTime);
             _attributes = fd.dwFileAttributes;
         }
 
@@ -3420,7 +3429,7 @@ private void copyImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, co
 {
     version(Windows)
     {
-        assert(preserve == Yes.preserve);
+        assert(preserve == Yes.preserveAttributes);
         immutable result = CopyFileW(fromz, toz, false);
         if (!result)
         {
@@ -4276,11 +4285,11 @@ string tempDir() @trusted
     {
         version(Windows)
         {
-            import std.utf : toUTF8;
+            import std.conv : to;
             // http://msdn.microsoft.com/en-us/library/windows/desktop/aa364992(v=vs.85).aspx
             wchar[MAX_PATH + 2] buf;
             DWORD len = GetTempPathW(buf.length, buf.ptr);
-            if (len) cache = toUTF8(buf[0 .. len]);
+            if (len) cache = buf[0 .. len].to!string;
         }
         else version(Android)
         {

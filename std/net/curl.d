@@ -1471,7 +1471,7 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
     */
     bool wait(Duration d)
     {
-        import std.datetime : StopWatch;
+        import std.datetime.stopwatch : StopWatch;
 
         if (state == State.gotUnits)
             return true;
@@ -2048,6 +2048,17 @@ private mixin template Protocol()
     }
 
     /**
+       Set the no proxy flag for the specified host names.
+       Params:
+       test = a list of comma host names that do not require
+              proxy to get reached
+    */
+    void setNoProxy(string hosts)
+    {
+        p.curl.set(CurlOption.noproxy, hosts);
+    }
+
+    /**
        Set the local outgoing port range to use.
        This can be used together with the localPort property.
        Params:
@@ -2122,6 +2133,9 @@ private mixin template Protocol()
         http.onReceive = (ubyte[] data) { return data.length; };
         http.setAuthentication("user", "pass");
         http.perform();
+
+        // Bugzilla 17540
+        http.setNoProxy("www.example.com");
     }
 
     /**
@@ -2377,14 +2391,14 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   * http.perform();
   * ---
   *
-  * See_Also: $(HTTP www.ietf.org/rfc/rfc2616.txt, RFC2616)
+  * See_Also: $(_HTTP www.ietf.org/rfc/rfc2616.txt, RFC2616)
   *
   */
 struct HTTP
 {
     mixin Protocol;
 
-    import std.datetime : SysTime;
+    import std.datetime.systime : SysTime;
 
     /// Authentication method equal to $(REF CurlAuth, etc,c,curl)
     alias AuthMethod = CurlAuth;
@@ -2933,7 +2947,7 @@ struct HTTP
      *
      * code = http.getTiming(CurlInfo.namelookup_time, val);
      * assert(code == CurlError.ok);
-     *---
+     * ---
      */
     CurlCode getTiming(CurlInfo timing, ref double val)
     {
@@ -3648,7 +3662,7 @@ struct FTP
      *
      * code = http.getTiming(CurlInfo.namelookup_time, val);
      * assert(code == CurlError.ok);
-     *---
+     * ---
      */
     CurlCode getTiming(CurlInfo timing, ref double val)
     {
@@ -4158,29 +4172,30 @@ private struct CurlAPI
         enforce!CurlException(!_api.global_init(CurlGlobal.all),
                               "Failed to initialize libcurl");
 
+        static extern(C) void cleanup()
+        {
+            if (_handle is null) return;
+            _api.global_cleanup();
+            version (Posix)
+            {
+                import core.sys.posix.dlfcn : dlclose;
+                dlclose(_handle);
+            }
+            else version (Windows)
+            {
+                import core.sys.windows.windows : FreeLibrary;
+                FreeLibrary(_handle);
+            }
+            else
+                static assert(0, "unimplemented");
+            _api = API.init;
+            _handle = null;
+        }
+
+        import core.stdc.stdlib : atexit;
+        atexit(&cleanup);
+
         return handle;
-    }
-
-    shared static ~this()
-    {
-        if (_handle is null) return;
-
-        _api.global_cleanup();
-        version (Posix)
-        {
-            import core.sys.posix.dlfcn : dlclose;
-            dlclose(_handle);
-        }
-        else version (Windows)
-        {
-            import core.sys.windows.windows : FreeLibrary;
-            FreeLibrary(_handle);
-        }
-        else
-            static assert(0, "unimplemented");
-
-        _api = API.init;
-        _handle = null;
     }
 }
 

@@ -98,7 +98,7 @@ enum CompressionMethod : ushort
 final class ArchiveMember
 {
     import std.conv : to, octal;
-    import std.datetime : DosFileTime, SysTime, SysTimeToDosFileTime;
+    import std.datetime.systime : DosFileTime, SysTime, SysTimeToDosFileTime;
 
     /**
      * Read/Write: Usually the file name of the archive member; it is used to
@@ -289,7 +289,7 @@ final class ZipArchive
     import std.algorithm.comparison : max;
     import std.bitmanip : littleEndianToNative, nativeToLittleEndian;
     import std.conv : to;
-    import std.datetime : DosFileTime;
+    import std.datetime.systime : DosFileTime;
 
     string comment;     /// Read/Write: the archive comment. Must be less than 65536 bytes in length.
 

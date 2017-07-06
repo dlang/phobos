@@ -787,10 +787,9 @@ real tan(real x) @trusted pure nothrow @nogc
         jc      trigerr                 ; // x is NAN, infinity, or empty
                                           // 387's can handle subnormals
 SC18:   fptan                           ;
-        fstp    ST(0)                   ; // dump X, which is always 1
         fstsw   AX                      ;
         sahf                            ;
-        jnp     Lret                    ; // C2 = 1 (x is out of range)
+        jnp     Clear1                  ; // C2 = 1 (x is out of range)
 
         // Do argument reduction to bring x into range
         fldpi                           ;
@@ -807,6 +806,10 @@ trigerr:
         fstp    ST(0)                   ; // dump theta
     }
     return real.nan;
+
+Clear1: asm pure nothrow @nogc{
+        fstp    ST(0)                   ; // dump X, which is always 1
+    }
 
 Lret: {}
     }
@@ -834,10 +837,9 @@ Lret: {}
         jnz     trigerr                 ; // x is NAN, infinity, or empty
                                           // 387's can handle subnormals
 SC18:   fptan                           ;
-        fstp    ST(0)                   ; // dump X, which is always 1
         fstsw   AX                      ;
         test    AH,4                    ;
-        jz      Lret                    ; // C2 = 1 (x is out of range)
+        jz      Clear1                  ; // C2 = 1 (x is out of range)
 
         // Do argument reduction to bring x into range
         fldpi                           ;
@@ -855,6 +857,10 @@ trigerr:
         fstp    ST(0)                   ; // dump theta
     }
     return real.nan;
+
+Clear1: asm pure nothrow @nogc{
+        fstp    ST(0)                   ; // dump X, which is always 1
+    }
 
 Lret: {}
     }
@@ -5872,7 +5878,7 @@ real NaN(ulong payload) @trusted pure nothrow @nogc
     }
 }
 
-@safe pure nothrow @nogc unittest
+@system pure nothrow @nogc unittest // not @safe because taking address of local.
 {
     static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble)
     {
@@ -7480,6 +7486,12 @@ bool approxEqual(T, U)(T lhs, U rhs)
 
     real r = tan(-2.0L);
     assert(fabs(r - 2.18504f) < .00001);
+
+    // Verify correct behavior for large inputs
+    assert(!isNaN(tan(0x1p63)));
+    assert(!isNaN(tan(0x1p300L)));
+    assert(!isNaN(tan(-0x1p63)));
+    assert(!isNaN(tan(-0x1p300L)));
 }
 
 @safe pure nothrow unittest

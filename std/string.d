@@ -11,7 +11,6 @@ $(TR $(TH Category) $(TH Functions) )
 $(TR $(TDNW Searching)
     $(TD
          $(MYREF column)
-         $(MYREF inPattern)
          $(MYREF indexOf)
          $(MYREF indexOfAny)
          $(MYREF indexOfNeither)
@@ -22,16 +21,12 @@ $(TR $(TDNW Searching)
 )
 $(TR $(TDNW Comparison)
     $(TD
-         $(MYREF countchars)
          $(MYREF isNumeric)
     )
 )
 $(TR $(TDNW Mutation)
     $(TD
          $(MYREF capitalize)
-         $(MYREF munch)
-         $(MYREF removechars)
-         $(MYREF squeeze)
     )
 )
 $(TR $(TDNW Pruning and Filling)
@@ -2744,8 +2739,8 @@ if ((hasSlicing!Range && hasLength!Range && isSomeChar!(ElementType!Range) ||
 
     string s = "Hello\nmy\rname\nis";
 
-    /* notice the call to $(D array) to turn the lazy range created by
-    lineSplitter comparable to the $(D string[]) created by splitLines.
+    /* notice the call to `array` to turn the lazy range created by
+    lineSplitter comparable to the `string[]` created by splitLines.
     */
     assert(lineSplitter(s).array == splitLines(s));
 }
@@ -5288,6 +5283,7 @@ if (isSomeString!S)
 }
 
 
+deprecated
 @safe pure @nogc unittest
 {
     import std.conv : to;
@@ -5363,6 +5359,7 @@ if (isSomeString!S && isSomeString!S1)
     return count;
 }
 
+deprecated
 @safe pure @nogc unittest
 {
     import std.conv : to;
@@ -5417,6 +5414,7 @@ if (isSomeString!S)
         return s;
 }
 
+deprecated
 @safe pure unittest
 {
     import std.conv : to;
@@ -5433,6 +5431,7 @@ if (isSomeString!S)
     });
 }
 
+deprecated
 @safe pure unittest
 {
     assert(removechars("abc", "x") == "abc");
@@ -5493,6 +5492,7 @@ S squeeze(S)(S s, in S pattern = null)
     return changed ? ((r is null) ? s[0 .. lasti] : cast(S) r) : s;
 }
 
+deprecated
 @system pure unittest
 {
     import std.conv : to;
@@ -5549,6 +5549,7 @@ S1 munch(S1, S2)(ref S1 s, S2 pattern) @safe pure @nogc
 }
 
 ///
+deprecated
 @safe pure @nogc unittest
 {
     string s = "123abc";
@@ -5558,6 +5559,7 @@ S1 munch(S1, S2)(ref S1 s, S2 pattern) @safe pure @nogc
     assert(t == "" && s == "abc");
 }
 
+deprecated
 @safe pure @nogc unittest
 {
     string s = "123€abc";

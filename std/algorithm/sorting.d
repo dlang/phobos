@@ -3402,7 +3402,7 @@ body
         r.swapAt(rite, pivot);
     }
     // Second loop: make left and pivot meet
-    outer: for (; rite > pivot; --rite)
+    for (; rite > pivot; --rite)
     {
         if (!lp(r[rite], r[oldPivot])) continue;
         while (rite > pivot)

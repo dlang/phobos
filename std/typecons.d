@@ -1255,7 +1255,7 @@ private template ReverseTupleSpecs(T...)
 }
 
 // ensure that internal Tuple unittests are compiled
-unittest
+@safe unittest
 {
     Tuple!() t;
 }
@@ -2848,7 +2848,7 @@ Returns:
 
 // https://issues.dlang.org/show_bug.cgi?id=11135
 // disable test until https://issues.dlang.org/show_bug.cgi?id=15316 gets fixed
-version (none) unittest
+version (none) @system unittest
 {
     foreach (T; AliasSeq!(float, double, real))
     {
@@ -5141,7 +5141,7 @@ scope, they will automatically increment or decrement the reference
 count.  When the reference count goes down to zero, $(D RefCounted)
 will call $(D destroy) against the payload and call $(D free) to
 deallocate the store.  If the $(D T) payload contains any references
-to GC-allocated memory, then $(RefCounted) will add it to the GC memory
+to GC-allocated memory, then `RefCounted` will add it to the GC memory
 that is scanned for pointers, and remove it from GC scanning before
 $(D free) is called on the store.
 
@@ -5414,7 +5414,7 @@ assert(refCountedStore.isInitialized)).
 ///
 pure @system nothrow @nogc unittest
 {
-    // A pair of an $(D int) and a $(D size_t) - the latter being the
+    // A pair of an `int` and a `size_t` - the latter being the
     // reference count - will be dynamically allocated
     auto rc1 = RefCounted!int(5);
     assert(rc1 == 5);
@@ -5729,10 +5729,22 @@ mixin template Proxy(alias a)
     auto ref opSliceAssign(this X, V      )(auto ref V v)                             { return a[]     = v; }
     auto ref opSliceAssign(this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return a[b .. e] = v; }
 
-    auto ref opOpAssign     (string op, this X, V      )(auto ref V v)                             { return mixin("a "      ~op~"= v"); }
-    auto ref opIndexOpAssign(string op, this X, V, D...)(auto ref V v, auto ref D i)               { return mixin("a[i] "   ~op~"= v"); }
-    auto ref opSliceOpAssign(string op, this X, V      )(auto ref V v)                             { return mixin("a[] "    ~op~"= v"); }
-    auto ref opSliceOpAssign(string op, this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return mixin("a[b .. e] "~op~"= v"); }
+    auto ref opOpAssign     (string op, this X, V      )(auto ref V v)
+    {
+        return mixin("a "      ~op~"= v");
+    }
+    auto ref opIndexOpAssign(string op, this X, V, D...)(auto ref V v, auto ref D i)
+    {
+        return mixin("a[i] "   ~op~"= v");
+    }
+    auto ref opSliceOpAssign(string op, this X, V      )(auto ref V v)
+    {
+        return mixin("a[] "    ~op~"= v");
+    }
+    auto ref opSliceOpAssign(string op, this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e)
+    {
+        return mixin("a[b .. e] "~op~"= v");
+    }
 
     template opDispatch(string name)
     {
@@ -6619,7 +6631,7 @@ template scoped(T)
             size_t* currD = cast(size_t*) &Scoped_store[$ - size_t.sizeof];
             if (d != *currD)
             {
-                import core.stdc.string;
+                import core.stdc.string : memmove;
                 memmove(alignedStore, Scoped_store.ptr + *currD, __traits(classInstanceSize, T));
                 *currD = d;
             }
@@ -7328,7 +7340,7 @@ public:
     BitFlags!Enum flags1;
     assert(!(flags1 & (Enum.A | Enum.B | Enum.C)));
 
-    // You need to specify the $(D unsafe) parameter for enum with custom values
+    // You need to specify the `unsafe` parameter for enum with custom values
     enum UnsafeEnum
     {
         A,

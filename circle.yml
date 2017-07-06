@@ -8,7 +8,6 @@ test:
   override:
     - ./circleci.sh setup-repos
     - ./circleci.sh style_lint
-    - ./circleci.sh has_public_example
     - ./circleci.sh publictests
     - ./circleci.sh coverage:
         parallel: true

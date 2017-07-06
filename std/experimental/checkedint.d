@@ -50,6 +50,9 @@ $(BOOKTABLE ,
         second parameter, i.e. `Checked!short` is the same as
         $(D Checked!(short, Abort)).
     ))
+    $(TR $(TD $(LREF Throw)) $(TD
+        fails every incorrect operation by throwing an exception.
+    ))
     $(TR $(TD $(LREF Warn)) $(TD
         prints incorrect operations to $(REF stderr, std, stdio)
         but otherwise preserves the built-in behavior.

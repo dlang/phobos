@@ -2,7 +2,8 @@
 module std.experimental.logger.core;
 
 import core.sync.mutex : Mutex;
-import std.datetime;
+import std.datetime.date : DateTime;
+import std.datetime.systime : Clock, SysTime;
 import std.range.primitives;
 import std.traits;
 

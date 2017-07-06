@@ -493,7 +493,7 @@ Params:
 Returns:
     At minimum, an input range. The resulting range will adopt the
     range primitives of the underlying range as long as
-    $(REF, hasLength, std,range,primitives) is `true`.
+    $(REF hasLength, std,range,primitives) is `true`.
  */
 auto stride(Range)(Range r, size_t n)
 if (isInputRange!(Unqual!Range))
@@ -2921,13 +2921,13 @@ pure @safe nothrow @nogc unittest
 
 /++
     Convenience function which calls
-    `range.$(REF popFrontN, std, range, primitives)(n) and returns `range`.
+    $(REF popFrontN, std, _range, primitives)`(range, n)` and returns `range`.
     `drop` makes it easier to pop elements from a range
     and then pass it to another function within a single expression,
     whereas `popFrontN` would require multiple statements.
 
     `dropBack` provides the same functionality but instead calls
-    `range.$(REF popBackN, std, range, primitives)(n)
+    $(REF popBackN, std, _range, primitives)`(range, n)`
 
     Note: `drop` and `dropBack` will only pop $(I up to)
     `n` elements but will stop if the range is empty first.
@@ -4566,7 +4566,8 @@ private string lockstepMixin(Ranges...)(bool withIndex, bool reverse)
         {
             indexDef = q{
                 size_t index = ranges[0].length-1;
-                enforce(_stoppingPolicy == StoppingPolicy.requireSameLength, "lockstep can only be used with foreach_reverse when stoppingPolicy == requireSameLength");
+                enforce(_stoppingPolicy == StoppingPolicy.requireSameLength,
+                        "lockstep can only be used with foreach_reverse when stoppingPolicy == requireSameLength");
 
                 foreach (range; ranges[1..$])
                     enforce(range.length == ranges[0].length);

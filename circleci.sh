@@ -86,6 +86,10 @@ setup_repos()
         fi
     done
 
+    # checkout a specific version of https://github.com/dlang/tools
+    clone https://github.com/dlang/tools.git ../tools master
+    git -C ../tools checkout df3dfa3061d25996ac98158d3bdb3525c8d89445
+
     # load environment for bootstrap compiler
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
 
@@ -99,11 +103,6 @@ style_lint()
 {
     # dscanner needs a more up-to-date DMD version
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$DSCANNER_DMD_VER --activate)"
-
-    # some style tools are at the tools repo
-    clone https://github.com/dlang/tools.git ../tools master
-    # fix to a specific version of https://github.com/dlang/tools/tree/master/styles
-    git -C ../tools checkout 60583c8363ff25d00017dffdb18c7ee7e7d9a343
 
     make -f posix.mak style_lint DUB=$DUB
 }
@@ -133,18 +132,13 @@ publictests()
     make -f posix.mak -j$N publictests DUB=$DUB
 }
 
-# check modules for public unittests
-has_public_example()
-{
-    make -f posix.mak -j$N has_public_example DUB=$DUB
-}
-
 case $1 in
     install-deps) install_deps ;;
     setup-repos) setup_repos ;;
     coverage) coverage ;;
     publictests) publictests ;;
-    has_public_example) has_public_example;;
     style_lint) style_lint ;;
+    # has_public_example has been removed and is kept for compatibility with older PRs
+    has_public_example) echo "OK" ;;
     *) echo "Unknown command"; exit 1;;
 esac
