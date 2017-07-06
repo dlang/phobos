@@ -493,7 +493,7 @@ Params:
 Returns:
     At minimum, an input range. The resulting range will adopt the
     range primitives of the underlying range as long as
-    $(REF, hasLength, std,range,primitives) is `true`.
+    $(REF hasLength, std,range,primitives) is `true`.
  */
 auto stride(Range)(Range r, size_t n)
 if (isInputRange!(Unqual!Range))

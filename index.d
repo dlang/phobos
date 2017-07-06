@@ -353,7 +353,7 @@ $(BOOKTABLE ,
     )
     $(LEADINGROW Runtime utilities)
     $(TR
-        $(TDNW $(MREF object))
+        $(TDNW $(MREF1 object))
         $(TD Core language definitions. Automatically imported.)
     )
     $(TR
