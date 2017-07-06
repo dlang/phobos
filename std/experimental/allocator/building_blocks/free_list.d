@@ -817,7 +817,7 @@ struct SharedFreeList(ParentAllocator,
         @property size_t max() const shared { return _max; }
         @property void max(size_t x) shared
         {
-            enforce(x >= _min && x >= (void*).sizeof);
+            enforce(x >= min && x >= (void*).sizeof);
             enforce(cas(&_max, chooseAtRuntime, x),
                 "SharedFreeList.max must be initialized exactly once.");
         }
@@ -1095,6 +1095,7 @@ struct SharedFreeList(ParentAllocator,
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
+    scope(exit) a.deallocateAll();
     auto c = a.allocate(64);
     assert(a.reallocate(c, 96));
     assert(c.length == 96);
@@ -1105,6 +1106,7 @@ struct SharedFreeList(ParentAllocator,
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime, chooseAtRuntime) a;
+    scope(exit) a.deallocateAll;
     a.allocate(64);
 }
 
@@ -1112,6 +1114,7 @@ struct SharedFreeList(ParentAllocator,
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, 30, 40) a;
+    scope(exit) a.deallocateAll;
     a.allocate(64);
 }
 
@@ -1119,5 +1122,26 @@ struct SharedFreeList(ParentAllocator,
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, 30, 40, chooseAtRuntime) a;
+    scope(exit) a.deallocateAll;
+    a.allocate(64);
+}
+
+@system unittest
+{
+    // Pull request #5556
+    import std.experimental.allocator.mallocator : Mallocator;
+    shared SharedFreeList!(Mallocator, 0, chooseAtRuntime) a;
+    scope(exit) a.deallocateAll;
+    a.max = 64;
+    a.allocate(64);
+}
+
+@system unittest
+{
+    // Pull request #5556
+    import std.experimental.allocator.mallocator : Mallocator;
+    shared SharedFreeList!(Mallocator, chooseAtRuntime, 64) a;
+    scope(exit) a.deallocateAll;
+    a.min = 32;
     a.allocate(64);
 }
