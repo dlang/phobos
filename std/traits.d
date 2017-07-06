@@ -279,21 +279,21 @@ private
 
 package
 {
-    /// Add specific qualifier to the given type T.
+    /// Add the mutable qualifier to the given type T.
     template MutableOf(T)     { alias MutableOf     =              T  ; }
 }
 
-/// Add specific qualifier to the given type T.
+/// Add the inout qualifier to the given type T.
 template InoutOf(T)       { alias InoutOf       =        inout(T) ; }
-/// ditto.
+/// Add the const qualifier to the given type T.
 template ConstOf(T)       { alias ConstOf       =        const(T) ; }
-/// ditto.
+/// Add the shared qualifier to the given type T.
 template SharedOf(T)      { alias SharedOf      =       shared(T) ; }
-/// ditto.
+/// Add the shared and inout qualifiers to the given type T.
 template SharedInoutOf(T) { alias SharedInoutOf = shared(inout(T)); }
-/// ditto.
+/// Add the shared and const qualifiers to the given type T.
 template SharedConstOf(T) { alias SharedConstOf = shared(const(T)); }
-/// ditto.
+/// Add the immutable qualifier to the given type T.
 template ImmutableOf(T)   { alias ImmutableOf   =    immutable(T) ; }
 
 @safe unittest
