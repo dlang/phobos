@@ -393,7 +393,7 @@ template hasPeek(T)
 
 /**
  * Checks whether the digest has a $(D blockSize) member, which contains the
- * digest's internal block size in bits. It is primarily used by $(REF HMAC, std,digest.hmac).
+ * digest's internal block size in bits. It is primarily used by $(REF HMAC, std,digest,hmac).
  */
 
 template hasBlockSize(T)

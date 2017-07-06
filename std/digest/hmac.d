@@ -26,7 +26,7 @@ import std.meta : allSatisfy;
  * information about the block size, it can be supplied explicitly using
  * the second overload.
  *
- * This type conforms to $(REF isDigest, std,digest.digest).
+ * This type conforms to $(REF isDigest, std,digest,digest).
  */
 
 version(StdDdoc)

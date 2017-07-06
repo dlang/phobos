@@ -2705,7 +2705,7 @@ else version (NetBSD)
  * Returns the full path of the current executable.
  *
  * Throws:
- * $(REF Exception, std,object)
+ * $(REF1 Exception, object)
  */
 @trusted string thisExePath ()
 {
