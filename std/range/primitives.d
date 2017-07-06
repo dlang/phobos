@@ -1625,33 +1625,16 @@ range.
 If $(D hasLength!Range), simply returns $(D range.length) without
 checking $(D upTo) (when specified).
 
-Otherwise, walks the range through its length and returns the number
-of elements seen. Performes $(BIGOH n) evaluations of $(D range.empty)
+Otherwise, walks the range for $(D upTo) elements. If $(D range.length) is smaller
+than $(D upTo), the walking stops returning $(D range.length).
+
+Performes $(BIGOH n) evaluations of $(D range.empty)
 and $(D range.popFront()), where $(D n) is the effective length of $(D
 range).
-
-The $(D upTo) parameter is useful to "cut the losses" in case
-the interest is in seeing whether the range has at least some number
-of elements. If the parameter $(D upTo) is specified, stops if $(D
-upTo) steps have been taken and returns $(D upTo).
 
 Infinite ranges are compatible, provided the parameter $(D upTo) is
 specified, in which case the implementation simply returns upTo.
  */
-auto walkLength(Range)(Range range)
-if (isInputRange!Range && !isInfinite!Range)
-{
-    static if (hasLength!Range)
-        return range.length;
-    else
-    {
-        size_t result;
-        for ( ; !range.empty ; range.popFront() )
-            ++result;
-        return result;
-    }
-}
-/// ditto
 auto walkLength(Range)(Range range, const size_t upTo)
 if (isInputRange!Range)
 {
@@ -1663,6 +1646,22 @@ if (isInputRange!Range)
     {
         size_t result;
         for ( ; result < upTo && !range.empty ; range.popFront() )
+            ++result;
+        return result;
+    }
+}
+
+//@@@DEPRECATED_2018-07@@@
+deprecated("use std.algorithm.searching.count instead.")
+auto walkLength(Range)(Range range)
+if (isInputRange!Range && !isInfinite!Range)
+{
+    static if (hasLength!Range)
+        return range.length;
+    else
+    {
+        size_t result;
+        for ( ; !range.empty ; range.popFront() )
             ++result;
         return result;
     }
