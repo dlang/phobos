@@ -767,6 +767,8 @@ struct SharedFreeList(ParentAllocator,
     import core.atomic : atomicOp, cas;
     import core.internal.spinlock : SpinLock;
 
+    private enum unchecked = minSize == 0 && maxSize == unbounded;
+
     static if (minSize != chooseAtRuntime)
     {
         alias min = minSize;
@@ -1045,6 +1047,28 @@ struct SharedFreeList(ParentAllocator,
         resetNodes();
         return result;
     }
+
+    /**
+    Nonstandard function that minimizes the memory usage of the freelist by
+    freeing each element in turn. Defined only if $(D ParentAllocator) defines
+    $(D deallocate).
+    */
+    static if (hasMember!(ParentAllocator, "deallocate") && !unchecked)
+    void minimize() shared
+    {
+        lock.lock();
+        scope(exit) lock.unlock();
+
+        for (auto n = _root; n;)
+        {
+            auto tmp = n.next;
+            parent.deallocate((cast(ubyte*) n)[0 .. max]);
+            n = tmp;
+        }
+
+        _root = null;
+        resetNodes();
+    }
 }
 
 @system unittest
@@ -1088,6 +1112,40 @@ struct SharedFreeList(ParentAllocator,
     assert(a.nodes == 1);
     b = [];
     a.deallocateAll();
+    assert(a.nodes == 0);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
+    auto b = a.allocate(100);
+    auto c = a.allocate(100);
+    a.deallocate(c);
+    assert(a.nodes == 1);
+    c = [];
+    a.minimize();
+    assert(a.nodes == 0);
+    a.deallocate(b);
+    assert(a.nodes == 1);
+    b = [];
+    a.minimize();
+    assert(a.nodes == 0);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
+    auto b = a.allocate(100);
+    auto c = a.allocate(100);
+    assert(a.nodes == 0);
+    a.deallocate(b);
+    a.deallocate(c);
+    assert(a.nodes == 2);
+    b = [];
+    c = [];
+    a.minimize();
     assert(a.nodes == 0);
 }
 
