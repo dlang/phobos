@@ -604,6 +604,11 @@ $(D 2).
 The third version counts the elements for which $(D pred(x)) is $(D
 true). Performs $(BIGOH haystack.length) evaluations of $(D pred).
 
+The fourth version counts the number of elements in a range. It is
+an optimization for the third version: if the given range has the
+`length` property the count is returned right away, otherwise
+performs $(BIGOH haystack.length) to walk the range.
+
 Note: Regardless of the overload, $(D count) will not accept
 infinite ranges for $(D haystack).
 
@@ -630,6 +635,7 @@ if (isInputRange!Range && !isInfinite!Range &&
 
     // count elements in range
     int[] a = [ 1, 2, 4, 3, 2, 5, 3, 2, 4 ];
+    assert(count(a) == 9);
     assert(count(a, 2) == 3);
     assert(count!("a > b")(a, 2) == 5);
     // count range in range
@@ -692,7 +698,7 @@ if (isForwardRange!R1 && !isInfinite!R1 &&
 }
 
 /// Ditto
-size_t count(alias pred = "true", R)(R haystack)
+size_t count(alias pred, R)(R haystack)
 if (isInputRange!R && !isInfinite!R &&
     is(typeof(unaryFun!pred(haystack.front)) : bool))
 {
@@ -701,6 +707,13 @@ if (isInputRange!R && !isInfinite!R &&
     foreach (T elem; haystack)
         if (unaryFun!pred(elem)) ++result;
     return result;
+}
+
+/// Ditto
+size_t count(R)(R haystack)
+if (isInputRange!R && !isInfinite!R)
+{
+    return walkLength(haystack);
 }
 
 @safe unittest
