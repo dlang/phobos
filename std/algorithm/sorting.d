@@ -895,7 +895,7 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
         auto a = new int[](uniform(0, 100, r));
         foreach (ref e; a)
         {
-            e = uniform(0, 50);
+            e = uniform(0, 50, r);
         }
         auto pieces = partition3(a, 25);
         assert(pieces[0].length + pieces[1].length + pieces[2].length == a.length);
