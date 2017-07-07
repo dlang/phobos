@@ -89,11 +89,13 @@
  *           $(LREF isBuiltinType)
  *           $(LREF isCopyable)
  *           $(LREF isDynamicArray)
+ *           $(LREF isEqualityComparable)
  *           $(LREF isFloatingPoint)
  *           $(LREF isIntegral)
  *           $(LREF isNarrowString)
  *           $(LREF isConvertibleToString)
  *           $(LREF isNumeric)
+ *           $(LREF isOrderingComparable)
  *           $(LREF isPointer)
  *           $(LREF isScalarType)
  *           $(LREF isSigned)
@@ -163,6 +165,7 @@
 module std.traits;
 
 import std.meta : AliasSeq, allSatisfy;
+import std.functional : unaryFun;
 
 // Legacy inheritance from std.typetuple
 // See also: https://github.com/dlang/phobos/pull/5484#discussion_r122602797
@@ -5998,6 +6001,59 @@ enum bool isNarrowString(T) = (is(T : const char[]) || is(T : const wchar[])) &&
     }
 }
 
+/**
+ * Detects whether `T` is a comparable type. Basic types and structs and
+ * classes that implement opCmp are ordering comparable.
+ */
+enum bool isOrderingComparable(T) = ifTestable!(T, unaryFun!"a < a");
+
+///
+@safe unittest
+{
+    static assert(isOrderingComparable!int);
+    static assert(isOrderingComparable!string);
+    static assert(!isOrderingComparable!creal);
+
+    static struct Foo {}
+    static assert(!isOrderingComparable!Foo);
+
+    static struct Bar
+    {
+        int a;
+        auto opCmp(Bar b1) const { return a - b1.a; }
+    }
+
+    Bar b1 = Bar(5);
+    Bar b2 = Bar(7);
+    assert(isOrderingComparable!Bar && b2 > b1);
+}
+
+/// ditto
+enum bool isEqualityComparable(T) = ifTestable!(T, unaryFun!"a == a");
+
+@safe unittest
+{
+    static assert(isEqualityComparable!int);
+    static assert(isEqualityComparable!string);
+    static assert(isEqualityComparable!creal);
+    static assert(!isEqualityComparable!void);
+
+    struct Foo {}
+    static assert(isEqualityComparable!Foo);
+
+    struct Bar
+    {
+        int a;
+        auto opEquals(Bar b1) const { return a == b1.a; }
+    }
+
+    Bar b1 = Bar(5);
+    Bar b2 = Bar(5);
+    Bar b3 = Bar(7);
+    static assert(isEqualityComparable!Bar);
+    assert(b1 == b2);
+    assert(b1 != b3);
+}
 
 /**
  * Detect whether $(D T) is a struct, static array, or enum that is implicitly
