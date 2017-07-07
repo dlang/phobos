@@ -1980,18 +1980,21 @@ if (isInputRange!RoR &&
 /++
     Replace occurrences of `from` with `to` in `subject` in a new
     array. If `sink` is defined, then output the new array into
-    `sink`.
+    `sink`. If `countChanges` is defined, place the number of
+    replacements done in it.
 
     Params:
         sink = an $(REF_ALTTEXT output range, isOutputRange, std,range,primitives)
         subject = the array to scan
         from = the item to replace
         to = the item to replace all instances of `from` with
+        countChanges = the number of substitutions performed
 
     Returns:
         If `sink` isn't defined, a new array without changing the
         contents of `subject`, or the original array if no match
-        is found.
+        is found. The number of replacements is placed in countChanges
+        if it is defined.
 
     See_Also:
         $(REF map, std,algorithm,iteration) which can act as a lazy replace
@@ -2016,11 +2019,40 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
     return app.data;
 }
 
+/// ditto
+E[] replace(E, R1, R2)(E[] subject, R1 from, R2 to, ref size_t countChanges)
+if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
+        && (hasLength!R2 || isSomeString!R2))
+{
+    import std.algorithm.searching : find;
+
+    countChanges = 0;
+    if (from.empty) return subject;
+
+    auto balance = find(subject, from.save);
+    if (balance.empty)
+        return subject;
+
+    auto app = appender!(E[])();
+    app.put(subject[0 .. subject.length - balance.length]);
+    app.put(to.save);
+    replaceInto(app, balance[from.length .. $], from, to, countChanges);
+
+    // the first replacement is counted here since replaceInto makes countChanges = 0
+    ++countChanges;
+
+    return app.data;
+}
+
 ///
 @safe unittest
 {
     assert("Hello Wörld".replace("o Wö", "o Wo") == "Hello World");
     assert("Hello Wörld".replace("l", "h") == "Hehho Wörhd");
+
+    size_t countChanges;
+    assert("Sooo many oooos".replace("o", "ö", countChanges) == "Sööö many öööös");
+    assert(countChanges == 7); // o was replaced 7 times with ö
 }
 
 /// ditto
@@ -2050,6 +2082,35 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     }
 }
 
+/// ditto
+void replaceInto(E, Sink, R1, R2)(Sink sink, E[] subject, R1 from, R2 to, ref size_t countChanges)
+if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
+    && isForwardRange!R1 && isForwardRange!R2
+    && (hasLength!R2 || isSomeString!R2))
+{
+    import std.algorithm.searching : find;
+
+    countChanges = 0;
+    if (from.empty)
+    {
+        sink.put(subject);
+        return;
+    }
+    for (;;)
+    {
+        auto balance = find(subject, from.save);
+        if (balance.empty)
+        {
+            sink.put(subject);
+            break;
+        }
+        ++countChanges;
+        sink.put(subject[0 .. subject.length - balance.length]);
+        sink.put(to.save);
+        subject = balance[from.length .. $];
+    }
+}
+
 ///
 @safe unittest
 {
@@ -2059,8 +2120,15 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
     auto sink = appender!(int[])();
 
     replaceInto(sink, arr, from, to);
-
     assert(sink.data == [1, 4, 6, 4, 5]);
+
+    size_t countChanges;
+    auto arr2 = [1, 2, 3, 4, 6, 4];
+    auto from2 = [4];
+    auto to2 = [1, 1];
+    auto sink2 = appender!(int[])();
+    replaceInto(sink2, arr2, from2, to2, countChanges);
+    assert(sink2.data == [1, 2, 3, 1, 1, 6, 1, 1] && countChanges == 2);
 }
 
 @safe unittest
