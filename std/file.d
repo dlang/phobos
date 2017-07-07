@@ -3937,6 +3937,12 @@ public:
         path = The directory to iterate over.
                If empty, the current directory will be iterated.
 
+        pattern = Optional string with wildcards, such as $(RED
+                  "*.d"). When present, it is used to filter the
+                  results by their file name. The supported wildcard
+                  strings are described under $(REF globMatch,
+                  std,_path).
+
         mode = Whether the directory's sub-directories should be
                iterated in depth-first port-order ($(LREF depth)),
                depth-first pre-order ($(LREF breadth)), or not at all
@@ -3981,6 +3987,12 @@ foreach (d; parallel(dFiles, 1)) //passes by 1 file to each thread
     writeln(cmd);
     std.process.system(cmd);
 }
+
+// Iterate over all D source files in current directory and all its
+// subdirectories
+auto dFiles = dirEntries("","*.{d,di}",SpanMode.depth);
+foreach (d; dFiles)
+    writeln(d.name);
 --------------------
  +/
 auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
@@ -4083,33 +4095,7 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
     dirEntries("", SpanMode.shallow).walkLength();
 }
 
-/++
-    Convenience wrapper for filtering file names with a glob pattern.
-
-    Params:
-        path = The directory to iterate over.
-        pattern  = String with wildcards, such as $(RED "*.d"). The supported
-                   wildcard strings are described under
-                   $(REF globMatch, std,_path).
-        mode = Whether the directory's sub-directories should be iterated
-               over depth-first ($(D_PARAM depth)), breadth-first
-               ($(D_PARAM breadth)), or not at all ($(D_PARAM shallow)).
-        followSymlink = Whether symbolic links which point to directories
-                         should be treated as directories and their contents
-                         iterated over.
-
-    Throws:
-        $(D FileException) if the directory does not exist.
-
-Example:
---------------------
-// Iterate over all D source files in current directory and all its
-// subdirectories
-auto dFiles = dirEntries("","*.{d,di}",SpanMode.depth);
-foreach (d; dFiles)
-    writeln(d.name);
---------------------
- +/
+/// Ditto
 auto dirEntries(string path, string pattern, SpanMode mode,
     bool followSymlink = true)
 {
