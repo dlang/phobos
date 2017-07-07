@@ -4065,6 +4065,64 @@ if (is(typeof(binaryFun!pred(r.front, e))) && isInputRange!R)
 }
 
 /**
+ * An overload of `skipOver` which takes a predicate. Skips over any elements
+ * from the start of the range that evaluate to `true`. Stops popping elements
+ * on the first element which `pred(r.front)` equals `false`.
+ *
+ * Params:
+ *     pred = the test for each element
+ *     r = the range to skip over
+ * Returns:
+ *     `true` if elements were skipped over, `false` otherwise.
+ */
+bool skipOver(alias pred, R)(ref R r) if (ifTestable!(typeof(r.front), unaryFun!pred))
+{
+    bool ret = false;
+
+    while (!r.empty && unaryFun!pred(r.front))
+    {
+        r.popFront;
+        ret = true;
+    }
+
+    return ret;
+}
+
+///
+@safe pure unittest
+{
+    import std.ascii : isWhite;
+
+    auto s1 = "\t\nHello";
+    assert(s1.skipOver!(isWhite));
+    assert(s1 == "Hello");
+
+    auto s2 = "Hello\t\n";
+    assert(s2.skipOver!(a => !isWhite(a)));
+    assert(s2 == "\t\n");
+
+    auto s3 = "Hello\t\n";
+    assert(!s3.skipOver!(isWhite));
+    assert(s3 == "Hello\t\n");
+}
+
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.ascii : isUpper;
+    import std.internal.test.dummyrange;
+
+    auto r1 = new ReferenceInputRange!int([1, 2, 3, 4, 5, 6]);
+    auto r2 = new ReferenceInputRange!dchar("Hello");
+
+    r1.skipOver!(a => a < 3);
+    assert(r1.equal([3, 4, 5, 6]));
+
+    r2.skipOver!(isUpper);
+    assert(r2.equal("ello"));
+}
+
+/**
 Checks whether the given
 $(REF_ALTTEXT input range, isInputRange, std,range,primitives) starts with (one
 of) the given needle(s) or, if no needles are given,
