@@ -86,10 +86,6 @@ setup_repos()
         fi
     done
 
-    # checkout a specific version of https://github.com/dlang/tools
-    clone https://github.com/dlang/tools.git ../tools master
-    git -C ../tools checkout df3dfa3061d25996ac98158d3bdb3525c8d89445
-
     # load environment for bootstrap compiler
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
 
@@ -129,6 +125,12 @@ coverage()
 # extract publictests and run them independently
 publictests()
 {
+    # checkout a specific version of https://github.com/dlang/tools
+    if [ ! -d ../tools ] ; then
+        clone https://github.com/dlang/tools.git ../tools master
+    fi
+    git -C ../tools checkout df3dfa3061d25996ac98158d3bdb3525c8d89445
+
     make -f posix.mak -j$N publictests DUB=$DUB
 }
 
