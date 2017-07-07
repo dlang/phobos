@@ -4964,6 +4964,19 @@ struct FloatingPointControl
         }
     }
 
+    //// Change the floating-point hardware rounding mode
+    @property void rounding(RoundingMode newMode) @nogc
+    {
+        initialize();
+        setControlState((getControlState() & ~ROUNDING_MASK) | (newMode & ROUNDING_MASK));
+    }
+
+    /// Returns: the currently active rounding mode
+    @property static RoundingMode rounding() @nogc
+    {
+        return cast(RoundingMode)(getControlState() & ROUNDING_MASK);
+    }
+
     version(StdDdoc)
     {
         enum : uint
@@ -5100,13 +5113,6 @@ public:
             setControlState(getControlState() & ~(exceptions & EXCEPTION_MASK));
     }
 
-    //// Change the floating-point hardware rounding mode
-    @property void rounding(RoundingMode newMode) @nogc
-    {
-        initialize();
-        setControlState((getControlState() & ~ROUNDING_MASK) | (newMode & ROUNDING_MASK));
-    }
-
     /// Returns: the exceptions which are currently enabled (unmasked)
     @property static uint enabledExceptions() @nogc
     {
@@ -5115,12 +5121,6 @@ public:
             return (getControlState() & EXCEPTION_MASK) ^ EXCEPTION_MASK;
         else
             return (getControlState() & EXCEPTION_MASK);
-    }
-
-    /// Returns: the currently active rounding mode
-    @property static RoundingMode rounding() @nogc
-    {
-        return cast(RoundingMode)(getControlState() & ROUNDING_MASK);
     }
 
     ///  Clear all pending exceptions, then restore the original exception state and rounding mode.
