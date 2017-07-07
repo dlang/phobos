@@ -994,7 +994,7 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
         "r and index must be same length for makeIndex.");
     static if (IndexType.sizeof < size_t.sizeof)
     {
-        enforce(r.length <= size_t(IndexType.max + 1), "Cannot create an index with " ~
+        enforce(r.length <= size_t(1) + IndexType.max, "Cannot create an index with " ~
             "element type " ~ IndexType.stringof ~ " with length " ~
             to!string(r.length) ~ ".");
     }
@@ -1066,6 +1066,10 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
     byte[128] sindex = void;
     iota(128).makeIndex(sindex[]);
     assert(sindex[].equal(iota(128)));
+
+    auto index2 = new uint[10];
+    10.iota.makeIndex(index2);
+    assert(index2.equal(10.iota));
 }
 
 struct Merge(alias less = "a < b", Rs...)
