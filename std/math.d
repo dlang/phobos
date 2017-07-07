@@ -4918,7 +4918,7 @@ assert(rint(1.1) == 1);
  */
 struct FloatingPointControl
 {
-    alias RoundingMode = uint;
+    alias RoundingMode = uint; ///
 
     version(StdDdoc)
     {
