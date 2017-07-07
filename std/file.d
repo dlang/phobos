@@ -4091,9 +4091,12 @@ auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
         pattern  = String with wildcards, such as $(RED "*.d"). The supported
                    wildcard strings are described under
                    $(REF globMatch, std,_path).
-        mode = Whether the directory's sub-directories should be iterated
-               over depth-first ($(D_PARAM depth)), breadth-first
-               ($(D_PARAM breadth)), or not at all ($(D_PARAM shallow)).
+
+        mode = Whether the directory's sub-directories should be
+               iterated in depth-first port-order ($(LREF depth)),
+               depth-first pre-order ($(LREF breadth)), or not at all
+               ($(LREF shallow)).
+
         followSymlink = Whether symbolic links which point to directories
                          should be treated as directories and their contents
                          iterated over.
