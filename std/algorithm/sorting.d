@@ -994,15 +994,15 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
         "r and index must be same length for makeIndex.");
     static if (IndexType.sizeof < size_t.sizeof)
     {
-        enforce(r.length <= IndexType.max, "Cannot create an index with " ~
+        enforce(r.length <= size_t(1) + IndexType.max, "Cannot create an index with " ~
             "element type " ~ IndexType.stringof ~ " with length " ~
             to!string(r.length) ~ ".");
     }
 
-    for (IndexType i = 0; i < r.length; ++i)
-    {
-        index[cast(size_t) i] = i;
-    }
+    // Use size_t as loop index to avoid overflow on ++i,
+    // e.g. when squeezing 256 elements into a ubyte index.
+    foreach (size_t i; 0 .. r.length)
+        index[i] = cast(IndexType) i;
 
     // sort the index
     sort!((a, b) => binaryFun!less(r[cast(size_t) a], r[cast(size_t) b]), ss)
@@ -1054,6 +1054,22 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
     assert(isSorted!
             ((byte a, byte b){ return arr1[a] < arr1[b];})
             (index3));
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+
+    ubyte[256] index = void;
+    iota(256).makeIndex(index[]);
+    assert(index[].equal(iota(256)));
+    byte[128] sindex = void;
+    iota(128).makeIndex(sindex[]);
+    assert(sindex[].equal(iota(128)));
+
+    auto index2 = new uint[10];
+    10.iota.makeIndex(index2);
+    assert(index2.equal(10.iota));
 }
 
 struct Merge(alias less = "a < b", Rs...)
