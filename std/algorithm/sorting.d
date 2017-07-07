@@ -1001,7 +1001,7 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
 
     // Use size_t as loop index to avoid overflow on ++i,
     // e.g. when squeezing 256 elements into a ubyte index.
-    foreach (i; size_t(0) .. size_t(r.length))
+    foreach (size_t i; 0 .. r.length)
         index[i] = cast(IndexType) i;
 
     // sort the index
