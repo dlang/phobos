@@ -148,15 +148,6 @@ Source:    $(PHOBOSSRC std/_string.d)
 */
 module std.string;
 
-//debug=string;                 // uncomment to turn on debugging trustedPrintf's
-
-debug(string) private
-void trustedPrintf(in char* str) @trusted nothrow @nogc
-{
-    import core.stdc.stdio : printf;
-    printf("%s", str);
-}
-
 version (unittest)
 {
 private:
@@ -580,7 +571,6 @@ if (isConvertibleToString!Range)
     import std.exception : assertCTFEable;
     import std.traits : EnumMembers;
     import std.utf : byChar, byWchar, byDchar;
-    debug(string) trustedPrintf("string.indexOf.unittest\n");
 
     assertCTFEable!(
     {
@@ -636,7 +626,6 @@ if (isConvertibleToString!Range)
     import std.conv : to;
     import std.traits : EnumMembers;
     import std.utf : byCodeUnit, byChar, byWchar;
-    debug(string) trustedPrintf("string.indexOf(startIdx).unittest\n");
 
     assert("hello".byCodeUnit.indexOf(cast(dchar)'l', 1) == 2);
     assert("hello".byWchar.indexOf(cast(dchar)'l', 1) == 2);
@@ -835,7 +824,6 @@ if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     import std.conv : to;
     import std.exception : assertCTFEable;
     import std.traits : EnumMembers;
-    debug(string) trustedPrintf("string.indexOf.unittest\n");
 
     assertCTFEable!(
     {
@@ -906,7 +894,6 @@ unittest
 {
     import std.conv : to;
     import std.traits : EnumMembers;
-    debug(string) trustedPrintf("string.indexOf(startIdx).unittest\n");
 
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
@@ -1083,7 +1070,6 @@ if (isSomeChar!Char)
     import std.conv : to;
     import std.exception : assertCTFEable;
     import std.traits : EnumMembers;
-    debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
 
     assertCTFEable!(
     {
@@ -1123,8 +1109,6 @@ if (isSomeChar!Char)
 {
     import std.conv : to;
     import std.traits : EnumMembers;
-
-    debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
 
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
@@ -1310,8 +1294,6 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
     import std.exception : assertCTFEable;
     import std.traits : EnumMembers;
 
-    debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -1387,8 +1369,6 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
 {
     import std.conv : to;
     import std.traits : EnumMembers;
-
-    debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
 
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
@@ -1636,8 +1616,6 @@ if (isSomeChar!Char && isSomeChar!Char2)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.indexOfAny.unittest\n");
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -1676,8 +1654,6 @@ if (isSomeChar!Char && isSomeChar!Char2)
 {
     import std.conv : to;
     import std.traits : EnumMembers;
-
-    debug(string) trustedPrintf("string.indexOfAny(startIdx).unittest\n");
 
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
@@ -1804,8 +1780,6 @@ if (isSomeChar!Char && isSomeChar!Char2)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.lastIndexOfAny.unittest\n");
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -1858,8 +1832,6 @@ if (isSomeChar!Char && isSomeChar!Char2)
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("string.lastIndexOfAny(index).unittest\n");
 
     assertCTFEable!(
     {
@@ -1986,8 +1958,6 @@ if (isSomeChar!Char && isSomeChar!Char2)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.indexOf.unittest\n");
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -2031,8 +2001,6 @@ if (isSomeChar!Char && isSomeChar!Char2)
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("string.indexOfNeither(index).unittest\n");
 
     assertCTFEable!(
     {
@@ -2144,8 +2112,6 @@ if (isSomeChar!Char && isSomeChar!Char2)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.lastIndexOfNeither.unittest\n");
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -2190,8 +2156,6 @@ if (isSomeChar!Char && isSomeChar!Char2)
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("string.lastIndexOfNeither(index).unittest\n");
 
     assertCTFEable!(
     {
@@ -2511,8 +2475,6 @@ if (!isSomeString!S && is(StringTypeOf!S))
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.splitLines.unittest\n");
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
@@ -2761,8 +2723,6 @@ if (isConvertibleToString!Range)
     import std.array : array;
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("string.lineSplitter.unittest\n");
 
     assertCTFEable!(
     {
@@ -3148,8 +3108,6 @@ if (isConvertibleToString!Range)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.strip.unittest\n");
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!( char[], const  char[],  string,
@@ -3353,7 +3311,6 @@ if (isConvertibleToString!Range)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.chomp.unittest\n");
     string s;
 
     assertCTFEable!(
@@ -3644,8 +3601,6 @@ if (isConvertibleToString!Range)
     import std.algorithm.comparison : equal;
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("string.chop.unittest\n");
 
     assertCTFEable!(
     {
@@ -4032,8 +3987,6 @@ unittest
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.justify.unittest\n");
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
@@ -4372,8 +4325,6 @@ if (isConvertibleToString!Range)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.detab.unittest\n");
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
@@ -4710,8 +4661,6 @@ unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("string.entab.unittest\n");
 
     assertCTFEable!(
     {
@@ -5294,8 +5243,6 @@ deprecated
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("std.string.inPattern.unittest\n");
-
     assertCTFEable!(
     {
     assert(inPattern('x', "x") == 1);
@@ -5370,8 +5317,6 @@ deprecated
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("std.string.count.unittest\n");
-
     assertCTFEable!(
     {
     assert(countchars("abc", "a-c") == 3);
@@ -5424,8 +5369,6 @@ deprecated
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("std.string.removechars.unittest\n");
 
     assertCTFEable!(
     {
@@ -5502,8 +5445,6 @@ deprecated
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("std.string.squeeze.unittest\n");
 
     assertCTFEable!(
     {
@@ -5644,8 +5585,6 @@ if (isSomeString!S)
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("std.string.succ.unittest\n");
 
     assertCTFEable!(
     {
@@ -5818,8 +5757,6 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
     import std.algorithm.comparison : equal;
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("std.string.tr.unittest\n");
 
     // Complete list of test types; too slow to test'em all
     // alias TestTypes = AliasSeq!(
@@ -6143,8 +6080,6 @@ if (isSomeString!S ||
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("isNumeric(in string, bool = false).unittest\n");
-
     assertCTFEable!(
     {
     // Test the isNumeric(in string) function
@@ -6458,8 +6393,6 @@ string[string] abbrev(string[] values) @safe pure
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.abbrev.unittest\n");
-
     assertCTFEable!(
     {
     string[] values;
@@ -6601,8 +6534,6 @@ if (isConvertibleToString!Range)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.column.unittest\n");
-
     assertCTFEable!(
     {
     assert(column(string.init) == 0);
@@ -6715,8 +6646,6 @@ if (isSomeString!S)
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("string.wrap.unittest\n");
 
     assertCTFEable!(
     {
@@ -6857,8 +6786,6 @@ if (isSomeString!S)
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("string.outdent.unittest\n");
 
     template outdent_testStr(S)
     {
