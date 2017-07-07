@@ -3670,12 +3670,23 @@ enum SpanMode
 {
     /** Only spans one directory. */
     shallow,
-    /** Spans the directory depth-first, i.e. the content of any
+    /** Spans the directory in
+     $(HTTPS en.wikipedia.org/wiki/Tree_traversal#Post-order,
+     _depth-first $(B post)-order), i.e. the content of any
      subdirectory is spanned before that subdirectory itself. Useful
      e.g. when recursively deleting files.  */
     depth,
-    /** Spans the directory breadth-first, i.e. the content of any
-     subdirectory is spanned right after that subdirectory itself. */
+    /** Spans the directory in
+    $(HTTPS en.wikipedia.org/wiki/Tree_traversal#Pre-order, depth-first
+    $(B pre)-order), i.e. the content of any subdirectory is spanned
+    right after that subdirectory itself.
+
+    Note that $(D SpanMode.breadth) will not result in all directory
+    members occurring before any subdirectory members, i.e. it is not
+    _true
+    $(HTTPS en.wikipedia.org/wiki/Tree_traversal#Breadth-first_search,
+    _breadth-first traversal).
+    */
     breadth,
 }
 
@@ -3925,9 +3936,12 @@ public:
     Params:
         path = The directory to iterate over.
                If empty, the current directory will be iterated.
-        mode = Whether the directory's sub-directories should be iterated
-               over depth-first ($(D_PARAM depth)), breadth-first
-               ($(D_PARAM breadth)), or not at all ($(D_PARAM shallow)).
+
+        mode = Whether the directory's sub-directories should be
+               iterated in depth-first port-order ($(LREF depth)),
+               depth-first pre-order ($(LREF breadth)), or not at all
+               ($(LREF shallow)).
+
         followSymlink = Whether symbolic links which point to directories
                          should be treated as directories and their contents
                          iterated over.
