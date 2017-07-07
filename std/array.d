@@ -1363,6 +1363,9 @@ $(D @safe), $(D pure) and $(D CTFE)-able.
 Params:
     s = the string to split
 
+Returns:
+    An array of each word in `s`
+
 See_Also:
 $(REF splitter, std,algorithm,iteration) for a version that splits using any
 separator.
@@ -1400,6 +1403,29 @@ if (isSomeString!S)
     if (inword)
         result ~= s[istart .. $];
     return result;
+}
+
+///
+@safe unittest
+{
+    string str = "Hello World!";
+    assert(str.split == ["Hello", "World!"]);
+
+    string str2 = "Hello\t\tWorld\t!";
+    assert(str2.split == ["Hello", "World", "!"]);
+}
+
+/**
+ * `split` allocates memory, so the same effect can be achieved lazily
+ * using $(REF splitter, std,algorithm,iteration).
+ */
+@safe unittest
+{
+    import std.ascii : isWhite;
+    import std.algorithm.comparison : equal;
+
+    string str = "Hello World!";
+    assert(str.splitter!(isWhite).equal(["Hello", "World!"]));
 }
 
 @safe unittest
