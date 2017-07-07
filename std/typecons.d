@@ -2228,7 +2228,8 @@ Params:
     }
 
     /// Ditto
-    bool opEquals()(auto ref const(T) rhs) const
+    bool opEquals(U)(auto ref const(U) rhs) const
+    if (is(typeof(this.get == rhs)))
     {
         return _isNull ? false : rhs == _value;
     }
@@ -2274,6 +2275,16 @@ Params:
         // Test rvalue
         assert(a == const Nullable!int(42));
         assert(a != Nullable!int(29));
+    }
+
+    // Issue 17482
+    @system unittest
+    {
+        import std.variant : Variant;
+        Nullable!Variant a = Variant(12);
+        assert(a == 12);
+        Nullable!Variant e;
+        assert(e != 12);
     }
 
     template toString()
