@@ -1047,9 +1047,8 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     };
     client.onReceiveStatusLine = (HTTP.StatusLine l) { statusLine = l; };
     client.perform();
-    enforce!CurlException(statusLine.code / 100 == 2,
-                            format("HTTP request returned status code %d (%s)",
-                                   statusLine.code, statusLine.reason));
+    enforce(statusLine.code / 100 == 2, new HTTPStatusException(statusLine.code,
+            format("HTTP request returned status code %d (%s)", statusLine.code, statusLine.reason)));
 
     return _decodeContent!T(content.data, client.p.charset);
 }
@@ -1063,8 +1062,9 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         assert(req.hdrs.canFind("GET /path"));
         s.send(httpNotFound());
     });
-    auto e = collectException!CurlException(get(testServer.addr ~ "/path"));
+    auto e = collectException!HTTPStatusException(get(testServer.addr ~ "/path"));
     assert(e.msg == "HTTP request returned status code 404 (Not Found)");
+    assert(e.status == 404);
 }
 
 // Bugzilla 14760 - content length must be reset after post
@@ -4070,6 +4070,33 @@ class CurlTimeoutException : CurlException
     {
         super(msg, file, line, next);
     }
+}
+
+/++
+    Exception thrown on HTTP request failures, e.g. 404 Not Found.
++/
+class HTTPStatusException : CurlException
+{
+    /++
+        Params:
+            status = The HTTP status code.
+            msg  = The message for the exception.
+            file = The file where the exception occurred.
+            line = The line number where the exception occurred.
+            next = The previous exception in the chain of exceptions, if any.
+      +/
+    @safe pure nothrow
+    this(int status,
+         string msg,
+         string file = __FILE__,
+         size_t line = __LINE__,
+         Throwable next = null)
+    {
+        super(msg, file, line, next);
+        this.status = status;
+    }
+
+    immutable int status; /// The HTTP status code
 }
 
 /// Equal to $(REF CURLcode, etc,c,curl)
