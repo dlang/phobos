@@ -110,12 +110,13 @@ coverage()
     # remove all existing coverage files (just in case)
     rm -rf $(find -name '*.lst')
 
-    # currently using the test_runner yields wrong code coverage results
-    # see https://github.com/dlang/phobos/pull/4719 for details
-    ENABLE_COVERAGE="1" make -f posix.mak MODEL=$MODEL unittest-debug
+    # Coverage information of the test runner can be missing for some template instatiations.
+    # https://issues.dlang.org/show_bug.cgi?id=16397
+    # ENABLE_COVERAGE="1" make -j$N -f posix.mak MODEL=$MODEL unittest-debug
 
-    # instead we run all tests individually
-    make -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test")
+    # So instead we run all tests individually (hoping that that doesn't break any tests).
+    # -cov is enabled by the %.test target itself
+    make -j$N -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test/")
 
     # Remove coverage information from lines with non-deterministic coverage.
     # These lines are annotated with a comment containing "nocoverage".
