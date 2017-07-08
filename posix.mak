@@ -262,7 +262,7 @@ SHARED=$(if $(findstring $(OS),linux freebsd),1,)
 # A blacklist of ignored module is provided as not all public unittest in
 # Phobos are independently runnable yet
 IGNORED_PUBLICTESTS= $(addprefix std/, \
-						base64 $(addprefix experimental/allocator/, \
+						$(addprefix experimental/allocator/, \
 								building_blocks/free_list building_blocks/quantizer \
 						) digest/hmac \
 						file math stdio traits)
