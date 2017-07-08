@@ -4039,6 +4039,22 @@ template skipOver(alias pred = "a == b")
     assert(!s2.skipOver('a'));
 }
 
+/// Partial instantiation
+@safe unittest
+{
+    import std.ascii : isWhite;
+    import std.range.primitives : empty;
+
+    alias whitespaceSkiper = skipOver!isWhite;
+
+    auto s2 = "\t\tvalue";
+    auto s3 = "";
+    auto s4 = "\t\t\t";
+    assert(whitespaceSkiper(s2) && s2 == "value");
+    assert(!whitespaceSkiper(s2));
+    assert(whitespaceSkiper(s4) && s3.empty);
+}
+
 /**
 Checks whether the given
 $(REF_ALTTEXT input range, isInputRange, std,range,primitives) starts with (one
