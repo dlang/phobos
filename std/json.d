@@ -75,8 +75,8 @@ enum JSONOptions
 {
     none,                       /// standard parsing
     specialFloatLiterals = 0x1, /// encode NaN and Inf float values as strings
-    escapeNonAsciiChars = 0x2,   /// encode non ascii characters with an unicode escape sequence
-    doNotEscapeSlashes = 0x4, /// do not escape slashes ('/')
+    escapeNonAsciiChars = 0x2,  /// encode non ascii characters with an unicode escape sequence
+    doNotEscapeSlashes = 0x4,   /// do not escape slashes ('/')
 }
 
 /**
@@ -1156,10 +1156,10 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                 case '\\':      json.put("\\\\");       break;
 
                 case '/':
-                if (!(options & JSONOptions.doNotEscapeSlashes))
-                    json.put('\\');
-                json.put('/');
-                break;
+                    if (!(options & JSONOptions.doNotEscapeSlashes))
+                        json.put('\\');
+                    json.put('/');
+                    break;
 
                 case '\b':      json.put("\\b");        break;
                 case '\f':      json.put("\\f");        break;
