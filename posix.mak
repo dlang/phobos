@@ -265,7 +265,7 @@ IGNORED_PUBLICTESTS= $(addprefix std/, \
 						base64 $(addprefix experimental/allocator/, \
 								building_blocks/free_list building_blocks/quantizer \
 						) digest/hmac \
-						file math stdio traits typecons uuid)
+						file math stdio traits typecons)
 PUBLICTESTS= $(addsuffix .publictests,$(filter-out $(IGNORED_PUBLICTESTS), $(D_MODULES)))
 TESTS_EXTRACTOR=$(ROOT)/tests_extractor
 PUBLICTESTS_DIR=$(ROOT)/publictests
