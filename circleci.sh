@@ -114,7 +114,7 @@ coverage()
     # https://issues.dlang.org/show_bug.cgi?id=16397
     ENABLE_COVERAGE="1" make -j$N -f posix.mak MODEL=$MODEL unittest-debug
 
-    # So instead we run all tests individually (hoping that that doesn't break any tests).
+    # So instead we run all tests individually (hoping that this doesn't break any tests).
     # -cov is enabled by the %.test target itself
     make -j$N -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test/")
 
