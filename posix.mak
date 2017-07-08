@@ -591,7 +591,7 @@ style_lint: dscanner $(LIB)
 ################################################################################
 publictests: $(PUBLICTESTS)
 
-$(TESTS_EXTRACTOR): $(TOOLS_DIR)/tests_extractor.d $(LIB)
+$(TESTS_EXTRACTOR): $(TOOLS_DIR)/tests_extractor.d | $(LIB)
 	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) build --force --compiler=$${PWD}/$(DMD) --single $<
 	mv $(TOOLS_DIR)/tests_extractor $@
 
