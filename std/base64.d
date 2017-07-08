@@ -1721,6 +1721,21 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 }
 
+///
+@safe unittest
+{
+    import std.string : representation;
+
+    // pre-defined: alias Base64 = Base64Impl!('+', '/');
+    ubyte[] emptyArr;
+    assert(Base64.encode(emptyArr) == "");
+    assert(Base64.encode("f".representation) == "Zg==");
+    assert(Base64.encode("foo".representation) == "Zm9v");
+
+    alias Base64Re = Base64Impl!('!', '=', Base64.NoPadding);
+    assert(Base64Re.encode("f".representation) == "Zg");
+    assert(Base64Re.encode("foo".representation) == "Zm9v");
+}
 
 /**
  * Exception thrown upon encountering Base64 encoding or decoding errors.
@@ -1732,6 +1747,13 @@ class Base64Exception : Exception
     {
         super(s, fn, ln);
     }
+}
+
+///
+@system unittest
+{
+    import std.exception : assertThrown;
+    assertThrown!Base64Exception(Base64.decode("ab|c"));
 }
 
 
