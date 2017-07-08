@@ -1659,6 +1659,36 @@ enum SwapStrategy
     stable,
 }
 
+///
+@safe unittest
+{
+    import std.stdio;
+    import std.algorithm.sorting : partition;
+    int[] a = [0, 1, 2, 3];
+    assert(remove!(SwapStrategy.stable)(a, 1) == [0, 2, 3]);
+    a = [0, 1, 2, 3];
+    assert(remove!(SwapStrategy.unstable)(a, 1) == [0, 3, 2]);
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.sorting : partition;
+
+    // Put stuff greater than 3 on the left
+    auto arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    assert(partition!(a => a > 3, SwapStrategy.stable)(arr) == [1, 2, 3]);
+    assert(arr == [4, 5, 6, 7, 8, 9, 10, 1, 2, 3]);
+
+    arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    assert(partition!(a => a > 3, SwapStrategy.semistable)(arr) == [2, 3, 1]);
+    assert(arr == [4, 5, 6, 7, 8, 9, 10, 2, 3, 1]);
+
+    arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    assert(partition!(a => a > 3, SwapStrategy.unstable)(arr) == [3, 2, 1]);
+    assert(arr == [10, 9, 8, 4, 5, 6, 7, 3, 2, 1]);
+}
+
 /**
 Eliminates elements at given offsets from `range` and returns the shortened
 range.
