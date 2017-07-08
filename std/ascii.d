@@ -87,6 +87,29 @@ enum LetterCase : bool
     lower  /// Lower case letters
 }
 
+///
+@safe unittest
+{
+    import std.conv : to;
+
+    assert(42.to!string(16, LetterCase.upper) == "2A");
+    assert(42.to!string(16, LetterCase.lower) == "2a");
+}
+
+///
+@system unittest
+{
+    import std.digest.hmac : hmac;
+    import std.digest.digest : toHexString;
+    import std.digest.sha : SHA1;
+    import std.string : representation;
+
+    const sha1HMAC = "A very long phrase".representation
+        .hmac!SHA1("secret".representation)
+        .toHexString!(LetterCase.lower);
+    assert(sha1HMAC == "49f2073c7bf58577e8c9ae59fe8cfd37c9ab94e5");
+}
+
 /// Newline sequence for this system.
 version(Windows)
     immutable newline = "\r\n";
