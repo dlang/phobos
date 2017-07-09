@@ -4706,6 +4706,7 @@ if (!isMutable!Target)
 ///
 @system unittest
 {
+    import std.traits : FunctionAttribute, functionAttributes;
     interface A { int run(); }
     interface B { int stop(); @property int status(); }
     class X
@@ -7329,6 +7330,8 @@ public:
 /// BitFlags can be manipulated with the usual operators
 @safe @nogc pure nothrow unittest
 {
+    import std.traits : EnumMembers;
+
     // You can use such an enum with BitFlags straight away
     enum Enum
     {

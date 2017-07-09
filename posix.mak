@@ -262,10 +262,10 @@ SHARED=$(if $(findstring $(OS),linux freebsd),1,)
 # A blacklist of ignored module is provided as not all public unittest in
 # Phobos are independently runnable yet
 IGNORED_PUBLICTESTS= $(addprefix std/, \
-						base64 $(addprefix experimental/allocator/, \
+						$(addprefix experimental/allocator/, \
 								building_blocks/free_list building_blocks/quantizer \
 						) digest/hmac \
-						file math stdio traits typecons uuid)
+						math stdio traits)
 PUBLICTESTS= $(addsuffix .publictests,$(filter-out $(IGNORED_PUBLICTESTS), $(D_MODULES)))
 TESTS_EXTRACTOR=$(ROOT)/tests_extractor
 PUBLICTESTS_DIR=$(ROOT)/publictests
@@ -591,7 +591,7 @@ style_lint: dscanner $(LIB)
 ################################################################################
 publictests: $(PUBLICTESTS)
 
-$(TESTS_EXTRACTOR): $(TOOLS_DIR)/tests_extractor.d $(LIB)
+$(TESTS_EXTRACTOR): $(TOOLS_DIR)/tests_extractor.d | $(LIB)
 	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) build --force --compiler=$${PWD}/$(DMD) --single $<
 	mv $(TOOLS_DIR)/tests_extractor $@
 
