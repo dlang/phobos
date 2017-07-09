@@ -405,7 +405,7 @@ if (isSomeChar!(Char))
                                 index = addressLiteral.lastIndexOf(matchesIp.front);
 
                                 if (index != 0)
-                                    addressLiteral = addressLiteral.substr(0, index) ~ "0:0";
+                                    addressLiteral = addressLiteral[0 .. index] ~ "0:0";
                             }
 
                             if (index == 0)
@@ -416,7 +416,7 @@ if (isSomeChar!(Char))
 
                             else
                             {
-                                auto ipV6 = addressLiteral.substr(5);
+                                auto ipV6 = addressLiteral[5 .. $];
                                 matchesIp = ipV6.split(Token.colon);
                                 immutable groupCount = matchesIp.length;
                                 index = ipV6.indexOf(Token.doubleColon);
@@ -445,10 +445,10 @@ if (isSomeChar!(Char))
                                     }
                                 }
 
-                                if (ipV6.substr(0, 1) == Token.colon && ipV6.substr(1, 1) != Token.colon)
+                                if (ipV6[0 .. 1] == Token.colon && ipV6[1 .. 2] != Token.colon)
                                     returnStatus ~= EmailStatusCode.rfc5322IpV6ColonStart;
 
-                                else if (ipV6.substr(-1) == Token.colon && ipV6.substr(-2, -1) != Token.colon)
+                                else if (ipV6[$ - 1 .. $] == Token.colon && ipV6[$ - 2 .. $ - 1] != Token.colon)
                                     returnStatus ~= EmailStatusCode.rfc5322IpV6ColonEnd;
 
                                 else if (!matchesIp
@@ -1766,98 +1766,6 @@ enum AsciiToken
     horizontalTab = 9,
     unitSeparator = 31,
     delete_ = 127
-}
-
-/*
- * Returns the portion of string specified by the $(D_PARAM start) and
- * $(D_PARAM length) parameters.
- *
- * Params:
- *     str = the input string. Must be one character or longer.
- *     start = if $(D_PARAM start) is non-negative, the returned string will start at the
- *             $(D_PARAM start)'th position in $(D_PARAM str), counting from zero.
- *             For instance, in the string "abcdef", the character at position 0 is 'a',
- *             the character at position 2 is 'c', and so forth.
- *
- *             If $(D_PARAM start) is negative, the returned string will start at the
- *             $(D_PARAM start)'th character from the end of $(D_PARAM str).
- *
- *             If $(D_PARAM str) is less than or equal to $(D_PARAM start) characters long,
- *             $(D_KEYWORD true) will be returned.
- *
- *     length = if $(D_PARAM length) is given and is positive, the string returned will
- *              contain at most $(D_PARAM length) characters beginning from $(D_PARAM start)
- *              (depending on the length of string).
- *
- *              If $(D_PARAM length) is given and is negative, then that many characters
- *              will be omitted from the end of string (after the start position has been
- *              calculated when a $(D_PARAM start) is negative). If $(D_PARAM start)
- *              denotes the position of this truncation or beyond, $(D_KEYWORD false)
- *              will be returned.
- *
- *              If $(D_PARAM length) is given and is 0, an empty string will be returned.
- *
- *              If $(D_PARAM length) is omitted, the substring starting from $(D_PARAM start)
- *              until the end of the string will be returned.
- *
- * Returns: the extracted part of string, or an empty string.
- */
-T[] substr (T) (T[] str, ptrdiff_t start = 0, ptrdiff_t length = ptrdiff_t.min)
-{
-    ptrdiff_t end = length;
-
-    if (start < 0)
-    {
-        start = str.length + start;
-
-        if (end < 0)
-        {
-            if (end == ptrdiff_t.min)
-                end = 0;
-
-            end = str.length + end;
-        }
-
-        else
-            end = start + end;
-    }
-
-    else
-    {
-        if (end == ptrdiff_t.min)
-            end = str.length;
-
-        if (end < 0)
-            end = str.length + end;
-
-        else
-            end = start + end;
-    }
-
-    if (start > end)
-        end = start;
-
-    if (end > str.length)
-        end = str.length;
-
-    return str[start .. end];
-}
-
-@safe unittest
-{
-    assert("abcdef".substr(-1) == "f");
-    assert("abcdef".substr(-2) == "ef");
-    assert("abcdef".substr(-3, 1) == "d");
-}
-
-@safe unittest
-{
-    assert("abcdef".substr(0, -1) == "abcde");
-    assert("abcdef".substr(2, -1) == "cde");
-    assert("abcdef".substr(4, -4) == []);
-    assert("abcdef".substr(-3, -1) == "de");
-    assert("abcdef".substr(1, 1) == "b");
-    assert("abcdef".substr(-1, -1) == []);
 }
 
 /*
