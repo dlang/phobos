@@ -26,7 +26,7 @@
 module std.net.isemail;
 
 // FIXME
-import std.range.primitives; // : ElementType;
+import std.range.primitives : back, ElementType, front, empty, popFront;
 import std.regex;
 import std.traits;
 import std.typecons : Flag, Yes, No;
@@ -1821,6 +1821,7 @@ if (is(Unqual!(ElementType!(S1)) == dchar) && is(Unqual!(ElementType!(S2)) == dc
 ElementType!(A) pop (A) (ref A a)
 if (isDynamicArray!(A) && !isNarrowString!(A) && isMutable!(A) && !is(A == void[]))
 {
+    import std.range.primitives : popBack;
     auto e = a.back;
     a.popBack();
     return e;

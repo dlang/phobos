@@ -707,15 +707,15 @@ CLUSTER = $(S_LINK Grapheme cluster, grapheme cluster)
 +/
 module std.uni;
 
-import std.meta; // AliasSeq
-import std.range.primitives; // back, ElementEncodingType, ElementType, empty,
-    // front, isForwardRange, isInputRange, isRandomAccessRange, popFront, put,
-    // save
-import std.traits; // isConvertibleToString, isIntegral, isSomeChar,
-    // isSomeString, Unqual
+import std.meta : AliasSeq;
+import std.range.primitives :back, ElementEncodingType, ElementType, empty,
+    front, isForwardRange, isInputRange, isRandomAccessRange, popFront, popFrontN,
+    put, save;
+import std.traits :isConvertibleToString, isIntegral, isSomeChar,
+    isSomeString, Unqual;
 // debug = std_uni;
 
-debug(std_uni) import std.stdio; // writefln, writeln
+debug(std_uni) import std.stdio : writefln, writeln;
 
 private:
 
@@ -2809,6 +2809,8 @@ private:
             immutable b = slice[start+1];
             return CodepointInterval(a, b);
         }
+
+        import std.range.primitives : hasAssignableElements;
 
         //may break sorted property - but we need std.sort to access it
         //hence package protection attribute
@@ -8783,7 +8785,7 @@ else
 // trusted -> avoid bounds check
 @trusted pure nothrow @nogc private
 {
-    import std.internal.unicode_tables; // : toLowerTable, toTitleTable, toUpperTable; // generated file
+    import std.internal.unicode_tables : toLowerTable, toTitleTable, toUpperTable; // generated file
 
     // hide template instances behind functions (Bugzilla 13232)
     ushort toLowerIndex(dchar c) { return toLowerIndexTrie[c]; }

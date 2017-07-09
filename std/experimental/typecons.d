@@ -20,7 +20,7 @@ Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
  */
 module std.experimental.typecons;
 
-import std.meta; // : AliasSeq, allSatisfy;
+import std.meta : AliasSeq, allSatisfy;
 import std.traits;
 
 import std.typecons : Tuple, tuple, Bind, DerivedFunctionType, GetOverloadedMethods;

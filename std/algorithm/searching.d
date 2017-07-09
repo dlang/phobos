@@ -106,11 +106,11 @@ T2=$(TR $(TDNW $(LREF $1)) $(TD $+))
 module std.algorithm.searching;
 
 // FIXME
-import std.functional; // : unaryFun, binaryFun;
+import std.functional : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
 // FIXME
-import std.typecons; // : Tuple, Flag, Yes, No;
+import std.typecons : Tuple, tuple, Flag, Yes, No;
 
 /++
 Checks if $(I _all) of the elements verify `pred`.
