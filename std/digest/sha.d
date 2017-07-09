@@ -1201,7 +1201,7 @@ auto sha512_256Of(T...)(T data)
  * OOP API SHA1 and SHA2 implementations.
  * See $(D std.digest.digest) for differences between template and OOP API.
  *
- * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!SHA1), see
+ * This is an alias for $(REF WrapperDigest, std,digest,digest)$(D !SHA1), see
  * there for more information.
  */
 alias SHA1Digest = WrapperDigest!SHA1;

@@ -682,7 +682,7 @@ auto ripemd160Of(T...)(T data)
  * OOP API RIPEMD160 implementation.
  * See $(D std.digest.digest) for differences between template and OOP API.
  *
- * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!RIPEMD160),
+ * This is an alias for $(REF WrapperDigest, std,digest,digest)$(D !RIPEMD160),
  * see there for more information.
  */
 alias RIPEMD160Digest = WrapperDigest!RIPEMD160;
