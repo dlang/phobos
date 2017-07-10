@@ -22,9 +22,9 @@ $(LI The current implementation is optimized for little endian architectures.
   less uniform distribution.)
 )
 
-This module conforms to the APIs defined in $(D std.digest.digest).
+This module conforms to the APIs defined in $(D std.digest).
 
-This module publicly imports $(D std.digest.digest) and can be used as a stand-alone module.
+This module publicly imports $(D std.digest) and can be used as a stand-alone module.
 
 License: $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors: Guillaume Chatelet
@@ -41,7 +41,7 @@ module std.digest.murmurhash;
 @safe unittest
 {
     // MurmurHash3!32, MurmurHash3!(128, 32) and MurmurHash3!(128, 64) implement
-    // the std.digest.digest Template API.
+    // the std.digest Template API.
     static assert(isDigest!(MurmurHash3!32));
     // The convenient digest template allows for quick hashing of any data.
     ubyte[4] hashed = digest!(MurmurHash3!32)([1, 2, 3, 4]);
@@ -88,7 +88,7 @@ module std.digest.murmurhash;
     auto hashed = hasher.getBytes();
 }
 
-public import std.digest.digest;
+public import std.digest;
 
 @safe:
 

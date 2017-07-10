@@ -16,7 +16,7 @@ Source: $(PHOBOSSRC std/digest/_hmac.d)
 
 module std.digest.hmac;
 
-import std.digest.digest : isDigest, hasBlockSize, isDigestibleRange, DigestType;
+import std.digest : isDigest, hasBlockSize, isDigestibleRange, DigestType;
 import std.meta : allSatisfy;
 
 /**
@@ -26,7 +26,7 @@ import std.meta : allSatisfy;
  * information about the block size, it can be supplied explicitly using
  * the second overload.
  *
- * This type conforms to $(REF isDigest, std,digest,digest).
+ * This type conforms to $(REF isDigest, std,digest).
  */
 
 version(StdDdoc)
@@ -286,7 +286,7 @@ if (isDigest!H)
 
 version(unittest)
 {
-    import std.digest.digest : toHexString, LetterCase;
+    import std.digest : toHexString, LetterCase;
     alias hex = toHexString!(LetterCase.lower);
 }
 
