@@ -212,6 +212,18 @@ if (isNarrowString!String)
     return cast(typeof(return)) str.toUTF32;
 }
 
+///
+@safe unittest
+{
+    import std.range.primitives : isRandomAccessRange;
+
+    assert("Hello D".array == "Hello D"d);
+    static assert(isRandomAccessRange!string == false);
+
+    assert("Hello D"w.array == "Hello D"d);
+    static assert(isRandomAccessRange!dstring == true);
+}
+
 @system unittest
 {
     // @system due to array!string
@@ -534,7 +546,7 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I) && hasIndirections!(ElementEn
     return arrayAllocImpl!(false, T, ST)(sizes);
 }
 
-///
+/// ditto
 auto uninitializedArray(T, I...)(I sizes) nothrow @trusted
 if (isDynamicArray!T && allSatisfy!(isIntegral, I) && !hasIndirections!(ElementEncodingType!T))
 {
@@ -586,6 +598,18 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
     alias ST = staticMap!(toSize_t, I);
 
     return arrayAllocImpl!(true, T, ST)(sizes);
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : repeat;
+
+    auto arr = minimallyInitializedArray!(int[])(42);
+    assert(arr.length == 42);
+    // Elements aren't necessarily initialized to 0
+    assert(!arr.equal(0.repeat(42)));
 }
 
 @safe pure nothrow unittest
@@ -1533,6 +1557,15 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
 {
     import std.algorithm.iteration : splitter;
     return range.splitter!isTerminator.array;
+}
+
+///
+@safe unittest
+{
+    import std.uni : isWhite;
+    assert("Learning,D,is,fun".split(",") == ["Learning", "D", "is", "fun"]);
+    assert("Learning D is fun".split!isWhite == ["Learning", "D", "is", "fun"]);
+    assert("Learning D is fun".split(" D ") == ["Learning", "is fun"]);
 }
 
 @safe unittest
@@ -3212,6 +3245,23 @@ if (isDynamicArray!A)
     }
 }
 
+///
+@system pure nothrow
+unittest
+{
+    int[] a = [1, 2];
+    auto app2 = appender(&a);
+    assert(app2.data == [1, 2]);
+    assert(a == [1, 2]);
+    app2 ~= 3;
+    app2 ~= [4, 5, 6];
+    assert(app2.data == [1, 2, 3, 4, 5, 6]);
+    assert(a == [1, 2, 3, 4, 5, 6]);
+
+    app2.reserve(5);
+    assert(app2.capacity >= 5);
+}
+
 /++
     Convenience function that returns an $(LREF Appender) instance,
     optionally initialized with $(D array).
@@ -3332,6 +3382,25 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
         w.put(S10122(1));
         assert(w.data.length == 1 && w.data[0].val == 1);
     });
+}
+
+///
+@safe pure nothrow
+unittest
+{
+    auto w = appender!string;
+    // pre-allocate space for at least 10 elements (this avoids costly reallocations)
+    w.reserve(10);
+    assert(w.capacity >= 10);
+
+    w.put('a'); // single elements
+    w.put("bc"); // multiple elements
+
+    // use the append syntax
+    w ~= 'd';
+    w ~= "ef";
+
+    assert(w.data == "abcdef");
 }
 
 @safe pure nothrow unittest
@@ -3595,6 +3664,23 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
 RefAppender!(E[]) appender(P : E[]*, E)(P arrayPtr)
 {
     return RefAppender!(E[])(arrayPtr);
+}
+
+///
+@system pure nothrow
+unittest
+{
+    int[] a = [1, 2];
+    auto app2 = appender(&a);
+    assert(app2.data == [1, 2]);
+    assert(a == [1, 2]);
+    app2 ~= 3;
+    app2 ~= [4, 5, 6];
+    assert(app2.data == [1, 2, 3, 4, 5, 6]);
+    assert(a == [1, 2, 3, 4, 5, 6]);
+
+    app2.reserve(5);
+    assert(app2.capacity >= 5);
 }
 
 @system unittest
