@@ -2808,13 +2808,26 @@ public:
     /**
      * Accept an incoming connection. If the socket is blocking, $(D accept)
      * waits for a connection request. Throws $(D SocketAcceptException) if
-     * unable to _accept. See $(D accepting) for use with derived classes.
+     * unable to accept. See $(D accepting) for use with derived classes.
      */
-    Socket accept() @trusted
+    Socket accept() @safe
+    {
+        auto newSocket = tryAccept();
+        if (newSocket is null)
+            throw new SocketAcceptException("Unable to accept socket connection");
+        return newSocket;
+    }
+
+    /**
+     * Accept an incoming connection. If the socket is blocking, $(D tryAccept)
+     * waits for a connection request. Returns $(D null) if unable to accept.
+     * See $(D accepting) for use with derived classes.
+     */
+    Socket tryAccept() @trusted
     {
         auto newsock = cast(socket_t).accept(sock, null, null);
         if (socket_t.init == newsock)
-            throw new SocketAcceptException("Unable to accept socket connection");
+            return null;
 
         Socket newSocket;
         try
