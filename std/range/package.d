@@ -190,6 +190,10 @@ $(BOOKTABLE ,
         $(TD Creates a random-access _range consisting of exactly the first
         element of the given _range.
     ))
+    $(TR $(TD $(LREF takeWhile))
+        $(TD Creates a sub-_range consisting of the first elements of the
+        given _range that satisfy a given predicate.
+    ))
     $(TR $(TD $(LREF tee))
         $(TD Creates a _range that wraps a given _range, forwarding along
         its elements while also calling a provided function with each element.
@@ -235,7 +239,7 @@ public import std.typecons : Flag, Yes, No;
 import std.meta; // allSatisfy, staticMap
 import std.traits; // CommonType, isCallable, isFloatingPoint, isIntegral,
     // isPointer, isSomeFunction, isStaticArray, Unqual
-
+import std.functional : unaryFun;
 
 /**
 Iterates a bidirectional range backwards. The original range can be
@@ -11843,4 +11847,68 @@ pure @safe unittest
     static immutable r1 = [1, 2, 3, 4];
     static immutable r2 = [1, 2, 3, 4, 0, 0];
     assert(r1.padRight(0, 6).equal(r2));
+}
+
+private struct TakeWhile(alias pred, R)
+if (isInputRange!R && is(typeof(!unaryFun!pred(ElementType!R.init)) == bool))
+{
+    private R _range;
+
+    // Range primitives
+    bool empty() @property
+    {
+        return _range.empty || !(unaryFun!pred(_range.front));
+    }
+
+    auto front() @property
+    {
+        assert(!empty, "Attempting to fetch the front of an empty TakeWhile range");
+        return _range.front;
+    }
+
+    auto save() @property
+    {
+        return this;
+    }
+
+    void popFront() @property
+    {
+        assert(!empty, "Attempting to pop the front of an empty TakeWhile range");
+        _range.popFront;
+    }
+}
+
+/**
+Lazily produce elements of a range as long as the predicate holds
+for the produced elements.
+
+Params:
+    range = the range to take from while the predicate stands
+    pred = the prediacate used to take the elements
+
+Returns:
+    A `ForwardRange` which contains the taken elements.
+
+See_Also: $(LREF chain) to chain ranges
+ */
+auto takeWhile(alias pred, R)(R range) if (isInputRange!R)
+{
+    return TakeWhile!(pred,R)(range);
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto arr = [0,1,2,3,4,3,2,1,0];
+
+    assert(equal(takeWhile!"a < 3"(arr), [0,1,2])); // standard case
+    assert(equal(takeWhile!"a < 10"(arr), arr));    // predicate true for all elements
+    assert(takeWhile!"a < 0"(arr).empty);            // predicate false from the beginning
+    assert(takeWhile!"a != 0"(arr).empty);           // predicate false for the first element
+
+    // With a standard function
+    bool foo(int i) { return i != 4;}
+    assert(equal(takeWhile!foo(arr), [0, 1, 2, 3]));
 }
