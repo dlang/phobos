@@ -31,18 +31,19 @@ import std.meta : allSatisfy;
  * This type conforms to $(REF isDigest, std,digest).
  */
 
-version(StdDdoc)
-/// Computes an HMAC over data read from stdin.
+/// Compute HMAC over an input string
 @safe unittest
 {
-    import std.digest.hmac, std.digest.sha, std.stdio;
+    import std.ascii : LetterCase;
+    import std.digest : toHexString;
+    import std.digest.sha : SHA1;
     import std.string : representation;
 
     auto secret = "secret".representation;
-    stdin.byChunk(4096)
-         .hmac!SHA1(secret)
-         .toHexString!(LetterCase.lower)
-         .writeln;
+    assert("The quick brown fox jumps over the lazy dog"
+            .representation
+            .hmac!SHA1(secret)
+            .toHexString!(LetterCase.lower) == "198ea1ea04c435c1246b586a06d5cf11c3ffcda6");
 }
 
 template HMAC(H)

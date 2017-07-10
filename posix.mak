@@ -264,7 +264,7 @@ SHARED=$(if $(findstring $(OS),linux freebsd),1,)
 IGNORED_PUBLICTESTS= $(addprefix std/, \
 						$(addprefix experimental/allocator/, \
 								building_blocks/free_list building_blocks/quantizer \
-						) digest/hmac \
+						) \
 						math stdio traits)
 PUBLICTESTS= $(addsuffix .publictests,$(filter-out $(IGNORED_PUBLICTESTS), $(D_MODULES)))
 TESTS_EXTRACTOR=$(ROOT)/tests_extractor
