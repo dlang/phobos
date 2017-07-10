@@ -19,6 +19,8 @@ module std.digest.hmac;
 import std.digest : isDigest, hasBlockSize, isDigestibleRange, DigestType;
 import std.meta : allSatisfy;
 
+@safe:
+
 /**
  * Template API HMAC implementation.
  *
@@ -258,15 +260,15 @@ if (isDigest!H)
     DigestType!H hmac(T...)(scope T data, scope const(ubyte)[] secret)
     if (allSatisfy!(isDigestibleRange, typeof(data)))
     {
-        import std.algorithm.mutation : copy;
+        import std.range.primitives : put;
         auto hash = HMAC!(H, blockSize)(secret);
         foreach (datum; data)
-            copy(datum, &hash);
+            put(hash, datum);
         return hash.finish();
     }
 
     ///
-    @system pure nothrow @nogc unittest
+    @safe pure nothrow @nogc unittest
     {
         import std.algorithm.iteration : map;
         import std.digest.hmac, std.digest.sha;
@@ -300,7 +302,7 @@ unittest
     static assert(hasBlockSize!(HMAC!MD5) && HMAC!MD5.blockSize == MD5.blockSize);
 }
 
-@system pure nothrow
+@safe pure nothrow
 unittest
 {
     import std.digest.md : MD5;
