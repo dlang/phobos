@@ -6,30 +6,6 @@ that allow construction of new, useful general-purpose types.
 
 Source:    $(PHOBOSSRC std/_typecons.d)
 
-Synopsis:
-
-----
-// value tuples
-alias Coord = Tuple!(float, "x", float, "y", float, "z");
-Coord c;
-c[1] = 1;       // access by index
-c.z = 1;        // access by given name
-alias DicEntry = Tuple!(string, string); // names can be omitted
-
-// Rebindable references to const and immutable objects
-void bar()
-{
-    const w1 = new Widget, w2 = new Widget;
-    w1.foo();
-    // w1 = w2 would not work; can't rebind const object
-    auto r = Rebindable!(const Widget)(w1);
-    // invoke method as if r were a Widget object
-    r.foo();
-    // rebind r to refer to another object
-    r = w2;
-}
-----
-
 Copyright: Copyright the respective authors, 2008-
 License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
@@ -43,6 +19,38 @@ module std.typecons;
 import core.stdc.stdint : uintptr_t;
 import std.meta; // : AliasSeq, allSatisfy;
 import std.traits;
+
+///
+@safe unittest
+{
+    // value tuples
+    alias Coord = Tuple!(int, "x", int, "y", int, "z");
+    Coord c;
+    c[1] = 1;       // access by index
+    c.z = 1;        // access by given name
+    assert(c == Coord(0, 1, 1));
+
+    // names can be omitted
+    alias DicEntry = Tuple!(string, string);
+
+    // tuples can also be constructed on instantiation
+    assert(tuple(2, 3, 4)[1] == 3);
+    // construction on instantiation works with names too
+    assert(tuple!("x", "y", "z")(2, 3, 4).y == 3);
+
+    // Rebindable references to const and immutable objects
+    {
+        class Widget { void foo() const @safe {} }
+        const w1 = new Widget, w2 = new Widget;
+        w1.foo();
+        // w1 = w2 would not work; can't rebind const object
+        auto r = Rebindable!(const Widget)(w1);
+        // invoke method as if r were a Widget object
+        r.foo();
+        // rebind r to refer to another object
+        r = w2;
+    }
+}
 
 debug(Unique) import std.stdio;
 

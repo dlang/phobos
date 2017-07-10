@@ -10,38 +10,6 @@ Such types are useful
 for type-uniform binary interfaces, interfacing with scripting
 languages, and comfortable exploratory programming.
 
-Synopsis:
-----
-Variant a; // Must assign before use, otherwise exception ensues
-// Initialize with an integer; make the type int
-Variant b = 42;
-assert(b.type == typeid(int));
-// Peek at the value
-assert(b.peek!(int) !is null && *b.peek!(int) == 42);
-// Automatically convert per language rules
-auto x = b.get!(real);
-// Assign any other type, including other variants
-a = b;
-a = 3.14;
-assert(a.type == typeid(double));
-// Implicit conversions work just as with built-in types
-assert(a < b);
-// Check for convertibility
-assert(!a.convertsTo!(int)); // double not convertible to int
-// Strings and all other arrays are supported
-a = "now I'm a string";
-assert(a == "now I'm a string");
-a = new int[42]; // can also assign arrays
-assert(a.length == 42);
-a[5] = 7;
-assert(a[5] == 7);
-// Can also assign class values
-class Foo {}
-auto foo = new Foo;
-a = foo;
-assert(*a.peek!(Foo) == foo); // and full type information is preserved
-----
-
 A $(LREF Variant) object can hold a value of any type, with very few
 restrictions (such as `shared` types and noncopyable types). Setting the value
 is as immediate as assigning to the `Variant` object. To read back the value of
@@ -66,6 +34,43 @@ Source:    $(PHOBOSSRC std/_variant.d)
 module std.variant;
 
 import std.meta, std.traits, std.typecons;
+
+///
+@system unittest
+{
+    Variant a; // Must assign before use, otherwise exception ensues
+    // Initialize with an integer; make the type int
+    Variant b = 42;
+    assert(b.type == typeid(int));
+    // Peek at the value
+    assert(b.peek!(int) !is null && *b.peek!(int) == 42);
+    // Automatically convert per language rules
+    auto x = b.get!(real);
+
+    // Assign any other type, including other variants
+    a = b;
+    a = 3.14;
+    assert(a.type == typeid(double));
+    // Implicit conversions work just as with built-in types
+    assert(a < b);
+    // Check for convertibility
+    assert(!a.convertsTo!(int)); // double not convertible to int
+    // Strings and all other arrays are supported
+    a = "now I'm a string";
+    assert(a == "now I'm a string");
+
+    // can also assign arrays
+    a = new int[42];
+    assert(a.length == 42);
+    a[5] = 7;
+    assert(a[5] == 7);
+
+    // Can also assign class values
+    class Foo {}
+    auto foo = new Foo;
+    a = foo;
+    assert(*a.peek!(Foo) == foo); // and full type information is preserved
+}
 
 /++
     Gives the $(D sizeof) the largest type given.
