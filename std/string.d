@@ -4723,8 +4723,9 @@ unittest
     A copy with the changes is returned.
 
     See_Also:
-        $(LREF tr)
-        $(REF replace, std,array)
+        $(LREF tr),
+        $(REF replace, std,array),
+        $(REF substitute, std,algorithm,iteration)
 
     Params:
         str        = The original string.
@@ -4993,8 +4994,9 @@ private void translateImpl(C1, T, C2, Buffer)(C1[] str,
     unit greater than $(D 127) which will cause UTF validation issues.
 
     See_Also:
-        $(LREF tr)
-        $(REF replace, std,array)
+        $(LREF tr),
+        $(REF replace, std,array),
+        $(REF substitute, std,algorithm,iteration)
 
     Params:
         str        = The original string.
@@ -5633,6 +5635,11 @@ if (isSomeString!S)
     (e.g. $(D "a-d") is synonymous with $(D "abcd").) Neither accept a leading
     $(D '^') as meaning the complement of the string (use the $(D 'c') modifier
     for that).
+
+    See_Also:
+        $(LREF translate),
+        $(REF replace, std,array),
+        $(REF substitute, std,algorithm,iteration)
   +/
 C1[] tr(C1, C2, C3, C4 = immutable char)
        (C1[] str, const(C2)[] from, const(C3)[] to, const(C4)[] modifiers = null)
