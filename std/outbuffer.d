@@ -202,6 +202,12 @@ class OutBuffer
             fill0(alignsize - nbytes);
     }
 
+    /// Clear the data in the buffer
+    void clear()
+    {
+        offset = 0;
+    }
+
     /****************************************
      * Optimize common special case alignSize(2)
      */
@@ -380,6 +386,11 @@ class OutBuffer
     buf.write("world"[]);
     buf.printf(" %d", 62665);
     assert(cmp(buf.toString(), "hello world 62665") == 0);
+
+    buf.clear();
+    assert(cmp(buf.toString(), "") == 0);
+    buf.write("New data"[]);
+    assert(cmp(buf.toString(),"New data") == 0);
 }
 
 @safe unittest
