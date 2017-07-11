@@ -3048,6 +3048,26 @@ public:
 
     /++
         Converts this $(LREF DateTime) to a string.
+
+        This function exists to make it easy to convert a $(LREF DateTime) to a
+        string for code that does not care what the exact format is - just that
+        it presents the information in a clear manner. It also makes it easy to
+        simply convert a $(LREF DateTime) to a string when using functions such
+        as `to!string`, `format`, or `writeln` which use toString to convert
+        user-defined types. So, it is unlikely that much code will call
+        toString directly.
+
+        The format of the string is purposefully unspecified, and code that
+        cares about the format of the string should use `toISOString`,
+        `toISOExtString`, `toSimpleString`, or some other custom formatting
+        function that explicitly generates the format that the code needs. The
+        reason is that the code is then clear about what format it's using,
+        making it less error-prone to maintain the code and interact with other
+        software that consumes the generated strings. It's for this same reason
+        that $(LREF DateTime) has no `fromString` function, whereas it does have
+        `fromISOString`, `fromISOExtString`, and `fromSimpleString`.
+
+        The format returned by toString may or may not change in the future.
       +/
     string toString() const @safe pure nothrow
     {
@@ -7281,16 +7301,30 @@ public:
 
     /++
         Converts this $(LREF Date) to a string.
+
+        This function exists to make it easy to convert a $(LREF Date) to a
+        string for code that does not care what the exact format is - just that
+        it presents the information in a clear manner. It also makes it easy to
+        simply convert a $(LREF Date) to a string when using functions such as
+        `to!string`, `format`, or `writeln` which use toString to convert
+        user-defined types. So, it is unlikely that much code will call
+        toString directly.
+
+        The format of the string is purposefully unspecified, and code that
+        cares about the format of the string should use `toISOString`,
+        `toISOExtString`, `toSimpleString`, or some other custom formatting
+        function that explicitly generates the format that the code needs. The
+        reason is that the code is then clear about what format it's using,
+        making it less error-prone to maintain the code and interact with other
+        software that consumes the generated strings. It's for this same reason
+        $(LREF Date) has no `fromString` function, whereas it does have
+        `fromISOString`, `fromISOExtString`, and `fromSimpleString`.
+
+        The format returned by toString may or may not change in the future.
       +/
     string toString() const @safe pure nothrow
     {
         return toSimpleString();
-    }
-
-    ///
-    @safe unittest
-    {
-        assert(Date(2010, 7, 4).toString() == "2010-Jul-04");
     }
 
     @safe unittest
@@ -8804,6 +8838,26 @@ public:
 
     /++
         Converts this TimeOfDay to a string.
+
+        This function exists to make it easy to convert a $(LREF TimeOfDay) to a
+        string for code that does not care what the exact format is - just that
+        it presents the information in a clear manner. It also makes it easy to
+        simply convert a $(LREF TimeOfDay) to a string when using functions such
+        as `to!string`, `format`, or `writeln` which use toString to convert
+        user-defined types. So, it is unlikely that much code will call
+        toString directly.
+
+        The format of the string is purposefully unspecified, and code that
+        cares about the format of the string should use `toISOString`,
+        `toISOExtString`, or some other custom formatting function that
+        explicitly generates the format that the code needs. The reason is that
+        the code is then clear about what format it's using, making it less
+        error-prone to maintain the code and interact with other software that
+        consumes the generated strings. It's for this same reason that
+        $(LREF TimeOfDay) has no `fromString` function, whereas it does have
+        `fromISOString` and `fromISOExtString`.
+
+        The format returned by toString may or may not change in the future.
       +/
     string toString() const @safe pure nothrow
     {
