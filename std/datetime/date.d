@@ -3047,7 +3047,8 @@ public:
 
 
     /++
-        Converts this $(LREF DateTime) to a string.
+        Converts this $(LREF DateTime) to a string. It calls `toSimpleString` and
+        returns the result.
       +/
     string toString() const @safe pure nothrow
     {
@@ -7280,7 +7281,8 @@ public:
 
 
     /++
-        Converts this $(LREF Date) to a string.
+        Converts this $(LREF Date) to a string. It calls `toSimpleString` and
+        returns the result.
       +/
     string toString() const @safe pure nothrow
     {
@@ -8803,7 +8805,8 @@ public:
 
 
     /++
-        Converts this TimeOfDay to a string.
+        Converts this TimeOfDay to a string. It calls `toISOExtString` and
+        returns the result.
       +/
     string toString() const @safe pure nothrow
     {
