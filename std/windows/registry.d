@@ -43,7 +43,7 @@ import std.array;
 import std.conv;
 import std.exception;
 import std.internal.cstring;
-private import std.internal.windows.advapi32;
+import std.internal.windows.advapi32;
 import std.system : Endian, endian;
 import std.windows.syserror;
 
@@ -223,7 +223,7 @@ enum REG_VALUE_TYPE : DWORD
 
 /* ************* private *************** */
 
-private import core.sys.windows.winnt :
+import core.sys.windows.winnt :
     DELETE                  ,
     READ_CONTROL            ,
     WRITE_DAC               ,
@@ -240,7 +240,7 @@ private import core.sys.windows.winnt :
 
     SPECIFIC_RIGHTS_ALL     ;
 
-private import core.sys.windows.winreg :
+import core.sys.windows.winreg :
     REG_CREATED_NEW_KEY     ,
     REG_OPENED_EXISTING_KEY ;
 

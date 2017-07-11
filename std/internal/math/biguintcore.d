@@ -46,10 +46,10 @@ alias multibyteAdd = multibyteAddSub!('+');
 alias multibyteSub = multibyteAddSub!('-');
 
 
-private import core.cpuid;
+import core.cpuid;
 public import std.ascii : LetterCase;
-private import std.range.primitives;
-private import std.traits;
+import std.range.primitives;
+import std.traits;
 
 shared static this()
 {
@@ -75,8 +75,8 @@ else static if (BigDigit.sizeof == long.sizeof)
 }
 else static assert(0, "Unsupported BigDigit size");
 
-private import std.exception : assumeUnique;
-private import std.traits : isIntegral;
+import std.exception : assumeUnique;
+import std.traits : isIntegral;
 enum BigDigitBits = BigDigit.sizeof*8;
 template maxBigDigits(T)
 if (isIntegral!T)

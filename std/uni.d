@@ -2069,8 +2069,6 @@ pure:
 {
     import std.range : assumeSorted;
 
-public:
-
     /**
         Construct from another code point set of any type.
     */
@@ -2436,7 +2434,7 @@ public:
         ---
     */
 
-    private import std.format : FormatException, FormatSpec;
+    private import std.format : FormatSpec;
 
     /***************************************
      * Obtain a textual representation of this InversionList
@@ -2495,7 +2493,7 @@ public:
     @safe unittest
     {
         import std.exception : assertThrown;
-        import std.format : format;
+        import std.format : format, FormatException;
         assertThrown!FormatException(format("%a", unicode.ASCII));
     }
 

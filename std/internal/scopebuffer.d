@@ -10,8 +10,8 @@ module std.internal.scopebuffer;
 
 //debug=ScopeBuffer;
 
-private import core.stdc.stdlib : realloc;
-private import std.traits;
+import core.stdc.stdlib : realloc;
+import std.traits;
 
 /**************************************
  * ScopeBuffer encapsulates using a local array as a temporary buffer.
