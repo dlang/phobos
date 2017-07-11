@@ -1776,7 +1776,7 @@ cases.))
 
 Params:
     s = a SwapStrategy to determine if the original order needs to be preserved
-    range = a $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
+    range = a $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,_range,primitives)
     with a length member
     offset = which element(s) to remove
 
@@ -2011,7 +2011,7 @@ if (s == SwapStrategy.stable
 
 /**
 Reduces the length of the
-$(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives) $(D range) by removing
+$(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,_range,primitives) $(D range) by removing
 elements that satisfy $(D pred). If $(D s = SwapStrategy.unstable),
 elements are moved from the right end of the range over the elements
 to eliminate. If $(D s = SwapStrategy.stable) (the default),
