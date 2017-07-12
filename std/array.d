@@ -2007,7 +2007,7 @@ if (isForwardRange!E && isForwardRange!R1 && isForwardRange!R2)
 }
 
 /// ditto
-auto replace(E, R1, R2)(E subject, R1 from, R2 to, ref size_t countChanges)
+auto replace(E, R1, R2)(E subject, R1 from, R2 to, out size_t countChanges)
 if (isForwardRange!E && isForwardRange!R1 && isForwardRange!R2)
 {
     import std.algorithm.searching : findSplit;
