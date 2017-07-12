@@ -1574,18 +1574,20 @@ Returns:
     alias of that range's type.
  */
 auto chooseAmong(Ranges...)(size_t index, Ranges rs)
-if (Ranges.length > 2
-        && is(typeof(choose(true, rs[0], rs[1])))
-        && is(typeof(chooseAmong(0, rs[1 .. $]))))
+if (Ranges.length >= 2 && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)))
 {
-    return choose(index == 0, rs[0], chooseAmong(index - 1, rs[1 .. $]));
-}
-
-/// ditto
-auto chooseAmong(Ranges...)(size_t index, Ranges rs)
-if (Ranges.length == 2 && is(typeof(choose(true, rs[0], rs[1]))))
-{
-    return choose(index == 0, rs[0], rs[1]);
+    static if (Ranges.length == 2 && is(typeof(choose(true, rs[0], rs[1]))))
+    {
+        return choose(index == 0, rs[0], rs[1]);
+    }
+    else static if(is(typeof(choose(true, rs[0], rs[1]))) && is(typeof(chooseAmong(0, rs[1 .. $]))))
+    {
+        return choose(index == 0, rs[0], chooseAmong(index - 1, rs[1 .. $]));
+    }
+    else
+    {
+        static assert(0, "The ranges have no common type.");
+    }
 }
 
 ///
@@ -1923,11 +1925,23 @@ Returns:
     and `length`, `take` offers them as well.
  */
 Take!R take(R)(R input, size_t n)
-if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R) &&
-    !is(R T == Take!T))
+if (isInputRange!(Unqual!R))
 {
-    import std.algorithm.comparison : min;
-    return input[0 .. min(n, input.length)];
+    alias U = Unqual!R;
+    static if (is(R T == Take!T))
+    {
+        import std.algorithm.comparison : min;
+        return R(input.source, min(n, input._maxAvailable));
+    }
+    else static if(!isInfinite!U && hasSlicing!U)
+    {
+        import std.algorithm.comparison : min;
+        return input[0 .. min(n, input.length)];
+    }
+    else
+    {
+        return Take!R(input, n);
+    }
 }
 
 /// ditto
@@ -2156,21 +2170,6 @@ pure @safe nothrow unittest
     auto t = take(arr2, 5);
     assert(t.length == 3);
     assert(equal(t, [ 1, 2, 3 ]));
-}
-
-/// ditto
-Take!R take(R)(R input, size_t n)
-if (is(R T == Take!T))
-{
-    import std.algorithm.comparison : min;
-    return R(input.source, min(n, input._maxAvailable));
-}
-
-/// ditto
-Take!(R) take(R)(R input, size_t n)
-if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) && !is(R T == Take!T)))
-{
-    return Take!R(input, n);
 }
 
 pure @safe nothrow unittest
@@ -10714,16 +10713,12 @@ private:
 
 /// ditto
 auto refRange(R)(R* range)
-if (isInputRange!R && !is(R == class))
+if (isInputRange!R)
 {
-    return RefRange!R(range);
-}
-
-/// ditto
-auto refRange(R)(R* range)
-if (isInputRange!R && is(R == class))
-{
-    return *range;
+    static if (!is(R == class))
+        return RefRange!R(range);
+    else
+        return *range;
 }
 
 /*****************************************************************************/
