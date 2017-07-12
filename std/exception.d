@@ -1795,7 +1795,7 @@ Params:
 
 Returns: A wrapper $(D struct) that preserves the range interface of $(D input).
 
-opSlice:
+Note:
 Infinite ranges with slicing support must return an instance of
 $(REF Take, std,range) when sliced with a specific lower and upper
 bound (see $(REF hasSlicing, std,range,primitives)); $(D handle) deals with

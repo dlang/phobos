@@ -688,7 +688,7 @@ private struct RBRange(N)
     /**
      * pop the front element from the range
      *
-     * complexity: amortized $(BIGOH 1)
+     * Complexity: amortized $(BIGOH 1)
      */
     void popFront()
     {
@@ -698,7 +698,7 @@ private struct RBRange(N)
     /**
      * pop the back element from the range
      *
-     * complexity: amortized $(BIGOH 1)
+     * Complexity: amortized $(BIGOH 1)
      */
     void popBack()
     {

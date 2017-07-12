@@ -5314,9 +5314,9 @@ private:
 
 /*********************************
  * Determines if $(D_PARAM x) is NaN.
- * params:
+ * Params:
  *  x = a floating point number.
- * returns:
+ * Returns:
  *  $(D true) if $(D_PARAM x) is Nan.
  */
 bool isNaN(X)(X x) @nogc @trusted pure nothrow
@@ -5402,9 +5402,9 @@ if (isFloatingPoint!(X))
 
 /*********************************
  * Determines if $(D_PARAM x) is finite.
- * params:
+ * Params:
  *  x = a floating point number.
- * returns:
+ * Returns:
  *  $(D true) if $(D_PARAM x) is finite.
  */
 bool isFinite(X)(X x) @trusted pure nothrow @nogc
@@ -5445,9 +5445,9 @@ bool isFinite(X)(X x) @trusted pure nothrow @nogc
  *
  * A normalized number must not be zero, subnormal, infinite nor $(NAN).
  *
- * params:
+ * Params:
  *  x = a floating point number.
- * returns:
+ * Returns:
  *  $(D true) if $(D_PARAM x) is normalized.
  */
 
@@ -5495,9 +5495,9 @@ bool isNormal(X)(X x) @trusted pure nothrow @nogc
  * Subnormals (also known as "denormal number"), have a 0 exponent
  * and a 0 most significant mantissa bit.
  *
- * params:
+ * Params:
  *  x = a floating point number.
- * returns:
+ * Returns:
  *  $(D true) if $(D_PARAM x) is a denormal number.
  */
 bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
@@ -5557,9 +5557,9 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
 
 /*********************************
  * Determines if $(D_PARAM x) is $(PLUSMN)$(INFIN).
- * params:
+ * Params:
  *  x = a floating point number.
- * returns:
+ * Returns:
  *  $(D true) if $(D_PARAM x) is $(PLUSMN)$(INFIN).
  */
 bool isInfinity(X)(X x) @nogc @trusted pure nothrow
