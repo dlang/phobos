@@ -1919,11 +1919,23 @@ Returns:
     and `length`, `take` offers them as well.
  */
 Take!R take(R)(R input, size_t n)
-if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R) &&
-    !is(R T == Take!T))
+if (isInputRange!(Unqual!R))
 {
-    import std.algorithm.comparison : min;
-    return input[0 .. min(n, input.length)];
+    alias U = Unqual!R;
+    static if (is(R T == Take!T))
+    {
+        import std.algorithm.comparison : min;
+        return R(input.source, min(n, input._maxAvailable));
+    }
+    else static if (!isInfinite!U && hasSlicing!U)
+    {
+        import std.algorithm.comparison : min;
+        return input[0 .. min(n, input.length)];
+    }
+    else
+    {
+        return Take!R(input, n);
+    }
 }
 
 /// ditto
@@ -2152,21 +2164,6 @@ pure @safe nothrow unittest
     auto t = take(arr2, 5);
     assert(t.length == 3);
     assert(equal(t, [ 1, 2, 3 ]));
-}
-
-/// ditto
-Take!R take(R)(R input, size_t n)
-if (is(R T == Take!T))
-{
-    import std.algorithm.comparison : min;
-    return R(input.source, min(n, input._maxAvailable));
-}
-
-/// ditto
-Take!(R) take(R)(R input, size_t n)
-if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) && !is(R T == Take!T)))
-{
-    return Take!R(input, n);
 }
 
 pure @safe nothrow unittest
