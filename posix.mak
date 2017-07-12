@@ -264,15 +264,6 @@ MAKEFILE = $(firstword $(MAKEFILE_LIST))
 # build with shared library support (defaults to true on supported platforms)
 SHARED=$(if $(findstring $(OS),linux freebsd),1,)
 
-# Check for missing imports in public unittest examples.
-# A blacklist of ignored module is provided as not all public unittest in
-# Phobos are independently runnable yet
-IGNORED_PUBLICTESTS= $(addprefix std/, \
-						$(addprefix experimental/allocator/, \
-								building_blocks/free_list building_blocks/quantizer \
-						) \
-						math stdio traits)
-PUBLICTESTS= $(addsuffix .publictests,$(filter-out $(IGNORED_PUBLICTESTS), $(D_MODULES)))
 TESTS_EXTRACTOR=$(ROOT)/tests_extractor
 PUBLICTESTS_DIR=$(ROOT)/publictests
 
@@ -593,7 +584,7 @@ style_lint: dscanner $(LIB)
 ################################################################################
 # Check for missing imports in public unittest examples.
 ################################################################################
-publictests: $(PUBLICTESTS)
+publictests: $(addsuffix .publictests,$(D_MODULES))
 
 $(TESTS_EXTRACTOR): $(TOOLS_DIR)/tests_extractor.d | $(LIB)
 	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) build --force --compiler=$${PWD}/$(DMD) --single $<
