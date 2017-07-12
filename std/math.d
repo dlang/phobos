@@ -2771,8 +2771,7 @@ if (isFloatingPoint!T)
     int exp;
     real mantissa = frexp(123.456L, exp);
 
-    // check if values are equal to 19 decimal digits of precision
-    assert(equalsDigit(mantissa * pow(2.0L, cast(real) exp), 123.456L, 19));
+    assert(approxEqual(mantissa * pow(2.0L, cast(real) exp), 123.456L));
 
     assert(frexp(-real.nan, exp) && exp == int.min);
     assert(frexp(real.nan, exp) && exp == int.min);
@@ -2780,6 +2779,15 @@ if (isFloatingPoint!T)
     assert(frexp(real.infinity, exp) == real.infinity && exp == int.max);
     assert(frexp(-0.0, exp) == -0.0 && exp == 0);
     assert(frexp(0.0, exp) == 0.0 && exp == 0);
+}
+
+@system unittest
+{
+    int exp;
+    real mantissa = frexp(123.456L, exp);
+
+    // check if values are equal to 19 decimal digits of precision
+    assert(equalsDigit(mantissa * pow(2.0L, cast(real) exp), 123.456L, 19));
 }
 
 @safe unittest
@@ -3619,6 +3627,11 @@ real log2(real x) @safe pure nothrow @nogc
 }
 
 ///
+@system unittest
+{
+    assert(approxEqual(log2(1024.0L), 10));
+}
+
 @system unittest
 {
     // check if values are equal to 19 decimal digits of precision
