@@ -1361,8 +1361,6 @@ if (isInputRange!S && !isDynamicArray!S)
 {
     import std.conv : to;
 
-    debug(std_array) printf("array.replicate.unittest\n");
-
     foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         S s;
@@ -1573,7 +1571,6 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
     import std.algorithm.comparison : cmp;
     import std.conv;
 
-    debug(std_array) printf("array.split\n");
     foreach (S; AliasSeq!(string, wstring, dstring,
                     immutable(string), immutable(wstring), immutable(dstring),
                     char[], wchar[], dchar[],
@@ -1904,8 +1901,6 @@ if (isInputRange!RoR &&
     import std.conv : to;
     import std.range;
 
-    debug(std_array) printf("array.join.unittest\n");
-
     foreach (R; AliasSeq!(string, wstring, dstring))
     {
         R word1 = "日本語";
@@ -2126,8 +2121,6 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
 {
     import std.algorithm.comparison : cmp;
     import std.conv : to;
-
-    debug(std_array) printf("array.replace.unittest\n");
 
     foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
@@ -2571,8 +2564,6 @@ if (isDynamicArray!(E[]) &&
     import std.algorithm.comparison : cmp;
     import std.conv : to;
 
-    debug(std_array) printf("array.replaceFirst.unittest\n");
-
     foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
                           const(char[]), immutable(char[])))
     {
@@ -2686,8 +2677,6 @@ if (isDynamicArray!(E[]) &&
     import std.algorithm.comparison : cmp;
     import std.conv : to;
 
-    debug(std_array) printf("array.replaceLast.unittest\n");
-
     foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
                           const(char[]), immutable(char[])))
     {
@@ -2763,7 +2752,6 @@ body
 @system unittest
 {
     import std.algorithm.comparison : cmp;
-    debug(std_array) printf("array.replaceSlice.unittest\n");
 
     string s = "hello";
     string slice = s[2 .. 4];
