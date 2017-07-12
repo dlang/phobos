@@ -4494,6 +4494,8 @@ real round(real x) @trusted nothrow @nogc
  *
  * If the fractional part of x is exactly 0.5, the return value is rounded
  * away from zero.
+ *
+ * $(BLUE This function is Posix-Only.)
  */
 long lround(real x) @trusted nothrow @nogc
 {
@@ -4581,7 +4583,7 @@ real trunc(real x) @trusted nothrow @nogc
  *  $(TR $(TD != $(PLUSMNINF)) $(TD $(PLUSMNINF)) $(TD x)               $(TD ?)   $(TD no))
  * )
  *
- * Note: remquo not supported on windows
+ * $(BLUE `remquo` and `remainder` not supported on Windows.)
  */
 real remainder(real x, real y) @trusted nothrow @nogc
 {
