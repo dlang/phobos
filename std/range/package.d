@@ -1574,18 +1574,14 @@ Returns:
     alias of that range's type.
  */
 auto chooseAmong(Ranges...)(size_t index, Ranges rs)
-if (Ranges.length > 2
-        && is(typeof(choose(true, rs[0], rs[1])))
-        && is(typeof(chooseAmong(0, rs[1 .. $]))))
+if (Ranges.length >= 2
+        && allSatisfy!(isInputRange, staticMap!(Unqual, Ranges))
+        && !is(CommonType!(staticMap!(ElementType, Ranges)) == void))
 {
-    return choose(index == 0, rs[0], chooseAmong(index - 1, rs[1 .. $]));
-}
-
-/// ditto
-auto chooseAmong(Ranges...)(size_t index, Ranges rs)
-if (Ranges.length == 2 && is(typeof(choose(true, rs[0], rs[1]))))
-{
-    return choose(index == 0, rs[0], rs[1]);
+    static if (Ranges.length == 2)
+        return choose(index == 0, rs[0], rs[1]);
+    else
+        return choose(index == 0, rs[0], chooseAmong(index - 1, rs[1 .. $]));
 }
 
 ///
