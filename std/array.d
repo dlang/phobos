@@ -1999,44 +1999,47 @@ if (isInputRange!RoR &&
     See_Also:
         $(REF map, std,algorithm,iteration) which can act as a lazy replace
  +/
-E[] replace(E, R1, R2)(E[] subject, R1 from, R2 to)
-if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
+E replace(E, R1, R2)(in E subject, R1 from, R2 to)
+if (isForwardRange!E && isForwardRange!R1 && isForwardRange!R2
         && (hasLength!R2 || isSomeString!R2))
 {
-    import std.algorithm.searching : find;
+    import std.algorithm.searching : countUntil;
+    import std.range : take, drop;
 
     if (from.empty) return subject;
 
-    auto balance = find(subject, from.save);
-    if (balance.empty)
+    auto offset = countUntil(subject, from.save);
+    if (offset == -1)
         return subject;
 
-    auto app = appender!(E[])();
-    app.put(subject[0 .. subject.length - balance.length]);
+    auto app = appender!((ElementEncodingType!E)[])();
+    app.put(subject.take(offset));
     app.put(to.save);
-    replaceInto(app, balance[from.length .. $], from, to);
+    replaceInto(app, subject.drop(offset + from.length), from, to);
 
     return app.data;
 }
 
 /// ditto
-E[] replace(E, R1, R2)(E[] subject, R1 from, R2 to, ref size_t countChanges)
-if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
+E replace(E, R1, R2)(in E subject, R1 from, R2 to, ref size_t countChanges)
+if (isForwardRange!E && isForwardRange!R1 && isForwardRange!R2
         && (hasLength!R2 || isSomeString!R2))
 {
-    import std.algorithm.searching : find;
+    import std.algorithm.searching : countUntil;
+    import std.range : take, drop;
 
     countChanges = 0;
     if (from.empty) return subject;
 
-    auto balance = find(subject, from.save);
-    if (balance.empty)
+    auto subrange = subject.save;
+    auto offset = countUntil(subject, from.save);
+    if (offset == -1)
         return subject;
 
-    auto app = appender!(E[])();
-    app.put(subject[0 .. subject.length - balance.length]);
+    auto app = appender!((ElementEncodingType!E)[])();
+    app.put(subject.take(offset));
     app.put(to.save);
-    replaceInto(app, balance[from.length .. $], from, to, countChanges);
+    replaceInto(app, subject.drop(offset + from.length), from, to, countChanges);
 
     // the first replacement is counted here since replaceInto makes countChanges = 0
     ++countChanges;
@@ -2056,39 +2059,43 @@ if (isDynamicArray!(E[]) && isForwardRange!R1 && isForwardRange!R2
 }
 
 /// ditto
-void replaceInto(E, Sink, R1, R2)(Sink sink, E[] subject, R1 from, R2 to)
-if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
+void replaceInto(E, Sink, R1, R2)(Sink sink, in E subject, R1 from, R2 to)
+if (isOutputRange!(Sink, E) && isForwardRange!E
     && isForwardRange!R1 && isForwardRange!R2
     && (hasLength!R2 || isSomeString!R2))
 {
-    import std.algorithm.searching : find;
+    import std.algorithm.searching : countUntil;
+    import std.range : take, drop;
 
     if (from.empty)
     {
         sink.put(subject);
         return;
     }
+
+    auto subject_copy = subject.save;
     for (;;)
     {
-        auto balance = find(subject, from.save);
-        if (balance.empty)
+        auto offset = countUntil(subject_copy, from.save);
+        if (offset == -1)
         {
-            sink.put(subject);
+            sink.put(subject_copy);
             break;
         }
-        sink.put(subject[0 .. subject.length - balance.length]);
+        sink.put(subject_copy.take(offset));
         sink.put(to.save);
-        subject = balance[from.length .. $];
+        subject_copy = subject_copy.drop(offset + from.length);
     }
 }
 
 /// ditto
-void replaceInto(E, Sink, R1, R2)(Sink sink, E[] subject, R1 from, R2 to, ref size_t countChanges)
-if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
+void replaceInto(E, Sink, R1, R2)(Sink sink, E subject, R1 from, R2 to, ref size_t countChanges)
+if (isOutputRange!(Sink, E) && isForwardRange!E
     && isForwardRange!R1 && isForwardRange!R2
     && (hasLength!R2 || isSomeString!R2))
 {
-    import std.algorithm.searching : find;
+    import std.algorithm.searching : countUntil;
+    import std.range : take, drop;
 
     countChanges = 0;
     if (from.empty)
@@ -2096,18 +2103,20 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
         sink.put(subject);
         return;
     }
+
+    auto subject_copy = subject.save;
     for (;;)
     {
-        auto balance = find(subject, from.save);
-        if (balance.empty)
+        auto offset = countUntil(subject_copy, from.save);
+        if (offset == -1)
         {
-            sink.put(subject);
+            sink.put(subject_copy);
             break;
         }
         ++countChanges;
-        sink.put(subject[0 .. subject.length - balance.length]);
+        sink.put(subject_copy.take(offset));
         sink.put(to.save);
-        subject = balance[from.length .. $];
+        subject_copy = subject_copy.drop(offset + from.length);
     }
 }
 
