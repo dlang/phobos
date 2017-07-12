@@ -10713,16 +10713,12 @@ private:
 
 /// ditto
 auto refRange(R)(R* range)
-if (isInputRange!R && !is(R == class))
+if (isInputRange!R)
 {
-    return RefRange!R(range);
-}
-
-/// ditto
-auto refRange(R)(R* range)
-if (isInputRange!R && is(R == class))
-{
-    return *range;
+    static if (!is(R == class))
+        return RefRange!R(range);
+    else
+        return *range;
 }
 
 /*****************************************************************************/
