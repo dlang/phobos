@@ -41,26 +41,21 @@ import std.range.primitives;
 import std.range.interfaces : InputRange;
 import std.traits;
 
-// Avoids writeln output during a normal test-suite run
-// Using writeln is very helpful for runnable unittest examples
-version(unittest)
-{
-    void writeln(T...)(T t){}
-}
-
 ///
 @system unittest
 {
+    __gshared string received;
     static void spawnedFunc(Tid ownerTid)
     {
+        import std.conv : text;
         // Receive a message from the owner thread.
-        receive(
-            (int i) { writeln("Received the number ", i);}
-        );
+        receive((int i){
+            received = text("Received the number ", i);
 
-        // Send a message back to the owner thread
-        // indicating success.
-        send(ownerTid, true);
+            // Send a message back to the owner thread
+            // indicating success.
+            send(ownerTid, true);
+        });
     }
 
     // Start spawnedFunc in a new thread.
@@ -72,6 +67,7 @@ version(unittest)
     // Receive the result code.
     auto wasSuccessful = receiveOnly!(bool);
     assert(wasSuccessful);
+    assert(received == "Received the number 42");
 }
 
 private
