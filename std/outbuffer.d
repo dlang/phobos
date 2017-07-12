@@ -374,6 +374,7 @@ class OutBuffer
         }
 }
 
+///
 @safe unittest
 {
     import std.string : cmp;
@@ -381,15 +382,15 @@ class OutBuffer
     OutBuffer buf = new OutBuffer();
 
     assert(buf.offset == 0);
-    buf.write("hello"[]);
+    buf.write("hello");
     buf.write(cast(byte) 0x20);
-    buf.write("world"[]);
+    buf.write("world");
     buf.printf(" %d", 62665);
     assert(cmp(buf.toString(), "hello world 62665") == 0);
 
     buf.clear();
     assert(cmp(buf.toString(), "") == 0);
-    buf.write("New data"[]);
+    buf.write("New data");
     assert(cmp(buf.toString(),"New data") == 0);
 }
 
