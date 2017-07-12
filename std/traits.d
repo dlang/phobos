@@ -2490,6 +2490,7 @@ template Fields(T)
 ///
 @safe unittest
 {
+    import std.meta : AliasSeq;
     struct S { int x; float y; }
     static assert(is(Fields!S == AliasSeq!(int, float)));
 }
@@ -2546,6 +2547,7 @@ template FieldNameTuple(T)
 ///
 @safe unittest
 {
+    import std.meta : AliasSeq;
     struct S { int x; float y; }
     static assert(FieldNameTuple!S == AliasSeq!("x", "y"));
     static assert(FieldNameTuple!int == AliasSeq!"");
@@ -2692,7 +2694,7 @@ private template hasRawAliasing(T...)
     enum hasRawAliasing = Impl!(RepresentationTypeTuple!T);
 }
 
-///
+//
 @safe unittest
 {
     // simple types
@@ -2788,7 +2790,7 @@ private template hasRawUnsharedAliasing(T...)
     enum hasRawUnsharedAliasing = Impl!(RepresentationTypeTuple!T);
 }
 
-///
+//
 @safe unittest
 {
     // simple types
@@ -4009,6 +4011,8 @@ template BaseTypeTuple(A)
 ///
 @safe unittest
 {
+    import std.meta : AliasSeq;
+
     interface I1 { }
     interface I2 { }
     interface I12 : I1, I2 { }
@@ -4062,6 +4066,8 @@ template BaseClassesTuple(T)
 ///
 @safe unittest
 {
+    import std.meta : AliasSeq;
+
     class C1 { }
     class C2 : C1 { }
     class C3 : C2 { }
@@ -4422,6 +4428,8 @@ template TemplateArgsOf(T : Base!Args, alias Base, Args...)
 ///
 @safe unittest
 {
+    import std.meta : AliasSeq;
+
     struct Foo(T, U) {}
     static assert(is(TemplateArgsOf!(Foo!(int, real)) == AliasSeq!(int, real)));
 }
@@ -7331,6 +7339,8 @@ template mostNegative(T)
 ///
 @safe unittest
 {
+    import std.meta : AliasSeq;
+
     foreach (T; AliasSeq!(bool, byte, short, int, long))
         static assert(mostNegative!T == T.min);
 
@@ -7397,6 +7407,7 @@ template mangledName(sth...)
 ///
 @safe unittest
 {
+    import std.meta : AliasSeq;
     alias TL = staticMap!(mangledName, int, const int, immutable int);
     static assert(TL == AliasSeq!("i", "xi", "yi"));
 }
@@ -7845,13 +7856,13 @@ template getSymbolsByUDA(alias symbol, alias attribute)
     static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[0], Attr));
 }
 
-///
+//
 @safe unittest
 {
     enum Attr;
     struct A
     {
-        alias int INT;
+        alias INT = int;
         alias void function(INT) SomeFunction;
         @Attr int a;
         int b;
