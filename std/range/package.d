@@ -886,18 +886,22 @@ Returns:
 
 See_Also: $(LREF only) to chain values to a range
  */
-auto chain(Ranges...)(Ranges rs)
+template chain(Ranges...)
 if (Ranges.length > 0 &&
     allSatisfy!(isInputRange, staticMap!(Unqual, Ranges)) &&
     !is(CommonType!(staticMap!(ElementType, staticMap!(Unqual, Ranges))) == void))
 {
-    static if (Ranges.length == 1)
+    auto chain(Ranges rs)
     {
-        return rs[0];
+        static if (Ranges.length == 1)
+            return rs[0];
+        else
+            return Result(rs);
     }
-    else
+
+    static if (Ranges.length > 1)
     {
-        static struct Result
+        struct Result
         {
         private:
             alias R = staticMap!(Unqual, Ranges);
@@ -1197,7 +1201,6 @@ if (Ranges.length > 0 &&
                     return result;
                 }
         }
-        return Result(rs);
     }
 }
 
