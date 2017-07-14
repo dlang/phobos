@@ -963,6 +963,39 @@ bool register(string name, Tid tid)
 }
 
 /**
+Retrieves all names associated with $(LREF Tid). These names
+have all been registered with the $(LREF register) function.
+
+*/
+string[] registeredNames(Tid tid)
+{
+    synchronized (registryLock)
+    {
+        return namesByTid[tid];
+    }
+}
+
+///
+@system unittest
+{
+    __gshared string received;
+    static void spawnedFunc(Tid ownerTid)
+    {
+        // Receive a message from the owner thread.
+        receive((string msg) { received = msg; });
+    }
+
+    // Start spawnedFunc in a new thread.
+    auto childTid = spawn(&spawnedFunc, thisTid);
+
+    assert(register("name1", childTid));
+    assert(register("name2", childTid));
+    assert(registeredNames(childTid) == ["name1", "name2"]);
+
+    send(childTid, "You may perish");
+}
+
+/**
  * Removes the registered name associated with a tid.
  *
  * Params:
