@@ -1,5 +1,4 @@
 `Config.detached` flag for `spawnProcess` has been added
 
-Config.detached allows to $(REF_ALTTEXT spawn process, spawnProcess, std, process) independently from the caller.
-No need to wait on the process spawned that way - no zombie will left after process exits.
-Attempts to $(REF wait, std, process) on or $(REF kill, std, process) detached processes will throw.
+`Config.detached` allows $(REF_ALTTEXT spawning processes, spawnProcess, std, process) which run independently from the current process. There is no need to wait on the processes created with this flag, and no $(HTTPS en.wikipedia.org/wiki/Zombie_process, zombie process) will be left after they exit.
+Attempts to call $(REF wait, std, process) or $(REF kill, std, process) on detached processes will throw.
