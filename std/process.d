@@ -341,7 +341,7 @@ version(Posix) private enum InternalError : ubyte
     exec,
     chdir,
     getrlimit,
-    doubleFork
+    doubleFork,
 }
 
 /*
@@ -426,18 +426,19 @@ private Pid spawnProcessImpl(in char[][] args,
         throw ProcessException.newFromErrno("Could not create pipe to check startup of child");
     scope(exit) close(forkPipe[0]);
 
-    // To create detached process, we use double fork technique
-    // but we don't have a direct access to the second fork pid from the caller side thus use a pipe.
-    // We also can't reuse forkPipe for that purpose
-    // because we can't predict the order in which pid and possible error will be written
-    // since the first and the second forks will run in parallel.
+    /*
+    To create detached process, we use double fork technique
+    but we don't have a direct access to the second fork pid from the caller side thus use a pipe.
+    We also can't reuse forkPipe for that purpose
+    because we can't predict the order in which pid and possible error will be written
+    since the first and the second forks will run in parallel.
+    */
     int[2] pidPipe;
     if (config & Config.detached)
     {
-        if (core.sys.posix.unistd.pipe(pidPipe) == 0)
-            setCLOEXEC(pidPipe[1], true);
-        else
+        if (core.sys.posix.unistd.pipe(pidPipe) != 0)
             throw ProcessException.newFromErrno("Could not create pipe to get process pid");
+        setCLOEXEC(pidPipe[1], true);
     }
     scope(exit) if (config & Config.detached) close(pidPipe[0]);
 
@@ -496,7 +497,7 @@ private Pid spawnProcessImpl(in char[][] args,
             // In the case that stderr is redirected to stdout, we need
             // to backup the file descriptor since stdout may be redirected
             // as well.
-            if (stderrFD == STDOUT_FILENO)  stderrFD = dup(stderrFD);
+            if (stderrFD == STDOUT_FILENO) stderrFD = dup(stderrFD);
             dup2(stdinFD,  STDIN_FILENO);
             dup2(stdoutFD, STDOUT_FILENO);
             dup2(stderrFD, STDERR_FILENO);
@@ -525,7 +526,7 @@ private Pid spawnProcessImpl(in char[][] args,
                 immutable maxToClose = maxDescriptors - 3;
 
                 // Call poll() to see which ones are actually open:
-                pollfd* pfds = cast(pollfd*) malloc(pollfd.sizeof * maxToClose);
+                auto pfds = cast(pollfd*) malloc(pollfd.sizeof * maxToClose);
                 foreach (i; 0 .. maxToClose)
                 {
                     pfds[i].fd = i + 3;
@@ -607,7 +608,7 @@ private Pid spawnProcessImpl(in char[][] args,
         auto status = InternalError.noerror;
         auto readExecResult = core.sys.posix.unistd.read(forkPipe[0], &status, status.sizeof);
         // Save error number just in case if subsequent "waitpid" fails and overrides errno
-        auto lastError = .errno;
+        immutable lastError = .errno;
 
         if (config & Config.detached)
         {
@@ -647,16 +648,12 @@ private Pid spawnProcessImpl(in char[][] args,
             }
             if (readExecResult == error.sizeof)
                 throw ProcessException.newFromErrno(error, errorMsg);
-            else
-                throw new ProcessException(errorMsg);
+            throw new ProcessException(errorMsg);
         }
         else if (config & Config.detached)
         {
             owned = false;
-            typeof(id) actualPid;
-            if (read(pidPipe[0], &actualPid, id.sizeof) == id.sizeof)
-                id = actualPid;
-            else
+            if (read(pidPipe[0], &id, id.sizeof) != id.sizeof)
                 throw ProcessException.newFromErrno("Could not read from pipe to get detached process id");
         }
 
@@ -773,10 +770,7 @@ private Pid spawnProcessImpl(in char[] commandLine,
         CloseHandle(pi.hProcess);
         return new Pid(pi.dwProcessId);
     }
-    else
-    {
-        return new Pid(pi.dwProcessId, pi.hProcess);
-    }
+    return new Pid(pi.dwProcessId, pi.hProcess);
 }
 
 // Converts childEnv to a zero-terminated array of zero-terminated strings
@@ -1126,7 +1120,7 @@ version (Posix) @system unittest
             wait(pid);
         else
             // We need to wait a little to ensure that the process has finished and data was written to files
-            Thread.sleep(dur!"msecs"(200));
+            Thread.sleep(2.seconds);
         assert(readText(patho).chomp() == "INPUT output bar");
         assert(readText(pathe).chomp().stripRight() == "INPUT error baz");
         remove(pathi);
@@ -1861,7 +1855,7 @@ void kill(Pid pid, int codeOrSignal)
     This leads to the annoying message like "/bin/sh: 0: Can't open /tmp/std.process temporary file" to appear when running tests.
     It does not happen in unittests with non-detached processes because we always wait() for them to finish.
     */
-    Thread.sleep(dur!"msecs"(100));
+    Thread.sleep(1.seconds);
     assert(!pid.owned);
     version(Windows) assert(pid.osHandle == INVALID_HANDLE_VALUE);
     assertThrown!ProcessException(wait(pid));
