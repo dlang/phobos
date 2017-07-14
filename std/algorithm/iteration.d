@@ -2406,10 +2406,15 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR)
 }
 
 /// Ditto
-auto joiner(RoR)(RoR r)
+template joiner(RoR)
 if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 {
-    static struct Result
+    auto joiner(RoR r)
+    {
+        return Result(r);
+    }
+
+    struct Result
     {
     private:
         RoR _items;
@@ -2509,7 +2514,6 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
             }
         }
     }
-    return Result(r);
 }
 
 @safe unittest
