@@ -7943,4 +7943,5 @@ enum isCopyable(S) = is(typeof(
 
     static assert(isCopyable!C1);
     static assert(isCopyable!int);
+    static assert(isCopyable!(int[]));
 }
