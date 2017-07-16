@@ -1083,7 +1083,7 @@ private bool optMatch(string arg, string optPattern, ref string value,
     import std.uni : toUpper;
     //writeln("optMatch:\n  ", arg, "\n  ", optPattern, "\n  ", value);
     //scope(success) writeln("optMatch result: ", value);
-    if (!arg.length || arg[0] != optionChar) return false;
+    if (arg.length < 2 || arg[0] != optionChar) return false;
     // yank the leading '-'
     arg = arg[1 .. $];
     immutable isLong = arg.length > 1 && arg[0] == optionChar;
@@ -1811,4 +1811,25 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
 
     assert(x == 17);
     assert(y == 50);
+}
+
+@system unittest // Hyphens at the start of option values; Issue 17650
+{
+    auto args = ["program", "-m", "-5", "-n", "-50", "-c", "-", "-f", "-"];
+
+    int m;
+    int n;
+    char c;
+    string f;
+
+    getopt(args,
+           "m|mm", "integer", &m,
+           "n|nn", "integer", &n,
+           "c|cc", "character", &c,
+           "f|file", "filename or hyphen for stdin", &f);
+
+    assert(m == -5);
+    assert(n == -50);
+    assert(c == '-');
+    assert(f == "-");
 }
