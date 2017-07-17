@@ -865,6 +865,45 @@ alias nWayUnion = multiwayMerge;
 alias NWayUnion = MultiwayMerge;
 
 /**
+Computes the union of multiple ranges. The input ranges are passed
+as a range of ranges and each is assumed to be sorted by $(D
+less). Computation is done lazily, one union element at a time.
+`multiwayUnion(ror)` is functionally equivalent to `multiwayMerge(ror).uniq`.
+
+Params:
+    less = Predicate the given ranges are sorted by.
+    ror = A range of ranges sorted by `less` to compute the intersection for.
+
+Returns:
+    A range of the intersection of the ranges in `ror`.
+
+See also: $(LREF NWayUnion)
+ */
+auto multiwayUnion(alias less = "a < b", RangeOfRanges)(RangeOfRanges ror)
+{
+    import std.algorithm.iteration : uniq;
+    return ror.multiwayMerge.uniq;
+}
+
+///
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+
+    double[][] a =
+    [
+        [ 1, 4, 7, 8 ],
+        [ 1, 7 ],
+        [ 1, 7, 8],
+        [ 4 ],
+        [ 7 ],
+    ];
+
+    auto witness = [1, 4, 7, 8];
+    assert(equal(multiwayUnion(a), witness));
+}
+
+/**
 Lazily computes the difference of $(D r1) and $(D r2). The two ranges
 are assumed to be sorted by $(D less). The element types of the two
 ranges must have a common type.
