@@ -13,7 +13,7 @@ $(T2 largestPartialIntersection,
 $(T2 largestPartialIntersectionWeighted,
         Copies out the values that occur most frequently (multiplied by
         per-value weights) in a range of ranges.)
-$(T2 nWayUnion,
+$(T2 multiwayMerge,
         Computes the union of a set of sets implemented as a range of sorted
         ranges.)
 $(T2 setDifference,
@@ -647,7 +647,7 @@ void largestPartialIntersectionWeighted
     {
         return weights[a[0]] * a[1] > weights[b[0]] * b[1];
     }
-    topNCopy!heapComp(group(nWayUnion!less(ror)), tgt, sorted);
+    topNCopy!heapComp(group(multiwayMerge!less(ror)), tgt, sorted);
 }
 
 ///
@@ -744,7 +744,7 @@ void largestPartialIntersectionWeighted
     assert(arrayOne == arrayTwo);
 }
 
-// NWayUnion
+// MultiwayMerge
 /**
 Computes the union of multiple sets. The input sets are passed as a
 range of ranges and each is assumed to be sorted by $(D
@@ -752,12 +752,17 @@ less). Computation is done lazily, one union element at a time. The
 complexity of one $(D popFront) operation is $(BIGOH
 log(ror.length)). However, the length of $(D ror) decreases as ranges
 in it are exhausted, so the complexity of a full pass through $(D
-NWayUnion) is dependent on the distribution of the lengths of ranges
+MultiwayMerge) is dependent on the distribution of the lengths of ranges
 contained within $(D ror). If all ranges have the same length $(D n)
 (worst case scenario), the complexity of a full pass through $(D
-NWayUnion) is $(BIGOH n * ror.length * log(ror.length)), i.e., $(D
+MultiwayMerge) is $(BIGOH n * ror.length * log(ror.length)), i.e., $(D
 log(ror.length)) times worse than just spanning all ranges in
 turn. The output comes sorted (unstably) by $(D less).
+
+For backward compatibility, `multiwayMerge` is available under
+the name `nWayUnion` and `MultiwayMerge` under the name of `NWayUnion` .
+Future code should use `multiwayMerge` and `MultiwayMerge` as `nWayUnion`
+and `NWayUnion` will be deprecated.
 
 Params:
     less = Predicate the given ranges are sorted by.
@@ -766,14 +771,14 @@ Params:
 Returns:
     A range of the union of the ranges in `ror`.
 
-Warning: Because $(D NWayUnion) does not allocate extra memory, it
-will leave $(D ror) modified. Namely, $(D NWayUnion) assumes ownership
+Warning: Because $(D MultiwayMerge) does not allocate extra memory, it
+will leave $(D ror) modified. Namely, $(D MultiwayMerge) assumes ownership
 of $(D ror) and discretionarily swaps and advances elements of it. If
 you want $(D ror) to preserve its contents after the call, you may
-want to pass a duplicate to $(D NWayUnion) (and perhaps cache the
+want to pass a duplicate to $(D MultiwayMerge) (and perhaps cache the
 duplicate in between calls).
  */
-struct NWayUnion(alias less, RangeOfRanges)
+struct MultiwayMerge(alias less, RangeOfRanges)
 {
     import std.container : BinaryHeap;
 
@@ -830,7 +835,7 @@ struct NWayUnion(alias less, RangeOfRanges)
 }
 
 /// Ditto
-NWayUnion!(less, RangeOfRanges) nWayUnion
+MultiwayMerge!(less, RangeOfRanges) multiwayMerge
 (alias less = "a < b", RangeOfRanges)
 (RangeOfRanges ror)
 {
@@ -853,8 +858,11 @@ NWayUnion!(less, RangeOfRanges) nWayUnion
     auto witness = [
         1, 1, 1, 4, 4, 7, 7, 7, 7, 8, 8
     ];
-    assert(equal(nWayUnion(a), witness));
+    assert(equal(multiwayMerge(a), witness));
 }
+
+alias nWayUnion = multiwayMerge;
+alias NWayUnion = MultiwayMerge;
 
 /**
 Lazily computes the difference of $(D r1) and $(D r2). The two ranges
