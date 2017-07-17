@@ -2168,7 +2168,6 @@ struct ProcessPipes
     /// The $(LREF Pid) of the child process.
     @property Pid pid() @safe nothrow
     {
-        assert(_pid !is null);
         return _pid;
     }
 
