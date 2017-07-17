@@ -1933,6 +1933,48 @@ if (isInputRange!(Unqual!R) && !isInfinite!(Unqual!R) && hasSlicing!(Unqual!R) &
 }
 
 /// ditto
+Take!R take(R)(R input, size_t n)
+if (is(R T == Take!T))
+{
+    import std.algorithm.comparison : min;
+    return R(input.source, min(n, input._maxAvailable));
+}
+
+/// ditto
+Take!(R) take(R)(R input, size_t n)
+if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) && !is(R T == Take!T)))
+{
+    return Take!R(input, n);
+}
+
+///
+pure @safe nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    int[] arr1 = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
+    auto s = take(arr1, 5);
+    assert(s.length == 5);
+    assert(s[4] == 5);
+    assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
+}
+
+/**
+ * If the range runs out before `n` elements, `take` simply returns the entire
+ * range (unlike $(LREF takeExactly), which will cause an assertion failure if
+ * the range ends prematurely):
+ */
+pure @safe nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    int[] arr2 = [ 1, 2, 3 ];
+    auto t = take(arr2, 5);
+    assert(t.length == 3);
+    assert(equal(t, [ 1, 2, 3 ]));
+}
+
+// Explicitly undocumented
 struct Take(Range)
 if (isInputRange!(Unqual!Range) &&
     //take _cannot_ test hasSlicing on infinite ranges, because hasSlicing uses
@@ -2122,7 +2164,7 @@ if (isInputRange!(Unqual!Range) &&
     }
 }
 
-/**
+/* Explicitly undocumented
 This template simply aliases itself to R and is useful for consistency in
 generic code.
 */
@@ -2131,48 +2173,6 @@ if (isInputRange!(Unqual!R) &&
     ((!isInfinite!(Unqual!R) && hasSlicing!(Unqual!R)) || is(R T == Take!T)))
 {
     alias Take = R;
-}
-
-///
-pure @safe nothrow unittest
-{
-    import std.algorithm.comparison : equal;
-
-    int[] arr1 = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
-    auto s = take(arr1, 5);
-    assert(s.length == 5);
-    assert(s[4] == 5);
-    assert(equal(s, [ 1, 2, 3, 4, 5 ][]));
-}
-
-/**
- * If the range runs out before `n` elements, `take` simply returns the entire
- * range (unlike $(LREF takeExactly), which will cause an assertion failure if
- * the range ends prematurely):
- */
-pure @safe nothrow unittest
-{
-    import std.algorithm.comparison : equal;
-
-    int[] arr2 = [ 1, 2, 3 ];
-    auto t = take(arr2, 5);
-    assert(t.length == 3);
-    assert(equal(t, [ 1, 2, 3 ]));
-}
-
-/// ditto
-Take!R take(R)(R input, size_t n)
-if (is(R T == Take!T))
-{
-    import std.algorithm.comparison : min;
-    return R(input.source, min(n, input._maxAvailable));
-}
-
-/// ditto
-Take!(R) take(R)(R input, size_t n)
-if (isInputRange!(Unqual!R) && (isInfinite!(Unqual!R) || !hasSlicing!(Unqual!R) && !is(R T == Take!T)))
-{
-    return Take!R(input, n);
 }
 
 pure @safe nothrow unittest
@@ -3125,6 +3125,17 @@ Params:
 Returns:
     An infinite random access range with slicing.
 */
+Repeat!T repeat(T)(T value) { return Repeat!T(value); }
+
+///
+pure @safe nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+
+    assert(equal(5.repeat().take(4), [ 5, 5, 5, 5 ]));
+}
+
+// Explicitly undocumented
 struct Repeat(T)
 {
 private:
@@ -3182,17 +3193,6 @@ public:
 
     /// ditto
     auto opSlice(size_t, DollarToken) inout { return this; }
-}
-
-/// Ditto
-Repeat!T repeat(T)(T value) { return Repeat!T(value); }
-
-///
-pure @safe nothrow unittest
-{
-    import std.algorithm.comparison : equal;
-
-    assert(equal(5.repeat().take(4), [ 5, 5, 5, 5 ]));
 }
 
 pure @safe nothrow unittest
@@ -3419,20 +3419,7 @@ public:
     assert(g.front == f + 5);
 }
 
-/**
-Repeats the given forward range ad infinitum. If the original range is
-infinite (fact that would make $(D Cycle) the identity application),
-$(D Cycle) detects that and aliases itself to the range type
-itself. That works for non-forward ranges too.
-If the original range has random access, $(D Cycle) offers
-random access and also offers a constructor taking an initial position
-$(D index). $(D Cycle) works with static arrays in addition to ranges,
-mostly for performance reasons.
-
-Note: The input range must not be empty.
-
-Tip: This is a great way to implement simple circular buffers.
-*/
+// Explicitly undocumented
 struct Cycle(R)
 if (isForwardRange!R && !isInfinite!R)
 {
@@ -3599,14 +3586,14 @@ if (isForwardRange!R && !isInfinite!R)
     }
 }
 
-/// ditto
+// Explicitly undocumented
 template Cycle(R)
 if (isInfinite!R)
 {
     alias Cycle = R;
 }
 
-///
+// Explicitly undocumented
 struct Cycle(R)
 if (isStaticArray!R)
 {
@@ -3689,7 +3676,20 @@ nothrow:
     }
 }
 
-/// Ditto
+/**
+Repeats the given forward range ad infinitum. If the original range is
+infinite (fact that would make $(D Cycle) the identity application),
+$(D Cycle) detects that and aliases itself to the range type
+itself. That works for non-forward ranges too.
+If the original range has random access, $(D Cycle) offers
+random access and also offers a constructor taking an initial position
+$(D index). $(D Cycle) works with static arrays in addition to ranges,
+mostly for performance reasons.
+
+Note: The input range must not be empty.
+
+Tip: This is a great way to implement simple circular buffers.
+*/
 auto cycle(R)(R input)
 if (isInputRange!R)
 {
@@ -3909,29 +3909,7 @@ if (isStaticArray!R)
 
 private alias lengthType(R) = typeof(R.init.length.init);
 
-/**
-   Iterate several ranges in lockstep. The element type is a proxy tuple
-   that allows accessing the current element in the $(D n)th range by
-   using $(D e[n]).
-
-   `zip` is similar to $(LREF lockstep), but `lockstep` doesn't
-   bundle its elements and uses the `opApply` protocol.
-   `lockstep` allows reference access to the elements in
-   `foreach` iterations.
-
-    Params:
-        sp = controls what `zip` will do if the _ranges are different lengths
-        ranges = the ranges to zip together
-    Returns:
-        At minimum, an input range. `Zip` offers the lowest range facilities
-        of all components, e.g. it offers random access iff all ranges offer
-        random access, and also offers mutation and swapping if all ranges offer
-        it. Due to this, `Zip` is extremely powerful because it allows manipulating
-        several ranges in lockstep.
-    Throws:
-        An `Exception` if all of the _ranges are not the same length and
-        `sp` is set to `StoppingPolicy.requireSameLength`.
-*/
+// Explicitly undocumented
 struct Zip(Ranges...)
 if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
@@ -4276,7 +4254,29 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
     }
 }
 
-/// Ditto
+/**
+   Iterate several ranges in lockstep. The element type is a proxy tuple
+   that allows accessing the current element in the $(D n)th range by
+   using $(D e[n]).
+
+   `zip` is similar to $(LREF lockstep), but `lockstep` doesn't
+   bundle its elements and uses the `opApply` protocol.
+   `lockstep` allows reference access to the elements in
+   `foreach` iterations.
+
+    Params:
+        sp = controls what `zip` will do if the _ranges are different lengths
+        ranges = the ranges to zip together
+    Returns:
+        At minimum, an input range. `Zip` offers the lowest range facilities
+        of all components, e.g. it offers random access iff all ranges offer
+        random access, and also offers mutation and swapping if all ranges offer
+        it. Due to this, `Zip` is extremely powerful because it allows manipulating
+        several ranges in lockstep.
+    Throws:
+        An `Exception` if all of the _ranges are not the same length and
+        `sp` is set to `StoppingPolicy.requireSameLength`.
+*/
 auto zip(Ranges...)(Ranges ranges)
 if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 {
@@ -4631,30 +4631,7 @@ private string lockstepMixin(Ranges...)(bool withIndex, bool reverse)
        indexInc);
 }
 
-/**
-   Iterate multiple ranges in lockstep using a $(D foreach) loop. In contrast to
-   $(LREF zip) it allows reference access to its elements. If only a single
-   range is passed in, the $(D Lockstep) aliases itself away.  If the
-   ranges are of different lengths and $(D s) == $(D StoppingPolicy.shortest)
-   stop after the shortest range is empty.  If the ranges are of different
-   lengths and $(D s) == $(D StoppingPolicy.requireSameLength), throw an
-   exception.  $(D s) may not be $(D StoppingPolicy.longest), and passing this
-   will throw an exception.
-
-   Iterating over $(D Lockstep) in reverse and with an index is only possible
-   when $(D s) == $(D StoppingPolicy.requireSameLength), in order to preserve
-   indexes. If an attempt is made at iterating in reverse when $(D s) ==
-   $(D StoppingPolicy.shortest), an exception will be thrown.
-
-   By default $(D StoppingPolicy) is set to $(D StoppingPolicy.shortest).
-
-   See_Also: $(LREF zip)
-
-       `lockstep` is similar to $(LREF zip), but `zip` bundles its
-       elements and returns a range.
-       `lockstep` also supports reference access.
-       Use `zip` if you want to pass the result to a range function.
-*/
+// Explicitly undocumented
 struct Lockstep(Ranges...)
 if (Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
 {
@@ -4737,7 +4714,30 @@ template Lockstep(Range)
     alias Lockstep = Range;
 }
 
-/// Ditto
+/**
+   Iterate multiple ranges in lockstep using a $(D foreach) loop. In contrast to
+   $(LREF zip) it allows reference access to its elements. If only a single
+   range is passed in, the $(D Lockstep) aliases itself away.  If the
+   ranges are of different lengths and $(D s) == $(D StoppingPolicy.shortest)
+   stop after the shortest range is empty.  If the ranges are of different
+   lengths and $(D s) == $(D StoppingPolicy.requireSameLength), throw an
+   exception.  $(D s) may not be $(D StoppingPolicy.longest), and passing this
+   will throw an exception.
+
+   Iterating over $(D Lockstep) in reverse and with an index is only possible
+   when $(D s) == $(D StoppingPolicy.requireSameLength), in order to preserve
+   indexes. If an attempt is made at iterating in reverse when $(D s) ==
+   $(D StoppingPolicy.shortest), an exception will be thrown.
+
+   By default $(D StoppingPolicy) is set to $(D StoppingPolicy.shortest).
+
+   See_Also: $(LREF zip)
+
+       `lockstep` is similar to $(LREF zip), but `zip` bundles its
+       elements and returns a range.
+       `lockstep` also supports reference access.
+       Use `zip` if you want to pass the result to a range function.
+*/
 Lockstep!(Ranges) lockstep(Ranges...)(Ranges ranges)
 if (allSatisfy!(isInputRange, Ranges))
 {
@@ -4913,38 +4913,7 @@ if (allSatisfy!(isInputRange, Ranges))
     }));
 }
 
-/**
-Creates a mathematical sequence given the initial values and a
-recurrence function that computes the next value from the existing
-values. The sequence comes in the form of an infinite forward
-range. The type $(D Recurrence) itself is seldom used directly; most
-often, recurrences are obtained by calling the function $(D
-recurrence).
-
-When calling $(D recurrence), the function that computes the next
-value is specified as a template argument, and the initial values in
-the recurrence are passed as regular arguments. For example, in a
-Fibonacci sequence, there are two initial values (and therefore a
-state size of 2) because computing the next Fibonacci value needs the
-past two values.
-
-The signature of this function should be:
-----
-auto fun(R)(R state, size_t n)
-----
-where $(D n) will be the index of the current value, and $(D state) will be an
-opaque state vector that can be indexed with array-indexing notation
-$(D state[i]), where valid values of $(D i) range from $(D (n - 1)) to
-$(D (n - State.length)).
-
-If the function is passed in string form, the state has name $(D "a")
-and the zero-based index in the recurrence has name $(D "n"). The
-given string must return the desired value for $(D a[n]) given $(D a[n
-- 1]), $(D a[n - 2]), $(D a[n - 3]),..., $(D a[n - stateSize]). The
-state size is dictated by the number of arguments passed to the call
-to $(D recurrence). The $(D Recurrence) struct itself takes care of
-managing the recurrence's state and shifting it appropriately.
- */
+// Explicitly undocumented
 struct Recurrence(alias fun, StateType, size_t stateSize)
 {
     import std.functional : binaryFun;
@@ -4981,6 +4950,49 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
     enum bool empty = false;
 }
 
+/**
+Creates a mathematical sequence given the initial values and a
+recurrence function that computes the next value from the existing
+values. The sequence comes in the form of an infinite forward
+range. The type $(D Recurrence) itself is seldom used directly; most
+often, recurrences are obtained by calling the function $(D
+recurrence).
+
+When calling $(D recurrence), the function that computes the next
+value is specified as a template argument, and the initial values in
+the recurrence are passed as regular arguments. For example, in a
+Fibonacci sequence, there are two initial values (and therefore a
+state size of 2) because computing the next Fibonacci value needs the
+past two values.
+
+The signature of this function should be:
+----
+auto fun(R)(R state, size_t n)
+----
+where $(D n) will be the index of the current value, and $(D state) will be an
+opaque state vector that can be indexed with array-indexing notation
+$(D state[i]), where valid values of $(D i) range from $(D (n - 1)) to
+$(D (n - State.length)).
+
+If the function is passed in string form, the state has name $(D "a")
+and the zero-based index in the recurrence has name $(D "n"). The
+given string must return the desired value for $(D a[n]) given $(D a[n
+- 1]), $(D a[n - 2]), $(D a[n - 3]),..., $(D a[n - stateSize]). The
+state size is dictated by the number of arguments passed to the call
+to $(D recurrence). The $(D Recurrence) struct itself takes care of
+managing the recurrence's state and shifting it appropriately.
+ */
+Recurrence!(fun, CommonType!(State), State.length)
+recurrence(alias fun, State...)(State initial)
+{
+    CommonType!(State)[State.length] state;
+    foreach (i, Unused; State)
+    {
+        state[i] = initial[i];
+    }
+    return typeof(return)(state);
+}
+
 ///
 @safe unittest
 {
@@ -5006,18 +5018,6 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
     assert(take(tri, 10).equal([0, 1, 3, 6, 10, 15, 21, 28, 36, 45]));
 }
 
-/// Ditto
-Recurrence!(fun, CommonType!(State), State.length)
-recurrence(alias fun, State...)(State initial)
-{
-    CommonType!(State)[State.length] state;
-    foreach (i, Unused; State)
-    {
-        state[i] = initial[i];
-    }
-    return typeof(return)(state);
-}
-
 @safe unittest
 {
     import std.algorithm.comparison : equal;
@@ -5039,18 +5039,7 @@ recurrence(alias fun, State...)(State initial)
     assert(equal(take(r, 5), witness));
 }
 
-/**
-   $(D Sequence) is similar to $(D Recurrence) except that iteration is
-   presented in the so-called $(HTTP en.wikipedia.org/wiki/Closed_form,
-   closed form). This means that the $(D n)th element in the series is
-   computable directly from the initial values and $(D n) itself. This
-   implies that the interface offered by $(D Sequence) is a random-access
-   range, as opposed to the regular $(D Recurrence), which only offers
-   forward iteration.
-
-   The state of the sequence is stored as a $(D Tuple) so it can be
-   heterogeneous.
-*/
+// Explicitly undocumented
 struct Sequence(alias fun, State)
 {
 private:
@@ -5110,7 +5099,18 @@ public:
     @property Sequence save() { return this; }
 }
 
-/// Ditto
+/**
+   $(D Sequence) is similar to $(D Recurrence) except that iteration is
+   presented in the so-called $(HTTP en.wikipedia.org/wiki/Closed_form,
+   closed form). This means that the $(D n)th element in the series is
+   computable directly from the initial values and $(D n) itself. This
+   implies that the interface offered by $(D Sequence) is a random-access
+   range, as opposed to the regular $(D Recurrence), which only offers
+   forward iteration.
+
+   The state of the sequence is stored as a $(D Tuple) so it can be
+   heterogeneous.
+*/
 auto sequence(alias fun, State...)(State args)
 {
     import std.typecons : Tuple, tuple;
@@ -5884,10 +5884,7 @@ enum TransverseOptions
         assumeNotJagged,
         }
 
-/**
-   Given a range of ranges, iterate transversally through the first
-   elements of each of the enclosed ranges.
-*/
+// Explicitly undocumented
 struct FrontTransversal(Ror,
         TransverseOptions opt = TransverseOptions.assumeJagged)
 {
@@ -6099,7 +6096,10 @@ private:
     RangeOfRanges _input;
 }
 
-/// Ditto
+/**
+   Given a range of ranges, iterate transversally through the first
+   elements of each of the enclosed ranges.
+*/
 FrontTransversal!(RangeOfRanges, opt) frontTransversal(
     TransverseOptions opt = TransverseOptions.assumeJagged,
     RangeOfRanges)
@@ -6210,18 +6210,7 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
     assert(ft2.empty);
 }
 
-/**
-    Given a range of ranges, iterate transversally through the
-    `n`th element of each of the enclosed ranges.
-
-    Params:
-        opt = Controls the assumptions the function makes about the lengths
-        of the ranges
-        rr = An input range of random access ranges
-    Returns:
-        At minimum, an input range. Range primitives such as bidirectionality
-        and random access are given if the element type of `rr` provides them.
-*/
+// Explicitly undocumented
 struct Transversal(Ror,
         TransverseOptions opt = TransverseOptions.assumeJagged)
 {
@@ -6432,7 +6421,18 @@ private:
     size_t _n;
 }
 
-/// Ditto
+/**
+    Given a range of ranges, iterate transversally through the
+    `n`th element of each of the enclosed ranges.
+
+    Params:
+        opt = Controls the assumptions the function makes about the lengths
+        of the ranges
+        rr = An input range of random access ranges
+    Returns:
+        At minimum, an input range. Range primitives such as bidirectionality
+        and random access are given if the element type of `rr` provides them.
+*/
 Transversal!(RangeOfRanges, opt) transversal
 (TransverseOptions opt = TransverseOptions.assumeJagged, RangeOfRanges)
 (RangeOfRanges rr, size_t n)
@@ -6651,16 +6651,7 @@ if (isForwardRange!RangeOfRanges &&
     assert(equal!"a.equal(b)"(t1, [[123]]));
 }
 
-/**
-This struct takes two ranges, $(D source) and $(D indices), and creates a view
-of $(D source) as if its elements were reordered according to $(D indices).
-$(D indices) may include only a subset of the elements of $(D source) and
-may also repeat elements.
-
-$(D Source) must be a random access range.  The returned range will be
-bidirectional or random-access if $(D Indices) is bidirectional or
-random-access, respectively.
-*/
+// Explicitly undocumented
 struct Indexed(Source, Indices)
 if (isRandomAccessRange!Source && isInputRange!Indices &&
     is(typeof(Source.init[ElementType!(Indices).init])))
@@ -6861,7 +6852,16 @@ private:
 
 }
 
-/// Ditto
+/**
+This struct takes two ranges, $(D source) and $(D indices), and creates a view
+of $(D source) as if its elements were reordered according to $(D indices).
+$(D indices) may include only a subset of the elements of $(D source) and
+may also repeat elements.
+
+$(D Source) must be a random access range.  The returned range will be
+bidirectional or random-access if $(D Indices) is bidirectional or
+random-access, respectively.
+*/
 Indexed!(Source, Indices) indexed(Source, Indices)(Source source, Indices indices)
 {
     return typeof(return)(source, indices);
@@ -6910,24 +6910,7 @@ Indexed!(Source, Indices) indexed(Source, Indices)(Source source, Indices indice
     }
 }
 
-/**
-This range iterates over fixed-sized chunks of size $(D chunkSize) of a
-$(D source) range. $(D Source) must be a forward range. $(D chunkSize) must be
-greater than zero.
-
-If $(D !isInfinite!Source) and $(D source.walkLength) is not evenly
-divisible by $(D chunkSize), the back element of this range will contain
-fewer than $(D chunkSize) elements.
-
-Params:
-    source = Range from which the chunks will be selected
-    chunkSize = Chunk size
-
-See_Also: $(LREF slide)
-
-Returns: Forward range of all chunks with propagated bidirectionality,
-         conditional random access and slicing.
-*/
+// Explicitly undocumented
 struct Chunks(Source)
 if (isForwardRange!Source)
 {
@@ -7126,7 +7109,24 @@ private:
     size_t _chunkSize;
 }
 
-/// Ditto
+/**
+This range iterates over fixed-sized chunks of size $(D chunkSize) of a
+$(D source) range. $(D Source) must be a forward range. $(D chunkSize) must be
+greater than zero.
+
+If $(D !isInfinite!Source) and $(D source.walkLength) is not evenly
+divisible by $(D chunkSize), the back element of this range will contain
+fewer than $(D chunkSize) elements.
+
+Params:
+    source = Range from which the chunks will be selected
+    chunkSize = Chunk size
+
+See_Also: $(LREF slide)
+
+Returns: Forward range of all chunks with propagated bidirectionality,
+         conditional random access and slicing.
+*/
 Chunks!Source chunks(Source)(Source source, size_t chunkSize)
 if (isForwardRange!Source)
 {
@@ -7222,20 +7222,7 @@ if (isForwardRange!Source)
     assert(equal!`equal(a, b)`(oddsByPairs[3 .. $].take(2), [[13, 15], [17, 19]]));
 }
 
-
-
-/**
-This range splits a $(D source) range into $(D chunkCount) chunks of
-approximately equal length. $(D Source) must be a forward range with
-known length.
-
-Unlike $(LREF chunks), $(D evenChunks) takes a chunk count (not size).
-The returned range will contain zero or more $(D source.length /
-chunkCount + 1) elements followed by $(D source.length / chunkCount)
-elements. If $(D source.length < chunkCount), some chunks will be empty.
-
-$(D chunkCount) must not be zero, unless $(D source) is also empty.
-*/
+// Explicitly undocumented
 struct EvenChunks(Source)
 if (isForwardRange!Source && hasLength!Source)
 {
@@ -7363,7 +7350,18 @@ private:
     }
 }
 
-/// Ditto
+/**
+This range splits a $(D source) range into $(D chunkCount) chunks of
+approximately equal length. $(D Source) must be a forward range with
+known length.
+
+Unlike $(LREF chunks), $(D evenChunks) takes a chunk count (not size).
+The returned range will contain zero or more $(D source.length /
+chunkCount + 1) elements followed by $(D source.length / chunkCount)
+elements. If $(D source.length < chunkCount), some chunks will be empty.
+
+$(D chunkCount) must not be zero, unless $(D source) is also empty.
+*/
 EvenChunks!Source evenChunks(Source)(Source source, size_t chunkCount)
 if (isForwardRange!Source && hasLength!Source)
 {
@@ -9966,27 +9964,7 @@ if (isInputRange!(Unqual!R))
     auto r = a.assumeSorted;
 }
 
-/++
-    Wrapper which effectively makes it possible to pass a range by reference.
-    Both the original range and the RefRange will always have the exact same
-    elements. Any operation done on one will affect the other. So, for instance,
-    if it's passed to a function which would implicitly copy the original range
-    if it were passed to it, the original range is $(I not) copied but is
-    consumed as if it were a reference type.
-
-    Note:
-        `save` works as normal and operates on a new _range, so if
-        `save` is ever called on the `RefRange`, then no operations on the
-        saved _range will affect the original.
-
-    Params:
-        range = the range to construct the `RefRange` from
-
-    Returns:
-        A `RefRange`. If the given _range is a class type
-        (and thus is already a reference type), then the original
-        range is returned rather than a `RefRange`.
-  +/
+// Explicitly undocumented
 struct RefRange(R)
 if (isInputRange!R)
 {
@@ -10331,6 +10309,41 @@ public:
 private:
 
     R* _range;
+}
+
+/++
+    Wrapper which effectively makes it possible to pass a range by reference.
+    Both the original range and the RefRange will always have the exact same
+    elements. Any operation done on one will affect the other. So, for instance,
+    if it's passed to a function which would implicitly copy the original range
+    if it were passed to it, the original range is $(I not) copied but is
+    consumed as if it were a reference type.
+
+    Note:
+        `save` works as normal and operates on a new _range, so if
+        `save` is ever called on the `RefRange`, then no operations on the
+        saved _range will affect the original.
+
+    Params:
+        range = the range to construct the `RefRange` from
+
+    Returns:
+        A `RefRange`. If the given _range is a class type
+        (and thus is already a reference type), then the original
+        range is returned rather than a `RefRange`.
+  +/
+
+auto refRange(R)(R* range)
+if (isInputRange!R && !is(R == class))
+{
+    return RefRange!R(range);
+}
+
+/// ditto
+auto refRange(R)(R* range)
+if (isInputRange!R && is(R == class))
+{
+    return *range;
 }
 
 /// Basic Example
@@ -10713,20 +10726,6 @@ private:
     static assert(isBidirectionalRange!R2);
     R2 r2;
     auto rr2 = refRange(&r2);
-}
-
-/// ditto
-auto refRange(R)(R* range)
-if (isInputRange!R && !is(R == class))
-{
-    return RefRange!R(range);
-}
-
-/// ditto
-auto refRange(R)(R* range)
-if (isInputRange!R && is(R == class))
-{
-    return *range;
 }
 
 /*****************************************************************************/
