@@ -6056,6 +6056,10 @@ enum bool isStaticArray(T) = __traits(isStaticArray, T);
 ///
 @safe unittest
 {
+    static assert( isStaticArray!(int[3]));
+    static assert( isStaticArray!(const(int)[5]));
+    static assert( isStaticArray!(const(int)[][5]));
+
     static assert(!isStaticArray!(const(int)[]));
     static assert(!isStaticArray!(immutable(int)[]));
     static assert(!isStaticArray!(const(int)[4][]));
