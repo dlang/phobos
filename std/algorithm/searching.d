@@ -778,8 +778,7 @@ if (isForwardRange!R
 {
     static if (needles.length == 1)
     {
-        alias T = ptrdiff_t;
-        T result;
+        ptrdiff_t result;
 
         static if (hasLength!R) //Note: Narrow strings don't have length.
         {
@@ -788,14 +787,14 @@ if (isForwardRange!R
             auto len = haystack.length;
             auto r2 = find!pred(haystack, needles[0]);
             if (!r2.empty)
-              return cast(T) (len - r2.length);
+              return ptrdiff_t(len - r2.length);
         }
         else
         {
             import std.range : dropOne;
 
             if (needles[0].empty)
-              return 0;
+              return ptrdiff_t(0);
 
             //Default case, slower route doing startsWith iteration
             for ( ; !haystack.empty ; ++result )
