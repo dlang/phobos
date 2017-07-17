@@ -815,9 +815,7 @@ if (isForwardRange!R
                   haystack.popFront();
             }
         }
-        //Because of @@@8804@@@: Avoids both "unreachable code" or "no return statement"
-        static if (isInfinite!R) assert(0);
-        else return -1;
+        return ptrdiff_t(-1);
     }
     else
     {
@@ -967,6 +965,17 @@ if (isInputRange!R &&
     // test tuple emulation
     assert(noMatch[0] == -1);
     assert(noMatch[1] == -1);
+}
+
+// test infinite ranges
+@safe unittest
+{
+    import std.algorithm.iteration : joiner;
+    import std.range : iota, repeat;
+    import std.stdio;
+    assert(10.iota.repeat.joiner.countUntil(9) == 9);
+    assert(10.iota.repeat.joiner.countUntil(1, 2) == 1);
+    assert(10.iota.repeat.joiner.countUntil!(a => a >= 9) == 9);
 }
 
 /// ditto
