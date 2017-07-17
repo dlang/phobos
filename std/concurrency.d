@@ -2235,7 +2235,7 @@ private
             if (m_last is m_first)
                 m_last = null;
             else if (m_last is n.next)
-                m_last = n;
+                m_last = n; // nocoverage
             Node* to_free = n.next;
             n.next = n.next.next;
             freeNode(to_free);
