@@ -1020,7 +1020,7 @@ Get tuple, one per function parameter, of the storage classes of the parameters.
 Params:
     func = function symbol or type of function, delegate, or pointer to function
 Returns:
-    a tuple of ParameterStorageClass bits
+    A tuple of ParameterStorageClass bits
  */
 enum ParameterStorageClass : uint
 {
