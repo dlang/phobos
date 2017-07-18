@@ -5367,6 +5367,14 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
             // consistent with calling popFront() n times.
             return cast(inout Value) (current + step * n);
         }
+        auto opBinaryRight(string op)(Value val) const
+        if (op == "in")
+        {
+            if (empty) return false;
+            //cast to avoid becoming unsigned
+            auto supposedIndex = cast(StepType)(val - current) / step;
+            return supposedIndex < length && supposedIndex * step + current == val;
+        }
         inout(Result) opSlice() inout { return this; }
         inout(Result) opSlice(ulong lower, ulong upper) inout
         {
@@ -5443,6 +5451,11 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
             // Just cast to Value here because doing so gives overflow behavior
             // consistent with calling popFront() n times.
             return cast(inout Value) (current + n);
+        }
+        auto opBinaryRight(string op)(Value val) const
+        if (op == "in")
+        {
+            return current <= val && val < pastLast;
         }
         inout(Result) opSlice() inout { return this; }
         inout(Result) opSlice(ulong lower, ulong upper) inout
@@ -5566,9 +5579,14 @@ body
 
     auto r = iota(0, 10, 1);
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
+    assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
+    assert(3 in r);
+    assert(!(10 in r));
+    assert(!(-8 in r));
     r = iota(0, 11, 3);
     assert(equal(r, [0, 3, 6, 9]));
     assert(r[2] == 6);
+    assert(!(2 in r));
     auto rf = iota(0.0, 0.5, 0.1);
     assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
 }
@@ -5600,6 +5618,7 @@ debug @system unittest
     auto r1 = iota(a.ptr, a.ptr + a.length, 1);
     assert(r1.front == a.ptr);
     assert(r1.back == a.ptr + a.length - 1);
+    assert(&a[4] in r1);
 }
 
 @safe unittest
@@ -5639,6 +5658,8 @@ debug @system unittest
 
     rSlice = r[0 .. 4];
     assert(equal(rSlice, [0, 1, 2, 3]));
+    assert(3 in rSlice);
+    assert(!(4 in rSlice));
 
     auto rr = iota(10);
     assert(equal(rr, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][]));
@@ -5655,8 +5676,15 @@ debug @system unittest
 
     r = iota(0, -7, -3);
     assert(equal(r, [0, -3, -6][]));
+    assert(0 in r);
+    assert(-6 in r);
     rSlice = r[1 .. 3];
     assert(equal(rSlice, [-3, -6]));
+    assert(!(0 in rSlice));
+    assert(!(-2 in rSlice));
+    assert(!(-5 in rSlice));
+    assert(!(3 in rSlice));
+    assert(!(-9 in rSlice));
 
     r = iota(0, 11, 3);
     assert(equal(r, [0, 3, 6, 9][]));
@@ -5706,6 +5734,10 @@ debug @system unittest
     // iota of longs
     auto rl = iota(5_000_000L);
     assert(rl.length == 5_000_000L);
+    assert(0 in rl);
+    assert(4_000_000L in rl);
+    assert(!(-4_000_000L in rl));
+    assert(!(5_000_000L in rl));
 
     // iota of longs with steps
     auto iota_of_longs_with_steps = iota(50L, 101L, 10);
@@ -5725,6 +5757,15 @@ debug @system unittest
     assert(iota(uint.max, uint.max-10, -1).length == 10);
     assert(iota(uint.max, uint.max-10, -2).length == 5);
     assert(iota(uint.max, 0u, -1).length == uint.max);
+
+    assert(20 in iota(20u, 10u, -2));
+    assert(16 in iota(20u, 10u, -2));
+    assert(!(15 in iota(20u, 10u, -2)));
+    assert(!(10 in iota(20u, 10u, -2)));
+    assert(!(uint.max in iota(20u, 10u, -1)));
+    assert(!(int.min in iota(20u, 10u, -1)));
+    assert(!(int.max in iota(20u, 10u, -1)));
+
 
     // Issue 8920
     foreach (Type; AliasSeq!(byte, ubyte, short, ushort,
