@@ -1086,29 +1086,32 @@ template ParameterStorageClassTuple(func...)
  * Returns:
  *      ParameterStorageClass bits
  */
-ParameterStorageClass extractParameterStorageClassFlags(Attribs...)()
+template extractParameterStorageClassFlags(Attribs...)
 {
-    auto result = ParameterStorageClass.none;
-    static if (Attribs.length > 0)
+    enum ParameterStorageClass extractParameterStorageClassFlags = ()
     {
-        foreach (attrib; [Attribs])
+        auto result = ParameterStorageClass.none;
+        static if (Attribs.length > 0)
         {
-            final switch (attrib) with (ParameterStorageClass)
+            foreach (attrib; [Attribs])
             {
-                case "scope":  result |= scope_;  break;
-                case "out":    result |= out_;    break;
-                case "ref":    result |= ref_;    break;
-                case "lazy":   result |= lazy_;   break;
-                case "return": result |= return_; break;
+                final switch (attrib) with (ParameterStorageClass)
+                {
+                    case "scope":  result |= scope_;  break;
+                    case "out":    result |= out_;    break;
+                    case "ref":    result |= ref_;    break;
+                    case "lazy":   result |= lazy_;   break;
+                    case "return": result |= return_; break;
+                }
             }
+            /* Mimic behavor of original version of ParameterStorageClassTuple()
+             * to avoid breaking existing code.
+             */
+            if (result == (ParameterStorageClass.ref_ | ParameterStorageClass.return_))
+                result = ParameterStorageClass.return_;
         }
-        /* Mimic behavor of original version of ParameterStorageClassTuple()
-         * to avoid breaking existing code.
-         */
-        if (result == (ParameterStorageClass.ref_ | ParameterStorageClass.return_))
-            result = ParameterStorageClass.return_;
-    }
-    return result;
+        return result;
+    }();
 }
 
 @safe unittest
