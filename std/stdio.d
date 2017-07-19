@@ -294,7 +294,7 @@ public:
         else
         {
             line = chomp(line);
-            formattedRead(line, format, &current);
+            formattedRead(line, format, current);
             enforce(line.empty, text("Leftover characters in record: `",
                             line, "'"));
         }
@@ -1828,10 +1828,11 @@ $(CONSOLE
     uint readf(Data...)(in char[] format, auto ref Data data)
     {
         import std.format : formattedRead;
+        import std.functional : forward;
 
         assert(isOpen);
         auto input = LockingTextReader(this);
-        return formattedRead(input, format, data);
+        return formattedRead(input, format, forward!data);
     }
 
     ///
@@ -3854,7 +3855,8 @@ if (isSomeString!(typeof(format)))
 /// ditto
 uint readf(A...)(in char[] format, auto ref A args)
 {
-    return stdin.readf(format, args);
+    import std.functional : forward;
+    return stdin.readf(format, forward!args);
 }
 
 @system unittest
