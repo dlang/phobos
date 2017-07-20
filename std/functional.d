@@ -23,7 +23,7 @@ $(TR $(TH Function Name) $(TH Description)
     $(TR $(TD $(LREF forward))
         $(TD Forwards function arguments while saving ref-ness.
     ))
-    $(TR $(TD $(LREF lessThan)), $(LREF greaterThan)), $(D $(LREF equalTo)
+    $(TR $(TD $(LREF lessThan), $(LREF greaterThan), $(LREF equalTo))
         $(TD Ready-made predicate functions to compare two values.
     ))
     $(TR $(TD $(LREF memoize))
