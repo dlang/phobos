@@ -397,8 +397,9 @@ pure @safe nothrow unittest
     test([ 1, 2, 3, 4, 5 ], [ 5, 4, 3, 2, 1 ]);
     test([ 1, 2, 3, 4, 5, 6 ], [ 6, 5, 4, 3, 2, 1 ]);
 
-   immutable foo = [1,2,3].idup;
-   auto r = retro(foo);
+    immutable foo = [1,2,3].idup;
+    auto r = retro(foo);
+    assert(equal(r, [3, 2, 1]));
 }
 
 pure @safe nothrow unittest
@@ -698,9 +699,11 @@ pure @safe nothrow unittest
 
 pure @safe nothrow @nogc unittest
 {
+    import std.algorithm.comparison : equal;
+
     int[4] testArr = [1,2,3,4];
-    //just checking it compiles
-    auto s = testArr[].stride(2);
+    static immutable result = [1, 3];
+    assert(equal(testArr[].stride(2), result));
 }
 
 debug pure nothrow @system unittest
@@ -1280,7 +1283,7 @@ pure @safe nothrow unittest
 
     // Make sure bug 3311 is fixed.  ChainImpl should compile even if not all
     // elements are mutable.
-    auto c = chain( iota(0, 10), iota(0, 10) );
+    assert(equal(chain(iota(0, 3), iota(0, 3)), [0, 1, 2, 0, 1, 2]));
 
     // Test the case where infinite ranges are present.
     auto inf = chain([0,1,2][], cycle([4,5,6][]), [7,8,9][]); // infinite range
@@ -1343,7 +1346,7 @@ pure @safe nothrow @nogc unittest
     class Foo{}
     immutable(Foo)[] a;
     immutable(Foo)[] b;
-    auto c = chain(a, b);
+    assert(chain(a, b).empty);
 }
 
 /**
@@ -2252,13 +2255,16 @@ pure @safe nothrow @nogc unittest
     int[] r1;
     Take!(int[]) t1;
     t1 = take(r1, 1);
+    assert(t1.empty);
 
     string r2;
     Take!string t2;
     t2 = take(r2, 1);
+    assert(t2.empty);
 
     Take!(Take!string) t3;
     t3 = take(t2, 1);
+    assert(t3.empty);
 }
 
 pure @safe nothrow @nogc unittest
@@ -2276,6 +2282,9 @@ pure @safe nothrow @nogc unittest //12731
     auto a = repeat(1);
     auto s = a[1 .. 5];
     s = s[1 .. 3];
+    assert(s.length == 2);
+    assert(s[0] == 1);
+    assert(s[1] == 1);
 }
 
 pure @safe nothrow @nogc unittest //13151
@@ -2399,16 +2408,20 @@ pure @safe nothrow unittest
 
     auto a = [ 1, 2, 3, 4, 5 ];
     auto b = takeExactly(a, 3);
+    assert(equal(b, [1, 2, 3]));
     auto c = takeExactly(b, 2);
+    assert(equal(c, [1, 2]));
 
-    auto d = filter!"a > 0"(a);
+
+
+    auto d = filter!"a > 2"(a);
     auto e = takeExactly(d, 3);
-    assert(equal(e, [1, 2, 3]));
+    assert(equal(e, [3, 4, 5]));
     static assert(is(typeof(e.length) == size_t));
     assert(e.length == 3);
-    assert(e.front == 1);
+    assert(e.front == 3);
 
-    assert(equal(takeExactly(e, 3), [1, 2, 3]));
+    assert(equal(takeExactly(e, 3), [3, 4, 5]));
 }
 
 pure @safe nothrow unittest
@@ -3205,6 +3218,8 @@ pure @safe nothrow unittest
     assert(r[0 .. 4].equal([ 5, 5, 5, 5 ]));
 
     R r2 = r[5 .. $];
+    assert(r2.back == 5);
+    assert(r2.front == 5);
 }
 
 /**
@@ -3233,10 +3248,17 @@ pure @safe nothrow unittest //12007
     rc = rc.save;
 
     import std.algorithm.setops : cartesianProduct;
+    import std.algorithm.comparison : equal;
+    import std.typecons : tuple;
     immutable int[] A = [1,2,3];
     immutable int[] B = [4,5,6];
 
-    auto AB = cartesianProduct(A,B);
+    assert(equal(cartesianProduct(A,B),
+        [
+            tuple(1, 4), tuple(1, 5), tuple(1, 6),
+            tuple(2, 4), tuple(2, 5), tuple(2, 6),
+            tuple(3, 4), tuple(3, 5), tuple(3, 6),
+        ]));
 }
 
 /**
@@ -3736,7 +3758,6 @@ if (isStaticArray!R)
     assert(nums[0] == 2);
 
     immutable int[] immarr = [1, 2, 3];
-    auto cycleimm = cycle(immarr);
 
     foreach (DummyType; AllDummyRanges)
     {
@@ -3889,7 +3910,7 @@ if (isStaticArray!R)
 
 @safe unittest // 12177
 {
-    auto a = recurrence!q{a[n - 1] ~ a[n - 2]}("1", "0");
+    static assert(__traits(compiles, recurrence!q{a[n - 1] ~ a[n - 2]}("1", "0")));
 }
 
 // Issue 13390
@@ -4522,7 +4543,7 @@ pure @safe unittest
     }
     R r;
     auto z = zip(r, r);
-    auto zz = z.save;
+    assert(z.save == z);
 }
 
 pure @system unittest
@@ -4834,7 +4855,12 @@ if (allSatisfy!(isInputRange, Ranges))
     // Make sure StoppingPolicy.requireSameLength doesn't throw.
     auto ls = lockstep(arr1, arr2, StoppingPolicy.requireSameLength);
 
-    foreach (a, b; ls) {}
+    int k = 1;
+    foreach (a, b; ls)
+    {
+        assert(a - b == k);
+        ++k;
+    }
 
     // Make sure StoppingPolicy.requireSameLength throws.
     arr2.popBack();
@@ -4848,6 +4874,10 @@ if (allSatisfy!(isInputRange, Ranges))
     // Just make sure 1-range case instantiates.  This hangs the compiler
     // when no explicit stopping policy is specified due to Bug 4652.
     auto stuff = lockstep([1,2,3,4,5], StoppingPolicy.shortest);
+    foreach (int i, a; stuff)
+    {
+        assert(stuff[i] == a);
+    }
 
     // Test with indexing.
     uint[] res1;
@@ -5535,9 +5565,9 @@ body
     import std.math : approxEqual;
 
     auto r = iota(0, 10, 1);
-    assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9][]));
+    assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
     r = iota(0, 11, 3);
-    assert(equal(r, [0, 3, 6, 9][]));
+    assert(equal(r, [0, 3, 6, 9]));
     assert(r[2] == 6);
     auto rf = iota(0.0, 0.5, 0.1);
     assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
@@ -5545,10 +5575,7 @@ body
 
 nothrow @nogc @safe unittest
 {
-    auto t0 = iota(0, 10);
-    auto t1 = iota(0, 10, 2);
-    auto t2 = iota(1, 1, 0);
-    //float overloads use std.conv.to so can't be @nogc or nothrow
+   //float overloads use std.conv.to so can't be @nogc or nothrow
     alias ssize_t = Signed!size_t;
     assert(iota(ssize_t.max, 0, -1).length == ssize_t.max);
     assert(iota(ssize_t.max, ssize_t.min, -1).length == size_t.max);
@@ -5834,8 +5861,8 @@ if (!isIntegral!(CommonType!(B, E)) &&
 
         this(int start) { current = start % wrapAround; }
 
-        bool opEquals(Cyclic c) { return current == c.current; }
-        bool opEquals(int i) { return current == i; }
+        bool opEquals(Cyclic c) const { return current == c.current; }
+        bool opEquals(int i) const { return current == i; }
         void opUnary(string op)() if (op == "++")
         {
             current = (current + 1) % wrapAround;
