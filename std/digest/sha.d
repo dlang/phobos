@@ -23,8 +23,8 @@ $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
  * SHA2 comes in several different versions, all supported by this module:
  * SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/224 and SHA-512/256.
  *
- * This module conforms to the APIs defined in $(D std.digest). To understand the
- * differences between the template and the OOP API, see $(D std.digest).
+ * This module conforms to the APIs defined in $(MREF std, digest). To understand the
+ * differences between the template and the OOP API, see $(MREF std, digest).
  *
  * This module publicly imports $(D std.digest) and can be used as a stand-alone
  * module.

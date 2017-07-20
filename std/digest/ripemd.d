@@ -18,8 +18,8 @@ $(TR $(TDNW Helpers) $(TD $(MYREF ripemd160Of))
 )
 )
 
- * This module conforms to the APIs defined in $(D std.digest). To understand the
- * differences between the template and the OOP API, see $(D std.digest).
+ * This module conforms to the APIs defined in $(MREF std, digest). To understand the
+ * differences between the template and the OOP API, see $(MREF std, digest).
  *
  * This module publicly imports $(D std.digest) and can be used as a stand-alone
  * module.
