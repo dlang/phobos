@@ -4,7 +4,58 @@
 This module implements a variety of type constructors, i.e., templates
 that allow construction of new, useful general-purpose types.
 
-Source:    $(PHOBOSSRC std/_typecons.d)
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Tuple) $(TD
+    $(LREF isTuple)
+    $(LREF Tuple)
+    $(LREF tuple)
+    $(LREF reverse)
+))
+$(TR $(TD Flags) $(TD
+    $(LREF BitFlags)
+    $(LREF isBitFlagEnum)
+    $(LREF Flag)
+    $(LREF No)
+    $(LREF Yes)
+))
+$(TR $(TD Memory allocation) $(TD
+    $(LREF RefCounted)
+    $(LREF refCounted)
+    $(LREF RefCountedAutoInitialize)
+    $(LREF scoped)
+    $(LREF Unique)
+))
+$(TR $(TD Code generation) $(TD
+    $(LREF AutoImplement)
+    $(LREF BlackHole)
+    $(LREF generateAssertTrap)
+    $(LREF generateEmptyFunction)
+    $(LREF WhiteHole)
+))
+$(TR $(TD Nullable) $(TD
+    $(LREF Nullable)
+    $(LREF nullable)
+    $(LREF NullableRef)
+    $(LREF nullableRef)
+))
+$(TR $(TD Proxies) $(TD
+    $(LREF Proxy)
+    $(LREF rebindable)
+    $(LREF Rebindable)
+    $(LREF ReplaceType)
+    $(LREF unwrap)
+    $(LREF wrap)
+))
+$(TR $(TD Types) $(TD
+    $(LREF alignForSize)
+    $(LREF Ternary)
+    $(LREF Typedef)
+    $(LREF TypedefType)
+    $(LREF UnqualRef)
+))
+)
 
 Copyright: Copyright the respective authors, 2008-
 License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -52,6 +103,7 @@ import std.traits;
     }
 }
 
+Source:    $(PHOBOSSRC std/_typecons.d)
 debug(Unique) import std.stdio;
 
 /**
