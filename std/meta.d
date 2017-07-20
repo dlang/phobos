@@ -343,7 +343,7 @@ if (args.length >= 1)
 }
 
 /**
- * Returns a typetuple created from TList with the first occurrence,
+ * Returns an `AliasSeq` created from TList with the first occurrence,
  * if any, of T removed.
  */
 template Erase(T, TList...)
@@ -401,7 +401,7 @@ if (args.length >= 1)
 
 
 /**
- * Returns a typetuple created from TList with the all occurrences,
+ * Returns an `AliasSeq` created from TList with the all occurrences,
  * if any, of T removed.
  */
 template EraseAll(T, TList...)
@@ -464,7 +464,7 @@ if (args.length >= 1)
 
 
 /**
- * Returns a typetuple created from TList with the all duplicate
+ * Returns an `AliasSeq` created from TList with the all duplicate
  * types removed.
  */
 template NoDuplicates(TList...)
@@ -523,7 +523,7 @@ template NoDuplicates(TList...)
 
 
 /**
- * Returns a typetuple created from TList with the first occurrence
+ * Returns an `AliasSeq` created from TList with the first occurrence
  * of type T, if found, replaced with type U.
  */
 template Replace(T, U, TList...)
@@ -603,7 +603,7 @@ if (args.length >= 2)
 }
 
 /**
- * Returns a typetuple created from TList with all occurrences
+ * Returns an `AliasSeq` created from TList with all occurrences
  * of type T, if found, replaced with type U.
  */
 template ReplaceAll(T, U, TList...)
@@ -683,7 +683,7 @@ if (args.length >= 2)
 }
 
 /**
- * Returns a typetuple created from TList with the order reversed.
+ * Returns an `AliasSeq` created from TList with the order reversed.
  */
 template Reverse(TList...)
 {
@@ -736,7 +736,7 @@ template MostDerived(T, TList...)
 }
 
 /**
- * Returns the typetuple TList with the types sorted so that the most
+ * Returns the `AliasSeq` TList with the types sorted so that the most
  * derived types come first.
  */
 template DerivedToFront(TList...)
