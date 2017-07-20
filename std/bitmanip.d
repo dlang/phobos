@@ -772,7 +772,7 @@ struct BitArray
 {
 private:
 
-    import core.bitop : bts, btr, bsf, bt;
+    import core.bitop : btc, bts, btr, bsf, bt;
     import std.format : FormatSpec;
 
     size_t _len;
@@ -884,6 +884,89 @@ public:
         else
             btr(_ptr, i);
         return b;
+    }
+
+    /**
+      Sets all the values in the $(D BitArray) to the
+      value specified by $(D val).
+     */
+    BitArray opSliceAssign(bool val)
+    {
+        for(size_t i = 0; i < _len; i++)
+            opIndexAssign(val, i);
+        return this;
+    }
+
+    ///
+    @system unittest
+    {
+        import std.algorithm.comparison : equal;
+
+        auto b = BitArray([1, 0, 1, 0, 1, 1]);
+
+        b[] = true;
+        // all bits are set
+        assert(b.bitsSet.equal([0, 1, 2, 3, 4, 5]));
+
+        b[] = false;
+        // none of the bits are set
+        assert(b.bitsSet.empty);
+    }
+
+    /**
+      Sets the bits of a slice of $(D BitArray) which
+      starts at the index $(D start) and ends at the
+      index ($D end) - 1 with the values specified by $(D val).
+     */
+    BitArray opSliceAssign(bool val, size_t start, size_t end)
+    in
+    {
+        assert(start >= 0 && start <= _len);
+        assert(end >=0 && end <= _len);
+        assert(start <= end);
+    }
+    body
+    {
+        for(size_t i = start; i < end; i++)
+            opIndexAssign(val, i);
+        return this;
+    }
+
+    ///
+    @system unittest
+    {
+        import std.algorithm.comparison : equal;
+
+        auto b = BitArray([1, 1, 0, 0, 0, 0]);
+
+        b[2 .. 6] = true;
+        assert(b.bitsSet.equal([0, 1, 2, 3, 4, 5]));
+    }
+
+    /**
+      Flips all the bits in the $(D BitArray)
+     */
+    BitArray opUnary(string op)()
+        if (op == "~")
+    {
+        for(size_t i = 0; i < _len; i++)
+            btc(_ptr, i);
+        return this;
+    }
+
+    ///
+    @system unittest
+    {
+        import std.algorithm.comparison : equal;
+        import std.stdio : writeln;
+        import std.format : format;
+
+        // positions 0, 2, 4 are set
+        auto b = BitArray([1, 0, 1, 0, 1, 0]);
+
+        b = ~b;
+        // after negation, position 1, 3, 5 are set
+        assert(b.bitsSet.equal([1, 3, 5]));
     }
 
     /**********************************************
