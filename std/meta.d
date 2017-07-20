@@ -75,6 +75,8 @@ module std.meta;
 /**
  * Creates a sequence of zero or more aliases. This is most commonly
  * used as template parameters or arguments.
+ *
+ * In previous versions of Phobos, this was known as `TypeTuple`.
  */
 template AliasSeq(TList...)
 {
