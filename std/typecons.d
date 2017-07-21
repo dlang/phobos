@@ -69,8 +69,9 @@ $(D T) to deallocate or clean up any non-GC resources.
 If it is desirable to persist a $(D Unique!T) outside of its original
 scope, then it can be transferred.  The transfer can be explicit, by
 calling $(D release), or implicit, when returning Unique from a
-function. The resource $(D T) can be a polymorphic class object, in
-which case Unique behaves polymorphically too.
+function. The resource $(D T) can be a polymorphic class object or
+instance of an interface, in which case Unique behaves polymorphically
+too.
 
 If $(D T) is a value type, then $(D Unique!T) will be implemented
 as a reference to a $(D T).
@@ -78,7 +79,7 @@ as a reference to a $(D T).
 struct Unique(T)
 {
 /** Represents a reference to $(D T). Resolves to $(D T*) if $(D T) is a value type. */
-static if (is(T:Object))
+static if (is(T == class) || is(T == interface))
     alias RefT = T;
 else
     alias RefT = T*;
@@ -286,6 +287,51 @@ private:
     debug(Unique) writeln("Returned from g");
     assert(ub.isEmpty);
     assert(!ub2.isEmpty);
+}
+
+@system unittest
+{
+    debug(Unique) writeln("Unique interface");
+    interface Bar
+    {
+        int val() const;
+    }
+    class BarImpl : Bar
+    {
+        static int count;
+        this()
+        {
+            count++;
+        }
+        ~this()
+        {
+            count--;
+        }
+        int val() const { return 4; };
+    }
+    alias UBar = Unique!Bar;
+    UBar g(UBar u)
+    {
+        debug(Unique) writeln("inside g");
+        return u.release;
+    }
+    void consume(UBar u)
+    {
+        assert(u.val() == 4);
+        // Resource automatically deleted here
+    }
+    auto ub = UBar(new BarImpl);
+    assert(BarImpl.count == 1);
+    assert(!ub.isEmpty);
+    assert(ub.val == 4);
+    static assert(!__traits(compiles, {auto ub3 = g(ub);}));
+    debug(Unique) writeln("Calling g");
+    auto ub2 = g(ub.release);
+    debug(Unique) writeln("Returned from g");
+    assert(ub.isEmpty);
+    assert(!ub2.isEmpty);
+    consume(ub2.release);
+    assert(BarImpl.count == 0);
 }
 
 @system unittest
