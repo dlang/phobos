@@ -19,9 +19,9 @@ $(TR $(TDNW Helpers) $(TD $(MYREF md5Of))
 )
 
  * This module conforms to the APIs defined in $(D std.digest). To understand the
- * differences between the template and the OOP API, see $(D std.digest).
+ * differences between the template and the OOP API, see $(MREF std, digest).
  *
- * This module publicly imports $(D std.digest) and can be used as a stand-alone
+ * This module publicly imports $(MREF std, digest) and can be used as a stand-alone
  * module.
  *
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
