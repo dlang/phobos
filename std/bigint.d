@@ -1098,7 +1098,7 @@ if (isIntegral!T)
          * on two's complement machines because unsigned(T.min) = |T.min|
          * even though -T.min = T.min.
          */
-        return unsigned((x < 0) ? -x : x);
+        return unsigned((x < 0) ? T(-x) : x);
     }
     else
     {
