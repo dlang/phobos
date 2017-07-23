@@ -307,7 +307,7 @@ private:
         {
             count--;
         }
-        int val() const { return 4; };
+        int val() const { return 4; }
     }
     alias UBar = Unique!Bar;
     UBar g(UBar u)
