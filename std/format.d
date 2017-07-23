@@ -1900,7 +1900,7 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assert(w.data == "1337");
 }
 
-private void formatIntegral(Writer, T, Char)(auto ref Writer w, const(T) val, const ref FormatSpec!Char fs,
+private void formatIntegral(Writer, T, Char)(ref Writer w, const(T) val, const ref FormatSpec!Char fs,
     uint base, ulong mask)
 {
     T arg = val;
@@ -1918,7 +1918,8 @@ private void formatIntegral(Writer, T, Char)(auto ref Writer w, const(T) val, co
         formatUnsigned(w, (cast(ulong) arg) & mask, fs, base, negative);
 }
 
-private void formatUnsigned(Writer, T, Char)(auto ref Writer w, T arg, const ref FormatSpec!Char fs, uint base, bool negative)
+private void formatUnsigned(Writer, T, Char)
+(ref Writer w, T arg, const ref FormatSpec!Char fs, uint base, bool negative)
 {
     /* Write string:
      *    leftpad prefix1 prefix2 zerofill digits rightpad
@@ -2855,7 +2856,7 @@ if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToS
 }
 
 // input range formatting
-private void formatRange(Writer, T, Char)(auto ref Writer w, ref T val, const ref FormatSpec!Char f)
+private void formatRange(Writer, T, Char)(ref Writer w, ref T val, const ref FormatSpec!Char f)
 if (isInputRange!T)
 {
     import std.conv : text;
@@ -3024,7 +3025,7 @@ if (isInputRange!T)
 }
 
 // character formatting with ecaping
-private void formatChar(Writer)(auto ref Writer w, in dchar c, in char quote)
+private void formatChar(Writer)(ref Writer w, in dchar c, in char quote)
 {
     import std.uni : isGraphical;
 
@@ -3332,7 +3333,7 @@ template hasToString(T, Char)
 }
 
 // object formatting with toString
-private void formatObject(Writer, T, Char)(auto ref Writer w, ref T val, const ref FormatSpec!Char f)
+private void formatObject(Writer, T, Char)(ref Writer w, ref T val, const ref FormatSpec!Char f)
 if (hasToString!(T, Char))
 {
     static if (is(typeof(val.toString((const(char)[] s){}, f))))
