@@ -9701,8 +9701,11 @@ Returns $(D true) if and only if $(D value) can be found in $(D
 range), which is assumed to be sorted. Performs $(BIGOH log(r.length))
 evaluations of $(D pred). See also STL's $(HTTP
 sgi.com/tech/stl/binary_search.html, binary_search).
- */
 
+$(RED Deprecated - please use $(REF canFind, std,algorithm.searching) instead).
+ */
+    // @@@DEPRECATED_2018-02@@@
+    deprecated("Please use std.algorithm.searching : canFind instead.")
     bool contains(V)(V value)
     if (isRandomAccessRange!Range)
     {
@@ -9727,6 +9730,21 @@ sorting relation.
 ///
 @safe unittest
 {
+    import std.algorithm.searching : canFind;
+    import std.algorithm.sorting : sort;
+    auto a = [ 1, 2, 3, 42, 52, 64 ];
+    auto r = assumeSorted(a);
+    assert(r.canFind(3));
+    assert(!r.canFind(32));
+    auto r1 = sort!"a > b"(a);
+    assert(r1.canFind(3));
+    assert(!r1.canFind(32));
+    assert(r1.release() == [ 64, 52, 42, 3, 2, 1 ]);
+}
+
+deprecated
+@safe unittest
+{
     import std.algorithm.sorting : sort;
     auto a = [ 1, 2, 3, 42, 52, 64 ];
     auto r = assumeSorted(a);
@@ -9749,6 +9767,19 @@ that break its sorted-ness, $(D SortedRange) will work erratically.
 */
 @safe unittest
 {
+    import std.algorithm.searching : canFind;
+    import std.algorithm.mutation : swap;
+    auto a = [ 1, 2, 3, 42, 52, 64 ];
+    auto r = assumeSorted(a);
+    assert(r.canFind(42));
+    swap(a[3], a[5]);         // illegal to break sortedness of original range
+    assert(!r.canFind(42));  // passes although it shouldn't
+}
+
+deprecated
+@safe unittest
+{
+    import std.algorithm.searching : find;
     import std.algorithm.mutation : swap;
     auto a = [ 1, 2, 3, 42, 52, 64 ];
     auto r = assumeSorted(a);
@@ -9838,11 +9869,12 @@ that break its sorted-ness, $(D SortedRange) will work erratically.
 @safe unittest
 {
     import std.algorithm.mutation : swap;
+    import std.algorithm.searching : canFind;
     auto a = [ 1, 2, 3, 42, 52, 64 ];
     auto r = assumeSorted(a);
-    assert(r.contains(42));
+    assert(r.canFind(42));
     swap(a[3], a[5]);                  // illegal to break sortedness of original range
-    assert(!r.contains(42));            // passes although it shouldn't
+    assert(!r.canFind(42));            // passes although it shouldn't
 }
 
 @safe unittest
