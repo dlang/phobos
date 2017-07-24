@@ -2168,7 +2168,6 @@ struct ProcessPipes
     /// The $(LREF Pid) of the child process.
     @property Pid pid() @safe nothrow
     {
-        assert(_pid !is null);
         return _pid;
     }
 
@@ -2433,19 +2432,8 @@ class ProcessException : Exception
                                          string file = __FILE__,
                                          size_t line = __LINE__)
     {
-        import std.conv : to;
-        version (CRuntime_Glibc)
-        {
-            import core.stdc.string : strerror_r;
-            char[1024] buf;
-            auto errnoMsg = to!string(
-                core.stdc.string.strerror_r(error, buf.ptr, buf.length));
-        }
-        else
-        {
-            import core.stdc.string : strerror;
-            auto errnoMsg = to!string(strerror(error));
-        }
+        import std.exception : errnoString;
+        auto errnoMsg = errnoString(error);
         auto msg = customMsg.empty ? errnoMsg
                                    : customMsg ~ " (" ~ errnoMsg ~ ')';
         return new ProcessException(msg, file, line);

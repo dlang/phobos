@@ -337,7 +337,7 @@ void main(string[] args)
     }
     f.writeln("!");
     // f exits scope, reference count falls to zero,
-    // underlying $(D FILE*) is closed.
+    // underlying `FILE*` is closed.
 }
 ----
 $(CONSOLE
@@ -1519,7 +1519,7 @@ Throws:
 
 Example:
 ---
-// Reads $(D stdin) and writes it to $(D stdout).
+// Reads `stdin` and writes it to `stdout`.
 import std.stdio;
 
 void main()
@@ -1603,9 +1603,9 @@ conversion error.
 
 Example:
 ---
-// Read lines from $(D stdin) into a string
+// Read lines from `stdin` into a string
 // Ignore lines starting with '#'
-// Write the string to $(D stdout)
+// Write the string to `stdout`
 
 void main()
 {
@@ -1635,7 +1635,7 @@ largest buffer returned by $(D readln):
 
 Example:
 ---
-// Read lines from $(D stdin) and count words
+// Read lines from `stdin` and count words
 
 void main()
 {
@@ -4477,31 +4477,9 @@ Initialize with a message and an error code.
 */
     this(string message, uint e = core.stdc.errno.errno) @trusted
     {
-        import std.conv : to;
-
+        import std.exception : errnoString;
         errno = e;
-        version (Posix)
-        {
-            import core.stdc.string : strerror_r;
-
-            char[256] buf = void;
-            version (CRuntime_Glibc)
-            {
-                auto s = strerror_r(errno, buf.ptr, buf.length);
-            }
-            else
-            {
-                strerror_r(errno, buf.ptr, buf.length);
-                auto s = buf.ptr;
-            }
-        }
-        else
-        {
-            import core.stdc.string : strerror;
-
-            auto s = strerror(errno);
-        }
-        auto sysmsg = to!string(s);
+        auto sysmsg = errnoString(errno);
         // If e is 0, we don't use the system error message.  (The message
         // is "Success", which is rather pointless for an exception.)
         super(e == 0 ? message

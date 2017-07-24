@@ -674,8 +674,8 @@ class UnCompress
 
 /* ========================== unittest ========================= */
 
-private import std.random;
-private import std.stdio;
+import std.random;
+import std.stdio;
 
 @system unittest // by Dave
 {

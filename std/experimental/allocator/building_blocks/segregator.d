@@ -50,7 +50,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
         /**
         This method is defined only if at least one of the allocators defines
         it. If $(D SmallAllocator) defines $(D expand) and $(D b.length +
-        delta <= threshold), the call is forwarded to $(D SmallAllocator). If $(
+        delta <= threshold), the call is forwarded to $(D SmallAllocator). If $(D
         LargeAllocator) defines $(D expand) and $(D b.length > threshold), the
         call is forwarded to $(D LargeAllocator). Otherwise, the call returns
         $(D false).

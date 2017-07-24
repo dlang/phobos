@@ -7785,11 +7785,12 @@ public:
             generated +HH:MM or -HH:MM for the time zone when it was not
             $(REF LocalTime,std,datetime,timezone) or
             $(REF UTC,std,datetime,timezone), which is not in conformance with
-            ISO 9601 for the non-extended string format. This has now been
+            ISO 8601 for the non-extended string format. This has now been
             fixed. However, for now, fromISOString will continue to accept the
             extended format for the time zone so that any code which has been
             writing out the result of toISOString to read in later will continue
-            to work.)
+            to work. The current behavior will be kept until July 2019 at which
+            point, fromISOString will be fixed to be standards compliant.)
       +/
     string toISOString() @safe const nothrow
     {
@@ -8180,6 +8181,26 @@ public:
 
     /++
         Converts this $(LREF SysTime) to a string.
+
+        This function exists to make it easy to convert a $(LREF SysTime) to a
+        string for code that does not care what the exact format is - just that
+        it presents the information in a clear manner. It also makes it easy to
+        simply convert a $(LREF SysTime) to a string when using functions such
+        as `to!string`, `format`, or `writeln` which use toString to convert
+        user-defined types. So, it is unlikely that much code will call
+        toString directly.
+
+        The format of the string is purposefully unspecified, and code that
+        cares about the format of the string should use `toISOString`,
+        `toISOExtString`, `toSimpleString`, or some other custom formatting
+        function that explicitly generates the format that the code needs. The
+        reason is that the code is then clear about what format it's using,
+        making it less error-prone to maintain the code and interact with other
+        software that consumes the generated strings. It's for this same reason
+        that $(LREF SysTime) has no `fromString` function, whereas it does have
+        `fromISOString`, `fromISOExtString`, and `fromSimpleString`.
+
+        The format returned by toString may or may not change in the future.
       +/
     string toString() @safe const nothrow
     {
@@ -8228,11 +8249,12 @@ public:
             $(LREF toISOExtString) and generated +HH:MM or -HH:MM for the time
             zone when it was not $(REF LocalTime,std,datetime,timezone) or
             $(REF UTC,std,datetime,timezone), which is not in conformance with
-            ISO 9601 for the non-extended string format. This has now been
+            ISO 8601 for the non-extended string format. This has now been
             fixed. However, for now, fromISOString will continue to accept the
             extended format for the time zone so that any code which has been
             writing out the result of toISOString to read in later will continue
-            to work.)
+            to work. The current behavior will be kept until July 2019 at which
+            point, fromISOString will be fixed to be standards compliant.)
 
         Params:
             isoString = A string formatted in the ISO format for dates and times.
@@ -8433,16 +8455,16 @@ public:
         test("20101222T172201.0000000+0130", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
         test("20101222T172201.45+0800", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000), east480));
 
-        // @@@DEPRECATED_2017-07@@@
+        // @@@DEPRECATED_2019-07@@@
         // This isn't deprecated per se, but that text will make it so that it
-        // pops up when deprecations are moved along around July 2017. At that
-        // time, the notice on the documentation should be removed, and we may
-        // or may not change the behavior of fromISOString to no longer accept
-        // ISO extended time zones (the concern being that programs will have
-        // written out strings somewhere to read in again that they'll still be
-        // reading in for years to come and may not be able to fix, even if the
-        // code is fixed). If/when we do change the behavior, these tests will
-        // start failing and will need to be updated accordingly.
+        // pops up when deprecations are moved along around July 2019. At that
+        // time, we will update fromISOString so that it is conformant with ISO
+        // 8601, and it will no longer accept ISO extended time zones (it does
+        // currently because of issue #15654 - toISOString used to incorrectly
+        // use the ISO extended time zone format). These tests will then start
+        // failing will need to be updated accordingly. Also, the notes about
+        // this issue in toISOString and fromISOString's documentation will need
+        // to be removed.
         test("20101222T172201-01:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west60));
         test("20101222T172201-01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west90));
         test("20101222T172201-08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), west480));

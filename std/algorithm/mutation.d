@@ -1659,9 +1659,52 @@ enum SwapStrategy
     stable,
 }
 
+///
+@safe unittest
+{
+    import std.stdio;
+    import std.algorithm.sorting : partition;
+    int[] a = [0, 1, 2, 3];
+    assert(remove!(SwapStrategy.stable)(a, 1) == [0, 2, 3]);
+    a = [0, 1, 2, 3];
+    assert(remove!(SwapStrategy.unstable)(a, 1) == [0, 3, 2]);
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.sorting : partition;
+
+    // Put stuff greater than 3 on the left
+    auto arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    assert(partition!(a => a > 3, SwapStrategy.stable)(arr) == [1, 2, 3]);
+    assert(arr == [4, 5, 6, 7, 8, 9, 10, 1, 2, 3]);
+
+    arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    assert(partition!(a => a > 3, SwapStrategy.semistable)(arr) == [2, 3, 1]);
+    assert(arr == [4, 5, 6, 7, 8, 9, 10, 2, 3, 1]);
+
+    arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    assert(partition!(a => a > 3, SwapStrategy.unstable)(arr) == [3, 2, 1]);
+    assert(arr == [10, 9, 8, 4, 5, 6, 7, 3, 2, 1]);
+}
+
 /**
-Eliminates elements at given offsets from $(D range) and returns the
-shortened range. In the simplest call, one element is removed.
+Eliminates elements at given offsets from `range` and returns the shortened
+range.
+
+For example, here is how to _remove a single element from an array:
+
+----
+string[] a = [ "a", "b", "c", "d" ];
+a = a.remove(1); // remove element at offset 1
+assert(a == [ "a", "c", "d"]);
+----
+
+Note that `remove` does not change the length of the original _range directly;
+instead, it returns the shortened _range. If its return value is not assigned to
+the original _range, the original _range will retain its original length, though
+its contents will have changed:
 
 ----
 int[] a = [ 3, 5, 7, 8 ];
@@ -1669,15 +1712,13 @@ assert(remove(a, 1) == [ 3, 7, 8 ]);
 assert(a == [ 3, 7, 8, 8 ]);
 ----
 
-In the case above the element at offset $(D 1) is removed and $(D
-remove) returns the range smaller by one element. The original array
-has remained of the same length because all functions in $(D
-std.algorithm) only change $(I content), not $(I topology). The value
-$(D 8) is repeated because $(LREF move) was invoked to
-move elements around and on integers $(D move) simply copies the source to
-the destination. To replace $(D a) with the effect of the removal,
-simply assign $(D a = remove(a, 1)). The slice will be rebound to the
-shorter array and the operation completes with maximal efficiency.
+The element at _offset `1` has been removed and the rest of the elements have
+shifted up to fill its place, however, the original array remains of the same
+length. This is because all functions in `std.algorithm` only change $(I
+content), not $(I topology). The value `8` is repeated because $(LREF move) was
+invoked to rearrange elements, and on integers `move` simply copies the source
+to the destination.  To replace `a` with the effect of the removal, simply
+assign the slice returned by `remove` to it, as shown in the first example.
 
 Multiple indices can be passed into $(D remove). In that case,
 elements at the respective indices are all removed. The indices must
@@ -1689,7 +1730,7 @@ assert(remove(a, 1, 3, 5) ==
     [ 0, 2, 4, 6, 7, 8, 9, 10 ]);
 ----
 
-(Note how all indices refer to slots in the $(I original) array, not
+(Note that all indices refer to slots in the $(I original) array, not
 in the array as it is being progressively shortened.) Finally, any
 combination of integral offsets and tuples composed of two integral
 offsets can be passed in.
@@ -1735,7 +1776,7 @@ cases.))
 
 Params:
     s = a SwapStrategy to determine if the original order needs to be preserved
-    range = a $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
+    range = a $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,_range,primitives)
     with a length member
     offset = which element(s) to remove
 
@@ -1970,7 +2011,7 @@ if (s == SwapStrategy.stable
 
 /**
 Reduces the length of the
-$(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives) $(D range) by removing
+$(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,_range,primitives) $(D range) by removing
 elements that satisfy $(D pred). If $(D s = SwapStrategy.unstable),
 elements are moved from the right end of the range over the elements
 to eliminate. If $(D s = SwapStrategy.stable) (the default),

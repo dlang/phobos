@@ -24,8 +24,8 @@
 module std.uri;
 
 //debug=uri;        // uncomment to turn on debugging writefln's
-debug(uri) private import std.stdio;
-private import std.traits : isSomeChar;
+debug(uri) import std.stdio;
+import std.traits : isSomeChar;
 
 /** This Exception is thrown if something goes wrong when encoding or
 decoding a URI.

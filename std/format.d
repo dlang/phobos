@@ -438,7 +438,7 @@ My friends are "John", "Nancy".
 My friends are John, Nancy.
 )
  */
-uint formattedWrite(alias fmt, Writer, A...)(Writer w, A args)
+uint formattedWrite(alias fmt, Writer, A...)(auto ref Writer w, A args)
 if (isSomeString!(typeof(fmt)))
 {
     alias e = checkFormatException!(fmt, A);
@@ -463,35 +463,17 @@ if (isSomeString!(typeof(fmt)))
 }
 
 /// ditto
-uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
+uint formattedWrite(Writer, Char, A...)(auto ref Writer w, in Char[] fmt, A args)
 {
     import std.conv : text;
 
-    alias FPfmt = void function(Writer, scope const(void)*, const ref FormatSpec!Char) @safe pure nothrow;
-
     auto spec = FormatSpec!Char(fmt);
-
-    FPfmt[A.length] funs;
-    const(void)*[A.length] argsAddresses;
-    if (!__ctfe)
-    {
-        foreach (i, Arg; A)
-        {
-            funs[i] = ()@trusted{ return cast(FPfmt)&formatGeneric!(Writer, Arg, Char); }();
-            // We can safely cast away shared because all data is either
-            // immutable or completely owned by this function.
-            argsAddresses[i] = (ref arg)@trusted{ return cast(const void*) &arg; }(args[i]);
-
-            // Reflect formatting @safe/pure ability of each arguments to this function
-            if (0) formatValue(w, args[i], spec);
-        }
-    }
 
     // Are we already done with formats? Then just dump each parameter in turn
     uint currentArg = 0;
     while (spec.writeUpToNextSpec(w))
     {
-        if (currentArg == funs.length && !spec.indexStart)
+        if (currentArg == A.length && !spec.indexStart)
         {
             // leftover spec?
             enforceFmt(fmt.length == 0,
@@ -568,36 +550,43 @@ uint formattedWrite(Writer, Char, A...)(Writer w, in Char[] fmt, A args)
             break;
         }
 
-        // Format!
-        if (spec.indexStart > 0)
-        {
-            // using positional parameters!
-
-            // Make the conditional compilation of this loop explicit, to avoid "statement not reachable" warnings.
-            static if (A.length > 0)
-            {
-                foreach (i; spec.indexStart - 1 .. spec.indexEnd)
-                {
-                    if (A.length <= i)
-                        throw new FormatException(
-                            text("Positional specifier %", i + 1, '$', spec.spec,
-                                " index exceeds ", A.length));
-
-                    if (__ctfe)
-                        formatNth(w, spec, i, args);
-                    else
-                        funs[i](w, argsAddresses[i], spec);
-                }
-            }
-            if (currentArg < spec.indexEnd) currentArg = spec.indexEnd;
-        }
+        // Format an argument
+        // This switch uses a static foreach to generate a jump table.
+        // Currently `spec.indexStart` use the special value '0' to signal
+        // we should use the current argument. An enhancement would be to
+        // always store the index.
+        size_t index = currentArg;
+        if (spec.indexStart != 0)
+            index = spec.indexStart - 1;
         else
-        {
-            if (__ctfe)
-                formatNth(w, spec, currentArg, args);
-            else
-                funs[currentArg](w, argsAddresses[currentArg], spec);
             ++currentArg;
+    SWITCH: switch (index)
+        {
+            foreach (i, Tunused; A)
+            {
+            case i:
+                formatValue(w, args[i], spec);
+                if (currentArg < spec.indexEnd)
+                    currentArg = spec.indexEnd;
+                // A little know feature of format is to format a range
+                // of arguments, e.g. `%1:3$` will format the first 3
+                // arguments. Since they have to be consecutive we can
+                // just use explicit fallthrough to cover that case.
+                if (i + 1 < spec.indexEnd)
+                {
+                    // You cannot goto case if the next case is the default
+                    static if (i + 1 < A.length)
+                        goto case;
+                    else
+                        goto default;
+                }
+                else
+                    break SWITCH;
+            }
+        default:
+            throw new FormatException(
+                text("Positional specifier %", spec.indexStart, '$', spec.spec,
+                     " index exceeds ", A.length));
         }
     }
     return currentArg;
@@ -1174,7 +1163,7 @@ if (is(Unqual!Char == Char))
         trailing = fmt;
     }
 
-    bool writeUpToNextSpec(OutputRange)(OutputRange writer)
+    bool writeUpToNextSpec(OutputRange)(ref OutputRange writer)
     {
         if (trailing.empty)
             return false;
@@ -1735,7 +1724,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     BooleanTypeOf!T val = obj;
@@ -1817,7 +1806,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 {
     enforceFmt(f.spec == 's',
@@ -1855,7 +1844,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     alias U = IntegralTypeOf!T;
@@ -1911,7 +1900,7 @@ if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assert(w.data == "1337");
 }
 
-private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, const ref FormatSpec!Char fs,
+private void formatIntegral(Writer, T, Char)(ref Writer w, const(T) val, const ref FormatSpec!Char fs,
     uint base, ulong mask)
 {
     T arg = val;
@@ -1929,7 +1918,8 @@ private void formatIntegral(Writer, T, Char)(Writer w, const(T) val, const ref F
         formatUnsigned(w, (cast(ulong) arg) & mask, fs, base, negative);
 }
 
-private void formatUnsigned(Writer, T, Char)(Writer w, T arg, const ref FormatSpec!Char fs, uint base, bool negative)
+private void formatUnsigned(Writer, T, Char)
+(ref Writer w, T arg, const ref FormatSpec!Char fs, uint base, bool negative)
 {
     /* Write string:
      *    leftpad prefix1 prefix2 zerofill digits rightpad
@@ -2131,7 +2121,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     import std.algorithm.comparison : min;
@@ -2355,7 +2345,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
 {
     immutable creal val = obj;
@@ -2411,7 +2401,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(Unqual!T : ireal) && !is(T == enum) && !hasToString!(T, Char))
 {
     immutable ireal val = obj;
@@ -2458,7 +2448,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     CharTypeOf!T val = obj;
@@ -2531,7 +2521,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     Unqual!(StringTypeOf!T) val = obj;  // for `alias this`, see bug5371
@@ -2609,7 +2599,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, auto ref T obj, const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T obj, const ref FormatSpec!Char f)
 if (is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     formatValue(w, obj[], f);
@@ -2652,7 +2642,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     static if (is(const(ArrayTypeOf!T) == const(void[])))
@@ -3035,7 +3025,7 @@ if (isInputRange!T)
 }
 
 // character formatting with ecaping
-private void formatChar(Writer)(Writer w, in dchar c, in char quote)
+private void formatChar(Writer)(ref Writer w, in dchar c, in char quote)
 {
     import std.uni : isGraphical;
 
@@ -3073,7 +3063,7 @@ private void formatChar(Writer)(Writer w, in dchar c, in char quote)
 
 // undocumented because of deprecation
 // string elements are formatted like UTF-8 string literals.
-void formatElement(Writer, T, Char)(Writer w, T val, const ref FormatSpec!Char f)
+void formatElement(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
 if (is(StringTypeOf!T) && !is(T == enum))
 {
     import std.array : appender;
@@ -3158,7 +3148,7 @@ if (is(StringTypeOf!T) && !is(T == enum))
 
 // undocumented because of deprecation
 // Character elements are formatted like UTF-8 character literals.
-void formatElement(Writer, T, Char)(Writer w, T val, const ref FormatSpec!Char f)
+void formatElement(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
 if (is(CharTypeOf!T) && !is(T == enum))
 {
     if (f.spec == 's')
@@ -3184,7 +3174,7 @@ if (is(CharTypeOf!T) && !is(T == enum))
 
 // undocumented
 // Maybe T is noncopyable struct, so receive it by 'auto ref'.
-void formatElement(Writer, T, Char)(Writer w, auto ref T val, const ref FormatSpec!Char f)
+void formatElement(Writer, T, Char)(auto ref Writer w, auto ref T val, const ref FormatSpec!Char f)
 if (!is(StringTypeOf!T) && !is(CharTypeOf!T) || is(T == enum))
 {
     formatValue(w, val, f);
@@ -3199,7 +3189,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T obj, const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     AssocArrayTypeOf!T val = obj;
@@ -3444,7 +3434,7 @@ const string toString();
 
    Otherwise, are formatted just as their type name.
  */
-void formatValue(Writer, T, Char)(Writer w, T val, const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
 if (is(T == class) && !is(T == enum))
 {
     enforceValidFormatSpec!(T, Char)(f);
@@ -3593,7 +3583,7 @@ if (is(T == class) && !is(T == enum))
 }
 
 /// ditto
-void formatValue(Writer, T, Char)(Writer w, T val, const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
 if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
 {
     enforceValidFormatSpec!(T, Char)(f);
@@ -3673,7 +3663,7 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
 
 /// ditto
 // Maybe T is noncopyable struct, so receive it by 'auto ref'.
-void formatValue(Writer, T, Char)(Writer w, auto ref T val, const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, const ref FormatSpec!Char f)
 if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
 {
     enforceValidFormatSpec!(T, Char)(f);
@@ -3808,7 +3798,7 @@ Params:
     val = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(Writer w, T val, const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
 if (is(T == enum))
 {
     if (f.spec == 's')
@@ -3877,7 +3867,7 @@ if (is(T == enum))
 /**
    Pointers are formatted as hex integers.
  */
-void formatValue(Writer, T, Char)(Writer w, T val, const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
 if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 {
     static if (isInputRange!T)
@@ -3982,7 +3972,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 /**
    Delegates are formatted by 'ReturnType delegate(Parameters) FunctionAttributes'
  */
-void formatValue(Writer, T, Char)(Writer w, scope T, const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, scope T, const ref FormatSpec!Char f)
 if (isDelegate!T)
 {
     formatValue(w, T.stringof, f);
@@ -4013,32 +4003,6 @@ if (isDelegate!T)
 {
     void func() @system { __gshared int x; ++x; throw new Exception("msg"); }
     version (linux) formatTest( &func, "void delegate() @system" );
-}
-
-/*
-  Formats an object of type 'D' according to 'f' and writes it to
-  'w'. The pointer 'arg' is assumed to point to an object of type
-  'D'. The untyped signature is for the sake of taking this function's
-  address.
- */
-private void formatGeneric(Writer, D, Char)(Writer w, const(void)* arg, const ref FormatSpec!Char f)
-{
-    formatValue(w, *cast(D*) arg, f);
-}
-
-private void formatNth(Writer, Char, A...)(Writer w, const ref FormatSpec!Char f, size_t index, A args)
-{
-    switch (index)
-    {
-        foreach (n, _; A)
-        {
-            case n:
-                formatValue(w, args[n], f);
-                return;
-        }
-        default:
-            assert(0, "n = "~cast(char)(index + '0'));
-    }
 }
 
 @safe pure unittest
@@ -6054,4 +6018,11 @@ char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
 
     tmp = format("%19,?f", '.', -1234567.891011);
     assert(tmp == " -1.234.567.891.011", "'" ~ tmp ~ "'");
+}
+
+// Test for multiple indexes
+@safe unittest
+{
+    auto tmp = format("%2:5$s", 1, 2, 3, 4, 5);
+    assert(tmp == "2345", tmp);
 }

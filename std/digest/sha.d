@@ -23,10 +23,10 @@ $(TR $(TDNW Helpers) $(TD $(MYREF sha1Of))
  * SHA2 comes in several different versions, all supported by this module:
  * SHA-224, SHA-256, SHA-384, SHA-512, SHA-512/224 and SHA-512/256.
  *
- * This module conforms to the APIs defined in $(D std.digest.digest). To understand the
- * differences between the template and the OOP API, see $(D std.digest.digest).
+ * This module conforms to the APIs defined in $(MREF std, digest). To understand the
+ * differences between the template and the OOP API, see $(MREF std, digest).
  *
- * This module publicly imports $(D std.digest.digest) and can be used as a stand-alone
+ * This module publicly imports $(D std.digest) and can be used as a stand-alone
  * module.
  *
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -124,7 +124,7 @@ version(unittest)
 }
 
 
-public import std.digest.digest;
+public import std.digest;
 
 /*
  * Helper methods for encoding the buffer.
@@ -193,7 +193,7 @@ private ulong rotateRight(ulong x, uint n) @safe pure nothrow @nogc
  * simply use the convenience aliases: SHA1, SHA224, SHA256, SHA384, SHA512,
  * SHA512_224 and SHA512_256.
  *
- * See $(D std.digest.digest) for differences between template and OOP API.
+ * See $(D std.digest) for differences between template and OOP API.
  */
 struct SHA(uint hashBlockSize, uint digestSize)
 {
@@ -1122,7 +1122,7 @@ alias SHA512_256 = SHA!(1024, 256); /// SHA alias for SHA-512/256, hash is ubyte
 }
 
 /**
- * These are convenience aliases for $(REF digest, std,digest,digest) using the
+ * These are convenience aliases for $(REF digest, std,digest) using the
  * SHA implementation.
  */
 //simple alias doesn't work here, hope this gets inlined...
@@ -1199,9 +1199,9 @@ auto sha512_256Of(T...)(T data)
 
 /**
  * OOP API SHA1 and SHA2 implementations.
- * See $(D std.digest.digest) for differences between template and OOP API.
+ * See $(D std.digest) for differences between template and OOP API.
  *
- * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!SHA1), see
+ * This is an alias for $(D $(REF WrapperDigest, std,digest)!SHA1), see
  * there for more information.
  */
 alias SHA1Digest = WrapperDigest!SHA1;

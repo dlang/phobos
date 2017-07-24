@@ -43,9 +43,8 @@ import std.array;
 import std.conv;
 import std.exception;
 import std.internal.cstring;
-private import std.internal.windows.advapi32;
+import std.internal.windows.advapi32;
 import std.system : Endian, endian;
-import std.utf : toUTF8, toUTF16;
 import std.windows.syserror;
 
 //debug = winreg;
@@ -224,7 +223,7 @@ enum REG_VALUE_TYPE : DWORD
 
 /* ************* private *************** */
 
-private import core.sys.windows.winnt :
+import core.sys.windows.winnt :
     DELETE                  ,
     READ_CONTROL            ,
     WRITE_DAC               ,
@@ -241,7 +240,7 @@ private import core.sys.windows.winnt :
 
     SPECIFIC_RIGHTS_ALL     ;
 
-private import core.sys.windows.winreg :
+import core.sys.windows.winreg :
     REG_CREATED_NEW_KEY     ,
     REG_OPENED_EXISTING_KEY ;
 
@@ -557,7 +556,7 @@ body
             if (wstr.length && wstr[$-1] == '\0')
                 wstr.length = wstr.length - 1;
             assert(wstr.length == 0 || wstr[$-1] != '\0');
-            value = toUTF8(wstr);
+            value = wstr.to!string;
             break;
 
         case REG_VALUE_TYPE.REG_DWORD_LITTLE_ENDIAN:
@@ -623,7 +622,7 @@ body
     value.length = list.length;
     foreach (i, ref v; value)
     {
-        v = toUTF8(list[i]);
+        v = list[i].to!string;
     }
 }
 
@@ -752,7 +751,7 @@ private void regProcessNthKey(HKEY hkey, scope void delegate(scope LONG delegate
         immutable res = regEnumKeyName(hkey, index, sName, cchName);
         if (res == ERROR_SUCCESS)
         {
-            name = toUTF8(sName[0 .. cchName]);
+            name = sName[0 .. cchName].to!string;
         }
         return res;
     });
@@ -774,7 +773,7 @@ private void regProcessNthValue(HKEY hkey, scope void delegate(scope LONG delega
         immutable res = regEnumValueName(hkey, index, sName, cchName);
         if (res == ERROR_SUCCESS)
         {
-            name = toUTF8(sName[0 .. cchName]);
+            name = sName[0 .. cchName].to!string;
         }
         return res;
     });
@@ -1098,7 +1097,7 @@ public:
         wstring[] data = new wstring[value.length+1];
         foreach (i, ref s; data[0..$-1])
         {
-            s = toUTF16(value[i]);
+            s = value[i].to!wstring;
         }
         data[$-1] = "\0";
         auto ws = std.array.join(data, "\0"w);
@@ -1235,7 +1234,7 @@ public:
             ExpandEnvironmentStringsW(srcTmp, newValue.ptr, to!DWORD(newValue.length)),
             "Failed to expand environment variables");
 
-        return toUTF8(newValue[0 .. count-1]); // remove trailing 0
+        return newValue[0 .. count-1].to!string; // remove trailing 0
     }
 
     /**

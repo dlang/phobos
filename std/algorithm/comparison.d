@@ -1007,6 +1007,16 @@ enum EditOp : char
     remove = 'r'
 }
 
+///
+@safe unittest
+{
+    with(EditOp)
+    {
+        assert(levenshteinDistanceAndPath("foo", "foobar")[1] == [none, none, none, insert, insert, insert]);
+        assert(levenshteinDistanceAndPath("banana", "fazan")[1] == [substitute, none, substitute, none, none, remove]);
+    }
+}
+
 private struct Levenshtein(Range, alias equals, CostType = size_t)
 {
     EditOp[] path()
