@@ -9332,6 +9332,15 @@ if (units == "days")
     return day > 0 && day <= maxDay(year, month);
 }
 
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(valid!"days"(2016, 2, 29));
+    assert(!valid!"days"(2016, 2, 30));
+    assert(valid!"days"(2017, 2, 20));
+    assert(!valid!"days"(2017, 2, 29));
+}
+
 
 /++
     Params:
@@ -9415,6 +9424,14 @@ int daysToDayOfWeek(DayOfWeek currDoW, DayOfWeek dow) @safe pure nothrow @nogc
     return DayOfWeek.sat - currDoW + dow + 1;
 }
 
+///
+@safe pure nothrow @nogc unittest
+{
+    assert(daysToDayOfWeek(DayOfWeek.mon, DayOfWeek.mon) == 0);
+    assert(daysToDayOfWeek(DayOfWeek.mon, DayOfWeek.sun) == 6);
+    assert(daysToDayOfWeek(DayOfWeek.mon, DayOfWeek.wed) == 2);
+}
+
 @safe unittest
 {
     assert(daysToDayOfWeek(DayOfWeek.sun, DayOfWeek.sun) == 0);
@@ -9495,6 +9512,14 @@ int monthsToMonth(int currMonth, int month) @safe pure
     return Month.dec - currMonth + month;
 }
 
+///
+@safe pure unittest
+{
+    assert(monthsToMonth(Month.jan, Month.jan) == 0);
+    assert(monthsToMonth(Month.jan, Month.dec) == 11);
+    assert(monthsToMonth(Month.jul, Month.oct) == 3);
+}
+
 @safe unittest
 {
     assert(monthsToMonth(Month.jan, Month.jan) == 0);
@@ -9564,6 +9589,22 @@ bool yearIsLeapYear(int year) @safe pure nothrow @nogc
     if (year % 100 == 0)
         return false;
     return year % 4 == 0;
+}
+
+///
+@safe unittest
+{
+    foreach (year; [1, 2, 100, 2001, 2002, 2003, 2005, 2006, 2007, 2009, 2010])
+    {
+        assert(!yearIsLeapYear(year));
+        assert(!yearIsLeapYear(-year));
+    }
+
+    foreach (year; [0, 4, 8, 400, 800, 1600, 1996, 2000, 2004, 2008, 2012])
+    {
+        assert(yearIsLeapYear(year));
+        assert(yearIsLeapYear(-year));
+    }
 }
 
 @safe unittest
@@ -9701,6 +9742,14 @@ bool validTimeUnits(string[] units...) @safe pure nothrow @nogc
     return true;
 }
 
+///
+@safe @nogc nothrow unittest
+{
+    assert(validTimeUnits("msecs", "seconds", "minutes"));
+    assert(validTimeUnits("days", "weeks", "months"));
+    assert(!validTimeUnits("ms", "seconds", "minutes"));
+}
+
 
 /++
     Compares two time unit strings. $(D "years") are the largest units and
@@ -9736,6 +9785,14 @@ int cmpTimeUnits(string lhs, string rhs) @safe pure
         return 1;
 
     return 0;
+}
+
+///
+@safe pure unittest
+{
+    assert(cmpTimeUnits("hours", "hours") == 0);
+    assert(cmpTimeUnits("hours", "weeks") < 0);
+    assert(cmpTimeUnits("months", "seconds") > 0);
 }
 
 @safe unittest
