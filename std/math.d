@@ -2614,7 +2614,7 @@ if (isFloatingPoint!T)
             vf *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ex - F.EXPBIAS - T.mant_dig + 1;
-            vu[F.EXPPOS_SHORT] = (~F.EXPMASK & vu[F.EXPPOS_SHORT]) | 0x3FFE;
+            vu[F.EXPPOS_SHORT] = ((-1 - F.EXPMASK) & vu[F.EXPPOS_SHORT]) | 0x3FFE;
         }
         return vf;
     }
@@ -2695,7 +2695,7 @@ if (isFloatingPoint!T)
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ((ex - F.EXPBIAS) >> 4) - T.mant_dig + 1;
             vu[F.EXPPOS_SHORT] =
-                cast(ushort)((~F.EXPMASK & vu[F.EXPPOS_SHORT]) | 0x3FE0);
+                cast(ushort)(((-1 - F.EXPMASK) & vu[F.EXPPOS_SHORT]) | 0x3FE0);
         }
         return vf;
     }
@@ -2735,7 +2735,7 @@ if (isFloatingPoint!T)
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ((ex - F.EXPBIAS) >> 7) - T.mant_dig + 1;
             vu[F.EXPPOS_SHORT] =
-                cast(ushort)((~F.EXPMASK & vu[F.EXPPOS_SHORT]) | 0x3F00);
+                cast(ushort)(((-1 - F.EXPMASK) & vu[F.EXPPOS_SHORT]) | 0x3F00);
         }
         return vf;
     }
@@ -4970,7 +4970,7 @@ struct FloatingPointControl
     @property void rounding(RoundingMode newMode) @nogc
     {
         initialize();
-        setControlState((getControlState() & ~ROUNDING_MASK) | (newMode & ROUNDING_MASK));
+        setControlState((getControlState() & (-1 - ROUNDING_MASK)) | (newMode & ROUNDING_MASK));
     }
 
     /// Returns: the currently active rounding mode
@@ -6353,7 +6353,7 @@ if (isFloatingPoint!(F) && isIntegral!(G))
         default:
         }
 
-        m = -n;
+        m = cast(typeof(m))(0 - n);
         v = p / x;
     }
     else
@@ -7632,7 +7632,7 @@ if (isFloatingPoint!T)
             if (var.bytes[F.SIGNPOS_BYTE] & 0x80)
             {
                 var.bits.bulk = ~var.bits.bulk;
-                var.bits.rem = ~var.bits.rem;
+                var.bits.rem = cast(typeof(var.bits.rem))(-1 - var.bits.rem); // ~var.bits.rem
             }
             else
             {
@@ -7783,7 +7783,7 @@ private T powIntegralImpl(PowType type, T)(T val)
     else
     {
         static if (isSigned!T)
-            return cast(Unqual!T) (val < 0 ? -(T(1) << bsr(-val) + type) : T(1) << bsr(val) + type);
+            return cast(Unqual!T) (val < 0 ? -(T(1) << bsr(0 - val) + type) : T(1) << bsr(val) + type);
         else
             return cast(Unqual!T) (T(1) << bsr(val) + type);
     }
