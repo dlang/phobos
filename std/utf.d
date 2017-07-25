@@ -333,8 +333,8 @@ in { assert(c & 0x80); }
 body
 {
     import core.bitop : bsr;
-    immutable msbs = 7 - bsr(~c);
-    if (!~c || msbs < 2 || msbs > 4)
+    immutable msbs = 7 - bsr((~uint(c)) & 0xFF);
+    if (c == 0xFF || msbs < 2 || msbs > 4)
         throw new UTFException("Invalid UTF-8 sequence", index);
     return msbs;
 }
