@@ -170,8 +170,8 @@ class FileException : Exception
         Params:
             name = Name of file for which the error occurred.
             msg  = Message describing the error.
-            file = The file where the error occurred.
-            line = The line where the error occurred.
+            file = The _file where the error occurred.
+            line = The _line where the error occurred.
      +/
     this(in char[] name, in char[] msg, string file = __FILE__, size_t line = __LINE__) @safe pure
     {
@@ -190,9 +190,9 @@ class FileException : Exception
         Params:
             name  = Name of file for which the error occurred.
             errno = The error number.
-            file  = The file where the error occurred.
+            file  = The _file where the error occurred.
                     Defaults to $(D __FILE__).
-            line  = The line where the error occurred.
+            line  = The _line where the error occurred.
                     Defaults to $(D __LINE__).
      +/
     version(Windows) this(in char[] name,
@@ -281,11 +281,11 @@ private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez,
 /********************************************
 Read entire contents of file $(D name) and returns it as an untyped
 array. If the file size is larger than $(D upTo), only $(D upTo)
-bytes are read.
+bytes are _read.
 
 Params:
     name = string or range of characters representing the file _name
-    upTo = if present, the maximum number of bytes to read
+    upTo = if present, the maximum number of bytes to _read
 
 Returns: Untyped array of bytes _read.
 
@@ -685,7 +685,7 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
 }
 
 /***************************************************
- * Rename file $(D from) to $(D to).
+ * Rename file $(D from) _to $(D to).
  * If the target file exists, it is overwritten.
  * Params:
  *    from = string or range of characters representing the existing file name
@@ -783,7 +783,7 @@ private void renameImpl(const(char)[] f, const(char)[] t, const(FSChar)* fromz, 
 Delete file $(D name).
 
 Params:
-    name = string or range of characters representing the file name
+    name = string or range of characters representing the file _name
 
 Throws: $(D FileException) on error.
  */
@@ -875,7 +875,7 @@ version(Windows) private ulong makeUlong(DWORD dwLow, DWORD dwHigh) @safe pure n
 Get size of file $(D name) in bytes.
 
 Params:
-    name = string or range of characters representing the file name
+    name = string or range of characters representing the file _name
 
 Throws: $(D FileException) on error (e.g., file not found).
  */
@@ -957,7 +957,7 @@ private SysTime statTimeToStdTime(char which)(ref stat_t statbuf)
     Get the access and modified times of file or folder $(D name).
 
     Params:
-        name             = File/Folder name to get times for.
+        name             = File/Folder _name to get times for.
         accessTime       = Time the file/folder was last accessed.
         modificationTime = Time the file/folder was last modified.
 
@@ -1082,7 +1082,7 @@ version(StdDdoc)
      creation time - which isn't possible on Posix systems.
 
      Params:
-     name                 = File name to get times for.
+     name                 = File _name to get times for.
      fileCreationTime     = Time the file was created.
      fileAccessTime       = Time the file was last accessed.
      fileModificationTime = Time the file was last modified.
@@ -1201,7 +1201,7 @@ version(Windows) @system unittest
     Set access/modified times of file or folder $(D name).
 
     Params:
-        name             = File/Folder name to get times for.
+        name             = File/Folder _name to get times for.
         accessTime       = Time the file/folder was last accessed.
         modificationTime = Time the file/folder was last modified.
 
@@ -1415,7 +1415,7 @@ if (isConvertibleToString!R)
     correctly prompts building it.
 
     Params:
-        name            = The name of the file to get the modification time for.
+        name            = The _name of the file to get the modification time for.
         returnIfMissing = The time to return if the given file does not exist.
 
 Example:
@@ -1510,11 +1510,11 @@ version (OSX) {} else
 
 
 /**
- * Determine whether the given file (or directory) exists.
+ * Determine whether the given file (or directory) _exists.
  * Params:
- *    name = string or range of characters representing the file name
+ *    name = string or range of characters representing the file _name
  * Returns:
- *    true if the filename specified as input exists
+ *    true if the file _name specified as input _exists
  */
 bool exists(R)(R name)
 if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R) &&
@@ -1711,11 +1711,11 @@ if (isConvertibleToString!R)
 }
 
 /++
-    Set the attributes of the given file.
+    Set the _attributes of the given file.
 
     Params:
-        name = the file name
-        attributes = the attributes to set the file to
+        name = the file _name
+        attributes = the _attributes to set the file to
 
     Throws:
         $(D FileException) if the given file does not exist.
@@ -1772,7 +1772,7 @@ if (isConvertibleToString!R)
         name = The path to the file.
 
     Returns:
-        true if the name specifies a directory
+        true if name specifies a directory
 
     Throws:
         $(D FileException) if the given file does not exist.
@@ -1845,13 +1845,13 @@ if (isConvertibleToString!R)
 }
 
 /++
-    Returns whether the given file attributes are for a directory.
+    Returns whether the given file _attributes are for a directory.
 
     Params:
-        attributes = The file attributes.
+        attributes = The file _attributes.
 
     Returns:
-        true if attibutes specifies a directory
+        true if attributes specifies a directory
 
 Example:
 --------------------
@@ -1984,24 +1984,24 @@ if (isConvertibleToString!R)
 
 
 /++
-    Returns whether the given file attributes are for a file.
+    Returns whether the given file _attributes are for a file.
 
     On Windows, if a file is not a directory, it's a file. So, either
     $(D attrIsFile) or $(D attrIsDir) will return $(D true) for the
-    attributes of any given file.
+    _attributes of any given file.
 
     On Posix systems, if $(D attrIsFile) is $(D true), that indicates that the
     file is a regular file (e.g. not a block not device). So, on Posix systems,
     it's possible for both $(D attrIsFile) and $(D attrIsDir) to be $(D false)
     for a particular file (in which case, it's a special file). If a file is a
-    special file, you can use the attributes to check what type of special file
+    special file, you can use the _attributes to check what type of special file
     it is (see the man page for $(D stat) for more information).
 
     Params:
-        attributes = The file attributes.
+        attributes = The file _attributes.
 
     Returns:
-        true if the given file attributes are for a file
+        true if the given file _attributes are for a file
 
 Example:
 --------------------
@@ -2809,7 +2809,7 @@ version(StdDdoc)
     struct DirEntry
     {
         /++
-            Constructs a DirEntry for the given file (or directory).
+            Constructs a $(D DirEntry) for the given file (or directory).
 
             Params:
                 path = The file (or directory) to get a DirEntry for.
@@ -2925,9 +2925,9 @@ assert(!de2.isFile);
         @property SysTime timeLastModified();
 
         /++
-            Returns the attributes of the file represented by this $(D DirEntry).
+            Returns the _attributes of the file represented by this $(D DirEntry).
 
-            Note that the file attributes on Windows and Posix systems are
+            Note that the file _attributes on Windows and Posix systems are
             completely different. On, Windows, they're what is returned by
             $(D GetFileAttributes)
             $(HTTP msdn.microsoft.com/en-us/library/aa364944(v=vs.85).aspx, GetFileAttributes)
@@ -2935,7 +2935,7 @@ assert(!de2.isFile);
             part of the $(D stat) struct gotten by calling $(D stat).
 
             On Posix systems, if the file represented by this $(D DirEntry) is a
-            symbolic link, then attributes are the attributes of the file
+            symbolic link, then _attributes are the _attributes of the file
             pointed to by the symbolic link.
           +/
         @property uint attributes();
@@ -3377,7 +3377,7 @@ else
 }
 
 /***************************************************
-Copy file $(D from) to file $(D to). File timestamps are preserved.
+Copy file $(D from) _to file $(D to). File timestamps are preserved.
 File attributes are preserved, if $(D preserve) equals $(D Yes.preserveAttributes).
 On Windows only $(D Yes.preserveAttributes) (the default on Windows) is supported.
 If the target file exists, it is overwritten.
@@ -3385,7 +3385,7 @@ If the target file exists, it is overwritten.
 Params:
     from = string or range of characters representing the existing file name
     to = string or range of characters representing the target file name
-    preserve = whether to preserve the file attributes
+    preserve = whether to _preserve the file attributes
 
 Throws: $(D FileException) on error.
  */
@@ -3926,12 +3926,12 @@ public:
 
 }
 /++
-    Returns an input range of DirEntry that lazily iterates a given directory,
+    Returns an input range of $(D DirEntry) that lazily iterates a given directory,
     also provides two ways of foreach iteration. The iteration variable can be of
-    type $(D_PARAM string) if only the name is needed, or $(D_PARAM DirEntry)
-    if additional details are needed. The span mode dictates how the
+    type $(D string) if only the name is needed, or $(D DirEntry)
+    if additional details are needed. The span _mode dictates how the
     directory is traversed. The name of each iterated directory entry
-    contains the absolute path.
+    contains the absolute _path.
 
     Params:
         path = The directory to iterate over.
@@ -4188,12 +4188,12 @@ auto dirEntries(string path, string pattern, SpanMode mode,
  * $(REF Tuple, std,typecons) of values depending on the length of `Types`.
  * The lines are parsed using the specified format string. The format string is
  * passed to $(REF formattedRead, std,_format), and therefore must conform to the
- * format string specification outlined in $(MREF std, _format).
+ * _format string specification outlined in $(MREF std, _format).
  *
  * Params:
  *     Types = the types that each of the elements in the line should be returned as
  *     filename = the name of the file to read
- *     format = the format string to use when reading
+ *     format = the _format string to use when reading
  *
  * Returns:
  *     If only one type is passed, then an array of that type. Otherwise, an
