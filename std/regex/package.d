@@ -559,21 +559,21 @@ public:
     ///Slice of matched portion of input.
     @property R hit()
     {
-        assert(_nMatch);
+        assert(_nMatch, "attempted to get hit of an empty match");
         return _input[matches[0].begin .. matches[0].end];
     }
 
     ///Range interface.
     @property R front()
     {
-        assert(_nMatch);
+        assert(_nMatch, "attempted to get front of an empty match");
         return _input[matches[_f].begin .. matches[_f].end];
     }
 
     ///ditto
     @property R back()
     {
-        assert(_nMatch);
+        assert(_nMatch, "attempted to get back of an empty match");
         return _input[matches[_b - 1].begin .. matches[_b - 1].end];
     }
 
