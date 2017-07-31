@@ -1897,6 +1897,28 @@ $(CONSOLE
         assert(b1 == true && b2 == false);
     }
 
+    @system unittest
+    {
+        static import std.file;
+
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "1\n2");
+        scope(exit) std.file.remove(deleteme);
+        int input;
+        auto f = File(deleteme);
+        f.readf("%s", &input);
+
+        import std.conv : ConvException;
+        try
+        {
+            f.readf("%s", &input);
+        }
+        catch (ConvException e)
+        {
+            assert(e.msg == "Unexpected '\\n' when converting from type LockingTextReader to type int");
+        }
+    }
+
 /**
  Returns a temporary file by calling
  $(HTTP cplusplus.com/reference/clibrary/cstdio/_tmpfile.html, _tmpfile).

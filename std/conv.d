@@ -81,8 +81,15 @@ private auto convError(S, T)(S source, string fn = __FILE__, size_t ln = __LINE_
     if (source.empty)
         msg = "Unexpected end of input when converting from type " ~ S.stringof ~ " to type " ~ T.stringof;
     else
-        msg =  text("Unexpected '", source.front,
+    {
+        ElementType!S el = source.front;
+
+        if (el == '\n')
+            msg = text("Unexpected '\\n' when converting from type " ~ S.stringof ~ " to type " ~ T.stringof);
+        else
+            msg =  text("Unexpected '", el,
                  "' when converting from type " ~ S.stringof ~ " to type " ~ T.stringof);
+    }
 
     return new ConvException(msg, fn, ln);
 }
