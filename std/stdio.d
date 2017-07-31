@@ -1897,6 +1897,7 @@ $(CONSOLE
         assert(b1 == true && b2 == false);
     }
 
+    // Issue 12260 - Nice error of std.stdio.readf with newlines
     @system unittest
     {
         static import std.file;
@@ -1909,14 +1910,9 @@ $(CONSOLE
         f.readf("%s", &input);
 
         import std.conv : ConvException;
-        try
-        {
-            f.readf("%s", &input);
-        }
-        catch (ConvException e)
-        {
-            assert(e.msg == "Unexpected '\\n' when converting from type LockingTextReader to type int");
-        }
+        import std.exception : collectException;
+        assert(collectException!ConvException(f.readf("%s", &input)).msg ==
+            "Unexpected '\\n' when converting from type LockingTextReader to type int");
     }
 
 /**
