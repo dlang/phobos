@@ -3705,6 +3705,9 @@ class NotImplementedError : Error
 $(D AutoImplement) automatically implements (by default) all abstract member
 functions in the class or interface $(D Base) in specified way.
 
+The second version of $(D AutoImplement) automatically implements
+$(D Interface), while deriving from $(D BaseClass).
+
 Params:
   how  = template which specifies _how functions will be implemented/overridden.
 
@@ -3785,9 +3788,21 @@ $(UL
 )
  */
 class AutoImplement(Base, alias how, alias what = isAbstractFunction) : Base
+    if (!is(how == class))
 {
     private alias autoImplement_helper_ =
-        AutoImplement_Helper!("autoImplement_helper_", "Base", Base, how, what);
+        AutoImplement_Helper!("autoImplement_helper_", "Base", Base, typeof(this), how, what);
+    mixin(autoImplement_helper_.code);
+}
+
+/// ditto
+class AutoImplement(
+    Interface, BaseClass, alias how,
+    alias what = isAbstractFunction) : BaseClass, Interface
+    if (is(Interface == interface) && is(BaseClass == class))
+{
+    private alias autoImplement_helper_ = AutoImplement_Helper!(
+            "autoImplement_helper_", "Interface", Interface, typeof(this), how, what);
     mixin(autoImplement_helper_.code);
 }
 
@@ -3797,7 +3812,7 @@ class AutoImplement(Base, alias how, alias what = isAbstractFunction) : Base
  * members, should be minimized.
  */
 private template AutoImplement_Helper(string myName, string baseName,
-        Base, alias generateMethodBody, alias cherrypickMethod)
+        Base, Self, alias generateMethodBody, alias cherrypickMethod)
 {
 private static:
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
@@ -3842,11 +3857,18 @@ private static:
     alias targetOverloadSets = enumerateOverloads!(Base, canonicalPicker);
 
     /*
+     * Super class of this AutoImplement instance
+     */
+    alias Super = BaseTypeTuple!(Self)[0];
+    static assert(is(Super == class));
+    static assert(is(Base == interface) || is(Super == Base));
+
+    /*
      * A tuple of the super class' constructors.  Used for forwarding
      * constructor calls.
      */
-    static if (__traits(hasMember, Base, "__ctor"))
-        alias ctorOverloadSet = OverloadSet!("__ctor", __traits(getOverloads, Base, "__ctor"));
+    static if (__traits(hasMember, Super, "__ctor"))
+        alias ctorOverloadSet = OverloadSet!("__ctor", __traits(getOverloads, Super, "__ctor"));
     else
         alias ctorOverloadSet = OverloadSet!("__ctor"); // empty
 
@@ -4041,6 +4063,41 @@ private static:
             void test_shared_const() shared const;
         }
         auto o = new BlackHole!I_8;
+    }
+    // use baseclass
+    {
+        static class C_9
+        {
+            private string foo_;
+
+            this(string s) {
+                foo_ = s;
+            }
+
+            protected string boilerplate() @property
+            {
+                return "Boilerplate stuff.";
+            }
+
+            public string foo() @property
+            {
+                return foo_;
+            }
+        }
+
+        interface I_10
+        {
+            string testMethod(size_t);
+        }
+
+        static string generateTestMethod(C, alias fun)() @property
+        {
+            return "return this.boilerplate[0 .. a0];";
+        }
+
+        auto o = new AutoImplement!(I_10, C_9, generateTestMethod)("Testing");
+        assert(o.testMethod(11) == "Boilerplate");
+        assert(o.foo == "Testing");
     }
     /+ // deep inheritance
     {
