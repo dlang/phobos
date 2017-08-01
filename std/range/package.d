@@ -6933,12 +6933,19 @@ Indexed!(Source, Indices) indexed(Source, Indices)(Source source, Indices indice
 
 /**
 This range iterates over fixed-sized chunks of size $(D chunkSize) of a
-$(D source) range. $(D Source) must be a forward range. $(D chunkSize) must be
+$(D source) range. $(D Source) must be an input range. $(D chunkSize) must be
 greater than zero.
 
 If $(D !isInfinite!Source) and $(D source.walkLength) is not evenly
 divisible by $(D chunkSize), the back element of this range will contain
 fewer than $(D chunkSize) elements.
+
+If `Source` is a forward range, the resulting range will be forward ranges as
+well. Otherwise, the resulting chunks will be input ranges consuming the same
+input: iterating over `front` will shrink the chunk such that subsequent
+invocations of `front` will no longer return the full chunk, and calling
+`popFront` on the outer range will invalidate any lingering references to
+previous values of `front`.
 
 Params:
     source = Range from which the chunks will be selected
@@ -6946,210 +6953,259 @@ Params:
 
 See_Also: $(LREF slide)
 
-Returns: Forward range of all chunks with propagated bidirectionality,
-         conditional random access and slicing.
+Returns: Range of chunks.
 */
 struct Chunks(Source)
-if (isForwardRange!Source)
+if (isInputRange!Source)
 {
-    /// Standard constructor
-    this(Source source, size_t chunkSize)
+    static if (isForwardRange!Source)
     {
-        assert(chunkSize != 0, "Cannot create a Chunk with an empty chunkSize");
-        _source = source;
-        _chunkSize = chunkSize;
-    }
+        /// Standard constructor
+        this(Source source, size_t chunkSize)
+        {
+            assert(chunkSize != 0, "Cannot create a Chunk with an empty chunkSize");
+            _source = source;
+            _chunkSize = chunkSize;
+        }
 
-    /// Forward range primitives. Always present.
-    @property auto front()
-    {
-        assert(!empty, "Attempting to fetch the front of an empty Chunks");
-        return _source.save.take(_chunkSize);
-    }
+        /// Input range primitives. Always present.
+        @property auto front()
+        {
+            assert(!empty, "Attempting to fetch the front of an empty Chunks");
+            return _source.save.take(_chunkSize);
+        }
 
-    /// Ditto
-    void popFront()
-    {
-        assert(!empty, "Attempting to popFront and empty Chunks");
-        _source.popFrontN(_chunkSize);
-    }
-
-    static if (!isInfinite!Source)
         /// Ditto
-        @property bool empty()
+        void popFront()
         {
-            return _source.empty;
+            assert(!empty, "Attempting to popFront and empty Chunks");
+            _source.popFrontN(_chunkSize);
         }
-    else
-        // undocumented
-        enum empty = false;
 
-    /// Ditto
-    @property typeof(this) save()
-    {
-        return typeof(this)(_source.save, _chunkSize);
-    }
+        static if (!isInfinite!Source)
+            /// Ditto
+            @property bool empty()
+            {
+                return _source.empty;
+            }
+        else
+            // undocumented
+            enum empty = false;
 
-    static if (hasLength!Source)
-    {
-        /// Length. Only if $(D hasLength!Source) is $(D true)
-        @property size_t length()
+        /// Forward range primitives. Only present if `Source` is a forward range.
+        @property typeof(this) save()
         {
-            // Note: _source.length + _chunkSize may actually overflow.
-            // We cast to ulong to mitigate the problem on x86 machines.
-            // For x64 machines, we just suppose we'll never overflow.
-            // The "safe" code would require either an extra branch, or a
-            //   modulo operation, which is too expensive for such a rare case
-            return cast(size_t)((cast(ulong)(_source.length) + _chunkSize - 1) / _chunkSize);
+            return typeof(this)(_source.save, _chunkSize);
         }
-        //Note: No point in defining opDollar here without slicing.
-        //opDollar is defined below in the hasSlicing!Source section
-    }
 
-    static if (hasSlicing!Source)
-    {
-        //Used for various purposes
-        private enum hasSliceToEnd = is(typeof(Source.init[_chunkSize .. $]) == Source);
-
-        /**
-        Indexing and slicing operations. Provided only if
-        $(D hasSlicing!Source) is $(D true).
-         */
-        auto opIndex(size_t index)
+        static if (hasLength!Source)
         {
-            immutable start = index * _chunkSize;
-            immutable end   = start + _chunkSize;
+            /// Length. Only if $(D hasLength!Source) is $(D true)
+            @property size_t length()
+            {
+                // Note: _source.length + _chunkSize may actually overflow.
+                // We cast to ulong to mitigate the problem on x86 machines.
+                // For x64 machines, we just suppose we'll never overflow.
+                // The "safe" code would require either an extra branch, or a
+                //   modulo operation, which is too expensive for such a rare case
+                return cast(size_t)((cast(ulong)(_source.length) + _chunkSize - 1) / _chunkSize);
+            }
+            //Note: No point in defining opDollar here without slicing.
+            //opDollar is defined below in the hasSlicing!Source section
+        }
+
+        static if (hasSlicing!Source)
+        {
+            //Used for various purposes
+            private enum hasSliceToEnd = is(typeof(Source.init[_chunkSize .. $]) == Source);
+
+            /**
+            Indexing and slicing operations. Provided only if
+            $(D hasSlicing!Source) is $(D true).
+             */
+            auto opIndex(size_t index)
+            {
+                immutable start = index * _chunkSize;
+                immutable end   = start + _chunkSize;
+
+                static if (isInfinite!Source)
+                    return _source[start .. end];
+                else
+                {
+                    import std.algorithm.comparison : min;
+                    immutable len = _source.length;
+                    assert(start < len, "chunks index out of bounds");
+                    return _source[start .. min(end, len)];
+                }
+            }
+
+            /// Ditto
+            static if (hasLength!Source)
+                typeof(this) opSlice(size_t lower, size_t upper)
+                {
+                    import std.algorithm.comparison : min;
+                    assert(lower <= upper && upper <= length, "chunks slicing index out of bounds");
+                    immutable len = _source.length;
+                    return chunks(_source[min(lower * _chunkSize, len) .. min(upper * _chunkSize, len)], _chunkSize);
+                }
+            else static if (hasSliceToEnd)
+                //For slicing an infinite chunk, we need to slice the source to the end.
+                typeof(takeExactly(this, 0)) opSlice(size_t lower, size_t upper)
+                {
+                    assert(lower <= upper, "chunks slicing index out of bounds");
+                    return chunks(_source[lower * _chunkSize .. $], _chunkSize).takeExactly(upper - lower);
+                }
 
             static if (isInfinite!Source)
-                return _source[start .. end];
+            {
+                static if (hasSliceToEnd)
+                {
+                    private static struct DollarToken{}
+                    DollarToken opDollar()
+                    {
+                        return DollarToken();
+                    }
+                    //Slice to dollar
+                    typeof(this) opSlice(size_t lower, DollarToken)
+                    {
+                        return typeof(this)(_source[lower * _chunkSize .. $], _chunkSize);
+                    }
+                }
+            }
             else
             {
-                import std.algorithm.comparison : min;
-                immutable len = _source.length;
-                assert(start < len, "chunks index out of bounds");
-                return _source[start .. min(end, len)];
-            }
-        }
-
-        /// Ditto
-        static if (hasLength!Source)
-            typeof(this) opSlice(size_t lower, size_t upper)
-            {
-                import std.algorithm.comparison : min;
-                assert(lower <= upper && upper <= length, "chunks slicing index out of bounds");
-                immutable len = _source.length;
-                return chunks(_source[min(lower * _chunkSize, len) .. min(upper * _chunkSize, len)], _chunkSize);
-            }
-        else static if (hasSliceToEnd)
-            //For slicing an infinite chunk, we need to slice the source to the end.
-            typeof(takeExactly(this, 0)) opSlice(size_t lower, size_t upper)
-            {
-                assert(lower <= upper, "chunks slicing index out of bounds");
-                return chunks(_source[lower * _chunkSize .. $], _chunkSize).takeExactly(upper - lower);
-            }
-
-        static if (isInfinite!Source)
-        {
-            static if (hasSliceToEnd)
-            {
-                private static struct DollarToken{}
+                //Dollar token carries a static type, with no extra information.
+                //It can lazily transform into _source.length on algorithmic
+                //operations such as : chunks[$/2, $-1];
+                private static struct DollarToken
+                {
+                    Chunks!Source* mom;
+                    @property size_t momLength()
+                    {
+                        return mom.length;
+                    }
+                    alias momLength this;
+                }
                 DollarToken opDollar()
                 {
-                    return DollarToken();
+                    return DollarToken(&this);
                 }
-                //Slice to dollar
+
+                //Slice overloads optimized for using dollar. Without this, to slice to end, we would...
+                //1. Evaluate chunks.length
+                //2. Multiply by _chunksSize
+                //3. To finally just compare it (with min) to the original length of source (!)
+                //These overloads avoid that.
+                typeof(this) opSlice(DollarToken, DollarToken)
+                {
+                    static if (hasSliceToEnd)
+                        return chunks(_source[$ .. $], _chunkSize);
+                    else
+                    {
+                        immutable len = _source.length;
+                        return chunks(_source[len .. len], _chunkSize);
+                    }
+                }
                 typeof(this) opSlice(size_t lower, DollarToken)
                 {
-                    return typeof(this)(_source[lower * _chunkSize .. $], _chunkSize);
+                    import std.algorithm.comparison : min;
+                    assert(lower <= length, "chunks slicing index out of bounds");
+                    static if (hasSliceToEnd)
+                        return chunks(_source[min(lower * _chunkSize, _source.length) .. $], _chunkSize);
+                    else
+                    {
+                        immutable len = _source.length;
+                        return chunks(_source[min(lower * _chunkSize, len) .. len], _chunkSize);
+                    }
+                }
+                typeof(this) opSlice(DollarToken, size_t upper)
+                {
+                    assert(upper == length, "chunks slicing index out of bounds");
+                    return this[$ .. $];
                 }
             }
         }
-        else
+
+        //Bidirectional range primitives
+        static if (hasSlicing!Source && hasLength!Source)
         {
-            //Dollar token carries a static type, with no extra information.
-            //It can lazily transform into _source.length on algorithmic
-            //operations such as : chunks[$/2, $-1];
-            private static struct DollarToken
+            /**
+            Bidirectional range primitives. Provided only if both
+            $(D hasSlicing!Source) and $(D hasLength!Source) are $(D true).
+             */
+            @property auto back()
             {
-                Chunks!Source* mom;
-                @property size_t momLength()
-                {
-                    return mom.length;
-                }
-                alias momLength this;
-            }
-            DollarToken opDollar()
-            {
-                return DollarToken(&this);
+                assert(!empty, "back called on empty chunks");
+                immutable len = _source.length;
+                immutable start = (len - 1) / _chunkSize * _chunkSize;
+                return _source[start .. len];
             }
 
-            //Slice overloads optimized for using dollar. Without this, to slice to end, we would...
-            //1. Evaluate chunks.length
-            //2. Multiply by _chunksSize
-            //3. To finally just compare it (with min) to the original length of source (!)
-            //These overloads avoid that.
-            typeof(this) opSlice(DollarToken, DollarToken)
+            /// Ditto
+            void popBack()
             {
-                static if (hasSliceToEnd)
-                    return chunks(_source[$ .. $], _chunkSize);
-                else
-                {
-                    immutable len = _source.length;
-                    return chunks(_source[len .. len], _chunkSize);
-                }
-            }
-            typeof(this) opSlice(size_t lower, DollarToken)
-            {
-                import std.algorithm.comparison : min;
-                assert(lower <= length, "chunks slicing index out of bounds");
-                static if (hasSliceToEnd)
-                    return chunks(_source[min(lower * _chunkSize, _source.length) .. $], _chunkSize);
-                else
-                {
-                    immutable len = _source.length;
-                    return chunks(_source[min(lower * _chunkSize, len) .. len], _chunkSize);
-                }
-            }
-            typeof(this) opSlice(DollarToken, size_t upper)
-            {
-                assert(upper == length, "chunks slicing index out of bounds");
-                return this[$ .. $];
+                assert(!empty, "popBack() called on empty chunks");
+                immutable end = (_source.length - 1) / _chunkSize * _chunkSize;
+                _source = _source[0 .. end];
             }
         }
-    }
 
-    //Bidirectional range primitives
-    static if (hasSlicing!Source && hasLength!Source)
+    private:
+        Source _source;
+        size_t _chunkSize;
+    }
+    else // is input range only
     {
-        /**
-        Bidirectional range primitives. Provided only if both
-        $(D hasSlicing!Source) and $(D hasLength!Source) are $(D true).
-         */
-        @property auto back()
+        import std.typecons : RefCounted;
+
+        static struct Chunk
         {
-            assert(!empty, "back called on empty chunks");
-            immutable len = _source.length;
-            immutable start = (len - 1) / _chunkSize * _chunkSize;
-            return _source[start .. len];
+            private RefCounted!Impl impl;
+
+            @property bool empty() { return impl.curSizeLeft == 0 || impl.r.empty; }
+            @property auto front() { return impl.r.front; }
+            void popFront()
+            {
+                assert(impl.curSizeLeft > 0 && !impl.r.empty);
+                impl.curSizeLeft--;
+                impl.r.popFront();
+            }
         }
 
-        /// Ditto
-        void popBack()
+        static struct Impl
         {
-            assert(!empty, "popBack() called on empty chunks");
-            immutable end = (_source.length - 1) / _chunkSize * _chunkSize;
-            _source = _source[0 .. end];
+            private Source r;
+            private size_t chunkSize;
+            private size_t curSizeLeft;
         }
+
+        private RefCounted!Impl impl;
+        alias impl this;
+
+        private this(Source r, size_t chunkSize)
+        {
+            impl = RefCounted!Impl(r, r.empty ? 0 : chunkSize, chunkSize);
+        }
+
+        @property bool empty() { return chunkSize == 0; }
+        @property Chunk front() return { return Chunk(impl); }
+
+        void popFront()
+        {
+            impl.curSizeLeft -= impl.r.popFrontN(impl.curSizeLeft);
+            if (!impl.r.empty)
+                impl.curSizeLeft = impl.chunkSize;
+            else
+                impl.chunkSize = 0;
+        }
+
+        static assert(isInputRange!(typeof(this)));
     }
-
-private:
-    Source _source;
-    size_t _chunkSize;
 }
 
 /// Ditto
 Chunks!Source chunks(Source)(Source source, size_t chunkSize)
-if (isForwardRange!Source)
+if (isInputRange!Source)
 {
     return typeof(return)(source, chunkSize);
 }
@@ -7167,6 +7223,55 @@ if (isForwardRange!Source)
     assert(chunks.front == chunks[0]);
     assert(chunks.length == 3);
     assert(equal(retro(array(chunks)), array(retro(chunks))));
+}
+
+/// Non-forward input ranges are supported, but with limited semantics.
+@system /*@safe*/ unittest // FIXME: can't be @safe because RefCounted isn't.
+{
+    import std.algorithm.comparison : equal;
+
+    int i;
+
+    // The generator doesn't save state, so it cannot be a forward range.
+    auto inputRange = generate!(() => ++i).take(10);
+
+    // We can still process it in chunks, but it will be single-pass only.
+    auto chunked = inputRange.chunks(2);
+
+    assert(chunked.front.equal([1, 2]));
+    assert(chunked.front.empty); // Iterating the chunk has consumed it
+    chunked.popFront;
+    assert(chunked.front.equal([3, 4]));
+}
+
+@system /*@safe*/ unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange : ReferenceInputRange;
+
+    auto data = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ];
+    auto r = new ReferenceInputRange!int(data).chunks(3);
+    assert(r.equal!equal([
+        [ 1, 2, 3 ],
+        [ 4, 5, 6 ],
+        [ 7, 8, 9 ],
+        [ 10 ]
+    ]));
+
+    auto data2 = [ 1, 2, 3, 4, 5, 6 ];
+    auto r2 = new ReferenceInputRange!int(data2).chunks(3);
+    assert(r2.equal!equal([
+        [ 1, 2, 3 ],
+        [ 4, 5, 6 ]
+    ]));
+
+    auto data3 = [ 1, 2, 3, 4, 5 ];
+    auto r3 = new ReferenceInputRange!int(data3).chunks(2);
+    assert(r3.front.equal([1, 2]));
+    r3.popFront();
+    assert(!r3.empty);
+    r3.popFront();
+    assert(r3.front.equal([5]));
 }
 
 @safe unittest
