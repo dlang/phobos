@@ -428,7 +428,7 @@ Params: aa = The associative array to iterate over.
 Returns: A $(REF_ALTTEXT forward range, isForwardRange, std,_range,primitives)
 of Tuple's of key and value pairs from the given associative array.
 */
-auto byPair(Key, Value)(Value[Key] aa)
+auto byPair(AA : Value[Key], Value, Key)(AA aa)
 {
     import std.algorithm.iteration : map;
     import std.typecons : tuple;
@@ -480,6 +480,26 @@ auto byPair(Key, Value)(Value[Key] aa)
     assert(pairs.empty);
     assert(!savedPairs.empty);
     assert(savedPairs.front == tuple("a", 2));
+}
+
+// Issue 17711
+@system unittest
+{
+    const(int[string]) aa = [ "abc": 123 ];
+
+    // Ensure that byKeyValue is usable with a const AA.
+    auto kv = aa.byKeyValue;
+    assert(!kv.empty);
+    assert(kv.front.key == "abc" && kv.front.value == 123);
+    kv.popFront();
+    assert(kv.empty);
+
+    // Ensure byPair is instantiable with const AA.
+    auto r = aa.byPair;
+    static assert(isInputRange!(typeof(r)));
+    assert(!r.empty && r.front[0] == "abc" && r.front[1] == 123);
+    r.popFront();
+    assert(r.empty);
 }
 
 private template blockAttribute(T)
