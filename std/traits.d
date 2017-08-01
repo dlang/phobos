@@ -3791,7 +3791,7 @@ Returns:
 Note:
  An enum can have multiple members which have the same value. If you want
  to use EnumMembers to e.g. generate switch cases at compile-time,
- you should use the $(REF NoDuplicates, std,typetuple) template to avoid
+ you should use the $(REF NoDuplicates, std,meta) template to avoid
  generating duplicate switch cases.
 
 Note:
