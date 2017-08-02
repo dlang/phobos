@@ -5264,6 +5264,11 @@ auto sequence(alias fun, State...)(State args)
    user-defined types that support $(D ++), the range is an input
    range.
 
+   An integral iota also supports $(D in) operator from the right. It takes
+   the stepping into account, the integral won't be considered
+   contained if it falls between two consecutive values of the range.
+   $(D contains) does the same as in, but from lefthand side.
+
     Example:
     ---
     void main()
@@ -5375,6 +5380,7 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
             auto supposedIndex = cast(StepType)(val - current) / step;
             return supposedIndex < length && supposedIndex * step + current == val;
         }
+        auto contains(Value x){return x in this;}
         inout(Result) opSlice() inout { return this; }
         inout(Result) opSlice(ulong lower, ulong upper) inout
         {
@@ -5457,6 +5463,7 @@ if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
         {
             return current <= val && val < pastLast;
         }
+        auto contains(Value x){return x in this;}
         inout(Result) opSlice() inout { return this; }
         inout(Result) opSlice(ulong lower, ulong upper) inout
         {
@@ -5581,6 +5588,7 @@ body
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
     assert(equal(r, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
     assert(3 in r);
+    assert(r.contains(3)); //Same as above
     assert(!(10 in r));
     assert(!(-8 in r));
     r = iota(0, 11, 3);
