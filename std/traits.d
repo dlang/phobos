@@ -1226,20 +1226,32 @@ If a parameter doesn't have the default value, $(D void) is returned instead.
 template ParameterDefaults(func...)
     if (func.length == 1 && isCallable!func)
 {
+    alias param_names = ParameterIdentifierTuple!func;
     static if (is(FunctionTypeOf!(func[0]) PT == __parameters))
     {
         template Get(size_t i)
         {
-            // workaround scope escape check, see
-            // https://issues.dlang.org/show_bug.cgi?id=16582
-            // should use return scope once available
-            enum get = (PT[i .. i+1] __args) @trusted
-            {
-                // If __args[0] is lazy, we force it to be evaluated like this.
-                PT[i] __pd_value = __args[0];
-                PT[i]* __pd_val = &__pd_value; // workaround Bugzilla 16582
-                return *__pd_val;
-            };
+            // `PT[i .. i+1]` declares a parameter with an arbitrary name.
+            // To avoid a name clash, generate local names that are distinct
+            // from the parameter name, and mix them in.
+            enum name = param_names[i];
+            enum args = "args" ~ (name == "args" ? "_" : "");
+            enum val = "val" ~ (name == "val" ? "_" : "");
+            enum ptr = "ptr" ~ (name == "ptr" ? "_" : "");
+            mixin("
+                // workaround scope escape check, see
+                // https://issues.dlang.org/show_bug.cgi?id=16582
+                // should use return scope once available
+                enum get = (PT[i .. i+1] " ~ args ~ ") @trusted
+                {
+                    // If the parameter is lazy, we force it to be evaluated
+                    // like this.
+                    auto " ~ val ~ " = " ~ args ~ "[0];
+                    auto " ~ ptr ~ " = &" ~ val ~ ";
+                        // workaround Bugzilla 16582
+                    return *" ~ ptr ~ ";
+                };
+            ");
             static if (is(typeof(get())))
                 enum Get = get();
             else
@@ -1275,6 +1287,17 @@ template ParameterDefaults(func...)
     static assert(   ParameterDefaults!foo[1] == "hello");
     static assert(   ParameterDefaults!foo[2] == [1,2,3]);
     static assert(   ParameterDefaults!foo[3] == 0);
+}
+
+unittest // issue 17192
+{
+    static void func(int i, int PT, int __pd_value, int __pd_val, int __args,
+        int name, int args, int val, int ptr, int args_, int val_, int ptr_)
+    {
+    }
+    alias Voids = ParameterDefaults!func;
+    static assert(Voids.length == 12);
+    foreach (V; Voids) static assert(is(V == void));
 }
 
 /**
