@@ -310,7 +310,7 @@ template ImmutableOf(T)   { alias ImmutableOf   =    immutable(T) ; }
     static assert(is(  ImmutableOf!int ==    immutable int));
 }
 
-// Get qualifier template from the given type T
+/// Get qualifier template from the given type T
 template QualifierOf(T)
 {
          static if (is(T == shared(const U), U)) alias QualifierOf = SharedConstOf;
