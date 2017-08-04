@@ -1691,11 +1691,8 @@ if (isInputRange!InputRange &&
 
 @safe pure nothrow unittest
 {
-    int[] a1 = [1, 2, 3];
     assert(!find              ([1, 2, 3], 2).empty);
     assert(!find!((a,b)=>a == b)([1, 2, 3], 2).empty);
-    ubyte[] a2 = [1, 2, 3];
-    ubyte   b2 = 2;
     assert(!find              ([1, 2, 3], 2).empty);
     assert(!find!((a,b)=>a == b)([1, 2, 3], 2).empty);
 }
@@ -1707,21 +1704,13 @@ if (isInputRange!InputRange &&
     {
         foreach (E; AliasSeq!(char, wchar, dchar))
         {
-            R r1 = "hello world";
-            E e1 = 'w';
             assert(find              ("hello world", 'w') == "world");
             assert(find!((a,b)=>a == b)("hello world", 'w') == "world");
-            R r2 = "日c語";
-            E e2 = 'c';
             assert(find              ("日c語", 'c') == "c語");
             assert(find!((a,b)=>a == b)("日c語", 'c') == "c語");
-            R r3 = "0123456789";
-            E e3 = 'A';
             assert(find              ("0123456789", 'A').empty);
             static if (E.sizeof >= 2)
             {
-                R r4 = "hello world";
-                E e4 = 'w';
                 assert(find              ("日本語", '本') == "本語");
                 assert(find!((a,b)=>a == b)("日本語", '本') == "本語");
             }
@@ -1737,11 +1726,8 @@ if (isInputRange!InputRange &&
     static assert(find("日本語", '本') == "本語");
     static assert(find([1, 2, 3], 2)  == [2, 3]);
 
-    int[] a1 = [1, 2, 3];
     static assert(find              ([1, 2, 3], 2));
     static assert(find!((a,b)=>a == b)([1, 2, 3], 2));
-    ubyte[] a2 = [1, 2, 3];
-    ubyte   b2 = 2;
     static assert(find              ([1, 2, 3], 2));
     static assert(find!((a,b)=>a == b)([1, 2, 3], 2));
 }
@@ -2145,6 +2131,7 @@ if (isForwardRange!R1 && isForwardRange!R2
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
     // @@@BUG@@@ removing static below makes unittest fail
     static struct BiRange
     {
@@ -2157,6 +2144,7 @@ if (isForwardRange!R1 && isForwardRange!R2
         void popBack() { return payload.popBack(); }
     }
     auto r = BiRange([1, 2, 3, 10, 11, 4]);
+    assert(equal(find(r, [10, 11]), [10, 11, 4]));
 }
 
 @safe unittest
@@ -2277,6 +2265,7 @@ private R1 simpleMindedFind(alias pred, R1, R2)(R1 haystack, scope R2 needle)
     // If issue 7992 occurs, this will throw an exception from calling
     // popFront() on an empty range.
     auto r = find(CustomString("a"), CustomString("b"));
+    assert(r.empty);
 }
 
 /**
@@ -4605,7 +4594,7 @@ if (isInputRange!Range)
 
 @safe unittest // Issue 13124
 {
-    import std.algorithm.comparison : among;
+    import std.algorithm.comparison : among, equal;
     auto s = "hello how\nare you";
-    s.until!(c => c.among!('\n', '\r'));
+    assert(equal(s.until!(c => c.among!('\n', '\r')), "hello how"));
 }

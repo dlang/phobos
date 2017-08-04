@@ -1412,6 +1412,8 @@ setSymmetricDifference(alias less = "a < b", R1, R2)
 
 @safe unittest // Issue 10460
 {
+    import std.algorithm.comparison : equal;
+
     int[] a = [1, 2];
     double[] b = [2.0, 3.0];
     int[] c = [2, 3];
@@ -1423,6 +1425,9 @@ setSymmetricDifference(alias less = "a < b", R1, R2)
     alias R2 = typeof(setSymmetricDifference(a, c));
     static assert(is(ElementType!R2 == int));
     static assert(hasLvalueElements!R2);
+
+    assert(equal(setSymmetricDifference(a, b), [1.0, 3.0]));
+    assert(equal(setSymmetricDifference(a, c), [1, 3]));
 }
 
 /++

@@ -520,6 +520,7 @@ $(HTTP sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
             copy(arr1, arr2);
             return 35;
         }();
+        assert(v == 35);
     }
 }
 
@@ -605,8 +606,10 @@ if ((isInputRange!Range && is(typeof(range.front = value)) ||
 @nogc @safe unittest
 {
     const(char)[] chars;
+    assert(chars.length == 0);
     static assert(!__traits(compiles, fill(chars, 'c')));
     wstring wchars;
+    assert(wchars.length == 0);
     static assert(!__traits(compiles, fill(wchars, wchar('c'))));
 }
 
@@ -929,6 +932,8 @@ if (is(Range == char[]) || is(Range == wchar[]))
     assert(a[] == [char.init, char.init, char.init]);
     string s;
     assert(!__traits(compiles, s.initializeAll()));
+    assert(!__traits(compiles, s.initializeAll()));
+    assert(s.empty);
 
     //Note: Cannot call uninitializedFill on narrow strings
 
@@ -1169,11 +1174,15 @@ pure nothrow @safe @nogc unittest
 {
     struct S
     {
+        int a = 1;
         @disable this(this);
         ~this() pure nothrow @safe @nogc {}
     }
     S s1;
+    s1.a = 2;
     S s2 = move(s1);
+    assert(s1.a == 1);
+    assert(s2.a == 2);
 }
 
 private void trustedMoveImpl(T)(ref T source, ref T target) @trusted
@@ -1592,6 +1601,7 @@ pure nothrow @nogc @system unittest
     Foo[3] dst = void;
 
     auto res = moveEmplaceSome(src[], dst[]);
+    assert(res.length == 2);
 
     import std.algorithm.searching : all;
     assert(src[0 .. 3].all!(e => e._ptr is null));
@@ -2518,8 +2528,14 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     assert(s2.y == [ 1, 2 ]);
 
     // Immutables cannot be swapped:
-    immutable int imm1, imm2;
+    immutable int imm1 = 1, imm2 = 2;
     static assert(!__traits(compiles, swap(imm1, imm2)));
+
+    int c = imm1 + 0;
+    int d = imm2 + 0;
+    swap(c, d);
+    assert(c == 2);
+    assert(d == 1);
 }
 
 ///
@@ -2565,6 +2581,7 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
 
     // Const types cannot be swapped.
     const NoCopy const1, const2;
+    assert(const1.n == 0 && const2.n == 0);
     static assert(!__traits(compiles, swap(const1, const2)));
 }
 
@@ -2598,9 +2615,14 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     struct S
     {
         const int i;
+        int i2 = 2;
+        int i3 = 3;
     }
     S s;
     static assert(!__traits(compiles, swap(s, s)));
+    swap(s.i2, s.i3);
+    assert(s.i2 == 3);
+    assert(s.i3 == 2);
 }
 
 @safe unittest
@@ -2616,6 +2638,7 @@ if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
     // 12024
     import std.datetime;
     SysTime a, b;
+    swap(a, b);
 }
 
 @system unittest // 9975

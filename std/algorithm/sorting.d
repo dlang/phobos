@@ -2823,6 +2823,7 @@ private template TimSortImpl(alias pred, R)
     testSort(seed);
 
     enum result = testSort(seed);
+    assert(result == true);
 }
 
 @safe unittest
@@ -3118,11 +3119,10 @@ if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
         // Workaround for https://issues.dlang.org/show_bug.cgi?id=16528
         // Safety checks: enumerate all potentially unsafe generic primitives
         // then use a @trusted implementation.
-        auto b = binaryFun!less(r[0], r[r.length - 1]);
+        binaryFun!less(r[0], r[r.length - 1]);
         import std.algorithm.mutation : swapAt;
         r.swapAt(size_t(0), size_t(0));
-        auto len = r.length;
-        static assert(is(typeof(len) == size_t));
+        static assert(is(typeof(r.length) == size_t));
         pivotPartition!less(r, 0);
     }
     bool useSampling = true;
