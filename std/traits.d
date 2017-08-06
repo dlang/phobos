@@ -141,6 +141,7 @@
  *           $(LREF hasUDA)
  *           $(LREF getUDAs)
  *           $(LREF getSymbolsByUDA)
+ *           $(LREF getSymbolsNamesByUDA)
  * ))
  * )
  * )
@@ -7694,6 +7695,87 @@ template getUDAs(alias symbol, alias attribute)
 }
 
 /**
+ * Gets all symbols names within `symbol` that have the given user-defined attribute.
+ * This is not recursive; it will not search for symbols within symbols such as
+ * nested structs or unions.
+ */
+template getSymbolsNamesByUDA(alias symbol, alias attribute)
+{
+    import std.format : format;
+    import std.meta : AliasSeq, Filter;
+
+    // filtering inaccessible members
+    enum isAccessibleMember(string name) = __traits(compiles, __traits(getMember, symbol, name));
+    alias accessibleMembers = Filter!(isAccessibleMember, __traits(allMembers, symbol));
+
+    // filtering not compiled members such as alias of basic types
+    enum hasSpecificUDA(string name) = mixin("hasUDA!(symbol." ~ name ~ ", attribute)");
+    enum isCorrectMember(string name) = __traits(compiles, hasSpecificUDA!(name));
+
+    alias correctMembers = Filter!(isCorrectMember, accessibleMembers);
+    alias getSymbolsNamesByUDA = Filter!(hasSpecificUDA, correctMembers);
+}
+
+///
+@safe unittest
+{
+    enum Attr;
+
+    static struct A
+    {
+        @Attr int a;
+        int b;
+        @Attr void doStuff() {}
+        void doOtherStuff() {}
+
+        static struct Inner
+        {
+            // Not found by getSymbolsNamesByUDA
+            @Attr int c;
+        }
+    }
+
+    // Finds both variables and functions with the attribute, but
+    // doesn't include the variables and functions without it.
+    static assert(getSymbolsNamesByUDA!(A, Attr).length == 2);
+
+    static assert(getSymbolsNamesByUDA!(A, Attr)[0] == "a");
+    static assert(getSymbolsNamesByUDA!(A, Attr)[1] == "doStuff");
+
+    // UDA name not found for B
+    @Attr
+    static struct B
+    {
+        @Attr int a;
+        @Attr int b;
+    }
+
+    static assert(getSymbolsNamesByUDA!(B, Attr).length == 2);
+    static assert(getSymbolsNamesByUDA!(B, Attr)[0] != "B");
+
+    // Inheritance is allowed
+    class Foo
+    {
+        @Attr int a;
+        @Attr int b;
+    }
+
+    class Bar : Foo
+    {
+        @Attr int c;
+        @Attr int d;
+    }
+
+    static assert(getSymbolsNamesByUDA!(Foo, Attr).length == 2);
+    static assert(getSymbolsNamesByUDA!(Bar, Attr).length == 4);
+
+    static assert(getSymbolsNamesByUDA!(Bar, Attr)[0] == "c");
+    static assert(getSymbolsNamesByUDA!(Bar, Attr)[1] == "d");
+    static assert(getSymbolsNamesByUDA!(Bar, Attr)[2] == "a");
+    static assert(getSymbolsNamesByUDA!(Bar, Attr)[3] == "b");
+}
+
+/**
  * Gets all symbols within `symbol` that have the given user-defined attribute.
  * This is not recursive; it will not search for symbols within symbols such as
  * nested structs or unions.
@@ -7714,16 +7796,7 @@ template getSymbolsByUDA(alias symbol, alias attribute)
                   .format(names[0]));
     }
 
-    // filtering inaccessible members
-    enum isAccessibleMember(string name) = __traits(compiles, __traits(getMember, symbol, name));
-    alias accessibleMembers = Filter!(isAccessibleMember, __traits(allMembers, symbol));
-
-    // filtering not compiled members such as alias of basic types
-    enum hasSpecificUDA(string name) = mixin("hasUDA!(symbol." ~ name ~ ", attribute)");
-    enum isCorrectMember(string name) = __traits(compiles, hasSpecificUDA!(name));
-
-    alias correctMembers = Filter!(isCorrectMember, accessibleMembers);
-    alias membersWithUDA = toSymbols!(Filter!(hasSpecificUDA, correctMembers));
+    alias membersWithUDA = toSymbols!(getSymbolsNamesByUDA!(symbol, attribute));
 
     // if the symbol itself has the UDA, tack it on to the front of the list
     static if (hasUDA!(symbol, attribute))
