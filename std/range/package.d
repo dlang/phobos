@@ -5326,10 +5326,10 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
             else if (current > pastLast && step < 0)
             {
                 // Iterating downward
-                assert(unsigned((current - pastLast) / -step) <= size_t.max);
+                assert(unsigned((current - pastLast) / (0 - step)) <= size_t.max);
                 // Cast below can't fail because current > pastLast
                 this.last = cast(Value) (pastLast + 1);
-                this.last += unsigned(current - this.last) % -step;
+                this.last += unsigned(current - this.last) % (0 - step);
             }
             else
             {
@@ -5396,7 +5396,7 @@ if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
             if (step > 0)
                 return 1 + cast(size_t) (unsigned(last - current) / step);
             if (step < 0)
-                return 1 + cast(size_t) (unsigned(current - last) / -step);
+                return 1 + cast(size_t) (unsigned(current - last) / (0 - step));
             return 0;
         }
 
