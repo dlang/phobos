@@ -2759,6 +2759,48 @@ private string uniqueTempPath() @safe
 }
 
 
+/**
+ * $(WEB en.wikipedia.org/wiki/Fork_(system_call), Forks) the current process.
+ *
+ * $(BLUE This functions is Posix-Only.)
+ *
+ * $(RED Warning): This function carries with it all the caveats of the
+ * underlying `fork` system call. Threads are not duplicated, thus any locks
+ * held by other threads will remain acquired. This includes locks used by
+ * C or library functions, such as `malloc` or `printf`.
+ *
+ * Returns:
+ * The child process's $(LREF Pid), or $(D null) if execution is in
+ * the forked process. As with `spawnProcess`, you must call `wait` on
+ * the `Pid` to reap the child process.
+ *
+ * Throws:
+ * $(LREF ProcessException) on failure to fork the process.
+ */
+version (Posix)
+Pid fork()
+{
+    import core.thread;
+    auto id = core.thread.fork();
+
+    if (id < 0)
+        throw ProcessException.newFromErrno("Failed to fork process");
+    return id ? new Pid(id) : null;
+}
+
+version (Posix)
+unittest
+{
+    import core.memory;
+    auto pid = fork();
+    GC.collect();
+    if (pid)
+        assert(wait(pid) == 123);
+    else
+        exit(123);
+}
+
+
 // =============================================================================
 // Functions for shell command quoting/escaping.
 // =============================================================================
