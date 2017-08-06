@@ -71,6 +71,7 @@ module std.typecons;
 import core.stdc.stdint : uintptr_t;
 import std.meta; // : AliasSeq, allSatisfy;
 import std.traits;
+import std.range;
 
 ///
 @safe unittest
@@ -1299,6 +1300,83 @@ template Tuple(Specs...)
     Tuple!(int, "x", int, "y") point1;
     Tuple!(int, int) point2;
     assert(!is(typeof(point1) == typeof(point2)));
+}
+
+/// Allows to unpack a $(D Tuple) range to arguments when iterating using $(D foreach).
+auto unpackIterator(Range)(Range r)
+    if (isInputRange!(Unqual!Range) && isTuple!(ElementType!Range))
+{
+    static struct Result
+    {
+        private alias R = Unqual!Range;
+        private alias Types = ElementType!R.Types;
+        R source;
+
+        int opApply(scope int delegate(Types args) dg)
+        {
+            while (!source.empty)
+            {
+                const int result = dg(source.front.expand);
+                source.popFront();
+
+                if (result)
+                    return result;
+            }
+            return 0;
+	    }
+
+        int opApply(scope int delegate(size_t, Types) dg)
+        {
+            size_t i = 0;
+            while (!source.empty)
+            {
+                const int result = dg(i, source.front.expand);
+                source.popFront();
+                i++;
+
+                if (result)
+                    return result;
+            }
+            return 0;
+	    }
+    }
+
+    return Result(r);
+}
+
+///
+unittest
+{
+    alias T = Tuple!(int,string);
+    const T[] array = [ T(1, "a"), T(2, "b"), T(3, "c"), T(4, "d") ];
+
+    size_t index = 0;
+    foreach (int num, string str; array.unpackIterator)
+    {
+        assert( num == index + 1 );
+        assert( str == [ 'a' + index ] );
+
+        index++;
+    }
+    assert( index == 4 );
+}
+
+/// It is also possible to get item index as first argument
+unittest
+{
+    alias T = Tuple!(int,string);
+    const T[] array = [ T(1, "a"), T(2, "b"), T(3, "c"), T(4, "d") ];
+
+    size_t index = 0;
+    foreach (i, num, str; array.unpackIterator)
+    {
+        assert( num == index + 1 );
+        assert( str == [ 'a' + index ] );
+        assert( i == index );
+
+        index++;
+    }
+    assert( index == 4 );
 }
 
 /**
