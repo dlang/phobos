@@ -4123,7 +4123,7 @@ private T octal(T)(const string num)
 
     T value = 0;
 
-    foreach (immutable s; num)
+    foreach (const char s; num)
     {
         if (s < '0' || s > '7') // we only care about digits; skip the rest
         // safe to skip - this is checked out in the assert so these
