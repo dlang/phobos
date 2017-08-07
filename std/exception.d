@@ -4,6 +4,36 @@
     This module defines functions related to exceptions and general error
     handling. It also defines functions intended to aid in unit testing.
 
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Assumptions) $(TD
+        $(LREF assertNotThrown)
+        $(LREF assertThrown)
+        $(LREF assumeUnique)
+        $(LREF assumeWontThrow)
+        $(LREF mayPointTo)
+))
+$(TR $(TD Enforce) $(TD
+        $(LREF doesPointTo)
+        $(LREF enforce)
+        $(LREF enforceEx)
+        $(LREF errnoEnforce)
+))
+$(TR $(TD Handlers) $(TD
+        $(LREF collectException)
+        $(LREF collectExceptionMsg)
+        $(LREF ifThrown)
+        $(LREF handle)
+))
+$(TR $(TD Other) $(TD
+        $(LREF basicExceptionCtors)
+        $(LREF emptyExceptionMsg)
+        $(LREF ErrnoException)
+        $(LREF RangePrimitive)
+))
+)
+
     Synopsis of some of std.exception's functions:
     --------------------
     string synopsis()
@@ -601,8 +631,8 @@ if (is(typeof(new E(__FILE__, __LINE__))) && !is(typeof(new E("", __FILE__, __LI
 
 @system unittest
 {
-    import std.array : empty;
     import core.exception : OutOfMemoryError;
+    import std.array : empty;
     assertNotThrown(enforceEx!Exception(true));
     assertNotThrown(enforceEx!Exception(true, "blah"));
     assertNotThrown(enforceEx!OutOfMemoryError(true));
@@ -883,6 +913,13 @@ immutable(T)[] assumeUnique(T)(ref T[] array) pure nothrow
     array = null;
     return result;
 }
+/// ditto
+immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
+{
+    auto result = cast(immutable(T[U])) array;
+    array = null;
+    return result;
+}
 
 @system unittest
 {
@@ -890,13 +927,6 @@ immutable(T)[] assumeUnique(T)(ref T[] array) pure nothrow
     int[] arr = new int[1];
     auto arr1 = assumeUnique(arr);
     assert(is(typeof(arr1) == immutable(int)[]) && arr == null);
-}
-
-immutable(T[U]) assumeUnique(T, U)(ref T[U] array) pure nothrow
-{
-    auto result = cast(immutable(T[U])) array;
-    array = null;
-    return result;
 }
 
 // @@@BUG@@@
@@ -1448,6 +1478,34 @@ private bool isUnionAliasedImpl(T)(size_t offset)
         static assert( isUnionAliased!(S.A5, 1)); //a5.b1;
 }
 
+package string errnoString(int errno) nothrow @trusted
+{
+    import core.stdc.string : strlen;
+    version (CRuntime_Glibc)
+    {
+        import core.stdc.string : strerror_r;
+        char[1024] buf = void;
+        auto s = strerror_r(errno, buf.ptr, buf.length);
+    }
+    else version (Posix)
+    {
+        // XSI-compliant
+        import core.stdc.string : strerror_r;
+        char[1024] buf = void;
+        const(char)* s;
+        if (strerror_r(errno, buf.ptr, buf.length) == 0)
+            s = buf.ptr;
+        else
+            return "Unknown error";
+    }
+    else
+    {
+        import core.stdc.string : strerror;
+        auto s = strerror(errno);
+    }
+    return s[0 .. s.strlen].idup;
+}
+
 /*********************
  * Thrown if errors that set $(D errno) occur.
  */
@@ -1455,28 +1513,17 @@ class ErrnoException : Exception
 {
     final @property uint errno() { return _errno; } /// Operating system error code.
     private uint _errno;
+    /// Constructor which takes an error message. The current global $(REF errno, core,stdc,errno) value is used as error code.
     this(string msg, string file = null, size_t line = 0) @trusted
     {
         import core.stdc.errno : errno;
         this(msg, errno, file, line);
     }
+    /// Constructor which takes an error message and error code.
     this(string msg, int errno, string file = null, size_t line = 0) @trusted
     {
-        import core.stdc.string : strlen;
-
         _errno = errno;
-        version (CRuntime_Glibc)
-        {
-            import core.stdc.string : strerror_r;
-            char[1024] buf = void;
-            auto s = strerror_r(errno, buf.ptr, buf.length);
-        }
-        else
-        {
-            import core.stdc.string : strerror;
-            auto s = strerror(errno);
-        }
-        super(msg ~ " (" ~ s[0 .. s.strlen].idup ~ ")", file, line);
+        super(msg ~ " (" ~ errnoString(errno) ~ ")", file, line);
     }
 
     @system unittest
@@ -1628,8 +1675,8 @@ CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate
 //Verify Examples
 @system unittest
 {
-    import std.string;
     import std.conv;
+    import std.string;
     //Revert to a default value upon an error:
     assert("x".to!int().ifThrown(0) == 0);
 
@@ -1660,9 +1707,9 @@ CommonType!(T1, T2) ifThrown(T1, T2)(lazy scope T1 expression, scope T2 delegate
 
 @system unittest
 {
-    import std.string;
-    import std.conv;
     import core.exception;
+    import std.conv;
+    import std.string;
     //Basic behaviour - all versions.
     assert("1".to!int().ifThrown(0) == 1);
     assert("x".to!int().ifThrown(0) == 0);
@@ -1748,7 +1795,7 @@ Params:
 
 Returns: A wrapper $(D struct) that preserves the range interface of $(D input).
 
-opSlice:
+Note:
 Infinite ranges with slicing support must return an instance of
 $(REF Take, std,range) when sliced with a specific lower and upper
 bound (see $(REF hasSlicing, std,range,primitives)); $(D handle) deals with

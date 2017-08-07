@@ -105,8 +105,8 @@ class MultiLogger : Logger
 
 @safe unittest
 {
-    import std.experimental.logger.nulllogger;
     import std.exception : assertThrown;
+    import std.experimental.logger.nulllogger;
     auto a = new MultiLogger;
     auto n0 = new NullLogger();
     auto n1 = new NullLogger();

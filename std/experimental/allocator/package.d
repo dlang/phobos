@@ -6,6 +6,33 @@ and destruction/deallocation of data including `struct`s and `class`es,
 and also array primitives related to allocation. This module is the entry point
 for both making use of allocators and for their documentation.
 
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Make) $(TD
+    $(LREF make)
+    $(LREF makeArray)
+    $(LREF makeMultidimensionalArray)
+))
+$(TR $(TD Dispose) $(TD
+    $(LREF dispose)
+    $(LREF disposeMultidimensionalArray)
+))
+$(TR $(TD Modify) $(TD
+    $(LREF expandArray)
+    $(LREF shrinkArray)
+))
+$(TR $(TD Global) $(TD
+    $(LREF processAllocator)
+    $(LREF theAllocator)
+))
+$(TR $(TD Class interface) $(TD
+    $(LREF allocatorObject)
+    $(LREF CAllocatorImpl)
+    $(LREF IAllocator)
+))
+)
+
 Synopsis:
 ---
 // Allocate an int, initialize it with 42
@@ -203,14 +230,14 @@ public import std.experimental.allocator.common,
 @system unittest
 {
     import std.algorithm.comparison : min, max;
-    import std.experimental.allocator.building_blocks.free_list : FreeList;
-    import std.experimental.allocator.gc_allocator : GCAllocator;
-    import std.experimental.allocator.building_blocks.segregator : Segregator;
-    import std.experimental.allocator.building_blocks.bucketizer : Bucketizer;
     import std.experimental.allocator.building_blocks.allocator_list
         : AllocatorList;
     import std.experimental.allocator.building_blocks.bitmapped_block
         : BitmappedBlock;
+    import std.experimental.allocator.building_blocks.bucketizer : Bucketizer;
+    import std.experimental.allocator.building_blocks.free_list : FreeList;
+    import std.experimental.allocator.building_blocks.segregator : Segregator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
 
     alias FList = FreeList!(GCAllocator, 0, unbounded);
     alias A = Segregator!(
@@ -222,8 +249,9 @@ public import std.experimental.allocator.common,
         2048, Bucketizer!(FList, 1025, 2048, 256),
         3584, Bucketizer!(FList, 2049, 3584, 512),
         4072 * 1024, AllocatorList!(
-            (n) => BitmappedBlock!(4096)(GCAllocator.instance.allocate(
-                max(n, 4072 * 1024)))),
+            (n) => BitmappedBlock!(4096)(
+                    cast(ubyte[])(GCAllocator.instance.allocate(
+                        max(n, 4072 * 1024))))),
         GCAllocator
     );
     A tuMalloc;
@@ -312,7 +340,7 @@ interface IAllocator
     Resolves an internal pointer to the full block allocated. Implementations
     that don't support this primitive should always return `Ternary.unknown`.
     */
-    Ternary resolveInternalPointer(void* p, ref void[] result);
+    Ternary resolveInternalPointer(const void* p, ref void[] result);
 
     /**
     Deallocates a memory block. Implementations that don't support this
@@ -335,20 +363,183 @@ interface IAllocator
     Ternary empty();
 }
 
-__gshared IAllocator _processAllocator;
-IAllocator _threadAllocator;
+/**
+Dynamic shared allocator interface. Code that defines allocators shareable
+across threads ultimately implements this interface. This should be used
+wherever a uniform type is required for encapsulating various allocator
+implementations.
 
-shared static this()
+Composition of allocators is not recommended at this level due to
+inflexibility of dynamic interfaces and inefficiencies caused by cascaded
+multiple calls. Instead, compose allocators using the static interface defined
+in $(A std_experimental_allocator_building_blocks.html,
+`std.experimental.allocator.building_blocks`), then adapt the composed
+allocator to `ISharedAllocator` (possibly by using $(LREF CSharedAllocatorImpl) below).
+
+Methods returning $(D Ternary) return $(D Ternary.yes) upon success,
+$(D Ternary.no) upon failure, and $(D Ternary.unknown) if the primitive is not
+implemented by the allocator instance.
+*/
+interface ISharedAllocator
 {
-    assert(!_processAllocator);
-    import std.experimental.allocator.gc_allocator : GCAllocator;
-    _processAllocator = allocatorObject(GCAllocator.instance);
+    /**
+    Returns the alignment offered.
+    */
+    @property uint alignment() shared;
+
+    /**
+    Returns the good allocation size that guarantees zero internal
+    fragmentation.
+    */
+    size_t goodAllocSize(size_t s) shared;
+
+    /**
+    Allocates `n` bytes of memory.
+    */
+    void[] allocate(size_t, TypeInfo ti = null) shared;
+
+    /**
+    Allocates `n` bytes of memory with specified alignment `a`. Implementations
+    that do not support this primitive should always return `null`.
+    */
+    void[] alignedAllocate(size_t n, uint a) shared;
+
+    /**
+    Allocates and returns all memory available to this allocator.
+    Implementations that do not support this primitive should always return
+    `null`.
+    */
+    void[] allocateAll() shared;
+
+    /**
+    Expands a memory block in place and returns `true` if successful.
+    Implementations that don't support this primitive should always return
+    `false`.
+    */
+    bool expand(ref void[], size_t) shared;
+
+    /// Reallocates a memory block.
+    bool reallocate(ref void[], size_t) shared;
+
+    /// Reallocates a memory block with specified alignment.
+    bool alignedReallocate(ref void[] b, size_t size, uint alignment) shared;
+
+    /**
+    Returns $(D Ternary.yes) if the allocator owns $(D b), $(D Ternary.no) if
+    the allocator doesn't own $(D b), and $(D Ternary.unknown) if ownership
+    cannot be determined. Implementations that don't support this primitive
+    should always return `Ternary.unknown`.
+    */
+    Ternary owns(void[] b) shared;
+
+    /**
+    Resolves an internal pointer to the full block allocated. Implementations
+    that don't support this primitive should always return `Ternary.unknown`.
+    */
+    Ternary resolveInternalPointer(const void* p, ref void[] result) shared;
+
+    /**
+    Deallocates a memory block. Implementations that don't support this
+    primitive should always return `false`. A simple way to check that an
+    allocator supports deallocation is to call $(D deallocate(null)).
+    */
+    bool deallocate(void[] b) shared;
+
+    /**
+    Deallocates all memory. Implementations that don't support this primitive
+    should always return `false`.
+    */
+    bool deallocateAll() shared;
+
+    /**
+    Returns $(D Ternary.yes) if no memory is currently allocated from this
+    allocator, $(D Ternary.no) if some allocations are currently active, or
+    $(D Ternary.unknown) if not supported.
+    */
+    Ternary empty() shared;
 }
 
-static this()
+private shared ISharedAllocator _processAllocator;
+private IAllocator _threadAllocator;
+
+private IAllocator setupThreadAllocator() nothrow @nogc @safe
 {
+    /*
+    Forwards the `_threadAllocator` calls to the `processAllocator`
+    */
+    static class ThreadAllocator : IAllocator
+    {
+        override @property uint alignment()
+        {
+            return processAllocator.alignment();
+        }
+
+        override size_t goodAllocSize(size_t s)
+        {
+            return processAllocator.goodAllocSize(s);
+        }
+
+        override void[] allocate(size_t n, TypeInfo ti = null)
+        {
+            return processAllocator.allocate(n, ti);
+        }
+
+        override void[] alignedAllocate(size_t n, uint a)
+        {
+            return processAllocator.alignedAllocate(n, a);
+        }
+
+        override void[] allocateAll()
+        {
+            return processAllocator.allocateAll();
+        }
+
+        override bool expand(ref void[] b, size_t size)
+        {
+            return processAllocator.expand(b, size);
+        }
+
+        override bool reallocate(ref void[] b, size_t size)
+        {
+            return processAllocator.reallocate(b, size);
+        }
+
+        override bool alignedReallocate(ref void[] b, size_t size, uint alignment)
+        {
+            return processAllocator.alignedReallocate(b, size, alignment);
+        }
+
+        override Ternary owns(void[] b)
+        {
+            return processAllocator.owns(b);
+        }
+
+        override Ternary resolveInternalPointer(const void* p, ref void[] result)
+        {
+            return processAllocator.resolveInternalPointer(p, result);
+        }
+
+        override bool deallocate(void[] b)
+        {
+            return processAllocator.deallocate(b);
+        }
+
+        override bool deallocateAll()
+        {
+            return processAllocator.deallocateAll();
+        }
+
+        override Ternary empty()
+        {
+            return processAllocator.empty();
+        }
+    }
+
     assert(!_threadAllocator);
-    _threadAllocator = _processAllocator;
+    import std.conv : emplace;
+    static ulong[stateSize!(ThreadAllocator).divideRoundUp(ulong.sizeof)] _threadAllocatorState;
+    _threadAllocator = () @trusted { return emplace!(ThreadAllocator)(_threadAllocatorState[]); } ();
+    return _threadAllocator;
 }
 
 /**
@@ -360,7 +551,8 @@ in turn uses the garbage collected heap.
 */
 nothrow @safe @nogc @property IAllocator theAllocator()
 {
-    return _threadAllocator;
+    auto p = _threadAllocator;
+    return p !is null ? p : setupThreadAllocator();
 }
 
 /// Ditto
@@ -390,13 +582,16 @@ Gets/sets the allocator for the current process. This allocator must be used
 for allocating memory shared across threads. Objects created using this
 allocator can be cast to $(D shared).
 */
-@property IAllocator processAllocator()
+@property shared(ISharedAllocator) processAllocator()
 {
-    return _processAllocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.concurrency : initOnce;
+    return initOnce!_processAllocator(
+        sharedAllocatorObject(GCAllocator.instance));
 }
 
 /// Ditto
-@property void processAllocator(IAllocator a)
+@property void processAllocator(shared ISharedAllocator a)
 {
     assert(a);
     _processAllocator = a;
@@ -404,8 +599,40 @@ allocator can be cast to $(D shared).
 
 @system unittest
 {
+    import core.exception : AssertError;
+    import std.exception : assertThrown;
+    import std.experimental.allocator.building_blocks.free_list : SharedFreeList;
+    import std.experimental.allocator.mallocator : Mallocator;
+
     assert(processAllocator);
-    assert(processAllocator is theAllocator);
+    assert(theAllocator);
+
+    testAllocatorObject(processAllocator);
+    testAllocatorObject(theAllocator);
+
+    shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) sharedFL;
+    shared ISharedAllocator sharedFLObj = sharedAllocatorObject(sharedFL);
+    assert(sharedFLObj);
+    testAllocatorObject(sharedFLObj);
+
+    // Test processAllocator setter
+    shared ISharedAllocator oldProcessAllocator = processAllocator;
+    processAllocator = sharedFLObj;
+    assert(processAllocator is sharedFLObj);
+
+    testAllocatorObject(processAllocator);
+    testAllocatorObject(theAllocator);
+    assertThrown!AssertError(processAllocator = null);
+
+    // Restore initial processAllocator state
+    processAllocator = oldProcessAllocator;
+    assert(processAllocator is oldProcessAllocator);
+
+    shared ISharedAllocator indirectShFLObj = sharedAllocatorObject(&sharedFL);
+    testAllocatorObject(indirectShFLObj);
+
+    IAllocator indirectMallocator = allocatorObject(&Mallocator.instance);
+    testAllocatorObject(indirectMallocator);
 }
 
 /**
@@ -1091,8 +1318,8 @@ if (isInputRange!R && !isInfinite!R)
 /*pure*/ nothrow @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.internal.test.dummyrange;
     import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.internal.test.dummyrange;
     import std.range : iota;
     foreach (DummyType; AllDummyRanges)
     {
@@ -1612,18 +1839,18 @@ lengths = static array containing the size of each dimension
 Returns:
 An N-dimensional array with individual elements of type T.
 */
-auto makeMultidimensionalArray(T, Allocator, size_t n)(auto ref Allocator alloc, size_t[n] lengths...)
+auto makeMultidimensionalArray(T, Allocator, size_t N)(auto ref Allocator alloc, size_t[N] lengths...)
 {
-    static if (n == 1)
+    static if (N == 1)
     {
         return makeArray!T(alloc, lengths[0]);
     }
     else
     {
-        alias E = typeof(makeMultidimensionalArray!(T, Allocator, n - 1)(alloc, lengths[1 .. $]));
+        alias E = typeof(makeMultidimensionalArray!(T, Allocator, N - 1)(alloc, lengths[1 .. $]));
         auto ret = makeArray!E(alloc, lengths[0]);
         foreach (ref e; ret)
-            e = makeMultidimensionalArray!(T, Allocator, n - 1)(alloc, lengths[1 .. $]);
+            e = makeMultidimensionalArray!(T, Allocator, N - 1)(alloc, lengths[1 .. $]);
         return ret;
     }
 }
@@ -1820,12 +2047,79 @@ CAllocatorImpl!(A, Yes.indirect) allocatorObject(A)(A* pa)
 
 /**
 
-Implementation of $(D IAllocator) using $(D Allocator). This adapts a
-statically-built allocator type to $(D IAllocator) that is directly usable by
+Returns a dynamically-typed $(D CSharedAllocator) built around a given statically-
+typed allocator $(D a) of type $(D A). Passing a pointer to the allocator
+creates a dynamic allocator around the allocator pointed to by the pointer,
+without attempting to copy or move it. Passing the allocator by value or
+reference behaves as follows.
+
+$(UL
+$(LI If $(D A) has no state, the resulting object is allocated in static
+shared storage.)
+$(LI If $(D A) has state and is copyable, the result will store a copy of it
+within. The result itself is allocated in its own statically-typed allocator.)
+$(LI If $(D A) has state and is not copyable, the result will move the
+passed-in argument into the result. The result itself is allocated in its own
+statically-typed allocator.)
+)
+
+*/
+shared(CSharedAllocatorImpl!A) sharedAllocatorObject(A)(auto ref A a)
+if (!isPointer!A)
+{
+    import std.conv : emplace;
+    static if (stateSize!A == 0)
+    {
+        enum s = stateSize!(CSharedAllocatorImpl!A).divideRoundUp(ulong.sizeof);
+        static __gshared ulong[s] state;
+        static shared CSharedAllocatorImpl!A result;
+        if (!result)
+        {
+            // Don't care about a few races
+            result = cast(shared
+                    CSharedAllocatorImpl!A)(emplace!(CSharedAllocatorImpl!A)(state[]));
+        }
+        assert(result);
+        return result;
+    }
+    else static if (is(typeof({ shared A b = a; shared A c = b; }))) // copyable
+    {
+        auto state = a.allocate(stateSize!(CSharedAllocatorImpl!A));
+        import std.traits : hasMember;
+        static if (hasMember!(A, "deallocate"))
+        {
+            scope(failure) a.deallocate(state);
+        }
+        return emplace!(shared CSharedAllocatorImpl!A)(state);
+    }
+    else // the allocator object is not copyable
+    {
+        assert(0, "Not yet implemented");
+    }
+}
+
+/// Ditto
+shared(CSharedAllocatorImpl!(A, Yes.indirect)) sharedAllocatorObject(A)(A* pa)
+{
+    assert(pa);
+    import std.conv : emplace;
+    auto state = pa.allocate(stateSize!(CSharedAllocatorImpl!(A, Yes.indirect)));
+    import std.traits : hasMember;
+    static if (hasMember!(A, "deallocate"))
+    {
+        scope(failure) pa.deallocate(state);
+    }
+    return emplace!(shared CSharedAllocatorImpl!(A, Yes.indirect))(state, pa);
+}
+
+
+/**
+
+Implementation of `IAllocator` using `Allocator`. This adapts a
+statically-built allocator type to `IAllocator` that is directly usable by
 non-templated code.
 
-Usually $(D CAllocatorImpl) is used indirectly by calling
-$(LREF theAllocator).
+Usually `CAllocatorImpl` is used indirectly by calling $(LREF theAllocator).
 */
 class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     : IAllocator
@@ -1853,14 +2147,14 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
         else alias impl = Allocator.instance;
     }
 
-    /// Returns $(D impl.alignment).
+    /// Returns `impl.alignment`.
     override @property uint alignment()
     {
         return impl.alignment;
     }
 
     /**
-    Returns $(D impl.goodAllocSize(s)).
+    Returns `impl.goodAllocSize(s)`.
     */
     override size_t goodAllocSize(size_t s)
     {
@@ -1868,7 +2162,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     }
 
     /**
-    Returns $(D impl.allocate(s)).
+    Returns `impl.allocate(s)`.
     */
     override void[] allocate(size_t s, TypeInfo ti = null)
     {
@@ -1876,7 +2170,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     }
 
     /**
-    If $(D impl.alignedAllocate) exists, calls it and returns the result.
+    If `impl.alignedAllocate` exists, calls it and returns the result.
     Otherwise, always returns `null`.
     */
     override void[] alignedAllocate(size_t s, uint a)
@@ -1897,7 +2191,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
         else return Ternary.unknown;
     }
 
-    /// Returns $(D impl.expand(b, s)) if defined, $(D false) otherwise.
+    /// Returns $(D impl.expand(b, s)) if defined, `false` otherwise.
     override bool expand(ref void[] b, size_t s)
     {
         static if (hasMember!(Allocator, "expand"))
@@ -1912,7 +2206,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
         return impl.reallocate(b, s);
     }
 
-    /// Forwards to $(D impl.alignedReallocate).
+    /// Forwards to `impl.alignedReallocate` if defined, `false` otherwise.
     bool alignedReallocate(ref void[] b, size_t s, uint a)
     {
         static if (!hasMember!(Allocator, "alignedAllocate"))
@@ -1926,12 +2220,11 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     }
 
     // Undocumented for now
-    Ternary resolveInternalPointer(void* p, ref void[] result)
+    Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
         static if (hasMember!(Allocator, "resolveInternalPointer"))
         {
-            result = impl.resolveInternalPointer(p);
-            return Ternary(result.ptr !is null);
+            return impl.resolveInternalPointer(p, result);
         }
         else
         {
@@ -1940,11 +2233,8 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     }
 
     /**
-    If $(D impl.deallocate) is not defined, returns $(D Ternary.unknown). If
-    $(D impl.deallocate) returns $(D void) (the common case), calls it and
-    returns $(D Ternary.yes). If $(D impl.deallocate) returns $(D bool), calls
-    it and returns $(D Ternary.yes) for $(D true), $(D Ternary.no) for $(D
-    false).
+    If `impl.deallocate` is not defined, returns `false`. Otherwise it forwards
+    the call.
     */
     override bool deallocate(void[] b)
     {
@@ -1959,8 +2249,8 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     }
 
     /**
-    Calls $(D impl.deallocateAll()) and returns $(D Ternary.yes) if defined,
-    otherwise returns $(D Ternary.unknown).
+    Calls `impl.deallocateAll()` and returns the result if defined,
+    otherwise returns `false`.
     */
     override bool deallocateAll()
     {
@@ -1975,8 +2265,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     }
 
     /**
-    Forwards to $(D impl.empty()) if defined, otherwise returns
-    $(D Ternary.unknown).
+    Forwards to `impl.empty()` if defined, otherwise returns `Ternary.unknown`.
     */
     override Ternary empty()
     {
@@ -1991,7 +2280,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     }
 
     /**
-    Returns $(D impl.allocateAll()) if present, $(D null) otherwise.
+    Returns `impl.allocateAll()` if present, `null` otherwise.
     */
     override void[] allocateAll()
     {
@@ -2006,23 +2295,216 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     }
 }
 
+/**
+
+Implementation of `ISharedAllocator` using `Allocator`. This adapts a
+statically-built, shareable across threads, allocator type to `ISharedAllocator`
+that is directly usable by non-templated code.
+
+Usually `CSharedAllocatorImpl` is used indirectly by calling
+$(LREF processAllocator).
+*/
+class CSharedAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
+    : ISharedAllocator
+{
+    import std.traits : hasMember;
+
+    /**
+    The implementation is available as a public member.
+    */
+    static if (indirect)
+    {
+        private shared Allocator* pimpl;
+        ref Allocator impl() shared
+        {
+            return *pimpl;
+        }
+        this(Allocator* pa) shared
+        {
+            pimpl = pa;
+        }
+    }
+    else
+    {
+        static if (stateSize!Allocator) shared Allocator impl;
+        else alias impl = Allocator.instance;
+    }
+
+    /// Returns `impl.alignment`.
+    override @property uint alignment() shared
+    {
+        return impl.alignment;
+    }
+
+    /**
+    Returns `impl.goodAllocSize(s)`.
+    */
+    override size_t goodAllocSize(size_t s) shared
+    {
+        return impl.goodAllocSize(s);
+    }
+
+    /**
+    Returns `impl.allocate(s)`.
+    */
+    override void[] allocate(size_t s, TypeInfo ti = null) shared
+    {
+        return impl.allocate(s);
+    }
+
+    /**
+    If `impl.alignedAllocate` exists, calls it and returns the result.
+    Otherwise, always returns `null`.
+    */
+    override void[] alignedAllocate(size_t s, uint a) shared
+    {
+        static if (hasMember!(Allocator, "alignedAllocate"))
+            return impl.alignedAllocate(s, a);
+        else
+            return null;
+    }
+
+    /**
+    If `Allocator` implements `owns`, forwards to it. Otherwise, returns
+    `Ternary.unknown`.
+    */
+    override Ternary owns(void[] b) shared
+    {
+        static if (hasMember!(Allocator, "owns")) return impl.owns(b);
+        else return Ternary.unknown;
+    }
+
+    /// Returns $(D impl.expand(b, s)) if defined, `false` otherwise.
+    override bool expand(ref void[] b, size_t s) shared
+    {
+        static if (hasMember!(Allocator, "expand"))
+            return impl.expand(b, s);
+        else
+            return s == 0;
+    }
+
+    /// Returns $(D impl.reallocate(b, s)).
+    override bool reallocate(ref void[] b, size_t s) shared
+    {
+        return impl.reallocate(b, s);
+    }
+
+    /// Forwards to `impl.alignedReallocate` if defined, `false` otherwise.
+    bool alignedReallocate(ref void[] b, size_t s, uint a) shared
+    {
+        static if (!hasMember!(Allocator, "alignedAllocate"))
+        {
+            return false;
+        }
+        else
+        {
+            return impl.alignedReallocate(b, s, a);
+        }
+    }
+
+    // Undocumented for now
+    Ternary resolveInternalPointer(const void* p, ref void[] result) shared
+    {
+        static if (hasMember!(Allocator, "resolveInternalPointer"))
+        {
+            return impl.resolveInternalPointer(p, result);
+        }
+        else
+        {
+            return Ternary.unknown;
+        }
+    }
+
+    /**
+    If `impl.deallocate` is not defined, returns `false`. Otherwise it forwards
+    the call.
+    */
+    override bool deallocate(void[] b) shared
+    {
+        static if (hasMember!(Allocator, "deallocate"))
+        {
+            return impl.deallocate(b);
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    /**
+    Calls `impl.deallocateAll()` and returns the result if defined,
+    otherwise returns `false`.
+    */
+    override bool deallocateAll() shared
+    {
+        static if (hasMember!(Allocator, "deallocateAll"))
+        {
+            return impl.deallocateAll();
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    /**
+    Forwards to `impl.empty()` if defined, otherwise returns `Ternary.unknown`.
+    */
+    override Ternary empty() shared
+    {
+        static if (hasMember!(Allocator, "empty"))
+        {
+            return Ternary(impl.empty);
+        }
+        else
+        {
+            return Ternary.unknown;
+        }
+    }
+
+    /**
+    Returns `impl.allocateAll()` if present, `null` otherwise.
+    */
+    override void[] allocateAll() shared
+    {
+        static if (hasMember!(Allocator, "allocateAll"))
+        {
+            return impl.allocateAll();
+        }
+        else
+        {
+            return null;
+        }
+    }
+}
+
+
 // Example in intro above
 @system unittest
 {
     // Allocate an int, initialize it with 42
     int* p = theAllocator.make!int(42);
     assert(*p == 42);
+
     // Destroy and deallocate it
     theAllocator.dispose(p);
 
     // Allocate using the global process allocator
     p = processAllocator.make!int(100);
     assert(*p == 100);
+
     // Destroy and deallocate
     processAllocator.dispose(p);
 
     // Create an array of 50 doubles initialized to -1.0
     double[] arr = theAllocator.makeArray!double(50, -1.0);
+
+    // Check internal pointer
+    void[] result;
+    assert(theAllocator.resolveInternalPointer(null, result) == Ternary.no);
+    Ternary r = theAllocator.resolveInternalPointer(arr.ptr, result);
+    assert(result.ptr is arr.ptr && result.length >= arr.length);
+
     // Append two zeros to it
     theAllocator.expandArray(arr, 2, 0.0);
     // On second thought, take that back
@@ -2364,7 +2846,8 @@ private struct InternalPointersTree(Allocator)
     /// Ditto
     Ternary owns(void[] b)
     {
-        return Ternary(resolveInternalPointer(b.ptr) !is null);
+        void[] result;
+        return resolveInternalPointer(b.ptr, result);
     }
 
     /// Ditto
@@ -2376,7 +2859,7 @@ private struct InternalPointersTree(Allocator)
     /** Returns the block inside which $(D p) resides, or $(D null) if the
     pointer does not belong.
     */
-    void[] resolveInternalPointer(void* p)
+    Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
         // Must define a custom find
         Tree.Node* find()
@@ -2400,8 +2883,9 @@ private struct InternalPointersTree(Allocator)
         }
 
         auto n = find();
-        if (!n) return null;
-        return (cast(void*) (n + 1))[0 .. n.payload];
+        if (!n) return Ternary.no;
+        result = (cast(void*) (n + 1))[0 .. n.payload];
+        return Ternary.yes;
     }
 }
 
@@ -2418,14 +2902,15 @@ unittest
 
     foreach (b; allox)
     {
-        auto p = a.resolveInternalPointer(b.ptr);
+        void[] p;
+        Ternary r = a.resolveInternalPointer(b.ptr, p);
         assert(p.ptr is b.ptr && p.length >= b.length);
-        p = a.resolveInternalPointer(b.ptr + b.length);
+        r = a.resolveInternalPointer(b.ptr + b.length, p);
         assert(p.ptr is b.ptr && p.length >= b.length);
-        p = a.resolveInternalPointer(b.ptr + b.length / 2);
+        r = a.resolveInternalPointer(b.ptr + b.length / 2, p);
         assert(p.ptr is b.ptr && p.length >= b.length);
         auto bogus = new void[b.length];
-        assert(a.resolveInternalPointer(bogus.ptr) is null);
+        assert(a.resolveInternalPointer(bogus.ptr, p) == Ternary.no);
     }
 
     foreach (b; allox.randomCover)

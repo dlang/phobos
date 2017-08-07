@@ -1,9 +1,45 @@
 /++
-  $(LUCKY Regular expressions) are a commonly used method of pattern matching
+  $(LINK2 https://en.wikipedia.org/wiki/Regular_expression, Regular expressions)
+  are a commonly used method of pattern matching
   on strings, with $(I regex) being a catchy word for a pattern in this domain
   specific language. Typical problems usually solved by regular expressions
   include validation of user input and the ubiquitous find $(AMP) replace
   in text processing utilities.
+
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Matching) $(TD
+        $(LREF bmatch)
+        $(LREF match)
+        $(LREF matchAll)
+        $(LREF matchFirst)
+))
+$(TR $(TD Building) $(TD
+        $(LREF ctRegex)
+        $(LREF escaper)
+        $(LREF _regex)
+))
+$(TR $(TD Replace) $(TD
+        $(LREF replace)
+        $(LREF replaceAll)
+        $(LREF replaceAllInto)
+        $(LREF replaceFirst)
+        $(LREF replaceFirstInto)
+))
+$(TR $(TD Split) $(TD
+        $(LREF split)
+        $(LREF splitter)
+))
+$(TR $(TD Objects) $(TD
+        $(LREF Captures)
+        $(LREF Regex)
+        $(LREF RegexException)
+        $(LREF RegexMatch)
+        $(LREF Splitter)
+        $(LREF StaticRegex)
+))
+)
 
   $(SECTION Synopsis)
   ---
@@ -43,12 +79,11 @@
   assert(m.front[1] == "12");
   ...
 
-  // The result of the $(D matchAll/matchFirst) is directly testable with if/assert/while.
+  // The result of the `matchAll/matchFirst` is directly testable with if/assert/while.
   // e.g. test if a string consists of letters:
   assert(matchFirst("Letter", `^\p{L}+$`));
-
-
   ---
+
   $(SECTION Syntax and general information)
   The general usage guideline is to keep regex complexity on the side of simplicity,
   as its capabilities reside in purely character-level manipulation.
@@ -256,14 +291,14 @@ Macros:
     REG_TITLE = $(TR $(TD $(B $1)) $(TD $(B $2)) )
     REG_TABLE = <table border="1" cellspacing="0" cellpadding="5" > $0 </table>
     REG_START = <h3><div align="center"> $0 </div></h3>
-    SECTION = <h3><a id="$1">$0</a></h3>
+    SECTION = <h3><a id="$1" href="#$1" class="anchor">$0</a></h3>
     S_LINK = <a href="#$1">$+</a>
  +/
 module std.regex;
 
+import std.range.primitives, std.traits;
 import std.regex.internal.ir;
 import std.regex.internal.thompson; //TODO: get rid of this dependency
-import std.traits, std.range.primitives;
 import std.typecons; // : Flag, Yes, No;
 
 /++
@@ -315,7 +350,10 @@ public alias StaticRegex(Char) = std.regex.internal.ir.StaticRegex!(Char);
     the same character width as $(D pattern).
 
     Params:
-    pattern(s) = Regular expression(s) to match
+    pattern = A single regular expression to match.
+    patterns = An array of regular expression strings.
+        The resulting `Regex` object will match any expression;
+        use $(LREF whichPattern) to know which.
     flags = The _attributes (g, i, m and x accepted)
 
     Throws: $(D RegexException) if there were any errors during compilation.
@@ -383,7 +421,7 @@ if (isSomeString!(S))
 
 template ctRegexImpl(alias pattern, string flags=[])
 {
-    import std.regex.internal.parser, std.regex.internal.backtracking;
+    import std.regex.internal.backtracking, std.regex.internal.parser;
     enum r = regex(pattern, flags);
     alias Char = BasicElementOf!(typeof(pattern));
     enum source = ctGenRegExCode(r);
@@ -521,21 +559,21 @@ public:
     ///Slice of matched portion of input.
     @property R hit()
     {
-        assert(_nMatch);
+        assert(_nMatch, "attempted to get hit of an empty match");
         return _input[matches[0].begin .. matches[0].end];
     }
 
     ///Range interface.
     @property R front()
     {
-        assert(_nMatch);
+        assert(_nMatch, "attempted to get front of an empty match");
         return _input[matches[_f].begin .. matches[_f].end];
     }
 
     ///ditto
     @property R back()
     {
-        assert(_nMatch);
+        assert(_nMatch, "attempted to get back of an empty match");
         return _input[matches[_b - 1].begin .. matches[_b - 1].end];
     }
 
@@ -1017,9 +1055,9 @@ if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 // another set of tests just to cover the new API
 @system unittest
 {
-    import std.conv : to;
-    import std.algorithm.iteration : map;
     import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    import std.conv : to;
 
     foreach (String; AliasSeq!(string, wstring, const(dchar)[]))
     {
@@ -1058,7 +1096,8 @@ if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 
 /++
     Start matching of $(D input) to regex pattern $(D re),
-    using traditional $(LUCKY backtracking) matching scheme.
+    using traditional $(LINK2 https://en.wikipedia.org/wiki/Backtracking,
+    backtracking) matching scheme.
 
     The use of this function is $(RED discouraged) - use either of
     $(LREF matchAll) or $(LREF matchFirst).
@@ -1102,8 +1141,8 @@ if (isOutputRange!(OutR, ElementEncodingType!R[]) &&
     isOutputRange!(OutR, ElementEncodingType!(Capt.String)[]))
 {
     import std.algorithm.searching : find;
-    import std.conv : text, parse;
     import std.ascii : isDigit, isAlpha;
+    import std.conv : text, parse;
     import std.exception : enforce;
     enum State { Normal, Dollar }
     auto state = State.Normal;
@@ -1178,8 +1217,8 @@ L_Replace_Loop:
     Params:
     input = string to search
     re = compiled regular expression to use
-    format = format string to generate replacements from,
-    see $(S_LINK Replace format string, the format string).
+    format = _format string to generate replacements from,
+    see $(S_LINK Replace _format string, the _format string).
 
     Returns:
     A string of the same type with the first match (if any) replaced.
@@ -1295,8 +1334,8 @@ if (isOutputRange!(Sink, dchar) && isSomeString!R && isRegexFor!(RegEx, R))
     Params:
     input = string to search
     re = compiled regular expression to use
-    format = format string to generate replacements from,
-    see $(S_LINK Replace format string, the format string).
+    format = _format string to generate replacements from,
+    see $(S_LINK Replace _format string, the _format string).
 
     Returns:
     A string of the same type as $(D input) with the all
@@ -1386,7 +1425,7 @@ if (isOutputRange!(Sink, dchar) && isSomeString!R && isRegexFor!(RegEx, R))
 @system unittest
 {
     // insert comma as thousands delimiter in fifty randomly produced big numbers
-    import std.array, std.random, std.conv, std.range;
+    import std.array, std.conv, std.random, std.range;
     static re = regex(`(?<=\d)(?=(\d\d\d)+\b)`, "g");
     auto sink = appender!(char [])();
     enum ulong min = 10UL ^^ 10, max = 10UL ^^ 19;
@@ -1601,7 +1640,7 @@ if (
 @system unittest
 {
     import std.algorithm.comparison : equal;
-    import std.typecons;
+    import std.typecons : Yes;
 
     auto pattern = regex(`([\.,])`);
 
@@ -1670,16 +1709,16 @@ auto escaper(Range)(Range r)
 ///
 @system unittest
 {
-    import std.regex;
     import std.algorithm.comparison;
+    import std.regex;
     string s = `This is {unfriendly} to *regex*`;
     assert(s.escaper.equal(`This is \{unfriendly\} to \*regex\*`));
 }
 
 @system unittest
 {
-    import std.conv;
     import std.algorithm.comparison;
+    import std.conv;
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
       auto s = "^".to!S;

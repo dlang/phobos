@@ -3,6 +3,37 @@
 /**
 Bit-level manipulation facilities.
 
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Bit constructs) $(TD
+    $(LREF BitArray)
+    $(LREF bitfields)
+    $(LREF bitsSet)
+))
+$(TR $(TD Endianness conversion) $(TD
+    $(LREF bigEndianToNative)
+    $(LREF littleEndianToNative)
+    $(LREF nativeToBigEndian)
+    $(LREF nativeToLittleEndian)
+    $(LREF swapEndian)
+))
+$(TR $(TD Integral ranges) $(TD
+    $(LREF append)
+    $(LREF peek)
+    $(LREF read)
+    $(LREF write)
+))
+$(TR $(TD Floating-Point manipulation) $(TD
+    $(LREF DoubleRep)
+    $(LREF FloatRep)
+))
+$(TR $(TD Tagging) $(TD
+    $(LREF taggedClassRef)
+    $(LREF taggedPointer)
+))
+)
+
 Copyright: Copyright Digital Mars 2007 - 2011.
 License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP digitalmars.com, Walter Bright),
@@ -84,7 +115,7 @@ private template createAccessors(
             // setter
                 ~"@property void " ~ name ~ "(bool v) @safe pure nothrow @nogc { "
                 ~"if (v) "~store~" |= "~myToString(maskAllElse)~";"
-                ~"else "~store~" &= ~cast(typeof("~store~"))"~myToString(maskAllElse)~";}\n";
+                ~"else "~store~" &= cast(typeof("~store~"))(-1-cast(typeof("~store~"))"~myToString(maskAllElse)~");}\n";
         }
         else
         {
@@ -103,7 +134,7 @@ private template createAccessors(
                 ~"assert(v >= "~name~`_min, "Value is smaller than the minimum value of bitfield '`~name~`'"); `
                 ~"assert(v <= "~name~`_max, "Value is greater than the maximum value of bitfield '`~name~`'"); `
                 ~store~" = cast(typeof("~store~"))"
-                ~" (("~store~" & ~cast(typeof("~store~"))"~myToString(maskAllElse)~")"
+                ~" (("~store~" & (-1-cast(typeof("~store~"))"~myToString(maskAllElse)~"))"
                 ~" | ((cast(typeof("~store~")) v << "~myToString(offset)~")"
                 ~" & "~myToString(maskAllElse)~"));}\n"
             // constants
@@ -601,9 +632,9 @@ unittest
 // Issue 12477
 @system unittest
 {
+    import core.exception : AssertError;
     import std.algorithm.searching : canFind;
     import std.bitmanip : bitfields;
-    import core.exception : AssertError;
 
     static struct S
     {
@@ -741,8 +772,8 @@ struct BitArray
 {
 private:
 
-    import std.format : FormatSpec;
     import core.bitop : bts, btr, bsf, bt;
+    import std.format : FormatSpec;
 
     size_t _len;
     size_t* _ptr;
@@ -2976,7 +3007,7 @@ if (canSwapEndianness!T &&
 T read(T, Endian endianness = Endian.bigEndian, R)(ref R range)
 if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
 {
-    static if (hasSlicing!R)
+    static if (hasSlicing!R && is(typeof(R.init[0 .. 0]) : const(ubyte)[]))
     {
         const ubyte[T.sizeof] bytes = range[0 .. T.sizeof];
         range.popFrontN(T.sizeof);
@@ -3203,6 +3234,32 @@ if (canSwapEndianness!T && isInputRange!R && is(ElementType!R : const ubyte))
 
     assert(range.read!ubyte() == 8);
     assert(range.empty);
+}
+
+// issue 17247
+@safe unittest
+{
+    struct UbyteRange
+    {
+        ubyte[] impl;
+        @property bool empty() { return impl.empty; }
+        @property ubyte front() { return impl.front; }
+        void popFront() { impl.popFront(); }
+        @property UbyteRange save() { return this; }
+
+        // N.B. support slicing but do not return ubyte[] slices.
+        UbyteRange opSlice(size_t start, size_t end)
+        {
+            return UbyteRange(impl[start .. end]);
+        }
+        @property size_t length() { return impl.length; }
+        size_t opDollar() { return impl.length; }
+    }
+    static assert(hasSlicing!UbyteRange);
+
+    auto r = UbyteRange([0x01, 0x00, 0x00, 0x00]);
+    int x = r.read!(int, Endian.littleEndian)();
+    assert(x == 1);
 }
 
 
@@ -3722,8 +3779,8 @@ if (canSwapEndianness!T && isOutputRange!(R, ubyte))
 
 @system unittest
 {
-    import std.format : format;
     import std.array;
+    import std.format : format;
     import std.meta;
     foreach (endianness; AliasSeq!(Endian.bigEndian, Endian.littleEndian))
     {

@@ -10,33 +10,84 @@ between strings of different type, as well as validation and sanitization.
 Encodings currently supported are UTF-8, UTF-16, UTF-32, ASCII, ISO-8859-1
 (also known as LATIN-1), ISO-8859-2 (LATIN-2), WINDOWS-1250 and WINDOWS-1252.
 
-$(UL
-$(LI The type $(D AsciiChar) represents an ASCII character.)
-$(LI The type $(D AsciiString) represents an ASCII string.)
-$(LI The type $(D Latin1Char) represents an ISO-8859-1 character.)
-$(LI The type $(D Latin1String) represents an ISO-8859-1 string.)
-$(LI The type $(D Latin2Char) represents an ISO-8859-2 character.)
-$(LI The type $(D Latin2String) represents an ISO-8859-2 string.)
-$(LI The type $(D Windows1250Char) represents a Windows-1250 character.)
-$(LI The type $(D Windows1250String) represents a Windows-1250 string.)
-$(LI The type $(D Windows1252Char) represents a Windows-1252 character.)
-$(LI The type $(D Windows1252String) represents a Windows-1252 string.))
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Decode) $(TD
+    $(LREF codePoints)
+    $(LREF decode)
+    $(LREF decodeReverse)
+    $(LREF safeDecode)
+))
+$(TR $(TD Conversion) $(TD
+    $(LREF codeUnits)
+    $(LREF sanitize)
+    $(LREF transcode)
+))
+$(TR $(TD Classification) $(TD
+    $(LREF canEncode)
+    $(LREF isValid)
+    $(LREF isValidCodePoint)
+    $(LREF isValidCodeUnit)
+))
+$(TR $(TD BOM) $(TD
+    $(LREF BOM)
+    $(LREF BOMSeq)
+    $(LREF getBOM)
+    $(LREF utfBOM)
+))
+$(TR $(TD Length &amp; Index) $(TD
+    $(LREF firstSequence)
+    $(LREF encodedLength)
+    $(LREF index)
+    $(LREF lastSequence)
+    $(LREF validLength)
+))
+$(TR $(TD Encoding schemes) $(TD
+    $(LREF encodingName)
+    $(LREF EncodingScheme)
+    $(LREF EncodingSchemeASCII)
+    $(LREF EncodingSchemeLatin1)
+    $(LREF EncodingSchemeLatin2)
+    $(LREF EncodingSchemeUtf16Native)
+    $(LREF EncodingSchemeUtf32Native)
+    $(LREF EncodingSchemeUtf8)
+    $(LREF EncodingSchemeWindows1250)
+    $(LREF EncodingSchemeWindows1252)
+))
+$(TR $(TD Representation) $(TD
+    $(LREF AsciiChar)
+    $(LREF AsciiString)
+    $(LREF Latin1Char)
+    $(LREF Latin1String)
+    $(LREF Latin2Char)
+    $(LREF Latin2String)
+    $(LREF Windows1250Char)
+    $(LREF Windows1250String)
+    $(LREF Windows1252Char)
+    $(LREF Windows1252String)
+))
+$(TR $(TD Exceptions) $(TD
+    $(LREF INVALID_SEQUENCE)
+    $(LREF EncodingException)
+))
+)
 
 For cases where the _encoding is not known at compile-time, but is
-known at run-time, we provide the abstract class $(D EncodingScheme)
-and its subclasses.  To construct a run-time encoder/decoder, one does
-e.g.
+known at run-time, the abstract class $(LREF EncodingScheme)
+and its subclasses is provided.  To construct a run-time encoder/decoder,
+one does e.g.
 
 ----------------------------------------------------
-    auto e = EncodingScheme.create("utf-8");
+auto e = EncodingScheme.create("utf-8");
 ----------------------------------------------------
 
-This library supplies $(D EncodingScheme) subclasses for ASCII,
+This library supplies $(LREF EncodingScheme) subclasses for ASCII,
 ISO-8859-1 (also known as LATIN-1), ISO-8859-2 (LATIN-2), WINDOWS-1250,
 WINDOWS-1252, UTF-8, and (on little-endian architectures) UTF-16LE and
 UTF-32LE; or (on big-endian architectures) UTF-16BE and UTF-32BE.
 
-This library provides a mechanism whereby other modules may add $(D
+This library provides a mechanism whereby other modules may add $(LREF
 EncodingScheme) subclasses for any other _encoding.
 
 Copyright: Copyright Janice Caron 2008 - 2009.
@@ -52,10 +103,9 @@ Distributed under the Boost Software License, Version 1.0.
 */
 module std.encoding;
 
+import std.range.primitives;
 import std.traits;
 import std.typecons;
-import std.range.primitives;
-import std.internal.encodinginit;
 
 @system unittest
 {
@@ -2410,6 +2460,22 @@ abstract class EncodingScheme
      */
     static EncodingScheme create(string encodingName)
     {
+        static bool registerDefaultEncodings()
+        {
+            EncodingScheme.register!EncodingSchemeASCII;
+            EncodingScheme.register!EncodingSchemeLatin1;
+            EncodingScheme.register!EncodingSchemeLatin2;
+            EncodingScheme.register!EncodingSchemeWindows1250;
+            EncodingScheme.register!EncodingSchemeWindows1252;
+            EncodingScheme.register!EncodingSchemeUtf8;
+            EncodingScheme.register!EncodingSchemeUtf16Native;
+            EncodingScheme.register!EncodingSchemeUtf32Native;
+            return true;
+        }
+
+        static shared bool initialized;
+        import std.concurrency : initOnce;
+        initOnce!initialized(registerDefaultEncodings());
         encodingName = toLower(encodingName);
 
         if (auto p = encodingName in supported)
@@ -3315,20 +3381,6 @@ class EncodingSchemeUtf32Native : EncodingScheme
     dchar dc = efrom.safeDecode(ub);
     assert(dc == 410);
     assert(ub.length == 8);
-}
-
-
-// shared static this() called from encodinginit to break ctor cycle
-extern(C) void std_encoding_shared_static_this()
-{
-    EncodingScheme.register!EncodingSchemeASCII;
-    EncodingScheme.register!EncodingSchemeLatin1;
-    EncodingScheme.register!EncodingSchemeLatin2;
-    EncodingScheme.register!EncodingSchemeWindows1250;
-    EncodingScheme.register!EncodingSchemeWindows1252;
-    EncodingScheme.register!EncodingSchemeUtf8;
-    EncodingScheme.register!EncodingSchemeUtf16Native;
-    EncodingScheme.register!EncodingSchemeUtf32Native;
 }
 
 //=============================================================================

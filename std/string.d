@@ -11,7 +11,6 @@ $(TR $(TH Category) $(TH Functions) )
 $(TR $(TDNW Searching)
     $(TD
          $(MYREF column)
-         $(MYREF inPattern)
          $(MYREF indexOf)
          $(MYREF indexOfAny)
          $(MYREF indexOfNeither)
@@ -22,16 +21,12 @@ $(TR $(TDNW Searching)
 )
 $(TR $(TDNW Comparison)
     $(TD
-         $(MYREF countchars)
          $(MYREF isNumeric)
     )
 )
 $(TR $(TDNW Mutation)
     $(TD
          $(MYREF capitalize)
-         $(MYREF munch)
-         $(MYREF removechars)
-         $(MYREF squeeze)
     )
 )
 $(TR $(TDNW Pruning and Filling)
@@ -148,15 +143,6 @@ Source:    $(PHOBOSSRC std/_string.d)
 */
 module std.string;
 
-//debug=string;                 // uncomment to turn on debugging trustedPrintf's
-
-debug(string) private
-void trustedPrintf(in char* str) @trusted nothrow @nogc
-{
-    import core.stdc.stdio : printf;
-    printf("%s", str);
-}
-
 version (unittest)
 {
 private:
@@ -185,9 +171,9 @@ private:
     }
 }
 
-public import std.uni : icmp, toLower, toLowerInPlace, toUpper, toUpperInPlace;
 public import std.format : format, sformat;
 import std.typecons : Flag, Yes, No;
+public import std.uni : icmp, toLower, toLowerInPlace, toUpper, toUpperInPlace;
 
 import std.meta; // AliasSeq, staticIndexOf
 import std.range.primitives; // back, ElementEncodingType, ElementType, front,
@@ -580,7 +566,6 @@ if (isConvertibleToString!Range)
     import std.exception : assertCTFEable;
     import std.traits : EnumMembers;
     import std.utf : byChar, byWchar, byDchar;
-    debug(string) trustedPrintf("string.indexOf.unittest\n");
 
     assertCTFEable!(
     {
@@ -636,7 +621,6 @@ if (isConvertibleToString!Range)
     import std.conv : to;
     import std.traits : EnumMembers;
     import std.utf : byCodeUnit, byChar, byWchar;
-    debug(string) trustedPrintf("string.indexOf(startIdx).unittest\n");
 
     assert("hello".byCodeUnit.indexOf(cast(dchar)'l', 1) == 2);
     assert("hello".byWchar.indexOf(cast(dchar)'l', 1) == 2);
@@ -835,7 +819,6 @@ if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     import std.conv : to;
     import std.exception : assertCTFEable;
     import std.traits : EnumMembers;
-    debug(string) trustedPrintf("string.indexOf.unittest\n");
 
     assertCTFEable!(
     {
@@ -906,7 +889,6 @@ unittest
 {
     import std.conv : to;
     import std.traits : EnumMembers;
-    debug(string) trustedPrintf("string.indexOf(startIdx).unittest\n");
 
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
@@ -1083,7 +1065,6 @@ if (isSomeChar!Char)
     import std.conv : to;
     import std.exception : assertCTFEable;
     import std.traits : EnumMembers;
-    debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
 
     assertCTFEable!(
     {
@@ -1123,8 +1104,6 @@ if (isSomeChar!Char)
 {
     import std.conv : to;
     import std.traits : EnumMembers;
-
-    debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
 
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
@@ -1310,8 +1289,6 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
     import std.exception : assertCTFEable;
     import std.traits : EnumMembers;
 
-    debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -1387,8 +1364,6 @@ if (isSomeChar!Char1 && isSomeChar!Char2)
 {
     import std.conv : to;
     import std.traits : EnumMembers;
-
-    debug(string) trustedPrintf("string.lastIndexOf.unittest\n");
 
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
@@ -1551,7 +1526,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
 }
 
 /**
-    Returns the index of the first occurence of any of the elements in $(D
+    Returns the index of the first occurrence of any of the elements in $(D
     needles) in $(D haystack). If no element of $(D needles) is found,
     then $(D -1) is returned. The $(D startIdx) slices $(D haystack) in the
     following way $(D haystack[startIdx .. $]). $(D startIdx) represents a
@@ -1636,8 +1611,6 @@ if (isSomeChar!Char && isSomeChar!Char2)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.indexOfAny.unittest\n");
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -1676,8 +1649,6 @@ if (isSomeChar!Char && isSomeChar!Char2)
 {
     import std.conv : to;
     import std.traits : EnumMembers;
-
-    debug(string) trustedPrintf("string.indexOfAny(startIdx).unittest\n");
 
     foreach (S; AliasSeq!(string, wstring, dstring))
     {
@@ -1722,7 +1693,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
 }
 
 /**
-    Returns the index of the last occurence of any of the elements in $(D
+    Returns the index of the last occurrence of any of the elements in $(D
     needles) in $(D haystack). If no element of $(D needles) is found,
     then $(D -1) is returned. The $(D stopIdx) slices $(D haystack) in the
     following way $(D s[0 .. stopIdx]). $(D stopIdx) represents a codeunit
@@ -1804,8 +1775,6 @@ if (isSomeChar!Char && isSomeChar!Char2)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.lastIndexOfAny.unittest\n");
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -1859,8 +1828,6 @@ if (isSomeChar!Char && isSomeChar!Char2)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.lastIndexOfAny(index).unittest\n");
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -1909,7 +1876,7 @@ if (isSomeChar!Char && isSomeChar!Char2)
 }
 
 /**
-    Returns the index of the first occurence of any character not an elements
+    Returns the index of the first occurrence of any character not an elements
     in $(D needles) in $(D haystack). If all element of $(D haystack) are
     element of $(D needles) $(D -1) is returned.
 
@@ -1986,8 +1953,6 @@ if (isSomeChar!Char && isSomeChar!Char2)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.indexOf.unittest\n");
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -2031,8 +1996,6 @@ if (isSomeChar!Char && isSomeChar!Char2)
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("string.indexOfNeither(index).unittest\n");
 
     assertCTFEable!(
     {
@@ -2144,8 +2107,6 @@ if (isSomeChar!Char && isSomeChar!Char2)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.lastIndexOfNeither.unittest\n");
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(string, wstring, dstring))
@@ -2190,8 +2151,6 @@ if (isSomeChar!Char && isSomeChar!Char2)
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("string.lastIndexOfNeither(index).unittest\n");
 
     assertCTFEable!(
     {
@@ -2309,8 +2268,8 @@ S capitalize(S)(S input) @trusted pure
 if (isSomeString!S)
 {
     import std.array : array;
-    import std.utf : byUTF;
     import std.uni : asCapitalized;
+    import std.utf : byUTF;
 
     return input.asCapitalized.byUTF!(ElementEncodingType!(S)).array;
 }
@@ -2510,8 +2469,6 @@ if (!isSomeString!S && is(StringTypeOf!S))
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("string.splitLines.unittest\n");
 
     assertCTFEable!(
     {
@@ -2744,8 +2701,8 @@ if ((hasSlicing!Range && hasLength!Range && isSomeChar!(ElementType!Range) ||
 
     string s = "Hello\nmy\rname\nis";
 
-    /* notice the call to $(D array) to turn the lazy range created by
-    lineSplitter comparable to the $(D string[]) created by splitLines.
+    /* notice the call to `array` to turn the lazy range created by
+    lineSplitter comparable to the `string[]` created by splitLines.
     */
     assert(lineSplitter(s).array == splitLines(s));
 }
@@ -2761,8 +2718,6 @@ if (isConvertibleToString!Range)
     import std.array : array;
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("string.lineSplitter.unittest\n");
 
     assertCTFEable!(
     {
@@ -2861,7 +2816,8 @@ if (isConvertibleToString!Range)
     Strips leading whitespace (as defined by $(REF isWhite, std,uni)).
 
     Params:
-        input = string or ForwardRange of characters
+        input = string or $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
+        of characters
 
     Returns: $(D input) stripped of leading whitespace.
 
@@ -3147,8 +3103,6 @@ if (isConvertibleToString!Range)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.strip.unittest\n");
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!( char[], const  char[],  string,
@@ -3352,7 +3306,6 @@ if (isConvertibleToString!Range)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.chomp.unittest\n");
     string s;
 
     assertCTFEable!(
@@ -3414,7 +3367,8 @@ if (isConvertibleToString!Range)
     $(D delimiter), then it is returned unchanged.
 
     Params:
-        str = string or forward range of characters
+        str = string or $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
+        of characters
         delimiter = string of characters to be sliced off front of str[]
 
     Returns:
@@ -3643,8 +3597,6 @@ if (isConvertibleToString!Range)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.chop.unittest\n");
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
@@ -3840,7 +3792,8 @@ if (isSomeString!S)
     $(D s) doesn't fill.
 
     Params:
-        r = string or forward range of characters
+        r = string or $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
+        of characters
         width = minimum field width
         fillChar = used to pad end up to $(D width) characters
 
@@ -4029,8 +3982,6 @@ unittest
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.justify.unittest\n");
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
@@ -4066,7 +4017,8 @@ unittest
     $(D r) doesn't fill.
 
     Params:
-        r = string or forward range of characters
+        r = string or $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
+        of characters
         width = minimum field width
         fillChar = used to pad end up to $(D width) characters
 
@@ -4226,7 +4178,7 @@ if ((isForwardRange!Range && isSomeChar!(ElementEncodingType!Range))
     necessary to align the following character at the next tab stop.
 
     Params:
-        r = string or forward range
+        r = string or $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
         tabSize = distance between tab stops
 
     Returns:
@@ -4368,8 +4320,6 @@ if (isConvertibleToString!Range)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.detab.unittest\n");
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
@@ -4455,7 +4405,7 @@ if (!(isForwardRange!Range && isSomeChar!(ElementEncodingType!Range)) &&
     All spaces and tabs at the end of a line are removed.
 
     Params:
-        r = string or forward range
+        r = string or $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
         tabSize = distance between tab stops
 
     Returns:
@@ -4706,8 +4656,6 @@ unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("string.entab.unittest\n");
 
     assertCTFEable!(
     {
@@ -5226,8 +5174,13 @@ body
     assert(buffer.data == "h5 rd");
 }
 
-
+//@@@DEPRECATED_2018-05@@@
 /***********************************************
+ * $(RED This function is deprecated and will be removed May 2018.)
+ * Please use the functions in $(MREF std, regex) and $(MREF std, algorithm)
+ * instead. If you still need this function, it will be available in
+ * $(LINK2 https://github.com/dlang/undeaD, undeaD).
+ *
  * See if character c is in the pattern.
  * Patterns:
  *
@@ -5244,7 +5197,7 @@ body
  * Note: In the future, the pattern syntax may be improved
  *  to be more like regular expression character classes.
  */
-
+deprecated("This function is obsolete and will be removed May 2018. See the docs for more details")
 bool inPattern(S)(dchar c, in S pattern) @safe pure @nogc
 if (isSomeString!S)
 {
@@ -5279,12 +5232,11 @@ if (isSomeString!S)
 }
 
 
+deprecated
 @safe pure @nogc unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("std.string.inPattern.unittest\n");
 
     assertCTFEable!(
     {
@@ -5310,11 +5262,16 @@ if (isSomeString!S)
     });
 }
 
-
+//@@@DEPRECATED_2018-05@@@
 /***********************************************
+ * $(RED This function is deprecated and will be removed May 2018.)
+ * Please use the functions in $(MREF std, regex) and $(MREF std, algorithm)
+ * instead. If you still need this function, it will be available in
+ * $(LINK2 https://github.com/dlang/undeaD, undeaD).
+ *
  * See if character c is in the intersection of the patterns.
  */
-
+deprecated("This function is obsolete and will be removed May 2018. See the docs for more details")
 bool inPattern(S)(dchar c, S[] patterns) @safe pure @nogc
 if (isSomeString!S)
 {
@@ -5328,11 +5285,16 @@ if (isSomeString!S)
     return true;
 }
 
-
+//@@@DEPRECATED_2018-05@@@
 /********************************************
+ * $(RED This function is deprecated and will be removed May 2018.)
+ * Please use the functions in $(MREF std, regex) and $(MREF std, algorithm)
+ * instead. If you still need this function, it will be available in
+ * $(LINK2 https://github.com/dlang/undeaD, undeaD).
+ *
  * Count characters in s that match pattern.
  */
-
+deprecated("This function is obsolete and will be removed May 2018. See the docs for more details")
 size_t countchars(S, S1)(S s, in S1 pattern) @safe pure @nogc
 if (isSomeString!S && isSomeString!S1)
 {
@@ -5344,12 +5306,11 @@ if (isSomeString!S && isSomeString!S1)
     return count;
 }
 
+deprecated
 @safe pure @nogc unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("std.string.count.unittest\n");
 
     assertCTFEable!(
     {
@@ -5358,11 +5319,16 @@ if (isSomeString!S && isSomeString!S1)
     });
 }
 
-
+//@@@DEPRECATED_2018-05@@@
 /********************************************
+ * $(RED This function is deprecated and will be removed May 2018.)
+ * Please use the functions in $(MREF std, regex) and $(MREF std, algorithm)
+ * instead. If you still need this function, it will be available in
+ * $(LINK2 https://github.com/dlang/undeaD, undeaD).
+ *
  * Return string that is s with all characters removed that match pattern.
  */
-
+deprecated("This function is obsolete and will be removed May 2018. See the docs for more details")
 S removechars(S)(S s, in S pattern) @safe pure
 if (isSomeString!S)
 {
@@ -5393,12 +5359,11 @@ if (isSomeString!S)
         return s;
 }
 
+deprecated
 @safe pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("std.string.removechars.unittest\n");
 
     assertCTFEable!(
     {
@@ -5409,18 +5374,24 @@ if (isSomeString!S)
     });
 }
 
+deprecated
 @safe pure unittest
 {
     assert(removechars("abc", "x") == "abc");
 }
 
-
+//@@@DEPRECATED_2018-05@@@
 /***************************************************
+ * $(RED This function is deprecated and will be removed May 2018.)
+ * Please use the functions in $(MREF std, regex) and $(MREF std, algorithm)
+ * instead. If you still need this function, it will be available in
+ * $(LINK2 https://github.com/dlang/undeaD, undeaD).
+ *
  * Return string where sequences of a character in s[] from pattern[]
  * are replaced with a single instance of that character.
  * If pattern is null, it defaults to all characters.
  */
-
+deprecated("This function is obsolete and will be removed May 2018. See the docs for more details")
 S squeeze(S)(S s, in S pattern = null)
 {
     import std.utf : encode, stride;
@@ -5464,12 +5435,11 @@ S squeeze(S)(S s, in S pattern = null)
     return changed ? ((r is null) ? s[0 .. lasti] : cast(S) r) : s;
 }
 
+deprecated
 @system pure unittest
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("std.string.squeeze.unittest\n");
 
     assertCTFEable!(
     {
@@ -5486,7 +5456,13 @@ S squeeze(S)(S s, in S pattern = null)
     });
 }
 
+//@@@DEPRECATED_2018-05@@@
 /***************************************************************
+ $(RED This function is deprecated and will be removed May 2018.)
+ Please use the functions in $(MREF std, regex) and $(MREF std, algorithm)
+ instead. If you still need this function, it will be available in
+ $(LINK2 https://github.com/dlang/undeaD, undeaD).
+
  Finds the position $(D_PARAM pos) of the first character in $(D_PARAM
  s) that does not match $(D_PARAM pattern) (in the terminology used by
  $(REF inPattern, std,string)). Updates $(D_PARAM s =
@@ -5497,6 +5473,7 @@ The $(D_PARAM munch) function is mostly convenient for skipping
 certain category of characters (e.g. whitespace) when parsing
 strings. (In such cases, the return value is not used.)
  */
+deprecated("This function is obsolete and will be removed May 2018. See the docs for more details")
 S1 munch(S1, S2)(ref S1 s, S2 pattern) @safe pure @nogc
 {
     size_t j = s.length;
@@ -5513,6 +5490,7 @@ S1 munch(S1, S2)(ref S1 s, S2 pattern) @safe pure @nogc
 }
 
 ///
+deprecated
 @safe pure @nogc unittest
 {
     string s = "123abc";
@@ -5522,6 +5500,7 @@ S1 munch(S1, S2)(ref S1 s, S2 pattern) @safe pure @nogc
     assert(t == "" && s == "abc");
 }
 
+deprecated
 @safe pure @nogc unittest
 {
     string s = "123€abc";
@@ -5601,8 +5580,6 @@ if (isSomeString!S)
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("std.string.succ.unittest\n");
 
     assertCTFEable!(
     {
@@ -5776,8 +5753,6 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("std.string.tr.unittest\n");
-
     // Complete list of test types; too slow to test'em all
     // alias TestTypes = AliasSeq!(
     //          char[], const( char)[], immutable( char)[],
@@ -5817,8 +5792,8 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
 
 @system pure unittest
 {
-    import std.exception : assertThrown;
     import core.exception : AssertError;
+    import std.exception : assertThrown;
     assertThrown!AssertError(tr("abcdef", "cd", "CD", "X"));
 }
 
@@ -6100,8 +6075,6 @@ if (isSomeString!S ||
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("isNumeric(in string, bool = false).unittest\n");
-
     assertCTFEable!(
     {
     // Test the isNumeric(in string) function
@@ -6344,7 +6317,7 @@ body
  *
  * This is useful in cases where the user is expected to type
  * in one of a known set of strings, and the program will helpfully
- * autocomplete the string once sufficient characters have been
+ * auto-complete the string once sufficient characters have been
  * entered that uniquely identify it.
  */
 
@@ -6414,8 +6387,6 @@ string[string] abbrev(string[] values) @safe pure
     import std.algorithm.sorting : sort;
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("string.abbrev.unittest\n");
 
     assertCTFEable!(
     {
@@ -6558,8 +6529,6 @@ if (isConvertibleToString!Range)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.column.unittest\n");
-
     assertCTFEable!(
     {
     assert(column(string.init) == 0);
@@ -6672,8 +6641,6 @@ if (isSomeString!S)
 {
     import std.conv : to;
     import std.exception : assertCTFEable;
-
-    debug(string) trustedPrintf("string.wrap.unittest\n");
 
     assertCTFEable!(
     {
@@ -6815,8 +6782,6 @@ if (isSomeString!S)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    debug(string) trustedPrintf("string.outdent.unittest\n");
-
     template outdent_testStr(S)
     {
         enum S outdent_testStr =
@@ -6917,6 +6882,9 @@ return it typed as a UTF string.
 
 $(D ubyte) becomes $(D char), $(D ushort) becomes $(D wchar) and $(D uint)
 becomes $(D dchar). Type qualifiers are preserved.
+
+When compiled with debug mode, this function performs an extra check to make
+sure the return value is a valid Unicode string.
 
 Params:
     arr = array of bytes, ubytes, shorts, ushorts, ints, or uints

@@ -529,8 +529,8 @@ public:
     */
     void reportStatistics(R)(auto ref R output)
     {
-        import std.traits : EnumMembers;
         import std.conv : to;
+        import std.traits : EnumMembers;
         foreach (e; EnumMembers!Options)
         {
             static if ((flags & e) && e != Options.numAll
@@ -611,8 +611,8 @@ public:
 
         private PerCallStatistics* statsAt(string f, uint n, opts...)()
         {
-            import std.range : repeat;
             import std.array : array;
+            import std.range : repeat;
 
             static PerCallStatistics s = { f, n, [ opts ],
                 repeat(0UL, opts.length).array };
@@ -656,8 +656,8 @@ public:
 ///
 @system unittest
 {
-    import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.free_list : FreeList;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
     alias Allocator = StatsCollector!(GCAllocator, Options.all, Options.all);
 
     Allocator alloc;
@@ -666,8 +666,8 @@ public:
     alloc.deallocate(b);
 
     import std.file : deleteme, remove;
-    import std.stdio : File;
     import std.range : walkLength;
+    import std.stdio : File;
 
     auto f = deleteme ~ "-dlang.std.experimental.allocator.stats_collector.txt";
     scope(exit) remove(f);
@@ -705,8 +705,8 @@ public:
         assert(a.bytesUsed == 0);
      }
 
-    import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.free_list : FreeList;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
     test!(StatsCollector!(GCAllocator, Options.all, Options.all));
     test!(StatsCollector!(FreeList!(GCAllocator, 128), Options.all,
         Options.all));
@@ -729,7 +729,7 @@ public:
         a.deallocate(b1);
         a.deallocate(b3);
     }
-    import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator.building_blocks.free_list : FreeList;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
     test!(StatsCollector!(GCAllocator, 0, 0));
 }

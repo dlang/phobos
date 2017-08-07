@@ -3,6 +3,7 @@
 This is a submodule of $(MREF std, algorithm).
 It contains generic _comparison algorithms.
 
+$(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 $(T2 among,
@@ -27,11 +28,13 @@ $(T2 isSameLength,
         $(D isSameLength([1, 2, 3], [4, 5, 6])) returns $(D true).)
 $(T2 levenshteinDistance,
         $(D levenshteinDistance("kitten", "sitting")) returns $(D 3) by using
-        the $(LUCKY Levenshtein distance _algorithm).)
+        the $(LINK2 https://en.wikipedia.org/wiki/Levenshtein_distance,
+        Levenshtein distance _algorithm).)
 $(T2 levenshteinDistanceAndPath,
         $(D levenshteinDistanceAndPath("kitten", "sitting")) returns
-        $(D tuple(3, "snnnsni")) by using the $(LUCKY Levenshtein distance
-        _algorithm).)
+        $(D tuple(3, "snnnsni")) by using the
+        $(LINK2 https://en.wikipedia.org/wiki/Levenshtein_distance,
+        Levenshtein distance _algorithm).)
 $(T2 max,
         $(D max(3, 4, 2)) returns $(D 4).)
 $(T2 min,
@@ -60,8 +63,8 @@ import std.functional; // : unaryFun, binaryFun;
 import std.range.primitives;
 import std.traits;
 // FIXME
-import std.typecons; // : tuple, Tuple, Flag, Yes;
 import std.meta : allSatisfy;
+import std.typecons; // : tuple, Tuple, Flag, Yes;
 
 /**
 Find $(D value) _among $(D values), returning the 1-based index
@@ -551,8 +554,6 @@ body
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int a = 1;
     short b = 6;
     double c = 2;
@@ -579,7 +580,8 @@ body
 
 // cmp
 /**********************************
-Performs three-way lexicographical comparison on two input ranges
+Performs three-way lexicographical comparison on two
+$(REF_ALTTEXT input ranges, isInputRange, std,range,primitives)
 according to predicate $(D pred). Iterating $(D r1) and $(D r2) in
 lockstep, $(D cmp) compares each element $(D e1) of $(D r1) with the
 corresponding element $(D e2) in $(D r2). If one of the ranges has been
@@ -823,8 +825,8 @@ template equal(alias pred = "a == b")
 ///
 @safe unittest
 {
-    import std.math : approxEqual;
     import std.algorithm.comparison : equal;
+    import std.math : approxEqual;
 
     int[] a = [ 1, 2, 4, 3 ];
     assert(!equal(a, a[1..$]));
@@ -849,8 +851,8 @@ range of range (of range...) comparisons.
  +/
 @safe unittest
 {
-    import std.range : iota, chunks;
     import std.algorithm.comparison : equal;
+    import std.range : iota, chunks;
     assert(equal!(equal!equal)(
         [[[0, 1], [2, 3]], [[4, 5], [6, 7]]],
         iota(0, 8).chunks(2).chunks(2)
@@ -860,12 +862,9 @@ range of range (of range...) comparisons.
 @safe unittest
 {
     import std.algorithm.iteration : map;
-    import std.math : approxEqual;
     import std.internal.test.dummyrange : ReferenceForwardRange,
         ReferenceInputRange, ReferenceInfiniteForwardRange;
-
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
+    import std.math : approxEqual;
 
     // various strings
     assert(equal("æøå", "æøå")); //UTF8 vs UTF8
@@ -1008,6 +1007,16 @@ enum EditOp : char
     remove = 'r'
 }
 
+///
+@safe unittest
+{
+    with(EditOp)
+    {
+        assert(levenshteinDistanceAndPath("foo", "foobar")[1] == [none, none, none, insert, insert, insert]);
+        assert(levenshteinDistanceAndPath("banana", "fazan")[1] == [substitute, none, substitute, none, none, remove]);
+    }
+}
+
 private struct Levenshtein(Range, alias equals, CostType = size_t)
 {
     EditOp[] path()
@@ -1070,8 +1079,8 @@ private:
         cols = c;
         if (_matrix.length < rc)
         {
-            import core.stdc.stdlib : realloc;
             import core.exception : onOutOfMemoryError;
+            import core.stdc.stdlib : realloc;
             const nbytes = mulu(rc, _matrix[0].sizeof, overflow);
             if (overflow) assert(0);
             auto m = cast(CostType *) realloc(_matrix.ptr, nbytes);
@@ -1331,8 +1340,6 @@ if (isForwardRange!(Range1) && isForwardRange!(Range2))
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     assert(levenshteinDistance("a", "a") == 0);
     assert(levenshteinDistance("a", "b") == 1);
     assert(levenshteinDistance("aa", "ab") == 1);
@@ -1418,8 +1425,6 @@ if (T.length >= 2)
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
     int a = 5;
     short b = 6;
     double c = 2;
@@ -1582,9 +1587,6 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 
 @safe unittest
 {
-    debug(std_algorithm) scope(success)
-        writeln("unittest @", __FILE__, ":", __LINE__, " done.");
-
     int[] a = [ 1, 2, 3 ];
     int[] b = [ 1, 2, 4, 5 ];
     auto mm = mismatch(a, b);
@@ -1739,8 +1741,8 @@ If both ranges have a length member, this function is $(BIGOH 1). Otherwise,
 this function is $(BIGOH min(r1.length, r2.length)).
 
 Params:
-    r1 = a finite input range
-    r2 = a finite input range
+    r1 = a finite $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+    r2 = a finite $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
 
 Returns:
     $(D true) if both ranges have the same length, $(D false) otherwise.
@@ -1880,8 +1882,8 @@ Allocating forward range option: amortized $(BIGOH r1.length) + $(BIGOH r2.lengt
 Params:
     pred = an optional parameter to change how equality is defined
     allocate_gc = $(D Yes.allocateGC)/$(D No.allocateGC)
-    r1 = A finite forward range
-    r2 = A finite forward range
+    r1 = A finite $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
+    r2 = A finite $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
 
 Returns:
     $(D true) if all of the elements in $(D r1) appear the same number of times in $(D r2).

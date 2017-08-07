@@ -24,8 +24,8 @@
 module std.uri;
 
 //debug=uri;        // uncomment to turn on debugging writefln's
-debug(uri) private import std.stdio;
-private import std.traits : isSomeChar;
+debug(uri) import std.stdio;
+import std.traits : isSomeChar;
 
 /** This Exception is thrown if something goes wrong when encoding or
 decoding a URI.
@@ -65,7 +65,7 @@ private immutable ubyte[128] uri_flags =      // indexed by character
         return uflags;
     })();
 
-private string URI_Encode(dstring string, uint unescapedSet)
+private string URI_Encode(dstring str, uint unescapedSet)
 {
     import core.exception : OutOfMemoryError;
     import core.stdc.stdlib : alloca;
@@ -81,7 +81,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
     uint Rlen;
     uint Rsize; // alloc'd size
 
-    auto len = string.length;
+    immutable len = str.length;
 
     R = buffer.ptr;
     Rsize = buffer.length;
@@ -89,7 +89,7 @@ private string URI_Encode(dstring string, uint unescapedSet)
 
     for (k = 0; k != len; k++)
     {
-        C = string[k];
+        C = str[k];
         // if (C in unescapedSet)
         if (C < uri_flags.length && uri_flags[C] & unescapedSet)
         {
@@ -209,7 +209,7 @@ if (isSomeChar!Char)
     dchar* R;
     uint Rlen;
 
-    auto len = uri.length;
+    immutable len = uri.length;
     auto s = uri.ptr;
 
     // Preallocate result buffer R guaranteed to be large enough for result
@@ -290,7 +290,7 @@ if (isSomeChar!Char)
         if (C < uri_flags.length && uri_flags[C] & reservedSet)
         {
             // R ~= s[start .. k + 1];
-            int width = (k + 1) - start;
+            immutable width = (k + 1) - start;
             for (int ii = 0; ii < width; ii++)
                 R[Rlen + ii] = s[start + ii];
             Rlen += width;
@@ -316,11 +316,12 @@ if (isSomeChar!Char)
 string decode(Char)(in Char[] encodedURI)
 if (isSomeChar!Char)
 {
-    // selective imports trigger wrong deprecation
-    // https://issues.dlang.org/show_bug.cgi?id=17193
-    static import std.utf;
+    import std.algorithm.iteration : each;
+    import std.utf : encode;
     auto s = URI_Decode(encodedURI, URI_Reserved | URI_Hash);
-    return std.utf.toUTF8(s);
+    char[] r;
+    s.each!(c => encode(r, c));
+    return r;
 }
 
 /*******************************
@@ -331,11 +332,12 @@ if (isSomeChar!Char)
 string decodeComponent(Char)(in Char[] encodedURIComponent)
 if (isSomeChar!Char)
 {
-    // selective imports trigger wrong deprecation
-    // https://issues.dlang.org/show_bug.cgi?id=17193
-    static import std.utf;
+    import std.algorithm.iteration : each;
+    import std.utf : encode;
     auto s = URI_Decode(encodedURIComponent, 0);
-    return std.utf.toUTF8(s);
+    char[] r;
+    s.each!(c => encode(r, c));
+    return r;
 }
 
 /*****************************

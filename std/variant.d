@@ -10,38 +10,6 @@ Such types are useful
 for type-uniform binary interfaces, interfacing with scripting
 languages, and comfortable exploratory programming.
 
-Synopsis:
-----
-Variant a; // Must assign before use, otherwise exception ensues
-// Initialize with an integer; make the type int
-Variant b = 42;
-assert(b.type == typeid(int));
-// Peek at the value
-assert(b.peek!(int) !is null && *b.peek!(int) == 42);
-// Automatically convert per language rules
-auto x = b.get!(real);
-// Assign any other type, including other variants
-a = b;
-a = 3.14;
-assert(a.type == typeid(double));
-// Implicit conversions work just as with built-in types
-assert(a < b);
-// Check for convertibility
-assert(!a.convertsTo!(int)); // double not convertible to int
-// Strings and all other arrays are supported
-a = "now I'm a string";
-assert(a == "now I'm a string");
-a = new int[42]; // can also assign arrays
-assert(a.length == 42);
-a[5] = 7;
-assert(a[5] == 7);
-// Can also assign class values
-class Foo {}
-auto foo = new Foo;
-a = foo;
-assert(*a.peek!(Foo) == foo); // and full type information is preserved
-----
-
 A $(LREF Variant) object can hold a value of any type, with very few
 restrictions (such as `shared` types and noncopyable types). Setting the value
 is as immediate as assigning to the `Variant` object. To read back the value of
@@ -67,6 +35,43 @@ module std.variant;
 
 import std.meta, std.traits, std.typecons;
 
+///
+@system unittest
+{
+    Variant a; // Must assign before use, otherwise exception ensues
+    // Initialize with an integer; make the type int
+    Variant b = 42;
+    assert(b.type == typeid(int));
+    // Peek at the value
+    assert(b.peek!(int) !is null && *b.peek!(int) == 42);
+    // Automatically convert per language rules
+    auto x = b.get!(real);
+
+    // Assign any other type, including other variants
+    a = b;
+    a = 3.14;
+    assert(a.type == typeid(double));
+    // Implicit conversions work just as with built-in types
+    assert(a < b);
+    // Check for convertibility
+    assert(!a.convertsTo!(int)); // double not convertible to int
+    // Strings and all other arrays are supported
+    a = "now I'm a string";
+    assert(a == "now I'm a string");
+
+    // can also assign arrays
+    a = new int[42];
+    assert(a.length == 42);
+    a[5] = 7;
+    assert(a[5] == 7);
+
+    // Can also assign class values
+    class Foo {}
+    auto foo = new Foo;
+    a = foo;
+    assert(*a.peek!(Foo) == foo); // and full type information is preserved
+}
+
 /++
     Gives the $(D sizeof) the largest type given.
   +/
@@ -81,6 +86,16 @@ template maxSize(T...)
         import std.algorithm.comparison : max;
         enum size_t maxSize = max(T[0].sizeof, maxSize!(T[1 .. $]));
     }
+}
+
+///
+@safe unittest
+{
+    static assert(maxSize!(int, long) == 8);
+    static assert(maxSize!(bool, byte) == 1);
+
+    struct Cat { int a, b, c; }
+    static assert(maxSize!(bool, Cat) == 12);
 }
 
 struct This;
@@ -1395,12 +1410,15 @@ values of their own type within.
 
 This is achieved with `Algebraic` by using `This` as a placeholder whenever a
 reference to the type being defined is needed. The `Algebraic` instantiation
-will perform $(LUCKY alpha renaming) on its constituent types, replacing `This`
+will perform $(LINK2 https://en.wikipedia.org/wiki/Name_resolution_(programming_languages)#Alpha_renaming_to_make_name_resolution_trivial,
+alpha renaming) on its constituent types, replacing `This`
 with the self-referenced type. The structure of the type involving `This` may
 be arbitrarily complex.
 */
 @system unittest
 {
+    import std.typecons : Tuple, tuple;
+
     // A tree is either a leaf or a branch of two other trees
     alias Tree(Leaf) = Algebraic!(Leaf, Tuple!(This*, This*));
     Tree!int tree = tuple(new Tree!int(42), new Tree!int(43));
@@ -2008,6 +2026,11 @@ static class VariantException : Exception
  * $(D visit) allows delegates and static functions to be passed
  * as parameters.
  *
+ * If a function with an untyped parameter is specified, this function is called
+ * when the variant contains a type that does not match any other function.
+ * This can be used to apply the same function across multiple possible types.
+ * Exactly one generic function is allowed.
+ *
  * If a function without parameters is specified, this function is called
  * when `variant` doesn't hold a value. Exactly one parameter-less function
  * is allowed.
@@ -2050,6 +2073,20 @@ if (Handlers.length > 0)
                           (int i)    => i,
                           () => -1)();
     assert(rslt == -1);
+
+    // Generic function usage
+    Algebraic!(int, float, real) number = 2;
+    assert(number.visit!(x => x += 1) == 3);
+
+    // Generic function for int/float with separate behavior for string
+    Algebraic!(int, float, string) something = 2;
+    assert(something.visit!((string s) => s.length, x => x) == 2); // generic
+    something = "asdf";
+    assert(something.visit!((string s) => s.length, x => x) == 4); // string
+
+    // Generic handler and empty handler
+    Algebraic!(int, float, real) empty2;
+    assert(empty2.visit!(x => x + 1, () => -1) == -1);
 }
 
 @system unittest
@@ -2087,8 +2124,8 @@ if (Handlers.length > 0)
     Algebraic!(int, float, string) variant2 = 5.0f;
     // Shouldn' t compile as float not handled by visitor.
     static assert(!__traits(compiles, variant2.visit!(
-                        (int) {},
-                        (string) {})()));
+                        (int _) {},
+                        (string _) {})()));
 
     Algebraic!(size_t, string, float) variant3;
     variant3 = 10.0f;
@@ -2109,6 +2146,29 @@ if (Handlers.length > 0)
     static assert(!__traits(compiles,
                             visit!(() => size_t.max, func, (float f) => cast(size_t) f, () => size_t.max)(variant4))
                  );
+}
+
+// disallow providing multiple generic handlers to visit
+// disallow a generic handler that does not apply to all types
+@system unittest
+{
+    Algebraic!(int, float) number = 2;
+    // ok, x + 1 valid for int and float
+    static assert( __traits(compiles, number.visit!(x => x + 1)));
+    // bad, two generic handlers
+    static assert(!__traits(compiles, number.visit!(x => x + 1, x => x + 2)));
+    // bad, x ~ "a" does not apply to int or float
+    static assert(!__traits(compiles, number.visit!(x => x ~ "a")));
+    // bad, x ~ "a" does not apply to int or float
+    static assert(!__traits(compiles, number.visit!(x => x + 1, x => x ~ "a")));
+
+    Algebraic!(int, string) maybenumber = 2;
+    // ok, x ~ "a" valid for string, x + 1 valid for int, only 1 generic
+    static assert( __traits(compiles, number.visit!((string x) => x ~ "a", x => x + 1)));
+    // bad, x ~ "a" valid for string but not int
+    static assert(!__traits(compiles, number.visit!(x => x ~ "a")));
+    // bad, two generics, each only applies in one case
+    static assert(!__traits(compiles, number.visit!(x => x + 1, x => x ~ "a")));
 }
 
 /**
@@ -2212,6 +2272,7 @@ if (isAlgebraic!VariantType && Handler.length > 0)
         struct Result {
             int[AllowedTypes.length] indices;
             int exceptionFuncIdx = -1;
+            int generalFuncIdx = -1;
         }
 
         Result result;
@@ -2246,6 +2307,13 @@ if (isAlgebraic!VariantType && Handler.length > 0)
                         added = true;
                         result.indices[tidx] = dgidx;
                     }
+                }
+                else static if (isSomeFunction!(dg!T))
+                {
+                    assert(result.generalFuncIdx == -1 ||
+                           result.generalFuncIdx == dgidx,
+                           "Only one generic visitor function is allowed");
+                    result.generalFuncIdx = dgidx;
                 }
                 // Handle composite visitors with opCall overloads
                 else
@@ -2282,19 +2350,18 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 
             static if (dgIdx == -1)
             {
-                static if (Strict)
+                static if (HandlerOverloadMap.generalFuncIdx >= 0)
+                    return Handler[HandlerOverloadMap.generalFuncIdx](*ptr);
+                else static if (Strict)
                     static assert(false, "overload for type '" ~ T.stringof ~ "' hasn't been specified");
+                else static if (HandlerOverloadMap.exceptionFuncIdx != -1)
+                    return Handler[HandlerOverloadMap.exceptionFuncIdx]();
                 else
-                {
-                    static if (HandlerOverloadMap.exceptionFuncIdx != -1)
-                        return Handler[ HandlerOverloadMap.exceptionFuncIdx ]();
-                    else
-                        throw new VariantException(
-                            "variant holds value of type '"
-                            ~ T.stringof ~
-                            "' but no visitor has been provided"
-                        );
-                }
+                    throw new VariantException(
+                        "variant holds value of type '"
+                        ~ T.stringof ~
+                        "' but no visitor has been provided"
+                    );
             }
             else
             {
@@ -2667,8 +2734,8 @@ if (isAlgebraic!VariantType && Handler.length > 0)
 @system unittest
 {
     // Bugzilla 15039
-    import std.variant;
     import std.typecons;
+    import std.variant;
 
     alias IntTypedef = Typedef!int;
     alias Obj = Algebraic!(int, IntTypedef, This[]);

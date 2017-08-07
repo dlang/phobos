@@ -40,20 +40,23 @@ public enum CustomFloatFlags
      * Store values in normalized form by default. The actual precision of the
      * significand is extended by 1 bit by assuming an implicit leading bit of 1
      * instead of 0. i.e. $(D 1.nnnn) instead of $(D 0.nnnn).
-     * True for all $(LUCKY IEE754) types
+     * True for all $(LINK2 https://en.wikipedia.org/wiki/IEEE_floating_point, IEE754) types
      */
     storeNormalized = 2,
 
     /**
-     * Stores the significand in $(LUCKY IEEE754 denormalized) form when the
-     * exponent is 0. Required to express the value 0.
+     * Stores the significand in $(LINK2 https://en.wikipedia.org/wiki/IEEE_754-1985#Denormalized_numbers,
+     * IEEE754 denormalized) form when the exponent is 0. Required to express the value 0.
      */
     allowDenorm = 4,
 
-    /// Allows the storage of $(LUCKY IEEE754 _infinity) values.
+    /**
+      * Allows the storage of $(LINK2 https://en.wikipedia.org/wiki/IEEE_754-1985#Positive_and_negative_infinity,
+      * IEEE754 _infinity) values.
+      */
     infinity = 8,
 
-    /// Allows the storage of $(LUCKY IEEE754 Not a Number) values.
+    /// Allows the storage of $(LINK2 https://en.wikipedia.org/wiki/NaN, IEEE754 Not a Number) values.
     nan = 16,
 
     /**
@@ -66,12 +69,13 @@ public enum CustomFloatFlags
     /// If set, unsigned custom floats are assumed to be negative.
     negativeUnsigned = 64,
 
-    /**If set, 0 is the only allowed $(LUCKY IEEE754 denormalized) number.
+    /**If set, 0 is the only allowed $(LINK2 https://en.wikipedia.org/wiki/IEEE_754-1985#Denormalized_numbers,
+     * IEEE754 denormalized) number.
      * Requires allowDenorm and storeNormalized.
      */
     allowDenormZeroOnly = 128 | allowDenorm | storeNormalized,
 
-    /// Include _all of the $(LUCKY IEEE754) options.
+    /// Include _all of the $(LINK2 https://en.wikipedia.org/wiki/IEEE_floating_point, IEEE754) options.
     ieee = signed | storeNormalized | allowDenorm | infinity | nan ,
 
     /// Include none of the above options.
@@ -1624,7 +1628,8 @@ body
 }
 
 /**
-Computes $(LUCKY Euclidean distance) between input ranges $(D a) and
+Computes $(LINK2 https://en.wikipedia.org/wiki/Euclidean_distance,
+Euclidean distance) between input ranges $(D a) and
 $(D b). The two ranges must have the same length. The three-parameter
 version stops computation as soon as the distance is greater than or
 equal to $(D limit) (this is useful to save computation if a small
@@ -1684,7 +1689,8 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 }
 
 /**
-Computes the $(LUCKY dot product) of input ranges $(D a) and $(D
+Computes the $(LINK2 https://en.wikipedia.org/wiki/Dot_product,
+dot product) of input ranges $(D a) and $(D
 b). The two ranges must have the same length. If both ranges define
 length, the check is done once; otherwise, it is done at each
 iteration.
@@ -1781,7 +1787,8 @@ dotProduct(F1, F2)(in F1[] avector, in F2[] bvector)
 }
 
 /**
-Computes the $(LUCKY cosine similarity) of input ranges $(D a) and $(D
+Computes the $(LINK2 https://en.wikipedia.org/wiki/Cosine_similarity,
+cosine similarity) of input ranges $(D a) and $(D
 b). The two ranges must have the same length. If both ranges define
 length, the check is done once; otherwise, it is done at each
 iteration. If either range has all-zero elements, return 0.
@@ -1924,7 +1931,8 @@ if (isInputRange!Range && isFloatingPoint!(ElementType!Range))
 }
 
 /**
-Computes $(LUCKY _entropy) of input range $(D r) in bits. This
+Computes $(LINK2 https://en.wikipedia.org/wiki/Entropy_(information_theory),
+_entropy) of input range $(D r) in bits. This
 function assumes (without checking) that the values in $(D r) are all
 in $(D [0, 1]). For the entropy to be meaningful, often $(D r) should
 be normalized too (i.e., its values should sum to 1). The
@@ -1972,7 +1980,8 @@ if (isInputRange!Range &&
 }
 
 /**
-Computes the $(LUCKY Kullback-Leibler divergence) between input ranges
+Computes the $(LINK2 https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence,
+Kullback-Leibler divergence) between input ranges
 $(D a) and $(D b), which is the sum $(D ai * log(ai / bi)). The base
 of logarithm is 2. The ranges are assumed to contain elements in $(D
 [0, 1]). Usually the ranges are normalized probability distributions,
@@ -2020,7 +2029,8 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 }
 
 /**
-Computes the $(LUCKY Jensen-Shannon divergence) between $(D a) and $(D
+Computes the $(LINK2 https://en.wikipedia.org/wiki/Jensen%E2%80%93Shannon_divergence,
+Jensen-Shannon divergence) between $(D a) and $(D
 b), which is the sum $(D (ai * log(2 * ai / (ai + bi)) + bi * log(2 *
 bi / (ai + bi))) / 2). The base of logarithm is 2. The ranges are
 assumed to contain elements in $(D [0, 1]). Usually the ranges are
@@ -2177,10 +2187,10 @@ F gapWeightedSimilarity(alias comp = "a == b", R1, R2, F)(R1 s, R2 t, F lambda)
 if (isRandomAccessRange!(R1) && hasLength!(R1) &&
     isRandomAccessRange!(R2) && hasLength!(R2))
 {
-    import std.functional : binaryFun;
-    import std.algorithm.mutation : swap;
-    import core.stdc.stdlib : malloc, free;
     import core.exception : onOutOfMemoryError;
+    import core.stdc.stdlib : malloc, free;
+    import std.algorithm.mutation : swap;
+    import std.functional : binaryFun;
 
     if (s.length < t.length) return gapWeightedSimilarity(t, s, lambda);
     if (!t.length) return 0;
@@ -2591,8 +2601,16 @@ GapWeightedSimilarityIncremental!(R, F) gapWeightedSimilarityIncremental(R, F)
 Computes the greatest common divisor of $(D a) and $(D b) by using
 an efficient algorithm such as $(HTTPS en.wikipedia.org/wiki/Euclidean_algorithm, Euclid's)
 or $(HTTPS en.wikipedia.org/wiki/Binary_GCD_algorithm, Stein's) algorithm.
+
+Params:
+    T = Any numerical type that supports the modulo operator `%`. If
+        bit-shifting `<<` and `>>` are also supported, Stein's algorithm will
+        be used; otherwise, Euclid's algorithm is used as _a fallback.
+Returns:
+    The greatest common divisor of the given arguments.
  */
 T gcd(T)(T a, T b)
+    if (isIntegral!T)
 {
     static if (is(T == const) || is(T == immutable))
     {
@@ -2645,6 +2663,89 @@ T gcd(T)(T a, T b)
     assert(gcd(a, b) == 13);
 }
 
+// This overload is for non-builtin numerical types like BigInt or
+// user-defined types.
+/// ditto
+T gcd(T)(T a, T b)
+    if (!isIntegral!T &&
+        is(typeof(T.init % T.init)) &&
+        is(typeof(T.init == 0 || T.init > 0)))
+{
+    import std.algorithm.mutation : swap;
+
+    enum canUseBinaryGcd = is(typeof(() {
+        T t, u;
+        t <<= 1;
+        t >>= 1;
+        t -= u;
+        bool b = (t & 1) == 0;
+        swap(t, u);
+    }));
+
+    assert(a >= 0 && b >= 0);
+
+    static if (canUseBinaryGcd)
+    {
+        uint shift = 0;
+        while ((a & 1) == 0 && (b & 1) == 0)
+        {
+            a >>= 1;
+            b >>= 1;
+            shift++;
+        }
+
+        do
+        {
+            assert((a & 1) != 0);
+            while ((b & 1) == 0)
+                b >>= 1;
+            if (a > b)
+                swap(a, b);
+            b -= a;
+        } while (b);
+
+        return a << shift;
+    }
+    else
+    {
+        // The only thing we have is %; fallback to Euclidean algorithm.
+        while (b != 0)
+        {
+            auto t = b;
+            b = a % b;
+            a = t;
+        }
+        return a;
+    }
+}
+
+// Issue 7102
+@system pure unittest
+{
+    import std.bigint : BigInt;
+    assert(gcd(BigInt("71_000_000_000_000_000_000"),
+               BigInt("31_000_000_000_000_000_000")) ==
+           BigInt("1_000_000_000_000_000_000"));
+}
+
+@safe pure nothrow unittest
+{
+    // A numerical type that only supports % and - (to force gcd implementation
+    // to use Euclidean algorithm).
+    struct CrippledInt
+    {
+        int impl;
+        CrippledInt opBinary(string op : "%")(CrippledInt i)
+        {
+            return CrippledInt(impl % i.impl);
+        }
+        int opEquals(CrippledInt i) { return impl == i.impl; }
+        int opEquals(int i) { return impl == i; }
+        int opCmp(int i) { return (impl < i) ? -1 : (impl > i) ? 1 : 0; }
+    }
+    assert(gcd(CrippledInt(2310), CrippledInt(1309)) == CrippledInt(77));
+}
+
 // This is to make tweaking the speed/size vs. accuracy tradeoff easy,
 // though floats seem accurate enough for all practical purposes, since
 // they pass the "approxEqual(inverseFft(fft(arr)), arr)" test even for
@@ -2664,8 +2765,8 @@ private alias lookup_t = float;
  */
 final class Fft
 {
-    import std.algorithm.iteration : map;
     import core.bitop : bsf;
+    import std.algorithm.iteration : map;
     import std.array : uninitializedArray;
 
 private:
@@ -3154,8 +3255,8 @@ void inverseFft(Ret, R)(R range, Ret buf)
 @system unittest
 {
     import std.algorithm;
-    import std.range;
     import std.conv;
+    import std.range;
     // Test values from R and Octave.
     auto arr = [1,2,3,4,5,6,7,8];
     auto fft1 = fft(arr);

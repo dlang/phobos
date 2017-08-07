@@ -27,10 +27,10 @@ module std.bigint;
 
 import std.conv : ConvException;
 
-private import std.internal.math.biguintcore;
-private import std.format : FormatSpec, FormatException;
-private import std.traits;
-private import std.range.primitives;
+import std.format : FormatSpec, FormatException;
+import std.internal.math.biguintcore;
+import std.range.primitives;
+import std.traits;
 
 /** A struct representing an arbitrary precision integer.
  *
@@ -59,18 +59,19 @@ public:
      *     s = a finite bidirectional range of any character type
      *
      * Throws:
-     *     $(D ConvException) if the string doesn't represent a valid number
+     *     $(REF ConvException, std,conv) if the string doesn't represent a valid number
      */
     this(Range)(Range s) if (
         isBidirectionalRange!Range &&
         isSomeChar!(ElementType!Range) &&
-        !isInfinite!Range)
+        !isInfinite!Range &&
+        !isSomeString!Range)
     {
         import std.algorithm.iteration : filterBidirectional;
         import std.algorithm.searching : startsWith;
-        import std.utf : byCodeUnit, byChar;
-        import std.exception : enforce;
         import std.conv : ConvException;
+        import std.exception : enforce;
+        import std.utf : byChar;
 
         enforce!ConvException(!s.empty, "Can't initialize BigInt with an empty range");
 
@@ -79,37 +80,31 @@ public:
 
         data = 0UL;
 
-        // auto decoding special case
-        static if (isNarrowString!Range)
-            auto codeUnits = s.byCodeUnit();
-        else
-            alias codeUnits = s;
-
         // check for signs and if the string is a hex value
-        if (codeUnits.front == '+')
+        if (s.front == '+')
         {
-            codeUnits.popFront(); // skip '+'
+            s.popFront(); // skip '+'
         }
-        else if (codeUnits.front == '-')
+        else if (s.front == '-')
         {
             neg = true;
-            codeUnits.popFront();
+            s.popFront();
         }
 
-        if (codeUnits.save.startsWith("0x".byChar) ||
-            codeUnits.save.startsWith("0X".byChar))
+        if (s.save.startsWith("0x".byChar) ||
+            s.save.startsWith("0X".byChar))
         {
-            codeUnits.popFront;
-            codeUnits.popFront;
+            s.popFront;
+            s.popFront;
 
-            if (!codeUnits.empty)
-                ok = data.fromHexString(codeUnits.filterBidirectional!(a => a != '_'));
+            if (!s.empty)
+                ok = data.fromHexString(s.filterBidirectional!(a => a != '_'));
             else
                 ok = false;
         }
         else
         {
-            ok = data.fromDecimalString(codeUnits.filterBidirectional!(a => a != '_'));
+            ok = data.fromDecimalString(s.filterBidirectional!(a => a != '_'));
         }
 
         enforce!ConvException(ok, "Not a valid numerical string");
@@ -120,11 +115,18 @@ public:
         sign = neg;
     }
 
+    /// ditto
+    this(Range)(Range s) pure if (isSomeString!Range)
+    {
+        import std.utf : byCodeUnit;
+        this(s.byCodeUnit);
+    }
+
     @system unittest
     {
         // system because of the dummy ranges eventually call std.array!string
-        import std.internal.test.dummyrange;
         import std.exception : assertThrown;
+        import std.internal.test.dummyrange;
 
         auto r1 = new ReferenceBidirectionalRange!dchar("101");
         auto big1 = BigInt(r1);
@@ -1096,12 +1098,20 @@ if (isIntegral!T)
          * on two's complement machines because unsigned(T.min) = |T.min|
          * even though -T.min = T.min.
          */
-        return unsigned((x < 0) ? -x : x);
+        return unsigned((x < 0) ? cast(T)(0-x) : x);
     }
     else
     {
         return x;
     }
+}
+
+///
+nothrow pure @system
+unittest
+{
+    assert((-1).absUnsign == 1);
+    assert(1.absUnsign == 1);
 }
 
 nothrow pure @system
@@ -1493,8 +1503,8 @@ unittest
     assert(__traits(compiles, foo(cbi)));
     assert(__traits(compiles, foo(ibi)));
 
-    import std.meta : AliasSeq;
     import std.conv : to;
+    import std.meta : AliasSeq;
 
     foreach (T1; AliasSeq!(BigInt, const(BigInt), immutable(BigInt)))
     {
@@ -1688,3 +1698,8 @@ unittest
     ]));
 }
 
+// Issue 17330
+@system unittest
+{
+    auto b = immutable BigInt("123");
+}

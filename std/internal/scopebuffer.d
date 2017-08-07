@@ -10,8 +10,8 @@ module std.internal.scopebuffer;
 
 //debug=ScopeBuffer;
 
-private import core.stdc.stdlib : realloc;
-private import std.traits;
+import core.stdc.stdlib : realloc;
+import std.traits;
 
 /**************************************
  * ScopeBuffer encapsulates using a local array as a temporary buffer.
@@ -98,8 +98,8 @@ if (isAssignable!T &&
     !hasElaborateCopyConstructor!T &&
     !hasElaborateAssign!T)
 {
-    import core.stdc.string : memcpy;
     import core.exception : onOutOfMemoryError;
+    import core.stdc.string : memcpy;
 
 
     /**************************

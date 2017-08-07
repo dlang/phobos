@@ -18,7 +18,8 @@ flags (e.g. for dmd, `-L-lodbc` on Posix and `-Lodbc32.lib` on Windows) to link
 with the ODBC library. On Windows, using $(D pragma(lib, "odbc32")) in D
 code at top level is also appropriate.
 
-See_Also: $(LUCKY ODBC API Reference on MSN Online)
+See_Also: $(LINK2 https://docs.microsoft.com/en-us/sql/odbc/reference/syntax/odbc-api-reference,
+            ODBC API Reference on MSN Online)
 */
 
 module etc.c.odbc.sql;

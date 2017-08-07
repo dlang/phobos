@@ -1,2 +1,0 @@
-`std.stdio.readf` now only accepts pointers as input arguments.
-

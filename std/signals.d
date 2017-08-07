@@ -52,6 +52,8 @@
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_signals.d)
+ *
+ * $(SCRIPT inhibitQuickIndex = 1;)
  */
 /*          Copyright Digital Mars 2000 - 2009.
  * Distributed under the Boost Software License, Version 1.0.
@@ -60,9 +62,9 @@
  */
 module std.signals;
 
-import std.stdio;
-import core.stdc.stdlib : calloc, realloc, free;
 import core.exception : onOutOfMemoryError;
+import core.stdc.stdlib : calloc, realloc, free;
+import std.stdio;
 
 // Special function for internal use only.
 // Use of this is where the slot had better be a delegate
@@ -83,8 +85,8 @@ extern (C) void  rt_detachDisposeEvent( Object obj, DisposeEvt evt );
 
 mixin template Signal(T1...)
 {
-    static import core.stdc.stdlib;
     static import core.exception;
+    static import core.stdc.stdlib;
     /***
      * A slot is implemented as a delegate.
      * The slot_t is the type of the delegate.

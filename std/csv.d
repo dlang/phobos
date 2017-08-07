@@ -92,9 +92,9 @@
 module std.csv;
 
 import std.conv;
+import std.exception;  // basicExceptionCtors
 import std.range.primitives;
 import std.traits;
-import std.exception;  // basicExceptionCtors
 
 /**
  * Exception containing the row and column for when an exception was thrown.
@@ -1099,7 +1099,6 @@ public:
     }
 }
 
-///
 @safe pure unittest
 {
     import std.algorithm.comparison : equal;
@@ -1145,7 +1144,7 @@ private:
     size_t[] _popCount;
 public:
     /*
-     * params:
+     * Params:
      *      input = Pointer to a character input range
      *      delimiter = Separator for each column
      *      quote = Character used for quotation
@@ -1349,7 +1348,7 @@ public:
  * start with either a delimiter or record break (\n, \r\n, \r) which
  * must be removed for subsequent calls.
  *
- * params:
+ * Params:
  *       input = Any CSV input
  *       ans   = The first field in the input
  *       sep   = The character to represent a comma in the specification

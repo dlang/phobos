@@ -13,13 +13,12 @@ Authors:   $(HTTP digitalmars.com, Walter Bright),
  */
 module std.stdio;
 
-public import core.stdc.stdio;
 import core.stdc.stddef; // wchar_t
+public import core.stdc.stdio;
 import std.algorithm.mutation; // copy
 import std.meta; // allSatisfy
 import std.range.primitives; // ElementEncodingType, empty, front,
     // isBidirectionalRange, isInputRange, put
-import std.stdiobase;
 import std.traits; // isSomeChar, isSomeString, Unqual, isPointer
 import std.typecons; // Flag
 
@@ -338,7 +337,7 @@ void main(string[] args)
     }
     f.writeln("!");
     // f exits scope, reference count falls to zero,
-    // underlying $(D FILE*) is closed.
+    // underlying `FILE*` is closed.
 }
 ----
 $(CONSOLE
@@ -501,13 +500,13 @@ Throws: $(D ErrnoException) in case of error.
  */
     void reopen(string name, in char[] stdioOpenmode = "rb") @trusted
     {
-        import std.internal.cstring : tempCString;
-        import std.exception : enforce, errnoEnforce;
         import std.conv : text;
+        import std.exception : enforce, errnoEnforce;
+        import std.internal.cstring : tempCString;
 
         enforce(isOpen, "Attempting to reopen() an unopened file");
 
-        auto namez = name.tempCString!FSChar();
+        auto namez = (name == null ? _name : name).tempCString!FSChar();
         auto modez = stdioOpenmode.tempCString!FSChar();
 
         FILE* fd = _p.handle;
@@ -526,8 +525,8 @@ Throws: $(D ErrnoException) in case of error.
 
     @system unittest // Test changing filename
     {
-        static import std.file;
         import std.exception : assertThrown, assertNotThrown;
+        static import std.file;
 
         auto deleteme = testFilename();
         std.file.write(deleteme, "foo");
@@ -548,8 +547,8 @@ Throws: $(D ErrnoException) in case of error.
     version (CRuntime_Microsoft) {} else // Not implemented
     @system unittest // Test changing mode
     {
-        static import std.file;
         import std.exception : assertThrown, assertNotThrown;
+        static import std.file;
 
         auto deleteme = testFilename();
         std.file.write(deleteme, "foo");
@@ -650,9 +649,9 @@ Throws: $(D ErrnoException) in case of error.
     version(Windows)
     void windowsHandleOpen(HANDLE handle, in char[] stdioOpenmode)
     {
+        import core.stdc.stdint : intptr_t;
         import std.exception : errnoEnforce;
         import std.format : format;
-        import core.stdc.stdint : intptr_t;
 
         // Create file descriptors from the handles
         version (DIGITAL_MARS_STDIO)
@@ -839,8 +838,8 @@ Throws: $(D Exception) if the file is not opened or if the call to $(D fflush) f
     @safe unittest
     {
         // Issue 12349
-        static import std.file;
         import std.exception : assertThrown;
+        static import std.file;
 
         auto deleteme = testFilename();
         auto f = File(deleteme, "w");
@@ -1032,8 +1031,8 @@ Throws: $(D Exception) if the file is not opened.
 
     @system unittest
     {
-        static import std.file;
         import std.conv : text;
+        static import std.file;
 
         auto deleteme = testFilename();
         auto f = File(deleteme, "w+");
@@ -1090,8 +1089,8 @@ Throws: $(D Exception) if the file is not opened.
     ///
     @system unittest
     {
-        static import std.file;
         import std.conv : text;
+        static import std.file;
 
         auto testFile = testFilename();
         std.file.write(testFile, "abcdefghijklmnopqrstuvwqxyz");
@@ -1173,8 +1172,8 @@ Throws: $(D Exception) if the file is not opened.
 
         private static T wenforce(T)(T cond, string str)
         {
-            import std.windows.syserror : sysErrorString;
             import core.sys.windows.windows : GetLastError;
+            import std.windows.syserror : sysErrorString;
 
             if (cond) return cond;
             throw new Exception(str ~ ": " ~ sysErrorString(GetLastError()));
@@ -1221,8 +1220,8 @@ $(UL
         enforce(isOpen, "Attempting to call lock() on an unopened file");
         version (Posix)
         {
-            import std.exception : errnoEnforce;
             import core.sys.posix.fcntl : F_RDLCK, F_SETLKW, F_WRLCK;
+            import std.exception : errnoEnforce;
             immutable short type = lockType == LockType.readWrite
                 ? F_WRLCK : F_RDLCK;
             errnoEnforce(lockImpl(F_SETLKW, type, start, length) != -1,
@@ -1255,9 +1254,9 @@ specified file segment was already locked.
         enforce(isOpen, "Attempting to call tryLock() on an unopened file");
         version (Posix)
         {
-            import std.exception : errnoEnforce;
             import core.stdc.errno : EACCES, EAGAIN, errno;
             import core.sys.posix.fcntl : F_RDLCK, F_SETLK, F_WRLCK;
+            import std.exception : errnoEnforce;
             immutable short type = lockType == LockType.readWrite
                 ? F_WRLCK : F_RDLCK;
             immutable res = lockImpl(F_SETLK, type, start, length);
@@ -1295,8 +1294,8 @@ Removes the lock over the specified file segment.
         enforce(isOpen, "Attempting to call unlock() on an unopened file");
         version (Posix)
         {
-            import std.exception : errnoEnforce;
             import core.sys.posix.fcntl : F_SETLK, F_UNLCK;
+            import std.exception : errnoEnforce;
             errnoEnforce(lockImpl(F_SETLK, F_UNLCK, start, length) != -1,
                     "Could not remove lock for file `"~_name~"'");
         }
@@ -1448,11 +1447,28 @@ Throws: $(D Exception) if the file is not opened.
 
 /**
 Writes its arguments in text format to the file, according to the
-format in the first argument.
+format string fmt.
+
+Params:
+fmt = The $(LINK2 std_format.html#format-string, format string).
+When passed as a compile-time argument, the string will be statically checked
+against the argument types passed.
+args = Items to write.
 
 Throws: $(D Exception) if the file is not opened.
         $(D ErrnoException) on an error writing to the file.
 */
+    void writef(alias fmt, A...)(A args)
+    if (isSomeString!(typeof(fmt)))
+    {
+        import std.format : checkFormatException;
+
+        alias e = checkFormatException!(fmt, A);
+        static assert(!e, e.msg);
+        return this.writef(fmt, args);
+    }
+
+    /// ditto
     void writef(Char, A...)(in Char[] fmt, A args)
     {
         import std.format : formattedWrite;
@@ -1460,13 +1476,18 @@ Throws: $(D Exception) if the file is not opened.
         formattedWrite(lockingTextWriter(), fmt, args);
     }
 
-/**
-Writes its arguments in text format to the file, according to the
-format in the first argument, followed by a newline.
+    /// Equivalent to `file.writef(fmt, args, '\n')`.
+    void writefln(alias fmt, A...)(A args)
+    if (isSomeString!(typeof(fmt)))
+    {
+        import std.format : checkFormatException;
 
-Throws: $(D Exception) if the file is not opened.
-        $(D ErrnoException) on an error writing to the file.
-*/
+        alias e = checkFormatException!(fmt, A);
+        static assert(!e, e.msg);
+        return this.writefln(fmt, args);
+    }
+
+    /// ditto
     void writefln(Char, A...)(in Char[] fmt, A args)
     {
         import std.format : formattedWrite;
@@ -1498,7 +1519,7 @@ Throws:
 
 Example:
 ---
-// Reads $(D stdin) and writes it to $(D stdout).
+// Reads `stdin` and writes it to `stdout`.
 import std.stdio;
 
 void main()
@@ -1519,8 +1540,8 @@ void main()
 
     @system unittest
     {
-        static import std.file;
         import std.algorithm.comparison : equal;
+        static import std.file;
         import std.meta : AliasSeq;
 
         auto deleteme = testFilename();
@@ -1582,9 +1603,9 @@ conversion error.
 
 Example:
 ---
-// Read lines from $(D stdin) into a string
+// Read lines from `stdin` into a string
 // Ignore lines starting with '#'
-// Write the string to $(D stdout)
+// Write the string to `stdout`
 
 void main()
 {
@@ -1614,7 +1635,7 @@ largest buffer returned by $(D readln):
 
 Example:
 ---
-// Read lines from $(D stdin) and count words
+// Read lines from `stdin` and count words
 
 void main()
 {
@@ -1764,12 +1785,47 @@ is recommended if you want to process a complete file.
     }
 
     /**
-     * Read data from the file according to the specified
-     * $(LINK2 std_format.html#_format-string, _format specifier) using
-     * $(REF formattedRead, std,_format).
+     * Reads formatted _data from the file using $(REF formattedRead, std,_format).
+     * Params:
+     * format = The $(LINK2 std_format.html#_format-string, _format string).
+     * When passed as a compile-time argument, the string will be statically checked
+     * against the argument types passed.
+     * data = Items to be read.
+     * Example:
+----
+// test.d
+void main()
+{
+    import std.stdio;
+    auto f = File("input");
+    foreach (_; 0 .. 3)
+    {
+        int a;
+        f.readf!" %d"(a);
+        writeln(++a);
+    }
+}
+----
+$(CONSOLE
+% echo "1 2 3" > input
+% rdmd test.d
+2
+3
+4
+)
      */
-    uint readf(Data...)(in char[] format, Data data)
-    if (allSatisfy!(isPointer, Data))
+    uint readf(alias format, Data...)(auto ref Data data)
+    if (isSomeString!(typeof(format)))
+    {
+        import std.format : checkFormatException;
+
+        alias e = checkFormatException!(format, Data);
+        static assert(!e, e.msg);
+        return this.readf(format, data);
+    }
+
+    /// ditto
+    uint readf(Data...)(in char[] format, auto ref Data data)
     {
         import std.format : formattedRead;
 
@@ -1779,6 +1835,26 @@ is recommended if you want to process a complete file.
     }
 
     ///
+    @system unittest
+    {
+        static import std.file;
+
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "hello\nworld\ntrue\nfalse\n");
+        scope(exit) std.file.remove(deleteme);
+        string s;
+        auto f = File(deleteme);
+        f.readf!"%s\n"(s);
+        assert(s == "hello", "["~s~"]");
+        f.readf("%s\n", s);
+        assert(s == "world", "["~s~"]");
+
+        bool b1, b2;
+        f.readf("%s\n%s\n", b1, b2);
+        assert(b1 == true && b2 == false);
+    }
+
+    // backwards compatibility with pointers
     @system unittest
     {
         // @system due to readf
@@ -1798,6 +1874,45 @@ is recommended if you want to process a complete file.
         bool b1, b2;
         f.readf("%s\n%s\n", &b1, &b2);
         assert(b1 == true && b2 == false);
+    }
+
+    // backwards compatibility (mixed)
+    @system unittest
+    {
+        // @system due to readf
+        static import std.file;
+
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "hello\nworld\ntrue\nfalse\n");
+        scope(exit) std.file.remove(deleteme);
+        string s1, s2;
+        auto f = File(deleteme);
+        f.readf("%s\n%s\n", s1, &s2);
+        assert(s1 == "hello");
+        assert(s2 == "world");
+
+        // Issue 11698
+        bool b1, b2;
+        f.readf("%s\n%s\n", &b1, b2);
+        assert(b1 == true && b2 == false);
+    }
+
+    // Issue 12260 - Nice error of std.stdio.readf with newlines
+    @system unittest
+    {
+        static import std.file;
+
+        auto deleteme = testFilename();
+        std.file.write(deleteme, "1\n2");
+        scope(exit) std.file.remove(deleteme);
+        int input;
+        auto f = File(deleteme);
+        f.readf("%s", &input);
+
+        import std.conv : ConvException;
+        import std.exception : collectException;
+        assert(collectException!ConvException(f.readf("%s", &input)).msg ==
+            "Unexpected '\\n' when converting from type LockingTextReader to type int");
     }
 
 /**
@@ -2203,8 +2318,8 @@ $(REF readText, std,file)
 
     @system unittest
     {
-        static import std.file;
         import std.algorithm.comparison : equal;
+        static import std.file;
 
         scope(failure) printf("Failed test at line %d\n", __LINE__);
         auto deleteme = testFilename();
@@ -2500,7 +2615,7 @@ In the  example above, $(D buffer.length) is 4096 for all iterations, except
 for the last one, in which case $(D buffer.length) may be less than 4096 (but
 always greater than zero).
 
-With the mentioned limitations, $(D byChunks) works with any algorithm
+With the mentioned limitations, $(D byChunk) works with any algorithm
 compatible with input ranges.
 
 Example:
@@ -2642,7 +2757,8 @@ $(D Range) that locks the file and allows fast writing to it.
 
         /// Range primitive implementations.
         void put(A)(A writeme)
-            if (is(ElementType!A : const(dchar)) &&
+            if ((isSomeChar!(Unqual!(ElementType!A)) ||
+                  is(ElementType!A : const(ubyte))) &&
                 isInputRange!A &&
                 !isInfinite!A)
         {
@@ -2650,7 +2766,7 @@ $(D Range) that locks the file and allows fast writing to it.
 
             alias C = ElementEncodingType!A;
             static assert(!is(C == void));
-            static if (isSomeString!A && C.sizeof == 1)
+            static if (isSomeString!A && C.sizeof == 1 || is(A : const(ubyte)[]))
             {
                 if (orientation_ <= 0)
                 {
@@ -2662,15 +2778,16 @@ $(D Range) that locks the file and allows fast writing to it.
                 }
             }
 
-            // put each character in turn
-            foreach (dchar c; writeme)
+            // put each element in turn.
+            alias Elem = Unqual!(ElementType!A);
+            foreach (Elem c; writeme)
             {
                 put(c);
             }
         }
 
         /// ditto
-        void put(C)(C c) @safe if (is(C : const(dchar)))
+        void put(C)(C c) @safe if (isSomeChar!C || is(C : const(ubyte)))
         {
             import std.traits : Parameters;
             static auto trustedFPUTC(int ch, _iobuf* h) @trusted
@@ -2883,8 +3000,8 @@ See $(LREF byChunk) for an example.
 /** Returns an output range that locks the file and allows fast writing to it.
 
 Example:
-Produce a grayscale image of the $(LUCKY Mandelbrot set)
-in binary $(LUCKY Netpbm format) to standard output.
+Produce a grayscale image of the $(LINK2 https://en.wikipedia.org/wiki/Mandelbrot_set, Mandelbrot set)
+in binary $(LINK2 https://en.wikipedia.org/wiki/Netpbm_format, Netpbm format) to standard output.
 ---
 import std.algorithm, std.range, std.stdio;
 
@@ -2922,9 +3039,9 @@ void main()
 
     @system unittest
     {
-        static import std.file;
         import std.algorithm.mutation : reverse;
         import std.exception : collectException;
+        static import std.file;
         import std.range : only, retro;
         import std.string : format;
 
@@ -3132,8 +3249,8 @@ void main()
 
 @safe unittest
 {
-    static import std.file;
     import std.exception : collectException;
+    static import std.file;
 
     auto deleteme = testFilename();
     scope(exit) collectException(std.file.remove(deleteme));
@@ -3163,8 +3280,9 @@ void main()
         writer.put('日');
         writer.put(chain(only('本'), only('語')));
         writer.put(repeat('#', 12)); // BUG 11945
+        writer.put(cast(immutable(ubyte)[])"日本語"); // Bug 17229
     }
-    assert(File(deleteme).readln() == "日本語日本語日本語日本語############");
+    assert(File(deleteme).readln() == "日本語日本語日本語日本語############日本語");
 }
 
 @safe unittest
@@ -3295,8 +3413,8 @@ struct LockingTextReader
 
 @system unittest // bugzilla 13686
 {
-    static import std.file;
     import std.algorithm.comparison : equal;
+    static import std.file;
     import std.utf : byDchar;
 
     auto deleteme = testFilename();
@@ -3603,11 +3721,10 @@ void writeln(T...)(T args)
 Writes formatted data to standard output (without a trailing newline).
 
 Params:
-args = The first argument $(D args[0]) should be the format string, specifying
-how to format the rest of the arguments. For a full description of the syntax
-of the format string and how it controls the formatting of the rest of the
-arguments, please refer to the documentation for $(REF formattedWrite,
-std,format).
+fmt = The $(LINK2 std_format.html#format-string, format string).
+When passed as a compile-time argument, the string will be statically checked
+against the argument types passed.
+args = Items to write.
 
 Note: In older versions of Phobos, it used to be possible to write:
 
@@ -3623,10 +3740,20 @@ stderr.writef("%s", "message");
 ------
 
 */
-
-void writef(T...)(T args)
+void writef(alias fmt, A...)(A args)
+if (isSomeString!(typeof(fmt)))
 {
-    trustedStdout.writef(args);
+    import std.format : checkFormatException;
+
+    alias e = checkFormatException!(fmt, A);
+    static assert(!e, e.msg);
+    return .writef(fmt, args);
+}
+
+/// ditto
+void writef(Char, A...)(in Char[] fmt, A args)
+{
+    trustedStdout.writef(fmt, args);
 }
 
 @system unittest
@@ -3639,24 +3766,35 @@ void writef(T...)(T args)
     auto deleteme = testFilename();
     auto f = File(deleteme, "w");
     scope(exit) { std.file.remove(deleteme); }
-    f.writef("Hello, %s world number %s!", "nice", 42);
+    f.writef!"Hello, %s world number %s!"("nice", 42);
     f.close();
     assert(cast(char[]) std.file.read(deleteme) ==  "Hello, nice world number 42!");
     // test write on stdout
     auto saveStdout = stdout;
     scope(exit) stdout = saveStdout;
     stdout.open(deleteme, "w");
-    writef("Hello, %s world number %s!", "nice", 42);
+    writef!"Hello, %s world number %s!"("nice", 42);
     stdout.close();
     assert(cast(char[]) std.file.read(deleteme) == "Hello, nice world number 42!");
 }
 
 /***********************************
- * Equivalent to $(D writef(args, '\n')).
+ * Equivalent to $(D writef(fmt, args, '\n')).
  */
-void writefln(T...)(T args)
+void writefln(alias fmt, A...)(A args)
+if (isSomeString!(typeof(fmt)))
 {
-    trustedStdout.writefln(args);
+    import std.format : checkFormatException;
+
+    alias e = checkFormatException!(fmt, A);
+    static assert(!e, e.msg);
+    return .writefln(fmt, args);
+}
+
+/// ditto
+void writefln(Char, A...)(in Char[] fmt, A args)
+{
+    trustedStdout.writefln(fmt, args);
 }
 
 @system unittest
@@ -3665,11 +3803,11 @@ void writefln(T...)(T args)
 
     scope(failure) printf("Failed test at line %d\n", __LINE__);
 
-    // test writefln
+    // test File.writefln
     auto deleteme = testFilename();
     auto f = File(deleteme, "w");
     scope(exit) { std.file.remove(deleteme); }
-    f.writefln("Hello, %s world number %s!", "nice", 42);
+    f.writefln!"Hello, %s world number %s!"("nice", 42);
     f.close();
     version (Windows)
         assert(cast(char[]) std.file.read(deleteme) ==
@@ -3678,15 +3816,61 @@ void writefln(T...)(T args)
         assert(cast(char[]) std.file.read(deleteme) ==
                 "Hello, nice world number 42!\n",
                 cast(char[]) std.file.read(deleteme));
+
+    // test writefln
+    auto saveStdout = stdout;
+    scope(exit) stdout = saveStdout;
+    stdout.open(deleteme, "w");
+    writefln!"Hello, %s world number %s!"("nice", 42);
+    stdout.close();
+    version (Windows)
+        assert(cast(char[]) std.file.read(deleteme) ==
+                "Hello, nice world number 42!\r\n");
+    else
+        assert(cast(char[]) std.file.read(deleteme) ==
+                "Hello, nice world number 42!\n");
 }
 
 /**
- * Read data from $(D stdin) according to the specified
- * $(LINK2 std_format.html#_format-string, _format specifier) using
- * $(REF formattedRead, std,_format).
+ * Reads formatted data from $(D stdin) using $(REF formattedRead, std,_format).
+ * Params:
+ * format = The $(LINK2 std_format.html#_format-string, _format string).
+ * When passed as a compile-time argument, the string will be statically checked
+ * against the argument types passed.
+ * args = Items to be read.
+ * Example:
+----
+// test.d
+void main()
+{
+    import std.stdio;
+    foreach (_; 0 .. 3)
+    {
+        int a;
+        readf!" %d"(a);
+        writeln(++a);
+    }
+}
+----
+$(CONSOLE
+% echo "1 2 3" | rdmd test.d
+2
+3
+4
+)
  */
-uint readf(A...)(in char[] format, A args)
-if (allSatisfy!(isPointer, A))
+uint readf(alias format, A...)(auto ref A args)
+if (isSomeString!(typeof(format)))
+{
+    import std.format : checkFormatException;
+
+    alias e = checkFormatException!(format, A);
+    static assert(!e, e.msg);
+    return .readf(format, args);
+}
+
+/// ditto
+uint readf(A...)(in char[] format, auto ref A args)
 {
     return stdin.readf(format, args);
 }
@@ -3699,7 +3883,10 @@ if (allSatisfy!(isPointer, A))
     char a;
     wchar b;
     dchar c;
-    if (false) readf("%s %s %s", &a,&b,&c);
+    if (false) readf("%s %s %s", a, b, c);
+    // backwards compatibility with pointers
+    if (false) readf("%s %s %s", a, &b, c);
+    if (false) readf("%s %s %s", &a, &b, &c);
 }
 
 /**********************************
@@ -4308,31 +4495,9 @@ Initialize with a message and an error code.
 */
     this(string message, uint e = core.stdc.errno.errno) @trusted
     {
-        import std.conv : to;
-
+        import std.exception : errnoString;
         errno = e;
-        version (Posix)
-        {
-            import core.stdc.string : strerror_r;
-
-            char[256] buf = void;
-            version (CRuntime_Glibc)
-            {
-                auto s = strerror_r(errno, buf.ptr, buf.length);
-            }
-            else
-            {
-                strerror_r(errno, buf.ptr, buf.length);
-                auto s = buf.ptr;
-            }
-        }
-        else
-        {
-            import core.stdc.string : strerror;
-
-            auto s = strerror(errno);
-        }
-        auto sysmsg = to!string(s);
+        auto sysmsg = errnoString(errno);
         // If e is 0, we don't use the system error message.  (The message
         // is "Success", which is rather pointless for an exception.)
         super(e == 0 ? message
@@ -4352,69 +4517,81 @@ Initialize with a message and an error code.
     }
 }
 
-extern(C) void std_stdio_static_this()
+// Undocumented but public because the std* handles are aliasing it.
+@property ref File makeGlobal(alias handle)()
 {
-    static import core.stdc.stdio;
-    //Bind stdin, stdout, stderr
-    __gshared File.Impl stdinImpl;
-    stdinImpl.handle = core.stdc.stdio.stdin;
-    .stdin._p = &stdinImpl;
-    // stdout
-    __gshared File.Impl stdoutImpl;
-    stdoutImpl.handle = core.stdc.stdio.stdout;
-    .stdout._p = &stdoutImpl;
-    // stderr
-    __gshared File.Impl stderrImpl;
-    stderrImpl.handle = core.stdc.stdio.stderr;
-    .stderr._p = &stderrImpl;
-}
+    __gshared File.Impl impl;
+    __gshared File result;
 
-//---------
-__gshared
-{
-    /** The standard input stream.
-        Bugs:
-            Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
-            it is thread un-safe to reassign `stdin` to a different `File` instance
-            than the default.
-     */
-    File stdin;
-    ///
-    @safe unittest
+    // Use an inline spinlock to make sure the initializer is only run once.
+    // We assume there will be at most uint.max / 2 threads trying to initialize
+    // `handle` at once and steal the high bit to indicate that the globals have
+    // been initialized.
+    static shared uint spinlock;
+    import core.atomic : atomicLoad, atomicOp, MemoryOrder;
+    if (atomicLoad!(MemoryOrder.acq)(spinlock) <= uint.max / 2)
     {
-        // Read stdin, sort lines, write to stdout
-        import std.array : array;
-        import std.algorithm.sorting : sort;
-        import std.algorithm.mutation : copy;
-        import std.typecons : Yes;
-
-        void main() {
-            stdin                       // read from stdin
-            .byLineCopy(Yes.keepTerminator) // copying each line
-            .array()                    // convert to array of lines
-            .sort()                     // sort the lines
-            .copy(                      // copy output of .sort to an OutputRange
-                stdout.lockingTextWriter()); // the OutputRange
+        for (;;)
+        {
+            if (atomicLoad!(MemoryOrder.acq)(spinlock) > uint.max / 2)
+                break;
+            if (atomicOp!"+="(spinlock, 1) == 1)
+            {
+                impl.handle = handle;
+                result._p = &impl;
+                atomicOp!"+="(spinlock, uint.max / 2);
+                break;
+            }
+            atomicOp!"-="(spinlock, 1);
         }
     }
-
-    /**
-        The standard output stream.
-        Bugs:
-            Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
-            it is thread un-safe to reassign `stdout` to a different `File` instance
-            than the default.
-    */
-    File stdout;
-    /**
-        The standard error stream.
-        Bugs:
-            Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
-            it is thread un-safe to reassign `stderr` to a different `File` instance
-            than the default.
-    */
-    File stderr;
+    return result;
 }
+
+/** The standard input stream.
+    Bugs:
+        Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
+        it is thread un-safe to reassign `stdin` to a different `File` instance
+        than the default.
+*/
+alias stdin = makeGlobal!(core.stdc.stdio.stdin);
+
+///
+@safe unittest
+{
+    // Read stdin, sort lines, write to stdout
+    import std.algorithm.mutation : copy;
+    import std.algorithm.sorting : sort;
+    import std.array : array;
+    import std.typecons : Yes;
+
+    void main() {
+        stdin                       // read from stdin
+        .byLineCopy(Yes.keepTerminator) // copying each line
+        .array()                    // convert to array of lines
+        .sort()                     // sort the lines
+        .copy(                      // copy output of .sort to an OutputRange
+            stdout.lockingTextWriter()); // the OutputRange
+    }
+}
+
+/**
+    The standard output stream.
+    Bugs:
+        Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
+        it is thread un-safe to reassign `stdout` to a different `File` instance
+        than the default.
+*/
+alias stdout = makeGlobal!(core.stdc.stdio.stdout);
+
+/**
+    The standard error stream.
+    Bugs:
+        Due to $(LINK2 https://issues.dlang.org/show_bug.cgi?id=15768, bug 15768),
+        it is thread un-safe to reassign `stderr` to a different `File` instance
+        than the default.
+*/
+alias stderr = makeGlobal!(core.stdc.stdio.stderr);
 
 @system unittest
 {
@@ -4438,6 +4615,15 @@ __gshared
         }
         assert(i == 3);
     }
+}
+
+@safe unittest
+{
+    // Retain backwards compatibility
+    // https://issues.dlang.org/show_bug.cgi?id=17472
+    static assert(is(typeof(stdin) == File));
+    static assert(is(typeof(stdout) == File));
+    static assert(is(typeof(stderr) == File));
 }
 
 // roll our own appender, but with "safe" arrays
@@ -4923,12 +5109,12 @@ version(linux)
 {
     File openNetwork(string host, ushort port)
     {
-        static import sock = core.sys.posix.sys.socket;
-        static import core.sys.posix.unistd;
         import core.stdc.string : memcpy;
         import core.sys.posix.arpa.inet : htons;
         import core.sys.posix.netdb : gethostbyname;
         import core.sys.posix.netinet.in_ : sockaddr_in;
+        static import core.sys.posix.unistd;
+        static import sock = core.sys.posix.sys.socket;
         import std.conv : to;
         import std.exception : enforce;
         import std.internal.cstring : tempCString;

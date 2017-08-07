@@ -7,6 +7,8 @@
  * Authors:   $(HTTP digitalmars.com, Walter Bright),
  *            Matthew Wilson
  * Source:    $(PHOBOSSRC std/_mmfile.d)
+ *
+ * $(SCRIPT inhibitQuickIndex = 1;)
  */
 /*          Copyright Digital Mars 2004 - 2009.
  * Distributed under the Boost Software License, Version 1.0.
@@ -15,13 +17,13 @@
  */
 module std.mmfile;
 
-private import std.file;
-private import core.stdc.stdio;
-private import core.stdc.stdlib;
-private import core.stdc.errno;
-private import std.path;
-private import std.string;
+import core.stdc.errno;
+import core.stdc.stdio;
+import core.stdc.stdlib;
 import std.conv, std.exception, std.stdio;
+import std.file;
+import std.path;
+import std.string;
 
 import std.internal.cstring;
 
@@ -29,16 +31,16 @@ import std.internal.cstring;
 
 version (Windows)
 {
-    private import core.sys.windows.windows;
-    private import std.utf;
-    private import std.windows.syserror;
+    import core.sys.windows.windows;
+    import std.utf;
+    import std.windows.syserror;
 }
 else version (Posix)
 {
-    private import core.sys.posix.fcntl;
-    private import core.sys.posix.unistd;
-    private import core.sys.posix.sys.mman;
-    private import core.sys.posix.sys.stat;
+    import core.sys.posix.fcntl;
+    import core.sys.posix.sys.mman;
+    import core.sys.posix.sys.stat;
+    import core.sys.posix.unistd;
 }
 else
 {
@@ -633,8 +635,8 @@ private:
 
 @system unittest
 {
-    import std.file : deleteme;
     import core.memory : GC;
+    import std.file : deleteme;
 
     const size_t K = 1024;
     size_t win = 64*K; // assume the page size is 64K
@@ -679,8 +681,8 @@ private:
 version(linux)
 @system unittest // Issue 14868
 {
-    import std.typecons : scoped;
     import std.file : deleteme;
+    import std.typecons : scoped;
 
     // Test retaining ownership of File/fd
 

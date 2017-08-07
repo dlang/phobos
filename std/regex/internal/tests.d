@@ -529,8 +529,8 @@ alias Sequence(int B, int E) = staticIota!(B, E);
 
 @safe unittest
 {
-    import std.algorithm.iteration : map;
     import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
     enum cx = ctRegex!"(A|B|C)";
     auto mx = match("B",cx);
     assert(mx);
@@ -560,8 +560,8 @@ alias Sequence(int B, int E) = staticIota!(B, E);
 
 @safe unittest
 {
-    import std.algorithm.iteration : map;
     import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
 //global matching
     void test_body(alias matchFn)()
     {
@@ -603,8 +603,8 @@ alias Sequence(int B, int E) = staticIota!(B, E);
 //tests for accumulated std.regex issues and other regressions
 @safe unittest
 {
-    import std.algorithm.iteration : map;
     import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
     void test_body(alias matchFn)()
     {
         //issue 5857
@@ -1014,9 +1014,9 @@ alias Sequence(int B, int E) = staticIota!(B, E);
 // bugzilla 14615
 @safe unittest
 {
-    import std.stdio : writeln;
-    import std.regex : replaceFirst, replaceFirstInto, regex;
     import std.array : appender;
+    import std.regex : replaceFirst, replaceFirstInto, regex;
+    import std.stdio : writeln;
 
     auto example = "Hello, world!";
     auto pattern = regex("^Hello, (bug)");  // won't find this one
@@ -1048,4 +1048,37 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     auto r = regex("(?# comment)abc(?# comment2)");
     assert("abc".matchFirst(r));
     assertThrown(regex("(?#..."));
+}
+
+// bugzilla 17075
+@safe unittest
+{
+    enum titlePattern = `<title>(.+)</title>`;
+    static titleRegex = ctRegex!titlePattern;
+    string input = "<title>" ~ "<".repeat(100_000).join;
+    assert(input.matchFirst(titleRegex).empty);
+}
+
+// bugzilla 17212
+@safe unittest
+{
+    auto r = regex(" [a] ", "x");
+    assert("a".matchFirst(r));
+}
+
+// bugzilla 17157
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    auto ctr = ctRegex!"(a)|(b)|(c)|(d)";
+    auto r = regex("(a)|(b)|(c)|(d)", "g");
+    auto s = "--a--b--c--d--";
+    auto outcomes = [
+        ["a", "a", "", "", ""],
+        ["b", "", "b", "", ""],
+        ["c", "", "", "c", ""],
+        ["d", "", "", "", "d"]
+    ];
+    assert(equal!equal(s.matchAll(ctr), outcomes));
+    assert(equal!equal(s.bmatch(r), outcomes));
 }

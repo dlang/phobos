@@ -1,4 +1,5 @@
 /**
+$(SCRIPT inhibitQuickIndex = 1;)
 
 This module defines facilities for efficient checking of integral operations
 against overflow, casting with loss of precision, unexpected change of sign,
@@ -15,12 +16,22 @@ results. For example, `Checked!int` is a type that behaves like `int` but aborts
 execution immediately whenever involved in an operation that produces the
 arithmetically wrong result. The accompanying convenience function $(LREF
 checked) uses type deduction to convert a value `x` of integral type `T` to
-`Checked!T` by means of `checked(x)`. For example, $(D checked(1_000_000) *
-10_000) aborts execution because the operation overflows. Also, $(D checked(-1) >
-uint(0)) aborts execution (even though the built-in comparison $(D int(-1) >
-uint(0)) is surprisingly true due to language's conversion rules modeled  after
-C). Thus, `Checked!int` is a virtually drop-in replacement for `int` useable in
-debug builds, to be replaced by `int` in release mode if efficiency demands it.
+`Checked!T` by means of `checked(x)`. For example:
+
+---
+void main()
+{
+    import std.experimental.checkedint, std.stdio;
+    writeln((checked(5) + 7).get); // 12
+    writeln((checked(10) * 1000 * 1000 * 1000).get); // Overflow
+}
+---
+
+Similarly, $(D checked(-1) > uint(0)) aborts execution (even though the built-in
+comparison $(D int(-1) > uint(0)) is surprisingly true due to language's
+conversion rules modeled after C). Thus, `Checked!int` is a virtually drop-in
+replacement for `int` useable in debug builds, to be replaced by `int` in
+release mode if efficiency demands it.
 
 `Checked`  has customizable behavior with the help of a second type parameter,
 `Hook`. Depending on what methods `Hook` defines, core operations on the
@@ -32,33 +43,45 @@ customization at all.
 This module provides a few predefined hooks (below) that add useful behavior to
 `Checked`:
 
-$(UL
-$(LI $(LREF Abort) fails every incorrect operation with a message to $(REF
-stderr, std, stdio) followed by a call to `assert(0)`. It is the default
-second parameter, i.e. `Checked!short` is the same as $(D Checked!(short,
-Abort)).
+$(BOOKTABLE ,
+    $(TR $(TD $(LREF Abort)) $(TD
+        fails every incorrect operation with a message to $(REF
+        stderr, std, stdio) followed by a call to `assert(0)`. It is the default
+        second parameter, i.e. `Checked!short` is the same as
+        $(D Checked!(short, Abort)).
+    ))
+    $(TR $(TD $(LREF Throw)) $(TD
+        fails every incorrect operation by throwing an exception.
+    ))
+    $(TR $(TD $(LREF Warn)) $(TD
+        prints incorrect operations to $(REF stderr, std, stdio)
+        but otherwise preserves the built-in behavior.
+    ))
+    $(TR $(TD $(LREF ProperCompare)) $(TD
+        fixes the comparison operators `==`, `!=`, `<`, `<=`, `>`, and `>=`
+        to return correct results in all circumstances,
+        at a slight cost in efficiency. For example,
+        $(D Checked!(uint, ProperCompare)(1) > -1) is `true`,
+        which is not the case for the built-in comparison. Also, comparing
+        numbers for equality with floating-point numbers only passes if the
+        integral can be converted to the floating-point number precisely,
+        so as to preserve transitivity of equality.
+    ))
+    $(TR $(TD $(LREF WithNaN)) $(TD
+        reserves a special "Not a Number" (NaN) value akin to the homonym value
+        reserved for floating-point values. Once a $(D Checked!(X, WithNaN))
+        gets this special value, it preserves and propagates it until
+        reassigned. $(LREF isNaN) can be used to query whether the object
+        is not a number.
+    ))
+    $(TR $(TD $(LREF Saturate)) $(TD
+        implements saturating arithmetic, i.e. $(D Checked!(int, Saturate))
+        "stops" at `int.max` for all operations that would cause an `int` to
+        overflow toward infinity, and at `int.min` for all operations that would
+        correspondingly overflow toward negative infinity.
+    ))
 )
-$(LI $(LREF Warn) prints incorrect operations to $(REF stderr, std, stdio) but
-otherwise preserves the built-in behavior.
-)
-$(LI $(LREF ProperCompare) fixes the comparison operators `==`, `!=`, `<`, `<=`, `>`,
-and `>=` to return correct results in all circumstances, at a slight cost in
-    efficiency. For example, $(D Checked!(uint, ProperCompare)(1) > -1) is `true`,
-which is not the case for the built-in comparison. Also, comparing numbers for
-equality with floating-point numbers only passes if the integral can be
-converted to the floating-point number precisely, so as to preserve transitivity
-of equality.
-)
-$(LI $(LREF WithNaN) reserves a special "Not a Number" value akin to the homonym
-value reserved for floating-point values. Once a $(D Checked!(X, WithNaN)) gets
-this special value, it preserves and propagates it until reassigned.
-)
-$(LI $(LREF Saturate) implements saturating arithmetic, i.e. $(D Checked!(int,
-Saturate)) "stops" at `int.max` for all operations that would cause an `int` to
-overflow toward infinity, and at `int.min` for all operations that would
-correspondingly overflow toward negative infinity.
-)
-)
+
 
 These policies may be used alone, e.g. $(D Checked!(uint, WithNaN)) defines a
 `uint`-like type that reaches a stable NaN state for all erroneous operations.
@@ -66,8 +89,10 @@ They may also be "stacked" on top of each other, owing to the property that a
 checked integral emulates an actual integral, which means another checked
 integral can be built on top of it. Some combinations of interest include:
 
-$(UL
-$(LI $(D Checked!(Checked!int, ProperCompare)) defines an `int` with fixed
+$(BOOKTABLE ,
+    $(TR $(TD $(D Checked!(Checked!int, ProperCompare))))
+    $(TR $(TD
+defines an `int` with fixed
 comparison operators that will fail with `assert(0)` upon overflow. (Recall that
 `Abort` is the default policy.) The order in which policies are combined is
 important because the outermost policy (`ProperCompare` in this case) has the
@@ -75,13 +100,16 @@ first crack at intercepting an operator. The converse combination $(D
 Checked!(Checked!(int, ProperCompare))) is meaningless because `Abort` will
 intercept comparison and will fail without giving `ProperCompare` a chance to
 intervene.
-)
-$(LI $(D Checked!(Checked!(int, ProperCompare), WithNaN)) defines an `int`-like
+    ))
+    $(TR $(TD))
+    $(TR $(TDNW $(D Checked!(Checked!(int, ProperCompare), WithNaN))))
+    $(TR $(TD
+defines an `int`-like
 type that supports a NaN value. For values that are not NaN, comparison works
 properly. Again the composition order is important; $(D Checked!(Checked!(int,
 WithNaN), ProperCompare)) does not have good semantics because `ProperCompare`
 intercepts comparisons before the numbers involved are tested for NaN.
-)
+    ))
 )
 
 The hook's members are looked up statically in a Design by Introspection manner
@@ -189,8 +217,8 @@ struct Checked(T, Hook = Abort)
 if (isIntegral!T || is(T == Checked!(U, H), U, H))
 {
     import std.algorithm.comparison : among;
-    import std.traits : hasMember;
     import std.experimental.allocator.common : stateSize;
+    import std.traits : hasMember;
 
     /**
     The type of the integral subject to checking.
@@ -2238,13 +2266,13 @@ Params:
 x = The binary operator involved, e.g. `/`
 lhs = The left-hand side of the operator
 rhs = The right-hand side of the operator
-error = The error indicator (assigned `true` in case there's an error)
+overflow = The overflow indicator (assigned `true` in case there's an error)
 
 Returns:
 The result of the operation, which is the same as the built-in operator
 */
 typeof(mixin(x == "cmp" ? "0" : ("L() " ~ x ~ " R()")))
-opChecked(string x, L, R)(const L lhs, const R rhs, ref bool error)
+opChecked(string x, L, R)(const L lhs, const R rhs, ref bool overflow)
 if (isIntegral!L && isIntegral!R)
 {
     static if (x == "cmp")
@@ -2279,7 +2307,7 @@ if (isIntegral!L && isIntegral!R)
                 if (lhs >= 0)
                     return true;
             }
-            error = true;
+            overflow = true;
             return true;
         }
     }
@@ -2292,12 +2320,12 @@ if (isIntegral!L && isIntegral!R)
             static assert(isUnsigned!L != isUnsigned!R);
             if (!isUnsigned!L && lhs < 0)
             {
-                error = true;
+                overflow = true;
                 return -1;
             }
             if (!isUnsigned!R && rhs < 0)
             {
-                error = true;
+                overflow = true;
                 return 1;
             }
         }
@@ -2319,7 +2347,7 @@ if (isIntegral!L && isIntegral!R)
     else static if (x == "^^")
     {
         // Exponentiation is weird, handle separately
-        return pow(lhs, rhs, error);
+        return pow(lhs, rhs, overflow);
     }
     else static if (valueConvertible!(L, Result) &&
             valueConvertible!(R, Result))
@@ -2334,13 +2362,13 @@ if (isIntegral!L && isIntegral!R)
         {
             static if (isUnsigned!Result) alias impl = addu;
             else alias impl = adds;
-            return impl(Result(lhs), Result(rhs), error);
+            return impl(Result(lhs), Result(rhs), overflow);
         }
         else static if (x == "-")
         {
             static if (isUnsigned!Result) alias impl = subu;
             else alias impl = subs;
-            return impl(Result(lhs), Result(rhs), error);
+            return impl(Result(lhs), Result(rhs), overflow);
         }
         else static if (x == "*")
         {
@@ -2351,7 +2379,7 @@ if (isIntegral!L && isIntegral!R)
             }
             static if (isUnsigned!Result) alias impl = mulu;
             else alias impl = muls;
-            return impl(Result(lhs), Result(rhs), error);
+            return impl(Result(lhs), Result(rhs), overflow);
         }
         else static if (x == "/" || x == "%")
         {
@@ -2374,14 +2402,14 @@ if (isIntegral!L && isIntegral!R)
             static if (!isUnsigned!L)
             {
                 if (lhs < 0)
-                    return subu(Result(rhs), Result(-lhs), error);
+                    return subu(Result(rhs), Result(-lhs), overflow);
             }
             else static if (!isUnsigned!R)
             {
                 if (rhs < 0)
-                    return subu(Result(lhs), Result(-rhs), error);
+                    return subu(Result(lhs), Result(-rhs), overflow);
             }
-            return addu(Result(lhs), Result(rhs), error);
+            return addu(Result(lhs), Result(rhs), overflow);
         }
         else static if (x == "-")
         {
@@ -2392,9 +2420,9 @@ if (isIntegral!L && isIntegral!R)
             else static if (!isUnsigned!R)
             {
                 if (rhs < 0)
-                    return addu(Result(lhs), Result(-rhs), error);
+                    return addu(Result(lhs), Result(-rhs), overflow);
             }
-            return subu(Result(lhs), Result(rhs), error);
+            return subu(Result(lhs), Result(rhs), overflow);
         }
         else static if (x == "*")
         {
@@ -2406,7 +2434,7 @@ if (isIntegral!L && isIntegral!R)
             {
                 if (rhs < 0) goto fail;
             }
-            return mulu(Result(lhs), Result(rhs), error);
+            return mulu(Result(lhs), Result(rhs), overflow);
         }
         else static if (x == "/" || x == "%")
         {
@@ -2424,7 +2452,7 @@ if (isIntegral!L && isIntegral!R)
     }
     debug assert(false);
 fail:
-    error = true;
+    overflow = true;
     return Result(0);
 }
 
@@ -2964,12 +2992,12 @@ version(unittest) private struct CountOpBinary
     static struct Hook2
     {
         uint calls;
-        auto hookOpUnary(string op, T)(ref T value) if (op == "++")
+        void hookOpUnary(string op, T)(ref T value) if (op == "++")
         {
             ++calls;
             --value;
         }
-        auto hookOpUnary(string op, T)(ref T value) if (op == "--")
+        void hookOpUnary(string op, T)(ref T value) if (op == "--")
         {
             ++calls;
             ++value;

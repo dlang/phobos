@@ -13,14 +13,16 @@ License: Distributed under the Boost Software License, Version 1.0.
 boost.org/LICENSE_1_0.txt)).
 
 Authors: $(HTTP erdani.com, Andrei Alexandrescu)
+
+$(SCRIPT inhibitQuickIndex = 1;)
 */
 module std.container.slist;
 
 ///
 @safe unittest
 {
-    import std.container : SList;
     import std.algorithm.comparison : equal;
+    import std.container : SList;
 
     auto s = SList!int(1, 2, 3);
     assert(equal(s[], [1, 2, 3]));

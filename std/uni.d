@@ -4,8 +4,99 @@
     $(P The $(D std.uni) module provides an implementation
     of fundamental Unicode algorithms and data structures.
     This doesn't include UTF encoding and decoding primitives,
-    see $(REF decode, std,_utf) and $(REF encode, std,_utf) in std.utf
+    see $(REF decode, std,_utf) and $(REF encode, std,_utf) in $(MREF std, utf)
     for this functionality. )
+
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Decode) $(TD
+    $(LREF byCodePoint)
+    $(LREF byGrapheme)
+    $(LREF decodeGrapheme)
+    $(LREF graphemeStride)
+))
+$(TR $(TD Comparison) $(TD
+    $(LREF icmp)
+    $(LREF sicmp)
+))
+$(TR $(TD Classification) $(TD
+    $(LREF isAlpha)
+    $(LREF isAlphaNum)
+    $(LREF isCodepointSet)
+    $(LREF isControl)
+    $(LREF isFormat)
+    $(LREF isGraphical)
+    $(LREF isIntegralPair)
+    $(LREF isMark)
+    $(LREF isNonCharacter)
+    $(LREF isNumber)
+    $(LREF isPrivateUse)
+    $(LREF isPunctuation)
+    $(LREF isSpace)
+    $(LREF isSurrogate)
+    $(LREF isSurrogateHi)
+    $(LREF isSurrogateLo)
+    $(LREF isSymbol)
+    $(LREF isWhite)
+))
+$(TR $(TD Normalization) $(TD
+    $(LREF NFC)
+    $(LREF NFD)
+    $(LREF NFKD)
+    $(LREF NormalizationForm)
+    $(LREF normalize)
+))
+$(TR $(TD Decompose) $(TD
+    $(LREF decompose)
+    $(LREF decomposeHangul)
+    $(LREF UnicodeDecomposition)
+))
+$(TR $(TD Compose) $(TD
+    $(LREF compose)
+    $(LREF composeJamo)
+))
+$(TR $(TD Sets) $(TD
+    $(LREF CodepointInterval)
+    $(LREF CodepointSet)
+    $(LREF InversionList)
+    $(LREF unicode)
+))
+$(TR $(TD Trie) $(TD
+    $(LREF codepointSetTrie)
+    $(LREF CodepointSetTrie)
+    $(LREF codepointTrie)
+    $(LREF CodepointTrie)
+    $(LREF toTrie)
+    $(LREF toDelegate)
+))
+$(TR $(TD Casing) $(TD
+    $(LREF asCapitalized)
+    $(LREF asLowerCase)
+    $(LREF asUpperCase)
+    $(LREF isLower)
+    $(LREF isUpper)
+    $(LREF toLower)
+    $(LREF toLowerInPlace)
+    $(LREF toUpper)
+    $(LREF toUpperInPlace)
+))
+$(TR $(TD Utf8Matcher) $(TD
+    $(LREF isUtfMatcher)
+    $(LREF MatcherConcept)
+    $(LREF utfMatcher)
+))
+$(TR $(TD Separators) $(TD
+    $(LREF lineSep)
+    $(LREF nelSep)
+    $(LREF paraSep)
+))
+$(TR $(TD Building blocks) $(TD
+    $(LREF allowedIn)
+    $(LREF combiningClass)
+    $(LREF Grapheme)
+))
+)
 
     $(P All primitives listed operate on Unicode characters and
         sets of characters. For functions which operate on ASCII characters
@@ -55,7 +146,7 @@
         )
         $(LI
             A way to construct optimal packed multi-stage tables also known as a
-            special case of $(LUCKY Trie).
+            special case of $(LINK2 https://en.wikipedia.org/wiki/Trie, Trie).
             The functions $(LREF codepointTrie), $(LREF codepointSetTrie)
             construct custom tries that map dchar to value.
             The end result is a fast and predictable $(BIGOH 1) lookup that powers
@@ -1940,7 +2031,7 @@ pure:
     As seen this provides a space-efficient storage of highly redundant data
     that comes in long runs. A description which Unicode $(CHARACTER)
     properties fit nicely. The technique itself could be seen as a variation
-    on $(LUCKY RLE encoding).
+    on $(LINK2 https://en.wikipedia.org/wiki/Run-length_encoding, RLE encoding).
     )
 
     $(P Sets are value types (just like $(D int) is) thus they
@@ -1977,8 +2068,6 @@ pure:
 @trusted public struct InversionList(SP=GcPolicy)
 {
     import std.range : assumeSorted;
-
-public:
 
     /**
         Construct from another code point set of any type.
@@ -2345,7 +2434,7 @@ public:
         ---
     */
 
-    private import std.format : FormatException, FormatSpec;
+    private import std.format : FormatSpec;
 
     /***************************************
      * Obtain a textual representation of this InversionList
@@ -2404,7 +2493,7 @@ public:
     @safe unittest
     {
         import std.exception : assertThrown;
-        import std.format : format;
+        import std.format : format, FormatException;
         assertThrown!FormatException(format("%a", unicode.ASCII));
     }
 
@@ -2455,7 +2544,6 @@ private:
         return this;
     }
 
-    ///
     @safe unittest
     {
         assert(unicode.Cyrillic.intersect('-').byInterval.empty);
@@ -4249,7 +4337,6 @@ if (sumOfIntegerTuple!sizes == 21)
     }
 }
 
-///
 @system pure unittest
 {
     import std.algorithm.comparison : max;
@@ -4553,7 +4640,6 @@ public struct MatcherConcept
         return this;
     }
 
-    ///
     @safe unittest
     {
         auto m = utfMatcher!char(unicode.Number);
@@ -4671,9 +4757,9 @@ template Utf8Matcher()
     static auto encode(size_t sz)(dchar ch)
         if (sz > 1)
     {
-        import std.utf : encode;
+        import std.utf : encodeUTF = encode;
         char[4] buf;
-        std.utf.encode(buf, ch);
+        encodeUTF(buf, ch);
         char[sz] ret;
         buf[0] &= leadMask!sz;
         foreach (n; 1 .. sz)
@@ -6197,7 +6283,8 @@ enum EMPTY_CASE_TRIE = ushort.max;// from what gen_uni uses internally
 
 // control - '\r'
 enum controlSwitch = `
-    case '\u0000':..case '\u0008':case '\u000E':..case '\u001F':case '\u007F':..case '\u0084':case '\u0086':..case '\u009F': case '\u0009':..case '\u000C': case '\u0085':
+    case '\u0000':..case '\u0008':case '\u000E':..case '\u001F':case '\u007F':..
+    case '\u0084':case '\u0086':..case '\u009F': case '\u0009':..case '\u000C': case '\u0085':
 `;
 // TODO: redo the most of hangul stuff algorithmically in case of Graphemes too
 // kill unrolled switches
@@ -6451,8 +6538,8 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.range : take, drop;
     import std.range.primitives : walkLength;
+    import std.range : take, drop;
     auto text = "noe\u0308l"; // noël using e + combining diaeresis
     assert(text.walkLength == 5); // 5 code points
 
@@ -7027,7 +7114,7 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
 }
 
 ///
-@safe @nogc nothrow unittest
+@safe @nogc pure nothrow unittest
 {
     assert(sicmp("Август", "авгусТ") == 0);
     // Greek also works as long as there is no 1:M mapping in sight
@@ -7053,7 +7140,6 @@ if (isInputRange!S1 && isSomeChar!(ElementEncodingType!S1)
 }
 
 private int fullCasedCmp(Range)(dchar lhs, dchar rhs, ref Range rtail)
-    @trusted pure nothrow
 {
     import std.algorithm.searching : skipOver;
     import std.internal.unicode_tables : fullCaseTable; // generated file
@@ -7147,7 +7233,7 @@ if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
 }
 
 ///
-@safe @nogc nothrow unittest
+@safe @nogc pure nothrow unittest
 {
     assert(icmp("Rußland", "Russland") == 0);
     assert(icmp("ᾩ -> \u1F70\u03B9", "\u1F61\u03B9 -> ᾲ") == 0);
@@ -7227,6 +7313,15 @@ if (isForwardRange!S1 && isSomeChar!(ElementEncodingType!S1)
     });
 }
 
+// issue 17372
+@safe pure unittest
+{
+    import std.algorithm.iteration : joiner, map;
+    import std.algorithm.sorting : sort;
+    import std.array : array;
+    auto a = [["foo", "bar"], ["baz"]].map!(line => line.joiner(" ")).array.sort!((a, b) => icmp(a, b) < 0);
+}
+
 // This is package for the moment to be used as a support tool for std.regex
 // It needs a better API
 /*
@@ -7280,7 +7375,7 @@ package auto simpleCaseFoldings(dchar ch) @safe
             return len == 0;
         }
 
-        @property uint length() const
+        @property size_t length() const
         {
             if (isSmall)
             {
@@ -8925,8 +9020,8 @@ if (isSomeString!S)
 
 @system unittest //@@@BUG std.format is not @safe
 {
-    import std.format : format;
     static import std.ascii;
+    import std.format : format;
     foreach (ch; 0 .. 0x80)
         assert(std.ascii.toLower(ch) == toLower(ch));
     assert(toLower('Я') == 'я');
@@ -9051,8 +9146,8 @@ dchar toUpper(dchar c)
 
 @safe unittest
 {
-    import std.format : format;
     static import std.ascii;
+    import std.format : format;
     foreach (ch; 0 .. 0x80)
         assert(std.ascii.toUpper(ch) == toUpper(ch));
     assert(toUpper('я') == 'Я');

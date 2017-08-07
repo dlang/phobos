@@ -95,12 +95,12 @@ setup_repos()
 }
 
 # verify style guide
-style()
+style_lint()
 {
     # dscanner needs a more up-to-date DMD version
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$DSCANNER_DMD_VER --activate)"
 
-    make -f posix.mak style
+    make -f posix.mak style_lint DUB=$DUB
 }
 
 # run unittest with coverage
@@ -110,27 +110,38 @@ coverage()
     # remove all existing coverage files (just in case)
     rm -rf $(find -name '*.lst')
 
-    # currently using the test_runner yields wrong code coverage results
-    # see https://github.com/dlang/phobos/pull/4719 for details
-    ENABLE_COVERAGE="1" make -f posix.mak MODEL=$MODEL unittest-debug
+    # Coverage information of the test runner can be missing for some template instatiations.
+    # https://issues.dlang.org/show_bug.cgi?id=16397
+    # ENABLE_COVERAGE="1" make -j$N -f posix.mak MODEL=$MODEL unittest-debug
 
-    # instead we run all tests individually
-    make -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test")
+    # So instead we run all tests individually (hoping that that doesn't break any tests).
+    # -cov is enabled by the %.test target itself
+    make -j$N -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test/")
+
+    # Remove coverage information from lines with non-deterministic coverage.
+    # These lines are annotated with a comment containing "nocoverage".
+    sed -i 's/^ *[0-9]*\(|.*nocoverage.*\)$/       \1/' ./*.lst
 }
 
-# compile all public unittests separately
+# extract publictests and run them independently
 publictests()
 {
-    clone https://github.com/dlang/tools.git ../tools master
-    # fix to a specific version of https://github.com/dlang/tools/blob/master/phobos_tests_extractor.d
-    git -C ../tools checkout 184f5e60372d6dd36d3451b75fb6f21e23f7275b
-    make -f posix.mak publictests DUB=$DUB
+    # checkout a specific version of https://github.com/dlang/tools
+    if [ ! -d ../tools ] ; then
+        clone https://github.com/dlang/tools.git ../tools master
+    fi
+    git -C ../tools checkout df3dfa3061d25996ac98158d3bdb3525c8d89445
+
+    make -f posix.mak -j$N publictests DUB=$DUB
 }
 
 case $1 in
     install-deps) install_deps ;;
     setup-repos) setup_repos ;;
     coverage) coverage ;;
-    style) style ;;
     publictests) publictests ;;
+    style_lint) style_lint ;;
+    # has_public_example has been removed and is kept for compatibility with older PRs
+    has_public_example) echo "OK" ;;
+    *) echo "Unknown command"; exit 1;;
 esac

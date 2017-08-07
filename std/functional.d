@@ -7,41 +7,42 @@ This module provides functions for compile time function composition. These
 functions are helpful when constructing predicates for the algorithms in
 $(MREF std, algorithm) or $(MREF std, range).
 
+$(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE ,
 $(TR $(TH Function Name) $(TH Description)
 )
-    $(TR $(TD $(D $(LREF adjoin)))
+    $(TR $(TD $(LREF adjoin))
         $(TD Joins a couple of functions into one that executes the original
         functions independently and returns a tuple with all the results.
     ))
-    $(TR $(TD $(D $(LREF compose)), $(D $(LREF pipe)))
+    $(TR $(TD $(LREF compose)), $(LREF pipe)
         $(TD Join a couple of functions into one that executes the original
         functions one after the other, using one function's result for the next
         function's argument.
     ))
-    $(TR $(TD $(D $(LREF forward)))
+    $(TR $(TD $(LREF forward))
         $(TD Forwards function arguments while saving ref-ness.
     ))
-    $(TR $(TD $(D $(LREF lessThan)), $(D $(LREF greaterThan)), $(D $(LREF equalTo)))
+    $(TR $(TD $(LREF lessThan)), $(LREF greaterThan)), $(D $(LREF equalTo)
         $(TD Ready-made predicate functions to compare two values.
     ))
-    $(TR $(TD $(D $(LREF memoize)))
+    $(TR $(TD $(LREF memoize))
         $(TD Creates a function that caches its result for fast re-evaluation.
     ))
-    $(TR $(TD $(D $(LREF not)))
+    $(TR $(TD $(LREF not))
         $(TD Creates a function that negates another.
     ))
-    $(TR $(TD $(D $(LREF partial)))
+    $(TR $(TD $(LREF partial))
         $(TD Creates a function that binds the first argument of a given function
         to a given value.
     ))
-    $(TR $(TD $(D $(LREF reverseArgs)), $(D $(LREF binaryReverseArgs)))
+    $(TR $(TD $(LREF reverseArgs)), $(LREF binaryReverseArgs)
         $(TD Predicate that reverses the order of its arguments.
     ))
-    $(TR $(TD $(D $(LREF toDelegate)))
+    $(TR $(TD $(LREF toDelegate))
         $(TD Converts a callable to a delegate.
     ))
-    $(TR $(TD $(D $(LREF unaryFun)), $(D $(LREF binaryFun)))
+    $(TR $(TD $(LREF unaryFun)), $(LREF binaryFun)
         $(TD Create a unary or binary function from a string. Most often
         used when defining algorithms on ranges.
     ))
@@ -104,8 +105,8 @@ template unaryFun(alias fun, string parmName = "a")
     {
         static if (!fun._ctfeMatchUnary(parmName))
         {
-            import std.traits, std.typecons, std.meta;
             import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+            import std.meta, std.traits, std.typecons;
         }
         auto unaryFun(ElementType)(auto ref ElementType __a)
         {
@@ -189,8 +190,8 @@ template binaryFun(alias fun, string parm1Name = "a",
     {
         static if (!fun._ctfeMatchBinary(parm1Name, parm2Name))
         {
-            import std.traits, std.typecons, std.meta;
             import std.algorithm, std.conv, std.exception, std.math, std.range, std.string;
+            import std.meta, std.traits, std.typecons;
         }
         auto binaryFun(ElementType1, ElementType2)
             (auto ref ElementType1 __a, auto ref ElementType2 __b)
@@ -963,8 +964,8 @@ alias pipe(fun...) = compose!(Reverse!(fun));
 }
 
 /**
- * $(LUCKY Memoizes) a function so as to avoid repeated
- * computation. The memoization structure is a hash table keyed by a
+ * $(LINK2 https://en.wikipedia.org/wiki/Memoization, Memoizes) a function so as
+ * to avoid repeated computation. The memoization structure is a hash table keyed by a
  * tuple of the function's arguments. There is a speed gain if the
  * function is repeatedly called with the same arguments and is more
  * expensive than a hash table lookup. For more information on memoization, refer to $(HTTP docs.google.com/viewer?url=http%3A%2F%2Fhop.perl.plover.com%2Fbook%2Fpdf%2F03CachingAndMemoization.pdf, this book chapter).
@@ -1168,6 +1169,83 @@ template memoize(alias fun, uint maxSize)
     assert(func(int.init) == 1);
 }
 
+// 16079: memoize should work with arrays
+@safe unittest
+{
+    int executed = 0;
+    T median(T)(const T[] nums) {
+        import std.algorithm.sorting : sort;
+        executed++;
+        auto arr = nums.dup;
+        arr.sort();
+        if (arr.length % 2)
+            return arr[$ / 2];
+        else
+            return (arr[$ / 2 - 1]
+                + arr[$ / 2]) / 2;
+    }
+
+    alias fastMedian = memoize!(median!int);
+
+    assert(fastMedian([7, 5, 3]) == 5);
+    assert(fastMedian([7, 5, 3]) == 5);
+
+    assert(executed == 1);
+}
+
+// 16079: memoize should work with structs
+@safe unittest
+{
+    int executed = 0;
+    T pickFirst(T)(T first)
+    {
+        executed++;
+        return first;
+    }
+
+    struct Foo { int k; }
+    Foo A = Foo(3);
+
+    alias first = memoize!(pickFirst!Foo);
+    assert(first(Foo(3)) == A);
+    assert(first(Foo(3)) == A);
+    assert(executed == 1);
+}
+
+// 16079: memoize should work with classes
+@safe unittest
+{
+    int executed = 0;
+    T pickFirst(T)(T first)
+    {
+        executed++;
+        return first;
+    }
+
+    class Bar
+    {
+        size_t k;
+        this(size_t k)
+        {
+            this.k = k;
+        }
+        override size_t toHash()
+        {
+            return k;
+        }
+        override bool opEquals(Object o)
+        {
+            auto b = cast(Bar) o;
+            return b && k == b.k;
+        }
+    }
+
+    alias firstClass = memoize!(pickFirst!Bar);
+    assert(firstClass(new Bar(3)).k == 3);
+    assert(firstClass(new Bar(3)).k == 3);
+    assert(executed == 1);
+}
+
 private struct DelegateFaker(F)
 {
     import std.typecons : FuncInfo, MemberFunctionGenerator;
@@ -1288,6 +1366,20 @@ if (isCallable!(F))
 
         return df.del;
     }
+}
+
+///
+@system unittest
+{
+    static int inc(ref uint num) {
+        num++;
+        return 8675309;
+    }
+
+    uint myNum = 0;
+    auto incMyNumDel = toDelegate(&inc);
+    auto returnVal = incMyNumDel(myNum);
+    assert(myNum == 1);
 }
 
 @system unittest // not @safe due to toDelegate

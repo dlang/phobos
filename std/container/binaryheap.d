@@ -65,11 +65,11 @@ container.
 struct BinaryHeap(Store, alias less = "a < b")
 if (isRandomAccessRange!(Store) || isRandomAccessRange!(typeof(Store.init[])))
 {
-    import std.functional : binaryFun;
-    import std.exception : enforce;
     import std.algorithm.comparison : min;
     import std.algorithm.mutation : move, swapAt;
     import std.algorithm.sorting : HeapOps;
+    import std.exception : enforce;
+    import std.functional : binaryFun;
     import std.typecons : RefCounted, RefCountedAutoInitialize;
 
     static if (isRandomAccessRange!Store)
@@ -175,7 +175,8 @@ heap.
 
 /**
 Clears the heap. Returns the portion of the store from $(D 0) up to
-$(D length), which satisfies the $(LUCKY heap property).
+$(D length), which satisfies the $(LINK2 https://en.wikipedia.org/wiki/Heap_(data_structure),
+heap property).
      */
     auto release()
     {
@@ -281,10 +282,8 @@ and $(D length == capacity), throws an exception.
             import std.traits : isDynamicArray;
             static if (isDynamicArray!Store)
             {
-                if (_store.length == 0)
-                    _store.length = 8;
-                else if (length == _store.length)
-                    _store.length = length * 3 / 2;
+                if (length == _store.length)
+                    _store.length = (length < 6 ? 8 : length * 3 / 2);
                 _store[_length] = value;
             }
             else
@@ -436,9 +435,11 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
     return BinaryHeap!(Store, less)(s, initialSize);
 }
 
+///
 @system unittest
 {
     import std.conv : to;
+    import std.range.primitives;
     {
         // example from "Introduction to Algorithms" Cormen et al., p 146
         int[] a = [ 4, 1, 3, 2, 16, 9, 10, 14, 8, 7 ];
@@ -564,8 +565,8 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
 
 @system unittest
 {
-    import std.internal.test.dummyrange;
     import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange;
 
     alias RefRange = DummyRange!(ReturnBy.Reference, Length.Yes, RangeType.Random);
 
@@ -582,4 +583,13 @@ BinaryHeap!(Store, less) heapify(alias less = "a < b", Store)(Store s,
 
     assert(equal(heap, [ 5, 5, 4, 4, 3, 3, 2, 2, 1, 1]));
     assert(equal(b, [10, 9, 8, 7, 6, 6, 7, 8, 9, 10]));
+}
+
+@system unittest // Issue 17314
+{
+    import std.algorithm.comparison : equal;
+    int[] a = [5];
+    auto heap = heapify(a);
+    heap.insert(6);
+    assert(equal(heap, [6, 5]));
 }

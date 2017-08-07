@@ -7,6 +7,8 @@ Serialize data to $(D ubyte) arrays.
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright)
  * Source:    $(PHOBOSSRC std/_outbuffer.d)
+ *
+ * $(SCRIPT inhibitQuickIndex = 1;)
  */
 module std.outbuffer;
 
@@ -200,6 +202,12 @@ class OutBuffer
             fill0(alignsize - nbytes);
     }
 
+    /// Clear the data in the buffer
+    void clear()
+    {
+        offset = 0;
+    }
+
     /****************************************
      * Optimize common special case alignSize(2)
      */
@@ -239,9 +247,9 @@ class OutBuffer
 
     void vprintf(string format, va_list args) @trusted nothrow
     {
-        import std.string : toStringz;
         import core.stdc.stdio : vsnprintf;
         import core.stdc.stdlib : alloca;
+        import std.string : toStringz;
 
         version (unittest)
             char[3] buffer = void;      // trigger reallocation
@@ -366,6 +374,7 @@ class OutBuffer
         }
 }
 
+///
 @safe unittest
 {
     import std.string : cmp;
@@ -373,11 +382,16 @@ class OutBuffer
     OutBuffer buf = new OutBuffer();
 
     assert(buf.offset == 0);
-    buf.write("hello"[]);
+    buf.write("hello");
     buf.write(cast(byte) 0x20);
-    buf.write("world"[]);
+    buf.write("world");
     buf.printf(" %d", 62665);
     assert(cmp(buf.toString(), "hello world 62665") == 0);
+
+    buf.clear();
+    assert(cmp(buf.toString(), "") == 0);
+    buf.write("New data");
+    assert(cmp(buf.toString(),"New data") == 0);
 }
 
 @safe unittest

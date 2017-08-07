@@ -9,7 +9,7 @@ module std.regex.internal.ir;
 
 package(std.regex):
 
-import std.exception, std.uni, std.meta, std.traits, std.range.primitives;
+import std.exception, std.meta, std.range.primitives, std.traits, std.uni;
 
 debug(std_regex_parser) import std.stdio;
 // just a common trait, may be moved elsewhere
@@ -707,10 +707,10 @@ template BackLooper(E)
 //
 @trusted uint lookupNamedGroup(String)(NamedGroup[] dict, String name)
 {//equal is @system?
-    import std.range : assumeSorted;
-    import std.conv : text;
-    import std.algorithm.iteration : map;
     import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    import std.conv : text;
+    import std.range : assumeSorted;
 
     auto fnd = assumeSorted!"cmp(a,b) < 0"(map!"a.name"(dict)).lowerBound(name).length;
     enforce(fnd < dict.length && equal(dict[fnd].name, name),

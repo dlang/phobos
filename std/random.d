@@ -3,32 +3,25 @@
 /**
 Facilities for random number generation.
 
+$(RED Disclaimer:) The _random number generators and API provided in this
+module are not designed to be cryptographically secure, and are therefore
+unsuitable for cryptographic or security-related purposes such as generating
+authentication tokens or network sequence numbers. For such needs, please use a
+reputable cryptographic library instead.
+
 The new-style generator objects hold their own state so they are
 immune of threading issues. The generators feature a number of
 well-known and well-documented methods of generating random
 numbers. An overall fast and reliable means to generate random numbers
 is the $(D_PARAM Mt19937) generator, which derives its name from
-"$(LUCKY Mersenne Twister) with a period of 2 to the power of
-19937". In memory-constrained situations, $(LUCKY linear congruential)
-generators such as $(D MinstdRand0) and $(D MinstdRand) might be
+"$(LINK2 https://en.wikipedia.org/wiki/Mersenne_Twister, Mersenne Twister)
+with a period of 2 to the power of
+19937". In memory-constrained situations,
+$(LINK2 https://en.wikipedia.org/wiki/Linear_congruential_generator,
+linear congruential generators) such as $(D MinstdRand0) and $(D MinstdRand) might be
 useful. The standard library provides an alias $(D_PARAM Random) for
 whichever generator it considers the most fit for the target
 environment.
-
-Example:
-
-----
-// Generate a uniformly-distributed integer in the range [0, 14]
-auto i = uniform(0, 15);
-
-// Generate a uniformly-distributed real in the range [0, 100)
-// using a specific random generator
-Random gen;
-auto r = uniform(0.0L, 100.0L, gen);
-
-// Generate a 32-bit random number
-auto l = uniform!uint();
-----
 
 In addition to random number generators, this module features
 distributions, which skew a generator's output statistical
@@ -44,7 +37,7 @@ License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
 Authors:   $(HTTP erdani.org, Andrei Alexandrescu)
            Masahiro Nakagawa (Xorshift random generator)
            $(HTTP braingam.es, Joseph Rushton Wakeling) (Algorithm D for random sampling)
-           Ilya Yaroshenko (Mersenne Twister implementation, adapted from $(HTTPS github.com/libmir/mir-random, mir.random))
+           Ilya Yaroshenko (Mersenne Twister implementation, adapted from $(HTTPS github.com/libmir/mir-_random, mir-_random))
 Credits:   The entire random number library architecture is derived from the
            excellent $(HTTP open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2461.pdf, C++0X)
            random number facility proposed by Jens Maurer and contributed to by
@@ -61,6 +54,26 @@ module std.random;
 
 import std.range.primitives;
 import std.traits;
+
+///
+@safe unittest
+{
+    // seed a random generator with a constant
+    auto rnd = Random(42);
+
+    // Generate a uniformly-distributed integer in the range [0, 14]
+    // If no random generator is passed, the global `rndGen` would be used
+    auto i = uniform(0, 15, rnd);
+    assert(i == 12);
+
+    // Generate a uniformly-distributed real in the range [0, 100)
+    auto r = uniform(0.0L, 100.0L, rnd);
+    assert(r == 79.65429843861011285);
+
+    // Generate a 32-bit random number
+    auto u = uniform!uint(rnd);
+    assert(u == 4083286876);
+}
 
 version(unittest)
 {
@@ -525,7 +538,7 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
 }
 
 /**
-The $(LUCKY Mersenne Twister) generator.
+The $(LINK2 https://en.wikipedia.org/wiki/Mersenne_Twister, Mersenne Twister) generator.
  */
 struct MersenneTwisterEngine(UIntType, size_t w, size_t n, size_t m, size_t r,
                              UIntType a, size_t u, UIntType d, size_t s,
@@ -909,9 +922,9 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
 
 @safe unittest
 {
+    import std.algorithm;
     import std.exception;
     import std.range;
-    import std.algorithm;
 
     Mt19937 gen;
 
@@ -981,8 +994,9 @@ alias Mt19937_64 = MersenneTwisterEngine!(ulong, 64, 312, 156, 31,
  * Xorshift generator using 32bit algorithm.
  *
  * Implemented according to $(HTTP www.jstatsoft.org/v08/i14/paper, Xorshift RNGs).
+ * Supporting bits are below, $(D bits) means second parameter of XorshiftEngine.
  *
- * $(BOOKTABLE $(TEXTWITHCOMMAS Supporting bits are below, $(D bits) means second parameter of XorshiftEngine.),
+ * $(BOOKTABLE ,
  *  $(TR $(TH bits) $(TH period))
  *  $(TR $(TD 32)   $(TD 2^32 - 1))
  *  $(TR $(TD 64)   $(TD 2^64 - 1))
@@ -1416,8 +1430,8 @@ auto uniform(string boundaries = "[)",
 (T1 a, T2 b, ref UniformRandomNumberGenerator urng)
 if (isFloatingPoint!(CommonType!(T1, T2)) && isUniformRNG!UniformRandomNumberGenerator)
 {
-    import std.exception : enforce;
     import std.conv : text;
+    import std.exception : enforce;
     alias NumberType = Unqual!(CommonType!(T1, T2));
     static if (boundaries[0] == '(')
     {
@@ -1515,8 +1529,8 @@ auto uniform(string boundaries = "[)", T1, T2, RandomGen)
 if ((isIntegral!(CommonType!(T1, T2)) || isSomeChar!(CommonType!(T1, T2))) &&
      isUniformRNG!RandomGen)
 {
-    import std.exception : enforce;
     import std.conv : text, unsigned;
+    import std.exception : enforce;
     alias ResultType = Unqual!(CommonType!(T1, T2));
     static if (boundaries[0] == '(')
     {
@@ -1958,8 +1972,8 @@ if (isFloatingPoint!F)
 
 @safe unittest
 {
-    import std.math;
     import std.algorithm;
+    import std.math;
     static assert(is(CommonType!(double, int) == double));
     auto a = uniformDistribution(5);
     assert(a.length == 5);
@@ -2040,8 +2054,8 @@ if (isRandomAccessRange!Range && hasLength!Range && isUniformRNG!RandomGen)
 
 @system unittest
 {
-    import std.algorithm.searching : canFind;
     import std.algorithm.iteration : map;
+    import std.algorithm.searching : canFind;
 
     auto array = [1, 2, 3, 4, 5];
     auto elemAddr = &choice(array);
@@ -2115,8 +2129,8 @@ Params:
 void partialShuffle(Range, RandomGen)(Range r, in size_t n, ref RandomGen gen)
 if (isRandomAccessRange!Range && isUniformRNG!RandomGen)
 {
-    import std.exception : enforce;
     import std.algorithm.mutation : swapAt;
+    import std.exception : enforce;
     enforce(n <= r.length, "n must be <= r.length for partialShuffle.");
     foreach (i; 0 .. n)
     {
@@ -2234,8 +2248,8 @@ in
 }
 body
 {
-    import std.exception : enforce;
     import std.algorithm.iteration : reduce;
+    import std.exception : enforce;
     double sum = reduce!"a + b"(0.0, proportions.save);
     enforce(sum > 0, "Proportions in a dice cannot sum to zero");
     immutable point = uniform(0.0, sum, rng);
@@ -2651,8 +2665,8 @@ if (isInputRange!Range && (isUniformRNG!UniformRNG || is(UniformRNG == void)))
 
     private void initialize(size_t howMany, size_t total)
     {
-        import std.exception : enforce;
         import std.conv : text;
+        import std.exception : enforce;
         _available = total;
         _toSelect = howMany;
         enforce(_toSelect <= _available,
@@ -3003,9 +3017,9 @@ if (isInputRange!Range && hasLength!Range && isUniformRNG!UniformRNG)
 @system unittest
 {
     // @system because it takes the address of a local
+    import std.conv : text;
     import std.exception;
     import std.range;
-    import std.conv : text;
     // For test purposes, an infinite input range
     struct TestInputRange
     {
