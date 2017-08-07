@@ -1304,6 +1304,7 @@ if (isForwardRange!R && is(ElementType!R : dchar))
             switch (op)
             {
             case Operator.Negate:
+                enforce(!stack.empty, "no operand for '^'");
                 stack.top = stack.top.inverted;
                 break;
             case Operator.Union:

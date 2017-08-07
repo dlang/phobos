@@ -1098,3 +1098,11 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     willThrow([r"[a-\", r"123"], "invalid escape sequence");
     willThrow([r"\", r"123"], "invalid escape sequence");
 }
+
+// bugzilla 17668
+@safe unittest
+{
+    import std.algorithm.searching;
+    auto e = collectException!RegexException(regex(q"<[^]>"));
+    assert(e.msg.canFind("no operand for '^'"));
+}
