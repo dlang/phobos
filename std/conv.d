@@ -4137,7 +4137,7 @@ private T octal(T)(const string num)
     return value;
 }
 
-unittest
+@safe unittest
 {
     int a = octal!int("10");
     assert(a == 8);
