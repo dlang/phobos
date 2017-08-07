@@ -4121,25 +4121,23 @@ private T octal(T)(const string num)
 {
     assert(isOctalLiteral(num));
 
-    ulong pow = 1;
     T value = 0;
 
-    foreach_reverse (immutable pos; 0 .. num.length)
+    foreach (const char s; num)
     {
-        char s = num[pos];
         if (s < '0' || s > '7') // we only care about digits; skip the rest
         // safe to skip - this is checked out in the assert so these
         // are just suffixes
             continue;
 
-        value += pow * (s - '0');
-        pow *= 8;
+        value *= 8;
+        value += s - '0';
     }
 
     return value;
 }
 
-@system unittest
+@safe unittest
 {
     int a = octal!int("10");
     assert(a == 8);
