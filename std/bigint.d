@@ -157,7 +157,7 @@ public:
         // @system due to failure in FreeBSD32
         ulong data = 1_000_000_000_000;
         auto bigData = BigInt(data);
-        assert(data == BigInt("1_000_000_000_000"));
+        assert(bigData == BigInt("1_000_000_000_000"));
     }
 
     /// Construct a BigInt from another BigInt.
@@ -1020,7 +1020,9 @@ private:
     assert(h == a);
     assert(i == e);
     BigInt j = "-0x9A56_57f4_7B83_AB78";
+    BigInt k = j;
     j ^^= 11;
+    assert(k ^^ 11 == j);
 }
 
 /**
@@ -1121,6 +1123,7 @@ unittest
     a = 1;
     b = 2;
     auto c = a + b;
+    assert(c == 3);
 }
 
 nothrow pure @system
@@ -1129,7 +1132,9 @@ unittest
     long a;
     BigInt b;
     auto c = a + b;
+    assert(c == 0);
     auto d = b + a;
+    assert(d == 0);
 }
 
 nothrow pure @system
@@ -1500,8 +1505,8 @@ unittest
     const BigInt cbi = 3;
     immutable BigInt ibi = 3;
 
-    assert(__traits(compiles, foo(cbi)));
-    assert(__traits(compiles, foo(ibi)));
+    foo(cbi);
+    foo(ibi);
 
     import std.conv : to;
     import std.meta : AliasSeq;
@@ -1529,12 +1534,14 @@ unittest
 
     BigInt n = 2;
     n *= 2;
+    assert(n == 4);
 }
 
 @safe unittest // 8167
 {
     BigInt a = BigInt(3);
     BigInt b = BigInt(a);
+    assert(b == 3);
 }
 
 @safe unittest // 9061
@@ -1620,6 +1627,7 @@ unittest
     assert(is(typeof(x % 1UL) == BigInt));
 
     auto x1 = BigInt(8);
+    assert(x1 / x == x1);
     auto x2 = -BigInt(long.min) + 1;
 
     // long
@@ -1702,4 +1710,5 @@ unittest
 @system unittest
 {
     auto b = immutable BigInt("123");
+    assert(b == 123);
 }

@@ -3401,7 +3401,7 @@ struct LockingTextReader
     auto deleteme = testFilename();
     std.file.write(deleteme, "1 2 3");
     scope(exit) std.file.remove(deleteme);
-    int x, y;
+    int x;
     auto f = File(deleteme);
     f.readf("%s ", &x);
     assert(x == 1);
@@ -3878,7 +3878,7 @@ uint readf(A...)(in char[] format, auto ref A args)
 @system unittest
 {
     float f;
-    if (false) uint x = readf("%s", &f);
+    if (false) readf("%s", &f);
 
     char a;
     wchar b;
@@ -4143,8 +4143,6 @@ struct lines
         alias Parms = Parameters!(dg);
         static if (isSomeString!(Parms[$ - 1]))
         {
-            enum bool duplicate = is(Parms[$ - 1] == string)
-                || is(Parms[$ - 1] == wstring) || is(Parms[$ - 1] == dstring);
             int result = 0;
             static if (is(Parms[$ - 1] : const(char)[]))
                 alias C = char;
@@ -5071,7 +5069,6 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     File f = File(deleteme, "rb");
 
     char[] ln = new char[2];
-    char* lnptr = ln.ptr;
     f.readln(ln);
 
     assert(ln == "abcd\n");
@@ -5082,7 +5079,6 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
 
     // it can also stomp the array length
     ln = new char[4];
-    lnptr = ln.ptr;
     f.readln(ln);
     assert(ln == "0123456789abcde\n");
 
