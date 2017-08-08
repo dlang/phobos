@@ -454,7 +454,7 @@ public:
     {
         immutable fracHNSecs = fracSec.hnsecs;
         enforce(fracHNSecs >= 0, new DateTimeException("A SysTime cannot have negative fractional seconds."));
-        _timezone = tz is null ? LocalTime() : tz;
+        timezone = tz;
 
         try
         {
@@ -462,9 +462,9 @@ public:
             immutable todDiff = (dateTime.timeOfDay - TimeOfDay(0, 0, 0)).total!"hnsecs";
 
             immutable adjustedTime = dateDiff + todDiff + fracHNSecs;
-            immutable standardTime = _timezone.tzToUTC(adjustedTime);
+            immutable standardTime = timezone.tzToUTC(adjustedTime);
 
-            this(standardTime, _timezone);
+            this(standardTime, timezone);
         }
         catch (Exception e)
             assert(0, "Date, TimeOfDay, or DateTime's constructor threw when it shouldn't have.");
@@ -507,14 +507,14 @@ public:
       +/
     this(in Date date, immutable TimeZone tz = null) @safe nothrow
     {
-        _timezone = tz is null ? LocalTime() : tz;
+        timezone = tz;
 
         try
         {
             immutable adjustedTime = (date - Date(1, 1, 1)).total!"hnsecs";
-            immutable standardTime = _timezone.tzToUTC(adjustedTime);
+            immutable standardTime = timezone.tzToUTC(adjustedTime);
 
-            this(standardTime, _timezone);
+            this(standardTime, timezone);
         }
         catch (Exception e)
             assert(0, "Date's constructor through when it shouldn't have.");
@@ -556,7 +556,7 @@ public:
     this(long stdTime, immutable TimeZone tz = null) @safe pure nothrow
     {
         _stdTime = stdTime;
-        _timezone = tz is null ? LocalTime() : tz;
+        timezone = tz;
     }
 
     @safe unittest
@@ -2076,9 +2076,16 @@ public:
       +/
     @property immutable(TimeZone) timezone() @safe const pure nothrow
     {
-        return _timezone;
+        return _timezone is null ? LocalTime() : _timezone;
     }
 
+    unittest
+    {
+        // https://issues.dlang.org/show_bug.cgi?id=17732
+        SysTime time;
+        assert(time.timezone is LocalTime());
+        assert(time.toString == SysTime(0).toString);
+    }
 
     /++
         The current time zone of this $(LREF SysTime). It's internal time is
@@ -2105,7 +2112,7 @@ public:
       +/
     @property bool dstInEffect() @safe const nothrow
     {
-        return _timezone.dstInEffect(_stdTime);
+        return timezone.dstInEffect(_stdTime);
         // This function's unit testing is done in the time zone classes.
     }
 
@@ -2116,7 +2123,7 @@ public:
       +/
     @property Duration utcOffset() @safe const nothrow
     {
-        return _timezone.utcOffsetAt(_stdTime);
+        return timezone.utcOffsetAt(_stdTime);
     }
 
 
@@ -2432,13 +2439,13 @@ public:
         timeInfo.tm_year = dateTime.year - 1900;
         timeInfo.tm_wday = dateTime.dayOfWeek;
         timeInfo.tm_yday = dateTime.dayOfYear - 1;
-        timeInfo.tm_isdst = _timezone.dstInEffect(_stdTime);
+        timeInfo.tm_isdst = timezone.dstInEffect(_stdTime);
 
         version(Posix)
         {
             import std.utf : toUTFz;
             timeInfo.tm_gmtoff = cast(int) convert!("hnsecs", "seconds")(adjTime - _stdTime);
-            auto zone = (timeInfo.tm_isdst ? _timezone.dstName : _timezone.stdName);
+            auto zone = (timeInfo.tm_isdst ? timezone.dstName : timezone.stdName);
             timeInfo.tm_zone = zone.toUTFz!(char*)();
         }
 
@@ -5973,7 +5980,7 @@ public:
     SysTime opBinary(string op)(Duration duration) @safe const pure nothrow
         if (op == "+" || op == "-")
     {
-        SysTime retval = SysTime(this._stdTime, this._timezone);
+        SysTime retval = SysTime(this._stdTime, this.timezone);
         immutable hnsecs = duration.total!"hnsecs";
         mixin("retval._stdTime " ~ op ~ "= hnsecs;");
         return retval;
@@ -6172,7 +6179,7 @@ public:
     SysTime opBinary(string op)(TickDuration td) @safe const pure nothrow
         if (op == "+" || op == "-")
     {
-        SysTime retval = SysTime(this._stdTime, this._timezone);
+        SysTime retval = SysTime(this._stdTime, this.timezone);
         immutable hnsecs = td.hnsecs;
         mixin("retval._stdTime " ~ op ~ "= hnsecs;");
         return retval;
@@ -7374,7 +7381,7 @@ public:
 
         immutable newDaysHNSecs = convert!("days", "hnsecs")(newDays);
 
-        auto retval = SysTime(this._stdTime, this._timezone);
+        auto retval = SysTime(this._stdTime, this.timezone);
         retval.adjTime = newDaysHNSecs + theTimeHNSecs;
 
         return retval;
@@ -7757,7 +7764,7 @@ public:
     SysTime opCast(T)() @safe const pure nothrow
         if (is(Unqual!T == SysTime))
     {
-        return SysTime(_stdTime, _timezone);
+        return SysTime(_stdTime, timezone);
     }
 
 
@@ -7815,10 +7822,10 @@ public:
                                           cast(int) minute, cast(int) second));
             auto fracSecStr = fracSecsToISOString(cast(int) hnsecs);
 
-            if (_timezone is LocalTime())
+            if (timezone is LocalTime())
                 return dateTime.toISOString() ~ fracSecStr;
 
-            if (_timezone is UTC())
+            if (timezone is UTC())
                 return dateTime.toISOString() ~ fracSecStr ~ "Z";
 
             immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
@@ -7947,10 +7954,10 @@ public:
                                           cast(int) minute, cast(int) second));
             auto fracSecStr = fracSecsToISOString(cast(int) hnsecs);
 
-            if (_timezone is LocalTime())
+            if (timezone is LocalTime())
                 return dateTime.toISOExtString() ~ fracSecStr;
 
-            if (_timezone is UTC())
+            if (timezone is UTC())
                 return dateTime.toISOExtString() ~ fracSecStr ~ "Z";
 
             immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
@@ -8083,10 +8090,10 @@ public:
                                           cast(int) minute, cast(int) second));
             auto fracSecStr = fracSecsToISOString(cast(int) hnsecs);
 
-            if (_timezone is LocalTime())
+            if (timezone is LocalTime())
                 return dateTime.toSimpleString() ~ fracSecStr;
 
-            if (_timezone is UTC())
+            if (timezone is UTC())
                 return dateTime.toSimpleString() ~ fracSecStr ~ "Z";
 
             immutable utcOffset = dur!"hnsecs"(adjustedTime - stdTime);
@@ -8979,7 +8986,7 @@ private:
       +/
     @property long adjTime() @safe const nothrow
     {
-        return _timezone.utcToTZ(_stdTime);
+        return timezone.utcToTZ(_stdTime);
     }
 
 
@@ -8988,18 +8995,8 @@ private:
       +/
     @property void adjTime(long adjTime) @safe nothrow
     {
-        _stdTime = _timezone.tzToUTC(adjTime);
+        _stdTime = timezone.tzToUTC(adjTime);
     }
-
-
-    // Commented out due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5058
-    /+
-    invariant()
-    {
-        assert(_timezone !is null, "Invariant Failure: timezone is null. Were you foolish enough to use " ~
-                                   "SysTime.init? (since timezone for SysTime.init can't be set at compile time).");
-    }
-    +/
 
 
     long  _stdTime;
