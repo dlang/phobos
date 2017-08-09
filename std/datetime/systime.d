@@ -8992,18 +8992,45 @@ private:
     }
 
 
-    // Commented out due to bug http://d.puremagic.com/issues/show_bug.cgi?id=5058
-    /+
-    invariant()
+    final class InitTimeZone : TimeZone
     {
-        assert(_timezone !is null, "Invariant Failure: timezone is null. Were you foolish enough to use " ~
-                                   "SysTime.init? (since timezone for SysTime.init can't be set at compile time).");
+    public:
+
+        static immutable(InitTimeZone) opCall() @safe pure nothrow @nogc { return _initTimeZone; }
+
+        @property override bool hasDST() @safe const nothrow @nogc { return false; }
+
+        override bool dstInEffect(long stdTime) @safe const nothrow @nogc { return false; }
+
+        override long utcToTZ(long stdTime) @safe const nothrow @nogc { return 0; }
+
+        override long tzToUTC(long adjTime) @safe const nothrow @nogc { return 0; }
+
+        override Duration utcOffsetAt(long stdTime) @safe const nothrow @nogc { return Duration.zero; }
+
+    private:
+
+        this() @safe immutable pure
+        {
+            super("SysTime.init's timezone", "SysTime.init's timezone", "SysTime.init's timezone");
+        }
+
+        static immutable InitTimeZone _initTimeZone = new immutable(InitTimeZone);
     }
-    +/
+
+    // https://issues.dlang.org/show_bug.cgi?id=17732
+    unittest
+    {
+        assert(SysTime.init.timezone is InitTimeZone());
+        assert(SysTime.init.toISOString() == "00010101T000000+00:00");
+        assert(SysTime.init.toISOExtString() == "0001-01-01T00:00:00+00:00");
+        assert(SysTime.init.toSimpleString() == "0001-Jan-01 00:00:00+00:00");
+        assert(SysTime.init.toString() == "0001-Jan-01 00:00:00+00:00");
+    }
 
 
     long  _stdTime;
-    Rebindable!(immutable TimeZone) _timezone;
+    Rebindable!(immutable TimeZone) _timezone = InitTimeZone();
 }
 
 
