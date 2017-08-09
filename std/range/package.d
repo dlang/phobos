@@ -1550,10 +1550,14 @@ private struct ChooseResult(R1, R2)
     static if (hasSlicing!R1 && hasSlicing!R2)
         auto opSlice(size_t begin, size_t end)
         {
-            auto result = this;
-            actOnChosen!((ref r, size_t begin, size_t end)
-                    { r = r[begin .. end]; })(result, begin, end);
-            return result;
+            alias Slice1 = typeof(R1.init[0 .. 1]);
+            alias Slice2 = typeof(R2.init[0 .. 1]);
+            return actOnChosen!((r, size_t begin, size_t end) {
+                    static if (is(typeof(r) == Slice1))
+                        return choose(true, r[begin .. end], Slice2.init);
+                    else
+                        return choose(false, Slice1.init, r[begin .. end]);
+                })(this, begin, end);
         }
 }
 
@@ -1673,10 +1677,12 @@ if (Ranges.length >= 2
         }
         {
             import std.range : cycle;
-            auto s = chooseAmong(1, cycle(arr2), cycle(arr3));
+            auto s = chooseAmong(0, cycle(arr2), cycle(arr3));
             assert(isInfinite!(typeof(s)));
             assert(!s.empty);
-            assert(s[100] == 7);
+            assert(s[100] == 8);
+            assert(s[101] == 9);
+            assert(s[0 .. 3].equal([8, 9, 8]));
         }
         return 0;
     }
