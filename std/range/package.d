@@ -1374,8 +1374,6 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
 
 private struct ChooseResult(R1, R2)
 {
-    import std.algorithm.comparison : max;
-    import std.algorithm.internal : addressOf;
     import std.traits : hasElaborateCopyConstructor, hasElaborateDestructor;
 
     private union
@@ -1389,48 +1387,24 @@ private struct ChooseResult(R1, R2)
             auto ref ExtraArgs extraArgs)
     {
         if (r.r1Chosen)
-        {
-            ref getR1() @trusted { return r._r1; }
-            return foo(getR1(), extraArgs);
-        }
+            return foo(r._r1, extraArgs);
         else
-        {
-            ref getR2() @trusted { return r._r2; }
-            return foo(getR2(), extraArgs);
-        }
-    }
-
-    // have to do this in a constructor because otherwise
-    // the compiler thinks they're not initialised.
-    // Don't want to make the whole constructor @trusted
-    // because would hide @system code in R{1,2}.__ctor,
-    // hence this dummy constructor
-    private this(char dummy) @trusted
-    {
-        _r1 = R1.init;
-        _r2 = R2.init;
+            return foo(r._r2, extraArgs);
     }
 
     this(bool r1Chosen, R1 r1, R2 r2)
     {
         import std.conv : emplace;
 
-        this('\0');
+        _r1 = R1.init; // avoid uninitialised member errors
 
-        // This should be the only place r1Chosen is every assigned
+        // This should be the only place r1Chosen is ever assigned
         // independently
         this.r1Chosen = r1Chosen;
-
         if (r1Chosen)
-        {
-            auto r1p = &_r1;
-            emplace(r1p, r1);
-        }
+            emplace(&_r1, r1);
         else
-        {
-            auto r2p = &_r2;
-            emplace(r2p, r2);
-        }
+            emplace(&_r2, r2);
     }
 
     // Carefully defined postblit to postblit the appropriate range
