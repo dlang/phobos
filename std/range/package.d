@@ -1383,7 +1383,7 @@ private struct ChooseResult(R1, R2)
     }
     private bool r1Chosen;
 
-    private static auto actOnChosen(alias foo, ExtraArgs ...)(ref ChooseResult r,
+    private static auto ref actOnChosen(alias foo, ExtraArgs ...)(ref ChooseResult r,
             auto ref ExtraArgs extraArgs)
     {
         if (r.r1Chosen)
@@ -1535,7 +1535,6 @@ private struct ChooseResult(R1, R2)
         }
 }
 
-
 ///
 @safe nothrow pure unittest
 {
@@ -1666,13 +1665,41 @@ if (Ranges.length >= 2
     static b = test();
 }
 
-@safe nothrow pure unittest
+@safe nothrow pure @nogc unittest
 {
-    int[] a = [1, 2, 3];
-    long[] b = [4, 5, 6];
-    auto c = chooseAmong(0, a, b);
+    int[3] a = [1, 2, 3];
+    long[3] b = [4, 5, 6];
+    auto c = chooseAmong(0, a[], b[]);
     c[0] = 42;
     assert(c[0] == 42);
+}
+
+@safe nothrow pure @nogc unittest
+{
+    static struct RefAccessRange
+    {
+        int[] r;
+        ref front() @property { return r[0]; }
+        ref back() @property { return r[$ - 1]; }
+        auto popFront() { r = r[1 .. $]; }
+        auto popBack() { r = r[0 .. $ - 1]; }
+        auto empty() @property { return r.empty; }
+        ref opIndex(size_t i) { return r[i]; }
+        auto length() @property { return r.length; }
+        alias opDollar = length;
+        auto save() { return this; }
+    }
+    static assert(isRandomAccessRange!RefAccessRange);
+    static assert(isRandomAccessRange!RefAccessRange);
+    int[4] a = [4, 3, 2, 1];
+    int[2] b = [6, 5];
+    auto c = chooseAmong(0, RefAccessRange(a[]), RefAccessRange(b[]));
+
+    auto refFunc(ref int a, int target) { assert(a == target); }
+
+    refFunc(c[2], 2);
+    refFunc(c.front, 4);
+    refFunc(c.back, 1);
 }
 
 
