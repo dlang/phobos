@@ -1,0 +1,5 @@
+Make $(REF assertThrown, std, exception) return the caught exception.
+
+assertThrown checks if an exception was thrown by an expression.
+This change makes assertThrown return the caught exception.
+This allows to inspect thrown exception for further details.
