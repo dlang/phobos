@@ -1540,13 +1540,13 @@ private struct ChooseResult(R1, R2)
 }
 
 ///
-@safe nothrow pure unittest
+@safe nothrow pure @nogc unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter, map;
 
-    auto data1 = [ 1, 2, 3, 4 ].filter!(a => a != 3);
-    auto data2 = [ 5, 6, 7, 8 ].map!(a => a + 1);
+    auto data1 = only(1, 2, 3, 4).filter!(a => a != 3);
+    auto data2 = only(5, 6, 7, 8).map!(a => a + 1);
 
     // choose() is primarily useful when you need to select one of two ranges
     // with different types at runtime.
@@ -1564,10 +1564,10 @@ private struct ChooseResult(R1, R2)
     }
 
     auto result = chooseRange(true);
-    assert(result.equal([ 1, 2, 4 ]));
+    assert(result.equal(only(1, 2, 4)));
 
     result = chooseRange(false);
-    assert(result.equal([ 6, 7, 8, 9 ]));
+    assert(result.equal(only(6, 7, 8, 9)));
 }
 
 /**
@@ -1596,15 +1596,18 @@ if (Ranges.length >= 2
 }
 
 ///
-@safe nothrow pure unittest
+@safe nothrow pure @nogc unittest
 {
-    auto test()
+    auto test() @safe nothrow pure @nogc
     {
         import std.algorithm.comparison : equal;
 
-        int[] arr1 = [ 1, 2, 3, 4 ];
-        int[] arr2 = [ 5, 6 ];
-        int[] arr3 = [ 7 ];
+        int[4] sarr1 = [1, 2, 3, 4];
+        int[2] sarr2 = [5, 6];
+        int[1] sarr3 = [7];
+        auto arr1 = sarr1[];
+        auto arr2 = sarr2[];
+        auto arr3 = sarr3[];
 
         {
             auto s = chooseAmong(0, arr1, arr2, arr3);
@@ -1612,24 +1615,24 @@ if (Ranges.length >= 2
             assert(s.length == 4);
             assert(s[2] == 3);
             s.popFront();
-            assert(equal(t, [1, 2, 3, 4][]));
+            assert(equal(t, only(1, 2, 3, 4)));
         }
         {
             auto s = chooseAmong(1, arr1, arr2, arr3);
             assert(s.length == 2);
             s.front = 8;
-            assert(equal(s, [8, 6][]));
+            assert(equal(s, only(8, 6)));
         }
         {
             auto s = chooseAmong(1, arr1, arr2, arr3);
             assert(s.length == 2);
             s[1] = 9;
-            assert(equal(s, [8, 9][]));
+            assert(equal(s, only(8, 9)));
         }
         {
             auto s = chooseAmong(1, arr2, arr1, arr3)[1 .. 3];
             assert(s.length == 2);
-            assert(equal(s, [2, 3][]));
+            assert(equal(s, only(2, 3)));
         }
         {
             auto s = chooseAmong(0, arr1, arr2, arr3);
@@ -1637,14 +1640,14 @@ if (Ranges.length >= 2
             assert(s.back == 4);
             s.popBack();
             s.back = 5;
-            assert(equal(s, [1, 2, 5][]));
+            assert(equal(s, only(1, 2, 5)));
             s.back = 3;
-            assert(equal(s, [1, 2, 3][]));
+            assert(equal(s, only(1, 2, 3)));
         }
         {
-            uint[] foo = [1,2,3,4,5];
-            uint[] bar = [6,7,8,9,10];
-            auto c = chooseAmong(1,foo, bar);
+            uint[5] foo = [1, 2, 3, 4, 5];
+            uint[5] bar = [6, 7, 8, 9, 10];
+            auto c = chooseAmong(1, foo[], bar[]);
             assert(c[3] == 9);
             c[3] = 42;
             assert(c[3] == 42);
@@ -1659,7 +1662,7 @@ if (Ranges.length >= 2
             assert(!s.empty);
             assert(s[100] == 8);
             assert(s[101] == 9);
-            assert(s[0 .. 3].equal([8, 9, 8]));
+            assert(s[0 .. 3].equal(only(8, 9, 8)));
         }
         return 0;
     }
