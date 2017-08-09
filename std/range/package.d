@@ -1396,15 +1396,19 @@ private struct ChooseResult(R1, R2)
     {
         import std.conv : emplace;
 
-        _r1 = R1.init; // avoid uninitialised member errors
-
         // This should be the only place r1Chosen is ever assigned
         // independently
         this.r1Chosen = r1Chosen;
         if (r1Chosen)
+        {
+            _r2 = R2.init;
             emplace(&_r1, r1);
+        }
         else
+        {
+            _r1 = R1.init;
             emplace(&_r2, r2);
+        }
     }
 
     // Carefully defined postblit to postblit the appropriate range
