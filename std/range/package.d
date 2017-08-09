@@ -1598,7 +1598,7 @@ if (Ranges.length >= 2
 ///
 @safe nothrow pure @nogc unittest
 {
-    auto test() @safe nothrow pure @nogc
+    auto test()
     {
         import std.algorithm.comparison : equal;
 
