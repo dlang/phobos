@@ -1685,8 +1685,8 @@ if (Ranges.length >= 2
         int[] r;
         ref front() @property { return r[0]; }
         ref back() @property { return r[$ - 1]; }
-        auto popFront() { r = r[1 .. $]; }
-        auto popBack() { r = r[0 .. $ - 1]; }
+        void popFront() { r = r[1 .. $]; }
+        void popBack() { r = r[0 .. $ - 1]; }
         auto empty() @property { return r.empty; }
         ref opIndex(size_t i) { return r[i]; }
         auto length() @property { return r.length; }
@@ -1699,7 +1699,7 @@ if (Ranges.length >= 2
     int[2] b = [6, 5];
     auto c = chooseAmong(0, RefAccessRange(a[]), RefAccessRange(b[]));
 
-    auto refFunc(ref int a, int target) { assert(a == target); }
+    void refFunc(ref int a, int target) { assert(a == target); }
 
     refFunc(c[2], 2);
     refFunc(c.front, 4);
