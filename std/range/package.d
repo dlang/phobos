@@ -7229,14 +7229,13 @@ if (isInputRange!Source)
         }
 
         private RefCounted!Impl impl;
-        alias impl this;
 
         private this(Source r, size_t chunkSize)
         {
             impl = RefCounted!Impl(r, r.empty ? 0 : chunkSize, chunkSize);
         }
 
-        @property bool empty() { return chunkSize == 0; }
+        @property bool empty() { return impl.chunkSize == 0; }
         @property Chunk front() return { return Chunk(impl); }
 
         void popFront()
