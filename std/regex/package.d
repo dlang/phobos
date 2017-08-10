@@ -79,7 +79,7 @@ $(TR $(TD Objects) $(TD
   assert(m.front[1] == "12");
   ...
 
-  // The result of the $(D matchAll/matchFirst) is directly testable with if/assert/while.
+  // The result of the `matchAll/matchFirst` is directly testable with if/assert/while.
   // e.g. test if a string consists of letters:
   assert(matchFirst("Letter", `^\p{L}+$`));
   ---
@@ -350,7 +350,10 @@ public alias StaticRegex(Char) = std.regex.internal.ir.StaticRegex!(Char);
     the same character width as $(D pattern).
 
     Params:
-    pattern(s) = Regular expression(s) to match
+    pattern = A single regular expression to match.
+    patterns = An array of regular expression strings.
+        The resulting `Regex` object will match any expression;
+        use $(LREF whichPattern) to know which.
     flags = The _attributes (g, i, m and x accepted)
 
     Throws: $(D RegexException) if there were any errors during compilation.
@@ -556,21 +559,21 @@ public:
     ///Slice of matched portion of input.
     @property R hit()
     {
-        assert(_nMatch);
+        assert(_nMatch, "attempted to get hit of an empty match");
         return _input[matches[0].begin .. matches[0].end];
     }
 
     ///Range interface.
     @property R front()
     {
-        assert(_nMatch);
+        assert(_nMatch, "attempted to get front of an empty match");
         return _input[matches[_f].begin .. matches[_f].end];
     }
 
     ///ditto
     @property R back()
     {
-        assert(_nMatch);
+        assert(_nMatch, "attempted to get back of an empty match");
         return _input[matches[_b - 1].begin .. matches[_b - 1].end];
     }
 

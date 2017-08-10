@@ -27,10 +27,10 @@ module std.bigint;
 
 import std.conv : ConvException;
 
-private import std.format : FormatSpec, FormatException;
-private import std.internal.math.biguintcore;
-private import std.range.primitives;
-private import std.traits;
+import std.format : FormatSpec, FormatException;
+import std.internal.math.biguintcore;
+import std.range.primitives;
+import std.traits;
 
 /** A struct representing an arbitrary precision integer.
  *
@@ -1098,7 +1098,7 @@ if (isIntegral!T)
          * on two's complement machines because unsigned(T.min) = |T.min|
          * even though -T.min = T.min.
          */
-        return unsigned((x < 0) ? -x : x);
+        return unsigned((x < 0) ? cast(T)(0-x) : x);
     }
     else
     {

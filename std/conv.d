@@ -81,8 +81,15 @@ private auto convError(S, T)(S source, string fn = __FILE__, size_t ln = __LINE_
     if (source.empty)
         msg = "Unexpected end of input when converting from type " ~ S.stringof ~ " to type " ~ T.stringof;
     else
-        msg =  text("Unexpected '", source.front,
+    {
+        ElementType!S el = source.front;
+
+        if (el == '\n')
+            msg = text("Unexpected '\\n' when converting from type " ~ S.stringof ~ " to type " ~ T.stringof);
+        else
+            msg =  text("Unexpected '", el,
                  "' when converting from type " ~ S.stringof ~ " to type " ~ T.stringof);
+    }
 
     return new ConvException(msg, fn, ln);
 }
@@ -1815,7 +1822,7 @@ if (isInputRange!S && isSomeChar!(ElementEncodingType!S) &&
 /// ditto
 private T toImpl(T, S)(S value, uint radix)
 if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S) &&
-    !isExactSomeString!T && is(typeof(parse!T(value, radix))))
+    isIntegral!T && is(typeof(parse!T(value, radix))))
 {
     scope(success)
     {
@@ -3991,7 +3998,7 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) &&
 string text(T...)(T args)
 if (T.length > 0) { return textImpl!string(args); }
 
-// @@@DEPRECATED_2017-06@@@
+// @@@DEPRECATED_2018-06@@@
 deprecated("Calling `text` with 0 arguments is deprecated")
 string text(T...)(T args)
 if (T.length == 0) { return textImpl!string(args); }
@@ -4000,7 +4007,7 @@ if (T.length == 0) { return textImpl!string(args); }
 wstring wtext(T...)(T args)
 if (T.length > 0) { return textImpl!wstring(args); }
 
-// @@@DEPRECATED_2017-06@@@
+// @@@DEPRECATED_2018-06@@@
 deprecated("Calling `wtext` with 0 arguments is deprecated")
 wstring wtext(T...)(T args)
 if (T.length == 0) { return textImpl!wstring(args); }
@@ -4017,7 +4024,7 @@ if (T.length > 0) { return textImpl!dstring(args); }
     assert(dtext(42, ' ', 1.5, ": xyz") == "42 1.5: xyz"d);
 }
 
-// @@@DEPRECATED_2017-06@@@
+// @@@DEPRECATED_2018-06@@@
 deprecated("Calling `dtext` with 0 arguments is deprecated")
 dstring dtext(T...)(T args)
 if (T.length == 0) { return textImpl!dstring(args); }
@@ -4114,25 +4121,23 @@ private T octal(T)(const string num)
 {
     assert(isOctalLiteral(num));
 
-    ulong pow = 1;
     T value = 0;
 
-    foreach_reverse (immutable pos; 0 .. num.length)
+    foreach (const char s; num)
     {
-        char s = num[pos];
         if (s < '0' || s > '7') // we only care about digits; skip the rest
         // safe to skip - this is checked out in the assert so these
         // are just suffixes
             continue;
 
-        value += pow * (s - '0');
-        pow *= 8;
+        value *= 8;
+        value += s - '0';
     }
 
     return value;
 }
 
-@system unittest
+@safe unittest
 {
     int a = octal!int("10");
     assert(a == 8);

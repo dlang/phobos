@@ -61,10 +61,10 @@ auto mmapRegionList(size_t bytesPerRegion)
     static struct Factory
     {
         size_t bytesPerRegion;
-        private import std.algorithm.comparison : max;
-        private import std.experimental.allocator.building_blocks.region
+        import std.algorithm.comparison : max;
+        import std.experimental.allocator.building_blocks.region
             : Region;
-        private import std.experimental.allocator.mmap_allocator
+        import std.experimental.allocator.mmap_allocator
             : MmapAllocator;
         this(size_t n)
         {

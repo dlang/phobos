@@ -1169,6 +1169,83 @@ template memoize(alias fun, uint maxSize)
     assert(func(int.init) == 1);
 }
 
+// 16079: memoize should work with arrays
+@safe unittest
+{
+    int executed = 0;
+    T median(T)(const T[] nums) {
+        import std.algorithm.sorting : sort;
+        executed++;
+        auto arr = nums.dup;
+        arr.sort();
+        if (arr.length % 2)
+            return arr[$ / 2];
+        else
+            return (arr[$ / 2 - 1]
+                + arr[$ / 2]) / 2;
+    }
+
+    alias fastMedian = memoize!(median!int);
+
+    assert(fastMedian([7, 5, 3]) == 5);
+    assert(fastMedian([7, 5, 3]) == 5);
+
+    assert(executed == 1);
+}
+
+// 16079: memoize should work with structs
+@safe unittest
+{
+    int executed = 0;
+    T pickFirst(T)(T first)
+    {
+        executed++;
+        return first;
+    }
+
+    struct Foo { int k; }
+    Foo A = Foo(3);
+
+    alias first = memoize!(pickFirst!Foo);
+    assert(first(Foo(3)) == A);
+    assert(first(Foo(3)) == A);
+    assert(executed == 1);
+}
+
+// 16079: memoize should work with classes
+@safe unittest
+{
+    int executed = 0;
+    T pickFirst(T)(T first)
+    {
+        executed++;
+        return first;
+    }
+
+    class Bar
+    {
+        size_t k;
+        this(size_t k)
+        {
+            this.k = k;
+        }
+        override size_t toHash()
+        {
+            return k;
+        }
+        override bool opEquals(Object o)
+        {
+            auto b = cast(Bar) o;
+            return b && k == b.k;
+        }
+    }
+
+    alias firstClass = memoize!(pickFirst!Bar);
+    assert(firstClass(new Bar(3)).k == 3);
+    assert(firstClass(new Bar(3)).k == 3);
+    assert(executed == 1);
+}
+
 private struct DelegateFaker(F)
 {
     import std.typecons : FuncInfo, MemberFunctionGenerator;

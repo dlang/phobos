@@ -1,6 +1,10 @@
 # Documentation: https://github.com/codecov/support/wiki/codecov.yml
 
 codecov:
+  ci:
+    - "circleci.com"
+  notify:
+    after_n_builds: 1  # send notifications after the first upload
   bot: dlang-bot
 
 coverage:

@@ -14,6 +14,4 @@ deprecated("Import core.sys.posix.pthread or the appropriate core.sys.posix.* mo
 module std.c.linux.pthread;
 
 version (linux):
-import std.c.linux.linux;
-
 public import core.sys.posix.pthread;

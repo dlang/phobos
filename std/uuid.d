@@ -1712,6 +1712,18 @@ public class UUIDParsingException : Exception
 ///
 @safe unittest
 {
+    import std.exception : collectException;
+
+    const inputUUID = "this-is-an-invalid-uuid";
+    auto ex = collectException!UUIDParsingException(UUID(inputUUID));
+    assert(ex !is null); // check that exception was thrown
+    assert(ex.input == inputUUID);
+    assert(ex.position == 0);
+    assert(ex.reason == UUIDParsingException.Reason.tooLittle);
+}
+
+@safe unittest
+{
     auto ex = new UUIDParsingException("foo", 10, UUIDParsingException.Reason.tooMuch);
     assert(ex.input == "foo");
     assert(ex.position == 10);

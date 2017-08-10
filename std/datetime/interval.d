@@ -7690,7 +7690,8 @@ if (isTimePoint!TP &&
         dir   = The direction to iterate in. If passing the return value to
                 $(D fwdRange), use $(D Direction.fwd). If passing it to
                 $(D bwdRange), use $(D Direction.bwd).
-        month = The month that each time point in the range will be in.
+        month = The month that each time point in the range will be in
+                (January is 1).
   +/
 TP delegate(in TP) everyMonth(TP, Direction dir = Direction.fwd)(int month)
 if (isTimePoint!TP &&

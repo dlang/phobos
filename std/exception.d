@@ -1478,6 +1478,34 @@ private bool isUnionAliasedImpl(T)(size_t offset)
         static assert( isUnionAliased!(S.A5, 1)); //a5.b1;
 }
 
+package string errnoString(int errno) nothrow @trusted
+{
+    import core.stdc.string : strlen;
+    version (CRuntime_Glibc)
+    {
+        import core.stdc.string : strerror_r;
+        char[1024] buf = void;
+        auto s = strerror_r(errno, buf.ptr, buf.length);
+    }
+    else version (Posix)
+    {
+        // XSI-compliant
+        import core.stdc.string : strerror_r;
+        char[1024] buf = void;
+        const(char)* s;
+        if (strerror_r(errno, buf.ptr, buf.length) == 0)
+            s = buf.ptr;
+        else
+            return "Unknown error";
+    }
+    else
+    {
+        import core.stdc.string : strerror;
+        auto s = strerror(errno);
+    }
+    return s[0 .. s.strlen].idup;
+}
+
 /*********************
  * Thrown if errors that set $(D errno) occur.
  */
@@ -1485,28 +1513,17 @@ class ErrnoException : Exception
 {
     final @property uint errno() { return _errno; } /// Operating system error code.
     private uint _errno;
+    /// Constructor which takes an error message. The current global $(REF errno, core,stdc,errno) value is used as error code.
     this(string msg, string file = null, size_t line = 0) @trusted
     {
         import core.stdc.errno : errno;
         this(msg, errno, file, line);
     }
+    /// Constructor which takes an error message and error code.
     this(string msg, int errno, string file = null, size_t line = 0) @trusted
     {
-        import core.stdc.string : strlen;
-
         _errno = errno;
-        version (CRuntime_Glibc)
-        {
-            import core.stdc.string : strerror_r;
-            char[1024] buf = void;
-            auto s = strerror_r(errno, buf.ptr, buf.length);
-        }
-        else
-        {
-            import core.stdc.string : strerror;
-            auto s = strerror(errno);
-        }
-        super(msg ~ " (" ~ s[0 .. s.strlen].idup ~ ")", file, line);
+        super(msg ~ " (" ~ errnoString(errno) ~ ")", file, line);
     }
 
     @system unittest
@@ -1778,7 +1795,7 @@ Params:
 
 Returns: A wrapper $(D struct) that preserves the range interface of $(D input).
 
-opSlice:
+Note:
 Infinite ranges with slicing support must return an instance of
 $(REF Take, std,range) when sliced with a specific lower and upper
 bound (see $(REF hasSlicing, std,range,primitives)); $(D handle) deals with

@@ -65,10 +65,6 @@ import std.range.primitives;
 import std.traits;     // isSomeChar, isSomeString
 import std.typecons;   // Flag, Yes, No
 
-//debug=utf;           // uncomment to turn on debugging printf's
-
-debug (utf) import core.stdc.stdio : printf;
-
 
 /++
     Exception thrown on errors in std.utf functions.
@@ -259,7 +255,6 @@ bool isValidDchar(dchar c) pure nothrow @safe @nogc
 pure nothrow @safe @nogc unittest
 {
     import std.exception;
-    debug(utf) printf("utf.isValidDchar.unittest\n");
 
     assertCTFEable!(
     {
@@ -338,8 +333,8 @@ in { assert(c & 0x80); }
 body
 {
     import core.bitop : bsr;
-    immutable msbs = 7 - bsr(~c);
-    if (!~c || msbs < 2 || msbs > 4)
+    immutable msbs = 7 - bsr((~uint(c)) & 0xFF);
+    if (c == 0xFF || msbs < 2 || msbs > 4)
         throw new UTFException("Invalid UTF-8 sequence", index);
     return msbs;
 }
@@ -1895,7 +1890,6 @@ version(unittest) private void testBadDecodeBack(R)(R range, size_t line = __LIN
 {
     import std.conv : to;
     import std.exception;
-    debug(utf) printf("utf.decode.unittest\n");
 
     assertCTFEable!(
     {
@@ -2371,7 +2365,6 @@ void encode(UseReplacementDchar useReplacementDchar = No.useReplacementDchar)(
 @safe unittest
 {
     import std.exception;
-    debug(utf) printf("utf.encode.unittest\n");
 
     assertCTFEable!(
     {
@@ -3118,7 +3111,6 @@ if (isSomeChar!C)
 @safe pure unittest
 {
     import std.exception;
-    debug(utf) printf("utf.toUTF.unittest\n");
 
     assertCTFEable!(
     {

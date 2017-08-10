@@ -2069,8 +2069,6 @@ pure:
 {
     import std.range : assumeSorted;
 
-public:
-
     /**
         Construct from another code point set of any type.
     */
@@ -2436,7 +2434,7 @@ public:
         ---
     */
 
-    private import std.format : FormatException, FormatSpec;
+    private import std.format : FormatSpec;
 
     /***************************************
      * Obtain a textual representation of this InversionList
@@ -2495,7 +2493,7 @@ public:
     @safe unittest
     {
         import std.exception : assertThrown;
-        import std.format : format;
+        import std.format : format, FormatException;
         assertThrown!FormatException(format("%a", unicode.ASCII));
     }
 
@@ -2546,7 +2544,6 @@ private:
         return this;
     }
 
-    ///
     @safe unittest
     {
         assert(unicode.Cyrillic.intersect('-').byInterval.empty);
@@ -4340,7 +4337,6 @@ if (sumOfIntegerTuple!sizes == 21)
     }
 }
 
-///
 @system pure unittest
 {
     import std.algorithm.comparison : max;
@@ -4644,7 +4640,6 @@ public struct MatcherConcept
         return this;
     }
 
-    ///
     @safe unittest
     {
         auto m = utfMatcher!char(unicode.Number);
@@ -4762,9 +4757,9 @@ template Utf8Matcher()
     static auto encode(size_t sz)(dchar ch)
         if (sz > 1)
     {
-        import std.utf : encode;
+        import std.utf : encodeUTF = encode;
         char[4] buf;
-        std.utf.encode(buf, ch);
+        encodeUTF(buf, ch);
         char[sz] ret;
         buf[0] &= leadMask!sz;
         foreach (n; 1 .. sz)
@@ -6288,7 +6283,8 @@ enum EMPTY_CASE_TRIE = ushort.max;// from what gen_uni uses internally
 
 // control - '\r'
 enum controlSwitch = `
-    case '\u0000':..case '\u0008':case '\u000E':..case '\u001F':case '\u007F':..case '\u0084':case '\u0086':..case '\u009F': case '\u0009':..case '\u000C': case '\u0085':
+    case '\u0000':..case '\u0008':case '\u000E':..case '\u001F':case '\u007F':..
+    case '\u0084':case '\u0086':..case '\u009F': case '\u0009':..case '\u000C': case '\u0085':
 `;
 // TODO: redo the most of hangul stuff algorithmically in case of Graphemes too
 // kill unrolled switches
@@ -7379,7 +7375,7 @@ package auto simpleCaseFoldings(dchar ch) @safe
             return len == 0;
         }
 
-        @property uint length() const
+        @property size_t length() const
         {
             if (isSmall)
             {

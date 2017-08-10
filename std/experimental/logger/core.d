@@ -2,7 +2,8 @@
 module std.experimental.logger.core;
 
 import core.sync.mutex : Mutex;
-import std.datetime;
+import std.datetime.date : DateTime;
+import std.datetime.systime : Clock, SysTime;
 import std.range.primitives;
 import std.traits;
 
@@ -1664,7 +1665,8 @@ if (sharedLog !is myLogger)
     static auto trustedLoad(ref shared Logger logger) @trusted
     {
         import core.atomic : atomicLoad, MemoryOrder;
-        return atomicLoad!(MemoryOrder.acq)(logger);
+        return cast() atomicLoad!(MemoryOrder.acq)(logger);
+            //FIXME: Casting shared away here. Not good. See issue 16232.
     }
 
     // If we have set up our own logger use that

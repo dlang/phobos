@@ -100,11 +100,6 @@ style_lint()
     # dscanner needs a more up-to-date DMD version
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$DSCANNER_DMD_VER --activate)"
 
-    # some style tools are at the tools repo
-    clone https://github.com/dlang/tools.git ../tools master
-    # fix to a specific version of https://github.com/dlang/tools/tree/master/styles
-    git -C ../tools checkout 60583c8363ff25d00017dffdb18c7ee7e7d9a343
-
     make -f posix.mak style_lint DUB=$DUB
 }
 
@@ -115,12 +110,13 @@ coverage()
     # remove all existing coverage files (just in case)
     rm -rf $(find -name '*.lst')
 
-    # currently using the test_runner yields wrong code coverage results
-    # see https://github.com/dlang/phobos/pull/4719 for details
-    ENABLE_COVERAGE="1" make -f posix.mak MODEL=$MODEL unittest-debug
+    # Coverage information of the test runner can be missing for some template instatiations.
+    # https://issues.dlang.org/show_bug.cgi?id=16397
+    # ENABLE_COVERAGE="1" make -j$N -f posix.mak MODEL=$MODEL unittest-debug
 
-    # instead we run all tests individually
-    make -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test")
+    # So instead we run all tests individually (hoping that that doesn't break any tests).
+    # -cov is enabled by the %.test target itself
+    make -j$N -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test/")
 
     # Remove coverage information from lines with non-deterministic coverage.
     # These lines are annotated with a comment containing "nocoverage".
@@ -130,13 +126,13 @@ coverage()
 # extract publictests and run them independently
 publictests()
 {
-    make -f posix.mak -j$N publictests DUB=$DUB
-}
+    # checkout a specific version of https://github.com/dlang/tools
+    if [ ! -d ../tools ] ; then
+        clone https://github.com/dlang/tools.git ../tools master
+    fi
+    git -C ../tools checkout df3dfa3061d25996ac98158d3bdb3525c8d89445
 
-# check modules for public unittests
-has_public_example()
-{
-    make -f posix.mak -j$N has_public_example DUB=$DUB
+    make -f posix.mak -j$N publictests DUB=$DUB
 }
 
 case $1 in
@@ -144,7 +140,8 @@ case $1 in
     setup-repos) setup_repos ;;
     coverage) coverage ;;
     publictests) publictests ;;
-    has_public_example) has_public_example;;
     style_lint) style_lint ;;
+    # has_public_example has been removed and is kept for compatibility with older PRs
+    has_public_example) echo "OK" ;;
     *) echo "Unknown command"; exit 1;;
 esac

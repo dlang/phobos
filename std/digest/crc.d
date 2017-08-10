@@ -18,16 +18,16 @@ $(TR $(TDNW Helpers) $(TD $(MYREF crcHexString) $(MYREF crc32Of) $(MYREF crc64EC
 )
 
  *
- * This module conforms to the APIs defined in $(D std.digest.digest). To understand the
- * differences between the template and the OOP API, see $(D std.digest.digest).
+ * This module conforms to the APIs defined in $(D std.digest). To understand the
+ * differences between the template and the OOP API, see $(MREF std, digest).
  *
- * This module publicly imports $(D std.digest.digest) and can be used as a stand-alone
+ * This module publicly imports $(MREF std, digest) and can be used as a stand-alone
  * module.
  *
  * Note:
  * CRCs are usually printed with the MSB first. When using
- * $(REF toHexString, std,digest,digest) the result will be in an unexpected
- * order. Use $(REF toHexString, std,digest,digest)'s optional order parameter
+ * $(REF toHexString, std,digest) the result will be in an unexpected
+ * order. Use $(REF toHexString, std,digest)'s optional order parameter
  * to specify decreasing order for the correct result. The $(LREF crcHexString)
  * alias can also be used for this purpose.
  *
@@ -58,7 +58,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF crcHexString) $(MYREF crc32Of) $(MYREF crc64EC
  */
 module std.digest.crc;
 
-public import std.digest.digest;
+public import std.digest;
 
 version(unittest)
     import std.exception;
@@ -133,7 +133,7 @@ private T[256][8] genTables(T)(T polynomial)
 
 /**
  * Template API CRC32 implementation.
- * See $(D std.digest.digest) for differences between template and OOP API.
+ * See $(D std.digest) for differences between template and OOP API.
  */
 alias CRC32 = CRC!(32, 0xEDB88320);
 
@@ -461,7 +461,7 @@ struct CRC(uint N, ulong P) if (N == 32 || N == 64)
 }
 
 /**
- * This is a convenience alias for $(REF digest, std,digest,digest) using the
+ * This is a convenience alias for $(REF digest, std,digest) using the
  * CRC32 implementation.
  *
  * Params:
@@ -496,7 +496,7 @@ ubyte[4] crc32Of(T...)(T data)
 }
 
 /**
- * This is a convenience alias for $(REF digest, std,digest,digest) using the
+ * This is a convenience alias for $(REF digest, std,digest) using the
  * CRC64-ECMA implementation.
  *
  * Params:
@@ -569,7 +569,6 @@ ubyte[8] crc64ISOOf(T...)(T data)
 }
 
 /**
- * This is a convenience alias for $(REF toHexString, std,digest,digest)
  * producing the usual CRC32 string output.
  */
 public alias crcHexString = toHexString!(Order.decreasing);
@@ -578,9 +577,9 @@ public alias crcHexString = toHexString!(Order.decreasing, 16);
 
 /**
  * OOP API CRC32 implementation.
- * See $(D std.digest.digest) for differences between template and OOP API.
+ * See $(D std.digest) for differences between template and OOP API.
  *
- * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!CRC32), see
+ * This is an alias for $(D $(REF WrapperDigest, std,digest)!CRC32), see
  * there for more information.
  */
 alias CRC32Digest = WrapperDigest!CRC32;

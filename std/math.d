@@ -787,10 +787,9 @@ real tan(real x) @trusted pure nothrow @nogc
         jc      trigerr                 ; // x is NAN, infinity, or empty
                                           // 387's can handle subnormals
 SC18:   fptan                           ;
-        fstp    ST(0)                   ; // dump X, which is always 1
         fstsw   AX                      ;
         sahf                            ;
-        jnp     Lret                    ; // C2 = 1 (x is out of range)
+        jnp     Clear1                  ; // C2 = 1 (x is out of range)
 
         // Do argument reduction to bring x into range
         fldpi                           ;
@@ -807,6 +806,10 @@ trigerr:
         fstp    ST(0)                   ; // dump theta
     }
     return real.nan;
+
+Clear1: asm pure nothrow @nogc{
+        fstp    ST(0)                   ; // dump X, which is always 1
+    }
 
 Lret: {}
     }
@@ -834,10 +837,9 @@ Lret: {}
         jnz     trigerr                 ; // x is NAN, infinity, or empty
                                           // 387's can handle subnormals
 SC18:   fptan                           ;
-        fstp    ST(0)                   ; // dump X, which is always 1
         fstsw   AX                      ;
         test    AH,4                    ;
-        jz      Lret                    ; // C2 = 1 (x is out of range)
+        jz      Clear1                  ; // C2 = 1 (x is out of range)
 
         // Do argument reduction to bring x into range
         fldpi                           ;
@@ -855,6 +857,10 @@ trigerr:
         fstp    ST(0)                   ; // dump theta
     }
     return real.nan;
+
+Clear1: asm pure nothrow @nogc{
+        fstp    ST(0)                   ; // dump X, which is always 1
+    }
 
 Lret: {}
     }
@@ -2608,7 +2614,7 @@ if (isFloatingPoint!T)
             vf *= F.RECIP_EPSILON;
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ex - F.EXPBIAS - T.mant_dig + 1;
-            vu[F.EXPPOS_SHORT] = (~F.EXPMASK & vu[F.EXPPOS_SHORT]) | 0x3FFE;
+            vu[F.EXPPOS_SHORT] = ((-1 - F.EXPMASK) & vu[F.EXPPOS_SHORT]) | 0x3FFE;
         }
         return vf;
     }
@@ -2689,7 +2695,7 @@ if (isFloatingPoint!T)
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ((ex - F.EXPBIAS) >> 4) - T.mant_dig + 1;
             vu[F.EXPPOS_SHORT] =
-                cast(ushort)((~F.EXPMASK & vu[F.EXPPOS_SHORT]) | 0x3FE0);
+                cast(ushort)(((-1 - F.EXPMASK) & vu[F.EXPPOS_SHORT]) | 0x3FE0);
         }
         return vf;
     }
@@ -2729,7 +2735,7 @@ if (isFloatingPoint!T)
             ex = vu[F.EXPPOS_SHORT] & F.EXPMASK;
             exp = ((ex - F.EXPBIAS) >> 7) - T.mant_dig + 1;
             vu[F.EXPPOS_SHORT] =
-                cast(ushort)((~F.EXPMASK & vu[F.EXPPOS_SHORT]) | 0x3F00);
+                cast(ushort)(((-1 - F.EXPMASK) & vu[F.EXPPOS_SHORT]) | 0x3F00);
         }
         return vf;
     }
@@ -4914,12 +4920,22 @@ assert(rint(1.1) == 1);
  */
 struct FloatingPointControl
 {
-    alias RoundingMode = uint;
+    alias RoundingMode = uint; ///
 
-    /** IEEE rounding modes.
-     * The default mode is roundToNearest.
-     */
-    version(ARM)
+    version(StdDdoc)
+    {
+        enum : RoundingMode
+        {
+            /** IEEE rounding modes.
+             * The default mode is roundToNearest.
+             */
+            roundToNearest,
+            roundDown, /// ditto
+            roundUp, /// ditto
+            roundToZero /// ditto
+        }
+    }
+    else version(ARM)
     {
         enum : RoundingMode
         {
@@ -4950,10 +4966,40 @@ struct FloatingPointControl
         }
     }
 
-    /** IEEE hardware exceptions.
-     *  By default, all exceptions are masked (disabled).
-     */
-    version(ARM)
+    //// Change the floating-point hardware rounding mode
+    @property void rounding(RoundingMode newMode) @nogc
+    {
+        initialize();
+        setControlState((getControlState() & (-1 - ROUNDING_MASK)) | (newMode & ROUNDING_MASK));
+    }
+
+    /// Returns: the currently active rounding mode
+    @property static RoundingMode rounding() @nogc
+    {
+        return cast(RoundingMode)(getControlState() & ROUNDING_MASK);
+    }
+
+    version(StdDdoc)
+    {
+        enum : uint
+        {
+            /** IEEE hardware exceptions.
+             *  By default, all exceptions are masked (disabled).
+             *
+             *  severeExceptions = The overflow, division by zero, and invalid
+             *  exceptions.
+             */
+            subnormalException,
+            inexactException, /// ditto
+            underflowException, /// ditto
+            overflowException, /// ditto
+            divByZeroException, /// ditto
+            invalidException, /// ditto
+            severeExceptions, /// ditto
+            allExceptions, /// ditto
+        }
+    }
+    else version(ARM)
     {
         enum : uint
         {
@@ -4963,7 +5009,6 @@ struct FloatingPointControl
             overflowException     = 0x0400,
             divByZeroException    = 0x0200,
             invalidException      = 0x0100,
-            /// Severe = The overflow, division by zero, and invalid exceptions.
             severeExceptions   = overflowException | divByZeroException
                                  | invalidException,
             allExceptions      = severeExceptions | underflowException
@@ -4979,7 +5024,6 @@ struct FloatingPointControl
             underflowException    = 0x0020,
             overflowException     = 0x0040,
             invalidException      = 0x0080,
-            /// Severe = The overflow, division by zero, and invalid exceptions.
             severeExceptions   = overflowException | divByZeroException
                                  | invalidException,
             allExceptions      = severeExceptions | underflowException
@@ -4996,7 +5040,6 @@ struct FloatingPointControl
             divByZeroException    = 0x04,
             subnormalException    = 0x02,
             invalidException      = 0x01,
-            /// Severe = The overflow, division by zero, and invalid exceptions.
             severeExceptions   = overflowException | divByZeroException
                                  | invalidException,
             allExceptions      = severeExceptions | underflowException
@@ -5072,13 +5115,6 @@ public:
             setControlState(getControlState() & ~(exceptions & EXCEPTION_MASK));
     }
 
-    //// Change the floating-point hardware rounding mode
-    @property void rounding(RoundingMode newMode) @nogc
-    {
-        initialize();
-        setControlState((getControlState() & ~ROUNDING_MASK) | (newMode & ROUNDING_MASK));
-    }
-
     /// Returns: the exceptions which are currently enabled (unmasked)
     @property static uint enabledExceptions() @nogc
     {
@@ -5087,12 +5123,6 @@ public:
             return (getControlState() & EXCEPTION_MASK) ^ EXCEPTION_MASK;
         else
             return (getControlState() & EXCEPTION_MASK);
-    }
-
-    /// Returns: the currently active rounding mode
-    @property static RoundingMode rounding() @nogc
-    {
-        return cast(RoundingMode)(getControlState() & ROUNDING_MASK);
     }
 
     ///  Clear all pending exceptions, then restore the original exception state and rounding mode.
@@ -5286,9 +5316,9 @@ private:
 
 /*********************************
  * Determines if $(D_PARAM x) is NaN.
- * params:
+ * Params:
  *  x = a floating point number.
- * returns:
+ * Returns:
  *  $(D true) if $(D_PARAM x) is Nan.
  */
 bool isNaN(X)(X x) @nogc @trusted pure nothrow
@@ -5374,9 +5404,9 @@ if (isFloatingPoint!(X))
 
 /*********************************
  * Determines if $(D_PARAM x) is finite.
- * params:
+ * Params:
  *  x = a floating point number.
- * returns:
+ * Returns:
  *  $(D true) if $(D_PARAM x) is finite.
  */
 bool isFinite(X)(X x) @trusted pure nothrow @nogc
@@ -5417,9 +5447,9 @@ bool isFinite(X)(X x) @trusted pure nothrow @nogc
  *
  * A normalized number must not be zero, subnormal, infinite nor $(NAN).
  *
- * params:
+ * Params:
  *  x = a floating point number.
- * returns:
+ * Returns:
  *  $(D true) if $(D_PARAM x) is normalized.
  */
 
@@ -5467,9 +5497,9 @@ bool isNormal(X)(X x) @trusted pure nothrow @nogc
  * Subnormals (also known as "denormal number"), have a 0 exponent
  * and a 0 most significant mantissa bit.
  *
- * params:
+ * Params:
  *  x = a floating point number.
- * returns:
+ * Returns:
  *  $(D true) if $(D_PARAM x) is a denormal number.
  */
 bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
@@ -5529,9 +5559,9 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
 
 /*********************************
  * Determines if $(D_PARAM x) is $(PLUSMN)$(INFIN).
- * params:
+ * Params:
  *  x = a floating point number.
- * returns:
+ * Returns:
  *  $(D true) if $(D_PARAM x) is $(PLUSMN)$(INFIN).
  */
 bool isInfinity(X)(X x) @nogc @trusted pure nothrow
@@ -5874,7 +5904,7 @@ real NaN(ulong payload) @trusted pure nothrow @nogc
     }
 }
 
-@safe pure nothrow @nogc unittest
+@system pure nothrow @nogc unittest // not @safe because taking address of local.
 {
     static if (floatTraits!(real).realFormat == RealFormat.ieeeDouble)
     {
@@ -6323,7 +6353,7 @@ if (isFloatingPoint!(F) && isIntegral!(G))
         default:
         }
 
-        m = -n;
+        m = cast(typeof(m))(0 - n);
         v = p / x;
     }
     else
@@ -7482,6 +7512,12 @@ bool approxEqual(T, U)(T lhs, U rhs)
 
     real r = tan(-2.0L);
     assert(fabs(r - 2.18504f) < .00001);
+
+    // Verify correct behavior for large inputs
+    assert(!isNaN(tan(0x1p63)));
+    assert(!isNaN(tan(0x1p300L)));
+    assert(!isNaN(tan(-0x1p63)));
+    assert(!isNaN(tan(-0x1p300L)));
 }
 
 @safe pure nothrow unittest
@@ -7596,7 +7632,7 @@ if (isFloatingPoint!T)
             if (var.bytes[F.SIGNPOS_BYTE] & 0x80)
             {
                 var.bits.bulk = ~var.bits.bulk;
-                var.bits.rem = ~var.bits.rem;
+                var.bits.rem = cast(typeof(var.bits.rem))(-1 - var.bits.rem); // ~var.bits.rem
             }
             else
             {
@@ -7747,7 +7783,7 @@ private T powIntegralImpl(PowType type, T)(T val)
     else
     {
         static if (isSigned!T)
-            return cast(Unqual!T) (val < 0 ? -(T(1) << bsr(-val) + type) : T(1) << bsr(val) + type);
+            return cast(Unqual!T) (val < 0 ? -(T(1) << bsr(0 - val) + type) : T(1) << bsr(val) + type);
         else
             return cast(Unqual!T) (T(1) << bsr(val) + type);
     }

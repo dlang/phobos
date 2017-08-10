@@ -75,7 +75,8 @@ enum JSONOptions
 {
     none,                       /// standard parsing
     specialFloatLiterals = 0x1, /// encode NaN and Inf float values as strings
-    escapeNonAsciiChars = 0x2   /// encode non ascii characters with an unicode escape sequence
+    escapeNonAsciiChars = 0x2,  /// encode non ascii characters with an unicode escape sequence
+    doNotEscapeSlashes = 0x4,   /// do not escape slashes ('/')
 }
 
 /**
@@ -1153,7 +1154,13 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
             {
                 case '"':       json.put("\\\"");       break;
                 case '\\':      json.put("\\\\");       break;
-                case '/':       json.put("\\/");        break;
+
+                case '/':
+                    if (!(options & JSONOptions.doNotEscapeSlashes))
+                        json.put('\\');
+                    json.put('/');
+                    break;
+
                 case '\b':      json.put("\\b");        break;
                 case '\f':      json.put("\\f");        break;
                 case '\n':      json.put("\\n");        break;
@@ -1841,4 +1848,12 @@ pure nothrow @safe unittest // issue 15884
     import std.utf;
     assert(parseJSON("\"\xFF\"".byChar).str == "\xFF");
     assert(parseJSON("\"\U0001D11E\"".byChar).str == "\U0001D11E");
+}
+
+@safe unittest // JSONOptions.doNotEscapeSlashes (issue 17587)
+{
+    assert(parseJSON(`"/"`).toString == `"\/"`);
+    assert(parseJSON(`"\/"`).toString == `"\/"`);
+    assert(parseJSON(`"/"`).toString(JSONOptions.doNotEscapeSlashes) == `"/"`);
+    assert(parseJSON(`"\/"`).toString(JSONOptions.doNotEscapeSlashes) == `"/"`);
 }

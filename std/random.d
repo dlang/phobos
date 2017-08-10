@@ -23,21 +23,6 @@ useful. The standard library provides an alias $(D_PARAM Random) for
 whichever generator it considers the most fit for the target
 environment.
 
-Example:
-
-----
-// Generate a uniformly-distributed integer in the range [0, 14]
-auto i = uniform(0, 15);
-
-// Generate a uniformly-distributed real in the range [0, 100)
-// using a specific random generator
-Random gen;
-auto r = uniform(0.0L, 100.0L, gen);
-
-// Generate a 32-bit random number
-auto l = uniform!uint();
-----
-
 In addition to random number generators, this module features
 distributions, which skew a generator's output statistical
 distribution in various ways. So far the uniform distribution for
@@ -69,6 +54,26 @@ module std.random;
 
 import std.range.primitives;
 import std.traits;
+
+///
+@safe unittest
+{
+    // seed a random generator with a constant
+    auto rnd = Random(42);
+
+    // Generate a uniformly-distributed integer in the range [0, 14]
+    // If no random generator is passed, the global `rndGen` would be used
+    auto i = uniform(0, 15, rnd);
+    assert(i == 12);
+
+    // Generate a uniformly-distributed real in the range [0, 100)
+    auto r = uniform(0.0L, 100.0L, rnd);
+    assert(r == 79.65429843861011285);
+
+    // Generate a 32-bit random number
+    auto u = uniform!uint(rnd);
+    assert(u == 4083286876);
+}
 
 version(unittest)
 {

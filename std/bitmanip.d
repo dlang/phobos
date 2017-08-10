@@ -115,7 +115,7 @@ private template createAccessors(
             // setter
                 ~"@property void " ~ name ~ "(bool v) @safe pure nothrow @nogc { "
                 ~"if (v) "~store~" |= "~myToString(maskAllElse)~";"
-                ~"else "~store~" &= ~cast(typeof("~store~"))"~myToString(maskAllElse)~";}\n";
+                ~"else "~store~" &= cast(typeof("~store~"))(-1-cast(typeof("~store~"))"~myToString(maskAllElse)~");}\n";
         }
         else
         {
@@ -134,7 +134,7 @@ private template createAccessors(
                 ~"assert(v >= "~name~`_min, "Value is smaller than the minimum value of bitfield '`~name~`'"); `
                 ~"assert(v <= "~name~`_max, "Value is greater than the maximum value of bitfield '`~name~`'"); `
                 ~store~" = cast(typeof("~store~"))"
-                ~" (("~store~" & ~cast(typeof("~store~"))"~myToString(maskAllElse)~")"
+                ~" (("~store~" & (-1-cast(typeof("~store~"))"~myToString(maskAllElse)~"))"
                 ~" | ((cast(typeof("~store~")) v << "~myToString(offset)~")"
                 ~" & "~myToString(maskAllElse)~"));}\n"
             // constants

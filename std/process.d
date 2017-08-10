@@ -166,7 +166,8 @@ input, output, and error streams.
 
 The function returns immediately, leaving the child _process to execute
 in parallel with its parent.  It is recommended to always call $(LREF wait)
-on the returned $(LREF Pid), as detailed in the documentation for $(D wait).
+on the returned $(LREF Pid) unless the process was spawned with
+$(D Config.detached) flag, as detailed in the documentation for $(D wait).
 
 Command_line:
 There are four overloads of this function.  The first two take an array
@@ -339,7 +340,8 @@ version(Posix) private enum InternalError : ubyte
     noerror,
     exec,
     chdir,
-    getrlimit
+    getrlimit,
+    doubleFork,
 }
 
 /*
@@ -406,7 +408,7 @@ private Pid spawnProcessImpl(in char[][] args,
             throw new ProcessException("Not a directory: " ~ cast(string) workDir);
     }
 
-    int getFD(ref File f) { return core.stdc.stdio.fileno(f.getFP()); }
+    static int getFD(ref File f) { return core.stdc.stdio.fileno(f.getFP()); }
 
     // Get the file descriptors of the streams.
     // These could potentially be invalid, but that is OK.  If so, later calls
@@ -415,16 +417,30 @@ private Pid spawnProcessImpl(in char[][] args,
     auto stdoutFD = getFD(stdout);
     auto stderrFD = getFD(stderr);
 
+    // We don't have direct access to the errors that may happen in a child process.
+    // So we use this pipe to deliver them.
     int[2] forkPipe;
     if (core.sys.posix.unistd.pipe(forkPipe) == 0)
-    {
         setCLOEXEC(forkPipe[1], true);
-    }
     else
-    {
         throw ProcessException.newFromErrno("Could not create pipe to check startup of child");
-    }
     scope(exit) close(forkPipe[0]);
+
+    /*
+    To create detached process, we use double fork technique
+    but we don't have a direct access to the second fork pid from the caller side thus use a pipe.
+    We also can't reuse forkPipe for that purpose
+    because we can't predict the order in which pid and possible error will be written
+    since the first and the second forks will run in parallel.
+    */
+    int[2] pidPipe;
+    if (config & Config.detached)
+    {
+        if (core.sys.posix.unistd.pipe(pidPipe) != 0)
+            throw ProcessException.newFromErrno("Could not create pipe to get process pid");
+        setCLOEXEC(pidPipe[1], true);
+    }
+    scope(exit) if (config & Config.detached) close(pidPipe[0]);
 
     static void abortOnError(int forkPipeOut, InternalError errorType, int error) nothrow
     {
@@ -435,10 +451,17 @@ private Pid spawnProcessImpl(in char[][] args,
         assert(0);
     }
 
+    void closePipeWriteEnds()
+    {
+        close(forkPipe[1]);
+        if (config & Config.detached)
+            close(pidPipe[1]);
+    }
+
     auto id = core.sys.posix.unistd.fork();
     if (id < 0)
     {
-        close(forkPipe[1]);
+        closePipeWriteEnds();
         throw ProcessException.newFromErrno("Failed to spawn new process");
     }
 
@@ -450,8 +473,11 @@ private Pid spawnProcessImpl(in char[][] args,
         // Child process
 
         // no need for the read end of pipe on child side
+        if (config & Config.detached)
+            close(pidPipe[0]);
         close(forkPipe[0]);
         immutable forkPipeOut = forkPipe[1];
+        immutable pidPipeOut = pidPipe[1];
 
         // Set the working directory.
         if (workDirFD >= 0)
@@ -465,80 +491,110 @@ private Pid spawnProcessImpl(in char[][] args,
             close(workDirFD);
         }
 
-        // Redirect streams and close the old file descriptors.
-        // In the case that stderr is redirected to stdout, we need
-        // to backup the file descriptor since stdout may be redirected
-        // as well.
-        if (stderrFD == STDOUT_FILENO)  stderrFD = dup(stderrFD);
-        dup2(stdinFD,  STDIN_FILENO);
-        dup2(stdoutFD, STDOUT_FILENO);
-        dup2(stderrFD, STDERR_FILENO);
-
-        // Ensure that the standard streams aren't closed on execute, and
-        // optionally close all other file descriptors.
-        setCLOEXEC(STDIN_FILENO, false);
-        setCLOEXEC(STDOUT_FILENO, false);
-        setCLOEXEC(STDERR_FILENO, false);
-        if (!(config & Config.inheritFDs))
+        void execProcess()
         {
-            import core.stdc.stdlib : malloc;
-            import core.sys.posix.poll : pollfd, poll, POLLNVAL;
-            import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
+            // Redirect streams and close the old file descriptors.
+            // In the case that stderr is redirected to stdout, we need
+            // to backup the file descriptor since stdout may be redirected
+            // as well.
+            if (stderrFD == STDOUT_FILENO) stderrFD = dup(stderrFD);
+            dup2(stdinFD,  STDIN_FILENO);
+            dup2(stdoutFD, STDOUT_FILENO);
+            dup2(stderrFD, STDERR_FILENO);
 
-            // Get the maximum number of file descriptors that could be open.
-            rlimit r;
-            if (getrlimit(RLIMIT_NOFILE, &r) != 0)
-            {
-                abortOnError(forkPipeOut, InternalError.getrlimit, .errno);
-            }
-            immutable maxDescriptors = cast(int) r.rlim_cur;
+            // Ensure that the standard streams aren't closed on execute, and
+            // optionally close all other file descriptors.
+            setCLOEXEC(STDIN_FILENO, false);
+            setCLOEXEC(STDOUT_FILENO, false);
+            setCLOEXEC(STDERR_FILENO, false);
 
-            // The above, less stdin, stdout, and stderr
-            immutable maxToClose = maxDescriptors - 3;
+            if (!(config & Config.inheritFDs))
+            {
+                import core.stdc.stdlib : malloc;
+                import core.sys.posix.poll : pollfd, poll, POLLNVAL;
+                import core.sys.posix.sys.resource : rlimit, getrlimit, RLIMIT_NOFILE;
 
-            // Call poll() to see which ones are actually open:
-            pollfd* pfds = cast(pollfd*) malloc(pollfd.sizeof * maxToClose);
-            foreach (i; 0 .. maxToClose)
-            {
-                pfds[i].fd = i + 3;
-                pfds[i].events = 0;
-                pfds[i].revents = 0;
-            }
-            if (poll(pfds, maxToClose, 0) >= 0)
-            {
+                // Get the maximum number of file descriptors that could be open.
+                rlimit r;
+                if (getrlimit(RLIMIT_NOFILE, &r) != 0)
+                {
+                    abortOnError(forkPipeOut, InternalError.getrlimit, .errno);
+                }
+                immutable maxDescriptors = cast(int) r.rlim_cur;
+
+                // The above, less stdin, stdout, and stderr
+                immutable maxToClose = maxDescriptors - 3;
+
+                // Call poll() to see which ones are actually open:
+                auto pfds = cast(pollfd*) malloc(pollfd.sizeof * maxToClose);
                 foreach (i; 0 .. maxToClose)
                 {
-                    // don't close pipe write end
-                    if (pfds[i].fd == forkPipeOut) continue;
-                    // POLLNVAL will be set if the file descriptor is invalid.
-                    if (!(pfds[i].revents & POLLNVAL)) close(pfds[i].fd);
+                    pfds[i].fd = i + 3;
+                    pfds[i].events = 0;
+                    pfds[i].revents = 0;
                 }
+                if (poll(pfds, maxToClose, 0) >= 0)
+                {
+                    foreach (i; 0 .. maxToClose)
+                    {
+                        // don't close pipe write end
+                        if (pfds[i].fd == forkPipeOut) continue;
+                        // POLLNVAL will be set if the file descriptor is invalid.
+                        if (!(pfds[i].revents & POLLNVAL)) close(pfds[i].fd);
+                    }
+                }
+                else
+                {
+                    // Fall back to closing everything.
+                    foreach (i; 3 .. maxDescriptors)
+                    {
+                        if (i == forkPipeOut) continue;
+                        close(i);
+                    }
+                }
+            }
+            else // This is already done if we don't inherit descriptors.
+            {
+                // Close the old file descriptors, unless they are
+                // either of the standard streams.
+                if (stdinFD  > STDERR_FILENO)  close(stdinFD);
+                if (stdoutFD > STDERR_FILENO)  close(stdoutFD);
+                if (stderrFD > STDERR_FILENO)  close(stderrFD);
+            }
+
+            // Execute program.
+            core.sys.posix.unistd.execve(argz[0], argz.ptr, envz);
+
+            // If execution fails, exit as quickly as possible.
+            abortOnError(forkPipeOut, InternalError.exec, .errno);
+        }
+
+        if (config & Config.detached)
+        {
+            auto secondFork = core.sys.posix.unistd.fork();
+            if (secondFork == 0)
+            {
+                close(pidPipeOut);
+                execProcess();
+            }
+            else if (secondFork == -1)
+            {
+                auto secondForkErrno = .errno;
+                close(pidPipeOut);
+                abortOnError(forkPipeOut, InternalError.doubleFork, secondForkErrno);
             }
             else
             {
-                // Fall back to closing everything.
-                foreach (i; 3 .. maxDescriptors)
-                {
-                    if (i == forkPipeOut) continue;
-                    close(i);
-                }
+                core.sys.posix.unistd.write(pidPipeOut, &secondFork, pid_t.sizeof);
+                close(pidPipeOut);
+                close(forkPipeOut);
+                _exit(0);
             }
         }
         else
-        { // This is already done if we don't inherit descriptors.
-
-            // Close the old file descriptors, unless they are
-            // either of the standard streams.
-            if (stdinFD  > STDERR_FILENO)  close(stdinFD);
-            if (stdoutFD > STDERR_FILENO)  close(stdoutFD);
-            if (stderrFD > STDERR_FILENO)  close(stderrFD);
+        {
+            execProcess();
         }
-
-        // Execute program.
-        core.sys.posix.unistd.execve(argz[0], argz.ptr, envz);
-
-        // If execution fails, exit as quickly as possible.
-        abortOnError(forkPipeOut, InternalError.exec, .errno);
     }
 
     if (id == 0)
@@ -548,18 +604,29 @@ private Pid spawnProcessImpl(in char[][] args,
     }
     else
     {
-        close(forkPipe[1]);
+        closePipeWriteEnds();
         auto status = InternalError.noerror;
         auto readExecResult = core.sys.posix.unistd.read(forkPipe[0], &status, status.sizeof);
-        if (readExecResult == -1)
-            throw ProcessException.newFromErrno("Could not read from pipe to get child status");
+        // Save error number just in case if subsequent "waitpid" fails and overrides errno
+        immutable lastError = .errno;
 
+        if (config & Config.detached)
+        {
+            // Forked child exits right after creating second fork. So it should be safe to wait here.
+            import core.sys.posix.sys.wait : waitpid;
+            int waitResult;
+            waitpid(id, &waitResult, 0);
+        }
+
+        if (readExecResult == -1)
+            throw ProcessException.newFromErrno(lastError, "Could not read from pipe to get child status");
+
+        bool owned = true;
         if (status != InternalError.noerror)
         {
             int error;
-            string errorMsg;
             readExecResult = read(forkPipe[0], &error, error.sizeof);
-
+            string errorMsg;
             final switch (status)
             {
                 case InternalError.chdir:
@@ -571,14 +638,23 @@ private Pid spawnProcessImpl(in char[][] args,
                 case InternalError.exec:
                     errorMsg = "Failed to execute program";
                     break;
+                case InternalError.doubleFork:
+                    // Can happen only when starting detached process
+                    assert(config & Config.detached);
+                    errorMsg = "Failed to fork twice";
+                    break;
                 case InternalError.noerror:
                     assert(false);
             }
-
             if (readExecResult == error.sizeof)
                 throw ProcessException.newFromErrno(error, errorMsg);
-            else
-                throw new ProcessException(errorMsg);
+            throw new ProcessException(errorMsg);
+        }
+        else if (config & Config.detached)
+        {
+            owned = false;
+            if (read(pidPipe[0], &id, id.sizeof) != id.sizeof)
+                throw ProcessException.newFromErrno("Could not read from pipe to get detached process id");
         }
 
         // Parent process:  Close streams and return.
@@ -591,7 +667,7 @@ private Pid spawnProcessImpl(in char[][] args,
         if (!(config & Config.retainStderr) && stderrFD > STDERR_FILENO
                                             && stderrFD != getFD(std.stdio.stderr))
             stderr.close();
-        return new Pid(id);
+        return new Pid(id, owned);
     }
 }
 
@@ -689,7 +765,11 @@ private Pid spawnProcessImpl(in char[] commandLine,
 
     // close the thread handle in the process info structure
     CloseHandle(pi.hThread);
-
+    if (config & Config.detached)
+    {
+        CloseHandle(pi.hProcess);
+        return new Pid(pi.dwProcessId);
+    }
     return new Pid(pi.dwProcessId, pi.hProcess);
 }
 
@@ -1009,33 +1089,49 @@ version (Posix) @system unittest
         echo $INPUT error $2 >&2";
 
     // Pipes
-    auto pipei = pipe();
-    auto pipeo = pipe();
-    auto pipee = pipe();
-    auto pid = spawnProcess([prog.path, "foo", "bar"],
-                             pipei.readEnd, pipeo.writeEnd, pipee.writeEnd);
-    pipei.writeEnd.writeln("input");
-    pipei.writeEnd.flush();
-    assert(pipeo.readEnd.readln().chomp() == "input output foo");
-    assert(pipee.readEnd.readln().chomp().stripRight() == "input error bar");
-    wait(pid);
+    void testPipes(Config config)
+    {
+        auto pipei = pipe();
+        auto pipeo = pipe();
+        auto pipee = pipe();
+        auto pid = spawnProcess([prog.path, "foo", "bar"],
+                                    pipei.readEnd, pipeo.writeEnd, pipee.writeEnd, null, config);
+        pipei.writeEnd.writeln("input");
+        pipei.writeEnd.flush();
+        assert(pipeo.readEnd.readln().chomp() == "input output foo");
+        assert(pipee.readEnd.readln().chomp().stripRight() == "input error bar");
+        if (!(config & Config.detached))
+            wait(pid);
+    }
 
     // Files
-    import std.ascii, std.file, std.uuid;
-    auto pathi = buildPath(tempDir(), randomUUID().toString());
-    auto patho = buildPath(tempDir(), randomUUID().toString());
-    auto pathe = buildPath(tempDir(), randomUUID().toString());
-    std.file.write(pathi, "INPUT"~std.ascii.newline);
-    auto filei = File(pathi, "r");
-    auto fileo = File(patho, "w");
-    auto filee = File(pathe, "w");
-    pid = spawnProcess([prog.path, "bar", "baz" ], filei, fileo, filee);
-    wait(pid);
-    assert(readText(patho).chomp() == "INPUT output bar");
-    assert(readText(pathe).chomp().stripRight() == "INPUT error baz");
-    remove(pathi);
-    remove(patho);
-    remove(pathe);
+    void testFiles(Config config)
+    {
+        import std.ascii, std.file, std.uuid, core.thread;
+        auto pathi = buildPath(tempDir(), randomUUID().toString());
+        auto patho = buildPath(tempDir(), randomUUID().toString());
+        auto pathe = buildPath(tempDir(), randomUUID().toString());
+        std.file.write(pathi, "INPUT"~std.ascii.newline);
+        auto filei = File(pathi, "r");
+        auto fileo = File(patho, "w");
+        auto filee = File(pathe, "w");
+        auto pid = spawnProcess([prog.path, "bar", "baz" ], filei, fileo, filee, null, config);
+        if (!(config & Config.detached))
+            wait(pid);
+        else
+            // We need to wait a little to ensure that the process has finished and data was written to files
+            Thread.sleep(2.seconds);
+        assert(readText(patho).chomp() == "INPUT output bar");
+        assert(readText(pathe).chomp().stripRight() == "INPUT error baz");
+        remove(pathi);
+        remove(patho);
+        remove(pathe);
+    }
+
+    testPipes(Config.none);
+    testFiles(Config.none);
+    testPipes(Config.detached);
+    testFiles(Config.detached);
 }
 
 @system unittest // Error handling in spawnProcess()
@@ -1043,6 +1139,8 @@ version (Posix) @system unittest
     import std.exception : assertThrown;
     assertThrown!ProcessException(spawnProcess("ewrgiuhrifuheiohnmnvqweoijwf"));
     assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf"));
+    assertThrown!ProcessException(spawnProcess("ewrgiuhrifuheiohnmnvqweoijwf", null, Config.detached));
+    assertThrown!ProcessException(spawnProcess("./rgiuhrifuheiohnmnvqweoijwf", null, Config.detached));
 
     // can't execute malformed file with executable permissions
     version(Posix)
@@ -1055,6 +1153,7 @@ version (Posix) @system unittest
         scope(exit) remove(deleteme);
         setAttributes(deleteme, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
         assertThrown!ProcessException(spawnProcess(deleteme));
+        assertThrown!ProcessException(spawnProcess(deleteme, null, Config.detached));
     }
 }
 
@@ -1079,10 +1178,12 @@ version (Posix) @system unittest
 
     auto directory = uniqueTempPath();
     assertThrown!ProcessException(spawnProcess([prog.path], null, Config.none, directory));
+    assertThrown!ProcessException(spawnProcess([prog.path], null, Config.detached, directory));
 
     std.file.write(directory, "foo");
     scope(exit) remove(directory);
     assertThrown!ProcessException(spawnProcess([prog.path], null, Config.none, directory));
+    assertThrown!ProcessException(spawnProcess([prog.path], null, Config.detached, directory));
 
     // can't run in directory if user does not have search permission on this directory
     version(Posix)
@@ -1093,6 +1194,7 @@ version (Posix) @system unittest
         scope(exit) rmdirRecurse(directoryNoSearch);
         setAttributes(directoryNoSearch, S_IRUSR);
         assertThrown!ProcessException(spawnProcess(prog.path, null, Config.none, directoryNoSearch));
+        assertThrown!ProcessException(spawnProcess(prog.path, null, Config.detached, directoryNoSearch));
     }
 }
 
@@ -1319,6 +1421,15 @@ enum Config
     process.
     */
     inheritFDs = 32,
+
+    /**
+    Spawn process in detached state. This removes the need in calling
+    $(LREF wait) to clean up the process resources.
+
+    Note:
+    Calling $(LREF wait) or $(LREF kill) with the resulting $(D Pid) is invalid.
+    */
+    detached = 64,
 }
 
 
@@ -1377,6 +1488,8 @@ private:
     version (Posix)
     int performWait(bool block) @trusted
     {
+        import std.exception : enforceEx;
+        enforceEx!ProcessException(owned, "Can't wait on a detached process");
         if (_processID == terminated) return _exitCode;
         int exitCode;
         while (true)
@@ -1425,6 +1538,8 @@ private:
     {
         int performWait(bool block) @trusted
         {
+            import std.exception : enforceEx;
+            enforceEx!ProcessException(owned, "Can't wait on a detached process");
             if (_processID == terminated) return _exitCode;
             assert(_handle != INVALID_HANDLE_VALUE);
             if (block)
@@ -1463,6 +1578,10 @@ private:
     // sensible value if _processID == terminated.
     int _exitCode;
 
+    // Whether the process can be waited for by wait() for or killed by kill().
+    // False if process was started as detached. True otherwise.
+    bool owned;
+
     // Pids are only meant to be constructed inside this module, so
     // we make the constructor private.
     version (Windows)
@@ -1472,13 +1591,20 @@ private:
         {
             _processID = pid;
             _handle = handle;
+            this.owned = true;
+        }
+        this(int pid) @safe pure nothrow
+        {
+            _processID = pid;
+            this.owned = false;
         }
     }
     else
     {
-        this(int id) @safe pure nothrow
+        this(int id, bool owned) @safe pure nothrow
         {
             _processID = id;
+            this.owned = owned;
         }
     }
 }
@@ -1489,9 +1615,11 @@ Waits for the process associated with $(D pid) to terminate, and returns
 its exit status.
 
 In general one should always _wait for child processes to terminate
-before exiting the parent process.  Otherwise, they may become
-"$(HTTP en.wikipedia.org/wiki/Zombie_process,zombies)" – processes
-that are defunct, yet still occupy a slot in the OS process table.
+before exiting the parent process unless the process was spawned as detached
+(that was spawned with $(D Config.detached) flag).
+Otherwise, they may become "$(HTTP en.wikipedia.org/wiki/Zombie_process,zombies)"
+– processes that are defunct, yet still occupy a slot in the OS process table.
+You should not and must not wait for detached processes, since you don't own them.
 
 If the process has already terminated, this function returns directly.
 The exit code is cached, so that if wait() is called multiple times on
@@ -1506,7 +1634,7 @@ Signal codes are defined in the $(D core.sys.posix.signal) module
 (which corresponds to the $(D signal.h) POSIX header).
 
 Throws:
-$(LREF ProcessException) on failure.
+$(LREF ProcessException) on failure or on attempt to wait for detached process.
 
 Example:
 See the $(LREF spawnProcess) documentation.
@@ -1561,7 +1689,7 @@ Returns:
 An $(D std.typecons.Tuple!(bool, "terminated", int, "status")).
 
 Throws:
-$(LREF ProcessException) on failure.
+$(LREF ProcessException) on failure or on attempt to wait for detached process.
 
 Example:
 ---
@@ -1639,6 +1767,7 @@ assert(wait(pid) == -SIGKILL); // Negative return value on POSIX!
 
 Throws:
 $(LREF ProcessException) on error (e.g. if codeOrSignal is invalid).
+    or on attempt to kill detached process.
     Note that failure to terminate the process is considered a "normal"
     outcome, not an error.$(BR)
 */
@@ -1655,6 +1784,8 @@ void kill(Pid pid)
 /// ditto
 void kill(Pid pid, int codeOrSignal)
 {
+    import std.exception : enforceEx;
+    enforceEx!ProcessException(pid.owned, "Can't kill detached process");
     version (Windows)
     {
         if (codeOrSignal < 0) throw new ProcessException("Invalid exit code");
@@ -1709,6 +1840,25 @@ void kill(Pid pid, int codeOrSignal)
     do { s = tryWait(pid); } while (!s.terminated);
     version (Windows)    assert(s.status == 123);
     else version (Posix) assert(s.status == -SIGKILL);
+    assertThrown!ProcessException(kill(pid));
+}
+
+@system unittest // wait() and kill() detached process
+{
+    import core.thread;
+    import std.exception : assertThrown;
+    TestScript prog = "exit 0";
+    auto pid = spawnProcess([prog.path], null, Config.detached);
+    /*
+    This sleep is needed because we can't wait() for detached process to end
+    and therefore TestScript destructor may run at the same time as /bin/sh tries to start the script.
+    This leads to the annoying message like "/bin/sh: 0: Can't open /tmp/std.process temporary file" to appear when running tests.
+    It does not happen in unittests with non-detached processes because we always wait() for them to finish.
+    */
+    Thread.sleep(1.seconds);
+    assert(!pid.owned);
+    version(Windows) assert(pid.osHandle == INVALID_HANDLE_VALUE);
+    assertThrown!ProcessException(wait(pid));
     assertThrown!ProcessException(kill(pid));
 }
 
@@ -2168,7 +2318,6 @@ struct ProcessPipes
     /// The $(LREF Pid) of the child process.
     @property Pid pid() @safe nothrow
     {
-        assert(_pid !is null);
         return _pid;
     }
 
@@ -2433,19 +2582,8 @@ class ProcessException : Exception
                                          string file = __FILE__,
                                          size_t line = __LINE__)
     {
-        import std.conv : to;
-        version (CRuntime_Glibc)
-        {
-            import core.stdc.string : strerror_r;
-            char[1024] buf;
-            auto errnoMsg = to!string(
-                core.stdc.string.strerror_r(error, buf.ptr, buf.length));
-        }
-        else
-        {
-            import core.stdc.string : strerror;
-            auto errnoMsg = to!string(strerror(error));
-        }
+        import std.exception : errnoString;
+        auto errnoMsg = errnoString(error);
         auto msg = customMsg.empty ? errnoMsg
                                    : customMsg ~ " (" ~ errnoMsg ~ ')';
         return new ProcessException(msg, file, line);

@@ -17,13 +17,13 @@
  */
 module std.mmfile;
 
-private import core.stdc.errno;
-private import core.stdc.stdio;
-private import core.stdc.stdlib;
+import core.stdc.errno;
+import core.stdc.stdio;
+import core.stdc.stdlib;
 import std.conv, std.exception, std.stdio;
-private import std.file;
-private import std.path;
-private import std.string;
+import std.file;
+import std.path;
+import std.string;
 
 import std.internal.cstring;
 
@@ -31,16 +31,16 @@ import std.internal.cstring;
 
 version (Windows)
 {
-    private import core.sys.windows.windows;
-    private import std.utf;
-    private import std.windows.syserror;
+    import core.sys.windows.windows;
+    import std.utf;
+    import std.windows.syserror;
 }
 else version (Posix)
 {
-    private import core.sys.posix.fcntl;
-    private import core.sys.posix.sys.mman;
-    private import core.sys.posix.sys.stat;
-    private import core.sys.posix.unistd;
+    import core.sys.posix.fcntl;
+    import core.sys.posix.sys.mman;
+    import core.sys.posix.sys.stat;
+    import core.sys.posix.unistd;
 }
 else
 {

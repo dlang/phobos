@@ -104,14 +104,30 @@ alias Base64URL = Base64Impl!('-', '_');
     assert(Base64URL.decode("g9cwegE_") == data);
 }
 
+/**
+ * Unpadded variation of Base64 encoding that is safe for use in URLs and
+ * filenames, as used in RFCs 4648 and 7515 (JWS/JWT/JWE).
+ *
+ * See $(LREF Base64Impl) for a description of available methods.
+ */
+alias Base64URLNoPadding = Base64Impl!('-', '_', Base64.NoPadding);
+
+///
+@safe unittest
+{
+    ubyte[] data = [0x83, 0xd7, 0x30, 0x7b, 0xef];
+    assert(Base64URLNoPadding.encode(data) == "g9cwe-8");
+    assert(Base64URLNoPadding.decode("g9cwe-8") == data);
+}
 
 /**
  * Template for implementing Base64 encoding and decoding.
  *
  * For most purposes, direct usage of this template is not necessary; instead,
- * this module provides two default implementations: $(LREF Base64) and
- * $(LREF Base64URL), that implement basic Base64 encoding and a variant
- * intended for use in URLs and filenames, respectively.
+ * this module provides default implementations: $(LREF Base64), implementing
+ * basic Base64 encoding, and $(LREF Base64URL) and $(LREF Base64URLNoPadding),
+ * that implement the Base64 variant for use in URLs and filenames, with
+ * and without padding, respectively.
  *
  * Customized Base64 encoding schemes can be implemented by instantiating this
  * template with the appropriate arguments. For example:
@@ -178,7 +194,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
         ubyte[] data = [0x1a, 0x2b, 0x3c, 0x4d, 0x5d, 0x6e];
 
         // Allocate a buffer large enough to hold the encoded string.
-        auto buf = new char[encodeLength(data.length)];
+        auto buf = new char[Base64.encodeLength(data.length)];
 
         Base64.encode(data, buf);
         assert(buf == "Gis8TV1u");
@@ -1721,6 +1737,21 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
     }
 }
 
+///
+@safe unittest
+{
+    import std.string : representation;
+
+    // pre-defined: alias Base64 = Base64Impl!('+', '/');
+    ubyte[] emptyArr;
+    assert(Base64.encode(emptyArr) == "");
+    assert(Base64.encode("f".representation) == "Zg==");
+    assert(Base64.encode("foo".representation) == "Zm9v");
+
+    alias Base64Re = Base64Impl!('!', '=', Base64.NoPadding);
+    assert(Base64Re.encode("f".representation) == "Zg");
+    assert(Base64Re.encode("foo".representation) == "Zm9v");
+}
 
 /**
  * Exception thrown upon encountering Base64 encoding or decoding errors.
@@ -1732,6 +1763,13 @@ class Base64Exception : Exception
     {
         super(s, fn, ln);
     }
+}
+
+///
+@system unittest
+{
+    import std.exception : assertThrown;
+    assertThrown!Base64Exception(Base64.decode("ab|c"));
 }
 
 

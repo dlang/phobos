@@ -767,6 +767,8 @@ struct SharedFreeList(ParentAllocator,
     import core.atomic : atomicOp, cas;
     import core.internal.spinlock : SpinLock;
 
+    private enum unchecked = minSize == 0 && maxSize == unbounded;
+
     static if (minSize != chooseAtRuntime)
     {
         alias min = minSize;
@@ -817,7 +819,7 @@ struct SharedFreeList(ParentAllocator,
         @property size_t max() const shared { return _max; }
         @property void max(size_t x) shared
         {
-            enforce(x >= _min && x >= (void*).sizeof);
+            enforce(x >= min && x >= (void*).sizeof);
             enforce(cas(&_max, chooseAtRuntime, x),
                 "SharedFreeList.max must be initialized exactly once.");
         }
@@ -1045,6 +1047,28 @@ struct SharedFreeList(ParentAllocator,
         resetNodes();
         return result;
     }
+
+    /**
+    Nonstandard function that minimizes the memory usage of the freelist by
+    freeing each element in turn. Defined only if $(D ParentAllocator) defines
+    $(D deallocate).
+    */
+    static if (hasMember!(ParentAllocator, "deallocate") && !unchecked)
+    void minimize() shared
+    {
+        lock.lock();
+        scope(exit) lock.unlock();
+
+        for (auto n = _root; n;)
+        {
+            auto tmp = n.next;
+            parent.deallocate((cast(ubyte*) n)[0 .. max]);
+            n = tmp;
+        }
+
+        _root = null;
+        resetNodes();
+    }
 }
 
 @system unittest
@@ -1094,7 +1118,42 @@ struct SharedFreeList(ParentAllocator,
 @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
+    static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
+    auto b = a.allocate(100);
+    auto c = a.allocate(100);
+    a.deallocate(c);
+    assert(a.nodes == 1);
+    c = [];
+    a.minimize();
+    assert(a.nodes == 0);
+    a.deallocate(b);
+    assert(a.nodes == 1);
+    b = [];
+    a.minimize();
+    assert(a.nodes == 0);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
+    auto b = a.allocate(100);
+    auto c = a.allocate(100);
+    assert(a.nodes == 0);
+    a.deallocate(b);
+    a.deallocate(c);
+    assert(a.nodes == 2);
+    b = [];
+    c = [];
+    a.minimize();
+    assert(a.nodes == 0);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
+    scope(exit) a.deallocateAll();
     auto c = a.allocate(64);
     assert(a.reallocate(c, 96));
     assert(c.length == 96);
@@ -1105,6 +1164,7 @@ struct SharedFreeList(ParentAllocator,
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime, chooseAtRuntime) a;
+    scope(exit) a.deallocateAll;
     a.allocate(64);
 }
 
@@ -1112,6 +1172,7 @@ struct SharedFreeList(ParentAllocator,
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, 30, 40) a;
+    scope(exit) a.deallocateAll;
     a.allocate(64);
 }
 
@@ -1119,5 +1180,26 @@ struct SharedFreeList(ParentAllocator,
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, 30, 40, chooseAtRuntime) a;
+    scope(exit) a.deallocateAll;
+    a.allocate(64);
+}
+
+@system unittest
+{
+    // Pull request #5556
+    import std.experimental.allocator.mallocator : Mallocator;
+    shared SharedFreeList!(Mallocator, 0, chooseAtRuntime) a;
+    scope(exit) a.deallocateAll;
+    a.max = 64;
+    a.allocate(64);
+}
+
+@system unittest
+{
+    // Pull request #5556
+    import std.experimental.allocator.mallocator : Mallocator;
+    shared SharedFreeList!(Mallocator, chooseAtRuntime, 64) a;
+    scope(exit) a.deallocateAll;
+    a.min = 32;
     a.allocate(64);
 }

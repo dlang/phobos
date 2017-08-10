@@ -591,7 +591,7 @@ SbrkRegion) adversely.
 */
 version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
 {
-    private import core.sys.posix.pthread : pthread_mutex_init, pthread_mutex_destroy,
+    import core.sys.posix.pthread : pthread_mutex_init, pthread_mutex_destroy,
         pthread_mutex_t, pthread_mutex_lock, pthread_mutex_unlock,
         PTHREAD_MUTEX_INITIALIZER;
     private static shared pthread_mutex_t sbrkMutex = PTHREAD_MUTEX_INITIALIZER;
