@@ -164,7 +164,7 @@ Returns:
 enum bool isInputRange(R) =
     is(typeof(R.init) == R)
     && is(ReturnType!((R r) => r.empty) == bool)
-    && is(typeof((R r) => r.front))
+    && is(typeof((return ref R r) => r.front))
     && !is(ReturnType!((R r) => r.front) == void)
     && is(typeof((R r) => r.popFront));
 
