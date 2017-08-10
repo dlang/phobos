@@ -220,6 +220,31 @@ enum bool isInputRange(R) =
     static assert(!isInputRange!VoidFront);
 }
 
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+
+    static struct R
+    {
+        static struct Front
+        {
+            R* impl;
+            @property int value() { return impl._front; }
+            alias value this;
+        }
+
+        int _front;
+
+        @property bool empty() { return _front >= 3; }
+        @property auto front() { return Front(&this); }
+        void popFront() { _front++; }
+    }
+    R r;
+
+    static assert(isInputRange!R);
+    assert(r.equal([ 0, 1, 2 ]));
+}
+
 /+
 puts the whole raw element $(D e) into $(D r). doPut will not attempt to
 iterate, slice or transcode $(D e) in any way shape or form. It will $(B only)
