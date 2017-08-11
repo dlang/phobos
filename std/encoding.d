@@ -8,7 +8,7 @@ for arbitrary _encoding and decoding of characters, arbitrary transcoding
 between strings of different type, as well as validation and sanitization.
 
 Encodings currently supported are UTF-8, UTF-16, UTF-32, ASCII, ISO-8859-1
-(also known as LATIN-1), ISO-8859-2 (LATIN-2), WINDOWS-1250, WINDOWS-1251 
+(also known as LATIN-1), ISO-8859-2 (LATIN-2), WINDOWS-1250, WINDOWS-1251
 and WINDOWS-1252.
 
 $(SCRIPT inhibitQuickIndex = 1;)
@@ -88,7 +88,7 @@ auto e = EncodingScheme.create("utf-8");
 
 This library supplies $(LREF EncodingScheme) subclasses for ASCII,
 ISO-8859-1 (also known as LATIN-1), ISO-8859-2 (LATIN-2), WINDOWS-1250,
-WINDOWS-1251, WINDOWS-1252, UTF-8, and (on little-endian architectures) 
+WINDOWS-1251, WINDOWS-1252, UTF-8, and (on little-endian architectures)
 UTF-16LE and UTF-32LE; or (on big-endian architectures) UTF-16BE and UTF-32BE.
 
 This library provides a mechanism whereby other modules may add $(LREF
@@ -3299,6 +3299,75 @@ class EncodingSchemeWindows1252 : EncodingScheme
             return cast(immutable(ubyte)[])"?";
         }
     }
+}
+
+@system unittest
+{
+    static string[] schemeNames =
+    [
+        "ASCII",
+        "ISO-8859-1",
+        "ISO-8859-2",
+        "windows-1250",
+        "windows-1251",
+        "windows-1252"
+    ];
+
+    EncodingScheme[] schemes;
+
+    foreach (name;schemeNames)
+    {
+       schemes ~= EncodingScheme.create(name);
+    }
+
+    ubyte[1] buffer;
+    static dchar[][] valid =
+    [
+        //Valid ASCII
+        ['\u0001','\u0020','\u0040','\u0060','\u007F'],
+        //Vaild 8859-1
+        ['\u0001','\u0020','\u0070','\u00DA','\u00FF'],
+        //Valid 8859-2
+        ['\u0020','\u00D7','\u00DF','\u010F','\u02D9'],
+        //Valid 1250
+        ['\u0020','\u20AC','\u201E','\u2021','\u2039'],
+        //Valid 1251
+        ['\u0402','\u00A4','\u0415','\u0439','\u044F'],
+        //Valid 1252
+        ['\u20AC','\u0160','\u2019','\u2122','\u0178'],
+    ];
+
+    static const(ubyte)[] invalid = [0xA0,0xFF,0xFF,0x81,0x98,0x81];
+
+    foreach (i,scheme;schemes)
+    {
+        assert(scheme.toString() == schemeNames[i],"Error in the name of encoding scheme"~schemeNames[i]);
+        assert(!scheme.canEncode('\uFFFD'));
+        assert(scheme.encodedLength('A') == 1);
+        const(ubyte)[] encodeStr;
+        dchar[] decStr;
+        foreach (chr;valid[i])
+        {
+            assert(scheme.encode(chr,buffer) == 1);
+            encodeStr ~= buffer;
+            const(ubyte)[] buf = buffer;
+            decStr ~= scheme.decode(buf);
+        }
+
+        assert(scheme.isValid(encodeStr),"Not correctly encoded UTF => " ~ schemeNames[i]);
+        assert(valid[i] == decStr,"Error encode/decode UTF8 <=> " ~ schemeNames[i]);
+
+        if (schemeNames[i] == "ISO-8859-1" || schemeNames[i] == "ISO-8859-2")
+        {
+            assert(scheme.safeDecode(invalid) != INVALID_SEQUENCE);
+        }
+        else
+        {
+            assert(scheme.safeDecode(invalid) == INVALID_SEQUENCE);
+        }
+        assert(scheme.replacementSequence() == cast(immutable(ubyte)[])"?");
+    }
+    assert(invalid.length == 0);
 }
 
 /**
