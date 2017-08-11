@@ -6534,11 +6534,8 @@ Transversal!(RangeOfRanges, opt) transversal
 
 struct Transposed(RangeOfRanges)
 if (isForwardRange!RangeOfRanges &&
-    isInputRange!(ElementType!RangeOfRanges) &&
-    hasAssignableElements!RangeOfRanges)
+    isInputRange!(ElementType!RangeOfRanges))
 {
-    //alias ElementType = typeof(map!"a.front"(RangeOfRanges.init));
-
     this(RangeOfRanges input)
     {
         this._input = input;
@@ -6546,10 +6543,7 @@ if (isForwardRange!RangeOfRanges &&
 
     @property auto front()
     {
-        import std.algorithm.iteration : filter, map;
-        return _input.save
-                     .filter!(a => !a.empty)
-                     .map!(a => a.front);
+        return TransposedIndex!RangeOfRanges(_input, 0);
     }
 
     void popFront()
@@ -6562,17 +6556,23 @@ if (isForwardRange!RangeOfRanges &&
             if (!e.empty)
             {
                 e.popFront();
-                r.front = e;
+                static if (hasAssignableElements!(ElementType!RangeOfRanges))
+                {
+                    r.front = e;
+                }
             }
 
             r.popFront();
         }
     }
 
-    // ElementType opIndex(size_t n)
-    // {
-    //     return _input[n].front;
-    // }
+    static if (isRandomAccessRange!RangeOfRanges && isRandomAccessRange!(ElementType!RangeOfRanges))
+    {
+        auto opIndex(size_t n)
+        {
+            return TransposedIndex!RangeOfRanges(_input, n);
+        }
+    }
 
     @property bool empty()
     {
@@ -6595,6 +6595,40 @@ private:
     RangeOfRanges _input;
 }
 
+struct TransposedIndex(RangeOfRanges)
+if (isRandomAccessRange!RangeOfRanges &&
+    isRandomAccessRange!(ElementType!RangeOfRanges))
+{
+    this(RangeOfRanges input, size_t index)
+    {
+        this._input = input;
+        this._index = index;
+    }
+
+    ref auto opIndex(size_t n)
+    {
+        return _input[n][_index];
+    }
+
+    auto empty()
+    {
+        return _input.empty;
+    }
+
+    void popFront()
+    {
+        _input.popFront();
+    }
+
+    ref auto front()
+    {
+        return _input.front[_index];
+    }
+private:
+    RangeOfRanges _input;
+    const size_t _index;
+}
+
 @safe unittest
 {
     // Boundary case: transpose of empty range should be empty
@@ -6614,14 +6648,38 @@ private:
     ]));
 }
 
+// Issue 17742
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    auto ror = [[0,1,2,3,4], [5,6,7,8,9,10], [11,12,13,14,15]];
+
+    assert(ror[2][4] == 15);
+    auto result = ror.transposed;
+    assert(result[4][2] == 15);
+    auto row = result[2];
+    assert(equal(row, [2,7,13]));
+    result[4][2] = 7;
+    assert(result[4][2] == 7);
+    result.front.front = 9;
+    assert(result[0][0] == 9);
+}
+
+// Issue 17741
+@safe unittest
+{
+    import std.algorithm.iteration : map;
+    auto ror = 5.iota.map!(y => 5.iota.map!(x => x * y));
+    auto result = ror.transposed;
+}
+
 /**
 Given a range of ranges, returns a range of ranges where the $(I i)'th subrange
 contains the $(I i)'th elements of the original subranges.
  */
 Transposed!RangeOfRanges transposed(RangeOfRanges)(RangeOfRanges rr)
 if (isForwardRange!RangeOfRanges &&
-    isInputRange!(ElementType!RangeOfRanges) &&
-    hasAssignableElements!RangeOfRanges)
+    isInputRange!(ElementType!RangeOfRanges))
 {
     return Transposed!RangeOfRanges(rr);
 }
