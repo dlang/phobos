@@ -276,7 +276,8 @@ SRC_STD_INTERNAL= \
 	std\internal\unicode_grapheme.d \
 	std\internal\unicode_norm.d \
 	std\internal\scopebuffer.d \
-	std\internal\test\dummyrange.d
+	std\internal\test\dummyrange.d \
+	std\internal\test\range.d
 
 SRC_STD_INTERNAL_DIGEST= \
 	std\internal\digest\sha_SSSE3.d
