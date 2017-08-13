@@ -2098,7 +2098,24 @@ L_largenegative:
  *    $(TR $(TD $(NAN))        $(TD $(NAN))    )
  *  )
  */
+pragma(inline, true)
 real exp2(real x) @nogc @trusted pure nothrow
+{
+    version(InlineAsm_X86_Any)
+    {
+        if (!__ctfe)
+            return exp2Asm(x);
+        else
+            return exp2Impl(x);
+    }
+    else
+    {
+        return exp2Impl(x);
+    }
+}
+
+version(InlineAsm_X86_Any)
+private real exp2Asm(real x) @nogc @trusted pure nothrow
 {
     version(D_InlineAsm_X86)
     {
@@ -2288,81 +2305,84 @@ L_was_nan:
         }
     }
     else
+        static assert(0);
+}
+
+private real exp2Impl(real x) @nogc @trusted pure nothrow
+{
+    // Coefficients for exp2(x)
+    static if (floatTraits!real.realFormat == RealFormat.ieeeQuadruple)
     {
-        // Coefficients for exp2(x)
-        static if (floatTraits!real.realFormat == RealFormat.ieeeQuadruple)
-        {
-            static immutable real[5] P = [
-                9.079594442980146270952372234833529694788E12L,
-                1.530625323728429161131811299626419117557E11L,
-                5.677513871931844661829755443994214173883E8L,
-                6.185032670011643762127954396427045467506E5L,
-                1.587171580015525194694938306936721666031E2L
-            ];
+        static immutable real[5] P = [
+            9.079594442980146270952372234833529694788E12L,
+            1.530625323728429161131811299626419117557E11L,
+            5.677513871931844661829755443994214173883E8L,
+            6.185032670011643762127954396427045467506E5L,
+            1.587171580015525194694938306936721666031E2L
+        ];
 
-            static immutable real[6] Q = [
-                2.619817175234089411411070339065679229869E13L,
-                1.490560994263653042761789432690793026977E12L,
-                1.092141473886177435056423606755843616331E10L,
-                2.186249607051644894762167991800811827835E7L,
-                1.236602014442099053716561665053645270207E4L,
-                1.0
-            ];
-        }
-        else
-        {
-            static immutable real[3] P = [
-                2.0803843631901852422887E6L,
-                3.0286971917562792508623E4L,
-                6.0614853552242266094567E1L,
-            ];
-            static immutable real[4] Q = [
-                6.0027204078348487957118E6L,
-                3.2772515434906797273099E5L,
-                1.7492876999891839021063E3L,
-                1.0000000000000000000000E0L,
-            ];
-        }
-
-        // Overflow and Underflow limits.
-        enum real OF =  16_384.0L;
-        enum real UF = -16_382.0L;
-
-        // Special cases. Raises an overflow or underflow flag accordingly,
-        // except in the case for CTFE, where there are no hardware controls.
-        if (isNaN(x))
-            return x;
-        if (x > OF)
-        {
-            if (__ctfe)
-                return real.infinity;
-            else
-                return real.max * copysign(real.max, real.infinity);
-        }
-        if (x < UF)
-        {
-            if (__ctfe)
-                return 0.0;
-            else
-                return real.min_normal * copysign(real.min_normal, 0.0);
-        }
-
-        // Separate into integer and fractional parts.
-        int n = cast(int) floor(x + 0.5);
-        x -= n;
-
-        // Rational approximation:
-        //  exp2(x) = 1.0 + 2x P(x^^2) / (Q(x^^2) - P(x^^2))
-        const real xx = x * x;
-        const real px = x * poly(xx, P);
-        x = px / (poly(xx, Q) - px);
-        x = 1.0 + ldexp(x, 1);
-
-        // Scale by power of 2.
-        x = ldexp(x, n);
-
-        return x;
+        static immutable real[6] Q = [
+            2.619817175234089411411070339065679229869E13L,
+            1.490560994263653042761789432690793026977E12L,
+            1.092141473886177435056423606755843616331E10L,
+            2.186249607051644894762167991800811827835E7L,
+            1.236602014442099053716561665053645270207E4L,
+            1.0
+        ];
     }
+    else
+    {
+        static immutable real[3] P = [
+            2.0803843631901852422887E6L,
+            3.0286971917562792508623E4L,
+            6.0614853552242266094567E1L,
+        ];
+        static immutable real[4] Q = [
+            6.0027204078348487957118E6L,
+            3.2772515434906797273099E5L,
+            1.7492876999891839021063E3L,
+            1.0000000000000000000000E0L,
+        ];
+    }
+
+    // Overflow and Underflow limits.
+    enum real OF =  16_384.0L;
+    enum real UF = -16_382.0L;
+
+    // Special cases. Raises an overflow or underflow flag accordingly,
+    // except in the case for CTFE, where there are no hardware controls.
+    if (isNaN(x))
+        return x;
+    if (x > OF)
+    {
+        if (__ctfe)
+            return real.infinity;
+        else
+            return real.max * copysign(real.max, real.infinity);
+    }
+    if (x < UF)
+    {
+        if (__ctfe)
+            return 0.0;
+        else
+            return real.min_normal * copysign(real.min_normal, 0.0);
+    }
+
+    // Separate into integer and fractional parts.
+    int n = cast(int) floor(x + 0.5);
+    x -= n;
+
+    // Rational approximation:
+    //  exp2(x) = 1.0 + 2x P(x^^2) / (Q(x^^2) - P(x^^2))
+    const real xx = x * x;
+    const real px = x * poly(xx, P);
+    x = px / (poly(xx, Q) - px);
+    x = 1.0 + ldexp(x, 1);
+
+    // Scale by power of 2.
+    x = ldexp(x, n);
+
+    return x;
 }
 
 ///
