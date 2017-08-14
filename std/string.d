@@ -2702,6 +2702,8 @@ if ((hasSlicing!Range && hasLength!Range && isSomeChar!(ElementType!Range) ||
     string s = "Hello\nmy\rname\nis";
 
     /* notice the call to `array` to turn the lazy range created by
+    ^ the html code for this line is exposed – shows <code class="lang-d"><span class="pln">array</span></code> on the website
+    
     lineSplitter comparable to the `string[]` created by splitLines.
     */
     assert(lineSplitter(s).array == splitLines(s));
