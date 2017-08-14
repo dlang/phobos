@@ -164,7 +164,7 @@ Returns:
 enum bool isInputRange(R) =
     is(typeof(R.init) == R)
     && is(ReturnType!((R r) => r.empty) == bool)
-    && is(typeof((R r) => r.front))
+    && is(typeof((return ref R r) => r.front))
     && !is(ReturnType!((R r) => r.front) == void)
     && is(typeof((R r) => r.popFront));
 
@@ -218,6 +218,31 @@ enum bool isInputRange(R) =
         void front();
     }
     static assert(!isInputRange!VoidFront);
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+
+    static struct R
+    {
+        static struct Front
+        {
+            R* impl;
+            @property int value() { return impl._front; }
+            alias value this;
+        }
+
+        int _front;
+
+        @property bool empty() { return _front >= 3; }
+        @property auto front() { return Front(&this); }
+        void popFront() { _front++; }
+    }
+    R r;
+
+    static assert(isInputRange!R);
+    assert(r.equal([ 0, 1, 2 ]));
 }
 
 /+
