@@ -2701,8 +2701,8 @@ if ((hasSlicing!Range && hasLength!Range && isSomeChar!(ElementType!Range) ||
 
     string s = "Hello\nmy\rname\nis";
 
-    /* notice the call to `array` to turn the lazy range created by
-    lineSplitter comparable to the `string[]` created by splitLines.
+    /* notice the call to 'array' to turn the lazy range created by
+    lineSplitter comparable to the string[] created by splitLines.
     */
     assert(lineSplitter(s).array == splitLines(s));
 }
