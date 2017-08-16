@@ -1082,3 +1082,27 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     assert(equal!equal(s.matchAll(ctr), outcomes));
     assert(equal!equal(s.bmatch(r), outcomes));
 }
+
+// bugzilla 17667
+@safe unittest
+{
+    import std.algorithm.searching : canFind;
+    void willThrow(T)(T arg, string msg)
+    {
+        auto e = collectException(regex(arg));
+        assert(e.msg.canFind(msg), e.msg);
+    }
+    willThrow([r".", r"[\(\{[\]\}\)]"], "no matching ']' found while parsing character class");
+    willThrow([r"[\", r"123"], "no matching ']' found while parsing character class");
+    willThrow([r"[a-", r"123"], "no matching ']' found while parsing character class");
+    willThrow([r"[a-\", r"123"], "invalid escape sequence");
+    willThrow([r"\", r"123"], "invalid escape sequence");
+}
+
+// bugzilla 17668
+@safe unittest
+{
+    import std.algorithm.searching;
+    auto e = collectException!RegexException(regex(q"<[^]>"));
+    assert(e.msg.canFind("no operand for '^'"));
+}
