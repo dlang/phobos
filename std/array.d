@@ -139,7 +139,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
     }
 }
 
-///
+/// ditto
 ForeachType!(PointerTarget!Range)[] array(Range)(Range r)
 if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range && !isInfinite!Range)
 {
@@ -173,7 +173,15 @@ if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range
         void popFront() {}
     }
 
-    static assert(__traits(compiles, (new MyRange).array));
+    auto arr = (new MyRange).array;
+    assert(arr.empty);
+}
+
+@system pure nothrow unittest
+{
+    immutable int[] a = [1, 2, 3, 4];
+    auto b = (&a).array;
+    assert(b == a);
 }
 
 @system unittest
