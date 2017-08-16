@@ -1182,6 +1182,8 @@ if (isForwardRange!R && is(ElementType!R : dchar))
                     state = State.Start;
                     break;
                 default:
+                    if (current >= privateUseStart && current <= privateUseEnd)
+                       enforce(false, "no matching ']' found while parsing character class");
                     enforce(false, "invalid escape sequence");
                 }
                 break;
@@ -1256,7 +1258,16 @@ if (isForwardRange!R && is(ElementType!R : dchar))
                     end = parseUniHex(pat, 8);
                     break;
                 default:
+                    if (current >= privateUseStart && current <= privateUseEnd)
+                       enforce(false, "no matching ']' found while parsing character class");
                     error("invalid escape sequence");
+                }
+                // Lookahead to check if it's a \T
+                // where T is sub-pattern terminator in multi-pattern scheme
+                if (end == '\\' && !pat.empty)
+                {
+                    if (pat.front >= privateUseStart && pat.front <= privateUseEnd)
+                        enforce(false, "invalid escape sequence");
                 }
                 enforce(last <= end,"inverted range");
                 set.add(last, end + 1);
@@ -1293,6 +1304,7 @@ if (isForwardRange!R && is(ElementType!R : dchar))
             switch (op)
             {
             case Operator.Negate:
+                enforce(!stack.empty, "no operand for '^'");
                 stack.top = stack.top.inverted;
                 break;
             case Operator.Union:
@@ -1364,8 +1376,7 @@ if (isForwardRange!R && is(ElementType!R : dchar))
                     "character class syntax error");
                 enforce(!opstack.empty, "unmatched ']'");
                 opstack.pop();
-                next();
-                if (opstack.empty)
+                if (!next() || opstack.empty)
                     break L_CharsetLoop;
                 auto pair  = parseCharTerm();
                 if (!pair[0].empty)//not only operator e.g. -- or ~~
@@ -1390,10 +1401,13 @@ if (isForwardRange!R && is(ElementType!R : dchar))
                 }
                 vstack.push(pair[0]);
             }
-
         }while (!empty || !opstack.empty);
         while (!opstack.empty)
-            apply(opstack.pop(),vstack);
+        {
+            enforce(opstack.top != Operator.Open,
+                "no matching ']' found while parsing character class");
+            apply(opstack.pop(), vstack);
+        }
         assert(vstack.length == 1);
         g.charsetToIr(vstack.top);
     }
@@ -1483,6 +1497,13 @@ if (isForwardRange!R && is(ElementType!R : dchar))
             g.markBackref(nref);
             break;
         default:
+            // Lookahead to check if it's a \T
+            // where T is sub-pattern terminator in multi-pattern scheme
+            if (current == '\\' && !pat.empty)
+            {
+                if (pat.front >= privateUseStart && current <= privateUseEnd)
+                    enforce(false, "invalid escape sequence");
+            }
             if (current >= privateUseStart && current <= privateUseEnd)
             {
                 g.endPattern(current - privateUseStart + 1);
