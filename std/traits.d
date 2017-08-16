@@ -4596,8 +4596,14 @@ template ImplicitConversionTargets(T)
     else static if (is(T : Object))
         alias ImplicitConversionTargets = TransitiveBaseTypeTuple!(T);
     else static if (isDynamicArray!T && !is(typeof(T.init[0]) == const))
-        alias ImplicitConversionTargets =
-            AliasSeq!(const(Unqual!(typeof(T.init[0])))[]);
+    {
+       static if (is(typeof(T.init[0]) == shared))
+           alias ImplicitConversionTargets =
+           AliasSeq!(const(shared(Unqual!(typeof(T.init[0]))))[]);
+       else
+           alias ImplicitConversionTargets =
+           AliasSeq!(const(Unqual!(typeof(T.init[0])))[]);
+    }
     else static if (is(T : void*))
         alias ImplicitConversionTargets = AliasSeq!(void*);
     else
