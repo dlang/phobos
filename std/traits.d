@@ -1325,7 +1325,7 @@ template ParameterDefaults(func...)
     static assert(   ParameterDefaults!foo[3] == 0);
 }
 
-unittest // issue 17192
+@safe unittest // issue 17192
 {
     static void func(int i, int PT, int __pd_value, int __pd_val, int __args,
         int name, int args, int val, int ptr, int args_, int val_, int ptr_)
