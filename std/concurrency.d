@@ -19,38 +19,6 @@
  * schedulers are available that multiplex fibers across the main thread or
  * use some combination of the two approaches.
  *
- * Synposis:
- * ---
- * import std.stdio;
- * import std.concurrency;
- *
- * void spawnedFunc(Tid ownerTid)
- * {
- *     // Receive a message from the owner thread.
- *     receive(
- *         (int i) { writeln("Received the number ", i);}
- *     );
- *
- *     // Send a message back to the owner thread
- *     // indicating success.
- *     send(ownerTid, true);
- * }
- *
- * void main()
- * {
- *     // Start spawnedFunc in a new thread.
- *     auto childTid = spawn(&spawnedFunc, thisTid);
- *
- *     // Send the number 42 to this new thread.
- *     send(childTid, 42);
- *
- *     // Receive the result code.
- *     auto wasSuccessful = receiveOnly!(bool);
- *     assert(wasSuccessful);
- *     writeln("Successfully printed number.");
- * }
- * ---
- *
  * Copyright: Copyright Sean Kelly 2009 - 2014.
  * License:   <a href="http://www.boost.org/LICENSE_1_0.txt">Boost License 1.0</a>.
  * Authors:   Sean Kelly, Alex Rønne Petersen, Martin Nowak
@@ -70,7 +38,37 @@ import core.sync.condition;
 import core.sync.mutex;
 import core.thread;
 import std.range.primitives;
+import std.range.interfaces : InputRange;
 import std.traits;
+
+///
+@system unittest
+{
+    __gshared string received;
+    static void spawnedFunc(Tid ownerTid)
+    {
+        import std.conv : text;
+        // Receive a message from the owner thread.
+        receive((int i){
+            received = text("Received the number ", i);
+
+            // Send a message back to the owner thread
+            // indicating success.
+            send(ownerTid, true);
+        });
+    }
+
+    // Start spawnedFunc in a new thread.
+    auto childTid = spawn(&spawnedFunc, thisTid);
+
+    // Send the number 42 to this new thread.
+    send(childTid, 42);
+
+    // Receive the result code.
+    auto wasSuccessful = receiveOnly!(bool);
+    assert(wasSuccessful);
+    assert(received == "Received the number 42");
+}
 
 private
 {
@@ -1496,7 +1494,8 @@ private interface IsGenerator {}
  * }
  * ---
  */
-class Generator(T) : Fiber, IsGenerator
+class Generator(T) :
+    Fiber, IsGenerator, InputRange!T
 {
     /**
      * Initializes a generator object which is associated with a static
@@ -1585,13 +1584,52 @@ class Generator(T) : Fiber, IsGenerator
     }
 
     /**
-     * Returns the most recently generated value.
+     * Returns the most recently generated value by shallow copy.
      */
     final T front() @property
     {
         return *m_value;
     }
 
+    /**
+     * Returns the most recently generated value without executing a
+     * copy contructor. Will not compile for element types defining a
+     * postblit, because Generator does not return by reference.
+     */
+    final T moveFront()
+    {
+        static if (!hasElaborateCopyConstructor!T)
+        {
+            return front;
+        }
+        else
+        {
+            static assert(0,
+                    "Fiber front is always rvalue and thus cannot be moved since it defines a postblit.");
+        }
+    }
+
+    final int opApply(scope int delegate(T) loopBody)
+    {
+        int broken;
+        for (; !empty; popFront())
+        {
+            broken = loopBody(front);
+            if (broken) break;
+        }
+        return broken;
+    }
+
+    final int opApply(scope int delegate(size_t, T) loopBody)
+    {
+        int broken;
+        for (size_t i; !empty; ++i, popFront())
+        {
+            broken = loopBody(i, front);
+            if (broken) break;
+        }
+        return broken;
+    }
 private:
     T* m_value;
 }
@@ -1667,6 +1705,39 @@ void yield(T)(T value)
 
     testScheduler(new ThreadScheduler);
     testScheduler(new FiberScheduler);
+}
+///
+@system unittest
+{
+    import std.range;
+
+    InputRange!int myIota = iota(10).inputRangeObject;
+
+    myIota.popFront();
+    myIota.popFront();
+    assert(myIota.moveFront == 2);
+    assert(myIota.front == 2);
+    myIota.popFront();
+    assert(myIota.front == 3);
+
+    //can be assigned to std.range.interfaces.InputRange directly
+    myIota = new Generator!int(
+    {
+        foreach (i; 0 .. 10) yield(i);
+    });
+
+    myIota.popFront();
+    myIota.popFront();
+    assert(myIota.moveFront == 2);
+    assert(myIota.front == 2);
+    myIota.popFront();
+    assert(myIota.front == 3);
+
+    size_t[2] counter = [0, 0];
+    foreach (i, unused; myIota) counter[] += [1, i];
+
+    assert(myIota.empty);
+    assert(counter == [7, 21]);
 }
 
 private
@@ -2164,7 +2235,7 @@ private
             if (m_last is m_first)
                 m_last = null;
             else if (m_last is n.next)
-                m_last = n;
+                m_last = n; // nocoverage
             Node* to_free = n.next;
             n.next = n.next.next;
             freeNode(to_free);
@@ -2322,12 +2393,12 @@ version (unittest)
 private @property Mutex initOnceLock()
 {
     __gshared Mutex lock;
-    if (auto mtx = atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock))
+    if (auto mtx = cast() atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock))
         return mtx;
     auto mtx = new Mutex;
     if (cas(cast(shared)&lock, cast(shared) null, cast(shared) mtx))
         return mtx;
-    return atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock);
+    return cast() atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock);
 }
 
 /**

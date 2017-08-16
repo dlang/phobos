@@ -1047,9 +1047,8 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
     };
     client.onReceiveStatusLine = (HTTP.StatusLine l) { statusLine = l; };
     client.perform();
-    enforce!CurlException(statusLine.code / 100 == 2,
-                            format("HTTP request returned status code %d (%s)",
-                                   statusLine.code, statusLine.reason));
+    enforce(statusLine.code / 100 == 2, new HTTPStatusException(statusLine.code,
+            format("HTTP request returned status code %d (%s)", statusLine.code, statusLine.reason)));
 
     return _decodeContent!T(content.data, client.p.charset);
 }
@@ -1063,8 +1062,9 @@ private auto _basicHTTP(T)(const(char)[] url, const(void)[] sendData, HTTP clien
         assert(req.hdrs.canFind("GET /path"));
         s.send(httpNotFound());
     });
-    auto e = collectException!CurlException(get(testServer.addr ~ "/path"));
+    auto e = collectException!HTTPStatusException(get(testServer.addr ~ "/path"));
     assert(e.msg == "HTTP request returned status code 404 (Not Found)");
+    assert(e.status == 404);
 }
 
 // Bugzilla 14760 - content length must be reset after post
@@ -1471,7 +1471,7 @@ private mixin template WorkerThreadProtocol(Unit, alias units)
     */
     bool wait(Duration d)
     {
-        import std.datetime : StopWatch;
+        import std.datetime.stopwatch : StopWatch;
 
         if (state == State.gotUnits)
             return true;
@@ -2048,6 +2048,17 @@ private mixin template Protocol()
     }
 
     /**
+       Set the no proxy flag for the specified host names.
+       Params:
+       test = a list of comma host names that do not require
+              proxy to get reached
+    */
+    void setNoProxy(string hosts)
+    {
+        p.curl.set(CurlOption.noproxy, hosts);
+    }
+
+    /**
        Set the local outgoing port range to use.
        This can be used together with the localPort property.
        Params:
@@ -2122,6 +2133,9 @@ private mixin template Protocol()
         http.onReceive = (ubyte[] data) { return data.length; };
         http.setAuthentication("user", "pass");
         http.perform();
+
+        // Bugzilla 17540
+        http.setNoProxy("www.example.com");
     }
 
     /**
@@ -2377,14 +2391,14 @@ private bool decodeLineInto(Terminator, Char = char)(ref const(ubyte)[] basesrc,
   * http.perform();
   * ---
   *
-  * See_Also: $(HTTP www.ietf.org/rfc/rfc2616.txt, RFC2616)
+  * See_Also: $(_HTTP www.ietf.org/rfc/rfc2616.txt, RFC2616)
   *
   */
 struct HTTP
 {
     mixin Protocol;
 
-    import std.datetime : SysTime;
+    import std.datetime.systime : SysTime;
 
     /// Authentication method equal to $(REF CurlAuth, etc,c,curl)
     alias AuthMethod = CurlAuth;
@@ -2933,7 +2947,7 @@ struct HTTP
      *
      * code = http.getTiming(CurlInfo.namelookup_time, val);
      * assert(code == CurlError.ok);
-     *---
+     * ---
      */
     CurlCode getTiming(CurlInfo timing, ref double val)
     {
@@ -3648,7 +3662,7 @@ struct FTP
      *
      * code = http.getTiming(CurlInfo.namelookup_time, val);
      * assert(code == CurlError.ok);
-     *---
+     * ---
      */
     CurlCode getTiming(CurlInfo timing, ref double val)
     {
@@ -4058,6 +4072,33 @@ class CurlTimeoutException : CurlException
     }
 }
 
+/++
+    Exception thrown on HTTP request failures, e.g. 404 Not Found.
++/
+class HTTPStatusException : CurlException
+{
+    /++
+        Params:
+            status = The HTTP status code.
+            msg  = The message for the exception.
+            file = The file where the exception occurred.
+            line = The line number where the exception occurred.
+            next = The previous exception in the chain of exceptions, if any.
+      +/
+    @safe pure nothrow
+    this(int status,
+         string msg,
+         string file = __FILE__,
+         size_t line = __LINE__,
+         Throwable next = null)
+    {
+        super(msg, file, line, next);
+        this.status = status;
+    }
+
+    immutable int status; /// The HTTP status code
+}
+
 /// Equal to $(REF CURLcode, etc,c,curl)
 alias CurlCode = CURLcode;
 
@@ -4158,29 +4199,30 @@ private struct CurlAPI
         enforce!CurlException(!_api.global_init(CurlGlobal.all),
                               "Failed to initialize libcurl");
 
+        static extern(C) void cleanup()
+        {
+            if (_handle is null) return;
+            _api.global_cleanup();
+            version (Posix)
+            {
+                import core.sys.posix.dlfcn : dlclose;
+                dlclose(_handle);
+            }
+            else version (Windows)
+            {
+                import core.sys.windows.windows : FreeLibrary;
+                FreeLibrary(_handle);
+            }
+            else
+                static assert(0, "unimplemented");
+            _api = API.init;
+            _handle = null;
+        }
+
+        import core.stdc.stdlib : atexit;
+        atexit(&cleanup);
+
         return handle;
-    }
-
-    shared static ~this()
-    {
-        if (_handle is null) return;
-
-        _api.global_cleanup();
-        version (Posix)
-        {
-            import core.sys.posix.dlfcn : dlclose;
-            dlclose(_handle);
-        }
-        else version (Windows)
-        {
-            import core.sys.windows.windows : FreeLibrary;
-            FreeLibrary(_handle);
-        }
-        else
-            static assert(0, "unimplemented");
-
-        _api = API.init;
-        _handle = null;
     }
 }
 

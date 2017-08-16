@@ -4,34 +4,62 @@
 This module implements a variety of type constructors, i.e., templates
 that allow construction of new, useful general-purpose types.
 
-Source:    $(PHOBOSSRC std/_typecons.d)
-
-Synopsis:
-
-----
-// value tuples
-alias Coord = Tuple!(float, "x", float, "y", float, "z");
-Coord c;
-c[1] = 1;       // access by index
-c.z = 1;        // access by given name
-alias DicEntry = Tuple!(string, string); // names can be omitted
-
-// Rebindable references to const and immutable objects
-void bar()
-{
-    const w1 = new Widget, w2 = new Widget;
-    w1.foo();
-    // w1 = w2 would not work; can't rebind const object
-    auto r = Rebindable!(const Widget)(w1);
-    // invoke method as if r were a Widget object
-    r.foo();
-    // rebind r to refer to another object
-    r = w2;
-}
-----
+$(SCRIPT inhibitQuickIndex = 1;)
+$(BOOKTABLE,
+$(TR $(TH Category) $(TH Functions))
+$(TR $(TD Tuple) $(TD
+    $(LREF isTuple)
+    $(LREF Tuple)
+    $(LREF tuple)
+    $(LREF reverse)
+))
+$(TR $(TD Flags) $(TD
+    $(LREF BitFlags)
+    $(LREF isBitFlagEnum)
+    $(LREF Flag)
+    $(LREF No)
+    $(LREF Yes)
+))
+$(TR $(TD Memory allocation) $(TD
+    $(LREF RefCounted)
+    $(LREF refCounted)
+    $(LREF RefCountedAutoInitialize)
+    $(LREF scoped)
+    $(LREF Unique)
+))
+$(TR $(TD Code generation) $(TD
+    $(LREF AutoImplement)
+    $(LREF BlackHole)
+    $(LREF generateAssertTrap)
+    $(LREF generateEmptyFunction)
+    $(LREF WhiteHole)
+))
+$(TR $(TD Nullable) $(TD
+    $(LREF Nullable)
+    $(LREF nullable)
+    $(LREF NullableRef)
+    $(LREF nullableRef)
+))
+$(TR $(TD Proxies) $(TD
+    $(LREF Proxy)
+    $(LREF rebindable)
+    $(LREF Rebindable)
+    $(LREF ReplaceType)
+    $(LREF unwrap)
+    $(LREF wrap)
+))
+$(TR $(TD Types) $(TD
+    $(LREF alignForSize)
+    $(LREF Ternary)
+    $(LREF Typedef)
+    $(LREF TypedefType)
+    $(LREF UnqualRef)
+))
+)
 
 Copyright: Copyright the respective authors, 2008-
 License:   $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
+Source:    $(PHOBOSSRC std/_typecons.d)
 Authors:   $(HTTP erdani.org, Andrei Alexandrescu),
            $(HTTP bartoszmilewski.wordpress.com, Bartosz Milewski),
            Don Clugston,
@@ -43,6 +71,38 @@ module std.typecons;
 import core.stdc.stdint : uintptr_t;
 import std.meta; // : AliasSeq, allSatisfy;
 import std.traits;
+
+///
+@safe unittest
+{
+    // value tuples
+    alias Coord = Tuple!(int, "x", int, "y", int, "z");
+    Coord c;
+    c[1] = 1;       // access by index
+    c.z = 1;        // access by given name
+    assert(c == Coord(0, 1, 1));
+
+    // names can be omitted
+    alias DicEntry = Tuple!(string, string);
+
+    // tuples can also be constructed on instantiation
+    assert(tuple(2, 3, 4)[1] == 3);
+    // construction on instantiation works with names too
+    assert(tuple!("x", "y", "z")(2, 3, 4).y == 3);
+
+    // Rebindable references to const and immutable objects
+    {
+        class Widget { void foo() const @safe {} }
+        const w1 = new Widget, w2 = new Widget;
+        w1.foo();
+        // w1 = w2 would not work; can't rebind const object
+        auto r = Rebindable!(const Widget)(w1);
+        // invoke method as if r were a Widget object
+        r.foo();
+        // rebind r to refer to another object
+        r = w2;
+    }
+}
 
 debug(Unique) import std.stdio;
 
@@ -61,8 +121,9 @@ $(D T) to deallocate or clean up any non-GC resources.
 If it is desirable to persist a $(D Unique!T) outside of its original
 scope, then it can be transferred.  The transfer can be explicit, by
 calling $(D release), or implicit, when returning Unique from a
-function. The resource $(D T) can be a polymorphic class object, in
-which case Unique behaves polymorphically too.
+function. The resource $(D T) can be a polymorphic class object or
+instance of an interface, in which case Unique behaves polymorphically
+too.
 
 If $(D T) is a value type, then $(D Unique!T) will be implemented
 as a reference to a $(D T).
@@ -70,7 +131,7 @@ as a reference to a $(D T).
 struct Unique(T)
 {
 /** Represents a reference to $(D T). Resolves to $(D T*) if $(D T) is a value type. */
-static if (is(T:Object))
+static if (is(T == class) || is(T == interface))
     alias RefT = T;
 else
     alias RefT = T*;
@@ -278,6 +339,51 @@ private:
     debug(Unique) writeln("Returned from g");
     assert(ub.isEmpty);
     assert(!ub2.isEmpty);
+}
+
+@system unittest
+{
+    debug(Unique) writeln("Unique interface");
+    interface Bar
+    {
+        int val() const;
+    }
+    class BarImpl : Bar
+    {
+        static int count;
+        this()
+        {
+            count++;
+        }
+        ~this()
+        {
+            count--;
+        }
+        int val() const { return 4; }
+    }
+    alias UBar = Unique!Bar;
+    UBar g(UBar u)
+    {
+        debug(Unique) writeln("inside g");
+        return u.release;
+    }
+    void consume(UBar u)
+    {
+        assert(u.val() == 4);
+        // Resource automatically deleted here
+    }
+    auto ub = UBar(new BarImpl);
+    assert(BarImpl.count == 1);
+    assert(!ub.isEmpty);
+    assert(ub.val == 4);
+    static assert(!__traits(compiles, {auto ub3 = g(ub);}));
+    debug(Unique) writeln("Calling g");
+    auto ub2 = g(ub.release);
+    debug(Unique) writeln("Returned from g");
+    assert(ub.isEmpty);
+    assert(!ub2.isEmpty);
+    consume(ub2.release);
+    assert(BarImpl.count == 0);
 }
 
 @system unittest
@@ -1255,7 +1361,7 @@ private template ReverseTupleSpecs(T...)
 }
 
 // ensure that internal Tuple unittests are compiled
-unittest
+@safe unittest
 {
     Tuple!() t;
 }
@@ -2859,7 +2965,7 @@ Returns:
 
 // https://issues.dlang.org/show_bug.cgi?id=11135
 // disable test until https://issues.dlang.org/show_bug.cgi?id=15316 gets fixed
-version (none) unittest
+version (none) @system unittest
 {
     foreach (T; AliasSeq!(float, double, real))
     {
@@ -3599,6 +3705,9 @@ class NotImplementedError : Error
 $(D AutoImplement) automatically implements (by default) all abstract member
 functions in the class or interface $(D Base) in specified way.
 
+The second version of $(D AutoImplement) automatically implements
+$(D Interface), while deriving from $(D BaseClass).
+
 Params:
   how  = template which specifies _how functions will be implemented/overridden.
 
@@ -3679,9 +3788,21 @@ $(UL
 )
  */
 class AutoImplement(Base, alias how, alias what = isAbstractFunction) : Base
+    if (!is(how == class))
 {
     private alias autoImplement_helper_ =
-        AutoImplement_Helper!("autoImplement_helper_", "Base", Base, how, what);
+        AutoImplement_Helper!("autoImplement_helper_", "Base", Base, typeof(this), how, what);
+    mixin(autoImplement_helper_.code);
+}
+
+/// ditto
+class AutoImplement(
+    Interface, BaseClass, alias how,
+    alias what = isAbstractFunction) : BaseClass, Interface
+    if (is(Interface == interface) && is(BaseClass == class))
+{
+    private alias autoImplement_helper_ = AutoImplement_Helper!(
+            "autoImplement_helper_", "Interface", Interface, typeof(this), how, what);
     mixin(autoImplement_helper_.code);
 }
 
@@ -3691,7 +3812,7 @@ class AutoImplement(Base, alias how, alias what = isAbstractFunction) : Base
  * members, should be minimized.
  */
 private template AutoImplement_Helper(string myName, string baseName,
-        Base, alias generateMethodBody, alias cherrypickMethod)
+        Base, Self, alias generateMethodBody, alias cherrypickMethod)
 {
 private static:
     //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
@@ -3736,11 +3857,18 @@ private static:
     alias targetOverloadSets = enumerateOverloads!(Base, canonicalPicker);
 
     /*
+     * Super class of this AutoImplement instance
+     */
+    alias Super = BaseTypeTuple!(Self)[0];
+    static assert(is(Super == class));
+    static assert(is(Base == interface) || is(Super == Base));
+
+    /*
      * A tuple of the super class' constructors.  Used for forwarding
      * constructor calls.
      */
-    static if (__traits(hasMember, Base, "__ctor"))
-        alias ctorOverloadSet = OverloadSet!("__ctor", __traits(getOverloads, Base, "__ctor"));
+    static if (__traits(hasMember, Super, "__ctor"))
+        alias ctorOverloadSet = OverloadSet!("__ctor", __traits(getOverloads, Super, "__ctor"));
     else
         alias ctorOverloadSet = OverloadSet!("__ctor"); // empty
 
@@ -3935,6 +4063,41 @@ private static:
             void test_shared_const() shared const;
         }
         auto o = new BlackHole!I_8;
+    }
+    // use baseclass
+    {
+        static class C_9
+        {
+            private string foo_;
+
+            this(string s) {
+                foo_ = s;
+            }
+
+            protected string boilerplate() @property
+            {
+                return "Boilerplate stuff.";
+            }
+
+            public string foo() @property
+            {
+                return foo_;
+            }
+        }
+
+        interface I_10
+        {
+            string testMethod(size_t);
+        }
+
+        static string generateTestMethod(C, alias fun)() @property
+        {
+            return "return this.boilerplate[0 .. a0];";
+        }
+
+        auto o = new AutoImplement!(I_10, C_9, generateTestMethod)("Testing");
+        assert(o.testMethod(11) == "Boilerplate");
+        assert(o.foo == "Testing");
     }
     /+ // deep inheritance
     {
@@ -4717,6 +4880,7 @@ if (!isMutable!Target)
 ///
 @system unittest
 {
+    import std.traits : FunctionAttribute, functionAttributes;
     interface A { int run(); }
     interface B { int stop(); @property int status(); }
     class X
@@ -5152,7 +5316,7 @@ scope, they will automatically increment or decrement the reference
 count.  When the reference count goes down to zero, $(D RefCounted)
 will call $(D destroy) against the payload and call $(D free) to
 deallocate the store.  If the $(D T) payload contains any references
-to GC-allocated memory, then $(RefCounted) will add it to the GC memory
+to GC-allocated memory, then `RefCounted` will add it to the GC memory
 that is scanned for pointers, and remove it from GC scanning before
 $(D free) is called on the store.
 
@@ -5425,7 +5589,7 @@ assert(refCountedStore.isInitialized)).
 ///
 pure @system nothrow @nogc unittest
 {
-    // A pair of an $(D int) and a $(D size_t) - the latter being the
+    // A pair of an `int` and a `size_t` - the latter being the
     // reference count - will be dynamically allocated
     auto rc1 = RefCounted!int(5);
     assert(rc1 == 5);
@@ -5720,7 +5884,7 @@ mixin template Proxy(alias a)
 
     static if (!is(typeof(this) == class))
     {
-        private import std.traits;
+        import std.traits;
         static if (isAssignable!ValueType)
         {
             auto ref opAssign(this X)(auto ref typeof(this) v)
@@ -5740,10 +5904,22 @@ mixin template Proxy(alias a)
     auto ref opSliceAssign(this X, V      )(auto ref V v)                             { return a[]     = v; }
     auto ref opSliceAssign(this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return a[b .. e] = v; }
 
-    auto ref opOpAssign     (string op, this X, V      )(auto ref V v)                             { return mixin("a "      ~op~"= v"); }
-    auto ref opIndexOpAssign(string op, this X, V, D...)(auto ref V v, auto ref D i)               { return mixin("a[i] "   ~op~"= v"); }
-    auto ref opSliceOpAssign(string op, this X, V      )(auto ref V v)                             { return mixin("a[] "    ~op~"= v"); }
-    auto ref opSliceOpAssign(string op, this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e) { return mixin("a[b .. e] "~op~"= v"); }
+    auto ref opOpAssign     (string op, this X, V      )(auto ref V v)
+    {
+        return mixin("a "      ~op~"= v");
+    }
+    auto ref opIndexOpAssign(string op, this X, V, D...)(auto ref V v, auto ref D i)
+    {
+        return mixin("a[i] "   ~op~"= v");
+    }
+    auto ref opSliceOpAssign(string op, this X, V      )(auto ref V v)
+    {
+        return mixin("a[] "    ~op~"= v");
+    }
+    auto ref opSliceOpAssign(string op, this X, V, B, E)(auto ref V v, auto ref B b, auto ref E e)
+    {
+        return mixin("a[b .. e] "~op~"= v");
+    }
 
     template opDispatch(string name)
     {
@@ -6630,7 +6806,7 @@ template scoped(T)
             size_t* currD = cast(size_t*) &Scoped_store[$ - size_t.sizeof];
             if (d != *currD)
             {
-                import core.stdc.string;
+                import core.stdc.string : memmove;
                 memmove(alignedStore, Scoped_store.ptr + *currD, __traits(classInstanceSize, T));
                 *currD = d;
             }
@@ -7328,6 +7504,8 @@ public:
 /// BitFlags can be manipulated with the usual operators
 @safe @nogc pure nothrow unittest
 {
+    import std.traits : EnumMembers;
+
     // You can use such an enum with BitFlags straight away
     enum Enum
     {
@@ -7339,7 +7517,7 @@ public:
     BitFlags!Enum flags1;
     assert(!(flags1 & (Enum.A | Enum.B | Enum.C)));
 
-    // You need to specify the $(D unsafe) parameter for enum with custom values
+    // You need to specify the `unsafe` parameter for enum with custom values
     enum UnsafeEnum
     {
         A,

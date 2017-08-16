@@ -26,6 +26,7 @@
  *           $(LREF EraseAll)
  *           $(LREF Filter)
  *           $(LREF NoDuplicates)
+ *           $(LREF Stride)
  * ))
  * $(TR $(TD Alias sequence type hierarchy) $(TD
  *           $(LREF DerivedToFront)
@@ -74,6 +75,8 @@ module std.meta;
 /**
  * Creates a sequence of zero or more aliases. This is most commonly
  * used as template parameters or arguments.
+ *
+ * In previous versions of Phobos, this was known as `TypeTuple`.
  */
 template AliasSeq(TList...)
 {
@@ -342,7 +345,7 @@ if (args.length >= 1)
 }
 
 /**
- * Returns a typetuple created from TList with the first occurrence,
+ * Returns an `AliasSeq` created from TList with the first occurrence,
  * if any, of T removed.
  */
 template Erase(T, TList...)
@@ -400,7 +403,7 @@ if (args.length >= 1)
 
 
 /**
- * Returns a typetuple created from TList with the all occurrences,
+ * Returns an `AliasSeq` created from TList with the all occurrences,
  * if any, of T removed.
  */
 template EraseAll(T, TList...)
@@ -463,7 +466,7 @@ if (args.length >= 1)
 
 
 /**
- * Returns a typetuple created from TList with the all duplicate
+ * Returns an `AliasSeq` created from TList with the all duplicate
  * types removed.
  */
 template NoDuplicates(TList...)
@@ -522,7 +525,7 @@ template NoDuplicates(TList...)
 
 
 /**
- * Returns a typetuple created from TList with the first occurrence
+ * Returns an `AliasSeq` created from TList with the first occurrence
  * of type T, if found, replaced with type U.
  */
 template Replace(T, U, TList...)
@@ -602,7 +605,7 @@ if (args.length >= 2)
 }
 
 /**
- * Returns a typetuple created from TList with all occurrences
+ * Returns an `AliasSeq` created from TList with all occurrences
  * of type T, if found, replaced with type U.
  */
 template ReplaceAll(T, U, TList...)
@@ -682,7 +685,7 @@ if (args.length >= 2)
 }
 
 /**
- * Returns a typetuple created from TList with the order reversed.
+ * Returns an `AliasSeq` created from TList with the order reversed.
  */
 template Reverse(TList...)
 {
@@ -735,7 +738,7 @@ template MostDerived(T, TList...)
 }
 
 /**
- * Returns the typetuple TList with the types sorted so that the most
+ * Returns the `AliasSeq` TList with the types sorted so that the most
  * derived types come first.
  */
 template DerivedToFront(TList...)
@@ -1492,6 +1495,60 @@ template staticIsSorted(alias cmp, Seq...)
     enum Comp(T1, T2) = __traits(isUnsigned, T2) - __traits(isUnsigned, T1);
     static assert( staticIsSorted!(Comp, uint, ubyte, ulong, short, long));
     static assert(!staticIsSorted!(Comp, uint, short, ubyte, long, ulong));
+}
+
+/**
+Selects a subset of the argument list by stepping with fixed `stepSize` over the list.
+A negative `stepSize` starts iteration with the last list element.
+
+Params:
+    stepSize = Number of elements to increment on each iteration. Can't be `0`.
+    Args = Template arguments
+
+Returns: A template argument list filtered by the selected stride.
+*/
+template Stride(int stepSize, Args...)
+if (stepSize != 0)
+{
+    static if (Args.length == 0)
+    {
+        alias Stride = AliasSeq!();
+    }
+    else static if (stepSize > 0)
+    {
+        static if (stepSize >= Args.length)
+            alias Stride = AliasSeq!(Args[0]);
+        else
+            alias Stride = AliasSeq!(Args[0], Stride!(stepSize, Args[stepSize .. $]));
+    }
+    else
+    {
+        static if (-stepSize >= Args.length)
+            alias Stride = AliasSeq!(Args[$ - 1]);
+        else
+            alias Stride = AliasSeq!(Args[$ - 1], Stride!(stepSize, Args[0 .. $ + stepSize]));
+    }
+}
+
+///
+@safe unittest
+{
+    static assert(is(Stride!(1, short, int, long) == AliasSeq!(short, int, long)));
+    static assert(is(Stride!(2, short, int, long) == AliasSeq!(short, long)));
+    static assert(is(Stride!(-1, short, int, long) == AliasSeq!(long, int, short)));
+    static assert(is(Stride!(-2, short, int, long) == AliasSeq!(long, short)));
+
+    alias attribs = AliasSeq!(short, int, long, ushort, uint, ulong);
+    static assert(is(Stride!(3, attribs) == AliasSeq!(short, ushort)));
+    static assert(is(Stride!(3, attribs[1 .. $]) == AliasSeq!(int, uint)));
+    static assert(is(Stride!(-3, attribs) == AliasSeq!(ulong, long)));
+}
+
+@safe unittest
+{
+    static assert(Pack!(Stride!(5, int)).equals!(int));
+    static assert(Pack!(Stride!(-5, int)).equals!(int));
+    static assert(!__traits(compiles, Stride!(0, int)));
 }
 
 // : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //

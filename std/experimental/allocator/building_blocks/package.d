@@ -144,7 +144,7 @@ advance.
 
 Sizes through 3584 bytes are handled via freelists of staggered sizes. Sizes
 from 3585 bytes through 4072 KB are handled by a $(D BitmappedBlock) with a
-block size of 4 KB. Sizes above that are passed direct to the $(D Mallocator).
+block size of 4 KB. Sizes above that are passed direct to the $(D GCAllocator).
 
 ----
     alias FList = FreeList!(GCAllocator, 0, unbounded);

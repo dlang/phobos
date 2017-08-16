@@ -98,7 +98,7 @@ enum CompressionMethod : ushort
 final class ArchiveMember
 {
     import std.conv : to, octal;
-    import std.datetime : DosFileTime, SysTime, SysTimeToDosFileTime;
+    import std.datetime.systime : DosFileTime, SysTime, SysTimeToDosFileTime;
 
     /**
      * Read/Write: Usually the file name of the archive member; it is used to
@@ -289,7 +289,7 @@ final class ZipArchive
     import std.algorithm.comparison : max;
     import std.bitmanip : littleEndianToNative, nativeToLittleEndian;
     import std.conv : to;
-    import std.datetime : DosFileTime;
+    import std.datetime.systime : DosFileTime;
 
     string comment;     /// Read/Write: the archive comment. Must be less than 65536 bytes in length.
 
@@ -360,11 +360,37 @@ final class ZipArchive
     {
     }
 
-    /** Add de to the archive.
+    /** Add de to the archive. The file is compressed on the fly.
      */
     @safe void addMember(ArchiveMember de)
     {
         _directory[de.name] = de;
+        if (!de._compressedData.length)
+        {
+            switch (de.compressionMethod)
+            {
+                case CompressionMethod.none:
+                    de._compressedData = de._expandedData;
+                    break;
+
+                case CompressionMethod.deflate:
+                    import std.zlib : compress;
+                    () @trusted
+                    {
+                        de._compressedData = cast(ubyte[]) compress(cast(void[]) de._expandedData);
+                    }();
+                        de._compressedData = de._compressedData[2 .. de._compressedData.length - 4];
+                    break;
+
+                default:
+                    throw new ZipException("unsupported compression method");
+            }
+
+            de._compressedSize = to!uint(de._compressedData.length);
+            import std.zlib : crc32;
+            () @trusted { de._crc32 = crc32(0, cast(void[]) de._expandedData); }();
+        }
+        assert(de._compressedData.length == de._compressedSize);
     }
 
     /** Delete de from the archive.
@@ -399,30 +425,6 @@ final class ZipArchive
         auto directory = _directory.values().sort!((x, y) => x.index < y.index).release;
         foreach (ArchiveMember de; directory)
         {
-            if (!de._compressedData.length)
-            {
-                switch (de.compressionMethod)
-                {
-                    case CompressionMethod.none:
-                        de._compressedData = de._expandedData;
-                        break;
-
-                    case CompressionMethod.deflate:
-                        import std.zlib : compress;
-                        de._compressedData = cast(ubyte[]) compress(cast(void[]) de._expandedData);
-                        de._compressedData = de._compressedData[2 .. de._compressedData.length - 4];
-                        break;
-
-                    default:
-                        throw new ZipException("unsupported compression method");
-                }
-
-                de._compressedSize = to!uint(de._compressedData.length);
-                import std.zlib : crc32;
-                de._crc32 = crc32(0, cast(void[]) de._expandedData);
-            }
-            assert(de._compressedData.length == de._compressedSize);
-
             if (to!ulong(archiveSize) + 30 + de.name.length + de.extra.length + de.compressedSize
                     + directorySize + 46 + de.name.length + de.extra.length + de.comment.length
                     + 22 + comment.length + eocd64LocLength + eocd64Length > uint.max)

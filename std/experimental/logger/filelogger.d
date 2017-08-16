@@ -4,6 +4,12 @@ module std.experimental.logger.filelogger;
 import std.experimental.logger.core;
 import std.stdio;
 
+import std.typecons : Flag;
+
+/** An option to create $(LREF FileLogger) directory if it is non-existent.
+*/
+alias CreateFolder = Flag!"CreateFolder";
+
 /** This $(D Logger) implementation writes log messages to the associated
 file. The name of the file has to be passed on construction time. If the file
 is already present new log messages will be append at its end.
@@ -11,7 +17,7 @@ is already present new log messages will be append at its end.
 class FileLogger : Logger
 {
     import std.concurrency : Tid;
-    import std.datetime : SysTime;
+    import std.datetime.systime : SysTime;
     import std.format : formattedWrite;
 
     /** A constructor for the $(D FileLogger) Logger.
@@ -20,18 +26,57 @@ class FileLogger : Logger
       fn = The filename of the output file of the $(D FileLogger). If that
       file can not be opened for writting an exception will be thrown.
       lv = The $(D LogLevel) for the $(D FileLogger). By default the
-      $(D LogLevel) for $(D FileLogger) is $(D LogLevel.all).
 
     Example:
     -------------
     auto l1 = new FileLogger("logFile");
     auto l2 = new FileLogger("logFile", LogLevel.fatal);
+    auto l3 = new FileLogger("logFile", LogLevel.fatal, CreateFolder.yes);
     -------------
     */
     this(in string fn, const LogLevel lv = LogLevel.all) @safe
     {
+         this(fn, lv, CreateFolder.yes);
+    }
+
+    /** A constructor for the $(D FileLogger) Logger that takes a reference to
+    a $(D File).
+
+    The $(D File) passed must be open for all the log call to the
+    $(D FileLogger). If the $(D File) gets closed, using the $(D FileLogger)
+    for logging will result in undefined behaviour.
+
+    Params:
+      fn = The file used for logging.
+      lv = The $(D LogLevel) for the $(D FileLogger). By default the
+      $(D LogLevel) for $(D FileLogger) is $(D LogLevel.all).
+      createFileNameFolder = if yes and fn contains a folder name, this
+      folder will be created.
+
+    Example:
+    -------------
+    auto file = File("logFile.log", "w");
+    auto l1 = new FileLogger(file);
+    auto l2 = new FileLogger(file, LogLevel.fatal);
+    -------------
+    */
+    this(in string fn, const LogLevel lv, CreateFolder createFileNameFolder) @safe
+    {
+        import std.file : exists, mkdirRecurse;
+        import std.path : dirName;
+        import std.conv : text;
+
         super(lv);
         this.filename = fn;
+
+        if (createFileNameFolder)
+        {
+            auto d = dirName(this.filename);
+            mkdirRecurse(d);
+            assert(exists(d), text("The folder the FileLogger should have",
+                                   " created in '", d,"' could not be created."));
+        }
+
         this.file_.open(this.filename, "a");
     }
 
@@ -156,6 +201,24 @@ class FileLogger : Logger
     assert(readLine.indexOf(written) != -1, readLine);
     readLine = file.readln();
     assert(readLine.indexOf(notWritten) == -1, readLine);
+}
+
+@safe unittest
+{
+    import std.file : rmdirRecurse, exists, deleteme;
+    import std.path : dirName;
+
+    const string tmpFolder = dirName(deleteme);
+    const string filepath = tmpFolder ~ "/bug15771/minas/oops/";
+    const string filename = filepath ~ "output.txt";
+    assert(!exists(filepath));
+
+    auto f = new FileLogger(filename, LogLevel.all, CreateFolder.yes);
+    scope(exit) () @trusted { rmdirRecurse(tmpFolder ~ "/bug15771"); }();
+
+    f.log("Hello World!");
+    assert(exists(filepath));
+    f.file.close();
 }
 
 @system unittest

@@ -50,7 +50,7 @@ $(BOOKTABLE ,
         $(TD Class that implements the $(D InputRange) interface and wraps the
         input _range methods in virtual functions.
     ))
-    $(TR $(TD $(LREF InputRangeObject))
+    $(TR $(TD $(LREF inputRangeObject))
         $(TD Convenience function for creating an $(D InputRangeObject)
         of the proper type.
     ))

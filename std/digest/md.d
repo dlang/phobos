@@ -18,10 +18,10 @@ $(TR $(TDNW Helpers) $(TD $(MYREF md5Of))
 )
 )
 
- * This module conforms to the APIs defined in $(D std.digest.digest). To understand the
- * differences between the template and the OOP API, see $(D std.digest.digest).
+ * This module conforms to the APIs defined in $(D std.digest). To understand the
+ * differences between the template and the OOP API, see $(MREF std, digest).
  *
- * This module publicly imports $(D std.digest.digest) and can be used as a stand-alone
+ * This module publicly imports $(MREF std, digest) and can be used as a stand-alone
  * module.
  *
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -45,7 +45,7 @@ $(TR $(TDNW Helpers) $(TD $(MYREF md5Of))
  */
 module std.digest.md;
 
-public import std.digest.digest;
+public import std.digest;
 
 ///
 @safe unittest
@@ -91,7 +91,7 @@ private uint rotateLeft(uint x, uint n) @safe pure nothrow @nogc
 
 /**
  * Template API MD5 implementation.
- * See $(D std.digest.digest) for differences between template and OOP API.
+ * See $(D std.digest) for differences between template and OOP API.
  */
 struct MD5
 {
@@ -493,7 +493,7 @@ struct MD5
 }
 
 /**
- * This is a convenience alias for $(REF digest, std,digest,digest) using the
+ * This is a convenience alias for $(REF digest, std,digest) using the
  * MD5 implementation.
  */
 //simple alias doesn't work here, hope this gets inlined...
@@ -511,9 +511,9 @@ auto md5Of(T...)(T data)
 
 /**
  * OOP API MD5 implementation.
- * See $(D std.digest.digest) for differences between template and OOP API.
+ * See $(D std.digest) for differences between template and OOP API.
  *
- * This is an alias for $(D $(REF WrapperDigest, std,digest,digest)!MD5), see
+ * This is an alias for $(D $(REF WrapperDigest, std,digest)!MD5), see
  * there for more information.
  */
 alias MD5Digest = WrapperDigest!MD5;

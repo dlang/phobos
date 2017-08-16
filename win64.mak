@@ -46,7 +46,7 @@ DRUNTIMELIB=$(DRUNTIME)\lib\druntime$(MODEL).lib
 
 ## Flags for dmd D compiler
 
-DFLAGS=-conf= -m$(MODEL) -O -release -w -dip25 -I$(DRUNTIME)\import
+DFLAGS=-conf= -m$(MODEL) -O -release -w -de -dip25 -I$(DRUNTIME)\import
 #DFLAGS=-m$(MODEL) -unittest -g
 #DFLAGS=-m$(MODEL) -unittest -cov -g
 
@@ -233,7 +233,8 @@ SRC_STD_DIGEST= \
 	std\digest\ripemd.d \
 	std\digest\digest.d \
 	std\digest\hmac.d \
-	std\digest\murmurhash.d
+	std\digest\murmurhash.d \
+	std\digest\package.d
 
 SRC_STD_NET= \
 	std\net\isemail.d \
@@ -300,7 +301,8 @@ SRC_STD_INTERNAL= \
 	std\internal\unicode_grapheme.d \
 	std\internal\unicode_norm.d \
 	std\internal\scopebuffer.d \
-	std\internal\test\dummyrange.d
+	std\internal\test\dummyrange.d \
+	std\internal\test\range.d
 
 SRC_STD_INTERNAL_DIGEST= \
 	std\internal\digest\sha_SSSE3.d

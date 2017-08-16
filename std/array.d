@@ -212,6 +212,18 @@ if (isNarrowString!String)
     return cast(typeof(return)) str.toUTF32;
 }
 
+///
+@safe unittest
+{
+    import std.range.primitives : isRandomAccessRange;
+
+    assert("Hello D".array == "Hello D"d);
+    static assert(isRandomAccessRange!string == false);
+
+    assert("Hello D"w.array == "Hello D"d);
+    static assert(isRandomAccessRange!dstring == true);
+}
+
 @system unittest
 {
     // @system due to array!string
@@ -416,7 +428,7 @@ Params: aa = The associative array to iterate over.
 Returns: A $(REF_ALTTEXT forward range, isForwardRange, std,_range,primitives)
 of Tuple's of key and value pairs from the given associative array.
 */
-auto byPair(Key, Value)(Value[Key] aa)
+auto byPair(AA : Value[Key], Value, Key)(AA aa)
 {
     import std.algorithm.iteration : map;
     import std.typecons : tuple;
@@ -468,6 +480,26 @@ auto byPair(Key, Value)(Value[Key] aa)
     assert(pairs.empty);
     assert(!savedPairs.empty);
     assert(savedPairs.front == tuple("a", 2));
+}
+
+// Issue 17711
+@system unittest
+{
+    const(int[string]) aa = [ "abc": 123 ];
+
+    // Ensure that byKeyValue is usable with a const AA.
+    auto kv = aa.byKeyValue;
+    assert(!kv.empty);
+    assert(kv.front.key == "abc" && kv.front.value == 123);
+    kv.popFront();
+    assert(kv.empty);
+
+    // Ensure byPair is instantiable with const AA.
+    auto r = aa.byPair;
+    static assert(isInputRange!(typeof(r)));
+    assert(!r.empty && r.front[0] == "abc" && r.front[1] == 123);
+    r.popFront();
+    assert(r.empty);
 }
 
 private template blockAttribute(T)
@@ -534,7 +566,7 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I) && hasIndirections!(ElementEn
     return arrayAllocImpl!(false, T, ST)(sizes);
 }
 
-///
+/// ditto
 auto uninitializedArray(T, I...)(I sizes) nothrow @trusted
 if (isDynamicArray!T && allSatisfy!(isIntegral, I) && !hasIndirections!(ElementEncodingType!T))
 {
@@ -586,6 +618,18 @@ if (isDynamicArray!T && allSatisfy!(isIntegral, I))
     alias ST = staticMap!(toSize_t, I);
 
     return arrayAllocImpl!(true, T, ST)(sizes);
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : repeat;
+
+    auto arr = minimallyInitializedArray!(int[])(42);
+    assert(arr.length == 42);
+    // Elements aren't necessarily initialized to 0
+    assert(!arr.equal(0.repeat(42)));
 }
 
 @safe pure nothrow unittest
@@ -1337,8 +1381,6 @@ if (isInputRange!S && !isDynamicArray!S)
 {
     import std.conv : to;
 
-    debug(std_array) printf("array.replicate.unittest\n");
-
     foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
         S s;
@@ -1362,6 +1404,9 @@ $(D @safe), $(D pure) and $(D CTFE)-able.
 
 Params:
     s = the string to split
+
+Returns:
+    An array of each word in `s`
 
 See_Also:
 $(REF splitter, std,algorithm,iteration) for a version that splits using any
@@ -1400,6 +1445,29 @@ if (isSomeString!S)
     if (inword)
         result ~= s[istart .. $];
     return result;
+}
+
+///
+@safe unittest
+{
+    string str = "Hello World!";
+    assert(str.split == ["Hello", "World!"]);
+
+    string str2 = "Hello\t\tWorld\t!";
+    assert(str2.split == ["Hello", "World", "!"]);
+}
+
+/**
+ * `split` allocates memory, so the same effect can be achieved lazily
+ * using $(REF splitter, std,algorithm,iteration).
+ */
+@safe unittest
+{
+    import std.ascii : isWhite;
+    import std.algorithm.comparison : equal;
+
+    string str = "Hello World!";
+    assert(str.splitter!(isWhite).equal(["Hello", "World!"]));
 }
 
 @safe unittest
@@ -1509,12 +1577,20 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(range.front))))
     return range.splitter!isTerminator.array;
 }
 
+///
+@safe unittest
+{
+    import std.uni : isWhite;
+    assert("Learning,D,is,fun".split(",") == ["Learning", "D", "is", "fun"]);
+    assert("Learning D is fun".split!isWhite == ["Learning", "D", "is", "fun"]);
+    assert("Learning D is fun".split(" D ") == ["Learning", "is fun"]);
+}
+
 @safe unittest
 {
     import std.algorithm.comparison : cmp;
     import std.conv;
 
-    debug(std_array) printf("array.split\n");
     foreach (S; AliasSeq!(string, wstring, dstring,
                     immutable(string), immutable(wstring), immutable(dstring),
                     char[], wchar[], dchar[],
@@ -1845,8 +1921,6 @@ if (isInputRange!RoR &&
     import std.conv : to;
     import std.range;
 
-    debug(std_array) printf("array.join.unittest\n");
-
     foreach (R; AliasSeq!(string, wstring, dstring))
     {
         R word1 = "日本語";
@@ -2067,8 +2141,6 @@ if (isOutputRange!(Sink, E) && isDynamicArray!(E[])
 {
     import std.algorithm.comparison : cmp;
     import std.conv : to;
-
-    debug(std_array) printf("array.replace.unittest\n");
 
     foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
@@ -2512,8 +2584,6 @@ if (isDynamicArray!(E[]) &&
     import std.algorithm.comparison : cmp;
     import std.conv : to;
 
-    debug(std_array) printf("array.replaceFirst.unittest\n");
-
     foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
                           const(char[]), immutable(char[])))
     {
@@ -2627,8 +2697,6 @@ if (isDynamicArray!(E[]) &&
     import std.algorithm.comparison : cmp;
     import std.conv : to;
 
-    debug(std_array) printf("array.replaceLast.unittest\n");
-
     foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[],
                           const(char[]), immutable(char[])))
     {
@@ -2704,7 +2772,6 @@ body
 @system unittest
 {
     import std.algorithm.comparison : cmp;
-    debug(std_array) printf("array.replaceSlice.unittest\n");
 
     string s = "hello";
     string slice = s[2 .. 4];
@@ -3186,6 +3253,23 @@ if (isDynamicArray!A)
     }
 }
 
+///
+@system pure nothrow
+unittest
+{
+    int[] a = [1, 2];
+    auto app2 = appender(&a);
+    assert(app2.data == [1, 2]);
+    assert(a == [1, 2]);
+    app2 ~= 3;
+    app2 ~= [4, 5, 6];
+    assert(app2.data == [1, 2, 3, 4, 5, 6]);
+    assert(a == [1, 2, 3, 4, 5, 6]);
+
+    app2.reserve(5);
+    assert(app2.capacity >= 5);
+}
+
 /++
     Convenience function that returns an $(LREF Appender) instance,
     optionally initialized with $(D array).
@@ -3306,6 +3390,25 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
         w.put(S10122(1));
         assert(w.data.length == 1 && w.data[0].val == 1);
     });
+}
+
+///
+@safe pure nothrow
+unittest
+{
+    auto w = appender!string;
+    // pre-allocate space for at least 10 elements (this avoids costly reallocations)
+    w.reserve(10);
+    assert(w.capacity >= 10);
+
+    w.put('a'); // single elements
+    w.put("bc"); // multiple elements
+
+    // use the append syntax
+    w ~= 'd';
+    w ~= "ef";
+
+    assert(w.data == "abcdef");
 }
 
 @safe pure nothrow unittest
@@ -3569,6 +3672,23 @@ Appender!(E[]) appender(A : E[], E)(auto ref A array)
 RefAppender!(E[]) appender(P : E[]*, E)(P arrayPtr)
 {
     return RefAppender!(E[])(arrayPtr);
+}
+
+///
+@system pure nothrow
+unittest
+{
+    int[] a = [1, 2];
+    auto app2 = appender(&a);
+    assert(app2.data == [1, 2]);
+    assert(a == [1, 2]);
+    app2 ~= 3;
+    app2 ~= [4, 5, 6];
+    assert(app2.data == [1, 2, 3, 4, 5, 6]);
+    assert(a == [1, 2, 3, 4, 5, 6]);
+
+    app2.reserve(5);
+    assert(app2.capacity >= 5);
 }
 
 @system unittest

@@ -142,43 +142,7 @@ public:
         return dur!"hnsecs"(utcToTZ(stdTime) - stdTime);
     }
 
-    // @@@DEPRECATED_2017-07@@@
-    /++
-        $(RED Deprecated. Use either PosixTimeZone.getTimeZone or
-              WindowsTimeZone.getTimeZone. ($(LREF parseTZConversions) can be
-              used to convert time zone names if necessary). Microsoft changes
-              their time zones too often for us to compile the conversions into
-              Phobos and have them be properly up-to-date. TimeZone.getTimeZone
-              will be removed in July 2017.)
-
-        Returns a $(LREF TimeZone) with the give name per the TZ Database.
-
-        This returns a $(LREF PosixTimeZone) on Posix systems and a
-        $(LREF WindowsTimeZone) on Windows systems. For
-        $(LREF PosixTimeZone) on Windows, call $(D PosixTimeZone.getTimeZone)
-        directly and give it the location of the TZ Database time zone files on
-        disk.
-
-        On Windows, the given TZ Database name is converted to the corresponding
-        time zone name on Windows prior to calling
-        $(D WindowsTimeZone.getTimeZone). This function allows for
-        the same time zone names on both Windows and Posix systems.
-
-        See_Also:
-            $(HTTP en.wikipedia.org/wiki/Tz_database, Wikipedia entry on TZ
-              Database)<br>
-            $(HTTP en.wikipedia.org/wiki/List_of_tz_database_time_zones, List of
-              Time Zones)<br>
-            $(HTTP unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html,
-                  Windows <-> TZ Database Name Conversion Table)
-
-        Params:
-            name = The TZ Database name of the desired time zone
-
-        Throws:
-            $(REF DateTimeException,std,datetime,date) if the given time zone
-            could not be found.
-      +/
+    // Explicitly undocumented. It will be removed in June 2018. @@@DEPRECATED_2018-07@@@
     deprecated("Use PosixTimeZone.getTimeZone or WindowsTimeZone.getTimeZone instead")
     static immutable(TimeZone) getTimeZone(string name) @safe
     {
@@ -524,35 +488,7 @@ public:
     }
 
 
-    // @@@DEPRECATED_2017-07@@@
-    /++
-        $(RED Deprecated. Use either PosixTimeZone.getInstalledTZNames or
-              WindowsTimeZone.getInstalledTZNames. ($(LREF parseTZConversions)
-              can be used to convert time zone names if necessary). Microsoft
-              changes their time zones too often for us to compile the
-              conversions into Phobos and have them be properly up-to-date.
-              TimeZone.getInstalledTZNames will be removed in July 2017.)
-
-        Returns a list of the names of the time zones installed on the system.
-
-        Providing a sub-name narrows down the list of time zones (which
-        can number in the thousands). For example,
-        passing in "America" as the sub-name returns only the time zones which
-        begin with "America".
-
-        On Windows, this function will convert the Windows time zone names to
-        the corresponding TZ Database names with
-        $(D windowsTZNameToTZDatabaseName). To get the actual Windows time
-        zone names, use $(D WindowsTimeZone.getInstalledTZNames) directly.
-
-        Params:
-            subName = The first part of the time zones desired.
-
-        Throws:
-            $(D FileException) on Posix systems if it fails to read from disk.
-            $(REF DateTimeException,std,datetime,date) on Windows systems if
-            it fails to read the registry.
-      +/
+    // Explicitly undocumented. It will be removed in June 2018. @@@DEPRECATED_2018-07@@@
     deprecated("Use PosixTimeZone.getInstalledTZNames or WindowsTimeZone.getInstalledTZNames instead")
     static string[] getInstalledTZNames(string subName = "") @safe
     {
@@ -2991,8 +2927,6 @@ else version(Windows)
 
         static immutable(WindowsTimeZone) getTimeZone(string name) @trusted
         {
-            import std.utf : toUTF16;
-
             scope baseKey = Registry.localMachine.getKey(`Software\Microsoft\Windows NT\CurrentVersion\Time Zones`);
 
             foreach (tzKeyName; baseKey.keyNames)
@@ -3015,8 +2949,8 @@ else version(Windows)
 
                 TIME_ZONE_INFORMATION tzInfo;
 
-                auto wstdName = toUTF16(stdName);
-                auto wdstName = toUTF16(dstName);
+                auto wstdName = stdName.to!wstring;
+                auto wdstName = dstName.to!wstring;
                 auto wstdNameLen = wstdName.length > 32 ? 32 : wstdName.length;
                 auto wdstNameLen = wdstName.length > 32 ? 32 : wdstName.length;
 
@@ -3347,7 +3281,7 @@ else version(Posix)
     does.
 
     Params:
-        windowsZonesXMLFileText The text from
+        windowsZonesXMLText = The text from
         $(HTTP unicode.org/cldr/data/common/supplemental/windowsZones.xml, windowsZones.xml)
 
     Throws:
@@ -3525,34 +3459,7 @@ For terms of use, see http://www.unicode.org/copyright.html
 }
 
 
-// @@@DEPRECATED_2017-07@@@
-/++
-    $(RED Deprecated. Use $(LREF parseTZConversions) instead. Microsoft changes
-          their time zones too often for us to compile the conversions into
-          Phobos and have them be properly up-to-date.
-          tzDatabaseNameToWindowsTZName will be removed in July 2017.)
-
-    Converts the given TZ Database name to the corresponding Windows time zone
-    name.
-
-    Note that in a few cases, a TZ Dabatase name corresponds to two different
-    Windows time zone names. So, while in most cases converting from one to the
-    other and back again will result in the same time zone name started
-    with, in a few case, it'll get a different name.
-
-    Also, there are far more TZ Database names than Windows time zones, so some
-    of the more exotic TZ Database names don't have corresponding Windows time
-    zone names.
-
-    Returns null if the given time zone name cannot be converted.
-
-    See_Also:
-        $(HTTP unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html,
-              Windows <-> TZ Database Name Conversion Table)
-
-    Params:
-        tzName = The TZ Database name to convert.
-  +/
+// Explicitly undocumented. It will be removed in June 2018. @@@DEPRECATED_2018-07@@@
 deprecated("Use parseTZConversions instead")
 string tzDatabaseNameToWindowsTZName(string tzName) @safe pure nothrow @nogc
 {
@@ -4021,25 +3928,7 @@ version(Windows) version(UpdateWindowsTZTranslations) deprecated @system unittes
 }
 
 
-// @@@DEPRECATED_2017-07@@@
-/++
-    $(RED Deprecated. Use $(LREF parseTZConversions) instead. Microsoft changes
-          their time zones too often for us to compile the conversions into
-          Phobos and have them be properly up-to-date.
-          windowsTZNameToTZDatabaseName will be removed in July 2017.)
-
-    Converts the given Windows time zone name to a corresponding TZ Database
-    name.
-
-    Returns null if the given time zone name cannot be converted.
-
-    See_Also:
-        $(HTTP unicode.org/repos/cldr-tmp/trunk/diff/supplemental/zone_tzid.html,
-              Windows <-> TZ Database Name Conversion Table)
-
-    Params:
-        tzName = The TZ Database name to convert.
-  +/
+// Explicitly undocumented. It will be removed in June 2018. @@@DEPRECATED_2018-07@@@
 deprecated("Use parseTZConversions instead")
 string windowsTZNameToTZDatabaseName(string tzName) @safe pure nothrow @nogc
 {

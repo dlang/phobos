@@ -895,7 +895,7 @@ if (ss == SwapStrategy.unstable && isRandomAccessRange!Range
         auto a = new int[](uniform(0, 100, r));
         foreach (ref e; a)
         {
-            e = uniform(0, 50);
+            e = uniform(0, 50, r);
         }
         auto pieces = partition3(a, 25);
         assert(pieces[0].length + pieces[1].length + pieces[2].length == a.length);
@@ -994,15 +994,15 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
         "r and index must be same length for makeIndex.");
     static if (IndexType.sizeof < size_t.sizeof)
     {
-        enforce(r.length <= IndexType.max, "Cannot create an index with " ~
+        enforce(r.length <= size_t(1) + IndexType.max, "Cannot create an index with " ~
             "element type " ~ IndexType.stringof ~ " with length " ~
             to!string(r.length) ~ ".");
     }
 
-    for (IndexType i = 0; i < r.length; ++i)
-    {
-        index[cast(size_t) i] = i;
-    }
+    // Use size_t as loop index to avoid overflow on ++i,
+    // e.g. when squeezing 256 elements into a ubyte index.
+    foreach (size_t i; 0 .. r.length)
+        index[i] = cast(IndexType) i;
 
     // sort the index
     sort!((a, b) => binaryFun!less(r[cast(size_t) a], r[cast(size_t) b]), ss)
@@ -1054,6 +1054,22 @@ if (isRandomAccessRange!Range && !isInfinite!Range &&
     assert(isSorted!
             ((byte a, byte b){ return arr1[a] < arr1[b];})
             (index3));
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+
+    ubyte[256] index = void;
+    iota(256).makeIndex(index[]);
+    assert(index[].equal(iota(256)));
+    byte[128] sindex = void;
+    iota(128).makeIndex(sindex[]);
+    assert(sindex[].equal(iota(128)));
+
+    auto index2 = new uint[10];
+    10.iota.makeIndex(index2);
+    assert(index2.equal(10.iota));
 }
 
 struct Merge(alias less = "a < b", Rs...)
@@ -2807,6 +2823,7 @@ private template TimSortImpl(alias pred, R)
     testSort(seed);
 
     enum result = testSort(seed);
+    assert(result == true);
 }
 
 @safe unittest
@@ -3102,11 +3119,10 @@ if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
         // Workaround for https://issues.dlang.org/show_bug.cgi?id=16528
         // Safety checks: enumerate all potentially unsafe generic primitives
         // then use a @trusted implementation.
-        auto b = binaryFun!less(r[0], r[r.length - 1]);
+        binaryFun!less(r[0], r[r.length - 1]);
         import std.algorithm.mutation : swapAt;
         r.swapAt(size_t(0), size_t(0));
-        auto len = r.length;
-        static assert(is(typeof(len) == size_t));
+        static assert(is(typeof(r.length) == size_t));
         pivotPartition!less(r, 0);
     }
     bool useSampling = true;
@@ -3402,7 +3418,7 @@ body
         r.swapAt(rite, pivot);
     }
     // Second loop: make left and pivot meet
-    outer: for (; rite > pivot; --rite)
+    for (; rite > pivot; --rite)
     {
         if (!lp(r[rite], r[oldPivot])) continue;
         while (rite > pivot)
@@ -3748,58 +3764,46 @@ void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
               (Range r, RangeIndex index, SortOutput sorted = No.sortOutput)
 if (isRandomAccessRange!Range &&
     isRandomAccessRange!RangeIndex &&
-    hasAssignableElements!RangeIndex &&
-    isIntegral!(ElementType!(RangeIndex)))
+    hasAssignableElements!RangeIndex)
 {
     static assert(ss == SwapStrategy.unstable,
                   "Stable swap strategy not implemented yet.");
 
-    import std.container : BinaryHeap;
-    import std.exception : enforce;
-
+    import std.container.binaryheap : BinaryHeap;
     if (index.empty) return;
-    enforce(ElementType!(RangeIndex).max >= index.length,
-            "Index type too small");
-    bool indirectLess(ElementType!(RangeIndex) a, ElementType!(RangeIndex) b)
-    {
-        return binaryFun!(less)(r[a], r[b]);
-    }
-    auto heap = BinaryHeap!(RangeIndex, indirectLess)(index, 0);
-    foreach (i; 0 .. r.length)
-    {
-        heap.conditionalInsert(cast(ElementType!RangeIndex) i);
-    }
-    if (sorted == Yes.sortOutput)
-    {
-        while (!heap.empty) heap.removeFront();
-    }
-}
 
-/// ditto
-void topNIndex(alias less = "a < b", SwapStrategy ss = SwapStrategy.unstable,
-               Range, RangeIndex)
-              (Range r, RangeIndex index, SortOutput sorted = No.sortOutput)
-if (isRandomAccessRange!Range &&
-    isRandomAccessRange!RangeIndex &&
-    hasAssignableElements!RangeIndex &&
-    is(ElementType!(RangeIndex) == ElementType!(Range)*))
-{
-    static assert(ss == SwapStrategy.unstable,
-                  "Stable swap strategy not implemented yet.");
-
-    import std.container : BinaryHeap;
-
-    if (index.empty) return;
-    static bool indirectLess(const ElementType!(RangeIndex) a,
-                             const ElementType!(RangeIndex) b)
+    static if (isIntegral!(ElementType!(RangeIndex)))
     {
-        return binaryFun!less(*a, *b);
+        import std.exception : enforce;
+
+        enforce(ElementType!(RangeIndex).max >= index.length,
+                "Index type too small");
+        bool indirectLess(ElementType!(RangeIndex) a, ElementType!(RangeIndex) b)
+        {
+            return binaryFun!(less)(r[a], r[b]);
+        }
+        auto heap = BinaryHeap!(RangeIndex, indirectLess)(index, 0);
+        foreach (i; 0 .. r.length)
+        {
+            heap.conditionalInsert(cast(ElementType!RangeIndex) i);
+        }
+
     }
-    auto heap = BinaryHeap!(RangeIndex, indirectLess)(index, 0);
-    foreach (i; 0 .. r.length)
+    else static if (is(ElementType!(RangeIndex) == ElementType!(Range)*))
     {
-        heap.conditionalInsert(&r[i]);
+        static bool indirectLess(const ElementType!(RangeIndex) a,
+                                 const ElementType!(RangeIndex) b)
+        {
+            return binaryFun!less(*a, *b);
+        }
+        auto heap = BinaryHeap!(RangeIndex, indirectLess)(index, 0);
+        foreach (i; 0 .. r.length)
+        {
+            heap.conditionalInsert(&r[i]);
+        }
     }
+    else static assert(0, "Invalid ElementType");
+
     if (sorted == Yes.sortOutput)
     {
         while (!heap.empty) heap.removeFront();

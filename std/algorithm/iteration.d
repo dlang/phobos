@@ -284,10 +284,13 @@ same cost or side effects.
 
 @safe unittest
 {
-    import std.range;
+    import std.range : cycle;
+    import std.algorithm.comparison : equal;
+
     auto c = [1, 2, 3].cycle().cache();
     c = c[1 .. $];
     auto d = c[0 .. 1];
+    assert(d.equal([2]));
 }
 
 @safe unittest
@@ -686,6 +689,7 @@ private struct MapResult(alias fun, Range)
     import std.internal.test.dummyrange;
     import std.range;
     import std.typecons : tuple;
+    import std.random : unpredictableSeed, uniform, Random;
 
     int[] arr1 = [ 1, 2, 3, 4 ];
     const int[] arr1Const = arr1;
@@ -743,10 +747,14 @@ private struct MapResult(alias fun, Range)
     assert(fibsSquares.front == 9);
 
     auto repeatMap = map!"a"(repeat(1));
+    auto gen = Random(unpredictableSeed);
+    auto index = uniform(0, 1024, gen);
     static assert(isInfinite!(typeof(repeatMap)));
+    assert(repeatMap[index] == 1);
 
     auto intRange = map!"a"([1,2,3]);
     static assert(isRandomAccessRange!(typeof(intRange)));
+    assert(equal(intRange, [1, 2, 3]));
 
     foreach (DummyType; AllDummyRanges)
     {
@@ -831,6 +839,7 @@ private struct MapResult(alias fun, Range)
     import std.range;
     struct S {int* p;}
     auto m = immutable(S).init.repeat().map!"a".save;
+    assert(m.front == immutable(S)(null));
 }
 
 // each
@@ -1197,6 +1206,8 @@ private struct FilterResult(alias pred, Range)
     import std.range;
 
     auto shouldNotLoop4ever = repeat(1).filter!(x => x % 2 == 0);
+    static assert(isInfinite!(typeof(shouldNotLoop4ever)));
+    assert(!shouldNotLoop4ever.empty);
 
     int[] a = [ 3, 4, 2 ];
     auto r = filter!("a > 3")(a);
@@ -1216,6 +1227,7 @@ private struct FilterResult(alias pred, Range)
     auto infinite = filter!"a > 2"(repeat(3));
     static assert(isInfinite!(typeof(infinite)));
     static assert(isForwardRange!(typeof(infinite)));
+    assert(infinite.front == 3);
 
     foreach (DummyType; AllDummyRanges)
     {
@@ -1246,6 +1258,7 @@ private struct FilterResult(alias pred, Range)
     // With copying of inner struct Filter to Map
     auto arr = [1,2,3,4,5];
     auto m = map!"a + 1"(filter!"a < 4"(arr));
+    assert(equal(m, [2, 3, 4]));
 }
 
 @safe unittest
@@ -1262,10 +1275,6 @@ private struct FilterResult(alias pred, Range)
     assert(equal(under10, [1, 3, 5][]));
     assert(equal(under10.save, [1, 3, 5][]));
     assert(equal(under10.save, under10));
-
-    // With copying of inner struct Filter to Map
-    auto arr = [1,2,3,4,5];
-    auto m = map!"a + 1"(filter!"a < 4"(arr));
 }
 
 @safe unittest
@@ -1555,28 +1564,40 @@ if (isInputRange!R)
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+    import std.typecons : tuple;
+
     // Issue 13857
     immutable(int)[] a1 = [1,1,2,2,2,3,4,4,5,6,6,7,8,9,9,9];
     auto g1 = group(a1);
+    assert(equal(g1, [ tuple(1, 2u), tuple(2, 3u), tuple(3, 1u),
+                       tuple(4, 2u), tuple(5, 1u), tuple(6, 2u),
+                       tuple(7, 1u), tuple(8, 1u), tuple(9, 3u)
+                     ]));
 
     // Issue 13162
     immutable(ubyte)[] a2 = [1, 1, 1, 0, 0, 0];
     auto g2 = a2.group;
+    assert(equal(g2, [ tuple(1, 3u), tuple(0, 3u) ]));
 
     // Issue 10104
     const a3 = [1, 1, 2, 2];
     auto g3 = a3.group;
+    assert(equal(g3, [ tuple(1, 2u), tuple(2, 2u) ]));
 
     interface I {}
     class C : I {}
     const C[] a4 = [new const C()];
     auto g4 = a4.group!"a is b";
+    assert(g4.front[1] == 1);
 
     immutable I[] a5 = [new immutable C()];
     auto g5 = a5.group!"a is b";
+    assert(g5.front[1] == 1);
 
     const(int[][]) a6 = [[1], [1]];
     auto g6 = a6.group;
+    assert(equal(g6.front[0], [1]));
 }
 
 // Used by implementation of chunkBy for non-forward input ranges.
@@ -1935,24 +1956,15 @@ if (isInputRange!Range)
 version(none) // this example requires support for non-equivalence relations
 @safe unittest
 {
-    auto data = [
-        [1, 1],
-        [1, 2],
-        [2, 2],
-        [2, 3]
-    ];
+    // Grouping by maximum adjacent difference:
+    import std.math : abs;
+    auto r3 = [1, 3, 2, 5, 4, 9, 10].chunkBy!((a, b) => abs(a-b) < 3);
+    assert(r3.equal!equal([
+        [1, 3, 2],
+        [5, 4],
+        [9, 10]
+    ]));
 
-    version(none)
-    {
-        // Grouping by maximum adjacent difference:
-        import std.math : abs;
-        auto r3 = [1, 3, 2, 5, 4, 9, 10].chunkBy!((a, b) => abs(a-b) < 3);
-        assert(r3.equal!equal([
-            [1, 3, 2],
-            [5, 4],
-            [9, 10]
-        ]));
-    }
 }
 
 /// Showing usage with unary predicate:
@@ -2534,6 +2546,7 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
     auto j = joiner(a);
     j.front = 44;
     assert(a == [ [44, 2, 3], [42, 43] ]);
+    assert(equal(j, [44, 2, 3, 42, 43]));
 }
 
 
@@ -2956,7 +2969,9 @@ The number of seeds must be correspondingly increased.
     assert(approxEqual(r[1], 233)); // sum of squares
     // Compute average and standard deviation from the above
     auto avg = r[0] / a.length;
+    assert(avg == 5);
     auto stdev = sqrt(r[1] / a.length - avg * avg);
+    assert(cast(int) stdev == 2);
 }
 
 @safe unittest
@@ -3035,6 +3050,7 @@ The number of seeds must be correspondingly increased.
     float[] c = [ 1.2, 3, 3.3 ];
     auto r = reduce!"a + b"(a, b);
     r = reduce!"a + b"(a, c);
+    assert(r == 7.5);
 }
 
 @safe unittest
@@ -3065,7 +3081,6 @@ The number of seeds must be correspondingly increased.
 
 @system unittest
 {
-    int i = 0;
     static struct OpApply
     {
         int opApply(int delegate(ref int) dg)
@@ -3095,10 +3110,12 @@ The number of seeds must be correspondingly increased.
         auto e = reduce!(fun)(0, OpApply());
         auto f = reduce!(fun, fun)(tuple(0, 0), OpApply());
 
-        return max(a, b.expand, c, d.expand);
+        return max(a, b.expand, c, d.expand, e, f.expand);
     }
     auto a = foo();
+    assert(a == 9);
     enum b = foo();
+    assert(b == 9);
 }
 
 @safe unittest
@@ -3115,7 +3132,7 @@ The number of seeds must be correspondingly increased.
         return reduce!(F, G)(tuple(ElementType!R.max,
                                    ElementType!R.min), range);
     }
-    assert(minmaxElement([1, 2, 3])== tuple(1, 3));
+    assert(minmaxElement([1, 2, 3]) == tuple(1, 3));
 }
 
 @safe unittest //12569
@@ -3142,7 +3159,8 @@ The number of seeds must be correspondingly increased.
 @safe unittest //13304
 {
     int[] data;
-    static assert(is(typeof(reduce!((a, b)=>a+b)(data))));
+    static assert(is(typeof(reduce!((a, b) => a + b)(data))));
+    assert(data.length == 0);
 }
 
 //Helper for Reduce
@@ -3242,6 +3260,7 @@ if (fun.length >= 1)
     static assert(!is(typeof(arr.fold!(a => a))));
     static assert(is(typeof(arr.fold!((a, b) => a))));
     static assert(is(typeof(arr.fold!((a, b) => a)(1))));
+    assert(arr.length == 1);
 }
 
 /++
@@ -4870,8 +4889,7 @@ private auto sumKahan(Result, R)(Result result, R r)
     static assert(is(typeof(sum([1.0, 2.0, 3.0, 4.0])) == double));
     static assert(is(typeof(sum([ 1F,  2F,  3F,  4F])) == double));
     const(float[]) a = [1F, 2F, 3F, 4F];
-    static assert(is(typeof(sum(a)) == double));
-    const(float)[] b = [1F, 2F, 3F, 4F];
+    assert(sum(a) == 10F);
     static assert(is(typeof(sum(a)) == double));
 
     double[] empty;
@@ -4899,8 +4917,10 @@ private auto sumKahan(Result, R)(Result result, R r)
 @safe pure nothrow unittest // 12434
 {
     immutable a = [10, 20];
-    auto s1 = sum(a);             // Error
-    auto s2 = a.map!(x => x).sum; // Error
+    auto s1 = sum(a);
+    assert(s1 == 30);
+    auto s2 = a.map!(x => x).sum;
+    assert(s2 == 30);
 }
 
 @system unittest
@@ -5097,30 +5117,6 @@ if (isRandomAccessRange!Range && hasLength!Range)
     private size_t[] _indices, _state;
     private Range _r;
     private bool _empty;
-
-    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
-    deprecated("Private variable. Use front()")
-    @property size_t[] indices() pure nothrow @nogc @safe { return _indices; }
-
-    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
-    deprecated("Private variable. Don't set it manually")
-    @property void indices(size_t[] indices) pure nothrow @nogc @safe { _indices = indices; }
-
-    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
-    deprecated("Private variable. Use front()")
-    @property size_t[] state() pure nothrow @nogc @safe { return _state; }
-
-    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
-    deprecated("Private variable. Don't set it manually")
-    @property void state(size_t[] state) pure nothrow @nogc @safe { state = state; }
-
-    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
-    deprecated("Private variable. Access will be forbidden.")
-    @property Range r() pure nothrow @nogc @safe { return _r; }
-
-    // Explicitly undocumented. It will be removed in June 2017. @@@DEPRECATED_2017-06@@@
-    deprecated("Private variable. Don't set it manually")
-    @property void r(Range r) pure nothrow @nogc @safe { _r = r; }
 
     ///
     this(Range r)

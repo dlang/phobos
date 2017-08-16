@@ -60,7 +60,7 @@ version(Windows)
     pragma (lib, "ws2_32.lib");
     pragma (lib, "wsock32.lib");
 
-    private import core.sys.windows.windows, std.windows.syserror;
+    import core.sys.windows.windows, std.windows.syserror;
     public import core.sys.windows.winsock2;
     private alias _ctimeval = core.sys.windows.winsock2.timeval;
     private alias _clinger = core.sys.windows.winsock2.linger;
@@ -85,20 +85,20 @@ else version(Posix)
         }
     }
 
-    private import core.sys.posix.arpa.inet;
-    private import core.sys.posix.fcntl;
+    import core.sys.posix.arpa.inet;
+    import core.sys.posix.fcntl;
     import core.sys.posix.netdb;
-    private import core.sys.posix.netinet.in_;
-    private import core.sys.posix.netinet.tcp;
-    private import core.sys.posix.sys.select;
-    private import core.sys.posix.sys.socket;
-    private import core.sys.posix.sys.time;
+    import core.sys.posix.netinet.in_;
+    import core.sys.posix.netinet.tcp;
+    import core.sys.posix.sys.select;
+    import core.sys.posix.sys.socket;
+    import core.sys.posix.sys.time;
     import core.sys.posix.sys.un : sockaddr_un;
-    private import core.sys.posix.unistd;
+    import core.sys.posix.unistd;
     private alias _ctimeval = core.sys.posix.sys.time.timeval;
     private alias _clinger = core.sys.posix.sys.socket.linger;
 
-    private import core.stdc.errno;
+    import core.stdc.errno;
 
     enum socket_t : int32_t { init = -1 }
     private const int _SOCKET_ERROR = -1;
@@ -125,7 +125,7 @@ version(unittest)
     static assert(is(uint32_t == uint));
     static assert(is(uint16_t == ushort));
 
-    private import std.stdio : writefln;
+    import std.stdio : writefln;
 
     // Print a message on exception instead of failing the unittest.
     private void softUnittest(void delegate() @safe test, int line = __LINE__) @trusted
@@ -1269,6 +1269,20 @@ abstract class Address
     /// Returns actual size of underlying $(D sockaddr) structure.
     abstract @property socklen_t nameLen() const pure nothrow @nogc;
 
+    // Socket.remoteAddress, Socket.localAddress, and Socket.receiveFrom
+    // use setNameLen to set the actual size of the address as returned by
+    // getsockname, getpeername, and recvfrom, respectively.
+    // The following implementation is sufficient for fixed-length addresses,
+    // and ensures that the length is not changed.
+    // Must be overridden for variable-length addresses.
+    protected void setNameLen(socklen_t len)
+    {
+        if (len != this.nameLen)
+            throw new AddressException(
+                format("%s expects address of length %d, not %d", typeid(this),
+                    this.nameLen, len), 0);
+    }
+
     /// Family of this address.
     @property AddressFamily addressFamily() const pure nothrow @nogc
     {
@@ -1914,7 +1928,22 @@ version(StdDdoc)
 
     /**
      * $(D UnixAddress) encapsulates an address for a Unix domain socket
-     * ($(D AF_UNIX)). Available only on supported systems.
+     * ($(D AF_UNIX)), i.e. a socket bound to a path name in the file system.
+     * Available only on supported systems.
+     *
+     * Linux also supports an abstract address namespace, in which addresses
+     * are independent of the file system. A socket address is abstract
+     * iff `path` starts with a _null byte (`'\0'`). Null bytes in other
+     * positions of an abstract address are allowed and have no special
+     * meaning.
+     *
+     * Example:
+     * ---
+     * auto addr = new UnixAddress("/var/run/dbus/system_bus_socket");
+     * auto abstractAddr = new UnixAddress("\0/tmp/dbus-OtHLWmCLPR");
+     * ---
+     *
+     * See_Also: $(HTTP http://man7.org/linux/man-pages/man7/unix.7.html, UNIX(7))
      */
     class UnixAddress: Address
     {
@@ -1947,6 +1976,8 @@ static if (is(sockaddr_un))
     class UnixAddress: Address
     {
     protected:
+        socklen_t _nameLen;
+
         struct
         {
         align (1):
@@ -1958,6 +1989,14 @@ static if (is(sockaddr_un))
         {
             sun.sun_family = AddressFamily.UNIX;
             sun.sun_path = '?';
+            _nameLen = sun.sizeof;
+        }
+
+        override void setNameLen(socklen_t len) @trusted
+        {
+            if (len > sun.sizeof)
+                throw new SocketParameterException("Not enough socket address storage");
+            _nameLen = len;
         }
 
     public:
@@ -1973,8 +2012,7 @@ static if (is(sockaddr_un))
 
         override @property socklen_t nameLen() @trusted const
         {
-            return cast(socklen_t) (sockaddr_un.init.sun_path.offsetof +
-                strlen(cast(const(char*)) sun.sun_path.ptr) + 1);
+            return _nameLen;
         }
 
         this(in char[] path) @trusted pure
@@ -1982,7 +2020,18 @@ static if (is(sockaddr_un))
             enforce(path.length <= sun.sun_path.sizeof, new SocketParameterException("Path too long"));
             sun.sun_family = AddressFamily.UNIX;
             sun.sun_path.ptr[0 .. path.length] = (cast(byte[]) path)[];
-            sun.sun_path.ptr[path.length] = 0;
+            _nameLen = cast(socklen_t)
+                {
+                    auto len = sockaddr_un.init.sun_path.offsetof + path.length;
+                    // Pathname socket address must be terminated with '\0'
+                    // which must be included in the address length.
+                    if (sun.sun_path.ptr[0])
+                    {
+                        sun.sun_path.ptr[path.length] = 0;
+                        ++len;
+                    }
+                    return len;
+                }();
         }
 
         this(sockaddr_un addr) pure nothrow @nogc
@@ -1993,7 +2042,11 @@ static if (is(sockaddr_un))
 
         @property string path() @trusted const pure
         {
-            return to!string(cast(const(char)*)sun.sun_path.ptr);
+            auto len = _nameLen - sockaddr_un.init.sun_path.offsetof;
+            // For pathname socket address we need to strip off the terminating '\0'
+            if (sun.sun_path.ptr[0])
+                --len;
+            return (cast(const(char)*) sun.sun_path.ptr)[0 .. len].idup;
         }
 
         override string toString() const pure
@@ -2010,32 +2063,36 @@ static if (is(sockaddr_un))
         immutable ubyte[] data = [1, 2, 3, 4];
         Socket[2] pair;
 
-        auto name = deleteme ~ "-unix-socket";
-        auto address = new UnixAddress(name);
+        auto names = [ deleteme ~ "-unix-socket" ];
+        version (linux)
+            names ~= "\0" ~ deleteme ~ "-abstract\0unix\0socket";
+        foreach (name; names)
+        {
+            auto address = new UnixAddress(name);
 
-        auto listener = new Socket(AddressFamily.UNIX, SocketType.STREAM);
-        scope(exit) listener.close();
+            auto listener = new Socket(AddressFamily.UNIX, SocketType.STREAM);
+            scope(exit) listener.close();
+            listener.bind(address);
+            scope(exit) () @trusted { if (name[0]) remove(name.tempCString()); } ();
+            assert(listener.localAddress.toString == name);
 
-        listener.bind(address);
-        scope(exit) () @trusted { remove(name.tempCString()); } ();
-        assert(listener.localAddress.toString == name);
+            listener.listen(1);
 
-        listener.listen(1);
+            pair[0] = new Socket(AddressFamily.UNIX, SocketType.STREAM);
+            scope(exit) listener.close();
 
-        pair[0] = new Socket(AddressFamily.UNIX, SocketType.STREAM);
-        scope(exit) listener.close();
+            pair[0].connect(address);
+            scope(exit) pair[0].close();
 
-        pair[0].connect(address);
-        scope(exit) pair[0].close();
+            pair[1] = listener.accept();
+            scope(exit) pair[1].close();
 
-        pair[1] = listener.accept();
-        scope(exit) pair[1].close();
+            pair[0].send(data);
 
-        pair[0].send(data);
-
-        auto buf = new ubyte[data.length];
-        pair[1].receive(buf);
-        assert(buf == data);
+            auto buf = new ubyte[data.length];
+            pair[1].receive(buf);
+            assert(buf == data);
+        }
     }
 }
 
@@ -2889,8 +2946,7 @@ public:
         socklen_t nameLen = addr.nameLen;
         if (_SOCKET_ERROR == .getpeername(sock, addr.name, &nameLen))
             throw new SocketOSException("Unable to obtain remote socket address");
-        if (nameLen > addr.nameLen)
-            throw new SocketParameterException("Not enough socket address storage");
+        addr.setNameLen(nameLen);
         assert(addr.addressFamily == _family);
         return addr;
     }
@@ -2902,8 +2958,7 @@ public:
         socklen_t nameLen = addr.nameLen;
         if (_SOCKET_ERROR == .getsockname(sock, addr.name, &nameLen))
             throw new SocketOSException("Unable to obtain local socket address");
-        if (nameLen > addr.nameLen)
-            throw new SocketParameterException("Not enough socket address storage");
+        addr.setNameLen(nameLen);
         assert(addr.addressFamily == _family);
         return addr;
     }
@@ -3046,6 +3101,7 @@ public:
         version(Windows)
         {
             auto read = .recvfrom(sock, buf.ptr, capToInt(buf.length), cast(int) flags, from.name, &nameLen);
+            from.setNameLen(nameLen);
             assert(from.addressFamily == _family);
             // if (!read) //connection closed
             return read;
@@ -3053,6 +3109,7 @@ public:
         else
         {
             auto read = .recvfrom(sock, buf.ptr, buf.length, cast(int) flags, from.name, &nameLen);
+            from.setNameLen(nameLen);
             assert(from.addressFamily == _family);
             // if (!read) //connection closed
             return read;

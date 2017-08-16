@@ -22,9 +22,9 @@ struct ScopedAllocator(ParentAllocator)
         testAllocator!(() => ScopedAllocator());
     }
 
-    private import std.experimental.allocator.building_blocks.affix_allocator
+    import std.experimental.allocator.building_blocks.affix_allocator
         : AffixAllocator;
-    private import std.traits : hasMember;
+    import std.traits : hasMember;
     import std.typecons : Ternary;
 
     private struct Node

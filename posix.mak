@@ -31,8 +31,10 @@
 QUIET:=
 
 DEBUGGER=gdb
+GIT_HOME=https://github.com/dlang
+DMD_DIR=../dmd
 
-include osmodel.mak
+include $(DMD_DIR)/src/osmodel.mak
 
 ifeq (osx,$(OS))
 	export MACOSX_DEPLOYMENT_TARGET=10.7
@@ -61,8 +63,9 @@ ZIPFILE = phobos.zip
 ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DUB=dub
-GIT_HOME=https://github.com/dlang
 TOOLS_DIR=../tools
+DSCANNER_HASH=071cd08a6de9bbe1720c763b0aff4d19864b27f1
+DSCANNER_DIR=../dscanner-$(DSCANNER_HASH)
 
 # Documentation-related stuff
 DOCSRC = ../dlang.org
@@ -94,7 +97,7 @@ ifeq ($(OS),win32wine)
 	DMD = wine dmd.exe
 	RUN = wine
 else
-	DMD = ../dmd/generated/$(OS)/release/$(MODEL)/dmd
+	DMD = $(DMD_DIR)/generated/$(OS)/release/$(MODEL)/dmd
 	ifeq ($(OS),win32)
 		CC = dmc
 	else
@@ -112,7 +115,7 @@ else
 endif
 
 # Set DFLAGS
-DFLAGS=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -dip25 $(MODEL_FLAG) $(PIC)
+DFLAGS=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -dip25 $(MODEL_FLAG) $(PIC)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
@@ -140,7 +143,7 @@ LINKDL:=$(if $(findstring $(OS),linux),-L-ldl,)
 TIMELIMIT:=$(if $(shell which timelimit 2>/dev/null || true),timelimit -t 90 ,)
 
 # Set VERSION, where the file is that contains the version string
-VERSION=../dmd/VERSION
+VERSION=$(DMD_DIR)/VERSION
 
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
@@ -179,14 +182,14 @@ PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
   conv csv demangle encoding exception file format \
   functional getopt json math mathspecial meta mmfile numeric \
   outbuffer parallelism path process random signals socket stdint \
-  stdio string system traits typecons typetuple uni \
+  stdio string system traits typecons uni \
   uri utf uuid variant xml zip zlib
 PACKAGE_std_experimental = checkedint typecons
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
   sorting
 PACKAGE_std_container = array binaryheap dlist package rbtree slist util
 PACKAGE_std_datetime = date interval package stopwatch systime timezone
-PACKAGE_std_digest = crc digest hmac md murmurhash ripemd sha
+PACKAGE_std_digest = crc digest hmac md murmurhash package ripemd sha
 PACKAGE_std_experimental_logger = core filelogger \
   nulllogger multilogger package
 PACKAGE_std_experimental_allocator = \
@@ -224,9 +227,10 @@ EXTRA_MODULES_INTERNAL := $(addprefix std/, \
 		cstring digest/sha_SSSE3 \
 		$(addprefix math/, biguintcore biguintnoasm biguintx86	\
 						   errorfunction gammafunction ) \
-		scopebuffer test/dummyrange \
+		scopebuffer test/dummyrange test/range \
 		$(addprefix unicode_, comp decomp grapheme norm tables) \
 	) \
+	typetuple \
 )
 
 EXTRA_MODULES += $(EXTRA_DOCUMENTABLES) $(EXTRA_MODULES_INTERNAL)
@@ -259,12 +263,12 @@ SHARED=$(if $(findstring $(OS),linux freebsd),1,)
 # A blacklist of ignored module is provided as not all public unittest in
 # Phobos are independently runnable yet
 IGNORED_PUBLICTESTS= $(addprefix std/, \
-						base64 $(addprefix experimental/allocator/, \
+						$(addprefix experimental/allocator/, \
 								building_blocks/free_list building_blocks/quantizer \
-						) digest/hmac \
-						file math stdio traits typecons uuid)
+						) \
+						math stdio traits)
 PUBLICTESTS= $(addsuffix .publictests,$(filter-out $(IGNORED_PUBLICTESTS), $(D_MODULES)))
-TEST_EXTRACTOR=$(TOOLS_DIR)/styles/test_extractor
+TESTS_EXTRACTOR=$(ROOT)/tests_extractor
 PUBLICTESTS_DIR=$(ROOT)/publictests
 
 ################################################################################
@@ -504,12 +508,12 @@ changelog.html: changelog.dd
 
 ${TOOLS_DIR}:
 	git clone --depth=1 ${GIT_HOME}/$(@F) $@
+
 $(TOOLS_DIR)/checkwhitespace.d: | $(TOOLS_DIR)
-$(TOOLS_DIR)/styles/tests_extractor.d: | $(TOOLS_DIR)
-$(TOOLS_DIR)/styles/has_public_example.d: | $(TOOLS_DIR)
+$(TOOLS_DIR)/tests_extractor.d: | $(TOOLS_DIR)
 
 #################### test for undesired white spaces ##########################
-CWS_TOCHECK = posix.mak win32.mak win64.mak osmodel.mak
+CWS_TOCHECK = posix.mak win32.mak win64.mak
 CWS_TOCHECK += $(ALL_D_FILES) index.d
 
 checkwhitespace: $(LIB) $(TOOLS_DIR)/checkwhitespace.d
@@ -521,20 +525,25 @@ checkwhitespace: $(LIB) $(TOOLS_DIR)/checkwhitespace.d
 # See also: http://dlang.org/dstyle.html
 #############################
 
-../dscanner:
-	git clone https://github.com/Hackerpilot/Dscanner ../dscanner
-	git -C ../dscanner checkout tags/v0.4.0
-	git -C ../dscanner submodule update --init --recursive
+$(DSCANNER_DIR):
+	git clone https://github.com/dlang-community/Dscanner $@
+	git -C $@ checkout $(DSCANNER_HASH)
+	git -C $@ submodule update --init --recursive
 
-../dscanner/dsc: ../dscanner
+$(DSCANNER_DIR)/dsc: | $(DSCANNER_DIR) $(DMD) $(LIB)
 	# debug build is faster, but disable 'missing import' messages (missing core from druntime)
-	sed 's/dparse_verbose/StdLoggerDisableWarning/' ../dscanner/makefile > dscanner_makefile_tmp
-	mv dscanner_makefile_tmp ../dscanner/makefile
-	make -C ../dscanner githash debug
+	sed 's/dparse_verbose/StdLoggerDisableWarning/' $(DSCANNER_DIR)/makefile > $(DSCANNER_DIR)/dscanner_makefile_tmp
+	mv $(DSCANNER_DIR)/dscanner_makefile_tmp $(DSCANNER_DIR)/makefile
+	DC=$(DMD) DFLAGS="$(DFLAGS) -defaultlib=$(LIB)" make -C $(DSCANNER_DIR) githash debug
 
-style: has_public_example publictests style_lint
+style: publictests style_lint
 
-style_lint: ../dscanner/dsc $(LIB)
+# runs static code analysis with Dscanner
+dscanner: | $(DSCANNER_DIR)/dsc
+	@echo "Running DScanner"
+	$(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
+
+style_lint: dscanner $(LIB)
 	@echo "Check for trailing whitespace"
 	grep -nr '[[:blank:]]$$' etc std ; test $$? -eq 1
 
@@ -578,31 +587,23 @@ style_lint: ../dscanner/dsc $(LIB)
 	@echo "Check that Ddoc runs without errors"
 	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -w -D -Df/dev/null -main -c -o- $$(find etc std -type f -name '*.d') 2>&1 | grep -v "Deprecation:"; test $$? -eq 1
 
-	# at the moment libdparse has problems to parse some modules (->excludes)
-	@echo "Running DScanner"
-	../dscanner/dsc --config .dscanner.ini --styleCheck $$(find etc std -type f -name '*.d' | grep -vE 'std/traits.d|std/typecons.d') -I.
-
 ################################################################################
 # Check for missing imports in public unittest examples.
 ################################################################################
 publictests: $(PUBLICTESTS)
 
-$(TEST_EXTRACTOR): $(TOOLS_DIR)/styles/tests_extractor.d $(LIB)
-	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) build --force --compiler=$${PWD}/$(DMD) --root=$(TOOLS_DIR)/styles -c tests_extractor
+$(TESTS_EXTRACTOR): $(TOOLS_DIR)/tests_extractor.d | $(LIB)
+	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) build --force --compiler=$${PWD}/$(DMD) --single $<
+	mv $(TOOLS_DIR)/tests_extractor $@
 
 ################################################################################
 # Extract public tests of a module and test them in an separate file (i.e. without its module)
 # This is done to check for potentially missing imports in the examples, e.g.
 # make -f posix.mak std/format.publictests
 ################################################################################
-%.publictests: %.d $(LIB) $(TEST_EXTRACTOR) | $(PUBLICTESTS_DIR)/.directory
-	@$(TEST_EXTRACTOR) --inputdir  $< --outputdir $(PUBLICTESTS_DIR)
+%.publictests: %.d $(LIB) $(TESTS_EXTRACTOR) | $(PUBLICTESTS_DIR)/.directory
+	@$(TESTS_EXTRACTOR) --inputdir  $< --outputdir $(PUBLICTESTS_DIR)
 	@$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -main -unittest -run $(PUBLICTESTS_DIR)/$(subst /,_,$<)
-
-has_public_example: $(LIB)
-	#  checks whether public function have public examples (for now some modules are excluded)
-	rm -rf ./out
-	DFLAGS="$(DFLAGS) $(LIB) $(LINKDL)" $(DUB) -v --compiler=$${PWD}/$(DMD) --root=../tools/styles -c has_public_example -- --inputdir std --ignore "array.d,allocator,base64.d,bitmanip.d,concurrency.d,conv.d,csv.d,datetime/date.d,datetime/interval.d,datetime/package.d,datetime/stopwatch.d,datetime/systime.d,datetime/timezone.d,demangle.d,digest/hmac.d,digest/sha.d,encoding.d,exception.d,file.d,format.d,getopt.d,index.d,internal,isemail.d,json.d,logger/core.d,logger/nulllogger.d,math.d,mathspecial.d,net/curl.d,numeric.d,parallelism.d,path.d,process.d,random.d,range,regex/package.d,socket.d,stdio.d,string.d,traits.d,typecons.d,uni.d,unittest.d,uri.d,utf.d,uuid.d,xml.d,zlib.d"
 
 .PHONY : auto-tester-build
 auto-tester-build: all checkwhitespace

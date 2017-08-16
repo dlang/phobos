@@ -50,11 +50,10 @@ else:
 
 version (Windows):
 
-private import core.sys.windows.windows;
-private import std.conv;
-private import std.string;
-private import std.utf;
-private import std.windows.syserror;
+import core.sys.windows.windows;
+import std.conv;
+import std.string;
+import std.windows.syserror;
 
 import std.internal.cstring;
 
@@ -114,7 +113,7 @@ string fromMBSz(immutable(char)* s, int codePage = 0)
                     sysErrorString(GetLastError()));
             }
 
-            return std.utf.toUTF8(result[0 .. result.length-1]); // omit trailing null
+            return result[0 .. result.length-1].to!string; // omit trailing null
         }
     }
     return s[0 .. c-s];         // string is ASCII, no conversion necessary

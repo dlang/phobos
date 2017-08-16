@@ -13,7 +13,7 @@ deprecated("Import the appropriate core.sys.posix.* instead")
 module std.c.osx.socket;
 
 version (OSX):
-private import core.stdc.stdint;
+import core.stdc.stdint;
 public import core.sys.posix.arpa.inet;
 public import core.sys.posix.netdb;
 public import core.sys.posix.netinet.in_;
