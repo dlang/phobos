@@ -9865,6 +9865,15 @@ sgi.com/tech/stl/binary_search.html, binary_search).
         return !predFun(value, _input[i]);
     }
 
+/**
+Like $(D contains), but the value is specified before the range.
+*/
+    auto opBinaryRight(string op, V)(V value)
+    if (op == "in" && isRandomAccessRange!Range)
+    {
+        return contains(value);
+    }
+
 // groupBy
 /**
 Returns a range of subranges of elements that are equivalent according to the
@@ -9884,9 +9893,9 @@ sorting relation.
     auto a = [ 1, 2, 3, 42, 52, 64 ];
     auto r = assumeSorted(a);
     assert(r.contains(3));
-    assert(!r.contains(32));
+    assert(!(32 in r));
     auto r1 = sort!"a > b"(a);
-    assert(r1.contains(3));
+    assert(3 in r1);
     assert(!r1.contains(32));
     assert(r1.release() == [ 64, 52, 42, 3, 2, 1 ]);
 }
