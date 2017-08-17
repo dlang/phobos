@@ -778,24 +778,40 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
 }
 
 // overlap
-/*
-NOTE: Undocumented for now, overlap does not yet work with ctfe.
+
+
+/++
 Returns the overlapping portion, if any, of two arrays. Unlike $(D
-equal), $(D overlap) only compares the pointers in the ranges, not the
-values referred by them. If $(D r1) and $(D r2) have an overlapping
-slice, returns that slice. Otherwise, returns the null slice.
-*/
-auto overlap(T, U)(T[] r1, U[] r2) @trusted pure nothrow
-if (is(typeof(r1.ptr < r2.ptr) == bool))
+equal), $(D overlap) only compares the pointers and lengths in the
+ranges, not the values referred by them. If $(D r1) and $(D r2) have an
+overlapping slice, returns that slice. Otherwise, returns the null
+slice.
++/
+
+auto overlap(T, U)(T[] a, U[] b) @trusted
+if (is(typeof(a.ptr < b.ptr) == bool))
 {
-    import std.algorithm.comparison : min, max;
-    auto b = max(r1.ptr, r2.ptr);
-    auto e = min(r1.ptr + r1.length, r2.ptr + r2.length);
-    return b < e ? b[0 .. e - b] : null;
+    import std.algorithm.comparison : min;
+
+    alias RetPtr = CommonType!(T*, U*);
+
+    if (a.ptr <= b.ptr && b.ptr < a.ptr + a.length)
+    {
+        auto end = min(a.ptr + a.length, b.ptr + b.length);
+        return (cast(RetPtr)b.ptr)[0 .. end - b.ptr];
+    }
+
+    if (b.ptr <= a.ptr && a.ptr < b.ptr + b.length)
+    {
+        auto end = min(a.ptr + a.length, b.ptr + b.length);
+        return (cast(RetPtr)a.ptr)[0 .. end - a.ptr];
+    }
+
+    return null;
 }
 
 ///
-@safe pure /*nothrow*/ unittest
+@safe pure nothrow unittest
 {
     int[] a = [ 10, 11, 12, 13, 14 ];
     int[] b = a[1 .. 3];
@@ -803,7 +819,28 @@ if (is(typeof(r1.ptr < r2.ptr) == bool))
     b = b.dup;
     // overlap disappears even though the content is the same
     assert(overlap(a, b).empty);
+
+    //Enums are just literals, so they will never overlap anything.
+    enum x1 = [3, 5, 6, 2, 5];
+    enum ctfeOverlap = overlap(x1, x1);
+    assert(ctfeOverlap == []);
+
+    auto x2 = x1[1 .. 4];
+    auto runtimeOverlap = overlap(x1, x2);
+    assert(runtimeOverlap == []);
+
+    static test()() @nogc
+    {
+        auto a = "Yet another overuse of static"d;
+        auto b = a[4 .. 11];
+        return b.overlap(a);
+    }
+
+    //works at compile-time
+    static assert(test == "another"d);
 }
+
+
 
 @safe /*nothrow*/ unittest
 {
@@ -832,6 +869,8 @@ if (is(typeof(r1.ptr < r2.ptr) == bool))
     test(c, d);
     assert(overlap(c, d.idup).empty);
 }
+
+
 
 @safe pure nothrow unittest // bugzilla 9836
 {
