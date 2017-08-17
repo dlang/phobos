@@ -529,14 +529,14 @@ private:
         case OpID.postblit:
             static if (hasElaborateCopyConstructor!A)
             {
-                typeid(A).postblit(zis);
+                zis.__xpostblit();
             }
             break;
 
         case OpID.destruct:
             static if (hasElaborateDestructor!A)
             {
-                typeid(A).destroy(zis);
+                zis.__xdtor();
             }
             break;
 
