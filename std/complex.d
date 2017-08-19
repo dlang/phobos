@@ -822,7 +822,6 @@ Complex!(CommonType!(T, U)) fromPolar(T, U)(T modulus, U argument)
 */
 Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 {
-    import std.math : expi, coshisinh;
     auto cs = expi(z.re);
     auto csh = coshisinh(z.im);
     return typeof(return)(cs.im * csh.re, cs.re * csh.im);
@@ -840,7 +839,6 @@ Complex!T sin(T)(Complex!T z)  @safe pure nothrow @nogc
 /// ditto
 Complex!T cos(T)(Complex!T z)  @safe pure nothrow @nogc
 {
-    import std.math : expi, coshisinh;
     auto cs = expi(z.re);
     auto csh = coshisinh(z.im);
     return typeof(return)(cs.re * csh.re, - cs.im * csh.im);
@@ -882,6 +880,39 @@ Complex!real expi(real y)  @trusted pure nothrow @nogc
     assert(expi(0.0L) == 1.0L);
     auto z1 = expi(1.234);
     auto z2 = std.math.expi(1.234);
+    assert(z1.re == z2.re && z1.im == z2.im);
+}
+
+
+/**
+    Params: y = A real number.
+    Returns: The value of cosh(y) + i sinh(y)
+
+    Note:
+    $(D coshisinh) is included here for convenience and for easy migration of code
+    that uses $(REF _coshisinh, std,math).
+*/
+Complex!real coshisinh(real y) @safe pure nothrow @nogc
+{
+    static import std.math;
+    if (std.math.fabs(y) <= 0.5)
+        return Complex!real(std.math.cosh(y), std.math.sinh(y));
+    else
+    {
+        auto z = std.math.exp(y);
+        auto zi = 0.5 / z;
+        z = 0.5 * z;
+        return Complex!real(z + zi, z - zi);
+    }
+}
+
+@safe pure nothrow @nogc unittest
+{
+    static import std.math;
+
+    assert(coshisinh(3.0L) == complex(std.math.cosh(3.0L), std.math.sinh(3.0L)));
+    auto z1 = coshisinh(1.234);
+    auto z2 = std.math.coshisinh(1.234);
     assert(z1.re == z2.re && z1.im == z2.im);
 }
 
