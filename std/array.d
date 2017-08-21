@@ -820,15 +820,6 @@ if (is(typeof(a.ptr < b.ptr) == bool))
     // overlap disappears even though the content is the same
     assert(overlap(a, b).empty);
 
-    //Enums are just literals, so they will never overlap anything.
-    enum x1 = [3, 5, 6, 2, 5];
-    enum ctfeOverlap = overlap(x1, x1);
-    assert(ctfeOverlap == []);
-
-    auto x2 = x1[1 .. 4];
-    auto runtimeOverlap = overlap(x1, x2);
-    assert(runtimeOverlap == []);
-
     static test()() @nogc
     {
         auto a = "Yet another overuse of static"d;
@@ -840,14 +831,11 @@ if (is(typeof(a.ptr < b.ptr) == bool))
     static assert(test == "another"d);
 }
 
-
-
-@safe /*nothrow*/ unittest
+@safe nothrow unittest
 {
     static void test(L, R)(L l, R r)
     {
         import std.stdio;
-        scope(failure) writeln("Types: L %s  R %s", L.stringof, R.stringof);
 
         assert(overlap(l, r) == [ 100, 12 ]);
 
@@ -869,8 +857,6 @@ if (is(typeof(a.ptr < b.ptr) == bool))
     test(c, d);
     assert(overlap(c, d.idup).empty);
 }
-
-
 
 @safe pure nothrow unittest // bugzilla 9836
 {
