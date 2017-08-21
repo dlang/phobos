@@ -240,10 +240,13 @@ auto assertNotThrown(T : Throwable = Exception, E)
         line       = The line where the error occurred.
                      Defaults to $(D __LINE__).
 
+    Returns:
+        The caught exception.
+
     Throws:
         $(D AssertError) if the given $(D Throwable) is not thrown.
   +/
-void assertThrown(T : Throwable = Exception, E)
+T assertThrown(T : Throwable = Exception, E)
                  (lazy E expression,
                   string msg = null,
                   string file = __FILE__,
@@ -253,8 +256,8 @@ void assertThrown(T : Throwable = Exception, E)
 
     try
         expression();
-    catch (T)
-        return;
+    catch (T t)
+        return t;
     throw new AssertError("assertThrown failed: No " ~ T.stringof ~ " was thrown"
                                  ~ (msg.length == 0 ? "." : ": ") ~ msg,
                           file, line);
@@ -268,7 +271,8 @@ void assertThrown(T : Throwable = Exception, E)
     assertThrown!StringException(enforce!StringException(false, "Error!"));
 
     //Exception is the default.
-    assertThrown(enforce!StringException(false, "Error!"));
+    Exception exp = assertThrown(enforce!StringException(false, "Error!"));
+    assert(exp.msg == "Error!");
 
     assert(collectExceptionMsg!AssertError(assertThrown!StringException(
                enforce!StringException(true, "Error!"))) ==
@@ -284,7 +288,10 @@ void assertThrown(T : Throwable = Exception, E)
 
     try
     {
-        assertThrown!Exception(throwEx(new Exception("It's an Exception")));
+        string msg = "It's an Exception";
+        Exception ex = assertThrown!Exception(throwEx(new Exception(msg)));
+        assert(ex !is null);
+        assert(ex.msg == msg);
     }
     catch (AssertError) assert(0);
 
