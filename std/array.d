@@ -798,13 +798,13 @@ if (is(typeof(a.ptr < b.ptr) == bool))
     if (a.ptr <= b.ptr && b.ptr < a.ptr + a.length)
     {
         auto end = min(a.ptr + a.length, b.ptr + b.length);
-        return (cast(RetPtr)b.ptr)[0 .. end - b.ptr];
+        return (cast(RetPtr) b.ptr)[0 .. end - b.ptr];
     }
 
     if (b.ptr <= a.ptr && a.ptr < b.ptr + b.length)
     {
         auto end = min(a.ptr + a.length, b.ptr + b.length);
-        return (cast(RetPtr)a.ptr)[0 .. end - a.ptr];
+        return (cast(RetPtr) a.ptr)[0 .. end - a.ptr];
     }
 
     return null;
@@ -822,21 +822,19 @@ if (is(typeof(a.ptr < b.ptr) == bool))
 
     static test()() @nogc
     {
-        auto a = "Yet another overuse of static"d;
-        auto b = a[4 .. 11];
+        auto a = "It's three o'clock"d;
+        auto b = a[5 .. 10];
         return b.overlap(a);
     }
 
     //works at compile-time
-    static assert(test == "another"d);
+    static assert(test == "three"d);
 }
 
 @safe nothrow unittest
 {
     static void test(L, R)(L l, R r)
     {
-        import std.stdio;
-
         assert(overlap(l, r) == [ 100, 12 ]);
 
         assert(overlap(l, l[0 .. 2]) is l[0 .. 2]);
