@@ -8401,7 +8401,7 @@ version(unittest)
 }
 
 // Structs 
-unittest
+@safe unittest
 {
     mixin isSubTypeOfTestStructs;
     
@@ -8431,7 +8431,7 @@ unittest
 }
 
 // Classes 
-unittest
+@safe unittest
 {
     mixin isSubTypeOfTestClasses;
     
@@ -8472,7 +8472,7 @@ unittest
 }
 
 // Interfaces
-unittest
+@system unittest
 {
     mixin isSubTypeOfTestStructs;
     mixin isSubTypeOfTestInterfaces;
@@ -8488,7 +8488,7 @@ unittest
 }
 
 // Abstract Class ignores final being overwritten
-unittest
+@system unittest
 {
     mixin isSubTypeOfTestStructs;
     
@@ -8515,7 +8515,7 @@ unittest
 }
 
 // Double-check UDAs
-unittest
+@safe unittest
 {
     mixin isSubTypeOfTestInterfaces;
     
@@ -8530,7 +8530,7 @@ unittest
 }
 
 // Class with struct alias this
-unittest
+@safe unittest
 {
     struct Foo
     {
@@ -8550,7 +8550,7 @@ unittest
 }
 
 // Struct with class alias this
-unittest
+@safe unittest
 {
     class Foo
     {
@@ -8570,7 +8570,7 @@ unittest
 }
 
 // Struct with nested struct alias this
-unittest
+@safe unittest
 {
     struct Foo
     {
@@ -8597,7 +8597,7 @@ unittest
 }
 
 // Struct with assignment to nested struct (this is ok b/c what matters is access)
-unittest
+@safe unittest
 {
     struct Foo
     {
