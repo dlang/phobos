@@ -713,7 +713,8 @@ import std.range.primitives; // back, ElementEncodingType, ElementType, empty,
     // save
 import std.traits; // isConvertibleToString, isIntegral, isSomeChar,
     // isSomeString, Unqual
-import std.exception; // enforce
+import std.exception : enforce, collectException;
+static import std.ascii;
 // debug = std_uni;
 
 debug(std_uni) import std.stdio; // writefln, writeln
@@ -6827,7 +6828,6 @@ auto caseEnclose(CodepointSet set)
     static package CodepointSet parsePropertySpec(Range)(ref Range p,
         bool negated, bool casefold)
     {
-        import std.ascii;
         with(p)
         {
             enum MAX_PROPERTY = 128;
@@ -6878,7 +6878,7 @@ auto caseEnclose(CodepointSet set)
     ///
     @safe unittest
     {
-        import std.uni;
+        import std.uni : unicode;
         string pat = "[a-zA-Z0-9]hello";
         auto set = unicode.parseSet(pat);
         // check some of the codepoints
