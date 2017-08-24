@@ -8299,7 +8299,7 @@ version(unittest)
             double foo2(string s) @safe { return 0; }
         }
     }
-    
+
     mixin template isSubTypeOfTestClasses()
     {
         class Foo
