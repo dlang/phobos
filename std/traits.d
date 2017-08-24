@@ -8260,7 +8260,7 @@ version(unittest)
             double foo2(string s) @safe { return 0; }
             string bar(double d) @safe { return ""; }
             void bar(string s) @safe { }
-        }   
+        }
 
         //struct with member variable
         struct Baz
