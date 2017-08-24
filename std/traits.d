@@ -8233,7 +8233,7 @@ unittest
 
     static assert(isSubtypeOf!(FooBar, Foo));
     static assert(isSubtypeOf!(FooBar, Bar));
-    
+
     static assert(!isSubtypeOf!(Foo, FooBar));
     static assert(!isSubtypeOf!(Bar, FooBar));
 }
