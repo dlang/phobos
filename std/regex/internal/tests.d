@@ -1087,10 +1087,10 @@ alias Sequence(int B, int E) = staticIota!(B, E);
 @safe unittest
 {
     import std.algorithm.searching : canFind;
-    void willThrow(T)(T arg, string msg)
+    void willThrow(T, size_t line = __LINE__)(T arg, string msg)
     {
         auto e = collectException(regex(arg));
-        assert(e.msg.canFind(msg), e.msg);
+        assert(e.msg.canFind(msg), to!string(line) ~ ": " ~ e.msg);
     }
     willThrow([r".", r"[\(\{[\]\}\)]"], "no matching ']' found while parsing character class");
     willThrow([r"[\", r"123"], "no matching ']' found while parsing character class");
@@ -1106,3 +1106,15 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     auto e = collectException!RegexException(regex(q"<[^]>"));
     assert(e.msg.canFind("no operand for '^'"));
 }
+
+// bugzilla 17673
+@safe unittest
+{
+    string str = `<">`;
+    string[] regexps = ["abc", "\"|x"];
+    auto regexp = regex(regexps);
+    auto c = matchFirst(str, regexp);
+    assert(c);
+    assert(c.whichPattern == 2);
+}
+
