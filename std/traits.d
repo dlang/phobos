@@ -8176,17 +8176,17 @@ private bool checkSubTypeOf(alias S, alias T)()
 /**
  * Detect whether type `S` is a subtype of type `T`
  *
- * If type `S` implements all the members, member functions, or aggregate 
- * types of `T`, then for the sake of this function, it is said to 
+ * If type `S` implements all the members, member functions, or aggregate
+ * types of `T`, then for the sake of this function, it is said to
  * subtype `T`.
  *
  * This template ignores private members and/or member functions.
  *
- * It also ignores members and/or member functions that come from 
- * $(LREF Object). The implication of this is that a struct can be a subtype 
+ * It also ignores members and/or member functions that come from
+ * $(LREF Object). The implication of this is that a struct can be a subtype
  * of a class, even if it does not implement $(LREF Object)'s member functions.
  *
- * Finally, it also ignores final/abstract status of member functions. This 
+ * Finally, it also ignores final/abstract status of member functions. This
  * means that a subtype may have a different implementation than a final class.
  *
  * Params:
