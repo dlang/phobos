@@ -8132,7 +8132,7 @@ private template checkMemberName(string memberName, S, T)
                     }
                     else static if (members.length == 1)
                     {
-                        static if (is(typeof(memberT) == 
+                        static if (is(typeof(memberT) ==
                                       typeof(__traits(getMember, memberS, memberName))))
                         {
                             enum bool checkMemberName = true;
