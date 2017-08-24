@@ -6282,7 +6282,8 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
 
 /**
     Given a range of ranges, iterate transversally through the
-    `n`th element of each of the enclosed ranges.
+    `n`th element of each of the enclosed ranges. This function
+    is similar to `unzip` in other languages.
 
     Params:
         opt = Controls the assumptions the function makes about the lengths
@@ -6518,7 +6519,17 @@ Transversal!(RangeOfRanges, opt) transversal
     x[0] = [1, 2];
     x[1] = [3, 4];
     auto ror = transversal(x, 1);
-    assert(equal(ror, [ 2, 4 ][]));
+    assert(equal(ror, [ 2, 4 ]));
+}
+
+/// The following code does a full unzip
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    int[][] y = [[1, 2, 3], [4, 5, 6]];
+    auto z = y.front.walkLength.iota.map!(i => transversal(y, i));
+    assert(equal!equal(z, [[1, 4], [2, 5], [3, 6]]));
 }
 
 @safe unittest
