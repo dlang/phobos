@@ -8063,7 +8063,7 @@ enum isCopyable(S) = is(typeof(
     static assert(isCopyable!(int[]));
 }
 
-//True if memberName is in S and T, false if there is something 
+//True if memberName is in S and T, false if there is something
 //that does not match T
 private template checkMemberName(string memberName, S, T)
 {
@@ -8106,7 +8106,7 @@ private template checkMemberName(string memberName, S, T)
                 else
                 {
                     static assert(0, "this case has not been handled yet");
-                    //the normal case is for isType to only be true for 
+                    //the normal case is for isType to only be true for
                     //aggregatetypes, have not seen a case otherwise
                 }
             }
@@ -8140,8 +8140,8 @@ private template checkMemberName(string memberName, S, T)
                         else
                         {
                             //possible alternative
-                            //enum bool checkMemberName = 
-                            //    checkMemberName!(memberName, typeof(memberS), 
+                            //enum bool checkMemberName =
+                            //    checkMemberName!(memberName, typeof(memberS),
                             //                     T);
                             static assert(0, "this case has not been implemented");
                         }
@@ -8157,7 +8157,7 @@ private template checkMemberName(string memberName, S, T)
     }
 }
 
-//returns true if subtype, false if there is something that does not match 
+//returns true if subtype, false if there is something that does not match
 //interface
 private bool checkSubTypeOf(alias S, alias T)()
     if (isAggregateType!S && isAggregateType!T)
@@ -8176,14 +8176,14 @@ private bool checkSubTypeOf(alias S, alias T)()
 /**
  * Detect whether type `S` is a subtype of type `T`
  *
- * If type `S` implements all the members, member functions, or aggregate
- * types of `T`, then for the sake of this function, it is said to
+ * If type `S` implements all the members, member functions, or aggregate 
+ * types of `T`, then for the sake of this function, it is said to 
  * subtype `T`.
  *
- * This template ignores private members and/or member functions. 
+ * This template ignores private members and/or member functions.
  *
  * It also ignores members and/or member functions that come from 
- * $(LREF Object). The implication of this is that a struct can be a subtype
+ * $(LREF Object). The implication of this is that a struct can be a subtype 
  * of a class, even if it does not implement $(LREF Object)'s member functions.
  *
  * Finally, it also ignores final/abstract status of member functions. This 
