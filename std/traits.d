@@ -8088,7 +8088,7 @@ private template checkMemberName(string memberName, S, T)
         {
             alias memberS = Identity!(__traits(getMember, S, memberName));
             alias memberT = Identity!(__traits(getMember, T, memberName));
-            
+
             //Check if member is struct/class/interface/union
             static if (isType!(memberT))
             {
@@ -8121,9 +8121,9 @@ private template checkMemberName(string memberName, S, T)
                 {
                     //Handle Alias Seq (actually need to fix and ensure that it
                     //checks the that memberS is in getAliasThis
-                    
+
                     import std.meta : AliasSeq;
-                    
+
                     alias members = AliasSeq!(__traits(getAliasThis, S));
 
                     static if (members.length == 0)
@@ -8163,7 +8163,7 @@ private bool checkSubTypeOf(alias S, alias T)()
     if (isAggregateType!S && isAggregateType!T)
 {
     bool result;
-    
+
     foreach(memberName; __traits(allMembers, T))
     {
         result = checkMemberName!(memberName, S, T);
@@ -8216,13 +8216,13 @@ unittest
         int foo(int i, string s) @safe { return 0; }
         double foo(string s) @safe { return 0; }
     }
-    
+
     struct Bar
     {
         string bar(double d) @safe { return ""; }
         void bar(string s) @safe { }
     }
-    
+
     class FooBar
     {
         int foo(int i, string s) @safe { return 0; }
@@ -8230,7 +8230,7 @@ unittest
         string bar(double d) @safe { return ""; }
         void bar(string s) @safe { }
     }
-    
+
     static assert(isSubtypeOf!(FooBar, Foo));
     static assert(isSubtypeOf!(FooBar, Bar));
     
@@ -8247,13 +8247,13 @@ version(unittest)
             int foo(int i, string s) @safe { return 0; }
             double foo2(string s) @safe { return 0; }
         }
-        
+
         struct Bar
         {
             string bar(double d) @safe { return ""; }
             void bar(string s) @safe { }
         }
-        
+
         struct FooBar
         {
             int foo(int i, string s) @safe { return 0; }
@@ -8261,7 +8261,7 @@ version(unittest)
             string bar(double d) @safe { return ""; }
             void bar(string s) @safe { }
         }   
-        
+
         //struct with member variable
         struct Baz
         {
@@ -8269,7 +8269,7 @@ version(unittest)
             int foo(int i, string s) @safe { return 0; }
             double foo2(string s) @safe { return 0; }
         }
-        
+
         //struct with struct member variable
         struct Qux
         {
@@ -8277,7 +8277,7 @@ version(unittest)
             int foo(int i, string s) @safe { return 0; }
             double foo2(string s) @safe { return 0; }
         }
-        
+
         struct FooBarAliasThis
         {
             Foo foo;
@@ -8285,13 +8285,13 @@ version(unittest)
             string bar(double d) @safe { return ""; }
             void bar(string s) @safe { }
         }
-        
+
         struct FooStatic
         {
             static int foo(int i, string s) @safe { return 0; }
             double foo2(string s) @safe { return 0; }
         }
-        
+
         struct FooStaticMember
         {
             static int a;
@@ -8307,13 +8307,13 @@ version(unittest)
             int foo(int i, string s) @safe { return 0; }
             double foo2(string s) @safe { return 0; }
         }
-        
+
         class Bar
         {
             string bar(double d) @safe { return ""; }
             void bar(string s) @safe { }
         }
-        
+
         class FooBar
         {
             int foo(int i, string s) @safe { return 0; }
@@ -8321,7 +8321,7 @@ version(unittest)
             string bar(double d) @safe { return ""; }
             void bar(string s) @safe { }
         }
-        
+
         //class with member variable
         class Baz
         {
@@ -8329,7 +8329,7 @@ version(unittest)
             int foo(int i, string s) @safe { return 0; }
             double foo2(string s) @safe { return 0; }
         }
-        
+
         //class with struct member variable
         class Qux
         {
@@ -8337,19 +8337,19 @@ version(unittest)
             int foo(int i, string s) @safe { return 0; }
             double foo2(string s) @safe { return 0; }
         }
-        
+
         class FooBarInherit : Foo
         {
             string bar(double d) @safe { return ""; }
             void bar(string s) @safe { }
         }
-        
+
         class BarFooInherit : Bar
         {
             int foo(int i, string s) @safe { return 0; }
             double foo2(string s) @safe { return 0; }
         }
-        
+
         class FooBarAliasThis
         {
             Foo foo;
@@ -8357,25 +8357,25 @@ version(unittest)
             string bar(double d) @safe { return ""; }
             void bar(string s) @safe { }
         }
-        
+
         //class with member variable and inheritance
         class FooMember : Foo
         {
             int a;
         }
-        
+
         class BarMember : Bar
         {
             int b;
         }
-        
+
         class FooBarMember : FooMember
         {
             int c;
             string bar(double d) @safe { return ""; }
             void bar(string s) @safe { }
         }
-        
+
         class BarFooMember : BarMember
         {
             int d;
@@ -8391,7 +8391,7 @@ version(unittest)
             int foo(int i, string s) @safe;
             double foo2(string s) @safe;
         }
-        
+
         interface IBar
         {
             string bar(double d) @safe;
@@ -8404,28 +8404,28 @@ version(unittest)
 @safe unittest
 {
     mixin isSubTypeOfTestStructs;
-    
-    static assert(!isSubtypeOf!(Foo, Bar));
 
+    static assert(!isSubtypeOf!(Foo, Bar));
+    
     static assert(isSubtypeOf!(FooBar, Foo));
     static assert(isSubtypeOf!(FooBar, Bar));
-    
+
     static assert(!isSubtypeOf!(Foo, FooBar));
     static assert(!isSubtypeOf!(Bar, FooBar));
-    
+
     static assert(isSubtypeOf!(Baz, Foo));
     static assert(!isSubtypeOf!(Foo, Baz));
     static assert(!isSubtypeOf!(Baz, Bar));
-    
+
     static assert(isSubtypeOf!(Qux, Foo));
     static assert(!isSubtypeOf!(Qux, Bar));
-    
+
     // Initial Alias This check
-    
+
     static assert(isSubtypeOf!(FooBarAliasThis, Foo));
-    
+
     // Structs with static member variable/function
-    
+
     static assert(isSubtypeOf!(Baz, FooStatic));
     static assert(isSubtypeOf!(FooStaticMember, Foo));
 }
@@ -8434,39 +8434,39 @@ version(unittest)
 @safe unittest
 {
     mixin isSubTypeOfTestClasses;
-    
-    static assert(!isSubtypeOf!(Foo, Bar));
 
+    static assert(!isSubtypeOf!(Foo, Bar));
+    
     static assert(isSubtypeOf!(FooBar, Foo));
     static assert(isSubtypeOf!(FooBar, Bar));
-    
+
     static assert(!isSubtypeOf!(Foo, FooBar));
     static assert(!isSubtypeOf!(Bar, FooBar));
-    
+
     static assert(isSubtypeOf!(Baz, Foo));
     static assert(!isSubtypeOf!(Foo, Baz));
     static assert(!isSubtypeOf!(Baz, Bar));
-    
+
     static assert(isSubtypeOf!(Qux, Foo));
     static assert(!isSubtypeOf!(Qux, Bar));
-    
-    // Initial Alias This check
-    
-    static assert(isSubtypeOf!(FooBarAliasThis, Foo));
-    
-    // Class inheritance (functions only)
 
+    // Initial Alias This check
+
+    static assert(isSubtypeOf!(FooBarAliasThis, Foo));
+
+    // Class inheritance (functions only)
+    
     static assert(isSubtypeOf!(FooBarInherit, Foo));
     static assert(isSubtypeOf!(FooBarInherit, Bar));
-    
+
     static assert(isSubtypeOf!(BarFooInherit, Foo));
     static assert(isSubtypeOf!(BarFooInherit, Bar));
-    
+
     // Class inheritance (functions with member variables)
-    
+
     static assert(isSubtypeOf!(FooBarMember, FooMember));
     static assert(!isSubtypeOf!(FooBarMember, BarMember));
-    
+
     static assert(!isSubtypeOf!(BarFooMember, FooMember));
     static assert(isSubtypeOf!(BarFooMember, BarMember));
 }
@@ -8479,10 +8479,10 @@ version(unittest)
 
     static assert(isSubtypeOf!(Foo, IFoo));
     static assert(!isSubtypeOf!(Foo, IBar));
-    
+
     static assert(!isSubtypeOf!(Bar, IFoo));
     static assert(isSubtypeOf!(Bar, IBar));
-    
+
     static assert(isSubtypeOf!(FooBar, IFoo));
     static assert(isSubtypeOf!(FooBar, IBar));
 }
@@ -8491,25 +8491,25 @@ version(unittest)
 @system unittest
 {
     mixin isSubTypeOfTestStructs;
-    
+
     abstract class FooAbstract
     {
         abstract int foo(int i, string s) @safe;
         final double foo2(string s) @safe { return 0; }
     }
-    
+
     abstract class BarAbstract
     {
         final string bar(double d) @safe { return ""; }
         abstract void bar(string s) @safe;
     }
-    
+
     static assert(isSubtypeOf!(Foo, FooAbstract));
     static assert(!isSubtypeOf!(Foo, BarAbstract));
-
+    
     static assert(!isSubtypeOf!(Bar, FooAbstract));
     static assert(isSubtypeOf!(Bar, BarAbstract));
-    
+
     static assert(isSubtypeOf!(FooBar, FooAbstract));
     static assert(isSubtypeOf!(FooBar, BarAbstract));
 }
@@ -8518,13 +8518,13 @@ version(unittest)
 @safe unittest
 {
     mixin isSubTypeOfTestInterfaces;
-    
+
     struct UnsafeBar
     {
         string bar(double d) @system { return ""; }
         void bar(string s) @system { }
     }
-    
+
     static assert(!isSubtypeOf!(UnsafeBar, IFoo));
     static assert(!isSubtypeOf!(UnsafeBar, IBar));
 }
@@ -8537,7 +8537,7 @@ version(unittest)
         int foo1(int i, string s) @safe { return 0; }
         double foo2(string s) @safe { return 0; }
     }
-    
+
     class FooBarAliasThis
     {
         Foo foo;
@@ -8545,7 +8545,7 @@ version(unittest)
         string bar(double d) @safe { return ""; }
         void bar(string s) @safe { }
     }
-    
+
     static assert(isSubtypeOf!(FooBarAliasThis, Foo));
 }
 
@@ -8557,7 +8557,7 @@ version(unittest)
         int foo1(int i, string s) @safe { return 0; }
         double foo2(string s) @safe { return 0; }
     }
-    
+
     struct FooBarAliasThis
     {
         Foo foo;
@@ -8565,7 +8565,7 @@ version(unittest)
         string bar(double d) @safe { return ""; }
         void bar(string s) @safe { }
     }
-    
+
     static assert(isSubtypeOf!(FooBarAliasThis, Foo));
 }
 
@@ -8576,14 +8576,14 @@ version(unittest)
     {
         int foo1(int i, string s) @safe { return 0; }
     }
-    
+
     struct Bar
     {
         Foo foo;
         alias foo this;
         double foo2(string s) @safe { return 0; }
     }
-    
+
     struct FooBar
     {
         Bar bar;
@@ -8591,7 +8591,7 @@ version(unittest)
         string baz(double d) @safe { return ""; }
         void baz(string s) @safe { }
     }
-    
+
     static assert(isSubtypeOf!(FooBar, Foo));
     static assert(isSubtypeOf!(FooBar, Bar));
 }
@@ -8605,7 +8605,7 @@ version(unittest)
         int foo(int i, string s) @safe { return 0; }
         double foo2(string s) @safe { return 0; }
     }
-    
+
     //struct with struct member variable
     struct Bar
     {
@@ -8613,7 +8613,7 @@ version(unittest)
         string bar(double d) @safe { return ""; }
         void bar(string s) @safe { }
     }
-    
+
     //struct with struct member variable
     struct Baz
     {
@@ -8621,7 +8621,7 @@ version(unittest)
         string bar(double d) @safe { return ""; }
         void bar(string s) @safe { }
     }
-    
+
     static assert(isSubtypeOf!(Baz, Bar));
     static assert(isSubtypeOf!(Bar, Baz));
 }
