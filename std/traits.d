@@ -8400,13 +8400,13 @@ version(unittest)
     }
 }
 
-// Structs 
+// Structs
 @safe unittest
 {
     mixin isSubTypeOfTestStructs;
 
     static assert(!isSubtypeOf!(Foo, Bar));
-    
+
     static assert(isSubtypeOf!(FooBar, Foo));
     static assert(isSubtypeOf!(FooBar, Bar));
 
@@ -8430,13 +8430,13 @@ version(unittest)
     static assert(isSubtypeOf!(FooStaticMember, Foo));
 }
 
-// Classes 
+// Classes
 @safe unittest
 {
     mixin isSubTypeOfTestClasses;
 
     static assert(!isSubtypeOf!(Foo, Bar));
-    
+
     static assert(isSubtypeOf!(FooBar, Foo));
     static assert(isSubtypeOf!(FooBar, Bar));
 
@@ -8455,7 +8455,7 @@ version(unittest)
     static assert(isSubtypeOf!(FooBarAliasThis, Foo));
 
     // Class inheritance (functions only)
-    
+
     static assert(isSubtypeOf!(FooBarInherit, Foo));
     static assert(isSubtypeOf!(FooBarInherit, Bar));
 
@@ -8506,7 +8506,7 @@ version(unittest)
 
     static assert(isSubtypeOf!(Foo, FooAbstract));
     static assert(!isSubtypeOf!(Foo, BarAbstract));
-    
+
     static assert(!isSubtypeOf!(Bar, FooAbstract));
     static assert(isSubtypeOf!(Bar, BarAbstract));
 
