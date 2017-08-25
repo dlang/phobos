@@ -374,9 +374,15 @@ if (isSomeString!(S))
                 app.put("|");
             app.put("(?:");
             app.put(patterns[i]);
+            // terminator for the pattern
+            // to detect if the pattern unexpectedly ends
             app.put("\\");
-            app.put(cast(dchar)(privateUseStart+i)); // special end marker
+            app.put(cast(dchar)(privateUseStart+i));
             app.put(")");
+            // another one to return correct whichPattern
+            // for all of potential alternatives in the patterns[i]
+            app.put("\\");
+            app.put(cast(dchar)(privateUseStart+i));
         }
         pat = app.data;
     }
