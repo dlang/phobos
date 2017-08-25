@@ -1106,3 +1106,15 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     auto e = collectException!RegexException(regex(q"<[^]>"));
     assert(e.msg.canFind("no operand for '^'"), e.msg);
 }
+
+// bugzilla 17673
+@safe unittest
+{
+    string str = `<">`;
+    string[] regexps = ["abc", "\"|x"];
+    auto regexp = regex(regexps);
+    auto c = matchFirst(str, regexp);
+    assert(c);
+    assert(c.whichPattern == 2);
+}
+
