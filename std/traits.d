@@ -8209,7 +8209,7 @@ template isSubtypeOf(alias S, alias T)
 }
 
 ///
-unittest
+@system unittest
 {
     class Foo
     {
