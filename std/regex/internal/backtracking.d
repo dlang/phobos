@@ -15,7 +15,7 @@ import std.regex.internal.ir;
 +/
 template BacktrackingMatcher(bool CTregex)
 {
-    @trusted struct BacktrackingMatcher(Char, Stream = Input!Char)
+    @trusted class BacktrackingMatcher(Char, Stream = Input!Char) : Matcher!Char
         if (is(Char : dchar))
     {
         alias DataIndex = Stream.DataIndex;
@@ -29,20 +29,18 @@ template BacktrackingMatcher(bool CTregex)
         enum initialStack = 1 << 11; // items in a block of segmented stack
         alias String = const(Char)[];
         alias RegEx = Regex!Char;
-        alias MatchFn = bool function (ref BacktrackingMatcher!(Char, Stream));
-        RegEx re;      //regex program
-        static if (CTregex)
-            MatchFn nativeFn; //native code for that program
-        //Stream state
+        alias MatchFn = bool function (BacktrackingMatcher!(Char, Stream));
+        RegEx re;         // regex program
+        MatchFn nativeFn; // native code for that program
+        // Stream state
         Stream s;
         DataIndex index;
         dchar front;
         bool exhausted;
-        //backtracking machine state
+        // Backtracking machine state
         uint pc, counter;
-        DataIndex lastState = 0;    //top of state stack
-        static if (!CTregex)
-            uint infiniteNesting;
+        DataIndex lastState = 0;    // Top of state stack
+        uint infiniteNesting;
         size_t[] memory;
         Trace[]  merge;
         static struct Trace
@@ -69,6 +67,10 @@ template BacktrackingMatcher(bool CTregex)
         }
         //local slice of matches, global for backref
         Group!DataIndex[] matches, backrefed;
+        size_t _refCount;
+
+        override @property ref size_t refCount() { return _refCount; }
+        override @property ref RegEx pattern(){ return re; }
 
         static if (__traits(hasMember,Stream, "search"))
         {
@@ -182,20 +184,20 @@ template BacktrackingMatcher(bool CTregex)
             next();
         }
 
-        auto fwdMatcher(ref BacktrackingMatcher matcher, void[] memBlock)
+        auto fwdMatcher(BacktrackingMatcher matcher, void[] memBlock)
         {
             alias BackMatcherTempl = .BacktrackingMatcher!(CTregex);
             alias BackMatcher = BackMatcherTempl!(Char, Stream);
-            auto fwdMatcher = BackMatcher(matcher.re, s, memBlock, front, index);
+            auto fwdMatcher = new BackMatcher(matcher.re, s, memBlock, front, index);
             return fwdMatcher;
         }
 
-        auto bwdMatcher(ref BacktrackingMatcher matcher, void[] memBlock)
+        auto bwdMatcher(BacktrackingMatcher matcher, void[] memBlock)
         {
             alias BackMatcherTempl = .BacktrackingMatcher!(CTregex);
             alias BackMatcher = BackMatcherTempl!(Char, typeof(s.loopBack(index)));
             auto fwdMatcher =
-                BackMatcher(matcher.re, s.loopBack(index), memBlock);
+                new BackMatcher(matcher.re, s.loopBack(index), memBlock);
             return fwdMatcher;
         }
 
@@ -716,7 +718,7 @@ template BacktrackingMatcher(bool CTregex)
             debug(std_regex_matcher) writeln("pop array SP= ", lastState);
         }
 
-        static if (!CTregex)
+        static if (true)
         {
             //helper function, saves engine state
             void pushState(uint pc, uint counter)
@@ -946,7 +948,7 @@ struct CtContext
                         alias Lookaround = $$;
                     else
                         alias Lookaround = $$;
-                    static bool matcher_$$(ref Lookaround matcher) @trusted
+                    static bool matcher_$$(Lookaround matcher) @trusted
                     {
                         //(neg)lookaround piece start
                         $$

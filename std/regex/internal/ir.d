@@ -423,6 +423,92 @@ struct Group(DataIndex)
         writeln("\t", disassemble(slice, pc, dict));
 }
 
+// Encapsulates memory management, explicit ref counting
+// and the exact type of engine created
+// there is a single instance per engine combination type x Char
+// In future may also maintain a (TLS?) cache of memory
+interface MatcherFactory(Char)
+{
+    Matcher!Char create(ref Regex!Char, in Char[] input);
+    Matcher!Char dup(Matcher!Char m, in Char[] input);
+    void incRef(Matcher!Char m);
+    void decRef(Matcher!Char m);
+}
+
+// Only memory management, no compile-time vs run-time specialities
+abstract class GenericFactory(EngineType, Char) : MatcherFactory!Char
+{
+    Matcher!Char construct(ref Regex!Char re, in Char[] input, void[] memory);
+
+    Matcher!Char create(ref Regex!Char re, in Char[] input)
+    {
+        immutable classSize = __traits(classInstanceSize, EngineType!Char);
+        immutable size = EngineType!Char.initialMemory(prog) + classSize;
+        auto memory = enforce(malloc(size), "malloc failed")[0 .. size];
+        scope(failure) free(memory.ptr);
+        auto engine = construct(prog, input, _memory);
+        assert(engine.refCount == 1);
+        assert(cast(void*)engine == memory.ptr);
+        return engine;
+    }
+
+    Matcher!Char dup(Matcher!Char engine, in Char[] input)
+    {
+        immutable size = EngineType.initialMemory(engine.re)+size_t.sizeof;
+        auto memory = enforce(malloc(size), "malloc failed")[0 .. size];
+        scope(failure) free(memory.ptr);
+        engine.dupTo(_memory[size_t.sizeof .. size]);
+        engine = construct(engine.pattern, input, memory);
+        assert(engine.refCount == 1);
+        return engine;
+    }
+
+    void incRef()
+    {
+        ++m.refCount;
+    }
+
+    void decRef(Matcher!Char m)
+    {
+        assert(m.refCount != 0);
+        if (--m.refCount == 0)
+        {
+            free(cast(void*)m);
+        }
+    }
+}
+
+// A factory for run-time engines
+class RuntimeFactory(EngineType, Char) : GenericFactory!(EngineType, Char)
+{
+    Matcher!Char construct(ref Regex!Char re, in Char[] input, void[] memory)
+    {
+        return emplace!(EngineType!Char)(_memory[0 .. classSize], 
+            prog, Input!Char(input), _memory[classSize .. $]);
+    }
+}
+
+// A factory for compile-time engine
+class CtfeFactory(EngineType, Char, alias func) : GenericFactory!(EngineType, Char)
+{
+    Matcher!Char construct(ref Regex!Char re, in Char[] input, void[] memory)
+    {
+        return emplace!(EngineType!Char)(_memory[0 .. classSize], 
+            StaticRegex!Char(prog, func), Input!Char(input), _memory[classSize .. $]);
+    }
+}
+
+interface Matcher(Char) 
+{
+    // Get a (next) match
+    int match(Group!size_t[] matches);
+    // This only maintains internal ref-count,
+    // deallocation happens inside MatcherFactory
+    @property ref size_t refCount();
+    // The pattern loaded
+    @property ref Regex!Char pattern();
+}
+
 /++
     $(D Regex) object holds regular expression pattern in compiled form.
     Instances of this object are constructed via calls to $(D regex).
@@ -495,6 +581,7 @@ package(std.regex):
     public const(BitTable)[] filters;      // bloom filters for conditional loops
     uint[] backrefed;                      // bit array of backreferenced submatches
     Kickstart!Char kickstart;
+    MatcherFactory!Char factory;           // produces optimal matcher for this pattern
 
     //bit access helper
     uint isBackref(uint n)

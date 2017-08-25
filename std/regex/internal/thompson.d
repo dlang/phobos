@@ -714,7 +714,7 @@ template ThompsonOps(E,S, bool withInput:false)
    Thomspon matcher does all matching in lockstep,
    never looking at the same char twice
 +/
-@trusted struct ThompsonMatcher(Char, StreamType = Input!Char)
+@trusted class ThompsonMatcher(Char, StreamType = Input!Char): Matcher!Char
 if (is(Char : dchar))
 {
     alias DataIndex = Stream.DataIndex;
