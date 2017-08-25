@@ -1027,6 +1027,50 @@ public:
         assert(b1.bitsSet.equal(iota(0, 270)));
     }
 
+    /**
+      Flips a single bit, specified by `pos`
+     */
+    void flip(size_t i)
+    {
+        bt(_ptr, i) ? btr(_ptr, i) : bts(_ptr, i);
+    }
+
+    @system unittest
+    {
+        auto ax = BitArray([1, 0, 0, 1]);
+        ax.flip(0);
+        assert(ax[0] == 0);
+
+        bool[200] y;
+        y[90 .. 130] = true;
+        auto ay = BitArray(y);
+        ay.flip(100);
+        assert(ay[100] == 0);
+    }
+
+    /**********************************************
+     * Counts all the set bits in the $(D BitArray)
+     */
+    size_t count()
+    {
+        size_t bitCount;
+        foreach (i; 0 .. fullWords)
+            bitCount += countBitsSet(_ptr[i]);
+        bitCount += countBitsSet(_ptr[fullWords] & endMask);
+        return bitCount;
+    }
+
+    @system unittest
+    {
+        auto a = BitArray([0, 1, 1, 0, 0, 1, 1]);
+        assert(a.count == 4);
+
+        bool[200] boolArray;
+        boolArray[45 .. 130] = true;
+        auto c = BitArray(boolArray);
+        assert(c.count == 85);
+    }
+
     /**********************************************
      * Duplicates the $(D BitArray) and its contents.
      */
