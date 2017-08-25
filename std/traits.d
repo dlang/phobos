@@ -8164,7 +8164,7 @@ private bool checkSubTypeOf(alias S, alias T)()
 {
     bool result;
 
-    foreach(memberName; __traits(allMembers, T))
+    foreach (memberName; __traits(allMembers, T))
     {
         result = checkMemberName!(memberName, S, T);
         if (result == false)
