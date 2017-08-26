@@ -1731,17 +1731,18 @@ reference, or an entire array. It is assumed the respective entities had been
 allocated with the same allocator.
 
 */
-void dispose(A, T)(auto ref A alloc, T* p)
+void dispose(A, T)(auto ref A alloc, auto ref T* p)
 {
     static if (hasElaborateDestructor!T)
     {
         destroy(*p);
     }
     alloc.deallocate((cast(void*) p)[0 .. T.sizeof]);
+    p = null;
 }
 
 /// Ditto
-void dispose(A, T)(auto ref A alloc, T p)
+void dispose(A, T)(auto ref A alloc, auto ref T p)
 if (is(T == class) || is(T == interface))
 {
     if (!p) return;
@@ -1760,6 +1761,7 @@ if (is(T == class) || is(T == interface))
     auto support = (cast(void*) ob)[0 .. typeid(ob).initializer.length];
     destroy(p);
     alloc.deallocate(support);
+    p = null;
 }
 
 /// Ditto
@@ -1811,6 +1813,23 @@ void dispose(A, T)(auto ref A alloc, T[] array)
 
     int[] arr = theAllocator.makeArray!int(43);
     theAllocator.dispose(arr);
+}
+
+@system unittest //bugzilla 16512
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    int* i = Mallocator.instance.make!int(0);
+    Mallocator.instance.dispose(i);
+    assert(i is null);
+
+    Object o = Mallocator.instance.make!Object();
+    Mallocator.instance.dispose(o);
+    assert(o is null);
+
+    uint* u = Mallocator.instance.make!uint(0);
+    Mallocator.instance.dispose((){return u;}());
+    assert(u !is null);
 }
 
 @system unittest //bugzilla 15721
