@@ -2949,7 +2949,7 @@ pure @safe nothrow @nogc unittest
         `range` with up to `n` elements dropped
 
     See_Also:
-        $(REF popFront, std, range, primitives), $(REF popBackN, std, range, primitives)
+        $(REF popFront, std, _range, primitives), $(REF popBackN, std, _range, primitives)
   +/
 R drop(R)(R range, size_t n)
 if (isInputRange!R)
@@ -3038,8 +3038,8 @@ if (isBidirectionalRange!R)
         `range` with `n` elements dropped
 
     See_Also:
-        $(REF popFrontExcatly, std, range, primitives),
-        $(REF popBackExcatly, std, range, primitives)
+        $(REF popFrontExcatly, std, _range, primitives),
+        $(REF popBackExcatly, std, _range, primitives)
 +/
 R dropExactly(R)(R range, size_t n)
 if (isInputRange!R)
