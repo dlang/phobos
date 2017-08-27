@@ -2529,3 +2529,17 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
     static assert(!__traits(compiles, initOnce!c(true))); // TLS
     static assert(!__traits(compiles, initOnce!d(true))); // local variable
 }
+
+// test ability to send shared arrays
+@system unittest
+{
+    static shared int[] x = new shared(int)[1];
+    auto tid = spawn({
+        auto arr = receiveOnly!(shared(int)[]);
+        arr[0] = 5;
+        ownerTid.send(true);
+    });
+    tid.send(x);
+    receiveOnly!(bool);
+    assert(x[0] == 5);
+}

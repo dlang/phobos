@@ -2509,8 +2509,13 @@ Params:
 }
 
 /**
-Gets the value. $(D this) must not be in the null state.
+Gets the value if not null. If $(D this) is in the null state and the optional
+parameter `datum` is passed, then `datum` is returned, otherwise
+the function will throw an `AssertError`.
 This function is also called for the implicit conversion to $(D T).
+
+Params:
+    fallback = the value to return in case the `Nullable` is null.
 
 Returns:
     The value held internally by this `Nullable`.
@@ -2520,6 +2525,12 @@ Returns:
         enum message = "Called `get' on null Nullable!" ~ T.stringof ~ ".";
         assert(!isNull, message);
         return _value;
+    }
+
+    /// ditto
+    @property get(U)(inout(U) fallback) inout @safe pure nothrow
+    {
+        return isNull ? fallback : _value;
     }
 
 ///
@@ -2538,6 +2549,19 @@ Returns:
     ni = 5;
     assertNotThrown!AssertError(i = ni);
     assert(i == 5);
+}
+
+///
+@safe pure nothrow unittest
+{
+    int i = 42;
+    Nullable!int ni2;
+    int x = ni2.get(i);
+    assert(x == i);
+
+    ni2 = 7;
+    x = ni2.get(i);
+    assert(x == 7);
 }
 
 /**
