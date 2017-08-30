@@ -484,18 +484,18 @@ abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
 // A factory for run-time engines
 class RuntimeFactory(alias EngineType, Char) : GenericFactory!(EngineType, Char)
 {
-    override Matcher!Char construct(const Regex!Char re, in Char[] input, void[] memory) const
+    override EngineType!Char construct(const Regex!Char re, in Char[] input, void[] memory) const
     {
         import std.conv : emplace;
         return emplace!(EngineType!Char)(memory[0 .. classSize], 
-            prog, Input!Char(input), memory[classSize .. $]);
+            re, Input!Char(input), memory[classSize .. $]);
     }
 }
 
 // A factory for compile-time engine
 class CtfeFactory(alias EngineType, Char, alias func) : GenericFactory!(EngineType, Char)
 {
-    override Matcher!Char construct(const Regex!Char re, in Char[] input, void[] memory) const
+    override EngineType!Char construct(const Regex!Char re, in Char[] input, void[] memory) const
     {
         import std.conv : emplace;
         return emplace!(EngineType!Char)(memory[0 .. classSize], 
@@ -503,8 +503,11 @@ class CtfeFactory(alias EngineType, Char, alias func) : GenericFactory!(EngineTy
     }
 }
 
-interface Matcher(Char) 
+// Defining it as an interface has the undesired side-effect:
+// casting any class to an interface silently adjusts pointer to point to a nested vtbl
+abstract class Matcher(Char) 
 {
+abstract:
     // Get a (next) match
     int match(Group!size_t[] matches);
     // This only maintains internal ref-count,
@@ -608,6 +611,13 @@ package(std.regex):
     {
         auto r = cast()this;
         r.ir = code.dup; // TODO: sidestep const instead?
+        return r;
+    }
+
+    const(Regex) withNGroup(uint nGroup) pure const @trusted
+    {
+        auto r = cast()this;
+        r.ngroup = nGroup;
         return r;
     }
 

@@ -68,6 +68,7 @@ template BacktrackingMatcher(bool CTregex)
         //local slice of matches, global for backref
         Group!DataIndex[] matches, backrefed;
         size_t _refCount;
+    final:
 
         override @property ref size_t refCount() { return _refCount; }
         override @property ref const(RegEx) pattern(){ return re; }
@@ -163,14 +164,18 @@ template BacktrackingMatcher(bool CTregex)
             backrefed = null;
         }
 
-        void dupTo(void[] memory)
+        override void dupTo(void[] memBlock)
         {
-            auto tmp = this;
-            tmp.initExternalMemory(memory);
+            auto m  = arrayInChunk!(Trace)(re.hotspotTableSize, memBlock);
+            m[] = Trace.init;
+            auto mem = cast(size_t[]) memBlock;
+            mem[0] = 0; // hidden pointer
+            mem[1] = 0; // used size
         }
 
         this(ref const RegEx program, Stream stream, void[] memBlock, dchar ch, DataIndex idx)
         {
+            _refCount = 1;
             re = program;
             initialize(program, stream, memBlock);
             front = ch;
@@ -179,6 +184,7 @@ template BacktrackingMatcher(bool CTregex)
 
         this(ref const RegEx program, MatchFn func, Stream stream, void[] memBlock)
         {
+            _refCount = 1;
             re = program;
             initialize(program, stream, memBlock);
             nativeFn = func;
@@ -187,6 +193,7 @@ template BacktrackingMatcher(bool CTregex)
 
         this(ref const RegEx program, Stream stream, void[] memBlock)
         {
+            _refCount = 1;
             re = program;
             initialize(program, stream, memBlock);
             next();
@@ -229,7 +236,7 @@ template BacktrackingMatcher(bool CTregex)
         }
 
         //lookup next match, fill matches with indices into input
-        int match(Group!DataIndex[] matches)
+        override int match(Group!DataIndex[] matches)
         {
             debug(std_regex_matcher)
             {
@@ -815,7 +822,7 @@ struct CtContext
     //to mark the portion of matches to save
     int match, total_matches;
     int reserved;
-    CodepointSet[] charsets;
+    const CodepointSet[] charsets;
 
 
     //state of codegenerator
@@ -825,7 +832,7 @@ struct CtContext
         int addr;
     }
 
-    this(Char)(Regex!Char re)
+    this(Char)(const Regex!Char re)
     {
         match = 1;
         reserved = 1; //first match is skipped
@@ -886,7 +893,7 @@ struct CtContext
     }
 
     //
-    CtState ctGenBlock(Bytecode[] ir, int addr)
+    CtState ctGenBlock(const(Bytecode)[] ir, int addr)
     {
         CtState result;
         result.addr = addr;
@@ -900,7 +907,7 @@ struct CtContext
     }
 
     //
-    CtState ctGenGroup(ref Bytecode[] ir, int addr)
+    CtState ctGenGroup(ref const(Bytecode)[] ir, int addr)
     {
         import std.algorithm.comparison : max;
         auto bailOut = "goto L_backtrack;";
@@ -1002,7 +1009,7 @@ struct CtContext
     }
 
     //generate source for bytecode contained  in OrStart ... OrEnd
-    CtState ctGenAlternation(Bytecode[] ir, int addr)
+    CtState ctGenAlternation(const(Bytecode)[] ir, int addr)
     {
         CtState[] pieces;
         CtState r;
@@ -1042,11 +1049,11 @@ struct CtContext
 
     // generate fixup code for instruction in ir,
     // fixup means it has an alternative way for control flow
-    string ctGenFixupCode(Bytecode[] ir, int addr, int fixup)
+    string ctGenFixupCode(const(Bytecode)[] ir, int addr, int fixup)
     {
         return ctGenFixupCode(ir, addr, fixup); // call ref Bytecode[] version
     }
-    string ctGenFixupCode(ref Bytecode[] ir, int addr, int fixup)
+    string ctGenFixupCode(ref const(Bytecode)[] ir, int addr, int fixup)
     {
         string r;
         string testCode;
@@ -1200,7 +1207,7 @@ struct CtContext
     }
 
 
-    string ctQuickTest(Bytecode[] ir, int id)
+    string ctQuickTest(const(Bytecode)[] ir, int id)
     {
         uint pc = 0;
         while (pc < ir.length && ir[pc].isAtom)
@@ -1227,7 +1234,7 @@ struct CtContext
     }
 
     //process & generate source for simple bytecodes at front of ir using address addr
-    CtState ctGenAtom(ref Bytecode[] ir, int addr)
+    CtState ctGenAtom(ref const(Bytecode)[] ir, int addr)
     {
         CtState result;
         result.code = ctAtomCode(ir, addr);
@@ -1237,7 +1244,7 @@ struct CtContext
     }
 
     //D code for atom at ir using address addr, addr < 0 means quickTest
-    string ctAtomCode(Bytecode[] ir, int addr)
+    string ctAtomCode(const(Bytecode)[] ir, int addr)
     {
         string code;
         string bailOut, nextInstr;
@@ -1449,7 +1456,7 @@ struct CtContext
     }
 
     //generate D code for the whole regex
-    public string ctGenRegEx(Bytecode[] ir)
+    public string ctGenRegEx(const(Bytecode)[] ir)
     {
         auto bdy = ctGenBlock(ir, 0);
         auto r = `
@@ -1498,7 +1505,7 @@ struct CtContext
 
 }
 
-string ctGenRegExCode(Char)(Regex!Char re)
+string ctGenRegExCode(Char)(const Regex!Char re)
 {
     auto context = CtContext(re);
     return context.ctGenRegEx(re.ir);

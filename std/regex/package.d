@@ -426,7 +426,7 @@ if (isSomeString!(S))
 template ctRegexImpl(alias pattern, string flags=[])
 {
     import std.regex.internal.backtracking, std.regex.internal.parser;
-    enum r = regex(pattern, flags);
+    static immutable r = cast(immutable)regex(pattern, flags);
     alias Char = BasicElementOf!(typeof(pattern));
     enum source = ctGenRegExCode(r);
     alias CtMatcher = BacktrackingMatcher!(true);

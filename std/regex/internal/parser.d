@@ -12,7 +12,10 @@ static import std.ascii;
 // package relevant info from parser into a regex object
 auto makeRegex(S, CG)(Parser!(S, CG) p)
 {
-    Regex!(BasicElementOf!S) re;
+    import std.regex.internal.thompson, std.regex.internal.backtracking;
+    import std.algorithm.searching : canFind;
+    alias Char = BasicElementOf!S;
+    Regex!Char re;
     auto g = p.g;
     with(re)
     {
@@ -24,6 +27,9 @@ auto makeRegex(S, CG)(Parser!(S, CG) p)
         charsets = g.charsets;
         matchers = g.matchers;
         backrefed = g.backrefed;
+        // check if we have backreferences, if so - use backtracking
+        if (backrefed.canFind!"a != 0") factory = new RuntimeFactory!(BacktrackingMatcher!false, Char);
+        else factory = new RuntimeFactory!(ThompsonMatcher, Char);
         re.postprocess();
         debug(std_regex_parser)
         {

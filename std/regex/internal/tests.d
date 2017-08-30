@@ -518,11 +518,11 @@ alias Sequence(int B, int E) = staticIota!(B, E);
 {
     import std.algorithm.comparison : equal;
     auto rtr = regex("a|b|c");
-    enum ctr = regex("a|b|c");
+    static ctr = regex("a|b|c");
     assert(equal(rtr.ir,ctr.ir));
     //CTFE parser BUG is triggered by group
     //in the middle of alternation (at least not first and not last)
-    enum testCT = regex(`abc|(edf)|xyz`);
+    static testCT = regex(`abc|(edf)|xyz`);
     auto testRT = regex(`abc|(edf)|xyz`);
     assert(equal(testCT.ir,testRT.ir));
 }

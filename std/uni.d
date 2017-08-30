@@ -2181,9 +2181,9 @@ pure:
         assert(set.byInterval.equal([tuple('A','E'), tuple('a','e')]));
         -----------
     */
-    @property auto byInterval()
+    @property auto byInterval() const
     {
-        return Intervals!(typeof(data))(data);
+        return Intervals!(const(uint)[])(data[]);
     }
 
     /**
@@ -2663,7 +2663,7 @@ public:
         }
         ---
     */
-    string toSourceCode(string funcName="")
+    string toSourceCode(string funcName="") const
     {
         import std.algorithm.searching : countUntil;
         import std.array : array;
@@ -2804,6 +2804,7 @@ private:
 
         //may break sorted property - but we need std.sort to access it
         //hence package protection attribute
+        static if(hasAssignableElements!Range)
         package @property void front(CodepointInterval val)
         {
             slice[start] = val.a;
@@ -2818,6 +2819,7 @@ private:
         }
 
         //ditto about package
+        static if(hasAssignableElements!Range)
         package @property void back(CodepointInterval val)
         {
             slice[end-2] = val.a;
@@ -2842,6 +2844,7 @@ private:
         }
 
         //ditto about package
+        static if(hasAssignableElements!Range)
         package void opIndexAssign(CodepointInterval val, size_t idx)
         {
             slice[start+idx*2] = val.a;
