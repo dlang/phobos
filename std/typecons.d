@@ -847,7 +847,7 @@ template Tuple(Specs...)
          *           source `Tuple` must be implicitly assignable to each
          *           respective element of the target `Tuple`.
          */
-        void opAssign(R)(auto ref R rhs)
+        ref Tuple opAssign(R)(auto ref R rhs)
         if (areCompatibleTuples!(typeof(this), R, "="))
         {
             import std.algorithm.mutation : swap;
@@ -870,6 +870,7 @@ template Tuple(Specs...)
                 // Do not swap; opAssign should be called on the fields.
                 field[] = rhs.field[];
             }
+            return this;
         }
 
         /**
@@ -1800,6 +1801,22 @@ private template ReverseTupleSpecs(T...)
     assertThrown!FormatException(
         format("%(%d%|, %)", tuple(1, 2.0)) == `1, 2.0`
     );
+}
+
+// Issue 17803, parte uno
+@safe unittest
+{
+    auto a = tuple(3, "foo");
+    assert(__traits(compiles, { a = (a = a); }));
+}
+// Ditto
+@safe unittest
+{
+    Tuple!(int[]) a, b, c;
+    a = tuple([0, 1, 2]);
+    c = b = a;
+    assert(a[0].length == b[0].length && b[0].length == c[0].length);
+    assert(a[0].ptr == b[0].ptr && b[0].ptr == c[0].ptr);
 }
 
 /**
