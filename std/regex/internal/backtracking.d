@@ -29,8 +29,8 @@ template BacktrackingMatcher(bool CTregex)
         enum initialStack = 1 << 11; // items in a block of segmented stack
         alias String = const(Char)[];
         alias RegEx = Regex!Char;
-        alias MatchFn = bool function (BacktrackingMatcher!(Char, Stream));
-        RegEx re;         // regex program
+        alias MatchFn = bool function (ref BacktrackingMatcher);
+        const RegEx re;         // regex program
         MatchFn nativeFn; // native code for that program
         // Stream state
         Stream s;
@@ -70,7 +70,7 @@ template BacktrackingMatcher(bool CTregex)
         size_t _refCount;
 
         override @property ref size_t refCount() { return _refCount; }
-        override @property ref RegEx pattern(){ return re; }
+        override @property ref const(RegEx) pattern(){ return re; }
 
         static if (__traits(hasMember,Stream, "search"))
         {
@@ -155,49 +155,57 @@ template BacktrackingMatcher(bool CTregex)
             memory = memory[2..$];
         }
 
-        void initialize(ref RegEx program, Stream stream, void[] memBlock)
+        void initialize(ref const RegEx program, Stream stream, void[] memBlock)
         {
-            re = program;
             s = stream;
             exhausted = false;
             initExternalMemory(memBlock);
             backrefed = null;
         }
 
-        auto dupTo(void[] memory)
+        void dupTo(void[] memory)
         {
-            typeof(this) tmp = this;
+            auto tmp = this;
             tmp.initExternalMemory(memory);
-            return tmp;
         }
 
-        this(ref RegEx program, Stream stream, void[] memBlock, dchar ch, DataIndex idx)
+        this(ref const RegEx program, Stream stream, void[] memBlock, dchar ch, DataIndex idx)
         {
+            re = program;
             initialize(program, stream, memBlock);
             front = ch;
             index = idx;
         }
 
-        this(ref RegEx program, Stream stream, void[] memBlock)
+        this(ref const RegEx program, MatchFn func, Stream stream, void[] memBlock)
         {
+            re = program;
+            initialize(program, stream, memBlock);
+            nativeFn = func;
+            next();
+        }
+
+        this(ref const RegEx program, Stream stream, void[] memBlock)
+        {
+            re = program;
             initialize(program, stream, memBlock);
             next();
         }
 
-        auto fwdMatcher(BacktrackingMatcher matcher, void[] memBlock)
+        auto fwdMatcher(ref const RegEx re, void[] memBlock)
         {
             alias BackMatcherTempl = .BacktrackingMatcher!(CTregex);
             alias BackMatcher = BackMatcherTempl!(Char, Stream);
-            auto fwdMatcher = new BackMatcher(matcher.re, s, memBlock, front, index);
+            auto fwdMatcher = new BackMatcher(re, s, memBlock, front, index);
             return fwdMatcher;
         }
 
-        auto bwdMatcher(BacktrackingMatcher matcher, void[] memBlock)
+        auto bwdMatcher(ref const RegEx re, void[] memBlock)
         {
             alias BackMatcherTempl = .BacktrackingMatcher!(CTregex);
             alias BackMatcher = BackMatcherTempl!(Char, typeof(s.loopBack(index)));
             auto fwdMatcher =
-                new BackMatcher(matcher.re, s.loopBack(index), memBlock);
+                new BackMatcher(re, s.loopBack(index), memBlock);
             return fwdMatcher;
         }
 
@@ -582,19 +590,19 @@ template BacktrackingMatcher(bool CTregex)
                         immutable ms = re.ir[pc+1].raw, me = re.ir[pc+2].raw;
                         auto mem = malloc(initialMemory(re))[0 .. initialMemory(re)];
                         scope(exit) free(mem.ptr);
+                        auto slicedRe = re.withCode(re.ir[
+                            pc+IRL!(IR.LookaheadStart) .. pc+IRL!(IR.LookaheadStart)+len+IRL!(IR.LookaheadEnd)
+                        ]);
                         static if (Stream.isLoopback)
                         {
-                            auto matcher = bwdMatcher(this, mem);
+                            auto matcher = bwdMatcher(slicedRe, mem);
                         }
                         else
                         {
-                            auto matcher = fwdMatcher(this, mem);
+                            auto matcher = fwdMatcher(slicedRe, mem);
                         }
                         matcher.matches = matches[ms .. me];
                         matcher.backrefed = backrefed.empty ? matches : backrefed;
-                        matcher.re.ir = re.ir[
-                            pc+IRL!(IR.LookaheadStart) .. pc+IRL!(IR.LookaheadStart)+len+IRL!(IR.LookaheadEnd)
-                        ];
                         immutable match = (matcher.matchImpl() != 0) ^ (re.ir[pc].code == IR.NeglookaheadStart);
                         s.reset(save);
                         next();
@@ -611,20 +619,20 @@ template BacktrackingMatcher(bool CTregex)
                         immutable ms = re.ir[pc+1].raw, me = re.ir[pc+2].raw;
                         auto mem = malloc(initialMemory(re))[0 .. initialMemory(re)];
                         scope(exit) free(mem.ptr);
+                        auto slicedRe = re.withCode(re.ir[
+                          pc + IRL!(IR.LookbehindStart) .. pc + IRL!(IR.LookbehindStart) + len + IRL!(IR.LookbehindEnd)
+                        ]);
                         static if (Stream.isLoopback)
                         {
                             alias Matcher = BacktrackingMatcher!(Char, Stream);
-                            auto matcher = Matcher(re, s, mem, front, index);
+                            auto matcher = new Matcher(slicedRe, s, mem, front, index);
                         }
                         else
                         {
                             alias Matcher = BacktrackingMatcher!(Char, typeof(s.loopBack(index)));
-                            auto matcher = Matcher(re, s.loopBack(index), mem);
+                            auto matcher = new Matcher(slicedRe, s.loopBack(index), mem);
                         }
                         matcher.matches = matches[ms .. me];
-                        matcher.re.ir = re.ir[
-                          pc + IRL!(IR.LookbehindStart) .. pc + IRL!(IR.LookbehindStart) + len + IRL!(IR.LookbehindEnd)
-                        ];
                         matcher.backrefed  = backrefed.empty ? matches : backrefed;
                         immutable match = (matcher.matchImpl() != 0) ^ (re.ir[pc].code == IR.NeglookbehindStart);
                         if (!match)
@@ -934,10 +942,10 @@ struct CtContext
             immutable len = ir[0].data;
             immutable behind = ir[0].code == IR.LookbehindStart || ir[0].code == IR.NeglookbehindStart;
             immutable negative = ir[0].code == IR.NeglookaheadStart || ir[0].code == IR.NeglookbehindStart;
-            string fwdType = "typeof(fwdMatcher(matcher, []))";
-            string bwdType = "typeof(bwdMatcher(matcher, []))";
-            string fwdCreate = "fwdMatcher(matcher, mem)";
-            string bwdCreate = "bwdMatcher(matcher, mem)";
+            string fwdType = "typeof(fwdMatcher(re, []))";
+            string bwdType = "typeof(bwdMatcher(re, []))";
+            string fwdCreate = "fwdMatcher(re, mem)";
+            string bwdCreate = "bwdMatcher(re, mem)";
             immutable start = IRL!(IR.LookbehindStart);
             immutable end = IRL!(IR.LookbehindStart)+len+IRL!(IR.LookaheadEnd);
             CtContext context = lookaround(ir[1].raw, ir[2].raw); //split off new context
@@ -948,7 +956,7 @@ struct CtContext
                         alias Lookaround = $$;
                     else
                         alias Lookaround = $$;
-                    static bool matcher_$$(Lookaround matcher) @trusted
+                    static bool matcher_$$(ref Lookaround matcher) @trusted
                     {
                         //(neg)lookaround piece start
                         $$

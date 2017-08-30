@@ -298,7 +298,6 @@ module std.regex;
 
 import std.range.primitives, std.traits;
 import std.regex.internal.ir;
-import std.regex.internal.thompson; //TODO: get rid of this dependency
 import std.typecons; // : Flag, Yes, No;
 
 /++
@@ -339,10 +338,9 @@ public alias Regex(Char) = std.regex.internal.ir.Regex!(Char);
     A $(D StaticRegex) is $(D Regex) object that contains D code specially
     generated at compile-time to speed up matching.
 
-    Implicitly convertible to normal $(D Regex),
-    however doing so will result in losing this additional capability.
+    No longer used, kept as alias to Regex for backwards compatibility.
 +/
-public alias StaticRegex(Char) = std.regex.internal.ir.StaticRegex!(Char);
+public alias StaticRegex = Regex;
 
 /++
     Compile regular expression pattern for the later execution.
@@ -431,13 +429,19 @@ template ctRegexImpl(alias pattern, string flags=[])
     enum r = regex(pattern, flags);
     alias Char = BasicElementOf!(typeof(pattern));
     enum source = ctGenRegExCode(r);
-    alias Matcher = BacktrackingMatcher!(true);
-    @trusted bool func(ref Matcher!Char matcher)
+    alias CtMatcher = BacktrackingMatcher!(true);
+    @trusted bool func(ref CtMatcher!Char matcher)
     {
         debug(std_regex_ctr) pragma(msg, source);
         mixin(source);
     }
-    enum nr = StaticRegex!Char(r, &func);
+    static immutable staticRe = cast(immutable)r.withFactory(new CtfeFactory!(CtMatcher, Char, func));
+    struct Wrapper
+    {
+        @property auto getRe(){ return staticRe; }
+        alias getRe this;
+    }
+    enum wrapper = Wrapper();
 }
 
 /++
@@ -450,10 +454,10 @@ template ctRegexImpl(alias pattern, string flags=[])
     pattern = Regular expression
     flags = The _attributes (g, i, m and x accepted)
 +/
-public enum ctRegex(alias pattern, alias flags=[]) = ctRegexImpl!(pattern, flags).nr;
+public enum ctRegex(alias pattern, alias flags=[]) = ctRegexImpl!(pattern, flags).wrapper;
 
-enum isRegexFor(RegEx, R) = is(RegEx == Regex!(BasicElementOf!R))
-     || is(RegEx == StaticRegex!(BasicElementOf!R));
+enum isRegexFor(RegEx, R) = is(Unqual!RegEx == Regex!(BasicElementOf!R)) || is(RegEx : const(Regex!(BasicElementOf!R)))
+     || is(Unqual!RegEx == StaticRegex!(BasicElementOf!R));
 
 
 /++
@@ -480,9 +484,9 @@ private:
     }
     uint _f, _b;
     uint _refcount; // ref count or SMALL MASK + num groups
-    NamedGroup[] _names;
+    const(NamedGroup)[] _names;
 
-    this(R input, uint n, NamedGroup[] named)
+    this(R input, uint n, const(NamedGroup)[] named)
     {
         _input = input;
         _names = named;
@@ -701,7 +705,7 @@ private:
     import core.stdc.stdlib : malloc, free;
     alias Char = BasicElementOf!R;
     Matcher!Char _engine;
-    MatcherFactory!Char _factory;
+    const MatcherFactory!Char _factory;
     R _input;
     Captures!R _captures;
 
@@ -709,6 +713,7 @@ private:
     {
         import std.exception : enforce;
         _input = input;
+        assert(prog.factory !is null, "malformed regex - missing matcher factory");
         _factory = prog.factory;
         _engine = prog.factory.create(prog, input);
         _captures = Captures!R(this);
@@ -796,6 +801,7 @@ public:
 private @trusted auto matchOnce(RegEx, R)(R input, RegEx re)
 {
     alias Char = BasicElementOf!R;
+    assert(re.factory !is null, "malformed regex - missing matcher factory");
     auto engine = re.factory.create(re, input);
     scope(exit) re.factory.decRef(engine); // destroys the engine
     auto captures = Captures!R(input, re.ngroup, re.dict);
@@ -803,18 +809,17 @@ private @trusted auto matchOnce(RegEx, R)(R input, RegEx re)
     return captures;
 }
 
-private auto matchMany(RegEx, R)(R input, RegEx re)
+private auto matchMany(RegEx, R)(R input, RegEx re) @safe
 {
-    re.flags |= RegexOption.global;
-    return RegexMatch!R(input, re);
+    return RegexMatch!R(input, re.withFlags(re.flags | RegexOption.global));
 }
 
 @system unittest
 {
     //sanity checks for new API
     auto re = regex("abc");
-    assert(!"abc".matchOnce!(ThompsonMatcher)(re).empty);
-    assert("abc".matchOnce!(ThompsonMatcher)(re)[0] == "abc");
+    assert(!"abc".matchOnce(re).empty);
+    assert("abc".matchOnce(re)[0] == "abc");
 }
 
 
@@ -906,7 +911,7 @@ if (isSomeString!R && isRegexFor!(RegEx, R))
 +/
 
 public auto match(R, RegEx)(R input, RegEx re)
-if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
+if (isSomeString!R && isRegexFor!(RegEx,R))
 {
     return RegexMatch!(Unqual!(typeof(input)))(input, re);
 }
@@ -916,12 +921,6 @@ public auto match(R, String)(R input, String re)
 if (isSomeString!R && isSomeString!String)
 {
     return RegexMatch!(Unqual!(typeof(input)))(input, regex(re));
-}
-
-public auto match(R, RegEx)(R input, RegEx re)
-if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
-{
-    return RegexMatch!(Unqual!(typeof(input)))(input, re);
 }
 
 /++
@@ -943,7 +942,7 @@ if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
     if there was a match, otherwise an empty $(LREF Captures) object.
 +/
 public auto matchFirst(R, RegEx)(R input, RegEx re)
-if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
+if (isSomeString!R && isRegexFor!(RegEx, R))
 {
     return matchOnce(input, re);
 }
@@ -960,12 +959,6 @@ public auto matchFirst(R, String)(R input, String[] re...)
 if (isSomeString!R && isSomeString!String)
 {
     return matchOnce(input, regex(re));
-}
-
-public auto matchFirst(R, RegEx)(R input, RegEx re)
-if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
-{
-    return matchOnce(input, re);
 }
 
 /++
@@ -990,7 +983,7 @@ if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
     after the first match was found or an empty one if not present.
 +/
 public auto matchAll(R, RegEx)(R input, RegEx re)
-if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
+if (isSomeString!R && isRegexFor!(RegEx, R))
 {
     return matchMany(input, re);
 }
@@ -1007,12 +1000,6 @@ public auto matchAll(R, String)(R input, String[] re...)
 if (isSomeString!R && isSomeString!String)
 {
     return matchMany(input, regex(re));
-}
-
-public auto matchAll(R, RegEx)(R input, RegEx re)
-if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
-{
-    return matchMany(input, re);
 }
 
 // another set of tests just to cover the new API
@@ -1076,7 +1063,7 @@ if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 
 +/
 public auto bmatch(R, RegEx)(R input, RegEx re)
-if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
+if (isSomeString!R && isRegexFor!(RegEx, R))
 {
     return RegexMatch!(Unqual!(typeof(input)))(input, re);
 }
@@ -1086,12 +1073,6 @@ public auto bmatch(R, String)(R input, String re)
 if (isSomeString!R && isSomeString!String)
 {
     return RegexMatch!(Unqual!(typeof(input)))(input, regex(re));
-}
-
-public auto bmatch(R, RegEx)(R input, RegEx re)
-if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
-{
-    return RegexMatch!(Unqual!(typeof(input)))(input, re);
 }
 
 // produces replacement string from format using captures for substitution
@@ -1484,7 +1465,7 @@ private:
     @trusted this(Range input, RegEx separator)
     {//@@@BUG@@@ generated opAssign of RegexMatch is not @trusted
         _input = input;
-        separator.flags |= RegexOption.global;
+        auto re = separator.withFlags(separator.flags | RegexOption.global);
         if (_input.empty)
         {
             //there is nothing to match at all, make _offset > 0
@@ -1492,7 +1473,7 @@ private:
         }
         else
         {
-            _match = Rx(_input, separator);
+            _match = Rx(_input, re);
 
             static if (keepSeparators)
                 if (_match.pre.empty)
