@@ -1402,59 +1402,76 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
         auto extra =  x.length % y.length;
         auto maxchunk = chunksize + extra;
         bool paddingY; // true = we're padding Y, false = we're padding X.
-        if (extra * extra * 2 < y.length*y.length)
+        bool isExtraSmall = extra * extra * 2 < y.length * y.length;
+        if (numchunks == 1 && isExtraSmall)
         {
-            // The leftover bit is small enough that it should be incorporated
-            // in the existing chunks.
-            // Make all the chunks a tiny bit bigger
-            // (We're padding y with zeros)
-            chunksize += extra / numchunks;
-            extra = x.length - chunksize*numchunks;
-            // there will probably be a few left over.
-            // Every chunk will either have size chunksize, or chunksize+1.
-            maxchunk = chunksize + 1;
-            paddingY = true;
-            assert(chunksize + extra + chunksize *(numchunks-1) == x.length );
+            // We divide (x_first_half * y) and (x_last_half * y)
+            // between 1.414:1 and 1.707:1 (1.707 = 1+1/sqrt(2)).
+            // (1.414 ~ 1.707)/2:1 is balanced.
+            BigDigit [] scratchbuff = new BigDigit[karatsubaRequiredBuffSize(y.length) + y.length];
+            BigDigit [] partial = scratchbuff[$ - y.length .. $];
+            mulKaratsuba(result[0 .. half + y.length], y, x[0 .. half], scratchbuff);
+            partial[] = result[half .. half + y.length];
+            mulKaratsuba(result[half .. $], y, x[half .. $], scratchbuff);
+            addAssignSimple(result[half .. half + y.length], partial);
+            () @trusted { GC.free(scratchbuff.ptr); } ();
         }
         else
         {
-            // the extra bit is large enough that it's worth making a new chunk.
-            // (This means we're padding x with zeros, when doing the first one).
-            maxchunk = chunksize;
-            ++numchunks;
-            paddingY = false;
-            assert(extra + chunksize *(numchunks-1) == x.length );
+            if (isExtraSmall)
+            {
+                // The leftover bit is small enough that it should be incorporated
+                // in the existing chunks.
+                // Make all the chunks a tiny bit bigger
+                // (We're padding y with zeros)
+                chunksize += extra / numchunks;
+                extra = x.length - chunksize*numchunks;
+                // there will probably be a few left over.
+                // Every chunk will either have size chunksize, or chunksize+1.
+                maxchunk = chunksize + 1;
+                paddingY = true;
+                assert(chunksize + extra + chunksize *(numchunks-1) == x.length );
+            }
+            else
+            {
+                // the extra bit is large enough that it's worth making a new chunk.
+                // (This means we're padding x with zeros, when doing the first one).
+                maxchunk = chunksize;
+                ++numchunks;
+                paddingY = false;
+                assert(extra + chunksize *(numchunks-1) == x.length );
+            }
+            // We make the buffer a bit bigger so we have space for the partial sums.
+            BigDigit [] scratchbuff = new BigDigit[karatsubaRequiredBuffSize(maxchunk) + y.length];
+            BigDigit [] partial = scratchbuff[$ - y.length .. $];
+            size_t done; // how much of X have we done so far?
+            if (paddingY)
+            {
+                // If the first chunk is bigger, do it first. We're padding y.
+                mulKaratsuba(result[0 .. y.length + chunksize + (extra > 0 ? 1 : 0 )],
+                    x[0 .. chunksize + (extra>0?1:0)], y, scratchbuff);
+                done = chunksize + (extra > 0 ? 1 : 0);
+                if (extra) --extra;
+            }
+            else
+            {   // We're padding X. Begin with the extra bit.
+                mulKaratsuba(result[0 .. y.length + extra], y, x[0 .. extra], scratchbuff);
+                done = extra;
+                extra = 0;
+            }
+            immutable basechunksize = chunksize;
+            while (done < x.length)
+            {
+                chunksize = basechunksize + (extra > 0 ? 1 : 0);
+                if (extra) --extra;
+                partial[] = result[done .. done+y.length];
+                mulKaratsuba(result[done .. done + y.length + chunksize],
+                        x[done .. done+chunksize], y, scratchbuff);
+                addAssignSimple(result[done .. done + y.length + chunksize], partial);
+                done += chunksize;
+            }
+            () @trusted { GC.free(scratchbuff.ptr); } ();
         }
-        // We make the buffer a bit bigger so we have space for the partial sums.
-        BigDigit [] scratchbuff = new BigDigit[karatsubaRequiredBuffSize(maxchunk) + y.length];
-        BigDigit [] partial = scratchbuff[$ - y.length .. $];
-        size_t done; // how much of X have we done so far?
-        if (paddingY)
-        {
-            // If the first chunk is bigger, do it first. We're padding y.
-            mulKaratsuba(result[0 .. y.length + chunksize + (extra > 0 ? 1 : 0 )],
-                x[0 .. chunksize + (extra>0?1:0)], y, scratchbuff);
-            done = chunksize + (extra > 0 ? 1 : 0);
-            if (extra) --extra;
-        }
-        else
-        {   // We're padding X. Begin with the extra bit.
-            mulKaratsuba(result[0 .. y.length + extra], y, x[0 .. extra], scratchbuff);
-            done = extra;
-            extra = 0;
-        }
-        immutable basechunksize = chunksize;
-        while (done < x.length)
-        {
-            chunksize = basechunksize + (extra > 0 ? 1 : 0);
-            if (extra) --extra;
-            partial[] = result[done .. done+y.length];
-            mulKaratsuba(result[done .. done + y.length + chunksize],
-                       x[done .. done+chunksize], y, scratchbuff);
-            addAssignSimple(result[done .. done + y.length + chunksize], partial);
-            done += chunksize;
-        }
-        () @trusted { GC.free(scratchbuff.ptr); } ();
     }
     else
     {
@@ -1963,7 +1980,7 @@ bool less(const(BigDigit)[] x, const(BigDigit)[] y) pure nothrow
 bool inplaceSub(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
     pure nothrow
 {
-    assert(result.length == (x.length >= y.length) ? x.length : y.length);
+    assert(result.length == ((x.length >= y.length) ? x.length : y.length));
 
     size_t minlen;
     bool negative;
@@ -2021,7 +2038,7 @@ void mulKaratsuba(BigDigit [] result, const(BigDigit) [] x,
         const(BigDigit)[] y, BigDigit [] scratchbuff) pure nothrow
 {
     assert(x.length >= y.length);
-          assert(result.length < uint.max, "Operands too large");
+    assert(result.length < uint.max, "Operands too large");
     assert(result.length == x.length + y.length);
     if (x.length <= KARATSUBALIMIT)
     {
