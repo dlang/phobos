@@ -21,3 +21,6 @@ obj/
 .vscode
 
 *.html
+
+# Eclipse project folder
+/.project
