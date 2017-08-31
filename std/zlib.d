@@ -523,6 +523,7 @@ class UnCompress
     z_stream zs;
     int inited;
     int done;
+    bool _empty;
     size_t destbufsize;
 
     HeaderFormat format;
@@ -616,6 +617,10 @@ class UnCompress
             GC.free(destbuf.ptr);
             error(err);
         }
+
+        if(err == Z_STREAM_END)
+            _empty = true;
+
         destbuf.length = destbuf.length - zs.avail_out;
         return destbuf;
     }
@@ -665,12 +670,18 @@ class UnCompress
         }
         destbuf = destbuf.ptr[0 .. zs.next_out - destbuf.ptr];
         err = etc.c.zlib.inflateEnd(&zs);
+        _empty = true;
         inited = 0;
         if (err)
             error(err);
         if (extra.length)
             destbuf = extra ~ destbuf;
         return destbuf;
+    }
+
+    /// Returns $(D true) if all available compressed data has beed decoded.
+    @property bool empty() inout {
+        return _empty;
     }
 }
 
