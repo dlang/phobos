@@ -604,6 +604,8 @@ class UnCompress
 
         if (zs.avail_in)
             buf = zs.next_in[0 .. zs.avail_in] ~ cast(ubyte[]) buf;
+        else //avoid having buf around, as it causes problems with reusing buffers
+            buf = buf.idup();
 
         zs.next_in = cast(ubyte*) buf.ptr;
         zs.avail_in = to!uint(buf.length);
