@@ -618,7 +618,7 @@ class UnCompress
             error(err);
         }
 
-        if(err == Z_STREAM_END)
+        if (err == Z_STREAM_END)
             _empty = true;
 
         destbuf.length = destbuf.length - zs.avail_out;
@@ -680,7 +680,8 @@ class UnCompress
     }
 
     /// Returns $(D true) if all available compressed data has beed decoded.
-    @property bool empty() inout {
+    @property bool empty() inout
+    {
         return _empty;
     }
 }
