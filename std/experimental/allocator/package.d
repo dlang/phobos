@@ -1765,7 +1765,7 @@ if (is(T == class) || is(T == interface))
 }
 
 /// Ditto
-void dispose(A, T)(auto ref A alloc, T[] array)
+void dispose(A, T)(auto ref A alloc, auto ref T[] array)
 {
     static if (hasElaborateDestructor!(typeof(array[0])))
     {
@@ -1775,6 +1775,7 @@ void dispose(A, T)(auto ref A alloc, T[] array)
         }
     }
     alloc.deallocate(array);
+    array = null;
 }
 
 @system unittest
@@ -1830,6 +1831,10 @@ void dispose(A, T)(auto ref A alloc, T[] array)
     uint* u = Mallocator.instance.make!uint(0);
     Mallocator.instance.dispose((){return u;}());
     assert(u !is null);
+
+    uint[] ua = Mallocator.instance.makeArray!uint([0,1,2]);
+    Mallocator.instance.dispose(ua);
+    assert(ua is null);
 }
 
 @system unittest //bugzilla 15721
@@ -1905,7 +1910,7 @@ T = element type of an element of the multidimensional array
 alloc = the allocator used for getting memory
 array = the multidimensional array that is to be deallocated
 */
-void disposeMultidimensionalArray(T, Allocator)(auto ref Allocator alloc, T[] array)
+void disposeMultidimensionalArray(T, Allocator)(auto ref Allocator alloc, auto ref T[] array)
 {
     static if (isArray!T)
     {
@@ -1914,6 +1919,7 @@ void disposeMultidimensionalArray(T, Allocator)(auto ref Allocator alloc, T[] ar
     }
 
     dispose(alloc, array);
+    array = null;
 }
 
 ///
