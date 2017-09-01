@@ -8063,98 +8063,747 @@ enum isCopyable(S) = is(typeof(
     static assert(isCopyable!(int[]));
 }
 
-//True if memberName is in S and T, false if there is something
-//that does not match T
-private template checkMemberName(string memberName, S, T)
+/// Returns true if `member` of type `T` has overloads.
+private template hasMemberOverload(T, string member)
 {
-    //Ignore members of Object
-    static if (is(T == class) && hasMember!(Object, memberName))
+    enum bool hasMemberOverload = __traits(getOverloads, T, member).length > 1;
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    struct Foo
     {
-        enum bool checkMemberName = true;
+        void bar() {}
+        int baz(int x, double y) { return 0; }
     }
-    //Ignore members that do not compile (private)
-    else static if (!__traits(compiles, __traits(getMember, T, memberName)))
+
+    struct Bar
     {
-        enum bool checkMemberName = true;
+        void bar() {}
+        int bar() { return 0; }
+        int baz(int x, double y) { return 0; }
+    }
+
+    static assert(!hasMemberOverload!(Foo, "bar"));
+    static assert(!hasMemberOverload!(Foo, "baz"));
+    static assert(hasMemberOverload!(Bar, "bar"));
+    static assert(!hasMemberOverload!(Bar, "baz"));
+}
+
+/// Returns an alias to the `members` of `T`, adjusts for overloads
+private template memberIdentity(T, string member)
+{
+    static if (!hasMemberOverload!(T, member))
+        alias memberIdentity = Identity!(__traits(getMember, T, member));
+    else
+    {
+        import std.meta : staticMap;
+        alias memberIdentity = staticMap!(Identity,
+                                             __traits(getOverloads, T, member));
+    }
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    import std.traits : ReturnType, Parameters;
+
+    struct Foo
+    {
+        void bar() {}
+        int baz(int, double) { return 0; }
+    }
+
+    alias test1 = memberIdentity!(Foo, "bar");
+    alias test2 = memberIdentity!(Foo, "baz");
+
+    void function() fp;
+    int function(int, double) gp;
+
+    static assert(is(ReturnType!test1 == ReturnType!fp));
+    static assert(is(ReturnType!test2 == ReturnType!gp));
+
+    static assert(is(Parameters!test1 == Parameters!fp));
+    static assert(is(Parameters!test2 == Parameters!gp));
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    import std.traits : ReturnType, Parameters;
+    import std.meta : staticMap;
+
+    struct Foo
+    {
+        void bar() {}
+        int bar(int) { return 0; }
+        int baz(int, double) { return 0; }
+    }
+
+    alias test1 = memberIdentity!(Foo, "bar");
+    alias test2 = memberIdentity!(Foo, "baz");
+
+    void function() fp;
+    int function(int) gp;
+    int function(int, double) hp;
+
+    static assert(is(ReturnType!(test1[0]) == ReturnType!fp));
+    static assert(is(ReturnType!(test1[1]) == ReturnType!gp));
+    static assert(is(ReturnType!test2 == ReturnType!hp));
+
+    static assert(is(Parameters!(test1[0]) == Parameters!fp));
+    static assert(is(Parameters!(test1[1]) == Parameters!gp));
+    static assert(is(Parameters!test2 == Parameters!hp));
+}
+
+/// Returns true if `T` is a class and `member` is a member of Object.
+private template isMemberOfObject(T, string member)
+{
+    enum bool isMemberOfObject = is(T == class) && hasMember!(Object, member);
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    class Foo
+    {
+        void foo() { }
+    }
+
+    struct Bar
+    {
+        void bar() { }
+    }
+
+    static assert(isMemberOfObject!(Foo, "toString"));
+    static assert(!isMemberOfObject!(Foo, "foo"));
+    static assert(!isMemberOfObject!(Bar, "toString"));
+    static assert(!isMemberOfObject!(Bar, "bar"));
+}
+
+/// Returns true if member `member of `T` compiles.
+private template memberCompiles(T, string member)
+{
+    enum bool memberCompiles = __traits(compiles,
+                                            __traits(getMember, T, member));
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    struct Foo
+    {
+        int foo;
+    }
+
+    static assert(memberCompiles!(Foo, "foo"));
+    static assert(!memberCompiles!(Foo, "bar"));
+}
+
+private template areEqual(alias S, alias T)
+{
+    static if (!isType!S && !isType!T)
+    {
+        enum bool areEqual = is(typeof(S) == typeof(T));
     }
     else
     {
-        //If S does not have the member, then false
-        static if (!hasMember!(S, memberName))
+        enum bool areEqual = false;
+    }
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    struct Bar
+    {
+        string bar(double d) @safe { return ""; }
+    }
+
+    struct Baz
+    {
+        string bar(double d) @safe { return ""; }
+    }
+
+    static assert(areEqual!(Baz.bar, Bar.bar));
+    static assert(areEqual!(Bar.bar, Baz.bar));
+}
+
+/// Returns true if `T` has alias this member.
+private template hasAliasThis(T)
+{
+    import std.meta : AliasSeq;
+
+    alias members = AliasSeq!(__traits(getAliasThis, T));
+
+    static if (members.length == 0)
+    {
+        enum bool hasAliasThis = false;
+    }
+    else
+    {
+        enum bool hasAliasThis = true;
+    }
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    struct Foo
+    {
+    }
+
+    struct Bar
+    {
+        Foo foo;
+        alias foo this;
+    }
+
+    static assert(!hasAliasThis!Foo);
+    static assert(hasAliasThis!Bar);
+}
+
+/// DMD does not support multiple alias this, but spec says it may in future.
+private template hasMultipleAliasThis(T)
+{
+    static if (hasAliasThis!T)
+    {
+        import std.meta : AliasSeq;
+
+        alias members = AliasSeq!(__traits(getAliasThis, T));
+
+        static if (members.length > 1)
         {
-            enum bool checkMemberName = false;
+            enum bool hasMultipleAliasThis = true;
         }
         else
         {
-            alias memberS = Identity!(__traits(getMember, S, memberName));
-            alias memberT = Identity!(__traits(getMember, T, memberName));
-
-            //Check if member is struct/class/interface/union
-            static if (isType!(memberT))
-            {
-                static if (isAggregateType!(memberT))
-                {
-                    static if (is(memberT == memberS))
-                    {
-                        enum bool checkMemberName = true;
-                    }
-                    else
-                    {
-                        enum bool checkMemberName = false;
-                    }
-                }
-                else
-                {
-                    static assert(0, "this case has not been handled yet");
-                    //the normal case is for isType to only be true for
-                    //aggregatetypes, have not seen a case otherwise
-                }
-            }
-            // This covers members, member functions, and alias this
-            else
-            {
-                static if (is(typeof(memberT) == typeof(memberS)))
-                {
-                    enum bool checkMemberName = true;
-                }
-                else
-                {
-                    //Handle Alias Seq (actually need to fix and ensure that it
-                    //checks the that memberS is in getAliasThis
-
-                    import std.meta : AliasSeq;
-
-                    alias members = AliasSeq!(__traits(getAliasThis, S));
-
-                    static if (members.length == 0)
-                    {
-                        enum bool checkMemberName = false;
-                    }
-                    else static if (members.length == 1)
-                    {
-                        static if (is(typeof(memberT) ==
-                                      typeof(__traits(getMember, memberS, memberName))))
-                        {
-                            enum bool checkMemberName = true;
-                        }
-                        else
-                        {
-                            //possible alternative
-                            //enum bool checkMemberName =
-                            //    checkMemberName!(memberName, typeof(memberS),
-                            //                     T);
-                            static assert(0, "this case has not been implemented");
-                        }
-                    }
-                    else
-                    {
-                        static assert(0, "Not implemented to work with multiple
-                                          alias this");
-                    }
-                }
-            }
+            enum bool hasMultipleAliasThis = false;
         }
     }
+    else
+    {
+        enum bool hasMultipleAliasThis = false;
+    }
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    struct Foo
+    {
+    }
+
+    struct Bar
+    {
+        Foo foo;
+        alias foo this;
+    }
+
+    struct Baz
+    {
+        Bar bar;
+        alias bar this;
+    }
+
+    static assert(!hasMultipleAliasThis!Foo);
+    static assert(!hasMultipleAliasThis!Bar);
+    static assert(!hasMultipleAliasThis!Baz);
+}
+
+private template isAliasThisMember(S, alias memberS, alias memberT, string member)
+{
+    static if (hasAliasThis!S)
+    {
+        static if (!hasMultipleAliasThis!S)
+        {
+            static if (is(typeof(memberT) ==
+                          typeof(__traits(getMember, memberS, member))))
+            {
+                enum bool isAliasThisMember = true;
+            }
+            else
+            {
+                static assert(0, "This case has not been implemented, #1");
+            }
+        }
+        else
+        {
+            static assert(0, "This case has not been implemented, #2");
+        }
+    }
+    else
+    {
+        enum bool isAliasThisMember = false;
+    }
+}
+
+private template doBothHaveMemberCalc(S, alias memberS, alias memberT,
+                                                                  string member)
+{
+    static if (areEqual!(memberS, memberT))
+    {
+        enum bool doBothHaveMemberCalc = true;
+    }
+    else static if (isAliasThisMember!(S, memberS, memberT, member))
+    {
+        enum bool doBothHaveMemberCalc = true;
+    }
+    else
+    {
+        enum bool doBothHaveMemberCalc = false;
+    }
+}
+
+private template doBothHaveMemberExact(S, T, string member)
+    if (!hasMemberOverload!(S, member) && !hasMemberOverload!(T, member))
+{
+    alias memberS = memberIdentity!(S, member);
+    alias memberT = memberIdentity!(T, member);
+
+    enum bool doBothHaveMemberExact = doBothHaveMemberCalc!(S, memberS, memberT,
+                                                                        member);
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    struct Bar1
+    {
+        void foo() {}
+        void bar(string s) @safe { }
+        void baz() { }
+    }
+
+    struct Bar2
+    {
+        void foo() {}
+        void bar(string s) @safe { }
+        int baz() { return 0; }
+    }
+
+    static assert(doBothHaveMemberExact!(Bar1, Bar2, "foo"));
+    static assert(doBothHaveMemberExact!(Bar2, Bar1, "foo"));
+    static assert(doBothHaveMemberExact!(Bar1, Bar2, "bar"));
+    static assert(doBothHaveMemberExact!(Bar2, Bar1, "bar"));
+    static assert(!doBothHaveMemberExact!(Bar1, Bar2, "baz"));
+    static assert(!doBothHaveMemberExact!(Bar2, Bar1, "baz"));
+}
+
+private bool doBothHaveMemberOverloaded(S, T, string member)()
+{
+    static if (hasMemberOverload!(S, member))
+    {
+        alias memberSFull = memberIdentity!(S, member);
+        bool result = false;
+
+        static if (hasMemberOverload!(T, member))
+        {
+            alias memberTFull = memberIdentity!(T, member);
+
+            bool resultIter;
+            size_t i = 0;
+
+            foreach(memberT; memberTFull)
+            {
+                resultIter = false;
+
+                foreach(memberS; memberSFull)
+                {
+                    if (doBothHaveMemberCalc!(S, memberS, memberT, member))
+                    {
+                        resultIter = true;
+                        break;
+                    }
+                }
+
+                if (resultIter == false)
+                {
+                    break;
+                }
+                else
+                {
+                    i++;
+                }
+            }
+
+            if (i == memberTFull.length && resultIter == true)
+            {
+                result = true;
+            }
+
+            return result;
+        }
+        else
+        {
+            alias memberT = memberIdentity!(T, member);
+
+            foreach(memberS; memberSFull)
+            {
+                if (doBothHaveMemberCalc!(S, memberS, memberT, member))
+                {
+                    result = true;
+                    break;
+                }
+            }
+
+            return result;
+        }
+    }
+    else static if (!hasMemberOverload!(S, member) &&
+                    hasMemberOverload!(T, member))
+    {
+        return false; //Because S must have overloads if T does
+    }
+    else
+    {
+        return doBothHaveMemberExact!(S, T, member);
+    }
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    struct Foo1
+    {
+        int foo(int i, string s) @safe { return 0; }
+        double foo(string s) @safe { return 0; }
+    }
+
+    struct Foo2
+    {
+        int foo(int i, string s) @safe { return 0; }
+        double foo(string s) @safe { return 0; }
+        int a;
+    }
+
+    struct Foo3
+    {
+        int foo(int i, string s) @safe { return 0; }
+    }
+
+    static assert(doBothHaveMemberOverloaded!(Foo1, Foo2, "foo"));
+    static assert(doBothHaveMemberOverloaded!(Foo2, Foo1, "foo"));
+
+    static assert(doBothHaveMemberOverloaded!(Foo1, Foo3, "foo"));
+    static assert(!doBothHaveMemberOverloaded!(Foo3, Foo1, "foo"));
+    static assert(doBothHaveMemberOverloaded!(Foo2, Foo3, "foo"));
+    static assert(!doBothHaveMemberOverloaded!(Foo3, Foo2, "foo"));
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    struct Bar1
+    {
+        void foo() {}
+        string bar(double d) @safe { return ""; }
+        void bar(string s) @safe { }
+    }
+
+    struct Bar2
+    {
+        void foo() {}
+        void bar(string s) @safe { }
+    }
+
+    static assert(doBothHaveMemberOverloaded!(Bar1, Bar2, "foo"));
+    static assert(doBothHaveMemberOverloaded!(Bar2, Bar1, "foo"));
+    static assert(doBothHaveMemberOverloaded!(Bar1, Bar2, "bar"));
+    static assert(!doBothHaveMemberOverloaded!(Bar2, Bar1, "bar"));
+}
+
+@safe pure @nogc nothrow
+unittest
+{
+    interface IBar
+    {
+        string bar(double d) @safe pure nothrow @nogc;
+        void bar(string s) @safe pure nothrow @nogc;
+    }
+
+    struct SafeBar
+    {
+        string bar(double d) @safe pure nothrow @nogc { return ""; }
+        void bar(string s) @safe pure nothrow @nogc { }
+    }
+
+    struct UnsafeBar
+    {
+        string bar(double d) @system pure nothrow @nogc { return ""; }
+        void bar(string s) @system pure nothrow @nogc { }
+    }
+
+    static assert(doBothHaveMemberOverloaded!(SafeBar, IBar, "bar"));
+    static assert(!doBothHaveMemberOverloaded!(UnsafeBar, IBar, "bar"));
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    struct Bar
+    {
+        string bar(double d) @safe pure @nogc nothrow { return ""; }
+        void bar(string s) @safe pure @nogc nothrow { }
+    }
+
+    class FooBar
+    {
+        int foo(int i, string s) @safe pure @nogc nothrow { return 0; }
+        double foo(string s) @safe pure @nogc nothrow { return 0; }
+        string bar(double d) @safe pure @nogc nothrow { return ""; }
+        void bar(string s) @safe pure @nogc nothrow { }
+    }
+
+    static assert(doBothHaveMemberOverloaded!(FooBar, Bar, "bar"));
+    static assert(doBothHaveMemberOverloaded!(Bar, FooBar, "bar"));
+}
+
+/++
+ + Detect whether both type `S` and type `T` have member `member`
+ +
+ +/
+private template doBothHaveMember(S, T, string member)
+{
+    static if (!hasMember!(S, member))
+    {
+        enum bool doBothHaveMember = false;
+    }
+    else
+    {
+        alias memberS = memberIdentity!(S, member);
+        alias memberT = memberIdentity!(T, member);
+
+        static if (!hasMemberOverload!(S, member) &&
+                   !hasMemberOverload!(T, member) &&
+                   isAggregateType!(typeof(memberS)) &&
+                   isAggregateType!(typeof(memberT)))
+        {
+            enum bool doBothHaveMember = is(typeof(memberS) == typeof(memberT));
+        }
+        else
+        {
+            enum bool doBothHaveMember = doBothHaveMemberOverloaded!(S, T,
+                                                                        member);
+        }
+    }
+}
+
+@safe pure nothrow @nogc
+{
+    struct Bar1
+    {
+        void foo() {}
+        string bar(double d) @safe { return ""; }
+        void bar(string s) @safe { }
+    }
+
+    struct Bar2
+    {
+        void foo() {}
+        void bar(string s) @safe { }
+    }
+
+    static assert(doBothHaveMember!(Bar1, Bar2, "foo"));
+    static assert(doBothHaveMember!(Bar2, Bar1, "foo"));
+
+    static assert(doBothHaveMember!(Bar1, Bar2, "bar"));
+    static assert(!doBothHaveMember!(Bar2, Bar1, "bar"));
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    struct Bar1
+    {
+        void foo() {}
+        string bar(double d) @safe { return ""; }
+    }
+
+    struct Bar2
+    {
+        void foo() {}
+        void bar(string s) @safe { }
+    }
+
+    struct Bar3
+    {
+        void foo() {}
+        void bar(double d) @safe { }
+    }
+
+    struct Bar4
+    {
+        void foo() {}
+        string bar(int i) @safe { return ""; }
+    }
+
+    struct Bar5
+    {
+        void foo() {}
+        char bar(int i) @safe { return 'a'; }
+    }
+
+    struct Bar6
+    {
+        void foo() {}
+        void bar(string s) @safe { }
+    }
+
+    static assert(doBothHaveMember!(Bar1, Bar2, "foo"));
+
+    static assert(!doBothHaveMember!(Bar1, Bar2, "bar"));
+    static assert(!doBothHaveMember!(Bar2, Bar1, "bar"));
+
+    static assert(!doBothHaveMember!(Bar1, Bar3, "bar"));
+    static assert(!doBothHaveMember!(Bar3, Bar1, "bar"));
+    static assert(!doBothHaveMember!(Bar3, Bar2, "bar"));
+    static assert(!doBothHaveMember!(Bar2, Bar3, "bar"));
+
+    static assert(!doBothHaveMember!(Bar1, Bar5, "bar"));
+    static assert(!doBothHaveMember!(Bar5, Bar1, "bar"));
+    static assert(!doBothHaveMember!(Bar5, Bar2, "bar"));
+    static assert(!doBothHaveMember!(Bar2, Bar5, "bar"));
+    static assert(!doBothHaveMember!(Bar5, Bar3, "bar"));
+    static assert(!doBothHaveMember!(Bar3, Bar5, "bar"));
+    static assert(!doBothHaveMember!(Bar5, Bar4, "bar"));
+    static assert(!doBothHaveMember!(Bar4, Bar5, "bar"));
+
+    static assert(!doBothHaveMember!(Bar1, Bar6, "bar"));
+    static assert(!doBothHaveMember!(Bar6, Bar1, "bar"));
+    static assert(doBothHaveMember!(Bar6, Bar2, "bar"));
+    static assert(doBothHaveMember!(Bar2, Bar6, "bar"));
+    static assert(!doBothHaveMember!(Bar6, Bar3, "bar"));
+    static assert(!doBothHaveMember!(Bar3, Bar6, "bar"));
+    static assert(!doBothHaveMember!(Bar6, Bar4, "bar"));
+    static assert(!doBothHaveMember!(Bar4, Bar6, "bar"));
+    static assert(!doBothHaveMember!(Bar6, Bar5, "bar"));
+    static assert(!doBothHaveMember!(Bar5, Bar6, "bar"));
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    class Bar1
+    {
+        void foo() {}
+        string bar(double d) @safe { return ""; }
+    }
+
+    class Bar2
+    {
+        void foo() {}
+        void bar(string s) @safe { }
+    }
+
+    class Bar3
+    {
+        void foo() {}
+        void bar(double d) @safe { }
+    }
+
+    class Bar4
+    {
+        void foo() {}
+        string bar(int i) @safe { return ""; }
+    }
+
+    class Bar5
+    {
+        void foo() {}
+        char bar(int i) @safe { return 'a'; }
+    }
+
+    class Bar6
+    {
+        void foo() {}
+        void bar(string s) @safe { }
+    }
+
+    static assert(doBothHaveMember!(Bar1, Bar2, "foo"));
+
+    static assert(!doBothHaveMember!(Bar1, Bar2, "bar"));
+    static assert(!doBothHaveMember!(Bar2, Bar1, "bar"));
+
+    static assert(!doBothHaveMember!(Bar1, Bar3, "bar"));
+    static assert(!doBothHaveMember!(Bar3, Bar1, "bar"));
+    static assert(!doBothHaveMember!(Bar3, Bar2, "bar"));
+    static assert(!doBothHaveMember!(Bar2, Bar3, "bar"));
+
+    static assert(!doBothHaveMember!(Bar1, Bar5, "bar"));
+    static assert(!doBothHaveMember!(Bar5, Bar1, "bar"));
+    static assert(!doBothHaveMember!(Bar5, Bar2, "bar"));
+    static assert(!doBothHaveMember!(Bar2, Bar5, "bar"));
+    static assert(!doBothHaveMember!(Bar5, Bar3, "bar"));
+    static assert(!doBothHaveMember!(Bar3, Bar5, "bar"));
+    static assert(!doBothHaveMember!(Bar5, Bar4, "bar"));
+    static assert(!doBothHaveMember!(Bar4, Bar5, "bar"));
+
+    static assert(!doBothHaveMember!(Bar1, Bar6, "bar"));
+    static assert(!doBothHaveMember!(Bar6, Bar1, "bar"));
+    static assert(doBothHaveMember!(Bar6, Bar2, "bar"));
+    static assert(doBothHaveMember!(Bar2, Bar6, "bar"));
+    static assert(!doBothHaveMember!(Bar6, Bar3, "bar"));
+    static assert(!doBothHaveMember!(Bar3, Bar6, "bar"));
+    static assert(!doBothHaveMember!(Bar6, Bar4, "bar"));
+    static assert(!doBothHaveMember!(Bar4, Bar6, "bar"));
+    static assert(!doBothHaveMember!(Bar6, Bar5, "bar"));
+    static assert(!doBothHaveMember!(Bar5, Bar6, "bar"));
+}
+
+// Struct with assignment to nested struct (this is ok b/c what matters is access)
+@safe pure nothrow @nogc
+unittest
+{
+    struct Foo
+    {
+        int a;
+        int foo(int i, string s) @safe { return 0; }
+        double foo2(string s) @safe { return 0; }
+    }
+
+    //struct with struct member variable
+    struct Bar
+    {
+        Foo foo;
+        string bar(double d) @safe { return ""; }
+        void bar(string s) @safe { }
+    }
+
+    //struct with struct member variable
+    struct Baz
+    {
+        Foo foo = Foo(1);
+        string bar(double d) @safe { return ""; }
+        void bar(string s) @safe { }
+    }
+
+    static assert(doBothHaveMember!(Baz, Bar, "foo"));
+    static assert(doBothHaveMember!(Bar, Baz, "foo"));
+    static assert(doBothHaveMember!(Baz, Bar, "bar"));
+    static assert(doBothHaveMember!(Bar, Baz, "bar"));
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    struct Bar
+    {
+        string bar(double d) @safe pure @nogc nothrow { return ""; }
+        void bar(string s) @safe pure @nogc nothrow { }
+    }
+
+    class FooBar
+    {
+        int foo(int i, string s) @safe pure @nogc nothrow { return 0; }
+        double foo(string s) @safe pure @nogc nothrow { return 0; }
+        string bar(double d) @safe pure @nogc nothrow { return ""; }
+        void bar(string s) @safe pure @nogc nothrow { }
+    }
+
+    static assert(doBothHaveMember!(FooBar, Bar, "bar"));
+    static assert(doBothHaveMember!(Bar, FooBar, "bar"));
 }
 
 //returns true if subtype, false if there is something that does not match
@@ -8164,41 +8813,51 @@ private bool checkSubTypeOf(alias S, alias T)()
 {
     bool result;
 
-    foreach (memberName; __traits(allMembers, T))
+    foreach (member; __traits(allMembers, T))
     {
-        result = checkMemberName!(memberName, S, T);
-        if (result == false)
-            break;
+        static if (!isMemberOfObject!(T, member) &&
+                   memberCompiles!(T, member))
+        {
+            result = doBothHaveMember!(S, T, member);
+            if (result == false)
+                break;
+        }
     }
     return result;
 }
 
-/**
- * Detect whether type `S` is a subtype of type `T`
- *
- * If type `S` implements all the members, member functions, or aggregate
- * types of `T`, then for the sake of this function, it is said to
- * subtype `T`.
- *
- * This template ignores private members and/or member functions.
- *
- * It also ignores members and/or member functions that come from
- * $(LREF Object). The implication of this is that a struct can be a subtype
- * of a class, even if it does not implement $(LREF Object)'s member functions.
- *
- * Finally, it also ignores final/abstract status of member functions. This
- * means that a subtype may have a different implementation than a final class.
- *
- * Params:
- *      S = type to be tested
- *      T = type to be tested against
- *
- * Returns:
- *      true if S is a subtype, false otherwise
- *
- * See_Also:
- *      $(HTTP https://en.wikipedia.org/wiki/Subtyping, Subtyping)
- */
+/++
+ + Detect whether type `S` is a subtype of type `T`
+ +
+ + If type `S` implements all the members, member functions, or aggregate
+ + types of `T`, then for the sake of this function, it is said to
+ + subtype `T`.
+ +
+ + This template ignores private members and/or member functions.
+ +
+ + It also ignores members and/or member functions that come from
+ + $(LREF Object). The implication of this is that a struct can be a subtype
+ + of a class, even if it does not implement $(LREF Object)'s member functions.
+ +
+ + Finally, it also ignores final/abstract status of member functions. This
+ + means that a subtype may have a different implementation than a final class.
+ +
+ + However, it does not currently ignore function attributes, such as @safe.
+ + Thus, it is important to be aware of the impact of type inference on member
+ + functions. For instance, a template or auto function in one class may have
+ + different attributes assigned by the compiler and thus may be considered
+ + different from what is in another class.
+ +
+ + Params:
+ +      S = type to be tested
+ +      T = type to be tested against
+ +
+ + Returns:
+ +      true if S is a subtype, false otherwise
+ +
+ + See_Also:
+ +      $(HTTP https://en.wikipedia.org/wiki/Subtyping, Subtyping)
+ +/
 template isSubtypeOf(alias S, alias T)
     if (isAggregateType!S && isAggregateType!T)
 {
@@ -8209,14 +8868,47 @@ template isSubtypeOf(alias S, alias T)
 }
 
 ///
-@system unittest
+@safe pure nothrow @nogc
+unittest
 {
     class Foo
     {
-        int foo(int i, string s) @safe { return 0; }
-        double foo(string s) @safe { return 0; }
+        int foo(int i, string s) @safe @nogc pure nothrow { return 0; }
+        double foo(string s) @safe @nogc pure nothrow { return 0; }
     }
 
+    struct Bar
+    {
+        string bar(double d) @safe @nogc pure nothrow { return ""; }
+        void bar(string s) @safe @nogc pure nothrow { }
+    }
+
+    struct Baz
+    {
+        string bar(double d) @safe @nogc pure nothrow { return ""; }
+        void bar(double s) @safe @nogc pure nothrow { }
+    }
+
+    class FooBar
+    {
+        int foo(int i, string s) @safe @nogc pure nothrow { return 0; }
+        double foo(string s) @safe @nogc pure nothrow { return 0; }
+        string bar(double d) @safe @nogc pure nothrow { return ""; }
+        void bar(string s) @safe @nogc pure nothrow { }
+    }
+
+    static assert(isSubtypeOf!(FooBar, Foo));
+    static assert(isSubtypeOf!(FooBar, Bar));
+    static assert(!isSubtypeOf!(FooBar, Baz));
+
+    static assert(!isSubtypeOf!(Foo, FooBar));
+    static assert(!isSubtypeOf!(Bar, FooBar));
+    static assert(!isSubtypeOf!(Baz, FooBar));
+}
+
+@safe pure nothrow @nogc
+unittest
+{
     struct Bar
     {
         string bar(double d) @safe { return ""; }
@@ -8231,10 +8923,7 @@ template isSubtypeOf(alias S, alias T)
         void bar(string s) @safe { }
     }
 
-    static assert(isSubtypeOf!(FooBar, Foo));
-    static assert(isSubtypeOf!(FooBar, Bar));
-
-    static assert(!isSubtypeOf!(Foo, FooBar));
+    //static assert(isSubtypeOf!(FooBar, Bar));
     static assert(!isSubtypeOf!(Bar, FooBar));
 }
 
@@ -8244,59 +8933,59 @@ version(unittest)
     {
         struct Foo
         {
-            int foo(int i, string s) @safe { return 0; }
-            double foo2(string s) @safe { return 0; }
+            int foo(int i, string s) @safe pure nothrow @nogc { return 0; }
+            double foo2(string s) @safe pure nothrow @nogc{ return 0; }
         }
 
         struct Bar
         {
-            string bar(double d) @safe { return ""; }
-            void bar(string s) @safe { }
+            string bar(double d) @safe pure nothrow @nogc { return ""; }
+            void bar(string s) @safe pure nothrow @nogc { }
         }
 
         struct FooBar
         {
-            int foo(int i, string s) @safe { return 0; }
-            double foo2(string s) @safe { return 0; }
-            string bar(double d) @safe { return ""; }
-            void bar(string s) @safe { }
+            int foo(int i, string s) @safe pure nothrow @nogc { return 0; }
+            double foo2(string s) @safe pure nothrow @nogc { return 0; }
+            string bar(double d) @safe pure nothrow @nogc { return ""; }
+            void bar(string s) @safe pure nothrow @nogc { }
         }
 
         //struct with member variable
         struct Baz
         {
             int a;
-            int foo(int i, string s) @safe { return 0; }
-            double foo2(string s) @safe { return 0; }
+            int foo(int i, string s) @safe pure nothrow @nogc { return 0; }
+            double foo2(string s) @safe pure nothrow @nogc { return 0; }
         }
 
         //struct with struct member variable
         struct Qux
         {
             Bar bar;
-            int foo(int i, string s) @safe { return 0; }
-            double foo2(string s) @safe { return 0; }
+            int foo(int i, string s) @safe pure nothrow @nogc { return 0; }
+            double foo2(string s) @safe pure nothrow @nogc { return 0; }
         }
 
         struct FooBarAliasThis
         {
             Foo foo;
             alias foo this;
-            string bar(double d) @safe { return ""; }
-            void bar(string s) @safe { }
+            string bar(double d) @safe pure nothrow @nogc { return ""; }
+            void bar(string s) @safe pure nothrow @nogc { }
         }
 
         struct FooStatic
         {
-            static int foo(int i, string s) @safe { return 0; }
-            double foo2(string s) @safe { return 0; }
+            static int foo(int i, string s) @safe pure nothrow @nogc { return 0; }
+            double foo2(string s) @safe pure nothrow @nogc { return 0; }
         }
 
         struct FooStaticMember
         {
             static int a;
-            static int foo(int i, string s) @safe { return 0; }
-            double foo2(string s) @safe { return 0; }
+            static int foo(int i, string s) @safe pure nothrow @nogc { return 0; }
+            double foo2(string s) @safe pure nothrow @nogc { return 0; }
         }
     }
 
@@ -8304,58 +8993,58 @@ version(unittest)
     {
         class Foo
         {
-            int foo(int i, string s) @safe { return 0; }
-            double foo2(string s) @safe { return 0; }
+            int foo(int i, string s) @safe pure nothrow @nogc { return 0; }
+            double foo2(string s) @safe pure nothrow @nogc { return 0; }
         }
 
         class Bar
         {
-            string bar(double d) @safe { return ""; }
-            void bar(string s) @safe { }
+            string bar(double d) @safe pure nothrow @nogc { return ""; }
+            void bar(string s) @safe pure nothrow @nogc { }
         }
 
         class FooBar
         {
-            int foo(int i, string s) @safe { return 0; }
-            double foo2(string s) @safe { return 0; }
-            string bar(double d) @safe { return ""; }
-            void bar(string s) @safe { }
+            int foo(int i, string s) @safe pure nothrow @nogc { return 0; }
+            double foo2(string s) @safe pure nothrow @nogc { return 0; }
+            string bar(double d) @safe pure nothrow @nogc { return ""; }
+            void bar(string s) @safe pure nothrow @nogc { }
         }
 
         //class with member variable
         class Baz
         {
             int a;
-            int foo(int i, string s) @safe { return 0; }
-            double foo2(string s) @safe { return 0; }
+            int foo(int i, string s) @safe pure nothrow @nogc { return 0; }
+            double foo2(string s) @safe pure nothrow @nogc { return 0; }
         }
 
         //class with struct member variable
         class Qux
         {
             Bar bar;
-            int foo(int i, string s) @safe { return 0; }
-            double foo2(string s) @safe { return 0; }
+            int foo(int i, string s) @safe pure nothrow @nogc { return 0; }
+            double foo2(string s)@safe pure nothrow @nogc { return 0; }
         }
 
         class FooBarInherit : Foo
         {
-            string bar(double d) @safe { return ""; }
-            void bar(string s) @safe { }
+            string bar(double d) @safe pure nothrow @nogc { return ""; }
+            void bar(string s) @safe pure nothrow @nogc { }
         }
 
         class BarFooInherit : Bar
         {
-            int foo(int i, string s) @safe { return 0; }
-            double foo2(string s) @safe { return 0; }
+            int foo(int i, string s) @safe pure nothrow @nogc { return 0; }
+            double foo2(string s) @safe pure nothrow @nogc { return 0; }
         }
 
         class FooBarAliasThis
         {
             Foo foo;
             alias foo this;
-            string bar(double d) @safe { return ""; }
-            void bar(string s) @safe { }
+            string bar(double d) @safe pure nothrow @nogc { return ""; }
+            void bar(string s) @safe pure nothrow @nogc { }
         }
 
         //class with member variable and inheritance
@@ -8372,15 +9061,15 @@ version(unittest)
         class FooBarMember : FooMember
         {
             int c;
-            string bar(double d) @safe { return ""; }
-            void bar(string s) @safe { }
+            string bar(double d) @safe pure nothrow @nogc { return ""; }
+            void bar(string s) @safe pure nothrow @nogc { }
         }
 
         class BarFooMember : BarMember
         {
             int d;
-            int foo(int i, string s) @safe { return 0; }
-            double foo2(string s) @safe { return 0; }
+            int foo(int i, string s) @safe pure nothrow @nogc { return 0; }
+            double foo2(string s) @safe pure nothrow @nogc { return 0; }
         }
     }
 
@@ -8388,20 +9077,21 @@ version(unittest)
     {
         interface IFoo
         {
-            int foo(int i, string s) @safe;
-            double foo2(string s) @safe;
+            int foo(int i, string s) @safe pure nothrow @nogc;
+            double foo2(string s) @safe pure nothrow @nogc;
         }
 
         interface IBar
         {
-            string bar(double d) @safe;
-            void bar(string s) @safe;
+            string bar(double d) @safe pure nothrow @nogc;
+            void bar(string s) @safe pure nothrow @nogc;
         }
     }
 }
 
 // Structs
-@safe unittest
+@safe pure nothrow @nogc
+unittest
 {
     mixin isSubTypeOfTestStructs;
 
@@ -8431,7 +9121,8 @@ version(unittest)
 }
 
 // Classes
-@safe unittest
+@safe pure nothrow @nogc
+unittest
 {
     mixin isSubTypeOfTestClasses;
 
@@ -8472,7 +9163,8 @@ version(unittest)
 }
 
 // Interfaces
-@system unittest
+@safe pure nothrow @nogc
+unittest
 {
     mixin isSubTypeOfTestStructs;
     mixin isSubTypeOfTestInterfaces;
@@ -8488,20 +9180,21 @@ version(unittest)
 }
 
 // Abstract Class ignores final being overwritten
-@system unittest
+@safe pure nothrow @nogc
+unittest
 {
     mixin isSubTypeOfTestStructs;
 
     abstract class FooAbstract
     {
-        abstract int foo(int i, string s) @safe;
-        final double foo2(string s) @safe { return 0; }
+        abstract int foo(int i, string s) @safe pure nothrow @nogc;
+        final double foo2(string s)@safe pure nothrow @nogc { return 0; }
     }
 
     abstract class BarAbstract
     {
-        final string bar(double d) @safe { return ""; }
-        abstract void bar(string s) @safe;
+        final string bar(double d) @safe pure nothrow @nogc { return ""; }
+        abstract void bar(string s) @safe pure nothrow @nogc;
     }
 
     static assert(isSubtypeOf!(Foo, FooAbstract));
@@ -8515,14 +9208,15 @@ version(unittest)
 }
 
 // Double-check UDAs
-@safe unittest
+@safe pure nothrow @nogc
+unittest
 {
     mixin isSubTypeOfTestInterfaces;
 
     struct UnsafeBar
     {
-        string bar(double d) @system { return ""; }
-        void bar(string s) @system { }
+        string bar(double d) @system pure nothrow @nogc { return ""; }
+        void bar(string s) @system pure nothrow @nogc { }
     }
 
     static assert(!isSubtypeOf!(UnsafeBar, IFoo));
@@ -8530,7 +9224,8 @@ version(unittest)
 }
 
 // Class with struct alias this
-@safe unittest
+@safe pure nothrow @nogc
+unittest
 {
     struct Foo
     {
@@ -8550,7 +9245,8 @@ version(unittest)
 }
 
 // Struct with class alias this
-@safe unittest
+@safe pure nothrow @nogc
+unittest
 {
     class Foo
     {
@@ -8570,7 +9266,8 @@ version(unittest)
 }
 
 // Struct with nested struct alias this
-@safe unittest
+@safe pure nothrow @nogc
+unittest
 {
     struct Foo
     {
@@ -8597,7 +9294,8 @@ version(unittest)
 }
 
 // Struct with assignment to nested struct (this is ok b/c what matters is access)
-@safe unittest
+@safe pure nothrow @nogc
+unittest
 {
     struct Foo
     {
@@ -8624,4 +9322,136 @@ version(unittest)
 
     static assert(isSubtypeOf!(Baz, Bar));
     static assert(isSubtypeOf!(Bar, Baz));
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    struct Foo
+    {
+        void foo() {}
+    }
+
+    struct Bar1
+    {
+        void foo() {}
+        string bar(double d) @safe { return ""; }
+    }
+
+    struct Bar2
+    {
+        void foo() {}
+        void bar(string s) @safe { }
+    }
+
+    struct Bar3
+    {
+        void foo() {}
+        void bar(double d) @safe { }
+    }
+
+    struct Bar4
+    {
+        void foo() {}
+        string bar(string s) @safe { return ""; }
+    }
+
+    struct Bar5
+    {
+        void foo() {}
+        void bar(string s) @safe { }
+    }
+
+    static assert(isSubtypeOf!(Bar1, Foo));
+    static assert(!isSubtypeOf!(Foo, Bar1));
+
+    static assert(!isSubtypeOf!(Bar1, Bar2));
+    static assert(!isSubtypeOf!(Bar2, Bar1));
+
+    static assert(!isSubtypeOf!(Bar1, Bar3));
+    static assert(!isSubtypeOf!(Bar3, Bar1));
+    static assert(!isSubtypeOf!(Bar3, Bar2));
+    static assert(!isSubtypeOf!(Bar2, Bar3));
+
+    static assert(!isSubtypeOf!(Bar1, Bar4));
+    static assert(!isSubtypeOf!(Bar4, Bar1));
+    static assert(!isSubtypeOf!(Bar4, Bar2));
+    static assert(!isSubtypeOf!(Bar2, Bar4));
+    static assert(!isSubtypeOf!(Bar4, Bar3));
+    static assert(!isSubtypeOf!(Bar3, Bar4));
+
+    static assert(!isSubtypeOf!(Bar1, Bar5));
+    static assert(!isSubtypeOf!(Bar5, Bar1));
+    static assert(isSubtypeOf!(Bar5, Bar2));
+    static assert(isSubtypeOf!(Bar2, Bar5));
+    static assert(!isSubtypeOf!(Bar5, Bar3));
+    static assert(!isSubtypeOf!(Bar3, Bar5));
+    static assert(!isSubtypeOf!(Bar5, Bar4));
+    static assert(!isSubtypeOf!(Bar4, Bar5));
+}
+
+@safe pure nothrow @nogc
+unittest
+{
+    class Foo
+    {
+        void foo() {}
+    }
+
+    class Bar1
+    {
+        void foo() {}
+        string bar(double d) @safe { return ""; }
+    }
+
+    class Bar2
+    {
+        void foo() {}
+        void bar(string s) @safe { }
+    }
+
+    class Bar3
+    {
+        void foo() {}
+        void bar(double d) @safe { }
+    }
+
+    class Bar4
+    {
+        void foo() {}
+        string bar(string s) @safe { return ""; }
+    }
+
+    class Bar5
+    {
+        void foo() {}
+        void bar(string s) @safe { }
+    }
+
+    static assert(isSubtypeOf!(Bar1, Foo));
+    static assert(!isSubtypeOf!(Foo, Bar1));
+
+    static assert(!isSubtypeOf!(Bar1, Bar2));
+    static assert(!isSubtypeOf!(Bar2, Bar1));
+
+    static assert(!isSubtypeOf!(Bar1, Bar3));
+    static assert(!isSubtypeOf!(Bar3, Bar1));
+    static assert(!isSubtypeOf!(Bar3, Bar2));
+    static assert(!isSubtypeOf!(Bar2, Bar3));
+
+    static assert(!isSubtypeOf!(Bar1, Bar4));
+    static assert(!isSubtypeOf!(Bar4, Bar1));
+    static assert(!isSubtypeOf!(Bar4, Bar2));
+    static assert(!isSubtypeOf!(Bar2, Bar4));
+    static assert(!isSubtypeOf!(Bar4, Bar3));
+    static assert(!isSubtypeOf!(Bar3, Bar4));
+
+    static assert(!isSubtypeOf!(Bar1, Bar5));
+    static assert(!isSubtypeOf!(Bar5, Bar1));
+    static assert(isSubtypeOf!(Bar5, Bar2));
+    static assert(isSubtypeOf!(Bar2, Bar5));
+    static assert(!isSubtypeOf!(Bar5, Bar3));
+    static assert(!isSubtypeOf!(Bar3, Bar5));
+    static assert(!isSubtypeOf!(Bar5, Bar4));
+    static assert(!isSubtypeOf!(Bar4, Bar5));
 }
