@@ -8405,11 +8405,11 @@ private bool doBothHaveMemberOverloaded(S, T, string member)()
             bool resultIter;
             size_t i = 0;
 
-            foreach(memberT; memberTFull)
+            foreach (memberT; memberTFull)
             {
                 resultIter = false;
 
-                foreach(memberS; memberSFull)
+                foreach (memberS; memberSFull)
                 {
                     if (doBothHaveMemberCalc!(S, memberS, memberT, member))
                     {
@@ -8439,7 +8439,7 @@ private bool doBothHaveMemberOverloaded(S, T, string member)()
         {
             alias memberT = memberIdentity!(T, member);
 
-            foreach(memberS; memberSFull)
+            foreach (memberS; memberSFull)
             {
                 if (doBothHaveMemberCalc!(S, memberS, memberT, member))
                 {
