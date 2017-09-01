@@ -1,9 +1,0 @@
-Added possibility to use a baseclass when auto-implementing an interface
-
-A second $(REF AutoImplement, std, typecons) template has been added, which
-differs from the existing one in accepting an extra type parameter. The extra
-parameter specifies a class to derive from while auto-implementing an interface.
-
-The base class used may contain non-default constructors. Matching constructors
-will be created in the auto-implemented class and be implemented as just a call
-to super with all arguments.
