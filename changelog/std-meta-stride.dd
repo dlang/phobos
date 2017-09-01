@@ -1,9 +1,0 @@
-`std.meta.Stride` was added
-
-$(REF Stride, std,meta) allows selecting a subset of template by a step size and offset:
-
----
-alias attribs = AliasSeq!(short, int, long, ushort, uint, ulong);
-static assert(is(Stride!(3, attribs) == AliasSeq!(short, ushort)));
-static assert(is(Stride!(3, attribs[1 .. $]) == AliasSeq!(int, uint)));
----
