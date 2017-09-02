@@ -522,7 +522,7 @@ class UnCompress
   private:
     z_stream zs;
     int inited;
-    int done;
+    bool done_;
     size_t destbufsize;
 
     HeaderFormat format;
@@ -560,7 +560,7 @@ class UnCompress
             inited = 0;
             inflateEnd(&zs);
         }
-        done = 1;
+        done_ = true;
     }
 
     /**
@@ -571,13 +571,13 @@ class UnCompress
     const(void)[] uncompress(const(void)[] buf)
     in
     {
-        assert(!done);
+        assert(!done_);
     }
     body
     {
         import core.memory : GC;
+
         int err;
-        ubyte[] destbuf;
 
         if (buf.length == 0)
             return null;
@@ -598,9 +598,8 @@ class UnCompress
 
         if (!destbufsize)
             destbufsize = to!uint(buf.length) * 2;
-        destbuf = new ubyte[zs.avail_in * 2 + destbufsize];
-        zs.next_out = destbuf.ptr;
-        zs.avail_out = to!uint(destbuf.length);
+        auto destbuf = new ubyte[destbufsize];
+        size_t destFill;
 
         if (zs.avail_in)
             buf = zs.next_in[0 .. zs.avail_in] ~ cast(ubyte[]) buf;
@@ -608,14 +607,96 @@ class UnCompress
         zs.next_in = cast(ubyte*) buf.ptr;
         zs.avail_in = to!uint(buf.length);
 
-        err = inflate(&zs, Z_NO_FLUSH);
-        if (err != Z_STREAM_END && err != Z_OK)
+        while (true)
         {
-            GC.free(destbuf.ptr);
-            error(err);
+            auto oldAvailIn = zs.avail_in;
+
+            zs.next_out = destbuf[destFill .. $].ptr;
+            zs.avail_out = to!uint(destbuf.length - destFill);
+
+            err = inflate(&zs, Z_NO_FLUSH);
+            if (err != Z_STREAM_END && err != Z_OK)
+            {
+                GC.free(destbuf.ptr);
+                error(err);
+            }
+            else if (err == Z_STREAM_END)
+            {
+                done_ = true;
+                break;
+            }
+            else if (!zs.avail_in)
+                break;
+
+            // According to the zlib manual inflate() stops when either there's no more data to uncompress or the output buffer is full
+            // So at this point, the output buffer is too full
+
+            destFill = destbuf.length;
+
+            if (destbuf.capacity)
+            {
+                if (auto newLength = GC.extend(destbuf.ptr, destbufsize, destbufsize))
+                    destbuf.length = destbuf.capacity;
+                else
+                    destbuf.length += destbufsize;
+            }
+            else
+            {
+                destbuf.length += destbufsize;
+            }
         }
+
         destbuf.length = destbuf.length - zs.avail_out;
         return destbuf;
+    }
+
+    // Test for issues 3191 and 9505
+    unittest
+    {
+        import std.algorithm.comparison;
+        import std.array;
+        import std.file;
+        import std.zlib;
+
+        // Data that can be easily compressed
+        ubyte[1024] originalData;
+
+        // This should yield a compression ratio of at least 1/2
+        auto compressedData = compress(originalData, 9);
+        assert(compressedData.length < originalData.length / 2, "The compression ratio is too low to accurately test this situation");
+
+        auto chunkSize = compressedData.length / 2;
+        assert(chunkSize < compressedData.length, "The length of the compressed data is too small to accurately test this situation");
+
+        auto decompressor = new UnCompress();
+        ubyte[originalData.length] uncompressedData;
+        ubyte[] reusedBuf;
+        int progress;
+
+        reusedBuf.length = chunkSize;
+
+        for (int i = 0; i < compressedData.length; i += chunkSize) {
+            auto len = min(chunkSize, compressedData.length - i);
+            // simulate reading from a stream in small chunks
+            reusedBuf[0 .. len] = compressedData[i .. i + len];
+
+            // decompress using same input buffer
+            auto chunk = decompressor.uncompress(reusedBuf);
+            assert(progress + chunk.length <= originalData.length, "The uncompressed result is bigger than the original data");
+
+            uncompressedData[progress .. progress + chunk.length] = cast(const ubyte[]) chunk[];
+            progress += chunk.length;
+        }
+
+        auto chunk = decompressor.flush();
+        assert(progress + chunk.length <= originalData.length, "The uncompressed result is bigger than the original data");
+        assert(decompressor.done, "done_ is false");
+
+        uncompressedData[progress .. progress + chunk.length] = cast(const ubyte[]) chunk[];
+        progress += chunk.length;
+
+        assert(progress == originalData.length, "The uncompressed and the original data sizes differ");
+        assert(originalData[] == uncompressedData[], "The uncompressed and the original data differ");
     }
 
     /**
@@ -626,11 +707,11 @@ class UnCompress
     void[] flush()
     in
     {
-        assert(!done);
+        assert(!done_);
     }
     out
     {
-        assert(done);
+        assert(done_);
     }
     body
     {
@@ -639,7 +720,7 @@ class UnCompress
         ubyte[] destbuf;
         int err;
 
-        done = 1;
+        done_ = true;
         if (!inited)
             return null;
 
@@ -669,6 +750,28 @@ class UnCompress
         if (extra.length)
             destbuf = extra ~ destbuf;
         return destbuf;
+    }
+
+    /// Returns true if all input data has been decompressed and no further data can be decompressed (inflate() returned )
+    @property bool done() const
+    {
+        return done_;
+    }
+
+    ///
+    unittest
+    {
+        // some random data
+        ubyte[1024] originalData = void;
+
+        // append garbage data (or don't, this works in both cases)
+        auto compressedData = cast(ubyte[]) compress(originalData) ~ cast(ubyte[]) "whatever";
+
+        auto decompressor = new UnCompress();
+        auto uncompressedData = decompressor.uncompress(compressedData);
+
+        assert(uncompressedData[] == originalData[], "The uncompressed and the original data differ");
+        assert(decompressor.done, "The UnCompressor reports not being done");
     }
 }
 
