@@ -2498,7 +2498,7 @@ auto ref initOnce(alias var)(lazy typeof(var) init, shared Mutex mutex)
     return var;
 }
 
-deprecated("use the overload that takes a `shared(Mutex)`")
+/// ditto
 auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
 {
     return initOnce!var(init, cast(shared) mutex);
