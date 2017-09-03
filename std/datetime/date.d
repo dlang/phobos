@@ -3106,7 +3106,7 @@ public:
         import std.format : format;
         import std.string : strip;
 
-        immutable str = strip(isoString);
+        auto str = strip(isoString);
 
         enforce(str.length >= 15, new DateTimeException(format("Invalid ISO String: %s", isoString)));
         auto t = str.countUntil('T');
@@ -3172,6 +3172,18 @@ public:
         assert(DateTime.fromISOString(" 19990706T123033 ") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
     }
 
+    // bug# 17801
+    @safe unittest
+    {
+        import std.conv : to;
+        import std.meta : AliasSeq;
+        foreach (C; AliasSeq!(char, wchar, dchar))
+        {
+            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+                assert(DateTime.fromISOString(to!S("20121221T141516")) == DateTime(2012, 12, 21, 14, 15, 16));
+        }
+    }
+
 
     /++
         Creates a $(LREF DateTime) from a string with the format
@@ -3194,7 +3206,7 @@ public:
         import std.format : format;
         import std.string : strip;
 
-        immutable str = strip(isoExtString);
+        auto str = strip(isoExtString);
 
         enforce(str.length >= 15, new DateTimeException(format("Invalid ISO Extended String: %s", isoExtString)));
         auto t = str.countUntil('T');
@@ -3259,6 +3271,18 @@ public:
         assert(DateTime.fromISOExtString(" 1999-07-06T12:30:33 ") == DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
     }
 
+    // bug# 17801
+    @safe unittest
+    {
+        import std.conv : to;
+        import std.meta : AliasSeq;
+        foreach (C; AliasSeq!(char, wchar, dchar))
+        {
+            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+                assert(DateTime.fromISOExtString(to!S("2012-12-21T14:15:16")) == DateTime(2012, 12, 21, 14, 15, 16));
+        }
+    }
+
 
     /++
         Creates a $(LREF DateTime) from a string with the format
@@ -3281,7 +3305,7 @@ public:
         import std.format : format;
         import std.string : strip;
 
-        immutable str = strip(simpleString);
+        auto str = strip(simpleString);
 
         enforce(str.length >= 15, new DateTimeException(format("Invalid string format: %s", simpleString)));
         auto t = str.countUntil(' ');
@@ -3348,6 +3372,18 @@ public:
                DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
         assert(DateTime.fromSimpleString(" 1999-Jul-06 12:30:33 ") ==
                DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)));
+    }
+
+    // bug# 17801
+    @safe unittest
+    {
+        import std.conv : to;
+        import std.meta : AliasSeq;
+        foreach (C; AliasSeq!(char, wchar, dchar))
+        {
+            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+                assert(DateTime.fromSimpleString(to!S("2012-Dec-21 14:15:16")) == DateTime(2012, 12, 21, 14, 15, 16));
+        }
     }
 
 
@@ -7467,6 +7503,18 @@ public:
         assert(Date.fromISOString(" 19990706 ") == Date(1999, 7, 6));
     }
 
+    // bug# 17801
+    @safe unittest
+    {
+        import std.conv : to;
+        import std.meta : AliasSeq;
+        foreach (C; AliasSeq!(char, wchar, dchar))
+        {
+            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+                assert(Date.fromISOString(to!S("20121221")) == Date(2012, 12, 21));
+        }
+    }
+
 
     /++
         Creates a $(LREF Date) from a string with the format YYYY-MM-DD.
@@ -7596,6 +7644,18 @@ public:
         assert(Date.fromISOExtString(" 1999-07-06 ") == Date(1999, 7, 6));
     }
 
+    // bug# 17801
+    @safe unittest
+    {
+        import std.conv : to;
+        import std.meta : AliasSeq;
+        foreach (C; AliasSeq!(char, wchar, dchar))
+        {
+            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+                assert(Date.fromISOExtString(to!S("2012-12-21")) == Date(2012, 12, 21));
+        }
+    }
+
 
     /++
         Creates a $(LREF Date) from a string with the format YYYY-Mon-DD.
@@ -7720,6 +7780,18 @@ public:
         assert(Date.fromSimpleString("1999-Jul-06 ") == Date(1999, 7, 6));
         assert(Date.fromSimpleString(" 1999-Jul-06") == Date(1999, 7, 6));
         assert(Date.fromSimpleString(" 1999-Jul-06 ") == Date(1999, 7, 6));
+    }
+
+    // bug# 17801
+    @safe unittest
+    {
+        import std.conv : to;
+        import std.meta : AliasSeq;
+        foreach (C; AliasSeq!(char, wchar, dchar))
+        {
+            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+                assert(Date.fromSimpleString(to!S("2012-Dec-21")) == Date(2012, 12, 21));
+        }
     }
 
 
@@ -8986,6 +9058,18 @@ public:
         assert(TimeOfDay.fromISOString(" 011217 ") == TimeOfDay(1, 12, 17));
     }
 
+    // bug# 17801
+    @safe unittest
+    {
+        import std.conv : to;
+        import std.meta : AliasSeq;
+        foreach (C; AliasSeq!(char, wchar, dchar))
+        {
+            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+                assert(TimeOfDay.fromISOString(to!S("141516")) == TimeOfDay(14, 15, 16));
+        }
+    }
+
 
     /++
         Creates a $(LREF TimeOfDay) from a string with the format HH:MM:SS.
@@ -9099,6 +9183,18 @@ public:
         assert(TimeOfDay.fromISOExtString("01:12:17 ") == TimeOfDay(1, 12, 17));
         assert(TimeOfDay.fromISOExtString(" 01:12:17") == TimeOfDay(1, 12, 17));
         assert(TimeOfDay.fromISOExtString(" 01:12:17 ") == TimeOfDay(1, 12, 17));
+    }
+
+    // bug# 17801
+    @safe unittest
+    {
+        import std.conv : to;
+        import std.meta : AliasSeq;
+        foreach (C; AliasSeq!(char, wchar, dchar))
+        {
+            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+                assert(TimeOfDay.fromISOExtString(to!S("14:15:16")) == TimeOfDay(14, 15, 16));
+        }
     }
 
 

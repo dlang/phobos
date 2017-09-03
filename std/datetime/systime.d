@@ -8480,6 +8480,21 @@ public:
         test("20101222T172201.45+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000), east480));
     }
 
+    // bug# 17801
+    @safe unittest
+    {
+        import std.conv : to;
+        import std.meta : AliasSeq;
+        foreach (C; AliasSeq!(char, wchar, dchar))
+        {
+            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+            {
+                assert(SysTime.fromISOString(to!S("20121221T141516Z")) ==
+                       SysTime(DateTime(2012, 12, 21, 14, 15, 16), UTC()));
+            }
+        }
+    }
+
 
     /++
         Creates a $(LREF SysTime) from a string with the format
@@ -8704,6 +8719,21 @@ public:
         test("2010-12-22T17:22:01.0+01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
         test("2010-12-22T17:22:01.0000000+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
         test("2010-12-22T17:22:01.45+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000), east480));
+    }
+
+    // bug# 17801
+    @safe unittest
+    {
+        import std.conv : to;
+        import std.meta : AliasSeq;
+        foreach (C; AliasSeq!(char, wchar, dchar))
+        {
+            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+            {
+                assert(SysTime.fromISOExtString(to!S("2012-12-21T14:15:16Z")) ==
+                       SysTime(DateTime(2012, 12, 21, 14, 15, 16), UTC()));
+            }
+        }
     }
 
 
@@ -8933,6 +8963,21 @@ public:
         test("2010-Dec-22 17:22:01.0+01", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east60));
         test("2010-Dec-22 17:22:01.0000000+01:30", SysTime(DateTime(2010, 12, 22, 17, 22, 01), east90));
         test("2010-Dec-22 17:22:01.45+08:00", SysTime(DateTime(2010, 12, 22, 17, 22, 01), hnsecs(4_500_000), east480));
+    }
+
+    // bug# 17801
+    @safe unittest
+    {
+        import std.conv : to;
+        import std.meta : AliasSeq;
+        foreach (C; AliasSeq!(char, wchar, dchar))
+        {
+            foreach (S; AliasSeq!(C[], const(C)[], immutable(C)[]))
+            {
+                assert(SysTime.fromSimpleString(to!S("2012-Dec-21 14:15:16Z")) ==
+                       SysTime(DateTime(2012, 12, 21, 14, 15, 16), UTC()));
+            }
+        }
     }
 
 
