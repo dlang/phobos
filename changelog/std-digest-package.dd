@@ -1,8 +1,0 @@
-`std.digest.digest` was renamed to `std.digest`.
-
-$(B Motivation):
-
-The fully qualified name of the digest function template was `std.digest.digest.digest`.
-This is because `std.digest` is a package, with a module named `digest` in it, and the function `digest` inside that.
-
-$(MREF std, digest) contains the former `std.digest.digest` package.
