@@ -860,7 +860,8 @@ final:
     {
         _refCount = 1;
         s = stream;
-        re = matcher.re.withCode(re.ir[lo .. hi]).withNGroup(nGroup);
+        auto code = matcher.re.ir[lo .. hi];
+        re = matcher.re.withCode(code).withNGroup(nGroup);
         threadSize = matcher.threadSize;
         merge = matcher.merge;
         freelist = matcher.freelist;
@@ -876,7 +877,8 @@ final:
     {
         _refCount = 1;
         s = stream;
-        re = matcher.re.withCode(re.ir[lo .. hi]).withNGroup(nGroup);
+        auto code = matcher.re.ir[lo .. hi];
+        re = matcher.re.withCode(code).withNGroup(nGroup);
         threadSize = matcher.threadSize;
         merge = matcher.merge;
         freelist = matcher.freelist;
@@ -904,10 +906,15 @@ final:
         return m;
     }
 
-    override void dupTo(void[] memory)
+    override void dupTo(Matcher!Char engine, void[] memory)
     {
-        auto tmp = this; // bit-blit
-        tmp.initExternalMemory(memory);
+        auto thompson = cast(ThompsonMatcher)engine;
+        thompson.s = s;
+        thompson.front = front;
+        thompson.index = index;
+        thompson.matched = matched;
+        thompson.exhausted = exhausted;
+        thompson.initExternalMemory(memory);
     }
 
     override int match(Group!DataIndex[] matches)

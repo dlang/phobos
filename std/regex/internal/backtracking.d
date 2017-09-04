@@ -164,13 +164,14 @@ template BacktrackingMatcher(bool CTregex)
             backrefed = null;
         }
 
-        override void dupTo(void[] memBlock)
+        override void dupTo(Matcher!Char m, void[] memBlock)
         {
-            auto m  = arrayInChunk!(Trace)(re.hotspotTableSize, memBlock);
-            m[] = Trace.init;
-            auto mem = cast(size_t[]) memBlock;
-            mem[0] = 0; // hidden pointer
-            mem[1] = 0; // used size
+            auto backtracking = cast(BacktrackingMatcher)m;
+            backtracking.s = s;
+            backtracking.front = front;
+            backtracking.index = index;
+            backtracking.exhausted = exhausted;
+            backtracking.initExternalMemory(memBlock);
         }
 
         this(ref const RegEx program, Stream stream, void[] memBlock, dchar ch, DataIndex idx)
@@ -822,7 +823,7 @@ struct CtContext
     //to mark the portion of matches to save
     int match, total_matches;
     int reserved;
-    const CodepointSet[] charsets;
+    const(CodepointInterval)[][] charsets;
 
 
     //state of codegenerator
@@ -837,7 +838,10 @@ struct CtContext
         match = 1;
         reserved = 1; //first match is skipped
         total_matches = re.ngroup;
-        charsets = re.charsets;
+        foreach (ref set; re.charsets)
+        {
+            charsets ~= set.intervals;
+        }
     }
 
     CtContext lookaround(uint s, uint e)
@@ -1299,7 +1303,7 @@ struct CtContext
             if (charsets.length)
             {
                 string name = `func_`~to!string(addr+1);
-                string funcCode = charsets[ir[0].data].toSourceCode(name);
+                string funcCode = CodepointSet.toSourceCode(charsets[ir[0].data], name);
                 code ~= ctSub( `
                     static $$
                     if (atEnd || !$$(front))
@@ -1315,7 +1319,7 @@ struct CtContext
                 $$`, ir[0].data, bailOut, addr >= 0 ? "next();" :"", nextInstr);
             break;
         case IR.Trie:
-            if (charsets.length && charsets[ir[0].data].byInterval.length  <= 8)
+            if (charsets.length && charsets[ir[0].data].length  <= 8)
                 goto case IR.CodepointSet;
             code ~= ctSub( `
                     if (atEnd || !re.matchers[$$][front])

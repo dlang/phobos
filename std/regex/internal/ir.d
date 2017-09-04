@@ -432,8 +432,8 @@ interface MatcherFactory(Char)
 @safe:
     Matcher!Char create(const Regex!Char, in Char[] input) const;
     Matcher!Char dup(Matcher!Char m, in Char[] input) const;
-    void incRef(Matcher!Char m) const;
-    void decRef(Matcher!Char m) const;
+    size_t incRef(Matcher!Char m) const;
+    size_t decRef(Matcher!Char m) const;
 }
 
 // Only memory management, no compile-time vs run-time specialities
@@ -460,24 +460,23 @@ abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
         immutable size = EngineType!Char.initialMemory(engine.pattern) + classSize;
         auto memory = enforce(malloc(size), "malloc failed")[0 .. size];
         scope(failure) free(memory.ptr);
-        engine.dupTo(memory[classSize .. size]);
-        engine = construct(engine.pattern, input, memory);
-        assert(engine.refCount == 1);
-        return engine;
+        auto copy = construct(engine.pattern, input, memory);
+        engine.dupTo(copy, memory[classSize .. size]);
+        assert(copy.refCount == 1);
+        return copy;
     }
 
-    override void incRef(Matcher!Char m) const
+    override size_t incRef(Matcher!Char m) const
     {
-        ++m.refCount;
+        return ++m.refCount;
     }
 
-    override void decRef(Matcher!Char m) const  @trusted
+    override size_t decRef(Matcher!Char m) const  @trusted
     {
         assert(m.refCount != 0);
-        if (--m.refCount == 0)
-        {
-            free(cast(void*)m);
-        }
+        auto cnt = --m.refCount;
+        if (cnt == 0) free(cast(void*)m);
+        return cnt;
     }
 }
 
@@ -487,7 +486,7 @@ class RuntimeFactory(alias EngineType, Char) : GenericFactory!(EngineType, Char)
     override EngineType!Char construct(const Regex!Char re, in Char[] input, void[] memory) const
     {
         import std.conv : emplace;
-        return emplace!(EngineType!Char)(memory[0 .. classSize], 
+        return emplace!(EngineType!Char)(memory[0 .. classSize],
             re, Input!Char(input), memory[classSize .. $]);
     }
 }
@@ -498,14 +497,39 @@ class CtfeFactory(alias EngineType, Char, alias func) : GenericFactory!(EngineTy
     override EngineType!Char construct(const Regex!Char re, in Char[] input, void[] memory) const
     {
         import std.conv : emplace;
-        return emplace!(EngineType!Char)(memory[0 .. classSize], 
+        return emplace!(EngineType!Char)(memory[0 .. classSize],
             re, &func, Input!Char(input), memory[classSize .. $]);
+    }
+}
+
+// A workaround for R-T enum re = regex(...)
+template defaultFactory(Char)
+{
+    @property MatcherFactory!Char defaultFactory(const Regex!Char re)
+    {
+        import std.regex.internal.backtracking : BacktrackingMatcher;
+        import std.regex.internal.thompson : ThompsonMatcher;
+        import std.algorithm.searching : canFind;
+        static MatcherFactory!Char backtrackingFactory;
+        static MatcherFactory!Char thompsonFactory;
+        if (re.backrefed.canFind!"a != 0")
+        {
+            if (backtrackingFactory is null)
+                backtrackingFactory = new RuntimeFactory!(BacktrackingMatcher!false, Char);
+            return backtrackingFactory;
+        }
+        else
+        {
+            if (thompsonFactory is null)
+                thompsonFactory = new RuntimeFactory!(ThompsonMatcher, Char);
+            return thompsonFactory;
+        }
     }
 }
 
 // Defining it as an interface has the undesired side-effect:
 // casting any class to an interface silently adjusts pointer to point to a nested vtbl
-abstract class Matcher(Char) 
+abstract class Matcher(Char)
 {
 abstract:
     // Get a (next) match
@@ -513,8 +537,8 @@ abstract:
     // This only maintains internal ref-count,
     // deallocation happens inside MatcherFactory
     @property ref size_t refCount() @safe;
-    // Copy internal state to memory location
-    void dupTo(void[] memory);
+    // Copy internal state to another engine, using memory arena 'memory'
+    void dupTo(Matcher!Char m, void[] memory);
     // The pattern loaded
     @property ref const(Regex!Char) pattern() @safe;
 }

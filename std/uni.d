@@ -2181,9 +2181,15 @@ pure:
         assert(set.byInterval.equal([tuple('A','E'), tuple('a','e')]));
         -----------
     */
-    @property auto byInterval() const
+    @property auto byInterval()
     {
-        return Intervals!(const(uint)[])(data[]);
+        return Intervals!(typeof(data))(data);
+    }
+
+    package @property const(CodepointInterval)[] intervals() const
+    {
+        import std.array : array;
+        return Intervals!(typeof(data[]))(data[]).array;
     }
 
     /**
@@ -2621,52 +2627,9 @@ public:
         assert((set & set.inverted).empty);
     }
 
-    /**
-        Generates string with D source code of unary function with name of
-        $(D funcName) taking a single $(D dchar) argument. If $(D funcName) is empty
-        the code is adjusted to be a lambda function.
-
-        The function generated tests if the $(CODEPOINT) passed
-        belongs to this set or not. The result is to be used with string mixin.
-        The intended usage area is aggressive optimization via meta programming
-        in parser generators and the like.
-
-        Note: Use with care for relatively small or regular sets. It
-        could end up being slower then just using multi-staged tables.
-
-        Example:
-        ---
-        import std.stdio;
-
-        // construct set directly from [a, b$RPAREN intervals
-        auto set = CodepointSet(10, 12, 45, 65, 100, 200);
-        writeln(set);
-        writeln(set.toSourceCode("func"));
-        ---
-
-        The above outputs something along the lines of:
-        ---
-        bool func(dchar ch)  @safe pure nothrow @nogc
-        {
-            if (ch < 45)
-            {
-                if (ch == 10 || ch == 11) return true;
-                return false;
-            }
-            else if (ch < 65) return true;
-            else
-            {
-                if (ch < 100) return false;
-                if (ch < 200) return true;
-                return false;
-            }
-        }
-        ---
-    */
-    string toSourceCode(string funcName="") const
+    package static string toSourceCode(const(CodepointInterval)[] range, string funcName)
     {
         import std.algorithm.searching : countUntil;
-        import std.array : array;
         import std.format : format;
         enum maxBinary = 3;
         static string linearScope(R)(R ivals, string indent)
@@ -2748,7 +2711,6 @@ public:
 
         string code = format("bool %s(dchar ch) @safe pure nothrow @nogc\n",
             funcName.empty ? "function" : funcName);
-        auto range = byInterval.array();
         // special case first bisection to be on ASCII vs beyond
         auto tillAscii = countUntil!"a[0] > 0x80"(range);
         if (tillAscii <= 0) // everything is ASCII or nothing is ascii (-1 & 0)
@@ -2756,6 +2718,55 @@ public:
         else
             code ~= bisect(range, tillAscii, "");
         return code;
+    }
+
+    /**
+        Generates string with D source code of unary function with name of
+        $(D funcName) taking a single $(D dchar) argument. If $(D funcName) is empty
+        the code is adjusted to be a lambda function.
+
+        The function generated tests if the $(CODEPOINT) passed
+        belongs to this set or not. The result is to be used with string mixin.
+        The intended usage area is aggressive optimization via meta programming
+        in parser generators and the like.
+
+        Note: Use with care for relatively small or regular sets. It
+        could end up being slower then just using multi-staged tables.
+
+        Example:
+        ---
+        import std.stdio;
+
+        // construct set directly from [a, b$RPAREN intervals
+        auto set = CodepointSet(10, 12, 45, 65, 100, 200);
+        writeln(set);
+        writeln(set.toSourceCode("func"));
+        ---
+
+        The above outputs something along the lines of:
+        ---
+        bool func(dchar ch)  @safe pure nothrow @nogc
+        {
+            if (ch < 45)
+            {
+                if (ch == 10 || ch == 11) return true;
+                return false;
+            }
+            else if (ch < 65) return true;
+            else
+            {
+                if (ch < 100) return false;
+                if (ch < 200) return true;
+                return false;
+            }
+        }
+        ---
+    */
+    string toSourceCode(string funcName="")
+    {
+        import std.array : array;
+        auto range = byInterval.array();
+        return toSourceCode(range, funcName);
     }
 
     /**

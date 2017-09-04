@@ -438,7 +438,7 @@ template ctRegexImpl(alias pattern, string flags=[])
     static immutable staticRe = cast(immutable)r.withFactory(new CtfeFactory!(CtMatcher, Char, func));
     struct Wrapper
     {
-        @property auto getRe(){ return staticRe; }
+        @property auto getRe() const { return staticRe; }
         alias getRe this;
     }
     enum wrapper = Wrapper();
@@ -702,7 +702,6 @@ public:
 if (isSomeString!R)
 {
 private:
-    import core.stdc.stdlib : malloc, free;
     alias Char = BasicElementOf!R;
     Matcher!Char _engine;
     const MatcherFactory!Char _factory;
@@ -713,9 +712,10 @@ private:
     {
         import std.exception : enforce;
         _input = input;
-        assert(prog.factory !is null, "malformed regex - missing matcher factory");
-        _factory = prog.factory;
-        _engine = prog.factory.create(prog, input);
+        if (prog.factory is null) _factory = defaultFactory!Char(prog);
+        else _factory = prog.factory;
+        _engine = _factory.create(prog, input);
+        assert(_engine.refCount == 1);
         _captures = Captures!R(this);
         _captures._nMatch = _engine.match(_captures.matches);
     }
@@ -723,12 +723,12 @@ private:
 public:
     this(this)
     {
-        _factory.incRef(_engine);
+        if (_engine) _factory.incRef(_engine);
     }
 
     ~this()
     {
-        _factory.decRef(_engine);
+        if (_engine) _factory.decRef(_engine);
     }
 
     ///Shorthands for front.pre, front.post, front.hit.
@@ -773,9 +773,10 @@ public:
         // CoW - if refCount is not 1, we are aliased by somebody else
         if (_engine.refCount != 1)
         {
-            // we abandon this reference & create a new engine
-            _factory.decRef(_engine);
-            _engine = _factory.dup(_engine, _input);
+            // we create a new engine & abandon this reference
+            auto old = _engine;
+            _engine = _factory.dup(old, _input);
+            _factory.decRef(old);
         }
         if (!_captures.unique)
         {
@@ -798,13 +799,13 @@ public:
     @property auto captures() inout { return _captures; }
 }
 
-private @trusted auto matchOnce(RegEx, R)(R input, RegEx re)
+private @trusted auto matchOnce(RegEx, R)(R input, const RegEx prog)
 {
     alias Char = BasicElementOf!R;
-    assert(re.factory !is null, "malformed regex - missing matcher factory");
-    auto engine = re.factory.create(re, input);
-    scope(exit) re.factory.decRef(engine); // destroys the engine
-    auto captures = Captures!R(input, re.ngroup, re.dict);
+    auto factory = prog.factory is null ? defaultFactory!Char(prog) : prog.factory;
+    auto engine = prog.factory.create(prog, input);
+    scope(exit) prog.factory.decRef(engine); // destroys the engine
+    auto captures = Captures!R(input, prog.ngroup, prog.dict);
     captures._nMatch = engine.match(captures.matches);
     return captures;
 }
