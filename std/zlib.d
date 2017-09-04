@@ -763,6 +763,30 @@ class UnCompress
         done = 1;
         return null;
     }
+
+    /// Returns true if all input data has been decompressed and no further data
+    /// can be decompressed (inflate() returned Z_STREAM_END)
+    @property bool empty() const
+    {
+        return inputEnded;
+    }
+
+    ///
+    @system unittest
+    {
+        // some random data
+        ubyte[1024] originalData = void;
+
+        // append garbage data (or don't, this works in both cases)
+        auto compressedData = cast(ubyte[]) compress(originalData) ~ cast(ubyte[]) "whatever";
+
+        auto decompressor = new UnCompress();
+        auto uncompressedData = decompressor.uncompress(compressedData);
+
+        assert(uncompressedData[] == originalData[],
+                "The uncompressed and the original data differ");
+        assert(decompressor.empty, "The UnCompressor reports not being done");
+    }
 }
 
 /* ========================== unittest ========================= */
