@@ -996,6 +996,33 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     assertThrown(regex(`^((x)(?=\1))`));
 }
 
+// bugzilla 13532
+@safe unittest
+{
+    import std.datetime.stopwatch : benchmark;
+    import std.math : abs;
+    void enumRegex()
+    {
+        enum re = ctRegex!`[0-9][0-9]`;
+        foreach (_; 0..100)
+        {
+            auto r = re;
+            assert(r.charsets.length == 1);
+        }
+    }
+    void staticRegex()
+    {
+        immutable static re = ctRegex!`[0-9][0-9]`;
+        foreach (_; 0..100)
+        {
+            assert(re.charsets.length == 1);
+        }
+    }
+    auto bench = benchmark!(enumRegex, staticRegex)(100);
+    auto ratio = 1.0 * bench[0].total!"usecs" / bench[1].total!"usecs";
+    assert(abs(ratio - 1.0) < 0.10, "enum regex vs static regex diff is > 10%");
+}
+
 // bugzilla 14504
 @safe unittest
 {
