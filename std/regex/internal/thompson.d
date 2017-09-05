@@ -785,7 +785,7 @@ final:
     @property bool atEnd(){  return index == s.lastIndex && s.atEnd; }
 
     override @property ref size_t refCount() @safe { return _refCount; }
-    
+
     override @property ref const(Regex!Char) pattern() @safe { return re; }
 
     bool next()
@@ -908,7 +908,7 @@ final:
 
     override void dupTo(Matcher!Char engine, void[] memory)
     {
-        auto thompson = cast(ThompsonMatcher)engine;
+        auto thompson = cast(ThompsonMatcher) engine;
         thompson.s = s;
         thompson.front = front;
         thompson.index = index;

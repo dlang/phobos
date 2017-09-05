@@ -166,7 +166,7 @@ template BacktrackingMatcher(bool CTregex)
 
         override void dupTo(Matcher!Char m, void[] memBlock)
         {
-            auto backtracking = cast(BacktrackingMatcher)m;
+            auto backtracking = cast(BacktrackingMatcher) m;
             backtracking.s = s;
             backtracking.front = front;
             backtracking.index = index;

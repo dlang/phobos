@@ -426,7 +426,7 @@ if (isSomeString!(S))
 template ctRegexImpl(alias pattern, string flags=[])
 {
     import std.regex.internal.backtracking, std.regex.internal.parser;
-    static immutable r = cast(immutable)regex(pattern, flags);
+    static immutable r = cast(immutable) regex(pattern, flags);
     alias Char = BasicElementOf!(typeof(pattern));
     enum source = ctGenRegExCode(r);
     alias CtMatcher = BacktrackingMatcher!(true);
@@ -435,10 +435,10 @@ template ctRegexImpl(alias pattern, string flags=[])
         debug(std_regex_ctr) pragma(msg, source);
         mixin(source);
     }
-    static immutable staticRe = cast(immutable)r.withFactory(new CtfeFactory!(CtMatcher, Char, func));
+    static immutable staticRe = cast(immutable) r.withFactory(new CtfeFactory!(CtMatcher, Char, func));
     struct Wrapper
     {
-        @property auto getRe() const { return staticRe; }
+        @property ref getRe() const { return staticRe; }
         alias getRe this;
     }
     enum wrapper = Wrapper();
@@ -803,8 +803,8 @@ private @trusted auto matchOnce(RegEx, R)(R input, const RegEx prog)
 {
     alias Char = BasicElementOf!R;
     auto factory = prog.factory is null ? defaultFactory!Char(prog) : prog.factory;
-    auto engine = prog.factory.create(prog, input);
-    scope(exit) prog.factory.decRef(engine); // destroys the engine
+    auto engine = factory.create(prog, input);
+    scope(exit) factory.decRef(engine); // destroys the engine
     auto captures = Captures!R(input, prog.ngroup, prog.dict);
     captures._nMatch = engine.match(captures.matches);
     return captures;

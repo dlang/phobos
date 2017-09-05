@@ -30,7 +30,7 @@ auto makeRegex(S, CG)(Parser!(S, CG) p)
         backrefed = g.backrefed;
         re.postprocess();
         // check if we have backreferences, if so - use backtracking
-        if(__ctfe) factory = null; // allows us to use the awful enum re = regex(...);
+        if (__ctfe) factory = null; // allows us to use the awful enum re = regex(...);
         else
         if (re.backrefed.canFind!"a != 0")
             factory =  new RuntimeFactory!(BacktrackingMatcher!false, Char);

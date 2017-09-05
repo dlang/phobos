@@ -200,7 +200,7 @@ bool isAtomIR(IR i)
 IR pairedIR(IR i)
 {
     assert(isStartIR(i) || isEndIR(i));
-    return cast(IR)(i ^ 0b11);
+    return cast(IR) (i ^ 0b11);
 }
 
 //encoded IR instruction
@@ -439,7 +439,7 @@ interface MatcherFactory(Char)
 // Only memory management, no compile-time vs run-time specialities
 abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
 {
-    import core.stdc.stdlib;
+    import core.stdc.stdlib : malloc, free;
     enum classSize = __traits(classInstanceSize, EngineType!Char);
 
     Matcher!Char construct(const Regex!Char re, in Char[] input, void[] memory) const;
@@ -451,7 +451,7 @@ abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
         scope(failure) free(memory.ptr);
         auto engine = construct(re, input, memory);
         assert(engine.refCount == 1);
-        assert(cast(void*)engine == memory.ptr);
+        assert(cast(void*) engine == memory.ptr);
         return engine;
     }
 
@@ -475,7 +475,7 @@ abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
     {
         assert(m.refCount != 0);
         auto cnt = --m.refCount;
-        if (cnt == 0) free(cast(void*)m);
+        if (cnt == 0) free(cast(void*) m);
         return cnt;
     }
 }
@@ -619,28 +619,28 @@ package(std.regex):
 
     const(Regex) withFactory(MatcherFactory!Char factory) pure const @trusted
     {
-        auto r = cast()this;
+        auto r = cast() this;
         r.factory = factory;
         return r;
     }
 
     const(Regex) withFlags(uint newFlags) pure const @trusted
     {
-        auto r = cast()this;
+        auto r = cast() this;
         r.flags = newFlags;
         return r;
     }
 
     const(Regex) withCode(const(Bytecode)[] code) pure const @trusted
     {
-        auto r = cast()this;
+        auto r = cast() this;
         r.ir = code.dup; // TODO: sidestep const instead?
         return r;
     }
 
     const(Regex) withNGroup(uint nGroup) pure const @trusted
     {
-        auto r = cast()this;
+        auto r = cast() this;
         r.ngroup = nGroup;
         return r;
     }

@@ -2815,7 +2815,7 @@ private:
 
         //may break sorted property - but we need std.sort to access it
         //hence package protection attribute
-        static if(hasAssignableElements!Range)
+        static if (hasAssignableElements!Range)
         package @property void front(CodepointInterval val)
         {
             slice[start] = val.a;
@@ -2830,7 +2830,7 @@ private:
         }
 
         //ditto about package
-        static if(hasAssignableElements!Range)
+        static if (hasAssignableElements!Range)
         package @property void back(CodepointInterval val)
         {
             slice[end-2] = val.a;
@@ -2855,7 +2855,7 @@ private:
         }
 
         //ditto about package
-        static if(hasAssignableElements!Range)
+        static if (hasAssignableElements!Range)
         package void opIndexAssign(CodepointInterval val, size_t idx)
         {
             slice[start+idx*2] = val.a;
