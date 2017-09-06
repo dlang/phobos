@@ -713,7 +713,10 @@ import std.range.primitives; // back, ElementEncodingType, ElementType, empty,
     // save
 import std.traits; // isConvertibleToString, isIntegral, isSomeChar,
     // isSomeString, Unqual
-
+import std.exception;// : enforce;
+import core.memory; //: pureMalloc, pureRealloc, pureFree;
+import core.exception; // : onOutOfMemoryError;
+static import std.ascii;
 // debug = std_uni;
 
 debug(std_uni) import std.stdio; // writefln, writeln
@@ -6289,7 +6292,7 @@ enum controlSwitch = `
 // TODO: redo the most of hangul stuff algorithmically in case of Graphemes too
 // kill unrolled switches
 
-private static bool isRegionalIndicator(dchar ch) @safe
+private static bool isRegionalIndicator(dchar ch) @safe pure @nogc nothrow
 {
     return ch >= '\U0001F1E6' && ch <= '\U0001F1FF';
 }
@@ -6500,9 +6503,9 @@ auto byGrapheme(Range)(Range range)
 if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 {
     // TODO: Bidirectional access
-    static struct Result
+    static struct Result(R)
     {
-        private Range _range;
+        private R _range;
         private Grapheme _front;
 
         bool empty() @property
@@ -6520,7 +6523,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
             _front = _range.empty ? Grapheme.init : _range.decodeGrapheme();
         }
 
-        static if (isForwardRange!Range)
+        static if (isForwardRange!R)
         {
             Result save() @property
             {
@@ -6529,7 +6532,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
         }
     }
 
-    auto result = Result(range);
+    auto result = Result!(Range)(range);
     result.popFront();
     return result;
 }
@@ -6702,7 +6705,6 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 +/
 @trusted struct Grapheme
 {
-    import std.exception : enforce;
     import std.traits : isDynamicArray;
 
 public:
@@ -6787,7 +6789,6 @@ public:
     {
         static if (op == "~")
         {
-            import core.stdc.stdlib : realloc;
             if (!isBig)
             {
                 if (slen_ == small_cap)
@@ -6808,9 +6809,8 @@ public:
                 cap_ = addu(cap_, grow, overflow);
                 auto nelems = mulu(3, addu(cap_, 1, overflow), overflow);
                 if (overflow) assert(0);
-
-                ptr_ = cast(ubyte*) enforce(realloc(ptr_, nelems),
-                    "realloc failed");
+                ptr_ = cast(ubyte*) pureRealloc(ptr_, nelems);
+                if (ptr_ is null) onOutOfMemoryError();
             }
             write24(ptr_, ch, len_++);
             return this;
@@ -6865,9 +6865,8 @@ public:
         return r.length == 0;
     }
 
-    this(this)
+    this(this) pure @nogc nothrow
     {
-        import core.stdc.stdlib : malloc;
         if (isBig)
         {// dup it
             import core.checkedint : addu, mulu;
@@ -6875,18 +6874,18 @@ public:
             auto raw_cap = mulu(3, addu(cap_, 1, overflow), overflow);
             if (overflow) assert(0);
 
-            auto p = cast(ubyte*) enforce(malloc(raw_cap), "malloc failed");
+            auto p = cast(ubyte*) pureMalloc(raw_cap);
+            if (p is null) onOutOfMemoryError();
             p[0 .. raw_cap] = ptr_[0 .. raw_cap];
             ptr_ = p;
         }
     }
 
-    ~this()
+    ~this() pure @nogc nothrow
     {
-        import core.stdc.stdlib : free;
         if (isBig)
         {
-            free(ptr_);
+            pureFree(ptr_);
         }
     }
 
@@ -6915,14 +6914,13 @@ private:
         }
     }
 
-    void convertToBig()
+    void convertToBig() pure @nogc nothrow
     {
-        import core.stdc.stdlib : malloc;
-
         static assert(grow.max / 3 - 1 >= grow);
         enum nbytes = 3 * (grow + 1);
         size_t k = smallLength;
-        ubyte* p = cast(ubyte*) enforce(malloc(nbytes), "malloc failed");
+        ubyte* p = cast(ubyte*) pureMalloc(nbytes);
+        if (p is null) onOutOfMemoryError();
         for (int i=0; i<k; i++)
             write24(p, read24(small_.ptr, i), i);
         // now we can overwrite small array data
@@ -6946,6 +6944,14 @@ private:
 }
 
 static assert(Grapheme.sizeof == size_t.sizeof*4);
+
+
+@system pure /*nothrow @nogc*/ unittest // TODO: string .front is GC and throw
+{
+    import std.algorithm.comparison : equal;
+    Grapheme[3] data = [Grapheme("Ю"), Grapheme("У"), Grapheme("З")];
+    assert(byGrapheme("ЮУЗ").equal(data[]));
+}
 
 ///
 @system unittest
