@@ -4517,7 +4517,7 @@ Initialize with a message and an error code.
     }
 }
 
-enum int
+enum: int
 {
     stdin_handle  = 0,
     stdout_handle = 1,
