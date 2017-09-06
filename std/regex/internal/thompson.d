@@ -849,7 +849,13 @@ final:
 
     this()(const Regex!Char program, Stream stream, void[] memory)
     {
+         // We are emplace'd to malloced memory w/o blitting T.init over it\
+         // make sure we initialize all fields explicitly
         _refCount = 1;
+        subCounters = null;
+        backrefed = null;
+        exhausted = false;
+        matched = 0;
         re = program;
         s = stream;
         initExternalMemory(memory);
