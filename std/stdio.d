@@ -4517,15 +4517,15 @@ Initialize with a message and an error code.
     }
 }
 
-enum: int
+enum StdFileHandle: string
 {
-    stdin_handle  = 0,
-    stdout_handle = 1,
-    stderr_handle,
+    stdin  = "core.stdc.stdio.stdin",
+    stdout = "core.stdc.stdio.stdout",
+    stderr = "core.stdc.stdio.stderr",
 }
 
 // Undocumented but public because the std* handles are aliasing it.
-@property ref File makeGlobal(int _iob)()
+@property ref File makeGlobal(StdFileHandle _iob)()
 {
     __gshared File.Impl impl;
     __gshared File result;
@@ -4544,9 +4544,9 @@ enum: int
                 break;
             if (atomicOp!"+="(spinlock, 1) == 1)
             {
-                impl.handle = _iob == stdin_handle  ? core.stdc.stdio.stdin :
-                              _iob == stdout_handle ? core.stdc.stdio.stdout :
-                                                      core.stdc.stdio.stderr;
+                with (StdFileHandle) 
+                    assert(_iob == stdin || _iob == stdout || _iob == stderr);
+                impl.handle = mixin(_iob);
                 result._p = &impl;
                 atomicOp!"+="(spinlock, uint.max / 2);
                 break;
@@ -4563,7 +4563,7 @@ enum: int
         it is thread un-safe to reassign `stdin` to a different `File` instance
         than the default.
 */
-alias stdin = makeGlobal!stdin_handle;
+alias stdin = makeGlobal!(StdFileHandle.stdin);
 
 ///
 @safe unittest
@@ -4591,7 +4591,7 @@ alias stdin = makeGlobal!stdin_handle;
         it is thread un-safe to reassign `stdout` to a different `File` instance
         than the default.
 */
-alias stdout = makeGlobal!stdout_handle;
+alias stdout = makeGlobal!(StdFileHandle.stdout);
 
 /**
     The standard error stream.
@@ -4600,7 +4600,7 @@ alias stdout = makeGlobal!stdout_handle;
         it is thread un-safe to reassign `stderr` to a different `File` instance
         than the default.
 */
-alias stderr = makeGlobal!stderr_handle;
+alias stderr = makeGlobal!(StdFileHandle.stderr);
 
 @system unittest
 {
