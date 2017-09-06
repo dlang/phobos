@@ -4544,7 +4544,7 @@ enum StdFileHandle: string
                 break;
             if (atomicOp!"+="(spinlock, 1) == 1)
             {
-                with (StdFileHandle) 
+                with (StdFileHandle)
                     assert(_iob == stdin || _iob == stdout || _iob == stderr);
                 impl.handle = mixin(_iob);
                 result._p = &impl;
