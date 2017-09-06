@@ -777,9 +777,6 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
     enum b3 = minimallyInitializedArray!(S3[][])(2, 2);
 }
 
-// overlap
-
-
 /++
 Returns the overlapping portion, if any, of two arrays. Unlike $(D
 equal), $(D overlap) only compares the pointers and lengths in the
@@ -788,23 +785,22 @@ overlapping slice, returns that slice. Otherwise, returns the null
 slice.
 +/
 
-auto overlap(T, U)(T[] a, U[] b) @trusted
+CommonType!(T[], U[]) overlap(T, U)(T[] a, U[] b) @trusted
 if (is(typeof(a.ptr < b.ptr) == bool))
 {
     import std.algorithm.comparison : min;
 
-    alias RetPtr = CommonType!(T*, U*);
-
+    auto end = min(a.ptr + a.length, b.ptr + b.length);
+    // CTFE requires pairing pointer comparisons, which forces a
+    // slightly inefficient implementation.
     if (a.ptr <= b.ptr && b.ptr < a.ptr + a.length)
     {
-        auto end = min(a.ptr + a.length, b.ptr + b.length);
-        return (cast(RetPtr) b.ptr)[0 .. end - b.ptr];
+        return b.ptr[0 .. end - b.ptr];
     }
 
     if (b.ptr <= a.ptr && a.ptr < b.ptr + b.length)
     {
-        auto end = min(a.ptr + a.length, b.ptr + b.length);
-        return (cast(RetPtr) a.ptr)[0 .. end - a.ptr];
+        return a.ptr[0 .. end - a.ptr];
     }
 
     return null;
