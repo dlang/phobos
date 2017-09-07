@@ -1738,7 +1738,8 @@ void dispose(A, T)(auto ref A alloc, auto ref T* p)
         destroy(*p);
     }
     alloc.deallocate((cast(void*) p)[0 .. T.sizeof]);
-    p = null;
+    static if (__traits(isRef, p))
+        p = null;
 }
 
 /// Ditto
@@ -1761,7 +1762,8 @@ if (is(T == class) || is(T == interface))
     auto support = (cast(void*) ob)[0 .. typeid(ob).initializer.length];
     destroy(p);
     alloc.deallocate(support);
-    p = null;
+    static if (__traits(isRef, p))
+        p = null;
 }
 
 /// Ditto
@@ -1775,7 +1777,8 @@ void dispose(A, T)(auto ref A alloc, auto ref T[] array)
         }
     }
     alloc.deallocate(array);
-    array = null;
+    static if (__traits(isRef, array))
+        array = null;
 }
 
 @system unittest
@@ -1919,7 +1922,8 @@ void disposeMultidimensionalArray(T, Allocator)(auto ref Allocator alloc, auto r
     }
 
     dispose(alloc, array);
-    array = null;
+    static if (__traits(isRef, array))
+        array = null;
 }
 
 ///
