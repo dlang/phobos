@@ -2004,11 +2004,12 @@ ElementType!R moveAt(R)(R r, size_t i)
 
 /**
 Implements the range interface primitive $(D empty) for built-in
-arrays. Due to the fact that nonmember functions can be called with
+arrays and associative arrays. Due to the fact that nonmember functions can be called with
 the first argument using the dot notation, $(D array.empty) is
 equivalent to $(D empty(array)).
  */
-@property bool empty(T)(in T[] a) @safe pure nothrow @nogc
+@property bool empty(T)(in T a) @safe pure nothrow @nogc
+    if (isArray!T || isAssociativeArray!T)
 {
     return !a.length;
 }
@@ -2019,6 +2020,11 @@ equivalent to $(D empty(array)).
     auto a = [ 1, 2, 3 ];
     assert(!a.empty);
     assert(a[3 .. $].empty);
+
+    int[string] b;
+    assert(b.empty);
+    b["zero"] = 0;
+    assert(!b.empty);
 }
 
 /**
