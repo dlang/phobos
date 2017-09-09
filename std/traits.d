@@ -8078,14 +8078,23 @@ enum isSimdVector(V : __vector(T), T) = true;
 enum isSimdVector(V) = false;
 
 ///
+version(D_Ddoc) @nogc @safe unittest
+{
+    import core.simd;
+    static assert(isSimdVector!ubyte16);
+    static assert(isSimdVector!ushort8);
+    static assert(!isSimdVector!ulong);
+    static assert(!isSimdVector!char);
+}
+
 @nogc @safe unittest
 {
-    version(X86_64)
+    version(DigitalMars) {version(X86){} else
     {
         import core.simd;
         static assert(isSimdVector!ubyte16);
         static assert(isSimdVector!ushort8);
-    }
+    }}
     static assert(!isSimdVector!ulong);
     static assert(!isSimdVector!char);
 }
