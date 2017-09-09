@@ -8080,7 +8080,7 @@ enum isSimdVector(V) = false;
 ///
 @nogc @safe unittest
 {
-    version(D_SIMD)
+    version(X86_64)
     {
         import core.simd;
         static assert(isSimdVector!ubyte16);
