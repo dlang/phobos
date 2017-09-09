@@ -99,6 +99,7 @@
  *           $(LREF isPointer)
  *           $(LREF isScalarType)
  *           $(LREF isSigned)
+ *           $(LREF isSimdVector)
  *           $(LREF isSomeChar)
  *           $(LREF isSomeString)
  *           $(LREF isStaticArray)
@@ -8061,3 +8062,31 @@ enum isCopyable(S) = is(typeof(
     static assert(isCopyable!int);
     static assert(isCopyable!(int[]));
 }
+
+/**
+ * Detect whether type `V` is a vector type as defined in core.simd.
+ *
+ * Params:
+ *      V = The type to check.
+ *
+ * Returns:
+ *     `true` if `V` is a `__vector`, `false` otherwise.
+ */
+enum isSimdVector(V : __vector(T), T) = true;
+
+/// ditto
+enum isSimdVector(V) = false;
+
+///
+@nogc @safe unittest
+{
+    version(D_SIMD)
+    {
+        import core.simd;
+        static assert(isSimdVector!ubyte16);
+        static assert(isSimdVector!ushort8);
+    }
+    static assert(!isSimdVector!ulong);
+    static assert(!isSimdVector!char);
+}
+
