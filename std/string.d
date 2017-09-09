@@ -3306,8 +3306,6 @@ if (isConvertibleToString!Range)
     import std.conv : to;
     import std.exception : assertCTFEable;
 
-    string s;
-
     assertCTFEable!(
     {
     foreach (S; AliasSeq!(char[], wchar[], dchar[], string, wstring, dstring))
@@ -4808,6 +4806,7 @@ if (isSomeChar!C1 && isSomeChar!C2)
         auto s = to!S("hello world");
         dchar[dchar] transTable = ['h' : 'q', 'l' : '5'];
         static assert(is(typeof(s) == typeof(translate(s, transTable))));
+        assert(translate(s, transTable) == "qe55o wor5d");
     }
     });
 }
@@ -4874,6 +4873,7 @@ if (isSomeChar!C1 && isSomeString!S && isSomeChar!C2)
         auto s = to!S("hello world");
         string[dchar] transTable = ['h' : "silly", 'l' : "putty"];
         static assert(is(typeof(s) == typeof(translate(s, transTable))));
+        assert(translate(s, transTable) == "sillyeputtyputtyo worputtyd");
     }
     });
 }
@@ -5101,6 +5101,7 @@ body
         auto s = to!(C[])("hello world");
         auto transTable = makeTransTable("hl", "q5");
         static assert(is(typeof(s) == typeof(translate!C(s, transTable))));
+        assert(translate(s, transTable) == "qe55o wor5d");
     }
 
     foreach (S; AliasSeq!(char[], const(char)[], immutable(char)[]))
@@ -5786,6 +5787,7 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
 
         auto s = to!S("hello world");
         static assert(is(typeof(s) == typeof(tr(s, "he", "if"))));
+        assert(tr(s, "he", "if") == "ifllo world");
     }
     });
 }
