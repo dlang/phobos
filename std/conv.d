@@ -835,8 +835,8 @@ if (!isImplicitlyConvertible!(S, T) &&
     class C : B, I, J {}
     class D : I {}
 
-    foreach (m1; AliasSeq!(0,1,2,3,4)) // enumerate modifiers
-    foreach (m2; AliasSeq!(0,1,2,3,4)) // ditto
+    static foreach (m1; 0 .. 5) // enumerate modifiers
+    static foreach (m2; 0 .. 5) // ditto
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         alias srcmod = AddModifier!m1;
         alias tgtmod = AddModifier!m2;

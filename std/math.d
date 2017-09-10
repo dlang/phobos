@@ -8264,14 +8264,14 @@ if (isNumeric!X)
     {
         immutable min_sub = X.min_normal * X.epsilon;
 
-        foreach (x; AliasSeq!(smallP2, min_sub, X.min_normal, .25L, 0.5L, 1.0L,
-                              2.0L, 8.0L, pow(2.0L, X.max_exp - 1), bigP2))
+        foreach (x; [smallP2, min_sub, X.min_normal, .25L, 0.5L, 1.0L,
+                              2.0L, 8.0L, pow(2.0L, X.max_exp - 1), bigP2])
         {
             assert( isPowerOf2(cast(X) x));
             assert(!isPowerOf2(cast(X)-x));
         }
 
-        foreach (x; AliasSeq!(0.0L, 3 * min_sub, smallP7, 0.1L, 1337.0L, bigP7, X.max, real.nan, real.infinity))
+        foreach (x; [0.0L, 3 * min_sub, smallP7, 0.1L, 1337.0L, bigP7, X.max, real.nan, real.infinity])
         {
             assert(!isPowerOf2(cast(X) x));
             assert(!isPowerOf2(cast(X)-x));

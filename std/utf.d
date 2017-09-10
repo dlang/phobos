@@ -630,7 +630,7 @@ if (is(S : const char[]) ||
 
     if (index >= 4) //single verification for most common case
     {
-        foreach (i; AliasSeq!(2, 3, 4))
+        static foreach (i; 2 .. 5)
         {
             if ((str[index-i] & 0b1100_0000) != 0b1000_0000)
                 return i;
@@ -638,7 +638,7 @@ if (is(S : const char[]) ||
     }
     else
     {
-        foreach (i; AliasSeq!(2, 3))
+        static foreach (i; 2 .. 4)
         {
             if (index >= i && (str[index-i] & 0b1100_0000) != 0b1000_0000)
                 return i;
