@@ -99,6 +99,7 @@
  *           $(LREF isPointer)
  *           $(LREF isScalarType)
  *           $(LREF isSigned)
+ *           $(LREF isSIMDVector)
  *           $(LREF isSomeChar)
  *           $(LREF isSomeString)
  *           $(LREF isStaticArray)
