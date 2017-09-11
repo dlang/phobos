@@ -3909,7 +3909,7 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 /**
    SIMD vectors are formatted as arrays.
  */
-void formatValue(Writer, V, Char)(auto ref Writer w, auto ref V val, const ref FormatSpec!Char f)
+void formatValue(Writer, V, Char)(auto ref Writer w, V val, const ref FormatSpec!Char f)
 if (isSIMDVector!V)
 {
     formatValue(w, val.array, f);
@@ -3920,12 +3920,19 @@ if (isSIMDVector!V)
     import core.simd;
     static if (is(float4))
     {
-        float4 f;
-        f.array[0] = 1;
-        f.array[1] = 2;
-        f.array[2] = 3;
-        f.array[3] = 4;
-        formatTest(f, "[1, 2, 3, 4]");
+        version (X86)
+        {
+            version (OSX) {/* issue 17823 */}
+        }
+        else
+        {
+            float4 f;
+            f.array[0] = 1;
+            f.array[1] = 2;
+            f.array[2] = 3;
+            f.array[3] = 4;
+            formatTest(f, "[1, 2, 3, 4]");
+        }
     }
 }
 
