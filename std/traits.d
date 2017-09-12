@@ -8280,8 +8280,8 @@ unittest
 
     struct Bar
     {
-        Foo foo;
-        alias foo this;
+        Foo fooMemb;
+        alias fooMemb this;
     }
 
     static assert(!hasAliasThis!Foo);
@@ -8321,14 +8321,14 @@ unittest
 
     struct Bar
     {
-        Foo foo;
-        alias foo this;
+        Foo fooMemb;
+        alias fooMemb this;
     }
 
     struct Baz
     {
-        Bar bar;
-        alias bar this;
+        Bar barMemb;
+        alias barMemb this;
     }
 
     static assert(!hasMultipleAliasThis!Foo);
@@ -8900,33 +8900,33 @@ unittest
     //struct with struct member variable
     struct Bar
     {
-        Foo foo;
+        Foo fooMemb;
         string bar1(double d) @safe { return ""; }
         void bar1(string s) @safe { }
     }
 
     Bar bar;
-    int z3 = bar.foo.foo1(1, "");
-    double z4 = bar.foo.foo2("");
+    int z3 = bar.fooMemb.foo1(1, "");
+    double z4 = bar.fooMemb.foo2("");
     string z5 = bar.bar1(1);
     bar.bar1("");
 
     //struct with struct member variable
     struct Baz
     {
-        Foo foo = Foo(1);
+        Foo fooMemb = Foo(1);
         string bar1(double d) @safe { return ""; }
         void bar1(string s) @safe { }
     }
 
     Baz baz;
-    int z6 = baz.foo.foo1(1, "");
-    double z7 = baz.foo.foo2("");
+    int z6 = baz.fooMemb.foo1(1, "");
+    double z7 = baz.fooMemb.foo2("");
     string z8 = baz.bar1(1);
     baz.bar1("");
 
-    static assert(doBothHaveMember!(Baz, Bar, "foo"));
-    static assert(doBothHaveMember!(Bar, Baz, "foo"));
+    static assert(doBothHaveMember!(Baz, Bar, "fooMemb"));
+    static assert(doBothHaveMember!(Bar, Baz, "fooMemb"));
     static assert(doBothHaveMember!(Baz, Bar, "bar1"));
     static assert(doBothHaveMember!(Bar, Baz, "bar1"));
 }
@@ -9128,19 +9128,11 @@ version(unittest)
             double foo2(string s) @safe pure nothrow @nogc{ return 0; }
         }
 
-        Foo foo;
-        int z1 = foo.foo1(1, "");
-        double z2 = foo.foo2("");
-
         struct Bar
         {
             string bar1(double d) @safe pure nothrow @nogc { return ""; }
             void bar1(string s) @safe pure nothrow @nogc { }
         }
-
-        Bar bar;
-        string z3 = bar.bar1(1);
-        //bar.bar1("");
 
         struct FooBar
         {
@@ -9149,12 +9141,6 @@ version(unittest)
             string bar1(double d) @safe pure nothrow @nogc { return ""; }
             void bar1(string s) @safe pure nothrow @nogc { }
         }
-
-        FooBar foobar;
-        int z4 = foobar.foo1(1, "");
-        double z5 = foobar.foo2("");
-        string z6 = foobar.bar1(1);
-        //foobar.bar1("");
 
         //struct with member variable
         struct Baz
@@ -9167,15 +9153,15 @@ version(unittest)
         //struct with struct member variable
         struct Qux
         {
-            Bar bar;
+            Bar barMemb;
             int foo1(int i, string s) @safe pure nothrow @nogc { return 0; }
             double foo2(string s) @safe pure nothrow @nogc { return 0; }
         }
 
         struct FooBarAliasThis
         {
-            Foo foo;
-            alias foo this;
+            Foo fooMemb;
+            alias fooMemb this;
             string bar1(double d) @safe pure nothrow @nogc { return ""; }
             void bar1(string s) @safe pure nothrow @nogc { }
         }
@@ -9227,7 +9213,7 @@ version(unittest)
         //class with struct member variable
         class Qux
         {
-            Bar bar = new Bar;
+            Bar barMemb = new Bar;
             int foo1(int i, string s) @safe pure nothrow @nogc { return 0; }
             double foo2(string s)@safe pure nothrow @nogc { return 0; }
         }
@@ -9246,8 +9232,8 @@ version(unittest)
 
         class FooBarAliasThis
         {
-            Foo foo = new Foo;
-            alias foo this;
+            Foo fooMemb = new Foo;
+            alias fooMemb this;
             string bar1(double d) @safe pure nothrow @nogc { return ""; }
             void bar1(string s) @safe pure nothrow @nogc { }
         }
@@ -9320,11 +9306,11 @@ unittest
     Qux qux;
     int z9 = qux.foo1(1, "");
     double z10 = qux.foo2("");
-    string z11 = qux.bar.bar1(1);
-    qux.bar.bar1("");
+    string z11 = qux.barMemb.bar1(1);
+    qux.barMemb.bar1("");
 
     FooBarAliasThis foobaraliasthis;
-    int z12 = foobaraliasthis.foo.foo1(1, "");
+    int z12 = foobaraliasthis.foo1(1, "");
     double z13 = foobaraliasthis.foo2("");
     string z14 = foobaraliasthis.bar1(1);
     foobaraliasthis.bar1("");
@@ -9364,8 +9350,8 @@ unittest
     Qux qux = new Qux;
     int z9 = qux.foo1(1, "");
     double z10 = qux.foo2("");
-    string z11 = qux.bar.bar1(1);
-    qux.bar.bar1("");
+    string z11 = qux.barMemb.bar1(1);
+    qux.barMemb.bar1("");
 
     FooBarInherit foobarInherit = new FooBarInherit;
     int z12 = foobarInherit.foo1(1, "");
@@ -9566,8 +9552,8 @@ unittest
 
     class FooBarAliasThis
     {
-        Foo foo;
-        alias foo this;
+        Foo fooMemb;
+        alias fooMemb this;
         string bar1(double d) @safe { return ""; }
         void bar1(string s) @safe { }
     }
@@ -9597,8 +9583,8 @@ unittest
 
     struct FooBarAliasThis
     {
-        Foo foo = new Foo;
-        alias foo this;
+        Foo fooMemb = new Foo;
+        alias fooMemb this;
         string bar1(double d) @safe { return ""; }
         void bar1(string s) @safe { }
     }
@@ -9626,8 +9612,8 @@ unittest
 
     struct Bar
     {
-        Foo foo;
-        alias foo this;
+        Foo fooMemb;
+        alias fooMemb this;
         double foo2(string s) @safe { return 0; }
     }
 
@@ -9637,8 +9623,8 @@ unittest
 
     struct FooBar
     {
-        Bar bar;
-        alias bar this;
+        Bar barMemb;
+        alias barMemb this;
         string baz1(double d) @safe { return ""; }
         void baz1(string s) @safe { }
     }
@@ -9671,28 +9657,28 @@ unittest
     //struct with struct member variable
     struct Bar
     {
-        Foo foo;
+        Foo fooMemb;
         string bar1(double d) @safe { return ""; }
         void bar1(string s) @safe { }
     }
 
     Bar bar;
-    int z3 = bar.foo.foo1(1, "");
-    double z4 = bar.foo.foo2("");
+    int z3 = bar.fooMemb.foo1(1, "");
+    double z4 = bar.fooMemb.foo2("");
     string z5 = bar.bar1(1);
     bar.bar1("");
 
     //struct with struct member variable
     struct Baz
     {
-        Foo foo = Foo(1);
+        Foo fooMemb = Foo(1);
         string bar1(double d) @safe { return ""; }
         void bar1(string s) @safe { }
     }
 
     Baz baz;
-    int z6 = baz.foo.foo1(1, "");
-    double z7 = baz.foo.foo2("");
+    int z6 = baz.fooMemb.foo1(1, "");
+    double z7 = baz.fooMemb.foo2("");
     string z8 = baz.bar1(1);
     baz.bar1("");
 
