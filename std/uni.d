@@ -7241,7 +7241,8 @@ private static struct InputRangeString
     $(P Useful for converting the result to a string after doing operations
     on graphemes.)
 
-    $(P Acts as the identity function when given a range of code points.)
+    $(P If passed in a range of codepoint will return an opaque range of code points
+      that hides direct access to underlying source.)
 +/
 auto byCodePoint(Range)(Range range)
 if (isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
@@ -7286,10 +7287,27 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
 }
 
 /// Ditto
-Range byCodePoint(Range)(Range range)
+auto byCodePoint(Range)(Range range)
 if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 {
-    return range;
+    static struct Result
+    {
+        private Range _range;
+        @property bool empty() { return _range.empty; }
+        @property dchar front(){ return _range.front; }
+        void popFront(){ _range.popFront; }
+        static if (isForwardRange!Range)
+        {
+             @property auto save() { return Result(_range.save); }
+        }
+        static if (isBidirectionalRange!Range)
+        {
+            @property dchar back(){ return _range.back; }
+            void popBack(){ _range.popBack; }
+        }
+    }
+    static assert(isInputRange!(Result));
+    return Result(range);
 }
 
 ///
@@ -7315,10 +7333,11 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 {
     import std.algorithm.comparison : equal;
     import std.range.primitives : walkLength;
+    import std.range : retro;
     assert("".byGrapheme.byCodePoint.equal(""));
 
     string text = "noe\u0308l";
-    static assert(is(typeof(text.byCodePoint) == string));
+    static assert(!__traits(compiles, "noe\u0308l".byCodePoint.length));
 
     auto gText = InputRangeString(text).byGrapheme;
     static assert(!isForwardRange!(typeof(gText)));
@@ -7327,6 +7346,11 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
     static assert(!isForwardRange!(typeof(cpText)));
 
     assert(cpText.walkLength == text.walkLength);
+
+    auto plainCp = text.byCodePoint;
+    static assert(isForwardRange!(typeof(plainCp)));
+    assert(equal(plainCp, text));
+    assert(equal(retro(plainCp), retro(text)));
 }
 
 @trusted:
