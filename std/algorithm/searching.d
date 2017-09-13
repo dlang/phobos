@@ -1887,7 +1887,7 @@ if (isForwardRange!R1 && isForwardRange!R2
                 Select!(haystack[0].sizeof == 1, ubyte[],
                     Select!(haystack[0].sizeof == 2, ushort[], uint[]));
             // Will use the array specialization
-            static TO force(TO, T)(T r) @trusted { return cast(TO) r; }
+            static TO force(TO, T)(inout T r) @trusted { return cast(TO) r; }
             return force!R1(.find!(pred, Representation, Representation)
                 (force!Representation(haystack), force!Representation(needle)));
         }
@@ -2094,6 +2094,16 @@ if (isForwardRange!R1 && isForwardRange!R2
     import std.container : SList;
     alias C = Tuple!(int, "x", int, "y");
     assert([C(1,0), C(2,0), C(3,1), C(4,0)].find!"a.x == b"(SList!int(2, 3)[]) == [C(2,0), C(3,1), C(4,0)]);
+}
+
+@safe unittest // issue 12470
+{
+    import std.array : replace;
+    inout(char)[] sanitize(inout(char)[] p)
+    {
+        return p.replace("\0", " ");
+    }
+    assert(sanitize("O\x00o") == "O o");
 }
 
 @safe unittest
