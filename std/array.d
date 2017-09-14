@@ -139,6 +139,13 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
     }
 }
 
+/// ditto
+ForeachType!(PointerTarget!Range)[] array(Range)(Range r)
+if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range && !isInfinite!Range)
+{
+    return array(*r);
+}
+
 ///
 @safe pure nothrow unittest
 {
@@ -155,6 +162,26 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
     }
     auto a = array([Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)][]);
     assert(equal(a, [Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)]));
+}
+
+@safe pure nothrow unittest
+{
+    struct MyRange
+    {
+        enum front = 123;
+        enum empty = true;
+        void popFront() {}
+    }
+
+    auto arr = (new MyRange).array;
+    assert(arr.empty);
+}
+
+@system pure nothrow unittest
+{
+    immutable int[] a = [1, 2, 3, 4];
+    auto b = (&a).array;
+    assert(b == a);
 }
 
 @system unittest
