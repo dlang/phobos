@@ -523,6 +523,7 @@ class UnCompress
     z_stream zs;
     int inited;
     int done;
+    bool inputEnded;
     size_t destbufsize;
 
     HeaderFormat format;
@@ -575,12 +576,11 @@ class UnCompress
     }
     body
     {
+        if (inputEnded || !buf.length)
+            return null;
+
         import core.memory : GC;
         int err;
-        ubyte[] destbuf;
-
-        if (buf.length == 0)
-            return null;
 
         if (!inited)
         {
@@ -598,24 +598,150 @@ class UnCompress
 
         if (!destbufsize)
             destbufsize = to!uint(buf.length) * 2;
-        destbuf = new ubyte[zs.avail_in * 2 + destbufsize];
-        zs.next_out = destbuf.ptr;
-        zs.avail_out = to!uint(destbuf.length);
-
-        if (zs.avail_in)
-            buf = zs.next_in[0 .. zs.avail_in] ~ cast(ubyte[]) buf;
+        auto destbuf = new ubyte[destbufsize];
+        size_t destFill;
 
         zs.next_in = cast(ubyte*) buf.ptr;
         zs.avail_in = to!uint(buf.length);
 
-        err = inflate(&zs, Z_NO_FLUSH);
-        if (err != Z_STREAM_END && err != Z_OK)
+        while (true)
         {
-            GC.free(destbuf.ptr);
-            error(err);
+            auto oldAvailIn = zs.avail_in;
+
+            zs.next_out = destbuf[destFill .. $].ptr;
+            zs.avail_out = to!uint(destbuf.length - destFill);
+
+            err = inflate(&zs, Z_NO_FLUSH);
+            if (err == Z_STREAM_END)
+            {
+                inputEnded = true;
+                break;
+            }
+            else if (err != Z_OK)
+            {
+                GC.free(destbuf.ptr);
+                error(err);
+            }
+            else if (!zs.avail_in)
+                break;
+
+            /*
+                According to the zlib manual inflate() stops when either there's
+                no more data to uncompress or the output buffer is full
+                So at this point, the output buffer is too full
+            */
+
+            destFill = destbuf.length;
+
+            if (destbuf.capacity)
+            {
+                if (destbuf.length < destbuf.capacity)
+                    destbuf.length = destbuf.capacity;
+                else
+                {
+                    auto newLength = GC.extend(destbuf.ptr, destbufsize, destbufsize);
+
+                    if (newLength && destbuf.length < destbuf.capacity)
+                        destbuf.length = destbuf.capacity;
+                    else
+                        destbuf.length += destbufsize;
+                }
+            }
+            else
+                destbuf.length += destbufsize;
         }
+
         destbuf.length = destbuf.length - zs.avail_out;
         return destbuf;
+    }
+
+    // Test for issues 3191 and 9505
+    @system unittest
+    {
+        import std.algorithm.comparison;
+        import std.array;
+        import std.file;
+        import std.zlib;
+
+        // Data that can be easily compressed
+        ubyte[1024] originalData;
+
+        // This should yield a compression ratio of at least 1/2
+        auto compressedData = compress(originalData, 9);
+        assert(compressedData.length < originalData.length / 2,
+                "The compression ratio is too low to accurately test this situation");
+
+        auto chunkSize = compressedData.length / 4;
+        assert(chunkSize < compressedData.length,
+                "The length of the compressed data is too small to accurately test this situation");
+
+        auto decompressor = new UnCompress();
+        ubyte[originalData.length] uncompressedData;
+        ubyte[] reusedBuf;
+        int progress;
+
+        reusedBuf.length = chunkSize;
+
+        for (int i = 0; i < compressedData.length; i += chunkSize)
+        {
+            auto len = min(chunkSize, compressedData.length - i);
+            // simulate reading from a stream in small chunks
+            reusedBuf[0 .. len] = compressedData[i .. i + len];
+
+            // decompress using same input buffer
+            auto chunk = decompressor.uncompress(reusedBuf);
+            assert(progress + chunk.length <= originalData.length,
+                    "The uncompressed result is bigger than the original data");
+
+            uncompressedData[progress .. progress + chunk.length] = cast(const ubyte[]) chunk[];
+            progress += chunk.length;
+        }
+
+        auto chunk = decompressor.flush();
+        assert(progress + chunk.length <= originalData.length,
+                "The uncompressed result is bigger than the original data");
+
+        uncompressedData[progress .. progress + chunk.length] = cast(const ubyte[]) chunk[];
+        progress += chunk.length;
+
+        assert(progress == originalData.length,
+                "The uncompressed and the original data sizes differ");
+        assert(originalData[] == uncompressedData[],
+                "The uncompressed and the original data differ");
+    }
+
+    @system unittest
+    {
+        ubyte[1024] invalidData;
+        auto decompressor = new UnCompress();
+
+        try
+        {
+            auto uncompressedData = decompressor.uncompress(invalidData);
+        }
+        catch (ZlibException e)
+        {
+            assert(e.msg == "data error");
+            return;
+        }
+
+        assert(false, "Corrupted data didn't result in an error");
+    }
+
+    @system unittest
+    {
+        ubyte[2014] originalData = void;
+        auto compressedData = compress(originalData, 9);
+
+        auto decompressor = new UnCompress();
+        auto uncompressedData = decompressor.uncompress(compressedData ~ cast(ubyte[]) "whatever");
+
+        assert(originalData.length == uncompressedData.length,
+                "The uncompressed and the original data sizes differ");
+        assert(originalData[] == uncompressedData[],
+                "The uncompressed and the original data differ");
+        assert(!decompressor.uncompress("whatever").length,
+                "Compression continued after the end");
     }
 
     /**
@@ -634,41 +760,32 @@ class UnCompress
     }
     body
     {
-        import core.memory : GC;
-        ubyte[] extra;
-        ubyte[] destbuf;
-        int err;
-
         done = 1;
-        if (!inited)
-            return null;
+        return null;
+    }
 
-      L1:
-        destbuf = new ubyte[zs.avail_in * 2 + 100];
-        zs.next_out = destbuf.ptr;
-        zs.avail_out = to!uint(destbuf.length);
+    /// Returns true if all input data has been decompressed and no further data
+    /// can be decompressed (inflate() returned Z_STREAM_END)
+    @property bool empty() const
+    {
+        return inputEnded;
+    }
 
-        err = etc.c.zlib.inflate(&zs, Z_NO_FLUSH);
-        if (err == Z_OK && zs.avail_out == 0)
-        {
-            extra ~= destbuf;
-            goto L1;
-        }
-        if (err != Z_STREAM_END)
-        {
-            GC.free(destbuf.ptr);
-            if (err == Z_OK)
-                err = Z_BUF_ERROR;
-            error(err);
-        }
-        destbuf = destbuf.ptr[0 .. zs.next_out - destbuf.ptr];
-        err = etc.c.zlib.inflateEnd(&zs);
-        inited = 0;
-        if (err)
-            error(err);
-        if (extra.length)
-            destbuf = extra ~ destbuf;
-        return destbuf;
+    ///
+    @system unittest
+    {
+        // some random data
+        ubyte[1024] originalData = void;
+
+        // append garbage data (or don't, this works in both cases)
+        auto compressedData = cast(ubyte[]) compress(originalData) ~ cast(ubyte[]) "whatever";
+
+        auto decompressor = new UnCompress();
+        auto uncompressedData = decompressor.uncompress(compressedData);
+
+        assert(uncompressedData[] == originalData[],
+                "The uncompressed and the original data differ");
+        assert(decompressor.empty, "The UnCompressor reports not being done");
     }
 }
 
