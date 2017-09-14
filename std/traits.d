@@ -8466,7 +8466,7 @@ private template checkFunctionAttributes(S, T)
     import std.traits : isFunction, functionAttributes, hasFunctionAttributes;
 
     static assert (isFunction!S && isFunction!T, "Should not be here");
-    
+
     static if (hasFunctionAttributes!(T, "@none"))
     {
         enum bool checkFunctionAttributes = true;
@@ -8509,7 +8509,7 @@ private template checkFunctionAttributes(S, T)
         {
             enum bool checkFunctionAttributes = false;
         }
-    }   
+    }
     else
     {
         enum bool checkFunctionAttributes = false;
@@ -8602,7 +8602,7 @@ unittest
     int z7 = baz.foo3(0, 2.0);
     int z8 = baz.bar1();
     baz.bar2(1);
-    
+
     static assert(!isFunctionSubType!(Baz.foo1, Bar.foo1));
     static assert(!isFunctionSubType!(Bar.foo1, Baz.foo1));
     static assert(isFunctionSubType!(Baz.foo2, Bar.foo2));
@@ -8864,7 +8864,7 @@ unittest
 
     Baz baz = new Baz;
     string z2 = baz.bar1(1);
-    
+
     static assert(!isFunctionSubType!(Baz.bar1, Bar.bar1));
     static assert(isFunctionSubType!(Bar.bar1, Baz.bar1));
 }
@@ -8884,10 +8884,10 @@ unittest
 
     BarInheritAbstract bar = new BarInheritAbstract;
     bar.bar1("");
-    
+
     alias S = BarInheritAbstract.bar1;
     alias T = BarAbstract.bar1;
-    
+
     static assert(isFunctionSubType!(S, T));
     static assert(!isFunctionSubType!(T, S));
 }
@@ -8904,7 +8904,7 @@ unittest
     {
         abstract void bar1(string s) @safe pure nothrow @nogc;
     }
-    
+
     static assert(isFunctionSubType!(Bar.bar1, BarAbstract.bar1));
     static assert(isFunctionSubType!(BarAbstract.bar1, Bar.bar1));
 }
@@ -10091,10 +10091,10 @@ unittest
 
     static assert(isSubtypeOf!(FooBar, FooAbstract));
     static assert(isSubtypeOf!(FooBar, BarAbstract));
-    
+
     static assert(isSubtypeOf!(FooInheritAbstract, FooAbstract));
     static assert(!isSubtypeOf!(FooInheritAbstract, BarAbstract));
-    
+
     static assert(!isSubtypeOf!(BarInheritAbstract, FooAbstract));
     static assert(isSubtypeOf!(BarInheritAbstract, BarAbstract));
 }
@@ -10136,7 +10136,7 @@ unittest
     BarImplAbstract bar = new BarImplAbstract;
     auto z3 = bar.bar1(1.0);
     bar.bar1("");
-    
+
     static assert(!isSubtypeOf!(FooImplAbstract, FooAbstract));
     static assert(!isSubtypeOf!(FooImplAbstract, BarAbstract));
 
