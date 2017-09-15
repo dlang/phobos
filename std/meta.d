@@ -1328,7 +1328,7 @@ private template SmartAlias(T...)
   *    Alias to instantiated template passed as last parameter, with other
   *    parameters used for instantiation.
   */
-template ApplyWith(Args...) if(Args.length >= 1)
+template ApplyWith(Args...) if (Args.length >= 1)
 {
     alias ApplyWith = Instantiate!(Args[$-1], Args[0 .. $-1]);
 }
@@ -1340,7 +1340,7 @@ template ApplyWith(Args...) if(Args.length >= 1)
     alias functions = staticMap!(ApplyLeft!(ApplyWith, string),
                                  leftJustify, center, rightJustify);
     string result = "";
-    static foreach(f; functions)
+    static foreach (f; functions)
     {
         {
             auto x = &f; // not a template, but a function instantiation
