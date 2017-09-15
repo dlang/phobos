@@ -54,6 +54,7 @@
  * $(TR $(TD Template instantiation) $(TD
  *           $(LREF ApplyLeft)
  *           $(LREF ApplyRight)
+ *           $(LREF ApplyWith)
  * ))
  * ))
  *
@@ -1310,6 +1311,45 @@ private template SmartAlias(T...)
         enum U3 = U2!short;
         static assert(U3);
     })));
+}
+
+/**
+  * This template instantiates a template by taking its parameters first, and
+  * the template last. This can be useful when using staticMap to apply various
+  * templates to the same set of parameters, since staticMap always appends the
+  * list of arguments to one template.
+  *
+  * `ApplyWith!(A0, A1, ..., An-1, An)` is equivalent to
+  * `An!(A0, A1, ..., An-1)`
+  *
+  * Params:
+  *    args = Arguments for instantiation, followed by template to instantiate.
+  * Returns:
+  *    Alias to instantiated template passed as last parameter, with other
+  *    parameters used for instantiation.
+  */
+template ApplyWith(Args...) if(Args.length >= 1)
+{
+    alias ApplyWith = Instantiate!(Args[$-1], Args[0 .. $-1]);
+}
+
+///
+@safe unittest
+{
+    import std.string: leftJustify, center, rightJustify;
+    alias functions = staticMap!(ApplyLeft!(ApplyWith, string),
+                                 leftJustify, center, rightJustify);
+    string result = "";
+    static foreach(f; functions)
+    {
+        {
+            auto x = &f; // not a template, but a function instantiation
+            result ~= x("hello", 7);
+            result ~= ";";
+        }
+    }
+
+    assert(result == "hello  ; hello ;  hello;");
 }
 
 /**
