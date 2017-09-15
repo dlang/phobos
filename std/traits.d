@@ -8475,27 +8475,27 @@ private template checkFunctionAttributes(S, T)
     {
         enum bool checkFunctionAttributes = true;
     }
-    else static if((hasFunctionAttributes!(T, "@safe") &&
-                    hasFunctionAttributes!(S, "@safe")) ||
-                   (hasFunctionAttributes!(T, "@trusted") &&
-                     (hasFunctionAttributes!(S, "@trusted") ||
-                      hasFunctionAttributes!(S, "@safe"))) ||
-                   hasFunctionAttributes!(T, "@system") ||
-                   (!hasFunctionAttributes!(T, "@system") &&
-                    !hasFunctionAttributes!(T, "@safe") &&
-                    !hasFunctionAttributes!(T, "@trusted")))
+    else static if ((hasFunctionAttributes!(T, "@safe") &&
+                     hasFunctionAttributes!(S, "@safe")) ||
+                    (hasFunctionAttributes!(T, "@trusted") &&
+                      (hasFunctionAttributes!(S, "@trusted") ||
+                       hasFunctionAttributes!(S, "@safe"))) ||
+                    hasFunctionAttributes!(T, "@system") ||
+                    (!hasFunctionAttributes!(T, "@system") &&
+                     !hasFunctionAttributes!(T, "@safe") &&
+                     !hasFunctionAttributes!(T, "@trusted")))
     {
-        static if((hasFunctionAttributes!(T, "@nogc") &&
-                   hasFunctionAttributes!(S, "@nogc")) ||
-                   !hasFunctionAttributes!(T, "@nogc"))
+        static if ((hasFunctionAttributes!(T, "@nogc") &&
+                    hasFunctionAttributes!(S, "@nogc")) ||
+                    !hasFunctionAttributes!(T, "@nogc"))
         {
-            static if((hasFunctionAttributes!(T, "@nothrow_") &&
-                       hasFunctionAttributes!(S, "@nothrow_")) ||
-                       !hasFunctionAttributes!(T, "@nothrow_"))
+            static if ((hasFunctionAttributes!(T, "@nothrow_") &&
+                        hasFunctionAttributes!(S, "@nothrow_")) ||
+                        !hasFunctionAttributes!(T, "@nothrow_"))
             {
-                static if((hasFunctionAttributes!(T, "@pure_") &&
-                           hasFunctionAttributes!(S, "@pure_")) ||
-                           !hasFunctionAttributes!(T, "@pure_"))
+                static if ((hasFunctionAttributes!(T, "@pure_") &&
+                            hasFunctionAttributes!(S, "@pure_")) ||
+                            !hasFunctionAttributes!(T, "@pure_"))
                 {
                     enum bool checkFunctionAttributes = true;
                 }
