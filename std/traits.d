@@ -9568,7 +9568,7 @@ private bool checkSubTypeOf(alias S, alias T)()
  + $(LREF Object). The implication of this is that a struct can be a subtype
  + of a class, even if it does not implement $(LREF Object)'s member functions.
  +
- + This function ignores UDAs, but does consider D's built-in function 
+ + This function ignores UDAs, but does consider D's built-in function
  + attributes in the following manner (< indicates subtypes):
  +      1) @safe < @trusted < @system
  +      2) @nogc < non-@nogc (because there is no @gc)
