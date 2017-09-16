@@ -8465,7 +8465,7 @@ private template checkFunctionAttributes(S, T)
 {
     import std.traits : isFunction, functionAttributes, hasFunctionAttributes;
 
-    static assert (isFunction!S && isFunction!T, "Should not be here");
+    static assert(isFunction!S && isFunction!T, "Should not be here");
 
     static if (hasFunctionAttributes!(T, "@none"))
     {
