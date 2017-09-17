@@ -1556,14 +1556,14 @@ if (stepSize != 0)
  * Instantiates the given template with the given list of parameters.
  *
  * Used to work around syntactic limitations of D with regard to instantiating
- * a template from an alias sequence (e.g. T[0]!(...) is not valid) or a
- * template returning another template (e.g. Foo!(Bar)!(Baz) is not allowed).
+ * a template from an alias sequence (e.g. `T[0]!(...)` is not valid) or a
+ * template returning another template (e.g. `Foo!(Bar)!(Baz)` is not allowed).
  *
  * Params:
  *    Template = The template to instantiate.
  *    Params = The parameters with which to instantiate the template.
  * Returns:
- *    Aliases to the instantiated template.
+ *    The instantiated template.
  */
 alias Instantiate(alias Template, Params...) = Template!Params;
 
