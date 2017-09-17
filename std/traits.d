@@ -1001,8 +1001,9 @@ alias ParameterTypeTuple = Parameters;
 Returns the number of arguments of function $(D func).
 arity is undefined for variadic functions.
 */
-template arity(alias func)
-    if ( isCallable!func && variadicFunctionStyle!func == Variadic.no )
+template arity(func...)
+    if (func.length == 1 && isCallable!func &&
+        variadicFunctionStyle!func == Variadic.no)
 {
     enum size_t arity = Parameters!func.length;
 }
@@ -1016,6 +1017,12 @@ template arity(alias func)
     static assert(arity!bar == 1);
     void variadicFoo(uint...){}
     static assert(!__traits(compiles, arity!variadicFoo));
+}
+
+@safe unittest // issue 11389
+{
+    alias TheType = size_t function( string[] );
+    static assert(arity!TheType == 1);
 }
 
 /**
