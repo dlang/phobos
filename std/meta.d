@@ -1313,31 +1313,45 @@ private template SmartAlias(T...)
     })));
 }
 
+// used to actually instantiate the ApplyWith template. The last parameter is
+// the template to instantiation, while the other parameters are the ones to
+// pass to the template. It is done this way because of how ApplyLeft works.
+private template InstantiateLast(size_t arglength, Args...) if (Args.length == arglength + 1)
+{
+    alias InstantiateLast = Instantiate!(Args[$-1], Args[0 .. $-1]);
+}
+
 /**
-  * This template instantiates a template by taking its parameters first, and
-  * the template last. This can be useful when using staticMap to apply various
-  * templates to the same set of parameters, since staticMap always appends the
-  * list of arguments to one template.
-  *
-  * `ApplyWith!(A0, A1, ..., An-1, An)` is equivalent to
-  * `An!(A0, A1, ..., An-1)`
+  * This template is used to bind a single set of parameters to multiple
+  * templates. When instantiated, `ApplyWith` will alias to a
+  * $(LINK2 http://en.wikipedia.org/wiki/Partial_application, partially applied)
+  * template that accepts as its last parameter, the true template to
+  * instantiate.
   *
   * Params:
-  *    args = Arguments for instantiation, followed by template to instantiate.
+  *    Args = Arguments for instantiation with a template to be determined.
   * Returns:
-  *    Alias to instantiated template passed as last parameter, with other
-  *    parameters used for instantiation.
+  *    Alias to template that will instantiate another template with the given
+  *    parameters.
   */
-template ApplyWith(Args...) if (Args.length >= 1)
+template ApplyWith(Args...)
 {
-    alias ApplyWith = Instantiate!(Args[$-1], Args[0 .. $-1]);
+    alias ApplyWith = ApplyLeft!(InstantiateLast, Args.length, Args);
 }
 
 ///
 @safe unittest
 {
-    import std.string: leftJustify, center, rightJustify;
-    alias functions = staticMap!(ApplyLeft!(ApplyWith, string),
+    import std.traits : isIntegral, hasIndirections;
+    alias X = ApplyWith!int;
+    static assert(X!isIntegral);
+    static assert(!X!hasIndirections);
+}
+///
+@safe unittest
+{
+    import std.string : leftJustify, center, rightJustify;
+    alias functions = staticMap!(ApplyWith!string,
                                  leftJustify, center, rightJustify);
     string result = "";
     static foreach (f; functions)
@@ -1350,6 +1364,19 @@ template ApplyWith(Args...) if (Args.length >= 1)
     }
 
     assert(result == "hello  ; hello ;  hello;");
+}
+
+@safe unittest
+{
+    import std.traits : isIntegral, isImplicitlyConvertible;
+    alias X = ApplyWith!int;
+    // make sure we have a valid setup.
+    static assert(X!isIntegral);
+
+    // ensure we can't instantiate with zero or extra parameters, as that
+    // allows abuse.
+    static assert(!__traits(compiles, X!()));
+    static assert(!__traits(compiles, X!(int, isImplicitlyConvertible)));
 }
 
 /**
