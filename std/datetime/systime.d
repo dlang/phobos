@@ -9020,7 +9020,7 @@ private:
 
     "std time"'s epoch is based on the Proleptic Gregorian Calendar per ISO
     8601 and is what $(LREF SysTime) uses internally. However, holding the time
-    as an integer in hnescs since that epoch technically isn't actually part of
+    as an integer in hnsecs since that epoch technically isn't actually part of
     the standard, much as it's based on it, so the name "std time" isn't
     particularly good, but there isn't an official name for it. C# uses "ticks"
     for the same thing, but they aren't actually clock ticks, and the term
