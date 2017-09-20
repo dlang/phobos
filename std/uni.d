@@ -7241,8 +7241,7 @@ private static struct InputRangeString
     $(P Useful for converting the result to a string after doing operations
     on graphemes.)
 
-    $(P If passed in a range of codepoint will return an opaque range of code points
-      that hides direct access to underlying source.)
+    $(P If passed in a range of code points, returns a range with equivalent capabilities.)
 +/
 auto byCodePoint(Range)(Range range)
 if (isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
@@ -7290,24 +7289,23 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == Grapheme))
 auto byCodePoint(Range)(Range range)
 if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 {
-    static struct Result
+    static if (isNarrowString!Range)
     {
-        private Range _range;
-        @property bool empty() { return _range.empty; }
-        @property dchar front(){ return _range.front; }
-        void popFront(){ _range.popFront; }
-        static if (isForwardRange!Range)
+        static struct Result
         {
-             @property auto save() { return Result(_range.save); }
-        }
-        static if (isBidirectionalRange!Range)
-        {
+            private Range _range;
+            @property bool empty() { return _range.empty; }
+            @property dchar front(){ return _range.front; }
+            void popFront(){ _range.popFront; }
+            @property auto save() { return Result(_range.save); }
             @property dchar back(){ return _range.back; }
             void popBack(){ _range.popBack; }
         }
+        static assert(isBidirectionalRange!(Result));
+        return Result(range);
     }
-    static assert(isInputRange!(Result));
-    return Result(range);
+    else
+        return range;
 }
 
 ///
@@ -7350,7 +7348,9 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
     auto plainCp = text.byCodePoint;
     static assert(isForwardRange!(typeof(plainCp)));
     assert(equal(plainCp, text));
-    assert(equal(retro(plainCp), retro(text)));
+    assert(equal(retro(plainCp.save), retro(text.save)));
+    // Check that we still have length for dstring
+    assert("абвгд"d.byCodePoint.length == 5);
 }
 
 @trusted:
