@@ -1358,7 +1358,8 @@ version (Windows)
 
 
 /**
-Flags that control the behaviour of $(LREF spawnProcess) and
+Flags that control the behaviour of process creation functions in this
+module. Most flags only apply to $(LREF spawnProcess) and
 $(LREF spawnShell).
 
 Use bitwise OR to combine flags.
@@ -1444,6 +1445,8 @@ enum Config
     Specify this flag when calling `execute` or `executeShell` to
     cause invoked processes' stderr stream to be sent to $(REF stderr,
     std,stdio), and only capture and return standard output.
+
+    This flag has no effect on $(LREF spawnProcess) or $(LREF spawnShell).
     */
     stderrPassThrough = 128,
 }
