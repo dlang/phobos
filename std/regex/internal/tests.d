@@ -1002,34 +1002,23 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     import std.datetime.stopwatch : StopWatch, AutoStart;
     import std.math : abs;
     import std.conv : to;
-    bool enumRegex()
-    {
-        enum re = ctRegex!`[0-9][0-9]`;
-        asm @trusted { nop; }
-        return re.charsets.length == 1;
-    }
-    bool staticRegex()
-    {
-        immutable static re = ctRegex!`[0-9][0-9]`;
-        asm @trusted { nop; }
-        return re.charsets.length == 1;
-    }
+    enum re1 = ctRegex!`[0-9][0-9]`;
+    immutable static re2 = ctRegex!`[0-9][0-9]`;
     immutable iterations = 1000_000;
-    bool result1 = true, result2 = true;
+    size_t result1 = 0, result2 = 0;
     auto sw = StopWatch(AutoStart.yes);
     foreach (_; 0 .. iterations)
     {
-        result1 &= staticRegex();
+        result1 += matchFirst("12345678", re1).length;
     }
     const staticTime = sw.peek();
     sw.reset();
     foreach (_; 0 .. iterations)
     {
-        result2 &= enumRegex();
+        result2 += matchFirst("12345678", re2).length;
     }
     const enumTime = sw.peek();
-    assert(result1);
-    assert(result2);
+    assert(result1 == result2);
     auto ratio = 1.0 * enumTime.total!"usecs" / staticTime.total!"usecs";
     assert(abs(ratio - 1.0) < 0.33,
         "enum regex to static regex ratio "~to!string(ratio));
