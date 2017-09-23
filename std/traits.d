@@ -4876,7 +4876,9 @@ Determines whether the function type $(D F) is covariant with $(D G), i.e.,
 functions of the type $(D F) can override ones of the type $(D G).
  */
 template isCovariantWith(F, G)
-    if (is(F == function) && is(G == function))
+    if ((is(F == function) && is(G == function)) ||
+        (is(F == delegate) && is(G == delegate)) ||
+        (isFunctionPointer!F && isFunctionPointer!G))
 {
     static if (is(F : G))
         enum isCovariantWith = true;
@@ -5062,6 +5064,29 @@ template isCovariantWith(F, G)
     }
     static assert( isCovariantWith!(DerivF.test1, BaseF.test1));
     static assert( isCovariantWith!(DerivF.test2, BaseF.test2));
+}
+
+@safe unittest
+{
+    interface I     {}
+    interface J : I {}
+    interface K     {}
+    J function() derived_function;
+    I function() base_function;
+    K function() invalid_function;
+    J delegate() derived_delegate;
+    I delegate() base_delegate;
+    K delegate() invalid_delegate;
+
+    static assert(isCovariantWith!(typeof(derived_function), typeof(derived_function)));
+    static assert(isCovariantWith!(typeof(base_delegate), typeof(base_delegate)));
+
+    static assert(isCovariantWith!(typeof(derived_function), typeof(base_function)));
+    static assert(isCovariantWith!(typeof(*derived_function), typeof(*base_function)));
+    static assert(isCovariantWith!(typeof(derived_delegate), typeof(base_delegate)));
+
+    static assert(!isCovariantWith!(typeof(invalid_function), typeof(base_function)));
+    static assert(!isCovariantWith!(typeof(invalid_delegate), typeof(base_delegate)));
 }
 
 
