@@ -362,7 +362,7 @@ The parameters of this distribution. The random number is $(D_PARAM x
 Constructs a $(D_PARAM LinearCongruentialEngine) generator seeded with
 $(D x0).
  */
-    this(UIntType x0) @safe pure
+    this(UIntType x0) @safe pure nothrow @nogc
     {
         seed(x0);
     }
@@ -370,15 +370,15 @@ $(D x0).
 /**
    (Re)seeds the generator.
 */
-    void seed(UIntType x0 = 1) @safe pure
+    void seed(UIntType x0 = 1) @safe pure nothrow @nogc
     {
+        _x = modulus ? (x0 % modulus) : x0;
         static if (c == 0)
         {
-            import std.exception : enforce;
-            enforce(x0, "Invalid (zero) seed for "
-                    ~ LinearCongruentialEngine.stringof);
+            //Necessary to prevent generator from outputting an endless series of zeroes.
+            if (_x == 0)
+                _x = max;
         }
-        _x = modulus ? (x0 % modulus) : x0;
         popFront();
     }
 
@@ -535,6 +535,14 @@ alias MinstdRand = LinearCongruentialEngine!(uint, 48_271, 0, 2_147_483_647);
         version(none) { assert(rnd1 !is rnd2); }
         assert(rnd1.take(100).array() == rnd2.take(100).array());
     }
+}
+
+@safe unittest
+{
+    auto rnd0 = MinstdRand0(MinstdRand0.modulus);
+    auto n = rnd0.front;
+    rnd0.popFront();
+    assert(n != rnd0.front);
 }
 
 /**
@@ -1291,7 +1299,7 @@ random number sequences every run.
 Returns:
 A single unsigned integer seed value, different on each successive call
 */
-@property uint unpredictableSeed() @trusted
+@property uint unpredictableSeed() @trusted nothrow @nogc
 {
     import core.thread : Thread, getpid, MonoTime;
     static bool seeded;
