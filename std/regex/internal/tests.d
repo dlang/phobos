@@ -1020,7 +1020,8 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     const enumTime = sw.peek();
     assert(result1 == result2);
     auto ratio = 1.0 * enumTime.total!"usecs" / staticTime.total!"usecs";
-    assert(abs(ratio - 1.0) < 0.33,
+    // enum is faster or the diff is less < 30%
+    assert(ratio < 1.0 || abs(ratio - 1.0) < 0.3,
         "enum regex to static regex ratio "~to!string(ratio));
 }
 
