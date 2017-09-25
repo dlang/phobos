@@ -438,7 +438,9 @@ template ctRegexImpl(alias pattern, string flags=[])
     static immutable staticRe = cast(immutable) r.withFactory(new CtfeFactory!(CtMatcher, Char, func));
     struct Wrapper
     {
-        @property ref getRe() const { return staticRe; }
+        // allow code that expects mutable Regex to still work
+        // we stay "logically const"
+        @trusted @property auto getRe() const { return cast() staticRe; }
         alias getRe this;
     }
     enum wrapper = Wrapper();
