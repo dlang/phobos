@@ -75,6 +75,19 @@
  *           $(LREF SharedConstOf)
  *           $(LREF ImmutableOf)
  *           $(LREF QualifierOf)
+ *           $(LREF BooleanTypeOf)
+ *           $(LREF IntegralTypeOf)
+ *           $(LREF FloatingPointTypeOf)
+ *           $(LREF NumericTypeOf)
+ *           $(LREF UnsignedTypeOf)
+ *           $(LREF SignedTypeOf)
+ *           $(LREF CharTypeOf)
+ *           $(LREF StaticArrayTypeOf)
+ *           $(LREF DynamicArrayTypeOf)
+ *           $(LREF ArrayTypeOf)
+ *           $(LREF StringTypeOf)
+ *           $(LREF AssocArrayTypeOf)
+ *           $(LREF BuiltinTypeOf)
  * ))
  * $(TR $(TD Categories of types) $(TD
  *           $(LREF allSameType)
@@ -5125,7 +5138,8 @@ private template AliasThisTypeOf(T) if (isAggregateType!T)
         static assert(0, T.stringof~" does not have alias this type");
 }
 
-/*
+/**
+ * Create an alias of `T` either if `T` is or if it subtypes `bool`.
  */
 template BooleanTypeOf(T)
 {
@@ -5140,6 +5154,14 @@ template BooleanTypeOf(T)
     }
     else
         static assert(0, T.stringof~" is not boolean type");
+}
+///
+@safe unittest
+{
+    struct SubTyped{bool b; alias b this;}
+    static assert(is(BooleanTypeOf!bool == bool));
+    static assert(is(BooleanTypeOf!SubTyped == bool));
+    static assert(!is(BooleanTypeOf!float));
 }
 
 @safe unittest
@@ -5176,7 +5198,9 @@ template BooleanTypeOf(T)
     static assert(is(BooleanTypeOf!S == bool));
 }
 
-/*
+/**
+ * Create an alias of `T` either if `T` is or if it subtypes a built-in
+ * integral type.
  */
 template IntegralTypeOf(T)
 {
@@ -5192,6 +5216,15 @@ template IntegralTypeOf(T)
     }
     else
         static assert(0, T.stringof~" is not an integral type");
+}
+///
+@safe unittest
+{
+    struct SubTyped{int i; alias i this;}
+    static assert(is(IntegralTypeOf!int == int));
+    static assert(is(IntegralTypeOf!ulong == ulong));
+    static assert(is(IntegralTypeOf!SubTyped == int));
+    static assert(!is(IntegralTypeOf!float));
 }
 
 @safe unittest
@@ -5211,7 +5244,9 @@ template IntegralTypeOf(T)
         }
 }
 
-/*
+/**
+ * Create an alias of `T` either if `T` is or if it subtypes a built-in
+ * floating point type.
  */
 template FloatingPointTypeOf(T)
 {
@@ -5227,6 +5262,15 @@ template FloatingPointTypeOf(T)
     }
     else
         static assert(0, T.stringof~" is not a floating point type");
+}
+///
+@safe unittest
+{
+    struct SubTyped{float f; alias f this;}
+    static assert(is(FloatingPointTypeOf!float == float));
+    static assert(is(FloatingPointTypeOf!real == real));
+    static assert(is(FloatingPointTypeOf!SubTyped == float));
+    static assert(!is(FloatingPointTypeOf!char));
 }
 
 @safe unittest
@@ -5246,7 +5290,9 @@ template FloatingPointTypeOf(T)
         }
 }
 
-/*
+/**
+ * Create an alias of `T` either if `T` is or if it subtypes a built-in
+ * numeric type.
  */
 template NumericTypeOf(T)
 {
@@ -5256,6 +5302,15 @@ template NumericTypeOf(T)
     }
     else
         static assert(0, T.stringof~" is not a numeric type");
+}
+///
+@safe unittest
+{
+    struct SubTyped{int i; alias i this;}
+    static assert(is(NumericTypeOf!int == int));
+    static assert(is(NumericTypeOf!float == float));
+    static assert(is(NumericTypeOf!SubTyped == int));
+    static assert(!is(NumericTypeOf!char));
 }
 
 @safe unittest
@@ -5275,7 +5330,9 @@ template NumericTypeOf(T)
         }
 }
 
-/*
+/**
+ * Create an alias of `T` either if `T` is or if it subtypes a built-in
+ * unsigned integral type.
  */
 template UnsignedTypeOf(T)
 {
@@ -5286,8 +5343,19 @@ template UnsignedTypeOf(T)
     else
         static assert(0, T.stringof~" is not an unsigned type.");
 }
+///
+@safe unittest
+{
+    struct SubTyped{uint u; alias u this;}
+    static assert(is(UnsignedTypeOf!uint == uint));
+    static assert(is(UnsignedTypeOf!ubyte == ubyte));
+    static assert(is(UnsignedTypeOf!SubTyped == uint));
+    static assert(!is(UnsignedTypeOf!char));
+}
 
-/*
+/**
+ * Create an alias of `T` either if `T` is or if it subtypes a built-in
+ * signed type.
  */
 template SignedTypeOf(T)
 {
@@ -5300,8 +5368,19 @@ template SignedTypeOf(T)
     else
         static assert(0, T.stringof~" is not an signed type.");
 }
+///
+@safe unittest
+{
+    struct SubTyped{int i; alias i this;}
+    static assert(is(SignedTypeOf!int == int));
+    static assert(is(SignedTypeOf!float == float));
+    static assert(is(SignedTypeOf!SubTyped == int));
+    static assert(!is(SignedTypeOf!ubyte));
+}
 
-/*
+/**
+ * Create an alias of `T` either if `T` is or if it subtypes a built-in
+ * character type.
  */
 template CharTypeOf(T)
 {
@@ -5317,6 +5396,15 @@ template CharTypeOf(T)
     }
     else
         static assert(0, T.stringof~" is not a character type");
+}
+///
+@safe unittest
+{
+    struct SubTyped{char c; alias c this;}
+    static assert(is(CharTypeOf!char == char));
+    static assert(is(CharTypeOf!wchar == wchar));
+    static assert(is(CharTypeOf!SubTyped == char));
+    static assert(!is(CharTypeOf!ubyte));
 }
 
 @safe unittest
@@ -5343,7 +5431,8 @@ template CharTypeOf(T)
         }
 }
 
-/*
+/**
+ * Create an alias of `T` either if `T` is or if it subtypes a static array.
  */
 template StaticArrayTypeOf(T)
 {
@@ -5356,6 +5445,14 @@ template StaticArrayTypeOf(T)
         alias StaticArrayTypeOf = X;
     else
         static assert(0, T.stringof~" is not a static array type");
+}
+///
+@safe unittest
+{
+    struct SubTyped{ubyte[4] u; alias u this;}
+    static assert(is(StaticArrayTypeOf!(int[8]) == int[8]));
+    static assert(is(StaticArrayTypeOf!SubTyped == ubyte[4]));
+    static assert(!is(StaticArrayTypeOf!ubyte));
 }
 
 @safe unittest
@@ -5378,7 +5475,8 @@ template StaticArrayTypeOf(T)
         }
 }
 
-/*
+/**
+ * Create an alias of `T` either if `T` is or if it subtypes a dynamic array.
  */
 template DynamicArrayTypeOf(T)
 {
@@ -5393,6 +5491,14 @@ template DynamicArrayTypeOf(T)
     }
     else
         static assert(0, T.stringof~" is not a dynamic array");
+}
+///
+@safe unittest
+{
+    struct SubTyped{ubyte[] u; alias u this;}
+    static assert(is(DynamicArrayTypeOf!(int[]) == int[]));
+    static assert(is(DynamicArrayTypeOf!SubTyped == ubyte[]));
+    static assert(!is(DynamicArrayTypeOf!ubyte));
 }
 
 @safe unittest
@@ -5415,7 +5521,8 @@ template DynamicArrayTypeOf(T)
     static assert(!is(DynamicArrayTypeOf!(typeof(null))));
 }
 
-/*
+/**
+ * Create an alias of `T` either if `T` is or if it subtypes an array.
  */
 template ArrayTypeOf(T)
 {
@@ -5426,9 +5533,18 @@ template ArrayTypeOf(T)
     else
         static assert(0, T.stringof~" is not an array type");
 }
+///
+@safe unittest
+{
+    struct SubTyped{ubyte[] u; alias u this;}
+    static assert(is(ArrayTypeOf!(int[5]) == int[5]));
+    static assert(is(ArrayTypeOf!SubTyped == ubyte[]));
+    static assert(!is(ArrayTypeOf!ubyte));
+}
 
-/*
-Always returns the Dynamic Array version.
+/**
+ * Create an alias of `T` either if `T` is or if it subtypes a string type.
+ * Note that fixed size string types are converted to their dynamic counterpart.
  */
 template StringTypeOf(T)
 {
@@ -5448,6 +5564,14 @@ template StringTypeOf(T)
     }
     else
         static assert(0, T.stringof~" is not a string type");
+}
+///
+@safe unittest
+{
+    struct SubTyped{char[] c; alias c this;}
+    static assert(is(StringTypeOf!(const(wchar)[5]) == const(wchar)[]));
+    static assert(is(StringTypeOf!SubTyped == char[]));
+    static assert(!is(StringTypeOf!ubyte));
 }
 
 @safe unittest
@@ -5479,7 +5603,9 @@ template StringTypeOf(T)
     static assert(is(StringTypeOf!(char[4]) == char[]));
 }
 
-/*
+/**
+ * Create an alias of `T` either if `T` is or if it subtypes a built-in
+ * associative array.
  */
 template AssocArrayTypeOf(T)
 {
@@ -5494,6 +5620,14 @@ template AssocArrayTypeOf(T)
     }
     else
         static assert(0, T.stringof~" is not an associative array type");
+}
+///
+@safe unittest
+{
+    struct SubTyped{string[int] si; alias si this;}
+    static assert(is(AssocArrayTypeOf!(int[int]) == int[int]));
+    static assert(is(AssocArrayTypeOf!SubTyped == string[int]));
+    static assert(!is(AssocArrayTypeOf!ubyte));
 }
 
 @safe unittest
@@ -5516,7 +5650,8 @@ template AssocArrayTypeOf(T)
                     }
 }
 
-/*
+/**
+ * Create an alias of `T` either if `T` is or if it subtypes a built-in type.
  */
 template BuiltinTypeOf(T)
 {
@@ -5530,6 +5665,15 @@ template BuiltinTypeOf(T)
     else static if (is(ArrayTypeOf!T X))        alias BuiltinTypeOf = X;
     else static if (is(AssocArrayTypeOf!T X))   alias BuiltinTypeOf = X;
     else                                        static assert(0);
+}
+///
+@safe unittest
+{
+    struct NotSubTyped {}
+    struct SubTyped{double d; alias d this;}
+    static assert(is(BuiltinTypeOf!(int[][][]) == int[][][]));
+    static assert(is(BuiltinTypeOf!SubTyped == double));
+    static assert(!is(BuiltinTypeOf!NotSubTyped));
 }
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
