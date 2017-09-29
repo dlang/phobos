@@ -75,19 +75,6 @@
  *           $(LREF SharedConstOf)
  *           $(LREF ImmutableOf)
  *           $(LREF QualifierOf)
- *           $(LREF BooleanTypeOf)
- *           $(LREF IntegralTypeOf)
- *           $(LREF FloatingPointTypeOf)
- *           $(LREF NumericTypeOf)
- *           $(LREF UnsignedTypeOf)
- *           $(LREF SignedTypeOf)
- *           $(LREF CharTypeOf)
- *           $(LREF StaticArrayTypeOf)
- *           $(LREF DynamicArrayTypeOf)
- *           $(LREF ArrayTypeOf)
- *           $(LREF StringTypeOf)
- *           $(LREF AssocArrayTypeOf)
- *           $(LREF BuiltinTypeOf)
  * ))
  * $(TR $(TD Categories of types) $(TD
  *           $(LREF allSameType)
@@ -5138,30 +5125,24 @@ private template AliasThisTypeOf(T) if (isAggregateType!T)
         static assert(0, T.stringof~" does not have alias this type");
 }
 
-/**
+deprecated public alias BooleanTypeOf = _BooleanTypeOf;
+
+/*
  * Create an alias of `T` either if `T` is or if it subtypes `bool`.
  */
-template BooleanTypeOf(T)
+package template _BooleanTypeOf(T)
 {
     static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
-        alias X = BooleanTypeOf!AT;
+        alias X = _BooleanTypeOf!AT;
     else
         alias X = OriginalType!T;
 
     static if (is(Unqual!X == bool))
     {
-        alias BooleanTypeOf = X;
+        alias _BooleanTypeOf = X;
     }
     else
         static assert(0, T.stringof~" is not boolean type");
-}
-///
-@safe unittest
-{
-    struct SubTyped{bool b; alias b this;}
-    static assert(is(BooleanTypeOf!bool == bool));
-    static assert(is(BooleanTypeOf!SubTyped == bool));
-    static assert(!is(BooleanTypeOf!float));
 }
 
 @safe unittest
@@ -5170,15 +5151,15 @@ template BooleanTypeOf(T)
     foreach (T; AliasSeq!bool)
         foreach (Q; TypeQualifierList)
         {
-            static assert( is(Q!T == BooleanTypeOf!(            Q!T  )));
-            static assert( is(Q!T == BooleanTypeOf!( SubTypeOf!(Q!T) )));
+            static assert( is(Q!T == _BooleanTypeOf!(            Q!T  )));
+            static assert( is(Q!T == _BooleanTypeOf!( SubTypeOf!(Q!T) )));
         }
 
     foreach (T; AliasSeq!(void, NumericTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
         foreach (Q; TypeQualifierList)
         {
-            static assert(!is(BooleanTypeOf!(            Q!T  )), Q!T.stringof);
-            static assert(!is(BooleanTypeOf!( SubTypeOf!(Q!T) )));
+            static assert(!is(_BooleanTypeOf!(            Q!T  )), Q!T.stringof);
+            static assert(!is(_BooleanTypeOf!( SubTypeOf!(Q!T) )));
         }
 }
 
@@ -5194,37 +5175,30 @@ template BooleanTypeOf(T)
         B b;
         alias b this;
     }
-    static assert(is(BooleanTypeOf!B == bool));
-    static assert(is(BooleanTypeOf!S == bool));
+    static assert(is(_BooleanTypeOf!B == bool));
+    static assert(is(_BooleanTypeOf!S == bool));
 }
 
-/**
+deprecated public alias IntegralTypeOf = _IntegralTypeOf;
+
+/*
  * Create an alias of `T` either if `T` is or if it subtypes a built-in
  * integral type.
  */
-template IntegralTypeOf(T)
+package template _IntegralTypeOf(T)
 {
     import std.meta : staticIndexOf;
     static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
-        alias X = IntegralTypeOf!AT;
+        alias X = _IntegralTypeOf!AT;
     else
         alias X = OriginalType!T;
 
     static if (staticIndexOf!(Unqual!X, IntegralTypeList) >= 0)
     {
-        alias IntegralTypeOf = X;
+        alias _IntegralTypeOf = X;
     }
     else
         static assert(0, T.stringof~" is not an integral type");
-}
-///
-@safe unittest
-{
-    struct SubTyped{int i; alias i this;}
-    static assert(is(IntegralTypeOf!int == int));
-    static assert(is(IntegralTypeOf!ulong == ulong));
-    static assert(is(IntegralTypeOf!SubTyped == int));
-    static assert(!is(IntegralTypeOf!float));
 }
 
 @safe unittest
@@ -5232,45 +5206,38 @@ template IntegralTypeOf(T)
     foreach (T; IntegralTypeList)
         foreach (Q; TypeQualifierList)
         {
-            static assert( is(Q!T == IntegralTypeOf!(            Q!T  )));
-            static assert( is(Q!T == IntegralTypeOf!( SubTypeOf!(Q!T) )));
+            static assert( is(Q!T == _IntegralTypeOf!(            Q!T  )));
+            static assert( is(Q!T == _IntegralTypeOf!( SubTypeOf!(Q!T) )));
         }
 
     foreach (T; AliasSeq!(void, bool, FloatingPointTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
         foreach (Q; TypeQualifierList)
         {
-            static assert(!is(IntegralTypeOf!(            Q!T  )));
-            static assert(!is(IntegralTypeOf!( SubTypeOf!(Q!T) )));
+            static assert(!is(_IntegralTypeOf!(            Q!T  )));
+            static assert(!is(_IntegralTypeOf!( SubTypeOf!(Q!T) )));
         }
 }
 
-/**
+deprecated public alias FloatingPointTypeOf = _FloatingPointTypeOf;
+
+/*
  * Create an alias of `T` either if `T` is or if it subtypes a built-in
  * floating point type.
  */
-template FloatingPointTypeOf(T)
+package template _FloatingPointTypeOf(T)
 {
     import std.meta : staticIndexOf;
     static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
-        alias X = FloatingPointTypeOf!AT;
+        alias X = _FloatingPointTypeOf!AT;
     else
         alias X = OriginalType!T;
 
     static if (staticIndexOf!(Unqual!X, FloatingPointTypeList) >= 0)
     {
-        alias FloatingPointTypeOf = X;
+        alias _FloatingPointTypeOf = X;
     }
     else
         static assert(0, T.stringof~" is not a floating point type");
-}
-///
-@safe unittest
-{
-    struct SubTyped{float f; alias f this;}
-    static assert(is(FloatingPointTypeOf!float == float));
-    static assert(is(FloatingPointTypeOf!real == real));
-    static assert(is(FloatingPointTypeOf!SubTyped == float));
-    static assert(!is(FloatingPointTypeOf!char));
 }
 
 @safe unittest
@@ -5278,39 +5245,32 @@ template FloatingPointTypeOf(T)
     foreach (T; FloatingPointTypeList)
         foreach (Q; TypeQualifierList)
         {
-            static assert( is(Q!T == FloatingPointTypeOf!(            Q!T  )));
-            static assert( is(Q!T == FloatingPointTypeOf!( SubTypeOf!(Q!T) )));
+            static assert( is(Q!T == _FloatingPointTypeOf!(            Q!T  )));
+            static assert( is(Q!T == _FloatingPointTypeOf!( SubTypeOf!(Q!T) )));
         }
 
     foreach (T; AliasSeq!(void, bool, IntegralTypeList, ImaginaryTypeList, ComplexTypeList, CharTypeList))
         foreach (Q; TypeQualifierList)
         {
-            static assert(!is(FloatingPointTypeOf!(            Q!T  )));
-            static assert(!is(FloatingPointTypeOf!( SubTypeOf!(Q!T) )));
+            static assert(!is(_FloatingPointTypeOf!(            Q!T  )));
+            static assert(!is(_FloatingPointTypeOf!( SubTypeOf!(Q!T) )));
         }
 }
 
-/**
+deprecated public alias NumericTypeOf = _NumericTypeOf;
+
+/*
  * Create an alias of `T` either if `T` is or if it subtypes a built-in
  * numeric type.
  */
-template NumericTypeOf(T)
+package template _NumericTypeOf(T)
 {
-    static if (is(IntegralTypeOf!T X) || is(FloatingPointTypeOf!T X))
+    static if (is(_IntegralTypeOf!T X) || is(_FloatingPointTypeOf!T X))
     {
-        alias NumericTypeOf = X;
+        alias _NumericTypeOf = X;
     }
     else
         static assert(0, T.stringof~" is not a numeric type");
-}
-///
-@safe unittest
-{
-    struct SubTyped{int i; alias i this;}
-    static assert(is(NumericTypeOf!int == int));
-    static assert(is(NumericTypeOf!float == float));
-    static assert(is(NumericTypeOf!SubTyped == int));
-    static assert(!is(NumericTypeOf!char));
 }
 
 @safe unittest
@@ -5318,93 +5278,72 @@ template NumericTypeOf(T)
     foreach (T; NumericTypeList)
         foreach (Q; TypeQualifierList)
         {
-            static assert( is(Q!T == NumericTypeOf!(            Q!T  )));
-            static assert( is(Q!T == NumericTypeOf!( SubTypeOf!(Q!T) )));
+            static assert( is(Q!T == _NumericTypeOf!(            Q!T  )));
+            static assert( is(Q!T == _NumericTypeOf!( SubTypeOf!(Q!T) )));
         }
 
     foreach (T; AliasSeq!(void, bool, CharTypeList, ImaginaryTypeList, ComplexTypeList))
         foreach (Q; TypeQualifierList)
         {
-            static assert(!is(NumericTypeOf!(            Q!T  )));
-            static assert(!is(NumericTypeOf!( SubTypeOf!(Q!T) )));
+            static assert(!is(_NumericTypeOf!(            Q!T  )));
+            static assert(!is(_NumericTypeOf!( SubTypeOf!(Q!T) )));
         }
 }
 
-/**
+deprecated public alias UnsignedTypeOf = _UnsignedTypeOf;
+
+/*
  * Create an alias of `T` either if `T` is or if it subtypes a built-in
  * unsigned integral type.
  */
-template UnsignedTypeOf(T)
+package template _UnsignedTypeOf(T)
 {
     import std.meta : staticIndexOf;
-    static if (is(IntegralTypeOf!T X) &&
+    static if (is(_IntegralTypeOf!T X) &&
                staticIndexOf!(Unqual!X, UnsignedIntTypeList) >= 0)
-        alias UnsignedTypeOf = X;
+        alias _UnsignedTypeOf = X;
     else
         static assert(0, T.stringof~" is not an unsigned type.");
 }
-///
-@safe unittest
-{
-    struct SubTyped{uint u; alias u this;}
-    static assert(is(UnsignedTypeOf!uint == uint));
-    static assert(is(UnsignedTypeOf!ubyte == ubyte));
-    static assert(is(UnsignedTypeOf!SubTyped == uint));
-    static assert(!is(UnsignedTypeOf!char));
-}
 
-/**
+deprecated public alias SignedTypeOf = _SignedTypeOf;
+
+/*
  * Create an alias of `T` either if `T` is or if it subtypes a built-in
  * signed type.
  */
-template SignedTypeOf(T)
+package template _SignedTypeOf(T)
 {
     import std.meta : staticIndexOf;
-    static if (is(IntegralTypeOf!T X) &&
+    static if (is(_IntegralTypeOf!T X) &&
                staticIndexOf!(Unqual!X, SignedIntTypeList) >= 0)
-        alias SignedTypeOf = X;
-    else static if (is(FloatingPointTypeOf!T X))
-        alias SignedTypeOf = X;
+        alias _SignedTypeOf = X;
+    else static if (is(_FloatingPointTypeOf!T X))
+        alias _SignedTypeOf = X;
     else
         static assert(0, T.stringof~" is not an signed type.");
 }
-///
-@safe unittest
-{
-    struct SubTyped{int i; alias i this;}
-    static assert(is(SignedTypeOf!int == int));
-    static assert(is(SignedTypeOf!float == float));
-    static assert(is(SignedTypeOf!SubTyped == int));
-    static assert(!is(SignedTypeOf!ubyte));
-}
 
-/**
+deprecated public alias CharTypeOf = _CharTypeOf;
+
+/*
  * Create an alias of `T` either if `T` is or if it subtypes a built-in
  * character type.
  */
-template CharTypeOf(T)
+package template _CharTypeOf(T)
 {
     import std.meta : staticIndexOf;
     static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
-        alias X = CharTypeOf!AT;
+        alias X = _CharTypeOf!AT;
     else
         alias X = OriginalType!T;
 
     static if (staticIndexOf!(Unqual!X, CharTypeList) >= 0)
     {
-        alias CharTypeOf = X;
+        alias _CharTypeOf = X;
     }
     else
         static assert(0, T.stringof~" is not a character type");
-}
-///
-@safe unittest
-{
-    struct SubTyped{char c; alias c this;}
-    static assert(is(CharTypeOf!char == char));
-    static assert(is(CharTypeOf!wchar == wchar));
-    static assert(is(CharTypeOf!SubTyped == char));
-    static assert(!is(CharTypeOf!ubyte));
 }
 
 @safe unittest
@@ -5412,47 +5351,41 @@ template CharTypeOf(T)
     foreach (T; CharTypeList)
         foreach (Q; TypeQualifierList)
         {
-            static assert( is(CharTypeOf!(            Q!T  )));
-            static assert( is(CharTypeOf!( SubTypeOf!(Q!T) )));
+            static assert( is(_CharTypeOf!(            Q!T  )));
+            static assert( is(_CharTypeOf!( SubTypeOf!(Q!T) )));
         }
 
     foreach (T; AliasSeq!(void, bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
         foreach (Q; TypeQualifierList)
         {
-            static assert(!is(CharTypeOf!(            Q!T  )));
-            static assert(!is(CharTypeOf!( SubTypeOf!(Q!T) )));
+            static assert(!is(_CharTypeOf!(            Q!T  )));
+            static assert(!is(_CharTypeOf!( SubTypeOf!(Q!T) )));
         }
 
     foreach (T; AliasSeq!(string, wstring, dstring, char[4]))
         foreach (Q; TypeQualifierList)
         {
-            static assert(!is(CharTypeOf!(            Q!T  )));
-            static assert(!is(CharTypeOf!( SubTypeOf!(Q!T) )));
+            static assert(!is(_CharTypeOf!(            Q!T  )));
+            static assert(!is(_CharTypeOf!( SubTypeOf!(Q!T) )));
         }
 }
 
-/**
+deprecated public alias StaticArrayTypeOf = _StaticArrayTypeOf;
+
+/*
  * Create an alias of `T` either if `T` is or if it subtypes a static array.
  */
-template StaticArrayTypeOf(T)
+package template _StaticArrayTypeOf(T)
 {
     static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
-        alias X = StaticArrayTypeOf!AT;
+        alias X = _StaticArrayTypeOf!AT;
     else
         alias X = OriginalType!T;
 
     static if (is(X : E[n], E, size_t n))
-        alias StaticArrayTypeOf = X;
+        alias _StaticArrayTypeOf = X;
     else
         static assert(0, T.stringof~" is not a static array type");
-}
-///
-@safe unittest
-{
-    struct SubTyped{ubyte[4] u; alias u this;}
-    static assert(is(StaticArrayTypeOf!(int[8]) == int[8]));
-    static assert(is(StaticArrayTypeOf!SubTyped == ubyte[4]));
-    static assert(!is(StaticArrayTypeOf!ubyte));
 }
 
 @safe unittest
@@ -5460,45 +5393,39 @@ template StaticArrayTypeOf(T)
     foreach (T; AliasSeq!(bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
         foreach (Q; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
         {
-            static assert(is( Q!(   T[1] ) == StaticArrayTypeOf!( Q!(              T[1]  ) ) ));
+            static assert(is( Q!(   T[1] ) == _StaticArrayTypeOf!( Q!(              T[1]  ) ) ));
 
             foreach (P; TypeQualifierList)
             { // SubTypeOf cannot have inout type
-                static assert(is( Q!(P!(T[1])) == StaticArrayTypeOf!( Q!(SubTypeOf!(P!(T[1]))) ) ));
+                static assert(is( Q!(P!(T[1])) == _StaticArrayTypeOf!( Q!(SubTypeOf!(P!(T[1]))) ) ));
             }
         }
 
     foreach (T; AliasSeq!void)
         foreach (Q; AliasSeq!TypeQualifierList)
         {
-            static assert(is( StaticArrayTypeOf!( Q!(void[1]) ) == Q!(void[1]) ));
+            static assert(is( _StaticArrayTypeOf!( Q!(void[1]) ) == Q!(void[1]) ));
         }
 }
 
-/**
+deprecated public alias DynamicArrayTypeOf = _DynamicArrayTypeOf;
+
+/*
  * Create an alias of `T` either if `T` is or if it subtypes a dynamic array.
  */
-template DynamicArrayTypeOf(T)
+package template _DynamicArrayTypeOf(T)
 {
     static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
-        alias X = DynamicArrayTypeOf!AT;
+        alias X = _DynamicArrayTypeOf!AT;
     else
         alias X = OriginalType!T;
 
     static if (is(Unqual!X : E[], E) && !is(typeof({ enum n = X.length; })))
     {
-        alias DynamicArrayTypeOf = X;
+        alias _DynamicArrayTypeOf = X;
     }
     else
         static assert(0, T.stringof~" is not a dynamic array");
-}
-///
-@safe unittest
-{
-    struct SubTyped{ubyte[] u; alias u this;}
-    static assert(is(DynamicArrayTypeOf!(int[]) == int[]));
-    static assert(is(DynamicArrayTypeOf!SubTyped == ubyte[]));
-    static assert(!is(DynamicArrayTypeOf!ubyte));
 }
 
 @safe unittest
@@ -5506,47 +5433,43 @@ template DynamicArrayTypeOf(T)
     foreach (T; AliasSeq!(/*void, */bool, NumericTypeList, ImaginaryTypeList, ComplexTypeList))
         foreach (Q; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
         {
-            static assert(is( Q!T[]  == DynamicArrayTypeOf!( Q!T[] ) ));
-            static assert(is( Q!(T[])  == DynamicArrayTypeOf!( Q!(T[]) ) ));
+            static assert(is( Q!T[]  == _DynamicArrayTypeOf!( Q!T[] ) ));
+            static assert(is( Q!(T[])  == _DynamicArrayTypeOf!( Q!(T[]) ) ));
 
             foreach (P; AliasSeq!(MutableOf, ConstOf, ImmutableOf))
             {
-                static assert(is( Q!(P!T[]) == DynamicArrayTypeOf!( Q!(SubTypeOf!(P!T[])) ) ));
-                static assert(is( Q!(P!(T[])) == DynamicArrayTypeOf!( Q!(SubTypeOf!(P!(T[]))) ) ));
+                static assert(is( Q!(P!T[]) == _DynamicArrayTypeOf!( Q!(SubTypeOf!(P!T[])) ) ));
+                static assert(is( Q!(P!(T[])) == _DynamicArrayTypeOf!( Q!(SubTypeOf!(P!(T[]))) ) ));
             }
         }
 
-    static assert(!is(DynamicArrayTypeOf!(int[3])));
-    static assert(!is(DynamicArrayTypeOf!(void[3])));
-    static assert(!is(DynamicArrayTypeOf!(typeof(null))));
+    static assert(!is(_DynamicArrayTypeOf!(int[3])));
+    static assert(!is(_DynamicArrayTypeOf!(void[3])));
+    static assert(!is(_DynamicArrayTypeOf!(typeof(null))));
 }
 
-/**
+deprecated public alias ArrayTypeOf = _ArrayTypeOf;
+
+/*
  * Create an alias of `T` either if `T` is or if it subtypes an array.
  */
-template ArrayTypeOf(T)
+package template _ArrayTypeOf(T)
 {
-    static if (is(StaticArrayTypeOf!T X) || is(DynamicArrayTypeOf!T X))
+    static if (is(_StaticArrayTypeOf!T X) || is(_DynamicArrayTypeOf!T X))
     {
-        alias ArrayTypeOf = X;
+        alias _ArrayTypeOf = X;
     }
     else
         static assert(0, T.stringof~" is not an array type");
 }
-///
-@safe unittest
-{
-    struct SubTyped{ubyte[] u; alias u this;}
-    static assert(is(ArrayTypeOf!(int[5]) == int[5]));
-    static assert(is(ArrayTypeOf!SubTyped == ubyte[]));
-    static assert(!is(ArrayTypeOf!ubyte));
-}
 
-/**
+deprecated public alias StringTypeOf = _StringTypeOf;
+
+/*
  * Create an alias of `T` either if `T` is or if it subtypes a string type.
  * Note that fixed size string types are converted to their dynamic counterpart.
  */
-template StringTypeOf(T)
+package template _StringTypeOf(T)
 {
     static if (is(T == typeof(null)))
     {
@@ -5558,20 +5481,12 @@ template StringTypeOf(T)
     else static if (is(T : const char[]) || is(T : const wchar[]) || is(T : const dchar[]))
     {
         static if (is(T : U[], U))
-            alias StringTypeOf = U[];
+            alias _StringTypeOf = U[];
         else
             static assert(0);
     }
     else
         static assert(0, T.stringof~" is not a string type");
-}
-///
-@safe unittest
-{
-    struct SubTyped{char[] c; alias c this;}
-    static assert(is(StringTypeOf!(const(wchar)[5]) == const(wchar)[]));
-    static assert(is(StringTypeOf!SubTyped == char[]));
-    static assert(!is(StringTypeOf!ubyte));
 }
 
 @safe unittest
@@ -5579,55 +5494,49 @@ template StringTypeOf(T)
     foreach (T; CharTypeList)
         foreach (Q; AliasSeq!(MutableOf, ConstOf, ImmutableOf, InoutOf))
         {
-            static assert(is(Q!T[] == StringTypeOf!( Q!T[] )));
+            static assert(is(Q!T[] == _StringTypeOf!( Q!T[] )));
 
             static if (!__traits(isSame, Q, InoutOf))
             {
-                static assert(is(Q!T[] == StringTypeOf!( SubTypeOf!(Q!T[]) )));
+                static assert(is(Q!T[] == _StringTypeOf!( SubTypeOf!(Q!T[]) )));
 
                 alias Str = Q!T[];
                 class C(S) { S val;  alias val this; }
-                static assert(is(StringTypeOf!(C!Str) == Str));
+                static assert(is(_StringTypeOf!(C!Str) == Str));
             }
         }
 
     foreach (T; CharTypeList)
         foreach (Q; AliasSeq!(SharedOf, SharedConstOf, SharedInoutOf))
         {
-            static assert(!is(StringTypeOf!( Q!T[] )));
+            static assert(!is(_StringTypeOf!( Q!T[] )));
         }
 }
 
 @safe unittest
 {
-    static assert(is(StringTypeOf!(char[4]) == char[]));
+    static assert(is(_StringTypeOf!(char[4]) == char[]));
 }
 
-/**
+deprecated public alias AssocArrayTypeOf = _AssocArrayTypeOf;
+
+/*
  * Create an alias of `T` either if `T` is or if it subtypes a built-in
  * associative array.
  */
-template AssocArrayTypeOf(T)
+package template _AssocArrayTypeOf(T)
 {
     static if (is(AliasThisTypeOf!T AT) && !is(AT[] == AT))
-        alias X = AssocArrayTypeOf!AT;
+        alias X = _AssocArrayTypeOf!AT;
     else
         alias X = OriginalType!T;
 
     static if (is(Unqual!X : V[K], K, V))
     {
-        alias AssocArrayTypeOf = X;
+        alias _AssocArrayTypeOf = X;
     }
     else
         static assert(0, T.stringof~" is not an associative array type");
-}
-///
-@safe unittest
-{
-    struct SubTyped{string[int] si; alias si this;}
-    static assert(is(AssocArrayTypeOf!(int[int]) == int[int]));
-    static assert(is(AssocArrayTypeOf!SubTyped == string[int]));
-    static assert(!is(AssocArrayTypeOf!ubyte));
 }
 
 @safe unittest
@@ -5637,7 +5546,7 @@ template AssocArrayTypeOf(T)
             foreach (Q; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
                 foreach (R; AliasSeq!(TypeQualifierList, InoutOf, SharedInoutOf))
                 {
-                    static assert(is( P!(Q!T[R!T]) == AssocArrayTypeOf!(            P!(Q!T[R!T])  ) ));
+                    static assert(is( P!(Q!T[R!T]) == _AssocArrayTypeOf!(            P!(Q!T[R!T])  ) ));
                 }
 
     foreach (T; AliasSeq!(int/*bool, CharTypeList, NumericTypeList, ImaginaryTypeList, ComplexTypeList*/))
@@ -5646,34 +5555,27 @@ template AssocArrayTypeOf(T)
                 foreach (Q; AliasSeq!TypeQualifierList)
                     foreach (R; AliasSeq!TypeQualifierList)
                     {
-                        static assert(is( O!(P!(Q!T[R!T])) == AssocArrayTypeOf!( O!(SubTypeOf!(P!(Q!T[R!T]))) ) ));
+                        static assert(is( O!(P!(Q!T[R!T])) == _AssocArrayTypeOf!( O!(SubTypeOf!(P!(Q!T[R!T]))) ) ));
                     }
 }
 
-/**
+deprecated public alias BuiltinTypeOf = _BuiltinTypeOf;
+
+/*
  * Create an alias of `T` either if `T` is or if it subtypes a built-in type.
  */
-template BuiltinTypeOf(T)
+package template _BuiltinTypeOf(T)
 {
-         static if (is(T : void))               alias BuiltinTypeOf = void;
-    else static if (is(BooleanTypeOf!T X))      alias BuiltinTypeOf = X;
-    else static if (is(IntegralTypeOf!T X))     alias BuiltinTypeOf = X;
-    else static if (is(FloatingPointTypeOf!T X))alias BuiltinTypeOf = X;
-    else static if (is(T : const(ireal)))       alias BuiltinTypeOf = ireal;  //TODO
-    else static if (is(T : const(creal)))       alias BuiltinTypeOf = creal;  //TODO
-    else static if (is(CharTypeOf!T X))         alias BuiltinTypeOf = X;
-    else static if (is(ArrayTypeOf!T X))        alias BuiltinTypeOf = X;
-    else static if (is(AssocArrayTypeOf!T X))   alias BuiltinTypeOf = X;
+         static if (is(T : void))               alias _BuiltinTypeOf = void;
+    else static if (is(_BooleanTypeOf!T X))      alias _BuiltinTypeOf = X;
+    else static if (is(_IntegralTypeOf!T X))     alias _BuiltinTypeOf = X;
+    else static if (is(_FloatingPointTypeOf!T X))alias _BuiltinTypeOf = X;
+    else static if (is(T : const(ireal)))       alias _BuiltinTypeOf = ireal;  //TODO
+    else static if (is(T : const(creal)))       alias _BuiltinTypeOf = creal;  //TODO
+    else static if (is(_CharTypeOf!T X))         alias _BuiltinTypeOf = X;
+    else static if (is(_ArrayTypeOf!T X))        alias _BuiltinTypeOf = X;
+    else static if (is(_AssocArrayTypeOf!T X))   alias _BuiltinTypeOf = X;
     else                                        static assert(0);
-}
-///
-@safe unittest
-{
-    struct NotSubTyped {}
-    struct SubTyped{double d; alias d this;}
-    static assert(is(BuiltinTypeOf!(int[][][]) == int[][][]));
-    static assert(is(BuiltinTypeOf!SubTyped == double));
-    static assert(!is(BuiltinTypeOf!NotSubTyped));
 }
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
@@ -5683,7 +5585,7 @@ template BuiltinTypeOf(T)
 /**
  * Detect whether $(D T) is a built-in boolean type.
  */
-enum bool isBoolean(T) = is(BooleanTypeOf!T) && !isAggregateType!T;
+enum bool isBoolean(T) = is(_BooleanTypeOf!T) && !isAggregateType!T;
 
 ///
 @safe unittest
@@ -5708,7 +5610,7 @@ enum bool isBoolean(T) = is(BooleanTypeOf!T) && !isAggregateType!T;
  * Detect whether $(D T) is a built-in integral type. Types $(D bool),
  * $(D char), $(D wchar), and $(D dchar) are not considered integral.
  */
-enum bool isIntegral(T) = is(IntegralTypeOf!T) && !isAggregateType!T;
+enum bool isIntegral(T) = is(_IntegralTypeOf!T) && !isAggregateType!T;
 
 ///
 @safe unittest
@@ -6048,7 +5950,7 @@ enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T);
  * The built-in char types are any of $(D char), $(D wchar) or $(D dchar), with
  * or without qualifiers.
  */
-enum bool isSomeChar(T) = is(CharTypeOf!T) && !isAggregateType!T;
+enum bool isSomeChar(T) = is(_CharTypeOf!T) && !isAggregateType!T;
 
 ///
 @safe unittest
@@ -6101,7 +6003,7 @@ $(D wchar) or $(D dchar), with or without qualifiers.
 Static arrays of characters (like $(D char[80])) are not considered
 built-in string types.
  */
-enum bool isSomeString(T) = is(StringTypeOf!T) && !isAggregateType!T && !isStaticArray!T;
+enum bool isSomeString(T) = is(_StringTypeOf!T) && !isAggregateType!T && !isStaticArray!T;
 
 ///
 @safe unittest
@@ -6236,7 +6138,7 @@ template isConvertibleToString(T)
 {
     enum isConvertibleToString =
         (isAggregateType!T || isStaticArray!T || is(T == enum))
-        && is(StringTypeOf!T);
+        && is(_StringTypeOf!T);
 }
 
 ///
@@ -6268,7 +6170,7 @@ template isConvertibleToString(T)
 package template convertToString(T)
 {
     static if (isConvertibleToString!T)
-        alias convertToString = StringTypeOf!T;
+        alias convertToString = _StringTypeOf!T;
     else
         alias convertToString = T;
 }
@@ -6346,7 +6248,7 @@ enum bool isStaticArray(T) = __traits(isStaticArray, T);
 /**
  * Detect whether type $(D T) is a dynamic array.
  */
-enum bool isDynamicArray(T) = is(DynamicArrayTypeOf!T) && !isAggregateType!T;
+enum bool isDynamicArray(T) = is(_DynamicArrayTypeOf!T) && !isAggregateType!T;
 
 ///
 @safe unittest
@@ -6437,7 +6339,7 @@ enum bool isAssociativeArray(T) = __traits(isAssociativeArray, T);
 /**
  * Detect whether type $(D T) is a builtin type.
  */
-enum bool isBuiltinType(T) = is(BuiltinTypeOf!T) && !isAggregateType!T;
+enum bool isBuiltinType(T) = is(_BuiltinTypeOf!T) && !isAggregateType!T;
 
 ///
 @safe unittest
