@@ -9048,16 +9048,16 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 auto asLowerCase(Range)(auto ref Range str)
 if (isConvertibleToString!Range)
 {
-    import std.traits : _StringTypeOf;
-    return asLowerCase!(_StringTypeOf!Range)(str);
+    import std.traits : StringTypeOf;
+    return asLowerCase!(StringTypeOf!Range)(str);
 }
 
 // explicitly undocumented
 auto asUpperCase(Range)(auto ref Range str)
 if (isConvertibleToString!Range)
 {
-    import std.traits : _StringTypeOf;
-    return asUpperCase!(_StringTypeOf!Range)(str);
+    import std.traits : StringTypeOf;
+    return asUpperCase!(StringTypeOf!Range)(str);
 }
 
 @safe unittest
@@ -9244,8 +9244,8 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
 auto asCapitalized(Range)(auto ref Range str)
 if (isConvertibleToString!Range)
 {
-    import std.traits : _StringTypeOf;
-    return asCapitalized!(_StringTypeOf!Range)(str);
+    import std.traits : StringTypeOf;
+    return asCapitalized!(StringTypeOf!Range)(str);
 }
 
 @safe unittest
