@@ -3076,7 +3076,7 @@ else version(Posix)
     public:
         alias name this;
 
-        this(string path)
+        this(string path) @safe
         {
             if (!path.exists)
                 throw new FileException(path, "File does not exist");
@@ -3088,11 +3088,16 @@ else version(Posix)
             _dTypeSet = false;
         }
 
-        private this(string path, core.sys.posix.dirent.dirent* fd)
+        private this(string path, core.sys.posix.dirent.dirent* fd) @safe
         {
             import std.path : buildPath;
 
-            immutable len = core.stdc.string.strlen(fd.d_name.ptr);
+            static auto trustedStrlen(char* str) @trusted
+            {
+                return core.stdc.string.strlen(str);
+            }
+
+            immutable len = trustedStrlen(&fd.d_name[0]);
             _name = buildPath(path, fd.d_name[0 .. len]);
 
             _didLStat = false;
@@ -3123,74 +3128,74 @@ else version(Posix)
             }
         }
 
-        @property string name() const pure nothrow
+        @property string name() @safe const pure nothrow
         {
             return _name;
         }
 
-        @property bool isDir()
+        @property bool isDir() @safe
         {
             _ensureStatOrLStatDone();
 
             return (_statBuf.st_mode & S_IFMT) == S_IFDIR;
         }
 
-        @property bool isFile()
+        @property bool isFile() @safe
         {
             _ensureStatOrLStatDone();
 
             return (_statBuf.st_mode & S_IFMT) == S_IFREG;
         }
 
-        @property bool isSymlink()
+        @property bool isSymlink() @safe
         {
             _ensureLStatDone();
 
             return (_lstatMode & S_IFMT) == S_IFLNK;
         }
 
-        @property ulong size()
+        @property ulong size() @safe
         {
             _ensureStatDone();
             return _statBuf.st_size;
         }
 
-        @property SysTime timeStatusChanged()
+        @property SysTime timeStatusChanged() @safe
         {
             _ensureStatDone();
 
             return statTimeToStdTime!'c'(_statBuf);
         }
 
-        @property SysTime timeLastAccessed()
+        @property SysTime timeLastAccessed() @safe
         {
             _ensureStatDone();
 
             return statTimeToStdTime!'a'(_statBuf);
         }
 
-        @property SysTime timeLastModified()
+        @property SysTime timeLastModified() @safe
         {
             _ensureStatDone();
 
             return statTimeToStdTime!'m'(_statBuf);
         }
 
-        @property uint attributes()
+        @property uint attributes() @safe
         {
             _ensureStatDone();
 
             return _statBuf.st_mode;
         }
 
-        @property uint linkAttributes()
+        @property uint linkAttributes() @safe
         {
             _ensureLStatDone();
 
             return _lstatMode;
         }
 
-        @property stat_t statBuf()
+        @property stat_t statBuf() @safe
         {
             _ensureStatDone();
 
@@ -3210,6 +3215,7 @@ else version(Posix)
             {
                 return stat(path.tempCString(), buf);
             }
+
             if (_didStat)
                 return;
 
@@ -3226,12 +3232,17 @@ else version(Posix)
             Try both stat and lstat for isFile and isDir
             to detect broken symlinks.
          +/
-        void _ensureStatOrLStatDone()
+        void _ensureStatOrLStatDone() @safe
         {
             if (_didStat)
                 return;
 
-            if ( stat(_name.tempCString(), &_statBuf) != 0 )
+            static auto trustedStat(in char[] path, stat_t* buf) @trusted
+            {
+                return stat(path.tempCString(), buf);
+            }
+
+            if (trustedStat(_name, &_statBuf) != 0)
             {
                 _ensureLStatDone();
 
@@ -3248,19 +3259,22 @@ else version(Posix)
             This is to support lazy evaluation, because doing stat's is
             expensive and not always needed.
          +/
-        void _ensureLStatDone()
+        void _ensureLStatDone() @safe
         {
             import std.exception : enforce;
 
             if (_didLStat)
                 return;
 
-            stat_t statbuf = void;
+            static auto trustedLstat(in char[] path, stat_t* buf) @trusted
+            {
+                return lstat(path.tempCString(), buf);
+            }
 
-            enforce(lstat(_name.tempCString(), &statbuf) == 0,
+            enforce(trustedLstat(_name, &_lstatBuf) == 0,
                 "Failed to stat file `" ~ _name ~ "'");
 
-            _lstatMode = statbuf.st_mode;
+            _lstatMode = _lstatBuf.st_mode;
 
             _dTypeSet = true;
             _didLStat = true;
@@ -3268,9 +3282,10 @@ else version(Posix)
 
         string _name; /// The file or directory represented by this DirEntry.
 
-        stat_t _statBuf = void;  /// The result of stat().
-        uint  _lstatMode;               /// The stat mode from lstat().
-        ubyte _dType;                   /// The type of the file.
+        stat_t _lstatBuf = void;  /// The result of lstat().
+        stat_t _statBuf = void;   /// The result of stat().
+        uint  _lstatMode;         /// The stat mode from lstat().
+        ubyte _dType;             /// The type of the file.
 
         bool _didLStat = false;   /// Whether lstat() has been called for this DirEntry.
         bool _didStat = false;    /// Whether stat() has been called for this DirEntry.
@@ -3572,7 +3587,7 @@ void rmdirRecurse(in char[] pathname)
         $(D FileException) if there is an error (including if the given
         file is not a directory).
  +/
-void rmdirRecurse(ref DirEntry de)
+void rmdirRecurse(ref DirEntry de) @safe
 {
     if (!de.isDir)
         throw new FileException(de.name, "Not a directory");
@@ -3692,7 +3707,6 @@ enum SpanMode
 
 private struct DirIteratorImpl
 {
-    import std.array : Appender, appender;
     SpanMode _mode;
     // Whether we should follow symlinked directories while iterating.
     // It also indicates whether we should avoid functions which call
@@ -3700,21 +3714,30 @@ private struct DirIteratorImpl
     // be more efficient to not call stat in addition to lstat).
     bool _followSymlink;
     DirEntry _cur;
-    Appender!(DirHandle[]) _stack;
-    Appender!(DirEntry[]) _stashed; //used in depth first mode
+    DirHandle[] _stack;
+    DirEntry[] _stashed; //used in depth first mode
+
     //stack helpers
-    void pushExtra(DirEntry de){ _stashed.put(de); }
+    void pushExtra(DirEntry de) @safe
+    {
+        _stashed ~= de;
+    }
+
     //ditto
-    bool hasExtra(){ return !_stashed.data.empty; }
+    bool hasExtra() @safe
+    {
+        return _stashed.length != 0;
+    }
+
     //ditto
-    DirEntry popExtra()
+    DirEntry popExtra() @safe
     {
         DirEntry de;
-        de = _stashed.data[$-1];
-        _stashed.shrinkTo(_stashed.data.length - 1);
+        de = _stashed[$-1];
+        _stashed.popBack();
         return de;
-
     }
+
     version(Windows)
     {
         struct DirHandle
@@ -3792,25 +3815,41 @@ private struct DirIteratorImpl
             DIR*   h;
         }
 
-        bool stepIn(string directory)
+        bool stepIn(string directory) @safe
         {
-            auto h = directory.length ? opendir(directory.tempCString()) : opendir(".");
+            static auto trustedOpendir(string dir) @trusted
+            {
+                return opendir(dir.tempCString());
+            }
+
+            auto h = directory.length ? trustedOpendir(directory) : trustedOpendir(".");
             cenforce(h, directory);
-            _stack.put(DirHandle(directory, h));
+            _stack ~= (DirHandle(directory, h));
             return next();
         }
 
-        bool next()
+        bool next() @safe
         {
-            if (_stack.data.empty)
+            if (_stack.length == 0)
                 return false;
-            for (dirent* fdata; (fdata = readdir(_stack.data[$-1].h)) != null; )
+
+            static auto trustedReaddir(DirHandle dh) @trusted
+            {
+                return readdir(dh.h);
+            }
+
+            static auto trustedStrcmp(char* dirName, string specialDirName) @trusted
+            {
+                return core.stdc.string.strcmp(dirName, specialDirName.tempCString());
+            }
+
+            for (dirent* fdata; (fdata = trustedReaddir(_stack[$-1])) != null; )
             {
                 // Skip "." and ".."
-                if (core.stdc.string.strcmp(fdata.d_name.ptr, ".")  &&
-                   core.stdc.string.strcmp(fdata.d_name.ptr, "..") )
+                if (trustedStrcmp(&fdata.d_name[0], ".") &&
+                    trustedStrcmp(&fdata.d_name[0], ".."))
                 {
-                    _cur = DirEntry(_stack.data[$-1].dirpath, fdata);
+                    _cur = DirEntry(_stack[$-1].dirpath, fdata);
                     return true;
                 }
             }
@@ -3818,33 +3857,41 @@ private struct DirIteratorImpl
             return false;
         }
 
-        void popDirStack()
+        void popDirStack() @safe
         {
-            assert(!_stack.data.empty);
-            closedir(_stack.data[$-1].h);
-            _stack.shrinkTo(_stack.data.length-1);
+            assert(_stack.length != 0);
+
+            static auto trustedClosedir(DirHandle dh) @trusted
+            {
+                return closedir(dh.h);
+            }
+
+            trustedClosedir(_stack[$-1]);
+            _stack.popBack();
         }
 
-        void releaseDirStack()
+        void releaseDirStack() @safe
         {
-            foreach ( d;  _stack.data)
-                closedir(d.h);
+            static auto trustedClosedir(DirHandle dh) @trusted
+            {
+                return closedir(dh.h);
+            }
+
+            foreach (d; _stack)
+                trustedClosedir(d);
         }
 
-        bool mayStepIn()
+        bool mayStepIn() @safe
         {
             return _followSymlink ? _cur.isDir : attrIsDir(_cur.linkAttributes);
         }
     }
 
-    this(R)(R pathname, SpanMode mode, bool followSymlink)
+    this(R)(R pathname, SpanMode mode, bool followSymlink) @safe
         if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
     {
         _mode = mode;
         _followSymlink = followSymlink;
-        _stack = appender(cast(DirHandle[])[]);
-        if (_mode == SpanMode.depth)
-            _stashed = appender(cast(DirEntry[])[]);
 
         static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
             alias pathnameStr = pathname;
@@ -3868,9 +3915,18 @@ private struct DirIteratorImpl
                 }
         }
     }
-    @property bool empty(){ return _stashed.data.empty && _stack.data.empty; }
-    @property DirEntry front(){ return _cur; }
-    void popFront()
+
+    @property bool empty() @safe
+    {
+        return (_stashed.length == 0) && (_stack.length == 0);
+    }
+
+    @property DirEntry front() @safe
+    {
+        return _cur;
+    }
+
+    void popFront() @safe
     {
         switch (_mode)
         {
@@ -3905,7 +3961,7 @@ private struct DirIteratorImpl
         }
     }
 
-    ~this()
+    ~this() @safe
     {
         releaseDirStack();
     }
@@ -3915,15 +3971,14 @@ struct DirIterator
 {
 private:
     RefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
-    this(string pathname, SpanMode mode, bool followSymlink)
+    this(string pathname, SpanMode mode, bool followSymlink) @trusted
     {
         impl = typeof(impl)(pathname, mode, followSymlink);
     }
 public:
-    @property bool empty(){ return impl.empty; }
-    @property DirEntry front(){ return impl.front; }
-    void popFront(){ impl.popFront(); }
-
+    @property bool empty() @safe { return impl.empty; }
+    @property DirEntry front() @safe { return impl.front; }
+    void popFront() @safe { impl.popFront(); }
 }
 /++
     Returns an input range of $(D DirEntry) that lazily iterates a given directory,
@@ -3995,7 +4050,7 @@ foreach (d; dFiles)
     writeln(d.name);
 --------------------
  +/
-auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
+auto dirEntries(string path, SpanMode mode, bool followSymlink = true) @safe
 {
     return DirIterator(path, mode, followSymlink);
 }
