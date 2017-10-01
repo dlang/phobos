@@ -714,7 +714,7 @@ import std.range.primitives; // back, ElementEncodingType, ElementType, empty,
 import std.traits; // isConvertibleToString, isIntegral, isSomeChar,
     // isSomeString, Unqual
 import std.exception : enforce, collectException;
-import core.memory: pureMalloc, pureRealloc, pureFree;
+import core.memory : pureMalloc, pureRealloc, pureFree;
 import core.exception : onOutOfMemoryError;
 static import std.ascii;
 // debug = std_uni;
