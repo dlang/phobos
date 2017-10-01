@@ -2791,9 +2791,9 @@ shown in the following example.
 
 Example:
 ---
-if (const split = haystack.findSplit(needle))
+if (auto split = haystack.findSplit(needle))
 {
-     doSomethingWithSplit(split);
+    doSomethingWithSplit(split);
 }
 ---
  */
