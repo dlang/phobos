@@ -735,20 +735,21 @@ body
         "Value cannot be set: \"" ~ subKey ~ "\"");
 }
 
-private void regProcessNthKey(HKEY hkey, scope void delegate(scope LONG delegate(DWORD, out string)) dg)
+private void regProcessNthKey(Key key, scope void delegate(scope LONG delegate(DWORD, out string)) dg)
 {
     DWORD cSubKeys;
     DWORD cchSubKeyMaxLen;
 
-    immutable res = regGetNumSubKeys(hkey, cSubKeys, cchSubKeyMaxLen);
+    immutable res = regGetNumSubKeys(key.m_hkey, cSubKeys, cchSubKeyMaxLen);
     assert(res == ERROR_SUCCESS);
 
     wchar[] sName = new wchar[cchSubKeyMaxLen + 1];
 
+    // Capture `key` in the lambda to keep the object alive (and so its HKEY handle open).
     dg((DWORD index, out string name)
     {
         DWORD cchName;
-        immutable res = regEnumKeyName(hkey, index, sName, cchName);
+        immutable res = regEnumKeyName(key.m_hkey, index, sName, cchName);
         if (res == ERROR_SUCCESS)
         {
             name = sName[0 .. cchName].to!string;
@@ -757,20 +758,21 @@ private void regProcessNthKey(HKEY hkey, scope void delegate(scope LONG delegate
     });
 }
 
-private void regProcessNthValue(HKEY hkey, scope void delegate(scope LONG delegate(DWORD, out string)) dg)
+private void regProcessNthValue(Key key, scope void delegate(scope LONG delegate(DWORD, out string)) dg)
 {
     DWORD cValues;
     DWORD cchValueMaxLen;
 
-    immutable res = regGetNumValues(hkey, cValues, cchValueMaxLen);
+    immutable res = regGetNumValues(key.m_hkey, cValues, cchValueMaxLen);
     assert(res == ERROR_SUCCESS);
 
     wchar[] sName = new wchar[cchValueMaxLen + 1];
 
+    // Capture `key` in the lambda to keep the object alive (and so its HKEY handle open).
     dg((DWORD index, out string name)
     {
         DWORD cchName;
-        immutable res = regEnumValueName(hkey, index, sName, cchName);
+        immutable res = regEnumValueName(key.m_hkey, index, sName, cchName);
         if (res == ERROR_SUCCESS)
         {
             name = sName[0 .. cchName].to!string;
@@ -1388,7 +1390,7 @@ public:
     string getKeyName(size_t index)
     {
         string name;
-        regProcessNthKey(m_key.m_hkey, (scope LONG delegate(DWORD, out string) getName)
+        regProcessNthKey(m_key, (scope LONG delegate(DWORD, out string) getName)
         {
             enforceSucc(getName(to!DWORD(index), name), "Invalid key");
         });
@@ -1415,7 +1417,7 @@ public:
     int opApply(scope int delegate(ref string name) dg)
     {
         int result;
-        regProcessNthKey(m_key.m_hkey, (scope LONG delegate(DWORD, out string) getName)
+        regProcessNthKey(m_key, (scope LONG delegate(DWORD, out string) getName)
         {
             for (DWORD index = 0; !result; ++index)
             {
@@ -1485,7 +1487,7 @@ public:
     Key getKey(size_t index)
     {
         string name;
-        regProcessNthKey(m_key.m_hkey, (scope LONG delegate(DWORD, out string) getName)
+        regProcessNthKey(m_key, (scope LONG delegate(DWORD, out string) getName)
         {
             enforceSucc(getName(to!DWORD(index), name), "Invalid key");
         });
@@ -1512,7 +1514,7 @@ public:
     int opApply(scope int delegate(ref Key key) dg)
     {
         int result = 0;
-        regProcessNthKey(m_key.m_hkey, (scope LONG delegate(DWORD, out string) getName)
+        regProcessNthKey(m_key, (scope LONG delegate(DWORD, out string) getName)
         {
             for (DWORD index = 0; !result; ++index)
             {
@@ -1594,7 +1596,7 @@ public:
     string getValueName(size_t index)
     {
         string name;
-        regProcessNthValue(m_key.m_hkey, (scope LONG delegate(DWORD, out string) getName)
+        regProcessNthValue(m_key, (scope LONG delegate(DWORD, out string) getName)
         {
             enforceSucc(getName(to!DWORD(index), name), "Invalid value");
         });
@@ -1621,7 +1623,7 @@ public:
     int opApply(scope int delegate(ref string name) dg)
     {
         int result = 0;
-        regProcessNthValue(m_key.m_hkey, (scope LONG delegate(DWORD, out string) getName)
+        regProcessNthValue(m_key, (scope LONG delegate(DWORD, out string) getName)
         {
             for (DWORD index = 0; !result; ++index)
             {
@@ -1688,7 +1690,7 @@ public:
     Value getValue(size_t index)
     {
         string name;
-        regProcessNthValue(m_key.m_hkey, (scope LONG delegate(DWORD, out string) getName)
+        regProcessNthValue(m_key, (scope LONG delegate(DWORD, out string) getName)
         {
             enforceSucc(getName(to!DWORD(index), name), "Invalid value");
         });
@@ -1715,7 +1717,7 @@ public:
     int opApply(scope int delegate(ref Value value) dg)
     {
         int result = 0;
-        regProcessNthValue(m_key.m_hkey, (scope LONG delegate(DWORD, out string) getName)
+        regProcessNthValue(m_key, (scope LONG delegate(DWORD, out string) getName)
         {
             for (DWORD index = 0; !result; ++index)
             {
@@ -1839,4 +1841,28 @@ private:
 
     auto e = collectException!RegistryException(HKCU.getKey("cDhmxsX9K23a8Uf869uB"));
     assert(e.msg.endsWith(" (error 2)"));
+}
+
+@system unittest
+{
+    Key HKCU = Registry.currentUser;
+    assert(HKCU);
+
+    Key key = HKCU.getKey("Control Panel");
+    assert(key);
+    assert(key.keyCount >= 2);
+
+    // Make sure `key` isn't garbage-collected while iterating over it.
+    // Trigger a collection in the first iteration and check whether we
+    // make it successfully to the second iteration.
+    int i = 0;
+    foreach (name; key.keyNames)
+    {
+        if (i++ > 0)
+            break;
+
+        import core.memory;
+        GC.collect();
+    }
+    assert(i == 2);
 }
