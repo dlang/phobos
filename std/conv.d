@@ -3154,9 +3154,10 @@ if (isInputRange!Source && isSomeChar!(ElementType!Source) && !is(Source == enum
     assert(to!string(r) == to!string(real.max));
 }
 
-//Tests for the double implementation
-@safe unittest
+// Tests for the double implementation
+@system unittest
 {
+    // @system because strtod is not @safe.
     static if (real.mant_dig == 53)
     {
         import core.stdc.stdlib, std.exception, std.math;
