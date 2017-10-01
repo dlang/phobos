@@ -2970,7 +2970,7 @@ else version(Windows)
     public:
         alias name this;
 
-        this(string path)
+        this(string path) @safe
         {
             import std.datetime.systime : FILETIMEToSysTime;
 
@@ -2989,14 +2989,19 @@ else version(Windows)
             }
         }
 
-        private this(string path, in WIN32_FIND_DATAW *fd)
+        private this(string path, in WIN32_FIND_DATAW *fd) @safe
         {
             import core.stdc.wchar_ : wcslen;
             import std.conv : to;
             import std.datetime.systime : FILETIMEToSysTime;
             import std.path : buildPath;
 
-            size_t clength = wcslen(fd.cFileName.ptr);
+            static auto trustedWcslen(const wchar* str) @trusted
+            {
+                return wcslen(str);
+            }
+
+            size_t clength = trustedWcslen(&fd.cFileName[0]);
             _name = buildPath(path, fd.cFileName[0 .. clength].to!string);
             _size = (cast(ulong) fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
             _timeCreated = FILETIMEToSysTime(&fd.ftCreationTime);
@@ -3005,17 +3010,17 @@ else version(Windows)
             _attributes = fd.dwFileAttributes;
         }
 
-        @property string name() const pure nothrow
+        @property string name() @safe const pure nothrow
         {
             return _name;
         }
 
-        @property bool isDir() const pure nothrow
+        @property bool isDir() @safe const pure nothrow
         {
             return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
         }
 
-        @property bool isFile() const pure nothrow
+        @property bool isFile() @safe const pure nothrow
         {
             //Are there no options in Windows other than directory and file?
             //If there are, then this probably isn't the best way to determine
@@ -3023,37 +3028,37 @@ else version(Windows)
             return !isDir;
         }
 
-        @property bool isSymlink() const pure nothrow
+        @property bool isSymlink() @safe const pure nothrow
         {
             return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
         }
 
-        @property ulong size() const pure nothrow
+        @property ulong size() @safe const pure nothrow
         {
             return _size;
         }
 
-        @property SysTime timeCreated() const pure nothrow
+        @property SysTime timeCreated() @safe const pure nothrow
         {
             return cast(SysTime)_timeCreated;
         }
 
-        @property SysTime timeLastAccessed() const pure nothrow
+        @property SysTime timeLastAccessed() @safe const pure nothrow
         {
             return cast(SysTime)_timeLastAccessed;
         }
 
-        @property SysTime timeLastModified() const pure nothrow
+        @property SysTime timeLastModified() @safe const pure nothrow
         {
             return cast(SysTime)_timeLastModified;
         }
 
-        @property uint attributes() const pure nothrow
+        @property uint attributes() @safe const pure nothrow
         {
             return _attributes;
         }
 
-        @property uint linkAttributes() const pure nothrow
+        @property uint linkAttributes() @safe const pure nothrow
         {
             return _attributes;
         }
@@ -3092,7 +3097,7 @@ else version(Posix)
         {
             import std.path : buildPath;
 
-            static auto trustedStrlen(char* str) @trusted
+            static auto trustedStrlen(const char* str) @trusted
             {
                 return core.stdc.string.strlen(str);
             }
@@ -3211,13 +3216,13 @@ else version(Posix)
         {
             import std.exception : enforce;
 
+            if (_didStat)
+                return;
+
             static auto trustedStat(in char[] path, stat_t* buf) @trusted
             {
                 return stat(path.tempCString(), buf);
             }
-
-            if (_didStat)
-                return;
 
             enforce(trustedStat(_name, &_statBuf) == 0,
                     "Failed to stat file `" ~ _name ~ "'");
@@ -3587,7 +3592,7 @@ void rmdirRecurse(in char[] pathname)
         $(D FileException) if there is an error (including if the given
         file is not a directory).
  +/
-void rmdirRecurse(ref DirEntry de) @safe
+void rmdirRecurse(ref DirEntry de)
 {
     if (!de.isDir)
         throw new FileException(de.name, "Not a directory");
@@ -3740,69 +3745,94 @@ private struct DirIteratorImpl
 
     version(Windows)
     {
+        WIN32_FIND_DATAW _findinfo;
         struct DirHandle
         {
             string dirpath;
             HANDLE h;
         }
 
-        bool stepIn(string directory)
+        bool stepIn(string directory) @safe
         {
             import std.path : chainPath;
+            auto searchPattern = chainPath(directory, "*.*");
 
-            auto search_pattern = chainPath(directory, "*.*");
-            WIN32_FIND_DATAW findinfo;
-            HANDLE h = FindFirstFileW(search_pattern.tempCString!FSChar(), &findinfo);
+            static auto trustedFindFirstFileW(typeof(searchPattern) pattern, WIN32_FIND_DATAW* findinfo) @trusted
+            {
+                return FindFirstFileW(pattern.tempCString!FSChar(), findinfo);
+            }
+
+            HANDLE h = trustedFindFirstFileW(searchPattern, &_findinfo);
             cenforce(h != INVALID_HANDLE_VALUE, directory);
-            _stack.put(DirHandle(directory, h));
-            return toNext(false, &findinfo);
+            _stack ~= DirHandle(directory, h);
+            return toNext(false, &_findinfo);
         }
 
-        bool next()
+        bool next() @safe
         {
-            if (_stack.data.empty)
+            if (_stack.length == 0)
                 return false;
-            WIN32_FIND_DATAW findinfo;
-            return toNext(true, &findinfo);
+            return toNext(true, &_findinfo);
         }
 
-        bool toNext(bool fetch, WIN32_FIND_DATAW* findinfo)
+        bool toNext(bool fetch, WIN32_FIND_DATAW* findinfo) @safe
         {
             import core.stdc.wchar_ : wcscmp;
 
+            static auto trustedFindNextFileW(DirHandle dh, WIN32_FIND_DATA* findinfo) @trusted
+            {
+                return FindNextFileW(dh.h, findinfo);
+            }
+
+            static auto trustedWcscmp(WIN32_FIND_DATA* findinfo, const wchar* str) @trusted
+            {
+                return wcscmp(&findinfo.cFileName[0], str);
+            }
+
             if (fetch)
             {
-                if (FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
+                if (trustedFindNextFileW(_stack[$-1], findinfo) == FALSE)
                 {
                     popDirStack();
                     return false;
                 }
             }
-            while ( wcscmp(findinfo.cFileName.ptr, ".") == 0
-                    || wcscmp(findinfo.cFileName.ptr, "..") == 0)
-                if (FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
+            while (trustedWcscmp(findinfo, ".") == 0 ||
+                   trustedWcscmp(findinfo, "..") == 0)
+                if (trustedFindNextFileW(_stack[$-1], findinfo) == FALSE)
                 {
                     popDirStack();
                     return false;
                 }
-            _cur = DirEntry(_stack.data[$-1].dirpath, findinfo);
+            _cur = DirEntry(_stack[$-1].dirpath, findinfo);
             return true;
         }
 
-        void popDirStack()
+        void popDirStack() @safe
         {
-            assert(!_stack.data.empty);
-            FindClose(_stack.data[$-1].h);
-            _stack.shrinkTo(_stack.data.length-1);
+            assert(_stack.length != 0);
+
+            static auto trustedFindClose(DirHandle dh) @trusted
+            {
+                return FindClose(dh.h);
+            }
+
+            trustedFindClose(_stack[$-1]);
+            _stack.popBack();
         }
 
-        void releaseDirStack()
+        void releaseDirStack() @safe
         {
-            foreach ( d;  _stack.data)
-                FindClose(d.h);
+            static auto trustedFindClose(DirHandle dh) @trusted
+            {
+                return FindClose(dh.h);
+            }
+
+            foreach (d; _stack)
+                trustedFindClose(d);
         }
 
-        bool mayStepIn()
+        bool mayStepIn() @safe
         {
             return _followSymlink ? _cur.isDir : _cur.isDir && !_cur.isSymlink;
         }
@@ -4050,7 +4080,7 @@ foreach (d; dFiles)
     writeln(d.name);
 --------------------
  +/
-auto dirEntries(string path, SpanMode mode, bool followSymlink = true) @safe
+auto dirEntries(string path, SpanMode mode, bool followSymlink = true)
 {
     return DirIterator(path, mode, followSymlink);
 }
