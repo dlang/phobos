@@ -1314,6 +1314,13 @@ if (distinctFieldNames!(Specs)())
     assert(!is(typeof(point1) == typeof(point2)));
 }
 
+@safe unittest
+{
+    // Bugzilla 4582
+    static assert(!__traits(compiles, Tuple!(string, "id", int, "id")));
+    static assert(!__traits(compiles, Tuple!(string, "str", int, "i", string, "str", float)));
+}
+
 /**
     Creates a copy of a $(LREF Tuple) with its fields in _reverse order.
 
