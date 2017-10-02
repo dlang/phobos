@@ -2985,7 +2985,7 @@ if (isForwardRange!R1 && isForwardRange!R2)
 {
     // findSplit returns a triplet
     if (auto split = "dlang-rocks".findSplit("-"))
-	    assert(split[2] == "rocks");
+        assert(split[2] == "rocks");
 }
 
 ///
