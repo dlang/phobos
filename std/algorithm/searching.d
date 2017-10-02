@@ -2786,16 +2786,7 @@ Returns:
 A sub-type of `Tuple!()` of the split portions of `haystack` (see above for
 details).  This sub-type of `Tuple!()` has `opCast` defined for `bool`.  This
 `opCast` returns `true` when the separating `needle` was found
-(`!result[1].empty`) and `false` otherwise.  This enables the convenient idiom
-shown in the following example.
-
-Example:
----
-if (auto split = haystack.findSplit(needle))
-{
-    doSomethingWithSplit(split);
-}
----
+(`!result[1].empty`) and `false` otherwise.
  */
 auto findSplit(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2)
@@ -2986,6 +2977,15 @@ if (isForwardRange!R1 && isForwardRange!R2)
                        typeof(h))(takeExactly(original, pos2),
                                   h);
     }
+}
+
+/// Returning a subtype of $(REF Tuple, std,typecons) enables
+/// the following convenient idiom:
+@safe pure nothrow unittest
+{
+    // findSplit returns a triplet
+    if (auto split = "dlang-rocks".findSplit("-"))
+	    assert(split[2] == "rocks");
 }
 
 ///
