@@ -1116,11 +1116,11 @@ if (is(typeof(unaryFun!predicate)))
 
     int[] arr = [ 1, 2, 3, 4, 5 ];
 
-    // Sum all elements
+    // Filter below 3
     auto small = filter!(a => a < 3)(arr);
     assert(equal(small, [ 1, 2 ]));
 
-    // Sum again, but with Uniform Function Call Syntax (UFCS)
+    // Filter again, but with Uniform Function Call Syntax (UFCS)
     auto sum = arr.filter!(a => a < 3);
     assert(equal(sum, [ 1, 2 ]));
 
