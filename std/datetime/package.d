@@ -149,14 +149,16 @@ import std.typecons : Flag, Yes, No;
     static assert(!hasUnsharedAliasing!SysTime);
 }
 
-
-//==============================================================================
-// Everything after here will be deprecated after we have replacements which
-// use MonoTime and Duration.
-//==============================================================================
-
-
+// @@@DEPRECATED_2018-10@@@
 /++
+    $(RED The old benchmarking functionality in std.datetime (which uses
+          $(REF TickDuration,core,time)) has been deprecated. Use what's in
+          std.datetime.stopwatch instead. It uses $(REF MonoTime,core,time) and
+          $(REF Duration,core,time). See
+          $(REF AutoStart,std,datetime,stopwatch). This symbol will be removed
+          from the documentation in October 2018 and fully removed from Phobos
+          in October 2019.)
+
    Used by StopWatch to indicate whether it should start immediately upon
    construction.
 
@@ -166,15 +168,18 @@ import std.typecons : Flag, Yes, No;
    Otherwise, if set to $(D AutoStart.yes), then the stopwatch is started when
    it is constructed.
   +/
-alias AutoStart = Flag!"autoStart";
+deprecated("Use std.datetime.stopwatch.AutoStart.") alias AutoStart = Flag!"autoStart";
 
 
+// @@@DEPRECATED_2018-10@@@
 /++
-    $(RED This will be deprecated in 2.076. Please use
-          $(REF StopWatch,std,datetime,stopwatch) instead. It uses
-          $(REF Monotime,core,time) and $(REF Duration,core,time) rather
-          than $(REF TickDuration,core,time), which will also be deprecated in
-          2.076.)
+    $(RED The old benchmarking functionality in std.datetime (which uses
+          $(REF TickDuration,core,time)) has been deprecated. Use what's in
+          std.datetime.stopwatch instead. It uses $(REF MonoTime,core,time) and
+          $(REF Duration,core,time). See
+          $(REF StopWatch,std,datetime,stopwatch). This symbol will be removed
+          from the documentation in October 2018 and fully removed from Phobos
+          in October 2019.)
 
    $(D StopWatch) measures time as precisely as possible.
 
@@ -188,6 +193,7 @@ alias AutoStart = Flag!"autoStart";
    and situation-dependent stuff (such as the overhead of a context switch
    between threads) can also affect $(D StopWatch)'s accuracy.
   +/
+deprecated("Use std.datetime.stopwatch.StopWatch.")
 @safe struct StopWatch
 {
 public:
@@ -390,7 +396,7 @@ private:
 }
 
 ///
-@safe unittest
+deprecated @safe unittest
 {
     void writeln(S...)(S args){}
     static void bar() {}
@@ -421,12 +427,15 @@ private:
 }
 
 
+// @@@DEPRECATED_2018-10@@@
 /++
-    $(RED This will be deprecated in 2.076. Please use
-          $(REF benchmark,std,datetime,stopwatch) instead. It uses
-          $(REF Monotime,core,time) and $(REF Duration,core,time) rather
-          than $(REF TickDuration,core,time), which will also be deprecated in
-          2.076.)
+    $(RED The old benchmarking functionality in std.datetime (which uses
+          $(REF TickDuration,core,time)) has been deprecated. Use what's in
+          std.datetime.stopwatch instead. It uses $(REF MonoTime,core,time) and
+          $(REF Duration,core,time). See
+          $(REF benchmark,std,datetime,stopwatch). This symbol will be removed
+          from the documentation in October 2018 and fully removed from Phobos
+          in October 2019.)
 
     Benchmarks code for speed assessment and comparison.
 
@@ -448,6 +457,7 @@ private:
     See_Also:
         $(LREF measureTime)
   +/
+deprecated("Use std.datetime.stopwatch.benchmark.")
 TickDuration[fun.length] benchmark(fun...)(uint n)
 {
     TickDuration[fun.length] result;
@@ -466,7 +476,7 @@ TickDuration[fun.length] benchmark(fun...)(uint n)
 }
 
 ///
-@safe unittest
+deprecated @safe unittest
 {
     import std.conv : to;
     int a;
@@ -479,7 +489,7 @@ TickDuration[fun.length] benchmark(fun...)(uint n)
     auto f2Result = to!Duration(r[2]); // time f2 took to run 10,000 times
 }
 
-@safe unittest
+deprecated @safe unittest
 {
     int a;
     void f0() {}
@@ -489,10 +499,20 @@ TickDuration[fun.length] benchmark(fun...)(uint n)
 }
 
 
+// @@@DEPRECATED_2018-10@@@
 /++
+    $(RED The old benchmarking functionality in std.datetime (which uses
+          $(REF TickDuration,core,time)) has been deprecated. Use what's in
+          std.datetime.stopwatch instead. It uses $(REF MonoTime,core,time) and
+          $(REF Duration,core,time). Note that comparingBenchmark has
+          not been ported over, because it's a trivial wrapper around benchmark.
+          See $(REF benchmark,std,datetime,stopwatch). This symbol will be
+          removed from the documentation in October 2018 and fully removed from
+          Phobos in October 2019.)
+
    Return value of benchmark with two functions comparing.
   +/
-@safe struct ComparingBenchmarkResult
+deprecated("Use std.datetime.stopwatch.benchmark.") @safe struct ComparingBenchmarkResult
 {
     /++
        Evaluation value
@@ -537,12 +557,16 @@ private:
 }
 
 
+// @@@DEPRECATED_2018-10@@@
 /++
-    $(RED This will be deprecated in 2.076. Please use
-          $(REF benchmark,std,datetime,stopwatch) instead. This function has
-          not been ported to $(REF Monotime,core,time) and
-          $(REF Duration,core,time), because it is a trivial wrapper around
-          benchmark.)
+    $(RED The old benchmarking functionality in std.datetime (which uses
+          $(REF TickDuration,core,time)) has been deprecated. Use what's in
+          std.datetime.stopwatch instead. It uses $(REF MonoTime,core,time) and
+          $(REF Duration,core,time). Note that comparingBenchmark has
+          not been ported over, because it's a trivial wrapper around benchmark.
+          See $(REF benchmark,std,datetime,stopwatch). This symbol will be
+          removed from the documentation in October 2018 and fully removed from
+          Phobos in October 2019.)
 
    Benchmark with two functions comparing.
 
@@ -551,6 +575,7 @@ private:
        targetFunc = The function that wants to measure speed.
        times      = The number of times each function is to be executed.
   +/
+deprecated("Use std.datetime.stopwatch.benchmark.")
 ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
                                             alias targetFunc,
                                             int times = 0xfff)()
@@ -560,7 +585,7 @@ ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
 }
 
 ///
-@safe unittest
+deprecated @safe unittest
 {
     void f1x() {}
     void f2x() {}
@@ -571,7 +596,7 @@ ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
 }
 
 //Bug# 8450
-@system unittest
+deprecated @system unittest
 {
     @safe    void safeFunc() {}
     @trusted void trustFunc() {}
@@ -585,12 +610,16 @@ ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
 }
 
 
+// @@@DEPRECATED_2018-10@@@
 /++
-    $(RED This will be deprecated in 2.076. Please use
-          $(REF StopWatch,std,datetime,stopwatch) instead. This function has
-          not been ported to $(REF Monotime,core,time) and
-          $(REF Duration,core,time), because it is a trivial wrapper around
-          StopWatch.)
+    $(RED The old benchmarking functionality in std.datetime (which uses
+          $(REF TickDuration,core,time)) has been deprecated. Use what's in
+          std.datetime.stopwatch instead. It uses $(REF MonoTime,core,time) and
+          $(REF Duration,core,time). Note that measureTime has not been ported
+          over, because it's a trivial wrapper around StopWatch. See
+          $(REF StopWatch,std,datetime,stopwatch). This symbol will be removed
+          from the documentation in October 2018 and fully removed from Phobos
+          in October 2019.)
 
     Function for starting to a stop watch time when the function is called
     and stopping it when its return value goes out of scope and is destroyed.
@@ -625,7 +654,7 @@ ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
     See_Also:
         $(LREF benchmark)
 +/
-@safe auto measureTime(alias func)()
+deprecated("Use std.datetime.stopwatch.StopWatch.") @safe auto measureTime(alias func)()
 if (isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
 {
     struct Result
@@ -643,7 +672,8 @@ if (isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
     return Result(Yes.autoStart);
 }
 
-auto measureTime(alias func)()
+/// Ditto
+deprecated("Use std.datetime.stopwatch.StopWatch.") auto measureTime(alias func)()
 if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
 {
     struct Result
@@ -662,7 +692,7 @@ if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
 }
 
 // Verify Example.
-@safe unittest
+deprecated @safe unittest
 {
     {
         auto mt = measureTime!((TickDuration a)
@@ -681,7 +711,7 @@ if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
     }
 }
 
-@safe unittest
+deprecated @safe unittest
 {
     import std.math : isNaN;
 
@@ -701,7 +731,7 @@ if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
     +/
 }
 
-@safe unittest
+deprecated @safe unittest
 {
     import std.math : isNaN;
 
@@ -722,7 +752,7 @@ if (!isSafe!((){StopWatch sw; unaryFun!func(sw.peek());}))
 }
 
 //Bug# 8450
-@system unittest
+deprecated @system unittest
 {
     @safe    void safeFunc() {}
     @trusted void trustFunc() {}

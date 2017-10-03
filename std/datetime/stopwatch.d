@@ -10,8 +10,11 @@
           versions of this functionality which use
           $(REF TickDuration,core,time) are in std.datetime.package and would
           conflict with the symbols in this module. After the old symbols have
-          gone through the deprecation cycle and have been removed, then this
-          module will be publicly imported in std.datetime.package.)
+          gone through the deprecation cycle and have been fully removed, then
+          this module will be publicly imported in std.datetime.package. The
+          old, deprecated symbols are currently scheduled to be removed from the
+          documentation in October 2018 and fully removed from Phobos in October
+          2019.)
 
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis and Kato Shoichi
