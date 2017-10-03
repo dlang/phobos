@@ -26,32 +26,32 @@ public import core.time;
 import std.typecons : Flag;
 
 /++
-   Used by StopWatch to indicate whether it should start immediately upon
-   construction.
+    Used by StopWatch to indicate whether it should start immediately upon
+    construction.
 
-   If set to $(D AutoStart.no), then the StopWatch is not started when it is
-   constructed.
+    If set to $(D AutoStart.no), then the StopWatch is not started when it is
+    constructed.
 
-   Otherwise, if set to $(D AutoStart.yes), then the StopWatch is started when
-   it is constructed.
+    Otherwise, if set to $(D AutoStart.yes), then the StopWatch is started when
+    it is constructed.
   +/
 alias AutoStart = Flag!"autoStart";
 
 
 /++
-   StopWatch is used to measure time just like one would do with a physical
-   stopwatch, including stopping, restarting, and/or resetting it.
+    StopWatch is used to measure time just like one would do with a physical
+    stopwatch, including stopping, restarting, and/or resetting it.
 
-   $(REF MonoTime,core,time) is used to hold the time, and it uses the system's
-   monotonic clock, which is high precision and never counts backwards (unlike
-   the wall clock time, which $(I can) count backwards, which is why
-   $(REF SysTime,std,datetime,systime) should not be used for timing).
+    $(REF MonoTime,core,time) is used to hold the time, and it uses the system's
+    monotonic clock, which is high precision and never counts backwards (unlike
+    the wall clock time, which $(I can) count backwards, which is why
+    $(REF SysTime,std,datetime,systime) should not be used for timing).
 
-   Note that the precision of StopWatch differs from system to system. It is
-   impossible for it to be the same for all systems, since the precision of the
-   system clock and other system-dependent and situation-dependent factors
-   (such as the overhead of a context switch between threads) varies from system
-   to system and can affect StopWatch's accuracy.
+    Note that the precision of StopWatch differs from system to system. It is
+    impossible for it to be the same for all systems, since the precision of the
+    system clock and other system-dependent and situation-dependent factors
+    (such as the overhead of a context switch between threads) varies from
+    system to system and can affect StopWatch's accuracy.
   +/
 struct StopWatch
 {

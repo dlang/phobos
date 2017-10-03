@@ -159,14 +159,14 @@ import std.typecons : Flag, Yes, No;
           from the documentation in October 2018 and fully removed from Phobos
           in October 2019.)
 
-   Used by StopWatch to indicate whether it should start immediately upon
-   construction.
+    Used by StopWatch to indicate whether it should start immediately upon
+    construction.
 
-   If set to $(D AutoStart.no), then the stopwatch is not started when it is
-   constructed.
+    If set to $(D AutoStart.no), then the stopwatch is not started when it is
+    constructed.
 
-   Otherwise, if set to $(D AutoStart.yes), then the stopwatch is started when
-   it is constructed.
+    Otherwise, if set to $(D AutoStart.yes), then the stopwatch is started when
+    it is constructed.
   +/
 deprecated("Use std.datetime.stopwatch.AutoStart.") alias AutoStart = Flag!"autoStart";
 
@@ -181,17 +181,17 @@ deprecated("Use std.datetime.stopwatch.AutoStart.") alias AutoStart = Flag!"auto
           from the documentation in October 2018 and fully removed from Phobos
           in October 2019.)
 
-   $(D StopWatch) measures time as precisely as possible.
+    $(D StopWatch) measures time as precisely as possible.
 
-   This class uses a high-performance counter. On Windows systems, it uses
-   $(D QueryPerformanceCounter), and on Posix systems, it uses
-   $(D clock_gettime) if available, and $(D gettimeofday) otherwise.
+    This class uses a high-performance counter. On Windows systems, it uses
+    $(D QueryPerformanceCounter), and on Posix systems, it uses
+    $(D clock_gettime) if available, and $(D gettimeofday) otherwise.
 
-   But the precision of $(D StopWatch) differs from system to system. It is
-   impossible to for it to be the same from system to system since the precision
-   of the system clock varies from system to system, and other system-dependent
-   and situation-dependent stuff (such as the overhead of a context switch
-   between threads) can also affect $(D StopWatch)'s accuracy.
+    But the precision of $(D StopWatch) differs from system to system. It is
+    impossible to for it to be the same from system to system since the precision
+    of the system clock varies from system to system, and other system-dependent
+    and situation-dependent stuff (such as the overhead of a context switch
+    between threads) can also affect $(D StopWatch)'s accuracy.
   +/
 deprecated("Use std.datetime.stopwatch.StopWatch.")
 @safe struct StopWatch
@@ -510,7 +510,7 @@ deprecated @safe unittest
           removed from the documentation in October 2018 and fully removed from
           Phobos in October 2019.)
 
-   Return value of benchmark with two functions comparing.
+    Return value of benchmark with two functions comparing.
   +/
 deprecated("Use std.datetime.stopwatch.benchmark.") @safe struct ComparingBenchmarkResult
 {
@@ -568,12 +568,12 @@ private:
           removed from the documentation in October 2018 and fully removed from
           Phobos in October 2019.)
 
-   Benchmark with two functions comparing.
+    Benchmark with two functions comparing.
 
-   Params:
-       baseFunc   = The function to become the base of the speed.
-       targetFunc = The function that wants to measure speed.
-       times      = The number of times each function is to be executed.
+    Params:
+        baseFunc   = The function to become the base of the speed.
+        targetFunc = The function that wants to measure speed.
+        times      = The number of times each function is to be executed.
   +/
 deprecated("Use std.datetime.stopwatch.benchmark.")
 ComparingBenchmarkResult comparingBenchmark(alias baseFunc,
