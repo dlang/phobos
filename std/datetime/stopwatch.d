@@ -16,6 +16,19 @@
           documentation in October 2018 and fully removed from Phobos in October
           2019.)
 
+    So, for now, when using std.datetime.stopwatch, if other modules from
+    std.datetime are needed, then either import them individually rather than
+    importing std.datetime, or use selective or static imports to import
+    std.datetime.stopwatch. e.g.
+
+    ----------------------------------------------------------------------------
+    import std.datetime;
+    import std.datetime.stopwatch : benchmark, StopWatch;
+    ----------------------------------------------------------------------------
+
+    The compiler will then know to use the symbols from std.datetime.stopwatch
+    rather than the deprecated ones from std.datetime.package.
+
     License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
     Authors:   Jonathan M Davis and Kato Shoichi
     Source:    $(PHOBOSSRC std/datetime/_stopwatch.d)
