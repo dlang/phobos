@@ -2625,7 +2625,7 @@ private:
     {
         version(SlowTests)
         softUnittest({
-            import std.datetime;
+            import std.datetime.stopwatch;
             import std.typecons;
 
             enum msecs = 1000;
@@ -2643,7 +2643,7 @@ private:
             sock.getOption(SocketOptionLevel.SOCKET, SocketOption.RCVTIMEO, readBack);
 
             assert(readBack.total!"msecs" == msecs);
-            assert(sw.peek().msecs > msecs-100 && sw.peek().msecs < msecs+100);
+            assert(sw.peek().total!"msecs" > msecs - 100 && sw.peek().total!"msecs" < msecs + 100);
         });
     }
 
