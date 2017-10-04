@@ -281,11 +281,13 @@ private T cenforce(T)(T condition, const(char)[] name, const(FSChar)* namez,
 /********************************************
 Read entire contents of file $(D name) and returns it as an untyped
 array. If the file size is larger than $(D upTo), only $(D upTo)
-bytes are _read.
+bytes are _read. If an offset is passed, then the reading of the file
+starts at $(D offset).
 
 Params:
     name = string or range of characters representing the file _name
     upTo = if present, the maximum number of bytes to _read
+    offset = if present, the starting point of the reading
 
 Returns: Untyped array of bytes _read.
 
@@ -325,6 +327,22 @@ if (isInputRange!R && isSomeChar!(ElementEncodingType!R) && !isInfinite!R &&
 ///
 @safe unittest
 {
+    import std.utf : byChar;
+    scope(exit)
+    {
+        assert(exists(deleteme));
+        remove(deleteme);
+    }
+
+    write(deleteme, "1234"); // deleteme is the name of a temporary file
+    assert(read(deleteme, 2) == "12");
+    assert(read(deleteme.byChar) == "1234");
+    assert((cast(const(ubyte)[])read(deleteme)).length == 4);
+}
+
+///
+@safe unittest
+{
     scope(exit)
     {
         assert(exists(deleteme));
@@ -359,6 +377,8 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
     stat_t statbuf = void;
     cenforce(fstat(fd, &statbuf) == 0, name, namez);
 
+    if (offset >= statbuf.st_size)
+        offset = to!size_t(statbuf.st_size + 1);
     immutable initialAlloc = min(upTo, to!size_t(statbuf.st_size
         ? min(statbuf.st_size + 1 - offset, maxInitialAlloc)
         : minInitialAlloc));
@@ -396,21 +416,6 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
         : result[0 .. size];
 }
 
-@safe version (Posix) unittest
-{
-    import std.utf : byChar;
-    scope(exit)
-    {
-        assert(exists(deleteme));
-        remove(deleteme);
-    }
-
-    write(deleteme, "1234"); // deleteme is the name of a temporary file
-    assert(read(deleteme, 2) == "12");
-    assert(read(deleteme.byChar) == "1234");
-    assert((cast(const(ubyte)[])read(deleteme)).length == 4);
-}
-
 version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo, size_t offset) @safe
 {
     import core.memory : GC;
@@ -444,11 +449,14 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
         ulong totalNumRead = 0;
         while (totalNumRead != nNumberOfBytesToRead)
         {
+            import std.stdio : writeln;
+            writeln("bytes to read: ", nNumberOfBytesToRead);
             const uint chunkSize = min(nNumberOfBytesToRead - totalNumRead, 0xffff_0000);
             DWORD numRead = void;
             const result = ReadFile(hFile, lpBuffer + totalNumRead, chunkSize, &numRead, null);
             if (result == 0 || numRead != chunkSize)
                 return false;
+            writeln("bytes read: ", numRead);
             totalNumRead += chunkSize;
         }
         return true;
@@ -477,9 +485,11 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
     {
         if (offset != 0)
         {
-            int low = offset & uint.max;
-            int high = offset >> 32;
-            () @trusted { SetFilePointer(h, offset, &high, FILE_BEGIN); } ();
+            import std.stdio : writeln;
+            writeln("with setfilepointer!");
+            LARGE_INTEGER p;
+            p.QuadPart = offset;
+            () @trusted { SetFilePointerEx(h, p, null, FILE_BEGIN); } ();
         }
 
         cenforce(trustedReadFile(h, &buf[0], size), name, namez);
