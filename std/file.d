@@ -396,7 +396,7 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
         : result[0 .. size];
 }
 
-version (Posix) unittest
+@safe version (Posix) unittest
 {
     import std.utf : byChar;
     scope(exit)
@@ -477,7 +477,8 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
     {
         if (offset != 0)
         {
-            int high;
+            int low = offset & uint.max;
+            int high = offset >> 32;
             () @trusted { SetFilePointer(h, offset, &high, FILE_BEGIN); } ();
         }
 
