@@ -247,7 +247,6 @@ public:
         _timeMeasured.length = 0;
     }
 
-    ///
     @nogc @safe unittest
     {
         StopWatch sw;
