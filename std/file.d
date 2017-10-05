@@ -2989,19 +2989,16 @@ else version(Windows)
             }
         }
 
-        private this(string path, in WIN32_FIND_DATAW *fd) @safe
+        private this(string path, WIN32_FIND_DATAW *fd) @trusted
         {
             import core.stdc.wchar_ : wcslen;
             import std.conv : to;
             import std.datetime.systime : FILETIMEToSysTime;
             import std.path : buildPath;
 
-            static auto trustedWcslen(const wchar* str) @trusted
-            {
-                return wcslen(str);
-            }
+            fd.cFileName[$ - 1] = 0;
 
-            size_t clength = trustedWcslen(&fd.cFileName[0]);
+            size_t clength = wcslen(&fd.cFileName[0]);
             _name = buildPath(path, fd.cFileName[0 .. clength].to!string);
             _size = (cast(ulong) fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
             _timeCreated = FILETIMEToSysTime(&fd.ftCreationTime);
@@ -3093,16 +3090,12 @@ else version(Posix)
             _dTypeSet = false;
         }
 
-        private this(string path, core.sys.posix.dirent.dirent* fd) @safe
+        private this(string path, core.sys.posix.dirent.dirent* fd) @trusted
         {
             import std.path : buildPath;
 
-            static auto trustedStrlen(const char* str) @trusted
-            {
-                return core.stdc.string.strlen(str);
-            }
-
-            immutable len = trustedStrlen(&fd.d_name[0]);
+            fd.d_name[$ - 1] = 0;
+            immutable len = strlen(&fd.d_name[0]);
             _name = buildPath(path, fd.d_name[0 .. len]);
 
             _didLStat = false;
@@ -3212,19 +3205,14 @@ else version(Posix)
             This is to support lazy evaluation, because doing stat's is
             expensive and not always needed.
          +/
-        void _ensureStatDone() @safe
+        void _ensureStatDone() @trusted
         {
             import std.exception : enforce;
 
             if (_didStat)
                 return;
 
-            static auto trustedStat(in char[] path, stat_t* buf) @trusted
-            {
-                return stat(path.tempCString(), buf);
-            }
-
-            enforce(trustedStat(_name, &_statBuf) == 0,
+            enforce(stat(_name.tempCString(), &_statBuf) == 0,
                     "Failed to stat file `" ~ _name ~ "'");
 
             _didStat = true;
@@ -3237,17 +3225,12 @@ else version(Posix)
             Try both stat and lstat for isFile and isDir
             to detect broken symlinks.
          +/
-        void _ensureStatOrLStatDone() @safe
+        void _ensureStatOrLStatDone() @trusted
         {
             if (_didStat)
                 return;
 
-            static auto trustedStat(in char[] path, stat_t* buf) @trusted
-            {
-                return stat(path.tempCString(), buf);
-            }
-
-            if (trustedStat(_name, &_statBuf) != 0)
+            if (stat(_name.tempCString(), &_statBuf) != 0)
             {
                 _ensureLStatDone();
 
@@ -3264,22 +3247,18 @@ else version(Posix)
             This is to support lazy evaluation, because doing stat's is
             expensive and not always needed.
          +/
-        void _ensureLStatDone() @safe
+        void _ensureLStatDone() @trusted
         {
             import std.exception : enforce;
 
             if (_didLStat)
                 return;
 
-            static auto trustedLstat(in char[] path, stat_t* buf) @trusted
-            {
-                return lstat(path.tempCString(), buf);
-            }
-
-            enforce(trustedLstat(_name, &_lstatBuf) == 0,
+            stat_t statbuf = void;
+            enforce(lstat(_name.tempCString(), &statbuf) == 0,
                 "Failed to stat file `" ~ _name ~ "'");
 
-            _lstatMode = _lstatBuf.st_mode;
+            _lstatMode = statbuf.st_mode;
 
             _dTypeSet = true;
             _didLStat = true;
@@ -3775,31 +3754,21 @@ private struct DirIteratorImpl
             return toNext(true, &_findinfo);
         }
 
-        bool toNext(bool fetch, WIN32_FIND_DATAW* findinfo) @safe
+        bool toNext(bool fetch, WIN32_FIND_DATAW* findinfo) @trusted
         {
             import core.stdc.wchar_ : wcscmp;
 
-            static auto trustedFindNextFileW(DirHandle dh, WIN32_FIND_DATA* findinfo) @trusted
-            {
-                return FindNextFileW(dh.h, findinfo);
-            }
-
-            static auto trustedWcscmp(WIN32_FIND_DATA* findinfo, const wchar* str) @trusted
-            {
-                return wcscmp(&findinfo.cFileName[0], str);
-            }
-
             if (fetch)
             {
-                if (trustedFindNextFileW(_stack[$-1], findinfo) == FALSE)
+                if (FindNextFileW(_stack[$-1].h, findinfo) == FALSE)
                 {
                     popDirStack();
                     return false;
                 }
             }
-            while (trustedWcscmp(findinfo, ".") == 0 ||
-                   trustedWcscmp(findinfo, "..") == 0)
-                if (trustedFindNextFileW(_stack[$-1], findinfo) == FALSE)
+            while (wcscmp(&findinfo.cFileName[0], ".") == 0 ||
+                   wcscmp(&findinfo.cFileName[0], "..") == 0)
+                if (FindNextFileW(_stack[$-1].h, findinfo) == FALSE)
                 {
                     popDirStack();
                     return false;
@@ -3808,28 +3777,18 @@ private struct DirIteratorImpl
             return true;
         }
 
-        void popDirStack() @safe
+        void popDirStack() @trusted
         {
             assert(_stack.length != 0);
 
-            static auto trustedFindClose(DirHandle dh) @trusted
-            {
-                return FindClose(dh.h);
-            }
-
-            trustedFindClose(_stack[$-1]);
+            FindClose(_stack[$-1].h);
             _stack.popBack();
         }
 
-        void releaseDirStack() @safe
+        void releaseDirStack() @trusted
         {
-            static auto trustedFindClose(DirHandle dh) @trusted
-            {
-                return FindClose(dh.h);
-            }
-
             foreach (d; _stack)
-                trustedFindClose(d);
+                FindClose(d.h);
         }
 
         bool mayStepIn() @safe
@@ -3858,57 +3817,38 @@ private struct DirIteratorImpl
             return next();
         }
 
-        bool next() @safe
+        bool next() @trusted
         {
             if (_stack.length == 0)
                 return false;
 
-            static auto trustedReaddir(DirHandle dh) @trusted
-            {
-                return readdir(dh.h);
-            }
-
-            static auto trustedStrcmp(char* dirName, string specialDirName) @trusted
-            {
-                return core.stdc.string.strcmp(dirName, specialDirName.tempCString());
-            }
-
-            for (dirent* fdata; (fdata = trustedReaddir(_stack[$-1])) != null; )
+            for (dirent* fdata; (fdata = readdir(_stack[$-1].h)) != null; )
             {
                 // Skip "." and ".."
-                if (trustedStrcmp(&fdata.d_name[0], ".") &&
-                    trustedStrcmp(&fdata.d_name[0], ".."))
+                if (core.stdc.string.strcmp(&fdata.d_name[0], ".") &&
+                    core.stdc.string.strcmp(&fdata.d_name[0], ".."))
                 {
                     _cur = DirEntry(_stack[$-1].dirpath, fdata);
                     return true;
                 }
             }
+
             popDirStack();
             return false;
         }
 
-        void popDirStack() @safe
+        void popDirStack() @trusted
         {
             assert(_stack.length != 0);
 
-            static auto trustedClosedir(DirHandle dh) @trusted
-            {
-                return closedir(dh.h);
-            }
-
-            trustedClosedir(_stack[$-1]);
+            closedir(_stack[$-1].h);
             _stack.popBack();
         }
 
-        void releaseDirStack() @safe
+        void releaseDirStack() @trusted
         {
-            static auto trustedClosedir(DirHandle dh) @trusted
-            {
-                return closedir(dh.h);
-            }
-
             foreach (d; _stack)
-                trustedClosedir(d);
+                closedir(d.h);
         }
 
         bool mayStepIn() @safe
