@@ -7856,7 +7856,7 @@ template getSymbolsByUDA(alias symbol, alias attribute)
     static assert(hasUDA!(getSymbolsByUDA!(HasPrivateMembers, Attr)[0], Attr));
 }
 
-//
+///
 @safe unittest
 {
     enum Attr;
@@ -7866,14 +7866,10 @@ template getSymbolsByUDA(alias symbol, alias attribute)
         alias void function(INT) SomeFunction;
         @Attr int a;
         int b;
-        @Attr private int c;
-        private int d;
     }
 
-    // Here everything is fine, we have access to private member c
-    static assert(getSymbolsByUDA!(A, Attr).length == 2);
+    static assert(getSymbolsByUDA!(A, Attr).length == 1);
     static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[0], Attr));
-    static assert(hasUDA!(getSymbolsByUDA!(A, Attr)[1], Attr));
 }
 
 // #16387: getSymbolsByUDA works with structs but fails with classes
