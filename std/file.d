@@ -3266,7 +3266,6 @@ else version(Posix)
 
         string _name; /// The file or directory represented by this DirEntry.
 
-        stat_t _lstatBuf = void;  /// The result of lstat().
         stat_t _statBuf = void;   /// The result of stat().
         uint  _lstatMode;         /// The stat mode from lstat().
         ubyte _dType;             /// The type of the file.
