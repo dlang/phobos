@@ -865,7 +865,7 @@ final:
     this(ThompsonMatcher matcher, size_t lo, size_t hi, uint nGroup, Stream stream)
     {
         _refCount = 1;
-        subCounters = null;
+        subCounters = matcher.subCounters;
         s = stream;
         auto code = matcher.re.ir[lo .. hi];
         re = matcher.re.withCode(code).withNGroup(nGroup);
@@ -883,7 +883,7 @@ final:
     this(BackMatcher matcher, size_t lo, size_t hi, uint nGroup, Stream stream)
     {
         _refCount = 1;
-        subCounters = null;
+        subCounters = matcher.subCounters;
         s = stream;
         auto code = matcher.re.ir[lo .. hi];
         re = matcher.re.withCode(code).withNGroup(nGroup);

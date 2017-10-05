@@ -440,6 +440,7 @@ interface MatcherFactory(Char)
 abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
 {
     import core.stdc.stdlib : malloc, free;
+    import core.memory : GC;
     enum classSize = __traits(classInstanceSize, EngineType!Char);
 
     Matcher!Char construct(const Regex!Char re, in Char[] input, void[] memory) const;
@@ -449,6 +450,7 @@ abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
         immutable size = EngineType!Char.initialMemory(re) + classSize;
         auto memory = enforce(malloc(size), "malloc failed")[0 .. size];
         scope(failure) free(memory.ptr);
+        GC.addRange(memory.ptr, classSize);
         auto engine = construct(re, input, memory);
         assert(engine.refCount == 1);
         assert(cast(void*) engine == memory.ptr);
@@ -461,6 +463,7 @@ abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
         auto memory = enforce(malloc(size), "malloc failed")[0 .. size];
         scope(failure) free(memory.ptr);
         auto copy = construct(engine.pattern, input, memory);
+        GC.addRange(memory.ptr, classSize);
         engine.dupTo(copy, memory[classSize .. size]);
         assert(copy.refCount == 1);
         return copy;
@@ -475,7 +478,12 @@ abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
     {
         assert(m.refCount != 0);
         auto cnt = --m.refCount;
-        if (cnt == 0) free(cast(void*) m);
+        if (cnt == 0)
+        {
+            void* ptr = cast(void*) m;
+            GC.removeRange(ptr);
+            free(ptr);
+        }
         return cnt;
     }
 }

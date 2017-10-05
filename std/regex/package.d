@@ -1468,7 +1468,7 @@ private:
     @trusted this(Range input, RegEx separator)
     {//@@@BUG@@@ generated opAssign of RegexMatch is not @trusted
         _input = input;
-        auto re = separator.withFlags(separator.flags | RegexOption.global);
+        const re = separator.withFlags(separator.flags | RegexOption.global);
         if (_input.empty)
         {
             //there is nothing to match at all, make _offset > 0
