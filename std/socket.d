@@ -1056,7 +1056,7 @@ private ushort serviceToPort(in char[] service)
     if (service == "")
         return InternetAddress.PORT_ANY;
     else
-    if (isNumeric(service))
+    if (isNumber(service))
         return to!ushort(service);
     else
     {
