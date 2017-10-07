@@ -2808,6 +2808,7 @@ version(StdDdoc)
       +/
     struct DirEntry
     {
+        @safe:
         /++
             Constructs a $(D DirEntry) for the given file (or directory).
 
