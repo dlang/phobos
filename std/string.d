@@ -21,7 +21,7 @@ $(TR $(TDNW Searching)
 )
 $(TR $(TDNW Comparison)
     $(TD
-         $(MYREF isNumeric)
+         $(MYREF isNumber)
     )
 )
 $(TR $(TDNW Mutation)
@@ -5799,6 +5799,24 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
     assertThrown!AssertError(tr("abcdef", "cd", "CD", "X"));
 }
 
+/++
+    $(RED This will be deprecated in 2.078.)
+
+    isNumeric is now an alias for $(LREF isNumber) and will soon be deprecated,
+    the reason being that templatizing isNumeric to work with multiple types
+    rather than just string made it conflict with $(REF isNumeric,std,traits),
+    and they can't be differented by overloading, because one is a function, and
+    the other is an eponymous template. Renaming one of them fixes the conflict.
+    So, this one gets a new name.
+  +/
+alias isNumeric = isNumber;
+
+@safe unittest
+{
+    assert(isNumeric("10"));
+    assert(!isNumeric("foo"));
+}
+
 /**
  * Takes a string $(D s) and determines if it represents a number. This function
  * also takes an optional parameter, $(D bAllowSep), which will accept the
@@ -5819,7 +5837,7 @@ C1[] tr(C1, C2, C3, C4 = immutable char)
  * Returns:
  *     $(D bool)
  */
-bool isNumeric(S)(S s, bool bAllowSep = false)
+bool isNumber(S)(S s, bool bAllowSep = false)
 if (isSomeString!S ||
     (isRandomAccessRange!S &&
     hasSlicing!S &&
@@ -5967,11 +5985,11 @@ if (isSomeString!S ||
  */
 @safe @nogc pure nothrow unittest
 {
-    assert(isNumeric("123"));
-    assert(isNumeric("123UL"));
-    assert(isNumeric("123L"));
-    assert(isNumeric("+123U"));
-    assert(isNumeric("-123L"));
+    assert(isNumber("123"));
+    assert(isNumber("123UL"));
+    assert(isNumber("123L"));
+    assert(isNumber("+123U"));
+    assert(isNumber("-123L"));
 }
 
 /**
@@ -5981,15 +5999,15 @@ if (isSomeString!S ||
  */
 @safe @nogc pure nothrow unittest
 {
-    assert(isNumeric("+123"));
-    assert(isNumeric("-123.01"));
-    assert(isNumeric("123.3e-10f"));
-    assert(isNumeric("123.3e-10fi"));
-    assert(isNumeric("123.3e-10L"));
+    assert(isNumber("+123"));
+    assert(isNumber("-123.01"));
+    assert(isNumber("123.3e-10f"));
+    assert(isNumber("123.3e-10fi"));
+    assert(isNumber("123.3e-10L"));
 
-    assert(isNumeric("nan"));
-    assert(isNumeric("nani"));
-    assert(isNumeric("-inf"));
+    assert(isNumber("nan"));
+    assert(isNumber("nani"));
+    assert(isNumber("-inf"));
 }
 
 /**
@@ -6000,32 +6018,32 @@ if (isSomeString!S ||
  */
 @safe @nogc pure nothrow unittest
 {
-    assert(isNumeric("-123e-1+456.9e-10Li"));
-    assert(isNumeric("+123e+10+456i"));
-    assert(isNumeric("123+456"));
+    assert(isNumber("-123e-1+456.9e-10Li"));
+    assert(isNumber("+123e+10+456i"));
+    assert(isNumber("123+456"));
 }
 
 @safe @nogc pure nothrow unittest
 {
-    assert(!isNumeric("F"));
-    assert(!isNumeric("L"));
-    assert(!isNumeric("U"));
-    assert(!isNumeric("i"));
-    assert(!isNumeric("fi"));
-    assert(!isNumeric("ul"));
-    assert(!isNumeric("li"));
-    assert(!isNumeric("."));
-    assert(!isNumeric("-"));
-    assert(!isNumeric("+"));
-    assert(!isNumeric("e-"));
-    assert(!isNumeric("e+"));
-    assert(!isNumeric(".f"));
-    assert(!isNumeric("e+f"));
-    assert(!isNumeric("++1"));
-    assert(!isNumeric(""));
-    assert(!isNumeric("1E+1E+1"));
-    assert(!isNumeric("1E1"));
-    assert(!isNumeric("\x81"));
+    assert(!isNumber("F"));
+    assert(!isNumber("L"));
+    assert(!isNumber("U"));
+    assert(!isNumber("i"));
+    assert(!isNumber("fi"));
+    assert(!isNumber("ul"));
+    assert(!isNumber("li"));
+    assert(!isNumber("."));
+    assert(!isNumber("-"));
+    assert(!isNumber("+"));
+    assert(!isNumber("e-"));
+    assert(!isNumber("e+"));
+    assert(!isNumber(".f"));
+    assert(!isNumber("e+f"));
+    assert(!isNumber("++1"));
+    assert(!isNumber(""));
+    assert(!isNumber("1E+1E+1"));
+    assert(!isNumber("1E1"));
+    assert(!isNumber("\x81"));
 }
 
 // Test string types
@@ -6035,11 +6053,11 @@ if (isSomeString!S ||
 
     foreach (T; AliasSeq!(string, char[], wstring, wchar[], dstring, dchar[]))
     {
-        assert("123".to!T.isNumeric());
-        assert("123UL".to!T.isNumeric());
-        assert("123fi".to!T.isNumeric());
-        assert("123li".to!T.isNumeric());
-        assert(!"--123L".to!T.isNumeric());
+        assert("123".to!T.isNumber());
+        assert("123UL".to!T.isNumber());
+        assert("123fi".to!T.isNumber());
+        assert("123li".to!T.isNumber());
+        assert(!"--123L".to!T.isNumber());
     }
 }
 
@@ -6049,24 +6067,24 @@ if (isSomeString!S ||
     import std.range : refRange;
     import std.utf : byCodeUnit;
 
-    assert("123".byCodeUnit.isNumeric());
-    assert("123UL".byCodeUnit.isNumeric());
-    assert("123fi".byCodeUnit.isNumeric());
-    assert("123li".byCodeUnit.isNumeric());
-    assert(!"--123L".byCodeUnit.isNumeric());
+    assert("123".byCodeUnit.isNumber());
+    assert("123UL".byCodeUnit.isNumber());
+    assert("123fi".byCodeUnit.isNumber());
+    assert("123li".byCodeUnit.isNumber());
+    assert(!"--123L".byCodeUnit.isNumber());
 
     dstring z = "0";
-    assert(isNumeric(refRange(&z)));
+    assert(isNumber(refRange(&z)));
 
     dstring nani = "nani";
-    assert(isNumeric(refRange(&nani)));
+    assert(isNumber(refRange(&nani)));
 }
 
-/// isNumeric works with CTFE
+/// isNumber works with CTFE
 @safe pure unittest
 {
-    enum a = isNumeric("123.00E-5+1234.45E-12Li");
-    enum b = isNumeric("12345xxxx890");
+    enum a = isNumber("123.00E-5+1234.45E-12Li");
+    enum b = isNumber("12345xxxx890");
 
     static assert( a);
     static assert(!b);
@@ -6079,48 +6097,48 @@ if (isSomeString!S ||
 
     assertCTFEable!(
     {
-    // Test the isNumeric(in string) function
-    assert(isNumeric("1") == true );
-    assert(isNumeric("1.0") == true );
-    assert(isNumeric("1e-1") == true );
-    assert(isNumeric("12345xxxx890") == false );
-    assert(isNumeric("567L") == true );
-    assert(isNumeric("23UL") == true );
-    assert(isNumeric("-123..56f") == false );
-    assert(isNumeric("12.3.5.6") == false );
-    assert(isNumeric(" 12.356") == false );
-    assert(isNumeric("123 5.6") == false );
-    assert(isNumeric("1233E-1+1.0e-1i") == true );
+    // Test the isNumber(in string) function
+    assert(isNumber("1") == true );
+    assert(isNumber("1.0") == true );
+    assert(isNumber("1e-1") == true );
+    assert(isNumber("12345xxxx890") == false );
+    assert(isNumber("567L") == true );
+    assert(isNumber("23UL") == true );
+    assert(isNumber("-123..56f") == false );
+    assert(isNumber("12.3.5.6") == false );
+    assert(isNumber(" 12.356") == false );
+    assert(isNumber("123 5.6") == false );
+    assert(isNumber("1233E-1+1.0e-1i") == true );
 
-    assert(isNumeric("123.00E-5+1234.45E-12Li") == true);
-    assert(isNumeric("123.00e-5+1234.45E-12iL") == false);
-    assert(isNumeric("123.00e-5+1234.45e-12uL") == false);
-    assert(isNumeric("123.00E-5+1234.45e-12lu") == false);
+    assert(isNumber("123.00E-5+1234.45E-12Li") == true);
+    assert(isNumber("123.00e-5+1234.45E-12iL") == false);
+    assert(isNumber("123.00e-5+1234.45e-12uL") == false);
+    assert(isNumber("123.00E-5+1234.45e-12lu") == false);
 
-    assert(isNumeric("123fi") == true);
-    assert(isNumeric("123li") == true);
-    assert(isNumeric("--123L") == false);
-    assert(isNumeric("+123.5UL") == false);
-    assert(isNumeric("123f") == true);
-    assert(isNumeric("123.u") == false);
+    assert(isNumber("123fi") == true);
+    assert(isNumber("123li") == true);
+    assert(isNumber("--123L") == false);
+    assert(isNumber("+123.5UL") == false);
+    assert(isNumber("123f") == true);
+    assert(isNumber("123.u") == false);
 
   // @@@BUG@@ to!string(float) is not CTFEable.
   // Related: formatValue(T) if (is(FloatingPointTypeOf!T))
   if (!__ctfe)
   {
-    assert(isNumeric(to!string(real.nan)) == true);
-    assert(isNumeric(to!string(-real.infinity)) == true);
-    assert(isNumeric(to!string(123e+2+1234.78Li)) == true);
+    assert(isNumber(to!string(real.nan)) == true);
+    assert(isNumber(to!string(-real.infinity)) == true);
+    assert(isNumber(to!string(123e+2+1234.78Li)) == true);
   }
 
     string s = "$250.99-";
-    assert(isNumeric(s[1 .. s.length - 2]) == true);
-    assert(isNumeric(s) == false);
-    assert(isNumeric(s[0 .. s.length - 1]) == false);
+    assert(isNumber(s[1 .. s.length - 2]) == true);
+    assert(isNumber(s) == false);
+    assert(isNumber(s[0 .. s.length - 1]) == false);
     });
 
-    assert(!isNumeric("-"));
-    assert(!isNumeric("+"));
+    assert(!isNumber("-"));
+    assert(!isNumber("+"));
 }
 
 /*****************************
