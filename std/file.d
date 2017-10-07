@@ -2967,10 +2967,11 @@ else version(Windows)
 {
     struct DirEntry
     {
+    @safe:
     public:
         alias name this;
 
-        this(string path) @safe
+        this(string path)
         {
             import std.datetime.systime : FILETIMEToSysTime;
 
@@ -3007,17 +3008,17 @@ else version(Windows)
             _attributes = fd.dwFileAttributes;
         }
 
-        @property string name() @safe const pure nothrow
+        @property string name() const pure nothrow
         {
             return _name;
         }
 
-        @property bool isDir() @safe const pure nothrow
+        @property bool isDir() const pure nothrow
         {
             return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
         }
 
-        @property bool isFile() @safe const pure nothrow
+        @property bool isFile() const pure nothrow
         {
             //Are there no options in Windows other than directory and file?
             //If there are, then this probably isn't the best way to determine
@@ -3025,37 +3026,37 @@ else version(Windows)
             return !isDir;
         }
 
-        @property bool isSymlink() @safe const pure nothrow
+        @property bool isSymlink() const pure nothrow
         {
             return (attributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
         }
 
-        @property ulong size() @safe const pure nothrow
+        @property ulong size() const pure nothrow
         {
             return _size;
         }
 
-        @property SysTime timeCreated() @safe const pure nothrow
+        @property SysTime timeCreated() const pure nothrow
         {
             return cast(SysTime)_timeCreated;
         }
 
-        @property SysTime timeLastAccessed() @safe const pure nothrow
+        @property SysTime timeLastAccessed() const pure nothrow
         {
             return cast(SysTime)_timeLastAccessed;
         }
 
-        @property SysTime timeLastModified() @safe const pure nothrow
+        @property SysTime timeLastModified() const pure nothrow
         {
             return cast(SysTime)_timeLastModified;
         }
 
-        @property uint attributes() @safe const pure nothrow
+        @property uint attributes() const pure nothrow
         {
             return _attributes;
         }
 
-        @property uint linkAttributes() @safe const pure nothrow
+        @property uint linkAttributes() const pure nothrow
         {
             return _attributes;
         }
@@ -3075,10 +3076,11 @@ else version(Posix)
 {
     struct DirEntry
     {
+    @safe:
     public:
         alias name this;
 
-        this(string path) @safe
+        this(string path)
         {
             if (!path.exists)
                 throw new FileException(path, "File does not exist");
@@ -3093,9 +3095,9 @@ else version(Posix)
         private this(string path, core.sys.posix.dirent.dirent* fd) @trusted
         {
             import std.path : buildPath;
+            import std.algorithm.searching : countUntil;
 
-            fd.d_name[$ - 1] = 0;
-            immutable len = strlen(&fd.d_name[0]);
+            immutable len = fd.d_name[].countUntil(0);
             _name = buildPath(path, fd.d_name[0 .. len]);
 
             _didLStat = false;
@@ -3126,74 +3128,74 @@ else version(Posix)
             }
         }
 
-        @property string name() @safe const pure nothrow
+        @property string name() const pure nothrow
         {
             return _name;
         }
 
-        @property bool isDir() @safe
+        @property bool isDir()
         {
             _ensureStatOrLStatDone();
 
             return (_statBuf.st_mode & S_IFMT) == S_IFDIR;
         }
 
-        @property bool isFile() @safe
+        @property bool isFile()
         {
             _ensureStatOrLStatDone();
 
             return (_statBuf.st_mode & S_IFMT) == S_IFREG;
         }
 
-        @property bool isSymlink() @safe
+        @property bool isSymlink()
         {
             _ensureLStatDone();
 
             return (_lstatMode & S_IFMT) == S_IFLNK;
         }
 
-        @property ulong size() @safe
+        @property ulong size()
         {
             _ensureStatDone();
             return _statBuf.st_size;
         }
 
-        @property SysTime timeStatusChanged() @safe
+        @property SysTime timeStatusChanged()
         {
             _ensureStatDone();
 
             return statTimeToStdTime!'c'(_statBuf);
         }
 
-        @property SysTime timeLastAccessed() @safe
+        @property SysTime timeLastAccessed()
         {
             _ensureStatDone();
 
             return statTimeToStdTime!'a'(_statBuf);
         }
 
-        @property SysTime timeLastModified() @safe
+        @property SysTime timeLastModified()
         {
             _ensureStatDone();
 
             return statTimeToStdTime!'m'(_statBuf);
         }
 
-        @property uint attributes() @safe
+        @property uint attributes()
         {
             _ensureStatDone();
 
             return _statBuf.st_mode;
         }
 
-        @property uint linkAttributes() @safe
+        @property uint linkAttributes()
         {
             _ensureLStatDone();
 
             return _lstatMode;
         }
 
-        @property stat_t statBuf() @safe
+        @property stat_t statBuf()
         {
             _ensureStatDone();
 
@@ -3690,6 +3692,7 @@ enum SpanMode
 
 private struct DirIteratorImpl
 {
+  @safe:
     SpanMode _mode;
     // Whether we should follow symlinked directories while iterating.
     // It also indicates whether we should avoid functions which call
@@ -3701,19 +3704,19 @@ private struct DirIteratorImpl
     DirEntry[] _stashed; //used in depth first mode
 
     //stack helpers
-    void pushExtra(DirEntry de) @safe
+    void pushExtra(DirEntry de)
     {
         _stashed ~= de;
     }
 
     //ditto
-    bool hasExtra() @safe
+    bool hasExtra()
     {
         return _stashed.length != 0;
     }
 
     //ditto
-    DirEntry popExtra() @safe
+    DirEntry popExtra()
     {
         DirEntry de;
         de = _stashed[$-1];
@@ -3746,7 +3749,7 @@ private struct DirIteratorImpl
             return toNext(false, &_findinfo);
         }
 
-        bool next() @safe
+        bool next()
         {
             if (_stack.length == 0)
                 return false;
@@ -3779,7 +3782,6 @@ private struct DirIteratorImpl
         void popDirStack() @trusted
         {
             assert(_stack.length != 0);
-
             FindClose(_stack[$-1].h);
             _stack.popBack();
         }
@@ -3790,7 +3792,7 @@ private struct DirIteratorImpl
                 FindClose(d.h);
         }
 
-        bool mayStepIn() @safe
+        bool mayStepIn()
         {
             return _followSymlink ? _cur.isDir : _cur.isDir && !_cur.isSymlink;
         }
@@ -3803,7 +3805,7 @@ private struct DirIteratorImpl
             DIR*   h;
         }
 
-        bool stepIn(string directory) @safe
+        bool stepIn(string directory)
         {
             static auto trustedOpendir(string dir) @trusted
             {
@@ -3839,7 +3841,6 @@ private struct DirIteratorImpl
         void popDirStack() @trusted
         {
             assert(_stack.length != 0);
-
             closedir(_stack[$-1].h);
             _stack.popBack();
         }
@@ -3850,13 +3851,13 @@ private struct DirIteratorImpl
                 closedir(d.h);
         }
 
-        bool mayStepIn() @safe
+        bool mayStepIn()
         {
             return _followSymlink ? _cur.isDir : attrIsDir(_cur.linkAttributes);
         }
     }
 
-    this(R)(R pathname, SpanMode mode, bool followSymlink) @safe
+    this(R)(R pathname, SpanMode mode, bool followSymlink)
         if (isInputRange!R && isSomeChar!(ElementEncodingType!R))
     {
         _mode = mode;
@@ -3885,17 +3886,17 @@ private struct DirIteratorImpl
         }
     }
 
-    @property bool empty() @safe
+    @property bool empty()
     {
-        return (_stashed.length == 0) && (_stack.length == 0);
+        return _stashed.length == 0 && _stack.length == 0;
     }
 
-    @property DirEntry front() @safe
+    @property DirEntry front()
     {
         return _cur;
     }
 
-    void popFront() @safe
+    void popFront()
     {
         switch (_mode)
         {
@@ -3930,7 +3931,7 @@ private struct DirIteratorImpl
         }
     }
 
-    ~this() @safe
+    ~this()
     {
         releaseDirStack();
     }
@@ -3938,6 +3939,7 @@ private struct DirIteratorImpl
 
 struct DirIterator
 {
+@safe:
 private:
     RefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
     this(string pathname, SpanMode mode, bool followSymlink) @trusted
@@ -3945,9 +3947,9 @@ private:
         impl = typeof(impl)(pathname, mode, followSymlink);
     }
 public:
-    @property bool empty() @safe { return impl.empty; }
-    @property DirEntry front() @safe { return impl.front; }
-    void popFront() @safe { impl.popFront(); }
+    @property bool empty() { return impl.empty; }
+    @property DirEntry front() { return impl.front; }
+    void popFront() { impl.popFront(); }
 }
 /++
     Returns an input range of $(D DirEntry) that lazily iterates a given directory,
