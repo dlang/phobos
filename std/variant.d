@@ -2337,6 +2337,11 @@ if (isAlgebraic!VariantType && Handler.length > 0)
                 static if (isSomeFunction!dg)
                 {
                     alias Params = Parameters!dg;
+                    //Make sure the type handled by dg is in AllowedTypes
+                    static if (Params.length > 0)
+                        static assert(VariantType.allowed!(Params[0]),
+                            "Type " ~ Params[0].stringof ~ " does not match any of " ~ AllowedTypes.stringof);
+
                     static if (Params.length == 0)
                     {
                         // Just check exception functions in the first
@@ -2422,6 +2427,20 @@ if (isAlgebraic!VariantType && Handler.length > 0)
     }
 
     assert(false);
+}
+
+unittest
+{
+    Algebraic!(size_t, string) v;
+
+    static assert(__traits(compiles, v.visit!((size_t s)=>0, (string s)=>0)));
+    static assert(!__traits(compiles, v.visit!((bool)=>0, (size_t s)=>0, (string s)=>0)));
+    static assert(!__traits(compiles, v.visit!((size_t s)=>0, (void*)=>0, (string s)=>0)));
+
+    static assert(__traits(compiles, v.tryVisit!((size_t s)=>0)));
+    static assert(!__traits(compiles, v.tryVisit!((bool)=>0, ()=>0)));
+    static assert(!__traits(compiles, v.tryVisit!((void*)=>0, (string s)=>0)));
+    static assert(!__traits(compiles, v.tryVisit!((size_t s)=>0, (bool)=>0)));
 }
 
 @system unittest
