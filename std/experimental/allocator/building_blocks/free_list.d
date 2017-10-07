@@ -114,8 +114,7 @@ struct FreeList(ParentAllocator,
             _max = high;
         }
 
-        ///
-        @safe unittest
+        @system unittest
         {
             import std.experimental.allocator.common : chooseAtRuntime;
             import std.experimental.allocator.mallocator : Mallocator;
@@ -895,20 +894,6 @@ struct SharedFreeList(ParentAllocator,
         @property void max(size_t newMaxSize);
         /// Ditto
         void setBounds(size_t newMin, size_t newMax);
-        ///
-        @safe unittest
-        {
-            import std.experimental.allocator.common : chooseAtRuntime;
-            import std.experimental.allocator.mallocator : Mallocator;
-
-            shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
-            // Set the maxSize first so setting the minSize doesn't throw
-            a.max = 128;
-            a.min = 64;
-            a.setBounds(64, 128); // equivalent
-            assert(a.max == 128);
-            assert(a.min == 64);
-        }
 
         /**
         Properties for getting (and possibly setting) the approximate maximum length of a shared freelist.
@@ -916,21 +901,6 @@ struct SharedFreeList(ParentAllocator,
         @property size_t approxMaxLength() const shared;
         /// ditto
         @property void approxMaxLength(size_t x) shared;
-        ///
-        @safe unittest
-        {
-            import std.experimental.allocator.common : chooseAtRuntime;
-            import std.experimental.allocator.mallocator : Mallocator;
-
-            shared SharedFreeList!(Mallocator, 50, 50, chooseAtRuntime) a;
-            // Set the maxSize first so setting the minSize doesn't throw
-            a.approxMaxLength = 128;
-            assert(a.approxMaxLength  == 128);
-            a.approxMaxLength = 1024;
-            assert(a.approxMaxLength  == 1024);
-            a.approxMaxLength = 1;
-            assert(a.approxMaxLength  == 1);
-        }
     }
 
     /**
@@ -1069,6 +1039,34 @@ struct SharedFreeList(ParentAllocator,
         _root = null;
         resetNodes();
     }
+}
+
+///
+@safe unittest
+{
+    import std.experimental.allocator.common : chooseAtRuntime;
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
+    a.setBounds(64, 128);
+    assert(a.max == 128);
+    assert(a.min == 64);
+}
+
+///
+@safe unittest
+{
+    import std.experimental.allocator.common : chooseAtRuntime;
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    shared SharedFreeList!(Mallocator, 50, 50, chooseAtRuntime) a;
+    // Set the maxSize first so setting the minSize doesn't throw
+    a.approxMaxLength = 128;
+    assert(a.approxMaxLength  == 128);
+    a.approxMaxLength = 1024;
+    assert(a.approxMaxLength  == 1024);
+    a.approxMaxLength = 1;
+    assert(a.approxMaxLength  == 1);
 }
 
 @system unittest

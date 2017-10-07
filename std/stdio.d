@@ -930,7 +930,7 @@ $(D rawRead) always reads in binary mode on Windows.
     {
         static import std.file;
 
-        auto testFile = testFilename();
+        auto testFile = std.file.deleteme();
         std.file.write(testFile, "\r\n\n\r\n");
         scope(exit) std.file.remove(testFile);
 
@@ -985,7 +985,7 @@ Throws: $(D ErrnoException) if the file is not opened or if the call to $(D fwri
     {
         static import std.file;
 
-        auto testFile = testFilename();
+        auto testFile = std.file.deleteme();
         auto f = File(testFile, "w");
         scope(exit) std.file.remove(testFile);
 
@@ -1092,7 +1092,7 @@ Throws: $(D Exception) if the file is not opened.
         import std.conv : text;
         static import std.file;
 
-        auto testFile = testFilename();
+        auto testFile = std.file.deleteme();
         std.file.write(testFile, "abcdefghijklmnopqrstuvwqxyz");
         scope(exit) { std.file.remove(testFile); }
 
@@ -1839,7 +1839,7 @@ $(CONSOLE
     {
         static import std.file;
 
-        auto deleteme = testFilename();
+        auto deleteme = std.file.deleteme();
         std.file.write(deleteme, "hello\nworld\ntrue\nfalse\n");
         scope(exit) std.file.remove(deleteme);
         string s;
@@ -2491,7 +2491,7 @@ $(REF readText, std,file)
          import std.typecons : tuple;
 
          // prepare test file
-         auto testFile = testFilename();
+         auto testFile = std.file.deleteme();
          scope(failure) printf("Failed test at line %d\n", __LINE__);
          std.file.write(testFile, "1 2\n4 1\n5 100");
          scope(exit) std.file.remove(testFile);
