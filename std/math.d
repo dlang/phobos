@@ -5052,22 +5052,18 @@ struct FloatingPointControl
 private:
     version(ARM)
     {
-        enum uint EXCEPTION_MASK = 0x9F00;
         enum uint ROUNDING_MASK = 0xC00000;
     }
     else version(PPC_Any)
     {
-        enum uint EXCEPTION_MASK = 0x00F8;
         enum uint ROUNDING_MASK = 0x0003;
     }
     else version(X86)
     {
-        enum ushort EXCEPTION_MASK = 0x3F;
         enum ushort ROUNDING_MASK = 0xC00;
     }
     else version(X86_64)
     {
-        enum ushort EXCEPTION_MASK = 0x3F;
         enum ushort ROUNDING_MASK = 0xC00;
     }
     else
@@ -5086,8 +5082,8 @@ public:
             auto oldState = getControlState();
             // If exceptions are not supported, we set the bit but read it back as zero
             // https://sourceware.org/ml/libc-ports/2012-06/msg00091.html
-            setControlState(oldState | (divByZeroException & EXCEPTION_MASK));
-            immutable result = (getControlState() & EXCEPTION_MASK) != 0;
+            setControlState(oldState | (divByZeroException & allExceptions));
+            immutable result = (getControlState() & allExceptions) != 0;
             setControlState(oldState);
             return result;
         }
@@ -5101,9 +5097,9 @@ public:
         assert(hasExceptionTraps);
         initialize();
         version(X86_Any)
-            setControlState(getControlState() & ~(exceptions & EXCEPTION_MASK));
+            setControlState(getControlState() & ~(exceptions & allExceptions));
         else
-            setControlState(getControlState() | (exceptions & EXCEPTION_MASK));
+            setControlState(getControlState() | (exceptions & allExceptions));
     }
 
     /// Disable (mask) specific hardware exceptions. Multiple exceptions may be ORed together.
@@ -5112,9 +5108,9 @@ public:
         assert(hasExceptionTraps);
         initialize();
         version(X86_Any)
-            setControlState(getControlState() | (exceptions & EXCEPTION_MASK));
+            setControlState(getControlState() | (exceptions & allExceptions));
         else
-            setControlState(getControlState() & ~(exceptions & EXCEPTION_MASK));
+            setControlState(getControlState() & ~(exceptions & allExceptions));
     }
 
     /// Returns: the exceptions which are currently enabled (unmasked)
@@ -5122,9 +5118,9 @@ public:
     {
         assert(hasExceptionTraps);
         version(X86_Any)
-            return (getControlState() & EXCEPTION_MASK) ^ EXCEPTION_MASK;
+            return (getControlState() & allExceptions) ^ allExceptions;
         else
-            return (getControlState() & EXCEPTION_MASK);
+            return (getControlState() & allExceptions);
     }
 
     ///  Clear all pending exceptions, then restore the original exception state and rounding mode.
@@ -5222,8 +5218,8 @@ private:
 
                 /* In the FPU control register, masks are bits 0 through 5.
                 In MXCSR they're 7 through 12. */
-                enum EXCEPTION_MASK_SSE = EXCEPTION_MASK << 7;
-                immutable newExceptionMasks = (newState & EXCEPTION_MASK) << 7;
+                enum EXCEPTION_MASK_SSE = allExceptions << 7;
+                immutable newExceptionMasks = (newState & allExceptions) << 7;
                 mxcsr &= ~EXCEPTION_MASK_SSE; // delete old masks
                 mxcsr |= newExceptionMasks; // write new exception masks
 
