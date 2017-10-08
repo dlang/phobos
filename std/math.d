@@ -4981,9 +4981,11 @@ struct FloatingPointControl
         return cast(RoundingMode)(getControlState() & ROUNDING_MASK);
     }
 
+    alias ExceptionMask = uint; ///
+
     version(StdDdoc)
     {
-        enum : uint
+        enum : ExceptionMask
         {
             /** IEEE hardware exceptions.
              *  By default, all exceptions are masked (disabled).
@@ -5003,7 +5005,7 @@ struct FloatingPointControl
     }
     else version(ARM)
     {
-        enum : uint
+        enum : ExceptionMask
         {
             subnormalException    = 0x8000,
             inexactException      = 0x1000,
@@ -5019,7 +5021,7 @@ struct FloatingPointControl
     }
     else version(PPC_Any)
     {
-        enum : uint
+        enum : ExceptionMask
         {
             inexactException      = 0x0008,
             divByZeroException    = 0x0010,
@@ -5034,7 +5036,7 @@ struct FloatingPointControl
     }
     else
     {
-        enum : uint
+        enum : ExceptionMask
         {
             inexactException      = 0x20,
             underflowException    = 0x10,
@@ -5092,7 +5094,7 @@ public:
     }
 
     /// Enable (unmask) specific hardware exceptions. Multiple exceptions may be ORed together.
-    void enableExceptions(uint exceptions) @nogc
+    void enableExceptions(ExceptionMask exceptions) @nogc
     {
         assert(hasExceptionTraps);
         initialize();
@@ -5103,7 +5105,7 @@ public:
     }
 
     /// Disable (mask) specific hardware exceptions. Multiple exceptions may be ORed together.
-    void disableExceptions(uint exceptions) @nogc
+    void disableExceptions(ExceptionMask exceptions) @nogc
     {
         assert(hasExceptionTraps);
         initialize();
@@ -5114,7 +5116,7 @@ public:
     }
 
     /// Returns: the exceptions which are currently enabled (unmasked)
-    @property static uint enabledExceptions() @nogc
+    @property static ExceptionMask enabledExceptions() @nogc
     {
         assert(hasExceptionTraps);
         version(X86_Any)
