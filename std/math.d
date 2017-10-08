@@ -5213,17 +5213,13 @@ private:
 
                 /* In the FPU control register, rounding mode is in bits 10 and
                 11. In MXCSR it's in bits 13 and 14. */
-                enum ROUNDING_MASK_SSE = ROUNDING_MASK << 3;
-                immutable newRoundingModeSSE = (newState & ROUNDING_MASK) << 3;
-                mxcsr &= ~ROUNDING_MASK_SSE; // delete old rounding mode
-                mxcsr |= newRoundingModeSSE; // write new rounding mode
+                mxcsr &= ~(ROUNDING_MASK << 3);             // delete old rounding mode
+                mxcsr |= (newState & ROUNDING_MASK) << 3;   // write new rounding mode
 
                 /* In the FPU control register, masks are bits 0 through 5.
                 In MXCSR they're 7 through 12. */
-                enum EXCEPTION_MASK_SSE = allExceptions << 7;
-                immutable newExceptionMasks = (newState & allExceptions) << 7;
-                mxcsr &= ~EXCEPTION_MASK_SSE; // delete old masks
-                mxcsr |= newExceptionMasks; // write new exception masks
+                mxcsr &= ~(allExceptions << 7);            // delete old masks
+                mxcsr |= (newState & allExceptions) << 7;  // write new exception masks
 
                 asm nothrow @nogc { ldmxcsr mxcsr; }
             }
