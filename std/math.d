@@ -135,6 +135,7 @@ version (Win64)
 
 static import core.math;
 static import core.stdc.math;
+static import core.stdc.fenv;
 import std.traits; // CommonType, isFloatingPoint, isIntegral, isSigned, isUnsigned, Largest, Unqual
 
 version(LDC)
@@ -4655,9 +4656,13 @@ struct IeeeFlags
 private:
     // The x87 FPU status register is 16 bits.
     // The Pentium SSE2 status register is 32 bits.
+    // The ARM and PowerPC FPSCR is a 32-bit register.
+    // The SPARC FSR is a 32bit register (64 bits for SPARC 7 & 8, but high bits are uninteresting).
     uint flags;
-    version (X86_Any)
+
+    version (CRuntime_Microsoft)
     {
+        // Microsoft uses hardware-incompatible custom constants in fenv.h (core.stdc.fenv).
         // Applies to both x87 status word (16 bits) and SSE2 status word(32 bits).
         enum : int
         {
@@ -4672,45 +4677,19 @@ private:
         // Don't bother about subnormals, they are not supported on most CPUs.
         //  SUBNORMAL_MASK = 0x02;
     }
-    else version (PPC_Any)
-    {
-        // PowerPC FPSCR is a 32-bit register.
-        enum : int
-        {
-            INEXACT_MASK   = 0x02000000,
-            DIVBYZERO_MASK = 0x04000000,
-            UNDERFLOW_MASK = 0x08000000,
-            OVERFLOW_MASK  = 0x10000000,
-            INVALID_MASK   = 0x20000000 // Summary as PowerPC has five types of invalid exceptions.
-        }
-    }
-    else version (ARM)
-    {
-        // ARM FPSCR is a 32bit register
-        enum : int
-        {
-            INEXACT_MASK   = 0x10,
-            UNDERFLOW_MASK = 0x08,
-            OVERFLOW_MASK  = 0x04,
-            DIVBYZERO_MASK = 0x02,
-            INVALID_MASK   = 0x01
-        }
-    }
-    else version(SPARC)
-    {
-        // SPARC FSR is a 32bit register
-             //(64 bits for Sparc 7 & 8, but high 32 bits are uninteresting).
-        enum : int
-        {
-            INEXACT_MASK   = 0x020,
-            UNDERFLOW_MASK = 0x080,
-            OVERFLOW_MASK  = 0x100,
-            DIVBYZERO_MASK = 0x040,
-            INVALID_MASK   = 0x200
-        }
-    }
     else
-        static assert(0, "Not implemented");
+    {
+        enum : int
+        {
+            INEXACT_MASK    = core.stdc.fenv.FE_INEXACT,
+            UNDERFLOW_MASK  = core.stdc.fenv.FE_UNDERFLOW,
+            OVERFLOW_MASK   = core.stdc.fenv.FE_OVERFLOW,
+            DIVBYZERO_MASK  = core.stdc.fenv.FE_DIVBYZERO,
+            INVALID_MASK    = core.stdc.fenv.FE_INVALID,
+            EXCEPTIONS_MASK = core.stdc.fenv.FE_ALL_EXCEPT,
+        }
+    }
+
 private:
     static uint getIeeeFlags()
     {
