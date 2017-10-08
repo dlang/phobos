@@ -879,7 +879,6 @@ public:
         return new ValueNameSequence(this);
     }
 
-public:
     /**
         Returns the named sub-key of this key.
 
@@ -1410,7 +1409,6 @@ public:
         return getKeyName(index);
     }
 
-public:
     ///
     int opApply(scope int delegate(ref string name) dg)
     {
@@ -1507,7 +1505,6 @@ public:
         return getKey(index);
     }
 
-public:
     ///
     int opApply(scope int delegate(ref Key key) dg)
     {
@@ -1616,7 +1613,6 @@ public:
         return getValueName(index);
     }
 
-public:
     ///
     int opApply(scope int delegate(ref string name) dg)
     {
@@ -1710,7 +1706,6 @@ public:
         return getValue(index);
     }
 
-public:
     ///
     int opApply(scope int delegate(ref Value value) dg)
     {

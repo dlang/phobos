@@ -907,7 +907,7 @@ if (Ranges.length > 0 &&
         private:
             alias R = staticMap!(Unqual, Ranges);
             alias RvalueElementType = CommonType!(staticMap!(.ElementType, R));
-            private template sameET(A)
+            template sameET(A)
             {
                 enum sameET = is(.ElementType!A == RvalueElementType);
             }

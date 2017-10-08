@@ -1338,10 +1338,9 @@ private:
             yield();
         }
 
-        private bool notified;
+        bool notified;
     }
 
-private:
     void dispatch()
     {
         import std.algorithm.mutation : remove;
@@ -1379,7 +1378,6 @@ private:
         m_fibers ~= new InfoFiber(&wrap);
     }
 
-private:
     Fiber[] m_fibers;
     size_t m_pos;
 }
