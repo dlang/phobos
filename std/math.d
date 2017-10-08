@@ -5135,10 +5135,12 @@ private:
     {
         alias ControlState = uint;
     }
-    else
+    else version (X86_Any)
     {
         alias ControlState = ushort;
     }
+    else
+        static assert(false, "Not implemented for this architecture");
 
     void initialize() @nogc
     {
