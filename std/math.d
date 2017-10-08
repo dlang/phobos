@@ -6852,8 +6852,6 @@ if (isIntegral!F && isIntegral!G && isIntegral!H &&
     {
         static if (T.sizeof == 8)
         {
-            import core.checkedint : addu;
-
             static T addmod(T a, T b, T c)
             {
                 b = c - b;
