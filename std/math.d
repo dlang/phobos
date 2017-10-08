@@ -5041,7 +5041,7 @@ struct FloatingPointControl
                                  | inexactException,
         }
     }
-    else
+    else version (X86_Any)
     {
         enum : ExceptionMask
         {
@@ -5057,6 +5057,8 @@ struct FloatingPointControl
                                  | inexactException | subnormalException,
         }
     }
+    else
+        static assert(false, "Not implemented for this architecture");
 
 public:
     /// Returns: true if the current FPU supports exception trapping
