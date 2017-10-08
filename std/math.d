@@ -4946,34 +4946,25 @@ struct FloatingPointControl
             roundToZero /// ditto
         }
     }
-    else version(ARM)
+    else version (CRuntime_Microsoft)
     {
-        enum : RoundingMode
-        {
-            roundToNearest = 0x000000,
-            roundDown      = 0x800000,
-            roundUp        = 0x400000,
-            roundToZero    = 0xC00000
-        }
-    }
-    else version(PPC_Any)
-    {
-        enum : RoundingMode
-        {
-            roundToNearest = 0x00000000,
-            roundDown      = 0x00000003,
-            roundUp        = 0x00000002,
-            roundToZero    = 0x00000001
-        }
-    }
-    else
-    {
+        // Microsoft uses hardware-incompatible custom constants in fenv.h (core.stdc.fenv).
         enum : RoundingMode
         {
             roundToNearest = 0x0000,
             roundDown      = 0x0400,
             roundUp        = 0x0800,
             roundToZero    = 0x0C00
+        }
+    }
+    else
+    {
+        enum : RoundingMode
+        {
+            roundToNearest = core.stdc.fenv.FE_TONEAREST,
+            roundDown      = core.stdc.fenv.FE_DOWNWARD,
+            roundUp        = core.stdc.fenv.FE_UPWARD,
+            roundToZero    = core.stdc.fenv.FE_TOWARDZERO,
         }
     }
 
