@@ -6837,10 +6837,9 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
  * All values have to be unsigned types, otherwise it will raise a compilation error.
  */
 Unqual!(Largest!(F, H)) powmod(F, G, H)(F x, G n, H m)
-if (isIntegral!F && isIntegral!G && isIntegral!H &&
-    isUnsigned!F && isUnsigned!G && isUnsigned!H)
+if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
 {
-    import std.traits : AliasSeq;
+    import std.meta : AliasSeq;
 
     alias T = Unqual!(Largest!(F, H));
     static if (T.sizeof <= 4)
