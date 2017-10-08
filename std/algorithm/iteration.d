@@ -3663,9 +3663,8 @@ empty elements.
 The predicate is passed to $(REF binaryFun, std,functional), and can either accept
 a string, or any callable that can be executed via $(D pred(element, s)).
 
-If the empty range is given, the result is a range with one empty
-element. If a range with one separator is given, the result is a range
-with two empty elements.
+If the empty range is given, the result is an empty range. If a range with
+one separator is given, the result is a range with two empty elements.
 
 If splitting a string on whitespace and token compression is desired,
 consider using $(D splitter) without specifying a separator (see fourth overload
@@ -3852,6 +3851,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
+    import std.range : empty;
 
     assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
@@ -3863,6 +3863,8 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     assert(equal(splitter(a, 0), [ [], [1] ]));
     w = [ [0], [1], [2] ];
     assert(equal(splitter!"a.front == b"(w, 1), [ [[0]], [[2]] ]));
+    assert(splitter("", '.').empty);
+    assert(equal(splitter(".", '.'), [ "", "" ]));
 }
 
 @safe unittest
