@@ -713,10 +713,6 @@ import std.range.primitives; // back, ElementEncodingType, ElementType, empty,
     // save
 import std.traits; // isConvertibleToString, isIntegral, isSomeChar,
     // isSomeString, Unqual
-import std.exception : enforce, collectException;
-import core.memory : pureMalloc, pureRealloc, pureFree;
-import core.exception : onOutOfMemoryError;
-static import std.ascii;
 // debug = std_uni;
 
 debug(std_uni) import std.stdio; // writefln, writeln
@@ -6155,6 +6151,7 @@ package struct Stack(T)
 //returns it's value and skips these maxDigit chars on success, throws on failure
 package dchar parseUniHex(Range)(ref Range str, size_t maxDigit)
 {
+    import std.exception : enforce;
     //std.conv.parse is both @system and bogus
     uint val;
     for (int k = 0; k < maxDigit; k++)
@@ -6179,6 +6176,7 @@ package dchar parseUniHex(Range)(ref Range str, size_t maxDigit)
 @system unittest //BUG canFind is system
 {
     import std.algorithm.searching : canFind;
+    import std.exception : collectException;
     string[] non_hex = [ "000j", "000z", "FffG", "0Z"];
     string[] hex = [ "01", "ff", "00af", "10FFFF" ];
     int[] value = [ 1, 0xFF, 0xAF, 0x10FFFF ];
@@ -6219,6 +6217,7 @@ auto caseEnclose(CodepointSet set)
 
 @safe struct UnicodeSetParser(Range)
 {
+    import std.exception : enforce;
     import std.typecons : tuple, Tuple;
     Range range;
     bool casefold_;
@@ -6674,6 +6673,7 @@ auto caseEnclose(CodepointSet set)
 */
 @safe public struct unicode
 {
+    import std.exception : enforce;
     /**
         Performs the lookup of set of $(CODEPOINTS)
         with compile-time correctness checking.
@@ -6830,6 +6830,7 @@ auto caseEnclose(CodepointSet set)
     static package CodepointSet parsePropertySpec(Range)(ref Range p,
         bool negated, bool casefold)
     {
+        static import std.ascii;
         with(p)
         {
             enum MAX_PROPERTY = 128;
@@ -7372,6 +7373,7 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 +/
 @trusted struct Grapheme
 {
+    import std.exception : enforce;
     import std.traits : isDynamicArray;
 
 public:
@@ -7456,6 +7458,8 @@ public:
     {
         static if (op == "~")
         {
+            import core.exception : onOutOfMemoryError;
+            import core.memory : pureRealloc;
             if (!isBig)
             {
                 if (slen_ == small_cap)
@@ -7534,6 +7538,8 @@ public:
 
     this(this) pure @nogc nothrow
     {
+        import core.exception : onOutOfMemoryError;
+        import core.memory : pureMalloc;
         if (isBig)
         {// dup it
             import core.checkedint : addu, mulu;
@@ -7550,6 +7556,7 @@ public:
 
     ~this() pure @nogc nothrow
     {
+        import core.memory : pureFree;
         if (isBig)
         {
             pureFree(ptr_);
@@ -7583,6 +7590,8 @@ private:
 
     void convertToBig() pure @nogc nothrow
     {
+        import core.exception : onOutOfMemoryError;
+        import core.memory : pureMalloc;
         static assert(grow.max / 3 - 1 >= grow);
         enum nbytes = 3 * (grow + 1);
         size_t k = smallLength;
