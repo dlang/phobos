@@ -62,6 +62,7 @@ $(TR $(TD Other) $(TD
           $(LREF FileException)
           $(LREF PreserveAttributes)
           $(LREF SpanMode)
+          $(LREF getAvailableDiskSpace)
 ))
 )
 
@@ -5231,4 +5232,75 @@ string tempDir() @trusted
 
     myFile.write("hello");
     assert(myFile.readText == "hello");
+}
+
+/**
+Returns the available disk space based on a given path.
+On Windows, `path` must be a directory; on Posix systems, it can be a file or directory.
+
+Params:
+    path = on Windows, it must be a directory; on Posix it can be a file or directory
+Returns:
+    Available space in bytes
+
+Throws:
+    $(LREF FileException) in case of failure
+*/
+ulong getAvailableDiskSpace(string path) @safe
+{
+    version (Windows)
+    {
+        import core.sys.windows.winbase : GetDiskFreeSpaceExW;
+        import core.sys.windows.winnt : ULARGE_INTEGER;
+        import std.internal.cstring : tempCStringW;
+
+        ULARGE_INTEGER freeBytesAvailable;
+        auto err = () @trusted {
+            return GetDiskFreeSpaceExW(path.tempCStringW(), &freeBytesAvailable, null, null);
+        } ();
+        cenforce(err != 0, "Cannot get available disk space");
+
+        return freeBytesAvailable.QuadPart;
+    }
+    else version (Posix)
+    {
+        import std.string : toStringz;
+
+        version (FreeBSD)
+        {
+            import core.sys.posix.sys.statvfs : statfs, statfs_t;
+
+            statfs_t stats;
+            auto err = () @trusted {
+                return statfs(path.toStringz(), &stats);
+            } ();
+            cenforce(err == 0, "Cannot get available disk space");
+
+            return stats.f_bavail * stats.f_bsize;
+        }
+        else
+        {
+            import core.sys.posix.sys.statvfs : statvfs, statvfs_t;
+
+            statvfs_t stats;
+            auto err = () @trusted {
+                return statvfs(path.toStringz(), &stats);
+            } ();
+            cenforce(err == 0, "Cannot get available disk space");
+
+            return stats.f_bavail * stats.f_frsize;
+        }
+    }
+    else static assert(0, "Unsupported platform");
+}
+
+///
+@safe unittest
+{
+    import std.exception : assertThrown;
+
+    auto space = getAvailableDiskSpace(".");
+    assert(space > 0);
+
+    assertThrown!FileException(getAvailableDiskSpace("ThisFileDoesNotExist123123"));
 }
