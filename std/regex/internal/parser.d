@@ -88,7 +88,7 @@ if (isSomeString!S)
     {
         for (uint pc = start; pc < end; )
         {
-            immutable len = code[pc].length;
+            immutable len = cast(uint) code[pc].length;
             if (code[pc].code == IR.GotoEndOr)
                 break; //pick next alternation branch
             if (code[pc].isAtom)
@@ -110,14 +110,14 @@ if (isSomeString!S)
                     revPc -= blockLen;
                     continue;
                 }
-                immutable second = code[pc].indexOfPair(pc);
-                immutable secLen = code[second].length;
+                immutable uint second = code[pc].indexOfPair(pc);
+                immutable uint secLen = cast(uint) code[second].length;
                 rev[revPc - secLen .. revPc] = code[second .. second + secLen];
                 revPc -= secLen;
                 if (code[pc].code == IR.OrStart)
                 {
                     //we pass len bytes forward, but secLen in reverse
-                    immutable revStart = revPc - (second + len - secLen - pc);
+                    immutable uint revStart = revPc - (second + len - secLen - pc);
                     uint r = revStart;
                     uint i = pc + IRL!(IR.OrStart);
                     while (code[i].code == IR.Option)
@@ -430,8 +430,8 @@ struct CodeGen
         }
         else
         {//IR.lookahead, etc. fixups that have length > 1, thus check ir[x].length
-            len = cast(uint) ir.length - fix - (ir[fix].length - 1);
-            orStart = fix + ir[fix].length;
+            len = cast(uint) ir.length - fix - (cast(uint) ir[fix].length - 1);
+            orStart = fix + cast(uint) ir[fix].length;
         }
         insertInPlace(ir, orStart, Bytecode(IR.OrStart, 0), Bytecode(IR.Option, len));
         assert(ir[orStart].code == IR.OrStart);
@@ -1099,10 +1099,10 @@ void fixupBytecode()(Bytecode[] ir)
         {
             // Alternatives need more care
             auto j = fixups.pop(); // last Option
-            ir[j].data = i -  j - ir[j].length;
+            ir[j].data = i -  j - cast(uint) ir[j].length;
             j = fixups.pop(); // OrStart
-            ir[j].data = i - j - ir[j].length;
-            ir[i].data = ir[j].data;
+            ir[j].data = i - j - cast(uint) ir[j].length;
+            ir[i].data = cast(uint) ir[j].data;
 
             // fixup all GotoEndOrs
             j = j + IRL!(OrStart);
@@ -1124,8 +1124,8 @@ void fixupBytecode()(Bytecode[] ir)
         else if (ir[i].isEnd)
         {
             auto j = fixups.pop();
-            ir[i].data = i - j - ir[j].length;
-            ir[j].data = ir[i].data;
+            ir[i].data = i - j - cast(uint) ir[j].length;
+            ir[j].data = cast(uint) ir[i].data;
         }
     }
     assert(fixups.empty);
