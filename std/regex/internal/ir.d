@@ -523,7 +523,7 @@ template defaultFactory(Char)
         if (re.backrefed.canFind!"a != 0")
         {
             if (backtrackingFactory is null)
-                backtrackingFactory = new RuntimeFactory!(BacktrackingMatcher!false, Char);
+                backtrackingFactory = new RuntimeFactory!(BacktrackingMatcher, Char);
             return backtrackingFactory;
         }
         else

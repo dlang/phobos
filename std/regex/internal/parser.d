@@ -32,7 +32,7 @@ auto makeRegex(S, CG)(Parser!(S, CG) p)
         // check if we have backreferences, if so - use backtracking
         if (__ctfe) factory = null; // allows us to use the awful enum re = regex(...);
         else if (re.backrefed.canFind!"a != 0")
-            factory =  new RuntimeFactory!(BacktrackingMatcher!false, Char);
+            factory =  new RuntimeFactory!(BacktrackingMatcher, Char);
         else
             factory = new RuntimeFactory!(ThompsonMatcher, Char);
         debug(std_regex_parser)

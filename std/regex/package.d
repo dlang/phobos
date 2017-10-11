@@ -429,13 +429,13 @@ template ctRegexImpl(alias pattern, string flags=[])
     static immutable r = cast(immutable) regex(pattern, flags);
     alias Char = BasicElementOf!(typeof(pattern));
     enum source = ctGenRegExCode(r);
-    alias CtMatcher = BacktrackingMatcher!(true);
-    @trusted bool func(ref CtMatcher!Char matcher)
+    @trusted bool func(BacktrackingMatcher!Char matcher)
     {
         debug(std_regex_ctr) pragma(msg, source);
         mixin(source);
     }
-    static immutable staticRe = cast(immutable) r.withFactory(new CtfeFactory!(CtMatcher, Char, func));
+    static immutable staticRe =
+        cast(immutable) r.withFactory(new CtfeFactory!(BacktrackingMatcher, Char, func));
     struct Wrapper
     {
         // allow code that expects mutable Regex to still work
