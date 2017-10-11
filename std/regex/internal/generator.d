@@ -148,7 +148,7 @@ module std.regex.internal.generator;
                     if (app.data.length < limit && rand(3) > 0)
                         pc = pc - len;
                     else
-                        pc = pc + re.ir[pc].length;
+                        pc = pc + cast(uint) re.ir[pc].length;
                     break;
                 case IR.GroupStart, IR.GroupEnd:
                     pc += IRL!(IR.GroupStart);

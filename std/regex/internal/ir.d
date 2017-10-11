@@ -301,7 +301,7 @@ struct Bytecode
     }
 
     //full length of instruction
-    @property uint length() const
+    @property size_t length() const
     {
         return lengthOfIR(code);
     }
@@ -323,7 +323,7 @@ struct Bytecode
     uint indexOfPair(uint pc) const
     {
         assert(isStart || isEnd);
-        return isStart ? pc + data + length  : pc - data - lengthOfPairedIR(code);
+        return isStart ? pc + data + cast(uint) length  : pc - data - lengthOfPairedIR(code);
     }
 }
 
