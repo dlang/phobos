@@ -447,6 +447,20 @@ private template sharedToString(alias field)
     alias sharedToString = field;
 }
 
+private enum bool distinctFieldNames(names...) = __traits(compiles,
+{
+    static foreach (name; names)
+        static if (is(typeof(name) : string))
+            mixin("enum int" ~ name ~ " = 0;");
+});
+
+@safe unittest
+{
+    static assert(!distinctFieldNames!(string, "abc", string, "abc"));
+    static assert(distinctFieldNames!(string, "abc", int, "abd"));
+    static assert(!distinctFieldNames!(int, "abc", string, "abd", int, "abc"));
+}
+
 /**
 _Tuple of values, for example $(D Tuple!(int, string)) is a record that
 stores an $(D int) and a $(D string). $(D Tuple) can be used to bundle
@@ -466,6 +480,7 @@ Params:
     Specs = A list of types (and optionally, member names) that the `Tuple` contains.
 */
 template Tuple(Specs...)
+if (distinctFieldNames!(Specs))
 {
     import std.meta : staticMap;
 
@@ -1300,6 +1315,13 @@ template Tuple(Specs...)
     Tuple!(int, "x", int, "y") point1;
     Tuple!(int, int) point2;
     assert(!is(typeof(point1) == typeof(point2)));
+}
+
+@safe unittest
+{
+    // Bugzilla 4582
+    static assert(!__traits(compiles, Tuple!(string, "id", int, "id")));
+    static assert(!__traits(compiles, Tuple!(string, "str", int, "i", string, "str", float)));
 }
 
 /**
