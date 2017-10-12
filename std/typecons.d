@@ -447,16 +447,18 @@ private template sharedToString(alias field)
     alias sharedToString = field;
 }
 
-private bool distinctFieldNames(T...)()
+private enum bool distinctFieldNames(names...) = __traits(compiles,
 {
-    enum int tlen = T.length;
-    static foreach (i1; 0 .. tlen)
-        static if (is(typeof(T[i1]) : string))
-            static foreach (i2; 0 .. tlen)
-                static if (i1 != i2 && is(typeof(T[i2]) : string))
-                    if (T[i1] == T[i2])
-                        return false;
-    return true;
+    static foreach (name; names)
+        static if (is(typeof(name) : string))
+            mixin("enum int" ~ name ~ " = 0;");
+});
+
+@safe unittest
+{
+    static assert(!distinctFieldNames!(string, "abc", string, "abc"));
+    static assert(distinctFieldNames!(string, "abc", int, "abd"));
+    static assert(!distinctFieldNames!(int, "abc", string, "abd", int, "abc"));
 }
 
 /**
@@ -478,7 +480,7 @@ Params:
     Specs = A list of types (and optionally, member names) that the `Tuple` contains.
 */
 template Tuple(Specs...)
-if (distinctFieldNames!(Specs)())
+if (distinctFieldNames!(Specs))
 {
     import std.meta : staticMap;
 
