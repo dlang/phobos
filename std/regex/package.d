@@ -432,6 +432,7 @@ template ctRegexImpl(alias pattern, string flags=[])
     @trusted bool func(BacktrackingMatcher!Char matcher)
     {
         debug(std_regex_ctr) pragma(msg, source);
+        cast(void) matcher;
         mixin(source);
     }
     static immutable staticRe =
