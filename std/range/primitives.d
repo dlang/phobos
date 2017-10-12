@@ -2009,7 +2009,7 @@ fact that nonmember functions can be called with the first argument
 using the dot notation, $(D a.empty) is equivalent to $(D empty(a)).
  */
 @property bool empty(T)(auto ref scope const(T) a)
-if (hasLength!T || isNarrowString!T)
+if (is(typeof(a.length) : size_t) || isNarrowString!T)
 {
     return !a.length;
 }
