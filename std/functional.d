@@ -1581,9 +1581,9 @@ template apply(alias callable)
 {
     import std.typecons : isTuple;
     auto apply(Tup)(Tup t)
-    if (isTuple!Tup && Parameters!callable.length == Tup.length)
+    if (isTuple!Tup && __traits(compiles, callable(t.expand)))
     {
-        return callable(t.tupleof);
+        return callable(t.expand);
     }
 }
 
@@ -1606,4 +1606,27 @@ template apply(alias callable)
 
     int foo2(dchar a, int b, int c) { return a + b + c; }
     assert(zip(a1, a2, a3).map!(apply!foo2).equal([207, 318, 429, 540]));
+}
+
+@safe unittest
+{
+    // works with overload sets
+    import std.typecons : tuple;
+    class A
+    {
+        int a;
+        this(int a) { this.a = a; }
+
+        static int foo(A x, int y) { return x.a + y; }
+        static int foo(A x, A y) { return x.a + y.a; }
+        static int foo(int x, int y, int z) { return x + y + z; }
+    }
+
+    auto tup = tuple(new A(2), 7);
+    auto tup2 = tuple(7, 8, 9);
+
+    static assert(__traits(compiles, tup.apply!(A.foo)));
+    assert(tup.apply!(A.foo) == 9);
+    static assert(__traits(compiles, tup2.apply!(A.foo)));
+    assert(tup2.apply!(A.foo) == 24);
 }
