@@ -15,6 +15,9 @@ $(TR $(TH Function Name) $(TH Description)
         $(TD Joins a couple of functions into one that executes the original
         functions independently and returns a tuple with all the results.
     ))
+    $(TR $(TD $(LREF apply))
+        $(TD Applies the items of a tuple as arguments to a function.
+    ))
     $(TR $(TD $(LREF compose), $(LREF pipe))
         $(TD Join a couple of functions into one that executes the original
         functions one after the other, using one function's result for the next
@@ -1561,4 +1564,69 @@ template forward(args...)
     static assert(!__traits(compiles, { auto x1 = bar(3); })); // case of NG
     int value = 3;
     auto x2 = bar(value); // case of OK
+}
+
+/**
+$(D auto apply(Tup)(Tup t)
+    if (isTuple!Tup && Parameters!callable.length == Tup.length))
+
+Applies the items of tuple `t` as arguments to the function `callable`.
+
+Returns:
+    The return value of the function `callable` for the arguments
+    represented by the items of `t`.
+
+*/
+template apply(alias callable)
+{
+    import std.typecons : isTuple;
+    auto apply(Tup)(Tup t)
+    if (isTuple!Tup && __traits(compiles, callable(t.expand)))
+    {
+        return callable(t.expand);
+    }
+}
+
+///
+@safe unittest
+{
+    import std.range : zip;
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    import std.typecons : tuple;
+
+    auto tup = tuple('a', 10);
+    auto a1 = "abcd"d;
+    auto a2 = [10, 20, 30, 40];
+    auto a3 = [100, 200, 300, 400];
+
+    int foo(dchar a, int b) { return a + b; }
+    assert(tup.apply!foo() == 107);
+    assert(zip(a1, a2).map!(apply!foo).equal([107, 118, 129, 140]));
+
+    int foo2(dchar a, int b, int c) { return a + b + c; }
+    assert(zip(a1, a2, a3).map!(apply!foo2).equal([207, 318, 429, 540]));
+}
+
+@safe unittest
+{
+    // works with overload sets
+    import std.typecons : tuple;
+    class A
+    {
+        int a;
+        this(int a) { this.a = a; }
+
+        static int foo(A x, int y) { return x.a + y; }
+        static int foo(A x, A y) { return x.a + y.a; }
+        static int foo(int x, int y, int z) { return x + y + z; }
+    }
+
+    auto tup = tuple(new A(2), 7);
+    auto tup2 = tuple(7, 8, 9);
+
+    static assert(__traits(compiles, tup.apply!(A.foo)));
+    assert(tup.apply!(A.foo) == 9);
+    static assert(__traits(compiles, tup2.apply!(A.foo)));
+    assert(tup2.apply!(A.foo) == 24);
 }
