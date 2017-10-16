@@ -5612,7 +5612,7 @@ Assignment operators
         $(D refCountedPayload) will also be qualified as safe and nothrow
         (but will still assert if not initialized).
          */
-        @property
+        @property @trusted
         ref T refCountedPayload() return;
 
         /// ditto
