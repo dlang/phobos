@@ -87,24 +87,25 @@ alias AllowDayOverflow = Flag!"allowDayOverflow";
     Array of the strings representing time units, starting with the smallest
     unit and going to the largest. It does not include $(D "nsecs").
 
-   Includes $(D "hnsecs") (hecto-nanoseconds (100 ns)),
-   $(D "usecs") (microseconds), $(D "msecs") (milliseconds), $(D "seconds"),
-   $(D "minutes"), $(D "hours"), $(D "days"), $(D "weeks"), $(D "months"), and
-   $(D "years")
+    Includes $(D "hnsecs") (hecto-nanoseconds (100 ns)),
+    $(D "usecs") (microseconds), $(D "msecs") (milliseconds), $(D "seconds"),
+    $(D "minutes"), $(D "hours"), $(D "days"), $(D "weeks"), $(D "months"), and
+    $(D "years")
   +/
 immutable string[] timeStrings = ["hnsecs", "usecs", "msecs", "seconds", "minutes",
                                   "hours", "days", "weeks", "months", "years"];
 
 
 /++
-   Combines the $(REF Date,std,datetime,date) and
-   $(REF TimeOfDay,std,datetime,date) structs to give an object which holds
-   both the date and the time. It is optimized for calendar-based operations and
-   has no concept of time zone. For an object which is optimized for time
-   operations based on the system time, use $(REF SysTime,std,datetime,systime).
-   $(REF SysTime,std,datetime,systime) has a concept of time zone and has much
-   higher precision (hnsecs). $(D DateTime) is intended primarily for
-   calendar-based uses rather than precise time operations.
+    Combines the $(REF Date,std,datetime,date) and
+    $(REF TimeOfDay,std,datetime,date) structs to give an object which holds
+    both the date and the time. It is optimized for calendar-based operations
+    and has no concept of time zone. For an object which is optimized for time
+    operations based on the system time, use
+    $(REF SysTime,std,datetime,systime). $(REF SysTime,std,datetime,systime) has
+    a concept of time zone and has much higher precision (hnsecs). $(D DateTime)
+    is intended primarily for calendar-based uses rather than precise time
+    operations.
   +/
 struct DateTime
 {

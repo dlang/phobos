@@ -930,7 +930,7 @@ $(D rawRead) always reads in binary mode on Windows.
     {
         static import std.file;
 
-        auto testFile = testFilename();
+        auto testFile = std.file.deleteme();
         std.file.write(testFile, "\r\n\n\r\n");
         scope(exit) std.file.remove(testFile);
 
@@ -985,7 +985,7 @@ Throws: $(D ErrnoException) if the file is not opened or if the call to $(D fwri
     {
         static import std.file;
 
-        auto testFile = testFilename();
+        auto testFile = std.file.deleteme();
         auto f = File(testFile, "w");
         scope(exit) std.file.remove(testFile);
 
@@ -1092,7 +1092,7 @@ Throws: $(D Exception) if the file is not opened.
         import std.conv : text;
         static import std.file;
 
-        auto testFile = testFilename();
+        auto testFile = std.file.deleteme();
         std.file.write(testFile, "abcdefghijklmnopqrstuvwqxyz");
         scope(exit) { std.file.remove(testFile); }
 
@@ -1839,7 +1839,7 @@ $(CONSOLE
     {
         static import std.file;
 
-        auto deleteme = testFilename();
+        auto deleteme = std.file.deleteme();
         std.file.write(deleteme, "hello\nworld\ntrue\nfalse\n");
         scope(exit) std.file.remove(deleteme);
         string s;
@@ -2491,7 +2491,7 @@ $(REF readText, std,file)
          import std.typecons : tuple;
 
          // prepare test file
-         auto testFile = testFilename();
+         auto testFile = std.file.deleteme();
          scope(failure) printf("Failed test at line %d\n", __LINE__);
          std.file.write(testFile, "1 2\n4 1\n5 100");
          scope(exit) std.file.remove(testFile);
@@ -3401,7 +3401,7 @@ struct LockingTextReader
     auto deleteme = testFilename();
     std.file.write(deleteme, "1 2 3");
     scope(exit) std.file.remove(deleteme);
-    int x, y;
+    int x;
     auto f = File(deleteme);
     f.readf("%s ", &x);
     assert(x == 1);
@@ -3878,7 +3878,7 @@ uint readf(A...)(in char[] format, auto ref A args)
 @system unittest
 {
     float f;
-    if (false) uint x = readf("%s", &f);
+    if (false) readf("%s", &f);
 
     char a;
     wchar b;
@@ -4143,8 +4143,6 @@ struct lines
         alias Parms = Parameters!(dg);
         static if (isSomeString!(Parms[$ - 1]))
         {
-            enum bool duplicate = is(Parms[$ - 1] == string)
-                || is(Parms[$ - 1] == wstring) || is(Parms[$ - 1] == dstring);
             int result = 0;
             static if (is(Parms[$ - 1] : const(char)[]))
                 alias C = char;
@@ -4517,8 +4515,15 @@ Initialize with a message and an error code.
     }
 }
 
+enum StdFileHandle: string
+{
+    stdin  = "core.stdc.stdio.stdin",
+    stdout = "core.stdc.stdio.stdout",
+    stderr = "core.stdc.stdio.stderr",
+}
+
 // Undocumented but public because the std* handles are aliasing it.
-@property ref File makeGlobal(alias handle)()
+@property ref File makeGlobal(StdFileHandle _iob)()
 {
     __gshared File.Impl impl;
     __gshared File result;
@@ -4537,7 +4542,9 @@ Initialize with a message and an error code.
                 break;
             if (atomicOp!"+="(spinlock, 1) == 1)
             {
-                impl.handle = handle;
+                with (StdFileHandle)
+                    assert(_iob == stdin || _iob == stdout || _iob == stderr);
+                impl.handle = mixin(_iob);
                 result._p = &impl;
                 atomicOp!"+="(spinlock, uint.max / 2);
                 break;
@@ -4554,7 +4561,7 @@ Initialize with a message and an error code.
         it is thread un-safe to reassign `stdin` to a different `File` instance
         than the default.
 */
-alias stdin = makeGlobal!(core.stdc.stdio.stdin);
+alias stdin = makeGlobal!(StdFileHandle.stdin);
 
 ///
 @safe unittest
@@ -4582,7 +4589,7 @@ alias stdin = makeGlobal!(core.stdc.stdio.stdin);
         it is thread un-safe to reassign `stdout` to a different `File` instance
         than the default.
 */
-alias stdout = makeGlobal!(core.stdc.stdio.stdout);
+alias stdout = makeGlobal!(StdFileHandle.stdout);
 
 /**
     The standard error stream.
@@ -4591,7 +4598,7 @@ alias stdout = makeGlobal!(core.stdc.stdio.stdout);
         it is thread un-safe to reassign `stderr` to a different `File` instance
         than the default.
 */
-alias stderr = makeGlobal!(core.stdc.stdio.stderr);
+alias stderr = makeGlobal!(StdFileHandle.stderr);
 
 @system unittest
 {
@@ -5071,7 +5078,6 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
     File f = File(deleteme, "rb");
 
     char[] ln = new char[2];
-    char* lnptr = ln.ptr;
     f.readln(ln);
 
     assert(ln == "abcd\n");
@@ -5082,7 +5088,6 @@ private size_t readlnImpl(FILE* fps, ref char[] buf, dchar terminator, File.Orie
 
     // it can also stomp the array length
     ln = new char[4];
-    lnptr = ln.ptr;
     f.readln(ln);
     assert(ln == "0123456789abcde\n");
 

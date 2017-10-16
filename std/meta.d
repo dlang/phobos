@@ -54,6 +54,7 @@
  * $(TR $(TD Template instantiation) $(TD
  *           $(LREF ApplyLeft)
  *           $(LREF ApplyRight)
+ *           $(LREF Instantiate)
  * ))
  * ))
  *
@@ -1551,6 +1552,42 @@ if (stepSize != 0)
     static assert(!__traits(compiles, Stride!(0, int)));
 }
 
+/**
+ * Instantiates the given template with the given list of parameters.
+ *
+ * Used to work around syntactic limitations of D with regard to instantiating
+ * a template from an alias sequence (e.g. `T[0]!(...)` is not valid) or a
+ * template returning another template (e.g. `Foo!(Bar)!(Baz)` is not allowed).
+ *
+ * Params:
+ *    Template = The template to instantiate.
+ *    Params = The parameters with which to instantiate the template.
+ * Returns:
+ *    The instantiated template.
+ */
+alias Instantiate(alias Template, Params...) = Template!Params;
+
+///
+@safe unittest
+{
+    // ApplyRight combined with Instantiate can be used to apply various
+    // templates to the same parameters.
+    import std.string : leftJustify, center, rightJustify;
+    alias functions = staticMap!(ApplyRight!(Instantiate, string),
+                                 leftJustify, center, rightJustify);
+    string result = "";
+    static foreach (f; functions)
+    {
+        {
+            auto x = &f; // not a template, but a function instantiation
+            result ~= x("hello", 7);
+            result ~= ";";
+        }
+    }
+
+    assert(result == "hello  ; hello ;  hello;");
+}
+
 // : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : : //
 private:
 
@@ -1667,13 +1704,3 @@ private template Pack(T...)
     static assert(!Pack!(1, int, "abc").equals!(1, int, "cba"));
 }
 
-/*
- * Instantiates the given template with the given list of parameters.
- *
- * Used to work around syntactic limitations of D with regard to instantiating
- * a template from an alias sequence (e.g. T[0]!(...) is not valid) or a template
- * returning another template (e.g. Foo!(Bar)!(Baz) is not allowed).
- */
-// TODO: Consider publicly exposing this, maybe even if only for better
-// understandability of error messages.
-alias Instantiate(alias Template, Params...) = Template!Params;

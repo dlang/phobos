@@ -447,6 +447,20 @@ private template sharedToString(alias field)
     alias sharedToString = field;
 }
 
+private enum bool distinctFieldNames(names...) = __traits(compiles,
+{
+    static foreach (name; names)
+        static if (is(typeof(name) : string))
+            mixin("enum int" ~ name ~ " = 0;");
+});
+
+@safe unittest
+{
+    static assert(!distinctFieldNames!(string, "abc", string, "abc"));
+    static assert(distinctFieldNames!(string, "abc", int, "abd"));
+    static assert(!distinctFieldNames!(int, "abc", string, "abd", int, "abc"));
+}
+
 /**
 _Tuple of values, for example $(D Tuple!(int, string)) is a record that
 stores an $(D int) and a $(D string). $(D Tuple) can be used to bundle
@@ -466,6 +480,7 @@ Params:
     Specs = A list of types (and optionally, member names) that the `Tuple` contains.
 */
 template Tuple(Specs...)
+if (distinctFieldNames!(Specs))
 {
     import std.meta : staticMap;
 
@@ -847,7 +862,7 @@ template Tuple(Specs...)
          *           source `Tuple` must be implicitly assignable to each
          *           respective element of the target `Tuple`.
          */
-        void opAssign(R)(auto ref R rhs)
+        ref Tuple opAssign(R)(auto ref R rhs)
         if (areCompatibleTuples!(typeof(this), R, "="))
         {
             import std.algorithm.mutation : swap;
@@ -870,6 +885,7 @@ template Tuple(Specs...)
                 // Do not swap; opAssign should be called on the fields.
                 field[] = rhs.field[];
             }
+            return this;
         }
 
         /**
@@ -1299,6 +1315,13 @@ template Tuple(Specs...)
     Tuple!(int, "x", int, "y") point1;
     Tuple!(int, int) point2;
     assert(!is(typeof(point1) == typeof(point2)));
+}
+
+@safe unittest
+{
+    // Bugzilla 4582
+    static assert(!__traits(compiles, Tuple!(string, "id", int, "id")));
+    static assert(!__traits(compiles, Tuple!(string, "str", int, "i", string, "str", float)));
 }
 
 /**
@@ -1800,6 +1823,22 @@ private template ReverseTupleSpecs(T...)
     assertThrown!FormatException(
         format("%(%d%|, %)", tuple(1, 2.0)) == `1, 2.0`
     );
+}
+
+// Issue 17803, parte uno
+@safe unittest
+{
+    auto a = tuple(3, "foo");
+    assert(__traits(compiles, { a = (a = a); }));
+}
+// Ditto
+@safe unittest
+{
+    Tuple!(int[]) a, b, c;
+    a = tuple([0, 1, 2]);
+    c = b = a;
+    assert(a[0].length == b[0].length && b[0].length == c[0].length);
+    assert(a[0].ptr == b[0].ptr && b[0].ptr == c[0].ptr);
 }
 
 /**
@@ -2509,8 +2548,13 @@ Params:
 }
 
 /**
-Gets the value. $(D this) must not be in the null state.
+Gets the value if not null. If $(D this) is in the null state and the optional
+parameter `datum` is passed, then `datum` is returned, otherwise
+the function will throw an `AssertError`.
 This function is also called for the implicit conversion to $(D T).
+
+Params:
+    fallback = the value to return in case the `Nullable` is null.
 
 Returns:
     The value held internally by this `Nullable`.
@@ -2520,6 +2564,12 @@ Returns:
         enum message = "Called `get' on null Nullable!" ~ T.stringof ~ ".";
         assert(!isNull, message);
         return _value;
+    }
+
+    /// ditto
+    @property get(U)(inout(U) fallback) inout @safe pure nothrow
+    {
+        return isNull ? fallback : _value;
     }
 
 ///
@@ -2538,6 +2588,19 @@ Returns:
     ni = 5;
     assertNotThrown!AssertError(i = ni);
     assert(i == 5);
+}
+
+///
+@safe pure nothrow unittest
+{
+    int i = 42;
+    Nullable!int ni2;
+    int x = ni2.get(i);
+    assert(x == i);
+
+    ni2 = 7;
+    x = ni2.get(i);
+    assert(x == 7);
 }
 
 /**

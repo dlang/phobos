@@ -354,7 +354,7 @@ public alias StaticRegex(Char) = std.regex.internal.ir.StaticRegex!(Char);
     patterns = An array of regular expression strings.
         The resulting `Regex` object will match any expression;
         use $(LREF whichPattern) to know which.
-    flags = The _attributes (g, i, m and x accepted)
+    flags = The _attributes (g, i, m, s and x accepted)
 
     Throws: $(D RegexException) if there were any errors during compilation.
 +/
@@ -448,7 +448,7 @@ template ctRegexImpl(alias pattern, string flags=[])
 
     Params:
     pattern = Regular expression
-    flags = The _attributes (g, i, m and x accepted)
+    flags = The _attributes (g, i, m, s and x accepted)
 +/
 public enum ctRegex(alias pattern, alias flags=[]) = ctRegexImpl!(pattern, flags).nr;
 

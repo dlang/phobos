@@ -1887,7 +1887,7 @@ if (isForwardRange!R1 && isForwardRange!R2
                 Select!(haystack[0].sizeof == 1, ubyte[],
                     Select!(haystack[0].sizeof == 2, ushort[], uint[]));
             // Will use the array specialization
-            static TO force(TO, T)(T r) @trusted { return cast(TO) r; }
+            static TO force(TO, T)(inout T r) @trusted { return cast(TO) r; }
             return force!R1(.find!(pred, Representation, Representation)
                 (force!Representation(haystack), force!Representation(needle)));
         }
@@ -2094,6 +2094,16 @@ if (isForwardRange!R1 && isForwardRange!R2
     import std.container : SList;
     alias C = Tuple!(int, "x", int, "y");
     assert([C(1,0), C(2,0), C(3,1), C(4,0)].find!"a.x == b"(SList!int(2, 3)[]) == [C(2,0), C(3,1), C(4,0)]);
+}
+
+@safe unittest // issue 12470
+{
+    import std.array : replace;
+    inout(char)[] sanitize(inout(char)[] p)
+    {
+        return p.replace("\0", " ");
+    }
+    assert(sanitize("O\x00o") == "O o");
 }
 
 @safe unittest
@@ -2776,16 +2786,7 @@ Returns:
 A sub-type of `Tuple!()` of the split portions of `haystack` (see above for
 details).  This sub-type of `Tuple!()` has `opCast` defined for `bool`.  This
 `opCast` returns `true` when the separating `needle` was found
-(`!result[1].empty`) and `false` otherwise.  This enables the convenient idiom
-shown in the following example.
-
-Example:
----
-if (const split = haystack.findSplit(needle))
-{
-     doSomethingWithSplit(split);
-}
----
+(`!result[1].empty`) and `false` otherwise.
  */
 auto findSplit(alias pred = "a == b", R1, R2)(R1 haystack, R2 needle)
 if (isForwardRange!R1 && isForwardRange!R2)
@@ -2976,6 +2977,15 @@ if (isForwardRange!R1 && isForwardRange!R2)
                        typeof(h))(takeExactly(original, pos2),
                                   h);
     }
+}
+
+/// Returning a subtype of $(REF Tuple, std,typecons) enables
+/// the following convenient idiom:
+@safe pure nothrow unittest
+{
+    // findSplit returns a triplet
+    if (auto split = "dlang-rocks".findSplit("-"))
+        assert(split[2] == "rocks");
 }
 
 ///

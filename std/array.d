@@ -139,6 +139,13 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
     }
 }
 
+/// ditto
+ForeachType!(PointerTarget!Range)[] array(Range)(Range r)
+if (isPointer!Range && isIterable!(PointerTarget!Range) && !isNarrowString!Range && !isInfinite!Range)
+{
+    return array(*r);
+}
+
 ///
 @safe pure nothrow unittest
 {
@@ -157,13 +164,33 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
     assert(equal(a, [Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)]));
 }
 
+@safe pure nothrow unittest
+{
+    struct MyRange
+    {
+        enum front = 123;
+        enum empty = true;
+        void popFront() {}
+    }
+
+    auto arr = (new MyRange).array;
+    assert(arr.empty);
+}
+
+@system pure nothrow unittest
+{
+    immutable int[] a = [1, 2, 3, 4];
+    auto b = (&a).array;
+    assert(b == a);
+}
+
 @system unittest
 {
     import std.algorithm.comparison : equal;
     struct Foo
     {
         int a;
-        void opAssign(Foo foo)
+        void opAssign(Foo)
         {
             assert(0);
         }
@@ -189,6 +216,7 @@ if (isIterable!Range && !isNarrowString!Range && !isInfinite!Range)
     import std.range;
     static struct S{int* p;}
     auto a = array(immutable(S).init.repeat(5));
+    assert(a.length == 5);
 }
 
 /**
@@ -257,11 +285,10 @@ if (isNarrowString!String)
     }
 
     auto a = array([1, 2, 3, 4, 5][]);
-    //writeln(a);
     assert(a == [ 1, 2, 3, 4, 5 ]);
 
     auto b = array([TestArray(1), TestArray(2)][]);
-    //writeln(b);
+    assert(b == [TestArray(1), TestArray(2)]);
 
     class C
     {
@@ -270,11 +297,12 @@ if (isNarrowString!String)
         override string toString() const @safe { return to!string(x); }
     }
     auto c = array([new C(1), new C(2)][]);
-    //writeln(c);
+    assert(c[0].x == 1);
+    assert(c[1].x == 2);
 
     auto d = array([1.0, 2.2, 3][]);
     assert(is(typeof(d) == double[]));
-    //writeln(d);
+    assert(d == [1.0, 2.2, 3]);
 
     auto e = [OpAssign(1), OpAssign(2)];
     auto f = array(e);
@@ -416,6 +444,7 @@ if (isInputRange!Range)
     import std.typecons;
     auto a = [tuple!(const string, string)("foo", "bar")];
     auto b = [tuple!(string, const string)("foo", "bar")];
+    assert(a == b);
     assert(assocArray(a) == [cast(const(string)) "foo": "bar"]);
     static assert(!__traits(compiles, assocArray(b)));
 }
@@ -750,6 +779,7 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
     auto a = minimallyInitializedArray!(S[])(1);
     assert(a[0].p == null);
     enum b = minimallyInitializedArray!(S[])(1);
+    assert(b[0].p == null);
 }
 
 @safe nothrow unittest
@@ -760,21 +790,25 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
         this(this) @disable;
     }
     auto a1 = minimallyInitializedArray!(S1[][])(2, 2);
-    //enum b1 = minimallyInitializedArray!(S1[][])(2, 2);
+    assert(a1);
     static struct S2
     {
         this() @disable;
         //this(this) @disable;
     }
     auto a2 = minimallyInitializedArray!(S2[][])(2, 2);
+    assert(a2);
     enum b2 = minimallyInitializedArray!(S2[][])(2, 2);
+    assert(b2);
     static struct S3
     {
         //this() @disable;
         this(this) @disable;
     }
     auto a3 = minimallyInitializedArray!(S3[][])(2, 2);
+    assert(a3);
     enum b3 = minimallyInitializedArray!(S3[][])(2, 2);
+    assert(b3);
 }
 
 // overlap
@@ -1082,8 +1116,7 @@ private template isInputRangeOrConvertible(E)
     import std.exception;
 
 
-    bool test(T, U, V)(T orig, size_t pos, U toInsert, V result,
-               string file = __FILE__, size_t line = __LINE__)
+    bool test(T, U, V)(T orig, size_t pos, U toInsert, V result)
     {
         {
             static if (is(T == typeof(T.init.dup)))
@@ -1199,18 +1232,6 @@ private template isInputRangeOrConvertible(E)
     assert(arr[0] == 1);
     insertInPlace(arr, 1, Int(2), Int(3));
     assert(equal(arr, [1, 2, 3, 4, 5]));  //check it works with postblit
-
-    version (none) // illustrates that insertInPlace() will not work with CTFE and postblit
-    {
-        static bool testctfe()
-        {
-            Int[] arr = [Int(1), Int(4), Int(5)];
-            assert(arr[0] == 1);
-            insertInPlace(arr, 1, Int(2), Int(3));
-            return equal(arr, [1, 2, 3, 4, 5]);  //check it works with postblit
-        }
-        enum E = testctfe();
-    }
 }
 
 @safe unittest
@@ -1383,7 +1404,6 @@ if (isInputRange!S && !isDynamicArray!S)
 
     foreach (S; AliasSeq!(string, wstring, dstring, char[], wchar[], dchar[]))
     {
-        S s;
         immutable S t = "abc";
 
         assert(replicate(to!S("1234"), 0) is null);
@@ -1818,6 +1838,7 @@ if (isInputRange!RoR &&
     assert(a[0].length == 3);
     auto temp = join(a, " ");
     assert(a[0].length == 3);
+    assert(temp.length == 3);
 }
 
 @safe unittest // Issue 14230
@@ -2455,8 +2476,7 @@ if (is(typeof(replace(array, from, to, stuff))))
     import std.exception;
 
 
-    bool test(T, U, V)(T orig, size_t from, size_t to, U toReplace, V result,
-               string file = __FILE__, size_t line = __LINE__)
+    bool test(T, U, V)(T orig, size_t from, size_t to, U toReplace, V result)
     {
         {
             static if (is(T == typeof(T.init.dup)))
@@ -3540,6 +3560,7 @@ unittest
     S[] s = [ S(new C) ];
 
     auto t = fastCopy(s); // Does not compile
+    assert(t.length == 1);
 }
 
 @safe unittest
@@ -3558,6 +3579,8 @@ unittest
 
 @safe unittest
 {
+    import std.algorithm.comparison : equal;
+
     //New appender signature tests
     alias mutARR = int[];
     alias conARR = const(int)[];
@@ -3567,27 +3590,40 @@ unittest
     conARR con;
     immARR imm;
 
-    {auto app = Appender!mutARR(mut);}                //Always worked. Should work. Should not create a warning.
+    auto app1 = Appender!mutARR(mut);                //Always worked. Should work. Should not create a warning.
+    app1.put(7);
+    assert(equal(app1.data, [7]));
     static assert(!is(typeof(Appender!mutARR(con)))); //Never worked.  Should not work.
     static assert(!is(typeof(Appender!mutARR(imm)))); //Never worked.  Should not work.
 
-    {auto app = Appender!conARR(mut);} //Always worked. Should work. Should not create a warning.
-    {auto app = Appender!conARR(con);} //Didn't work.   Now works.   Should not create a warning.
-    {auto app = Appender!conARR(imm);} //Didn't work.   Now works.   Should not create a warning.
+    auto app2 = Appender!conARR(mut); //Always worked. Should work. Should not create a warning.
+    app2.put(7);
+    assert(equal(app2.data, [7]));
+    auto app3 = Appender!conARR(con); //Didn't work.   Now works.   Should not create a warning.
+    app3.put(7);
+    assert(equal(app3.data, [7]));
+    auto app4 = Appender!conARR(imm); //Didn't work.   Now works.   Should not create a warning.
+    app4.put(7);
+    assert(equal(app4.data, [7]));
 
     //{auto app = Appender!immARR(mut);}                //Worked. Will cease to work. Creates warning.
     //static assert(!is(typeof(Appender!immARR(mut)))); //Worked. Will cease to work. Uncomment me after full deprecation.
     static assert(!is(typeof(Appender!immARR(con))));   //Never worked. Should not work.
-    {auto app = Appender!immARR(imm);}                  //Didn't work.  Now works. Should not create a warning.
+    auto app5 = Appender!immARR(imm);                  //Didn't work.  Now works. Should not create a warning.
+    app5.put(7);
+    assert(equal(app5.data, [7]));
 
     //Deprecated. Please uncomment and make sure this doesn't work:
     //char[] cc;
     //static assert(!is(typeof(Appender!string(cc))));
 
     //This should always work:
-    {auto app = appender!string(null);}
-    {auto app = appender!(const(char)[])(null);}
-    {auto app = appender!(char[])(null);}
+    auto app6 = appender!string(null);
+    assert(app6.data == null);
+    auto app7 = appender!(const(char)[])(null);
+    assert(app7.data == null);
+    auto app8 = appender!(char[])(null);
+    assert(app8.data == null);
 }
 
 @safe unittest //Test large allocations (for GC.extend)
@@ -3614,7 +3650,9 @@ unittest
 @safe unittest // clear method is supported only for mutable element types
 {
     Appender!string app;
+    app.put("foo");
     static assert(!__traits(compiles, app.clear()));
+    assert(app.data == "foo");
 }
 
 @safe unittest
@@ -3662,6 +3700,7 @@ unittest
         return [new shared A].inputRangeObject;
     }
     auto res = foo.array;
+    assert(res.length == 1);
 }
 
 /++

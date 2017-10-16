@@ -54,7 +54,12 @@ ifneq ($(BUILD),release)
     endif
 endif
 
-override PIC:=$(if $(PIC),-fPIC,)
+# -fPIC is enabled by default and can be disabled with DISABLE_PIC=1
+ifeq ($(DISABLE_PIC),)
+    PIC_FLAG:=-fPIC
+else
+    PIC_FLAG:=
+endif
 
 # Configurable stuff that's rarely edited
 INSTALL_DIR = ../install
@@ -64,7 +69,7 @@ ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DUB=dub
 TOOLS_DIR=../tools
-DSCANNER_HASH=071cd08a6de9bbe1720c763b0aff4d19864b27f1
+DSCANNER_HASH=285ef162f024cbd305d587e9e0fcfb2292ea93ce
 DSCANNER_DIR=../dscanner-$(DSCANNER_HASH)
 
 # Documentation-related stuff
@@ -115,7 +120,7 @@ else
 endif
 
 # Set DFLAGS
-DFLAGS=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -dip25 $(MODEL_FLAG) $(PIC)
+DFLAGS=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -dip25 $(MODEL_FLAG) $(PIC_FLAG)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
@@ -259,15 +264,6 @@ MAKEFILE = $(firstword $(MAKEFILE_LIST))
 # build with shared library support (defaults to true on supported platforms)
 SHARED=$(if $(findstring $(OS),linux freebsd),1,)
 
-# Check for missing imports in public unittest examples.
-# A blacklist of ignored module is provided as not all public unittest in
-# Phobos are independently runnable yet
-IGNORED_PUBLICTESTS= $(addprefix std/, \
-						$(addprefix experimental/allocator/, \
-								building_blocks/free_list building_blocks/quantizer \
-						) \
-						math stdio traits)
-PUBLICTESTS= $(addsuffix .publictests,$(filter-out $(IGNORED_PUBLICTESTS), $(D_MODULES)))
 TESTS_EXTRACTOR=$(ROOT)/tests_extractor
 PUBLICTESTS_DIR=$(ROOT)/publictests
 
@@ -316,7 +312,6 @@ $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
 $(ROOT)/$(SONAME): $(LIBSO)
 	ln -sf $(notdir $(LIBSO)) $@
 
-$(LIBSO): override PIC:=-fPIC
 $(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIMESO)
 	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(D_FILES) $(OBJS)
 
@@ -358,7 +353,6 @@ UT_LIBSO:=$(ROOT)/unittest/libphobos2-ut.so
 
 $(UT_D_OBJS): $(DRUNTIMESO)
 
-$(UT_LIBSO): override PIC:=-fPIC
 $(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO)
 	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) -defaultlib= -debuglib=
 
@@ -590,7 +584,7 @@ style_lint: dscanner $(LIB)
 ################################################################################
 # Check for missing imports in public unittest examples.
 ################################################################################
-publictests: $(PUBLICTESTS)
+publictests: $(addsuffix .publictests,$(D_MODULES))
 
 $(TESTS_EXTRACTOR): $(TOOLS_DIR)/tests_extractor.d | $(LIB)
 	DFLAGS="$(DFLAGS) $(LIB) -defaultlib= -debuglib= $(LINKDL)" $(DUB) build --force --compiler=$${PWD}/$(DMD) --single $<

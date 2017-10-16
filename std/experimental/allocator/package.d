@@ -1731,17 +1731,19 @@ reference, or an entire array. It is assumed the respective entities had been
 allocated with the same allocator.
 
 */
-void dispose(A, T)(auto ref A alloc, T* p)
+void dispose(A, T)(auto ref A alloc, auto ref T* p)
 {
     static if (hasElaborateDestructor!T)
     {
         destroy(*p);
     }
     alloc.deallocate((cast(void*) p)[0 .. T.sizeof]);
+    static if (__traits(isRef, p))
+        p = null;
 }
 
 /// Ditto
-void dispose(A, T)(auto ref A alloc, T p)
+void dispose(A, T)(auto ref A alloc, auto ref T p)
 if (is(T == class) || is(T == interface))
 {
     if (!p) return;
@@ -1760,10 +1762,12 @@ if (is(T == class) || is(T == interface))
     auto support = (cast(void*) ob)[0 .. typeid(ob).initializer.length];
     destroy(p);
     alloc.deallocate(support);
+    static if (__traits(isRef, p))
+        p = null;
 }
 
 /// Ditto
-void dispose(A, T)(auto ref A alloc, T[] array)
+void dispose(A, T)(auto ref A alloc, auto ref T[] array)
 {
     static if (hasElaborateDestructor!(typeof(array[0])))
     {
@@ -1773,6 +1777,8 @@ void dispose(A, T)(auto ref A alloc, T[] array)
         }
     }
     alloc.deallocate(array);
+    static if (__traits(isRef, array))
+        array = null;
 }
 
 @system unittest
@@ -1811,6 +1817,27 @@ void dispose(A, T)(auto ref A alloc, T[] array)
 
     int[] arr = theAllocator.makeArray!int(43);
     theAllocator.dispose(arr);
+}
+
+@system unittest //bugzilla 16512
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    int* i = Mallocator.instance.make!int(0);
+    Mallocator.instance.dispose(i);
+    assert(i is null);
+
+    Object o = Mallocator.instance.make!Object();
+    Mallocator.instance.dispose(o);
+    assert(o is null);
+
+    uint* u = Mallocator.instance.make!uint(0);
+    Mallocator.instance.dispose((){return u;}());
+    assert(u !is null);
+
+    uint[] ua = Mallocator.instance.makeArray!uint([0,1,2]);
+    Mallocator.instance.dispose(ua);
+    assert(ua is null);
 }
 
 @system unittest //bugzilla 15721
@@ -1886,7 +1913,7 @@ T = element type of an element of the multidimensional array
 alloc = the allocator used for getting memory
 array = the multidimensional array that is to be deallocated
 */
-void disposeMultidimensionalArray(T, Allocator)(auto ref Allocator alloc, T[] array)
+void disposeMultidimensionalArray(T, Allocator)(auto ref Allocator alloc, auto ref T[] array)
 {
     static if (isArray!T)
     {
@@ -1895,6 +1922,8 @@ void disposeMultidimensionalArray(T, Allocator)(auto ref Allocator alloc, T[] ar
     }
 
     dispose(alloc, array);
+    static if (__traits(isRef, array))
+        array = null;
 }
 
 ///

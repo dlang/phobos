@@ -4469,46 +4469,37 @@ if (is(T == struct) || Args.length == 1)
     assert(i == 42);
 }
 
-private void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName) @nogc pure nothrow
+private @nogc pure nothrow @safe
+void testEmplaceChunk(void[] chunk, size_t typeSize, size_t typeAlignment, string typeName)
 {
     assert(chunk.length >= typeSize, "emplace: Chunk size too small.");
     assert((cast(size_t) chunk.ptr) % typeAlignment == 0, "emplace: Chunk is not aligned.");
 }
 
 /**
-Given a raw memory area $(D chunk), constructs an object of $(D class)
-type $(D T) at that address. The constructor is passed the arguments
-$(D Args).
+Given a raw memory area `chunk` (but already typed as a class type `T`),
+constructs an object of `class` type `T` at that address. The constructor
+is passed the arguments `Args`.
 
 If `T` is an inner class whose `outer` field can be used to access an instance
 of the enclosing class, then `Args` must not be empty, and the first member of it
 must be a valid initializer for that `outer` field. Correct initialization of
 this field is essential to access members of the outer class inside `T` methods.
 
-Preconditions:
-$(D chunk) must be at least as large as $(D T) needs
-and should have an alignment multiple of $(D T)'s alignment. (The size
-of a $(D class) instance is obtained by using $(D
-__traits(classInstanceSize, T))).
-
 Note:
-This function can be $(D @trusted) if the corresponding constructor of
-$(D T) is $(D @safe).
+This function is `@safe` if the corresponding constructor of `T` is `@safe`.
 
 Returns: The newly constructed object.
  */
-T emplace(T, Args...)(void[] chunk, auto ref Args args)
+T emplace(T, Args...)(T chunk, auto ref Args args)
 if (is(T == class))
 {
     static assert(!isAbstractClass!T, T.stringof ~
         " is abstract and it can't be emplaced");
 
-    enum classSize = __traits(classInstanceSize, T);
-    testEmplaceChunk(chunk, classSize, classInstanceAlignment!T, T.stringof);
-    auto result = cast(T) chunk.ptr;
-
     // Initialize the object in its pre-ctor state
-    chunk[0 .. classSize] = typeid(T).initializer[];
+    enum classSize = __traits(classInstanceSize, T);
+    (() @trusted => (cast(void*) chunk)[0 .. classSize] = typeid(T).initializer[])();
 
     static if (isInnerClass!T)
     {
@@ -4517,17 +4508,17 @@ if (is(T == class))
         static assert(is(Args[0] : typeof(T.outer)),
             "The first argument must be a pointer to the outer class");
 
-        result.outer = args[0];
+        chunk.outer = args[0];
         alias args1 = args[1..$];
     }
     else alias args1 = args;
 
     // Call the ctor if any
-    static if (is(typeof(result.__ctor(args1))))
+    static if (is(typeof(chunk.__ctor(args1))))
     {
         // T defines a genuine constructor accepting args
         // Go the classic route: write .init first, then call ctor
-        result.__ctor(args1);
+        chunk.__ctor(args1);
     }
     else
     {
@@ -4535,7 +4526,82 @@ if (is(T == class))
             "Don't know how to initialize an object of type "
             ~ T.stringof ~ " with arguments " ~ typeof(args1).stringof);
     }
-    return result;
+    return chunk;
+}
+
+///
+@safe unittest
+{
+    () @safe {
+        class SafeClass
+        {
+            int x;
+            @safe this(int x) { this.x = x; }
+        }
+
+        auto buf = new void[__traits(classInstanceSize, SafeClass)];
+        auto support = (() @trusted => cast(SafeClass)(buf.ptr))();
+        auto safeClass = emplace!SafeClass(support, 5);
+        assert(safeClass.x == 5);
+
+        class UnsafeClass
+        {
+            int x;
+            @system this(int x) { this.x = x; }
+        }
+
+        auto buf2 = new void[__traits(classInstanceSize, UnsafeClass)];
+        auto support2 = (() @trusted => cast(UnsafeClass)(buf2.ptr))();
+        static assert(!__traits(compiles, emplace!UnsafeClass(support2, 5)));
+        static assert(!__traits(compiles, emplace!UnsafeClass(buf2, 5)));
+    }();
+}
+
+@safe unittest
+{
+    class Outer
+    {
+        int i = 3;
+        class Inner
+        {
+            @safe auto getI() { return i; }
+        }
+    }
+    auto outerBuf = new void[__traits(classInstanceSize, Outer)];
+    auto outerSupport = (() @trusted => cast(Outer)(outerBuf.ptr))();
+
+    auto innerBuf = new void[__traits(classInstanceSize, Outer.Inner)];
+    auto innerSupport = (() @trusted => cast(Outer.Inner)(innerBuf.ptr))();
+
+    auto inner = innerSupport.emplace!(Outer.Inner)(outerSupport.emplace!Outer);
+    assert(inner.getI == 3);
+}
+
+/**
+Given a raw memory area `chunk`, constructs an object of `class` type `T` at
+that address. The constructor is passed the arguments `Args`.
+
+If `T` is an inner class whose `outer` field can be used to access an instance
+of the enclosing class, then `Args` must not be empty, and the first member of it
+must be a valid initializer for that `outer` field. Correct initialization of
+this field is essential to access members of the outer class inside `T` methods.
+
+Preconditions:
+`chunk` must be at least as large as `T` needs and should have an alignment
+multiple of `T`'s alignment. (The size of a `class` instance is obtained by using
+$(D __traits(classInstanceSize, T))).
+
+Note:
+This function can be `@trusted` if the corresponding constructor of `T` is `@safe`.
+
+Returns: The newly constructed object.
+ */
+T emplace(T, Args...)(void[] chunk, auto ref Args args)
+if (is(T == class))
+{
+    enum classSize = __traits(classInstanceSize, T);
+    testEmplaceChunk(chunk, classSize, classInstanceAlignment!T, T.stringof);
+    return emplace!T(cast(T)(chunk.ptr), args);
 }
 
 ///
@@ -4567,11 +4633,12 @@ if (is(T == class))
     assert(inner.getI == 3);
 }
 
-@nogc pure nothrow @system unittest
+@nogc pure nothrow @safe unittest
 {
     int var = 6;
     align(__conv_EmplaceTestClass.alignof) ubyte[__traits(classInstanceSize, __conv_EmplaceTestClass)] buf;
-    auto k = emplace!__conv_EmplaceTestClass(buf, 5, var);
+    auto support = (() @trusted => cast(__conv_EmplaceTestClass)(buf.ptr))();
+    auto k = emplace!__conv_EmplaceTestClass(support, 5, var);
     assert(k.i == 5);
     assert(var == 7);
 }

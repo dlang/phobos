@@ -2003,12 +2003,13 @@ ElementType!R moveAt(R)(R r, size_t i)
 }
 
 /**
-Implements the range interface primitive $(D empty) for built-in
-arrays. Due to the fact that nonmember functions can be called with
-the first argument using the dot notation, $(D array.empty) is
-equivalent to $(D empty(array)).
+Implements the range interface primitive $(D empty) for types that
+obey $(LREF hasLength) property and for narrow strings. Due to the
+fact that nonmember functions can be called with the first argument
+using the dot notation, $(D a.empty) is equivalent to $(D empty(a)).
  */
-@property bool empty(T)(in T[] a) @safe pure nothrow @nogc
+@property bool empty(T)(auto ref scope const(T) a)
+if (is(typeof(a.length) : size_t) || isNarrowString!T)
 {
     return !a.length;
 }
@@ -2019,6 +2020,11 @@ equivalent to $(D empty(array)).
     auto a = [ 1, 2, 3 ];
     assert(!a.empty);
     assert(a[3 .. $].empty);
+
+    int[string] b;
+    assert(b.empty);
+    b["zero"] = 0;
+    assert(!b.empty);
 }
 
 /**

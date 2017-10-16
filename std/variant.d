@@ -529,14 +529,14 @@ private:
         case OpID.postblit:
             static if (hasElaborateCopyConstructor!A)
             {
-                typeid(A).postblit(zis);
+                zis.__xpostblit();
             }
             break;
 
         case OpID.destruct:
             static if (hasElaborateDestructor!A)
             {
-                typeid(A).destroy(zis);
+                zis.__xdtor();
             }
             break;
 
@@ -613,19 +613,21 @@ public:
             static if (T.sizeof <= size)
             {
                 import core.stdc.string : memcpy;
-                // If T is a class we're only copying the reference, so it
-                // should be safe to cast away shared so the memcpy will work.
+                // rhs has already been copied onto the stack, so even if T is
+                // shared, it's not really shared. Therefore, we can safely
+                // remove the shared qualifier when copying, as we are only
+                // copying from the unshared stack.
                 //
-                // TODO: If a shared class has an atomic reference then using
-                //       an atomic load may be more correct.  Just make sure
-                //       to use the fastest approach for the load op.
-                static if (is(T == class) && is(T == shared))
-                    memcpy(&store, cast(const(void*)) &rhs, rhs.sizeof);
-                else
-                    memcpy(&store, &rhs, rhs.sizeof);
+                // In addition, the storage location is not accessible outside
+                // the Variant, so even if shared data is stored there, it's
+                // not really shared, as it's copied out as well.
+                memcpy(&store, cast(const(void*)) &rhs, rhs.sizeof);
                 static if (hasElaborateCopyConstructor!T)
                 {
-                    typeid(T).postblit(&store);
+                    // Safer than using typeid's postblit function because it
+                    // type-checks the postblit function against the qualifiers
+                    // of the type.
+                    (cast(T*)&store).__xpostblit();
                 }
             }
             else
@@ -1375,6 +1377,55 @@ pure nothrow @nogc
     v.get!S;
 }
 
+// issue 13262
+@system unittest
+{
+    static void fun(T)(Variant v){
+        T x;
+        v = x;
+        auto r = v.get!(T);
+    }
+    Variant v;
+    fun!(shared(int))(v);
+    fun!(shared(int)[])(v);
+
+    static struct S1
+    {
+        int c;
+        string a;
+    }
+
+    static struct S2
+    {
+        string a;
+        shared int[] b;
+    }
+
+    static struct S3
+    {
+        string a;
+        shared int[] b;
+        int c;
+    }
+
+    fun!(S1)(v);
+    fun!(shared(S1))(v);
+    fun!(S2)(v);
+    fun!(shared(S2))(v);
+    fun!(S3)(v);
+    fun!(shared(S3))(v);
+
+    // ensure structs that are shared, but don't have shared postblits
+    // can't be used.
+    static struct S4
+    {
+        int x;
+        this(this) {x = 0;}
+    }
+
+    fun!(S4)(v);
+    static assert(!is(typeof(fun!(shared(S4))(v))));
+}
 
 /**
 _Algebraic data type restricted to a closed set of possible

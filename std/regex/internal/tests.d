@@ -1095,7 +1095,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     willThrow([r".", r"[\(\{[\]\}\)]"], "no matching ']' found while parsing character class");
     willThrow([r"[\", r"123"], "no matching ']' found while parsing character class");
     willThrow([r"[a-", r"123"], "no matching ']' found while parsing character class");
-    willThrow([r"[a-\", r"123"], "invalid escape sequence");
+    willThrow([r"[a-\", r"123"], "no matching ']' found while parsing character class");
     willThrow([r"\", r"123"], "invalid escape sequence");
 }
 
@@ -1104,7 +1104,7 @@ alias Sequence(int B, int E) = staticIota!(B, E);
 {
     import std.algorithm.searching;
     auto e = collectException!RegexException(regex(q"<[^]>"));
-    assert(e.msg.canFind("no operand for '^'"));
+    assert(e.msg.canFind("no operand for '^'"), e.msg);
 }
 
 // bugzilla 17673

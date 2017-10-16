@@ -2390,15 +2390,15 @@ version (unittest)
     }
 }
 
-private @property Mutex initOnceLock()
+private @property shared(Mutex) initOnceLock()
 {
-    __gshared Mutex lock;
-    if (auto mtx = cast() atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock))
+    static shared Mutex lock;
+    if (auto mtx = atomicLoad!(MemoryOrder.acq)(lock))
         return mtx;
-    auto mtx = new Mutex;
-    if (cas(cast(shared)&lock, cast(shared) null, cast(shared) mtx))
+    auto mtx = new shared Mutex;
+    if (cas(&lock, cast(shared) null, mtx))
         return mtx;
-    return cast() atomicLoad!(MemoryOrder.acq)(*cast(shared)&lock);
+    return atomicLoad!(MemoryOrder.acq)(lock);
 }
 
 /**
@@ -2476,7 +2476,7 @@ auto ref initOnce(alias var)(lazy typeof(var) init)
  * Returns:
  *   A reference to the initialized variable
  */
-auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
+auto ref initOnce(alias var)(lazy typeof(var) init, shared Mutex mutex)
 {
     // check that var is global, can't take address of a TLS variable
     static assert(is(typeof({ __gshared p = &var; })),
@@ -2498,14 +2498,20 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
     return var;
 }
 
+/// ditto
+auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
+{
+    return initOnce!var(init, cast(shared) mutex);
+}
+
 /// Use a separate mutex when init blocks on another thread that might also call initOnce.
 @system unittest
 {
     import core.sync.mutex : Mutex;
 
     static shared bool varA, varB;
-    __gshared Mutex m;
-    m = new Mutex;
+    static shared Mutex m;
+    m = new shared Mutex;
 
     spawn({
         // use a different mutex for varB to avoid a dead-lock
@@ -2528,4 +2534,18 @@ auto ref initOnce(alias var)(lazy typeof(var) init, Mutex mutex)
     initOnce!b(true);
     static assert(!__traits(compiles, initOnce!c(true))); // TLS
     static assert(!__traits(compiles, initOnce!d(true))); // local variable
+}
+
+// test ability to send shared arrays
+@system unittest
+{
+    static shared int[] x = new shared(int)[1];
+    auto tid = spawn({
+        auto arr = receiveOnly!(shared(int)[]);
+        arr[0] = 5;
+        ownerTid.send(true);
+    });
+    tid.send(x);
+    receiveOnly!(bool);
+    assert(x[0] == 5);
 }

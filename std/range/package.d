@@ -6282,7 +6282,8 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
 
 /**
     Given a range of ranges, iterate transversally through the
-    `n`th element of each of the enclosed ranges.
+    `n`th element of each of the enclosed ranges. This function
+    is similar to `unzip` in other languages.
 
     Params:
         opt = Controls the assumptions the function makes about the lengths
@@ -6518,7 +6519,17 @@ Transversal!(RangeOfRanges, opt) transversal
     x[0] = [1, 2];
     x[1] = [3, 4];
     auto ror = transversal(x, 1);
-    assert(equal(ror, [ 2, 4 ][]));
+    assert(equal(ror, [ 2, 4 ]));
+}
+
+/// The following code does a full unzip
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    int[][] y = [[1, 2, 3], [4, 5, 6]];
+    auto z = y.front.walkLength.iota.map!(i => transversal(y, i));
+    assert(equal!equal(z, [[1, 4], [2, 5], [3, 6]]));
 }
 
 @safe unittest
@@ -9865,6 +9876,15 @@ sgi.com/tech/stl/binary_search.html, binary_search).
         return !predFun(value, _input[i]);
     }
 
+/**
+Like $(D contains), but the value is specified before the range.
+*/
+    auto opBinaryRight(string op, V)(V value)
+    if (op == "in" && isRandomAccessRange!Range)
+    {
+        return contains(value);
+    }
+
 // groupBy
 /**
 Returns a range of subranges of elements that are equivalent according to the
@@ -9884,9 +9904,9 @@ sorting relation.
     auto a = [ 1, 2, 3, 42, 52, 64 ];
     auto r = assumeSorted(a);
     assert(r.contains(3));
-    assert(!r.contains(32));
+    assert(!(32 in r));
     auto r1 = sort!"a > b"(a);
-    assert(r1.contains(3));
+    assert(3 in r1);
     assert(!r1.contains(32));
     assert(r1.release() == [ 64, 52, 42, 3, 2, 1 ]);
 }
