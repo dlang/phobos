@@ -69,18 +69,19 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     }
 
     /**
+    Allocates the requested `bytes` of memory with specified `alignment`.
     Directs the call to either one of the $(D buckets) allocators. Defined only
     if `Allocator` defines `alignedAllocate`.
     */
     static if (hasMember!(Allocator, "alignedAllocate"))
-    void[] alignedAllocate(size_t bytes, uint a)
+    void[] alignedAllocate(size_t bytes, uint alignment)
     {
         if (!bytes) return null;
-        if (auto a = allocatorFor(b.length))
+        if (auto a = allocatorFor(bytes))
         {
             const actual = goodAllocSize(bytes);
-            auto result = a.alignedAllocate(actual);
-            return result.ptr ? result.ptr[0 .. bytes] : null;
+            auto result = a.alignedAllocate(actual, alignment);
+            return result !is null ? (() @trusted => (&result)[0 .. bytes])() : null;
         }
         return null;
     }
