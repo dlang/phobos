@@ -6832,7 +6832,16 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
     assert(approxEqual(pow(twoI, three), 8.0));
 }
 
-/** Computes the value of a positive integer x, raised to the power n, modulo m.
+/** Computes the value of a positive integer `x`, raised to the power `n`, modulo `m`.
+ *
+ *  Params:
+ *      x = base
+ *      n = exponent
+ *      m = modulus
+ *
+ *  Returns:
+ *      `x` to the power `n`, modulo `m`.
+ *      The return type is the largest between `x`'s and `m`'s type.
  *
  * All values have to be unsigned types, otherwise it will raise a compilation error.
  */
