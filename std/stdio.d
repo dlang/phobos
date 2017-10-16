@@ -375,6 +375,7 @@ struct File
 
     private void initImpl(FILE* handle, string name, uint refs = 1, bool isPopened = false)
     {
+        assert(_p);
         _p.handle = handle;
         _p.refs = refs;
         _p.isPopened = isPopened;
@@ -503,23 +504,13 @@ Throws: $(D ErrnoException) in case of error.
         }
 
         FILE* handle;
-        version (Posix)
+        if (isPopened)
         {
-            if (isPopened)
-            {
-                errnoEnforce(handle = .popen(name, stdioOpenmode),
-                             "Cannot run command `"~name~"'");
-            }
-            else
-            {
-                errnoEnforce(handle = .fopen(name, stdioOpenmode),
-                             text("Cannot open file `", name, "' in mode `",
-                                  stdioOpenmode, "'"));
-            }
+            errnoEnforce(handle = .popen(name, stdioOpenmode),
+                         "Cannot run command `"~name~"'");
         }
         else
         {
-            assert(isPopened == false);
             errnoEnforce(handle = .fopen(name, stdioOpenmode),
                          text("Cannot open file `", name, "' in mode `",
                               stdioOpenmode, "'"));
