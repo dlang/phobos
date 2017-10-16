@@ -28,6 +28,7 @@ struct MmapAllocator
     version(Posix)
     {
         /// Allocator API.
+        @trusted @nogc nothrow
         void[] allocate(size_t bytes) shared
         {
             import core.sys.posix.sys.mman : mmap, MAP_ANON, PROT_READ,
@@ -40,6 +41,7 @@ struct MmapAllocator
         }
 
         /// Ditto
+        @system @nogc nothrow
         bool deallocate(void[] b) shared
         {
             import core.sys.posix.sys.mman : munmap;
@@ -53,6 +55,7 @@ struct MmapAllocator
             PAGE_READWRITE, MEM_RELEASE;
 
         /// Allocator API.
+        @trusted @nogc nothrow
         void[] allocate(size_t bytes) shared
         {
             if (!bytes) return null;
@@ -63,6 +66,7 @@ struct MmapAllocator
         }
 
         /// Ditto
+        @system @nogc nothrow
         bool deallocate(void[] b) shared
         {
             return b.ptr is null || VirtualFree(b.ptr, 0, MEM_RELEASE) != 0;
@@ -70,10 +74,12 @@ struct MmapAllocator
     }
 }
 
-@system unittest
+@safe unittest
 {
     alias alloc = MmapAllocator.instance;
     auto p = alloc.allocate(100);
     assert(p.length == 100);
-    alloc.deallocate(p);
+    () @trusted {
+        alloc.deallocate(p);
+    }();
 }

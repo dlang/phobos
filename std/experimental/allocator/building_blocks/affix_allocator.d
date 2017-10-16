@@ -68,7 +68,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         Allocator _parent;
         static if (is(Allocator == IAllocator))
         {
-            Allocator parent()
+            @safe Allocator parent()
             {
                 if (_parent is null) _parent = theAllocator;
                 assert(alignment <= _parent.alignment);
@@ -88,7 +88,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     private template Impl()
     {
 
-        size_t goodAllocSize(size_t s)
+        @safe size_t goodAllocSize(size_t s)
         {
             import std.experimental.allocator.common : goodAllocSize;
             auto a = actualAllocationSize(s);
@@ -97,7 +97,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
                 this.alignment);
         }
 
-        private size_t actualAllocationSize(size_t s) const
+        private @safe size_t actualAllocationSize(size_t s) const
         {
             assert(s > 0);
             static if (!stateSize!Suffix)
@@ -112,7 +112,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             }
         }
 
-        private void[] actualAllocation(void[] b) const
+        private @trusted void[] actualAllocation(void[] b) const
         {
             assert(b !is null);
             return (b.ptr - stateSize!Prefix)
@@ -126,16 +126,20 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             if (result is null) return null;
             static if (stateSize!Prefix)
             {
-                assert(result.ptr.alignedAt(Prefix.alignof));
-                emplace!Prefix(cast(Prefix*) result.ptr);
+                () @trusted {
+                    assert(result.ptr.alignedAt(Prefix.alignof));
+                    emplace!Prefix(cast(Prefix*) result.ptr);
+                }();
             }
             static if (stateSize!Suffix)
             {
-                auto suffixP = result.ptr + result.length - Suffix.sizeof;
-                assert(suffixP.alignedAt(Suffix.alignof));
-                emplace!Suffix(cast(Suffix*)(suffixP));
+                () @trusted {
+                    auto suffixP = result.ptr + result.length - Suffix.sizeof;
+                    assert(suffixP.alignedAt(Suffix.alignof));
+                    emplace!Suffix(cast(Suffix*)(suffixP));
+                }();
             }
-            return result[stateSize!Prefix .. stateSize!Prefix + bytes];
+            return (() @trusted => result[stateSize!Prefix ..  stateSize!Prefix + bytes])();
         }
 
         static if (hasMember!(Allocator, "allocateAll"))
@@ -145,24 +149,27 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             if (result is null) return null;
             if (result.length < actualAllocationSize(1))
             {
-                deallocate(result);
+                () @trusted { deallocate(result); }();
                 return null;
             }
             static if (stateSize!Prefix)
             {
                 assert(result.length > stateSize!Prefix);
-                emplace!Prefix(cast(Prefix*) result.ptr);
+                () @trusted { emplace!Prefix(cast(Prefix*) result.ptr); }();
                 result = result[stateSize!Prefix .. $];
             }
             static if (stateSize!Suffix)
             {
                 assert(result.length > stateSize!Suffix);
                 // Ehm, find a properly aligned place for the suffix
-                auto p = (result.ptr + result.length - stateSize!Suffix)
-                    .alignDownTo(Suffix.alignof);
-                assert(p > result.ptr);
-                emplace!Suffix(cast(Suffix*) p);
-                result = result[0 .. p - result.ptr];
+                void *p;
+                () @trusted {
+                    p = (result.ptr + result.length - stateSize!Suffix)
+                             .alignDownTo(Suffix.alignof);
+                    assert(p > result.ptr);
+                    emplace!Suffix(cast(Suffix*) p);
+                }();
+                result = result[0 .. p - &result[0]];
             }
             return result;
         }
@@ -182,9 +189,12 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             if (r != Ternary.yes || p1 is null)
                 return r;
             p1 = p1[stateSize!Prefix .. $];
-            auto p2 = (p1.ptr + p1.length - stateSize!Suffix)
-                      .alignDownTo(Suffix.alignof);
-            result = p1[0 .. p2 - p1.ptr];
+            void* p2;
+            () @trusted {
+                p2 = (p1.ptr + p1.length - stateSize!Suffix)
+                     .alignDownTo(Suffix.alignof);
+            }();
+            result = p1[0 .. p2 - &p1[0]];
             return Ternary.yes;
         }
 
@@ -195,7 +205,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             auto t = actualAllocation(b);
             const result = parent.expand(t, delta);
             if (!result) return false;
-            b = b.ptr[0 .. b.length + delta];
+            b = (() @trusted => b.ptr[0 .. b.length + delta])();
             return true;
         }
 
@@ -356,19 +366,21 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
 }
 
 ///
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     // One word before and after each allocation.
     alias A = AffixAllocator!(Mallocator, size_t, size_t);
     auto b = A.instance.allocate(11);
-    A.instance.prefix(b) = 0xCAFE_BABE;
-    A.instance.suffix(b) = 0xDEAD_BEEF;
-    assert(A.instance.prefix(b) == 0xCAFE_BABE
-        && A.instance.suffix(b) == 0xDEAD_BEEF);
+    () @trusted {
+        A.instance.prefix(b) = 0xCAFE_BABE;
+        A.instance.suffix(b) = 0xDEAD_BEEF;
+        assert(A.instance.prefix(b) == 0xCAFE_BABE
+               && A.instance.suffix(b) == 0xDEAD_BEEF);
+    }();
 }
 
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.experimental.allocator : theAllocator, IAllocator;
@@ -376,18 +388,22 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     // One word before and after each allocation.
     auto A = AffixAllocator!(IAllocator, size_t, size_t)(theAllocator);
     auto a = A.allocate(11);
-    A.prefix(a) = 0xCAFE_BABE;
-    A.suffix(a) = 0xDEAD_BEEF;
-    assert(A.prefix(a) == 0xCAFE_BABE
-        && A.suffix(a) == 0xDEAD_BEEF);
+    () @trusted {
+        A.prefix(a) = 0xCAFE_BABE;
+        A.suffix(a) = 0xDEAD_BEEF;
+        assert(A.prefix(a) == 0xCAFE_BABE
+               && A.suffix(a) == 0xDEAD_BEEF);
+    }();
 
     // One word before and after each allocation.
     auto B = AffixAllocator!(IAllocator, size_t, size_t)();
     auto b = B.allocate(11);
-    B.prefix(b) = 0xCAFE_BABE;
-    B.suffix(b) = 0xDEAD_BEEF;
-    assert(B.prefix(b) == 0xCAFE_BABE
-        && B.suffix(b) == 0xDEAD_BEEF);
+    () @trusted {
+        B.prefix(b) = 0xCAFE_BABE;
+        B.suffix(b) = 0xDEAD_BEEF;
+        assert(B.prefix(b) == 0xCAFE_BABE
+               && B.suffix(b) == 0xDEAD_BEEF);
+    }();
 }
 
 @system unittest
@@ -402,13 +418,15 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     });
 }
 
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     alias A = AffixAllocator!(Mallocator, size_t);
     auto b = A.instance.allocate(10);
-    A.instance.prefix(b) = 10;
-    assert(A.instance.prefix(b) == 10);
+    () @trusted {
+        A.instance.prefix(b) = 10;
+        assert(A.instance.prefix(b) == 10);
+    }();
 
     import std.experimental.allocator.building_blocks.null_allocator
         : NullAllocator;

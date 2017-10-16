@@ -39,15 +39,17 @@ alias StackFront(size_t stackSize, Allocator = GCAllocator) =
         Allocator);
 
 ///
-@system unittest
+@safe unittest
 {
     StackFront!4096 a;
     auto b = a.allocate(4000);
     assert(b.length == 4000);
     auto c = a.allocate(4000);
     assert(c.length == 4000);
-    a.deallocate(b);
-    a.deallocate(c);
+    () @trusted {
+        a.deallocate(b);
+        a.deallocate(c);
+    }();
 }
 
 /**

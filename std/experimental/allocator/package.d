@@ -289,18 +289,18 @@ interface IAllocator
     /**
     Returns the alignment offered.
     */
-    @property uint alignment();
+    @property @safe uint alignment();
 
     /**
     Returns the good allocation size that guarantees zero internal
     fragmentation.
     */
-    size_t goodAllocSize(size_t s);
+    @safe size_t goodAllocSize(size_t s);
 
     /**
     Allocates `n` bytes of memory.
     */
-    void[] allocate(size_t, TypeInfo ti = null);
+    @safe void[] allocate(size_t, TypeInfo ti = null);
 
     /**
     Allocates `n` bytes of memory with specified alignment `a`. Implementations
@@ -334,13 +334,13 @@ interface IAllocator
     cannot be determined. Implementations that don't support this primitive
     should always return `Ternary.unknown`.
     */
-    Ternary owns(void[] b);
+    @safe Ternary owns(void[] b);
 
     /**
     Resolves an internal pointer to the full block allocated. Implementations
     that don't support this primitive should always return `Ternary.unknown`.
     */
-    Ternary resolveInternalPointer(const void* p, ref void[] result);
+    @safe Ternary resolveInternalPointer(const void* p, ref void[] result);
 
     /**
     Deallocates a memory block. Implementations that don't support this
@@ -385,18 +385,18 @@ interface ISharedAllocator
     /**
     Returns the alignment offered.
     */
-    @property uint alignment() shared;
+    @property uint alignment() shared @safe;
 
     /**
     Returns the good allocation size that guarantees zero internal
     fragmentation.
     */
-    size_t goodAllocSize(size_t s) shared;
+    size_t goodAllocSize(size_t s) shared @safe;
 
     /**
     Allocates `n` bytes of memory.
     */
-    void[] allocate(size_t, TypeInfo ti = null) shared;
+    void[] allocate(size_t, TypeInfo ti = null) shared @safe;
 
     /**
     Allocates `n` bytes of memory with specified alignment `a`. Implementations
@@ -430,13 +430,13 @@ interface ISharedAllocator
     cannot be determined. Implementations that don't support this primitive
     should always return `Ternary.unknown`.
     */
-    Ternary owns(void[] b) shared;
+    Ternary owns(void[] b) shared @safe;
 
     /**
     Resolves an internal pointer to the full block allocated. Implementations
     that don't support this primitive should always return `Ternary.unknown`.
     */
-    Ternary resolveInternalPointer(const void* p, ref void[] result) shared;
+    Ternary resolveInternalPointer(const void* p, ref void[] result) shared @safe;
 
     /**
     Deallocates a memory block. Implementations that don't support this
@@ -469,17 +469,17 @@ private IAllocator setupThreadAllocator() nothrow @nogc @safe
     */
     static class ThreadAllocator : IAllocator
     {
-        override @property uint alignment()
+        override @property @safe uint alignment()
         {
             return processAllocator.alignment();
         }
 
-        override size_t goodAllocSize(size_t s)
+        override size_t goodAllocSize(size_t s) @safe
         {
             return processAllocator.goodAllocSize(s);
         }
 
-        override void[] allocate(size_t n, TypeInfo ti = null)
+        override void[] allocate(size_t n, TypeInfo ti = null) @safe
         {
             return processAllocator.allocate(n, ti);
         }
@@ -509,12 +509,13 @@ private IAllocator setupThreadAllocator() nothrow @nogc @safe
             return processAllocator.alignedReallocate(b, size, alignment);
         }
 
-        override Ternary owns(void[] b)
+        override Ternary owns(void[] b) @safe
         {
             return processAllocator.owns(b);
         }
 
-        override Ternary resolveInternalPointer(const void* p, ref void[] result)
+        override
+        Ternary resolveInternalPointer(const void* p, ref void[] result) @safe
         {
             return processAllocator.resolveInternalPointer(p, result);
         }
@@ -2161,7 +2162,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     static if (indirect)
     {
         private Allocator* pimpl;
-        ref Allocator impl()
+        ref Allocator impl() @safe
         {
             return *pimpl;
         }
@@ -2344,7 +2345,7 @@ class CSharedAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     static if (indirect)
     {
         private shared Allocator* pimpl;
-        ref Allocator impl() shared
+        ref Allocator impl() shared @safe
         {
             return *pimpl;
         }
@@ -2831,13 +2832,15 @@ private struct InternalPointersTree(Allocator)
     else alias parent = Parent.instance;
 
     /// Allocator API.
-    void[] allocate(size_t bytes)
+    @safe void[] allocate(size_t bytes)
     {
         auto r = parent.allocate(bytes);
         if (!r.ptr) return r;
-        Tree.Node* n = &parent.prefix(r);
-        n.payload = bytes;
-        blockMap.insert(n) || assert(0);
+        () @trusted {
+            Tree.Node* n = &parent.prefix(r);
+            n.payload = bytes;
+            blockMap.insert(n) || assert(0);
+        }();
         return r;
     }
 
@@ -2873,7 +2876,7 @@ private struct InternalPointersTree(Allocator)
     }
 
     /// Ditto
-    Ternary owns(void[] b)
+    @safe Ternary owns(void[] b)
     {
         void[] result;
         return resolveInternalPointer(b.ptr, result);
@@ -2888,7 +2891,7 @@ private struct InternalPointersTree(Allocator)
     /** Returns the block inside which $(D p) resides, or $(D null) if the
     pointer does not belong.
     */
-    Ternary resolveInternalPointer(const void* p, ref void[] result)
+    @trusted Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
         // Must define a custom find
         Tree.Node* find()

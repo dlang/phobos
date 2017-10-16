@@ -69,24 +69,28 @@ struct Mallocator
 
 ///
 @nogc nothrow
-@system unittest
+@safe unittest
 {
     auto buffer = Mallocator.instance.allocate(1024 * 1024 * 4);
-    scope(exit) Mallocator.instance.deallocate(buffer);
+    () @trusted {
+        scope(exit) Mallocator.instance.deallocate(buffer);
+    }();
     //...
 }
 
 @nogc nothrow
-@system unittest
+@safe unittest
 {
     @nogc nothrow
     static void test(A)()
     {
-        int* p = null;
-        p = cast(int*) A.instance.allocate(int.sizeof);
-        scope(exit) A.instance.deallocate(p[0 .. int.sizeof]);
-        *p = 42;
-        assert(*p == 42);
+        void[] buf = A.instance.allocate(int.sizeof);
+        () @trusted {
+            int* p = cast(int*)buf;
+            scope(exit) A.instance.deallocate(p[0 .. int.sizeof]);
+            *p = 42;
+            assert(*p == 42);
+        }();
     }
     test!Mallocator();
 }
@@ -101,7 +105,6 @@ struct Mallocator
         p = A.instance.make!Object();
         assert(p !is null);
     }
-
     test!Mallocator();
 }
 
@@ -328,11 +331,13 @@ struct AlignedMallocator
 
 ///
 @nogc nothrow
-@system unittest
+@safe unittest
 {
     auto buffer = AlignedMallocator.instance.alignedAllocate(1024 * 1024 * 4,
         128);
-    scope(exit) AlignedMallocator.instance.deallocate(buffer);
+    () @trusted {
+        scope(exit) AlignedMallocator.instance.deallocate(buffer);
+    }();
     //...
 }
 
@@ -342,7 +347,7 @@ size_t addr(ref void* ptr) { return cast(size_t) ptr; }
 
 version(CRuntime_DigitalMars)
 @nogc nothrow
-@system unittest
+@safe unittest
 {
     void* m;
 
@@ -350,38 +355,42 @@ version(CRuntime_DigitalMars)
     if (m)
     {
         assert((m.addr & 0xF) == 0);
-        _aligned_free(m);
+        () @trusted { _aligned_free(m); }();
     }
 
     m = _aligned_malloc(16, 0x100);
     if (m)
     {
         assert((m.addr & 0xFF) == 0);
-        _aligned_free(m);
+        () @trusted { _aligned_free(m); }();
     }
 
     m = _aligned_malloc(16, 0x1000);
     if (m)
     {
         assert((m.addr & 0xFFF) == 0);
-        _aligned_free(m);
+        () @trusted { _aligned_free(m); }();
     }
 
     m = _aligned_malloc(16, 0x10);
     if (m)
     {
-        assert((cast(size_t) m & 0xF) == 0);
-        m = _aligned_realloc(m, 32, 0x10000);
-        if (m) assert((m.addr & 0xFFFF) == 0);
-        _aligned_free(m);
+        () @trusted {
+            assert((cast(size_t) m & 0xF) == 0);
+            m = _aligned_realloc(m, 32, 0x10000);
+            if (m) assert((m.addr & 0xFFFF) == 0);
+            _aligned_free(m);
+        }();
     }
 
     m = _aligned_malloc(8, 0x10);
     if (m)
     {
-        *cast(ulong*) m = 0X01234567_89ABCDEF;
-        m = _aligned_realloc(m, 0x800, 0x1000);
-        if (m) assert(*cast(ulong*) m == 0X01234567_89ABCDEF);
-        _aligned_free(m);
+        () @trusted {
+            *cast(ulong*) m = 0X01234567_89ABCDEF;
+            m = _aligned_realloc(m, 0x800, 0x1000);
+            if (m) assert(*cast(ulong*) m == 0X01234567_89ABCDEF);
+            _aligned_free(m);
+        }();
     }
 }

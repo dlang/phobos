@@ -127,7 +127,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 
     private template Impl()
     {
-        size_t goodAllocSize(size_t s)
+        @safe size_t goodAllocSize(size_t s)
         {
             return s <= threshold
                 ? _small.goodAllocSize(s)
@@ -274,7 +274,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 }
 
 ///
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -292,7 +292,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
     A a;
     auto b = a.allocate(200);
     assert(b.length == 200);
-    a.deallocate(b);
+    () @trusted { a.deallocate(b); }();
 }
 
 /**
@@ -342,7 +342,7 @@ if (Args.length > 3)
 }
 
 ///
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.gc_allocator : GCAllocator;
@@ -357,5 +357,5 @@ if (Args.length > 3)
     A a;
     auto b = a.allocate(201);
     assert(b.length == 201);
-    a.deallocate(b);
+    () @trusted { a.deallocate(b); }();
 }

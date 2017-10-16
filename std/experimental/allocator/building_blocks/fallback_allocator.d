@@ -97,7 +97,7 @@ struct FallbackAllocator(Primary, Fallback)
     bool expand(ref void[] b, size_t delta)
     {
         if (!delta) return true;
-        if (!b.ptr) return false;
+        if (b is null) return false;
         if (primary.owns(b) == Ternary.yes)
         {
             static if (hasMember!(Primary, "expand"))
@@ -254,7 +254,7 @@ struct FallbackAllocator(Primary, Fallback)
     }
 }
 
-@system unittest
+@safe unittest
 {
     import std.conv : text;
     import std.experimental.allocator.building_blocks.region : InSituRegion;
@@ -268,8 +268,10 @@ struct FallbackAllocator(Primary, Fallback)
     // This large allocation will go to the Mallocator
     auto b2 = a.allocate(1024 * 1024);
     assert(a.primary.owns(b2) == Ternary.no);
-    a.deallocate(b1);
-    a.deallocate(b2);
+    () @trusted {
+        a.deallocate(b1);
+        a.deallocate(b2);
+    }();
 }
 
 /*
@@ -346,10 +348,12 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.typecons : Ternary;
     auto a = fallbackAllocator(Region!GCAllocator(1024), GCAllocator.instance);
-    auto b1 = a.allocate(1020);
-    assert(b1.length == 1020);
-    assert(a.primary.owns(b1) == Ternary.yes);
-    auto b2 = a.allocate(10);
-    assert(b2.length == 10);
-    assert(a.primary.owns(b2) == Ternary.no);
+    () @safe {
+        auto b1 = a.allocate(1020);
+        assert(b1.length == 1020);
+        assert(a.primary.owns(b1) == Ternary.yes);
+        auto b2 = a.allocate(10);
+        assert(b2.length == 10);
+        assert(a.primary.owns(b2) == Ternary.no);
+    }();
 }

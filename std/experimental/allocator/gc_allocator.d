@@ -30,17 +30,18 @@ struct GCAllocator
     }
 
     /// Ditto
-    @system bool expand(ref void[] b, size_t delta) shared
+    pure nothrow @safe bool expand(ref void[] b, size_t delta) shared
     {
         if (delta == 0) return true;
         if (b is null) return false;
-        immutable curLength = GC.sizeOf(b.ptr);
+        immutable curLength = (() @trusted => GC.sizeOf(b.ptr))();
         assert(curLength != 0); // we have a valid GC pointer here
         immutable desired = b.length + delta;
         if (desired > curLength) // check to see if the current block can't hold the data
         {
             immutable sizeRequest = desired - curLength;
-            immutable newSize = GC.extend(b.ptr, sizeRequest, sizeRequest);
+            immutable newSize = (() @trusted => GC.extend(b.ptr, sizeRequest,
+                                                          sizeRequest))();
             if (newSize == 0)
             {
                 // expansion unsuccessful
@@ -48,7 +49,7 @@ struct GCAllocator
             }
             assert(newSize >= desired);
         }
-        b = b.ptr[0 .. desired];
+        b = (() @trusted => b.ptr[0 .. desired])();
         return true;
     }
 
@@ -70,7 +71,7 @@ struct GCAllocator
     }
 
     /// Ditto
-    pure nothrow
+    pure nothrow @trusted
     Ternary resolveInternalPointer(const void* p, ref void[] result) shared
     {
         auto r = GC.addrOf(cast(void*) p);
@@ -87,7 +88,7 @@ struct GCAllocator
     }
 
     /// Ditto
-    size_t goodAllocSize(size_t n) shared
+    pure nothrow @safe size_t goodAllocSize(size_t n) shared
     {
         if (n == 0)
             return 0;
@@ -120,21 +121,25 @@ struct GCAllocator
 }
 
 ///
-@system unittest
+@safe unittest
 {
     auto buffer = GCAllocator.instance.allocate(1024 * 1024 * 4);
     // deallocate upon scope's end (alternatively: leave it to collection)
-    scope(exit) GCAllocator.instance.deallocate(buffer);
+    () @trusted {
+        scope(exit) GCAllocator.instance.deallocate(buffer);
+    }();
     //...
 }
 
-@system unittest
+@safe unittest
 {
     auto b = GCAllocator.instance.allocate(10_000);
-    assert(GCAllocator.instance.expand(b, 1));
+    () @trusted {
+        assert(GCAllocator.instance.expand(b, 1));
+    }();
 }
 
-@system unittest
+@safe unittest
 {
     import core.memory : GC;
     import std.typecons : Ternary;
@@ -147,19 +152,21 @@ struct GCAllocator
         assert(GCAllocator.instance.goodAllocSize(s - (s / 2) + 1) == s);
 
         auto buffer = GCAllocator.instance.allocate(s);
-        scope(exit) GCAllocator.instance.deallocate(buffer);
+        () @trusted {
+            scope(exit) GCAllocator.instance.deallocate(buffer);
 
-        void[] p;
-        assert(GCAllocator.instance.resolveInternalPointer(null, p) == Ternary.no);
-        Ternary r = GCAllocator.instance.resolveInternalPointer(buffer.ptr, p);
-        assert(p.ptr is buffer.ptr && p.length >= buffer.length);
-
-        assert(GC.sizeOf(buffer.ptr) == s);
+            void[] p;
+            assert(GCAllocator.instance.resolveInternalPointer(null, p) == Ternary.no);
+            Ternary r = GCAllocator.instance.resolveInternalPointer(buffer.ptr, p);
+            assert(p.ptr is buffer.ptr && p.length >= buffer.length);
+            assert(GC.sizeOf(buffer.ptr) == s);
+        }();
 
         auto buffer2 = GCAllocator.instance.allocate(s - (s / 2) + 1);
-        scope(exit) GCAllocator.instance.deallocate(buffer2);
-
-        assert(GC.sizeOf(buffer2.ptr) == s);
+        () @trusted {
+            scope(exit) GCAllocator.instance.deallocate(buffer2);
+            assert(GC.sizeOf(buffer2.ptr) == s);
+        }();
     }
 
     // anything above a page is simply rounded up to next page

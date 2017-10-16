@@ -56,7 +56,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     /**
     Returns $(D roundingFunction(n)).
     */
-    size_t goodAllocSize(size_t n)
+    @safe size_t goodAllocSize(size_t n)
     {
         auto result = roundingFunction(n);
         assert(result >= n);
@@ -76,7 +76,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     void[] allocate(size_t n)
     {
         auto result = parent.allocate(goodAllocSize(n));
-        return result.ptr ? result.ptr[0 .. n] : null;
+        return (() @trusted => result.ptr ? result.ptr[0 .. n] : null)();
     }
 
     /**
@@ -85,10 +85,10 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     $(D parent.alignedAllocate(goodAllocSize(n), a)).
     */
     static if (hasMember!(ParentAllocator, "alignedAllocate"))
-    void[] alignedAllocate(size_t n, uint)
+    void[] alignedAllocate()(size_t n, uint)
     {
         auto result = parent.alignedAllocate(goodAllocSize(n));
-        return result.ptr ? result.ptr[0 .. n] : null;
+        return (() @trusted => result.ptr ? result.ptr[0 .. n] : null)();
     }
 
     /**
@@ -99,7 +99,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     */
     bool expand(ref void[] b, size_t delta)
     {
-        if (!b.ptr) return delta == 0;
+        if (b is null) return delta == 0;
         immutable allocated = goodAllocSize(b.length),
             needed = b.length + delta,
             neededAllocation = goodAllocSize(needed);
@@ -110,19 +110,19 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
         if (allocated == neededAllocation)
         {
             // Nice!
-            b = b.ptr[0 .. needed];
+            b = (() @trusted => b.ptr[0 .. needed])();
             return true;
         }
         // Hail Mary
         static if (hasMember!(ParentAllocator, "expand"))
         {
             // Expand to the appropriate quantum
-            auto original = b.ptr[0 .. allocated];
+            auto original = (() @trusted => b.ptr[0 .. allocated])();
             assert(goodAllocSize(needed) >= allocated);
             if (!parent.expand(original, neededAllocation - allocated))
                 return false;
             // Dial back the size
-            b = original.ptr[0 .. needed];
+            b = (() @trusted => original.ptr[0 .. needed])();
             return true;
         }
         else
@@ -236,4 +236,14 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     alias MyAlloc = Quantizer!(GCAllocator,
         (size_t n) => n.roundUpToMultipleOf(64));
     testAllocator!(() => MyAlloc());
+}
+
+@safe unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    alias MyAlloc = Quantizer!(GCAllocator,
+        (size_t n) => n.roundUpToMultipleOf(64));
+    MyAlloc alloc;
+    const buf = alloc.allocate(256);
+    assert(buf !is null);
 }

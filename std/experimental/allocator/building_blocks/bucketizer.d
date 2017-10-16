@@ -31,7 +31,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     */
     Allocator[(max + 1 - min) / step] buckets;
 
-    private Allocator* allocatorFor(size_t n)
+    @trusted private Allocator* allocatorFor(size_t n)
     {
         const i = (n - min) / step;
         return i < buckets.length ? buckets.ptr + i : null;
@@ -45,7 +45,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     /**
     Rounds up to the maximum size of the bucket in which $(D bytes) falls.
     */
-    size_t goodAllocSize(size_t bytes) const
+    @safe size_t goodAllocSize(size_t bytes) const
     {
         // round up bytes such that bytes - min + 1 is a multiple of step
         assert(bytes >= min);
@@ -63,7 +63,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
         {
             const actual = goodAllocSize(bytes);
             auto result = a.allocate(actual);
-            return result.ptr ? result.ptr[0 .. bytes] : null;
+            return () @trusted { return result.ptr ? result.ptr[0 .. bytes] : null; }();
         }
         return null;
     }
@@ -80,7 +80,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
         {
             const actual = goodAllocSize(bytes);
             auto result = a.alignedAllocate(actual);
-            return result.ptr ? result.ptr[0 .. bytes] : null;
+            return () @trusted { return result.ptr ? result.ptr[0 .. bytes] : null; }();
         }
         return null;
     }
@@ -92,12 +92,12 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     */
     bool expand(ref void[] b, size_t delta)
     {
-        if (!b.ptr) return delta == 0;
+        if (b is null) return delta == 0;
         assert(b.length >= min && b.length <= max);
         const available = goodAllocSize(b.length);
         const desired = b.length + delta;
         if (available < desired) return false;
-        b = b.ptr[0 .. desired];
+        b = (() @trusted => b.ptr[0 .. desired])();
         return true;
     }
 
@@ -162,11 +162,11 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     static if (hasMember!(Allocator, "owns"))
     Ternary owns(void[] b)
     {
-        if (!b.ptr) return Ternary.no;
+        if (b is null) return Ternary.no;
         if (auto a = allocatorFor(b.length))
         {
             const actual = goodAllocSize(b.length);
-            return a.owns(b.ptr[0 .. actual]);
+            return a.owns((() @trusted => b.ptr[0 .. actual])());
         }
         return Ternary.no;
     }
@@ -233,9 +233,17 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
                 (size_t n) => Region!Mallocator(max(n, 1024 * 1024))),
             0, unbounded),
         65, 512, 64) a;
-    auto b = a.allocate(400);
-    assert(b.length == 400);
-    assert(a.owns(b) == Ternary.yes);
-    void[] p;
+    void[] b;
+    () @safe {
+        b = a.allocate(400);
+        assert(b.length == 400);
+        assert(a.owns(b) == Ternary.yes);
+        void[] p;
+        static if (__traits(compiles, a.resolveInternalPointer(b, p)))
+        {
+            auto r = a.resolveInternalPointer(b, p);
+            assert(r == Ternary.yes);
+        }
+    }();
     a.deallocate(b);
 }

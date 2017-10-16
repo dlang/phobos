@@ -72,7 +72,7 @@ struct ScopedAllocator(ParentAllocator)
     Forwards to $(D parent.goodAllocSize) (which accounts for the management
     overhead).
     */
-    size_t goodAllocSize(size_t n)
+    @safe size_t goodAllocSize(size_t n)
     {
         return parent.goodAllocSize(n);
     }
@@ -85,7 +85,7 @@ struct ScopedAllocator(ParentAllocator)
     {
         auto b = parent.allocate(n);
         if (!b.ptr) return b;
-        Node* toInsert = & parent.prefix(b);
+        Node* toInsert = (() @trusted => & parent.prefix(b))();
         toInsert.prev = null;
         toInsert.next = root;
         toInsert.length = n;
@@ -102,9 +102,9 @@ struct ScopedAllocator(ParentAllocator)
     bool expand(ref void[] b, size_t delta)
     {
         auto result = parent.expand(b, delta);
-        if (result && b.ptr)
+        if (result && (b !is null))
         {
-            parent.prefix(b).length = b.length;
+            () @trusted { parent.prefix(b).length = b.length; }();
         }
         return result;
     }
@@ -196,10 +196,12 @@ struct ScopedAllocator(ParentAllocator)
     import std.experimental.allocator.mallocator : Mallocator;
     import std.typecons : Ternary;
     ScopedAllocator!Mallocator alloc;
-    assert(alloc.empty == Ternary.yes);
-    const b = alloc.allocate(10);
-    assert(b.length == 10);
-    assert(alloc.empty == Ternary.no);
+    () @safe {
+        assert(alloc.empty == Ternary.yes);
+        const b = alloc.allocate(10);
+        assert(b.length == 10);
+        assert(alloc.empty == Ternary.no);
+    }();
 }
 
 @system unittest
