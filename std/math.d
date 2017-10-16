@@ -6841,7 +6841,7 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
  *
  *  Returns:
  *      `x` to the power `n`, modulo `m`.
- *      The return type is the largest between `x`'s and `m`'s type.
+ *      The return type is the largest of `x`'s and `m`'s type.
  *
  * All values have to be unsigned types, otherwise it will raise a compilation error.
  */
