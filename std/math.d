@@ -6843,7 +6843,7 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
  *      `x` to the power `n`, modulo `m`.
  *      The return type is the largest of `x`'s and `m`'s type.
  *
- * All values have to be unsigned types, otherwise it will raise a compilation error.
+ * The function requires that all values have unsigned types.
  */
 Unqual!(Largest!(F, H)) powmod(F, G, H)(F x, G n, H m)
 if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
