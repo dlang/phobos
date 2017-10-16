@@ -504,13 +504,23 @@ Throws: $(D ErrnoException) in case of error.
         }
 
         FILE* handle;
-        if (isPopened)
+        version (Posix)
         {
-            errnoEnforce(handle = .popen(name, stdioOpenmode),
-                         "Cannot run command `"~name~"'");
+            if (isPopened)
+            {
+                errnoEnforce(handle = .popen(name, stdioOpenmode),
+                             "Cannot run command `"~name~"'");
+            }
+            else
+            {
+                errnoEnforce(handle = .fopen(name, stdioOpenmode),
+                             text("Cannot open file `", name, "' in mode `",
+                                  stdioOpenmode, "'"));
+            }
         }
         else
         {
+            assert(isPopened == false);
             errnoEnforce(handle = .fopen(name, stdioOpenmode),
                          text("Cannot open file `", name, "' in mode `",
                               stdioOpenmode, "'"));
