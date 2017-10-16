@@ -393,7 +393,7 @@ public:
     // has a useful trait: if supplied with valid UTF indexes,
     // returns only valid UTF indexes
     // (that given the haystack in question is valid UTF string)
-    @trusted size_t search(const(Char)[] haystack, size_t idx)
+    @trusted size_t search(const(Char)[] haystack, size_t idx) const
     {//@BUG: apparently assumes little endian machines
         import core.stdc.string : memchr;
         import std.conv : text;
