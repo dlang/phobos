@@ -70,7 +70,7 @@ struct GCAllocator
     }
 
     /// Ditto
-    pure nothrow
+    pure nothrow @trusted @nogc
     Ternary resolveInternalPointer(const void* p, ref void[] result) shared
     {
         auto r = GC.addrOf(cast(void*) p);
@@ -165,4 +165,18 @@ struct GCAllocator
 
     // anything above a page is simply rounded up to next page
     assert((() nothrow @safe @nogc => GCAllocator.instance.goodAllocSize(4096 * 4 + 1))() == 4096 * 5);
+}
+
+@safe unittest
+{
+    import std.typecons : Ternary;
+
+    void[] buffer = GCAllocator.instance.allocate(42);
+    void[] result;
+    Ternary found = GCAllocator.instance.resolveInternalPointer(&buffer[0], result);
+
+    assert(found == Ternary.yes && &result[0] == &buffer[0] && result.length >= buffer.length);
+    assert(GCAllocator.instance.resolveInternalPointer(null, result) == Ternary.no);
+    void *badPtr = (() @trusted => cast(void*)(0xdeadbeef))();
+    assert(GCAllocator.instance.resolveInternalPointer(badPtr, result) == Ternary.no);
 }

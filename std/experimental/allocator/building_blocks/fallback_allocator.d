@@ -364,3 +364,17 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
     auto buff = a.allocate(42);
     assert((() pure nothrow @safe @nogc => a.owns(buff))() == Ternary.yes);
 }
+
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.typecons : Ternary;
+
+    auto a = fallbackAllocator(GCAllocator.instance, GCAllocator.instance);
+    auto b = a.allocate(1020);
+    assert(b.length == 1020);
+
+    void[] p;
+    assert((() nothrow @safe @nogc => a.resolveInternalPointer(null, p))() == Ternary.no);
+    assert((() nothrow @safe @nogc => a.resolveInternalPointer(&b[0], p))() == Ternary.yes);
+}

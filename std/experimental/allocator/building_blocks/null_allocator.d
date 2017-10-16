@@ -44,6 +44,7 @@ struct NullAllocator
     /**
     Returns $(D Ternary.no).
     */
+    pure nothrow @safe @nogc
     Ternary resolveInternalPointer(const void*, ref void[]) shared const
     { return Ternary.no; }
     /**
@@ -82,5 +83,5 @@ struct NullAllocator
     assert(NullAllocator.instance.empty() == Ternary.yes);
     assert((() nothrow @safe @nogc => NullAllocator.instance.owns(null))() == Ternary.no);
     void[] p;
-    assert(NullAllocator.instance.resolveInternalPointer(null, p) == Ternary.no);
+    assert((() nothrow @safe @nogc => NullAllocator.instance.resolveInternalPointer(null, p))() == Ternary.no);
 }
