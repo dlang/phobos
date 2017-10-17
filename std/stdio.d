@@ -534,6 +534,7 @@ Throws: $(D ErrnoException) in case of error.
 
     private void closeHandles() @trusted
     {
+        assert(_p);
         import std.exception : errnoEnforce;
 
         version (Posix)
@@ -547,6 +548,7 @@ Throws: $(D ErrnoException) in case of error.
                 errnoEnforce(res != -1,
                         "Could not close pipe `"~_name~"'");
                 _p.handle = null;
+                return;
             }
         }
         if (_p.handle)
