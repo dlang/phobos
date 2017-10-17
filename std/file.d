@@ -35,6 +35,7 @@ $(TR $(TD Files) $(TD
           $(LREF remove)
           $(LREF slurp)
           $(LREF write)
+          $(LREF createTempFile)
 ))
 $(TR $(TD Symlinks) $(TD
           $(LREF symlink)
@@ -809,8 +810,6 @@ if (isConvertibleToString!R)
     static assert(__traits(compiles, append(TestAliasedString("foo"), [0, 1, 2, 3])));
 }
 
-// Posix implementation helper for write and append
-
 version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
         in void[] buffer, bool append) @trusted
 {
@@ -821,26 +820,8 @@ version(Posix) private void writeImpl(const(char)[] name, const(FSChar)* namez,
                        : O_CREAT | O_WRONLY | O_TRUNC;
 
     immutable fd = core.sys.posix.fcntl.open(namez, mode, octal!666);
-    cenforce(fd != -1, name, namez);
-    {
-        scope(failure) core.sys.posix.unistd.close(fd);
-
-        immutable size = buffer.length;
-        size_t sum, cnt = void;
-        while (sum != size)
-        {
-            cnt = (size - sum < 2^^30) ? (size - sum) : 2^^30;
-            const numwritten = core.sys.posix.unistd.write(fd, buffer.ptr + sum, cnt);
-            if (numwritten != cnt)
-                break;
-            sum += numwritten;
-        }
-        cenforce(sum == size, name, namez);
-    }
-    cenforce(core.sys.posix.unistd.close(fd) == 0, name, namez);
+    writeToOpenFile(fd, buffer, name, namez);
 }
-
-// Windows implementation helper for write and append
 
 version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez,
         in void[] buffer, bool append) @trusted
@@ -868,19 +849,201 @@ version(Windows) private void writeImpl(const(char)[] name, const(FSChar)* namez
         h = CreateFileW(namez, defaults);
         cenforce(h != INVALID_HANDLE_VALUE, name, namez);
     }
+    writeToOpenFile(h, buffer, name, namez);
+}
+
+private void writeToOpenFile(FD)(FD fd, const void[] buffer, const(char)[] name,
+                                 const(FSChar)* namez) @trusted
+{
     immutable size = buffer.length;
     size_t sum, cnt = void;
-    DWORD numwritten = void;
+
     while (sum != size)
     {
-        cnt = (size - sum < 2^^30) ? (size - sum) : 2^^30;
-        WriteFile(h, buffer.ptr + sum, cast(uint) cnt, &numwritten, null);
-        if (numwritten != cnt)
+        cnt = size - sum < 2^^30 ? size - sum : 2^^30;
+
+        version(Posix)
+            immutable numWritten = core.sys.posix.unistd.write(fd, buffer.ptr + sum, cnt);
+        else version(Windows)
+        {
+            DWORD numWritten = void;
+            WriteFile(fd, buffer.ptr + sum, cast(uint) cnt, &numWritten, null);
+        }
+        else
+            static assert(0, "Unsupported OS");
+
+        if (numWritten != cnt)
             break;
-        sum += numwritten;
+        sum += numWritten;
     }
-    cenforce(sum == size && CloseHandle(h), name, namez);
+
+    version(Posix)
+        cenforce(sum == size && core.sys.posix.unistd.close(fd) == 0, name, namez);
+    else version(Windows)
+        cenforce(sum == size && CloseHandle(fd), name, namez);
+    else
+        static assert(0, "Unsupported OS");
 }
+
+
+/++
+    Creates a file with a random name in $(LREF tempDir) and returns the name
+    of the file. If data is passed in, then the file is written with that data;
+    otherwise, it's empty.
+
+    The idea is that this creates a temporary file for testing or whatever
+    other purpose a temporary file might be needed for. However, it will only
+    be deleted if it's explicitly deleted or if the OS decides to delete it as
+    some OSes do with files in temp directories on startup or shutdown. So,
+    unlike $(REF File.tmpfile, std, stdio), the file has a name, and it can have
+    all of the things done to it that one might typically do with a file
+    (including reopening it after closing it).
+
+    The file is created with R/W permissions. On POSIX systems, the permissions
+    are restricted to the current user, though the effective permissions are
+    modified by the process' umask in the usual way.
+
+    $(REF rndGen, std, random) is used as the random number generator.
+
+    Params:
+        prefix = Prefix to the random portion of the file name.
+        suffix = Suffix to the random portion of the file name (e.g. for a file
+                 extension).
+        buffer = Data to populate the file with.
+
+    Returns:
+        The name of the generated file.
+
+    Throws:
+        $(LREF FileException) if it fails to create the file.
+
+    See_Also:
+        $(REF File.tmpfile, std, stdio)
+  +/
+string createTempFile(const void[] buffer = null) @safe
+{
+    return createTempFile(null, null, buffer);
+}
+
+/// Ditto
+string createTempFile(const(char)[] prefix, const(char)[] suffix, const void[] buffer = null) @trusted
+{
+    import std.path : absolutePath, baseName, buildPath, dirName;
+
+    static string genTempName(const(char)[] prefix, const(char)[] suffix)
+    {
+        import std.ascii : digits, letters;
+        import std.random : choice, rndGen;
+        import std.range : chain;
+        import std.string : representation;
+
+        auto name = new char[](prefix.length + 15 + suffix.length);
+        name[0 .. prefix.length] = prefix;
+        name[$ - suffix.length .. $] = suffix;
+
+        auto random = &rndGen();
+        rndGen.popFront();
+
+        auto chars = chain(letters.representation, digits.representation);
+        foreach (ref c; name[prefix.length .. $ - suffix.length])
+        {
+            c = choice(chars);
+            random.popFront();
+        }
+
+        return buildPath(tempDir, name);
+    }
+
+    while (1)
+    {
+        auto filename = genTempName(prefix, suffix);
+
+        version(Posix)
+        {
+            auto fd = open(tempCString!FSChar(filename), O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR);
+            if (fd == -1)
+            {
+                immutable errno = .errno;
+                if (errno == EEXIST)
+                    continue;
+                else
+                    throw new FileException("Failed to create a temporary file", errno);
+            }
+        }
+        else version(Windows)
+        {
+            auto fd = CreateFileW(tempCString!FSChar(filename), GENERIC_WRITE, 0, null, CREATE_NEW,
+                                  FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN, HANDLE.init);
+            if (fd == INVALID_HANDLE_VALUE)
+            {
+                immutable errno = .GetLastError();
+                if (errno == ERROR_FILE_EXISTS)
+                    continue;
+                else
+                    throw new FileException("Failed to create a temporary file", errno);
+            }
+        }
+        else
+            static assert(0, "Unsupported OS");
+
+        writeToOpenFile(fd, buffer, filename, null);
+
+        return filename;
+    }
+}
+
+///
+@safe unittest
+{
+    import std.algorithm.searching : startsWith;
+    import std.range.primitives;
+    import std.path : baseName, buildNormalizedPath, dirName, extension;
+
+    {
+        auto path = createTempFile();
+        scope(exit) if (path.exists) remove(path);
+        assert(!path.empty);
+        assert(buildNormalizedPath(path.dirName) == buildNormalizedPath(tempDir));
+        assert(!path.baseName.empty);
+        assert(path.exists);
+        assert(path.isFile);
+        assert(readText(path).empty);
+    }
+    {
+        auto path = createTempFile("hello world");
+        scope(exit) if (path.exists) remove(path);
+        assert(!path.empty);
+        assert(buildNormalizedPath(path.dirName) == buildNormalizedPath(tempDir));
+        assert(!path.baseName.empty);
+        assert(path.exists);
+        assert(path.isFile);
+        assert(readText(path) == "hello world");
+    }
+    {
+        auto path = createTempFile("prefix_", ".txt");
+        scope(exit) if (path.exists) remove(path);
+        auto name = path.baseName;
+        assert(name.startsWith("prefix_"));
+        assert(name.extension == ".txt");
+        assert(name.length > "prefix_.txt".length);
+        assert(buildNormalizedPath(path.dirName) == buildNormalizedPath(tempDir));
+        assert(path.exists);
+        assert(path.isFile);
+        assert(readText(path).empty);
+    }
+    {
+        auto path = createTempFile(null, ".txt", "D rocks");
+        scope(exit) if (path.exists) remove(path);
+        auto name = path.baseName;
+        assert(name.extension == ".txt");
+        assert(name.length > ".txt".length);
+        assert(buildNormalizedPath(path.dirName) == buildNormalizedPath(tempDir));
+        assert(path.exists);
+        assert(path.isFile);
+        assert(readText(path) == "D rocks");
+    }
+}
+
 
 /***************************************************
  * Rename file $(D from) _to $(D to).

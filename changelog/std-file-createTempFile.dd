@@ -1,0 +1,15 @@
+`createTempFile` added to std.file
+
+$(REF std, file, createTempFile) creates a file in $(REF tempDir, std, file)
+with a random name (with an optionally provided prefix and suffix) and returns
+the file name. It also optionally takes data to write to the file when creating
+it (if no data is provided, then the newly created file will be empty).
+
+This is different from $(REF File.tmpfile, std, stdio), which creates a
+temporary file with no name, returns a $(REF File, std, stdio) to that file,
+and then deletes the file when the $(REF File, std, stdio) is closed. The file
+created by $(REF std, file, createTempFile) is a normal file which can be
+opened and closed as many times as desired and will only be deleted by the
+program if the program explicitly does so (though it is sitting in a temp
+directory and is subject to the normal things tha happen to such files - e.g.
+some OSes delete those files on boot).
