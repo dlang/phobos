@@ -590,6 +590,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
     Adjusts $(D n) to a size suitable for allocation (two words or larger,
     word-aligned).
     */
+    pure nothrow @safe @nogc
     static size_t goodAllocSize(size_t n)
     {
         import std.experimental.allocator.common : roundUpToMultipleOf;
@@ -879,4 +880,14 @@ it actually returns memory to the operating system when possible.
 
     test(sizes64, word64);
     test(sizes32, word32);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+
+    auto a = KRRegion!GCAllocator(1024 * 1024);
+    () nothrow @safe @nogc {
+        assert(a.goodAllocSize(1) == typeof(*a.root).sizeof);
+    }();
 }

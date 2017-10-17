@@ -83,6 +83,7 @@ enum uint platformAlignment = std.algorithm.comparison.max(double.alignof, real.
 The default good size allocation is deduced as $(D n) rounded up to the
 allocator's alignment.
 */
+pure nothrow @safe @nogc
 size_t goodAllocSize(A)(auto ref A a, size_t n)
 {
     return n.roundUpToMultipleOf(a.alignment);
