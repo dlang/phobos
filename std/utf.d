@@ -3280,9 +3280,9 @@ enum dchar replacementDchar = '\uFFFD';
  *      r = an input range of characters (including strings) or a type that
  *          implicitly converts to a string type.
  * Returns:
- *     If `r` is not an auto-decodable string (i.e. a narrow string or a
- *     user-defined type that implicits converts to a string type), then `r`
- *     is returned.
+ *      If `r` is not an auto-decodable string (i.e. a narrow string or a
+ *      user-defined type that implicits converts to a string type), then `r`
+ *      is returned.
  *
  *      Otherwise, `r` is converted to its corresponding string type (if it's
  *      not already a string) and wrapped in a random-access range where the
