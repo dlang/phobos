@@ -546,7 +546,6 @@ Throws: $(D ErrnoException) in case of error.
                 auto res = pclose(_p.handle);
                 errnoEnforce(res != -1,
                         "Could not close pipe `"~_name~"'");
-                errnoEnforce(res == 0, format("Command returned %d", res));
                 _p.handle = null;
             }
         }
