@@ -5556,17 +5556,17 @@ template BuiltinTypeOf(T)
     Also, whereas `typeof` will not accept symbols that are already
     types (e.g., `typeof(int)` will not compile), Typeof will accept
     both values and types.
-    
+
     Params:
         T =  The symbol to take the type of. Can be either a type
-             or a value. If it is something that does not have a valid 
-             type (such as a module name or an expression that 
-             evaluates to the special `__error__` symbol), an error 
+             or a value. If it is something that does not have a valid
+             type (such as a module name or an expression that
+             evaluates to the special `__error__` symbol), an error
              will be raised at compile time.
-             
+
     Returns:
         The type of the given symbol.
-        
+
     Note:
         If the given symbol is a template, the result type will be `void`.
 */
@@ -5667,7 +5667,7 @@ if (T.length == 1)
     static assert(is(Typeof!void == void));
     static assert(testMatch!Typeof);
 }
-                  
+
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 // isSomething
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
