@@ -5623,7 +5623,7 @@ if (T.length == 1)
 
     //The built-in typeof cannot be passed to templates.
     //The following will not compile
-    //alias justTypes = staticMap!(typeof, typeAndValues);
+    //alias justTypes = staticMap!(typeof, typesAndValues);
 
     //But Typeof can
     assert(is(staticMap!(Typeof, typesAndValues) == AliasSeq!(int, bool, char, string)));
