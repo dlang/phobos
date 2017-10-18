@@ -5551,24 +5551,24 @@ template BuiltinTypeOf(T)
 
 /**
     A template designed to function in the same manner as the
-    built-in `typeof` utility. As it is a template, Typeof can be
-    passed around like any other symbol, unlike `typeof`.
-    Also, whereas `typeof` will not accept symbols that are already
-    types (e.g., `typeof(int)` will not compile), Typeof will accept
-    both values and types.
+    built-in `typeof` utility. As it is a template, `Typeof` can be
+    passed around like any other symbol, unlike `typeof`. Also,
+    whereas `typeof` will not accept symbols or expressions that
+    evaluate to a type (e.g., `typeof(int)` will not compile),
+    `Typeof` will accept both values and types.
 
     Params:
-        T =  The symbol to take the type of. Can be either a type
+        T =  The symbol or expression to take the type of. Can be either a type
              or a value. If it is something that does not have a valid
              type (such as a module name or an expression that
-             evaluates to the special `__error__` symbol), an error
+             evaluates to the special `__error__` type), an error
              will be raised at compile time.
 
     Returns:
-        The type of the given symbol.
+        The type of the given symbol or expression.
 
     Note:
-        If the given symbol is a template, the result type will be `void`.
+        If a template is passed to `Typeof`, the result type will be `void`.
 */
 template Typeof(T...)
 if (T.length == 1)
