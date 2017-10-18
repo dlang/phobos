@@ -5633,13 +5633,20 @@ if (T.length == 1)
 {
     import std.meta : AliasSeq;
 
+    //If T[0] is a type, ensure that Typeof!(T[0]) is the same type as T[0],
+    //and ensure that Typeof!(T[0].init) matches the type returned by typeof(T[0].init).
+    //
+    //If T[0] is a value, ensure that Typeof!(T[0]) matches the type returned by typeof(T[0]),
+    //and ensure that applying Typeof to the output of typeof(T[0]) matches the type returned by typeof(T[0]).
     template testMatch(T...)
     if (T.length == 1)
     {
         static if (is(T[0]))
-            enum testMatch = is(Typeof!(T[0]) == T[0]) && is(Typeof!(T[0].init) == typeof(T[0].init));
+            enum testMatch = is(Typeof!(T[0]) == T[0])
+                                && is(Typeof!(T[0].init) == typeof(T[0].init));
         else static if (is(typeof(T[0])))
-            enum testMatch = is(Typeof!(T[0]) == typeof(T[0])) && is(Typeof!(typeof(T[0])) == typeof(T[0]));
+            enum testMatch = is(Typeof!(T[0]) == typeof(T[0]))
+                                && is(Typeof!(typeof(T[0])) == typeof(T[0]));
         else
             enum testMatch = false;
     }
