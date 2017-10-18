@@ -370,6 +370,12 @@ struct File
 
         assert(!_p);
         _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
+        initImpl(handle, name, refs, isPopened);
+    }
+
+    private void initImpl(FILE* handle, string name, uint refs = 1, bool isPopened = false)
+    {
+        assert(_p);
         _p.handle = handle;
         _p.refs = refs;
         _p.isPopened = isPopened;
@@ -408,15 +414,7 @@ Throws: $(D ErrnoException) if the file could not be opened.
         // MSVCRT workaround (issue 14422)
         version (MICROSOFT_STDIO)
         {
-            bool append, update;
-            foreach (c; stdioOpenmode)
-                if (c == 'a')
-                    append = true;
-                else
-                if (c == '+')
-                    update = true;
-            if (append && !update)
-                seek(size);
+            setAppendWin(stdioOpenmode);
         }
     }
 
@@ -472,17 +470,109 @@ file.
     }
 
 /**
-First calls $(D detach) (throwing on failure), and then attempts to
+Detaches from the current file (throwing on failure), and then attempts to
 _open file $(D name) with mode $(D stdioOpenmode). The mode has the
 same semantics as in the C standard library $(HTTP
 cplusplus.com/reference/clibrary/cstdio/fopen.html, fopen) function.
 
 Throws: $(D ErrnoException) in case of error.
  */
-    void open(string name, in char[] stdioOpenmode = "rb") @safe
+    void open(string name, in char[] stdioOpenmode = "rb") @trusted
     {
-        detach();
-        this = File(name, stdioOpenmode);
+        resetFile(name, stdioOpenmode, false);
+    }
+
+    private void resetFile(string name, in char[] stdioOpenmode, bool isPopened) @trusted
+    {
+        import core.stdc.stdlib : malloc;
+        import std.exception : enforce;
+        import std.conv : text;
+        import std.exception : errnoEnforce;
+
+        if (_p is null)
+        {
+            _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
+        }
+        else if (_p.refs == 1)
+        {
+            closeHandles();
+        }
+        else
+        {
+            _p.refs--;
+            _p = cast(Impl*) enforce(malloc(Impl.sizeof), "Out of memory");
+        }
+
+        FILE* handle;
+        version (Posix)
+        {
+            if (isPopened)
+            {
+                errnoEnforce(handle = .popen(name, stdioOpenmode),
+                             "Cannot run command `"~name~"'");
+            }
+            else
+            {
+                errnoEnforce(handle = .fopen(name, stdioOpenmode),
+                             text("Cannot open file `", name, "' in mode `",
+                                  stdioOpenmode, "'"));
+            }
+        }
+        else
+        {
+            assert(isPopened == false);
+            errnoEnforce(handle = .fopen(name, stdioOpenmode),
+                         text("Cannot open file `", name, "' in mode `",
+                              stdioOpenmode, "'"));
+        }
+        initImpl(handle, name, 1, isPopened);
+        version (MICROSOFT_STDIO)
+        {
+            setAppendWin(stdioOpenmode);
+        }
+    }
+
+    private void closeHandles() @trusted
+    {
+        assert(_p);
+        import std.exception : errnoEnforce;
+
+        version (Posix)
+        {
+            import core.sys.posix.stdio : pclose;
+            import std.format : format;
+
+            if (_p.isPopened)
+            {
+                auto res = pclose(_p.handle);
+                errnoEnforce(res != -1,
+                        "Could not close pipe `"~_name~"'");
+                _p.handle = null;
+                return;
+            }
+        }
+        if (_p.handle)
+        {
+            errnoEnforce(.fclose(_p.handle) == 0,
+                    "Could not close file `"~_name~"'");
+            _p.handle = null;
+        }
+    }
+
+    version (MICROSOFT_STDIO)
+    {
+        private void setAppendWin(in char[] stdioOpenmode) @safe
+        {
+            bool append, update;
+            foreach (c; stdioOpenmode)
+                if (c == 'a')
+                    append = true;
+                else
+                if (c == '+')
+                    update = true;
+            if (append && !update)
+                seek(size);
+        }
     }
 
 /**
@@ -566,7 +656,7 @@ Throws: $(D ErrnoException) in case of error.
     }
 
 /**
-First calls $(D detach) (throwing on failure), and then runs a command
+Detaches from the current file (throwing on failure), and then runs a command
 by calling the C standard library function $(HTTP
 opengroup.org/onlinepubs/007908799/xsh/_popen.html, _popen).
 
@@ -574,12 +664,7 @@ Throws: $(D ErrnoException) in case of error.
  */
     version(Posix) void popen(string command, in char[] stdioOpenmode = "r") @safe
     {
-        import std.exception : errnoEnforce;
-
-        detach();
-        this = File(errnoEnforce(.popen(command, stdioOpenmode),
-                        "Cannot run command `"~command~"'"),
-                command, 1, true);
+        resetFile(command, stdioOpenmode ,true);
     }
 
 /**
@@ -790,22 +875,7 @@ Throws: $(D ErrnoException) on error.
         if (!_p.handle) return; // Impl is closed by another File
 
         scope(exit) _p.handle = null; // nullify the handle anyway
-        version (Posix)
-        {
-            import core.sys.posix.stdio : pclose;
-            import std.format : format;
-
-            if (_p.isPopened)
-            {
-                auto res = pclose(_p.handle);
-                errnoEnforce(res != -1,
-                        "Could not close pipe `"~_name~"'");
-                errnoEnforce(res == 0, format("Command returned %d", res));
-                return;
-            }
-        }
-        errnoEnforce(.fclose(_p.handle) == 0,
-                "Could not close file `"~_name~"'");
+        closeHandles();
     }
 
 /**
