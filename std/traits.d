@@ -5549,7 +5549,7 @@ template BuiltinTypeOf(T)
     else                                        static assert(0);
 }
 
-/*
+/**
     A template designed to function in the same manner as the
     built-in `typeof` utility. As it is a template, Typeof can be
     passed around like any other symbol, unlike `typeof`.
