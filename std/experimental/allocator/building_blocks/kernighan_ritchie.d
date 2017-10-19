@@ -887,7 +887,5 @@ it actually returns memory to the operating system when possible.
     import std.experimental.allocator.gc_allocator : GCAllocator;
 
     auto a = KRRegion!GCAllocator(1024 * 1024);
-    () nothrow @safe @nogc {
-        assert(a.goodAllocSize(1) == typeof(*a.root).sizeof);
-    }();
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(1))() == typeof(*a.root).sizeof);
 }

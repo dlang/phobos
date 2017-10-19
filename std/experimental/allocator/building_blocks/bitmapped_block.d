@@ -1100,9 +1100,7 @@ struct BitmappedBlockWithInternalPointers(
 @system unittest
 {
     auto h = BitmappedBlockWithInternalPointers!(4096)(new ubyte[4096 * 1024]);
-    () nothrow @safe @nogc {
-        assert(h.goodAllocSize(1) == 4096);
-    }();
+    assert((() pure nothrow @safe @nogc => h.goodAllocSize(1))() == 4096);
 }
 
 /**

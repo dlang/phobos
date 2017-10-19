@@ -219,3 +219,13 @@ struct ScopedAllocator(ParentAllocator)
     alloc.dispose(foo);
     alloc.dispose(bar); // segfault here
 }
+
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    ScopedAllocator!GCAllocator a;
+
+    assert(__traits(compiles, (() nothrow @safe @nogc => a.goodAllocSize(0))()));
+    // goodAllocSize is not pure because we are calling through Allocator.instance
+    assert(!__traits(compiles, (() pure nothrow @safe @nogc => a.goodAllocSize(0))()));
+}

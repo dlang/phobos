@@ -141,15 +141,11 @@ struct GCAllocator
     import std.typecons : Ternary;
 
     // test allocation sizes
-    () nothrow @safe @nogc {
-        assert(GCAllocator.instance.goodAllocSize(1) == 16);
-    }();
+    assert((() nothrow @safe @nogc => GCAllocator.instance.goodAllocSize(1))() == 16);
     for (size_t s = 16; s <= 8192; s *= 2)
     {
-        () nothrow @safe @nogc {
-            assert(GCAllocator.instance.goodAllocSize(s) == s);
-            assert(GCAllocator.instance.goodAllocSize(s - (s / 2) + 1) == s);
-        }();
+        assert((() nothrow @safe @nogc => GCAllocator.instance.goodAllocSize(s))() == s);
+        assert((() nothrow @safe @nogc => GCAllocator.instance.goodAllocSize(s - (s / 2) + 1))() == s);
 
         auto buffer = GCAllocator.instance.allocate(s);
         scope(exit) GCAllocator.instance.deallocate(buffer);
@@ -168,7 +164,5 @@ struct GCAllocator
     }
 
     // anything above a page is simply rounded up to next page
-    () nothrow @safe @nogc {
-        assert(GCAllocator.instance.goodAllocSize(4096 * 4 + 1) == 4096 * 5);
-    }();
+    assert((() nothrow @safe @nogc => GCAllocator.instance.goodAllocSize(4096 * 4 + 1))() == 4096 * 5);
 }

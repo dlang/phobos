@@ -237,7 +237,5 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
         (size_t n) => n.roundUpToMultipleOf(64));
     testAllocator!(() => MyAlloc());
 
-    () nothrow @safe @nogc {
-        assert(MyAlloc().goodAllocSize(1) == 64);
-    }();
+    assert((() pure nothrow @safe @nogc => MyAlloc().goodAllocSize(1))() == 64);
 }

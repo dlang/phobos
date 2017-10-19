@@ -258,7 +258,5 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
             0, unbounded),
         65, 512, 64) a;
 
-    () nothrow @safe @nogc {
-        assert(a.goodAllocSize(65) == 128);
-    }();
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(65))() == 128);
 }

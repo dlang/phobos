@@ -402,6 +402,14 @@ struct FreeList(ParentAllocator,
     assert(fl.root is null);
 }
 
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    FreeList!(GCAllocator, 0, 16) fl;
+    // Not @nogc because of std.conv.text
+    assert((() nothrow @safe /*@nogc*/ => fl.goodAllocSize(1))() == 16);
+}
+
 /**
 Free list built on top of exactly one contiguous block of memory. The block is
 assumed to have been allocated with $(D ParentAllocator), and is released in
@@ -693,8 +701,9 @@ struct ContiguousFreeList(ParentAllocator,
 
     assert(a.empty == Ternary.yes);
 
-    assert(a.goodAllocSize(15) == 64);
-    assert(a.goodAllocSize(65) == NullAllocator.instance.goodAllocSize(65));
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(15))() == 64);
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(65))()
+            == (() nothrow @safe @nogc => NullAllocator.instance.goodAllocSize(65))());
 
     auto b = a.allocate(100);
     assert(a.empty == Ternary.yes);
@@ -718,8 +727,9 @@ struct ContiguousFreeList(ParentAllocator,
 
     assert(a.empty == Ternary.yes);
 
-    assert(a.goodAllocSize(15) == 64);
-    assert(a.goodAllocSize(65) == a.parent.goodAllocSize(65));
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(15))() == 64);
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(65))()
+            == (() pure nothrow @safe @nogc => a.parent.goodAllocSize(65))());
 
     auto b = a.allocate(100);
     assert(a.empty == Ternary.no);
@@ -1078,7 +1088,7 @@ struct SharedFreeList(ParentAllocator,
 
     static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
 
-    assert(a.goodAllocSize(1) == platformAlignment);
+    assert((() nothrow @safe @nogc => a.goodAllocSize(1))() == platformAlignment);
 
     auto b = a.allocate(96);
     a.deallocate(b);
