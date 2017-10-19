@@ -350,12 +350,12 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     `Ternary.no` otherwise. Never returns `Ternary.unkown`. (This
     method is somewhat tolerant in that accepts an interior slice.)
     */
-    Ternary owns(void[] b) const
+    pure nothrow @trusted @nogc
+    Ternary owns(const void[] b) const
     {
-        //if (!b.ptr) return Ternary.no;
-        assert(b.ptr !is null || b.length == 0, "Corrupt block.");
-        return Ternary(b.ptr >= _payload.ptr
-            && b.ptr + b.length <= _payload.ptr + _payload.length);
+        assert(b || b.length == 0, "Corrupt block.");
+        return Ternary(b && _payload && (&b[0] >= &_payload[0])
+               && (&b[0] + b.length) <= (&_payload[0] + _payload.length));
     }
 
     /*
@@ -841,6 +841,19 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     assert(h3.totalAllocation(1) >= 4096);
     assert(h3.totalAllocation(64 * 4096) >= 64 * 4096);
     assert(h3.totalAllocation(64 * 4096 + 1) >= 65 * 4096);
+}
+
+// Test owns
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.typecons : Ternary;
+
+    auto a = BitmappedBlock!(64, 8, GCAllocator)(1024 * 64);
+    const void[] buff = a.allocate(42);
+
+    assert((() nothrow @safe @nogc => a.owns(buff))() == Ternary.yes);
+    assert((() nothrow @safe @nogc => a.owns(null))() == Ternary.no);
 }
 
 // BitmappedBlockWithInternalPointers

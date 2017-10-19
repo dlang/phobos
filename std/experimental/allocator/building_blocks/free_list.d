@@ -611,9 +611,13 @@ struct ContiguousFreeList(ParentAllocator,
     belongs to this allocator.
     */
     static if (hasMember!(SParent, "owns") || unchecked)
+    // Ternary owns(const void[] b) const ?
     Ternary owns(void[] b)
     {
-        if (support.ptr <= b.ptr && b.ptr < support.ptr + support.length)
+        if ((() @trusted => support && b
+                            && (&support[0] <= &b[0])
+                            && (&b[0] < &support[0] + support.length)
+            )())
             return Ternary.yes;
         static if (unchecked)
             return Ternary.no;
@@ -703,8 +707,8 @@ struct ContiguousFreeList(ParentAllocator,
     b = a.allocate(64);
     assert(a.empty == Ternary.no);
     assert(b.length == 64);
-    assert(a.owns(b) == Ternary.yes);
-    assert(a.owns(null) == Ternary.no);
+    assert((() nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
+    assert((() nothrow @safe @nogc => a.owns(null))() == Ternary.no);
     a.deallocate(b);
 }
 
@@ -730,8 +734,8 @@ struct ContiguousFreeList(ParentAllocator,
     b = a.allocate(64);
     assert(a.empty == Ternary.no);
     assert(b.length == 64);
-    assert(a.owns(b) == Ternary.yes);
-    assert(a.owns(null) == Ternary.no);
+    assert((() nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
+    assert((() nothrow @safe @nogc => a.owns(null))() == Ternary.no);
     a.deallocate(b);
 }
 
@@ -757,6 +761,11 @@ struct SharedFreeList(ParentAllocator,
     import std.conv : text;
     import std.exception : enforce;
     import std.traits : hasMember;
+
+    static if (hasMember!(ParentAllocator, "owns"))
+    {
+        import std.typecons : Ternary;
+    }
 
     static assert(approxMaxNodes, "approxMaxNodes must not be null.");
     static assert(minSize != unbounded, "Use minSize = 0 for no low bound.");
@@ -931,7 +940,7 @@ struct SharedFreeList(ParentAllocator,
 
     /// Ditto
     static if (hasMember!(ParentAllocator, "owns"))
-    Ternary owns(void[] b) shared const
+    Ternary owns(const void[] b) shared const
     {
         return parent.owns(b);
     }

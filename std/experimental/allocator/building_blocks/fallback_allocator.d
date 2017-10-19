@@ -264,10 +264,10 @@ struct FallbackAllocator(Primary, Fallback)
     // This allocation uses the stack
     auto b1 = a.allocate(1024);
     assert(b1.length == 1024, text(b1.length));
-    assert(a.primary.owns(b1) == Ternary.yes);
-    // This large allocation will go to the Mallocator
+    assert((() pure nothrow @safe @nogc => a.primary.owns(b1))() == Ternary.yes);
+    // This large allocation will go to the GCAllocator
     auto b2 = a.allocate(1024 * 1024);
-    assert(a.primary.owns(b2) == Ternary.no);
+    assert((() pure nothrow @safe @nogc => a.primary.owns(b2))() == Ternary.no);
     a.deallocate(b1);
     a.deallocate(b2);
 }
@@ -352,4 +352,15 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
     auto b2 = a.allocate(10);
     assert(b2.length == 10);
     assert(a.primary.owns(b2) == Ternary.no);
+}
+
+// Ensure `owns` inherits function attributes
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : InSituRegion;
+    import std.typecons : Ternary;
+
+    FallbackAllocator!(InSituRegion!16_384, InSituRegion!16_384) a;
+    auto buff = a.allocate(42);
+    assert((() pure nothrow @safe @nogc => a.owns(buff))() == Ternary.yes);
 }
