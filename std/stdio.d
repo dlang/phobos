@@ -2719,6 +2719,7 @@ $(D Range) that locks the file and allows fast writing to it.
         import std.range.primitives : ElementType, isInfinite, isInputRange;
         // the shared file handle
         FILE* fps_;
+        File file_;
 
         // the unshared version of fps
         @property _iobuf* handle_() @trusted { return cast(_iobuf*) fps_; }
@@ -2733,6 +2734,7 @@ $(D Range) that locks the file and allows fast writing to it.
             import std.exception : enforce;
 
             enforce(f._p && f._p.handle, "Attempting to write to closed File");
+            file_ = f;
             fps_ = f._p.handle;
             orientation_ = fwide(fps_, 0);
             FLOCK(fps_);
@@ -2897,6 +2899,7 @@ See $(LREF byChunk) for an example.
         import std.traits : hasIndirections;
     private:
         FILE* fps;
+        File file;
         string name;
 
         version (Windows)
@@ -2910,7 +2913,7 @@ See $(LREF byChunk) for an example.
         this(ref File f)
         {
             import std.exception : enforce;
-
+            file = f;
             enforce(f._p && f._p.handle);
             name = f._name;
             fps = f._p.handle;
@@ -3047,6 +3050,19 @@ void main()
 
         auto deleteme = testFilename();
         scope(exit) collectException(std.file.remove(deleteme));
+
+        {
+            auto writer = File(deleteme, "wb").lockingBinaryWriter();
+            auto input = File(deleteme, "rb");
+
+            ubyte[1] byteIn = [42];
+            writer.rawWrite(byteIn);
+            destroy(writer);
+
+            ubyte[1] byteOut = input.rawRead(new ubyte[1]);
+            assert(byteIn[0] == byteOut[0]);
+        }
+
         auto output = File(deleteme, "wb");
         auto writer = output.lockingBinaryWriter();
         auto input = File(deleteme, "rb");
@@ -3271,8 +3287,7 @@ void main()
     scope(exit) std.file.remove(deleteme);
 
     {
-        File f = File(deleteme, "w");
-        auto writer = f.lockingTextWriter();
+        auto writer = File(deleteme, "w").lockingTextWriter();
         static assert(isOutputRange!(typeof(writer), dchar));
         writer.put("日本語");
         writer.put("日本語"w);
