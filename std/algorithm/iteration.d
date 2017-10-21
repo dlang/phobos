@@ -3851,20 +3851,42 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.range : empty;
+    import std.ascii : toLower;
+    import std.range : empty, retro;
 
-    assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
-    int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
-    int[][] w = [ [1, 2], [], [3], [4, 5], [] ];
+    // Basic splitting with characters and numbers.
+    assert(equal(splitter("a.bc.def", '.'), [ "a", "bc", "def" ]));
+
+    int[] a = [1, 0, 2, 3, 0, 4, 5, 6];
+    int[][] w = [ [1], [2, 3], [4, 5, 6] ];
     assert(equal(splitter(a, 0), w));
-    a = [ 0 ];
-    assert(equal(splitter(a, 0), [ (int[]).init, (int[]).init ]));
-    a = [ 0, 1 ];
-    assert(equal(splitter(a, 0), [ [], [1] ]));
-    w = [ [0], [1], [2] ];
-    assert(equal(splitter!"a.front == b"(w, 1), [ [[0]], [[2]] ]));
+
+    // Adjacent separators.
+    assert(equal(splitter("a.b..c", '.'), [ "a", "b", "", "c" ]));
+    assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
+
+    a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
+    w = [ [1, 2], [], [3], [4, 5], [] ];
+    assert(equal(splitter(a, 0), w));
+
+    // Empty and separator-only ranges.
     assert(splitter("", '.').empty);
     assert(equal(splitter(".", '.'), [ "", "" ]));
+    assert(equal(splitter("..", '.'), [ "", "", "" ]));
+
+    // Leading separators, trailing separators, or no separators.
+    assert(equal(splitter(".ab.", '.'), [ "", "ab", "" ]));
+    assert(equal(splitter("ab", '.'), [ "ab" ]));
+
+    // Predicate functions.
+    assert(equal(splitter!"a.toLower == b"("abXcdxef", 'x'),
+                 [ "ab", "cd", "ef" ]));
+
+    w = [ [0], [1], [2] ];
+    assert(equal(splitter!"a.front == b"(w, 1), [ [[0]], [[2]] ]));
+
+    // Bidirectional ranges.
+    assert(equal(splitter("a.bc.def", '.').retro, [ "def", "bc", "a" ]));
 }
 
 @safe unittest
@@ -3886,6 +3908,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     a = [ 0 ];
     assert(equal(splitter(a, 0), [ (int[]).init, (int[]).init ][]));
     a = [ 0, 1 ];
+    assert(equal(splitter(a, 0), [ [], [1] ]));
     assert(equal(splitter(a, 0), [ [], [1] ][]));
 
     // Thoroughly exercise the bidirectional stuff.
@@ -3952,6 +3975,9 @@ Two adjacent separators are considered to surround an empty element in
 the split range. Use $(D filter!(a => !a.empty)) on the result to compress
 empty elements.
 
+Unlike the previous overload of $(D splitter), this one will not return a
+bidirectional range.
+
 Params:
     pred = The predicate for comparing each element with the separator,
         defaulting to $(D "a == b").
@@ -3966,8 +3992,7 @@ Constraints:
 
 Returns:
     An input range of the subranges of elements between separators. If $(D r)
-    is a forward range or $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives),
-    the returned range will be likewise.
+    is a forward range, the returned range will be a forward range.
 
 See_Also: $(REF _splitter, std,regex) for a version that splits using a regular
 expression defined separator.
@@ -4093,12 +4118,17 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 {
     import std.algorithm.comparison : equal;
 
+    assert(equal(splitter("a=>bc=>def", "=>"), [ "a", "bc", "def" ]));
+    assert(equal(splitter("a.b..c", ".."), [ "a.b", "c" ]));
     assert(equal(splitter("hello  world", "  "), [ "hello", "world" ]));
+
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
     int[][] w = [ [1, 2], [3, 0, 4, 5, 0] ];
     assert(equal(splitter(a, [0, 0]), w));
+
     a = [ 0, 0 ];
     assert(equal(splitter(a, [0, 0]), [ (int[]).init, (int[]).init ]));
+
     a = [ 0, 0, 1 ];
     assert(equal(splitter(a, [0, 0]), [ [], [1] ]));
 }
@@ -4243,14 +4273,19 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(input.front))))
     import std.algorithm.comparison : equal;
     import std.range.primitives : front;
 
+    assert(equal(splitter!(a => a == '.')("a.bc.def"), [ "a", "bc", "def" ]));
     assert(equal(splitter!(a => a == ' ')("hello  world"), [ "hello", "", "world" ]));
+
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
     int[][] w = [ [1, 2], [], [3], [4, 5], [] ];
     assert(equal(splitter!(a => a == 0)(a), w));
+
     a = [ 0 ];
     assert(equal(splitter!(a => a == 0)(a), [ (int[]).init, (int[]).init ]));
+
     a = [ 0, 1 ];
     assert(equal(splitter!(a => a == 0)(a), [ [], [1] ]));
+
     w = [ [0], [1], [2] ];
     assert(equal(splitter!(a => a.front == 1)(w), [ [[0]], [[2]] ]));
 }
