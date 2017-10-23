@@ -2585,9 +2585,9 @@ struct ThreadLocal(A)
 ///
 unittest
 {
-    import std.experimental.allocator.building_blocks.free_list: FreeList;
-    import std.experimental.allocator.gc_allocator: GCAllocator;
-    import std.experimental.allocator.mallocator: Mallocator;
+    import std.experimental.allocator.building_blocks.free_list : FreeList;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.mallocator : Mallocator;
 
     static assert(!is(ThreadLocal!Mallocator));
     static assert(!is(ThreadLocal!GCAllocator));
@@ -2757,8 +2757,8 @@ private struct EmbeddedTree(T, alias less)
     void dump(Node* r, uint indent)
     {
         import std.stdio;
-        import std.range: repeat;
-        import std.array: array;
+        import std.range : repeat;
+        import std.array : array;
 
         write(repeat(' ', indent).array);
         if (!r)
@@ -2789,7 +2789,7 @@ private struct EmbeddedTree(T, alias less)
 
 unittest
 {
-    import std.experimental.allocator.gc_allocator: GCAllocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
 
     alias a = GCAllocator.instance;
     alias Tree = EmbeddedTree!(int, (a, b) => a.payload < b.payload);
@@ -2826,7 +2826,7 @@ the block size and two for search management).
 */
 private struct InternalPointersTree(Allocator)
 {
-    import std.experimental.allocator.building_blocks.affix_allocator: AffixAllocator;
+    import std.experimental.allocator.building_blocks.affix_allocator : AffixAllocator;
 
     alias Tree = EmbeddedTree!(size_t,
         (a, b) => cast(void*) a + a.payload < cast(void*) b);
@@ -2901,7 +2901,8 @@ private struct InternalPointersTree(Allocator)
     /** Returns the block inside which $(D p) resides, or $(D null) if the
     pointer does not belong.
     */
-    Ternary resolveInternalPointer(const void* p, ref void[] result) @safe
+    pure nothrow @safe @nogc
+    Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
         // Must define a custom find
         Tree.Node* find()
@@ -2933,8 +2934,8 @@ private struct InternalPointersTree(Allocator)
 
 unittest
 {
-    import std.experimental.allocator.mallocator: Mallocator;
-    import std.random: randomCover;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.random : randomCover;
 
     InternalPointersTree!(Mallocator) a;
     int[] vals = [ 6, 3, 9, 1, 2, 8, 11 ];
@@ -2947,9 +2948,9 @@ unittest
 
     foreach (b; allox)
     {
-        () @safe {
+        () pure nothrow @safe {
             void[] p;
-            Ternary r = a.resolveInternalPointer(&b[0], p);
+            Ternary r = (() @nogc => a.resolveInternalPointer(&b[0], p))();
             assert(&p[0] == &b[0] && p.length >= b.length);
             r = a.resolveInternalPointer((() @trusted => &b[0] + b.length)(), p);
             assert(&p[0] == &b[0] && p.length >= b.length);
@@ -2971,14 +2972,14 @@ unittest
 //version (std_allocator_benchmark)
 unittest
 {
-    import std.experimental.allocator.building_blocks.null_allocator: NullAllocator;
-    import std.experimental.allocator.building_blocks.allocator_list: AllocatorList;
-    import std.experimental.allocator.building_blocks.bitmapped_block: BitmappedBlock;
-    import std.experimental.allocator.building_blocks.segregator: Segregator;
-    import std.experimental.allocator.building_blocks.bucketizer: Bucketizer;
-    import std.experimental.allocator.building_blocks.free_list: FreeList;
-    import std.experimental.allocator.gc_allocator: GCAllocator;
-    import std.experimental.allocator.mallocator: Mallocator;
+    import std.experimental.allocator.building_blocks.null_allocator : NullAllocator;
+    import std.experimental.allocator.building_blocks.allocator_list : AllocatorList;
+    import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlock;
+    import std.experimental.allocator.building_blocks.segregator : Segregator;
+    import std.experimental.allocator.building_blocks.bucketizer : Bucketizer;
+    import std.experimental.allocator.building_blocks.free_list : FreeList;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.mallocator : Mallocator;
 
     static void testSpeed(A)()
     {
@@ -3007,7 +3008,7 @@ unittest
         }
     }
 
-    import std.algorithm.comparison: max;
+    import std.algorithm.comparison : max;
 
     alias FList = FreeList!(GCAllocator, 0, unbounded);
     alias A = Segregator!(
@@ -3019,15 +3020,15 @@ unittest
         2048, Bucketizer!(FList, 1025, 2048, 256),
         3584, Bucketizer!(FList, 2049, 3584, 512),
         4072 * 1024, AllocatorList!(
-            (size_t n) => BitmappedBlock!(4096)(cast(ubyte[])GCAllocator.instance.allocate(
+            (size_t n) => BitmappedBlock!(4096)(cast(ubyte[]) GCAllocator.instance.allocate(
                 max(n, 4072 * 1024)))),
         GCAllocator
     );
 
     import std.stdio;
-    import std.conv: to;
+    import std.conv : to;
     import std.datetime.stopwatch;
-    import std.algorithm.iteration: map;
+    import std.algorithm.iteration : map;
 
     if (false) writeln(benchmark!(
         testSpeed!NullAllocator,
@@ -3040,11 +3041,11 @@ unittest
 
 unittest
 {
-    import std.experimental.allocator.building_blocks.free_list: FreeList;
-    import std.experimental.allocator.building_blocks.region: InSituRegion;
-    import std.experimental.allocator.building_blocks.fallback_allocator: FallbackAllocator;
-    import std.experimental.allocator.gc_allocator: GCAllocator;
-    import std.experimental.allocator.mallocator: Mallocator;
+    import std.experimental.allocator.building_blocks.free_list : FreeList;
+    import std.experimental.allocator.building_blocks.region : InSituRegion;
+    import std.experimental.allocator.building_blocks.fallback_allocator : FallbackAllocator;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.mallocator : Mallocator;
 
     auto a = allocatorObject(Mallocator.instance);
     auto b = a.allocate(100);
@@ -3065,12 +3066,12 @@ unittest
 ///
 unittest
 {
-    import std.experimental.allocator.building_blocks.allocator_list: AllocatorList;
-    import std.experimental.allocator.building_blocks.bitmapped_block: BitmappedBlock;
-    import std.experimental.allocator.building_blocks.segregator: Segregator;
-    import std.experimental.allocator.building_blocks.bucketizer: Bucketizer;
-    import std.experimental.allocator.building_blocks.free_list: FreeList;
-    import std.experimental.allocator.gc_allocator: GCAllocator;
+    import std.experimental.allocator.building_blocks.allocator_list : AllocatorList;
+    import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlock;
+    import std.experimental.allocator.building_blocks.segregator : Segregator;
+    import std.experimental.allocator.building_blocks.bucketizer : Bucketizer;
+    import std.experimental.allocator.building_blocks.free_list : FreeList;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
 
     /// Define an allocator bound to the built-in GC.
     IAllocator alloc = allocatorObject(GCAllocator.instance);
@@ -3078,7 +3079,7 @@ unittest
     assert(b.length == 42);
     assert(alloc.deallocate(b));
 
-    import std.algorithm.comparison: max;
+    import std.algorithm.comparison : max;
     // Define an elaborate allocator and bind it to the class API.
     alias FList = FreeList!(GCAllocator, 0, unbounded);
     alias A = ThreadLocal!(
@@ -3091,7 +3092,7 @@ unittest
             2048, Bucketizer!(FList, 1025, 2048, 256),
             3584, Bucketizer!(FList, 2049, 3584, 512),
             4072 * 1024, AllocatorList!(
-                (n) => BitmappedBlock!(4096)(cast(ubyte[])GCAllocator.instance.allocate(
+                (n) => BitmappedBlock!(4096)(cast(ubyte[]) GCAllocator.instance.allocate(
                     max(n, 4072 * 1024)))),
             GCAllocator
         )

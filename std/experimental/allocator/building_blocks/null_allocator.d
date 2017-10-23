@@ -82,6 +82,7 @@ struct NullAllocator
     import std.typecons : Ternary;
     assert(NullAllocator.instance.empty() == Ternary.yes);
     assert((() nothrow @safe @nogc => NullAllocator.instance.owns(null))() == Ternary.no);
+
     void[] p;
     assert((() nothrow @safe @nogc => NullAllocator.instance.resolveInternalPointer(null, p))() == Ternary.no);
 }

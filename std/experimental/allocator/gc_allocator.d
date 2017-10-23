@@ -151,8 +151,8 @@ struct GCAllocator
         scope(exit) GCAllocator.instance.deallocate(buffer);
 
         void[] p;
-        assert(GCAllocator.instance.resolveInternalPointer(null, p) == Ternary.no);
-        Ternary r = GCAllocator.instance.resolveInternalPointer(buffer.ptr, p);
+        assert((() nothrow @safe => GCAllocator.instance.resolveInternalPointer(null, p))() == Ternary.no);
+        assert((() nothrow @safe => GCAllocator.instance.resolveInternalPointer(&buffer[0], p))() == Ternary.yes);
         assert(p.ptr is buffer.ptr && p.length >= buffer.length);
 
         assert(GC.sizeOf(buffer.ptr) == s);
@@ -167,7 +167,7 @@ struct GCAllocator
     assert((() nothrow @safe @nogc => GCAllocator.instance.goodAllocSize(4096 * 4 + 1))() == 4096 * 5);
 }
 
-@safe unittest
+nothrow @safe unittest
 {
     import std.typecons : Ternary;
 

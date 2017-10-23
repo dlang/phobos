@@ -1016,22 +1016,24 @@ struct BitmappedBlockWithInternalPointers(
     }
 
     /// Ditto
+    nothrow @safe @nogc
     Ternary resolveInternalPointer(const void* p, ref void[] result)
     {
-        if (p < _heap._payload.ptr
-            || p >= _heap._payload.ptr + _heap._payload.length)
+        if ((() @trusted => _heap._payload
+                    && (p < &_heap._payload[0]
+                        || p >= &_heap._payload[0] + _heap._payload.length))())
         {
             return Ternary.no;
         }
         // Find block start
-        auto block = (p - _heap._payload.ptr) / _heap.blockSize;
+        auto block = (() @trusted => (p - &_heap._payload[0]) / _heap.blockSize)();
         if (block >= _allocStart.length) return Ternary.no;
         // Within an allocation, must find the 1 just to the left of it
         auto i = _allocStart.find1Backward(block);
         if (i == i.max) return Ternary.no;
         auto j = _allocStart.find1(i + 1);
-        result = _heap._payload.ptr[cast(size_t) (_heap.blockSize * i)
-                                    .. cast(size_t) (_heap.blockSize * j)];
+        result = (() @trusted => _heap._payload.ptr[cast(size_t) (_heap.blockSize * i)
+                                                    .. cast(size_t) (_heap.blockSize * j)])();
         return Ternary.yes;
     }
 
@@ -1089,24 +1091,29 @@ struct BitmappedBlockWithInternalPointers(
     assert(b.length == 123);
 
     void[] p;
-    Ternary r = h.resolveInternalPointer(b.ptr + 17, p);
+    void* offset = &b[0] + 17;
+    assert((() nothrow @safe @nogc => h.resolveInternalPointer(offset, p))() == Ternary.yes);
     assert(p.ptr is b.ptr);
     assert(p.length >= b.length);
     b = h.allocate(4096);
 
-    h.resolveInternalPointer(b.ptr, p);
+    offset = &b[0];
+    assert((() nothrow @safe @nogc => h.resolveInternalPointer(offset, p))() == Ternary.yes);
     assert(p is b);
 
-    h.resolveInternalPointer(b.ptr + 11, p);
+    offset = &b[0] + 11;
+    assert((() nothrow @safe @nogc => h.resolveInternalPointer(offset, p))() == Ternary.yes);
     assert(p is b);
 
     void[] unchanged = p;
-    h.resolveInternalPointer(b.ptr - 40_970, p);
+    offset = &b[0] - 40_970;
+    assert((() nothrow @safe @nogc => h.resolveInternalPointer(offset, p))() == Ternary.no);
     assert(p is unchanged);
 
     assert(h.expand(b, 1));
     assert(b.length == 4097);
-    h.resolveInternalPointer(b.ptr + 4096, p);
+    offset = &b[0] + 4096;
+    assert((() nothrow @safe @nogc => h.resolveInternalPointer(offset, p))() == Ternary.yes);
     assert(p.ptr is b.ptr);
 }
 
@@ -1120,6 +1127,7 @@ struct BitmappedBlockWithInternalPointers(
 Returns the number of most significant ones before a zero can be found in $(D
 x). If $(D x) contains no zeros (i.e. is equal to $(D ulong.max)), returns 64.
 */
+pure nothrow @safe @nogc
 private uint leadingOnes(ulong x)
 {
     uint result = 0;
@@ -1131,7 +1139,7 @@ private uint leadingOnes(ulong x)
     return result;
 }
 
-@system unittest
+@safe unittest
 {
     assert(leadingOnes(0) == 0);
     assert(leadingOnes(~0UL) == 64);
@@ -1145,6 +1153,7 @@ private uint leadingOnes(ulong x)
 /**
 Finds a run of contiguous ones in $(D x) of length at least $(D n).
 */
+pure nothrow @safe @nogc
 private uint findContigOnes(ulong x, uint n)
 {
     while (n > 1)
@@ -1156,7 +1165,7 @@ private uint findContigOnes(ulong x, uint n)
     return leadingOnes(~x);
 }
 
-@system unittest
+@safe unittest
 {
     assert(findContigOnes(0x0000_0000_0000_0300, 2) == 54);
 
@@ -1173,6 +1182,7 @@ private uint findContigOnes(ulong x, uint n)
 /*
 Unconditionally sets the bits from lsb through msb in w to zero.
 */
+pure nothrow @safe @nogc
 private void setBits(ref ulong w, uint lsb, uint msb)
 {
     assert(lsb <= msb && msb < 64);
@@ -1180,7 +1190,7 @@ private void setBits(ref ulong w, uint lsb, uint msb)
     w |= mask;
 }
 
-@system unittest
+@safe unittest
 {
     ulong w;
     w = 0; setBits(w, 0, 63); assert(w == ulong.max);
@@ -1192,6 +1202,7 @@ private void setBits(ref ulong w, uint lsb, uint msb)
 /* Are bits from lsb through msb in w zero? If so, make then 1
 and return the resulting w. Otherwise, just return 0.
 */
+pure nothrow @safe @nogc
 private bool setBitsIfZero(ref ulong w, uint lsb, uint msb)
 {
     assert(lsb <= msb && msb < 64);
@@ -1202,6 +1213,7 @@ private bool setBitsIfZero(ref ulong w, uint lsb, uint msb)
 }
 
 // Assigns bits in w from lsb through msb to zero.
+pure nothrow @safe @nogc
 private void resetBits(ref ulong w, uint lsb, uint msb)
 {
     assert(lsb <= msb && msb < 64);
@@ -1218,10 +1230,13 @@ private struct BitVector
 
     auto rep() { return _rep; }
 
+    @safe @nogc
     this(ulong[] data) { _rep = data; }
 
+    pure nothrow @safe @nogc
     void opSliceAssign(bool b) { _rep[] = b ? ulong.max : 0; }
 
+    pure @safe @nogc
     void opSliceAssign(bool b, ulong x, ulong y)
     {
         assert(x <= y && y <= _rep.length * 64);
@@ -1253,6 +1268,7 @@ private struct BitVector
         }
     }
 
+    @safe @nogc
     bool opIndex(ulong x)
     {
         assert(x < length);
@@ -1260,6 +1276,7 @@ private struct BitVector
             & (0x8000_0000_0000_0000UL >> (x % 64))) != 0;
     }
 
+    @safe @nogc
     void opIndexAssign(bool b, ulong x)
     {
         assert(x / 64 <= size_t.max);
@@ -1269,6 +1286,7 @@ private struct BitVector
         else _rep[i] &= ~j;
     }
 
+    nothrow @safe @nogc
     ulong length() const
     {
         return _rep.length * 64;
@@ -1277,6 +1295,7 @@ private struct BitVector
     /* Returns the index of the first 1 to the right of i (including i itself),
     or length if not found.
     */
+    nothrow @safe @nogc
     ulong find1(ulong i)
     {
         assert(i < length);
@@ -1304,6 +1323,7 @@ private struct BitVector
     /* Returns the index of the first 1 to the left of i (including i itself),
     or ulong.max if not found.
     */
+    nothrow @safe @nogc
     ulong find1Backward(ulong i)
     {
         assert(i < length);
@@ -1329,6 +1349,7 @@ private struct BitVector
     }
 
     /// Are all bits zero?
+    nothrow @safe @nogc
     bool allAre0() const
     {
         foreach (w; _rep) if (w) return false;
@@ -1336,12 +1357,14 @@ private struct BitVector
     }
 
     /// Are all bits one?
+    nothrow @safe @nogc
     bool allAre1() const
     {
         foreach (w; _rep) if (w != ulong.max) return false;
         return true;
     }
 
+    nothrow @safe @nogc
     ulong findZeros(immutable size_t howMany, ulong start)
     {
         assert(start < length);
@@ -1378,7 +1401,7 @@ private struct BitVector
     }
 }
 
-@system unittest
+@safe unittest
 {
     auto v = BitVector(new ulong[10]);
     assert(v.length == 640);

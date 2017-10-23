@@ -182,9 +182,9 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             if (r != Ternary.yes || p1 is null)
                 return r;
             p1 = p1[stateSize!Prefix .. $];
-            auto p2 = (p1.ptr + p1.length - stateSize!Suffix)
-                      .alignDownTo(Suffix.alignof);
-            result = p1[0 .. p2 - p1.ptr];
+            auto p2 = (() @trusted => (&p1[0] + p1.length - stateSize!Suffix)
+                                      .alignDownTo(Suffix.alignof))();
+            result = p1[0 .. p2 - &p1[0]];
             return Ternary.yes;
         }
 
@@ -435,8 +435,8 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     static assert(is(typeof(&MyAllocator.instance.prefix(e)) == const(uint)*));
 
     void[] p;
-    assert(MyAllocator.instance.resolveInternalPointer(null, p) == Ternary.no);
-    Ternary r = MyAllocator.instance.resolveInternalPointer(d.ptr, p);
+    assert((() nothrow @safe @nogc => MyAllocator.instance.resolveInternalPointer(null, p))() == Ternary.no);
+    assert((() nothrow @safe => MyAllocator.instance.resolveInternalPointer(&d[0], p))() == Ternary.yes);
     assert(p.ptr is d.ptr && p.length >= d.length);
 }
 
