@@ -5587,31 +5587,31 @@ if (T.length == 1)
 @safe unittest
 {
     //Types, values and expressions are accepted
-    assert(is(Typeof!1 == typeof(1)));
-    assert(is(Typeof!false == typeof(false)));
-    assert(is(Typeof!"" == string));
+    static assert(is(Typeof!1 == typeof(1)));
+    static assert(is(Typeof!false == typeof(false)));
+    static assert(is(Typeof!"" == string));
 
-    assert(is(Typeof!int == int));
-    assert(is(Typeof!bool == bool));
-    assert(is(Typeof!string == string));
+    static assert(is(Typeof!int == int));
+    static assert(is(Typeof!bool == bool));
+    static assert(is(Typeof!string == string));
 
-    assert(is(Typeof!(1 + 2 / 3) == typeof(1 + 2 / 3)));
+    static assert(is(Typeof!(1 + 2 / 3) == typeof(1 + 2 / 3)));
 
     struct S {}
-    assert(is(Typeof!(S()) == typeof(S())));
-    assert(is(Typeof!S == S));
+    static assert(is(Typeof!(S()) == typeof(S())));
+    static assert(is(Typeof!S == S));
 
     class C {}
     C c;
-    assert(is(Typeof!c == typeof(c)));
-    assert(is(Typeof!C == C));
+    static assert(is(Typeof!c == typeof(c)));
+    static assert(is(Typeof!C == C));
 
     //The type of a template is `void`
-    assert(is(Typeof!Typeof == typeof(Typeof)));
-    assert(is(Typeof!Typeof == void));
+    static assert(is(Typeof!Typeof == typeof(Typeof)));
+    static assert(is(Typeof!Typeof == void));
 
     //Modules do not have a valid type
-    assert(!__traits(compiles, { alias _ = Typeof!(std.traits); }));
+    static assert(!__traits(compiles, { alias _ = Typeof!(std.traits); }));
 }
 
 ///
@@ -5626,7 +5626,7 @@ if (T.length == 1)
     //alias justTypes = staticMap!(typeof, typesAndValues);
 
     //But Typeof can
-    assert(is(staticMap!(Typeof, typesAndValues) == AliasSeq!(int, bool, char, string)));
+    static assert(is(staticMap!(Typeof, typesAndValues) == AliasSeq!(int, bool, char, string)));
 }
 
 @safe unittest
