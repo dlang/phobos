@@ -24,6 +24,8 @@ struct FallbackAllocator(Primary, Fallback)
     import std.traits : hasMember;
     import std.typecons : Ternary;
 
+    // Need at least one stateless allocator for this to work
+    static if (!stateSize!Primary || !stateSize!Fallback)
     @system unittest
     {
         testAllocator!(() => FallbackAllocator());
@@ -247,7 +249,8 @@ struct FallbackAllocator(Primary, Fallback)
 
     Returns: $(D primary.empty & fallback.empty)
     */
-    static if (hasMember!(Primary, "empty") && hasMember!(Fallback, "empty"))
+    static if (hasMember!(Primary, "empty")
+               && hasMember!(Fallback, "empty"))
     Ternary empty()
     {
         return primary.empty & fallback.empty;
@@ -271,6 +274,48 @@ struct FallbackAllocator(Primary, Fallback)
     // Ensure deallocate inherits from parent allocators
     () nothrow @nogc { a.deallocate(b1); }();
     () nothrow @nogc { a.deallocate(b2); }();
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlockWithInternalPointers;
+    import std.typecons : Ternary;
+
+    alias A =
+        FallbackAllocator!(
+            BitmappedBlockWithInternalPointers!(4096),
+            BitmappedBlockWithInternalPointers!(4096)
+        );
+
+    A a = A(
+            BitmappedBlockWithInternalPointers!(4096)(new ubyte[4096 * 1024]),
+            BitmappedBlockWithInternalPointers!(4096)(new ubyte[4096 * 1024])
+    );
+
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
+    auto b = a.allocate(201);
+    assert(b.length == 201);
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlockWithInternalPointers;
+    import std.typecons : Ternary;
+
+    alias A =
+        FallbackAllocator!(
+            BitmappedBlockWithInternalPointers!(4096),
+            BitmappedBlockWithInternalPointers!(4096)
+        );
+
+    // Run testAllocator here since both allocators stateful
+    testAllocator!(
+        () => A(
+            BitmappedBlockWithInternalPointers!(4096)(new ubyte[4096 * 1024]),
+            BitmappedBlockWithInternalPointers!(4096)(new ubyte[4096 * 1024])
+        )
+    );
 }
 
 /*

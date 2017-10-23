@@ -652,6 +652,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     allocator, otherwise `Ternary.no`. This method never returns
     `Ternary.unknown`.
     */
+    pure nothrow @safe @nogc
     Ternary empty()
     {
         return Ternary(_control.allAre0());
@@ -704,6 +705,17 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     static assert(hasMember!(InSituRegion!(10_240, 64), "allocateAll"));
     const b = a.allocate(100);
     assert(b.length == 100);
+}
+
+@system unittest
+{
+    import std.typecons : Ternary;
+
+    auto a = BitmappedBlock!(64, 64)(new ubyte[10_240]);
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
+    const b = a.allocate(100);
+    assert(b.length == 100);
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
 }
 
 @system unittest
@@ -1089,8 +1101,10 @@ struct BitmappedBlockWithInternalPointers(
     import std.typecons : Ternary;
 
     auto h = BitmappedBlockWithInternalPointers!(4096)(new ubyte[4096 * 1024]);
+    assert((() nothrow @safe @nogc => h.empty)() == Ternary.yes);
     auto b = h.allocate(123);
     assert(b.length == 123);
+    assert((() nothrow @safe @nogc => h.empty)() == Ternary.no);
 
     void[] p;
     void* offset = &b[0] + 17;
@@ -1354,7 +1368,7 @@ private struct BitVector
     }
 
     /// Are all bits zero?
-    nothrow @safe @nogc
+    pure nothrow @safe @nogc
     bool allAre0() const
     {
         foreach (w; _rep) if (w) return false;

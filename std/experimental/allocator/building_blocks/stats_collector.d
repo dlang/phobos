@@ -517,6 +517,7 @@ public:
     0).
     */
     static if (flags & Options.bytesUsed)
+    pure nothrow @safe @nogc
     Ternary empty()
     {
         return Ternary(_bytesUsed == 0);
@@ -681,8 +682,10 @@ public:
     void test(Allocator)()
     {
         import std.range : walkLength;
-        import std.stdio : writeln;
+        import std.typecons : Ternary;
+
         Allocator a;
+        assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
         auto b1 = a.allocate(100);
         assert(a.numAllocate == 1);
         assert(a.expand(b1, 0));
@@ -694,6 +697,7 @@ public:
         auto b3 = a.allocate(202);
         assert(a.numAllocate == 3);
         assert(a.bytesAllocated == 404);
+        assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.no);
 
         () nothrow @nogc { a.deallocate(b2); }();
         assert(a.numDeallocate == 1);
@@ -717,7 +721,6 @@ public:
     void test(Allocator)()
     {
         import std.range : walkLength;
-        import std.stdio : writeln;
         Allocator a;
         auto b1 = a.allocate(100);
         assert(a.expand(b1, 0));

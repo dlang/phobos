@@ -310,9 +310,13 @@ struct Region(ParentAllocator = NullAllocator,
     Returns `Ternary.yes` if no memory has been allocated in this region,
     `Ternary.no` otherwise. (Never returns `Ternary.unknown`.)
     */
+    pure nothrow @safe @nogc
     Ternary empty() const
     {
-        return Ternary(_current == _begin);
+        static if (growDownwards)
+            return Ternary(_current == _end);
+        else
+            return Ternary(_current == _begin);
     }
 
     /// Nonstandard property that returns bytes available for allocation.
@@ -336,13 +340,16 @@ struct Region(ParentAllocator = NullAllocator,
     import std.experimental.allocator.building_blocks.allocator_list
         : AllocatorList;
     import std.experimental.allocator.mallocator : Mallocator;
+    import std.typecons : Ternary;
     // Create a scalable list of regions. Each gets at least 1MB at a time by
     // using malloc.
     auto batchAllocator = AllocatorList!(
         (size_t n) => Region!Mallocator(max(n, 1024 * 1024))
     )();
+    assert(batchAllocator.empty ==  Ternary.yes);
     auto b = batchAllocator.allocate(101);
     assert(b.length == 101);
+    assert(batchAllocator.empty ==  Ternary.no);
     // This will cause a second allocation
     b = batchAllocator.allocate(2 * 1024 * 1024);
     assert(b.length == 2 * 1024 * 1024);
@@ -357,6 +364,8 @@ struct Region(ParentAllocator = NullAllocator,
     // Create a 64 KB region allocated with malloc
     auto reg = Region!(Mallocator, Mallocator.alignment,
         Yes.growDownwards)(1024 * 64);
+
+    assert((() pure nothrow @safe @nogc => reg.empty)() ==  Ternary.yes);
     const b = reg.allocate(101);
     assert(b.length == 101);
     assert((() nothrow @safe @nogc => reg.owns(b))() == Ternary.yes);
@@ -364,8 +373,8 @@ struct Region(ParentAllocator = NullAllocator,
     // Ensure deallocate inherits from parent allocators
     auto c = reg.allocate(42);
     assert(c.length == 42);
-    () nothrow @nogc { reg.deallocate(c); }();
-    // Destructor will free the memory
+    assert((() nothrow @nogc => reg.deallocate(c))());
+    assert((() pure nothrow @safe @nogc => reg.empty)() ==  Ternary.no);
 }
 
 @system unittest
@@ -787,7 +796,8 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     }
 
     /// Standard allocator API.
-    Ternary empty()
+    pure nothrow @safe @nogc
+    Ternary empty() shared
     {
         // Also works when they're both null.
         return Ternary(_brkCurrent == _brkInitial);
@@ -811,8 +821,10 @@ version(Posix) @system unittest
     import std.typecons : Ternary;
     import std.algorithm.comparison : min;
     alias alloc = SbrkRegion!(min(8, platformAlignment)).instance;
+    assert((() nothrow @safe @nogc => alloc.empty)() == Ternary.yes);
     auto a = alloc.alignedAllocate(2001, 4096);
     assert(a.length == 2001);
+    assert((() nothrow @safe @nogc => alloc.empty)() == Ternary.no);
     auto b = alloc.allocate(2001);
     assert(b.length == 2001);
     assert((() nothrow @safe @nogc => alloc.owns(a))() == Ternary.yes);

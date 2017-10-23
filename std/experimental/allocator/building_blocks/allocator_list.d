@@ -503,6 +503,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
      Returns `Ternary.yes` if no allocators are currently active,
     `Ternary.no` otherwise. This methods never returns `Ternary.unknown`.
     */
+    pure nothrow @safe @nogc
     Ternary empty() const
     {
         return Ternary(!allocators.length);
@@ -615,9 +616,10 @@ version(Posix) @system unittest
     b1 = a.allocate(1024 * 10);
     assert(b1.length == 1024 * 10);
     a.allocate(1024 * 4095);
+    assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.no);
     // Ensure deallocateAll infers from parent
     assert((() nothrow @nogc => a.deallocateAll())());
-    assert(a.empty == Ternary.yes);
+    assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
 }
 
 @system unittest

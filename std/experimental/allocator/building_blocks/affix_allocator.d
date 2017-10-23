@@ -402,6 +402,20 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     });
 }
 
+// Test empty
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlock;
+    import std.typecons : Ternary;
+
+    auto a = AffixAllocator!(BitmappedBlock!128, ulong, ulong)
+                (BitmappedBlock!128(new ubyte[128 * 4096]));
+    assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.no);
+}
+
 @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;

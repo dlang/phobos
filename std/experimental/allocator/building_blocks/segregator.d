@@ -15,7 +15,7 @@ shared) methods.
 struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 {
     import std.algorithm.comparison : min;
-    import std.traits : hasMember;
+    import std.traits : hasMember, ReturnType;
     import std.typecons : Ternary;
 
     static if (stateSize!SmallAllocator) private SmallAllocator _small;
@@ -428,5 +428,28 @@ if (Args.length > 3)
     assert((() nothrow @safe @nogc => a.resolveInternalPointer(null, p))() == Ternary.no);
 
     // Ensure deallocate inherits from parent allocators
-    () nothrow @nogc { a.deallocate(b); }();
+    assert((() nothrow @nogc => a.deallocate(b))());
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlockWithInternalPointers;
+    import std.typecons : Ternary;
+
+    alias A =
+        Segregator!(
+            10_240, BitmappedBlockWithInternalPointers!(4096),
+            BitmappedBlockWithInternalPointers!(4096)
+        );
+
+    A a = A(
+            BitmappedBlockWithInternalPointers!(4096)(new ubyte[4096 * 1024]),
+            BitmappedBlockWithInternalPointers!(4096)(new ubyte[4096 * 1024])
+    );
+
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
+    auto b = a.allocate(201);
+    assert(b.length == 201);
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
+    assert((() nothrow @nogc => a.deallocate(b))());
 }

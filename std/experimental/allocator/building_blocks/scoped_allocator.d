@@ -188,6 +188,7 @@ struct ScopedAllocator(ParentAllocator)
     Returns `Ternary.yes` if this allocator is not responsible for any memory,
     `Ternary.no` otherwise. (Never returns `Ternary.unknown`.)
     */
+    pure nothrow @safe @nogc
     Ternary empty() const
     {
         return Ternary(root is null);
@@ -249,4 +250,29 @@ struct ScopedAllocator(ParentAllocator)
     auto b = a.allocate(42);
     assert(b.length == 42);
     assert((() nothrow @nogc => a.deallocateAll())());
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.typecons : Ternary;
+
+    auto a = Region!(Mallocator)(1024 * 64);
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
+    assert((() pure nothrow @safe @nogc => a.owns(null))() == Ternary.no);
+}
+
+// Test empty
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.typecons : Ternary;
+    ScopedAllocator!Mallocator alloc;
+
+    assert((() pure nothrow @safe @nogc => alloc.empty)() == Ternary.yes);
+    const b = alloc.allocate(10);
+    assert((() pure nothrow @safe @nogc => alloc.empty)() == Ternary.no);
 }

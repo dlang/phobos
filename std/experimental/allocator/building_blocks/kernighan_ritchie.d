@@ -605,6 +605,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
     Returns: `Ternary.yes` if the allocator is empty, `Ternary.no` otherwise.
     Never returns `Ternary.unknown`.
     */
+    pure nothrow @safe @nogc
     Ternary empty()
     {
         return Ternary(root && root.size == payload.length);
@@ -832,7 +833,7 @@ it actually returns memory to the operating system when possible.
             () nothrow @nogc { a.deallocate(b); }();
         }
 
-        assert(a.empty == Ternary.yes);
+        assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
     }
 
     test(sizes64);
@@ -878,7 +879,7 @@ it actually returns memory to the operating system when possible.
             () nothrow @nogc { a.deallocate(bufs[i]); }();
         }
 
-        assert(a.empty == Ternary.yes);
+        assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
     }
 
     test(sizes64, word64);
