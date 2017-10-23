@@ -75,6 +75,7 @@
  *           $(LREF SharedConstOf)
  *           $(LREF ImmutableOf)
  *           $(LREF QualifierOf)
+ *           $(LREF Typeof)
  * ))
  * $(TR $(TD Categories of types) $(TD
  *           $(LREF allSameType)
@@ -5546,6 +5547,132 @@ template BuiltinTypeOf(T)
     else static if (is(ArrayTypeOf!T X))        alias BuiltinTypeOf = X;
     else static if (is(AssocArrayTypeOf!T X))   alias BuiltinTypeOf = X;
     else                                        static assert(0);
+}
+
+/**
+    A template designed to function in the same manner as the
+    built-in `typeof` utility. As it is a template, `Typeof` can be
+    passed around like any other symbol, unlike `typeof`. Also,
+    whereas `typeof` will not accept symbols or expressions that
+    evaluate to a type (e.g., `typeof(int)` will not compile),
+    `Typeof` will accept both values and types.
+
+    Params:
+        T =  The symbol or expression to take the type of. Can be either a type
+             or a value. If it is something that does not have a valid
+             type (such as a module name or an expression that
+             evaluates to the special `__error__` type), an error
+             will be raised at compile time.
+
+    Returns:
+        The type of the given symbol or expression.
+
+    Note:
+        If a template is passed to `Typeof`, the result type will be `void`.
+*/
+template Typeof(T...)
+if (T.length == 1)
+{
+    static if (__traits(isTemplate, T[0]))
+        alias Typeof = void;
+    else static if (is(T[0] TypeOfT0))
+        alias Typeof = TypeOfT0;
+    else static if (is(typeof(T[0]) TypeOfT0))
+        alias Typeof = TypeOfT0;
+    else
+        static assert(false, "Cannot take the type of " ~ T[0].stringof);
+}
+
+///
+@safe unittest
+{
+    //Types, values and expressions are accepted
+    static assert(is(Typeof!1 == typeof(1)));
+    static assert(is(Typeof!false == typeof(false)));
+    static assert(is(Typeof!"" == string));
+
+    static assert(is(Typeof!int == int));
+    static assert(is(Typeof!bool == bool));
+    static assert(is(Typeof!string == string));
+
+    static assert(is(Typeof!(1 + 2 / 3) == typeof(1 + 2 / 3)));
+
+    struct S {}
+    static assert(is(Typeof!(S()) == typeof(S())));
+    static assert(is(Typeof!S == S));
+
+    class C {}
+    C c;
+    static assert(is(Typeof!c == typeof(c)));
+    static assert(is(Typeof!C == C));
+
+    //The type of a template is `void`
+    static assert(is(Typeof!Typeof == typeof(Typeof)));
+    static assert(is(Typeof!Typeof == void));
+
+    //Modules do not have a valid type
+    static assert(!__traits(compiles, { alias _ = Typeof!(std.traits); }));
+}
+
+///
+@safe unittest
+{
+    import std.meta : AliasSeq, staticMap;
+
+    alias typesAndValues = AliasSeq!(int, false, char, "test");
+
+    //The built-in typeof cannot be passed to templates.
+    //The following will not compile
+    //alias justTypes = staticMap!(typeof, typesAndValues);
+
+    //But Typeof can
+    static assert(is(staticMap!(Typeof, typesAndValues) == AliasSeq!(int, bool, char, string)));
+}
+
+@safe unittest
+{
+    import std.meta : AliasSeq;
+
+    //If T[0] is a type, ensure that Typeof!(T[0]) is the same type as T[0],
+    //and ensure that Typeof!(T[0].init) matches the type returned by typeof(T[0].init).
+    //
+    //If T[0] is a value, ensure that Typeof!(T[0]) matches the type returned by typeof(T[0]),
+    //and ensure that applying Typeof to the output of typeof(T[0]) matches the type returned by typeof(T[0]).
+    template testMatch(T...)
+    if (T.length == 1)
+    {
+        static if (is(T[0]))
+            enum testMatch = is(Typeof!(T[0]) == T[0])
+                                && is(Typeof!(T[0].init) == typeof(T[0].init));
+        else static if (is(typeof(T[0])))
+            enum testMatch = is(Typeof!(T[0]) == typeof(T[0]))
+                                && is(Typeof!(typeof(T[0])) == typeof(T[0]));
+        else
+            enum testMatch = false;
+    }
+
+    struct TestS {}
+    class TestC {}
+
+    foreach (T; AliasSeq!(NumericTypeList,
+                          ImaginaryTypeList,
+                          ComplexTypeList,
+                          CharTypeList,
+                          TestS,
+                          TestC))
+    {
+        static assert(testMatch!T);
+        static assert(testMatch!(T function(T)));
+        static assert(testMatch!(T delegate(T)));
+        static assert(testMatch!(T[]));
+        static assert(testMatch!(T[10]));
+        static assert(testMatch!(T[T]));
+        static assert(testMatch!(T*));
+    }
+
+    static assert(testMatch!null);
+    static assert(is(Typeof!void == void));
+    static assert(testMatch!Typeof);
 }
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
