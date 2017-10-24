@@ -53,7 +53,7 @@
  * Authors:   Masahiro Nakagawa, Daniel Murphy (Single value Encoder and Decoder)
  * Source:    $(PHOBOSSRC std/_base64.d)
  * Macros:
- *      LREF2=<a href="#$1">$(D $2)</a>
+ *      LREF2=<a href="#$1">`$2`</a>
  */
 module std.base64;
 
@@ -138,8 +138,8 @@ alias Base64URLNoPadding = Base64Impl!('-', '_', Base64.NoPadding);
  * -----
  *
  * NOTE:
- * Encoded strings will not have any padding if the $(D Padding) parameter is
- * set to $(D NoPadding).
+ * Encoded strings will not have any padding if the `Padding` parameter is
+ * set to `NoPadding`.
  */
 template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 {
@@ -205,13 +205,13 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
 
     /**
-     * Encode $(D_PARAM source) into a $(D char[]) buffer using Base64
+     * Encode $(D_PARAM source) into a `char[]` buffer using Base64
      * encoding.
      *
      * Params:
      *  source = The $(LINK2 std_range_primitives.html#isInputRange, input
      *           range) to _encode.
-     *  buffer = The $(D char[]) buffer to store the encoded result.
+     *  buffer = The `char[]` buffer to store the encoded result.
      *
      * Returns:
      *  The slice of $(D_PARAM buffer) that contains the encoded string.
@@ -388,7 +388,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *           range) to store the encoded result.
      *
      * Returns:
-     *  The number of times the output range's $(D put) method was invoked.
+     *  The number of times the output range's `put` method was invoked.
      */
     size_t encode(R1, R2)(in R1 source, auto ref R2 range)
         if (isArray!R1 && is(ElementType!R1 : ubyte) &&
@@ -567,7 +567,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *           range) to _encode.
      *
      * Returns:
-     *  A newly-allocated $(D char[]) buffer containing the encoded string.
+     *  A newly-allocated `char[]` buffer containing the encoded string.
      */
     @safe
     pure char[] encode(Range)(Range source) if (isArray!Range && is(ElementType!Range : ubyte))
@@ -645,8 +645,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
          * Advance the range to the next chunk of encoded data.
          *
          * Throws:
-         *  $(D Base64Exception) If invoked when
-         *  $(LREF2 .Base64Impl.Encoder.empty, empty) returns $(D true).
+         *  `Base64Exception` If invoked when
+         *  $(LREF2 .Base64Impl.Encoder.empty, empty) returns `true`.
          */
         void popFront()
         {
@@ -675,7 +675,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
              * range).
              *
              * Returns:
-             *  A copy of $(D this).
+             *  A copy of `this`.
              */
             @property
             typeof(this) save()
@@ -764,8 +764,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
          * Advance to the next encoded character.
          *
          * Throws:
-         *  $(D Base64Exception) If invoked when $(LREF2 .Base64Impl.Encoder.empty.2,
-         *  empty) returns $(D true).
+         *  `Base64Exception` If invoked when $(LREF2 .Base64Impl.Encoder.empty.2,
+         *  empty) returns `true`.
          */
         void popFront()
         {
@@ -839,7 +839,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
              * range).
              *
              * Returns:
-             *  A copy of $(D this).
+             *  A copy of `this`.
              */
             @property
             typeof(this) save()
@@ -853,7 +853,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
 
     /**
-     * Construct an $(D Encoder) that iterates over the Base64 encoding of the
+     * Construct an `Encoder` that iterates over the Base64 encoding of the
      * given $(LINK2 std_range_primitives.html#isInputRange, input range).
      *
      * Params:
@@ -861,15 +861,15 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *      range) over the data to be encoded.
      *
      * Returns:
-     *  If $(D_PARAM range) is a range of bytes, an $(D Encoder) that iterates
+     *  If $(D_PARAM range) is a range of bytes, an `Encoder` that iterates
      *  over the bytes of the corresponding Base64 encoding.
      *
-     *  If $(D_PARAM range) is a range of ranges of bytes, an $(D Encoder) that
+     *  If $(D_PARAM range) is a range of ranges of bytes, an `Encoder` that
      *  iterates over the Base64 encoded strings of each element of the range.
      *
-     *  In both cases, the returned $(D Encoder) will be a
+     *  In both cases, the returned `Encoder` will be a
      *  $(LINK2 std_range_primitives.html#isForwardRange, forward range) if the
-     *  given $(D range) is at least a forward range, otherwise it will be only
+     *  given `range` is at least a forward range, otherwise it will be only
      *  an input range.
      *
      * Example:
@@ -990,7 +990,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *  The slice of $(D_PARAM buffer) containing the decoded result.
      *
      * Throws:
-     *  $(D Base64Exception) if $(D_PARAM source) contains characters outside the
+     *  `Base64Exception` if $(D_PARAM source) contains characters outside the
      *  base alphabet of the current Base64 encoding scheme.
      */
     @trusted
@@ -1168,10 +1168,10 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *           range) to store the decoded result.
      *
      * Returns:
-     *  The number of times the output range's $(D put) method was invoked.
+     *  The number of times the output range's `put` method was invoked.
      *
      * Throws:
-     *  $(D Base64Exception) if $(D_PARAM source) contains characters outside the
+     *  `Base64Exception` if $(D_PARAM source) contains characters outside the
      *  base alphabet of the current Base64 encoding scheme.
      */
     size_t decode(R1, R2)(in R1 source, auto ref R2 range)
@@ -1350,7 +1350,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *           range) to _decode.
      *
      * Returns:
-     *  A newly-allocated $(D ubyte[]) buffer containing the decoded string.
+     *  A newly-allocated `ubyte[]` buffer containing the decoded string.
      */
     @safe
     pure ubyte[] decode(Range)(Range source) if (isArray!Range && is(ElementType!Range : dchar))
@@ -1428,8 +1428,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
          * Advance to the next element in the input to be decoded.
          *
          * Throws:
-         *  $(D Base64Exception) if invoked when $(LREF2 .Base64Impl.Decoder.empty,
-         *  empty) returns $(D true).
+         *  `Base64Exception` if invoked when $(LREF2 .Base64Impl.Decoder.empty,
+         *  empty) returns `true`.
          */
         void popFront()
         {
@@ -1454,7 +1454,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
              * $(LINK2 std_range_primitives.html#isForwardRange, forward
              * range).
              *
-             * Returns: A copy of $(D this).
+             * Returns: A copy of `this`.
              */
             @property
             typeof(this) save()
@@ -1562,8 +1562,8 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
          * Advance to the next decoded byte.
          *
          * Throws:
-         *  $(D Base64Exception) if invoked when $(LREF2 .Base64Impl.Decoder.empty,
-         *  empty) returns $(D true).
+         *  `Base64Exception` if invoked when $(LREF2 .Base64Impl.Decoder.empty,
+         *  empty) returns `true`.
          */
         void popFront()
         {
@@ -1647,7 +1647,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
              * $(LINK2 std_range_primitives.html#isForwardRange, forward
              * range).
              *
-             * Returns: A copy of $(D this).
+             * Returns: A copy of `this`.
              */
             @property
             typeof(this) save()
@@ -1661,7 +1661,7 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
 
 
     /**
-     * Construct a $(D Decoder) that iterates over the decoding of the given
+     * Construct a `Decoder` that iterates over the decoding of the given
      * Base64 encoded data.
      *
      * Params:
@@ -1669,23 +1669,23 @@ template Base64Impl(char Map62th, char Map63th, char Padding = '=')
      *      range) over the data to be decoded.
      *
      * Returns:
-     *  If $(D_PARAM range) is a range of characters, a $(D Decoder) that
+     *  If $(D_PARAM range) is a range of characters, a `Decoder` that
      *  iterates over the bytes of the corresponding Base64 decoding.
      *
-     *  If $(D_PARAM range) is a range of ranges of characters, a $(D Decoder)
+     *  If $(D_PARAM range) is a range of ranges of characters, a `Decoder`
      *  that iterates over the decoded strings corresponding to each element of
      *  the range. In this case, the length of each subrange must be a multiple
      *  of 4; the returned _decoder does not keep track of Base64 decoding
      *  state across subrange boundaries.
      *
-     *  In both cases, the returned $(D Decoder) will be a
+     *  In both cases, the returned `Decoder` will be a
      *  $(LINK2 std_range_primitives.html#isForwardRange, forward range) if the
-     *  given $(D range) is at least a forward range, otherwise it will be only
+     *  given `range` is at least a forward range, otherwise it will be only
      *  an input range.
      *
      * If the input data contains characters not found in the base alphabet of
      * the current Base64 encoding scheme, the returned range may throw a
-     * $(D Base64Exception).
+     * `Base64Exception`.
      *
      * Example:
      * This example shows decoding over a range of input data lines.

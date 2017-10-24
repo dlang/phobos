@@ -3,7 +3,7 @@
 /**
  * Contains the elementary mathematical functions (powers, roots,
  * and trigonometric functions), and low-level floating-point operations.
- * Mathematical special functions are available in $(D std.mathspecial).
+ * Mathematical special functions are available in `std.mathspecial`.
  *
 $(SCRIPT inhibitQuickIndex = 1;)
 
@@ -5330,7 +5330,7 @@ private:
  * Params:
  *  x = a floating point number.
  * Returns:
- *  $(D true) if $(D_PARAM x) is Nan.
+ *  `true` if $(D_PARAM x) is Nan.
  */
 bool isNaN(X)(X x) @nogc @trusted pure nothrow
 if (isFloatingPoint!(X))
@@ -5418,7 +5418,7 @@ if (isFloatingPoint!(X))
  * Params:
  *  x = a floating point number.
  * Returns:
- *  $(D true) if $(D_PARAM x) is finite.
+ *  `true` if $(D_PARAM x) is finite.
  */
 bool isFinite(X)(X x) @trusted pure nothrow @nogc
 {
@@ -5461,7 +5461,7 @@ bool isFinite(X)(X x) @trusted pure nothrow @nogc
  * Params:
  *  x = a floating point number.
  * Returns:
- *  $(D true) if $(D_PARAM x) is normalized.
+ *  `true` if $(D_PARAM x) is normalized.
  */
 
 /* Need one for each format because subnormal floats might
@@ -5511,7 +5511,7 @@ bool isNormal(X)(X x) @trusted pure nothrow @nogc
  * Params:
  *  x = a floating point number.
  * Returns:
- *  $(D true) if $(D_PARAM x) is a denormal number.
+ *  `true` if $(D_PARAM x) is a denormal number.
  */
 bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
 {
@@ -5573,7 +5573,7 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
  * Params:
  *  x = a floating point number.
  * Returns:
- *  $(D true) if $(D_PARAM x) is $(PLUSMN)$(INFIN).
+ *  `true` if $(D_PARAM x) is $(PLUSMN)$(INFIN).
  */
 bool isInfinity(X)(X x) @nogc @trusted pure nothrow
 if (isFloatingPoint!(X))
@@ -5816,7 +5816,7 @@ if (isIntegral!(X) && isFloatingPoint!(R))
 }
 
 /*********************************
-Returns $(D -1) if $(D x < 0), $(D x) if $(D x == 0), $(D 1) if
+Returns `-1` if $(D x < 0), `x` if $(D x == 0), `1` if
 $(D x > 0), and $(NAN) if x==$(NAN).
  */
 F sgn(F)(F x) @safe pure nothrow @nogc
@@ -7709,8 +7709,8 @@ bool approxEqual(T, U)(T lhs, U rhs)
  * )
  *
  * Returns:
- *      negative value if $(D x) precedes $(D y) in the order specified above;
- *      0 if $(D x) and $(D y) are identical, and positive value otherwise.
+ *      negative value if `x` precedes `y` in the order specified above;
+ *      0 if `x` and `y` are identical, and positive value otherwise.
  *
  * See_Also:
  *      $(MYREF isIdentical)
@@ -7968,7 +7968,7 @@ private T powFloatingPointImpl(PowType type, T)(T x)
 }
 
 /**
- * Gives the next power of two after $(D val). `T` can be any built-in
+ * Gives the next power of two after `val`. `T` can be any built-in
  * numerical type.
  *
  * If the operation would lead to an over/underflow, this function will
@@ -7978,7 +7978,7 @@ private T powFloatingPointImpl(PowType type, T)(T x)
  *     val = any number
  *
  * Returns:
- *     the next power of two after $(D val)
+ *     the next power of two after `val`
  */
 T nextPow2(T)(const T val)
 if (isIntegral!T)
@@ -8096,14 +8096,14 @@ if (isFloatingPoint!T)
 }
 
 /**
- * Gives the last power of two before $(D val). $(T) can be any built-in
+ * Gives the last power of two before `val`. $(T) can be any built-in
  * numerical type.
  *
  * Params:
  *     val = any number
  *
  * Returns:
- *     the last power of two before $(D val)
+ *     the last power of two before `val`
  */
 T truncPow2(T)(const T val)
 if (isIntegral!T)

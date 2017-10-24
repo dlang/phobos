@@ -149,7 +149,7 @@
  * Copyright: Copyright Digital Mars 2005 - 2009.
  * License:   $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors:   $(HTTP digitalmars.com, Walter Bright),
- *            Tomasz Stachowiak ($(D isExpressions)),
+ *            Tomasz Stachowiak (`isExpressions`),
  *            $(HTTP erdani.org, Andrei Alexandrescu),
  *            Shin Fujishiro,
  *            $(HTTP octarineparrot.com, Robert Clipsham),
@@ -889,7 +889,7 @@ private template fqnType(T,
  * Get the type of the return value from a function,
  * a pointer to function, a delegate, a struct
  * with an opCall, a pointer to a struct with an opCall,
- * or a class with an $(D opCall). Please note that $(D_KEYWORD ref)
+ * or a class with an `opCall`. Please note that $(D_KEYWORD ref)
  * is not part of a type, but the attribute of the function
  * (see template $(LREF functionAttributes)).
  */
@@ -949,8 +949,8 @@ template ReturnType(func...)
 
 /***
 Get, as a tuple, the types of the parameters to a function, a pointer
-to function, a delegate, a struct with an $(D opCall), a pointer to a
-struct with an $(D opCall), or a class with an $(D opCall).
+to function, a delegate, a struct with an `opCall`, a pointer to a
+struct with an `opCall`, or a class with an `opCall`.
 */
 template Parameters(func...)
     if (func.length == 1 && isCallable!func)
@@ -999,7 +999,7 @@ alias ParameterTypeTuple = Parameters;
 }
 
 /**
-Returns the number of arguments of function $(D func).
+Returns the number of arguments of function `func`.
 arity is undefined for variadic functions.
 */
 template arity(func...)
@@ -1265,7 +1265,7 @@ template ParameterIdentifierTuple(func...)
 
 /**
 Get, as a tuple, the default value of the parameters to a function symbol.
-If a parameter doesn't have the default value, $(D void) is returned instead.
+If a parameter doesn't have the default value, `void` is returned instead.
  */
 template ParameterDefaults(func...)
     if (func.length == 1 && isCallable!func)
@@ -1387,7 +1387,7 @@ alias ParameterDefaultValueTuple = ParameterDefaults;
 
 
 /**
-Returns the FunctionAttribute mask for function $(D func).
+Returns the FunctionAttribute mask for function `func`.
 
 See_Also:
     $(LREF hasFunctionAttributes)
@@ -1775,7 +1775,7 @@ template hasFunctionAttributes(args...)
 }
 
 /**
-$(D true) if $(D func) is $(D @safe) or $(D @trusted).
+`true` if `func` is `@safe` or `@trusted`.
  */
 template isSafe(alias func)
     if (isCallable!func)
@@ -1854,7 +1854,7 @@ template isSafe(alias func)
 
 
 /**
-$(D true) if $(D func) is $(D @system).
+`true` if `func` is `@system`.
 */
 template isUnsafe(alias func)
 {
@@ -2030,11 +2030,11 @@ template variadicFunctionStyle(func...)
 
 
 /**
-Get the function type from a callable object $(D func).
+Get the function type from a callable object `func`.
 
-Using builtin $(D typeof) on a property function yields the types of the
+Using builtin `typeof` on a property function yields the types of the
 property value, not of the property function itself.  Still,
-$(D FunctionTypeOf) is able to obtain function types of properties.
+`FunctionTypeOf` is able to obtain function types of properties.
 
 Note:
 Do not confuse function types with function pointer types; function types are
@@ -2358,8 +2358,8 @@ template isInnerClass(T)
 }
 
 /**
-Determines whether $(D T) has its own context pointer.
-$(D T) must be either $(D class), $(D struct), or $(D union).
+Determines whether `T` has its own context pointer.
+`T` must be either `class`, `struct`, or `union`.
 */
 template isNested(T)
     if (is(T == class) || is(T == struct) || is(T == union))
@@ -2379,7 +2379,7 @@ template isNested(T)
 }
 
 /**
-Determines whether $(D T) or any of its representation types
+Determines whether `T` or any of its representation types
 have a context pointer.
 */
 template hasNested(T)
@@ -2474,8 +2474,8 @@ template hasNested(T)
  * This consists of the fields that take up memory space,
  * excluding the hidden fields like the virtual function
  * table pointer or a context pointer for nested types.
- * If $(D T) isn't a struct, class, or union returns a tuple
- * with one element $(D T).
+ * If `T` isn't a struct, class, or union returns a tuple
+ * with one element `T`.
  */
 template Fields(T)
 {
@@ -2530,7 +2530,7 @@ private enum NameOf(alias T) = T.stringof;
  * Get as an expression tuple the names of the fields of a struct, class, or
  * union. This consists of the fields that take up memory space, excluding the
  * hidden fields like the virtual function table pointer or a context pointer
- * for nested types. If $(D T) isn't a struct, class, or union returns an
+ * for nested types. If `T` isn't a struct, class, or union returns an
  * expression tuple with an empty string.
  */
 template FieldNameTuple(T)
@@ -2663,7 +2663,7 @@ template RepresentationTypeTuple(T)
 }
 
 /*
-Statically evaluates to $(D true) if and only if $(D T)'s
+Statically evaluates to `true` if and only if `T`'s
 representation contains at least one field of pointer or array type.
 Members of class types are not considered raw pointers. Pointers to
 immutable objects are not considered raw aliasing.
@@ -2759,7 +2759,7 @@ private template hasRawAliasing(T...)
 }
 
 /*
-Statically evaluates to $(D true) if and only if $(D T)'s
+Statically evaluates to `true` if and only if `T`'s
 representation contains at least one non-shared field of pointer or
 array type.  Members of class types are not considered raw pointers.
 Pointers to immutable objects are not considered raw aliasing.
@@ -2941,7 +2941,7 @@ private template hasRawUnsharedAliasing(T...)
 }
 
 /*
-Statically evaluates to $(D true) if and only if $(D T)'s
+Statically evaluates to `true` if and only if `T`'s
 representation includes at least one non-immutable object reference.
 */
 
@@ -2964,7 +2964,7 @@ private template hasObjects(T...)
 }
 
 /*
-Statically evaluates to $(D true) if and only if $(D T)'s
+Statically evaluates to `true` if and only if `T`'s
 representation includes at least one non-immutable non-shared object
 reference.
 */
@@ -2988,10 +2988,10 @@ private template hasUnsharedObjects(T...)
 }
 
 /**
-Returns $(D true) if and only if $(D T)'s representation includes at
-least one of the following: $(OL $(LI a raw pointer $(D U*) and $(D U)
-is not immutable;) $(LI an array $(D U[]) and $(D U) is not
-immutable;) $(LI a reference to a class or interface type $(D C) and $(D C) is
+Returns `true` if and only if `T`'s representation includes at
+least one of the following: $(OL $(LI a raw pointer `U*` and `U`
+is not immutable;) $(LI an array `U[]` and `U` is not
+immutable;) $(LI a reference to a class or interface type `C` and `C` is
 not immutable.) $(LI an associative array that is not immutable.)
 $(LI a delegate.))
 */
@@ -3094,9 +3094,9 @@ template hasAliasing(T...)
     static assert(!hasAliasing!S14);
 }
 /**
-Returns $(D true) if and only if $(D T)'s representation includes at
-least one of the following: $(OL $(LI a raw pointer $(D U*);) $(LI an
-array $(D U[]);) $(LI a reference to a class type $(D C).)
+Returns `true` if and only if `T`'s representation includes at
+least one of the following: $(OL $(LI a raw pointer `U*`;) $(LI an
+array `U[]`;) $(LI a reference to a class type `C`.)
 $(LI an associative array.) $(LI a delegate.))
  */
 template hasIndirections(T)
@@ -3202,11 +3202,11 @@ template hasIndirections(T)
 }
 
 /**
-Returns $(D true) if and only if $(D T)'s representation includes at
-least one of the following: $(OL $(LI a raw pointer $(D U*) and $(D U)
-is not immutable or shared;) $(LI an array $(D U[]) and $(D U) is not
-immutable or shared;) $(LI a reference to a class type $(D C) and
-$(D C) is not immutable or shared.) $(LI an associative array that is not
+Returns `true` if and only if `T`'s representation includes at
+least one of the following: $(OL $(LI a raw pointer `U*` and `U`
+is not immutable or shared;) $(LI an array `U[]` and `U` is not
+immutable or shared;) $(LI a reference to a class type `C` and
+`C` is not immutable or shared.) $(LI an associative array that is not
 immutable or shared.) $(LI a delegate that is not shared.))
 */
 
@@ -3380,9 +3380,9 @@ template hasUnsharedAliasing(T...)
 }
 
 /**
- True if $(D S) or any type embedded directly in the representation of $(D S)
+ True if `S` or any type embedded directly in the representation of `S`
  defines an elaborate copy constructor. Elaborate copy constructors are
- introduced by defining $(D this(this)) for a $(D struct).
+ introduced by defining $(D this(this)) for a `struct`.
 
  Classes and unions never have elaborate copy constructors.
  */
@@ -3429,12 +3429,12 @@ template hasElaborateCopyConstructor(S)
 }
 
 /**
-   True if $(D S) or any type directly embedded in the representation of $(D S)
+   True if `S` or any type directly embedded in the representation of `S`
    defines an elaborate assignment. Elaborate assignments are introduced by
    defining $(D opAssign(typeof(this))) or $(D opAssign(ref typeof(this)))
-   for a $(D struct) or when there is a compiler-generated $(D opAssign).
+   for a `struct` or when there is a compiler-generated `opAssign`.
 
-   A type $(D S) gets compiler-generated $(D opAssign) in case it has
+   A type `S` gets compiler-generated `opAssign` in case it has
    an elaborate copy constructor or elaborate destructor.
 
    Classes and unions never have elaborate assignments.
@@ -3522,8 +3522,8 @@ template hasElaborateAssign(S)
 }
 
 /**
-   True if $(D S) or any type directly embedded in the representation
-   of $(D S) defines an elaborate destructor. Elaborate destructors
+   True if `S` or any type directly embedded in the representation
+   of `S` defines an elaborate destructor. Elaborate destructors
    are introduced by defining $(D ~this()) for a $(D
    struct).
 
@@ -3575,8 +3575,8 @@ template hasElaborateDestructor(S)
 package alias Identity(alias A) = A;
 
 /**
-   Yields $(D true) if and only if $(D T) is an aggregate that defines
-   a symbol called $(D name).
+   Yields `true` if and only if `T` is an aggregate that defines
+   a symbol called `name`.
  */
 enum hasMember(T, string name) = __traits(hasMember, T, name);
 
@@ -3639,11 +3639,11 @@ enum hasMember(T, string name) = __traits(hasMember, T, name);
  * Whether the symbol represented by the string, member, exists and is a static member of T.
  *
  * Params:
- *     T = Type containing symbol $(D member).
- *     member = Name of symbol to test that resides in $(D T).
+ *     T = Type containing symbol `member`.
+ *     member = Name of symbol to test that resides in `T`.
  *
  * Returns:
- *     $(D true) iff $(D member) exists and is static.
+ *     `true` iff `member` exists and is static.
  */
 template hasStaticMember(T, string member)
 {
@@ -3815,11 +3815,11 @@ template hasStaticMember(T, string member)
 Retrieves the members of an enumerated type $(D enum E).
 
 Params:
- E = An enumerated type. $(D E) may have duplicated values.
+ E = An enumerated type. `E` may have duplicated values.
 
 Returns:
- Static tuple composed of the members of the enumerated type $(D E).
- The members are arranged in the same order as declared in $(D E).
+ Static tuple composed of the members of the enumerated type `E`.
+ The members are arranged in the same order as declared in `E`.
 
 Note:
  An enum can have multiple members which have the same value. If you want
@@ -3828,7 +3828,7 @@ Note:
  generating duplicate switch cases.
 
 Note:
- Returned values are strictly typed with $(D E). Thus, the following code
+ Returned values are strictly typed with `E`. Thus, the following code
  does not work without the explicit cast:
 --------------------
 enum E : int { a, b, c }
@@ -3851,7 +3851,7 @@ assert(sqrts == [ Sqrts.one, Sqrts.two, Sqrts.three ]);
 --------------------
 
  A generic function $(D rank(v)) in the following example uses this
- template for finding a member $(D e) in an enumerated type $(D E).
+ template for finding a member `e` in an enumerated type `E`.
 --------------------
 // Returns i if e is the i-th enumerator of E.
 size_t rank(E)(E e)
@@ -4185,8 +4185,8 @@ template TransitiveBaseTypeTuple(T)
 
 
 /**
-Returns a tuple of non-static functions with the name $(D name) declared in the
-class or interface $(D C).  Covariant duplicates are shrunk into the most
+Returns a tuple of non-static functions with the name `name` declared in the
+class or interface `C`.  Covariant duplicates are shrunk into the most
 derived one.
  */
 template MemberFunctionsTuple(C, string name)
@@ -4367,7 +4367,7 @@ template MemberFunctionsTuple(C, string name)
 
 
 /**
-Returns an alias to the template that $(D T) is an instance of.
+Returns an alias to the template that `T` is an instance of.
  */
 template TemplateOf(alias T : Base!Args, alias Base, Args...)
 {
@@ -4412,7 +4412,7 @@ template TemplateOf(T : Base!Args, alias Base, Args...)
 
 
 /**
-Returns a $(D AliasSeq) of the template arguments used to instantiate $(D T).
+Returns a `AliasSeq` of the template arguments used to instantiate `T`.
  */
 template TemplateArgsOf(alias T : Base!Args, alias Base, Args...)
 {
@@ -4633,7 +4633,7 @@ template ImplicitConversionTargets(T)
 }
 
 /**
-Is $(D From) implicitly convertible to $(D To)?
+Is `From` implicitly convertible to `To`?
  */
 template isImplicitlyConvertible(From, To)
 {
@@ -4663,12 +4663,12 @@ template isImplicitlyConvertible(From, To)
 }
 
 /**
-Returns $(D true) iff a value of type $(D Rhs) can be assigned to a variable of
-type $(D Lhs).
+Returns `true` iff a value of type `Rhs` can be assigned to a variable of
+type `Lhs`.
 
-$(D isAssignable) returns whether both an lvalue and rvalue can be assigned.
+`isAssignable` returns whether both an lvalue and rvalue can be assigned.
 
-If you omit $(D Rhs), $(D isAssignable) will check identity assignable of $(D Lhs).
+If you omit `Rhs`, `isAssignable` will check identity assignable of `Lhs`.
 */
 enum isAssignable(Lhs, Rhs = Lhs) = isRvalueAssignable!(Lhs, Rhs) && isLvalueAssignable!(Lhs, Rhs);
 
@@ -4856,7 +4856,7 @@ package template isBlitAssignable(T)
 
 
 /*
-Works like $(D isImplicitlyConvertible), except this cares only about storage
+Works like `isImplicitlyConvertible`, except this cares only about storage
 classes of the arguments.
  */
 private template isStorageClassImplicitlyConvertible(From, To)
@@ -4881,8 +4881,8 @@ private template isStorageClassImplicitlyConvertible(From, To)
 
 
 /**
-Determines whether the function type $(D F) is covariant with $(D G), i.e.,
-functions of the type $(D F) can override ones of the type $(D G).
+Determines whether the function type `F` is covariant with `G`, i.e.,
+functions of the type `F` can override ones of the type `G`.
  */
 template isCovariantWith(F, G)
     if (is(F == function) && is(G == function) ||
@@ -5090,7 +5090,7 @@ template isCovariantWith(F, G)
 private struct __InoutWorkaroundStruct{}
 
 /**
-Creates an lvalue or rvalue of type $(D T) for $(D typeof(...)) and
+Creates an lvalue or rvalue of type `T` for $(D typeof(...)) and
 $(D __traits(compiles, ...)) purposes. No actual value is returned.
 
 Note: Trying to use returned value will result in a
@@ -5564,7 +5564,7 @@ template BuiltinTypeOf(T)
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
 /**
- * Detect whether $(D T) is a built-in boolean type.
+ * Detect whether `T` is a built-in boolean type.
  */
 enum bool isBoolean(T) = is(BooleanTypeOf!T) && !isAggregateType!T;
 
@@ -5588,8 +5588,8 @@ enum bool isBoolean(T) = is(BooleanTypeOf!T) && !isAggregateType!T;
 }
 
 /**
- * Detect whether $(D T) is a built-in integral type. Types $(D bool),
- * $(D char), $(D wchar), and $(D dchar) are not considered integral.
+ * Detect whether `T` is a built-in integral type. Types `bool`,
+ * `char`, `wchar`, and `dchar` are not considered integral.
  */
 enum bool isIntegral(T) = is(IntegralTypeOf!T) && !isAggregateType!T;
 
@@ -5641,7 +5641,7 @@ enum bool isIntegral(T) = is(IntegralTypeOf!T) && !isAggregateType!T;
 }
 
 /**
- * Detect whether $(D T) is a built-in floating point type.
+ * Detect whether `T` is a built-in floating point type.
  */
 enum bool isFloatingPoint(T) = __traits(isFloating, T) && !(is(Unqual!T == cfloat) ||
                                                             is(Unqual!T == cdouble) ||
@@ -5713,7 +5713,7 @@ enum bool isFloatingPoint(T) = __traits(isFloating, T) && !(is(Unqual!T == cfloa
 }
 
 /**
- * Detect whether $(D T) is a built-in numeric type (integral or floating
+ * Detect whether `T` is a built-in numeric type (integral or floating
  * point).
  */
 enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == bool) ||
@@ -5774,7 +5774,7 @@ enum bool isNumeric(T) = __traits(isArithmetic, T) && !(is(Unqual!T == bool) ||
 }
 
 /**
- * Detect whether $(D T) is a scalar type (a built-in numeric, character or
+ * Detect whether `T` is a scalar type (a built-in numeric, character or
  * boolean type).
  */
 enum bool isScalarType(T) = is(T : real) && !isAggregateType!T;
@@ -5807,7 +5807,7 @@ enum bool isScalarType(T) = is(T : real) && !isAggregateType!T;
 }
 
 /**
- * Detect whether $(D T) is a basic type (scalar type or void).
+ * Detect whether `T` is a basic type (scalar type or void).
  */
 enum bool isBasicType(T) = isScalarType!T || is(Unqual!T == void);
 
@@ -5830,7 +5830,7 @@ enum bool isBasicType(T) = isScalarType!T || is(Unqual!T == void);
 }
 
 /**
- * Detect whether $(D T) is a built-in unsigned numeric type.
+ * Detect whether `T` is a built-in unsigned numeric type.
  */
 enum bool isUnsigned(T) = __traits(isUnsigned, T) && !(is(Unqual!T == char) ||
                                                        is(Unqual!T == wchar) ||
@@ -5875,7 +5875,7 @@ enum bool isUnsigned(T) = __traits(isUnsigned, T) && !(is(Unqual!T == char) ||
 }
 
 /**
- * Detect whether $(D T) is a built-in signed numeric type.
+ * Detect whether `T` is a built-in signed numeric type.
  */
 enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T);
 
@@ -5926,9 +5926,9 @@ enum bool isSigned(T) = __traits(isArithmetic, T) && !__traits(isUnsigned, T);
 }
 
 /**
- * Detect whether $(D T) is one of the built-in character types.
+ * Detect whether `T` is one of the built-in character types.
  *
- * The built-in char types are any of $(D char), $(D wchar) or $(D dchar), with
+ * The built-in char types are any of `char`, `wchar` or `dchar`, with
  * or without qualifiers.
  */
 enum bool isSomeChar(T) = is(CharTypeOf!T) && !isAggregateType!T;
@@ -5976,12 +5976,12 @@ enum bool isSomeChar(T) = is(CharTypeOf!T) && !isAggregateType!T;
 }
 
 /**
-Detect whether $(D T) is one of the built-in string types.
+Detect whether `T` is one of the built-in string types.
 
-The built-in string types are $(D Char[]), where $(D Char) is any of $(D char),
-$(D wchar) or $(D dchar), with or without qualifiers.
+The built-in string types are `Char[]`, where `Char` is any of `char`,
+`wchar` or `dchar`, with or without qualifiers.
 
-Static arrays of characters (like $(D char[80])) are not considered
+Static arrays of characters (like `char[80]`) are not considered
 built-in string types.
  */
 enum bool isSomeString(T) = is(StringTypeOf!T) && !isAggregateType!T && !isStaticArray!T;
@@ -6017,7 +6017,7 @@ enum bool isSomeString(T) = is(StringTypeOf!T) && !isAggregateType!T && !isStati
 }
 
 /**
- * Detect whether type $(D T) is a narrow string.
+ * Detect whether type `T` is a narrow string.
  *
  * All arrays that use char, wchar, and their qualified versions are narrow
  * strings. (Those include string and wstring).
@@ -6112,7 +6112,7 @@ enum bool isEqualityComparable(T) = ifTestable!(T, unaryFun!"a == a");
 }
 
 /**
- * Detect whether $(D T) is a struct, static array, or enum that is implicitly
+ * Detect whether `T` is a struct, static array, or enum that is implicitly
  * convertible to a string.
  */
 template isConvertibleToString(T)
@@ -6157,7 +6157,7 @@ package template convertToString(T)
 }
 
 /**
- * Detect whether type $(D T) is a string that will be autodecoded.
+ * Detect whether type `T` is a string that will be autodecoded.
  *
  * All arrays that use char, wchar, and their qualified versions are narrow
  * strings. (Those include string and wstring).
@@ -6188,7 +6188,7 @@ enum bool isAutodecodableString(T) = (is(T : const char[]) || is(T : const wchar
 }
 
 /**
- * Detect whether type $(D T) is a static array.
+ * Detect whether type `T` is a static array.
  */
 enum bool isStaticArray(T) = __traits(isStaticArray, T);
 
@@ -6227,7 +6227,7 @@ enum bool isStaticArray(T) = __traits(isStaticArray, T);
 }
 
 /**
- * Detect whether type $(D T) is a dynamic array.
+ * Detect whether type `T` is a dynamic array.
  */
 enum bool isDynamicArray(T) = is(DynamicArrayTypeOf!T) && !isAggregateType!T;
 
@@ -6256,7 +6256,7 @@ enum bool isDynamicArray(T) = is(DynamicArrayTypeOf!T) && !isAggregateType!T;
 }
 
 /**
- * Detect whether type $(D T) is an array (static or dynamic; for associative
+ * Detect whether type `T` is an array (static or dynamic; for associative
  *  arrays see $(LREF isAssociativeArray)).
  */
 enum bool isArray(T) = isStaticArray!T || isDynamicArray!T;
@@ -6287,7 +6287,7 @@ enum bool isArray(T) = isStaticArray!T || isDynamicArray!T;
 }
 
 /**
- * Detect whether $(D T) is an associative array type
+ * Detect whether `T` is an associative array type
  */
 enum bool isAssociativeArray(T) = __traits(isAssociativeArray, T);
 
@@ -6318,7 +6318,7 @@ enum bool isAssociativeArray(T) = __traits(isAssociativeArray, T);
 }
 
 /**
- * Detect whether type $(D T) is a builtin type.
+ * Detect whether type `T` is a builtin type.
  */
 enum bool isBuiltinType(T) = is(BuiltinTypeOf!T) && !isAggregateType!T;
 
@@ -6342,7 +6342,7 @@ enum bool isBuiltinType(T) = is(BuiltinTypeOf!T) && !isAggregateType!T;
 }
 
 /**
- * Detect whether type $(D T) is a SIMD vector type.
+ * Detect whether type `T` is a SIMD vector type.
  */
 enum bool isSIMDVector(T) = is(T : __vector(V[N]), V, size_t N);
 
@@ -6359,7 +6359,7 @@ enum bool isSIMDVector(T) = is(T : __vector(V[N]), V, size_t N);
 }
 
 /**
- * Detect whether type $(D T) is a pointer.
+ * Detect whether type `T` is a pointer.
  */
 enum bool isPointer(T) = is(T == U*, U) && !isAggregateType!T;
 
@@ -6393,7 +6393,7 @@ alias PointerTarget(T : T*) = T;
 }
 
 /**
- * Detect whether type $(D T) is an aggregate type.
+ * Detect whether type `T` is an aggregate type.
  */
 enum bool isAggregateType(T) = is(T == struct) || is(T == union) ||
                                is(T == class) || is(T == interface);
@@ -6418,10 +6418,10 @@ enum bool isAggregateType(T) = is(T == struct) || is(T == union) ||
 }
 
 /**
- * Returns $(D true) if T can be iterated over using a $(D foreach) loop with
+ * Returns `true` if T can be iterated over using a `foreach` loop with
  * a single loop variable of automatically inferred type, regardless of how
- * the $(D foreach) loop is implemented.  This includes ranges, structs/classes
- * that define $(D opApply) with a single loop variable, and builtin dynamic,
+ * the `foreach` loop is implemented.  This includes ranges, structs/classes
+ * that define `opApply` with a single loop variable, and builtin dynamic,
  * static and associative arrays.
  */
 enum bool isIterable(T) = is(typeof({ foreach (elem; T.init) {} }));
@@ -6567,7 +6567,7 @@ alias isExpressionTuple = isExpressions;
 
 
 /**
- * Check whether the tuple $(D T) is a type tuple.
+ * Check whether the tuple `T` is a type tuple.
  * A type tuple only contains types.
  *
  * See_Also: $(LREF isExpressions).
@@ -6610,7 +6610,7 @@ template isTypeTuple(T...)
 
 
 /**
-Detect whether symbol or type $(D T) is a function pointer.
+Detect whether symbol or type `T` is a function pointer.
  */
 template isFunctionPointer(T...)
     if (T.length == 1)
@@ -6646,7 +6646,7 @@ template isFunctionPointer(T...)
 }
 
 /**
-Detect whether symbol or type $(D T) is a delegate.
+Detect whether symbol or type `T` is a delegate.
 */
 template isDelegate(T...)
     if (T.length == 1)
@@ -6684,7 +6684,7 @@ template isDelegate(T...)
 }
 
 /**
-Detect whether symbol or type $(D T) is a function, a function pointer or a delegate.
+Detect whether symbol or type `T` is a function, a function pointer or a delegate.
  */
 template isSomeFunction(T...)
     if (T.length == 1)
@@ -6744,7 +6744,7 @@ template isSomeFunction(T...)
 
 
 /**
-Detect whether $(D T) is a callable object, which can be called with the
+Detect whether `T` is a callable object, which can be called with the
 function call operator $(D $(LPAREN)...$(RPAREN)).
  */
 template isCallable(T...)
@@ -6779,7 +6779,7 @@ template isCallable(T...)
 
 
 /**
- * Detect whether $(D T) is an abstract function.
+ * Detect whether `T` is an abstract function.
  */
 template isAbstractFunction(T...)
     if (T.length == 1)
@@ -6799,7 +6799,7 @@ template isAbstractFunction(T...)
 }
 
 /**
- * Detect whether $(D T) is a final function.
+ * Detect whether `T` is a final function.
  */
 template isFinalFunction(T...)
     if (T.length == 1)
@@ -6825,7 +6825,7 @@ template isFinalFunction(T...)
 }
 
 /**
-Determines whether function $(D f) requires a context pointer.
+Determines whether function `f` requires a context pointer.
 */
 template isNestedFunction(alias f)
 {
@@ -6841,7 +6841,7 @@ template isNestedFunction(alias f)
 }
 
 /**
- * Detect whether $(D T) is an abstract class.
+ * Detect whether `T` is an abstract class.
  */
 template isAbstractClass(T...)
     if (T.length == 1)
@@ -6865,7 +6865,7 @@ template isAbstractClass(T...)
 }
 
 /**
- * Detect whether $(D T) is a final class.
+ * Detect whether `T` is a final class.
  */
 template isFinalClass(T...)
     if (T.length == 1)
@@ -6895,7 +6895,7 @@ template isFinalClass(T...)
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
 /**
-Removes all qualifiers, if any, from type $(D T).
+Removes all qualifiers, if any, from type `T`.
  */
 template Unqual(T)
 {
@@ -6976,14 +6976,14 @@ package template ModifyTypePreservingTQ(alias Modifier, T)
 }
 
 /**
- * Copies type qualifiers from $(D FromType) to $(D ToType).
+ * Copies type qualifiers from `FromType` to `ToType`.
  *
  * Supported type qualifiers:
  * $(UL
- *     $(LI $(D const))
- *     $(LI $(D inout))
- *     $(LI $(D immutable))
- *     $(LI $(D shared))
+ *     $(LI `const`)
+ *     $(LI `inout`)
+ *     $(LI `immutable`)
+ *     $(LI `shared`)
  * )
  */
 template CopyTypeQualifiers(FromType, ToType)
@@ -7086,9 +7086,9 @@ template CopyConstness(FromType, ToType)
 
 /**
 Returns the inferred type of the loop variable when a variable of type T
-is iterated over using a $(D foreach) loop with a single loop variable and
+is iterated over using a `foreach` loop with a single loop variable and
 automatically inferred return type.  Note that this may not be the same as
-$(D std.range.ElementType!Range) in the case of narrow strings, or if T
+`std.range.ElementType!Range` in the case of narrow strings, or if T
 has both opApply and a range interface.
 */
 template ForeachType(T)
@@ -7115,7 +7115,7 @@ template ForeachType(T)
 
 
 /**
- * Strips off all $(D enum)s from type $(D T).
+ * Strips off all `enum`s from type `T`.
  */
 template OriginalType(T)
 {
@@ -7403,9 +7403,9 @@ template Promoted(T)
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::://
 
 /**
-Returns the mangled name of symbol or type $(D sth).
+Returns the mangled name of symbol or type `sth`.
 
-$(D mangledName) is the same as builtin $(D .mangleof) property, but
+`mangledName` is the same as builtin `.mangleof` property, but
 might be more convenient in generic code, e.g. as a template argument
 when invoking staticMap.
  */
@@ -7461,8 +7461,8 @@ version(unittest) void freeFunc(string);
 // XXX Select & select should go to another module. (functional or algorithm?)
 
 /**
-Aliases itself to $(D T[0]) if the boolean $(D condition) is $(D true)
-and to $(D T[1]) otherwise.
+Aliases itself to `T[0]` if the boolean `condition` is `true`
+and to `T[1]` otherwise.
  */
 template Select(bool condition, T...) if (T.length == 2)
 {
@@ -7493,8 +7493,8 @@ template Select(bool condition, T...) if (T.length == 2)
 }
 
 /**
-If $(D cond) is $(D true), returns $(D a) without evaluating $(D
-b). Otherwise, returns $(D b) without evaluating $(D a).
+If `cond` is `true`, returns `a` without evaluating $(D
+b). Otherwise, returns `b` without evaluating `a`.
  */
 A select(bool cond : true, A, B)(A a, lazy B b) { return a; }
 /// Ditto
@@ -7898,7 +7898,7 @@ template getSymbolsByUDA(alias symbol, alias attribute)
 }
 
 /**
-   Returns: $(D true) iff all types $(D T) are the same.
+   Returns: `true` iff all types `T` are the same.
 */
 template allSameType(T...)
 {
@@ -7925,7 +7925,7 @@ template allSameType(T...)
 }
 
 /**
-   Returns: $(D true) iff the type $(D T) can be tested in an $(D
+   Returns: `true` iff the type `T` can be tested in an $(D
    if)-expression, that is if $(D if (pred(T.init)) {}) is compilable.
 */
 enum ifTestable(T, alias pred = a => a) = __traits(compiles, { if (pred(T.init)) {} });

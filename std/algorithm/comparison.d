@@ -10,24 +10,24 @@ $(T2 among,
         Checks if a value is among a set of values, e.g.
         $(D if (v.among(1, 2, 3)) // `v` is 1, 2 or 3))
 $(T2 castSwitch,
-        $(D (new A()).castSwitch((A a)=>1,(B b)=>2)) returns $(D 1).)
+        $(D (new A()).castSwitch((A a)=>1,(B b)=>2)) returns `1`.)
 $(T2 clamp,
-        $(D clamp(1, 3, 6)) returns $(D 3). $(D clamp(4, 3, 6)) returns $(D 4).)
+        $(D clamp(1, 3, 6)) returns `3`. $(D clamp(4, 3, 6)) returns `4`.)
 $(T2 cmp,
-        $(D cmp("abc", "abcd")) is $(D -1), $(D cmp("abc", "aba")) is $(D 1),
-        and $(D cmp("abc", "abc")) is $(D 0).)
+        $(D cmp("abc", "abcd")) is `-1`, $(D cmp("abc", "aba")) is `1`,
+        and $(D cmp("abc", "abc")) is `0`.)
 $(T2 either,
-        Return first parameter $(D p) that passes an $(D if (p)) test, e.g.
-        $(D either(0, 42, 43)) returns $(D 42).)
+        Return first parameter `p` that passes an $(D if (p)) test, e.g.
+        $(D either(0, 42, 43)) returns `42`.)
 $(T2 equal,
         Compares ranges for element-by-element equality, e.g.
-        $(D equal([1, 2, 3], [1.0, 2.0, 3.0])) returns $(D true).)
+        $(D equal([1, 2, 3], [1.0, 2.0, 3.0])) returns `true`.)
 $(T2 isPermutation,
-        $(D isPermutation([1, 2], [2, 1])) returns $(D true).)
+        $(D isPermutation([1, 2], [2, 1])) returns `true`.)
 $(T2 isSameLength,
-        $(D isSameLength([1, 2, 3], [4, 5, 6])) returns $(D true).)
+        $(D isSameLength([1, 2, 3], [4, 5, 6])) returns `true`.)
 $(T2 levenshteinDistance,
-        $(D levenshteinDistance("kitten", "sitting")) returns $(D 3) by using
+        $(D levenshteinDistance("kitten", "sitting")) returns `3` by using
         the $(LINK2 https://en.wikipedia.org/wiki/Levenshtein_distance,
         Levenshtein distance _algorithm).)
 $(T2 levenshteinDistanceAndPath,
@@ -36,13 +36,13 @@ $(T2 levenshteinDistanceAndPath,
         $(LINK2 https://en.wikipedia.org/wiki/Levenshtein_distance,
         Levenshtein distance _algorithm).)
 $(T2 max,
-        $(D max(3, 4, 2)) returns $(D 4).)
+        $(D max(3, 4, 2)) returns `4`.)
 $(T2 min,
-        $(D min(3, 4, 2)) returns $(D 2).)
+        $(D min(3, 4, 2)) returns `2`.)
 $(T2 mismatch,
         $(D mismatch("oh hi", "ohayo")) returns $(D tuple(" hi", "ayo")).)
 $(T2 predSwitch,
-        $(D 2.predSwitch(1, "one", 2, "two", 3, "three")) returns $(D "two").)
+        $(D 2.predSwitch(1, "one", 2, "two", 3, "three")) returns `"two"`.)
 )
 
 Copyright: Andrei Alexandrescu 2008-.
@@ -67,9 +67,9 @@ import std.meta : allSatisfy;
 import std.typecons; // : tuple, Tuple, Flag, Yes;
 
 /**
-Find $(D value) _among $(D values), returning the 1-based index
-of the first matching value in $(D values), or $(D 0) if $(D value)
-is not _among $(D values). The predicate $(D pred) is used to
+Find `value` _among `values`, returning the 1-based index
+of the first matching value in `values`, or `0` if `value`
+is not _among `values`. The predicate `pred` is used to
 compare values, and uses equality by default.
 
 Params:
@@ -130,7 +130,7 @@ if (isExpressionTuple!values)
 }
 
 /**
-Alternatively, $(D values) can be passed at compile-time, allowing for a more
+Alternatively, `values` can be passed at compile-time, allowing for a more
 efficient search, but one that only supports matching on equality:
 */
 @safe unittest
@@ -214,19 +214,19 @@ private template indexOfFirstOvershadowingChoiceOnLast(choices...)
 Executes and returns one of a collection of handlers based on the type of the
 switch object.
 
-The first choice that $(D switchObject) can be casted to the type
-of argument it accepts will be called with $(D switchObject) casted to that
-type, and the value it'll return will be returned by $(D castSwitch).
+The first choice that `switchObject` can be casted to the type
+of argument it accepts will be called with `switchObject` casted to that
+type, and the value it'll return will be returned by `castSwitch`.
 
 If a choice's return type is void, the choice must throw an exception, unless
 all the choices are void. In that case, castSwitch itself will return void.
 
-Throws: If none of the choice matches, a $(D SwitchError) will be thrown.  $(D
+Throws: If none of the choice matches, a `SwitchError` will be thrown.  $(D
 SwitchError) will also be thrown if not all the choices are void and a void
 choice was executed without throwing anything.
 
 Params:
-    choices = The $(D choices) needs to be composed of function or delegate
+    choices = The `choices` needs to be composed of function or delegate
         handlers that accept one argument. There can also be a choice that
         accepts zero arguments. That choice will be invoked if the $(D
         switchObject) is null.
@@ -235,7 +235,7 @@ Params:
 Returns:
     The value of the selected choice.
 
-Note: $(D castSwitch) can only be used with object types.
+Note: `castSwitch` can only be used with object types.
 */
 auto castSwitch(choices...)(Object switchObject)
 {
@@ -525,7 +525,7 @@ Params:
     upper = The _upper bound of the _clamp.
 
 Returns:
-    Returns $(D val), if it is between $(D lower) and $(D upper).
+    Returns `val`, if it is between `lower` and `upper`.
     Otherwise returns the nearest of the two.
 
 */
@@ -582,15 +582,15 @@ body
 /**********************************
 Performs three-way lexicographical comparison on two
 $(REF_ALTTEXT input ranges, isInputRange, std,range,primitives)
-according to predicate $(D pred). Iterating $(D r1) and $(D r2) in
-lockstep, $(D cmp) compares each element $(D e1) of $(D r1) with the
-corresponding element $(D e2) in $(D r2). If one of the ranges has been
-finished, $(D cmp) returns a negative value if $(D r1) has fewer
-elements than $(D r2), a positive value if $(D r1) has more elements
-than $(D r2), and $(D 0) if the ranges have the same number of
+according to predicate `pred`. Iterating `r1` and `r2` in
+lockstep, `cmp` compares each element `e1` of `r1` with the
+corresponding element `e2` in `r2`. If one of the ranges has been
+finished, `cmp` returns a negative value if `r1` has fewer
+elements than `r2`, a positive value if `r1` has more elements
+than `r2`, and `0` if the ranges have the same number of
 elements.
 
-If the ranges are strings, $(D cmp) performs UTF decoding
+If the ranges are strings, `cmp` performs UTF decoding
 appropriately and compares the ranges one code point at a time.
 
 Params:
@@ -600,9 +600,9 @@ Params:
 
 Returns:
     0 if both ranges compare equal. -1 if the first differing element of $(D
-    r1) is less than the corresponding element of $(D r2) according to $(D
-    pred). 1 if the first differing element of $(D r2) is less than the
-    corresponding element of $(D r1) according to $(D pred).
+    r1) is less than the corresponding element of `r2` according to $(D
+    pred). 1 if the first differing element of `r2` is less than the
+    corresponding element of `r1` according to `pred`.
 
 */
 int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2)
@@ -726,8 +726,8 @@ if (isSomeString!R1 && isSomeString!R2)
 
 // equal
 /**
-Compares two ranges for equality, as defined by predicate $(D pred)
-(which is $(D ==) by default).
+Compares two ranges for equality, as defined by predicate `pred`
+(which is `==` by default).
 */
 template equal(alias pred = "a == b")
 {
@@ -739,16 +739,16 @@ template equal(alias pred = "a == b")
     /++
     Compares two ranges for equality. The ranges may have
     different element types, as long as $(D pred(r1.front, r2.front))
-    evaluates to $(D bool).
-    Performs $(BIGOH min(r1.length, r2.length)) evaluations of $(D pred).
+    evaluates to `bool`.
+    Performs $(BIGOH min(r1.length, r2.length)) evaluations of `pred`.
 
     Params:
         r1 = The first range to be compared.
         r2 = The second range to be compared.
 
     Returns:
-        $(D true) if and only if the two ranges compare _equal element
-        for element, according to binary predicate $(D pred).
+        `true` if and only if the two ranges compare _equal element
+        for element, according to binary predicate `pred`.
 
     See_Also:
         $(HTTP sgi.com/tech/stl/_equal.html, STL's _equal)
@@ -844,9 +844,9 @@ template equal(alias pred = "a == b")
 }
 
 /++
-Tip: $(D equal) can itself be used as a predicate to other functions.
+Tip: `equal` can itself be used as a predicate to other functions.
 This can be very useful when the element type of a range is itself a
-range. In particular, $(D equal) can be its own predicate, allowing
+range. In particular, `equal` can be its own predicate, allowing
 range of range (of range...) comparisons.
  +/
 @safe unittest
@@ -983,10 +983,10 @@ if (T.length >= 1)
 /**
 Encodes $(HTTP realityinteractive.com/rgrzywinski/archives/000249.html,
 edit operations) necessary to transform one sequence into
-another. Given sequences $(D s) (source) and $(D t) (target), a
-sequence of $(D EditOp) encodes the steps that need to be taken to
-convert $(D s) into $(D t). For example, if $(D s = "cat") and $(D
-"cars"), the minimal sequence that transforms $(D s) into $(D t) is:
+another. Given sequences `s` (source) and `t` (target), a
+sequence of `EditOp` encodes the steps that need to be taken to
+convert `s` into `t`. For example, if $(D s = "cat") and $(D
+"cars"), the minimal sequence that transforms `s` into `t` is:
 skip two characters, replace 't' with 'r', and insert an 's'. Working
 with edit operations is useful in applications such as spell-checkers
 (to find the closest word to a given misspelled word), approximate
@@ -1193,9 +1193,9 @@ private:
 
 /**
 Returns the $(HTTP wikipedia.org/wiki/Levenshtein_distance, Levenshtein
-distance) between $(D s) and $(D t). The Levenshtein distance computes
-the minimal amount of edit operations necessary to transform $(D s)
-into $(D t).  Performs $(BIGOH s.length * t.length) evaluations of $(D
+distance) between `s` and `t`. The Levenshtein distance computes
+the minimal amount of edit operations necessary to transform `s`
+into `t`.  Performs $(BIGOH s.length * t.length) evaluations of $(D
 equals) and occupies $(BIGOH s.length * t.length) storage.
 
 Params:
@@ -1305,8 +1305,8 @@ if (isConvertibleToString!Range1 || isConvertibleToString!Range2)
 }
 
 /**
-Returns the Levenshtein distance and the edit path between $(D s) and
-$(D t).
+Returns the Levenshtein distance and the edit path between `s` and
+`t`.
 
 Params:
     equals = The binary predicate to compare the elements of the two ranges.
@@ -1555,11 +1555,11 @@ if (T.length >= 2)
 
 // mismatch
 /**
-Sequentially compares elements in $(D r1) and $(D r2) in lockstep, and
-stops at the first mismatch (according to $(D pred), by default
+Sequentially compares elements in `r1` and `r2` in lockstep, and
+stops at the first mismatch (according to `pred`, by default
 equality). Returns a tuple with the reduced ranges that start with the
 two mismatched values. Performs $(BIGOH min(r1.length, r2.length))
-evaluations of $(D pred).
+evaluations of `pred`.
 
 See_Also:
     $(HTTP sgi.com/tech/stl/_mismatch.html, STL's _mismatch)
@@ -1598,9 +1598,9 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 Returns one of a collection of expressions based on the value of the switch
 expression.
 
-$(D choices) needs to be composed of pairs of test expressions and return
-expressions. Each test-expression is compared with $(D switchExpression) using
-$(D pred)($(D switchExpression) is the first argument) and if that yields true
+`choices` needs to be composed of pairs of test expressions and return
+expressions. Each test-expression is compared with `switchExpression` using
+`pred`(`switchExpression` is the first argument) and if that yields true
 - the return expression is returned.
 
 Both the test and the return expressions are lazily evaluated.
@@ -1622,7 +1622,7 @@ made the predicate yield true, or the default return expression if no test
 expression matched.
 
 Throws: If there is no default return expression and the predicate does not
-yield true with any test expression - $(D SwitchError) is thrown. $(D
+yield true with any test expression - `SwitchError` is thrown. $(D
 SwitchError) is also thrown if a void return expression was executed without
 throwing anything.
 */
@@ -1734,7 +1734,7 @@ auto predSwitch(alias pred = "a == b", T, R ...)(T switchExpression, lazy R choi
 
 /**
 Checks if the two ranges have the same number of elements. This function is
-optimized to always take advantage of the $(D length) member of either range
+optimized to always take advantage of the `length` member of either range
 if it exists.
 
 If both ranges have a length member, this function is $(BIGOH 1). Otherwise,
@@ -1745,7 +1745,7 @@ Params:
     r2 = a finite $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
 
 Returns:
-    $(D true) if both ranges have the same length, $(D false) otherwise.
+    `true` if both ranges have the same length, `false` otherwise.
 */
 bool isSameLength(Range1, Range2)(Range1 r1, Range2 r2)
 if (isInputRange!Range1 &&
@@ -1867,27 +1867,27 @@ alias AllocateGC = Flag!"allocateGC";
 /**
 Checks if both ranges are permutations of each other.
 
-This function can allocate if the $(D Yes.allocateGC) flag is passed. This has
-the benefit of have better complexity than the $(D Yes.allocateGC) option. However,
+This function can allocate if the `Yes.allocateGC` flag is passed. This has
+the benefit of have better complexity than the `Yes.allocateGC` option. However,
 this option is only available for ranges whose equality can be determined via each
-element's $(D toHash) method. If customized equality is needed, then the $(D pred)
+element's `toHash` method. If customized equality is needed, then the `pred`
 template parameter can be passed, and the function will automatically switch to
 the non-allocating algorithm. See $(REF binaryFun, std,functional) for more details on
-how to define $(D pred).
+how to define `pred`.
 
 Non-allocating forward range option: $(BIGOH n^2)
-Non-allocating forward range option with custom $(D pred): $(BIGOH n^2)
+Non-allocating forward range option with custom `pred`: $(BIGOH n^2)
 Allocating forward range option: amortized $(BIGOH r1.length) + $(BIGOH r2.length)
 
 Params:
     pred = an optional parameter to change how equality is defined
-    allocate_gc = $(D Yes.allocateGC)/$(D No.allocateGC)
+    allocate_gc = `Yes.allocateGC`/`No.allocateGC`
     r1 = A finite $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
     r2 = A finite $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
 
 Returns:
-    $(D true) if all of the elements in $(D r1) appear the same number of times in $(D r2).
-    Otherwise, returns $(D false).
+    `true` if all of the elements in `r1` appear the same number of times in `r2`.
+    Otherwise, returns `false`.
 */
 
 bool isPermutation(AllocateGC allocate_gc, Range1, Range2)

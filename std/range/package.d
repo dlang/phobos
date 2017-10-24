@@ -113,9 +113,9 @@ $(BOOKTABLE ,
         and ending point, spaced apart by a given interval.
     ))
     $(TR $(TD $(LREF lockstep))
-        $(TD Iterates $(I n) _ranges in lockstep, for use in a $(D foreach)
-        loop. Similar to $(D zip), except that $(D lockstep) is designed
-        especially for $(D foreach) loops.
+        $(TD Iterates $(I n) _ranges in lockstep, for use in a `foreach`
+        loop. Similar to `zip`, except that `lockstep` is designed
+        especially for `foreach` loops.
     ))
     $(TR $(TD $(LREF NullSink))
         $(TD An output _range that discards the data it receives.
@@ -158,7 +158,7 @@ $(BOOKTABLE ,
         _range, and so on, in a round-robin fashion.
     ))
     $(TR $(TD $(LREF sequence))
-        $(TD Similar to $(D recurrence), except that a random-access _range is
+        $(TD Similar to `recurrence`, except that a random-access _range is
         created.
     ))
     $(COMMENT Explicitly undocumented to delay the release until 2.076
@@ -173,7 +173,7 @@ $(BOOKTABLE ,
         $(TD Iterates a _range with stride $(I n).
     ))
     $(TR $(TD $(LREF tail))
-        $(TD Return a _range advanced to within $(D n) elements of the end of
+        $(TD Return a _range advanced to within `n` elements of the end of
         the given _range.
     ))
     $(TR $(TD $(LREF take))
@@ -181,8 +181,8 @@ $(BOOKTABLE ,
         elements of the given _range.
     ))
     $(TR $(TD $(LREF takeExactly))
-        $(TD Like $(D take), but assumes the given _range actually has $(I n)
-        elements, and therefore also defines the $(D length) property.
+        $(TD Like `take`, but assumes the given _range actually has $(I n)
+        elements, and therefore also defines the `length` property.
     ))
     $(TR $(TD $(LREF takeNone))
         $(TD Creates a random-access _range consisting of zero elements of the
@@ -241,7 +241,7 @@ import std.traits; // CommonType, isCallable, isFloatingPoint, isIntegral,
 
 /**
 Iterates a bidirectional range backwards. The original range can be
-accessed by using the $(D source) property. Applying retro twice to
+accessed by using the `source` property. Applying retro twice to
 the same range yields the original range.
 
 Params:
@@ -483,11 +483,11 @@ pure @safe nothrow @nogc unittest
 
 
 /**
-Iterates range $(D r) with stride $(D n). If the range is a
+Iterates range `r` with stride `n`. If the range is a
 random-access range, moves by indexing into the range; otherwise,
-moves by successive calls to $(D popFront). Applying stride twice to
+moves by successive calls to `popFront`. Applying stride twice to
 the same range results in a stride with a step that is the
-product of the two applications. It is an error for $(D n) to be 0.
+product of the two applications. It is an error for `n` to be 0.
 
 Params:
     r = the input range to stride over
@@ -870,14 +870,14 @@ pure @safe nothrow unittest
 }
 
 /**
-Spans multiple ranges in sequence. The function $(D chain) takes any
+Spans multiple ranges in sequence. The function `chain` takes any
 number of ranges and returns a $(D Chain!(R1, R2,...)) object. The
 ranges may be different, but they must have the same element type. The
-result is a range that offers the $(D front), $(D popFront), and $(D
+result is a range that offers the `front`, `popFront`, and $(D
 empty) primitives. If all input ranges offer random access and $(D
-length), $(D Chain) offers them as well.
+length), `Chain` offers them as well.
 
-If only one range is offered to $(D Chain) or $(D chain), the $(D
+If only one range is offered to `Chain` or `chain`, the $(D
 Chain) type exits the picture by aliasing itself directly to that
 range's type.
 
@@ -1353,17 +1353,17 @@ pure @safe nothrow @nogc unittest
 Choose one of two ranges at runtime depending on a Boolean condition.
 
 The ranges may be different, but they must have compatible element types (i.e.
-$(D CommonType) must exist for the two element types). The result is a range
-that offers the weakest capabilities of the two (e.g. $(D ForwardRange) if $(D
-R1) is a random-access range and $(D R2) is a forward range).
+`CommonType` must exist for the two element types). The result is a range
+that offers the weakest capabilities of the two (e.g. `ForwardRange` if $(D
+R1) is a random-access range and `R2` is a forward range).
 
 Params:
-    condition = which range to choose: $(D r1) if $(D true), $(D r2) otherwise
+    condition = which range to choose: `r1` if `true`, `r2` otherwise
     r1 = the "true" range
     r2 = the "false" range
 
 Returns:
-    A range type dependent on $(D R1) and $(D R2).
+    A range type dependent on `R1` and `R2`.
 
 Bugs:
     $(BUGZILLA 14660)
@@ -1568,7 +1568,7 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
 Choose one of multiple ranges at runtime.
 
 The ranges may be different, but they must have compatible element types. The
-result is a range that offers the weakest capabilities of all $(D Ranges).
+result is a range that offers the weakest capabilities of all `Ranges`.
 
 Params:
     index = which range to choose, must be less than the number of ranges
@@ -1664,10 +1664,10 @@ if (Ranges.length >= 2
 
 
 /**
-$(D roundRobin(r1, r2, r3)) yields $(D r1.front), then $(D r2.front),
-then $(D r3.front), after which it pops off one element from each and
-continues again from $(D r1). For example, if two ranges are involved,
-it alternately yields elements off the two ranges. $(D roundRobin)
+$(D roundRobin(r1, r2, r3)) yields `r1.front`, then `r2.front`,
+then `r3.front`, after which it pops off one element from each and
+continues again from `r1`. For example, if two ranges are involved,
+it alternately yields elements off the two ranges. `roundRobin`
 stops after it has consumed all ranges (skipping over the ones that
 finish early).
  */
@@ -2297,16 +2297,16 @@ pure @safe nothrow @nogc unittest //13151
 
 
 /**
-Similar to $(LREF take), but assumes that $(D range) has at least $(D
+Similar to $(LREF take), but assumes that `range` has at least $(D
 n) elements. Consequently, the result of $(D takeExactly(range, n))
-always defines the $(D length) property (and initializes it to $(D n))
-even when $(D range) itself does not define $(D length).
+always defines the `length` property (and initializes it to `n`)
+even when `range` itself does not define `length`.
 
-The result of $(D takeExactly) is identical to that of $(LREF take) in
-cases where the original range defines $(D length) or is infinite.
+The result of `takeExactly` is identical to that of $(LREF take) in
+cases where the original range defines `length` or is infinite.
 
 Unlike $(LREF take), however, it is illegal to pass a range with less than
-$(D n) elements to $(D takeExactly); this will cause an assertion failure.
+`n` elements to `takeExactly`; this will cause an assertion failure.
  */
 auto takeExactly(R)(R range, size_t n)
 if (isInputRange!R)
@@ -2507,9 +2507,9 @@ In effect $(D takeOne(r)) is somewhat equivalent to $(D take(r, 1)) but in
 certain interfaces it is important to know statically that the range may only
 have at most one element.
 
-The type returned by $(D takeOne) is a random-access range with length
-regardless of $(D R)'s capabilities, as long as it is a forward range.
-(another feature that distinguishes $(D takeOne) from $(D take)). If
+The type returned by `takeOne` is a random-access range with length
+regardless of `R`'s capabilities, as long as it is a forward range.
+(another feature that distinguishes `takeOne` from `take`). If
 (D R) is an input range but not a forward range, return type is an input
 range with all random-access capabilities except save.
  */
@@ -2626,7 +2626,7 @@ pure @safe unittest
 
 /++
     Returns an empty range which is statically known to be empty and is
-    guaranteed to have $(D length) and be random access regardless of $(D R)'s
+    guaranteed to have `length` and be random access regardless of `R`'s
     capabilities.
   +/
 auto takeNone(R)()
@@ -2814,12 +2814,12 @@ pure @safe nothrow unittest
 }
 
 /++
- + Return a _range advanced to within $(D _n) elements of the end of
- + $(D _range).
+ + Return a _range advanced to within `_n` elements of the end of
+ + `_range`.
  +
  + Intended as the _range equivalent of the Unix
  + $(HTTP en.wikipedia.org/wiki/Tail_%28Unix%29, _tail) utility. When the length
- + of $(D _range) is less than or equal to $(D _n), $(D _range) is returned
+ + of `_range` is less than or equal to `_n`, `_range` is returned
  + as-is.
  +
  + Completes in $(BIGOH 1) steps for ranges that support slicing and have
@@ -2830,7 +2830,7 @@ pure @safe nothrow unittest
  +    n = maximum number of elements to include in _tail
  +
  + Returns:
- +    Returns the _tail of $(D _range) augmented with length information
+ +    Returns the _tail of `_range` augmented with length information
  +/
 auto tail(Range)(Range range, size_t n)
 if (isInputRange!Range && !isInfinite!Range &&
@@ -3018,17 +3018,17 @@ if (isBidirectionalRange!R)
 }
 
 /++
-    Similar to $(LREF drop) and $(D dropBack) but they call
+    Similar to $(LREF drop) and `dropBack` but they call
     $(D range.$(LREF popFrontExactly)(n)) and $(D range.popBackExactly(n))
     instead.
 
-    Note: Unlike $(D drop), $(D dropExactly) will assume that the
-    range holds at least $(D n) elements. This makes $(D dropExactly)
-    faster than $(D drop), but it also means that if $(D range) does
-    not contain at least $(D n) elements, it will attempt to call $(D popFront)
+    Note: Unlike `drop`, `dropExactly` will assume that the
+    range holds at least `n` elements. This makes `dropExactly`
+    faster than `drop`, but it also means that if `range` does
+    not contain at least `n` elements, it will attempt to call `popFront`
     on an empty range, which is undefined behavior. So, only use
-    $(D popFrontExactly) when it is guaranteed that $(D range) holds at least
-    $(D n) elements.
+    `popFrontExactly` when it is guaranteed that `range` holds at least
+    `n` elements.
 
     Params:
         range = the input range to drop from
@@ -3076,12 +3076,12 @@ if (isBidirectionalRange!R)
 
 /++
     Convenience function which calls
-    $(D range.popFront()) and returns $(D range). $(D dropOne)
+    $(D range.popFront()) and returns `range`. `dropOne`
     makes it easier to pop an element from a range
     and then pass it to another function within a single expression,
-    whereas $(D popFront) would require multiple statements.
+    whereas `popFront` would require multiple statements.
 
-    $(D dropBackOne) provides the same functionality but instead calls
+    `dropBackOne` provides the same functionality but instead calls
     $(D range.popBack()).
 +/
 R dropOne(R)(R range)
@@ -3223,7 +3223,7 @@ pure @safe nothrow unittest
 }
 
 /**
-   Repeats $(D value) exactly $(D n) times. Equivalent to $(D
+   Repeats `value` exactly `n` times. Equivalent to $(D
    take(repeat(value), n)).
 */
 Take!(Repeat!T) repeat(T)(T value, size_t n)
@@ -3436,12 +3436,12 @@ public:
 
 /**
 Repeats the given forward range ad infinitum. If the original range is
-infinite (fact that would make $(D Cycle) the identity application),
-$(D Cycle) detects that and aliases itself to the range type
+infinite (fact that would make `Cycle` the identity application),
+`Cycle` detects that and aliases itself to the range type
 itself. That works for non-forward ranges too.
-If the original range has random access, $(D Cycle) offers
+If the original range has random access, `Cycle` offers
 random access and also offers a constructor taking an initial position
-$(D index). $(D Cycle) works with static arrays in addition to ranges,
+`index`. `Cycle` works with static arrays in addition to ranges,
 mostly for performance reasons.
 
 Note: The input range must not be empty.
@@ -3925,8 +3925,8 @@ private alias lengthType(R) = typeof(R.init.length.init);
 
 /**
    Iterate several ranges in lockstep. The element type is a proxy tuple
-   that allows accessing the current element in the $(D n)th range by
-   using $(D e[n]).
+   that allows accessing the current element in the `n`th range by
+   using `e[n]`.
 
    `zip` is similar to $(LREF lockstep), but `lockstep` doesn't
    bundle its elements and uses the `opApply` protocol.
@@ -3968,7 +3968,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
     }
 
 /**
-   Returns $(D true) if the range is at end. The test depends on the
+   Returns `true` if the range is at end. The test depends on the
    stopping policy.
 */
     static if (allSatisfy!(isInfinite, R))
@@ -4162,7 +4162,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
     }
 
 /**
-   Calls $(D popBack) for all controlled ranges.
+   Calls `popBack` for all controlled ranges.
 */
     static if (allSatisfy!(isBidirectionalRange, R))
     {
@@ -4199,7 +4199,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 
 /**
    Returns the length of this range. Defined only if all ranges define
-   $(D length).
+   `length`.
 */
     static if (allSatisfy!(hasLength, R))
     {
@@ -4242,7 +4242,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
     }
 
 /**
-   Returns the $(D n)th element in the composite range. Defined if all
+   Returns the `n`th element in the composite range. Defined if all
    ranges offer random access.
 */
     static if (allSatisfy!(isRandomAccessRange, R))
@@ -4257,7 +4257,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
         }
 
 /**
-   Assigns to the $(D n)th element in the composite range. Defined if
+   Assigns to the `n`th element in the composite range. Defined if
    all ranges offer random access.
 */
         static if (allSatisfy!(hasAssignableElements, R))
@@ -4273,7 +4273,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
         }
 
 /**
-   Destructively reads the $(D n)th element in the composite
+   Destructively reads the `n`th element in the composite
    range. Defined if all ranges offer random access.
 */
         static if (allSatisfy!(hasMobileElements, R))
@@ -4334,7 +4334,7 @@ pure @safe unittest
     }
 }
 
-/// $(D zip) is powerful - the following code sorts two arrays in parallel:
+/// `zip` is powerful - the following code sorts two arrays in parallel:
 pure @safe unittest
 {
     import std.algorithm.sorting : sort;
@@ -4356,7 +4356,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 }
 
 /**
-   Dictates how iteration in a $(D Zip) should stop. By default stop at
+   Dictates how iteration in a `Zip` should stop. By default stop at
    the end of the shortest of all ranges.
 */
 enum StoppingPolicy
@@ -4647,21 +4647,21 @@ private string lockstepMixin(Ranges...)(bool withIndex, bool reverse)
 }
 
 /**
-   Iterate multiple ranges in lockstep using a $(D foreach) loop. In contrast to
+   Iterate multiple ranges in lockstep using a `foreach` loop. In contrast to
    $(LREF zip) it allows reference access to its elements. If only a single
-   range is passed in, the $(D Lockstep) aliases itself away.  If the
-   ranges are of different lengths and $(D s) == $(D StoppingPolicy.shortest)
+   range is passed in, the `Lockstep` aliases itself away.  If the
+   ranges are of different lengths and `s` == `StoppingPolicy.shortest`
    stop after the shortest range is empty.  If the ranges are of different
-   lengths and $(D s) == $(D StoppingPolicy.requireSameLength), throw an
-   exception.  $(D s) may not be $(D StoppingPolicy.longest), and passing this
+   lengths and `s` == `StoppingPolicy.requireSameLength`, throw an
+   exception.  `s` may not be `StoppingPolicy.longest`, and passing this
    will throw an exception.
 
-   Iterating over $(D Lockstep) in reverse and with an index is only possible
-   when $(D s) == $(D StoppingPolicy.requireSameLength), in order to preserve
-   indexes. If an attempt is made at iterating in reverse when $(D s) ==
-   $(D StoppingPolicy.shortest), an exception will be thrown.
+   Iterating over `Lockstep` in reverse and with an index is only possible
+   when `s` == `StoppingPolicy.requireSameLength`, in order to preserve
+   indexes. If an attempt is made at iterating in reverse when `s` ==
+   `StoppingPolicy.shortest`, an exception will be thrown.
 
-   By default $(D StoppingPolicy) is set to $(D StoppingPolicy.shortest).
+   By default `StoppingPolicy` is set to `StoppingPolicy.shortest`.
 
    See_Also: $(LREF zip)
 
@@ -4941,11 +4941,11 @@ if (allSatisfy!(isInputRange, Ranges))
 Creates a mathematical sequence given the initial values and a
 recurrence function that computes the next value from the existing
 values. The sequence comes in the form of an infinite forward
-range. The type $(D Recurrence) itself is seldom used directly; most
+range. The type `Recurrence` itself is seldom used directly; most
 often, recurrences are obtained by calling the function $(D
 recurrence).
 
-When calling $(D recurrence), the function that computes the next
+When calling `recurrence`, the function that computes the next
 value is specified as a template argument, and the initial values in
 the recurrence are passed as regular arguments. For example, in a
 Fibonacci sequence, there are two initial values (and therefore a
@@ -4956,17 +4956,17 @@ The signature of this function should be:
 ----
 auto fun(R)(R state, size_t n)
 ----
-where $(D n) will be the index of the current value, and $(D state) will be an
+where `n` will be the index of the current value, and `state` will be an
 opaque state vector that can be indexed with array-indexing notation
-$(D state[i]), where valid values of $(D i) range from $(D (n - 1)) to
+`state[i]`, where valid values of `i` range from $(D (n - 1)) to
 $(D (n - State.length)).
 
-If the function is passed in string form, the state has name $(D "a")
-and the zero-based index in the recurrence has name $(D "n"). The
-given string must return the desired value for $(D a[n]) given $(D a[n
+If the function is passed in string form, the state has name `"a"`
+and the zero-based index in the recurrence has name `"n"`. The
+given string must return the desired value for `a[n]` given $(D a[n
 - 1]), $(D a[n - 2]), $(D a[n - 3]),..., $(D a[n - stateSize]). The
 state size is dictated by the number of arguments passed to the call
-to $(D recurrence). The $(D Recurrence) struct itself takes care of
+to `recurrence`. The `Recurrence` struct itself takes care of
 managing the recurrence's state and shifting it appropriately.
  */
 struct Recurrence(alias fun, StateType, size_t stateSize)
@@ -5064,15 +5064,15 @@ recurrence(alias fun, State...)(State initial)
 }
 
 /**
-   $(D Sequence) is similar to $(D Recurrence) except that iteration is
+   `Sequence` is similar to `Recurrence` except that iteration is
    presented in the so-called $(HTTP en.wikipedia.org/wiki/Closed_form,
-   closed form). This means that the $(D n)th element in the series is
-   computable directly from the initial values and $(D n) itself. This
-   implies that the interface offered by $(D Sequence) is a random-access
-   range, as opposed to the regular $(D Recurrence), which only offers
+   closed form). This means that the `n`th element in the series is
+   computable directly from the initial values and `n` itself. This
+   implies that the interface offered by `Sequence` is a random-access
+   range, as opposed to the regular `Recurrence`, which only offers
    forward iteration.
 
-   The state of the sequence is stored as a $(D Tuple) so it can be
+   The state of the sequence is stored as a `Tuple` so it can be
    heterogeneous.
 */
 struct Sequence(alias fun, State)
@@ -5253,21 +5253,21 @@ auto sequence(alias fun, State...)(State args)
    step = The value to add to the current value at each iteration.
 
    Returns:
-   A range that goes through the numbers $(D begin), $(D begin + step),
-   $(D begin + 2 * step), $(D ...), up to and excluding $(D end).
+   A range that goes through the numbers `begin`, $(D begin + step),
+   $(D begin + 2 * step), `...`, up to and excluding `end`.
 
    The two-argument overloads have $(D step = 1). If $(D begin < end && step <
    0) or $(D begin > end && step > 0) or $(D begin == end), then an empty range
    is returned. If $(D step == 0) then $(D begin == end) is an error.
 
    For built-in types, the range returned is a random access range. For
-   user-defined types that support $(D ++), the range is an input
+   user-defined types that support `++`, the range is an input
    range.
 
-   An integral iota also supports $(D in) operator from the right. It takes
+   An integral iota also supports `in` operator from the right. It takes
    the stepping into account, the integral won't be considered
    contained if it falls between two consecutive values of the range.
-   $(D contains) does the same as in, but from lefthand side.
+   `contains` does the same as in, but from lefthand side.
 
     Example:
     ---
@@ -5864,7 +5864,7 @@ unittest
  * operations.
  *
  * User-defined types such as $(REF BigInt, std,bigint) are also supported, as long
- * as they can be incremented with $(D ++) and compared with $(D <) or $(D ==).
+ * as they can be incremented with `++` and compared with `<` or `==`.
  */
 /// ditto
 auto iota(B, E)(B begin, E end)
@@ -6059,7 +6059,7 @@ struct FrontTransversal(Ror,
     }
 
 /**
-   Duplicates this $(D frontTransversal). Note that only the encapsulating
+   Duplicates this `frontTransversal`. Note that only the encapsulating
    range of range will be duplicated. Underlying ranges will not be
    duplicated.
 */
@@ -6151,7 +6151,7 @@ struct FrontTransversal(Ror,
         }
 
 /**
-   Slicing if offered if $(D RangeOfRanges) supports slicing and all the
+   Slicing if offered if `RangeOfRanges` supports slicing and all the
    conditions for supporting indexing are met.
 */
         static if (hasSlicing!RangeOfRanges)
@@ -6484,7 +6484,7 @@ struct Transversal(Ror,
         }
 
 /**
-   Slicing if offered if $(D RangeOfRanges) supports slicing and all the
+   Slicing if offered if `RangeOfRanges` supports slicing and all the
    conditions for supporting indexing are met.
 */
         static if (hasSlicing!RangeOfRanges)
@@ -6733,13 +6733,13 @@ if (isForwardRange!RangeOfRanges &&
 }
 
 /**
-This struct takes two ranges, $(D source) and $(D indices), and creates a view
-of $(D source) as if its elements were reordered according to $(D indices).
-$(D indices) may include only a subset of the elements of $(D source) and
+This struct takes two ranges, `source` and `indices`, and creates a view
+of `source` as if its elements were reordered according to `indices`.
+`indices` may include only a subset of the elements of `source` and
 may also repeat elements.
 
-$(D Source) must be a random access range.  The returned range will be
-bidirectional or random-access if $(D Indices) is bidirectional or
+`Source` must be a random access range.  The returned range will be
+bidirectional or random-access if `Indices` is bidirectional or
 random-access, respectively.
 */
 struct Indexed(Source, Indices)
@@ -6921,7 +6921,7 @@ if (isRandomAccessRange!Source && isInputRange!Indices &&
         /**
         Returns the physical index into the source range corresponding to a
         given logical index.  This is useful, for example, when indexing
-        an $(D Indexed) without adding another layer of indirection.
+        an `Indexed` without adding another layer of indirection.
         */
         size_t physicalIndex(size_t logicalIndex)
         {
@@ -6992,13 +6992,13 @@ Indexed!(Source, Indices) indexed(Source, Indices)(Source source, Indices indice
 }
 
 /**
-This range iterates over fixed-sized chunks of size $(D chunkSize) of a
-$(D source) range. $(D Source) must be an input range. $(D chunkSize) must be
+This range iterates over fixed-sized chunks of size `chunkSize` of a
+`source` range. `Source` must be an input range. `chunkSize` must be
 greater than zero.
 
-If $(D !isInfinite!Source) and $(D source.walkLength) is not evenly
-divisible by $(D chunkSize), the back element of this range will contain
-fewer than $(D chunkSize) elements.
+If `!isInfinite!Source` and `source.walkLength` is not evenly
+divisible by `chunkSize`, the back element of this range will contain
+fewer than `chunkSize` elements.
 
 If `Source` is a forward range, the resulting range will be forward ranges as
 well. Otherwise, the resulting chunks will be input ranges consuming the same
@@ -7060,7 +7060,7 @@ if (isInputRange!Source)
 
         static if (hasLength!Source)
         {
-            /// Length. Only if $(D hasLength!Source) is $(D true)
+            /// Length. Only if `hasLength!Source` is `true`
             @property size_t length()
             {
                 // Note: _source.length + _chunkSize may actually overflow.
@@ -7081,7 +7081,7 @@ if (isInputRange!Source)
 
             /**
             Indexing and slicing operations. Provided only if
-            $(D hasSlicing!Source) is $(D true).
+            `hasSlicing!Source` is `true`.
              */
             auto opIndex(size_t index)
             {
@@ -7191,7 +7191,7 @@ if (isInputRange!Source)
         {
             /**
             Bidirectional range primitives. Provided only if both
-            $(D hasSlicing!Source) and $(D hasLength!Source) are $(D true).
+            `hasSlicing!Source` and `hasLength!Source` are `true`.
              */
             @property auto back()
             {
@@ -7410,16 +7410,16 @@ if (isInputRange!Source)
 
 
 /**
-This range splits a $(D source) range into $(D chunkCount) chunks of
-approximately equal length. $(D Source) must be a forward range with
+This range splits a `source` range into `chunkCount` chunks of
+approximately equal length. `Source` must be a forward range with
 known length.
 
-Unlike $(LREF chunks), $(D evenChunks) takes a chunk count (not size).
+Unlike $(LREF chunks), `evenChunks` takes a chunk count (not size).
 The returned range will contain zero or more $(D source.length /
 chunkCount + 1) elements followed by $(D source.length / chunkCount)
 elements. If $(D source.length < chunkCount), some chunks will be empty.
 
-$(D chunkCount) must not be zero, unless $(D source) is also empty.
+`chunkCount` must not be zero, unless `source` is also empty.
 */
 struct EvenChunks(Source)
 if (isForwardRange!Source && hasLength!Source)
@@ -7471,7 +7471,7 @@ if (isForwardRange!Source && hasLength!Source)
     {
         /**
         Indexing, slicing and bidirectional operations and range primitives.
-        Provided only if $(D hasSlicing!Source) is $(D true).
+        Provided only if `hasSlicing!Source` is `true`.
          */
         auto opIndex(size_t index)
         {
@@ -7767,7 +7767,7 @@ public:
 
     static if (hasLength!Source)
     {
-        /// Length. Only if $(D hasLength!Source) is $(D true)
+        /// Length. Only if `hasLength!Source` is `true`
         @property size_t length()
         {
             if (_source.length < _windowSize)
@@ -8764,7 +8764,7 @@ private struct OnlyResult(T, size_t arity : 0)
 }
 
 /**
-Assemble $(D values) into a range that carries all its
+Assemble `values` into a range that carries all its
 elements in-situ.
 
 Useful when a single value or multiple disconnected values
@@ -8988,7 +8988,7 @@ if (!is(CommonType!Values == void) || Values.length == 0)
 Iterate over `range` with an attached index variable.
 
 Each element is a $(REF Tuple, std,typecons) containing the index
-and the element, in that order, where the index member is named $(D index)
+and the element, in that order, where the index member is named `index`
 and the element member is named `value`.
 
 The index starts at `start` and is incremented by one on every iteration.
@@ -9012,7 +9012,7 @@ Returns:
     primitives, which are propagated only if `range` has length.
 
 Example:
-Useful for using $(D foreach) with an index loop variable:
+Useful for using `foreach` with an index loop variable:
 ----
     import std.stdio : stdin, stdout;
     import std.range : enumerate;
@@ -9351,7 +9351,7 @@ version(none) // @@@BUG@@@ 10939
 }
 
 /**
-  Returns true if $(D fn) accepts variables of type T1 and T2 in any order.
+  Returns true if `fn` accepts variables of type T1 and T2 in any order.
   The following code should compile:
   ---
   T1 foo();
@@ -9375,8 +9375,8 @@ template isTwoWayCompatible(alias fn, T1, T2)
 
 
 /**
-   Policy used with the searching primitives $(D lowerBound), $(D
-   upperBound), and $(D equalRange) of $(LREF SortedRange) below.
+   Policy used with the searching primitives `lowerBound`, $(D
+   upperBound), and `equalRange` of $(LREF SortedRange) below.
  */
 enum SearchPolicy
 {
@@ -9411,21 +9411,21 @@ enum SearchPolicy
        Searches using a classic interval halving policy. The search
        starts in the middle of the range, and each search step cuts
        the range in half. This policy finds a value in $(BIGOH log(n))
-       time but is less cache friendly than $(D gallop) for large
-       ranges. The $(D binarySearch) policy is used as the last step
-       of $(D trot), $(D gallop), $(D trotBackwards), and $(D
+       time but is less cache friendly than `gallop` for large
+       ranges. The `binarySearch` policy is used as the last step
+       of `trot`, `gallop`, `trotBackwards`, and $(D
        gallopBackwards) strategies.
     */
         binarySearch,
 
     /**
-       Similar to $(D trot) but starts backwards. Use it when
+       Similar to `trot` but starts backwards. Use it when
        confident that the value is around the end of the range.
     */
         trotBackwards,
 
     /**
-       Similar to $(D gallop) but starts backwards. Use it when
+       Similar to `gallop` but starts backwards. Use it when
        confident that the value is around the end of the range.
     */
         gallopBackwards
@@ -9435,10 +9435,10 @@ enum SearchPolicy
 Represents a sorted range. In addition to the regular range
 primitives, supports additional operations that take advantage of the
 ordering, such as merge and binary search. To obtain a $(D
-SortedRange) from an unsorted range $(D r), use
-$(REF sort, std,algorithm,sorting) which sorts $(D r) in place and returns the
-corresponding $(D SortedRange). To construct a $(D SortedRange) from a range
-$(D r) that is known to be already sorted, use $(LREF assumeSorted) described
+SortedRange) from an unsorted range `r`, use
+$(REF sort, std,algorithm,sorting) which sorts `r` in place and returns the
+corresponding `SortedRange`. To construct a `SortedRange` from a range
+`r` that is known to be already sorted, use $(LREF assumeSorted) described
 below.
 */
 struct SortedRange(Range, alias pred = "a < b")
@@ -9666,10 +9666,10 @@ if (isInputRange!Range)
 
 // lowerBound
 /**
-   This function uses a search with policy $(D sp) to find the
-   largest left subrange on which $(D pred(x, value)) is $(D true) for
-   all $(D x) (e.g., if $(D pred) is "less than", returns the portion of
-   the range with elements strictly smaller than $(D value)). The search
+   This function uses a search with policy `sp` to find the
+   largest left subrange on which $(D pred(x, value)) is `true` for
+   all `x` (e.g., if `pred` is "less than", returns the portion of
+   the range with elements strictly smaller than `value`). The search
    schedule and its complexity are documented in
    $(LREF SearchPolicy).  See also STL's
    $(HTTP sgi.com/tech/stl/lower_bound.html, lower_bound).
@@ -9692,16 +9692,16 @@ if (isInputRange!Range)
 
 // upperBound
 /**
-This function searches with policy $(D sp) to find the largest right
-subrange on which $(D pred(value, x)) is $(D true) for all $(D x)
-(e.g., if $(D pred) is "less than", returns the portion of the range
-with elements strictly greater than $(D value)). The search schedule
+This function searches with policy `sp` to find the largest right
+subrange on which $(D pred(value, x)) is `true` for all `x`
+(e.g., if `pred` is "less than", returns the portion of the range
+with elements strictly greater than `value`). The search schedule
 and its complexity are documented in $(LREF SearchPolicy).
 
-For ranges that do not offer random access, $(D SearchPolicy.linear)
+For ranges that do not offer random access, `SearchPolicy.linear`
 is the only policy allowed (and it must be specified explicitly lest it exposes
 user code to unexpected inefficiencies). For random-access searches, all
-policies are allowed, and $(D SearchPolicy.binarySearch) is the default.
+policies are allowed, and `SearchPolicy.binarySearch` is the default.
 
 See_Also: STL's $(HTTP sgi.com/tech/stl/lower_bound.html,upper_bound).
 */
@@ -9737,13 +9737,13 @@ See_Also: STL's $(HTTP sgi.com/tech/stl/lower_bound.html,upper_bound).
 
 // equalRange
 /**
-   Returns the subrange containing all elements $(D e) for which both $(D
-   pred(e, value)) and $(D pred(value, e)) evaluate to $(D false) (e.g.,
-   if $(D pred) is "less than", returns the portion of the range with
-   elements equal to $(D value)). Uses a classic binary search with
+   Returns the subrange containing all elements `e` for which both $(D
+   pred(e, value)) and $(D pred(value, e)) evaluate to `false` (e.g.,
+   if `pred` is "less than", returns the portion of the range with
+   elements equal to `value`). Uses a classic binary search with
    interval halving until it finds a value that satisfies the condition,
-   then uses $(D SearchPolicy.gallopBackwards) to find the left boundary
-   and $(D SearchPolicy.gallop) to find the right boundary. These
+   then uses `SearchPolicy.gallopBackwards` to find the left boundary
+   and `SearchPolicy.gallop` to find the right boundary. These
    policies are justified by the fact that the two boundaries are likely
    to be near the first found value (i.e., equal ranges are relatively
    small). Completes the entire search in $(BIGOH log(n)) time. See also
@@ -9799,9 +9799,9 @@ See_Also: STL's $(HTTP sgi.com/tech/stl/lower_bound.html,upper_bound).
 
 // trisect
 /**
-Returns a tuple $(D r) such that $(D r[0]) is the same as the result
-of $(D lowerBound(value)), $(D r[1]) is the same as the result of $(D
-equalRange(value)), and $(D r[2]) is the same as the result of $(D
+Returns a tuple `r` such that `r[0]` is the same as the result
+of $(D lowerBound(value)), `r[1]` is the same as the result of $(D
+equalRange(value)), and `r[2]` is the same as the result of $(D
 upperBound(value)). The call is faster than computing all three
 separately. Uses a search schedule similar to $(D
 equalRange). Completes the entire search in $(BIGOH log(n)) time.
@@ -9861,9 +9861,9 @@ equalRange). Completes the entire search in $(BIGOH log(n)) time.
 
 // contains
 /**
-Returns $(D true) if and only if $(D value) can be found in $(D
+Returns `true` if and only if `value` can be found in $(D
 range), which is assumed to be sorted. Performs $(BIGOH log(r.length))
-evaluations of $(D pred). See also STL's $(HTTP
+evaluations of `pred`. See also STL's $(HTTP
 sgi.com/tech/stl/binary_search.html, binary_search).
  */
 
@@ -9877,7 +9877,7 @@ sgi.com/tech/stl/binary_search.html, binary_search).
     }
 
 /**
-Like $(D contains), but the value is specified before the range.
+Like `contains`, but the value is specified before the range.
 */
     auto opBinaryRight(string op, V)(V value)
     if (op == "in" && isRandomAccessRange!Range)
@@ -9912,13 +9912,13 @@ sorting relation.
 }
 
 /**
-$(D SortedRange) could accept ranges weaker than random-access, but it
+`SortedRange` could accept ranges weaker than random-access, but it
 is unable to provide interesting functionality for them. Therefore,
-$(D SortedRange) is currently restricted to random-access ranges.
+`SortedRange` is currently restricted to random-access ranges.
 
 No copy of the original range is ever made. If the underlying range is
-changed concurrently with its corresponding $(D SortedRange) in ways
-that break its sorted-ness, $(D SortedRange) will work erratically.
+changed concurrently with its corresponding `SortedRange` in ways
+that break its sorted-ness, `SortedRange` will work erratically.
 */
 @safe unittest
 {
@@ -10055,11 +10055,11 @@ that break its sorted-ness, $(D SortedRange) will work erratically.
 }
 
 /**
-Assumes $(D r) is sorted by predicate $(D pred) and returns the
-corresponding $(D SortedRange!(pred, R)) having $(D r) as support. To
+Assumes `r` is sorted by predicate `pred` and returns the
+corresponding $(D SortedRange!(pred, R)) having `r` as support. To
 keep the checking costs low, the cost is $(BIGOH 1) in release mode
 (no checks for sorted-ness are performed). In debug mode, a few random
-elements of $(D r) are checked for sorted-ness. The size of the sample
+elements of `r` are checked for sorted-ness. The size of the sample
 is proportional $(BIGOH log(r.length)). That way, checking has no
 effect on the complexity of subsequent operations specific to sorted
 ranges (such as binary search). The probability of an arbitrary
@@ -10194,13 +10194,13 @@ public:
 
 
     /++
-        This does not assign the pointer of $(D rhs) to this $(D RefRange).
-        Rather it assigns the range pointed to by $(D rhs) to the range pointed
-        to by this $(D RefRange). This is because $(I any) operation on a
-        $(D RefRange) is the same is if it occurred to the original range. The
-        one exception is when a $(D RefRange) is assigned $(D null) either
-        directly or because $(D rhs) is $(D null). In that case, $(D RefRange)
-        no longer refers to the original range but is $(D null).
+        This does not assign the pointer of `rhs` to this `RefRange`.
+        Rather it assigns the range pointed to by `rhs` to the range pointed
+        to by this `RefRange`. This is because $(I any) operation on a
+        `RefRange` is the same is if it occurred to the original range. The
+        one exception is when a `RefRange` is assigned `null` either
+        directly or because `rhs` is `null`. In that case, `RefRange`
+        no longer refers to the original range but is `null`.
       +/
     auto opAssign(RefRange rhs)
     {
@@ -10287,7 +10287,7 @@ public:
     version(StdDdoc)
     {
         /++
-            Only defined if $(D isForwardRange!R) is $(D true).
+            Only defined if `isForwardRange!R` is `true`.
           +/
         @property auto save() {assert(0);}
         /++ Ditto +/
@@ -10357,7 +10357,7 @@ public:
     version(StdDdoc)
     {
         /++
-            Only defined if $(D isBidirectionalRange!R) is $(D true).
+            Only defined if `isBidirectionalRange!R` is `true`.
           +/
         @property auto back() {assert(0);}
         /++ Ditto +/
@@ -10394,7 +10394,7 @@ public:
     version(StdDdoc)
     {
         /++
-            Only defined if $(D isRandomAccesRange!R) is $(D true).
+            Only defined if `isRandomAccesRange!R` is `true`.
           +/
         auto ref opIndex(IndexType)(IndexType index) {assert(0);}
 
@@ -10418,8 +10418,8 @@ public:
 
 
     /++
-        Only defined if $(D hasMobileElements!R) and $(D isForwardRange!R) are
-        $(D true).
+        Only defined if `hasMobileElements!R` and `isForwardRange!R` are
+        `true`.
       +/
     static if (hasMobileElements!R && isForwardRange!R) auto moveFront()
     {
@@ -10428,8 +10428,8 @@ public:
 
 
     /++
-        Only defined if $(D hasMobileElements!R) and $(D isBidirectionalRange!R)
-        are $(D true).
+        Only defined if `hasMobileElements!R` and `isBidirectionalRange!R`
+        are `true`.
       +/
     static if (hasMobileElements!R && isBidirectionalRange!R) auto moveBack()
     {
@@ -10438,8 +10438,8 @@ public:
 
 
     /++
-        Only defined if $(D hasMobileElements!R) and $(D isRandomAccessRange!R)
-        are $(D true).
+        Only defined if `hasMobileElements!R` and `isRandomAccessRange!R`
+        are `true`.
       +/
     static if (hasMobileElements!R && isRandomAccessRange!R) auto moveAt(size_t index)
     {
@@ -10450,7 +10450,7 @@ public:
     version(StdDdoc)
     {
         /++
-            Only defined if $(D hasLength!R) is $(D true).
+            Only defined if `hasLength!R` is `true`.
           +/
         @property auto length() {assert(0);}
 
@@ -10479,7 +10479,7 @@ public:
     version(StdDdoc)
     {
         /++
-            Only defined if $(D hasSlicing!R) is $(D true).
+            Only defined if `hasSlicing!R` is `true`.
           +/
         auto opSlice(IndexType1, IndexType2)
                     (IndexType1 begin, IndexType2 end) {assert(0);}
@@ -11442,11 +11442,11 @@ struct NullSink
   range can be passed to a provided function or $(LREF OutputRange) as they are
   iterated over. This is useful for printing out intermediate values in a long
   chain of range code, performing some operation with side-effects on each call
-  to $(D front) or $(D popFront), or diverting the elements of a range into an
+  to `front` or `popFront`, or diverting the elements of a range into an
   auxiliary $(LREF OutputRange).
 
   It is important to note that as the resultant range is evaluated lazily,
-  in the case of the version of $(D tee) that takes a function, the function
+  in the case of the version of `tee` that takes a function, the function
   will not actually be executed until the range is "walked" using functions
   that evaluate ranges, such as $(REF array, std,array) or
   $(REF fold, std,algorithm,iteration).
@@ -11542,7 +11542,7 @@ if (is(typeof(fun) == void) || isSomeFunction!fun)
         when using either as an $(LREF OutputRange). Since a template
         has no type, typeof(template) will always return void.
         If it's a template lambda, it's first necessary to instantiate
-        it with $(D ElementType!R1).
+        it with `ElementType!R1`.
     */
     static if (is(typeof(fun) == void))
         alias _fun = fun!(ElementType!R1);
