@@ -8006,6 +8006,13 @@ struct Ternary
     {
         return make((26_504 >> (value + rhs.value)) & 6);
     }
+
+    /// ditto
+    Ternary opBinary(string s)(bool rhs)
+    if (s == "|" || s == "&" || s == "^")
+    {
+        return this.opBinary!s(Ternary(rhs));
+    }
 }
 
 ///
@@ -8089,4 +8096,15 @@ unittest
     assert(~Ternary.yes == Ternary.no);
     assert(~Ternary.no == Ternary.yes);
     assert(~Ternary.unknown == Ternary.unknown);
+}
+
+@safe @nogc nothrow pure
+unittest
+{
+    Ternary a = Ternary(true);
+    assert(a == Ternary.yes);
+    assert((a & false) == Ternary.no);
+    assert((a | false) == Ternary.yes);
+    assert((a ^ true) == Ternary.no);
+    assert((a ^ false) == Ternary.yes);
 }
