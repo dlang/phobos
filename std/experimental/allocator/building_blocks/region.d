@@ -777,7 +777,7 @@ version(Posix) @system unittest
 version(Posix) @system unittest
 {
     import std.typecons : Ternary;
-    alias alloc = SbrkRegion!(8).instance;
+    alias alloc = SbrkRegion!().instance;
     auto a = alloc.alignedAllocate(2001, 4096);
     assert(a.length == 2001);
     auto b = alloc.allocate(2001);
