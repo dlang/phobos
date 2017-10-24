@@ -702,7 +702,44 @@ Complexity: $(BIGOH r.walkLength)
     /// ditto
     alias stableLinearRemove = linearRemove;
 
+/**
+Removes the first occurence of an element from the list in linear time.
+
+Returns: True if the element existed and was successfully removed, false otherwise.
+
+Params:
+    value = value of the node to be removed
+
+Complexity: $(BIGOH n)
+     */
+    bool linearRemoveElement(T value)
+    {
+        auto n1 = findNodeByValue(_root, value);
+        if (n1)
+        {
+            auto n2 = n1._next._next;
+            BaseNode.connect(n1, n2);
+            return true;
+        }
+
+        return false;
+    }
+
+
 private:
+
+    BaseNode* findNodeByValue(BaseNode* n, T value)
+    {
+        if (!n) return null;
+        auto ahead = n._next;
+        while (ahead && ahead.getPayload!T() != value)
+        {
+            n = ahead;
+            ahead = n._next;
+            if (ahead == _last._next) return null;
+        }
+        return n;
+    }
 
     // Helper: Inserts stuff before the node n.
     size_t insertBeforeNode(Stuff)(BaseNode* n, ref Stuff stuff)
@@ -760,6 +797,38 @@ private:
         }
         return Range(first, last);
     }
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto e = DList!int();
+    auto b = e.linearRemoveElement(1);
+    assert(b == false);
+    assert(e.empty());
+    auto a = DList!int(-1, 1, 2, 1, 3, 4);
+    b = a.linearRemoveElement(1);
+    assert(equal(a[], [-1, 2, 1, 3, 4]));
+    assert(b == true);
+    b = a.linearRemoveElement(-1);
+    assert(b == true);
+    assert(equal(a[], [2, 1, 3, 4]));
+    b = a.linearRemoveElement(1);
+    assert(b == true);
+    assert(equal(a[], [2, 3, 4]));
+    b = a.linearRemoveElement(2);
+    assert(b == true);
+    b = a.linearRemoveElement(20);
+    assert(b == false);
+    assert(equal(a[], [3, 4]));
+    b = a.linearRemoveElement(4);
+    assert(b == true);
+    assert(equal(a[], [3]));
+    b = a.linearRemoveElement(3);
+    assert(b == true);
+    assert(a.empty());
+    a.linearRemoveElement(3);
 }
 
 @safe unittest
