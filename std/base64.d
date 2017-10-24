@@ -53,7 +53,7 @@
  * Authors:   Masahiro Nakagawa, Daniel Murphy (Single value Encoder and Decoder)
  * Source:    $(PHOBOSSRC std/_base64.d)
  * Macros:
- *      LREF2=<a href="#$1">`$2`</a>
+ *      LREF2=<a href="#$1">$(D $2)</a>
  */
 module std.base64;
 
