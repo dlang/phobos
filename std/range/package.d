@@ -6592,13 +6592,12 @@ Transversal!(RangeOfRanges, opt) transversal
     assert(mat1[1] == 10);
 }
 
-struct Transposed(RangeOfRanges)
+struct Transposed(RangeOfRanges,
+    TransverseOptions opt = TransverseOptions.assumeJagged)
 if (isForwardRange!RangeOfRanges &&
     isInputRange!(ElementType!RangeOfRanges) &&
     hasAssignableElements!RangeOfRanges)
 {
-    //alias ElementType = typeof(map!"a.front"(RangeOfRanges.init));
-
     this(RangeOfRanges input)
     {
         this._input = input;
@@ -6629,10 +6628,13 @@ if (isForwardRange!RangeOfRanges &&
         }
     }
 
-    // ElementType opIndex(size_t n)
-    // {
-    //     return _input[n].front;
-    // }
+    static if (isRandomAccessRange!(ElementType!RangeOfRanges))
+    {
+        auto ref opIndex(size_t n)
+        {
+            return transversal!(opt)(_input, n);
+        }
+    }
 
     @property bool empty()
     {
@@ -6674,16 +6676,57 @@ private:
     ]));
 }
 
+// Issue 17742
+@safe unittest
+{
+    import std.algorithm.iteration : map;
+    import std.algorithm.comparison : equal;
+    auto ror = 5.iota.map!(y => 5.iota.map!(x => x * y).array).array;
+    assert(ror[3][2] == 6);
+    auto result = transposed!(TransverseOptions.assumeNotJagged)(ror);
+    assert(result[2][3] == 6);
+
+    auto x = [[1,2,3],[4,5,6]];
+    auto y = transposed!(TransverseOptions.assumeNotJagged)(x);
+    assert(y.front.equal([1,4]));
+    assert(y[0].equal([1,4]));
+    assert(y[0][0] == 1);
+    assert(y[1].equal([2,5]));
+    assert(y[1][1] == 5);
+
+    auto yy = transposed!(TransverseOptions.enforceNotJagged)(x);
+    assert(yy.front.equal([1,4]));
+    assert(yy[0].equal([1,4]));
+    assert(yy[0][0] == 1);
+    assert(yy[1].equal([2,5]));
+    assert(yy[1][1] == 5);
+
+    auto z = x.transposed; // assumeJagged
+    assert(z.front.equal([1,4]));
+    assert(z[0].equal([1,4]));
+    assert(!is(typeof(z[0][0])));
+}
+
 /**
 Given a range of ranges, returns a range of ranges where the $(I i)'th subrange
 contains the $(I i)'th elements of the original subranges.
+
+$(RED `Transposed` currently defines `save`, but does not work as a forward range.
+Consuming a copy made with `save` will consume all copies, even the original sub-ranges
+fed into `Transposed`.)
+
+Params:
+    opt = Controls the assumptions the function makes about the lengths of the ranges (i.e. jagged or not)
+    rr = Range of ranges
  */
-Transposed!RangeOfRanges transposed(RangeOfRanges)(RangeOfRanges rr)
+Transposed!(RangeOfRanges, opt) transposed
+(TransverseOptions opt = TransverseOptions.assumeJagged, RangeOfRanges)
+(RangeOfRanges rr)
 if (isForwardRange!RangeOfRanges &&
     isInputRange!(ElementType!RangeOfRanges) &&
     hasAssignableElements!RangeOfRanges)
 {
-    return Transposed!RangeOfRanges(rr);
+    return Transposed!(RangeOfRanges, opt)(rr);
 }
 
 ///
