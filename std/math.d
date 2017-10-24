@@ -481,7 +481,7 @@ T floorImpl(T)(const T x) @trusted pure nothrow @nogc
         y.vu[pos] &= 0xffff ^ ((1 << exp) - 1);
 
     if ((x < 0.0) && (x != y.rv))
-        y.rv -= 1.0;
+        y.rv -= 1.0f;
 
     return y.rv;
 }
@@ -4036,7 +4036,7 @@ float ceil(float x) @trusted pure nothrow @nogc
 
     float y = floorImpl(x);
     if (y < x)
-        y += 1.0;
+        y += 1.0f;
 
     return y;
 }

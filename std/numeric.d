@@ -3034,7 +3034,7 @@ private:
             else if (i == size * 3 / 4)
                 lastRow[i] = 1;  // -sin(pi * 3 / 2) == 1
             else
-                lastRow[i] = -sin(i * 2.0L * PI / size);
+                lastRow[i] = -sin(i * cast(float)(2.0 * PI) / size);
         }
 
         // Fill in all the other rows with strided versions.
