@@ -578,12 +578,13 @@ struct KRRegion(ParentAllocator = NullAllocator)
     It does a simple $(BIGOH 1) range check. $(D b) should be a buffer either
     allocated with $(D this) or obtained through other means.
     */
+    pure nothrow @trusted @nogc
     Ternary owns(void[] b)
     {
         debug(KRRegion) assertValid("owns");
         debug(KRRegion) scope(exit) assertValid("owns");
-        return Ternary(b.ptr >= payload.ptr
-            && b.ptr < payload.ptr + payload.length);
+        return Ternary(b && payload && (&b[0] >= &payload[0])
+                       && (&b[0] < &payload[0] + payload.length));
     }
 
     /**
@@ -624,7 +625,7 @@ fronting the GC allocator.
     auto alloc = fallbackAllocator(KRRegion!()(buf), GCAllocator.instance);
     auto b = alloc.allocate(100);
     assert(b.length == 100);
-    assert(alloc.primary.owns(b) == Ternary.yes);
+    assert((() pure nothrow @safe @nogc => alloc.primary.owns(b))() == Ternary.yes);
 }
 
 /**
@@ -675,7 +676,7 @@ it actually returns memory to the operating system when possible.
     foreach (i; 0 .. array.length)
     {
         assert(array[i].ptr);
-        assert(alloc.owns(array[i]) == Ternary.yes);
+        assert((() pure nothrow @safe @nogc => alloc.owns(array[i]))() == Ternary.yes);
         alloc.deallocate(array[i]);
     }
 }
@@ -713,7 +714,7 @@ it actually returns memory to the operating system when possible.
     randomShuffle(array[]);
     foreach (i; 0 .. array.length)
     {
-        assert(alloc.owns(array[i]) == Ternary.yes);
+        assert((() pure nothrow @safe @nogc => alloc.owns(array[i]))() == Ternary.yes);
         alloc.deallocate(array[i]);
     }
 }
@@ -768,13 +769,13 @@ it actually returns memory to the operating system when possible.
         auto length = 100 * i + 1;
         array[i] = p.allocate(length);
         assert(array[i].length == length, text(array[i].length));
-        assert(p.owns(array[i]) == Ternary.yes);
+        assert((() pure nothrow @safe @nogc => p.owns(array[i]))() == Ternary.yes);
     }
     import std.random : randomShuffle;
     randomShuffle(array[]);
     foreach (i; 0 .. array.length)
     {
-        assert(p.owns(array[i]) == Ternary.yes);
+        assert((() pure nothrow @safe @nogc => p.owns(array[i]))() == Ternary.yes);
         p.deallocate(array[i]);
     }
     auto b = p.allocateAll();
