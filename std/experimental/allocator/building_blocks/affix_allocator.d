@@ -439,3 +439,12 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     Ternary r = MyAllocator.instance.resolveInternalPointer(d.ptr, p);
     assert(p.ptr is d.ptr && p.length >= d.length);
 }
+
+// Check that goodAllocSize inherits from parent, i.e. GCAllocator
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator;
+    alias a = AffixAllocator!(GCAllocator, uint).instance;
+
+    assert(__traits(compiles, (() nothrow @safe @nogc => a.goodAllocSize(1))()));
+}

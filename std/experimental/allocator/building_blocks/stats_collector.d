@@ -733,3 +733,12 @@ public:
     import std.experimental.allocator.gc_allocator : GCAllocator;
     test!(StatsCollector!(GCAllocator, 0, 0));
 }
+
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    StatsCollector!(GCAllocator, 0, 0) a;
+
+    // calls std.experimental.allocator.common.goodAllocSize
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(1))());
+}

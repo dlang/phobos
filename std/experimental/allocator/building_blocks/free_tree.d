@@ -485,3 +485,13 @@ struct FreeTree(ParentAllocator)
     assert(myDeallocCounter == 1);
     assert(y.ptr is null);
 }
+
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator;
+    FreeTree!GCAllocator a;
+
+    assert((() nothrow @safe @nogc => a.goodAllocSize(1))() == typeof(*a.root).sizeof);
+    // goodAllocSize is not pure because we are calling through GCAllocator.instance
+    assert(!__traits(compiles, (() pure nothrow @safe @nogc => a.goodAllocSize(0))()));
+}

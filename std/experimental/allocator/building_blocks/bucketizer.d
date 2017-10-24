@@ -45,6 +45,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     /**
     Rounds up to the maximum size of the bucket in which $(D bytes) falls.
     */
+    pure nothrow @safe @nogc
     size_t goodAllocSize(size_t bytes) const
     {
         // round up bytes such that bytes - min + 1 is a multiple of step
@@ -239,4 +240,23 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     assert(a.owns(b) == Ternary.yes);
     void[] p;
     a.deallocate(b);
+}
+
+@system unittest
+{
+    import std.algorithm.comparison : max;
+    import std.experimental.allocator.building_blocks.allocator_list : AllocatorList;
+    import std.experimental.allocator.building_blocks.free_list : FreeList;
+    import std.experimental.allocator.building_blocks.region : Region;
+    import std.experimental.allocator.common : unbounded;
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    Bucketizer!(
+        FreeList!(
+            AllocatorList!(
+                (size_t n) => Region!Mallocator(max(n, 1024 * 1024))),
+            0, unbounded),
+        65, 512, 64) a;
+
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(65))() == 128);
 }

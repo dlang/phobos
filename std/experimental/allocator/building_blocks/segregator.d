@@ -359,3 +359,18 @@ if (Args.length > 3)
     assert(b.length == 201);
     a.deallocate(b);
 }
+
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator.building_blocks.kernighan_ritchie : KRRegion;
+    Segregator!(128, GCAllocator, KRRegion!GCAllocator) alloc;
+    assert((() nothrow @safe @nogc => alloc.goodAllocSize(1))()
+            == GCAllocator.instance.goodAllocSize(1));
+
+    // Note: we infer `shared` from GCAllocator.goodAllocSize so we need a
+    // shared object in order to be able to use the function
+    shared Segregator!(128, GCAllocator, GCAllocator) sharedAlloc;
+    assert((() nothrow @safe @nogc => sharedAlloc.goodAllocSize(1))()
+            == GCAllocator.instance.goodAllocSize(1));
+}
