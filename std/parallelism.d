@@ -109,28 +109,56 @@ For that reason, no special precautions are taken so `initializer` may be called
 more than one time leading to benign races on the cached value.
 
 In the quiescent state the cost of the function is an atomic load from a global.
+
+Params:
+    T = The type of the pseudo-constant (may be qualified)
+    outOfBandValue = A value that cannot be valid, it is used for initialization
+    initializer = The function performing initialization; must be `nothrow`
+
+Returns:
+    The lazily initialized value
 */
-package @property @nogc nothrow pure @trusted
-T lazilyInitializedConstant(T, T outOfBandValue, alias initializer)()
+package @property pure
+T lazilyInitializedConstant(T, alias outOfBandValue, alias initializer)()
+if (is(Unqual!T : T)
+    && is(typeof(initializer()) : T)
+    && is(typeof(outOfBandValue) : T))
 {
-    shared T result = outOfBandValue;
-    // Short path
-    auto local = atomicLoad(result);
-    if (local != outOfBandValue) return local;
-    // Long path
-    local = (cast(size_t function() @nogc nothrow pure @trusted) &initializer)();
-    atomicStore(result, local);
-    return local;
+    static T impl() nothrow
+    {
+        // Thread-local cache
+        static Unqual!T tls = outOfBandValue;
+        auto local = tls;
+        // Shortest path, no atomic operations
+        if (local != outOfBandValue) return local;
+        // Process-level cache
+        static shared Unqual!T result = outOfBandValue;
+        // Initialize both process-level cache and tls
+        local = atomicLoad(result);
+        if (local == outOfBandValue)
+        {
+            local = initializer();
+            atomicStore(result, local);
+        }
+        tls = local;
+        return local;
+    }
+
+    import std.traits;
+    alias Fun = SetFunctionAttributes!(typeof(&impl), "D",
+        functionAttributes!(typeof(&impl)) | FunctionAttribute.pure_);
+    return (cast(Fun) &impl)();
 }
 
 // Returns the size of a cache line.
-alias cacheLineSize = lazilyInitializedConstant!(size_t, size_t.max, cacheLineSizeImpl);
+alias cacheLineSize =
+    lazilyInitializedConstant!(immutable(size_t), size_t.max, cacheLineSizeImpl);
 
-private size_t cacheLineSizeImpl() @nogc nothrow
+private size_t cacheLineSizeImpl() @nogc nothrow @trusted
 {
     size_t result = 0;
     import core.cpuid : datacache;
-    foreach (cachelevel; datacache)
+    foreach (ref const cachelevel; datacache)
     {
         if (cachelevel.lineSize > result && cachelevel.lineSize < uint.max)
         {
@@ -138,6 +166,11 @@ private size_t cacheLineSizeImpl() @nogc nothrow
         }
     }
     return result;
+}
+
+unittest
+{
+    assert(cacheLineSize == cacheLineSizeImpl);
 }
 
 /* Atomics code.  These forward to core.atomic, but are written like this
@@ -914,38 +947,29 @@ version(useSysctlbyname)
 The total number of CPU cores available on the current machine, as reported by
 the operating system.
 */
-@property @nogc nothrow pure @trusted uint totalCPUs()
-{
-    return (cast(uint function() @nogc nothrow pure)
-        &totalCPUsImpl)();
-}
+alias totalCPUs =
+    lazilyInitializedConstant!(immutable(uint), uint.max, totalCPUsImpl);
 
-uint totalCPUsImpl() @nogc nothrow
+uint totalCPUsImpl() @nogc nothrow @trusted
 {
-    static shared uint result;
-    auto localResult = atomicLoad(result);
-    if (localResult > 0) return localResult;
-
-    // There might be harmless multiple initialization here
     version(Windows)
     {
         // BUGS:  Only works on Windows 2000 and above.
         import core.sys.windows.windows : SYSTEM_INFO, GetSystemInfo;
         import std.algorithm.comparison : max;
-
         SYSTEM_INFO si;
         GetSystemInfo(&si);
-        atomicStore(result, max(1, cast(uint) si.dwNumberOfProcessors));
+        return max(1, cast(uint) si.dwNumberOfProcessors);
     }
     else version(linux)
     {
         import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
-        atomicStore(result, cast(uint) sysconf(_SC_NPROCESSORS_ONLN));
+        return cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
     else version(Solaris)
     {
         import core.sys.posix.unistd : _SC_NPROCESSORS_ONLN, sysconf;
-        atomicStore(result, cast(uint) sysconf(_SC_NPROCESSORS_ONLN));
+        return cast(uint) sysconf(_SC_NPROCESSORS_ONLN);
     }
     else version(useSysctlbyname)
     {
@@ -962,16 +986,15 @@ uint totalCPUsImpl() @nogc nothrow
             auto nameStr = "hw.ncpu\0".ptr;
         }
 
-        localResult = 0;
-        size_t len = uint.sizeof;
-        sysctlbyname(nameStr, &localResult, &len, null, 0);
-        atomicStore(result, localResult);
+        uint result;
+        size_t len = result.sizeof;
+        sysctlbyname(nameStr, &result, &len, null, 0);
+        return result;
     }
     else
     {
         static assert(0, "Don't know how to get N CPUs on this OS.");
     }
-    return atomicLoad(result);
 }
 
 /*
@@ -3327,7 +3350,7 @@ number of worker threads in the instance returned by $(D taskPool).
 */
 @property uint defaultPoolThreads() @trusted
 {
-    auto local = atomicLoad(_defaultPoolThreads);
+    const local = atomicLoad(_defaultPoolThreads);
     return local < uint.max ? local : totalCPUs - 1;
 }
 
