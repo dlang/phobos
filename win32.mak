@@ -1173,7 +1173,6 @@ cleanhtml:
 
 install: phobos.zip
 	$(CP) phobos.lib phobos64.lib $(DIR)\windows\lib
-	$(CP) $(DRUNTIME)\lib\gcstub.obj $(DRUNTIME)\lib\gcstub64.obj $(DIR)\windows\lib
 	+rd/s/q $(DIR)\html\d\phobos
 	+md $(DIR)\html\d\phobos
 	$(CP) $(DOCS) $(DIR)\html\d\phobos
