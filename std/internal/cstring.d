@@ -98,23 +98,23 @@ if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
     static struct Res
     {
     @trusted:
-    nothrow @nogc:
+    pure nothrow @nogc:
 
         @disable this();
         @disable this(this);
         alias ptr this;
 
-        @property inout(To)* buffPtr() inout pure
+        @property inout(To)* buffPtr() inout
         {
             return _ptr == useStack ? _buff.ptr : _ptr;
         }
 
-        @property const(To)* ptr() const pure
+        @property const(To)* ptr() const
         {
             return buffPtr;
         }
 
-        const(To)[] opIndex() const pure
+        const(To)[] opIndex() const
         {
             return buffPtr[0 .. _length];
         }
@@ -123,8 +123,8 @@ if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
         {
             if (_ptr != useStack)
             {
-                import core.stdc.stdlib : free;
-                free(_ptr);
+                import core.memory : pureFree;
+                pureFree(_ptr);
             }
         }
 
@@ -154,12 +154,12 @@ if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
     size_t i;
 
     static To[] trustedRealloc(To[] buf, size_t i, To[] res, size_t strLength, bool res_is_onstack)
-        @trusted @nogc nothrow
+        @trusted @nogc pure nothrow
     {
         pragma(inline, false);  // because it's rarely called
 
         import core.exception : onOutOfMemoryError;
-        import core.stdc.stdlib : malloc, realloc;
+        import core.memory : pureMalloc, pureRealloc;
         import core.stdc.string : memcpy;
 
         if (res_is_onstack)
@@ -167,7 +167,7 @@ if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
             size_t newlen = res.length * 3 / 2;
             if (newlen <= strLength)
                 newlen = strLength + 1; // +1 for terminating 0
-            auto ptr = cast(To*) malloc(newlen * To.sizeof);
+            auto ptr = cast(To*) pureMalloc(newlen * To.sizeof);
             if (!ptr)
                 onOutOfMemoryError();
             memcpy(ptr, res.ptr, i * To.sizeof);
@@ -178,7 +178,7 @@ if (isSomeChar!To && (isInputRange!From || isSomeString!From) &&
             if (buf.length >= size_t.max / (2 * To.sizeof))
                 onOutOfMemoryError();
             const newlen = buf.length * 3 / 2;
-            auto ptr = cast(To*) realloc(buf.ptr, newlen * To.sizeof);
+            auto ptr = cast(To*) pureRealloc(buf.ptr, newlen * To.sizeof);
             if (!ptr)
                 onOutOfMemoryError();
             return ptr[0 .. newlen];
@@ -241,7 +241,7 @@ nothrow @nogc @system unittest
     // both primary expressions are ended.
 }
 
-@safe nothrow @nogc unittest
+@safe pure nothrow @nogc unittest
 {
     assert("abc".tempCString().asArray == "abc");
     assert("abc"d.tempCString().ptr.asArray == "abc");
@@ -255,7 +255,7 @@ nothrow @nogc @system unittest
 }
 
 // Bugzilla 14980
-nothrow @nogc @safe unittest
+pure nothrow @nogc @safe unittest
 {
     const(char[]) str = null;
     auto res = tempCString(str);
