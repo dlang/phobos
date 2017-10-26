@@ -6594,8 +6594,7 @@ Transversal!(RangeOfRanges, opt) transversal
 
 struct Transposed(RangeOfRanges)
 if (isForwardRange!RangeOfRanges &&
-    isInputRange!(ElementType!RangeOfRanges) &&
-    hasAssignableElements!RangeOfRanges)
+    isInputRange!(ElementType!RangeOfRanges))
 {
     //alias ElementType = typeof(map!"a.front"(RangeOfRanges.init));
 
@@ -6678,12 +6677,18 @@ private:
 Given a range of ranges, returns a range of ranges where the $(I i)'th subrange
 contains the $(I i)'th elements of the original subranges.
  */
-Transposed!RangeOfRanges transposed(RangeOfRanges)(RangeOfRanges rr)
+auto ref transposed(RangeOfRanges)(RangeOfRanges rr)
 if (isForwardRange!RangeOfRanges &&
-    isInputRange!(ElementType!RangeOfRanges) &&
-    hasAssignableElements!RangeOfRanges)
+    isInputRange!(ElementType!RangeOfRanges))
 {
-    return Transposed!RangeOfRanges(rr);
+    static if (hasAssignableElements!RangeOfRanges)
+    {
+        return Transposed!RangeOfRanges(rr);
+    }
+    else
+    {
+        return Transposed!(typeof(rr.array))(rr.array);
+    }
 }
 
 ///
@@ -6725,7 +6730,7 @@ if (isForwardRange!RangeOfRanges &&
     ulong[1] t0 = [ 123 ];
 
     assert(!hasAssignableElements!(typeof(t0[].chunks(1))));
-    assert(!is(typeof(transposed(t0[].chunks(1)))));
+    assert(is(typeof(transposed(t0[].chunks(1)))));
     assert(is(typeof(transposed(t0[].chunks(1).array()))));
 
     auto t1 = transposed(t0[].chunks(1).array());
