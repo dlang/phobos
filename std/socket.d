@@ -354,7 +354,8 @@ version(Windows)
 
         // Now that we called WSAStartup, make sure we clean up, too.
         import core.stdc.stdlib;
-        atexit(&WSACleanup);
+        static extern(C) void cleanup() { WSACleanup(); }
+        atexit(&cleanup);
 
         // These functions may not be present on older Windows versions.
         // See the comment in InternetAddress.toHostNameString() for details.
