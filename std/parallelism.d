@@ -144,10 +144,11 @@ if (is(Unqual!T : T)
         return local;
     }
 
-    import std.traits;
+    import std.traits : SetFunctionAttributes;
     alias Fun = SetFunctionAttributes!(typeof(&impl), "D",
         functionAttributes!(typeof(&impl)) | FunctionAttribute.pure_);
-    return (cast(Fun) &impl)();
+    auto purified = (() @trusted => cast(Fun) &impl)();
+    return purified();
 }
 
 // Returns the size of a cache line.
@@ -168,7 +169,7 @@ private size_t cacheLineSizeImpl() @nogc nothrow @trusted
     return result;
 }
 
-unittest
+@nogc @safe nothrow unittest
 {
     assert(cacheLineSize == cacheLineSizeImpl);
 }
