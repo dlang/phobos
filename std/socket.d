@@ -307,17 +307,41 @@ bool wouldHaveBlocked() nothrow @nogc
         static assert(0);
 }
 
-
-private immutable
+version(Windows)
 {
-    typeof(&getnameinfo) getnameinfoPointer;
-    typeof(&getaddrinfo) getaddrinfoPointer;
-    typeof(&freeaddrinfo) freeaddrinfoPointer;
+    private shared typeof(&getnameinfo) _getnameinfoPointer;
+    private shared typeof(&getaddrinfo) _getaddrinfoPointer;
+    private shared typeof(&freeaddrinfo) _freeaddrinfoPointer;
+    private shared bool initialized;
+}
+else version(Posix)
+{
+    immutable getnameinfoPointer = &getnameinfo;
+    immutable getaddrinfoPointer = &getaddrinfo;
+    immutable freeaddrinfoPointer = &freeaddrinfo;
+}
+else
+{
+    static assert(false, "Your code here.");
 }
 
-shared static this() @system
+version(Windows)
 {
-    version(Windows)
+    private @property auto get(alias which)() @trusted
+    {
+        import core.atomic : atomicLoad;
+        auto local = atomicLoad(which);
+        if (local) return local;
+        import std.concurrency : initOnce;
+        initOnce!initialized(initialize);
+        return atomicLoad(which);
+    }
+
+    auto getnameinfoPointer() @trusted { return get!_getnameinfoPointer; }
+    auto getaddrinfoPointer() @trusted { return get!_getaddrinfoPointer; }
+    auto freeaddrinfoPointer() @trusted { return get!_freeaddrinfoPointer; }
+
+    private bool initialize() @trusted
     {
         WSADATA wd;
 
@@ -328,33 +352,24 @@ shared static this() @system
         if (val)         // Request Winsock 2.2 for IPv6.
             throw new SocketOSException("Unable to initialize socket library", val);
 
+        // Now that we called WSAStartup, make sure we clean up, too.
+        import core.stdc.stdlib;
+        static extern(C) void cleanup() { WSACleanup(); }
+        atexit(&cleanup);
+
         // These functions may not be present on older Windows versions.
         // See the comment in InternetAddress.toHostNameString() for details.
         auto ws2Lib = GetModuleHandleA("ws2_32.dll");
         if (ws2Lib)
         {
-            getnameinfoPointer = cast(typeof(getnameinfoPointer))
+            _getnameinfoPointer = cast(typeof(_getnameinfoPointer))
                                  GetProcAddress(ws2Lib, "getnameinfo");
-            getaddrinfoPointer = cast(typeof(getaddrinfoPointer))
+            _getaddrinfoPointer = cast(typeof(_getaddrinfoPointer))
                                  GetProcAddress(ws2Lib, "getaddrinfo");
-            freeaddrinfoPointer = cast(typeof(freeaddrinfoPointer))
+            _freeaddrinfoPointer = cast(typeof(_freeaddrinfoPointer))
                                  GetProcAddress(ws2Lib, "freeaddrinfo");
         }
-    }
-    else version(Posix)
-    {
-        getnameinfoPointer = &getnameinfo;
-        getaddrinfoPointer = &getaddrinfo;
-        freeaddrinfoPointer = &freeaddrinfo;
-    }
-}
-
-
-shared static ~this() @system nothrow @nogc
-{
-    version(Windows)
-    {
-        WSACleanup();
+        return true;
     }
 }
 
@@ -979,16 +994,18 @@ private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addr
 {
         import std.array : appender;
 
+    auto getaddrinfoPointer = .getaddrinfoPointer;
+    auto freeaddrinfoPointer = .freeaddrinfoPointer;
     if (getaddrinfoPointer && freeaddrinfoPointer)
     {
         addrinfo* ai_res;
 
-        int ret = getaddrinfoPointer(
+        int ret = (*getaddrinfoPointer)(
             node.tempCString(),
             service.tempCString(),
             hints, &ai_res);
         enforce(ret == 0, new SocketOSException("getaddrinfo error", ret, &formatGaiError));
-        scope(exit) freeaddrinfoPointer(ai_res);
+        scope(exit) (*freeaddrinfoPointer)(ai_res);
 
         auto result = appender!(AddressInfo[])();
 
@@ -1016,8 +1033,8 @@ private AddressInfo[] getAddressInfoImpl(in char[] node, in char[] service, addr
         if (getaddrinfoPointer)
         {
             // Roundtrip DNS resolution
-            auto results = getAddressInfo("www.digitalmars.com");
-            assert(results[0].address.toHostNameString() == "digitalmars.com");
+            auto results = getAddressInfo("google.com");
+            assert(results[0].address.toHostNameString().length > 0);
 
             // Canonical name
             results = getAddressInfo("www.digitalmars.com",
@@ -1131,12 +1148,12 @@ Address[] getAddress(in char[] hostname, ushort port)
         auto addresses = getAddress("63.105.9.61");
         assert(addresses.length && addresses[0].toAddrString() == "63.105.9.61");
 
-        if (getaddrinfoPointer)
+        version(Windows) if (getaddrinfoPointer)
         {
             // test via gethostbyname
-            auto getaddrinfoPointerBackup = getaddrinfoPointer;
-            cast() getaddrinfoPointer = null;
-            scope(exit) cast() getaddrinfoPointer = getaddrinfoPointerBackup;
+            auto getaddrinfoPointerBackup = getaddrinfoPointerß;
+            cast() _getaddrinfoPointer = null;
+            scope(exit) _getaddrinfoPointer = getaddrinfoPointerBackup;
 
             addresses = getAddress("63.105.9.61");
             assert(addresses.length && addresses[0].toAddrString() == "63.105.9.61");
@@ -1211,12 +1228,12 @@ Address parseAddress(in char[] hostaddr, ushort port)
         auto address = parseAddress("63.105.9.61");
         assert(address.toAddrString() == "63.105.9.61");
 
-        if (getaddrinfoPointer)
+        version(Windows) if (getaddrinfoPointer)
         {
             // test via inet_addr
             auto getaddrinfoPointerBackup = getaddrinfoPointer;
-            cast() getaddrinfoPointer = null;
-            scope(exit) cast() getaddrinfoPointer = getaddrinfoPointerBackup;
+            cast() _getaddrinfoPointer = null;
+            scope(exit) cast() _getaddrinfoPointer = getaddrinfoPointerBackup;
 
             address = parseAddress("63.105.9.61");
             assert(address.toAddrString() == "63.105.9.61");
@@ -1305,7 +1322,7 @@ abstract class Address
         if (getnameinfoPointer)
         {
             auto buf = new char[NI_MAXHOST];
-            auto ret = getnameinfoPointer(
+            auto ret = (*getnameinfoPointer)(
                         name, nameLen,
                         buf.ptr, cast(uint) buf.length,
                         null, 0,
@@ -1336,7 +1353,7 @@ abstract class Address
         if (getnameinfoPointer)
         {
             auto buf = new char[NI_MAXSERV];
-            enforce(getnameinfoPointer(
+            enforce((*getnameinfoPointer)(
                         name, nameLen,
                         null, 0,
                         buf.ptr, cast(uint) buf.length,
@@ -1713,12 +1730,12 @@ public:
             const ia = new InternetAddress(ih.addrList[0], 80);
             assert(ia.toHostNameString() == "digitalmars.com");
 
-            if (getnameinfoPointer)
+            version(Windows) if (getnameinfoPointer)
             {
                 // test reverse lookup, via gethostbyaddr
                 auto getnameinfoPointerBackup = getnameinfoPointer;
-                cast() getnameinfoPointer = null;
-                scope(exit) cast() getnameinfoPointer = getnameinfoPointerBackup;
+                cast() _getnameinfoPointer = null;
+                scope(exit) _getnameinfoPointer = getnameinfoPointerBackup;
 
                 assert(ia.toHostNameString() == "digitalmars.com");
             }
