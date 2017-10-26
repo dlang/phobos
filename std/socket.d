@@ -289,55 +289,93 @@ bool wouldHaveBlocked() nothrow @nogc
     assert(rec == -1 && wouldHaveBlocked());
 }
 
-
-private immutable
+// Returns true iff getnameinfo is supported on this platform.
+version(Windows) private @property bool getnameinfoSupported()
 {
-    typeof(&getnameinfo) getnameinfoPointer;
-    typeof(&getaddrinfo) getaddrinfoPointer;
-    typeof(&freeaddrinfo) freeaddrinfoPointer;
+    initialize;
+    return getnameinfoPointer !is null;
 }
+// Ditto (always supported on Posix).
+version(Posix) private enum bool getnameinfoSupported = true;
 
-shared static this() @system
+// Returns true iff getaddrinfo is supported on this platform.
+version(Windows) private @property bool getaddrinfoSupported()
 {
-    version (Windows)
+    initialize;
+    return getaddrInfoPointer !is null;
+}
+// Ditto (always supported on Posix).
+version(Posix) private enum bool getaddrinfoSupported = true;
+
+version(Windows) private
+{
+    import core.atomic;
+
+    shared typeof(&getnameinfo) getnameinfoPointer;
+    shared typeof(&getaddrinfo) getaddrinfoPointer;
+    shared typeof(&freeaddrinfo) freeaddrinfoPointer;
+
+    auto our_getnameinfo(A...)(A a) @system
     {
-        WSADATA wd;
+        initialize;
+        return atomicLoad(getnameinfoPointer)(a);
+    }
 
-        // Winsock will still load if an older version is present.
-        // The version is just a request.
-        int val;
-        val = WSAStartup(0x2020, &wd);
-        if (val)         // Request Winsock 2.2 for IPv6.
-            throw new SocketOSException("Unable to initialize socket library", val);
+    auto our_getaddrinfo(A...)(A a) @system
+    {
+        initialize;
+        return atomicLoad(getaddrinfoPointer)(a);
+    }
 
-        // These functions may not be present on older Windows versions.
-        // See the comment in InternetAddress.toHostNameString() for details.
-        auto ws2Lib = GetModuleHandleA("ws2_32.dll");
-        if (ws2Lib)
+    auto our_freeaddrinfo(A...)(A a) @system
+    {
+        initialize;
+        return atomicLoad(freeaddrinfoPointer)(a);
+    }
+
+    void initialize() @trusted
+    {
+        static bool tlsInitialized;
+        if (tlsInitialized) return;
+
+        static shared bool processInitialized;
+        import std.concurrency : initOnce;
+
+        static bool perform()
         {
-            getnameinfoPointer = cast(typeof(getnameinfoPointer))
-                                 GetProcAddress(ws2Lib, "getnameinfo");
-            getaddrinfoPointer = cast(typeof(getaddrinfoPointer))
-                                 GetProcAddress(ws2Lib, "getaddrinfo");
-            freeaddrinfoPointer = cast(typeof(freeaddrinfoPointer))
-                                 GetProcAddress(ws2Lib, "freeaddrinfo");
+            // Winsock will still load if an older version is present.
+            // The version is just a request.
+            WSADATA wd;
+            const val = WSAStartup(0x2020, &wd);
+            if (val)         // Request Winsock 2.2 for IPv6.
+                throw new SocketOSException("Unable to initialize socket library", val);
+            static extern(C) void cleanup() { WSACleanup(); }
+            atexit(&cleanup);
+
+            // These functions may not be present on older Windows versions.
+            // See the comment in InternetAddress.toHostNameString() for details.
+            auto ws2Lib = GetModuleHandleA("ws2_32.dll");
+            if (ws2Lib)
+            {
+                atomicStore(getnameinfoPointer, cast(typeof(getnameinfoPointer))
+                            GetProcAddress(ws2Lib, "getnameinfo"));
+                atomicStore(getaddrinfoPointer, cast(typeof(getaddrinfoPointer))
+                            GetProcAddress(ws2Lib, "getaddrinfo"));
+                atomicStore(freeaddrinfoPointer, cast(typeof(freeaddrinfoPointer))
+                            GetProcAddress(ws2Lib, "freeaddrinfo"));
+            }
+            return true;
         }
-    }
-    else version (Posix)
-    {
-        getnameinfoPointer = &getnameinfo;
-        getaddrinfoPointer = &getaddrinfo;
-        freeaddrinfoPointer = &freeaddrinfo;
+
+        initOnce!processInitialized(perform());
+        tlsInitialized = true;
     }
 }
-
-
-shared static ~this() @system nothrow @nogc
+else version(Posix)
 {
-    version (Windows)
-    {
-        WSACleanup();
-    }
+    alias our_getnameinfo = getnameinfo;
+    alias our_getaddrinfo = getaddrinfo;
+    alias our_freeaddrinfo = freeaddrinfo;
 }
 
 /**
@@ -963,16 +1001,16 @@ private AddressInfo[] getAddressInfoImpl(scope const(char)[] node, scope const(c
 {
         import std.array : appender;
 
-    if (getaddrinfoPointer && freeaddrinfoPointer)
+    if (getaddrinfoSupported)
     {
         addrinfo* ai_res;
 
-        int ret = getaddrinfoPointer(
+        int ret = our_getaddrinfo(
             node.tempCString(),
             service.tempCString(),
             hints, &ai_res);
         enforce(ret == 0, new SocketOSException("getaddrinfo error", ret, &formatGaiError));
-        scope(exit) freeaddrinfoPointer(ai_res);
+        scope(exit) our_freeaddrinfo(ai_res);
 
         auto result = appender!(AddressInfo[])();
 
@@ -989,15 +1027,16 @@ private AddressInfo[] getAddressInfoImpl(scope const(char)[] node, scope const(c
         return result.data;
     }
 
-    throw new SocketFeatureException("Address info lookup is not available " ~
-        "on this system.");
+    version(Windows)
+        throw new SocketFeatureException("Address info lookup is not available " ~
+                                         "on this system.");
 }
 
 
 @safe unittest
 {
     softUnittest({
-        if (getaddrinfoPointer)
+        if (getaddrinfoSupported)
         {
             // Roundtrip DNS resolution
             auto results = getAddressInfo("www.digitalmars.com");
@@ -1026,7 +1065,7 @@ private AddressInfo[] getAddressInfoImpl(scope const(char)[] node, scope const(c
         }
     });
 
-    if (getaddrinfoPointer)
+    if (getaddrinfoSupported)
     {
         auto results = getAddressInfo(null, "1234", AddressInfoFlags.PASSIVE,
                                       SocketType.STREAM, ProtocolType.TCP, AddressFamily.INET);
@@ -1074,7 +1113,7 @@ private ushort serviceToPort(scope const(char)[] service)
  */
 Address[] getAddress(scope const(char)[] hostname, scope const(char)[] service = null)
 {
-    if (getaddrinfoPointer && freeaddrinfoPointer)
+    if (getaddrinfoSupported)
     {
         // use getAddressInfo
         auto infos = getAddressInfo(hostname, service);
@@ -1091,7 +1130,7 @@ Address[] getAddress(scope const(char)[] hostname, scope const(char)[] service =
 /// ditto
 Address[] getAddress(scope const(char)[] hostname, ushort port)
 {
-    if (getaddrinfoPointer && freeaddrinfoPointer)
+    if (getaddrinfoSupported)
         return getAddress(hostname, to!string(port));
     else
     {
@@ -1109,13 +1148,13 @@ Address[] getAddress(scope const(char)[] hostname, ushort port)
 }
 
 
-@safe unittest
+version(Windows) @safe unittest
 {
     softUnittest({
         auto addresses = getAddress("63.105.9.61");
         assert(addresses.length && addresses[0].toAddrString() == "63.105.9.61");
 
-        if (getaddrinfoPointer)
+        if (getaddrinfoSupported)
         {
             // test via gethostbyname
             auto getaddrinfoPointerBackup = getaddrinfoPointer;
@@ -1168,7 +1207,7 @@ Address[] getAddress(scope const(char)[] hostname, ushort port)
  */
 Address parseAddress(scope const(char)[] hostaddr, scope const(char)[] service = null)
 {
-    if (getaddrinfoPointer && freeaddrinfoPointer)
+    if (getaddrinfoSupported)
         return getAddressInfo(hostaddr, service, AddressInfoFlags.NUMERICHOST)[0].address;
     else
         return parseAddress(hostaddr, serviceToPort(service));
@@ -1177,7 +1216,7 @@ Address parseAddress(scope const(char)[] hostaddr, scope const(char)[] service =
 /// ditto
 Address parseAddress(scope const(char)[] hostaddr, ushort port)
 {
-    if (getaddrinfoPointer && freeaddrinfoPointer)
+    if (getaddrinfoSupported)
         return parseAddress(hostaddr, to!string(port));
     else
     {
@@ -1189,13 +1228,13 @@ Address parseAddress(scope const(char)[] hostaddr, ushort port)
 }
 
 
-@safe unittest
+version(Windows) @safe unittest
 {
     softUnittest({
         auto address = parseAddress("63.105.9.61");
         assert(address.toAddrString() == "63.105.9.61");
 
-        if (getaddrinfoPointer)
+        if (getaddrinfoSupported)
         {
             // test via inet_addr
             auto getaddrinfoPointerBackup = getaddrinfoPointer;
@@ -1286,10 +1325,10 @@ abstract class Address
         // deprecated, albeit commonly-available method when getnameinfo()
         // is not available.
         // http://technet.microsoft.com/en-us/library/aa450403.aspx
-        if (getnameinfoPointer)
+        if (getnameinfoSupported)
         {
             auto buf = new char[NI_MAXHOST];
-            auto ret = getnameinfoPointer(
+            auto ret = our_getnameinfo(
                         name, nameLen,
                         buf.ptr, cast(uint) buf.length,
                         null, 0,
@@ -1309,18 +1348,20 @@ abstract class Address
             return assumeUnique(buf[0 .. strlen(buf.ptr)]);
         }
 
-        throw new SocketFeatureException((numeric ? "Host address" : "Host name") ~
-            " lookup for this address family is not available on this system.");
+        version(Windows)
+            throw new SocketFeatureException(
+                (numeric ? "Host address" : "Host name") ~
+                " lookup for this address family is not available on this system.");
     }
 
     // Common code for toPortString and toServiceNameString
     private string toServiceString(bool numeric) @trusted const
     {
         // See toHostNameString() for details about getnameinfo().
-        if (getnameinfoPointer)
+        if (getnameinfoSupported)
         {
             auto buf = new char[NI_MAXSERV];
-            enforce(getnameinfoPointer(
+            enforce(our_getnameinfo(
                         name, nameLen,
                         null, 0,
                         buf.ptr, cast(uint) buf.length,
@@ -1330,8 +1371,10 @@ abstract class Address
             return assumeUnique(buf[0 .. strlen(buf.ptr)]);
         }
 
-        throw new SocketFeatureException((numeric ? "Port number" : "Service name") ~
-            " lookup for this address family is not available on this system.");
+        version(Windows)
+            throw new SocketFeatureException(
+                (numeric ? "Port number" : "Service name") ~
+                " lookup for this address family is not available on this system.");
     }
 
     /**
@@ -1613,7 +1656,7 @@ public:
         // deprecated getHostByAddr() if it could not be found. See also:
         // http://technet.microsoft.com/en-us/library/aa450403.aspx
 
-        if (getnameinfoPointer)
+        if (getnameinfoSupported)
             return super.toHostNameString();
         else
         {
@@ -1689,7 +1732,7 @@ public:
         assert(ia.toString() == "127.0.0.1:80");
     });
 
-    softUnittest({
+    version(Windows) softUnittest({
         // test reverse lookup
         auto ih = new InternetHost;
         if (ih.getHostByName("digitalmars.com"))
@@ -1697,7 +1740,7 @@ public:
             const ia = new InternetAddress(ih.addrList[0], 80);
             assert(ia.toHostNameString() == "digitalmars.com");
 
-            if (getnameinfoPointer)
+            if (getnameinfoSupported)
             {
                 // test reverse lookup, via gethostbyaddr
                 auto getnameinfoPointerBackup = getnameinfoPointer;
@@ -1709,13 +1752,13 @@ public:
         }
     });
 
-    version (SlowTests)
+    version(Windows) version (SlowTests)
     softUnittest({
         // test failing reverse lookup
         const InternetAddress ia = new InternetAddress("127.114.111.120", 80);
         assert(ia.toHostNameString() is null);
 
-        if (getnameinfoPointer)
+        if (getnameinfoSupported)
         {
             // test failing reverse lookup, via gethostbyaddr
             auto getnameinfoPointerBackup = getnameinfoPointer;
