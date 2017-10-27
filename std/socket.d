@@ -335,9 +335,6 @@ version(Windows) private
 
     void initialize() @trusted
     {
-        static bool tlsInitialized;
-        if (tlsInitialized) return;
-
         static shared bool processInitialized;
         import std.concurrency : initOnce;
 
@@ -368,7 +365,6 @@ version(Windows) private
         }
 
         initOnce!processInitialized(perform());
-        tlsInitialized = true;
     }
 }
 else version(Posix)
