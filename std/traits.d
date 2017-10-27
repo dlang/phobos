@@ -17,12 +17,14 @@
  *           $(LREF isFunction)
  *           $(LREF arity)
  *           $(LREF functionAttributes)
+ *           $(LREF getOverloads)
  *           $(LREF hasFunctionAttributes)
  *           $(LREF functionLinkage)
  *           $(LREF FunctionTypeOf)
  *           $(LREF isSafe)
  *           $(LREF isUnsafe)
  *           $(LREF isFinal)
+ *           $(LREF overloadFor)
  *           $(LREF ParameterDefaults)
  *           $(LREF ParameterIdentifierTuple)
  *           $(LREF ParameterStorageClassTuple)
@@ -8663,4 +8665,153 @@ enum isCopyable(S) = is(typeof(
     static assert(isCopyable!C1);
     static assert(isCopyable!int);
     static assert(isCopyable!(int[]));
+}
+
+// Gets the type of a value, or just the type passed if it's a type.
+private template TypeOf(T...)
+{
+    static if (is(T[0] U))
+        alias TypeOf = U;
+    else static if (is(typeof(T[0]) U))
+        alias TypeOf = U;
+}
+
+@safe unittest
+{
+    static assert(is(TypeOf!3 == int));
+    static assert(is(TypeOf!int == int));
+    static assert(is(TypeOf!([]) == void[]));
+    static assert(!is(TypeOf!(mixin(__MODULE__))));
+    static assert(is(TypeOf!TypeOf));
+}
+
+/**
+ * Get a list of the overloads for the given callable, in the order in which they are defined in the code.
+ *
+ * Params:
+ *     func = The callable whose overload set to return.
+ * Returns:
+ *     A tuple of the overloads for the given callable.
+ */
+template getOverloads(func...)
+if (func.length == 1 && isCallable!func)
+{
+    enum isModuleOrPackage(alias s) = !is(typeof(s));
+    alias Parent = __traits(parent, func);
+
+    static if (is(Parent) || isModuleOrPackage!Parent)
+        alias getOverloads = AliasSeq!(__traits(getOverloads, Parent, __traits(identifier, func)));
+    else
+        alias getOverloads = func;
+}
+
+///
+@safe unittest
+{
+    static struct S
+    {
+        int overloadTest(int n = 3) { return n; }
+        int overloadTest(int, int)  { return 3; }
+        int overloadTest2(int, int) { return 3; }
+    }
+
+    void overloadTestLocalFunction() {}
+
+    static assert(getOverloads!overloadTestLocalFunction.length == 1);
+
+    static assert(getOverloads!(S.overloadTest).length == 2);
+    static assert(is(typeof(&S.overloadTest) == typeof(&getOverloads!(S.overloadTest)[0])));
+    static assert(!is(typeof(&S.overloadTest) == typeof(&getOverloads!(S.overloadTest)[1])));
+    alias fn = S.overloadTest;
+    static assert(is(typeof(&fn) == int function(int = 3) pure nothrow @nogc @safe));
+    static assert(is(typeof(&getOverloads!(S.overloadTest)[0]) == int function(int  = 3) pure nothrow @nogc @safe));
+    static assert(is(typeof(&getOverloads!(S.overloadTest)[1]) == int function(int, int) pure nothrow @nogc @safe));
+    static assert(is(typeof(&fn) == typeof(&getOverloads!(S.overloadTest)[0])));
+    static assert(!is(typeof(&fn) == typeof(&getOverloads!(S.overloadTest)[1])));
+    static assert(getOverloads!(S.overloadTest2).length == 1);
+    static assert(getOverloads!(() => 3).length == 1);
+    static assert(getOverloads!(() => 3).length == 1);
+}
+
+/**
+ * Gets the overload for `func` that can be called with `Args` as arguments, if any.
+ *
+ * Params:
+ *    func = the overload set to search.
+ *    Args = the set of argument types to look for, specified as types or as values.
+ * Returns:
+ *    The overload that matches the argument types in `Args`.
+ */
+template overloadFor(alias func, Args...)
+if (isCallable!func)
+{
+    import std.meta : Filter;
+    enum isMatch(alias overload) = __traits(compiles, (staticMap!(TypeOf, Args) a) => (FunctionTypeOf!overload*).init(a));
+    alias tmp = Filter!(isMatch, getOverloads!func);
+    static if (tmp.length == 0) alias overloadFor = AliasSeq!();
+    else                        alias overloadFor = tmp[0];
+}
+
+///
+@safe unittest
+{
+    static struct S
+    {
+        int overloadTest(int n = 3) { return n; }
+        int overloadTest(int, int)  { return 3; }
+        int overloadTest2(int, int) { return 3; }
+    }
+    static assert(is(typeof(overloadFor!(S.overloadTest)) == typeof(getOverloads!(S.overloadTest)[0])));
+    static assert(is(typeof(overloadFor!(S.overloadTest, int)) == typeof(getOverloads!(S.overloadTest)[0])));
+    static assert(is(typeof(overloadFor!(S.overloadTest, int, int)) == typeof(getOverloads!(S.overloadTest)[1])));
+    static assert(is(typeof(overloadFor!(S.overloadTest, 3)) == typeof(getOverloads!(S.overloadTest)[0])));
+    static assert(is(typeof(overloadFor!(S.overloadTest, 3, 3)) == typeof(getOverloads!(S.overloadTest)[1])));
+    static assert(!is(typeof(overloadFor!(S.overloadTest, string)) == AliasSeq!()));
+    static assert(!is(typeof(overloadFor!(S.overloadTest, int[])) == AliasSeq!()));
+    static assert(!is(typeof(overloadFor!(S.overloadTest, "test")) == AliasSeq!()));
+    static assert(is(typeof(overloadFor!(S.overloadTest2, int, int)) == typeof(S.overloadTest2)));
+    static assert(is(typeof(overloadFor!(() => 3)) == typeof(() => 3)));
+}
+
+/**
+ * Gets the overload for `func` that can be called with the same arguments as `pattern`
+ *
+ * Params:
+ *    func = the overload set to search.
+ *    pattern = a function or delegate with the arguments you are looking for.
+ * Returns:
+ *    The overload that matches the argument types in `pattern`.
+ */
+template exactOverloadFor(alias func, alias pattern)
+if (__traits(compiles, Parameters!pattern))
+{
+    import std.meta : Filter;
+    enum isMatch(alias overload) = is(Parameters!overload == Parameters!pattern) &&
+            [ParameterStorageClassTuple!overload] == [ParameterStorageClassTuple!pattern];
+    alias tmp = Filter!(isMatch, getOverloads!func);
+    static if (tmp.length == 0) alias exactOverloadFor = AliasSeq!();
+    else                        alias exactOverloadFor = tmp[0];
+}
+
+///
+@safe unittest
+{
+    static struct S
+    {
+        int overloadTest(int n = 3)     { return n; }
+        int overloadTest(int, int)      { return 3; }
+        int overloadTest2(int, int)     { return 3; }
+        int overloadTest3(string s)     { return 3; }
+        int overloadTest3(ref string s) { return 3; }
+    }
+
+    static assert(!is(typeof(exactOverloadFor!(S.overloadTest, (){}))));
+    static assert(is(typeof(exactOverloadFor!(S.overloadTest, (int){})) == typeof(getOverloads!(S.overloadTest)[0])));
+    static assert(is(typeof(exactOverloadFor!(S.overloadTest, (int, int){})) == typeof(getOverloads!(S.overloadTest)[1])));
+    static assert(!is(typeof(exactOverloadFor!(S.overloadTest, (string){})) == AliasSeq!()));
+    static assert(!is(typeof(exactOverloadFor!(S.overloadTest, (int[]){})) == AliasSeq!()));
+    static assert(is(typeof(exactOverloadFor!(S.overloadTest2, (int, int){})) == typeof(S.overloadTest2)));
+    static assert(is(typeof(exactOverloadFor!(() => 3, (){})) == typeof(() => 3)));
+    static assert(is(typeof(exactOverloadFor!(S.overloadTest3, (string s){})) == typeof(getOverloads!(S.overloadTest3)[0])));
+    static assert(is(typeof(exactOverloadFor!(S.overloadTest3, (ref string s){})) == typeof(getOverloads!(S.overloadTest3)[1])));
 }

@@ -1,0 +1,16 @@
+Templates for working with callable overloads added to `std.traits`.
+
+$(REF getOverloads, std, traits) returns a full list of the functions in an overload set.
+
+$(REF overloadFor, std, traits) finds the element of an overload set that matches the passed argument types.
+
+-----
+int foo() { return 3; }
+void foo(int i) { }
+
+assert(getOverloads!foo.length == 2);
+assert(__traits(compiles, getOverloads!foo[0]()));
+assert(__traits(compiles, getOverloads!foo[1](3)));
+
+assert(__traits(compiles, overloadFor!(foo, int)(3)));
+-----
