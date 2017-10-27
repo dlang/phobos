@@ -100,6 +100,8 @@ else version(NetBSD)
 }
 
 /*
+(For now public undocumented with reserved name.)
+
 A lazily initialized global constant. The underlying value is a shared global
 statically initialized to `outOfBandValue` which must not be a legit value of
 the constant. Upon the first call the situation is detected and the global is
@@ -118,8 +120,8 @@ Params:
 Returns:
     The lazily initialized value
 */
-package @property pure
-T lazilyInitializedConstant(T, alias outOfBandValue, alias initializer)()
+@property pure
+T __lazilyInitializedConstant(T, alias outOfBandValue, alias initializer)()
 if (is(Unqual!T : T)
     && is(typeof(initializer()) : T)
     && is(typeof(outOfBandValue) : T))
@@ -153,7 +155,7 @@ if (is(Unqual!T : T)
 
 // Returns the size of a cache line.
 alias cacheLineSize =
-    lazilyInitializedConstant!(immutable(size_t), size_t.max, cacheLineSizeImpl);
+    __lazilyInitializedConstant!(immutable(size_t), size_t.max, cacheLineSizeImpl);
 
 private size_t cacheLineSizeImpl() @nogc nothrow @trusted
 {
@@ -949,7 +951,7 @@ The total number of CPU cores available on the current machine, as reported by
 the operating system.
 */
 alias totalCPUs =
-    lazilyInitializedConstant!(immutable(uint), uint.max, totalCPUsImpl);
+    __lazilyInitializedConstant!(immutable(uint), uint.max, totalCPUsImpl);
 
 uint totalCPUsImpl() @nogc nothrow @trusted
 {
