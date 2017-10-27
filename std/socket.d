@@ -302,7 +302,8 @@ version(Posix) private enum bool getnameinfoSupported = true;
 version(Windows) private @property bool getaddrinfoSupported()
 {
     initialize;
-    return getaddrInfoPointer !is null;
+    assert((getaddrinfoPointer is null) == (freeaddrinfoPointer is null));
+    return getaddrinfoPointer !is null;
 }
 // Ditto (always supported on Posix).
 version(Posix) private enum bool getaddrinfoSupported = true;
@@ -318,24 +319,26 @@ version(Windows) private
     auto our_getnameinfo(A...)(A a) @system
     {
         initialize;
-        return atomicLoad(getnameinfoPointer)(a);
+        return getnameinfoPointer(a);
     }
 
     auto our_getaddrinfo(A...)(A a) @system
     {
         initialize;
-        return atomicLoad(getaddrinfoPointer)(a);
+        return getaddrinfoPointer(a);
     }
 
     auto our_freeaddrinfo(A...)(A a) @system
     {
         initialize;
-        return atomicLoad(freeaddrinfoPointer)(a);
+        return freeaddrinfoPointer(a);
     }
 
     void initialize() @trusted
     {
         static shared bool processInitialized;
+        if (atomicLoad(processInitialized)) return;
+
         import std.concurrency : initOnce;
 
         static bool perform()
@@ -354,12 +357,12 @@ version(Windows) private
             auto ws2Lib = GetModuleHandleA("ws2_32.dll");
             if (ws2Lib)
             {
-                atomicStore(getnameinfoPointer, cast(typeof(getnameinfoPointer))
-                            GetProcAddress(ws2Lib, "getnameinfo"));
-                atomicStore(getaddrinfoPointer, cast(typeof(getaddrinfoPointer))
-                            GetProcAddress(ws2Lib, "getaddrinfo"));
-                atomicStore(freeaddrinfoPointer, cast(typeof(freeaddrinfoPointer))
-                            GetProcAddress(ws2Lib, "freeaddrinfo"));
+                getnameinfoPointer = cast(typeof(getnameinfoPointer))
+                            GetProcAddress(ws2Lib, "getnameinfo");
+                getaddrinfoPointer = cast(typeof(getaddrinfoPointer))
+                            GetProcAddress(ws2Lib, "getaddrinfo");
+                freeaddrinfoPointer = cast(typeof(freeaddrinfoPointer))
+                            GetProcAddress(ws2Lib, "freeaddrinfo");
             }
             return true;
         }
