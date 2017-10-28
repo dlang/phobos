@@ -69,7 +69,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
         This method is defined only if at least one of the allocators defines
         it, and work similarly to $(D reallocate).
         */
-        bool alignedReallocate(ref void[] b, size_t s);
+        bool alignedReallocate(ref void[] b, size_t s, uint a);
         /**
         This method is defined only if both allocators define it. The call is
         forwarded to $(D SmallAllocator) if $(D b.length <= threshold), or $(D
@@ -195,22 +195,22 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 
         static if (hasMember!(SmallAllocator, "alignedReallocate")
                 || hasMember!(LargeAllocator, "alignedReallocate"))
-        bool reallocate(ref void[] b, size_t s)
+        bool alignedReallocate(ref void[] b, size_t s, uint a)
         {
             static if (hasMember!(SmallAllocator, "alignedReallocate"))
                 if (b.length <= threshold && s <= threshold)
                 {
                     // Old and new allocations handled by _small
-                    return _small.alignedReallocate(b, s);
+                    return _small.alignedReallocate(b, s, a);
                 }
             static if (hasMember!(LargeAllocator, "alignedReallocate"))
                 if (b.length > threshold && s > threshold)
                 {
                     // Old and new allocations handled by _large
-                    return _large.alignedReallocate(b, s);
+                    return _large.alignedReallocate(b, s, a);
                 }
             // Cross-allocator transgression
-            return .alignedReallocate(this, b, s);
+            return .alignedReallocate(this, b, s, a);
         }
 
         static if (hasMember!(SmallAllocator, "owns")
@@ -242,7 +242,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
                 && hasMember!(LargeAllocator, "empty"))
         Ternary empty()
         {
-            return _small.empty && _large.empty;
+            return _small.empty & _large.empty;
         }
 
         static if (hasMember!(SmallAllocator, "resolveInternalPointer")
@@ -373,4 +373,31 @@ if (Args.length > 3)
     shared Segregator!(128, GCAllocator, GCAllocator) sharedAlloc;
     assert((() nothrow @safe @nogc => sharedAlloc.goodAllocSize(1))()
             == GCAllocator.instance.goodAllocSize(1));
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlock;
+    import std.typecons : Ternary;
+
+    alias A =
+        Segregator!(
+            128, BitmappedBlock!(4096),
+            BitmappedBlock!(4096)
+        );
+
+    A a = A(
+            BitmappedBlock!(4096)(new ubyte[4096 * 1024]),
+            BitmappedBlock!(4096)(new ubyte[4096 * 1024])
+    );
+
+    assert(a.empty == Ternary.yes);
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert(a.empty == Ternary.no);
+    assert(a.alignedReallocate(b, 256, 512));
+    assert(b.length == 256);
+    assert(a.alignedReallocate(b, 42, 512));
+    assert(b.length == 42);
+    a.deallocate(b);
 }
