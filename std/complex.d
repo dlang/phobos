@@ -169,15 +169,15 @@ if (isFloatingPoint!T)
     */
     this(R : T)(Complex!R z)
     {
-        re = z.re;
-        im = z.im;
+        re = T(z.re);
+        im = T(z.im);
     }
 
     /// ditto
     this(Rx : T, Ry : T)(Rx x, Ry y)
     {
-        re = x;
-        im = y;
+        re = T(x);
+        im = T(y);
     }
 
     /// ditto
@@ -192,15 +192,15 @@ if (isFloatingPoint!T)
     // this = complex
     ref Complex opAssign(R : T)(Complex!R z)
     {
-        re = z.re;
-        im = z.im;
+        re = T(z.re);
+        im = T(z.im);
         return this;
     }
 
     // this = numeric
     ref Complex opAssign(R : T)(R r)
     {
-        re = r;
+        re = T(r);
         im = 0;
         return this;
     }
@@ -305,15 +305,15 @@ if (isFloatingPoint!T)
         {
             // r = lhs
             // theta = 0
-            ab = lhs ^^ this.re;
-            ar = log(lhs) * this.im;
+            ab = T(lhs ^^ this.re);
+            ar = T(log(lhs) * this.im);
         }
         else
         {
             // r = -lhs
             // theta = PI
-            ab = (-lhs) ^^ this.re * exp(-PI * this.im);
-            ar = PI * this.re + log(-lhs) * this.im;
+            ab = T((-lhs) ^^ this.re * exp(-PI * this.im));
+            ar = T(PI * this.re + log(-lhs) * this.im);
         }
 
         return typeof(return)(ab * cos(ar), ab * sin(ar));
@@ -376,8 +376,8 @@ if (isFloatingPoint!T)
         immutable ab = r^^z.re * exp(-t*z.im);
         immutable ar = t*z.re + log(r)*z.im;
 
-        re = ab*cos(ar);
-        im = ab*sin(ar);
+        re = T(ab*cos(ar));
+        im = T(ab*sin(ar));
         return this;
     }
 
@@ -405,8 +405,8 @@ if (isFloatingPoint!T)
         import std.math : cos, sin;
         immutable ab = abs(this)^^r;
         immutable ar = arg(this)*r;
-        re = ab*cos(ar);
-        im = ab*sin(ar);
+        re = T(ab*cos(ar));
+        im = T(ab*sin(ar));
         return this;
     }
 

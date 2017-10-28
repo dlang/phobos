@@ -1531,8 +1531,8 @@ body
         // a parabolic-interpolation step
         if (fabs(p) < fabs(q * r / 2) && p > q * (a - x) && p < q * (b - x))
         {
-            d = p / q;
-            u = x + d;
+            d = T(p / q);
+            u = T(x + d);
             // f must not be evaluated too close to a or b
             if (u - a < t2 || b - u < t2)
                 d = x < m ? tolerance : -tolerance;
@@ -1544,7 +1544,7 @@ body
             d = c * e;
         }
         // f must not be evaluated too close to x
-        u = x + (fabs(d) >= tolerance ? d : d > 0 ? tolerance : -tolerance);
+        u = T(x + (fabs(d) >= tolerance ? d : d > 0 ? tolerance : -tolerance));
         immutable fu = f(u);
         if (isNaN(fu) || fu == -T.infinity)
         {
@@ -1942,11 +1942,12 @@ result is greater than or equal to $(D max).
 ElementType!Range entropy(Range)(Range r)
 if (isInputRange!Range)
 {
-    Unqual!(typeof(return)) result = 0.0;
+    alias T = Unqual!(typeof(return));
+    T result = 0.0;
     for (;!r.empty; r.popFront)
     {
         if (!r.front) continue;
-        result -= r.front * log2(r.front);
+        result -= T(r.front * log2(r.front));
     }
     return result;
 }
@@ -1956,11 +1957,12 @@ ElementType!Range entropy(Range, F)(Range r, F max)
 if (isInputRange!Range &&
     !is(CommonType!(ElementType!Range, F) == void))
 {
-    Unqual!(typeof(return)) result = 0.0;
+    alias T = Unqual!(typeof(return));
+    T result = 0.0;
     for (;!r.empty; r.popFront)
     {
         if (!r.front) continue;
-        result -= r.front * log2(r.front);
+        result -= T(r.front * log2(r.front));
         if (result >= max) break;
     }
     return result;
@@ -1998,7 +2000,8 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) assert(a.length == b.length);
-    Unqual!(typeof(return)) result = 0;
+    alias T = Unqual!(typeof(return));
+    T result = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
         immutable t1 = a.front;
@@ -2006,7 +2009,7 @@ if (isInputRange!(Range1) && isInputRange!(Range2))
         immutable t2 = b.front;
         if (t2 == 0) return result.infinity;
         assert(t1 > 0 && t2 > 0);
-        result += t1 * log2(t1 / t2);
+        result += T(t1 * log2(t1 / t2));
     }
     static if (!haveLen) assert(b.empty);
     return result;
@@ -2047,7 +2050,8 @@ if (isInputRange!Range1 && isInputRange!Range2 &&
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) assert(a.length == b.length);
-    Unqual!(typeof(return)) result = 0;
+    alias T = Unqual!(typeof(return));
+    T result = 0;
     for (; !a.empty; a.popFront(), b.popFront())
     {
         immutable t1 = a.front;
@@ -2055,11 +2059,11 @@ if (isInputRange!Range1 && isInputRange!Range2 &&
         immutable avg = (t1 + t2) / 2;
         if (t1 != 0)
         {
-            result += t1 * log2(t1 / avg);
+            result += T(t1 * log2(t1 / avg));
         }
         if (t2 != 0)
         {
-            result += t2 * log2(t2 / avg);
+            result += T(t2 * log2(t2 / avg));
         }
     }
     static if (!haveLen) assert(b.empty);
@@ -2075,7 +2079,8 @@ if (isInputRange!Range1 && isInputRange!Range2 &&
 {
     enum bool haveLen = hasLength!(Range1) && hasLength!(Range2);
     static if (haveLen) assert(a.length == b.length);
-    Unqual!(typeof(return)) result = 0;
+    alias T = Unqual!(typeof(return));
+    T result = 0;
     limit *= 2;
     for (; !a.empty; a.popFront(), b.popFront())
     {
@@ -2084,11 +2089,11 @@ if (isInputRange!Range1 && isInputRange!Range2 &&
         immutable avg = (t1 + t2) / 2;
         if (t1 != 0)
         {
-            result += t1 * log2(t1 / avg);
+            result += T(t1 * log2(t1 / avg));
         }
         if (t2 != 0)
         {
-            result += t2 * log2(t2 / avg);
+            result += T(t2 * log2(t2 / avg));
         }
         if (result >= limit) break;
     }
@@ -3034,7 +3039,7 @@ private:
             else if (i == size * 3 / 4)
                 lastRow[i] = 1;  // -sin(pi * 3 / 2) == 1
             else
-                lastRow[i] = -sin(i * 2.0L * PI / size);
+                lastRow[i] = float(-sin(i * 2.0 * PI / size));
         }
 
         // Fill in all the other rows with strided versions.
