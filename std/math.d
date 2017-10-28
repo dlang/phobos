@@ -4518,7 +4518,7 @@ real round(real x) @trusted nothrow @nogc
     {
         auto old = FloatingPointControl.getControlState();
         FloatingPointControl.setControlState(
-            (old & (-1 - FloatingPointControl.ROUNDING_MASK)) | FloatingPointControl.roundToZero
+            (old & (-1 - FloatingPointControl.roundingMask)) | FloatingPointControl.roundToZero
         );
         x = rint((x >= 0) ? x + 0.5 : x - 0.5);
         FloatingPointControl.setControlState(old);
@@ -4939,41 +4939,39 @@ struct FloatingPointControl
         {
             /** IEEE rounding modes.
              * The default mode is roundToNearest.
+             *
+             *  roundingMask = A mask of all rounding modes.
              */
             roundToNearest,
             roundDown, /// ditto
             roundUp, /// ditto
-            roundToZero /// ditto
+            roundToZero, /// ditto
+            roundingMask, /// ditto
         }
     }
-    else version(ARM)
+    else version (CRuntime_Microsoft)
     {
+        // Microsoft uses hardware-incompatible custom constants in fenv.h (core.stdc.fenv).
         enum : RoundingMode
         {
-            roundToNearest = 0x000000,
-            roundDown      = 0x800000,
-            roundUp        = 0x400000,
-            roundToZero    = 0xC00000
-        }
-    }
-    else version(PPC_Any)
-    {
-        enum : RoundingMode
-        {
-            roundToNearest = 0x00000000,
-            roundDown      = 0x00000003,
-            roundUp        = 0x00000002,
-            roundToZero    = 0x00000001
+            roundToNearest = 0x0000,
+            roundDown      = 0x0400,
+            roundUp        = 0x0800,
+            roundToZero    = 0x0C00,
+            roundingMask   = roundToNearest | roundDown
+                             | roundUp | roundToZero,
         }
     }
     else
     {
         enum : RoundingMode
         {
-            roundToNearest = 0x0000,
-            roundDown      = 0x0400,
-            roundUp        = 0x0800,
-            roundToZero    = 0x0C00
+            roundToNearest = core.stdc.fenv.FE_TONEAREST,
+            roundDown      = core.stdc.fenv.FE_DOWNWARD,
+            roundUp        = core.stdc.fenv.FE_UPWARD,
+            roundToZero    = core.stdc.fenv.FE_TOWARDZERO,
+            roundingMask   = roundToNearest | roundDown
+                             | roundUp | roundToZero,
         }
     }
 
@@ -4981,18 +4979,20 @@ struct FloatingPointControl
     @property void rounding(RoundingMode newMode) @nogc
     {
         initialize();
-        setControlState((getControlState() & (-1 - ROUNDING_MASK)) | (newMode & ROUNDING_MASK));
+        setControlState((getControlState() & (-1 - roundingMask)) | (newMode & roundingMask));
     }
 
     /// Returns: the currently active rounding mode
     @property static RoundingMode rounding() @nogc
     {
-        return cast(RoundingMode)(getControlState() & ROUNDING_MASK);
+        return cast(RoundingMode)(getControlState() & roundingMask);
     }
+
+    alias ExceptionMask = uint; ///
 
     version(StdDdoc)
     {
-        enum : uint
+        enum : ExceptionMask
         {
             /** IEEE hardware exceptions.
              *  By default, all exceptions are masked (disabled).
@@ -5012,7 +5012,7 @@ struct FloatingPointControl
     }
     else version(ARM)
     {
-        enum : uint
+        enum : ExceptionMask
         {
             subnormalException    = 0x8000,
             inexactException      = 0x1000,
@@ -5028,7 +5028,7 @@ struct FloatingPointControl
     }
     else version(PPC_Any)
     {
-        enum : uint
+        enum : ExceptionMask
         {
             inexactException      = 0x0008,
             divByZeroException    = 0x0010,
@@ -5041,9 +5041,9 @@ struct FloatingPointControl
                                  | inexactException,
         }
     }
-    else
+    else version (X86_Any)
     {
-        enum : uint
+        enum : ExceptionMask
         {
             inexactException      = 0x20,
             underflowException    = 0x10,
@@ -5057,30 +5057,8 @@ struct FloatingPointControl
                                  | inexactException | subnormalException,
         }
     }
-
-private:
-    version(ARM)
-    {
-        enum uint EXCEPTION_MASK = 0x9F00;
-        enum uint ROUNDING_MASK = 0xC00000;
-    }
-    else version(PPC_Any)
-    {
-        enum uint EXCEPTION_MASK = 0x00F8;
-        enum uint ROUNDING_MASK = 0x0003;
-    }
-    else version(X86)
-    {
-        enum ushort EXCEPTION_MASK = 0x3F;
-        enum ushort ROUNDING_MASK = 0xC00;
-    }
-    else version(X86_64)
-    {
-        enum ushort EXCEPTION_MASK = 0x3F;
-        enum ushort ROUNDING_MASK = 0xC00;
-    }
     else
-        static assert(false, "Architecture not supported");
+        static assert(false, "Not implemented for this architecture");
 
 public:
     /// Returns: true if the current FPU supports exception trapping
@@ -5095,45 +5073,45 @@ public:
             auto oldState = getControlState();
             // If exceptions are not supported, we set the bit but read it back as zero
             // https://sourceware.org/ml/libc-ports/2012-06/msg00091.html
-            setControlState(oldState | (divByZeroException & EXCEPTION_MASK));
-            immutable result = (getControlState() & EXCEPTION_MASK) != 0;
+            setControlState(oldState | (divByZeroException & allExceptions));
+            immutable result = (getControlState() & allExceptions) != 0;
             setControlState(oldState);
             return result;
         }
         else
-            static assert(false, "Not implemented for this architecture");
+            assert(0, "Not yet supported");
     }
 
     /// Enable (unmask) specific hardware exceptions. Multiple exceptions may be ORed together.
-    void enableExceptions(uint exceptions) @nogc
+    void enableExceptions(ExceptionMask exceptions) @nogc
     {
         assert(hasExceptionTraps);
         initialize();
         version(X86_Any)
-            setControlState(getControlState() & ~(exceptions & EXCEPTION_MASK));
+            setControlState(getControlState() & ~(exceptions & allExceptions));
         else
-            setControlState(getControlState() | (exceptions & EXCEPTION_MASK));
+            setControlState(getControlState() | (exceptions & allExceptions));
     }
 
     /// Disable (mask) specific hardware exceptions. Multiple exceptions may be ORed together.
-    void disableExceptions(uint exceptions) @nogc
+    void disableExceptions(ExceptionMask exceptions) @nogc
     {
         assert(hasExceptionTraps);
         initialize();
         version(X86_Any)
-            setControlState(getControlState() | (exceptions & EXCEPTION_MASK));
+            setControlState(getControlState() | (exceptions & allExceptions));
         else
-            setControlState(getControlState() & ~(exceptions & EXCEPTION_MASK));
+            setControlState(getControlState() & ~(exceptions & allExceptions));
     }
 
     /// Returns: the exceptions which are currently enabled (unmasked)
-    @property static uint enabledExceptions() @nogc
+    @property static ExceptionMask enabledExceptions() @nogc
     {
         assert(hasExceptionTraps);
         version(X86_Any)
-            return (getControlState() & EXCEPTION_MASK) ^ EXCEPTION_MASK;
+            return (getControlState() & allExceptions) ^ allExceptions;
         else
-            return (getControlState() & EXCEPTION_MASK);
+            return (getControlState() & allExceptions);
     }
 
     ///  Clear all pending exceptions, then restore the original exception state and rounding mode.
@@ -5157,10 +5135,12 @@ private:
     {
         alias ControlState = uint;
     }
-    else
+    else version (X86_Any)
     {
         alias ControlState = ushort;
     }
+    else
+        static assert(false, "Not implemented for this architecture");
 
     void initialize() @nogc
     {
@@ -5224,17 +5204,13 @@ private:
 
                 /* In the FPU control register, rounding mode is in bits 10 and
                 11. In MXCSR it's in bits 13 and 14. */
-                enum ROUNDING_MASK_SSE = ROUNDING_MASK << 3;
-                immutable newRoundingModeSSE = (newState & ROUNDING_MASK) << 3;
-                mxcsr &= ~ROUNDING_MASK_SSE; // delete old rounding mode
-                mxcsr |= newRoundingModeSSE; // write new rounding mode
+                mxcsr &= ~(roundingMask << 3);             // delete old rounding mode
+                mxcsr |= (newState & roundingMask) << 3;   // write new rounding mode
 
                 /* In the FPU control register, masks are bits 0 through 5.
                 In MXCSR they're 7 through 12. */
-                enum EXCEPTION_MASK_SSE = EXCEPTION_MASK << 7;
-                immutable newExceptionMasks = (newState & EXCEPTION_MASK) << 7;
-                mxcsr &= ~EXCEPTION_MASK_SSE; // delete old masks
-                mxcsr |= newExceptionMasks; // write new exception masks
+                mxcsr &= ~(allExceptions << 7);            // delete old masks
+                mxcsr |= (newState & allExceptions) << 7;  // write new exception masks
 
                 asm nothrow @nogc { ldmxcsr mxcsr; }
             }
