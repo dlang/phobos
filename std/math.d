@@ -375,15 +375,22 @@ template floatTraits(T)
         enum ushort EXPMASK = 0x7FF0;
         enum ushort EXPSHIFT = 4;
         enum realFormat = RealFormat.ibmExtended;
-        // the exponent byte is not unique
+
+        // For IBM doubledouble the larger magnitude double comes first.
+        // It's really a double[2] and arrays don't index differently
+        // between little and big-endian targets.
+        enum DOUBLEPAIR_MSB = 0;
+        enum DOUBLEPAIR_LSB = 1;
+
+        // The exponent/sign byte is for most significant part.
         version(LittleEndian)
         {
-            enum EXPPOS_SHORT = 7; // [3] is also an exp short
-            enum SIGNPOS_BYTE = 15;
+            enum EXPPOS_SHORT = 3;
+            enum SIGNPOS_BYTE = 7;
         }
         else
         {
-            enum EXPPOS_SHORT = 0; // [4] is also an exp short
+            enum EXPPOS_SHORT = 0;
             enum SIGNPOS_BYTE = 0;
         }
     }
@@ -5581,7 +5588,7 @@ bool isNormal(X)(X x) @trusted pure nothrow @nogc
     static if (F.realFormat == RealFormat.ibmExtended)
     {
         // doubledouble is normal if the least significant part is normal.
-        return isNormal((cast(double*)&x)[MANTISSA_LSB]);
+        return isNormal((cast(double*)&x)[F.DOUBLEPAIR_LSB]);
     }
     else
     {
@@ -5655,7 +5662,7 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
     }
     else static if (F.realFormat == RealFormat.ibmExtended)
     {
-        return isSubnormal((cast(double*)&x)[MANTISSA_MSB]);
+        return isSubnormal((cast(double*)&x)[F.DOUBLEPAIR_MSB]);
     }
     else
     {
@@ -5706,7 +5713,7 @@ if (isFloatingPoint!(X))
     }
     else static if (F.realFormat == RealFormat.ibmExtended)
     {
-        return (((cast(ulong *)&x)[MANTISSA_MSB]) & 0x7FFF_FFFF_FFFF_FFFF)
+        return (((cast(ulong *)&x)[F.DOUBLEPAIR_MSB]) & 0x7FFF_FFFF_FFFF_FFFF)
             == 0x7FF8_0000_0000_0000;
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
@@ -7097,16 +7104,16 @@ if (isFloatingPoint!(X))
     alias F = floatTraits!(X);
     static if (F.realFormat == RealFormat.ibmExtended)
     {
-        if ((cast(double*)&x)[MANTISSA_MSB] == (cast(double*)&y)[MANTISSA_MSB])
+        if ((cast(double*)&x)[F.DOUBLEPAIR_MSB] == (cast(double*)&y)[F.DOUBLEPAIR_MSB])
         {
             return double.mant_dig
-            + feqrel((cast(double*)&x)[MANTISSA_LSB],
-                    (cast(double*)&y)[MANTISSA_LSB]);
+            + feqrel((cast(double*)&x)[F.DOUBLEPAIR_LSB],
+                    (cast(double*)&y)[F.DOUBLEPAIR_LSB]);
         }
         else
         {
-            return feqrel((cast(double*)&x)[MANTISSA_MSB],
-                    (cast(double*)&y)[MANTISSA_MSB]);
+            return feqrel((cast(double*)&x)[F.DOUBLEPAIR_MSB],
+                    (cast(double*)&y)[F.DOUBLEPAIR_MSB]);
         }
     }
     else
