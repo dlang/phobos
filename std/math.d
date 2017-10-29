@@ -273,15 +273,11 @@ pragma(inline, true):
     //      sword = view as a signed integer.
 
     // 64-bit, 80-bit and 128-bit reals only:
-    //      ints = view as an array of ints.
     //      msw = view the most significant part.
     //      lsw = view the least significant part.
 
     // 80-bit real only:
     //      exponent = view the exponent part.
-
-    // 128-bit reals only:
-    //      longs = view as an array of longs.
 
     // 128-bit ibm real only:
     //      high = view the underlying higher double format.
@@ -322,7 +318,6 @@ pragma(inline, true):
         }
         ubyte[8] bytes;
         ushort[4] shorts;
-        int[2] ints;
         ulong word;
         long sword;
     }
@@ -365,7 +360,6 @@ pragma(inline, true):
         }
         ubyte[12] bytes;
         ushort[6] shorts;
-        uint[3] ints;
     }
     else static if (traits.realFormat == RealFormat.ibmExtended)
     {
@@ -385,8 +379,6 @@ pragma(inline, true):
         }
         ubyte[16] bytes;
         ushort[8] shorts;
-        uint[4] ints;
-        long[2] longs;
     }
     else static if (traits.realFormat == RealFormat.ieeeQuadruple)
     {
@@ -406,8 +398,6 @@ pragma(inline, true):
         }
         ubyte[16] bytes;
         ushort[8] shorts;
-        uint[4] ints;
-        long[2] longs;
     }
     else
         static assert(false, "No float bits support for " ~ T.stringof);
@@ -3016,11 +3006,10 @@ if (isFloatingPoint!T)
             if (ex == F.EXPMASK)
             {
                 // infinity or NaN
-                if (vf.longs[MANTISSA_LSB] |
-                    (vf.longs[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF))  // NaN
+                if (vf.lsw | (vf.msw & 0x0000_FFFF_FFFF_FFFF))  // NaN
                 {
                     // convert NaNS to NaNQ
-                    vf.longs[MANTISSA_MSB] |= 0x0000_8000_0000_0000;
+                    vf.msw |= 0x0000_8000_0000_0000;
                     exp = int.min;
                 }
                 else if (vf.shorts[F.EXPPOS_SHORT] & 0x8000)   // negative infinity
@@ -3034,8 +3023,7 @@ if (isFloatingPoint!T)
                 vf.shorts[F.EXPPOS_SHORT] = F.EXPBIAS | (0x8000 & vf.shorts[F.EXPPOS_SHORT]);
             }
         }
-        else if ((vf.longs[MANTISSA_LSB] |
-            (vf.longs[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0)
+        else if ((vf.lsw | (vf.msw & 0x0000_FFFF_FFFF_FFFF)) == 0)
         {
             // vf is +-0.0
             exp = 0;
@@ -3291,7 +3279,7 @@ if (isFloatingPoint!T)
             if (ex == F.EXPMASK)
             {
                 // infinity or NaN
-                if (y.longs[MANTISSA_LSB] | ( y.longs[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF))  // NaN
+                if (y.lsw | (y.msw & 0x0000_FFFF_FFFF_FFFF))  // NaN
                     return FP_ILOGBNAN;
                 else // +- infinity
                     return int.max;
@@ -3301,7 +3289,7 @@ if (isFloatingPoint!T)
                 return ex - F.EXPBIAS - 1;
             }
         }
-        else if ((y.longs[MANTISSA_LSB] | (y.longs[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) == 0)
+        else if ((y.lsw | (y.msw & 0x0000_FFFF_FFFF_FFFF)) == 0)
         {
             // vf is +-0.0
             return FP_ILOGB0;
@@ -3309,8 +3297,8 @@ if (isFloatingPoint!T)
         else
         {
             // subnormal
-            const ulong msb = y.longs[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF;
-            const ulong lsb = y.longs[MANTISSA_LSB];
+            const ulong msb = y.msw & 0x0000_FFFF_FFFF_FFFF;
+            const ulong lsb = y.lsw;
             if (msb)
                 return ex - F.EXPBIAS - T.mant_dig + 1 + bsr(msb) + 64;
             else
@@ -4845,8 +4833,8 @@ long lrint(real x) @trusted pure nothrow @nogc
             const RealRep!real rx = x;
 
             // Find the exponent and sign
-            uint msb = rx.ints[MANTISSA_MSB];
-            uint lsb = rx.ints[MANTISSA_LSB];
+            uint msb = rx.msw;
+            uint lsb = rx.lsw;
             int exp = ((msb >> 20) & 0x7ff) - 0x3ff;
             const int sign = msb >> 31;
             msb &= 0xfffff;
@@ -4861,8 +4849,8 @@ long lrint(real x) @trusted pure nothrow @nogc
                     // Adjust x and check result.
                     const real j = sign ? -OF : OF;
                     x = (j + x) - j;
-                    msb = rx.ints[MANTISSA_MSB];
-                    lsb = rx.ints[MANTISSA_LSB];
+                    msb = rx.msw;
+                    lsb = rx.lsw;
                     exp = ((msb >> 20) & 0x7ff) - 0x3ff;
                     msb &= 0xfffff;
                     msb |= 0x100000;
@@ -4910,18 +4898,18 @@ long lrint(real x) @trusted pure nothrow @nogc
                     if (exp < 0)
                         result = 0;
                     else if (exp <= 31)
-                        result = rx.ints[1] >> (31 - exp);
+                        result = rx.msw >> (31 - exp);
                     else
-                        result = (cast(long) rx.ints[1] << (exp - 31)) | (rx.ints[0] >> (63 - exp));
+                        result = (cast(long) rx.msw << (exp - 31)) | (rx.lsw >> (63 - exp));
                 }
                 else
                 {
                     if (exp < 0)
                         result = 0;
                     else if (exp <= 31)
-                        result = rx.ints[1] >> (31 - exp);
+                        result = rx.msw >> (31 - exp);
                     else
-                        result = (cast(long) rx.ints[1] << (exp - 31)) | (rx.ints[2] >> (63 - exp));
+                        result = (cast(long) rx.msw << (exp - 31)) | (rx.lsw >> (63 - exp));
                 }
             }
             else
@@ -4953,8 +4941,8 @@ long lrint(real x) @trusted pure nothrow @nogc
             rx = (j + rx) - j;
 
             const implicitOne = 1UL << 48;
-            rx.longs[MANTISSA_MSB] &= implicitOne - 1;
-            rx.longs[MANTISSA_MSB] |= implicitOne;
+            rx.msw &= implicitOne - 1;
+            rx.msw |= implicitOne;
 
             long result;
 
@@ -4962,9 +4950,9 @@ long lrint(real x) @trusted pure nothrow @nogc
             if (exp < 0)
                 result = 0;
             else if (exp <= 48)
-                result = rx.longs[MANTISSA_MSB] >> (48 - exp);
+                result = rx.msw >> (48 - exp);
             else
-                result = (rx.longs[MANTISSA_MSB] << (exp - 48)) | (rx.longs[MANTISSA_LSB] >> (112 - exp));
+                result = (rx.msw << (exp - 48)) | (rx.lsw >> (112 - exp));
 
             return sign ? -result : result;
         }
@@ -5981,15 +5969,13 @@ if (isFloatingPoint!(X))
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
-        const ushort e = F.EXPMASK & y.shorts[F.EXPPOS_SHORT];
-        return e == F.EXPMASK &&
-            y.word & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
+        return (F.EXPMASK & y.shorts[F.EXPPOS_SHORT]) == F.EXPMASK
+            && y.word & 0x7FFF_FFFF_FFFF_FFFF; // not infinity
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        const ushort e = F.EXPMASK & y.shorts[F.EXPPOS_SHORT];
-        return e == F.EXPMASK &&
-            (y.longs[MANTISSA_LSB] | (y.longs[MANTISSA_MSB] & 0x0000_FFFF_FFFF_FFFF)) != 0;
+        return (F.EXPMASK & y.shorts[F.EXPPOS_SHORT]) == F.EXPMASK
+            && (y.lsw | (y.msw & 0x0000_FFFF_FFFF_FFFF)) != 0;
     }
     else
     {
@@ -6157,14 +6143,13 @@ bool isSubnormal(X)(X x) @trusted pure nothrow @nogc
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
-        return (y.ints[MANTISSA_MSB] & F.EXPMASK_INT) == 0
-            && (y.ints[MANTISSA_LSB] || y.ints[MANTISSA_MSB] & F.MANTISSAMASK_INT);
+        return (y.msw & F.EXPMASK_INT) == 0
+            && (y.lsw || y.msw & F.MANTISSAMASK_INT);
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        ushort e = F.EXPMASK & y.shorts[F.EXPPOS_SHORT];
-        return (e == 0 &&
-          ((y.longs[MANTISSA_LSB]|(y.longs[MANTISSA_MSB]& 0x0000_FFFF_FFFF_FFFF)) != 0));
+        return (F.EXPMASK & y.shorts[F.EXPPOS_SHORT]) == 0
+            && (y.lsw | (y.msw & 0x0000_FFFF_FFFF_FFFF)) != 0;
     }
     else static if (F.realFormat == RealFormat.ieeeExtended)
     {
@@ -6223,12 +6208,12 @@ if (isFloatingPoint!(X))
     }
     else static if (F.realFormat == RealFormat.ibmExtended)
     {
-        return (y.high.word & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FF8_0000_0000_0000;
+        return (y.msw & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FF8_0000_0000_0000;
     }
     else static if (F.realFormat == RealFormat.ieeeQuadruple)
     {
-        return (y.longs[MANTISSA_LSB] == 0)
-            && (y.longs[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_0000_0000_0000;
+        return (y.lsw == 0)
+            && (y.msw & 0x7FFF_FFFF_FFFF_FFFF) == 0x7FFF_0000_0000_0000;
     }
     else
     {
@@ -6327,7 +6312,7 @@ bool isIdentical(real x, real y) @trusted pure nothrow @nogc
     else static if (F.realFormat == RealFormat.ieeeQuadruple
                  || F.realFormat == RealFormat.ibmExtended)
     {
-        return xs.longs[0] == ys.longs[0] && xs.longs[1] == ys.longs[1];
+        return xs.msw == ys.msw && xs.lsw == ys.lsw;
     }
     else
     {
@@ -6705,24 +6690,24 @@ real nextUp(real x) @trusted pure nothrow @nogc
             return x; // +Inf and NaN are unchanged.
         }
 
-        if (y.longs[MANTISSA_MSB] & 0x8000_0000_0000_0000)
+        if (y.msw & 0x8000_0000_0000_0000)
         {
             // Negative number
-            if (y.longs[MANTISSA_LSB] == 0 && y.longs[MANTISSA_MSB] == 0x8000_0000_0000_0000)
+            if (y.lsw == 0 && y.msw == 0x8000_0000_0000_0000)
             {
                 // it was negative zero, change to smallest subnormal
-                y.longs[MANTISSA_LSB] = 1;
-                y.longs[MANTISSA_MSB] = 0;
+                y.lsw = 1;
+                y.msw = 0;
                 return y;
             }
-            if (y.longs[MANTISSA_LSB] == 0) --y.longs[MANTISSA_MSB];
-            --y.longs[MANTISSA_LSB];
+            if (y.lsw == 0) --y.msw;
+            --y.lsw;
         }
         else
         {
             // Positive number
-            ++y.longs[MANTISSA_LSB];
-            if (y.longs[MANTISSA_LSB] == 0) ++y.longs[MANTISSA_MSB];
+            ++y.lsw;
+            if (y.lsw == 0) ++y.msw;
         }
         return y;
     }
@@ -7965,13 +7950,13 @@ do
         // Multi-byte add, then multi-byte right shift.
         import core.checkedint : addu;
         bool carry;
-        ulong ml = addu(rx.longs[MANTISSA_LSB], ry.longs[MANTISSA_LSB], carry);
+        ulong ml = addu(rx.lsw, ry.lsw, carry);
 
-        ulong mh = carry + (rx.longs[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL) +
-            (ry.longs[MANTISSA_MSB] & 0x7FFF_FFFF_FFFF_FFFFL);
+        ulong mh = carry + (rx.msw & 0x7FFF_FFFF_FFFF_FFFFL) +
+            (ry.msw & 0x7FFF_FFFF_FFFF_FFFFL);
 
-        u.longs[MANTISSA_MSB] = (mh >>> 1) | (rx.longs[MANTISSA_MSB] & 0x8000_0000_0000_0000);
-        u.longs[MANTISSA_LSB] = (ml >>> 1) | (mh & 1) << 63;
+        u.msw = (mh >>> 1) | (rx.msw & 0x8000_0000_0000_0000);
+        u.lsw = (ml >>> 1) | (mh & 1) << 63;
     }
     else static if (F.realFormat == RealFormat.ieeeDouble)
     {
@@ -8613,8 +8598,8 @@ if (isFloatingPoint!T)
         {
             if (var.bytes[F.SIGNPOS_BYTE] & 0x80)
             {
-                var.longs[MANTISSA_MSB] = ~var.longs[MANTISSA_MSB];
-                var.longs[MANTISSA_LSB] = ~var.longs[MANTISSA_LSB];
+                var.msw = ~var.msw;
+                var.lsw = ~var.lsw;
             }
             else
             {
@@ -8622,13 +8607,13 @@ if (isFloatingPoint!T)
             }
         }
 
-        if (vars[0].longs[MANTISSA_MSB] < vars[1].longs[MANTISSA_MSB])
+        if (vars[0].msw < vars[1].msw)
             return -1;
-        else if (vars[0].longs[MANTISSA_MSB] > vars[1].longs[MANTISSA_MSB])
+        else if (vars[0].msw > vars[1].msw)
             return 1;
-        else if (vars[0].longs[MANTISSA_LSB] < vars[1].longs[MANTISSA_LSB])
+        else if (vars[0].lsw < vars[1].lsw)
             return -1;
-        else if (vars[0].longs[MANTISSA_LSB] > vars[1].longs[MANTISSA_LSB])
+        else if (vars[0].lsw > vars[1].lsw)
             return 1;
         else
             return 0;
