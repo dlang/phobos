@@ -56,6 +56,7 @@ public import std.container.util;
 struct SList(T)
 {
     import std.exception : enforce;
+    import std.functional : unaryFun;
     import std.range : Take;
     import std.range.primitives : isInputRange, isForwardRange, ElementType;
     import std.traits : isImplicitlyConvertible;
@@ -221,6 +222,13 @@ Defines the container's primary range, which embodies a forward range.
         {
             return _head && _head == rhs._head;
         }
+/**
+Returns a $(D ConsumeRange) that iterates then removes elements for which $(D pred) is true.
+    */
+        auto consume(alias pred)() if (is(typeof(unaryFun!pred)))
+        {
+            return ConsumeRange!(unaryFun!pred)(this);
+        }
     }
 
     @safe unittest
@@ -228,6 +236,69 @@ Defines the container's primary range, which embodies a forward range.
         static assert(isForwardRange!Range);
     }
 
+/**
+ Defines a range that iterates then removes elements for which $(D pred) is true.
+    */
+    struct ConsumeRange(alias pred)
+    {
+        private Range _r;
+        private Node* _prevHead = null;
+        private bool _primed = false;
+        this(Range r) { _r = r; }
+        
+        private void prime()
+        {
+            if (_primed) return;
+            while (!_r.empty && !pred(_r.front))
+            {
+                _prevHead = _r._head;
+                _r.popFront();
+            }
+            _primed = true;
+        }
+        
+        private void spliceOut() { _prevHead._next = _r._head._next; }
+        
+        @property bool empty()
+        {
+            prime;
+            if (_r.empty)
+            {
+                spliceOut;
+                return true;
+            }
+            return false;
+        }
+        
+        void popFront()
+        {
+            spliceOut;
+            
+            do
+            {
+                _prevHead = _r._head;
+                _r.popFront();
+            } while (!_r.empty && !pred(_r.front));
+            _primed = true;
+        }
+        @property auto ref front()
+        {
+            prime;
+            return _r.front;
+        }
+    }
+/**
+ Returns a $(D ConsumeRange) that iterates then removes elements for which $(D pred) is true.
+    */
+    auto consume(alias pred)() if (is(typeof(unaryFun!pred)))
+    {
+        return ConsumeRange!(unaryFun!pred)(this[]);
+    }
+    
+    @safe unittest
+    {
+        static assert(isInputRange!(ConsumeRange!(a=>true)));
+    }
 /**
 Property returning $(D true) if and only if the container has no
 elements.
@@ -656,6 +727,21 @@ Complexity: $(BIGOH n)
     assert(b == true);
     assert(a.empty());
     a.linearRemoveElement(3);
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    
+    auto a = SList!int(-1, 1, -2, 1, -3, 4);
+    assert(equal(a.consume!(e=>e<0),[-1,-2,-3]);
+    assert(equal(a[],[1,1,4]));
+    
+    auto b = SList!int(-1, 1, -2, 1, -3, 4);
+    auto c = b[];
+    assert(equal(c.consume!(e=>e<0),[-1,-2,-3]);
+    assert(equal(b[],[1,1,4]));
+    assert(equal(c[],[1,1,4]));
 }
 
 @safe unittest
