@@ -256,6 +256,163 @@ enum RealFormat
     ieeeQuadruple,
 }
 
+// A union which permits converting between a floating point
+// and an integer, or array of integers for low level access.
+union RealRep(N)
+if (isFloatingPoint!N)
+{
+pure: @safe: nothrow: @nogc:
+pragma(inline, true):
+    // Field accessors:
+    //      value = the floating point value to manipulate.
+    //      bytes = view as an array of bytes.
+    //      shorts = view as an array of shorts.
+
+    // 32-bit, 64-bit and 80-bit reals only:
+    //      word = view as an unsigned integer.
+    //      sword = view as a signed integer.
+
+    // 64-bit, 80-bit and 128-bit reals only:
+    //      ints = view as an array of ints.
+    //      msw = view the most significant part.
+    //      lsw = view the least significant part.
+
+    // 80-bit real only:
+    //      exponent = view the exponent part.
+
+    // 128-bit reals only:
+    //      longs = view as an array of longs.
+
+    // 128-bit ibm real only:
+    //      high = view the underlying higher double format.
+    //      low = view the underlying lower double format.
+    Unqual!N value;
+    alias value this;
+
+    this (const N x) inout
+    {
+        this.value = x;
+    }
+
+    alias traits = floatTraits!N;
+
+    static if (traits.realFormat == RealFormat.ieeeSingle)
+    {
+        // Single precision float
+        ubyte[4] bytes;
+        ushort[2] shorts;
+        uint word;
+        int sword;
+    }
+    else static if (traits.realFormat == RealFormat.ieeeDouble)
+    {
+        // Double precision float, or real == double
+        struct
+        {
+            version (LittleEndian)
+            {
+                int lsw;
+                int msw;
+            }
+            else
+            {
+                int msw;
+                int lsw;
+            }
+        }
+        ubyte[8] bytes;
+        ushort[4] shorts;
+        int[2] ints;
+        ulong word;
+        long sword;
+    }
+    else static if (traits.realFormat == RealFormat.ieeeExtended
+                    || traits.realFormat == RealFormat.ieeeExtended53)
+    {
+        // Intel extended real80
+        struct
+        {
+            version (LittleEndian)
+            {
+                union
+                {
+                    struct
+                    {
+                        uint lsw;
+                        uint msw;
+                    }
+                    ulong word;
+                    long sword;
+                }
+                ushort exponent;
+                ushort __pad;
+            }
+            else
+            {
+                ushort exponent;
+                ushort __pad;
+                union
+                {
+                    struct
+                    {
+                        uint msw;
+                        uint lsw;
+                    }
+                    ulong word;
+                    long sword;
+                }
+            }
+        }
+        ubyte[12] bytes;
+        ushort[6] shorts;
+        uint[3] ints;
+    }
+    else static if (traits.realFormat == RealFormat.ibmExtended)
+    {
+        // IBM Extended doubledouble
+        struct
+        {
+            long msw;
+            long lsw;
+        }
+        // For IBM doubledouble the larger magnitude double comes first.
+        // It's really a double[2] and arrays don't index differently
+        // between little and big-endian targets.
+        struct
+        {
+            RealRep!double high;
+            RealRep!double low;
+        }
+        ubyte[16] bytes;
+        ushort[8] shorts;
+        uint[4] ints;
+        long[2] longs;
+    }
+    else static if (traits.realFormat == RealFormat.ieeeQuadruple)
+    {
+        // Quadruple precision float
+        struct
+        {
+            version (LittleEndian)
+            {
+                long lsw;
+                long msw;
+            }
+            else
+            {
+                long msw;
+                long lsw;
+            }
+        }
+        ubyte[16] bytes;
+        ushort[8] shorts;
+        uint[4] ints;
+        long[2] longs;
+    }
+    else
+        static assert(false, "No float bits support for " ~ T.stringof);
+}
+
 // Constants used for extracting the components of the representation.
 // They supplement the built-in floating point properties.
 template floatTraits(T)
