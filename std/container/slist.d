@@ -297,7 +297,7 @@ Returns a $(D ConsumeRange) that iterates then removes elements for which $(D pr
     
     @safe unittest
     {
-        static assert(isInputRange!(ConsumeRange!(a=>true)));
+        static assert(isInputRange!(ConsumeRange!((T a)=>true)));
     }
 /**
 Property returning $(D true) if and only if the container has no
@@ -734,14 +734,14 @@ Complexity: $(BIGOH n)
     import std.algorithm.comparison : equal;
     
     auto a = SList!int(-1, 1, -2, 1, -3, 4);
-    assert(equal(a.consume!(e=>e<0),[-1,-2,-3]));
+    assert(equal(a.consume!((int e)=>e<0),[-1,-2,-3]));
     assert(equal(a[],[1,1,4]));
     
     auto b = SList!int(-1, 1, -2, 1, -3, 4);
     auto c = b[];
-    assert(equal(c.consume!(e=>e<0),[-1,-2,-3]));
+    assert(equal(c.consume!((int e) =>e<0),[-1,-2,-3]));
     assert(equal(b[],[1,1,4]));
-    assert(equal(c[],[1,1,4]));
+    assert(equal(c  ,[1,1,4]));
 }
 
 @safe unittest
