@@ -1068,6 +1068,147 @@ template memoize(alias fun, uint maxSize)
     }
 }
 
+/// ditto
+template memoize(alias fun, uint maxSize, bool lru = true)
+{
+    import std.traits : ReturnType;
+    import std.typecons : Tuple;
+
+    class Node
+    {
+    public:
+        Node next;
+        Node prev;
+        Tuple!(Parameters!fun) args;
+        ReturnType!fun res;
+
+        this(Tuple!(Parameters!fun) args = Tuple!(Parameters!fun).init,
+             ReturnType!fun res = ReturnType!fun.init)
+        {
+            this.args = args;
+            this.res = res;
+        }
+
+        void removeNode()
+        {
+            Node prev = this.prev;
+            Node next = this.next;
+
+            prev.next = next;
+            next.prev = prev;
+        }
+
+        void addNode(Node head)
+        {
+            Node nextHead = head.next;
+
+            nextHead.prev = this;
+            head.next = this;
+            this.prev = head;
+            this.next = nextHead;
+        }
+
+        void moveNode(Node head)
+        {
+            removeNode();
+            addNode(head);
+        }
+    }
+
+    ReturnType!fun memoize(Parameters!fun args)
+    {
+        import std.typecons : Tuple;
+        import std.conv;
+
+        alias Args = Parameters!fun;
+
+        static Node head;
+        static Node tail;
+        static Node[Tuple!Args] cache;
+        static int capacity = maxSize;
+
+        if (capacity == maxSize)
+        {
+            head = new Node();
+            tail = new Node();
+
+            head.prev = tail;
+            head.next = tail;
+
+            tail.next = head;
+            tail.prev = head;
+        }
+
+        Node node = null;
+        auto t = Tuple!Args(args);
+        if (auto p = t in cache)
+        {
+            node = *p;
+        }
+
+        if (node)
+        {
+            node.moveNode(head);
+            return node.res;
+        }
+
+        if (capacity == 0)
+        {
+            Node last = tail.prev;
+            last.removeNode();
+            cache.remove(last.args);
+            capacity++;
+        }
+
+        ReturnType!fun res = fun(args);
+        node = new Node(t, res);
+        cache[t] = node;
+        node.addNode(head);
+        capacity--;
+
+        return res;
+    }
+}
+
+/**
+ * Check LRU policy by filling the cache and checking if the oldest value
+ * is removed when exceeding capacity
+ */
+@system unittest
+{
+    int val;
+    int func(int x)
+    {
+        val = x;
+        return x;
+    }
+
+    alias fmemo = memoize!(func, 4, true);
+    assert(fmemo(1) == 1);
+    assert(val == 1);
+
+    assert(fmemo(2) == 2);
+    assert(val == 2);
+
+    assert(fmemo(3) == 3);
+    assert(val == 3);
+
+    assert(fmemo(4) == 4);
+    assert(val == 4);
+
+    // The value 1 is already in the cache, so 'val' should be unchanged
+    assert(fmemo(1) == 1);
+    assert(val == 4);
+
+    // When inserting 5, the cache is full so 2 should be removed
+    assert(fmemo(5) == 5);
+    assert(val == 5);
+
+    // Check if 2 was removed when previously inserting 5
+    assert(fmemo(2) == 2);
+    assert(val == 2);
+}
+
 /**
  * To _memoize a recursive function, simply insert the memoized call in lieu of the plain recursive call.
  * For example, to transform the exponential-time Fibonacci implementation into a linear-time computation:
@@ -1079,6 +1220,13 @@ template memoize(alias fun, uint maxSize)
         return n < 2 ? n : memoize!fib(n - 2) + memoize!fib(n - 1);
     }
     assert(fib(10) == 55);
+
+    ulong fibLRU(ulong n) @trusted
+    {
+        return n < 2 ? n : memoize!(fibLRU, 5, true)(n - 2) +
+                           memoize!(fibLRU, 5, true)(n - 1);
+    }
+    assert(fibLRU(10) == 55);
 }
 
 /**
@@ -1091,20 +1239,29 @@ template memoize(alias fun, uint maxSize)
         return n < 2 ? 1 : n * memoize!fact(n - 1);
     }
     assert(fact(10) == 3628800);
+
+    ulong factLRU(ulong n) @trusted
+    {
+        return n < 2 ? 1 : n * memoize!(factLRU, 5, true)(n - 1);
+    }
+    assert(factLRU(10) == 3628800);
 }
 
 /**
  * This memoizes all values of $(D fact) up to the largest argument. To only cache the final
  * result, move $(D memoize) outside the function as shown below.
  */
-@safe unittest
+@system unittest
 {
-    ulong factImpl(ulong n) @safe
+    ulong factImpl(ulong n)
     {
         return n < 2 ? 1 : n * factImpl(n - 1);
     }
     alias fact = memoize!factImpl;
     assert(fact(10) == 3628800);
+
+    alias factLRU = memoize!(factImpl, 5, true);
+    assert(factLRU(10) == 3628800);
 }
 
 /**
@@ -1118,9 +1275,15 @@ template memoize(alias fun, uint maxSize)
         // Memoize no more than 8 values
         return n < 2 ? 1 : n * memoize!(fact, 8)(n - 1);
     }
-    assert(fact(8) == 40320);
+
+    ulong factLRU(ulong n)
+    {
+        // Memoize no more than 8 values
+        return n < 2 ? 1 : n * memoize!(factLRU, 8, true)(n - 1);
+    }
+    assert(factLRU(8) == 40320);
     // using more entries than maxSize will overwrite existing entries
-    assert(fact(10) == 3628800);
+    assert(factLRU(10) == 3628800);
 }
 
 @system unittest // not @safe due to memoize
@@ -1170,7 +1333,7 @@ template memoize(alias fun, uint maxSize)
 }
 
 // 16079: memoize should work with arrays
-@safe unittest
+@system unittest
 {
     int executed = 0;
     T median(T)(const T[] nums) {
@@ -1186,15 +1349,25 @@ template memoize(alias fun, uint maxSize)
     }
 
     alias fastMedian = memoize!(median!int);
+    alias fastMedianLRU = memoize!(median!int, 1, true);
 
     assert(fastMedian([7, 5, 3]) == 5);
-    assert(fastMedian([7, 5, 3]) == 5);
-
     assert(executed == 1);
+    executed = 0;
+
+    assert(fastMedian([7, 5, 3]) == 5);
+    assert(executed == 0);
+
+    assert(fastMedianLRU([7, 5, 3]) == 5);
+    assert(executed == 1);
+    executed = 0;
+
+    assert(fastMedianLRU([7, 5, 3]) == 5);
+    assert(executed == 0);
 }
 
 // 16079: memoize should work with structs
-@safe unittest
+@system unittest
 {
     int executed = 0;
     T pickFirst(T)(T first)
@@ -1207,13 +1380,25 @@ template memoize(alias fun, uint maxSize)
     Foo A = Foo(3);
 
     alias first = memoize!(pickFirst!Foo);
-    assert(first(Foo(3)) == A);
+    alias firstLRU = memoize!(pickFirst!Foo, 10, true);
+
     assert(first(Foo(3)) == A);
     assert(executed == 1);
+    executed = 0;
+
+    assert(first(Foo(3)) == A);
+    assert(executed == 0);
+
+    assert(firstLRU(Foo(3)) == A);
+    assert(executed == 1);
+    executed = 0;
+
+    assert(firstLRU(Foo(3)) == A);
+    assert(executed == 0);
 }
 
 // 16079: memoize should work with classes
-@safe unittest
+@system unittest
 {
     int executed = 0;
     T pickFirst(T)(T first)
@@ -1241,9 +1426,21 @@ template memoize(alias fun, uint maxSize)
     }
 
     alias firstClass = memoize!(pickFirst!Bar);
-    assert(firstClass(new Bar(3)).k == 3);
+    alias firstClassLRU = memoize!(pickFirst!Bar, 10, true);
+
     assert(firstClass(new Bar(3)).k == 3);
     assert(executed == 1);
+    executed = 0;
+
+    assert(firstClass(new Bar(3)).k == 3);
+    assert(executed == 0);
+
+    assert(firstClassLRU(new Bar(3)).k == 3);
+    assert(executed == 1);
+    executed = 0;
+
+    assert(firstClassLRU(new Bar(3)).k == 3);
+    assert(executed == 0);
 }
 
 private struct DelegateFaker(F)
