@@ -401,3 +401,20 @@ if (Args.length > 3)
     assert(b.length == 42);
     a.deallocate(b);
 }
+
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.typecons : Ternary;
+
+    shared Segregator!(1024 * 4, GCAllocator, GCAllocator) a;
+
+    auto b = a.allocate(201);
+    assert(b.length == 201);
+
+    void[] p;
+    assert((() nothrow @safe @nogc => a.resolveInternalPointer(null, p))() == Ternary.no);
+    assert((() nothrow @safe @nogc => a.resolveInternalPointer(&b[0], p))(  ) == Ternary.yes);
+
+    a.deallocate(b);
+}

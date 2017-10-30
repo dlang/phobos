@@ -238,7 +238,6 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     auto b = a.allocate(400);
     assert(b.length == 400);
     assert(a.owns(b) == Ternary.yes);
-    void[] p;
     a.deallocate(b);
 }
 
