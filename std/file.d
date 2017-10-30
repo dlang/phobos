@@ -350,8 +350,14 @@ if (isInputRange!R && isSomeChar!(ElementEncodingType!R) && !isInfinite!R &&
     }
 
     write(deleteme, "Read me"); // deleteme is the name of a temporary file
-    version(Posix) { assert(read(deleteme, 100, 100) == []); }
     assert(read(deleteme, 5, 3) == "me");
+    version(Posix)
+    {
+        assert(read(deleteme, 100, 100) == []);
+        // test special files
+        auto s = read("/proc/sys/kernel/osrelease", 5, 10);
+        assert(s.length > 0);
+    }
 }
 
 version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez, size_t upTo, size_t offset) @trusted
@@ -380,7 +386,7 @@ version (Posix) private void[] readImpl(const(char)[] name, const(FSChar)* namez
     if (offset >= statbuf.st_size)
         offset = to!size_t(statbuf.st_size + 1);
     immutable initialAlloc = min(upTo, to!size_t(statbuf.st_size
-        ? min(statbuf.st_size + 1 - offset, maxInitialAlloc)
+        ? min(statbuf.st_size + 1, maxInitialAlloc)
         : minInitialAlloc));
     void[] result = uninitializedArray!(ubyte[])(initialAlloc);
     scope(failure) GC.free(result.ptr);
@@ -450,13 +456,11 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
         while (totalNumRead != nNumberOfBytesToRead)
         {
             import std.stdio : writeln;
-            writeln("bytes to read: ", nNumberOfBytesToRead);
             const uint chunkSize = min(nNumberOfBytesToRead - totalNumRead, 0xffff_0000);
             DWORD numRead = void;
             const result = ReadFile(hFile, lpBuffer + totalNumRead, chunkSize, &numRead, null);
             if (result == 0 || numRead != chunkSize)
                 return false;
-            writeln("bytes read: ", numRead);
             totalNumRead += chunkSize;
         }
         return true;
@@ -485,8 +489,6 @@ version (Windows) private void[] readImpl(const(char)[] name, const(FSChar)* nam
     {
         if (offset != 0)
         {
-            import std.stdio : writeln;
-            writeln("with setfilepointer!");
             LARGE_INTEGER p;
             p.QuadPart = offset;
             () @trusted { SetFilePointerEx(h, p, null, FILE_BEGIN); } ();
