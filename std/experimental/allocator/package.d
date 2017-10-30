@@ -1031,8 +1031,7 @@ private enum hasPureDtor(T) = !hasElaborateDestructor!T ||
 private enum canSafelyDeallocPostRewind(T) = hasPurePostblit!T && hasPureDtor!T;
 
 /// Ditto
-T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
-    auto ref T init)
+T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length, T init)
 {
     if (!length) return null;
     auto m = alloc.allocate(T.sizeof * length);
@@ -1092,6 +1091,18 @@ T[] makeArray(T, Allocator)(auto ref Allocator alloc, size_t length,
     test!(shared int)();
     test!(const int)();
     test!(immutable int)();
+}
+
+@system unittest
+{
+    void test(T)(in T initialValue)
+    {
+        auto t = theAllocator.makeArray!T(100, initialValue);
+        //auto t = theAllocator.makeArray(100, initialValue); // works well with the old code
+    }
+
+    const int init = 3;
+    test(init);
 }
 
 @system unittest
