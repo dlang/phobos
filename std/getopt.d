@@ -390,22 +390,6 @@ getopt(args,
 Only the option directly following $(D std.getopt.config.required) is
 required.
 
-Hidden:
-An option can likewise be marked as hidden. Flagged thus it will still be a
-valid option, but it will not show up the options list produced by
-$(D defaultGetoptPrinter).
-
----------
-bool foo, bar;
-getopt(args,
-    std.getopt.config.hidden,
-    "foo|f", &foo,
-    "bar|b", &bar);
----------
-
-Only the option directly following $(D std.getopt.config.hidden) will be
-omitted.
-
 Passing_unrecognized_options_through:
 If an application needs to do its own processing of whichever arguments
 $(D getopt) did not understand, it can pass the
@@ -499,9 +483,7 @@ enum config {
     /// Do not erase the endOfOptions separator from args
     keepEndOfOptions,
     /// Make the next option a required option
-    required,
-    /// Hide this option in the $(D defaultGetoptPrinter) help list
-    hidden
+    required
 }
 
 /** The result of the $(D getopt) function.
@@ -520,7 +502,6 @@ struct Option {
     string optLong; /// The long symbol for this option
     string help; /// The description of this option
     bool required; /// If a option is required, not passing it will result in an error
-    bool hidden; /// Don't show the option in the help list
 }
 
 private pure Option splitAndGet(string opt) @trusted nothrow
@@ -724,7 +705,6 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
             }
             Option optionHelp = splitAndGet(option);
             optionHelp.required = cfg.required;
-            optionHelp.hidden = cfg.hidden;
 
             if (optionHelp.optLong.length)
             {
@@ -773,7 +753,6 @@ private void getoptImpl(T...)(ref string[] args, ref configuration cfg,
                     ~ option ~ " was not supplied", excep);
             }
             cfg.required = false;
-            cfg.hidden = false;
 
             getoptImpl(args, cfg, rslt, excep, visitedLongOpts,
                 visitedShortOpts, opts[lowSliceIdx .. $]);
@@ -1115,8 +1094,7 @@ private struct configuration
                 bool, "stopOnFirstNonOption", 1,
                 bool, "keepEndOfOptions", 1,
                 bool, "required", 1,
-                bool, "hidden", 1,
-                ubyte, "", 1));
+                ubyte, "", 2));
 }
 
 private bool optMatch(string arg, string optPattern, ref string value,
@@ -1191,7 +1169,6 @@ private void setConfig(ref configuration cfg, config option) @safe pure nothrow 
     case config.passThrough: cfg.passThrough = true; break;
     case config.noPassThrough: cfg.passThrough = false; break;
     case config.required: cfg.required = true; break;
-    case config.hidden: cfg.hidden = true; break;
     case config.stopOnFirstNonOption:
         cfg.stopOnFirstNonOption = true; break;
     case config.keepEndOfOptions:
@@ -1625,8 +1602,7 @@ The passed text will be printed first, followed by a newline, then the short
 and long version of every option will be printed. The short and long version
 will be aligned to the longest option of every $(D Option) passed. If the option
 is required, then "Required:" will be printed after the long version of the
-$(D Option). If a help message is present it will be printed next. If the option
-is marked to be hidden it will be omitted from the list. The format is
+$(D Option). If a help message is present it will be printed next. The format is
 illustrated by this code:
 
 ------------
@@ -1679,8 +1655,6 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
 
     foreach (it; opt)
     {
-        if (it.hidden) continue;
-
         output.formattedWrite("%*s %*s%*s%s\n", ls, it.optShort, ll, it.optLong,
             hasRequired ? re.length : 1, it.required ? re : " ", it.help);
     }
