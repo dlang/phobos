@@ -1091,11 +1091,11 @@ template memoize(alias fun, uint maxSize, bool lru = true)
 
         void removeNode()
         {
-            Node prev = this.prev;
-            Node next = this.next;
+            Node prevNode = this.prev;
+            Node nextNode = this.next;
 
-            prev.next = next;
-            next.prev = prev;
+            prevNode.next = nextNode;
+            nextNode.prev = prevNode;
         }
 
         void addNode(Node head)
@@ -1118,7 +1118,6 @@ template memoize(alias fun, uint maxSize, bool lru = true)
     ReturnType!fun memoize(Parameters!fun args)
     {
         import std.typecons : Tuple;
-        import std.conv;
 
         alias Args = Parameters!fun;
 
