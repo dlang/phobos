@@ -772,7 +772,7 @@ struct BitArray
 {
 private:
 
-    import core.bitop : bts, btr, bsf, bt;
+    import core.bitop : btc, bts, btr, bsf, bt;
     import std.format : FormatSpec;
 
     size_t _len;
@@ -884,6 +884,191 @@ public:
         else
             btr(_ptr, i);
         return b;
+    }
+
+    /**
+      Sets all the values in the $(D BitArray) to the
+      value specified by $(D val).
+     */
+    void opSliceAssign(bool val)
+    {
+        _ptr[0 .. fullWords] = val ? ~size_t(0) : 0;
+        if (endBits)
+        {
+            if (val)
+                _ptr[fullWords] |= endMask;
+            else
+                _ptr[fullWords] &= ~endMask;
+        }
+    }
+
+    ///
+    @system unittest
+    {
+        import std.algorithm.comparison : equal;
+
+        auto b = BitArray([1, 0, 1, 0, 1, 1]);
+
+        b[] = true;
+        // all bits are set
+        assert(b.bitsSet.equal([0, 1, 2, 3, 4, 5]));
+
+        b[] = false;
+        // none of the bits are set
+        assert(b.bitsSet.empty);
+    }
+
+    /**
+      Sets the bits of a slice of $(D BitArray) starting
+      at index `start` and ends at index ($D end - 1)
+      with the values specified by $(D val).
+     */
+    void opSliceAssign(bool val, size_t start, size_t end)
+    in
+    {
+        assert(start <= end);
+        assert(end <= length);
+    }
+    body
+    {
+        size_t startBlock = start / bitsPerSizeT;
+        size_t endBlock = end / bitsPerSizeT;
+        size_t startOffset = start % bitsPerSizeT;
+        size_t endOffset = end % bitsPerSizeT;
+
+        if (startBlock == endBlock)
+        {
+            size_t startBlockMask = ~((size_t(1) << startOffset) - 1);
+            size_t endBlockMask = (size_t(1) << endOffset) - 1;
+            size_t joinMask = startBlockMask & endBlockMask;
+            if (val)
+                _ptr[startBlock] |= joinMask;
+            else
+                _ptr[startBlock] &= ~joinMask;
+            return;
+        }
+
+        if (startOffset != 0)
+        {
+            size_t startBlockMask = ~((size_t(1) << startOffset) - 1);
+            if (val)
+                _ptr[startBlock] |= startBlockMask;
+            else
+                _ptr[startBlock] &= ~startBlockMask;
+            ++startBlock;
+        }
+        if (endOffset != 0)
+        {
+            size_t endBlockMask = (size_t(1) << endOffset) - 1;
+            if (val)
+                _ptr[endBlock] |= endBlockMask;
+            else
+                _ptr[endBlock] &= ~endBlockMask;
+        }
+        _ptr[startBlock .. endBlock] = size_t(0) - size_t(val);
+    }
+
+    ///
+    @system unittest
+    {
+        import std.algorithm.comparison : equal;
+        import std.range : iota;
+        import std.stdio;
+
+        auto b = BitArray([1, 0, 0, 0, 1, 1, 0]);
+        b[1 .. 3] = true;
+        assert(b.bitsSet.equal([0, 1, 2, 4, 5]));
+
+        bool[72] bitArray;
+        auto b1 = BitArray(bitArray);
+        b1[63 .. 67] = true;
+        assert(b1.bitsSet.equal([63, 64, 65, 66]));
+        b1[63 .. 67] = false;
+        assert(b1.bitsSet.empty);
+        b1[0 .. 64] = true;
+        assert(b1.bitsSet.equal(iota(0, 64)));
+        b1[0 .. 64] = false;
+        assert(b1.bitsSet.empty);
+
+        bool[256] bitArray2;
+        auto b2 = BitArray(bitArray2);
+        b2[3 .. 245] = true;
+        assert(b2.bitsSet.equal(iota(3, 245)));
+        b2[3 .. 245] = false;
+        assert(b2.bitsSet.empty);
+    }
+
+    /**
+      Flips all the bits in the $(D BitArray)
+     */
+    void flip()
+    {
+        foreach (i; 0 .. fullWords)
+            _ptr[i] = ~_ptr[i];
+
+        _ptr[fullWords] = (~_ptr[fullWords]) & endMask;
+    }
+
+    ///
+    @system unittest
+    {
+        import std.algorithm.comparison : equal;
+        import std.range : iota;
+
+        // positions 0, 2, 4 are set
+        auto b = BitArray([1, 0, 1, 0, 1, 0]);
+        b.flip();
+        // after flipping, positions 1, 3, 5 are set
+        assert(b.bitsSet.equal([1, 3, 5]));
+
+        bool[270] bits;
+        auto b1 = BitArray(bits);
+        b1.flip();
+        assert(b1.bitsSet.equal(iota(0, 270)));
+    }
+
+    /**
+      Flips a single bit, specified by `pos`
+     */
+    void flip(size_t i)
+    {
+        bt(_ptr, i) ? btr(_ptr, i) : bts(_ptr, i);
+    }
+
+    @system unittest
+    {
+        auto ax = BitArray([1, 0, 0, 1]);
+        ax.flip(0);
+        assert(ax[0] == 0);
+
+        bool[200] y;
+        y[90 .. 130] = true;
+        auto ay = BitArray(y);
+        ay.flip(100);
+        assert(ay[100] == 0);
+    }
+
+    /**********************************************
+     * Counts all the set bits in the $(D BitArray)
+     */
+    size_t count()
+    {
+        size_t bitCount;
+        foreach (i; 0 .. fullWords)
+            bitCount += countBitsSet(_ptr[i]);
+        bitCount += countBitsSet(_ptr[fullWords] & endMask);
+        return bitCount;
+    }
+
+    @system unittest
+    {
+        auto a = BitArray([0, 1, 1, 0, 0, 1, 1]);
+        assert(a.count == 4);
+
+        bool[200] boolArray;
+        boolArray[45 .. 130] = true;
+        auto c = BitArray(boolArray);
+        assert(c.count == 85);
     }
 
     /**********************************************
