@@ -125,7 +125,7 @@ struct Region(ParentAllocator = NullAllocator,
     {
         static if (growDownwards)
         {
-            if (!available || available < n) return null;
+            if (!available || available < n || n == 0) return null;
             static if (minAlign > 1)
                 const rounded = n.roundUpToAlignment(alignment);
             else
@@ -139,6 +139,7 @@ struct Region(ParentAllocator = NullAllocator,
         }
         else
         {
+            if (n == 0) return null;
             auto result = _current[0 .. n];
             static if (minAlign > 1)
                 const rounded = n.roundUpToAlignment(alignment);
@@ -220,7 +221,7 @@ struct Region(ParentAllocator = NullAllocator,
     {
         assert(owns(b) == Ternary.yes || b.ptr is null);
         assert(b.ptr + b.length <= _current || b.ptr is null);
-        if (!b.ptr) return delta == 0;
+        if (b is null || delta == 0) return delta == 0;
         auto newLength = b.length + delta;
         if (_current < b.ptr + b.length + alignment)
         {
@@ -358,6 +359,14 @@ struct Region(ParentAllocator = NullAllocator,
     assert(b.length == 101);
     assert((() nothrow @safe @nogc => reg.owns(b))() == Ternary.yes);
     // Destructor will free the memory
+}
+
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    testAllocator!(() => Region!(Mallocator)(1024 * 64));
+    testAllocator!(() => Region!(Mallocator, Mallocator.alignment, Yes.growDownwards)(1024 * 64));
 }
 
 /**
@@ -686,7 +695,7 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     */
     bool expand(ref void[] b, size_t delta) shared
     {
-        if (b is null) return delta == 0;
+        if (b is null || delta == 0) return delta == 0;
         assert(_brkInitial && _brkCurrent); // otherwise where did b come from?
         pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) == 0 || assert(0);
         scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex) == 0
