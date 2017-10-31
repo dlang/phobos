@@ -123,9 +123,10 @@ struct Region(ParentAllocator = NullAllocator,
     */
     void[] allocate(size_t n)
     {
+        if (n == 0) return null;
         static if (growDownwards)
         {
-            if (!available || available < n || n == 0) return null;
+            if (!available || available < n) return null;
             static if (minAlign > 1)
                 const rounded = n.roundUpToAlignment(alignment);
             else
@@ -139,7 +140,6 @@ struct Region(ParentAllocator = NullAllocator,
         }
         else
         {
-            if (n == 0) return null;
             auto result = _current[0 .. n];
             static if (minAlign > 1)
                 const rounded = n.roundUpToAlignment(alignment);
