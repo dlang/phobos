@@ -408,11 +408,18 @@ $(D args) after $(D getopt) returns.
 
 Help_Information_Generation:
 If an option string is followed by another string, this string serves as a
-description for this option. The $(D getopt) function returns a struct of type
+description for this option. This field is optional, and omitting it will yield
+the same result as when supplying an empty string.
+
+The $(D getopt) function returns a struct of type
 $(D GetoptResult). This return value contains information about all passed options
 as well a $(D bool GetoptResult.helpWanted) flag indicating whether information
 about these options was requested. The $(D getopt) function always adds an option for
 `--help|-h` to set the flag if the option is seen on the command line.
+
+An option can be prevented from being displayed in this information list by
+giving it a description value of `null`. The option will still be available for
+use, but it will be hidden.
 
 Options_Terminator:
 A lone double-dash terminates $(D getopt) gathering. It is used to
@@ -500,7 +507,7 @@ struct GetoptResult {
 struct Option {
     string optShort; /// The short symbol for this option
     string optLong; /// The long symbol for this option
-    string help; /// The description of this option
+    string help = ""; /// The description of this option
     bool required; /// If a option is required, not passing it will result in an error
 }
 
@@ -555,7 +562,7 @@ follow this pattern:
 
  - config override: a config value, optional
  - option:          a string or a char
- - description:     a string, optional
+ - description:     a string, optional, may be explicitly null
  - receiver:        a pointer or a callable
 */
 private template optionValidator(A...)
@@ -583,12 +590,13 @@ private template optionValidator(A...)
             else foreach (i; staticIota!(1, A.length))
             {
                 static if (!isReceiver!(A[i]) && !isOptionStr!(A[i]) &&
-                    !(is(A[i] == config)))
+                    !is(A[i] == config) && !is(A[i] == typeof(null)))
                 {
                     msg = format(fmt, "invalid argument type: " ~ A[i].stringof, i);
                     break;
                 }
-                else static if (isReceiver!(A[i]) && !isOptionStr!(A[i-1]))
+                else static if (isReceiver!(A[i]) && !isOptionStr!(A[i-1]) &&
+                    !is(A[i-1] == typeof(null)))
                 {
                     msg = format(fmt, "a receiver can not be preceeded by a receiver", i);
                     break;
@@ -1655,6 +1663,8 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
 
     foreach (it; opt)
     {
+        if (it.help is null) continue;
+
         output.formattedWrite("%*s %*s%*s%s\n", ls, it.optShort, ll, it.optLong,
             hasRequired ? re.length : 1, it.required ? re : " ", it.help);
     }
@@ -1854,4 +1864,48 @@ void defaultGetoptFormatter(Output)(Output output, string text, Option[] opt)
     assert(n == -50);
     assert(c == '-');
     assert(f == "-");
+}
+
+@system unittest // Hidden option when description is explicitly null
+{
+    import std.array : appender;
+    import std.string : indexOf;
+
+    auto args = ["program", "--normal", "--empty", "--missing", "--null"];
+    bool normal, empty, missing, null_;
+
+    auto result = getopt(args,
+        "normal", "description", &normal,
+        "empty", "", &empty,
+        "missing", &missing,
+        "null", null, &null_); // hidden
+
+    assert(normal);
+    assert(empty);
+    assert(missing);
+    assert(null_);
+
+    auto app = appender!string();
+    defaultGetoptFormatter(app, "Help", result.options);
+    string helpMsg = app.data;
+
+    assert(helpMsg.indexOf("--normal") != -1);
+    assert(helpMsg.indexOf("--empty") != -1);
+    assert(helpMsg.indexOf("--missing") != -1);
+    assert(helpMsg.indexOf("--null") == -1);
+
+    // Added support for typeof(null) parameters, so test that only the
+    // description may be null
+    bool foo;
+
+    // Normal getopt with config.required flag
+    static assert(__traits(compiles, getopt(args, config.required, "option", "description", &foo)));
+    // null description
+    static assert(__traits(compiles, getopt(args, "option", null, &foo)));
+    // null flag
+    static assert(!__traits(compiles, getopt(args, null, "option", "description", &foo)));
+    // null option string
+    static assert(!__traits(compiles, getopt(args, null, "description", &foo)));
+    // null receiver
+    static assert(!__traits(compiles, getopt(args, "option", "description", null)));
 }
