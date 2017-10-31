@@ -196,7 +196,8 @@ struct FallbackAllocator(Primary, Fallback)
     Returns $(D primary.owns(b) | fallback.owns(b)).
     */
     static if (hasMember!(Primary, "owns") && hasMember!(Fallback, "owns"))
-    Ternary owns(void[] b)
+    //Ternary owns(const void[] b) const ?
+    Ternary owns(const void[] b)
     {
         return primary.owns(b) | fallback.owns(b);
     }
@@ -361,7 +362,7 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
     import std.typecons : Ternary;
 
     FallbackAllocator!(InSituRegion!16_384, InSituRegion!16_384) a;
-    auto buff = a.allocate(42);
+    const buff = a.allocate(42);
     assert((() pure nothrow @safe @nogc => a.owns(buff))() == Ternary.yes);
 }
 

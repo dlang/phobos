@@ -223,9 +223,24 @@ struct ScopedAllocator(ParentAllocator)
 @system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.typecons : Ternary;
+
     ScopedAllocator!GCAllocator a;
 
     assert(__traits(compiles, (() nothrow @safe @nogc => a.goodAllocSize(0))()));
     // goodAllocSize is not pure because we are calling through Allocator.instance
     assert(!__traits(compiles, (() pure nothrow @safe @nogc => a.goodAllocSize(0))()));
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.typecons : Ternary;
+
+    auto a = Region!(Mallocator)(1024 * 64);
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
+    assert((() pure nothrow @safe @nogc => a.owns(null))() == Ternary.no);
 }

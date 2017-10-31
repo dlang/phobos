@@ -85,9 +85,9 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     $(D parent.alignedAllocate(goodAllocSize(n), a)).
     */
     static if (hasMember!(ParentAllocator, "alignedAllocate"))
-    void[] alignedAllocate(size_t n, uint)
+    void[] alignedAllocate(size_t n, uint a)
     {
-        auto result = parent.alignedAllocate(goodAllocSize(n));
+        auto result = parent.alignedAllocate(goodAllocSize(n), a);
         return result.ptr ? result.ptr[0 .. n] : null;
     }
 
@@ -171,7 +171,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     {
         if (!b.ptr)
         {
-            b = alignedAllocate(s);
+            b = alignedAllocate(s, a);
             return b.length == s;
         }
         if (s >= b.length && expand(b, s - b.length)) return true;
@@ -238,4 +238,20 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     testAllocator!(() => MyAlloc());
 
     assert((() pure nothrow @safe @nogc => MyAlloc().goodAllocSize(1))() == 64);
+}
+
+// Check that owns inherits from parent, i.e. Region
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.typecons : Ternary;
+
+    alias Alloc = Quantizer!(Region!(Mallocator),
+            (size_t n) => n.roundUpToMultipleOf(64));
+    auto a = Alloc(Region!Mallocator(1024 * 64));
+    const b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
+    assert((() pure nothrow @safe @nogc => a.owns(null))() == Ternary.no);
 }
