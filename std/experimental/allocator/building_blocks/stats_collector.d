@@ -289,7 +289,7 @@ public:
         Ternary owns(void[] b)
         { return ownsImpl(b); }
         else
-        Ternary owns(string f = __FILE, uint n = line)(void[] b)
+        Ternary owns(string f = __FILE__, uint n = __LINE__)(void[] b)
         { return ownsImpl!(f, n)(b); }
     }
 
