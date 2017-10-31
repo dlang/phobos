@@ -112,7 +112,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             }
         }
 
-        private void[] actualAllocation(void[] b) const
+        private inout(void)[] actualAllocation(inout(void)[] b) const
         {
             assert(b !is null);
             return (b.ptr - stateSize!Prefix)
@@ -168,10 +168,11 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         }
 
         static if (hasMember!(Allocator, "owns"))
-        Ternary owns(void[] b)
+        //Ternary owns(const void[] b) const ?
+        Ternary owns(const void[] b)
         {
             if (b is null) return Ternary.no;
-            return parent.owns(actualAllocation(b));
+            return parent.owns((() @trusted => actualAllocation(b))());
         }
 
         static if (hasMember!(Allocator, "resolveInternalPointer"))
@@ -275,7 +276,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         /// Ditto
         void[] allocate(size_t);
         /// Ditto
-        Ternary owns(void[]);
+        Ternary owns(const void[]);
         /// Ditto
         bool expand(ref void[] b, size_t delta);
         /// Ditto
@@ -477,4 +478,18 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     auto b = a.allocate(42);
     assert(b.length == 42);
     assert((() nothrow @nogc => a.deallocateAll())());
+}
+
+// Check that owns inherits from parent, i.e. Region
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.typecons : Ternary;
+
+    auto a = AffixAllocator!(Region!(Mallocator), uint)(Region!Mallocator(1024 * 64));
+    const b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
+    assert((() pure nothrow @safe @nogc => a.owns(null))() == Ternary.no);
 }
