@@ -31,10 +31,11 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     */
     Allocator[(max + 1 - min) / step] buckets;
 
+    pure nothrow @safe @nogc
     private Allocator* allocatorFor(size_t n)
     {
         const i = (n - min) / step;
-        return i < buckets.length ? buckets.ptr + i : null;
+        return i < buckets.length ? &buckets[i] : null;
     }
 
     /**
@@ -270,4 +271,6 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     // Free through realloc
     assert(a.reallocate(b, 0));
     assert(b is null);
+    // Ensure deallocate inherits from parent allocators
+    () nothrow @nogc { a.deallocate(b); }();
 }

@@ -51,6 +51,7 @@ struct NullAllocator
     No-op.
     Precondition: $(D b is null)
     */
+    pure nothrow @nogc
     bool deallocate(void[] b) shared { assert(b is null); return true; }
     /**
     No-op.
@@ -76,7 +77,7 @@ struct NullAllocator
     assert(!NullAllocator.instance.expand(b, 42));
     assert(!NullAllocator.instance.reallocate(b, 42));
     assert(!NullAllocator.instance.alignedReallocate(b, 42, 0));
-    NullAllocator.instance.deallocate(b);
+    () nothrow @nogc { NullAllocator.instance.deallocate(b); }();
     NullAllocator.instance.deallocateAll();
 
     import std.typecons : Ternary;

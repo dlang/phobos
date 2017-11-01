@@ -2974,7 +2974,7 @@ unittest
 
     foreach (b; allox.randomCover)
     {
-        a.deallocate(b);
+        () nothrow @nogc { a.deallocate(b); }();
     }
 
     assert(a.empty == Ternary.yes);
@@ -3006,11 +3006,11 @@ unittest
             switch (uniform(0, 2))
             {
             case 0:
-                a.deallocate(bufs[j]);
+                () nothrow @nogc { a.deallocate(bufs[j]); }();
                 bufs[j] = a.allocate(uniform(0, 4096));
                 break;
             case 1:
-                a.deallocate(bufs[j]);
+                () nothrow @nogc { a.deallocate(bufs[j]); }();
                 bufs[j] = null;
                 break;
             default:

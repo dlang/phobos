@@ -440,11 +440,16 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     assert(p.ptr is d.ptr && p.length >= d.length);
 }
 
-// Check that goodAllocSize inherits from parent, i.e. GCAllocator
 @system unittest
 {
     import std.experimental.allocator.gc_allocator;
     alias a = AffixAllocator!(GCAllocator, uint).instance;
 
+    // Check that goodAllocSize inherits from parent, i.e. GCAllocator
     assert(__traits(compiles, (() nothrow @safe @nogc => a.goodAllocSize(1))()));
+
+    // Ensure deallocate inherits from parent
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    () nothrow @nogc { a.deallocate(b); }();
 }

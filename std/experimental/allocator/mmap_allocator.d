@@ -40,6 +40,7 @@ struct MmapAllocator
         }
 
         /// Ditto
+        nothrow @nogc
         bool deallocate(void[] b) shared
         {
             import core.sys.posix.sys.mman : munmap;
@@ -63,6 +64,7 @@ struct MmapAllocator
         }
 
         /// Ditto
+        nothrow @nogc
         bool deallocate(void[] b) shared
         {
             return b.ptr is null || VirtualFree(b.ptr, 0, MEM_RELEASE) != 0;
@@ -75,5 +77,5 @@ struct MmapAllocator
     alias alloc = MmapAllocator.instance;
     auto p = alloc.allocate(100);
     assert(p.length == 100);
-    alloc.deallocate(p);
+    () nothrow @nogc { alloc.deallocate(p); }();
 }

@@ -80,7 +80,8 @@ struct GCAllocator
     }
 
     /// Ditto
-    pure nothrow @system bool deallocate(void[] b) shared
+    pure nothrow @system @nogc
+    bool deallocate(void[] b) shared
     {
         GC.free(b.ptr);
         return true;
@@ -148,7 +149,7 @@ struct GCAllocator
         assert((() nothrow @safe @nogc => GCAllocator.instance.goodAllocSize(s - (s / 2) + 1))() == s);
 
         auto buffer = GCAllocator.instance.allocate(s);
-        scope(exit) GCAllocator.instance.deallocate(buffer);
+        scope(exit) () nothrow @nogc { GCAllocator.instance.deallocate(buffer); }();
 
         void[] p;
         assert((() nothrow @safe => GCAllocator.instance.resolveInternalPointer(null, p))() == Ternary.no);
@@ -158,7 +159,7 @@ struct GCAllocator
         assert(GC.sizeOf(buffer.ptr) == s);
 
         auto buffer2 = GCAllocator.instance.allocate(s - (s / 2) + 1);
-        scope(exit) GCAllocator.instance.deallocate(buffer2);
+        scope(exit) () nothrow @nogc { GCAllocator.instance.deallocate(buffer2); }();
 
         assert(GC.sizeOf(buffer2.ptr) == s);
     }

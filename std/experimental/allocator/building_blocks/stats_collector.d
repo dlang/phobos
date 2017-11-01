@@ -695,11 +695,11 @@ public:
         assert(a.numAllocate == 3);
         assert(a.bytesAllocated == 404);
 
-        a.deallocate(b2);
+        () nothrow @nogc { a.deallocate(b2); }();
         assert(a.numDeallocate == 1);
-        a.deallocate(b1);
+        () nothrow @nogc { a.deallocate(b1); }();
         assert(a.numDeallocate == 2);
-        a.deallocate(b3);
+        () nothrow @nogc { a.deallocate(b3); }();
         assert(a.numDeallocate == 3);
         assert(a.numAllocate == a.numDeallocate);
         assert(a.bytesUsed == 0);
@@ -725,9 +725,9 @@ public:
         auto b2 = a.allocate(101);
         auto b3 = a.allocate(202);
 
-        a.deallocate(b2);
-        a.deallocate(b1);
-        a.deallocate(b3);
+        () nothrow @nogc { a.deallocate(b2); }();
+        () nothrow @nogc { a.deallocate(b1); }();
+        () nothrow @nogc { a.deallocate(b3); }();
     }
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.gc_allocator : GCAllocator;

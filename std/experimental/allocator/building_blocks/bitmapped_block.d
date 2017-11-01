@@ -56,7 +56,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         import std.experimental.allocator.mallocator : AlignedMallocator;
         auto m = cast(ubyte[])(AlignedMallocator.instance.alignedAllocate(1024 * 64,
                                 max(theAlignment, cast(uint) size_t.sizeof)));
-        scope(exit) AlignedMallocator.instance.deallocate(m);
+        scope(exit) () nothrow @nogc { AlignedMallocator.instance.deallocate(m); }();
         testAllocator!(() => BitmappedBlock(m));
     }
     static assert(theBlockSize > 0 && theAlignment.isGoodStaticAlignment);
@@ -580,6 +580,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     /**
     Deallocates a block previously allocated with this allocator.
     */
+    nothrow @nogc
     bool deallocate(void[] b)
     {
         if (b is null) return true;
@@ -762,7 +763,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 
         foreach (i; 0 .. blocks / blocksAtATime)
         {
-            a.deallocate(v[i]);
+            () nothrow @nogc { a.deallocate(v[i]); }();
         }
 
         foreach (i; 0 .. blocks / blocksAtATime)
@@ -774,7 +775,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 
         foreach (i; 0 .. v.length)
         {
-            a.deallocate(v[i]);
+            () nothrow @nogc { a.deallocate(v[i]); }();
         }
 
         if (twice)
@@ -884,7 +885,7 @@ struct BitmappedBlockWithInternalPointers(
         import std.experimental.allocator.mallocator : AlignedMallocator;
         auto m = cast(ubyte[])(AlignedMallocator.instance.alignedAllocate(1024 * 64,
             theAlignment));
-        scope(exit) AlignedMallocator.instance.deallocate(m);
+        scope(exit) () nothrow @nogc { AlignedMallocator.instance.deallocate(m); }();
         testAllocator!(() => BitmappedBlockWithInternalPointers(m));
     }
 
@@ -1115,6 +1116,9 @@ struct BitmappedBlockWithInternalPointers(
     offset = &b[0] + 4096;
     assert((() nothrow @safe @nogc => h.resolveInternalPointer(offset, p))() == Ternary.yes);
     assert(p.ptr is b.ptr);
+
+    // Ensure deallocate inherits from parent
+    () nothrow @nogc { h.deallocate(b); }();
 }
 
 @system unittest
