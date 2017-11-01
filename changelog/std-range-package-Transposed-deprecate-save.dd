@@ -1,4 +1,4 @@
-Deprecate `savce` for `std.range.package.Transposed`
+Deprecate `save` for `std.range.package.Transposed`
 
 Transposed is incorrectly marked as a forward range. Its `popFront` primitive 
 cannot be used without affecting any other copies made with `save`. `save` will be
