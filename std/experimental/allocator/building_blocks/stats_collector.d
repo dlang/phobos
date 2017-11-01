@@ -286,14 +286,14 @@ public:
     static if (hasMember!(Allocator, "owns"))
     {
         static if ((perCallFlags & Options.numOwns) == 0)
-        Ternary owns(void[] b)
+        Ternary owns(const void[] b)
         { return ownsImpl(b); }
         else
-        Ternary owns(string f = __FILE__, uint n = __LINE__)(void[] b)
+        Ternary owns(string f = __FILE__, uint n = __LINE__)(const void[] b)
         { return ownsImpl!(f, n)(b); }
     }
 
-    private Ternary ownsImpl(string f = null, uint n = 0)(void[] b)
+    private Ternary ownsImpl(string f = null, uint n = 0)(const void[] b)
     {
         up!"numOwns";
         addPerCall!(f, n, "numOwns")(1);
@@ -737,8 +737,24 @@ public:
 @system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.typecons : Ternary;
     StatsCollector!(GCAllocator, 0, 0) a;
 
     // calls std.experimental.allocator.common.goodAllocSize
     assert((() pure nothrow @safe @nogc => a.goodAllocSize(1))());
+}
+
+// Check that owns inherits from parent, i.e. Region
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.typecons : Ternary;
+
+    auto a = StatsCollector!(Region!(Mallocator), Options.all, Options.all)
+                (Region!Mallocator(1024 * 64));
+    const b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
+    assert((() nothrow @safe @nogc => a.owns(null))() == Ternary.no);
 }
