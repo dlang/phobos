@@ -6646,7 +6646,7 @@ if (isForwardRange!RangeOfRanges &&
 
     /**
        Save an independent copy of Transposed.
-       
+
        $(RED `Transposed` does not work as a forward range, consuming a copy made with `save`
        will consume all copies, even the original sub-ranges fed into `Transposed`.)
     */
