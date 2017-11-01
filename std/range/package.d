@@ -6644,12 +6644,6 @@ if (isForwardRange!RangeOfRanges &&
         return true;
     }
 
-    /**
-       Save an independent copy of Transposed.
-
-       $(RED `Transposed` does not work as a forward range, consuming a copy made with `save`
-       will consume all copies, even the original sub-ranges fed into `Transposed`.)
-    */
     deprecated("This function is incorrect and will be removed November 2018. See the docs for more details.")
     @property Transposed save()
     {
@@ -6684,6 +6678,10 @@ private:
 /**
 Given a range of ranges, returns a range of ranges where the $(I i)'th subrange
 contains the $(I i)'th elements of the original subranges.
+
+$(RED `Transposed` currently defines `save`, but does not work as a forward range.
+Consuming a copy made with `save` will consume all copies, even the original sub-ranges
+fed into `Transposed`.)
  */
 Transposed!RangeOfRanges transposed(RangeOfRanges)(RangeOfRanges rr)
 if (isForwardRange!RangeOfRanges &&
