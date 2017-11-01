@@ -6644,6 +6644,10 @@ if (isForwardRange!RangeOfRanges &&
         return true;
     }
 
+    /**
+    "Do not use Transposed.save, consuming any saved range consumes the original range as well.")
+    */
+    deprecated("This function is obsolete and will be removed November 2018. See the docs for more details.")
     @property Transposed save()
     {
         return Transposed(_input.save);
