@@ -6644,6 +6644,13 @@ if (isForwardRange!RangeOfRanges &&
         return true;
     }
 
+    /**
+       Save an independent copy of Transposed.
+
+       $(RED `Transposed` does not work as a forward range, consuming a copy made with `save`
+       will consume all copies, even the original sub-ranges fed into `Transposed`.)
+    */
+    deprecated("This function is incorrect and will be removed November 2018. See the docs for more details.")
     @property Transposed save()
     {
         return Transposed(_input.save);
