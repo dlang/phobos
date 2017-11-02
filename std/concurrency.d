@@ -1533,6 +1533,27 @@ class Generator(T) :
     }
 
     /**
+     * Initializes a generator object which is associated with a static
+     * D function.  The function will be called once to prepare the range
+     * for iteration.
+     *
+     * Params:
+     *  fn = The fiber function.
+     *  sz = The stack size for this fiber.
+     *  guardPageSize = size of the guard page to trap fiber's stack
+     *                  overflows. Refer to $(REF Fiber, core,thread)'s
+     *                  documentation for more details.
+     *
+     * In:
+     *  fn must not be null.
+     */
+    this(void function() fn, size_t sz, size_t guardPageSize)
+    {
+        super(fn, sz, guardPageSize);
+        call();
+    }
+
+    /**
      * Initializes a generator object which is associated with a dynamic
      * D function.  The function will be called once to prepare the range
      * for iteration.
@@ -1564,6 +1585,27 @@ class Generator(T) :
     this(void delegate() dg, size_t sz)
     {
         super(dg, sz);
+        call();
+    }
+
+    /**
+     * Initializes a generator object which is associated with a dynamic
+     * D function.  The function will be called once to prepare the range
+     * for iteration.
+     *
+     * Params:
+     *  dg = The fiber function.
+     *  sz = The stack size for this fiber.
+     *  guardPageSize = size of the guard page to trap fiber's stack
+     *                  overflows. Refer to $(REF Fiber, core,thread)'s
+     *                  documentation for more details.
+     *
+     * In:
+     *  dg must not be null.
+     */
+    this(void delegate() dg, size_t sz, size_t guardPageSize)
+    {
+        super(dg, sz, guardPageSize);
         call();
     }
 
