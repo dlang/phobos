@@ -1,0 +1,4 @@
+`std.experimental.allocator.ISharedAllocator.owns` takes `const void[]`
+
+The allocators implementing the ISharedAllocator interface must define the `owns`
+method as taking a `const void[]` as input.
