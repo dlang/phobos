@@ -334,7 +334,7 @@ interface IAllocator
     cannot be determined. Implementations that don't support this primitive
     should always return `Ternary.unknown`.
     */
-    Ternary owns(const void[] b);
+    Ternary owns(void[] b);
 
     /**
     Resolves an internal pointer to the full block allocated. Implementations
@@ -430,7 +430,7 @@ interface ISharedAllocator
     cannot be determined. Implementations that don't support this primitive
     should always return `Ternary.unknown`.
     */
-    Ternary owns(const void[] b) shared;
+    Ternary owns(void[] b) shared;
 
     /**
     Resolves an internal pointer to the full block allocated. Implementations
@@ -509,7 +509,7 @@ private IAllocator setupThreadAllocator() nothrow @nogc @safe
             return processAllocator.alignedReallocate(b, size, alignment);
         }
 
-        override Ternary owns(const void[] b)
+        override Ternary owns(void[] b)
         {
             return processAllocator.owns(b);
         }
@@ -2225,7 +2225,7 @@ class CAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     If `Allocator` implements `owns`, forwards to it. Otherwise, returns
     `Ternary.unknown`.
     */
-    override Ternary owns(const void[] b)
+    override Ternary owns(void[] b)
     {
         static if (hasMember!(Allocator, "owns")) return impl.owns(b);
         else return Ternary.unknown;
@@ -2408,7 +2408,7 @@ class CSharedAllocatorImpl(Allocator, Flag!"indirect" indirect = No.indirect)
     If `Allocator` implements `owns`, forwards to it. Otherwise, returns
     `Ternary.unknown`.
     */
-    override Ternary owns(const void[] b) shared
+    override Ternary owns(void[] b) shared
     {
         static if (hasMember!(Allocator, "owns")) return impl.owns(b);
         else return Ternary.unknown;
@@ -2897,7 +2897,7 @@ private struct InternalPointersTree(Allocator)
     }
 
     /// Ditto
-    Ternary owns(const void[] b)
+    Ternary owns(void[] b)
     {
         void[] result;
         return resolveInternalPointer(b.ptr, result);

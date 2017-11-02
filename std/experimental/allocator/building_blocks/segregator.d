@@ -75,7 +75,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
         forwarded to $(D SmallAllocator) if $(D b.length <= threshold), or $(D
         LargeAllocator) otherwise.
         */
-        Ternary owns(const void[] b);
+        Ternary owns(void[] b);
         /**
         This function is defined only if both allocators define it, and forwards
         appropriately depending on $(D b.length).
@@ -215,8 +215,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 
         static if (hasMember!(SmallAllocator, "owns")
                 && hasMember!(LargeAllocator, "owns"))
-        //Ternary owns(const void[] b) const ?
-        Ternary owns(const void[] b)
+        Ternary owns(void[] b)
         {
             return Ternary(b.length <= threshold
                 ? _small.owns(b) : _large.owns(b));
@@ -400,8 +399,6 @@ if (Args.length > 3)
     assert(b.length == 256);
     assert(a.alignedReallocate(b, 42, 512));
     assert(b.length == 42);
-    assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
-    assert((() pure nothrow @safe @nogc => a.owns(null))() == Ternary.no);
     a.deallocate(b);
 }
 
@@ -416,8 +413,8 @@ if (Args.length > 3)
     assert(b.length == 201);
 
     void[] p;
-    assert((() nothrow @safe @nogc => a.resolveInternalPointer(&b[0], p))() == Ternary.yes);
     assert((() nothrow @safe @nogc => a.resolveInternalPointer(null, p))() == Ternary.no);
+    assert((() nothrow @safe @nogc => a.resolveInternalPointer(&b[0], p))(  ) == Ternary.yes);
 
     a.deallocate(b);
 }

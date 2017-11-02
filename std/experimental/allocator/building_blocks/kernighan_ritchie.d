@@ -579,8 +579,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
     allocated with $(D this) or obtained through other means.
     */
     pure nothrow @trusted @nogc
-    //Ternary owns(const void[] b) const ?
-    Ternary owns(const void[] b)
+    Ternary owns(void[] b)
     {
         debug(KRRegion) assertValid("owns");
         debug(KRRegion) scope(exit) assertValid("owns");
@@ -625,7 +624,7 @@ fronting the GC allocator.
     // KRRegion fronting a general-purpose allocator
     ubyte[1024 * 128] buf;
     auto alloc = fallbackAllocator(KRRegion!()(buf), GCAllocator.instance);
-    const b = alloc.allocate(100);
+    auto b = alloc.allocate(100);
     assert(b.length == 100);
     assert((() pure nothrow @safe @nogc => alloc.primary.owns(b))() == Ternary.yes);
 }
