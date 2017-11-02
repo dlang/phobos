@@ -1,0 +1,14 @@
+`std.typecons.Ternary.opBinary` supports `bool` operands
+
+Now `std.range.Ternary` can be used in bitwise operations with `bool`
+
+-----
+import std.typecons : Ternary;
+
+Ternary a = Ternary(true);
+assert(a == Ternary.yes);
+assert((a & false) == Ternary.no);
+assert((a | false) == Ternary.yes);
+assert((a ^ true) == Ternary.no);
+assert((a ^ false) == Ternary.yes);
+-----

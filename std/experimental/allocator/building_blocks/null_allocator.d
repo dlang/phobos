@@ -39,10 +39,12 @@ struct NullAllocator
     bool alignedReallocate(ref void[] b, size_t, uint) shared
     { assert(b is null); return false; }
     /// Returns $(D Ternary.no).
-    Ternary owns(void[]) shared const { return Ternary.no; }
+    pure nothrow @safe @nogc
+    Ternary owns(const void[]) shared const { return Ternary.no; }
     /**
     Returns $(D Ternary.no).
     */
+    pure nothrow @safe @nogc
     Ternary resolveInternalPointer(const void*, ref void[]) shared const
     { return Ternary.no; }
     /**
@@ -79,7 +81,8 @@ struct NullAllocator
 
     import std.typecons : Ternary;
     assert(NullAllocator.instance.empty() == Ternary.yes);
-    assert(NullAllocator.instance.owns(null) == Ternary.no);
+    assert((() nothrow @safe @nogc => NullAllocator.instance.owns(null))() == Ternary.no);
+
     void[] p;
-    assert(NullAllocator.instance.resolveInternalPointer(null, p) == Ternary.no);
+    assert((() nothrow @safe @nogc => NullAllocator.instance.resolveInternalPointer(null, p))() == Ternary.no);
 }

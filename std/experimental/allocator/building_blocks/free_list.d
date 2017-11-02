@@ -402,6 +402,14 @@ struct FreeList(ParentAllocator,
     assert(fl.root is null);
 }
 
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    FreeList!(GCAllocator, 0, 16) fl;
+    // Not @nogc because of std.conv.text
+    assert((() nothrow @safe /*@nogc*/ => fl.goodAllocSize(1))() == 16);
+}
+
 /**
 Free list built on top of exactly one contiguous block of memory. The block is
 assumed to have been allocated with $(D ParentAllocator), and is released in
@@ -611,9 +619,13 @@ struct ContiguousFreeList(ParentAllocator,
     belongs to this allocator.
     */
     static if (hasMember!(SParent, "owns") || unchecked)
-    Ternary owns(void[] b)
+    // Ternary owns(const void[] b) const ?
+    Ternary owns(const void[] b)
     {
-        if (support.ptr <= b.ptr && b.ptr < support.ptr + support.length)
+        if ((() @trusted => support && b
+                            && (&support[0] <= &b[0])
+                            && (&b[0] < &support[0] + support.length)
+            )())
             return Ternary.yes;
         static if (unchecked)
             return Ternary.no;
@@ -693,8 +705,9 @@ struct ContiguousFreeList(ParentAllocator,
 
     assert(a.empty == Ternary.yes);
 
-    assert(a.goodAllocSize(15) == 64);
-    assert(a.goodAllocSize(65) == NullAllocator.instance.goodAllocSize(65));
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(15))() == 64);
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(65))()
+            == (() nothrow @safe @nogc => NullAllocator.instance.goodAllocSize(65))());
 
     auto b = a.allocate(100);
     assert(a.empty == Ternary.yes);
@@ -703,8 +716,8 @@ struct ContiguousFreeList(ParentAllocator,
     b = a.allocate(64);
     assert(a.empty == Ternary.no);
     assert(b.length == 64);
-    assert(a.owns(b) == Ternary.yes);
-    assert(a.owns(null) == Ternary.no);
+    assert((() nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
+    assert((() nothrow @safe @nogc => a.owns(null))() == Ternary.no);
     a.deallocate(b);
 }
 
@@ -718,8 +731,9 @@ struct ContiguousFreeList(ParentAllocator,
 
     assert(a.empty == Ternary.yes);
 
-    assert(a.goodAllocSize(15) == 64);
-    assert(a.goodAllocSize(65) == a.parent.goodAllocSize(65));
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(15))() == 64);
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(65))()
+            == (() pure nothrow @safe @nogc => a.parent.goodAllocSize(65))());
 
     auto b = a.allocate(100);
     assert(a.empty == Ternary.no);
@@ -730,8 +744,8 @@ struct ContiguousFreeList(ParentAllocator,
     b = a.allocate(64);
     assert(a.empty == Ternary.no);
     assert(b.length == 64);
-    assert(a.owns(b) == Ternary.yes);
-    assert(a.owns(null) == Ternary.no);
+    assert((() nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
+    assert((() nothrow @safe @nogc => a.owns(null))() == Ternary.no);
     a.deallocate(b);
 }
 
@@ -757,6 +771,11 @@ struct SharedFreeList(ParentAllocator,
     import std.conv : text;
     import std.exception : enforce;
     import std.traits : hasMember;
+
+    static if (hasMember!(ParentAllocator, "owns"))
+    {
+        import std.typecons : Ternary;
+    }
 
     static assert(approxMaxNodes, "approxMaxNodes must not be null.");
     static assert(minSize != unbounded, "Use minSize = 0 for no low bound.");
@@ -931,7 +950,7 @@ struct SharedFreeList(ParentAllocator,
 
     /// Ditto
     static if (hasMember!(ParentAllocator, "owns"))
-    Ternary owns(void[] b) shared const
+    Ternary owns(const void[] b) shared const
     {
         return parent.owns(b);
     }
@@ -1078,7 +1097,7 @@ struct SharedFreeList(ParentAllocator,
 
     static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
 
-    assert(a.goodAllocSize(1) == platformAlignment);
+    assert((() nothrow @safe @nogc => a.goodAllocSize(1))() == platformAlignment);
 
     auto b = a.allocate(96);
     a.deallocate(b);

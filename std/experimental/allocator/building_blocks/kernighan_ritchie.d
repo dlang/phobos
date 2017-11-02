@@ -578,18 +578,21 @@ struct KRRegion(ParentAllocator = NullAllocator)
     It does a simple $(BIGOH 1) range check. $(D b) should be a buffer either
     allocated with $(D this) or obtained through other means.
     */
-    Ternary owns(void[] b)
+    pure nothrow @trusted @nogc
+    //Ternary owns(const void[] b) const ?
+    Ternary owns(const void[] b)
     {
         debug(KRRegion) assertValid("owns");
         debug(KRRegion) scope(exit) assertValid("owns");
-        return Ternary(b.ptr >= payload.ptr
-            && b.ptr < payload.ptr + payload.length);
+        return Ternary(b && payload && (&b[0] >= &payload[0])
+                       && (&b[0] < &payload[0] + payload.length));
     }
 
     /**
     Adjusts $(D n) to a size suitable for allocation (two words or larger,
     word-aligned).
     */
+    pure nothrow @safe @nogc
     static size_t goodAllocSize(size_t n)
     {
         import std.experimental.allocator.common : roundUpToMultipleOf;
@@ -622,9 +625,9 @@ fronting the GC allocator.
     // KRRegion fronting a general-purpose allocator
     ubyte[1024 * 128] buf;
     auto alloc = fallbackAllocator(KRRegion!()(buf), GCAllocator.instance);
-    auto b = alloc.allocate(100);
+    const b = alloc.allocate(100);
     assert(b.length == 100);
-    assert(alloc.primary.owns(b) == Ternary.yes);
+    assert((() pure nothrow @safe @nogc => alloc.primary.owns(b))() == Ternary.yes);
 }
 
 /**
@@ -675,7 +678,7 @@ it actually returns memory to the operating system when possible.
     foreach (i; 0 .. array.length)
     {
         assert(array[i].ptr);
-        assert(alloc.owns(array[i]) == Ternary.yes);
+        assert((() pure nothrow @safe @nogc => alloc.owns(array[i]))() == Ternary.yes);
         alloc.deallocate(array[i]);
     }
 }
@@ -713,7 +716,7 @@ it actually returns memory to the operating system when possible.
     randomShuffle(array[]);
     foreach (i; 0 .. array.length)
     {
-        assert(alloc.owns(array[i]) == Ternary.yes);
+        assert((() pure nothrow @safe @nogc => alloc.owns(array[i]))() == Ternary.yes);
         alloc.deallocate(array[i]);
     }
 }
@@ -768,13 +771,13 @@ it actually returns memory to the operating system when possible.
         auto length = 100 * i + 1;
         array[i] = p.allocate(length);
         assert(array[i].length == length, text(array[i].length));
-        assert(p.owns(array[i]) == Ternary.yes);
+        assert((() pure nothrow @safe @nogc => p.owns(array[i]))() == Ternary.yes);
     }
     import std.random : randomShuffle;
     randomShuffle(array[]);
     foreach (i; 0 .. array.length)
     {
-        assert(p.owns(array[i]) == Ternary.yes);
+        assert((() pure nothrow @safe @nogc => p.owns(array[i]))() == Ternary.yes);
         p.deallocate(array[i]);
     }
     auto b = p.allocateAll();
@@ -879,4 +882,12 @@ it actually returns memory to the operating system when possible.
 
     test(sizes64, word64);
     test(sizes32, word32);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+
+    auto a = KRRegion!GCAllocator(1024 * 1024);
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(1))() == typeof(*a.root).sizeof);
 }

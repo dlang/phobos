@@ -298,7 +298,6 @@ module std.regex;
 
 import std.range.primitives, std.traits;
 import std.regex.internal.ir;
-import std.regex.internal.thompson; //TODO: get rid of this dependency
 import std.typecons; // : Flag, Yes, No;
 
 /++
@@ -339,10 +338,9 @@ public alias Regex(Char) = std.regex.internal.ir.Regex!(Char);
     A $(D StaticRegex) is $(D Regex) object that contains D code specially
     generated at compile-time to speed up matching.
 
-    Implicitly convertible to normal $(D Regex),
-    however doing so will result in losing this additional capability.
+    No longer used, kept as alias to Regex for backwards compatibility.
 +/
-public alias StaticRegex(Char) = std.regex.internal.ir.StaticRegex!(Char);
+public alias StaticRegex = Regex;
 
 /++
     Compile regular expression pattern for the later execution.
@@ -428,16 +426,25 @@ if (isSomeString!(S))
 template ctRegexImpl(alias pattern, string flags=[])
 {
     import std.regex.internal.backtracking, std.regex.internal.parser;
-    enum r = regex(pattern, flags);
+    static immutable r = cast(immutable) regex(pattern, flags);
     alias Char = BasicElementOf!(typeof(pattern));
     enum source = ctGenRegExCode(r);
-    alias Matcher = BacktrackingMatcher!(true);
-    @trusted bool func(ref Matcher!Char matcher)
+    @trusted bool func(BacktrackingMatcher!Char matcher)
     {
         debug(std_regex_ctr) pragma(msg, source);
+        cast(void) matcher;
         mixin(source);
     }
-    enum nr = StaticRegex!Char(r, &func);
+    static immutable staticRe =
+        cast(immutable) r.withFactory(new CtfeFactory!(BacktrackingMatcher, Char, func));
+    struct Wrapper
+    {
+        // allow code that expects mutable Regex to still work
+        // we stay "logically const"
+        @trusted @property auto getRe() const { return cast() staticRe; }
+        alias getRe this;
+    }
+    enum wrapper = Wrapper();
 }
 
 /++
@@ -450,10 +457,10 @@ template ctRegexImpl(alias pattern, string flags=[])
     pattern = Regular expression
     flags = The _attributes (g, i, m, s and x accepted)
 +/
-public enum ctRegex(alias pattern, alias flags=[]) = ctRegexImpl!(pattern, flags).nr;
+public enum ctRegex(alias pattern, alias flags=[]) = ctRegexImpl!(pattern, flags).wrapper;
 
-enum isRegexFor(RegEx, R) = is(RegEx == Regex!(BasicElementOf!R))
-     || is(RegEx == StaticRegex!(BasicElementOf!R));
+enum isRegexFor(RegEx, R) = is(Unqual!RegEx == Regex!(BasicElementOf!R)) || is(RegEx : const(Regex!(BasicElementOf!R)))
+     || is(Unqual!RegEx == StaticRegex!(BasicElementOf!R));
 
 
 /++
@@ -462,10 +469,10 @@ enum isRegexFor(RegEx, R) = is(RegEx == Regex!(BasicElementOf!R))
 
     First element of range is the whole match.
 +/
-@trusted public struct Captures(R, DIndex = size_t)
+@trusted public struct Captures(R)
 if (isSomeString!R)
 {//@trusted because of union inside
-    alias DataIndex = DIndex;
+    alias DataIndex = size_t;
     alias String = R;
 private:
     import std.conv : text;
@@ -480,9 +487,9 @@ private:
     }
     uint _f, _b;
     uint _refcount; // ref count or SMALL MASK + num groups
-    NamedGroup[] _names;
+    const(NamedGroup)[] _names;
 
-    this()(R input, uint n, NamedGroup[] named)
+    this(R input, uint n, const(NamedGroup)[] named)
     {
         _input = input;
         _names = named;
@@ -491,11 +498,11 @@ private:
         _f = 0;
     }
 
-    this(alias Engine)(ref RegexMatch!(R,Engine) rmatch)
+    this(ref RegexMatch!R rmatch)
     {
         _input = rmatch._input;
-        _names = rmatch._engine.re.dict;
-        immutable n = rmatch._engine.re.ngroup;
+        _names = rmatch._engine.pattern.dict;
+        immutable n = rmatch._engine.pattern.ngroup;
         newMatches(n);
         _b = n;
         _f = 0;
@@ -693,58 +700,38 @@ public:
 
     Effectively it's a forward range of Captures!R, produced
     by lazily searching for matches in a given input.
-
-    $(D alias Engine) specifies an engine type to use during matching,
-    and is automatically deduced in a call to $(D match)/$(D bmatch).
 +/
-@trusted public struct RegexMatch(R, alias Engine = ThompsonMatcher)
+@trusted public struct RegexMatch(R)
 if (isSomeString!R)
 {
 private:
-    import core.stdc.stdlib : malloc, free;
     alias Char = BasicElementOf!R;
-    alias EngineType = Engine!Char;
-    EngineType _engine;
+    Matcher!Char _engine;
+    const MatcherFactory!Char _factory;
     R _input;
-    Captures!(R,EngineType.DataIndex) _captures;
-    void[] _memory;//is ref-counted
+    Captures!R _captures;
 
     this(RegEx)(R input, RegEx prog)
     {
         import std.exception : enforce;
         _input = input;
-        immutable size = EngineType.initialMemory(prog)+size_t.sizeof;
-        _memory = (enforce(malloc(size), "malloc failed")[0 .. size]);
-        scope(failure) free(_memory.ptr);
-        *cast(size_t*)_memory.ptr = 1;
-        _engine = EngineType(prog, Input!Char(input), _memory[size_t.sizeof..$]);
-        static if (is(RegEx == StaticRegex!(BasicElementOf!R)))
-            _engine.nativeFn = prog.nativeFn;
-        _captures = Captures!(R,EngineType.DataIndex)(this);
+        if (prog.factory is null) _factory = defaultFactory!Char(prog);
+        else _factory = prog.factory;
+        _engine = _factory.create(prog, input);
+        assert(_engine.refCount == 1);
+        _captures = Captures!R(this);
         _captures._nMatch = _engine.match(_captures.matches);
-        debug(std_regex_allocation) writefln("RefCount (ctor): %x %d", _memory.ptr, counter);
     }
 
-    @property ref size_t counter(){ return *cast(size_t*)_memory.ptr; }
 public:
     this(this)
     {
-        if (_memory.ptr)
-        {
-            ++counter;
-            debug(std_regex_allocation) writefln("RefCount (postblit): %x %d",
-                _memory.ptr, *cast(size_t*)_memory.ptr);
-        }
+        if (_engine) _factory.incRef(_engine);
     }
 
     ~this()
     {
-        if (_memory.ptr && --*cast(size_t*)_memory.ptr == 0)
-        {
-            debug(std_regex_allocation) writefln("RefCount (dtor): %x %d",
-                _memory.ptr, *cast(size_t*)_memory.ptr);
-            free(cast(void*)_memory.ptr);
-        }
+        if (_engine) _factory.decRef(_engine);
     }
 
     ///Shorthands for front.pre, front.post, front.hit.
@@ -786,19 +773,18 @@ public:
     void popFront()
     {
         import std.exception : enforce;
-        if (counter != 1)
-        {//do cow magic first
-            counter--;//we abandon this reference
-            immutable size = EngineType.initialMemory(_engine.re)+size_t.sizeof;
-            _memory = (enforce(malloc(size), "malloc failed")[0 .. size]);
-            _engine = _engine.dupTo(_memory[size_t.sizeof .. size]);
-            counter = 1;//points to new chunk
+        // CoW - if refCount is not 1, we are aliased by somebody else
+        if (_engine.refCount != 1)
+        {
+            // we create a new engine & abandon this reference
+            auto old = _engine;
+            _engine = _factory.dup(old, _input);
+            _factory.decRef(old);
         }
-
         if (!_captures.unique)
         {
             // has external references - allocate new space
-            _captures.newMatches(_engine.re.ngroup);
+            _captures.newMatches(_engine.pattern.ngroup);
         }
         _captures._nMatch = _engine.match(_captures.matches);
     }
@@ -814,39 +800,30 @@ public:
 
     /// Same as .front, provided for compatibility with original std.regex.
     @property auto captures() inout { return _captures; }
-
 }
 
-private @trusted auto matchOnce(alias Engine, RegEx, R)(R input, RegEx re)
+private @trusted auto matchOnce(RegEx, R)(R input, const RegEx prog)
 {
-    import core.stdc.stdlib : malloc, free;
-    import std.exception : enforce;
     alias Char = BasicElementOf!R;
-    alias EngineType = Engine!Char;
-
-    size_t size = EngineType.initialMemory(re);
-    void[] memory = enforce(malloc(size), "malloc failed")[0 .. size];
-    scope(exit) free(memory.ptr);
-    auto captures = Captures!(R, EngineType.DataIndex)(input, re.ngroup, re.dict);
-    auto engine = EngineType(re, Input!Char(input), memory);
-    static if (is(RegEx == StaticRegex!(BasicElementOf!R)))
-        engine.nativeFn = re.nativeFn;
+    auto factory = prog.factory is null ? defaultFactory!Char(prog) : prog.factory;
+    auto engine = factory.create(prog, input);
+    scope(exit) factory.decRef(engine); // destroys the engine
+    auto captures = Captures!R(input, prog.ngroup, prog.dict);
     captures._nMatch = engine.match(captures.matches);
     return captures;
 }
 
-private auto matchMany(alias Engine, RegEx, R)(R input, RegEx re)
+private auto matchMany(RegEx, R)(R input, RegEx re) @safe
 {
-    re.flags |= RegexOption.global;
-    return RegexMatch!(R, Engine)(input, re);
+    return RegexMatch!R(input, re.withFlags(re.flags | RegexOption.global));
 }
 
 @system unittest
 {
     //sanity checks for new API
     auto re = regex("abc");
-    assert(!"abc".matchOnce!(ThompsonMatcher)(re).empty);
-    assert("abc".matchOnce!(ThompsonMatcher)(re)[0] == "abc");
+    assert(!"abc".matchOnce(re).empty);
+    assert("abc".matchOnce(re)[0] == "abc");
 }
 
 
@@ -938,25 +915,16 @@ if (isSomeString!R && isRegexFor!(RegEx, R))
 +/
 
 public auto match(R, RegEx)(R input, RegEx re)
-if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
+if (isSomeString!R && isRegexFor!(RegEx,R))
 {
-    import std.regex.internal.thompson : ThompsonMatcher;
-    return RegexMatch!(Unqual!(typeof(input)),ThompsonMatcher)(input, re);
+    return RegexMatch!(Unqual!(typeof(input)))(input, re);
 }
 
 ///ditto
 public auto match(R, String)(R input, String re)
 if (isSomeString!R && isSomeString!String)
 {
-    import std.regex.internal.thompson : ThompsonMatcher;
-    return RegexMatch!(Unqual!(typeof(input)),ThompsonMatcher)(input, regex(re));
-}
-
-public auto match(R, RegEx)(R input, RegEx re)
-if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
-{
-    import std.regex.internal.backtracking : BacktrackingMatcher;
-    return RegexMatch!(Unqual!(typeof(input)),BacktrackingMatcher!true)(input, re);
+    return RegexMatch!(Unqual!(typeof(input)))(input, regex(re));
 }
 
 /++
@@ -978,33 +946,23 @@ if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
     if there was a match, otherwise an empty $(LREF Captures) object.
 +/
 public auto matchFirst(R, RegEx)(R input, RegEx re)
-if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
+if (isSomeString!R && isRegexFor!(RegEx, R))
 {
-    import std.regex.internal.thompson : ThompsonMatcher;
-    return matchOnce!ThompsonMatcher(input, re);
+    return matchOnce(input, re);
 }
 
 ///ditto
 public auto matchFirst(R, String)(R input, String re)
 if (isSomeString!R && isSomeString!String)
 {
-    import std.regex.internal.thompson : ThompsonMatcher;
-    return matchOnce!ThompsonMatcher(input, regex(re));
+    return matchOnce(input, regex(re));
 }
 
 ///ditto
 public auto matchFirst(R, String)(R input, String[] re...)
 if (isSomeString!R && isSomeString!String)
 {
-    import std.regex.internal.thompson : ThompsonMatcher;
-    return matchOnce!ThompsonMatcher(input, regex(re));
-}
-
-public auto matchFirst(R, RegEx)(R input, RegEx re)
-if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
-{
-    import std.regex.internal.backtracking : BacktrackingMatcher;
-    return matchOnce!(BacktrackingMatcher!true)(input, re);
+    return matchOnce(input, regex(re));
 }
 
 /++
@@ -1029,33 +987,23 @@ if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
     after the first match was found or an empty one if not present.
 +/
 public auto matchAll(R, RegEx)(R input, RegEx re)
-if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
+if (isSomeString!R && isRegexFor!(RegEx, R))
 {
-    import std.regex.internal.thompson : ThompsonMatcher;
-    return matchMany!ThompsonMatcher(input, re);
+    return matchMany(input, re);
 }
 
 ///ditto
 public auto matchAll(R, String)(R input, String re)
 if (isSomeString!R && isSomeString!String)
 {
-    import std.regex.internal.thompson : ThompsonMatcher;
-    return matchMany!ThompsonMatcher(input, regex(re));
+    return matchMany(input, regex(re));
 }
 
 ///ditto
 public auto matchAll(R, String)(R input, String[] re...)
 if (isSomeString!R && isSomeString!String)
 {
-    import std.regex.internal.thompson : ThompsonMatcher;
-    return matchMany!ThompsonMatcher(input, regex(re));
-}
-
-public auto matchAll(R, RegEx)(R input, RegEx re)
-if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
-{
-    import std.regex.internal.backtracking : BacktrackingMatcher;
-    return matchMany!(BacktrackingMatcher!true)(input, re);
+    return matchMany(input, regex(re));
 }
 
 // another set of tests just to cover the new API
@@ -1119,25 +1067,16 @@ if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
 
 +/
 public auto bmatch(R, RegEx)(R input, RegEx re)
-if (isSomeString!R && is(RegEx == Regex!(BasicElementOf!R)))
+if (isSomeString!R && isRegexFor!(RegEx, R))
 {
-    import std.regex.internal.backtracking : BacktrackingMatcher;
-    return RegexMatch!(Unqual!(typeof(input)), BacktrackingMatcher!false)(input, re);
+    return RegexMatch!(Unqual!(typeof(input)))(input, re);
 }
 
 ///ditto
 public auto bmatch(R, String)(R input, String re)
 if (isSomeString!R && isSomeString!String)
 {
-    import std.regex.internal.backtracking : BacktrackingMatcher;
-    return RegexMatch!(Unqual!(typeof(input)), BacktrackingMatcher!false)(input, regex(re));
-}
-
-public auto bmatch(R, RegEx)(R input, RegEx re)
-if (isSomeString!R && is(RegEx == StaticRegex!(BasicElementOf!R)))
-{
-    import std.regex.internal.backtracking : BacktrackingMatcher;
-    return RegexMatch!(Unqual!(typeof(input)),BacktrackingMatcher!true)(input, re);
+    return RegexMatch!(Unqual!(typeof(input)))(input, regex(re));
 }
 
 // produces replacement string from format using captures for substitution
@@ -1530,7 +1469,7 @@ private:
     @trusted this(Range input, RegEx separator)
     {//@@@BUG@@@ generated opAssign of RegexMatch is not @trusted
         _input = input;
-        separator.flags |= RegexOption.global;
+        const re = separator.withFlags(separator.flags | RegexOption.global);
         if (_input.empty)
         {
             //there is nothing to match at all, make _offset > 0
@@ -1538,7 +1477,7 @@ private:
         }
         else
         {
-            _match = Rx(_input, separator);
+            _match = Rx(_input, re);
 
             static if (keepSeparators)
                 if (_match.pre.empty)

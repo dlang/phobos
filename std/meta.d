@@ -1317,9 +1317,12 @@ private template SmartAlias(T...)
  * Creates an `AliasSeq` which repeats a type or an `AliasSeq` exactly `n` times.
  */
 template Repeat(size_t n, TList...)
-if (n > 0)
 {
-    static if (n == 1)
+    static if (n == 0)
+    {
+        alias Repeat = AliasSeq!();
+    }
+    else static if (n == 1)
     {
         alias Repeat = AliasSeq!TList;
     }
@@ -1344,6 +1347,9 @@ if (n > 0)
 ///
 @safe unittest
 {
+    alias ImInt0 = Repeat!(0, int);
+    static assert(is(ImInt0 == AliasSeq!()));
+
     alias ImInt1 = Repeat!(1, immutable(int));
     static assert(is(ImInt1 == AliasSeq!(immutable(int))));
 

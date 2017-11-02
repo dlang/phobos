@@ -1123,12 +1123,12 @@ if (isInputRange!R1 && isInputRange!R2 && !isInfinite!R1 && !isInfinite!R2 &&
     auto secret = "A7GZIP6TAQA6OHM7KZ42KB9303CEY0MOV5DD6NTV".representation;
     auto data = "data".representation;
 
-    string hex1 = data.hmac!SHA1(secret).toHexString;
-    string hex2 = data.hmac!SHA1(secret).toHexString;
-    string hex3 = "data1".representation.hmac!SHA1(secret).toHexString;
+    auto hex1 = data.hmac!SHA1(secret).toHexString;
+    auto hex2 = data.hmac!SHA1(secret).toHexString;
+    auto hex3 = "data1".representation.hmac!SHA1(secret).toHexString;
 
-    assert( secureEqual(hex1, hex2));
-    assert(!secureEqual(hex1, hex3));
+    assert( secureEqual(hex1[], hex2[]));
+    assert(!secureEqual(hex1[], hex3[]));
 }
 
 @system pure unittest

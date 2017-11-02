@@ -1160,7 +1160,7 @@ pure nothrow @safe @nogc unittest
 }
 
 /// Ditto
-T move(T)(ref T source)
+T move(T)(return scope ref T source)
 {
     // test @safe destructible
     static if (__traits(compiles, (T t) @safe {}))

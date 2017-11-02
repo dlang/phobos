@@ -518,11 +518,11 @@ alias Sequence(int B, int E) = staticIota!(B, E);
 {
     import std.algorithm.comparison : equal;
     auto rtr = regex("a|b|c");
-    enum ctr = regex("a|b|c");
+    static ctr = regex("a|b|c");
     assert(equal(rtr.ir,ctr.ir));
     //CTFE parser BUG is triggered by group
     //in the middle of alternation (at least not first and not last)
-    enum testCT = regex(`abc|(edf)|xyz`);
+    static testCT = regex(`abc|(edf)|xyz`);
     auto testRT = regex(`abc|(edf)|xyz`);
     assert(equal(testCT.ir,testRT.ir));
 }
@@ -994,6 +994,36 @@ alias Sequence(int B, int E) = staticIota!(B, E);
     assertThrown(regex(`^x(\1)`));
     assertThrown(regex(`^(x(\1))`));
     assertThrown(regex(`^((x)(?=\1))`));
+}
+
+// bugzilla 13532
+version(none) // TODO: revist once we have proper benchmark framework
+@safe unittest
+{
+    import std.datetime.stopwatch : StopWatch, AutoStart;
+    import std.math : abs;
+    import std.conv : to;
+    enum re1 = ctRegex!`[0-9][0-9]`;
+    immutable static re2 = ctRegex!`[0-9][0-9]`;
+    immutable iterations = 1_000_000;
+    size_t result1 = 0, result2 = 0;
+    auto sw = StopWatch(AutoStart.yes);
+    foreach (_; 0 .. iterations)
+    {
+        result1 += matchFirst("12345678", re1).length;
+    }
+    const staticTime = sw.peek();
+    sw.reset();
+    foreach (_; 0 .. iterations)
+    {
+        result2 += matchFirst("12345678", re2).length;
+    }
+    const enumTime = sw.peek();
+    assert(result1 == result2);
+    auto ratio = 1.0 * enumTime.total!"usecs" / staticTime.total!"usecs";
+    // enum is faster or the diff is less < 30%
+    assert(ratio < 1.0 || abs(ratio - 1.0) < 0.75,
+        "enum regex to static regex ratio "~to!string(ratio));
 }
 
 // bugzilla 14504

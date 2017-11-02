@@ -31,10 +31,10 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     */
     Allocator[(max + 1 - min) / step] buckets;
 
-    private Allocator* allocatorFor(size_t n)
+    private Allocator* allocatorFor(size_t n) @safe
     {
         const i = (n - min) / step;
-        return i < buckets.length ? buckets.ptr + i : null;
+        return i < buckets.length ? &buckets[i] : null;
     }
 
     /**
@@ -45,6 +45,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     /**
     Rounds up to the maximum size of the bucket in which $(D bytes) falls.
     */
+    pure nothrow @safe @nogc
     size_t goodAllocSize(size_t bytes) const
     {
         // round up bytes such that bytes - min + 1 is a multiple of step
@@ -163,11 +164,11 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     static if (hasMember!(Allocator, "owns"))
     Ternary owns(void[] b)
     {
-        if (!b.ptr) return Ternary.no;
+        if (!b) return Ternary.no;
         if (auto a = allocatorFor(b.length))
         {
             const actual = goodAllocSize(b.length);
-            return a.owns(b.ptr[0 .. actual]);
+            return a.owns((() @trusted => b.ptr[0 .. actual])());
         }
         return Ternary.no;
     }
@@ -236,7 +237,25 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
         65, 512, 64) a;
     auto b = a.allocate(400);
     assert(b.length == 400);
-    assert(a.owns(b) == Ternary.yes);
-    void[] p;
+    assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
     a.deallocate(b);
+}
+
+@system unittest
+{
+    import std.algorithm.comparison : max;
+    import std.experimental.allocator.building_blocks.allocator_list : AllocatorList;
+    import std.experimental.allocator.building_blocks.free_list : FreeList;
+    import std.experimental.allocator.building_blocks.region : Region;
+    import std.experimental.allocator.common : unbounded;
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    Bucketizer!(
+        FreeList!(
+            AllocatorList!(
+                (size_t n) => Region!Mallocator(max(n, 1024 * 1024))),
+            0, unbounded),
+        65, 512, 64) a;
+
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(65))() == 128);
 }

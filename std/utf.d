@@ -3280,9 +3280,9 @@ enum dchar replacementDchar = '\uFFFD';
  *      r = an input range of characters (including strings) or a type that
  *          implicitly converts to a string type.
  * Returns:
- *     If `r` is not an auto-decodable string (i.e. a narrow string or a
- *     user-defined type that implicits converts to a string type), then `r`
- *     is returned.
+ *      If `r` is not an auto-decodable string (i.e. a narrow string or a
+ *      user-defined type that implicits converts to a string type), then `r`
+ *      is returned.
  *
  *      Otherwise, `r` is converted to its corresponding string type (if it's
  *      not already a string) and wrapped in a random-access range where the
@@ -3293,6 +3293,11 @@ enum dchar replacementDchar = '\uFFFD';
  *      of characters on its own (i.e. it has the input range API as member
  *      functions), $(I and) it's implicitly convertible to a string type, then
  *      `r` is returned, and no implicit conversion takes place.
+ *
+ *      If `r` is wrapped in a new range, then that range has a `source`
+ *      property for returning the string that's currently contained within that
+ *      range.
+ *
  * See_Also:
  *      Refer to the $(MREF std, uni) docs for a reference on Unicode
  *      terminology.
@@ -3315,23 +3320,22 @@ if (isAutodecodableString!R ||
         {
         @safe pure nothrow @nogc:
 
-            @property bool empty() const     { return str.length == 0; }
-            @property auto ref front() inout { return str[0]; }
-            void popFront()                  { str = str[1 .. $]; }
+            @property bool empty() const     { return source.length == 0; }
+            @property auto ref front() inout { return source[0]; }
+            void popFront()                  { source = source[1 .. $]; }
 
-            @property auto save() { return ByCodeUnitImpl(str.save); }
+            @property auto save() { return ByCodeUnitImpl(source.save); }
 
-            @property auto ref back() inout { return str[$ - 1]; }
-            void popBack()                  { str = str[0 .. $-1]; }
+            @property auto ref back() inout { return source[$ - 1]; }
+            void popBack()                  { source = source[0 .. $-1]; }
 
-            auto ref opIndex(size_t index) inout     { return str[index]; }
-            auto opSlice(size_t lower, size_t upper) { return ByCodeUnitImpl(str[lower .. upper]); }
+            auto ref opIndex(size_t index) inout     { return source[index]; }
+            auto opSlice(size_t lower, size_t upper) { return ByCodeUnitImpl(source[lower .. upper]); }
 
-            @property size_t length() const { return str.length; }
+            @property size_t length() const { return source.length; }
             alias opDollar = length;
 
-          private:
-            StringTypeOf!R str;
+            StringTypeOf!R source;
         }
 
         static assert(isRandomAccessRange!ByCodeUnitImpl);
@@ -3382,6 +3386,25 @@ if (isAutodecodableString!R ||
     // Because string is UTF-8, the code unit at index 2 is just
     // the first of a sequence that encodes 'ë'
     assert(noel2.byCodeUnit[2] != 'ë');
+}
+
+/// `byCodeUnit` exposes a `source` property when wrapping narrow strings.
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.range : popFrontN;
+    {
+        auto range = byCodeUnit("hello world");
+        range.popFrontN(3);
+        assert(equal(range.save, "lo world"));
+        string str = range.source;
+        assert(str == "lo world");
+    }
+    // source only exists if the range was wrapped
+    {
+        auto range = byCodeUnit("hello world"d);
+        static assert(!__traits(compiles, range.source));
+    }
 }
 
 @safe pure nothrow @nogc unittest
