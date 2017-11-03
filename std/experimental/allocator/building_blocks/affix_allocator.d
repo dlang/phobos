@@ -453,3 +453,14 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     assert(b.length == 42);
     () nothrow @nogc { a.deallocate(b); }();
 }
+
+// Test that deallocateAll infers from parent
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+
+    auto a = AffixAllocator!(Region!(), uint)(Region!()(new ubyte[1024 * 64]));
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() nothrow @nogc => a.deallocateAll())());
+}

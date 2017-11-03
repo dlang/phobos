@@ -250,11 +250,12 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     import std.experimental.allocator.building_blocks.region : Region;
     import std.experimental.allocator.common : unbounded;
     import std.experimental.allocator.mallocator : Mallocator;
+    import std.typecons : Ternary;
 
     Bucketizer!(
         FreeList!(
             AllocatorList!(
-                (size_t n) => Region!Mallocator(max(n, 1024 * 1024))),
+                (size_t n) => Region!Mallocator(max(n, 1024 * 1024)), Mallocator),
             0, unbounded),
         65, 512, 64) a;
 
@@ -272,5 +273,6 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     assert(a.reallocate(b, 0));
     assert(b is null);
     // Ensure deallocate inherits from parent allocators
-    () nothrow @nogc { a.deallocate(b); }();
+    assert((() nothrow @nogc => a.deallocate(b))());
+    assert((() nothrow @nogc => a.deallocateAll())());
 }

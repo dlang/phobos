@@ -277,3 +277,17 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     assert(b.length == 42);
     assert(alignedAt(&b[0], 16));
 }
+
+// Check that deallocateAll inherits from parent
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+    alias MyAlloc = Quantizer!(Region!(),
+        (size_t n) => n.roundUpToMultipleOf(64));
+    testAllocator!(() => MyAlloc(Region!()(new ubyte[1024 * 64])));
+
+    auto a = MyAlloc(Region!()(new ubyte[1024 * 64]));
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() nothrow @nogc => a.deallocateAll())());
+}

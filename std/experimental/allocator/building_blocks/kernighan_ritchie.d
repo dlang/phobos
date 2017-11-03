@@ -560,6 +560,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
     Deallocates all memory currently allocated, making the allocator ready for
     other allocations. This is a $(BIGOH 1) operation.
     */
+    pure nothrow @nogc
     bool deallocateAll()
     {
         debug(KRRegion) assertValid("deallocateAll");
@@ -791,7 +792,7 @@ it actually returns memory to the operating system when possible.
                     cast(ubyte[])(GCAllocator.instance.allocate(1024 * 1024)));
     auto p = alloc.allocateAll();
     assert(p.length == 1024 * 1024);
-    () nothrow @nogc { alloc.deallocateAll(); }();
+    assert((() nothrow @nogc => alloc.deallocateAll())());
     p = alloc.allocateAll();
     assert(p.length == 1024 * 1024);
 }

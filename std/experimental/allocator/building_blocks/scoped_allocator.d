@@ -17,9 +17,13 @@ simpler design combining $(D AllocatorList) with $(D Region) is recommended.
 */
 struct ScopedAllocator(ParentAllocator)
 {
-    @system unittest
+    static if (!stateSize!ParentAllocator)
     {
-        testAllocator!(() => ScopedAllocator());
+        // This test is available only for stateless allocators
+        @system unittest
+        {
+            testAllocator!(() => ScopedAllocator());
+        }
     }
 
     import std.experimental.allocator.building_blocks.affix_allocator
@@ -233,4 +237,16 @@ struct ScopedAllocator(ParentAllocator)
     auto b = a.allocate(42);
     assert(b.length == 42);
     () nothrow @nogc { a.deallocate(b); }();
+}
+
+// Test that deallocateAll infers from parent
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+
+    ScopedAllocator!(Region!()) a;
+    a.parent.parent = Region!()(new ubyte[1024 * 64]);
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() nothrow @nogc => a.deallocateAll())());
 }
