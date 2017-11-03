@@ -13,7 +13,7 @@ LDFLAGS=/nologo
 O=.obj
 
 # do not preselect a C runtime (extracted from the line above to make the auto tester happy)
-CFLAGS=$(CFLAGS) /Zl
+CFLAGS=$(CFLAGS) /Zl /GS-
 
 # variables
 
