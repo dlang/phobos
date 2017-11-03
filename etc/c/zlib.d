@@ -228,7 +228,8 @@ enum
 }
 /* The deflate compression method (the only one supported in this version) */
 
-const int Z_NULL = 0;  /* for initializing zalloc, zfree, opaque */
+/// for initializing zalloc, zfree, opaque (extern(D) for mangling)
+extern(D) immutable void* Z_NULL = null;
 
                         /* basic functions */
 
