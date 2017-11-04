@@ -117,9 +117,9 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
             b = null;
             return true;
         }
-        if (size >= b.length)
+        if (size >= b.length && expand(b, size - b.length))
         {
-            return expand(b, size - b.length);
+            return true;
         }
         assert(b.length >= min && b.length <= max);
         if (goodAllocSize(size) == goodAllocSize(b.length))
@@ -258,4 +258,9 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
         65, 512, 64) a;
 
     assert((() pure nothrow @safe @nogc => a.goodAllocSize(65))() == 128);
+
+    auto b = a.allocate(100);
+    assert(b.length == 100);
+    assert(a.reallocate(b, 200));
+    assert(b.length == 200);
 }
