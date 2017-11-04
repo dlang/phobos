@@ -2,8 +2,8 @@
 
 set -uexo pipefail
 
-HOST_DMD_VER=2.068.2 # same as in dmd/src/posix.mak
-DSCANNER_DMD_VER=2.071.2 # dscanner needs a more up-to-date version
+HOST_DMD_VER=2.072.2 # same as in dmd/src/posix.mak
+DSCANNER_DMD_VER=2.077.0 # dscanner needs a more up-to-date version
 CURL_USER_AGENT="CirleCI $(curl --version | head -n 1)"
 DUB=${DUB:-$HOME/dlang/dub/dub}
 N=2
