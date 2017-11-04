@@ -82,7 +82,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
         {
             const actual = goodAllocSize(bytes);
             auto result = a.alignedAllocate(actual, alignment);
-            return result !is null ? (() @trusted => (&result)[0 .. bytes])() : null;
+            return result !is null ? (() @trusted => (&result[0])[0 .. bytes])() : null;
         }
         return null;
     }
@@ -155,7 +155,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
             return true;
         }
         // Move cross buckets
-        return .alignedReallocate(this, b, size, a);
+        return common.alignedReallocate(this, b, size, a);
     }
 
     /**
@@ -270,4 +270,22 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     // Free through realloc
     assert(a.reallocate(b, 0));
     assert(b is null);
+}
+
+// Test alignedAllocate
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlock;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+
+    Bucketizer!(BitmappedBlock!(64, 8, GCAllocator), 65, 512, 64) a;
+    foreach (ref bucket; a.buckets)
+    {
+        bucket = BitmappedBlock!(64, 8, GCAllocator)(new ubyte[1024]);
+    }
+
+    auto b = a.alignedAllocate(100, 16);
+    assert(b.length == 100);
+    assert(a.alignedAllocate(42, 16) is null);
+    assert(a.alignedAllocate(0, 16) is null);
 }
