@@ -1093,7 +1093,8 @@ Params:
 
 Returns:
     $(D filter!(predicate)(range)) returns a new range containing only elements $(D x) in $(D range) for
-    which $(D predicate(x)) returns $(D true).
+    which $(D predicate(x)) returns $(D true). If a `SortedRange` is passed, the result is going to be
+    a `SortedRange`.
 
 See_Also:
     $(HTTP en.wikipedia.org/wiki/Filter_(higher-order_function), Filter (higher-order function))
@@ -1103,7 +1104,11 @@ if (is(typeof(unaryFun!predicate)))
 {
     auto filter(Range)(Range range) if (isInputRange!(Unqual!Range))
     {
-        return FilterResult!(unaryFun!predicate, Range)(range);
+        import std.range : SortedRange, assumeSorted;
+        static if (is(Range : SortedRange!TT, TT))
+            return assumeSorted(FilterResult!(unaryFun!predicate, Range)(range));
+        else
+            return FilterResult!(unaryFun!predicate, Range)(range);
     }
 }
 
@@ -1259,6 +1264,11 @@ private struct FilterResult(alias pred, Range)
     auto arr = [1,2,3,4,5];
     auto m = map!"a + 1"(filter!"a < 4"(arr));
     assert(equal(m, [2, 3, 4]));
+
+    // Issue 9682
+    import std.range : SortedRange, assumeSorted;
+    auto t = assumeSorted([1, 2, 3, 4, 5]);
+    assert(equal(filter!(a => a > 3)(t), assumeSorted([4, 5])));
 }
 
 @safe unittest
@@ -1414,14 +1424,19 @@ Params:
 Returns: A range of elements of type $(D Tuple!(ElementType!R, uint)),
 representing each consecutively unique element and its respective number of
 occurrences in that run.  This will be an input range if $(D R) is an input
-range, and a forward range in all other cases.
+range, and a forward range in all other cases. If a `SortedRanged` is passed,
+the result is going to be a `SortedRange`.
 
 See_Also: $(LREF chunkBy), which chunks an input range into subranges
     of equivalent adjacent elements.
 */
-Group!(pred, Range) group(alias pred = "a == b", Range)(Range r)
+auto group(alias pred = "a == b", Range)(Range r)
 {
-    return typeof(return)(r);
+    import std.range : SortedRange, assumeSorted;
+    static if (is(Range : SortedRange!TT, TT))
+        return assumeSorted(Group!(pred, Range)(r));
+    else
+        return Group!(pred, Range)(r);
 }
 
 /// ditto
@@ -1598,6 +1613,13 @@ if (isInputRange!R)
     const(int[][]) a6 = [[1], [1]];
     auto g6 = a6.group;
     assert(equal(g6.front[0], [1]));
+
+    // Issue 9682
+    import std.range : SortedRange, assumeSorted;
+    auto a7 = assumeSorted([1, 1, 2, 5, 5, 5, 5]);
+    auto g7 = a7.group;
+    static assert(is(typeof(g7) : SortedRange!TT, TT));
+    assert(equal(g7, [tuple(1, 2u), tuple(2, 1u), tuple(5, 4u)]));
 }
 
 // Used by implementation of chunkBy for non-forward input ranges.
