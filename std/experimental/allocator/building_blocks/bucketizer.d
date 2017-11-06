@@ -17,7 +17,8 @@ for $(D Bucketizer). To handle them separately, $(D Segregator) may be of use.
 */
 struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 {
-    import common = std.experimental.allocator.common : roundUpToMultipleOf;
+    import common = std.experimental.allocator.common : roundUpToMultipleOf,
+           alignedAt;
     import std.traits : hasMember;
     import std.typecons : Ternary;
 
@@ -145,12 +146,12 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
             b = null;
             return true;
         }
-        if (size >= b.length)
+        if (size >= b.length && b.ptr.alignedAt(a) && expand(b, size - b.length))
         {
-            return expand(b, size - b.length);
+            return true;
         }
         assert(b.length >= min && b.length <= max);
-        if (goodAllocSize(size) == goodAllocSize(b.length))
+        if (goodAllocSize(size) == goodAllocSize(b.length) && b.ptr.alignedAt(a))
         {
             b = b.ptr[0 .. size];
             return true;
@@ -291,4 +292,34 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     assert(b.length == 100);
     assert(a.alignedAllocate(42, 16) is null);
     assert(a.alignedAllocate(0, 16) is null);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlock;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+
+    Bucketizer!(BitmappedBlock!(64, 8, GCAllocator), 1, 512, 64) a;
+    foreach (ref bucket; a.buckets)
+    {
+        bucket = BitmappedBlock!(64, 8, GCAllocator)(new ubyte[1024]);
+    }
+
+    auto b = a.alignedAllocate(1, 4);
+    assert(b.length == 1);
+    // Make reallocate use extend
+    assert(a.alignedReallocate(b, 11, 4));
+    assert(b.length == 11);
+    // Make reallocate use use realloc because of alignment change
+    assert(a.alignedReallocate(b, 21, 16));
+    assert(b.length == 21);
+    // Make reallocate use extend
+    assert(a.alignedReallocate(b, 22, 16));
+    assert(b.length == 22);
+    // Move cross buckets
+    assert(a.alignedReallocate(b, 101, 16));
+    assert(b.length == 101);
+    // Free through realloc
+    assert(a.alignedReallocate(b, 0, 16));
+    assert(b is null);
 }
