@@ -268,8 +268,9 @@ struct FallbackAllocator(Primary, Fallback)
     // This large allocation will go to the GCAllocator
     auto b2 = a.allocate(1024 * 1024);
     assert((() pure nothrow @safe @nogc => a.primary.owns(b2))() == Ternary.no);
-    a.deallocate(b1);
-    a.deallocate(b2);
+    // Ensure deallocate inherits from parent allocators
+    () nothrow @nogc { a.deallocate(b1); }();
+    () nothrow @nogc { a.deallocate(b2); }();
 }
 
 /*

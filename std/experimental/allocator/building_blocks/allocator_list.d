@@ -632,7 +632,8 @@ version(Posix) @system unittest
     auto b3 = a.allocate(192 * bs);
     assert(b3.length == 192 * bs);
     assert(a.allocators.length == 2);
-    a.deallocate(b1);
+    // Ensure deallocate inherits from parent allocators
+    () nothrow @nogc { a.deallocate(b1); }();
     b1 = a.allocate(64 * bs);
     assert(b1.length == 64 * bs);
     assert(a.allocators.length == 2);

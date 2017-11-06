@@ -443,6 +443,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
 
     Params: b = block to be deallocated
     */
+    nothrow @nogc
     bool deallocate(void[] b)
     {
         debug(KRRegion) writefln("KRRegion@%s: deallocate(%s[%s])", &this,
@@ -678,7 +679,7 @@ it actually returns memory to the operating system when possible.
     {
         assert(array[i].ptr);
         assert((() pure nothrow @safe @nogc => alloc.owns(array[i]))() == Ternary.yes);
-        alloc.deallocate(array[i]);
+        () nothrow @nogc { alloc.deallocate(array[i]); }();
     }
 }
 
@@ -716,7 +717,7 @@ it actually returns memory to the operating system when possible.
     foreach (i; 0 .. array.length)
     {
         assert((() pure nothrow @safe @nogc => alloc.owns(array[i]))() == Ternary.yes);
-        alloc.deallocate(array[i]);
+        () nothrow @nogc { alloc.deallocate(array[i]); }();
     }
 }
 
@@ -743,9 +744,9 @@ it actually returns memory to the operating system when possible.
         array ~= alloc.allocate(i);
         assert(array[$ - 1].length == i);
     }
-    alloc.deallocate(array[1]);
-    alloc.deallocate(array[0]);
-    alloc.deallocate(array[2]);
+    () nothrow @nogc { alloc.deallocate(array[1]); }();
+    () nothrow @nogc { alloc.deallocate(array[0]); }();
+    () nothrow @nogc { alloc.deallocate(array[2]); }();
     assert(alloc.allocateAll().length == 1024 * 1024);
 }
 
@@ -777,7 +778,7 @@ it actually returns memory to the operating system when possible.
     foreach (i; 0 .. array.length)
     {
         assert((() pure nothrow @safe @nogc => p.owns(array[i]))() == Ternary.yes);
-        p.deallocate(array[i]);
+        () nothrow @nogc { p.deallocate(array[i]); }();
     }
     auto b = p.allocateAll();
     assert(b.length == 1024 * 1024 - KRRegion!().sizeof, text(b.length));
@@ -790,7 +791,7 @@ it actually returns memory to the operating system when possible.
                     cast(ubyte[])(GCAllocator.instance.allocate(1024 * 1024)));
     auto p = alloc.allocateAll();
     assert(p.length == 1024 * 1024);
-    alloc.deallocateAll();
+    () nothrow @nogc { alloc.deallocateAll(); }();
     p = alloc.allocateAll();
     assert(p.length == 1024 * 1024);
 }
@@ -827,7 +828,7 @@ it actually returns memory to the operating system when possible.
 
         foreach (b; bufs.randomCover)
         {
-            a.deallocate(b);
+            () nothrow @nogc { a.deallocate(b); }();
         }
 
         assert(a.empty == Ternary.yes);
@@ -867,13 +868,13 @@ it actually returns memory to the operating system when possible.
             bufs ~= a.allocate(size);
         }
 
-        a.deallocate(bufs[1]);
+        () nothrow @nogc { a.deallocate(bufs[1]); }();
         bufs ~= a.allocate(sizes[1] - word);
 
-        a.deallocate(bufs[0]);
+        () nothrow @nogc { a.deallocate(bufs[0]); }();
         foreach (i; 2 .. bufs.length)
         {
-            a.deallocate(bufs[i]);
+            () nothrow @nogc { a.deallocate(bufs[i]); }();
         }
 
         assert(a.empty == Ternary.yes);

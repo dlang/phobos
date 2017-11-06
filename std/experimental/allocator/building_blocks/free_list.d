@@ -396,7 +396,8 @@ struct FreeList(ParentAllocator,
     auto b1 = fl.allocate(7);
     fl.allocate(8);
     assert(fl.root is null);
-    fl.deallocate(b1);
+    // Ensure deallocate inherits from parent
+    () nothrow @nogc { fl.deallocate(b1); }();
     assert(fl.root !is null);
     fl.allocate(8);
     assert(fl.root is null);
@@ -645,8 +646,7 @@ struct ContiguousFreeList(ParentAllocator,
         if (support.ptr <= b.ptr && b.ptr < support.ptr + support.length)
         {
             // we own this guy
-            import std.conv : text;
-            assert(fl.freeListEligible(b.length), text(b.length));
+            assert(fl.freeListEligible(b.length));
             assert(allocated);
             --allocated;
             // Put manually in the freelist
@@ -712,13 +712,14 @@ struct ContiguousFreeList(ParentAllocator,
     auto b = a.allocate(100);
     assert(a.empty == Ternary.yes);
     assert(b.length == 0);
-    a.deallocate(b);
+    // Ensure deallocate inherits from parent
+    () nothrow @nogc { a.deallocate(b); }();
     b = a.allocate(64);
     assert(a.empty == Ternary.no);
     assert(b.length == 64);
     assert((() nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
     assert((() nothrow @safe @nogc => a.owns(null))() == Ternary.no);
-    a.deallocate(b);
+    () nothrow @nogc { a.deallocate(b); }();
 }
 
 @system unittest
@@ -739,14 +740,15 @@ struct ContiguousFreeList(ParentAllocator,
     assert(a.empty == Ternary.no);
     assert(a.allocated == 0);
     assert(b.length == 100);
-    a.deallocate(b);
+    // Ensure deallocate inherits from parent
+    () nothrow @nogc { a.deallocate(b); }();
     assert(a.empty == Ternary.yes);
     b = a.allocate(64);
     assert(a.empty == Ternary.no);
     assert(b.length == 64);
     assert((() nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
     assert((() nothrow @safe @nogc => a.owns(null))() == Ternary.no);
-    a.deallocate(b);
+    () nothrow @nogc { a.deallocate(b); }();
 }
 
 @system unittest
@@ -1100,7 +1102,8 @@ struct SharedFreeList(ParentAllocator,
     assert((() nothrow @safe @nogc => a.goodAllocSize(1))() == platformAlignment);
 
     auto b = a.allocate(96);
-    a.deallocate(b);
+    // Ensure deallocate inherits from parent
+    () nothrow @nogc { a.deallocate(b); }();
 
     void fun()
     {
@@ -1108,7 +1111,7 @@ struct SharedFreeList(ParentAllocator,
         b[] = cast(size_t) &b;
 
         assert(b.equal(repeat(cast(size_t) &b, b.length)));
-        a.deallocate(b);
+        () nothrow @nogc { a.deallocate(b); }();
     }
 
     auto tg = new ThreadGroup;
@@ -1125,7 +1128,8 @@ struct SharedFreeList(ParentAllocator,
     import std.experimental.allocator.mallocator : Mallocator;
     static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
     auto b = a.allocate(100);
-    a.deallocate(b);
+    // Ensure deallocate inherits from parent
+    () nothrow @nogc { a.deallocate(b); }();
     assert(a.nodes == 1);
     b = [];
     a.deallocateAll();
@@ -1138,12 +1142,13 @@ struct SharedFreeList(ParentAllocator,
     static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
     auto b = a.allocate(100);
     auto c = a.allocate(100);
-    a.deallocate(c);
+    // Ensure deallocate inherits from parent
+    () nothrow @nogc { a.deallocate(c); }();
     assert(a.nodes == 1);
     c = [];
     a.minimize();
     assert(a.nodes == 0);
-    a.deallocate(b);
+    () nothrow @nogc { a.deallocate(b); }();
     assert(a.nodes == 1);
     b = [];
     a.minimize();
@@ -1157,8 +1162,9 @@ struct SharedFreeList(ParentAllocator,
     auto b = a.allocate(100);
     auto c = a.allocate(100);
     assert(a.nodes == 0);
-    a.deallocate(b);
-    a.deallocate(c);
+    // Ensure deallocate inherits from parent
+    () nothrow @nogc { a.deallocate(b); }();
+    () nothrow @nogc { a.deallocate(c); }();
     assert(a.nodes == 2);
     b = [];
     c = [];
@@ -1174,7 +1180,8 @@ struct SharedFreeList(ParentAllocator,
     auto c = a.allocate(64);
     assert(a.reallocate(c, 96));
     assert(c.length == 96);
-    a.deallocate(c);
+    // Ensure deallocate inherits from parent
+    () nothrow @nogc { a.deallocate(c); }();
 }
 
 @system unittest

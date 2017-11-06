@@ -248,6 +248,7 @@ struct Region(ParentAllocator = NullAllocator,
     b = Block previously obtained by a call to $(D allocate) against this
     allocator ($(D null) is allowed).
     */
+    pure nothrow @nogc
     bool deallocate(void[] b)
     {
         assert(owns(b) == Ternary.yes || b.ptr is null);
@@ -358,6 +359,11 @@ struct Region(ParentAllocator = NullAllocator,
     const b = reg.allocate(101);
     assert(b.length == 101);
     assert((() nothrow @safe @nogc => reg.owns(b))() == Ternary.yes);
+
+    // Ensure deallocate inherits from parent allocators
+    auto c = reg.allocate(42);
+    assert(c.length == 42);
+    () nothrow @nogc { reg.deallocate(c); }();
     // Destructor will free the memory
 }
 
@@ -584,6 +590,8 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     assert(a.length == 2001);
     import std.conv : text;
     assert(r1.available == 2095, text(r1.available));
+    // Ensure deallocate inherits from parent
+    () nothrow @nogc { r1.deallocate(a); }();
 
     InSituRegion!(65_536, 1024*4) r2;
     assert(r2.available <= 65_536);
@@ -593,8 +601,8 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     assert((() nothrow @safe @nogc => r2.owns(buff))() == Ternary.yes);
 }
 
-private extern(C) void* sbrk(long);
-private extern(C) int brk(shared void*);
+private extern(C) void* sbrk(long) nothrow @nogc;
+private extern(C) int brk(shared void*) nothrow @nogc;
 
 /**
 
@@ -733,6 +741,7 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     must be the last block allocated.
 
     */
+    nothrow @nogc
     bool deallocate(void[] b) shared
     {
         static if (minAlign > 1)
@@ -797,7 +806,7 @@ version(Posix) @system unittest
     // reducing the brk does not work on OSX
     version(OSX) {} else
     {
-        assert(alloc.deallocate(b));
+        assert((() nothrow @nogc => alloc.deallocate(b))());
         assert(alloc.deallocateAll);
     }
     const void[] c = alloc.allocate(2001);

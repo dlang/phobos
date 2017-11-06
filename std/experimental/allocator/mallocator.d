@@ -84,7 +84,7 @@ struct Mallocator
     {
         int* p = null;
         p = cast(int*) A.instance.allocate(int.sizeof);
-        scope(exit) A.instance.deallocate(p[0 .. int.sizeof]);
+        scope(exit) () nothrow @nogc { A.instance.deallocate(p[0 .. int.sizeof]); }();
         *p = 42;
         assert(*p == 42);
     }

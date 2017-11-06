@@ -399,7 +399,10 @@ if (Args.length > 3)
     assert(b.length == 256);
     assert(a.alignedReallocate(b, 42, 512));
     assert(b.length == 42);
-    a.deallocate(b);
+    assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
+    assert((() pure nothrow @safe @nogc => a.owns(null))() == Ternary.no);
+    // Ensure deallocate inherits from parent allocators
+    () nothrow @nogc { a.deallocate(b); }();
 }
 
 @system unittest
@@ -413,8 +416,9 @@ if (Args.length > 3)
     assert(b.length == 201);
 
     void[] p;
+    assert((() nothrow @safe @nogc => a.resolveInternalPointer(&b[0], p))() == Ternary.yes);
     assert((() nothrow @safe @nogc => a.resolveInternalPointer(null, p))() == Ternary.no);
-    assert((() nothrow @safe @nogc => a.resolveInternalPointer(&b[0], p))(  ) == Ternary.yes);
 
-    a.deallocate(b);
+    // Ensure deallocate inherits from parent allocators
+    () nothrow @nogc { a.deallocate(b); }();
 }

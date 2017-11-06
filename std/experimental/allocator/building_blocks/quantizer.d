@@ -238,6 +238,12 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     testAllocator!(() => MyAlloc());
 
     assert((() pure nothrow @safe @nogc => MyAlloc().goodAllocSize(1))() == 64);
+
+    auto a = MyAlloc();
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    // Ensure deallocate inherits from parent
+    () nothrow @nogc { a.deallocate(b); }();
 }
 
 // Check that owns inherits from parent, i.e. Region
