@@ -25,7 +25,7 @@ struct FallbackAllocator(Primary, Fallback)
     import std.typecons : Ternary;
 
     // Need at least one stateless allocator for this to work
-    static if (!stateSize!Primary || !stateSize!Fallback)
+    static if (!stateSize!Primary && !stateSize!Fallback)
     @system unittest
     {
         testAllocator!(() => FallbackAllocator());
