@@ -639,6 +639,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     available for further allocations. Does not return memory to $(D
     ParentAllocator).
     */
+    pure nothrow @nogc
     bool deallocateAll()
     {
         _control[] = 0;
@@ -733,7 +734,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         x = a.allocate(1);
         assert(x.length == 1 || blocks == 0,
             text(x.ptr, " ", x.length, " ", a));
-        a.deallocateAll();
+        assert((() nothrow @nogc => a.deallocateAll())());
 
         bool twice = true;
 
@@ -747,7 +748,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         assert(a.allocate(1) is null);
 
         // Now deallocate all and do it again!
-        a.deallocateAll();
+        assert((() nothrow @nogc => a.deallocateAll())());
 
         // Test deallocation
 
@@ -784,7 +785,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
             goto begin;
         }
 
-        a.deallocateAll;
+        assert((() nothrow @nogc => a.deallocateAll())());
 
         // test expansion
         if (blocks >= blocksAtATime)

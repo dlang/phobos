@@ -495,3 +495,13 @@ struct FreeTree(ParentAllocator)
     // goodAllocSize is not pure because we are calling through GCAllocator.instance
     assert(!__traits(compiles, (() pure nothrow @safe @nogc => a.goodAllocSize(0))()));
 }
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+
+    auto a = FreeTree!(Region!())(Region!()(new ubyte[1024 * 64]));
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() nothrow @nogc => a.deallocateAll())());
+}

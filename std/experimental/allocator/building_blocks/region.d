@@ -276,6 +276,7 @@ struct Region(ParentAllocator = NullAllocator,
     Deallocates all memory allocated by this region, which can be subsequently
     reused for new allocations.
     */
+    pure nothrow @nogc
     bool deallocateAll()
     {
         static if (growDownwards)
@@ -373,6 +374,16 @@ struct Region(ParentAllocator = NullAllocator,
 
     testAllocator!(() => Region!(Mallocator)(1024 * 64));
     testAllocator!(() => Region!(Mallocator, Mallocator.alignment, Yes.growDownwards)(1024 * 64));
+}
+
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    auto reg = Region!(Mallocator)(1024 * 64);
+    const b = reg.allocate(101);
+    assert(b.length == 101);
+    assert((() nothrow @nogc => reg.deallocateAll())());
 }
 
 /**
@@ -591,7 +602,8 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     import std.conv : text;
     assert(r1.available == 2095, text(r1.available));
     // Ensure deallocate inherits from parent
-    () nothrow @nogc { r1.deallocate(a); }();
+    assert((() nothrow @nogc => r1.deallocate(a))());
+    assert((() nothrow @nogc => r1.deallocateAll())());
 
     InSituRegion!(65_536, 1024*4) r2;
     assert(r2.available <= 65_536);
@@ -599,6 +611,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     assert(a.length == 2001);
     const void[] buff = r2.allocate(42);
     assert((() nothrow @safe @nogc => r2.owns(buff))() == Ternary.yes);
+    assert((() nothrow @nogc => r2.deallocateAll())());
 }
 
 private extern(C) void* sbrk(long) nothrow @nogc;
@@ -764,6 +777,7 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     that support reducing the  break address (i.e. accept calls to $(D sbrk)
     with negative offsets). OSX does not accept such.
     */
+    nothrow @nogc
     bool deallocateAll() shared
     {
         pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) == 0 || assert(0);
@@ -807,7 +821,7 @@ version(Posix) @system unittest
     version(OSX) {} else
     {
         assert((() nothrow @nogc => alloc.deallocate(b))());
-        assert(alloc.deallocateAll);
+        assert((() nothrow @nogc => alloc.deallocateAll())());
     }
     const void[] c = alloc.allocate(2001);
     assert(c.length == 2001);

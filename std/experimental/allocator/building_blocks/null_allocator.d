@@ -56,6 +56,7 @@ struct NullAllocator
     /**
     No-op.
     */
+    pure nothrow @safe @nogc
     bool deallocateAll() shared { return true; }
     /**
     Returns $(D Ternary.yes).
@@ -77,8 +78,8 @@ struct NullAllocator
     assert(!NullAllocator.instance.expand(b, 42));
     assert(!NullAllocator.instance.reallocate(b, 42));
     assert(!NullAllocator.instance.alignedReallocate(b, 42, 0));
-    () nothrow @nogc { NullAllocator.instance.deallocate(b); }();
-    NullAllocator.instance.deallocateAll();
+    assert((() nothrow @nogc => NullAllocator.instance.deallocate(b))());
+    assert((() nothrow @nogc => NullAllocator.instance.deallocateAll())());
 
     import std.typecons : Ternary;
     assert(NullAllocator.instance.empty() == Ternary.yes);

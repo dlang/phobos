@@ -607,14 +607,16 @@ version(Posix) @system unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
+    import std.experimental.allocator.mallocator : Mallocator;
     import std.typecons : Ternary;
-    AllocatorList!((n) => Region!()(new ubyte[max(n, 1024 * 4096)])) a;
+    AllocatorList!((n) => Region!()(new ubyte[max(n, 1024 * 4096)]), Mallocator) a;
     auto b1 = a.allocate(1024 * 8192);
     assert(b1 !is null);
     b1 = a.allocate(1024 * 10);
     assert(b1.length == 1024 * 10);
     a.allocate(1024 * 4095);
-    a.deallocateAll();
+    // Ensure deallocateAll infers from parent
+    assert((() nothrow @nogc => a.deallocateAll())());
     assert(a.empty == Ternary.yes);
 }
 
