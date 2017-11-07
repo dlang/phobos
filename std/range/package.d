@@ -6632,7 +6632,7 @@ if (isForwardRange!RangeOfRanges &&
     {
         auto ref opIndex(size_t n)
         {
-            return transversal!(opt)(_input, n);
+            return transversal!opt(_input, n);
         }
     }
 
