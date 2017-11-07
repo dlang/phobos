@@ -2014,7 +2014,10 @@ public:
     }
     body
     {
-        return (upper << nbits) | (lower >> (bitsPerSizeT - nbits));
+        if (nbits == 0)
+            return upper;
+        else
+            return (upper << nbits) | (lower >> (bitsPerSizeT - nbits));
     }
 
     @safe unittest
@@ -2193,6 +2196,19 @@ public:
                "00000000_00000000_"~
                "00000000_00000000_"~
                "00000000_00000000");
+    }
+
+    @system unittest
+    {
+        // Bugzilla 17467
+        import std.algorithm.comparison : equal;
+        import std.range : iota;
+        bool[] buf = new bool[64*3];
+        buf[0 .. 64] = true;
+        BitArray b = BitArray(buf);
+        assert(equal(b.bitsSet, iota(0, 64)));
+        b <<= 64;
+        assert(equal(b.bitsSet, iota(64, 128)));
     }
 
     /***************************************
