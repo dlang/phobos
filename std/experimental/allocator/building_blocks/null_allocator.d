@@ -61,6 +61,7 @@ struct NullAllocator
     /**
     Returns $(D Ternary.yes).
     */
+    pure nothrow @safe @nogc
     Ternary empty() shared const { return Ternary.yes; }
     /**
     Returns the $(D shared) global instance of the $(D NullAllocator).
@@ -82,7 +83,7 @@ struct NullAllocator
     assert((() nothrow @nogc => NullAllocator.instance.deallocateAll())());
 
     import std.typecons : Ternary;
-    assert(NullAllocator.instance.empty() == Ternary.yes);
+    assert((() nothrow @safe @nogc => NullAllocator.instance.empty)() == Ternary.yes);
     assert((() nothrow @safe @nogc => NullAllocator.instance.owns(null))() == Ternary.no);
 
     void[] p;

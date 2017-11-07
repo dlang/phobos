@@ -714,19 +714,19 @@ struct ContiguousFreeList(ParentAllocator,
     alias A = ContiguousFreeList!(NullAllocator, 0, 64);
     auto a = A(new ubyte[1024]);
 
-    assert(a.empty == Ternary.yes);
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
 
     assert((() pure nothrow @safe @nogc => a.goodAllocSize(15))() == 64);
     assert((() pure nothrow @safe @nogc => a.goodAllocSize(65))()
             == (() nothrow @safe @nogc => NullAllocator.instance.goodAllocSize(65))());
 
     auto b = a.allocate(100);
-    assert(a.empty == Ternary.yes);
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
     assert(b.length == 0);
     // Ensure deallocate inherits from parent
     () nothrow @nogc { a.deallocate(b); }();
     b = a.allocate(64);
-    assert(a.empty == Ternary.no);
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
     assert(b.length == 64);
     assert((() nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
     assert((() nothrow @safe @nogc => a.owns(null))() == Ternary.no);
@@ -741,21 +741,21 @@ struct ContiguousFreeList(ParentAllocator,
     alias A = ContiguousFreeList!(Region!GCAllocator, 0, 64);
     auto a = A(Region!GCAllocator(1024 * 4), 1024);
 
-    assert(a.empty == Ternary.yes);
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
 
     assert((() pure nothrow @safe @nogc => a.goodAllocSize(15))() == 64);
     assert((() pure nothrow @safe @nogc => a.goodAllocSize(65))()
             == (() pure nothrow @safe @nogc => a.parent.goodAllocSize(65))());
 
     auto b = a.allocate(100);
-    assert(a.empty == Ternary.no);
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
     assert(a.allocated == 0);
     assert(b.length == 100);
     // Ensure deallocate inherits from parent
-    () nothrow @nogc { a.deallocate(b); }();
-    assert(a.empty == Ternary.yes);
+    assert((() nothrow @nogc => a.deallocate(b))());
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
     b = a.allocate(64);
-    assert(a.empty == Ternary.no);
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
     assert(b.length == 64);
     assert((() nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
     assert((() nothrow @safe @nogc => a.owns(null))() == Ternary.no);
