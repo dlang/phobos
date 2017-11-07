@@ -3093,12 +3093,13 @@ else version(Posix)
             _dTypeSet = false;
         }
 
-        private this(string path, core.sys.posix.dirent.dirent* fd) @trusted
+        private this(string path, core.sys.posix.dirent.dirent* fd) @safe
         {
-            import std.path : buildPath;
             import std.algorithm.searching : countUntil;
+            import std.path : buildPath;
+            import std.string : representation;
 
-            immutable len = fd.d_name[].countUntil(0);
+            immutable len = fd.d_name[].representation.countUntil(0);
             _name = buildPath(path, fd.d_name[0 .. len]);
 
             _didLStat = false;
@@ -4207,6 +4208,33 @@ auto dirEntries(string path, string pattern, SpanMode mode,
             assert(de.attributes == de.statBuf.st_mode);
         }
     }
+}
+
+// Bugzilla 17962 - Make sure that dirEntries does not butcher Unicode file names.
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    import std.algorithm.sorting : sort;
+    import std.array : array;
+    import std.path : buildPath;
+    import std.uni : normalize;
+
+    // The Unicode normalization is required to make the tests pass on Mac OS X.
+    auto dir = deleteme ~ normalize("𐐷");
+    scope(exit) if (dir.exists) rmdirRecurse(dir);
+    mkdir(dir);
+    auto files = ["Hello World",
+                  "Ma Chérie.jpeg",
+                  "さいごの果実.txt"].map!(a => buildPath(dir, normalize(a)))().array();
+    sort(files);
+    foreach (file; files)
+        write(file, "nothing");
+
+    auto result = dirEntries(dir, SpanMode.shallow).map!(a => a.name.normalize()).array();
+    sort(result);
+
+    assert(equal(files, result));
 }
 
 
