@@ -7051,7 +7051,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
             byte[size] arr;
             alignmentTest();
         }
-        foreach (i; AliasSeq!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
+        static foreach (i; 0 .. 11)
             test!i();
     }
 }
