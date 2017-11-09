@@ -2718,14 +2718,10 @@ $(D Range) that locks the file and allows fast writing to it.
     private:
         import std.range.primitives : ElementType, isInfinite, isInputRange;
 
-        // We need the 'file_' member to keep the object alive by refcounting.
-        // The 'fps_' member is also kept to avoid constant checking if 'file_'
-        // members are correctly initialized, when trying to get the 'FILE*' from the 'File' object
-        FILE* fps_;
         File file_;
 
         // the unshared version of fps
-        @property _iobuf* handle_() @trusted { return cast(_iobuf*) fps_; }
+        @property _iobuf* handle_() @trusted { return cast(_iobuf*) file_._p.handle; }
 
         // the file's orientation (byte- or wide-oriented)
         int orientation_;
@@ -2738,25 +2734,38 @@ $(D Range) that locks the file and allows fast writing to it.
 
             enforce(f._p && f._p.handle, "Attempting to write to closed File");
             file_ = f;
-            fps_ = f._p.handle;
-            orientation_ = fwide(fps_, 0);
-            FLOCK(fps_);
+            FILE* fps = f._p.handle;
+            orientation_ = fwide(fps, 0);
+            FLOCK(fps);
         }
 
         ~this() @trusted
         {
-            if (fps_)
+            FILE* fps;
+
+            if (file_._p)
             {
-                FUNLOCK(fps_);
-                fps_ = null;
+                fps = file_._p.handle;
+            }
+
+            if (fps)
+            {
+                FUNLOCK(fps);
             }
         }
 
         this(this) @trusted
         {
-            if (fps_)
+            FILE* fps;
+
+            if (file_._p)
             {
-                FLOCK(fps_);
+                fps = file_._p.handle;
+            }
+
+            if (fps)
+            {
+                FLOCK(fps);
             }
         }
 
@@ -2777,7 +2786,7 @@ $(D Range) that locks the file and allows fast writing to it.
                 {
                     //file.write(writeme); causes infinite recursion!!!
                     //file.rawWrite(writeme);
-                    auto result = trustedFwrite(fps_, writeme);
+                    auto result = trustedFwrite(file_._p.handle, writeme);
                     if (result != writeme.length) errnoEnforce(0);
                     return;
                 }
@@ -2901,11 +2910,6 @@ See $(LREF byChunk) for an example.
     {
         import std.traits : hasIndirections;
     private:
-
-        // We need the 'file_' member to keep the object alive by refcounting.
-        // The 'fps_' member is also kept to avoid constant checking if 'file_'
-        // members are correctly initialized, when trying to get the 'FILE*' from the 'File' object
-        FILE* fps;
         File file;
         string name;
 
@@ -2923,7 +2927,7 @@ See $(LREF byChunk) for an example.
             file = f;
             enforce(f._p && f._p.handle);
             name = f._name;
-            fps = f._p.handle;
+            FILE* fps = f._p.handle;
             static if (locking)
                 FLOCK(fps);
 
@@ -2946,6 +2950,13 @@ See $(LREF byChunk) for an example.
     public:
         ~this()
         {
+            FILE* fps;
+
+            if (file._p)
+            {
+                fps = file._p.handle;
+            }
+
             if (!fps)
                 return;
 
@@ -2961,7 +2972,6 @@ See $(LREF byChunk) for an example.
             }
 
             FUNLOCK(fps);
-            fps = null;
         }
 
         void rawWrite(T)(in T[] buffer)
@@ -2969,7 +2979,7 @@ See $(LREF byChunk) for an example.
             import std.conv : text;
             import std.exception : errnoEnforce;
 
-            auto result = trustedFwrite(fps, buffer);
+            auto result = trustedFwrite(file._p.handle, buffer);
             if (result == result.max) result = 0;
             errnoEnforce(result == buffer.length,
                     text("Wrote ", result, " instead of ", buffer.length,
@@ -2985,6 +2995,13 @@ See $(LREF byChunk) for an example.
         {
             this(this)
             {
+                FILE* fps;
+
+                if (file._p)
+                {
+                    fps = file._p.handle;
+                }
+
                 if (fps)
                 {
                     FLOCK(fps);
