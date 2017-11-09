@@ -2717,7 +2717,10 @@ $(D Range) that locks the file and allows fast writing to it.
     {
     private:
         import std.range.primitives : ElementType, isInfinite, isInputRange;
-        // the shared file handle
+
+        // We need the 'file_' member to keep the object alive by refcounting.
+        // The 'fps_' member is also kept to avoid constant checking if 'file_'
+        // members are correctly initialized, when trying to get the 'FILE*' from the 'File' object
         FILE* fps_;
         File file_;
 
@@ -2898,6 +2901,10 @@ See $(LREF byChunk) for an example.
     {
         import std.traits : hasIndirections;
     private:
+
+        // We need the 'file_' member to keep the object alive by refcounting.
+        // The 'fps_' member is also kept to avoid constant checking if 'file_'
+        // members are correctly initialized, when trying to get the 'FILE*' from the 'File' object
         FILE* fps;
         File file;
         string name;
