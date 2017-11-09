@@ -4689,7 +4689,7 @@ and precision used for summation.
 
 Note that these specialized summing algorithms execute more primitive operations
 than vanilla summation. Therefore, if in certain cases maximum speed is required
-at expense of precision, one can use $(D fold!((a, b) => a + b)(r, 0)), which
+at expense of precision, one can use $(D fold!((a, b) => a + b)(0, r)), which
 is not specialized for summation.
 
 Params:
