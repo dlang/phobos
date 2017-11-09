@@ -768,7 +768,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     // Test chooseAtRuntime
     import std.experimental.allocator.gc_allocator : GCAllocator;
     uint blockSize = 64;
-    testAllocator!(() => BitmappedBlock!(chooseAtRuntime, 8, GCAllocator)(1024 * 64, 64));
+    testAllocator!(() => BitmappedBlock!(chooseAtRuntime, 8, GCAllocator)(1024 * 64, blockSize));
 }
 
 @system unittest
