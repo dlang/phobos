@@ -2717,10 +2717,11 @@ $(D Range) that locks the file and allows fast writing to it.
     {
     private:
         import std.range.primitives : ElementType, isInfinite, isInputRange;
-
+        // Access the FILE* handle through the 'file_' member
+        // to keep the object alive through refcounting
         File file_;
 
-        // the unshared version of fps
+        // the unshared version of FILE* handle, extracted from the File object
         @property _iobuf* handle_() @trusted { return cast(_iobuf*) file_._p.handle; }
 
         // the file's orientation (byte- or wide-oriented)
@@ -2910,6 +2911,8 @@ See $(LREF byChunk) for an example.
     {
         import std.traits : hasIndirections;
     private:
+        // Access the FILE* handle through the 'file_' member
+        // to keep the object alive through refcounting
         File file;
         string name;
 
