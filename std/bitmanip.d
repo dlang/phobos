@@ -1979,6 +1979,8 @@ public:
     }
     body
     {
+        if (nbits == 0)
+            return lower;
         return (upper << (bitsPerSizeT - nbits)) | (lower >> nbits);
     }
 
@@ -2014,6 +2016,8 @@ public:
     }
     body
     {
+        if (nbits == 0)
+            return upper;
         return (upper << nbits) | (lower >> (bitsPerSizeT - nbits));
     }
 
@@ -2101,8 +2105,11 @@ public:
         // end of the array.
         if (wordsToShift < dim)
         {
-            _ptr[dim - wordsToShift - 1] = rollRight(0, _ptr[dim - 1] & endMask,
-                                                    bitsToShift);
+            if (bitsToShift == 0)
+                _ptr[dim - wordsToShift - 1] = _ptr[dim - 1];
+            else
+                _ptr[dim - wordsToShift - 1] = rollRight(0, _ptr[dim - 1] & endMask,
+                                                        bitsToShift);
         }
 
         import std.algorithm.comparison : min;
@@ -2110,6 +2117,27 @@ public:
         {
             _ptr[dim - i - 1] = 0;
         }
+    }
+
+    // Issue 17467
+    @system unittest
+    {
+        import std.algorithm.comparison : equal;
+        import std.range : iota;
+
+        bool[] buf = new bool[64*3];
+        buf[0 .. 64] = true;
+        BitArray b = BitArray(buf);
+        assert(equal(b.bitsSet, iota(0, 64)));
+        b <<= 64;
+        assert(equal(b.bitsSet, iota(64, 128)));
+
+        buf = new bool[64*3];
+        buf[64*2 .. 64*3] = true;
+        b = BitArray(buf);
+        assert(equal(b.bitsSet, iota(64*2, 64*3)));
+        b >>= 64;
+        assert(equal(b.bitsSet, iota(64, 128)));
     }
 
     @system unittest
