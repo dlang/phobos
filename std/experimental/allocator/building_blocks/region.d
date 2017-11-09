@@ -392,8 +392,11 @@ struct Region(ParentAllocator = NullAllocator,
     import std.experimental.allocator.mallocator : Mallocator;
 
     auto reg = Region!(Mallocator)(1024 * 64);
-    const b = reg.allocate(101);
+    auto b = reg.allocate(101);
     assert(b.length == 101);
+    assert(reg.expand(b, 20));
+    assert(reg.expand(b, 73));
+    assert(!reg.expand(b, 1024 * 64));
     assert((() nothrow @nogc => reg.deallocateAll())());
 }
 
