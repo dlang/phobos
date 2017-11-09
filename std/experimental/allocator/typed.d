@@ -6,7 +6,7 @@ for thread-local vs. thread-shared data, or for fixed-size data (`struct`,
 `class` objects) vs. resizable data (arrays).
 
 Macros:
-T2=$(TR <td style="text-align:left">$(D $1)</td> $(TD $(ARGS $+)))
+T2=$(TR <td style="text-align:left">`$1`</td> $(TD $(ARGS $+)))
 */
 
 module std.experimental.allocator.typed;
@@ -80,12 +80,12 @@ not $(D Tuple!(int, string)), which contains an indirection.)
 
 $(T2 AllocFlag.threadLocal |$(NBSP)AllocFlag.hasNoIndirections,
 As above, but may be reallocated later. Examples of types fitting this
-description are $(D int[]), $(D double[]), $(D Tuple!(int, long)[]), but not
+description are `int[]`, `double[]`, $(D Tuple!(int, long)[]), but not
 $(D Tuple!(int, string)[]), which contains an indirection.)
 
 $(T2 AllocFlag.threadLocal,
 As above, but may embed indirections. Examples of types fitting this
-description are $(D int*[]), $(D Object[]), $(D Tuple!(int, string)[]).)
+description are `int*[]`, `Object[]`, $(D Tuple!(int, string)[]).)
 
 $(T2 AllocFlag.immutableShared |$(NBSP)AllocFlag.hasNoIndirections
 |$(NBSP)AllocFlag.fixedSize,

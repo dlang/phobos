@@ -722,7 +722,7 @@ public:
     /**
         Implements casting to/from qualified BigInt's.
 
-        Warning: Casting to/from $(D const) or $(D immutable) may break type
+        Warning: Casting to/from `const` or `immutable` may break type
         system guarantees. Use with care.
      */
     T opCast(T)() pure nothrow @nogc const
@@ -930,7 +930,7 @@ public:
     }
 
     /**
-        $(D toString) is rarely directly invoked; the usual way of using it is via
+        `toString` is rarely directly invoked; the usual way of using it is via
         $(REF format, std, format):
      */
     @system unittest
@@ -957,7 +957,7 @@ public:
     }
 
     /**
-        $(D toHash) is rarely directly invoked; it is implicitly used when
+        `toHash` is rarely directly invoked; it is implicitly used when
         BigInt is used as the key of an associative array.
      */
     @safe unittest
@@ -1027,10 +1027,10 @@ private:
 
 /**
 Params:
-    x = The $(D BigInt) to convert to a decimal $(D string).
+    x = The `BigInt` to convert to a decimal `string`.
 
 Returns:
-    A $(D string) that represents the $(D BigInt) as a decimal number.
+    A `string` that represents the `BigInt` as a decimal number.
 
 */
 string toDecimalString(const(BigInt) x)
@@ -1054,10 +1054,10 @@ string toDecimalString(const(BigInt) x)
 
 /**
 Params:
-    x = The $(D BigInt) to convert to a hexadecimal $(D string).
+    x = The `BigInt` to convert to a hexadecimal `string`.
 
 Returns:
-    A $(D string) that represents the $(D BigInt) as a hexadecimal (base 16)
+    A `string` that represents the `BigInt` as a hexadecimal (base 16)
     number in upper case.
 
 */

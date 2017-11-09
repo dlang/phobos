@@ -23,18 +23,18 @@ $(T2 initializeAll,
         If $(D a = [1.2, 3.4]), then $(D initializeAll(a)) leaves
         $(D a = [double.init, double.init]).)
 $(T2 move,
-        $(D move(a, b)) moves $(D a) into $(D b). $(D move(a)) reads $(D a)
+        $(D move(a, b)) moves `a` into `b`. $(D move(a)) reads `a`
         destructively when necessary.)
 $(T2 moveEmplace,
-        Similar to $(D move) but assumes `target` is uninitialized.)
+        Similar to `move` but assumes `target` is uninitialized.)
 $(T2 moveAll,
         Moves all elements from one range to another.)
 $(T2 moveEmplaceAll,
-        Similar to $(D moveAll) but assumes all elements in `target` are uninitialized.)
+        Similar to `moveAll` but assumes all elements in `target` are uninitialized.)
 $(T2 moveSome,
         Moves as many elements as possible from one range to another.)
 $(T2 moveEmplaceSome,
-        Similar to $(D moveSome) but assumes all elements in `target` are uninitialized.)
+        Similar to `moveSome` but assumes all elements in `target` are uninitialized.)
 $(T2 remove,
         Removes elements from a range in-place, and returns the shortened
         range.)
@@ -44,7 +44,7 @@ $(T2 strip,
         Strips all leading and trailing elements equal to a value, or that
         satisfy a predicate.
         If $(D a = [1, 1, 0, 1, 1]), then $(D strip(a, 1)) and
-        $(D strip!(e => e == 1)(a)) returns $(D [0]).)
+        $(D strip!(e => e == 1)(a)) returns `[0]`.)
 $(T2 stripLeft,
         Strips all leading elements equal to a value, or that satisfy a
         predicate.  If $(D a = [1, 1, 0, 1, 1]), then $(D stripLeft(a, 1)) and
@@ -84,21 +84,21 @@ import std.typecons; // : tuple, Tuple;
 
 // bringToFront
 /**
-The $(D bringToFront) function has considerable flexibility and
+The `bringToFront` function has considerable flexibility and
 usefulness. It can rotate elements in one buffer left or right, swap
 buffers of equal length, and even move elements across disjoint
 buffers of different types and different lengths.
 
-$(D bringToFront) takes two ranges $(D front) and $(D back), which may
-be of different types. Considering the concatenation of $(D front) and
-$(D back) one unified range, $(D bringToFront) rotates that unified
-range such that all elements in $(D back) are brought to the beginning
-of the unified range. The relative ordering of elements in $(D front)
-and $(D back), respectively, remains unchanged.
+`bringToFront` takes two ranges `front` and `back`, which may
+be of different types. Considering the concatenation of `front` and
+`back` one unified range, `bringToFront` rotates that unified
+range such that all elements in `back` are brought to the beginning
+of the unified range. The relative ordering of elements in `front`
+and `back`, respectively, remains unchanged.
 
-The $(D bringToFront) function treats strings at the code unit
+The `bringToFront` function treats strings at the code unit
 level and it is not concerned with Unicode character integrity.
-$(D bringToFront) is designed as a function for moving elements
+`bringToFront` is designed as a function for moving elements
 in ranges, not as a string function.
 
 Performs $(BIGOH max(front.length, back.length)) evaluations of $(D
@@ -106,8 +106,8 @@ swap).
 
 Preconditions:
 
-Either $(D front) and $(D back) are disjoint, or $(D back) is
-reachable from $(D front) and $(D front) is not reachable from $(D
+Either `front` and `back` are disjoint, or `back` is
+reachable from `front` and `front` is not reachable from $(D
 back).
 
 Params:
@@ -115,7 +115,7 @@ Params:
     back = a $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
 
 Returns:
-    The number of elements brought to the front, i.e., the length of $(D back).
+    The number of elements brought to the front, i.e., the length of `back`.
 
 See_Also:
     $(HTTP sgi.com/tech/stl/_rotate.html, STL's rotate)
@@ -209,7 +209,7 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
 }
 
 /**
-The simplest use of $(D bringToFront) is for rotating elements in a
+The simplest use of `bringToFront` is for rotating elements in a
 buffer. For example:
 */
 @safe unittest
@@ -221,10 +221,10 @@ buffer. For example:
 }
 
 /**
-The $(D front) range may actually "step over" the $(D back)
+The `front` range may actually "step over" the `back`
 range. This is very useful with forward ranges that cannot compute
 comfortably right-bounded subranges like $(D arr[0 .. 4]) above. In
-the example below, $(D r2) is a right subrange of $(D r1).
+the example below, `r2` is a right subrange of `r1`.
 */
 @safe unittest
 {
@@ -351,11 +351,11 @@ private enum bool areCopyCompatibleArrays(T1, T2) =
 
 // copy
 /**
-Copies the content of $(D source) into $(D target) and returns the
-remaining (unfilled) part of $(D target).
+Copies the content of `source` into `target` and returns the
+remaining (unfilled) part of `target`.
 
-Preconditions: $(D target) shall have enough room to accommodate
-the entirety of $(D source).
+Preconditions: `target` shall have enough room to accommodate
+the entirety of `source`.
 
 Params:
     source = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
@@ -446,7 +446,7 @@ range elements, different types of ranges are accepted:
 }
 
 /**
-To _copy at most $(D n) elements from a range, you may want to use
+To _copy at most `n` elements from a range, you may want to use
 $(REF take, std,range):
 */
 @safe unittest
@@ -539,7 +539,7 @@ $(HTTP sgi.com/tech/stl/copy_backward.html, STL's copy_backward'):
 }
 
 /**
-Assigns $(D value) to each element of input _range $(D range).
+Assigns `value` to each element of input _range `range`.
 
 Params:
         range = An
@@ -713,9 +713,9 @@ if ((isInputRange!Range && is(typeof(range.front = value)) ||
 }
 
 /**
-Fills $(D range) with a pattern copied from $(D filler). The length of
-$(D range) does not have to be a multiple of the length of $(D
-filler). If $(D filler) is empty, an exception is thrown.
+Fills `range` with a pattern copied from `filler`. The length of
+`range` does not have to be a multiple of the length of $(D
+filler). If `filler` is empty, an exception is thrown.
 
 Params:
     range = An $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
@@ -832,7 +832,7 @@ if (isInputRange!InputRange
 }
 
 /**
-Initializes all elements of $(D range) with their $(D .init) value.
+Initializes all elements of `range` with their `.init` value.
 Assumes that the elements of the range are uninitialized.
 
 Params:
@@ -1447,9 +1447,9 @@ Params:
     src = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with
         movable elements.
     tgt = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with
-        elements that elements from $(D src) can be moved into.
+        elements that elements from `src` can be moved into.
 
-Returns: The leftover portion of $(D tgt) after all elements from $(D src) have
+Returns: The leftover portion of `tgt` after all elements from `src` have
 been moved.
  */
 InputRange2 moveAll(InputRange1, InputRange2)(InputRange1 src, InputRange2 tgt)
@@ -1554,7 +1554,7 @@ Params:
     src = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with
         movable elements.
     tgt = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) with
-        elements that elements from $(D src) can be moved into.
+        elements that elements from `src` can be moved into.
 
 Returns: The leftover portions of the two ranges after one or the other of the
 ranges have been exhausted.
@@ -1625,8 +1625,8 @@ elements in a range (such as partition and sort). The strategy
 concerns the swapping of elements that are not the core concern of the
 algorithm. For example, consider an algorithm that sorts $(D [ "abc",
 "b", "aBc" ]) according to $(D toUpper(a) < toUpper(b)). That
-algorithm might choose to swap the two equivalent strings $(D "abc")
-and $(D "aBc"). That does not affect the sorting since both $(D [
+algorithm might choose to swap the two equivalent strings `"abc"`
+and `"aBc"`. That does not affect the sorting since both $(D [
 "abc", "aBc", "b" ]) and $(D [ "aBc", "abc", "b" ]) are valid
 outcomes.
 
@@ -1642,12 +1642,12 @@ being stable only on a well-defined subrange of the range. There is no
 established terminology for such behavior; this library calls it $(B
 semistable).
 
-Generally, the $(D stable) ordering strategy may be more costly in
+Generally, the `stable` ordering strategy may be more costly in
 time and/or space than the other two because it imposes additional
-constraints. Similarly, $(D semistable) may be costlier than $(D
+constraints. Similarly, `semistable` may be costlier than $(D
 unstable). As (semi-)stability is not needed very often, the ordering
-algorithms in this module parameterized by $(D SwapStrategy) all
-choose $(D SwapStrategy.unstable) as the default.
+algorithms in this module parameterized by `SwapStrategy` all
+choose `SwapStrategy.unstable` as the default.
 */
 
 enum SwapStrategy
@@ -1730,7 +1730,7 @@ invoked to rearrange elements, and on integers `move` simply copies the source
 to the destination.  To replace `a` with the effect of the removal, simply
 assign the slice returned by `remove` to it, as shown in the first example.
 
-Multiple indices can be passed into $(D remove). In that case,
+Multiple indices can be passed into `remove`. In that case,
 elements at the respective indices are all removed. The indices must
 be passed in increasing order, otherwise an exception occurs.
 
@@ -1753,24 +1753,24 @@ assert(remove(a, 1, tuple(3, 5), 9) == [ 0, 2, 5, 6, 7, 8, 10 ]);
 In this case, the slots at positions 1, 3, 4, and 9 are removed from
 the array. The tuple passes in a range closed to the left and open to
 the right (consistent with built-in slices), e.g. $(D tuple(3, 5))
-means indices $(D 3) and $(D 4) but not $(D 5).
+means indices `3` and `4` but not `5`.
 
 If the need is to remove some elements in the range but the order of
 the remaining elements does not have to be preserved, you may want to
-pass $(D SwapStrategy.unstable) to $(D remove).
+pass `SwapStrategy.unstable` to `remove`.
 
 ----
 int[] a = [ 0, 1, 2, 3 ];
 assert(remove!(SwapStrategy.unstable)(a, 1) == [ 0, 3, 2 ]);
 ----
 
-In the case above, the element at slot $(D 1) is removed, but replaced
+In the case above, the element at slot `1` is removed, but replaced
 with the last element of the range. Taking advantage of the relaxation
-of the stability requirement, $(D remove) moved elements from the end
+of the stability requirement, `remove` moved elements from the end
 of the array over the slots to be removed. This way there is less data
 movement to be done which improves the execution time of the function.
 
-The function $(D remove) works on bidirectional ranges that have assignable
+The function `remove` works on bidirectional ranges that have assignable
 lvalue elements. The moving strategy is (listed from fastest to slowest):
 $(UL $(LI If $(D s == SwapStrategy.unstable && isRandomAccessRange!Range &&
 hasLength!Range && hasLvalueElements!Range), then elements are moved from the
@@ -1779,8 +1779,8 @@ minimum of moves is performed.)  $(LI Otherwise, if $(D s ==
 SwapStrategy.unstable && isBidirectionalRange!Range && hasLength!Range
 && hasLvalueElements!Range), then elements are still moved from the
 end of the range, but time is spent on advancing between slots by repeated
-calls to $(D range.popFront).)  $(LI Otherwise, elements are moved
-incrementally towards the front of $(D range); a given element is never
+calls to `range.popFront`.)  $(LI Otherwise, elements are moved
+incrementally towards the front of `range`; a given element is never
 moved several times, but more elements are moved than in the previous
 cases.))
 
@@ -2021,8 +2021,8 @@ if (s == SwapStrategy.stable
 
 /**
 Reduces the length of the
-$(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,_range,primitives) $(D range) by removing
-elements that satisfy $(D pred). If $(D s = SwapStrategy.unstable),
+$(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,_range,primitives) `range` by removing
+elements that satisfy `pred`. If $(D s = SwapStrategy.unstable),
 elements are moved from the right end of the range over the elements
 to eliminate. If $(D s = SwapStrategy.stable) (the default),
 elements are moved progressively to front such that their relative
@@ -2032,7 +2032,7 @@ Params:
     range = a bidirectional ranges with lvalue elements
 
 Returns:
-    the range with all of the elements where $(D pred) is $(D true)
+    the range with all of the elements where `pred` is `true`
     removed
 */
 Range remove(alias pred, SwapStrategy s = SwapStrategy.stable, Range)
@@ -2181,7 +2181,7 @@ if (isBidirectionalRange!Range
 
 // reverse
 /**
-Reverses $(D r) in-place.  Performs $(D r.length / 2) evaluations of $(D
+Reverses `r` in-place.  Performs $(D r.length / 2) evaluations of $(D
 swap).
 Params:
     r = a $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
@@ -2240,18 +2240,18 @@ if (isRandomAccessRange!Range && hasLength!Range)
 }
 
 /**
-Reverses $(D r) in-place, where $(D r) is a narrow string (having
-elements of type $(D char) or $(D wchar)). UTF sequences consisting of
+Reverses `r` in-place, where `r` is a narrow string (having
+elements of type `char` or `wchar`). UTF sequences consisting of
 multiple code units are preserved properly.
 
 Params:
     s = a narrow string
 
 Bugs:
-    When passing a sting with unicode modifiers on characters, such as $(D \u0301),
+    When passing a sting with unicode modifiers on characters, such as `\u0301`,
     this function will not properly keep the position of the modifier. For example,
-    reversing $(D ba\u0301d) ("bád") will result in d\u0301ab ("d́ab") instead of
-    $(D da\u0301b) ("dáb").
+    reversing `ba\u0301d` ("bád") will result in d\u0301ab ("d́ab") instead of
+    `da\u0301b` ("dáb").
 */
 void reverse(Char)(Char[] s)
 if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
@@ -2307,12 +2307,12 @@ if (isNarrowString!(Char[]) && !is(Char == const) && !is(Char == immutable))
     The strip group of functions allow stripping of either leading, trailing,
     or both leading and trailing elements.
 
-    The $(D stripLeft) function will strip the $(D front) of the range,
-    the $(D stripRight) function will strip the $(D back) of the range,
-    while the $(D strip) function will strip both the $(D front) and $(D back)
+    The `stripLeft` function will strip the `front` of the range,
+    the `stripRight` function will strip the `back` of the range,
+    while the `strip` function will strip both the `front` and `back`
     of the range.
 
-    Note that the $(D strip) and $(D stripRight) functions require the range to
+    Note that the `strip` and `stripRight` functions require the range to
     be a $(LREF BidirectionalRange) range.
 
     All of these functions come in two varieties: one takes a target element,
@@ -2445,18 +2445,18 @@ if (isBidirectionalRange!Range && is(typeof(pred(range.back)) : bool))
 
 // swap
 /**
-Swaps $(D lhs) and $(D rhs). The instances $(D lhs) and $(D rhs) are moved in
-memory, without ever calling $(D opAssign), nor any other function. $(D T)
+Swaps `lhs` and `rhs`. The instances `lhs` and `rhs` are moved in
+memory, without ever calling `opAssign`, nor any other function. `T`
 need not be assignable at all to be swapped.
 
-If $(D lhs) and $(D rhs) reference the same instance, then nothing is done.
+If `lhs` and `rhs` reference the same instance, then nothing is done.
 
-$(D lhs) and $(D rhs) must be mutable. If $(D T) is a struct or union, then
+`lhs` and `rhs` must be mutable. If `T` is a struct or union, then
 its fields must also all be (recursively) mutable.
 
 Params:
-    lhs = Data to be swapped with $(D rhs).
-    rhs = Data to be swapped with $(D lhs).
+    lhs = Data to be swapped with `rhs`.
+    rhs = Data to be swapped with `lhs`.
 */
 void swap(T)(ref T lhs, ref T rhs) @trusted pure nothrow @nogc
 if (isBlitAssignable!T && !is(typeof(lhs.proxySwap(rhs))))
@@ -2820,8 +2820,8 @@ if (isInputRange!R1 && isInputRange!R2)
 
 // swapRanges
 /**
-Swaps all elements of $(D r1) with successive elements in $(D r2).
-Returns a tuple containing the remainder portions of $(D r1) and $(D
+Swaps all elements of `r1` with successive elements in `r2`.
+Returns a tuple containing the remainder portions of `r1` and $(D
 r2) that were not swapped (one of them will be empty). The ranges may
 be of different types but must have the same element type and support
 swapping.
@@ -2860,7 +2860,7 @@ if (hasSwappableElements!InputRange1 && hasSwappableElements!InputRange2
 }
 
 /**
-Initializes each element of $(D range) with $(D value).
+Initializes each element of `range` with `value`.
 Assumes that the elements of the range are uninitialized.
 This is of interest for structs that
 define copy constructors (for all other types, $(LREF fill) and

@@ -7,9 +7,9 @@ $(SCRIPT inhibitQuickIndex = 1;)
 $(BOOKTABLE Cheat Sheet,
 $(TR $(TH Function Name) $(TH Description))
 $(T2 cache,
-        Eagerly evaluates and caches another range's $(D front).)
+        Eagerly evaluates and caches another range's `front`.)
 $(T2 cacheBidirectional,
-        As above, but also provides $(D back) and $(D popBack).)
+        As above, but also provides `back` and `popBack`.)
 $(T2 chunkBy,
         $(D chunkBy!((a,b) => a[1] == b[1])([[1, 1], [1, 2], [2, 2], [2, 1]]))
         returns a range containing 3 subranges: the first with just
@@ -20,16 +20,16 @@ $(T2 cumulativeFold,
         lazily-evaluated range containing the successive reduced values `1`,
         `3`, `6`, `10`.)
 $(T2 each,
-        $(D each!writeln([1, 2, 3])) eagerly prints the numbers $(D 1), $(D 2)
-        and $(D 3) on their own lines.)
+        $(D each!writeln([1, 2, 3])) eagerly prints the numbers `1`, `2`
+        and `3` on their own lines.)
 $(T2 filter,
-        $(D filter!(a => a > 0)([1, -1, 2, 0, -3])) iterates over elements $(D 1)
-        and $(D 2).)
+        $(D filter!(a => a > 0)([1, -1, 2, 0, -3])) iterates over elements `1`
+        and `2`.)
 $(T2 filterBidirectional,
-        Similar to $(D filter), but also provides $(D back) and $(D popBack) at
+        Similar to `filter`, but also provides `back` and `popBack` at
         a small increase in cost.)
 $(T2 fold,
-        $(D fold!((a, b) => a + b)([1, 2, 3, 4])) returns $(D 10).)
+        $(D fold!((a, b) => a + b)([1, 2, 3, 4])) returns `10`.)
 $(T2 group,
         $(D group([5, 2, 2, 3, 3])) returns a range containing the tuples
         $(D tuple(5, 1)), $(D tuple(2, 2)), and $(D tuple(3, 2)).)
@@ -39,16 +39,16 @@ $(T2 joiner,
         the existing inputs are iterated.)
 $(T2 map,
         $(D map!(a => a * 2)([1, 2, 3])) lazily returns a range with the numbers
-        $(D 2), $(D 4), $(D 6).)
+        `2`, `4`, `6`.)
 $(T2 permutations,
         Lazily computes all permutations using Heap's algorithm.)
 $(T2 reduce,
-        $(D reduce!((a, b) => a + b)([1, 2, 3, 4])) returns $(D 10).
+        $(D reduce!((a, b) => a + b)([1, 2, 3, 4])) returns `10`.
         This is the old implementation of `fold`.)
 $(T2 splitter,
         Lazily splits a range by a separator.)
 $(T2 sum,
-        Same as $(D fold), but specialized for accurate summation.)
+        Same as `fold`, but specialized for accurate summation.)
 $(T2 uniq,
         Iterates over the unique elements in a range, which is assumed sorted.)
 )
@@ -117,29 +117,29 @@ if (fun.length >= 1)
 }
 
 /++
-$(D cache) eagerly evaluates $(D front) of $(D range)
-on each construction or call to $(D popFront),
+`cache` eagerly evaluates `front` of `range`
+on each construction or call to `popFront`,
 to store the result in a cache.
-The result is then directly returned when $(D front) is called,
+The result is then directly returned when `front` is called,
 rather than re-evaluated.
 
 This can be a useful function to place in a chain, after functions
 that have expensive evaluation, as a lazy alternative to $(REF array, std,array).
-In particular, it can be placed after a call to $(D map), or before a call
-to $(D filter).
+In particular, it can be placed after a call to `map`, or before a call
+to `filter`.
 
-$(D cache) may provide
+`cache` may provide
 $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
 iteration if needed, but since this comes at an increased cost, it must be explicitly requested via the
-call to $(D cacheBidirectional). Furthermore, a bidirectional cache will
+call to `cacheBidirectional`. Furthermore, a bidirectional cache will
 evaluate the "center" element twice, when there is only one element left in
 the range.
 
-$(D cache) does not provide random access primitives,
-as $(D cache) would be unable to cache the random accesses.
-If $(D Range) provides slicing primitives,
-then $(D cache) will provide the same slicing primitives,
-but $(D hasSlicing!Cache) will not yield true (as the $(REF hasSlicing, std,_range,primitives)
+`cache` does not provide random access primitives,
+as `cache` would be unable to cache the random accesses.
+If `Range` provides slicing primitives,
+then `cache` will provide the same slicing primitives,
+but `hasSlicing!Cache` will not yield true (as the $(REF hasSlicing, std,_range,primitives)
 trait also checks for random access).
 
 Params:
@@ -204,14 +204,14 @@ if (isBidirectionalRange!Range)
 }
 
 /++
-Tip: $(D cache) is eager when evaluating elements. If calling front on the
+Tip: `cache` is eager when evaluating elements. If calling front on the
 underlying _range has a side effect, it will be observable before calling
 front on the actual cached _range.
 
-Furthermore, care should be taken composing $(D cache) with $(REF take, std,_range).
-By placing $(D take) before $(D cache), then $(D cache) will be "aware"
+Furthermore, care should be taken composing `cache` with $(REF take, std,_range).
+By placing `take` before `cache`, then `cache` will be "aware"
 of when the _range ends, and correctly stop caching elements when needed.
-If calling front has no side effect though, placing $(D take) after $(D cache)
+If calling front has no side effect though, placing `take` after `cache`
 may yield a faster _range.
 
 Either way, the resulting ranges will be equivalent, but maybe not at the
@@ -442,10 +442,10 @@ private struct _Cache(R, bool bidir)
 /**
 $(D auto map(Range)(Range r) if (isInputRange!(Unqual!Range));)
 
-Implements the homonym function (also known as $(D transform)) present
+Implements the homonym function (also known as `transform`) present
 in many languages of functional flavor. The call $(D map!(fun)(range))
 returns a range of which elements are obtained by applying $(D fun(a))
-left to right for all elements $(D a) in $(D range). The original ranges are
+left to right for all elements `a` in `range`. The original ranges are
 not changed. Evaluation is done lazily.
 
 Params:
@@ -454,7 +454,7 @@ Params:
 
 Returns:
     a range with each fun applied to all the elements. If there is more than one
-    fun, the element type will be $(D Tuple) containing one element for each fun.
+    fun, the element type will be `Tuple` containing one element for each fun.
 
 See_Also:
     $(HTTP en.wikipedia.org/wiki/Map_(higher-order_function), Map (higher-order function))
@@ -508,8 +508,8 @@ if (fun.length >= 1)
 }
 
 /**
-Multiple functions can be passed to $(D map). In that case, the
-element type of $(D map) is a tuple containing one element for each
+Multiple functions can be passed to `map`. In that case, the
+element type of `map` is a tuple containing one element for each
 function.
 */
 @safe unittest
@@ -527,7 +527,7 @@ function.
 }
 
 /**
-You may alias $(D map) with some function(s) to a symbol and use
+You may alias `map` with some function(s) to a symbol and use
 it separately:
 */
 @safe unittest
@@ -844,14 +844,14 @@ private struct MapResult(alias fun, Range)
 
 // each
 /**
-Eagerly iterates over $(D r) and calls $(D pred) over _each element.
+Eagerly iterates over `r` and calls `pred` over _each element.
 
-If no predicate is specified, $(D each) will default to doing nothing
-but consuming the entire range. $(D .front) will be evaluated, but this
+If no predicate is specified, `each` will default to doing nothing
+but consuming the entire range. `.front` will be evaluated, but this
 can be avoided by explicitly specifying a predicate lambda with a
-$(D lazy) parameter.
+`lazy` parameter.
 
-$(D each) also supports $(D opApply)-based iterators, so it will work
+`each` also supports `opApply`-based iterators, so it will work
 with e.g. $(REF parallel, std,parallelism).
 
 Params:
@@ -1092,8 +1092,8 @@ Params:
     range = Input range of elements
 
 Returns:
-    $(D filter!(predicate)(range)) returns a new range containing only elements $(D x) in $(D range) for
-    which $(D predicate(x)) returns $(D true).
+    $(D filter!(predicate)(range)) returns a new range containing only elements `x` in `range` for
+    which $(D predicate(x)) returns `true`.
 
 See_Also:
     $(HTTP en.wikipedia.org/wiki/Filter_(higher-order_function), Filter (higher-order function))
@@ -1301,7 +1301,7 @@ private struct FilterResult(alias pred, Range)
 /**
  * $(D auto filterBidirectional(Range)(Range r) if (isBidirectionalRange!(Unqual!Range));)
  *
- * Similar to $(D filter), except it defines a
+ * Similar to `filter`, except it defines a
  * $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives).
  * There is a speed disadvantage - the constructor spends time
  * finding the last element in the range that satisfies the filtering
@@ -1317,7 +1317,7 @@ private struct FilterResult(alias pred, Range)
  *     r = Bidirectional range of elements
  *
  * Returns:
- *     a new range containing only the elements in r for which pred returns $(D true).
+ *     a new range containing only the elements in r for which pred returns `true`.
  */
 template filterBidirectional(alias pred)
 {
@@ -1398,10 +1398,10 @@ private struct FilterBidiResult(alias pred, Range)
 Groups consecutively equivalent elements into a single tuple of the element and
 the number of its repetitions.
 
-Similarly to $(D uniq), $(D group) produces a range that iterates over unique
+Similarly to `uniq`, `group` produces a range that iterates over unique
 consecutive elements of the given range. Each element of this range is a tuple
 of the element and the number of times it is repeated in the original range.
-Equivalence of elements is assessed by using the predicate $(D pred), which
+Equivalence of elements is assessed by using the predicate `pred`, which
 defaults to $(D "a == b").  The predicate is passed to $(REF binaryFun, std,functional),
 and can either accept a string, or any callable that can be executed via
 $(D pred(element, element)).
@@ -1413,7 +1413,7 @@ Params:
 
 Returns: A range of elements of type $(D Tuple!(ElementType!R, uint)),
 representing each consecutively unique element and its respective number of
-occurrences in that run.  This will be an input range if $(D R) is an input
+occurrences in that run.  This will be an input range if `R` is an input
 range, and a forward range in all other cases.
 
 See_Also: $(LREF chunkBy), which chunks an input range into subranges
@@ -1886,10 +1886,10 @@ if (isForwardRange!Range)
  * In other languages this is often called `partitionBy`, `groupBy`
  * or `sliceWhen`.
  *
- * Equivalence is defined by the predicate $(D pred), which can be either
+ * Equivalence is defined by the predicate `pred`, which can be either
  * binary, which is passed to $(REF binaryFun, std,functional), or unary, which is
  * passed to $(REF unaryFun, std,functional). In the binary form, two _range elements
- * $(D a) and $(D b) are considered equivalent if $(D pred(a,b)) is true. In
+ * `a` and `b` are considered equivalent if $(D pred(a,b)) is true. In
  * unary form, two elements are considered equivalent if $(D pred(a) == pred(b))
  * is true.
  *
@@ -2128,7 +2128,7 @@ Params:
 
 Returns:
 A range of elements in the joined range. This will be a forward range if
-both outer and inner ranges of $(D RoR) are forward ranges; otherwise it will
+both outer and inner ranges of `RoR` are forward ranges; otherwise it will
 be only an input range.
 
 See_also:
@@ -2726,20 +2726,20 @@ if (isInputRange!RoR && isInputRange!(ElementType!RoR))
 }
 
 /++
-Implements the homonym function (also known as $(D accumulate), $(D
-compress), $(D inject), or $(D foldl)) present in various programming
+Implements the homonym function (also known as `accumulate`, $(D
+compress), `inject`, or `foldl`) present in various programming
 languages of functional flavor. There is also $(LREF fold) which does
 the same thing but with the opposite parameter order.
-The call $(D reduce!(fun)(seed, range)) first assigns $(D seed) to
-an internal variable $(D result), also called the accumulator.
-Then, for each element $(D x) in $(D range), $(D result = fun(result, x))
-gets evaluated. Finally, $(D result) is returned.
+The call $(D reduce!(fun)(seed, range)) first assigns `seed` to
+an internal variable `result`, also called the accumulator.
+Then, for each element `x` in `range`, $(D result = fun(result, x))
+gets evaluated. Finally, `result` is returned.
 The one-argument version $(D reduce!(fun)(range))
 works similarly, but it uses the first element of the range as the
 seed (the range must be non-empty).
 
 Returns:
-    the accumulated $(D result)
+    the accumulated `result`
 
 Params:
     fun = one or more functions
@@ -2764,20 +2764,20 @@ if (fun.length >= 1)
         import std.typecons : tuple, isTuple;
 
     /++
-    No-seed version. The first element of $(D r) is used as the seed's value.
+    No-seed version. The first element of `r` is used as the seed's value.
 
-    For each function $(D f) in $(D fun), the corresponding
-    seed type $(D S) is $(D Unqual!(typeof(f(e, e)))), where $(D e) is an
-    element of $(D r): $(D ElementType!R) for ranges,
-    and $(D ForeachType!R) otherwise.
+    For each function `f` in `fun`, the corresponding
+    seed type `S` is $(D Unqual!(typeof(f(e, e)))), where `e` is an
+    element of `r`: `ElementType!R` for ranges,
+    and `ForeachType!R` otherwise.
 
     Once S has been determined, then $(D S s = e;) and $(D s = f(s, e);)
     must both be legal.
 
-    If $(D r) is empty, an $(D Exception) is thrown.
+    If `r` is empty, an `Exception` is thrown.
 
     Params:
-        r = an iterable value as defined by $(D isIterable)
+        r = an iterable value as defined by `isIterable`
 
     Returns:
         the final result of the accumulator applied to the iterable
@@ -2804,19 +2804,19 @@ if (fun.length >= 1)
     }
 
     /++
-    Seed version. The seed should be a single value if $(D fun) is a
-    single function. If $(D fun) is multiple functions, then $(D seed)
-    should be a $(REF Tuple, std,typecons), with one field per function in $(D f).
+    Seed version. The seed should be a single value if `fun` is a
+    single function. If `fun` is multiple functions, then `seed`
+    should be a $(REF Tuple, std,typecons), with one field per function in `f`.
 
     For convenience, if the seed is const, or has qualified fields, then
-    $(D reduce) will operate on an unqualified copy. If this happens
-    then the returned type will not perfectly match $(D S).
+    `reduce` will operate on an unqualified copy. If this happens
+    then the returned type will not perfectly match `S`.
 
-    Use $(D fold) instead of $(D reduce) to use the seed version in a UFCS chain.
+    Use `fold` instead of `reduce` to use the seed version in a UFCS chain.
 
     Params:
         seed = the initial value of the accumulator
-        r = an iterable value as defined by $(D isIterable)
+        r = an iterable value as defined by `isIterable`
 
     Returns:
         the final result of the accumulator applied to the iterable
@@ -2891,8 +2891,8 @@ if (fun.length >= 1)
 }
 
 /**
-Many aggregate range operations turn out to be solved with $(D reduce)
-quickly and easily. The example below illustrates $(D reduce)'s
+Many aggregate range operations turn out to be solved with `reduce`
+quickly and easily. The example below illustrates `reduce`'s
 remarkable power and flexibility.
 */
 @safe unittest
@@ -2945,8 +2945,8 @@ remarkable power and flexibility.
 /**
 Sometimes it is very useful to compute multiple aggregates in one pass.
 One advantage is that the computation is faster because the looping overhead
-is shared. That's why $(D reduce) accepts multiple functions.
-If two or more functions are passed, $(D reduce) returns a
+is shared. That's why `reduce` accepts multiple functions.
+If two or more functions are passed, `reduce` returns a
 $(REF Tuple, std,typecons) object with one member per passed-in function.
 The number of seeds must be correspondingly increased.
 */
@@ -3187,18 +3187,18 @@ private template ReduceSeedType(E)
 
 
 /++
-Implements the homonym function (also known as $(D accumulate), $(D
-compress), $(D inject), or $(D foldl)) present in various programming
+Implements the homonym function (also known as `accumulate`, $(D
+compress), `inject`, or `foldl`) present in various programming
 languages of functional flavor. The call $(D fold!(fun)(range, seed))
-first assigns $(D seed) to an internal variable $(D result),
-also called the accumulator. Then, for each element $(D x) in $(D
+first assigns `seed` to an internal variable `result`,
+also called the accumulator. Then, for each element `x` in $(D
 range), $(D result = fun(result, x)) gets evaluated. Finally, $(D
 result) is returned. The one-argument version $(D fold!(fun)(range))
 works similarly, but it uses the first element of the range as the
 seed (the range must be non-empty).
 
 Returns:
-    the accumulated $(D result)
+    the accumulated `result`
 
 See_Also:
     $(HTTP en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
@@ -3667,23 +3667,23 @@ If the empty range is given, the result is an empty range. If a range with
 one separator is given, the result is a range with two empty elements.
 
 If splitting a string on whitespace and token compression is desired,
-consider using $(D splitter) without specifying a separator (see fourth overload
+consider using `splitter` without specifying a separator (see fourth overload
 below).
 
 Params:
     pred = The predicate for comparing each element with the separator,
         defaulting to $(D "a == b").
     r = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to be
-        split. Must support slicing and $(D .length).
+        split. Must support slicing and `.length`.
     s = The element to be treated as the separator between range segments to be
         split.
 
 Constraints:
-    The predicate $(D pred) needs to accept an element of $(D r) and the
-    separator $(D s).
+    The predicate `pred` needs to accept an element of `r` and the
+    separator `s`.
 
 Returns:
-    An input range of the subranges of elements between separators. If $(D r)
+    An input range of the subranges of elements between separators. If `r`
     is a $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
     or $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives),
     the returned range will be likewise.
@@ -3942,7 +3942,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 }
 
 /**
-Similar to the previous overload of $(D splitter), except this one uses another
+Similar to the previous overload of `splitter`, except this one uses another
 range as a separator. This can be used with any narrow string type or sliceable
 range type, but is most popular with string types. The predicate is passed to
 $(REF binaryFun, std,functional), and can either accept a string, or any callable
@@ -3958,14 +3958,14 @@ Params:
     r = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to be
         split.
     s = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to
-        be treated as the separator between segments of $(D r) to be split.
+        be treated as the separator between segments of `r` to be split.
 
 Constraints:
-    The predicate $(D pred) needs to accept an element of $(D r) and an
-    element of $(D s).
+    The predicate `pred` needs to accept an element of `r` and an
+    element of `s`.
 
 Returns:
-    An input range of the subranges of elements between separators. If $(D r)
+    An input range of the subranges of elements between separators. If `r`
     is a forward range or $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives),
     the returned range will be likewise.
 
@@ -4206,9 +4206,9 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 
 /**
 
-Similar to the previous overload of $(D splitter), except this one does not use a separator.
+Similar to the previous overload of `splitter`, except this one does not use a separator.
 Instead, the predicate is an unary function on the input range's element type.
-The $(D isTerminator) predicate is passed to $(REF unaryFun, std,functional) and can
+The `isTerminator` predicate is passed to $(REF unaryFun, std,functional) and can
 either accept a string, or any callable that can be executed via $(D pred(element, s)).
 
 Two adjacent separators are considered to surround an empty element in
@@ -4221,10 +4221,10 @@ Params:
         be split.
 
 Constraints:
-    The predicate $(D isTerminator) needs to accept an element of $(D input).
+    The predicate `isTerminator` needs to accept an element of `input`.
 
 Returns:
-    An input range of the subranges of elements between separators. If $(D input)
+    An input range of the subranges of elements between separators. If `input`
     is a forward range or $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives),
     the returned range will be likewise.
 
@@ -4459,7 +4459,7 @@ private struct SplitterResult(alias isTerminator, Range)
 }
 
 /++
-Lazily splits the string $(D s) into words, using whitespace as the delimiter.
+Lazily splits the string `s` into words, using whitespace as the delimiter.
 
 This function is string specific and, contrary to
 $(D splitter!(std.uni.isWhite)), runs of whitespace will be merged together
@@ -4653,37 +4653,37 @@ if (isSomeChar!C)
 
 // sum
 /**
-Sums elements of $(D r), which must be a finite
+Sums elements of `r`, which must be a finite
 $(REF_ALTTEXT input range, isInputRange, std,range,primitives). Although
 conceptually $(D sum(r)) is equivalent to $(LREF fold)!((a, b) => a +
-b)(r, 0), $(D sum) uses specialized algorithms to maximize accuracy,
+b)(r, 0), `sum` uses specialized algorithms to maximize accuracy,
 as follows.
 
 $(UL
 $(LI If $(D $(REF ElementType, std,range,primitives)!R) is a floating-point
-type and $(D R) is a
+type and `R` is a
 $(REF_ALTTEXT random-access range, isRandomAccessRange, std,range,primitives) with
-length and slicing, then $(D sum) uses the
+length and slicing, then `sum` uses the
 $(HTTP en.wikipedia.org/wiki/Pairwise_summation, pairwise summation)
 algorithm.)
-$(LI If $(D ElementType!R) is a floating-point type and $(D R) is a
+$(LI If `ElementType!R` is a floating-point type and `R` is a
 finite input range (but not a random-access range with slicing), then
-$(D sum) uses the $(HTTP en.wikipedia.org/wiki/Kahan_summation,
+`sum` uses the $(HTTP en.wikipedia.org/wiki/Kahan_summation,
 Kahan summation) algorithm.)
 $(LI In all other cases, a simple element by element addition is done.)
 )
 
 For floating point inputs, calculations are made in
-$(DDLINK spec/type, Types, $(D real))
-precision for $(D real) inputs and in $(D double) precision otherwise
-(Note this is a special case that deviates from $(D fold)'s behavior,
-which would have kept $(D float) precision for a $(D float) range).
+$(DDLINK spec/type, Types, `real`)
+precision for `real` inputs and in `double` precision otherwise
+(Note this is a special case that deviates from `fold`'s behavior,
+which would have kept `float` precision for a `float` range).
 For all other types, the calculations are done in the same type obtained
 from from adding two elements of the range, which may be a different
 type from the elements themselves (for example, in case of
 $(DDSUBLINK spec/type,integer-promotions, integral promotion)).
 
-A seed may be passed to $(D sum). Not only will this seed be used as an initial
+A seed may be passed to `sum`. Not only will this seed be used as an initial
 value, but its type will override all the above, and determine the algorithm
 and precision used for summation.
 
@@ -4950,10 +4950,10 @@ private auto sumKahan(Result, R)(Result result, R r)
 Lazily iterates unique consecutive elements of the given range (functionality
 akin to the $(HTTP wikipedia.org/wiki/_Uniq, _uniq) system
 utility). Equivalence of elements is assessed by using the predicate
-$(D pred), by default $(D "a == b"). The predicate is passed to
+`pred`, by default $(D "a == b"). The predicate is passed to
 $(REF binaryFun, std,functional), and can either accept a string, or any callable
 that can be executed via $(D pred(element, element)). If the given range is
-bidirectional, $(D uniq) also yields a
+bidirectional, `uniq` also yields a
 $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives).
 
 Params:
@@ -4963,7 +4963,7 @@ Params:
 
 Returns:
     An $(REF_ALTTEXT input range, isInputRange, std,range,primitives) of
-    consecutively unique elements in the original range. If $(D r) is also a
+    consecutively unique elements in the original range. If `r` is also a
     forward range or bidirectional range, the returned range will be likewise.
 */
 auto uniq(alias pred = "a == b", Range)(Range r)
@@ -5096,12 +5096,12 @@ private struct UniqResult(alias pred, Range)
 }
 
 /**
-Lazily computes all _permutations of $(D r) using $(HTTP
+Lazily computes all _permutations of `r` using $(HTTP
 en.wikipedia.org/wiki/Heap%27s_algorithm, Heap's algorithm).
 
 Returns:
 A $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives)
-the elements of which are an $(REF indexed, std,range) view into $(D r).
+the elements of which are an $(REF indexed, std,range) view into `r`.
 
 See_Also:
 $(REF nextPermutation, std,algorithm,sorting).

@@ -10,7 +10,7 @@ and $(D $(LUCKY munmap)) directly (or their Windows equivalents). There is no
 additional structure: each call to $(D allocate(s)) issues a call to
 $(D mmap(null, s, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)),
 and each call to $(D deallocate(b)) issues $(D munmap(b.ptr, b.length)).
-So $(D MmapAllocator) is usually intended for allocating large chunks to be
+So `MmapAllocator` is usually intended for allocating large chunks to be
 managed by fine-granular allocators.
 
 */
