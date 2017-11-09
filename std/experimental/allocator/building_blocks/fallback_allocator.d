@@ -24,7 +24,8 @@ struct FallbackAllocator(Primary, Fallback)
     import std.traits : hasMember;
     import std.typecons : Ternary;
 
-    // Need at least one stateless allocator for this to work
+    // Need both allocators to be stateless
+    // This is to avoid using default initialized stateful allocators
     static if (!stateSize!Primary && !stateSize!Fallback)
     @system unittest
     {
