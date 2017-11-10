@@ -380,6 +380,7 @@ implementation of $(D reallocate).
 */
 bool alignedReallocate(Allocator)(ref Allocator alloc,
         ref void[] b, size_t s, uint a)
+if (hasMember!(Allocator, "alignedAllocate"))
 {
     static if (hasMember!(Allocator, "expand"))
     {
