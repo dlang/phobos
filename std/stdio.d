@@ -2913,7 +2913,7 @@ See $(LREF byChunk) for an example.
     private:
         // Access the FILE* handle through the 'file_' member
         // to keep the object alive through refcounting
-        File file;
+        File file_;
         string name;
 
         version (Windows)
@@ -2927,7 +2927,7 @@ See $(LREF byChunk) for an example.
         this(ref File f)
         {
             import std.exception : enforce;
-            file = f;
+            file_ = f;
             enforce(f._p && f._p.handle);
             name = f._name;
             FILE* fps = f._p.handle;
@@ -2955,9 +2955,9 @@ See $(LREF byChunk) for an example.
         {
             FILE* fps;
 
-            if (file._p)
+            if (file_._p)
             {
-                fps = file._p.handle;
+                fps = file_._p.handle;
             }
 
             if (!fps)
@@ -2982,7 +2982,7 @@ See $(LREF byChunk) for an example.
             import std.conv : text;
             import std.exception : errnoEnforce;
 
-            auto result = trustedFwrite(file._p.handle, buffer);
+            auto result = trustedFwrite(file_._p.handle, buffer);
             if (result == result.max) result = 0;
             errnoEnforce(result == buffer.length,
                     text("Wrote ", result, " instead of ", buffer.length,
@@ -3000,9 +3000,9 @@ See $(LREF byChunk) for an example.
             {
                 FILE* fps;
 
-                if (file._p)
+                if (file_._p)
                 {
-                    fps = file._p.handle;
+                    fps = file_._p.handle;
                 }
 
                 if (fps)
