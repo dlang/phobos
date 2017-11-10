@@ -2343,7 +2343,22 @@ Practically $(D Nullable!T) stores a $(D T) and a $(D bool).
  */
 struct Nullable(T)
 {
-    private T _value;
+    // simple case: type is freely constructable
+    static if (__traits(compiles, { T _value; }))
+    {
+        private T _value;
+    }
+    // type is not constructable, but also has no way to notice
+    // that we're assigning to an uninitialized variable.
+    else static if (!hasElaborateAssign!T)
+    {
+        private T _value = void;
+    }
+    else
+    {
+        static assert(false, "Cannot construct Nullable("~T.stringof~"): type has no default constructor and overloaded assignment.");
+    }
+
     private bool _isNull = true;
 
 /**
