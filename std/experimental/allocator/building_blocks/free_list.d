@@ -405,6 +405,36 @@ struct FreeList(ParentAllocator,
 
 @system unittest
 {
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.experimental.allocator.building_blocks.stats_collector
+        : StatsCollector, Options;
+
+    struct StatsCollectorWrapper {
+        ~this()
+        {
+            // buf2 should still be around and buf1 deallocated
+            assert(parent.numDeallocate == 1);
+            assert(parent.bytesUsed == 16);
+        }
+        static StatsCollector!(Mallocator, Options.all) parent;
+        alias parent this;
+    }
+
+    FreeList!(StatsCollectorWrapper, 16, 16) fl;
+    auto buf1 = fl.allocate(16);
+    auto buf2 = fl.allocate(16);
+    assert(fl.parent.bytesUsed == 32);
+
+    // After this, the list has 1 node, so no actual deallocation by Mallocator
+    fl.deallocate(buf1);
+    assert(fl.parent.bytesUsed == 32);
+
+    // Destruction should only deallocate the node
+    destroy(fl);
+}
+
+@system unittest
+{
     import std.experimental.allocator.gc_allocator : GCAllocator;
     FreeList!(GCAllocator, 0, 8) fl;
     assert(fl.root is null);
