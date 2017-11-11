@@ -401,6 +401,13 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
     assert(a.primary.owns(b2) == Ternary.no);
 }
 
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    testAllocator!(() => fallbackAllocator(Region!GCAllocator(1024), GCAllocator.instance));
+}
+
 // Ensure `owns` inherits function attributes
 @system unittest
 {
