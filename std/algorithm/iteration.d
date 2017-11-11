@@ -3855,14 +3855,14 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     import std.range : empty, retro;
 
     // Basic splitting with characters and numbers.
-    assert(equal(splitter("a.bc.def", '.'), [ "a", "bc", "def" ]));
+    assert(equal(splitter("a|bc|def", '|'), [ "a", "bc", "def" ]));
 
     int[] a = [1, 0, 2, 3, 0, 4, 5, 6];
     int[][] w = [ [1], [2, 3], [4, 5, 6] ];
     assert(equal(splitter(a, 0), w));
 
     // Adjacent separators.
-    assert(equal(splitter("a.b..c", '.'), [ "a", "b", "", "c" ]));
+    assert(equal(splitter("a|b||c", '|'), [ "a", "b", "", "c" ]));
     assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
 
     a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
@@ -3870,13 +3870,13 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     assert(equal(splitter(a, 0), w));
 
     // Empty and separator-only ranges.
-    assert(splitter("", '.').empty);
-    assert(equal(splitter(".", '.'), [ "", "" ]));
-    assert(equal(splitter("..", '.'), [ "", "", "" ]));
+    assert(splitter("", '|').empty);
+    assert(equal(splitter("|", '|'), [ "", "" ]));
+    assert(equal(splitter("||", '|'), [ "", "", "" ]));
 
     // Leading separators, trailing separators, or no separators.
-    assert(equal(splitter(".ab.", '.'), [ "", "ab", "" ]));
-    assert(equal(splitter("ab", '.'), [ "ab" ]));
+    assert(equal(splitter("|ab|", '|'), [ "", "ab", "" ]));
+    assert(equal(splitter("ab", '|'), [ "ab" ]));
 
     // Predicate functions.
     assert(equal(splitter!"a.toLower == b"("abXcdxef", 'x'),
@@ -3886,7 +3886,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     assert(equal(splitter!"a.front == b"(w, 1), [ [[0]], [[2]] ]));
 
     // Bidirectional ranges.
-    assert(equal(splitter("a.bc.def", '.').retro, [ "def", "bc", "a" ]));
+    assert(equal(splitter("a|bc|def", '|').retro, [ "def", "bc", "a" ]));
 }
 
 @safe unittest
@@ -4119,7 +4119,7 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
     import std.algorithm.comparison : equal;
 
     assert(equal(splitter("a=>bc=>def", "=>"), [ "a", "bc", "def" ]));
-    assert(equal(splitter("a.b..c", ".."), [ "a.b", "c" ]));
+    assert(equal(splitter("a|b||c", "||"), [ "a|b", "c" ]));
     assert(equal(splitter("hello  world", "  "), [ "hello", "world" ]));
 
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
@@ -4273,7 +4273,7 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(input.front))))
     import std.algorithm.comparison : equal;
     import std.range.primitives : front;
 
-    assert(equal(splitter!(a => a == '.')("a.bc.def"), [ "a", "bc", "def" ]));
+    assert(equal(splitter!(a => a == '|')("a|bc|def"), [ "a", "bc", "def" ]));
     assert(equal(splitter!(a => a == ' ')("hello  world"), [ "hello", "", "world" ]));
 
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
