@@ -380,6 +380,7 @@ implementation of $(D reallocate).
 */
 bool alignedReallocate(Allocator)(ref Allocator alloc,
         ref void[] b, size_t s, uint a)
+if (hasMember!(Allocator, "alignedAllocate"))
 {
     static if (hasMember!(Allocator, "expand"))
     {
@@ -391,6 +392,7 @@ bool alignedReallocate(Allocator)(ref Allocator alloc,
         if (b.length == s) return true;
     }
     auto newB = alloc.alignedAllocate(s, a);
+    if (newB.length != s) return false;
     if (newB.length <= b.length) newB[] = b[0 .. newB.length];
     else newB[0 .. b.length] = b[];
     static if (hasMember!(Allocator, "deallocate"))

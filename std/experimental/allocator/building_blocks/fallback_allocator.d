@@ -24,8 +24,9 @@ struct FallbackAllocator(Primary, Fallback)
     import std.traits : hasMember;
     import std.typecons : Ternary;
 
-    // Need at least one stateless allocator for this to work
-    static if (!stateSize!Primary || !stateSize!Fallback)
+    // Need both allocators to be stateless
+    // This is to avoid using default initialized stateful allocators
+    static if (!stateSize!Primary && !stateSize!Fallback)
     @system unittest
     {
         testAllocator!(() => FallbackAllocator());
@@ -398,6 +399,13 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
     auto b2 = a.allocate(10);
     assert(b2.length == 10);
     assert(a.primary.owns(b2) == Ternary.no);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    testAllocator!(() => fallbackAllocator(Region!GCAllocator(1024), GCAllocator.instance));
 }
 
 // Ensure `owns` inherits function attributes
