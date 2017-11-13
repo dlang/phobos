@@ -2356,7 +2356,7 @@ struct Nullable(T)
     }
     else
     {
-        static assert(false, "Cannot construct Nullable("~T.stringof~"): type has no default constructor and overloaded assignment.");
+        static assert(false, "Cannot construct " ~ typeof(this).stringof ~ ": type has no default constructor and overloaded assignment.");
     }
 
     private bool _isNull = true;
@@ -2957,6 +2957,19 @@ auto nullable(T)(T t)
     }
     Nullable!TestToString ntts = new TestToString(2.5);
     assert(ntts.to!string() == "2.5");
+}
+
+// Bugzilla 14477
+@safe unittest
+{
+    static struct DisabledDefaultConstructor
+    {
+        @disable this();
+        this(int i) { }
+    }
+    Nullable!DisabledDefaultConstructor var;
+    var = DisabledDefaultConstructor(5);
+    var.nullify;
 }
 
 /**
