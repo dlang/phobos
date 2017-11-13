@@ -289,7 +289,7 @@ struct AlignedMallocator
 
     /**
     On Posix there is no `realloc` for aligned memory, so `alignedReallocate` emulates
-    the needed behavior by using `alignedAllocate` to get a new block. The existing 
+    the needed behavior by using `alignedAllocate` to get a new block. The existing
     block is copied to the new block and then freed.
     On Windows, calls $(HTTPS msdn.microsoft.com/en-us/library/y69db7sx.aspx,
     $(D __aligned_realloc(b.ptr, newSize, a))).
