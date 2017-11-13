@@ -1397,7 +1397,8 @@ Deprecation: Historically `hasLength!R` yielded `true` for types whereby
 */
 template hasLength(R)
 {
-    static if (is(typeof(((R* r) => r.length)(null)) Length))
+    import std.traits : Unqual;
+    static if (is(Unqual!(typeof(((R* r) => r.length)(null))) Length))
     {
         static if (is(Length == size_t))
         {
