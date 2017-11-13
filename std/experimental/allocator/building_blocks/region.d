@@ -225,9 +225,11 @@ struct Region(ParentAllocator = NullAllocator,
         auto newLength = b.length + delta;
         if (_current < b.ptr + b.length + alignment)
         {
+            immutable currentGoodSize = this.goodAllocSize(b.length);
+            immutable newGoodSize = this.goodAllocSize(newLength);
+            immutable goodDelta = newGoodSize - currentGoodSize;
             // This was the last allocation! Allocate some more and we're done.
-            if (this.goodAllocSize(b.length) == this.goodAllocSize(newLength)
-                || allocate(delta).length == delta)
+            if (goodDelta == 0 || allocate(goodDelta).length == goodDelta)
             {
                 b = b.ptr[0 .. newLength];
                 assert(_current < b.ptr + b.length + alignment);
@@ -390,8 +392,11 @@ struct Region(ParentAllocator = NullAllocator,
     import std.experimental.allocator.mallocator : Mallocator;
 
     auto reg = Region!(Mallocator)(1024 * 64);
-    const b = reg.allocate(101);
+    auto b = reg.allocate(101);
     assert(b.length == 101);
+    assert(reg.expand(b, 20));
+    assert(reg.expand(b, 73));
+    assert(!reg.expand(b, 1024 * 64));
     assert((() nothrow @nogc => reg.deallocateAll())());
 }
 
