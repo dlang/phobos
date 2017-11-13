@@ -37,8 +37,8 @@ both internal and external fragmentation.
 The size of each block can be selected either during compilation or at run
 time. Statically-known block sizes are frequent in practice and yield slightly
 better performance. To choose a block size statically, pass it as the $(D
-blockSize) parameter as in $(D BitmappedBlock!(Allocator, 4096)). To choose a block
-size parameter, use $(D BitmappedBlock!(Allocator, chooseAtRuntime)) and pass the
+blockSize) parameter as in $(D BitmappedBlock!(4096)). To choose a block
+size parameter, use $(D BitmappedBlock!(chooseAtRuntime)) and pass the
 block size to the constructor.
 
 */
@@ -57,7 +57,14 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         auto m = cast(ubyte[])(AlignedMallocator.instance.alignedAllocate(1024 * 64,
                                 max(theAlignment, cast(uint) size_t.sizeof)));
         scope(exit) () nothrow @nogc { AlignedMallocator.instance.deallocate(m); }();
-        testAllocator!(() => BitmappedBlock(m));
+        static if (theBlockSize == chooseAtRuntime)
+        {
+            testAllocator!(() => BitmappedBlock(m, 64));
+        }
+        else
+        {
+            testAllocator!(() => BitmappedBlock(m));
+        }
     }
     static assert(theBlockSize > 0 && theAlignment.isGoodStaticAlignment);
     static assert(theBlockSize == chooseAtRuntime
@@ -81,7 +88,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         @property uint blockSize() { return _blockSize; }
         @property void blockSize(uint s)
         {
-            assert(!_control && s % alignment == 0);
+            assert(_control.length == 0 && s % alignment == 0);
             _blockSize = s;
         }
         private uint _blockSize;
@@ -117,6 +124,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     {
         alias parent = ParentAllocator.instance;
     }
+
     private uint _blocks;
     private BitVector _control;
     private void[] _payload;
@@ -186,6 +194,14 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     }
 
     /// Ditto
+    static if (chooseAtRuntime == theBlockSize)
+    this(ubyte[] data, uint blockSize)
+    {
+        this._blockSize = blockSize;
+        this(data);
+    }
+
+    /// Ditto
     static if (!is(ParentAllocator == NullAllocator))
     this(size_t capacity)
     {
@@ -193,6 +209,15 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         auto data = cast(ubyte[])(parent.allocate(toAllocate));
         this(data);
         assert(_blocks * blockSize >= capacity);
+    }
+
+    /// Ditto
+    static if (!is(ParentAllocator == NullAllocator) &&
+        chooseAtRuntime == theBlockSize)
+    this(size_t capacity, uint blockSize)
+    {
+        this._blockSize = blockSize;
+        this(capacity);
     }
 
     /**
@@ -709,6 +734,20 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 
 @system unittest
 {
+    // Test chooseAtRuntime
+    // Create a block allocator on top of a 10KB stack region.
+    import std.experimental.allocator.building_blocks.region : InSituRegion;
+    import std.traits : hasMember;
+    InSituRegion!(10_240, 64) r;
+    uint blockSize = 64;
+    auto a = BitmappedBlock!(chooseAtRuntime, 64)(cast(ubyte[])(r.allocateAll()), blockSize);
+    static assert(hasMember!(InSituRegion!(10_240, 64), "allocateAll"));
+    const b = a.allocate(100);
+    assert(b.length == 100);
+}
+
+@system unittest
+{
     import std.typecons : Ternary;
 
     auto a = BitmappedBlock!(64, 64)(new ubyte[10_240]);
@@ -722,6 +761,14 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     testAllocator!(() => BitmappedBlock!(64, 8, GCAllocator)(1024 * 64));
+}
+
+@system unittest
+{
+    // Test chooseAtRuntime
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    uint blockSize = 64;
+    testAllocator!(() => BitmappedBlock!(chooseAtRuntime, 8, GCAllocator)(1024 * 64, blockSize));
 }
 
 @system unittest
