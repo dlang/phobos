@@ -4684,6 +4684,13 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
             alias type = F;
         }
 
+        // issue 12064: Remove NVI members
+        template OnlyVirtual(members...)
+        {
+            enum notFinal(alias T) = !__traits(isFinalFunction, T);
+            alias OnlyVirtual = Filter!(notFinal, members);
+        }
+
         // Concat all Targets function members into one tuple
         template Concat(size_t i = 0)
         {
@@ -4691,9 +4698,10 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
                 alias Concat = AliasSeq!();
             else
             {
-                alias Concat = AliasSeq!(GetOverloadedMethods!(Targets[i]), Concat!(i + 1));
+                alias Concat = AliasSeq!(OnlyVirtual!(GetOverloadedMethods!(Targets[i]), Concat!(i + 1)));
             }
         }
+
         // Remove duplicated functions based on the identifier name and function type covariance
         template Uniq(members...)
         {
@@ -5057,6 +5065,32 @@ if (!isMutable!Target)
     Interface i = wrap!Interface(new Pluggable());
     assert(i.foo() == 100);
     assert(i.bar(10) == 100);
+}
+
+@system unittest // issue 12064
+{
+    interface I
+    {
+        int foo();
+        final int nvi1(){return foo();}
+    }
+
+    interface J
+    {
+        int bar();
+        final int nvi2(){return bar();}
+    }
+
+    class Baz
+    {
+        int foo() { return 42;}
+        int bar() { return 12064;}
+    }
+
+    auto baz = new Baz();
+    auto foobar = baz.wrap!(I, J)();
+    assert(foobar.nvi1 == 42);
+    assert(foobar.nvi2 == 12064);
 }
 
 // Make a tuple of non-static function symbols
