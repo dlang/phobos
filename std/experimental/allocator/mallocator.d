@@ -288,9 +288,10 @@ struct AlignedMallocator
     }
 
     /**
-    On Posix this function is non system call that allocates and copies old data
-    because there is no `realloc` for aligned memory.
-    On Windows, calls $(HTTPS https://msdn.microsoft.com/en-us/library/y69db7sx.aspx,
+    On Posix there is no `realloc` for aligned memory, so `alignedReallocate` emulates
+    the needed behavior by using `alignedAllocate` to get a new block. The existing 
+    block is copied to the new block and then freed.
+    On Windows, calls $(HTTPS msdn.microsoft.com/en-us/library/y69db7sx.aspx,
     $(D __aligned_realloc(b.ptr, newSize, a))).
     */
     version (Windows)
@@ -325,15 +326,12 @@ struct AlignedMallocator
         {
             return false;
         }
-        else
-        {
-            import std.algorithm.comparison : min;
-            const upTo = min(s, b.length);
-            p[0 .. upTo] = b[0 .. upTo];
-            deallocate(b);
-            b = p;
-            return true;
-        }
+        import std.algorithm.comparison : min;
+        const upTo = min(s, b.length);
+        p[0 .. upTo] = b[0 .. upTo];
+        deallocate(b);
+        b = p;
+        return true;
     }
 
     /**
