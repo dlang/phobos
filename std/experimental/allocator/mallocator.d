@@ -68,16 +68,14 @@ struct Mallocator
 }
 
 ///
-@nogc nothrow
-@system unittest
+@nogc @system nothrow unittest
 {
     auto buffer = Mallocator.instance.allocate(1024 * 1024 * 4);
     scope(exit) Mallocator.instance.deallocate(buffer);
     //...
 }
 
-@nogc nothrow
-@system unittest
+@nogc @system nothrow unittest
 {
     @nogc nothrow
     static void test(A)()
@@ -91,8 +89,7 @@ struct Mallocator
     test!Mallocator();
 }
 
-@nogc nothrow
-@system unittest
+@nogc @system nothrow unittest
 {
     static void test(A)()
     {
@@ -280,16 +277,10 @@ struct AlignedMallocator
     else static assert(0);
 
     /**
-    On Posix, forwards to $(D realloc). On Windows, forwards to
-    $(D alignedReallocate(b, newSize, platformAlignment)).
+    Forwards to $(D alignedReallocate(b, newSize, platformAlignment)).
+    Should be used with bocks obtained with `allocate` otherwise the custom
+    alignment passed with `alignedAllocate` can be lost.
     */
-    version (Posix)
-    @system @nogc nothrow
-    bool reallocate(ref void[] b, size_t newSize) shared
-    {
-        return Mallocator.instance.reallocate(b, newSize);
-    }
-    version (Windows)
     @system @nogc nothrow
     bool reallocate(ref void[] b, size_t newSize) shared
     {
@@ -297,9 +288,9 @@ struct AlignedMallocator
     }
 
     /**
-    On Posix, uses $(D alignedAllocate) and copies data around because there is
-    no realloc for aligned memory. On Windows, calls
-    $(HTTP msdn.microsoft.com/en-US/library/y69db7sx(v=vs.80).aspx,
+    On Posix this function is non system call that allocates and copies old data
+    because there is no `realloc` for aligned memory.
+    On Windows, calls $(HTTPS https://msdn.microsoft.com/en-us/library/y69db7sx.aspx,
     $(D __aligned_realloc(b.ptr, newSize, a))).
     */
     version (Windows)
@@ -318,6 +309,33 @@ struct AlignedMallocator
         return true;
     }
 
+    /// ditto
+    version (Posix)
+    @system @nogc nothrow
+    bool alignedReallocate(ref void[] b, size_t s, uint a) shared
+    {
+        if (!s)
+        {
+            deallocate(b);
+            b = null;
+            return true;
+        }
+        auto p = alignedAllocate(s, a);
+        if (!p.ptr)
+        {
+            return false;
+        }
+        else
+        {
+            import std.algorithm.comparison : min;
+            const upTo = min(s, b.length);
+            p[0 .. upTo] = b[0 .. upTo];
+            deallocate(b);
+            b = p;
+            return true;
+        }
+    }
+
     /**
     Returns the global instance of this allocator type. The C heap allocator is
     thread-safe, therefore all of its methods and `instance` itself are
@@ -327,8 +345,7 @@ struct AlignedMallocator
 }
 
 ///
-@nogc nothrow
-@system unittest
+@nogc @system nothrow unittest
 {
     auto buffer = AlignedMallocator.instance.alignedAllocate(1024 * 1024 * 4,
         128);
@@ -340,9 +357,32 @@ version(unittest) version(CRuntime_DigitalMars)
 @nogc nothrow
 size_t addr(ref void* ptr) { return cast(size_t) ptr; }
 
+version(Posix)
+@nogc @system nothrow unittest
+{
+    // 16398 : test the "pseudo" alignedReallocate for Posix
+    void[] s = AlignedMallocator.instance.alignedAllocate(16, 32);
+    (cast(ubyte[]) s)[] = ubyte(1);
+    AlignedMallocator.instance.alignedReallocate(s, 32, 32);
+    ubyte[16] o;
+    o[] = 1;
+    assert((cast(ubyte[]) s)[0 .. 16] == o);
+    AlignedMallocator.instance.alignedReallocate(s, 4, 32);
+    assert((cast(ubyte[]) s)[0 .. 3] == o[0 .. 3]);
+    AlignedMallocator.instance.alignedReallocate(s, 128, 32);
+    assert((cast(ubyte[]) s)[0 .. 3] == o[0 .. 3]);
+    AlignedMallocator.instance.deallocate(s);
+
+    void[] c;
+    AlignedMallocator.instance.alignedReallocate(c, 32, 32);
+    assert(c.ptr);
+
+    assert(!AlignedMallocator.instance.alignedReallocate(c, size_t.max, 4096));
+    AlignedMallocator.instance.deallocate(c);
+}
+
 version(CRuntime_DigitalMars)
-@nogc nothrow
-@system unittest
+@nogc @system nothrow unittest
 {
     void* m;
 
