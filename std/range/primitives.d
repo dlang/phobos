@@ -1435,10 +1435,12 @@ template hasLength(R)
 
     struct A { ulong length; }
     struct B { size_t length() { return 0; } }
-    struct C { @property size_t length() { return 0; } }
+    struct C { immutable(size_t) length() { return 0; } }
+    struct D { @property size_t length() { return 0; } }
     static assert( hasLength!(A));
     static assert( hasLength!(B));
     static assert( hasLength!(C));
+    static assert( hasLength!(D));
 }
 
 /**
