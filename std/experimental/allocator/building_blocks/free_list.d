@@ -11,7 +11,9 @@ another allocator. Allocation requests between $(D min) and $(D max) bytes are
 rounded up to $(D max) and served from a singly-linked list of buffers
 deallocated in the past. All other allocations are directed to $(D
 ParentAllocator). Due to the simplicity of free list management, allocations
-from the free list are fast.
+from the free list are fast. If $(D adaptive) is set to $(D Yes.adaptive),
+the free list gradually reduces its size if allocations tend to use the parent
+allocator much more than the lists' available nodes.
 
 One instantiation is of particular interest: $(D FreeList!(0, unbounded)) puts
 every deallocation in the freelist, and subsequently serves any allocation from
@@ -32,6 +34,7 @@ struct FreeList(ParentAllocator,
     import std.exception : enforce;
     import std.traits : hasMember;
     import std.typecons : Ternary;
+    import std.experimental.allocator.building_blocks.null_allocator : NullAllocator;
 
     static assert(minSize != unbounded, "Use minSize = 0 for no low bound.");
     static assert(maxSize >= (void*).sizeof,
@@ -374,7 +377,7 @@ struct FreeList(ParentAllocator,
     /**
     Nonstandard function that minimizes the memory usage of the freelist by
     freeing each element in turn. Defined only if $(D ParentAllocator) defines
-    $(D deallocate).
+    $(D deallocate). $(D FreeList!(0, unbounded)) does not have this function.
     */
     static if (hasMember!(ParentAllocator, "deallocate") && !unchecked)
     void minimize()
@@ -386,6 +389,48 @@ struct FreeList(ParentAllocator,
             parent.deallocate(nuke);
         }
     }
+
+    /**
+    If $(D ParentAllocator) defines $(D deallocate), the list frees all nodes
+    on destruction. $(D FreeList!(0, unbounded)) does not deallocate the memory
+    on destruction.
+    */
+    static if (!is(ParentAllocator == NullAllocator) &&
+        hasMember!(ParentAllocator, "deallocate") && !unchecked)
+    ~this()
+    {
+        minimize();
+    }
+}
+
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.experimental.allocator.building_blocks.stats_collector
+        : StatsCollector, Options;
+
+    struct StatsCollectorWrapper {
+        ~this()
+        {
+            // buf2 should still be around and buf1 deallocated
+            assert(parent.numDeallocate == 1);
+            assert(parent.bytesUsed == 16);
+        }
+        static StatsCollector!(Mallocator, Options.all) parent;
+        alias parent this;
+    }
+
+    FreeList!(StatsCollectorWrapper, 16, 16) fl;
+    auto buf1 = fl.allocate(16);
+    auto buf2 = fl.allocate(16);
+    assert(fl.parent.bytesUsed == 32);
+
+    // After this, the list has 1 node, so no actual deallocation by Mallocator
+    fl.deallocate(buf1);
+    assert(fl.parent.bytesUsed == 32);
+
+    // Destruction should only deallocate the node
+    destroy(fl);
 }
 
 @system unittest
