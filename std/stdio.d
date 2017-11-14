@@ -2742,31 +2742,17 @@ $(D Range) that locks the file and allows fast writing to it.
 
         ~this() @trusted
         {
-            FILE* fps;
-
-            if (file_._p)
+            if (auto p = file_._p)
             {
-                fps = file_._p.handle;
-            }
-
-            if (fps)
-            {
-                FUNLOCK(fps);
+                if (p.handle) FUNLOCK(p.handle);
             }
         }
 
         this(this) @trusted
         {
-            FILE* fps;
-
-            if (file_._p)
+            if (auto p = file_._p)
             {
-                fps = file_._p.handle;
-            }
-
-            if (fps)
-            {
-                FLOCK(fps);
+                if (p.handle) FLOCK(p.handle);
             }
         }
 
@@ -2953,15 +2939,10 @@ See $(LREF byChunk) for an example.
     public:
         ~this()
         {
-            FILE* fps;
-
-            if (file_._p)
-            {
-                fps = file_._p.handle;
-            }
-
-            if (!fps)
+            if (!file_._p || !file_._p.handle)
                 return;
+
+            FILE* fps = file_._p.handle;
 
             version (Windows)
             {
@@ -2998,16 +2979,9 @@ See $(LREF byChunk) for an example.
         {
             this(this)
             {
-                FILE* fps;
-
-                if (file_._p)
+                if (auto p = file_._p)
                 {
-                    fps = file_._p.handle;
-                }
-
-                if (fps)
-                {
-                    FLOCK(fps);
+                    if (p.handle) FLOCK(p.handle);
                 }
             }
         }
