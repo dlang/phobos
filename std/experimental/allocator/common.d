@@ -389,7 +389,7 @@ if (hasMember!(Allocator, "alignedAllocate"))
     }
     else
     {
-        if (b.length == s) return true;
+        if (b.length == s && b.ptr.alignedAt(a)) return true;
     }
     auto newB = alloc.alignedAllocate(s, a);
     if (newB.length != s) return false;
