@@ -2787,11 +2787,12 @@ $(D Range) that locks the file and allows fast writing to it.
     {
     private:
         import std.range.primitives : ElementType, isInfinite, isInputRange;
-        // the shared file handle
-        FILE* fps_;
+        // Access the FILE* handle through the 'file_' member
+        // to keep the object alive through refcounting
+        File file_;
 
-        // the unshared version of fps
-        @property _iobuf* handle_() @trusted { return cast(_iobuf*) fps_; }
+        // the unshared version of FILE* handle, extracted from the File object
+        @property _iobuf* handle_() @trusted { return cast(_iobuf*) file_._p.handle; }
 
         // the file's orientation (byte- or wide-oriented)
         int orientation_;
@@ -2803,25 +2804,25 @@ $(D Range) that locks the file and allows fast writing to it.
             import std.exception : enforce;
 
             enforce(f._p && f._p.handle, "Attempting to write to closed File");
-            fps_ = f._p.handle;
-            orientation_ = fwide(fps_, 0);
-            FLOCK(fps_);
+            file_ = f;
+            FILE* fps = f._p.handle;
+            orientation_ = fwide(fps, 0);
+            FLOCK(fps);
         }
 
         ~this() @trusted
         {
-            if (fps_)
+            if (auto p = file_._p)
             {
-                FUNLOCK(fps_);
-                fps_ = null;
+                if (p.handle) FUNLOCK(p.handle);
             }
         }
 
         this(this) @trusted
         {
-            if (fps_)
+            if (auto p = file_._p)
             {
-                FLOCK(fps_);
+                if (p.handle) FLOCK(p.handle);
             }
         }
 
@@ -2842,7 +2843,7 @@ $(D Range) that locks the file and allows fast writing to it.
                 {
                     //file.write(writeme); causes infinite recursion!!!
                     //file.rawWrite(writeme);
-                    auto result = trustedFwrite(fps_, writeme);
+                    auto result = trustedFwrite(file_._p.handle, writeme);
                     if (result != writeme.length) errnoEnforce(0);
                     return;
                 }
@@ -2966,7 +2967,9 @@ See $(LREF byChunk) for an example.
     {
         import std.traits : hasIndirections;
     private:
-        FILE* fps;
+        // Access the FILE* handle through the 'file_' member
+        // to keep the object alive through refcounting
+        File file_;
         string name;
 
         version (Windows)
@@ -2980,10 +2983,10 @@ See $(LREF byChunk) for an example.
         this(ref File f)
         {
             import std.exception : enforce;
-
+            file_ = f;
             enforce(f._p && f._p.handle);
             name = f._name;
-            fps = f._p.handle;
+            FILE* fps = f._p.handle;
             static if (locking)
                 FLOCK(fps);
 
@@ -3006,8 +3009,10 @@ See $(LREF byChunk) for an example.
     public:
         ~this()
         {
-            if (!fps)
+            if (!file_._p || !file_._p.handle)
                 return;
+
+            FILE* fps = file_._p.handle;
 
             version (Windows)
             {
@@ -3021,7 +3026,6 @@ See $(LREF byChunk) for an example.
             }
 
             FUNLOCK(fps);
-            fps = null;
         }
 
         void rawWrite(T)(in T[] buffer)
@@ -3029,7 +3033,7 @@ See $(LREF byChunk) for an example.
             import std.conv : text;
             import std.exception : errnoEnforce;
 
-            auto result = trustedFwrite(fps, buffer);
+            auto result = trustedFwrite(file_._p.handle, buffer);
             if (result == result.max) result = 0;
             errnoEnforce(result == buffer.length,
                     text("Wrote ", result, " instead of ", buffer.length,
@@ -3045,9 +3049,9 @@ See $(LREF byChunk) for an example.
         {
             this(this)
             {
-                if (fps)
+                if (auto p = file_._p)
                 {
-                    FLOCK(fps);
+                    if (p.handle) FLOCK(p.handle);
                 }
             }
         }
@@ -3117,6 +3121,19 @@ void main()
 
         auto deleteme = testFilename();
         scope(exit) collectException(std.file.remove(deleteme));
+
+        {
+            auto writer = File(deleteme, "wb").lockingBinaryWriter();
+            auto input = File(deleteme, "rb");
+
+            ubyte[1] byteIn = [42];
+            writer.rawWrite(byteIn);
+            destroy(writer);
+
+            ubyte[1] byteOut = input.rawRead(new ubyte[1]);
+            assert(byteIn[0] == byteOut[0]);
+        }
+
         auto output = File(deleteme, "wb");
         auto writer = output.lockingBinaryWriter();
         auto input = File(deleteme, "rb");
@@ -3341,8 +3358,7 @@ void main()
     scope(exit) std.file.remove(deleteme);
 
     {
-        File f = File(deleteme, "w");
-        auto writer = f.lockingTextWriter();
+        auto writer = File(deleteme, "w").lockingTextWriter();
         static assert(isOutputRange!(typeof(writer), dchar));
         writer.put("日本語");
         writer.put("日本語"w);
