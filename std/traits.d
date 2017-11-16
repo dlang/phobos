@@ -594,14 +594,18 @@ private template fqnSym(alias T)
     static assert(fqn!Barrier == "core.sync.barrier.Barrier");
 }
 
+version(unittest)
+{
+     struct TemplatedStruct()
+     {
+         enum foo = 0;
+     }
+     alias TemplatedStructAlias = TemplatedStruct;
+}
+
 @safe unittest
 {
-    struct TemplatedStruct()
-    {
-        enum foo = 0;
-    }
-    alias TemplatedStructAlias = TemplatedStruct;
-    assert("TemplatedStruct.foo" == fullyQualifiedName!(TemplatedStructAlias!().foo));
+    assert("std.traits.TemplatedStruct!().foo" == fullyQualifiedName!(TemplatedStructAlias!().foo));
 }
 
 private template fqnType(T,
