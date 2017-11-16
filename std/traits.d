@@ -594,16 +594,6 @@ private template fqnSym(alias T)
     static assert(fqn!Barrier == "core.sync.barrier.Barrier");
 }
 
-@safe unittest
-{
-    struct TemplatedStruct()
-    {
-        enum foo = 0;
-    }
-    alias TemplatedStructAlias = TemplatedStruct;
-    assert("TemplatedStruct.foo" == fullyQualifiedName!(TemplatedStructAlias!().foo));
-}
-
 private template fqnType(T,
     bool alreadyConst, bool alreadyImmutable, bool alreadyShared, bool alreadyInout)
 {
