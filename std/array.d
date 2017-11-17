@@ -811,25 +811,37 @@ private auto arrayAllocImpl(bool minimallyInitialized, T, I...)(I sizes) nothrow
     assert(b3);
 }
 
-// overlap
-/*
-NOTE: Undocumented for now, overlap does not yet work with ctfe.
+/++
 Returns the overlapping portion, if any, of two arrays. Unlike $(D
-equal), $(D overlap) only compares the pointers in the ranges, not the
-values referred by them. If $(D r1) and $(D r2) have an overlapping
-slice, returns that slice. Otherwise, returns the null slice.
-*/
-auto overlap(T, U)(T[] r1, U[] r2) @trusted pure nothrow
-if (is(typeof(r1.ptr < r2.ptr) == bool))
+equal), $(D overlap) only compares the pointers and lengths in the
+ranges, not the values referred by them. If $(D r1) and $(D r2) have an
+overlapping slice, returns that slice. Otherwise, returns the null
+slice.
++/
+
+CommonType!(T[], U[]) overlap(T, U)(T[] a, U[] b) @trusted
+if (is(typeof(a.ptr < b.ptr) == bool))
 {
-    import std.algorithm.comparison : min, max;
-    auto b = max(r1.ptr, r2.ptr);
-    auto e = min(r1.ptr + r1.length, r2.ptr + r2.length);
-    return b < e ? b[0 .. e - b] : null;
+    import std.algorithm.comparison : min;
+
+    auto end = min(a.ptr + a.length, b.ptr + b.length);
+    // CTFE requires pairing pointer comparisons, which forces a
+    // slightly inefficient implementation.
+    if (a.ptr <= b.ptr && b.ptr < a.ptr + a.length)
+    {
+        return b.ptr[0 .. end - b.ptr];
+    }
+
+    if (b.ptr <= a.ptr && a.ptr < b.ptr + b.length)
+    {
+        return a.ptr[0 .. end - a.ptr];
+    }
+
+    return null;
 }
 
 ///
-@safe pure /*nothrow*/ unittest
+@safe pure nothrow unittest
 {
     int[] a = [ 10, 11, 12, 13, 14 ];
     int[] b = a[1 .. 3];
@@ -837,15 +849,22 @@ if (is(typeof(r1.ptr < r2.ptr) == bool))
     b = b.dup;
     // overlap disappears even though the content is the same
     assert(overlap(a, b).empty);
+
+    static test()() @nogc
+    {
+        auto a = "It's three o'clock"d;
+        auto b = a[5 .. 10];
+        return b.overlap(a);
+    }
+
+    //works at compile-time
+    static assert(test == "three"d);
 }
 
-@safe /*nothrow*/ unittest
+@safe nothrow unittest
 {
     static void test(L, R)(L l, R r)
     {
-        import std.stdio;
-        scope(failure) writeln("Types: L %s  R %s", L.stringof, R.stringof);
-
         assert(overlap(l, r) == [ 100, 12 ]);
 
         assert(overlap(l, l[0 .. 2]) is l[0 .. 2]);
