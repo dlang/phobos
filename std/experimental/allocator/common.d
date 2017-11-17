@@ -440,9 +440,10 @@ if (hasMember!(Allocator, "alignedAllocate"))
     assert(alignedReallocate(a1, b, b.length, alignment));
     assert(!called);
 
-    // Ask for same length, different alignment, should call 'alignedAllocate'
+    // Ask for same length, different alignment
+    // should call 'alignedAllocate' if not aligned to new value
     alignedReallocate(a1, b, b.length, alignment + 1);
-    assert(called);
+    assert(b.ptr.alignedAt(alignment + 1) || called);
     called = false;
 
     DummyAllocatorExpand a2;
@@ -451,9 +452,10 @@ if (hasMember!(Allocator, "alignedAllocate"))
     assert(called);
     called = false;
 
-    // Ask for bigger length, different alignment, should call 'alignedAllocate'
+    // Ask for bigger length, different alignment
+    // should call 'alignedAllocate' if not aligned to new value
     alignedReallocate(a2, b, b.length + 1, alignment + 1);
-    assert(!called);
+    assert(b.ptr.alignedAt(alignment + 1) || !called);
 }
 
 /**
