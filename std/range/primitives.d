@@ -103,6 +103,10 @@ $(BOOKTABLE ,
     ))
 )
 
+$(B NEW:) `version(NoAutoDecode)` allows to use Phobos ranges without
+auto-decoding. This is an experimental option to test the feasibility
+of disabling auto-decoding by default. You have been warned.
+
 Source: $(PHOBOSSRC std/range/_primitives.d)
 
 License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
@@ -2271,14 +2275,25 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
     assert(c.front == 1);
 }
 
-/// ditto
-@property dchar front(T)(T[] a) @safe pure
-if (isNarrowString!(T[]))
+version(NoAutoDecode)
 {
-    import std.utf : decode;
-    assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
-    size_t i = 0;
-    return decode(a, i);
+    @property auto front(T)(T[] a) @safe pure
+    if (isNarrowString!(T[]))
+    {
+        return a[0];
+    }
+}
+else
+{
+    /// ditto
+    @property dchar front(T)(T[] a) @safe pure
+    if (isNarrowString!(T[]))
+    {
+        import std.utf : decode;
+        assert(a.length, "Attempting to fetch the front of an empty array of " ~ T.stringof);
+        size_t i = 0;
+        return decode(a, i);
+    }
 }
 
 /**
@@ -2314,13 +2329,24 @@ if (!isNarrowString!(T[]) && !is(T[] == void[]))
     assert(c.back == 3);
 }
 
-/// ditto
-// Specialization for strings
-@property dchar back(T)(T[] a) @safe pure
-if (isNarrowString!(T[]))
+version(NoAutoDecode)
 {
-    import std.utf : decode, strideBack;
-    assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
-    size_t i = a.length - strideBack(a, a.length);
-    return decode(a, i);
+    @property auto back(T)(T[] a) @safe pure
+    if (isNarrowString!(T[]))
+    {
+        return a[$ - 1];
+    }
+}
+else
+{
+    /// ditto
+    // Specialization for strings
+    @property dchar back(T)(T[] a) @safe pure
+    if (isNarrowString!(T[]))
+    {
+        import std.utf : decode, strideBack;
+        assert(a.length, "Attempting to fetch the back of an empty array of " ~ T.stringof);
+        size_t i = a.length - strideBack(a, a.length);
+        return decode(a, i);
+    }
 }
