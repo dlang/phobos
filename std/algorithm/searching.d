@@ -778,8 +778,6 @@ if (isForwardRange!R
 {
     static if (needles.length == 1)
     {
-        ptrdiff_t result;
-
         static if (hasLength!R) //Note: Narrow strings don't have length.
         {
             //We delegate to find because find is very efficient.
@@ -795,6 +793,8 @@ if (isForwardRange!R
 
             if (needles[0].empty)
               return ptrdiff_t(0);
+
+            ptrdiff_t result;
 
             //Default case, slower route doing startsWith iteration
             for ( ; !haystack.empty ; ++result )
