@@ -438,12 +438,24 @@ My friends are "John", "Nancy".
 My friends are John, Nancy.
 )
  */
+extern(delegate)
 uint formattedWrite(alias fmt, Writer, A...)(auto ref Writer w, A args)
 if (isSomeString!(typeof(fmt)))
 {
     alias e = checkFormatException!(fmt, A);
     static assert(!e, e.msg);
     return .formattedWrite(w, fmt, args);
+}
+
+//
+// Example of using extern(delegate) functions
+//
+unittest
+{
+    import std.stdio : write;
+    uint delegate(string) sayHelloTo = &write!(string).formattedWrite!("Hello, %s")("World");
+    sayHelloTo("World");
+    sayHelloTo("extern(delegate)");
 }
 
 /// The format string can be checked at compile-time (see $(LREF format) for details):
