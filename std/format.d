@@ -63,7 +63,6 @@ import std.meta;
 import std.range.primitives;
 import std.traits;
 
-
 /**********************************************************************
  * Signals a mismatch between a format and its corresponding argument.
  */
@@ -444,6 +443,38 @@ if (isSomeString!(typeof(fmt)))
     alias e = checkFormatException!(fmt, A);
     static assert(!e, e.msg);
     return .formattedWrite(w, fmt, args);
+}
+
+// Attempt to make formattedWrite work with the delegatefunction template library
+//
+// By using this libary, you can now call formattedWrite(2) as a normal function, or you
+// can call the function through a delegate!
+//
+// Problem 1: template type deduction doesn't work.
+// Problem 2: "auto ref" doesn't work, removed it for now
+import std.delegatefunction;
+mixin delegateFunction!("formattedWrite2", "(alias fmt, Writer, A...)", "if (isSomeString!(typeof(fmt)))",
+    "Writer", "w", "A args",
+q{
+    alias e = checkFormatException!(fmt, A);
+    static assert(!e, e.msg);
+    return .formattedWrite(w, fmt, args);
+});
+unittest
+{
+    import std.stdio : File, stdout;
+    struct StdoutWriter
+    {
+        void put(const(char)[] msg)
+        {
+            stdout.write(msg);
+        }
+    }
+    StdoutWriter writer;
+    uint delegate(string) sayHelloTo = formattedWrite2!("Hello, %s\n",
+        StdoutWriter, string).createDelegate(writer);
+    sayHelloTo("World");
+    sayHelloTo("delegateFunctions");
 }
 
 /// The format string can be checked at compile-time (see $(LREF format) for details):
