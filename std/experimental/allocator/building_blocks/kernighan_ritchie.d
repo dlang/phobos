@@ -171,7 +171,8 @@ struct KRRegion(ParentAllocator = NullAllocator)
     else alias parent = ParentAllocator.instance;
     private void[] payload;
     private Node* root;
-    private bool regionMode = true;
+    private bool regionMode() const { return bytesUsedRegionMode != size_t.max; }
+    private void cancelRegionMode() { bytesUsedRegionMode = size_t.max; }
     private size_t bytesUsedRegionMode = 0;
 
     auto byNodePtr()
@@ -358,7 +359,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
     void switchToFreeList()
     {
         if (!regionMode) return;
-        regionMode = false;
+        cancelRegionMode;
         if (!root) return;
         root = sortFreelist(root);
         coalesceAndMakeCircular;
@@ -572,7 +573,6 @@ struct KRRegion(ParentAllocator = NullAllocator)
         root = cast(Node*) payload.ptr;
 
         // Reset to regionMode
-        regionMode = true;
         bytesUsedRegionMode = 0;
         if (root)
         {
