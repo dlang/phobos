@@ -171,7 +171,9 @@ struct KRRegion(ParentAllocator = NullAllocator)
     else alias parent = ParentAllocator.instance;
     private void[] payload;
     private Node* root;
-    private bool regionMode = true;
+    private bool regionMode() const { return bytesUsedRegionMode != size_t.max; }
+    private void cancelRegionMode() { bytesUsedRegionMode = size_t.max; }
+    private size_t bytesUsedRegionMode = 0;
 
     auto byNodePtr()
     {
@@ -357,7 +359,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
     void switchToFreeList()
     {
         if (!regionMode) return;
-        regionMode = false;
+        cancelRegionMode;
         if (!root) return;
         root = sortFreelist(root);
         coalesceAndMakeCircular;
@@ -394,6 +396,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
             if (root.size >= actualBytes)
             {
                 // Enough room for allocation
+                bytesUsedRegionMode += actualBytes;
                 void* result = root;
                 immutable balance = root.size - actualBytes;
                 if (balance >= Node.sizeof)
@@ -462,6 +465,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
         {
             assert(root);
             // Insert right after root
+            bytesUsedRegionMode -= n.size;
             n.next = root.next;
             root.next = n;
             return true;
@@ -490,9 +494,10 @@ struct KRRegion(ParentAllocator = NullAllocator)
             assert(pnode && pnode.next);
             assert(pnode != n);
             assert(pnode.next != n);
+
             if (pnode < pnode.next)
             {
-                if (pnode >= n || n >= pnode.next) continue;
+                if (pnode > n || n > pnode.next) continue;
                 // Insert in between pnode and pnode.next
                 n.next = pnode.next;
                 pnode.next = n;
@@ -566,10 +571,12 @@ struct KRRegion(ParentAllocator = NullAllocator)
         debug(KRRegion) assertValid("deallocateAll");
         debug(KRRegion) scope(exit) assertValid("deallocateAll");
         root = cast(Node*) payload.ptr;
-        // Initialize the free list with all list
+
+        // Reset to regionMode
+        bytesUsedRegionMode = 0;
         if (root)
         {
-            root.next = root;
+            root.next = null;
             root.size = payload.length;
         }
         return true;
@@ -608,6 +615,9 @@ struct KRRegion(ParentAllocator = NullAllocator)
     pure nothrow @safe @nogc
     Ternary empty()
     {
+        if (regionMode)
+            return Ternary(bytesUsedRegionMode == 0);
+
         return Ternary(root && root.size == payload.length);
     }
 }
@@ -788,12 +798,14 @@ it actually returns memory to the operating system when possible.
 
 @system unittest
 {
+    import std.typecons : Ternary;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     auto alloc = KRRegion!()(
                     cast(ubyte[])(GCAllocator.instance.allocate(1024 * 1024)));
     auto p = alloc.allocateAll();
     assert(p.length == 1024 * 1024);
     assert((() nothrow @nogc => alloc.deallocateAll())());
+    assert(alloc.empty() == Ternary.yes);
     p = alloc.allocateAll();
     assert(p.length == 1024 * 1024);
 }
@@ -892,4 +904,29 @@ it actually returns memory to the operating system when possible.
 
     auto a = KRRegion!GCAllocator(1024 * 1024);
     assert((() pure nothrow @safe @nogc => a.goodAllocSize(1))() == typeof(*a.root).sizeof);
+}
+
+@system unittest
+{   import std.typecons : Ternary;
+
+    ubyte[1024] b;
+    auto alloc = KRRegion!()(b);
+
+    auto k = alloc.allocate(128);
+    assert(k.length == 128);
+    assert(alloc.empty == Ternary.no);
+    assert(alloc.deallocate(k));
+    assert(alloc.empty == Ternary.yes);
+
+    k = alloc.allocate(512);
+    assert(k.length == 512);
+    assert(alloc.empty == Ternary.no);
+    assert(alloc.deallocate(k));
+    assert(alloc.empty == Ternary.yes);
+
+    k = alloc.allocate(1024);
+    assert(k.length == 1024);
+    assert(alloc.empty == Ternary.no);
+    assert(alloc.deallocate(k));
+    assert(alloc.empty == Ternary.yes);
 }
