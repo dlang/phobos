@@ -2757,7 +2757,7 @@ if (isForwardRange!R1 && isForwardRange!R2
 *   in.
 *  pred = Custom predicate for comparison of haystack and needle
 *
-* Returns: The number of times `pred` was truthfully evaluated.
+* Returns: The number of times `pred(haystack.front)` returned true.
 */
 size_t findSkip(alias pred, R1)(ref R1 haystack)
 if (isForwardRange!R1 && ifTestable!(typeof(haystack.front), unaryFun!pred))
