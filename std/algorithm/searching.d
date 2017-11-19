@@ -2712,6 +2712,7 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
  *  needle = The
  *   $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to search
  *   for.
+ *  pred = Custom predicate for comparison of haystack and needle
  *
  * Returns: $(D true) if the needle was found, in which case $(D haystack) is
  * positioned after the end of the first occurrence of $(D needle); otherwise
@@ -2744,6 +2745,53 @@ if (isForwardRange!R1 && isForwardRange!R2
     // If the needle occurs at the end of the range, the range is left empty.
     s = "abcdef";
     assert(findSkip(s, "def") && s.empty);
+}
+
+/**
+* Advances the `haystack` as long as `pred` evaluates to `true`.
+* The haystack is positioned so as pred evaluates to false for haystack.front.
+*
+* Params:
+*  haystack = The
+*   $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to search
+*   in.
+*  pred = Custom predicate for comparison of haystack and needle
+*
+* Returns: The number of times `pred(haystack.front)` returned true.
+*/
+size_t findSkip(alias pred, R1)(ref R1 haystack)
+if (isForwardRange!R1 && ifTestable!(typeof(haystack.front), unaryFun!pred))
+{
+    size_t result;
+    while (!haystack.empty && unaryFun!pred(haystack.front))
+    {
+        result++;
+        haystack.popFront;
+    }
+    return result;
+}
+
+///
+@safe unittest
+{
+    import std.ascii : isWhite;
+    string s = "    abc";
+    assert(findSkip!isWhite(s) && s == "abc");
+    assert(!findSkip!isWhite(s) && s == "abc");
+
+    s = "  ";
+    assert(findSkip!isWhite(s) == 2);
+    import std.stdio;
+    s = "  ";
+    findSkip!isWhite(s).writeln;
+}
+
+@safe unittest
+{
+    import std.ascii : isWhite;
+
+    auto s = "  ";
+    assert(findSkip!isWhite(s) == 2);
 }
 
 /**
