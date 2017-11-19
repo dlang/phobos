@@ -3395,8 +3395,7 @@ template hasElaborateCopyConstructor(S)
     }
     else static if (is(S == struct))
     {
-        enum hasElaborateCopyConstructor = hasMember!(S, "__postblit")
-            || anySatisfy!(.hasElaborateCopyConstructor, FieldTypeTuple!S);
+        enum hasElaborateCopyConstructor = hasMember!(S, "__xpostblit");
     }
     else
     {
