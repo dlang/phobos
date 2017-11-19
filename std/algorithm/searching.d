@@ -2749,7 +2749,7 @@ if (isForwardRange!R1 && isForwardRange!R2
 
 /**
 * Advances the `haystack` as long as `pred` evaluates to `true`.
-* The `haystack` is positioned before position of first falsely evaluation of `pred`.
+* The haystack is positioned so as pred evaluates to false for haystack.front.
 *
 * Params:
 *  haystack = The
