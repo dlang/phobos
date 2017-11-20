@@ -35,6 +35,10 @@
 
 /**
  * Socket primitives.
+ * $(MESSAGE_BOX red, Warning - This module is considered out-dated and not up to Phobos'
+ * current standards. Have a look at $(LINK2 vibe-core, https://github.com/vibe-d/vibe-core)
+ * for a modern approach.)
+ *
  * Example: See $(SAMPLESRC listener.d) and $(SAMPLESRC htmlget.d)
  * License: $(HTTP www.boost.org/LICENSE_1_0.txt, Boost License 1.0).
  * Authors: Christopher E. Miller, $(HTTP klickverbot.at, David Nadlinger),

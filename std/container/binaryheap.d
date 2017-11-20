@@ -4,6 +4,9 @@ adaptor that makes a binary heap out of any user-provided random-access range.
 
 This module is a submodule of $(MREF std, container).
 
+$(MESSAGE_BOX orange, This module will be reworked $(LINK2 http://dconf.org/2017/talks/staniloiu.html, soon)
+to make containers `@nogc` and `@safe`.)
+
 Source: $(PHOBOSSRC std/container/_binaryheap.d)
 
 Copyright: 2010- Andrei Alexandrescu. All rights reserved by the respective holders.

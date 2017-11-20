@@ -3,6 +3,9 @@ This module implements a red-black tree container.
 
 This module is a submodule of $(MREF std, container).
 
+$(MESSAGE_BOX orange, This module will be reworked $(LINK2 http://dconf.org/2017/talks/staniloiu.html, soon)
+to make containers `@nogc` and `@safe`.)
+
 Source: $(PHOBOSSRC std/container/_rbtree.d)
 
 Copyright: Red-black tree code copyright (C) 2008- by Steven Schveighoffer. Other code

@@ -1,6 +1,10 @@
 // Written in the D programming language.
 
 /**
+$(MESSAGE_BOX gray, $(LINK2 https://github.com/ikod/dlang-requests, `requests`) provides
+a simple, high-level API with a native D implementation. Moreover, `requests`
+can be used with $(LINK2 http://vibed.org/, Vibe.d) for asynchronous requests.)
+
 Networking client functionality as provided by $(HTTP _curl.haxx.se/libcurl,
 libcurl). The libcurl library must be installed on the system in order to use
 this module.
