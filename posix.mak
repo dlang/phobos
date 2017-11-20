@@ -54,12 +54,7 @@ ifneq ($(BUILD),release)
     endif
 endif
 
-# -fPIC is enabled by default and can be disabled with DISABLE_PIC=1
-ifeq ($(DISABLE_PIC),)
-    PIC_FLAG:=-fPIC
-else
-    PIC_FLAG:=
-endif
+override PIC:=$(if $(PIC),-fPIC,)
 
 # Configurable stuff that's rarely edited
 INSTALL_DIR = ../install
@@ -120,7 +115,7 @@ else
 endif
 
 # Set DFLAGS
-DFLAGS=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -dip25 $(MODEL_FLAG) $(PIC_FLAG)
+DFLAGS=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -dip25 $(MODEL_FLAG) $(PIC)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
@@ -312,6 +307,7 @@ $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
 $(ROOT)/$(SONAME): $(LIBSO)
 	ln -sf $(notdir $(LIBSO)) $@
 
+$(LIBSO): override PIC:=-fPIC
 $(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIMESO)
 	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(D_FILES) $(OBJS)
 
@@ -353,6 +349,7 @@ UT_LIBSO:=$(ROOT)/unittest/libphobos2-ut.so
 
 $(UT_D_OBJS): $(DRUNTIMESO)
 
+$(UT_LIBSO): override PIC:=-fPIC
 $(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO)
 	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) -defaultlib= -debuglib=
 
