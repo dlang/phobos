@@ -40,7 +40,7 @@ ifeq (osx,$(OS))
 	export MACOSX_DEPLOYMENT_TARGET=10.7
 endif
 
-# Default to a release built, override with BUILD=debug
+# Default to a release build, override with BUILD=debug
 ifeq (,$(BUILD))
 BUILD_WAS_SPECIFIED=0
 BUILD=release
@@ -54,7 +54,20 @@ ifneq ($(BUILD),release)
     endif
 endif
 
-override PIC:=$(if $(PIC),-fPIC,)
+# default to PIC on x86_64, use PIC=1/0 to en-/disable PIC.
+# Note that shared libraries and C files are always compiled with PIC.
+ifeq ($(PIC),)
+    ifeq ($(MODEL),64) # x86_64
+        PIC:=1
+    else
+        PIC:=0
+    endif
+endif
+ifeq ($(PIC),1)
+    override PIC:=-fPIC
+else
+    override PIC:=
+endif
 
 # Configurable stuff that's rarely edited
 INSTALL_DIR = ../install
