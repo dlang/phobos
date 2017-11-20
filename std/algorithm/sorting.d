@@ -1485,6 +1485,17 @@ template multiSort(less...) //if (less.length > 1)
     }
 }
 
+///
+@safe unittest
+{
+    import std.algorithm.mutation : SwapStrategy;
+    static struct Point { int x, y; }
+    auto pts1 = [ Point(0, 0), Point(5, 5), Point(0, 1), Point(0, 2) ];
+    auto pts2 = [ Point(0, 0), Point(0, 1), Point(0, 2), Point(5, 5) ];
+    multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts1);
+    assert(pts1 == pts2);
+}
+
 private bool multiSortPredFun(Range, funs...)(ElementType!Range a, ElementType!Range b)
 {
     foreach (f; funs)
@@ -1524,17 +1535,6 @@ private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
     {
         sort!(lessFun, ss)(r);
     }
-}
-
-///
-@safe unittest
-{
-    import std.algorithm.mutation : SwapStrategy;
-    static struct Point { int x, y; }
-    auto pts1 = [ Point(0, 0), Point(5, 5), Point(0, 1), Point(0, 2) ];
-    auto pts2 = [ Point(0, 0), Point(0, 1), Point(0, 2), Point(5, 5) ];
-    multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts1);
-    assert(pts1 == pts2);
 }
 
 @safe unittest
@@ -3130,6 +3130,17 @@ if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
     return ret;
 }
 
+///
+@safe unittest
+{
+    int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
+    topN!"a < b"(v, 100);
+    assert(v == [ 25, 7, 9, 2, 0, 5, 21 ]);
+    auto n = 4;
+    topN!"a < b"(v, n);
+    assert(v[n] == 9);
+}
+
 private @trusted
 void topNImpl(alias less, R)(R r, size_t n, ref bool useSampling)
 {
@@ -3228,17 +3239,6 @@ void topNImpl(alias less, R)(R r, size_t n, ref bool useSampling)
             r = r[pivot + 1 .. r.length];
         }
     }
-}
-
-///
-@safe unittest
-{
-    int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
-    topN!"a < b"(v, 100);
-    assert(v == [ 25, 7, 9, 2, 0, 5, 21 ]);
-    auto n = 4;
-    topN!"a < b"(v, n);
-    assert(v[n] == 9);
 }
 
 private size_t topNPartition(alias lp, R)(R r, size_t n, bool useSampling)
