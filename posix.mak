@@ -200,7 +200,7 @@ PACKAGE_std_experimental_logger = core filelogger \
 PACKAGE_std_experimental_allocator = \
   common gc_allocator mallocator mmap_allocator package showcase typed
 PACKAGE_std_experimental_allocator_building_blocks = \
-  affix_allocator allocator_list bucketizer \
+  affix_allocator allocator_list ascending_page_allocator bucketizer \
   fallback_allocator free_list free_tree bitmapped_block \
   kernighan_ritchie null_allocator package quantizer \
   region scoped_allocator segregator stats_collector
