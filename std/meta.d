@@ -487,7 +487,14 @@ template NoDuplicates(TList...)
     {
         enum steps = 16;
         alias first = NoDuplicates!(TList[0 .. steps]);
-        alias NoDuplicates = NoDuplicates!(EraseAllN!(first.length, first, TList[steps..$]));
+        alias cleaned = AliasSeq!(
+            NoDuplicates!(EraseAllN!(first.length, first, TList[0 .. $/2])),
+            NoDuplicates!(EraseAllN!(first.length, first, TList[$/2 .. $])));
+
+        static if (cleaned.length == TList.length)
+            alias NoDuplicates = AliasSeq!(first, cleaned);
+        else
+            alias NoDuplicates = NoDuplicates!(first, cleaned);
     }
     else static if (TList.length == 0)
     {
@@ -514,6 +521,11 @@ template NoDuplicates(TList...)
     // Bugzilla 14561: huge enums
     alias LongList = Repeat!(1500, int);
     static assert(NoDuplicates!LongList.length == 1);
+    // Bugzilla 17995: huge enums, revisited
+
+    alias a = NoDuplicates!(AliasSeq!(1, Repeat!(1000, 3)));
+    alias b = NoDuplicates!(AliasSeq!(1, Repeat!(10, 3)));
+    static assert(a.length == b.length);
 }
 
 @safe unittest
