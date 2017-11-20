@@ -239,7 +239,8 @@ mixin template Signal(T1...)
      */
     final void unhook(Object o)
     in { assert( status == ST.idle ); }
-    do {
+    do
+    {
         debug (signal) writefln("Signal.unhook(o = %s)", cast(void*) o);
         for (size_t i = 0; i < slots_idx; )
         {
