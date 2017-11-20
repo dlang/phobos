@@ -619,28 +619,6 @@ private void _send(T...)(MsgType type, Tid tid, T vals)
  * matched by an earlier delegate.  If more than one argument is sent,
  * the $(D Variant) will contain a $(REF Tuple, std,typecons) of all values
  * sent.
- *
- * Example:
- * ---
- * import std.stdio;
- * import std.variant;
- * import std.concurrency;
- *
- * void spawnedFunction()
- * {
- *     receive(
- *         (int i) { writeln("Received an int."); },
- *         (float f) { writeln("Received a float."); },
- *         (Variant v) { writeln("Received some other type."); }
- *     );
- * }
- *
- * void main()
- * {
- *      auto tid = spawn(&spawnedFunction);
- *      send(tid, 42);
- * }
- * ---
  */
 void receive(T...)( T ops )
 in
@@ -656,6 +634,38 @@ body
     thisInfo.ident.mbox.get( ops );
 }
 
+///
+@system unittest
+{
+    import std.variant : Variant;
+
+    auto process = ()
+    {
+        receive(
+            (int i) { ownerTid.send(1); },
+            (double f) { ownerTid.send(2); },
+            (Variant v) { ownerTid.send(3); }
+        );
+    };
+
+    {
+        auto tid = spawn(process);
+        send(tid, 42);
+        assert(receiveOnly!int == 1);
+    }
+
+    {
+        auto tid = spawn(process);
+        send(tid, 3.14);
+        assert(receiveOnly!int == 2);
+    }
+
+    {
+        auto tid = spawn(process);
+        send(tid, "something else");
+        assert(receiveOnly!int == 3);
+    }
+}
 
 @safe unittest
 {
