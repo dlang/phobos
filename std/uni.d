@@ -1215,7 +1215,7 @@ pure nothrow:
         static if (isIntegral!T)
             assert(val <= mask);
     }
-    body
+    do
     {
         immutable q = n / factor;
         immutable r = n % factor;
@@ -1308,7 +1308,7 @@ pure nothrow:
     {
         assert(s <= e);
     }
-    body
+    do
     {
         s += ofs;
         e += ofs;
@@ -1340,7 +1340,7 @@ pure nothrow:
     {
         assert(idx < limit);
     }
-    body
+    do
     {
         return ptr[ofs + idx];
     }
@@ -1358,7 +1358,7 @@ pure nothrow:
     {
         assert(idx < limit);
     }
-    body
+    do
     {
         ptr[ofs + idx] = val;
     }
@@ -1377,7 +1377,7 @@ pure nothrow:
         assert(start <= end);
         assert(end <= limit);
     }
-    body
+    do
     {
         // account for ofsetted view
         start += ofs;
@@ -1412,7 +1412,7 @@ pure nothrow:
         assert(from <= to);
         assert(ofs + to <= limit);
     }
-    body
+    do
     {
         return typeof(this)(ptr.origin, ofs + from, to - from);
     }
@@ -1457,7 +1457,7 @@ private struct SliceOverIndexed(T)
     {
         assert(idx < to - from);
     }
-    body
+    do
     {
         return (*arr)[from+idx];
     }
@@ -1468,7 +1468,7 @@ private struct SliceOverIndexed(T)
     {
         assert(idx < to - from);
     }
-    body
+    do
     {
        (*arr)[from+idx] = val;
     }
@@ -2122,7 +2122,7 @@ pure:
             assert(a < b, text("illegal interval [a, b): ", a, " > ", b));
         }
     }
-    body
+    do
     {
         InversionList set;
         set.data = CowArray!(SP)(intervals);
@@ -2143,7 +2143,7 @@ pure:
             assert(a < b, text("illegal interval [a, b): ", a, " > ", b));
         }
     }
-    body
+    do
     {
         data = CowArray!(SP)(intervals);
         sanitize(); //enforce invariant: sort intervals etc.
@@ -2942,7 +2942,7 @@ private:
     {
         assert(a <= b);
     }
-    body
+    do
     {
         import std.range : assumeSorted, SearchPolicy;
         auto range = assumeSorted(data[]);
@@ -3056,7 +3056,7 @@ private:
     {
         assert(pos % 2 == 0); // at start of interval
     }
-    body
+    do
     {
         auto range = assumeSorted!"a <= b"(data[pos .. data.length]);
         if (range.empty)
@@ -3093,7 +3093,7 @@ private:
         assert(result % 2 == 0);// always start of interval
         //(may be  0-width after-split)
     }
-    body
+    do
     {
         assert(data.length % 2 == 0);
         auto range = assumeSorted!"a <= b"(data[pos .. data.length]);
@@ -3390,7 +3390,7 @@ private:
     {
         assert(!empty && count != 1 && count == refCount);
     }
-    body
+    do
     {
         import std.algorithm.mutation : copy;
         // dec shared ref-count
@@ -5590,7 +5590,7 @@ struct sliceBits(size_t from, size_t to)
     {
         assert(result < (1 << to-from));
     }
-    body
+    do
     {
         static assert(from < to);
         static if (from == 0)

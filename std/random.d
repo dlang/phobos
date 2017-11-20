@@ -1877,7 +1877,7 @@ out (result)
     assert(0 <= result);
     assert(result < 1);
 }
-body
+do
 {
     alias R = typeof(rng.front);
     static if (isIntegral!R)
@@ -2254,7 +2254,7 @@ in
     import std.algorithm.searching : all;
     assert(proportions.save.all!"a >= 0");
 }
-body
+do
 {
     import std.algorithm.iteration : reduce;
     import std.exception : enforce;

@@ -7110,7 +7110,7 @@ in
     assert(signbit(x) == signbit(y));
     assert(x == x && y == y);
 }
-body
+do
 {
     // Runtime behaviour for contract violation:
     // If signs are opposite, or one is a NaN, return 0.
@@ -7244,7 +7244,7 @@ in
 {
     assert(A.length > 0);
 }
-body
+do
 {
     static if (is(Unqual!T2 == real))
     {

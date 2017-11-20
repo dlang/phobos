@@ -5208,7 +5208,7 @@ in
 {
     assert(spec.spec == '(');
 }
-body
+do
 {
     debug (unformatRange) printf("unformatRange:\n");
 

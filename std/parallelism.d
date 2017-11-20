@@ -1197,7 +1197,7 @@ private:
             assert(returned.prev is null);
         }
     }
-    body
+    do
     {
         if (isSingleTask) return null;
 
@@ -1241,7 +1241,7 @@ private:
             assert(tail.prev.next is tail, text(tail.prev, '\t', tail.next));
         }
     }
-    body
+    do
     {
         // Not using enforce() to save on function call overhead since this
         // is a performance critical function.
@@ -3930,7 +3930,7 @@ private struct RoundRobinBuffer(C1, C2)
     {
         assert(!empty);
     }
-    body
+    do
     {
         scope(success) primed = true;
         nextDel(bufs[index]);
@@ -3942,7 +3942,7 @@ private struct RoundRobinBuffer(C1, C2)
     {
         assert(!empty);
     }
-    body
+    do
     {
         if (!primed) prime();
         return bufs[index];

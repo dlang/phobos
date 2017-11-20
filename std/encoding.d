@@ -603,7 +603,7 @@ struct CodePoints(E)
     {
         assert(isValid(s));
     }
-    body
+    do
     {
         this.s = s;
     }
@@ -671,7 +671,7 @@ struct CodeUnits(E)
     {
         assert(isValidCodePoint(d));
     }
-    body
+    do
     {
         s = encode!(E)(d);
     }
@@ -735,7 +735,7 @@ private template GenericEncoder()
     {
         assert(canEncode(c));
     }
-    body
+    do
     {
         return 1;
     }
@@ -827,7 +827,7 @@ template EncoderInstance(CharType : AsciiChar)
     {
         assert(canEncode(c));
     }
-    body
+    do
     {
         return 1;
     }
@@ -910,7 +910,7 @@ template EncoderInstance(CharType : Latin1Char)
     {
         assert(canEncode(c));
     }
-    body
+    do
     {
         return 1;
     }
@@ -1307,7 +1307,7 @@ template EncoderInstance(CharType : char)
     {
         assert(c >= 0x80);
     }
-    body
+    do
     {
         return tailTable[c-0x80];
     }
@@ -1317,7 +1317,7 @@ template EncoderInstance(CharType : char)
     {
         assert(canEncode(c));
     }
-    body
+    do
     {
         if (c < 0x80) return 1;
         if (c < 0x800) return 2;
@@ -1461,7 +1461,7 @@ template EncoderInstance(CharType : wchar)
     {
         assert(canEncode(c));
     }
-    body
+    do
     {
         return (c < 0x10000) ? 1 : 2;
     }
@@ -1558,7 +1558,7 @@ template EncoderInstance(CharType : dchar)
     {
         assert(canEncode(c));
     }
-    body
+    do
     {
         return 1;
     }
@@ -1857,7 +1857,7 @@ in
     const(E)[] u = s;
     assert(safeDecode(u) != INVALID_SEQUENCE);
 }
-body
+do
 {
     auto before = s.length;
     EncoderInstance!(E).skip(s);
@@ -1889,7 +1889,7 @@ in
     assert(s.length != 0);
     assert(isValid(s));
 }
-body
+do
 {
     const(E)[] t = s;
     EncoderInstance!(E).decodeReverse(s);
@@ -1925,7 +1925,7 @@ in
     assert(isValid(s));
     assert(n >= 0);
 }
-body
+do
 {
     const(E)[] t = s;
     for (size_t i=0; i<n; ++i) EncoderInstance!(E).skip(s);
@@ -1965,7 +1965,7 @@ in
     auto u = s;
     assert(safeDecode(u) != INVALID_SEQUENCE);
 }
-body
+do
 {
     return EncoderInstance!(typeof(s[0])).decode(s);
 }
@@ -1991,7 +1991,7 @@ in
     assert(s.length != 0);
     assert(isValid(s));
 }
-body
+do
 {
     return EncoderInstance!(E).decodeReverse(s);
 }
@@ -2017,7 +2017,7 @@ in
 {
     assert(s.length != 0);
 }
-body
+do
 {
     return EncoderInstance!(typeof(s[0])).safeDecode(s);
 }
@@ -2042,7 +2042,7 @@ in
 {
     assert(isValidCodePoint(c));
 }
-body
+do
 {
     return EncoderInstance!(E).encodedLength(c);
 }
@@ -2074,7 +2074,7 @@ in
 {
     assert(isValidCodePoint(c));
 }
-body
+do
 {
     return EncoderInstance!(E).encode(c);
 }
@@ -2111,7 +2111,7 @@ in
 {
     assert(isValidCodePoint(c));
 }
-body
+do
 {
     E[] t = array;
     EncoderInstance!(E).encode(c,t);
@@ -2217,7 +2217,7 @@ in
 {
     assert(isValidCodePoint(c));
 }
-body
+do
 {
     EncoderInstance!(E).encode(c,dg);
 }
@@ -2280,7 +2280,7 @@ in
 {
     assert(isValid(s));
 }
-body
+do
 {
     return CodePoints!(E)(s);
 }
@@ -2321,7 +2321,7 @@ in
 {
     assert(isValidCodePoint(c));
 }
-body
+do
 {
     return CodeUnits!(E)(c);
 }
@@ -2364,7 +2364,7 @@ in
 {
     assert(isValid(s));
 }
-body
+do
 {
     static if (is(Src == Dst) && is(Src == immutable))
     {
@@ -2790,7 +2790,7 @@ abstract class EncodingScheme
         const(ubyte)[] u = s;
         assert(safeDecode(u) != INVALID_SEQUENCE);
     }
-    body
+    do
     {
         const(ubyte)[] t = s;
         decode(s);
@@ -2811,7 +2811,7 @@ abstract class EncodingScheme
     {
         assert(isValid(s));
     }
-    body
+    do
     {
         size_t n = 0;
         while (s.length != 0)
@@ -2838,7 +2838,7 @@ abstract class EncodingScheme
         assert(isValid(s));
         assert(n >= 0);
     }
-    body
+    do
     {
         const(ubyte)[] t = s;
         for (size_t i=0; i<n; ++i) decode(s);
@@ -3489,7 +3489,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
         {
             assert((s.length & 1) == 0);
         }
-        body
+        do
         {
             auto t = cast(const(wchar)[]) s;
             dchar c = std.encoding.decode(t);
@@ -3502,7 +3502,7 @@ class EncodingSchemeUtf16Native : EncodingScheme
         {
             assert((s.length & 1) == 0);
         }
-        body
+        do
         {
             auto t = cast(const(wchar)[]) s;
             dchar c = std.encoding.safeDecode(t);
@@ -3585,7 +3585,7 @@ class EncodingSchemeUtf32Native : EncodingScheme
         {
             assert((s.length & 3) == 0);
         }
-        body
+        do
         {
             auto t = cast(const(dchar)[]) s;
             dchar c = std.encoding.decode(t);
@@ -3598,7 +3598,7 @@ class EncodingSchemeUtf32Native : EncodingScheme
         {
             assert((s.length & 3) == 0);
         }
-        body
+        do
         {
             auto t = cast(const(dchar)[]) s;
             dchar c = std.encoding.safeDecode(t);

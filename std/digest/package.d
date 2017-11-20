@@ -933,7 +933,7 @@ if (isDigest!T) : Digest
         {
             assert(buf.length >= this.length);
         }
-        body
+        do
         {
             enum string msg = "Buffer needs to be at least " ~ digestLength!(T).stringof ~ " bytes " ~
                 "big, check " ~ typeof(this).stringof ~ ".length!";
@@ -969,7 +969,7 @@ if (isDigest!T) : Digest
             {
                 assert(buf.length >= this.length);
             }
-            body
+            do
             {
                 enum string msg = "Buffer needs to be at least " ~ digestLength!(T).stringof ~ " bytes " ~
                     "big, check " ~ typeof(this).stringof ~ ".length!";

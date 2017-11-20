@@ -1324,7 +1324,7 @@ in
 {
     assert(radix >= 2 && radix <= 36);
 }
-body
+do
 {
     alias EEType = Unqual!(ElementEncodingType!T);
 
@@ -2444,7 +2444,7 @@ in
 {
     assert(radix >= 2 && radix <= 36);
 }
-body
+do
 {
     import core.checkedint : mulu, addu;
     import std.exception : enforce;

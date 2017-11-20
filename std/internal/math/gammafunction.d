@@ -1300,7 +1300,7 @@ in {
    assert(x >= 0);
    assert(a > 0);
 }
-body {
+do {
     /* left tail of incomplete gamma function:
      *
      *          inf.      k
@@ -1344,7 +1344,7 @@ in {
    assert(x >= 0);
    assert(a > 0);
 }
-body {
+do {
     if (x == 0)
         return 1.0L;
     if ( (x < 1.0L) || (x < a) )
@@ -1430,7 +1430,7 @@ in {
   assert(p >= 0 && p <= 1);
   assert(a>0);
 }
-body {
+do {
     if (p == 0) return real.infinity;
 
     real y0 = p;

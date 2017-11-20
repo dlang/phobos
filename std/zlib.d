@@ -193,7 +193,7 @@ in
 {
     assert(-1 <= level && level <= 9);
 }
-body
+do
 {
     import core.memory : GC;
     auto destlen = srcbuf.length + ((srcbuf.length + 1023) / 1024) + 12;
@@ -372,7 +372,7 @@ class Compress
     {
         assert(1 <= level && level <= 9);
     }
-    body
+    do
     {
         this.level = level;
         this.gzip = header == HeaderFormat.gzip;
@@ -463,7 +463,7 @@ class Compress
     {
         assert(mode == Z_FINISH || mode == Z_SYNC_FLUSH || mode == Z_FULL_FLUSH);
     }
-    body
+    do
     {
         import core.memory : GC;
         ubyte[] destbuf;
@@ -574,7 +574,7 @@ class UnCompress
     {
         assert(!done);
     }
-    body
+    do
     {
         if (inputEnded || !buf.length)
             return null;
@@ -758,7 +758,7 @@ class UnCompress
     {
         assert(done);
     }
-    body
+    do
     {
         done = 1;
         return null;

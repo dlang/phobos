@@ -1278,7 +1278,7 @@ in
 {
     assert(!r.empty, "r is an empty range");
 }
-body
+do
 {
     alias Element = ElementType!Range;
     Unqual!Element seed = r.front;

@@ -59,7 +59,7 @@ class OutBuffer
         {
             assert(offset + nbytes <= data.length);
         }
-        body
+        do
         {
             if (data.length < offset + nbytes)
             {
@@ -195,7 +195,7 @@ class OutBuffer
     {
         assert((offset & (alignsize - 1)) == 0);
     }
-    body
+    do
     {
         auto nbytes = offset & (alignsize - 1);
         if (nbytes)
@@ -360,7 +360,7 @@ class OutBuffer
         {
             assert(index <= offset);
         }
-        body
+        do
         {
             reserve(nbytes);
 

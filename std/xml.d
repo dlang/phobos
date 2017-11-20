@@ -556,7 +556,7 @@ class Document : Element
     {
         assert(s.length != 0);
     }
-    body
+    do
     {
         auto xml = new DocumentParser(s);
         string tagString = xml.tag.tagString;
@@ -1718,7 +1718,7 @@ class DocumentParser : ElementParser
             assert(false, "\n" ~ e.toString());
         }
     }
-    body
+    do
     {
         xmlText = xmlText_;
         s = &xmlText;
