@@ -558,7 +558,7 @@ struct MurmurHash3(uint size /* 32 or 128 */ , uint opt = size_t.sizeof == 8 ? 6
         static assert(isUnsigned!T);
         debug assert(y >= 0 && y <= (T.sizeof * 8));
     }
-    body
+    do
     {
         return ((x << y) | (x >> ((T.sizeof * 8) - y)));
     }

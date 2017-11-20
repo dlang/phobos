@@ -649,7 +649,7 @@ in
            "Cannot receive a message until a thread was spawned "
            ~ "or thisTid was passed to a running thread.");
 }
-body
+do
 {
     checkops( ops );
 
@@ -737,7 +737,7 @@ in
     assert(thisInfo.ident.mbox !is null,
         "Cannot receive a message until a thread was spawned or thisTid was passed to a running thread.");
 }
-body
+do
 {
     import std.format : format;
     import std.typecons : Tuple;
@@ -801,7 +801,7 @@ in
     assert(thisInfo.ident.mbox !is null,
         "Cannot receive a message until a thread was spawned or thisTid was passed to a running thread.");
 }
-body
+do
 {
     checkops(ops);
 

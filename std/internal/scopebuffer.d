@@ -122,7 +122,7 @@ if (isAssignable!T &&
             assert(!(buf.length & wasResized));    // assure even length of scratch buffer space
             assert(buf.length <= uint.max);     // because we cast to uint later
         }
-    body
+    do
     {
         this.buf = buf.ptr;
         this.bufLen = cast(uint) buf.length;
@@ -203,7 +203,7 @@ if (isAssignable!T &&
             assert(upper <= bufLen);
             assert(lower <= upper);
         }
-    body
+    do
     {
         return buf[lower .. upper];
     }
@@ -244,7 +244,7 @@ if (isAssignable!T &&
         {
             assert(i <= this.used);
         }
-    body
+    do
     {
         this.used = cast(uint) i;
     }
@@ -263,7 +263,7 @@ if (isAssignable!T &&
         {
             assert(newsize <= uint.max);
         }
-    body
+    do
     {
         //writefln("%s: oldsize %s newsize %s", id, buf.length, newsize);
         newsize |= wasResized;

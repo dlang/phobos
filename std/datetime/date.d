@@ -3398,7 +3398,7 @@ public:
         assert(result._date == Date.min);
         assert(result._tod == TimeOfDay.min);
     }
-    body
+    do
     {
         auto dt = DateTime.init;
         dt._date._year = short.min;
@@ -3425,7 +3425,7 @@ public:
         assert(result._date == Date.max);
         assert(result._tod == TimeOfDay.max);
     }
-    body
+    do
     {
         auto dt = DateTime.init;
         dt._date._year = short.max;
@@ -9996,7 +9996,7 @@ in
 {
     assert(valid!"months"(month));
 }
-body
+do
 {
     switch (month)
     {

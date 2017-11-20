@@ -535,7 +535,7 @@ in
     import std.functional : greaterThan;
     assert(!lower.greaterThan(upper));
 }
-body
+do
 {
     return max(lower, min(upper, val));
 }

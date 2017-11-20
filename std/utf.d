@@ -330,7 +330,7 @@ if (is(S : const char[]) ||
 
 private uint strideImpl(char c, size_t index) @trusted pure
 in { assert(c & 0x80); }
-body
+do
 {
     import core.bitop : bsr;
     immutable msbs = 7 - bsr((~uint(c)) & 0xFF);
@@ -1049,7 +1049,7 @@ out (result)
 {
     assert(isValidDchar(result));
 }
-body
+do
 {
     if (str[index] < codeUnitLimit!S)
         return str[index++];
@@ -1068,7 +1068,7 @@ out (result)
 {
     assert(isValidDchar(result));
 }
-body
+do
 {
     if (str[index] < codeUnitLimit!S)
         return str[index++];
@@ -1110,7 +1110,7 @@ out (result)
 {
     assert(isValidDchar(result));
 }
-body
+do
 {
     immutable fst = str.front;
 
@@ -1147,7 +1147,7 @@ out (result)
 {
     assert(isValidDchar(result));
 }
-body
+do
 {
     if (str[0] < codeUnitLimit!S)
     {
@@ -1204,7 +1204,7 @@ out (result)
 {
     assert(isValidDchar(result));
 }
-body
+do
 {
     if (str[$ - 1] < codeUnitLimit!S)
     {
@@ -1237,7 +1237,7 @@ out (result)
 {
     assert(isValidDchar(result));
 }
-body
+do
 {
     if (str.back < codeUnitLimit!S)
     {
@@ -1288,7 +1288,7 @@ out (result)
 {
     assert(isValidDchar(result));
 }
-body
+do
 {
     size_t numCodeUnits;
     return decodeBack!useReplacementDchar(str, numCodeUnits);

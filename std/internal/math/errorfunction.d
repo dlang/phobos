@@ -1024,7 +1024,7 @@ real normalDistributionInvImpl(real p)
 in {
   assert(p >= 0.0L && p <= 1.0L, "Domain error");
 }
-body
+do
 {
 static immutable real[8] P0 =
 [ -0x1.758f4d969484bfdcp-7, 0x1.53cee17a59259dd2p-3,

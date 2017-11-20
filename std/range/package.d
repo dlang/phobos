@@ -504,7 +504,7 @@ in
 {
     assert(n != 0, "stride cannot have step zero.");
 }
-body
+do
 {
     import std.algorithm.comparison : min;
 
@@ -3177,7 +3177,7 @@ public:
             "Attempting to slice a Repeat with a larger first argument than the second."
         );
     }
-    body
+    do
     {
         return this.takeExactly(j - i);
     }
@@ -3543,7 +3543,7 @@ if (isForwardRange!R && !isInfinite!R)
             {
                 assert(i <= j);
             }
-            body
+            do
             {
                 return this[i .. $].takeExactly(j - i);
             }
@@ -3688,7 +3688,7 @@ nothrow:
             "Attempting to slice a Repeat with a larger first argument than the second."
         );
     }
-    body
+    do
     {
         return this[i .. $].takeExactly(j - i);
     }
@@ -5114,7 +5114,7 @@ public:
             "Attempting to slice a Sequence with a larger first argument than the second."
         );
     }
-    body
+    do
     {
         return typeof(this)(_state, _n + lower).take(upper - lower);
     }
@@ -5500,7 +5500,7 @@ in
     assert(step != 0, "iota: step must not be 0");
     assert((end - begin) / step >= 0, "iota: incorrect startup parameters");
 }
-body
+do
 {
     alias Value = Unqual!(CommonType!(B, E, S));
     static struct Result
@@ -9101,7 +9101,7 @@ in
         assert(!overflow && result <= Enumerator.max);
     }
 }
-body
+do
 {
     // TODO: Relax isIntegral!Enumerator to allow user-defined integral types
     static struct Result
@@ -9509,7 +9509,7 @@ if (isInputRange!Range)
         // moved out of the body as a workaround for Issue 12661
         dbgVerifySorted();
     }
-    body
+    do
     {
         this._input = input;
     }
@@ -11151,7 +11151,7 @@ public:
                 assert(n < length, "Index out of bounds");
             }
         }
-        body
+        do
         {
             immutable size_t remainingBits = bitsNum - maskPos + 1;
             // If n >= maskPos, then the bit sign will be 1, otherwise 0
@@ -11190,7 +11190,7 @@ public:
                         assert(n < length, "Index out of bounds");
                     }
                 }
-            body
+            do
             {
                 import core.bitop : bsf;
 
@@ -11217,7 +11217,7 @@ public:
         {
             assert(start < end, "Invalid bounds: end <= start");
         }
-        body
+        do
         {
             import core.bitop : bsf;
 

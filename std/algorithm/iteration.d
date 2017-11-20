@@ -430,7 +430,7 @@ private struct _Cache(R, bool bidir)
             {
                 assert(low <= high, "Bounds error when slicing cache.");
             }
-            body
+            do
             {
                 import std.range : takeExactly;
                 return this[low .. $].takeExactly(high - low);

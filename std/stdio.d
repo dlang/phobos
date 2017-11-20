@@ -4465,7 +4465,7 @@ private struct ChunksImpl
     {
         assert(size, "size must be larger than 0");
     }
-    body
+    do
     {
         this.f = f;
         this.size = size;

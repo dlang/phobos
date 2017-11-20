@@ -199,7 +199,7 @@ public:
       +/
     void start() @safe nothrow @nogc
     in { assert(!_running, "start was called when the StopWatch was already running."); }
-    body
+    do
     {
         _running = true;
         _timeStarted = MonoTime.currTime;
@@ -227,7 +227,7 @@ public:
       +/
     void stop() @safe nothrow @nogc
     in { assert(_running, "stop was called when the StopWatch was not running."); }
-    body
+    do
     {
         _running = false;
         _ticksElapsed += MonoTime.currTime.ticks - _timeStarted.ticks;

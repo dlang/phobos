@@ -2354,7 +2354,7 @@ private template TimSortImpl(alias pred, R)
     {
         assert(ret <= range.length);
     }
-    body
+    do
     {
         import std.algorithm.mutation : reverse;
 
@@ -2379,7 +2379,7 @@ private template TimSortImpl(alias pred, R)
     {
         if (!__ctfe) assert(isSorted!pred(range));
     }
-    body
+    do
     {
         import std.algorithm.mutation : move;
 
@@ -2412,7 +2412,7 @@ private template TimSortImpl(alias pred, R)
         assert(stack.length >= 2);
         assert(stack.length - at == 2 || stack.length - at == 3);
     }
-    body
+    do
     {
         immutable base = stack[at].base;
         immutable mid  = stack[at].length;
@@ -2437,7 +2437,7 @@ private template TimSortImpl(alias pred, R)
             assert(isSorted!pred(range[mid .. range.length]));
         }
     }
-    body
+    do
     {
         assert(mid < range.length);
 
@@ -2468,7 +2468,7 @@ private template TimSortImpl(alias pred, R)
     {
         assert(ret.length >= minCapacity);
     }
-    body
+    do
     {
         if (temp.length < minCapacity)
         {
@@ -2489,7 +2489,7 @@ private template TimSortImpl(alias pred, R)
     {
         if (!__ctfe) assert(isSorted!pred(range));
     }
-    body
+    do
     {
         import std.algorithm.mutation : copy;
 
@@ -2572,7 +2572,7 @@ private template TimSortImpl(alias pred, R)
     {
         if (!__ctfe) assert(isSorted!pred(range));
     }
-    body
+    do
     {
         import std.algorithm.mutation : copy;
 
@@ -2678,7 +2678,7 @@ private template TimSortImpl(alias pred, R)
         {
             assert(ret <= range.length);
         }
-        body
+        do
         {
             size_t lower = 0, center = 1, upper = range.length;
             alias gap = center;
@@ -3349,7 +3349,7 @@ out
     assert(r[0 .. pivot + 1].all!(x => !lp(r[pivot], x)));
     assert(r[pivot + 1 .. r.length].all!(x => !lp(x, r[pivot])));
 }
-body
+do
 {
     import std.algorithm.mutation : swapAt;
     import std.algorithm.searching : all;

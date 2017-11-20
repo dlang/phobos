@@ -3399,7 +3399,7 @@ public:
             assert(checkWrite !is checkError);
         }
     }
-    body
+    do
     {
         fd_set* fr, fw, fe;
         int n = 0;

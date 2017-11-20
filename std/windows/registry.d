@@ -274,7 +274,7 @@ in
 {
     assert(hkey !is null);
 }
-body
+do
 {
     /* No need to attempt to close any of the standard hive keys.
      * Although it's documented that calling RegCloseKey() on any of
@@ -309,7 +309,7 @@ in
 {
     assert(hkey !is null);
 }
-body
+do
 {
     immutable res = RegFlushKey(hkey);
     enforceSucc(res, "Key cannot be flushed");
@@ -322,7 +322,7 @@ in
     assert(hkey !is null);
     assert(subKey !is null);
 }
-body
+do
 {
     HKEY hkeyResult;
     enforceSucc(RegCreateKeyExW(
@@ -340,7 +340,7 @@ in
     assert(hkey !is null);
     assert(subKey !is null);
 }
-body
+do
 {
     LONG res;
     if (haveWoW64Job(samDesired))
@@ -361,7 +361,7 @@ in
     assert(hkey !is null);
     assert(valueName !is null);
 }
-body
+do
 {
     enforceSucc(RegDeleteValueW(hkey, valueName.tempCStringW()),
         "Value cannot be deleted: \"" ~ valueName ~ "\"");
@@ -372,7 +372,7 @@ in
 {
     assert(hkey !is null);
 }
-body
+do
 {
     /* Can't duplicate standard keys, but don't need to, so can just return */
     if (cast(uint) hkey & 0x80000000)
@@ -422,7 +422,7 @@ out(res)
 {
     assert(res != ERROR_MORE_DATA);
 }
-body
+do
 {
     // The Registry API lies about the lengths of a very few sub-key lengths
     // so we have to test to see if it whinges about more data, and provide
@@ -447,7 +447,7 @@ in
 {
     assert(hkey !is null);
 }
-body
+do
 {
     for (;;)
     {
@@ -467,7 +467,7 @@ in
 {
     assert(hkey !is null);
 }
-body
+do
 {
     return RegQueryInfoKeyW(hkey, null, null, null, &cSubKeys,
                             &cchSubKeyMaxLen, null, null, null, null, null, null);
@@ -478,7 +478,7 @@ in
 {
     assert(hkey !is null);
 }
-body
+do
 {
     return RegQueryInfoKeyW(hkey, null, null, null, null, null, null,
                             &cValues, &cchValueMaxLen, null, null, null);
@@ -489,7 +489,7 @@ in
 {
     assert(hkey !is null);
 }
-body
+do
 {
     REG_VALUE_TYPE type;
     enforceSucc(RegQueryValueExW(hkey, name.tempCStringW(), null, cast(LPDWORD) &type, null, null),
@@ -504,7 +504,7 @@ in
     assert(hkey !is null);
     assert(subKey !is null);
 }
-body
+do
 {
     HKEY hkeyResult;
     enforceSucc(RegOpenKeyExW(hkey, subKey.tempCStringW(), 0, compatibleRegsam(samDesired), &hkeyResult),
@@ -518,7 +518,7 @@ in
 {
     assert(hkey !is null);
 }
-body
+do
 {
     import core.bitop : bswap;
 
@@ -589,7 +589,7 @@ in
 {
     assert(hkey !is null);
 }
-body
+do
 {
     REG_VALUE_TYPE type;
 
@@ -631,7 +631,7 @@ in
 {
     assert(hkey !is null);
 }
-body
+do
 {
     import core.bitop : bswap;
 
@@ -669,7 +669,7 @@ in
 {
     assert(hkey !is null);
 }
-body
+do
 {
     REG_VALUE_TYPE type;
 
@@ -694,7 +694,7 @@ in
 {
     assert(hkey !is null);
 }
-body
+do
 {
     REG_VALUE_TYPE type;
 
@@ -729,7 +729,7 @@ in
 {
     assert(hkey !is null);
 }
-body
+do
 {
     enforceSucc(RegSetValueExW(hkey, subKey.tempCStringW(), 0, type, cast(BYTE*) lpData, cbData),
         "Value cannot be set: \"" ~ subKey ~ "\"");
@@ -801,7 +801,7 @@ private:
     {
         assert(hkey !is null);
     }
-    body
+    do
     {
         m_hkey = hkey;
         m_name = name;
@@ -1168,7 +1168,7 @@ private:
     {
         assert(null !is key);
     }
-    body
+    do
     {
         m_key = key;
         m_type = type;

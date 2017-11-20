@@ -849,7 +849,7 @@ public:
     {
         assert(i < _len);
     }
-    body
+    do
     {
         return cast(bool) bt(_ptr, i);
     }
@@ -877,7 +877,7 @@ public:
     {
         assert(i < _len);
     }
-    body
+    do
     {
         if (b)
             bts(_ptr, i);
@@ -929,7 +929,7 @@ public:
         assert(start <= end);
         assert(end <= length);
     }
-    body
+    do
     {
         size_t startBlock = start / bitsPerSizeT;
         size_t endBlock = end / bitsPerSizeT;
@@ -1208,7 +1208,7 @@ public:
     {
         assert(result == this);
     }
-    body
+    do
     {
         if (_len >= 2)
         {
@@ -1252,7 +1252,7 @@ public:
     {
         assert(result == this);
     }
-    body
+    do
     {
         if (_len >= 2)
         {
@@ -1506,7 +1506,7 @@ public:
         assert(numbits <= v.length * 8);
         assert(v.length % size_t.sizeof == 0);
     }
-    body
+    do
     {
         _ptr = cast(size_t*) v.ptr;
         _len = numbits;
@@ -1615,7 +1615,7 @@ public:
     {
         assert(_len == e2.length);
     }
-    body
+    do
     {
         auto dim = this.dim;
 
@@ -1721,7 +1721,7 @@ public:
     {
         assert(_len == e2.length);
     }
-    body
+    do
     {
         foreach (i; 0 .. fullWords)
         {
@@ -1977,7 +1977,7 @@ public:
     {
         assert(nbits < bitsPerSizeT);
     }
-    body
+    do
     {
         if (nbits == 0)
             return lower;
@@ -2014,7 +2014,7 @@ public:
     {
         assert(nbits < bitsPerSizeT);
     }
-    body
+    do
     {
         if (nbits == 0)
             return upper;

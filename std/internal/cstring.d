@@ -45,7 +45,7 @@ version(unittest)
 @property inout(C)[] asArray(C)(inout C* cstr) pure nothrow @nogc @trusted
 if (isSomeChar!C)
 in { assert(cstr); }
-body
+do
 {
     size_t length = 0;
     while (cstr[length])

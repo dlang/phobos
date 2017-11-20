@@ -869,7 +869,7 @@ in
     assert(!ax.isNaN() && !bx.isNaN(), "Limits must not be NaN");
     assert(signbit(fax) != signbit(fbx), "Parameters must bracket the root.");
 }
-body
+do
 {
     // Author: Don Clugston. This code is (heavily) modified from TOMS748
     // (www.netlib.org).  The changes to improve the worst-cast performance are
@@ -1451,7 +1451,7 @@ out (result)
 {
     assert(isFinite(result.x));
 }
-body
+do
 {
     alias R = Unqual!(CommonType!(ReturnType!DF, T));
     // c is the squared inverse of the golden ratio
@@ -2785,7 +2785,7 @@ private:
         assert(range.length >= 4);
         assert(isPowerOf2(range.length));
     }
-    body
+    do
     {
         auto recurseRange = range;
         recurseRange.doubleSteps();
@@ -2819,7 +2819,7 @@ private:
         assert(range.length >= 4);
         assert(isPowerOf2(range.length));
     }
-    body
+    do
     {
         alias E = ElementType!R;
 
@@ -2927,7 +2927,7 @@ private:
     {
         assert(isPowerOf2(buf.length));
     }
-    body
+    do
     {
         immutable n = buf.length;
         immutable localLookup = negSinLookup[bsf(n)];

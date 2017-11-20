@@ -2787,7 +2787,7 @@ in
     // Verify that slice[] really is a slice of s[]
     assert(overlap(s, slice) is slice);
 }
-body
+do
 {
     auto result = new T[s.length - slice.length + replacement.length];
     immutable so = slice.ptr - s.ptr;

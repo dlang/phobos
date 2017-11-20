@@ -201,7 +201,7 @@ version (Windows)
     if (isRandomAccessRange!R && isSomeChar!(ElementType!R) ||
         isNarrowString!R)
         in { assert(isUNC(path)); }
-        body
+        do
     {
         ptrdiff_t i = 3;
         while (i < path.length && !isDirSeparator(path[i])) ++i;
@@ -3251,7 +3251,7 @@ in
     assert(balancedParens(pattern, '[', ']', 0));
     assert(balancedParens(pattern, '{', '}', 0));
 }
-body
+do
 {
     alias RC = Unqual!(ElementEncodingType!Range);
 
