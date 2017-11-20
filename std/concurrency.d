@@ -712,24 +712,6 @@ private template receiveOnlyRet(T...)
  *
  * Returns: The received message.  If $(D T.length) is greater than one,
  *          the message will be packed into a $(REF Tuple, std,typecons).
- *
- * Example:
- * ---
- * import std.concurrency;
- *
- * void spawnedFunc()
- * {
- *     auto msg = receiveOnly!(int, string)();
- *     assert(msg[0] == 42);
- *     assert(msg[1] == "42");
- * }
- *
- * void main()
- * {
- *     auto tid = spawn(&spawnedFunc);
- *     send(tid, 42, "42");
- * }
- * ---
  */
 receiveOnlyRet!(T) receiveOnly(T...)()
 in
@@ -763,6 +745,42 @@ do
         return ret[0];
     else
         return ret;
+}
+
+///
+@system unittest
+{
+    auto tid = spawn(
+    {
+        assert(receiveOnly!int == 42);
+    });
+    send(tid, 42);
+}
+
+///
+@system unittest
+{
+    auto tid = spawn(
+    {
+        assert(receiveOnly!string == "text");
+    });
+    send(tid, "text");
+}
+
+///
+@system unittest
+{
+    struct Record { string name; int age; }
+
+    auto tid = spawn(
+    {
+        auto msg = receiveOnly!(double, Record);
+        assert(msg[0] == 0.5);
+        assert(msg[1].name == "Alice");
+        assert(msg[1].age == 31);
+    });
+
+    send(tid, 0.5, Record("Alice", 31));
 }
 
 @system unittest
