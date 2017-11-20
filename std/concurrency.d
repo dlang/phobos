@@ -429,40 +429,38 @@ private template isSpawnable(F, T...)
  *  to $(D fn) must either be $(D shared) or $(D immutable) or have no
  *  pointer indirection.  This is necessary for enforcing isolation among
  *  threads.
- *
- * Example:
- * ---
- * import std.stdio, std.concurrency;
- *
- * void f1(string str)
- * {
- *     writeln(str);
- * }
- *
- * void f2(char[] str)
- * {
- *     writeln(str);
- * }
- *
- * void main()
- * {
- *     auto str = "Hello, world";
- *
- *     // Works:  string is immutable.
- *     auto tid1 = spawn(&f1, str);
- *
- *     // Fails:  char[] has mutable aliasing.
- *     auto tid2 = spawn(&f2, str.dup);
- *
- *     // New thread with anonymous function
- *     spawn({ writeln("This is so great!"); });
- * }
- * ---
  */
 Tid spawn(F, T...)(F fn, T args) if (isSpawnable!(F, T))
 {
     static assert(!hasLocalAliasing!(T), "Aliases to mutable thread-local data not allowed.");
     return _spawn(false, fn, args);
+}
+
+///
+@system unittest
+{
+    import core.thread : thread_joinAll;
+
+    __gshared string wrote;
+    string msg = "Hello World";
+    static void f1(string msg)
+    {
+        wrote = msg;
+    }
+
+    auto tid1 = spawn(&f1, msg);
+    thread_joinAll;
+    assert(wrote == "Hello World");
+
+    // Fails:  char[] has mutable aliasing.
+    static void f2(char[] str) {}
+    static assert(!__traits(compiles, spawn(&f2, msg.dup)));
+
+    // New thread with anonymous function
+    spawn({
+        ownerTid.send("This is so great!");
+    });
+    assert(receiveOnly!(string) == "This is so great!");
 }
 
 /**
@@ -619,28 +617,6 @@ private void _send(T...)(MsgType type, Tid tid, T vals)
  * matched by an earlier delegate.  If more than one argument is sent,
  * the $(D Variant) will contain a $(REF Tuple, std,typecons) of all values
  * sent.
- *
- * Example:
- * ---
- * import std.stdio;
- * import std.variant;
- * import std.concurrency;
- *
- * void spawnedFunction()
- * {
- *     receive(
- *         (int i) { writeln("Received an int."); },
- *         (float f) { writeln("Received a float."); },
- *         (Variant v) { writeln("Received some other type."); }
- *     );
- * }
- *
- * void main()
- * {
- *      auto tid = spawn(&spawnedFunction);
- *      send(tid, 42);
- * }
- * ---
  */
 void receive(T...)( T ops )
 in
@@ -656,6 +632,36 @@ do
     thisInfo.ident.mbox.get( ops );
 }
 
+///
+@system unittest
+{
+    import std.variant;
+    __gshared string received;
+
+    static void spawnedFunction()
+    {
+        receive(
+            (int i) {
+                received = "Received an int.";
+                ownerTid.send(true); // signal success
+            },
+            (double f) {
+                received = "Received a double.";
+                ownerTid.send(true); // signal success
+            },
+            (Variant v) {
+                received = "Received some other type.";
+                ownerTid.send(true); // signal success
+            },
+        );
+    }
+
+    auto tid = spawn(&spawnedFunction);
+
+    send(tid, 42);
+    assert(receiveOnly!(bool), "Receive failed");
+    assert(received == "Received an int.");
+}
 
 @safe unittest
 {
@@ -712,24 +718,6 @@ private template receiveOnlyRet(T...)
  *
  * Returns: The received message.  If $(D T.length) is greater than one,
  *          the message will be packed into a $(REF Tuple, std,typecons).
- *
- * Example:
- * ---
- * import std.concurrency;
- *
- * void spawnedFunc()
- * {
- *     auto msg = receiveOnly!(int, string)();
- *     assert(msg[0] == 42);
- *     assert(msg[1] == "42");
- * }
- *
- * void main()
- * {
- *     auto tid = spawn(&spawnedFunc);
- *     send(tid, 42, "42");
- * }
- * ---
  */
 receiveOnlyRet!(T) receiveOnly(T...)()
 in
@@ -763,6 +751,22 @@ do
         return ret[0];
     else
         return ret;
+}
+
+///
+@system unittest
+{
+    static void spawnedFunc(Tid mainTid)
+    {
+        auto msg = receiveOnly!(int, string)();
+        assert(msg[0] == 42);
+        assert(msg[1] == "42");
+        mainTid.send(true);
+    }
+
+    auto tid = spawn(&spawnedFunc, thisTid);
+    send(tid, 42, "42");
+    assert(receiveOnly!(bool), "Receive failed");
 }
 
 @system unittest
@@ -1464,35 +1468,6 @@ private interface IsGenerator {}
 /**
  * A Generator is a Fiber that periodically returns values of type T to the
  * caller via yield.  This is represented as an InputRange.
- *
- * Example:
- * ---
- * import std.concurrency;
- * import std.stdio;
- *
- *
- * void main()
- * {
- *     auto tid = spawn(
- *     {
- *         while (true)
- *         {
- *             writeln(receiveOnly!int());
- *         }
- *     });
- *
- *     auto r = new Generator!int(
- *     {
- *         foreach (i; 1 .. 10)
- *             yield(i);
- *     });
- *
- *     foreach (e; r)
- *     {
- *         tid.send(e);
- *     }
- * }
- * ---
  */
 class Generator(T) :
     Fiber, IsGenerator, InputRange!T
@@ -1632,6 +1607,28 @@ class Generator(T) :
     }
 private:
     T* m_value;
+}
+
+///
+@system unittest
+{
+    auto tid = spawn({
+        size_t i;
+        while (i < 9)
+            i = receiveOnly!size_t;
+
+        ownerTid.send(i * 2);
+    });
+
+    auto r = new Generator!int({
+        foreach (i; 1 .. 10)
+            yield(i);
+    });
+
+    foreach (e; r)
+        tid.send(e);
+
+    assert(receiveOnly!size_t == 18);
 }
 
 /**
