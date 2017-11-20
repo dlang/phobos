@@ -2075,7 +2075,8 @@ public:
                 {
                     assert(nextBufTask.prev is null);
                     assert(nextBufTask.next is null);
-                } body
+                }
+                do
                 {
                     // Hack to reuse the task object.
 
@@ -2261,7 +2262,8 @@ public:
             {
                 assert(nextBufTask.prev is null);
                 assert(nextBufTask.next is null);
-            } body
+            }
+            do
             {
                 // Hack to reuse the task object.
 
