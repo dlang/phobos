@@ -4764,6 +4764,36 @@ if (isInputRange!R && !isInfinite!R && is(typeof(seed = seed + r.front)))
     }
 }
 
+/// Ditto
+@safe pure nothrow unittest
+{
+    import std.range;
+
+    //simple integral sumation
+    assert(sum([ 1, 2, 3, 4]) == 10);
+
+    //with integral promotion
+    assert(sum([false, true, true, false, true]) == 3);
+    assert(sum(ubyte.max.repeat(100)) == 25500);
+
+    //The result may overflow
+    assert(uint.max.repeat(3).sum()           ==  4294967293U );
+    //But a seed can be used to change the sumation primitive
+    assert(uint.max.repeat(3).sum(ulong.init) == 12884901885UL);
+
+    //Floating point sumation
+    assert(sum([1.0, 2.0, 3.0, 4.0]) == 10);
+
+    //Floating point operations have double precision minimum
+    static assert(is(typeof(sum([1F, 2F, 3F, 4F])) == double));
+    assert(sum([1F, 2, 3, 4]) == 10);
+
+    //Force pair-wise floating point sumation on large integers
+    import std.math : approxEqual;
+    assert(iota(ulong.max / 2, ulong.max / 2 + 4096).sum(0.0)
+               .approxEqual((ulong.max / 2) * 4096.0 + 4096^^2 / 2));
+}
+
 // Pairwise summation http://en.wikipedia.org/wiki/Pairwise_summation
 private auto sumPairwise(F, R)(R data)
 if (isInputRange!R && !isInfinite!R)
@@ -4872,36 +4902,6 @@ private auto sumKahan(Result, R)(Result result, R r)
         result = t;
     }
     return result;
-}
-
-/// Ditto
-@safe pure nothrow unittest
-{
-    import std.range;
-
-    //simple integral sumation
-    assert(sum([ 1, 2, 3, 4]) == 10);
-
-    //with integral promotion
-    assert(sum([false, true, true, false, true]) == 3);
-    assert(sum(ubyte.max.repeat(100)) == 25500);
-
-    //The result may overflow
-    assert(uint.max.repeat(3).sum()           ==  4294967293U );
-    //But a seed can be used to change the sumation primitive
-    assert(uint.max.repeat(3).sum(ulong.init) == 12884901885UL);
-
-    //Floating point sumation
-    assert(sum([1.0, 2.0, 3.0, 4.0]) == 10);
-
-    //Floating point operations have double precision minimum
-    static assert(is(typeof(sum([1F, 2F, 3F, 4F])) == double));
-    assert(sum([1F, 2, 3, 4]) == 10);
-
-    //Force pair-wise floating point sumation on large integers
-    import std.math : approxEqual;
-    assert(iota(ulong.max / 2, ulong.max / 2 + 4096).sum(0.0)
-               .approxEqual((ulong.max / 2) * 4096.0 + 4096^^2 / 2));
 }
 
 @safe pure nothrow unittest
