@@ -297,3 +297,19 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     assert((() nothrow @nogc => a.deallocateAll())());
     assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
 }
+
+// Check that owns inherits from parent, i.e. Region
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.typecons : Ternary;
+
+    alias Alloc = Quantizer!(Region!(Mallocator),
+            (size_t n) => n.roundUpToMultipleOf(64));
+    auto a = Alloc(Region!Mallocator(1024 * 64));
+    const b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
+    assert((() pure nothrow @safe @nogc => a.owns(null))() == Ternary.no);
+}

@@ -75,7 +75,7 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
         forwarded to $(D SmallAllocator) if $(D b.length <= threshold), or $(D
         LargeAllocator) otherwise.
         */
-        Ternary owns(void[] b);
+        Ternary owns(const void[] b);
         /**
         This function is defined only if both allocators define it, and forwards
         appropriately depending on $(D b.length).
@@ -215,7 +215,8 @@ struct Segregator(size_t threshold, SmallAllocator, LargeAllocator)
 
         static if (hasMember!(SmallAllocator, "owns")
                 && hasMember!(LargeAllocator, "owns"))
-        Ternary owns(void[] b)
+        //Ternary owns(const void[] b) const ?
+        Ternary owns(const void[] b)
         {
             return Ternary(b.length <= threshold
                 ? _small.owns(b) : _large.owns(b));

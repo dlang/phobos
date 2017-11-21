@@ -677,7 +677,7 @@ struct ContiguousFreeList(ParentAllocator,
     */
     static if (hasMember!(SParent, "owns") || unchecked)
     // Ternary owns(const void[] b) const ?
-    Ternary owns(void[] b)
+    Ternary owns(const void[] b)
     {
         if ((() @trusted => support && b
                             && (&support[0] <= &b[0])
