@@ -429,40 +429,60 @@ private template isSpawnable(F, T...)
  *  to $(D fn) must either be $(D shared) or $(D immutable) or have no
  *  pointer indirection.  This is necessary for enforcing isolation among
  *  threads.
- *
- * Example:
- * ---
- * import std.stdio, std.concurrency;
- *
- * void f1(string str)
- * {
- *     writeln(str);
- * }
- *
- * void f2(char[] str)
- * {
- *     writeln(str);
- * }
- *
- * void main()
- * {
- *     auto str = "Hello, world";
- *
- *     // Works:  string is immutable.
- *     auto tid1 = spawn(&f1, str);
- *
- *     // Fails:  char[] has mutable aliasing.
- *     auto tid2 = spawn(&f2, str.dup);
- *
- *     // New thread with anonymous function
- *     spawn({ writeln("This is so great!"); });
- * }
- * ---
  */
 Tid spawn(F, T...)(F fn, T args) if (isSpawnable!(F, T))
 {
     static assert(!hasLocalAliasing!(T), "Aliases to mutable thread-local data not allowed.");
     return _spawn(false, fn, args);
+}
+
+///
+@system unittest
+{
+    static void f(string msg)
+    {
+        assert(msg == "Hello World");
+    }
+
+    auto tid = spawn(&f, "Hello World");
+}
+
+/// Fails: char[] has mutable aliasing.
+@system unittest
+{
+    string msg = "Hello, World!";
+
+    static void f1(string msg) {}
+    static assert(!__traits(compiles, spawn(&f1, msg.dup)));
+    static assert( __traits(compiles, spawn(&f1, msg.idup)));
+
+    static void f2(char[] msg) {}
+    static assert(!__traits(compiles, spawn(&f2, msg.dup)));
+    static assert(!__traits(compiles, spawn(&f2, msg.idup)));
+}
+
+/// New thread with anonymous function
+@system unittest
+{
+    spawn({
+        ownerTid.send("This is so great!");
+    });
+    assert(receiveOnly!string == "This is so great!");
+}
+
+@system unittest
+{
+    import core.thread : thread_joinAll;
+
+    __gshared string receivedMessage;
+    static void f1(string msg)
+    {
+        receivedMessage = msg;
+    }
+
+    auto tid1 = spawn(&f1, "Hello World");
+    thread_joinAll;
+    assert(receivedMessage == "Hello World");
 }
 
 /**
