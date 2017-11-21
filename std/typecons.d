@@ -2352,7 +2352,7 @@ struct Nullable(T)
     // that we're assigning to an uninitialized variable.
     else static if (!hasElaborateAssign!T)
     {
-        private T _value = void;
+        private T _value = T.init;
     }
     else
     {
