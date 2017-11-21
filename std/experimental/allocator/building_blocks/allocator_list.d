@@ -349,7 +349,8 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
     returned  `Ternary.unknown`.
     */
     static if (hasMember!(Allocator, "owns"))
-    Ternary owns(void[] b)
+    //Ternary owns(const void[] b) const ?
+    Ternary owns(const void[] b)
     {
         auto result = Ternary.no;
         for (auto p = &root, n = *p; n; p = &n.next, n = *p)
@@ -582,12 +583,15 @@ version(Posix) @system unittest
     // Create an allocator based upon 4MB regions, fetched from the GC heap.
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
+    import std.typecons : Ternary;
     AllocatorList!((n) => Region!GCAllocator(new ubyte[max(n, 1024 * 4096)]),
         NullAllocator) a;
     const b1 = a.allocate(1024 * 8192);
     assert(b1 !is null); // still works due to overdimensioning
     const b2 = a.allocate(1024 * 10);
     assert(b2.length == 1024 * 10);
+    assert((() pure nothrow @safe @nogc => a.owns(b2))() == Ternary.yes);
+    assert((() pure nothrow @safe @nogc => a.owns(null))() == Ternary.no);
     a.deallocateAll();
 }
 
@@ -596,11 +600,14 @@ version(Posix) @system unittest
     // Create an allocator based upon 4MB regions, fetched from the GC heap.
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
+    import std.typecons : Ternary;
     AllocatorList!((n) => Region!()(new ubyte[max(n, 1024 * 4096)])) a;
     auto b1 = a.allocate(1024 * 8192);
     assert(b1 !is null); // still works due to overdimensioning
     b1 = a.allocate(1024 * 10);
     assert(b1.length == 1024 * 10);
+    assert((() pure nothrow @safe @nogc => a.owns(b1))() == Ternary.yes);
+    assert((() pure nothrow @safe @nogc => a.owns(null))() == Ternary.no);
     a.deallocateAll();
 }
 
