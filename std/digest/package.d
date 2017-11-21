@@ -17,7 +17,7 @@ $(TR $(TDNW Template API) $(TD $(MYREF isDigest) $(MYREF DigestType) $(MYREF has
 $(TR $(TDNW OOP API) $(TD $(MYREF Digest)
 )
 )
-$(TR $(TDNW Helper functions) $(TD $(MYREF toHexString))
+$(TR $(TDNW Helper functions) $(TD $(MYREF toHexString) $(MYREF secureEqual))
 )
 $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDigest))
 )
