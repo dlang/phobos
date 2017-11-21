@@ -119,7 +119,7 @@ if (fun.length >= 1)
 /++
 $(D cache) eagerly evaluates $(D front) of $(D range)
 on each construction or call to $(D popFront),
-to store the result in a cache.
+to store the result in a _cache.
 The result is then directly returned when $(D front) is called,
 rather than re-evaluated.
 
@@ -129,24 +129,24 @@ In particular, it can be placed after a call to $(D map), or before a call
 to $(D filter).
 
 $(D cache) may provide
-$(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives)
+$(REF_ALTTEXT bidirectional _range, isBidirectionalRange, std,_range,primitives)
 iteration if needed, but since this comes at an increased cost, it must be explicitly requested via the
-call to $(D cacheBidirectional). Furthermore, a bidirectional cache will
+call to $(D cacheBidirectional). Furthermore, a bidirectional _cache will
 evaluate the "center" element twice, when there is only one element left in
-the range.
+the _range.
 
 $(D cache) does not provide random access primitives,
-as $(D cache) would be unable to cache the random accesses.
+as $(D cache) would be unable to _cache the random accesses.
 If $(D Range) provides slicing primitives,
 then $(D cache) will provide the same slicing primitives,
 but $(D hasSlicing!Cache) will not yield true (as the $(REF hasSlicing, std,_range,primitives)
 trait also checks for random access).
 
 Params:
-    range = an $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+    range = an $(REF_ALTTEXT input _range, isInputRange, std,_range,primitives)
 
 Returns:
-    an input range with the cached values of range
+    an input _range with the cached values of _range
 +/
 auto cache(Range)(Range range)
 if (isInputRange!Range)
