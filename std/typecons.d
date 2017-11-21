@@ -2356,7 +2356,10 @@ struct Nullable(T)
     }
     else
     {
-        static assert(false, "Cannot construct " ~ typeof(this).stringof ~ ": type has no default constructor and overloaded assignment.");
+        static assert(false,
+                      "Cannot construct "~typeof(this).stringof~
+                      ": type has no default constructor and overloaded assignment."
+        );
     }
 
     private bool _isNull = true;
