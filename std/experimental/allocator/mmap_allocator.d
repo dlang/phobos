@@ -28,6 +28,7 @@ struct MmapAllocator
     version(Posix)
     {
         /// Allocator API.
+        @trusted @nogc nothrow
         void[] allocate(size_t bytes) shared
         {
             import core.sys.posix.sys.mman : mmap, MAP_ANON, PROT_READ,
@@ -54,6 +55,7 @@ struct MmapAllocator
             PAGE_READWRITE, MEM_RELEASE;
 
         /// Allocator API.
+        @trusted @nogc nothrow
         void[] allocate(size_t bytes) shared
         {
             if (!bytes) return null;

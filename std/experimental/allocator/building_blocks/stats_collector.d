@@ -686,15 +686,15 @@ public:
 
         Allocator a;
         assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
-        auto b1 = a.allocate(100);
+        auto b1 = (() nothrow @safe => a.allocate(100))();
         assert(a.numAllocate == 1);
         assert(a.expand(b1, 0));
         assert(a.reallocate(b1, b1.length + 1));
-        auto b2 = a.allocate(101);
+        auto b2 = (() nothrow @safe => a.allocate(101))();
         assert(a.numAllocate == 2);
         assert(a.bytesAllocated == 202);
         assert(a.bytesUsed == 202);
-        auto b3 = a.allocate(202);
+        auto b3 = (() nothrow @safe => a.allocate(202))();
         assert(a.numAllocate == 3);
         assert(a.bytesAllocated == 404);
         assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.no);
@@ -722,11 +722,11 @@ public:
     {
         import std.range : walkLength;
         Allocator a;
-        auto b1 = a.allocate(100);
+        auto b1 = (() nothrow @safe => a.allocate(100))();
         assert(a.expand(b1, 0));
         assert(a.reallocate(b1, b1.length + 1));
-        auto b2 = a.allocate(101);
-        auto b3 = a.allocate(202);
+        auto b2 = (() nothrow @safe => a.allocate(101))();
+        auto b3 = (() nothrow @safe => a.allocate(202))();
 
         () nothrow @nogc { a.deallocate(b2); }();
         () nothrow @nogc { a.deallocate(b1); }();
@@ -752,7 +752,7 @@ public:
     import std.experimental.allocator.building_blocks.region : Region;
 
     auto a = StatsCollector!(Region!(), Options.all, Options.all)(Region!()(new ubyte[1024 * 64]));
-    auto b = a.allocate(42);
+    auto b = (() nothrow @safe @nogc => a.allocate(42))();
     assert(b.length == 42);
     assert((() nothrow @nogc => a.deallocateAll())());
 }

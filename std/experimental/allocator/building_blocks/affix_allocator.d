@@ -124,17 +124,19 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             if (!bytes) return null;
             auto result = parent.allocate(actualAllocationSize(bytes));
             if (result is null) return null;
-            static if (stateSize!Prefix)
-            {
-                assert(result.ptr.alignedAt(Prefix.alignof));
-                emplace!Prefix(cast(Prefix*) result.ptr);
-            }
-            static if (stateSize!Suffix)
-            {
-                auto suffixP = result.ptr + result.length - Suffix.sizeof;
-                assert(suffixP.alignedAt(Suffix.alignof));
-                emplace!Suffix(cast(Suffix*)(suffixP));
-            }
+            () @trusted {
+                static if (stateSize!Prefix)
+                {
+                    assert(result.ptr.alignedAt(Prefix.alignof));
+                    emplace!Prefix(cast(Prefix*) result.ptr);
+                }
+                static if (stateSize!Suffix)
+                {
+                    auto suffixP = result.ptr + result.length - Suffix.sizeof;
+                    assert(suffixP.alignedAt(Suffix.alignof));
+                    emplace!Suffix(cast(Suffix*)(suffixP));
+                }
+            }();
             return result[stateSize!Prefix .. stateSize!Prefix + bytes];
         }
 
@@ -411,18 +413,20 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     auto a = AffixAllocator!(BitmappedBlock!128, ulong, ulong)
                 (BitmappedBlock!128(new ubyte[128 * 4096]));
     assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
-    auto b = a.allocate(42);
+    auto b = (() pure nothrow @safe @nogc => a.allocate(42))();
     assert(b.length == 42);
     assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.no);
 }
 
-@system unittest
+nothrow @safe @nogc unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     alias A = AffixAllocator!(Mallocator, size_t);
     auto b = A.instance.allocate(10);
-    A.instance.prefix(b) = 10;
-    assert(A.instance.prefix(b) == 10);
+    () @trusted {
+        A.instance.prefix(b) = 10;
+        assert(A.instance.prefix(b) == 10);
+    }();
 
     import std.experimental.allocator.building_blocks.null_allocator
         : NullAllocator;
@@ -454,18 +458,19 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     assert(p.ptr is d.ptr && p.length >= d.length);
 }
 
-@system unittest
+//@system unittest
+nothrow @safe unittest
 {
     import std.experimental.allocator.gc_allocator;
     alias a = AffixAllocator!(GCAllocator, uint).instance;
 
     // Check that goodAllocSize inherits from parent, i.e. GCAllocator
-    assert(__traits(compiles, (() nothrow @safe @nogc => a.goodAllocSize(1))()));
+    assert(__traits(compiles, (() @nogc => a.goodAllocSize(1))()));
 
     // Ensure deallocate inherits from parent
     auto b = a.allocate(42);
     assert(b.length == 42);
-    () nothrow @nogc { a.deallocate(b); }();
+    () @trusted @nogc { a.deallocate(b); }();
 }
 
 // Test that deallocateAll infers from parent
@@ -474,7 +479,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     import std.experimental.allocator.building_blocks.region : Region;
 
     auto a = AffixAllocator!(Region!(), uint)(Region!()(new ubyte[1024 * 64]));
-    auto b = a.allocate(42);
+    auto b = (() pure nothrow @safe @nogc => a.allocate(42))();
     assert(b.length == 42);
     assert((() nothrow @nogc => a.deallocateAll())());
 }

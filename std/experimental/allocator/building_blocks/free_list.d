@@ -254,13 +254,14 @@ struct FreeList(ParentAllocator,
         return parent.goodAllocSize(bytes);
     }
 
+    //[>pure*/ nothrow @safe /*@nogc<]
     private void[] allocateEligible(size_t bytes)
     {
         assert(bytes);
         if (root)
         {
             // faster
-            auto result = (cast(ubyte*) root)[0 .. bytes];
+            auto result = (() @trusted => (cast(ubyte*) root)[0 .. bytes])();
             root = root.next;
             return result;
         }
@@ -277,7 +278,7 @@ struct FreeList(ParentAllocator,
         auto result = parent.allocate(toAllocate);
         static if (hasTolerance)
         {
-            if (result) result = result.ptr[0 .. bytes];
+            if (result) result = (() @trusted => result.ptr[0 .. bytes])();
         }
         static if (adaptive == Yes.adaptive)
         {
@@ -307,6 +308,7 @@ struct FreeList(ParentAllocator,
 
     Postcondition: $(D result.length == bytes || result is null)
     */
+    //[>pure*/ nothrow @safe/* @nogc <]
     void[] allocate(size_t n)
     {
         static if (adaptive == Yes.adaptive) ++accumSamples;
@@ -421,7 +423,7 @@ struct FreeList(ParentAllocator,
     }
 
     FreeList!(StatsCollectorWrapper, 16, 16) fl;
-    auto buf1 = fl.allocate(16);
+    auto buf1 = (() nothrow @safe @nogc => fl.allocate(16))();
     auto buf2 = fl.allocate(16);
     assert(fl.parent.bytesUsed == 32);
 
@@ -437,15 +439,18 @@ struct FreeList(ParentAllocator,
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     FreeList!(GCAllocator, 0, 8) fl;
-    assert(fl.root is null);
-    auto b1 = fl.allocate(7);
-    fl.allocate(8);
-    assert(fl.root is null);
-    // Ensure deallocate inherits from parent
-    () nothrow @nogc { fl.deallocate(b1); }();
-    assert(fl.root !is null);
-    fl.allocate(8);
-    assert(fl.root is null);
+    // Can't mark the unittest as @safe because of ~this
+    () nothrow @safe {
+        assert(fl.root is null);
+        auto b1 = fl.allocate(7);
+        fl.allocate(8);
+        assert(fl.root is null);
+        // Ensure deallocate inherits from parent
+        () @trusted @nogc { fl.deallocate(b1); }();
+        assert(fl.root !is null);
+        fl.allocate(8);
+        assert(fl.root is null);
+    }();
 }
 
 @system unittest
@@ -462,9 +467,11 @@ struct FreeList(ParentAllocator,
     import std.experimental.allocator.building_blocks.region : Region;
 
     auto fl = FreeList!(Region!(), 0, 16)(Region!()(new ubyte[1024 * 64]));
-    auto b = fl.allocate(42);
-    assert(b.length == 42);
-    assert((() nothrow @nogc => fl.deallocateAll())());
+    () nothrow @safe {
+        auto b = fl.allocate(42);
+        assert(b.length == 42);
+        assert((() @trusted @nogc => fl.deallocateAll())());
+    }();
 }
 
 /**
@@ -759,23 +766,24 @@ struct ContiguousFreeList(ParentAllocator,
     alias A = ContiguousFreeList!(NullAllocator, 0, 64);
     auto a = A(new ubyte[1024]);
 
-    assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
+    () nothrow @safe @nogc {
+        assert(a.empty == Ternary.yes);
+        assert((() pure => a.goodAllocSize(15))() == 64);
+        assert((() pure => a.goodAllocSize(65))()
+                == NullAllocator.instance.goodAllocSize(65));
 
-    assert((() pure nothrow @safe @nogc => a.goodAllocSize(15))() == 64);
-    assert((() pure nothrow @safe @nogc => a.goodAllocSize(65))()
-            == (() nothrow @safe @nogc => NullAllocator.instance.goodAllocSize(65))());
-
-    auto b = a.allocate(100);
-    assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
-    assert(b.length == 0);
-    // Ensure deallocate inherits from parent
-    () nothrow @nogc { a.deallocate(b); }();
-    b = a.allocate(64);
-    assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
-    assert(b.length == 64);
-    assert((() nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
-    assert((() nothrow @safe @nogc => a.owns(null))() == Ternary.no);
-    () nothrow @nogc { a.deallocate(b); }();
+        auto b = a.allocate(100);
+        assert(a.empty == Ternary.yes);
+        assert(b.length == 0);
+        // Ensure deallocate inherits from parent
+        () @trusted { a.deallocate(b); }();
+        b = a.allocate(64);
+        assert(a.empty == Ternary.no);
+        assert(b.length == 64);
+        assert(a.owns(b) == Ternary.yes);
+        assert(a.owns(null) == Ternary.no);
+        () @trusted { a.deallocate(b); }();
+    }();
 }
 
 @system unittest
@@ -786,27 +794,28 @@ struct ContiguousFreeList(ParentAllocator,
     alias A = ContiguousFreeList!(Region!GCAllocator, 0, 64);
     auto a = A(Region!GCAllocator(1024 * 4), 1024);
 
-    assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
+    () nothrow @safe @nogc {
+        assert(a.empty == Ternary.yes);
+        assert((() pure => a.goodAllocSize(15))() == 64);
+        assert((() pure => a.goodAllocSize(65))()
+                == (() pure => a.parent.goodAllocSize(65))());
 
-    assert((() pure nothrow @safe @nogc => a.goodAllocSize(15))() == 64);
-    assert((() pure nothrow @safe @nogc => a.goodAllocSize(65))()
-            == (() pure nothrow @safe @nogc => a.parent.goodAllocSize(65))());
-
-    auto b = a.allocate(100);
-    assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
-    assert(a.allocated == 0);
-    assert(b.length == 100);
-    // Ensure deallocate inherits from parent
-    assert((() nothrow @nogc => a.deallocate(b))());
-    assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
-    b = a.allocate(64);
-    assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
-    assert(b.length == 64);
-    assert((() nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
-    assert((() nothrow @safe @nogc => a.owns(null))() == Ternary.no);
-    // Test deallocate infers from parent
-    assert((() nothrow @nogc => a.deallocate(b))());
-    assert((() nothrow @nogc => a.deallocateAll())());
+        auto b = a.allocate(100);
+        assert(a.empty == Ternary.no);
+        assert(a.allocated == 0);
+        assert(b.length == 100);
+        // Ensure deallocate inherits from parent
+        assert((() @trusted => a.deallocate(b))());
+        assert(a.empty == Ternary.yes);
+        b = a.allocate(64);
+        assert(a.empty == Ternary.no);
+        assert(b.length == 64);
+        assert(a.owns(b) == Ternary.yes);
+        assert(a.owns(null) == Ternary.no);
+        // Test deallocate infers from parent
+        assert((() @trusted => a.deallocate(b))());
+        assert((() @trusted => a.deallocateAll())());
+    }();
 }
 
 @system unittest
@@ -814,7 +823,7 @@ struct ContiguousFreeList(ParentAllocator,
     import std.experimental.allocator.gc_allocator : GCAllocator;
     alias A = ContiguousFreeList!(GCAllocator, 64, 64);
     auto a = A(1024);
-    const b = a.allocate(100);
+    const b = (() nothrow @safe => a.allocate(100))();
     assert(b.length == 100);
 }
 
@@ -1042,7 +1051,7 @@ struct SharedFreeList(ParentAllocator,
             _root = _root.next;
             decNodes();
             lock.unlock();
-            return (cast(ubyte*) oldRoot)[0 .. bytes];
+            return (() @trusted => (cast(ubyte*) oldRoot)[0 .. bytes])();
         }
     }
 
@@ -1157,15 +1166,16 @@ struct SharedFreeList(ParentAllocator,
 
     static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
 
-    assert((() nothrow @safe @nogc => a.goodAllocSize(1))() == platformAlignment);
-
-    auto b = a.allocate(96);
-    // Ensure deallocate inherits from parent
-    () nothrow @nogc { a.deallocate(b); }();
+    () nothrow @safe {
+        assert((() @nogc => a.goodAllocSize(1))() == platformAlignment);
+        auto b = a.allocate(96);
+        // Ensure deallocate inherits from parent
+        () @trusted @nogc { a.deallocate(b); }();
+    }();
 
     void fun()
     {
-        auto b = cast(size_t[]) a.allocate(96);
+        auto b = cast(size_t[]) (() nothrow @safe => a.allocate(96))();
         b[] = cast(size_t) &b;
 
         assert(b.equal(repeat(cast(size_t) &b, b.length)));
@@ -1181,39 +1191,39 @@ struct SharedFreeList(ParentAllocator,
     tg.joinAll();
 }
 
-@system unittest
+nothrow @safe @nogc unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
     auto b = a.allocate(100);
     // Ensure deallocate inherits from parent
-    () nothrow @nogc { a.deallocate(b); }();
+    () @trusted { a.deallocate(b); }();
     assert(a.nodes == 1);
     b = [];
-    assert((() nothrow @nogc => a.deallocateAll())());
+    assert((() @trusted => a.deallocateAll())());
     assert(a.nodes == 0);
 }
 
-@system unittest
+nothrow @safe @nogc unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
     auto b = a.allocate(100);
     auto c = a.allocate(100);
     // Ensure deallocate inherits from parent
-    () nothrow @nogc { a.deallocate(c); }();
+    () @trusted { a.deallocate(c); }();
     assert(a.nodes == 1);
     c = [];
-    a.minimize();
+    () @trusted { a.minimize(); }();
     assert(a.nodes == 0);
-    () nothrow @nogc { a.deallocate(b); }();
+    () @trusted { a.deallocate(b); }();
     assert(a.nodes == 1);
     b = [];
-    a.minimize();
+    () @trusted { a.minimize(); }();
     assert(a.nodes == 0);
 }
 
-@system unittest
+nothrow @safe @nogc unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
@@ -1221,12 +1231,12 @@ struct SharedFreeList(ParentAllocator,
     auto c = a.allocate(100);
     assert(a.nodes == 0);
     // Ensure deallocate inherits from parent
-    () nothrow @nogc { a.deallocate(b); }();
-    () nothrow @nogc { a.deallocate(c); }();
+    () @trusted { a.deallocate(b); }();
+    () @trusted { a.deallocate(c); }();
     assert(a.nodes == 2);
     b = [];
     c = [];
-    a.minimize();
+    () @trusted { a.minimize(); }();
     assert(a.nodes == 0);
 }
 
@@ -1235,53 +1245,53 @@ struct SharedFreeList(ParentAllocator,
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
     scope(exit) assert((() nothrow @nogc => a.deallocateAll())());
-    auto c = a.allocate(64);
+    auto c = (() nothrow @safe @nogc => a.allocate(64))();
     assert(a.reallocate(c, 96));
     assert(c.length == 96);
     // Ensure deallocate inherits from parent
     () nothrow @nogc { a.deallocate(c); }();
 }
 
-@system unittest
+nothrow @safe @nogc unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime, chooseAtRuntime) a;
-    scope(exit) assert((() nothrow @nogc => a.deallocateAll())());
+    scope(exit) assert((() @trusted => a.deallocateAll())());
     a.allocate(64);
 }
 
-@system unittest
+nothrow @safe @nogc unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, 30, 40) a;
-    scope(exit) assert((() nothrow @nogc => a.deallocateAll())());
+    scope(exit) assert((() @trusted => a.deallocateAll())());
     a.allocate(64);
 }
 
-@system unittest
+nothrow @safe @nogc unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, 30, 40, chooseAtRuntime) a;
-    scope(exit) assert((() nothrow @nogc => a.deallocateAll())());
+    scope(exit) assert((() @trusted => a.deallocateAll())());
     a.allocate(64);
 }
 
-@system unittest
+@safe unittest
 {
     // Pull request #5556
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, 0, chooseAtRuntime) a;
-    scope(exit) assert((() nothrow @nogc => a.deallocateAll())());
+    scope(exit) assert((() @trusted => a.deallocateAll())());
     a.max = 64;
-    a.allocate(64);
+    () nothrow @nogc { a.allocate(64); }();
 }
 
-@system unittest
+@safe unittest
 {
     // Pull request #5556
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, chooseAtRuntime, 64) a;
-    scope(exit) assert((() nothrow @nogc => a.deallocateAll())());
+    scope(exit) assert((() @trusted => a.deallocateAll())());
     a.min = 32;
-    a.allocate(64);
+    () nothrow @nogc { a.allocate(64); }();
 }

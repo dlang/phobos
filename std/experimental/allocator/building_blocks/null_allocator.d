@@ -20,6 +20,7 @@ struct NullAllocator
     //size_t goodAllocSize(size_t n) shared const
     //{ return .goodAllocSize(this, n); }
     /// Always returns $(D null).
+    pure nothrow @safe @nogc
     void[] allocate(size_t) shared { return null; }
     /// Always returns $(D null).
     void[] alignedAllocate(size_t, uint) shared { return null; }
@@ -73,7 +74,7 @@ struct NullAllocator
 {
     assert(NullAllocator.instance.alignedAllocate(100, 0) is null);
     assert(NullAllocator.instance.allocateAll() is null);
-    auto b = NullAllocator.instance.allocate(100);
+    auto b = (() nothrow @safe @nogc => NullAllocator.instance.allocate(100))();
     assert(b is null);
     assert(NullAllocator.instance.expand(b, 0));
     assert(!NullAllocator.instance.expand(b, 42));

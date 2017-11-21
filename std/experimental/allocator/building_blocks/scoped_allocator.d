@@ -88,8 +88,8 @@ struct ScopedAllocator(ParentAllocator)
     void[] allocate(size_t n)
     {
         auto b = parent.allocate(n);
-        if (!b.ptr) return b;
-        Node* toInsert = & parent.prefix(b);
+        if (!b) return b;
+        Node* toInsert = (() @trusted => & parent.prefix(b))();
         toInsert.prev = null;
         toInsert.next = root;
         toInsert.length = n;
@@ -235,7 +235,7 @@ struct ScopedAllocator(ParentAllocator)
     assert(!__traits(compiles, (() pure nothrow @safe @nogc => a.goodAllocSize(0))()));
 
     // Ensure deallocate inherits from parent allocators
-    auto b = a.allocate(42);
+    auto b = (() nothrow @safe => a.allocate(42))();
     assert(b.length == 42);
     () nothrow @nogc { a.deallocate(b); }();
 }
@@ -247,9 +247,9 @@ struct ScopedAllocator(ParentAllocator)
 
     ScopedAllocator!(Region!()) a;
     a.parent.parent = Region!()(new ubyte[1024 * 64]);
-    auto b = a.allocate(42);
+    auto b = (() pure nothrow @safe @nogc => a.allocate(42))();
     assert(b.length == 42);
-    assert((() nothrow @nogc => a.deallocateAll())());
+    assert((() pure nothrow @nogc => a.deallocateAll())());
 }
 
 @system unittest
@@ -259,10 +259,12 @@ struct ScopedAllocator(ParentAllocator)
     import std.typecons : Ternary;
 
     auto a = Region!(Mallocator)(1024 * 64);
-    auto b = a.allocate(42);
-    assert(b.length == 42);
-    assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
-    assert((() pure nothrow @safe @nogc => a.owns(null))() == Ternary.no);
+    () pure nothrow @safe @nogc {
+        auto b = a.allocate(42);
+        assert(b.length == 42);
+        assert(a.owns(b) == Ternary.yes);
+        assert(a.owns(null) == Ternary.no);
+    }();
 }
 
 // Test empty
@@ -272,7 +274,9 @@ struct ScopedAllocator(ParentAllocator)
     import std.typecons : Ternary;
     ScopedAllocator!Mallocator alloc;
 
-    assert((() pure nothrow @safe @nogc => alloc.empty)() == Ternary.yes);
-    const b = alloc.allocate(10);
-    assert((() pure nothrow @safe @nogc => alloc.empty)() == Ternary.no);
+    () nothrow @safe @nogc {
+        assert((() pure => alloc.empty)() == Ternary.yes);
+        const b = alloc.allocate(10);
+        assert((() pure => alloc.empty)() == Ternary.no);
+    }();
 }

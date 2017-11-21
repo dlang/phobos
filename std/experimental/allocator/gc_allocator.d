@@ -136,36 +136,36 @@ struct GCAllocator
     assert(GCAllocator.instance.expand(b, 1));
 }
 
-@system unittest
+nothrow @safe unittest
 {
     import core.memory : GC;
     import std.typecons : Ternary;
 
     // test allocation sizes
-    assert((() nothrow @safe @nogc => GCAllocator.instance.goodAllocSize(1))() == 16);
+    assert((() @nogc => GCAllocator.instance.goodAllocSize(1))() == 16);
     for (size_t s = 16; s <= 8192; s *= 2)
     {
-        assert((() nothrow @safe @nogc => GCAllocator.instance.goodAllocSize(s))() == s);
-        assert((() nothrow @safe @nogc => GCAllocator.instance.goodAllocSize(s - (s / 2) + 1))() == s);
+        assert((() @nogc => GCAllocator.instance.goodAllocSize(s))() == s);
+        assert((() @nogc => GCAllocator.instance.goodAllocSize(s - (s / 2) + 1))() == s);
 
         auto buffer = GCAllocator.instance.allocate(s);
-        scope(exit) () nothrow @nogc { GCAllocator.instance.deallocate(buffer); }();
+        scope(exit) () @trusted @nogc { GCAllocator.instance.deallocate(buffer); }();
 
         void[] p;
-        assert((() nothrow @safe => GCAllocator.instance.resolveInternalPointer(null, p))() == Ternary.no);
-        assert((() nothrow @safe => GCAllocator.instance.resolveInternalPointer(&buffer[0], p))() == Ternary.yes);
-        assert(p.ptr is buffer.ptr && p.length >= buffer.length);
+        assert(GCAllocator.instance.resolveInternalPointer(null, p) == Ternary.no);
+        assert(GCAllocator.instance.resolveInternalPointer(&buffer[0], p) == Ternary.yes);
+        assert(&p[0] == &buffer[0] && p.length >= buffer.length);
 
-        assert(GC.sizeOf(buffer.ptr) == s);
+        () @trusted { assert(GC.sizeOf(&buffer[0]) == s); }();
 
         auto buffer2 = GCAllocator.instance.allocate(s - (s / 2) + 1);
-        scope(exit) () nothrow @nogc { GCAllocator.instance.deallocate(buffer2); }();
+        scope(exit) () @trusted @nogc { GCAllocator.instance.deallocate(buffer2); }();
 
-        assert(GC.sizeOf(buffer2.ptr) == s);
+        () @trusted { assert(GC.sizeOf(&buffer2[0]) == s); }();
     }
 
     // anything above a page is simply rounded up to next page
-    assert((() nothrow @safe @nogc => GCAllocator.instance.goodAllocSize(4096 * 4 + 1))() == 4096 * 5);
+    assert((() @nogc => GCAllocator.instance.goodAllocSize(4096 * 4 + 1))() == 4096 * 5);
 }
 
 nothrow @safe unittest

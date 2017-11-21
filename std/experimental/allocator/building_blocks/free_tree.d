@@ -293,21 +293,20 @@ struct FreeTree(ParentAllocator)
         immutable s = goodAllocSize(n);
 
         // Consult the free tree.
-        auto result = findAndRemove(root, s);
-        if (result.ptr) return result.ptr[0 .. n];
+        auto result = (() @trusted => findAndRemove(root, s))();
+        if (result) return result[0 .. n];
 
         // No block found, try the parent allocator.
         result = parent.allocate(s);
-        if (result.ptr) return result.ptr[0 .. n];
+        if (result) return result[0 .. n];
 
         // Parent ran out of juice, desperation mode on
         static if (hasMember!(ParentAllocator, "deallocate"))
         {
-            clear;
+            () @trusted { clear; }();
             // Try parent allocator again.
             result = parent.allocate(s);
-            if (result.ptr) return result.ptr[0 .. n];
-            return null;
+            return result ? result[0 .. n] : null;
         }
         else
         {
@@ -336,21 +335,29 @@ struct FreeTree(ParentAllocator)
     {
         import std.experimental.allocator.gc_allocator;
         FreeTree!GCAllocator a;
-        auto b1 = a.allocate(10000);
-        auto b2 = a.allocate(20000);
-        auto b3 = a.allocate(30000);
-        assert(b1.ptr && b2.ptr && b3.ptr);
-        () nothrow @nogc { a.deallocate(b1); }();
-        () nothrow @nogc { a.deallocate(b3); }();
-        () nothrow @nogc { a.deallocate(b2); }();
-        assert(a.formatSizes == "(20480 (12288 32768))", a.formatSizes);
+        () nothrow @safe {
+            auto b1 = a.allocate(10000);
+            auto b2 = a.allocate(20000);
+            auto b3 = a.allocate(30000);
+            assert(b1 && b2 && b3);
+            assert(b1.length == 10000);
+            assert(b2.length == 20000);
+            assert(b3.length == 30000);
+            () @trusted @nogc { a.deallocate(b1); }();
+            () @trusted @nogc { a.deallocate(b3); }();
+            () @trusted @nogc { a.deallocate(b2); }();
+            assert(a.formatSizes == "(20480 (12288 32768))", a.formatSizes);
 
-        b1 = a.allocate(10000);
-        assert(a.formatSizes == "(20480 (_ 32768))", a.formatSizes);
-        b1 = a.allocate(30000);
-        assert(a.formatSizes == "(20480)", a.formatSizes);
-        b1 = a.allocate(20000);
-        assert(a.formatSizes == "(_)", a.formatSizes);
+            b1 = a.allocate(10000);
+            assert(b1.length == 10000);
+            assert(a.formatSizes == "(20480 (_ 32768))", a.formatSizes);
+            b1 = a.allocate(30000);
+            assert(b1.length == 30000);
+            assert(a.formatSizes == "(20480)", a.formatSizes);
+            b1 = a.allocate(20000);
+            assert(b1.length == 20000);
+            assert(a.formatSizes == "(_)", a.formatSizes);
+        }();
     }
 
     @system unittest // build a complex free tree
@@ -360,19 +367,26 @@ struct FreeTree(ParentAllocator)
         uint[] sizes = [3008,704,1856,576,1632,672,832,1856,1120,2656,1216,672,
             448,992,2400,1376,2688,2656,736,1440];
         void[][] allocs;
-        foreach (s; sizes)
-            allocs ~= a.allocate(s);
-        foreach_reverse (b; allocs)
-        {
-            assert(b.ptr);
-            () nothrow @nogc { a.deallocate(b); }();
-        }
-        a.assertValid;
-        allocs = null;
-        foreach (s; sizes)
-            allocs ~= a.allocate(s);
-        assert(a.root is null);
-        a.assertValid;
+        () nothrow @safe {
+            foreach (s; sizes)
+            {
+                allocs ~= a.allocate(s);
+                assert(allocs[$ - 1].length == s);
+            }
+            foreach_reverse (b; allocs)
+            {
+                assert(b && (() @trusted @nogc => a.deallocate(b))());
+            }
+            a.assertValid;
+            allocs = null;
+            foreach (s; sizes)
+            {
+                allocs ~= a.allocate(s);
+                assert(allocs[$ - 1].length == s);
+            }
+            assert(a.root is null);
+            a.assertValid;
+        }();
     }
 
     /** Defined if $(D ParentAllocator.deallocate) exists, and returns to it
@@ -422,7 +436,7 @@ struct FreeTree(ParentAllocator)
     static void f(ParentAllocator)(size_t sz)
     {
         static FreeTree!ParentAllocator myAlloc;
-        byte[] _payload = cast(byte[]) myAlloc.allocate(sz);
+        byte[] _payload = cast(byte[]) (() nothrow @safe => myAlloc.allocate(sz))();
         assert(_payload, "_payload is null");
         _payload[] = 0;
         () nothrow @nogc { myAlloc.deallocate(_payload); }();
@@ -446,8 +460,10 @@ struct FreeTree(ParentAllocator)
 
     FreeTree!MyAllocator ft;
     void[] x = ft.allocate(1);
+    assert(x.length == 1);
     () nothrow @nogc { ft.deallocate(x); }();
-    ft.allocate(1000);
+    x = ft.allocate(1000);
+    assert(x.length == 1000);
     MyAllocator.alive = false;
 }
 
@@ -475,15 +491,16 @@ struct FreeTree(ParentAllocator)
 
     FreeTree!MyAllocator ft;
     void[] x = ft.allocate(1);
+    assert(x.length == 1);
     () nothrow @nogc { ft.deallocate(x); }();
     assert(myDeallocCounter == 0);
     x = ft.allocate(1000); // Triggers "desperation mode".
     assert(myDeallocCounter == 1);
-    assert(x.ptr);
+    assert(x && x.length == 1000);
     void[] y = ft.allocate(1000); /* Triggers "desperation mode" but there's
         nothing to deallocate so MyAllocator can't deliver. */
     assert(myDeallocCounter == 1);
-    assert(y.ptr is null);
+    assert(y is null);
 }
 
 @system unittest
@@ -501,7 +518,7 @@ struct FreeTree(ParentAllocator)
     import std.experimental.allocator.building_blocks.region : Region;
 
     auto a = FreeTree!(Region!())(Region!()(new ubyte[1024 * 64]));
-    auto b = a.allocate(42);
+    auto b = (() nothrow @safe @nogc => a.allocate(42))();
     assert(b.length == 42);
     assert((() nothrow @nogc => a.deallocateAll())());
 }
