@@ -637,8 +637,14 @@ if (distinctFieldNames!(Specs))
         ///
         static if (Specs.length == 0) @safe unittest
         {
+            //The following unittest converts a double to a string, the result of this operation depends on the rounding mode though.
+            import std.conv;
+            FloatingPointControl fpctrl;
+            uint previousRoundingMode = fpctrl.rounding;
+            fpctrl.rounding = FloatingPointControl.roundToNearest;
             auto t1 = tuple(1, " hello ", 2.3);
             assert(t1.toString() == `Tuple!(int, string, double)(1, " hello ", 2.3)`);
+            fpctrl.rounding = previousRoundingMode;
 
             void takeSeveralTypes(int n, string s, bool b)
             {
