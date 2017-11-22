@@ -202,6 +202,7 @@ SRC_STD_ALGO_2= \
 
 SRC_STD_ALGO_3= \
 	std\algorithm\sorting.d \
+	std\algorithm\stats.d \
 	std\algorithm\internal.d
 
 SRC_STD_ALGO= \
@@ -750,6 +751,9 @@ $(DOC)\std_algorithm_setops.html : $(STDDOC) std\algorithm\setops.d
 
 $(DOC)\std_algorithm_sorting.html : $(STDDOC) std\algorithm\sorting.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_sorting.html $(STDDOC) std\algorithm\sorting.d
+
+$(DOC)\std_algorithm_stats.html : $(STDDOC) std\algorithm\stats.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_stats.html $(STDDOC) std\algorithm\stats.d
 
 $(DOC)\std_array.html : $(STDDOC) std\array.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_array.html $(STDDOC) std\array.d
