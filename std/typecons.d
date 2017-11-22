@@ -635,12 +635,11 @@ if (distinctFieldNames!(Specs))
         mixin(injectNamedFields());
 
         ///
-        
         static if (Specs.length == 0) @safe unittest
-        {    
+        {
             auto t1 = tuple(1, " hello ", 'a');
             assert(t1.toString() == `Tuple!(int, string, char)(1, " hello ", 'a')`);
-                    
+
             void takeSeveralTypes(int n, string s, bool b)
             {
                 assert(n == 4 && s == "test" && b == false);
