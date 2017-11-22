@@ -30,6 +30,7 @@ struct NullAllocator
     Precondition: $(D b is null). This is because there is no other possible
     legitimate input.
     */
+    pure nothrow @safe @nogc
     bool expand(ref void[] b, size_t s) shared
     { assert(b is null); return s == 0; }
     /// Ditto
@@ -75,8 +76,8 @@ struct NullAllocator
     assert(NullAllocator.instance.allocateAll() is null);
     auto b = NullAllocator.instance.allocate(100);
     assert(b is null);
-    assert(NullAllocator.instance.expand(b, 0));
-    assert(!NullAllocator.instance.expand(b, 42));
+    assert((() nothrow @safe @nogc => NullAllocator.instance.expand(b, 0))());
+    assert((() nothrow @safe @nogc => !NullAllocator.instance.expand(b, 42))());
     assert(!NullAllocator.instance.reallocate(b, 42));
     assert(!NullAllocator.instance.alignedReallocate(b, 42, 0));
     assert((() nothrow @nogc => NullAllocator.instance.deallocate(b))());

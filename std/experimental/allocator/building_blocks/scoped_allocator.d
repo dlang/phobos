@@ -106,9 +106,9 @@ struct ScopedAllocator(ParentAllocator)
     bool expand(ref void[] b, size_t delta)
     {
         auto result = parent.expand(b, delta);
-        if (result && b.ptr)
+        if (result && b)
         {
-            parent.prefix(b).length = b.length;
+            () @trusted { parent.prefix(b).length = b.length; }();
         }
         return result;
     }
@@ -249,6 +249,8 @@ struct ScopedAllocator(ParentAllocator)
     a.parent.parent = Region!()(new ubyte[1024 * 64]);
     auto b = a.allocate(42);
     assert(b.length == 42);
+    assert((() pure nothrow @safe @nogc => a.expand(b, 22))());
+    assert(b.length == 64);
     assert((() nothrow @nogc => a.deallocateAll())());
 }
 
@@ -261,6 +263,8 @@ struct ScopedAllocator(ParentAllocator)
     auto a = Region!(Mallocator)(1024 * 64);
     auto b = a.allocate(42);
     assert(b.length == 42);
+    assert((() pure nothrow @safe @nogc => a.expand(b, 22))());
+    assert(b.length == 64);
     assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
     assert((() pure nothrow @safe @nogc => a.owns(null))() == Ternary.no);
 }

@@ -99,7 +99,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     */
     bool expand(ref void[] b, size_t delta)
     {
-        if (!b.ptr) return delta == 0;
+        if (!b || delta == 0) return delta == 0;
         immutable allocated = goodAllocSize(b.length),
             needed = b.length + delta,
             neededAllocation = goodAllocSize(needed);
@@ -110,19 +110,19 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
         if (allocated == neededAllocation)
         {
             // Nice!
-            b = b.ptr[0 .. needed];
+            b = (() @trusted => b.ptr[0 .. needed])();
             return true;
         }
         // Hail Mary
         static if (hasMember!(ParentAllocator, "expand"))
         {
             // Expand to the appropriate quantum
-            auto original = b.ptr[0 .. allocated];
+            auto original = (() @trusted => b.ptr[0 .. allocated])();
             assert(goodAllocSize(needed) >= allocated);
             if (!parent.expand(original, neededAllocation - allocated))
                 return false;
             // Dial back the size
-            b = original.ptr[0 .. needed];
+            b = (() @trusted => original.ptr[0 .. needed])();
             return true;
         }
         else
@@ -242,11 +242,17 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     auto a = MyAlloc();
     auto b = a.allocate(42);
     assert(b.length == 42);
+    // Inplace expand, since goodAllocSize is 64
+    assert((() @safe => a.expand(b, 22))());
+    //assert((() nothrow @safe => a.expand(b, 22))());
+    assert(b.length == 64);
+    // Trigger parent.expand, which may or may not succed
+    //() nothrow @safe { a.expand(b, 1); }();
+    () @safe { a.expand(b, 1); }();
     // Ensure deallocate inherits from parent
     () nothrow @nogc { a.deallocate(b); }();
 }
 
-// Check that owns inherits from parent, i.e. Region
 @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
@@ -258,8 +264,19 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     auto a = Alloc(Region!Mallocator(1024 * 64));
     const b = a.allocate(42);
     assert(b.length == 42);
+    // Check that owns inherits from parent, i.e. Region
     assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
     assert((() pure nothrow @safe @nogc => a.owns(null))() == Ternary.no);
+
+    // Check that expand inherits from parent, i.e. Region
+    auto c = a.allocate(42);
+    assert(c.length == 42);
+    // Inplace expand, since goodAllocSize is 64
+    assert((() nothrow @safe => a.expand(c, 22))());
+    assert(c.length == 64);
+    // Trigger parent.expand
+    assert((() nothrow @safe => a.expand(c, 1))());
+    assert(c.length == 65);
 }
 
 @system unittest

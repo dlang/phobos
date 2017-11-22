@@ -407,7 +407,9 @@ if (Args.length > 3)
 
     // Test that deallocateAll inherits from parents
     auto c = a.allocate(42);
-    assert(b.length == 42);
+    assert(c.length == 42);
+    assert((() pure nothrow @safe @nogc => a.expand(c, 58))());
+    assert(c.length == 100);
     assert(a.empty == Ternary.no);
     assert((() nothrow @nogc => a.deallocateAll())());
     assert(a.empty == Ternary.yes);

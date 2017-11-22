@@ -30,7 +30,7 @@ struct GCAllocator
     }
 
     /// Ditto
-    @system bool expand(ref void[] b, size_t delta) shared
+    pure nothrow @trusted bool expand(ref void[] b, size_t delta) shared
     {
         if (delta == 0) return true;
         if (b is null) return false;
@@ -130,7 +130,7 @@ struct GCAllocator
     //...
 }
 
-@system unittest
+@safe unittest
 {
     auto b = GCAllocator.instance.allocate(10_000);
     assert(GCAllocator.instance.expand(b, 1));

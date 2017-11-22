@@ -381,7 +381,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         && hasMember!(Allocator, "owns"))
     bool expand(ref void[] b, size_t delta)
     {
-        if (!b.ptr) return delta == 0;
+        if (!b) return delta == 0;
         for (auto p = &root, n = *p; n; p = &n.next, n = *p)
         {
             if (n.owns(b) == Ternary.yes) return n.expand(b, delta);
@@ -615,6 +615,8 @@ version(Posix) @system unittest
     assert(b1 !is null);
     b1 = a.allocate(1024 * 10);
     assert(b1.length == 1024 * 10);
+    assert((() pure nothrow @safe @nogc => a.expand(b1, 10))());
+    assert(b1.length == 1025 * 10);
     a.allocate(1024 * 4095);
     assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.no);
     // Ensure deallocateAll infers from parent
