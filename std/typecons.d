@@ -635,16 +635,11 @@ if (distinctFieldNames!(Specs))
         mixin(injectNamedFields());
 
         ///
-        static if (Specs.length == 0) @system unittest
-        {
-            //The following conversion from a double to a string doesn't work for all rounding modes, therefore set the rounding mode.
-            import std.math;
-            FloatingPointControl fpctrl;
-            uint previousRoundingMode = fpctrl.rounding;
-            fpctrl.rounding = FloatingPointControl.roundToNearest;
-            auto t1 = tuple(1, " hello ", 2.3);
-            assert(t1.toString() == `Tuple!(int, string, double)(1, " hello ", 2.3)`);
-            fpctrl.rounding = previousRoundingMode;
+        
+        static if (Specs.length == 0) @safe unittest
+        {    
+            auto t1 = tuple(1, " hello ", 'a');
+            assert(t1.toString() == `Tuple!(int, string, char)(1, " hello ", 'a')`);
                     
             void takeSeveralTypes(int n, string s, bool b)
             {
