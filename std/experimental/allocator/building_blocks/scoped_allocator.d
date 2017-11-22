@@ -251,6 +251,8 @@ struct ScopedAllocator(ParentAllocator)
     assert(b.length == 42);
     assert((() pure nothrow @safe @nogc => a.expand(b, 22))());
     assert(b.length == 64);
+    assert((() nothrow @nogc => a.reallocate(b, 100))());
+    assert(b.length == 100);
     assert((() nothrow @nogc => a.deallocateAll())());
 }
 
@@ -265,6 +267,9 @@ struct ScopedAllocator(ParentAllocator)
     assert(b.length == 42);
     assert((() pure nothrow @safe @nogc => a.expand(b, 22))());
     assert(b.length == 64);
+    assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
+    assert((() nothrow @nogc => a.reallocate(b, 100))());
+    assert(b.length == 100);
     assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
     assert((() pure nothrow @safe @nogc => a.owns(null))() == Ternary.no);
 }

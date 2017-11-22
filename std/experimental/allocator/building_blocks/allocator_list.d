@@ -601,6 +601,8 @@ version(Posix) @system unittest
     assert(b1 !is null); // still works due to overdimensioning
     b1 = a.allocate(1024 * 10);
     assert(b1.length == 1024 * 10);
+    assert(a.reallocate(b1, 1024));
+    assert(b1.length == 1024);
     a.deallocateAll();
 }
 

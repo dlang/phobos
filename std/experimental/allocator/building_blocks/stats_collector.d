@@ -746,7 +746,6 @@ public:
     assert((() pure nothrow @safe @nogc => a.goodAllocSize(1))());
 }
 
-// Test that deallocateAll infers from parent
 @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
@@ -754,5 +753,9 @@ public:
     auto a = StatsCollector!(Region!(), Options.all, Options.all)(Region!()(new ubyte[1024 * 64]));
     auto b = a.allocate(42);
     assert(b.length == 42);
+    // Test that reallocate infers from parent
+    assert((() nothrow @nogc => a.reallocate(b, 100))());
+    assert(b.length == 100);
+    // Test that deallocateAll infers from parent
     assert((() nothrow @nogc => a.deallocateAll())());
 }

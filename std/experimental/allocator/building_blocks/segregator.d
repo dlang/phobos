@@ -455,3 +455,17 @@ if (Args.length > 3)
     assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
     assert((() nothrow @nogc => a.deallocate(b))());
 }
+
+// Test that reallocate infers from parent
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    alias a = Segregator!(10_240, Mallocator, Mallocator).instance;
+
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() nothrow @nogc => a.reallocate(b, 100))());
+    assert(b.length == 100);
+    assert((() nothrow @nogc => a.deallocate(b))());
+}
