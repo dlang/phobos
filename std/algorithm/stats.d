@@ -171,6 +171,7 @@ if (isInputRange!R &&
 T variance(R, T)(R r, T seed, bool population = false)
 if (isInputRange!R &&
     !isInfinite!R &&
+    !isNumeric!T &&
     is(typeof(r.front + seed)) &&
     is(typeof(r.front / size_t(1))))
 {
@@ -180,19 +181,23 @@ if (isInputRange!R &&
     return varianceImpl(r, mean, var, population);
 }
 
-private T varianceImpl(R, T)(R r, ref T mean, ref T var, bool population)
+private T varianceImpl(R, T)(auto ref R r, ref T mean, ref T var, bool population)
 {
-    if (r.empty)
-        return T.init;
-
     // giving the variance with one or two elements is incorrect
     static if (hasLength!R)
+    {
         if (r.length < 3)
             return T.init;
+    }
+    else
+    {
+        if (r.empty)
+            return T.init;
+    }
 
     size_t i = 1;
 
-    // Welford’s single pass variance method
+    // Welford’s method for single pass variance
     foreach (e; r)
     {
         Unqual!T oldMean = mean;
@@ -201,7 +206,7 @@ private T varianceImpl(R, T)(R r, ref T mean, ref T var, bool population)
     }
 
     static if (!hasLength!R)
-        if (i == 3)
+        if (i <= 3)
             return T.init;
 
     if (population)
@@ -234,12 +239,12 @@ private T varianceImpl(R, T)(R r, ref T mean, ref T var, bool population)
 {
     import std.bigint : BigInt;
 
-    auto bigint_arr = [BigInt("1"), BigInt("2"), BigInt("3"), BigInt("4"), BigInt("5")];
-    assert(bigint_arr.variance(BigInt(0)) == 6);
-    assert(bigint_arr.variance(BigInt(0), true) == 5);
+    auto bigIntArr = [BigInt(1), BigInt(2), BigInt(3), BigInt(4), BigInt(5)];
+    assert(bigIntArr.variance(BigInt(0)) == 6);
+    assert(bigIntArr.variance(BigInt(0), true) == 5);
 
-    assert(bigint_arr[0 .. 0].variance(BigInt(0)) == BigInt.init);
-    assert(bigint_arr[0 .. 2].variance(BigInt(0)) == BigInt.init);
+    assert(bigIntArr[0 .. 0].variance(BigInt(0)) == BigInt.init);
+    assert(bigIntArr[0 .. 2].variance(BigInt(0)) == BigInt.init);
 }
 
 @system pure unittest
@@ -251,7 +256,7 @@ private T varianceImpl(R, T)(R r, ref T mean, ref T var, bool population)
 
     auto r1 = new ReferenceInputRange!int([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
     auto r2 = new ReferenceInputRange!BigInt([
-        BigInt("1"), BigInt("2"), BigInt("3"), BigInt("4"), BigInt("5")
+        BigInt(1), BigInt(2), BigInt(3), BigInt(4), BigInt(5)
     ]);
 
     assert(r1.variance.approxEqual(8.25));
