@@ -1,6 +1,4 @@
 /**
- * This is a submodule of $(MREF std, algorithm).
- *
  * --This doc is to-do until adding this module is approved--
  */
 module std.algorithm.stats;
@@ -136,4 +134,134 @@ if (isInputRange!R &&
     auto d_arr = [MyFancyDouble(10), MyFancyDouble(15), MyFancyDouble(30)];
     assert(mean!(double)(cast(double[]) d_arr).approxEqual(18.333));
     assert(mean(d_arr, MyFancyDouble(0)).approxEqual(18.333));
+}
+
+/**
+ * Calculates variance of a range of number-like elements. Finds either the
+ * population variance or the sample variance based on the `population` argument.
+ *
+ * If the range has less than 3 elements, `T.init` will be returned.
+ *
+ * This function is $(BIGOH r.length).
+ *
+ * Params:
+ *     r = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+ *     of number-like elements
+ *     population = If `true` gives the population variance and not the sample
+ *     variance
+ *     seed = For user defined types. Should be equivalent to `0`.
+ * Returns:
+ *     If `r` has three or more elements, the variance of `r`, as type `T`.
+ *
+ *     Otherwise, `T.init` is returned.
+ */
+T variance(R, T = double)(R r, bool population = false)
+if (isInputRange!R &&
+    isNumeric!(ElementType!R) &&
+    isNumeric!(T) &&
+    !isInfinite!R)
+{
+    Unqual!T mean = 0;
+    Unqual!T var = 0;
+
+    return varianceImpl(r, mean, var, population);
+}
+
+/// ditto
+T variance(R, T)(R r, T seed, bool population = false)
+if (isInputRange!R &&
+    !isInfinite!R &&
+    is(typeof(r.front + seed)) &&
+    is(typeof(r.front / size_t(1))))
+{
+    Unqual!T mean = seed;
+    Unqual!T var = seed;
+
+    return varianceImpl(r, mean, var, population);
+}
+
+private T varianceImpl(R, T)(R r, ref T mean, ref T var, bool population)
+{
+    if (r.empty)
+        return T.init;
+
+    // giving the variance with one or two elements is incorrect
+    static if (hasLength!R)
+        if (r.length < 3)
+            return T.init;
+
+    size_t i = 1;
+
+    // Welford’s single pass variance method
+    foreach (e; r)
+    {
+        Unqual!T oldMean = mean;
+        mean = mean + (e - mean) / i++;
+        var = var + (e - mean) * (e - oldMean);
+    }
+
+    static if (!hasLength!R)
+        if (i == 3)
+            return T.init;
+
+    if (population)
+        return var / i;
+
+    return var / (i - 1);
+}
+
+///
+@safe pure nothrow unittest
+{
+    import std.math : approxEqual, isNaN;
+    auto arr1 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    auto arr2 = [1, 10, 40, 15, 4, 5, 22];
+
+    // sample variance
+    assert(arr1.variance.approxEqual(8.25));
+    assert(arr2.variance.approxEqual(158.12));
+
+    // whole population variance
+    assert(arr1.variance(true).approxEqual(7.5));
+    assert(arr2.variance(true).approxEqual(138.357));
+
+    // ranges with less than three elements return T.init
+    assert(arr1[0 .. 0].variance.isNaN);
+    assert(arr1[0 .. 2].variance.isNaN);
+}
+
+@system pure unittest
+{
+    import std.bigint : BigInt;
+
+    auto bigint_arr = [BigInt("1"), BigInt("2"), BigInt("3"), BigInt("4"), BigInt("5")];
+    assert(bigint_arr.variance(BigInt(0)) == 6);
+    assert(bigint_arr.variance(BigInt(0), true) == 5);
+
+    assert(bigint_arr[0 .. 0].variance(BigInt(0)) == BigInt.init);
+    assert(bigint_arr[0 .. 2].variance(BigInt(0)) == BigInt.init);
+}
+
+@system pure unittest
+{
+    import std.bigint : BigInt;
+    import std.internal.test.dummyrange : ReferenceInputRange;
+    import std.math : approxEqual;
+    import std.stdio;
+
+    auto r1 = new ReferenceInputRange!int([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    auto r2 = new ReferenceInputRange!BigInt([
+        BigInt("1"), BigInt("2"), BigInt("3"), BigInt("4"), BigInt("5")
+    ]);
+
+    assert(r1.variance.approxEqual(8.25));
+    assert(r2.variance(BigInt(0)) == 6);
+}
+
+// test nogc
+@safe @nogc pure nothrow unittest
+{
+    import std.math : approxEqual;
+    static immutable arr1 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    assert(arr1.variance.approxEqual(8.25));
 }
