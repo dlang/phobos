@@ -4,6 +4,7 @@
 module std.algorithm.stats;
 
 import std.traits;
+import std.typecons;
 import std.range.primitives;
 
 /**
@@ -155,7 +156,7 @@ if (isInputRange!R &&
  *
  *     Otherwise, `T.init` is returned.
  */
-T variance(R, T = double)(R r, bool population = false)
+T variance(R, T = double)(R r, Flag!"Population" population = No.Population)
 if (isInputRange!R &&
     isNumeric!(ElementType!R) &&
     isNumeric!(T) &&
@@ -168,7 +169,7 @@ if (isInputRange!R &&
 }
 
 /// ditto
-T variance(R, T)(R r, T seed, bool population = false)
+T variance(R, T)(R r, T seed, Flag!"Population" population = No.Population)
 if (isInputRange!R &&
     !isInfinite!R &&
     !isNumeric!T &&
@@ -227,8 +228,8 @@ private T varianceImpl(R, T)(auto ref R r, ref T mean, ref T var, bool populatio
     assert(arr2.variance.approxEqual(158.12));
 
     // whole population variance
-    assert(arr1.variance(true).approxEqual(7.5));
-    assert(arr2.variance(true).approxEqual(138.357));
+    assert(arr1.variance(Yes.Population).approxEqual(7.5));
+    assert(arr2.variance(Yes.Population).approxEqual(138.357));
 
     // ranges with less than three elements return T.init
     assert(arr1[0 .. 0].variance.isNaN);
@@ -241,7 +242,7 @@ private T varianceImpl(R, T)(auto ref R r, ref T mean, ref T var, bool populatio
 
     auto bigIntArr = [BigInt(1), BigInt(2), BigInt(3), BigInt(4), BigInt(5)];
     assert(bigIntArr.variance(BigInt(0)) == 6);
-    assert(bigIntArr.variance(BigInt(0), true) == 5);
+    assert(bigIntArr.variance(BigInt(0), Yes.Population) == 5);
 
     assert(bigIntArr[0 .. 0].variance(BigInt(0)) == BigInt.init);
     assert(bigIntArr[0 .. 2].variance(BigInt(0)) == BigInt.init);
