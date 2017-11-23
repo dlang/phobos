@@ -38,6 +38,7 @@ struct NullAllocator
     bool reallocate(ref void[] b, size_t) shared
     { assert(b is null); return false; }
     /// Ditto
+    pure nothrow @nogc
     bool alignedReallocate(ref void[] b, size_t, uint) shared
     { assert(b is null); return false; }
     /// Returns $(D Ternary.no).
@@ -80,7 +81,7 @@ struct NullAllocator
     assert((() nothrow @safe @nogc => NullAllocator.instance.expand(b, 0))());
     assert((() nothrow @safe @nogc => !NullAllocator.instance.expand(b, 42))());
     assert((() nothrow @nogc => !NullAllocator.instance.reallocate(b, 42))());
-    assert(!NullAllocator.instance.alignedReallocate(b, 42, 0));
+    assert((() nothrow @nogc => !NullAllocator.instance.alignedReallocate(b, 42, 0))());
     assert((() nothrow @nogc => NullAllocator.instance.deallocate(b))());
     assert((() nothrow @nogc => NullAllocator.instance.deallocateAll())());
 
