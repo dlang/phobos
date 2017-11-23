@@ -121,6 +121,7 @@ struct Region(ParentAllocator = NullAllocator,
     A properly-aligned buffer of size $(D n) or $(D null) if request could not
     be satisfied.
     */
+    pure nothrow @safe @nogc
     void[] allocate(size_t n)
     {
         if (n == 0) return null;
@@ -132,23 +133,23 @@ struct Region(ParentAllocator = NullAllocator,
             else
                 alias rounded = n;
             assert(available >= rounded);
-            auto result = (_current - rounded)[0 .. n];
-            assert(result.ptr >= _begin);
-            _current = result.ptr;
+            auto result = (() @trusted => (_current - rounded)[0 .. n])();
+            assert(&result[0] >= _begin);
+            _current = &result[0];
             assert(owns(result) == Ternary.yes);
             return result;
         }
         else
         {
-            auto result = _current[0 .. n];
+            auto result = (() @trusted => _current[0 .. n])();
             static if (minAlign > 1)
                 const rounded = n.roundUpToAlignment(alignment);
             else
                 alias rounded = n;
-            _current += rounded;
+            () @trusted { _current += rounded; }();
             if (_current <= _end) return result;
             // Slow path, backtrack
-            _current -= rounded;
+            () @trusted { _current -= rounded; }();
             return null;
         }
     }
@@ -368,12 +369,12 @@ struct Region(ParentAllocator = NullAllocator,
         Yes.growDownwards)(1024 * 64);
 
     assert((() pure nothrow @safe @nogc => reg.empty)() ==  Ternary.yes);
-    const b = reg.allocate(101);
+    const b = (() pure nothrow @safe @nogc => reg.allocate(101))();
     assert(b.length == 101);
     assert((() nothrow @safe @nogc => reg.owns(b))() == Ternary.yes);
 
     // Ensure deallocate inherits from parent allocators
-    auto c = reg.allocate(42);
+    auto c = (() pure nothrow @safe @nogc => reg.allocate(42))();
     assert(c.length == 42);
     assert((() nothrow @nogc => reg.deallocate(c))());
     assert((() pure nothrow @safe @nogc => reg.empty)() ==  Ternary.no);
@@ -392,7 +393,7 @@ struct Region(ParentAllocator = NullAllocator,
     import std.experimental.allocator.mallocator : Mallocator;
 
     auto reg = Region!(Mallocator)(1024 * 64);
-    auto b = reg.allocate(101);
+    auto b = (() pure nothrow @safe @nogc => reg.allocate(101))();
     assert(b.length == 101);
     assert(reg.expand(b, 20));
     assert(reg.expand(b, 73));
@@ -466,7 +467,8 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     private void lazyInit()
     {
         assert(!_impl._current);
-        _impl = typeof(_impl)(_store);
+        // TODO: Remove once region ctor is made safe
+        _impl = (() @trusted => typeof(_impl)(_store))();
         assert(_impl._current.alignedAt(alignment));
     }
 
@@ -611,7 +613,7 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
     import std.typecons : Ternary;
 
     InSituRegion!(4096, 1) r1;
-    auto a = r1.allocate(2001);
+    auto a = (() pure nothrow @safe @nogc => r1.allocate(2001))();
     assert(a.length == 2001);
     import std.conv : text;
     assert(r1.available == 2095, text(r1.available));
@@ -621,9 +623,9 @@ struct InSituRegion(size_t size, size_t minAlign = platformAlignment)
 
     InSituRegion!(65_536, 1024*4) r2;
     assert(r2.available <= 65_536);
-    a = r2.allocate(2001);
+    a = (() pure nothrow @safe @nogc => r2.allocate(2001))();
     assert(a.length == 2001);
-    const void[] buff = r2.allocate(42);
+    const void[] buff = (() pure nothrow @safe @nogc => r2.allocate(42))();
     assert((() nothrow @safe @nogc => r2.owns(buff))() == Ternary.yes);
     assert((() nothrow @nogc => r2.deallocateAll())());
 }
@@ -664,6 +666,7 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     enum uint alignment = minAlign;
 
     /// Ditto
+    /*pure*/ nothrow @trusted @nogc
     void[] allocate(size_t bytes) shared
     {
         static if (minAlign > 1)
@@ -830,7 +833,7 @@ version(Posix) @system unittest
     auto a = alloc.alignedAllocate(2001, 4096);
     assert(a.length == 2001);
     assert((() nothrow @safe @nogc => alloc.empty)() == Ternary.no);
-    auto b = alloc.allocate(2001);
+    auto b = (() nothrow @safe @nogc => alloc.allocate(2001))();
     assert(b.length == 2001);
     assert((() nothrow @safe @nogc => alloc.owns(a))() == Ternary.yes);
     assert((() nothrow @safe @nogc => alloc.owns(b))() == Ternary.yes);
@@ -840,7 +843,7 @@ version(Posix) @system unittest
         assert((() nothrow @nogc => alloc.deallocate(b))());
         assert((() nothrow @nogc => alloc.deallocateAll())());
     }
-    const void[] c = alloc.allocate(2001);
+    const void[] c = (() nothrow @safe @nogc => alloc.allocate(2001))();
     assert(c.length == 2001);
     assert((() nothrow @safe @nogc => alloc.owns(c))() == Ternary.yes);
     assert((() nothrow @safe @nogc => alloc.owns(null))() == Ternary.no);

@@ -76,7 +76,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     void[] allocate(size_t n)
     {
         auto result = parent.allocate(goodAllocSize(n));
-        return result.ptr ? result.ptr[0 .. n] : null;
+        return result ? result[0 .. n] : null;
     }
 
     /**
@@ -230,20 +230,20 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     assert(buf.ptr);
 }
 
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     alias MyAlloc = Quantizer!(GCAllocator,
         (size_t n) => n.roundUpToMultipleOf(64));
-    testAllocator!(() => MyAlloc());
-
-    assert((() pure nothrow @safe @nogc => MyAlloc().goodAllocSize(1))() == 64);
+    () @trusted { testAllocator!(() => MyAlloc()); }();
 
     auto a = MyAlloc();
-    auto b = a.allocate(42);
+    assert((() pure nothrow @nogc => a.goodAllocSize(1))() == 64);
+
+    auto b = (() nothrow => a.allocate(42))();
     assert(b.length == 42);
     // Ensure deallocate inherits from parent
-    () nothrow @nogc { a.deallocate(b); }();
+    () @trusted nothrow @nogc { a.deallocate(b); }();
 }
 
 // Check that owns inherits from parent, i.e. Region
@@ -256,7 +256,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     alias Alloc = Quantizer!(Region!(Mallocator),
             (size_t n) => n.roundUpToMultipleOf(64));
     auto a = Alloc(Region!Mallocator(1024 * 64));
-    const b = a.allocate(42);
+    const b = (() pure nothrow @safe @nogc => a.allocate(42))();
     assert(b.length == 42);
     assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
     assert((() pure nothrow @safe @nogc => a.owns(null))() == Ternary.no);
@@ -290,7 +290,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     auto a = MyAlloc(Region!()(new ubyte[1024 * 64]));
     // Check that empty inherits from parent
     assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
-    auto b = a.allocate(42);
+    auto b = (() pure nothrow @safe @nogc => a.allocate(42))();
     assert(b.length == 42);
     assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.no);
     // Check that deallocateAll inherits from parent

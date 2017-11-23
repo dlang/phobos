@@ -258,7 +258,7 @@ struct FallbackAllocator(Primary, Fallback)
     }
 }
 
-@system unittest
+nothrow @safe unittest
 {
     import std.conv : text;
     import std.experimental.allocator.building_blocks.region : InSituRegion;
@@ -268,13 +268,13 @@ struct FallbackAllocator(Primary, Fallback)
     // This allocation uses the stack
     auto b1 = a.allocate(1024);
     assert(b1.length == 1024, text(b1.length));
-    assert((() pure nothrow @safe @nogc => a.primary.owns(b1))() == Ternary.yes);
+    assert((() pure @nogc => a.primary.owns(b1))() == Ternary.yes);
     // This large allocation will go to the GCAllocator
     auto b2 = a.allocate(1024 * 1024);
-    assert((() pure nothrow @safe @nogc => a.primary.owns(b2))() == Ternary.no);
+    assert((() pure @nogc => a.primary.owns(b2))() == Ternary.no);
     // Ensure deallocate inherits from parent allocators
-    () nothrow @nogc { a.deallocate(b1); }();
-    () nothrow @nogc { a.deallocate(b2); }();
+    () @trusted @nogc { a.deallocate(b1); }();
+    () @trusted @nogc { a.deallocate(b2); }();
 }
 
 @system unittest
@@ -294,7 +294,7 @@ struct FallbackAllocator(Primary, Fallback)
     );
 
     assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
-    auto b = a.allocate(201);
+    auto b = (() pure nothrow @safe @nogc => a.allocate(201))();
     assert(b.length == 201);
     assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
 }
@@ -409,17 +409,17 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
 }
 
 // Ensure `owns` inherits function attributes
-@system unittest
+nothrow @safe unittest
 {
     import std.experimental.allocator.building_blocks.region : InSituRegion;
     import std.typecons : Ternary;
 
     FallbackAllocator!(InSituRegion!16_384, InSituRegion!16_384) a;
-    auto buff = a.allocate(42);
-    assert((() pure nothrow @safe @nogc => a.owns(buff))() == Ternary.yes);
+    auto buff = (() pure @nogc => a.allocate(42))();
+    assert((() pure @nogc => a.owns(buff))() == Ternary.yes);
 }
 
-@system unittest
+nothrow @safe unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.typecons : Ternary;
@@ -429,6 +429,6 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
     assert(b.length == 1020);
 
     void[] p;
-    assert((() nothrow @safe @nogc => a.resolveInternalPointer(null, p))() == Ternary.no);
-    assert((() nothrow @safe @nogc => a.resolveInternalPointer(&b[0], p))() == Ternary.yes);
+    assert((() @nogc => a.resolveInternalPointer(null, p))() == Ternary.no);
+    assert((() @nogc => a.resolveInternalPointer(&b[0], p))() == Ternary.yes);
 }

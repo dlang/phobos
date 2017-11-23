@@ -375,7 +375,7 @@ if (Args.length > 3)
             == GCAllocator.instance.goodAllocSize(1));
 }
 
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlock;
     import std.typecons : Ternary;
@@ -386,34 +386,37 @@ if (Args.length > 3)
             BitmappedBlock!(4096)
         );
 
-    A a = A(
+    // TODO: remove trusted once BB.this is safe
+    A a = (() @trusted => A(
             BitmappedBlock!(4096)(new ubyte[4096 * 1024]),
             BitmappedBlock!(4096)(new ubyte[4096 * 1024])
-    );
+    ))();
 
-    assert(a.empty == Ternary.yes);
-    auto b = a.allocate(42);
-    assert(b.length == 42);
-    assert(a.empty == Ternary.no);
-    assert(a.alignedReallocate(b, 256, 512));
-    assert(b.length == 256);
-    assert(a.alignedReallocate(b, 42, 512));
-    assert(b.length == 42);
-    assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
-    assert((() pure nothrow @safe @nogc => a.owns(null))() == Ternary.no);
-    // Ensure deallocate inherits from parent allocators
-    assert((() nothrow @nogc => a.deallocate(b))());
-    assert(a.empty == Ternary.yes);
+    () pure nothrow @nogc {
+        assert(a.empty == Ternary.yes);
+        auto b = a.allocate(42);
+        assert(b.length == 42);
+        assert(a.empty == Ternary.no);
+        assert((() @trusted => a.alignedReallocate(b, 256, 512))());
+        assert(b.length == 256);
+        assert((() @trusted => a.alignedReallocate(b, 42, 512))());
+        assert(b.length == 42);
+        assert(a.owns(b) == Ternary.yes);
+        assert(a.owns(null) == Ternary.no);
+        // Ensure deallocate inherits from parent allocators
+        assert((() @trusted => a.deallocate(b))());
+        assert(a.empty == Ternary.yes);
 
-    // Test that deallocateAll inherits from parents
-    auto c = a.allocate(42);
-    assert(b.length == 42);
-    assert(a.empty == Ternary.no);
-    assert((() nothrow @nogc => a.deallocateAll())());
-    assert(a.empty == Ternary.yes);
+        // Test that deallocateAll inherits from parents
+        auto c = a.allocate(42);
+        assert(b.length == 42);
+        assert(a.empty == Ternary.no);
+        assert((() @trusted => a.deallocateAll())());
+        assert(a.empty == Ternary.yes);
+    }();
 }
 
-@system unittest
+nothrow @safe unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
     import std.typecons : Ternary;
@@ -424,14 +427,14 @@ if (Args.length > 3)
     assert(b.length == 201);
 
     void[] p;
-    assert((() nothrow @safe @nogc => a.resolveInternalPointer(&b[0], p))() == Ternary.yes);
-    assert((() nothrow @safe @nogc => a.resolveInternalPointer(null, p))() == Ternary.no);
+    assert((() @nogc => a.resolveInternalPointer(&b[0], p))() == Ternary.yes);
+    assert((() @nogc => a.resolveInternalPointer(null, p))() == Ternary.no);
 
     // Ensure deallocate inherits from parent allocators
-    assert((() nothrow @nogc => a.deallocate(b))());
+    assert((() @trusted @nogc => a.deallocate(b))());
 }
 
-@system unittest
+@safe unittest
 {
     import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlockWithInternalPointers;
     import std.typecons : Ternary;
@@ -442,14 +445,17 @@ if (Args.length > 3)
             BitmappedBlockWithInternalPointers!(4096)
         );
 
-    A a = A(
+    // TODO: remove trusted once BB.this is safe
+    A a = (() @trusted => A(
             BitmappedBlockWithInternalPointers!(4096)(new ubyte[4096 * 1024]),
             BitmappedBlockWithInternalPointers!(4096)(new ubyte[4096 * 1024])
-    );
+    ))();
 
-    assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
-    auto b = a.allocate(201);
-    assert(b.length == 201);
-    assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
-    assert((() nothrow @nogc => a.deallocate(b))());
+    () nothrow @nogc {
+        assert(a.empty == Ternary.yes);
+        auto b = a.allocate(201);
+        assert(b.length == 201);
+        assert(a.empty == Ternary.no);
+        assert((() @trusted => a.deallocate(b))());
+    }();
 }
