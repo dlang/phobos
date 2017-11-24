@@ -688,7 +688,7 @@ public:
         assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
         auto b1 = a.allocate(100);
         assert(a.numAllocate == 1);
-        assert(a.expand(b1, 0));
+        assert((() nothrow @safe => a.expand(b1, 0))());
         assert(a.reallocate(b1, b1.length + 1));
         auto b2 = a.allocate(101);
         assert(a.numAllocate == 2);
@@ -723,7 +723,7 @@ public:
         import std.range : walkLength;
         Allocator a;
         auto b1 = a.allocate(100);
-        assert(a.expand(b1, 0));
+        assert((() nothrow @safe => a.expand(b1, 0))());
         assert(a.reallocate(b1, b1.length + 1));
         auto b2 = a.allocate(101);
         auto b3 = a.allocate(202);

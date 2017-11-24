@@ -464,6 +464,8 @@ struct FreeList(ParentAllocator,
     auto fl = FreeList!(Region!(), 0, 16)(Region!()(new ubyte[1024 * 64]));
     auto b = fl.allocate(42);
     assert(b.length == 42);
+    assert((() pure nothrow @safe @nogc => fl.expand(b, 58))());
+    assert(b.length == 100);
     assert((() nothrow @nogc => fl.deallocateAll())());
 }
 

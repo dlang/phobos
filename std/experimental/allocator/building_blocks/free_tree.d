@@ -503,5 +503,7 @@ struct FreeTree(ParentAllocator)
     auto a = FreeTree!(Region!())(Region!()(new ubyte[1024 * 64]));
     auto b = a.allocate(42);
     assert(b.length == 42);
+    assert((() pure nothrow @safe @nogc => a.expand(b, 22))());
+    assert(b.length == 64);
     assert((() nothrow @nogc => a.deallocateAll())());
 }

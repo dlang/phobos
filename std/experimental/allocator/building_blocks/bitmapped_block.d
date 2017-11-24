@@ -518,11 +518,11 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     /**
     Expands an allocated block in place.
     */
-    @trusted bool expand(ref void[] b, immutable size_t delta)
+    pure nothrow @trusted @nogc
+    bool expand(ref void[] b, immutable size_t delta)
     {
         // Dispose with trivial corner cases
-        if (delta == 0) return true;
-        if (b is null) return false;
+        if (b is null || delta == 0) return delta == 0;
 
         /* To simplify matters, refuse to expand buffers that don't start at a block start (this may be the case for blocks allocated with alignedAllocate).
         */
@@ -553,8 +553,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
             return false;
         }
         // Expansion successful
-        assert(p.ptr == b.ptr + blocksOld * blockSize,
-            text(p.ptr, " != ", b.ptr + blocksOld * blockSize));
+        assert(p.ptr == b.ptr + blocksOld * blockSize);
         b = b.ptr[0 .. b.length + delta];
         return true;
     }
@@ -854,8 +853,8 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
                 auto b = a.allocate(bs * blocksAtATime);
                 assert(b.length == bs * blocksAtATime, text(i, ": ", b.length));
                 (cast(ubyte[]) b)[] = 0xff;
-                a.expand(b, blocksAtATime * bs)
-                    || assert(0, text(i));
+                assert((() pure nothrow @safe @nogc => a.expand(b, blocksAtATime * bs))()
+                        , text(i));
                 (cast(ubyte[]) b)[] = 0xfe;
                 assert(b.length == bs * blocksAtATime * 2, text(i, ": ", b.length));
                 a.reallocate(b, blocksAtATime * bs) || assert(0);
@@ -973,6 +972,7 @@ struct BitmappedBlockWithInternalPointers(
     }
 
     // Makes sure there's enough room for _allocStart
+    @safe
     private bool ensureRoomForAllocStart(size_t len)
     {
         if (_allocStart.length >= len) return true;
@@ -980,9 +980,9 @@ struct BitmappedBlockWithInternalPointers(
         immutable oldLength = _allocStart.rep.length;
         immutable bits = len.roundUpToMultipleOf(64);
         void[] b = _allocStart.rep;
-        if (!_heap.reallocate(b, bits / 8)) return false;
-        assert(b.length * 8 == bits, text(b.length * 8, " != ", bits));
-        _allocStart = BitVector(cast(ulong[]) b);
+        if ((() @trusted => !_heap.reallocate(b, bits / 8))()) return false;
+        assert(b.length * 8 == bits);
+        _allocStart = BitVector((() @trusted => cast(ulong[]) b)());
         assert(_allocStart.rep.length * 64 == bits);
         _allocStart.rep[oldLength .. $] = ulong.max;
         return true;
@@ -1053,7 +1053,7 @@ struct BitmappedBlockWithInternalPointers(
         immutable newBlocks =
             (b.length + bytes + _heap.blockSize - 1) / _heap.blockSize;
         assert(newBlocks >= oldBlocks);
-        immutable block = (b.ptr - _heap._payload.ptr) / _heap.blockSize;
+        immutable block = (() @trusted => (b.ptr - _heap._payload.ptr) / _heap.blockSize)();
         assert(_allocStart[block]);
         if (!ensureRoomForAllocStart(block + newBlocks)
                 || !_heap.expand(b, bytes))
@@ -1173,7 +1173,7 @@ struct BitmappedBlockWithInternalPointers(
     assert((() nothrow @safe @nogc => h.resolveInternalPointer(offset, p))() == Ternary.no);
     assert(p is unchanged);
 
-    assert(h.expand(b, 1));
+    assert((() nothrow @safe => h.expand(b, 1))());
     assert(b.length == 4097);
     offset = &b[0] + 4096;
     assert((() nothrow @safe @nogc => h.resolveInternalPointer(offset, p))() == Ternary.yes);
@@ -1296,13 +1296,13 @@ private struct BitVector
 
     auto rep() { return _rep; }
 
-    @safe @nogc
+    pure nothrow @safe @nogc
     this(ulong[] data) { _rep = data; }
 
     pure nothrow @safe @nogc
     void opSliceAssign(bool b) { _rep[] = b ? ulong.max : 0; }
 
-    pure @safe @nogc
+    pure nothrow @safe @nogc
     void opSliceAssign(bool b, ulong x, ulong y)
     {
         assert(x <= y && y <= _rep.length * 64);
@@ -1334,7 +1334,7 @@ private struct BitVector
         }
     }
 
-    @safe @nogc
+    pure nothrow @safe @nogc
     bool opIndex(ulong x)
     {
         assert(x < length);
@@ -1342,7 +1342,7 @@ private struct BitVector
             & (0x8000_0000_0000_0000UL >> (x % 64))) != 0;
     }
 
-    @safe @nogc
+    pure nothrow @safe @nogc
     void opIndexAssign(bool b, ulong x)
     {
         assert(x / 64 <= size_t.max);
@@ -1352,7 +1352,7 @@ private struct BitVector
         else _rep[i] &= ~j;
     }
 
-    nothrow @safe @nogc
+    pure nothrow @safe @nogc
     ulong length() const
     {
         return _rep.length * 64;

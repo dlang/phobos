@@ -217,22 +217,24 @@ struct Region(ParentAllocator = NullAllocator,
     `No.growDownwards`.
     */
     static if (growDownwards == No.growDownwards)
+    pure nothrow @safe @nogc
     bool expand(ref void[] b, size_t delta)
     {
-        assert(owns(b) == Ternary.yes || b.ptr is null);
-        assert(b.ptr + b.length <= _current || b.ptr is null);
+        assert(owns(b) == Ternary.yes || b is null);
+        assert((() @trusted => b.ptr + b.length <= _current)() || b is null);
         if (b is null || delta == 0) return delta == 0;
         auto newLength = b.length + delta;
-        if (_current < b.ptr + b.length + alignment)
+        if ((() @trusted => _current < b.ptr + b.length + alignment)())
         {
             immutable currentGoodSize = this.goodAllocSize(b.length);
             immutable newGoodSize = this.goodAllocSize(newLength);
             immutable goodDelta = newGoodSize - currentGoodSize;
             // This was the last allocation! Allocate some more and we're done.
-            if (goodDelta == 0 || allocate(goodDelta).length == goodDelta)
+            if (goodDelta == 0
+                || (() @trusted => allocate(goodDelta).length == goodDelta)())
             {
-                b = b.ptr[0 .. newLength];
-                assert(_current < b.ptr + b.length + alignment);
+                b = (() @trusted => b.ptr[0 .. newLength])();
+                assert((() @trusted => _current < b.ptr + b.length + alignment)());
                 return true;
             }
         }
@@ -394,9 +396,9 @@ struct Region(ParentAllocator = NullAllocator,
     auto reg = Region!(Mallocator)(1024 * 64);
     auto b = reg.allocate(101);
     assert(b.length == 101);
-    assert(reg.expand(b, 20));
-    assert(reg.expand(b, 73));
-    assert(!reg.expand(b, 1024 * 64));
+    assert((() pure nothrow @safe @nogc => reg.expand(b, 20))());
+    assert((() pure nothrow @safe @nogc => reg.expand(b, 73))());
+    assert((() pure nothrow @safe @nogc => !reg.expand(b, 1024 * 64))());
     assert((() nothrow @nogc => reg.deallocateAll())());
 }
 
@@ -728,6 +730,7 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
     the right.
 
     */
+    nothrow @trusted @nogc
     bool expand(ref void[] b, size_t delta) shared
     {
         if (b is null || delta == 0) return delta == 0;
@@ -735,18 +738,27 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
         pthread_mutex_lock(cast(pthread_mutex_t*) &sbrkMutex) == 0 || assert(0);
         scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex) == 0
             || assert(0);
-        if (_brkCurrent != b.ptr + b.length) return false;
+
+        // TODO: This is the correct way of checking for _brkCurrent,
+        // but this breaks deallocate
+        //static if (minAlign > 1)
+            //const rounded = b.length.roundUpToMultipleOf(alignment);
+        //else
+            //alias rounded = b.length;
+        const rounded = b.length;
+
+        if (_brkCurrent != b.ptr + rounded) return false;
         // Great, can expand the last block
         static if (minAlign > 1)
-            const rounded = delta.roundUpToMultipleOf(alignment);
+            const roundedDelta = delta.roundUpToMultipleOf(alignment);
         else
-            alias rounded = bytes;
-        auto p = sbrk(rounded);
+            alias roundedDelta = delta;
+        auto p = sbrk(roundedDelta);
         if (p == cast(void*) -1)
         {
             return false;
         }
-        _brkCurrent = cast(shared) (p + rounded);
+        _brkCurrent = cast(shared) (p + roundedDelta);
         b = b.ptr[0 .. b.length + delta];
         return true;
     }
@@ -832,6 +844,10 @@ version(Posix) @system unittest
     assert((() nothrow @safe @nogc => alloc.empty)() == Ternary.no);
     auto b = alloc.allocate(2001);
     assert(b.length == 2001);
+    assert((() nothrow @safe @nogc => alloc.expand(b, 0))());
+    assert(b.length == 2001);
+    // Fails because of alignment
+    assert((() nothrow @safe @nogc => !alloc.expand(b, 1))());
     assert((() nothrow @safe @nogc => alloc.owns(a))() == Ternary.yes);
     assert((() nothrow @safe @nogc => alloc.owns(b))() == Ternary.yes);
     // reducing the brk does not work on OSX

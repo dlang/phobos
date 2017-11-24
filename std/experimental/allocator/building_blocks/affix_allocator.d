@@ -171,7 +171,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         Ternary owns(void[] b)
         {
             if (b is null) return Ternary.no;
-            return parent.owns(actualAllocation(b));
+            return parent.owns((() @trusted => actualAllocation(b))());
         }
 
         static if (hasMember!(Allocator, "resolveInternalPointer"))
@@ -188,14 +188,16 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             return Ternary.yes;
         }
 
-        static if (!stateSize!Suffix && hasMember!(Allocator, "expand"))
+        static if (!stateSize!Suffix && hasMember!(Allocator, "expand")
+                    && hasMember!(Allocator, "owns"))
         bool expand(ref void[] b, size_t delta)
         {
-            if (!b.ptr) return delta == 0;
-            auto t = actualAllocation(b);
+            if (!b || delta == 0) return delta == 0;
+            if (owns(b) == Ternary.no) return false;
+            auto t = (() @trusted => actualAllocation(b))();
             const result = parent.expand(t, delta);
             if (!result) return false;
-            b = b.ptr[0 .. b.length + delta];
+            b = (() @trusted => b.ptr[0 .. b.length + delta])();
             return true;
         }
 
@@ -468,7 +470,6 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     () nothrow @nogc { a.deallocate(b); }();
 }
 
-// Test that deallocateAll infers from parent
 @system unittest
 {
     import std.experimental.allocator.building_blocks.region : Region;
@@ -476,5 +477,9 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     auto a = AffixAllocator!(Region!(), uint)(Region!()(new ubyte[1024 * 64]));
     auto b = a.allocate(42);
     assert(b.length == 42);
+    // Test that expand infers from parent
+    assert((() pure nothrow @safe @nogc => a.expand(b, 58))());
+    assert(b.length == 100);
+    // Test that deallocateAll infers from parent
     assert((() nothrow @nogc => a.deallocateAll())());
 }

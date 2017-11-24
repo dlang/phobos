@@ -432,3 +432,18 @@ fallbackAllocator(Primary, Fallback)(auto ref Primary p, auto ref Fallback f)
     assert((() nothrow @safe @nogc => a.resolveInternalPointer(null, p))() == Ternary.no);
     assert((() nothrow @safe @nogc => a.resolveInternalPointer(&b[0], p))() == Ternary.yes);
 }
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+    import std.typecons : Ternary;
+
+    alias A = FallbackAllocator!(Region!(), Region!());
+    auto a = A(Region!()(new ubyte[16_384]), Region!()(new ubyte[16_384]));
+
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
+    assert((() nothrow @safe @nogc => a.expand(b, 58))());
+    assert(b.length == 100);
+}

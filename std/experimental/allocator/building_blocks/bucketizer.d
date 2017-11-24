@@ -96,12 +96,12 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     */
     bool expand(ref void[] b, size_t delta)
     {
-        if (!b.ptr) return delta == 0;
+        if (!b || delta == 0) return delta == 0;
         assert(b.length >= min && b.length <= max);
         const available = goodAllocSize(b.length);
         const desired = b.length + delta;
         if (available < desired) return false;
-        b = b.ptr[0 .. desired];
+        b = (() @trusted => b.ptr[0 .. desired])();
         return true;
     }
 
@@ -294,6 +294,11 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     assert(b.length == 100);
     assert(a.alignedAllocate(42, 16) is null);
     assert(a.alignedAllocate(0, 16) is null);
+    assert((() pure nothrow @safe @nogc => a.expand(b, 0))());
+    assert(b.length == 100);
+    assert((() pure nothrow @safe @nogc => a.expand(b, 28))());
+    assert(b.length == 128);
+    assert((() pure nothrow @safe @nogc => !a.expand(b, 1))());
 }
 
 @system unittest
