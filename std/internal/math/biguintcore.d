@@ -56,9 +56,9 @@ private:
 // Half the size of the data cache.
 @nogc nothrow pure size_t getCacheLimit()
 {
-    import core.cpuid;
+    import core.cpuid : dataCaches;
     return (cast(size_t function() @nogc nothrow pure)
-        (() => core.cpuid.datacache[0].size * 1024 / 2))();
+        (() => core.cpuid.dataCaches[0].size * 1024 / 2))();
 }
 enum size_t FASTDIVLIMIT = 100; // crossover to recursive division
 
