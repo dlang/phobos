@@ -58,7 +58,7 @@ private:
 {
     import core.cpuid : dataCaches;
     return (cast(size_t function() @nogc nothrow pure)
-        (() => core.cpuid.dataCaches[0].size * 1024 / 2))();
+        (() => dataCaches[0].size * 1024 / 2))();
 }
 enum size_t FASTDIVLIMIT = 100; // crossover to recursive division
 
