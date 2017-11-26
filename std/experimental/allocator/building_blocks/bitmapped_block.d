@@ -202,6 +202,14 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 
     /// Ditto
     static if (chooseAtRuntime == theBlockSize)
+    this(OpaquePointer[] data, uint blockSize)
+    {
+        this._blockSize = blockSize;
+        this(data);
+    }
+
+    /// Ditto
+    static if (chooseAtRuntime == theBlockSize)
     this(ubyte[] data, uint blockSize)
     {
         this._blockSize = blockSize;
