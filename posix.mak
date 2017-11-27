@@ -199,7 +199,7 @@ PACKAGE_std = array ascii base64 bigint bitmanip compiler complex concurrency \
   uri utf uuid variant xml zip zlib
 PACKAGE_std_experimental = checkedint typecons
 PACKAGE_std_algorithm = comparison iteration mutation package searching setops \
-  sorting
+  sorting stats
 PACKAGE_std_container = array binaryheap dlist package rbtree slist util
 PACKAGE_std_datetime = date interval package stopwatch systime timezone
 PACKAGE_std_digest = crc digest hmac md murmurhash package ripemd sha

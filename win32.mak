@@ -182,6 +182,7 @@ SRC_STD_ALGO= \
 	std\algorithm\searching.d \
 	std\algorithm\setops.d \
 	std\algorithm\sorting.d \
+	std\algorithm\stats.d \
 	std\algorithm\internal.d
 
 SRC_STD_CONTAINER= \
@@ -658,6 +659,7 @@ cov : $(SRC_TO_COMPILE) $(LIB)
 	$(DMD) -conf= -cov=95 -unittest -main -run std\algorithm\searching.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\algorithm\setops.d
 	$(DMD) -conf= -cov=95 -unittest -main -run std\algorithm\sorting.d
+	$(DMD) -conf= -cov=95 -unittest -main -run std\algorithm\stats.d
 	$(DMD) -conf= -cov=83 -unittest -main -run std\variant.d
 	$(DMD) -conf= -cov=58 -unittest -main -run std\zlib.d
 	$(DMD) -conf= -cov=53 -unittest -main -run std\socket.d
@@ -777,6 +779,9 @@ $(DOC)\std_algorithm_setops.html : $(STDDOC) std\algorithm\setops.d
 
 $(DOC)\std_algorithm_sorting.html : $(STDDOC) std\algorithm\sorting.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_sorting.html $(STDDOC) std\algorithm\sorting.d
+
+$(DOC)\std_algorithm_stats.html : $(STDDOC) std\algorithm\stats.d
+	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_algorithm_stats.html $(STDDOC) std\algorithm\stats.d
 
 $(DOC)\std_array.html : $(STDDOC) std\array.d
 	$(DMD) -c -o- $(DDOCFLAGS) -Df$(DOC)\std_array.html $(STDDOC) std\array.d
