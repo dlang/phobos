@@ -637,8 +637,8 @@ if (distinctFieldNames!(Specs))
         ///
         static if (Specs.length == 0) @safe unittest
         {
-            auto t1 = tuple(1, " hello ", 2.3);
-            assert(t1.toString() == `Tuple!(int, string, double)(1, " hello ", 2.3)`);
+            auto t1 = tuple(1, " hello ", 'a');
+            assert(t1.toString() == `Tuple!(int, string, char)(1, " hello ", 'a')`);
 
             void takeSeveralTypes(int n, string s, bool b)
             {
