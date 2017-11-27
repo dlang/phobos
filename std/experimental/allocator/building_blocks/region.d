@@ -739,16 +739,22 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
         scope(exit) pthread_mutex_unlock(cast(pthread_mutex_t*) &sbrkMutex) == 0
             || assert(0);
 
-        // TODO: This is the correct way of checking for _brkCurrent,
-        // but this breaks deallocate
-        //static if (minAlign > 1)
-            //const rounded = b.length.roundUpToMultipleOf(alignment);
-        //else
-            //alias rounded = b.length;
-        const rounded = b.length;
+        // Take alignment rounding into account
+        static if (minAlign > 1)
+            const rounded = b.length.roundUpToMultipleOf(alignment);
+        else
+            alias rounded = b.length;
+
+        const slack = rounded - b.length;
+        if (delta <= slack)
+        {
+            b = b.ptr[0 .. b.length + delta];
+            return true;
+        }
 
         if (_brkCurrent != b.ptr + rounded) return false;
         // Great, can expand the last block
+        delta -= slack;
         static if (minAlign > 1)
             const roundedDelta = delta.roundUpToMultipleOf(alignment);
         else
@@ -759,7 +765,7 @@ version(Posix) struct SbrkRegion(uint minAlign = platformAlignment)
             return false;
         }
         _brkCurrent = cast(shared) (p + roundedDelta);
-        b = b.ptr[0 .. b.length + delta];
+        b = b.ptr[0 .. b.length + slack + delta];
         return true;
     }
 
@@ -842,18 +848,26 @@ version(Posix) @system unittest
     auto a = alloc.alignedAllocate(2001, 4096);
     assert(a.length == 2001);
     assert((() nothrow @safe @nogc => alloc.empty)() == Ternary.no);
+    auto oldBrkCurr = alloc._brkCurrent;
     auto b = alloc.allocate(2001);
     assert(b.length == 2001);
     assert((() nothrow @safe @nogc => alloc.expand(b, 0))());
     assert(b.length == 2001);
-    // Fails because of alignment
-    assert((() nothrow @safe @nogc => !alloc.expand(b, 1))());
+    // Expand with a small size to fit the rounded slack due to alignment
+    assert((() nothrow @safe @nogc => alloc.expand(b, 1))());
+    assert(b.length == 2002);
+    // Exceed the rounded slack due to alignment
+    assert((() nothrow @safe @nogc => alloc.expand(b, 10))());
+    assert(b.length == 2012);
     assert((() nothrow @safe @nogc => alloc.owns(a))() == Ternary.yes);
     assert((() nothrow @safe @nogc => alloc.owns(b))() == Ternary.yes);
     // reducing the brk does not work on OSX
     version(OSX) {} else
     {
         assert((() nothrow @nogc => alloc.deallocate(b))());
+        // Check that expand and deallocate work well
+        assert(oldBrkCurr == alloc._brkCurrent);
+        assert((() nothrow @nogc => alloc.deallocate(a))());
         assert((() nothrow @nogc => alloc.deallocateAll())());
     }
     const void[] c = alloc.allocate(2001);
