@@ -58,7 +58,7 @@ struct AscendingPageAllocator
             GetSystemInfo(&si);
             pageSize = cast(size_t) si.dwPageSize;
             data = VirtualAlloc(null, pageSize * pages, MEM_RESERVE, PAGE_NOACCESS);
-            assert(!data, "Failed to VirtualAlloc memory");
+            assert(data, "Failed to VirtualAlloc memory");
         }
         offset = data;
         readWriteLimit = data;
