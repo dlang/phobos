@@ -11,10 +11,10 @@ $(T2 cache,
 $(T2 cacheBidirectional,
         As above, but also provides $(D back) and $(D popBack).)
 $(T2 chunkBy,
-        $(D chunkBy!((a,b) => a[1] == b[1])([[1, 1], [1, 2], [2, 2], [2, 1]]))
+        $(D chunkBy!((a,b) => a[1] == b[1])([[1, 1], [1, 2], [2, 2], [2, 3]]))
         returns a range containing 3 subranges: the first with just
         $(D [1, 1]); the second with the elements $(D [1, 2]) and $(D [2, 2]);
-        and the third with just $(D [2, 1]).)
+        and the third with just $(D [2, 3]).)
 $(T2 cumulativeFold,
         $(D cumulativeFold!((a, b) => a + b)([1, 2, 3, 4])) returns a
         lazily-evaluated range containing the successive reduced values `1`,
