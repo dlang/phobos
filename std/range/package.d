@@ -161,14 +161,12 @@ $(BOOKTABLE ,
         $(TD Similar to $(D recurrence), except that a random-access _range is
         created.
     ))
-    $(COMMENT Explicitly undocumented to delay the release until 2.076
     $(TR $(TD $(D $(LREF slide)))
         $(TD Creates a _range that returns a fixed-size sliding window
         over the original _range. Unlike chunks,
         it advances a configurable number of items at a time,
         not one chunk at a time.
     ))
-    )
     $(TR $(TD $(LREF stride))
         $(TD Iterates a _range with stride $(I n).
     ))
@@ -7645,7 +7643,7 @@ if (isForwardRange!Source && hasLength!Source)
     assert(equal(chunks, [[1], [2], [3], [], []]));
 }
 
-/*
+/**
 A fixed-sized sliding window iteration
 of size `windowSize` over a `source` range by a custom `stepSize`.
 
@@ -7669,8 +7667,6 @@ Returns: Range of all sliding windows with propagated bi-directionality,
 
 See_Also: $(LREF chunks)
 */
-// Explicitly set to private to delay the release until 2.076
-private
 auto slide(Flag!"withFewerElements" f = Yes.withFewerElements,
             Source)(Source source, size_t windowSize, size_t stepSize = 1)
     if (isForwardRange!Source)
