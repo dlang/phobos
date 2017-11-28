@@ -121,13 +121,14 @@ public:
                 {
                     import core.sys.windows.windows : VirtualAlloc, MEM_COMMIT, PAGE_READWRITE;
 
-                    auto ret = VirtualAlloc(readWriteLimit, newReadWriteLimit - readWriteLimit, MEM_COMMIT, PAGE_READWRITE);
+                    auto ret = VirtualAlloc(readWriteLimit, newReadWriteLimit - readWriteLimit, 
+                        MEM_COMMIT, PAGE_READWRITE);
                     if (!ret)
                         assert(0, "Failed to allocate memory, VirtualAlloc failure");
                 }
                 else
                 {
-                    assert(0, "Unsupported OS version");
+                    static assert(0, "Unsupported OS");
                 }
 
                 readWriteLimit = newReadWriteLimit;
@@ -342,7 +343,8 @@ public:
                 else version(Windows)
                 {
                     import core.sys.windows.windows : VirtualAlloc, PAGE_READWRITE, MEM_COMMIT;
-                    auto ret = VirtualAlloc(readWriteLimit, newReadWriteLimit - readWriteLimit, MEM_COMMIT, PAGE_READWRITE);
+                    auto ret = VirtualAlloc(readWriteLimit, newReadWriteLimit - readWriteLimit,
+                        MEM_COMMIT, PAGE_READWRITE);
                     if (!ret)
                         assert(0, "Failed to expand, VirtualAlloc failure");
                 }
