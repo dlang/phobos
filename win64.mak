@@ -63,9 +63,10 @@ MAKE=make
 
 ## D compiler
 
-DMD=$(DIR)\bin\dmd
-#DMD=..\dmd
-DMD=dmd
+DMD_DIR=..\dmd
+BUILD=release
+OS=windows
+DMD=$(DMD_DIR)\generated\$(OS)\$(BUILD)\$(MODEL)\dmd
 
 ## Location of where to write the html documentation files
 
