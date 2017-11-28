@@ -56,7 +56,7 @@ public:
         {
             import core.sys.posix.sys.mman : mmap, MAP_ANON, PROT_NONE,
                 MAP_PRIVATE, MAP_FAILED;
-            import core.sys.posix.unistd;
+            import core.sys.posix.unistd : sysconf;
 
             pageSize = cast(size_t) sysconf(_SC_PAGESIZE);
             data = mmap(null, pageSize * pages, PROT_NONE, MAP_PRIVATE | MAP_ANON, -1, 0);
