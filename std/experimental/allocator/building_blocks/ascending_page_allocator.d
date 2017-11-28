@@ -97,7 +97,7 @@ public:
     */
     void[] allocate(size_t n)
     {
-        import std.algorithm : min;
+        import std.algorithm.comparison : min;
 
         size_t goodSize = goodAllocSize(n);
         if (offset - data > numPages * pageSize - goodSize)
@@ -298,7 +298,7 @@ public:
     */
     bool expand(ref void[] b, size_t delta)
     {
-        import std.algorithm : min;
+        import std.algorithm.comparison : min;
 
         if (!delta) return true;
         if (!b.ptr) return false;
