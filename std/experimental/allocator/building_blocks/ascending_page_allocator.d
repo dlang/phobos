@@ -121,7 +121,7 @@ public:
                 {
                     import core.sys.windows.windows : VirtualAlloc, MEM_COMMIT, PAGE_READWRITE;
 
-                    auto ret = VirtualAlloc(readWriteLimit, newReadWriteLimit - readWriteLimit, 
+                    auto ret = VirtualAlloc(readWriteLimit, newReadWriteLimit - readWriteLimit,
                         MEM_COMMIT, PAGE_READWRITE);
                     if (!ret)
                         assert(0, "Failed to allocate memory, VirtualAlloc failure");
