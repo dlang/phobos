@@ -3,7 +3,7 @@ import std.experimental.allocator.common;
 
 /**
 `AscendingPageAllocator` is a fast and safe allocator that rounds all allocations
-to multiples of the system's page size. It reserves a range of virtual addresses 
+to multiples of the system's page size. It reserves a range of virtual addresses
 (using `mmap` on Posix and `VirtualAlloc` on Windows) and allocates memory at consecutive virtual
 addresses.
 
