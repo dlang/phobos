@@ -1,14 +1,15 @@
 module std.experimental.allocator.building_blocks.ascending_page_allocator;
 import std.experimental.allocator.common;
+
 /**
-`AscendingPageAllocator` is a fast and safe allocator which rounds all allocations
-to page size multiples. It reserves a range of virtual addresses (`mmap` for Posix
-and `VirtualAlloc` for Windows) and allocates memory at consecutive virtual
+`AscendingPageAllocator` is a fast and safe allocator that rounds all allocations
+to multiples of the system's page size. It reserves a range of virtual addresses 
+(using `mmap` on Posix and `VirtualAlloc` on Windows) and allocates memory at consecutive virtual
 addresses.
 
 When a chunk of memory is requested, the allocator finds a range of
-virtual pages which satisfy the requested size, changing their protection to
-read and write using OS primitives (`mprotect` and `VirtualProtect`).
+virtual pages that satisfy the requested size, changing their protection to
+read/write using OS primitives (`mprotect` and `VirtualProtect`, respectively).
 The physical memory is allocated on demand, when the pages are accessed.
 
 Deallocation removes any read/write permissions from the target pages
@@ -17,6 +18,9 @@ memory.
 
 Because the allocator does not reuse memory, any dangling references to
 deallocated memory will always result in deterministically crashing the process.
+
+See_Also:
+$(HTTPS microsoft.com/en-us/research/wp-content/uploads/2017/07/snowflake-extended.pdf, Project Snoflake) for the general approach.
 */
 struct AscendingPageAllocator
 {
@@ -73,7 +77,7 @@ public:
         }
         else
         {
-            assert(0, "Unsupported OS version");
+            static assert(0, "Unsupported OS version");
         }
 
         offset = data;
@@ -81,10 +85,15 @@ public:
     }
 
     /**
-    Round the allocation to the next multiple of the page size.
+    Rounds the allocation size to the next multiple of the page size.
     The allocation only reserves a range of virtual pages but the actual
-    physical memory is allocated on demand, when accessing the memory
-    Returns `null` on failure or if the requested size exceeds the remaining capacity.
+    physical memory is allocated on demand, when accessing the memory.
+    
+    Params:
+    n = Bytes to allocate
+    
+    Returns:
+    `null` on failure or if the requested size exceeds the remaining capacity.
     */
     void[] allocate(size_t n)
     {
@@ -133,7 +142,7 @@ public:
     }
 
     /**
-    Rounds the requested size to the next multiple of the page size
+    Rounds the requested size to the next multiple of the page size.
     */
     size_t goodAllocSize(size_t n)
     {
@@ -144,8 +153,8 @@ public:
     Decommit all physical memory associated with the buffer given as parameter,
     but keep the range of virtual addresses.
 
-    On POSIX systems we call `mmap` with `MAP_FIXED' a second time to decommit the memory.
-    On Windows we use `VirtualFree` with `MEM_DECOMMIT`.
+    On POSIX systems `deallocate` calls `mmap` with `MAP_FIXED' a second time to decommit the memory.
+    On Windows, it uses `VirtualFree` with `MEM_DECOMMIT`.
     */
     version(Posix)
     {
@@ -198,14 +207,11 @@ public:
     }
     else
     {
-        bool deallocate(void[] buf)
-        {
-            assert(0, "Unsupported OS version");
-        }
+        static assert(0, "Unsupported OS");
     }
 
     /**
-    Return `true` if the passed buffer is inside the range of virtual adresses.
+    Returns `true` if the passed buffer is inside the range of virtual adresses.
     Does not guarantee that the passed buffer is still valid.
     */
     bool owns(void[] buf)
