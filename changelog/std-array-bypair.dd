@@ -1,0 +1,20 @@
+`std.array.byPair` now returns a `NamedTuple`
+
+$(REF byPair, std, array) now returns a named tuple.
+
+---
+import std.array : byPair;
+import std.typecons : Tuple;
+
+int[string] dict = ["b": 2, "c": 3];
+auto pairs = dict.byPair;
+static assert(is(typeof(pairs.front) : Tuple!(string,int)));
+
+// access by index (existing way)
+assert(pairs.front[0] == "b");
+assert(pairs.front[1] == 2);
+
+// access by name (enabled with this release)
+assert(pairs.front.key == "b");
+assert(pairs.front.value == 2);
+---
