@@ -91,7 +91,7 @@ public:
 
     Params:
     n = Bytes to allocate
-    
+
     Returns:
     `null` on failure or if the requested size exceeds the remaining capacity.
     */
