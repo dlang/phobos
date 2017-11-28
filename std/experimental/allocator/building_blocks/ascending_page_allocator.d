@@ -88,7 +88,7 @@ public:
     Rounds the allocation size to the next multiple of the page size.
     The allocation only reserves a range of virtual pages but the actual
     physical memory is allocated on demand, when accessing the memory.
-    
+
     Params:
     n = Bytes to allocate
     
