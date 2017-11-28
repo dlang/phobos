@@ -420,7 +420,8 @@ public:
     size_t numPages = 26214;
     AscendingPageAllocator a = AscendingPageAllocator(numPages);
     size_t pageSize = a.pageSize;
-    for (int i = 0; i < numPages; i++) {
+    for (int i = 0; i < numPages; i++)
+    {
         void[] buf = a.allocate(pageSize);
         assert(buf.length == pageSize);
         testrw(buf);
