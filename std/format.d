@@ -1715,6 +1715,11 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
     assertThrown(singleSpec("%2.3eTest"));
 }
 
+void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T obj, const ref FormatSpec!Char f)
+{
+    formatValueImpl(w, obj, f);
+}
+
 /**
 $(D bool)s are formatted as "true" or "false" with %s and as "1" or
 "0" with integral-specific format specs.
@@ -1724,7 +1729,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     BooleanTypeOf!T val = obj;
@@ -1748,7 +1753,7 @@ if (is(BooleanTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         }
     }
     else
-        formatValue(w, cast(int) val, f);
+        formatValueImpl(w, cast(int) val, f);
 }
 
 ///
@@ -1806,7 +1811,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(Unqual!T == typeof(null)) && !is(T == enum) && !hasToString!(T, Char))
 {
     enforceFmt(f.spec == 's',
@@ -1844,7 +1849,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(IntegralTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     alias U = IntegralTypeOf!T;
@@ -2121,7 +2126,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     import std.algorithm.comparison : min;
@@ -2167,7 +2172,7 @@ if (is(FloatingPointTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
         {
           version(none)
           {
-            return formatValue(w, s, f);
+            return formatValueImpl(w, s, f);
           }
           else  // FIXME:workaround
           {
@@ -2345,17 +2350,17 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(Unqual!T : creal) && !is(T == enum) && !hasToString!(T, Char))
 {
     immutable creal val = obj;
 
-    formatValue(w, val.re, f);
+    formatValueImpl(w, val.re, f);
     if (val.im >= 0)
     {
         put(w, '+');
     }
-    formatValue(w, val.im, f);
+    formatValueImpl(w, val.im, f);
     put(w, 'i');
 }
 
@@ -2401,12 +2406,12 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(Unqual!T : ireal) && !is(T == enum) && !hasToString!(T, Char))
 {
     immutable ireal val = obj;
 
-    formatValue(w, val.im, f);
+    formatValueImpl(w, val.im, f);
     put(w, 'i');
 }
 
@@ -2448,7 +2453,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     CharTypeOf!T val = obj;
@@ -2460,7 +2465,7 @@ if (is(CharTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     else
     {
         alias U = AliasSeq!(ubyte, ushort, uint)[CharTypeOf!T.sizeof/2];
-        formatValue(w, cast(U) val, f);
+        formatValueImpl(w, cast(U) val, f);
     }
 }
 
@@ -2521,7 +2526,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(StringTypeOf!T) && !is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     Unqual!(StringTypeOf!T) val = obj;  // for `alias this`, see bug5371
@@ -2599,10 +2604,10 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, auto ref T obj, const ref FormatSpec!Char f)
 if (is(StaticArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
-    formatValue(w, obj[], f);
+    formatValueImpl(w, obj[], f);
 }
 
 ///
@@ -2642,19 +2647,19 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(DynamicArrayTypeOf!T) && !is(StringTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     static if (is(const(ArrayTypeOf!T) == const(void[])))
     {
-        formatValue(w, cast(const ubyte[]) obj, f);
+        formatValueImpl(w, cast(const ubyte[]) obj, f);
     }
     else static if (!isInputRange!T)
     {
         alias U = Unqual!(ArrayTypeOf!T);
         static assert(isInputRange!U);
         U val = obj;
-        formatValue(w, val, f);
+        formatValueImpl(w, val, f);
     }
     else
     {
@@ -3189,7 +3194,7 @@ Params:
     obj = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T obj, const ref FormatSpec!Char f)
 if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
 {
     AssocArrayTypeOf!T val = obj;
@@ -3434,7 +3439,7 @@ const string toString();
 
    Otherwise, are formatted just as their type name.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
 if (is(T == class) && !is(T == enum))
 {
     enforceValidFormatSpec!(T, Char)(f);
@@ -3465,7 +3470,7 @@ if (is(T == class) && !is(T == enum))
             else static if (is(BuiltinTypeOf!T X))
             {
                 X x = val;
-                formatValue(w, x, f);
+                formatValueImpl(w, x, f);
             }
             else
             {
@@ -3583,7 +3588,7 @@ if (is(T == class) && !is(T == enum))
 }
 
 /// ditto
-void formatValue(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
 if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
 {
     enforceValidFormatSpec!(T, Char)(f);
@@ -3606,16 +3611,16 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
                 import core.sys.windows.com : IUnknown;
                 static if (is(T : IUnknown))
                 {
-                    formatValue(w, *cast(void**)&val, f);
+                    formatValueImpl(w, *cast(void**)&val, f);
                 }
                 else
                 {
-                    formatValue(w, cast(Object) val, f);
+                    formatValueImpl(w, cast(Object) val, f);
                 }
             }
             else
             {
-                formatValue(w, cast(Object) val, f);
+                formatValueImpl(w, cast(Object) val, f);
             }
         }
     }
@@ -3663,7 +3668,7 @@ if (is(T == interface) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is
 
 /// ditto
 // Maybe T is noncopyable struct, so receive it by 'auto ref'.
-void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, auto ref T val, const ref FormatSpec!Char f)
 if ((is(T == struct) || is(T == union)) && (hasToString!(T, Char) || !is(BuiltinTypeOf!T)) && !is(T == enum))
 {
     enforceValidFormatSpec!(T, Char)(f);
@@ -3798,7 +3803,7 @@ Params:
     val = The value to write.
     f = The $(D FormatSpec) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
 if (is(T == enum))
 {
     if (f.spec == 's')
@@ -3807,7 +3812,7 @@ if (is(T == enum))
         {
             if (val == e)
             {
-                formatValue(w, __traits(allMembers, T)[i], f);
+                formatValueImpl(w, __traits(allMembers, T)[i], f);
                 return;
             }
         }
@@ -3816,7 +3821,7 @@ if (is(T == enum))
         put(w, "cast(" ~ T.stringof ~ ")");
         static assert(!is(OriginalType!T == T));
     }
-    formatValue(w, cast(OriginalType!T) val, f);
+    formatValueImpl(w, cast(OriginalType!T) val, f);
 }
 
 ///
@@ -3867,7 +3872,7 @@ if (is(T == enum))
 /**
    Pointers are formatted as hex integers.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, T val, const ref FormatSpec!Char f)
 if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
 {
     static if (isInputRange!T)
@@ -3896,23 +3901,23 @@ if (isPointer!T && !is(T == enum) && !hasToString!(T, Char))
         }
         FormatSpec!Char fs = f; // fs is copy for change its values.
         fs.spec = 'X';
-        formatValue(w, pnum, fs);
+        formatValueImpl(w, pnum, fs);
     }
     else
     {
         enforceFmt(f.spec == 'X' || f.spec == 'x',
            "Expected one of %s, %x or %X for pointer type.");
-        formatValue(w, pnum, f);
+        formatValueImpl(w, pnum, f);
     }
 }
 
 /**
    SIMD vectors are formatted as arrays.
  */
-void formatValue(Writer, V, Char)(auto ref Writer w, V val, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, V, Char)(auto ref Writer w, V val, const ref FormatSpec!Char f)
 if (isSIMDVector!V)
 {
-    formatValue(w, val.array, f);
+    formatValueImpl(w, val.array, f);
 }
 
 @safe unittest
@@ -4002,10 +4007,10 @@ if (isSIMDVector!V)
 /**
    Delegates are formatted by 'ReturnType delegate(Parameters) FunctionAttributes'
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, scope T, const ref FormatSpec!Char f)
+private void formatValueImpl(Writer, T, Char)(auto ref Writer w, scope T, const ref FormatSpec!Char f)
 if (isDelegate!T)
 {
-    formatValue(w, T.stringof, f);
+    formatValueImpl(w, T.stringof, f);
 }
 
 ///
