@@ -476,17 +476,18 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         assert(special || !allocators.ptr);
         if (special)
         {
-            static if (stateSize!Allocator)
+            static if (stateSize!SAllocator)
             {
                 import core.stdc.string : memcpy;
-                Allocator specialCopy;
-                memcpy(&specialCopy, &special.a, Allocator.sizeof);
+                SAllocator specialCopy;
+                assert(special.a.sizeof == specialCopy.sizeof);
+                memcpy(&specialCopy, &special.a, specialCopy.sizeof);
                 emplace(&special.a);
-                specialCopy.deallocate(allocators);
+                specialCopy.deallocateAll();
             }
             else
             {
-                special.deallocate(allocators);
+                special.deallocateAll();
             }
         }
         allocators = null;
