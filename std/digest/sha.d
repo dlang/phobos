@@ -1190,11 +1190,11 @@ auto sha512_256Of(T...)(T data)
 {
     string a = "Mary has ", b = "a little lamb";
     int[] c = [ 1, 2, 3, 4, 5 ];
-    string d = toHexString(sha1Of(a, b, c));
+    auto d = toHexString(sha1Of(a, b, c));
     version(LittleEndian)
-        assert(d == "CDBB611D00AC2387B642D3D7BDF4C3B342237110", d);
+        assert(d[] == "CDBB611D00AC2387B642D3D7BDF4C3B342237110", d);
     else
-        assert(d == "A0F1196C7A379C09390476D9CA4AA11B71FD11C8", d);
+        assert(d[] == "A0F1196C7A379C09390476D9CA4AA11B71FD11C8", d);
 }
 
 /**
