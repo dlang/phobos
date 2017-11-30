@@ -5,6 +5,7 @@
  * Copyright: Dominic Sayers, Jacob Carlborg 2008-.
  * Test schema documentation: Copyright © 2011, Daniel Marschall
  * License: $(LINK2 http://www.boost.org/LICENSE_1_0.txt, Boost Software License 1.0)
+ * Dominic Sayers graciously granted permission to use the Boost license via email on Feb 22, 2011.
  * Version: 3.0.13 - Version 3.0 of the original PHP implementation: $(LINK http://www.dominicsayers.com/isemail)
  *
  * Standards:
