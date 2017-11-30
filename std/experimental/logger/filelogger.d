@@ -170,8 +170,11 @@ class FileLogger : Logger
         return this.filename;
     }
 
-    private File file_;
-    private string filename;
+    /** The $(D File) log messages are written to. */
+    protected File file_;
+
+    /** The filename of the $(D File) log messages are written to. */
+    protected string filename;
 }
 
 @system unittest
