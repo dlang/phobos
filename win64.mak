@@ -238,7 +238,6 @@ SRC_STD_DIGEST= \
 	std\digest\package.d
 
 SRC_STD_NET= \
-	std\net\isemail.d \
 	std\net\curl.d
 
 SRC_STD_RANGE= \
