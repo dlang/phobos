@@ -152,6 +152,8 @@ version (X86)    version = X86_Any;
 version (X86_64) version = X86_Any;
 version (PPC)    version = PPC_Any;
 version (PPC64)  version = PPC_Any;
+version (MIPS)   version = MIPS_Any;
+version (MIPS64) version = MIPS_Any;
 
 version(D_InlineAsm_X86)
 {
@@ -169,7 +171,7 @@ version (StaticallyHaveSSE)
 {
     private enum bool haveSSE = true;
 }
-else
+else version (X86)
 {
     static import core.cpuid;
     private alias haveSSE = core.cpuid.sse;
@@ -4880,6 +4882,18 @@ version(X86_Any)
 {
     version = IeeeFlagsSupport;
 }
+else version(PPC_Any)
+{
+    version = IeeeFlagsSupport;
+}
+else version(MIPS_Any)
+{
+    version = IeeeFlagsSupport;
+}
+else version(AArch64)
+{
+    version = IeeeFlagsSupport;
+}
 else version(ARM)
 {
     version = IeeeFlagsSupport;
@@ -5024,6 +5038,21 @@ struct FloatingPointControl
             allExceptions, /// ditto
         }
     }
+    else version(AArch64)
+    {
+        enum : ExceptionMask
+        {
+            inexactException      = 0x1000,
+            underflowException    = 0x0800,
+            overflowException     = 0x0400,
+            divByZeroException    = 0x0200,
+            invalidException      = 0x0100,
+            severeExceptions   = overflowException | divByZeroException
+                                 | invalidException,
+            allExceptions      = severeExceptions | underflowException
+                                 | inexactException,
+        }
+    }
     else version(ARM)
     {
         enum : ExceptionMask
@@ -5048,6 +5077,21 @@ struct FloatingPointControl
             divByZeroException    = 0x0010,
             underflowException    = 0x0020,
             overflowException     = 0x0040,
+            invalidException      = 0x0080,
+            severeExceptions   = overflowException | divByZeroException
+                                 | invalidException,
+            allExceptions      = severeExceptions | underflowException
+                                 | inexactException,
+        }
+    }
+    else version(MIPS_Any)
+    {
+        enum : ExceptionMask
+        {
+            inexactException      = 0x0800,
+            divByZeroException    = 0x0400,
+            overflowException     = 0x0200,
+            underflowException    = 0x0100,
             invalidException      = 0x0080,
             severeExceptions   = overflowException | divByZeroException
                                  | invalidException,
@@ -5082,6 +5126,18 @@ public:
             return true;
         else version(PPC_Any)
             return true;
+        else version(MIPS_Any)
+            return true;
+        else version(AArch64)
+        {
+            auto oldState = getControlState();
+            // If exceptions are not supported, we set the bit but read it back as zero
+            // https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/aarch64/fpu/feenablxcpth.c
+            setControlState(oldState | (divByZeroException & allExceptions));
+            immutable result = (getControlState() & allExceptions) != 0;
+            setControlState(oldState);
+            return result;
+        }
         else version(ARM)
         {
             auto oldState = getControlState();
@@ -5141,11 +5197,19 @@ private:
 
     bool initialized = false;
 
-    version(ARM)
+    version(AArch64)
+    {
+        alias ControlState = uint;
+    }
+    else version(ARM)
     {
         alias ControlState = uint;
     }
     else version(PPC_Any)
+    {
+        alias ControlState = uint;
+    }
+    else version(MIPS_Any)
     {
         alias ControlState = uint;
     }
