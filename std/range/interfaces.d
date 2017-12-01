@@ -42,6 +42,7 @@ $(BOOKTABLE ,
     $(TR $(TD $(LREF OutputRangeObject))
         $(TD Class that implements the $(D OutputRange) interface and wraps the
         $(D put) methods in virtual functions.
+    ))
     $(TR $(TD $(LREF outputRangeObject))
         Convenience function for creating an $(D OutputRangeObject) with a base
         range of type R that accepts types E.
