@@ -1782,7 +1782,7 @@ if (isBidirectionalRange!Range)
     $(D popBackExactly) will behave the same but instead removes elements from
     the back of the (bidirectional) range instead of the front.
 
-    See_Also: $(REF dropExcatly, std, range), $(REF dropBackExactly, std, range)
+    See_Also: $(REF dropExactly, std, range), $(REF dropBackExactly, std, range)
 */
 void popFrontExactly(Range)(ref Range r, size_t n)
 if (isInputRange!Range)
