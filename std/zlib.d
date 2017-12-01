@@ -191,7 +191,7 @@ uint crc32(uint crc, const(void)[] buf)
 ubyte[] compress(const(void)[] srcbuf, int level)
 in
 {
-    assert(-1 <= level && level <= 9);
+    assert(-1 <= level && level <= 9, "Compression level needs to be within [-1, 9].");
 }
 do
 {
@@ -276,7 +276,7 @@ void[] uncompress(const(void)[] srcbuf, size_t destlen = 0u, int winbits = 15)
                 throw new ZlibException(err);
         }
     }
-    assert(0);
+    assert(0, "Unreachable code");
 }
 
 @system unittest
@@ -370,7 +370,7 @@ class Compress
     this(int level, HeaderFormat header = HeaderFormat.deflate)
     in
     {
-        assert(1 <= level && level <= 9);
+        assert(1 <= level && level <= 9, "Legal compression level are in [1, 9].");
     }
     do
     {
@@ -461,7 +461,8 @@ class Compress
     void[] flush(int mode = Z_FINISH)
     in
     {
-        assert(mode == Z_FINISH || mode == Z_SYNC_FLUSH || mode == Z_FULL_FLUSH);
+        assert(mode == Z_FINISH || mode == Z_SYNC_FLUSH || mode == Z_FULL_FLUSH,
+                "Mode must be either Z_FINISH, Z_SYNC_FLUSH or Z_FULL_FLUSH.");
     }
     do
     {
@@ -572,7 +573,7 @@ class UnCompress
     const(void)[] uncompress(const(void)[] buf)
     in
     {
-        assert(!done);
+        assert(!done, "Buffer has been flushed.");
     }
     do
     {
@@ -752,11 +753,11 @@ class UnCompress
     void[] flush()
     in
     {
-        assert(!done);
+        assert(!done, "Buffer has been flushed before.");
     }
     out
     {
-        assert(done);
+        assert(done, "Flushing failed.");
     }
     do
     {

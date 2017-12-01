@@ -390,7 +390,7 @@ final class ZipArchive
             import std.zlib : crc32;
             () @trusted { de._crc32 = crc32(0, cast(void[]) de._expandedData); }();
         }
-        assert(de._compressedData.length == de._compressedSize);
+        assert(de._compressedData.length == de._compressedSize, "Archive member compressed failed.");
     }
 
     /** Delete de from the archive.
@@ -543,7 +543,7 @@ final class ZipArchive
         i += 22;
 
         // Write archive comment
-        assert(i + comment.length == data.length);
+        assert(i + comment.length == data.length, "Writing the archive comment failed.");
         _data[i .. data.length] = (cast(ubyte[]) comment)[];
 
         return cast(void[]) data;

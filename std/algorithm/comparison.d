@@ -533,7 +533,7 @@ auto clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
 in
 {
     import std.functional : greaterThan;
-    assert(!lower.greaterThan(upper));
+    assert(!lower.greaterThan(upper), "Lower can't be greater than upper.");
 }
 do
 {
@@ -732,7 +732,7 @@ Compares two ranges for equality, as defined by predicate $(D pred)
 template equal(alias pred = "a == b")
 {
     enum isEmptyRange(R) =
-        isInputRange!R && __traits(compiles, {static assert(R.empty);});
+        isInputRange!R && __traits(compiles, {static assert(R.empty, "");});
 
     enum hasFixedLength(T) = hasLength!T || isNarrowString!T;
 

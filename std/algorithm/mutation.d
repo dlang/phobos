@@ -257,7 +257,7 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
         }
         else
         {
-            assert(front.empty);
+            assert(front.empty, "Expected front to be empty");
             // Left side was shorter. Let's step into the back.
             static if (is(InputRange == Take!ForwardRange))
             {
@@ -1528,7 +1528,7 @@ private InputRange2 moveAllImpl(alias moveOp, InputRange1, InputRange2)(
          && hasSlicing!InputRange2 && isRandomAccessRange!InputRange2)
     {
         auto toMove = src.length;
-        assert(toMove <= tgt.length);
+        assert(toMove <= tgt.length, "Source buffer needs to be smaller or equal to the target buffer.");
         foreach (idx; 0 .. toMove)
             moveOp(src[idx], tgt[idx]);
         return tgt[toMove .. tgt.length];
@@ -1537,7 +1537,7 @@ private InputRange2 moveAllImpl(alias moveOp, InputRange1, InputRange2)(
     {
         for (; !src.empty; src.popFront(), tgt.popFront())
         {
-            assert(!tgt.empty);
+            assert(!tgt.empty, "Source buffer needs to be smaller or equal to the target buffer.");
             moveOp(src.front, tgt.front);
         }
         return tgt;
@@ -1849,7 +1849,7 @@ if (s != SwapStrategy.stable
                 break;
         }
         // Advance to next blackout on the left
-        assert(blackouts[left].pos >= tgtPos);
+        assert(blackouts[left].pos >= tgtPos, "Next blackout on the left shouldn't appear before the target.");
         tgt.popFrontExactly(blackouts[left].pos - tgtPos);
         tgtPos = blackouts[left].pos;
 
