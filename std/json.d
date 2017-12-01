@@ -1166,7 +1166,7 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                     // Make sure we do UTF decoding iff we want to
                     // escape Unicode characters.
                     assert(((options & JSONOptions.escapeNonAsciiChars) != 0)
-                        == is(Char == dchar));
+                        == is(Char == dchar), "JSONOptions.escapeNonAsciiChars needs dchar strings");
 
                     with (JSONOptions) if (isControl(c) ||
                         ((options & escapeNonAsciiChars) >= escapeNonAsciiChars && c >= 0x80))

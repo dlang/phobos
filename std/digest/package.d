@@ -931,7 +931,7 @@ if (isDigest!T) : Digest
         nothrow ubyte[] finish(ubyte[] buf)
         in
         {
-            assert(buf.length >= this.length);
+            assert(buf.length >= this.length, "Given buffer is smaller than the local buffer.");
         }
         do
         {
@@ -967,7 +967,7 @@ if (isDigest!T) : Digest
             @trusted ubyte[] peek(ubyte[] buf) const
             in
             {
-                assert(buf.length >= this.length);
+                assert(buf.length >= this.length, "Given buffer is smaller than the local buffer.");
             }
             do
             {
