@@ -1,0 +1,19 @@
+Replace `std.experimental.allocator.IAllocator` with `std.experimental.allocator.RCIAllocator`
+
+$(B Motivation):
+
+Keep track of references to allocators so they don't escape, dangle,
+and cause undefined behavior.
+
+From now on, `RCIAllocator` will be used instead of the old `IAllocator`
+interface. $(REF allocatorObject, std, experimental, allocator) can be used to build
+a `RCIAllocator` out of a custom allocator.
+
+------
+import std.experimental.allocator.mallocator : Mallocator;
+
+RCIAllocator a = allocatorObject(Mallocator.instance);
+auto b = a.allocate(100);
+assert(b.length == 100);
+assert(a.deallocate(b));
+------
