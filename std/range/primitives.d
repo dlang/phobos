@@ -1636,18 +1636,18 @@ if (isInputRange!Range)
 }
 
 /**
-    Eagerly advances $(D r) itself (not a copy) up to $(D n) times (by
-    calling $(D r.popFront)). $(D popFrontN) takes $(D r) by $(D ref),
+    $(D popFrontN) eagerly advances $(D r) itself (not a copy) up to $(D n) times
+    (by calling $(D r.popFront)). $(D popFrontN) takes $(D r) by $(D ref),
     so it mutates the original range. Completes in $(BIGOH 1) steps for ranges
     that support slicing and have length.
     Completes in $(BIGOH n) time for all other ranges.
 
+    $(D popBackN) behaves the same as $(D popFrontN) but instead removes
+    elements from the back of the (bidirectional) range instead of the front.
+
     Returns:
     How much $(D r) was actually advanced, which may be less than $(D n) if
     $(D r) did not have at least $(D n) elements.
-
-    $(D popBackN) will behave the same but instead removes elements from
-    the back of the (bidirectional) range instead of the front.
 
     See_Also: $(REF drop, std, range), $(REF dropBack, std, range)
 */
