@@ -49,12 +49,13 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     import std.traits : hasMember;
     import std.typecons : Ternary;
     import std.typecons : tuple, Tuple;
+    import std.experimental.allocator : OpaquePointer;
 
     @system unittest
     {
         import std.algorithm.comparison : max;
         import std.experimental.allocator.mallocator : AlignedMallocator;
-        auto m = cast(ubyte[])(AlignedMallocator.instance.alignedAllocate(1024 * 64,
+        auto m = cast(OpaquePointer[])(AlignedMallocator.instance.alignedAllocate(1024 * 64,
                                 max(theAlignment, cast(uint) size_t.sizeof)));
         scope(exit) () nothrow @nogc { AlignedMallocator.instance.deallocate(m); }();
         static if (theBlockSize == chooseAtRuntime)
@@ -151,18 +152,24 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     in bytes.
 
     $(UL
-    $(LI If $(D ParentAllocator) is $(D NullAllocator), only the constructor
-    taking $(D data) is defined and the user is responsible for freeing $(D
-    data) if desired.)
-    $(LI Otherwise, both constructors are defined. The $(D data)-based
-    constructor assumes memory has been allocated with the parent allocator.
-    The $(D capacity)-based constructor uses $(D ParentAllocator) to allocate
+    $(LI If `ParentAllocator` is `NullAllocator`, only the constructor taking
+    `data` is defined and the user is responsible for freeing `data` if desired.)
+    $(LI Otherwise, both constructors are defined. The `data`-based constructor
+    assumes memory has been allocated with the parent allocator. The underlying
+    `data` must be of $(LREF OpaquePointer) type for a safe allocation of objects
+    that may contain pointers, and thus for a safe allocator.
+    The `capacity`-based constructor uses `ParentAllocator` to allocate
     an appropriate contiguous hunk of memory. Regardless of the constructor
-    used, the destructor releases the memory by using $(D
-    ParentAllocator.deallocate).)
+    used, the destructor releases the memory by using `ParentAllocator.deallocate`.)
     )
     */
-    this(ubyte[] data)
+    @trusted this(OpaquePointer[] data)
+    {
+        this(cast(ubyte[]) data);
+    }
+
+    /// Ditto
+    @system this(ubyte[] data)
     {
         immutable a = data.ptr.effectiveAlignment;
         assert(a >= size_t.alignof || !data.ptr,
@@ -178,7 +185,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         // blocks found.
         for (; _blocks; --_blocks)
         {
-            immutable controlWords = _blocks.divideRoundUp(64);
+            immutable controlWords = _blocks.divideRoundUp(ulong.sizeof * 8);
             auto payload = data[controlWords * 8 .. $].roundStartToMultipleOf(
                 alignment);
             if (payload.length < _blocks * blockSize)
@@ -195,6 +202,14 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 
     /// Ditto
     static if (chooseAtRuntime == theBlockSize)
+    this(OpaquePointer[] data, uint blockSize)
+    {
+        this._blockSize = blockSize;
+        this(data);
+    }
+
+    /// Ditto
+    static if (chooseAtRuntime == theBlockSize)
     this(ubyte[] data, uint blockSize)
     {
         this._blockSize = blockSize;
@@ -205,8 +220,9 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     static if (!is(ParentAllocator == NullAllocator))
     this(size_t capacity)
     {
-        size_t toAllocate = totalAllocation(capacity);
-        auto data = cast(ubyte[])(parent.allocate(toAllocate));
+        size_t toAllocate = totalAllocation(capacity)
+                            .roundUpToAlignment(OpaquePointer.alignof);
+        auto data = cast(OpaquePointer[])(parent.allocate(toAllocate));
         this(data);
         assert(_blocks * blockSize >= capacity);
     }
@@ -723,9 +739,10 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 {
     // Create a block allocator on top of a 10KB stack region.
     import std.experimental.allocator.building_blocks.region : InSituRegion;
+    import std.experimental.allocator : OpaquePointer;
     import std.traits : hasMember;
     InSituRegion!(10_240, 64) r;
-    auto a = BitmappedBlock!(64, 64)(cast(ubyte[])(r.allocateAll()));
+    auto a = BitmappedBlock!(64, 64)(cast(OpaquePointer[])(r.allocateAll()));
     static assert(hasMember!(InSituRegion!(10_240, 64), "allocateAll"));
     const b = a.allocate(100);
     assert(b.length == 100);
@@ -772,14 +789,15 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 
 @system unittest
 {
-    static void testAllocateAll(size_t bs)(uint blocks, uint blocksAtATime)
+    static void testAllocateAll(size_t bs, T)(uint blocks, uint blocksAtATime)
     {
         import std.algorithm.comparison : min;
         assert(bs);
         import std.experimental.allocator.gc_allocator : GCAllocator;
+
+        auto nb = ((blocks * bs * 8 + blocks) / 8).roundUpToAlignment(T.alignof);
         auto a = BitmappedBlock!(bs, min(bs, platformAlignment))(
-            cast(ubyte[])(GCAllocator.instance.allocate((blocks * bs * 8 +
-                        blocks) / 8))
+            cast(T[])(GCAllocator.instance.allocate(nb)) // this many bytes
         );
         import std.conv : text;
         assert(blocks >= a._blocks, text(blocks, " < ", a._blocks));
@@ -863,26 +881,32 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         }
     }
 
-    testAllocateAll!(1)(0, 1);
-    testAllocateAll!(1)(8, 1);
-    testAllocateAll!(4096)(128, 1);
+    import std.experimental.allocator : OpaquePointer;
+    import std.meta : AliasSeq;
 
-    testAllocateAll!(1)(0, 2);
-    testAllocateAll!(1)(128, 2);
-    testAllocateAll!(4096)(128, 2);
+    foreach (T; AliasSeq!(ubyte, OpaquePointer))
+    {
+        testAllocateAll!(1, T)(0, 1);
+        testAllocateAll!(1, T)(8, 1);
+        testAllocateAll!(4096, T)(128, 1);
 
-    testAllocateAll!(1)(0, 4);
-    testAllocateAll!(1)(128, 4);
-    testAllocateAll!(4096)(128, 4);
+        testAllocateAll!(1, T)(0, 2);
+        testAllocateAll!(1, T)(128, 2);
+        testAllocateAll!(4096, T)(128, 2);
 
-    testAllocateAll!(1)(0, 3);
-    testAllocateAll!(1)(24, 3);
-    testAllocateAll!(3008)(100, 1);
-    testAllocateAll!(3008)(100, 3);
+        testAllocateAll!(1, T)(0, 4);
+        testAllocateAll!(1, T)(128, 4);
+        testAllocateAll!(4096, T)(128, 4);
 
-    testAllocateAll!(1)(0, 128);
-    testAllocateAll!(1)(128 * 1, 128);
-    testAllocateAll!(128 * 20)(13 * 128, 128);
+        testAllocateAll!(1, T)(0, 3);
+        testAllocateAll!(1, T)(24, 3);
+        testAllocateAll!(3008, T)(100, 1);
+        testAllocateAll!(3008, T)(100, 3);
+
+        testAllocateAll!(1, T)(0, 128);
+        testAllocateAll!(1, T)(128 * 1, 128);
+        testAllocateAll!(128 * 20, T)(13 * 128, 128);
+    }
 }
 
 // Test totalAllocation and goodAllocSize
@@ -939,10 +963,11 @@ struct BitmappedBlockWithInternalPointers(
 {
     import std.conv : text;
     import std.typecons : Ternary;
+    import std.experimental.allocator : OpaquePointer;
     @system unittest
     {
         import std.experimental.allocator.mallocator : AlignedMallocator;
-        auto m = cast(ubyte[])(AlignedMallocator.instance.alignedAllocate(1024 * 64,
+        auto m = cast(OpaquePointer[])(AlignedMallocator.instance.alignedAllocate(1024 * 64,
             theAlignment));
         scope(exit) () nothrow @nogc { AlignedMallocator.instance.deallocate(m); }();
         testAllocator!(() => BitmappedBlockWithInternalPointers(m));
@@ -957,7 +982,8 @@ struct BitmappedBlockWithInternalPointers(
     Constructors accepting desired capacity or a preallocated buffer, similar
     in semantics to those of $(D BitmappedBlock).
     */
-    this(ubyte[] data)
+    this(T)(T[] data)
+        if (is (T == ubyte) || is (T == OpaquePointer))
     {
         _heap = BitmappedBlock!(theBlockSize, theAlignment, ParentAllocator)(data);
     }
@@ -1146,8 +1172,10 @@ struct BitmappedBlockWithInternalPointers(
 @system unittest
 {
     import std.typecons : Ternary;
+    import std.experimental.allocator : OpaquePointer;
 
-    auto h = BitmappedBlockWithInternalPointers!(4096)(new ubyte[4096 * 1024]);
+    auto h = BitmappedBlockWithInternalPointers!(4096)(new OpaquePointer[4096 *
+            1024 / OpaquePointer.sizeof]);
     assert((() nothrow @safe @nogc => h.empty)() == Ternary.yes);
     auto b = h.allocate(123);
     assert(b.length == 123);
@@ -1294,7 +1322,7 @@ private struct BitVector
 {
     ulong[] _rep;
 
-    auto rep() { return _rep; }
+    @safe auto rep() { return _rep; }
 
     pure nothrow @safe @nogc
     this(ulong[] data) { _rep = data; }

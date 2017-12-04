@@ -95,7 +95,9 @@ information is available in client code at deallocation time.)
 */
 struct KRRegion(ParentAllocator = NullAllocator)
 {
-    import std.experimental.allocator.common : stateSize, alignedAt;
+    import std.experimental.allocator.common : stateSize, alignedAt,
+           roundUpToAlignment;
+    import std.experimental.allocator : OpaquePointer;
     import std.traits : hasMember;
     import std.typecons : Ternary;
 
@@ -304,16 +306,18 @@ struct KRRegion(ParentAllocator = NullAllocator)
     }
 
     /**
-    Create a $(D KRRegion). If $(D ParentAllocator) is not $(D NullAllocator),
-    $(D KRRegion)'s destructor will call $(D parent.deallocate).
+    Create a `KRRegion`. If `ParentAllocator` is not `NullAllocator`, `KRRegion`'s
+    destructor will call $(D parent.deallocate).
 
     Params:
     b = Block of memory to serve as support for the allocator. Memory must be
-    larger than two words and word-aligned.
-    n = Capacity desired. This constructor is defined only if $(D
-    ParentAllocator) is not $(D NullAllocator).
+    larger than two words and word-aligned. The memory block must be of
+    $(LREF OpaquePointer) type for a safe allocation of objects that may
+    contain pointers, and thus for a safe allocator.
+    n = Capacity desired. This constructor is defined only if `ParentAllocator`
+    is not `NullAllocator`.
     */
-    this(ubyte[] b)
+    @system this(ubyte[] b)
     {
         if (b.length < Node.sizeof)
         {
@@ -335,12 +339,19 @@ struct KRRegion(ParentAllocator = NullAllocator)
             b.ptr, b.length);
     }
 
+    /// ditto
+    @trusted this(OpaquePointer[] b)
+    {
+        this(cast(ubyte[]) b);
+    }
+
     /// Ditto
     static if (!is(ParentAllocator == NullAllocator))
     this(size_t n)
     {
         assert(n > Node.sizeof);
-        this(cast(ubyte[])(parent.allocate(n)));
+        auto nb = n.roundUpToAlignment(OpaquePointer.alignof);
+        this(cast(OpaquePointer[])(parent.allocate(nb)));
     }
 
     /// Ditto
@@ -633,13 +644,18 @@ fronting the GC allocator.
     import std.experimental.allocator.building_blocks.fallback_allocator
         : fallbackAllocator;
     import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator : OpaquePointer;
     import std.typecons : Ternary;
+    import std.meta : AliasSeq;
     // KRRegion fronting a general-purpose allocator
-    ubyte[1024 * 128] buf;
-    auto alloc = fallbackAllocator(KRRegion!()(buf), GCAllocator.instance);
-    auto b = alloc.allocate(100);
-    assert(b.length == 100);
-    assert((() pure nothrow @safe @nogc => alloc.primary.owns(b))() == Ternary.yes);
+    foreach (T; AliasSeq!(ubyte, OpaquePointer))
+    {
+        T[1024 * 128] buf;
+        auto alloc = fallbackAllocator(KRRegion!()(buf), GCAllocator.instance);
+        auto b = alloc.allocate(100);
+        assert(b.length == 100);
+        assert((() pure nothrow @safe @nogc => alloc.primary.owns(b))() == Ternary.yes);
+    }
 }
 
 /**
@@ -765,49 +781,74 @@ it actually returns memory to the operating system when possible.
 @system unittest
 {
     import std.experimental.allocator.gc_allocator : GCAllocator;
+    import std.experimental.allocator : OpaquePointer;
     import std.typecons : Ternary;
-    auto alloc = KRRegion!()(
-                    cast(ubyte[])(GCAllocator.instance.allocate(1024 * 1024)));
-    const store = alloc.allocate(KRRegion!().sizeof);
-    auto p = cast(KRRegion!()* ) store.ptr;
     import core.stdc.string : memcpy;
-    import std.algorithm.mutation : move;
     import std.conv : emplace;
+    import std.meta : AliasSeq;
 
-    memcpy(p, &alloc, alloc.sizeof);
-    emplace(&alloc);
+    foreach (T; AliasSeq!(ubyte, OpaquePointer))
+    {
+        auto alloc = KRRegion!()(
+                cast(T[])(GCAllocator.instance.allocate(1024 * 1024)));
+        const store = alloc.allocate(KRRegion!().sizeof);
+        auto p = cast(KRRegion!()* ) store.ptr;
 
-    void[][100] array;
-    foreach (i; 0 .. array.length)
-    {
-        auto length = 100 * i + 1;
-        array[i] = p.allocate(length);
-        assert(array[i].length == length, text(array[i].length));
-        assert((() pure nothrow @safe @nogc => p.owns(array[i]))() == Ternary.yes);
+        memcpy(p, &alloc, alloc.sizeof);
+        emplace(&alloc);
+
+        void[][100] array;
+        foreach (i; 0 .. array.length)
+        {
+            auto length = 100 * i + 1;
+            array[i] = p.allocate(length);
+            assert(array[i].length == length, text(array[i].length));
+            assert((() pure nothrow @safe @nogc => p.owns(array[i]))() == Ternary.yes);
+        }
+        import std.random : randomShuffle;
+        randomShuffle(array[]);
+        foreach (i; 0 .. array.length)
+        {
+            assert((() pure nothrow @safe @nogc => p.owns(array[i]))() == Ternary.yes);
+            () nothrow @nogc { p.deallocate(array[i]); }();
+        }
+        auto b = p.allocateAll();
+        assert(b.length == 1024 * 1024 - KRRegion!().sizeof, text(b.length));
     }
-    import std.random : randomShuffle;
-    randomShuffle(array[]);
-    foreach (i; 0 .. array.length)
-    {
-        assert((() pure nothrow @safe @nogc => p.owns(array[i]))() == Ternary.yes);
-        () nothrow @nogc { p.deallocate(array[i]); }();
-    }
-    auto b = p.allocateAll();
-    assert(b.length == 1024 * 1024 - KRRegion!().sizeof, text(b.length));
 }
 
 @system unittest
 {
-    import std.typecons : Ternary;
     import std.experimental.allocator.gc_allocator : GCAllocator;
-    auto alloc = KRRegion!()(
-                    cast(ubyte[])(GCAllocator.instance.allocate(1024 * 1024)));
-    auto p = alloc.allocateAll();
-    assert(p.length == 1024 * 1024);
-    assert((() nothrow @nogc => alloc.deallocateAll())());
-    assert(alloc.empty() == Ternary.yes);
-    p = alloc.allocateAll();
-    assert(p.length == 1024 * 1024);
+    import std.experimental.allocator : OpaquePointer;
+    import std.meta : AliasSeq;
+
+    foreach (T; AliasSeq!(ubyte, OpaquePointer))
+    {
+        auto alloc = KRRegion!()(
+                cast(T[])(GCAllocator.instance.allocate(1024 * 1024)));
+        auto p = alloc.allocateAll();
+        assert(p.length == 1024 * 1024);
+        assert((() nothrow @nogc => alloc.deallocateAll())());
+        p = alloc.allocateAll();
+        assert(p.length == 1024 * 1024);
+    }
+}
+
+@system unittest
+{
+    import std.experimental.allocator : OpaquePointer;
+    import std.meta : AliasSeq;
+
+    foreach (T; AliasSeq!(ubyte, OpaquePointer))
+    {
+        T[] emptyBuf;
+        auto alloc = KRRegion!()(emptyBuf);
+        auto p = alloc.allocateAll();
+        assert(p.length == 0 && p is null);
+        assert((() nothrow @nogc => alloc.deallocateAll())());
+        assert(alloc.allocate(1) is null);
+    }
 }
 
 @system unittest
