@@ -5007,20 +5007,20 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
 }
 
 ///
-pure @safe nothrow @nogc unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
     // The Fibonacci numbers, using function in string form:
     // a[0] = 1, a[1] = 1, and compute a[n+1] = a[n-1] + a[n]
     auto fib = recurrence!("a[n-1] + a[n-2]")(1, 1);
-    assert(fib.take(10).equal(only(1, 1, 2, 3, 5, 8, 13, 21, 34, 55)));
+    assert(fib.take(10).equal([1, 1, 2, 3, 5, 8, 13, 21, 34, 55]));
 
     // The factorials, using function in lambda form:
     auto fac = recurrence!((a,n) => a[n-1] * n)(1);
-    assert(take(fac, 10).equal(only(
+    assert(take(fac, 10).equal([
         1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880
-    )));
+    ]));
 
     // The triangular numbers, using function in explicit form:
     static size_t genTriangular(R)(R state, size_t n)
@@ -5028,7 +5028,7 @@ pure @safe nothrow @nogc unittest
         return state[n-1] + n;
     }
     auto tri = recurrence!genTriangular(0);
-    assert(take(tri, 10).equal(only(0, 1, 3, 6, 10, 15, 21, 28, 36, 45)));
+    assert(take(tri, 10).equal([0, 1, 3, 6, 10, 15, 21, 28, 36, 45]));
 }
 
 /// Ditto
@@ -6273,18 +6273,17 @@ pure @safe nothrow unittest
 {
     int[][] arr = [[], []];
 
-    auto ft1 = frontTransversal!(TransverseOptions.assumeNotJagged)(arr);
-    assert(ft1.empty);
+    auto ft = frontTransversal!(TransverseOptions.assumeNotJagged)(arr);
+    assert(ft.empty);
+}
 
-    try
-    {
-        auto ft2 = frontTransversal!(TransverseOptions.enforceNotJagged)(arr);
-        assert(ft2.empty);
-    }
-    catch (Exception)
-    {
-        assert(false);
-    }
+// ditto
+pure @safe unittest
+{
+    int[][] arr = [[], []];
+
+    auto ft = frontTransversal!(TransverseOptions.enforceNotJagged)(arr);
+    assert(ft.empty);
 }
 
 /**
