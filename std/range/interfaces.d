@@ -42,8 +42,9 @@ $(BOOKTABLE ,
     $(TR $(TD $(LREF OutputRangeObject))
         $(TD Class that implements the $(D OutputRange) interface and wraps the
         $(D put) methods in virtual functions.
+    ))
     $(TR $(TD $(LREF outputRangeObject))
-        Convenience function for creating an $(D OutputRangeObject) with a base
+        $(TD Convenience function for creating an $(D OutputRangeObject) with a base
         range of type R that accepts types E.
     ))
     $(TR $(TD $(LREF InputRangeObject))
@@ -55,7 +56,7 @@ $(BOOKTABLE ,
         of the proper type.
     ))
     $(TR $(TD $(LREF MostDerivedInputRange))
-        $(TD Returns the interface type that best matches the range.)
+        $(TD Returns the interface type that best matches the range.
     ))
 )
 
