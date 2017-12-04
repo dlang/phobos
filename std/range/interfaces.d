@@ -44,7 +44,7 @@ $(BOOKTABLE ,
         $(D put) methods in virtual functions.
     ))
     $(TR $(TD $(LREF outputRangeObject))
-        Convenience function for creating an $(D OutputRangeObject) with a base
+        $(TD Convenience function for creating an $(D OutputRangeObject) with a base
         range of type R that accepts types E.
     ))
     $(TR $(TD $(LREF InputRangeObject))
