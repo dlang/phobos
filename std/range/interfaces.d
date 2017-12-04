@@ -56,7 +56,7 @@ $(BOOKTABLE ,
         of the proper type.
     ))
     $(TR $(TD $(LREF MostDerivedInputRange))
-        $(TD Returns the interface type that best matches the range.)
+        $(TD Returns the interface type that best matches the range.
     ))
 )
 
