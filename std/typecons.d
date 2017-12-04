@@ -2343,7 +2343,25 @@ Practically $(D Nullable!T) stores a $(D T) and a $(D bool).
  */
 struct Nullable(T)
 {
-    private T _value;
+    // simple case: type is freely constructable
+    static if (__traits(compiles, { T _value; }))
+    {
+        private T _value;
+    }
+    // type is not constructable, but also has no way to notice
+    // that we're assigning to an uninitialized variable.
+    else static if (!hasElaborateAssign!T)
+    {
+        private T _value = T.init;
+    }
+    else
+    {
+        static assert(false,
+                      "Cannot construct " ~ typeof(this).stringof ~
+                      ": type has no default constructor and overloaded assignment."
+        );
+    }
+
     private bool _isNull = true;
 
 /**
@@ -2942,6 +2960,19 @@ auto nullable(T)(T t)
     }
     Nullable!TestToString ntts = new TestToString(2.5);
     assert(ntts.to!string() == "2.5");
+}
+
+// Bugzilla 14477
+@safe unittest
+{
+    static struct DisabledDefaultConstructor
+    {
+        @disable this();
+        this(int i) { }
+    }
+    Nullable!DisabledDefaultConstructor var;
+    var = DisabledDefaultConstructor(5);
+    var.nullify;
 }
 
 /**
