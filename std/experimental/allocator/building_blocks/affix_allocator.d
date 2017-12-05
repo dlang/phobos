@@ -483,3 +483,16 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     // Test that deallocateAll infers from parent
     assert((() nothrow @nogc => a.deallocateAll())());
 }
+
+// Test that reallocate infers from parent
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    alias a = AffixAllocator!(Mallocator, uint).instance;
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() nothrow @nogc => a.reallocate(b, 100))());
+    assert(b.length == 100);
+    assert((() nothrow @nogc => a.deallocate(b))());
+}

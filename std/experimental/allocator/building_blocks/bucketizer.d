@@ -265,13 +265,13 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     auto b = a.allocate(100);
     assert(b.length == 100);
     // Make reallocate use extend
-    assert(a.reallocate(b, 101));
+    assert((() nothrow @nogc => a.reallocate(b, 101))());
     assert(b.length == 101);
     // Move cross buckets
-    assert(a.reallocate(b, 200));
+    assert((() nothrow @nogc => a.reallocate(b, 200))());
     assert(b.length == 200);
     // Free through realloc
-    assert(a.reallocate(b, 0));
+    assert((() nothrow @nogc => a.reallocate(b, 0))());
     assert(b is null);
     // Ensure deallocate inherits from parent allocators
     assert((() nothrow @nogc => a.deallocate(b))());

@@ -249,6 +249,8 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     // Trigger parent.expand, which may or may not succed
     //() nothrow @safe { a.expand(b, 1); }();
     () @safe { a.expand(b, 1); }();
+    assert(a.reallocate(b, 100));
+    assert(b.length == 100);
     // Ensure deallocate inherits from parent
     () nothrow @nogc { a.deallocate(b); }();
 }
@@ -268,15 +270,18 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
     assert((() pure nothrow @safe @nogc => a.owns(null))() == Ternary.no);
 
-    // Check that expand inherits from parent, i.e. Region
     auto c = a.allocate(42);
     assert(c.length == 42);
+    assert((() pure nothrow @safe @nogc => a.owns(c))() == Ternary.yes);
     // Inplace expand, since goodAllocSize is 64
     assert((() nothrow @safe => a.expand(c, 22))());
     assert(c.length == 64);
     // Trigger parent.expand
     assert((() nothrow @safe => a.expand(c, 1))());
     assert(c.length == 65);
+    // Check that reallocate inherits from parent
+    assert((() nothrow @nogc => a.reallocate(c, 100))());
+    assert(c.length == 100);
 }
 
 @system unittest

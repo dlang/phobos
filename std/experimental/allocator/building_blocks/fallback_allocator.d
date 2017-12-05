@@ -269,6 +269,9 @@ struct FallbackAllocator(Primary, Fallback)
     auto b1 = a.allocate(1024);
     assert(b1.length == 1024, text(b1.length));
     assert((() pure nothrow @safe @nogc => a.primary.owns(b1))() == Ternary.yes);
+    assert((() nothrow => a.reallocate(b1, 2048))());
+    assert(b1.length == 2048, text(b1.length));
+    assert((() pure nothrow @safe @nogc => a.primary.owns(b1))() == Ternary.yes);
     // This large allocation will go to the GCAllocator
     auto b2 = a.allocate(1024 * 1024);
     assert((() pure nothrow @safe @nogc => a.primary.owns(b2))() == Ternary.no);
@@ -296,6 +299,8 @@ struct FallbackAllocator(Primary, Fallback)
     assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
     auto b = a.allocate(201);
     assert(b.length == 201);
+    assert(a.reallocate(b, 202));
+    assert(b.length == 202);
     assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
 }
 
@@ -317,6 +322,19 @@ struct FallbackAllocator(Primary, Fallback)
             BitmappedBlockWithInternalPointers!(4096)(new ubyte[4096 * 1024])
         )
     );
+}
+
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.typecons : Ternary;
+
+    alias a = FallbackAllocator!(Mallocator, Mallocator).instance;
+
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() nothrow @nogc => a.reallocate(b, 100))());
+    assert(b.length == 100);
 }
 
 /*

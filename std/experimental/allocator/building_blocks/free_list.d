@@ -464,7 +464,9 @@ struct FreeList(ParentAllocator,
     auto fl = FreeList!(Region!(), 0, 16)(Region!()(new ubyte[1024 * 64]));
     auto b = fl.allocate(42);
     assert(b.length == 42);
-    assert((() pure nothrow @safe @nogc => fl.expand(b, 58))());
+    assert((() pure nothrow @safe @nogc => fl.expand(b, 48))());
+    assert(b.length == 90);
+    assert((() nothrow @nogc => fl.reallocate(b, 100))());
     assert(b.length == 100);
     assert((() nothrow @nogc => fl.deallocateAll())());
 }
@@ -804,6 +806,8 @@ struct ContiguousFreeList(ParentAllocator,
     b = a.allocate(64);
     assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
     assert(b.length == 64);
+    assert(a.reallocate(b, 100));
+    assert(b.length == 100);
     assert((() nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
     assert((() nothrow @safe @nogc => a.owns(null))() == Ternary.no);
     // Test deallocate infers from parent
@@ -1238,7 +1242,7 @@ struct SharedFreeList(ParentAllocator,
     shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
     scope(exit) assert((() nothrow @nogc => a.deallocateAll())());
     auto c = a.allocate(64);
-    assert(a.reallocate(c, 96));
+    assert((() nothrow @nogc => a.reallocate(c, 96))());
     assert(c.length == 96);
     // Ensure deallocate inherits from parent
     () nothrow @nogc { a.deallocate(c); }();

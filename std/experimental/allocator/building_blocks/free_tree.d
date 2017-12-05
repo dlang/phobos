@@ -505,5 +505,7 @@ struct FreeTree(ParentAllocator)
     assert(b.length == 42);
     assert((() pure nothrow @safe @nogc => a.expand(b, 22))());
     assert(b.length == 64);
+    assert((() nothrow @nogc => a.reallocate(b, 100))());
+    assert(b.length == 100);
     assert((() nothrow @nogc => a.deallocateAll())());
 }
