@@ -117,16 +117,15 @@ Checks if $(I _all) of the elements verify $(D pred).
  +/
 template all(alias pred = "a")
 {
+    import std.functional : not;
     /++
     Returns $(D true) if and only if $(I _all) values $(D v) found in the
     input _range $(D range) satisfy the predicate $(D pred).
     Performs (at most) $(BIGOH range.length) evaluations of $(D pred).
      +/
     bool all(Range)(Range range)
-    if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
+    if (isInputRange!Range && is(typeof(find!(not!(unaryFun!pred))(range))))
     {
-        import std.functional : not;
-
         return find!(not!(unaryFun!pred))(range).empty;
     }
 }
@@ -157,6 +156,18 @@ are true.
 }
 
 /++
+If the range passed to $(D all) contains $(D Tuple)s, the tuple values
+are distributed over the predicate.
++/
+@safe unittest
+{
+    import std.range : enumerate;
+
+    auto range = [0, 1, 2, 3].enumerate;
+    assert(range.all!((index, value) => index == value));
+}
+
+/++
 Checks if $(I _any) of the elements verifies $(D pred).
 $(D !any) can be used to verify that $(I none) of the elements verify
 $(D pred).
@@ -170,7 +181,7 @@ template any(alias pred = "a")
     Performs (at most) $(BIGOH range.length) evaluations of $(D pred).
      +/
     bool any(Range)(Range range)
-    if (isInputRange!Range && is(typeof(unaryFun!pred(range.front))))
+    if (isInputRange!Range && is(typeof(find!pred(range))))
     {
         return !find!pred(range).empty;
     }
@@ -202,6 +213,18 @@ evaluate to true.
     int[3] vals3 = [3, 3, 3];
     assert( any(vals3[]));
     assert( all(vals3[]));
+}
+
+/++
+If the range passed to $(D any) contains $(D Tuple)s, the tuple values
+are distributed over the predicate.
++/
+@safe unittest
+{
+    import std.range : enumerate;
+
+    auto range = [1, 2, 3].enumerate;
+    assert(! range.any!((index, value) => index == value));
 }
 
 @safe unittest
@@ -1818,8 +1841,16 @@ if (isInputRange!InputRange)
         //standard range
         for ( ; !haystack.empty; haystack.popFront() )
         {
-            if (predFun(haystack.front))
-                break;
+            static if (__traits(compiles, predFun(haystack.front.expand)))
+            {
+                if (predFun(haystack.front.expand))
+                    break;
+            }
+            else
+            {
+                if (predFun(haystack.front))
+                    break;
+            }
         }
         return haystack;
     }
