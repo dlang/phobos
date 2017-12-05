@@ -3295,7 +3295,7 @@ if (isCallable!fun)
 }
 
 ///
-@safe pure unittest
+@safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -3306,7 +3306,7 @@ if (isCallable!fun)
 }
 
 ///
-@safe pure unittest
+@safe pure nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -3378,7 +3378,7 @@ public:
     }
 }
 
-@safe unittest
+@safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -3404,7 +3404,7 @@ public:
 }
 
 // verify ref mechanism works
-@system unittest
+@system nothrow unittest
 {
     int[10] arr;
     int idx;
@@ -3744,7 +3744,7 @@ if (isStaticArray!R)
     return Cycle!R(input, index);
 }
 
-@safe unittest
+@safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     import std.internal.test.dummyrange : AllDummyRanges;
@@ -3806,7 +3806,7 @@ if (isStaticArray!R)
     }
 }
 
-@system unittest // For static arrays.
+@system nothrow unittest // For static arrays.
 {
     import std.algorithm.comparison : equal;
 
@@ -3824,7 +3824,7 @@ if (isStaticArray!R)
     static assert(is(typeof(cConst[1 .. $]) == const(C)));
 }
 
-@safe unittest // For infinite ranges
+@safe nothrow unittest // For infinite ranges
 {
     struct InfRange
     {
@@ -3868,7 +3868,7 @@ if (isStaticArray!R)
     }
 }
 
-@system unittest
+@system @nogc nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -4307,8 +4307,9 @@ pure @safe unittest
     import std.algorithm.iteration : map;
 
     // pairwise sum
-    auto arr = [0, 1, 2];
-    assert(zip(arr, arr.dropOne).map!"a[0] + a[1]".equal([1, 3]));
+    auto arr = only(0, 1, 2);
+    auto part1 = zip(arr, arr.dropOne).map!"a[0] + a[1]";
+    assert(part1.equal(only(1, 3)));
 }
 
 ///
@@ -4372,7 +4373,7 @@ enum StoppingPolicy
     requireSameLength,
 }
 
-@system unittest
+pure @system unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter, map;
@@ -4508,7 +4509,7 @@ pure @safe unittest
     assert(b == [6, 5, 2, 1, 3]);
 }
 
-@safe pure unittest
+pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
@@ -5013,7 +5014,7 @@ struct Recurrence(alias fun, StateType, size_t stateSize)
 }
 
 ///
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -5049,7 +5050,7 @@ recurrence(alias fun, State...)(State initial)
     return typeof(return)(state);
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -5150,7 +5151,7 @@ auto sequence(alias fun, State...)(State args)
 }
 
 /// Odd numbers, using function in string form:
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     auto odds = sequence!("a[0] + n * a[1]")(1, 2);
     assert(odds.front == 1);
@@ -5161,7 +5162,7 @@ auto sequence(alias fun, State...)(State args)
 }
 
 /// Triangular numbers, using function in lambda form:
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     auto tri = sequence!((a,n) => n*(n+1)/2)();
 
@@ -5174,7 +5175,7 @@ auto sequence(alias fun, State...)(State args)
 }
 
 /// Fibonacci numbers, using function in explicit form:
-@safe unittest
+@safe nothrow @nogc unittest
 {
     import std.math : pow, round, sqrt;
     static ulong computeFib(S)(S state, size_t n)
@@ -5196,7 +5197,7 @@ auto sequence(alias fun, State...)(State args)
     assert(fib[9] == 55);
 }
 
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     import std.typecons : Tuple, tuple;
     auto y = Sequence!("a[0] + n * a[1]", Tuple!(int, int))(tuple(0, 4));
@@ -5217,7 +5218,7 @@ auto sequence(alias fun, State...)(State args)
     }
 }
 
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -5228,21 +5229,21 @@ auto sequence(alias fun, State...)(State args)
     //since they'll both just forward to opSlice, making the tests irrelevant
 
     // static slicing tests
-    assert(equal(odds[0 .. 5], [1,  3,  5,  7,  9]));
-    assert(equal(odds[3 .. 7], [7,  9, 11, 13]));
+    assert(equal(odds[0 .. 5], only(1,  3,  5,  7,  9)));
+    assert(equal(odds[3 .. 7], only(7,  9, 11, 13)));
 
     // relative slicing test, testing slicing is NOT agnostic of state
     auto odds_less5 = odds.drop(5); //this should actually call odds[5 .. $]
-    assert(equal(odds_less5[0 ..  3], [11, 13, 15]));
+    assert(equal(odds_less5[0 ..  3], only(11, 13, 15)));
     assert(equal(odds_less5[0 .. 10], odds[5 .. 15]));
 
     //Infinite slicing tests
     odds = odds[10 .. $];
-    assert(equal(odds.take(3), [21, 23, 25]));
+    assert(equal(odds.take(3), only(21, 23, 25)));
 }
 
 // Issue 5036
-@safe unittest
+pure @safe nothrow unittest
 {
     auto s = sequence!((a, n) => new int)(0);
     assert(s.front != s.front);  // no caching
@@ -5586,7 +5587,7 @@ do
 }
 
 ///
-@safe unittest
+pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.math : approxEqual;
@@ -5606,7 +5607,7 @@ do
     assert(approxEqual(rf, [0.0, 0.1, 0.2, 0.3, 0.4]));
 }
 
-nothrow @nogc @safe unittest
+pure nothrow @nogc @safe unittest
 {
    //float overloads use std.conv.to so can't be @nogc or nothrow
     alias ssize_t = Signed!size_t;
@@ -5627,7 +5628,7 @@ debug @system unittest
     assertThrown!AssertError(iota(0f,1f,-0.1f));
 }
 
-@system unittest
+pure @system nothrow unittest
 {
     int[] a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
     auto r1 = iota(a.ptr, a.ptr + a.length, 1);
@@ -5636,7 +5637,7 @@ debug @system unittest
     assert(&a[4] in r1);
 }
 
-@safe unittest
+pure @safe nothrow @nogc unittest
 {
     assert(iota(1UL, 0UL).length == 0);
     assert(iota(1UL, 0UL, 1).length == 0);
@@ -5646,7 +5647,7 @@ debug @system unittest
     assert(iota(ulong.max, 0).length == 0);
 }
 
-@safe unittest
+pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.searching : count;
@@ -5792,7 +5793,7 @@ debug @system unittest
     }
 }
 
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.mutation : copy;
     auto idx = new size_t[100];
@@ -5847,8 +5848,7 @@ debug @system unittest
     }
 }
 
-@nogc nothrow pure @safe
-unittest
+@nogc nothrow pure @safe unittest
 {
     {
         ushort start = 0, end = 10, step = 2;
@@ -6186,7 +6186,7 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
 }
 
 ///
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
     int[][] x = new int[][2];
@@ -6264,7 +6264,7 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
 }
 
 // Issue 16363
-@safe unittest
+pure @safe nothrow unittest
 {
     import std.algorithm.comparison : equal;
 
@@ -6276,15 +6276,21 @@ FrontTransversal!(RangeOfRanges, opt) frontTransversal(
 }
 
 // Bugzilla 16442
-@safe unittest
+pure @safe nothrow unittest
 {
     int[][] arr = [[], []];
 
-    auto ft1 = frontTransversal!(TransverseOptions.assumeNotJagged)(arr);
-    assert(ft1.empty);
+    auto ft = frontTransversal!(TransverseOptions.assumeNotJagged)(arr);
+    assert(ft.empty);
+}
 
-    auto ft2 = frontTransversal!(TransverseOptions.enforceNotJagged)(arr);
-    assert(ft2.empty);
+// ditto
+pure @safe unittest
+{
+    int[][] arr = [[], []];
+
+    auto ft = frontTransversal!(TransverseOptions.enforceNotJagged)(arr);
+    assert(ft.empty);
 }
 
 /**
