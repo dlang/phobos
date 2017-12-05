@@ -3945,6 +3945,9 @@ private alias lengthType(R) = typeof(R.init.length.init);
     Throws:
         An `Exception` if all of the _ranges are not the same length and
         `sp` is set to `StoppingPolicy.requireSameLength`.
+
+    Limitations: The `@nogc` or `nothrow` attributes for this range cannot be inferred
+    because $(LREF StoppingPolicy) is not known during compilation.
 */
 struct Zip(Ranges...)
 if (Ranges.length && allSatisfy!(isInputRange, Ranges))
@@ -4662,6 +4665,10 @@ private string lockstepMixin(Ranges...)(bool withIndex, bool reverse)
    $(D StoppingPolicy.shortest), an exception will be thrown.
 
    By default $(D StoppingPolicy) is set to $(D StoppingPolicy.shortest).
+
+   Limitations: The `pure`, `@safe`, `@nogc`, or `nothrow` attributes cannot be
+   inferred for `lockstep` iteration. $(LREF zip) can infer the first two due to
+   a different implementation.
 
    See_Also: $(LREF zip)
 
