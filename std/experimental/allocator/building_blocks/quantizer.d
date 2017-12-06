@@ -295,7 +295,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
 
     auto a = MyAlloc(Region!Mallocator(1024 * 64));
     void[] b;
-    assert(a.alignedReallocate(b, 42, 16));
+    assert((() nothrow @nogc => a.alignedReallocate(b, 42, 16))());
     assert(b.length == 42);
     assert(alignedAt(&b[0], 16));
 }

@@ -306,6 +306,21 @@ struct FallbackAllocator(Primary, Fallback)
 
 @system unittest
 {
+    import std.experimental.allocator.building_blocks.region : Region;
+    import std.typecons : Ternary;
+
+    auto a = FallbackAllocator!(Region!(), Region!())(
+                Region!()(new ubyte[4096 * 1024]),
+                Region!()(new ubyte[4096 * 1024]));
+
+    auto b = a.alignedAllocate(42, 8);
+    assert(b.length == 42);
+    assert((() nothrow @nogc => a.alignedReallocate(b, 100, 8))());
+    assert(b.length == 100);
+}
+
+@system unittest
+{
     import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlockWithInternalPointers;
     import std.typecons : Ternary;
 
