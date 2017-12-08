@@ -101,13 +101,14 @@ public:
     {
         import std.algorithm.comparison : min;
 
+        immutable pagedBytes = numPages * pageSize;
         size_t goodSize = goodAllocSize(n);
-        if (goodSize > numPages * pageSize || offset - data > numPages * pageSize - goodSize)
+        if (goodSize > pagedBytes || offset - data > pagedBytes - goodSize)
             return null;
 
         if (offset + goodSize > readWriteLimit)
         {
-            void* newReadWriteLimit = min(data + numPages * pageSize, offset + goodSize + extraAllocPages * pageSize);
+            void* newReadWriteLimit = min(data + pagedBytes, offset + goodSize + extraAllocPages * pageSize);
             if (newReadWriteLimit != readWriteLimit)
             {
                 assert(newReadWriteLimit > readWriteLimit);
@@ -142,6 +143,38 @@ public:
         pagesUsed += goodSize / pageSize;
 
         return cast(void[]) result[0 .. n];
+    }
+
+    /**
+    Rounds the allocation size to the next multiple of the page size.
+    The allocation only reserves a range of virtual pages but the actual
+    physical memory is allocated on demand, when accessing the memory.
+
+    The allocated memory is aligned to the specified alignment `a`.
+
+    Params:
+    n = Bytes to allocate
+    a = Alignment
+
+    Returns:
+    `null` on failure or if the requested size exceeds the remaining capacity.
+    */
+    void[] alignedAllocate(size_t n, uint a)
+    {
+        void* alignedStart = cast(void*) roundUpToMultipleOf(cast(size_t) offset, a);
+        assert(alignedStart.alignedAt(a));
+        immutable pagedBytes = numPages * pageSize;
+        size_t goodSize = goodAllocSize(n);
+        if (goodSize > pagedBytes ||
+            alignedStart - data > pagedBytes - goodSize)
+            return null;
+
+        auto oldOffset = offset;
+        offset = alignedStart;
+        auto result = allocate(n);
+        if (!result)
+            offset = oldOffset;
+        return result;
     }
 
     /**
@@ -334,7 +367,7 @@ public:
     }
 }
 
-@system unittest
+version (unittest)
 {
     static void testrw(void[] b)
     {
@@ -345,22 +378,30 @@ public:
         assert(buf[b.length - 1] == 101);
     }
 
-    size_t pageSize;
-    version(Posix)
+    static size_t getPageSize()
     {
-        import core.sys.posix.unistd : sysconf, _SC_PAGESIZE;
+        size_t pageSize;
+        version(Posix)
+        {
+            import core.sys.posix.unistd : sysconf, _SC_PAGESIZE;
 
-        pageSize = cast(size_t) sysconf(_SC_PAGESIZE);
+            pageSize = cast(size_t) sysconf(_SC_PAGESIZE);
+        }
+        else version(Windows)
+        {
+            import core.sys.windows.windows : GetSystemInfo, SYSTEM_INFO;
+
+            SYSTEM_INFO si;
+            GetSystemInfo(&si);
+            pageSize = cast(size_t) si.dwPageSize;
+        }
+        return pageSize;
     }
-    else version(Windows)
-    {
-        import core.sys.windows.windows : GetSystemInfo, SYSTEM_INFO;
+}
 
-        SYSTEM_INFO si;
-        GetSystemInfo(&si);
-        pageSize = cast(size_t) si.dwPageSize;
-    }
-
+@system unittest
+{
+    size_t pageSize = getPageSize();
     AscendingPageAllocator a = AscendingPageAllocator(4 * pageSize);
     void[] b1 = a.allocate(1);
     assert(a.getAvailableSize() == 3 * pageSize);
@@ -391,32 +432,7 @@ public:
 
 @system unittest
 {
-    static void testrw(void[] b)
-    {
-        ubyte* buf = cast(ubyte*) b.ptr;
-        buf[0] = 100;
-        buf[b.length - 1] = 101;
-
-        assert(buf[0] == 100);
-        assert(buf[b.length - 1] == 101);
-    }
-
-    size_t pageSize;
-    version(Posix)
-    {
-        import core.sys.posix.unistd : sysconf, _SC_PAGESIZE;
-
-        pageSize = cast(size_t) sysconf(_SC_PAGESIZE);
-    }
-    else version(Windows)
-    {
-        import core.sys.windows.windows : GetSystemInfo, SYSTEM_INFO;
-
-        SYSTEM_INFO si;
-        GetSystemInfo(&si);
-        pageSize = cast(size_t) si.dwPageSize;
-    }
-
+    size_t pageSize = getPageSize();
     size_t numPages = 26214;
     AscendingPageAllocator a = AscendingPageAllocator(numPages * pageSize);
     for (int i = 0; i < numPages; i++)
@@ -433,39 +449,33 @@ public:
 
 @system unittest
 {
-    static void testrw(void[] b)
+    size_t pageSize = getPageSize();
+    size_t numPages = 26214;
+    uint alignment = cast(uint) pageSize;
+    AscendingPageAllocator a = AscendingPageAllocator(numPages * pageSize);
+    for (int i = 0; i < numPages; i++)
     {
-        ubyte* buf = cast(ubyte*) b.ptr;
-        buf[0] = 100;
-        buf[b.length - 1] = 101;
-
-        assert(buf[0] == 100);
-        assert(buf[b.length - 1] == 101);
+        void[] buf = a.alignedAllocate(pageSize, alignment);
+        assert(buf.length == pageSize);
+        testrw(buf);
+        a.deallocate(buf);
     }
 
-    size_t pageSize;
-    version(Posix)
-    {
-        import core.sys.posix.unistd : sysconf, _SC_PAGESIZE;
+    assert(!a.allocate(1));
+    assert(a.getAvailableSize() == 0);
+}
 
-        pageSize = cast(size_t) sysconf(_SC_PAGESIZE);
-    }
-    else version(Windows)
-    {
-        import core.sys.windows.windows : GetSystemInfo, SYSTEM_INFO;
-
-        SYSTEM_INFO si;
-        GetSystemInfo(&si);
-        pageSize = cast(size_t) si.dwPageSize;
-    }
-
+@system unittest
+{
+    size_t pageSize = getPageSize();
     size_t numPages = 5;
+    uint alignment = cast(uint) pageSize;
     AscendingPageAllocator a = AscendingPageAllocator(numPages * pageSize);
 
     void[] b1 = a.allocate(pageSize / 2);
     assert(b1.length == pageSize / 2);
 
-    void[] b2 = a.allocate(pageSize / 2);
+    void[] b2 = a.alignedAllocate(pageSize / 2, alignment);
     assert(a.expand(b1, pageSize / 2));
     assert(a.expand(b1, 0));
     assert(!a.expand(b1, 1));
@@ -516,31 +526,7 @@ public:
 
 @system unittest
 {
-    static void testrw(void[] b)
-    {
-        ubyte* buf = cast(ubyte*) b.ptr;
-        buf[0] = 100;
-        assert(buf[0] == 100);
-        buf[b.length - 1] = 101;
-        assert(buf[b.length - 1] == 101);
-    }
-
-    size_t pageSize;
-    version(Posix)
-    {
-        import core.sys.posix.unistd : sysconf, _SC_PAGESIZE;
-
-        pageSize = cast(size_t) sysconf(_SC_PAGESIZE);
-    }
-    else version(Windows)
-    {
-        import core.sys.windows.windows : GetSystemInfo, SYSTEM_INFO;
-
-        SYSTEM_INFO si;
-        GetSystemInfo(&si);
-        pageSize = cast(size_t) si.dwPageSize;
-    }
-
+    size_t pageSize = getPageSize();
     size_t numPages = 21000;
     enum testNum = 100;
     enum allocPages = 10;
@@ -564,22 +550,7 @@ public:
 
 @system unittest
 {
-    size_t pageSize;
-    version(Posix)
-    {
-        import core.sys.posix.unistd : sysconf, _SC_PAGESIZE;
-
-        pageSize = cast(size_t) sysconf(_SC_PAGESIZE);
-    }
-    else version(Windows)
-    {
-        import core.sys.windows.windows : GetSystemInfo, SYSTEM_INFO;
-
-        SYSTEM_INFO si;
-        GetSystemInfo(&si);
-        pageSize = cast(size_t) si.dwPageSize;
-    }
-
+    size_t pageSize = getPageSize();
     enum numPages = 2;
     AscendingPageAllocator a = AscendingPageAllocator(numPages * pageSize);
     void[] b = a.allocate((numPages + 1) * pageSize);
@@ -587,6 +558,55 @@ public:
     b = a.allocate(1);
     assert(b.length == 1);
     assert(a.getAvailableSize() == pageSize);
+    a.deallocateAll();
+    assert(!a.data && !a.offset);
+}
+
+@system unittest
+{
+    size_t pageSize = getPageSize();
+    enum numPages = 26;
+    AscendingPageAllocator a = AscendingPageAllocator(numPages * pageSize);
+    uint alignment = cast(uint) ((numPages / 2) * pageSize);
+    void[] b = a.alignedAllocate(pageSize, alignment);
+    assert(b.length == pageSize);
+    testrw(b);
+    assert(b.ptr.alignedAt(alignment));
+    a.deallocateAll();
+    assert(!a.data && !a.offset);
+}
+
+@system unittest
+{
+    size_t pageSize = getPageSize();
+    enum numPages = 10;
+    AscendingPageAllocator a = AscendingPageAllocator(numPages * pageSize);
+    uint alignment = cast(uint) (2 * pageSize);
+
+    void[] b1 = a.alignedAllocate(pageSize, alignment);
+    assert(b1.length == pageSize);
+    testrw(b1);
+    assert(b1.ptr.alignedAt(alignment));
+
+    void[] b2 = a.alignedAllocate(pageSize, alignment);
+    assert(b2.length == pageSize);
+    testrw(b2);
+    assert(b2.ptr.alignedAt(alignment));
+
+    void[] b3 = a.alignedAllocate(pageSize, alignment);
+    assert(b3.length == pageSize);
+    testrw(b3);
+    assert(b3.ptr.alignedAt(alignment));
+
+    void[] b4 = a.allocate(pageSize);
+    assert(b4.length == pageSize);
+    testrw(b4);
+
+    assert(a.deallocate(b1));
+    assert(a.deallocate(b2));
+    assert(a.deallocate(b3));
+    assert(a.deallocate(b4));
+
     a.deallocateAll();
     assert(!a.data && !a.offset);
 }
