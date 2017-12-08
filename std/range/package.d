@@ -1364,183 +1364,189 @@ Params:
 
 Returns:
     A range type dependent on $(D R1) and $(D R2).
-
-Bugs:
-    $(BUGZILLA 14660)
  */
 auto choose(R1, R2)(bool condition, R1 r1, R2 r2)
 if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
     !is(CommonType!(ElementType!(Unqual!R1), ElementType!(Unqual!R2)) == void))
 {
-    static struct Result
+    return ChooseResult!(R1, R2)(condition, r1, r2);
+}
+
+private struct ChooseResult(R1, R2)
+{
+    import std.traits : hasElaborateCopyConstructor, hasElaborateDestructor;
+
+    private union
     {
-        import std.algorithm.comparison : max;
-        import std.algorithm.internal : addressOf;
-        import std.traits : hasElaborateCopyConstructor, hasElaborateDestructor;
+        R1 r1;
+        R2 r2;
+    }
+    private bool r1Chosen;
 
-        private union
-        {
-            void[max(R1.sizeof, R2.sizeof)] buffer = void;
-            void* forAlignmentOnly = void;
-        }
-        private bool condition;
-        private @property ref R1 r1()
-        {
-            assert(condition);
-            return *cast(R1*) buffer.ptr;
-        }
-        private @property ref R2 r2()
-        {
-            assert(!condition);
-            return *cast(R2*) buffer.ptr;
-        }
-
-        this(bool condition, R1 r1, R2 r2)
-        {
-            this.condition = condition;
-            import std.conv : emplace;
-            if (condition) emplace(addressOf(this.r1), r1);
-            else emplace(addressOf(this.r2), r2);
-        }
-
-        // Carefully defined postblit to postblit the appropriate range
-        static if (hasElaborateCopyConstructor!R1
-            || hasElaborateCopyConstructor!R2)
-        this(this)
-        {
-            if (condition)
-            {
-                static if (hasElaborateCopyConstructor!R1) r1.__postblit();
-            }
-            else
-            {
-                static if (hasElaborateCopyConstructor!R2) r2.__postblit();
-            }
-        }
-
-        static if (hasElaborateDestructor!R1 || hasElaborateDestructor!R2)
-        ~this()
-        {
-            if (condition) destroy(r1);
-            else destroy(r2);
-        }
-
-        static if (isInfinite!R1 && isInfinite!R2)
-            // Propagate infiniteness.
-            enum bool empty = false;
+    private static auto ref actOnChosen(alias foo, ExtraArgs ...)(ref ChooseResult r,
+            auto ref ExtraArgs extraArgs)
+    {
+        if (r.r1Chosen)
+            return foo(r.r1, extraArgs);
         else
-            @property bool empty()
-            {
-                return condition ? r1.empty : r2.empty;
-            }
+            return foo(r.r2, extraArgs);
+    }
 
-        @property auto ref front()
+    this(bool r1Chosen, R1 r1, R2 r2)
+    {
+        import std.conv : emplace;
+
+        // This should be the only place r1Chosen is ever assigned
+        // independently
+        this.r1Chosen = r1Chosen;
+        if (r1Chosen)
         {
-            return condition ? r1.front : r2.front;
+            this.r2 = R2.init;
+            emplace(&this.r1, r1);
+        }
+        else
+        {
+            this.r1 = R1.init;
+            emplace(&this.r2, r2);
+        }
+    }
+
+    // Carefully defined postblit to postblit the appropriate range
+    static if (hasElaborateCopyConstructor!R1
+        || hasElaborateCopyConstructor!R2)
+    this(this)
+    {
+        this.actOnChosen!((ref r) {
+                static if (hasElaborateCopyConstructor!(typeof(r))) r.__postblit();
+            });
+    }
+
+    static if (hasElaborateDestructor!R1 || hasElaborateDestructor!R2)
+    ~this()
+    {
+        actOnChosen!((ref r) => destroy(r))(this);
+    }
+
+    static if (isInfinite!R1 && isInfinite!R2)
+        // Propagate infiniteness.
+        enum bool empty = false;
+    else
+        @property bool empty()
+        {
+            return actOnChosen!(r => r.empty)(this);
         }
 
-        void popFront()
+    @property auto ref front()
+    {
+        static auto ref getFront(R)(ref R r) { return r.front; }
+        return actOnChosen!getFront(this);
+    }
+
+    void popFront()
+    {
+        return actOnChosen!((ref r) { r.popFront; })(this);
+    }
+
+    static if (isForwardRange!R1 && isForwardRange!R2)
+        @property auto save()
         {
-            return condition ? r1.popFront : r2.popFront;
+            auto result = this;
+            actOnChosen!((ref r) { r = r.save; })(result);
+            return result;
         }
 
-        static if (isForwardRange!R1 && isForwardRange!R2)
-            @property auto save()
-            {
-                auto result = this;
-                if (condition) r1 = r1.save;
-                else r2 = r2.save;
-                return result;
-            }
+    @property void front(T)(T v)
+    if (is(typeof({ r1.front = v; r2.front = v; })))
+    {
+        actOnChosen!((ref r, T v) { r.front = v; })(this, v);
+    }
 
-        @property void front(T)(T v)
-        if (is(typeof({ r1.front = v; r2.front = v; })))
+    static if (hasMobileElements!R1 && hasMobileElements!R2)
+        auto moveFront()
         {
-            if (condition) r1.front = v; else r2.front = v;
+            return actOnChosen!((ref r) => r.moveFront)(this);
+        }
+
+    static if (isBidirectionalRange!R1 && isBidirectionalRange!R2)
+    {
+        @property auto ref back()
+        {
+            static auto ref getBack(R)(ref R r) { return r.back; }
+            return actOnChosen!getBack(this);
+        }
+
+        void popBack()
+        {
+            actOnChosen!((ref r) { r.popBack; })(this);
         }
 
         static if (hasMobileElements!R1 && hasMobileElements!R2)
-            auto moveFront()
+            auto moveBack()
             {
-                return condition ? r1.moveFront : r2.moveFront;
+                return actOnChosen!((ref r) => r.moveBack)(this);
             }
 
-        static if (isBidirectionalRange!R1 && isBidirectionalRange!R2)
+        @property void back(T)(T v)
+        if (is(typeof({ r1.back = v; r2.back = v; })))
         {
-            @property auto ref back()
-            {
-                return condition ? r1.back : r2.back;
-            }
-
-            void popBack()
-            {
-                return condition ? r1.popBack : r2.popBack;
-            }
-
-            static if (hasMobileElements!R1 && hasMobileElements!R2)
-                auto moveBack()
-                {
-                    return condition ? r1.moveBack : r2.moveBack;
-                }
-
-            @property void back(T)(T v)
-            if (is(typeof({ r1.back = v; r2.back = v; })))
-            {
-                if (condition) r1.back = v; else r2.back = v;
-            }
+            actOnChosen!((ref r, T v) { r.back = v; })(this, v);
         }
-
-        static if (hasLength!R1 && hasLength!R2)
-        {
-            @property size_t length()
-            {
-                return condition ? r1.length : r2.length;
-            }
-            alias opDollar = length;
-        }
-
-        static if (isRandomAccessRange!R1 && isRandomAccessRange!R2)
-        {
-            auto ref opIndex(size_t index)
-            {
-                return condition ? r1[index] : r2[index];
-            }
-
-            static if (hasMobileElements!R1 && hasMobileElements!R2)
-                auto moveAt(size_t index)
-                {
-                    return condition ? r1.moveAt(index) : r2.moveAt(index);
-                }
-
-            void opIndexAssign(T)(T v, size_t index)
-            if (is(typeof({ r1[1] = v; r2[1] = v; })))
-            {
-                if (condition) r1[index] = v; else r2[index] = v;
-            }
-        }
-
-        // BUG: this should work for infinite ranges, too
-        static if (hasSlicing!R1 && hasSlicing!R2 &&
-                !isInfinite!R2 && !isInfinite!R2)
-            auto opSlice(size_t begin, size_t end)
-            {
-                auto result = this;
-                if (condition) result.r1 = result.r1[begin .. end];
-                else result.r2 = result.r2[begin .. end];
-                return result;
-            }
     }
-    return Result(condition, r1, r2);
+
+    static if (hasLength!R1 && hasLength!R2)
+    {
+        @property size_t length()
+        {
+            return actOnChosen!(r => r.length)(this);
+        }
+        alias opDollar = length;
+    }
+
+    static if (isRandomAccessRange!R1 && isRandomAccessRange!R2)
+    {
+        auto ref opIndex(size_t index)
+        {
+            static auto ref get(R)(ref R r, size_t index) { return r[index]; }
+            return actOnChosen!get(this, index);
+        }
+
+        static if (hasMobileElements!R1 && hasMobileElements!R2)
+            auto moveAt(size_t index)
+            {
+                return actOnChosen!((ref r, size_t index) => r.moveAt(index))
+                    (this, index);
+            }
+
+        void opIndexAssign(T)(T v, size_t index)
+        if (is(typeof({ r1[1] = v; r2[1] = v; })))
+        {
+            return actOnChosen!((ref r, size_t index, T v) { r[index] = v; })
+                (this, index, v);
+        }
+    }
+
+    static if (hasSlicing!R1 && hasSlicing!R2)
+        auto opSlice(size_t begin, size_t end)
+        {
+            alias Slice1 = typeof(R1.init[0 .. 1]);
+            alias Slice2 = typeof(R2.init[0 .. 1]);
+            return actOnChosen!((r, size_t begin, size_t end) {
+                    static if (is(typeof(r) == Slice1))
+                        return choose(true, r[begin .. end], Slice2.init);
+                    else
+                        return choose(false, Slice1.init, r[begin .. end]);
+                })(this, begin, end);
+        }
 }
 
 ///
-@system unittest
+@safe nothrow pure @nogc unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : filter, map;
 
-    auto data1 = [ 1, 2, 3, 4 ].filter!(a => a != 3);
-    auto data2 = [ 5, 6, 7, 8 ].map!(a => a + 1);
+    auto data1 = only(1, 2, 3, 4).filter!(a => a != 3);
+    auto data2 = only(5, 6, 7, 8).map!(a => a + 1);
 
     // choose() is primarily useful when you need to select one of two ranges
     // with different types at runtime.
@@ -1558,10 +1564,10 @@ if (isInputRange!(Unqual!R1) && isInputRange!(Unqual!R2) &&
     }
 
     auto result = chooseRange(true);
-    assert(result.equal([ 1, 2, 4 ]));
+    assert(result.equal(only(1, 2, 4)));
 
     result = chooseRange(false);
-    assert(result.equal([ 6, 7, 8, 9 ]));
+    assert(result.equal(only(6, 7, 8, 9)));
 }
 
 /**
@@ -1590,76 +1596,117 @@ if (Ranges.length >= 2
 }
 
 ///
-@system unittest
+@safe nothrow pure @nogc unittest
 {
-    import std.algorithm.comparison : equal;
+    auto test()
+    {
+        import std.algorithm.comparison : equal;
 
-    int[] arr1 = [ 1, 2, 3, 4 ];
-    int[] arr2 = [ 5, 6 ];
-    int[] arr3 = [ 7 ];
+        int[4] sarr1 = [1, 2, 3, 4];
+        int[2] sarr2 = [5, 6];
+        int[1] sarr3 = [7];
+        auto arr1 = sarr1[];
+        auto arr2 = sarr2[];
+        auto arr3 = sarr3[];
 
-    {
-        auto s = chooseAmong(0, arr1, arr2, arr3);
-        auto t = s.save;
-        assert(s.length == 4);
-        assert(s[2] == 3);
-        s.popFront();
-        assert(equal(t, [1, 2, 3, 4][]));
+        {
+            auto s = chooseAmong(0, arr1, arr2, arr3);
+            auto t = s.save;
+            assert(s.length == 4);
+            assert(s[2] == 3);
+            s.popFront();
+            assert(equal(t, only(1, 2, 3, 4)));
+        }
+        {
+            auto s = chooseAmong(1, arr1, arr2, arr3);
+            assert(s.length == 2);
+            s.front = 8;
+            assert(equal(s, only(8, 6)));
+        }
+        {
+            auto s = chooseAmong(1, arr1, arr2, arr3);
+            assert(s.length == 2);
+            s[1] = 9;
+            assert(equal(s, only(8, 9)));
+        }
+        {
+            auto s = chooseAmong(1, arr2, arr1, arr3)[1 .. 3];
+            assert(s.length == 2);
+            assert(equal(s, only(2, 3)));
+        }
+        {
+            auto s = chooseAmong(0, arr1, arr2, arr3);
+            assert(s.length == 4);
+            assert(s.back == 4);
+            s.popBack();
+            s.back = 5;
+            assert(equal(s, only(1, 2, 5)));
+            s.back = 3;
+            assert(equal(s, only(1, 2, 3)));
+        }
+        {
+            uint[5] foo = [1, 2, 3, 4, 5];
+            uint[5] bar = [6, 7, 8, 9, 10];
+            auto c = chooseAmong(1, foo[], bar[]);
+            assert(c[3] == 9);
+            c[3] = 42;
+            assert(c[3] == 42);
+            assert(c.moveFront() == 6);
+            assert(c.moveBack() == 10);
+            assert(c.moveAt(4) == 10);
+        }
+        {
+            import std.range : cycle;
+            auto s = chooseAmong(0, cycle(arr2), cycle(arr3));
+            assert(isInfinite!(typeof(s)));
+            assert(!s.empty);
+            assert(s[100] == 8);
+            assert(s[101] == 9);
+            assert(s[0 .. 3].equal(only(8, 9, 8)));
+        }
+        return 0;
     }
-    {
-        auto s = chooseAmong(1, arr1, arr2, arr3);
-        assert(s.length == 2);
-        s.front = 8;
-        assert(equal(s, [8, 6][]));
-    }
-    {
-        auto s = chooseAmong(1, arr1, arr2, arr3);
-        assert(s.length == 2);
-        s[1] = 9;
-        assert(equal(s, [8, 9][]));
-    }
-    {
-        auto s = chooseAmong(1, arr2, arr1, arr3)[1 .. 3];
-        assert(s.length == 2);
-        assert(equal(s, [2, 3][]));
-    }
-    {
-        auto s = chooseAmong(0, arr1, arr2, arr3);
-        assert(s.length == 4);
-        assert(s.back == 4);
-        s.popBack();
-        s.back = 5;
-        assert(equal(s, [1, 2, 5][]));
-        s.back = 3;
-        assert(equal(s, [1, 2, 3][]));
-    }
-    {
-        uint[] foo = [1,2,3,4,5];
-        uint[] bar = [6,7,8,9,10];
-        auto c = chooseAmong(1,foo, bar);
-        assert(c[3] == 9);
-        c[3] = 42;
-        assert(c[3] == 42);
-        assert(c.moveFront() == 6);
-        assert(c.moveBack() == 10);
-        assert(c.moveAt(4) == 10);
-    }
-    {
-        import std.range : cycle;
-        auto s = chooseAmong(1, cycle(arr2), cycle(arr3));
-        assert(isInfinite!(typeof(s)));
-        assert(!s.empty);
-        assert(s[100] == 7);
-    }
+    // works at runtime
+    auto a = test();
+    // and at compile time
+    static b = test();
 }
 
-@system unittest
+@safe nothrow pure @nogc unittest
 {
-    int[] a = [1, 2, 3];
-    long[] b = [4, 5, 6];
-    auto c = chooseAmong(0, a, b);
+    int[3] a = [1, 2, 3];
+    long[3] b = [4, 5, 6];
+    auto c = chooseAmong(0, a[], b[]);
     c[0] = 42;
     assert(c[0] == 42);
+}
+
+@safe nothrow pure @nogc unittest
+{
+    static struct RefAccessRange
+    {
+        int[] r;
+        ref front() @property { return r[0]; }
+        ref back() @property { return r[$ - 1]; }
+        void popFront() { r = r[1 .. $]; }
+        void popBack() { r = r[0 .. $ - 1]; }
+        auto empty() @property { return r.empty; }
+        ref opIndex(size_t i) { return r[i]; }
+        auto length() @property { return r.length; }
+        alias opDollar = length;
+        auto save() { return this; }
+    }
+    static assert(isRandomAccessRange!RefAccessRange);
+    static assert(isRandomAccessRange!RefAccessRange);
+    int[4] a = [4, 3, 2, 1];
+    int[2] b = [6, 5];
+    auto c = chooseAmong(0, RefAccessRange(a[]), RefAccessRange(b[]));
+
+    void refFunc(ref int a, int target) { assert(a == target); }
+
+    refFunc(c[2], 2);
+    refFunc(c.front, 4);
+    refFunc(c.back, 1);
 }
 
 
