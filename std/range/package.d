@@ -1378,8 +1378,8 @@ private struct ChooseResult(R1, R2)
 
     private union
     {
-        R1 _r1;
-        R2 _r2;
+        R1 r1;
+        R2 r2;
     }
     private bool r1Chosen;
 
@@ -1387,9 +1387,9 @@ private struct ChooseResult(R1, R2)
             auto ref ExtraArgs extraArgs)
     {
         if (r.r1Chosen)
-            return foo(r._r1, extraArgs);
+            return foo(r.r1, extraArgs);
         else
-            return foo(r._r2, extraArgs);
+            return foo(r.r2, extraArgs);
     }
 
     this(bool r1Chosen, R1 r1, R2 r2)
@@ -1401,13 +1401,13 @@ private struct ChooseResult(R1, R2)
         this.r1Chosen = r1Chosen;
         if (r1Chosen)
         {
-            _r2 = R2.init;
-            emplace(&_r1, r1);
+            this.r2 = R2.init;
+            emplace(&this.r1, r1);
         }
         else
         {
-            _r1 = R1.init;
-            emplace(&_r2, r2);
+            this.r1 = R1.init;
+            emplace(&this.r2, r2);
         }
     }
 
@@ -1456,7 +1456,7 @@ private struct ChooseResult(R1, R2)
         }
 
     @property void front(T)(T v)
-    if (is(typeof({ _r1.front = v; _r2.front = v; })))
+    if (is(typeof({ r1.front = v; r2.front = v; })))
     {
         actOnChosen!((ref r, T v) { r.front = v; })(this, v);
     }
@@ -1487,7 +1487,7 @@ private struct ChooseResult(R1, R2)
             }
 
         @property void back(T)(T v)
-        if (is(typeof({ _r1.back = v; _r2.back = v; })))
+        if (is(typeof({ r1.back = v; r2.back = v; })))
         {
             actOnChosen!((ref r, T v) { r.back = v; })(this, v);
         }
@@ -1518,7 +1518,7 @@ private struct ChooseResult(R1, R2)
             }
 
         void opIndexAssign(T)(T v, size_t index)
-        if (is(typeof({ _r1[1] = v; _r2[1] = v; })))
+        if (is(typeof({ r1[1] = v; r2[1] = v; })))
         {
             return actOnChosen!((ref r, size_t index, T v) { r[index] = v; })
                 (this, index, v);
