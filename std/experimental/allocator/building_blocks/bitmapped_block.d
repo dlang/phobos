@@ -129,6 +129,11 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     private BitVector _control;
     private void[] _payload;
     private size_t _startIdx;
+
+    // Keeps track of first block which has never been used in an allocation.
+    // All blocks which are located right to the '_freshBit', should have never been
+    // allocated
+    private ulong _freshBit;
     // }
 
     pure nothrow @safe @nogc
@@ -247,6 +252,15 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     }
 
     /*
+    Based on the latest allocated bit, 'newBit', it adjusts '_freshBit'
+    */
+    void adjustFreshBit(const ulong newBit)
+    {
+        import std.algorithm.comparison : max;
+        _freshBit = max(newBit, _freshBit);
+    }
+
+    /*
     Returns the blocks corresponding to the control bits starting at word index
     wordIdx and bit index msbIdx (MSB=0) for a total of howManyBlocks.
     */
@@ -255,6 +269,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         assert(msbIdx <= 63);
         const start = (wordIdx * 64 + msbIdx) * blockSize;
         const end = start + blockSize * howManyBlocks;
+        if (start == end) return null;
         if (end <= _payload.length) return _payload[start .. end];
         // This could happen if we have more control bits than available memory.
         // That's possible because the control bits are rounded up to fit in
@@ -320,7 +335,34 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
             result = hugeAlloc(blocks);
             break;
         }
+        if (result)
+        {
+            adjustFreshBit((result.ptr - _payload.ptr) / blockSize + blocks);
+        }
         return result.ptr ? result.ptr[0 .. s] : null;
+    }
+
+    /**
+    Allocates `s` bytes of memory and returns it, or `null` if memory
+    could not be allocated.
+
+    `allocateFresh` behaves just like `allocate`, the only difference being that
+    this always returns unused(fresh) memory. Although there may still be available
+    space in the `BitmappedBlock`, `allocateFresh` could still return `null`,
+    because all the available blocks have been previously deallocated.
+    */
+    @safe void[] allocateFresh(const size_t s)
+    {
+        const blocks = s.divideRoundUp(blockSize);
+
+        void[] result = blocksFor(cast(size_t) (_freshBit / 64),
+            cast(uint) (_freshBit % 64), blocks);
+        if (result)
+        {
+            _control[_freshBit .. _freshBit + blocks] = 1;
+            _freshBit += blocks;
+        }
+        return result;
     }
 
     /**
@@ -573,6 +615,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         // Expansion successful
         assert(p.ptr == b.ptr + blocksOld * blockSize);
         b = b.ptr[0 .. b.length + delta];
+        adjustFreshBit(blockIdx + blocksNew);
         return true;
     }
 
@@ -908,6 +951,86 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
 @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
+
+    enum blocks = 10000;
+    int count = 0;
+
+    ubyte[] payload = cast(ubyte[]) Mallocator.instance.allocate(blocks * 16);
+    auto a = BitmappedBlock!(16, 16)(payload);
+    void[][] buf = cast(void[][]) Mallocator.instance.allocate((void[]).sizeof * blocks);
+
+    assert(!a.allocateFresh(0));
+    assert(!a._control[0]);
+
+    void[] b = a.allocate(256 * 16);
+    assert(b.length == 256 * 16);
+    count += 256;
+
+    assert(!a._control[count]);
+    b = a.allocateFresh(16);
+    assert(b.length == 16);
+    count++;
+    assert(a._control[count - 1]);
+
+    b = a.allocateFresh(16 * 300);
+    assert(b.length == 16 * 300);
+    count += 300;
+
+    for (int i = 0; i < count; i++)
+        assert(a._control[i]);
+    assert(!a._control[count]);
+
+    assert(a.expand(b, 313 * 16));
+    count += 313;
+
+    for (int i = 0; i < count; i++)
+        assert(a._control[i]);
+    assert(!a._control[count]);
+
+    b = a.allocate(64 * 16);
+    assert(b.length == 64 * 16);
+    count += 64;
+
+    b = a.allocateFresh(16);
+    assert(b.length == 16);
+    count++;
+
+    for (int i = 0; i < count; i++)
+        assert(a._control[i]);
+    assert(!a._control[count]);
+
+    assert(a.deallocateAll());
+    for (int i = 0; i < a._blocks; i++)
+        assert(!a._control[i]);
+
+    b = a.allocateFresh(257 * 16);
+    assert(b.length == 257 * 16);
+    for (int i = 0; i < count; i++)
+        assert(!a._control[i]);
+    for (int i = count; i < count + 257; i++)
+        assert(a._control[i]);
+    count += 257;
+    assert(!a._control[count]);
+
+    while (true)
+    {
+        b = a.allocate(16);
+        if (!b)
+            break;
+        assert(b.length == 16);
+    }
+
+    assert(!a.allocateFresh(16));
+    assert(a.deallocateAll());
+
+    assert(a.allocate(16).length == 16);
+    assert(!a.allocateFresh(16));
+}
+
+
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
     import std.random;
 
     auto numBlocks = [1, 64, 256];
@@ -921,20 +1044,29 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     auto rnd = Random();
     while (iter < blocks)
     {
+        int event = uniform(0, 2, rnd);
         int doExpand = uniform(0, 2, rnd);
         int allocSize = numBlocks[uniform(0, 3, rnd)] * 16;
         int expandSize = numBlocks[uniform(0, 3, rnd)] * 16;
+        int doDeallocate = uniform(0, 2, rnd);
 
-        buf[iter] = a.allocate(allocSize);
+        if (event) buf[iter] = a.allocate(allocSize);
+        else buf[iter] = a.allocateFresh(allocSize);
+
         if (!buf[iter])
             break;
         assert(buf[iter].length == allocSize);
 
         auto oldSize = buf[iter].length;
         if (doExpand && a.expand(buf[iter], expandSize))
-        {
             assert(buf[iter].length == expandSize + oldSize);
+
+        if (doDeallocate)
+        {
+            assert(a.deallocate(buf[iter]));
+            buf[iter] = null;
         }
+
         iter++;
     }
 
