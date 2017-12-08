@@ -397,14 +397,23 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         assert(blocks > 0);
         assert(wordIdx < _control.rep.length);
         assert(msbIdx <= 63);
+        void[] tmpResult;
+        result = null;
         if (msbIdx + blocks <= 64)
         {
             // Allocation should fit this control word
             if (setBitsIfZero(_control.rep[wordIdx],
                     cast(uint) (64 - msbIdx - blocks), 63 - msbIdx))
             {
-                // Success
-                result = blocksFor(wordIdx, msbIdx, blocks);
+                tmpResult = blocksFor(wordIdx, msbIdx, blocks);
+                if (!tmpResult)
+                {
+                    resetBits(_control.rep[wordIdx],
+                        cast(uint) (64 - msbIdx - blocks), 63 - msbIdx);
+                    return tuple(size_t.max - 1, 0u);
+                }
+                result = tmpResult;
+                tmpResult = null;
                 return tuple(size_t.max, 0u);
             }
             // Can't allocate, make a suggestion
@@ -430,9 +439,14 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         auto hint = allocateAt(wordIdx + 1, 0, blocks - 64 + msbIdx, result);
         if (hint[0] == size_t.max)
         {
-            // We did it!
+            tmpResult = blocksFor(wordIdx, msbIdx, blocks);
+            if (!tmpResult)
+            {
+                return tuple(size_t.max - 1, 0u);
+            }
             _control.rep[wordIdx] |= mask;
-            result = blocksFor(wordIdx, msbIdx, blocks);
+            result = tmpResult;
+            tmpResult = null;
             return tuple(size_t.max, 0u);
         }
         // Failed, return a suggestion that skips this whole run.
@@ -452,6 +466,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     private void[] smallAlloc(uint blocks)
     {
         assert(blocks >= 2 && blocks <= 64, text(blocks));
+        void[] result;
         foreach (i; _startIdx .. _control.rep.length)
         {
             // Test within the current 64-bit word
@@ -461,8 +476,10 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
             if (j < 64)
             {
                 // yay, found stuff
-                setBits(_control.rep[i], 64 - j - blocks, 63 - j);
-                return blocksFor(i, j, blocks);
+                result = blocksFor(i, j, blocks);
+                if (result)
+                    setBits(_control.rep[i], 64 - j - blocks, 63 - j);
+                return result;
             }
             // Next, try allocations that cross a word
             auto available = trailingZeros(v);
@@ -471,11 +488,11 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
             assert(available < blocks); // otherwise we should have found it
             auto needed = blocks - available;
             assert(needed > 0 && needed < 64);
-            if (allocateAtFront(i + 1, needed))
+            result = blocksFor(i, 64 - available, blocks);
+            if (result && allocateAtFront(i + 1, needed))
             {
-                // yay, found a block crossing two words
                 _control.rep[i] |= (1UL << available) - 1;
-                return blocksFor(i, 64 - available, blocks);
+                return result;
             }
         }
         return null;
@@ -489,6 +506,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
             assert(_control.allAre1);
             return null;
         }
+
         auto i = _control.findZeros(blocks, _startIdx * 64);
         if (i == i.max) return null;
         // Allocate those bits
@@ -687,7 +705,7 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
         import std.stdio : writefln, writeln;
         writefln("%s @ %s {", typeid(this), cast(void*) _control._rep.ptr);
         scope(exit) writeln("}");
-        assert(_payload.length == blockSize * _blocks);
+        assert(_payload.length >= blockSize * _blocks);
         assert(_control.length >= _blocks);
         writefln("  _startIdx=%s; blockSize=%s; blocks=%s",
             _startIdx, blockSize, _blocks);
@@ -803,7 +821,8 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
             assert(b.length == bs * blocksAtATime, text(i, ": ", b.length));
         }
         assert(a.allocate(bs * blocksAtATime) is null);
-        assert(a.allocate(1) is null);
+        if (a._blocks % blocksAtATime == 0)
+            assert(a.allocate(1) is null);
 
         // Now deallocate all and do it again!
         assert((() nothrow @nogc => a.deallocateAll())());
@@ -818,7 +837,8 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
             v[i] = b;
         }
         assert(a.allocate(bs * blocksAtATime) is null);
-        assert(a.allocate(1) is null);
+        if (a._blocks % blocksAtATime == 0)
+            assert(a.allocate(1) is null);
 
         foreach (i; 0 .. blocks / blocksAtATime)
         {
@@ -883,6 +903,61 @@ struct BitmappedBlock(size_t theBlockSize, uint theAlignment = platformAlignment
     testAllocateAll!(1)(0, 128);
     testAllocateAll!(1)(128 * 1, 128);
     testAllocateAll!(128 * 20)(13 * 128, 128);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.random;
+
+    auto numBlocks = [1, 64, 256];
+    enum blocks = 10000;
+    int iter = 0;
+
+    ubyte[] payload = cast(ubyte[]) Mallocator.instance.allocate(blocks * 16);
+    auto a = BitmappedBlock!(16, 16)(payload);
+    void[][] buf = cast(void[][]) Mallocator.instance.allocate((void[]).sizeof * blocks);
+
+    auto rnd = Random();
+    while (iter < blocks)
+    {
+        int doExpand = uniform(0, 2, rnd);
+        int allocSize = numBlocks[uniform(0, 3, rnd)] * 16;
+        int expandSize = numBlocks[uniform(0, 3, rnd)] * 16;
+
+        buf[iter] = a.allocate(allocSize);
+        if (!buf[iter])
+            break;
+        assert(buf[iter].length == allocSize);
+
+        auto oldSize = buf[iter].length;
+        if (doExpand && a.expand(buf[iter], expandSize))
+        {
+            assert(buf[iter].length == expandSize + oldSize);
+        }
+        iter++;
+    }
+
+    while (iter < blocks)
+    {
+        buf[iter++] = a.allocate(16);
+        if (!buf[iter - 1])
+            break;
+        assert(buf[iter - 1].length == 16);
+    }
+
+    for (size_t i = 0; i < a._blocks; i++)
+        assert(a._control[i]);
+
+    assert(!a.allocate(16));
+    for (size_t i = 0; i < iter; i++)
+    {
+        if (buf[i])
+            assert(a.deallocate(buf[i]));
+    }
+
+    for (size_t i = 0; i < a._blocks; i++)
+        assert(!a._control[i]);
 }
 
 // Test totalAllocation and goodAllocSize
@@ -1328,7 +1403,7 @@ private struct BitVector
             assert(i1 < i2);
             if (b) setBits(_rep[i1], 0, b1);
             else resetBits(_rep[i1], 0, b1);
-            _rep[i1 + 1 .. i2] = b;
+            _rep[i1 + 1 .. i2] = (b ? ulong.max : 0);
             if (b) setBits(_rep[i2], b2, 63);
             else resetBits(_rep[i2], b2, 63);
         }
