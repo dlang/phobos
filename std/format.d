@@ -1994,7 +1994,7 @@ private void formatUnsigned(Writer, T, Char)
             + (prefix2 != 0)
             + zerofill
             + digits.length
-            + ((fs.flSeparator != 0) * ((digits.length - 1)/ fs.separators))
+            + ((fs.flSeparator != 0) * ((digits.length - 1) / fs.separators))
         );
     if (spacesToPrint > 0) // need to do some padding
     {
