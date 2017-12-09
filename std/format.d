@@ -1994,7 +1994,7 @@ private void formatUnsigned(Writer, T, Char)
             + (prefix2 != 0)
             + zerofill
             + digits.length
-            + ((fs.flSeparator != 0) * (digits.length / fs.separators))
+            + ((fs.flSeparator != 0) * ((digits.length - 1) / fs.separators))
         );
     if (spacesToPrint > 0) // need to do some padding
     {
@@ -2013,8 +2013,33 @@ private void formatUnsigned(Writer, T, Char)
     if (prefix1) put(w, prefix1);
     if (prefix2) put(w, prefix2);
 
-    foreach (i ; 0 .. zerofill)
-        put(w, '0');
+    if (fs.flSeparator)
+    {
+        if (zerofill > 0)
+        {
+            put(w, '0');
+            --zerofill;
+        }
+
+        int j = fs.width;
+        for (size_t i = 0; i < zerofill; ++i, --j)
+        {
+            if (j != fs.width && j % fs.separators == 0)
+            {
+                put(w, fs.separatorChar);
+                ++i;
+            }
+            if (i < zerofill)
+            {
+                   put(w, '0');
+            }
+        }
+    }
+    else
+    {
+        foreach (i ; 0 .. zerofill)
+            put(w, '0');
+    }
 
     if (fs.flSeparator)
     {
@@ -6055,4 +6080,63 @@ char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
 {
     auto tmp = format("%2:5$s", 1, 2, 3, 4, 5);
     assert(tmp == "2345", tmp);
+}
+
+// Issue 18047
+@safe unittest
+{
+    auto cmp = "     123,456";
+    assert(cmp.length == 12, format("%d", cmp.length));
+    auto tmp = format("%12,d", 123456);
+    assert(tmp.length == 12, format("%d", tmp.length));
+
+    assert(tmp == cmp, "'" ~ tmp ~ "'");
+}
+
+// Issue 17459
+@safe unittest
+{
+    auto cmp = "100";
+    auto tmp  = format("%0d", 100);
+    assert(tmp == cmp, tmp);
+
+    cmp = "0100";
+    tmp  = format("%04d", 100);
+    assert(tmp == cmp, tmp);
+
+    cmp = "0000,000,100";
+    tmp  = format("%012,3d", 100);
+    assert(tmp == cmp, tmp);
+
+    cmp = "0000,001,000";
+    tmp = format("%012,3d", 1_000);
+    assert(tmp == cmp, tmp);
+
+    cmp = "0000,100,000";
+    tmp = format("%012,3d", 100_000);
+    assert(tmp == cmp, tmp);
+
+    cmp = "0001,000,000";
+    tmp = format("%012,3d", 1_000_000);
+    assert(tmp == cmp, tmp);
+
+    cmp = "0100,000,000";
+    tmp = format("%012,3d", 100_000_000);
+    assert(tmp == cmp, tmp);
+}
+
+// Issue 17459
+@safe unittest
+{
+    auto cmp = "100,000";
+    auto tmp  = format("%06,d", 100_000);
+    assert(tmp == cmp, tmp);
+
+    cmp = "100,000";
+    tmp  = format("%07,d", 100_000);
+    assert(tmp == cmp, tmp);
+
+    cmp = "0100,000";
+    tmp  = format("%08,d", 100_000);
+    assert(tmp == cmp, tmp);
 }
