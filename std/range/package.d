@@ -5887,284 +5887,387 @@ pure @safe nothrow unittest
     ---
 */
 auto iota(B, E, S)(B begin, E end, S step)
-if ((isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
-        && isIntegral!S)
 {
-    import std.conv : unsigned;
-
-    alias Value = CommonType!(Unqual!B, Unqual!E);
-    alias StepType = Unqual!S;
-
-    assert(step != 0 || begin == end);
-
-    static struct Result
+    static if (!is(B == Unqual!B) || !is(E == Unqual!E) || !is(S == Unqual!S))
     {
-        private Value current, last;
-        private StepType step; // by convention, 0 if range is empty
-
-        this(Value current, Value pastLast, StepType step)
-        {
-            if (current < pastLast && step > 0)
-            {
-                // Iterating upward
-                assert(unsigned((pastLast - current) / step) <= size_t.max);
-                // Cast below can't fail because current < pastLast
-                this.last = cast(Value) (pastLast - 1);
-                this.last -= unsigned(this.last - current) % step;
-            }
-            else if (current > pastLast && step < 0)
-            {
-                // Iterating downward
-                assert(unsigned((current - pastLast) / (0 - step)) <= size_t.max);
-                // Cast below can't fail because current > pastLast
-                this.last = cast(Value) (pastLast + 1);
-                this.last += unsigned(current - this.last) % (0 - step);
-            }
-            else
-            {
-                // Initialize an empty range
-                this.step = 0;
-                return;
-            }
-            this.step = step;
-            this.current = current;
-        }
-
-        @property bool empty() const { return step == 0; }
-        @property inout(Value) front() inout { assert(!empty); return current; }
-        void popFront()
-        {
-            assert(!empty);
-            if (current == last) step = 0;
-            else current += step;
-        }
-
-        @property inout(Value) back() inout
-        {
-            assert(!empty);
-            return last;
-        }
-        void popBack()
-        {
-            assert(!empty);
-            if (current == last) step = 0;
-            else last -= step;
-        }
-
-        @property auto save() { return this; }
-
-        inout(Value) opIndex(ulong n) inout
-        {
-            assert(n < this.length);
-
-            // Just cast to Value here because doing so gives overflow behavior
-            // consistent with calling popFront() n times.
-            return cast(inout Value) (current + step * n);
-        }
-        auto opBinaryRight(string op)(Value val) const
-        if (op == "in")
-        {
-            if (empty) return false;
-            //cast to avoid becoming unsigned
-            auto supposedIndex = cast(StepType)(val - current) / step;
-            return supposedIndex < length && supposedIndex * step + current == val;
-        }
-        auto contains(Value x){return x in this;}
-        inout(Result) opSlice() inout { return this; }
-        inout(Result) opSlice(ulong lower, ulong upper) inout
-        {
-            assert(upper >= lower && upper <= this.length);
-
-            return cast(inout Result) Result(
-                cast(Value)(current + lower * step),
-                cast(Value)(current + upper * step),
-                step);
-        }
-        @property size_t length() const
-        {
-            if (step > 0)
-                return 1 + cast(size_t) (unsigned(last - current) / step);
-            if (step < 0)
-                return 1 + cast(size_t) (unsigned(current - last) / (0 - step));
-            return 0;
-        }
-
-        alias opDollar = length;
+        return iota(Unqual!B(begin), Unqual!E(end), Unqual!S(step));
     }
-
-    return Result(begin, end, step);
+    else
+    {
+        return IotaResult!(B, E, S)(begin, end, step);
+    }
 }
 
 /// Ditto
 auto iota(B, E)(B begin, E end)
-if (isFloatingPoint!(CommonType!(B, E)))
 {
-    return iota(begin, end, CommonType!(B, E)(1));
-}
-
-/// Ditto
-auto iota(B, E)(B begin, E end)
-if (isIntegral!(CommonType!(B, E)) || isPointer!(CommonType!(B, E)))
-{
-    import std.conv : unsigned;
-
-    alias Value = CommonType!(Unqual!B, Unqual!E);
-
-    static struct Result
+    static if (!is(B == Unqual!B) || !is(E == Unqual!E))
     {
-        private Value current, pastLast;
-
-        this(Value current, Value pastLast)
-        {
-            if (current < pastLast)
-            {
-                assert(unsigned(pastLast - current) <= size_t.max);
-
-                this.current = current;
-                this.pastLast = pastLast;
-            }
-            else
-            {
-                // Initialize an empty range
-                this.current = this.pastLast = current;
-            }
-        }
-
-        @property bool empty() const { return current == pastLast; }
-        @property inout(Value) front() inout { assert(!empty); return current; }
-        void popFront() { assert(!empty); ++current; }
-
-        @property inout(Value) back() inout { assert(!empty); return cast(inout(Value))(pastLast - 1); }
-        void popBack() { assert(!empty); --pastLast; }
-
-        @property auto save() { return this; }
-
-        inout(Value) opIndex(size_t n) inout
-        {
-            assert(n < this.length);
-
-            // Just cast to Value here because doing so gives overflow behavior
-            // consistent with calling popFront() n times.
-            return cast(inout Value) (current + n);
-        }
-        auto opBinaryRight(string op)(Value val) const
-        if (op == "in")
-        {
-            return current <= val && val < pastLast;
-        }
-        auto contains(Value x){return x in this;}
-        inout(Result) opSlice() inout { return this; }
-        inout(Result) opSlice(ulong lower, ulong upper) inout
-        {
-            assert(upper >= lower && upper <= this.length);
-
-            return cast(inout Result) Result(cast(Value)(current + lower),
-                                            cast(Value)(pastLast - (length - upper)));
-        }
-        @property size_t length() const
-        {
-            return cast(size_t)(pastLast - current);
-        }
-
-        alias opDollar = length;
+        return iota(Unqual!B(begin), Unqual!E(end));
     }
-
-    return Result(begin, end);
+    else static if (is(typeof(begin + B(1))))
+    {
+        return iota(begin, end, B(1));
+    }
+    else static if (is(typeof(++begin)) && !isPointer!B)
+    {
+        return IotaResult!(B, E)(begin, end);
+    }
+    else static if (is(typeof(begin + 1)))
+    {
+        return iota(begin, end, 1);
+    }
+    else
+    {
+        static assert(false, "iota does not support the types ("~B.stringof~", "~E.stringof~").");
+    }
 }
 
 /// Ditto
 auto iota(E)(E end)
-if (is(typeof(iota(E(0), end))))
+if (is(typeof(E(0))))
 {
-    E begin = E(0);
-    return iota(begin, end);
+    static if (is(E == Unqual!E))
+        return iota(E(0), end);
+    else
+        return iota(Unqual!E(end));
 }
 
-/// Ditto
-// Specialization for floating-point types
-auto iota(B, E, S)(B begin, E end, S step)
-if (isFloatingPoint!(CommonType!(B, E, S)))
-in
+/*
+ * Overload for anything supporting regular arithmetic.
+ */
+struct IotaResult(B, E, S)
+if (!anySatisfy!(isFloatingPoint, B, E, S) && is(typeof(B.init + S.init)))
 {
-    assert(step != 0, "iota: step must not be 0");
-    assert((end - begin) / step >= 0, "iota: incorrect startup parameters");
-}
-do
-{
-    alias Value = Unqual!(CommonType!(B, E, S));
-    static struct Result
+    static if (is(CommonType!(B, E, S)) && !is(CommonType!(B, E, S) == void))
+        alias ValueType = CommonType!(B, E, S);
+    else static if (is(typeof(B.init + E.init + S.init)))
+        alias ValueType = typeof(B.init + E.init + S.init);
+    else static if (is(typeof(B.init + S.init)))
+        alias ValueType = typeof(B.init + S.init);
+    else
+        static assert(false, "iota does not support types that cannot be added or incremented.");
+
+    ValueType begin;
+    ValueType end;
+    S step;
+
+    private auto unsigned(T)(T value)
     {
-        private Value start, step;
-        private size_t index, count;
-
-        this(Value start, Value end, Value step)
-        {
-            import std.conv : to;
-
-            this.start = start;
-            this.step = step;
-            immutable fcount = (end - start) / step;
-            count = to!size_t(fcount);
-            auto pastEnd = start + count * step;
-            if (step > 0)
-            {
-                if (pastEnd < end) ++count;
-                assert(start + count * step >= end);
-            }
-            else
-            {
-                if (pastEnd > end) ++count;
-                assert(start + count * step <= end);
-            }
-        }
-
-        @property bool empty() const { return index == count; }
-        @property Value front() const { assert(!empty); return start + step * index; }
-        void popFront()
-        {
-            assert(!empty);
-            ++index;
-        }
-        @property Value back() const
-        {
-            assert(!empty);
-            return start + step * (count - 1);
-        }
-        void popBack()
-        {
-            assert(!empty);
-            --count;
-        }
-
-        @property auto save() { return this; }
-
-        Value opIndex(size_t n) const
-        {
-            assert(n < count);
-            return start + step * (n + index);
-        }
-        inout(Result) opSlice() inout
-        {
-            return this;
-        }
-        inout(Result) opSlice(size_t lower, size_t upper) inout
-        {
-            assert(upper >= lower && upper <= count);
-
-            Result ret = this;
-            ret.index += lower;
-            ret.count = upper - lower + ret.index;
-            return cast(inout Result) ret;
-        }
-        @property size_t length() const
-        {
-            return count - index;
-        }
-
-        alias opDollar = length;
+        static if (is(Unsigned!T)) return cast(Unsigned!T) value;
+        else return value;
     }
 
-    return Result(begin, end, step);
+    this(B b, E e, S s)
+    {
+        step = 0;
+        if (s == 0) return;
+        if (b < e && s < 0) return;
+        if (b > e && s > 0) return;
+
+        begin = b;
+        end = e;
+        step = s;
+
+        if (begin < end && step > 0)
+        {
+            // Iterating upward
+            assert(unsigned((end - begin) / step) <= size_t.max);
+            // Cast below can't fail because begin < end
+            end = cast(E) (end - 1);
+            end -= unsigned(end - begin) % step;
+        }
+        else if (begin > end && step < 0)
+        {
+            // Iterating downward
+            assert(unsigned((begin - end) / (0 - step)) <= size_t.max);
+            // Cast below can't fail because begin > end
+            end = cast(E) (end + 1);
+            end += unsigned(begin - end) % (0 - step);
+        }
+        else
+        {
+            // Initialize an empty range
+            step = 0;
+            return;
+        }
+    }
+
+    @property
+    auto save() inout { return this; }
+
+    inout(IotaResult) opSlice() inout { return this; }
+
+    void popFront()
+    {
+        assert(!empty, "Can't popFront on an empty range.");
+        if (begin == end)
+            step = 0;
+        else
+            begin += step;
+    }
+
+    void popBack()()
+    {
+        assert(!empty, "Can't popBack on an empty range.");
+        if (begin == end)
+            step = 0;
+        else
+            end -= step;
+    }
+
+    @property
+    inout(ValueType) front() inout
+    {
+        assert(!empty, "Can't get the front of an empty range.");
+        return begin;
+    }
+
+    @property
+    inout(ValueType) back()() inout
+    {
+        assert(!empty, "Can't get the back of an empty range.");
+        return end;
+    }
+
+    @property
+    bool empty() const
+    {
+        static if (is(typeof(begin < end)))
+        {
+            if (step == 0) return true;
+            if (step < 0)
+                return begin < end;
+            return begin > end;
+        }
+        else static if (is(typeof(begin == end)))
+        {
+            return begin == end;
+        }
+        else static assert(false, "Arguments to iota must be comparable using > or ==");
+    }
+
+    @property
+    size_t length() const
+    {
+        if (step > 0)
+        {
+            auto delta = cast(size_t)(end - begin);
+            return 1+cast(size_t)(delta / step);
+        }
+        else if (step < 0)
+        {
+            auto delta = cast(size_t)(begin - end);
+            auto absStep = 0-step;
+            return 1+cast(size_t)(delta / absStep);
+        }
+        else return 0;
+    }
+
+    @property
+    size_t opDollar(size_t idx : 0)() const
+    {
+        return length;
+    }
+
+    inout(ValueType) opIndex()(size_t idx) inout
+    {
+        return cast(inout(ValueType))(front + step * idx);
+    }
+
+    inout(IotaResult) opSlice(ulong lower, ulong upper) inout
+    {
+        assert(lower <= upper, "When slicing, upper bound must be >= lower bound.");
+        assert(upper <= length, "Whenc slicing, upper bound must be <= length.");
+
+        return cast(inout IotaResult) IotaResult(
+                        cast(B)(begin + step * lower),
+                        cast(E)(begin + step * upper),
+                        cast(S) step);
+    }
+
+    bool opBinaryRight(string op : "in", T)(T value) const
+    {
+        auto index = cast(S)(value - begin) / step;
+        return index < length &&
+               index >= 0 &&
+               index * step + begin == value;
+    }
+
+    bool contains(T)(T value) const
+    {
+        return value in this;
+    }
+}
+
+/*
+ * Overload for floating-point types.
+ */
+struct IotaResult(B, E, S)
+if (anySatisfy!(isFloatingPoint, B, E, S))
+{
+    alias ValueType = CommonType!(B, E, S);
+
+    ValueType begin;
+    ValueType step;
+    ulong count;
+    ulong distance;
+
+    this(B b, E e, S s)
+    {
+        begin = b;
+        step = s;
+        count = cast(size_t)((e - begin)/step+0.5);
+        auto end = begin + (count+1) * step;
+        if ((step > 0 && 0 < (e - end) + step) ||
+            (step < 0 && 0 > (e - end) + step))
+        {
+            count += 1;
+        }
+    }
+
+    @property
+    auto save() inout { return this; }
+
+    inout(IotaResult) opSlice() inout { return this; }
+
+    void popFront()
+    {
+        assert(!empty, "Can't popFront on an empty range.");
+        ++distance;
+    }
+
+    void popBack()
+    {
+        assert(!empty, "Can't popBack on an empty range.");
+        --count;
+    }
+
+    @property
+    ValueType front() const
+    {
+        assert(!empty, "Can't get the front of an empty range.");
+        return begin + distance * step;
+    }
+
+    @property
+    ValueType back() const
+    {
+        assert(!empty, "Can't get the back of an empty range.");
+        return begin + (count-1) * step;
+    }
+
+    @property
+    bool empty() const
+    {
+        return count - distance <= 0;
+    }
+
+    @property
+    size_t length() const
+    {
+        return cast(size_t)(count - distance);
+    }
+
+    alias opDollar = length;
+
+    ValueType opIndex(size_t idx) const
+    {
+        assert(idx < length, "Index out of bounds");
+        return begin + step * (idx + distance);
+    }
+
+    inout(IotaResult) opSlice()(ulong lower, ulong upper) inout
+    {
+        assert(lower <= upper, "When slicing, upper bound must be >= lower bound.");
+        assert(upper <= length, "When slicing, upper bound must be <= length.");
+
+        IotaResult result;
+        result.step = step;
+        result.begin = begin;
+        result.count = distance + upper;
+        result.distance = distance + lower;
+
+        assert(result.count <= count);
+        assert(result.count >= result.distance);
+        return result;
+    }
+
+    bool opBinaryRight(string op : "in", T)(T value) const
+    {
+        auto index = cast(S)(value - begin) / step;
+        return index < length &&
+               index >= 0 &&
+               index * step + begin == value;
+    }
+
+    bool contains(T)(T value) const
+    {
+        return value in this;
+    }
+}
+
+/*
+ * Overload for arbitrary types that support only ++.
+ * That means no slicing, no indexing, no `x in range`.
+ */
+struct IotaResult(B, E)
+if (is(typeof((B b) => ++b)) && (is(typeof(B.init < E.init)) || is(typeof(B.init == E.init))))
+{
+    alias ValueType = CommonType!(B,E);
+    ValueType begin;
+    ValueType end;
+
+    this(B b, E e)
+    {
+        begin = b;
+        end = e;
+    }
+
+    @property
+    auto save() inout { return this; }
+
+    inout(IotaResult) opSlice() inout { return this; }
+
+    void popFront()
+    {
+        assert(!empty, "Can't popFront on an empty range.");
+        ++begin;
+    }
+
+    @property
+    ValueType front()
+    {
+        assert(!empty, "Can't get the front of an empty range.");
+        return begin;
+    }
+
+    static if (is(typeof(--end)))
+    {
+        void popBack()
+        {
+        assert(!empty, "Can't popBack on an empty range.");
+            --end;
+        }
+
+        @property
+        ValueType back()
+        {
+        assert(!empty, "Can't get the back of an empty range.");
+            return end;
+        }
+    }
+
+    @property
+    bool empty() const
+    {
+        static if (is(typeof(B.init < E.init)))
+            return !(begin < end);
+        else static if (is(typeof(B.init != E.init)))
+            return begin == end;
+        else
+            static assert(false, "Arguments to iota must be comparable using > or ==");
+    }
 }
 
 ///
@@ -6197,16 +6300,6 @@ pure nothrow @nogc @safe unittest
     assert(iota(ssize_t.max, ssize_t.min, -2).length == 1 + size_t.max / 2);
     assert(iota(ssize_t.min, ssize_t.max, 2).length == 1 + size_t.max / 2);
     assert(iota(ssize_t.max, ssize_t.min, -3).length == size_t.max / 3);
-}
-
-debug @system unittest
-{//check the contracts
-    import core.exception : AssertError;
-    import std.exception : assertThrown;
-    assertThrown!AssertError(iota(1,2,0));
-    assertThrown!AssertError(iota(0f,1f,0f));
-    assertThrown!AssertError(iota(1f,0f,0.1f));
-    assertThrown!AssertError(iota(0f,1f,-0.1f));
 }
 
 pure @system nothrow unittest
@@ -6448,51 +6541,13 @@ pure @safe nothrow unittest
     }
 }
 
-/* Generic overload that handles arbitrary types that support arithmetic
- * operations.
- *
- * User-defined types such as $(REF BigInt, std,bigint) are also supported, as long
- * as they can be incremented with `++` and compared with `<` or `==`.
- */
-/// ditto
-auto iota(B, E)(B begin, E end)
-if (!isIntegral!(CommonType!(B, E)) &&
-    !isFloatingPoint!(CommonType!(B, E)) &&
-    !isPointer!(CommonType!(B, E)) &&
-    is(typeof((ref B b) { ++b; })) &&
-    (is(typeof(B.init < E.init)) || is(typeof(B.init == E.init))) )
-{
-    static struct Result
-    {
-        B current;
-        E end;
-
-        @property bool empty()
-        {
-            static if (is(typeof(B.init < E.init)))
-                return !(current < end);
-            else static if (is(typeof(B.init != E.init)))
-                return current == end;
-            else
-                static assert(0);
-        }
-        @property auto front() { return current; }
-        void popFront()
-        {
-            assert(!empty);
-            ++current;
-        }
-    }
-    return Result(begin, end);
-}
-
 @safe unittest
 {
     import std.algorithm.comparison : equal;
 
     // Test iota() for a type that only supports ++ and != but does not have
     // '<'-ordering.
-    struct Cyclic(int wrapAround)
+    static struct Cyclic(int wrapAround)
     {
         int current;
 
@@ -11140,7 +11195,9 @@ public:
                 mixin(_genSave());
             }
 
-            static if (is(typeof((*cast(const R*)_range).save))) @property RefRange!CS save() @trusted const
+            static if (is(typeof((*cast(const R*)_range).save)) &&
+                isForwardRange!(typeof((*cast(const R*)_range).save)))
+            @property RefRange!CS save() @trusted const
             {
                 mixin(_genSave());
             }
