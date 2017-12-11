@@ -294,6 +294,7 @@ public:
         {
             version (FreeBSD)            enum utcZone = "Etc/UTC";
             else version (NetBSD)        enum utcZone = "UTC";
+            else version (DragonFlyBSD)  enum utcZone = "UTC";
             else version (linux)         enum utcZone = "UTC";
             else version (OSX)           enum utcZone = "UTC";
             else version (Solaris)       enum utcZone = "UTC";
