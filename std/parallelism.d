@@ -94,6 +94,10 @@ else version(FreeBSD)
 {
     version = useSysctlbyname;
 }
+else version(DragonFlyBSD)
+{
+    version = useSysctlbyname;
+}
 else version(NetBSD)
 {
     version = useSysctlbyname;
@@ -981,6 +985,10 @@ uint totalCPUsImpl() @nogc nothrow @trusted
             auto nameStr = "machdep.cpu.core_count\0".ptr;
         }
         else version(FreeBSD)
+        {
+            auto nameStr = "hw.ncpu\0".ptr;
+        }
+        else version(DragonFlyBSD)
         {
             auto nameStr = "hw.ncpu\0".ptr;
         }
