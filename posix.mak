@@ -26,10 +26,11 @@
 ################################################################################
 # Configurable stuff, usually from the command line
 #
-# OS can be linux, win32, win32wine, osx, freebsd, netbsd or dragonflybsd.
-# The system will be determined by using uname
+# OS can be linux, win32, win32wine, osx, freebsd, netbsd or dragonflybsd. The system will be
+# determined by using uname
 
-QUIET:=@
+#QUIET:=@
+QUIET:=
 
 DEBUGGER=gdb
 GIT_HOME=https://github.com/dlang
