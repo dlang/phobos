@@ -25,9 +25,10 @@
 ################################################################################
 # Configurable stuff, usually from the command line
 #
-# OS can be linux, win32, win32wine, osx, or freebsd. The system will be
+# OS can be linux, win32, win32wine, osx, freebsd, netbsd or dragonflybsd. The system will be
 # determined by using uname
 
+#QUIET:=@
 QUIET:=
 
 DEBUGGER=gdb
@@ -110,7 +111,7 @@ ifeq ($(OS),win32wine)
 	DMD = wine dmd.exe
 	RUN = wine
 else
-	DMD = $(DMD_DIR)/generated/$(OS)/release/$(MODEL)/dmd
+	DMD = $(DMD_DIR)/generated/$(OS)/$(BUILD)/$(MODEL)/dmd
 	ifeq ($(OS),win32)
 		CC = dmc
 	else

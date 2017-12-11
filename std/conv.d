@@ -5509,7 +5509,7 @@ pure nothrow @safe @nogc unittest
 }
 
 // Test attribute propagation for UDTs
-pure nothrow @safe /* @nogc */ unittest
+pure nothrow @safe /+@nogc+/ unittest
 {
     static struct Safe
     {
