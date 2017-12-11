@@ -3993,7 +3993,7 @@ private alias lengthType(R) = typeof(R.init.length.init);
         An `Exception` if all of the _ranges are not the same length and
         `sp` is set to `StoppingPolicy.requireSameLength`.
 
-    Limitations: The `@nogc` or `nothrow` attributes for this range cannot be inferred
+    Limitations: The `@nogc` attribute for this range cannot be inferred
     because $(LREF StoppingPolicy) is not known during compilation.
 */
 struct Zip(Ranges...)
@@ -4060,7 +4060,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
             case StoppingPolicy.requireSameLength:
                 foreach (i, Unused; R[1 .. $])
                 {
-                    enforce(ranges[0].empty ==
+                    assert(ranges[0].empty ==
                             ranges[i + 1].empty,
                             "Inequal-length ranges passed to Zip");
                 }
@@ -4084,7 +4084,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
     {
         alias E = .ElementType!(R[i]);
         static if (!is(typeof({static E i;})))
-            throw new Exception("Range with non-default constructable elements exhausted.");
+            assert(0, "Range with non-default constructable elements exhausted.");
         else
             return E.init;
     }
@@ -4204,7 +4204,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
         case StoppingPolicy.requireSameLength:
             foreach (i, Unused; R)
             {
-                enforce(!ranges[i].empty, "Invalid Zip object");
+                assert(!ranges[i].empty, "Invalid Zip object");
                 ranges[i].popFront();
             }
             break;
@@ -4239,7 +4239,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
             case StoppingPolicy.requireSameLength:
                 foreach (i, Unused; R)
                 {
-                    enforce(!ranges[i].empty, "Invalid Zip object");
+                    assert(!ranges[i].empty, "Invalid Zip object");
                     ranges[i].popBack();
                 }
                 break;
@@ -4348,7 +4348,7 @@ if (Ranges.length && allSatisfy!(isInputRange, Ranges))
 }
 
 ///
-pure @safe unittest
+nothrow pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;
@@ -4360,7 +4360,7 @@ pure @safe unittest
 }
 
 ///
-pure @safe unittest
+nothrow pure @safe unittest
 {
     import std.conv : to;
 
@@ -4386,7 +4386,7 @@ pure @safe unittest
 }
 
 /// $(D zip) is powerful - the following code sorts two arrays in parallel:
-pure @safe unittest
+nothrow pure @safe unittest
 {
     import std.algorithm.sorting : sort;
 
@@ -4542,7 +4542,7 @@ pure @system unittest
     +/
 }
 
-pure @safe unittest
+nothrow pure @safe unittest
 {
     import std.algorithm.sorting : sort;
 
@@ -4556,7 +4556,7 @@ pure @safe unittest
     assert(b == [6, 5, 2, 1, 3]);
 }
 
-pure @safe unittest
+nothrow pure @safe unittest
 {
     import std.algorithm.comparison : equal;
     import std.typecons : tuple;
@@ -4572,17 +4572,23 @@ pure @safe unittest
 }
 
 // Text for Issue 11196
-@safe pure unittest
+debug nothrow pure @system unittest
 {
-    import std.exception : assertThrown;
+    import core.exception : AssertError;
 
     static struct S { @disable this(); }
     assert(zip((S[5]).init[]).length == 5);
     assert(zip(StoppingPolicy.longest, cast(S[]) null, new int[1]).length == 1);
-    assertThrown(zip(StoppingPolicy.longest, cast(S[]) null, new int[1]).front);
+    bool passed = false;
+    scope (exit) assert(passed);
+    try
+    {
+        zip(StoppingPolicy.longest, cast(S[]) null, new int[1]).front;
+    }
+    catch (AssertError){passed = true;}
 }
 
-@safe pure unittest //12007
+nothrow pure @safe unittest //12007
 {
     static struct R
     {
@@ -4597,7 +4603,7 @@ pure @safe unittest
     assert(z.save == z);
 }
 
-pure @system unittest
+nothrow pure @system unittest
 {
     import std.typecons : tuple;
 
@@ -4633,11 +4639,11 @@ private string lockstepMixin(Ranges...)(bool withIndex, bool reverse)
         {
             indexDef = q{
                 size_t index = ranges[0].length-1;
-                enforce(_stoppingPolicy == StoppingPolicy.requireSameLength,
+                assert(_stoppingPolicy == StoppingPolicy.requireSameLength,
                         "lockstep can only be used with foreach_reverse when stoppingPolicy == requireSameLength");
 
                 foreach (range; ranges[1..$])
-                    enforce(range.length == ranges[0].length);
+                    assert(range.length == ranges[0].length);
                 };
             indexInc = "--index;";
         }
@@ -4670,8 +4676,6 @@ private string lockstepMixin(Ranges...)(bool withIndex, bool reverse)
     q{
         int %s(scope int delegate(%s) dg)
         {
-            import std.exception : enforce;
-
             auto ranges = _ranges;
             int res;
             %s
@@ -4687,7 +4691,7 @@ private string lockstepMixin(Ranges...)(bool withIndex, bool reverse)
             if (_stoppingPolicy == StoppingPolicy.requireSameLength)
             {
                 foreach (range; ranges)
-                    enforce(range.empty);
+                    assert(range.empty);
             }
             return res;
         }
@@ -4715,8 +4719,8 @@ private string lockstepMixin(Ranges...)(bool withIndex, bool reverse)
    By default $(D StoppingPolicy) is set to $(D StoppingPolicy.shortest).
 
    Limitations: The `pure`, `@safe`, `@nogc`, or `nothrow` attributes cannot be
-   inferred for `lockstep` iteration. $(LREF zip) can infer the first two due to
-   a different implementation.
+   inferred for `lockstep` iteration. $(LREF zip) can infer them, except '@nogc',
+   due to a different implementation.
 
    See_Also: $(LREF zip)
 
@@ -4734,7 +4738,7 @@ if (Ranges.length > 1 && allSatisfy!(isInputRange, Ranges))
         import std.exception : enforce;
 
         _ranges = ranges;
-        enforce(sp != StoppingPolicy.longest,
+        assert(sp != StoppingPolicy.longest,
                 "Can't use StoppingPolicy.Longest on Lockstep.");
         _stoppingPolicy = sp;
     }
