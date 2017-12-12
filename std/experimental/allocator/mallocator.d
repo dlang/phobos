@@ -375,7 +375,7 @@ version(Posix)
     AlignedMallocator.instance.alignedReallocate(c, 32, 32);
     assert(c.ptr);
 
-    version (DragonFlyBSD) {} else							/* FIXME */
+    version (DragonFlyBSD) {} else                    /* FIXME: assertion below fails, have not been able to figure out why, yet */
     assert(!AlignedMallocator.instance.alignedReallocate(c, size_t.max, 4096));
     AlignedMallocator.instance.deallocate(c);
 }
