@@ -177,7 +177,7 @@ deprecated("Use std.datetime.stopwatch.AutoStart.") alias AutoStart = Flag!"auto
           $(REF TickDuration,core,time)) has been deprecated. Use what's in
           std.datetime.stopwatch instead. It uses $(REF MonoTime,core,time) and
           $(REF Duration,core,time). See
-          $(REF StopWatch,std,datetime,stopwatch). This symbol will be removed
+          $(REF _StopWatch,std,datetime,stopwatch). This symbol will be removed
           from the documentation in October 2018 and fully removed from Phobos
           in October 2019.)
 
