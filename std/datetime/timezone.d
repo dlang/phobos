@@ -595,10 +595,6 @@ public:
         {
             // The same bug on NetBSD 7+
         }
-        //else version(DragonFlyBSD)
-        //{
-            // The same bug on NetBSD 7+
-        //}
         else
         {
             assert(LocalTime().stdName !is null);
@@ -690,10 +686,6 @@ public:
             {
                 // The same bug on NetBSD 7+
             }
-            //else version(DragonFlyBSD)
-            //{
-                // The same bug on NetBSD 7+
-            //}
             else
             {
                 setTZEnvVar("America/Los_Angeles");
