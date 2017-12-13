@@ -3830,6 +3830,20 @@ if (is(AssocArrayTypeOf!T) && !is(T == enum) && !hasToString!(T, Char))
     assert(w.data == "TestContainer(helloworld)", w.data);
 }
 
+// https://issues.dlang.org/show_bug.cgi?id=17269
+@safe unittest
+{
+    import std.typecons : Nullable;
+
+    struct Foo
+    {
+        Nullable!string bar;
+    }
+
+    Foo f;
+    formatTest(f, "Foo(Nullable.null)");
+}
+
 @safe unittest
 {
     assert(collectExceptionMsg!FormatException(format("%d", [0:1])).back == 'd');
