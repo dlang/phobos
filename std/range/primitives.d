@@ -1404,12 +1404,41 @@ template hasLength(R)
     static assert( hasLength!(int[]));
     static assert( hasLength!(inout(int)[]));
 
-    struct A { ulong length; }
-    struct B { size_t length() { return 0; } }
-    struct C { @property size_t length() { return 0; } }
+    struct A { size_t length() { return 0; } }
+    struct B { @property size_t length() { return 0; } }
     static assert( hasLength!(A));
     static assert( hasLength!(B));
-    static assert( hasLength!(C));
+}
+
+// test combinations which are invalid on some platforms
+unittest
+{
+    struct A { ulong length; }
+    struct B { @property uint length() { return 0; } }
+
+    version (X86)
+    {
+        static assert(!hasLength!(A));
+        static assert(hasLength!(B));
+    }
+    else version(X86_64)
+    {
+        static assert(hasLength!(A));
+        static assert(!hasLength!(B));
+    }
+}
+
+// test combinations which are invalid on all platforms
+unittest
+{
+    struct A { long length; }
+    struct B { int length; }
+    struct C { ubyte length; }
+    struct D { char length; }
+    static assert(!hasLength!(A));
+    static assert(!hasLength!(B));
+    static assert(!hasLength!(C));
+    static assert(!hasLength!(D));
 }
 
 /**
