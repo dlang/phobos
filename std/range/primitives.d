@@ -1388,41 +1388,13 @@ This is because a narrow string's length does not reflect the number of
 characters, but instead the number of encoding units, and as such is not useful
 with range-oriented algorithms. To use strings as random-access ranges with
 length, use $(REF representation, std, string) or $(REF byCodeUnit, std, utf).
-
-Deprecation: Historically `hasLength!R` yielded `true` for types whereby
-`R.length` returns other types convertible to `ulong`, such as `int`, `ushort`,
-`const(size_t)`, user-defined types using `alias this`, or notably `ulong` on
-32-bit systems. This behavior has  been deprecated. After December 2017,
-`hasLength` will yield `true` only if `R.length` yields the exact type `size_t`.
 */
 template hasLength(R)
 {
     static if (is(typeof(((R* r) => r.length)(null)) Length))
-    {
-        static if (is(Length == size_t))
-        {
-            enum bool hasLength = !isNarrowString!R;
-        }
-        else static if (is(Length : ulong))
-        {
-            // @@@DEPRECATED_2017-12@@@
-            // Uncomment the deprecated(...) message and take the pragma(msg)
-            // out once https://issues.dlang.org/show_bug.cgi?id=10181 is fixed.
-            pragma(msg, __FILE__ ~ "(" ~ __LINE__.stringof ~
-                "): Note: length must have type size_t on all systems" ~
-                    ", please update your code by December 2017.");
-            //deprecated("length must have type size_t on all systems")
-            enum bool hasLength = true;
-        }
-        else
-        {
-            enum bool hasLength = false;
-        }
-    }
+        enum bool hasLength = is(Length == size_t) && !isNarrowString!R;
     else
-    {
         enum bool hasLength = false;
-    }
 }
 
 ///
