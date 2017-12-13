@@ -1397,7 +1397,8 @@ Deprecation: Historically `hasLength!R` yielded `true` for types whereby
 */
 template hasLength(R)
 {
-    static if (is(typeof(((R* r) => r.length)(null)) Length))
+    import std.traits : Unqual;
+    static if (is(Unqual!(typeof(((R* r) => r.length)(null))) Length))
     {
         static if (is(Length == size_t))
         {
@@ -1434,10 +1435,12 @@ template hasLength(R)
 
     struct A { ulong length; }
     struct B { size_t length() { return 0; } }
-    struct C { @property size_t length() { return 0; } }
+    struct C { immutable(size_t) length() { return 0; } }
+    struct D { @property size_t length() { return 0; } }
     static assert( hasLength!(A));
     static assert( hasLength!(B));
     static assert( hasLength!(C));
+    static assert( hasLength!(D));
 }
 
 /**
