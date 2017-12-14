@@ -1746,12 +1746,12 @@ FormatSpec!Char singleSpec(Char)(Char[] fmt)
  *
  * Params:
  *     w = The $(REF_ALTTEXT output _range, isOutputRange, std,_range,primitives) to write to.
- *     obj = The value to write.
+ *     val = The value to write.
  *     f = The $(REF FormatSpec, std, format) defining how to write the value.
  */
-void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T obj, const ref FormatSpec!Char f)
+void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, const ref FormatSpec!Char f)
 {
-    formatValueImpl(w, obj, f);
+    formatValueImpl(w, val, f);
 }
 
 /++
@@ -1861,8 +1861,10 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T obj, const ref F
  * Dynamic arrays are formatted as input ranges.
  *
  * Specializations:
- *     $(UL $(LI $(D void[]) is formatted like $(D ubyte[]).)
- *         $(LI Const array is converted to input range by removing its qualifier.))
+ *   $(UL
+ *      $(LI $(D void[]) is formatted like $(D ubyte[]).)
+ *      $(LI Const array is converted to input range by removing its qualifier.)
+ *   )
  */
 @safe pure unittest
 {
@@ -1911,8 +1913,6 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T obj, const ref F
  */
 @system unittest
 {
-   import std.format;
-
    struct Point
    {
        int x, y;
@@ -1972,7 +1972,7 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T obj, const ref F
 }
 
 /// Delegates are formatted by `ReturnType delegate(Parameters) FunctionAttributes`
-@safe pure unittest
+@safe unittest
 {
     import std.conv : to;
 
@@ -1985,11 +1985,13 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T obj, const ref F
 
     @system int delegate(short) @nogc bar() nothrow pure
     {
-        int* p = new int;
+        int* p = new int(1);
+        i = *p;
         return &foo;
     }
 
     assert(to!string(&bar) == "int delegate(short) @nogc delegate() pure nothrow @system");
+    assert(() @trusted { return bar()(3); }() == 4);
 }
 
 /*
@@ -5942,7 +5944,6 @@ char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
 @system unittest
 {
     import core.exception;
-    import std.format;
 
     debug(string) trustedPrintf("std.string.sformat.unittest\n");
 
