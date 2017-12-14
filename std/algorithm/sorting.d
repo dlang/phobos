@@ -3137,7 +3137,7 @@ if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
     topN!"a < b"(v, 100);
     assert(v == [ 25, 7, 9, 2, 0, 5, 21 ]);
     auto n = 4;
-    topN!"a < b"(v, n);
+    topN!((a, b) => a < b)(v, n);
     assert(v[n] == 9);
 }
 
