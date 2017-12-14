@@ -1,6 +1,6 @@
-`std.typecons.Ternary.opBinary` supports `bool` operands
+`std.typecons.Ternary.opBinary` supports `bool` bitwise operands
 
-Now `std.range.Ternary` can be used in bitwise operations with `bool`
+Now $(REF Ternary, std, typecons) can be used in bitwise operations with `bool`s:
 
 -----
 import std.typecons : Ternary;
