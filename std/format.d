@@ -450,7 +450,6 @@ if (isSomeString!(typeof(fmt)))
 @safe pure unittest
 {
     import std.array : appender;
-    import std.format : formattedWrite;
 
     auto writer = appender!string();
     writer.formattedWrite!"%s is the ultimate %s."(42, "answer");
@@ -1760,7 +1759,6 @@ void formatValue(Writer, T, Char)(auto ref Writer w, auto ref T val, const ref F
 @safe pure unittest
 {
    import std.array : appender;
-   import std.format;
 
    auto writer1 = appender!string();
    writer1.formattedWrite("%08b", 42);
@@ -5804,7 +5802,6 @@ immutable(Char)[] format(Char, Args...)(in Char[] fmt, Args args)
 if (isSomeChar!Char)
 {
     import std.array : appender;
-    import std.format : formattedWrite, FormatException;
     auto w = appender!(immutable(Char)[]);
     auto n = formattedWrite(w, fmt, args);
     version (all)
@@ -5823,7 +5820,6 @@ if (isSomeChar!Char)
 {
     import core.exception;
     import std.exception;
-    import std.format;
     assertCTFEable!(
     {
 //  assert(format(null) == "");
@@ -5880,7 +5876,6 @@ if (isSomeString!(typeof(fmt)))
 char[] sformat(Char, Args...)(char[] buf, in Char[] fmt, Args args)
 {
     import core.exception : RangeError;
-    import std.format : formattedWrite, FormatException;
     import std.utf : encode;
 
     size_t i;
