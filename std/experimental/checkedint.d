@@ -46,10 +46,13 @@ This module provides a few predefined hooks (below) that add useful behavior to
 
 $(BOOKTABLE ,
     $(TR $(TD $(LREF Abort)) $(TD
-        fails every incorrect operation with a message to $(REF
-        stderr, std, stdio) followed by a call to `assert(0)`. It is the default
+        fails every incorrect operation with `assert(0, msg)`. It is the default
         second parameter, i.e. `Checked!short` is the same as
-        $(D Checked!(short, Abort)).
+        `Checked!(short, Abort)`.
+    ))
+    $(TR $(TD $(LREF Debug)) $(TD
+        fails every incorrect operation with a message to $(REF
+        stderr, std, stdio) followed by a call to `assert(0)`.
     ))
     $(TR $(TD $(LREF Throw)) $(TD
         fails every incorrect operation by throwing an exception.
@@ -199,7 +202,7 @@ module std.experimental.checkedint;
 import std.traits : isFloatingPoint, isIntegral, isNumeric, isUnsigned, Unqual;
 
 ///
-@system unittest
+@safe unittest
 {
     int[] concatAndAdd(int[] a, int[] b, int offset)
     {
@@ -1085,7 +1088,7 @@ if (is(typeof(Checked!(T, Hook)(value))))
 }
 
 ///
-@system unittest
+@safe unittest
 {
     static assert(is(typeof(checked(42)) == Checked!int));
     assert(checked(42) == Checked!int(42));
@@ -1108,11 +1111,177 @@ if (is(typeof(Checked!(T, Hook)(value))))
 // Abort
 /**
 
-Force all integral errors to fail by printing an error message to `stderr` and
-then abort the program. `Abort` is the default second argument for `Checked`.
+Force all integral errors to fail by aborting the program.
+`Abort` is the default second argument for `Checked`.
 
 */
 struct Abort
+{
+    import std.format : format;
+static:
+    /**
+
+    Called automatically upon a bad cast (one that loses precision or attempts
+    to convert a negative value to an unsigned type). The source type is `Src`
+    and the destination type is `Dst`.
+
+    Params:
+    src = The source of the cast
+
+    Returns: Nominally the result is the desired value of the cast operation,
+    which will be forwarded as the result of the cast. For `Abort`, the
+    function never returns because it aborts the program.
+
+    */
+    Dst onBadCast(Dst, Src)(Src src)
+    {
+        assert(0, "Erroneous cast: cast(%s) %s(%s)".format(
+            Dst.stringof, Src.stringof, src));
+    }
+
+    /**
+
+    Called automatically upon a bounds error.
+
+    Params:
+    rhs = The right-hand side value in the assignment, after the operator has
+    been evaluated
+    bound = The value of the bound being violated
+
+    Returns: Nominally the result is the desired value of the operator, which
+    will be forwarded as result. For `Abort`, the function never returns because
+    it aborts the program.
+
+    */
+    T onLowerBound(Rhs, T)(Rhs rhs, T bound)
+    {
+        assert(0, "Lower bound error: %s(%s) < %s(%s)".format(
+            Rhs.stringof, rhs, T.stringof, bound));
+    }
+    /// ditto
+    T onUpperBound(Rhs, T)(Rhs rhs, T bound)
+    {
+        assert(0, "Upper bound error: %s(%s) > %s(%s)".format(
+            Rhs.stringof, rhs, T.stringof, bound));
+    }
+
+    /**
+
+    Called automatically upon a comparison for equality. In case of a erroneous
+    comparison (one that would make a signed negative value appear equal to an
+    unsigned positive value), this hook issues `assert(0)` which terminates the
+    application.
+
+    Params:
+    lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
+      the operator is `Checked!int`
+    rhs = The right-hand side type involved in the operator
+
+    Returns: Upon a correct comparison, returns the result of the comparison.
+    Otherwise, the function terminates the application so it never returns.
+
+    */
+    static bool hookOpEquals(Lhs, Rhs)(Lhs lhs, Rhs rhs)
+    {
+        bool error;
+        auto result = opChecked!"=="(lhs, rhs, error);
+        if (error)
+        {
+            assert(0, "Erroneous comparison: %s(%s) == %s(%s)".format(
+                Lhs.stringof, lhs, Rhs.stringof, rhs));
+        }
+        return result;
+    }
+
+    /**
+
+    Called automatically upon a comparison for ordering using one of the
+    operators `<`, `<=`, `>`, or `>=`. In case the comparison is erroneous (i.e.
+    it would make a signed negative value appear greater than or equal to an
+    unsigned positive value), then application is terminated with `assert(0)`.
+    Otherwise, the three-state result is returned (positive if $(D lhs > rhs),
+    negative if $(D lhs < rhs), `0` otherwise).
+
+    Params:
+    lhs = The first argument of `Checked`, e.g. `int` if the left-hand side of
+      the operator is `Checked!int`
+    rhs = The right-hand side type involved in the operator
+
+    Returns: For correct comparisons, returns a positive integer if $(D lhs >
+    rhs), a negative integer if  $(D lhs < rhs), `0` if the two are equal. Upon
+    a mistaken comparison such as $(D int(-1) < uint(0)), the function never
+    returns because it aborts the program.
+
+    */
+    int hookOpCmp(Lhs, Rhs)(Lhs lhs, Rhs rhs)
+    {
+        bool error;
+        auto result = opChecked!"cmp"(lhs, rhs, error);
+        if (error)
+        {
+            assert(0, "Erroneous ordering comparison: %s(%s) and %s(%s)".format(
+                Lhs.stringof, lhs, Rhs.stringof, rhs));
+        }
+        return result;
+    }
+
+    /**
+
+    Called automatically upon an overflow during a unary or binary operation.
+
+    Params:
+    x = The operator, e.g. `-`
+    lhs = The left-hand side (or sole) argument
+    rhs = The right-hand side type involved in the operator
+
+    Returns: Nominally the result is the desired value of the operator, which
+    will be forwarded as result. For `Abort`, the function never returns because
+    it aborts the program.
+
+    */
+    typeof(~Lhs()) onOverflow(string x, Lhs)(Lhs lhs)
+    {
+        assert(0, "Overflow on unary operator: %s%s(%s)".format(
+            x, Lhs.stringof, lhs));
+    }
+    /// ditto
+    typeof(Lhs() + Rhs()) onOverflow(string x, Lhs, Rhs)(Lhs lhs, Rhs rhs)
+    {
+        assert(0, "Overflow on binary operator: %s(%s) %s %s(%s)".format(
+            Lhs.stringof, lhs, x, Rhs.stringof, rhs));
+    }
+}
+
+@safe unittest
+{
+    void test(T)()
+    {
+        Checked!(int, Abort) x;
+        x = 42;
+        auto x1 = cast(T) x;
+        assert(x1 == 42);
+        //x1 += long(int.max);
+    }
+    test!short;
+    test!(const short);
+    test!(immutable short);
+}
+
+@safe pure nothrow unittest
+{
+    Checked!(int, Abort) x;
+    x++;
+    x = 2;
+}
+
+// Debug
+/**
+
+Force all integral errors to fail by printing an error message to `stderr` and
+then abort the program.
+
+*/
+struct Debug
 {
 static:
     /**
@@ -1252,7 +1421,7 @@ static:
 {
     void test(T)()
     {
-        Checked!(int, Abort) x;
+        Checked!(int, Debug) x;
         x = 42;
         auto x1 = cast(T) x;
         assert(x1 == 42);
@@ -1262,7 +1431,6 @@ static:
     test!(const short);
     test!(immutable short);
 }
-
 
 // Throw
 /**
