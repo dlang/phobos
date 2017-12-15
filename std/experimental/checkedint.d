@@ -199,7 +199,7 @@ module std.experimental.checkedint;
 import std.traits : isFloatingPoint, isIntegral, isNumeric, isUnsigned, Unqual;
 
 ///
-@system unittest
+@safe unittest
 {
     int[] concatAndAdd(int[] a, int[] b, int offset)
     {
@@ -1085,7 +1085,7 @@ if (is(typeof(Checked!(T, Hook)(value))))
 }
 
 ///
-@system unittest
+@safe unittest
 {
     static assert(is(typeof(checked(42)) == Checked!int));
     assert(checked(42) == Checked!int(42));
@@ -1248,7 +1248,7 @@ static:
     }
 }
 
-@system unittest
+@safe unittest
 {
     void test(T)()
     {
@@ -1457,8 +1457,24 @@ default behavior.
 */
 struct Warn
 {
-    import std.stdio : stderr;
 static:
+
+    private void _writefln(Args...)(Args args)
+    {
+        import std.format : format;
+        import std.functional : forward;
+        import std.stdio : stderr;
+        auto msg = format(args);
+        () @trusted {
+            import core.thread : thread_resumeAll, thread_suspendAll;
+            thread_suspendAll;
+            scope(exit) thread_resumeAll;
+            scope(failure) assert(0, "Thread suspension while printing'" ~ msg ~ "' from CheckedInt failed.");
+            // this can be done @safe-ly, because it happens just before the program terminates
+            // and all other threads have been suspended
+            stderr.lockingTextWriter.put(msg);
+        }();
+    }
     /**
 
     Called automatically upon a bad cast from `src` to type `Dst` (one that
@@ -1474,7 +1490,7 @@ static:
     */
     Dst onBadCast(Dst, Src)(Src src)
     {
-        stderr.writefln("Erroneous cast: cast(%s) %s(%s)",
+        _writefln("Erroneous cast: cast(%s) %s(%s)",
             Dst.stringof, Src.stringof, src);
         return cast(Dst) src;
     }
@@ -1493,14 +1509,14 @@ static:
     */
     Lhs onLowerBound(Rhs, T)(Rhs rhs, T bound)
     {
-        stderr.writefln("Lower bound error: %s(%s) < %s(%s)",
+        _writefln("Lower bound error: %s(%s) < %s(%s)",
             Rhs.stringof, rhs, T.stringof, bound);
         return cast(T) rhs;
     }
     /// ditto
     T onUpperBound(Rhs, T)(Rhs rhs, T bound)
     {
-        stderr.writefln("Upper bound error: %s(%s) > %s(%s)",
+        _writefln("Upper bound error: %s(%s) > %s(%s)",
             Rhs.stringof, rhs, T.stringof, bound);
         return cast(T) rhs;
     }
@@ -1527,7 +1543,7 @@ static:
         auto result = opChecked!"=="(lhs, rhs, error);
         if (error)
         {
-            stderr.writefln("Erroneous comparison: %s(%s) == %s(%s)",
+            _writefln("Erroneous comparison: %s(%s) == %s(%s)",
                 Lhs.stringof, lhs, Rhs.stringof, rhs);
             return lhs == rhs;
         }
@@ -1566,7 +1582,7 @@ static:
         auto result = opChecked!"cmp"(lhs, rhs, error);
         if (error)
         {
-            stderr.writefln("Erroneous ordering comparison: %s(%s) and %s(%s)",
+            _writefln("Erroneous ordering comparison: %s(%s) and %s(%s)",
                 Lhs.stringof, lhs, Rhs.stringof, rhs);
             return lhs < rhs ? -1 : lhs > rhs;
         }
@@ -1599,21 +1615,21 @@ static:
     */
     typeof(~Lhs()) onOverflow(string x, Lhs)(ref Lhs lhs)
     {
-        stderr.writefln("Overflow on unary operator: %s%s(%s)",
+        _writefln("Overflow on unary operator: %s%s(%s)",
             x, Lhs.stringof, lhs);
         return mixin(x ~ "lhs");
     }
     /// ditto
     typeof(Lhs() + Rhs()) onOverflow(string x, Lhs, Rhs)(Lhs lhs, Rhs rhs)
     {
-        stderr.writefln("Overflow on binary operator: %s(%s) %s %s(%s)",
+        _writefln("Overflow on binary operator: %s(%s) %s %s(%s)",
             Lhs.stringof, lhs, x, Rhs.stringof, rhs);
         return mixin("lhs" ~ x ~ "rhs");
     }
 }
 
 ///
-@system unittest
+@safe unittest
 {
     auto x = checked!Warn(42);
     short x1 = cast(short) x;
