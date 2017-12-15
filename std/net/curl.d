@@ -250,11 +250,8 @@ version (unittest)
         immutable(T)[] bdy;
     }
 
-    private Request!T recvReq(T=char, S)(S s)
+    private Request!T recvReq(T=char)(Socket s)
     {
-        import std.socket : Socket;
-        static assert (is(S == Socket), "Invalid type used. Use std.socket.Socket.");
-
         import std.algorithm.comparison : min;
         import std.algorithm.searching : find, canFind;
         import std.conv : to;
@@ -4125,7 +4122,6 @@ class HTTPStatusException : CurlException
     immutable int status; /// The HTTP status code
 }
 
-import etc.c.curl : CURLcode;
 /// Equal to $(REF CURLcode, etc,c,curl)
 alias CurlCode = CURLcode;
 
@@ -4327,7 +4323,7 @@ struct Curl
                 interleavefunction, chunk_data, chunk_bgn_function,
                 chunk_end_function, fnmatch_data, fnmatch_function, cookiejar, postfields);
 
-            static foreach (option; tt)
+            foreach (option; tt)
                 copy.clear(option);
         }
 
