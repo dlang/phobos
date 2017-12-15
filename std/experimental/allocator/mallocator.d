@@ -7,6 +7,7 @@ import std.experimental.allocator.common;
  */
 struct Mallocator
 {
+    version(StdUnittest)
     @system unittest { testAllocator!(() => Mallocator.instance); }
 
     /**

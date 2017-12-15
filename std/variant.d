@@ -545,8 +545,6 @@ private:
         return 0;
     }
 
-    enum doUnittest = is(VariantN == Variant);
-
 public:
     /** Constructs a $(D VariantN) value given an argument of a
      * generic type. Statically rejects disallowed types.
@@ -684,7 +682,7 @@ public:
     }
 
     ///
-    static if (doUnittest)
+    version(StdUnittest)
     @system unittest
     {
         Variant a;
@@ -717,7 +715,7 @@ public:
     }
 
     ///
-    static if (doUnittest)
+    version(StdUnittest)
     @system unittest
     {
         Variant a = 5;
@@ -1109,7 +1107,7 @@ public:
     }
 
     ///
-    static if (doUnittest)
+    version(StdUnittest)
     @system unittest
     {
         Variant a = new int[10];

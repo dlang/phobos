@@ -551,6 +551,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
     }
 
     ///
+    version(StdUnittest)
     @system unittest
     {
         import std.experimental.allocator.gc_allocator : GCAllocator;

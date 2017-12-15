@@ -171,7 +171,7 @@ import std.internal.cstring;
 
 public import etc.c.curl : CurlOption;
 
-version(unittest)
+version(StdUnittest)
 {
     // Run unit test with the PHOBOS_TEST_ALLOW_NET=1 set in order to
     // allow net traffic
