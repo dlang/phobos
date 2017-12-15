@@ -157,6 +157,8 @@ Distributed under the Boost Software License, Version 1.0.
 module std.net.curl;
 
 public import etc.c.curl : CurlOption;
+import core.time : dur;
+import etc.c.curl : CURLcode;
 import std.concurrency : Tid;
 import std.range.primitives;
 import std.encoding : EncodingScheme;
@@ -165,6 +167,8 @@ import std.typecons : Flag, Yes, No, Tuple;
 
 version(unittest)
 {
+    import std.socket : Socket;
+
     // Run unit test with the PHOBOS_TEST_ALLOW_NET=1 set in order to
     // allow net traffic
     private struct TestServer
@@ -232,11 +236,8 @@ version(unittest)
         immutable(T)[] bdy;
     }
 
-    private Request!T recvReq(T=char, S)(S s)
+    private Request!T recvReq(T=char)(Socket s)
     {
-        import std.socket : Socket;
-        static assert (is(S == Socket), "Invalid type used. Use std.socket.Socket.");
-
         import std.algorithm.comparison : min;
         import std.algorithm.searching : find, canFind;
         import std.conv : to;
@@ -313,11 +314,7 @@ version(unittest)
 version(StdDdoc) import std.stdio;
 
 // Default data timeout for Protocols
-private auto _defaultDataTimeout() {
-    import core.time : dur;
-    static res = dur!"minutes"(2);
-    return res;
-}
+enum _defaultDataTimeout = dur!"minutes"(2);
 
 /**
 Macros:
@@ -4144,7 +4141,6 @@ class HTTPStatusException : CurlException
     immutable int status; /// The HTTP status code
 }
 
-import etc.c.curl : CURLcode;
 /// Equal to $(REF CURLcode, etc,c,curl)
 alias CurlCode = CURLcode;
 
@@ -4352,7 +4348,7 @@ struct Curl
                 interleavefunction, chunk_data, chunk_bgn_function,
                 chunk_end_function, fnmatch_data, fnmatch_function, cookiejar, postfields);
 
-            static foreach (option; tt)
+            foreach (option; tt)
                 copy.clear(option);
         }
 
