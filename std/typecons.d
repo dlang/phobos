@@ -535,16 +535,15 @@ if (distinctFieldNames!(Specs))
     string injectNamedFields()
     {
         string decl = "";
-        foreach (i, name; staticMap!(extractName, fieldSpecs))
-        {
-            import std.format : format;
-
-            decl ~= format("alias _%s = Identity!(field[%s]);", i, i);
-            if (name.length != 0)
+        static foreach (i, val; fieldSpecs)
+        {{
+            immutable si = i.stringof;
+            decl ~= "alias _" ~ si ~ " = Identity!(field[" ~ si ~ "]);";
+            if (val.name.length != 0)
             {
-                decl ~= format("alias %s = _%s;", name, i);
+                decl ~= "alias " ~ val.name ~ " = _" ~ si ~ ";";
             }
-        }
+        }}
         return decl;
     }
 
