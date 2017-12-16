@@ -101,6 +101,9 @@ style_lint()
     # dscanner needs a more up-to-date DMD version
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$DSCANNER_DMD_VER --activate)"
 
+    # Temporarily allow DScanner failures
+    # See also: https://github.com/dlang/phobos/pull/5929
+    sed -i 's/dscanner:/dscanner:\n\t@echo "Temporarily disabled. Failures allowed."\n\t-make -f posix.mak dscanner_allow_failures\n\ndscanner_allow_failures:/' posix.mak
     make -f posix.mak style_lint DUB=$DUB BUILD=$BUILD
 }
 
