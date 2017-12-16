@@ -105,6 +105,7 @@ style_lint()
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$DSCANNER_DMD_VER --activate)"
 
     make -f posix.mak style_lint DUB=$DUB BUILD=$BUILD
+    cat "gcx.log"
 }
 
 # run unittest with coverage
