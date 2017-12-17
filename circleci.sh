@@ -87,6 +87,9 @@ setup_repos()
         fi
     done
 
+    # enable debug GC logs
+    cp -f gc.d ../druntime/src/gc/impl/conservative/gc.d
+
     # load environment for bootstrap compiler
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
 
@@ -102,6 +105,7 @@ style_lint()
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$DSCANNER_DMD_VER --activate)"
 
     make -f posix.mak style_lint DUB=$DUB BUILD=$BUILD
+    cat "gcx.log"
 }
 
 # run unittest with coverage
