@@ -1411,7 +1411,7 @@ template hasLength(R)
 }
 
 // test combinations which are invalid on some platforms
-unittest
+@safe unittest
 {
     struct A { ulong length; }
     struct B { @property uint length() { return 0; } }
@@ -1429,7 +1429,7 @@ unittest
 }
 
 // test combinations which are invalid on all platforms
-unittest
+@safe unittest
 {
     struct A { long length; }
     struct B { int length; }
