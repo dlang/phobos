@@ -3119,7 +3119,7 @@ if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
         // Workaround for https://issues.dlang.org/show_bug.cgi?id=16528
         // Safety checks: enumerate all potentially unsafe generic primitives
         // then use a @trusted implementation.
-        binaryFun!less(r[0], r[r.length - 1]);
+        cast(void) binaryFun!less(r[0], r[r.length - 1]);
         import std.algorithm.mutation : swapAt;
         r.swapAt(size_t(0), size_t(0));
         static assert(is(typeof(r.length) == size_t));
@@ -3137,7 +3137,7 @@ if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
     topN!"a < b"(v, 100);
     assert(v == [ 25, 7, 9, 2, 0, 5, 21 ]);
     auto n = 4;
-    topN!"a < b"(v, n);
+    topN!((a, b) => a < b)(v, n);
     assert(v[n] == 9);
 }
 
