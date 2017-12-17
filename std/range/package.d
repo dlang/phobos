@@ -2393,9 +2393,9 @@ if (isInputRange!R)
             @property size_t length() const { return _n; }
             alias opDollar = length;
 
-            @property Take!R _takeExactly_Result_asTake()
+            @property auto _takeExactly_Result_asTake()
             {
-                return typeof(return)(_input, _n);
+                return take(_input, _n);
             }
 
             alias _takeExactly_Result_asTake this;
@@ -2543,6 +2543,22 @@ pure @safe nothrow unittest
     Take!DummyType t = te;
     assert(equal(t, [1, 2, 3, 4, 5]));
     assert(equal(t, te));
+}
+
+// https://issues.dlang.org/show_bug.cgi?id=18092
+// can't combine take and takeExactly
+unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.internal.test.dummyrange : AllDummyRanges;
+
+    static foreach (Range; AllDummyRanges)
+    {{
+        Range r;
+        assert(r.take(6).takeExactly(2).equal([1, 2]));
+        assert(r.takeExactly(6).takeExactly(2).equal([1, 2]));
+        assert(r.takeExactly(6).take(2).equal([1, 2]));
+    }}
 }
 
 /**
