@@ -47,7 +47,11 @@ CharMatcher[CodepointSet] matcherCache;
     }
 }
 
-static CharMatcher wordMatcher = CharMatcher(wordCharacter);
+@property ref wordMatcher()()
+{
+    static CharMatcher matcher = CharMatcher(wordCharacter);
+    return matcher;
+}
 
 // some special Unicode white space characters
 private enum NEL = '\u0085', LS = '\u2028', PS = '\u2029';
