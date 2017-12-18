@@ -13,7 +13,8 @@
 #
 # make BUILD=debug unittest => builds all unittests (for debug) and runs them
 #
-# make DEBUGGER=ddd std/XXXXX.debug => builds the module XXXXX and executes it in the debugger ddd
+# make DEBUGGER=ddd std/XXXXX.debug => builds the module XXXXX and executes it
+#                                      in the debugger ddd
 #
 # make html => makes html documentation
 #
@@ -25,11 +26,10 @@
 ################################################################################
 # Configurable stuff, usually from the command line
 #
-# OS can be linux, win32, win32wine, osx, freebsd, netbsd or dragonflybsd. The system will be
-# determined by using uname
+# OS can be linux, win32, win32wine, osx, freebsd, netbsd or dragonflybsd.
+# The system will be determined by using uname
 
-#QUIET:=@
-QUIET:=
+QUIET:=@
 
 DEBUGGER=gdb
 GIT_HOME=https://github.com/dlang
