@@ -94,46 +94,26 @@ test.obj : test.d
 test.exe : test.obj $(LIB)
 	$(DMD) -conf= test.obj -m$(MODEL) -g -L/map
 
-#	ti_bit.obj ti_Abit.obj
-
-SRC= \
+SRC_STD= \
 	unittest.d \
 	index.d
-
-# The separation is a workaround for bug 4904 (optlink bug 3372).
-SRC_STD_1= \
 	std\stdio.d \
 	std\string.d \
 	std\format.d \
 	std\file.d
-
-SRC_STD_2a= \
-	std\array.d \
 	std\functional.d \
 	std\path.d \
 	std\outbuffer.d \
 	std\utf.d
-
-SRC_STD_3= \
-	std\csv.d \
 	std\complex.d \
 	std\numeric.d \
 	std\bigint.d
-
-SRC_STD_3a= \
-	std\math.d
-
-SRC_STD_3b= \
-	std\uni.d \
 	std\base64.d \
 	std\ascii.d \
 	std\demangle.d \
 	std\uri.d \
 	std\mmfile.d \
 	std\getopt.d
-
-SRC_STD_3c= \
-	std\signals.d \
 	std\meta.d \
 	std\typetuple.d \
 	std\traits.d \
@@ -144,63 +124,25 @@ SRC_STD_3c= \
 	std\compiler.d \
 	std\system.d \
 	std\concurrency.d
-
-SRC_STD_3d= \
-	std\bitmanip.d \
 	std\typecons.d
-
-SRC_STD_4= \
-	std\uuid.d
-
-SRC_STD_6a=std\variant.d
-SRC_STD_6c=std\zlib.d
-SRC_STD_6e=std\socket.d
-SRC_STD_6h=std\conv.d
-SRC_STD_6i=std\zip.d
-
-SRC_STD_7= \
+	std\variant.d \
+	std\zlib.d \
+	std\socket.d \
+	std\conv.d \
+	std\zip.d \
 	std\stdint.d \
 	std\json.d \
 	std\parallelism.d \
 	std\mathspecial.d \
 	std\process.d
-
-SRC_STD= \
-	$(SRC_STD_1) \
-	$(SRC_STD_2a) \
-	$(SRC_STD_3) \
-	$(SRC_STD_3a) \
-	$(SRC_STD_3b) \
-	$(SRC_STD_3c) \
-	$(SRC_STD_3d) \
-	$(SRC_STD_4) \
-	$(SRC_STD_6a) \
-	$(SRC_STD_6c) \
-	$(SRC_STD_6e) \
-	$(SRC_STD_6h) \
-	$(SRC_STD_6i) \
-	$(SRC_STD_7)
-
-SRC_STD_ALGO_1= \
 	std\algorithm\package.d \
 	std\algorithm\comparison.d \
 	std\algorithm\iteration.d \
 	std\algorithm\mutation.d
-
-SRC_STD_ALGO_2= \
 	std\algorithm\searching.d \
 	std\algorithm\setops.d
-
-SRC_STD_ALGO_3= \
 	std\algorithm\sorting.d \
 	std\algorithm\internal.d
-
-SRC_STD_ALGO= \
-	$(SRC_STD_ALGO_1) \
-	$(SRC_STD_ALGO_2) \
-	$(SRC_STD_ALGO_3)
-
-SRC_STD_CONTAINER= \
 	std\container\array.d \
 	std\container\binaryheap.d \
 	std\container\dlist.d \
@@ -208,16 +150,12 @@ SRC_STD_CONTAINER= \
 	std\container\slist.d \
 	std\container\util.d \
 	std\container\package.d
-
-SRC_STD_DATETIME= \
 	std\datetime\date.d \
 	std\datetime\interval.d \
 	std\datetime\package.d \
 	std\datetime\stopwatch.d \
 	std\datetime\systime.d \
 	std\datetime\timezone.d
-
-SRC_STD_DIGEST= \
 	std\digest\crc.d \
 	std\digest\sha.d \
 	std\digest\md.d \
@@ -226,17 +164,11 @@ SRC_STD_DIGEST= \
 	std\digest\hmac.d \
 	std\digest\murmurhash.d \
 	std\digest\package.d
-
-SRC_STD_NET= \
 	std\net\isemail.d \
 	std\net\curl.d
-
-SRC_STD_RANGE= \
 	std\range\package.d \
 	std\range\primitives.d \
 	std\range\interfaces.d
-
-SRC_STD_REGEX= \
 	std\regex\internal\ir.d \
 	std\regex\package.d \
 	std\regex\internal\parser.d \
@@ -246,13 +178,9 @@ SRC_STD_REGEX= \
 	std\regex\internal\thompson.d \
 	std\regex\internal\kickstart.d \
 	std\regex\internal\generator.d
-
-SRC_STD_WIN= \
 	std\windows\registry.d \
 	std\windows\syserror.d \
 	std\windows\charset.d
-
-SRC_STD_INTERNAL= \
 	std\internal\cstring.d \
 	std\internal\unicode_tables.d \
 	std\internal\unicode_comp.d \
@@ -262,24 +190,14 @@ SRC_STD_INTERNAL= \
 	std\internal\scopebuffer.d \
 	std\internal\test\dummyrange.d \
 	std\internal\test\range.d
-
-SRC_STD_INTERNAL_DIGEST= \
 	std\internal\digest\sha_SSSE3.d
-
-SRC_STD_INTERNAL_MATH= \
 	std\internal\math\biguintcore.d \
 	std\internal\math\biguintnoasm.d \
 	std\internal\math\biguintx86.d \
 	std\internal\math\gammafunction.d \
 	std\internal\math\errorfunction.d
-
-SRC_STD_INTERNAL_WINDOWS= \
 	std\internal\windows\advapi32.d
-
-SRC_STD_EXP= \
 	std\experimental\all.d std\experimental\checkedint.d std\experimental\typecons.d
-
-SRC_STD_EXP_ALLOC_BB= \
 	std\experimental\allocator\building_blocks\affix_allocator.d \
 	std\experimental\allocator\building_blocks\aligned_block_list.d \
 	std\experimental\allocator\building_blocks\allocator_list.d \
@@ -297,8 +215,6 @@ SRC_STD_EXP_ALLOC_BB= \
 	std\experimental\allocator\building_blocks\segregator.d \
 	std\experimental\allocator\building_blocks\stats_collector.d \
 	std\experimental\allocator\building_blocks\package.d
-
-SRC_STD_EXP_ALLOC= \
 	std\experimental\allocator\common.d \
 	std\experimental\allocator\gc_allocator.d \
 	std\experimental\allocator\mallocator.d \
@@ -306,9 +222,6 @@ SRC_STD_EXP_ALLOC= \
 	std\experimental\allocator\showcase.d \
 	std\experimental\allocator\typed.d \
 	std\experimental\allocator\package.d \
-	$(SRC_STD_EXP_ALLOC_BB)
-
-SRC_STD_EXP_LOGGER= \
 	std\experimental\logger\core.d \
 	std\experimental\logger\filelogger.d \
 	std\experimental\logger\multilogger.d \
@@ -316,8 +229,6 @@ SRC_STD_EXP_LOGGER= \
 	std\experimental\logger\package.d
 
 SRC_ETC=
-
-SRC_ETC_C= \
 	etc\c\zlib.d \
 	etc\c\curl.d \
 	etc\c\sqlite3.d \
@@ -328,25 +239,9 @@ SRC_ETC_C= \
 
 SRC_TO_COMPILE= \
 	$(SRC_STD) \
-	$(SRC_STD_ALGO) \
-	$(SRC_STD_CONTAINER) \
-	$(SRC_STD_DATETIME) \
-	$(SRC_STD_DIGEST) \
-	$(SRC_STD_NET) \
-	$(SRC_STD_RANGE) \
-	$(SRC_STD_REGEX) \
-	$(SRC_STD_C) \
-	$(SRC_STD_WIN) \
-	$(SRC_STD_C_WIN) \
-	$(SRC_STD_INTERNAL) \
-	$(SRC_STD_INTERNAL_DIGEST) \
-	$(SRC_STD_INTERNAL_MATH) \
-	$(SRC_STD_INTERNAL_WINDOWS) \
-	$(SRC_STD_EXP) \
-	$(SRC_STD_EXP_ALLOC) \
-	$(SRC_STD_EXP_LOGGER) \
 	$(SRC_ETC) \
-	$(SRC_ETC_C)
+
+SRC=$(SRC_TO_COMPILE)
 
 SRC_ZLIB= \
 	etc\c\zlib\crc32.h \
@@ -391,63 +286,8 @@ $(LIB) : $(SRC_TO_COMPILE) \
 	$(DMD) -lib -of$(LIB) -Xfphobos.json $(DFLAGS) $(SRC_TO_COMPILE) \
 		$(ZLIB) $(DRUNTIMELIB)
 
-UNITTEST_OBJS= \
-		unittest1.obj \
-		unittest2.obj \
-		unittest2a.obj \
-		unittest3.obj \
-		unittest3a.obj \
-		unittest3b.obj \
-		unittest3c.obj \
-		unittest3d.obj \
-		unittest4.obj \
-		unittest5a.obj \
-		unittest5b.obj \
-		unittest5c.obj \
-		unittest6a.obj \
-		unittest6c.obj \
-		unittest6e.obj \
-		unittest6g.obj \
-		unittest6h.obj \
-		unittest6i.obj \
-		unittest7.obj \
-		unittest8a.obj \
-		unittest8b.obj \
-		unittest8c.obj \
-		unittest8d.obj \
-		unittest8e.obj \
-		unittest8f.obj \
-		unittest9.obj
-
 unittest : $(LIB)
-	$(DMD) $(UDFLAGS) -c  -ofunittest1.obj $(SRC_STD_1)
-	$(DMD) $(UDFLAGS) -c  -ofunittest2.obj $(SRC_STD_RANGE)
-	$(DMD) $(UDFLAGS) -c  -ofunittest2a.obj $(SRC_STD_2a)
-	$(DMD) $(UDFLAGS) -c  -ofunittest3.obj $(SRC_STD_3)
-	$(DMD) $(UDFLAGS) -c  -ofunittest3a.obj $(SRC_STD_3a)
-	$(DMD) $(UDFLAGS) -c  -ofunittest3b.obj $(SRC_STD_3b)
-	$(DMD) $(UDFLAGS) -c  -ofunittest3c.obj $(SRC_STD_3c)
-	$(DMD) $(UDFLAGS) -c  -ofunittest3d.obj $(SRC_STD_3d) $(SRC_STD_DATETIME)
-	$(DMD) $(UDFLAGS) -c  -ofunittest4.obj $(SRC_STD_4) $(SRC_STD_DIGEST)
-	$(DMD) $(UDFLAGS) -c  -ofunittest5a.obj $(SRC_STD_ALGO_1)
-	$(DMD) $(UDFLAGS) -c  -ofunittest5b.obj $(SRC_STD_ALGO_2)
-	$(DMD) $(UDFLAGS) -c  -ofunittest5c.obj $(SRC_STD_ALGO_3)
-	$(DMD) $(UDFLAGS) -c  -ofunittest6a.obj $(SRC_STD_6a)
-	$(DMD) $(UDFLAGS) -c  -ofunittest6c.obj $(SRC_STD_6c)
-	$(DMD) $(UDFLAGS) -c  -ofunittest6e.obj $(SRC_STD_6e)
-	$(DMD) $(UDFLAGS) -c  -ofunittest6g.obj $(SRC_STD_CONTAINER)
-	$(DMD) $(UDFLAGS) -c  -ofunittest6h.obj $(SRC_STD_6h)
-	$(DMD) $(UDFLAGS) -c  -ofunittest6i.obj $(SRC_STD_6i)
-	$(DMD) $(UDFLAGS) -c  -ofunittest7.obj $(SRC_STD_7) $(SRC_STD_EXP_LOGGER)
-	$(DMD) $(UDFLAGS) -c  -ofunittest8a.obj $(SRC_STD_REGEX)
-	$(DMD) $(UDFLAGS) -c  -ofunittest8b.obj $(SRC_STD_NET)
-	$(DMD) $(UDFLAGS) -c  -ofunittest8c.obj $(SRC_STD_C) $(SRC_STD_WIN) $(SRC_STD_C_WIN)
-	$(DMD) $(UDFLAGS) -c  -ofunittest8d.obj $(SRC_STD_INTERNAL) $(SRC_STD_INTERNAL_DIGEST) $(SRC_STD_INTERNAL_MATH) $(SRC_STD_INTERNAL_WINDOWS)
-	$(DMD) $(UDFLAGS) -c  -ofunittest8e.obj $(SRC_ETC) $(SRC_ETC_C)
-	$(DMD) $(UDFLAGS) -c  -ofunittest8f.obj $(SRC_STD_EXP)
-	$(DMD) $(UDFLAGS) -c  -ofunittest9.obj $(SRC_STD_EXP_ALLOC)
-	$(DMD) $(UDFLAGS) -L/OPT:NOICF  unittest.d $(UNITTEST_OBJS) \
-	    $(ZLIB) $(DRUNTIMELIB)
+	$(DMD) $(UDFLAGS) -L/OPT:NOICF -unittest -ofunittest.exe $(SRC) $(ZLIB) $(DRUNTIMELIB)
 	.\unittest.exe
 
 #unittest : unittest.exe
