@@ -171,7 +171,7 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
         Ternary owns(void[] b)
         {
             if (b is null) return Ternary.no;
-            return parent.owns(actualAllocation(b));
+            return parent.owns((() @trusted => actualAllocation(b))());
         }
 
         static if (hasMember!(Allocator, "resolveInternalPointer"))
@@ -182,20 +182,22 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
             if (r != Ternary.yes || p1 is null)
                 return r;
             p1 = p1[stateSize!Prefix .. $];
-            auto p2 = (p1.ptr + p1.length - stateSize!Suffix)
-                      .alignDownTo(Suffix.alignof);
-            result = p1[0 .. p2 - p1.ptr];
+            auto p2 = (() @trusted => (&p1[0] + p1.length - stateSize!Suffix)
+                                      .alignDownTo(Suffix.alignof))();
+            result = p1[0 .. p2 - &p1[0]];
             return Ternary.yes;
         }
 
-        static if (!stateSize!Suffix && hasMember!(Allocator, "expand"))
+        static if (!stateSize!Suffix && hasMember!(Allocator, "expand")
+                    && hasMember!(Allocator, "owns"))
         bool expand(ref void[] b, size_t delta)
         {
-            if (!b.ptr) return delta == 0;
-            auto t = actualAllocation(b);
+            if (!b || delta == 0) return delta == 0;
+            if (owns(b) == Ternary.no) return false;
+            auto t = (() @trusted => actualAllocation(b))();
             const result = parent.expand(t, delta);
             if (!result) return false;
-            b = b.ptr[0 .. b.length + delta];
+            b = (() @trusted => b.ptr[0 .. b.length + delta])();
             return true;
         }
 
@@ -402,6 +404,20 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     });
 }
 
+// Test empty
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlock;
+    import std.typecons : Ternary;
+
+    auto a = AffixAllocator!(BitmappedBlock!128, ulong, ulong)
+                (BitmappedBlock!128(new ubyte[128 * 4096]));
+    assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.no);
+}
+
 @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
@@ -435,7 +451,48 @@ struct AffixAllocator(Allocator, Prefix, Suffix = void)
     static assert(is(typeof(&MyAllocator.instance.prefix(e)) == const(uint)*));
 
     void[] p;
-    assert(MyAllocator.instance.resolveInternalPointer(null, p) == Ternary.no);
-    Ternary r = MyAllocator.instance.resolveInternalPointer(d.ptr, p);
+    assert((() nothrow @safe @nogc => MyAllocator.instance.resolveInternalPointer(null, p))() == Ternary.no);
+    assert((() nothrow @safe => MyAllocator.instance.resolveInternalPointer(&d[0], p))() == Ternary.yes);
     assert(p.ptr is d.ptr && p.length >= d.length);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator;
+    alias a = AffixAllocator!(GCAllocator, uint).instance;
+
+    // Check that goodAllocSize inherits from parent, i.e. GCAllocator
+    assert(__traits(compiles, (() nothrow @safe @nogc => a.goodAllocSize(1))()));
+
+    // Ensure deallocate inherits from parent
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    () nothrow @nogc { a.deallocate(b); }();
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+
+    auto a = AffixAllocator!(Region!(), uint)(Region!()(new ubyte[1024 * 64]));
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    // Test that expand infers from parent
+    assert((() pure nothrow @safe @nogc => a.expand(b, 58))());
+    assert(b.length == 100);
+    // Test that deallocateAll infers from parent
+    assert((() nothrow @nogc => a.deallocateAll())());
+}
+
+// Test that reallocate infers from parent
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    alias a = AffixAllocator!(Mallocator, uint).instance;
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() nothrow @nogc => a.reallocate(b, 100))());
+    assert(b.length == 100);
+    assert((() nothrow @nogc => a.deallocate(b))());
 }

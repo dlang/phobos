@@ -533,9 +533,9 @@ auto clamp(T1, T2, T3)(T1 val, T2 lower, T3 upper)
 in
 {
     import std.functional : greaterThan;
-    assert(!lower.greaterThan(upper));
+    assert(!lower.greaterThan(upper), "Lower can't be greater than upper.");
 }
-body
+do
 {
     return max(lower, min(upper, val));
 }
@@ -606,85 +606,85 @@ Returns:
 
 */
 int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2)
-if (isInputRange!R1 && isInputRange!R2 && !(isSomeString!R1 && isSomeString!R2))
+if (isInputRange!R1 && isInputRange!R2)
 {
-    for (;; r1.popFront(), r2.popFront())
+    static if (!(isSomeString!R1 && isSomeString!R2))
     {
-        if (r1.empty) return -cast(int)!r2.empty;
-        if (r2.empty) return !r1.empty;
-        auto a = r1.front, b = r2.front;
-        if (binaryFun!pred(a, b)) return -1;
-        if (binaryFun!pred(b, a)) return 1;
-    }
-}
-
-/// ditto
-int cmp(alias pred = "a < b", R1, R2)(R1 r1, R2 r2)
-if (isSomeString!R1 && isSomeString!R2)
-{
-    import core.stdc.string : memcmp;
-    import std.utf : decode;
-
-    static if (is(typeof(pred) : string))
-        enum isLessThan = pred == "a < b";
-    else
-        enum isLessThan = false;
-
-    // For speed only
-    static int threeWay(size_t a, size_t b)
-    {
-        static if (size_t.sizeof == int.sizeof && isLessThan)
-            return a - b;
-        else
-            return binaryFun!pred(b, a) ? 1 : binaryFun!pred(a, b) ? -1 : 0;
-    }
-    // For speed only
-    // @@@BUG@@@ overloading should be allowed for nested functions
-    static int threeWayInt(int a, int b)
-    {
-        static if (isLessThan)
-            return a - b;
-        else
-            return binaryFun!pred(b, a) ? 1 : binaryFun!pred(a, b) ? -1 : 0;
-    }
-
-    static if (typeof(r1[0]).sizeof == typeof(r2[0]).sizeof && isLessThan)
-    {
-        static if (typeof(r1[0]).sizeof == 1)
+        for (;; r1.popFront(), r2.popFront())
         {
-            immutable len = min(r1.length, r2.length);
-            immutable result = __ctfe ?
-                {
-                    foreach (i; 0 .. len)
-                    {
-                        if (r1[i] != r2[i])
-                            return threeWayInt(r1[i], r2[i]);
-                    }
-                    return 0;
-                }()
-                : () @trusted { return memcmp(r1.ptr, r2.ptr, len); }();
-            if (result) return result;
+            if (r1.empty) return -cast(int)!r2.empty;
+            if (r2.empty) return !r1.empty;
+            auto a = r1.front, b = r2.front;
+            if (binaryFun!pred(a, b)) return -1;
+            if (binaryFun!pred(b, a)) return 1;
         }
+    }
+    else
+    {
+        import core.stdc.string : memcmp;
+        import std.utf : decode;
+
+        static if (is(typeof(pred) : string))
+            enum isLessThan = pred == "a < b";
         else
+            enum isLessThan = false;
+
+        // For speed only
+        static int threeWay(size_t a, size_t b)
         {
-            auto p1 = r1.ptr, p2 = r2.ptr,
-                pEnd = p1 + min(r1.length, r2.length);
-            for (; p1 != pEnd; ++p1, ++p2)
+            static if (size_t.sizeof == int.sizeof && isLessThan)
+                return a - b;
+            else
+                return binaryFun!pred(b, a) ? 1 : binaryFun!pred(a, b) ? -1 : 0;
+        }
+        // For speed only
+        // @@@BUG@@@ overloading should be allowed for nested functions
+        static int threeWayInt(int a, int b)
+        {
+            static if (isLessThan)
+                return a - b;
+            else
+                return binaryFun!pred(b, a) ? 1 : binaryFun!pred(a, b) ? -1 : 0;
+        }
+
+        static if (typeof(r1[0]).sizeof == typeof(r2[0]).sizeof && isLessThan)
+        {
+            static if (typeof(r1[0]).sizeof == 1)
             {
-                if (*p1 != *p2) return threeWayInt(cast(int) *p1, cast(int) *p2);
+                immutable len = min(r1.length, r2.length);
+                immutable result = __ctfe ?
+                    {
+                        foreach (i; 0 .. len)
+                        {
+                            if (r1[i] != r2[i])
+                                return threeWayInt(r1[i], r2[i]);
+                        }
+                        return 0;
+                    }()
+                    : () @trusted { return memcmp(r1.ptr, r2.ptr, len); }();
+                if (result) return result;
             }
+            else
+            {
+                auto p1 = r1.ptr, p2 = r2.ptr,
+                    pEnd = p1 + min(r1.length, r2.length);
+                for (; p1 != pEnd; ++p1, ++p2)
+                {
+                    if (*p1 != *p2) return threeWayInt(cast(int) *p1, cast(int) *p2);
+                }
+            }
+            return threeWay(r1.length, r2.length);
         }
-        return threeWay(r1.length, r2.length);
-    }
-    else
-    {
-        for (size_t i1, i2;;)
+        else
         {
-            if (i1 == r1.length) return threeWay(i2, r2.length);
-            if (i2 == r2.length) return threeWay(r1.length, i1);
-            immutable c1 = decode(r1, i1),
-                c2 = decode(r2, i2);
-            if (c1 != c2) return threeWayInt(cast(int) c1, cast(int) c2);
+            for (size_t i1, i2;;)
+            {
+                if (i1 == r1.length) return threeWay(i2, r2.length);
+                if (i2 == r2.length) return threeWay(r1.length, i1);
+                immutable c1 = decode(r1, i1),
+                    c2 = decode(r2, i2);
+                if (c1 != c2) return threeWayInt(cast(int) c1, cast(int) c2);
+            }
         }
     }
 }
@@ -732,7 +732,7 @@ Compares two ranges for equality, as defined by predicate $(D pred)
 template equal(alias pred = "a == b")
 {
     enum isEmptyRange(R) =
-        isInputRange!R && __traits(compiles, {static assert(R.empty);});
+        isInputRange!R && __traits(compiles, {static assert(R.empty, "");});
 
     enum hasFixedLength(T) = hasLength!T || isNarrowString!T;
 

@@ -1278,7 +1278,7 @@ in
 {
     assert(!r.empty, "r is an empty range");
 }
-body
+do
 {
     alias Element = ElementType!Range;
     Unqual!Element seed = r.front;
@@ -2712,6 +2712,7 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
  *  needle = The
  *   $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to search
  *   for.
+ *  pred = Custom predicate for comparison of haystack and needle
  *
  * Returns: $(D true) if the needle was found, in which case $(D haystack) is
  * positioned after the end of the first occurrence of $(D needle); otherwise
@@ -2744,6 +2745,53 @@ if (isForwardRange!R1 && isForwardRange!R2
     // If the needle occurs at the end of the range, the range is left empty.
     s = "abcdef";
     assert(findSkip(s, "def") && s.empty);
+}
+
+/**
+* Advances the `haystack` as long as `pred` evaluates to `true`.
+* The haystack is positioned so as pred evaluates to false for haystack.front.
+*
+* Params:
+*  haystack = The
+*   $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to search
+*   in.
+*  pred = Custom predicate for comparison of haystack and needle
+*
+* Returns: The number of times `pred(haystack.front)` returned true.
+*/
+size_t findSkip(alias pred, R1)(ref R1 haystack)
+if (isForwardRange!R1 && ifTestable!(typeof(haystack.front), unaryFun!pred))
+{
+    size_t result;
+    while (!haystack.empty && unaryFun!pred(haystack.front))
+    {
+        result++;
+        haystack.popFront;
+    }
+    return result;
+}
+
+///
+@safe unittest
+{
+    import std.ascii : isWhite;
+    string s = "    abc";
+    assert(findSkip!isWhite(s) && s == "abc");
+    assert(!findSkip!isWhite(s) && s == "abc");
+
+    s = "  ";
+    assert(findSkip!isWhite(s) == 2);
+    import std.stdio;
+    s = "  ";
+    findSkip!isWhite(s).writeln;
+}
+
+@safe unittest
+{
+    import std.ascii : isWhite;
+
+    auto s = "  ";
+    assert(findSkip!isWhite(s) == 2);
 }
 
 /**
@@ -3906,72 +3954,81 @@ Do nothing if there is no match.
 Params:
     pred = The predicate that determines whether elements from each respective
         range match. Defaults to equality $(D "a == b").
+*/
+template skipOver(alias pred = "a == b")
+{
+    /**
     r1 = The $(REF_ALTTEXT forward range, isForwardRange, std,range,primitives) to
         move forward.
     r2 = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
         representing the initial segment of $(D r1) to skip over.
+    e = The element to match.
 
-Returns:
-true if the initial segment of $(D r1) matches $(D r2) or $(D pred) evaluates to true,
-and $(D r1) has been advanced to the point past this segment; otherwise false, and
-$(D r1) is left in its original position.
- */
-bool skipOver(R1, R2)(ref R1 r1, R2 r2)
-if (isForwardRange!R1 && isInputRange!R2
-    && is(typeof(r1.front == r2.front)))
-{
-    static if (is(typeof(r1[0 .. $] == r2) : bool)
-        && is(typeof(r2.length > r1.length) : bool)
-        && is(typeof(r1 = r1[r2.length .. $])))
+    Returns:
+    true if the initial segment of $(D r1) matches $(D r2) or $(D pred) evaluates to true,
+    and $(D r1) has been advanced to the point past this segment; otherwise false, and
+    $(D r1) is left in its original position.
+    */
+    bool skipOver(R1, R2)(ref R1 r1, R2 r2)
+    if (is(typeof(binaryFun!pred(r1.front, r2.front))) &&
+        isForwardRange!R1 &&
+        isInputRange!R2)
     {
-        if (r2.length > r1.length || r1[0 .. r2.length] != r2)
+        static if (is(typeof(pred) : string) && pred == "a == b"
+                && is(typeof(r1[0 .. $] == r2) : bool)
+                && is(typeof(r2.length > r1.length) : bool)
+                && is(typeof(r1 = r1[r2.length .. $])))
         {
-            return false;
+            if (r2.length > r1.length || r1[0 .. r2.length] != r2)
+            {
+                return false;
+            }
+            r1 = r1[r2.length .. $];
+            return true;
         }
-        r1 = r1[r2.length .. $];
+        else
+        {
+            static if (hasLength!R1 && hasLength!R2)
+            {
+                // Shortcut opportunity!
+                if (r2.length > r1.length)
+                    return false;
+            }
+            auto r = r1.save;
+            while (!r2.empty && !r.empty && binaryFun!pred(r.front, r2.front))
+            {
+                r.popFront();
+                r2.popFront();
+            }
+            if (r2.empty)
+                r1 = r;
+            return r2.empty;
+        }
+    }
+
+    /// Ditto
+    bool skipOver(R)(ref R r1)
+    if (isForwardRange!R &&
+        ifTestable!(typeof(r1.front), unaryFun!pred))
+    {
+        if (r1.empty || !unaryFun!pred(r1.front))
+            return false;
+
+        do
+            r1.popFront();
+        while (!r1.empty && unaryFun!pred(r1.front));
         return true;
     }
-    else
-    {
-        return skipOver!((a, b) => a == b)(r1, r2);
-    }
-}
 
-/// Ditto
-bool skipOver(alias pred, R1, R2)(ref R1 r1, R2 r2)
-if (is(typeof(binaryFun!pred(r1.front, r2.front))) &&
-    isForwardRange!R1 &&
-    isInputRange!R2)
-{
-    static if (hasLength!R1 && hasLength!R2)
+    /// Ditto
+    bool skipOver(R, E)(ref R r, E e)
+    if (is(typeof(binaryFun!pred(r.front, e))) && isInputRange!R)
     {
-        // Shortcut opportunity!
-        if (r2.length > r1.length)
+        if (r.empty || !binaryFun!pred(r.front, e))
             return false;
-    }
-    auto r = r1.save;
-    while (!r2.empty && !r.empty && binaryFun!pred(r.front, r2.front))
-    {
         r.popFront();
-        r2.popFront();
+        return true;
     }
-    if (r2.empty)
-        r1 = r;
-    return r2.empty;
-}
-
-/// Ditto
-bool skipOver(alias pred, R)(ref R r1)
-if (isForwardRange!R &&
-    ifTestable!(typeof(r1.front), unaryFun!pred))
-{
-    if (r1.empty || !unaryFun!pred(r1.front))
-        return false;
-
-    do
-        r1.popFront();
-    while (!r1.empty && unaryFun!pred(r1.front));
-    return true;
 }
 
 ///
@@ -4002,40 +4059,6 @@ if (isForwardRange!R &&
     assert(s4.skipOver!isWhite && s3.empty);
 }
 
-/**
-Skip over the first element of the given range if it matches the given element,
-otherwise do nothing.
-
-Params:
-    pred = The predicate that determines whether an element from the range
-        matches the given element.
-
-    r = The $(REF_ALTTEXT input range, isInputRange, std,range,primitives) to skip
-        over.
-
-    e = The element to match.
-
-Returns:
-true if the first element matches the given element according to the given
-predicate, and the range has been advanced by one element; otherwise false, and
-the range is left untouched.
- */
-bool skipOver(R, E)(ref R r, E e)
-if (isInputRange!R && is(typeof(r.front == e) : bool))
-{
-    return skipOver!((a, b) => a == b)(r, e);
-}
-
-/// Ditto
-bool skipOver(alias pred, R, E)(ref R r, E e)
-if (is(typeof(binaryFun!pred(r.front, e))) && isInputRange!R)
-{
-    if (r.empty || !binaryFun!pred(r.front, e))
-        return false;
-    r.popFront();
-    return true;
-}
-
 ///
 @safe unittest
 {
@@ -4055,6 +4078,22 @@ if (is(typeof(binaryFun!pred(r.front, e))) && isInputRange!R)
 
     auto s2 = "";
     assert(!s2.skipOver('a'));
+}
+
+/// Partial instantiation
+@safe unittest
+{
+    import std.ascii : isWhite;
+    import std.range.primitives : empty;
+
+    alias whitespaceSkiper = skipOver!isWhite;
+
+    auto s2 = "\t\tvalue";
+    auto s3 = "";
+    auto s4 = "\t\t\t";
+    assert(whitespaceSkiper(s2) && s2 == "value");
+    assert(!whitespaceSkiper(s2));
+    assert(whitespaceSkiper(s4) && s3.empty);
 }
 
 /**

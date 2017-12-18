@@ -3398,7 +3398,7 @@ public:
         assert(result._date == Date.min);
         assert(result._tod == TimeOfDay.min);
     }
-    body
+    do
     {
         auto dt = DateTime.init;
         dt._date._year = short.min;
@@ -3425,7 +3425,7 @@ public:
         assert(result._date == Date.max);
         assert(result._tod == TimeOfDay.max);
     }
-    body
+    do
     {
         auto dt = DateTime.init;
         dt._date._year = short.max;
@@ -9952,26 +9952,16 @@ private int cmpTimeUnitsCTFE(string lhs, string rhs) @safe pure nothrow @nogc
 
 @safe unittest
 {
-    import std.format : format;
-    import std.meta : AliasSeq;
-
-    static string genTest(size_t index)
+    static foreach (i; 0 .. timeStrings.length)
     {
-        auto currUnits = timeStrings[index];
-        auto test = format(`assert(CmpTimeUnits!("%s", "%s") == 0);`, currUnits, currUnits);
+        static assert(CmpTimeUnits!(timeStrings[i], timeStrings[i]) == 0);
 
-        foreach (units; timeStrings[index + 1 .. $])
-            test ~= format(`assert(CmpTimeUnits!("%s", "%s") == -1);`, currUnits, units);
+        static foreach (next; timeStrings[i + 1 .. $])
+            static assert(CmpTimeUnits!(timeStrings[i], next) == -1);
 
-        foreach (units; timeStrings[0 .. index])
-            test ~= format(`assert(CmpTimeUnits!("%s", "%s") == 1);`, currUnits, units);
-
-        return test;
+        static foreach (prev; timeStrings[0 .. i])
+            static assert(CmpTimeUnits!(timeStrings[i], prev) == 1);
     }
-
-    static assert(timeStrings.length == 10);
-    foreach (n; AliasSeq!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9))
-        mixin(genTest(n));
 }
 
 
@@ -10006,7 +9996,7 @@ in
 {
     assert(valid!"months"(month));
 }
-body
+do
 {
     switch (month)
     {

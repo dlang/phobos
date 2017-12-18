@@ -25,7 +25,7 @@ import std.traits;
 public import std.container.util;
 
 ///
-@system unittest
+pure @system unittest
 {
     auto arr = Array!int(0, 2, 3);
     assert(arr[0] == 0);
@@ -52,7 +52,7 @@ public import std.container.util;
 }
 
 ///
-@system unittest
+pure @system unittest
 {
     import std.algorithm.comparison : equal;
     auto arr = Array!int(1, 2, 3);
@@ -71,7 +71,7 @@ public import std.container.util;
 }
 
 /// `Array!bool` packs together values efficiently by allocating one bit per element
-@system unittest
+pure @system unittest
 {
     Array!bool arr;
     arr.insert([true, true, false, true, false]);
@@ -251,7 +251,10 @@ private struct RangeT(A)
 struct Array(T)
 if (!is(Unqual!T == bool))
 {
-    import core.stdc.stdlib : malloc, realloc, free;
+    import core.memory : pureMalloc, pureRealloc, pureFree;
+    private alias malloc = pureMalloc;
+    private alias realloc = pureRealloc;
+    private alias free = pureFree;
     import core.stdc.string : memcpy, memmove, memset;
 
     import core.memory : GC;

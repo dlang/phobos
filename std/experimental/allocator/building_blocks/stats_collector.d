@@ -289,7 +289,7 @@ public:
         Ternary owns(void[] b)
         { return ownsImpl(b); }
         else
-        Ternary owns(string f = __FILE, uint n = line)(void[] b)
+        Ternary owns(string f = __FILE__, uint n = __LINE__)(void[] b)
         { return ownsImpl!(f, n)(b); }
     }
 
@@ -517,6 +517,7 @@ public:
     0).
     */
     static if (flags & Options.bytesUsed)
+    pure nothrow @safe @nogc
     Ternary empty()
     {
         return Ternary(_bytesUsed == 0);
@@ -681,11 +682,13 @@ public:
     void test(Allocator)()
     {
         import std.range : walkLength;
-        import std.stdio : writeln;
+        import std.typecons : Ternary;
+
         Allocator a;
+        assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
         auto b1 = a.allocate(100);
         assert(a.numAllocate == 1);
-        assert(a.expand(b1, 0));
+        assert((() nothrow @safe => a.expand(b1, 0))());
         assert(a.reallocate(b1, b1.length + 1));
         auto b2 = a.allocate(101);
         assert(a.numAllocate == 2);
@@ -694,12 +697,13 @@ public:
         auto b3 = a.allocate(202);
         assert(a.numAllocate == 3);
         assert(a.bytesAllocated == 404);
+        assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.no);
 
-        a.deallocate(b2);
+        () nothrow @nogc { a.deallocate(b2); }();
         assert(a.numDeallocate == 1);
-        a.deallocate(b1);
+        () nothrow @nogc { a.deallocate(b1); }();
         assert(a.numDeallocate == 2);
-        a.deallocate(b3);
+        () nothrow @nogc { a.deallocate(b3); }();
         assert(a.numDeallocate == 3);
         assert(a.numAllocate == a.numDeallocate);
         assert(a.bytesUsed == 0);
@@ -717,19 +721,41 @@ public:
     void test(Allocator)()
     {
         import std.range : walkLength;
-        import std.stdio : writeln;
         Allocator a;
         auto b1 = a.allocate(100);
-        assert(a.expand(b1, 0));
+        assert((() nothrow @safe => a.expand(b1, 0))());
         assert(a.reallocate(b1, b1.length + 1));
         auto b2 = a.allocate(101);
         auto b3 = a.allocate(202);
 
-        a.deallocate(b2);
-        a.deallocate(b1);
-        a.deallocate(b3);
+        () nothrow @nogc { a.deallocate(b2); }();
+        () nothrow @nogc { a.deallocate(b1); }();
+        () nothrow @nogc { a.deallocate(b3); }();
     }
     import std.experimental.allocator.building_blocks.free_list : FreeList;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     test!(StatsCollector!(GCAllocator, 0, 0));
+}
+
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    StatsCollector!(GCAllocator, 0, 0) a;
+
+    // calls std.experimental.allocator.common.goodAllocSize
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(1))());
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+
+    auto a = StatsCollector!(Region!(), Options.all, Options.all)(Region!()(new ubyte[1024 * 64]));
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    // Test that reallocate infers from parent
+    assert((() nothrow @nogc => a.reallocate(b, 100))());
+    assert(b.length == 100);
+    // Test that deallocateAll infers from parent
+    assert((() nothrow @nogc => a.deallocateAll())());
 }

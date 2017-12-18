@@ -1485,6 +1485,17 @@ template multiSort(less...) //if (less.length > 1)
     }
 }
 
+///
+@safe unittest
+{
+    import std.algorithm.mutation : SwapStrategy;
+    static struct Point { int x, y; }
+    auto pts1 = [ Point(0, 0), Point(5, 5), Point(0, 1), Point(0, 2) ];
+    auto pts2 = [ Point(0, 0), Point(0, 1), Point(0, 2), Point(5, 5) ];
+    multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts1);
+    assert(pts1 == pts2);
+}
+
 private bool multiSortPredFun(Range, funs...)(ElementType!Range a, ElementType!Range b)
 {
     foreach (f; funs)
@@ -1524,17 +1535,6 @@ private void multiSortImpl(Range, SwapStrategy ss, funs...)(Range r)
     {
         sort!(lessFun, ss)(r);
     }
-}
-
-///
-@safe unittest
-{
-    import std.algorithm.mutation : SwapStrategy;
-    static struct Point { int x, y; }
-    auto pts1 = [ Point(0, 0), Point(5, 5), Point(0, 1), Point(0, 2) ];
-    auto pts2 = [ Point(0, 0), Point(0, 1), Point(0, 2), Point(5, 5) ];
-    multiSort!("a.x < b.x", "a.y < b.y", SwapStrategy.unstable)(pts1);
-    assert(pts1 == pts2);
 }
 
 @safe unittest
@@ -2354,7 +2354,7 @@ private template TimSortImpl(alias pred, R)
     {
         assert(ret <= range.length);
     }
-    body
+    do
     {
         import std.algorithm.mutation : reverse;
 
@@ -2379,7 +2379,7 @@ private template TimSortImpl(alias pred, R)
     {
         if (!__ctfe) assert(isSorted!pred(range));
     }
-    body
+    do
     {
         import std.algorithm.mutation : move;
 
@@ -2412,7 +2412,7 @@ private template TimSortImpl(alias pred, R)
         assert(stack.length >= 2);
         assert(stack.length - at == 2 || stack.length - at == 3);
     }
-    body
+    do
     {
         immutable base = stack[at].base;
         immutable mid  = stack[at].length;
@@ -2437,7 +2437,7 @@ private template TimSortImpl(alias pred, R)
             assert(isSorted!pred(range[mid .. range.length]));
         }
     }
-    body
+    do
     {
         assert(mid < range.length);
 
@@ -2468,7 +2468,7 @@ private template TimSortImpl(alias pred, R)
     {
         assert(ret.length >= minCapacity);
     }
-    body
+    do
     {
         if (temp.length < minCapacity)
         {
@@ -2489,7 +2489,7 @@ private template TimSortImpl(alias pred, R)
     {
         if (!__ctfe) assert(isSorted!pred(range));
     }
-    body
+    do
     {
         import std.algorithm.mutation : copy;
 
@@ -2572,7 +2572,7 @@ private template TimSortImpl(alias pred, R)
     {
         if (!__ctfe) assert(isSorted!pred(range));
     }
-    body
+    do
     {
         import std.algorithm.mutation : copy;
 
@@ -2678,7 +2678,7 @@ private template TimSortImpl(alias pred, R)
         {
             assert(ret <= range.length);
         }
-        body
+        do
         {
             size_t lower = 0, center = 1, upper = range.length;
             alias gap = center;
@@ -3119,7 +3119,7 @@ if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
         // Workaround for https://issues.dlang.org/show_bug.cgi?id=16528
         // Safety checks: enumerate all potentially unsafe generic primitives
         // then use a @trusted implementation.
-        binaryFun!less(r[0], r[r.length - 1]);
+        cast(void) binaryFun!less(r[0], r[r.length - 1]);
         import std.algorithm.mutation : swapAt;
         r.swapAt(size_t(0), size_t(0));
         static assert(is(typeof(r.length) == size_t));
@@ -3128,6 +3128,17 @@ if (isRandomAccessRange!(Range) && hasLength!Range && hasSlicing!Range)
     bool useSampling = true;
     topNImpl!(binaryFun!less)(r, nth, useSampling);
     return ret;
+}
+
+///
+@safe unittest
+{
+    int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
+    topN!"a < b"(v, 100);
+    assert(v == [ 25, 7, 9, 2, 0, 5, 21 ]);
+    auto n = 4;
+    topN!((a, b) => a < b)(v, n);
+    assert(v[n] == 9);
 }
 
 private @trusted
@@ -3228,17 +3239,6 @@ void topNImpl(alias less, R)(R r, size_t n, ref bool useSampling)
             r = r[pivot + 1 .. r.length];
         }
     }
-}
-
-///
-@safe unittest
-{
-    int[] v = [ 25, 7, 9, 2, 0, 5, 21 ];
-    topN!"a < b"(v, 100);
-    assert(v == [ 25, 7, 9, 2, 0, 5, 21 ]);
-    auto n = 4;
-    topN!"a < b"(v, n);
-    assert(v[n] == 9);
 }
 
 private size_t topNPartition(alias lp, R)(R r, size_t n, bool useSampling)
@@ -3349,7 +3349,7 @@ out
     assert(r[0 .. pivot + 1].all!(x => !lp(r[pivot], x)));
     assert(r[pivot + 1 .. r.length].all!(x => !lp(x, r[pivot])));
 }
-body
+do
 {
     import std.algorithm.mutation : swapAt;
     import std.algorithm.searching : all;

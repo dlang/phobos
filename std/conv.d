@@ -835,8 +835,8 @@ if (!isImplicitlyConvertible!(S, T) &&
     class C : B, I, J {}
     class D : I {}
 
-    foreach (m1; AliasSeq!(0,1,2,3,4)) // enumerate modifiers
-    foreach (m2; AliasSeq!(0,1,2,3,4)) // ditto
+    static foreach (m1; 0 .. 5) // enumerate modifiers
+    static foreach (m2; 0 .. 5) // ditto
     (){ // avoid slow optimizations for large functions @@@BUG@@@ 2396
         alias srcmod = AddModifier!m1;
         alias tgtmod = AddModifier!m2;
@@ -1324,7 +1324,7 @@ in
 {
     assert(radix >= 2 && radix <= 36);
 }
-body
+do
 {
     alias EEType = Unqual!(ElementEncodingType!T);
 
@@ -1573,7 +1573,7 @@ Associative array to associative array conversion converts each key
 and each value in turn.
  */
 private T toImpl(T, S)(S value)
-if (isAssociativeArray!S &&
+if (!isImplicitlyConvertible!(S, T) && isAssociativeArray!S &&
     isAssociativeArray!T && !is(T == enum))
 {
     /* This code is potentially unsafe.
@@ -1617,6 +1617,16 @@ if (isAssociativeArray!S &&
 
     double[dstring][int[long[]]] c;
     auto d = to!(immutable(short[immutable wstring])[immutable string[double[]]])(c);
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.array : byPair;
+
+    int[int] a;
+    assert(a.to!(int[int]) == a);
+    assert(a.to!(const(int)[int]).byPair.equal(a.byPair));
 }
 
 private void testIntegralToFloating(Integral, Floating)()
@@ -2444,7 +2454,7 @@ in
 {
     assert(radix >= 2 && radix <= 36);
 }
-body
+do
 {
     import core.checkedint : mulu, addu;
     import std.exception : enforce;

@@ -465,6 +465,31 @@ if (args.length >= 1)
         equals!(real, 3,    4,    5, 9));
 }
 
+/*
+ * Erase any occurrence of the first `TList[0 .. N]` elements from `TList[N .. $]`.
+ *
+ * Params:
+ *   N = number of elements to delete from the `TList`
+ *   TList = sequence of aliases
+ *
+ * See_Also: $(LREF EraseAll)
+ */
+private template EraseAllN(uint N, TList...)
+{
+    static if (N == 1)
+    {
+        alias EraseAllN = EraseAll!(TList[0], TList[1 .. $]);
+    }
+    else
+    {
+        static if (N & 1)
+            alias EraseAllN = EraseAllN!(N / 2, TList[N / 2 + 1 .. N],
+                    EraseAllN!(N / 2 + 1, TList[0 .. N / 2 + 1], TList[N .. $]));
+        else
+            alias EraseAllN = EraseAllN!(N / 2, TList[N / 2 .. N],
+                    EraseAllN!(N / 2, TList[0 .. N / 2], TList[N .. $]));
+    }
+}
 
 /**
  * Returns an `AliasSeq` created from TList with the all duplicate
@@ -472,31 +497,15 @@ if (args.length >= 1)
  */
 template NoDuplicates(TList...)
 {
-    template EraseAllN(uint N, T...)
+    static if (TList.length >= 2)
     {
-        static if (N <= 1)
-        {
-            alias EraseAllN = T;
-        }
-        else
-        {
-            alias EraseAllN = EraseAllN!(N-1, T[1 .. N], EraseAll!(T[0], T[N..$]));
-        }
-    }
-    static if (TList.length > 500)
-    {
-        enum steps = 16;
-        alias first = NoDuplicates!(TList[0 .. steps]);
-        alias NoDuplicates = NoDuplicates!(EraseAllN!(first.length, first, TList[steps..$]));
-    }
-    else static if (TList.length == 0)
-    {
-        alias NoDuplicates = TList;
+        alias fst = NoDuplicates!(TList[0 .. $/2]);
+        alias snd = NoDuplicates!(TList[$/2 .. $]);
+        alias NoDuplicates = AliasSeq!(fst, EraseAllN!(fst.length, fst, snd));
     }
     else
     {
-        alias NoDuplicates =
-            AliasSeq!(TList[0], NoDuplicates!(EraseAll!(TList[0], TList[1 .. $])));
+        alias NoDuplicates = TList;
     }
 }
 
@@ -511,9 +520,19 @@ template NoDuplicates(TList...)
 
 @safe unittest
 {
+    import std.range : iota;
+
     // Bugzilla 14561: huge enums
     alias LongList = Repeat!(1500, int);
     static assert(NoDuplicates!LongList.length == 1);
+    // Bugzilla 17995: huge enums, revisited
+
+    alias a = NoDuplicates!(AliasSeq!(1, Repeat!(1000, 3)));
+    alias b = NoDuplicates!(AliasSeq!(1, Repeat!(10, 3)));
+    static assert(a.length == b.length);
+
+    static assert(NoDuplicates!(aliasSeqOf!(iota(7)), aliasSeqOf!(iota(7))) == aliasSeqOf!(iota(7)));
+    static assert(NoDuplicates!(aliasSeqOf!(iota(8)), aliasSeqOf!(iota(8))) == aliasSeqOf!(iota(8)));
 }
 
 @safe unittest
@@ -1317,9 +1336,12 @@ private template SmartAlias(T...)
  * Creates an `AliasSeq` which repeats a type or an `AliasSeq` exactly `n` times.
  */
 template Repeat(size_t n, TList...)
-if (n > 0)
 {
-    static if (n == 1)
+    static if (n == 0)
+    {
+        alias Repeat = AliasSeq!();
+    }
+    else static if (n == 1)
     {
         alias Repeat = AliasSeq!TList;
     }
@@ -1344,6 +1366,9 @@ if (n > 0)
 ///
 @safe unittest
 {
+    alias ImInt0 = Repeat!(0, int);
+    static assert(is(ImInt0 == AliasSeq!()));
+
     alias ImInt1 = Repeat!(1, immutable(int));
     static assert(is(ImInt1 == AliasSeq!(immutable(int))));
 
@@ -1703,4 +1728,3 @@ private template Pack(T...)
     static assert( Pack!(1, int, "abc").equals!(1, int, "abc"));
     static assert(!Pack!(1, int, "abc").equals!(1, int, "cba"));
 }
-

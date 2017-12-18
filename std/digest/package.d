@@ -17,7 +17,7 @@ $(TR $(TDNW Template API) $(TD $(MYREF isDigest) $(MYREF DigestType) $(MYREF has
 $(TR $(TDNW OOP API) $(TD $(MYREF Digest)
 )
 )
-$(TR $(TDNW Helper functions) $(TD $(MYREF toHexString))
+$(TR $(TDNW Helper functions) $(TD $(MYREF toHexString) $(MYREF secureEqual))
 )
 $(TR $(TDNW Implementation helpers) $(TD $(MYREF digestLength) $(MYREF WrapperDigest))
 )
@@ -931,9 +931,9 @@ if (isDigest!T) : Digest
         nothrow ubyte[] finish(ubyte[] buf)
         in
         {
-            assert(buf.length >= this.length);
+            assert(buf.length >= this.length, "Given buffer is smaller than the local buffer.");
         }
-        body
+        do
         {
             enum string msg = "Buffer needs to be at least " ~ digestLength!(T).stringof ~ " bytes " ~
                 "big, check " ~ typeof(this).stringof ~ ".length!";
@@ -967,9 +967,9 @@ if (isDigest!T) : Digest
             @trusted ubyte[] peek(ubyte[] buf) const
             in
             {
-                assert(buf.length >= this.length);
+                assert(buf.length >= this.length, "Given buffer is smaller than the local buffer.");
             }
-            body
+            do
             {
                 enum string msg = "Buffer needs to be at least " ~ digestLength!(T).stringof ~ " bytes " ~
                     "big, check " ~ typeof(this).stringof ~ ".length!";
@@ -1123,12 +1123,12 @@ if (isInputRange!R1 && isInputRange!R2 && !isInfinite!R1 && !isInfinite!R2 &&
     auto secret = "A7GZIP6TAQA6OHM7KZ42KB9303CEY0MOV5DD6NTV".representation;
     auto data = "data".representation;
 
-    string hex1 = data.hmac!SHA1(secret).toHexString;
-    string hex2 = data.hmac!SHA1(secret).toHexString;
-    string hex3 = "data1".representation.hmac!SHA1(secret).toHexString;
+    auto hex1 = data.hmac!SHA1(secret).toHexString;
+    auto hex2 = data.hmac!SHA1(secret).toHexString;
+    auto hex3 = "data1".representation.hmac!SHA1(secret).toHexString;
 
-    assert( secureEqual(hex1, hex2));
-    assert(!secureEqual(hex1, hex3));
+    assert( secureEqual(hex1[], hex2[]));
+    assert(!secureEqual(hex1[], hex3[]));
 }
 
 @system pure unittest

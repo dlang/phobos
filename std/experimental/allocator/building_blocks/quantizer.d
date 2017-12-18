@@ -4,34 +4,34 @@ module std.experimental.allocator.building_blocks.quantizer;
 import std.experimental.allocator.common;
 
 /**
-This allocator sits on top of $(D ParentAllocator) and quantizes allocation
-sizes, usually from arbitrary positive numbers to a small set of round numbers
-(e.g. powers of two, page sizes etc). This technique is commonly used to:
+This allocator sits on top of `ParentAllocator` and quantizes allocation sizes,
+usually from arbitrary positive numbers to a small set of round numbers (e.g.
+powers of two, page sizes etc). This technique is commonly used to:
 
 $(UL
 $(LI Preallocate more memory than requested such that later on, when
 reallocation is needed (e.g. to grow an array), expansion can be done quickly
 in place. Reallocation to smaller sizes is also fast (in-place) when the new
 size requested is within the same quantum as the existing size. Code that's
-reallocation-heavy can therefore benefit from fronting a generic allocator
-with a $(D Quantizer). These advantages are present even if
-$(D ParentAllocator) does not support reallocation at all.)
-$(LI Improve behavior of allocators sensitive to allocation sizes, such as $(D
-FreeList) and $(D FreeTree). Rounding allocation requests up makes for smaller
+reallocation-heavy can therefore benefit from fronting a generic allocator with
+a `Quantizer`. These advantages are present even if `ParentAllocator` does not
+support reallocation at all.)
+$(LI Improve behavior of allocators sensitive to allocation sizes, such as
+`FreeList` and `FreeTree`. Rounding allocation requests up makes for smaller
 free lists/trees at the cost of slack memory (internal fragmentation).)
 )
 
 The following methods are forwarded to the parent allocator if present:
-$(D allocateAll), $(D owns), $(D deallocateAll), $(D empty).
+`allocateAll`, `owns`, `deallocateAll`, `empty`.
 
-Preconditions: $(D roundingFunction) must satisfy three constraints. These are
-not enforced (save for the use of $(D assert)) for the sake of efficiency.
+Preconditions: `roundingFunction` must satisfy three constraints. These are
+not enforced (save for the use of `assert`) for the sake of efficiency.
 $(OL
-$(LI $(D roundingFunction(n) >= n) for all $(D n) of type $(D size_t);)
-$(LI $(D roundingFunction) must be monotonically increasing, i.e. $(D
+$(LI $(D roundingFunction(n) >= n) for all `n` of type `size_t`;)
+$(LI `roundingFunction` must be monotonically increasing, i.e. $(D
 roundingFunction(n1) <= roundingFunction(n2)) for all $(D n1 < n2);)
-$(LI $(D roundingFunction) must be $(D pure), i.e. always return the same
-value for a given $(D n).)
+$(LI `roundingFunction` must be `nothrow`, `@safe`, `@nogc` and `pure`, i.e.
+always return the same value for a given `n`.)
 )
 */
 struct Quantizer(ParentAllocator, alias roundingFunction)
@@ -85,9 +85,9 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     $(D parent.alignedAllocate(goodAllocSize(n), a)).
     */
     static if (hasMember!(ParentAllocator, "alignedAllocate"))
-    void[] alignedAllocate(size_t n, uint)
+    void[] alignedAllocate(size_t n, uint a)
     {
-        auto result = parent.alignedAllocate(goodAllocSize(n));
+        auto result = parent.alignedAllocate(goodAllocSize(n), a);
         return result.ptr ? result.ptr[0 .. n] : null;
     }
 
@@ -99,7 +99,7 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     */
     bool expand(ref void[] b, size_t delta)
     {
-        if (!b.ptr) return delta == 0;
+        if (!b || delta == 0) return delta == 0;
         immutable allocated = goodAllocSize(b.length),
             needed = b.length + delta,
             neededAllocation = goodAllocSize(needed);
@@ -110,19 +110,19 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
         if (allocated == neededAllocation)
         {
             // Nice!
-            b = b.ptr[0 .. needed];
+            b = (() @trusted => b.ptr[0 .. needed])();
             return true;
         }
         // Hail Mary
         static if (hasMember!(ParentAllocator, "expand"))
         {
             // Expand to the appropriate quantum
-            auto original = b.ptr[0 .. allocated];
+            auto original = (() @trusted => b.ptr[0 .. allocated])();
             assert(goodAllocSize(needed) >= allocated);
             if (!parent.expand(original, neededAllocation - allocated))
                 return false;
             // Dial back the size
-            b = original.ptr[0 .. needed];
+            b = (() @trusted => original.ptr[0 .. needed])();
             return true;
         }
         else
@@ -171,14 +171,14 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     {
         if (!b.ptr)
         {
-            b = alignedAllocate(s);
+            b = alignedAllocate(s, a);
             return b.length == s;
         }
-        if (s >= b.length && expand(b, s - b.length)) return true;
+        if (s >= b.length && b.ptr.alignedAt(a) && expand(b, s - b.length)) return true;
         immutable toAllocate = goodAllocSize(s),
             allocated = goodAllocSize(b.length);
         // Are the lengths within the same quantum?
-        if (allocated == toAllocate)
+        if (allocated == toAllocate && b.ptr.alignedAt(a))
         {
             assert(b.ptr); // code above must have caught this
             // Reallocation (whether up or down) will be done in place
@@ -236,4 +236,86 @@ struct Quantizer(ParentAllocator, alias roundingFunction)
     alias MyAlloc = Quantizer!(GCAllocator,
         (size_t n) => n.roundUpToMultipleOf(64));
     testAllocator!(() => MyAlloc());
+
+    assert((() pure nothrow @safe @nogc => MyAlloc().goodAllocSize(1))() == 64);
+
+    auto a = MyAlloc();
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    // Inplace expand, since goodAllocSize is 64
+    assert((() @safe => a.expand(b, 22))());
+    //assert((() nothrow @safe => a.expand(b, 22))());
+    assert(b.length == 64);
+    // Trigger parent.expand, which may or may not succed
+    //() nothrow @safe { a.expand(b, 1); }();
+    () @safe { a.expand(b, 1); }();
+    assert(a.reallocate(b, 100));
+    assert(b.length == 100);
+    // Ensure deallocate inherits from parent
+    () nothrow @nogc { a.deallocate(b); }();
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.typecons : Ternary;
+
+    alias Alloc = Quantizer!(Region!(Mallocator),
+            (size_t n) => n.roundUpToMultipleOf(64));
+    auto a = Alloc(Region!Mallocator(1024 * 64));
+    const b = a.allocate(42);
+    assert(b.length == 42);
+    // Check that owns inherits from parent, i.e. Region
+    assert((() pure nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
+    assert((() pure nothrow @safe @nogc => a.owns(null))() == Ternary.no);
+
+    auto c = a.allocate(42);
+    assert(c.length == 42);
+    assert((() pure nothrow @safe @nogc => a.owns(c))() == Ternary.yes);
+    // Inplace expand, since goodAllocSize is 64
+    assert((() nothrow @safe => a.expand(c, 22))());
+    assert(c.length == 64);
+    // Trigger parent.expand
+    assert((() nothrow @safe => a.expand(c, 1))());
+    assert(c.length == 65);
+    // Check that reallocate inherits from parent
+    assert((() nothrow @nogc => a.reallocate(c, 100))());
+    assert(c.length == 100);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+    import std.experimental.allocator.mallocator : Mallocator;
+
+    alias MyAlloc = Quantizer!(Region!(Mallocator),
+            (size_t n) => n.roundUpToMultipleOf(64));
+    testAllocator!(() => MyAlloc(Region!Mallocator(1024 * 64)));
+
+    auto a = MyAlloc(Region!Mallocator(1024 * 64));
+    void[] b;
+    assert((() nothrow @nogc => a.alignedReallocate(b, 42, 16))());
+    assert(b.length == 42);
+    assert(alignedAt(&b[0], 16));
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+    import std.typecons : Ternary;
+
+    alias MyAlloc = Quantizer!(Region!(),
+        (size_t n) => n.roundUpToMultipleOf(64));
+    testAllocator!(() => MyAlloc(Region!()(new ubyte[1024 * 64])));
+
+    auto a = MyAlloc(Region!()(new ubyte[1024 * 64]));
+    // Check that empty inherits from parent
+    assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.no);
+    // Check that deallocateAll inherits from parent
+    assert((() nothrow @nogc => a.deallocateAll())());
+    assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
 }

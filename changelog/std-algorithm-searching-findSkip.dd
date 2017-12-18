@@ -1,0 +1,12 @@
+`findSkip` can now skip elements using just a predicate function
+
+Previously, $(REF findSkip, std, algorithm, searching) could only
+be used to find a specific string. Now, a new overload allows elements
+in a range to be skipped over if the passed function returns `true`:
+
+-------
+import std.ascii : isWhite;
+string s = "   abc";
+assert(findSkip!isWhite(s) == 3 && s == "abc");
+assert(!findSkip!isWhite(s) && s == "abc");
+-------

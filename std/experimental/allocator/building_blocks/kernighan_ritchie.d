@@ -171,7 +171,9 @@ struct KRRegion(ParentAllocator = NullAllocator)
     else alias parent = ParentAllocator.instance;
     private void[] payload;
     private Node* root;
-    private bool regionMode = true;
+    private bool regionMode() const { return bytesUsedRegionMode != size_t.max; }
+    private void cancelRegionMode() { bytesUsedRegionMode = size_t.max; }
+    private size_t bytesUsedRegionMode = 0;
 
     auto byNodePtr()
     {
@@ -357,7 +359,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
     void switchToFreeList()
     {
         if (!regionMode) return;
-        regionMode = false;
+        cancelRegionMode;
         if (!root) return;
         root = sortFreelist(root);
         coalesceAndMakeCircular;
@@ -394,6 +396,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
             if (root.size >= actualBytes)
             {
                 // Enough room for allocation
+                bytesUsedRegionMode += actualBytes;
                 void* result = root;
                 immutable balance = root.size - actualBytes;
                 if (balance >= Node.sizeof)
@@ -443,6 +446,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
 
     Params: b = block to be deallocated
     */
+    nothrow @nogc
     bool deallocate(void[] b)
     {
         debug(KRRegion) writefln("KRRegion@%s: deallocate(%s[%s])", &this,
@@ -461,6 +465,7 @@ struct KRRegion(ParentAllocator = NullAllocator)
         {
             assert(root);
             // Insert right after root
+            bytesUsedRegionMode -= n.size;
             n.next = root.next;
             root.next = n;
             return true;
@@ -489,9 +494,10 @@ struct KRRegion(ParentAllocator = NullAllocator)
             assert(pnode && pnode.next);
             assert(pnode != n);
             assert(pnode.next != n);
+
             if (pnode < pnode.next)
             {
-                if (pnode >= n || n >= pnode.next) continue;
+                if (pnode > n || n > pnode.next) continue;
                 // Insert in between pnode and pnode.next
                 n.next = pnode.next;
                 pnode.next = n;
@@ -559,15 +565,18 @@ struct KRRegion(ParentAllocator = NullAllocator)
     Deallocates all memory currently allocated, making the allocator ready for
     other allocations. This is a $(BIGOH 1) operation.
     */
+    pure nothrow @nogc
     bool deallocateAll()
     {
         debug(KRRegion) assertValid("deallocateAll");
         debug(KRRegion) scope(exit) assertValid("deallocateAll");
         root = cast(Node*) payload.ptr;
-        // Initialize the free list with all list
+
+        // Reset to regionMode
+        bytesUsedRegionMode = 0;
         if (root)
         {
-            root.next = root;
+            root.next = null;
             root.size = payload.length;
         }
         return true;
@@ -578,18 +587,20 @@ struct KRRegion(ParentAllocator = NullAllocator)
     It does a simple $(BIGOH 1) range check. $(D b) should be a buffer either
     allocated with $(D this) or obtained through other means.
     */
+    pure nothrow @trusted @nogc
     Ternary owns(void[] b)
     {
         debug(KRRegion) assertValid("owns");
         debug(KRRegion) scope(exit) assertValid("owns");
-        return Ternary(b.ptr >= payload.ptr
-            && b.ptr < payload.ptr + payload.length);
+        return Ternary(b && payload && (&b[0] >= &payload[0])
+                       && (&b[0] < &payload[0] + payload.length));
     }
 
     /**
     Adjusts $(D n) to a size suitable for allocation (two words or larger,
     word-aligned).
     */
+    pure nothrow @safe @nogc
     static size_t goodAllocSize(size_t n)
     {
         import std.experimental.allocator.common : roundUpToMultipleOf;
@@ -601,8 +612,12 @@ struct KRRegion(ParentAllocator = NullAllocator)
     Returns: `Ternary.yes` if the allocator is empty, `Ternary.no` otherwise.
     Never returns `Ternary.unknown`.
     */
+    pure nothrow @safe @nogc
     Ternary empty()
     {
+        if (regionMode)
+            return Ternary(bytesUsedRegionMode == 0);
+
         return Ternary(root && root.size == payload.length);
     }
 }
@@ -624,7 +639,7 @@ fronting the GC allocator.
     auto alloc = fallbackAllocator(KRRegion!()(buf), GCAllocator.instance);
     auto b = alloc.allocate(100);
     assert(b.length == 100);
-    assert(alloc.primary.owns(b) == Ternary.yes);
+    assert((() pure nothrow @safe @nogc => alloc.primary.owns(b))() == Ternary.yes);
 }
 
 /**
@@ -675,8 +690,8 @@ it actually returns memory to the operating system when possible.
     foreach (i; 0 .. array.length)
     {
         assert(array[i].ptr);
-        assert(alloc.owns(array[i]) == Ternary.yes);
-        alloc.deallocate(array[i]);
+        assert((() pure nothrow @safe @nogc => alloc.owns(array[i]))() == Ternary.yes);
+        () nothrow @nogc { alloc.deallocate(array[i]); }();
     }
 }
 
@@ -713,8 +728,8 @@ it actually returns memory to the operating system when possible.
     randomShuffle(array[]);
     foreach (i; 0 .. array.length)
     {
-        assert(alloc.owns(array[i]) == Ternary.yes);
-        alloc.deallocate(array[i]);
+        assert((() pure nothrow @safe @nogc => alloc.owns(array[i]))() == Ternary.yes);
+        () nothrow @nogc { alloc.deallocate(array[i]); }();
     }
 }
 
@@ -741,9 +756,9 @@ it actually returns memory to the operating system when possible.
         array ~= alloc.allocate(i);
         assert(array[$ - 1].length == i);
     }
-    alloc.deallocate(array[1]);
-    alloc.deallocate(array[0]);
-    alloc.deallocate(array[2]);
+    () nothrow @nogc { alloc.deallocate(array[1]); }();
+    () nothrow @nogc { alloc.deallocate(array[0]); }();
+    () nothrow @nogc { alloc.deallocate(array[2]); }();
     assert(alloc.allocateAll().length == 1024 * 1024);
 }
 
@@ -768,14 +783,14 @@ it actually returns memory to the operating system when possible.
         auto length = 100 * i + 1;
         array[i] = p.allocate(length);
         assert(array[i].length == length, text(array[i].length));
-        assert(p.owns(array[i]) == Ternary.yes);
+        assert((() pure nothrow @safe @nogc => p.owns(array[i]))() == Ternary.yes);
     }
     import std.random : randomShuffle;
     randomShuffle(array[]);
     foreach (i; 0 .. array.length)
     {
-        assert(p.owns(array[i]) == Ternary.yes);
-        p.deallocate(array[i]);
+        assert((() pure nothrow @safe @nogc => p.owns(array[i]))() == Ternary.yes);
+        () nothrow @nogc { p.deallocate(array[i]); }();
     }
     auto b = p.allocateAll();
     assert(b.length == 1024 * 1024 - KRRegion!().sizeof, text(b.length));
@@ -783,12 +798,14 @@ it actually returns memory to the operating system when possible.
 
 @system unittest
 {
+    import std.typecons : Ternary;
     import std.experimental.allocator.gc_allocator : GCAllocator;
     auto alloc = KRRegion!()(
                     cast(ubyte[])(GCAllocator.instance.allocate(1024 * 1024)));
     auto p = alloc.allocateAll();
     assert(p.length == 1024 * 1024);
-    alloc.deallocateAll();
+    assert((() nothrow @nogc => alloc.deallocateAll())());
+    assert(alloc.empty() == Ternary.yes);
     p = alloc.allocateAll();
     assert(p.length == 1024 * 1024);
 }
@@ -825,10 +842,10 @@ it actually returns memory to the operating system when possible.
 
         foreach (b; bufs.randomCover)
         {
-            a.deallocate(b);
+            () nothrow @nogc { a.deallocate(b); }();
         }
 
-        assert(a.empty == Ternary.yes);
+        assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
     }
 
     test(sizes64);
@@ -865,18 +882,51 @@ it actually returns memory to the operating system when possible.
             bufs ~= a.allocate(size);
         }
 
-        a.deallocate(bufs[1]);
+        () nothrow @nogc { a.deallocate(bufs[1]); }();
         bufs ~= a.allocate(sizes[1] - word);
 
-        a.deallocate(bufs[0]);
+        () nothrow @nogc { a.deallocate(bufs[0]); }();
         foreach (i; 2 .. bufs.length)
         {
-            a.deallocate(bufs[i]);
+            () nothrow @nogc { a.deallocate(bufs[i]); }();
         }
 
-        assert(a.empty == Ternary.yes);
+        assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
     }
 
     test(sizes64, word64);
     test(sizes32, word32);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+
+    auto a = KRRegion!GCAllocator(1024 * 1024);
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(1))() == typeof(*a.root).sizeof);
+}
+
+@system unittest
+{   import std.typecons : Ternary;
+
+    ubyte[1024] b;
+    auto alloc = KRRegion!()(b);
+
+    auto k = alloc.allocate(128);
+    assert(k.length == 128);
+    assert(alloc.empty == Ternary.no);
+    assert(alloc.deallocate(k));
+    assert(alloc.empty == Ternary.yes);
+
+    k = alloc.allocate(512);
+    assert(k.length == 512);
+    assert(alloc.empty == Ternary.no);
+    assert(alloc.deallocate(k));
+    assert(alloc.empty == Ternary.yes);
+
+    k = alloc.allocate(1024);
+    assert(k.length == 1024);
+    assert(alloc.empty == Ternary.no);
+    assert(alloc.deallocate(k));
+    assert(alloc.empty == Ternary.yes);
 }

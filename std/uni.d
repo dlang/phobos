@@ -1215,7 +1215,7 @@ pure nothrow:
         static if (isIntegral!T)
             assert(val <= mask);
     }
-    body
+    do
     {
         immutable q = n / factor;
         immutable r = n % factor;
@@ -1308,7 +1308,7 @@ pure nothrow:
     {
         assert(s <= e);
     }
-    body
+    do
     {
         s += ofs;
         e += ofs;
@@ -1340,7 +1340,7 @@ pure nothrow:
     {
         assert(idx < limit);
     }
-    body
+    do
     {
         return ptr[ofs + idx];
     }
@@ -1358,7 +1358,7 @@ pure nothrow:
     {
         assert(idx < limit);
     }
-    body
+    do
     {
         ptr[ofs + idx] = val;
     }
@@ -1377,7 +1377,7 @@ pure nothrow:
         assert(start <= end);
         assert(end <= limit);
     }
-    body
+    do
     {
         // account for ofsetted view
         start += ofs;
@@ -1412,7 +1412,7 @@ pure nothrow:
         assert(from <= to);
         assert(ofs + to <= limit);
     }
-    body
+    do
     {
         return typeof(this)(ptr.origin, ofs + from, to - from);
     }
@@ -1457,7 +1457,7 @@ private struct SliceOverIndexed(T)
     {
         assert(idx < to - from);
     }
-    body
+    do
     {
         return (*arr)[from+idx];
     }
@@ -1468,7 +1468,7 @@ private struct SliceOverIndexed(T)
     {
         assert(idx < to - from);
     }
-    body
+    do
     {
        (*arr)[from+idx] = val;
     }
@@ -2122,7 +2122,7 @@ pure:
             assert(a < b, text("illegal interval [a, b): ", a, " > ", b));
         }
     }
-    body
+    do
     {
         InversionList set;
         set.data = CowArray!(SP)(intervals);
@@ -2143,7 +2143,7 @@ pure:
             assert(a < b, text("illegal interval [a, b): ", a, " > ", b));
         }
     }
-    body
+    do
     {
         data = CowArray!(SP)(intervals);
         sanitize(); //enforce invariant: sort intervals etc.
@@ -2182,6 +2182,12 @@ pure:
     @property auto byInterval()
     {
         return Intervals!(typeof(data))(data);
+    }
+
+    package @property const(CodepointInterval)[] intervals() const
+    {
+        import std.array : array;
+        return Intervals!(typeof(data[]))(data[]).array;
     }
 
     /**
@@ -2619,52 +2625,9 @@ public:
         assert((set & set.inverted).empty);
     }
 
-    /**
-        Generates string with D source code of unary function with name of
-        $(D funcName) taking a single $(D dchar) argument. If $(D funcName) is empty
-        the code is adjusted to be a lambda function.
-
-        The function generated tests if the $(CODEPOINT) passed
-        belongs to this set or not. The result is to be used with string mixin.
-        The intended usage area is aggressive optimization via meta programming
-        in parser generators and the like.
-
-        Note: Use with care for relatively small or regular sets. It
-        could end up being slower then just using multi-staged tables.
-
-        Example:
-        ---
-        import std.stdio;
-
-        // construct set directly from [a, b$RPAREN intervals
-        auto set = CodepointSet(10, 12, 45, 65, 100, 200);
-        writeln(set);
-        writeln(set.toSourceCode("func"));
-        ---
-
-        The above outputs something along the lines of:
-        ---
-        bool func(dchar ch)  @safe pure nothrow @nogc
-        {
-            if (ch < 45)
-            {
-                if (ch == 10 || ch == 11) return true;
-                return false;
-            }
-            else if (ch < 65) return true;
-            else
-            {
-                if (ch < 100) return false;
-                if (ch < 200) return true;
-                return false;
-            }
-        }
-        ---
-    */
-    string toSourceCode(string funcName="")
+    package static string toSourceCode(const(CodepointInterval)[] range, string funcName)
     {
         import std.algorithm.searching : countUntil;
-        import std.array : array;
         import std.format : format;
         enum maxBinary = 3;
         static string linearScope(R)(R ivals, string indent)
@@ -2746,7 +2709,6 @@ public:
 
         string code = format("bool %s(dchar ch) @safe pure nothrow @nogc\n",
             funcName.empty ? "function" : funcName);
-        auto range = byInterval.array();
         // special case first bisection to be on ASCII vs beyond
         auto tillAscii = countUntil!"a[0] > 0x80"(range);
         if (tillAscii <= 0) // everything is ASCII or nothing is ascii (-1 & 0)
@@ -2754,6 +2716,55 @@ public:
         else
             code ~= bisect(range, tillAscii, "");
         return code;
+    }
+
+    /**
+        Generates string with D source code of unary function with name of
+        $(D funcName) taking a single $(D dchar) argument. If $(D funcName) is empty
+        the code is adjusted to be a lambda function.
+
+        The function generated tests if the $(CODEPOINT) passed
+        belongs to this set or not. The result is to be used with string mixin.
+        The intended usage area is aggressive optimization via meta programming
+        in parser generators and the like.
+
+        Note: Use with care for relatively small or regular sets. It
+        could end up being slower then just using multi-staged tables.
+
+        Example:
+        ---
+        import std.stdio;
+
+        // construct set directly from [a, b$RPAREN intervals
+        auto set = CodepointSet(10, 12, 45, 65, 100, 200);
+        writeln(set);
+        writeln(set.toSourceCode("func"));
+        ---
+
+        The above outputs something along the lines of:
+        ---
+        bool func(dchar ch)  @safe pure nothrow @nogc
+        {
+            if (ch < 45)
+            {
+                if (ch == 10 || ch == 11) return true;
+                return false;
+            }
+            else if (ch < 65) return true;
+            else
+            {
+                if (ch < 100) return false;
+                if (ch < 200) return true;
+                return false;
+            }
+        }
+        ---
+    */
+    string toSourceCode(string funcName="")
+    {
+        import std.array : array;
+        auto range = byInterval.array();
+        return toSourceCode(range, funcName);
     }
 
     /**
@@ -2802,6 +2813,7 @@ private:
 
         //may break sorted property - but we need std.sort to access it
         //hence package protection attribute
+        static if (hasAssignableElements!Range)
         package @property void front(CodepointInterval val)
         {
             slice[start] = val.a;
@@ -2816,6 +2828,7 @@ private:
         }
 
         //ditto about package
+        static if (hasAssignableElements!Range)
         package @property void back(CodepointInterval val)
         {
             slice[end-2] = val.a;
@@ -2840,6 +2853,7 @@ private:
         }
 
         //ditto about package
+        static if (hasAssignableElements!Range)
         package void opIndexAssign(CodepointInterval val, size_t idx)
         {
             slice[start+idx*2] = val.a;
@@ -2928,7 +2942,7 @@ private:
     {
         assert(a <= b);
     }
-    body
+    do
     {
         import std.range : assumeSorted, SearchPolicy;
         auto range = assumeSorted(data[]);
@@ -3042,7 +3056,7 @@ private:
     {
         assert(pos % 2 == 0); // at start of interval
     }
-    body
+    do
     {
         auto range = assumeSorted!"a <= b"(data[pos .. data.length]);
         if (range.empty)
@@ -3079,7 +3093,7 @@ private:
         assert(result % 2 == 0);// always start of interval
         //(may be  0-width after-split)
     }
-    body
+    do
     {
         assert(data.length % 2 == 0);
         auto range = assumeSorted!"a <= b"(data[pos .. data.length]);
@@ -3376,7 +3390,7 @@ private:
     {
         assert(!empty && count != 1 && count == refCount);
     }
-    body
+    do
     {
         import std.algorithm.mutation : copy;
         // dec shared ref-count
@@ -5576,7 +5590,7 @@ struct sliceBits(size_t from, size_t to)
     {
         assert(result < (1 << to-from));
     }
-    body
+    do
     {
         static assert(from < to);
         static if (from == 0)

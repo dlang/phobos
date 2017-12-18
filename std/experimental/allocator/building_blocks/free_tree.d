@@ -340,9 +340,9 @@ struct FreeTree(ParentAllocator)
         auto b2 = a.allocate(20000);
         auto b3 = a.allocate(30000);
         assert(b1.ptr && b2.ptr && b3.ptr);
-        a.deallocate(b1);
-        a.deallocate(b3);
-        a.deallocate(b2);
+        () nothrow @nogc { a.deallocate(b1); }();
+        () nothrow @nogc { a.deallocate(b3); }();
+        () nothrow @nogc { a.deallocate(b2); }();
         assert(a.formatSizes == "(20480 (12288 32768))", a.formatSizes);
 
         b1 = a.allocate(10000);
@@ -365,7 +365,7 @@ struct FreeTree(ParentAllocator)
         foreach_reverse (b; allocs)
         {
             assert(b.ptr);
-            a.deallocate(b);
+            () nothrow @nogc { a.deallocate(b); }();
         }
         a.assertValid;
         allocs = null;
@@ -425,7 +425,7 @@ struct FreeTree(ParentAllocator)
         byte[] _payload = cast(byte[]) myAlloc.allocate(sz);
         assert(_payload, "_payload is null");
         _payload[] = 0;
-        myAlloc.deallocate(_payload);
+        () nothrow @nogc { myAlloc.deallocate(_payload); }();
     }
 
     f!Mallocator(33);
@@ -446,7 +446,7 @@ struct FreeTree(ParentAllocator)
 
     FreeTree!MyAllocator ft;
     void[] x = ft.allocate(1);
-    ft.deallocate(x);
+    () nothrow @nogc { ft.deallocate(x); }();
     ft.allocate(1000);
     MyAllocator.alive = false;
 }
@@ -475,7 +475,7 @@ struct FreeTree(ParentAllocator)
 
     FreeTree!MyAllocator ft;
     void[] x = ft.allocate(1);
-    ft.deallocate(x);
+    () nothrow @nogc { ft.deallocate(x); }();
     assert(myDeallocCounter == 0);
     x = ft.allocate(1000); // Triggers "desperation mode".
     assert(myDeallocCounter == 1);
@@ -484,4 +484,28 @@ struct FreeTree(ParentAllocator)
         nothing to deallocate so MyAllocator can't deliver. */
     assert(myDeallocCounter == 1);
     assert(y.ptr is null);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator;
+    FreeTree!GCAllocator a;
+
+    assert((() nothrow @safe @nogc => a.goodAllocSize(1))() == typeof(*a.root).sizeof);
+    // goodAllocSize is not pure because we are calling through GCAllocator.instance
+    assert(!__traits(compiles, (() pure nothrow @safe @nogc => a.goodAllocSize(0))()));
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+
+    auto a = FreeTree!(Region!())(Region!()(new ubyte[1024 * 64]));
+    auto b = a.allocate(42);
+    assert(b.length == 42);
+    assert((() pure nothrow @safe @nogc => a.expand(b, 22))());
+    assert(b.length == 64);
+    assert((() nothrow @nogc => a.reallocate(b, 100))());
+    assert(b.length == 100);
+    assert((() nothrow @nogc => a.deallocateAll())());
 }

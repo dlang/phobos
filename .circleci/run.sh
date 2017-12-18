@@ -2,12 +2,13 @@
 
 set -uexo pipefail
 
-HOST_DMD_VER=2.068.2 # same as in dmd/src/posix.mak
-DSCANNER_DMD_VER=2.071.2 # dscanner needs a more up-to-date version
+HOST_DMD_VER=2.072.2 # same as in dmd/src/posix.mak
+DSCANNER_DMD_VER=2.077.0 # dscanner needs a more up-to-date version
 CURL_USER_AGENT="CirleCI $(curl --version | head -n 1)"
 DUB=${DUB:-$HOME/dlang/dub/dub}
 N=2
 CIRCLE_NODE_INDEX=${CIRCLE_NODE_INDEX:-0}
+BUILD="debug"
 
 case $CIRCLE_NODE_INDEX in
     0) MODEL=64 ;;
@@ -90,8 +91,8 @@ setup_repos()
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$HOST_DMD_VER --activate)"
 
     # build dmd and druntime
-    make -j$N -C ../dmd/src -f posix.mak MODEL=$MODEL HOST_DMD=$DMD all
-    make -j$N -C ../druntime -f posix.mak MODEL=$MODEL HOST_DMD=$DMD
+    make -j$N -C ../dmd/src -f posix.mak MODEL=$MODEL HOST_DMD=$DMD BUILD=$BUILD all
+    make -j$N -C ../druntime -f posix.mak MODEL=$MODEL HOST_DMD=$DMD BUILD=$BUILD
 }
 
 # verify style guide
@@ -100,7 +101,7 @@ style_lint()
     # dscanner needs a more up-to-date DMD version
     source "$(CURL_USER_AGENT=\"$CURL_USER_AGENT\" bash ~/dlang/install.sh dmd-$DSCANNER_DMD_VER --activate)"
 
-    make -f posix.mak style_lint DUB=$DUB
+    make -f posix.mak style_lint DUB=$DUB BUILD=$BUILD
 }
 
 # run unittest with coverage
@@ -116,7 +117,7 @@ coverage()
 
     # So instead we run all tests individually (hoping that that doesn't break any tests).
     # -cov is enabled by the %.test target itself
-    make -j$N -f posix.mak $(find std etc -name "*.d" | sed "s/[.]d$/.test/")
+    make -j$N -f posix.mak BUILD=$BUILD $(find std etc -name "*.d" | sed "s/[.]d$/.test/")
 
     # Remove coverage information from lines with non-deterministic coverage.
     # These lines are annotated with a comment containing "nocoverage".
@@ -132,7 +133,7 @@ publictests()
     fi
     git -C ../tools checkout df3dfa3061d25996ac98158d3bdb3525c8d89445
 
-    make -f posix.mak -j$N publictests DUB=$DUB
+    make -f posix.mak -j$N publictests DUB=$DUB BUILD=$BUILD
 }
 
 case $1 in

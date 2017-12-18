@@ -1296,11 +1296,13 @@ real betaDistPowerSeries(real a, real b, real x )
  * values of a and x.
  */
 real gammaIncomplete(real a, real x )
-in {
+in
+{
    assert(x >= 0);
    assert(a > 0);
 }
-body {
+do
+{
     /* left tail of incomplete gamma function:
      *
      *          inf.      k
@@ -1340,11 +1342,13 @@ body {
 
 /** ditto */
 real gammaIncompleteCompl(real a, real x )
-in {
+in
+{
    assert(x >= 0);
    assert(a > 0);
 }
-body {
+do
+{
     if (x == 0)
         return 1.0L;
     if ( (x < 1.0L) || (x < a) )
@@ -1426,11 +1430,13 @@ body {
  * root of incompleteGammaCompl(a,x) - p = 0.
  */
 real gammaIncompleteComplInv(real a, real p)
-in {
+in
+{
   assert(p >= 0 && p <= 1);
   assert(a>0);
 }
-body {
+do
+{
     if (p == 0) return real.infinity;
 
     real y0 = p;

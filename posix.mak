@@ -77,7 +77,7 @@ ROOT_OF_THEM_ALL = generated
 ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
 DUB=dub
 TOOLS_DIR=../tools
-DSCANNER_HASH=285ef162f024cbd305d587e9e0fcfb2292ea93ce
+DSCANNER_HASH=bb32e9f1e3e5206deb11b3dbc43ad44e23fabf96
 DSCANNER_DIR=../dscanner-$(DSCANNER_HASH)
 
 # Documentation-related stuff
@@ -110,7 +110,7 @@ ifeq ($(OS),win32wine)
 	DMD = wine dmd.exe
 	RUN = wine
 else
-	DMD = $(DMD_DIR)/generated/$(OS)/release/$(MODEL)/dmd
+	DMD = $(DMD_DIR)/generated/$(OS)/$(BUILD)/$(MODEL)/dmd
 	ifeq ($(OS),win32)
 		CC = dmc
 	else
@@ -208,7 +208,7 @@ PACKAGE_std_experimental_logger = core filelogger \
 PACKAGE_std_experimental_allocator = \
   common gc_allocator mallocator mmap_allocator package showcase typed
 PACKAGE_std_experimental_allocator_building_blocks = \
-  affix_allocator allocator_list bucketizer \
+  affix_allocator allocator_list ascending_page_allocator bucketizer \
   fallback_allocator free_list free_tree bitmapped_block \
   kernighan_ritchie null_allocator package quantizer \
   region scoped_allocator segregator stats_collector
@@ -545,7 +545,7 @@ style: publictests style_lint
 # runs static code analysis with Dscanner
 dscanner: | $(DSCANNER_DIR)/dsc
 	@echo "Running DScanner"
-	$(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
+	$(DEBUGGER) -q -ex run -ex bt -batch --args $(DSCANNER_DIR)/dsc --config .dscanner.ini --styleCheck etc std -I.
 
 style_lint: dscanner $(LIB)
 	@echo "Check for trailing whitespace"
@@ -589,7 +589,7 @@ style_lint: dscanner $(LIB)
 	done
 
 	@echo "Check that Ddoc runs without errors"
-	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -w -D -Df/dev/null -main -c -o- $$(find etc std -type f -name '*.d') 2>&1 | grep -v "Deprecation:"; test $$? -eq 1
+	$(DMD) $(DFLAGS) -defaultlib= -debuglib= $(LIB) -w -D -Df/dev/null -main -c -o- $$(find etc std -type f -name '*.d') 2>&1
 
 ################################################################################
 # Check for missing imports in public unittest examples.

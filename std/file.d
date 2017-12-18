@@ -2808,6 +2808,7 @@ version(StdDdoc)
       +/
     struct DirEntry
     {
+        @safe:
         /++
             Constructs a $(D DirEntry) for the given file (or directory).
 
@@ -2967,6 +2968,7 @@ else version(Windows)
 {
     struct DirEntry
     {
+    @safe:
     public:
         alias name this;
 
@@ -2989,14 +2991,16 @@ else version(Windows)
             }
         }
 
-        private this(string path, in WIN32_FIND_DATAW *fd)
+        private this(string path, WIN32_FIND_DATAW *fd) @trusted
         {
             import core.stdc.wchar_ : wcslen;
             import std.conv : to;
             import std.datetime.systime : FILETIMEToSysTime;
             import std.path : buildPath;
 
-            size_t clength = wcslen(fd.cFileName.ptr);
+            fd.cFileName[$ - 1] = 0;
+
+            size_t clength = wcslen(&fd.cFileName[0]);
             _name = buildPath(path, fd.cFileName[0 .. clength].to!string);
             _size = (cast(ulong) fd.nFileSizeHigh << 32) | fd.nFileSizeLow;
             _timeCreated = FILETIMEToSysTime(&fd.ftCreationTime);
@@ -3073,6 +3077,7 @@ else version(Posix)
 {
     struct DirEntry
     {
+    @safe:
     public:
         alias name this;
 
@@ -3088,11 +3093,13 @@ else version(Posix)
             _dTypeSet = false;
         }
 
-        private this(string path, core.sys.posix.dirent.dirent* fd)
+        private this(string path, core.sys.posix.dirent.dirent* fd) @safe
         {
+            import std.algorithm.searching : countUntil;
             import std.path : buildPath;
+            import std.string : representation;
 
-            immutable len = core.stdc.string.strlen(fd.d_name.ptr);
+            immutable len = fd.d_name[].representation.countUntil(0);
             _name = buildPath(path, fd.d_name[0 .. len]);
 
             _didLStat = false;
@@ -3202,18 +3209,14 @@ else version(Posix)
             This is to support lazy evaluation, because doing stat's is
             expensive and not always needed.
          +/
-        void _ensureStatDone() @safe
+        void _ensureStatDone() @trusted
         {
             import std.exception : enforce;
 
-            static auto trustedStat(in char[] path, stat_t* buf) @trusted
-            {
-                return stat(path.tempCString(), buf);
-            }
             if (_didStat)
                 return;
 
-            enforce(trustedStat(_name, &_statBuf) == 0,
+            enforce(stat(_name.tempCString(), &_statBuf) == 0,
                     "Failed to stat file `" ~ _name ~ "'");
 
             _didStat = true;
@@ -3226,12 +3229,12 @@ else version(Posix)
             Try both stat and lstat for isFile and isDir
             to detect broken symlinks.
          +/
-        void _ensureStatOrLStatDone()
+        void _ensureStatOrLStatDone() @trusted
         {
             if (_didStat)
                 return;
 
-            if ( stat(_name.tempCString(), &_statBuf) != 0 )
+            if (stat(_name.tempCString(), &_statBuf) != 0)
             {
                 _ensureLStatDone();
 
@@ -3248,7 +3251,7 @@ else version(Posix)
             This is to support lazy evaluation, because doing stat's is
             expensive and not always needed.
          +/
-        void _ensureLStatDone()
+        void _ensureLStatDone() @trusted
         {
             import std.exception : enforce;
 
@@ -3256,7 +3259,6 @@ else version(Posix)
                 return;
 
             stat_t statbuf = void;
-
             enforce(lstat(_name.tempCString(), &statbuf) == 0,
                 "Failed to stat file `" ~ _name ~ "'");
 
@@ -3268,9 +3270,9 @@ else version(Posix)
 
         string _name; /// The file or directory represented by this DirEntry.
 
-        stat_t _statBuf = void;  /// The result of stat().
-        uint  _lstatMode;               /// The stat mode from lstat().
-        ubyte _dType;                   /// The type of the file.
+        stat_t _statBuf = void;   /// The result of stat().
+        uint  _lstatMode;         /// The stat mode from lstat().
+        ubyte _dType;             /// The type of the file.
 
         bool _didLStat = false;   /// Whether lstat() has been called for this DirEntry.
         bool _didStat = false;    /// Whether stat() has been called for this DirEntry.
@@ -3692,7 +3694,7 @@ enum SpanMode
 
 private struct DirIteratorImpl
 {
-    import std.array : Appender, appender;
+  @safe:
     SpanMode _mode;
     // Whether we should follow symlinked directories while iterating.
     // It also indicates whether we should avoid functions which call
@@ -3700,82 +3702,95 @@ private struct DirIteratorImpl
     // be more efficient to not call stat in addition to lstat).
     bool _followSymlink;
     DirEntry _cur;
-    Appender!(DirHandle[]) _stack;
-    Appender!(DirEntry[]) _stashed; //used in depth first mode
+    DirHandle[] _stack;
+    DirEntry[] _stashed; //used in depth first mode
+
     //stack helpers
-    void pushExtra(DirEntry de){ _stashed.put(de); }
+    void pushExtra(DirEntry de)
+    {
+        _stashed ~= de;
+    }
+
     //ditto
-    bool hasExtra(){ return !_stashed.data.empty; }
+    bool hasExtra()
+    {
+        return _stashed.length != 0;
+    }
+
     //ditto
     DirEntry popExtra()
     {
         DirEntry de;
-        de = _stashed.data[$-1];
-        _stashed.shrinkTo(_stashed.data.length - 1);
+        de = _stashed[$-1];
+        _stashed.popBack();
         return de;
-
     }
+
     version(Windows)
     {
+        WIN32_FIND_DATAW _findinfo;
         struct DirHandle
         {
             string dirpath;
             HANDLE h;
         }
 
-        bool stepIn(string directory)
+        bool stepIn(string directory) @safe
         {
             import std.path : chainPath;
+            auto searchPattern = chainPath(directory, "*.*");
 
-            auto search_pattern = chainPath(directory, "*.*");
-            WIN32_FIND_DATAW findinfo;
-            HANDLE h = FindFirstFileW(search_pattern.tempCString!FSChar(), &findinfo);
+            static auto trustedFindFirstFileW(typeof(searchPattern) pattern, WIN32_FIND_DATAW* findinfo) @trusted
+            {
+                return FindFirstFileW(pattern.tempCString!FSChar(), findinfo);
+            }
+
+            HANDLE h = trustedFindFirstFileW(searchPattern, &_findinfo);
             cenforce(h != INVALID_HANDLE_VALUE, directory);
-            _stack.put(DirHandle(directory, h));
-            return toNext(false, &findinfo);
+            _stack ~= DirHandle(directory, h);
+            return toNext(false, &_findinfo);
         }
 
         bool next()
         {
-            if (_stack.data.empty)
+            if (_stack.length == 0)
                 return false;
-            WIN32_FIND_DATAW findinfo;
-            return toNext(true, &findinfo);
+            return toNext(true, &_findinfo);
         }
 
-        bool toNext(bool fetch, WIN32_FIND_DATAW* findinfo)
+        bool toNext(bool fetch, WIN32_FIND_DATAW* findinfo) @trusted
         {
             import core.stdc.wchar_ : wcscmp;
 
             if (fetch)
             {
-                if (FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
+                if (FindNextFileW(_stack[$-1].h, findinfo) == FALSE)
                 {
                     popDirStack();
                     return false;
                 }
             }
-            while ( wcscmp(findinfo.cFileName.ptr, ".") == 0
-                    || wcscmp(findinfo.cFileName.ptr, "..") == 0)
-                if (FindNextFileW(_stack.data[$-1].h, findinfo) == FALSE)
+            while (wcscmp(&findinfo.cFileName[0], ".") == 0 ||
+                   wcscmp(&findinfo.cFileName[0], "..") == 0)
+                if (FindNextFileW(_stack[$-1].h, findinfo) == FALSE)
                 {
                     popDirStack();
                     return false;
                 }
-            _cur = DirEntry(_stack.data[$-1].dirpath, findinfo);
+            _cur = DirEntry(_stack[$-1].dirpath, findinfo);
             return true;
         }
 
-        void popDirStack()
+        void popDirStack() @trusted
         {
-            assert(!_stack.data.empty);
-            FindClose(_stack.data[$-1].h);
-            _stack.shrinkTo(_stack.data.length-1);
+            assert(_stack.length != 0);
+            FindClose(_stack[$-1].h);
+            _stack.popBack();
         }
 
-        void releaseDirStack()
+        void releaseDirStack() @trusted
         {
-            foreach ( d;  _stack.data)
+            foreach (d; _stack)
                 FindClose(d.h);
         }
 
@@ -3794,40 +3809,47 @@ private struct DirIteratorImpl
 
         bool stepIn(string directory)
         {
-            auto h = directory.length ? opendir(directory.tempCString()) : opendir(".");
+            static auto trustedOpendir(string dir) @trusted
+            {
+                return opendir(dir.tempCString());
+            }
+
+            auto h = directory.length ? trustedOpendir(directory) : trustedOpendir(".");
             cenforce(h, directory);
-            _stack.put(DirHandle(directory, h));
+            _stack ~= (DirHandle(directory, h));
             return next();
         }
 
-        bool next()
+        bool next() @trusted
         {
-            if (_stack.data.empty)
+            if (_stack.length == 0)
                 return false;
-            for (dirent* fdata; (fdata = readdir(_stack.data[$-1].h)) != null; )
+
+            for (dirent* fdata; (fdata = readdir(_stack[$-1].h)) != null; )
             {
                 // Skip "." and ".."
-                if (core.stdc.string.strcmp(fdata.d_name.ptr, ".")  &&
-                   core.stdc.string.strcmp(fdata.d_name.ptr, "..") )
+                if (core.stdc.string.strcmp(&fdata.d_name[0], ".") &&
+                    core.stdc.string.strcmp(&fdata.d_name[0], ".."))
                 {
-                    _cur = DirEntry(_stack.data[$-1].dirpath, fdata);
+                    _cur = DirEntry(_stack[$-1].dirpath, fdata);
                     return true;
                 }
             }
+
             popDirStack();
             return false;
         }
 
-        void popDirStack()
+        void popDirStack() @trusted
         {
-            assert(!_stack.data.empty);
-            closedir(_stack.data[$-1].h);
-            _stack.shrinkTo(_stack.data.length-1);
+            assert(_stack.length != 0);
+            closedir(_stack[$-1].h);
+            _stack.popBack();
         }
 
-        void releaseDirStack()
+        void releaseDirStack() @trusted
         {
-            foreach ( d;  _stack.data)
+            foreach (d; _stack)
                 closedir(d.h);
         }
 
@@ -3842,9 +3864,6 @@ private struct DirIteratorImpl
     {
         _mode = mode;
         _followSymlink = followSymlink;
-        _stack = appender(cast(DirHandle[])[]);
-        if (_mode == SpanMode.depth)
-            _stashed = appender(cast(DirEntry[])[]);
 
         static if (isNarrowString!R && is(Unqual!(ElementEncodingType!R) == char))
             alias pathnameStr = pathname;
@@ -3868,8 +3887,17 @@ private struct DirIteratorImpl
                 }
         }
     }
-    @property bool empty(){ return _stashed.data.empty && _stack.data.empty; }
-    @property DirEntry front(){ return _cur; }
+
+    @property bool empty()
+    {
+        return _stashed.length == 0 && _stack.length == 0;
+    }
+
+    @property DirEntry front()
+    {
+        return _cur;
+    }
+
     void popFront()
     {
         switch (_mode)
@@ -3913,17 +3941,17 @@ private struct DirIteratorImpl
 
 struct DirIterator
 {
+@safe:
 private:
-    RefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl;
-    this(string pathname, SpanMode mode, bool followSymlink)
+    RefCounted!(DirIteratorImpl, RefCountedAutoInitialize.no) impl = void;
+    this(string pathname, SpanMode mode, bool followSymlink) @trusted
     {
         impl = typeof(impl)(pathname, mode, followSymlink);
     }
 public:
-    @property bool empty(){ return impl.empty; }
-    @property DirEntry front(){ return impl.front; }
-    void popFront(){ impl.popFront(); }
-
+    @property bool empty() { return impl.empty; }
+    @property DirEntry front() { return impl.front; }
+    void popFront() { impl.popFront(); }
 }
 /++
     Returns an input range of $(D DirEntry) that lazily iterates a given directory,
@@ -4180,6 +4208,33 @@ auto dirEntries(string path, string pattern, SpanMode mode,
             assert(de.attributes == de.statBuf.st_mode);
         }
     }
+}
+
+// Bugzilla 17962 - Make sure that dirEntries does not butcher Unicode file names.
+@system unittest
+{
+    import std.algorithm.comparison : equal;
+    import std.algorithm.iteration : map;
+    import std.algorithm.sorting : sort;
+    import std.array : array;
+    import std.path : buildPath;
+    import std.uni : normalize;
+
+    // The Unicode normalization is required to make the tests pass on Mac OS X.
+    auto dir = deleteme ~ normalize("𐐷");
+    scope(exit) if (dir.exists) rmdirRecurse(dir);
+    mkdir(dir);
+    auto files = ["Hello World",
+                  "Ma Chérie.jpeg",
+                  "さいごの果実.txt"].map!(a => buildPath(dir, normalize(a)))().array();
+    sort(files);
+    foreach (file; files)
+        write(file, "nothing");
+
+    auto result = dirEntries(dir, SpanMode.shallow).map!(a => a.name.normalize()).array();
+    sort(result);
+
+    assert(equal(files, result));
 }
 
 

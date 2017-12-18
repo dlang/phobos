@@ -145,69 +145,6 @@ if (isInputRange!InputRange && isForwardRange!ForwardRange)
     return bringToFrontImpl(frontW, backW);
 }
 
-private size_t bringToFrontImpl(InputRange, ForwardRange)(InputRange front, ForwardRange back)
-if (isInputRange!InputRange && isForwardRange!ForwardRange)
-{
-    import std.array : sameHead;
-    import std.range : take, Take;
-    enum bool sameHeadExists = is(typeof(front.sameHead(back)));
-    size_t result;
-
-    for (bool semidone; !front.empty && !back.empty; )
-    {
-        static if (sameHeadExists)
-        {
-            if (front.sameHead(back)) break; // shortcut
-        }
-        // Swap elements until front and/or back ends.
-        auto back0 = back.save;
-        size_t nswaps;
-        do
-        {
-            static if (sameHeadExists)
-            {
-                // Detect the stepping-over condition.
-                if (front.sameHead(back0)) back0 = back.save;
-            }
-            swapFront(front, back);
-            ++nswaps;
-            front.popFront();
-            back.popFront();
-        }
-        while (!front.empty && !back.empty);
-
-        if (!semidone) result += nswaps;
-
-        // Now deal with the remaining elements.
-        if (back.empty)
-        {
-            if (front.empty) break;
-            // Right side was shorter, which means that we've brought
-            // all the back elements to the front.
-            semidone = true;
-            // Next pass: bringToFront(front, back0) to adjust the rest.
-            back = back0;
-        }
-        else
-        {
-            assert(front.empty);
-            // Left side was shorter. Let's step into the back.
-            static if (is(InputRange == Take!ForwardRange))
-            {
-                front = take(back0, nswaps);
-            }
-            else
-            {
-                immutable subresult = bringToFront(take(back0, nswaps),
-                                                   back);
-                if (!semidone) result += subresult;
-                break; // done
-            }
-        }
-    }
-    return result;
-}
-
 /**
 The simplest use of $(D bringToFront) is for rotating elements in a
 buffer. For example:
@@ -273,6 +210,69 @@ Unicode integrity is not preserved:
     assert(a == "\303");
     // Illegal UTF-8
     assert(b == "\247a");
+}
+
+private size_t bringToFrontImpl(InputRange, ForwardRange)(InputRange front, ForwardRange back)
+if (isInputRange!InputRange && isForwardRange!ForwardRange)
+{
+    import std.array : sameHead;
+    import std.range : take, Take;
+    enum bool sameHeadExists = is(typeof(front.sameHead(back)));
+    size_t result;
+
+    for (bool semidone; !front.empty && !back.empty; )
+    {
+        static if (sameHeadExists)
+        {
+            if (front.sameHead(back)) break; // shortcut
+        }
+        // Swap elements until front and/or back ends.
+        auto back0 = back.save;
+        size_t nswaps;
+        do
+        {
+            static if (sameHeadExists)
+            {
+                // Detect the stepping-over condition.
+                if (front.sameHead(back0)) back0 = back.save;
+            }
+            swapFront(front, back);
+            ++nswaps;
+            front.popFront();
+            back.popFront();
+        }
+        while (!front.empty && !back.empty);
+
+        if (!semidone) result += nswaps;
+
+        // Now deal with the remaining elements.
+        if (back.empty)
+        {
+            if (front.empty) break;
+            // Right side was shorter, which means that we've brought
+            // all the back elements to the front.
+            semidone = true;
+            // Next pass: bringToFront(front, back0) to adjust the rest.
+            back = back0;
+        }
+        else
+        {
+            assert(front.empty, "Expected front to be empty");
+            // Left side was shorter. Let's step into the back.
+            static if (is(InputRange == Take!ForwardRange))
+            {
+                front = take(back0, nswaps);
+            }
+            else
+            {
+                immutable subresult = bringToFront(take(back0, nswaps),
+                                                   back);
+                if (!semidone) result += subresult;
+                break; // done
+            }
+        }
+    }
+    return result;
 }
 
 @safe unittest
@@ -1160,7 +1160,7 @@ pure nothrow @safe @nogc unittest
 }
 
 /// Ditto
-T move(T)(ref T source)
+T move(T)(return scope ref T source)
 {
     // test @safe destructible
     static if (__traits(compiles, (T t) @safe {}))
@@ -1528,7 +1528,7 @@ private InputRange2 moveAllImpl(alias moveOp, InputRange1, InputRange2)(
          && hasSlicing!InputRange2 && isRandomAccessRange!InputRange2)
     {
         auto toMove = src.length;
-        assert(toMove <= tgt.length);
+        assert(toMove <= tgt.length, "Source buffer needs to be smaller or equal to the target buffer.");
         foreach (idx; 0 .. toMove)
             moveOp(src[idx], tgt[idx]);
         return tgt[toMove .. tgt.length];
@@ -1537,7 +1537,7 @@ private InputRange2 moveAllImpl(alias moveOp, InputRange1, InputRange2)(
     {
         for (; !src.empty; src.popFront(), tgt.popFront())
         {
-            assert(!tgt.empty);
+            assert(!tgt.empty, "Source buffer needs to be smaller or equal to the target buffer.");
             moveOp(src.front, tgt.front);
         }
         return tgt;
@@ -1849,7 +1849,7 @@ if (s != SwapStrategy.stable
                 break;
         }
         // Advance to next blackout on the left
-        assert(blackouts[left].pos >= tgtPos);
+        assert(blackouts[left].pos >= tgtPos, "Next blackout on the left shouldn't appear before the target.");
         tgt.popFrontExactly(blackouts[left].pos - tgtPos);
         tgtPos = blackouts[left].pos;
 

@@ -429,40 +429,60 @@ private template isSpawnable(F, T...)
  *  to $(D fn) must either be $(D shared) or $(D immutable) or have no
  *  pointer indirection.  This is necessary for enforcing isolation among
  *  threads.
- *
- * Example:
- * ---
- * import std.stdio, std.concurrency;
- *
- * void f1(string str)
- * {
- *     writeln(str);
- * }
- *
- * void f2(char[] str)
- * {
- *     writeln(str);
- * }
- *
- * void main()
- * {
- *     auto str = "Hello, world";
- *
- *     // Works:  string is immutable.
- *     auto tid1 = spawn(&f1, str);
- *
- *     // Fails:  char[] has mutable aliasing.
- *     auto tid2 = spawn(&f2, str.dup);
- *
- *     // New thread with anonymous function
- *     spawn({ writeln("This is so great!"); });
- * }
- * ---
  */
 Tid spawn(F, T...)(F fn, T args) if (isSpawnable!(F, T))
 {
     static assert(!hasLocalAliasing!(T), "Aliases to mutable thread-local data not allowed.");
     return _spawn(false, fn, args);
+}
+
+///
+@system unittest
+{
+    static void f(string msg)
+    {
+        assert(msg == "Hello World");
+    }
+
+    auto tid = spawn(&f, "Hello World");
+}
+
+/// Fails: char[] has mutable aliasing.
+@system unittest
+{
+    string msg = "Hello, World!";
+
+    static void f1(string msg) {}
+    static assert(!__traits(compiles, spawn(&f1, msg.dup)));
+    static assert( __traits(compiles, spawn(&f1, msg.idup)));
+
+    static void f2(char[] msg) {}
+    static assert(!__traits(compiles, spawn(&f2, msg.dup)));
+    static assert(!__traits(compiles, spawn(&f2, msg.idup)));
+}
+
+/// New thread with anonymous function
+@system unittest
+{
+    spawn({
+        ownerTid.send("This is so great!");
+    });
+    assert(receiveOnly!string == "This is so great!");
+}
+
+@system unittest
+{
+    import core.thread : thread_joinAll;
+
+    __gshared string receivedMessage;
+    static void f1(string msg)
+    {
+        receivedMessage = msg;
+    }
+
+    auto tid1 = spawn(&f1, "Hello World");
+    thread_joinAll;
+    assert(receivedMessage == "Hello World");
 }
 
 /**
@@ -619,28 +639,6 @@ private void _send(T...)(MsgType type, Tid tid, T vals)
  * matched by an earlier delegate.  If more than one argument is sent,
  * the $(D Variant) will contain a $(REF Tuple, std,typecons) of all values
  * sent.
- *
- * Example:
- * ---
- * import std.stdio;
- * import std.variant;
- * import std.concurrency;
- *
- * void spawnedFunction()
- * {
- *     receive(
- *         (int i) { writeln("Received an int."); },
- *         (float f) { writeln("Received a float."); },
- *         (Variant v) { writeln("Received some other type."); }
- *     );
- * }
- *
- * void main()
- * {
- *      auto tid = spawn(&spawnedFunction);
- *      send(tid, 42);
- * }
- * ---
  */
 void receive(T...)( T ops )
 in
@@ -649,13 +647,45 @@ in
            "Cannot receive a message until a thread was spawned "
            ~ "or thisTid was passed to a running thread.");
 }
-body
+do
 {
     checkops( ops );
 
     thisInfo.ident.mbox.get( ops );
 }
 
+///
+@system unittest
+{
+    import std.variant : Variant;
+
+    auto process = ()
+    {
+        receive(
+            (int i) { ownerTid.send(1); },
+            (double f) { ownerTid.send(2); },
+            (Variant v) { ownerTid.send(3); }
+        );
+    };
+
+    {
+        auto tid = spawn(process);
+        send(tid, 42);
+        assert(receiveOnly!int == 1);
+    }
+
+    {
+        auto tid = spawn(process);
+        send(tid, 3.14);
+        assert(receiveOnly!int == 2);
+    }
+
+    {
+        auto tid = spawn(process);
+        send(tid, "something else");
+        assert(receiveOnly!int == 3);
+    }
+}
 
 @safe unittest
 {
@@ -712,24 +742,6 @@ private template receiveOnlyRet(T...)
  *
  * Returns: The received message.  If $(D T.length) is greater than one,
  *          the message will be packed into a $(REF Tuple, std,typecons).
- *
- * Example:
- * ---
- * import std.concurrency;
- *
- * void spawnedFunc()
- * {
- *     auto msg = receiveOnly!(int, string)();
- *     assert(msg[0] == 42);
- *     assert(msg[1] == "42");
- * }
- *
- * void main()
- * {
- *     auto tid = spawn(&spawnedFunc);
- *     send(tid, 42, "42");
- * }
- * ---
  */
 receiveOnlyRet!(T) receiveOnly(T...)()
 in
@@ -737,7 +749,7 @@ in
     assert(thisInfo.ident.mbox !is null,
         "Cannot receive a message until a thread was spawned or thisTid was passed to a running thread.");
 }
-body
+do
 {
     import std.format : format;
     import std.typecons : Tuple;
@@ -763,6 +775,42 @@ body
         return ret[0];
     else
         return ret;
+}
+
+///
+@system unittest
+{
+    auto tid = spawn(
+    {
+        assert(receiveOnly!int == 42);
+    });
+    send(tid, 42);
+}
+
+///
+@system unittest
+{
+    auto tid = spawn(
+    {
+        assert(receiveOnly!string == "text");
+    });
+    send(tid, "text");
+}
+
+///
+@system unittest
+{
+    struct Record { string name; int age; }
+
+    auto tid = spawn(
+    {
+        auto msg = receiveOnly!(double, Record);
+        assert(msg[0] == 0.5);
+        assert(msg[1].name == "Alice");
+        assert(msg[1].age == 31);
+    });
+
+    send(tid, 0.5, Record("Alice", 31));
 }
 
 @system unittest
@@ -801,7 +849,7 @@ in
     assert(thisInfo.ident.mbox !is null,
         "Cannot receive a message until a thread was spawned or thisTid was passed to a running thread.");
 }
-body
+do
 {
     checkops(ops);
 
@@ -1533,6 +1581,27 @@ class Generator(T) :
     }
 
     /**
+     * Initializes a generator object which is associated with a static
+     * D function.  The function will be called once to prepare the range
+     * for iteration.
+     *
+     * Params:
+     *  fn = The fiber function.
+     *  sz = The stack size for this fiber.
+     *  guardPageSize = size of the guard page to trap fiber's stack
+     *                  overflows. Refer to $(REF Fiber, core,thread)'s
+     *                  documentation for more details.
+     *
+     * In:
+     *  fn must not be null.
+     */
+    this(void function() fn, size_t sz, size_t guardPageSize)
+    {
+        super(fn, sz, guardPageSize);
+        call();
+    }
+
+    /**
      * Initializes a generator object which is associated with a dynamic
      * D function.  The function will be called once to prepare the range
      * for iteration.
@@ -1564,6 +1633,27 @@ class Generator(T) :
     this(void delegate() dg, size_t sz)
     {
         super(dg, sz);
+        call();
+    }
+
+    /**
+     * Initializes a generator object which is associated with a dynamic
+     * D function.  The function will be called once to prepare the range
+     * for iteration.
+     *
+     * Params:
+     *  dg = The fiber function.
+     *  sz = The stack size for this fiber.
+     *  guardPageSize = size of the guard page to trap fiber's stack
+     *                  overflows. Refer to $(REF Fiber, core,thread)'s
+     *                  documentation for more details.
+     *
+     * In:
+     *  dg must not be null.
+     */
+    this(void delegate() dg, size_t sz, size_t guardPageSize)
+    {
+        super(dg, sz, guardPageSize);
         call();
     }
 

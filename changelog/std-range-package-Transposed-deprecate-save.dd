@@ -1,0 +1,15 @@
+Deprecate `save` for `std.range.package.Transposed`
+
+Transposed is incorrectly marked as a forward range. Its `popFront` primitive
+cannot be used without affecting any other copies made with `save`. `save` will be
+removed from Transposed in November 2018.
+
+-----
+auto x = [[1,2,3],[4,5,6]].transposed;
+auto y = x.save;
+y.popFront;
+assert(x.equal([[1,4],[2,5],[3,6]])); // FAILS, x is really [[2,5],[3,6]]
+-----
+
+For more details, please see the respective $(LINK2 https://issues.dlang.org/show_bug.cgi?id=17952,
+Bugzilla issue).

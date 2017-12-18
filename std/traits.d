@@ -3395,8 +3395,7 @@ template hasElaborateCopyConstructor(S)
     }
     else static if (is(S == struct))
     {
-        enum hasElaborateCopyConstructor = hasMember!(S, "__postblit")
-            || anySatisfy!(.hasElaborateCopyConstructor, FieldTypeTuple!S);
+        enum hasElaborateCopyConstructor = hasMember!(S, "__xpostblit");
     }
     else
     {
@@ -4885,7 +4884,9 @@ Determines whether the function type $(D F) is covariant with $(D G), i.e.,
 functions of the type $(D F) can override ones of the type $(D G).
  */
 template isCovariantWith(F, G)
-    if (is(F == function) && is(G == function))
+    if (is(F == function) && is(G == function) ||
+        is(F == delegate) && is(G == delegate) ||
+        isFunctionPointer!F && isFunctionPointer!G)
 {
     static if (is(F : G))
         enum isCovariantWith = true;
@@ -5030,6 +5031,15 @@ template isCovariantWith(F, G)
     static assert( isCovariantWith!(BaseA.test, BaseA.test));
     static assert( isCovariantWith!(DerivA_1.test, DerivA_1.test));
     static assert( isCovariantWith!(DerivA_2.test, DerivA_2.test));
+
+     // function, function pointer and delegate
+     J function() derived_function;
+     I function() base_function;
+     J delegate() derived_delegate;
+     I delegate() base_delegate;
+     static assert(.isCovariantWith!(typeof(derived_function), typeof(base_function)));
+     static assert(.isCovariantWith!(typeof(*derived_function), typeof(*base_function)));
+     static assert(.isCovariantWith!(typeof(derived_delegate), typeof(base_delegate)));
 
     // scope parameter
     interface BaseB            {          void test(      int*,       int*); }

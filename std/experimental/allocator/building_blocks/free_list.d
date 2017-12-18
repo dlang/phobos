@@ -11,7 +11,9 @@ another allocator. Allocation requests between $(D min) and $(D max) bytes are
 rounded up to $(D max) and served from a singly-linked list of buffers
 deallocated in the past. All other allocations are directed to $(D
 ParentAllocator). Due to the simplicity of free list management, allocations
-from the free list are fast.
+from the free list are fast. If $(D adaptive) is set to $(D Yes.adaptive),
+the free list gradually reduces its size if allocations tend to use the parent
+allocator much more than the lists' available nodes.
 
 One instantiation is of particular interest: $(D FreeList!(0, unbounded)) puts
 every deallocation in the freelist, and subsequently serves any allocation from
@@ -32,6 +34,7 @@ struct FreeList(ParentAllocator,
     import std.exception : enforce;
     import std.traits : hasMember;
     import std.typecons : Ternary;
+    import std.experimental.allocator.building_blocks.null_allocator : NullAllocator;
 
     static assert(minSize != unbounded, "Use minSize = 0 for no low bound.");
     static assert(maxSize >= (void*).sizeof,
@@ -374,7 +377,7 @@ struct FreeList(ParentAllocator,
     /**
     Nonstandard function that minimizes the memory usage of the freelist by
     freeing each element in turn. Defined only if $(D ParentAllocator) defines
-    $(D deallocate).
+    $(D deallocate). $(D FreeList!(0, unbounded)) does not have this function.
     */
     static if (hasMember!(ParentAllocator, "deallocate") && !unchecked)
     void minimize()
@@ -386,6 +389,48 @@ struct FreeList(ParentAllocator,
             parent.deallocate(nuke);
         }
     }
+
+    /**
+    If $(D ParentAllocator) defines $(D deallocate), the list frees all nodes
+    on destruction. $(D FreeList!(0, unbounded)) does not deallocate the memory
+    on destruction.
+    */
+    static if (!is(ParentAllocator == NullAllocator) &&
+        hasMember!(ParentAllocator, "deallocate") && !unchecked)
+    ~this()
+    {
+        minimize();
+    }
+}
+
+@system unittest
+{
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.experimental.allocator.building_blocks.stats_collector
+        : StatsCollector, Options;
+
+    struct StatsCollectorWrapper {
+        ~this()
+        {
+            // buf2 should still be around and buf1 deallocated
+            assert(parent.numDeallocate == 1);
+            assert(parent.bytesUsed == 16);
+        }
+        static StatsCollector!(Mallocator, Options.all) parent;
+        alias parent this;
+    }
+
+    FreeList!(StatsCollectorWrapper, 16, 16) fl;
+    auto buf1 = fl.allocate(16);
+    auto buf2 = fl.allocate(16);
+    assert(fl.parent.bytesUsed == 32);
+
+    // After this, the list has 1 node, so no actual deallocation by Mallocator
+    fl.deallocate(buf1);
+    assert(fl.parent.bytesUsed == 32);
+
+    // Destruction should only deallocate the node
+    destroy(fl);
 }
 
 @system unittest
@@ -396,10 +441,34 @@ struct FreeList(ParentAllocator,
     auto b1 = fl.allocate(7);
     fl.allocate(8);
     assert(fl.root is null);
-    fl.deallocate(b1);
+    // Ensure deallocate inherits from parent
+    () nothrow @nogc { fl.deallocate(b1); }();
     assert(fl.root !is null);
     fl.allocate(8);
     assert(fl.root is null);
+}
+
+@system unittest
+{
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+    FreeList!(GCAllocator, 0, 16) fl;
+    // Not @nogc because of std.conv.text
+    assert((() nothrow @safe /*@nogc*/ => fl.goodAllocSize(1))() == 16);
+}
+
+// Test that deallocateAll infers from parent
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.region : Region;
+
+    auto fl = FreeList!(Region!(), 0, 16)(Region!()(new ubyte[1024 * 64]));
+    auto b = fl.allocate(42);
+    assert(b.length == 42);
+    assert((() pure nothrow @safe @nogc => fl.expand(b, 48))());
+    assert(b.length == 90);
+    assert((() nothrow @nogc => fl.reallocate(b, 100))());
+    assert(b.length == 100);
+    assert((() nothrow @nogc => fl.deallocateAll())());
 }
 
 /**
@@ -611,9 +680,13 @@ struct ContiguousFreeList(ParentAllocator,
     belongs to this allocator.
     */
     static if (hasMember!(SParent, "owns") || unchecked)
+    // Ternary owns(const void[] b) const ?
     Ternary owns(void[] b)
     {
-        if (support.ptr <= b.ptr && b.ptr < support.ptr + support.length)
+        if ((() @trusted => support && b
+                            && (&support[0] <= &b[0])
+                            && (&b[0] < &support[0] + support.length)
+            )())
             return Ternary.yes;
         static if (unchecked)
             return Ternary.no;
@@ -633,8 +706,7 @@ struct ContiguousFreeList(ParentAllocator,
         if (support.ptr <= b.ptr && b.ptr < support.ptr + support.length)
         {
             // we own this guy
-            import std.conv : text;
-            assert(fl.freeListEligible(b.length), text(b.length));
+            assert(fl.freeListEligible(b.length));
             assert(allocated);
             --allocated;
             // Put manually in the freelist
@@ -691,21 +763,23 @@ struct ContiguousFreeList(ParentAllocator,
     alias A = ContiguousFreeList!(NullAllocator, 0, 64);
     auto a = A(new ubyte[1024]);
 
-    assert(a.empty == Ternary.yes);
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
 
-    assert(a.goodAllocSize(15) == 64);
-    assert(a.goodAllocSize(65) == NullAllocator.instance.goodAllocSize(65));
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(15))() == 64);
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(65))()
+            == (() nothrow @safe @nogc => NullAllocator.instance.goodAllocSize(65))());
 
     auto b = a.allocate(100);
-    assert(a.empty == Ternary.yes);
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
     assert(b.length == 0);
-    a.deallocate(b);
+    // Ensure deallocate inherits from parent
+    () nothrow @nogc { a.deallocate(b); }();
     b = a.allocate(64);
-    assert(a.empty == Ternary.no);
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
     assert(b.length == 64);
-    assert(a.owns(b) == Ternary.yes);
-    assert(a.owns(null) == Ternary.no);
-    a.deallocate(b);
+    assert((() nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
+    assert((() nothrow @safe @nogc => a.owns(null))() == Ternary.no);
+    () nothrow @nogc { a.deallocate(b); }();
 }
 
 @system unittest
@@ -716,23 +790,29 @@ struct ContiguousFreeList(ParentAllocator,
     alias A = ContiguousFreeList!(Region!GCAllocator, 0, 64);
     auto a = A(Region!GCAllocator(1024 * 4), 1024);
 
-    assert(a.empty == Ternary.yes);
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
 
-    assert(a.goodAllocSize(15) == 64);
-    assert(a.goodAllocSize(65) == a.parent.goodAllocSize(65));
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(15))() == 64);
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(65))()
+            == (() pure nothrow @safe @nogc => a.parent.goodAllocSize(65))());
 
     auto b = a.allocate(100);
-    assert(a.empty == Ternary.no);
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
     assert(a.allocated == 0);
     assert(b.length == 100);
-    a.deallocate(b);
-    assert(a.empty == Ternary.yes);
+    // Ensure deallocate inherits from parent
+    assert((() nothrow @nogc => a.deallocate(b))());
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.yes);
     b = a.allocate(64);
-    assert(a.empty == Ternary.no);
+    assert((() nothrow @safe @nogc => a.empty)() == Ternary.no);
     assert(b.length == 64);
-    assert(a.owns(b) == Ternary.yes);
-    assert(a.owns(null) == Ternary.no);
-    a.deallocate(b);
+    assert(a.reallocate(b, 100));
+    assert(b.length == 100);
+    assert((() nothrow @safe @nogc => a.owns(b))() == Ternary.yes);
+    assert((() nothrow @safe @nogc => a.owns(null))() == Ternary.no);
+    // Test deallocate infers from parent
+    assert((() nothrow @nogc => a.deallocate(b))());
+    assert((() nothrow @nogc => a.deallocateAll())());
 }
 
 @system unittest
@@ -757,6 +837,11 @@ struct SharedFreeList(ParentAllocator,
     import std.conv : text;
     import std.exception : enforce;
     import std.traits : hasMember;
+
+    static if (hasMember!(ParentAllocator, "owns"))
+    {
+        import std.typecons : Ternary;
+    }
 
     static assert(approxMaxNodes, "approxMaxNodes must not be null.");
     static assert(minSize != unbounded, "Use minSize = 0 for no low bound.");
@@ -931,7 +1016,7 @@ struct SharedFreeList(ParentAllocator,
 
     /// Ditto
     static if (hasMember!(ParentAllocator, "owns"))
-    Ternary owns(void[] b) shared const
+    Ternary owns(const void[] b) shared const
     {
         return parent.owns(b);
     }
@@ -1078,10 +1163,11 @@ struct SharedFreeList(ParentAllocator,
 
     static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
 
-    assert(a.goodAllocSize(1) == platformAlignment);
+    assert((() nothrow @safe @nogc => a.goodAllocSize(1))() == platformAlignment);
 
     auto b = a.allocate(96);
-    a.deallocate(b);
+    // Ensure deallocate inherits from parent
+    () nothrow @nogc { a.deallocate(b); }();
 
     void fun()
     {
@@ -1089,7 +1175,7 @@ struct SharedFreeList(ParentAllocator,
         b[] = cast(size_t) &b;
 
         assert(b.equal(repeat(cast(size_t) &b, b.length)));
-        a.deallocate(b);
+        () nothrow @nogc { a.deallocate(b); }();
     }
 
     auto tg = new ThreadGroup;
@@ -1106,10 +1192,11 @@ struct SharedFreeList(ParentAllocator,
     import std.experimental.allocator.mallocator : Mallocator;
     static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
     auto b = a.allocate(100);
-    a.deallocate(b);
+    // Ensure deallocate inherits from parent
+    () nothrow @nogc { a.deallocate(b); }();
     assert(a.nodes == 1);
     b = [];
-    a.deallocateAll();
+    assert((() nothrow @nogc => a.deallocateAll())());
     assert(a.nodes == 0);
 }
 
@@ -1119,12 +1206,13 @@ struct SharedFreeList(ParentAllocator,
     static shared SharedFreeList!(Mallocator, 64, 128, 10) a;
     auto b = a.allocate(100);
     auto c = a.allocate(100);
-    a.deallocate(c);
+    // Ensure deallocate inherits from parent
+    () nothrow @nogc { a.deallocate(c); }();
     assert(a.nodes == 1);
     c = [];
     a.minimize();
     assert(a.nodes == 0);
-    a.deallocate(b);
+    () nothrow @nogc { a.deallocate(b); }();
     assert(a.nodes == 1);
     b = [];
     a.minimize();
@@ -1138,8 +1226,9 @@ struct SharedFreeList(ParentAllocator,
     auto b = a.allocate(100);
     auto c = a.allocate(100);
     assert(a.nodes == 0);
-    a.deallocate(b);
-    a.deallocate(c);
+    // Ensure deallocate inherits from parent
+    () nothrow @nogc { a.deallocate(b); }();
+    () nothrow @nogc { a.deallocate(c); }();
     assert(a.nodes == 2);
     b = [];
     c = [];
@@ -1151,18 +1240,19 @@ struct SharedFreeList(ParentAllocator,
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime) a;
-    scope(exit) a.deallocateAll();
+    scope(exit) assert((() nothrow @nogc => a.deallocateAll())());
     auto c = a.allocate(64);
-    assert(a.reallocate(c, 96));
+    assert((() nothrow @nogc => a.reallocate(c, 96))());
     assert(c.length == 96);
-    a.deallocate(c);
+    // Ensure deallocate inherits from parent
+    () nothrow @nogc { a.deallocate(c); }();
 }
 
 @system unittest
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, chooseAtRuntime, chooseAtRuntime, chooseAtRuntime) a;
-    scope(exit) a.deallocateAll;
+    scope(exit) assert((() nothrow @nogc => a.deallocateAll())());
     a.allocate(64);
 }
 
@@ -1170,7 +1260,7 @@ struct SharedFreeList(ParentAllocator,
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, 30, 40) a;
-    scope(exit) a.deallocateAll;
+    scope(exit) assert((() nothrow @nogc => a.deallocateAll())());
     a.allocate(64);
 }
 
@@ -1178,7 +1268,7 @@ struct SharedFreeList(ParentAllocator,
 {
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, 30, 40, chooseAtRuntime) a;
-    scope(exit) a.deallocateAll;
+    scope(exit) assert((() nothrow @nogc => a.deallocateAll())());
     a.allocate(64);
 }
 
@@ -1187,7 +1277,7 @@ struct SharedFreeList(ParentAllocator,
     // Pull request #5556
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, 0, chooseAtRuntime) a;
-    scope(exit) a.deallocateAll;
+    scope(exit) assert((() nothrow @nogc => a.deallocateAll())());
     a.max = 64;
     a.allocate(64);
 }
@@ -1197,7 +1287,7 @@ struct SharedFreeList(ParentAllocator,
     // Pull request #5556
     import std.experimental.allocator.mallocator : Mallocator;
     shared SharedFreeList!(Mallocator, chooseAtRuntime, 64) a;
-    scope(exit) a.deallocateAll;
+    scope(exit) assert((() nothrow @nogc => a.deallocateAll())());
     a.min = 32;
     a.allocate(64);
 }

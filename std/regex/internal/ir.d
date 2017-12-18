@@ -47,7 +47,11 @@ CharMatcher[CodepointSet] matcherCache;
     }
 }
 
-static CharMatcher wordMatcher = CharMatcher(wordCharacter);
+@property ref wordMatcher()()
+{
+    static CharMatcher matcher = CharMatcher(wordCharacter);
+    return matcher;
+}
 
 // some special Unicode white space characters
 private enum NEL = '\u0085', LS = '\u2028', PS = '\u2029';
@@ -200,7 +204,7 @@ bool isAtomIR(IR i)
 IR pairedIR(IR i)
 {
     assert(isStartIR(i) || isEndIR(i));
-    return cast(IR)(i ^ 0b11);
+    return cast(IR) (i ^ 0b11);
 }
 
 //encoded IR instruction
@@ -423,6 +427,134 @@ struct Group(DataIndex)
         writeln("\t", disassemble(slice, pc, dict));
 }
 
+// Encapsulates memory management, explicit ref counting
+// and the exact type of engine created
+// there is a single instance per engine combination type x Char
+// In future may also maintain a (TLS?) cache of memory
+interface MatcherFactory(Char)
+{
+@safe:
+    Matcher!Char create(const Regex!Char, in Char[] input) const;
+    Matcher!Char dup(Matcher!Char m, in Char[] input) const;
+    size_t incRef(Matcher!Char m) const;
+    size_t decRef(Matcher!Char m) const;
+}
+
+// Only memory management, no compile-time vs run-time specialities
+abstract class GenericFactory(alias EngineType, Char) : MatcherFactory!Char
+{
+    import core.stdc.stdlib : malloc, free;
+    import core.memory : GC;
+    enum classSize = __traits(classInstanceSize, EngineType!Char);
+
+    Matcher!Char construct(const Regex!Char re, in Char[] input, void[] memory) const;
+
+    override Matcher!Char create(const Regex!Char re, in Char[] input) const @trusted
+    {
+        immutable size = EngineType!Char.initialMemory(re) + classSize;
+        auto memory = enforce(malloc(size), "malloc failed")[0 .. size];
+        scope(failure) free(memory.ptr);
+        GC.addRange(memory.ptr, classSize);
+        auto engine = construct(re, input, memory);
+        assert(engine.refCount == 1);
+        assert(cast(void*) engine == memory.ptr);
+        return engine;
+    }
+
+    override Matcher!Char dup(Matcher!Char engine, in Char[] input) const @trusted
+    {
+        immutable size = EngineType!Char.initialMemory(engine.pattern) + classSize;
+        auto memory = enforce(malloc(size), "malloc failed")[0 .. size];
+        scope(failure) free(memory.ptr);
+        auto copy = construct(engine.pattern, input, memory);
+        GC.addRange(memory.ptr, classSize);
+        engine.dupTo(copy, memory[classSize .. size]);
+        assert(copy.refCount == 1);
+        return copy;
+    }
+
+    override size_t incRef(Matcher!Char m) const
+    {
+        return ++m.refCount;
+    }
+
+    override size_t decRef(Matcher!Char m) const  @trusted
+    {
+        assert(m.refCount != 0);
+        auto cnt = --m.refCount;
+        if (cnt == 0)
+        {
+            void* ptr = cast(void*) m;
+            GC.removeRange(ptr);
+            free(ptr);
+        }
+        return cnt;
+    }
+}
+
+// A factory for run-time engines
+class RuntimeFactory(alias EngineType, Char) : GenericFactory!(EngineType, Char)
+{
+    override EngineType!Char construct(const Regex!Char re, in Char[] input, void[] memory) const
+    {
+        import std.conv : emplace;
+        return emplace!(EngineType!Char)(memory[0 .. classSize],
+            re, Input!Char(input), memory[classSize .. $]);
+    }
+}
+
+// A factory for compile-time engine
+class CtfeFactory(alias EngineType, Char, alias func) : GenericFactory!(EngineType, Char)
+{
+    override EngineType!Char construct(const Regex!Char re, in Char[] input, void[] memory) const
+    {
+        import std.conv : emplace;
+        return emplace!(EngineType!Char)(memory[0 .. classSize],
+            re, &func, Input!Char(input), memory[classSize .. $]);
+    }
+}
+
+// A workaround for R-T enum re = regex(...)
+template defaultFactory(Char)
+{
+    @property MatcherFactory!Char defaultFactory(const Regex!Char re)
+    {
+        import std.regex.internal.backtracking : BacktrackingMatcher;
+        import std.regex.internal.thompson : ThompsonMatcher;
+        import std.algorithm.searching : canFind;
+        static MatcherFactory!Char backtrackingFactory;
+        static MatcherFactory!Char thompsonFactory;
+        if (re.backrefed.canFind!"a != 0")
+        {
+            if (backtrackingFactory is null)
+                backtrackingFactory = new RuntimeFactory!(BacktrackingMatcher, Char);
+            return backtrackingFactory;
+        }
+        else
+        {
+            if (thompsonFactory is null)
+                thompsonFactory = new RuntimeFactory!(ThompsonMatcher, Char);
+            return thompsonFactory;
+        }
+    }
+}
+
+// Defining it as an interface has the undesired side-effect:
+// casting any class to an interface silently adjusts pointer to point to a nested vtbl
+abstract class Matcher(Char)
+{
+abstract:
+    // Get a (next) match
+    int match(Group!size_t[] matches);
+    // This only maintains internal ref-count,
+    // deallocation happens inside MatcherFactory
+    @property ref size_t refCount() @safe;
+    // Copy internal state to another engine, using memory arena 'memory'
+    void dupTo(Matcher!Char m, void[] memory);
+    // The pattern loaded
+    @property ref const(Regex!Char) pattern() @safe;
+}
+
 /++
     $(D Regex) object holds regular expression pattern in compiled form.
     Instances of this object are constructed via calls to $(D regex).
@@ -443,11 +575,11 @@ struct Regex(Char)
         static struct NamedGroupRange
         {
         private:
-            NamedGroup[] groups;
+            const(NamedGroup)[] groups;
             size_t start;
             size_t end;
         public:
-            this(NamedGroup[] g, size_t s, size_t e)
+            this(const(NamedGroup)[] g, size_t s, size_t e)
             {
                 assert(s <= e);
                 assert(e <= g.length);
@@ -485,7 +617,7 @@ struct Regex(Char)
 
 package(std.regex):
     import std.regex.internal.kickstart : Kickstart; //TODO: get rid of this dependency
-    NamedGroup[] dict;                     // maps name -> user group number
+    const(NamedGroup)[] dict;              // maps name -> user group number
     uint ngroup;                           // number of internal groups
     uint maxCounterDepth;                  // max depth of nested {n,m} repetitions
     uint hotspotTableSize;                 // number of entries in merge table
@@ -495,6 +627,35 @@ package(std.regex):
     public const(BitTable)[] filters;      // bloom filters for conditional loops
     uint[] backrefed;                      // bit array of backreferenced submatches
     Kickstart!Char kickstart;
+    MatcherFactory!Char factory;           // produces optimal matcher for this pattern
+
+    const(Regex) withFactory(MatcherFactory!Char factory) pure const @trusted
+    {
+        auto r = cast() this;
+        r.factory = factory;
+        return r;
+    }
+
+    const(Regex) withFlags(uint newFlags) pure const @trusted
+    {
+        auto r = cast() this;
+        r.flags = newFlags;
+        return r;
+    }
+
+    const(Regex) withCode(const(Bytecode)[] code) pure const @trusted
+    {
+        auto r = cast() this;
+        r.ir = code.dup; // TODO: sidestep const instead?
+        return r;
+    }
+
+    const(Regex) withNGroup(uint nGroup) pure const @trusted
+    {
+        auto r = cast() this;
+        r.ngroup = nGroup;
+        return r;
+    }
 
     //bit access helper
     uint isBackref(uint n)
@@ -537,26 +698,6 @@ package(std.regex):
 
 }
 
-//@@@BUG@@@ (unreduced) - public makes it inaccessible in std.regex.package (!)
-/*public*/ struct StaticRegex(Char)
-{
-package(std.regex):
-    import std.regex.internal.backtracking : BacktrackingMatcher;
-    alias Matcher = BacktrackingMatcher!(true);
-    alias MatchFn = bool function(ref Matcher!Char) @trusted;
-    MatchFn nativeFn;
-public:
-    Regex!Char _regex;
-    alias _regex this;
-    this(Regex!Char re, MatchFn fn)
-    {
-        _regex = re;
-        nativeFn = fn;
-
-    }
-
-}
-
 // The stuff below this point is temporarrily part of IR module
 // but may need better place in the future (all internals)
 package(std.regex):
@@ -593,7 +734,7 @@ if (is(Char :dchar))
     @property bool atEnd(){
         return _index == _origin.length;
     }
-    bool search(Kickstart)(ref Kickstart kick, ref dchar res, ref size_t pos)
+    bool search(Kickstart)(ref const Kickstart kick, ref dchar res, ref size_t pos)
     {
         size_t idx = kick.search(_origin, _index);
         _index = idx;
@@ -676,7 +817,7 @@ template BackLooper(E)
 }
 
 //
-@trusted uint lookupNamedGroup(String)(NamedGroup[] dict, String name)
+@trusted uint lookupNamedGroup(String)(const(NamedGroup)[] dict, String name)
 {//equal is @system?
     import std.algorithm.comparison : equal;
     import std.algorithm.iteration : map;

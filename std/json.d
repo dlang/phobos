@@ -1123,14 +1123,6 @@ if (isInputRange!T && !isInfinite!T && isSomeChar!(ElementEncodingType!T))
     return parseJSON!T(json, -1, options);
 }
 
-deprecated(
-    "Please use the overload that takes a ref JSONValue rather than a pointer. This overload will "
-    ~ "be removed in November 2017.")
-string toJSON(in JSONValue* root, in bool pretty = false, in JSONOptions options = JSONOptions.none) @safe
-{
-    return toJSON(*root, pretty, options);
-}
-
 /**
 Takes a tree of JSON values and returns the serialized string.
 
@@ -1174,7 +1166,7 @@ string toJSON(const ref JSONValue root, in bool pretty = false, in JSONOptions o
                     // Make sure we do UTF decoding iff we want to
                     // escape Unicode characters.
                     assert(((options & JSONOptions.escapeNonAsciiChars) != 0)
-                        == is(Char == dchar));
+                        == is(Char == dchar), "JSONOptions.escapeNonAsciiChars needs dchar strings");
 
                     with (JSONOptions) if (isControl(c) ||
                         ((options & escapeNonAsciiChars) >= escapeNonAsciiChars && c >= 0x80))

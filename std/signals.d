@@ -221,6 +221,17 @@ mixin template Signal(T1...)
         }
      }
 
+    /***
+     * Disconnect all the slots.
+     */
+    final void disconnectAll()
+    {
+        debug (signal) writefln("Signal.disconnectAll");
+        __dtor();
+        slots_idx = 0;
+        status = ST.idle;
+    }
+
     /* **
      * Special function called when o is destroyed.
      * It causes any slots dependent on o to be removed from the list
@@ -228,7 +239,8 @@ mixin template Signal(T1...)
      */
     final void unhook(Object o)
     in { assert( status == ST.idle ); }
-    body {
+    do
+    {
         debug (signal) writefln("Signal.unhook(o = %s)", cast(void*) o);
         for (size_t i = 0; i < slots_idx; )
         {
@@ -706,3 +718,58 @@ version(none) // Disabled because of dmd @@@BUG5028@@@
     assert( dot2.value == -22 );
 }
 
+@system unittest
+{
+    import std.signals;
+
+    class Observer
+    {   // our slot
+        void watch(string msg, int value)
+        {
+            if (value != 0)
+            {
+                assert(msg == "setting new value");
+                assert(value == 1);
+            }
+        }
+    }
+
+    class Foo
+    {
+        int value() { return _value; }
+
+        int value(int v)
+        {
+            if (v != _value)
+            {
+                _value = v;
+                // call all the connected slots with the parameters
+                emit("setting new value", v);
+            }
+            return v;
+        }
+
+        // Mix in all the code we need to make Foo into a signal
+        mixin Signal!(string, int);
+
+      private :
+        int _value;
+    }
+
+    Foo a = new Foo;
+    Observer o = new Observer;
+    auto o2 = new Observer;
+
+    a.value = 3;                // should not call o.watch()
+    a.connect(&o.watch);        // o.watch is the slot
+    a.connect(&o2.watch);
+    a.value = 1;                // should call o.watch()
+    a.disconnectAll();
+    a.value = 5;                // so should not call o.watch()
+    a.connect(&o.watch);        // connect again
+    a.connect(&o2.watch);
+    a.value = 1;                // should call o.watch()
+    destroy(o);                 // destroying o should automatically disconnect it
+    destroy(o2);
+    a.value = 7;                // should not call o.watch()
+}

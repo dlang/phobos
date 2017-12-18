@@ -430,7 +430,7 @@ private struct _Cache(R, bool bidir)
             {
                 assert(low <= high, "Bounds error when slicing cache.");
             }
-            body
+            do
             {
                 import std.range : takeExactly;
                 return this[low .. $].takeExactly(high - low);
@@ -2747,7 +2747,7 @@ Params:
 See_Also:
     $(HTTP en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
 
-    $(LREF fold) is functionally equivalent to $(LREF reduce) with the argument order reversed,
+    $(LREF fold) is functionally equivalent to $(LREF _reduce) with the argument order reversed,
     and without the need to use $(LREF tuple) for multiple seeds. This makes it easier
     to use in UFCS chains.
 
@@ -3851,20 +3851,42 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
 @safe unittest
 {
     import std.algorithm.comparison : equal;
-    import std.range : empty;
+    import std.ascii : toLower;
+    import std.range : empty, retro;
 
-    assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
-    int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
-    int[][] w = [ [1, 2], [], [3], [4, 5], [] ];
+    // Basic splitting with characters and numbers.
+    assert(equal(splitter("a|bc|def", '|'), [ "a", "bc", "def" ]));
+
+    int[] a = [1, 0, 2, 3, 0, 4, 5, 6];
+    int[][] w = [ [1], [2, 3], [4, 5, 6] ];
     assert(equal(splitter(a, 0), w));
-    a = [ 0 ];
-    assert(equal(splitter(a, 0), [ (int[]).init, (int[]).init ]));
-    a = [ 0, 1 ];
-    assert(equal(splitter(a, 0), [ [], [1] ]));
+
+    // Adjacent separators.
+    assert(equal(splitter("a|b||c", '|'), [ "a", "b", "", "c" ]));
+    assert(equal(splitter("hello  world", ' '), [ "hello", "", "world" ]));
+
+    a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
+    w = [ [1, 2], [], [3], [4, 5], [] ];
+    assert(equal(splitter(a, 0), w));
+
+    // Empty and separator-only ranges.
+    assert(splitter("", '|').empty);
+    assert(equal(splitter("|", '|'), [ "", "" ]));
+    assert(equal(splitter("||", '|'), [ "", "", "" ]));
+
+    // Leading separators, trailing separators, or no separators.
+    assert(equal(splitter("|ab|", '|'), [ "", "ab", "" ]));
+    assert(equal(splitter("ab", '|'), [ "ab" ]));
+
+    // Predicate functions.
+    assert(equal(splitter!"a.toLower == b"("abXcdxef", 'x'),
+                 [ "ab", "cd", "ef" ]));
+
     w = [ [0], [1], [2] ];
     assert(equal(splitter!"a.front == b"(w, 1), [ [[0]], [[2]] ]));
-    assert(splitter("", '.').empty);
-    assert(equal(splitter(".", '.'), [ "", "" ]));
+
+    // Bidirectional ranges.
+    assert(equal(splitter("a|bc|def", '|').retro, [ "def", "bc", "a" ]));
 }
 
 @safe unittest
@@ -3886,6 +3908,7 @@ if (is(typeof(binaryFun!pred(r.front, s)) : bool)
     a = [ 0 ];
     assert(equal(splitter(a, 0), [ (int[]).init, (int[]).init ][]));
     a = [ 0, 1 ];
+    assert(equal(splitter(a, 0), [ [], [1] ]));
     assert(equal(splitter(a, 0), [ [], [1] ][]));
 
     // Thoroughly exercise the bidirectional stuff.
@@ -3952,6 +3975,9 @@ Two adjacent separators are considered to surround an empty element in
 the split range. Use $(D filter!(a => !a.empty)) on the result to compress
 empty elements.
 
+Unlike the previous overload of $(D splitter), this one will not return a
+bidirectional range.
+
 Params:
     pred = The predicate for comparing each element with the separator,
         defaulting to $(D "a == b").
@@ -3966,8 +3992,7 @@ Constraints:
 
 Returns:
     An input range of the subranges of elements between separators. If $(D r)
-    is a forward range or $(REF_ALTTEXT bidirectional range, isBidirectionalRange, std,range,primitives),
-    the returned range will be likewise.
+    is a forward range, the returned range will be a forward range.
 
 See_Also: $(REF _splitter, std,regex) for a version that splits using a regular
 expression defined separator.
@@ -4093,12 +4118,17 @@ if (is(typeof(binaryFun!pred(r.front, s.front)) : bool)
 {
     import std.algorithm.comparison : equal;
 
+    assert(equal(splitter("a=>bc=>def", "=>"), [ "a", "bc", "def" ]));
+    assert(equal(splitter("a|b||c", "||"), [ "a|b", "c" ]));
     assert(equal(splitter("hello  world", "  "), [ "hello", "world" ]));
+
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
     int[][] w = [ [1, 2], [3, 0, 4, 5, 0] ];
     assert(equal(splitter(a, [0, 0]), w));
+
     a = [ 0, 0 ];
     assert(equal(splitter(a, [0, 0]), [ (int[]).init, (int[]).init ]));
+
     a = [ 0, 0, 1 ];
     assert(equal(splitter(a, [0, 0]), [ [], [1] ]));
 }
@@ -4243,14 +4273,19 @@ if (isForwardRange!Range && is(typeof(unaryFun!isTerminator(input.front))))
     import std.algorithm.comparison : equal;
     import std.range.primitives : front;
 
+    assert(equal(splitter!(a => a == '|')("a|bc|def"), [ "a", "bc", "def" ]));
     assert(equal(splitter!(a => a == ' ')("hello  world"), [ "hello", "", "world" ]));
+
     int[] a = [ 1, 2, 0, 0, 3, 0, 4, 5, 0 ];
     int[][] w = [ [1, 2], [], [3], [4, 5], [] ];
     assert(equal(splitter!(a => a == 0)(a), w));
+
     a = [ 0 ];
     assert(equal(splitter!(a => a == 0)(a), [ (int[]).init, (int[]).init ]));
+
     a = [ 0, 1 ];
     assert(equal(splitter!(a => a == 0)(a), [ [], [1] ]));
+
     w = [ [0], [1], [2] ];
     assert(equal(splitter!(a => a.front == 1)(w), [ [[0]], [[2]] ]));
 }
@@ -4729,6 +4764,36 @@ if (isInputRange!R && !isInfinite!R && is(typeof(seed = seed + r.front)))
     }
 }
 
+/// Ditto
+@safe pure nothrow unittest
+{
+    import std.range;
+
+    //simple integral sumation
+    assert(sum([ 1, 2, 3, 4]) == 10);
+
+    //with integral promotion
+    assert(sum([false, true, true, false, true]) == 3);
+    assert(sum(ubyte.max.repeat(100)) == 25500);
+
+    //The result may overflow
+    assert(uint.max.repeat(3).sum()           ==  4294967293U );
+    //But a seed can be used to change the sumation primitive
+    assert(uint.max.repeat(3).sum(ulong.init) == 12884901885UL);
+
+    //Floating point sumation
+    assert(sum([1.0, 2.0, 3.0, 4.0]) == 10);
+
+    //Floating point operations have double precision minimum
+    static assert(is(typeof(sum([1F, 2F, 3F, 4F])) == double));
+    assert(sum([1F, 2, 3, 4]) == 10);
+
+    //Force pair-wise floating point sumation on large integers
+    import std.math : approxEqual;
+    assert(iota(ulong.max / 2, ulong.max / 2 + 4096).sum(0.0)
+               .approxEqual((ulong.max / 2) * 4096.0 + 4096^^2 / 2));
+}
+
 // Pairwise summation http://en.wikipedia.org/wiki/Pairwise_summation
 private auto sumPairwise(F, R)(R data)
 if (isInputRange!R && !isInfinite!R)
@@ -4839,36 +4904,6 @@ private auto sumKahan(Result, R)(Result result, R r)
     return result;
 }
 
-/// Ditto
-@safe pure nothrow unittest
-{
-    import std.range;
-
-    //simple integral sumation
-    assert(sum([ 1, 2, 3, 4]) == 10);
-
-    //with integral promotion
-    assert(sum([false, true, true, false, true]) == 3);
-    assert(sum(ubyte.max.repeat(100)) == 25500);
-
-    //The result may overflow
-    assert(uint.max.repeat(3).sum()           ==  4294967293U );
-    //But a seed can be used to change the sumation primitive
-    assert(uint.max.repeat(3).sum(ulong.init) == 12884901885UL);
-
-    //Floating point sumation
-    assert(sum([1.0, 2.0, 3.0, 4.0]) == 10);
-
-    //Floating point operations have double precision minimum
-    static assert(is(typeof(sum([1F, 2F, 3F, 4F])) == double));
-    assert(sum([1F, 2, 3, 4]) == 10);
-
-    //Force pair-wise floating point sumation on large integers
-    import std.math : approxEqual;
-    assert(iota(ulong.max / 2, ulong.max / 2 + 4096).sum(0.0)
-               .approxEqual((ulong.max / 2) * 4096.0 + 4096^^2 / 2));
-}
-
 @safe pure nothrow unittest
 {
     static assert(is(typeof(sum([cast( byte) 1])) ==  int));
@@ -4943,6 +4978,136 @@ private auto sumKahan(Result, R)(Result result, R r)
     import std.range;
     foreach (n; iota(50))
         assert(repeat(1.0, n).sum == n);
+}
+
+/**
+Finds the mean (colloquially known as the average) of a range.
+
+For built-in numerical types, accurate Knuth & Welford mean calculation
+is used. For user-defined types, element by element summation is used.
+Additionally an extra parameter `seed` is needed in order to correctly
+seed the summation with the equivalent to `0`.
+
+The first overload of this function will return `T.init` if the range
+is empty. However, the second overload will return `seed` on empty ranges.
+
+This function is $(BIGOH r.length).
+
+Params:
+    r = An $(REF_ALTTEXT input range, isInputRange, std,range,primitives)
+    seed = For user defined types. Should be equivalent to `0`.
+
+Returns:
+    The mean of `r` when `r` is non-empty.
+*/
+T mean(T = double, R)(R r)
+if (isInputRange!R &&
+    isNumeric!(ElementType!R) &&
+    !isInfinite!R)
+{
+    if (r.empty)
+        return T.init;
+
+    Unqual!T meanRes = 0;
+    size_t i = 1;
+
+    // Knuth & Welford mean calculation
+    // division per element is slower, but more accurate
+    for (; !r.empty; r.popFront())
+    {
+        T delta = r.front - meanRes;
+        meanRes += delta / i++;
+    }
+
+    return meanRes;
+}
+
+/// ditto
+auto mean(R, T)(R r, T seed)
+if (isInputRange!R &&
+    !isNumeric!(ElementType!R) &&
+    is(typeof(r.front + seed)) &&
+    is(typeof(r.front / size_t(1))) &&
+    !isInfinite!R)
+{
+    import std.algorithm.iteration : sum, reduce;
+
+    // per item division vis-a-vis the previous overload is too
+    // inaccurate for integer division, which the user defined
+    // types might be representing
+    static if (hasLength!R)
+    {
+        if (r.length == 0)
+            return seed;
+
+        return sum(r, seed) / r.length;
+    }
+    else
+    {
+        import std.typecons : tuple;
+
+        if (r.empty)
+            return seed;
+
+        auto pair = reduce!((a, b) => tuple(a[0] + 1, a[1] + b))
+            (tuple(size_t(0), seed), r);
+        return pair[1] / pair[0];
+    }
+}
+
+///
+@safe @nogc pure nothrow unittest
+{
+    import std.math : approxEqual, isNaN;
+
+    static immutable arr1 = [1, 2, 3];
+    static immutable arr2 = [1.5, 2.5, 12.5];
+
+    assert(arr1.mean.approxEqual(2));
+    assert(arr2.mean.approxEqual(5.5));
+
+    assert(arr1[0 .. 0].mean.isNaN);
+}
+
+@safe pure nothrow unittest
+{
+    import std.internal.test.dummyrange : ReferenceInputRange;
+    import std.math : approxEqual;
+
+    auto r1 = new ReferenceInputRange!int([1, 2, 3]);
+    assert(r1.mean.approxEqual(2));
+
+    auto r2 = new ReferenceInputRange!double([1.5, 2.5, 12.5]);
+    assert(r2.mean.approxEqual(5.5));
+}
+
+// Test user defined types
+@system pure unittest
+{
+    import std.bigint : BigInt;
+    import std.internal.test.dummyrange : ReferenceInputRange;
+    import std.math : approxEqual;
+
+    auto bigint_arr = [BigInt("1"), BigInt("2"), BigInt("3"), BigInt("6")];
+    auto bigint_arr2 = new ReferenceInputRange!BigInt([
+        BigInt("1"), BigInt("2"), BigInt("3"), BigInt("6")
+    ]);
+    assert(bigint_arr.mean(BigInt(0)) == BigInt("3"));
+    assert(bigint_arr2.mean(BigInt(0)) == BigInt("3"));
+
+    BigInt[] bigint_arr3 = [];
+    assert(bigint_arr3.mean(BigInt(0)) == BigInt(0));
+
+    struct MyFancyDouble
+    {
+       double v;
+       alias v this;
+    }
+
+    // both overloads
+    auto d_arr = [MyFancyDouble(10), MyFancyDouble(15), MyFancyDouble(30)];
+    assert(mean!(double)(cast(double[]) d_arr).approxEqual(18.333));
+    assert(mean(d_arr, MyFancyDouble(0)).approxEqual(18.333));
 }
 
 // uniq

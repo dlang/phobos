@@ -185,7 +185,7 @@ struct RBNode(V)
     {
         assert(_left !is null);
     }
-    body
+    do
     {
         // sets _left._parent also
         if (isLeftNode)
@@ -228,7 +228,7 @@ struct RBNode(V)
     {
         assert(_right !is null);
     }
-    body
+    do
     {
         // sets _right._parent also
         if (isLeftNode)
@@ -257,7 +257,7 @@ struct RBNode(V)
     {
         assert(_parent !is null);
     }
-    body
+    do
     {
         return _parent._left is &this;
     }

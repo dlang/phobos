@@ -888,11 +888,11 @@ Lret: {}
                 1.0
             ];
 
-            enum real DP1 =
+            enum real P1 =
                 7.853981633974483067550664827649598009884357452392578125E-1L;
-            enum real DP2 =
+            enum real P2 =
                 2.8605943630549158983813312792950660807511260829685741796657E-18L;
-            enum real DP3 =
+            enum real P3 =
                 2.1679525325309452561992610065108379921905808E-35L;
         }
         else
@@ -4518,7 +4518,7 @@ real round(real x) @trusted nothrow @nogc
     {
         auto old = FloatingPointControl.getControlState();
         FloatingPointControl.setControlState(
-            (old & ~FloatingPointControl.ROUNDING_MASK) | FloatingPointControl.roundToZero
+            (old & (-1 - FloatingPointControl.roundingMask)) | FloatingPointControl.roundToZero
         );
         x = rint((x >= 0) ? x + 0.5 : x - 0.5);
         FloatingPointControl.setControlState(old);
@@ -4939,41 +4939,39 @@ struct FloatingPointControl
         {
             /** IEEE rounding modes.
              * The default mode is roundToNearest.
+             *
+             *  roundingMask = A mask of all rounding modes.
              */
             roundToNearest,
             roundDown, /// ditto
             roundUp, /// ditto
-            roundToZero /// ditto
+            roundToZero, /// ditto
+            roundingMask, /// ditto
         }
     }
-    else version(ARM)
+    else version (CRuntime_Microsoft)
     {
+        // Microsoft uses hardware-incompatible custom constants in fenv.h (core.stdc.fenv).
         enum : RoundingMode
         {
-            roundToNearest = 0x000000,
-            roundDown      = 0x800000,
-            roundUp        = 0x400000,
-            roundToZero    = 0xC00000
-        }
-    }
-    else version(PPC_Any)
-    {
-        enum : RoundingMode
-        {
-            roundToNearest = 0x00000000,
-            roundDown      = 0x00000003,
-            roundUp        = 0x00000002,
-            roundToZero    = 0x00000001
+            roundToNearest = 0x0000,
+            roundDown      = 0x0400,
+            roundUp        = 0x0800,
+            roundToZero    = 0x0C00,
+            roundingMask   = roundToNearest | roundDown
+                             | roundUp | roundToZero,
         }
     }
     else
     {
         enum : RoundingMode
         {
-            roundToNearest = 0x0000,
-            roundDown      = 0x0400,
-            roundUp        = 0x0800,
-            roundToZero    = 0x0C00
+            roundToNearest = core.stdc.fenv.FE_TONEAREST,
+            roundDown      = core.stdc.fenv.FE_DOWNWARD,
+            roundUp        = core.stdc.fenv.FE_UPWARD,
+            roundToZero    = core.stdc.fenv.FE_TOWARDZERO,
+            roundingMask   = roundToNearest | roundDown
+                             | roundUp | roundToZero,
         }
     }
 
@@ -4981,18 +4979,20 @@ struct FloatingPointControl
     @property void rounding(RoundingMode newMode) @nogc
     {
         initialize();
-        setControlState((getControlState() & (-1 - ROUNDING_MASK)) | (newMode & ROUNDING_MASK));
+        setControlState((getControlState() & (-1 - roundingMask)) | (newMode & roundingMask));
     }
 
     /// Returns: the currently active rounding mode
     @property static RoundingMode rounding() @nogc
     {
-        return cast(RoundingMode)(getControlState() & ROUNDING_MASK);
+        return cast(RoundingMode)(getControlState() & roundingMask);
     }
+
+    alias ExceptionMask = uint; ///
 
     version(StdDdoc)
     {
-        enum : uint
+        enum : ExceptionMask
         {
             /** IEEE hardware exceptions.
              *  By default, all exceptions are masked (disabled).
@@ -5012,7 +5012,7 @@ struct FloatingPointControl
     }
     else version(ARM)
     {
-        enum : uint
+        enum : ExceptionMask
         {
             subnormalException    = 0x8000,
             inexactException      = 0x1000,
@@ -5028,7 +5028,7 @@ struct FloatingPointControl
     }
     else version(PPC_Any)
     {
-        enum : uint
+        enum : ExceptionMask
         {
             inexactException      = 0x0008,
             divByZeroException    = 0x0010,
@@ -5041,9 +5041,9 @@ struct FloatingPointControl
                                  | inexactException,
         }
     }
-    else
+    else version (X86_Any)
     {
-        enum : uint
+        enum : ExceptionMask
         {
             inexactException      = 0x20,
             underflowException    = 0x10,
@@ -5057,30 +5057,8 @@ struct FloatingPointControl
                                  | inexactException | subnormalException,
         }
     }
-
-private:
-    version(ARM)
-    {
-        enum uint EXCEPTION_MASK = 0x9F00;
-        enum uint ROUNDING_MASK = 0xC00000;
-    }
-    else version(PPC_Any)
-    {
-        enum uint EXCEPTION_MASK = 0x00F8;
-        enum uint ROUNDING_MASK = 0x0003;
-    }
-    else version(X86)
-    {
-        enum ushort EXCEPTION_MASK = 0x3F;
-        enum ushort ROUNDING_MASK = 0xC00;
-    }
-    else version(X86_64)
-    {
-        enum ushort EXCEPTION_MASK = 0x3F;
-        enum ushort ROUNDING_MASK = 0xC00;
-    }
     else
-        static assert(false, "Architecture not supported");
+        static assert(false, "Not implemented for this architecture");
 
 public:
     /// Returns: true if the current FPU supports exception trapping
@@ -5095,45 +5073,45 @@ public:
             auto oldState = getControlState();
             // If exceptions are not supported, we set the bit but read it back as zero
             // https://sourceware.org/ml/libc-ports/2012-06/msg00091.html
-            setControlState(oldState | (divByZeroException & EXCEPTION_MASK));
-            immutable result = (getControlState() & EXCEPTION_MASK) != 0;
+            setControlState(oldState | (divByZeroException & allExceptions));
+            immutable result = (getControlState() & allExceptions) != 0;
             setControlState(oldState);
             return result;
         }
         else
-            static assert(false, "Not implemented for this architecture");
+            assert(0, "Not yet supported");
     }
 
     /// Enable (unmask) specific hardware exceptions. Multiple exceptions may be ORed together.
-    void enableExceptions(uint exceptions) @nogc
+    void enableExceptions(ExceptionMask exceptions) @nogc
     {
         assert(hasExceptionTraps);
         initialize();
         version(X86_Any)
-            setControlState(getControlState() & ~(exceptions & EXCEPTION_MASK));
+            setControlState(getControlState() & ~(exceptions & allExceptions));
         else
-            setControlState(getControlState() | (exceptions & EXCEPTION_MASK));
+            setControlState(getControlState() | (exceptions & allExceptions));
     }
 
     /// Disable (mask) specific hardware exceptions. Multiple exceptions may be ORed together.
-    void disableExceptions(uint exceptions) @nogc
+    void disableExceptions(ExceptionMask exceptions) @nogc
     {
         assert(hasExceptionTraps);
         initialize();
         version(X86_Any)
-            setControlState(getControlState() | (exceptions & EXCEPTION_MASK));
+            setControlState(getControlState() | (exceptions & allExceptions));
         else
-            setControlState(getControlState() & ~(exceptions & EXCEPTION_MASK));
+            setControlState(getControlState() & ~(exceptions & allExceptions));
     }
 
     /// Returns: the exceptions which are currently enabled (unmasked)
-    @property static uint enabledExceptions() @nogc
+    @property static ExceptionMask enabledExceptions() @nogc
     {
         assert(hasExceptionTraps);
         version(X86_Any)
-            return (getControlState() & EXCEPTION_MASK) ^ EXCEPTION_MASK;
+            return (getControlState() & allExceptions) ^ allExceptions;
         else
-            return (getControlState() & EXCEPTION_MASK);
+            return (getControlState() & allExceptions);
     }
 
     ///  Clear all pending exceptions, then restore the original exception state and rounding mode.
@@ -5157,10 +5135,12 @@ private:
     {
         alias ControlState = uint;
     }
-    else
+    else version (X86_Any)
     {
         alias ControlState = ushort;
     }
+    else
+        static assert(false, "Not implemented for this architecture");
 
     void initialize() @nogc
     {
@@ -5224,17 +5204,13 @@ private:
 
                 /* In the FPU control register, rounding mode is in bits 10 and
                 11. In MXCSR it's in bits 13 and 14. */
-                enum ROUNDING_MASK_SSE = ROUNDING_MASK << 3;
-                immutable newRoundingModeSSE = (newState & ROUNDING_MASK) << 3;
-                mxcsr &= ~ROUNDING_MASK_SSE; // delete old rounding mode
-                mxcsr |= newRoundingModeSSE; // write new rounding mode
+                mxcsr &= ~(roundingMask << 3);             // delete old rounding mode
+                mxcsr |= (newState & roundingMask) << 3;   // write new rounding mode
 
                 /* In the FPU control register, masks are bits 0 through 5.
                 In MXCSR they're 7 through 12. */
-                enum EXCEPTION_MASK_SSE = EXCEPTION_MASK << 7;
-                immutable newExceptionMasks = (newState & EXCEPTION_MASK) << 7;
-                mxcsr &= ~EXCEPTION_MASK_SSE; // delete old masks
-                mxcsr |= newExceptionMasks; // write new exception masks
+                mxcsr &= ~(allExceptions << 7);            // delete old masks
+                mxcsr |= (newState & allExceptions) << 7;  // write new exception masks
 
                 asm nothrow @nogc { ldmxcsr mxcsr; }
             }
@@ -6823,6 +6799,149 @@ if (isFloatingPoint!(F) && isFloatingPoint!(G))
     assert(approxEqual(pow(twoI, three), 8.0));
 }
 
+/** Computes the value of a positive integer `x`, raised to the power `n`, modulo `m`.
+ *
+ *  Params:
+ *      x = base
+ *      n = exponent
+ *      m = modulus
+ *
+ *  Returns:
+ *      `x` to the power `n`, modulo `m`.
+ *      The return type is the largest of `x`'s and `m`'s type.
+ *
+ * The function requires that all values have unsigned types.
+ */
+Unqual!(Largest!(F, H)) powmod(F, G, H)(F x, G n, H m)
+if (isUnsigned!F && isUnsigned!G && isUnsigned!H)
+{
+    import std.meta : AliasSeq;
+
+    alias T = Unqual!(Largest!(F, H));
+    static if (T.sizeof <= 4)
+    {
+        alias DoubleT = AliasSeq!(void, ushort, uint, void, ulong)[T.sizeof];
+    }
+
+    static T mulmod(T a, T b, T c)
+    {
+        static if (T.sizeof == 8)
+        {
+            static T addmod(T a, T b, T c)
+            {
+                b = c - b;
+                if (a >= b)
+                    return a - b;
+                else
+                    return c - b + a;
+            }
+
+            T result = 0, tmp;
+
+            b %= c;
+            while (a > 0)
+            {
+                if (a & 1)
+                    result = addmod(result, b, c);
+
+                a >>= 1;
+                b = addmod(b, b, c);
+            }
+
+            return result;
+        }
+        else
+        {
+            DoubleT result = cast(DoubleT) (cast(DoubleT) a * cast(DoubleT) b);
+            return result % c;
+        }
+    }
+
+    T base = x, result = 1, modulus = m;
+    Unqual!G exponent = n;
+
+    while (exponent > 0)
+    {
+        if (exponent & 1)
+            result = mulmod(result, base, modulus);
+
+        base = mulmod(base, base, modulus);
+        exponent >>= 1;
+    }
+
+    return result;
+}
+
+@safe pure nothrow @nogc unittest
+{
+    ulong a = 18446744073709551615u, b = 20u, c = 18446744073709551610u;
+    assert(powmod(a, b, c) == 95367431640625u);
+    a = 100; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 18223853583554725198u);
+    a = 117; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 11493139548346411394u);
+    a = 134; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 10979163786734356774u);
+    a = 151; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 7023018419737782840u);
+    a = 168; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 58082701842386811u);
+    a = 185; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 17423478386299876798u);
+    a = 202; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 5522733478579799075u);
+    a = 219; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 15230218982491623487u);
+    a = 236; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 5198328724976436000u);
+
+    a = 0; b = 7919; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 0);
+    a = 123; b = 0; c = 18446744073709551557u;
+    assert(powmod(a, b, c) == 1);
+
+    immutable ulong a1 = 253, b1 = 7919, c1 = 18446744073709551557u;
+    assert(powmod(a1, b1, c1) == 3883707345459248860u);
+
+    uint x = 100 ,y = 7919, z = 1844674407u;
+    assert(powmod(x, y, z) == 1613100340u);
+    x = 134; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 734956622u);
+    x = 151; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 1738696945u);
+    x = 168; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 1247580927u);
+    x = 185; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 1293855176u);
+    x = 202; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 1566963682u);
+    x = 219; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 181227807u);
+    x = 236; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 217988321u);
+    x = 253; y = 7919; z = 1844674407u;
+    assert(powmod(x, y, z) == 1588843243u);
+
+    x = 0; y = 7919; z = 184467u;
+    assert(powmod(x, y, z) == 0);
+    x = 123; y = 0; z = 1844674u;
+    assert(powmod(x, y, z) == 1);
+
+    immutable ubyte x1 = 117;
+    immutable uint y1 = 7919;
+    immutable uint z1 = 1844674407u;
+    auto res = powmod(x1, y1, z1);
+    assert(is(typeof(res) == uint));
+    assert(res == 9479781u);
+
+    immutable ushort x2 = 123;
+    immutable uint y2 = 203;
+    immutable ubyte z2 = 113;
+    auto res2 = powmod(x2, y2, z2);
+    assert(is(typeof(res2) == ushort));
+    assert(res2 == 42u);
+}
+
 /**************************************
  * To what precision is x equal to y?
  *
@@ -6991,7 +7110,7 @@ in
     assert(signbit(x) == signbit(y));
     assert(x == x && y == y);
 }
-body
+do
 {
     // Runtime behaviour for contract violation:
     // If signs are opposite, or one is a NaN, return 0.
@@ -7125,7 +7244,7 @@ in
 {
     assert(A.length > 0);
 }
-body
+do
 {
     static if (is(Unqual!T2 == real))
     {
@@ -8145,14 +8264,14 @@ if (isNumeric!X)
     {
         immutable min_sub = X.min_normal * X.epsilon;
 
-        foreach (x; AliasSeq!(smallP2, min_sub, X.min_normal, .25L, 0.5L, 1.0L,
-                              2.0L, 8.0L, pow(2.0L, X.max_exp - 1), bigP2))
+        foreach (x; [smallP2, min_sub, X.min_normal, .25L, 0.5L, 1.0L,
+                              2.0L, 8.0L, pow(2.0L, X.max_exp - 1), bigP2])
         {
             assert( isPowerOf2(cast(X) x));
             assert(!isPowerOf2(cast(X)-x));
         }
 
-        foreach (x; AliasSeq!(0.0L, 3 * min_sub, smallP7, 0.1L, 1337.0L, bigP7, X.max, real.nan, real.infinity))
+        foreach (x; [0.0L, 3 * min_sub, smallP7, 0.1L, 1337.0L, bigP7, X.max, real.nan, real.infinity])
         {
             assert(!isPowerOf2(cast(X) x));
             assert(!isPowerOf2(cast(X)-x));

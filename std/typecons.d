@@ -637,8 +637,8 @@ if (distinctFieldNames!(Specs))
         ///
         static if (Specs.length == 0) @safe unittest
         {
-            auto t1 = tuple(1, " hello ", 2.3);
-            assert(t1.toString() == `Tuple!(int, string, double)(1, " hello ", 2.3)`);
+            auto t1 = tuple(1, " hello ", 'a');
+            assert(t1.toString() == `Tuple!(int, string, char)(1, " hello ", 'a')`);
 
             void takeSeveralTypes(int n, string s, bool b)
             {
@@ -2343,7 +2343,25 @@ Practically $(D Nullable!T) stores a $(D T) and a $(D bool).
  */
 struct Nullable(T)
 {
-    private T _value;
+    // simple case: type is freely constructable
+    static if (__traits(compiles, { T _value; }))
+    {
+        private T _value;
+    }
+    // type is not constructable, but also has no way to notice
+    // that we're assigning to an uninitialized variable.
+    else static if (!hasElaborateAssign!T)
+    {
+        private T _value = T.init;
+    }
+    else
+    {
+        static assert(false,
+                      "Cannot construct " ~ typeof(this).stringof ~
+                      ": type has no default constructor and overloaded assignment."
+        );
+    }
+
     private bool _isNull = true;
 
 /**
@@ -2942,6 +2960,19 @@ auto nullable(T)(T t)
     }
     Nullable!TestToString ntts = new TestToString(2.5);
     assert(ntts.to!string() == "2.5");
+}
+
+// Bugzilla 14477
+@safe unittest
+{
+    static struct DisabledDefaultConstructor
+    {
+        @disable this();
+        this(int i) { }
+    }
+    Nullable!DisabledDefaultConstructor var;
+    var = DisabledDefaultConstructor(5);
+    var.nullify;
 }
 
 /**
@@ -4684,6 +4715,13 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
             alias type = F;
         }
 
+        // issue 12064: Remove NVI members
+        template OnlyVirtual(members...)
+        {
+            enum notFinal(alias T) = !__traits(isFinalFunction, T);
+            alias OnlyVirtual = Filter!(notFinal, members);
+        }
+
         // Concat all Targets function members into one tuple
         template Concat(size_t i = 0)
         {
@@ -4691,9 +4729,10 @@ if (Targets.length >= 1 && allSatisfy!(isMutable, Targets))
                 alias Concat = AliasSeq!();
             else
             {
-                alias Concat = AliasSeq!(GetOverloadedMethods!(Targets[i]), Concat!(i + 1));
+                alias Concat = AliasSeq!(OnlyVirtual!(GetOverloadedMethods!(Targets[i]), Concat!(i + 1)));
             }
         }
+
         // Remove duplicated functions based on the identifier name and function type covariance
         template Uniq(members...)
         {
@@ -5057,6 +5096,32 @@ if (!isMutable!Target)
     Interface i = wrap!Interface(new Pluggable());
     assert(i.foo() == 100);
     assert(i.bar(10) == 100);
+}
+
+@system unittest // issue 12064
+{
+    interface I
+    {
+        int foo();
+        final int nvi1(){return foo();}
+    }
+
+    interface J
+    {
+        int bar();
+        final int nvi2(){return bar();}
+    }
+
+    class Baz
+    {
+        int foo() { return 42;}
+        int bar() { return 12064;}
+    }
+
+    auto baz = new Baz();
+    auto foobar = baz.wrap!(I, J)();
+    assert(foobar.nvi1 == 42);
+    assert(foobar.nvi2 == 12064);
 }
 
 // Make a tuple of non-static function symbols
@@ -5612,7 +5677,7 @@ Assignment operators
         $(D refCountedPayload) will also be qualified as safe and nothrow
         (but will still assert if not initialized).
          */
-        @property
+        @property @trusted
         ref T refCountedPayload() return;
 
         /// ditto
@@ -7051,7 +7116,7 @@ private uintptr_t _alignUp(uintptr_t alignment)(uintptr_t n)
             byte[size] arr;
             alignmentTest();
         }
-        foreach (i; AliasSeq!(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
+        static foreach (i; 0 .. 11)
             test!i();
     }
 }
@@ -8006,6 +8071,13 @@ struct Ternary
     {
         return make((26_504 >> (value + rhs.value)) & 6);
     }
+
+    /// ditto
+    Ternary opBinary(string s)(bool rhs)
+    if (s == "|" || s == "&" || s == "^")
+    {
+        return this.opBinary!s(Ternary(rhs));
+    }
 }
 
 ///
@@ -8089,4 +8161,15 @@ unittest
     assert(~Ternary.yes == Ternary.no);
     assert(~Ternary.no == Ternary.yes);
     assert(~Ternary.unknown == Ternary.unknown);
+}
+
+@safe @nogc nothrow pure
+unittest
+{
+    Ternary a = Ternary(true);
+    assert(a == Ternary.yes);
+    assert((a & false) == Ternary.no);
+    assert((a | false) == Ternary.yes);
+    assert((a ^ true) == Ternary.no);
+    assert((a ^ false) == Ternary.yes);
 }

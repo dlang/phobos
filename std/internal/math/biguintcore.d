@@ -45,20 +45,21 @@ else
 alias multibyteAdd = multibyteAddSub!('+');
 alias multibyteSub = multibyteAddSub!('-');
 
-
-import core.cpuid;
+private import std.traits;
+private import std.range.primitives;
 public import std.ascii : LetterCase;
 import std.range.primitives;
 import std.traits;
 
-shared static this()
-{
-    CACHELIMIT = core.cpuid.datacache[0].size*1024/2;
-}
-
 private:
 // Limits for when to switch between algorithms.
-immutable size_t CACHELIMIT;   // Half the size of the data cache.
+// Half the size of the data cache.
+@nogc nothrow pure size_t getCacheLimit()
+{
+    import core.cpuid : dataCaches;
+    return (cast(size_t function() @nogc nothrow pure)
+        (() => dataCaches[0].size * 1024 / 2))();
+}
 enum size_t FASTDIVLIMIT = 100; // crossover to recursive division
 
 
@@ -1355,6 +1356,7 @@ void mulInternal(BigDigit[] result, const(BigDigit)[] x, const(BigDigit)[] y)
             return;
         }
 
+        immutable CACHELIMIT = getCacheLimit;
         if (x.length + y.length < CACHELIMIT)
             return mulSimple(result, x, y);
 
@@ -1720,7 +1722,7 @@ in
     static if (hasLength!Range)
         assert((data.length >= 2) || (data.length == 1 && s.length == 1));
 }
-body
+do
 {
     import std.conv : ConvException;
 
@@ -1860,7 +1862,7 @@ in
     assert(result.length == left.length + right.length);
     assert(right.length>1);
 }
-body
+do
 {
     result[left.length] = multibyteMul(result[0 .. left.length], left, right[0], 0);
     multibyteMultiplyAccumulate(result[1..$], left, right[1..$]);
@@ -1873,7 +1875,7 @@ in
     assert(result.length == 2*x.length);
     assert(x.length>1);
 }
-body
+do
 {
     multibyteSquare(result, x);
 }
@@ -1890,7 +1892,7 @@ in
     assert(left.length >= right.length);
     assert(right.length>0);
 }
-body
+do
 {
     uint carry = multibyteAdd(result[0 .. right.length],
             left[0 .. right.length], right, 0);
@@ -1912,7 +1914,7 @@ in
     assert(left.length >= right.length);
     assert(right.length>0);
 }
-body
+do
 {
     BigDigit carry = multibyteSub(result[0 .. right.length],
             left[0 .. right.length], right, 0);
@@ -2390,7 +2392,7 @@ in
     assert((mayOverflow ? u.length-1 : u.length) >= v.length);
     assert(scratch.length >= quotient.length + (mayOverflow ? 0 : 1));
 }
-body
+do
 {
     if (quotient.length < FASTDIVLIMIT)
     {

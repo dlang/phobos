@@ -381,7 +381,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         && hasMember!(Allocator, "owns"))
     bool expand(ref void[] b, size_t delta)
     {
-        if (!b.ptr) return delta == 0;
+        if (!b) return delta == 0;
         for (auto p = &root, n = *p; n; p = &n.next, n = *p)
         {
             if (n.owns(b) == Ternary.yes) return n.expand(b, delta);
@@ -476,7 +476,19 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
         assert(special || !allocators.ptr);
         if (special)
         {
-            special.deallocate(allocators);
+            static if (stateSize!SAllocator)
+            {
+                import core.stdc.string : memcpy;
+                SAllocator specialCopy;
+                assert(special.a.sizeof == specialCopy.sizeof);
+                memcpy(&specialCopy, &special.a, specialCopy.sizeof);
+                emplace(&special.a);
+                specialCopy.deallocateAll();
+            }
+            else
+            {
+                special.deallocateAll();
+            }
         }
         allocators = null;
         root = null;
@@ -503,6 +515,7 @@ struct AllocatorList(Factory, BookkeepingAllocator = GCAllocator)
      Returns `Ternary.yes` if no allocators are currently active,
     `Ternary.no` otherwise. This methods never returns `Ternary.unknown`.
     */
+    pure nothrow @safe @nogc
     Ternary empty() const
     {
         return Ternary(!allocators.length);
@@ -600,6 +613,8 @@ version(Posix) @system unittest
     assert(b1 !is null); // still works due to overdimensioning
     b1 = a.allocate(1024 * 10);
     assert(b1.length == 1024 * 10);
+    assert(a.reallocate(b1, 1024));
+    assert(b1.length == 1024);
     a.deallocateAll();
 }
 
@@ -607,15 +622,20 @@ version(Posix) @system unittest
 {
     import std.algorithm.comparison : max;
     import std.experimental.allocator.building_blocks.region : Region;
+    import std.experimental.allocator.mallocator : Mallocator;
     import std.typecons : Ternary;
-    AllocatorList!((n) => Region!()(new ubyte[max(n, 1024 * 4096)])) a;
+    AllocatorList!((n) => Region!()(new ubyte[max(n, 1024 * 4096)]), Mallocator) a;
     auto b1 = a.allocate(1024 * 8192);
     assert(b1 !is null);
     b1 = a.allocate(1024 * 10);
     assert(b1.length == 1024 * 10);
+    assert((() pure nothrow @safe @nogc => a.expand(b1, 10))());
+    assert(b1.length == 1025 * 10);
     a.allocate(1024 * 4095);
-    a.deallocateAll();
-    assert(a.empty == Ternary.yes);
+    assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.no);
+    // Ensure deallocateAll infers from parent
+    assert((() nothrow @nogc => a.deallocateAll())());
+    assert((() pure nothrow @safe @nogc => a.empty)() == Ternary.yes);
 }
 
 @system unittest
@@ -632,9 +652,129 @@ version(Posix) @system unittest
     auto b3 = a.allocate(192 * bs);
     assert(b3.length == 192 * bs);
     assert(a.allocators.length == 2);
-    a.deallocate(b1);
+    // Ensure deallocate inherits from parent allocators
+    () nothrow @nogc { a.deallocate(b1); }();
     b1 = a.allocate(64 * bs);
     assert(b1.length == 64 * bs);
     assert(a.allocators.length == 2);
     a.deallocateAll();
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.ascending_page_allocator : AscendingPageAllocator;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.algorithm.comparison : max;
+    import std.typecons : Ternary;
+
+    enum pageSize = 4096;
+
+    static void testrw(void[] b)
+    {
+        ubyte* buf = cast(ubyte*) b.ptr;
+        for (int i = 0; i < b.length; i += pageSize)
+        {
+            buf[i] = cast(ubyte) (i % 256);
+            assert(buf[i] == cast(ubyte) (i % 256));
+        }
+    }
+
+    enum numPages = 2;
+    AllocatorList!((n) => AscendingPageAllocator(max(n, numPages * pageSize)), Mallocator) a;
+
+    void[] b1 = a.allocate(1);
+    assert(b1.length == 1);
+    b1 = a.allocate(2);
+    assert(b1.length == 2);
+    testrw(b1);
+    assert(a.root.a.parent.getAvailableSize() == 0);
+
+    void[] b2 = a.allocate((numPages + 1) * pageSize);
+    assert(b2.length == (numPages + 1) * pageSize);
+    testrw(b2);
+
+    void[] b3 = a.allocate(3);
+    assert(b3.length == 3);
+    testrw(b3);
+
+    void[] b4 = a.allocate(0);
+    assert(b4.length == 0);
+
+    assert(a.allocators.length == 3);
+    assert(a.owns(b1) == Ternary.yes);
+    assert(a.owns(b2) == Ternary.yes);
+    assert(a.owns(b3) == Ternary.yes);
+
+    assert(a.expand(b1, pageSize - b1.length));
+    assert(b1.length == pageSize);
+    assert(!a.expand(b1, 1));
+    assert(!a.expand(b2, 1));
+
+    testrw(b1);
+    testrw(b2);
+    testrw(b3);
+
+    assert(a.deallocate(b1));
+    assert(a.deallocate(b2));
+
+    assert(a.deallocateAll());
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.ascending_page_allocator : AscendingPageAllocator;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.algorithm.comparison : max;
+    import std.typecons : Ternary;
+
+    enum pageSize = 4096;
+
+    static void testrw(void[] b)
+    {
+        ubyte* buf = cast(ubyte*) b.ptr;
+        for (int i = 0; i < b.length; i += pageSize)
+        {
+            buf[i] = cast(ubyte) (i % 256);
+            assert(buf[i] == cast(ubyte) (i % 256));
+        }
+    }
+
+    enum numPages = 2;
+    AllocatorList!((n) => AscendingPageAllocator(max(n, numPages * pageSize)), NullAllocator) a;
+
+    void[] b1 = a.allocate(1);
+    assert(b1.length == 1);
+    b1 = a.allocate(2);
+    assert(b1.length == 2);
+    testrw(b1);
+
+    void[] b2 = a.allocate((numPages + 1) * pageSize);
+    assert(b2.length == (numPages + 1) * pageSize);
+    testrw(b2);
+
+    void[] b3 = a.allocate(3);
+    assert(b3.length == 3);
+    testrw(b3);
+
+    void[] b4 = a.allocate(0);
+    assert(b4.length == 0);
+
+    assert(a.allocators.length == 3);
+    assert(a.owns(b1) == Ternary.yes);
+    assert(a.owns(b2) == Ternary.yes);
+    assert(a.owns(b3) == Ternary.yes);
+
+    assert(a.expand(b1, pageSize - b1.length));
+    assert(b1.length == pageSize);
+    assert(!a.expand(b1, 1));
+    assert(!a.expand(b2, 1));
+
+    testrw(b1);
+    testrw(b2);
+    testrw(b3);
+
+    assert(a.deallocate(b1));
+    assert(a.deallocate(b2));
+
+    assert(a.deallocateAll());
 }

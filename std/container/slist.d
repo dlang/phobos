@@ -123,6 +123,18 @@ struct SList(T)
         return n;
     }
 
+    private static Node* findNodeByValue(Node* n, T value)
+    {
+        if (!n) return null;
+        auto ahead = n._next;
+        while (ahead && ahead._payload != value)
+        {
+            n = ahead;
+            ahead = n._next;
+        }
+        return n;
+    }
+
 /**
 Constructor taking a number of nodes
      */
@@ -589,6 +601,61 @@ Complexity: $(BIGOH n)
 
 /// ditto
     alias stableLinearRemove = linearRemove;
+
+/**
+Removes the first occurence of an element from the list in linear time.
+
+Returns: True if the element existed and was successfully removed, false otherwise.
+
+Params:
+    value = value of the node to be removed
+
+Complexity: $(BIGOH n)
+     */
+    bool linearRemoveElement(T value)
+    {
+        auto n1 = findNodeByValue(_root, value);
+
+        if (n1 && n1._next)
+        {
+            n1._next = n1._next._next;
+            return true;
+        }
+
+        return false;
+    }
+}
+
+@safe unittest
+{
+    import std.algorithm.comparison : equal;
+
+    auto e = SList!int();
+    auto b = e.linearRemoveElement(2);
+    assert(b == false);
+    assert(e.empty());
+    auto a = SList!int(-1, 1, 2, 1, 3, 4);
+    b = a.linearRemoveElement(1);
+    assert(equal(a[], [-1, 2, 1, 3, 4]));
+    assert(b == true);
+    b = a.linearRemoveElement(-1);
+    assert(b == true);
+    assert(equal(a[], [2, 1, 3, 4]));
+    b = a.linearRemoveElement(1);
+    assert(b == true);
+    assert(equal(a[], [2, 3, 4]));
+    b = a.linearRemoveElement(2);
+    assert(b == true);
+    b = a.linearRemoveElement(20);
+    assert(b == false);
+    assert(equal(a[], [3, 4]));
+    b = a.linearRemoveElement(4);
+    assert(b == true);
+    assert(equal(a[], [3]));
+    b = a.linearRemoveElement(3);
+    assert(b == true);
+    assert(a.empty());
+    a.linearRemoveElement(3);
 }
 
 @safe unittest

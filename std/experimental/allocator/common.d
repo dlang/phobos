@@ -380,6 +380,7 @@ implementation of $(D reallocate).
 */
 bool alignedReallocate(Allocator)(ref Allocator alloc,
         ref void[] b, size_t s, uint a)
+if (hasMember!(Allocator, "alignedAllocate"))
 {
     static if (hasMember!(Allocator, "expand"))
     {
@@ -388,15 +389,73 @@ bool alignedReallocate(Allocator)(ref Allocator alloc,
     }
     else
     {
-        if (b.length == s) return true;
+        if (b.length == s && b.ptr.alignedAt(a)) return true;
     }
     auto newB = alloc.alignedAllocate(s, a);
+    if (newB.length != s) return false;
     if (newB.length <= b.length) newB[] = b[0 .. newB.length];
     else newB[0 .. b.length] = b[];
     static if (hasMember!(Allocator, "deallocate"))
         alloc.deallocate(b);
     b = newB;
     return true;
+}
+
+@system unittest
+{
+    bool called = false;
+    struct DummyAllocator
+    {
+        void[] alignedAllocate(size_t size, uint alignment)
+        {
+            called = true;
+            return null;
+        }
+    }
+
+    struct DummyAllocatorExpand
+    {
+        void[] alignedAllocate(size_t size, uint alignment)
+        {
+            return null;
+        }
+
+        bool expand(ref void[] b, size_t length)
+        {
+            called = true;
+            return true;
+        }
+    }
+
+    char[128] buf;
+    uint alignment = 32;
+    auto alignedPtr = roundUpToMultipleOf(cast(size_t) buf.ptr, alignment);
+    auto diff = alignedPtr - cast(size_t) buf.ptr;
+
+    // Align the buffer to 'alignment'
+    void[] b = cast(void[]) (buf.ptr + diff)[0 .. buf.length - diff];
+
+    DummyAllocator a1;
+    // Ask for same length and alignment, should not call 'alignedAllocate'
+    assert(alignedReallocate(a1, b, b.length, alignment));
+    assert(!called);
+
+    // Ask for same length, different alignment
+    // should call 'alignedAllocate' if not aligned to new value
+    alignedReallocate(a1, b, b.length, alignment + 1);
+    assert(b.ptr.alignedAt(alignment + 1) || called);
+    called = false;
+
+    DummyAllocatorExpand a2;
+    // Ask for bigger length, same alignment, should call 'expand'
+    assert(alignedReallocate(a2, b, b.length + 1, alignment));
+    assert(called);
+    called = false;
+
+    // Ask for bigger length, different alignment
+    // should call 'alignedAllocate' if not aligned to new value
+    alignedReallocate(a2, b, b.length + 1, alignment + 1);
+    assert(b.ptr.alignedAt(alignment + 1) || !called);
 }
 
 /**

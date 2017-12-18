@@ -1082,16 +1082,16 @@ Returns:
     A $(D string) that represents the $(D BigInt) as a decimal number.
 
 */
-string toDecimalString(const(BigInt) x)
+string toDecimalString(const(BigInt) x) pure nothrow
 {
-    string outbuff="";
-    void sink(const(char)[] s) { outbuff ~= s; }
-    x.toString(&sink, "%d");
-    return outbuff;
+    auto buff = x.data.toDecimalString(x.isNegative ? 1 : 0);
+    if (x.isNegative)
+        buff[0] = '-';
+    return buff;
 }
 
 ///
-@system unittest
+@system pure unittest
 {
     auto x = BigInt("123");
     x *= 1000;

@@ -17,7 +17,8 @@ for $(D Bucketizer). To handle them separately, $(D Segregator) may be of use.
 */
 struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
 {
-    import common = std.experimental.allocator.common : roundUpToMultipleOf;
+    import common = std.experimental.allocator.common : roundUpToMultipleOf,
+           alignedAt;
     import std.traits : hasMember;
     import std.typecons : Ternary;
 
@@ -31,10 +32,11 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     */
     Allocator[(max + 1 - min) / step] buckets;
 
+    pure nothrow @safe @nogc
     private Allocator* allocatorFor(size_t n)
     {
         const i = (n - min) / step;
-        return i < buckets.length ? buckets.ptr + i : null;
+        return i < buckets.length ? &buckets[i] : null;
     }
 
     /**
@@ -45,6 +47,7 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     /**
     Rounds up to the maximum size of the bucket in which $(D bytes) falls.
     */
+    pure nothrow @safe @nogc
     size_t goodAllocSize(size_t bytes) const
     {
         // round up bytes such that bytes - min + 1 is a multiple of step
@@ -69,18 +72,19 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     }
 
     /**
+    Allocates the requested `bytes` of memory with specified `alignment`.
     Directs the call to either one of the $(D buckets) allocators. Defined only
     if `Allocator` defines `alignedAllocate`.
     */
     static if (hasMember!(Allocator, "alignedAllocate"))
-    void[] alignedAllocate(size_t bytes, uint a)
+    void[] alignedAllocate(size_t bytes, uint alignment)
     {
         if (!bytes) return null;
-        if (auto a = allocatorFor(b.length))
+        if (auto a = allocatorFor(bytes))
         {
             const actual = goodAllocSize(bytes);
-            auto result = a.alignedAllocate(actual);
-            return result.ptr ? result.ptr[0 .. bytes] : null;
+            auto result = a.alignedAllocate(actual, alignment);
+            return result !is null ? (() @trusted => (&result[0])[0 .. bytes])() : null;
         }
         return null;
     }
@@ -92,12 +96,12 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     */
     bool expand(ref void[] b, size_t delta)
     {
-        if (!b.ptr) return delta == 0;
+        if (!b || delta == 0) return delta == 0;
         assert(b.length >= min && b.length <= max);
         const available = goodAllocSize(b.length);
         const desired = b.length + delta;
         if (available < desired) return false;
-        b = b.ptr[0 .. desired];
+        b = (() @trusted => b.ptr[0 .. desired])();
         return true;
     }
 
@@ -115,9 +119,9 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
             b = null;
             return true;
         }
-        if (size >= b.length)
+        if (size >= b.length && expand(b, size - b.length))
         {
-            return expand(b, size - b.length);
+            return true;
         }
         assert(b.length >= min && b.length <= max);
         if (goodAllocSize(size) == goodAllocSize(b.length))
@@ -142,18 +146,18 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
             b = null;
             return true;
         }
-        if (size >= b.length)
+        if (size >= b.length && b.ptr.alignedAt(a) && expand(b, size - b.length))
         {
-            return expand(b, size - b.length);
+            return true;
         }
         assert(b.length >= min && b.length <= max);
-        if (goodAllocSize(size) == goodAllocSize(b.length))
+        if (goodAllocSize(size) == goodAllocSize(b.length) && b.ptr.alignedAt(a))
         {
             b = b.ptr[0 .. size];
             return true;
         }
         // Move cross buckets
-        return .alignedReallocate(this, b, size, a);
+        return common.alignedReallocate(this, b, size, a);
     }
 
     /**
@@ -236,6 +240,93 @@ struct Bucketizer(Allocator, size_t min, size_t max, size_t step)
     auto b = a.allocate(400);
     assert(b.length == 400);
     assert(a.owns(b) == Ternary.yes);
-    void[] p;
     a.deallocate(b);
+}
+
+@system unittest
+{
+    import std.algorithm.comparison : max;
+    import std.experimental.allocator.building_blocks.allocator_list : AllocatorList;
+    import std.experimental.allocator.building_blocks.free_list : FreeList;
+    import std.experimental.allocator.building_blocks.region : Region;
+    import std.experimental.allocator.common : unbounded;
+    import std.experimental.allocator.mallocator : Mallocator;
+    import std.typecons : Ternary;
+
+    Bucketizer!(
+        FreeList!(
+            AllocatorList!(
+                (size_t n) => Region!Mallocator(max(n, 1024 * 1024)), Mallocator),
+            0, unbounded),
+        65, 512, 64) a;
+
+    assert((() pure nothrow @safe @nogc => a.goodAllocSize(65))() == 128);
+
+    auto b = a.allocate(100);
+    assert(b.length == 100);
+    // Make reallocate use extend
+    assert((() nothrow @nogc => a.reallocate(b, 101))());
+    assert(b.length == 101);
+    // Move cross buckets
+    assert((() nothrow @nogc => a.reallocate(b, 200))());
+    assert(b.length == 200);
+    // Free through realloc
+    assert((() nothrow @nogc => a.reallocate(b, 0))());
+    assert(b is null);
+    // Ensure deallocate inherits from parent allocators
+    assert((() nothrow @nogc => a.deallocate(b))());
+    assert((() nothrow @nogc => a.deallocateAll())());
+}
+
+// Test alignedAllocate
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlock;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+
+    Bucketizer!(BitmappedBlock!(64, 8, GCAllocator), 65, 512, 64) a;
+    foreach (ref bucket; a.buckets)
+    {
+        bucket = BitmappedBlock!(64, 8, GCAllocator)(new ubyte[1024]);
+    }
+
+    auto b = a.alignedAllocate(100, 16);
+    assert(b.length == 100);
+    assert(a.alignedAllocate(42, 16) is null);
+    assert(a.alignedAllocate(0, 16) is null);
+    assert((() pure nothrow @safe @nogc => a.expand(b, 0))());
+    assert(b.length == 100);
+    assert((() pure nothrow @safe @nogc => a.expand(b, 28))());
+    assert(b.length == 128);
+    assert((() pure nothrow @safe @nogc => !a.expand(b, 1))());
+}
+
+@system unittest
+{
+    import std.experimental.allocator.building_blocks.bitmapped_block : BitmappedBlock;
+    import std.experimental.allocator.gc_allocator : GCAllocator;
+
+    Bucketizer!(BitmappedBlock!(64, 8, GCAllocator), 1, 512, 64) a;
+    foreach (ref bucket; a.buckets)
+    {
+        bucket = BitmappedBlock!(64, 8, GCAllocator)(new ubyte[1024]);
+    }
+
+    auto b = a.alignedAllocate(1, 4);
+    assert(b.length == 1);
+    // Make reallocate use extend
+    assert(a.alignedReallocate(b, 11, 4));
+    assert(b.length == 11);
+    // Make reallocate use use realloc because of alignment change
+    assert(a.alignedReallocate(b, 21, 16));
+    assert(b.length == 21);
+    // Make reallocate use extend
+    assert(a.alignedReallocate(b, 22, 16));
+    assert(b.length == 22);
+    // Move cross buckets
+    assert(a.alignedReallocate(b, 101, 16));
+    assert(b.length == 101);
+    // Free through realloc
+    assert(a.alignedReallocate(b, 0, 16));
+    assert(b is null);
 }
