@@ -6079,12 +6079,16 @@ else
     return findUnicodeSet!table(name) >= 0;
 }
 
-template SetSearcher(alias table, string kind)
+template SetSearcher(string tableName, string kind)
 {
     /// Run-time checked search.
     static auto opCall(C)(in C[] name)
         if (is(C : dchar))
     {
+        // lazily import the big unicode_table
+        mixin(q{
+            import std.internal.unicode_tables;
+            alias table = } ~ tableName ~ ";");
         import std.conv : to;
         CodepointSet set;
         if (loadUnicodeSet!table(name, set))
@@ -6095,6 +6099,10 @@ template SetSearcher(alias table, string kind)
     /// Compile-time checked search.
     static @property auto opDispatch(string name)()
     {
+        // lazily import the big unicode_table
+        mixin(q{
+            import std.internal.unicode_tables;
+            alias table = } ~ tableName ~ ";");
         static if (findSetName!table(name))
         {
             CodepointSet set;
@@ -6760,8 +6768,7 @@ auto caseEnclose(CodepointSet set)
     */
     struct block
     {
-        import std.internal.unicode_tables : blocks; // generated file
-        mixin SetSearcher!(blocks.tab, "block");
+        mixin SetSearcher!("blocks.tab", "block");
     }
 
     ///
@@ -6779,8 +6786,7 @@ auto caseEnclose(CodepointSet set)
     */
     struct script
     {
-        import std.internal.unicode_tables : scripts; // generated file
-        mixin SetSearcher!(scripts.tab, "script");
+        mixin SetSearcher!("scripts.tab", "script");
     }
 
     ///
@@ -6810,8 +6816,7 @@ auto caseEnclose(CodepointSet set)
     */
     struct hangulSyllableType
     {
-        import std.internal.unicode_tables : hangul; // generated file
-        mixin SetSearcher!(hangul.tab, "hangul syllable type");
+        mixin SetSearcher!("hangul.tab", "hangul syllable type");
     }
 
     ///
@@ -8771,20 +8776,27 @@ else
 // trusted -> avoid bounds check
 @trusted pure nothrow @nogc private
 {
-    import std.internal.unicode_tables; // : toLowerTable, toTitleTable, toUpperTable; // generated file
-
     // hide template instances behind functions (Bugzilla 13232)
     ushort toLowerIndex(dchar c) { return toLowerIndexTrie[c]; }
     ushort toLowerSimpleIndex(dchar c) { return toLowerSimpleIndexTrie[c]; }
-    dchar toLowerTab(size_t idx) { return toLowerTable[idx]; }
+    dchar toLowerTab()(size_t idx) {
+        import std.internal.unicode_tables : toLowerTable; // generated file
+        return toLowerTable[idx];
+    }
 
     ushort toTitleIndex(dchar c) { return toTitleIndexTrie[c]; }
     ushort toTitleSimpleIndex(dchar c) { return toTitleSimpleIndexTrie[c]; }
-    dchar toTitleTab(size_t idx) { return toTitleTable[idx]; }
+    dchar toTitleTab()(size_t idx) {
+        import std.internal.unicode_tables : toTitleTable; // generated file
+        return toTitleTable[idx];
+    }
 
     ushort toUpperIndex(dchar c) { return toUpperIndexTrie[c]; }
     ushort toUpperSimpleIndex(dchar c) { return toUpperSimpleIndexTrie[c]; }
-    dchar toUpperTab(size_t idx) { return toUpperTable[idx]; }
+    dchar toUpperTab()(size_t idx) {
+        import std.internal.unicode_tables : toUpperTable; // generated file
+        return toUpperTable[idx];
+    }
 }
 
 public:
@@ -8888,8 +8900,11 @@ private dchar toTitlecase(dchar c)
     return c;
 }
 
-private alias UpperTriple = AliasSeq!(toUpperIndex, MAX_SIMPLE_UPPER, toUpperTab);
-private alias LowerTriple = AliasSeq!(toLowerIndex, MAX_SIMPLE_LOWER, toLowerTab);
+enum MAX_SIMPLE_UPPER = 1051;
+alias UpperTriple = AliasSeq!(toUpperIndex, MAX_SIMPLE_UPPER, toUpperTab);
+
+enum MAX_SIMPLE_LOWER = 1043;
+alias LowerTriple = AliasSeq!(toLowerIndex, MAX_SIMPLE_LOWER, toLowerTab);
 
 // generic toUpper/toLower on whole string, creates new or returns as is
 private S toCase(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, S)(S s) @trusted pure
@@ -10320,30 +10335,98 @@ private:
     return CodepointSet.fromIntervals(decompressIntervals(compressed));
 }
 
-@safe pure nothrow auto asTrie(T...)(in TrieEntry!T e)
+auto asTrie(A)(in A a)
 {
-    return const(CodepointTrie!T)(e.offsets, e.sizes, e.data);
+    import std.internal.unicode_tables : TrieEntry; // generated file
+    static auto asTrieImpl(T...)(in TrieEntry!T e)
+    {
+        return const(CodepointTrie!T)(e.offsets, e.sizes, e.data);
+    }
+    return asTrieImpl(a);
 }
 
 @safe pure nothrow @nogc @property
 {
-    import std.internal.unicode_tables; // generated file
-
     // It's important to use auto return here, so that the compiler
     // only runs semantic on the return type if the function gets
     // used. Also these are functions rather than templates to not
     // increase the object size of the caller.
-    auto lowerCaseTrie() { static immutable res = asTrie(lowerCaseTrieEntries); return res; }
-    auto upperCaseTrie() { static immutable res = asTrie(upperCaseTrieEntries); return res; }
-    auto simpleCaseTrie() { static immutable res = asTrie(simpleCaseTrieEntries); return res; }
-    auto fullCaseTrie() { static immutable res = asTrie(fullCaseTrieEntries); return res; }
-    auto alphaTrie() { static immutable res = asTrie(alphaTrieEntries); return res; }
-    auto markTrie() { static immutable res = asTrie(markTrieEntries); return res; }
-    auto numberTrie() { static immutable res = asTrie(numberTrieEntries); return res; }
-    auto punctuationTrie() { static immutable res = asTrie(punctuationTrieEntries); return res; }
-    auto symbolTrie() { static immutable res = asTrie(symbolTrieEntries); return res; }
-    auto graphicalTrie() { static immutable res = asTrie(graphicalTrieEntries); return res; }
-    auto nonCharacterTrie() { static immutable res = asTrie(nonCharacterTrieEntries); return res; }
+    auto lowerCaseTrie()
+    {
+        import std.internal.unicode_tables : lowerCaseTrieEntries; // generated file
+        static immutable res = asTrie(lowerCaseTrieEntries);
+        return res;
+    }
+
+    auto upperCaseTrie()
+    {
+        import std.internal.unicode_tables : upperCaseTrieEntries; // generated file
+        static immutable res = asTrie(upperCaseTrieEntries);
+        return res;
+    }
+
+    auto simpleCaseTrie()
+    {
+        import std.internal.unicode_tables : simpleCaseTrieEntries; // generated file
+        static immutable res = asTrie(simpleCaseTrieEntries);
+        return res;
+    }
+
+    auto fullCaseTrie()
+    {
+        import std.internal.unicode_tables : fullCaseTrieEntries; // generated file
+        static immutable res = asTrie(fullCaseTrieEntries);
+        return res;
+    }
+
+    auto alphaTrie()
+    {
+        import std.internal.unicode_tables : alphaTrieEntries; // generated file
+        static immutable res = asTrie(alphaTrieEntries);
+        return res;
+    }
+
+    auto markTrie()
+    {
+        import std.internal.unicode_tables : markTrieEntries; // generated file
+        static immutable res = asTrie(markTrieEntries);
+        return res;
+    }
+
+    auto numberTrie()
+    {
+        import std.internal.unicode_tables : numberTrieEntries; // generated file
+        static immutable res = asTrie(numberTrieEntries);
+        return res;
+    }
+
+    auto punctuationTrie()
+    {
+        import std.internal.unicode_tables : punctuationTrieEntries; // generated file
+        static immutable res = asTrie(punctuationTrieEntries);
+        return res;
+    }
+
+    auto symbolTrie()
+    {
+        import std.internal.unicode_tables : symbolTrieEntries; // generated file
+        static immutable res = asTrie(symbolTrieEntries);
+        return res;
+    }
+
+    auto graphicalTrie()
+    {
+        import std.internal.unicode_tables : graphicalTrieEntries; // generated file
+        static immutable res = asTrie(graphicalTrieEntries);
+        return res;
+    }
+
+    auto nonCharacterTrie()
+    {
+        import std.internal.unicode_tables : nonCharacterTrieEntries; // generated file
+        static immutable res = asTrie(nonCharacterTrieEntries);
+        return res;
+    }
 
     //normalization quick-check tables
     auto nfcQCTrie()
@@ -10433,13 +10516,48 @@ private:
     }
 
     //case conversion tables
-    auto toUpperIndexTrie() { static immutable res = asTrie(toUpperIndexTrieEntries); return res; }
-    auto toLowerIndexTrie() { static immutable res = asTrie(toLowerIndexTrieEntries); return res; }
-    auto toTitleIndexTrie() { static immutable res = asTrie(toTitleIndexTrieEntries); return res; }
+    auto toUpperIndexTrie()
+    {
+        import std.internal.unicode_tables : toUpperIndexTrieEntries; // generated file
+        static immutable res = asTrie(toUpperIndexTrieEntries);
+        return res;
+    }
+
+    auto toLowerIndexTrie()
+    {
+        import std.internal.unicode_tables : toLowerIndexTrieEntries; // generated file
+        static immutable res = asTrie(toLowerIndexTrieEntries);
+        return res;
+    }
+
+    auto toTitleIndexTrie()
+    {
+        import std.internal.unicode_tables : toTitleIndexTrieEntries; // generated file
+        static immutable res = asTrie(toTitleIndexTrieEntries);
+        return res;
+    }
+
     //simple case conversion tables
-    auto toUpperSimpleIndexTrie() { static immutable res = asTrie(toUpperSimpleIndexTrieEntries); return res; }
-    auto toLowerSimpleIndexTrie() { static immutable res = asTrie(toLowerSimpleIndexTrieEntries); return res; }
-    auto toTitleSimpleIndexTrie() { static immutable res = asTrie(toTitleSimpleIndexTrieEntries); return res; }
+    auto toUpperSimpleIndexTrie()
+    {
+        import std.internal.unicode_tables : toUpperSimpleIndexTrieEntries; // generated file
+        static immutable res = asTrie(toUpperSimpleIndexTrieEntries);
+        return res;
+    }
+
+    auto toLowerSimpleIndexTrie()
+    {
+        import std.internal.unicode_tables : toLowerSimpleIndexTrieEntries; // generated file
+        static immutable res = asTrie(toLowerSimpleIndexTrieEntries);
+        return res;
+    }
+
+    auto toTitleSimpleIndexTrie()
+    {
+        import std.internal.unicode_tables : toTitleSimpleIndexTrieEntries; // generated file
+        static immutable res = asTrie(toTitleSimpleIndexTrieEntries);
+        return res;
+    }
 
 }
 
