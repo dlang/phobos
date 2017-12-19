@@ -7,11 +7,11 @@
 +/
 module std.datetime.timezone;
 
-import core.time;
-import std.datetime.date;
-import std.datetime.systime;
-import std.exception : enforce;
-import std.range.primitives;
+// Note: reconsider using specific imports below after
+// https://issues.dlang.org/show_bug.cgi?id=17630 has been fixed
+import core.time;// : abs, convert, dur, Duration, hours, minutes;
+import std.datetime.systime;// : Clock, stdTimeToUnixTime, SysTime;
+import std.range.primitives;// : back, front, empty, popFront;
 import std.traits : isIntegral, isSomeString, Unqual;
 
 version(Windows)
@@ -150,6 +150,7 @@ public:
             return PosixTimeZone.getTimeZone(name);
         else version(Windows)
         {
+            import std.datetime.date : DateTimeException;
             import std.format : format;
             auto windowsTZName = tzDatabaseNameToWindowsTZName(name);
             if (windowsTZName != null)
@@ -237,6 +238,7 @@ public:
             //assert(tz.dstName == dstName);  //Locale-dependent
             assert(tz.hasDST == hasDST);
 
+            import std.datetime.date : DateTime;
             immutable stdDate = DateTime(2010, north ? 1 : 7, 1, 6, 0, 0);
             immutable dstDate = DateTime(2010, north ? 7 : 1, 1, 6, 0, 0);
             auto std = SysTime(stdDate, tz);
@@ -316,6 +318,7 @@ public:
             return tz;
         }
 
+        import std.datetime.date : DateTime;
         auto dstSwitches = [/+America/Los_Angeles+/ tuple(DateTime(2012, 3, 11),  DateTime(2012, 11, 4), 2, 2),
                             /+America/New_York+/    tuple(DateTime(2012, 3, 11),  DateTime(2012, 11, 4), 2, 2),
                             ///+America/Santiago+/    tuple(DateTime(2011, 8, 21),  DateTime(2011, 5, 8), 0, 0),
@@ -323,6 +326,7 @@ public:
                             /+Europe/Paris+/        tuple(DateTime(2012, 3, 25),  DateTime(2012, 10, 28), 2, 3),
                             /+Australia/Adelaide+/  tuple(DateTime(2012, 10, 7),  DateTime(2012, 4, 1), 2, 3)];
 
+        import std.datetime.date : DateTimeException;
         version(Posix)
         {
             version(FreeBSD)      enum utcZone = "Etc/UTC";
@@ -382,6 +386,7 @@ public:
             // a DST switch.
             foreach (hour; -12 .. 13)
             {
+                import std.exception : enforce;
                 auto st = SysTime(dstSwitches[i][0] + dur!"hours"(hour), tz);
                 immutable targetHour = hour < 0 ? hour + 24 : hour;
 
@@ -457,6 +462,7 @@ public:
                                                __FILE__, line);
                     }
 
+                    import std.exception : enforce;
                     enforce((utc + offset).hour == local.hour, msg("1"));
                     enforce((utc + offset + dur!"minutes"(1)).hour == local.hour, msg("2"));
                 }
@@ -530,6 +536,7 @@ public:
         // leaving it commented out until I can sort it out.
         //assert(equal(tzNames, tzNames.uniq()));
 
+        import std.datetime.date : DateTimeException;
         foreach (tzName; tzNames)
             assertNotThrown!DateTimeException(testPZSuccess(tzName));
     }
@@ -792,6 +799,7 @@ public:
             {
                 try
                 {
+                    import std.datetime.date : Date;
                     auto currYear = (cast(Date) Clock.currTime()).year;
                     auto janOffset = SysTime(Date(currYear, 1, 4), cast(immutable) this).stdTime -
                                      SysTime(Date(currYear, 1, 4), UTC()).stdTime;
@@ -980,6 +988,7 @@ public:
         {
             scope(exit) clearTZEnvVar();
 
+            import std.datetime.date : DateTime;
             auto tzInfos = [tuple("America/Los_Angeles", DateTime(2012, 3, 11), DateTime(2012, 11, 4), 2, 2),
                             tuple("America/New_York",    DateTime(2012, 3, 11), DateTime(2012, 11, 4), 2, 2),
                             //tuple("America/Santiago",    DateTime(2011, 8, 21), DateTime(2011, 5, 8), 0, 0),
@@ -990,6 +999,7 @@ public:
 
             foreach (i; 0 .. tzInfos.length)
             {
+                import std.exception : enforce;
                 auto tzName = tzInfos[i][0];
                 setTZEnvVar(tzName);
                 immutable spring = tzInfos[i][3];
@@ -1209,6 +1219,7 @@ public:
             scope(exit) clearTZEnvVar();
 
             setTZEnvVar("UTC");
+            import std.datetime.date : Date;
             auto std = SysTime(Date(2010, 1, 1));
             auto dst = SysTime(Date(2010, 7, 1));
             assert(UTC().utcToTZ(std.stdTime) == std.stdTime);
@@ -1241,6 +1252,7 @@ public:
             scope(exit) clearTZEnvVar();
 
             setTZEnvVar("UTC");
+            import std.datetime.date : Date;
             auto std = SysTime(Date(2010, 1, 1));
             auto dst = SysTime(Date(2010, 7, 1));
             assert(UTC().tzToUTC(std.stdTime) == std.stdTime);
@@ -1385,6 +1397,8 @@ public:
     this(Duration utcOffset, string stdName = "") @safe immutable pure
     {
         // FIXME This probably needs to be changed to something like (-12 - 13).
+        import std.datetime.date : DateTimeException;
+        import std.exception : enforce;
         enforce!DateTimeException(abs(utcOffset) < dur!"minutes"(1440),
                                     "Offset from UTC must be within range (-24:00 - 24:00).");
         super("", stdName, "");
@@ -1424,6 +1438,8 @@ package:
       +/
     static string toISOString(Duration utcOffset) @safe pure
     {
+        import std.datetime.date : DateTimeException;
+        import std.exception : enforce;
         import std.format : format;
         immutable absOffset = abs(utcOffset);
         enforce!DateTimeException(absOffset < dur!"minutes"(1440),
@@ -1441,6 +1457,7 @@ package:
             return SimpleTimeZone.toISOString(offset);
         }
 
+        import std.datetime.date : DateTimeException;
         assertThrown!DateTimeException(testSTZInvalid(dur!"minutes"(1440)));
         assertThrown!DateTimeException(testSTZInvalid(dur!"minutes"(-1440)));
 
@@ -1476,7 +1493,9 @@ package:
       +/
     static string toISOExtString(Duration utcOffset) @safe pure
     {
+        import std.datetime.date : DateTimeException;
         import std.format : format;
+        import std.exception : enforce;
 
         immutable absOffset = abs(utcOffset);
         enforce!DateTimeException(absOffset < dur!"minutes"(1440),
@@ -1494,6 +1513,7 @@ package:
             return SimpleTimeZone.toISOExtString(offset);
         }
 
+        import std.datetime.date : DateTimeException;
         assertThrown!DateTimeException(testSTZInvalid(dur!"minutes"(1440)));
         assertThrown!DateTimeException(testSTZInvalid(dur!"minutes"(-1440)));
 
@@ -1534,6 +1554,8 @@ package:
         import std.algorithm.searching : startsWith, countUntil, all;
         import std.ascii : isDigit;
         import std.conv : to;
+        import std.datetime.date : DateTimeException;
+        import std.exception : enforce;
         import std.format : format;
 
         auto dstr = to!dstring(isoString);
@@ -1582,6 +1604,7 @@ package:
                        "-ab:cd", "+abcd", "-0Z:00", "-Z", "-00Z",
                        "01:00", "12:00", "23:59"])
         {
+            import std.datetime.date : DateTimeException;
             assertThrown!DateTimeException(SimpleTimeZone.fromISOString(str), format("[%s]", str));
         }
 
@@ -1678,10 +1701,12 @@ package:
         import std.algorithm.searching : startsWith, countUntil, all;
         import std.ascii : isDigit;
         import std.conv : to;
+        import std.exception : enforce;
         import std.format : format;
 
         auto dstr = to!dstring(isoExtString);
 
+        import std.datetime.date : DateTimeException;
         enforce!DateTimeException(dstr.startsWith('-', '+'), "Invalid ISO String");
 
         auto sign = dstr.startsWith('-') ? -1 : 1;
@@ -1733,6 +1758,7 @@ package:
                        "-ab:cd", "abcd", "-0Z:00", "-Z", "-00Z",
                        "0100", "1200", "2359"])
         {
+            import std.datetime.date : DateTimeException;
             assertThrown!DateTimeException(SimpleTimeZone.fromISOExtString(str), format("[%s]", str));
         }
 
@@ -2018,6 +2044,8 @@ public:
     {
         import std.algorithm.sorting : sort;
         import std.conv : to;
+        import std.datetime.date : DateTimeException;
+        import std.exception : enforce;
         import std.format : format;
         import std.path : asNormalizedPath, chainPath;
         import std.range : retro;
@@ -2044,6 +2072,7 @@ public:
         version(Android) tzFile.seek(*tzfileOffset);
         immutable gmtZone = name.representation().canFind("GMT");
 
+        import std.datetime.date : DateTimeException;
         try
         {
             _enforceValidTZFile(readVal!(char[])(tzFile, 4) == "TZif");
@@ -2366,6 +2395,7 @@ public:
     {
         import std.algorithm.sorting : sort;
         import std.array : appender;
+        import std.exception : enforce;
         import std.format : format;
 
         version(Posix)
@@ -2377,6 +2407,7 @@ public:
             subName = replace(strip(subName), "/", dirSeparator);
         }
 
+        import std.datetime.date : DateTimeException;
         enforce(tzDatabaseDir.exists(), new DateTimeException(format("Directory %s does not exist.", tzDatabaseDir)));
         enforce(tzDatabaseDir.isDir, new DateTimeException(format("%s is not a directory.", tzDatabaseDir)));
 
@@ -2434,6 +2465,7 @@ public:
 
         auto tzNames = getInstalledTZNames();
 
+        import std.datetime.date : DateTimeException;
         foreach (tzName; tzNames)
             assertNotThrown!DateTimeException(testPTZSuccess(tzName));
 
@@ -2618,6 +2650,7 @@ private:
       +/
     static void _enforceValidTZFile(bool result, size_t line = __LINE__) @safe pure
     {
+        import std.datetime.date : DateTimeException;
         if (!result)
             throw new DateTimeException("Not a valid tzdata file.", __FILE__, line);
     }
@@ -2966,6 +2999,7 @@ else version(Windows)
 
                 return new immutable WindowsTimeZone(name, tzInfo);
             }
+            import std.datetime.date : DateTimeException;
             throw new DateTimeException(format("Failed to find time zone: %s", name));
         }
 
@@ -2995,6 +3029,7 @@ else version(Windows)
 
             auto tzNames = getInstalledTZNames();
 
+            import std.datetime.date : DateTimeException;
             foreach (tzName; tzNames)
                 assertNotThrown!DateTimeException(testWTZSuccess(tzName));
         }
@@ -3009,11 +3044,13 @@ else version(Windows)
                 if (tzInfo.DaylightDate.wMonth == 0)
                     return false;
 
+                import std.datetime.date : DateTime, Month;
                 auto utcDateTime = cast(DateTime) SysTime(stdTime, UTC());
 
                 //The limits of what SystemTimeToTzSpecificLocalTime will accept.
                 if (utcDateTime.year < 1601)
                 {
+                    import std.datetime.date : Month;
                     if (utcDateTime.month == Month.feb && utcDateTime.day == 29)
                         utcDateTime.day = 28;
                     utcDateTime.year = 1601;
@@ -3078,6 +3115,7 @@ else version(Windows)
             TIME_ZONE_INFORMATION tzInfo;
             GetTimeZoneInformation(&tzInfo);
 
+            import std.datetime.date : DateTime;
             foreach (year; [1600, 1601, 30_827, 30_828])
                 WindowsTimeZone._dstInEffect(&tzInfo, SysTime(DateTime(year, 1, 1)).stdTime);
         }
@@ -3098,6 +3136,7 @@ else version(Windows)
             {
                 try
                 {
+                    import std.datetime.date : DateTime, Month;
                     bool dstInEffectForLocalDateTime(DateTime localDateTime)
                     {
                         // The limits of what SystemTimeToTzSpecificLocalTime will accept.
@@ -3162,6 +3201,7 @@ else version(Windows)
                         return false;
                     }
 
+                    import std.datetime.date : DateTime;
                     auto localDateTime = cast(DateTime) SysTime(adjTime, UTC());
                     auto localDateTimeBefore = localDateTime - dur!"hours"(1);
                     auto localDateTimeAfter = localDateTime + dur!"hours"(1);
@@ -3337,6 +3377,7 @@ TZConversions parseTZConversions(string windowsZonesXMLText) @safe pure
 
     foreach (line; windowsZonesXMLText.lineSplitter())
     {
+        import std.exception : enforce;
         // Sample line:
         // <mapZone other="Canada Central Standard Time" territory="CA" type="America/Regina America/Swift_Current"/>
 

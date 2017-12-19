@@ -7,12 +7,13 @@
 +/
 module std.datetime.date;
 
-import core.time;
+// Note: reconsider using specific imports below after
+// https://issues.dlang.org/show_bug.cgi?id=17630 has been fixed
+import core.time;// : TimeException;
 import std.traits : isSomeString, Unqual;
 import std.typecons : Flag;
 
 version(unittest) import std.exception : assertThrown;
-
 
 @safe unittest
 {
@@ -2064,6 +2065,7 @@ public:
     }
 
 
+    import core.time : Duration;
     /++
         Gives the result of adding or subtracting a $(REF Duration, core,time)
         from this $(LREF DateTime).
@@ -2108,6 +2110,8 @@ public:
 
     @safe unittest
     {
+        import core.time : dur;
+
         auto dt = DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33));
 
         assert(dt + dur!"weeks"(7) == DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
@@ -2155,6 +2159,7 @@ public:
         assert(idt - duration == DateTime(1999, 7, 6, 12, 30, 21));
     }
 
+    import core.time : TickDuration;
     // Explicitly undocumented. It will be removed in January 2018. @@@DEPRECATED_2018-01@@@
     deprecated("Use Duration instead of TickDuration.")
     DateTime opBinary(string op)(in TickDuration td) const @safe pure nothrow @nogc
@@ -2213,11 +2218,13 @@ public:
         else static if (is(Unqual!D == TickDuration))
             immutable hnsecs = duration.hnsecs;
 
+        import core.time : convert;
         mixin(format(`return _addSeconds(convert!("hnsecs", "seconds")(%shnsecs));`, op));
     }
 
     @safe unittest
     {
+        import core.time : dur;
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"weeks"(7) ==
                DateTime(Date(1999, 8, 24), TimeOfDay(12, 30, 33)));
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) + dur!"weeks"(-7) ==
@@ -2357,6 +2364,7 @@ public:
         immutable dateResult = _date - rhs.date;
         immutable todResult = _tod - rhs._tod;
 
+        import core.time : dur;
         return dur!"hnsecs"(dateResult.total!"hnsecs" + todResult.total!"hnsecs");
     }
 
@@ -2364,6 +2372,7 @@ public:
     {
         auto dt = DateTime(1999, 7, 6, 12, 30, 33);
 
+        import core.time : dur;
         assert(DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) - DateTime(Date(1998, 7, 6), TimeOfDay(12, 30, 33)) ==
                dur!"seconds"(31_536_000));
         assert(DateTime(Date(1998, 7, 6), TimeOfDay(12, 30, 33)) - DateTime(Date(1999, 7, 6), TimeOfDay(12, 30, 33)) ==
@@ -3458,6 +3467,7 @@ private:
       +/
     ref DateTime _addSeconds(long seconds) return @safe pure nothrow @nogc
     {
+        import core.time : convert;
         long hnsecs = convert!("seconds", "hnsecs")(seconds);
         hnsecs += convert!("hours", "hnsecs")(_tod._hour);
         hnsecs += convert!("minutes", "hnsecs")(_tod._minute);
@@ -6040,7 +6050,7 @@ public:
         static assert(!__traits(compiles, idate.roll!"days"(12)));
     }
 
-
+    import core.time : Duration;
     /++
         Gives the result of adding or subtracting a $(REF Duration, core,time)
         from
@@ -6080,6 +6090,7 @@ public:
     {
         auto date = Date(1999, 7, 6);
 
+        import core.time : dur;
         assert(date + dur!"weeks"(7) == Date(1999, 8, 24));
         assert(date + dur!"weeks"(-7) == Date(1999, 5, 18));
         assert(date + dur!"days"(7) == Date(1999, 7, 13));
@@ -6128,12 +6139,14 @@ public:
         assert(idate - duration == Date(1999, 6, 24));
     }
 
+    import core.time : TickDuration;
     // Explicitly undocumented. It will be removed in January 2018. @@@DEPRECATED_2018-01@@@
     deprecated("Use Duration instead of TickDuration.")
     Date opBinary(string op)(TickDuration td) const @safe pure nothrow @nogc
         if (op == "+" || op == "-")
     {
         Date retval = this;
+        import core.time : convert;
         immutable days = convert!("hnsecs", "days")(td.hnsecs);
         mixin("return retval._addDays(" ~ op ~ "days);");
     }
@@ -6180,6 +6193,7 @@ public:
 
     @safe unittest
     {
+        import core.time : dur;
         assert(Date(1999, 7, 6) + dur!"weeks"(7) == Date(1999, 8, 24));
         assert(Date(1999, 7, 6) + dur!"weeks"(-7) == Date(1999, 5, 18));
         assert(Date(1999, 7, 6) + dur!"days"(7) == Date(1999, 7, 13));
@@ -6240,6 +6254,7 @@ public:
     ref Date opOpAssign(string op)(TickDuration td) @safe pure nothrow @nogc
         if (op == "+" || op == "-")
     {
+        import core.time : convert;
         immutable days = convert!("seconds", "days")(td.seconds);
         mixin("return _addDays(" ~ op ~ "days);");
     }
@@ -6276,7 +6291,6 @@ public:
         }
     }
 
-
     /++
         Gives the difference between two $(LREF Date)s.
 
@@ -6289,6 +6303,7 @@ public:
     Duration opBinary(string op)(in Date rhs) const @safe pure nothrow @nogc
         if (op == "-")
     {
+        import core.time : dur;
         return dur!"days"(this.dayOfGregorianCal - rhs.dayOfGregorianCal);
     }
 
@@ -6296,6 +6311,7 @@ public:
     {
         auto date = Date(1999, 7, 6);
 
+        import core.time : dur;
         assert(Date(1999, 7, 6) - Date(1998, 7, 6) == dur!"days"(365));
         assert(Date(1998, 7, 6) - Date(1999, 7, 6) == dur!"days"(-365));
         assert(Date(1999, 6, 6) - Date(1999, 5, 6) == dur!"days"(31));
@@ -8353,6 +8369,7 @@ public:
     ref TimeOfDay roll(string units)(long value) @safe pure nothrow @nogc
         if (units == "hours")
     {
+        import core.time : dur;
         return this += dur!"hours"(value);
     }
 
@@ -8577,6 +8594,7 @@ public:
     }
 
 
+    import core.time : Duration;
     /++
         Gives the result of adding or subtracting a $(REF Duration, core,time)
         from this $(LREF TimeOfDay).
@@ -8621,6 +8639,7 @@ public:
     {
         auto tod = TimeOfDay(12, 30, 33);
 
+        import core.time : dur;
         assert(tod + dur!"hours"(7) == TimeOfDay(19, 30, 33));
         assert(tod + dur!"hours"(-7) == TimeOfDay(5, 30, 33));
         assert(tod + dur!"minutes"(7) == TimeOfDay(12, 37, 33));
@@ -8661,6 +8680,7 @@ public:
         assert(itod - duration == TimeOfDay(1, 30, 33));
     }
 
+    import core.time : TickDuration;
     // Explicitly undocumented. It will be removed in January 2018. @@@DEPRECATED_2018-01@@@
     deprecated("Use Duration instead of TickDuration.")
     TimeOfDay opBinary(string op)(TickDuration td) const @safe pure nothrow @nogc
@@ -8714,6 +8734,7 @@ public:
 
     @safe unittest
     {
+        import core.time : dur;
         auto duration = dur!"hours"(12);
 
         assert(TimeOfDay(12, 30, 33) + dur!"hours"(7) == TimeOfDay(19, 30, 33));
@@ -8817,6 +8838,7 @@ public:
         immutable lhsSec = _hour * 3600 + _minute * 60 + _second;
         immutable rhsSec = rhs._hour * 3600 + rhs._minute * 60 + rhs._second;
 
+        import core.time : dur;
         return dur!"seconds"(lhsSec - rhsSec);
     }
 
@@ -8824,6 +8846,7 @@ public:
     {
         auto tod = TimeOfDay(12, 30, 33);
 
+        import core.time : dur;
         assert(TimeOfDay(7, 12, 52) - TimeOfDay(12, 30, 33) == dur!"seconds"(-19_061));
         assert(TimeOfDay(12, 30, 33) - TimeOfDay(7, 12, 52) == dur!"seconds"(19_061));
         assert(TimeOfDay(12, 30, 33) - TimeOfDay(14, 30, 33) == dur!"seconds"(-7200));
@@ -9253,6 +9276,7 @@ private:
       +/
     ref TimeOfDay _addSeconds(long seconds) return @safe pure nothrow @nogc
     {
+        import core.time : convert;
         long hnsecs = convert!("seconds", "hnsecs")(seconds);
         hnsecs += convert!("hours", "hnsecs")(_hour);
         hnsecs += convert!("minutes", "hnsecs")(_minute);
