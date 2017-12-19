@@ -3342,24 +3342,17 @@ Throws:
     A $(LREF ConvException) if the range is empty.
  */
 Target parse(Target, Source)(ref Source s)
-if (isSomeString!Source && !is(Source == enum) &&
-    staticIndexOf!(Unqual!Target, dchar, Unqual!(ElementEncodingType!Source)) >= 0)
+if (isSomeString!Source && 
+    isSomeChar!Target &&
+    !is(Source == enum) &&
+    !is(Target == enum) &&
+    Target.sizeof >= (ElementEncodingType!Source).sizeof)
 {
     if (s.empty)
         throw convError!(Source, Target)(s);
-    static if (is(Unqual!Target == dchar))
-    {
-        Target result = s.front;
-        s.popFront();
-        return result;
-    }
-    else
-    {
-        // Special case: okay so parse a Char off a Char[]
-        Target result = s[0];
-        s = s[1 .. $];
-        return result;
-    }
+    Target result = s[0];
+    s = s[1 .. $];
+    return result;
 }
 
 @safe pure unittest
@@ -3368,12 +3361,11 @@ if (isSomeString!Source && !is(Source == enum) &&
     {
         foreach (Char; AliasSeq!(char, wchar, dchar))
         {
-            static if (is(Unqual!Char == dchar) ||
-                       Char.sizeof == ElementEncodingType!Str.sizeof)
+            static if (Char.sizeof >= ElementEncodingType!Str.sizeof)
             {
-                Str s = "aaa";
+                Str s = "abc";
                 assert(parse!Char(s) == 'a');
-                assert(s == "aa");
+                assert(s == "bc");
             }
         }
     }
