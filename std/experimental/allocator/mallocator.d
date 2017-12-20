@@ -375,7 +375,9 @@ version(Posix)
     AlignedMallocator.instance.alignedReallocate(c, 32, 32);
     assert(c.ptr);
 
-    version (DragonFlyBSD) {} else                    /* FIXME: assertion below fails, have not been able to figure out why, yet */
+    version (DragonFlyBSD) {} else    /* FIXME: Malloc on DragonFly does not return NULL when allocating more than UINTPTR_MAX
+                                       * $(LINK: https://bugs.dragonflybsd.org/issues/3114, dragonfly bug report)
+                                       * $(LINK: https://github.com/dlang/druntime/pull/1999#discussion_r157536030, PR Discussion) */
     assert(!AlignedMallocator.instance.alignedReallocate(c, size_t.max, 4096));
     AlignedMallocator.instance.deallocate(c);
 }
