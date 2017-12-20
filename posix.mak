@@ -32,57 +32,21 @@
 QUIET:=@
 
 DEBUGGER=gdb
-GIT_HOME=https://github.com/dlang
-DMD_DIR=../dmd
+D_HOME=..
 
-include $(DMD_DIR)/src/osmodel.mak
-
-ifeq (osx,$(OS))
-	export MACOSX_DEPLOYMENT_TARGET=10.7
-endif
-
-# Default to a release build, override with BUILD=debug
-ifeq (,$(BUILD))
-BUILD_WAS_SPECIFIED=0
-BUILD=release
-else
-BUILD_WAS_SPECIFIED=1
-endif
-
-ifneq ($(BUILD),release)
-    ifneq ($(BUILD),debug)
-        $(error Unrecognized BUILD=$(BUILD), must be 'debug' or 'release')
-    endif
-endif
-
-# default to PIC on x86_64, use PIC=1/0 to en-/disable PIC.
-# Note that shared libraries and C files are always compiled with PIC.
-ifeq ($(PIC),)
-    ifeq ($(MODEL),64) # x86_64
-        PIC:=1
-    else
-        PIC:=0
-    endif
-endif
-ifeq ($(PIC),1)
-    override PIC:=-fPIC
-else
-    override PIC:=
-endif
+# Load common variables, see https://github.com/dlang/dmd/blob/master/src/posix.mak
+include $(D_HOME)/dmd/src/common.mak
 
 # Configurable stuff that's rarely edited
-INSTALL_DIR = ../install
-DRUNTIME_PATH = ../druntime
 ZIPFILE = phobos.zip
-ROOT_OF_THEM_ALL = generated
-ROOT = $(ROOT_OF_THEM_ALL)/$(OS)/$(BUILD)/$(MODEL)
-DUB=dub
-TOOLS_DIR=../tools
+G = $(PHOBOS_BUILD_DIR)
+# FIXME: replace $(ROOT) with $G after the transition to common.mak
+ROOT = $G
 DSCANNER_HASH=bb32e9f1e3e5206deb11b3dbc43ad44e23fabf96
 DSCANNER_DIR=../dscanner-$(DSCANNER_HASH)
 
 # Documentation-related stuff
-DOCSRC = ../dlang.org
+DOCSRC = $(DLANG_ORG_DIR)
 WEBSITE_DIR = ../web
 DOC_OUTPUT_DIR = $(WEBSITE_DIR)/phobos-prerelease
 BIGDOC_OUTPUT_DIR = /tmp
@@ -94,32 +58,6 @@ BIGSTDDOC = $(DOCSRC)/std_consolidated.ddoc $(DOCSRC)/macros.ddoc
 DDOC=$(DMD) -conf= $(MODEL_FLAG) -w -c -o- -version=StdDdoc \
 	-I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS)
 
-# Set DRUNTIME name and full path
-ifneq (,$(DRUNTIME))
-	CUSTOM_DRUNTIME=1
-endif
-ifeq (,$(findstring win,$(OS)))
-	DRUNTIME = $(DRUNTIME_PATH)/generated/$(OS)/$(BUILD)/$(MODEL)/libdruntime.a
-	DRUNTIMESO = $(basename $(DRUNTIME)).so.a
-else
-	DRUNTIME = $(DRUNTIME_PATH)/lib/druntime.lib
-endif
-
-# Set CC and DMD
-ifeq ($(OS),win32wine)
-	CC = wine dmc.exe
-	DMD = wine dmd.exe
-	RUN = wine
-else
-	DMD = $(DMD_DIR)/generated/$(OS)/$(BUILD)/$(MODEL)/dmd
-	ifeq ($(OS),win32)
-		CC = dmc
-	else
-		CC = cc
-	endif
-	RUN =
-endif
-
 # Set CFLAGS
 CFLAGS=$(MODEL_FLAG) -fPIC -DHAVE_UNISTD_H
 ifeq ($(BUILD),debug)
@@ -129,7 +67,7 @@ else
 endif
 
 # Set DFLAGS
-DFLAGS=-conf= -I$(DRUNTIME_PATH)/import $(DMDEXTRAFLAGS) -w -de -dip25 $(MODEL_FLAG) $(PIC)
+DFLAGS=-conf= -I$(DRUNTIME_IMPORT_DIR) $(DMDEXTRAFLAGS) -w -de -dip25 $(MODEL_FLAG) $(PIC)
 ifeq ($(BUILD),debug)
 	DFLAGS += -g -debug
 else
@@ -140,24 +78,8 @@ ifdef ENABLE_COVERAGE
 DFLAGS  += -cov
 endif
 
-# Set DOTOBJ and DOTEXE
-ifeq (,$(findstring win,$(OS)))
-	DOTOBJ:=.o
-	DOTEXE:=
-	PATHSEP:=/
-else
-	DOTOBJ:=.obj
-	DOTEXE:=.exe
-	PATHSEP:=$(shell echo "\\")
-endif
-
-LINKDL:=$(if $(findstring $(OS),linux),-L-ldl,)
-
 # use timelimit to avoid deadlocks if available
 TIMELIMIT:=$(if $(shell which timelimit 2>/dev/null || true),timelimit -t 90 ,)
-
-# Set VERSION, where the file is that contains the version string
-VERSION=$(DMD_DIR)/VERSION
 
 # Set LIB, the ultimate target
 ifeq (,$(findstring win,$(OS)))
@@ -268,11 +190,6 @@ C_MODULES = $(addprefix etc/c/zlib/, adler32 compress crc32 deflate	\
 
 OBJS = $(addsuffix $(DOTOBJ),$(addprefix $(ROOT)/,$(C_MODULES)))
 
-MAKEFILE = $(firstword $(MAKEFILE_LIST))
-
-# build with shared library support (defaults to true on supported platforms)
-SHARED=$(if $(findstring $(OS),linux freebsd),1,)
-
 TESTS_EXTRACTOR=$(ROOT)/tests_extractor
 PUBLICTESTS_DIR=$(ROOT)/publictests
 
@@ -312,8 +229,8 @@ $(ROOT)/%$(DOTOBJ): %.c
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@) || [ -d $(dir $@) ]
 	$(CC) -c $(CFLAGS) $< -o$@
 
-$(LIB): $(OBJS) $(ALL_D_FILES) $(DRUNTIME)
-	$(DMD) $(DFLAGS) -lib -of$@ $(DRUNTIME) $(D_FILES) $(OBJS)
+$(LIB): $(OBJS) $(ALL_D_FILES) $(LIB_DRUNTIME)
+	$(DMD) $(DFLAGS) -lib -of$@ $(LIB_DRUNTIME) $(D_FILES) $(OBJS)
 
 $(ROOT)/libphobos2.so: $(ROOT)/$(SONAME)
 	ln -sf $(notdir $(LIBSO)) $@
@@ -323,16 +240,16 @@ $(ROOT)/$(SONAME): $(LIBSO)
 
 $(LIBSO): override PIC:=-fPIC
 $(LIBSO): $(OBJS) $(ALL_D_FILES) $(DRUNTIMESO)
-	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(DRUNTIMESO) $(LINKDL) $(D_FILES) $(OBJS)
+	$(DMD) $(DFLAGS) -shared -debuglib= -defaultlib= -of$@ -L-soname=$(SONAME) $(LIB_DRUNTIMESO) $(LINKDL) $(D_FILES) $(OBJS)
 
 ifeq (osx,$(OS))
 # Build fat library that combines the 32 bit and the 64 bit libraries
-libphobos2.a: $(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a
-$(ROOT_OF_THEM_ALL)/osx/release/libphobos2.a:
+libphobos2.a: $(PHOBOS_GENERATED)/osx/release/libphobos2.a
+$(PHOBOS_GENERATED)/osx/release/libphobos2.a:
 	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=32 BUILD=release
 	$(MAKE) -f $(MAKEFILE) OS=$(OS) MODEL=64 BUILD=release
-	lipo $(ROOT_OF_THEM_ALL)/osx/release/32/libphobos2.a \
-		$(ROOT_OF_THEM_ALL)/osx/release/64/libphobos2.a \
+	lipo $(PHOBOS_GENERATED)/osx/release/32/libphobos2.a \
+		$(PHOBOS_GENERATED)/osx/release/64/libphobos2.a \
 		-create -output $@
 endif
 
@@ -352,22 +269,22 @@ $(UT_D_OBJS): $(ROOT)/unittest/%.o: %.d
 
 ifneq (1,$(SHARED))
 
-$(UT_D_OBJS): $(DRUNTIME)
+$(UT_D_OBJS): $(LIB_DRUNTIME)
 
-$(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME)
-	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(DRUNTIME) $(LINKDL) -defaultlib= -debuglib=
+$(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(LIB_DRUNTIME)
+	$(DMD) $(DFLAGS) -unittest -of$@ $(DRUNTIME_PATH)/src/test_runner.d $(UT_D_OBJS) $(OBJS) $(LIB_DRUNTIME) $(LINKDL) -defaultlib= -debuglib=
 
 else
 
 UT_LIBSO:=$(ROOT)/unittest/libphobos2-ut.so
 
-$(UT_D_OBJS): $(DRUNTIMESO)
+$(UT_D_OBJS): $(LIB_DRUNTIMESO)
 
 $(UT_LIBSO): override PIC:=-fPIC
-$(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO)
-	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(DRUNTIMESO) $(LINKDL) -defaultlib= -debuglib=
+$(UT_LIBSO): $(UT_D_OBJS) $(OBJS) $(LIB_DRUNTIMESO)
+	$(DMD) $(DFLAGS) -shared -unittest -of$@ $(UT_D_OBJS) $(OBJS) $(LIB_DRUNTIMESO) $(LINKDL) -defaultlib= -debuglib=
 
-$(ROOT)/unittest/test_runner: $(DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
+$(ROOT)/unittest/test_runner: $(LIB_DRUNTIME_PATH)/src/test_runner.d $(UT_LIBSO)
 	$(DMD) $(DFLAGS) -of$@ $< -L$(UT_LIBSO) -defaultlib= -debuglib=
 
 endif
@@ -422,7 +339,7 @@ unittest/%.run : $(ROOT)/unittest/test_runner
 	touch $@
 
 clean :
-	rm -rf $(ROOT_OF_THEM_ALL) $(ZIPFILE) $(DOC_OUTPUT_DIR)
+	rm -rf $(PHOBOS_GENERATED) $(ZIPFILE)
 
 gitzip:
 	git archive --format=zip HEAD > $(ZIPFILE)
@@ -451,11 +368,11 @@ else
 # This rule additionally produces $(DRUNTIMESO). Add a fake dependency
 # to always invoke druntime's make. Use FORCE instead of .PHONY to
 # avoid rebuilding phobos when $(DRUNTIME) didn't change.
-$(DRUNTIME): FORCE
-	$(MAKE) -C $(DRUNTIME_PATH) -f posix.mak MODEL=$(MODEL) DMD=$(DMD) OS=$(OS) BUILD=$(BUILD)
+$(LIB_DRUNTIME): FORCE
+	$(MAKE) -C $(DRUNTIME_DIR) -f posix.mak MODEL=$(MODEL) DMD=$(DMD) OS=$(OS) BUILD=$(BUILD)
 
 ifeq (,$(findstring win,$(OS)))
-$(DRUNTIMESO): $(DRUNTIME)
+$(LIB_DRUNTIMESO): $(LIB_DRUNTIME)
 endif
 
 FORCE:
@@ -511,10 +428,6 @@ changelog.html: changelog.dd
 # Automatically create dlang/tools repository if non-existent
 ################################################################################
 
-${TOOLS_DIR}:
-	git clone --depth=1 ${GIT_HOME}/$(@F) $@
-
-$(TOOLS_DIR)/checkwhitespace.d: | $(TOOLS_DIR)
 $(TOOLS_DIR)/tests_extractor.d: | $(TOOLS_DIR)
 
 #################### test for undesired white spaces ##########################
