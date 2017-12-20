@@ -1033,7 +1033,6 @@ if (isForwardRange!R && is(ElementType!R : dchar))
 {//@@@BUG@@@ write is @system
     with(zis)
     {
-        import std.regex.internal.kickstart;
         struct FixedStack(T)
         {
             T[] arr;
