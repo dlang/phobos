@@ -325,11 +325,10 @@ public:
 
         version(Posix)
         {
-            version(FreeBSD)            enum utcZone = "Etc/UTC";
-            else version(NetBSD)        enum utcZone = "UTC";
-            else version(DragonFlyBSD)  enum utcZone = "UTC";
-            else version(linux)         enum utcZone = "UTC";
-            else version(OSX)           enum utcZone = "UTC";
+            version(FreeBSD)      enum utcZone = "Etc/UTC";
+            else version(NetBSD)  enum utcZone = "UTC";
+            else version(linux)   enum utcZone = "UTC";
+            else version(OSX)     enum utcZone = "UTC";
             else static assert(0, "The location of the UTC timezone file on this Posix platform must be set.");
 
             auto tzs = [testTZ("America/Los_Angeles", "PST", "PDT", dur!"hours"(-8), dur!"hours"(1)),
