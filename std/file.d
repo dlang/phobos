@@ -1488,7 +1488,6 @@ if (isInputRange!R && !isInfinite!R && isSomeChar!(ElementEncodingType!R))
 // - OS X, where the native filesystem (HFS+) stores filesystem
 //   timestamps with 1-second precision.
 version (FreeBSD) {} else
-version (DragonFlyBSD) {} else
 version (OSX) {} else
 @system unittest
 {
@@ -2779,10 +2778,6 @@ else version (NetBSD)
     else version (NetBSD)
     {
         return readLink("/proc/self/exe");
-    }
-    else version (DragonFlyBSD)
-    {
-        return readLink("/proc/curproc/file");
     }
     else version (Solaris)
     {
