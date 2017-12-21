@@ -2747,9 +2747,9 @@ Params:
 See_Also:
     $(HTTP en.wikipedia.org/wiki/Fold_(higher-order_function), Fold (higher-order function))
 
-    $(LREF fold) is functionally equivalent to $(LREF _reduce) with the argument order reversed,
-    and without the need to use $(LREF tuple) for multiple seeds. This makes it easier
-    to use in UFCS chains.
+    $(LREF fold) is functionally equivalent to $(LREF _reduce) with the argument
+    order reversed, and without the need to use $(REF_ALTTEXT $(D tuple),tuple,std,typecons)
+    for multiple seeds. This makes it easier to use in UFCS chains.
 
     $(LREF sum) is similar to $(D reduce!((a, b) => a + b)) that offers
     pairwise summing of floating point numbers.
@@ -3206,8 +3206,9 @@ See_Also:
     $(LREF sum) is similar to $(D fold!((a, b) => a + b)) that offers
     precise summing of floating point numbers.
 
-    This is functionally equivalent to $(LREF reduce) with the argument order reversed,
-    and without the need to use $(LREF tuple) for multiple seeds.
+    This is functionally equivalent to $(LREF reduce) with the argument order
+    reversed, and without the need to use $(REF_ALTTEXT $(D tuple),tuple,std,typecons)
+    for multiple seeds.
 +/
 template fold(fun...)
 if (fun.length >= 1)
