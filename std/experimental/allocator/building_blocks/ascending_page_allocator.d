@@ -367,7 +367,7 @@ public:
     }
 }
 
-version (unittest)
+version(StdUnittest)
 {
     static void testrw(void[] b)
     {

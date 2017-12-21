@@ -165,7 +165,7 @@ import std.encoding : EncodingScheme;
 import std.traits : isSomeChar;
 import std.typecons : Flag, Yes, No, Tuple;
 
-version(unittest)
+version(StdUnittest)
 {
     import std.socket : Socket;
 
