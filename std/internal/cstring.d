@@ -218,7 +218,7 @@ private:
 
     To* _ptr;
     size_t _length;        // length of the string
-    version (unittest)
+    version (StdUnittest)
     {
         enum buffLength = 16 / To.sizeof;   // smaller size to trigger reallocations
     }
