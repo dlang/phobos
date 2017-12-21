@@ -1316,6 +1316,15 @@ if (distinctFieldNames!(Specs))
     assert(!is(typeof(point1) == typeof(point2)));
 }
 
+/// Use tuples as ranges
+unittest
+{
+    import std.algorithm.iteration : sum;
+    import std.range : only;
+    auto t = tuple(1, 2);
+    assert(t.expand.only.sum == 3);
+}
+
 @safe unittest
 {
     // Bugzilla 4582
