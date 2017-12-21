@@ -104,8 +104,6 @@ import std.traits;
     }
 }
 
-debug(Unique) import std.stdio;
-
 /**
 Encapsulates unique ownership of a resource.
 
@@ -154,7 +152,6 @@ public:
     static Unique!T create(A...)(auto ref A args)
     if (__traits(compiles, new T(args)))
     {
-        debug(Unique) writeln("Unique.create for ", T.stringof);
         Unique!T u;
         u._p = new T(args);
         return u;
@@ -171,7 +168,6 @@ public:
     */
     this(RefT p)
     {
-        debug(Unique) writeln("Unique constructor with rvalue");
         _p = p;
     }
     /**
@@ -182,7 +178,6 @@ public:
     this(ref RefT p)
     {
         _p = p;
-        debug(Unique) writeln("Unique constructor nulling source");
         p = null;
         assert(p is null);
     }
@@ -202,7 +197,6 @@ public:
     this(U)(Unique!U u)
     if (is(u.RefT:RefT))
     {
-        debug(Unique) writeln("Unique constructor converting from ", U.stringof);
         _p = u._p;
         u._p = null;
     }
@@ -211,7 +205,6 @@ public:
     void opAssign(U)(Unique!U u)
     if (is(u.RefT:RefT))
     {
-        debug(Unique) writeln("Unique opAssign converting from ", U.stringof);
         // first delete any resource we own
         destroy(this);
         _p = u._p;
@@ -220,7 +213,6 @@ public:
 
     ~this()
     {
-        debug(Unique) writeln("Unique destructor of ", (_p is null)? null: _p);
         if (_p !is null)
         {
             destroy(_p);
@@ -238,7 +230,6 @@ public:
     */
     Unique release()
     {
-        debug(Unique) writeln("Unique Release");
         import std.algorithm.mutation : move;
         return this.move;
     }
@@ -318,7 +309,6 @@ private:
 
 @system unittest
 {
-    debug(Unique) writeln("Unique class");
     class Bar
     {
         ~this() { debug(Unique) writeln("    Bar destructor"); }
@@ -334,16 +324,13 @@ private:
     assert(!ub.isEmpty);
     assert(ub.val == 4);
     static assert(!__traits(compiles, {auto ub3 = g(ub);}));
-    debug(Unique) writeln("Calling g");
     auto ub2 = g(ub.release);
-    debug(Unique) writeln("Returned from g");
     assert(ub.isEmpty);
     assert(!ub2.isEmpty);
 }
 
 @system unittest
 {
-    debug(Unique) writeln("Unique interface");
     interface Bar
     {
         int val() const;
@@ -377,9 +364,7 @@ private:
     assert(!ub.isEmpty);
     assert(ub.val == 4);
     static assert(!__traits(compiles, {auto ub3 = g(ub);}));
-    debug(Unique) writeln("Calling g");
     auto ub2 = g(ub.release);
-    debug(Unique) writeln("Returned from g");
     assert(ub.isEmpty);
     assert(!ub2.isEmpty);
     consume(ub2.release);
@@ -388,10 +373,9 @@ private:
 
 @system unittest
 {
-    debug(Unique) writeln("Unique struct");
     struct Foo
     {
-        ~this() { debug(Unique) writeln("    Foo destructor"); }
+        ~this() { }
         int val() const { return 3; }
         @disable this(this);
     }
@@ -399,7 +383,6 @@ private:
 
     UFoo f(UFoo u)
     {
-        debug(Unique) writeln("inside f");
         return u.release;
     }
 
@@ -407,9 +390,7 @@ private:
     assert(!uf.isEmpty);
     assert(uf.val == 3);
     static assert(!__traits(compiles, {auto uf3 = f(uf);}));
-    debug(Unique) writeln("Unique struct: calling f");
     auto uf2 = f(uf.release);
-    debug(Unique) writeln("Unique struct: returned from f");
     assert(uf.isEmpty);
     assert(!uf2.isEmpty);
 }
