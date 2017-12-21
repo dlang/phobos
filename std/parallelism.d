@@ -2421,12 +2421,15 @@ public:
     {
         /**
         Parallel reduce on a random access range.  Except as otherwise noted,
-        usage is similar to $(REF _reduce, std,algorithm,iteration).  This
-        function works by splitting the range to be reduced into work units,
-        which are slices to be reduced in parallel.  Once the results from all
-        work units are computed, a final serial reduction is performed on these
-        results to compute the final answer. Therefore, care must be taken to
-        choose the seed value appropriately.
+        usage is similar to $(REF _reduce, std,algorithm,iteration).  There is
+        also $(LREF fold) which does the same thing with a different parameter
+        order.
+
+        This function works by splitting the range to be reduced into work
+        units, which are slices to be reduced in parallel.  Once the results
+        from all work units are computed, a final serial reduction is performed
+        on these results to compute the final answer. Therefore, care must be
+        taken to choose the seed value appropriately.
 
         Because the reduction is being performed in parallel, $(D functions)
         must be associative.  For notational simplicity, let # be an
@@ -2502,6 +2505,12 @@ public:
         After this function is finished executing, any exceptions thrown
         are chained together via $(D Throwable.next) and rethrown.  The chaining
         order is non-deterministic.
+
+        See_Also:
+
+            $(LREF fold) is functionally equivalent to $(LREF _reduce) except the
+            range parameter comes first and there is no need to use
+            $(REF_ALTTEXT $(D tuple),tuple,std,typecons) for multiple seeds.
          */
         auto reduce(Args...)(Args args)
         {
@@ -2800,6 +2809,120 @@ public:
             if (firstException) throw firstException;
 
             return result;
+        }
+    }
+
+    /** Implements the homonym function (also known as $(D accumulate), $(D
+        compress), $(D inject), or $(D foldl)) present in various programming
+        languages of functional flavor.
+
+        This is functionally equivalent to $(LREF reduce) except the range
+        parameter comes first and there is no need to use $(REF_ALTTEXT
+        $(D tuple),tuple,std,typecons) for multiple seeds.
+
+        Params:
+            functions = One or more functions
+
+        Returns:
+            The accumulated result as a single value for single function and as a tuple of values for multiple functions
+
+        See_Also:
+            $(LREF reduce)
+    */
+    template fold(functions...)
+    {
+        auto fold(Args...)(Args args)
+        {
+            import std.string : format;
+            static assert(isInputRange!(Args[0]), "First argument must be an InputRange");
+            static assert(args.length == 1 ||                         // just the range
+                          args.length == 1 + functions.length ||      // range and seeds
+                          args.length == 1 + functions.length + 1,    // range, seeds, and workUnitSize
+                          format("Invalid number of arguments (%s): Should be an input range, %s optional seed(s)," ~
+                                 " and an optional work unit size", Args.length, functions.length));
+            return fold(args[0], args[1..$]);
+        }
+
+        /** This is the overload that uses implicit seeds. (See important notes
+            on implicit seeds under $(LREF reduce).)
+
+            Params:
+                range = The range of values to _fold over
+        */
+        auto fold(R)(R range)
+        {
+            return reduce!functions(range);
+        }
+
+        ///
+        unittest
+        {
+            auto result = taskPool.fold!"a+b"([1, 2, 3, 4]);
+            assert(result == 10);
+        }
+
+        /** This is the overload that uses explicit _seeds. (See important notes
+            on explicit _seeds under $(LREF reduce).)
+
+            Params:
+                range = The range of values to _fold over
+                seeds = One seed per function
+        */
+        auto fold(R, Seeds...)(R range, Seeds seeds)
+        if (Seeds.length == functions.length)
+        {
+            static if (Seeds.length == 1)
+            {
+                return reduce!functions(seeds, range);
+            }
+            else
+            {
+                import std.typecons : tuple;
+                return reduce!functions(tuple(seeds), range);
+            }
+        }
+
+        ///
+        unittest
+        {
+            auto result = taskPool.fold!("a+b", "a*b")([1, 2, 3, 4], 0, 1);
+            assert(result[0] == 10);
+            assert(result[1] == 24);
+        }
+
+        /** This is the overload that uses explicit seeds and work unit size.
+            (See important notes on explicit seeds and work unit size under
+            $(LREF reduce).)
+
+            Params:
+                range = The range of values to _fold over
+                args = One seed per function ($(D args[0..$-1])) and the work unit size ($(D args[$-1]))
+        */
+        auto fold(R, Args...)(R range, Args args)
+        if (Args.length == functions.length + 1)
+        {
+            static assert(isIntegral!(Args[$-1]), "Work unit size must be an integral type");
+
+            static if (Args.length == 2)
+            {
+                return reduce!functions(args[0], range, args[1]);
+            }
+            else
+            {
+                import std.typecons : tuple;
+                return reduce!functions(tuple(args[0..$-1]), range, args[$-1]);
+            }
+        }
+
+        ///
+        unittest
+        {
+                auto x = taskPool.fold!"a+b"([1, 2, 3, 4], 0, 20);                // Single function
+                assert(x == 10);
+
+                auto y = taskPool.fold!("a+b", "a*b")([1, 2, 3, 4], 0, 1, 30);    // Multiple functions
+                assert(y[0] == 10);
+                assert(y[1] == 24);
         }
     }
 
