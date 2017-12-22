@@ -1498,6 +1498,26 @@ if (distinctFieldNames!(Specs))
     assert(t == AliasSeq!(1, Bad(1), "asdf"));
 }
 
+// Ensure Tuple.toHash works
+@safe unittest
+{
+    Tuple!(int, int) point;
+    assert(point.toHash == typeof(point).init.toHash);
+    assert(tuple(1, 2) != point);
+    assert(tuple(1, 2) == tuple(1, 2));
+    point[0] = 1;
+    assert(tuple(1, 2) != point);
+    point[1] = 2;
+    assert(tuple(1, 2) == point);
+}
+
+@safe @betterC unittest
+{
+    auto t = tuple(1, 2);
+    assert(t == tuple(1, 2));
+    auto t3 = tuple(1, 'd');
+}
+
 /**
     Creates a copy of a $(LREF Tuple) with its fields in _reverse order.
 
