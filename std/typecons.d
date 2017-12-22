@@ -512,7 +512,7 @@ if (distinctFieldNames!(Specs))
     //      :
     // NOTE: field[k] is an expression (which yields a symbol of a
     //       variable) and can't be aliased directly.
-    string injectNamedFields()
+    enum injectNamedFields = ()
     {
         string decl = "";
         static foreach (i, val; fieldSpecs)
@@ -525,7 +525,7 @@ if (distinctFieldNames!(Specs))
             }
         }}
         return decl;
-    }
+    };
 
     // Returns Specs for a subtuple this[from .. to] preserving field
     // names if any.
