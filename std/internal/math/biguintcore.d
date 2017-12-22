@@ -203,7 +203,7 @@ public:
     }
 
     ///
-    int opCmp(Tdummy = void)(const BigUint y) pure nothrow @nogc const @safe
+    int opCmp(Tdummy = void)(const auto ref BigUint y) pure nothrow @nogc const @safe
     {
         if (data.length != y.data.length)
             return (data.length > y.data.length) ?  1 : -1;

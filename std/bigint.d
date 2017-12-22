@@ -795,13 +795,6 @@ public:
         Implements 3-way comparisons of BigInt with BigInt or BigInt with
         built-in integers.
      */
-    int opCmp(ref const BigInt y) pure nothrow @nogc const
-    {
-        // Simply redirect to the "real" opCmp implementation.
-        return this.opCmp!BigInt(y);
-    }
-
-    /// ditto
     int opCmp(T)(T y) pure nothrow @nogc const if (isIntegral!T)
     {
         if (sign != (y<0) )
@@ -810,7 +803,7 @@ public:
         return sign? -cmp: cmp;
     }
     /// ditto
-    int opCmp(T:BigInt)(const T y) pure nothrow @nogc const
+    int opCmp(T : BigInt)(const auto ref T y) pure nothrow @nogc const
     {
         if (sign != y.sign)
             return sign ? -1 : 1;
