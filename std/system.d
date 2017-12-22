@@ -28,7 +28,7 @@ immutable
     {
         win32 = 1, /// Microsoft 32 bit Windows systems
         win64,     /// Microsoft 64 bit Windows systems
-        linux,     /// All Linux Systems
+        linux,     /// All Linux Systems, except for Android
         osx,       /// Mac OS X
         freeBSD,   /// FreeBSD
         netBSD,    /// NetBSD
