@@ -1588,7 +1588,7 @@ private auto packedArrayView(T)(inout(size_t)* ptr, size_t items) @trusted pure 
 // Partially unrolled binary search using Shar's method
 //============================================================================
 
-string genUnrolledSwitchSearch(size_t size) @safe pure nothrow
+auto genUnrolledSwitchSearch(size_t size) @safe pure nothrow
 {
     import core.bitop : bsr;
     import std.array : replace;
@@ -2760,7 +2760,7 @@ public:
         }
         ---
     */
-    string toSourceCode(string funcName="")
+    string toSourceCode()(string funcName="")
     {
         import std.array : array;
         auto range = byInterval.array();
@@ -6135,7 +6135,7 @@ package @trusted auto memoizeExpr(string expr)()
 }
 
 //property for \w character class
-package @property @safe CodepointSet wordCharacter()
+package @property @safe auto wordCharacter()
 {
     return memoizeExpr!("unicode.Alphabetic | unicode.Mn | unicode.Mc
         | unicode.Me | unicode.Nd | unicode.Pc")();
@@ -6212,7 +6212,7 @@ package dchar parseUniHex(Range)(ref Range str, size_t maxDigit)
       .canFind("invalid codepoint"));
 }
 
-auto caseEnclose(CodepointSet set)
+auto caseEnclose()(CodepointSet set)
 {
     auto cased = set & unicode.LC;
     foreach (dchar ch; cased.byCodepoint)
@@ -6226,7 +6226,7 @@ auto caseEnclose(CodepointSet set)
 /+
     fetch codepoint set corresponding to a name (InBlock or binary property)
 +/
-@trusted CodepointSet getUnicodeSet(in char[] name, bool negated,  bool casefold)
+@trusted CodepointSet getUnicodeSet()(in char[] name, bool negated,  bool casefold)
 {
     CodepointSet s = unicode(name);
     //FIXME: caseEnclose for new uni as Set | CaseEnclose(SET && LC)
