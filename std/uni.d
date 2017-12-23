@@ -5935,7 +5935,7 @@ else
     import std.algorithm.iteration : map;
     import std.range : assumeSorted;
     auto range = assumeSorted!((a,b) => propertyNameLess(a,b))
-        (table.map!"a.name"());
+        (table.map!(a => a.name)());
     size_t idx = range.lowerBound(name).length;
     if (idx < range.length && comparePropertyName(range[idx], name) == 0)
         return idx;
