@@ -6239,7 +6239,6 @@ auto caseEnclose(CodepointSet set)
 
 @safe struct UnicodeSetParser(Range)
 {
-    import std.exception : enforce;
     import std.typecons : tuple, Tuple;
     Range range;
     bool casefold_;
@@ -6257,6 +6256,7 @@ auto caseEnclose(CodepointSet set)
     //also fetches next set operation
     Tuple!(CodepointSet,Operator) parseCharTerm()
     {
+        import std.exception : enforce;
         import std.range : drop;
         enum privateUseStart = '\U000F0000', privateUseEnd ='\U000FFFFD';
         enum State{ Start, Char, Escape, CharDash, CharDashEscape,
@@ -6563,6 +6563,7 @@ auto caseEnclose(CodepointSet set)
 
     CodepointSet parseSet()
     {
+        import std.exception : enforce;
         ValStack vstack;
         OpStack opstack;
         import std.functional : unaryFun;
@@ -6695,7 +6696,6 @@ auto caseEnclose(CodepointSet set)
 */
 @safe public struct unicode
 {
-    import std.exception : enforce;
     /**
         Performs the lookup of set of $(CODEPOINTS)
         with compile-time correctness checking.
@@ -6833,6 +6833,7 @@ auto caseEnclose(CodepointSet set)
     //parse control code of form \cXXX, c assumed to be the current symbol
     static package dchar parseControlCode(Parser)(ref Parser p)
     {
+        import std.exception : enforce;
         with(p)
         {
             popFront();
@@ -6849,6 +6850,7 @@ auto caseEnclose(CodepointSet set)
     static package CodepointSet parsePropertySpec(Range)(ref Range p,
         bool negated, bool casefold)
     {
+        import std.exception : enforce;
         static import std.ascii;
         with(p)
         {
@@ -7392,7 +7394,6 @@ if (isInputRange!Range && is(Unqual!(ElementType!Range) == dchar))
 +/
 @trusted struct Grapheme
 {
-    import std.exception : enforce;
     import std.traits : isDynamicArray;
 
 public:
