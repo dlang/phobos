@@ -1884,6 +1884,49 @@ if (isInputRange!S && !isInfinite!S && isSomeChar!(ElementEncodingType!S) &&
 }
 
 /**
+String, or string-like input range, to char type not directly
+supported by parse parses the first dchar of the source.
+
+Returns: the first code point of the input range, converted
+         to type T.
+
+Throws: ConvException if the input range contains more than
+        a single code point, or if the code point does not
+        fit into a code unit of type T.
+*/
+private T toImpl(T, S)(S value)
+if (isSomeChar!T && !is(typeof(parse!T(value))) &&
+    is(typeof(parse!dchar(value))))
+{
+    import std.utf : encode;
+    
+    immutable dchar codepoint = parse!dchar(value);
+    if (!value.empty)
+        throw new ConvException(convFormat("Cannot convert \"%s\" to %s because it " ~
+                                           "contains more than a single code point.",
+                                           value, T.stringof));
+    T[dchar.sizeof / T.sizeof] decodedCodepoint;
+    if (encode(decodedCodepoint, codepoint) != 1)
+        throw new ConvException(convFormat("First code point '%s' of \"%s\" does not fit into a " ~
+                                           "single %s code unit", codepoint, value, T.stringof));
+    return decodedCodepoint[0];
+}
+
+@safe pure unittest
+{
+    import std.exception : assertThrown;
+
+    assert(toImpl!wchar("a") == 'a');
+
+    assert(toImpl!char("a"d) == 'a');
+    assert(toImpl!char("a"w) == 'a');
+    assert(toImpl!wchar("a"d) == 'a');
+
+    assertThrown!ConvException(toImpl!wchar("ab"));
+    assertThrown!ConvException(toImpl!char("😃"d));
+}
+
+/**
 Convert a value that is implicitly convertible to the enum base type
 into an Enum value. If the value does not match any enum member values
 a ConvException is thrown.
