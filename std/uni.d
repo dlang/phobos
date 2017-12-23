@@ -8900,11 +8900,25 @@ private dchar toTitlecase(dchar c)
     return c;
 }
 
-enum MAX_SIMPLE_UPPER = 1051;
-alias UpperTriple = AliasSeq!(toUpperIndex, MAX_SIMPLE_UPPER, toUpperTab);
-
-enum MAX_SIMPLE_LOWER = 1043;
-alias LowerTriple = AliasSeq!(toLowerIndex, MAX_SIMPLE_LOWER, toLowerTab);
+/*
+Needs to be a function to make the import of std.internal.unicode_tables lazy
+As of 2.078.0 DMD
+- doesn't allow templated structs with zero arguments nor
+- doesn't allow tuples (AliasSeq) as return value
+- doesn't perform imports in structs lazily
+*/
+private auto Triples()
+{
+    static struct TriplesImpl
+    {
+        import std.internal.unicode_tables : MAX_SIMPLE_UPPER, MAX_SIMPLE_LOWER;
+        //enum MAX_SIMPLE_UPPER = 1041;
+        alias UpperTriple = AliasSeq!(toUpperIndex, MAX_SIMPLE_UPPER, toUpperTab);
+        //enum MAX_SIMPLE_LOWER = 1043;
+        alias LowerTriple = AliasSeq!(toLowerIndex, MAX_SIMPLE_LOWER, toLowerTab);
+    }
+    return TriplesImpl();
+}
 
 // generic toUpper/toLower on whole string, creates new or returns as is
 private S toCase(alias indexFn, uint maxIdx, alias tableFn, alias asciiConvert, S)(S s) @trusted pure
@@ -9080,7 +9094,7 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     else
     {
         static import std.ascii;
-        return toCaser!(LowerTriple, std.ascii.toLower)(str);
+        return toCaser!(Triples.LowerTriple, std.ascii.toLower)(str);
     }
 }
 
@@ -9099,7 +9113,7 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
     else
     {
         static import std.ascii;
-        return toCaser!(UpperTriple, std.ascii.toUpper)(str);
+        return toCaser!(Triples.UpperTriple, std.ascii.toUpper)(str);
     }
 }
 
@@ -9292,11 +9306,11 @@ if (isInputRange!Range && isSomeChar!(ElementEncodingType!Range) &&
         import std.utf : byDchar;
 
         // Decode first
-        return toCapitalizer!UpperTriple(str.byDchar);
+        return toCapitalizer!(Triples.UpperTriple)(str.byDchar);
     }
     else
     {
-        return toCapitalizer!UpperTriple(str);
+        return toCapitalizer!(Triples.UpperTriple)(str);
     }
 }
 
@@ -9557,7 +9571,7 @@ private template toCaseLength(alias indexFn, uint maxIdx, alias tableFn)
 
 @safe unittest
 {
-    alias toLowerLength = toCaseLength!(LowerTriple);
+    alias toLowerLength = toCaseLength!(Triples.LowerTriple);
     assert(toLowerLength("abcd") == 4);
     assert(toLowerLength("аБВгд456") == 10+3);
 }
@@ -9628,7 +9642,7 @@ private template toCaseInPlaceAlloc(alias indexFn, uint maxIdx, alias tableFn)
 void toLowerInPlace(C)(ref C[] s) @trusted pure
 if (is(C == char) || is(C == wchar) || is(C == dchar))
 {
-    toCaseInPlace!(LowerTriple)(s);
+    toCaseInPlace!(Triples.LowerTriple)(s);
 }
 // overloads for the most common cases to reduce compile time
 @safe pure /*TODO nothrow*/
@@ -9650,7 +9664,7 @@ if (is(C == char) || is(C == wchar) || is(C == dchar))
 void toUpperInPlace(C)(ref C[] s) @trusted pure
 if (is(C == char) || is(C == wchar) || is(C == dchar))
 {
-    toCaseInPlace!(UpperTriple)(s);
+    toCaseInPlace!(Triples.UpperTriple)(s);
 }
 // overloads for the most common cases to reduce compile time/code size
 @safe pure /*TODO nothrow*/
@@ -9699,7 +9713,7 @@ S toLower(S)(S s) @trusted pure
 if (isSomeString!S)
 {
     static import std.ascii;
-    return toCase!(LowerTriple, std.ascii.toLower)(s);
+    return toCase!(Triples.LowerTriple, std.ascii.toLower)(s);
 }
 // overloads for the most common cases to reduce compile time
 @safe pure /*TODO nothrow*/
@@ -9881,7 +9895,7 @@ S toUpper(S)(S s) @trusted pure
 if (isSomeString!S)
 {
     static import std.ascii;
-    return toCase!(UpperTriple, std.ascii.toUpper)(s);
+    return toCase!(Triples.UpperTriple, std.ascii.toUpper)(s);
 }
 // overloads for the most common cases to reduce compile time
 @safe pure /*TODO nothrow*/
