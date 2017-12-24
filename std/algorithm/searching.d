@@ -2532,7 +2532,7 @@ template canFind(alias pred="a == b")
         allSatisfy!(isForwardRange, Ranges) &&
         is(typeof(find!pred(haystack, needles))))
     {
-        return find!pred(haystack, needles)[1];
+        return find!pred(haystack, needles).needle;
     }
 }
 
